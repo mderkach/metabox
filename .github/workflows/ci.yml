@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  # Быстрые проверки: типы, линтеры, юнит-тесты. Не требуют целевого окружения.
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          # Форк sing-box-extended объявляет `go 1.26.4`, ниже не соберётся
+          go-version: "1.26.7"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - run: pnpm -C web install --frozen-lockfile
+
+      - name: Go vet (оба модуля)
+        run: |
+          go vet ./...
+          cd tools/schemagen && go vet ./...
+
+      - run: go test ./...
+      - run: pnpm -C web lint
+      - run: pnpm -C web format:check
+      - run: pnpm -C web test
+      - run: pnpm -C web build
+
+  # AC-22: интеграционный прогон на том же образе целевого окружения,
+  # что и в devcontainer. Отличаются только архитектура и тег rootfs.
+  integration:
+    runs-on: ubuntu-latest
+    env:
+      OPENWRT_TAG: x86-64-24.10.8
+      # У тега x86-64 архитектура в манифесте обычная (amd64), в отличие от
+      # aarch64_generic — поэтому здесь платформа нормальная.
+      OPENWRT_PLATFORM: linux/amd64
+      SINGBOX_ARCH: amd64
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.26.7"
+
+      - name: Сборка демона под целевую систему
+        # OpenWrt на musl: бинарь с glibc там не запускается
+        env:
+          CGO_ENABLED: "0"
+        run: |
+          mkdir -p dist
+          go build -ldflags "-s -w -X metabox/internal/version.Version=ci" -o dist/metaboxd ./cmd/metaboxd
+
+      - name: Поднять целевое окружение
+        run: docker compose -f .devcontainer/docker-compose.yml up -d target
+
+      - name: Дождаться запуска сервисов
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8080/healthz >/dev/null 2>&1; then
+              echo "демон отвечает"; exit 0
+            fi
+            sleep 2
+          done
+          echo "демон не поднялся" >&2
+          docker compose -f .devcontainer/docker-compose.yml logs target
+          exit 1
+
+      - name: Цикл Apply (AC-21)
+        run: docker compose -f .devcontainer/docker-compose.yml exec -T target sh /usr/bin/apply-cycle-check
+
+      - name: Логи целевого окружения при провале
+        if: failure()
+        run: docker compose -f .devcontainer/docker-compose.yml logs target

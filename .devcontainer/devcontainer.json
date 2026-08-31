@@ -1,0 +1,22 @@
+{
+  "name": "metabox",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "dev",
+  "workspaceFolder": "/workspace",
+  "runServices": ["dev", "target"],
+  "postCreateCommand": "pnpm -C web install --frozen-lockfile",
+  "forwardPorts": [5173, 8080, 9090],
+  "portsAttributes": {
+    "5173": { "label": "Vite HMR" },
+    "8080": { "label": "metaboxd REST" },
+    "9090": { "label": "Clash API" }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": ["oxc.oxc-vscode", "bradlc.vscode-tailwindcss", "golang.go"],
+      "settings": {
+        "go.toolsManagement.checkForUpdates": "off"
+      }
+    }
+  }
+}

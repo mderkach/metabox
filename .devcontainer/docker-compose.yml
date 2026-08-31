@@ -1,0 +1,56 @@
+name: metabox
+
+services:
+  # Среда разработки: здесь живут Go-сборка, Vite и тесты.
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      args:
+        GO_VERSION: ${GO_VERSION:-1.26.7}
+    working_dir: /workspace
+    volumes:
+      - ../:/workspace
+      # Собственный node_modules: в хостовом лежат нативные бинарники под darwin
+      # (rolldown, esbuild), в linux-контейнере они не загружаются.
+      - web-node-modules:/workspace/web/node_modules
+      - go-mod:/cache/go/mod
+      - go-build:/cache/go/build
+      - pnpm-store:/cache/pnpm
+    ports:
+      - "5173:5173"   # Vite HMR
+    environment:
+      # Демон живёт в target, dev-сервер проксирует к нему запросы API
+      METABOX_API_TARGET: http://target:8080
+    command: sleep infinity
+    depends_on:
+      - target
+
+  # Целевое окружение: OpenWrt с procd, init.d и sing-box-extended.
+  target:
+    build:
+      context: ./target
+      dockerfile: Dockerfile
+      args:
+        OPENWRT_TAG: ${OPENWRT_TAG:-aarch64_generic-24.10.8}
+        OPENWRT_PLATFORM: ${OPENWRT_PLATFORM:-linux/aarch64_generic}
+        SINGBOX_VERSION: ${SINGBOX_VERSION:-1.13.18-extended-2.6.5}
+        SINGBOX_ARCH: ${SINGBOX_ARCH:-arm64}
+    # procd — это init: ему нужны собственные namespace и право поднимать сервисы.
+    # Границу безопасности держит сам контейнер, внутрь смонтирован только dist/.
+    platform: ${OPENWRT_PLATFORM:-linux/aarch64_generic}
+    privileged: true
+    volumes:
+      - ../dist:/opt/metabox:ro
+      - singbox-etc:/etc/sing-box
+    ports:
+      - "8080:8080"   # REST API демона
+      - "9090:9090"   # Clash API sing-box
+    stop_signal: SIGTERM
+
+volumes:
+  web-node-modules:
+  go-mod:
+  go-build:
+  pnpm-store:
+  singbox-etc:

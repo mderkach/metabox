@@ -1,0 +1,52 @@
+#!/bin/sh
+# Проверка цикла Apply на целевом окружении (AC-21): sing-box check → запись →
+# рестарт через procd → healthcheck. Запускается внутри контейнера target,
+# используется и локально (make apply-check), и в CI (AC-22).
+set -eu
+
+CONF=/etc/sing-box/config.json
+TMP=/tmp/config.candidate.json
+
+fail() { echo "ПРОВАЛ: $1" >&2; exit 1; }
+
+echo "1. Исходное состояние"
+/etc/init.d/sing-box running || fail "sing-box не запущен до начала цикла"
+before=$(wget -qO- http://127.0.0.1:9090/version) || fail "Clash API не отвечает до начала цикла"
+echo "   $before"
+
+echo "2. Кандидат конфига: добавляем правило маршрутизации"
+sed 's/"rules": \[\]/"rules": [{"domain_suffix": ["example.com"], "outbound": "direct"}]/' "$CONF" > "$TMP"
+grep -q example.com "$TMP" || fail "правило не подставилось, шаблон конфига изменился"
+
+echo "3. sing-box check на кандидате"
+sing-box check -c "$TMP" || fail "check отверг валидный конфиг"
+
+echo "4. Заведомо битый конфиг обязан быть отвергнут"
+echo '{"route": {"rules": [{"outbound": 42}]}}' > /tmp/config.broken.json
+if sing-box check -c /tmp/config.broken.json 2>/dev/null; then
+	fail "check пропустил заведомо битый конфиг"
+fi
+echo "   отвергнут, как и должен"
+
+echo "5. Запись и рестарт через procd"
+cp "$TMP" "$CONF"
+/etc/init.d/sing-box restart
+
+echo "6. Healthcheck"
+i=0
+while [ $i -lt 30 ]; do
+	if wget -qO- http://127.0.0.1:9090/version >/dev/null 2>&1; then
+		echo "   Clash API поднялся после рестарта"
+		break
+	fi
+	i=$((i + 1))
+	sleep 1
+done
+[ $i -lt 30 ] || fail "сервис не поднялся за 30 секунд после рестарта"
+
+echo "7. Применённое правило действительно в рантайме"
+wget -qO- http://127.0.0.1:9090/configs >/dev/null || fail "Clash API не отдаёт конфигурацию"
+grep -q example.com "$CONF" || fail "правило не сохранилось в конфиге"
+
+echo
+echo "Цикл Apply пройден полностью (AC-21)."

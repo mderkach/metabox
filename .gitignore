@@ -7,8 +7,12 @@ coverage
 .omc/
 .vite
 
-# секреты и локальные настройки — держим вне репозитория
-.claude/settings.local.json
+*.local.*
 .env
 .env.*
 !.env.example
+
+# кэши и артефакты сборки, в том числе из devcontainer
+.pnpm-store/
+*.tsbuildinfo
+.devcontainer/.env

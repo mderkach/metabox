@@ -1,0 +1,34 @@
+# Среда разработки: Go + Node. Целевое окружение — отдельный образ, см. target/Dockerfile.
+# Версия Go пиньуется точно: форк sing-box-extended объявляет `go 1.26.4`, ниже не соберётся.
+ARG GO_VERSION=1.26.7
+FROM golang:${GO_VERSION}-trixie
+
+ARG NODE_MAJOR=22
+ARG PNPM_VERSION=10.33.2
+
+# ca-certificates и git нужны go mod; jq и curl — скриптам проверки цикла Apply
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      ca-certificates curl git jq make gnupg \
+ && curl -fsSL https://deb.nodesource.com/setup_${NODE_MAJOR}.x | bash - \
+ && apt-get install -y --no-install-recommends nodejs \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
+
+# Кэш модулей и пакетов переживает пересоздание контейнера через именованные тома
+# Целевая система — OpenWrt на musl. Бинарь, слинкованный с glibc, там просто
+# не запускается («not found» при существующем файле), поэтому cgo выключен:
+# сборка получается статической и переносимой на роутер как есть.
+# store-dir задаётся через npm_config_* — переменную PNPM_STORE_DIR pnpm не читает
+# и молча кладёт store в корень workspace (278 МБ прямо в репозиторий).
+ENV CGO_ENABLED=0 \
+    GOMODCACHE=/cache/go/mod \
+    GOCACHE=/cache/go/build \
+    npm_config_store_dir=/cache/pnpm \
+    # Без TTY pnpm отказывается сам подчищать node_modules при смене store
+    # (ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY) — в контейнере подтверждать некому.
+    npm_config_confirm_modules_purge=false
+RUN mkdir -p /cache/go/mod /cache/go/build /cache/pnpm
+
+WORKDIR /workspace

@@ -2,7 +2,7 @@ BIN     := dist/metaboxd
 VERSION ?= dev
 LDFLAGS := -s -w -X metabox/internal/version.Version=$(VERSION)
 
-.PHONY: all schema web daemon dev test clean
+.PHONY: all schema web daemon dev test clean up down sh target-sh apply-check
 
 all: daemon
 
@@ -25,6 +25,30 @@ dev:
 test:
 	go test ./...
 	pnpm -C web test
+
+# --- devcontainer -----------------------------------------------------------
+# Стенд: dev (Go + Node) и target (OpenWrt с procd и sing-box-extended).
+
+DC := docker compose -f .devcontainer/docker-compose.yml
+
+# Поднять стенд целиком: фронт с HMR, демон и целевое окружение (AC-20)
+up:
+	$(DC) up -d
+
+down:
+	$(DC) down
+
+# Шелл в среде разработки
+sh:
+	$(DC) exec dev bash
+
+# Шелл в целевом окружении
+target-sh:
+	$(DC) exec target sh
+
+# Полный цикл Apply на целевом окружении: check → запись → restart → healthcheck (AC-21)
+apply-check:
+	$(DC) exec -T target sh /usr/bin/apply-cycle-check
 
 clean:
 	rm -rf dist web/dist

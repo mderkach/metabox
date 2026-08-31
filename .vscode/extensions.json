@@ -3,7 +3,8 @@
     "oxc.oxc-vscode",
     "bradlc.vscode-tailwindcss",
     "wayou.vscode-todo-highlight",
-    "gruntfuggly.todo-tree"
+    "gruntfuggly.todo-tree",
+    "github.vscode-github-actions"
   ],
   "unwantedRecommendations": [
     "esbenp.prettier-vscode",
