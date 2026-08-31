@@ -24,6 +24,7 @@ dev:
 
 test:
 	go test ./...
+	pnpm -C web test
 
 clean:
 	rm -rf dist web/dist

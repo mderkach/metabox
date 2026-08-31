@@ -1,0 +1,136 @@
+# Формы и валидация
+
+React Hook Form + Zod через `@hookform/resolvers`. Неконтролируемые поля выбраны ради числа рендеров: конфиг на 500 правил контролируемым состоянием не тянется.
+
+## Требования
+
+1. У каждой формы есть **модель** — тип, выведенный из Zod-схемы.
+2. Составная форма оборачивается в `FormProvider`; дочерние компоненты берут методы из `useFormContext<FormModel>()` — **с дженериком**, иначе типизация теряется.
+3. Поля регистрируются через `<Controller />` — примитивы shadcn/Base UI не пробрасывают `ref` в нативный input единообразно.
+4. Форма разбивается на подкомпоненты, но с оглядкой на раздел «Производительность» ниже.
+
+```tsx
+interface FormModel extends z.infer<typeof RuleFormSchema> {}
+
+function RuleForm() {
+  const form = useForm<FormModel>({
+    defaultValues: { domain: "", outbound: "" },
+    mode: "onChange",
+    resolver: zodResolver(RuleFormSchema),
+  })
+
+  return (
+    <FormProvider {...form}>
+      <RuleDomainField />
+    </FormProvider>
+  )
+}
+
+function RuleDomainField() {
+  const { control } = useFormContext<FormModel>()
+
+  return (
+    <Controller
+      control={control}
+      name="domain"
+      render={({ field }) => <Input {...field} />}
+    />
+  )
+}
+```
+
+## Ограничения RHF, важные для проекта
+
+Зафиксировано в [PRD, A.10](../../docs/PRD.md):
+
+- **Имена полей — только точечная нотация**: `outbounds.2.uuid`. Скобочный синтаксис не поддерживается; авторендерер печатает пути точками.
+- **Форма типизируется против типа узла**, а не всего конфига. `Path<T>` по union из 57 веток разложит компилятор. Именно поэтому документ живёт в Zustand, а форма открывается на одном узле — `VLESSOutboundOptions`, не `ConfigModel`.
+- Для авторендерера типобезопасности путей нет: там строка и приведение типа. Каст сопровождается комментарием, это единственное разрешённое место.
+
+## Производительность
+
+RHF быстрый, но работает через React Context, и у этого есть [известные грабли](https://react-hook-form.com/faqs#Howtoworkwithmodalortabforms).
+
+### Условный рендеринг
+
+Монтирование поля вызывает `register`, то есть изменение формы — ререндер и валидацию. Варианты:
+
+- прятать блок средствами CSS вместо размонтирования;
+- давать каждому шагу собственную форму, сохраняя данные в стор при анмаунте;
+- осознанно принять просадку, если форма маленькая.
+
+### Внешний контекст поверх формы
+
+Изменение внешнего React-контекста над `FormProvider` вызывает рендер контролируемых полей и может дать неожиданные сайд-эффекты. Если данные нужны глубоко внутри — пробрасываем их через `context` самой формы:
+
+```tsx
+const form = useForm<FormModel, StepContext>({
+  defaultValues: { name: "" },
+  context: stepContext,
+})
+
+// внутри
+const {
+  control,
+  control: {
+    _options: { context },
+  },
+} = useFormContext<FormModel, StepContext>()
+```
+
+Это обращение к внутреннему полю RHF — компромисс, применять точечно и с комментарием.
+
+## Zod
+
+### Общие правила
+
+- Схема — `z.object({ ... })`, поля аннотируются JSDoc: аннотации видны в подсказках IDE и в авторендерере.
+- Тип извлекается через `z.infer`, руками не дублируется.
+- Расширение схемы — `.extend()`, а не копипаста полей.
+- Внешний тип, который дорого переводить на `z.infer` — `z.custom<T>()`.
+
+```ts
+export const RuleFormSchema = z.object({
+  /** Домен или суффикс домена, на который срабатывает правило */
+  domain: z.string().min(1, "field.required"),
+  /** Тег outbound'а, в который уходит трафик */
+  outbound: z.string().min(1, "field.required"),
+})
+
+export type RuleFormModel = z.infer<typeof RuleFormSchema>
+```
+
+### Генерируемые схемы неприкосновенны
+
+`src/schema.generated.ts` пишет `tools/schemagen`. Правила:
+
+- файл не редактируется руками — правится генератор;
+- генерируемые схемы обязаны оставаться представимыми для `z.toJSONSchema()`, поэтому **никаких `.transform()` внутри них** (PRD, A.2.1) — авторендерер строит поля из JSON Schema, а `transform` в неё не переводится;
+- всё, что нужно преобразовать, преобразуется в `src/adapters/` или в отдельной схеме-адаптере формы, но не в генерируемом файле.
+
+### Адаптер: когда UI не совпадает с DTO
+
+Форма нередко удобнее пользователю в одном виде, а серверу нужна другая структура. Разводим их на две схемы и склеиваем `.transform()` — в **рукописной** схеме, не в генерируемой.
+
+```ts
+// то, чем удобно управлять в UI
+const RuleFormSchema = z.object({
+  matchKind: z.enum(["domain", "domainSuffix", "ipCidr"]),
+  value: z.string(),
+  outbound: z.string(),
+})
+
+// то, что уходит в конфиг
+const RuleAdapterSchema = RuleFormSchema.transform((data) => ({
+  ...(data.matchKind === "domain" && { domain: [data.value] }),
+  ...(data.matchKind === "domainSuffix" && { domain_suffix: [data.value] }),
+  ...(data.matchKind === "ipCidr" && { ip_cidr: [data.value] }),
+  outbound: data.outbound,
+}))
+```
+
+Форма принимает данные по `RuleFormSchema`, валидируется по `RuleAdapterSchema`, а на выходе `handleSubmit` отдаёт уже готовую к записи структуру — мапить снаружи не нужно.
+
+### Валидация вне формы
+
+Не всякая проверка живёт в схеме. Если валидность определяет сервер — например, `sing-box check` для целого конфига, — ответственность за это несёт вызывающий код, а из схемы проверка убирается. Смешивать синхронную схему и серверный вердикт в одном резолвере не нужно.

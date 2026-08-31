@@ -6,3 +6,9 @@ coverage
 .DS_Store
 .omc/
 .vite
+
+# секреты и локальные настройки — держим вне репозитория
+.claude/settings.local.json
+.env
+.env.*
+!.env.example
