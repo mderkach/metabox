@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "enableAllProjectMcpServers": true,
+  "permissions": {
+    "deny": [
+      "Read(./.claude/settings.local.json)",
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Edit(./.claude/settings.local.json)",
+      "Edit(./.env)",
+      "Edit(./.env.*)",
+      "Edit(./web/src/schema.generated.ts)",
+      "Edit(./web/pnpm-lock.yaml)",
+      "Edit(./dist/**)",
+      "Edit(./web/dist/**)"
+    ],
+    "allow": [
+      "Bash(make test)",
+      "Bash(make daemon)",
+      "Bash(make web)",
+      "Bash(make schema)",
+      "Bash(make up)",
+      "Bash(make down)",
+      "Bash(make apply-check)",
+      "Bash(go build:*)",
+      "Bash(go test:*)",
+      "Bash(go vet:*)",
+      "Bash(gofmt:*)",
+      "Bash(pnpm -C web lint:*)",
+      "Bash(pnpm -C web lint:fix:*)",
+      "Bash(pnpm -C web format:*)",
+      "Bash(pnpm -C web test:*)",
+      "Bash(pnpm -C web build:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+      "Bash(docker compose ps:*)",
+      "Bash(docker compose logs:*)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__query-docs"
+    ]
+  }
+}
