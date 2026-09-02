@@ -2,7 +2,7 @@ BIN     := dist/metaboxd
 VERSION ?= dev
 LDFLAGS := -s -w -X metabox/internal/version.Version=$(VERSION)
 
-.PHONY: all schema web daemon dev test clean up down sh target-sh apply-check
+.PHONY: all schema web daemon dev test hooks clean up down sh target-sh apply-check
 
 all: daemon
 
@@ -11,10 +11,8 @@ schema:
 	cd tools/schemagen && go run . -out ../../web/src/schema.generated.ts
 
 # Build the SPA into web/dist.
-# Команды идут через `cd web`, а не `pnpm -C web`: corepack берёт версию pnpm
-# из `packageManager` только в каталоге с package.json.
 web:
-	cd web && pnpm build
+	pnpm --filter web build
 
 # Build the daemon; the SPA is built first because it gets embedded.
 daemon: web
@@ -22,11 +20,15 @@ daemon: web
 
 # Run the SPA dev server.
 dev:
-	cd web && pnpm dev
+	pnpm --filter web dev
 
 test:
 	go test ./...
-	cd web && pnpm test
+	pnpm --filter web test
+
+# Git-хуки: их же ставит `pnpm install` через скрипт prepare.
+hooks:
+	pnpm exec lefthook install
 
 # --- devcontainer -----------------------------------------------------------
 # Стенд: dev (Go + Node) и target (OpenWrt с procd и sing-box-extended).

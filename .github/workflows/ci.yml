@@ -10,6 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          # commitlint проверяет весь диапазон коммитов PR — нужна история
+          fetch-depth: 0
 
       - uses: actions/setup-go@v6
         with:
@@ -17,17 +20,14 @@ jobs:
           go-version: "1.26.7"
 
       - uses: pnpm/action-setup@v4
-        with:
-          # Версия pnpm берётся из `packageManager` в web/package.json
-          package_json_file: web/package.json
 
       - uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
           cache: pnpm
-          cache-dependency-path: web/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
-      - run: pnpm -C web install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile
 
       - name: Go vet (оба модуля)
         run: |
@@ -35,11 +35,18 @@ jobs:
           cd tools/schemagen && go vet ./...
 
       - run: go test ./...
-      - run: pnpm -C web lint
-      - run: pnpm -C web lint:deps
-      - run: pnpm -C web format:check
-      - run: pnpm -C web test
-      - run: pnpm -C web build
+      - name: Сообщения коммитов
+        if: github.event_name == 'pull_request'
+        run: >
+          pnpm exec commitlint --config commitlint.config.mjs
+          --from ${{ github.event.pull_request.base.sha }}
+          --to ${{ github.event.pull_request.head.sha }}
+
+      - run: pnpm --filter web lint
+      - run: pnpm lint:deps
+      - run: pnpm --filter web format:check
+      - run: pnpm --filter web test
+      - run: pnpm --filter web build
 
   # AC-22: интеграционный прогон на том же образе целевого окружения,
   # что и в devcontainer. Отличаются только архитектура и тег rootfs.

@@ -200,13 +200,13 @@ Tailwind v4, вход — `src/app/styles/index.css`: глобальные ст�
 
 ## Инструменты
 
-| Что                 | Чем                           | Команда                 |
-| ------------------- | ----------------------------- | ----------------------- |
-| Линт                | oxlint                        | `pnpm -C web lint`      |
-| Формат              | oxfmt                         | `pnpm -C web format`    |
-| Типы                | tsc                           | `pnpm -C web build`     |
-| Тесты               | Vitest                        | `pnpm -C web test`      |
-| Версии зависимостей | `tools/checkExactVersions.js` | `pnpm -C web lint:deps` |
+| Что                 | Чем                           | Команда                    |
+| ------------------- | ----------------------------- | -------------------------- |
+| Линт                | oxlint                        | `pnpm --filter web lint`   |
+| Формат              | oxfmt                         | `pnpm --filter web format` |
+| Типы                | tsc                           | `pnpm --filter web build`  |
+| Тесты               | Vitest                        | `pnpm --filter web test`   |
+| Версии зависимостей | `tools/checkExactVersions.js` | `pnpm lint:deps`           |
 
 Форматирование не обсуждается и не правится руками — конфиг в `web/.oxfmtrc.json`. В VS Code формат и автофиксы работают на сохранении: `.vscode/settings.json` назначает `oxc.oxc-vscode` форматтером для TS/JS, JSON, CSS и Markdown, иначе встроенные форматтеры разойдутся с `format:check`. Конфиги лежат в `web/`, расширение находит их по близости к файлу.
 

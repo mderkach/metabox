@@ -4,7 +4,7 @@
   "service": "dev",
   "workspaceFolder": "/workspace",
   "runServices": ["dev", "target"],
-  "postCreateCommand": "pnpm -C web install --frozen-lockfile",
+  "postCreateCommand": "pnpm install --frozen-lockfile",
   "forwardPorts": [5173, 8080, 9090],
   "portsAttributes": {
     "5173": { "label": "Vite HMR" },

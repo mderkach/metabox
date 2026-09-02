@@ -1,0 +1,44 @@
+# Хуки ставятся при `pnpm install` (скрипт prepare) или командой `make hooks`.
+# Проверки те же, что в CI: локально они должны падать раньше пайплайна.
+
+pre-commit:
+  parallel: true
+  jobs:
+    - name: go-fmt
+      glob: "*.go"
+      run: gofmt -l {staged_files}
+      fail_text: Не отформатировано, прогони gofmt -w
+
+    - name: go-vet
+      glob: "*.go"
+      run: go vet ./... && cd tools/schemagen && go vet ./...
+
+    - name: generated-schema
+      glob: "web/src/schema.generated.ts"
+      run: exit 1
+      fail_text: Файл собирает `make schema`, руками не правится
+
+    - name: fe-lint
+      glob: "web/**/*.{ts,tsx,js,mjs}"
+      run: pnpm --filter web lint
+
+    - name: fe-format
+      glob: "web/**/*.{ts,tsx,js,mjs,json,css,md}"
+      run: pnpm --filter web format:check
+
+    - name: deps
+      glob: "{package.json,web/package.json}"
+      run: pnpm lint:deps
+
+commit-msg:
+  jobs:
+    - name: commitlint
+      run: node_modules/.bin/commitlint --config commitlint.config.mjs --edit {1}
+
+pre-push:
+  jobs:
+    - name: tests
+      run: make test
+
+    - name: types
+      run: pnpm --filter web build

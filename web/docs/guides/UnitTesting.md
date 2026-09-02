@@ -121,8 +121,8 @@ export function renderWithQuery(ui: ReactElement) {
 ## Команды
 
 ```bash
-pnpm -C web test              # прогон
-pnpm -C web test:watch        # watch
-pnpm -C web test -- Rule      # по подстроке пути
+pnpm --filter web test           # прогон
+pnpm --filter web test:watch     # watch
+pnpm --filter web test -- Rule   # по подстроке пути
 make test                     # Go + фронт
 ```
