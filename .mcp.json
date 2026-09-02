@@ -2,11 +2,7 @@
   "mcpServers": {
     "playwright": {
       "command": "playwright-mcp",
-      "args": [
-        "--browser",
-        "chromium",
-        "--no-sandbox"
-      ]
+      "args": ["--browser", "chromium", "--no-sandbox"]
     },
     "context7": {
       "type": "http",

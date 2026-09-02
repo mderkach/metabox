@@ -1,8 +1,10 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "extends": ["../.oxlintrc.json"],
   "plugins": ["react", "typescript", "oxc", "unicorn", "import", "vitest"],
   "jsPlugins": [
     "./tools/fsdBoundaries.js",
+    "./tools/projectRules.js",
     {
       "name": "query",
       "specifier": "@tanstack/eslint-plugin-query"
@@ -34,7 +36,6 @@
   },
   "ignorePatterns": ["dist", "src/schema.generated.ts"],
   "rules": {
-    "import/no-default-export": "error",
     "react/rules-of-hooks": "error",
     "react/exhaustive-deps": "error",
     "react/no-unstable-nested-components": "error",
@@ -62,39 +63,6 @@
         }
       }
     ],
-    "typescript/no-explicit-any": "error",
-    "typescript/ban-ts-comment": [
-      "error",
-      {
-        "ts-expect-error": "allow-with-description",
-        "ts-ignore": true,
-        "ts-nocheck": true,
-        "ts-check": false,
-        "minimumDescriptionLength": 10
-      }
-    ],
-    "unicorn/no-abusive-eslint-disable": "error",
-    "no-nested-ternary": "error",
-    "no-magic-numbers": [
-      "error",
-      {
-        "ignore": [-1, 0, 1],
-        "ignoreArrayIndexes": true,
-        "ignoreDefaultValues": true,
-        "ignoreEnums": true,
-        "ignoreTypeIndexes": true,
-        "enforceConst": true
-      }
-    ],
-    "unicorn/filename-case": [
-      "error",
-      {
-        "cases": {
-          "pascalCase": true,
-          "camelCase": true
-        }
-      }
-    ],
     "vitest/no-focused-tests": "error",
     "vitest/no-disabled-tests": "error",
     "vitest/expect-expect": "error",
@@ -106,6 +74,7 @@
       }
     ],
     "fsd/boundaries": "error",
+    "project/no-query-destructuring": "error",
     "query/exhaustive-deps": "error",
     "query/no-rest-destructuring": "error",
     "query/stable-query-client": "error",
@@ -221,13 +190,6 @@
         "typescript/no-unsafe-type-assertion": "off",
         "typescript/no-unnecessary-condition": "off",
         "typescript/promise-function-async": "off"
-      }
-    },
-    {
-      "files": ["*.config.ts", "*.config.js"],
-      "rules": {
-        "import/no-default-export": "off",
-        "unicorn/filename-case": "off"
       }
     },
     {

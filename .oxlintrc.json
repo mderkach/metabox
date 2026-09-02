@@ -1,0 +1,54 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["unicorn", "oxc", "import", "node", "typescript"],
+  "env": {
+    "node": true,
+    "es2024": true
+  },
+  "rules": {
+    "import/no-default-export": "error",
+    "no-nested-ternary": "error",
+    "no-magic-numbers": [
+      "error",
+      {
+        "ignore": [-1, 0, 1],
+        "ignoreArrayIndexes": true,
+        "ignoreDefaultValues": true,
+        "ignoreEnums": true,
+        "ignoreTypeIndexes": true,
+        "enforceConst": true
+      }
+    ],
+    "unicorn/filename-case": [
+      "error",
+      {
+        "cases": {
+          "camelCase": true,
+          "pascalCase": true
+        }
+      }
+    ],
+    "unicorn/no-abusive-eslint-disable": "error",
+    "typescript/no-explicit-any": "error",
+    "typescript/ban-ts-comment": [
+      "error",
+      {
+        "ts-expect-error": "allow-with-description",
+        "ts-ignore": true,
+        "ts-nocheck": true,
+        "ts-check": false,
+        "minimumDescriptionLength": 10
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["*.config.mjs", "*.config.js", "*.config.ts"],
+      "rules": {
+        "import/no-default-export": "off",
+        "unicorn/filename-case": "off",
+        "no-magic-numbers": "off"
+      }
+    }
+  ]
+}

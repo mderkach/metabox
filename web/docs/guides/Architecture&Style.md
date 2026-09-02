@@ -100,7 +100,7 @@ export * from "./ui"
 
 ### Импорты
 
-Порядок: внешние библиотеки → внутренние модули → стили. Порядок групп и сортировка внутри них — на `oxfmt` (`sortImports` в `web/.oxfmtrc.json`) — руками не выравнивать.
+Порядок: внешние библиотеки → внутренние модули → стили. Порядок групп и сортировка внутри них — на `oxfmt` (`sortImports` в корневом `.oxfmtrc.json`) — руками не выравнивать.
 
 Алиас слоя — это вход снаружи. Внутри своего слоя и слайса ходим относительными путями: так [требует FSD](https://feature-sliced.design/docs/reference/public-api) и так модуль не тянет сам себя через собственный баррель.
 
@@ -200,15 +200,15 @@ Tailwind v4, вход — `src/app/styles/index.css`: глобальные ст�
 
 ## Инструменты
 
-| Что                 | Чем                           | Команда                    |
-| ------------------- | ----------------------------- | -------------------------- |
-| Линт                | oxlint                        | `pnpm --filter web lint`   |
-| Формат              | oxfmt                         | `pnpm --filter web format` |
-| Типы                | tsc                           | `pnpm --filter web build`  |
-| Тесты               | Vitest                        | `pnpm --filter web test`   |
-| Версии зависимостей | `tools/checkExactVersions.js` | `pnpm lint:deps`           |
+| Что                 | Чем                           | Команда                   |
+| ------------------- | ----------------------------- | ------------------------- |
+| Линт                | oxlint                        | `pnpm --filter web lint`  |
+| Формат              | oxfmt                         | `pnpm format` (весь репо) |
+| Типы                | tsc                           | `pnpm --filter web build` |
+| Тесты               | Vitest                        | `pnpm --filter web test`  |
+| Версии зависимостей | `tools/checkExactVersions.js` | `pnpm lint:deps`          |
 
-Форматирование не обсуждается и не правится руками — конфиг в `web/.oxfmtrc.json`. В VS Code формат и автофиксы работают на сохранении: `.vscode/settings.json` назначает `oxc.oxc-vscode` форматтером для TS/JS, JSON, CSS и Markdown, иначе встроенные форматтеры разойдутся с `format:check`. Конфиги лежат в `web/`, расширение находит их по близости к файлу.
+Форматирование не обсуждается и не правится руками. Конфиг один на репозиторий — `.oxfmtrc.json` в корне; настройки фронта (порядок импортов, сортировка классов Tailwind) лежат там в override для `web/**`. Линт устроен так же: `web/.oxlintrc.json` расширяет корневой через `extends`, общие правила JS живут в корне. В VS Code формат и автофиксы работают на сохранении: `.vscode/settings.json` назначает `oxc.oxc-vscode` форматтером для TS/JS, JSON, CSS и Markdown, иначе встроенные форматтеры разойдутся с `format:check`.
 
 Линт типозависимый: `strict` в обоих tsconfig и `options.typeAware` в `.oxlintrc.json` (нужен пакет `oxlint-tsgolint`). Через `jsPlugins` подключены ESLint-плагины для TanStack Query, Testing Library, jest-dom, Tailwind и `check-file`, а границы FSD проверяет локальный `fsd/boundaries` — `web/tools/fsdBoundaries.js`: он знает слой и слайс файла, поэтому ловит импорт вверх по слоям, соседний слайс мимо `@x`, обход Public API и относительный путь за пределами слайса. Перечень правил и исключений — в самом конфиге, здесь не дублируется; риски `jsPlugins` — в [`docs/TechDebt.md`](../../../docs/TechDebt.md).
 

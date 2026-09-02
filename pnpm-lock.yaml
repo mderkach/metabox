@@ -4,6 +4,15 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+catalogs:
+  default:
+    oxfmt:
+      specifier: 0.65.0
+      version: 0.65.0
+    oxlint:
+      specifier: 1.80.0
+      version: 1.80.0
+
 importers:
 
   .:
@@ -17,6 +26,12 @@ importers:
       lefthook:
         specifier: 2.1.12
         version: 2.1.12
+      oxfmt:
+        specifier: 'catalog:'
+        version: 0.65.0
+      oxlint:
+        specifier: 'catalog:'
+        version: 1.80.0(oxlint-tsgolint@7.0.2001)
 
   web:
     dependencies:
@@ -103,10 +118,10 @@ importers:
         specifier: 30.0.1
         version: 30.0.1
       oxfmt:
-        specifier: 0.65.0
+        specifier: 'catalog:'
         version: 0.65.0
       oxlint:
-        specifier: 1.80.0
+        specifier: 'catalog:'
         version: 1.80.0(oxlint-tsgolint@7.0.2001)
       oxlint-tsgolint:
         specifier: 7.0.2001

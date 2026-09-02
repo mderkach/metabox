@@ -1,0 +1,46 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "printWidth": 80,
+  "semi": false,
+  "trailingComma": "es5",
+  "ignorePatterns": [
+    "dist",
+    "web/dist",
+    "web/src/schema.generated.ts",
+    ".claude",
+    ".omc",
+    ".devcontainer/target"
+  ],
+  "overrides": [
+    {
+      "files": ["web/**"],
+      "options": {
+        "sortImports": {
+          "groups": [
+            "builtin",
+            "external",
+            ["internal", "subpath"],
+            ["parent", "sibling", "index"],
+            "style",
+            "unknown"
+          ],
+          "internalPattern": [
+            "@app/",
+            "@pages/",
+            "@widgets/",
+            "@features/",
+            "@entities/",
+            "@shared/",
+            "@adapters/",
+            "@schema"
+          ],
+          "newlinesBetween": true
+        },
+        "sortTailwindcss": {
+          "stylesheet": "./web/src/app/styles/index.css",
+          "functions": ["cn", "cva"]
+        }
+      }
+    }
+  ]
+}

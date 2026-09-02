@@ -18,16 +18,20 @@ pre-commit:
       run: exit 1
       fail_text: Файл собирает `make schema`, руками не правится
 
-    - name: fe-lint
+    - name: lint-root
+      glob: "{tools/**/*.js,*.mjs}"
+      run: pnpm lint
+
+    - name: lint-fe
       glob: "web/**/*.{ts,tsx,js,mjs}"
       run: pnpm --filter web lint
 
-    - name: fe-format
-      glob: "web/**/*.{ts,tsx,js,mjs,json,css,md}"
-      run: pnpm --filter web format:check
+    - name: format
+      glob: "*.{ts,tsx,js,mjs,json,css,md,yml,yaml}"
+      run: pnpm format:check
 
     - name: deps
-      glob: "{package.json,web/package.json}"
+      glob: "{package.json,web/package.json,pnpm-workspace.yaml}"
       run: pnpm lint:deps
 
 commit-msg:
