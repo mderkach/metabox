@@ -3,9 +3,29 @@
   "printWidth": 80,
   "semi": false,
   "trailingComma": "es5",
-  "sortImports": true,
+  "sortImports": {
+    "groups": [
+      "builtin",
+      "external",
+      ["internal", "subpath"],
+      ["parent", "sibling", "index"],
+      "style",
+      "unknown"
+    ],
+    "internalPattern": [
+      "@app/",
+      "@pages/",
+      "@widgets/",
+      "@features/",
+      "@entities/",
+      "@shared/",
+      "@adapters/",
+      "@schema"
+    ],
+    "newlinesBetween": true
+  },
   "sortTailwindcss": {
-    "stylesheet": "./src/index.css",
+    "stylesheet": "./src/app/styles/index.css",
     "functions": ["cn", "cva"]
   },
   "ignorePatterns": ["dist", "src/schema.generated.ts"]

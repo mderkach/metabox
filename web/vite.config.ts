@@ -4,12 +4,29 @@ import tailwindcss from "@tailwindcss/vite"
 import react from "@vitejs/plugin-react"
 import { defineConfig } from "vitest/config"
 
+// Слои FSD; тот же список — в `paths` обоих tsconfig.
+const LAYERS = [
+  "app",
+  "pages",
+  "widgets",
+  "features",
+  "entities",
+  "shared",
+  "adapters",
+]
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      "@": path.resolve(import.meta.dirname, "./src"),
+      ...Object.fromEntries(
+        LAYERS.map((layer) => [
+          `@${layer}`,
+          path.resolve(import.meta.dirname, `./src/${layer}`),
+        ])
+      ),
+      "@schema": path.resolve(import.meta.dirname, "./src/schema.generated.ts"),
     },
   },
   server: {

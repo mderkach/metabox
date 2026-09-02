@@ -1,6 +1,6 @@
 # Управление состоянием
 
-Zustand + immer. Обоснование выбора — [PRD, A.10](../../docs/PRD.md): документ конфига это не форма, у него нет submit-семантики, зато есть черновик, история и диф.
+Zustand + immer. Почему документ конфига живёт в сторе, а не в форме или в кэше Query — [PRD, A.10](../../../docs/PRD.md).
 
 ## Зона ответственности
 
@@ -35,7 +35,7 @@ Zustand + immer. Обоснование выбора — [PRD, A.10](../../docs/
 ### Создание
 
 ```ts
-import { stateCreator, createReactSelectors } from "@/shared/lib/state"
+import { stateCreator, createReactSelectors } from "@shared/lib/state"
 
 interface ConfigDocumentState {
   draft: ConfigModel | null

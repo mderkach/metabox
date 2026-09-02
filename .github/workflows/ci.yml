@@ -18,11 +18,12 @@ jobs:
 
       - uses: pnpm/action-setup@v4
         with:
-          version: 10.33.2
+          # Версия pnpm берётся из `packageManager` в web/package.json
+          package_json_file: web/package.json
 
       - uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: pnpm
           cache-dependency-path: web/pnpm-lock.yaml
 
@@ -35,6 +36,7 @@ jobs:
 
       - run: go test ./...
       - run: pnpm -C web lint
+      - run: pnpm -C web lint:deps
       - run: pnpm -C web format:check
       - run: pnpm -C web test
       - run: pnpm -C web build

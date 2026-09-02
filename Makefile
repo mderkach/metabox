@@ -11,8 +11,10 @@ schema:
 	cd tools/schemagen && go run . -out ../../web/src/schema.generated.ts
 
 # Build the SPA into web/dist.
+# Команды идут через `cd web`, а не `pnpm -C web`: corepack берёт версию pnpm
+# из `packageManager` только в каталоге с package.json.
 web:
-	pnpm -C web build
+	cd web && pnpm build
 
 # Build the daemon; the SPA is built first because it gets embedded.
 daemon: web
@@ -20,11 +22,11 @@ daemon: web
 
 # Run the SPA dev server.
 dev:
-	pnpm -C web dev
+	cd web && pnpm dev
 
 test:
 	go test ./...
-	pnpm -C web test
+	cd web && pnpm test
 
 # --- devcontainer -----------------------------------------------------------
 # Стенд: dev (Go + Node) и target (OpenWrt с procd и sing-box-extended).

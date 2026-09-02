@@ -41,7 +41,7 @@ function RuleDomainField() {
 
 ## Ограничения RHF, важные для проекта
 
-Зафиксировано в [PRD, A.10](../../docs/PRD.md):
+Зафиксировано в [PRD, A.10](../../../docs/PRD.md):
 
 - **Имена полей — только точечная нотация**: `outbounds.2.uuid`. Скобочный синтаксис не поддерживается; авторендерер печатает пути точками.
 - **Форма типизируется против типа узла**, а не всего конфига. `Path<T>` по union из 57 веток разложит компилятор. Именно поэтому документ живёт в Zustand, а форма открывается на одном узле — `VLESSOutboundOptions`, не `ConfigModel`.
@@ -49,7 +49,7 @@ function RuleDomainField() {
 
 ## Производительность
 
-RHF быстрый, но работает через React Context, и у этого есть [известные грабли](https://react-hook-form.com/faqs#Howtoworkwithmodalortabforms).
+RHF работает через React Context — отсюда [известные грабли](https://react-hook-form.com/faqs#Howtoworkwithmodalortabforms).
 
 ### Условный рендеринг
 

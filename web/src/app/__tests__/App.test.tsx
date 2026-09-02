@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react"
 import { expect, test } from "vitest"
 
-import App from "./App"
+import { App } from "../ui/App"
 
 test("рендерит карточку-заглушку", () => {
   render(<App />)
