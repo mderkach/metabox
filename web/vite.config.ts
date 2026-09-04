@@ -19,15 +19,12 @@ const LAYERS = [
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
-    alias: {
-      ...Object.fromEntries(
-        LAYERS.map((layer) => [
-          `@${layer}`,
-          path.resolve(import.meta.dirname, `./src/${layer}`),
-        ])
-      ),
-      "@schema": path.resolve(import.meta.dirname, "./src/schema.generated.ts"),
-    },
+    alias: Object.fromEntries(
+      LAYERS.map((layer) => [
+        `@${layer}`,
+        path.resolve(import.meta.dirname, `./src/${layer}`),
+      ])
+    ),
   },
   server: {
     // В контейнере слушать loopback бесполезно — снаружи порт не виден.

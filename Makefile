@@ -6,9 +6,10 @@ LDFLAGS := -s -w -X metabox/internal/version.Version=$(VERSION)
 
 all: daemon
 
-# Regenerate web/src/schema.generated.ts from sing-box-extended.
+# Regenerate web/src/shared/api/generated.ts from sing-box-extended.
 schema:
-	cd tools/schemagen && go run . -out ../../web/src/schema.generated.ts
+	mkdir -p web/src/shared/api
+	cd tools/schemagen && go run . -out ../../web/src/shared/api/generated.ts
 
 # Build the SPA into web/dist.
 web:

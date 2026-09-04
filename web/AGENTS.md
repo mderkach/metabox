@@ -5,5 +5,5 @@
 Документы и условия, при которых их читают полностью, — в [`docs/README.md`](./docs/README.md) и в таблице корневого `AGENTS.md`.
 
 - `src/shared/ui/**` — вендорная зона shadcn/ui: файлы генерирует CLI, правила нейминга к ним не применяются, переименовывать нельзя. Наружу зона видна через `src/shared/ui/index.ts`.
-- `src/schema.generated.ts` — артефакт `tools/schemagen`, руками не правится.
+- `src/shared/api/generated.ts` — артефакт `tools/schemagen`, руками не правится.
 - Форматирование и линт — `pnpm format`, `pnpm lint`. Руками стиль не выравнивать.

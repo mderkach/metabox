@@ -14,7 +14,7 @@ pre-commit:
       run: go vet ./... && cd tools/schemagen && go vet ./...
 
     - name: generated-schema
-      glob: "web/src/schema.generated.ts"
+      glob: "web/src/shared/api/generated.ts"
       run: exit 1
       fail_text: Файл собирает `make schema`, руками не правится
 

@@ -102,7 +102,7 @@ export type RuleFormModel = z.infer<typeof RuleFormSchema>
 
 ### Генерируемые схемы неприкосновенны
 
-`src/schema.generated.ts` пишет `tools/schemagen`. Правила:
+`src/shared/api/generated.ts` пишет `tools/schemagen`. Правила:
 
 - файл не редактируется руками — правится генератор;
 - генерируемые схемы обязаны оставаться представимыми для `z.toJSONSchema()`, поэтому **никаких `.transform()` внутри них** (PRD, A.2.1) — авторендерер строит поля из JSON Schema, а `transform` в неё не переводится;

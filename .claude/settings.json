@@ -9,7 +9,7 @@
       "Edit(./.claude/settings.local.json)",
       "Edit(./.env)",
       "Edit(./.env.*)",
-      "Edit(./web/src/schema.generated.ts)",
+      "Edit(./web/src/shared/api/generated.ts)",
       "Edit(./web/pnpm-lock.yaml)",
       "Edit(./dist/**)",
       "Edit(./web/dist/**)"

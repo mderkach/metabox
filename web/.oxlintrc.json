@@ -34,7 +34,7 @@
   "options": {
     "typeAware": true
   },
-  "ignorePatterns": ["dist", "src/schema.generated.ts"],
+  "ignorePatterns": ["dist", "src/shared/api/generated.ts"],
   "rules": {
     "react/rules-of-hooks": "error",
     "react/exhaustive-deps": "error",

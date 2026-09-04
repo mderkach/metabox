@@ -38,16 +38,16 @@
 
 **Скоупы:**
 
-| Скоуп    | Что затрагивает                                  |
-| -------- | ------------------------------------------------ |
-| `daemon` | `cmd/metaboxd`, `internal/`                      |
-| `schema` | `tools/schemagen`, `web/src/schema.generated.ts` |
-| `fe`     | `web/` кроме генерируемой схемы                  |
-| `docs`   | `docs/`, `web/docs/`, `AGENTS.md`, `README.md`   |
-| `ci`     | `.github/`                                       |
-| `infra`  | `.devcontainer/`, `Makefile`                     |
-| `deps`   | обновление зависимостей и версий тулчейна        |
-| `ai`     | `.claude/`, инструкции и скиллы агентов          |
+| Скоуп    | Что затрагивает                                      |
+| -------- | ---------------------------------------------------- |
+| `daemon` | `cmd/metaboxd`, `internal/`                          |
+| `schema` | `tools/schemagen`, `web/src/shared/api/generated.ts` |
+| `fe`     | `web/` кроме генерируемой схемы                      |
+| `docs`   | `docs/`, `web/docs/`, `AGENTS.md`, `README.md`       |
+| `ci`     | `.github/`                                           |
+| `infra`  | `.devcontainer/`, `Makefile`                         |
+| `deps`   | обновление зависимостей и версий тулчейна            |
+| `ai`     | `.claude/`, инструкции и скиллы агентов              |
 
 Скоуп опускается, только если изменение реально задевает весь репозиторий. Этот же список уходит в `scope-enum`, когда подключим линтер коммитов.
 
@@ -70,7 +70,7 @@ refactor(schema)!: rename generated Outbound fields
 
 ## Что не коммитим
 
-- `web/src/schema.generated.ts` руками — правится генератор, файл пересобирается `make schema`.
+- `web/src/shared/api/generated.ts` руками — правится генератор, файл пересобирается `make schema`.
 - `*.local.*` (`AGENTS.local.md`, `.claude/settings.local.json`) — они в `.gitignore`.
 - `.omc/**` — рабочие заметки агентов; ссылаться на них в коммитах, коде и документации нельзя.
 - Секреты, ключи, дампы конфигов с реальных устройств.
@@ -97,11 +97,11 @@ refactor(schema)!: rename generated Outbound fields
 
 Проверки выше запускает lefthook, ставится один раз: `make hooks` (в devcontainer это делает `postCreateCommand`).
 
-| Хук          | Что делает                                                                                    |
-| ------------ | --------------------------------------------------------------------------------------------- |
-| `pre-commit` | gofmt и go vet, линт/формат/версии фронта, запрет ручной правки `web/src/schema.generated.ts` |
-| `commit-msg` | commitlint по конвенции из этого документа, правила — `commitlint.config.mjs`                 |
-| `pre-push`   | `make test` и сборка фронта с проверкой типов                                                 |
+| Хук          | Что делает                                                                                        |
+| ------------ | ------------------------------------------------------------------------------------------------- |
+| `pre-commit` | gofmt и go vet, линт/формат/версии фронта, запрет ручной правки `web/src/shared/api/generated.ts` |
+| `commit-msg` | commitlint по конвенции из этого документа, правила — `commitlint.config.mjs`                     |
+| `pre-push`   | `make test` и сборка фронта с проверкой типов                                                     |
 
 Джобы отбираются по staged-файлам: правка только в Go не запускает проверки фронта и наоборот. Конфиг — `lefthook.yml` в корне. lefthook и commitlint — devDependencies корневого пакета, ставить отдельно нечего: `pnpm install` подтягивает их и через скрипт `prepare` сам прописывает хуки.
 
@@ -118,7 +118,7 @@ refactor(schema)!: rename generated Outbound fields
 
 **Демон (`cmd/metaboxd`, `internal/`).** Владеет файлами конфига и циклом Apply. Изменения в API или формате хранения — ломающие, требуют футера и правки PRD.
 
-**Схема (`tools/schemagen`).** Генератор — источник, `web/src/schema.generated.ts` — артефакт. Коммит должен содержать и правку генератора, и перегенерированный файл, иначе фронт разъедется со схемой.
+**Схема (`tools/schemagen`).** Генератор — источник, `web/src/shared/api/generated.ts` — артефакт. Коммит должен содержать и правку генератора, и перегенерированный файл, иначе фронт разъедется со схемой.
 
 **Фронт (`web/`).** Перед правкой кода читается документ из таблицы в [`AGENTS.md`](./AGENTS.md); перед сдачей — [чеклист ревью](./web/docs/guides/ReviewChecklist.md). Часть правил проверяет `pnpm lint`, дублировать их в PR-описании не нужно.
 

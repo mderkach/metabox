@@ -458,7 +458,7 @@ cmd/metaboxd/            Go — демон
 internal/                Go
 tools/schemagen/         Go — отдельный модуль, тянет зависимости форка
 web/                     Vite SPA
-  src/schema.generated.ts
+  src/shared/api/generated.ts
   src/adapters/
 docs/
 ```

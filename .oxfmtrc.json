@@ -6,7 +6,7 @@
   "ignorePatterns": [
     "dist",
     "web/dist",
-    "web/src/schema.generated.ts",
+    "web/src/shared/api/generated.ts",
     ".claude",
     ".omc",
     ".devcontainer/target"
@@ -31,8 +31,7 @@
             "@features/",
             "@entities/",
             "@shared/",
-            "@adapters/",
-            "@schema"
+            "@adapters/"
           ],
           "newlinesBetween": true
         },

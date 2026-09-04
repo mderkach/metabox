@@ -16,8 +16,7 @@
       "@features/*": ["./src/features/*"],
       "@entities/*": ["./src/entities/*"],
       "@shared/*": ["./src/shared/*"],
-      "@adapters/*": ["./src/adapters/*"],
-      "@schema": ["./src/schema.generated.ts"]
+      "@adapters/*": ["./src/adapters/*"]
     }
   }
 }
