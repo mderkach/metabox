@@ -12,15 +12,15 @@ Zustand + immer. Почему документ конфига живёт в ст
 4. вычисляемые свойства поверх уже полученных данных;
 5. состояние, которое было бы дорого держать в React Hook Form (см. [Формы](./Form&Validation.md)).
 
-**Стор не управляет HTTP-запросами.** Запрос-ответ — зона TanStack Query. Исключение, зафиксированное в PRD: WebSocket-потоки дашборда (трафик, соединения) идут мимо Query в отдельный стор, потому что кэш поверх потока врёт.
+**Стор не управляет HTTP-запросами.** Запрос-ответ — зона TanStack Query. Исключение, зафиксированное в PRD: WebSocket-потоки идут мимо Query в отдельный стор, потому что кэш поверх потока врёт.
 
 ## Три стора приложения
 
-| Стор                  | Слой                        | Что держит                                                  |
-| --------------------- | --------------------------- | ----------------------------------------------------------- |
-| `ConfigDocumentState` | `entities/Config/model`     | дерево конфига, черновик, dirty-флаги, история, сырые блоки |
-| `RuntimeStreamState`  | `entities/Connection/model` | живой поток соединений и трафика из WebSocket               |
-| локальные             | по месту                    | состояние отдельного виджета, которое незачем поднимать     |
+| Роль стора    | Где живёт                             | Что держит                                                    |
+| ------------- | ------------------------------------- | ------------------------------------------------------------- |
+| документ      | `model` слайса редактируемой сущности | дерево документа, черновик, dirty-флаги, история, сырые блоки |
+| рантайм-поток | `model` слайса потоковой сущности     | снапшоты из WebSocket                                         |
+| локальный     | по месту                              | состояние отдельного виджета, которое незачем поднимать       |
 
 Больше глобальных сторов заводить не нужно. Если состояние нужно двум компонентам одного слайса — это локальный стор слайса, а не глобальный.
 
@@ -37,13 +37,13 @@ Zustand + immer. Почему документ конфига живёт в ст
 ```ts
 import { stateCreator, createReactSelectors } from "@shared/lib/state"
 
-interface ConfigDocumentState {
+interface DocumentState {
   draft: ConfigModel | null
   isDirty: boolean
   setField: (path: string, value: unknown) => void
 }
 
-const ConfigDocumentStateProto = stateCreator<ConfigDocumentState>(
+const DocumentStateProto = stateCreator<DocumentState>(
   (set) => ({
     draft: null,
     isDirty: false,
@@ -56,9 +56,7 @@ const ConfigDocumentStateProto = stateCreator<ConfigDocumentState>(
   "ConfigDocument"
 )
 
-export const ConfigDocumentState = createReactSelectors(
-  ConfigDocumentStateProto
-)
+export const DocumentState = createReactSelectors(DocumentStateProto)
 ```
 
 Нейминг — как у компонентов. Стор с суффиксом `Proto` наружу не уходит; экспортируется результат `createReactSelectors`.
@@ -69,7 +67,7 @@ export const ConfigDocumentState = createReactSelectors(
 
 ```tsx
 function DirtyBadge() {
-  const isDirty = ConfigDocumentState.use.isDirty()
+  const isDirty = DocumentState.use.isDirty()
 
   return isDirty ? <Badge>черновик</Badge> : null
 }
@@ -79,7 +77,7 @@ function DirtyBadge() {
 
 ```tsx
 function ApplyBar() {
-  const { isDirty, draft } = useStore(ConfigDocumentStateProto, (state) => ({
+  const { isDirty, draft } = useStore(DocumentStateProto, (state) => ({
     isDirty: state.isDirty,
     draft: state.draft,
   }))
@@ -92,12 +90,32 @@ function ApplyBar() {
 
 Прямой доступ к состоянию — через `getState()` / `setState()` на `*Proto`. Так работают, например, обработчики WebSocket, живущие вне дерева компонентов.
 
+## Документ конфига
+
+Стор документа держит применённое состояние, черновик, dirty-флаги, историю и карту сырых блоков. Правила:
+
+- Адресация узлов — строковый путь точечной нотацией (`outbounds.2.uuid` — пример): авторендерер строит поля в рантайме и другой адресации не имеет (PRD, A.10). Запись — вспомогательная функция «записать по пути» внутри `set` под immer.
+- **Черновик не добавляет полей.** Значения по умолчанию в дерево не пишутся, очищенное поле удаляется из узла. Иначе диф перед применением покажет правки, которых пользователь не делал (AC-2, UX-6).
+- Нераспознанный узел лежит как есть: путь, исходный JSON, флаг распознавания. Сериализуется обратно без нормализации (AC-3, AC-25).
+- Диф между применённым состоянием и черновиком считается селектором, а не хранится отдельным полем.
+- История версий приходит с сервера через Query; в сторе лежит только выбранная для сравнения версия.
+- Отмена действия — стек патчей immer (`produceWithPatches`), а не копии дерева: копировать большой документ на каждый шаг дорого.
+
+## Поток рантайма
+
+Стор потока принимает снапшоты WebSocket. Ограничения приходят из NFR-2 — тысячи объектов в потоке, без блокировок главного потока дольше 100 мс:
+
+- Снапшоты применяются пачкой по таймеру, а не по каждому сообщению.
+- Хранится кольцевой буфер фиксированной длины; выбывшие объекты из него выпадают, история потока не копится.
+- Объекты потока индексируются `Map` по id, компонент получает срез для виртуализованного списка, а не весь буфер.
+- Агрегация — на стороне сервера (PRD, A.10); в сторе только то, что рисуется.
+
 ## Запрещено
 
 **Подписка на весь стор.** Любое изменение вызовет рендер:
 
 ```tsx
-const state = useStore(ConfigDocumentStateProto, (s) => s) // ❌
+const state = useStore(DocumentStateProto, (s) => s) // ❌
 ```
 
 **Вызов вычисляющего экшена вместо селектора.** Подписка не сработает, ререндера не будет:
@@ -115,7 +133,7 @@ const total = useStore(StateProto, (state) => state.calcTotal())
 
 ## Полезные рецепты zustand
 
-1. [No-action сторы](https://zustand.docs.pmnd.rs/guides/practice-with-no-store-actions)
+1. [No-action сторы](https://zustand.docs.pmnd.rs/guides/practice-with-no-store-actions) — под запись из обработчиков вне React, см. раздел «Вне React»
 2. [Слайсы стора](https://zustand.docs.pmnd.rs/guides/slices-pattern) — под документ конфига, чтобы черновик, история и dirty-tracking были разными файлами
 3. [Map и Set](https://zustand.docs.pmnd.rs/guides/maps-and-sets-usage) — под индекс соединений по id
 4. [Сброс состояния](https://zustand.docs.pmnd.rs/guides/how-to-reset-state) — при смене устройства или перезагрузке конфига
