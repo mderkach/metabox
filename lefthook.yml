@@ -13,10 +13,13 @@ pre-commit:
       glob: "*.go"
       run: go vet ./... && cd tools/schemagen && go vet ./...
 
+    # Артефакт едет в коммите вместе с генератором (CONTRIBUTING.md), иначе
+    # фронт разъезжается со схемой. Правка артефакта в одиночку означает, что
+    # его писали руками.
     - name: generated-schema
       glob: "web/src/shared/api/generated.ts"
-      run: exit 1
-      fail_text: Файл собирает `make schema`, руками не правится
+      run: git diff --cached --name-only | grep -q '^tools/schemagen/'
+      fail_text: Файл собирает `make schema`; коммить его вместе с правкой tools/schemagen
 
     - name: lint-root
       glob: "{tools/**/*.js,*.mjs}"
