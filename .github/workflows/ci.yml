@@ -29,10 +29,10 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Go vet (оба модуля)
-        run: |
-          go vet ./...
-          cd tools/schemagen && go vet ./...
+      # govet входит в набор golangci-lint, отдельный шаг не нужен. Генератор
+      # проверяется с тегами форка, чего `go vet` здесь не делал.
+      - name: Линт Go (оба модуля)
+        run: make lint
 
       - run: go test ./...
       - name: Сообщения коммитов
