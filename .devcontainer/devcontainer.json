@@ -3,7 +3,7 @@
   "dockerComposeFile": "docker-compose.yml",
   "service": "dev",
   "workspaceFolder": "/workspace",
-  "runServices": ["dev", "target"],
+  "runServices": ["dev", "vite", "target"],
   "postCreateCommand": "pnpm install --frozen-lockfile",
   "forwardPorts": [5173, 8080, 9090],
   "portsAttributes": {

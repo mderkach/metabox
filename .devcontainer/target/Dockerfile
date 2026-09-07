@@ -40,6 +40,12 @@ COPY files/ /
 # Отключаем именно её, procd/ubus/logd/rpcd остаются настоящими.
 # `/etc/init.d/<svc> disable` на этапе сборки не срабатывает: procd и ubus ещё
 # не запущены. Снимаем симлинки автозапуска напрямую.
+#
+# mkdir /var/lock и /var/run — не косметика: в rootfs OpenWrt /var это симлинк
+# на /tmp, а /tmp в образе пуст. Без этих каталогов ubusd не создаёт сокет, и
+# procd поднимается, не запустив ни одного сервиса, — контейнер при этом
+# выглядит рабочим. Проверено на чистом openwrt/rootfs: без них `ps` показывает
+# только procd, с ними — ubusd, logd, rpcd и остальное.
 RUN rm -f /etc/rc.d/S*dnsmasq /etc/rc.d/S*firewall /etc/rc.d/S*odhcpd /etc/rc.d/S*uhttpd \
  && rm -f /etc/rc.d/S*network /etc/rc.d/K*network \
  && ln -sf ../init.d/sing-box /etc/rc.d/S99sing-box \

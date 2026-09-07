@@ -14,15 +14,47 @@ services:
       # Собственный node_modules: в хостовом лежат нативные бинарники под darwin
       # (rolldown, esbuild), в linux-контейнере они не загружаются.
       - web-node-modules:/workspace/web/node_modules
+      # Корневой node_modules тоже свой: pnpm пишет в него состояние воркспейса,
+      # и общий с хостом каталог после установки в контейнере заставляет
+      # хостовый pnpm переустанавливать зависимости.
+      - root-node-modules:/workspace/node_modules
       - go-mod:/cache/go/mod
       - go-build:/cache/go/build
+      - pnpm-store:/cache/pnpm
+    environment:
+      # Демон живёт в target, dev-сервер проксирует к нему запросы API
+      METABOX_API_TARGET: http://target:8080
+    # sleep infinity намеренно: к этому сервису подключается devcontainer, и
+    # главный процесс обязан переживать падения инструментов. Дев-сервер живёт
+    # отдельным сервисом vite, иначе падение Vite роняло бы сессию разработки.
+    command: sleep infinity
+    depends_on:
+      - target
+
+  # Дев-сервер фронта: тот же образ и те же тома, что у dev.
+  # Отдельный сервис, потому что AC-20 требует поднимать фронт с HMR той же
+  # командой, что и остальное, а занимать им главный процесс dev нельзя.
+  vite:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      args:
+        GO_VERSION: ${GO_VERSION:-1.26.7}
+    working_dir: /workspace/web
+    volumes:
+      - ../:/workspace
+      - web-node-modules:/workspace/web/node_modules
+      - root-node-modules:/workspace/node_modules
       - pnpm-store:/cache/pnpm
     ports:
       - "5173:5173" # Vite HMR
     environment:
-      # Демон живёт в target, dev-сервер проксирует к нему запросы API
       METABOX_API_TARGET: http://target:8080
-    command: sleep infinity
+      # Без TTY pnpm отказывается пересобирать node_modules и падает
+      # (ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY). CI=true — штатный для
+      # pnpm способ работать без интерактивного подтверждения.
+      CI: "true"
+    command: pnpm dev --host 0.0.0.0
     depends_on:
       - target
 
@@ -50,6 +82,7 @@ services:
 
 volumes:
   web-node-modules:
+  root-node-modules:
   go-mod:
   go-build:
   pnpm-store:

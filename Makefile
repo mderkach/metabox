@@ -2,14 +2,14 @@ BIN     := dist/metaboxd
 VERSION ?= dev
 LDFLAGS := -s -w -X metabox/internal/version.Version=$(VERSION)
 
-.PHONY: all schema web daemon dev test hooks clean up down sh target-sh apply-check
+.PHONY: all schema web daemon daemon-target dev test test-schemagen hooks clean up down sh target-sh apply-check stand-reset
 
 all: daemon
 
 # Regenerate web/src/shared/api/generated.ts from sing-box-extended.
-# Build tags and linker flags come from the fork itself: half of its protocols
-# are registered behind tags, so a generator built without them would emit a
-# truncated schema, and the fork's go:linkname tricks need -checklinkname=0.
+# Build tags and linker flags come from the fork itself: without with_wireguard
+# the schema silently loses the warp type (docs/adr/ADR-0001), and the fork's
+# go:linkname tricks need -checklinkname=0.
 SINGBOX_DIR = $(shell cd tools/schemagen && go list -m -f '{{.Dir}}' github.com/sagernet/sing-box)
 
 schema:
@@ -53,11 +53,28 @@ hooks:
 DC := docker compose -f .devcontainer/docker-compose.yml
 
 # Поднять стенд целиком: фронт с HMR, демон и целевое окружение (AC-20)
-up:
+# Демон собирается внутри dev-контейнера, а не на хосте: CGO_ENABLED=0 задан
+# в Dockerfile.dev, и сборка на macOS дала бы darwin-бинарь, который target не
+# запустит. Каталог dist/ смонтирован в target как /opt/metabox.
+daemon-target:
+	$(DC) up -d dev
+	$(DC) exec -T dev go build -ldflags "$(LDFLAGS)" -o $(BIN) ./cmd/metaboxd
+
+# AC-20: одна команда поднимает фронт с HMR, демон и целевое окружение.
+# Демон собирается до старта target — иначе init.d не найдёт /opt/metabox/metaboxd.
+up: daemon-target
 	$(DC) up -d
 
 down:
 	$(DC) down
+
+# Прогон Apply переписывает /etc/sing-box/config.json, а он лежит в именованном
+# томе и переживает down/up. Сброс возвращает эталон из образа: без него
+# проверки вида «sha256 до и после» считаются от неизвестного базиса.
+stand-reset:
+	$(DC) down
+	docker volume rm -f metabox_singbox-etc
+	$(MAKE) up
 
 # Шелл в среде разработки
 sh:
