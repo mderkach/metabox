@@ -1,0 +1,80 @@
+package main
+
+import (
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+// Схема должна собираться целиком: любой тип со своей сериализацией без
+// правила обрывает генерацию, поэтому успешный прогон и есть проверка
+// полноты таблицы переопределений.
+func TestGenerate(t *testing.T) {
+	out, err := generate()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, want := range []string{
+		"export const ConfigSchema",
+		"export const InboundSchema",
+		"export const OutboundSchema",
+		"export const DnsSchema",
+		"export type Config",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("в схеме нет %q", want)
+		}
+	}
+
+	// z.toJSONSchema не переваривает transform (docs/adr/ADR-0001).
+	if strings.Contains(out, ".transform(") {
+		t.Error("в генерируемой схеме есть .transform(): ломается z.toJSONSchema")
+	}
+}
+
+// Генерация должна быть детерминированной: иначе make schema даёт разный
+// файл на одном и том же форке и diff перестаёт что-либо значить.
+func TestGenerateIsStable(t *testing.T) {
+	first, err := generate()
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := generate()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first != second {
+		t.Error("два прогона генератора дали разный результат")
+	}
+}
+
+// Примеры конфигов из форка — готовый корпус для проверки, что схема
+// принимает реальные конфиги (AC-1). Тест только собирает список: разбор
+// идёт на стороне фронта, где схема исполняется.
+func TestForkExamplesArePresent(t *testing.T) {
+	dir, err := forkDir()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var configs []string
+	err = filepath.WalkDir(filepath.Join(dir, "examples"), func(path string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !entry.IsDir() && filepath.Ext(path) == ".json" {
+			configs = append(configs, path)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(configs) == 0 {
+		t.Fatal("в форке не нашлось примеров конфигов")
+	}
+	t.Logf("примеров конфигов в форке: %d", len(configs))
+}

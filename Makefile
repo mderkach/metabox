@@ -7,9 +7,17 @@ LDFLAGS := -s -w -X metabox/internal/version.Version=$(VERSION)
 all: daemon
 
 # Regenerate web/src/shared/api/generated.ts from sing-box-extended.
+# Build tags and linker flags come from the fork itself: half of its protocols
+# are registered behind tags, so a generator built without them would emit a
+# truncated schema, and the fork's go:linkname tricks need -checklinkname=0.
+SINGBOX_DIR = $(shell cd tools/schemagen && go list -m -f '{{.Dir}}' github.com/sagernet/sing-box)
+
 schema:
 	mkdir -p web/src/shared/api
-	cd tools/schemagen && go run . -out ../../web/src/shared/api/generated.ts
+	cd tools/schemagen && go run \
+		-tags "$$(cat '$(SINGBOX_DIR)/release/DEFAULT_BUILD_TAGS')" \
+		-ldflags "$$(cat '$(SINGBOX_DIR)/release/LDFLAGS')" . \
+		-out ../../web/src/shared/api/generated.ts
 
 # Build the SPA into web/dist.
 web:
@@ -25,7 +33,15 @@ dev:
 
 test:
 	go test ./...
+	$(MAKE) test-schemagen
 	pnpm --filter web test
+
+# Генератор — отдельный модуль, `go test ./...` из корня его не видит.
+# Теги и флаги те же, что у `make schema`: без них не соберётся.
+test-schemagen:
+	cd tools/schemagen && go test \
+		-tags "$$(cat '$(SINGBOX_DIR)/release/DEFAULT_BUILD_TAGS')" \
+		-ldflags "$$(cat '$(SINGBOX_DIR)/release/LDFLAGS')" ./...
 
 # Git-хуки: их же ставит `pnpm install` через скрипт prepare.
 hooks:
