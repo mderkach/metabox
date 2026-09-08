@@ -6,7 +6,7 @@ Vitest + Testing Library. Уровни тестов и что каждый за�
 
 Тесты лежат рядом с кодом, внутри слайса:
 
-```
+```text
 entities/Rule/
 ├── api/
 ├── model/

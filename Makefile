@@ -2,7 +2,7 @@ BIN     := dist/metaboxd
 VERSION ?= dev
 LDFLAGS := -s -w -X metabox/internal/version.Version=$(VERSION)
 
-.PHONY: all schema web daemon daemon-target dev test test-schemagen hooks clean up down sh target-sh apply-check stand-reset
+.PHONY: all schema web daemon daemon-target dev test test-schemagen lint hooks clean up down sh target-sh apply-check stand-reset
 
 all: daemon
 
@@ -42,6 +42,16 @@ test-schemagen:
 	cd tools/schemagen && go test \
 		-tags "$$(cat '$(SINGBOX_DIR)/release/DEFAULT_BUILD_TAGS')" \
 		-ldflags "$$(cat '$(SINGBOX_DIR)/release/LDFLAGS')" ./...
+
+# Версия линтера фиксируется здесь: tool-директива в go.mod демона притащила бы
+# в него двести строк чужих зависимостей. Генератор — отдельный модуль, и теги
+# ему нужны те же, что для сборки.
+GOLANGCI = go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.2
+
+lint:
+	$(GOLANGCI) run ./...
+	cd tools/schemagen && $(GOLANGCI) run \
+		--build-tags "$$(cat '$(SINGBOX_DIR)/release/DEFAULT_BUILD_TAGS')" ./...
 
 # Git-хуки: их же ставит `pnpm install` через скрипт prepare.
 hooks:

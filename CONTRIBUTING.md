@@ -12,7 +12,7 @@
 
 ## Формат коммита
 
-```
+```text
 <тип>(<скоуп>): <что сделано>
 
 <тело: зачем и что важно знать, по-русски>
@@ -55,7 +55,7 @@
 
 Примеры:
 
-```
+```text
 feat(daemon): add config rollback on failed healthcheck
 fix(fe): keep draft when websocket reconnects
 build(deps): bump oxlint to 1.80.0

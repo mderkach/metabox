@@ -98,6 +98,8 @@ func union(items ...*schema) *schema {
 // refs собирает имена схем, на которые ссылается узел.
 func (s *schema) refs(into map[string]bool) {
 	switch s.kind {
+	case kindScalar:
+		// Скаляр — готовое zod-выражение, ссылаться ему не на что.
 	case kindRef:
 		into[s.ref] = true
 	case kindArray, kindRecord:
@@ -130,6 +132,7 @@ func (s *schema) hasRef() bool {
 // объявлений в файле.
 func (s *schema) hardRefs(into map[string]bool) {
 	switch s.kind {
+	case kindScalar:
 	case kindRef:
 		into[s.ref] = true
 	case kindArray, kindRecord:

@@ -1,0 +1,38 @@
+version: "2"
+
+linters:
+  enable:
+    - bodyclose
+    - errorlint
+    - exhaustive
+    - gosec
+    - nilnil
+    - revive
+  settings:
+    exhaustive:
+      # Switch по reflect.Kind перечисляет то, что схема умеет представить, а
+      # остальное отдаёт в default. Требовать ветку под каждую константу
+      # reflect.Kind — значит писать мёртвый код.
+      default-signifies-exhaustive: true
+  exclusions:
+    rules:
+      # Генератор читает пакет constant форка через parser.ParseDir, а тот не
+      # учитывает build-теги. Сейчас безвредно: под тегами в этом пакете лежат
+      # только булевы константы, а constantStrings берёт строковые. Станет
+      # ошибкой, когда форк заведёт второй вариант файла со строками, — тогда
+      # переходить на golang.org/x/tools/go/packages (docs/TechDebt.md).
+      - path: types\.go
+        text: "SA1019: go/parser.ParseDir"
+        linters: [staticcheck]
+
+      # Схему из форка иначе не достать: опции реестров лежат в неэкспортируемом
+      # поле, и тест читает его через unsafe осознанно (ADR-0001).
+      - path: _test\.go
+        linters: [gosec]
+
+      # G304: путь собирается из вывода `go list`, а не из пользовательского
+      # ввода. G306: generated.ts — исходник в репозитории, у него права
+      # обычного файла, а не секрета.
+      - path: tools/schemagen/
+        text: "G304|G306"
+        linters: [gosec]

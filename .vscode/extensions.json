@@ -4,7 +4,9 @@
     "bradlc.vscode-tailwindcss",
     "wayou.vscode-todo-highlight",
     "github.vscode-github-actions",
-    "fanaticpythoner.better-todo-tree"
+    "fanaticpythoner.better-todo-tree",
+    "editorconfig.editorconfig",
+    "davidanson.vscode-markdownlint"
   ],
   "unwantedRecommendations": [
     "esbenp.prettier-vscode",

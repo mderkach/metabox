@@ -55,7 +55,7 @@ SOLID (пять принципов объектного проектирован
 
 Кросс-импорт — только через сегмент `@x` (FSD 2.1):
 
-```
+```text
 entities/Outbound/@x/rule/index.ts   // что Outbound разрешает импортировать слайсу Rule
 ```
 
@@ -137,7 +137,7 @@ import { RULE_QUERY } from "../model" // свой слайс — относит�
 
 **Файлы сущностей:** `<Имя>.<сущность>.<расширение>`
 
-```
+```text
 Rule.api.ts
 Rule.model.ts
 Rule.store.ts
