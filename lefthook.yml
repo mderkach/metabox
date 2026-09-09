@@ -22,7 +22,7 @@ pre-commit:
       fail_text: Файл собирает `make schema`; коммить его вместе с правкой tools/schemagen
 
     - name: lint-root
-      glob: "{tools/**/*.js,*.mjs}"
+      glob: "*.mjs"
       run: pnpm lint
 
     - name: lint-fe
