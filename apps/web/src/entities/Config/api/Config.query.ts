@@ -1,7 +1,7 @@
 import { queryOptions, useQuery } from "@tanstack/react-query"
 
 import { CACHE_TIME } from "@shared/api"
-import { ConfigSchema } from "@shared/api/generated"
+import { ConfigSchema, type Config } from "@shared/api/generated"
 
 import { getConfig } from "./Config.api"
 
@@ -22,19 +22,38 @@ export function getConfigOptions() {
 }
 
 /**
- * Конфиг, разобранный схемой. Схема `looseObject`, поэтому незнакомые узлы
- * переживают разбор — это требование AC-3, а не побочный эффект.
- *
- * Провал разбора не гасит экран: панель обязана открываться и на конфиге,
- * который она не понимает целиком (NFR-1).
+ * Итог разбора. Провал — не отсутствие данных: пустой конфиг и конфиг, который
+ * схема не поняла, выглядят на экране одинаково, а означают разное, и молчать
+ * о втором нельзя.
  */
-export function useConfig() {
-  return useQuery({
-    ...getConfigOptions(),
-    select: (data) => {
-      const parsed = ConfigSchema.safeParse(data)
+export interface ParsedConfig {
+  config: Config | null
+  /** Сообщения схемы: по ним видно, какой узел она не приняла. */
+  issues: string[]
+}
 
-      return parsed.success ? parsed.data : null
-    },
-  })
+/**
+ * Разбирает ответ демона схемой.
+ *
+ * Схема `looseObject`, поэтому незнакомые узлы разбор переживают — это
+ * требование AC-3, а не побочный эффект. Провал не бросает исключение: панель
+ * обязана открываться и на конфиге, который она не понимает целиком (NFR-1).
+ */
+export function parseConfig(data: unknown): ParsedConfig {
+  const parsed = ConfigSchema.safeParse(data)
+
+  if (parsed.success) {
+    return { config: parsed.data, issues: [] }
+  }
+
+  return {
+    config: null,
+    issues: parsed.error.issues.map(
+      (issue) => `${issue.path.join(".")}: ${issue.message}`
+    ),
+  }
+}
+
+export function useConfig() {
+  return useQuery({ ...getConfigOptions(), select: parseConfig })
 }
