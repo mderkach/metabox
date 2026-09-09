@@ -49,7 +49,7 @@ func run(log *slog.Logger, addr, allowedOrigin string) error {
 
 	srv := &http.Server{
 		Addr:              addr,
-		Handler:           api.Handler(),
+		Handler:           api,
 		ReadHeaderTimeout: readHeaderTimeout,
 		ReadTimeout:       readTimeout,
 		IdleTimeout:       idleTimeout,

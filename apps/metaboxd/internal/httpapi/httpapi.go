@@ -17,25 +17,33 @@ type Options struct {
 	AllowedOrigin string
 }
 
-// Server держит зависимости обработчиков. Создаётся один раз при старте.
+// Server держит зависимости обработчиков и собранную цепочку middleware.
 type Server struct {
 	log           *slog.Logger
 	version       string
 	allowedOrigin string
+	handler       http.Handler
 }
 
-// NewServer собирает слой. Логгер обязателен: своего пакет не заводит.
+// NewServer собирает слой вместе с цепочкой middleware. Логгер обязателен:
+// своего пакет не заводит.
 func NewServer(log *slog.Logger, opts Options) *Server {
-	return &Server{
+	s := &Server{
 		log:           log,
 		version:       opts.Version,
 		allowedOrigin: opts.AllowedOrigin,
 	}
+	s.handler = s.routes()
+
+	return s
 }
 
-// Handler возвращает маршруты, обёрнутые цепочкой middleware. Вызывается один
-// раз: повторный вызов соберёт вторую цепочку.
-func (s *Server) Handler() http.Handler {
+// ServeHTTP отдаёт запрос цепочке, собранной в NewServer.
+func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	s.handler.ServeHTTP(w, r)
+}
+
+func (s *Server) routes() http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /healthz", s.handleHealth)
@@ -49,12 +57,12 @@ type healthResponse struct {
 	Version string `json:"version"`
 }
 
-func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
-	s.writeJSON(w, r, http.StatusOK, healthResponse{Status: "ok", Version: s.version})
+func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(s.log, w, http.StatusOK, healthResponse{Status: "ok", Version: s.version})
 }
 
 // handleAPINotFound закрывает всё неизвестное под /api/ JSON-ошибкой: отдать
 // сюда index.html значит вернуть фронту HTML вместо разбираемого ответа.
 func (s *Server) handleAPINotFound(w http.ResponseWriter, r *http.Request) {
-	s.writeError(w, r, http.StatusNotFound, "not_found", "ручка не найдена")
+	fail(s.log, w, r, errNotFound)
 }

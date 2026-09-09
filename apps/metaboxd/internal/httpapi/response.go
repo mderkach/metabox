@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 )
 
@@ -14,16 +15,12 @@ type APIError struct {
 	Details any    `json:"details,omitempty"`
 }
 
-func (s *Server) writeJSON(w http.ResponseWriter, r *http.Request, status int, body any) {
+func writeJSON(log *slog.Logger, w http.ResponseWriter, status int, body any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
 
 	if err := json.NewEncoder(w).Encode(body); err != nil {
 		// Статус уже ушёл клиенту, вернуть ошибку некуда.
-		s.log.ErrorContext(r.Context(), "ответ не дописан", "err", err, "path", r.URL.Path)
+		log.Error("ответ не дописан", "err", err)
 	}
-}
-
-func (s *Server) writeError(w http.ResponseWriter, r *http.Request, status int, code, message string) {
-	s.writeJSON(w, r, status, APIError{Code: code, Message: message})
 }

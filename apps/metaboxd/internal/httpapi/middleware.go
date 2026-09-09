@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"runtime/debug"
@@ -10,10 +11,12 @@ import (
 
 func (s *Server) middleware(next http.Handler) http.Handler {
 	// recoverPanic снаружи: паника в логировании иначе уронит процесс.
-	return s.recoverPanic(s.logRequests(s.checkOrigin(next)))
+	return recoverPanic(s.log,
+		logRequests(s.log,
+			checkOrigin(s.log, s.allowedOrigin, next)))
 }
 
-func (s *Server) recoverPanic(next http.Handler) http.Handler {
+func recoverPanic(log *slog.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			rec := recover()
@@ -27,7 +30,7 @@ func (s *Server) recoverPanic(next http.Handler) http.Handler {
 				panic(rec)
 			}
 
-			s.log.Error("паника в обработчике",
+			log.Error("паника в обработчике",
 				"err", rec,
 				"method", r.Method,
 				"path", r.URL.Path,
@@ -40,14 +43,14 @@ func (s *Server) recoverPanic(next http.Handler) http.Handler {
 	})
 }
 
-func (s *Server) logRequests(next http.Handler) http.Handler {
+func logRequests(log *slog.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
 
 		next.ServeHTTP(rec, r)
 
-		s.log.Debug("запрос",
+		log.Debug("запрос",
 			"method", r.Method,
 			"path", r.URL.Path,
 			"status", rec.status,
@@ -58,7 +61,7 @@ func (s *Server) logRequests(next http.Handler) http.Handler {
 
 // checkOrigin — единственная защита мутирующих запросов: аутентификации в v1
 // нет по решению A.6 PRD.
-func (s *Server) checkOrigin(next http.Handler) http.Handler {
+func checkOrigin(log *slog.Logger, allowedOrigin string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !mutating(r.Method) {
 			next.ServeHTTP(w, r)
@@ -66,15 +69,21 @@ func (s *Server) checkOrigin(next http.Handler) http.Handler {
 		}
 
 		origin := r.Header.Get("Origin")
-		if !originAllowed(origin, r.Host, s.allowedOrigin) {
-			s.log.Warn("запрос отклонён по Origin",
+
+		// Послабление дев-стенда: vite-прокси ходит с changeOrigin: true, то
+		// есть с переписанным Host и исходным Origin, — сверять их бесполезно.
+		// Значение флага сравнивается целиком, со схемой и портом.
+		exempt := allowedOrigin != "" && origin == allowedOrigin
+
+		if !originAllowed(origin, r.Host) && !exempt {
+			log.Warn("запрос отклонён по Origin",
 				"origin", origin,
 				"host", r.Host,
 				"method", r.Method,
 				"path", r.URL.Path,
 			)
-			s.writeError(w, r, http.StatusForbidden, "origin_mismatch",
-				"источник запроса не совпадает с адресом панели")
+			fail(log, w, r, errOriginMismatch)
+
 			return
 		}
 
@@ -82,16 +91,11 @@ func (s *Server) checkOrigin(next http.Handler) http.Handler {
 	})
 }
 
-// originAllowed решает судьбу мутирующего запроса по ADR-0002: запрос без
-// Origin отклоняется, иначе хост из Origin обязан совпасть с Host запроса.
-// Значение allowed приходит флагом -allowed-origin и сверяется целиком со
-// схемой и портом — дев-стенд ходит через vite-прокси с переписанным Host.
-func originAllowed(origin, host, allowed string) bool {
+// originAllowed — правило ADR-0002 в чистом виде: запрос без Origin
+// отклоняется, иначе хост из Origin обязан совпасть с Host запроса.
+func originAllowed(origin, host string) bool {
 	if origin == "" {
 		return false
-	}
-	if allowed != "" && origin == allowed {
-		return true
 	}
 
 	u, err := url.Parse(origin)
