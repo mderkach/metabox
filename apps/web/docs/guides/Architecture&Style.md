@@ -1,6 +1,6 @@
 # Архитектура и стайлгайд фронтенда
 
-Структура `web/src` и правила написания кода. Стек и его обоснование — [PRD, A.10](../../../docs/PRD.md).
+Структура `apps/web/src` и правила написания кода. Стек и его обоснование — [PRD, A.10](../../../../docs/PRD.md).
 
 ## Методологии
 
@@ -219,7 +219,7 @@ Tailwind v4, вход — `src/app/styles/index.css`: глобальные ст�
 
 ## Инструменты
 
-Линт — oxlint, формат — oxfmt, типы — tsc, тесты — Vitest. Команды и полный список проверок перед коммитом — в [`CONTRIBUTING.md`](../../../CONTRIBUTING.md).
+Линт — oxlint, формат — oxfmt, типы — tsc, тесты — Vitest. Команды и полный список проверок перед коммитом — в [`CONTRIBUTING.md`](../../../../CONTRIBUTING.md).
 
 Формат руками не правится:
 
@@ -227,6 +227,6 @@ Tailwind v4, вход — `src/app/styles/index.css`: глобальные ст�
 - линт каскадный — `web/.oxlintrc.json` расширяет корневой через `extends`, общие правила JS живут в корне;
 - в VS Code формат и автофиксы работают на сохранении: `.vscode/settings.json` назначает `oxc.oxc-vscode` форматтером для TS/JS, JSON, CSS и Markdown, иначе встроенные форматтеры разойдутся с `format:check`.
 
-Линт типозависимый: `strict` в обоих tsconfig, `options.typeAware` в `.oxlintrc.json`, пакет `oxlint-tsgolint`. Через `jsPlugins` подключены плагины TanStack Query, Testing Library, jest-dom, Tailwind и `check-file`. Границы FSD проверяет локальный `fsd/boundaries` (`web/tools/fsdBoundaries.js`): импорт вверх по слоям, соседний слайс мимо `@x`, обход Public API, относительный путь за пределами слайса. Перечень правил — в конфиге, риски `jsPlugins` — в [`docs/TechDebt.md`](../../../docs/TechDebt.md).
+Линт типозависимый: `strict` в обоих tsconfig, `options.typeAware` в `.oxlintrc.json`, пакет `oxlint-tsgolint`. Через `jsPlugins` подключены плагины TanStack Query, Testing Library, jest-dom, Tailwind и `check-file`. Границы FSD проверяет локальный `fsd/boundaries` (`web/tools/fsdBoundaries.js`): импорт вверх по слоям, соседний слайс мимо `@x`, обход Public API, относительный путь за пределами слайса. Перечень правил — в конфиге, риски `jsPlugins` — в [`docs/TechDebt.md`](../../../../docs/TechDebt.md).
 
 Линтер не видит: состав `index.ts`, формат логов, оправданность `memo`, `useCallback` и спреда `props` — это [чеклист ревью](./ReviewChecklist.md). Слайс, используемый одной страницей, не видит и он: для этого [`steiger`](https://github.com/feature-sliced/steiger) отдельным шагом CI, когда слайсов станет много.

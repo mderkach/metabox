@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "extends": ["../.oxlintrc.json"],
+  "extends": ["../../.oxlintrc.json"],
   "plugins": ["react", "typescript", "oxc", "unicorn", "import", "vitest"],
   "jsPlugins": [
     "./tools/fsdBoundaries.js",

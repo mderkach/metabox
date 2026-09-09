@@ -5,8 +5,8 @@
   "trailingComma": "es5",
   "ignorePatterns": [
     "dist",
-    "web/dist",
-    "web/src/shared/api/generated.ts",
+    "apps/web/dist",
+    "apps/web/src/shared/api/generated.ts",
     ".claude",
     ".omc",
     ".devcontainer/target"
@@ -19,7 +19,7 @@
       }
     },
     {
-      "files": ["web/**"],
+      "files": ["apps/web/**"],
       "options": {
         "sortImports": {
           "groups": [
@@ -42,7 +42,7 @@
           "newlinesBetween": true
         },
         "sortTailwindcss": {
-          "stylesheet": "./web/src/app/styles/index.css",
+          "stylesheet": "./apps/web/src/app/styles/index.css",
           "functions": ["cn", "cva"]
         }
       }

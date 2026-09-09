@@ -41,7 +41,7 @@ function RuleDomainField() {
 
 ## Ограничения RHF, важные для проекта
 
-Зафиксировано в [PRD, A.10](../../../docs/PRD.md):
+Зафиксировано в [PRD, A.10](../../../../docs/PRD.md):
 
 - **Имена полей — только точечная нотация**: `outbounds.2.uuid`. Скобочный синтаксис не поддерживается; авторендерер печатает пути точками.
 - **Форма типизируется против типа узла**, а не всего конфига. `Path<T>` по union из 57 веток разложит компилятор. Именно поэтому документ живёт в Zustand, а форма открывается на одном узле — `VLESSOutboundOptions`, не `ConfigModel`.
@@ -104,7 +104,7 @@ export type RuleFormModel = z.infer<typeof RuleFormSchema>
 
 `src/shared/api/generated.ts` пишет `tools/schemagen`. Правила:
 
-- генерируемые схемы обязаны оставаться представимыми для `z.toJSONSchema()`, поэтому **никаких `.transform()` внутри них** ([ADR-0001](../../../docs/adr/ADR-0001-generate-schema-from-fork-registries.md)) — авторендерер строит поля из JSON Schema, а `transform` в неё не переводится;
+- генерируемые схемы обязаны оставаться представимыми для `z.toJSONSchema()`, поэтому **никаких `.transform()` внутри них** ([ADR-0001](../../../../docs/adr/ADR-0001-generate-schema-from-fork-registries.md)) — авторендерер строит поля из JSON Schema, а `transform` в неё не переводится;
 - всё, что нужно преобразовать, преобразуется в `src/adapters/` или в отдельной схеме-адаптере формы, но не в генерируемом файле.
 
 ### Адаптер: когда UI не совпадает с DTO
@@ -136,7 +136,7 @@ const RuleAdapterSchema = RuleFormSchema.transform((data) => ({
 
 ## Авторендерер
 
-Узлы схемы, под которые нет рукописной формы, рисуются автоматически из JSON Schema — её даёт `z.toJSONSchema()` от генерируемой схемы ([ADR-0001](../../../docs/adr/ADR-0001-generate-schema-from-fork-registries.md)).
+Узлы схемы, под которые нет рукописной формы, рисуются автоматически из JSON Schema — её даёт `z.toJSONSchema()` от генерируемой схемы ([ADR-0001](../../../../docs/adr/ADR-0001-generate-schema-from-fork-registries.md)).
 
 - Соответствие «тип поля → виджет» задаётся таблицей в `shared`; новый тип добавляется записью, а не веткой `if`.
 - Рукописная форма имеет приоритет: если для узла она есть, авторендерер к нему не применяется.

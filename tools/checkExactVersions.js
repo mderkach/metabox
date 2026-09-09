@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs"
 import path from "node:path"
 import process from "node:process"
 
-const MANIFESTS = ["package.json", "web/package.json"]
+const MANIFESTS = ["package.json", "apps/web/package.json"]
 const FIELDS = ["dependencies", "devDependencies", "optionalDependencies"]
 const EXACT = /^\d+\.\d+\.\d+(?:-[\w.]+)?$/
 const CATALOG = /^catalog:/

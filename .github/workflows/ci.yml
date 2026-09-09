@@ -34,7 +34,7 @@ jobs:
       - name: Линт Go (оба модуля)
         run: make lint
 
-      - run: go test ./...
+      - run: cd apps/metaboxd && go test ./...
       - name: Сообщения коммитов
         if: github.event_name == 'pull_request'
         run: >
@@ -72,7 +72,7 @@ jobs:
           CGO_ENABLED: "0"
         run: |
           mkdir -p dist
-          go build -ldflags "-s -w -X metabox/internal/version.Version=ci" -o dist/metaboxd ./cmd/metaboxd
+          cd apps/metaboxd && go build -ldflags "-s -w -X metabox/internal/version.Version=ci" -o ../../dist/metaboxd .
 
       - name: Поднять целевое окружение
         run: docker compose -f .devcontainer/docker-compose.yml up -d target

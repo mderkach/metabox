@@ -6,37 +6,38 @@ LDFLAGS := -s -w -X metabox/internal/version.Version=$(VERSION)
 
 all: daemon
 
-# Regenerate web/src/shared/api/generated.ts from sing-box-extended.
+# Regenerate apps/web/src/shared/api/generated.ts from sing-box-extended.
 # Build tags and linker flags come from the fork itself: without with_wireguard
 # the schema silently loses the warp type (docs/adr/ADR-0001), and the fork's
 # go:linkname tricks need -checklinkname=0.
 SINGBOX_DIR = $(shell cd tools/schemagen && go list -m -f '{{.Dir}}' github.com/sagernet/sing-box)
 
 schema:
-	mkdir -p web/src/shared/api
+	mkdir -p apps/web/src/shared/api
 	cd tools/schemagen && go run \
 		-tags "$$(cat '$(SINGBOX_DIR)/release/DEFAULT_BUILD_TAGS')" \
 		-ldflags "$$(cat '$(SINGBOX_DIR)/release/LDFLAGS')" . \
-		-out ../../web/src/shared/api/generated.ts
+		-out ../../apps/web/src/shared/api/generated.ts
 
-# Build the SPA into web/dist.
+# Build the SPA into apps/web/dist.
 web:
 	pnpm --filter web build
 
 # Build the daemon; the SPA is built first because it gets embedded.
+# BIN is relative to the repository root, so the build runs from there.
 daemon: web
-	go build -ldflags "$(LDFLAGS)" -o $(BIN) ./cmd/metaboxd
+	cd apps/metaboxd && go build -ldflags "$(LDFLAGS)" -o ../../$(BIN) .
 
 # Run the SPA dev server.
 dev:
 	pnpm --filter web dev
 
 test:
-	go test ./...
+	cd apps/metaboxd && go test ./...
 	$(MAKE) test-schemagen
 	pnpm --filter web test
 
-# Генератор — отдельный модуль, `go test ./...` из корня его не видит.
+# Генератор — отдельный модуль, тесты демона его не видят.
 # Теги и флаги те же, что у `make schema`: без них не соберётся.
 test-schemagen:
 	cd tools/schemagen && go test \
@@ -49,7 +50,7 @@ test-schemagen:
 GOLANGCI = go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.2
 
 lint:
-	$(GOLANGCI) run ./...
+	cd apps/metaboxd && $(GOLANGCI) run ./...
 	cd tools/schemagen && $(GOLANGCI) run \
 		--build-tags "$$(cat '$(SINGBOX_DIR)/release/DEFAULT_BUILD_TAGS')" ./...
 
@@ -68,7 +69,7 @@ DC := docker compose -f .devcontainer/docker-compose.yml
 # запустит. Каталог dist/ смонтирован в target как /opt/metabox.
 daemon-target:
 	$(DC) up -d dev
-	$(DC) exec -T dev go build -ldflags "$(LDFLAGS)" -o $(BIN) ./cmd/metaboxd
+	$(DC) exec -T dev sh -c 'cd apps/metaboxd && go build -ldflags "$(LDFLAGS)" -o ../../$(BIN) .'
 
 # AC-20: одна команда поднимает фронт с HMR, демон и целевое окружение.
 # Демон собирается до старта target — иначе init.d не найдёт /opt/metabox/metaboxd.
@@ -99,4 +100,4 @@ apply-check:
 	$(DC) exec -T target sh /usr/bin/apply-cycle-check
 
 clean:
-	rm -rf dist web/dist
+	rm -rf dist apps/web/dist

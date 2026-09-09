@@ -13,7 +13,7 @@ services:
       - ../:/workspace
       # Собственный node_modules: в хостовом лежат нативные бинарники под darwin
       # (rolldown, esbuild), в linux-контейнере они не загружаются.
-      - web-node-modules:/workspace/web/node_modules
+      - web-node-modules:/workspace/apps/web/node_modules
       # Корневой node_modules тоже свой: pnpm пишет в него состояние воркспейса,
       # и общий с хостом каталог после установки в контейнере заставляет
       # хостовый pnpm переустанавливать зависимости.
@@ -39,10 +39,10 @@ services:
       dockerfile: Dockerfile.dev
       args:
         GO_VERSION: ${GO_VERSION:-1.26.7}
-    working_dir: /workspace/web
+    working_dir: /workspace/apps/web
     volumes:
       - ../:/workspace
-      - web-node-modules:/workspace/web/node_modules
+      - web-node-modules:/workspace/apps/web/node_modules
       - root-node-modules:/workspace/node_modules
       - pnpm-store:/cache/pnpm
     ports:
