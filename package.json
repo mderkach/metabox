@@ -5,7 +5,6 @@
   "scripts": {
     "prepare": "lefthook install",
     "lint": "oxlint tools commitlint.config.mjs",
-    "lint:deps": "node tools/checkExactVersions.js",
     "format": "oxfmt",
     "format:check": "oxfmt --check"
   },

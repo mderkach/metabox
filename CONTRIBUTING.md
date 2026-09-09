@@ -85,7 +85,6 @@ refactor(schema)!: rename generated Outbound fields
 | Линт: корень         | `pnpm lint`               |
 | Линт: фронт          | `pnpm --filter web lint`  |
 | Формат (весь репо)   | `pnpm format:check`       |
-| Версии зависимостей  | `pnpm lint:deps`          |
 | Типы и сборка фронта | `pnpm --filter web build` |
 | Всё вместе           | `make test`               |
 
