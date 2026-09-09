@@ -415,6 +415,44 @@ func TestSecondApplyIsRejected(t *testing.T) {
 	}
 }
 
+// Подтверждение освобождает применение сразу: клиент, подтвердивший и тут же
+// применивший снова, не должен получать отказ из-за ещё живой горутины.
+func TestApplyIsFreeRightAfterConfirm(t *testing.T) {
+	h := newHarness(t)
+
+	tx, err := h.manager.Start(t.Context(), []byte(validConfig))
+	if err != nil {
+		t.Fatalf("первое применение: %v", err)
+	}
+	h.waitWindow(t)
+
+	if _, err := h.manager.Confirm(t.Context(), tx.ID); err != nil {
+		t.Fatalf("подтверждение: %v", err)
+	}
+
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig)); errors.Is(err, apply.ErrBusy) {
+		t.Error("после подтверждения применение осталось занятым")
+	}
+}
+
+// Откат тоже освобождает применение сразу: иначе после автоотката владелец не
+// может применить исправленный конфиг, пока не выйдет горутина.
+func TestApplyIsFreeRightAfterRollback(t *testing.T) {
+	h := newHarness(t)
+
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig)); err != nil {
+		t.Fatalf("первое применение: %v", err)
+	}
+	h.waitWindow(t)
+
+	h.clock.fire()
+	h.manager.Close()
+
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig)); errors.Is(err, apply.ErrBusy) {
+		t.Error("после отката применение осталось занятым")
+	}
+}
+
 // Конфиг мог поправить владелец по SSH — затирать это молча нельзя.
 func TestExternalEditIsDetected(t *testing.T) {
 	h := newHarness(t)

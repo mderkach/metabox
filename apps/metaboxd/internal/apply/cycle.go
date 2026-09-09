@@ -161,6 +161,7 @@ func (m *Manager) rollback(ctx context.Context, log *slog.Logger) {
 	m.current.Phase = PhaseRolledBack
 	m.current.Window = 0
 	m.lastSum = ""
+	m.busy = false
 	m.mu.Unlock()
 
 	if err := m.store.ClearState(ctx); err != nil {

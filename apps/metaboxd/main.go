@@ -14,7 +14,11 @@ import (
 	"syscall"
 	"time"
 
+	"metabox/internal/apply"
+	"metabox/internal/clashapi"
+	"metabox/internal/config"
 	"metabox/internal/httpapi"
+	"metabox/internal/singbox"
 	"metabox/internal/version"
 )
 
@@ -23,32 +27,85 @@ const (
 	readTimeout       = 30 * time.Second
 	idleTimeout       = 60 * time.Second
 	shutdownTimeout   = 10 * time.Second
+
+	// Потолок на один вызов бинаря. `sing-box check` на большом конфиге
+	// укладывается в секунды, но зависший процесс держать нельзя.
+	binaryTimeout = 30 * time.Second
+
+	healthRequestTimeout = 5 * time.Second
+	healthPollInterval   = 500 * time.Millisecond
 )
 
+// settings — то, что демон получает флагами. Значения по умолчанию
+// устройственные: запущенный без аргументов на роутере демон работает.
+type settings struct {
+	addr          string
+	allowedOrigin string
+	configDir     string
+	configName    string
+	serviceDir    string
+	binary        string
+	initScript    string
+	clashPort     int
+	confirmWindow time.Duration
+	cycleTimeout  time.Duration
+	logLevel      slog.Level
+}
+
 func main() {
-	addr := flag.String("listen", "127.0.0.1:8080", "адрес и порт, который слушает демон")
-	allowedOrigin := flag.String("allowed-origin", "",
+	var s settings
+
+	flag.StringVar(&s.addr, "listen", "127.0.0.1:8080", "адрес и порт, который слушает демон")
+	flag.StringVar(&s.allowedOrigin, "allowed-origin", "",
 		"дополнительный разрешённый Origin мутирующих запросов; нужен дев-стенду")
-	level := slog.LevelInfo
-	flag.TextVar(&level, "log-level", slog.LevelInfo, "уровень логов: debug, info, warn, error")
+	flag.StringVar(&s.configDir, "config-dir", "/etc/sing-box", "каталог конфига sing-box")
+	flag.StringVar(&s.configName, "config-name", "config.json", "имя файла конфига в этом каталоге")
+	flag.StringVar(&s.serviceDir, "state-dir", "/etc/metabox",
+		"служебный каталог демона под бэкап и состояние транзакции; вне каталога конфига")
+	flag.StringVar(&s.binary, "singbox", "/usr/bin/sing-box", "путь к бинарю sing-box")
+	flag.StringVar(&s.initScript, "init-script", "/etc/init.d/sing-box", "путь к init-скрипту сервиса")
+	flag.IntVar(&s.clashPort, "clash-port", 9090, "порт Clash API, если демон заводит секцию сам")
+	flag.DurationVar(&s.confirmWindow, "confirm-window", time.Minute,
+		"сколько ждать подтверждения связи до автоотката")
+	flag.DurationVar(&s.cycleTimeout, "cycle-timeout", 2*time.Minute,
+		"потолок на шаги применения от бэкапа до healthcheck")
+
+	s.logLevel = slog.LevelInfo
+	flag.TextVar(&s.logLevel, "log-level", slog.LevelInfo, "уровень логов: debug, info, warn, error")
 	flag.Parse()
 
-	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: level}))
+	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: s.logLevel}))
 
-	if err := run(log, *addr, *allowedOrigin); err != nil {
+	if err := run(log, s); err != nil {
 		log.Error("демон остановлен", "err", err)
 		os.Exit(1)
 	}
 }
 
-func run(log *slog.Logger, addr, allowedOrigin string) error {
-	api := httpapi.NewServer(log, httpapi.Options{
+func run(log *slog.Logger, s settings) error {
+	manager, err := build(log, s)
+	if err != nil {
+		return err
+	}
+	defer manager.Close()
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	// Незавершённая транзакция доигрывается до того, как демон начнёт
+	// принимать запросы: питание, снятое в окне подтверждения, иначе оставило
+	// бы устройство на неподтверждённом конфиге навсегда (ADR-0002).
+	if err := manager.Replay(ctx); err != nil {
+		log.Error("незавершённая транзакция не доиграна", "err", err)
+	}
+
+	api := httpapi.NewServer(manager, log, httpapi.Options{
 		Version:       version.Version,
-		AllowedOrigin: allowedOrigin,
+		AllowedOrigin: s.allowedOrigin,
 	})
 
 	srv := &http.Server{
-		Addr:              addr,
+		Addr:              s.addr,
 		Handler:           api,
 		ReadHeaderTimeout: readHeaderTimeout,
 		ReadTimeout:       readTimeout,
@@ -57,9 +114,6 @@ func run(log *slog.Logger, addr, allowedOrigin string) error {
 		// Clash API и поток соединений. Дедлайн ставится точечно на ответе.
 		ErrorLog: slog.NewLogLogger(log.Handler(), slog.LevelError),
 	}
-
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
 
 	serveErr := make(chan error, 1)
 	go func() {
@@ -70,7 +124,7 @@ func run(log *slog.Logger, addr, allowedOrigin string) error {
 		serveErr <- err
 	}()
 
-	log.Info("демон запущен", "addr", addr, "version", version.Version)
+	log.Info("демон запущен", "addr", s.addr, "version", version.Version)
 
 	select {
 	case err := <-serveErr:
@@ -88,4 +142,26 @@ func run(log *slog.Logger, addr, allowedOrigin string) error {
 	log.Info("демон остановлен")
 
 	return <-serveErr
+}
+
+// build собирает граф зависимостей. Отдельной функцией, чтобы run занимался
+// только запуском и остановкой.
+func build(log *slog.Logger, s settings) (*apply.Manager, error) {
+	store, err := config.NewStore(s.configDir, s.configName, s.serviceDir)
+	if err != nil {
+		return nil, err
+	}
+
+	service, err := singbox.New(singbox.NewExec(binaryTimeout), s.binary, s.initScript)
+	if err != nil {
+		return nil, err
+	}
+
+	health := clashapi.NewChecker(healthRequestTimeout, healthPollInterval)
+
+	return apply.New(store, service, health, nil, log, apply.Options{
+		Window:       s.confirmWindow,
+		ClashPort:    s.clashPort,
+		CycleTimeout: s.cycleTimeout,
+	}), nil
 }

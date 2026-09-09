@@ -232,6 +232,9 @@ func (m *Manager) Confirm(ctx context.Context, id string) (Transaction, error) {
 
 	m.current.Phase = PhaseConfirmed
 	m.current.Window = 0
+	// Применение свободно сразу, а не когда выйдет фоновая горутина: иначе
+	// клиент, подтвердивший и тут же применивший снова, получал бы отказ.
+	m.busy = false
 	tx := m.current
 	confirmed := m.confirmed
 	m.confirmed = nil
