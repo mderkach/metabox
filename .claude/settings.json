@@ -10,7 +10,7 @@
       "Edit(./.env)",
       "Edit(./.env.*)",
       "Edit(./apps/web/src/shared/api/generated.ts)",
-      "Edit(./apps/web/pnpm-lock.yaml)",
+      "Edit(./pnpm-lock.yaml)",
       "Edit(./dist/**)",
       "Edit(./apps/web/dist/**)"
     ],
