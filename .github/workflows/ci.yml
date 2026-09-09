@@ -34,7 +34,8 @@ jobs:
       - name: Линт Go (оба модуля)
         run: make lint
 
-      - run: cd apps/metaboxd && go test ./...
+      # -race ловит гонки, которые на одном ядре разработчика не видны.
+      - run: cd apps/metaboxd && go test -race ./...
       # Генератор — отдельный модуль, шаг выше его не видит.
       - name: Тесты генератора
         run: make test-schemagen

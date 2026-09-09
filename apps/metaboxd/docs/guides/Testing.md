@@ -24,24 +24,24 @@ internal/apply/
 
 ```go
 func TestOriginAllowed(t *testing.T) {
-	tests := []struct {
-		name   string
-		origin string
-		host   string
-		want   bool
-	}{
-		{"свой origin", "http://192.168.1.1", "192.168.1.1", true},
-		{"чужой origin", "http://evil.example", "192.168.1.1", false},
-		{"origin отсутствует", "", "192.168.1.1", false},
-	}
+ tests := []struct {
+  name   string
+  origin string
+  host   string
+  want   bool
+ }{
+  {"свой origin", "http://192.168.1.1", "192.168.1.1", true},
+  {"чужой origin", "http://evil.example", "192.168.1.1", false},
+  {"origin отсутствует", "", "192.168.1.1", false},
+ }
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := originAllowed(tt.origin, tt.host); got != tt.want {
-				t.Errorf("origin %q при host %q: получили %v, ожидали %v", tt.origin, tt.host, got, tt.want)
-			}
-		})
-	}
+ for _, tt := range tests {
+  t.Run(tt.name, func(t *testing.T) {
+   if got := originAllowed(tt.origin, tt.host); got != tt.want {
+    t.Errorf("origin %q при host %q: получили %v, ожидали %v", tt.origin, tt.host, got, tt.want)
+   }
+  })
+ }
 }
 ```
 
@@ -69,19 +69,19 @@ func TestOriginAllowed(t *testing.T) {
 ```go
 before, err := os.ReadFile(cfgPath)
 if err != nil {
-	t.Fatal(err)
+ t.Fatal(err)
 }
 
 if err := store.Write(brokenCandidate); err == nil {
-	t.Fatal("битый кандидат записался")
+ t.Fatal("битый кандидат записался")
 }
 
 after, err := os.ReadFile(cfgPath)
 if err != nil {
-	t.Fatal(err)
+ t.Fatal(err)
 }
 if !bytes.Equal(before, after) {
-	t.Error("файл изменился после неудачной записи")
+ t.Error("файл изменился после неудачной записи")
 }
 ```
 
@@ -93,14 +93,14 @@ if !bytes.Equal(before, after) {
 
 ```go
 type fakeRunner struct {
-	exitCode int
-	stderr   string
-	calls    [][]string
+ exitCode int
+ stderr   string
+ calls    [][]string
 }
 
 func (f *fakeRunner) Run(ctx context.Context, args ...string) (Result, error) {
-	f.calls = append(f.calls, args)
-	...
+ f.calls = append(f.calls, args)
+ ...
 }
 ```
 
@@ -112,16 +112,16 @@ func (f *fakeRunner) Run(ctx context.Context, args ...string) (Result, error) {
 
 ```go
 func TestRollbackAfterDeadline(t *testing.T) {
-	synctest.Test(t, func(t *testing.T) {
-		tx := startApply(t.Context())
+ synctest.Test(t, func(t *testing.T) {
+  tx := startApply(t.Context())
 
-		time.Sleep(61 * time.Second)
-		synctest.Wait()
+  time.Sleep(61 * time.Second)
+  synctest.Wait()
 
-		if tx.State() != StateRolledBack {
-			t.Errorf("состояние %v, ожидали откат", tx.State())
-		}
-	})
+  if tx.State() != StateRolledBack {
+   t.Errorf("состояние %v, ожидали откат", tx.State())
+  }
+ })
 }
 ```
 
@@ -129,7 +129,7 @@ func TestRollbackAfterDeadline(t *testing.T) {
 
 Внутри бабла `time.Sleep`, таймеры и `context.WithTimeout` работают на фиктивных часах; `synctest.Wait` ждёт, пока все горутины бабла заблокируются.
 
-Всё, что запускает горутины, прогоняется с `-race`: `go test -race ./...`. В CI такого шага сейчас нет — `.github/workflows/ci.yml` запускает `go test ./...` без детектора, — поэтому прогон остаётся на авторе правки.
+Всё, что запускает горутины, прогоняется с `-race`: `go test -race ./...`. Этот же прогон идёт в CI ([`ci.yml`](../../../../.github/workflows/ci.yml)). `make test` детектор не включает — он гоняет ещё и фронт, и удвоение времени на каждом локальном прогоне того не стоит, — поэтому правку с горутинами автор прогоняет с `-race` сам.
 
 ## HTTP
 
