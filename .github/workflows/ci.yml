@@ -35,9 +35,8 @@ jobs:
         run: make lint
 
       - run: cd apps/metaboxd && go test ./...
+      # Генератор — отдельный модуль, шаг выше его не видит.
       - name: Тесты генератора
-        # Отдельный модуль, тесты демона его не видят. Теги и флаги форка
-        # подставляет make: без них модуль не собирается.
         run: make test-schemagen
       - name: Сообщения коммитов
         if: github.event_name == 'pull_request'
