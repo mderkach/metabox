@@ -92,6 +92,10 @@
           {
             "pattern": "^-?[wh]-\\[.*\\]$",
             "message": "Жёсткие размеры не проставляем: компонент занимает место по сетке."
+          },
+          {
+            "pattern": "^-?(?:size|min-w|max-w|min-h|max-h|basis|text|leading|tracking|gap|gap-x|gap-y|p|px|py|pt|pr|pb|pl|m|mx|my|mt|mr|mb|ml|space-x|space-y|top|right|bottom|left|inset|inset-x|inset-y)-\\[-?[0-9.]+px\\]$",
+            "message": "Кегль, отступы и размеры — в rem: они обязаны масштабироваться вместе с настройкой шрифта у пользователя. px остаётся границам, focus-ring и теням."
           }
         ]
       }

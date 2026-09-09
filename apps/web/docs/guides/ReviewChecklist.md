@@ -52,7 +52,7 @@
 ## Запросы
 
 - [ ] GET через `useQuery`, остальное через `useMutation`
-- [ ] fetch-функция отделена от хука и принимает `RequestInit` с `signal`
+- [ ] fetch-функция отделена от хука и принимает `AxiosRequestConfig` с `signal`
 - [ ] `queryKey` построен фабрикой, а не литералом
 - [ ] Адрес endpoint вынесен в константу
 - [ ] Заданы `gcTime` и `staleTime`, и `gcTime` не ниже `staleTime`

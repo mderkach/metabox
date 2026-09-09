@@ -1,41 +1,32 @@
-import {
-  Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Field,
-  FieldGroup,
-  FieldLabel,
-  Input,
-  Switch,
-} from "@shared/ui"
+import { QueryClientProvider } from "@tanstack/react-query"
+import { RouterProvider } from "@tanstack/react-router"
+import { ThemeProvider } from "next-themes"
+
+import { QueryClientInstance } from "@shared/api"
+import { Toaster } from "@shared/ui"
+
+import { Router } from "../router/Router"
+import { DaemonBanner } from "./DaemonBanner"
 
 export function App() {
   return (
-    <main className="flex min-h-svh items-center justify-center bg-background p-6">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>metabox</CardTitle>
-          <CardDescription>
-            Заглушка. Проверка тулинга: Tailwind + примитивы shadcn.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="listen">Адрес прослушивания</FieldLabel>
-              <Input id="listen" defaultValue="127.0.0.1:9090" />
-            </Field>
-            <Field orientation="horizontal">
-              <Switch id="sniff" />
-              <FieldLabel htmlFor="sniff">Sniff</FieldLabel>
-            </Field>
-            <Button type="button">Применить</Button>
-          </FieldGroup>
-        </CardContent>
-      </Card>
-    </main>
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="dark"
+      enableSystem={false}
+      disableTransitionOnChange
+    >
+      <QueryClientProvider client={QueryClientInstance}>
+        {/* Высоту экрана задаёт оболочка, а не страница: иначе баннер
+            недоступности сдвигает страницу за нижний край. */}
+        <div className="flex h-svh flex-col overflow-hidden">
+          <DaemonBanner />
+          <div className="min-h-0 grow">
+            <RouterProvider router={Router} />
+          </div>
+        </div>
+        <Toaster />
+      </QueryClientProvider>
+    </ThemeProvider>
   )
 }
