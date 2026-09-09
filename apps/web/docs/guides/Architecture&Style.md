@@ -91,7 +91,7 @@ export * from "./model"
 export * from "./ui"
 ```
 
-Баррель работает только вместе с `"sideEffects": ["**/*.css"]` в `web/package.json`: без флага Rollup считает модули side-effectful и тянет весь слайс целиком — на `shared/ui` это лишние 24 kB.
+Баррель работает только вместе с `"sideEffects": ["**/*.css"]` в `apps/web/package.json`: без флага Rollup считает модули side-effectful и тянет весь слайс целиком — на `shared/ui` это лишние 24 kB.
 
 ### Исключения из FSD
 
@@ -223,10 +223,10 @@ Tailwind v4, вход — `src/app/styles/index.css`: глобальные ст�
 
 Формат руками не правится:
 
-- конфиг один на репозиторий — `.oxfmtrc.json` в корне, настройки фронта (порядок импортов, сортировка классов Tailwind) лежат там в override для `web/**`;
-- линт каскадный — `web/.oxlintrc.json` расширяет корневой через `extends`, общие правила JS живут в корне;
+- конфиг один на репозиторий — `.oxfmtrc.json` в корне, настройки фронта (порядок импортов, сортировка классов Tailwind) лежат там в override для `apps/web/**`;
+- линт каскадный — `apps/web/.oxlintrc.json` расширяет корневой через `extends`, общие правила JS живут в корне;
 - в VS Code формат и автофиксы работают на сохранении: `.vscode/settings.json` назначает `oxc.oxc-vscode` форматтером для TS/JS, JSON, CSS и Markdown, иначе встроенные форматтеры разойдутся с `format:check`.
 
-Линт типозависимый: `strict` в обоих tsconfig, `options.typeAware` в `.oxlintrc.json`, пакет `oxlint-tsgolint`. Через `jsPlugins` подключены плагины TanStack Query, Testing Library, jest-dom, Tailwind и `check-file`. Границы FSD проверяет локальный `fsd/boundaries` (`web/tools/fsdBoundaries.js`): импорт вверх по слоям, соседний слайс мимо `@x`, обход Public API, относительный путь за пределами слайса. Перечень правил — в конфиге, риски `jsPlugins` — в [`docs/TechDebt.md`](../../../../docs/TechDebt.md).
+Линт типозависимый: `strict` в обоих tsconfig, `options.typeAware` в `.oxlintrc.json`, пакет `oxlint-tsgolint`. Через `jsPlugins` подключены плагины TanStack Query, Testing Library, jest-dom, Tailwind и `check-file`. Границы FSD проверяет локальный `fsd/boundaries` (`apps/web/tools/fsdBoundaries.js`): импорт вверх по слоям, соседний слайс мимо `@x`, обход Public API, относительный путь за пределами слайса. Перечень правил — в конфиге, риски `jsPlugins` — в [`docs/TechDebt.md`](../../../../docs/TechDebt.md).
 
 Линтер не видит: состав `index.ts`, формат логов, оправданность `memo`, `useCallback` и спреда `props` — это [чеклист ревью](./ReviewChecklist.md). Слайс, используемый одной страницей, не видит и он: для этого [`steiger`](https://github.com/feature-sliced/steiger) отдельным шагом CI, когда слайсов станет много.
