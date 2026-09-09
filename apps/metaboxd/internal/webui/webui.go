@@ -93,10 +93,9 @@ func (h *handler) serveIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := w.Write(h.index); err != nil {
-		// Клиент отвалился на середине страницы — писать некуда и незачем.
-		_ = err
-	}
+	// Ошибка записи здесь означает оборвавшегося клиента: статус уже ушёл,
+	// сообщить о ней некому.
+	_, _ = w.Write(h.index)
 }
 
 func exists(root fs.FS, name string) bool {
