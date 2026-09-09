@@ -2,10 +2,11 @@
 
 interface ImportMetaEnv {
   /**
-   * Подменять ручку конфига фикстурой. Нужна, пока демон не отдаёт
-   * `GET /api/config`: без неё редактор не на чем открыть.
+   * `"false"` — не подменять ручку конфига фикстурой, ходить к настоящему
+   * демону. В разработке подмена включена по умолчанию: `GET /api/config`
+   * демон пока не обслуживает. В сборке переменная не действует.
    */
-  readonly VITE_METABOX_MOCK_CONFIG?: "true" | "false"
+  readonly VITE_METABOX_MOCK_CONFIG?: "false"
 }
 
 interface ImportMeta {

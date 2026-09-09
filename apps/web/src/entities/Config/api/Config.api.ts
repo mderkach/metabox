@@ -5,11 +5,18 @@ import type { Config } from "@shared/api/generated"
 
 import { CONFIG_FIXTURE } from "./Config.mock"
 
-/** Задержка фикстуры: без неё скелетон не успевает отрисоваться и его не видно. */
+/** Без задержки состояние загрузки не успевает отрисоваться. */
 const FIXTURE_DELAY = 120
 
+/**
+ * Демон ручку конфига пока не отдаёт. Условие начинается с `DEV`, поэтому в
+ * собранный бинарь ветка с фикстурой не попадает вовсе; против живого демона
+ * фронт проверяется флагом `VITE_METABOX_MOCK_CONFIG=false`.
+ */
 function isMocked(): boolean {
-  return import.meta.env.VITE_METABOX_MOCK_CONFIG === "true"
+  return (
+    import.meta.env.DEV && import.meta.env.VITE_METABOX_MOCK_CONFIG !== "false"
+  )
 }
 
 async function getFixture(): Promise<Config> {
@@ -18,10 +25,6 @@ async function getFixture(): Promise<Config> {
   return CONFIG_FIXTURE
 }
 
-/**
- * Применённый конфиг устройства. Возвращает то, что прислал демон, без
- * преобразований: разбор схемой делает `select` запроса (Query.md).
- */
 export async function getConfig(config?: AxiosRequestConfig): Promise<Config> {
   if (isMocked()) {
     return getFixture()

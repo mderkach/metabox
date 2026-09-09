@@ -5,7 +5,6 @@ import { ConfigSchema, type Config } from "@shared/api/generated"
 
 import { getConfig } from "./Config.api"
 
-/** Ключи от общего к частному: общий префикс нужен для массовой инвалидации. */
 export const CONFIG_QUERY = {
   all: ["config"] as const,
   current: () => [...CONFIG_QUERY.all, "current"] as const,
@@ -21,23 +20,15 @@ export function getConfigOptions() {
   })
 }
 
-/**
- * Итог разбора. Провал — не отсутствие данных: пустой конфиг и конфиг, который
- * схема не поняла, выглядят на экране одинаково, а означают разное, и молчать
- * о втором нельзя.
- */
 export interface ParsedConfig {
+  /** `null` — схема конфиг не приняла; что именно, сказано в `issues`. */
   config: Config | null
-  /** Сообщения схемы: по ним видно, какой узел она не приняла. */
   issues: string[]
 }
 
 /**
- * Разбирает ответ демона схемой.
- *
- * Схема `looseObject`, поэтому незнакомые узлы разбор переживают — это
- * требование AC-3, а не побочный эффект. Провал не бросает исключение: панель
- * обязана открываться и на конфиге, который она не понимает целиком (NFR-1).
+ * Схема `looseObject`, поэтому незнакомые узлы разбор переживают (AC-3). Провал
+ * не бросает: панель обязана открываться и на непонятом конфиге (NFR-1).
  */
 export function parseConfig(data: unknown): ParsedConfig {
   const parsed = ConfigSchema.safeParse(data)

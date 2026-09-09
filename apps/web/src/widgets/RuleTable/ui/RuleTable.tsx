@@ -18,13 +18,8 @@ import { Input } from "@shared/ui"
 import { RULE_COLUMN } from "./RuleColumns"
 import { RuleRow } from "./RuleRow"
 
-/**
- * Приблизительная высота строки для первого кадра. Точную виртуализатор
- * измеряет сам: при увеличенном системном шрифте строка выше, и жёсткое
- * значение оставило бы пустоты в конце списка.
- */
+/** Оценка для первого кадра: точную высоту виртуализатор измеряет сам. */
 const ROW_ESTIMATE = 52
-/** Запас строк за краем окна, чтобы прокрутка не показывала пустоту. */
 const OVERSCAN = 8
 
 const features = tableFeatures({
@@ -78,15 +73,15 @@ export function RuleTable({
 
   return (
     <div className="flex min-h-0 grow flex-col gap-4">
-      <div className="flex max-w-80 items-center gap-2 rounded-lg border border-border px-2.5">
-        <Search className="size-4 shrink-0 text-muted-foreground" />
+      <div className="relative max-w-80">
+        <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           value={query}
           onChange={(event) => {
             setQuery(event.target.value)
           }}
           placeholder="Домен, IP или тег outbound"
-          className="h-8 border-0 px-0 shadow-none focus-visible:ring-0"
+          className="pl-8"
           aria-label="Поиск по правилам"
         />
       </div>
@@ -121,13 +116,7 @@ export function RuleTable({
   )
 }
 
-/**
- * Куда уходит всё, что не поймало ни одно правило.
- *
- * `route.final` в конфиге необязателен: без него решает последнее правило без
- * условий. Показывать в этом случае пустую строку нельзя — читатель решит, что
- * трафик никуда не идёт.
- */
+/** Пустая строка здесь читалась бы как «трафик никуда не идёт». */
 function RuleFinalRow({ final }: { final: string | null }) {
   return (
     <div

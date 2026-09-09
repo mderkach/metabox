@@ -182,6 +182,12 @@
       }
     },
     {
+      "files": ["src/**/*.mock.ts"],
+      "rules": {
+        "no-magic-numbers": "off"
+      }
+    },
+    {
       "files": ["src/shared/ui/**"],
       "rules": {
         "react/only-export-components": "off",

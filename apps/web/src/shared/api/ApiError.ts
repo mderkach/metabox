@@ -1,24 +1,12 @@
-/**
- * Вид отказа. Панель обязана работать при неработающем sing-box (NFR-1),
- * поэтому «демон не ответил» и «демон ответил ошибкой» — разные состояния
- * экрана, а не один общий «упало».
- */
+/** Недоступность демона гасит панель, его ответ ошибкой — только экран (NFR-1). */
 export const API_FAILURE = {
-  /** Запрос не дошёл: демон не поднят, сеть оборвана, вышел таймаут. */
   Unreachable: "unreachable",
-  /** Демон ответил статусом ошибки. Данные экрана, редактор остаётся рабочим. */
   Response: "response",
 } as const
 
 export type ApiFailure = (typeof API_FAILURE)[keyof typeof API_FAILURE]
 
-/**
- * Отказ обращения к демону.
- *
- * `details` не разбирается: у `check_failed` там дословный вывод sing-box,
- * который показывают пользователю как есть (ADR-0002), у остальных кодов —
- * ничего.
- */
+/** `details` у `check_failed` несёт дословный вывод sing-box (ADR-0002). */
 export class ApiError extends Error {
   readonly kind: ApiFailure
   readonly status: number | null
