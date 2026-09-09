@@ -33,7 +33,7 @@ func newStore(t *testing.T) (*config.Store, string) {
 		}
 	}
 
-	store, err := config.NewStore(cfgDir, configName, filepath.Join(stateDir, "config.backup"))
+	store, err := config.NewStore(cfgDir, configName, stateDir)
 	if err != nil {
 		t.Fatalf("сборка хранилища: %v", err)
 	}
@@ -41,36 +41,91 @@ func newStore(t *testing.T) (*config.Store, string) {
 	return store, cfgDir
 }
 
-func TestNewStoreRejectsBackupInsideConfigDir(t *testing.T) {
+func TestNewStoreRejectsServiceDirInsideConfigDir(t *testing.T) {
 	dir := t.TempDir()
 
 	tests := []struct {
 		name       string
-		backupPath string
+		serviceDir string
 	}{
-		{"рядом с конфигом", filepath.Join(dir, "config.backup")},
-		{"в подкаталоге", filepath.Join(dir, "backups", "config.backup")},
-		{"путь без имени файла", dir + string(filepath.Separator)},
+		{"тот же каталог", dir},
+		{"подкаталог", filepath.Join(dir, "metabox")},
+		{"подкаталог глубже", filepath.Join(dir, "state", "metabox")},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if _, err := config.NewStore(dir, configName, tt.backupPath); err == nil {
+			if _, err := config.NewStore(dir, configName, tt.serviceDir); err == nil {
 				t.Error("раскладка принята: сервис сливает каталог конфига целиком")
 			}
 		})
 	}
 }
 
-func TestNewStoreAcceptsBackupOutside(t *testing.T) {
+func TestNewStoreAcceptsServiceDirOutside(t *testing.T) {
 	root := t.TempDir()
 
 	if _, err := config.NewStore(
 		filepath.Join(root, "sing-box"),
 		configName,
-		filepath.Join(root, "metabox", "config.backup"),
+		filepath.Join(root, "metabox"),
 	); err != nil {
 		t.Errorf("соседний каталог отвергнут: %v", err)
+	}
+}
+
+func TestStateRoundTrip(t *testing.T) {
+	store, _ := newStore(t)
+
+	if _, err := store.ReadState(t.Context()); !errors.Is(err, config.ErrNoState) {
+		t.Errorf("получили %v, ожидали ErrNoState на чистом старте", err)
+	}
+
+	want := []byte(`{"phase":"awaiting_confirm"}`)
+	if err := store.WriteState(t.Context(), want); err != nil {
+		t.Fatalf("запись состояния: %v", err)
+	}
+
+	got, err := store.ReadState(t.Context())
+	if err != nil {
+		t.Fatalf("чтение состояния: %v", err)
+	}
+	if !bytes.Equal(got, want) {
+		t.Errorf("прочитали %q, записали %q", got, want)
+	}
+
+	info, err := os.Stat(store.StatePath())
+	if err != nil {
+		t.Fatalf("stat состояния: %v", err)
+	}
+	if perm := info.Mode().Perm(); perm != 0o600 {
+		t.Errorf("права %o, ожидали 600: в состоянии тот же конфиг", perm)
+	}
+
+	if err := store.ClearState(t.Context()); err != nil {
+		t.Fatalf("очистка состояния: %v", err)
+	}
+	if _, err := store.ReadState(t.Context()); !errors.Is(err, config.ErrNoState) {
+		t.Errorf("получили %v, ожидали ErrNoState после очистки", err)
+	}
+	if err := store.ClearState(t.Context()); err != nil {
+		t.Errorf("повторная очистка дала ошибку: %v", err)
+	}
+}
+
+func TestStateLandsOutsideConfigDir(t *testing.T) {
+	store, cfgDir := newStore(t)
+
+	if err := store.WriteState(t.Context(), []byte("{}")); err != nil {
+		t.Fatalf("запись состояния: %v", err)
+	}
+
+	entries, err := os.ReadDir(cfgDir)
+	if err != nil {
+		t.Fatalf("чтение каталога конфига: %v", err)
+	}
+	if len(entries) != 0 {
+		t.Errorf("в каталоге конфига появилось %d файлов: сервис сливает его целиком", len(entries))
 	}
 }
 

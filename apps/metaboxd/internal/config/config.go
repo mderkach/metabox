@@ -22,42 +22,50 @@ import (
 	"sync"
 )
 
-// ErrNoBackup — откатываться не на что: демон ещё ничего не применял.
-var ErrNoBackup = errors.New("бэкапа нет")
+var (
+	// ErrNoBackup — откатываться не на что: демон ещё ничего не применял.
+	ErrNoBackup = errors.New("бэкапа нет")
 
-// Store — единственный владелец файла конфига и его бэкапа. Параллельный
-// доступ закрыт методами: снаружи мьютекса быть не должно.
+	// ErrNoState — незавершённой транзакции нет, доигрывать нечего.
+	ErrNoState = errors.New("состояния транзакции нет")
+)
+
+// Имена служебных файлов в каталоге демона. Они не настраиваются: каталог
+// задаётся флагом, а раскладка внутри него — забота самого демона.
+const (
+	backupName = "config.backup"
+	stateName  = "apply.json"
+)
+
+// Store — единственный владелец файла конфига, его бэкапа и состояния
+// транзакции. Один владелец на все три файла требует Architecture&Style:
+// параллельный доступ закрыт методами, снаружи мьютекса быть не должно.
 type Store struct {
 	mu         sync.Mutex
 	dir        string
 	name       string
-	backupDir  string
-	backupName string
+	serviceDir string
 }
 
-// NewStore принимает каталог конфига, имя файла в нём и путь к бэкапу. Пути
-// приходят флагами, пакет их не выдумывает.
+// NewStore принимает каталог конфига, имя файла в нём и служебный каталог
+// демона под бэкап и состояние. Пути приходят флагами, пакет их не выдумывает.
 //
-// Бэкап внутри каталога конфига сервис слил бы в рабочую конфигурацию — он
-// поднимается в режиме каталога (ADR-0002), — поэтому такая раскладка
-// отвергается на старте, а не выясняется на устройстве.
-func NewStore(dir, name, backupPath string) (*Store, error) {
-	backupDir, backupName := filepath.Split(backupPath)
-	backupDir = filepath.Clean(backupDir)
-
-	if backupName == "" {
-		return nil, fmt.Errorf("путь к бэкапу %q не содержит имени файла", backupPath)
-	}
-	if within(filepath.Clean(dir), backupDir) {
-		return nil, fmt.Errorf("бэкап %s лежит в каталоге конфига %s", backupPath, dir)
+// Служебный каталог внутри каталога конфига сервис слил бы в рабочую
+// конфигурацию — он поднимается в режиме каталога (ADR-0002), — поэтому такая
+// раскладка отвергается на старте, а не выясняется на устройстве.
+func NewStore(dir, name, serviceDir string) (*Store, error) {
+	if name == "" {
+		return nil, errors.New("имя файла конфига пусто")
 	}
 
-	return &Store{
-		dir:        dir,
-		name:       name,
-		backupDir:  backupDir,
-		backupName: backupName,
-	}, nil
+	dir = filepath.Clean(dir)
+	serviceDir = filepath.Clean(serviceDir)
+
+	if within(dir, serviceDir) {
+		return nil, fmt.Errorf("служебный каталог %s лежит в каталоге конфига %s", serviceDir, dir)
+	}
+
+	return &Store{dir: dir, name: name, serviceDir: serviceDir}, nil
 }
 
 // within отвечает, лежит ли path внутри dir. filepath.Rel даёт путь, ведущий
@@ -78,7 +86,12 @@ func (s *Store) Path() string {
 
 // BackupPath отдаёт полный путь к бэкапу.
 func (s *Store) BackupPath() string {
-	return filepath.Join(s.backupDir, s.backupName)
+	return filepath.Join(s.serviceDir, backupName)
+}
+
+// StatePath отдаёт полный путь к файлу состояния транзакции.
+func (s *Store) StatePath() string {
+	return filepath.Join(s.serviceDir, stateName)
 }
 
 // Read возвращает текущий конфиг. Отсутствие файла — штатный случай, ошибка
@@ -173,13 +186,13 @@ func (s *Store) Backup(ctx context.Context) error {
 		return fmt.Errorf("чтение конфига %s под бэкап: %w", s.Path(), err)
 	}
 
-	backupRoot, err := openRoot(s.backupDir)
+	serviceRoot, err := openRoot(s.serviceDir)
 	if err != nil {
 		return err
 	}
-	defer func() { _ = backupRoot.Close() }()
+	defer func() { _ = serviceRoot.Close() }()
 
-	return writeAtomic(backupRoot, s.backupName, data, securePerm)
+	return writeAtomic(serviceRoot, backupName, data, securePerm)
 }
 
 // Restore возвращает конфиг из бэкапа. Права целевого файла сохраняются:
@@ -192,13 +205,13 @@ func (s *Store) Restore(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	backupRoot, err := openRoot(s.backupDir)
+	serviceRoot, err := openRoot(s.serviceDir)
 	if err != nil {
 		return err
 	}
-	defer func() { _ = backupRoot.Close() }()
+	defer func() { _ = serviceRoot.Close() }()
 
-	data, err := backupRoot.ReadFile(s.backupName)
+	data, err := serviceRoot.ReadFile(backupName)
 	if errors.Is(err, fs.ErrNotExist) {
 		return ErrNoBackup
 	}
@@ -302,4 +315,74 @@ func copyFile(src, dst *os.Root, name string) error {
 	}
 
 	return nil
+}
+
+// ReadState отдаёт сохранённое состояние транзакции. Отсутствие файла —
+// штатный случай: демон стартовал с чистого листа.
+func (s *Store) ReadState(ctx context.Context) ([]byte, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	root, err := openRoot(s.serviceDir)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = root.Close() }()
+
+	data, err := root.ReadFile(stateName)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, ErrNoState
+	}
+	if err != nil {
+		return nil, fmt.Errorf("чтение состояния %s: %w", s.StatePath(), err)
+	}
+
+	return data, nil
+}
+
+// WriteState сохраняет состояние транзакции атомарно. Вызывается до записи
+// конфига: питание, снятое между записью и стартом таймера, иначе оставило бы
+// устройство на новом конфиге без автоотката (ADR-0002).
+func (s *Store) WriteState(ctx context.Context, data []byte) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	root, err := openRoot(s.serviceDir)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = root.Close() }()
+
+	return writeAtomic(root, stateName, data, securePerm)
+}
+
+// ClearState убирает состояние завершённой транзакции. Отсутствие файла
+// ошибкой не считается: доигрывать нечего.
+func (s *Store) ClearState(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	root, err := openRoot(s.serviceDir)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = root.Close() }()
+
+	if err := root.Remove(stateName); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return fmt.Errorf("удаление состояния %s: %w", s.StatePath(), err)
+	}
+
+	return syncDir(root)
 }
