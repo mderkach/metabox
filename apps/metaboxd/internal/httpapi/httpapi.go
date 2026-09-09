@@ -32,6 +32,9 @@ type Options struct {
 	// строка означает, что послаблений нет: правило из ADR-0002 действует
 	// в чистом виде.
 	AllowedOrigin string
+	// SPA раздаёт встроенный интерфейс. nil означает, что бинарь собран без
+	// фронта: API продолжает работать, а панель объясняет, чего не хватает.
+	SPA http.Handler
 }
 
 // Server держит зависимости обработчиков и собранную цепочку middleware.
@@ -40,6 +43,7 @@ type Server struct {
 	log           *slog.Logger
 	version       string
 	allowedOrigin string
+	spa           http.Handler
 	handler       http.Handler
 }
 
@@ -51,6 +55,7 @@ func NewServer(applier Applier, log *slog.Logger, opts Options) *Server {
 		log:           log,
 		version:       opts.Version,
 		allowedOrigin: opts.AllowedOrigin,
+		spa:           opts.SPA,
 	}
 	s.handler = s.routes()
 
@@ -71,6 +76,7 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /api/apply/{id}", s.handleApplyState)
 	mux.HandleFunc("POST /api/apply/{id}/confirm", s.handleApplyConfirm)
 	mux.HandleFunc("/api/", s.handleAPINotFound)
+	mux.Handle("/", s.spaHandler())
 
 	return s.middleware(mux)
 }
@@ -151,4 +157,19 @@ func (s *Server) handleApplyConfirm(w http.ResponseWriter, r *http.Request) {
 // сюда index.html значит вернуть фронту HTML вместо разбираемого ответа.
 func (s *Server) handleAPINotFound(w http.ResponseWriter, r *http.Request) {
 	fail(s.log, w, r, errNotFound)
+}
+
+// spaHandler отдаёт встроенный интерфейс, а без него — объяснение. Демон
+// обязан подниматься и обслуживать API, даже когда фронт в бинарь не попал
+// (NFR-1).
+func (s *Server) spaHandler() http.Handler {
+	if s.spa != nil {
+		return s.spa
+	}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_, _ = w.Write([]byte("интерфейс не собран: соберите демон через `make daemon`\n"))
+	})
 }

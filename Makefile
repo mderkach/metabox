@@ -23,9 +23,17 @@ schema:
 web:
 	pnpm --filter web build
 
+# Каталог, из которого go:embed берёт статику. Директива не поднимается выше
+# каталога своего пакета, поэтому собранная SPA переезжает сюда (ADR-0003).
+# В git тут лежит только .gitkeep — он держит каталог непустым, чтобы Go-часть
+# собиралась и тестировалась без фронта.
+EMBED_DIR := apps/metaboxd/internal/webui/static
+
 # Build the daemon; the SPA is built first because it gets embedded.
 # BIN is relative to the repository root, so the build runs from there.
 daemon: web
+	find $(EMBED_DIR) -mindepth 1 ! -name .gitkeep -delete
+	cp -R apps/web/dist/. $(EMBED_DIR)/
 	cd apps/metaboxd && go build -ldflags "$(LDFLAGS)" -o ../../$(BIN) .
 
 # Run the SPA dev server.
@@ -67,6 +75,8 @@ DC := docker compose -f .devcontainer/docker-compose.yml
 # Демон собирается внутри dev-контейнера, а не на хосте: CGO_ENABLED=0 задан
 # в Dockerfile.dev, и сборка на macOS дала бы darwin-бинарь, который target не
 # запустит. Каталог dist/ смонтирован в target как /opt/metabox.
+# Статику стенд раздаёт сам Vite с HMR (AC-20), поэтому embed здесь не нужен:
+# демон в стенде отвечает только API и говорит об этом в лог.
 daemon-target:
 	$(DC) up -d dev
 	$(DC) exec -T dev sh -c 'cd apps/metaboxd && go build -ldflags "$(LDFLAGS)" -o ../../$(BIN) .'
@@ -101,3 +111,4 @@ apply-check:
 
 clean:
 	rm -rf dist apps/web/dist
+	find $(EMBED_DIR) -mindepth 1 ! -name .gitkeep -delete

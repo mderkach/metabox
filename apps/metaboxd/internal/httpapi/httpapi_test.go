@@ -91,9 +91,16 @@ func (a *fakeApplier) body() []byte {
 func newTestServer(t *testing.T, applier httpapi.Applier, allowedOrigin string) *httptest.Server {
 	t.Helper()
 
+	return newTestServerWithSPA(t, applier, allowedOrigin, nil)
+}
+
+func newTestServerWithSPA(t *testing.T, applier httpapi.Applier, allowedOrigin string, spa http.Handler) *httptest.Server {
+	t.Helper()
+
 	srv := httptest.NewServer(httpapi.NewServer(applier, testLogger(t), httpapi.Options{
 		Version:       "test",
 		AllowedOrigin: allowedOrigin,
+		SPA:           spa,
 	}))
 	t.Cleanup(srv.Close)
 
@@ -447,5 +454,63 @@ func TestStatusLinksActiveTransaction(t *testing.T) {
 	followed := request(t, srv, http.MethodGet, status.TransactionHref, "", nil)
 	if followed.status != http.StatusOK {
 		t.Errorf("переход по ссылке дал %d", followed.status)
+	}
+}
+
+// Роутинг у SPA клиентский: всё, что не под /api/, уходит интерфейсу.
+func TestUnknownPathGoesToSPA(t *testing.T) {
+	spa := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write([]byte("оболочка"))
+	})
+	srv := newTestServerWithSPA(t, &fakeApplier{}, "", spa)
+
+	for _, path := range []string{"/", "/connections", "/config/outbounds/2"} {
+		t.Run(path, func(t *testing.T) {
+			got := request(t, srv, http.MethodGet, path, "", nil)
+
+			if got.status != http.StatusOK || got.body != "оболочка" {
+				t.Errorf("код %d, тело %q: ожидали оболочку SPA", got.status, got.body)
+			}
+		})
+	}
+}
+
+// Под /api/ по-прежнему JSON, а не index.html: иначе фронт получит HTML вместо
+// разбираемого ответа.
+func TestAPIPathNeverReachesSPA(t *testing.T) {
+	spa := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("оболочка"))
+	})
+
+	got := request(t, newTestServerWithSPA(t, &fakeApplier{}, "", spa), http.MethodGet, "/api/нет", "", nil)
+
+	if got.status != http.StatusNotFound {
+		t.Fatalf("код %d, ожидали %d", got.status, http.StatusNotFound)
+	}
+
+	var apiErr httpapi.APIError
+	got.decode(t, &apiErr)
+
+	if apiErr.Code != "not_found" {
+		t.Errorf("код ошибки %q, ожидали not_found", apiErr.Code)
+	}
+}
+
+// Демон, собранный без фронта, обязан подниматься и обслуживать API: панель
+// объясняет, чего не хватает, а не молчит 404 (NFR-1).
+func TestDaemonWithoutSPAStillServesAPI(t *testing.T) {
+	srv := newTestServer(t, &fakeApplier{}, "")
+
+	root := request(t, srv, http.MethodGet, "/", "", nil)
+	if root.status != http.StatusServiceUnavailable {
+		t.Errorf("код %d, ожидали %d", root.status, http.StatusServiceUnavailable)
+	}
+	if !strings.Contains(root.body, "make daemon") {
+		t.Errorf("тело %q не объясняет, как собрать интерфейс", root.body)
+	}
+
+	if got := request(t, srv, http.MethodGet, "/healthz", "", nil); got.status != http.StatusOK {
+		t.Errorf("API не работает без фронта: код %d", got.status)
 	}
 }

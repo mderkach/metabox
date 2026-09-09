@@ -20,6 +20,7 @@ import (
 	"metabox/internal/httpapi"
 	"metabox/internal/singbox"
 	"metabox/internal/version"
+	"metabox/internal/webui"
 )
 
 const (
@@ -99,9 +100,18 @@ func run(log *slog.Logger, s settings) error {
 		log.Error("незавершённая транзакция не доиграна", "err", err)
 	}
 
+	spa, err := webui.Handler()
+	if errors.Is(err, webui.ErrNotBuilt) {
+		log.Warn("интерфейс в бинарь не попал, отдаём только API", "как_починить", "make daemon")
+		spa = nil
+	} else if err != nil {
+		return fmt.Errorf("встроенный интерфейс: %w", err)
+	}
+
 	api := httpapi.NewServer(manager, log, httpapi.Options{
 		Version:       version.Version,
 		AllowedOrigin: s.allowedOrigin,
+		SPA:           spa,
 	})
 
 	srv := &http.Server{

@@ -52,6 +52,10 @@ jobs:
       - run: pnpm --filter web test
       - run: pnpm --filter web build
 
+      # Сборка целиком: только здесь проверяется, что собранная SPA доезжает
+      # до go:embed и попадает в бинарь (AC-17).
+      - run: make daemon
+
   # AC-22: интеграционный прогон на том же образе целевого окружения,
   # что и в devcontainer. Отличаются только архитектура и тег rootfs.
   integration:

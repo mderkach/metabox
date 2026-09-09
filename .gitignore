@@ -12,6 +12,13 @@ coverage
 .env.*
 !.env.example
 
+# Каталог, из которого go:embed берёт SPA: содержимое кладёт `make daemon`.
+# В git остаётся только .gitkeep — без единого файла go:embed не собирается,
+# и Go-часть переставала бы собираться на чистом клоне (docs/adr/ADR-0003).
+!apps/metaboxd/internal/webui/static/
+apps/metaboxd/internal/webui/static/*
+!apps/metaboxd/internal/webui/static/.gitkeep
+
 # кэши и артефакты сборки, в том числе из devcontainer
 .pnpm-store/
 *.tsbuildinfo
