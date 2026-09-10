@@ -47,7 +47,6 @@ jobs:
           --to ${{ github.event.pull_request.head.sha }}
 
       - run: pnpm lint
-      - run: pnpm --filter web lint
       - run: pnpm format:check
       - run: pnpm --filter web test
       - run: pnpm --filter web build
