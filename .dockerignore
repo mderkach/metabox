@@ -1,0 +1,11 @@
+# Контекст сборки — корень репозитория: образу нужны .nvmrc и package.json,
+# а они лежат выше .devcontainer. Всё тяжёлое и машинозависимое сюда не едет.
+.git
+node_modules
+**/node_modules
+.pnpm-store
+dist
+apps/web/dist
+apps/metaboxd/internal/webui/static/assets
+bin
+.omc

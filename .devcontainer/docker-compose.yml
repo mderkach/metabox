@@ -4,8 +4,10 @@ services:
   # Среда разработки: здесь живут Go-сборка, Vite и тесты.
   dev:
     build:
-      context: .
-      dockerfile: Dockerfile.dev
+      # Контекст — корень репозитория: версии Node и pnpm образ берёт из
+      # `.nvmrc` и `packageManager`, а не из собственных копий.
+      context: ..
+      dockerfile: .devcontainer/Dockerfile.dev
       args:
         GO_VERSION: ${GO_VERSION:-1.26.7}
     working_dir: /workspace
@@ -35,8 +37,10 @@ services:
   # нельзя — к нему подключается devcontainer.
   vite:
     build:
-      context: .
-      dockerfile: Dockerfile.dev
+      # Контекст — корень репозитория: версии Node и pnpm образ берёт из
+      # `.nvmrc` и `packageManager`, а не из собственных копий.
+      context: ..
+      dockerfile: .devcontainer/Dockerfile.dev
       args:
         GO_VERSION: ${GO_VERSION:-1.26.7}
     working_dir: /workspace/apps/web

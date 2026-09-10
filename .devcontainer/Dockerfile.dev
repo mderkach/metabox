@@ -3,18 +3,30 @@
 ARG GO_VERSION=1.26.7
 FROM golang:${GO_VERSION}-trixie
 
-ARG NODE_MAJOR=24
-ARG PNPM_VERSION=11.25.0
-
 # ca-certificates и git нужны go mod; jq и curl — скриптам проверки цикла Apply
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
-      ca-certificates curl git jq make gnupg \
- && curl -fsSL https://deb.nodesource.com/setup_${NODE_MAJOR}.x | bash - \
- && apt-get install -y --no-install-recommends nodejs \
+      ca-certificates curl git jq make xz-utils \
  && rm -rf /var/lib/apt/lists/*
 
-RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
+# Версии Node и pnpm берутся из тех же файлов, что читают инструменты
+# разработчика и CI: пакетный репозиторий дал бы свежий мажор, а не тот же.
+COPY .nvmrc package.json /tmp/pin/
+RUN NODE_VERSION="$(tr -d 'v \n' < /tmp/pin/.nvmrc)" \
+ && case "$(dpkg --print-architecture)" in \
+      amd64) NODE_ARCH=x64 ;; \
+      arm64) NODE_ARCH=arm64 ;; \
+      *) echo "нет сборки Node под $(dpkg --print-architecture)" >&2; exit 1 ;; \
+    esac \
+ && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz" \
+      -o /tmp/node.tar.xz \
+ && tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1 --no-same-owner \
+ && rm /tmp/node.tar.xz
+
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+RUN corepack enable \
+ && corepack prepare "$(node -p "require('/tmp/pin/package.json').packageManager")" --activate \
+ && rm -rf /tmp/pin
 
 # Кэш модулей и пакетов переживает пересоздание контейнера через именованные тома
 # Целевая система — OpenWrt на musl. Бинарь, слинкованный с glibc, там просто
