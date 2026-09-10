@@ -1,4 +1,3 @@
-// oxlint-disable no-magic-numbers
 import type { Config } from '@shared/api/generated';
 
 /**

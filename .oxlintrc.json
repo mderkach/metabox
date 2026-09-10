@@ -5,6 +5,9 @@
     "node": true,
     "es2024": true
   },
+  "options": {
+    "typeAware": true
+  },
   "rules": {
     "import/no-default-export": "error",
     "no-nested-ternary": "error",

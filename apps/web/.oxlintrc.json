@@ -31,9 +31,6 @@
       "entryPoint": "src/app/styles/index.css"
     }
   },
-  "options": {
-    "typeAware": true
-  },
   "ignorePatterns": ["dist", "src/shared/api/generated.ts"],
   "rules": {
     "react/rules-of-hooks": "error",
@@ -46,6 +43,7 @@
         "unnamedComponents": "arrow-function"
       }
     ],
+    "react/incompatible-library": "off",
     "react/only-export-components": [
       "warn",
       {
