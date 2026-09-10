@@ -23,6 +23,10 @@ import (
 )
 
 var (
+	// ErrNoConfig — конфига на месте нет: ни файла, ни каталога под него.
+	// Штатный случай, на устройстве sing-box могли ещё не настраивать.
+	ErrNoConfig = errors.New("файла конфига нет")
+
 	// ErrNoBackup — откатываться не на что: демон ещё ничего не применял.
 	ErrNoBackup = errors.New("бэкапа нет")
 
@@ -94,8 +98,7 @@ func (s *Store) StatePath() string {
 	return filepath.Join(s.serviceDir, stateName)
 }
 
-// Read возвращает текущий конфиг. Отсутствие файла — штатный случай, ошибка
-// заворачивает fs.ErrNotExist.
+// Read возвращает текущий конфиг. Отсутствие файла или каталога — ErrNoConfig.
 func (s *Store) Read(ctx context.Context) ([]byte, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -105,12 +108,18 @@ func (s *Store) Read(ctx context.Context) ([]byte, error) {
 	defer s.mu.Unlock()
 
 	root, err := openRoot(s.dir)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, ErrNoConfig
+	}
 	if err != nil {
 		return nil, err
 	}
 	defer func() { _ = root.Close() }()
 
 	data, err := root.ReadFile(s.name)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, ErrNoConfig
+	}
 	if err != nil {
 		return nil, fmt.Errorf("чтение конфига %s: %w", s.Path(), err)
 	}

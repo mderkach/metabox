@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
-import { CONFIG_FIXTURE } from "../api/Config.mock"
 import { CONFIG_QUERY, parseConfig } from "../api/Config.query"
+import { CONFIG_FIXTURE } from "./Config.fixture"
 
 describe("CONFIG_QUERY", () => {
   it("строит частный ключ от общего, чтобы работала массовая инвалидация", () => {

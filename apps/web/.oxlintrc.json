@@ -182,7 +182,7 @@
       }
     },
     {
-      "files": ["src/**/*.mock.ts"],
+      "files": ["src/**/*.mock.ts", "src/**/*.fixture.ts"],
       "rules": {
         "no-magic-numbers": "off"
       }

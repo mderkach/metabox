@@ -10,6 +10,7 @@ func (s *Server) routes() http.Handler {
 
 	mux.HandleFunc("GET /healthz", s.handleHealth)
 	mux.HandleFunc("GET /api/status", s.handleStatus)
+	mux.HandleFunc("GET /api/config", s.handleConfig)
 	mux.HandleFunc("POST /api/apply", s.handleApply)
 	mux.HandleFunc("GET /api/apply/{id}", s.handleApplyState)
 	mux.HandleFunc("POST /api/apply/{id}/confirm", s.handleApplyConfirm)
@@ -23,6 +24,8 @@ func (s *Server) routes() http.Handler {
 Метод в шаблоне обязателен: без него на `POST` ответит хендлер, написанный под `GET`. Параметр берётся `r.PathValue("id")`. Ручки API — под `/api/`, всё остальное отдаёт SPA.
 
 Набор ручек Apply задан ADR-0002 и не переизобретается по ходу: `POST /api/apply`, `GET /api/apply/{id}`, `POST /api/apply/{id}/confirm`, ссылка на активную транзакцию в `GET /api/status`.
+
+Записи конфига отдельной ручкой нет и не будет: `GET /api/config` отдаёт применённый конфиг, а пишет его только протокол Apply. `PUT` в обход `sing-box check`, бэкапа и окна подтверждения обошёл бы и гарантию отката.
 
 ## Хендлеры
 

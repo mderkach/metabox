@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -13,6 +14,7 @@ import (
 	"testing"
 
 	"metabox/internal/apply"
+	"metabox/internal/config"
 	"metabox/internal/httpapi"
 	"metabox/internal/singbox"
 )
@@ -88,16 +90,49 @@ func (a *fakeApplier) body() []byte {
 	return a.received
 }
 
+// fakeReader подменяет владельца файла конфига: чтение с диска проверяется в
+// internal/config, здесь важно, что байты доходят до ответа неизменными.
+type fakeReader struct {
+	data []byte
+	err  error
+}
+
+func (r fakeReader) Read(context.Context) ([]byte, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+
+	return r.data, nil
+}
+
 func newTestServer(t *testing.T, applier httpapi.Applier, allowedOrigin string) *httptest.Server {
 	t.Helper()
 
-	return newTestServerWithSPA(t, applier, allowedOrigin, nil)
+	return newTestServerWith(t, applier, fakeReader{}, allowedOrigin, nil)
 }
 
 func newTestServerWithSPA(t *testing.T, applier httpapi.Applier, allowedOrigin string, spa http.Handler) *httptest.Server {
 	t.Helper()
 
-	srv := httptest.NewServer(httpapi.NewServer(applier, testLogger(t), httpapi.Options{
+	return newTestServerWith(t, applier, fakeReader{}, allowedOrigin, spa)
+}
+
+func newTestServerWithReader(t *testing.T, reader httpapi.ConfigReader) *httptest.Server {
+	t.Helper()
+
+	return newTestServerWith(t, &fakeApplier{}, reader, "", nil)
+}
+
+func newTestServerWith(
+	t *testing.T,
+	applier httpapi.Applier,
+	reader httpapi.ConfigReader,
+	allowedOrigin string,
+	spa http.Handler,
+) *httptest.Server {
+	t.Helper()
+
+	srv := httptest.NewServer(httpapi.NewServer(applier, reader, testLogger(t), httpapi.Options{
 		Version:       "test",
 		AllowedOrigin: allowedOrigin,
 		SPA:           spa,
@@ -110,6 +145,7 @@ func newTestServerWithSPA(t *testing.T, applier httpapi.Applier, allowedOrigin s
 type response struct {
 	status      int
 	contentType string
+	header      http.Header
 	body        string
 }
 
@@ -155,6 +191,7 @@ func request(t *testing.T, srv *httptest.Server, method, path, origin string, bo
 	return response{
 		status:      resp.StatusCode,
 		contentType: resp.Header.Get("Content-Type"),
+		header:      resp.Header,
 		body:        string(raw),
 	}
 }
@@ -177,6 +214,57 @@ func TestHealth(t *testing.T) {
 
 	if health.Status != "ok" || health.Version != "test" {
 		t.Errorf("получили %+v, ожидали status ok и version test", health)
+	}
+}
+
+func TestConfigServedVerbatim(t *testing.T) {
+	raw := []byte("{\n  \"log\":   {\"level\": \"info\"},\n  \"неизвестная_секция\": [1,2]\n}\n")
+
+	got := request(t, newTestServerWithReader(t, fakeReader{data: raw}), http.MethodGet, "/api/config", "", nil)
+
+	if got.status != http.StatusOK {
+		t.Fatalf("код %d, ожидали %d", got.status, http.StatusOK)
+	}
+	if !strings.HasPrefix(got.contentType, "application/json") {
+		t.Errorf("Content-Type %q, ожидали application/json", got.contentType)
+	}
+	if got.body != string(raw) {
+		t.Errorf("тело %q, ожидали %q", got.body, raw)
+	}
+	if cache := got.header.Get("Cache-Control"); cache != "no-store" {
+		t.Errorf("Cache-Control %q, ожидали no-store", cache)
+	}
+}
+
+func TestConfigMissingIsNotFound(t *testing.T) {
+	got := request(t, newTestServerWithReader(t, fakeReader{err: config.ErrNoConfig}),
+		http.MethodGet, "/api/config", "", nil)
+
+	if got.status != http.StatusNotFound {
+		t.Fatalf("код %d, ожидали %d", got.status, http.StatusNotFound)
+	}
+
+	var apiErr httpapi.APIError
+	got.decode(t, &apiErr)
+
+	if apiErr.Code != "config_missing" {
+		t.Errorf("код ошибки %q, ожидали config_missing", apiErr.Code)
+	}
+	if strings.Contains(got.body, "config.json") {
+		t.Errorf("тело %q: путь к конфигу наружу не идёт", got.body)
+	}
+}
+
+func TestConfigReadFailureHidesDetails(t *testing.T) {
+	reader := fakeReader{err: errors.New("чтение конфига /etc/sing-box/config.json: отказано в доступе")}
+
+	got := request(t, newTestServerWithReader(t, reader), http.MethodGet, "/api/config", "", nil)
+
+	if got.status != http.StatusInternalServerError {
+		t.Fatalf("код %d, ожидали %d", got.status, http.StatusInternalServerError)
+	}
+	if strings.Contains(got.body, "/etc/sing-box") {
+		t.Errorf("тело %q: путь на диске наружу не идёт", got.body)
 	}
 }
 

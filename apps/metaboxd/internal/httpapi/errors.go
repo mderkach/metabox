@@ -1,11 +1,13 @@
 package httpapi
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"net/http"
 
 	"metabox/internal/apply"
+	"metabox/internal/config"
 	"metabox/internal/singbox"
 )
 
@@ -29,6 +31,14 @@ type checkDetails struct {
 // добавляется в statusFor, а не в хендлер. Текст неизвестной ошибки наружу не
 // уходит — в ней бывают пути, аргументы команд и содержимое конфига.
 func fail(log *slog.Logger, w http.ResponseWriter, r *http.Request, err error) {
+	// Клиент оборвал соединение — ушёл с экрана, перезапросил. Отвечать
+	// некому, и отказом сервера это не является.
+	if errors.Is(err, context.Canceled) {
+		log.Debug("запрос отменён клиентом", "method", r.Method, "path", r.URL.Path)
+
+		return
+	}
+
 	if checkErr, ok := errors.AsType[*singbox.CheckError](err); ok {
 		writeJSON(log, w, http.StatusUnprocessableEntity, APIError{
 			Code:    "check_failed",
@@ -62,6 +72,8 @@ func statusFor(err error) (status int, code string) {
 		return http.StatusNotFound, "not_found"
 	case errors.Is(err, errOriginMismatch):
 		return http.StatusForbidden, "origin_mismatch"
+	case errors.Is(err, config.ErrNoConfig):
+		return http.StatusNotFound, "config_missing"
 	case errors.Is(err, apply.ErrUnknownTransaction):
 		return http.StatusNotFound, "unknown_transaction"
 	case errors.Is(err, apply.ErrBusy):

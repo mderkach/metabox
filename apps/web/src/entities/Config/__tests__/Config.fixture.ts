@@ -1,12 +1,14 @@
+// oxlint-disable no-magic-numbers
 import type { Config } from "@shared/api/generated"
 
 /**
- * Фикстура на время, пока демон не отдаёт `GET /api/config` — см.
- * [TechDebt](../../../../../../docs/TechDebt.md).
+ * Структура конфига с рабочего роутера: 32 правила, 18 remote rule-set,
+ * 11 DNS-серверов и секция `providers`, которой в upstream sing-box нет.
  *
- * Снята с рабочего роутера: 32 правила, 18 remote rule-set, 11 DNS-серверов и
- * секция `providers`, которой в upstream sing-box нет. Ключи, пароли и адреса
- * подписок заменены на `REDACTED`, адреса нод — на `example.invalid`.
+ * Данные владельца из неё вычищены: ключи и адреса подписок — `REDACTED`, ноды
+ * и домены — зоны `.example` и `.invalid` (RFC 2606), адреса — `198.51.100.0/24`
+ * (RFC 5737). Реальный домен или адрес здесь появиться не должен: файл лежит
+ * в git.
  */
 export const CONFIG_FIXTURE: Config = {
   log: {
@@ -116,11 +118,7 @@ export const CONFIG_FIXTURE: Config = {
     ],
     rules: [
       {
-        domain: [
-          "node-a.example",
-          "node-b.example",
-          "node-c.example",
-        ],
+        domain: ["node-a.example", "node-b.example", "node-c.example"],
         action: "route",
         server: "dns-hosts",
       },
@@ -149,7 +147,11 @@ export const CONFIG_FIXTURE: Config = {
         server: "dns-alt",
       },
       {
-        domain_suffix: ["media-a.example", "media-b.example", "media-b.example"],
+        domain_suffix: [
+          "media-a.example",
+          "media-b.example",
+          "media-b.example",
+        ],
         action: "route",
         server: "dns-alt",
       },
@@ -200,7 +202,11 @@ export const CONFIG_FIXTURE: Config = {
         server: "dns-remote",
       },
       {
-        domain_suffix: ["maker-a.example", "maker-b.example", "maker-c.example"],
+        domain_suffix: [
+          "maker-a.example",
+          "maker-b.example",
+          "maker-c.example",
+        ],
         action: "route",
         server: "dns-remote",
       },
@@ -369,7 +375,11 @@ export const CONFIG_FIXTURE: Config = {
         outbound: "alt-fallback",
       },
       {
-        domain_suffix: ["media-a.example", "media-b.example", "media-c.example"],
+        domain_suffix: [
+          "media-a.example",
+          "media-b.example",
+          "media-c.example",
+        ],
         outbound: "alt-fallback",
       },
       {
@@ -432,7 +442,11 @@ export const CONFIG_FIXTURE: Config = {
         outbound: "proxy",
       },
       {
-        domain_suffix: ["maker-a.example", "maker-b.example", "maker-c.example"],
+        domain_suffix: [
+          "maker-a.example",
+          "maker-b.example",
+          "maker-c.example",
+        ],
         outbound: "proxy",
       },
       {

@@ -25,6 +25,12 @@ type Applier interface {
 	Current() apply.Transaction
 }
 
+// ConfigReader отдаёт применённый конфиг байтами. Интерфейс объявлен здесь,
+// у потребителя, и содержит только чтение: файлом владеет config.Store.
+type ConfigReader interface {
+	Read(ctx context.Context) ([]byte, error)
+}
+
 // Options — настройки слоя, приходящие в демон флагами.
 type Options struct {
 	Version string
@@ -40,6 +46,7 @@ type Options struct {
 // Server держит зависимости обработчиков и собранную цепочку middleware.
 type Server struct {
 	applier       Applier
+	reader        ConfigReader
 	log           *slog.Logger
 	version       string
 	allowedOrigin string
@@ -49,9 +56,10 @@ type Server struct {
 
 // NewServer собирает слой вместе с цепочкой middleware. Логгер обязателен:
 // своего пакет не заводит.
-func NewServer(applier Applier, log *slog.Logger, opts Options) *Server {
+func NewServer(applier Applier, reader ConfigReader, log *slog.Logger, opts Options) *Server {
 	s := &Server{
 		applier:       applier,
+		reader:        reader,
 		log:           log,
 		version:       opts.Version,
 		allowedOrigin: opts.AllowedOrigin,
@@ -72,6 +80,7 @@ func (s *Server) routes() http.Handler {
 
 	mux.HandleFunc("GET /healthz", s.handleHealth)
 	mux.HandleFunc("GET /api/status", s.handleStatus)
+	mux.HandleFunc("GET /api/config", s.handleConfig)
 	mux.HandleFunc("POST /api/apply", s.handleApply)
 	mux.HandleFunc("GET /api/apply/{id}", s.handleApplyState)
 	mux.HandleFunc("POST /api/apply/{id}/confirm", s.handleApplyConfirm)
@@ -108,6 +117,29 @@ func (s *Server) handleStatus(w http.ResponseWriter, _ *http.Request) {
 	}
 
 	writeJSON(s.log, w, http.StatusOK, body)
+}
+
+// handleConfig отдаёт конфиг ровно теми байтами, какими он лежит на диске:
+// демон его не разбирает и не переформатирует (ADR-0002), иначе round-trip
+// рукописного конфига терял бы форматирование (AC-2).
+func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
+	data, err := s.reader.Read(r.Context())
+	if err != nil {
+		fail(s.log, w, r, err)
+
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	// Конфиг меняется вне запросов клиента — применением, откатом, правкой по
+	// SSH, — поэтому ответ не кэшируется.
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(http.StatusOK)
+
+	if _, err := w.Write(data); err != nil {
+		// Статус уже ушёл клиенту, вернуть ошибку некуда.
+		s.log.Error("конфиг не дописан в ответ", "err", err)
+	}
 }
 
 // handleApply принимает конфиг байтами и запускает применение. Ответ приходит

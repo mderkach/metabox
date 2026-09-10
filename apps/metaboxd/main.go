@@ -84,7 +84,7 @@ func main() {
 }
 
 func run(log *slog.Logger, s settings) error {
-	manager, err := build(log, s)
+	manager, store, err := build(log, s)
 	if err != nil {
 		return err
 	}
@@ -108,7 +108,7 @@ func run(log *slog.Logger, s settings) error {
 		return fmt.Errorf("встроенный интерфейс: %w", err)
 	}
 
-	api := httpapi.NewServer(manager, log, httpapi.Options{
+	api := httpapi.NewServer(manager, store, log, httpapi.Options{
 		Version:       version.Version,
 		AllowedOrigin: s.allowedOrigin,
 		SPA:           spa,
@@ -156,22 +156,24 @@ func run(log *slog.Logger, s settings) error {
 
 // build собирает граф зависимостей. Отдельной функцией, чтобы run занимался
 // только запуском и остановкой.
-func build(log *slog.Logger, s settings) (*apply.Manager, error) {
+func build(log *slog.Logger, s settings) (*apply.Manager, *config.Store, error) {
 	store, err := config.NewStore(s.configDir, s.configName, s.serviceDir)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	service, err := singbox.New(singbox.NewExec(binaryTimeout), s.binary, s.initScript)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	health := clashapi.NewChecker(healthRequestTimeout, healthPollInterval)
 
-	return apply.New(store, service, health, nil, log, apply.Options{
+	manager := apply.New(store, service, health, nil, log, apply.Options{
 		Window:       s.confirmWindow,
 		ClashPort:    s.clashPort,
 		CycleTimeout: s.cycleTimeout,
-	}), nil
+	})
+
+	return manager, store, nil
 }

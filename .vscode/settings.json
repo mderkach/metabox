@@ -1,6 +1,7 @@
 {
   "editor.codeActionsOnSave": {
-    "source.fixAll.oxc": "always"
+    "source.fixAll.oxc": "always",
+    "source.fixAll.markdownlint": "explicit"
   },
 
   "[javascript]": {

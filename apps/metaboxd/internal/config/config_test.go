@@ -168,8 +168,19 @@ func TestWriteThenRead(t *testing.T) {
 func TestReadMissingConfig(t *testing.T) {
 	store, _ := newStore(t)
 
-	if _, err := store.Read(t.Context()); !errors.Is(err, fs.ErrNotExist) {
-		t.Errorf("получили %v, ожидали fs.ErrNotExist: отсутствие конфига — штатный случай", err)
+	if _, err := store.Read(t.Context()); !errors.Is(err, config.ErrNoConfig) {
+		t.Errorf("получили %v, ожидали ErrNoConfig: отсутствие конфига — штатный случай", err)
+	}
+}
+
+func TestReadMissingConfigDir(t *testing.T) {
+	store, err := config.NewStore(filepath.Join(t.TempDir(), "нет-такого"), configName, t.TempDir())
+	if err != nil {
+		t.Fatalf("создание хранилища: %v", err)
+	}
+
+	if _, err := store.Read(t.Context()); !errors.Is(err, config.ErrNoConfig) {
+		t.Errorf("получили %v, ожидали ErrNoConfig", err)
 	}
 }
 

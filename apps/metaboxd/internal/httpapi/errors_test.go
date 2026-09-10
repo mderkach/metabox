@@ -1,12 +1,15 @@
 package httpapi
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"metabox/internal/config"
 )
 
 func TestStatusFor(t *testing.T) {
@@ -19,6 +22,7 @@ func TestStatusFor(t *testing.T) {
 		{"ручки нет", errNotFound, http.StatusNotFound, "not_found"},
 		{"чужой источник", errOriginMismatch, http.StatusForbidden, "origin_mismatch"},
 		{"обёрнутый sentinel", fmt.Errorf("маршрут: %w", errNotFound), http.StatusNotFound, "not_found"},
+		{"конфига нет", config.ErrNoConfig, http.StatusNotFound, "config_missing"},
 		{"незнакомая ошибка", errors.New("что-то своё"), http.StatusInternalServerError, "internal"},
 	}
 
@@ -43,6 +47,16 @@ func TestFailHidesUnknownError(t *testing.T) {
 	}
 	if body := rec.Body.String(); strings.Contains(body, "/etc/metabox") {
 		t.Errorf("тело %q: путь на диске наружу не идёт", body)
+	}
+}
+
+func TestFailStaysQuietOnCancel(t *testing.T) {
+	rec := httptest.NewRecorder()
+
+	fail(testLogger(t), rec, httptest.NewRequest(http.MethodGet, "/api/config", nil), context.Canceled)
+
+	if body := rec.Body.String(); body != "" {
+		t.Errorf("тело %q, ожидали пустое: отвечать отменившему запрос клиенту некому", body)
 	}
 }
 
