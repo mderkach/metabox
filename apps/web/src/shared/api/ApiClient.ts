@@ -30,6 +30,22 @@ function isApiErrorBody(body: unknown): body is ApiErrorBody {
   );
 }
 
+/**
+ * Тело отказа приходит строкой, когда запрос просил сырой текст: без разбора
+ * код и сообщение демона потерялись бы, и `config_missing` стал бы «Not Found».
+ */
+function asErrorBody(data: unknown): unknown {
+  if (typeof data !== 'string') {
+    return data;
+  }
+
+  try {
+    return JSON.parse(data);
+  } catch {
+    return data;
+  }
+}
+
 function fromResponse(response: AxiosResponse<unknown>): ApiError {
   if (GATEWAY_STATUS.has(response.status)) {
     return new ApiError(API_FAILURE.Unreachable, 'демон не отвечает', {
@@ -37,11 +53,13 @@ function fromResponse(response: AxiosResponse<unknown>): ApiError {
     });
   }
 
-  if (isApiErrorBody(response.data)) {
-    return new ApiError(API_FAILURE.Response, response.data.message, {
+  const body = asErrorBody(response.data);
+
+  if (isApiErrorBody(body)) {
+    return new ApiError(API_FAILURE.Response, body.message, {
       status: response.status,
-      code: response.data.code,
-      details: response.data.details,
+      code: body.code,
+      details: body.details,
     });
   }
 

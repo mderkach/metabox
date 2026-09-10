@@ -21,6 +21,8 @@ export function getConfigOptions() {
 }
 
 export interface ParsedConfig {
+  /** Текст файла как есть: правки применяются к нему, а не к модели (ADR-0004). */
+  text: string;
   /** `null` — схема конфиг не приняла; что именно, сказано в `issues`. */
   config: Config | null;
   issues: string[];
@@ -30,14 +32,23 @@ export interface ParsedConfig {
  * Схема `looseObject`, поэтому незнакомые узлы разбор переживают (AC-3). Провал
  * не бросает: панель обязана открываться и на непонятом конфиге (NFR-1).
  */
-export function parseConfig(data: unknown): ParsedConfig {
+export function parseConfig(text: string): ParsedConfig {
+  let data: unknown;
+
+  try {
+    data = JSON.parse(text);
+  } catch (error) {
+    return { text, config: null, issues: [`файл не разбирается как JSON: ${String(error)}`] };
+  }
+
   const parsed = ConfigSchema.safeParse(data);
 
   if (parsed.success) {
-    return { config: parsed.data, issues: [] };
+    return { text, config: parsed.data, issues: [] };
   }
 
   return {
+    text,
     config: null,
     issues: parsed.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`),
   };

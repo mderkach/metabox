@@ -1,0 +1,113 @@
+import { beforeEach, describe, expect, it } from 'vitest';
+
+import { parseConfig } from '../api/Config.query';
+import { ConfigDocumentState } from '../model/Config.store';
+import { CONFIG_FIXTURE } from './Config.fixture';
+
+const TEXT = JSON.stringify(CONFIG_FIXTURE, null, 2);
+
+function state() {
+  return ConfigDocumentState.getState();
+}
+
+describe('ConfigDocumentState', () => {
+  beforeEach(() => {
+    ConfigDocumentState.setState({ applied: null, draft: null });
+  });
+
+  it('до чтения конфига править нечего', () => {
+    state().edit(['route', 'final'], 'direct');
+
+    expect(state().draft).toBeNull();
+    expect(state().current()).toBeNull();
+  });
+
+  it('без правок черновика нет, а показывается применённый конфиг', () => {
+    state().load(TEXT);
+
+    expect(state().draft).toBeNull();
+    expect(state().isDirty()).toBe(false);
+    expect(state().current()).toBe(TEXT);
+  });
+
+  it('правка уходит в черновик, применённый конфиг остаётся прежним', () => {
+    state().load(TEXT);
+    state().edit(['route', 'default_mark'], 200);
+
+    expect(state().applied).toBe(TEXT);
+    expect(state().isDirty()).toBe(true);
+    expect(parseConfig(state().current() ?? '').config?.route?.default_mark).toBe(200);
+  });
+
+  it('вторая правка ложится на первую, а не на применённый конфиг', () => {
+    state().load(TEXT);
+    state().edit(['route', 'default_mark'], 200);
+    state().edit(['route', 'final'], 'direct');
+
+    const config = parseConfig(state().current() ?? '').config;
+
+    expect(config?.route?.default_mark).toBe(200);
+    expect(config?.route?.final).toBe('direct');
+  });
+
+  it('отмена возвращает применённый конфиг', () => {
+    state().load(TEXT);
+    state().edit(['route', 'final'], 'direct');
+    state().discard();
+
+    expect(state().isDirty()).toBe(false);
+    expect(state().current()).toBe(TEXT);
+  });
+
+  it('перестановка меняет порядок правил и не трогает остальные', () => {
+    const rules = CONFIG_FIXTURE.route?.rules ?? [];
+
+    state().load(TEXT);
+    state().move(['route', 'rules'], 0, 1);
+
+    const left = parseConfig(state().current() ?? '').config?.route?.rules ?? [];
+
+    expect(left).toHaveLength(rules.length);
+    expect(left[0]).toEqual(rules[1]);
+    expect(left[1]).toEqual(rules[0]);
+    expect(left.slice(2)).toEqual(rules.slice(2));
+  });
+
+  it('перестановка не переписывает текст: набор строк остаётся прежним', () => {
+    state().load(TEXT);
+    state().move(['route', 'rules'], 0, 1);
+
+    const before = TEXT.split('\n').sort();
+    const after = (state().current() ?? '').split('\n').sort();
+
+    expect(after).toEqual(before);
+  });
+
+  it('перестановка на то же место конфиг не трогает', () => {
+    state().load(TEXT);
+    state().move(['route', 'rules'], 3, 3);
+
+    expect(state().isDirty()).toBe(false);
+  });
+
+  it('перестановка несуществующего правила конфиг не трогает', () => {
+    state().load(TEXT);
+    state().move(['route', 'rules'], 999, 0);
+
+    expect(state().isDirty()).toBe(false);
+  });
+
+  it('удаление и вставка правила идут тем же черновиком', () => {
+    const rules = CONFIG_FIXTURE.route?.rules ?? [];
+
+    state().load(TEXT);
+    state().remove(['route', 'rules', 0]);
+    state().insert(['route', 'rules', 0], { action: 'route', outbound: 'direct' });
+
+    const left = parseConfig(state().current() ?? '').config?.route?.rules ?? [];
+
+    expect(left).toHaveLength(rules.length);
+    expect(left[0]).toEqual({ action: 'route', outbound: 'direct' });
+    expect(left[1]).toEqual(rules[1]);
+  });
+});

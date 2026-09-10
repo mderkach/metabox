@@ -1,3 +1,4 @@
+import { Badge } from '@shared/ui';
 import { AppSidebar } from '@widgets/AppSidebar';
 import { ConfigTabs } from '@widgets/ConfigTabs';
 import { RuleTable } from '@widgets/RuleTable';
@@ -21,6 +22,7 @@ export function EditorPage() {
         <header className='flex h-14 shrink-0 items-baseline gap-2.5 border-b border-border px-6'>
           <span className='text-base font-medium'>Конфигурация</span>
           <span className='font-mono text-xs text-muted-foreground'>{CONFIG_PATH}</span>
+          {editor.isDirty && <Badge variant='secondary'>черновик</Badge>}
         </header>
 
         <ConfigTabs config={editor.config} />

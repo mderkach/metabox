@@ -46,6 +46,15 @@ function toTarget(rule: object): Pick<RuleRow, 'target' | 'targetKind'> {
 }
 
 /**
+ * Куда уходит трафик, не подошедший ни под одно правило.
+ *
+ * `null` — `route.final` не задан: тогда решает последнее правило без условий.
+ */
+export function toFinalTarget(config: Config | null): string | null {
+  return config?.route?.final ?? null;
+}
+
+/**
  * Разворачивает `route.rules` в плоские строки списка.
  *
  * Порядок сохраняется дословно: в sing-box он и есть логика — срабатывает
