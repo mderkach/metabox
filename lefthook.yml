@@ -1,5 +1,6 @@
 # Хуки ставятся при `pnpm install` (скрипт prepare) или командой `make hooks`.
-# Проверки те же, что в CI: локально они должны падать раньше пайплайна.
+# Разделение по стоимости: коммит проверяет только изменённое, push — весь
+# репозиторий целиком, теми же командами, что и CI.
 
 pre-commit:
   parallel: true
@@ -9,6 +10,7 @@ pre-commit:
       run: gofmt -l {staged_files}
       fail_text: Не отформатировано, прогони gofmt -w
 
+    # go vet работает по пакетам, а не по файлам: сузить до изменённого нечем.
     - name: go-vet
       glob: '*.go'
       run: cd apps/metaboxd && go vet ./... && cd ../../tools/schemagen && go vet ./...
@@ -21,25 +23,42 @@ pre-commit:
       run: git diff --cached --name-only | grep -q '^tools/schemagen/'
       fail_text: Файл собирает `make schema`; коммить его вместе с правкой tools/schemagen
 
-    - name: lint-root
-      glob: '*.mjs'
-      run: pnpm lint
-
-    - name: lint-fe
-      glob: 'apps/web/**/*.{ts,tsx,js,mjs}'
-      run: pnpm --filter web lint
+    # Сгенерированная схема исключена из обоих списков: она закрыта
+    # `ignorePatterns`, а oxlint и oxfmt выходят с ошибкой, когда после игнора
+    # не остаётся ни одного файла, — коммит одной лишь схемы падал бы на пустом
+    # месте.
+    - name: lint
+      glob: '*.{ts,tsx,js,mjs}'
+      exclude:
+        - 'apps/web/src/shared/api/generated.ts'
+      run: pnpm exec oxlint {staged_files}
 
     - name: format
       glob: '*.{ts,tsx,js,mjs,json,css,md,yml,yaml}'
-      run: pnpm format:check
+      exclude:
+        - 'apps/web/src/shared/api/generated.ts'
+      run: pnpm exec oxfmt --check {staged_files}
 
 commit-msg:
   jobs:
     - name: commitlint
       run: node_modules/.bin/commitlint --config commitlint.config.mjs --edit {1}
 
+# Перед push проверяется весь репозиторий: type-aware правила видят проект
+# целиком, и правка одного файла ломает типы в другом — по изменённым файлам
+# это не ловится. У репозитория нет remote, поэтому CI пока не подстрахует.
 pre-push:
+  parallel: true
   jobs:
+    - name: lint-js
+      run: pnpm lint
+
+    - name: lint-go
+      run: make lint
+
+    - name: format
+      run: pnpm format:check
+
     - name: tests
       run: make test
 
