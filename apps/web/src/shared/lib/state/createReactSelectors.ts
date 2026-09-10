@@ -2,7 +2,14 @@ import type { StoreApi, UseBoundStore } from 'zustand';
 
 type Selectors<T> = { [K in keyof T]: () => T[K] };
 
-type WithSelectors<S> = S extends UseBoundStore<StoreApi<infer T>> ? S & { use: Selectors<T> } : never;
+/**
+ * Состояние берётся из `getState`, а не выводится из `UseBoundStore<StoreApi<T>>`:
+ * middleware меняют тип `setState`, и вывод по всему стору давал `void` вместо
+ * состояния.
+ */
+type ExtractState<S> = S extends { getState: () => infer T } ? T : never;
+
+type WithSelectors<S> = S & { use: Selectors<ExtractState<S>> };
 
 /**
  * Достраивает стору `use.<поле>()` — подписку на одно поле.
@@ -22,7 +29,8 @@ export function createReactSelectors<S extends UseBoundStore<StoreApi<object>>>(
     selectors[key] = (): unknown => store((state): unknown => Reflect.get(state, key));
   }
 
-  withSelectors.use = selectors;
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- та же причина
+  withSelectors.use = selectors as Selectors<ExtractState<S>>;
 
   return withSelectors;
 }
