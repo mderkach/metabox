@@ -61,8 +61,8 @@ entities/Outbound/@x/rule/index.ts   // что Outbound разрешает им�
 
 ```ts
 // entities/Outbound/@x/rule/index.ts
-export { OUTBOUND_TYPE } from "../../model"
-export type { OutboundRef } from "../../model"
+export { OUTBOUND_TYPE } from '../../model';
+export type { OutboundRef } from '../../model';
 ```
 
 Импортирующая сторона пишет `import { OUTBOUND_TYPE } from "@entities/Outbound/@x/rule"`. Всё, что не вынесено в `@x`, для соседнего слайса закрыто.
@@ -85,10 +85,10 @@ export type { OutboundRef } from "../../model"
 
 ```ts
 // entities/Rule/index.ts
-export * from "./api"
-export * from "./lib"
-export * from "./model"
-export * from "./ui"
+export * from './api';
+export * from './lib';
+export * from './model';
+export * from './ui';
 ```
 
 Баррель работает только вместе с `"sideEffects": ["**/*.css"]` в `apps/web/package.json`: без флага Rollup считает модули side-effectful и тянет весь слайс целиком — на `shared/ui` это лишние 24 kB.
@@ -126,9 +126,9 @@ export * from "./ui"
 Алиас на каждый слой: `@app`, `@pages`, `@widgets`, `@features`, `@entities`, `@shared`, `@adapters`. Общего `@/` нет: путь начинается со слоя, направление импорта видно в строке. Объявлены в `tsconfig.json`, `tsconfig.app.json` и `vite.config.ts`.
 
 ```ts
-import { useQuery } from "@tanstack/react-query" // внешнее
-import { Button } from "@shared/ui" // другой слой — алиас
-import { RULE_QUERY } from "../model" // свой слайс — относительный путь
+import { useQuery } from '@tanstack/react-query'; // внешнее
+import { Button } from '@shared/ui'; // другой слой — алиас
+import { RULE_QUERY } from '../model'; // свой слайс — относительный путь
 ```
 
 ### Нейминг
@@ -150,14 +150,14 @@ Rule.schema.ts
 **Константы** — `UPPER_CASE` / `SCREAMING_SNAKE_CASE`. Логически связанная группа заключается в объект: имя объекта в `SCREAMING_SNAKE_CASE`, ключи в `PascalCase`.
 
 ```ts
-const DEFAULT_LISTEN = "127.0.0.1:9090"
+const DEFAULT_LISTEN = '127.0.0.1:9090';
 
 const APPLY_STAGE = {
-  Check: "check",
-  Write: "write",
-  Restart: "restart",
-  Healthcheck: "healthcheck",
-} as const
+  Check: 'check',
+  Write: 'write',
+  Restart: 'restart',
+  Healthcheck: 'healthcheck',
+} as const;
 ```
 
 Всё, что повторяется больше двух раз, выносится в константу. Магических чисел и строк в коде нет.
@@ -167,14 +167,8 @@ const APPLY_STAGE = {
 ### Компоненты
 
 ```tsx
-function RuleRow({
-  rule,
-  onSelect,
-}: {
-  rule: RuleModel
-  onSelect: (id: string) => void
-}) {
-  return <div>...</div>
+function RuleRow({ rule, onSelect }: { rule: RuleModel; onSelect: (id: string) => void }) {
+  return <div>...</div>;
 }
 ```
 

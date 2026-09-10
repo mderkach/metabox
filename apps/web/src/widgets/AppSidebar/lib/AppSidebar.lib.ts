@@ -1,19 +1,19 @@
-import { useCallback, useState } from "react"
+import { useCallback, useState } from 'react';
 
-const STORAGE_KEY = "metabox.sidebar.collapsed"
+const STORAGE_KEY = 'metabox.sidebar.collapsed';
 
 /** В приватном окне обращение к хранилищу бросает. */
 function readCollapsed(): boolean {
   try {
-    return globalThis.localStorage.getItem(STORAGE_KEY) === "true"
+    return globalThis.localStorage.getItem(STORAGE_KEY) === 'true';
   } catch {
-    return false
+    return false;
   }
 }
 
 function writeCollapsed(collapsed: boolean) {
   try {
-    globalThis.localStorage.setItem(STORAGE_KEY, String(collapsed))
+    globalThis.localStorage.setItem(STORAGE_KEY, String(collapsed));
   } catch {
     // Не сохранилось — панель вернётся к развёрнутому виду.
   }
@@ -21,15 +21,15 @@ function writeCollapsed(collapsed: boolean) {
 
 /** Выбор переживает перезагрузку страницы. */
 export function useSidebarCollapsed() {
-  const [collapsed, setCollapsed] = useState(readCollapsed)
+  const [collapsed, setCollapsed] = useState(readCollapsed);
 
   const toggle = useCallback(() => {
     setCollapsed((current) => {
-      writeCollapsed(!current)
+      writeCollapsed(!current);
 
-      return !current
-    })
-  }, [])
+      return !current;
+    });
+  }, []);
 
-  return { collapsed, toggle }
+  return { collapsed, toggle };
 }

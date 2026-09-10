@@ -1,7 +1,9 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
-  "printWidth": 80,
-  "semi": false,
+  "printWidth": 120,
+  "semi": true,
+  "singleQuote": true,
+  "jsxSingleQuote": true,
   "trailingComma": "es5",
   "ignorePatterns": [
     "dist",
@@ -30,15 +32,7 @@
             "style",
             "unknown"
           ],
-          "internalPattern": [
-            "@app/",
-            "@pages/",
-            "@widgets/",
-            "@features/",
-            "@entities/",
-            "@shared/",
-            "@adapters/"
-          ],
+          "internalPattern": ["@app/", "@pages/", "@widgets/", "@features/", "@entities/", "@shared/", "@adapters/"],
           "newlinesBetween": true
         },
         "sortTailwindcss": {

@@ -13,11 +13,7 @@
   },
   "customizations": {
     "vscode": {
-      "extensions": [
-        "oxc.oxc-vscode",
-        "bradlc.vscode-tailwindcss",
-        "golang.go"
-      ],
+      "extensions": ["oxc.oxc-vscode", "bradlc.vscode-tailwindcss", "golang.go"],
       "settings": {
         "go.toolsManagement.checkForUpdates": "off"
       }

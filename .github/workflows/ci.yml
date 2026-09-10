@@ -17,7 +17,7 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           # Форк sing-box-extended объявляет `go 1.26.4`, ниже не соберётся
-          go-version: "1.26.7"
+          go-version: '1.26.7'
 
       - uses: pnpm/action-setup@v4
 
@@ -71,12 +71,12 @@ jobs:
 
       - uses: actions/setup-go@v6
         with:
-          go-version: "1.26.7"
+          go-version: '1.26.7'
 
       - name: Сборка демона под целевую систему
         # OpenWrt на musl: бинарь с glibc там не запускается
         env:
-          CGO_ENABLED: "0"
+          CGO_ENABLED: '0'
         run: |
           mkdir -p dist
           cd apps/metaboxd && go build -ldflags "-s -w -X metabox/internal/version.Version=ci" -o ../../dist/metaboxd .

@@ -1,1 +1,1 @@
-export * from "./Editor.lib"
+export * from './Editor.lib';

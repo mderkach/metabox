@@ -1,4 +1,4 @@
-version: "2"
+version: '2'
 
 linters:
   enable:
@@ -22,7 +22,7 @@ linters:
       # ошибкой, когда форк заведёт второй вариант файла со строками, — тогда
       # переходить на golang.org/x/tools/go/packages (docs/TechDebt.md).
       - path: types\.go
-        text: "SA1019: go/parser.ParseDir"
+        text: 'SA1019: go/parser.ParseDir'
         linters: [staticcheck]
 
       # G204 и G702: имя команды — это путь к бинарю sing-box или к
@@ -30,7 +30,7 @@ linters:
       # отвергает относительный путь. Аргументы уезжают списком, шелла в цепочке
       # нет, так что подставить через них команду невозможно (DeviceIO.md).
       - path: internal/singbox/exec\.go
-        text: "G204|G702"
+        text: 'G204|G702'
         linters: [gosec]
 
       # Схему из форка иначе не достать: опции реестров лежат в неэкспортируемом
@@ -42,5 +42,5 @@ linters:
       # ввода. G306: generated.ts — исходник в репозитории, у него права
       # обычного файла, а не секрета.
       - path: tools/schemagen/
-        text: "G304|G306"
+        text: 'G304|G306'
         linters: [gosec]

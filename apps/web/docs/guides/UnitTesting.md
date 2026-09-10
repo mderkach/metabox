@@ -35,22 +35,22 @@ Vitest-глобалы **выключены** (`globals: false`): `describe`, `it
 ## Компоненты
 
 ```tsx
-import { render, screen } from "@testing-library/react"
-import userEvent from "@testing-library/user-event"
-import { describe, expect, it, vi } from "vitest"
-import { RuleRow } from "../ui/RuleRow"
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
+import { RuleRow } from '../ui/RuleRow';
 
-describe("RuleRow", () => {
-  it("вызывает обработчик при клике по строке", async () => {
-    const onSelect = vi.fn()
-    const user = userEvent.setup()
+describe('RuleRow', () => {
+  it('вызывает обработчик при клике по строке', async () => {
+    const onSelect = vi.fn();
+    const user = userEvent.setup();
 
-    render(<RuleRow rule={RULE_FIXTURE} onSelect={onSelect} />)
-    await user.click(screen.getByRole("button", { name: "Правило 1" }))
+    render(<RuleRow rule={RULE_FIXTURE} onSelect={onSelect} />);
+    await user.click(screen.getByRole('button', { name: 'Правило 1' }));
 
-    expect(onSelect).toHaveBeenCalledWith(RULE_FIXTURE.id)
-  })
-})
+    expect(onSelect).toHaveBeenCalledWith(RULE_FIXTURE.id);
+  });
+});
 ```
 
 Приоритет запросов: `getByRole` → `getByLabelText` → `getByText` → `getByTestId`. Последний — когда семантики нет.
@@ -60,9 +60,9 @@ shadcn: `CardTitle` рендерится как `<div data-slot="card-title">`. 
 ## Моки
 
 ```tsx
-vi.mock("@entities/Config", () => ({
+vi.mock('@entities/Config', () => ({
   useDraftConfig: vi.fn(() => ({ data: CONFIG_FIXTURE, isPending: false })),
-}))
+}));
 ```
 
 `vi.mock` поднимается наверх файла — объявлять до импорта тестируемого модуля. Очистка — `vi.clearAllMocks()` в `beforeEach`.
@@ -76,9 +76,9 @@ vi.mock("@entities/Config", () => ({
 **Константы и фабрики ключей:** проверяем форму ключа, а не значение:
 
 ```ts
-it("строит ключ версии от корня истории", () => {
-  expect(CONFIG_QUERY.version("42")).toEqual(["config", "history", "42"])
-})
+it('строит ключ версии от корня истории', () => {
+  expect(CONFIG_QUERY.version('42')).toEqual(['config', 'history', '42']);
+});
 ```
 
 ## TanStack Query
@@ -89,11 +89,9 @@ it("строит ключ версии от корня истории", () => {
 export function renderWithQuery(ui: ReactElement) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
-  })
+  });
 
-  return render(
-    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
-  )
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 }
 ```
 

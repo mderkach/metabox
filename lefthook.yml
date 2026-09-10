@@ -5,32 +5,32 @@ pre-commit:
   parallel: true
   jobs:
     - name: go-fmt
-      glob: "*.go"
+      glob: '*.go'
       run: gofmt -l {staged_files}
       fail_text: Не отформатировано, прогони gofmt -w
 
     - name: go-vet
-      glob: "*.go"
+      glob: '*.go'
       run: cd apps/metaboxd && go vet ./... && cd ../../tools/schemagen && go vet ./...
 
     # Артефакт едет в коммите вместе с генератором (CONTRIBUTING.md), иначе
     # фронт разъезжается со схемой. Правка артефакта в одиночку означает, что
     # его писали руками.
     - name: generated-schema
-      glob: "apps/web/src/shared/api/generated.ts"
+      glob: 'apps/web/src/shared/api/generated.ts'
       run: git diff --cached --name-only | grep -q '^tools/schemagen/'
       fail_text: Файл собирает `make schema`; коммить его вместе с правкой tools/schemagen
 
     - name: lint-root
-      glob: "*.mjs"
+      glob: '*.mjs'
       run: pnpm lint
 
     - name: lint-fe
-      glob: "apps/web/**/*.{ts,tsx,js,mjs}"
+      glob: 'apps/web/**/*.{ts,tsx,js,mjs}'
       run: pnpm --filter web lint
 
     - name: format
-      glob: "*.{ts,tsx,js,mjs,json,css,md,yml,yaml}"
+      glob: '*.{ts,tsx,js,mjs,json,css,md,yml,yaml}'
       run: pnpm format:check
 
 commit-msg:

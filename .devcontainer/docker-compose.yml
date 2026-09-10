@@ -46,13 +46,13 @@ services:
       - root-node-modules:/workspace/node_modules
       - pnpm-store:/cache/pnpm
     ports:
-      - "5173:5173" # Vite HMR
+      - '5173:5173' # Vite HMR
     environment:
       METABOX_API_TARGET: http://target:8080
       # Без TTY pnpm отказывается пересобирать node_modules и падает
       # (ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY). CI=true — штатный для
       # pnpm способ работать без интерактивного подтверждения.
-      CI: "true"
+      CI: 'true'
     command: pnpm dev --host 0.0.0.0
     depends_on:
       - target
@@ -75,8 +75,8 @@ services:
       - ../dist:/opt/metabox:ro
       - singbox-etc:/etc/sing-box
     ports:
-      - "8080:8080" # REST API демона
-      - "9090:9090" # Clash API sing-box
+      - '8080:8080' # REST API демона
+      - '9090:9090' # Clash API sing-box
     stop_signal: SIGTERM
 
 volumes:

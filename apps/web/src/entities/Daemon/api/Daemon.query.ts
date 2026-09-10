@@ -1,13 +1,13 @@
-import { queryOptions, useQuery } from "@tanstack/react-query"
+import { queryOptions, useQuery } from '@tanstack/react-query';
 
-import { CACHE_TIME, POLL_INTERVAL } from "@shared/api"
+import { CACHE_TIME, POLL_INTERVAL } from '@shared/api';
 
-import { getDaemonStatus } from "./Daemon.api"
+import { getDaemonStatus } from './Daemon.api';
 
 export const DAEMON_QUERY = {
-  all: ["daemon"] as const,
-  status: () => [...DAEMON_QUERY.all, "status"] as const,
-} as const
+  all: ['daemon'] as const,
+  status: () => [...DAEMON_QUERY.all, 'status'] as const,
+} as const;
 
 export function getDaemonStatusOptions() {
   return queryOptions({
@@ -19,7 +19,7 @@ export function getDaemonStatusOptions() {
     // Недоступность демона показывает баннер оболочки, а не тост на каждый
     // неудачный опрос: опрос идёт постоянно и завалил бы экран.
     meta: { showError: false },
-  })
+  });
 }
 
 /**
@@ -28,5 +28,5 @@ export function getDaemonStatusOptions() {
  * ответом, первое — молчанием (NFR-1).
  */
 export function useDaemonStatus() {
-  return useQuery(getDaemonStatusOptions())
+  return useQuery(getDaemonStatusOptions());
 }

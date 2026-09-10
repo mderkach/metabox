@@ -8,9 +8,5 @@
     "editorconfig.editorconfig",
     "davidanson.vscode-markdownlint"
   ],
-  "unwantedRecommendations": [
-    "esbenp.prettier-vscode",
-    "dbaeumer.vscode-eslint",
-    "stylelint.vscode-stylelint"
-  ]
+  "unwantedRecommendations": ["esbenp.prettier-vscode", "dbaeumer.vscode-eslint", "stylelint.vscode-stylelint"]
 }

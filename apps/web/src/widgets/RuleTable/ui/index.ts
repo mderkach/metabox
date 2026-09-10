@@ -1,1 +1,1 @@
-export * from "./RuleTable"
+export * from './RuleTable';

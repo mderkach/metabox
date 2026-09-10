@@ -14,28 +14,22 @@ interface FormModel extends z.infer<typeof RuleFormSchema> {}
 
 function RuleForm() {
   const form = useForm<FormModel>({
-    defaultValues: { domain: "", outbound: "" },
-    mode: "onChange",
+    defaultValues: { domain: '', outbound: '' },
+    mode: 'onChange',
     resolver: zodResolver(RuleFormSchema),
-  })
+  });
 
   return (
     <FormProvider {...form}>
       <RuleDomainField />
     </FormProvider>
-  )
+  );
 }
 
 function RuleDomainField() {
-  const { control } = useFormContext<FormModel>()
+  const { control } = useFormContext<FormModel>();
 
-  return (
-    <Controller
-      control={control}
-      name="domain"
-      render={({ field }) => <Input {...field} />}
-    />
-  )
+  return <Controller control={control} name='domain' render={({ field }) => <Input {...field} />} />;
 }
 ```
 
@@ -65,9 +59,9 @@ RHF работает через React Context — отсюда [известны
 
 ```tsx
 const form = useForm<FormModel, StepContext>({
-  defaultValues: { name: "" },
+  defaultValues: { name: '' },
   context: stepContext,
-})
+});
 
 // внутри
 const {
@@ -75,7 +69,7 @@ const {
   control: {
     _options: { context },
   },
-} = useFormContext<FormModel, StepContext>()
+} = useFormContext<FormModel, StepContext>();
 ```
 
 Это обращение к внутреннему полю RHF — компромисс, применять точечно и с комментарием.
@@ -92,12 +86,12 @@ const {
 ```ts
 export const RuleFormSchema = z.object({
   /** Домен или суффикс домена, на который срабатывает правило */
-  domain: z.string().min(1, "field.required"),
+  domain: z.string().min(1, 'field.required'),
   /** Тег outbound'а, в который уходит трафик */
-  outbound: z.string().min(1, "field.required"),
-})
+  outbound: z.string().min(1, 'field.required'),
+});
 
-export type RuleFormModel = z.infer<typeof RuleFormSchema>
+export type RuleFormModel = z.infer<typeof RuleFormSchema>;
 ```
 
 ### Генерируемые схемы неприкосновенны
@@ -114,18 +108,18 @@ export type RuleFormModel = z.infer<typeof RuleFormSchema>
 ```ts
 // то, чем удобно управлять в UI
 const RuleFormSchema = z.object({
-  matchKind: z.enum(["domain", "domainSuffix", "ipCidr"]),
+  matchKind: z.enum(['domain', 'domainSuffix', 'ipCidr']),
   value: z.string(),
   outbound: z.string(),
-})
+});
 
 // то, что уходит в конфиг
 const RuleAdapterSchema = RuleFormSchema.transform((data) => ({
-  ...(data.matchKind === "domain" && { domain: [data.value] }),
-  ...(data.matchKind === "domainSuffix" && { domain_suffix: [data.value] }),
-  ...(data.matchKind === "ipCidr" && { ip_cidr: [data.value] }),
+  ...(data.matchKind === 'domain' && { domain: [data.value] }),
+  ...(data.matchKind === 'domainSuffix' && { domain_suffix: [data.value] }),
+  ...(data.matchKind === 'ipCidr' && { ip_cidr: [data.value] }),
   outbound: data.outbound,
-}))
+}));
 ```
 
 Форма принимает данные по `RuleFormSchema`, валидируется по `RuleAdapterSchema`, а на выходе `handleSubmit` отдаёт уже готовую к записи структуру — мапить снаружи не нужно.

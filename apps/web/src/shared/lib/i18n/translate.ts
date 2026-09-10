@@ -1,7 +1,7 @@
-import { MESSAGES, type MessageKey } from "./messages"
+import { MESSAGES, type MessageKey } from './messages';
 
 function isKnownKey(key: string): key is MessageKey {
-  return key in MESSAGES
+  return key in MESSAGES;
 }
 
 /**
@@ -9,5 +9,5 @@ function isKnownKey(key: string): key is MessageKey {
  * экране скрыла бы опечатку, а сам ключ её показывает.
  */
 export function t(key: string): string {
-  return isKnownKey(key) ? MESSAGES[key] : key
+  return isKnownKey(key) ? MESSAGES[key] : key;
 }

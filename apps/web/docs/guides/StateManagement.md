@@ -35,12 +35,12 @@ Zustand + immer. Почему документ конфига живёт в ст
 ### Создание
 
 ```ts
-import { stateCreator, createReactSelectors } from "@shared/lib/state"
+import { stateCreator, createReactSelectors } from '@shared/lib/state';
 
 interface DocumentState {
-  draft: ConfigModel | null
-  isDirty: boolean
-  setField: (path: string, value: unknown) => void
+  draft: ConfigModel | null;
+  isDirty: boolean;
+  setField: (path: string, value: unknown) => void;
 }
 
 const DocumentStateProto = stateCreator<DocumentState>(
@@ -49,14 +49,14 @@ const DocumentStateProto = stateCreator<DocumentState>(
     isDirty: false,
     setField: (path, value) =>
       set((state) => {
-        applyAtPath(state.draft, path, value)
-        state.isDirty = true
+        applyAtPath(state.draft, path, value);
+        state.isDirty = true;
       }),
   }),
-  "ConfigDocument"
-)
+  'ConfigDocument'
+);
 
-export const DocumentState = createReactSelectors(DocumentStateProto)
+export const DocumentState = createReactSelectors(DocumentStateProto);
 ```
 
 Нейминг — как у компонентов. Стор с суффиксом `Proto` наружу не уходит; экспортируется результат `createReactSelectors`.
@@ -67,9 +67,9 @@ export const DocumentState = createReactSelectors(DocumentStateProto)
 
 ```tsx
 function DirtyBadge() {
-  const isDirty = DocumentState.use.isDirty()
+  const isDirty = DocumentState.use.isDirty();
 
-  return isDirty ? <Badge>черновик</Badge> : null
+  return isDirty ? <Badge>черновик</Badge> : null;
 }
 ```
 
@@ -80,9 +80,9 @@ function ApplyBar() {
   const { isDirty, draft } = useStore(DocumentStateProto, (state) => ({
     isDirty: state.isDirty,
     draft: state.draft,
-  }))
+  }));
 
-  return <div>...</div>
+  return <div>...</div>;
 }
 ```
 
@@ -115,18 +115,18 @@ function ApplyBar() {
 **Подписка на весь стор.** Любое изменение вызовет рендер:
 
 ```tsx
-const state = useStore(DocumentStateProto, (s) => s) // ❌
+const state = useStore(DocumentStateProto, (s) => s); // ❌
 ```
 
 **Вызов вычисляющего экшена вместо селектора.** Подписка не сработает, ререндера не будет:
 
 ```tsx
 // ❌ ререндера не будет
-const calc = useStore(StateProto, (state) => state.calcTotal)
-const total = calc()
+const calc = useStore(StateProto, (state) => state.calcTotal);
+const total = calc();
 
 // ✅
-const total = useStore(StateProto, (state) => state.calcTotal())
+const total = useStore(StateProto, (state) => state.calcTotal());
 ```
 
 **Избыточные множественные селекторы.** Если компонент выбирает восемь полей — скорее всего, его надо разбить.

@@ -18,15 +18,13 @@ TanStack Query v5 поверх axios. Транспорт закрыт врапп
 
 ```ts
 export const CONFIG_ENDPOINT = {
-  draft: () => "/api/config/draft",
-  applied: () => "/api/config",
-  apply: () => "/api/config/apply",
-} as const
+  draft: () => '/api/config/draft',
+  applied: () => '/api/config',
+  apply: () => '/api/config/apply',
+} as const;
 
-export async function getDraftConfig(
-  config?: AxiosRequestConfig
-): Promise<ConfigDto> {
-  return ApiClientInstance.get<ConfigDto>(CONFIG_ENDPOINT.draft(), config)
+export async function getDraftConfig(config?: AxiosRequestConfig): Promise<ConfigDto> {
+  return ApiClientInstance.get<ConfigDto>(CONFIG_ENDPOINT.draft(), config);
 }
 ```
 
@@ -42,12 +40,12 @@ export async function getDraftConfig(
 
 ```ts
 export const CONFIG_QUERY = {
-  all: ["config"] as const,
-  draft: () => [...CONFIG_QUERY.all, "draft"] as const,
-  applied: () => [...CONFIG_QUERY.all, "applied"] as const,
-  history: () => [...CONFIG_QUERY.all, "history"] as const,
+  all: ['config'] as const,
+  draft: () => [...CONFIG_QUERY.all, 'draft'] as const,
+  applied: () => [...CONFIG_QUERY.all, 'applied'] as const,
+  history: () => [...CONFIG_QUERY.all, 'history'] as const,
   version: (id: string) => [...CONFIG_QUERY.history(), id] as const,
-} as const
+} as const;
 ```
 
 Ключ строится **только** фабрикой: литеральный массив в `useQuery` не найти при инвалидации.
@@ -61,12 +59,12 @@ export function getDraftConfigOptions() {
     queryFn: ({ signal }) => getDraftConfig({ signal }),
     gcTime: CACHE_TIME.Hour,
     staleTime: CACHE_TIME.Minute,
-    meta: { showError: true, errorMessageKey: "config.draft.fetchFailed" },
-  })
+    meta: { showError: true, errorMessageKey: 'config.draft.fetchFailed' },
+  });
 }
 
 export function useDraftConfig() {
-  return useQuery(getDraftConfigOptions())
+  return useQuery(getDraftConfigOptions());
 }
 ```
 
@@ -75,13 +73,13 @@ export function useDraftConfig() {
 Константы времени живут в `shared/api`:
 
 ```ts
-const MINUTE = 60 * 1000
+const MINUTE = 60 * 1000;
 
 export const CACHE_TIME = {
   Minute: MINUTE,
   Hour: MINUTE * 60,
   Day: MINUTE * 60 * 24,
-} as const
+} as const;
 ```
 
 Дефолты клиента — без кэша (`staleTime: 0`, `gcTime: 0`): кэширование включается осознанно, по запросу.
@@ -92,10 +90,10 @@ export const CACHE_TIME = {
 
 ```ts
 export interface QueryMeta {
-  readonly showError?: boolean
-  readonly showSuccess?: boolean
-  readonly errorMessageKey?: string
-  readonly successMessageKey?: string
+  readonly showError?: boolean;
+  readonly showSuccess?: boolean;
+  readonly errorMessageKey?: string;
+  readonly successMessageKey?: string;
 }
 ```
 
@@ -108,21 +106,19 @@ export const QueryClientInstance = new QueryClient({
     onError: (error, query) => showQueryError(query.meta, error),
   }),
   mutationCache: new MutationCache({
-    onError: (error, _vars, _ctx, mutation) =>
-      showQueryError(mutation.meta, error),
-    onSuccess: (_data, _vars, _ctx, mutation) =>
-      showQuerySuccess(mutation.meta),
+    onError: (error, _vars, _ctx, mutation) => showQueryError(mutation.meta, error),
+    onSuccess: (_data, _vars, _ctx, mutation) => showQuerySuccess(mutation.meta),
   }),
-})
+});
 ```
 
 Типизация `meta` расширяется через augmentation, а не кастами:
 
 ```ts
-declare module "@tanstack/react-query" {
+declare module '@tanstack/react-query' {
   interface Register {
-    queryMeta: QueryMeta
-    mutationMeta: QueryMeta
+    queryMeta: QueryMeta;
+    mutationMeta: QueryMeta;
   }
 }
 ```
@@ -136,11 +132,11 @@ export function useOutbounds() {
   return useQuery({
     ...getDraftConfigOptions(),
     select: (data) => {
-      const parsed = ConfigSchema.safeParse(data)
+      const parsed = ConfigSchema.safeParse(data);
 
-      return parsed.success ? toOutboundList(parsed.data) : []
+      return parsed.success ? toOutboundList(parsed.data) : [];
     },
-  })
+  });
 }
 ```
 
@@ -150,15 +146,15 @@ export function useOutbounds() {
 
 ```ts
 export function useApplyConfig() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: applyConfig,
-    meta: { showSuccess: true, successMessageKey: "config.apply.done" },
+    meta: { showSuccess: true, successMessageKey: 'config.apply.done' },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: CONFIG_QUERY.all })
+      queryClient.invalidateQueries({ queryKey: CONFIG_QUERY.all });
     },
-  })
+  });
 }
 ```
 
@@ -204,11 +200,11 @@ WebSocket-потоки дашборда (трафик, список соедин
 ```ts
 export function listenConnections(socket: WebSocket) {
   const handler = (event: MessageEvent) => {
-    StreamStateProto.getState().pushSnapshot(parseSnapshot(event.data))
-  }
+    StreamStateProto.getState().pushSnapshot(parseSnapshot(event.data));
+  };
 
-  socket.addEventListener("message", handler)
+  socket.addEventListener('message', handler);
 
-  return () => socket.removeEventListener("message", handler)
+  return () => socket.removeEventListener('message', handler);
 }
 ```

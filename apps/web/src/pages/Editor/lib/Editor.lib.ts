@@ -1,16 +1,16 @@
-import { useMemo } from "react"
+import { useMemo } from 'react';
 
-import { useConfig } from "@entities/Config"
-import { toRuleRows, type RuleRow } from "@entities/Rule"
-import type { Config } from "@shared/api/generated"
+import { useConfig } from '@entities/Config';
+import { toRuleRows, type RuleRow } from '@entities/Rule';
+import type { Config } from '@shared/api/generated';
 
 export interface RouteEditorState {
-  isPending: boolean
-  issues: string[]
-  config: Config | null
-  rules: RuleRow[]
+  isPending: boolean;
+  issues: string[];
+  config: Config | null;
+  rules: RuleRow[];
   /** `null` — `route.final` не задан, решает последнее правило без условий. */
-  final: string | null
+  final: string | null;
 }
 
 /**
@@ -19,11 +19,11 @@ export interface RouteEditorState {
  * клавиши в поиске.
  */
 export function useRouteEditor(): RouteEditorState {
-  const config = useConfig()
-  const parsed = config.data ?? null
-  const document = parsed?.config ?? null
+  const config = useConfig();
+  const parsed = config.data ?? null;
+  const document = parsed?.config ?? null;
 
-  const rules = useMemo(() => toRuleRows(document), [document])
+  const rules = useMemo(() => toRuleRows(document), [document]);
 
   return {
     isPending: config.isPending,
@@ -31,5 +31,5 @@ export function useRouteEditor(): RouteEditorState {
     config: document,
     rules,
     final: document?.route?.final ?? null,
-  }
+  };
 }

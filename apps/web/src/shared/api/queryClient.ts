@@ -1,11 +1,11 @@
-import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query"
+import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query';
 
-import { API_FAILURE, ApiError } from "./ApiError"
-import { showQueryError, showQuerySuccess } from "./queryMeta"
+import { API_FAILURE, ApiError } from './ApiError';
+import { showQueryError, showQuerySuccess } from './queryMeta';
 
-const GET_RETRY_COUNT = 2
-const CLIENT_ERROR_MIN = 400
-const CLIENT_ERROR_MAX = 500
+const GET_RETRY_COUNT = 2;
+const CLIENT_ERROR_MIN = 400;
+const CLIENT_ERROR_MAX = 500;
 
 /**
  * Ответ 4xx — вердикт демона, а не сбой связи: повтор вернёт то же самое.
@@ -14,20 +14,20 @@ const CLIENT_ERROR_MAX = 500
  */
 function shouldRetry(failureCount: number, error: unknown): boolean {
   if (failureCount >= GET_RETRY_COUNT) {
-    return false
+    return false;
   }
 
   if (!(error instanceof ApiError)) {
-    return true
+    return true;
   }
 
   if (error.kind === API_FAILURE.Unreachable) {
-    return false
+    return false;
   }
 
-  const status = error.status ?? 0
+  const status = error.status ?? 0;
 
-  return status < CLIENT_ERROR_MIN || status >= CLIENT_ERROR_MAX
+  return status < CLIENT_ERROR_MIN || status >= CLIENT_ERROR_MAX;
 }
 
 /**
@@ -50,15 +50,15 @@ export const QueryClientInstance = new QueryClient({
   },
   queryCache: new QueryCache({
     onError: (error, query) => {
-      showQueryError(query.meta, error)
+      showQueryError(query.meta, error);
     },
   }),
   mutationCache: new MutationCache({
     onError: (error, _vars, _ctx, mutation) => {
-      showQueryError(mutation.meta, error)
+      showQueryError(mutation.meta, error);
     },
     onSuccess: (_data, _vars, _ctx, mutation) => {
-      showQuerySuccess(mutation.meta)
+      showQuerySuccess(mutation.meta);
     },
   }),
-})
+});

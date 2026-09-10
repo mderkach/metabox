@@ -1,1 +1,1 @@
-export * from "./ConfigTabs"
+export * from './ConfigTabs';
