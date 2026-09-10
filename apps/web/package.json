@@ -10,8 +10,6 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "lint": "oxlint",
-    "lint:fix": "oxlint --fix",
     "test": "vitest run",
     "test:watch": "vitest"
   },

@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "prepare": "lefthook install",
-    "lint": "oxlint commitlint.config.mjs",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
     "format": "oxfmt",
     "format:check": "oxfmt --check"
   },

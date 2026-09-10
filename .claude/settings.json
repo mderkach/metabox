@@ -27,7 +27,7 @@
       "Bash(go vet:*)",
       "Bash(gofmt:*)",
       "Bash(pnpm -C apps/web lint:*)",
-      "Bash(pnpm -C apps/web lint:fix:*)",
+      "Bash(pnpm lint:fix:*)",
       "Bash(pnpm -C apps/web format:*)",
       "Bash(pnpm -C apps/web test:*)",
       "Bash(pnpm -C apps/web build:*)",
