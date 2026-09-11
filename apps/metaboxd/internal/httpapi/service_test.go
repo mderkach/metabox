@@ -6,23 +6,31 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"metabox/internal/httpapi"
+	"metabox/internal/singbox"
 )
 
 // fakeService подменяет управление сервисом: сам вызов init-скрипта
 // проверяется в internal/singbox, здесь важны коды ответов и формат тела.
 type fakeService struct {
 	running    bool
+	failed     bool
+	uptime     time.Duration
 	runningErr error
 	failOn     string
 	calls      []string
 }
 
-func (f *fakeService) Running(context.Context) (bool, error) {
+func (f *fakeService) State(context.Context) (singbox.State, error) {
 	f.calls = append(f.calls, "running")
 
-	return f.running, f.runningErr
+	if f.runningErr != nil {
+		return singbox.State{}, f.runningErr
+	}
+
+	return singbox.State{Running: f.running, Failed: f.failed, Uptime: f.uptime}, nil
 }
 
 func (f *fakeService) Start(context.Context) error   { return f.act("start") }
@@ -58,7 +66,7 @@ func newServiceServer(t *testing.T, service httpapi.Service) *httptest.Server {
 
 	srv := httptest.NewServer(httpapi.NewServer(
 		&fakeApplier{},
-		&fakeReader{},
+		fakeReader{},
 		testLogger(t),
 		httpapi.Options{Version: "test", SingboxVersion: testSingboxVersion, Service: service},
 	))
@@ -74,8 +82,9 @@ func TestServiceState(t *testing.T) {
 		wantStatus string
 		wantError  bool
 	}{
-		{"сервис поднят", &fakeService{running: true}, "running", false},
+		{"сервис поднят", &fakeService{running: true, uptime: 90 * time.Second}, "running", false},
 		{"сервис остановлен", &fakeService{running: false}, "stopped", false},
+		{"сервис упал", &fakeService{running: false, failed: true}, "failed", false},
 		{
 			"состояние не прочитано",
 			&fakeService{runningErr: errors.New("init-скрипт не найден")},
@@ -105,6 +114,12 @@ func TestServiceState(t *testing.T) {
 
 			if body.Binary != testSingboxVersion {
 				t.Errorf("версия бинаря: получили %q, ожидали %q", body.Binary, testSingboxVersion)
+			}
+
+			// Возраст показывается только у поднятого сервиса: у остальных
+			// показывать нечего, и ноль панель рисует прочерком.
+			if wantUptime := tt.wantStatus == "running"; (body.Uptime > 0) != wantUptime {
+				t.Errorf("возраст: получили %d при статусе %q", body.Uptime, body.Status)
 			}
 
 			if hasError := body.LastError != ""; hasError != tt.wantError {
@@ -186,7 +201,7 @@ func TestServiceActionRejected(t *testing.T) {
 func TestServiceAbsent(t *testing.T) {
 	srv := httptest.NewServer(httpapi.NewServer(
 		&fakeApplier{},
-		&fakeReader{},
+		fakeReader{},
 		testLogger(t),
 		httpapi.Options{Version: "test"},
 	))

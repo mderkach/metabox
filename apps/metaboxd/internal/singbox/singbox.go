@@ -8,6 +8,9 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
+
+	"metabox/internal/procd"
 )
 
 // Result — итог запуска команды. Ненулевой ExitCode это результат, а не отказ
@@ -38,6 +41,7 @@ func (e *CheckError) Error() string {
 
 // Client — доступ демона к sing-box: проверка конфига и управление сервисом.
 type Client struct {
+	supervisor Supervisor
 	runner     Runner
 	binary     string
 	initScript string
@@ -46,14 +50,16 @@ type Client struct {
 // New собирает клиента. Пути обязаны быть абсолютными: под procd переменная
 // PATH не та, что в интерактивном шелле, и относительное имя разрешится не в
 // тот файл или не разрешится вовсе.
-func New(runner Runner, binary, initScript string) (*Client, error) {
+// New собирает клиента. supervisor необязателен: без него состояние сводится
+// к коду возврата init-скрипта, панель продолжает работать (NFR-1).
+func New(runner Runner, binary, initScript string, supervisor Supervisor) (*Client, error) {
 	for _, path := range []string{binary, initScript} {
 		if !filepath.IsAbs(path) {
 			return nil, fmt.Errorf("путь %q не абсолютный", path)
 		}
 	}
 
-	return &Client{runner: runner, binary: binary, initScript: initScript}, nil
+	return &Client{runner: runner, supervisor: supervisor, binary: binary, initScript: initScript}, nil
 }
 
 // Check валидирует каталог-кандидат. Проверяется каталог, а не отдельный файл:
@@ -139,6 +145,23 @@ func (c *Client) service(ctx context.Context, action string) error {
 	return nil
 }
 
+// State — состояние сервиса для панели.
+type State struct {
+	Running bool
+	// Failed означает, что procd службу знает, но ни один инстанс не поднят:
+	// её запускали и она отвалилась. Просто остановленную службу procd не
+	// помнит вовсе, поэтому различить их иначе нечем.
+	Failed bool
+	// Uptime — возраст процесса; ноль, когда источник недоступен.
+	Uptime time.Duration
+}
+
+// Supervisor отдаёт то, что знает о службе менеджер процессов. Интерфейс
+// объявлен здесь, у потребителя.
+type Supervisor interface {
+	Service(ctx context.Context, name string) (procd.State, error)
+}
+
 // Running отвечает, поднят ли сервис. Ненулевой код возврата означает «не
 // запущен», а не отказ: панель обязана работать при лежащем сервисе (NFR-1).
 func (c *Client) Running(ctx context.Context) (bool, error) {
@@ -148,6 +171,43 @@ func (c *Client) Running(ctx context.Context) (bool, error) {
 	}
 
 	return res.ExitCode == 0, nil
+}
+
+// State дополняет ответ init-скрипта данными procd. Init-скрипт отдаёт только
+// код возврата, поэтому возраст и признак падения берутся у менеджера
+// процессов; его отсутствие ответ не ломает.
+func (c *Client) State(ctx context.Context) (State, error) {
+	running, err := c.runner.Run(ctx, c.initScript, "running")
+	if err != nil {
+		return State{}, fmt.Errorf("состояние сервиса: %w", err)
+	}
+
+	state := State{Running: running.ExitCode == 0}
+
+	if c.supervisor == nil {
+		return state, nil
+	}
+
+	supervised, err := c.supervisor.Service(ctx, c.serviceName())
+	if err != nil {
+		return state, nil
+	}
+
+	if state.Running {
+		state.Uptime = supervised.Uptime
+
+		return state, nil
+	}
+
+	state.Failed = supervised.Known
+
+	return state, nil
+}
+
+// serviceName выводит имя службы в procd из пути init-скрипта: procd
+// регистрирует службу под именем скрипта.
+func (c *Client) serviceName() string {
+	return filepath.Base(c.initScript)
 }
 
 // firstLine оставляет от вывода одну строку: в текст ошибки идёт причина, а не

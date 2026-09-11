@@ -18,6 +18,7 @@ import (
 	"metabox/internal/clashapi"
 	"metabox/internal/config"
 	"metabox/internal/httpapi"
+	"metabox/internal/procd"
 	"metabox/internal/singbox"
 	"metabox/internal/version"
 	"metabox/internal/webui"
@@ -47,6 +48,7 @@ type settings struct {
 	serviceDir    string
 	binary        string
 	initScript    string
+	ubus          string
 	clashPort     int
 	confirmWindow time.Duration
 	cycleTimeout  time.Duration
@@ -65,6 +67,7 @@ func main() {
 		"служебный каталог демона под бэкап и состояние транзакции; вне каталога конфига")
 	flag.StringVar(&s.binary, "singbox", "/usr/bin/sing-box", "путь к бинарю sing-box")
 	flag.StringVar(&s.initScript, "init-script", "/etc/init.d/sing-box", "путь к init-скрипту сервиса")
+	flag.StringVar(&s.ubus, "ubus", "/bin/ubus", "путь к ubus: через него читается состояние службы у procd")
 	flag.IntVar(&s.clashPort, "clash-port", 9090, "порт Clash API, если демон заводит секцию сам")
 	flag.DurationVar(&s.confirmWindow, "confirm-window", time.Minute,
 		"сколько ждать подтверждения связи до автоотката")
@@ -176,6 +179,16 @@ func run(log *slog.Logger, s settings) error {
 	return <-serveErr
 }
 
+// runCommand переводит запуск команды к виду, который ждёт procd: свой тип
+// результата тот пакет объявить не может, иначе получился бы цикл импортов.
+func runCommand(exec *singbox.Exec) procd.Runner {
+	return func(ctx context.Context, name string, args ...string) (string, int, error) {
+		res, err := exec.Run(ctx, name, args...)
+
+		return res.Stdout, res.ExitCode, err
+	}
+}
+
 // configSettings читает адрес и секрет контроллера из применённого конфига.
 // Читается на каждый запрос: порт контроллера меняется вместе с конфигом, а
 // кэш отправил бы прокси на адрес, которого уже нет.
@@ -198,7 +211,9 @@ func build(log *slog.Logger, s settings) (*apply.Manager, *config.Store, *singbo
 		return nil, nil, nil, err
 	}
 
-	service, err := singbox.New(singbox.NewExec(binaryTimeout), s.binary, s.initScript)
+	exec := singbox.NewExec(binaryTimeout)
+
+	service, err := singbox.New(exec, s.binary, s.initScript, procd.New(runCommand(exec), s.ubus))
 	if err != nil {
 		return nil, nil, nil, err
 	}
