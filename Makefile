@@ -30,19 +30,21 @@ web:
 # собиралась и тестировалась без фронта.
 EMBED_DIR := apps/metaboxd/internal/webui/static
 
-embed:
+# Зависит от web: при параллельной сборке embed иначе скопировал бы каталог,
+# который фронт ещё не дописал.
+embed: web
 	find $(EMBED_DIR) -mindepth 1 ! -name .gitkeep -delete
 	cp -R apps/web/dist/. $(EMBED_DIR)/
 
 # Build the daemon; the SPA is built first because it gets embedded.
 # BIN is relative to the repository root, so the build runs from there.
-daemon: web embed
+daemon: embed
 	cd apps/metaboxd && go build -ldflags "$(LDFLAGS)" -o ../../$(BIN) .
 
 # Сборка под целевое устройство: OpenWrt на aarch64 (раздел 9 PRD). CGO
 # выключен, иначе бинарь привяжется к libc сборочной машины и на роутере
 # не запустится.
-daemon-device: web embed
+daemon-device: embed
 	cd apps/metaboxd && GOOS=linux GOARCH=arm64 CGO_ENABLED=0 \
 		go build -ldflags "$(LDFLAGS)" -o ../../$(DEVICE_BIN) .
 
@@ -101,8 +103,12 @@ daemon-target:
 
 # AC-20: одна команда поднимает фронт с HMR, демон и целевое окружение.
 # Демон собирается до старта target — иначе init.d не найдёт /opt/metabox/metaboxd.
+#
+# --build обязателен: без него compose берёт готовый образ, и подъём версии
+# sing-box в target/Dockerfile молча не доезжает до стенда. Пересборка с кэшем
+# занимает секунды, а стенд на устаревшем бинаре проверяет не то, что нужно.
 up: daemon-target
-	$(DC) up -d
+	$(DC) up -d --build
 
 down:
 	$(DC) down
