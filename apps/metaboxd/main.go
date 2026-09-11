@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -17,6 +18,7 @@ import (
 	"metabox/internal/apply"
 	"metabox/internal/clashapi"
 	"metabox/internal/config"
+	"metabox/internal/events"
 	"metabox/internal/httpapi"
 	"metabox/internal/procd"
 	"metabox/internal/singbox"
@@ -36,6 +38,14 @@ const (
 
 	healthRequestTimeout = 5 * time.Second
 	healthPollInterval   = 500 * time.Millisecond
+
+	// Периоды опроса тех источников, которые сами ничего не шлют. Соединения
+	// Clash API отдаёт только целиком, поэтому секунда здесь напрямую
+	// превращается в трафик между sing-box и демоном (NFR-2).
+	connectionsInterval = time.Second
+	// Опрос службы дороже: это запуск внешних процессов.
+	serviceInterval     = 5 * time.Second
+	streamRetryInterval = 3 * time.Second
 )
 
 // settings — то, что демон получает флагами. Значения по умолчанию
@@ -129,12 +139,23 @@ func run(log *slog.Logger, s settings) error {
 		clashHandler = clash
 	}
 
+	hub := events.New(
+		events.NewClashSource(clashSettings(store), serviceState(service, singboxVersion), healthRequestTimeout),
+		log,
+		events.Options{
+			ConnectionsInterval: connectionsInterval,
+			ServiceInterval:     serviceInterval,
+			RetryInterval:       streamRetryInterval,
+		},
+	)
+
 	api := httpapi.NewServer(manager, store, log, httpapi.Options{
 		Version:        version.Version,
 		SingboxVersion: singboxVersion,
 		AllowedOrigin:  s.allowedOrigin,
 		SPA:            spa,
 		Service:        service,
+		Events:         hub,
 		Clash:          clashHandler,
 		ConfigPath:     store.Path(),
 	})
@@ -186,6 +207,39 @@ func runCommand(exec *singbox.Exec) procd.Runner {
 		res, err := exec.Run(ctx, name, args...)
 
 		return res.Stdout, res.ExitCode, err
+	}
+}
+
+// clashSettings приводит настройки контроллера к виду, который ждёт поток
+// событий: у него свой тип, чтобы пакет не зависел от секции конфига.
+func clashSettings(store *config.Store) events.Resolver {
+	resolve := configSettings(store)
+
+	return func(ctx context.Context) (events.Settings, error) {
+		settings, err := resolve(ctx)
+		if err != nil {
+			return events.Settings{}, err
+		}
+
+		base, err := settings.BaseURL()
+		if err != nil {
+			return events.Settings{}, err
+		}
+
+		return events.Settings{BaseURL: base, Secret: settings.Secret}, nil
+	}
+}
+
+// serviceState отдаёт в поток то же состояние службы, что и ручка: панель
+// обязана видеть одно и то же независимо от того, откуда пришло.
+func serviceState(service *singbox.Client, binary string) events.ServiceReader {
+	return func(ctx context.Context) (json.RawMessage, error) {
+		state, err := service.State(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		return json.Marshal(httpapi.ServiceState(state, binary))
 	}
 }
 

@@ -64,6 +64,9 @@ type Options struct {
 	// Service управляет сервисом sing-box. nil означает, что управление
 	// недоступно: панель откроется, а карточка сервиса не покажется.
 	Service Service
+	// Events — единый поток рантайма к панели (ADR-0006). nil означает, что
+	// поток не собран: экраны остаются на прокси Clash API.
+	Events http.Handler
 	// Clash проксирует рантайм sing-box под веткой clashapi.Prefix. nil
 	// означает, что прокси не собран: панель откроется, а экраны рантайма
 	// деградируют (NFR-1).
@@ -85,6 +88,7 @@ type Server struct {
 	allowedOrigin  string
 	spa            http.Handler
 	service        Service
+	events         http.Handler
 	clash          http.Handler
 	configPath     string
 	handler        http.Handler
@@ -102,6 +106,7 @@ func NewServer(applier Applier, reader ConfigReader, log *slog.Logger, opts Opti
 		allowedOrigin:  opts.AllowedOrigin,
 		spa:            opts.SPA,
 		service:        opts.Service,
+		events:         opts.Events,
 		clash:          opts.Clash,
 		configPath:     opts.ConfigPath,
 	}
@@ -131,6 +136,10 @@ func (s *Server) routes() http.Handler {
 	if s.service != nil {
 		mux.HandleFunc("GET /api/service", s.handleServiceState)
 		mux.HandleFunc("POST /api/service/{action}", s.handleServiceAction)
+	}
+
+	if s.events != nil {
+		mux.Handle("GET /api/events", s.events)
 	}
 
 	if s.clash != nil {
@@ -325,6 +334,23 @@ type serviceResponse struct {
 	LastError string `json:"lastError,omitempty"`
 }
 
+// ServiceState приводит состояние службы к форме ответа. Экспортируется,
+// потому что то же тело уходит в поток событий: панель обязана получать один
+// формат независимо от того, ручкой оно пришло или потоком (ADR-0006).
+func ServiceState(state singbox.State, binary string) any {
+	body := serviceResponse{Status: "stopped", Binary: binary}
+
+	switch {
+	case state.Running:
+		body.Status = "running"
+		body.Uptime = int(state.Uptime.Seconds())
+	case state.Failed:
+		body.Status = "failed"
+	}
+
+	return body
+}
+
 // handleServiceState отдаёт состояние сервиса. Ошибка опроса — не отказ
 // панели: NFR-1 требует, чтобы экран открылся и при недоступном сервисе.
 func (s *Server) handleServiceState(w http.ResponseWriter, r *http.Request) {
@@ -340,15 +366,7 @@ func (s *Server) handleServiceState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	switch {
-	case state.Running:
-		body.Status = "running"
-		body.Uptime = int(state.Uptime.Seconds())
-	case state.Failed:
-		body.Status = "failed"
-	}
-
-	writeJSON(s.log, w, http.StatusOK, body)
+	writeJSON(s.log, w, http.StatusOK, ServiceState(state, s.singboxVersion))
 }
 
 // handleServiceAction выполняет действие и отдаёт новое состояние: гадать по
