@@ -2,7 +2,7 @@ BIN     := dist/metaboxd
 VERSION ?= dev
 LDFLAGS := -s -w -X metabox/internal/version.Version=$(VERSION)
 
-.PHONY: all schema web daemon daemon-target dev test test-schemagen lint hooks clean up down sh target-sh apply-check stand-reset
+.PHONY: all schema web daemon daemon-target dev dev-mock dev-mock-missing test test-schemagen lint hooks clean up down sh target-sh apply-check stand-reset
 
 all: daemon
 
@@ -39,6 +39,14 @@ daemon: web
 # Run the SPA dev server.
 dev:
 	pnpm --filter web dev
+
+# То же на моках MSW: демон и Clash API не нужны, данные берутся из фикстур.
+dev-mock:
+	pnpm --filter web dev:mock
+
+# Моки только там, где ручек у демона ещё нет; остальное идёт на живой демон.
+dev-mock-missing:
+	pnpm --filter web dev:mock-missing
 
 test:
 	cd apps/metaboxd && go test ./...
