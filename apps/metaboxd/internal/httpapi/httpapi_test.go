@@ -133,10 +133,11 @@ func newTestServerWith(
 	t.Helper()
 
 	srv := httptest.NewServer(httpapi.NewServer(applier, reader, testLogger(t), httpapi.Options{
-		Version:       "test",
-		AllowedOrigin: allowedOrigin,
-		SPA:           spa,
-		ConfigPath:    testConfigPath,
+		Version:        "test",
+		SingboxVersion: testSingboxVersion,
+		AllowedOrigin:  allowedOrigin,
+		SPA:            spa,
+		ConfigPath:     testConfigPath,
 	}))
 	t.Cleanup(srv.Close)
 
@@ -343,7 +344,10 @@ func TestReadRequestSkipsOriginCheck(t *testing.T) {
 const rawConfig = `{"log":{"level":"info"}}`
 
 // Путь стенда: демон отдаёт его как есть, значение здесь роли не играет.
-const testConfigPath = "/tmp/metabox-test/config.json"
+const (
+	testConfigPath     = "/tmp/metabox-test/config.json"
+	testSingboxVersion = "1.14.0-extended-2.7.1"
+)
 
 // apply отправляет конфиг со своим Origin: проверка источника здесь не предмет
 // теста, её закрывает TestMutatingRequestChecksOrigin.
@@ -499,6 +503,21 @@ func TestConfirmNothingToConfirm(t *testing.T) {
 
 	if apiErr.Code != "nothing_to_confirm" {
 		t.Errorf("код ошибки %q, ожидали nothing_to_confirm", apiErr.Code)
+	}
+}
+
+// Формы панели построены по схеме одной версии форка: без версии устройства
+// расхождение со схемой ничем не видно.
+func TestStatusReportsSingboxVersion(t *testing.T) {
+	srv := newTestServer(t, &fakeApplier{}, "")
+
+	var status struct {
+		SingboxVersion string `json:"singbox_version"`
+	}
+	request(t, srv, http.MethodGet, "/api/status", "", nil).decode(t, &status)
+
+	if status.SingboxVersion != testSingboxVersion {
+		t.Errorf("версия %q, ожидали %q", status.SingboxVersion, testSingboxVersion)
 	}
 }
 

@@ -84,7 +84,7 @@ func main() {
 }
 
 func run(log *slog.Logger, s settings) error {
-	manager, store, err := build(log, s)
+	manager, store, service, err := build(log, s)
 	if err != nil {
 		return err
 	}
@@ -108,11 +108,19 @@ func run(log *slog.Logger, s settings) error {
 		return fmt.Errorf("встроенный интерфейс: %w", err)
 	}
 
+	// Неудача не останавливает демон: панель обязана работать и при
+	// отсутствующем sing-box (NFR-1), просто без версии бинаря.
+	singboxVersion, err := service.Version(ctx)
+	if err != nil {
+		log.Warn("версия sing-box не прочитана", "err", err)
+	}
+
 	api := httpapi.NewServer(manager, store, log, httpapi.Options{
-		Version:       version.Version,
-		AllowedOrigin: s.allowedOrigin,
-		SPA:           spa,
-		ConfigPath:    store.Path(),
+		Version:        version.Version,
+		SingboxVersion: singboxVersion,
+		AllowedOrigin:  s.allowedOrigin,
+		SPA:            spa,
+		ConfigPath:     store.Path(),
 	})
 
 	srv := &http.Server{
@@ -157,15 +165,15 @@ func run(log *slog.Logger, s settings) error {
 
 // build собирает граф зависимостей. Отдельной функцией, чтобы run занимался
 // только запуском и остановкой.
-func build(log *slog.Logger, s settings) (*apply.Manager, *config.Store, error) {
+func build(log *slog.Logger, s settings) (*apply.Manager, *config.Store, *singbox.Client, error) {
 	store, err := config.NewStore(s.configDir, s.configName, s.serviceDir)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	service, err := singbox.New(singbox.NewExec(binaryTimeout), s.binary, s.initScript)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	health := clashapi.NewChecker(healthRequestTimeout, healthPollInterval)
@@ -176,5 +184,5 @@ func build(log *slog.Logger, s settings) (*apply.Manager, *config.Store, error) 
 		CycleTimeout: s.cycleTimeout,
 	})
 
-	return manager, store, nil
+	return manager, store, service, nil
 }

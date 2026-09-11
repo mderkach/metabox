@@ -34,6 +34,10 @@ type ConfigReader interface {
 // Options — настройки слоя, приходящие в демон флагами.
 type Options struct {
 	Version string
+	// SingboxVersion — версия бинаря на устройстве: формы панели собраны под
+	// одну версию форка, и расхождение с бинарём видно только отсюда. Пустая
+	// строка означает, что версию прочитать не удалось.
+	SingboxVersion string
 	// AllowedOrigin — разрешённый Origin сверх совпадения с Host. Пустая
 	// строка означает, что послаблений нет: правило из ADR-0002 действует
 	// в чистом виде.
@@ -50,27 +54,29 @@ type Options struct {
 
 // Server держит зависимости обработчиков и собранную цепочку middleware.
 type Server struct {
-	applier       Applier
-	reader        ConfigReader
-	log           *slog.Logger
-	version       string
-	allowedOrigin string
-	spa           http.Handler
-	configPath    string
-	handler       http.Handler
+	applier        Applier
+	reader         ConfigReader
+	log            *slog.Logger
+	version        string
+	singboxVersion string
+	allowedOrigin  string
+	spa            http.Handler
+	configPath     string
+	handler        http.Handler
 }
 
 // NewServer собирает слой вместе с цепочкой middleware. Логгер обязателен:
 // своего пакет не заводит.
 func NewServer(applier Applier, reader ConfigReader, log *slog.Logger, opts Options) *Server {
 	s := &Server{
-		applier:       applier,
-		reader:        reader,
-		log:           log,
-		version:       opts.Version,
-		allowedOrigin: opts.AllowedOrigin,
-		spa:           opts.SPA,
-		configPath:    opts.ConfigPath,
+		applier:        applier,
+		reader:         reader,
+		log:            log,
+		version:        opts.Version,
+		singboxVersion: opts.SingboxVersion,
+		allowedOrigin:  opts.AllowedOrigin,
+		spa:            opts.SPA,
+		configPath:     opts.ConfigPath,
 	}
 	s.handler = s.routes()
 
@@ -107,7 +113,8 @@ func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
 }
 
 type statusResponse struct {
-	Version string `json:"version"`
+	Version        string `json:"version"`
+	SingboxVersion string `json:"singbox_version,omitempty"`
 	// ConfigPath — файл, которым демон владеет: путь задаётся флагами запуска,
 	// и вычислить его на стороне панели нельзя.
 	ConfigPath  string             `json:"config_path,omitempty"`
@@ -119,7 +126,11 @@ type statusResponse struct {
 }
 
 func (s *Server) handleStatus(w http.ResponseWriter, _ *http.Request) {
-	body := statusResponse{Version: s.version, ConfigPath: s.configPath}
+	body := statusResponse{
+		Version:        s.version,
+		SingboxVersion: s.singboxVersion,
+		ConfigPath:     s.configPath,
+	}
 
 	if tx := s.applier.Current(); tx.ID != "" {
 		body.Transaction = &tx

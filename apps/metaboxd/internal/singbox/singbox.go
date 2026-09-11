@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
 )
 
 // Result — итог запуска команды. Ненулевой ExitCode это результат, а не отказ
@@ -69,6 +70,42 @@ func (c *Client) Check(ctx context.Context, dir string) error {
 	}
 
 	return nil
+}
+
+// Version возвращает версию бинаря.
+//
+// Значение предназначено для однократного чтения при старте демона: запуск
+// процесса на каждый опрос /api/status слишком дорог для роутера, поэтому
+// бинарь, подменённый под работающим демоном, попадёт в панель только после
+// его перезапуска.
+func (c *Client) Version(ctx context.Context) (string, error) {
+	res, err := c.runner.Run(ctx, c.binary, "version")
+	if err != nil {
+		return "", fmt.Errorf("версия sing-box: %w", err)
+	}
+
+	if res.ExitCode != 0 {
+		return "", fmt.Errorf("версия sing-box: код %d, %s", res.ExitCode, firstLine(res.Stderr))
+	}
+
+	version := parseVersion(res.Stdout)
+	if version == "" {
+		return "", fmt.Errorf("версия sing-box: вывод %q не разобран", firstLine(res.Stdout))
+	}
+
+	return version, nil
+}
+
+// parseVersion берёт номер из первой строки вида
+// `sing-box version 1.14.0-extended-2.7.1`: дальше идут строки про окружение
+// сборки и теги.
+func parseVersion(stdout string) string {
+	fields := strings.Fields(firstLine(stdout))
+	if len(fields) < 3 || fields[0] != "sing-box" || fields[1] != "version" {
+		return ""
+	}
+
+	return fields[2]
 }
 
 // Restart перезапускает сервис через init-скрипт. Остановленный сервис —
