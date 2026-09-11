@@ -95,25 +95,29 @@ func union(items ...*schema) *schema {
 	return &schema{kind: kindUnion, variants: variants}
 }
 
-// refs собирает имена схем, на которые ссылается узел.
-func (s *schema) refs(into map[string]bool) {
+// collectRefs собирает имена схем, на которые ссылается узел. Поля объекта
+// обходятся по withFields: ссылки из них вычисляются позже остальных, и
+// порядок объявлений от них не зависит.
+func (s *schema) collectRefs(into map[string]bool, withFields bool) {
 	switch s.kind {
 	case kindScalar:
 		// Скаляр — готовое zod-выражение, ссылаться ему не на что.
 	case kindRef:
 		into[s.ref] = true
 	case kindArray, kindRecord:
-		s.elem.refs(into)
+		s.elem.collectRefs(into, withFields)
 	case kindUnion, kindTagged:
 		for _, v := range s.variants {
-			v.schema.refs(into)
+			v.schema.collectRefs(into, withFields)
 		}
 	case kindObject:
 		if s.base != "" {
 			into[s.base] = true
 		}
-		for _, f := range s.fields {
-			f.schema.refs(into)
+		if withFields {
+			for _, f := range s.fields {
+				f.schema.collectRefs(into, withFields)
+			}
 		}
 	}
 }
@@ -123,7 +127,7 @@ func (s *schema) refs(into map[string]bool) {
 // того, на что оно ссылается, а при взаимной рекурсии такого порядка нет.
 func (s *schema) hasRef() bool {
 	found := map[string]bool{}
-	s.refs(found)
+	s.collectRefs(found, true)
 	return len(found) > 0
 }
 
@@ -131,21 +135,7 @@ func (s *schema) hasRef() bool {
 // что вне полей объекта (поля уходят в геттеры). Они и задают порядок
 // объявлений в файле.
 func (s *schema) hardRefs(into map[string]bool) {
-	switch s.kind {
-	case kindScalar:
-	case kindRef:
-		into[s.ref] = true
-	case kindArray, kindRecord:
-		s.elem.hardRefs(into)
-	case kindUnion, kindTagged:
-		for _, v := range s.variants {
-			v.schema.hardRefs(into)
-		}
-	case kindObject:
-		if s.base != "" {
-			into[s.base] = true
-		}
-	}
+	s.collectRefs(into, false)
 }
 
 // write печатает Zod-выражение с отступом indent.
