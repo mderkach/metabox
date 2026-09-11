@@ -74,6 +74,8 @@
     ],
     "fsd/boundaries": "error",
     "project/no-query-destructuring": "error",
+    "project/named-effect": "error",
+    "fsd/slice-name": "error",
     "query/exhaustive-deps": "error",
     "query/no-rest-destructuring": "error",
     "query/stable-query-client": "error",

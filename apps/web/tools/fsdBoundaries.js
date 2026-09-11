@@ -3,12 +3,49 @@
 // `paths` обоих tsconfig и в `vite.config.ts`.
 // Файл на JS, а не TS: oxlint грузит плагины через Node, TS-вариант требует
 // нативного type stripping и лишней записи в tsconfig ради одного файла.
+import fs from 'node:fs';
 import path from 'node:path';
 
-const LAYERS = ['app', 'pages', 'widgets', 'features', 'entities', 'shared', 'adapters'];
+const LAYERS = ['app', 'pages', 'widgets', 'features', 'entities', 'shared'];
 const SLICED = new Set(['pages', 'widgets', 'features', 'entities']);
 const RANK = new Map(LAYERS.map((layer, index) => [layer, index]));
 const SRC = 'src';
+const PUBLIC_API = 'index.ts';
+
+const publicApi = new Map();
+
+function hasPublicApi(dir) {
+  let known = publicApi.get(dir);
+
+  if (known === undefined) {
+    known = fs.existsSync(path.join(dir, PUBLIC_API));
+    publicApi.set(dir, known);
+  }
+
+  return known;
+}
+
+/**
+ * Сегменты слайса от корня слоя: слайс кончается там, где лежит Public API.
+ *
+ * Так родственные слайсы можно складывать в группу — `features/Rule/RuleEdit`, —
+ * потому что у группы своего `index.ts` нет и слайсом она не становится.
+ * Считать слайсом первый сегмент после слоя нельзя: группа читалась бы как
+ * слайс, а `@features/Rule/RuleEdit` — как обход Public API.
+ */
+function sliceOf(layerRoot, parts) {
+  const slice = [];
+  let dir = layerRoot;
+
+  for (const part of parts) {
+    dir = path.join(dir, part);
+    slice.push(part);
+
+    if (hasPublicApi(dir)) break;
+  }
+
+  return slice.join('/');
+}
 
 /** Слой и слайс файла по его пути; `null` — файл вне слоёв. */
 function locate(filePath) {
@@ -16,10 +53,16 @@ function locate(filePath) {
   const src = parts.lastIndexOf(SRC);
   if (src === -1) return null;
 
-  const [layer, second] = parts.slice(src + 1);
+  const [layer, ...inside] = parts.slice(src + 1);
   if (!RANK.has(layer)) return null;
 
-  return { layer, slice: SLICED.has(layer) ? second : null };
+  const root = parts.slice(0, src + 1).join(path.sep);
+
+  return {
+    layer,
+    root,
+    slice: SLICED.has(layer) ? sliceOf(path.join(root, layer), inside) : null,
+  };
 }
 
 function parseAlias(source) {
@@ -35,7 +78,8 @@ function checkAlias(from, alias, report) {
     return;
   }
 
-  const [slice, ...deep] = alias.rest;
+  const slice = SLICED.has(alias.layer) ? sliceOf(path.join(from.root, alias.layer), alias.rest) : '';
+  const deep = alias.rest.slice(slice === '' ? 0 : slice.split('/').length);
   const isCrossImport = SLICED.has(alias.layer) && deep[0] === '@x';
 
   if (alias.layer === from.layer && !isCrossImport) {
@@ -47,7 +91,7 @@ function checkAlias(from, alias, report) {
     return;
   }
 
-  if (SLICED.has(alias.layer) && slice && deep.length > 0 && !isCrossImport) {
+  if (SLICED.has(alias.layer) && slice !== '' && deep.length > 0 && !isCrossImport) {
     report(`Импорт в обход Public API: разрешён \`@${alias.layer}/${slice}\`.`);
   }
 }
@@ -73,6 +117,31 @@ function checkRelative(from, source, report) {
 export default {
   meta: { name: 'fsd', version: '1.0.0' },
   rules: {
+    // Группа родственных слайсов названа доменом, и слайс внутри неё начинается
+    // с того же слова: `Daemon/DaemonTraffic`, а не `Daemon/TrafficChart`.
+    // Иначе имя слайса читается в отрыве от папки и домен теряется.
+    'slice-name': {
+      meta: { type: 'problem', schema: [] },
+      create(context) {
+        const from = locate(context.filename);
+        if (!from?.slice?.includes('/')) return {};
+
+        const [group, ...rest] = from.slice.split('/');
+        const slice = rest.join('');
+
+        if (slice.startsWith(group)) return {};
+
+        return {
+          Program(node) {
+            context.report({
+              node,
+              message: `Слайс в группе \`${group}\` называется \`${group}…\`, а не \`${slice}\`.`,
+            });
+          },
+        };
+      },
+    },
+
     boundaries: {
       meta: { type: 'problem', schema: [] },
       create(context) {
