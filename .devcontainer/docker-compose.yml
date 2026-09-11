@@ -69,7 +69,7 @@ services:
       args:
         OPENWRT_TAG: ${OPENWRT_TAG:-aarch64_generic-24.10.8}
         OPENWRT_PLATFORM: ${OPENWRT_PLATFORM:-linux/aarch64_generic}
-        SINGBOX_VERSION: ${SINGBOX_VERSION:-1.13.18-extended-2.6.5}
+        SINGBOX_VERSION: ${SINGBOX_VERSION:-1.14.0-extended-2.7.1}
         SINGBOX_ARCH: ${SINGBOX_ARCH:-arm64}
     # procd — это init: ему нужны собственные namespace и право поднимать сервисы.
     # Границу безопасности держит сам контейнер, внутрь смонтирован только dist/.

@@ -2,7 +2,7 @@
 # Заглушки procd здесь намеренно нет: AC-21 требует, чтобы цикл Apply
 # (sing-box check → запись → restart → healthcheck) отрабатывал так же, как на роутере.
 
-ARG SINGBOX_VERSION=1.13.18-extended-2.6.5
+ARG SINGBOX_VERSION=1.14.0-extended-2.7.1
 ARG SINGBOX_ARCH=arm64
 ARG OPENWRT_TAG=aarch64_generic-24.10.8
 # OpenWrt публикует манифест с нестандартной архитектурой (`linux/aarch64_generic`,

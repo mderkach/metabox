@@ -6,13 +6,16 @@ import (
 	"strings"
 )
 
-// Статические union'ы форка объявлены одинаково: строковое поле-дискриминатор
-// и по полю с json:"-" на каждый вариант. Реестр им не нужен — варианты
-// известны на этапе компиляции, а badjson кладёт выбранный вариант плоско
-// рядом с дискриминатором.
+// Статические union'ы форка объявлены одинаково: поле-дискриминатор и по полю
+// с json:"-" на каждый вариант. Реестр им не нужен — варианты известны на
+// этапе компиляции, а badjson кладёт выбранный вариант плоско рядом с
+// дискриминатором.
 type taggedSpec struct {
-	discr    string      // имя поля в JSON: type, action, provider
+	discr    string      // имя поля в JSON: type, action, provider, version
 	variants []tagOption // порядок задаёт порядок вариантов в схеме
+	// numeric: дискриминатор — число, и литерал печатается без кавычек.
+	// Такой union у http_clients, где вариант выбирает версия протокола.
+	numeric bool
 }
 
 type tagOption struct {
@@ -36,7 +39,7 @@ func (w *walker) taggedUnion(t reflect.Type, spec taggedSpec, path string) *sche
 		body := &schema{kind: kindObject}
 		body.fields = append(body.fields, field{
 			name:     spec.discr,
-			schema:   scalar(fmt.Sprintf("z.literal(%q)", option.tag)),
+			schema:   scalar(literalOf(option.tag, spec.numeric)),
 			optional: discrOptional,
 		})
 		w.appendCommonFields(body, t, spec.discr)
@@ -55,6 +58,16 @@ func (w *walker) taggedUnion(t reflect.Type, spec taggedSpec, path string) *sche
 		}
 	}
 	return out
+}
+
+// literalOf печатает значение дискриминатора: число литералом, всё остальное
+// строкой.
+func literalOf(tag string, numeric bool) string {
+	if numeric {
+		return fmt.Sprintf("z.literal(%s)", tag)
+	}
+
+	return fmt.Sprintf("z.literal(%q)", tag)
 }
 
 // appendCommonFields переносит поля, общие для всех вариантов union'а: сам

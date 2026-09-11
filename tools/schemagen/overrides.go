@@ -120,6 +120,18 @@ var scalarOverrides = map[string]func() *schema{
 		return listable(enumSchema("tcp", "udp"))
 	},
 
+	// match_response DNS-правила: true/false либо тег сервера, чей ответ
+	// сопоставляется. Полей в JSON у типа нет — только эти две формы.
+	"option.DNSRuleMatchResponse": func() *schema {
+		return union(scalar("z.boolean()"), scalar("z.string()"))
+	},
+
+	// Провайдер сертификата в TLS: тег заведённого в certificate_providers
+	// либо тот же объект инлайном.
+	"option.CertificateProviderOptions": func() *schema {
+		return union(scalar("z.string()"), ref("CertificateProviderSchema"))
+	},
+
 	// Сырой JSON корневого конфига: содержимое не разбирается.
 	"contextjson.RawMessage": func() *schema { return scalar("z.unknown()") },
 }
@@ -197,6 +209,37 @@ var taggedSpecs = map[string]taggedSpec{
 		{C.DNSProviderCloudflare, "CloudflareOptions"},
 		{C.DNSProviderACMEDNS, "ACMEDNSOptions"},
 	}},
+	// То же дерево у отдельного провайдера сертификатов: в 1.14 ACME переехал
+	// из inline-опций TLS в certificate_providers, а inline-форма осталась
+	// как устаревшая.
+	"option.ACMEProviderDNS01ChallengeOptions": {discr: "provider", variants: []tagOption{
+		{C.DNSProviderAliDNS, "AliDNSOptions"},
+		{C.DNSProviderCloudflare, "CloudflareOptions"},
+		{C.DNSProviderACMEDNS, "ACMEDNSOptions"},
+	}},
+	// Версия протокола выбирает, какие настройки подмешиваются к полям
+	// клиента: HTTP/2 при 0 и 2, QUIC при 3, у HTTP/1.1 своих нет.
+	// Значение 0 форк трактует как 2 (`unmarshalHTTPClientVersionOptions`).
+	"option.HTTPClient": {discr: "version", numeric: true, variants: []tagOption{
+		{"0", "HTTP2Options"},
+		{"1", ""},
+		{"2", "HTTP2Options"},
+		{"3", "HTTP3Options"},
+	}},
+	"option.HTTPClientOptions": {discr: "version", numeric: true, variants: []tagOption{
+		{"0", "HTTP2Options"},
+		{"1", ""},
+		{"2", "HTTP2Options"},
+		{"3", "HTTP3Options"},
+	}},
+	"option.Hysteria2Obfs": {discr: "type", variants: []tagOption{
+		{C.Hysteria2ObfsTypeSalamander, ""},
+		{C.Hysteria2ObfsTypeGecko, "GeckoOptions"},
+	}},
+	"option.NetworkNamespace": {discr: "type", variants: []tagOption{
+		{C.NetNsTypeDefault, "DefaultOptions"},
+		{C.NetNsTypeUnshare, "UnshareOptions"},
+	}},
 	"option.Hysteria2Masquerade": {discr: "type", variants: []tagOption{
 		{C.Hysterai2MasqueradeTypeFile, "FileOptions"},
 		{C.Hysterai2MasqueradeTypeProxy, "ProxyOptions"},
@@ -204,12 +247,27 @@ var taggedSpecs = map[string]taggedSpec{
 	}},
 }
 
-// shorthand — типы, которые кроме объекта принимают короткую скалярную форму.
-var shorthand = map[string]string{
-	"option.DomainResolveOptions":       "z.string()",            // имя DNS-сервера
-	"option.UDPOverTCPOptions":          "z.boolean()",           // просто включить
-	"option.DERPVerifyClientURLOptions": "z.string()",            // URL
-	"option.DERPSTUNListenOptions":      "z.int().nonnegative()", // порт
+// shorthand — типы, которые кроме объекта принимают короткие скалярные формы.
+var shorthand = map[string][]string{
+	"option.DomainResolveOptions":       {"z.string()"},            // имя DNS-сервера
+	"option.UDPOverTCPOptions":          {"z.boolean()"},           // просто включить
+	"option.DERPVerifyClientURLOptions": {"z.string()"},            // URL
+	"option.DERPSTUNListenOptions":      {"z.int().nonnegative()"}, // порт
+	"option.OptimisticDNSOptions":       {"z.boolean()"},           // просто включить
+	"option.TailscaleSSHServerOptions":  {"z.boolean()"},           // просто включить
+	"option.HTTPClientOptions":          {"z.string()"},            // тег клиента из http_clients
+	// Дашборд API-сервиса: включить, путь к готовым файлам или полный объект.
+	"option.APIDashboardOptions": {"z.boolean()", "z.string()"},
+}
+
+// objectForm — объектная форма типа: union по дискриминатору, если он описан
+// в таблице, иначе обычная структура.
+func (w *walker) objectForm(t reflect.Type, name, path string) *schema {
+	if spec, ok := taggedSpecs[name]; ok {
+		return w.taggedUnion(t, spec, path)
+	}
+
+	return w.plainStruct(t, path)
 }
 
 // override возвращает схему для типа, если для него есть правило.
@@ -225,11 +283,16 @@ func (w *walker) override(t reflect.Type, path string) (*schema, bool) {
 	if flattenOnly[name] {
 		return w.plainStruct(t, path), true
 	}
+	if alts, ok := shorthand[name]; ok {
+		items := make([]*schema, 0, len(alts)+1)
+		for _, alt := range alts {
+			items = append(items, scalar(alt))
+		}
+
+		return union(append(items, w.objectForm(t, name, path))...), true
+	}
 	if spec, ok := taggedSpecs[name]; ok {
 		return w.taggedUnion(t, spec, path), true
-	}
-	if alt, ok := shorthand[name]; ok {
-		return union(scalar(alt), w.plainStruct(t, path)), true
 	}
 
 	switch genericBase(t) {

@@ -54,6 +54,7 @@ func collectRegistries() ([]registryGroup, error) {
 	provider := include.ProviderRegistry()
 	dnsTransport := include.DNSTransportRegistry()
 	svc := include.ServiceRegistry()
+	certProvider := include.CertificateProviderRegistry()
 
 	creators := []struct {
 		name   string
@@ -65,6 +66,7 @@ func collectRegistries() ([]registryGroup, error) {
 		{"provider", provider.CreateOptions},
 		{"dns", dnsTransport.CreateOptions},
 		{"service", svc.CreateOptions},
+		{"certificate_provider", certProvider.CreateOptions},
 	}
 
 	groups := make([]registryGroup, 0, len(creators))

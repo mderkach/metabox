@@ -18,7 +18,7 @@ import (
 
 // forkVersion попадает в шапку сгенерированного файла: по нему видно, на
 // какой схеме собран фронт (AC-28).
-const forkVersion = "v1.13.18-extended-2.6.5"
+const forkVersion = "v1.14.0-extended-2.7.1"
 
 func main() {
 	out := flag.String("out", "", "path of the generated schema file")
@@ -69,20 +69,22 @@ func generate() (string, error) {
 // нельзя.
 func (w *walker) registryUnions(groups []registryGroup) {
 	shadows := map[string]reflect.Type{
-		"inbound":  reflect.TypeOf(option.Inbound{}),
-		"outbound": reflect.TypeOf(option.Outbound{}),
-		"endpoint": reflect.TypeOf(option.Endpoint{}),
-		"provider": reflect.TypeOf(option.Provider{}),
-		"service":  reflect.TypeOf(option.Service{}),
-		"dns":      reflect.TypeOf(option.DNSServerOptions{}),
+		"inbound":              reflect.TypeOf(option.Inbound{}),
+		"outbound":             reflect.TypeOf(option.Outbound{}),
+		"endpoint":             reflect.TypeOf(option.Endpoint{}),
+		"provider":             reflect.TypeOf(option.Provider{}),
+		"service":              reflect.TypeOf(option.Service{}),
+		"dns":                  reflect.TypeOf(option.DNSServerOptions{}),
+		"certificate_provider": reflect.TypeOf(option.CertificateProvider{}),
 	}
 	names := map[string]string{
-		"inbound":  "option.Inbound",
-		"outbound": "option.Outbound",
-		"endpoint": "option.Endpoint",
-		"provider": "option.Provider",
-		"service":  "option.Service",
-		"dns":      "option.DNSServerOptions",
+		"inbound":              "option.Inbound",
+		"outbound":             "option.Outbound",
+		"endpoint":             "option.Endpoint",
+		"provider":             "option.Provider",
+		"service":              "option.Service",
+		"dns":                  "option.DNSServerOptions",
+		"certificate_provider": "option.CertificateProvider",
 	}
 
 	// Ссылки расставляются до обхода: bond и failover принимают вложенные

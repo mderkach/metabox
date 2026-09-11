@@ -1,10 +1,16 @@
-// Сгенерировано tools/schemagen из sing-box-extended v1.13.18-extended-2.6.5. Не редактировать:
+// Сгенерировано tools/schemagen из sing-box-extended v1.14.0-extended-2.7.1. Не редактировать:
 // правится генератор, файл пересобирается `make schema`.
 //
 // Схемы держатся представимыми для z.toJSONSchema(): по ним строится
 // авторендерер непокрытых узлов конфига (docs/adr/ADR-0001).
 
 import * as z from "zod"
+
+/**
+ * Версия форка, из которой собраны эти схемы. Панель сверяет её с версией
+ * бинаря на устройстве: формы знают ровно те типы, что были в этой версии.
+ */
+export const SCHEMA_FORK_VERSION = "v1.14.0-extended-2.7.1"
 
 export const ACMEDNS01ChallengeOptionsSchema = z.union([
   z.looseObject({
@@ -32,6 +38,44 @@ export const ACMEExternalAccountOptionsSchema = z.looseObject({
   key_id: z.string().optional(),
   mac_key: z.string().optional(),
 })
+
+export const ACMEKeyTypeSchema = z.string()
+
+export const ACMEProviderDNS01ChallengeOptionsSchema = z.union([
+  z.looseObject({
+    provider: z.literal("alidns").optional(),
+    access_key_id: z.string().optional(),
+    access_key_secret: z.string().optional(),
+    region_id: z.string().optional(),
+    security_token: z.string().optional(),
+  }),
+  z.looseObject({
+    provider: z.literal("cloudflare").optional(),
+    api_token: z.string().optional(),
+    zone_token: z.string().optional(),
+  }),
+  z.looseObject({
+    provider: z.literal("acmedns").optional(),
+    username: z.string().optional(),
+    password: z.string().optional(),
+    subdomain: z.string().optional(),
+    server_url: z.string().optional(),
+  }),
+])
+
+export const APIDashboardOptionsSchema = z.union([
+  z.boolean(),
+  z.string(),
+  z.looseObject({
+    enabled: z.boolean().optional(),
+    path: z.string().optional(),
+    download_url: z.string().optional(),
+    get http_client() {
+      return HTTPClientOptionsSchema.optional()
+    },
+    update_interval: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  }),
+])
 
 export const AnyTLSUserSchema = z.looseObject({
   name: z.string().optional(),
@@ -77,7 +121,9 @@ export const CacheFileOptionsSchema = z.looseObject({
   store_rdrc: z.boolean().optional(),
   store_warp_config: z.boolean().optional(),
   store_masque_config: z.boolean().optional(),
+  store_subscriptions: z.boolean().optional(),
   rdrc_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  store_dns: z.boolean().optional(),
 })
 
 export const CallCookieSchema = z.looseObject({
@@ -103,6 +149,75 @@ export const CertificateOptionsSchema = z.looseObject({
   ]).optional(),
 })
 
+export const CertificateProviderAcmeSchema = z.looseObject({
+  type: z.literal("acme"),
+  tag: z.string().optional(),
+  domain: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  data_directory: z.string().optional(),
+  default_server_name: z.string().optional(),
+  email: z.string().optional(),
+  provider: z.string().optional(),
+  account_key: z.string().optional(),
+  disable_http_challenge: z.boolean().optional(),
+  disable_tls_alpn_challenge: z.boolean().optional(),
+  alternative_http_port: z.int().nonnegative().optional(),
+  alternative_tls_port: z.int().nonnegative().optional(),
+  get external_account() {
+    return ACMEExternalAccountOptionsSchema.optional()
+  },
+  get dns01_challenge() {
+    return ACMEProviderDNS01ChallengeOptionsSchema.optional()
+  },
+  get key_type() {
+    return ACMEKeyTypeSchema.optional()
+  },
+  profile: z.string().optional(),
+  get http_client() {
+    return HTTPClientOptionsSchema.optional()
+  },
+})
+
+export const CertificateProviderCloudflareOriginCaSchema = z.looseObject({
+  type: z.literal("cloudflare-origin-ca"),
+  tag: z.string().optional(),
+  domain: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  data_directory: z.string().optional(),
+  api_token: z.string().optional(),
+  origin_ca_key: z.string().optional(),
+  get request_type() {
+    return CloudflareOriginCARequestTypeSchema.optional()
+  },
+  get requested_validity() {
+    return CloudflareOriginCARequestValiditySchema.optional()
+  },
+  get http_client() {
+    return HTTPClientOptionsSchema.optional()
+  },
+})
+
+export const CertificateProviderTailscaleSchema = z.looseObject({
+  type: z.literal("tailscale"),
+  tag: z.string().optional(),
+  endpoint: z.string().optional(),
+})
+
+export const CertificateProviderSchema = z.discriminatedUnion("type", [
+  CertificateProviderAcmeSchema,
+  CertificateProviderCloudflareOriginCaSchema,
+  CertificateProviderTailscaleSchema,
+])
+
+export const CertificateProviderOptionsSchema = z.union([
+  z.string(),
+  CertificateProviderSchema,
+])
+
 export const ClashAPIOptionsSchema = z.looseObject({
   external_controller: z.string().optional(),
   external_ui: z.string().optional(),
@@ -123,6 +238,10 @@ export const ClashAPIOptionsSchema = z.looseObject({
 })
 
 export const ClientAuthTypeSchema = z.enum(["no", "request", "require-any", "verify-if-given", "require-and-verify"])
+
+export const CloudflareOriginCARequestTypeSchema = z.string()
+
+export const CloudflareOriginCARequestValiditySchema = z.int().nonnegative()
 
 export const CloudflareProfileSchema = z.looseObject({
   id: z.string().optional(),
@@ -227,49 +346,55 @@ export const DERPSTUNListenOptionsSchema = z.union([
 
 export const DERPVerifyClientURLOptionsSchema = z.union([
   z.string(),
-  z.looseObject({
-    url: z.string().optional(),
-    detour: z.string().optional(),
-    bind_interface: z.string().optional(),
-    inet4_bind_address: z.string().optional(),
-    inet6_bind_address: z.string().optional(),
-    bind_address_no_port: z.boolean().optional(),
-    protect_path: z.string().optional(),
-    get routing_mark() {
-      return FwMarkSchema.optional()
-    },
-    reuse_addr: z.boolean().optional(),
-    netns: z.string().optional(),
-    connect_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
-    tcp_fast_open: z.boolean().optional(),
-    tcp_multi_path: z.boolean().optional(),
-    disable_tcp_keep_alive: z.boolean().optional(),
-    tcp_keep_alive: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
-    tcp_keep_alive_interval: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
-    udp_fragment: z.boolean().optional(),
-    get domain_resolver() {
-      return DomainResolveOptionsSchema.optional()
-    },
-    get network_strategy() {
-      return NetworkStrategySchema.optional()
-    },
-    get network_type() {
-      return z.union([
-        InterfaceTypeSchema,
-        z.array(InterfaceTypeSchema),
-      ]).optional()
-    },
-    get fallback_network_type() {
-      return z.union([
-        InterfaceTypeSchema,
-        z.array(InterfaceTypeSchema),
-      ]).optional()
-    },
-    fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
-    get domain_strategy() {
-      return DomainStrategySchema.optional()
-    },
-  }),
+  z.union([
+    z.looseObject({
+      version: z.literal("0").optional(),
+      idle_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+      keep_alive_period: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+      stream_receive_window: z.union([
+        z.int().nonnegative(),
+        z.string(),
+      ]).optional(),
+      connection_receive_window: z.union([
+        z.int().nonnegative(),
+        z.string(),
+      ]).optional(),
+      max_concurrent_streams: z.int().optional(),
+    }),
+    z.looseObject({
+      version: z.literal("1").optional(),
+    }),
+    z.looseObject({
+      version: z.literal("2").optional(),
+      idle_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+      keep_alive_period: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+      stream_receive_window: z.union([
+        z.int().nonnegative(),
+        z.string(),
+      ]).optional(),
+      connection_receive_window: z.union([
+        z.int().nonnegative(),
+        z.string(),
+      ]).optional(),
+      max_concurrent_streams: z.int().optional(),
+    }),
+    z.looseObject({
+      version: z.literal("3").optional(),
+      idle_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+      keep_alive_period: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+      stream_receive_window: z.union([
+        z.int().nonnegative(),
+        z.string(),
+      ]).optional(),
+      connection_receive_window: z.union([
+        z.int().nonnegative(),
+        z.string(),
+      ]).optional(),
+      max_concurrent_streams: z.int().optional(),
+      initial_packet_size: z.int().optional(),
+      disable_path_mtu_discovery: z.boolean().optional(),
+    }),
+  ]),
 ])
 
 export const DNSOptionsSchema = z.looseObject({
@@ -284,14 +409,15 @@ export const DNSOptionsSchema = z.looseObject({
   get strategy() {
     return DomainStrategySchema.optional()
   },
+  timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
   disable_cache: z.boolean().optional(),
   disable_expire: z.boolean().optional(),
   independent_cache: z.boolean().optional(),
   cache_capacity: z.int().nonnegative().optional(),
-  client_subnet: z.string().optional(),
-  get fakeip() {
-    return LegacyDNSFakeIPOptionsSchema.optional()
+  get optimistic() {
+    return OptimisticDNSOptionsSchema.optional()
   },
+  client_subnet: z.string().optional(),
 })
 
 export const DNSQueryTypeSchema = z.union([
@@ -308,6 +434,11 @@ export const DNSRecordOptionsSchema = z.looseObject({
   RR: z.unknown().optional(),
 })
 
+export const DNSRuleMatchResponseSchema = z.union([
+  z.boolean(),
+  z.string(),
+])
+
 export const DefaultDNSRuleBaseSchema = z.looseObject({
   type: z.literal("default").optional(),
   inbound: z.union([
@@ -321,6 +452,11 @@ export const DefaultDNSRuleBaseSchema = z.looseObject({
       z.array(DNSQueryTypeSchema),
     ]).optional()
   },
+  query_client_subnet: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  query_dnssec: z.boolean().optional(),
   network: z.union([
     z.string(),
     z.array(z.string()),
@@ -349,24 +485,6 @@ export const DefaultDNSRuleBaseSchema = z.looseObject({
     z.string(),
     z.array(z.string()),
   ]).optional(),
-  geosite: z.union([
-    z.string(),
-    z.array(z.string()),
-  ]).optional(),
-  source_geoip: z.union([
-    z.string(),
-    z.array(z.string()),
-  ]).optional(),
-  geoip: z.union([
-    z.string(),
-    z.array(z.string()),
-  ]).optional(),
-  ip_cidr: z.union([
-    z.string(),
-    z.array(z.string()),
-  ]).optional(),
-  ip_is_private: z.boolean().optional(),
-  ip_accept_any: z.boolean().optional(),
   source_ip_cidr: z.union([
     z.string(),
     z.array(z.string()),
@@ -401,6 +519,10 @@ export const DefaultDNSRuleBaseSchema = z.looseObject({
     z.array(z.string()),
   ]).optional(),
   package_name: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  package_name_regex: z.union([
     z.string(),
     z.array(z.string()),
   ]).optional(),
@@ -445,13 +567,67 @@ export const DefaultDNSRuleBaseSchema = z.looseObject({
     z.string(),
     z.array(z.string()),
   ]).optional(),
+  source_mac_address: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  source_hostname: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  preferred_by: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
   rule_set: z.union([
     z.string(),
     z.array(z.string()),
   ]).optional(),
   rule_set_ip_cidr_match_source: z.boolean().optional(),
-  rule_set_ip_cidr_accept_empty: z.boolean().optional(),
+  get match_response() {
+    return DNSRuleMatchResponseSchema.optional()
+  },
+  ip_cidr: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  ip_is_private: z.boolean().optional(),
+  ip_accept_any: z.boolean().optional(),
+  get response_rcode() {
+    return DNSRCodeSchema.optional()
+  },
+  get response_answer() {
+    return z.union([
+      DNSRecordOptionsSchema,
+      z.array(DNSRecordOptionsSchema),
+    ]).optional()
+  },
+  get response_ns() {
+    return z.union([
+      DNSRecordOptionsSchema,
+      z.array(DNSRecordOptionsSchema),
+    ]).optional()
+  },
+  get response_extra() {
+    return z.union([
+      DNSRecordOptionsSchema,
+      z.array(DNSRecordOptionsSchema),
+    ]).optional()
+  },
   invert: z.boolean().optional(),
+  geosite: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  source_geoip: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  geoip: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  rule_set_ip_cidr_accept_empty: z.boolean().optional(),
   rule_set_ipcidr_match_source: z.boolean().optional(),
 })
 
@@ -459,21 +635,28 @@ export const DNSRuleSchema = z.union([
   DefaultDNSRuleBaseSchema.extend({
     action: z.literal("route").optional(),
     server: z.string().optional(),
+    speculative: z.boolean().optional(),
+    timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
     get strategy() {
       return DomainStrategySchema.optional()
     },
     disable_cache: z.boolean().optional(),
+    disable_optimistic_cache: z.boolean().optional(),
     rewrite_ttl: z.int().nonnegative().optional(),
     client_subnet: z.string().optional(),
+    remove_client_subnet: z.boolean().optional(),
   }),
   DefaultDNSRuleBaseSchema.extend({
     action: z.literal("route-options").optional(),
+    timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
     get strategy() {
       return DomainStrategySchema.optional()
     },
     disable_cache: z.boolean().optional(),
+    disable_optimistic_cache: z.boolean().optional(),
     rewrite_ttl: z.int().nonnegative().optional(),
     client_subnet: z.string().optional(),
+    remove_client_subnet: z.boolean().optional(),
   }),
   DefaultDNSRuleBaseSchema.extend({
     action: z.literal("reject").optional(),
@@ -513,12 +696,16 @@ export const DNSRuleSchema = z.union([
     invert: z.boolean().optional(),
     action: z.literal("route").optional(),
     server: z.string().optional(),
+    speculative: z.boolean().optional(),
+    timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
     get strategy() {
       return DomainStrategySchema.optional()
     },
     disable_cache: z.boolean().optional(),
+    disable_optimistic_cache: z.boolean().optional(),
     rewrite_ttl: z.int().nonnegative().optional(),
     client_subnet: z.string().optional(),
+    remove_client_subnet: z.boolean().optional(),
   }),
   z.looseObject({
     type: z.literal("logical").optional(),
@@ -528,12 +715,15 @@ export const DNSRuleSchema = z.union([
     },
     invert: z.boolean().optional(),
     action: z.literal("route-options").optional(),
+    timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
     get strategy() {
       return DomainStrategySchema.optional()
     },
     disable_cache: z.boolean().optional(),
+    disable_optimistic_cache: z.boolean().optional(),
     rewrite_ttl: z.int().nonnegative().optional(),
     client_subnet: z.string().optional(),
+    remove_client_subnet: z.boolean().optional(),
   }),
   z.looseObject({
     type: z.literal("logical").optional(),
@@ -685,6 +875,10 @@ export const DefaultRuleBaseSchema = z.looseObject({
     z.string(),
     z.array(z.string()),
   ]).optional(),
+  package_name_regex: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
   user: z.union([
     z.string(),
     z.array(z.string()),
@@ -722,6 +916,14 @@ export const DefaultRuleBaseSchema = z.looseObject({
     z.string(),
     z.array(z.string()),
   ]).optional(),
+  source_mac_address: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  source_hostname: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
   preferred_by: z.union([
     z.string(),
     z.array(z.string()),
@@ -733,6 +935,49 @@ export const DefaultRuleBaseSchema = z.looseObject({
   rule_set_ip_cidr_match_source: z.boolean().optional(),
   invert: z.boolean().optional(),
   rule_set_ipcidr_match_source: z.boolean().optional(),
+})
+
+export const DialerOptionsSchema = z.looseObject({
+  detour: z.string().optional(),
+  bind_interface: z.string().optional(),
+  inet4_bind_address: z.string().optional(),
+  inet6_bind_address: z.string().optional(),
+  bind_address_no_port: z.boolean().optional(),
+  protect_path: z.string().optional(),
+  get routing_mark() {
+    return FwMarkSchema.optional()
+  },
+  reuse_addr: z.boolean().optional(),
+  netns: z.string().optional(),
+  connect_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  tcp_fast_open: z.boolean().optional(),
+  tcp_multi_path: z.boolean().optional(),
+  disable_tcp_keep_alive: z.boolean().optional(),
+  tcp_keep_alive: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  tcp_keep_alive_interval: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  udp_fragment: z.boolean().optional(),
+  get domain_resolver() {
+    return DomainResolveOptionsSchema.optional()
+  },
+  get network_strategy() {
+    return NetworkStrategySchema.optional()
+  },
+  get network_type() {
+    return z.union([
+      InterfaceTypeSchema,
+      z.array(InterfaceTypeSchema),
+    ]).optional()
+  },
+  get fallback_network_type() {
+    return z.union([
+      InterfaceTypeSchema,
+      z.array(InterfaceTypeSchema),
+    ]).optional()
+  },
+  fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  get domain_strategy() {
+    return DomainStrategySchema.optional()
+  },
 })
 
 export const DnsDhcpSchema = z.looseObject({
@@ -779,6 +1024,10 @@ export const DnsDhcpSchema = z.looseObject({
     return DomainStrategySchema.optional()
   },
   prefer_go: z.boolean().optional(),
+  neighbor_domain: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
   interface: z.string().optional(),
 })
 
@@ -966,6 +1215,80 @@ export const DnsLocalSchema = z.looseObject({
     return DomainStrategySchema.optional()
   },
   prefer_go: z.boolean().optional(),
+  neighbor_domain: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+})
+
+export const DnsMdnsSchema = z.looseObject({
+  type: z.literal("mdns"),
+  tag: z.string().optional(),
+  detour: z.string().optional(),
+  bind_interface: z.string().optional(),
+  inet4_bind_address: z.string().optional(),
+  inet6_bind_address: z.string().optional(),
+  bind_address_no_port: z.boolean().optional(),
+  protect_path: z.string().optional(),
+  get routing_mark() {
+    return FwMarkSchema.optional()
+  },
+  reuse_addr: z.boolean().optional(),
+  netns: z.string().optional(),
+  connect_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  tcp_fast_open: z.boolean().optional(),
+  tcp_multi_path: z.boolean().optional(),
+  disable_tcp_keep_alive: z.boolean().optional(),
+  tcp_keep_alive: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  tcp_keep_alive_interval: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  udp_fragment: z.boolean().optional(),
+  get domain_resolver() {
+    return DomainResolveOptionsSchema.optional()
+  },
+  get network_strategy() {
+    return NetworkStrategySchema.optional()
+  },
+  get network_type() {
+    return z.union([
+      InterfaceTypeSchema,
+      z.array(InterfaceTypeSchema),
+    ]).optional()
+  },
+  get fallback_network_type() {
+    return z.union([
+      InterfaceTypeSchema,
+      z.array(InterfaceTypeSchema),
+    ]).optional()
+  },
+  fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  get domain_strategy() {
+    return DomainStrategySchema.optional()
+  },
+  prefer_go: z.boolean().optional(),
+  neighbor_domain: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  interface: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+})
+
+export const DnsOpenconnectSchema = z.looseObject({
+  type: z.literal("openconnect"),
+  tag: z.string().optional(),
+  endpoint: z.string().optional(),
+  accept_default_resolvers: z.boolean().optional(),
+  accept_search_domain: z.boolean().optional(),
+})
+
+export const DnsOpenvpnSchema = z.looseObject({
+  type: z.literal("openvpn"),
+  tag: z.string().optional(),
+  endpoint: z.string().optional(),
+  accept_default_resolvers: z.boolean().optional(),
+  accept_search_domain: z.boolean().optional(),
 })
 
 export const DnsQuicSchema = z.looseObject({
@@ -1078,6 +1401,7 @@ export const DnsTailscaleSchema = z.looseObject({
   tag: z.string().optional(),
   endpoint: z.string().optional(),
   accept_default_resolvers: z.boolean().optional(),
+  accept_search_domain: z.boolean().optional(),
 })
 
 export const DnsTcpSchema = z.looseObject({
@@ -1232,6 +1556,9 @@ export const DnsSchema = z.discriminatedUnion("type", [
   DnsHostsSchema,
   DnsHttpsSchema,
   DnsLocalSchema,
+  DnsMdnsSchema,
+  DnsOpenconnectSchema,
+  DnsOpenvpnSchema,
   DnsQuicSchema,
   DnsResolvedSchema,
   DnsSdnsSchema,
@@ -1245,16 +1572,345 @@ export const DomainResolveOptionsSchema = z.union([
   z.string(),
   z.looseObject({
     server: z.string().optional(),
+    timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
     get strategy() {
       return DomainStrategySchema.optional()
     },
     disable_cache: z.boolean().optional(),
+    disable_optimistic_cache: z.boolean().optional(),
     rewrite_ttl: z.int().nonnegative().optional(),
     client_subnet: z.string().optional(),
   }),
 ])
 
 export const DomainStrategySchema = z.enum(["", "as_is", "prefer_ipv4", "prefer_ipv6", "ipv4_only", "ipv6_only"])
+
+export const EndpointOpenconnectSchema = z.looseObject({
+  type: z.literal("openconnect"),
+  tag: z.string().optional(),
+  detour: z.string().optional(),
+  bind_interface: z.string().optional(),
+  inet4_bind_address: z.string().optional(),
+  inet6_bind_address: z.string().optional(),
+  bind_address_no_port: z.boolean().optional(),
+  protect_path: z.string().optional(),
+  get routing_mark() {
+    return FwMarkSchema.optional()
+  },
+  reuse_addr: z.boolean().optional(),
+  netns: z.string().optional(),
+  connect_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  tcp_fast_open: z.boolean().optional(),
+  tcp_multi_path: z.boolean().optional(),
+  disable_tcp_keep_alive: z.boolean().optional(),
+  tcp_keep_alive: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  tcp_keep_alive_interval: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  udp_fragment: z.boolean().optional(),
+  get domain_resolver() {
+    return DomainResolveOptionsSchema.optional()
+  },
+  get network_strategy() {
+    return NetworkStrategySchema.optional()
+  },
+  get network_type() {
+    return z.union([
+      InterfaceTypeSchema,
+      z.array(InterfaceTypeSchema),
+    ]).optional()
+  },
+  get fallback_network_type() {
+    return z.union([
+      InterfaceTypeSchema,
+      z.array(InterfaceTypeSchema),
+    ]).optional()
+  },
+  fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  get domain_strategy() {
+    return DomainStrategySchema.optional()
+  },
+  system: z.boolean().optional(),
+  name: z.string().optional(),
+  udp_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  get udp_mapping() {
+    return UDPNATBehaviorSchema.optional()
+  },
+  get udp_filtering() {
+    return UDPNATBehaviorSchema.optional()
+  },
+  udp_nat_max: z.int().nonnegative().optional(),
+  server: z.string().optional(),
+  flavor: z.string().optional(),
+  username: z.string().optional(),
+  password: z.string().optional(),
+  auth_group: z.string().optional(),
+  cookie: z.string().optional(),
+  get token() {
+    return OpenConnectTokenOptionsSchema.optional()
+  },
+  reported_os: z.string().optional(),
+  user_agent: z.string().optional(),
+  version: z.string().optional(),
+  local_hostname: z.string().optional(),
+  get mobile() {
+    return OpenConnectMobileOptionsSchema.optional()
+  },
+  get csd() {
+    return OpenConnectCSDOptionsSchema.optional()
+  },
+  get hip() {
+    return OpenConnectHIPOptionsSchema.optional()
+  },
+  get tncc() {
+    return OpenConnectTNCCOptionsSchema.optional()
+  },
+  get fortinet_host_check() {
+    return OpenConnectFortinetHostCheckOptionsSchema.optional()
+  },
+  no_udp: z.boolean().optional(),
+  dtls_local_port: z.int().nonnegative().optional(),
+  compression_disabled: z.boolean().optional(),
+  compression_mode: z.string().optional(),
+  ipv6_disabled: z.boolean().optional(),
+  http_keepalive_disabled: z.boolean().optional(),
+  xml_post_disabled: z.boolean().optional(),
+  external_auth_disabled: z.boolean().optional(),
+  password_authentication_disabled: z.boolean().optional(),
+  tcp_keep_alive_enabled: z.boolean().optional(),
+  pfs: z.boolean().optional(),
+  mtu: z.int().nonnegative().optional(),
+  base_mtu: z.int().nonnegative().optional(),
+  dpd_interval: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  reconnect_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  trojan_interval: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  queue_length: z.int().nonnegative().optional(),
+  allow_insecure_crypto: z.boolean().optional(),
+  get tls() {
+    return OpenConnectTLSOptionsSchema.optional()
+  },
+  get form_entries() {
+    return z.array(OpenConnectFormEntryOptionsSchema).optional()
+  },
+})
+
+export const EndpointOpenvpnClientSchema = z.looseObject({
+  type: z.literal("openvpn-client"),
+  tag: z.string().optional(),
+  detour: z.string().optional(),
+  bind_interface: z.string().optional(),
+  inet4_bind_address: z.string().optional(),
+  inet6_bind_address: z.string().optional(),
+  bind_address_no_port: z.boolean().optional(),
+  protect_path: z.string().optional(),
+  get routing_mark() {
+    return FwMarkSchema.optional()
+  },
+  reuse_addr: z.boolean().optional(),
+  netns: z.string().optional(),
+  connect_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  tcp_fast_open: z.boolean().optional(),
+  tcp_multi_path: z.boolean().optional(),
+  disable_tcp_keep_alive: z.boolean().optional(),
+  tcp_keep_alive: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  tcp_keep_alive_interval: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  udp_fragment: z.boolean().optional(),
+  get domain_resolver() {
+    return DomainResolveOptionsSchema.optional()
+  },
+  get network_strategy() {
+    return NetworkStrategySchema.optional()
+  },
+  get network_type() {
+    return z.union([
+      InterfaceTypeSchema,
+      z.array(InterfaceTypeSchema),
+    ]).optional()
+  },
+  get fallback_network_type() {
+    return z.union([
+      InterfaceTypeSchema,
+      z.array(InterfaceTypeSchema),
+    ]).optional()
+  },
+  fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  get domain_strategy() {
+    return DomainStrategySchema.optional()
+  },
+  server: z.string().optional(),
+  server_port: z.int().nonnegative().optional(),
+  system: z.boolean().optional(),
+  name: z.string().optional(),
+  mtu: z.int().nonnegative().optional(),
+  get udp_mapping() {
+    return UDPNATBehaviorSchema.optional()
+  },
+  get udp_filtering() {
+    return UDPNATBehaviorSchema.optional()
+  },
+  udp_nat_max: z.int().nonnegative().optional(),
+  mode: z.string().optional(),
+  network: z.string().optional(),
+  get servers() {
+    return z.array(OpenVPNRemoteOptionsSchema).optional()
+  },
+  remote_random: z.boolean().optional(),
+  address: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  peer_address: z.string().optional(),
+  peer_address_ipv6: z.string().optional(),
+  topology: z.string().optional(),
+  username: z.string().optional(),
+  password: z.string().optional(),
+  auth_retry: z.string().optional(),
+  static_challenge: z.string().optional(),
+  static_challenge_echo: z.boolean().optional(),
+  static_key: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  static_key_path: z.string().optional(),
+  key_direction: z.string().optional(),
+  get tls() {
+    return OpenVPNOutboundTLSOptionsSchema.optional()
+  },
+  cipher: z.string().optional(),
+  data_ciphers: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  data_ciphers_fallback: z.string().optional(),
+  auth: z.string().optional(),
+  mss_fix: z.int().nonnegative().optional(),
+  mss_fix_disabled: z.boolean().optional(),
+  mss_fix_mode: z.string().optional(),
+  fragment: z.int().nonnegative().optional(),
+  replay_window: z.int().nonnegative().optional(),
+  replay_window_time: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  compression: z.string().optional(),
+  compression_lzo: z.string().optional(),
+  allow_compression: z.string().optional(),
+  route_no_pull: z.boolean().optional(),
+  get pull_filters() {
+    return z.array(OpenVPNPullFilterOptionsSchema).optional()
+  },
+  routes: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  route_gateway: z.string().optional(),
+  route_metric: z.int().optional(),
+  redirect_gateway: z.boolean().optional(),
+  redirect_gateway_flags: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  redirect_private: z.boolean().optional(),
+  block_ipv6: z.boolean().optional(),
+  ping_interval: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  ping_restart: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  ping_restart_disabled: z.boolean().optional(),
+  renegotiate_interval: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  renegotiate_disabled: z.boolean().optional(),
+  renegotiate_bytes: z.int().nonnegative().optional(),
+  renegotiate_packets: z.int().nonnegative().optional(),
+  tls_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  handshake_window: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  explicit_exit_notify: z.int().nonnegative().optional(),
+  get udp_timeout() {
+    return UDPTimeoutCompatSchema.optional()
+  },
+})
+
+export const EndpointOpenvpnServerSchema = z.looseObject({
+  type: z.literal("openvpn-server"),
+  tag: z.string().optional(),
+  listen: z.string().optional(),
+  listen_port: z.int().nonnegative().optional(),
+  bind_interface: z.string().optional(),
+  get routing_mark() {
+    return FwMarkSchema.optional()
+  },
+  reuse_addr: z.boolean().optional(),
+  netns: z.string().optional(),
+  disable_tcp_keep_alive: z.boolean().optional(),
+  tcp_keep_alive: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  tcp_keep_alive_interval: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  tcp_fast_open: z.boolean().optional(),
+  tcp_multi_path: z.boolean().optional(),
+  udp_fragment: z.boolean().optional(),
+  get udp_timeout() {
+    return UDPTimeoutCompatSchema.optional()
+  },
+  detour: z.string().optional(),
+  proxy_protocol: z.boolean().optional(),
+  proxy_protocol_accept_no_header: z.boolean().optional(),
+  sniff: z.boolean().optional(),
+  sniff_override_destination: z.boolean().optional(),
+  sniff_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  get domain_strategy() {
+    return DomainStrategySchema.optional()
+  },
+  udp_disable_domain_unmapping: z.boolean().optional(),
+  system: z.boolean().optional(),
+  name: z.string().optional(),
+  mtu: z.int().nonnegative().optional(),
+  get udp_mapping() {
+    return UDPNATBehaviorSchema.optional()
+  },
+  get udp_filtering() {
+    return UDPNATBehaviorSchema.optional()
+  },
+  udp_nat_max: z.int().nonnegative().optional(),
+  mode: z.string().optional(),
+  network: z.string().optional(),
+  remote: z.string().optional(),
+  remote_port: z.int().nonnegative().optional(),
+  max_clients: z.int().optional(),
+  address: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  peer_address: z.string().optional(),
+  peer_address_ipv6: z.string().optional(),
+  topology: z.string().optional(),
+  duplicate_cn: z.boolean().optional(),
+  users: z.array(z.looseObject({
+    Username: z.string().optional(),
+    Password: z.string().optional(),
+  })).optional(),
+  static_key: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  static_key_path: z.string().optional(),
+  key_direction: z.string().optional(),
+  get tls() {
+    return OpenVPNInboundTLSOptionsSchema.optional()
+  },
+  cipher: z.string().optional(),
+  data_ciphers: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  data_ciphers_fallback: z.string().optional(),
+  auth: z.string().optional(),
+  mss_fix: z.int().nonnegative().optional(),
+  mss_fix_disabled: z.boolean().optional(),
+  mss_fix_mode: z.string().optional(),
+  replay_window: z.int().nonnegative().optional(),
+  replay_window_time: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  get push() {
+    return OpenVPNPushOptionsSchema.optional()
+  },
+  ping_interval: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  ping_restart: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  renegotiate_interval: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  renegotiate_disabled: z.boolean().optional(),
+  renegotiate_bytes: z.int().nonnegative().optional(),
+  renegotiate_packets: z.int().nonnegative().optional(),
+  handshake_window: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+})
 
 export const EndpointTailscaleSchema = z.looseObject({
   type: z.literal("tailscale"),
@@ -1313,6 +1969,7 @@ export const EndpointTailscaleSchema = z.looseObject({
     z.string(),
     z.array(z.string()),
   ]).optional(),
+  listen_port: z.int().nonnegative().optional(),
   relay_server_port: z.int().nonnegative().optional(),
   relay_server_static_endpoints: z.array(z.string()).optional(),
   system_interface: z.boolean().optional(),
@@ -1321,6 +1978,10 @@ export const EndpointTailscaleSchema = z.looseObject({
   get udp_timeout() {
     return UDPTimeoutCompatSchema.optional()
   },
+  get ssh_server() {
+    return TailscaleSSHServerOptionsSchema.optional()
+  },
+  taildrop_directory: z.string().optional(),
 })
 
 export const EndpointVpnClientSchema = z.looseObject({
@@ -1369,6 +2030,8 @@ export const EndpointWarpSchema = z.looseObject({
   get profile() {
     return CloudflareProfileSchema.optional()
   },
+  address: z.string().optional(),
+  port: z.int().nonnegative().optional(),
   detour: z.string().optional(),
   bind_interface: z.string().optional(),
   inet4_bind_address: z.string().optional(),
@@ -1427,6 +2090,13 @@ export const EndpointWireguardSchema = z.looseObject({
     return z.array(WireGuardPeerSchema).optional()
   },
   udp_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  get udp_mapping() {
+    return UDPNATBehaviorSchema.optional()
+  },
+  get udp_filtering() {
+    return UDPNATBehaviorSchema.optional()
+  },
+  udp_nat_max: z.int().nonnegative().optional(),
   workers: z.int().optional(),
   preallocated_buffers_per_pool: z.int().nonnegative().optional(),
   disable_pauses: z.boolean().optional(),
@@ -1476,6 +2146,9 @@ export const EndpointWireguardSchema = z.looseObject({
 })
 
 export const EndpointSchema = z.discriminatedUnion("type", [
+  EndpointOpenconnectSchema,
+  EndpointOpenvpnClientSchema,
+  EndpointOpenvpnServerSchema,
   EndpointTailscaleSchema,
   EndpointVpnClientSchema,
   EndpointVpnServerSchema,
@@ -1517,6 +2190,165 @@ export const GeositeOptionsSchema = z.looseObject({
   download_url: z.string().optional(),
   download_detour: z.string().optional(),
 })
+
+export const HTTPClientOptionsSchema = z.union([
+  z.string(),
+  z.union([
+    z.looseObject({
+      version: z.literal(0).optional(),
+      tag: z.string().optional(),
+      engine: z.string().optional(),
+      disable_version_fallback: z.boolean().optional(),
+      headers: z.record(z.string(), z.union([
+        z.string(),
+        z.array(z.string()),
+      ])).optional(),
+      idle_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+      keep_alive_period: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+      stream_receive_window: z.union([
+        z.int().nonnegative(),
+        z.string(),
+      ]).optional(),
+      connection_receive_window: z.union([
+        z.int().nonnegative(),
+        z.string(),
+      ]).optional(),
+      max_concurrent_streams: z.int().optional(),
+    }),
+    z.looseObject({
+      version: z.literal(1).optional(),
+      tag: z.string().optional(),
+      engine: z.string().optional(),
+      disable_version_fallback: z.boolean().optional(),
+      headers: z.record(z.string(), z.union([
+        z.string(),
+        z.array(z.string()),
+      ])).optional(),
+    }),
+    z.looseObject({
+      version: z.literal(2).optional(),
+      tag: z.string().optional(),
+      engine: z.string().optional(),
+      disable_version_fallback: z.boolean().optional(),
+      headers: z.record(z.string(), z.union([
+        z.string(),
+        z.array(z.string()),
+      ])).optional(),
+      idle_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+      keep_alive_period: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+      stream_receive_window: z.union([
+        z.int().nonnegative(),
+        z.string(),
+      ]).optional(),
+      connection_receive_window: z.union([
+        z.int().nonnegative(),
+        z.string(),
+      ]).optional(),
+      max_concurrent_streams: z.int().optional(),
+    }),
+    z.looseObject({
+      version: z.literal(3).optional(),
+      tag: z.string().optional(),
+      engine: z.string().optional(),
+      disable_version_fallback: z.boolean().optional(),
+      headers: z.record(z.string(), z.union([
+        z.string(),
+        z.array(z.string()),
+      ])).optional(),
+      idle_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+      keep_alive_period: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+      stream_receive_window: z.union([
+        z.int().nonnegative(),
+        z.string(),
+      ]).optional(),
+      connection_receive_window: z.union([
+        z.int().nonnegative(),
+        z.string(),
+      ]).optional(),
+      max_concurrent_streams: z.int().optional(),
+      initial_packet_size: z.int().optional(),
+      disable_path_mtu_discovery: z.boolean().optional(),
+    }),
+  ]),
+])
+
+export const HTTPClientSchema = z.union([
+  z.looseObject({
+    version: z.literal(0).optional(),
+    tag: z.string().optional(),
+    engine: z.string().optional(),
+    disable_version_fallback: z.boolean().optional(),
+    headers: z.record(z.string(), z.union([
+      z.string(),
+      z.array(z.string()),
+    ])).optional(),
+    idle_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+    keep_alive_period: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+    stream_receive_window: z.union([
+      z.int().nonnegative(),
+      z.string(),
+    ]).optional(),
+    connection_receive_window: z.union([
+      z.int().nonnegative(),
+      z.string(),
+    ]).optional(),
+    max_concurrent_streams: z.int().optional(),
+  }),
+  z.looseObject({
+    version: z.literal(1).optional(),
+    tag: z.string().optional(),
+    engine: z.string().optional(),
+    disable_version_fallback: z.boolean().optional(),
+    headers: z.record(z.string(), z.union([
+      z.string(),
+      z.array(z.string()),
+    ])).optional(),
+  }),
+  z.looseObject({
+    version: z.literal(2).optional(),
+    tag: z.string().optional(),
+    engine: z.string().optional(),
+    disable_version_fallback: z.boolean().optional(),
+    headers: z.record(z.string(), z.union([
+      z.string(),
+      z.array(z.string()),
+    ])).optional(),
+    idle_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+    keep_alive_period: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+    stream_receive_window: z.union([
+      z.int().nonnegative(),
+      z.string(),
+    ]).optional(),
+    connection_receive_window: z.union([
+      z.int().nonnegative(),
+      z.string(),
+    ]).optional(),
+    max_concurrent_streams: z.int().optional(),
+  }),
+  z.looseObject({
+    version: z.literal(3).optional(),
+    tag: z.string().optional(),
+    engine: z.string().optional(),
+    disable_version_fallback: z.boolean().optional(),
+    headers: z.record(z.string(), z.union([
+      z.string(),
+      z.array(z.string()),
+    ])).optional(),
+    idle_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+    keep_alive_period: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+    stream_receive_window: z.union([
+      z.int().nonnegative(),
+      z.string(),
+    ]).optional(),
+    connection_receive_window: z.union([
+      z.int().nonnegative(),
+      z.string(),
+    ]).optional(),
+    max_concurrent_streams: z.int().optional(),
+    initial_packet_size: z.int().optional(),
+    disable_path_mtu_discovery: z.boolean().optional(),
+  }),
+])
 
 export const HTTPProxyOptionsSchema = z.looseObject({
   enabled: z.boolean().optional(),
@@ -1601,6 +2433,10 @@ export const HeadlessRuleSchema = z.union([
       z.string(),
       z.array(z.string()),
     ]).optional(),
+    package_name_regex: z.union([
+      z.string(),
+      z.array(z.string()),
+    ]).optional(),
     get network_type() {
       return z.union([
         InterfaceTypeSchema,
@@ -1637,6 +2473,26 @@ export const HeadlessRuleSchema = z.union([
   }),
 ])
 
+export const Hysteria2InboundRealmSchema = z.looseObject({
+  server_url: z.string().optional(),
+  token: z.string().optional(),
+  realm_id: z.string().optional(),
+  stun_servers: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  ip_version: z.int().optional(),
+  get port_mapping() {
+    return Hysteria2RealmPortMappingSchema.optional()
+  },
+  get http_client() {
+    return HTTPClientOptionsSchema.optional()
+  },
+  get stun_domain_resolver() {
+    return DomainResolveOptionsSchema.optional()
+  },
+})
+
 export const Hysteria2MasqueradeSchema = z.union([
   z.looseObject({
     type: z.literal("file").optional(),
@@ -1658,14 +2514,51 @@ export const Hysteria2MasqueradeSchema = z.union([
   }),
 ])
 
-export const Hysteria2ObfsSchema = z.looseObject({
-  type: z.string().optional(),
-  password: z.string().optional(),
+export const Hysteria2ObfsSchema = z.union([
+  z.looseObject({
+    type: z.literal("salamander").optional(),
+    password: z.string().optional(),
+  }),
+  z.looseObject({
+    type: z.literal("gecko").optional(),
+    password: z.string().optional(),
+    min_packet_size: z.int().optional(),
+    max_packet_size: z.int().optional(),
+  }),
+])
+
+export const Hysteria2RealmPortMappingSchema = z.looseObject({
+  enabled: z.boolean().optional(),
+  timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  lifetime: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+})
+
+export const Hysteria2RealmSchema = z.looseObject({
+  server_url: z.string().optional(),
+  token: z.string().optional(),
+  realm_id: z.string().optional(),
+  stun_servers: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  ip_version: z.int().optional(),
+  get port_mapping() {
+    return Hysteria2RealmPortMappingSchema.optional()
+  },
+  get http_client() {
+    return HTTPClientOptionsSchema.optional()
+  },
 })
 
 export const Hysteria2UserSchema = z.looseObject({
   name: z.string().optional(),
   password: z.string().optional(),
+})
+
+export const HysteriaRealmUserSchema = z.looseObject({
+  name: z.string().optional(),
+  token: z.string().optional(),
+  max_realms: z.int().optional(),
 })
 
 export const HysteriaUserSchema = z.looseObject({
@@ -1693,6 +2586,7 @@ export const InboundACMEOptionsSchema = z.looseObject({
   get dns01_challenge() {
     return ACMEDNS01ChallengeOptionsSchema.optional()
   },
+  profile: z.string().optional(),
 })
 
 export const InboundAnytlsSchema = z.looseObject({
@@ -1799,6 +2693,25 @@ export const InboundCallSchema = z.looseObject({
   join_link: z.string().optional(),
   email: z.string().optional(),
   password: z.string().optional(),
+})
+
+export const InboundCloudflaredSchema = z.looseObject({
+  type: z.literal("cloudflared"),
+  tag: z.string().optional(),
+  token: z.string().optional(),
+  ha_connections: z.int().optional(),
+  protocol: z.string().optional(),
+  post_quantum: z.boolean().optional(),
+  edge_ip_version: z.int().optional(),
+  datagram_version: z.string().optional(),
+  grace_period: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  region: z.string().optional(),
+  get control_dialer() {
+    return DialerOptionsSchema.optional()
+  },
+  get tunnel_dialer() {
+    return DialerOptionsSchema.optional()
+  },
 })
 
 export const InboundDirectSchema = z.looseObject({
@@ -1942,10 +2855,27 @@ export const InboundHysteria2Schema = z.looseObject({
   get tls() {
     return InboundTLSOptionsSchema.optional()
   },
+  idle_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  keep_alive_period: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  stream_receive_window: z.union([
+    z.int().nonnegative(),
+    z.string(),
+  ]).optional(),
+  connection_receive_window: z.union([
+    z.int().nonnegative(),
+    z.string(),
+  ]).optional(),
+  max_concurrent_streams: z.int().optional(),
+  initial_packet_size: z.int().optional(),
+  disable_path_mtu_discovery: z.boolean().optional(),
   get masquerade() {
     return Hysteria2MasqueradeSchema.optional()
   },
+  bbr_profile: z.string().optional(),
   brutal_debug: z.boolean().optional(),
+  get realm() {
+    return Hysteria2InboundRealmSchema.optional()
+  },
 })
 
 export const InboundHysteriaSchema = z.looseObject({
@@ -1999,6 +2929,19 @@ export const InboundHysteriaSchema = z.looseObject({
   get tls() {
     return InboundTLSOptionsSchema.optional()
   },
+  idle_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  keep_alive_period: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  stream_receive_window: z.union([
+    z.int().nonnegative(),
+    z.string(),
+  ]).optional(),
+  connection_receive_window: z.union([
+    z.int().nonnegative(),
+    z.string(),
+  ]).optional(),
+  max_concurrent_streams: z.int().optional(),
+  initial_packet_size: z.int().optional(),
+  disable_path_mtu_discovery: z.boolean().optional(),
 })
 
 export const InboundMieruSchema = z.looseObject({
@@ -2041,6 +2984,7 @@ export const InboundMieruSchema = z.looseObject({
   transport: z.string().optional(),
   traffic_pattern: z.string().optional(),
   user_hint_is_mandatory: z.boolean().optional(),
+  mtu: z.int().nonnegative().optional(),
 })
 
 export const InboundMixedSchema = z.looseObject({
@@ -2375,6 +3319,7 @@ export const InboundShadowtlsSchema = z.looseObject({
 export const InboundSnellSchema = z.looseObject({
   type: z.literal("snell"),
   tag: z.string().optional(),
+  version: z.int().optional(),
   listen: z.string().optional(),
   listen_port: z.int().nonnegative().optional(),
   bind_interface: z.string().optional(),
@@ -2403,12 +3348,8 @@ export const InboundSnellSchema = z.looseObject({
   },
   udp_disable_domain_unmapping: z.boolean().optional(),
   psk: z.string().optional(),
-  version: z.int().optional(),
-  get network() {
-    return NetworkListSchema.optional()
-  },
-  get obfs() {
-    return SnellObfsOptionsSchema.optional()
+  get users() {
+    return z.array(SnellUserSchema).optional()
   },
 })
 
@@ -2577,6 +3518,13 @@ export const InboundTproxySchema = z.looseObject({
   get network() {
     return NetworkListSchema.optional()
   },
+  get udp_mapping() {
+    return UDPNATBehaviorSchema.optional()
+  },
+  get udp_filtering() {
+    return UDPNATBehaviorSchema.optional()
+  },
+  udp_nat_max: z.int().nonnegative().optional(),
 })
 
 export const InboundTrojanSchema = z.looseObject({
@@ -2712,14 +3660,33 @@ export const InboundTuicSchema = z.looseObject({
   get tls() {
     return InboundTLSOptionsSchema.optional()
   },
+  idle_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  keep_alive_period: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  stream_receive_window: z.union([
+    z.int().nonnegative(),
+    z.string(),
+  ]).optional(),
+  connection_receive_window: z.union([
+    z.int().nonnegative(),
+    z.string(),
+  ]).optional(),
+  max_concurrent_streams: z.int().optional(),
+  initial_packet_size: z.int().optional(),
+  disable_path_mtu_discovery: z.boolean().optional(),
 })
 
 export const InboundTunSchema = z.looseObject({
   type: z.literal("tun"),
   tag: z.string().optional(),
   interface_name: z.string().optional(),
+  netns: z.string().optional(),
   mtu: z.int().nonnegative().optional(),
   address: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  dns_mode: z.string().optional(),
+  dns_address: z.union([
     z.string(),
     z.array(z.string()),
   ]).optional(),
@@ -2796,9 +3763,24 @@ export const InboundTunSchema = z.looseObject({
     z.string(),
     z.array(z.string()),
   ]).optional(),
+  include_mac_address: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  exclude_mac_address: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
   get udp_timeout() {
     return UDPTimeoutCompatSchema.optional()
   },
+  get udp_mapping() {
+    return UDPNATBehaviorSchema.optional()
+  },
+  get udp_filtering() {
+    return UDPNATBehaviorSchema.optional()
+  },
+  udp_nat_max: z.int().nonnegative().optional(),
   stack: z.string().optional(),
   get platform() {
     return TunPlatformOptionsSchema.optional()
@@ -2931,6 +3913,7 @@ export const InboundSchema = z.discriminatedUnion("type", [
   InboundAnytlsSchema,
   InboundBondSchema,
   InboundCallSchema,
+  InboundCloudflaredSchema,
   InboundDirectSchema,
   InboundFailoverSchema,
   InboundHttpSchema,
@@ -3003,6 +3986,10 @@ export const InboundTLSOptionsSchema = z.looseObject({
   key_path: z.string().optional(),
   kernel_tx: z.boolean().optional(),
   kernel_rx: z.boolean().optional(),
+  handshake_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  get certificate_provider() {
+    return CertificateProviderOptionsSchema.optional()
+  },
   get acme() {
     return InboundACMEOptionsSchema.optional()
   },
@@ -3015,12 +4002,6 @@ export const InboundTLSOptionsSchema = z.looseObject({
 })
 
 export const InterfaceTypeSchema = z.enum(["cellular", "ethernet", "other", "wifi"])
-
-export const LegacyDNSFakeIPOptionsSchema = z.looseObject({
-  enabled: z.boolean().optional(),
-  inet4_range: z.string().optional(),
-  inet6_range: z.string().optional(),
-})
 
 export const LogOptionsSchema = z.looseObject({
   disabled: z.boolean().optional(),
@@ -3117,6 +4098,19 @@ export const NetworkListSchema = z.union([
   z.array(z.enum(["tcp", "udp"])),
 ])
 
+export const NetworkNamespaceSchema = z.union([
+  z.looseObject({
+    type: z.literal("default").optional(),
+    tag: z.string().optional(),
+    path: z.string().optional(),
+  }),
+  z.looseObject({
+    type: z.literal("unshare").optional(),
+    tag: z.string().optional(),
+    pid_file: z.string().optional(),
+  }),
+])
+
 export const NetworkStrategySchema = z.enum(["default", "fallback", "hybrid"])
 
 export const OCMUserSchema = z.looseObject({
@@ -3124,22 +4118,263 @@ export const OCMUserSchema = z.looseObject({
   token: z.string().optional(),
 })
 
-export const OpenVPNTLSOptionsSchema = z.looseObject({
-  certificate: z.string().optional(),
-  certificate_path: z.string().optional(),
-  key: z.string().optional(),
-  key_path: z.string().optional(),
-  ca: z.string().optional(),
-  ca_path: z.string().optional(),
-  cipher_suites: z.union([
+export const OpenConnectCSDOptionsSchema = z.looseObject({
+  wrapper_path: z.string().optional(),
+})
+
+export const OpenConnectFormEntryOptionsSchema = z.looseObject({
+  form_id: z.string().optional(),
+  submission_key: z.string().optional(),
+  name: z.string().optional(),
+  value: z.string().optional(),
+  promote: z.boolean().optional(),
+})
+
+export const OpenConnectFortinetHostCheckOptionsSchema = z.looseObject({
+  hostcheck: z.string().optional(),
+  check_virtual_desktop: z.string().optional(),
+})
+
+export const OpenConnectHIPOptionsSchema = z.looseObject({
+  wrapper_path: z.string().optional(),
+})
+
+export const OpenConnectMobileOptionsSchema = z.looseObject({
+  platform_version: z.string().optional(),
+  device_type: z.string().optional(),
+  device_unique_id: z.string().optional(),
+})
+
+export const OpenConnectTLSOptionsSchema = z.looseObject({
+  insecure: z.boolean().optional(),
+  server_name: z.string().optional(),
+  peer_fingerprint: z.union([
     z.string(),
     z.array(z.string()),
   ]).optional(),
-  verify_x509_name: z.string().optional(),
-  verify_x509_name_mode: z.string().optional(),
-  kernel_tx: z.boolean().optional(),
-  kernel_rx: z.boolean().optional(),
+  system_trust_disabled: z.boolean().optional(),
+  certificate_authority: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  certificate_authority_path: z.string().optional(),
+  client_certificate: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  client_certificate_path: z.string().optional(),
+  client_key: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  client_key_path: z.string().optional(),
+  client_key_password: z.string().optional(),
+  mca_certificate: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  mca_certificate_path: z.string().optional(),
+  mca_key: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  mca_key_path: z.string().optional(),
+  mca_key_password: z.string().optional(),
 })
+
+export const OpenConnectTNCCCertificateOptionsSchema = z.looseObject({
+  certificate: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  certificate_path: z.string().optional(),
+})
+
+export const OpenConnectTNCCOptionsSchema = z.looseObject({
+  wrapper_path: z.string().optional(),
+  device_id: z.string().optional(),
+  user_agent: z.string().optional(),
+  machine_identification_enabled: z.boolean().optional(),
+  get certificates() {
+    return z.array(OpenConnectTNCCCertificateOptionsSchema).optional()
+  },
+})
+
+export const OpenConnectTokenOptionsSchema = z.looseObject({
+  mode: z.string().optional(),
+  secret: z.string().optional(),
+  secret_path: z.string().optional(),
+  pin: z.string().optional(),
+  password: z.string().optional(),
+  device_id: z.string().optional(),
+  counter: z.int().nonnegative().optional(),
+})
+
+export const OpenVPNControlWrapOptionsSchema = z.looseObject({
+  type: z.string().optional(),
+  key: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  key_path: z.string().optional(),
+  direction: z.string().optional(),
+})
+
+export const OpenVPNInboundControlWrapOptionsSchema = z.looseObject({
+  type: z.string().optional(),
+  key: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  key_path: z.string().optional(),
+  direction: z.string().optional(),
+  force_cookie: z.boolean().optional(),
+})
+
+export const OpenVPNInboundTLSOptionsSchema = z.looseObject({
+  certificate: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  certificate_path: z.string().optional(),
+  key: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  key_path: z.string().optional(),
+  client_certificate: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  client_certificate_path: z.string().optional(),
+  verify_client_certificate: z.string().optional(),
+  client_name: z.string().optional(),
+  client_name_type: z.string().optional(),
+  peer_fingerprint: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  crl_path: z.string().optional(),
+  remote_certificate_ku: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  remote_certificate_eku: z.string().optional(),
+  remote_certificate_tls: z.string().optional(),
+  certificate_profile: z.string().optional(),
+  ns_certificate_type: z.string().optional(),
+  version_min: z.string().optional(),
+  version_max: z.string().optional(),
+  cipher: z.string().optional(),
+  groups: z.string().optional(),
+  get control_wrap() {
+    return OpenVPNInboundControlWrapOptionsSchema.optional()
+  },
+})
+
+export const OpenVPNOutboundTLSOptionsSchema = z.looseObject({
+  server_name: z.string().optional(),
+  server_name_type: z.string().optional(),
+  certificate: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  certificate_path: z.string().optional(),
+  client_certificate: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  client_certificate_path: z.string().optional(),
+  client_key: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  client_key_path: z.string().optional(),
+  peer_fingerprint: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  crl_path: z.string().optional(),
+  remote_certificate_ku: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  remote_certificate_eku: z.string().optional(),
+  remote_certificate_tls: z.string().optional(),
+  certificate_profile: z.string().optional(),
+  ns_certificate_type: z.string().optional(),
+  version_min: z.string().optional(),
+  version_max: z.string().optional(),
+  cipher: z.string().optional(),
+  groups: z.string().optional(),
+  get control_wrap() {
+    return OpenVPNControlWrapOptionsSchema.optional()
+  },
+})
+
+export const OpenVPNPullFilterOptionsSchema = z.looseObject({
+  action: z.string().optional(),
+  text: z.string().optional(),
+})
+
+export const OpenVPNPushDNSServerOptionsSchema = z.looseObject({
+  priority: z.int().optional(),
+  addresses: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  resolve_domains: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  dnssec: z.string().optional(),
+  transport: z.string().optional(),
+  sni: z.string().optional(),
+})
+
+export const OpenVPNPushOptionsSchema = z.looseObject({
+  routes: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  dns: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  get dns_servers() {
+    return z.array(OpenVPNPushDNSServerOptionsSchema).optional()
+  },
+  search_domains: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  dhcp_options: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  redirect_gateway: z.boolean().optional(),
+  redirect_gateway_flags: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  block_outside_dns: z.boolean().optional(),
+  ping_interval: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  ping_restart: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+})
+
+export const OpenVPNRemoteOptionsSchema = z.looseObject({
+  server: z.string().optional(),
+  server_port: z.int().nonnegative().optional(),
+  network: z.string().optional(),
+})
+
+export const OptimisticDNSOptionsSchema = z.union([
+  z.boolean(),
+  z.looseObject({
+    enabled: z.boolean().optional(),
+    timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  }),
+])
 
 export const OptionsSchema = z.looseObject({
   $schema: z.string().optional(),
@@ -3154,6 +4389,15 @@ export const OptionsSchema = z.looseObject({
   },
   get certificate() {
     return CertificateOptionsSchema.optional()
+  },
+  get certificate_providers() {
+    return z.array(CertificateProviderSchema).optional()
+  },
+  get http_clients() {
+    return z.array(HTTPClientSchema).optional()
+  },
+  get network_namespaces() {
+    return z.array(NetworkNamespaceSchema).optional()
   },
   get endpoints() {
     return z.array(EndpointSchema).optional()
@@ -3258,6 +4502,15 @@ export const OutboundBondSchema = z.looseObject({
   get outbounds() {
     return z.array(BondOutboundSchema).optional()
   },
+})
+
+export const OutboundBridgeSchema = z.looseObject({
+  type: z.literal("bridge"),
+  tag: z.string().optional(),
+  interface: z.string().optional(),
+  bridge_name: z.string().optional(),
+  iproute2_table_index: z.int().optional(),
+  iproute2_rule_index: z.int().optional(),
 })
 
 export const OutboundCallSchema = z.looseObject({
@@ -3512,6 +4765,7 @@ export const OutboundHysteria2Schema = z.looseObject({
     z.array(z.string()),
   ]).optional(),
   hop_interval: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  hop_interval_max: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
   up_mbps: z.int().optional(),
   down_mbps: z.int().optional(),
   get obfs() {
@@ -3524,7 +4778,25 @@ export const OutboundHysteria2Schema = z.looseObject({
   get tls() {
     return OutboundTLSOptionsSchema.optional()
   },
+  idle_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  keep_alive_period: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  stream_receive_window: z.union([
+    z.int().nonnegative(),
+    z.string(),
+  ]).optional(),
+  connection_receive_window: z.union([
+    z.int().nonnegative(),
+    z.string(),
+  ]).optional(),
+  max_concurrent_streams: z.int().optional(),
+  initial_packet_size: z.int().optional(),
+  disable_path_mtu_discovery: z.boolean().optional(),
+  bbr_profile: z.string().optional(),
   brutal_debug: z.boolean().optional(),
+  disable_chrome_parrot: z.boolean().optional(),
+  get realm() {
+    return Hysteria2RealmSchema.optional()
+  },
 })
 
 export const OutboundHysteriaSchema = z.looseObject({
@@ -3599,6 +4871,19 @@ export const OutboundHysteriaSchema = z.looseObject({
   get tls() {
     return OutboundTLSOptionsSchema.optional()
   },
+  idle_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  keep_alive_period: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  stream_receive_window: z.union([
+    z.int().nonnegative(),
+    z.string(),
+  ]).optional(),
+  connection_receive_window: z.union([
+    z.int().nonnegative(),
+    z.string(),
+  ]).optional(),
+  max_concurrent_streams: z.int().optional(),
+  initial_packet_size: z.int().optional(),
+  disable_path_mtu_discovery: z.boolean().optional(),
 })
 
 export const OutboundMasqueSchema = z.looseObject({
@@ -3655,6 +4940,8 @@ export const OutboundMasqueSchema = z.looseObject({
   get profile() {
     return CloudflareProfileSchema.optional()
   },
+  address: z.string().optional(),
+  port: z.int().nonnegative().optional(),
   udp_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
   udp_keepalive_period: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
   udp_initial_packet_size: z.int().nonnegative().optional(),
@@ -3720,6 +5007,8 @@ export const OutboundMieruSchema = z.looseObject({
   password: z.string().optional(),
   multiplexing: z.string().optional(),
   traffic_pattern: z.string().optional(),
+  mtu: z.int().nonnegative().optional(),
+  handshake_mode: z.string().optional(),
 })
 
 export const OutboundMultiplexOptionsSchema = z.looseObject({
@@ -3801,77 +5090,6 @@ export const OutboundNaiveSchema = z.looseObject({
   ]).optional(),
   get tls() {
     return OutboundTLSOptionsSchema.optional()
-  },
-})
-
-export const OutboundOpenvpnSchema = z.looseObject({
-  type: z.literal("openvpn"),
-  tag: z.string().optional(),
-  detour: z.string().optional(),
-  bind_interface: z.string().optional(),
-  inet4_bind_address: z.string().optional(),
-  inet6_bind_address: z.string().optional(),
-  bind_address_no_port: z.boolean().optional(),
-  protect_path: z.string().optional(),
-  get routing_mark() {
-    return FwMarkSchema.optional()
-  },
-  reuse_addr: z.boolean().optional(),
-  netns: z.string().optional(),
-  connect_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
-  tcp_fast_open: z.boolean().optional(),
-  tcp_multi_path: z.boolean().optional(),
-  disable_tcp_keep_alive: z.boolean().optional(),
-  tcp_keep_alive: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
-  tcp_keep_alive_interval: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
-  udp_fragment: z.boolean().optional(),
-  get domain_resolver() {
-    return DomainResolveOptionsSchema.optional()
-  },
-  get network_strategy() {
-    return NetworkStrategySchema.optional()
-  },
-  get network_type() {
-    return z.union([
-      InterfaceTypeSchema,
-      z.array(InterfaceTypeSchema),
-    ]).optional()
-  },
-  get fallback_network_type() {
-    return z.union([
-      InterfaceTypeSchema,
-      z.array(InterfaceTypeSchema),
-    ]).optional()
-  },
-  fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
-  get domain_strategy() {
-    return DomainStrategySchema.optional()
-  },
-  system: z.boolean().optional(),
-  name: z.string().optional(),
-  allowed_ips: z.union([
-    z.string(),
-    z.array(z.string()),
-  ]).optional(),
-  get servers() {
-    return z.array(ServerOptionsSchema).optional()
-  },
-  proto: z.string().optional(),
-  cipher: z.string().optional(),
-  auth: z.string().optional(),
-  username: z.string().optional(),
-  password: z.string().optional(),
-  tls_crypt: z.string().optional(),
-  tls_crypt_path: z.string().optional(),
-  tls_crypt_v2: z.boolean().optional(),
-  tls_auth: z.string().optional(),
-  tls_auth_path: z.string().optional(),
-  key_direction: z.int().optional(),
-  reconnect_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
-  ping_interval: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
-  ping_restart: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
-  get tls() {
-    return OpenVPNTLSOptionsSchema.optional()
   },
 })
 
@@ -4072,6 +5290,7 @@ export const OutboundShadowtlsSchema = z.looseObject({
 export const OutboundSnellSchema = z.looseObject({
   type: z.literal("snell"),
   tag: z.string().optional(),
+  version: z.int().optional(),
   detour: z.string().optional(),
   bind_interface: z.string().optional(),
   inet4_bind_address: z.string().optional(),
@@ -4115,13 +5334,10 @@ export const OutboundSnellSchema = z.looseObject({
   server: z.string().optional(),
   server_port: z.int().nonnegative().optional(),
   psk: z.string().optional(),
-  version: z.int().optional(),
+  userkey: z.string().optional(),
   reuse: z.boolean().optional(),
   get network() {
     return NetworkListSchema.optional()
-  },
-  get obfs() {
-    return SnellObfsOptionsSchema.optional()
   },
 })
 
@@ -4243,6 +5459,18 @@ export const OutboundSshSchema = z.looseObject({
     z.array(z.string()),
   ]).optional(),
   client_version: z.string().optional(),
+  cipher: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  mac: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  kex_algorithm: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
 })
 
 export const OutboundSudokuSchema = z.looseObject({
@@ -4549,6 +5777,19 @@ export const OutboundTuicSchema = z.looseObject({
   get tls() {
     return OutboundTLSOptionsSchema.optional()
   },
+  idle_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  keep_alive_period: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  stream_receive_window: z.union([
+    z.int().nonnegative(),
+    z.string(),
+  ]).optional(),
+  connection_receive_window: z.union([
+    z.int().nonnegative(),
+    z.string(),
+  ]).optional(),
+  max_concurrent_streams: z.int().optional(),
+  initial_packet_size: z.int().optional(),
+  disable_path_mtu_discovery: z.boolean().optional(),
 })
 
 export const OutboundUrltestSchema = z.looseObject({
@@ -4701,6 +5942,7 @@ export const OutboundSchema = z.discriminatedUnion("type", [
   OutboundAnytlsSchema,
   OutboundBandwidthLimiterSchema,
   OutboundBondSchema,
+  OutboundBridgeSchema,
   OutboundCallSchema,
   OutboundConnectionLimiterSchema,
   OutboundDirectSchema,
@@ -4712,7 +5954,6 @@ export const OutboundSchema = z.discriminatedUnion("type", [
   OutboundMasqueSchema,
   OutboundMieruSchema,
   OutboundNaiveSchema,
-  OutboundOpenvpnSchema,
   OutboundParserSchema,
   OutboundRateLimiterSchema,
   OutboundSelectorSchema,
@@ -4734,6 +5975,7 @@ export const OutboundSchema = z.discriminatedUnion("type", [
 
 export const OutboundTLSOptionsSchema = z.looseObject({
   enabled: z.boolean().optional(),
+  engine: z.string().optional(),
   disable_sni: z.boolean().optional(),
   server_name: z.string().optional(),
   insecure: z.boolean().optional(),
@@ -4775,8 +6017,11 @@ export const OutboundTLSOptionsSchema = z.looseObject({
   fragment: z.boolean().optional(),
   fragment_fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
   record_fragment: z.boolean().optional(),
+  spoof: z.string().optional(),
+  spoof_method: z.string().optional(),
   kernel_tx: z.boolean().optional(),
   kernel_rx: z.boolean().optional(),
+  handshake_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
   get ech() {
     return OutboundECHOptionsSchema.optional()
   },
@@ -4810,6 +6055,9 @@ export const ProviderInlineSchema = z.looseObject({
   get health_check() {
     return ProviderHealthCheckOptionsSchema.optional()
   },
+  get override_dialer_options() {
+    return DialerOptionsSchema.optional()
+  },
 })
 
 export const ProviderLocalSchema = z.looseObject({
@@ -4819,6 +6067,9 @@ export const ProviderLocalSchema = z.looseObject({
   remove_emojis: z.boolean().optional(),
   get health_check() {
     return ProviderHealthCheckOptionsSchema.optional()
+  },
+  get override_dialer_options() {
+    return DialerOptionsSchema.optional()
   },
 })
 
@@ -4838,6 +6089,9 @@ export const ProviderRemoteSchema = z.looseObject({
   remove_emojis: z.boolean().optional(),
   get health_check() {
     return ProviderHealthCheckOptionsSchema.optional()
+  },
+  get override_dialer_options() {
+    return DialerOptionsSchema.optional()
   },
 })
 
@@ -4870,6 +6124,11 @@ export const RouteOptionsSchema = z.looseObject({
   },
   final: z.string().optional(),
   find_process: z.boolean().optional(),
+  find_neighbor: z.boolean().optional(),
+  dhcp_lease_files: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
   auto_detect_interface: z.boolean().optional(),
   override_android_vpn: z.boolean().optional(),
   default_interface: z.string().optional(),
@@ -4895,6 +6154,7 @@ export const RouteOptionsSchema = z.looseObject({
     ]).optional()
   },
   default_fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  default_http_client: z.string().optional(),
 })
 
 export const RuleSchema = z.union([
@@ -4914,6 +6174,8 @@ export const RuleSchema = z.union([
     tls_fragment: z.boolean().optional(),
     tls_fragment_fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
     tls_record_fragment: z.boolean().optional(),
+    tls_spoof: z.string().optional(),
+    tls_spoof_method: z.string().optional(),
   }),
   DefaultRuleBaseSchema.extend({
     action: z.literal("route-options").optional(),
@@ -4930,10 +6192,11 @@ export const RuleSchema = z.union([
     tls_fragment: z.boolean().optional(),
     tls_fragment_fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
     tls_record_fragment: z.boolean().optional(),
+    tls_spoof: z.string().optional(),
+    tls_spoof_method: z.string().optional(),
   }),
   DefaultRuleBaseSchema.extend({
     action: z.literal("direct").optional(),
-    detour: z.string().optional(),
     bind_interface: z.string().optional(),
     inet4_bind_address: z.string().optional(),
     inet6_bind_address: z.string().optional(),
@@ -4990,6 +6253,8 @@ export const RuleSchema = z.union([
     tls_fragment: z.boolean().optional(),
     tls_fragment_fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
     tls_record_fragment: z.boolean().optional(),
+    tls_spoof: z.string().optional(),
+    tls_spoof_method: z.string().optional(),
   }),
   DefaultRuleBaseSchema.extend({
     action: z.literal("reject").optional(),
@@ -5010,10 +6275,12 @@ export const RuleSchema = z.union([
   DefaultRuleBaseSchema.extend({
     action: z.literal("resolve").optional(),
     server: z.string().optional(),
+    timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
     get strategy() {
       return DomainStrategySchema.optional()
     },
     disable_cache: z.boolean().optional(),
+    disable_optimistic_cache: z.boolean().optional(),
     rewrite_ttl: z.int().nonnegative().optional(),
     client_subnet: z.string().optional(),
   }),
@@ -5039,6 +6306,8 @@ export const RuleSchema = z.union([
     tls_fragment: z.boolean().optional(),
     tls_fragment_fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
     tls_record_fragment: z.boolean().optional(),
+    tls_spoof: z.string().optional(),
+    tls_spoof_method: z.string().optional(),
   }),
   z.looseObject({
     type: z.literal("logical").optional(),
@@ -5061,6 +6330,8 @@ export const RuleSchema = z.union([
     tls_fragment: z.boolean().optional(),
     tls_fragment_fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
     tls_record_fragment: z.boolean().optional(),
+    tls_spoof: z.string().optional(),
+    tls_spoof_method: z.string().optional(),
   }),
   z.looseObject({
     type: z.literal("logical").optional(),
@@ -5070,7 +6341,6 @@ export const RuleSchema = z.union([
     },
     invert: z.boolean().optional(),
     action: z.literal("direct").optional(),
-    detour: z.string().optional(),
     bind_interface: z.string().optional(),
     inet4_bind_address: z.string().optional(),
     inet6_bind_address: z.string().optional(),
@@ -5133,6 +6403,8 @@ export const RuleSchema = z.union([
     tls_fragment: z.boolean().optional(),
     tls_fragment_fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
     tls_record_fragment: z.boolean().optional(),
+    tls_spoof: z.string().optional(),
+    tls_spoof_method: z.string().optional(),
   }),
   z.looseObject({
     type: z.literal("logical").optional(),
@@ -5177,10 +6449,12 @@ export const RuleSchema = z.union([
     invert: z.boolean().optional(),
     action: z.literal("resolve").optional(),
     server: z.string().optional(),
+    timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
     get strategy() {
       return DomainStrategySchema.optional()
     },
     disable_cache: z.boolean().optional(),
+    disable_optimistic_cache: z.boolean().optional(),
     rewrite_ttl: z.int().nonnegative().optional(),
     client_subnet: z.string().optional(),
   }),
@@ -5189,7 +6463,10 @@ export const RuleSchema = z.union([
 export const RuleSetSchema = z.union([
   z.looseObject({
     type: z.literal("inline").optional(),
-    tag: z.string().optional(),
+    tag: z.union([
+      z.string(),
+      z.array(z.string()),
+    ]).optional(),
     format: z.string().optional(),
     get rules() {
       return z.array(HeadlessRuleSchema).optional()
@@ -5197,17 +6474,27 @@ export const RuleSetSchema = z.union([
   }),
   z.looseObject({
     type: z.literal("local").optional(),
-    tag: z.string().optional(),
+    tag: z.union([
+      z.string(),
+      z.array(z.string()),
+    ]).optional(),
     format: z.string().optional(),
     path: z.string().optional(),
   }),
   z.looseObject({
     type: z.literal("remote").optional(),
-    tag: z.string().optional(),
+    tag: z.union([
+      z.string(),
+      z.array(z.string()),
+    ]).optional(),
     format: z.string().optional(),
     url: z.string().optional(),
-    download_detour: z.string().optional(),
+    initial_path: z.string().optional(),
+    get http_client() {
+      return HTTPClientOptionsSchema.optional()
+    },
     update_interval: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+    download_detour: z.string().optional(),
   }),
 ])
 
@@ -5333,6 +6620,50 @@ export const ServiceAdminPanelSchema = z.looseObject({
   },
 })
 
+export const ServiceApiSchema = z.looseObject({
+  type: z.literal("api"),
+  tag: z.string().optional(),
+  listen: z.string().optional(),
+  listen_port: z.int().nonnegative().optional(),
+  bind_interface: z.string().optional(),
+  get routing_mark() {
+    return FwMarkSchema.optional()
+  },
+  reuse_addr: z.boolean().optional(),
+  netns: z.string().optional(),
+  disable_tcp_keep_alive: z.boolean().optional(),
+  tcp_keep_alive: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  tcp_keep_alive_interval: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  tcp_fast_open: z.boolean().optional(),
+  tcp_multi_path: z.boolean().optional(),
+  udp_fragment: z.boolean().optional(),
+  get udp_timeout() {
+    return UDPTimeoutCompatSchema.optional()
+  },
+  detour: z.string().optional(),
+  proxy_protocol: z.boolean().optional(),
+  proxy_protocol_accept_no_header: z.boolean().optional(),
+  sniff: z.boolean().optional(),
+  sniff_override_destination: z.boolean().optional(),
+  sniff_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  get domain_strategy() {
+    return DomainStrategySchema.optional()
+  },
+  udp_disable_domain_unmapping: z.boolean().optional(),
+  secret: z.string().optional(),
+  access_control_allow_origin: z.union([
+    z.string(),
+    z.array(z.string()),
+  ]).optional(),
+  access_control_allow_private_network: z.boolean().optional(),
+  get dashboard() {
+    return APIDashboardOptionsSchema.optional()
+  },
+  get tls() {
+    return InboundTLSOptionsSchema.optional()
+  },
+})
+
 export const ServiceCcmSchema = z.looseObject({
   type: z.literal("ccm"),
   tag: z.string().optional(),
@@ -5435,6 +6766,55 @@ export const ServiceDerpSchema = z.looseObject({
   },
 })
 
+export const ServiceHysteriaRealmSchema = z.looseObject({
+  type: z.literal("hysteria-realm"),
+  tag: z.string().optional(),
+  listen: z.string().optional(),
+  listen_port: z.int().nonnegative().optional(),
+  bind_interface: z.string().optional(),
+  get routing_mark() {
+    return FwMarkSchema.optional()
+  },
+  reuse_addr: z.boolean().optional(),
+  netns: z.string().optional(),
+  disable_tcp_keep_alive: z.boolean().optional(),
+  tcp_keep_alive: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  tcp_keep_alive_interval: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  tcp_fast_open: z.boolean().optional(),
+  tcp_multi_path: z.boolean().optional(),
+  udp_fragment: z.boolean().optional(),
+  get udp_timeout() {
+    return UDPTimeoutCompatSchema.optional()
+  },
+  detour: z.string().optional(),
+  proxy_protocol: z.boolean().optional(),
+  proxy_protocol_accept_no_header: z.boolean().optional(),
+  sniff: z.boolean().optional(),
+  sniff_override_destination: z.boolean().optional(),
+  sniff_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  get domain_strategy() {
+    return DomainStrategySchema.optional()
+  },
+  udp_disable_domain_unmapping: z.boolean().optional(),
+  get tls() {
+    return InboundTLSOptionsSchema.optional()
+  },
+  idle_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  keep_alive_period: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  stream_receive_window: z.union([
+    z.int().nonnegative(),
+    z.string(),
+  ]).optional(),
+  connection_receive_window: z.union([
+    z.int().nonnegative(),
+    z.string(),
+  ]).optional(),
+  max_concurrent_streams: z.int().optional(),
+  get users() {
+    return z.array(HysteriaRealmUserSchema).optional()
+  },
+})
+
 export const ServiceManagerApiSchema = z.looseObject({
   type: z.literal("manager-api"),
   tag: z.string().optional(),
@@ -5526,7 +6906,6 @@ export const ServiceOomKillerSchema = z.looseObject({
   ]).optional(),
   min_interval: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
   max_interval: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
-  checks_before_limit: z.int().optional(),
 })
 
 export const ServiceProfilerSchema = z.looseObject({
@@ -5630,10 +7009,95 @@ export const ServiceSsmApiSchema = z.looseObject({
   },
 })
 
+export const ServiceUsbipClientSchema = z.looseObject({
+  type: z.literal("usbip-client"),
+  tag: z.string().optional(),
+  detour: z.string().optional(),
+  bind_interface: z.string().optional(),
+  inet4_bind_address: z.string().optional(),
+  inet6_bind_address: z.string().optional(),
+  bind_address_no_port: z.boolean().optional(),
+  protect_path: z.string().optional(),
+  get routing_mark() {
+    return FwMarkSchema.optional()
+  },
+  reuse_addr: z.boolean().optional(),
+  netns: z.string().optional(),
+  connect_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  tcp_fast_open: z.boolean().optional(),
+  tcp_multi_path: z.boolean().optional(),
+  disable_tcp_keep_alive: z.boolean().optional(),
+  tcp_keep_alive: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  tcp_keep_alive_interval: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  udp_fragment: z.boolean().optional(),
+  get domain_resolver() {
+    return DomainResolveOptionsSchema.optional()
+  },
+  get network_strategy() {
+    return NetworkStrategySchema.optional()
+  },
+  get network_type() {
+    return z.union([
+      InterfaceTypeSchema,
+      z.array(InterfaceTypeSchema),
+    ]).optional()
+  },
+  get fallback_network_type() {
+    return z.union([
+      InterfaceTypeSchema,
+      z.array(InterfaceTypeSchema),
+    ]).optional()
+  },
+  fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  get domain_strategy() {
+    return DomainStrategySchema.optional()
+  },
+  server: z.string().optional(),
+  server_port: z.int().nonnegative().optional(),
+  get devices() {
+    return z.array(USBIPDeviceMatchSchema).optional()
+  },
+})
+
+export const ServiceUsbipServerSchema = z.looseObject({
+  type: z.literal("usbip-server"),
+  tag: z.string().optional(),
+  listen: z.string().optional(),
+  listen_port: z.int().nonnegative().optional(),
+  bind_interface: z.string().optional(),
+  get routing_mark() {
+    return FwMarkSchema.optional()
+  },
+  reuse_addr: z.boolean().optional(),
+  netns: z.string().optional(),
+  disable_tcp_keep_alive: z.boolean().optional(),
+  tcp_keep_alive: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  tcp_keep_alive_interval: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  tcp_fast_open: z.boolean().optional(),
+  tcp_multi_path: z.boolean().optional(),
+  udp_fragment: z.boolean().optional(),
+  get udp_timeout() {
+    return UDPTimeoutCompatSchema.optional()
+  },
+  detour: z.string().optional(),
+  proxy_protocol: z.boolean().optional(),
+  proxy_protocol_accept_no_header: z.boolean().optional(),
+  sniff: z.boolean().optional(),
+  sniff_override_destination: z.boolean().optional(),
+  sniff_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  get domain_strategy() {
+    return DomainStrategySchema.optional()
+  },
+  udp_disable_domain_unmapping: z.boolean().optional(),
+  provider: z.string().optional(),
+})
+
 export const ServiceSchema = z.discriminatedUnion("type", [
   ServiceAdminPanelSchema,
+  ServiceApiSchema,
   ServiceCcmSchema,
   ServiceDerpSchema,
+  ServiceHysteriaRealmSchema,
   ServiceManagerSchema,
   ServiceManagerApiSchema,
   ServiceNodeSchema,
@@ -5643,6 +7107,8 @@ export const ServiceSchema = z.discriminatedUnion("type", [
   ServiceProfilerSchema,
   ServiceResolvedSchema,
   ServiceSsmApiSchema,
+  ServiceUsbipClientSchema,
+  ServiceUsbipServerSchema,
 ])
 
 export const ShadowTLSHandshakeOptionsSchema = z.looseObject({
@@ -5707,9 +7173,9 @@ export const ShadowsocksUserSchema = z.looseObject({
   password: z.string().optional(),
 })
 
-export const SnellObfsOptionsSchema = z.looseObject({
-  mode: z.string().optional(),
-  host: z.string().optional(),
+export const SnellUserSchema = z.looseObject({
+  name: z.string().optional(),
+  userkey: z.string().optional(),
 })
 
 export const SudokuHTTPMaskSchema = z.looseObject({
@@ -5728,6 +7194,16 @@ export const TUICUserSchema = z.looseObject({
   uuid: z.string().optional(),
   password: z.string().optional(),
 })
+
+export const TailscaleSSHServerOptionsSchema = z.union([
+  z.boolean(),
+  z.looseObject({
+    enabled: z.boolean().optional(),
+    disable_pty: z.boolean().optional(),
+    disable_sftp: z.boolean().optional(),
+    disable_forwarding: z.boolean().optional(),
+  }),
+])
 
 export const TrafficLimiterUserSchema = z.looseObject({
   name: z.string().optional(),
@@ -5762,6 +7238,8 @@ export const TunPlatformOptionsSchema = z.looseObject({
   },
 })
 
+export const UDPNATBehaviorSchema = z.int().nonnegative()
+
 export const UDPOverTCPOptionsSchema = z.union([
   z.boolean(),
   z.looseObject({
@@ -5774,6 +7252,13 @@ export const UDPTimeoutCompatSchema = z.union([
   z.int().nonnegative(),
   z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/),
 ])
+
+export const USBIPDeviceMatchSchema = z.looseObject({
+  bus_id: z.string().optional(),
+  vendor_id: z.int().nonnegative().optional(),
+  product_id: z.int().nonnegative().optional(),
+  serial: z.string().optional(),
+})
 
 export const UnifiedDelayOptionsSchema = z.looseObject({
   enabled: z.boolean().optional(),
