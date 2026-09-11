@@ -8,6 +8,8 @@
   ],
   "scripts": {
     "dev": "vite",
+    "dev:mock": "METABOX_MOCK=all vite",
+    "dev:mock-missing": "METABOX_MOCK=missing vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "test": "vitest run",
@@ -53,6 +55,7 @@
     "eslint-plugin-jest-dom": "5.10.1",
     "eslint-plugin-testing-library": "7.16.2",
     "jsdom": "30.0.1",
+    "msw": "2.15.0",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
     "oxlint-tsgolint": "7.0.2001",

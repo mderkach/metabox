@@ -6,6 +6,9 @@
     },
     {
       "path": "./tsconfig.node.json"
+    },
+    {
+      "path": "./tsconfig.mocks.json"
     }
   ],
   "compilerOptions": {
@@ -16,7 +19,7 @@
       "@features/*": ["./src/features/*"],
       "@entities/*": ["./src/entities/*"],
       "@shared/*": ["./src/shared/*"],
-      "@adapters/*": ["./src/adapters/*"]
+      "@test/*": ["./src/test/*"]
     }
   }
 }

@@ -8,8 +8,12 @@ packages:
 saveExact: true
 
 # lefthook скачивает свой бинарь в postinstall, поэтому сборка разрешена явно.
+# msw запрещён намеренно: его postinstall кладёт mockServiceWorker.js в public/,
+# оттуда файл уехал бы в dist и через go:embed — в бинарь демона. Дев-сервер
+# отдаёт этот скрипт прямо из node_modules (плагин metabox-mocks).
 allowBuilds:
   lefthook: true
+  msw: false
 
 # Общие для воркспейса версии — чтобы линтер не разъехался между пакетами.
 catalog:
