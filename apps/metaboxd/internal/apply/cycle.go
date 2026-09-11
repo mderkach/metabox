@@ -222,16 +222,16 @@ func (m *Manager) Replay(ctx context.Context) error {
 // нет. Свойство «нет подтверждения — откат» это сохраняет, а пользователю
 // достаётся ещё одно окно, чтобы подтвердить связь.
 func (m *Manager) restoreWindow(tx Transaction) {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// Транзакция и её отмена выставляются под одним замком: между двумя
+	// участками остановка демона увидела бы новое окно со старой отменой и
+	// прервала бы не то.
 	m.mu.Lock()
 	m.current = tx
 	m.lastSum = tx.Sum
 	m.confirmed = make(chan struct{})
 	confirmed := m.confirmed
-	m.mu.Unlock()
-
-	ctx, cancel := context.WithCancel(context.Background())
-
-	m.mu.Lock()
 	m.cancel = cancel
 	m.mu.Unlock()
 

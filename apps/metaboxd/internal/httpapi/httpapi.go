@@ -41,6 +41,11 @@ type Options struct {
 	// SPA раздаёт встроенный интерфейс. nil означает, что бинарь собран без
 	// фронта: API продолжает работать, а панель объясняет, чего не хватает.
 	SPA http.Handler
+	// ConfigPath — путь файла, которым владеет демон. Панель показывает его
+	// как факт об устройстве, а задаётся он флагами `-config-dir` и
+	// `-config-name`: без этого поля интерфейс показывал бы значение по
+	// умолчанию независимо от того, с чем демон запущен.
+	ConfigPath string
 }
 
 // Server держит зависимости обработчиков и собранную цепочку middleware.
@@ -51,6 +56,7 @@ type Server struct {
 	version       string
 	allowedOrigin string
 	spa           http.Handler
+	configPath    string
 	handler       http.Handler
 }
 
@@ -64,6 +70,7 @@ func NewServer(applier Applier, reader ConfigReader, log *slog.Logger, opts Opti
 		version:       opts.Version,
 		allowedOrigin: opts.AllowedOrigin,
 		spa:           opts.SPA,
+		configPath:    opts.ConfigPath,
 	}
 	s.handler = s.routes()
 
@@ -100,7 +107,10 @@ func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
 }
 
 type statusResponse struct {
-	Version     string             `json:"version"`
+	Version string `json:"version"`
+	// ConfigPath — файл, которым демон владеет: путь задаётся флагами запуска,
+	// и вычислить его на стороне панели нельзя.
+	ConfigPath  string             `json:"config_path,omitempty"`
 	Transaction *apply.Transaction `json:"transaction,omitempty"`
 	// TransactionHref — адрес идущего применения. Без него перезагрузка
 	// страницы теряет транзакцию: её идентификатор жил только в ответе на
@@ -109,7 +119,7 @@ type statusResponse struct {
 }
 
 func (s *Server) handleStatus(w http.ResponseWriter, _ *http.Request) {
-	body := statusResponse{Version: s.version}
+	body := statusResponse{Version: s.version, ConfigPath: s.configPath}
 
 	if tx := s.applier.Current(); tx.ID != "" {
 		body.Transaction = &tx

@@ -136,6 +136,7 @@ func newTestServerWith(
 		Version:       "test",
 		AllowedOrigin: allowedOrigin,
 		SPA:           spa,
+		ConfigPath:    testConfigPath,
 	}))
 	t.Cleanup(srv.Close)
 
@@ -341,6 +342,9 @@ func TestReadRequestSkipsOriginCheck(t *testing.T) {
 
 const rawConfig = `{"log":{"level":"info"}}`
 
+// Путь стенда: демон отдаёт его как есть, значение здесь роли не играет.
+const testConfigPath = "/tmp/metabox-test/config.json"
+
 // apply отправляет конфиг со своим Origin: проверка источника здесь не предмет
 // теста, её закрывает TestMutatingRequestChecksOrigin.
 func applyRequest(t *testing.T, srv *httptest.Server, body []byte) response {
@@ -495,6 +499,21 @@ func TestConfirmNothingToConfirm(t *testing.T) {
 
 	if apiErr.Code != "nothing_to_confirm" {
 		t.Errorf("код ошибки %q, ожидали nothing_to_confirm", apiErr.Code)
+	}
+}
+
+// Путь конфига задаётся флагами запуска, поэтому панель обязана получать его
+// с демона, а не держать у себя константу.
+func TestStatusReportsConfigPath(t *testing.T) {
+	srv := newTestServer(t, &fakeApplier{}, "")
+
+	var status struct {
+		ConfigPath string `json:"config_path"`
+	}
+	request(t, srv, http.MethodGet, "/api/status", "", nil).decode(t, &status)
+
+	if status.ConfigPath != testConfigPath {
+		t.Errorf("путь %q, ожидали %q", status.ConfigPath, testConfigPath)
 	}
 }
 

@@ -112,6 +112,7 @@ func run(log *slog.Logger, s settings) error {
 		Version:       version.Version,
 		AllowedOrigin: s.allowedOrigin,
 		SPA:           spa,
+		ConfigPath:    store.Path(),
 	})
 
 	srv := &http.Server{
