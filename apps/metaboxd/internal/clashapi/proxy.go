@@ -28,6 +28,7 @@ type ErrorHandler func(w http.ResponseWriter, r *http.Request, err error)
 // трафика, памяти и соединений.
 type Proxy struct {
 	resolve Resolver
+	onError ErrorHandler
 	proxy   *httputil.ReverseProxy
 }
 
@@ -49,15 +50,13 @@ func NewProxy(resolve Resolver, onError ErrorHandler) (*Proxy, error) {
 		return nil, errors.New("обработчик ошибок не задан")
 	}
 
-	p := &Proxy{resolve: resolve}
+	p := &Proxy{resolve: resolve, onError: onError}
 	p.proxy = &httputil.ReverseProxy{
 		Rewrite: rewrite,
 		// -1 отключает буферизацию: `/traffic` и `/memory` отдают по строке
 		// раз в секунду, и с буфером панель увидела бы их пачкой.
 		FlushInterval: -1,
-		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
-			onError(w, r, err)
-		},
+		ErrorHandler:  onError,
 	}
 
 	return p, nil
@@ -66,21 +65,21 @@ func NewProxy(resolve Resolver, onError ErrorHandler) (*Proxy, error) {
 func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	settings, err := p.resolve(r.Context())
 	if err != nil {
-		p.proxy.ErrorHandler(w, r, err)
+		p.onError(w, r, err)
 
 		return
 	}
 
 	base, err := settings.BaseURL()
 	if err != nil {
-		p.proxy.ErrorHandler(w, r, err)
+		p.onError(w, r, err)
 
 		return
 	}
 
 	parsed, err := url.Parse(base)
 	if err != nil {
-		p.proxy.ErrorHandler(w, r, err)
+		p.onError(w, r, err)
 
 		return
 	}
