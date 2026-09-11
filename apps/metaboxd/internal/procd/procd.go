@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -82,17 +83,26 @@ func (c *Client) Service(ctx context.Context, name string) (State, error) {
 
 	state := State{Known: true}
 
-	for _, instance := range service.Instances {
-		if !instance.Running {
-			continue
+	// Инстансы приходят картой, а её обход случаен: у службы с несколькими
+	// инстансами pid и возраст прыгали бы между опросами. Берём первый по
+	// имени из поднятых.
+	names := make([]string, 0, len(service.Instances))
+	for name, instance := range service.Instances {
+		if instance.Running {
+			names = append(names, name)
 		}
-
-		state.Running = true
-		state.PID = instance.PID
-		state.Uptime = c.uptime(instance.PID)
-
-		break
 	}
+
+	if len(names) == 0 {
+		return state, nil
+	}
+
+	sort.Strings(names)
+
+	instance := service.Instances[names[0]]
+	state.Running = true
+	state.PID = instance.PID
+	state.Uptime = c.uptime(instance.PID)
 
 	return state, nil
 }
@@ -142,14 +152,15 @@ func (c *Client) processStart(pid int) (time.Duration, error) {
 		return 0, err
 	}
 
-	// Имя процесса лежит в скобках и само может содержать пробелы, поэтому
-	// поля считаются от закрывающей скобки, а не от начала строки.
-	_, after, ok := strings.Cut(string(raw), ") ")
-	if !ok {
+	// Имя процесса лежит в скобках и может содержать и пробелы, и сами скобки,
+	// поэтому поля считаются от последней закрывающей скобки, а не от первой
+	// и не от начала строки.
+	end := strings.LastIndex(string(raw), ")")
+	if end < 0 {
 		return 0, fmt.Errorf("неожиданный формат stat для pid %d", pid)
 	}
 
-	fields := strings.Fields(after)
+	fields := strings.Fields(string(raw)[end+1:])
 
 	// starttime — 22-е поле всей строки, то есть 20-е после состояния.
 	const startTimeField = 19

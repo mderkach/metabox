@@ -216,3 +216,34 @@ func TestVersionsWithoutServiceDir(t *testing.T) {
 		t.Errorf("после сохранения версий %d, ошибка %v", len(got), err)
 	}
 }
+
+// Повторное применение того же конфига историю не засоряет: иначе десять
+// одинаковых применений вытеснили бы всё, что в ней было.
+func TestSaveVersionSkipsDuplicate(t *testing.T) {
+	store := newVersionStore(t)
+	same := []byte(`{"log":{"level":"error"}}`)
+
+	for range 3 {
+		if err := store.SaveVersion(t.Context(), same); err != nil {
+			t.Fatalf("сохранение версии: %v", err)
+		}
+	}
+
+	got, err := store.Versions(t.Context())
+	if err != nil {
+		t.Fatalf("чтение истории: %v", err)
+	}
+
+	if len(got) != 1 {
+		t.Fatalf("версий %d, ожидали 1", len(got))
+	}
+
+	// Другое содержимое по-прежнему добавляется.
+	if err := store.SaveVersion(t.Context(), []byte(`{"log":{"level":"warn"}}`)); err != nil {
+		t.Fatalf("сохранение другой версии: %v", err)
+	}
+
+	if got, err := store.Versions(t.Context()); err != nil || len(got) != 2 {
+		t.Errorf("версий %d, ошибка %v, ожидали 2", len(got), err)
+	}
+}

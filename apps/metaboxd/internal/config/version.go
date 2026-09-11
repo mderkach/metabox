@@ -75,21 +75,36 @@ func (s *Store) SaveVersion(ctx context.Context, data []byte) error {
 	}
 	defer func() { _ = root.Close() }()
 
-	saved, err := listVersions(root)
+	// Номера читаются без содержимого: хэшировать всю историю ради следующего
+	// номера значит держать её целиком в памяти, а бюджет демона — NFR-4.
+	saved, err := listIDs(root)
 	if err != nil {
 		return err
 	}
 
+	if len(saved) > 0 {
+		same, err := sameContent(root, saved[0], data)
+		if err != nil {
+			return err
+		}
+
+		// Повторное применение того же конфига в историю не пишется: десять
+		// одинаковых применений вытеснили бы всё, что там было.
+		if same {
+			return nil
+		}
+	}
+
 	next := 1
 	if len(saved) > 0 {
-		next = saved[0].ID + 1
+		next = saved[0] + 1
 	}
 
 	if err := writeAtomic(root, versionName(next), data, securePerm); err != nil {
 		return err
 	}
 
-	return trimVersions(root, append([]Version{{ID: next}}, saved...))
+	return trimVersions(root, append([]int{next}, saved...))
 }
 
 // Versions отдаёт историю от свежей к старой.
@@ -154,12 +169,31 @@ var errNoHistory = errors.New("каталога истории нет")
 // историю, а не ошибку.
 func (s *Store) versionsRoot(create bool) (*os.Root, error) {
 	if create {
-		if err := os.MkdirAll(s.VersionsPath(), secureDirPerm); err != nil {
+		if err := os.MkdirAll(s.serviceDir, secureDirPerm); err != nil {
+			return nil, fmt.Errorf("создание служебного каталога %s: %w", s.serviceDir, err)
+		}
+	}
+
+	// Подкаталог открывается из уже открытого корня, а не по собранному пути:
+	// os.Root держит операции внутри каталога и не даёт уйти по симлинку.
+	// Симлинк на месте versions увёл бы каждую версию в рабочую конфигурацию.
+	serviceRoot, err := openRoot(s.serviceDir)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil, errNoHistory
+		}
+
+		return nil, err
+	}
+	defer func() { _ = serviceRoot.Close() }()
+
+	if create {
+		if err := serviceRoot.Mkdir(versionsDir, secureDirPerm); err != nil && !errors.Is(err, fs.ErrExist) {
 			return nil, fmt.Errorf("создание каталога истории %s: %w", s.VersionsPath(), err)
 		}
 	}
 
-	root, err := os.OpenRoot(s.VersionsPath())
+	root, err := serviceRoot.OpenRoot(versionsDir)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return nil, errNoHistory
@@ -219,18 +253,55 @@ func listVersions(root *os.Root) ([]Version, error) {
 // trimVersions удаляет всё, что не помещается в maxVersions. Отказ удаления не
 // останавливает применение: лишний файл истории безвреден, а прерванный цикл
 // Apply — нет.
-func trimVersions(root *os.Root, versions []Version) error {
-	if len(versions) <= maxVersions {
+func trimVersions(root *os.Root, ids []int) error {
+	if len(ids) <= maxVersions {
 		return nil
 	}
 
-	for _, stale := range versions[maxVersions:] {
-		if err := root.Remove(versionName(stale.ID)); err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return fmt.Errorf("удаление версии %d: %w", stale.ID, err)
+	for _, stale := range ids[maxVersions:] {
+		if err := root.Remove(versionName(stale)); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("удаление версии %d: %w", stale, err)
 		}
 	}
 
 	return nil
+}
+
+// listIDs отдаёт номера от свежего к старому, не читая содержимого.
+func listIDs(root *os.Root) ([]int, error) {
+	entries, err := fs.ReadDir(root.FS(), ".")
+	if err != nil {
+		return nil, fmt.Errorf("чтение каталога истории: %w", err)
+	}
+
+	ids := make([]int, 0, len(entries))
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		if id, ok := versionID(entry.Name()); ok {
+			ids = append(ids, id)
+		}
+	}
+
+	sort.Sort(sort.Reverse(sort.IntSlice(ids)))
+
+	return ids, nil
+}
+
+// sameContent отвечает, совпадает ли версия с тем, что собираются сохранить.
+func sameContent(root *os.Root, id int, data []byte) (bool, error) {
+	saved, err := root.ReadFile(versionName(id))
+	if errors.Is(err, fs.ErrNotExist) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("чтение версии %d: %w", id, err)
+	}
+
+	return sha256.Sum256(saved) == sha256.Sum256(data), nil
 }
 
 func versionName(id int) string {
@@ -238,7 +309,10 @@ func versionName(id int) string {
 }
 
 func versionID(name string) (int, bool) {
-	if len(name) != versionDigits {
+	// Меньше положенной ширины — чужое имя. Больше допускается: номер выше
+	// миллиона перестаёт помещаться в versionDigits, и отвергать такие имена
+	// значило бы сбросить счётчик и перетереть первую версию.
+	if len(name) < versionDigits {
 		return 0, false
 	}
 
