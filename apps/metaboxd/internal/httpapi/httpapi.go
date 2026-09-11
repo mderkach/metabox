@@ -8,9 +8,12 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strconv"
 
 	"metabox/internal/apply"
 	"metabox/internal/clashapi"
+	"metabox/internal/config"
+	"metabox/internal/singbox"
 )
 
 // maxConfigBytes — потолок на тело запроса. Конфиг приходит байтами, и без
@@ -29,16 +32,19 @@ type Applier interface {
 // Service — управление сервисом sing-box через init-скрипт. Интерфейс
 // объявлен здесь, у потребителя.
 type Service interface {
-	Running(ctx context.Context) (bool, error)
+	State(ctx context.Context) (singbox.State, error)
 	Start(ctx context.Context) error
 	Stop(ctx context.Context) error
 	Restart(ctx context.Context) error
 }
 
-// ConfigReader отдаёт применённый конфиг байтами. Интерфейс объявлен здесь,
-// у потребителя, и содержит только чтение: файлом владеет config.Store.
+// ConfigReader отдаёт применённый конфиг и его историю. Интерфейс объявлен
+// здесь, у потребителя, и содержит только чтение: файлами владеет
+// config.Store, а запись идёт протоколом Apply.
 type ConfigReader interface {
 	Read(ctx context.Context) ([]byte, error)
+	Versions(ctx context.Context) ([]config.Version, error)
+	ReadVersion(ctx context.Context, id int) ([]byte, error)
 }
 
 // Options — настройки слоя, приходящие в демон флагами.
@@ -115,6 +121,9 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /healthz", s.handleHealth)
 	mux.HandleFunc("GET /api/status", s.handleStatus)
 	mux.HandleFunc("GET /api/config", s.handleConfig)
+	mux.HandleFunc("GET /api/config/versions", s.handleVersions)
+	mux.HandleFunc("GET /api/config/versions/{id}", s.handleVersion)
+	mux.HandleFunc("POST /api/config/versions/{id}/restore", s.handleVersionRestore)
 	mux.HandleFunc("POST /api/apply", s.handleApply)
 	mux.HandleFunc("GET /api/apply/{id}", s.handleApplyState)
 	mux.HandleFunc("POST /api/apply/{id}/confirm", s.handleApplyConfirm)
@@ -194,6 +203,74 @@ func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type versionsResponse struct {
+	Versions []config.Version `json:"versions"`
+}
+
+func (s *Server) handleVersions(w http.ResponseWriter, r *http.Request) {
+	versions, err := s.reader.Versions(r.Context())
+	if err != nil {
+		fail(s.log, w, r, err)
+
+		return
+	}
+
+	writeJSON(s.log, w, http.StatusOK, versionsResponse{Versions: versions})
+}
+
+// handleVersion отдаёт версию теми же байтами, какими она была применена:
+// история хранит документ целиком, а не разбор (ADR-0002).
+func (s *Server) handleVersion(w http.ResponseWriter, r *http.Request) {
+	data, err := s.readVersion(r)
+	if err != nil {
+		fail(s.log, w, r, err)
+
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(http.StatusOK)
+
+	// gosec ведёт поток от номера версии в URL до записи в ответ и считает его
+	// XSS. Из запроса приходит только целое число: содержимое читается из
+	// служебного каталога демона, тип ответа задан JSON, HTML тут не бывает.
+	if _, err := w.Write(data); err != nil { //nolint:gosec // G705: тело из файла демона, а не из запроса
+		// Статус уже ушёл клиенту, вернуть ошибку некуда.
+		s.log.Error("версия не дописана в ответ", "err", err)
+	}
+}
+
+// handleVersionRestore возвращает версию обычным применением: отдельной записи
+// в обход протокола нет, иначе откат на битую версию отрезал бы доступ без
+// проверки бинарём, рестарта и окна подтверждения (ADR-0002).
+func (s *Server) handleVersionRestore(w http.ResponseWriter, r *http.Request) {
+	data, err := s.readVersion(r)
+	if err != nil {
+		fail(s.log, w, r, err)
+
+		return
+	}
+
+	tx, err := s.applier.Start(r.Context(), data)
+	if err != nil {
+		fail(s.log, w, r, err)
+
+		return
+	}
+
+	writeJSON(s.log, w, http.StatusAccepted, tx)
+}
+
+func (s *Server) readVersion(r *http.Request) ([]byte, error) {
+	id, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil || id <= 0 {
+		return nil, config.ErrNoVersion
+	}
+
+	return s.reader.ReadVersion(r.Context(), id)
+}
+
 // handleApply принимает конфиг байтами и запускает применение. Ответ приходит
 // после проверки бинарём, но до конца цикла: применение асинхронно и живёт
 // дольше запроса (ADR-0002).
@@ -239,9 +316,8 @@ func (s *Server) handleApplyConfirm(w http.ResponseWriter, r *http.Request) {
 
 type serviceResponse struct {
 	Status string `json:"status"`
-	// Uptime — секунды с момента старта. Init-скрипт procd их не отдаёт, а
-	// лезть в /proc мимо него запрещено (DeviceIO), поэтому пока всегда 0:
-	// панель показывает такое значение прочерком.
+	// Uptime — секунды с момента старта. Ноль означает, что возраст узнать не
+	// удалось: панель показывает такое значение прочерком.
 	Uptime int `json:"uptime"`
 	// Binary — версия бинаря на устройстве. Схему панель знает свою и
 	// сверяет расхождение сама.
@@ -254,13 +330,22 @@ type serviceResponse struct {
 func (s *Server) handleServiceState(w http.ResponseWriter, r *http.Request) {
 	body := serviceResponse{Status: "stopped", Binary: s.singboxVersion}
 
-	running, err := s.service.Running(r.Context())
+	state, err := s.service.State(r.Context())
 	if err != nil {
 		s.log.Warn("состояние сервиса не прочитано", "err", err)
 
 		body.LastError = "состояние сервиса не прочитано"
-	} else if running {
+		writeJSON(s.log, w, http.StatusOK, body)
+
+		return
+	}
+
+	switch {
+	case state.Running:
 		body.Status = "running"
+		body.Uptime = int(state.Uptime.Seconds())
+	case state.Failed:
+		body.Status = "failed"
 	}
 
 	writeJSON(s.log, w, http.StatusOK, body)

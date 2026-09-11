@@ -74,6 +74,8 @@ func statusFor(err error) (status int, code string) {
 		return http.StatusForbidden, "origin_mismatch"
 	case errors.Is(err, config.ErrNoConfig):
 		return http.StatusNotFound, "config_missing"
+	case errors.Is(err, config.ErrNoVersion):
+		return http.StatusNotFound, "version_missing"
 	case errors.Is(err, apply.ErrUnknownTransaction):
 		return http.StatusNotFound, "unknown_transaction"
 	case errors.Is(err, apply.ErrBusy):

@@ -93,8 +93,11 @@ func (a *fakeApplier) body() []byte {
 // fakeReader подменяет владельца файла конфига: чтение с диска проверяется в
 // internal/config, здесь важно, что байты доходят до ответа неизменными.
 type fakeReader struct {
-	data []byte
-	err  error
+	data     []byte
+	err      error
+	versions []config.Version
+	// byID подменяет содержимое версий; пустая карта означает, что версии нет.
+	byID map[int][]byte
 }
 
 func (r fakeReader) Read(context.Context) ([]byte, error) {
@@ -103,6 +106,23 @@ func (r fakeReader) Read(context.Context) ([]byte, error) {
 	}
 
 	return r.data, nil
+}
+
+func (r fakeReader) Versions(context.Context) ([]config.Version, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+
+	return r.versions, nil
+}
+
+func (r fakeReader) ReadVersion(_ context.Context, id int) ([]byte, error) {
+	data, ok := r.byID[id]
+	if !ok {
+		return nil, config.ErrNoVersion
+	}
+
+	return data, nil
 }
 
 func newTestServer(t *testing.T, applier httpapi.Applier, allowedOrigin string) *httptest.Server {
