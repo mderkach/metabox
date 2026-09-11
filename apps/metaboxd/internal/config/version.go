@@ -69,7 +69,7 @@ func (s *Store) SaveVersion(ctx context.Context, data []byte) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	root, err := s.versionsRoot()
+	root, err := s.versionsRoot(true)
 	if err != nil {
 		return err
 	}
@@ -101,7 +101,12 @@ func (s *Store) Versions(ctx context.Context) ([]Version, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	root, err := s.versionsRoot()
+	root, err := s.versionsRoot(false)
+	if errors.Is(err, errNoHistory) {
+		// Пустой срез, а не nil: в JSON разница между `[]` и `null` видна, и
+		// панель на `null` сломалась бы на первом же обходе списка.
+		return []Version{}, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +125,10 @@ func (s *Store) ReadVersion(ctx context.Context, id int) ([]byte, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	root, err := s.versionsRoot()
+	root, err := s.versionsRoot(false)
+	if errors.Is(err, errNoHistory) {
+		return nil, ErrNoVersion
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -137,20 +145,26 @@ func (s *Store) ReadVersion(ctx context.Context, id int) ([]byte, error) {
 	return data, nil
 }
 
-// versionsRoot открывает каталог истории, создавая его при первом обращении.
-func (s *Store) versionsRoot() (*os.Root, error) {
-	serviceRoot, err := openRoot(s.serviceDir)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = serviceRoot.Close() }()
+// errNoHistory — каталога истории ещё нет. Для чтения это пустая история, а не
+// отказ: до первого применения сохранять было нечего.
+var errNoHistory = errors.New("каталога истории нет")
 
-	if err := serviceRoot.Mkdir(versionsDir, secureDirPerm); err != nil && !errors.Is(err, fs.ErrExist) {
-		return nil, fmt.Errorf("создание каталога истории %s: %w", s.VersionsPath(), err)
+// versionsRoot открывает каталог истории. При create он создаётся вместе со
+// служебным каталогом демона; без create отсутствие каталога означает пустую
+// историю, а не ошибку.
+func (s *Store) versionsRoot(create bool) (*os.Root, error) {
+	if create {
+		if err := os.MkdirAll(s.VersionsPath(), secureDirPerm); err != nil {
+			return nil, fmt.Errorf("создание каталога истории %s: %w", s.VersionsPath(), err)
+		}
 	}
 
-	root, err := serviceRoot.OpenRoot(versionsDir)
+	root, err := os.OpenRoot(s.VersionsPath())
 	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil, errNoHistory
+		}
+
 		return nil, fmt.Errorf("открытие каталога истории %s: %w", s.VersionsPath(), err)
 	}
 

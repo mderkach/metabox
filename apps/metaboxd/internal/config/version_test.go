@@ -174,3 +174,45 @@ func TestVersionsIgnoresForeignNames(t *testing.T) {
 		t.Errorf("версий в истории %d, ожидали 1", len(got))
 	}
 }
+
+// До первого применения служебного каталога на устройстве может не быть:
+// чтение истории обязано вернуть пусто, а не отказ.
+func TestVersionsWithoutServiceDir(t *testing.T) {
+	dir := t.TempDir()
+	cfgDir := filepath.Join(dir, "config")
+
+	if err := os.Mkdir(cfgDir, 0o700); err != nil {
+		t.Fatalf("создание %s: %v", cfgDir, err)
+	}
+
+	store, err := NewStore(cfgDir, "config.json", filepath.Join(dir, "нет-такого"))
+	if err != nil {
+		t.Fatalf("создание хранилища: %v", err)
+	}
+
+	got, err := store.Versions(t.Context())
+	if err != nil {
+		t.Fatalf("чтение истории без служебного каталога: %v", err)
+	}
+
+	if got == nil {
+		t.Error("история отдана как nil: в JSON это null, а не пустой список")
+	}
+
+	if len(got) != 0 {
+		t.Errorf("версий %d, ожидали 0", len(got))
+	}
+
+	if _, err := store.ReadVersion(t.Context(), 1); !errors.Is(err, ErrNoVersion) {
+		t.Errorf("чтение версии: получили %v, ожидали ErrNoVersion", err)
+	}
+
+	// Сохранение каталог создаёт само.
+	if err := store.SaveVersion(t.Context(), []byte("{}")); err != nil {
+		t.Fatalf("сохранение версии: %v", err)
+	}
+
+	if got, err := store.Versions(t.Context()); err != nil || len(got) != 1 {
+		t.Errorf("после сохранения версий %d, ошибка %v", len(got), err)
+	}
+}
