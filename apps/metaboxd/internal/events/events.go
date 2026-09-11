@@ -10,6 +10,7 @@ package events
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -436,7 +437,7 @@ func sleep(ctx context.Context, d time.Duration) bool {
 func lines(r *bufio.Reader, sink func(json.RawMessage)) error {
 	for {
 		line, err := r.ReadBytes('\n')
-		if trimmed := trimSpace(line); len(trimmed) > 0 {
+		if trimmed := bytes.TrimSpace(line); len(trimmed) > 0 {
 			sink(json.RawMessage(trimmed))
 		}
 
@@ -444,22 +445,4 @@ func lines(r *bufio.Reader, sink func(json.RawMessage)) error {
 			return err
 		}
 	}
-}
-
-func trimSpace(b []byte) []byte {
-	start := 0
-	for start < len(b) && isSpace(b[start]) {
-		start++
-	}
-
-	end := len(b)
-	for end > start && isSpace(b[end-1]) {
-		end--
-	}
-
-	return b[start:end]
-}
-
-func isSpace(b byte) bool {
-	return b == ' ' || b == '\t' || b == '\r' || b == '\n'
 }

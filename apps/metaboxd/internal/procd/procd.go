@@ -31,8 +31,9 @@ type State struct {
 	Known bool
 	// Running — поднят ли хоть один инстанс.
 	Running bool
-	// PID первого поднятого инстанса; ноль, когда служба не работает.
-	PID int
+	// pid поднятого инстанса. Не экспортируется: наружу он не нужен, службой
+	// управляет init-скрипт, а здесь он только для возраста процесса.
+	pid int
 	// Uptime — возраст процесса. Ноль, когда узнать не удалось: procd
 	// возраста не отдаёт, он считается по /proc и на чужой системе может
 	// быть недоступен.
@@ -101,7 +102,7 @@ func (c *Client) Service(ctx context.Context, name string) (State, error) {
 
 	instance := service.Instances[names[0]]
 	state.Running = true
-	state.PID = instance.PID
+	state.pid = instance.PID
 	state.Uptime = c.uptime(instance.PID)
 
 	return state, nil
