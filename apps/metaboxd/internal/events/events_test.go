@@ -152,8 +152,11 @@ func TestHubSharesUpstream(t *testing.T) {
 	}
 	defer func() { _ = first.Body.Close() }()
 
-	readEvents(t, first.Body, 1)
-	afterFirst := source.streams.Load()
+	// Ждём, пока поднимутся обе построчные подписки: снимок счётчика сразу
+	// после первого события ловил бы момент, когда часть горутин ещё не
+	// стартовала, и тест мигал бы.
+	const wantStreams = 2
+	waitStreams(t, source, wantStreams)
 
 	second, err := srv.Client().Get(srv.URL) //nolint:noctx // соединение закрывается ниже
 	if err != nil {
@@ -163,8 +166,8 @@ func TestHubSharesUpstream(t *testing.T) {
 
 	readEvents(t, second.Body, 1)
 
-	if got := source.streams.Load(); got != afterFirst {
-		t.Errorf("подписок на источник стало %d, было %d: апстрим не разделён", got, afterFirst)
+	if got := source.streams.Load(); got != wantStreams {
+		t.Errorf("подписок на источник %d, ожидали %d: апстрим не разделён", got, wantStreams)
 	}
 }
 
@@ -225,10 +228,10 @@ func TestHubStopsWithLastSubscriber(t *testing.T) {
 	source := &fakeSource{snapshot: json.RawMessage(`[]`), service: json.RawMessage(`{}`)}
 	hub := New(source, testLogger(t), fastOptions())
 
-	ch, _, cancel := hub.subscribe()
+	sub, _, cancel := hub.subscribe()
 
 	select {
-	case <-ch:
+	case <-sub.ch:
 	case <-time.After(time.Second):
 		t.Fatal("события не пошли")
 	}
@@ -268,3 +271,121 @@ type noFlushWriter struct {
 func (w *noFlushWriter) Header() http.Header         { return w.header }
 func (w *noFlushWriter) Write(b []byte) (int, error) { return len(b), nil }
 func (w *noFlushWriter) WriteHeader(code int)        { w.code = code }
+
+func waitStreams(t *testing.T, source *fakeSource, want int64) {
+	t.Helper()
+
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		if source.streams.Load() >= want {
+			return
+		}
+
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	t.Fatalf("подписок на источник %d, ожидали %d", source.streams.Load(), want)
+}
+
+// Номера у читателя идут подряд с единицы, включая повтор состояния при
+// подключении: иначе панель приняла бы начало потока за пропуск.
+func TestHubNumbersPerSubscriber(t *testing.T) {
+	source := &fakeSource{
+		snapshot: json.RawMessage(`[]`),
+		service:  json.RawMessage(`{}`),
+		lines:    []json.RawMessage{json.RawMessage(`{"up":1}`)},
+	}
+
+	srv := httptest.NewServer(New(source, testLogger(t), fastOptions()))
+	defer srv.Close()
+
+	first, err := srv.Client().Get(srv.URL) //nolint:noctx // соединение закрывается ниже
+	if err != nil {
+		t.Fatalf("первый читатель: %v", err)
+	}
+	defer func() { _ = first.Body.Close() }()
+
+	for i, event := range readEvents(t, first.Body, 5) {
+		if want := uint64(i + 1); event.Seq != want {
+			t.Fatalf("номер события %d: получили %d, ожидали %d", i, event.Seq, want)
+		}
+	}
+
+	// Подключившийся позже начинает с единицы, а не с номера общего счётчика.
+	late, err := srv.Client().Get(srv.URL) //nolint:noctx // соединение закрывается ниже
+	if err != nil {
+		t.Fatalf("поздний читатель: %v", err)
+	}
+	defer func() { _ = late.Body.Close() }()
+
+	if got := readEvents(t, late.Body, 1)[0]; got.Seq != 1 {
+		t.Errorf("первый номер у позднего читателя %d, ожидали 1", got.Seq)
+	}
+}
+
+// Битая строка источника не должна оседать в состоянии топика.
+func TestHubSkipsInvalidLines(t *testing.T) {
+	source := &fakeSource{
+		snapshot: json.RawMessage(`[]`),
+		service:  json.RawMessage(`{}`),
+		lines:    []json.RawMessage{json.RawMessage("не json"), json.RawMessage(`{"up":7}`)},
+	}
+
+	srv := httptest.NewServer(New(source, testLogger(t), fastOptions()))
+	defer srv.Close()
+
+	response, err := srv.Client().Get(srv.URL) //nolint:noctx // соединение закрывается ниже
+	if err != nil {
+		t.Fatalf("подключение: %v", err)
+	}
+	defer func() { _ = response.Body.Close() }()
+
+	for _, event := range readEvents(t, response.Body, 6) {
+		if event.Topic == TopicTraffic && string(event.Data) != `{"up":7}` {
+			t.Errorf("в топик трафика попало %q", event.Data)
+		}
+	}
+}
+
+// Уход апстрима не должен оставлять новому читателю данные мёртвого потока.
+func TestHubForgetsStateAfterStop(t *testing.T) {
+	source := &fakeSource{snapshot: json.RawMessage(`[{"id":"a"}]`), service: json.RawMessage(`{}`)}
+	hub := New(source, testLogger(t), fastOptions())
+
+	sub, _, cancel := hub.subscribe()
+
+	select {
+	case <-sub.ch:
+	case <-time.After(time.Second):
+		t.Fatal("события не пошли")
+	}
+
+	cancel()
+
+	hub.mu.Lock()
+	remembered := len(hub.last)
+	hub.mu.Unlock()
+
+	if remembered != 0 {
+		t.Errorf("после остановки помнится %d топиков, ожидали 0", remembered)
+	}
+}
+
+// Close закрывает читателей: без этого остановка демона ждала бы их ухода.
+func TestHubCloseReleasesSubscribers(t *testing.T) {
+	hub := New(&fakeSource{snapshot: json.RawMessage(`[]`), service: json.RawMessage(`{}`)}, testLogger(t), fastOptions())
+
+	sub, _, _ := hub.subscribe()
+	hub.Close()
+
+	for range sub.ch { //nolint:revive // вычитываем остаток очереди до закрытия
+	}
+
+	hub.mu.Lock()
+	left := len(hub.subscribers)
+	hub.mu.Unlock()
+
+	if left != 0 {
+		t.Errorf("после Close осталось читателей: %d", left)
+	}
+}

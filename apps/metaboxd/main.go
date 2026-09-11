@@ -39,11 +39,8 @@ const (
 	healthRequestTimeout = 5 * time.Second
 	healthPollInterval   = 500 * time.Millisecond
 
-	// Периоды опроса тех источников, которые сами ничего не шлют. Соединения
-	// Clash API отдаёт только целиком, поэтому секунда здесь напрямую
-	// превращается в трафик между sing-box и демоном (NFR-2).
+	// Периоды опроса источников потока; чем они заданы — events.Options.
 	connectionsInterval = time.Second
-	// Опрос службы дороже: это запуск внешних процессов.
 	serviceInterval     = 5 * time.Second
 	streamRetryInterval = 3 * time.Second
 )
@@ -171,6 +168,10 @@ func run(log *slog.Logger, s settings) error {
 		ErrorLog: slog.NewLogLogger(log.Handler(), slog.LevelError),
 	}
 
+	// Поток переживает запрос, поэтому Shutdown его сам не закроет: без этого
+	// остановка демона с открытой панелью упиралась бы в таймаут.
+	srv.RegisterOnShutdown(hub.Close)
+
 	serveErr := make(chan error, 1)
 	go func() {
 		err := srv.ListenAndServe()
@@ -234,12 +235,12 @@ func clashSettings(store *config.Store) events.Resolver {
 // обязана видеть одно и то же независимо от того, откуда пришло.
 func serviceState(service *singbox.Client, binary string) events.ServiceReader {
 	return func(ctx context.Context) (json.RawMessage, error) {
+		// Отказ опроса не прерывает публикацию: иначе поток замирал бы на
+		// последнем удачном значении, и панель показывала бы упавший сервис
+		// работающим.
 		state, err := service.State(ctx)
-		if err != nil {
-			return nil, err
-		}
 
-		return json.Marshal(httpapi.ServiceState(state, binary))
+		return json.Marshal(httpapi.ServiceState(state, binary, err))
 	}
 }
 

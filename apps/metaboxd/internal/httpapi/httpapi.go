@@ -337,8 +337,14 @@ type serviceResponse struct {
 // ServiceState приводит состояние службы к форме ответа. Экспортируется,
 // потому что то же тело уходит в поток событий: панель обязана получать один
 // формат независимо от того, ручкой оно пришло или потоком (ADR-0006).
-func ServiceState(state singbox.State, binary string) any {
+func ServiceState(state singbox.State, binary string, err error) any {
 	body := serviceResponse{Status: "stopped", Binary: binary}
+
+	if err != nil {
+		body.LastError = "состояние сервиса не прочитано"
+
+		return body
+	}
 
 	switch {
 	case state.Running:
@@ -354,19 +360,12 @@ func ServiceState(state singbox.State, binary string) any {
 // handleServiceState отдаёт состояние сервиса. Ошибка опроса — не отказ
 // панели: NFR-1 требует, чтобы экран открылся и при недоступном сервисе.
 func (s *Server) handleServiceState(w http.ResponseWriter, r *http.Request) {
-	body := serviceResponse{Status: "stopped", Binary: s.singboxVersion}
-
 	state, err := s.service.State(r.Context())
 	if err != nil {
 		s.log.Warn("состояние сервиса не прочитано", "err", err)
-
-		body.LastError = "состояние сервиса не прочитано"
-		writeJSON(s.log, w, http.StatusOK, body)
-
-		return
 	}
 
-	writeJSON(s.log, w, http.StatusOK, ServiceState(state, s.singboxVersion))
+	writeJSON(s.log, w, http.StatusOK, ServiceState(state, s.singboxVersion, err))
 }
 
 // handleServiceAction выполняет действие и отдаёт новое состояние: гадать по

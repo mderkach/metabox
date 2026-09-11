@@ -2,9 +2,10 @@
 //
 // Источники у форка разные — посекундные строки `/traffic` и `/memory`,
 // снапшот `/connections`, опрос службы, — а панель получает один конверт и не
-// знает, какой источник сработал (ADR-0006). Транспорт наружу — SSE: сервера
-// WebSocket в стандартной библиотеке нет, а зависимость в демоне требует
-// отдельного решения.
+// знает, какой источник сработал (ADR-0006). Транспорт, конверт и владение
+// подписками заданы ADR-0010: SSE выбран потому, что сервера WebSocket в
+// стандартной библиотеке нет, а зависимость в демоне требует отдельного
+// решения.
 package events
 
 import (
@@ -12,6 +13,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"sync"
@@ -27,12 +29,21 @@ const (
 	TopicService     = "service"
 )
 
-// Event — конверт. Seq растёт сквозным счётчиком: по разрыву в номерах панель
-// видит, что пропустила сообщения, и перезапрашивает состояние.
+// Event — конверт. Seq считается для каждого читателя отдельно и растёт без
+// пропусков, пока события доходят: разрыв в номерах означает, что читатель не
+// успевал и событие было отброшено.
 type Event struct {
 	Topic string          `json:"topic"`
 	Seq   uint64          `json:"seq"`
 	Data  json.RawMessage `json:"data"`
+}
+
+// subscriber — один читатель потока со своим счётчиком. Общий счётчик на всех
+// не годится: повтор состояния при подключении ушёл бы со старыми номерами и
+// выглядел бы для панели пропуском.
+type subscriber struct {
+	ch  chan Event
+	seq uint64
 }
 
 // Source — то, откуда Hub берёт данные. Интерфейс объявлен здесь, у
@@ -58,6 +69,10 @@ type Options struct {
 	ServiceInterval time.Duration
 	// RetryInterval — пауза перед повторной попыткой после обрыва источника.
 	RetryInterval time.Duration
+	// KeepAlive — период комментария в поток, когда источники молчат. Без него
+	// оборванное соединение не обнаруживает ни одна из сторон: в сокет ничего
+	// не пишется, и ошибка не возникает.
+	KeepAlive time.Duration
 }
 
 // Hub держит один набор подписок на источники, пока есть хоть один читатель,
@@ -69,13 +84,17 @@ type Hub struct {
 	opts   Options
 
 	mu          sync.Mutex
-	subscribers map[chan Event]struct{}
-	seq         uint64
-	// last хранит последнее событие каждого топика: подключившийся читатель
-	// получает текущее состояние сразу, а не через период опроса.
-	last map[string]Event
-	stop context.CancelFunc
-	done chan struct{}
+	subscribers map[*subscriber]struct{}
+	// last хранит последние данные каждого топика: подключившийся читатель
+	// получает текущее состояние сразу, а не через период опроса. Сбрасывается
+	// вместе с остановкой источников, иначе следующий читатель принял бы
+	// данные умершего апстрима за текущие.
+	last map[string]json.RawMessage
+	// order задаёт порядок повтора: карта его не хранит, а читателю состояние
+	// должно приходить в том же порядке, в каком публиковалось.
+	order []string
+	stop  context.CancelFunc
+	done  chan struct{}
 }
 
 // New собирает Hub. Опросов он не начинает: фоновый опрос без потребителя на
@@ -86,26 +105,27 @@ func New(source Source, log *slog.Logger, opts Options) *Hub {
 		source:      source,
 		log:         log,
 		opts:        opts,
-		subscribers: make(map[chan Event]struct{}),
-		last:        make(map[string]Event),
+		subscribers: make(map[*subscriber]struct{}),
+		last:        make(map[string]json.RawMessage),
 	}
 }
 
 // subscribe добавляет читателя и поднимает источники, если он первый. Вторым
 // значением возвращается снимок последних событий по каждому топику.
-func (h *Hub) subscribe() (chan Event, []Event, func()) {
-	// Буфер на топик с запасом: медленный читатель не должен блокировать
-	// рассылку остальным.
+func (h *Hub) subscribe() (*subscriber, []Event, func()) {
+	// Буфер читателя. Медленный читатель не должен блокировать рассылку
+	// остальным, поэтому очередь конечна и переполнение теряет событие.
 	const buffer = 16
 
-	ch := make(chan Event, buffer)
+	sub := &subscriber{ch: make(chan Event, buffer)}
 
 	h.mu.Lock()
-	h.subscribers[ch] = struct{}{}
+	h.subscribers[sub] = struct{}{}
 
-	recent := make([]Event, 0, len(h.last))
-	for _, event := range h.last {
-		recent = append(recent, event)
+	recent := make([]Event, 0, len(h.order))
+	for _, topic := range h.order {
+		sub.seq++
+		recent = append(recent, Event{Topic: topic, Seq: sub.seq, Data: h.last[topic]})
 	}
 
 	if len(h.subscribers) == 1 {
@@ -113,23 +133,42 @@ func (h *Hub) subscribe() (chan Event, []Event, func()) {
 	}
 	h.mu.Unlock()
 
-	return ch, recent, func() { h.unsubscribe(ch) }
+	return sub, recent, func() { h.unsubscribe(sub) }
 }
 
-func (h *Hub) unsubscribe(ch chan Event) {
+func (h *Hub) unsubscribe(sub *subscriber) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	if _, ok := h.subscribers[ch]; !ok {
-		return
-	}
-
-	delete(h.subscribers, ch)
-	close(ch)
+	h.removeLocked(sub)
 
 	if len(h.subscribers) == 0 {
 		h.stopLocked()
 	}
+}
+
+func (h *Hub) removeLocked(sub *subscriber) {
+	if _, ok := h.subscribers[sub]; !ok {
+		return
+	}
+
+	delete(h.subscribers, sub)
+	close(sub.ch)
+}
+
+// Close закрывает всех читателей и останавливает источники. Нужен на остановке
+// демона: http.Server.Shutdown ждёт завершения запросов и контексты им не
+// отменяет, а хендлер потока живёт до ухода клиента — без Close остановка
+// упиралась бы в таймаут и демон выходил бы с ошибкой.
+func (h *Hub) Close() {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	for sub := range h.subscribers {
+		h.removeLocked(sub)
+	}
+
+	h.stopLocked()
 }
 
 // start поднимает опрос источников. Вызывается под h.mu.
@@ -194,6 +233,12 @@ func (h *Hub) stopLocked() {
 	stop()
 	<-done
 	h.mu.Lock()
+
+	// Чистится после ожидания, а не до: горутина, не успевшая завершиться,
+	// записала бы состояние заново. Данные умершего апстрима не должны
+	// достаться следующему читателю как текущие.
+	h.last = make(map[string]json.RawMessage)
+	h.order = nil
 }
 
 // runStream держит построчный источник, переподключаясь после обрыва. Обрыв
@@ -234,20 +279,34 @@ func (h *Hub) runPoll(
 }
 
 func (h *Hub) publish(topic string, data json.RawMessage) {
+	// Проверка стоит здесь, в единственной точке публикации: невалидные данные
+	// осели бы в последнем состоянии топика, и тогда сборка конверта падала бы
+	// у каждого подключающегося читателя — вышел бы шторм переподключений.
+	if !json.Valid(data) {
+		h.log.Debug("источник отдал не JSON", "topic", topic)
+
+		return
+	}
+
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	h.seq++
-	event := Event{Topic: topic, Seq: h.seq, Data: data}
-	h.last[topic] = event
+	if _, seen := h.last[topic]; !seen {
+		h.order = append(h.order, topic)
+	}
 
-	for ch := range h.subscribers {
+	h.last[topic] = data
+
+	for sub := range h.subscribers {
+		// Номер тратится и на отброшенное событие: иначе пропуск не был бы
+		// виден читателю разрывом в нумерации.
+		sub.seq++
+
 		select {
-		case ch <- event:
+		case sub.ch <- Event{Topic: topic, Seq: sub.seq, Data: data}:
 		default:
 			// Читатель не успевает. Событие теряется намеренно: очередь в
 			// памяти демона, который живёт месяцами, опаснее пропуска сэмпла.
-			// Разрыв в Seq панель увидит сама.
 		}
 	}
 }
@@ -275,7 +334,7 @@ func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	_ = control.Flush()
 
-	ch, recent, cancel := h.subscribe()
+	sub, recent, cancel := h.subscribe()
 	defer cancel()
 
 	for _, event := range recent {
@@ -286,11 +345,24 @@ func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	_ = control.Flush()
 
+	keepAlive := time.NewTicker(h.keepAlive())
+	defer keepAlive.Stop()
+
 	for {
 		select {
 		case <-r.Context().Done():
 			return
-		case event, ok := <-ch:
+		case <-keepAlive.C:
+			// Комментарий SSE: панель его игнорирует, а запись в сокет
+			// обнаруживает обрыв.
+			if _, err := io.WriteString(w, ": keep-alive\n\n"); err != nil {
+				return
+			}
+
+			if err := control.Flush(); err != nil {
+				return
+			}
+		case event, ok := <-sub.ch:
 			if !ok {
 				return
 			}
@@ -315,6 +387,18 @@ func writeEvent(w http.ResponseWriter, event Event) bool {
 	_, err = fmt.Fprintf(w, "event: %s\ndata: %s\n\n", event.Topic, body)
 
 	return err == nil
+}
+
+// keepAlive отдаёт период поддержки соединения; ноль означает значение по
+// умолчанию, чтобы собранный без него Hub не слал комментарии непрерывно.
+func (h *Hub) keepAlive() time.Duration {
+	const fallback = 20 * time.Second
+
+	if h.opts.KeepAlive <= 0 {
+		return fallback
+	}
+
+	return h.opts.KeepAlive
 }
 
 // supportsFlush отвечает, доберётся ли контроллер до writer со сбросом. Обход
@@ -352,10 +436,8 @@ func sleep(ctx context.Context, d time.Duration) bool {
 func lines(r *bufio.Reader, sink func(json.RawMessage)) error {
 	for {
 		line, err := r.ReadBytes('\n')
-		if len(line) > 0 {
-			if trimmed := json.RawMessage(trimSpace(line)); len(trimmed) > 0 {
-				sink(trimmed)
-			}
+		if trimmed := trimSpace(line); len(trimmed) > 0 {
+			sink(json.RawMessage(trimmed))
 		}
 
 		if err != nil {
