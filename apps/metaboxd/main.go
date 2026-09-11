@@ -115,11 +115,23 @@ func run(log *slog.Logger, s settings) error {
 		log.Warn("версия sing-box не прочитана", "err", err)
 	}
 
+	// Отсутствие прокси не останавливает демон: панель обязана открываться
+	// и без рантайма (NFR-1), просто с деградировавшими экранами.
+	var clashHandler http.Handler
+
+	clash, err := clashapi.NewProxy(configSettings(store), httpapi.ProxyError(log))
+	if err != nil {
+		log.Warn("прокси Clash API не собран", "err", err)
+	} else {
+		clashHandler = clash
+	}
+
 	api := httpapi.NewServer(manager, store, log, httpapi.Options{
 		Version:        version.Version,
 		SingboxVersion: singboxVersion,
 		AllowedOrigin:  s.allowedOrigin,
 		SPA:            spa,
+		Clash:          clashHandler,
 		ConfigPath:     store.Path(),
 	})
 
@@ -161,6 +173,20 @@ func run(log *slog.Logger, s settings) error {
 	log.Info("демон остановлен")
 
 	return <-serveErr
+}
+
+// configSettings читает адрес и секрет контроллера из применённого конфига.
+// Читается на каждый запрос: порт контроллера меняется вместе с конфигом, а
+// кэш отправил бы прокси на адрес, которого уже нет.
+func configSettings(store *config.Store) clashapi.Resolver {
+	return func(ctx context.Context) (clashapi.Settings, error) {
+		data, err := store.Read(ctx)
+		if err != nil {
+			return clashapi.Settings{}, err
+		}
+
+		return clashapi.Read(data)
+	}
 }
 
 // build собирает граф зависимостей. Отдельной функцией, чтобы run занимался

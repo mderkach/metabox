@@ -1,8 +1,9 @@
-BIN     := dist/metaboxd
-VERSION ?= dev
-LDFLAGS := -s -w -X metabox/internal/version.Version=$(VERSION)
+BIN        := dist/metaboxd
+DEVICE_BIN := dist/metaboxd-linux-arm64
+VERSION    ?= dev
+LDFLAGS    := -s -w -X metabox/internal/version.Version=$(VERSION)
 
-.PHONY: all schema web daemon daemon-target dev dev-mock dev-mock-missing test test-schemagen lint hooks clean up down sh target-sh apply-check stand-reset
+.PHONY: all schema web embed daemon daemon-device daemon-target dev dev-mock dev-mock-missing test test-schemagen lint hooks clean up down sh target-sh apply-check stand-reset
 
 all: daemon
 
@@ -29,12 +30,21 @@ web:
 # собиралась и тестировалась без фронта.
 EMBED_DIR := apps/metaboxd/internal/webui/static
 
-# Build the daemon; the SPA is built first because it gets embedded.
-# BIN is relative to the repository root, so the build runs from there.
-daemon: web
+embed:
 	find $(EMBED_DIR) -mindepth 1 ! -name .gitkeep -delete
 	cp -R apps/web/dist/. $(EMBED_DIR)/
+
+# Build the daemon; the SPA is built first because it gets embedded.
+# BIN is relative to the repository root, so the build runs from there.
+daemon: web embed
 	cd apps/metaboxd && go build -ldflags "$(LDFLAGS)" -o ../../$(BIN) .
+
+# Сборка под целевое устройство: OpenWrt на aarch64 (раздел 9 PRD). CGO
+# выключен, иначе бинарь привяжется к libc сборочной машины и на роутере
+# не запустится.
+daemon-device: web embed
+	cd apps/metaboxd && GOOS=linux GOARCH=arm64 CGO_ENABLED=0 \
+		go build -ldflags "$(LDFLAGS)" -o ../../$(DEVICE_BIN) .
 
 # Run the SPA dev server.
 dev:

@@ -10,6 +10,7 @@ import (
 	"net/http"
 
 	"metabox/internal/apply"
+	"metabox/internal/clashapi"
 )
 
 // maxConfigBytes — потолок на тело запроса. Конфиг приходит байтами, и без
@@ -45,6 +46,10 @@ type Options struct {
 	// SPA раздаёт встроенный интерфейс. nil означает, что бинарь собран без
 	// фронта: API продолжает работать, а панель объясняет, чего не хватает.
 	SPA http.Handler
+	// Clash проксирует рантайм sing-box под веткой clashapi.Prefix. nil
+	// означает, что прокси не собран: панель откроется, а экраны рантайма
+	// деградируют (NFR-1).
+	Clash http.Handler
 	// ConfigPath — путь файла, которым владеет демон. Панель показывает его
 	// как факт об устройстве, а задаётся он флагами `-config-dir` и
 	// `-config-name`: без этого поля интерфейс показывал бы значение по
@@ -61,6 +66,7 @@ type Server struct {
 	singboxVersion string
 	allowedOrigin  string
 	spa            http.Handler
+	clash          http.Handler
 	configPath     string
 	handler        http.Handler
 }
@@ -76,6 +82,7 @@ func NewServer(applier Applier, reader ConfigReader, log *slog.Logger, opts Opti
 		singboxVersion: opts.SingboxVersion,
 		allowedOrigin:  opts.AllowedOrigin,
 		spa:            opts.SPA,
+		clash:          opts.Clash,
 		configPath:     opts.ConfigPath,
 	}
 	s.handler = s.routes()
@@ -97,6 +104,11 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("POST /api/apply", s.handleApply)
 	mux.HandleFunc("GET /api/apply/{id}", s.handleApplyState)
 	mux.HandleFunc("POST /api/apply/{id}/confirm", s.handleApplyConfirm)
+
+	if s.clash != nil {
+		mux.Handle(clashapi.Prefix+"/", s.clash)
+	}
+
 	mux.HandleFunc("/api/", s.handleAPINotFound)
 	mux.Handle("/", s.spaHandler())
 

@@ -88,3 +88,23 @@ func statusFor(err error) (status int, code string) {
 		return http.StatusInternalServerError, "internal"
 	}
 }
+
+// ProxyError отдаёт отказ прокси в формате демона. Причину наружу не пускаем:
+// в ней адрес контроллера и текст ошибки транспорта. Экран рантайма обязан
+// увидеть отказ, а не HTML от net/http (NFR-1).
+func ProxyError(log *slog.Logger) func(w http.ResponseWriter, r *http.Request, err error) {
+	return func(w http.ResponseWriter, r *http.Request, err error) {
+		if errors.Is(err, context.Canceled) {
+			log.Debug("поток закрыт клиентом", "path", r.URL.Path)
+
+			return
+		}
+
+		log.Warn("рантайм sing-box недоступен", "path", r.URL.Path, "err", err)
+
+		writeJSON(log, w, http.StatusBadGateway, APIError{
+			Code:    "runtime_unavailable",
+			Message: "рантайм sing-box недоступен",
+		})
+	}
+}
