@@ -3,7 +3,8 @@ import type { ClashConfigs, ClashVersion, ServiceState } from '../api/Daemon.dto
 
 /** Демон отвечает и применений в работе нет: поле `transaction` пустое. */
 export const DAEMON_STATUS_FIXTURE: DaemonStatus = {
-  version: '1.13.18-extended-2.6.5',
+  version: 'dev',
+  singbox_version: '1.14.0-extended-2.7.1',
   config_path: '/etc/sing-box/config.json',
 };
 
@@ -12,7 +13,7 @@ export const DAEMON_STATUS_FIXTURE: DaemonStatus = {
 export const CLASH_VERSION_FIXTURE: ClashVersion = {
   meta: true,
   premium: true,
-  version: 'sing-box 1.13.18-extended-2.6.5',
+  version: 'sing-box 1.14.0-extended-2.7.1',
 };
 
 export const CLASH_CONFIGS_FIXTURE: ClashConfigs = {
@@ -31,16 +32,16 @@ export const MEMORY_SAMPLES = [0, 47_923_200, 51_380_224];
 export const SERVICE_RUNNING_FIXTURE: ServiceState = {
   status: 'running',
   uptime: 253_091,
-  binary: '1.13.18-extended-2.6.5',
-  schema: '1.13.18-extended-2.6.5',
+  binary: '1.14.0-extended-2.7.1',
+  schema: '1.14.0-extended-2.7.1',
 };
 
 /** Сервис упал: вывод procd показывается дословно, разбирать его нельзя. */
 export const SERVICE_FAILED_FIXTURE: ServiceState = {
   status: 'failed',
   uptime: 0,
-  binary: '1.13.18-extended-2.6.5',
-  schema: '1.13.18-extended-2.6.5',
+  binary: '1.14.0-extended-2.7.1',
+  schema: '1.14.0-extended-2.7.1',
   lastError:
     'FATAL[0000] start service: initialize outbound/urltest[proxy]: provider sub-nl not found\nprocd: instance sing-box::instance1 exit code 1, restart in 5s',
 };
@@ -50,5 +51,5 @@ export const SERVICE_DRIFT_FIXTURE: ServiceState = {
   status: 'running',
   uptime: 120,
   binary: '1.13.19-extended-2.6.6',
-  schema: '1.13.18-extended-2.6.5',
+  schema: '1.14.0-extended-2.7.1',
 };

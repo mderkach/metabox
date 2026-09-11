@@ -28,7 +28,10 @@ export interface ApplyTransaction {
 
 /** Ответ `GET /api/status`. */
 export interface DaemonStatus {
+  /** Версия демона, а не sing-box: бинарь отдаётся полем `singbox_version`. */
   version: string;
+  /** Версия sing-box на устройстве; отсутствует, если демон её не прочитал. */
+  singbox_version?: string;
   /** Файл, которым владеет демон: путь задаётся флагами его запуска. */
   config_path?: string;
   transaction?: ApplyTransaction;

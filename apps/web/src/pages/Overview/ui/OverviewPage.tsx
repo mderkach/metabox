@@ -3,6 +3,8 @@ import type { ReactNode } from 'react';
 import { ConnectionState, useConnectionCounts, useConnectionStream } from '@entities/Connection';
 import {
   RuntimeState,
+  SCHEMA_VERSION,
+  matchesSchemaVersion,
   useClashConfigs,
   useConfigPath,
   useDaemonStatus,
@@ -10,7 +12,7 @@ import {
   useTrafficNow,
 } from '@entities/Daemon';
 import { formatBytes, formatRate } from '@shared/lib/format';
-import { Badge, Card, CardContent, CardHeader } from '@shared/ui';
+import { Alert, AlertDescription, AlertTitle, Badge, Card, CardContent, CardHeader } from '@shared/ui';
 import { DaemonService } from '@widgets/Daemon/DaemonService';
 import { DaemonMemory, DaemonTraffic } from '@widgets/Daemon/DaemonTraffic';
 
@@ -27,6 +29,7 @@ export function OverviewPage() {
   const memoryHistory = RuntimeState.use.memory();
   const totals = ConnectionState.use.totals();
   const counts = useConnectionCounts();
+  const singboxVersion = status.data?.singbox_version;
 
   return (
     <>
@@ -85,11 +88,23 @@ export function OverviewPage() {
 
           <CardContent>
             <dl>
-              <Row label='Бинарь' value={status.data?.version ?? '—'} mono />
+              <Row label='Демон' value={status.data?.version ?? '—'} mono />
+              <Row label='sing-box' value={singboxVersion ?? '—'} mono />
+              <Row label='Схема форм' value={SCHEMA_VERSION} mono />
               <Row label='Конфиг' value={configPath} mono />
               <Row label='Режим Clash API' value={clash.data?.mode ?? '—'} />
               <Row label='Соединений закрыто панелью' value={String(counts.closed)} />
             </dl>
+
+            {!matchesSchemaVersion(singboxVersion) && (
+              <Alert variant='destructive' className='mt-3'>
+                <AlertTitle>Версия sing-box разошлась со схемой форм</AlertTitle>
+                <AlertDescription>
+                  Формы собраны под {SCHEMA_VERSION}, на устройстве {singboxVersion}. Поле, которого нет в этой версии
+                  бинаря, отклонит `sing-box check` при Apply.
+                </AlertDescription>
+              </Alert>
+            )}
           </CardContent>
         </Card>
       </div>

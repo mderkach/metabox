@@ -5,15 +5,15 @@ import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { ConnectionStore, makeConnectionsSnapshot } from '@entities/Connection';
-import { CLASH_CONFIGS_FIXTURE, RuntimeStore } from '@entities/Daemon';
+import { CLASH_CONFIGS_FIXTURE, RuntimeStore, SCHEMA_VERSION } from '@entities/Daemon';
 import { API_ENDPOINT } from '@shared/api';
 
 import { OverviewPage } from '../ui/OverviewPage';
 
-function serveStatus(configPath?: string) {
+function serveStatus(configPath?: string, singboxVersion = SCHEMA_VERSION) {
   server.use(
     http.get(API_ENDPOINT.status(), () =>
-      HttpResponse.json({ version: '1.13.18-extended-2.6.5', config_path: configPath })
+      HttpResponse.json({ version: 'dev', singbox_version: singboxVersion, config_path: configPath })
     ),
     http.get(API_ENDPOINT.clashConfigs(), () => HttpResponse.json(CLASH_CONFIGS_FIXTURE))
   );
@@ -98,5 +98,25 @@ describe('экран обзора', () => {
     renderWithQuery(<OverviewPage />);
 
     expect(await screen.findByText('/etc/sing-box/config.json')).toBeInTheDocument();
+  });
+
+  // AC-28.
+  it('предупреждает, когда версия бинаря разошлась со схемой форм', async () => {
+    serveStatus(undefined, '1.13.18-extended-2.6.5');
+
+    renderWithQuery(<OverviewPage />);
+
+    const alert = await screen.findByRole('alert');
+
+    expect(within(alert).getByText('Версия sing-box разошлась со схемой форм')).toBeInTheDocument();
+    expect(alert).toHaveTextContent(SCHEMA_VERSION);
+    expect(alert).toHaveTextContent('1.13.18-extended-2.6.5');
+  });
+
+  it('на совпадающей версии предупреждения нет', async () => {
+    renderWithQuery(<OverviewPage />);
+
+    expect(await screen.findByText('демон отвечает')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });

@@ -11,7 +11,9 @@ import { Router } from '../Router';
 
 function serveDaemon() {
   server.use(
-    http.get(API_ENDPOINT.status(), () => HttpResponse.json({ version: '1.13.18-extended-2.6.5' })),
+    http.get(API_ENDPOINT.status(), () =>
+      HttpResponse.json({ version: 'dev', singbox_version: '1.14.0-extended-2.7.1' })
+    ),
     http.get(API_ENDPOINT.config(), () => HttpResponse.text(MINIMAL_CONFIG))
   );
 }
