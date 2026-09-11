@@ -82,8 +82,10 @@ var (
 // у потребителя, и содержит только то, что нужно применению.
 type Store interface {
 	Sum(ctx context.Context) (string, error)
+	Read(ctx context.Context) ([]byte, error)
 	Write(ctx context.Context, data []byte) error
 	Backup(ctx context.Context) error
+	SaveVersion(ctx context.Context, data []byte) error
 	Restore(ctx context.Context) error
 	StageCandidate(ctx context.Context, dst string, data []byte) error
 	ReadState(ctx context.Context) ([]byte, error)

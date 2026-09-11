@@ -79,6 +79,19 @@ func (s *fakeStore) Write(_ context.Context, data []byte) error {
 	return nil
 }
 
+func (s *fakeStore) Read(context.Context) ([]byte, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.written, nil
+}
+
+func (s *fakeStore) SaveVersion(_ context.Context, _ []byte) error {
+	s.rec.add("SaveVersion")
+
+	return nil
+}
+
 func (s *fakeStore) Backup(context.Context) error {
 	s.rec.add("Backup")
 
@@ -244,7 +257,11 @@ func TestApplyFollowsProtocolOrder(t *testing.T) {
 		t.Errorf("окно %v, ожидали %v", got, window)
 	}
 
-	want := []string{"StageCandidate", "Check", "WriteState", "Backup", "Write", "Restart", "Wait", "WriteState"}
+	// SaveVersion стоит между бэкапом и записью: история хранит то, что было
+	// применено до этого цикла (AC-15).
+	want := []string{
+		"StageCandidate", "Check", "WriteState", "Backup", "SaveVersion", "Write", "Restart", "Wait", "WriteState",
+	}
 	if got := h.rec.snapshot(); !slices.Equal(got, want) {
 		t.Errorf("порядок шагов %v, ожидали %v", got, want)
 	}

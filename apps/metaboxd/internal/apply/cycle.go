@@ -88,6 +88,14 @@ func (m *Manager) apply(ctx context.Context, data []byte, settings clashapi.Sett
 		m.log.Warn("бэкапа нет: конфига на устройстве ещё не было")
 	}
 
+	// История надстроена над бэкапом и к откату отношения не имеет: её отказ
+	// применение не останавливает (AC-15).
+	if previous, err := m.store.Read(ctx); err == nil {
+		if err := m.store.SaveVersion(ctx, previous); err != nil {
+			m.log.Warn("версия не сохранена в историю", "err", err)
+		}
+	}
+
 	if err := m.store.Write(ctx, data); err != nil {
 		return fmt.Errorf("запись конфига: %w", err)
 	}
