@@ -5,7 +5,10 @@ import { expect } from 'vitest';
 type User = ReturnType<typeof userEvent.setup>;
 
 /** Запас нажатий на случай, если гасящее событие пришло раньше отложенного слушателя. */
-const OPEN_ATTEMPTS = 3;
+const OPEN_ATTEMPTS = 5;
+
+/** Сколько ждать опций внутри одной попытки открытия. */
+const OPEN_TIMEOUT_MS = 250;
 
 /**
  * Открывает выпадающий список и выбирает опцию по её видимому тексту.
@@ -30,6 +33,12 @@ export async function selectOption(user: User, trigger: HTMLElement, option: str
 
     document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
     await user.click(trigger);
+
+    // Результат попытки дожидается здесь, а не общим ожиданием после цикла:
+    // слушатель, не успевший погаснуть, закрывает список тем же кликом, каким
+    // он открывается, и без ожидания попытки совпадают по фазе — каждая
+    // открывает список и тут же его теряет.
+    await waitForOptions();
   }
 
   await waitFor(() => {
@@ -56,4 +65,18 @@ export async function selectOption(user: User, trigger: HTMLElement, option: str
   expect(target).toHaveAttribute('data-highlighted');
 
   await user.keyboard('{Enter}');
+}
+
+/** Ждёт опций; не дождавшись, отдаёт управление следующей попытке. */
+async function waitForOptions(): Promise<void> {
+  try {
+    await waitFor(
+      () => {
+        expect(screen.getAllByRole('option').length).toBeGreaterThan(0);
+      },
+      { timeout: OPEN_TIMEOUT_MS }
+    );
+  } catch {
+    // Список не открылся — решает условие цикла.
+  }
 }
