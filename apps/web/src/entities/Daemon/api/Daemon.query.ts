@@ -1,12 +1,18 @@
-import { queryOptions, useQuery } from '@tanstack/react-query';
+import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { CACHE_TIME, POLL_INTERVAL } from '@shared/api';
 
-import { getDaemonStatus } from './Daemon.api';
+import { getClashConfigs, getDaemonStatus, getServiceState, runServiceAction } from './Daemon.api';
+import type { ServiceAction } from './Daemon.dto';
+
+/** Значение флагов демона по умолчанию: то же, что в `main.go`. */
+const DEFAULT_CONFIG_PATH = '/etc/sing-box/config.json';
 
 export const DAEMON_QUERY = {
   all: ['daemon'] as const,
   status: () => [...DAEMON_QUERY.all, 'status'] as const,
+  service: () => [...DAEMON_QUERY.all, 'service'] as const,
+  clashConfigs: () => [...DAEMON_QUERY.all, 'clash-configs'] as const,
 } as const;
 
 export function getDaemonStatusOptions() {
@@ -29,4 +35,63 @@ export function getDaemonStatusOptions() {
  */
 export function useDaemonStatus() {
   return useQuery(getDaemonStatusOptions());
+}
+
+/**
+ * Путь конфига на устройстве. Демон, запущенный с другими `-config-dir` и
+ * `-config-name`, сообщает свой; значение по умолчанию остаётся на случай
+ * сборки демона, которая поля ещё не отдаёт.
+ */
+export function useConfigPath(): string {
+  const status = useDaemonStatus();
+
+  return status.data?.config_path ?? DEFAULT_CONFIG_PATH;
+}
+
+export function getServiceStateOptions() {
+  return queryOptions({
+    queryKey: DAEMON_QUERY.service(),
+    queryFn: async ({ signal }) => getServiceState({ signal }),
+    staleTime: CACHE_TIME.Second,
+    gcTime: CACHE_TIME.Minute,
+    refetchInterval: POLL_INTERVAL.Status,
+    meta: { showError: false },
+  });
+}
+
+/**
+ * Состояние сервиса. Отдельный запрос от `GET /api/status`: остановленный
+ * sing-box — данные экрана, а молчание демона — отказ панели, и смешивать их
+ * в одном состоянии нельзя (NFR-1).
+ */
+export function useServiceState() {
+  return useQuery(getServiceStateOptions());
+}
+
+export function useServiceAction() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (action: ServiceAction) => runServiceAction(action),
+    meta: { showError: true, errorMessageKey: 'service.action.failed' },
+    onSuccess: (state) => {
+      queryClient.setQueryData(DAEMON_QUERY.service(), state);
+    },
+    onSettled: async () => queryClient.invalidateQueries({ queryKey: DAEMON_QUERY.all }),
+  });
+}
+
+export function getClashConfigsOptions() {
+  return queryOptions({
+    queryKey: DAEMON_QUERY.clashConfigs(),
+    queryFn: async ({ signal }) => getClashConfigs({ signal }),
+    staleTime: CACHE_TIME.Minute,
+    gcTime: CACHE_TIME.Hour,
+    meta: { showError: false },
+  });
+}
+
+/** Режим Clash API: правило `clash_mode` в конфиге сверяется именно с ним. */
+export function useClashConfigs() {
+  return useQuery(getClashConfigsOptions());
 }

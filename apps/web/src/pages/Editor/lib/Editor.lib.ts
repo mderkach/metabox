@@ -1,16 +1,49 @@
 import { useEffect, useMemo } from 'react';
 
-import { ConfigDocumentState, parseConfig, useConfig, useConfigDirty } from '@entities/Config';
-import { toFinalTarget, toRuleRows, type RuleRow } from '@entities/Rule';
+import {
+  ConfigDocumentState,
+  findValue,
+  parseConfig,
+  useConfig,
+  useConfigDirty,
+  useConfigText,
+} from '@entities/Config';
+import { toRuleRowsFromNodes, type RuleRow } from '@entities/Rule';
 import type { Config } from '@shared/api/generated';
+
+/** Теги аутбаундов конфига: из них выбирается исход правила. */
+function toOutboundTags(config: Config | null): string[] {
+  const outbounds: unknown = config?.outbounds;
+
+  if (!Array.isArray(outbounds)) {
+    return [];
+  }
+
+  const tags: string[] = [];
+
+  for (const outbound of outbounds) {
+    if (typeof outbound !== 'object' || outbound === null) {
+      continue;
+    }
+
+    const tag: unknown = Reflect.get(outbound, 'tag');
+
+    if (typeof tag === 'string' && tag.length > 0) {
+      tags.push(tag);
+    }
+  }
+
+  return tags;
+}
 
 export interface RouteEditorState {
   isPending: boolean;
   issues: string[];
   config: Config | null;
   rules: RuleRow[];
-  /** `null` — `route.final` не задан, решает последнее правило без условий. */
-  final: string | null;
+  outbounds: string[];
+  /** Узлы правил как есть: панель правит текст узла, а не разобранную модель. */
+  nodes: unknown[];
   /** Экран показывает черновик, а не файл с устройства. */
   isDirty: boolean;
 }
@@ -28,9 +61,12 @@ export function useRouteEditor(): RouteEditorState {
   const isDirty = useConfigDirty();
   const text = config.data?.text ?? null;
 
-  useEffect(() => {
-    if (text !== null) load(text);
-  }, [text, load]);
+  useEffect(
+    function loadDocument() {
+      if (text !== null) load(text);
+    },
+    [text, load]
+  );
 
   // Применённый конфиг разбирает `select` запроса, черновик — здесь: разбирать
   // один и тот же текст дважды на каждую правку незачем.
@@ -38,14 +74,25 @@ export function useRouteEditor(): RouteEditorState {
   const shown = edited ?? config.data ?? null;
   const document = shown?.config ?? null;
 
-  const rules = useMemo(() => toRuleRows(document), [document]);
+  // Узлы читаются из текста, а не из разобранной модели: правило, которое
+  // схема не приняла, обязано остаться видимым в списке (UX-3).
+  const shownText = useConfigText() ?? text;
+
+  const nodes = useMemo(() => {
+    const value: unknown = shownText === null ? undefined : findValue(shownText, ['route', 'rules']);
+
+    return Array.isArray(value) ? (value as unknown[]) : [];
+  }, [shownText]);
+
+  const rules = useMemo(() => toRuleRowsFromNodes(nodes), [nodes]);
 
   return {
     isPending: config.isPending,
     issues: shown?.issues ?? [],
     config: document,
     rules,
-    final: toFinalTarget(document),
+    outbounds: toOutboundTags(document),
+    nodes,
     isDirty,
   };
 }

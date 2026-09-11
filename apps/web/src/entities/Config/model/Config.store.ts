@@ -9,12 +9,23 @@ export interface ConfigDocumentState {
   applied: string | null;
   /** Правки пользователя поверх `applied`. `null` — правок не было. */
   draft: string | null;
+  /**
+   * Счётчик обновлений, пришедших не от пользователя: загрузка с устройства и
+   * отмена правок. По нему текстовый редактор понимает, что его содержимое
+   * устарело; собственные правки счётчик не двигают, иначе поле пересоздавалось
+   * бы на каждый набранный символ.
+   */
+  revision: number;
   load: (text: string) => void;
+  /** Замена текста целиком: режим правки всего конфига руками (AC-24). */
+  replace: (text: string) => void;
   edit: (path: JSONPath, value: unknown) => void;
   remove: (path: JSONPath) => void;
   insert: (path: JSONPath, value: unknown) => void;
   move: (path: JSONPath, from: number, to: number) => void;
   discard: () => void;
+  /** Забыть и файл, и черновик: панель перечитывает конфиг с устройства. */
+  reset: () => void;
   /** Текст, который увидит пользователь и который уйдёт в Apply. */
   current: () => string | null;
   isDirty: () => boolean;
@@ -38,10 +49,22 @@ const ConfigDocumentStateProto = stateCreator<ConfigDocumentState>((set, get) =>
   return {
     applied: null,
     draft: null,
+    revision: 0,
 
     load: (text) => {
       set((state) => {
+        if (state.applied === text) return;
+
         state.applied = text;
+        state.revision += 1;
+      });
+    },
+
+    replace: (text) => {
+      set((state) => {
+        // Черновик равен применённому тексту — правок нет, и держать его
+        // отдельно значило бы показывать бейдж «черновик» без причины.
+        state.draft = text === state.applied ? null : text;
       });
     },
 
@@ -73,7 +96,18 @@ const ConfigDocumentStateProto = stateCreator<ConfigDocumentState>((set, get) =>
 
     discard: () => {
       set((state) => {
+        if (state.draft === null) return;
+
         state.draft = null;
+        state.revision += 1;
+      });
+    },
+
+    reset: () => {
+      set((state) => {
+        state.applied = null;
+        state.draft = null;
+        state.revision += 1;
       });
     },
 
@@ -96,6 +130,10 @@ export const ConfigDocumentState = createReactSelectors(ConfigDocumentStateProto
  * правило документа, и второй его копии быть не должно. Сгенерированный
  * селектор тут не годится — он вернул бы саму функцию, а не результат.
  */
+export function useConfigText(): string | null {
+  return useStore(ConfigDocumentStateProto, (state) => state.current());
+}
+
 export function useConfigDirty(): boolean {
   return useStore(ConfigDocumentStateProto, (state) => state.isDirty());
 }

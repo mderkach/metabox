@@ -113,6 +113,18 @@ export class ApiClient {
 
     return response.data;
   }
+
+  async put<T, P = unknown>(url: string, data?: P, config?: AxiosRequestConfig): Promise<T> {
+    const response = await this.http.put<T>(url, data, config);
+
+    return response.data;
+  }
+
+  async delete<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
+    const response = await this.http.delete<T>(url, config);
+
+    return response.data;
+  }
 }
 
 export const ApiClientInstance = new ApiClient();

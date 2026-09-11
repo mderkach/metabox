@@ -1,16 +1,30 @@
 import { DefaultRuleBaseSchema } from '@shared/api/generated';
 
 /**
- * Поле, которое есть у каждого правила, но условием не является: оно называет
- * ветку union, а не то, на что правило срабатывает.
+ * Поля, которые есть у правила, но условием не являются: `type` называет ветку
+ * union, `invert` переворачивает результат уже собранных условий.
  */
-const RULE_TYPE_KEY = 'type';
+const NOT_MATCHER_KEYS = new Set(['type', 'invert']);
 
 /**
  * Имена полей-условий. Берутся из генерируемой схемы, а не переписываются
  * руками: база правила в схеме форка — это ровно набор условий, действия
  * добавляются ветками поверх неё. Новый матчер в форке появится здесь сам.
+ *
+ * Логическое правило под это не подпадает: его условия лежат во вложенных
+ * `rules`, которых в базе нет, — разбирает их `Rule.mapper`.
  */
 export const RULE_MATCHER_KEYS: readonly string[] = Object.keys(DefaultRuleBaseSchema.shape).filter(
-  (key) => key !== RULE_TYPE_KEY
+  (key) => !NOT_MATCHER_KEYS.has(key)
 );
+
+/**
+ * Поля, уточняющие действие. Показываются рядом с ним: `reject` без `method`
+ * и `reject` с `method: drop` ведут себя по-разному, а в списке выглядели бы
+ * одинаково.
+ */
+export const RULE_ACTION_FIELDS: Readonly<Partial<Record<string, readonly string[]>>> = {
+  reject: ['method'],
+  sniff: ['sniffer', 'timeout'],
+  resolve: ['server', 'strategy'],
+};

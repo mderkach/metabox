@@ -1,10 +1,13 @@
 import type { Config } from '@shared/api/generated';
 
-import { RULE_MATCHER_KEYS } from './Rule.constants';
-import { RULE_TARGET, type RuleMatcher, type RuleRow } from './Rule.model';
+import { RULE_ACTION_FIELDS, RULE_MATCHER_KEYS } from './Rule.constants';
+import { RULE_TARGET, type RuleBranch, type RuleGroup, type RuleMatcher, type RuleRow } from './Rule.model';
 
 /** Действие по умолчанию: правило без `action` маршрутизирует. */
 const DEFAULT_ACTION = 'route';
+
+/** Значение ветки union у логического правила. */
+const LOGICAL_TYPE = 'logical';
 
 function toValues(raw: unknown): string[] {
   if (Array.isArray(raw)) {
@@ -30,6 +33,37 @@ function toMatchers(rule: object): RuleMatcher[] {
   return matchers;
 }
 
+function isLogical(rule: object): boolean {
+  return Reflect.get(rule, 'type') === LOGICAL_TYPE;
+}
+
+/**
+ * Условия логического правила лежат во вложенных `rules`, а не в самом
+ * правиле. Без разбора вложенности такое правило выглядело бы как правило без
+ * условий, то есть как перехватывающее весь трафик, — и пользователь решил бы,
+ * что всё, что ниже, не выполняется.
+ */
+function toGroup(rule: object): RuleGroup | null {
+  if (!isLogical(rule)) {
+    return null;
+  }
+
+  const nested: unknown = Reflect.get(rule, 'rules');
+  const children: RuleBranch[] = Array.isArray(nested)
+    ? nested.filter((child): child is object => typeof child === 'object' && child !== null).map(toBranch)
+    : [];
+
+  return {
+    mode: String(Reflect.get(rule, 'mode') ?? 'and'),
+    invert: Reflect.get(rule, 'invert') === true,
+    children,
+  };
+}
+
+function toBranch(rule: object): RuleBranch {
+  return { matchers: toMatchers(rule), group: toGroup(rule) };
+}
+
 function toTarget(rule: object): Pick<RuleRow, 'target' | 'targetKind'> {
   const outbound: unknown = Reflect.get(rule, 'outbound');
 
@@ -45,13 +79,31 @@ function toTarget(rule: object): Pick<RuleRow, 'target' | 'targetKind'> {
   };
 }
 
-/**
- * Куда уходит трафик, не подошедший ни под одно правило.
- *
- * `null` — `route.final` не задан: тогда решает последнее правило без условий.
- */
-export function toFinalTarget(config: Config | null): string | null {
-  return config?.route?.final ?? null;
+function toTargetDetail(rule: object, target: string): string | null {
+  const fields = RULE_ACTION_FIELDS[target];
+
+  if (fields === undefined) {
+    return null;
+  }
+
+  const parts: string[] = [];
+
+  for (const field of fields) {
+    const raw: unknown = Reflect.get(rule, field);
+
+    if (raw !== undefined && raw !== null) {
+      parts.push(`${field}: ${toValues(raw).join(', ')}`);
+    }
+  }
+
+  return parts.length > 0 ? parts.join(' · ') : null;
+}
+
+function toSearchText(branch: RuleBranch): string[] {
+  const own = branch.matchers.flatMap((matcher) => [matcher.key, ...matcher.values]);
+  const nested = branch.group?.children.flatMap(toSearchText) ?? [];
+
+  return [...own, ...nested];
 }
 
 /**
@@ -61,23 +113,42 @@ export function toFinalTarget(config: Config | null): string | null {
  * первое подходящее правило, а не самое точное.
  */
 export function toRuleRows(config: Config | null): RuleRow[] {
-  const rules = config?.route?.rules;
+  return toRuleRowsFromNodes(config?.route?.rules ?? []);
+}
 
-  if (rules === undefined) {
-    return [];
-  }
+/**
+ * То же по узлам, прочитанным из текста файла.
+ *
+ * Экран правил обязан открываться и тогда, когда схема не приняла конфиг
+ * целиком: одно незнакомое правило иначе спрятало бы весь список, а
+ * пользователю нужно как раз найти это правило (UX-3, AC-25).
+ */
+export function toRuleRowsFromNodes(nodes: readonly unknown[]): RuleRow[] {
+  const rows: RuleRow[] = [];
 
-  return rules.map((rule, position) => {
-    const matchers = toMatchers(rule);
-    const target = toTarget(rule);
+  for (const [position, node] of nodes.entries()) {
+    // Позиция берётся в исходном массиве, а не в отфильтрованном: по ней
+    // правка адресует узел в файле (`route.rules[index - 1]`), и пропущенный
+    // не-объект сдвинул бы все следующие правки на чужие узлы.
+    if (typeof node !== 'object' || node === null) {
+      continue;
+    }
 
-    return {
+    const branch = toBranch(node);
+    const target = toTarget(node);
+
+    rows.push({
       id: String(position),
       index: position + 1,
-      matchers,
-      isCatchAll: matchers.length === 0,
-      searchText: [...matchers.flatMap((matcher) => [matcher.key, ...matcher.values]), target.target].join(' '),
+      matchers: branch.matchers,
+      group: branch.group,
+      invert: Reflect.get(node, 'invert') === true,
+      targetDetail: toTargetDetail(node, target.target),
+      isCatchAll: branch.matchers.length === 0 && branch.group === null,
+      searchText: [...toSearchText(branch), target.target].join(' '),
       ...target,
-    };
-  });
+    });
+  }
+
+  return rows;
 }

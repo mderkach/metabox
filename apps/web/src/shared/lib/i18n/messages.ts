@@ -13,7 +13,13 @@ export const MESSAGES = {
   'apply.start.accepted': 'Конфиг принят, идёт применение',
   'apply.state.failed': 'Не удалось узнать ход применения',
   'config.draft.fetchFailed': 'Не удалось загрузить конфиг',
+  'connection.close.failed': 'Закрыть соединение не удалось',
   'error.unknown': 'Что-то пошло не так',
+  'proxy.delay.failed': 'Проверить задержку не удалось',
+  'proxy.list.fetchFailed': 'Не удалось получить список прокси',
+  'proxy.providers.fetchFailed': 'Не удалось получить подписки',
+  'proxy.select.failed': 'Переключить узел не удалось',
+  'service.action.failed': 'Команда сервису не прошла',
   'status.fetchFailed': 'Демон не отвечает',
 } as const;
 

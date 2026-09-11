@@ -1,6 +1,54 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
-import { afterEach } from 'vitest';
+import { enableMapSet } from 'immer';
+import { afterAll, afterEach, beforeAll } from 'vitest';
 
-// Vitest globals are off, so RTL does not register its own cleanup.
+import { server } from './server';
+
+// Тесты поднимают сторы без входа приложения, а `Map` в состоянии требует
+// плагина immer — там он включается в `app/main.tsx`.
+enableMapSet();
+
+// Глобалы vitest выключены, поэтому Testing Library не регистрирует свою очистку.
 afterEach(cleanup);
+
+/**
+ * ResizeObserver в jsdom нет вовсе, а виртуализатор списков без него не
+ * подписывается на изменение окна прокрутки. Заглушка сообщает об изменении
+ * сразу, а размеры тест подставляет через `mockVirtualSizes`.
+ */
+class TestResizeObserver implements ResizeObserver {
+  private readonly callback: ResizeObserverCallback;
+
+  constructor(callback: ResizeObserverCallback) {
+    this.callback = callback;
+  }
+
+  observe(): void {
+    // Пустой список записей: библиотека тогда меряет элемент сама, а тест
+    // подменяет размеры через `mockVirtualSizes`.
+    this.callback([], this);
+  }
+
+  unobserve(): void {
+    // Наблюдение одноразовое: отписывать нечего.
+  }
+
+  disconnect(): void {
+    // Наблюдение одноразовое: отключать нечего.
+  }
+}
+
+globalThis.ResizeObserver = TestResizeObserver;
+
+beforeAll(() => {
+  server.listen({ onUnhandledRequest: 'error' });
+});
+
+afterEach(() => {
+  server.resetHandlers();
+});
+
+afterAll(() => {
+  server.close();
+});

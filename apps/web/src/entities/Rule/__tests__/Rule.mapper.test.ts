@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { Config } from '@shared/api/generated';
 
-import { toRuleRows } from '../model/Rule.mapper';
+import { toRuleRows, toRuleRowsFromNodes } from '../model/Rule.mapper';
 import { RULE_TARGET } from '../model/Rule.model';
 
 function configWithRules(rules: object[]): Config {
@@ -84,5 +84,88 @@ describe('toRuleRows', () => {
     const [row] = toRuleRows(configWithRules([{ domain_suffix: ['rt.ru'], outbound: 'direct' }]));
 
     expect(row.searchText).toBe('domain_suffix rt.ru direct');
+  });
+});
+
+describe('логические правила', () => {
+  it('не считает логическое правило безусловным', () => {
+    const [row] = toRuleRows(
+      configWithRules([
+        {
+          type: 'logical',
+          mode: 'or',
+          rules: [{ port: 853 }, { network: 'udp', port: 443 }],
+          action: 'reject',
+        },
+      ])
+    );
+
+    expect(row.isCatchAll).toBe(false);
+    expect(row.group?.mode).toBe('or');
+    expect(row.group?.children).toHaveLength(2);
+  });
+
+  it('разворачивает вложенность и оставляет условия внутри веток', () => {
+    const [row] = toRuleRows(
+      configWithRules([
+        {
+          type: 'logical',
+          mode: 'and',
+          rules: [
+            { rule_set: ['geoip-cn'] },
+            { type: 'logical', mode: 'or', rules: [{ domain_suffix: ['cn'] }], invert: true },
+          ],
+          outbound: 'direct',
+        },
+      ])
+    );
+
+    expect(row.group?.children[0]?.matchers).toContainEqual({ key: 'rule_set', values: ['geoip-cn'] });
+    expect(row.group?.children[1]?.group?.invert).toBe(true);
+    expect(row.group?.children[1]?.group?.children[0]?.matchers).toContainEqual({
+      key: 'domain_suffix',
+      values: ['cn'],
+    });
+  });
+
+  it('ищет по условиям вложенных веток, а не только по верхнему уровню', () => {
+    const [row] = toRuleRows(
+      configWithRules([{ type: 'logical', mode: 'or', rules: [{ domain_suffix: ['media.example'] }] }])
+    );
+
+    expect(row.searchText).toContain('media.example');
+  });
+});
+
+describe('действия кроме route', () => {
+  it('показывает параметры действия рядом с ним', () => {
+    const rows = toRuleRows(
+      configWithRules([
+        { port: 443, action: 'reject', method: 'drop' },
+        { action: 'sniff', sniffer: ['tls', 'http'] },
+        { port: 53, action: 'hijack-dns' },
+      ])
+    );
+
+    expect(rows[0]?.targetDetail).toBe('method: drop');
+    expect(rows[1]?.targetDetail).toBe('sniffer: tls, http');
+    expect(rows[2]?.targetDetail).toBeNull();
+  });
+
+  it('не путает инверсию с условием', () => {
+    const [row] = toRuleRows(configWithRules([{ rule_set: ['github'], invert: true, outbound: 'direct' }]));
+
+    expect(row.invert).toBe(true);
+    expect(row.matchers).toEqual([{ key: 'rule_set', values: ['github'] }]);
+  });
+  it('нумерует правила по их месту в файле, а не по порядку в списке', () => {
+    // Массив правит человек, и попавший в него не-объект пропускается. Если
+    // считать позицию после пропуска, правка следующего правила ушла бы в
+    // соседний узел файла.
+    const rows = toRuleRowsFromNodes([null, { rule_set: ['github'], outbound: 'proxy' }]);
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.index).toBe(2);
+    expect(rows[0]?.id).toBe('1');
   });
 });

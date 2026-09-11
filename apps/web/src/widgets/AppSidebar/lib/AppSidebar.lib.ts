@@ -2,13 +2,30 @@ import { useCallback, useState } from 'react';
 
 const STORAGE_KEY = 'metabox.sidebar.collapsed';
 
+/** Ширина, ниже которой развёрнутая панель съедает половину экрана. */
+const NARROW_SCREEN = '(max-width: 48rem)';
+
+/**
+ * Выбора не было — решает ширина экрана. В jsdom `matchMedia` нет вовсе,
+ * поэтому наличие функции проверяется, а не предполагается.
+ */
+function prefersCollapsed(): boolean {
+  return typeof globalThis.matchMedia === 'function' && globalThis.matchMedia(NARROW_SCREEN).matches;
+}
+
 /** В приватном окне обращение к хранилищу бросает. */
 function readCollapsed(): boolean {
   try {
-    return globalThis.localStorage.getItem(STORAGE_KEY) === 'true';
+    const stored = globalThis.localStorage.getItem(STORAGE_KEY);
+
+    if (stored !== null) {
+      return stored === 'true';
+    }
   } catch {
-    return false;
+    // Хранилище недоступно — остаётся ширина экрана.
   }
+
+  return prefersCollapsed();
 }
 
 function writeCollapsed(collapsed: boolean) {

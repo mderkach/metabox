@@ -1,47 +1,77 @@
-import { Badge } from '@shared/ui';
-import { AppSidebar } from '@widgets/AppSidebar';
-import { ConfigTabs } from '@widgets/ConfigTabs';
-import { RuleTable } from '@widgets/RuleTable';
+import { Link } from '@tanstack/react-router';
+import { useCallback, useState } from 'react';
+
+import { useConfigPath } from '@entities/Daemon';
+import { RuleSchema } from '@shared/api/generated';
+import { Badge, buttonVariants } from '@shared/ui';
+import { ConfigTabs } from '@widgets/Config/ConfigTabs';
+import { RulePanel } from '@widgets/Rule/RulePanel';
+import { RuleTable } from '@widgets/Rule/RuleTable';
 
 import { useRouteEditor } from '../lib/Editor.lib';
-
-/** Путь к файлу, которым владеет демон (`-config-dir` и `-config-name`). */
-const CONFIG_PATH = '/etc/sing-box/config.json';
 
 /** Сколько замечаний схемы показывать, чтобы они не вытеснили экран. */
 const VISIBLE_ISSUES = 5;
 
 export function EditorPage() {
   const editor = useRouteEditor();
+  const configPath = useConfigPath();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const onSelect = useCallback((id: string) => {
+    setSelectedId((current) => (current === id ? null : id));
+  }, []);
+
+  const onClose = useCallback(() => {
+    setSelectedId(null);
+  }, []);
+
+  const selected = editor.rules.find((rule) => rule.id === selectedId) ?? null;
+  const selectedNode = selected === null ? null : editor.nodes[selected.index - 1];
 
   return (
-    <div className='flex h-full bg-background text-foreground'>
-      <AppSidebar />
+    <>
+      <header className='flex min-h-14 shrink-0 flex-wrap items-baseline gap-x-2.5 gap-y-1 border-b border-border px-4 py-2.5 sm:px-6'>
+        <h1 className='text-base font-medium'>Конфигурация</h1>
+        <p className='font-mono text-xs text-muted-foreground'>{configPath}</p>
+        {editor.isDirty && <Badge variant='secondary'>черновик</Badge>}
+        <span className='grow' />
+        <Link to='/config/raw' className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+          Весь конфиг текстом
+        </Link>
+      </header>
 
-      <div className='flex min-w-0 grow flex-col'>
-        <header className='flex h-14 shrink-0 items-baseline gap-2.5 border-b border-border px-6'>
-          <span className='text-base font-medium'>Конфигурация</span>
-          <span className='font-mono text-xs text-muted-foreground'>{CONFIG_PATH}</span>
-          {editor.isDirty && <Badge variant='secondary'>черновик</Badge>}
-        </header>
+      <ConfigTabs config={editor.config} />
 
-        <ConfigTabs config={editor.config} />
+      <div className='flex min-h-0 grow flex-col gap-4 px-4 py-5 sm:px-6'>
+        <p className='rounded-xl bg-muted px-3.5 py-3 text-sm text-pretty text-muted-foreground'>
+          Правила проверяются{' '}
+          <span className='font-medium text-foreground'>сверху вниз, срабатывает первое подходящее</span> — не самое
+          точное. Правило ниже уже сработавшего никогда не выполнится, поэтому порядок здесь и есть логика.
+        </p>
 
-        <div className='flex min-h-0 grow flex-col gap-4 px-6 py-5'>
-          <p className='rounded-xl bg-muted px-3.5 py-3 text-sm text-pretty text-muted-foreground'>
-            Правила проверяются{' '}
-            <span className='font-medium text-foreground'>сверху вниз, срабатывает первое подходящее</span> — не самое
-            точное. Правило ниже уже сработавшего никогда не выполнится, поэтому порядок здесь и есть логика.
-          </p>
+        {editor.isPending && <p className='text-sm text-muted-foreground'>Загружаю конфиг…</p>}
 
-          {editor.isPending && <p className='text-sm text-muted-foreground'>Загружаю конфиг…</p>}
+        {editor.issues.length > 0 && <ConfigNotParsed issues={editor.issues} />}
 
-          {editor.issues.length > 0 && <ConfigNotParsed issues={editor.issues} />}
+        {editor.rules.length > 0 && (
+          <div className='flex min-h-0 grow flex-col gap-4 lg:flex-row'>
+            <RuleTable rules={editor.rules} selectedId={selectedId} onSelect={onSelect} />
 
-          {editor.config !== null && <RuleTable rules={editor.rules} final={editor.final} />}
-        </div>
+            {selected !== null && (
+              <RulePanel
+                key={selected.id}
+                rule={selected}
+                node={selectedNode}
+                recognized={RuleSchema.safeParse(selectedNode).success}
+                outbounds={editor.outbounds}
+                onClose={onClose}
+              />
+            )}
+          </div>
+        )}
       </div>
-    </div>
+    </>
   );
 }
 
