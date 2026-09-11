@@ -11,7 +11,7 @@ export interface ClashConnectionMetadata {
 }
 
 /**
- * `rule` приходит строкой формата sing-box: `rule_set=github => route(proxy)`,
+ * `rule` приходит строкой формата sing-box: `inbound=in => route(select)`,
  * а у правила без условий левая часть пуста — ` => route(direct)`.
  * `chains` перечисляет цепочку от узла к группе, то есть в обратном порядке
  * относительно того, как её читает человек.
