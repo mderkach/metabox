@@ -23,3 +23,6 @@ apps/metaboxd/internal/webui/static/*
 .pnpm-store/
 *.tsbuildinfo
 .devcontainer/.env
+
+# бинарь генератора схемы: собирается `make schema` в свой каталог
+/tools/schemagen/schemagen
