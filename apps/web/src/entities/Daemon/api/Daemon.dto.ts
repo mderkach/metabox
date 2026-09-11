@@ -39,8 +39,6 @@ export interface ServiceState {
   uptime: number;
   /** Версия установленного на устройстве бинаря sing-box. */
   binary: string;
-  /** Версия форка, на которой собрана схема панели. */
-  schema: string;
   /** Вывод последнего падения: показывается дословно, разбирать его нельзя. */
   lastError?: string;
 }

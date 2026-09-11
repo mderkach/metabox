@@ -26,6 +26,15 @@ type Applier interface {
 	Current() apply.Transaction
 }
 
+// Service — управление сервисом sing-box через init-скрипт. Интерфейс
+// объявлен здесь, у потребителя.
+type Service interface {
+	Running(ctx context.Context) (bool, error)
+	Start(ctx context.Context) error
+	Stop(ctx context.Context) error
+	Restart(ctx context.Context) error
+}
+
 // ConfigReader отдаёт применённый конфиг байтами. Интерфейс объявлен здесь,
 // у потребителя, и содержит только чтение: файлом владеет config.Store.
 type ConfigReader interface {
@@ -46,6 +55,9 @@ type Options struct {
 	// SPA раздаёт встроенный интерфейс. nil означает, что бинарь собран без
 	// фронта: API продолжает работать, а панель объясняет, чего не хватает.
 	SPA http.Handler
+	// Service управляет сервисом sing-box. nil означает, что управление
+	// недоступно: панель откроется, а карточка сервиса не покажется.
+	Service Service
 	// Clash проксирует рантайм sing-box под веткой clashapi.Prefix. nil
 	// означает, что прокси не собран: панель откроется, а экраны рантайма
 	// деградируют (NFR-1).
@@ -66,6 +78,7 @@ type Server struct {
 	singboxVersion string
 	allowedOrigin  string
 	spa            http.Handler
+	service        Service
 	clash          http.Handler
 	configPath     string
 	handler        http.Handler
@@ -82,6 +95,7 @@ func NewServer(applier Applier, reader ConfigReader, log *slog.Logger, opts Opti
 		singboxVersion: opts.SingboxVersion,
 		allowedOrigin:  opts.AllowedOrigin,
 		spa:            opts.SPA,
+		service:        opts.Service,
 		clash:          opts.Clash,
 		configPath:     opts.ConfigPath,
 	}
@@ -104,6 +118,11 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("POST /api/apply", s.handleApply)
 	mux.HandleFunc("GET /api/apply/{id}", s.handleApplyState)
 	mux.HandleFunc("POST /api/apply/{id}/confirm", s.handleApplyConfirm)
+
+	if s.service != nil {
+		mux.HandleFunc("GET /api/service", s.handleServiceState)
+		mux.HandleFunc("POST /api/service/{action}", s.handleServiceAction)
+	}
 
 	if s.clash != nil {
 		mux.Handle(clashapi.Prefix+"/", s.clash)
@@ -216,6 +235,62 @@ func (s *Server) handleApplyConfirm(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(s.log, w, http.StatusOK, tx)
+}
+
+type serviceResponse struct {
+	Status string `json:"status"`
+	// Uptime — секунды с момента старта. Init-скрипт procd их не отдаёт, а
+	// лезть в /proc мимо него запрещено (DeviceIO), поэтому пока всегда 0:
+	// панель показывает такое значение прочерком.
+	Uptime int `json:"uptime"`
+	// Binary — версия бинаря на устройстве. Схему панель знает свою и
+	// сверяет расхождение сама.
+	Binary    string `json:"binary"`
+	LastError string `json:"lastError,omitempty"`
+}
+
+// handleServiceState отдаёт состояние сервиса. Ошибка опроса — не отказ
+// панели: NFR-1 требует, чтобы экран открылся и при недоступном сервисе.
+func (s *Server) handleServiceState(w http.ResponseWriter, r *http.Request) {
+	body := serviceResponse{Status: "stopped", Binary: s.singboxVersion}
+
+	running, err := s.service.Running(r.Context())
+	if err != nil {
+		s.log.Warn("состояние сервиса не прочитано", "err", err)
+
+		body.LastError = "состояние сервиса не прочитано"
+	} else if running {
+		body.Status = "running"
+	}
+
+	writeJSON(s.log, w, http.StatusOK, body)
+}
+
+// handleServiceAction выполняет действие и отдаёт новое состояние: гадать по
+// коду ответа панель не должна.
+func (s *Server) handleServiceAction(w http.ResponseWriter, r *http.Request) {
+	var run func(context.Context) error
+
+	switch r.PathValue("action") {
+	case "start":
+		run = s.service.Start
+	case "stop":
+		run = s.service.Stop
+	case "restart":
+		run = s.service.Restart
+	default:
+		fail(s.log, w, r, errNotFound)
+
+		return
+	}
+
+	if err := run(r.Context()); err != nil {
+		fail(s.log, w, r, err)
+
+		return
+	}
+
+	s.handleServiceState(w, r)
 }
 
 // handleAPINotFound закрывает всё неизвестное под /api/ JSON-ошибкой: отдать

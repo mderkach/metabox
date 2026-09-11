@@ -111,13 +111,29 @@ func parseVersion(stdout string) string {
 // Restart перезапускает сервис через init-скрипт. Остановленный сервис —
 // штатный путь: скрипт его поднимет (AC-16).
 func (c *Client) Restart(ctx context.Context) error {
-	res, err := c.runner.Run(ctx, c.initScript, "restart")
+	return c.service(ctx, "restart")
+}
+
+// Start поднимает сервис. Уже запущенный сервис — штатный путь: init-скрипт
+// procd на повторный start не ругается.
+func (c *Client) Start(ctx context.Context) error {
+	return c.service(ctx, "start")
+}
+
+// Stop останавливает сервис. Остановленный сервис ошибкой не считается по той
+// же причине, что и в Start.
+func (c *Client) Stop(ctx context.Context) error {
+	return c.service(ctx, "stop")
+}
+
+func (c *Client) service(ctx context.Context, action string) error {
+	res, err := c.runner.Run(ctx, c.initScript, action)
 	if err != nil {
-		return fmt.Errorf("рестарт сервиса: %w", err)
+		return fmt.Errorf("%s сервиса: %w", action, err)
 	}
 
 	if res.ExitCode != 0 {
-		return fmt.Errorf("рестарт сервиса: код %d, %s", res.ExitCode, firstLine(res.Stderr))
+		return fmt.Errorf("%s сервиса: код %d, %s", action, res.ExitCode, firstLine(res.Stderr))
 	}
 
 	return nil

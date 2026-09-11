@@ -1,6 +1,13 @@
 import { CircleAlert, TriangleAlert } from 'lucide-react';
 
-import { SERVICE_ACTION, useServiceAction, useServiceState, type ServiceState } from '@entities/Daemon';
+import {
+  matchesSchemaVersion,
+  SCHEMA_VERSION,
+  SERVICE_ACTION,
+  useServiceAction,
+  useServiceState,
+  type ServiceState,
+} from '@entities/Daemon';
 import { Alert, AlertDescription, AlertTitle, Badge, Button, Card, CardContent, CardHeader } from '@shared/ui';
 
 const STATUS_LABEL: Readonly<Record<ServiceState['status'], string>> = {
@@ -40,7 +47,7 @@ export function DaemonService() {
 
   const state = service.data;
   const running = state.status === 'running';
-  const drifted = state.binary !== state.schema;
+  const drifted = !matchesSchemaVersion(state.binary);
 
   return (
     <Card>
@@ -76,7 +83,7 @@ export function DaemonService() {
         <dl className='text-sm'>
           <Row label='Аптайм' value={formatUptime(state.uptime)} />
           <Row label='Бинарь на устройстве' value={state.binary} mono />
-          <Row label='Схема панели собрана на' value={state.schema} mono />
+          <Row label='Схема панели собрана на' value={SCHEMA_VERSION} mono />
         </dl>
 
         {state.status !== 'running' && state.lastError !== undefined && (

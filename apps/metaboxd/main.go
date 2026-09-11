@@ -131,6 +131,7 @@ func run(log *slog.Logger, s settings) error {
 		SingboxVersion: singboxVersion,
 		AllowedOrigin:  s.allowedOrigin,
 		SPA:            spa,
+		Service:        service,
 		Clash:          clashHandler,
 		ConfigPath:     store.Path(),
 	})
