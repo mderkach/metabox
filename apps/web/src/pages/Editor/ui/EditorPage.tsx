@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router';
 import { useCallback, useState } from 'react';
 
 import { useConfigPath } from '@entities/Daemon';
+import { ConfigApplyHistory } from '@features/Config/ConfigApply';
 import { RuleSchema } from '@shared/api/generated';
 import { Badge, buttonVariants } from '@shared/ui';
 import { ConfigTabs } from '@widgets/Config/ConfigTabs';
@@ -36,6 +37,7 @@ export function EditorPage() {
         <p className='font-mono text-xs text-muted-foreground'>{configPath}</p>
         {editor.isDirty && <Badge variant='secondary'>черновик</Badge>}
         <span className='grow' />
+        <ConfigApplyHistory />
         <Link to='/config/raw' className={buttonVariants({ variant: 'outline', size: 'sm' })}>
           Весь конфиг текстом
         </Link>

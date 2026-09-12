@@ -1,6 +1,7 @@
 import { X } from 'lucide-react';
 import { useState } from 'react';
 
+import { ConfigDocumentState } from '@entities/Config';
 import type { RuleRow } from '@entities/Rule';
 import { RuleEditForm } from '@features/Rule/RuleEdit';
 import { RuleRawEditor } from '@features/Rule/RuleRaw';
@@ -41,6 +42,7 @@ export function RulePanel({
   onClose: () => void;
 }) {
   const [tab, setTab] = useState<string>(recognized ? TAB.Form : TAB.Raw);
+  const revision = ConfigDocumentState.use.revision();
 
   return (
     <aside className='flex w-full max-w-md shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-card'>
@@ -80,7 +82,10 @@ export function RulePanel({
           </TabsContent>
 
           <TabsContent value={TAB.Raw} className='pt-3'>
-            <RuleRawEditor index={rule.index} node={node} />
+            {/* Обновление документа не от пользователя — загрузка с устройства,
+                отмена правок, подтверждённое применение — пересоздаёт редактор:
+                иначе в поле остаётся текст, которого в конфиге уже нет. */}
+            <RuleRawEditor key={revision} index={rule.index} node={node} />
           </TabsContent>
         </Tabs>
 

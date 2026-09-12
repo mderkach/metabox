@@ -1,5 +1,7 @@
 import type { JSONPath } from 'jsonc-parser';
+import { useMemo } from 'react';
 
+import { diffLines, type DiffLine } from '@shared/lib/diff';
 import { createReactSelectors, stateCreator, useStore } from '@shared/lib/state';
 
 import { findValue, insertValue, removeValue, setValue } from './Config.model';
@@ -136,4 +138,21 @@ export function useConfigText(): string | null {
 
 export function useConfigDirty(): boolean {
   return useStore(ConfigDocumentStateProto, (state) => state.isDirty());
+}
+
+/**
+ * Построчный диф файла с устройства и черновика (UX-6).
+ *
+ * Диф считается, а не хранится полем стора: иначе он отставал бы от текста на
+ * одну правку. Мемоизация нужна здесь, а не в селекторе: селектор сверяет
+ * результат поверхностно и на новом массиве перерисовывал бы экран на каждое
+ * изменение стора.
+ */
+export function useConfigDiff(): DiffLine[] {
+  const { applied, draft } = useStore(ConfigDocumentStateProto, (state) => ({
+    applied: state.applied,
+    draft: state.draft,
+  }));
+
+  return useMemo(() => (applied === null || draft === null ? [] : diffLines(applied, draft)), [applied, draft]);
 }

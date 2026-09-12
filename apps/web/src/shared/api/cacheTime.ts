@@ -17,4 +17,6 @@ const STATUS_POLL_SECONDS = 5;
 /** Периоды опроса. Интервал живёт рядом с фабрикой ключа, а не в хуке. */
 export const POLL_INTERVAL = {
   Status: STATUS_POLL_SECONDS * SECOND,
+  /** Окно подтверждения — минута (NFR-5), и отсчёт обязан идти заметно чаще. */
+  Apply: SECOND,
 } as const;

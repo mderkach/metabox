@@ -1,0 +1,106 @@
+import { useMemo } from 'react';
+
+import { useConfigDiff } from '@entities/Config';
+import { DIFF_KIND, toDiffHunks, type DiffLine } from '@shared/lib/diff';
+import {
+  Button,
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  ScrollArea,
+} from '@shared/ui';
+
+/** Строк вокруг правки: меньше — и непонятно, в какой секции она сделана. */
+const DIFF_CONTEXT = 3;
+
+const LINE_STYLE: Readonly<Record<DiffLine['kind'], string>> = {
+  [DIFF_KIND.Same]: 'text-muted-foreground',
+  [DIFF_KIND.Added]: 'bg-foreground/10 font-medium text-foreground',
+  [DIFF_KIND.Removed]: 'bg-destructive/10 text-destructive',
+};
+
+/** Знак ставится текстом: тема монохромная, и цвет один различать не должен. */
+const LINE_MARK: Readonly<Record<DiffLine['kind'], string>> = {
+  [DIFF_KIND.Same]: ' ',
+  [DIFF_KIND.Added]: '+',
+  [DIFF_KIND.Removed]: '−',
+};
+
+/**
+ * Диалог показывает текст файла, а не разобранную модель: в Apply уйдут те же
+ * байты, что видны здесь (ADR-0004, AC-2).
+ */
+export function ConfigApplyDiff({ canApply, onApply }: { canApply: boolean; onApply: () => void }) {
+  const lines = useConfigDiff();
+  // Диалог перерисовывается на каждое нажатие снаружи, а проход идёт по всему
+  // файлу: на конфиге в полторы тысячи строк это заметная работа.
+  const hunks = useMemo(() => toDiffHunks(lines, DIFF_CONTEXT), [lines]);
+  const changed = useMemo(() => lines.filter((line) => line.kind !== DIFF_KIND.Same).length, [lines]);
+
+  return (
+    <Dialog>
+      <DialogTrigger render={<Button variant='outline' size='sm' />}>Посмотреть диф</DialogTrigger>
+
+      <DialogContent className='sm:max-w-3xl'>
+        <DialogHeader>
+          <DialogTitle>Что уйдёт на устройство</DialogTitle>
+          <DialogDescription>
+            {changed === 0
+              ? 'Черновик совпадает с файлом на устройстве.'
+              : `Изменённых строк: ${String(changed)}. Остальной файл уходит байт в байт.`}
+          </DialogDescription>
+        </DialogHeader>
+
+        <ScrollArea className='max-h-[60vh] rounded-lg border border-border'>
+          <table className='w-full border-collapse font-mono text-xs'>
+            <caption className='sr-only'>Построчные отличия черновика от применённого конфига</caption>
+            <thead className='sr-only'>
+              <tr>
+                <th scope='col'>Строка в применённом конфиге</th>
+                <th scope='col'>Строка в черновике</th>
+                <th scope='col'>Содержимое</th>
+              </tr>
+            </thead>
+            {hunks.map((hunk) => (
+              <tbody key={`${String(hunk.skipped)}:${String(hunk.lines[0]?.before)}:${String(hunk.lines[0]?.after)}`}>
+                {hunk.skipped > 0 && (
+                  <tr>
+                    <td colSpan={3} className='bg-muted px-2 py-1 text-muted-foreground'>
+                      … {hunk.skipped} совпадающих строк
+                    </td>
+                  </tr>
+                )}
+                {hunk.lines.map((line) => (
+                  <tr
+                    key={`${line.kind}:${String(line.before)}:${String(line.after)}`}
+                    className={LINE_STYLE[line.kind]}
+                  >
+                    <td className='w-10 px-2 text-right text-muted-foreground select-none'>{line.before ?? ''}</td>
+                    <td className='w-10 px-2 text-right text-muted-foreground select-none'>{line.after ?? ''}</td>
+                    <td className='px-2 whitespace-pre-wrap'>
+                      <span className='select-none'>{LINE_MARK[line.kind]} </span>
+                      {line.text}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            ))}
+          </table>
+        </ScrollArea>
+
+        <DialogFooter>
+          {/* Закрытие диалога — часть действия: после запуска смотреть в диф
+              нечего, ход применения показывает бар. */}
+          <DialogClose render={<Button size='sm' disabled={!canApply} />} onClick={onApply}>
+            Применить
+          </DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

@@ -1,5 +1,6 @@
 import { Outlet } from '@tanstack/react-router';
 
+import { ConfigApplyBar } from '@features/Config/ConfigApply';
 import { AppSidebar } from '@widgets/AppSidebar';
 
 import { useRuntimeStreams } from '../lib/useRuntimeStreams';
@@ -16,6 +17,7 @@ export function AppLayout() {
     <div className='flex h-full bg-background text-foreground'>
       <AppSidebar />
       <div className='flex min-w-0 grow flex-col'>
+        <ConfigApplyBar />
         <Outlet />
       </div>
     </div>

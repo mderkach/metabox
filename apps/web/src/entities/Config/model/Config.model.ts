@@ -100,3 +100,21 @@ export function readRules(text: string): unknown[] {
 
   return Array.isArray(rules) ? rules : [];
 }
+
+/** Запись истории конфига в виде, в котором её показывает экран. */
+export interface ConfigVersion {
+  id: number;
+  size: number;
+  sum: string;
+  /**
+   * `null` — отметки времени нет: роутер стартует с эпохи, и до синхронизации
+   * NTP дата сохранения врёт. Порядок всё равно задаёт номер версии.
+   */
+  savedAt: Date | null;
+}
+
+export interface CheckFailure {
+  stdout: string;
+  stderr: string;
+  exitCode: number;
+}

@@ -1,0 +1,167 @@
+import { renderWithQuery } from '@test/renderWithQuery';
+import { server } from '@test/server';
+import { screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { ConfigDocumentState } from '@entities/Config';
+import { API_ENDPOINT } from '@shared/api';
+
+import { ConfigApplyBar } from '../ui/ConfigApplyBar';
+
+const APPLIED = '{\n  "log": { "level": "info" }\n}';
+const DRAFT = '{\n  "log": { "level": "debug" }\n}';
+
+const CONFIRM_WINDOW_NS = 60_000_000_000;
+
+const TRANSACTION = {
+  id: 'tx-1',
+  phase: 'awaiting_confirm',
+  window: CONFIRM_WINDOW_NS,
+  sha256: 'a'.repeat(64),
+};
+
+function serveStatus(transaction?: unknown) {
+  server.use(http.get(API_ENDPOINT.status(), () => HttpResponse.json({ version: 'dev', transaction })));
+}
+
+function loadDocument(draft = true) {
+  ConfigDocumentState.getState().load(APPLIED);
+
+  if (draft) ConfigDocumentState.getState().replace(DRAFT);
+}
+
+describe('ConfigApplyBar', () => {
+  beforeEach(() => {
+    ConfigDocumentState.getState().reset();
+    serveStatus();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('молчит, пока правок нет и применение не идёт', () => {
+    loadDocument(false);
+    renderWithQuery(<ConfigApplyBar />);
+
+    expect(screen.queryByRole('region', { name: 'Применение конфига' })).not.toBeInTheDocument();
+  });
+
+  it('на черновике предлагает применить и посмотреть диф', () => {
+    loadDocument();
+    renderWithQuery(<ConfigApplyBar />);
+
+    expect(screen.getByRole('region', { name: 'Применение конфига' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Применить' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Посмотреть диф' })).toBeInTheDocument();
+  });
+
+  it('отправляет в Apply текст черновика, а не разобранный конфиг', async () => {
+    const sent: string[] = [];
+
+    server.use(
+      http.post(API_ENDPOINT.apply(), async ({ request }) => {
+        sent.push(await request.text());
+
+        return HttpResponse.json(TRANSACTION, { status: 202 });
+      }),
+      http.get(API_ENDPOINT.applyState(TRANSACTION.id), () => HttpResponse.json(TRANSACTION))
+    );
+
+    loadDocument();
+    renderWithQuery(<ConfigApplyBar />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
+
+    await waitFor(() => {
+      expect(sent).toEqual([DRAFT]);
+    });
+  });
+
+  it('в окне подтверждения отсчитывает остаток и подтверждает по кнопке', async () => {
+    const confirmed: string[] = [];
+
+    server.use(
+      http.get(API_ENDPOINT.applyState(TRANSACTION.id), () => HttpResponse.json(TRANSACTION)),
+      http.post(API_ENDPOINT.applyConfirm(TRANSACTION.id), () => {
+        confirmed.push(TRANSACTION.id);
+
+        return HttpResponse.json({ ...TRANSACTION, phase: 'confirmed', window: 0 });
+      })
+    );
+
+    serveStatus(TRANSACTION);
+    loadDocument();
+    renderWithQuery(<ConfigApplyBar />);
+
+    const confirm = await screen.findByRole('button', { name: 'Связь есть, оставить' });
+
+    expect(screen.getByText('60 с')).toBeInTheDocument();
+
+    await userEvent.click(confirm);
+
+    await waitFor(() => {
+      expect(confirmed).toEqual([TRANSACTION.id]);
+    });
+  });
+
+  it('показывает вывод sing-box, когда бинарь отверг конфиг', async () => {
+    server.use(
+      http.post(API_ENDPOINT.apply(), () =>
+        HttpResponse.json(
+          {
+            code: 'check_failed',
+            message: 'sing-box отверг конфиг',
+            details: { stdout: '', stderr: 'FATAL decode config: unknown field', exit_code: 1 },
+          },
+          { status: 422 }
+        )
+      )
+    );
+
+    loadDocument();
+    renderWithQuery(<ConfigApplyBar />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
+
+    expect(await screen.findByText('FATAL decode config: unknown field')).toBeInTheDocument();
+    expect(screen.getByText(/Код выхода: 1/)).toBeInTheDocument();
+    // Черновик остаётся: на нём пользователь чинит конфиг (AC-26, UX-3).
+    expect(ConfigDocumentState.getState().draft).toBe(DRAFT);
+  });
+
+  it('сообщает, что секцию clash_api дописал демон', async () => {
+    serveStatus({ ...TRANSACTION, clash_api_added: true });
+    server.use(
+      http.get(API_ENDPOINT.applyState(TRANSACTION.id), () =>
+        HttpResponse.json({ ...TRANSACTION, clash_api_added: true })
+      )
+    );
+
+    loadDocument();
+    renderWithQuery(<ConfigApplyBar />);
+
+    expect(await screen.findByText('metabox дописал в конфиг experimental.clash_api')).toBeInTheDocument();
+  });
+
+  it('показывает автооткат и без черновика: откат версии своего черновика не заводит', async () => {
+    const rolledBack = { ...TRANSACTION, phase: 'rolled_back', window: 0, reason: '' };
+
+    serveStatus(rolledBack);
+    server.use(
+      http.get(API_ENDPOINT.applyState(TRANSACTION.id), () => HttpResponse.json(rolledBack)),
+      http.get(API_ENDPOINT.config(), () => HttpResponse.text(APPLIED))
+    );
+
+    loadDocument(false);
+    renderWithQuery(<ConfigApplyBar />);
+
+    expect(await screen.findByText('Подтверждения не было — предыдущий конфиг возвращён')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Скрыть' }));
+
+    expect(screen.queryByText('Подтверждения не было — предыдущий конфиг возвращён')).not.toBeInTheDocument();
+  });
+});

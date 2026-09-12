@@ -41,6 +41,16 @@ class TestResizeObserver implements ResizeObserver {
 
 globalThis.ResizeObserver = TestResizeObserver;
 
+/**
+ * Web Animations API в jsdom нет, а область прокрутки Base UI спрашивает у
+ * вьюпорта текущие анимации по таймеру — уже после того, как тест закончился,
+ * поэтому падение прилетает необработанным исключением мимо теста. Анимаций в
+ * jsdom не бывает вовсе, поэтому пустой список здесь не упрощение.
+ */
+Element.prototype.getAnimations = function getAnimations(): Animation[] {
+  return [];
+};
+
 beforeAll(() => {
   server.listen({ onUnhandledRequest: 'error' });
 });

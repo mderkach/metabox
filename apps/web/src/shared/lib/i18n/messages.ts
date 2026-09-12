@@ -7,12 +7,10 @@
  * интерполяция пока не нужны. Появится второй язык — здесь встанет adapter.
  */
 export const MESSAGES = {
-  'apply.confirm.failed': 'Подтвердить не удалось',
   'apply.confirm.done': 'Связь подтверждена, конфиг оставлен',
-  'apply.start.failed': 'Применить не удалось',
   'apply.start.accepted': 'Конфиг принят, идёт применение',
-  'apply.state.failed': 'Не удалось узнать ход применения',
   'config.draft.fetchFailed': 'Не удалось загрузить конфиг',
+  'config.versions.fetchFailed': 'Не удалось получить историю версий',
   'connection.close.failed': 'Закрыть соединение не удалось',
   'error.unknown': 'Что-то пошло не так',
   'proxy.delay.failed': 'Проверить задержку не удалось',
