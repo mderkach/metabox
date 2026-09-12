@@ -37,6 +37,19 @@ func TestGenerate(t *testing.T) {
 	}
 }
 
+// Описания полей форка доходят до схемы: подсказки видит и разработчик, и
+// авторендерер непокрытых узлов (AC-5, Form&Validation).
+func TestGenerateCarriesDocs(t *testing.T) {
+	out, err := generate()
+	if err != nil {
+		t.Fatalf("генерация: %v", err)
+	}
+
+	if !strings.Contains(out, "/** Deprecated:") {
+		t.Error("в схеме нет ни одного описания поля: godoc форка не прочитан")
+	}
+}
+
 // Генерация должна быть детерминированной: иначе make schema даёт разный
 // файл на одном и том же форке и diff перестаёт что-либо значить.
 func TestGenerateIsStable(t *testing.T) {

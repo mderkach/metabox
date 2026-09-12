@@ -51,7 +51,14 @@ func generate() (string, error) {
 		return "", err
 	}
 
-	w := newWalker()
+	// Описания читаются из исходников того же форка, из которого собрана схема:
+	// рефлексия godoc не видит. Каталог уже известен — его отдаёт forkDir.
+	dir, err := forkDir()
+	if err != nil {
+		return "", err
+	}
+
+	w := newWalker(readDocs(dir, docPackages))
 	w.registryUnions(groups)
 
 	root := w.build(reflect.TypeOf(option.Options{}), "root")

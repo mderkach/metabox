@@ -230,10 +230,15 @@ export const ClashAPIOptionsSchema = z.looseObject({
     z.array(z.string()),
   ]).optional(),
   access_control_allow_private_network: z.boolean().optional(),
+  /** Deprecated: migrated to global cache file */
   cache_file: z.string().optional(),
+  /** Deprecated: migrated to global cache file */
   cache_id: z.string().optional(),
+  /** Deprecated: migrated to global cache file */
   store_mode: z.boolean().optional(),
+  /** Deprecated: migrated to global cache file */
   store_selected: z.boolean().optional(),
+  /** Deprecated: migrated to global cache file */
   store_fakeip: z.boolean().optional(),
 })
 
@@ -305,6 +310,7 @@ export const DERPMeshOptionsSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -332,7 +338,9 @@ export const DERPSTUNListenOptionsSchema = z.union([
       return UDPTimeoutCompatSchema.optional()
     },
     detour: z.string().optional(),
+    /** Deprecated: removed */
     proxy_protocol: z.boolean().optional(),
+    /** Deprecated: removed */
     proxy_protocol_accept_no_header: z.boolean().optional(),
     sniff: z.boolean().optional(),
     sniff_override_destination: z.boolean().optional(),
@@ -615,6 +623,7 @@ export const DefaultDNSRuleBaseSchema = z.looseObject({
     ]).optional()
   },
   invert: z.boolean().optional(),
+  /** Deprecated: removed in sing-box 1.12.0 */
   geosite: z.union([
     z.string(),
     z.array(z.string()),
@@ -627,7 +636,9 @@ export const DefaultDNSRuleBaseSchema = z.looseObject({
     z.string(),
     z.array(z.string()),
   ]).optional(),
+  /** Deprecated: removed in sing-box 1.11.0 */
   rule_set_ip_cidr_accept_empty: z.boolean().optional(),
+  /** Deprecated: renamed to rule_set_ip_cidr_match_source */
   rule_set_ipcidr_match_source: z.boolean().optional(),
 })
 
@@ -934,6 +945,7 @@ export const DefaultRuleBaseSchema = z.looseObject({
   ]).optional(),
   rule_set_ip_cidr_match_source: z.boolean().optional(),
   invert: z.boolean().optional(),
+  /** Deprecated: renamed to rule_set_ip_cidr_match_source */
   rule_set_ipcidr_match_source: z.boolean().optional(),
 })
 
@@ -975,6 +987,7 @@ export const DialerOptionsSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -1020,6 +1033,7 @@ export const DnsDhcpSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -1086,6 +1100,7 @@ export const DnsH3Schema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -1155,6 +1170,7 @@ export const DnsHttpsSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -1211,6 +1227,7 @@ export const DnsLocalSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -1261,6 +1278,7 @@ export const DnsMdnsSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -1331,6 +1349,7 @@ export const DnsQuicSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -1388,6 +1407,7 @@ export const DnsSdnsSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -1444,6 +1464,7 @@ export const DnsTcpSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -1491,6 +1512,7 @@ export const DnsTlsSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -1541,6 +1563,7 @@ export const DnsUdpSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -1625,6 +1648,7 @@ export const EndpointOpenconnectSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -1732,6 +1756,7 @@ export const EndpointOpenvpnClientSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -1843,7 +1868,9 @@ export const EndpointOpenvpnServerSchema = z.looseObject({
     return UDPTimeoutCompatSchema.optional()
   },
   detour: z.string().optional(),
+  /** Deprecated: removed */
   proxy_protocol: z.boolean().optional(),
+  /** Deprecated: removed */
   proxy_protocol_accept_no_header: z.boolean().optional(),
   sniff: z.boolean().optional(),
   sniff_override_destination: z.boolean().optional(),
@@ -1952,6 +1979,7 @@ export const EndpointTailscaleSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -2069,6 +2097,7 @@ export const EndpointWarpSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -2140,6 +2169,7 @@ export const EndpointWireguardSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -2610,7 +2640,9 @@ export const InboundAnytlsSchema = z.looseObject({
     return UDPTimeoutCompatSchema.optional()
   },
   detour: z.string().optional(),
+  /** Deprecated: removed */
   proxy_protocol: z.boolean().optional(),
+  /** Deprecated: removed */
   proxy_protocol_accept_no_header: z.boolean().optional(),
   sniff: z.boolean().optional(),
   sniff_override_destination: z.boolean().optional(),
@@ -2679,6 +2711,7 @@ export const InboundCallSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -2691,6 +2724,7 @@ export const InboundCallSchema = z.looseObject({
     return CallCookieListSchema.optional()
   },
   join_link: z.string().optional(),
+  /** Email and Password are used to re-authenticate with the dion.vc platform when the refresh cookie is missing or rejected. */
   email: z.string().optional(),
   password: z.string().optional(),
 })
@@ -2735,7 +2769,9 @@ export const InboundDirectSchema = z.looseObject({
     return UDPTimeoutCompatSchema.optional()
   },
   detour: z.string().optional(),
+  /** Deprecated: removed */
   proxy_protocol: z.boolean().optional(),
+  /** Deprecated: removed */
   proxy_protocol_accept_no_header: z.boolean().optional(),
   sniff: z.boolean().optional(),
   sniff_override_destination: z.boolean().optional(),
@@ -2758,7 +2794,9 @@ export const InboundECHOptionsSchema = z.looseObject({
     z.array(z.string()),
   ]).optional(),
   key_path: z.string().optional(),
+  /** Deprecated: not supported by stdlib */
   pq_signature_schemes_enabled: z.boolean().optional(),
+  /** Deprecated: added by fault */
   dynamic_record_sizing_disabled: z.boolean().optional(),
 })
 
@@ -2791,7 +2829,9 @@ export const InboundHttpSchema = z.looseObject({
     return UDPTimeoutCompatSchema.optional()
   },
   detour: z.string().optional(),
+  /** Deprecated: removed */
   proxy_protocol: z.boolean().optional(),
+  /** Deprecated: removed */
   proxy_protocol_accept_no_header: z.boolean().optional(),
   sniff: z.boolean().optional(),
   sniff_override_destination: z.boolean().optional(),
@@ -2834,7 +2874,9 @@ export const InboundHysteria2Schema = z.looseObject({
     return UDPTimeoutCompatSchema.optional()
   },
   detour: z.string().optional(),
+  /** Deprecated: removed */
   proxy_protocol: z.boolean().optional(),
+  /** Deprecated: removed */
   proxy_protocol_accept_no_header: z.boolean().optional(),
   sniff: z.boolean().optional(),
   sniff_override_destination: z.boolean().optional(),
@@ -2899,7 +2941,9 @@ export const InboundHysteriaSchema = z.looseObject({
     return UDPTimeoutCompatSchema.optional()
   },
   detour: z.string().optional(),
+  /** Deprecated: removed */
   proxy_protocol: z.boolean().optional(),
+  /** Deprecated: removed */
   proxy_protocol_accept_no_header: z.boolean().optional(),
   sniff: z.boolean().optional(),
   sniff_override_destination: z.boolean().optional(),
@@ -2922,9 +2966,13 @@ export const InboundHysteriaSchema = z.looseObject({
   get users() {
     return z.array(HysteriaUserSchema).optional()
   },
+  /** Deprecated: use QUIC fields instead */
   recv_window_conn: z.int().nonnegative().optional(),
+  /** Deprecated: use QUIC fields instead */
   recv_window_client: z.int().nonnegative().optional(),
+  /** Deprecated: use QUIC fields instead */
   max_conn_client: z.int().optional(),
+  /** Deprecated: use QUIC fields instead */
   disable_mtu_discovery: z.boolean().optional(),
   get tls() {
     return InboundTLSOptionsSchema.optional()
@@ -2965,7 +3013,9 @@ export const InboundMieruSchema = z.looseObject({
     return UDPTimeoutCompatSchema.optional()
   },
   detour: z.string().optional(),
+  /** Deprecated: removed */
   proxy_protocol: z.boolean().optional(),
+  /** Deprecated: removed */
   proxy_protocol_accept_no_header: z.boolean().optional(),
   sniff: z.boolean().optional(),
   sniff_override_destination: z.boolean().optional(),
@@ -3008,7 +3058,9 @@ export const InboundMixedSchema = z.looseObject({
     return UDPTimeoutCompatSchema.optional()
   },
   detour: z.string().optional(),
+  /** Deprecated: removed */
   proxy_protocol: z.boolean().optional(),
+  /** Deprecated: removed */
   proxy_protocol_accept_no_header: z.boolean().optional(),
   sniff: z.boolean().optional(),
   sniff_override_destination: z.boolean().optional(),
@@ -3051,7 +3103,9 @@ export const InboundMtproxySchema = z.looseObject({
     return UDPTimeoutCompatSchema.optional()
   },
   detour: z.string().optional(),
+  /** Deprecated: removed */
   proxy_protocol: z.boolean().optional(),
+  /** Deprecated: removed */
   proxy_protocol_accept_no_header: z.boolean().optional(),
   sniff: z.boolean().optional(),
   sniff_override_destination: z.boolean().optional(),
@@ -3110,7 +3164,9 @@ export const InboundNaiveSchema = z.looseObject({
     return UDPTimeoutCompatSchema.optional()
   },
   detour: z.string().optional(),
+  /** Deprecated: removed */
   proxy_protocol: z.boolean().optional(),
+  /** Deprecated: removed */
   proxy_protocol_accept_no_header: z.boolean().optional(),
   sniff: z.boolean().optional(),
   sniff_override_destination: z.boolean().optional(),
@@ -3172,6 +3228,7 @@ export const InboundRealityHandshakeOptionsSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -3211,7 +3268,9 @@ export const InboundRedirectSchema = z.looseObject({
     return UDPTimeoutCompatSchema.optional()
   },
   detour: z.string().optional(),
+  /** Deprecated: removed */
   proxy_protocol: z.boolean().optional(),
+  /** Deprecated: removed */
   proxy_protocol_accept_no_header: z.boolean().optional(),
   sniff: z.boolean().optional(),
   sniff_override_destination: z.boolean().optional(),
@@ -3243,7 +3302,9 @@ export const InboundShadowsocksSchema = z.looseObject({
     return UDPTimeoutCompatSchema.optional()
   },
   detour: z.string().optional(),
+  /** Deprecated: removed */
   proxy_protocol: z.boolean().optional(),
+  /** Deprecated: removed */
   proxy_protocol_accept_no_header: z.boolean().optional(),
   sniff: z.boolean().optional(),
   sniff_override_destination: z.boolean().optional(),
@@ -3290,7 +3351,9 @@ export const InboundShadowtlsSchema = z.looseObject({
     return UDPTimeoutCompatSchema.optional()
   },
   detour: z.string().optional(),
+  /** Deprecated: removed */
   proxy_protocol: z.boolean().optional(),
+  /** Deprecated: removed */
   proxy_protocol_accept_no_header: z.boolean().optional(),
   sniff: z.boolean().optional(),
   sniff_override_destination: z.boolean().optional(),
@@ -3338,7 +3401,9 @@ export const InboundSnellSchema = z.looseObject({
     return UDPTimeoutCompatSchema.optional()
   },
   detour: z.string().optional(),
+  /** Deprecated: removed */
   proxy_protocol: z.boolean().optional(),
+  /** Deprecated: removed */
   proxy_protocol_accept_no_header: z.boolean().optional(),
   sniff: z.boolean().optional(),
   sniff_override_destination: z.boolean().optional(),
@@ -3374,7 +3439,9 @@ export const InboundSocksSchema = z.looseObject({
     return UDPTimeoutCompatSchema.optional()
   },
   detour: z.string().optional(),
+  /** Deprecated: removed */
   proxy_protocol: z.boolean().optional(),
+  /** Deprecated: removed */
   proxy_protocol_accept_no_header: z.boolean().optional(),
   sniff: z.boolean().optional(),
   sniff_override_destination: z.boolean().optional(),
@@ -3413,7 +3480,9 @@ export const InboundSshSchema = z.looseObject({
     return UDPTimeoutCompatSchema.optional()
   },
   detour: z.string().optional(),
+  /** Deprecated: removed */
   proxy_protocol: z.boolean().optional(),
+  /** Deprecated: removed */
   proxy_protocol_accept_no_header: z.boolean().optional(),
   sniff: z.boolean().optional(),
   sniff_override_destination: z.boolean().optional(),
@@ -3461,7 +3530,9 @@ export const InboundSudokuSchema = z.looseObject({
     return UDPTimeoutCompatSchema.optional()
   },
   detour: z.string().optional(),
+  /** Deprecated: removed */
   proxy_protocol: z.boolean().optional(),
+  /** Deprecated: removed */
   proxy_protocol_accept_no_header: z.boolean().optional(),
   sniff: z.boolean().optional(),
   sniff_override_destination: z.boolean().optional(),
@@ -3506,7 +3577,9 @@ export const InboundTproxySchema = z.looseObject({
     return UDPTimeoutCompatSchema.optional()
   },
   detour: z.string().optional(),
+  /** Deprecated: removed */
   proxy_protocol: z.boolean().optional(),
+  /** Deprecated: removed */
   proxy_protocol_accept_no_header: z.boolean().optional(),
   sniff: z.boolean().optional(),
   sniff_override_destination: z.boolean().optional(),
@@ -3548,7 +3621,9 @@ export const InboundTrojanSchema = z.looseObject({
     return UDPTimeoutCompatSchema.optional()
   },
   detour: z.string().optional(),
+  /** Deprecated: removed */
   proxy_protocol: z.boolean().optional(),
+  /** Deprecated: removed */
   proxy_protocol_accept_no_header: z.boolean().optional(),
   sniff: z.boolean().optional(),
   sniff_override_destination: z.boolean().optional(),
@@ -3598,7 +3673,9 @@ export const InboundTrusttunnelSchema = z.looseObject({
     return UDPTimeoutCompatSchema.optional()
   },
   detour: z.string().optional(),
+  /** Deprecated: removed */
   proxy_protocol: z.boolean().optional(),
+  /** Deprecated: removed */
   proxy_protocol_accept_no_header: z.boolean().optional(),
   sniff: z.boolean().optional(),
   sniff_override_destination: z.boolean().optional(),
@@ -3641,7 +3718,9 @@ export const InboundTuicSchema = z.looseObject({
     return UDPTimeoutCompatSchema.optional()
   },
   detour: z.string().optional(),
+  /** Deprecated: removed */
   proxy_protocol: z.boolean().optional(),
+  /** Deprecated: removed */
   proxy_protocol_accept_no_header: z.boolean().optional(),
   sniff: z.boolean().optional(),
   sniff_override_destination: z.boolean().optional(),
@@ -3792,31 +3871,39 @@ export const InboundTunSchema = z.looseObject({
     return DomainStrategySchema.optional()
   },
   udp_disable_domain_unmapping: z.boolean().optional(),
+  /** Deprecated: removed */
   gso: z.boolean().optional(),
+  /** Deprecated: merged to Address */
   inet4_address: z.union([
     z.string(),
     z.array(z.string()),
   ]).optional(),
+  /** Deprecated: merged to Address */
   inet6_address: z.union([
     z.string(),
     z.array(z.string()),
   ]).optional(),
+  /** Deprecated: merged to RouteAddress */
   inet4_route_address: z.union([
     z.string(),
     z.array(z.string()),
   ]).optional(),
+  /** Deprecated: merged to RouteAddress */
   inet6_route_address: z.union([
     z.string(),
     z.array(z.string()),
   ]).optional(),
+  /** Deprecated: merged to RouteExcludeAddress */
   inet4_route_exclude_address: z.union([
     z.string(),
     z.array(z.string()),
   ]).optional(),
+  /** Deprecated: merged to RouteExcludeAddress */
   inet6_route_exclude_address: z.union([
     z.string(),
     z.array(z.string()),
   ]).optional(),
+  /** Deprecated: removed */
   endpoint_independent_nat: z.boolean().optional(),
 })
 
@@ -3841,7 +3928,9 @@ export const InboundVlessSchema = z.looseObject({
     return UDPTimeoutCompatSchema.optional()
   },
   detour: z.string().optional(),
+  /** Deprecated: removed */
   proxy_protocol: z.boolean().optional(),
+  /** Deprecated: removed */
   proxy_protocol_accept_no_header: z.boolean().optional(),
   sniff: z.boolean().optional(),
   sniff_override_destination: z.boolean().optional(),
@@ -3886,7 +3975,9 @@ export const InboundVmessSchema = z.looseObject({
     return UDPTimeoutCompatSchema.optional()
   },
   detour: z.string().optional(),
+  /** Deprecated: removed */
   proxy_protocol: z.boolean().optional(),
+  /** Deprecated: removed */
   proxy_protocol_accept_no_header: z.boolean().optional(),
   sniff: z.boolean().optional(),
   sniff_override_destination: z.boolean().optional(),
@@ -3990,6 +4081,7 @@ export const InboundTLSOptionsSchema = z.looseObject({
   get certificate_provider() {
     return CertificateProviderOptionsSchema.optional()
   },
+  /** Deprecated: use certificate_provider */
   get acme() {
     return InboundACMEOptionsSchema.optional()
   },
@@ -4088,6 +4180,7 @@ export const NTPOptionsSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -4462,6 +4555,7 @@ export const OutboundAnytlsSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -4553,6 +4647,7 @@ export const OutboundCallSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -4621,6 +4716,7 @@ export const OutboundDirectSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -4637,7 +4733,9 @@ export const OutboundECHOptionsSchema = z.looseObject({
   ]).optional(),
   config_path: z.string().optional(),
   query_server_name: z.string().optional(),
+  /** Deprecated: not supported by stdlib */
   pq_signature_schemes_enabled: z.boolean().optional(),
+  /** Deprecated: added by fault */
   dynamic_record_sizing_disabled: z.boolean().optional(),
 })
 
@@ -4698,6 +4796,7 @@ export const OutboundHttpSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -4755,6 +4854,7 @@ export const OutboundHysteria2Schema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -4839,6 +4939,7 @@ export const OutboundHysteriaSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -4862,8 +4963,11 @@ export const OutboundHysteriaSchema = z.looseObject({
   obfs: z.string().optional(),
   auth: z.string().optional(),
   auth_str: z.string().optional(),
+  /** Deprecated: use QUIC fields instead */
   recv_window_conn: z.int().nonnegative().optional(),
+  /** Deprecated: use QUIC fields instead */
   recv_window: z.int().nonnegative().optional(),
+  /** Deprecated: use QUIC fields instead */
   disable_mtu_discovery: z.boolean().optional(),
   get network() {
     return NetworkListSchema.optional()
@@ -4926,6 +5030,7 @@ export const OutboundMasqueSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -4993,6 +5098,7 @@ export const OutboundMieruSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -5063,6 +5169,7 @@ export const OutboundNaiveSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -5133,6 +5240,7 @@ export const OutboundParserSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -5215,6 +5323,7 @@ export const OutboundShadowsocksSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -5275,6 +5384,7 @@ export const OutboundShadowtlsSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -5328,6 +5438,7 @@ export const OutboundSnellSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -5381,6 +5492,7 @@ export const OutboundSocksSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -5437,6 +5549,7 @@ export const OutboundSshSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -5513,6 +5626,7 @@ export const OutboundSudokuSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -5571,6 +5685,7 @@ export const OutboundTorSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -5637,6 +5752,7 @@ export const OutboundTrojanSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -5697,6 +5813,7 @@ export const OutboundTrusttunnelSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -5759,6 +5876,7 @@ export const OutboundTuicSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -5850,6 +5968,7 @@ export const OutboundVlessSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -5913,6 +6032,7 @@ export const OutboundVmessSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -6233,6 +6353,7 @@ export const RuleSchema = z.union([
       ]).optional()
     },
     fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+    /** Deprecated: migrated to domain resolver */
     get domain_strategy() {
       return DomainStrategySchema.optional()
     },
@@ -6377,6 +6498,7 @@ export const RuleSchema = z.union([
       ]).optional()
     },
     fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+    /** Deprecated: migrated to domain resolver */
     get domain_strategy() {
       return DomainStrategySchema.optional()
     },
@@ -6494,6 +6616,7 @@ export const RuleSetSchema = z.union([
       return HTTPClientOptionsSchema.optional()
     },
     update_interval: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+    /** Deprecated: use http_client instead */
     download_detour: z.string().optional(),
   }),
 ])
@@ -6545,6 +6668,7 @@ export const SSHFallbackServerOptionsSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -6606,7 +6730,9 @@ export const ServiceAdminPanelSchema = z.looseObject({
     return UDPTimeoutCompatSchema.optional()
   },
   detour: z.string().optional(),
+  /** Deprecated: removed */
   proxy_protocol: z.boolean().optional(),
+  /** Deprecated: removed */
   proxy_protocol_accept_no_header: z.boolean().optional(),
   sniff: z.boolean().optional(),
   sniff_override_destination: z.boolean().optional(),
@@ -6641,7 +6767,9 @@ export const ServiceApiSchema = z.looseObject({
     return UDPTimeoutCompatSchema.optional()
   },
   detour: z.string().optional(),
+  /** Deprecated: removed */
   proxy_protocol: z.boolean().optional(),
+  /** Deprecated: removed */
   proxy_protocol_accept_no_header: z.boolean().optional(),
   sniff: z.boolean().optional(),
   sniff_override_destination: z.boolean().optional(),
@@ -6684,7 +6812,9 @@ export const ServiceCcmSchema = z.looseObject({
   get udp_timeout() {
     return UDPTimeoutCompatSchema.optional()
   },
+  /** Deprecated: removed */
   proxy_protocol: z.boolean().optional(),
+  /** Deprecated: removed */
   proxy_protocol_accept_no_header: z.boolean().optional(),
   sniff: z.boolean().optional(),
   sniff_override_destination: z.boolean().optional(),
@@ -6729,7 +6859,9 @@ export const ServiceDerpSchema = z.looseObject({
     return UDPTimeoutCompatSchema.optional()
   },
   detour: z.string().optional(),
+  /** Deprecated: removed */
   proxy_protocol: z.boolean().optional(),
+  /** Deprecated: removed */
   proxy_protocol_accept_no_header: z.boolean().optional(),
   sniff: z.boolean().optional(),
   sniff_override_destination: z.boolean().optional(),
@@ -6787,7 +6919,9 @@ export const ServiceHysteriaRealmSchema = z.looseObject({
     return UDPTimeoutCompatSchema.optional()
   },
   detour: z.string().optional(),
+  /** Deprecated: removed */
   proxy_protocol: z.boolean().optional(),
+  /** Deprecated: removed */
   proxy_protocol_accept_no_header: z.boolean().optional(),
   sniff: z.boolean().optional(),
   sniff_override_destination: z.boolean().optional(),
@@ -6869,7 +7003,9 @@ export const ServiceOcmSchema = z.looseObject({
   get udp_timeout() {
     return UDPTimeoutCompatSchema.optional()
   },
+  /** Deprecated: removed */
   proxy_protocol: z.boolean().optional(),
+  /** Deprecated: removed */
   proxy_protocol_accept_no_header: z.boolean().optional(),
   sniff: z.boolean().optional(),
   sniff_override_destination: z.boolean().optional(),
@@ -6929,7 +7065,9 @@ export const ServiceProfilerSchema = z.looseObject({
     return UDPTimeoutCompatSchema.optional()
   },
   detour: z.string().optional(),
+  /** Deprecated: removed */
   proxy_protocol: z.boolean().optional(),
+  /** Deprecated: removed */
   proxy_protocol_accept_no_header: z.boolean().optional(),
   sniff: z.boolean().optional(),
   sniff_override_destination: z.boolean().optional(),
@@ -6961,7 +7099,9 @@ export const ServiceResolvedSchema = z.looseObject({
     return UDPTimeoutCompatSchema.optional()
   },
   detour: z.string().optional(),
+  /** Deprecated: removed */
   proxy_protocol: z.boolean().optional(),
+  /** Deprecated: removed */
   proxy_protocol_accept_no_header: z.boolean().optional(),
   sniff: z.boolean().optional(),
   sniff_override_destination: z.boolean().optional(),
@@ -6993,7 +7133,9 @@ export const ServiceSsmApiSchema = z.looseObject({
     return UDPTimeoutCompatSchema.optional()
   },
   detour: z.string().optional(),
+  /** Deprecated: removed */
   proxy_protocol: z.boolean().optional(),
+  /** Deprecated: removed */
   proxy_protocol_accept_no_header: z.boolean().optional(),
   sniff: z.boolean().optional(),
   sniff_override_destination: z.boolean().optional(),
@@ -7049,6 +7191,7 @@ export const ServiceUsbipClientSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },
@@ -7080,7 +7223,9 @@ export const ServiceUsbipServerSchema = z.looseObject({
     return UDPTimeoutCompatSchema.optional()
   },
   detour: z.string().optional(),
+  /** Deprecated: removed */
   proxy_protocol: z.boolean().optional(),
+  /** Deprecated: removed */
   proxy_protocol_accept_no_header: z.boolean().optional(),
   sniff: z.boolean().optional(),
   sniff_override_destination: z.boolean().optional(),
@@ -7151,6 +7296,7 @@ export const ShadowTLSHandshakeOptionsSchema = z.looseObject({
     ]).optional()
   },
   fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+  /** Deprecated: migrated to domain resolver */
   get domain_strategy() {
     return DomainStrategySchema.optional()
   },

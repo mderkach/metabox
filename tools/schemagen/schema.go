@@ -37,7 +37,8 @@ type field struct {
 	name     string
 	schema   *schema
 	optional bool
-	depth    int // глубина встраивания: по ней разрешается затенение имён
+	depth    int    // глубина встраивания: по ней разрешается затенение имён
+	doc      string // godoc поля форка: панель показывает его в подсказках и в авторендерере
 }
 
 // dedupe повторяет правила encoding/json для встроенных структур: при
@@ -202,6 +203,10 @@ func (s *schema) writeObject(b *strings.Builder, indent string) {
 	}
 	inner := indent + "  "
 	for _, f := range s.fields {
+		if f.doc != "" {
+			fmt.Fprintf(b, "%s/** %s */\n", inner, f.doc)
+		}
+
 		// Поле со ссылкой печатается геттером: он ленивый, поэтому взаимная
 		// рекурсия работает без оглядки на порядок объявлений в файле.
 		if f.schema.hasRef() {

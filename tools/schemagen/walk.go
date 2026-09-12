@@ -14,14 +14,16 @@ type walker struct {
 	building map[reflect.Type]string // тип -> имя схемы, включая недостроенные
 	unknown  map[string][]string     // нераспознанный тип -> пути, где встретился
 	byGoType map[string]*schema      // готовые схемы: union'ы реестров и правила по типам
+	docs     *docSet                 // godoc форка: описания типов и полей
 }
 
-func newWalker() *walker {
+func newWalker(docs *docSet) *walker {
 	return &walker{
 		set:      newSchemaSet(),
 		building: map[reflect.Type]string{},
 		unknown:  map[string][]string{},
 		byGoType: map[string]*schema{},
+		docs:     docs,
 	}
 }
 
@@ -196,6 +198,7 @@ func (w *walker) appendFieldsAt(out *schema, t reflect.Type, path string, depth 
 			schema:   w.build(f.Type, path+"."+name),
 			optional: true,
 			depth:    depth,
+			doc:      w.docs.field(goTypeName(t), f.Name),
 		})
 	}
 
