@@ -1,7 +1,8 @@
-import { API_ENDPOINT, ApiClientInstance, listenTopic, RUNTIME_TOPIC, type StreamSource } from '@shared/api';
+import { ApiClientInstance, listenTopic, RUNTIME_TOPIC, type StreamSource } from '@shared/api';
 
 import { ConnectionStore } from '../model/Connection.store';
 import type { ConnectionsSnapshotDto } from './Connection.dto';
+import { CONNECTION_ENDPOINT } from './Connection.endpoints';
 
 /**
  * Снапшоты применяются пачкой по таймеру, а не на каждое событие: при
@@ -12,11 +13,11 @@ import type { ConnectionsSnapshotDto } from './Connection.dto';
 const APPLY_INTERVAL = 500;
 
 export async function closeConnection(id: string): Promise<void> {
-  await ApiClientInstance.delete<void>(API_ENDPOINT.clashConnection(id));
+  await ApiClientInstance.delete<void>(CONNECTION_ENDPOINT.connection(id));
 }
 
 export async function closeAllConnections(): Promise<void> {
-  await ApiClientInstance.delete<void>(API_ENDPOINT.clashConnections());
+  await ApiClientInstance.delete<void>(CONNECTION_ENDPOINT.connections());
 }
 
 /**

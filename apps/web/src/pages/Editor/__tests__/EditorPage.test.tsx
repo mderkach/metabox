@@ -8,7 +8,7 @@ import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { ConfigDocumentState, findValue } from '@entities/Config';
-import { API_ENDPOINT } from '@shared/api';
+import { CONFIG_ENDPOINT } from '@entities/Config';
 
 import { toSelectedRuleId } from '../lib/Editor.lib';
 import { EditorPage } from '../ui/EditorPage';
@@ -48,7 +48,7 @@ const RECOGNIZED_CONFIG = JSON.stringify(
 );
 
 function serveConfig(text = CONFIG) {
-  server.use(http.get(API_ENDPOINT.config(), () => HttpResponse.text(text)));
+  server.use(http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(text)));
 }
 
 describe('экран правил', () => {

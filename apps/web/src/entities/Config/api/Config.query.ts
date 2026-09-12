@@ -1,7 +1,13 @@
 import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { DAEMON_QUERY, isApplyActive, type ApplyTransaction, type DaemonStatus } from '@entities/Daemon/@x/config';
-import { API_ENDPOINT, CACHE_TIME, POLL_INTERVAL } from '@shared/api';
+import {
+  DAEMON_QUERY,
+  isApplyActive,
+  type ApplyTransaction,
+  type DaemonStatus,
+  DAEMON_ENDPOINT,
+} from '@entities/Daemon/@x/config';
+import { CACHE_TIME, POLL_INTERVAL } from '@shared/api';
 import { ConfigSchema, type Config } from '@shared/api/generated';
 
 import { toConfigVersions } from '../model/Config.mapper';
@@ -128,7 +134,7 @@ function useTransactionResult() {
     queryClient.setQueryData<DaemonStatus>(DAEMON_QUERY.status(), (status) =>
       status === undefined
         ? status
-        : { ...status, transaction, transaction_href: API_ENDPOINT.applyState(transaction.id) }
+        : { ...status, transaction, transaction_href: DAEMON_ENDPOINT.applyState(transaction.id) }
     );
   };
 }

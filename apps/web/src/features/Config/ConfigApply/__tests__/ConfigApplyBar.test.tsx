@@ -6,7 +6,8 @@ import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ConfigDocumentState } from '@entities/Config';
-import { API_ENDPOINT } from '@shared/api';
+import { CONFIG_ENDPOINT } from '@entities/Config';
+import { DAEMON_ENDPOINT } from '@entities/Daemon';
 
 import { ConfigApplyBar } from '../ui/ConfigApplyBar';
 
@@ -23,7 +24,7 @@ const TRANSACTION = {
 };
 
 function serveStatus(transaction?: unknown) {
-  server.use(http.get(API_ENDPOINT.status(), () => HttpResponse.json({ version: 'dev', transaction })));
+  server.use(http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json({ version: 'dev', transaction })));
 }
 
 function loadDocument(draft = true) {
@@ -62,12 +63,12 @@ describe('ConfigApplyBar', () => {
     const sent: string[] = [];
 
     server.use(
-      http.post(API_ENDPOINT.apply(), async ({ request }) => {
+      http.post(DAEMON_ENDPOINT.apply(), async ({ request }) => {
         sent.push(await request.text());
 
         return HttpResponse.json(TRANSACTION, { status: 202 });
       }),
-      http.get(API_ENDPOINT.applyState(TRANSACTION.id), () => HttpResponse.json(TRANSACTION))
+      http.get(DAEMON_ENDPOINT.applyState(TRANSACTION.id), () => HttpResponse.json(TRANSACTION))
     );
 
     loadDocument();
@@ -84,8 +85,8 @@ describe('ConfigApplyBar', () => {
     const confirmed: string[] = [];
 
     server.use(
-      http.get(API_ENDPOINT.applyState(TRANSACTION.id), () => HttpResponse.json(TRANSACTION)),
-      http.post(API_ENDPOINT.applyConfirm(TRANSACTION.id), () => {
+      http.get(DAEMON_ENDPOINT.applyState(TRANSACTION.id), () => HttpResponse.json(TRANSACTION)),
+      http.post(DAEMON_ENDPOINT.applyConfirm(TRANSACTION.id), () => {
         confirmed.push(TRANSACTION.id);
 
         return HttpResponse.json({ ...TRANSACTION, phase: 'confirmed', window: 0 });
@@ -109,7 +110,7 @@ describe('ConfigApplyBar', () => {
 
   it('показывает вывод sing-box, когда бинарь отверг конфиг', async () => {
     server.use(
-      http.post(API_ENDPOINT.apply(), () =>
+      http.post(DAEMON_ENDPOINT.apply(), () =>
         HttpResponse.json(
           {
             code: 'check_failed',
@@ -135,7 +136,7 @@ describe('ConfigApplyBar', () => {
   it('сообщает, что секцию clash_api дописал демон', async () => {
     serveStatus({ ...TRANSACTION, clash_api_added: true });
     server.use(
-      http.get(API_ENDPOINT.applyState(TRANSACTION.id), () =>
+      http.get(DAEMON_ENDPOINT.applyState(TRANSACTION.id), () =>
         HttpResponse.json({ ...TRANSACTION, clash_api_added: true })
       )
     );
@@ -151,8 +152,8 @@ describe('ConfigApplyBar', () => {
 
     serveStatus(rolledBack);
     server.use(
-      http.get(API_ENDPOINT.applyState(TRANSACTION.id), () => HttpResponse.json(rolledBack)),
-      http.get(API_ENDPOINT.config(), () => HttpResponse.text(APPLIED))
+      http.get(DAEMON_ENDPOINT.applyState(TRANSACTION.id), () => HttpResponse.json(rolledBack)),
+      http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(APPLIED))
     );
 
     loadDocument(false);

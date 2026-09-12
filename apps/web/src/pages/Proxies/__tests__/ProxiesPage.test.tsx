@@ -5,8 +5,8 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 
+import { PROXY_ENDPOINT } from '@entities/Proxy';
 import { proxyHandlers } from '@entities/Proxy/__tests__/Proxy.handlers';
-import { API_ENDPOINT } from '@shared/api';
 
 import { ProxiesPage } from '../ui/ProxiesPage';
 
@@ -33,7 +33,7 @@ describe('экран прокси', () => {
 
     serveProxies();
     server.use(
-      http.put(API_ENDPOINT.clashProxy('us-fallback'), async ({ request }) => {
+      http.put(PROXY_ENDPOINT.proxy('us-fallback'), async ({ request }) => {
         selected(await request.json());
 
         return new HttpResponse(null, { status: 204 });

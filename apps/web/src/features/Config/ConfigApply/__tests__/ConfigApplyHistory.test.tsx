@@ -5,7 +5,8 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 
-import { API_ENDPOINT } from '@shared/api';
+import { CONFIG_ENDPOINT } from '@entities/Config';
+import { DAEMON_ENDPOINT } from '@entities/Daemon';
 
 import { ConfigApplyHistory } from '../ui/ConfigApplyHistory';
 
@@ -15,7 +16,7 @@ const VERSIONS = [
 ];
 
 function serveVersions(versions: unknown[] = VERSIONS) {
-  server.use(http.get(API_ENDPOINT.configVersions(), () => HttpResponse.json({ versions })));
+  server.use(http.get(CONFIG_ENDPOINT.versions(), () => HttpResponse.json({ versions })));
 }
 
 describe('ConfigApplyHistory', () => {
@@ -56,12 +57,12 @@ describe('ConfigApplyHistory', () => {
 
     serveVersions();
     server.use(
-      http.post(API_ENDPOINT.configVersionRestore(2), () => {
+      http.post(CONFIG_ENDPOINT.versionRestore(2), () => {
         restored.push('2');
 
         return HttpResponse.json({ id: 'tx-1', phase: 'awaiting_confirm', window: 60_000_000_000 }, { status: 202 });
       }),
-      http.get(API_ENDPOINT.status(), () => HttpResponse.json({ version: 'dev' }))
+      http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json({ version: 'dev' }))
     );
 
     renderWithQuery(<ConfigApplyHistory />);
@@ -80,7 +81,7 @@ describe('ConfigApplyHistory', () => {
   it('отказ бинаря показывает в диалоге и оставляет его открытым', async () => {
     serveVersions();
     server.use(
-      http.post(API_ENDPOINT.configVersionRestore(2), () =>
+      http.post(CONFIG_ENDPOINT.versionRestore(2), () =>
         HttpResponse.json(
           {
             code: 'check_failed',

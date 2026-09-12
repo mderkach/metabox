@@ -6,17 +6,17 @@ import { http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { ServiceState } from '@entities/Daemon';
+import { DAEMON_ENDPOINT } from '@entities/Daemon';
 import {
   SERVICE_DRIFT_FIXTURE,
   SERVICE_FAILED_FIXTURE,
   SERVICE_RUNNING_FIXTURE,
 } from '@entities/Daemon/__tests__/Daemon.fixture';
-import { API_ENDPOINT } from '@shared/api';
 
 import { DaemonService } from '../ui/DaemonService';
 
 function serveService(state: ServiceState) {
-  server.use(http.get(API_ENDPOINT.service(), () => HttpResponse.json(state)));
+  server.use(http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(state)));
 }
 
 describe('состояние сервиса', () => {
@@ -49,8 +49,8 @@ describe('состояние сервиса', () => {
     let state: ServiceState = SERVICE_FAILED_FIXTURE;
 
     server.use(
-      http.get(API_ENDPOINT.service(), () => HttpResponse.json(state)),
-      http.post(API_ENDPOINT.serviceAction(':action'), ({ params }) => {
+      http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(state)),
+      http.post(DAEMON_ENDPOINT.serviceAction(':action'), ({ params }) => {
         called(String(params.action));
         state = SERVICE_RUNNING_FIXTURE;
 

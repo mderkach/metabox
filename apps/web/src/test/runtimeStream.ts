@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw';
 
-import { API_ENDPOINT, type RuntimeTopic } from '@shared/api';
+import { DAEMON_ENDPOINT } from '@entities/Daemon';
+import { type RuntimeTopic } from '@shared/api';
 
 /** Что мок шлёт в топик: значение берётся функцией, чтобы сэмплы менялись. */
 export interface RuntimeSample {
@@ -16,7 +17,7 @@ export interface RuntimeSample {
  * Доменного знания здесь нет, только кадрирование.
  */
 export function runtimeStreamHandler(samples: RuntimeSample[], interval: number) {
-  return http.get(API_ENDPOINT.events(), () => {
+  return http.get(DAEMON_ENDPOINT.events(), () => {
     const encoder = new TextEncoder();
     let timer: ReturnType<typeof setInterval> | null = null;
 

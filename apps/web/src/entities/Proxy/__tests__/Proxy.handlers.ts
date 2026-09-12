@@ -1,8 +1,7 @@
 import { http, HttpResponse } from 'msw';
 
-import { API_ENDPOINT } from '@shared/api';
-
 import type { ClashProxies } from '../api/Proxy.dto';
+import { PROXY_ENDPOINT } from '../api/Proxy.endpoints';
 import { withSelectedNode } from '../model/Proxy.mapper';
 import { CLASH_DELAY_FIXTURE, CLASH_PROVIDERS_FIXTURE, CLASH_PROXIES_FIXTURE } from './Proxy.fixture';
 
@@ -32,19 +31,19 @@ function toChosenNode(body: unknown): string | null {
 /** Ручки, которые от состояния не зависят: обе сборки моков берут их как есть. */
 function readOnlyHandlers() {
   return [
-    http.get(API_ENDPOINT.clashProviders(), () => HttpResponse.json(CLASH_PROVIDERS_FIXTURE)),
-    http.get(API_ENDPOINT.clashProxyDelay(NODE_PATTERN), () => HttpResponse.json(CLASH_DELAY_FIXTURE)),
+    http.get(PROXY_ENDPOINT.providers(), () => HttpResponse.json(CLASH_PROVIDERS_FIXTURE)),
+    http.get(PROXY_ENDPOINT.proxyDelay(NODE_PATTERN), () => HttpResponse.json(CLASH_DELAY_FIXTURE)),
   ];
 }
 
 /** Ручки прокси, которых у демона ещё нет: формы сняты с устройства. */
 export const proxyHandlers = [
-  http.get(API_ENDPOINT.clashProxies(), () => HttpResponse.json(CLASH_PROXIES_FIXTURE)),
+  http.get(PROXY_ENDPOINT.proxies(), () => HttpResponse.json(CLASH_PROXIES_FIXTURE)),
   ...readOnlyHandlers(),
 
   // Рантайм на выбор узла отвечает пустым телом: панель берёт новое состояние
   // из перезапроса списка, а не из ответа.
-  http.put(API_ENDPOINT.clashProxy(NODE_PATTERN), () => new HttpResponse(null, { status: 204 })),
+  http.put(PROXY_ENDPOINT.proxy(NODE_PATTERN), () => new HttpResponse(null, { status: 204 })),
 ];
 
 /**
@@ -69,10 +68,10 @@ export function createStatefulProxyHandlers() {
   }
 
   return [
-    http.get(API_ENDPOINT.clashProxies(), () => HttpResponse.json(snapshot())),
+    http.get(PROXY_ENDPOINT.proxies(), () => HttpResponse.json(snapshot())),
     ...readOnlyHandlers(),
 
-    http.put(API_ENDPOINT.clashProxy(NODE_PATTERN), async function rememberSelect({ request }) {
+    http.put(PROXY_ENDPOINT.proxy(NODE_PATTERN), async function rememberSelect({ request }) {
       const node = toChosenNode(await request.json());
 
       if (node !== null) {

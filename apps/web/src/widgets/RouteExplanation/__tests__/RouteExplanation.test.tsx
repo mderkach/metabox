@@ -5,13 +5,14 @@ import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ConfigDocumentState } from '@entities/Config';
+import { CONFIG_ENDPOINT } from '@entities/Config';
 import { CONFIG_FIXTURE } from '@entities/Config/__tests__/Config.fixture';
+import { ROUTE_ENDPOINT } from '@entities/Route';
 import {
   ROUTE_EXPLANATION_FIXTURE,
   ROUTE_FINAL_FIXTURE,
   ROUTE_UNKNOWN_FIXTURE,
 } from '@entities/Route/__tests__/Route.fixture';
-import { API_ENDPOINT } from '@shared/api';
 
 import { RouteExplanation } from '../ui/RouteExplanation';
 
@@ -21,11 +22,11 @@ const JSON_INDENT = 2;
 const CONFIG_TEXT = JSON.stringify(CONFIG_FIXTURE, null, JSON_INDENT);
 
 function serveExplanation(body: typeof ROUTE_EXPLANATION_FIXTURE) {
-  server.use(http.get(API_ENDPOINT.connectionRoute('c-1'), () => HttpResponse.json(body)));
+  server.use(http.get(ROUTE_ENDPOINT.explanation('c-1'), () => HttpResponse.json(body)));
 }
 
 function serveConfig(text: string) {
-  server.use(http.get(API_ENDPOINT.config(), () => HttpResponse.text(text)));
+  server.use(http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(text)));
 }
 
 /** Конфиг ровно с тем числом правил, что отдал демон: связка с узлом жива. */

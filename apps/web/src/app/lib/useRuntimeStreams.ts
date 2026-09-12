@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 
 import { ConnectionState, listenConnections } from '@entities/Connection';
 import { DAEMON_QUERY, listenMemory, listenService, listenTraffic, RuntimeState } from '@entities/Daemon';
-import { API_ENDPOINT } from '@shared/api';
+import { DAEMON_ENDPOINT } from '@entities/Daemon';
 
 /**
  * Единый поток рантайма живёт в оболочке, а не на экранах: экран объявляет,
@@ -27,7 +27,7 @@ export function useRuntimeStreams(): void {
         return undefined;
       }
 
-      const source = new EventSource(API_ENDPOINT.events());
+      const source = new EventSource(DAEMON_ENDPOINT.events());
 
       const unsubscribe = [
         listenTraffic(source),

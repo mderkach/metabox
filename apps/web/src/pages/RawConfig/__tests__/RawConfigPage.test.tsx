@@ -6,7 +6,7 @@ import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { ConfigDocumentState } from '@entities/Config';
-import { API_ENDPOINT } from '@shared/api';
+import { CONFIG_ENDPOINT } from '@entities/Config';
 
 import { RawConfigPage } from '../ui/RawConfigPage';
 
@@ -16,7 +16,7 @@ const VALID_CONFIG = JSON.stringify({ route: { rules: [{ outbound: 'direct' }] }
 const UNPARSED_CONFIG = JSON.stringify({ route: { rules: 'всё направо' } }, null, 2);
 
 function serveConfig(text: string) {
-  server.use(http.get(API_ENDPOINT.config(), () => HttpResponse.text(text)));
+  server.use(http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(text)));
 }
 
 describe('конфиг текстом', () => {

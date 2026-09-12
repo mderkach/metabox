@@ -1,8 +1,9 @@
 import { http, HttpResponse } from 'msw';
 
-import { API_ENDPOINT } from '@shared/api';
+import { CONFIG_ENDPOINT } from '@entities/Config';
 
 import type { ApplyTransaction } from '../api/Daemon.api';
+import { DAEMON_ENDPOINT } from '../api/Daemon.endpoints';
 import {
   CLASH_CONFIGS_FIXTURE,
   CLASH_VERSION_FIXTURE,
@@ -37,7 +38,7 @@ export function createStatefulDaemonHandlers() {
   };
 
   return [
-    http.get(API_ENDPOINT.status(), () =>
+    http.get(DAEMON_ENDPOINT.status(), () =>
       HttpResponse.json(
         transaction === null
           ? DAEMON_STATUS_FIXTURE
@@ -45,10 +46,10 @@ export function createStatefulDaemonHandlers() {
       )
     ),
 
-    http.post(API_ENDPOINT.apply(), () => HttpResponse.json(start(), { status: 202 })),
-    http.post(`${API_ENDPOINT.configVersions()}/:id/restore`, () => HttpResponse.json(start(), { status: 202 })),
+    http.post(DAEMON_ENDPOINT.apply(), () => HttpResponse.json(start(), { status: 202 })),
+    http.post(`${CONFIG_ENDPOINT.versions()}/:id/restore`, () => HttpResponse.json(start(), { status: 202 })),
 
-    http.get(API_ENDPOINT.applyState(':id'), () =>
+    http.get(DAEMON_ENDPOINT.applyState(':id'), () =>
       transaction === null
         ? HttpResponse.json(
             { code: 'unknown_transaction', message: 'транзакции с таким идентификатором нет' },
@@ -57,7 +58,7 @@ export function createStatefulDaemonHandlers() {
         : HttpResponse.json(transaction)
     ),
 
-    http.post(API_ENDPOINT.applyConfirm(':id'), () => {
+    http.post(DAEMON_ENDPOINT.applyConfirm(':id'), () => {
       if (transaction === null) {
         return HttpResponse.json({ code: 'nothing_to_confirm', message: 'подтверждать нечего' }, { status: 409 });
       }
@@ -67,9 +68,9 @@ export function createStatefulDaemonHandlers() {
       return HttpResponse.json(transaction);
     }),
 
-    http.get(API_ENDPOINT.service(), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE)),
-    http.post(API_ENDPOINT.serviceAction(':action'), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE)),
-    http.get(API_ENDPOINT.clashVersion(), () => HttpResponse.json(CLASH_VERSION_FIXTURE)),
-    http.get(API_ENDPOINT.clashConfigs(), () => HttpResponse.json(CLASH_CONFIGS_FIXTURE)),
+    http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE)),
+    http.post(DAEMON_ENDPOINT.serviceAction(':action'), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE)),
+    http.get(DAEMON_ENDPOINT.clashVersion(), () => HttpResponse.json(CLASH_VERSION_FIXTURE)),
+    http.get(DAEMON_ENDPOINT.clashConfigs(), () => HttpResponse.json(CLASH_CONFIGS_FIXTURE)),
   ];
 }

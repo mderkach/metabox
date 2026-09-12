@@ -94,6 +94,11 @@ function checkAlias(from, alias, report) {
   const deep = alias.rest.slice(slice === '' ? 0 : slice.split('/').length);
   const isCrossImport = SLICED.has(alias.layer) && deep[0] === '@x';
 
+  // Мок ведёт сценарий через несколько слайсов сразу — цикл применения живёт
+  // в моках демона вместе с конфиговой ручкой отката. Тесту сосед открыт через
+  // его Public API; прод-код правило по-прежнему связывает.
+  if (alias.layer === from.layer && !isCrossImport && deep.length === 0 && isTestFile(from.filePath)) return;
+
   if (alias.layer === from.layer && !isCrossImport) {
     report(
       SLICED.has(from.layer)

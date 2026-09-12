@@ -1,8 +1,9 @@
 import type { AxiosRequestConfig } from 'axios';
 
-import { API_ENDPOINT, ApiClientInstance } from '@shared/api';
+import { ApiClientInstance } from '@shared/api';
 
 import type { ClashConfigs, ServiceAction, ServiceState } from './Daemon.dto';
+import { DAEMON_ENDPOINT } from './Daemon.endpoints';
 
 /** Стадия применения. Значения приходят с демона (`apply.Phase`). */
 export const APPLY_PHASE = {
@@ -39,11 +40,11 @@ export interface DaemonStatus {
 }
 
 export async function getDaemonStatus(config?: AxiosRequestConfig): Promise<DaemonStatus> {
-  return ApiClientInstance.get<DaemonStatus>(API_ENDPOINT.status(), config);
+  return ApiClientInstance.get<DaemonStatus>(DAEMON_ENDPOINT.status(), config);
 }
 
 export async function getServiceState(config?: AxiosRequestConfig): Promise<ServiceState> {
-  return ApiClientInstance.get<ServiceState>(API_ENDPOINT.service(), config);
+  return ApiClientInstance.get<ServiceState>(DAEMON_ENDPOINT.service(), config);
 }
 
 /**
@@ -51,10 +52,10 @@ export async function getServiceState(config?: AxiosRequestConfig): Promise<Serv
  * запросом незачем, а гадать по коду ответа нельзя.
  */
 export async function runServiceAction(action: ServiceAction): Promise<ServiceState> {
-  return ApiClientInstance.post<ServiceState>(API_ENDPOINT.serviceAction(action));
+  return ApiClientInstance.post<ServiceState>(DAEMON_ENDPOINT.serviceAction(action));
 }
 
 /** Режим маршрутизации рантайма: `Rule`, `Global` или `Direct`. */
 export async function getClashConfigs(config?: AxiosRequestConfig): Promise<ClashConfigs> {
-  return ApiClientInstance.get<ClashConfigs>(API_ENDPOINT.clashConfigs(), config);
+  return ApiClientInstance.get<ClashConfigs>(DAEMON_ENDPOINT.clashConfigs(), config);
 }

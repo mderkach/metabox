@@ -1,7 +1,6 @@
 import { http, HttpResponse } from 'msw';
 
-import { API_ENDPOINT } from '@shared/api';
-
+import { CONFIG_ENDPOINT } from '../api/Config.endpoints';
 import { CONFIG_FIXTURE } from './Config.fixture';
 
 /** Отступ файла на устройстве: конфиг отдаётся текстом, а не объектом (ADR-0004). */
@@ -22,9 +21,9 @@ const CONFIG_TEXT = JSON.stringify(CONFIG_FIXTURE, null, JSON_INDENT);
  * живёт в моках демона, вместе с остальным циклом применения.
  */
 export const configHandlers = [
-  http.get(API_ENDPOINT.config(), () => HttpResponse.text(CONFIG_TEXT)),
-  http.get(API_ENDPOINT.configVersions(), () => HttpResponse.json({ versions: VERSIONS_FIXTURE })),
+  http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(CONFIG_TEXT)),
+  http.get(CONFIG_ENDPOINT.versions(), () => HttpResponse.json({ versions: VERSIONS_FIXTURE })),
   // Номер версии в адресе — шаблон msw, поэтому адрес собирается от базовой
   // ручки: сам номер в константу демона не подставить.
-  http.get(`${API_ENDPOINT.configVersions()}/:id`, () => HttpResponse.text(CONFIG_TEXT)),
+  http.get(`${CONFIG_ENDPOINT.versions()}/:id`, () => HttpResponse.text(CONFIG_TEXT)),
 ];

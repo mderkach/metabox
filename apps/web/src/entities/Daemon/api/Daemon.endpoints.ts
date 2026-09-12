@@ -1,0 +1,21 @@
+/**
+ * Адреса демона: собственные ручки, цикл применения и проксированные ручки
+ * Clash API. Цикл принадлежит демону, а не конфигу (ADR-0002): конфиг —
+ * предмет применения, а состояние транзакции живёт здесь.
+ *
+ * Ветка `/api/clash/*` — рантайм запрос-ответ: демон проксирует Clash API,
+ * сохраняя формы ответов дословно, и владеет его адресом и секретом. Потоки
+ * туда не ходят, всё приходит одним `GET /api/events` (ADR-0010).
+ */
+export const DAEMON_ENDPOINT = {
+  health: () => '/healthz',
+  status: () => '/api/status',
+  events: () => '/api/events',
+  service: () => '/api/service',
+  serviceAction: (action: string) => `/api/service/${action}`,
+  apply: () => '/api/apply',
+  applyState: (id: string) => `/api/apply/${id}`,
+  applyConfirm: (id: string) => `/api/apply/${id}/confirm`,
+  clashVersion: () => '/api/clash/version',
+  clashConfigs: () => '/api/clash/configs',
+} as const;

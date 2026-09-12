@@ -7,8 +7,8 @@ import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ConnectionStore } from '@entities/Connection';
+import { CONNECTION_ENDPOINT } from '@entities/Connection';
 import { makeConnectionsSnapshot } from '@entities/Connection/__tests__/Connection.fixture';
-import { API_ENDPOINT } from '@shared/api';
 
 import { ConnectionsPage } from '../ui/ConnectionsPage';
 
@@ -39,7 +39,7 @@ describe('экран соединений', () => {
     const closed = vi.fn<(id: string) => void>();
 
     server.use(
-      http.delete(`${API_ENDPOINT.clashConnections()}/:id`, ({ params }) => {
+      http.delete(`${CONNECTION_ENDPOINT.connections()}/:id`, ({ params }) => {
         closed(String(params.id));
 
         return new HttpResponse(null, { status: 204 });

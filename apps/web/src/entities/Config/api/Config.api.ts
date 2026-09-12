@@ -1,9 +1,10 @@
 import type { AxiosRequestConfig } from 'axios';
 
-import type { ApplyTransaction } from '@entities/Daemon/@x/config';
-import { API_ENDPOINT, ApiClientInstance } from '@shared/api';
+import { DAEMON_ENDPOINT, type ApplyTransaction } from '@entities/Daemon/@x/config';
+import { ApiClientInstance } from '@shared/api';
 
 import type { ConfigVersionsDto } from './Config.dto';
+import { CONFIG_ENDPOINT } from './Config.endpoints';
 
 /** Axios разобрал бы тело в объект, а нам нужны исходные байты файла. */
 const KEEP_RAW = [(data: string) => data];
@@ -22,7 +23,7 @@ const SEND_TEXT: AxiosRequestConfig = { headers: { 'Content-Type': 'application/
  * порядок ключей пользователя переписывается целиком (ADR-0004, AC-2).
  */
 export async function getConfig(config?: AxiosRequestConfig): Promise<string> {
-  return ApiClientInstance.get<string>(API_ENDPOINT.config(), { ...AS_TEXT, ...config });
+  return ApiClientInstance.get<string>(CONFIG_ENDPOINT.config(), { ...AS_TEXT, ...config });
 }
 
 /**
@@ -31,25 +32,25 @@ export async function getConfig(config?: AxiosRequestConfig): Promise<string> {
  * 422 с выводом бинаря в `details` — его показывает вызывающий (AC-26).
  */
 export async function applyConfig(text: string): Promise<ApplyTransaction> {
-  return ApiClientInstance.post<ApplyTransaction, string>(API_ENDPOINT.apply(), text, SEND_TEXT);
+  return ApiClientInstance.post<ApplyTransaction, string>(DAEMON_ENDPOINT.apply(), text, SEND_TEXT);
 }
 
 export async function getApplyState(id: string, config?: AxiosRequestConfig): Promise<ApplyTransaction> {
-  return ApiClientInstance.get<ApplyTransaction>(API_ENDPOINT.applyState(id), config);
+  return ApiClientInstance.get<ApplyTransaction>(DAEMON_ENDPOINT.applyState(id), config);
 }
 
 /** Подтверждает, что связь жива: без этого демон вернёт предыдущий конфиг. */
 export async function confirmApply(id: string): Promise<ApplyTransaction> {
-  return ApiClientInstance.post<ApplyTransaction>(API_ENDPOINT.applyConfirm(id));
+  return ApiClientInstance.post<ApplyTransaction>(DAEMON_ENDPOINT.applyConfirm(id));
 }
 
 export async function getConfigVersions(config?: AxiosRequestConfig): Promise<ConfigVersionsDto> {
-  return ApiClientInstance.get<ConfigVersionsDto>(API_ENDPOINT.configVersions(), config);
+  return ApiClientInstance.get<ConfigVersionsDto>(CONFIG_ENDPOINT.versions(), config);
 }
 
 /** Версия отдаётся теми же байтами, какими была применена. */
 export async function getConfigVersion(id: number, config?: AxiosRequestConfig): Promise<string> {
-  return ApiClientInstance.get<string>(API_ENDPOINT.configVersion(id), { ...AS_TEXT, ...config });
+  return ApiClientInstance.get<string>(CONFIG_ENDPOINT.version(id), { ...AS_TEXT, ...config });
 }
 
 /**
@@ -57,5 +58,5 @@ export async function getConfigVersion(id: number, config?: AxiosRequestConfig):
  * такая же транзакция с окном подтверждения (ADR-0008).
  */
 export async function restoreConfigVersion(id: number): Promise<ApplyTransaction> {
-  return ApiClientInstance.post<ApplyTransaction>(API_ENDPOINT.configVersionRestore(id));
+  return ApiClientInstance.post<ApplyTransaction>(CONFIG_ENDPOINT.versionRestore(id));
 }

@@ -5,16 +5,17 @@ import { screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 
-import { API_ENDPOINT } from '@shared/api';
+import { CONFIG_ENDPOINT } from '@entities/Config';
+import { DAEMON_ENDPOINT } from '@entities/Daemon';
 
 import { Router } from '../Router';
 
 function serveDaemon() {
   server.use(
-    http.get(API_ENDPOINT.status(), () =>
+    http.get(DAEMON_ENDPOINT.status(), () =>
       HttpResponse.json({ version: 'dev', singbox_version: '1.14.0-extended-2.7.1' })
     ),
-    http.get(API_ENDPOINT.config(), () => HttpResponse.text(MINIMAL_CONFIG))
+    http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(MINIMAL_CONFIG))
   );
 }
 

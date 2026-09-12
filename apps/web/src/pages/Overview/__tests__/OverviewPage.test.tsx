@@ -7,17 +7,17 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { ConnectionStore } from '@entities/Connection';
 import { makeConnectionsSnapshot } from '@entities/Connection/__tests__/Connection.fixture';
 import { RuntimeStore, SCHEMA_VERSION } from '@entities/Daemon';
+import { DAEMON_ENDPOINT } from '@entities/Daemon';
 import { CLASH_CONFIGS_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture';
-import { API_ENDPOINT } from '@shared/api';
 
 import { OverviewPage } from '../ui/OverviewPage';
 
 function serveStatus(configPath?: string, singboxVersion = SCHEMA_VERSION) {
   server.use(
-    http.get(API_ENDPOINT.status(), () =>
+    http.get(DAEMON_ENDPOINT.status(), () =>
       HttpResponse.json({ version: 'dev', singbox_version: singboxVersion, config_path: configPath })
     ),
-    http.get(API_ENDPOINT.clashConfigs(), () => HttpResponse.json(CLASH_CONFIGS_FIXTURE))
+    http.get(DAEMON_ENDPOINT.clashConfigs(), () => HttpResponse.json(CLASH_CONFIGS_FIXTURE))
   );
 }
 
