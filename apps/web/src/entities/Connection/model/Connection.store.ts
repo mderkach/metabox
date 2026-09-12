@@ -1,7 +1,6 @@
 import { createReactSelectors, stateCreator, useStore } from '@shared/lib/state';
 
-import type { ConnectionsSnapshotDto } from '../api/Connection.dto';
-import { toConnectionRow } from './Connection.mapper';
+import { toConnectionRow, toConnectionsSnapshot } from './Connection.adapter';
 import { CLOSED_LIMIT, type ConnectionRow, type ConnectionTotals } from './Connection.model';
 
 const EMPTY_TOTALS: ConnectionTotals = { upload: 0, download: 0, memory: 0 };
@@ -21,7 +20,12 @@ interface ConnectionState {
   paused: boolean;
   /** Сколько экранов сейчас смотрит поток: по нулю подписка закрывается. */
   readers: number;
-  apply: (snapshot: ConnectionsSnapshotDto) => void;
+  /**
+   * Снапшотов, которые схема не приняла. Показывается на экране соединений:
+   * молча замереть на старых данных хуже, чем сказать, что поток не разобран.
+   */
+  dropped: number;
+  apply: (snapshot: unknown) => void;
   setPaused: (paused: boolean) => void;
   addReader: () => void;
   removeReader: () => void;
@@ -36,9 +40,18 @@ const ConnectionStateProto = stateCreator<ConnectionState>(
     totals: EMPTY_TOTALS,
     paused: false,
     readers: 0,
-    apply: (snapshot) => {
+    dropped: 0,
+    apply: (frame) => {
+      const snapshot = toConnectionsSnapshot(frame);
+
       set((state) => {
         if (state.paused) {
+          return;
+        }
+
+        if (snapshot === null) {
+          state.dropped += 1;
+
           return;
         }
 
@@ -99,6 +112,7 @@ const ConnectionStateProto = stateCreator<ConnectionState>(
         state.closed = [];
         state.totals = EMPTY_TOTALS;
         state.paused = false;
+        state.dropped = 0;
       });
     },
   }),

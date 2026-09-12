@@ -1,7 +1,9 @@
-import type { ConnectionDto } from '../api/Connection.dto';
+import { decodeFrame } from '@shared/api';
+
+import { ConnectionsSnapshotSchema, type ConnectionWire } from '../api/Connection.schema';
 import { FINAL_OUTCOME, type ConnectionRow } from './Connection.model';
 
-export function toConnectionRow(connection: ConnectionDto): ConnectionRow {
+export function toConnectionRow(connection: ConnectionWire): ConnectionRow {
   return {
     id: connection.id,
     host: connection.host,
@@ -17,4 +19,13 @@ export function toConnectionRow(connection: ConnectionDto): ConnectionRow {
     download: connection.download,
     startedAt: Date.parse(connection.started_at),
   };
+}
+
+/**
+ * Снапшот потока. `null` — кадр отбракован: следующий придёт через секунду, и
+ * ронять на непонятом кадре подписку незачем. Стор считает отбракованные, иначе
+ * экран замер бы на старых данных без единого признака поломки.
+ */
+export function toConnectionsSnapshot(raw: unknown) {
+  return decodeFrame(ConnectionsSnapshotSchema, raw, 'connections');
 }

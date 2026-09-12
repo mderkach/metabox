@@ -1,7 +1,6 @@
 import { ApiClientInstance, listenTopic, RUNTIME_TOPIC, type StreamSource } from '@shared/api';
 
 import { ConnectionStore } from '../model/Connection.store';
-import type { ConnectionsSnapshotDto } from './Connection.dto';
 import { CONNECTION_ENDPOINT } from './Connection.endpoints';
 
 /**
@@ -26,7 +25,7 @@ export async function closeAllConnections(): Promise<void> {
  * один разбор тех же снапшотов.
  */
 export function listenConnections(source: StreamSource): () => void {
-  let pending: ConnectionsSnapshotDto | null = null;
+  let pending: unknown = null;
 
   const flush = () => {
     if (pending === null) {
@@ -41,7 +40,7 @@ export function listenConnections(source: StreamSource): () => void {
 
   const timer = setInterval(flush, APPLY_INTERVAL);
 
-  const unsubscribe = listenTopic<ConnectionsSnapshotDto>(source, RUNTIME_TOPIC.Connections, (snapshot) => {
+  const unsubscribe = listenTopic(source, RUNTIME_TOPIC.Connections, (snapshot) => {
     pending = snapshot;
   });
 

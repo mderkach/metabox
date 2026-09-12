@@ -1,4 +1,4 @@
-import type { ConnectionDto, ConnectionsSnapshotDto } from '../api/Connection.dto';
+import type { ConnectionWire, ConnectionsSnapshotWire } from '../api/Connection.schema';
 
 /**
  * Снапшот потока соединений с рабочего роутера, снятый 2026-09-10.
@@ -30,7 +30,7 @@ interface ConnectionInput {
   network?: string;
 }
 
-function connection(id: string, input: ConnectionInput): ConnectionDto {
+function connection(id: string, input: ConnectionInput): ConnectionWire {
   const startedAt = new Date(Date.parse(CAPTURED_AT) - input.startedSecondsAgo * 1000);
 
   return {
@@ -48,7 +48,7 @@ function connection(id: string, input: ConnectionInput): ConnectionDto {
   };
 }
 
-const CONNECTIONS: ConnectionDto[] = [
+const CONNECTIONS: ConnectionWire[] = [
   connection('962b2d06-f296-42bb-af39-b96f2fac2cee', {
     host: 'video.example',
     sourceIP: '192.168.1.120',
@@ -133,7 +133,7 @@ const CONNECTIONS: ConnectionDto[] = [
 ];
 
 /** Снапшот топика `connections`: то же тело, что приходит раз в секунду. */
-export const CONNECTIONS_FIXTURE: ConnectionsSnapshotDto = {
+export const CONNECTIONS_FIXTURE: ConnectionsSnapshotWire = {
   connections: CONNECTIONS,
   upload_total: 12376739,
   download_total: 109672289,
@@ -145,7 +145,7 @@ export const CONNECTIONS_FIXTURE: ConnectionsSnapshotDto = {
  * образцов, а не хранятся файлом. Размножается именно снапшот целиком — поток
  * отдаёт полный список, и разбор этого списка и есть стоимость.
  */
-export function makeConnectionsSnapshot(count: number): ConnectionsSnapshotDto {
+export function makeConnectionsSnapshot(count: number): ConnectionsSnapshotWire {
   const connections = Array.from({ length: count }, (_, index) => {
     const sample = CONNECTIONS[index % CONNECTIONS.length];
 

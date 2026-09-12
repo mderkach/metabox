@@ -25,6 +25,7 @@ export function ConnectionsPage() {
   const active = ConnectionState.use.active();
   const closed = ConnectionState.use.closed();
   const paused = ConnectionState.use.paused();
+  const dropped = ConnectionState.use.dropped();
   const setPaused = ConnectionState.use.setPaused();
   const counts = useConnectionCounts();
   const closeAll = useCloseAllConnections();
@@ -42,6 +43,13 @@ export function ConnectionsPage() {
       <header className='flex min-h-14 shrink-0 flex-wrap items-baseline gap-x-2.5 gap-y-1 border-b border-border px-4 py-2.5 sm:px-6'>
         <h1 className='text-base font-medium'>Соединения</h1>
         <p className='text-xs text-muted-foreground'>поток идёт снапшотами раз в секунду</p>
+        {dropped > 0 && (
+          // Молча замереть на старых данных хуже, чем сказать, что снапшоты не
+          // разбираются: список выглядел бы исправным, но не обновлялся.
+          <p role='status' className='text-xs text-destructive'>
+            снапшотов не разобрано: {dropped}
+          </p>
+        )}
         <span className='grow' />
         <Button
           variant='outline'

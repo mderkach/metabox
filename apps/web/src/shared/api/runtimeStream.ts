@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 /**
  * Топики потока рантайма. Панель подписывается на все сразу: отдельной
  * подписки на топик поток не имеет (ADR-0010).
@@ -15,12 +17,17 @@ export type RuntimeTopic = (typeof RUNTIME_TOPIC)[keyof typeof RUNTIME_TOPIC];
  * Конверт демона. `seq` считается для каждого читателя отдельно и растёт без
  * пропусков: разрыв в номерах означает, что читатель не успевал и событие
  * было отброшено.
+ *
+ * Полезная нагрузка остаётся `unknown`: её форму знает слайс-владелец топика,
+ * а конверт отвечает только за доставку.
  */
-export interface RuntimeEvent<T> {
-  topic: RuntimeTopic;
-  seq: number;
-  data: T;
-}
+export const RuntimeEventSchema = z.object({
+  topic: z.string(),
+  seq: z.number(),
+  data: z.unknown(),
+});
+
+export type RuntimeEvent = z.infer<typeof RuntimeEventSchema>;
 
 /**
  * Всё, что обработчику нужно от потока. Узкий тип вместо `EventSource`: так
@@ -40,17 +47,18 @@ export interface StreamSource {
  * Данные достаются из конверта здесь: слайсу достаётся его топик, а не форма
  * транспорта.
  */
-export function listenTopic<T>(source: StreamSource, topic: RuntimeTopic, apply: (data: T) => void): () => void {
+export function listenTopic(source: StreamSource, topic: RuntimeTopic, apply: (data: unknown) => void): () => void {
   const handler = (event: MessageEvent<string>) => {
     try {
-      // Схемой поток не проверяется намеренно: разбор снапшота на 5000
-      // соединений раз в секунду и есть та работа, которую запрещает NFR-2.
-      // Применение стоит внутри: кадр с валидным JSON и чужой формой уронил бы
-      // обработчик так же, как оборванный.
-      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- см. выше
-      const envelope = JSON.parse(event.data) as RuntimeEvent<T>;
+      const envelope = RuntimeEventSchema.safeParse(JSON.parse(event.data));
 
-      apply(envelope.data);
+      if (!envelope.success) {
+        console.warn(`[STREAM] конверт топика ${topic} не разобран`, z.prettifyError(envelope.error));
+
+        return;
+      }
+
+      apply(envelope.data.data);
     } catch {
       // Битый кадр пропускается: следующий придёт через секунду.
     }

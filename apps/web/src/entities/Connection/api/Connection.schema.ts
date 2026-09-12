@@ -1,31 +1,33 @@
+import { z } from 'zod';
+
 /**
  * Соединение в контракте демона (ADR-0006): форма не зависит от того, каким
  * источником оно прочитано. Условия правила и его исход демон разводит сам —
  * склеенной строки Clash API панель не видит.
  */
-export interface ConnectionDto {
-  id: string;
+export const ConnectionSchema = z.object({
+  id: z.string(),
   /** Адрес назначения с портом: имя из sniff, иначе адрес. */
-  host: string;
-  network: string;
-  source: string;
+  host: z.string(),
+  network: z.string(),
+  source: z.string(),
   /** Условия сработавшего правила; пусто у правила без условий и у `route.final`. */
-  rule: string;
+  rule: z.string(),
   /** Исход правила; пусто, когда источник его не отдаёт. */
-  action: string;
+  action: z.string(),
   /**
    * Ни одно правило не совпало — сработал `route.final`. Отдельный признак
    * нужен потому, что у этого исхода условия пусты так же, как у правила без
    * условий, а это разные вещи (ADR-0007).
    */
-  final: boolean;
+  final: z.boolean(),
   /** Цепочка в порядке core: от конечного узла к группе. */
-  chain: string[];
-  upload: number;
-  download: number;
+  chain: z.array(z.string()),
+  upload: z.number(),
+  download: z.number(),
   /** Время начала в том виде, в каком его отдал core. */
-  started_at: string;
-}
+  started_at: z.string(),
+});
 
 /**
  * Топик `connections` отдаёт **полный снапшот** примерно раз в секунду, а не
@@ -33,9 +35,12 @@ export interface ConnectionDto {
  * Соединения, завершившиеся между снапшотами, просто исчезают из списка —
  * списка закрытых ни один источник не отдаёт.
  */
-export interface ConnectionsSnapshotDto {
-  connections: ConnectionDto[];
-  upload_total: number;
-  download_total: number;
-  memory: number;
-}
+export const ConnectionsSnapshotSchema = z.object({
+  connections: z.array(ConnectionSchema),
+  upload_total: z.number(),
+  download_total: z.number(),
+  memory: z.number(),
+});
+
+export type ConnectionWire = z.infer<typeof ConnectionSchema>;
+export type ConnectionsSnapshotWire = z.infer<typeof ConnectionsSnapshotSchema>;

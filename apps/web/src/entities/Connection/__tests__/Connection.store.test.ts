@@ -4,7 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { RUNTIME_TOPIC } from '@shared/api';
 
 import { listenConnections } from '../api/Connection.api';
-import { toConnectionRow } from '../model/Connection.mapper';
+import type { ConnectionWire } from '../api/Connection.schema';
+import { toConnectionRow } from '../model/Connection.adapter';
 import { CLOSED_LIMIT, FINAL_OUTCOME } from '../model/Connection.model';
 import { ConnectionStore } from '../model/Connection.store';
 import { makeConnectionsSnapshot } from './Connection.fixture';
@@ -151,7 +152,7 @@ describe('идентичность строк между снапшотами', 
 
     store.apply({
       ...snapshot,
-      connections: snapshot.connections.map((connection, index) =>
+      connections: snapshot.connections.map((connection: ConnectionWire, index: number) =>
         index === 0 ? { ...connection, download: connection.download + 1 } : connection
       ),
     });
@@ -180,5 +181,18 @@ describe('строка соединения', () => {
     const row = toConnectionRow({ ...base, chain: ['hk-01', 'proxy'] });
 
     expect(row.chain).toEqual(['proxy', 'hk-01']);
+  });
+});
+
+describe('отбраковка снапшота', () => {
+  it('считает снапшоты, которые схема не приняла, и не трогает список', () => {
+    const store = ConnectionStore.getState();
+
+    store.reset();
+    store.apply(makeConnectionsSnapshot(3));
+    store.apply({ connections: 'не список', upload_total: 0, download_total: 0, memory: 0 });
+
+    expect(ConnectionStore.getState().dropped).toBe(1);
+    expect(ConnectionStore.getState().active).toHaveLength(3);
   });
 });
