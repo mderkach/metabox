@@ -12,17 +12,17 @@ const RANK = new Map(LAYERS.map((layer, index) => [layer, index]));
 const SRC = 'src';
 const PUBLIC_API = 'index.ts';
 
-const publicApi = new Map();
-
+/**
+ * Наличие Public API спрашивается у диска каждый раз.
+ *
+ * Кеш здесь жил бы дольше правды: языковой сервер редактора держит плагин в
+ * памяти между правками, и папка, у которой `index.ts` появился уже после
+ * первого вопроса, навсегда оставалась бы «без Public API». Линт в редакторе
+ * ругал бы верный код, а тот же прогон из CLI молчал — и разойтись они могли
+ * бы на недели.
+ */
 function hasPublicApi(dir) {
-  let known = publicApi.get(dir);
-
-  if (known === undefined) {
-    known = fs.existsSync(path.join(dir, PUBLIC_API));
-    publicApi.set(dir, known);
-  }
-
-  return known;
+  return fs.existsSync(path.join(dir, PUBLIC_API));
 }
 
 /**
@@ -41,10 +41,13 @@ function sliceOf(layerRoot, parts) {
     dir = path.join(dir, part);
     slice.push(part);
 
-    if (hasPublicApi(dir)) break;
+    if (hasPublicApi(dir)) return { name: slice.join('/'), found: true };
   }
 
-  return slice.join('/');
+  // Public API по пути не нашёлся: это группа слайсов, файл вне слайса или
+  // опечатка. Отвечать именем слайса здесь нельзя — из него получится путь до
+  // файла, и правила начнут ругаться на выдуманный слайс.
+  return { name: slice.join('/'), found: false };
 }
 
 /** Слой и слайс файла по его пути; `null` — файл вне слоёв. */
@@ -58,10 +61,12 @@ function locate(filePath) {
 
   const root = parts.slice(0, src + 1).join(path.sep);
 
+  const slice = SLICED.has(layer) ? sliceOf(path.join(root, layer), inside) : null;
+
   return {
     layer,
     root,
-    slice: SLICED.has(layer) ? sliceOf(path.join(root, layer), inside) : null,
+    slice: slice?.found === true ? slice.name : null,
   };
 }
 
@@ -78,7 +83,8 @@ function checkAlias(from, alias, report) {
     return;
   }
 
-  const slice = SLICED.has(alias.layer) ? sliceOf(path.join(from.root, alias.layer), alias.rest) : '';
+  const target = SLICED.has(alias.layer) ? sliceOf(path.join(from.root, alias.layer), alias.rest) : null;
+  const slice = target === null ? '' : target.name;
   const deep = alias.rest.slice(slice === '' ? 0 : slice.split('/').length);
   const isCrossImport = SLICED.has(alias.layer) && deep[0] === '@x';
 
@@ -91,8 +97,40 @@ function checkAlias(from, alias, report) {
     return;
   }
 
-  if (SLICED.has(alias.layer) && slice !== '' && deep.length > 0 && !isCrossImport) {
+  if (isCrossImport) {
+    checkCrossImport(from, alias, deep, report);
+    return;
+  }
+
+  // Слайс кончается там, где лежит Public API, поэтому путь без него — это
+  // группа слайсов или опечатка, а не вход в слайс.
+  if (target !== null && slice !== '' && !target.found) {
+    report(`У \`@${alias.layer}/${slice}\` нет Public API: это группа слайсов, а не слайс.`);
+    return;
+  }
+
+  if (slice !== '' && deep.length > 0) {
     report(`Импорт в обход Public API: разрешён \`@${alias.layer}/${slice}\`.`);
+  }
+}
+
+/**
+ * Сегмент `@x` — вход, который слайс открывает **конкретному соседу своего
+ * слоя**: `entities/Daemon/@x/config` читается как «что Daemon разрешает
+ * слайсу Config». Поэтому проверяются оба конца: кто входит и с какого слоя.
+ * Сверху вход не нужен — там доступен обычный Public API.
+ */
+function checkCrossImport(from, alias, deep, report) {
+  if (alias.layer !== from.layer) {
+    report(`\`@x\` — вход для соседа своего слоя; из ${from.layer} берём Public API \`@${alias.layer}/…\`.`);
+    return;
+  }
+
+  const target = deep[1];
+  const consumer = from.slice ? from.slice.split('/').at(-1) : '';
+
+  if (target && consumer && target.toLowerCase() !== consumer.toLowerCase()) {
+    report(`Вход \`@x/${target}\` открыт слайсу \`${target}\`, а импортирует \`${consumer}\`.`);
   }
 }
 
@@ -126,10 +164,14 @@ export default {
         const from = locate(context.filename);
         if (!from?.slice?.includes('/')) return {};
 
-        const [group, ...rest] = from.slice.split('/');
-        const slice = rest.join('');
+        // Группы вкладываются, поэтому подходит и имя от ближайшей группы, и
+        // имя от всей цепочки: `Alpha/Beta/AlphaBetaCard` назван верно, и
+        // склейка всего пути в одно слово обвиняла бы его напрасно.
+        const parts = from.slice.split('/');
+        const slice = parts.pop();
+        const group = parts.at(-1);
 
-        if (slice.startsWith(group)) return {};
+        if (slice.startsWith(group) || slice.startsWith(parts.join(''))) return {};
 
         return {
           Program(node) {
