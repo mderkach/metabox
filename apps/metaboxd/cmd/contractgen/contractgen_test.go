@@ -88,11 +88,11 @@ func TestGenerateContract(t *testing.T) {
 	}
 
 	for _, want := range []string{
-		"export const StatusResponseSchema",
+		"export const StatusSchema",
 		"export const ConnectionsSnapshotSchema",
 		"export const ExplanationSchema",
 		"export const TransactionSchema",
-		"export const VersionsResponseSchema",
+		"export const VersionsSchema",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("в контракте нет %q", want)

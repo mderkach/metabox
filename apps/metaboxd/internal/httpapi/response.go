@@ -6,15 +6,6 @@ import (
 	"net/http"
 )
 
-// APIError — единый формат отказа на границе HTTP. Внутренние подробности —
-// пути на диске, аргументы команд, содержимое конфига — в него не попадают;
-// Details несёт только то, что показывают пользователю.
-type APIError struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
-	Details any    `json:"details,omitempty"`
-}
-
 func writeJSON(log *slog.Logger, w http.ResponseWriter, status int, body any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)

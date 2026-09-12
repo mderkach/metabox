@@ -1,13 +1,13 @@
 import { z } from 'zod';
 
 export {
-  ServiceResponseSchema as ServiceStateSchema,
-  StatusResponseSchema as DaemonStatusSchema,
+  ServiceSchema as ServiceStateSchema,
+  StatusSchema as DaemonStatusSchema,
   TransactionSchema as ApplyTransactionSchema,
 } from '@shared/api/daemon.generated';
 export type {
-  ServiceResponseWire as ServiceStateWire,
-  StatusResponseWire as DaemonStatusWire,
+  ServiceWire as ServiceStateWire,
+  StatusWire as DaemonStatusWire,
   TransactionWire as ApplyTransactionWire,
 } from '@shared/api/daemon.generated';
 

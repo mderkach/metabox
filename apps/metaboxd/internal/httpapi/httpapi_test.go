@@ -15,6 +15,7 @@ import (
 
 	"metabox/internal/apply"
 	"metabox/internal/config"
+	"metabox/internal/contract"
 	"metabox/internal/httpapi"
 	"metabox/internal/singbox"
 )
@@ -266,7 +267,7 @@ func TestConfigMissingIsNotFound(t *testing.T) {
 		t.Fatalf("код %d, ожидали %d", got.status, http.StatusNotFound)
 	}
 
-	var apiErr httpapi.APIError
+	var apiErr contract.Error
 	got.decode(t, &apiErr)
 
 	if apiErr.Code != "config_missing" {
@@ -297,7 +298,7 @@ func TestAPINotFound(t *testing.T) {
 		t.Fatalf("код %d, ожидали %d", got.status, http.StatusNotFound)
 	}
 
-	var apiErr httpapi.APIError
+	var apiErr contract.Error
 	got.decode(t, &apiErr)
 
 	if apiErr.Code != "not_found" {
@@ -453,7 +454,7 @@ func TestApplyMapsDomainErrors(t *testing.T) {
 				t.Fatalf("код %d, ожидали %d", got.status, tt.want)
 			}
 
-			var apiErr httpapi.APIError
+			var apiErr contract.Error
 			got.decode(t, &apiErr)
 
 			if apiErr.Code != tt.wantCode {
@@ -471,7 +472,7 @@ func TestApplyRejectsOversizedBody(t *testing.T) {
 		t.Fatalf("код %d, ожидали %d", got.status, http.StatusRequestEntityTooLarge)
 	}
 
-	var apiErr httpapi.APIError
+	var apiErr contract.Error
 	got.decode(t, &apiErr)
 
 	if apiErr.Code != "config_too_large" {
@@ -518,7 +519,7 @@ func TestConfirmNothingToConfirm(t *testing.T) {
 		t.Fatalf("код %d, ожидали %d", got.status, http.StatusConflict)
 	}
 
-	var apiErr httpapi.APIError
+	var apiErr contract.Error
 	got.decode(t, &apiErr)
 
 	if apiErr.Code != "nothing_to_confirm" {
@@ -635,7 +636,7 @@ func TestAPIPathNeverReachesSPA(t *testing.T) {
 		t.Fatalf("код %d, ожидали %d", got.status, http.StatusNotFound)
 	}
 
-	var apiErr httpapi.APIError
+	var apiErr contract.Error
 	got.decode(t, &apiErr)
 
 	if apiErr.Code != "not_found" {

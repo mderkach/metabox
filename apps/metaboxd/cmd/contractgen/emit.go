@@ -181,6 +181,12 @@ func (w *walker) qualified(node *ast.SelectorExpr) (string, error) {
 		return external, nil
 	}
 
+	// Пакет мог не попасть в корни: контракт ссылается на доменный тип, и тот
+	// лежит в своём пакете.
+	if err := w.src.readPackage("internal/" + pkg.Name); err != nil {
+		return "", err
+	}
+
 	for key := range w.src.decls {
 		if strings.HasSuffix(key, "/"+pkg.Name+"."+node.Sel.Name) {
 			owner := strings.TrimSuffix(key, "."+node.Sel.Name)

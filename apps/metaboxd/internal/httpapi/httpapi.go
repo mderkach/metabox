@@ -13,6 +13,7 @@ import (
 	"metabox/internal/apply"
 	"metabox/internal/clashapi"
 	"metabox/internal/config"
+	"metabox/internal/contract"
 	"metabox/internal/route"
 	"metabox/internal/singbox"
 )
@@ -168,30 +169,12 @@ func (s *Server) routes() http.Handler {
 	return s.middleware(mux)
 }
 
-type healthResponse struct {
-	Status  string `json:"status"`
-	Version string `json:"version"`
-}
-
 func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(s.log, w, http.StatusOK, healthResponse{Status: "ok", Version: s.version})
-}
-
-type statusResponse struct {
-	Version        string `json:"version"`
-	SingboxVersion string `json:"singbox_version,omitempty"`
-	// ConfigPath — файл, которым демон владеет: путь задаётся флагами запуска,
-	// и вычислить его на стороне панели нельзя.
-	ConfigPath  string             `json:"config_path,omitempty"`
-	Transaction *apply.Transaction `json:"transaction,omitempty"`
-	// TransactionHref — адрес идущего применения. Без него перезагрузка
-	// страницы теряет транзакцию: её идентификатор жил только в ответе на
-	// POST (ADR-0002).
-	TransactionHref string `json:"transaction_href,omitempty"`
+	writeJSON(s.log, w, http.StatusOK, contract.Health{Status: "ok", Version: s.version})
 }
 
 func (s *Server) handleStatus(w http.ResponseWriter, _ *http.Request) {
-	body := statusResponse{
+	body := contract.Status{
 		Version:        s.version,
 		SingboxVersion: s.singboxVersion,
 		ConfigPath:     s.configPath,
@@ -228,10 +211,6 @@ func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-type versionsResponse struct {
-	Versions []config.Version `json:"versions"`
-}
-
 func (s *Server) handleVersions(w http.ResponseWriter, r *http.Request) {
 	versions, err := s.reader.Versions(r.Context())
 	if err != nil {
@@ -240,7 +219,7 @@ func (s *Server) handleVersions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(s.log, w, http.StatusOK, versionsResponse{Versions: versions})
+	writeJSON(s.log, w, http.StatusOK, contract.Versions{Versions: versions})
 }
 
 // handleVersion отдаёт версию теми же байтами, какими она была применена:
@@ -353,22 +332,11 @@ func (s *Server) handleExplain(w http.ResponseWriter, r *http.Request) {
 	writeJSON(s.log, w, http.StatusOK, explanation)
 }
 
-type serviceResponse struct {
-	Status string `json:"status"`
-	// Uptime — секунды с момента старта. Ноль означает, что возраст узнать не
-	// удалось: панель показывает такое значение прочерком.
-	Uptime int `json:"uptime"`
-	// Binary — версия бинаря на устройстве. Схему панель знает свою и
-	// сверяет расхождение сама.
-	Binary    string `json:"binary"`
-	LastError string `json:"lastError,omitempty"`
-}
-
 // ServiceState приводит состояние службы к форме ответа. Экспортируется,
 // потому что то же тело уходит в поток событий: панель обязана получать один
 // формат независимо от того, ручкой оно пришло или потоком (ADR-0006).
 func ServiceState(state singbox.State, binary string, err error) any {
-	body := serviceResponse{Status: "stopped", Binary: binary}
+	body := contract.Service{Status: "stopped", Binary: binary}
 
 	if err != nil {
 		body.LastError = "состояние сервиса не прочитано"

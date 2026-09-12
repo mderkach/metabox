@@ -6,6 +6,12 @@
 
 import { z } from 'zod'
 
+/** Health — ответ `GET /healthz`. */
+export const HealthSchema = z.object({
+  status: z.string(),
+  version: z.string(),
+})
+
 /** Transaction — снимок применения. Он же формат файла состояния: то, что демон отдаёт клиенту, и то, по чему доигрывает себя после перезагрузки. */
 export const TransactionSchema = z.object({
   id: z.string(),
@@ -20,7 +26,9 @@ export const TransactionSchema = z.object({
   clash_api_added: z.boolean().optional(),
 })
 
-export const StatusResponseSchema = z.object({
+/** Status — ответ `GET /api/status`. */
+export const StatusSchema = z.object({
+  /** Version — версия демона; версия бинаря sing-box идёт отдельным полем. */
   version: z.string(),
   singbox_version: z.string().optional(),
   /** ConfigPath — файл, которым демон владеет: путь задаётся флагами запуска, и вычислить его на стороне панели нельзя. */
@@ -42,11 +50,13 @@ export const VersionSchema = z.object({
   saved_at: z.int(),
 })
 
-export const VersionsResponseSchema = z.object({
+/** Versions — ответ `GET /api/config/versions`. */
+export const VersionsSchema = z.object({
   versions: z.array(VersionSchema),
 })
 
-export const ServiceResponseSchema = z.object({
+/** Service — ответ `GET /api/service` и того же вида событие потока: панель получает один формат независимо от источника (ADR-0010). */
+export const ServiceSchema = z.object({
   status: z.string(),
   /** Uptime — секунды с момента старта. Ноль означает, что возраст узнать не удалось: панель показывает такое значение прочерком. */
   uptime: z.int(),
@@ -55,23 +65,18 @@ export const ServiceResponseSchema = z.object({
   lastError: z.string().optional(),
 })
 
-export const HealthResponseSchema = z.object({
-  status: z.string(),
-  version: z.string(),
+/** Error — единый формат отказа на границе HTTP. Внутренние подробности — пути на диске, аргументы команд, содержимое конфига — в него не попадают; Details несёт только то, что показывают пользователю. */
+export const ErrorSchema = z.object({
+  code: z.string(),
+  message: z.string(),
+  details: z.unknown().optional(),
 })
 
-/** checkDetails — вывод sing-box дословно. Единственное исключение из правила «внутренние подробности наружу не идут», и оно задано ADR-0002: на этих строках пользователь чинит конфиг. */
+/** CheckDetails — вывод sing-box дословно. Единственное исключение из правила «внутренние подробности наружу не идут», и оно задано ADR-0002: на этих строках пользователь чинит конфиг. */
 export const CheckDetailsSchema = z.object({
   stdout: z.string(),
   stderr: z.string(),
   exit_code: z.int(),
-})
-
-/** APIError — единый формат отказа на границе HTTP. Внутренние подробности — пути на диске, аргументы команд, содержимое конфига — в него не попадают; Details несёт только то, что показывают пользователю. */
-export const APIErrorSchema = z.object({
-  code: z.string(),
-  message: z.string(),
-  details: z.unknown().optional(),
 })
 
 /** Connection — соединение в контракте демона. Форма панели не зависит от того, каким источником соединение прочитано (ADR-0006): Clash API и gRPC форка расходятся и в наборе полей, и в формате правила, поэтому сведение к одной модели делает демон, а не фронт. */
@@ -144,18 +149,18 @@ export const ExplanationSchema = z.object({
   rules: z.array(RuleSchema),
 })
 
-export type APIErrorWire = z.infer<typeof APIErrorSchema>
 export type ChainWire = z.infer<typeof ChainSchema>
 export type CheckDetailsWire = z.infer<typeof CheckDetailsSchema>
 export type ConnectionWire = z.infer<typeof ConnectionSchema>
 export type ConnectionsSnapshotWire = z.infer<typeof ConnectionsSnapshotSchema>
+export type ErrorWire = z.infer<typeof ErrorSchema>
 export type EventWire = z.infer<typeof EventSchema>
 export type ExplanationWire = z.infer<typeof ExplanationSchema>
-export type HealthResponseWire = z.infer<typeof HealthResponseSchema>
+export type HealthWire = z.infer<typeof HealthSchema>
 export type MatchWire = z.infer<typeof MatchSchema>
 export type RuleWire = z.infer<typeof RuleSchema>
-export type ServiceResponseWire = z.infer<typeof ServiceResponseSchema>
-export type StatusResponseWire = z.infer<typeof StatusResponseSchema>
+export type ServiceWire = z.infer<typeof ServiceSchema>
+export type StatusWire = z.infer<typeof StatusSchema>
 export type TransactionWire = z.infer<typeof TransactionSchema>
 export type VersionWire = z.infer<typeof VersionSchema>
-export type VersionsResponseWire = z.infer<typeof VersionsResponseSchema>
+export type VersionsWire = z.infer<typeof VersionsSchema>

@@ -1,7 +1,7 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse } from 'axios';
-import { z } from 'zod';
 
 import { API_FAILURE, ApiError } from './ApiError';
+import { ErrorSchema } from './daemon.generated';
 
 /** Полный цикл Apply укладывается в 15 секунд (NFR-5) — дольше уже отказ. */
 const REQUEST_TIMEOUT = 15_000;
@@ -13,12 +13,8 @@ const GATEWAY_TIMEOUT = 504;
 /** Без тела демона они значат то же, что оборванный запрос: ответил посредник. */
 const GATEWAY_STATUS = new Set([BAD_GATEWAY, SERVICE_UNAVAILABLE, GATEWAY_TIMEOUT]);
 
-/** Тело отказа демона — `httpapi.APIError`. */
-const ApiErrorBodySchema = z.object({
-  code: z.string(),
-  message: z.string(),
-  details: z.unknown().optional(),
-});
+/** Тело отказа демона приходит из его контракта (ADR-0012). */
+const ApiErrorBodySchema = ErrorSchema;
 
 /**
  * Тело отказа приходит строкой, когда запрос просил сырой текст: без разбора

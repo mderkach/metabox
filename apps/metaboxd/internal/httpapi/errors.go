@@ -8,6 +8,7 @@ import (
 
 	"metabox/internal/apply"
 	"metabox/internal/config"
+	"metabox/internal/contract"
 	"metabox/internal/route"
 	"metabox/internal/singbox"
 )
@@ -22,15 +23,6 @@ var (
 	errUpgradeUnsupported = errors.New("рантайм идёт потоком /api/events, апгрейд не поддерживается")
 )
 
-// checkDetails — вывод sing-box дословно. Единственное исключение из правила
-// «внутренние подробности наружу не идут», и оно задано ADR-0002: на этих
-// строках пользователь чинит конфиг.
-type checkDetails struct {
-	Stdout   string `json:"stdout"`
-	Stderr   string `json:"stderr"`
-	ExitCode int    `json:"exit_code"`
-}
-
 // fail — единственное место, где ошибка превращается в ответ: новый вид отказа
 // добавляется в statusFor, а не в хендлер. Текст неизвестной ошибки наружу не
 // уходит — в ней бывают пути, аргументы команд и содержимое конфига.
@@ -44,10 +36,10 @@ func fail(log *slog.Logger, w http.ResponseWriter, r *http.Request, err error) {
 	}
 
 	if checkErr, ok := errors.AsType[*singbox.CheckError](err); ok {
-		writeJSON(log, w, http.StatusUnprocessableEntity, APIError{
+		writeJSON(log, w, http.StatusUnprocessableEntity, contract.Error{
 			Code:    "check_failed",
 			Message: "sing-box отверг конфиг",
-			Details: checkDetails{
+			Details: contract.CheckDetails{
 				Stdout:   checkErr.Stdout,
 				Stderr:   checkErr.Stderr,
 				ExitCode: checkErr.ExitCode,
@@ -65,7 +57,7 @@ func fail(log *slog.Logger, w http.ResponseWriter, r *http.Request, err error) {
 		message = "внутренняя ошибка"
 	}
 
-	writeJSON(log, w, status, APIError{Code: code, Message: message})
+	writeJSON(log, w, status, contract.Error{Code: code, Message: message})
 }
 
 func statusFor(err error) (status int, code string) {
@@ -114,7 +106,7 @@ func ProxyError(log *slog.Logger) func(w http.ResponseWriter, r *http.Request, e
 
 		log.Warn("рантайм sing-box недоступен", "path", r.URL.Path, "err", err)
 
-		writeJSON(log, w, http.StatusBadGateway, APIError{
+		writeJSON(log, w, http.StatusBadGateway, contract.Error{
 			Code:    "runtime_unavailable",
 			Message: "рантайм sing-box недоступен",
 		})

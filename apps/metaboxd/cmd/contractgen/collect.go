@@ -30,18 +30,44 @@ type field struct {
 type sources struct {
 	decls map[string]*ast.TypeSpec
 	docs  map[string]string
+	root  string
+	read  map[string]bool
 }
 
 func parseSources(root string, pkgs []string) (*sources, error) {
-	out := &sources{decls: map[string]*ast.TypeSpec{}, docs: map[string]string{}}
-	set := token.NewFileSet()
+	out := &sources{
+		decls: map[string]*ast.TypeSpec{},
+		docs:  map[string]string{},
+		root:  root,
+		read:  map[string]bool{},
+	}
 
 	for _, pkg := range pkgs {
-		dir := filepath.Join(root, filepath.FromSlash(pkg))
+		if err := out.readPackage(pkg); err != nil {
+			return nil, err
+		}
+	}
+
+	return out, nil
+}
+
+// readPackage разбирает пакет, если он ещё не прочитан. Контракт ссылается на
+// доменные типы — `apply.Transaction`, `config.Version`, — и их пакеты
+// подгружаются по ходу, а не перечисляются вторым списком.
+func (s *sources) readPackage(pkg string) error {
+	if s.read[pkg] {
+		return nil
+	}
+
+	s.read[pkg] = true
+	set := token.NewFileSet()
+
+	for _, pkg := range []string{pkg} {
+		dir := filepath.Join(s.root, filepath.FromSlash(pkg))
 
 		entries, err := os.ReadDir(dir)
 		if err != nil {
-			return nil, fmt.Errorf("чтение %s: %w", pkg, err)
+			return fmt.Errorf("чтение %s: %w", pkg, err)
 		}
 
 		for _, entry := range entries {
@@ -51,14 +77,14 @@ func parseSources(root string, pkgs []string) (*sources, error) {
 
 			file, err := parser.ParseFile(set, filepath.Join(dir, entry.Name()), nil, parser.ParseComments)
 			if err != nil {
-				return nil, fmt.Errorf("разбор %s: %w", entry.Name(), err)
+				return fmt.Errorf("разбор %s: %w", entry.Name(), err)
 			}
 
-			collectDecls(out, pkg, file)
+			collectDecls(s, pkg, file)
 		}
 	}
 
-	return out, nil
+	return nil
 }
 
 // isSource отбрасывает тесты: контракт объявлен в рабочих файлах, а тестовые

@@ -2,9 +2,8 @@
 // пакетов, которые отдают тела наружу, и переводит их структуры в схемы для
 // панели.
 //
-// Разбор идёт по исходникам, а не рефлексией: тела ответов `internal/httpapi`
-// не экспортируются, и достать их из другого пакета нельзя. По исходникам
-// заодно переносятся godoc-комментарии полей — панель показывает их в формах.
+// Разбор идёт по исходникам, а не рефлексией: так в схему попадают
+// godoc-комментарии полей — панель показывает их в формах.
 package main
 
 import (
@@ -13,21 +12,21 @@ import (
 	"os"
 )
 
-// roots — типы, которые демон отдаёт наружу. Их зависимости генератор находит
-// сам; всё остальное во внутренних пакетах его не касается.
+// roots — то, что демон отдаёт наружу. Формы ответов объявлены в
+// `internal/contract`, формы потока и объяснение маршрута — в своих пакетах;
+// зависимости генератор находит сам. Приватные структуры хендлеров контрактом
+// не считаются и сюда не попадают.
 var roots = []rootType{
-	{pkg: "internal/httpapi", name: "statusResponse"},
-	{pkg: "internal/httpapi", name: "versionsResponse"},
-	{pkg: "internal/httpapi", name: "serviceResponse"},
-	{pkg: "internal/httpapi", name: "healthResponse"},
-	{pkg: "internal/httpapi", name: "checkDetails"},
-	{pkg: "internal/httpapi", name: "APIError"},
+	{pkg: "internal/contract", name: "Health"},
+	{pkg: "internal/contract", name: "Status"},
+	{pkg: "internal/contract", name: "Versions"},
+	{pkg: "internal/contract", name: "Service"},
+	{pkg: "internal/contract", name: "Error"},
+	{pkg: "internal/contract", name: "CheckDetails"},
 	{pkg: "internal/events", name: "Connection"},
 	{pkg: "internal/events", name: "ConnectionsSnapshot"},
 	{pkg: "internal/events", name: "Event"},
 	{pkg: "internal/route", name: "Explanation"},
-	{pkg: "internal/apply", name: "Transaction"},
-	{pkg: "internal/config", name: "Version"},
 }
 
 func main() {
