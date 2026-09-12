@@ -1,18 +1,11 @@
 import { decodeFrame, decodeResponse } from '@shared/api';
 
-import type {
-  ApplyTransactionWire,
-  ClashConfigsWire,
-  ClashVersionWire,
-  DaemonStatusWire,
-  ServiceStateWire,
-} from '../api/Daemon.schema';
+import type { ApplyTransactionWire, ClashConfigsWire, DaemonStatusWire, ServiceStateWire } from '../api/Daemon.schema';
 import {
   ApplyTransactionSchema,
   ClashConfigsSchema,
   ClashMemorySampleSchema,
   ClashTrafficSampleSchema,
-  ClashVersionSchema,
   DaemonStatusSchema,
   ServiceStateSchema,
 } from '../api/Daemon.schema';
@@ -24,7 +17,6 @@ import {
   type ApplyTransaction,
   type ClashConfigs,
   type ClashMode,
-  type ClashVersion,
   type DaemonStatus,
   type MemorySample,
   type ServiceState,
@@ -119,10 +111,6 @@ export function toClashConfigs(raw: ClashConfigsWire): ClashConfigs {
     bindAddress: wire['bind-address'],
     ipv6: wire.ipv6,
   };
-}
-
-export function toClashVersion(raw: ClashVersionWire): ClashVersion {
-  return decodeResponse(ClashVersionSchema, raw, 'clash version');
 }
 
 /**

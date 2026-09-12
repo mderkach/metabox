@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 import { ConnectionsSnapshotSchema } from '../api/Connection.schema';
 import { ConnectionStore } from '../model/Connection.store';
@@ -25,6 +25,15 @@ function median(values: number[]): number {
 
 describe('бюджет снапшота соединений', () => {
   const snapshot = makeConnectionsSnapshot(SNAPSHOT_SIZE);
+
+  beforeAll(() => {
+    // Первый разбор дороже установившегося в десятки раз: zod собирает схему
+    // при первом вызове. В работе это единственный кадр из тысяч, и порог
+    // ставится по остальным.
+    ConnectionsSnapshotSchema.safeParse(snapshot);
+    ConnectionStore.getState().apply(snapshot);
+    ConnectionStore.getState().reset();
+  });
 
   it('разбирает снапшот на 5000 соединений в пределах бюджета', () => {
     const runs: number[] = [];

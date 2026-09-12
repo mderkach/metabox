@@ -15,7 +15,6 @@ export type {
   ApplyTransaction,
   ClashConfigs,
   ClashMode,
-  ClashVersion,
   DaemonStatus,
   MemorySample,
   ServiceAction,

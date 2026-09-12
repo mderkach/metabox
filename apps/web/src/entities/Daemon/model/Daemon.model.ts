@@ -79,12 +79,6 @@ export interface ClashConfigs {
   ipv6: boolean;
 }
 
-export interface ClashVersion {
-  meta: boolean;
-  premium: boolean;
-  version: string;
-}
-
 /** Мгновенная скорость за последнюю секунду, а не накопительный счётчик. */
 export interface TrafficSample {
   up: number;

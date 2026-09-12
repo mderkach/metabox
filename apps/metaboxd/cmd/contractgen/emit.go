@@ -107,7 +107,6 @@ func (w *walker) schema(pkg, name string) error {
 	return nil
 }
 
-// expr переводит тип поля в выражение zod.
 func (w *walker) expr(node ast.Expr) (string, error) {
 	switch typed := node.(type) {
 	case *ast.StarExpr:
@@ -200,19 +199,16 @@ func (w *walker) qualified(node *ast.SelectorExpr) (string, error) {
 }
 
 func (w *walker) render() string {
-	declared := make([]string, len(w.order))
-	copy(declared, w.order)
-
-	parts := make([]string, 0, len(declared)+1)
+	parts := make([]string, 0, len(w.order)+1)
 	parts = append(parts, header)
 
-	for _, name := range declared {
+	for _, name := range w.order {
 		parts = append(parts, w.bodies[name])
 	}
 
-	types := make([]string, 0, len(declared))
+	types := make([]string, 0, len(w.order))
 
-	for _, name := range declared {
+	for _, name := range w.order {
 		base := strings.TrimSuffix(name, "Schema")
 		types = append(types, fmt.Sprintf("export type %sWire = z.infer<typeof %s>", base, name))
 	}

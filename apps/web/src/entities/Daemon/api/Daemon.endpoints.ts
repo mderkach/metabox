@@ -8,7 +8,6 @@
  * туда не ходят, всё приходит одним `GET /api/events` (ADR-0010).
  */
 export const DAEMON_ENDPOINT = {
-  health: () => '/healthz',
   status: () => '/api/status',
   events: () => '/api/events',
   service: () => '/api/service',
