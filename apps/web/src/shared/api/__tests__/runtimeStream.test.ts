@@ -7,7 +7,7 @@ import { watchSequence } from '../runtimeStream';
 describe('watchSequence', () => {
   it('молчит, пока номера идут подряд', () => {
     const stream = fakeEventSource();
-    const onGap = vi.fn();
+    const onGap = vi.fn<() => void>();
 
     watchSequence(stream.source, onGap);
     stream.send(RUNTIME_TOPIC.Traffic, { up: 1, down: 1 });
@@ -19,7 +19,7 @@ describe('watchSequence', () => {
 
   it('сообщает о пропуске: демон считает номера без разрывов, пока события доходят', () => {
     const stream = fakeEventSource();
-    const onGap = vi.fn();
+    const onGap = vi.fn<() => void>();
 
     watchSequence(stream.source, onGap);
     stream.send(RUNTIME_TOPIC.Traffic, { up: 1, down: 1 });
@@ -30,7 +30,7 @@ describe('watchSequence', () => {
 
   it('не считает первый кадр пропуском: номера начинаются с любого', () => {
     const stream = fakeEventSource();
-    const onGap = vi.fn();
+    const onGap = vi.fn<() => void>();
 
     watchSequence(stream.source, onGap);
     stream.sendRaw(RUNTIME_TOPIC.Service, JSON.stringify({ topic: RUNTIME_TOPIC.Service, seq: 42, data: {} }));
@@ -40,7 +40,7 @@ describe('watchSequence', () => {
 
   it('пропускает битый кадр, не роняя счёт', () => {
     const stream = fakeEventSource();
-    const onGap = vi.fn();
+    const onGap = vi.fn<() => void>();
 
     watchSequence(stream.source, onGap);
     stream.send(RUNTIME_TOPIC.Traffic, { up: 1, down: 1 });
@@ -52,7 +52,7 @@ describe('watchSequence', () => {
 
   it('отписка снимает обработчики со всех топиков', () => {
     const stream = fakeEventSource();
-    const stop = watchSequence(stream.source, vi.fn());
+    const stop = watchSequence(stream.source, vi.fn<() => void>());
 
     expect(stream.count(RUNTIME_TOPIC.Traffic)).toBe(1);
     stop();
