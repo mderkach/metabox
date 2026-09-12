@@ -1,4 +1,5 @@
 import { createRootRoute, createRoute, createRouter, lazyRouteComponent, redirect } from '@tanstack/react-router';
+import { z } from 'zod';
 
 import { AppLayout } from '../ui/AppLayout';
 
@@ -24,10 +25,14 @@ const indexRoute = createRoute({
  * параметра переход открывал бы просто список (ADR-0007). Номер — как в UI,
  * с единицы; значение, которое не похоже на номер, отбрасывается.
  */
-function parseRuleSearch(search: Record<string, unknown>): { rule?: number } {
-  const rule = Number(search.rule);
+const RuleSearchSchema = z.object({
+  rule: z.coerce.number().int().positive().optional(),
+});
 
-  return Number.isInteger(rule) && rule > 0 ? { rule } : {};
+function parseRuleSearch(search: Record<string, unknown>): { rule?: number } {
+  const parsed = RuleSearchSchema.safeParse(search);
+
+  return parsed.success ? parsed.data : {};
 }
 
 const configRoute = createRoute({

@@ -1,4 +1,5 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse } from 'axios';
+import { z } from 'zod';
 
 import { API_FAILURE, ApiError } from './ApiError';
 
@@ -13,22 +14,11 @@ const GATEWAY_TIMEOUT = 504;
 const GATEWAY_STATUS = new Set([BAD_GATEWAY, SERVICE_UNAVAILABLE, GATEWAY_TIMEOUT]);
 
 /** Тело отказа демона — `httpapi.APIError`. */
-interface ApiErrorBody {
-  code: string;
-  message: string;
-  details?: unknown;
-}
-
-function isApiErrorBody(body: unknown): body is ApiErrorBody {
-  return (
-    typeof body === 'object' &&
-    body !== null &&
-    'code' in body &&
-    typeof body.code === 'string' &&
-    'message' in body &&
-    typeof body.message === 'string'
-  );
-}
+const ApiErrorBodySchema = z.object({
+  code: z.string(),
+  message: z.string(),
+  details: z.unknown().optional(),
+});
 
 /**
  * Тело отказа приходит строкой, когда запрос просил сырой текст: без разбора
@@ -47,16 +37,16 @@ function asErrorBody(data: unknown): unknown {
 }
 
 function fromResponse(response: AxiosResponse<unknown>): ApiError {
-  const body = asErrorBody(response.data);
+  const body = ApiErrorBodySchema.safeParse(asErrorBody(response.data));
 
   // Тело в формате демона разбирается раньше статуса: шлюзовой код демон
   // ставит и сам — так он сообщает, что недоступен рантайм sing-box, а не он
   // (NFR-1). Без этой проверки лежащий sing-box читался бы как молчащий демон.
-  if (isApiErrorBody(body)) {
-    return new ApiError(API_FAILURE.Response, body.message, {
+  if (body.success) {
+    return new ApiError(API_FAILURE.Response, body.data.message, {
       status: response.status,
-      code: body.code,
-      details: body.details,
+      code: body.data.code,
+      details: body.data.details,
     });
   }
 

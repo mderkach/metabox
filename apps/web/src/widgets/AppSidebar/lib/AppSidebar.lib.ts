@@ -1,6 +1,10 @@
 import { useCallback, useState } from 'react';
+import { z } from 'zod';
 
 const STORAGE_KEY = 'metabox.sidebar.collapsed';
+
+/** Хранилище отдаёт строку, и она может быть чем угодно: ключ переживает версии панели. */
+const StoredCollapsedSchema = z.enum(['true', 'false']);
 
 /** Ширина, ниже которой развёрнутая панель съедает половину экрана. */
 const NARROW_SCREEN = '(max-width: 48rem)';
@@ -16,10 +20,10 @@ function prefersCollapsed(): boolean {
 /** В приватном окне обращение к хранилищу бросает. */
 function readCollapsed(): boolean {
   try {
-    const stored = globalThis.localStorage.getItem(STORAGE_KEY);
+    const stored = StoredCollapsedSchema.safeParse(globalThis.localStorage.getItem(STORAGE_KEY));
 
-    if (stored !== null) {
-      return stored === 'true';
+    if (stored.success) {
+      return stored.data === 'true';
     }
   } catch {
     // Хранилище недоступно — остаётся ширина экрана.
