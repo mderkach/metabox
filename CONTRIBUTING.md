@@ -71,6 +71,7 @@ refactor(schema)!: rename generated Outbound fields
 ## Что не коммитим
 
 - `apps/web/src/shared/api/generated.ts` руками — правится генератор, файл пересобирается `make schema`.
+- `apps/web/src/shared/api/daemon.generated.ts` руками — правится демон, файл пересобирается `make schema-daemon`.
 - `*.local.*` (`AGENTS.local.md`, `.claude/settings.local.json`) — они в `.gitignore`.
 - `.omc/**` — рабочие заметки агентов; ссылаться на них в коммитах, коде и документации нельзя.
 - Секреты, ключи, дампы конфигов с реальных устройств.
@@ -135,6 +136,8 @@ PRD — первоисточник требований и решений. До�
 **Демон (`apps/metaboxd/`).** Владеет файлами конфига и циклом Apply. Изменения в API или формате хранения — ломающие, требуют футера и правки PRD. Перед правкой кода читается документ из таблицы в [`apps/metaboxd/AGENTS.md`](./apps/metaboxd/AGENTS.md); перед сдачей — [чеклист ревью](./apps/metaboxd/docs/guides/ReviewChecklist.md).
 
 **Схема (`tools/schemagen`).** Генератор — источник, `apps/web/src/shared/api/generated.ts` — артефакт. Коммит должен содержать и правку генератора, и перегенерированный файл, иначе фронт разъедется со схемой.
+
+**Контракт демона.** Тот же порядок для `apps/web/src/shared/api/daemon.generated.ts`: его печатает `apps/metaboxd/cmd/contractgen`, источник — структуры демона, и артефакт едет в коммите вместе с их правкой.
 
 **Фронт (`apps/web/`).** Перед правкой кода читается документ из таблицы в [`apps/web/AGENTS.md`](./apps/web/AGENTS.md); перед сдачей — [чеклист ревью](./apps/web/docs/guides/ReviewChecklist.md). Часть правил проверяет `pnpm lint`, дублировать их в PR-описании не нужно.
 
