@@ -15,7 +15,7 @@ export const PROXY_QUERY = {
 export function getProxiesOptions() {
   return queryOptions({
     queryKey: PROXY_QUERY.list(),
-    queryFn: async ({ signal }) => getProxies({ signal }),
+    queryFn: getProxies,
     staleTime: CACHE_TIME.Second,
     gcTime: CACHE_TIME.Minute,
     meta: { showError: true, errorMessageKey: 'proxy.list.fetchFailed' },
@@ -25,7 +25,7 @@ export function getProxiesOptions() {
 export function getProxyProvidersOptions() {
   return queryOptions({
     queryKey: PROXY_QUERY.providers(),
-    queryFn: async ({ signal }) => getProxyProviders({ signal }),
+    queryFn: getProxyProviders,
     staleTime: CACHE_TIME.Minute,
     gcTime: CACHE_TIME.Hour,
     meta: { showError: true, errorMessageKey: 'proxy.providers.fetchFailed' },
@@ -80,7 +80,9 @@ export function useTestProxyDelay() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (name: string) => testProxyDelay(name),
+    mutationFn: async function requestProxyDelay(name: string) {
+      return testProxyDelay(name);
+    },
     meta: { showError: true, errorMessageKey: 'proxy.delay.failed' },
     onSettled: async () => queryClient.invalidateQueries({ queryKey: PROXY_QUERY.list() }),
   });

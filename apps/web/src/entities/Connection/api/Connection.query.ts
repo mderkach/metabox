@@ -21,14 +21,14 @@ export function useConnectionStream(): void {
 
 export function useCloseConnection() {
   return useMutation({
-    mutationFn: async (id: string) => closeConnection(id),
+    mutationFn: closeConnection,
     meta: { showError: true, errorMessageKey: 'connection.close.failed' },
   });
 }
 
 export function useCloseAllConnections() {
   return useMutation({
-    mutationFn: async () => closeAllConnections(),
+    mutationFn: closeAllConnections,
     meta: { showError: true, errorMessageKey: 'connection.close.failed' },
   });
 }

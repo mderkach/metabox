@@ -31,7 +31,7 @@ export const CONFIG_QUERY = {
 export function getConfigOptions() {
   return queryOptions({
     queryKey: CONFIG_QUERY.current(),
-    queryFn: async ({ signal }) => getConfig({ signal }),
+    queryFn: getConfig,
     staleTime: CACHE_TIME.Minute,
     gcTime: CACHE_TIME.Hour,
     meta: { showError: true, errorMessageKey: 'config.draft.fetchFailed' },
@@ -79,7 +79,7 @@ export function useConfig() {
 export function getConfigVersionsOptions() {
   return queryOptions({
     queryKey: CONFIG_QUERY.history(),
-    queryFn: async ({ signal }) => getConfigVersions({ signal }),
+    queryFn: getConfigVersions,
     staleTime: CACHE_TIME.Second,
     gcTime: CACHE_TIME.Minute,
     meta: { showError: true, errorMessageKey: 'config.versions.fetchFailed' },
@@ -94,7 +94,9 @@ export function useConfigVersions() {
 export function getApplyStateOptions(id: string) {
   return queryOptions({
     queryKey: CONFIG_QUERY.apply(id),
-    queryFn: async ({ signal }) => getApplyState(id, { signal }),
+    queryFn: async function fetchApplyState({ signal }) {
+      return getApplyState(id, { signal });
+    },
     staleTime: 0,
     gcTime: CACHE_TIME.Minute,
     // Идущее применение опрашивается секундно: окно подтверждения — минута.
@@ -145,7 +147,7 @@ export function useApplyConfig() {
   const onTransaction = useTransactionResult();
 
   return useMutation({
-    mutationFn: async (text: string) => applyConfig(text),
+    mutationFn: applyConfig,
     meta: { showError: true, showSuccess: true, successMessageKey: 'apply.start.accepted' },
     onSuccess: onTransaction,
   });
@@ -155,7 +157,7 @@ export function useConfirmApply() {
   const onTransaction = useTransactionResult();
 
   return useMutation({
-    mutationFn: async (id: string) => confirmApply(id),
+    mutationFn: confirmApply,
     meta: { showError: true, showSuccess: true, successMessageKey: 'apply.confirm.done' },
     onSuccess: onTransaction,
   });
@@ -166,7 +168,7 @@ export function useRestoreConfigVersion() {
   const onTransaction = useTransactionResult();
 
   return useMutation({
-    mutationFn: async (id: number) => restoreConfigVersion(id),
+    mutationFn: restoreConfigVersion,
     meta: { showError: true, showSuccess: true, successMessageKey: 'apply.start.accepted' },
     onSuccess: onTransaction,
   });

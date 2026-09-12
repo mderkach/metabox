@@ -13,7 +13,9 @@ export const ROUTE_QUERY = {
 export function getRouteExplanationOptions(id: string) {
   return queryOptions({
     queryKey: ROUTE_QUERY.explanation(id),
-    queryFn: async ({ signal }) => getRouteExplanation(id, { signal }),
+    queryFn: async function fetchRouteExplanation({ signal }) {
+      return getRouteExplanation(id, { signal });
+    },
     staleTime: CACHE_TIME.Second,
     gcTime: CACHE_TIME.Minute,
     meta: { showError: true, errorMessageKey: 'route.explain.failed' },

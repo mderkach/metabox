@@ -12,7 +12,7 @@ const NOT_MATCHER_KEYS = new Set(['type', 'invert']);
  * добавляются ветками поверх неё. Новый матчер в форке появится здесь сам.
  *
  * Логическое правило под это не подпадает: его условия лежат во вложенных
- * `rules`, которых в базе нет, — разбирает их `Rule.mapper`.
+ * `rules`, которых в базе нет, — разбирает их `Rule.adapter`.
  */
 export const RULE_MATCHER_KEYS: readonly string[] = Object.keys(DefaultRuleBaseSchema.shape).filter(
   (key) => !NOT_MATCHER_KEYS.has(key)

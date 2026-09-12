@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { Config } from '@shared/api/generated';
 
-import { toRuleRows, toRuleRowsFromNodes } from '../model/Rule.mapper';
+import { toRuleRows, toRuleRowsFromNodes } from '../model/Rule.adapter';
 import { RULE_TARGET } from '../model/Rule.model';
 
 function configWithRules(rules: object[]): Config {
