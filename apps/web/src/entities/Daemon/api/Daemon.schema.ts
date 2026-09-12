@@ -1,37 +1,20 @@
 import { z } from 'zod';
 
+export {
+  ServiceResponseSchema as ServiceStateSchema,
+  StatusResponseSchema as DaemonStatusSchema,
+  TransactionSchema as ApplyTransactionSchema,
+} from '@shared/api/daemon.generated';
+export type {
+  ServiceResponseWire as ServiceStateWire,
+  StatusResponseWire as DaemonStatusWire,
+  TransactionWire as ApplyTransactionWire,
+} from '@shared/api/daemon.generated';
+
 /**
- * Формы ответов демона и проксированных им ручек Clash API. Схемы описывают
- * то, что пришло по проводу; перевод в модель — в `model/Daemon.adapter.ts`.
+ * Формы ручек Clash API, которые демон проксирует дословно (ADR-0006): своих
+ * типов у него для них нет, поэтому схемы рукописные.
  */
-export const ApplyTransactionSchema = z.object({
-  id: z.string(),
-  phase: z.string(),
-  /** Остаток окна подтверждения в наносекундах: Go отдаёт `time.Duration`. */
-  window: z.number(),
-  sha256: z.string().optional(),
-  reason: z.string().optional(),
-  clash_api_added: z.boolean().optional(),
-});
-
-export const DaemonStatusSchema = z.object({
-  /** Версия демона, а не sing-box: бинарь отдаётся полем `singbox_version`. */
-  version: z.string(),
-  singbox_version: z.string().optional(),
-  config_path: z.string().optional(),
-  transaction: ApplyTransactionSchema.optional(),
-  transaction_href: z.string().optional(),
-});
-
-export const ServiceStateSchema = z.object({
-  status: z.string(),
-  /** Секунды с момента старта; `0`, когда сервис не запущен. */
-  uptime: z.number(),
-  binary: z.string(),
-  /** Вывод последнего падения: показывается дословно, разбирать его нельзя. */
-  lastError: z.string().optional(),
-});
-
 export const ClashConfigsSchema = z.object({
   mode: z.string(),
   'mode-list': z.array(z.string()),
@@ -62,8 +45,5 @@ export const ClashMemorySampleSchema = z.object({
   oslimit: z.number(),
 });
 
-export type ApplyTransactionWire = z.infer<typeof ApplyTransactionSchema>;
-export type DaemonStatusWire = z.infer<typeof DaemonStatusSchema>;
-export type ServiceStateWire = z.infer<typeof ServiceStateSchema>;
 export type ClashConfigsWire = z.infer<typeof ClashConfigsSchema>;
 export type ClashVersionWire = z.infer<typeof ClashVersionSchema>;

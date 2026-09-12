@@ -43,10 +43,10 @@ function toMatch(dto: RouteExplanationWire['match']) {
 }
 
 function toChain(dto: RouteExplanationWire['chain']) {
-  return { origin: toOrigin(dto.origin), nodes: dto.nodes ?? [] };
+  return { origin: toOrigin(dto.origin), nodes: dto.nodes };
 }
 
-function toRule(dto: NonNullable<RouteExplanationWire['rules']>[number]) {
+function toRule(dto: RouteExplanationWire['rules'][number]) {
   return {
     origin: toOrigin(dto.origin),
     index: dto.index,
@@ -68,6 +68,6 @@ export function toRouteExplanation(raw: RouteExplanationWire): RouteExplanation 
     connectionId: dto.connection_id,
     match: toMatch(dto.match),
     chain: toChain(dto.chain),
-    rules: (dto.rules ?? []).map(toRule),
+    rules: dto.rules.map(toRule),
   };
 }

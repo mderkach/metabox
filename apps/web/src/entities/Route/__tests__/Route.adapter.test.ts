@@ -12,7 +12,7 @@ describe('toRouteExplanation', () => {
     expect(explanation.connectionId).toBe(ROUTE_EXPLANATION_FIXTURE.connection_id);
     expect(explanation.match.kind).toBe(ROUTE_MATCH.Rule);
     expect(explanation.match.index).toBe(ROUTE_EXPLANATION_FIXTURE.match.index);
-    expect(explanation.rules).toHaveLength(ROUTE_EXPLANATION_FIXTURE.rules?.length ?? 0);
+    expect(explanation.rules).toHaveLength(ROUTE_EXPLANATION_FIXTURE.rules.length);
   });
 
   it('оставляет узел правила пустым, когда сработал `route.final`', () => {
@@ -39,10 +39,10 @@ describe('toRouteExplanation', () => {
     expect(explanation.match.reason).toBe(ROUTE_UNKNOWN_FIXTURE.match.reason);
   });
 
-  it('читает отсутствующую цепочку как пустую', () => {
+  it('читает пустую цепочку как пустую', () => {
     const explanation = toRouteExplanation({
       ...ROUTE_UNKNOWN_FIXTURE,
-      chain: { origin: ROUTE_ORIGIN.Unknown },
+      chain: { origin: ROUTE_ORIGIN.Unknown, nodes: [] },
     });
 
     expect(explanation.chain.nodes).toEqual([]);

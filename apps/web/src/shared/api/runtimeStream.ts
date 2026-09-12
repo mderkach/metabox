@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { EventSchema } from './daemon.generated';
+
 /**
  * Топики потока рантайма. Панель подписывается на все сразу: отдельной
  * подписки на топик поток не имеет (ADR-0010).
@@ -13,21 +15,8 @@ export const RUNTIME_TOPIC = {
 
 export type RuntimeTopic = (typeof RUNTIME_TOPIC)[keyof typeof RUNTIME_TOPIC];
 
-/**
- * Конверт демона. `seq` считается для каждого читателя отдельно и растёт без
- * пропусков: разрыв в номерах означает, что читатель не успевал и событие
- * было отброшено.
- *
- * Полезная нагрузка остаётся `unknown`: её форму знает слайс-владелец топика,
- * а конверт отвечает только за доставку.
- */
-export const RuntimeEventSchema = z.object({
-  topic: z.string(),
-  seq: z.number(),
-  data: z.unknown(),
-});
-
-export type RuntimeEvent = z.infer<typeof RuntimeEventSchema>;
+export { EventSchema as RuntimeEventSchema } from './daemon.generated';
+export type { EventWire as RuntimeEvent } from './daemon.generated';
 
 /**
  * Всё, что обработчику нужно от потока. Узкий тип вместо `EventSource`: так
@@ -50,7 +39,7 @@ export interface StreamSource {
 export function listenTopic(source: StreamSource, topic: RuntimeTopic, apply: (data: unknown) => void): () => void {
   const handler = (event: MessageEvent<string>) => {
     try {
-      const envelope = RuntimeEventSchema.safeParse(JSON.parse(event.data));
+      const envelope = EventSchema.safeParse(JSON.parse(event.data));
 
       if (!envelope.success) {
         console.warn(`[STREAM] конверт топика ${topic} не разобран`, z.prettifyError(envelope.error));

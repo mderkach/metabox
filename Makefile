@@ -3,7 +3,7 @@ DEVICE_BIN := dist/metaboxd-linux-arm64
 VERSION    ?= dev
 LDFLAGS    := -s -w -X metabox/internal/version.Version=$(VERSION)
 
-.PHONY: all schema web embed daemon daemon-device daemon-target dev dev-mock dev-mock-missing test test-schemagen lint hooks clean up down sh target-sh apply-check stand-reset
+.PHONY: all schema schema-daemon web embed daemon daemon-device daemon-target dev dev-mock dev-mock-missing test test-schemagen lint hooks clean up down sh target-sh apply-check stand-reset
 
 all: daemon
 
@@ -19,6 +19,15 @@ schema:
 		-tags "$$(cat '$(SINGBOX_DIR)/release/DEFAULT_BUILD_TAGS')" \
 		-ldflags "$$(cat '$(SINGBOX_DIR)/release/LDFLAGS')" . \
 		-out ../../apps/web/src/shared/api/generated.ts
+
+# Regenerate apps/web/src/shared/api/daemon.generated.ts from the daemon's own
+# contract. Тегов и флагов форка тут не нужно: генератор читает исходники
+# демона и живёт в его модуле без зависимостей.
+schema-daemon:
+	mkdir -p apps/web/src/shared/api
+	cd apps/metaboxd && go run ./cmd/contractgen \
+		-root . \
+		-out ../../apps/web/src/shared/api/daemon.generated.ts
 
 # Build the SPA into apps/web/dist.
 web:

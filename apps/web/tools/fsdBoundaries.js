@@ -12,6 +12,8 @@ const RANK = new Map(LAYERS.map((layer, index) => [layer, index]));
 const SRC = 'src';
 const PUBLIC_API = 'index.ts';
 const TESTS = '__tests__';
+const CONTRACT = 'daemon.generated';
+const API = 'api';
 
 /**
  * Наличие Public API спрашивается у диска каждый раз.
@@ -83,11 +85,28 @@ function parseAlias(source) {
   return { layer: match[1], rest: match[2] ? match[2].split('/') : [] };
 }
 
+/**
+ * Контракт демона лежит в `shared`, а значит виден всем слоям по построению.
+ * Ограничить его может только это правило: формы ответов разбирает `api`
+ * слайса-владельца, наружу уходит модель.
+ */
+function checkContract(from, rest, report) {
+  if (rest.at(-1) !== CONTRACT) return;
+
+  const segments = from.filePath.split(path.sep);
+
+  if (!segments.includes(API) && !segments.includes(TESTS)) {
+    report('Контракт демона разбирает `api` слайса: экраны читают модель.');
+  }
+}
+
 function checkAlias(from, alias, report) {
   if (RANK.get(alias.layer) < RANK.get(from.layer)) {
     report(`Импорт вверх по слоям: ${from.layer} не видит ${alias.layer}.`);
     return;
   }
+
+  checkContract(from, alias.rest, report);
 
   const target = SLICED.has(alias.layer) ? sliceOf(path.join(from.root, alias.layer), alias.rest) : null;
   const slice = target === null ? '' : target.name;

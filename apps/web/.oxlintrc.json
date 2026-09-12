@@ -32,7 +32,7 @@
       "entryPoint": "src/app/styles/index.css"
     }
   },
-  "ignorePatterns": ["dist", "src/shared/api/generated.ts"],
+  "ignorePatterns": ["dist", "src/shared/api/generated.ts", "src/shared/api/daemon.generated.ts"],
   "rules": {
     "react/rules-of-hooks": "error",
     "react/exhaustive-deps": "error",

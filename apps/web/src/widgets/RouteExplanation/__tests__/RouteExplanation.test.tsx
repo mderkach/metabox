@@ -43,7 +43,7 @@ describe('RouteExplanation', () => {
 
   it('показывает сработавшее правило и его происхождение', async () => {
     serveExplanation(ROUTE_EXPLANATION_FIXTURE);
-    serveConfig(configWithRules(ROUTE_EXPLANATION_FIXTURE.rules?.length ?? 0));
+    serveConfig(configWithRules(ROUTE_EXPLANATION_FIXTURE.rules.length));
 
     renderWithRouter(() => <RouteExplanation connectionId='c-1' onClose={vi.fn<() => void>()} />);
 
@@ -55,7 +55,7 @@ describe('RouteExplanation', () => {
 
   it('ведёт к правилу в редакторе, когда список процесса сходится с конфигом', async () => {
     serveExplanation(ROUTE_EXPLANATION_FIXTURE);
-    serveConfig(configWithRules(ROUTE_EXPLANATION_FIXTURE.rules?.length ?? 0));
+    serveConfig(configWithRules(ROUTE_EXPLANATION_FIXTURE.rules.length));
 
     renderWithRouter(() => <RouteExplanation connectionId='c-1' onClose={vi.fn<() => void>()} />);
 
@@ -80,7 +80,7 @@ describe('RouteExplanation', () => {
 
   it('исход по умолчанию показывает наблюдением, а не неизвестностью', async () => {
     serveExplanation(ROUTE_FINAL_FIXTURE);
-    serveConfig(configWithRules(ROUTE_FINAL_FIXTURE.rules?.length ?? 0));
+    serveConfig(configWithRules(ROUTE_FINAL_FIXTURE.rules.length));
 
     renderWithRouter(() => <RouteExplanation connectionId='c-1' onClose={vi.fn<() => void>()} />);
 
@@ -101,7 +101,7 @@ describe('RouteExplanation', () => {
 
   it('цепочку показывает в порядке чтения человеком', async () => {
     serveExplanation(ROUTE_EXPLANATION_FIXTURE);
-    serveConfig(configWithRules(ROUTE_EXPLANATION_FIXTURE.rules?.length ?? 0));
+    serveConfig(configWithRules(ROUTE_EXPLANATION_FIXTURE.rules.length));
 
     renderWithRouter(() => <RouteExplanation connectionId='c-1' onClose={vi.fn<() => void>()} />);
 

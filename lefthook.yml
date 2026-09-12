@@ -23,6 +23,13 @@ pre-commit:
       run: git diff --cached --name-only | grep -q '^tools/schemagen/'
       fail_text: Файл собирает `make schema`; коммить его вместе с правкой tools/schemagen
 
+    # То же для контракта демона: артефакт едет вместе с правкой демона или
+    # генератора, иначе панель разъезжается с тем, что демон отдаёт.
+    - name: generated-contract
+      glob: 'apps/web/src/shared/api/daemon.generated.ts'
+      run: git diff --cached --name-only | grep -qE '^apps/metaboxd/'
+      fail_text: Файл собирает `make schema-daemon`; коммить его вместе с правкой apps/metaboxd
+
     # Сгенерированная схема исключена из обоих списков: она закрыта
     # `ignorePatterns`, а oxlint и oxfmt выходят с ошибкой, когда после игнора
     # не остаётся ни одного файла, — коммит одной лишь схемы падал бы на пустом
@@ -31,12 +38,14 @@ pre-commit:
       glob: '*.{ts,tsx,js,mjs}'
       exclude:
         - 'apps/web/src/shared/api/generated.ts'
+        - 'apps/web/src/shared/api/daemon.generated.ts'
       run: pnpm exec oxlint {staged_files}
 
     - name: format
       glob: '*.{ts,tsx,js,mjs,json,css,md,yml,yaml}'
       exclude:
         - 'apps/web/src/shared/api/generated.ts'
+        - 'apps/web/src/shared/api/daemon.generated.ts'
       run: pnpm exec oxfmt --check {staged_files}
 
 commit-msg:

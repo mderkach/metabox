@@ -9,6 +9,7 @@
     "dist",
     "apps/web/dist",
     "apps/web/src/shared/api/generated.ts",
+    "apps/web/src/shared/api/daemon.generated.ts",
     ".claude",
     ".omc",
     ".devcontainer/target"
