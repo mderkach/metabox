@@ -29,6 +29,50 @@ export interface StreamSource {
 }
 
 /**
+ * Следит за нумерацией конверта и зовёт `onGap`, когда номера разошлись:
+ * демон считает `seq` для каждого читателя без пропусков, поэтому разрыв
+ * означает отброшенное событие, а не порядок доставки (ADR-0010). Счётчик
+ * общий на подписку, значит и проверять его нужно по всем топикам сразу.
+ */
+export function watchSequence(source: StreamSource, onGap: () => void): () => void {
+  let expected: number | null = null;
+
+  const handler = (event: MessageEvent<string>) => {
+    const envelope = EventSchema.safeParse(safeJson(event.data));
+
+    if (!envelope.success) {
+      return;
+    }
+
+    const { seq } = envelope.data;
+
+    if (expected !== null && seq !== expected) {
+      onGap();
+    }
+
+    expected = seq + 1;
+  };
+
+  for (const topic of Object.values(RUNTIME_TOPIC)) {
+    source.addEventListener(topic, handler);
+  }
+
+  return () => {
+    for (const topic of Object.values(RUNTIME_TOPIC)) {
+      source.removeEventListener(topic, handler);
+    }
+  };
+}
+
+function safeJson(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Подписка на топик потока. Возвращает функцию отписки: без неё обработчик
  * переживёт размонтирование, и каждое переоткрытие экрана добавляло бы ещё
  * один разбор тех же событий.

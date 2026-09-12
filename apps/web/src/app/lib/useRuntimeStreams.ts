@@ -2,8 +2,15 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
 import { ConnectionState, listenConnections } from '@entities/Connection';
-import { DAEMON_QUERY, listenMemory, listenService, listenTraffic, RuntimeState } from '@entities/Daemon';
-import { DAEMON_ENDPOINT } from '@entities/Daemon';
+import {
+  DAEMON_ENDPOINT,
+  DAEMON_QUERY,
+  listenMemory,
+  listenService,
+  listenTraffic,
+  RuntimeState,
+} from '@entities/Daemon';
+import { watchSequence } from '@shared/api';
 
 /**
  * Единый поток рантайма живёт в оболочке, а не на экранах: экран объявляет,
@@ -29,7 +36,29 @@ export function useRuntimeStreams(): void {
 
       const source = new EventSource(DAEMON_ENDPOINT.events());
 
+      // Переподключение и разрыв в номерах значат одно: часть событий прошла
+      // мимо панели. Соединения догонит следующий снапшот, а состояние службы
+      // и статус демона живут в кэше — их перечитываем (ADR-0010).
+      function refetchRuntime() {
+        void queryClient.invalidateQueries({ queryKey: DAEMON_QUERY.all });
+      }
+
+      // Первое открытие переподключением не считается: данные только что
+      // запрошены, и инвалидация сходила бы к демону впустую.
+      let opened = false;
+
+      function onStreamOpen() {
+        if (opened) {
+          refetchRuntime();
+        }
+
+        opened = true;
+      }
+
+      source.addEventListener('open', onStreamOpen);
+
       const unsubscribe = [
+        watchSequence(source, refetchRuntime),
         listenTraffic(source),
         listenMemory(source),
         listenConnections(source),
@@ -44,6 +73,7 @@ export function useRuntimeStreams(): void {
       return function closeRuntimeStream() {
         for (const off of unsubscribe) off();
 
+        source.removeEventListener('open', onStreamOpen);
         source.close();
       };
     },
