@@ -2,10 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { DAEMON_QUERY, getServiceStateOptions, runServiceAction } from '@entities/Daemon';
 
-/**
- * Запуск, остановка и перезапуск службы. Ответ — новое состояние, и оно
- * кладётся в кэш: перечитывать его отдельным запросом незачем.
- */
+/** Ответ несёт новое состояние службы: перечитывать его отдельным запросом незачем. */
 export function useServiceAction() {
   const queryClient = useQueryClient();
 
