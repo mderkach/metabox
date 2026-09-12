@@ -1,9 +1,8 @@
 import type { AxiosRequestConfig } from 'axios';
 
-import { DAEMON_ENDPOINT, type ApplyTransaction } from '@entities/Daemon/@x/config';
+import { DAEMON_ENDPOINT } from '@entities/Daemon/@x/config';
 import { ApiClientInstance } from '@shared/api';
 
-import type { ConfigVersionsDto } from './Config.dto';
 import { CONFIG_ENDPOINT } from './Config.endpoints';
 
 /** Axios разобрал бы тело в объект, а нам нужны исходные байты файла. */
@@ -31,21 +30,21 @@ export async function getConfig(config?: AxiosRequestConfig): Promise<string> {
  * цикла: применение живёт дольше запроса (ADR-0002). Отказ проверки возвращает
  * 422 с выводом бинаря в `details` — его показывает вызывающий (AC-26).
  */
-export async function applyConfig(text: string): Promise<ApplyTransaction> {
-  return ApiClientInstance.post<ApplyTransaction, string>(DAEMON_ENDPOINT.apply(), text, SEND_TEXT);
+export async function applyConfig(text: string): Promise<unknown> {
+  return ApiClientInstance.post<unknown, string>(DAEMON_ENDPOINT.apply(), text, SEND_TEXT);
 }
 
-export async function getApplyState(id: string, config?: AxiosRequestConfig): Promise<ApplyTransaction> {
-  return ApiClientInstance.get<ApplyTransaction>(DAEMON_ENDPOINT.applyState(id), config);
+export async function getApplyState(id: string, config?: AxiosRequestConfig): Promise<unknown> {
+  return ApiClientInstance.get<unknown>(DAEMON_ENDPOINT.applyState(id), config);
 }
 
 /** Подтверждает, что связь жива: без этого демон вернёт предыдущий конфиг. */
-export async function confirmApply(id: string): Promise<ApplyTransaction> {
-  return ApiClientInstance.post<ApplyTransaction>(DAEMON_ENDPOINT.applyConfirm(id));
+export async function confirmApply(id: string): Promise<unknown> {
+  return ApiClientInstance.post<unknown>(DAEMON_ENDPOINT.applyConfirm(id));
 }
 
-export async function getConfigVersions(config?: AxiosRequestConfig): Promise<ConfigVersionsDto> {
-  return ApiClientInstance.get<ConfigVersionsDto>(CONFIG_ENDPOINT.versions(), config);
+export async function getConfigVersions(config?: AxiosRequestConfig): Promise<unknown> {
+  return ApiClientInstance.get<unknown>(CONFIG_ENDPOINT.versions(), config);
 }
 
 /** Версия отдаётся теми же байтами, какими была применена. */
@@ -57,6 +56,6 @@ export async function getConfigVersion(id: number, config?: AxiosRequestConfig):
  * Откат на версию. Демон проводит её обычным протоколом Apply, поэтому ответ —
  * такая же транзакция с окном подтверждения (ADR-0008).
  */
-export async function restoreConfigVersion(id: number): Promise<ApplyTransaction> {
-  return ApiClientInstance.post<ApplyTransaction>(CONFIG_ENDPOINT.versionRestore(id));
+export async function restoreConfigVersion(id: number): Promise<unknown> {
+  return ApiClientInstance.post<unknown>(CONFIG_ENDPOINT.versionRestore(id));
 }

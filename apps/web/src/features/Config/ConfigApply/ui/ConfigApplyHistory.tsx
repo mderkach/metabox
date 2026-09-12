@@ -94,9 +94,7 @@ function VersionRow({
       {version.savedAt === null ? (
         <span className='text-xs text-muted-foreground'>время сохранения неизвестно</span>
       ) : (
-        <time dateTime={version.savedAt.toISOString()} className='text-xs text-muted-foreground'>
-          {version.savedAt.toLocaleString('ru-RU')}
-        </time>
+        <SavedAt at={version.savedAt} />
       )}
       <span className='font-mono text-xs text-muted-foreground'>{formatBytes(version.size)}</span>
       <span className='grow' />
@@ -111,5 +109,16 @@ function VersionRow({
         Вернуть
       </Button>
     </li>
+  );
+}
+
+/** Модель держит миллисекунды эпохи, датой они становятся только при показе. */
+function SavedAt({ at }: { at: number }) {
+  const saved = new Date(at);
+
+  return (
+    <time dateTime={saved.toISOString()} className='text-xs text-muted-foreground'>
+      {saved.toLocaleString('ru-RU')}
+    </time>
   );
 }

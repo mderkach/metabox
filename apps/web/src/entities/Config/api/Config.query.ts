@@ -3,6 +3,7 @@ import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/r
 import {
   DAEMON_QUERY,
   isApplyActive,
+  toApplyTransaction,
   type ApplyTransaction,
   type DaemonStatus,
   DAEMON_ENDPOINT,
@@ -10,7 +11,7 @@ import {
 import { CACHE_TIME, POLL_INTERVAL } from '@shared/api';
 import { ConfigSchema, type Config } from '@shared/api/generated';
 
-import { toConfigVersions } from '../model/Config.mapper';
+import { toConfigVersions } from '../model/Config.adapter';
 import {
   applyConfig,
   confirmApply,
@@ -78,7 +79,7 @@ export function useConfig() {
 export function getConfigVersionsOptions() {
   return queryOptions({
     queryKey: CONFIG_QUERY.history(),
-    queryFn: async ({ signal }) => getConfigVersions({ signal }),
+    queryFn: async ({ signal }) => toConfigVersions(await getConfigVersions({ signal })),
     staleTime: CACHE_TIME.Second,
     gcTime: CACHE_TIME.Minute,
     meta: { showError: true, errorMessageKey: 'config.versions.fetchFailed' },
@@ -87,16 +88,13 @@ export function getConfigVersionsOptions() {
 
 /** История версий, от свежей к старой: откатываются обычно на предыдущую. */
 export function useConfigVersions() {
-  return useQuery({
-    ...getConfigVersionsOptions(),
-    select: (data) => toConfigVersions(data.versions),
-  });
+  return useQuery(getConfigVersionsOptions());
 }
 
 export function getApplyStateOptions(id: string) {
   return queryOptions({
     queryKey: CONFIG_QUERY.apply(id),
-    queryFn: async ({ signal }) => getApplyState(id, { signal }),
+    queryFn: async ({ signal }) => toApplyTransaction(await getApplyState(id, { signal })),
     staleTime: 0,
     gcTime: CACHE_TIME.Minute,
     // Идущее применение опрашивается секундно: окно подтверждения — минута.
@@ -134,7 +132,7 @@ function useTransactionResult() {
     queryClient.setQueryData<DaemonStatus>(DAEMON_QUERY.status(), (status) =>
       status === undefined
         ? status
-        : { ...status, transaction, transaction_href: DAEMON_ENDPOINT.applyState(transaction.id) }
+        : { ...status, transaction, transactionHref: DAEMON_ENDPOINT.applyState(transaction.id) }
     );
   };
 }
@@ -147,7 +145,7 @@ export function useApplyConfig() {
   const onTransaction = useTransactionResult();
 
   return useMutation({
-    mutationFn: async (text: string) => applyConfig(text),
+    mutationFn: async (text: string) => toApplyTransaction(await applyConfig(text)),
     meta: { showError: true, showSuccess: true, successMessageKey: 'apply.start.accepted' },
     onSuccess: onTransaction,
   });
@@ -157,7 +155,7 @@ export function useConfirmApply() {
   const onTransaction = useTransactionResult();
 
   return useMutation({
-    mutationFn: async (id: string) => confirmApply(id),
+    mutationFn: async (id: string) => toApplyTransaction(await confirmApply(id)),
     meta: { showError: true, showSuccess: true, successMessageKey: 'apply.confirm.done' },
     onSuccess: onTransaction,
   });
@@ -168,7 +166,7 @@ export function useRestoreConfigVersion() {
   const onTransaction = useTransactionResult();
 
   return useMutation({
-    mutationFn: async (id: number) => restoreConfigVersion(id),
+    mutationFn: async (id: number) => toApplyTransaction(await restoreConfigVersion(id)),
     meta: { showError: true, showSuccess: true, successMessageKey: 'apply.start.accepted' },
     onSuccess: onTransaction,
   });
