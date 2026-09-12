@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 
-import { proxyHandlers } from '@entities/Proxy';
+import { proxyHandlers } from '@entities/Proxy/__tests__/Proxy.handlers';
 import { API_ENDPOINT } from '@shared/api';
 
 import { ProxiesPage } from '../ui/ProxiesPage';

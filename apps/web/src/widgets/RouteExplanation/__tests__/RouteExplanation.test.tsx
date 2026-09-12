@@ -4,8 +4,13 @@ import { screen } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { CONFIG_FIXTURE, ConfigDocumentState } from '@entities/Config';
-import { ROUTE_EXPLANATION_FIXTURE, ROUTE_FINAL_FIXTURE, ROUTE_UNKNOWN_FIXTURE } from '@entities/Route';
+import { ConfigDocumentState } from '@entities/Config';
+import { CONFIG_FIXTURE } from '@entities/Config/__tests__/Config.fixture';
+import {
+  ROUTE_EXPLANATION_FIXTURE,
+  ROUTE_FINAL_FIXTURE,
+  ROUTE_UNKNOWN_FIXTURE,
+} from '@entities/Route/__tests__/Route.fixture';
 import { API_ENDPOINT } from '@shared/api';
 
 import { RouteExplanation } from '../ui/RouteExplanation';

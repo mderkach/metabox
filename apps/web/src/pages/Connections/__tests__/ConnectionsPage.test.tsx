@@ -7,7 +7,7 @@ import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ConnectionStore } from '@entities/Connection';
-import { makeConnectionsSnapshot } from '@entities/Connection';
+import { makeConnectionsSnapshot } from '@entities/Connection/__tests__/Connection.fixture';
 import { API_ENDPOINT } from '@shared/api';
 
 import { ConnectionsPage } from '../ui/ConnectionsPage';

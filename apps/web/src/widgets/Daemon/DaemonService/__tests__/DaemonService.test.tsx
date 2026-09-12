@@ -5,12 +5,12 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 
+import type { ServiceState } from '@entities/Daemon';
 import {
   SERVICE_DRIFT_FIXTURE,
   SERVICE_FAILED_FIXTURE,
   SERVICE_RUNNING_FIXTURE,
-  type ServiceState,
-} from '@entities/Daemon';
+} from '@entities/Daemon/__tests__/Daemon.fixture';
 import { API_ENDPOINT } from '@shared/api';
 
 import { DaemonService } from '../ui/DaemonService';

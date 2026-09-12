@@ -4,8 +4,10 @@ import { screen, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { ConnectionStore, makeConnectionsSnapshot } from '@entities/Connection';
-import { CLASH_CONFIGS_FIXTURE, RuntimeStore, SCHEMA_VERSION } from '@entities/Daemon';
+import { ConnectionStore } from '@entities/Connection';
+import { makeConnectionsSnapshot } from '@entities/Connection/__tests__/Connection.fixture';
+import { RuntimeStore, SCHEMA_VERSION } from '@entities/Daemon';
+import { CLASH_CONFIGS_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture';
 import { API_ENDPOINT } from '@shared/api';
 
 import { OverviewPage } from '../ui/OverviewPage';

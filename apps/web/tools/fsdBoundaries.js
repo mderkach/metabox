@@ -11,6 +11,7 @@ const SLICED = new Set(['pages', 'widgets', 'features', 'entities']);
 const RANK = new Map(LAYERS.map((layer, index) => [layer, index]));
 const SRC = 'src';
 const PUBLIC_API = 'index.ts';
+const TESTS = '__tests__';
 
 /**
  * Наличие Public API спрашивается у диска каждый раз.
@@ -70,6 +71,11 @@ function locate(filePath) {
   };
 }
 
+/** Тест или мок: только им открыт `__tests__` чужого слайса. */
+function isTestFile(filePath) {
+  return filePath.split(path.sep).includes(TESTS);
+}
+
 function parseAlias(source) {
   const match = /^@([a-z]+)(?:\/(.*))?$/.exec(source);
   if (!match || !RANK.has(match[1])) return null;
@@ -108,6 +114,11 @@ function checkAlias(from, alias, report) {
     report(`У \`@${alias.layer}/${slice}\` нет Public API: это группа слайсов, а не слайс.`);
     return;
   }
+
+  // Фикстуры и моки слайса — вход для тестов, а не часть Public API: через
+  // баррель их тянул бы и прод-код, а вместе с ними msw. Остальному коду
+  // `__tests__` соседа закрыт так же, как любая другая внутренность слайса.
+  if (deep[0] === TESTS && isTestFile(from.filePath)) return;
 
   if (slice !== '' && deep.length > 0) {
     report(`Импорт в обход Public API: разрешён \`@${alias.layer}/${slice}\`.`);

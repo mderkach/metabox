@@ -1,13 +1,10 @@
-import { configHandlers } from '@entities/Config';
-import { connectionHandlers, CONNECTIONS_FIXTURE } from '@entities/Connection';
-import {
-  createStatefulDaemonHandlers,
-  MEMORY_SAMPLES,
-  SERVICE_RUNNING_FIXTURE,
-  TRAFFIC_SAMPLE,
-} from '@entities/Daemon';
-import { createStatefulProxyHandlers } from '@entities/Proxy';
-import { routeHandlers } from '@entities/Route';
+import { configHandlers } from '@entities/Config/__tests__/Config.handlers';
+import { CONNECTIONS_FIXTURE } from '@entities/Connection/__tests__/Connection.fixture';
+import { connectionHandlers } from '@entities/Connection/__tests__/Connection.handlers';
+import { MEMORY_SAMPLES, SERVICE_RUNNING_FIXTURE, TRAFFIC_SAMPLE } from '@entities/Daemon/__tests__/Daemon.fixture';
+import { createStatefulDaemonHandlers } from '@entities/Daemon/__tests__/Daemon.handlers';
+import { createStatefulProxyHandlers } from '@entities/Proxy/__tests__/Proxy.handlers';
+import { routeHandlers } from '@entities/Route/__tests__/Route.handlers';
 import { RUNTIME_TOPIC } from '@shared/api';
 
 import { runtimeStreamHandler } from './runtimeStream';
@@ -19,8 +16,8 @@ let memorySample = 0;
 
 /**
  * Сборка моков для дев-режима. Сами хендлеры и фикстуры лежат в `__tests__`
- * своих слайсов, рядом с кодом, который они подменяют, и берутся отсюда через
- * их Public API — обход барреля здесь не нужен и не делается.
+ * своих слайсов, рядом с кодом, который они подменяют. Берутся они прямым
+ * путём, а не через Public API слайса: в барреле они тянули бы msw в прод.
  *
  * Единый поток рантайма собирается тут же: он один на все топики, и данные в
  * него складывают фикстуры разных слайсов. Демон и прокси подключаются
