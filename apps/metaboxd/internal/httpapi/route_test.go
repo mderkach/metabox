@@ -190,3 +190,69 @@ func TestExplainRouteAbsent(t *testing.T) {
 		t.Errorf("код ответа: получили %d, ожидали %d", got.status, http.StatusNotFound)
 	}
 }
+
+// Апгрейд до WebSocket на ветке прокси закрыт: рантайм идёт одним потоком
+// `/api/events`, и второго пути к тем же данным быть не должно (ADR-0010).
+func TestClashProxyRejectsUpgrade(t *testing.T) {
+	var proxied int
+
+	srv := httptest.NewServer(httpapi.NewServer(
+		&fakeApplier{},
+		fakeReader{},
+		testLogger(t),
+		httpapi.Options{
+			Version: "test",
+			Clash: http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				proxied++
+				w.WriteHeader(http.StatusOK)
+			}),
+		},
+	))
+	t.Cleanup(srv.Close)
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL+"/api/clash/traffic", nil)
+	if err != nil {
+		t.Fatalf("сборка запроса: %v", err)
+	}
+	req.Header.Set("Upgrade", "websocket")
+	req.Header.Set("Connection", "Upgrade")
+
+	resp, err := srv.Client().Do(req)
+	if err != nil {
+		t.Fatalf("запрос: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("код ответа: получили %d, ожидали %d", resp.StatusCode, http.StatusBadRequest)
+	}
+	if proxied != 0 {
+		t.Error("апгрейд ушёл в прокси, а должен был остановиться на границе")
+	}
+}
+
+// Обычный запрос к тем же ручкам прокси проходит: правила, группы и DNS-запрос
+// остаются сквозными.
+func TestClashProxyPassesRequests(t *testing.T) {
+	var proxied int
+
+	srv := httptest.NewServer(httpapi.NewServer(
+		&fakeApplier{},
+		fakeReader{},
+		testLogger(t),
+		httpapi.Options{
+			Version: "test",
+			Clash: http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				proxied++
+				w.WriteHeader(http.StatusOK)
+			}),
+		},
+	))
+	t.Cleanup(srv.Close)
+
+	got := request(t, srv, http.MethodGet, "/api/clash/rules", "", nil)
+
+	if got.status != http.StatusOK || proxied != 1 {
+		t.Errorf("запрос-ответ обязан пройти в прокси: код %d, вызовов %d", got.status, proxied)
+	}
+}
