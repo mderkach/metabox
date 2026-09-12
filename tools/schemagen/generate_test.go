@@ -28,9 +28,12 @@ func TestGenerate(t *testing.T) {
 		}
 	}
 
-	// z.toJSONSchema не переваривает transform (docs/adr/ADR-0001).
+	// Трансформ превращает ZodObject в ZodPipe: пропадают .extend, .omit и
+	// .pick, на которых собрана схема правил, а z.toJSONSchema перестаёт
+	// печатать выходную сторону — авторендерер получит пустой узел вместо поля
+	// (docs/adr/ADR-0001).
 	if strings.Contains(out, ".transform(") {
-		t.Error("в генерируемой схеме есть .transform(): ломается z.toJSONSchema")
+		t.Error("в генерируемой схеме есть .transform(): ломаются .extend и z.toJSONSchema")
 	}
 }
 
