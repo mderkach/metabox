@@ -1,2 +1,2 @@
-export * from './Route.mapper';
+export * from './Route.adapter';
 export * from './Route.model';

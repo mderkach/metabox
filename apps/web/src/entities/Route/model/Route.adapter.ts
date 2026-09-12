@@ -1,4 +1,6 @@
-import type { RouteChainDto, RouteExplanationDto, RouteMatchDto, RouteRuleDto } from '../api/Route.dto';
+import { decodeResponse } from '@shared/api';
+
+import { RouteExplanationSchema, type RouteExplanationWire } from '../api/Route.schema';
 import { ROUTE_MATCH, ROUTE_ORIGIN, type RouteExplanation, type RouteMatchKind, type RouteOrigin } from './Route.model';
 
 const ORIGINS = new Set<string>(Object.values(ROUTE_ORIGIN));
@@ -27,7 +29,7 @@ function toKind(value: string): RouteMatchKind {
   return isKind(value) ? value : ROUTE_MATCH.Unknown;
 }
 
-function toMatch(dto: RouteMatchDto) {
+function toMatch(dto: RouteExplanationWire['match']) {
   const kind = toKind(dto.kind);
 
   return {
@@ -40,11 +42,11 @@ function toMatch(dto: RouteMatchDto) {
   };
 }
 
-function toChain(dto: RouteChainDto) {
+function toChain(dto: RouteExplanationWire['chain']) {
   return { origin: toOrigin(dto.origin), nodes: dto.nodes ?? [] };
 }
 
-function toRule(dto: RouteRuleDto) {
+function toRule(dto: NonNullable<RouteExplanationWire['rules']>[number]) {
   return {
     origin: toOrigin(dto.origin),
     index: dto.index,
@@ -54,7 +56,14 @@ function toRule(dto: RouteRuleDto) {
   };
 }
 
-export function toRouteExplanation(dto: RouteExplanationDto): RouteExplanation {
+/**
+ * Объяснение маршрута из ответа демона. Форма проверяется схемой, и непонятый
+ * ответ становится отказом, а не пустым экраном: «правило не найдено» и «ответ
+ * не разобран» — разные вещи, и вторую пользователь обязан видеть (ADR-0007).
+ */
+export function toRouteExplanation(raw: unknown): RouteExplanation {
+  const dto = decodeResponse(RouteExplanationSchema, raw, 'route');
+
   return {
     connectionId: dto.connection_id,
     match: toMatch(dto.match),

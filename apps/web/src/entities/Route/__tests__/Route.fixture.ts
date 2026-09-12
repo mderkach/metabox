@@ -1,4 +1,4 @@
-import type { RouteExplanationDto } from '../api/Route.dto';
+import type { RouteExplanationWire } from '../api/Route.schema';
 
 /**
  * Ответ демона на соединение, ушедшее в `alt-fallback` по rule-set.
@@ -8,7 +8,7 @@ import type { RouteExplanationDto } from '../api/Route.dto';
  * показывает расхождение списков и отключает переход к узлу. Это не поломка:
  * так выглядит случай «процесс исполняет другой конфиг» из ADR-0007.
  */
-export const ROUTE_EXPLANATION_FIXTURE: RouteExplanationDto = {
+export const ROUTE_EXPLANATION_FIXTURE: RouteExplanationWire = {
   connection_id: 'c-1',
   match: {
     origin: 'observed',
@@ -36,7 +36,7 @@ export const ROUTE_EXPLANATION_FIXTURE: RouteExplanationDto = {
 };
 
 /** Ни одно правило не совпало: сработал `route.final`, и это наблюдение. */
-export const ROUTE_FINAL_FIXTURE: RouteExplanationDto = {
+export const ROUTE_FINAL_FIXTURE: RouteExplanationWire = {
   connection_id: 'c-2',
   match: { origin: 'observed', kind: 'final' },
   chain: { origin: 'observed', nodes: ['direct'] },
@@ -47,7 +47,7 @@ export const ROUTE_FINAL_FIXTURE: RouteExplanationDto = {
  * Условия у соединения есть, а в списке процесса не нашлись: объяснение
  * помечается неизвестностью с причиной, а не догадкой (ADR-0007).
  */
-export const ROUTE_UNKNOWN_FIXTURE: RouteExplanationDto = {
+export const ROUTE_UNKNOWN_FIXTURE: RouteExplanationWire = {
   connection_id: 'c-3',
   match: { origin: 'unknown', kind: 'unknown', reason: 'правила соединения нет в списке работающего процесса' },
   chain: { origin: 'observed', nodes: ['direct'] },

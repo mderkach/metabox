@@ -25,6 +25,12 @@ function shouldRetry(failureCount: number, error: unknown): boolean {
     return false;
   }
 
+  // Повтор вернёт тот же непонятый ответ: форма не меняется от того, что
+  // запрос отправлен второй раз.
+  if (error.kind === API_FAILURE.Schema) {
+    return false;
+  }
+
   const status = error.status ?? 0;
 
   return status < CLIENT_ERROR_MIN || status >= CLIENT_ERROR_MAX;

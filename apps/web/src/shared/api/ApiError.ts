@@ -2,6 +2,12 @@
 export const API_FAILURE = {
   Unreachable: 'unreachable',
   Response: 'response',
+  /**
+   * Ответ пришёл, но схема его не приняла. Рождается не в транспорте, а в
+   * фабрике опций, поэтому `status`, `code` и `details` транспорта у него нет:
+   * в `details` лежит разбор ошибки схемы.
+   */
+  Schema: 'schema',
 } as const;
 
 export type ApiFailure = (typeof API_FAILURE)[keyof typeof API_FAILURE];
