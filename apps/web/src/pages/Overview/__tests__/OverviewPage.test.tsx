@@ -8,7 +8,7 @@ import { ConnectionStore } from '@entities/Connection';
 import { makeConnectionsSnapshot } from '@entities/Connection/__tests__/Connection.fixture';
 import { RuntimeStore, SCHEMA_VERSION } from '@entities/Daemon';
 import { DAEMON_ENDPOINT } from '@entities/Daemon';
-import { CLASH_CONFIGS_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture';
+import { CLASH_CONFIGS_FIXTURE, SERVICE_RUNNING_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture';
 
 import { OverviewPage } from '../ui/OverviewPage';
 
@@ -17,7 +17,10 @@ function serveStatus(configPath?: string, singboxVersion = SCHEMA_VERSION) {
     http.get(DAEMON_ENDPOINT.status(), () =>
       HttpResponse.json({ version: 'dev', singbox_version: singboxVersion, config_path: configPath })
     ),
-    http.get(DAEMON_ENDPOINT.clashConfigs(), () => HttpResponse.json(CLASH_CONFIGS_FIXTURE))
+    http.get(DAEMON_ENDPOINT.clashConfigs(), () => HttpResponse.json(CLASH_CONFIGS_FIXTURE)),
+    // Карточка службы живёт на этом же экране: без мока она показала бы
+    // «состояние не прочитано» и добавила на экран второе предупреждение.
+    http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE))
   );
 }
 

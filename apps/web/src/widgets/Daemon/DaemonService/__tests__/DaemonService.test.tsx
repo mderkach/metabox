@@ -5,7 +5,6 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { ServiceState } from '@entities/Daemon';
 import { DAEMON_ENDPOINT } from '@entities/Daemon';
 import {
   SERVICE_DRIFT_FIXTURE,
@@ -15,7 +14,7 @@ import {
 
 import { DaemonService } from '../ui/DaemonService';
 
-function serveService(state: ServiceState) {
+function serveService(state: typeof SERVICE_RUNNING_FIXTURE) {
   server.use(http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(state)));
 }
 
@@ -46,7 +45,7 @@ describe('состояние сервиса', () => {
 
     // Источник истины — демон: после команды экран перечитывает состояние,
     // поэтому мок меняет ответ так же, как это сделал бы сервис.
-    let state: ServiceState = SERVICE_FAILED_FIXTURE;
+    let state: typeof SERVICE_RUNNING_FIXTURE = SERVICE_FAILED_FIXTURE;
 
     server.use(
       http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(state)),

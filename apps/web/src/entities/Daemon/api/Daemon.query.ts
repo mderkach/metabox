@@ -2,8 +2,9 @@ import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/r
 
 import { CACHE_TIME, POLL_INTERVAL } from '@shared/api';
 
+import { toClashConfigs, toDaemonStatus, toServiceState } from '../model/Daemon.adapter';
+import type { ServiceAction } from '../model/Daemon.model';
 import { getClashConfigs, getDaemonStatus, getServiceState, runServiceAction } from './Daemon.api';
-import type { ServiceAction } from './Daemon.dto';
 
 /** Значение флагов демона по умолчанию: то же, что в `main.go`. */
 const DEFAULT_CONFIG_PATH = '/etc/sing-box/config.json';
@@ -18,7 +19,7 @@ export const DAEMON_QUERY = {
 export function getDaemonStatusOptions() {
   return queryOptions({
     queryKey: DAEMON_QUERY.status(),
-    queryFn: async ({ signal }) => getDaemonStatus({ signal }),
+    queryFn: async ({ signal }) => toDaemonStatus(await getDaemonStatus({ signal })),
     staleTime: CACHE_TIME.Second,
     gcTime: CACHE_TIME.Minute,
     refetchInterval: POLL_INTERVAL.Status,
@@ -45,13 +46,13 @@ export function useDaemonStatus() {
 export function useConfigPath(): string {
   const status = useDaemonStatus();
 
-  return status.data?.config_path ?? DEFAULT_CONFIG_PATH;
+  return status.data?.configPath ?? DEFAULT_CONFIG_PATH;
 }
 
 export function getServiceStateOptions() {
   return queryOptions({
     queryKey: DAEMON_QUERY.service(),
-    queryFn: async ({ signal }) => getServiceState({ signal }),
+    queryFn: async ({ signal }) => toServiceState(await getServiceState({ signal })),
     staleTime: CACHE_TIME.Second,
     gcTime: CACHE_TIME.Minute,
     // Опроса нет: состояние обновляет топик `service` единого потока, а тело
@@ -79,7 +80,7 @@ export function useServiceAction() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (action: ServiceAction) => runServiceAction(action),
+    mutationFn: async (action: ServiceAction) => toServiceState(await runServiceAction(action)),
     meta: { showError: true, errorMessageKey: 'service.action.failed' },
     onSuccess: (state) => {
       queryClient.setQueryData(DAEMON_QUERY.service(), state);
@@ -91,7 +92,7 @@ export function useServiceAction() {
 export function getClashConfigsOptions() {
   return queryOptions({
     queryKey: DAEMON_QUERY.clashConfigs(),
-    queryFn: async ({ signal }) => getClashConfigs({ signal }),
+    queryFn: async ({ signal }) => toClashConfigs(await getClashConfigs({ signal })),
     staleTime: CACHE_TIME.Minute,
     gcTime: CACHE_TIME.Hour,
     meta: { showError: false },

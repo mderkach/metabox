@@ -26,3 +26,24 @@ export function decodeResponse<Schema extends z.ZodType>(
     details: z.prettifyError(parsed.error),
   });
 }
+
+/**
+ * Разбор кадра потока. `null` — кадр отбракован: поток присылает следующий
+ * через секунду, и ронять на нём подписку незачем. Отбраковка не молчит —
+ * иначе экран замирает на старых данных без единого признака поломки.
+ */
+export function decodeFrame<Schema extends z.ZodType>(
+  schema: Schema,
+  data: unknown,
+  topic: string
+): z.infer<Schema> | null {
+  const parsed = schema.safeParse(data);
+
+  if (parsed.success) {
+    return parsed.data;
+  }
+
+  console.warn(`[STREAM] кадр топика ${topic} отбракован`, z.prettifyError(parsed.error));
+
+  return null;
+}

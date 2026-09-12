@@ -122,7 +122,7 @@ function ConfirmWindow({
         </Button>
       </div>
 
-      {transaction.clash_api_added === true && <ClashAPIAdded />}
+      {transaction.clashApiAdded === true && <ClashAPIAdded />}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import type { ClashTrafficSample } from '@entities/Daemon';
+import type { TrafficSample } from '@entities/Daemon';
 import { formatRate } from '@shared/lib/format';
 
 const WIDTH = 640;
@@ -39,7 +39,7 @@ function toPoints(values: number[], max: number, count: number): string {
  * Ряды разведены светлотой, а не цветом: в палитре панели все токены графиков
  * серые, и цветной ряд выбивался бы из неё сильнее, чем помогал.
  */
-export function DaemonTraffic({ samples }: { samples: ClashTrafficSample[] }) {
+export function DaemonTraffic({ samples }: { samples: TrafficSample[] }) {
   const down = samples.map((sample) => sample.down);
   const up = samples.map((sample) => sample.up);
   const peak = Math.max(...down, ...up, 1);

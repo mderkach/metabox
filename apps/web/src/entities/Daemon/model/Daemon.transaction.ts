@@ -1,4 +1,4 @@
-import { APPLY_PHASE, type ApplyPhase } from '../api/Daemon.api';
+import { APPLY_PHASE, type ApplyPhase } from './Daemon.model';
 
 /**
  * Применение ещё идёт: конфиг пишется или ждёт подтверждения связи.

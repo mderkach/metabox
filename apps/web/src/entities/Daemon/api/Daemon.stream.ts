@@ -1,7 +1,8 @@
 import { listenTopic, RUNTIME_TOPIC, type StreamSource } from '@shared/api';
 
+import { toMemoryFrame, toServiceFrame, toTrafficFrame } from '../model/Daemon.adapter';
+import type { ServiceState } from '../model/Daemon.model';
 import { RuntimeStore } from '../model/Daemon.store';
-import type { ClashMemorySample, ClashTrafficSample, ServiceState } from './Daemon.dto';
 
 /**
  * Трафик и память приходят топиками единого потока (ADR-0010). Копить их
@@ -9,14 +10,22 @@ import type { ClashMemorySample, ClashTrafficSample, ServiceState } from './Daem
  * сообщение весит десятки килобайт.
  */
 export function listenTraffic(source: StreamSource): () => void {
-  return listenTopic<ClashTrafficSample>(source, RUNTIME_TOPIC.Traffic, (sample) => {
-    RuntimeStore.getState().pushTraffic(sample);
+  return listenTopic(source, RUNTIME_TOPIC.Traffic, (frame) => {
+    const sample = toTrafficFrame(frame);
+
+    if (sample !== null) {
+      RuntimeStore.getState().pushTraffic(sample);
+    }
   });
 }
 
 export function listenMemory(source: StreamSource): () => void {
-  return listenTopic<ClashMemorySample>(source, RUNTIME_TOPIC.Memory, (sample) => {
-    RuntimeStore.getState().pushMemory(sample);
+  return listenTopic(source, RUNTIME_TOPIC.Memory, (frame) => {
+    const sample = toMemoryFrame(frame);
+
+    if (sample !== null) {
+      RuntimeStore.getState().pushMemory(sample);
+    }
   });
 }
 
@@ -26,5 +35,11 @@ export function listenMemory(source: StreamSource): () => void {
  * состояние своим хуком и не знает, пришло оно потоком или запросом.
  */
 export function listenService(source: StreamSource, apply: (state: ServiceState) => void): () => void {
-  return listenTopic<ServiceState>(source, RUNTIME_TOPIC.Service, apply);
+  return listenTopic(source, RUNTIME_TOPIC.Service, (frame) => {
+    const state = toServiceFrame(frame);
+
+    if (state !== null) {
+      apply(state);
+    }
+  });
 }

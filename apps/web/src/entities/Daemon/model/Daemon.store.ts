@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 
 import { createReactSelectors, stateCreator, useStore } from '@shared/lib/state';
 
-import type { ClashMemorySample, ClashTrafficSample } from '../api/Daemon.dto';
+import type { MemorySample, TrafficSample } from './Daemon.model';
 
 /** Минута трафика при шаге снапшота в секунду. */
 export const TRAFFIC_POINTS = 60;
@@ -13,14 +13,14 @@ export const MEMORY_EVERY = 10;
 
 interface RuntimeState {
   /** Кольцевой буфер: история потока не копится, экрану нужен хвост. */
-  traffic: ClashTrafficSample[];
+  traffic: TrafficSample[];
   memory: number[];
   /** Последний сэмпл памяти, даже если в буфер он ещё не попал. */
   memoryNow: number;
   /** Сколько экранов смотрит поток рантайма. */
   readers: number;
-  pushTraffic: (sample: ClashTrafficSample) => void;
-  pushMemory: (sample: ClashMemorySample) => void;
+  pushTraffic: (sample: TrafficSample) => void;
+  pushMemory: (sample: MemorySample) => void;
   addReader: () => void;
   removeReader: () => void;
   reset: () => void;
@@ -93,7 +93,7 @@ export const RuntimeState = createReactSelectors(RuntimeStateProto);
 /** Стор снаружи React: обработчики потоков живут вне дерева компонентов. */
 export const RuntimeStore = RuntimeStateProto;
 
-export function useTrafficNow(): ClashTrafficSample {
+export function useTrafficNow(): TrafficSample {
   return useStore(RuntimeStateProto, (state) => state.traffic.at(-1) ?? { up: 0, down: 0 });
 }
 

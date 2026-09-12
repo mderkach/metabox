@@ -1,8 +1,7 @@
-import type { DaemonStatus } from '../api/Daemon.api';
-import type { ClashConfigs, ClashVersion, ServiceState } from '../api/Daemon.dto';
+import type { ClashConfigsWire, ClashVersionWire, DaemonStatusWire, ServiceStateWire } from '../api/Daemon.schema';
 
 /** Демон отвечает и применений в работе нет: поле `transaction` пустое. */
-export const DAEMON_STATUS_FIXTURE: DaemonStatus = {
+export const DAEMON_STATUS_FIXTURE: DaemonStatusWire = {
   version: 'dev',
   singbox_version: '1.14.0-extended-2.7.1',
   config_path: '/etc/sing-box/config.json',
@@ -10,13 +9,13 @@ export const DAEMON_STATUS_FIXTURE: DaemonStatus = {
 
 /** Версия и режим, снятые с устройства 2026-09-10. */
 
-export const CLASH_VERSION_FIXTURE: ClashVersion = {
+export const CLASH_VERSION_FIXTURE: ClashVersionWire = {
   meta: true,
   premium: true,
   version: 'sing-box 1.14.0-extended-2.7.1',
 };
 
-export const CLASH_CONFIGS_FIXTURE: ClashConfigs = {
+export const CLASH_CONFIGS_FIXTURE: ClashConfigsWire = {
   mode: 'Rule',
   'mode-list': ['Rule', 'Global', 'Direct'],
   'log-level': 'error',
@@ -32,14 +31,14 @@ export const MEMORY_SAMPLES = [0, 47_923_200, 51_380_224];
 export const TRAFFIC_SAMPLE = { up: 8500, down: 43_400 };
 
 /** Сервис поднят: аптайм снят с устройства 2026-09-10. */
-export const SERVICE_RUNNING_FIXTURE: ServiceState = {
+export const SERVICE_RUNNING_FIXTURE: ServiceStateWire = {
   status: 'running',
   uptime: 253_091,
   binary: '1.14.0-extended-2.7.1',
 };
 
 /** Сервис упал: вывод procd показывается дословно, разбирать его нельзя. */
-export const SERVICE_FAILED_FIXTURE: ServiceState = {
+export const SERVICE_FAILED_FIXTURE: ServiceStateWire = {
   status: 'failed',
   uptime: 0,
   binary: '1.14.0-extended-2.7.1',
@@ -48,7 +47,7 @@ export const SERVICE_FAILED_FIXTURE: ServiceState = {
 };
 
 /** Бинарь новее схемы: панель обязана продолжать работать (UX-4, AC-28). */
-export const SERVICE_DRIFT_FIXTURE: ServiceState = {
+export const SERVICE_DRIFT_FIXTURE: ServiceStateWire = {
   status: 'running',
   uptime: 120,
   binary: '1.13.19-extended-2.6.6',

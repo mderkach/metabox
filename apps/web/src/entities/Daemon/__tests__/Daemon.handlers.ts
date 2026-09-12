@@ -2,8 +2,8 @@ import { http, HttpResponse } from 'msw';
 
 import { CONFIG_ENDPOINT } from '@entities/Config';
 
-import type { ApplyTransaction } from '../api/Daemon.api';
 import { DAEMON_ENDPOINT } from '../api/Daemon.endpoints';
+import type { ApplyTransactionWire } from '../api/Daemon.schema';
 import {
   CLASH_CONFIGS_FIXTURE,
   CLASH_VERSION_FIXTURE,
@@ -24,9 +24,9 @@ const CONFIRM_WINDOW_NS = 60_000_000_000;
  * её по двум мокам значило бы держать два независимых состояния одного цикла.
  */
 export function createStatefulDaemonHandlers() {
-  let transaction: ApplyTransaction | null = null;
+  let transaction: ApplyTransactionWire | null = null;
 
-  const start = (): ApplyTransaction => {
+  const start = (): ApplyTransactionWire => {
     transaction = {
       id: `mock-${String(Date.now())}`,
       phase: 'awaiting_confirm',

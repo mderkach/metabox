@@ -29,7 +29,7 @@ export function OverviewPage() {
   const memoryHistory = RuntimeState.use.memory();
   const totals = ConnectionState.use.totals();
   const counts = useConnectionCounts();
-  const singboxVersion = status.data?.singbox_version;
+  const singboxVersion = status.data?.singboxVersion;
 
   return (
     <>

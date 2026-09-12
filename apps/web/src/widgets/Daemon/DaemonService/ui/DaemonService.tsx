@@ -41,6 +41,23 @@ export function DaemonService() {
   const service = useServiceState();
   const action = useServiceAction();
 
+  if (service.isError) {
+    return (
+      <Card>
+        <CardHeader>
+          <h2 className='text-sm font-medium'>Сервис sing-box</h2>
+        </CardHeader>
+        <CardContent>
+          <Alert variant='destructive'>
+            <CircleAlert />
+            <AlertTitle>Состояние сервиса не прочитано</AlertTitle>
+            <AlertDescription>{service.error.message}</AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (!service.isSuccess) {
     return null;
   }
