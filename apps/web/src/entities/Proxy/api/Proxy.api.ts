@@ -2,15 +2,15 @@ import type { AxiosRequestConfig } from 'axios';
 
 import { ApiClientInstance } from '@shared/api';
 
-import type { ClashDelay, ClashProviders, ClashProxies } from './Proxy.dto';
 import { PROXY_ENDPOINT } from './Proxy.endpoints';
+import type { ClashDelayWire, ClashProvidersWire, ClashProxiesWire } from './Proxy.schema';
 
-export async function getProxies(config?: AxiosRequestConfig): Promise<ClashProxies> {
-  return ApiClientInstance.get<ClashProxies>(PROXY_ENDPOINT.proxies(), config);
+export async function getProxies(config?: AxiosRequestConfig): Promise<ClashProxiesWire> {
+  return ApiClientInstance.get<ClashProxiesWire>(PROXY_ENDPOINT.proxies(), config);
 }
 
-export async function getProxyProviders(config?: AxiosRequestConfig): Promise<ClashProviders> {
-  return ApiClientInstance.get<ClashProviders>(PROXY_ENDPOINT.providers(), config);
+export async function getProxyProviders(config?: AxiosRequestConfig): Promise<ClashProvidersWire> {
+  return ApiClientInstance.get<ClashProvidersWire>(PROXY_ENDPOINT.providers(), config);
 }
 
 /**
@@ -22,6 +22,6 @@ export async function selectProxy(group: string, node: string, config?: AxiosReq
 }
 
 /** Проверка задержки узла; `65535` в ответе значит «не ответил». */
-export async function testProxyDelay(name: string, config?: AxiosRequestConfig): Promise<ClashDelay> {
-  return ApiClientInstance.get<ClashDelay>(PROXY_ENDPOINT.proxyDelay(name), config);
+export async function testProxyDelay(name: string, config?: AxiosRequestConfig): Promise<ClashDelayWire> {
+  return ApiClientInstance.get<ClashDelayWire>(PROXY_ENDPOINT.proxyDelay(name), config);
 }

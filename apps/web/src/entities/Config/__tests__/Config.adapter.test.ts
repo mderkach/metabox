@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { API_FAILURE, ApiError } from '@shared/api';
 
+import { ConfigVersionsSchema } from '../api/Config.schema';
 import { toCheckFailure, toConfigVersions } from '../model/Config.adapter';
 
 const VERSIONS_WIRE = {
@@ -11,16 +12,6 @@ const VERSIONS_WIRE = {
     { id: 2, size: 3072, sum: 'b2', saved_at: 1_757_100_000 },
   ],
 };
-
-function catchApiError(run: () => unknown): ApiError | null {
-  try {
-    run();
-  } catch (error) {
-    return error instanceof ApiError ? error : null;
-  }
-
-  return null;
-}
 
 describe('toConfigVersions', () => {
   it('отдаёт историю от свежей версии к старой', () => {
@@ -39,10 +30,8 @@ describe('toConfigVersions', () => {
     expect(newest.savedAt).toBeNull();
   });
 
-  it('отказывает с видом `schema`, когда версия пришла без номера', () => {
-    const failure = catchApiError(() => toConfigVersions({ versions: [{ size: 1, sum: 'x', saved_at: 0 }] }));
-
-    expect(failure?.kind).toBe(API_FAILURE.Schema);
+  it('не принимает версию без номера: порядок истории задаёт именно он', () => {
+    expect(ConfigVersionsSchema.safeParse({ versions: [{ size: 1, sum: 'x', saved_at: 0 }] }).success).toBe(false);
   });
 });
 

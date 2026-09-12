@@ -1,2 +1,2 @@
-export * from './Proxy.mapper';
+export * from './Proxy.adapter';
 export * from './Proxy.model';

@@ -1,4 +1,4 @@
-import { toProxyGroups, toStandaloneNodes, useProxies, useProxyProviders } from '@entities/Proxy';
+import { useProxies, useProxyProviders } from '@entities/Proxy';
 import { plural } from '@shared/lib/format';
 import { Card, CardContent, CardHeader } from '@shared/ui';
 import { ProxyGroups } from '@widgets/ProxyGroups';
@@ -12,9 +12,9 @@ export function ProxiesPage() {
   const proxies = useProxies();
   const providers = useProxyProviders();
 
-  const groups = toProxyGroups(proxies.data);
-  const nodes = toStandaloneNodes(proxies.data);
-  const subscriptions = Object.values(providers.data?.providers ?? {});
+  const groups = proxies.data?.groups ?? [];
+  const nodes = proxies.data?.standalone ?? [];
+  const subscriptions = providers.data ?? [];
 
   return (
     <>
@@ -39,7 +39,7 @@ export function ProxiesPage() {
                 {subscriptions.map((provider) => (
                   <li key={provider.name} className='flex items-center gap-3 border-t border-border px-4 py-2.5'>
                     <span className='min-w-0 grow truncate text-sm'>{provider.name}</span>
-                    <span className='text-xs text-muted-foreground'>{plural(provider.proxies.length, NODE_FORMS)}</span>
+                    <span className='text-xs text-muted-foreground'>{plural(provider.nodes, NODE_FORMS)}</span>
                     <time dateTime={provider.updatedAt} className='font-mono text-xs text-muted-foreground'>
                       {provider.updatedAt.slice(0, ISO_DATE_LENGTH)}
                     </time>

@@ -1,4 +1,4 @@
-import type { ClashDelay, ClashProviders, ClashProxies } from '../api/Proxy.dto';
+import type { ClashProvidersWire, ClashProxiesWire } from '../api/Proxy.schema';
 
 /**
  * Прокси с рабочего роутера, снятые 2026-09-10: 4 группы, 6 узлов VLESS,
@@ -11,9 +11,9 @@ import type { ClashDelay, ClashProviders, ClashProxies } from '../api/Proxy.dto'
 export const CHECKED_AT = '2026-09-10T19:25:31.264867247Z';
 
 /** Ответ на проверку задержки: замер того же прогона, что и история узлов. */
-export const CLASH_DELAY_FIXTURE: ClashDelay = { time: CHECKED_AT, delay: 143 };
+export const CLASH_DELAY_FIXTURE = { time: CHECKED_AT, delay: 143 };
 
-export const CLASH_PROXIES_FIXTURE: ClashProxies = {
+export const CLASH_PROXIES_FIXTURE: ClashProxiesWire = {
   proxies: {
     GLOBAL: {
       type: 'Fallback',
@@ -88,7 +88,7 @@ export const CLASH_PROXIES_FIXTURE: ClashProxies = {
   },
 };
 
-export const CLASH_PROVIDERS_FIXTURE: ClashProviders = {
+export const CLASH_PROVIDERS_FIXTURE: ClashProvidersWire = {
   providers: {
     'sub-eu': {
       type: 'Proxy',

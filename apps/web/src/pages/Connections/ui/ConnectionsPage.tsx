@@ -44,8 +44,6 @@ export function ConnectionsPage() {
         <h1 className='text-base font-medium'>Соединения</h1>
         <p className='text-xs text-muted-foreground'>поток идёт снапшотами раз в секунду</p>
         {dropped > 0 && (
-          // Молча замереть на старых данных хуже, чем сказать, что снапшоты не
-          // разбираются: список выглядел бы исправным, но не обновлялся.
           <p role='status' className='text-xs text-destructive'>
             снапшотов не разобрано: {dropped}
           </p>

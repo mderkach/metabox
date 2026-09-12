@@ -1,8 +1,8 @@
 import { listenTopic, RUNTIME_TOPIC, type StreamSource } from '@shared/api';
 
 import { toMemoryFrame, toServiceFrame, toTrafficFrame } from '../model/Daemon.adapter';
-import type { ServiceState } from '../model/Daemon.model';
 import { RuntimeStore } from '../model/Daemon.store';
+import type { ServiceStateWire } from './Daemon.schema';
 
 /**
  * Трафик и память приходят топиками единого потока (ADR-0010). Копить их
@@ -34,7 +34,7 @@ export function listenMemory(source: StreamSource): () => void {
  * (ADR-0010), поэтому событие кладётся в кэш запроса: экран продолжает читать
  * состояние своим хуком и не знает, пришло оно потоком или запросом.
  */
-export function listenService(source: StreamSource, apply: (state: ServiceState) => void): () => void {
+export function listenService(source: StreamSource, apply: (state: ServiceStateWire) => void): () => void {
   return listenTopic(source, RUNTIME_TOPIC.Service, (frame) => {
     const state = toServiceFrame(frame);
 

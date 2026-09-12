@@ -1,21 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { API_FAILURE, ApiError } from '@shared/api';
-
+import { RouteExplanationSchema } from '../api/Route.schema';
 import { toRouteExplanation } from '../model/Route.adapter';
 import { ROUTE_MATCH, ROUTE_ORIGIN } from '../model/Route.model';
 import { ROUTE_EXPLANATION_FIXTURE, ROUTE_FINAL_FIXTURE, ROUTE_UNKNOWN_FIXTURE } from './Route.fixture';
-
-/** Отказ возвращается значением: условный `expect` в `catch` линтер не пропускает. */
-function catchApiError(run: () => unknown): ApiError | null {
-  try {
-    run();
-  } catch (error) {
-    return error instanceof ApiError ? error : null;
-  }
-
-  return null;
-}
 
 describe('toRouteExplanation', () => {
   it('переводит ответ демона в модель экрана', () => {
@@ -59,17 +47,16 @@ describe('toRouteExplanation', () => {
 
     expect(explanation.chain.nodes).toEqual([]);
   });
+});
 
-  it('отказывает с видом `schema`, когда форма ответа другая', () => {
-    const failure = catchApiError(() => toRouteExplanation({ connection_id: 'c-1' }));
-
-    expect(failure?.kind).toBe(API_FAILURE.Schema);
-    expect(failure?.details).toContain('match');
+describe('RouteExplanationSchema', () => {
+  it('не принимает ответ без сработавшего правила', () => {
+    expect(RouteExplanationSchema.safeParse({ connection_id: 'c-1' }).success).toBe(false);
   });
 
-  it('отказывает, когда индекс правила пришёл строкой', () => {
+  it('не принимает индекс правила строкой', () => {
     const broken = { ...ROUTE_EXPLANATION_FIXTURE, match: { ...ROUTE_EXPLANATION_FIXTURE.match, index: '3' } };
 
-    expect(() => toRouteExplanation(broken)).toThrowError(ApiError);
+    expect(RouteExplanationSchema.safeParse(broken).success).toBe(false);
   });
 });

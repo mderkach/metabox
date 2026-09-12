@@ -37,3 +37,16 @@ export interface ProxyGroup {
   now: string | null;
   nodes: ProxyNode[];
 }
+
+/** Группировка живёт в модели: её же использует оптимистичное обновление выбора. */
+export interface ProxyRuntime {
+  groups: ProxyGroup[];
+  standalone: ProxyNode[];
+}
+
+export interface ProxyProvider {
+  name: string;
+  nodes: number;
+  /** Время обновления подписки в том виде, в каком его отдал рантайм. */
+  updatedAt: string;
+}

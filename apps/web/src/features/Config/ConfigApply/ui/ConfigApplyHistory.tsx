@@ -112,7 +112,6 @@ function VersionRow({
   );
 }
 
-/** Модель держит миллисекунды эпохи, датой они становятся только при показе. */
 function SavedAt({ at }: { at: number }) {
   const saved = new Date(at);
 

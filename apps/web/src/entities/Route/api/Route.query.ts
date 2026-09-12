@@ -13,10 +13,7 @@ export const ROUTE_QUERY = {
 export function getRouteExplanationOptions(id: string) {
   return queryOptions({
     queryKey: ROUTE_QUERY.explanation(id),
-    // Разбор до кэша, а не в `select`: `select` меняет то, что видит хук, но
-    // не то, что лежит в кэше, и чужая форма осталась бы доступна всякому,
-    // кто возьмёт эти данные по ключу.
-    queryFn: async ({ signal }) => toRouteExplanation(await getRouteExplanation(id, { signal })),
+    queryFn: async ({ signal }) => getRouteExplanation(id, { signal }),
     staleTime: CACHE_TIME.Second,
     gcTime: CACHE_TIME.Minute,
     meta: { showError: true, errorMessageKey: 'route.explain.failed' },
@@ -28,5 +25,9 @@ export function getRouteExplanationOptions(id: string) {
  * запрос не заводится: ручка ходит к рантайму за списком правил.
  */
 export function useRouteExplanation(id: string | null) {
-  return useQuery({ ...getRouteExplanationOptions(id ?? ''), enabled: id !== null });
+  return useQuery({
+    ...getRouteExplanationOptions(id ?? ''),
+    enabled: id !== null,
+    select: toRouteExplanation,
+  });
 }

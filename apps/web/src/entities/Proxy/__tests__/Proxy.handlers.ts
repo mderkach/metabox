@@ -1,8 +1,7 @@
 import { http, HttpResponse } from 'msw';
 
-import type { ClashProxies } from '../api/Proxy.dto';
 import { PROXY_ENDPOINT } from '../api/Proxy.endpoints';
-import { withSelectedNode } from '../model/Proxy.mapper';
+import type { ClashProxiesWire } from '../api/Proxy.schema';
 import { CLASH_DELAY_FIXTURE, CLASH_PROVIDERS_FIXTURE, CLASH_PROXIES_FIXTURE } from './Proxy.fixture';
 
 /**
@@ -57,14 +56,18 @@ export const proxyHandlers = [
 export function createStatefulProxyHandlers() {
   const chosen = new Map<string, string>();
 
-  function snapshot(): ClashProxies {
-    let proxies = CLASH_PROXIES_FIXTURE;
+  // Мок отвечает формой провода, поэтому выбор проставляется прямо в ней:
+  // модельный `withSelectedNode` работает с группами, которых здесь ещё нет.
+  function snapshot(): ClashProxiesWire {
+    const proxies = { ...CLASH_PROXIES_FIXTURE.proxies };
 
     for (const [group, node] of chosen) {
-      proxies = withSelectedNode(proxies, group, node);
+      if (Object.hasOwn(proxies, group)) {
+        proxies[group] = { ...proxies[group], now: node };
+      }
     }
 
-    return proxies;
+    return { proxies };
   }
 
   return [

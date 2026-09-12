@@ -1,4 +1,12 @@
-import type { ClashProxies, ClashProxy } from '../api/Proxy.dto';
+import { decodeResponse } from '@shared/api';
+
+import {
+  ClashProvidersSchema,
+  ClashProxiesSchema,
+  type ClashProvidersWire,
+  type ClashProxiesWire,
+  type ClashProxyWire,
+} from '../api/Proxy.schema';
 import {
   DELAY_STATE,
   DELAY_TIMEOUT,
@@ -7,6 +15,8 @@ import {
   type DelayState,
   type ProxyGroup,
   type ProxyNode,
+  type ProxyProvider,
+  type ProxyRuntime,
 } from './Proxy.model';
 
 /** Граница «быстро» — порог, при котором переключение узла ещё не заметно. */
@@ -15,7 +25,7 @@ const FAST_DELAY = 300;
 /** Тип селектора: единственная группа, где узел выбирает пользователь. */
 const SELECTOR_TYPE = 'Selector';
 
-function toDelay(proxy: ClashProxy): number | null {
+function toDelay(proxy: ClashProxyWire): number | null {
   const last = proxy.history.at(-1);
 
   return last === undefined ? null : last.delay;
@@ -33,7 +43,7 @@ function toDelayState(delay: number | null): DelayState {
   return delay <= FAST_DELAY ? DELAY_STATE.Fast : DELAY_STATE.Slow;
 }
 
-function toNode(proxy: ClashProxy, selected: boolean): ProxyNode {
+function toNode(proxy: ClashProxyWire, selected: boolean): ProxyNode {
   const delay = toDelay(proxy);
 
   return { name: proxy.name, type: proxy.type, delay, delayState: toDelayState(delay), selected };
@@ -43,11 +53,7 @@ function toNode(proxy: ClashProxy, selected: boolean): ProxyNode {
  * Группы конфига. Служебные `GLOBAL` и `DIRECT` отброшены: в файле их нет, а
  * переключение `GLOBAL` увело бы весь трафик мимо правил маршрутизации.
  */
-export function toProxyGroups(source: ClashProxies | undefined): ProxyGroup[] {
-  if (source === undefined) {
-    return [];
-  }
-
+function toGroups(source: ClashProxiesWire): ProxyGroup[] {
   const groups: ProxyGroup[] = [];
 
   for (const proxy of Object.values(source.proxies)) {
@@ -86,11 +92,7 @@ export function toProxyGroups(source: ClashProxies | undefined): ProxyGroup[] {
  * Узлы вне групп — то, что показывает экран, когда групп в конфиге нет вовсе:
  * правила ссылаются прямо на аутбаунды, и переключать нечего.
  */
-export function toStandaloneNodes(source: ClashProxies | undefined): ProxyNode[] {
-  if (source === undefined) {
-    return [];
-  }
-
+function toStandalone(source: ClashProxiesWire): ProxyNode[] {
   return Object.values(source.proxies)
     .filter((proxy) => !GROUP_TYPES.has(proxy.type) && !SERVICE_GROUPS.has(proxy.name))
     .map((proxy) => toNode(proxy, false));
@@ -101,12 +103,26 @@ export function toStandaloneNodes(source: ClashProxies | undefined): ProxyNode[]
  * возвращает снимок как есть: выбор в несуществующей группе — не ошибка
  * данных, а гонка с перечитыванием списка.
  */
-export function withSelectedNode(proxies: ClashProxies, group: string, node: string): ClashProxies {
+export function withSelectedNode(proxies: ClashProxiesWire, group: string, node: string): ClashProxiesWire {
   if (!Object.hasOwn(proxies.proxies, group)) {
     return proxies;
   }
 
-  return {
-    proxies: { ...proxies.proxies, [group]: { ...proxies.proxies[group], now: node } },
-  };
+  return { proxies: { ...proxies.proxies, [group]: { ...proxies.proxies[group], now: node } } };
+}
+
+export function toProxyRuntime(raw: ClashProxiesWire): ProxyRuntime {
+  const wire = decodeResponse(ClashProxiesSchema, raw, 'proxies');
+
+  return { groups: toGroups(wire), standalone: toStandalone(wire) };
+}
+
+export function toProxyProviders(raw: ClashProvidersWire): ProxyProvider[] {
+  const wire = decodeResponse(ClashProvidersSchema, raw, 'proxy providers');
+
+  return Object.values(wire.providers).map((provider) => ({
+    name: provider.name,
+    nodes: provider.proxies.length,
+    updatedAt: provider.updatedAt,
+  }));
 }

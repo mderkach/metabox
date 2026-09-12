@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { API_FAILURE, ApiError } from '@shared/api';
-
+import { DaemonStatusSchema } from '../api/Daemon.schema';
 import {
   toClashConfigs,
   toDaemonStatus,
@@ -11,16 +10,6 @@ import {
 } from '../model/Daemon.adapter';
 import { APPLY_PHASE, CLASH_MODE, SERVICE_STATUS } from '../model/Daemon.model';
 import { CLASH_CONFIGS_FIXTURE, DAEMON_STATUS_FIXTURE, SERVICE_RUNNING_FIXTURE } from './Daemon.fixture';
-
-function catchApiError(run: () => unknown): ApiError | null {
-  try {
-    run();
-  } catch (error) {
-    return error instanceof ApiError ? error : null;
-  }
-
-  return null;
-}
 
 describe('toDaemonStatus', () => {
   it('переводит ответ демона в модель', () => {
@@ -40,10 +29,8 @@ describe('toDaemonStatus', () => {
     expect(status.transaction?.phase).toBe(APPLY_PHASE.Failed);
   });
 
-  it('отказывает с видом `schema`, когда версии в ответе нет', () => {
-    const failure = catchApiError(() => toDaemonStatus({ singbox_version: '1.14.0' }));
-
-    expect(failure?.kind).toBe(API_FAILURE.Schema);
+  it('не принимает ответ без версии демона', () => {
+    expect(DaemonStatusSchema.safeParse({ singbox_version: '1.14.0' }).success).toBe(false);
   });
 });
 

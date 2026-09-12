@@ -5,4 +5,5 @@ export { DAEMON_ENDPOINT } from '../../api';
 export { DAEMON_QUERY } from '../../api';
 export { APPLY_PHASE } from '../../model';
 export type { ApplyPhase, ApplyTransaction, DaemonStatus } from '../../model';
+export type { ApplyTransactionWire, DaemonStatusWire } from '../../api/Daemon.schema';
 export { isApplyActive, toApplyTransaction } from '../../model';

@@ -1,7 +1,12 @@
 import { ApiError } from '@shared/api';
 import { decodeResponse } from '@shared/api';
 
-import { CheckDetailsSchema, ConfigVersionsSchema, type ConfigVersionWire } from '../api/Config.schema';
+import {
+  CheckDetailsSchema,
+  ConfigVersionsSchema,
+  type ConfigVersionsWire,
+  type ConfigVersionWire,
+} from '../api/Config.schema';
 import type { CheckFailure, ConfigVersion } from './Config.model';
 
 const MS_IN_SECOND = 1000;
@@ -19,7 +24,7 @@ function toConfigVersion(wire: ConfigVersionWire): ConfigVersion {
  * История от свежей версии к старой: демон отдаёт её по возрастанию номера, а
  * откатываются обычно на предыдущий конфиг, а не на самый старый.
  */
-export function toConfigVersions(raw: unknown): ConfigVersion[] {
+export function toConfigVersions(raw: ConfigVersionsWire): ConfigVersion[] {
   const wire = decodeResponse(ConfigVersionsSchema, raw, 'config versions');
 
   return [...wire.versions].sort((left, right) => right.id - left.id).map(toConfigVersion);

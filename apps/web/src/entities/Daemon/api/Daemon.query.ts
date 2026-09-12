@@ -19,7 +19,7 @@ export const DAEMON_QUERY = {
 export function getDaemonStatusOptions() {
   return queryOptions({
     queryKey: DAEMON_QUERY.status(),
-    queryFn: async ({ signal }) => toDaemonStatus(await getDaemonStatus({ signal })),
+    queryFn: async ({ signal }) => getDaemonStatus({ signal }),
     staleTime: CACHE_TIME.Second,
     gcTime: CACHE_TIME.Minute,
     refetchInterval: POLL_INTERVAL.Status,
@@ -35,7 +35,7 @@ export function getDaemonStatusOptions() {
  * ответом, первое — молчанием (NFR-1).
  */
 export function useDaemonStatus() {
-  return useQuery(getDaemonStatusOptions());
+  return useQuery({ ...getDaemonStatusOptions(), select: toDaemonStatus });
 }
 
 /**
@@ -52,7 +52,7 @@ export function useConfigPath(): string {
 export function getServiceStateOptions() {
   return queryOptions({
     queryKey: DAEMON_QUERY.service(),
-    queryFn: async ({ signal }) => toServiceState(await getServiceState({ signal })),
+    queryFn: async ({ signal }) => getServiceState({ signal }),
     staleTime: CACHE_TIME.Second,
     gcTime: CACHE_TIME.Minute,
     // Опроса нет: состояние обновляет топик `service` единого потока, а тело
@@ -73,14 +73,14 @@ export function getServiceStateOptions() {
  * дальше будет показывать устаревшее.
  */
 export function useServiceState() {
-  return useQuery(getServiceStateOptions());
+  return useQuery({ ...getServiceStateOptions(), select: toServiceState });
 }
 
 export function useServiceAction() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (action: ServiceAction) => toServiceState(await runServiceAction(action)),
+    mutationFn: async (action: ServiceAction) => runServiceAction(action),
     meta: { showError: true, errorMessageKey: 'service.action.failed' },
     onSuccess: (state) => {
       queryClient.setQueryData(DAEMON_QUERY.service(), state);
@@ -92,7 +92,7 @@ export function useServiceAction() {
 export function getClashConfigsOptions() {
   return queryOptions({
     queryKey: DAEMON_QUERY.clashConfigs(),
-    queryFn: async ({ signal }) => toClashConfigs(await getClashConfigs({ signal })),
+    queryFn: async ({ signal }) => getClashConfigs({ signal }),
     staleTime: CACHE_TIME.Minute,
     gcTime: CACHE_TIME.Hour,
     meta: { showError: false },
@@ -101,5 +101,5 @@ export function getClashConfigsOptions() {
 
 /** Режим Clash API: правило `clash_mode` в конфиге сверяется именно с ним. */
 export function useClashConfigs() {
-  return useQuery(getClashConfigsOptions());
+  return useQuery({ ...getClashConfigsOptions(), select: toClashConfigs });
 }

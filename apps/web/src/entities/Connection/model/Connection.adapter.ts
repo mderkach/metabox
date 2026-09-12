@@ -21,11 +21,7 @@ export function toConnectionRow(connection: ConnectionWire): ConnectionRow {
   };
 }
 
-/**
- * Снапшот потока. `null` — кадр отбракован: следующий придёт через секунду, и
- * ронять на непонятом кадре подписку незачем. Стор считает отбракованные, иначе
- * экран замер бы на старых данных без единого признака поломки.
- */
+/** `null` — снапшот отбракован; счёт отбракованных ведёт стор. */
 export function toConnectionsSnapshot(raw: unknown) {
   return decodeFrame(ConnectionsSnapshotSchema, raw, 'connections');
 }

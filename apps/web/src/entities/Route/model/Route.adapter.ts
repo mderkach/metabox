@@ -61,7 +61,7 @@ function toRule(dto: NonNullable<RouteExplanationWire['rules']>[number]) {
  * ответ становится отказом, а не пустым экраном: «правило не найдено» и «ответ
  * не разобран» — разные вещи, и вторую пользователь обязан видеть (ADR-0007).
  */
-export function toRouteExplanation(raw: unknown): RouteExplanation {
+export function toRouteExplanation(raw: RouteExplanationWire): RouteExplanation {
   const dto = decodeResponse(RouteExplanationSchema, raw, 'route');
 
   return {

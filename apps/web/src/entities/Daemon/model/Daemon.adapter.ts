@@ -1,7 +1,12 @@
-import { z } from 'zod';
-
 import { decodeFrame, decodeResponse } from '@shared/api';
 
+import type {
+  ApplyTransactionWire,
+  ClashConfigsWire,
+  ClashVersionWire,
+  DaemonStatusWire,
+  ServiceStateWire,
+} from '../api/Daemon.schema';
 import {
   ApplyTransactionSchema,
   ClashConfigsSchema,
@@ -10,7 +15,6 @@ import {
   ClashVersionSchema,
   DaemonStatusSchema,
   ServiceStateSchema,
-  type DaemonStatusWire,
 } from '../api/Daemon.schema';
 import {
   APPLY_PHASE,
@@ -75,11 +79,11 @@ function toTransaction(wire: NonNullable<DaemonStatusWire['transaction']>): Appl
   };
 }
 
-export function toApplyTransaction(raw: unknown): ApplyTransaction {
+export function toApplyTransaction(raw: ApplyTransactionWire): ApplyTransaction {
   return toTransaction(decodeResponse(ApplyTransactionSchema, raw, 'apply'));
 }
 
-export function toDaemonStatus(raw: unknown): DaemonStatus {
+export function toDaemonStatus(raw: DaemonStatusWire): DaemonStatus {
   const wire = decodeResponse(DaemonStatusSchema, raw, 'status');
 
   return {
@@ -91,7 +95,7 @@ export function toDaemonStatus(raw: unknown): DaemonStatus {
   };
 }
 
-function toState(wire: z.infer<typeof ServiceStateSchema>): ServiceState {
+function toState(wire: ServiceStateWire): ServiceState {
   return {
     status: toServiceStatus(wire.status),
     uptime: wire.uptime,
@@ -100,11 +104,11 @@ function toState(wire: z.infer<typeof ServiceStateSchema>): ServiceState {
   };
 }
 
-export function toServiceState(raw: unknown): ServiceState {
+export function toServiceState(raw: ServiceStateWire): ServiceState {
   return toState(decodeResponse(ServiceStateSchema, raw, 'service'));
 }
 
-export function toClashConfigs(raw: unknown): ClashConfigs {
+export function toClashConfigs(raw: ClashConfigsWire): ClashConfigs {
   const wire = decodeResponse(ClashConfigsSchema, raw, 'clash configs');
 
   return {
@@ -117,7 +121,7 @@ export function toClashConfigs(raw: unknown): ClashConfigs {
   };
 }
 
-export function toClashVersion(raw: unknown): ClashVersion {
+export function toClashVersion(raw: ClashVersionWire): ClashVersion {
   return decodeResponse(ClashVersionSchema, raw, 'clash version');
 }
 
@@ -134,8 +138,7 @@ export function toMemoryFrame(raw: unknown): MemorySample | null {
   return decodeFrame(ClashMemorySampleSchema, raw, 'memory');
 }
 
-export function toServiceFrame(raw: unknown): ServiceState | null {
-  const wire = decodeFrame(ServiceStateSchema, raw, 'service');
-
-  return wire === null ? null : toState(wire);
+/** Кадр кладётся в кэш `/api/service` (ADR-0010), поэтому не переводится. */
+export function toServiceFrame(raw: unknown): ServiceStateWire | null {
+  return decodeFrame(ServiceStateSchema, raw, 'service');
 }

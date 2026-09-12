@@ -2,9 +2,9 @@ import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/r
 
 import { CACHE_TIME } from '@shared/api';
 
-import { withSelectedNode } from '../model/Proxy.mapper';
+import { toProxyProviders, toProxyRuntime, withSelectedNode } from '../model/Proxy.adapter';
 import { getProxies, getProxyProviders, selectProxy, testProxyDelay } from './Proxy.api';
-import type { ClashProxies } from './Proxy.dto';
+import type { ClashProxiesWire } from './Proxy.schema';
 
 export const PROXY_QUERY = {
   all: ['proxy'] as const,
@@ -33,11 +33,11 @@ export function getProxyProvidersOptions() {
 }
 
 export function useProxies() {
-  return useQuery(getProxiesOptions());
+  return useQuery({ ...getProxiesOptions(), select: toProxyRuntime });
 }
 
 export function useProxyProviders() {
-  return useQuery(getProxyProvidersOptions());
+  return useQuery({ ...getProxyProvidersOptions(), select: toProxyProviders });
 }
 
 interface SelectVariables {
@@ -59,10 +59,10 @@ export function useSelectProxy() {
     onMutate: async ({ group, node }: SelectVariables) => {
       await queryClient.cancelQueries({ queryKey: PROXY_QUERY.list() });
 
-      const previous = queryClient.getQueryData<ClashProxies>(PROXY_QUERY.list());
+      const previous = queryClient.getQueryData<ClashProxiesWire>(PROXY_QUERY.list());
 
       if (previous !== undefined) {
-        queryClient.setQueryData<ClashProxies>(PROXY_QUERY.list(), withSelectedNode(previous, group, node));
+        queryClient.setQueryData<ClashProxiesWire>(PROXY_QUERY.list(), withSelectedNode(previous, group, node));
       }
 
       return { previous };
