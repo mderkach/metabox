@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { ConfigDocumentState } from '@entities/Config';
+import { ConfigDocumentState, ruleNodePath } from '@entities/Config';
 import { RuleSchema } from '@shared/api/generated';
 import { Alert, AlertDescription, AlertTitle, Button, Textarea } from '@shared/ui';
 
@@ -46,7 +46,7 @@ export function RuleRawEditor({ index, node }: { index: number; node: unknown })
         : checked.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('\n')
     );
     setError(null);
-    edit(['route', 'rules', index - 1], parsed);
+    edit(ruleNodePath(index), parsed);
   };
 
   return (

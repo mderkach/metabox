@@ -2,8 +2,8 @@ import { useEffect, useMemo } from 'react';
 
 import {
   ConfigDocumentState,
-  findValue,
   parseConfig,
+  readRules,
   useConfig,
   useConfigDirty,
   useConfigText,
@@ -78,11 +78,7 @@ export function useRouteEditor(): RouteEditorState {
   // схема не приняла, обязано остаться видимым в списке (UX-3).
   const shownText = useConfigText() ?? text;
 
-  const nodes = useMemo(() => {
-    const value: unknown = shownText === null ? undefined : findValue(shownText, ['route', 'rules']);
-
-    return Array.isArray(value) ? (value as unknown[]) : [];
-  }, [shownText]);
+  const nodes = useMemo(() => (shownText === null ? [] : readRules(shownText)), [shownText]);
 
   const rules = useMemo(() => toRuleRowsFromNodes(nodes), [nodes]);
 
@@ -95,4 +91,15 @@ export function useRouteEditor(): RouteEditorState {
     nodes,
     isDirty,
   };
+}
+
+/**
+ * Строка списка по номеру правила из адреса.
+ *
+ * В адресе номер как в интерфейсе, с единицы, а строка адресуется индексом
+ * узла `route.rules`, считая с нуля: экран соединений ведёт сюда на конкретный
+ * узел, и промах на единицу открыл бы соседнее правило (ADR-0007).
+ */
+export function toSelectedRuleId(rule: number | undefined): string | null {
+  return rule === undefined ? null : String(rule - 1);
 }

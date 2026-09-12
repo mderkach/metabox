@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, FormProvider, useForm, useFormContext } from 'react-hook-form';
 
-import { ConfigDocumentState } from '@entities/Config';
+import { ConfigDocumentState, ruleNodePath } from '@entities/Config';
 import type { RuleRow } from '@entities/Rule';
 import { t } from '@shared/lib/i18n';
 import { Button, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/ui';
@@ -36,7 +36,7 @@ export function RuleEditForm({ rule, outbounds }: { rule: RuleRow; outbounds: st
   });
 
   const onSubmit = form.handleSubmit((patch) => {
-    const path = ['route', 'rules', rule.index - 1];
+    const path = ruleNodePath(rule.index);
     const touched = form.formState.dirtyFields;
 
     // Пишутся только тронутые поля. Правило без ключа `action` — обычное дело

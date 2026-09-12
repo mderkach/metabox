@@ -78,3 +78,25 @@ export function findValue(text: string, path: JSONPath): unknown {
 export function insertValue(text: string, path: JSONPath, value: unknown): string {
   return edit(text, path, value, { isArrayInsertion: true });
 }
+
+/**
+ * Где в документе лежат правила маршрутизации. Адресация узлов конфига —
+ * знание слайса Config: в экранах и формах оно расходилось бы копиями, и
+ * промах на единицу в одной из них открывал бы соседнее правило.
+ */
+export const RULES_PATH: JSONPath = ['route', 'rules'];
+
+/** Путь узла правила по его номеру в интерфейсе, считая с единицы. */
+export function ruleNodePath(index: number): JSONPath {
+  return [...RULES_PATH, index - 1];
+}
+
+/**
+ * Правила документа как есть. Узел, который схема не приняла, остаётся в
+ * списке: одно незнакомое правило не должно прятать остальные (UX-3).
+ */
+export function readRules(text: string): unknown[] {
+  const rules: unknown = findValue(text, RULES_PATH);
+
+  return Array.isArray(rules) ? rules : [];
+}
