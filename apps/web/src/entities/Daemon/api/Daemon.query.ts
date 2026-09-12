@@ -1,9 +1,9 @@
-import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { queryOptions, useQuery } from '@tanstack/react-query';
 
 import { CACHE_TIME, POLL_INTERVAL } from '@shared/api';
 
 import { toClashConfigs, toDaemonStatus, toServiceState } from '../model/Daemon.adapter';
-import { getClashConfigs, getDaemonStatus, getServiceState, runServiceAction } from './Daemon.api';
+import { getClashConfigs, getDaemonStatus, getServiceState } from './Daemon.api';
 
 /** Значение флагов демона по умолчанию: то же, что в `main.go`. */
 const DEFAULT_CONFIG_PATH = '/etc/sing-box/config.json';
@@ -73,19 +73,6 @@ export function getServiceStateOptions() {
  */
 export function useServiceState() {
   return useQuery({ ...getServiceStateOptions(), select: toServiceState });
-}
-
-export function useServiceAction() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: runServiceAction,
-    meta: { showError: true, errorMessageKey: 'service.action.failed' },
-    onSuccess: (state) => {
-      queryClient.setQueryData(getServiceStateOptions().queryKey, state);
-    },
-    onSettled: async () => queryClient.invalidateQueries({ queryKey: DAEMON_QUERY.all }),
-  });
 }
 
 export function getClashConfigsOptions() {

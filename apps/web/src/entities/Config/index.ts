@@ -1,17 +1,15 @@
 export { CONFIG_ENDPOINT } from './api/Config.endpoints';
-export { getConfig, getConfigVersion } from './api/Config.api';
+export { applyConfig, confirmApply, getConfig, getConfigVersion, restoreConfigVersion } from './api/Config.api';
 export {
   CONFIG_QUERY,
   getApplyStateOptions,
   getConfigOptions,
   getConfigVersionsOptions,
   parseConfig,
-  useApplyConfig,
   useApplyTransaction,
   useConfig,
   useConfigVersions,
-  useConfirmApply,
-  useRestoreConfigVersion,
+  useSaveApplyTransaction,
 } from './api/Config.query';
 export type { ParsedConfig } from './api/Config.query';
 export { toCheckFailure, toConfigVersions } from './model/Config.adapter';

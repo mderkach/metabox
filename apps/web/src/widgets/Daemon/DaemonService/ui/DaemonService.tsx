@@ -4,10 +4,10 @@ import {
   matchesSchemaVersion,
   SCHEMA_VERSION,
   SERVICE_ACTION,
-  useServiceAction,
   useServiceState,
   type ServiceState,
 } from '@entities/Daemon';
+import { useServiceAction } from '@features/Daemon/DaemonControl';
 import { Alert, AlertDescription, AlertTitle, Badge, Button, Card, CardContent, CardHeader } from '@shared/ui';
 
 const STATUS_LABEL: Readonly<Record<ServiceState['status'], string>> = {

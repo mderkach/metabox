@@ -1,4 +1,5 @@
 export { DAEMON_ENDPOINT } from './api/Daemon.endpoints';
+export { runServiceAction } from './api/Daemon.api';
 export { listenMemory, listenService, listenTraffic } from './api/Daemon.stream';
 export {
   DAEMON_QUERY,
@@ -7,7 +8,6 @@ export {
   useClashConfigs,
   useConfigPath,
   useDaemonStatus,
-  useServiceAction,
   useServiceState,
 } from './api/Daemon.query';
 export { APPLY_PHASE, CLASH_MODE, SERVICE_ACTION, SERVICE_STATUS } from './model/Daemon.model';

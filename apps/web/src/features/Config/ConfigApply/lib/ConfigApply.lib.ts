@@ -5,14 +5,14 @@ import {
   CONFIG_QUERY,
   ConfigDocumentState,
   toCheckFailure,
-  useApplyConfig,
   useApplyTransaction,
   useConfigDirty,
   useConfigText,
-  useConfirmApply,
   type CheckFailure,
 } from '@entities/Config';
 import { APPLY_PHASE, isApplyActive, useDaemonStatus, type ApplyTransaction } from '@entities/Daemon';
+
+import { useApplyConfig, useConfirmApply } from '../api/ConfigApply.api';
 
 /**
  * Перечитывает документ, когда цикл дошёл до конца.

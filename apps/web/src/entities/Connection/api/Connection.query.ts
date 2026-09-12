@@ -1,8 +1,6 @@
-import { useMutation } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
 import { ConnectionStore } from '../model/Connection.store';
-import { closeAllConnections, closeConnection } from './Connection.api';
 
 /**
  * Экран объявляет, что смотрит поток. Сокет открывает оболочка: держать его
@@ -17,18 +15,4 @@ export function useConnectionStream(): void {
 
     return removeReader;
   }, []);
-}
-
-export function useCloseConnection() {
-  return useMutation({
-    mutationFn: closeConnection,
-    meta: { showError: true, errorMessageKey: 'connection.close.failed' },
-  });
-}
-
-export function useCloseAllConnections() {
-  return useMutation({
-    mutationFn: closeAllConnections,
-    meta: { showError: true, errorMessageKey: 'connection.close.failed' },
-  });
 }

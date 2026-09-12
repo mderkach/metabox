@@ -1,11 +1,7 @@
 import { useCallback, useState } from 'react';
 
-import {
-  ConnectionState,
-  useCloseAllConnections,
-  useConnectionCounts,
-  useConnectionStream,
-} from '@entities/Connection';
+import { ConnectionState, useConnectionCounts, useConnectionStream } from '@entities/Connection';
+import { useCloseAllConnections } from '@features/Connection/ConnectionClose';
 import { Alert, AlertDescription, Badge, Button, Tabs, TabsContent, TabsList, TabsTrigger } from '@shared/ui';
 import { ConnectionTable } from '@widgets/ConnectionTable';
 import { RouteExplanation } from '@widgets/RouteExplanation';

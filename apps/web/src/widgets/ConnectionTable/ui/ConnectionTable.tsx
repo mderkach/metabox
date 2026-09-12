@@ -1,7 +1,8 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useCallback, useRef } from 'react';
 
-import { useCloseConnection, type ConnectionRow as ConnectionRowModel } from '@entities/Connection';
+import type { ConnectionRow as ConnectionRowModel } from '@entities/Connection';
+import { useCloseConnection } from '@features/Connection/ConnectionClose';
 import { cn } from '@shared/lib/utils';
 
 import { CONNECTION_COLUMN } from './ConnectionColumns';

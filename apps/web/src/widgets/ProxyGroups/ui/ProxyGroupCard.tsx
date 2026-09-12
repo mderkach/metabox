@@ -1,6 +1,8 @@
 import { useCallback } from 'react';
 
-import { useSelectProxy, useTestProxyDelay, type ProxyGroup } from '@entities/Proxy';
+import type { ProxyGroup } from '@entities/Proxy';
+import { useTestProxyDelay } from '@features/Proxy/ProxyDelay';
+import { useSelectProxy } from '@features/Proxy/ProxySelect';
 import { plural } from '@shared/lib/format';
 import { Badge, Button, Card, CardContent, CardHeader } from '@shared/ui';
 

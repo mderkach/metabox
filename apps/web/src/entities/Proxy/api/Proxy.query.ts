@@ -1,9 +1,9 @@
-import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { queryOptions, useQuery } from '@tanstack/react-query';
 
 import { CACHE_TIME } from '@shared/api';
 
-import { toProxyProviders, toProxyRuntime, withSelectedNode } from '../model/Proxy.adapter';
-import { getProxies, getProxyProviders, selectProxy, testProxyDelay } from './Proxy.api';
+import { toProxyProviders, toProxyRuntime } from '../model/Proxy.adapter';
+import { getProxies, getProxyProviders } from './Proxy.api';
 
 export const PROXY_QUERY = {
   all: ['proxy'] as const,
@@ -37,52 +37,4 @@ export function useProxies() {
 
 export function useProxyProviders() {
   return useQuery({ ...getProxyProvidersOptions(), select: toProxyProviders });
-}
-
-interface SelectVariables {
-  group: string;
-  node: string;
-}
-
-/**
- * Переключение узла в группе. Обновление оптимистичное: ответ рантайма ничего
- * не добавляет к тому, что уже известно, а задержка ответа читалась бы как
- * зависший интерфейс. Цену Apply это не имеет — конфиг не пишется.
- */
-export function useSelectProxy() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ group, node }: SelectVariables) => selectProxy(group, node),
-    meta: { showError: true, errorMessageKey: 'proxy.select.failed' },
-    onMutate: async ({ group, node }: SelectVariables) => {
-      await queryClient.cancelQueries({ queryKey: PROXY_QUERY.list() });
-
-      const previous = queryClient.getQueryData(getProxiesOptions().queryKey);
-
-      if (previous !== undefined) {
-        queryClient.setQueryData(getProxiesOptions().queryKey, withSelectedNode(previous, group, node));
-      }
-
-      return { previous };
-    },
-    onError: (_error, _variables, context) => {
-      if (context?.previous !== undefined) {
-        queryClient.setQueryData(getProxiesOptions().queryKey, context.previous);
-      }
-    },
-    onSettled: async () => queryClient.invalidateQueries({ queryKey: PROXY_QUERY.list() }),
-  });
-}
-
-export function useTestProxyDelay() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async function requestProxyDelay(name: string) {
-      return testProxyDelay(name);
-    },
-    meta: { showError: true, errorMessageKey: 'proxy.delay.failed' },
-    onSettled: async () => queryClient.invalidateQueries({ queryKey: PROXY_QUERY.list() }),
-  });
 }

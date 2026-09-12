@@ -1,24 +1,17 @@
-import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
+  DAEMON_ENDPOINT,
   getDaemonStatusOptions,
   isApplyActive,
   toApplyTransaction,
   type ApplyTransactionWire,
-  DAEMON_ENDPOINT,
 } from '@entities/Daemon/@x/config';
 import { CACHE_TIME, POLL_INTERVAL } from '@shared/api';
 import { ConfigSchema, type Config } from '@shared/api/generated';
 
 import { toConfigVersions } from '../model/Config.adapter';
-import {
-  applyConfig,
-  confirmApply,
-  getApplyState,
-  getConfig,
-  getConfigVersions,
-  restoreConfigVersion,
-} from './Config.api';
+import { getApplyState, getConfig, getConfigVersions } from './Config.api';
 
 export const CONFIG_QUERY = {
   all: ['config'] as const,
@@ -117,14 +110,15 @@ export function useApplyTransaction(id: string | null) {
 }
 
 /**
- * Ответ применения кладётся в кэш статуса.
+ * Кладёт ответ применения в кэш.
  *
- * Идущая транзакция живёт там: демон отдаёт её в `GET /api/status`, и панель
- * находит её после перезагрузки страницы (ADR-0002). Ответ на запуск пишется
- * туда же, иначе окно подтверждения появлялось бы только со следующим опросом,
- * а запуск из другого экрана — откат на версию — бар бы и вовсе не заметил.
+ * Идущая транзакция живёт в статусе демона: он отдаёт её в `GET /api/status`, и
+ * панель находит её после перезагрузки страницы (ADR-0002). Ответ на запуск
+ * пишется туда же, иначе окно подтверждения появлялось бы только со следующим
+ * опросом, а запуск из другого экрана — откат на версию — бар бы и вовсе не
+ * заметил.
  */
-function useTransactionResult() {
+export function useSaveApplyTransaction() {
   const queryClient = useQueryClient();
 
   return (transaction: ApplyTransactionWire) => {
@@ -136,39 +130,4 @@ function useTransactionResult() {
         : { ...status, transaction, transaction_href: DAEMON_ENDPOINT.applyState(transaction.id) }
     );
   };
-}
-
-/**
- * Применение черновика. Без ретраев: повтор запустил бы на устройстве второй
- * цикл (Query.md). Тело — текст черновика, а не пересобранный JSON (AC-2).
- */
-export function useApplyConfig() {
-  const onTransaction = useTransactionResult();
-
-  return useMutation({
-    mutationFn: applyConfig,
-    meta: { showError: true, showSuccess: true, successMessageKey: 'apply.start.accepted' },
-    onSuccess: onTransaction,
-  });
-}
-
-export function useConfirmApply() {
-  const onTransaction = useTransactionResult();
-
-  return useMutation({
-    mutationFn: confirmApply,
-    meta: { showError: true, showSuccess: true, successMessageKey: 'apply.confirm.done' },
-    onSuccess: onTransaction,
-  });
-}
-
-/** Откат на версию идёт тем же протоколом Apply, что и обычное применение. */
-export function useRestoreConfigVersion() {
-  const onTransaction = useTransactionResult();
-
-  return useMutation({
-    mutationFn: restoreConfigVersion,
-    meta: { showError: true, showSuccess: true, successMessageKey: 'apply.start.accepted' },
-    onSuccess: onTransaction,
-  });
 }

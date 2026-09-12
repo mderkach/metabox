@@ -1,7 +1,7 @@
 import { History } from 'lucide-react';
 import { useState } from 'react';
 
-import { toCheckFailure, useConfigVersions, useRestoreConfigVersion, type ConfigVersion } from '@entities/Config';
+import { toCheckFailure, useConfigVersions, type ConfigVersion } from '@entities/Config';
 import { formatBytes } from '@shared/lib/format';
 import {
   Button,
@@ -14,6 +14,7 @@ import {
   ScrollArea,
 } from '@shared/ui';
 
+import { useRestoreConfigVersion } from '../api/ConfigApply.api';
 import { ConfigApplyCheck } from './ConfigApplyCheck';
 
 /**
