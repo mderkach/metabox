@@ -3,6 +3,7 @@ export { listenMemory, listenService, listenTraffic } from './api/Daemon.stream'
 export {
   DAEMON_QUERY,
   getDaemonStatusOptions,
+  getServiceStateOptions,
   useClashConfigs,
   useConfigPath,
   useDaemonStatus,

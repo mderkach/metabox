@@ -4,7 +4,6 @@ import { CACHE_TIME } from '@shared/api';
 
 import { toProxyProviders, toProxyRuntime, withSelectedNode } from '../model/Proxy.adapter';
 import { getProxies, getProxyProviders, selectProxy, testProxyDelay } from './Proxy.api';
-import type { ClashProxiesWire } from './Proxy.schema';
 
 export const PROXY_QUERY = {
   all: ['proxy'] as const,
@@ -59,17 +58,17 @@ export function useSelectProxy() {
     onMutate: async ({ group, node }: SelectVariables) => {
       await queryClient.cancelQueries({ queryKey: PROXY_QUERY.list() });
 
-      const previous = queryClient.getQueryData<ClashProxiesWire>(PROXY_QUERY.list());
+      const previous = queryClient.getQueryData(getProxiesOptions().queryKey);
 
       if (previous !== undefined) {
-        queryClient.setQueryData<ClashProxiesWire>(PROXY_QUERY.list(), withSelectedNode(previous, group, node));
+        queryClient.setQueryData(getProxiesOptions().queryKey, withSelectedNode(previous, group, node));
       }
 
       return { previous };
     },
     onError: (_error, _variables, context) => {
       if (context?.previous !== undefined) {
-        queryClient.setQueryData(PROXY_QUERY.list(), context.previous);
+        queryClient.setQueryData(getProxiesOptions().queryKey, context.previous);
       }
     },
     onSettled: async () => queryClient.invalidateQueries({ queryKey: PROXY_QUERY.list() }),

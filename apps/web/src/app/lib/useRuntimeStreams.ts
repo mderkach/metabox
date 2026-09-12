@@ -5,6 +5,7 @@ import { ConnectionState, listenConnections } from '@entities/Connection';
 import {
   DAEMON_ENDPOINT,
   DAEMON_QUERY,
+  getServiceStateOptions,
   listenMemory,
   listenService,
   listenTraffic,
@@ -66,7 +67,7 @@ export function useRuntimeStreams(): void {
         // кладётся в кэш запроса: карточка службы читает его своим хуком и не
         // знает, пришло оно потоком или запросом.
         listenService(source, (state) => {
-          queryClient.setQueryData(DAEMON_QUERY.service(), state);
+          queryClient.setQueryData(getServiceStateOptions().queryKey, state);
         }),
       ];
 

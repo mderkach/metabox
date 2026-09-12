@@ -82,7 +82,7 @@ export function useServiceAction() {
     mutationFn: runServiceAction,
     meta: { showError: true, errorMessageKey: 'service.action.failed' },
     onSuccess: (state) => {
-      queryClient.setQueryData(DAEMON_QUERY.service(), state);
+      queryClient.setQueryData(getServiceStateOptions().queryKey, state);
     },
     onSettled: async () => queryClient.invalidateQueries({ queryKey: DAEMON_QUERY.all }),
   });
