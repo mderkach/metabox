@@ -1,4 +1,4 @@
-import type { Config } from '@shared/api/generated';
+import { RuleSchema, type Config } from '@shared/api/generated';
 
 import { RULE_ACTION_FIELDS, RULE_MATCHER_KEYS } from './Rule.constants';
 import { RULE_TARGET, type RuleBranch, type RuleGroup, type RuleMatcher, type RuleRow } from './Rule.model';
@@ -151,4 +151,27 @@ export function toRuleRowsFromNodes(nodes: readonly unknown[]): RuleRow[] {
   }
 
   return rows;
+}
+
+/** Узел принят схемой форка: для него есть форма, а не только текстовый режим. */
+export function isRuleRecognized(node: unknown): boolean {
+  return RuleSchema.safeParse(node).success;
+}
+
+/**
+ * Замечания схемы к узлу правила; пусто — узел принят.
+ *
+ * Замечание не запрещает запись: арбитр валидности — `sing-box check` на
+ * устройстве, а не схема панели (UX-4). Иначе узел, которого схема не знает,
+ * нельзя было бы ни поправить, ни сохранить, — а именно текстом его и правят
+ * (AC-25).
+ */
+export function checkRuleNode(node: unknown): string[] {
+  const checked = RuleSchema.safeParse(node);
+
+  if (checked.success) {
+    return [];
+  }
+
+  return checked.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`);
 }

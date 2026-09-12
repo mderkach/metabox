@@ -14,13 +14,15 @@ export {
 export type { ParsedConfig } from './api/Config.query';
 export { toCheckFailure, toConfigVersions } from './model/Config.adapter';
 export {
+  CONFIG_SECTION,
   findValue,
   insertValue,
   readRules,
   removeValue,
   ruleNodePath,
   RULES_PATH,
+  sectionSize,
   setValue,
 } from './model/Config.model';
-export type { CheckFailure, ConfigVersion } from './model/Config.model';
+export type { CheckFailure, ConfigDocument, ConfigSection, ConfigVersion } from './model/Config.model';
 export { ConfigDocumentState, useConfigDiff, useConfigDirty, useConfigText } from './model/Config.store';

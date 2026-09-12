@@ -1,4 +1,4 @@
-import type { ClashConfigsWire, ClashVersionWire, DaemonStatusWire, ServiceStateWire } from '../api/Daemon.schema';
+import type { ClashConfigsWire, DaemonStatusWire, ServiceStateWire } from '../api/Daemon.schema';
 
 /** Демон отвечает и применений в работе нет: поле `transaction` пустое. */
 export const DAEMON_STATUS_FIXTURE: DaemonStatusWire = {
@@ -8,12 +8,6 @@ export const DAEMON_STATUS_FIXTURE: DaemonStatusWire = {
 };
 
 /** Версия и режим, снятые с устройства 2026-09-10. */
-
-export const CLASH_VERSION_FIXTURE: ClashVersionWire = {
-  meta: true,
-  premium: true,
-  version: 'sing-box 1.14.0-extended-2.7.1',
-};
 
 export const CLASH_CONFIGS_FIXTURE: ClashConfigsWire = {
   mode: 'Rule',

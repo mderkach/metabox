@@ -12,8 +12,9 @@ const RANK = new Map(LAYERS.map((layer, index) => [layer, index]));
 const SRC = 'src';
 const PUBLIC_API = 'index.ts';
 const TESTS = '__tests__';
-const CONTRACT = 'daemon.generated';
-const API = 'api';
+const GENERATED = new Set(['generated', 'daemon.generated']);
+const OWNERS = new Set(['api', 'model']);
+const ENTITIES = 'entities';
 
 /**
  * Наличие Public API спрашивается у диска каждый раз.
@@ -86,17 +87,18 @@ function parseAlias(source) {
 }
 
 /**
- * Контракт демона лежит в `shared`, а значит виден всем слоям по построению.
- * Ограничить его может только это правило: формы ответов разбирает `api`
- * слайса-владельца, наружу уходит модель.
+ * Схема форка и контракт демона лежат в `shared`, а значит видны всем слоям по
+ * построению. Ограничить их может только это правило: чужую форму разбирает
+ * сущность, наружу уходит модель (PRD, A.2).
  */
-function checkContract(from, rest, report) {
-  if (rest.at(-1) !== CONTRACT) return;
+function checkGenerated(from, rest, report) {
+  if (!GENERATED.has(rest.at(-1) ?? '')) return;
 
   const segments = from.filePath.split(path.sep);
+  const owned = segments.includes(ENTITIES) && segments.some((segment) => OWNERS.has(segment));
 
-  if (!segments.includes(API) && !segments.includes(TESTS)) {
-    report('Контракт демона разбирает `api` слайса: экраны читают модель.');
+  if (!owned && !segments.includes(TESTS)) {
+    report('Сгенерированную форму разбирает сущность: экраны читают её модель.');
   }
 }
 
@@ -106,7 +108,7 @@ function checkAlias(from, alias, report) {
     return;
   }
 
-  checkContract(from, alias.rest, report);
+  checkGenerated(from, alias.rest, report);
 
   const target = SLICED.has(alias.layer) ? sliceOf(path.join(from.root, alias.layer), alias.rest) : null;
   const slice = target === null ? '' : target.name;

@@ -15,6 +15,5 @@ export const DAEMON_ENDPOINT = {
   apply: () => '/api/apply',
   applyState: (id: string) => `/api/apply/${id}`,
   applyConfirm: (id: string) => `/api/apply/${id}/confirm`,
-  clashVersion: () => '/api/clash/version',
   clashConfigs: () => '/api/clash/configs',
 } as const;

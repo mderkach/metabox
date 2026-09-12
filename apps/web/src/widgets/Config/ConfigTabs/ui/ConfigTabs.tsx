@@ -1,60 +1,23 @@
-import type { Config } from '@shared/api/generated';
+import { CONFIG_SECTION, sectionSize, type ConfigDocument, type ConfigSection } from '@entities/Config';
 import { cn } from '@shared/lib/utils';
 
 /**
  * Секции конфига в том же порядке, в каком они лежат в файле, — так вкладка
- * находится по памяти о `config.json`, а не по алфавиту.
- *
- * `count` возвращает число элементов секции или `null`, если считать нечего:
- * у логов и экспериментов нет списка.
+ * находится по памяти о `config.json`, а не по алфавиту. Сколько в секции
+ * элементов, знает слайс-владелец документа.
  */
-const SECTIONS = [
-  {
-    key: 'route',
-    label: 'Маршрутизация',
-    ready: true,
-    count: (config: Config) => config.route?.rules?.length ?? 0,
-  },
-  {
-    key: 'ruleSet',
-    label: "Rule-set'ы",
-    ready: false,
-    count: (config: Config) => config.route?.rule_set?.length ?? 0,
-  },
-  {
-    key: 'inbounds',
-    label: 'Инбаунды',
-    ready: false,
-    count: (config: Config) => config.inbounds?.length ?? 0,
-  },
-  {
-    key: 'outbounds',
-    label: 'Аутбаунды',
-    ready: false,
-    count: (config: Config) => config.outbounds?.length ?? 0,
-  },
-  {
-    key: 'providers',
-    label: 'Провайдеры',
-    ready: false,
-    count: (config: Config) => config.providers?.length ?? 0,
-  },
-  {
-    key: 'dns',
-    label: 'DNS',
-    ready: false,
-    count: (config: Config) => config.dns?.servers?.length ?? 0,
-  },
-  { key: 'log', label: 'Логи', ready: false, count: () => null },
-  {
-    key: 'experimental',
-    label: 'Эксперименты',
-    ready: false,
-    count: () => null,
-  },
-] as const;
+const SECTIONS: ReadonlyArray<{ key: ConfigSection; label: string; ready: boolean }> = [
+  { key: CONFIG_SECTION.Route, label: 'Маршрутизация', ready: true },
+  { key: CONFIG_SECTION.RuleSet, label: "Rule-set'ы", ready: false },
+  { key: CONFIG_SECTION.Inbounds, label: 'Инбаунды', ready: false },
+  { key: CONFIG_SECTION.Outbounds, label: 'Аутбаунды', ready: false },
+  { key: CONFIG_SECTION.Providers, label: 'Провайдеры', ready: false },
+  { key: CONFIG_SECTION.Dns, label: 'DNS', ready: false },
+  { key: CONFIG_SECTION.Log, label: 'Логи', ready: false },
+  { key: CONFIG_SECTION.Experimental, label: 'Эксперименты', ready: false },
+];
 
-export function ConfigTabs({ config }: { config: Config | null }) {
+export function ConfigTabs({ config }: { config: ConfigDocument | null }) {
   return (
     <div
       role='tablist'
@@ -62,7 +25,7 @@ export function ConfigTabs({ config }: { config: Config | null }) {
       className='flex h-11 shrink-0 items-end gap-1 border-b border-border px-6'
     >
       {SECTIONS.map((section) => {
-        const count = config === null ? null : section.count(config);
+        const count = sectionSize(config, section.key);
 
         return (
           <span

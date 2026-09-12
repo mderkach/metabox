@@ -24,12 +24,6 @@ export const ClashConfigsSchema = z.object({
   ipv6: z.boolean(),
 });
 
-export const ClashVersionSchema = z.object({
-  meta: z.boolean(),
-  premium: z.boolean(),
-  version: z.string(),
-});
-
 /** Мгновенная скорость за последнюю секунду, а не накопительный счётчик. */
 export const ClashTrafficSampleSchema = z.object({
   up: z.number(),
@@ -46,4 +40,3 @@ export const ClashMemorySampleSchema = z.object({
 });
 
 export type ClashConfigsWire = z.infer<typeof ClashConfigsSchema>;
-export type ClashVersionWire = z.infer<typeof ClashVersionSchema>;

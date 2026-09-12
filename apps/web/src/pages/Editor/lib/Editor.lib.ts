@@ -8,11 +8,11 @@ import {
   useConfigDirty,
   useConfigText,
 } from '@entities/Config';
+import type { ConfigDocument } from '@entities/Config';
 import { toRuleRowsFromNodes, type RuleRow } from '@entities/Rule';
-import type { Config } from '@shared/api/generated';
 
 /** Теги аутбаундов конфига: из них выбирается исход правила. */
-function toOutboundTags(config: Config | null): string[] {
+function toOutboundTags(config: ConfigDocument | null): string[] {
   const outbounds: unknown = config?.outbounds;
 
   if (!Array.isArray(outbounds)) {
@@ -39,7 +39,7 @@ function toOutboundTags(config: Config | null): string[] {
 export interface RouteEditorState {
   isPending: boolean;
   issues: string[];
-  config: Config | null;
+  config: ConfigDocument | null;
   rules: RuleRow[];
   outbounds: string[];
   /** Узлы правил как есть: панель правит текст узла, а не разобранную модель. */

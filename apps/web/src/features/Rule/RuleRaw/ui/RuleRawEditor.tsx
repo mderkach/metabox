@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import { ConfigDocumentState, ruleNodePath } from '@entities/Config';
-import { RuleSchema } from '@shared/api/generated';
+import { checkRuleNode } from '@entities/Rule';
 import { Alert, AlertDescription, AlertTitle, Button, Textarea } from '@shared/ui';
 
 /** Отступ узла: тот же, что у файла конфига на устройстве. */
@@ -34,17 +34,9 @@ export function RuleRawEditor({ index, node }: { index: number; node: unknown })
       return;
     }
 
-    const checked = RuleSchema.safeParse(parsed);
+    const issues = checkRuleNode(parsed);
 
-    // Замечание схемы не запрещает запись: арбитр валидности — `sing-box check`
-    // на устройстве, а не схема панели (UX-4). Иначе узел, которого схема не
-    // знает, нельзя было бы ни поправить, ни сохранить — а именно текстом его
-    // и правят (AC-25).
-    setWarning(
-      checked.success
-        ? null
-        : checked.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('\n')
-    );
+    setWarning(issues.length === 0 ? null : issues.join('\n'));
     setError(null);
     edit(ruleNodePath(index), parsed);
   };

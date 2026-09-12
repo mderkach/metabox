@@ -2,8 +2,8 @@ import { Link, useSearch } from '@tanstack/react-router';
 import { useCallback, useState } from 'react';
 
 import { useConfigPath } from '@entities/Daemon';
+import { isRuleRecognized } from '@entities/Rule';
 import { ConfigApplyHistory } from '@features/Config/ConfigApply';
-import { RuleSchema } from '@shared/api/generated';
 import { Badge, buttonVariants } from '@shared/ui';
 import { ConfigTabs } from '@widgets/Config/ConfigTabs';
 import { RulePanel } from '@widgets/Rule/RulePanel';
@@ -69,7 +69,7 @@ export function EditorPage() {
                 key={selected.id}
                 rule={selected}
                 node={selectedNode}
-                recognized={RuleSchema.safeParse(selectedNode).success}
+                recognized={isRuleRecognized(selectedNode)}
                 outbounds={editor.outbounds}
                 onClose={onClose}
               />

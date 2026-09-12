@@ -9,6 +9,8 @@ import {
   type ModificationOptions,
 } from 'jsonc-parser';
 
+import type { Config } from '@shared/api/generated';
+
 /** Отступ конфига, если определить его по файлу не удалось. */
 const DEFAULT_TAB_SIZE = 2;
 
@@ -99,6 +101,58 @@ export function readRules(text: string): unknown[] {
   const rules: unknown = findValue(text, RULES_PATH);
 
   return Array.isArray(rules) ? rules : [];
+}
+
+/**
+ * Документ конфига в модели приложения. Имя своё, а не из форка: переименование
+ * типа в схеме правится здесь, а не в каждом экране, который документ читает
+ * (PRD, A.2).
+ */
+export type ConfigDocument = Config;
+
+/** Секции документа, которые панель перечисляет вкладками. */
+export const CONFIG_SECTION = {
+  Route: 'route',
+  RuleSet: 'ruleSet',
+  Inbounds: 'inbounds',
+  Outbounds: 'outbounds',
+  Providers: 'providers',
+  Dns: 'dns',
+  Log: 'log',
+  Experimental: 'experimental',
+} as const;
+
+export type ConfigSection = (typeof CONFIG_SECTION)[keyof typeof CONFIG_SECTION];
+
+/**
+ * Сколько элементов в секции; `null` — считать нечего, у логов и экспериментов
+ * списка нет.
+ *
+ * Адресация узлов документа живёт в слайсе-владельце: иначе переименование
+ * секции в форке правилось бы по всем экранам, которые её показывают (PRD, A.2).
+ */
+export function sectionSize(config: ConfigDocument | null, section: ConfigSection): number | null {
+  if (config === null) {
+    return null;
+  }
+
+  switch (section) {
+    case CONFIG_SECTION.Route:
+      return config.route?.rules?.length ?? 0;
+    case CONFIG_SECTION.RuleSet:
+      return config.route?.rule_set?.length ?? 0;
+    case CONFIG_SECTION.Inbounds:
+      return config.inbounds?.length ?? 0;
+    case CONFIG_SECTION.Outbounds:
+      return config.outbounds?.length ?? 0;
+    case CONFIG_SECTION.Providers:
+      return config.providers?.length ?? 0;
+    case CONFIG_SECTION.Dns:
+      return config.dns?.servers?.length ?? 0;
+    case CONFIG_SECTION.Log:
+    case CONFIG_SECTION.Experimental:
+      return null;
+  }
 }
 
 /** Запись истории конфига в виде, в котором её показывает экран. */
