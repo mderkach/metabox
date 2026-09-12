@@ -8,6 +8,7 @@ import (
 
 	"metabox/internal/apply"
 	"metabox/internal/config"
+	"metabox/internal/route"
 	"metabox/internal/singbox"
 )
 
@@ -16,6 +17,9 @@ import (
 var (
 	errNotFound       = errors.New("ручка не найдена")
 	errOriginMismatch = errors.New("источник запроса не совпадает с адресом панели")
+	// errUpgradeUnsupported — попытка поднять WebSocket на ветке прокси.
+	// Рантайм идёт одним потоком `/api/events` (ADR-0010).
+	errUpgradeUnsupported = errors.New("рантайм идёт потоком /api/events, апгрейд не поддерживается")
 )
 
 // checkDetails — вывод sing-box дословно. Единственное исключение из правила
@@ -72,10 +76,16 @@ func statusFor(err error) (status int, code string) {
 		return http.StatusNotFound, "not_found"
 	case errors.Is(err, errOriginMismatch):
 		return http.StatusForbidden, "origin_mismatch"
+	case errors.Is(err, errUpgradeUnsupported):
+		return http.StatusBadRequest, "upgrade_unsupported"
 	case errors.Is(err, config.ErrNoConfig):
 		return http.StatusNotFound, "config_missing"
 	case errors.Is(err, config.ErrNoVersion):
 		return http.StatusNotFound, "version_missing"
+	case errors.Is(err, route.ErrNoConnection):
+		return http.StatusNotFound, "connection_missing"
+	case errors.Is(err, route.ErrRuntimeUnavailable):
+		return http.StatusBadGateway, "runtime_unavailable"
 	case errors.Is(err, apply.ErrUnknownTransaction):
 		return http.StatusNotFound, "unknown_transaction"
 	case errors.Is(err, apply.ErrBusy):

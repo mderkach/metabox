@@ -271,6 +271,26 @@ func TestApplyFollowsProtocolOrder(t *testing.T) {
 	}
 }
 
+// Панель показывает остаток окна пользователю: полная длительность после
+// перезагрузки страницы была бы обещанием, которого демон не даёт (NFR-5).
+func TestCurrentReportsRemainingWindow(t *testing.T) {
+	h := newHarness(t)
+
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig)); err != nil {
+		t.Fatalf("применение: %v", err)
+	}
+	h.waitWindow(t)
+
+	left := h.manager.Current().Window
+
+	if left <= 0 || left > window {
+		t.Fatalf("остаток окна %v, ожидали значение в пределах %v", left, window)
+	}
+	if later := h.manager.Current().Window; later > left {
+		t.Errorf("остаток вырос: было %v, стало %v", left, later)
+	}
+}
+
 // Состояние обязано лечь на диск раньше конфига: питание, снятое между
 // записью и стартом таймера, иначе оставило бы устройство без автоотката.
 func TestStateIsWrittenBeforeConfig(t *testing.T) {

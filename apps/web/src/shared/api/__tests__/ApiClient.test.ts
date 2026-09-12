@@ -112,6 +112,20 @@ describe('ApiClient', () => {
     expect(error.kind).toBe(API_FAILURE.Unreachable);
   });
 
+  // Тот же статус демон ставит сам, когда недоступен рантайм sing-box: это
+  // ответ демона, и путать его с молчанием панели нельзя (NFR-1).
+  it('шлюзовой статус с телом демона считает ответом', async () => {
+    const client = clientAnswering(BAD_GATEWAY, {
+      code: 'runtime_unavailable',
+      message: 'рантайм sing-box недоступен',
+    });
+
+    const error = asApiError(await client.get('/api/clash/rules').catch((cause: unknown) => cause));
+
+    expect(error.kind).toBe(API_FAILURE.Response);
+    expect(error.code).toBe('runtime_unavailable');
+  });
+
   it('не падает на теле, которое не разбирается как отказ демона', async () => {
     const client = clientAnswering(NOT_FOUND, '<html>404</html>', 'Not Found');
 

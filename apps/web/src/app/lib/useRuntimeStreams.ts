@@ -1,35 +1,52 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
 import { ConnectionState, listenConnections } from '@entities/Connection';
-import { listenMemory, listenTraffic, RuntimeState } from '@entities/Daemon';
-import { API_ENDPOINT, toWebSocketUrl } from '@shared/api';
+import { DAEMON_QUERY, listenMemory, listenService, listenTraffic, RuntimeState } from '@entities/Daemon';
+import { API_ENDPOINT } from '@shared/api';
 
 /**
- * Сокеты рантайма живут в оболочке, а не на экранах: экран объявляет, что
- * смотрит поток, а открывает и закрывает его одно место. Иначе переоткрытие
- * экрана заводило бы ещё один поток снапшотов поверх прежнего.
+ * Единый поток рантайма живёт в оболочке, а не на экранах: экран объявляет,
+ * что смотрит поток, а открывает и закрывает его одно место. Иначе
+ * переоткрытие экрана заводило бы ещё одну подписку поверх прежней.
+ *
+ * Поток один на все топики (ADR-0010): трафик, память, соединения и состояние
+ * службы приходят конвертом демона, а не тремя сокетами к Clash API.
  */
 export function useRuntimeStreams(): void {
-  useStream(ConnectionState.use.readers() > 0, API_ENDPOINT.clashConnections(), listenConnections);
-  useStream(RuntimeState.use.readers() > 0, API_ENDPOINT.clashTraffic(), listenTraffic);
-  useStream(RuntimeState.use.readers() > 0, API_ENDPOINT.clashMemory(), listenMemory);
-}
+  const queryClient = useQueryClient();
+  // Селекторы вызываются порознь: `||` закоротил бы второй хук, и порядок
+  // хуков поехал бы между рендерами.
+  const connectionReaders = ConnectionState.use.readers();
+  const runtimeReaders = RuntimeState.use.readers();
+  const active = connectionReaders > 0 || runtimeReaders > 0;
 
-function useStream(active: boolean, path: string, listen: (socket: WebSocket) => () => void): void {
   useEffect(
-    function openStream() {
+    function openRuntimeStream() {
       if (!active) {
-        return;
+        return undefined;
       }
 
-      const socket = new WebSocket(toWebSocketUrl(path));
-      const unsubscribe = listen(socket);
+      const source = new EventSource(API_ENDPOINT.events());
 
-      return function closeStream() {
-        unsubscribe();
-        socket.close();
+      const unsubscribe = [
+        listenTraffic(source),
+        listenMemory(source),
+        listenConnections(source),
+        // Состояние службы в потоке и в ручке — одно тело, поэтому событие
+        // кладётся в кэш запроса: карточка службы читает его своим хуком и не
+        // знает, пришло оно потоком или запросом.
+        listenService(source, (state) => {
+          queryClient.setQueryData(DAEMON_QUERY.service(), state);
+        }),
+      ];
+
+      return function closeRuntimeStream() {
+        for (const off of unsubscribe) off();
+
+        source.close();
       };
     },
-    [active, path, listen]
+    [active, queryClient]
   );
 }

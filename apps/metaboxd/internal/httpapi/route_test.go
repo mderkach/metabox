@@ -1,0 +1,192 @@
+package httpapi_test
+
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	"metabox/internal/httpapi"
+	"metabox/internal/route"
+)
+
+// fakeExplainer подменяет объяснение маршрута: подбор правила проверяется в
+// internal/route, здесь важны коды ответов и то, что происхождение доходит до
+// клиента.
+type fakeExplainer struct {
+	explanation route.Explanation
+	err         error
+	calls       []string
+}
+
+func (f *fakeExplainer) Explain(_ context.Context, id string) (route.Explanation, error) {
+	f.calls = append(f.calls, id)
+
+	if f.err != nil {
+		return route.Explanation{}, f.err
+	}
+
+	return f.explanation, nil
+}
+
+func newExplainServer(t *testing.T, explainer httpapi.Explainer) *httptest.Server {
+	t.Helper()
+
+	srv := httptest.NewServer(httpapi.NewServer(
+		&fakeApplier{},
+		fakeReader{},
+		testLogger(t),
+		httpapi.Options{Version: "test", Explain: explainer},
+	))
+	t.Cleanup(srv.Close)
+
+	return srv
+}
+
+func matchedExplanation() route.Explanation {
+	index := 2
+
+	return route.Explanation{
+		ConnectionID: "c-1",
+		Match: route.Match{
+			Origin:     route.OriginObserved,
+			Kind:       route.KindRule,
+			Index:      &index,
+			Conditions: "rule_set=google-ip",
+			Action:     "route(proxy)",
+		},
+		Chain: route.Chain{Origin: route.OriginObserved, Nodes: []string{"hk-01", "proxy"}},
+		Rules: []route.Rule{
+			{Origin: route.OriginObserved, Index: 0, Conditions: "", Action: "sniff"},
+			{Origin: route.OriginObserved, Index: 1, Conditions: "port=53", Action: "hijack-dns"},
+			{Origin: route.OriginObserved, Index: 2, Conditions: "rule_set=google-ip", Action: "route(proxy)"},
+		},
+	}
+}
+
+func TestExplainRoute(t *testing.T) {
+	explainer := &fakeExplainer{explanation: matchedExplanation()}
+	srv := newExplainServer(t, explainer)
+
+	got := request(t, srv, http.MethodGet, "/api/connections/c-1/route", "", nil)
+
+	if got.status != http.StatusOK {
+		t.Fatalf("код ответа: получили %d, ожидали %d", got.status, http.StatusOK)
+	}
+	if len(explainer.calls) != 1 || explainer.calls[0] != "c-1" {
+		t.Errorf("идентификатор соединения из адреса: получили %v", explainer.calls)
+	}
+
+	var body struct {
+		ConnectionID string `json:"connection_id"`
+		Match        struct {
+			Origin string `json:"origin"`
+			Kind   string `json:"kind"`
+			Index  *int   `json:"index"`
+		} `json:"match"`
+		Chain struct {
+			Origin string   `json:"origin"`
+			Nodes  []string `json:"nodes"`
+		} `json:"chain"`
+		Rules []struct {
+			Origin string `json:"origin"`
+			Index  int    `json:"index"`
+		} `json:"rules"`
+	}
+
+	if err := json.Unmarshal([]byte(got.body), &body); err != nil {
+		t.Fatalf("разбор ответа: %v", err)
+	}
+
+	if body.Match.Index == nil || *body.Match.Index != 2 {
+		t.Errorf("индекс узла route.rules: получили %v, ожидали 2", body.Match.Index)
+	}
+
+	// AC-34: утверждений без происхождения ручка не отдаёт.
+	if body.Match.Origin == "" {
+		t.Error("сработавшее правило ушло без происхождения")
+	}
+	if body.Chain.Origin == "" {
+		t.Error("цепочка ушла без происхождения")
+	}
+	for _, rule := range body.Rules {
+		if rule.Origin == "" {
+			t.Errorf("правило %d ушло без происхождения", rule.Index)
+		}
+	}
+}
+
+func TestExplainRouteUnknown(t *testing.T) {
+	srv := newExplainServer(t, &fakeExplainer{
+		explanation: route.Explanation{
+			ConnectionID: "c-1",
+			Match:        route.Match{Origin: route.OriginUnknown, Kind: route.KindUnknown, Reason: "core исполняет другой конфиг"},
+			Chain:        route.Chain{Origin: route.OriginObserved, Nodes: []string{"direct"}},
+		},
+	})
+
+	got := request(t, srv, http.MethodGet, "/api/connections/c-1/route", "", nil)
+
+	var body struct {
+		Match struct {
+			Origin string `json:"origin"`
+			Kind   string `json:"kind"`
+			Index  *int   `json:"index"`
+			Reason string `json:"reason"`
+		} `json:"match"`
+	}
+
+	if err := json.Unmarshal([]byte(got.body), &body); err != nil {
+		t.Fatalf("разбор ответа: %v", err)
+	}
+
+	if body.Match.Index != nil {
+		t.Error("индекс в чужой документ показывать нельзя")
+	}
+	if body.Match.Origin != string(route.OriginUnknown) {
+		t.Errorf("происхождение: получили %q, ожидали %q", body.Match.Origin, route.OriginUnknown)
+	}
+	if body.Match.Reason == "" {
+		t.Error("неизвестность без причины наружу не уходит")
+	}
+}
+
+func TestExplainRouteMissingConnection(t *testing.T) {
+	srv := newExplainServer(t, &fakeExplainer{err: route.ErrNoConnection})
+
+	got := request(t, srv, http.MethodGet, "/api/connections/c-1/route", "", nil)
+
+	if got.status != http.StatusNotFound {
+		t.Fatalf("код ответа: получили %d, ожидали %d", got.status, http.StatusNotFound)
+	}
+
+	var body struct {
+		Code string `json:"code"`
+	}
+
+	if err := json.Unmarshal([]byte(got.body), &body); err != nil {
+		t.Fatalf("разбор ответа: %v", err)
+	}
+	if body.Code != "connection_missing" {
+		t.Errorf("код отказа: получили %q, ожидали %q", body.Code, "connection_missing")
+	}
+}
+
+// Без источника рантайма ручки объяснения нет: панель открывается, а экран
+// соединений остаётся без объяснения (NFR-1).
+func TestExplainRouteAbsent(t *testing.T) {
+	srv := httptest.NewServer(httpapi.NewServer(
+		&fakeApplier{},
+		fakeReader{},
+		testLogger(t),
+		httpapi.Options{Version: "test"},
+	))
+	t.Cleanup(srv.Close)
+
+	got := request(t, srv, http.MethodGet, "/api/connections/c-1/route", "", nil)
+
+	if got.status != http.StatusNotFound {
+		t.Errorf("код ответа: получили %d, ожидали %d", got.status, http.StatusNotFound)
+	}
+}

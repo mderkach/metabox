@@ -1,57 +1,75 @@
-import { http, HttpResponse, ws } from 'msw';
+import { http, HttpResponse } from 'msw';
 
 import { API_ENDPOINT } from '@shared/api';
 
+import type { ApplyTransaction } from '../api/Daemon.api';
 import {
   CLASH_CONFIGS_FIXTURE,
   CLASH_VERSION_FIXTURE,
   DAEMON_STATUS_FIXTURE,
-  MEMORY_SAMPLES,
   SERVICE_RUNNING_FIXTURE,
 } from './Daemon.fixture';
 
-/** Шаг потоков на устройстве — замер 2026-09-10: сэмпл раз в секунду. */
-const STREAM_INTERVAL = 1000;
+/** Окно подтверждения демона — минута (NFR-5), в наносекундах `time.Duration`. */
+const CONFIRM_WINDOW_NS = 60_000_000_000;
 
 /**
- * Адрес потока матчится регуляркой: хост панель берёт из `location`, а `ws.link`
- * принимает только точный URL или `RegExp` — звёздочки в строке он не понимает
- * и молча не совпадает.
+ * Моки демона вместе с циклом применения.
+ *
+ * Транзакция держится состоянием и уходит в `GET /api/status`: панель ищет
+ * идущее применение именно там, и мок без состояния показывал бы окно
+ * подтверждения, которое ничем не закрывается. Ручка отката версии живёт здесь
+ * же, хотя адрес у неё конфиговый: она запускает ту же транзакцию, а разводить
+ * её по двум мокам значило бы держать два независимых состояния одного цикла.
  */
-function toStreamPattern(path: string): RegExp {
-  return new RegExp(`^wss?://[^/]+${path}$`);
+export function createStatefulDaemonHandlers() {
+  let transaction: ApplyTransaction | null = null;
+
+  const start = (): ApplyTransaction => {
+    transaction = {
+      id: `mock-${String(Date.now())}`,
+      phase: 'awaiting_confirm',
+      window: CONFIRM_WINDOW_NS,
+      clash_api_added: true,
+    };
+
+    return transaction;
+  };
+
+  return [
+    http.get(API_ENDPOINT.status(), () =>
+      HttpResponse.json(
+        transaction === null
+          ? DAEMON_STATUS_FIXTURE
+          : { ...DAEMON_STATUS_FIXTURE, transaction, transaction_href: `/api/apply/${transaction.id}` }
+      )
+    ),
+
+    http.post(API_ENDPOINT.apply(), () => HttpResponse.json(start(), { status: 202 })),
+    http.post(`${API_ENDPOINT.configVersions()}/:id/restore`, () => HttpResponse.json(start(), { status: 202 })),
+
+    http.get(API_ENDPOINT.applyState(':id'), () =>
+      transaction === null
+        ? HttpResponse.json(
+            { code: 'unknown_transaction', message: 'транзакции с таким идентификатором нет' },
+            { status: 404 }
+          )
+        : HttpResponse.json(transaction)
+    ),
+
+    http.post(API_ENDPOINT.applyConfirm(':id'), () => {
+      if (transaction === null) {
+        return HttpResponse.json({ code: 'nothing_to_confirm', message: 'подтверждать нечего' }, { status: 409 });
+      }
+
+      transaction = { ...transaction, phase: 'confirmed', window: 0 };
+
+      return HttpResponse.json(transaction);
+    }),
+
+    http.get(API_ENDPOINT.service(), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE)),
+    http.post(API_ENDPOINT.serviceAction(':action'), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE)),
+    http.get(API_ENDPOINT.clashVersion(), () => HttpResponse.json(CLASH_VERSION_FIXTURE)),
+    http.get(API_ENDPOINT.clashConfigs(), () => HttpResponse.json(CLASH_CONFIGS_FIXTURE)),
+  ];
 }
-
-const trafficStream = ws.link(toStreamPattern(API_ENDPOINT.clashTraffic()));
-const memoryStream = ws.link(toStreamPattern(API_ENDPOINT.clashMemory()));
-
-export const daemonHandlers = [
-  http.get(API_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE)),
-  http.get(API_ENDPOINT.service(), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE)),
-  http.post(API_ENDPOINT.serviceAction(':action'), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE)),
-  http.get(API_ENDPOINT.clashVersion(), () => HttpResponse.json(CLASH_VERSION_FIXTURE)),
-  http.get(API_ENDPOINT.clashConfigs(), () => HttpResponse.json(CLASH_CONFIGS_FIXTURE)),
-
-  trafficStream.addEventListener('connection', ({ client }) => {
-    const timer = setInterval(() => {
-      client.send(JSON.stringify({ up: 8500, down: 43_400 }));
-    }, STREAM_INTERVAL);
-
-    client.addEventListener('close', () => {
-      clearInterval(timer);
-    });
-  }),
-
-  memoryStream.addEventListener('connection', ({ client }) => {
-    let sample = 0;
-
-    const timer = setInterval(() => {
-      client.send(JSON.stringify({ inuse: MEMORY_SAMPLES[sample % MEMORY_SAMPLES.length], oslimit: 0 }));
-      sample += 1;
-    }, STREAM_INTERVAL);
-
-    client.addEventListener('close', () => {
-      clearInterval(timer);
-    });
-  }),
-];

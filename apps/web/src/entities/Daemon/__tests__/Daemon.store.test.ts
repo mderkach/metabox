@@ -1,5 +1,7 @@
-import { fakeSocket } from '@test/fakeSocket';
+import { fakeEventSource } from '@test/fakeEventSource';
 import { beforeEach, describe, expect, it } from 'vitest';
+
+import { RUNTIME_TOPIC } from '@shared/api';
 
 import { listenMemory, listenTraffic } from '../api/Daemon.stream';
 import { MEMORY_EVERY, RuntimeStore, TRAFFIC_POINTS } from '../model/Daemon.store';
@@ -11,11 +13,11 @@ describe('поток трафика', () => {
   });
 
   it('держит минуту и не копит историю дальше', () => {
-    const { socket, send } = fakeSocket();
-    const unsubscribe = listenTraffic(socket);
+    const { source, send } = fakeEventSource();
+    const unsubscribe = listenTraffic(source);
 
     for (let index = 0; index < TRAFFIC_POINTS + 20; index += 1) {
-      send({ up: index, down: index * 2 });
+      send(RUNTIME_TOPIC.Traffic, { up: index, down: index * 2 });
     }
 
     expect(RuntimeStore.getState().traffic).toHaveLength(TRAFFIC_POINTS);
@@ -28,11 +30,11 @@ describe('поток трафика', () => {
   });
 
   it('снимает обработчик при отписке', () => {
-    const { socket, send } = fakeSocket();
-    const unsubscribe = listenTraffic(socket);
+    const { source, send } = fakeEventSource();
+    const unsubscribe = listenTraffic(source);
 
     unsubscribe();
-    send({ up: 1, down: 1 });
+    send(RUNTIME_TOPIC.Traffic, { up: 1, down: 1 });
 
     expect(RuntimeStore.getState().traffic).toHaveLength(0);
   });
@@ -44,15 +46,15 @@ describe('поток памяти', () => {
   });
 
   it('пропускает нулевой первый сэмпл, а не показывает «памяти 0»', () => {
-    const { socket, send } = fakeSocket();
-    const unsubscribe = listenMemory(socket);
+    const { source, send } = fakeEventSource();
+    const unsubscribe = listenMemory(source);
 
-    send({ inuse: MEMORY_SAMPLES[0], oslimit: 0 });
+    send(RUNTIME_TOPIC.Memory, { inuse: MEMORY_SAMPLES[0], oslimit: 0 });
 
     expect(RuntimeStore.getState().memoryNow).toBe(0);
     expect(RuntimeStore.getState().memory).toHaveLength(0);
 
-    send({ inuse: MEMORY_SAMPLES[1], oslimit: 0 });
+    send(RUNTIME_TOPIC.Memory, { inuse: MEMORY_SAMPLES[1], oslimit: 0 });
 
     expect(RuntimeStore.getState().memoryNow).toBe(MEMORY_SAMPLES[1]);
 
@@ -60,11 +62,11 @@ describe('поток памяти', () => {
   });
 
   it('в буфер кладёт каждый десятый сэмпл: окно памяти шире окна трафика', () => {
-    const { socket, send } = fakeSocket();
-    const unsubscribe = listenMemory(socket);
+    const { source, send } = fakeEventSource();
+    const unsubscribe = listenMemory(source);
 
     for (let index = 1; index <= MEMORY_EVERY * 3; index += 1) {
-      send({ inuse: index * 1000, oslimit: 0 });
+      send(RUNTIME_TOPIC.Memory, { inuse: index * 1000, oslimit: 0 });
     }
 
     expect(RuntimeStore.getState().memory).toHaveLength(3);

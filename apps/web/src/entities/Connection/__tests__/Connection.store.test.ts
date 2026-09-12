@@ -1,9 +1,11 @@
-import { fakeSocket } from '@test/fakeSocket';
+import { fakeEventSource } from '@test/fakeEventSource';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { RUNTIME_TOPIC } from '@shared/api';
+
 import { listenConnections } from '../api/Connection.api';
-import { splitRule } from '../model/Connection.mapper';
-import { CLOSED_LIMIT } from '../model/Connection.model';
+import { toConnectionRow } from '../model/Connection.mapper';
+import { CLOSED_LIMIT, FINAL_OUTCOME } from '../model/Connection.model';
 import { ConnectionStore } from '../model/Connection.store';
 import { makeConnectionsSnapshot } from './Connection.fixture';
 
@@ -18,14 +20,14 @@ describe('поток соединений', () => {
   });
 
   it('применяет снапшот пачкой по таймеру, а не на каждое сообщение', async () => {
-    const { socket, send } = fakeSocket();
-    const unsubscribe = listenConnections(socket);
+    const { source, send } = fakeEventSource();
+    const unsubscribe = listenConnections(source);
     const applied = vi.fn<() => void>();
     const stop = ConnectionStore.subscribe(applied);
 
-    send(makeConnectionsSnapshot(3));
-    send(makeConnectionsSnapshot(4));
-    send(makeConnectionsSnapshot(5));
+    send(RUNTIME_TOPIC.Connections, makeConnectionsSnapshot(3));
+    send(RUNTIME_TOPIC.Connections, makeConnectionsSnapshot(4));
+    send(RUNTIME_TOPIC.Connections, makeConnectionsSnapshot(5));
 
     expect(applied).not.toHaveBeenCalled();
 
@@ -39,28 +41,28 @@ describe('поток соединений', () => {
   });
 
   it('снимает обработчик и таймер при отписке', async () => {
-    const fake = fakeSocket();
-    const unsubscribe = listenConnections(fake.socket);
+    const fake = fakeEventSource();
+    const unsubscribe = listenConnections(fake.source);
 
-    expect(fake.count).toBe(1);
+    expect(fake.count()).toBe(1);
 
     unsubscribe();
 
-    expect(fake.count).toBe(0);
+    expect(fake.count()).toBe(0);
 
-    fake.send(makeConnectionsSnapshot(2));
+    fake.send(RUNTIME_TOPIC.Connections, makeConnectionsSnapshot(2));
     await vi.advanceTimersByTimeAsync(600);
 
     expect(ConnectionStore.getState().active).toHaveLength(0);
   });
 
   it('переносит пропавшие между снапшотами соединения в закрытые', async () => {
-    const { socket, send } = fakeSocket();
-    const unsubscribe = listenConnections(socket);
+    const { source, send } = fakeEventSource();
+    const unsubscribe = listenConnections(source);
 
-    send(makeConnectionsSnapshot(4));
+    send(RUNTIME_TOPIC.Connections, makeConnectionsSnapshot(4));
     await vi.advanceTimersByTimeAsync(600);
-    send(makeConnectionsSnapshot(2));
+    send(RUNTIME_TOPIC.Connections, makeConnectionsSnapshot(2));
     await vi.advanceTimersByTimeAsync(600);
 
     expect(ConnectionStore.getState().active).toHaveLength(2);
@@ -79,11 +81,11 @@ describe('поток соединений', () => {
   });
 
   it('на паузе снапшот не применяется', async () => {
-    const { socket, send } = fakeSocket();
-    const unsubscribe = listenConnections(socket);
+    const { source, send } = fakeEventSource();
+    const unsubscribe = listenConnections(source);
 
     ConnectionStore.getState().setPaused(true);
-    send(makeConnectionsSnapshot(3));
+    send(RUNTIME_TOPIC.Connections, makeConnectionsSnapshot(3));
     await vi.advanceTimersByTimeAsync(600);
 
     expect(ConnectionStore.getState().active).toHaveLength(0);
@@ -92,15 +94,15 @@ describe('поток соединений', () => {
   });
 
   it('оборванный кадр пропускается, следующий снапшот применяется', async () => {
-    const { socket, send, sendRaw } = fakeSocket();
-    const unsubscribe = listenConnections(socket);
+    const { source, send, sendRaw } = fakeEventSource();
+    const unsubscribe = listenConnections(source);
 
-    sendRaw('{"connections":[{"id":"a"');
+    sendRaw(RUNTIME_TOPIC.Connections, '{"topic":"connections","seq":1,"data":{"connections":[{"id":"a"');
     await vi.advanceTimersByTimeAsync(600);
 
     expect(ConnectionStore.getState().active).toHaveLength(0);
 
-    send(makeConnectionsSnapshot(2));
+    send(RUNTIME_TOPIC.Connections, makeConnectionsSnapshot(2));
     await vi.advanceTimersByTimeAsync(600);
 
     expect(ConnectionStore.getState().active).toHaveLength(2);
@@ -109,12 +111,12 @@ describe('поток соединений', () => {
   });
 
   it('держит снапшот на 5000 соединений одним применением', async () => {
-    const { socket, send } = fakeSocket();
-    const unsubscribe = listenConnections(socket);
+    const { source, send } = fakeEventSource();
+    const unsubscribe = listenConnections(source);
     const applied = vi.fn<() => void>();
     const stop = ConnectionStore.subscribe(applied);
 
-    send(makeConnectionsSnapshot(5000));
+    send(RUNTIME_TOPIC.Connections, makeConnectionsSnapshot(5000));
     await vi.advanceTimersByTimeAsync(600);
 
     expect(applied).toHaveBeenCalledTimes(1);
@@ -122,23 +124,6 @@ describe('поток соединений', () => {
 
     stop();
     unsubscribe();
-  });
-});
-
-describe('splitRule', () => {
-  it('разводит условия и исход правила', () => {
-    expect(splitRule('rule_set=github => route(proxy)')).toEqual({
-      rule: 'rule_set=github',
-      outcome: 'route(proxy)',
-    });
-  });
-
-  it('у правила без условий левая часть пуста', () => {
-    expect(splitRule(' => route(direct)')).toEqual({ rule: '', outcome: 'route(direct)' });
-  });
-
-  it('строку без разделителя считает исходом целиком', () => {
-    expect(splitRule('sniff')).toEqual({ rule: '', outcome: 'sniff' });
   });
 });
 
@@ -172,5 +157,28 @@ describe('идентичность строк между снапшотами', 
     });
 
     expect(ConnectionStore.getState().active[0]).not.toBe(before);
+  });
+});
+
+describe('строка соединения', () => {
+  const base = makeConnectionsSnapshot(1).connections[0];
+
+  it('исход по умолчанию показывает узлом конфига, а не пустой строкой', () => {
+    const row = toConnectionRow({ ...base, rule: '', action: '', final: true });
+
+    expect(row.rule).toBe('');
+    expect(row.outcome).toBe(FINAL_OUTCOME);
+  });
+
+  it('правило без условий исходом по умолчанию не считает', () => {
+    const row = toConnectionRow({ ...base, rule: '', action: 'route(direct)', final: false });
+
+    expect(row.outcome).toBe('route(direct)');
+  });
+
+  it('цепочку переворачивает в порядок чтения человеком', () => {
+    const row = toConnectionRow({ ...base, chain: ['hk-01', 'proxy'] });
+
+    expect(row.chain).toEqual(['proxy', 'hk-01']);
   });
 });

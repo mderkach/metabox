@@ -21,6 +21,7 @@ import (
 	"metabox/internal/events"
 	"metabox/internal/httpapi"
 	"metabox/internal/procd"
+	"metabox/internal/route"
 	"metabox/internal/singbox"
 	"metabox/internal/version"
 	"metabox/internal/webui"
@@ -136,8 +137,10 @@ func run(log *slog.Logger, s settings) error {
 		clashHandler = clash
 	}
 
+	source := events.NewClashSource(clashSettings(store), serviceState(service, singboxVersion), healthRequestTimeout)
+
 	hub := events.New(
-		events.NewClashSource(clashSettings(store), serviceState(service, singboxVersion), healthRequestTimeout),
+		source,
 		log,
 		events.Options{
 			ConnectionsInterval: connectionsInterval,
@@ -154,6 +157,7 @@ func run(log *slog.Logger, s settings) error {
 		Service:        service,
 		Events:         hub,
 		Clash:          clashHandler,
+		Explain:        route.NewExplainer(source),
 		ConfigPath:     store.Path(),
 	})
 

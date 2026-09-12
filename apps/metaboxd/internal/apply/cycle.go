@@ -10,6 +10,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"os"
+	"time"
 
 	"metabox/internal/clashapi"
 	"metabox/internal/config"
@@ -116,6 +117,7 @@ func (m *Manager) apply(ctx context.Context, data []byte, settings clashapi.Sett
 func (m *Manager) await(ctx context.Context, log *slog.Logger, confirmed <-chan struct{}) {
 	m.mu.Lock()
 	m.current.Phase = PhaseAwaitingConfirm
+	m.windowEndsAt = time.Now().Add(m.opts.Window)
 	tx := m.current
 	m.mu.Unlock()
 
@@ -168,6 +170,7 @@ func (m *Manager) rollback(ctx context.Context, log *slog.Logger) {
 	m.mu.Lock()
 	m.current.Phase = PhaseRolledBack
 	m.current.Window = 0
+	m.windowEndsAt = time.Time{}
 	m.lastSum = ""
 	m.busy = false
 	m.mu.Unlock()
@@ -237,6 +240,7 @@ func (m *Manager) restoreWindow(tx Transaction) {
 	// прервала бы не то.
 	m.mu.Lock()
 	m.current = tx
+	m.windowEndsAt = time.Now().Add(tx.Window)
 	m.lastSum = tx.Sum
 	m.confirmed = make(chan struct{})
 	confirmed := m.confirmed

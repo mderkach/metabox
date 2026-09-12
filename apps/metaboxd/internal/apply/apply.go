@@ -145,9 +145,14 @@ type Manager struct {
 	current Transaction
 	// lastSum — sha256 того, что записал сам демон. Переживает перезапуск через
 	// файл состояния.
-	lastSum   string
-	confirmed chan struct{}
-	cancel    context.CancelFunc
+	lastSum string
+	// windowEndsAt — когда закрывается окно подтверждения. Хранится монотонной
+	// меткой Go и только в памяти: на диск уходит длительность, потому что у
+	// роутера нет часов реального времени и между жизнями демона метку сравнить
+	// не с чем (ADR-0002).
+	windowEndsAt time.Time
+	confirmed    chan struct{}
+	cancel       context.CancelFunc
 
 	wg sync.WaitGroup
 }
@@ -163,11 +168,20 @@ func New(store Store, service Service, health Health, clock Clock, log *slog.Log
 
 // Current отдаёт снимок текущей транзакции. Пустая фаза означает, что
 // применений в этой жизни демона не было.
+//
+// Window в снимке — остаток окна, а не его длительность: панель показывает эту
+// цифру пользователю, и после перезагрузки страницы полные шестьдесят секунд
+// означали бы обещание, которого демон не даёт (NFR-5).
 func (m *Manager) Current() Transaction {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	return m.current
+	tx := m.current
+	if tx.Phase == PhaseAwaitingConfirm && !m.windowEndsAt.IsZero() {
+		tx.Window = max(0, time.Until(m.windowEndsAt))
+	}
+
+	return tx
 }
 
 // Start запускает применение. Проверка бинарём идёт синхронно — на её выводе

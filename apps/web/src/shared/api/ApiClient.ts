@@ -9,7 +9,7 @@ const BAD_GATEWAY = 502;
 const SERVICE_UNAVAILABLE = 503;
 const GATEWAY_TIMEOUT = 504;
 
-/** Их выставляет посредник, а не демон: значат то же, что оборванный запрос. */
+/** Без тела демона они значат то же, что оборванный запрос: ответил посредник. */
 const GATEWAY_STATUS = new Set([BAD_GATEWAY, SERVICE_UNAVAILABLE, GATEWAY_TIMEOUT]);
 
 /** Тело отказа демона — `httpapi.APIError`. */
@@ -47,19 +47,22 @@ function asErrorBody(data: unknown): unknown {
 }
 
 function fromResponse(response: AxiosResponse<unknown>): ApiError {
-  if (GATEWAY_STATUS.has(response.status)) {
-    return new ApiError(API_FAILURE.Unreachable, 'демон не отвечает', {
-      status: response.status,
-    });
-  }
-
   const body = asErrorBody(response.data);
 
+  // Тело в формате демона разбирается раньше статуса: шлюзовой код демон
+  // ставит и сам — так он сообщает, что недоступен рантайм sing-box, а не он
+  // (NFR-1). Без этой проверки лежащий sing-box читался бы как молчащий демон.
   if (isApiErrorBody(body)) {
     return new ApiError(API_FAILURE.Response, body.message, {
       status: response.status,
       code: body.code,
       details: body.details,
+    });
+  }
+
+  if (GATEWAY_STATUS.has(response.status)) {
+    return new ApiError(API_FAILURE.Unreachable, 'демон не отвечает', {
+      status: response.status,
     });
   }
 

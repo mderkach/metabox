@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import {
   ConnectionState,
@@ -8,6 +8,7 @@ import {
 } from '@entities/Connection';
 import { Alert, AlertDescription, Badge, Button, Tabs, TabsContent, TabsList, TabsTrigger } from '@shared/ui';
 import { ConnectionTable } from '@widgets/ConnectionTable';
+import { RouteExplanation } from '@widgets/RouteExplanation';
 
 const TAB = {
   Active: 'active',
@@ -20,12 +21,21 @@ export function ConnectionsPage() {
   useConnectionStream();
 
   const [tab, setTab] = useState<Tab>(TAB.Active);
+  const [explainedId, setExplainedId] = useState<string | null>(null);
   const active = ConnectionState.use.active();
   const closed = ConnectionState.use.closed();
   const paused = ConnectionState.use.paused();
   const setPaused = ConnectionState.use.setPaused();
   const counts = useConnectionCounts();
   const closeAll = useCloseAllConnections();
+
+  const onExplain = useCallback((id: string) => {
+    setExplainedId((current) => (current === id ? null : id));
+  }, []);
+
+  const onCloseExplanation = useCallback(() => {
+    setExplainedId(null);
+  }, []);
 
   return (
     <>
@@ -71,8 +81,12 @@ export function ConnectionsPage() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value={TAB.Active} className='flex min-h-0 grow flex-col'>
-          <ConnectionTable rows={active} closable />
+        <TabsContent value={TAB.Active} className='flex min-h-0 grow flex-col gap-4 lg:flex-row'>
+          <ConnectionTable rows={active} closable selectedId={explainedId} onExplain={onExplain} />
+
+          {explainedId !== null && (
+            <RouteExplanation key={explainedId} connectionId={explainedId} onClose={onCloseExplanation} />
+          )}
         </TabsContent>
 
         <TabsContent value={TAB.Closed} className='flex min-h-0 grow flex-col gap-4'>

@@ -17,6 +17,7 @@ export const MESSAGES = {
   'proxy.list.fetchFailed': 'Не удалось получить список прокси',
   'proxy.providers.fetchFailed': 'Не удалось получить подписки',
   'proxy.select.failed': 'Переключить узел не удалось',
+  'route.explain.failed': 'Не удалось объяснить маршрут',
   'service.action.failed': 'Команда сервису не прошла',
   'status.fetchFailed': 'Демон не отвечает',
 } as const;

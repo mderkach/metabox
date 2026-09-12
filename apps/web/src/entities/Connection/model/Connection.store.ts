@@ -1,6 +1,6 @@
 import { createReactSelectors, stateCreator, useStore } from '@shared/lib/state';
 
-import type { ClashConnectionsSnapshot } from '../api/Connection.dto';
+import type { ConnectionsSnapshotDto } from '../api/Connection.dto';
 import { toConnectionRow } from './Connection.mapper';
 import { CLOSED_LIMIT, type ConnectionRow, type ConnectionTotals } from './Connection.model';
 
@@ -12,16 +12,16 @@ interface ConnectionState {
   /** Индекс по id: по нему снапшот сверяется с прошлым, не пересобирая список. */
   index: Map<string, ConnectionRow>;
   /**
-   * Закрытые собираются панелью: Clash API отдаёт только живые, и соединение,
+   * Закрытые собираются панелью: источник отдаёт только живые, и соединение,
    * пропавшее между снапшотами, иначе исчезло бы без следа.
    */
   closed: ConnectionRow[];
   totals: ConnectionTotals;
-  /** Поток остановлен пользователем: экран замирает, сокет остаётся живым. */
+  /** Поток остановлен пользователем: экран замирает, подписка живёт. */
   paused: boolean;
   /** Сколько экранов сейчас смотрит поток: по нулю подписка закрывается. */
   readers: number;
-  apply: (snapshot: ClashConnectionsSnapshot) => void;
+  apply: (snapshot: ConnectionsSnapshotDto) => void;
   setPaused: (paused: boolean) => void;
   addReader: () => void;
   removeReader: () => void;
@@ -71,8 +71,8 @@ const ConnectionStateProto = stateCreator<ConnectionState>(
           state.closed = [...gone, ...state.closed].slice(0, CLOSED_LIMIT);
         }
         state.totals = {
-          upload: snapshot.uploadTotal,
-          download: snapshot.downloadTotal,
+          upload: snapshot.upload_total,
+          download: snapshot.download_total,
           memory: snapshot.memory,
         };
       });

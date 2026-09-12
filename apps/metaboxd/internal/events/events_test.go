@@ -92,7 +92,7 @@ func readEvents(t *testing.T, body io.Reader, want int) []Event {
 // Поток не поднимается, пока нет читателя: устройство большую часть времени
 // простаивает, и фоновый опрос без потребителя там не нужен.
 func TestHubIdleWithoutSubscribers(t *testing.T) {
-	source := &fakeSource{snapshot: json.RawMessage(`[]`), service: json.RawMessage(`{}`)}
+	source := &fakeSource{snapshot: json.RawMessage(`{"connections":[]}`), service: json.RawMessage(`{}`)}
 	New(source, testLogger(t), fastOptions())
 
 	time.Sleep(50 * time.Millisecond)
@@ -102,9 +102,14 @@ func TestHubIdleWithoutSubscribers(t *testing.T) {
 	}
 }
 
+// Снапшот в форме Clash API: демон переводит его в свой контракт, и мок обязан
+// приходить в той же форме, что и настоящий источник.
+const clashSnapshotBody = `{"connections":[{"id":"a","rule":"domain=example.com => route(proxy)",` +
+	`"chains":["hk-01","proxy"],"metadata":{"host":"example.com","destinationPort":"443"}}],"memory":1024}`
+
 func TestHubStreamsToSubscriber(t *testing.T) {
 	source := &fakeSource{
-		snapshot: json.RawMessage(`[{"id":"a"}]`),
+		snapshot: json.RawMessage(clashSnapshotBody),
 		service:  json.RawMessage(`{"status":"running"}`),
 		lines:    []json.RawMessage{json.RawMessage(`{"up":1,"down":2}`)},
 	}
@@ -140,7 +145,7 @@ func TestHubStreamsToSubscriber(t *testing.T) {
 
 // Второй читатель не удваивает нагрузку на sing-box: апстрим остаётся один.
 func TestHubSharesUpstream(t *testing.T) {
-	source := &fakeSource{snapshot: json.RawMessage(`[]`), service: json.RawMessage(`{}`)}
+	source := &fakeSource{snapshot: json.RawMessage(`{"connections":[]}`), service: json.RawMessage(`{}`)}
 	hub := New(source, testLogger(t), fastOptions())
 
 	srv := httptest.NewServer(hub)
@@ -174,7 +179,7 @@ func TestHubSharesUpstream(t *testing.T) {
 // Подключившийся читатель получает текущее состояние сразу, а не через период
 // опроса: иначе экран после перезагрузки страницы был бы пустым до секунды.
 func TestHubReplaysLastState(t *testing.T) {
-	source := &fakeSource{snapshot: json.RawMessage(`[{"id":"a"}]`), service: json.RawMessage(`{"status":"running"}`)}
+	source := &fakeSource{snapshot: json.RawMessage(clashSnapshotBody), service: json.RawMessage(`{"status":"running"}`)}
 	hub := New(source, testLogger(t), fastOptions())
 
 	srv := httptest.NewServer(hub)
@@ -225,7 +230,7 @@ func TestHubReplaysLastState(t *testing.T) {
 
 // Уход последнего читателя останавливает опрос: горутины не остаются висеть.
 func TestHubStopsWithLastSubscriber(t *testing.T) {
-	source := &fakeSource{snapshot: json.RawMessage(`[]`), service: json.RawMessage(`{}`)}
+	source := &fakeSource{snapshot: json.RawMessage(`{"connections":[]}`), service: json.RawMessage(`{}`)}
 	hub := New(source, testLogger(t), fastOptions())
 
 	sub, _, cancel := hub.subscribe()
@@ -291,7 +296,7 @@ func waitStreams(t *testing.T, source *fakeSource, want int64) {
 // подключении: иначе панель приняла бы начало потока за пропуск.
 func TestHubNumbersPerSubscriber(t *testing.T) {
 	source := &fakeSource{
-		snapshot: json.RawMessage(`[]`),
+		snapshot: json.RawMessage(`{"connections":[]}`),
 		service:  json.RawMessage(`{}`),
 		lines:    []json.RawMessage{json.RawMessage(`{"up":1}`)},
 	}
@@ -326,7 +331,7 @@ func TestHubNumbersPerSubscriber(t *testing.T) {
 // Битая строка источника не должна оседать в состоянии топика.
 func TestHubSkipsInvalidLines(t *testing.T) {
 	source := &fakeSource{
-		snapshot: json.RawMessage(`[]`),
+		snapshot: json.RawMessage(`{"connections":[]}`),
 		service:  json.RawMessage(`{}`),
 		lines:    []json.RawMessage{json.RawMessage("не json"), json.RawMessage(`{"up":7}`)},
 	}
@@ -349,7 +354,7 @@ func TestHubSkipsInvalidLines(t *testing.T) {
 
 // Уход апстрима не должен оставлять новому читателю данные мёртвого потока.
 func TestHubForgetsStateAfterStop(t *testing.T) {
-	source := &fakeSource{snapshot: json.RawMessage(`[{"id":"a"}]`), service: json.RawMessage(`{}`)}
+	source := &fakeSource{snapshot: json.RawMessage(clashSnapshotBody), service: json.RawMessage(`{}`)}
 	hub := New(source, testLogger(t), fastOptions())
 
 	sub, _, cancel := hub.subscribe()
@@ -373,7 +378,7 @@ func TestHubForgetsStateAfterStop(t *testing.T) {
 
 // Close закрывает читателей: без этого остановка демона ждала бы их ухода.
 func TestHubCloseReleasesSubscribers(t *testing.T) {
-	hub := New(&fakeSource{snapshot: json.RawMessage(`[]`), service: json.RawMessage(`{}`)}, testLogger(t), fastOptions())
+	hub := New(&fakeSource{snapshot: json.RawMessage(`{"connections":[]}`), service: json.RawMessage(`{}`)}, testLogger(t), fastOptions())
 
 	sub, _, _ := hub.subscribe()
 	hub.Close()

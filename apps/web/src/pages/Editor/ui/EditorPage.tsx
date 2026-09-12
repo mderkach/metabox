@@ -1,4 +1,4 @@
-import { Link } from '@tanstack/react-router';
+import { Link, useSearch } from '@tanstack/react-router';
 import { useCallback, useState } from 'react';
 
 import { useConfigPath } from '@entities/Daemon';
@@ -9,7 +9,7 @@ import { ConfigTabs } from '@widgets/Config/ConfigTabs';
 import { RulePanel } from '@widgets/Rule/RulePanel';
 import { RuleTable } from '@widgets/Rule/RuleTable';
 
-import { useRouteEditor } from '../lib/Editor.lib';
+import { toSelectedRuleId, useRouteEditor } from '../lib/Editor.lib';
 
 /** Сколько замечаний схемы показывать, чтобы они не вытеснили экран. */
 const VISIBLE_ISSUES = 5;
@@ -17,7 +17,11 @@ const VISIBLE_ISSUES = 5;
 export function EditorPage() {
   const editor = useRouteEditor();
   const configPath = useConfigPath();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Номер правила из адреса — начальный выбор: экран соединений ведёт сюда на
+  // сработавший узел. Дальше выбором владеет сам экран, иначе закрытая панель
+  // открывалась бы заново на каждый рендер.
+  const { rule } = useSearch({ strict: false });
+  const [selectedId, setSelectedId] = useState<string | null>(() => toSelectedRuleId(rule));
 
   const onSelect = useCallback((id: string) => {
     setSelectedId((current) => (current === id ? null : id));

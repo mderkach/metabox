@@ -13,6 +13,7 @@ import (
 	"metabox/internal/apply"
 	"metabox/internal/clashapi"
 	"metabox/internal/config"
+	"metabox/internal/route"
 	"metabox/internal/singbox"
 )
 
@@ -47,6 +48,12 @@ type ConfigReader interface {
 	ReadVersion(ctx context.Context, id int) ([]byte, error)
 }
 
+// Explainer объясняет маршрут соединения. Интерфейс объявлен здесь, у
+// потребителя: сам слой не знает, откуда берутся данные core.
+type Explainer interface {
+	Explain(ctx context.Context, id string) (route.Explanation, error)
+}
+
 // Options — настройки слоя, приходящие в демон флагами.
 type Options struct {
 	Version string
@@ -71,6 +78,9 @@ type Options struct {
 	// означает, что прокси не собран: панель откроется, а экраны рантайма
 	// деградируют (NFR-1).
 	Clash http.Handler
+	// Explain объясняет маршрут соединения (ADR-0007). nil означает, что
+	// источника рантайма нет: экран соединений остаётся без объяснения.
+	Explain Explainer
 	// ConfigPath — путь файла, которым владеет демон. Панель показывает его
 	// как факт об устройстве, а задаётся он флагами `-config-dir` и
 	// `-config-name`: без этого поля интерфейс показывал бы значение по
@@ -90,6 +100,7 @@ type Server struct {
 	service        Service
 	events         http.Handler
 	clash          http.Handler
+	explain        Explainer
 	configPath     string
 	handler        http.Handler
 }
@@ -108,6 +119,7 @@ func NewServer(applier Applier, reader ConfigReader, log *slog.Logger, opts Opti
 		service:        opts.Service,
 		events:         opts.Events,
 		clash:          opts.Clash,
+		explain:        opts.Explain,
 		configPath:     opts.ConfigPath,
 	}
 	s.handler = s.routes()
@@ -133,6 +145,10 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /api/apply/{id}", s.handleApplyState)
 	mux.HandleFunc("POST /api/apply/{id}/confirm", s.handleApplyConfirm)
 
+	if s.explain != nil {
+		mux.HandleFunc("GET /api/connections/{id}/route", s.handleExplain)
+	}
+
 	if s.service != nil {
 		mux.HandleFunc("GET /api/service", s.handleServiceState)
 		mux.HandleFunc("POST /api/service/{action}", s.handleServiceAction)
@@ -143,7 +159,7 @@ func (s *Server) routes() http.Handler {
 	}
 
 	if s.clash != nil {
-		mux.Handle(clashapi.Prefix+"/", s.clash)
+		mux.Handle(clashapi.Prefix+"/", s.noUpgrade(s.clash))
 	}
 
 	mux.HandleFunc("/api/", s.handleAPINotFound)
@@ -323,6 +339,20 @@ func (s *Server) handleApplyConfirm(w http.ResponseWriter, r *http.Request) {
 	writeJSON(s.log, w, http.StatusOK, tx)
 }
 
+// handleExplain объясняет маршрут соединения: сработавшее правило, его индекс
+// в route.rules и цепочку. Каждое утверждение несёт происхождение, и ответов
+// без него у ручки не бывает (AC-34, ADR-0007).
+func (s *Server) handleExplain(w http.ResponseWriter, r *http.Request) {
+	explanation, err := s.explain.Explain(r.Context(), r.PathValue("id"))
+	if err != nil {
+		fail(s.log, w, r, err)
+
+		return
+	}
+
+	writeJSON(s.log, w, http.StatusOK, explanation)
+}
+
 type serviceResponse struct {
 	Status string `json:"status"`
 	// Uptime — секунды с момента старта. Ноль означает, что возраст узнать не
@@ -393,6 +423,24 @@ func (s *Server) handleServiceAction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.handleServiceState(w, r)
+}
+
+// noUpgrade закрывает апгрейд до WebSocket на ветке прокси.
+//
+// Рантайм идёт панели одним потоком `GET /api/events` (ADR-0010), и второго
+// пути к тем же данным быть не должно: прокси остаётся для ручек
+// запрос-ответ. Отказ явный, потому что молча снятый заголовок превратил бы
+// апгрейд в другой ответ того же адреса.
+func (s *Server) noUpgrade(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Upgrade") != "" {
+			fail(s.log, w, r, errUpgradeUnsupported)
+
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }
 
 // handleAPINotFound закрывает всё неизвестное под /api/ JSON-ошибкой: отдать

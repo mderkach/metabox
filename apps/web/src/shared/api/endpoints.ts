@@ -2,9 +2,10 @@
  * Адреса демона. Вынесены константами, потому что участвуют в `queryKey`:
  * литерал в двух местах разъезжается молча (Query.md).
  *
- * Ветка `/api/clash/*` — рантайм sing-box: демон проксирует Clash API,
- * сохраняя формы ответов дословно, и владеет его адресом и секретом. Пока
- * хендлеров демона нет, эти адреса обслуживает мок из `src/test/mocks`.
+ * Ветка `/api/clash/*` — ручки рантайма запрос-ответ: демон проксирует Clash
+ * API, сохраняя формы ответов дословно, и владеет его адресом и секретом.
+ * Потоки туда не ходят: трафик, память и соединения приходят одним
+ * `GET /api/events` (ADR-0010).
  */
 export const API_ENDPOINT = {
   health: () => '/healthz',
@@ -16,6 +17,8 @@ export const API_ENDPOINT = {
   apply: () => '/api/apply',
   applyState: (id: string) => `/api/apply/${id}`,
   applyConfirm: (id: string) => `/api/apply/${id}/confirm`,
+  connectionRoute: (id: string) => `/api/connections/${encodeURIComponent(id)}/route`,
+  events: () => '/api/events',
   service: () => '/api/service',
   serviceAction: (action: string) => `/api/service/${action}`,
   clashVersion: () => '/api/clash/version',
@@ -29,6 +32,4 @@ export const API_ENDPOINT = {
   clashRules: () => '/api/clash/rules',
   clashConnections: () => '/api/clash/connections',
   clashConnection: (id: string) => `/api/clash/connections/${id}`,
-  clashTraffic: () => '/api/clash/traffic',
-  clashMemory: () => '/api/clash/memory',
 } as const;

@@ -19,9 +19,21 @@ const indexRoute = createRoute({
   },
 });
 
+/**
+ * Номер правила в адресе: экран соединений ведёт на сработавший узел, и без
+ * параметра переход открывал бы просто список (ADR-0007). Номер — как в UI,
+ * с единицы; значение, которое не похоже на номер, отбрасывается.
+ */
+function parseRuleSearch(search: Record<string, unknown>): { rule?: number } {
+  const rule = Number(search.rule);
+
+  return Number.isInteger(rule) && rule > 0 ? { rule } : {};
+}
+
 const configRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/config',
+  validateSearch: parseRuleSearch,
   component: lazyRouteComponent(async () => import('@pages/Editor'), 'EditorPage'),
 });
 

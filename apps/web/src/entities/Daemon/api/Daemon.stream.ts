@@ -1,39 +1,30 @@
-import type { StreamSocket } from '@shared/api';
+import { listenTopic, RUNTIME_TOPIC, type StreamSource } from '@shared/api';
 
 import { RuntimeStore } from '../model/Daemon.store';
-import type { ClashMemorySample, ClashTrafficSample } from './Daemon.dto';
+import type { ClashMemorySample, ClashTrafficSample, ServiceState } from './Daemon.dto';
 
 /**
- * Потоки трафика и памяти отдают по одному маленькому сэмплу в секунду,
- * поэтому копить их пачкой незачем: пачка нужна там, где сообщение — снапшот
- * на тысячи объектов.
+ * Трафик и память приходят топиками единого потока (ADR-0010). Копить их
+ * пачкой незачем: сэмпл — два числа раз в секунду, пачка нужна там, где
+ * сообщение весит десятки килобайт.
  */
-function listen<T>(socket: StreamSocket, apply: (sample: T) => void): () => void {
-  const onMessage = (event: MessageEvent<string>) => {
-    try {
-      // Сэмпл — два числа; проверять его схемой дороже, чем разобрать.
-      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- см. выше
-      apply(JSON.parse(event.data) as T);
-    } catch {
-      // Битый кадр пропускается: следующий придёт через секунду.
-    }
-  };
-
-  socket.addEventListener('message', onMessage);
-
-  return () => {
-    socket.removeEventListener('message', onMessage);
-  };
-}
-
-export function listenTraffic(socket: StreamSocket): () => void {
-  return listen<ClashTrafficSample>(socket, (sample) => {
+export function listenTraffic(source: StreamSource): () => void {
+  return listenTopic<ClashTrafficSample>(source, RUNTIME_TOPIC.Traffic, (sample) => {
     RuntimeStore.getState().pushTraffic(sample);
   });
 }
 
-export function listenMemory(socket: StreamSocket): () => void {
-  return listen<ClashMemorySample>(socket, (sample) => {
+export function listenMemory(source: StreamSource): () => void {
+  return listenTopic<ClashMemorySample>(source, RUNTIME_TOPIC.Memory, (sample) => {
     RuntimeStore.getState().pushMemory(sample);
   });
+}
+
+/**
+ * Состояние службы в потоке и в ручке `/api/service` — одно и то же тело
+ * (ADR-0010), поэтому событие кладётся в кэш запроса: экран продолжает читать
+ * состояние своим хуком и не знает, пришло оно потоком или запросом.
+ */
+export function listenService(source: StreamSource, apply: (state: ServiceState) => void): () => void {
+  return listenTopic<ServiceState>(source, RUNTIME_TOPIC.Service, apply);
 }

@@ -28,6 +28,9 @@ export const CLASH_CONFIGS_FIXTURE: ClashConfigs = {
 /** Первый сэмпл памяти на устройстве нулевой (PRD, OQ-5) — мок это повторяет. */
 export const MEMORY_SAMPLES = [0, 47_923_200, 51_380_224];
 
+/** Сэмпл трафика: замер на устройстве 2026-09-10, байты в секунду. */
+export const TRAFFIC_SAMPLE = { up: 8500, down: 43_400 };
+
 /** Сервис поднят: аптайм снят с устройства 2026-09-10. */
 export const SERVICE_RUNNING_FIXTURE: ServiceState = {
   status: 'running',

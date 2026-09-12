@@ -10,6 +10,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { ConfigDocumentState, findValue } from '@entities/Config';
 import { API_ENDPOINT } from '@shared/api';
 
+import { toSelectedRuleId } from '../lib/Editor.lib';
 import { EditorPage } from '../ui/EditorPage';
 
 const CONFIG = JSON.stringify(
@@ -203,5 +204,16 @@ describe('экран правил', () => {
       action: 'quantum-teleport',
       port: 443,
     });
+  });
+});
+
+describe('номер правила из адреса', () => {
+  it('переводит номер интерфейса в индекс узла', () => {
+    expect(toSelectedRuleId(1)).toBe('0');
+    expect(toSelectedRuleId(7)).toBe('6');
+  });
+
+  it('без номера в адресе не выбирает ничего', () => {
+    expect(toSelectedRuleId(undefined)).toBeNull();
   });
 });

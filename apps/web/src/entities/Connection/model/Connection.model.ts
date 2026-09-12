@@ -21,5 +21,8 @@ export interface ConnectionTotals {
   memory: number;
 }
 
+/** Исход соединения, не совпавшего ни с одним правилом: узел `route.final`. */
+export const FINAL_OUTCOME = 'route.final';
+
 /** Сколько закрытых соединений держим: список закрытых Clash API не отдаёт. */
 export const CLOSED_LIMIT = 200;

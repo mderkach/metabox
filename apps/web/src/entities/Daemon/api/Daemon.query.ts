@@ -54,7 +54,9 @@ export function getServiceStateOptions() {
     queryFn: async ({ signal }) => getServiceState({ signal }),
     staleTime: CACHE_TIME.Second,
     gcTime: CACHE_TIME.Minute,
-    refetchInterval: POLL_INTERVAL.Status,
+    // Опроса нет: состояние обновляет топик `service` единого потока, а тело
+    // у потока и у ручки одно (ADR-0010). Запрос остаётся первым значением —
+    // до первого события экрану надо что-то показать.
     meta: { showError: false },
   });
 }
@@ -63,6 +65,11 @@ export function getServiceStateOptions() {
  * Состояние сервиса. Отдельный запрос от `GET /api/status`: остановленный
  * sing-box — данные экрана, а молчание демона — отказ панели, и смешивать их
  * в одном состоянии нельзя (NFR-1).
+ *
+ * Живым состояние держит топик `service` единого потока, а поток открыт, пока
+ * экран объявил себя читателем рантайма (`useRuntimeStream`). Экран, который
+ * покажет состояние сервиса без этого объявления, получит его один раз и
+ * дальше будет показывать устаревшее.
  */
 export function useServiceState() {
   return useQuery(getServiceStateOptions());

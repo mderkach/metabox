@@ -1,12 +1,13 @@
-import { API_ENDPOINT, ApiClientInstance, type StreamSocket } from '@shared/api';
+import { API_ENDPOINT, ApiClientInstance, listenTopic, RUNTIME_TOPIC, type StreamSource } from '@shared/api';
 
 import { ConnectionStore } from '../model/Connection.store';
-import type { ClashConnectionsSnapshot } from './Connection.dto';
+import type { ConnectionsSnapshotDto } from './Connection.dto';
 
 /**
- * Снапшоты применяются пачкой по таймеру, а не на каждое сообщение: поток
- * отдаёт полный список раз в секунду, а при переподключении присылает его
- * сразу, и построчное применение дало бы лишние проходы по 5000 объектов.
+ * Снапшоты применяются пачкой по таймеру, а не на каждое событие: при
+ * переподключении поток присылает текущее состояние сразу поверх очередного
+ * снапшота, и применение каждого дало бы лишние проходы по 5000 объектов
+ * (NFR-2). Копится только последний — предыдущий замещается целиком.
  */
 const APPLY_INTERVAL = 500;
 
@@ -19,43 +20,32 @@ export async function closeAllConnections(): Promise<void> {
 }
 
 /**
- * Подписка на поток соединений. Возвращает функцию отписки: без неё сокет
+ * Подписка на топик соединений. Возвращает функцию отписки: без неё обработчик
  * переживёт размонтирование, и каждое переоткрытие экрана добавляло бы ещё
- * один поток снапшотов.
+ * один разбор тех же снапшотов.
  */
-export function listenConnections(socket: StreamSocket): () => void {
-  let pending: string | null = null;
+export function listenConnections(source: StreamSource): () => void {
+  let pending: ConnectionsSnapshotDto | null = null;
 
   const flush = () => {
     if (pending === null) {
       return;
     }
 
-    const frame = pending;
+    const snapshot = pending;
     pending = null;
 
-    try {
-      // Схемой поток не проверяется намеренно: разбор 5000 объектов Zod'ом
-      // раз в секунду и есть та работа, которую запрещает NFR-2.
-      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- см. выше
-      ConnectionStore.getState().apply(JSON.parse(frame) as ClashConnectionsSnapshot);
-    } catch {
-      // Битый кадр пропускается: поток идёт дальше, следующий снапшот полный.
-    }
+    ConnectionStore.getState().apply(snapshot);
   };
 
   const timer = setInterval(flush, APPLY_INTERVAL);
 
-  const onMessage = (event: MessageEvent<string>) => {
-    // Копится только последний кадр, и разбирается он один раз при выгрузке:
-    // снапшот весит десятки килобайт, а предыдущий замещается целиком.
-    pending = event.data;
-  };
-
-  socket.addEventListener('message', onMessage);
+  const unsubscribe = listenTopic<ConnectionsSnapshotDto>(source, RUNTIME_TOPIC.Connections, (snapshot) => {
+    pending = snapshot;
+  });
 
   return () => {
     clearInterval(timer);
-    socket.removeEventListener('message', onMessage);
+    unsubscribe();
   };
 }

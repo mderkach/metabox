@@ -28,7 +28,18 @@ const HEADER_ROWS = 1;
  * тегов ломает их разбор вспомогательными технологиями сильнее, чем помогает.
  * Роли и `aria-rowcount` описывают полный список, а не отрисованное окно.
  */
-export function ConnectionTable({ rows, closable }: { rows: ConnectionRowModel[]; closable: boolean }) {
+export function ConnectionTable({
+  rows,
+  closable,
+  selectedId = null,
+  onExplain = null,
+}: {
+  rows: ConnectionRowModel[];
+  closable: boolean;
+  selectedId?: string | null;
+  /** `null` — объяснение маршрута выключено: у демона нет источника рантайма. */
+  onExplain?: ((id: string) => void) | null;
+}) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const close = useCloseConnection();
 
@@ -96,6 +107,8 @@ export function ConnectionTable({ rows, closable }: { rows: ConnectionRowModel[]
                   connection={row}
                   rowIndex={item.index + 1 + HEADER_ROWS}
                   onClose={closable ? onClose : null}
+                  onExplain={onExplain}
+                  selected={row.id === selectedId}
                 />
               </div>
             );

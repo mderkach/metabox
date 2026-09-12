@@ -1,41 +1,41 @@
-export interface ClashConnectionMetadata {
-  network: string;
-  type: string;
-  sourceIP: string;
-  sourcePort: string;
-  destinationIP: string;
-  destinationPort: string;
-  host: string;
-  dnsMode: string;
-  processPath: string;
-}
-
 /**
- * `rule` приходит строкой формата sing-box: `inbound=in => route(select)`,
- * а у правила без условий левая часть пуста — ` => route(direct)`.
- * `chains` перечисляет цепочку от узла к группе, то есть в обратном порядке
- * относительно того, как её читает человек.
+ * Соединение в контракте демона (ADR-0006): форма не зависит от того, каким
+ * источником оно прочитано. Условия правила и его исход демон разводит сам —
+ * склеенной строки Clash API панель не видит.
  */
-export interface ClashConnection {
+export interface ConnectionDto {
   id: string;
-  chains: string[];
+  /** Адрес назначения с портом: имя из sniff, иначе адрес. */
+  host: string;
+  network: string;
+  source: string;
+  /** Условия сработавшего правила; пусто у правила без условий и у `route.final`. */
   rule: string;
-  rulePayload: string;
+  /** Исход правила; пусто, когда источник его не отдаёт. */
+  action: string;
+  /**
+   * Ни одно правило не совпало — сработал `route.final`. Отдельный признак
+   * нужен потому, что у этого исхода условия пусты так же, как у правила без
+   * условий, а это разные вещи (ADR-0007).
+   */
+  final: boolean;
+  /** Цепочка в порядке core: от конечного узла к группе. */
+  chain: string[];
   upload: number;
   download: number;
-  start: string;
-  metadata: ClashConnectionMetadata;
+  /** Время начала в том виде, в каком его отдал core. */
+  started_at: string;
 }
 
 /**
- * Поток `/connections` отдаёт **полный снапшот** примерно раз в секунду, а не
+ * Топик `connections` отдаёт **полный снапшот** примерно раз в секунду, а не
  * приращения: на 132 соединениях это 60 КБ на сообщение (замер 2026-09-10).
  * Соединения, завершившиеся между снапшотами, просто исчезают из списка —
- * списка закрытых Clash API не отдаёт вовсе.
+ * списка закрытых ни один источник не отдаёт.
  */
-export interface ClashConnectionsSnapshot {
-  connections: ClashConnection[];
-  uploadTotal: number;
-  downloadTotal: number;
+export interface ConnectionsSnapshotDto {
+  connections: ConnectionDto[];
+  upload_total: number;
+  download_total: number;
   memory: number;
 }

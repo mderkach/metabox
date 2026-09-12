@@ -203,7 +203,14 @@ func (h *Hub) start() {
 	go func() {
 		defer wg.Done()
 		h.runPoll(ctx, TopicConnections, h.opts.ConnectionsInterval, func(ctx context.Context) (json.RawMessage, error) {
-			return h.source.Snapshot(ctx, "/connections")
+			// Форма соединений принадлежит демону, а не источнику: панель не
+			// должна знать, каким API они прочитаны (ADR-0006).
+			raw, err := h.source.Snapshot(ctx, "/connections")
+			if err != nil {
+				return nil, err
+			}
+
+			return connectionsSnapshot(raw)
 		})
 	}()
 
