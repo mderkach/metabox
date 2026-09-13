@@ -1,9 +1,13 @@
 import { decodeFrame } from '@shared/api';
 
 import { ConnectionsSnapshotSchema, type ConnectionWire } from '../api/Connection.schema';
-import { FINAL_OUTCOME, type ConnectionRow } from './Connection.model';
+import { FINAL_OUTCOME, type ConnectionRate, type ConnectionRow } from './Connection.model';
 
-export function toConnectionRow(connection: ConnectionWire): ConnectionRow {
+/** Скорости приходят извне: считать их можно только рядом с прошлым снапшотом. */
+export function toConnectionRow(connection: ConnectionWire, rate: ConnectionRate): ConnectionRow {
+  const outcome = connection.final ? FINAL_OUTCOME : connection.action;
+  const chain = [...connection.chain].reverse();
+
   return {
     id: connection.id,
     host: connection.host,
@@ -12,12 +16,17 @@ export function toConnectionRow(connection: ConnectionWire): ConnectionRow {
     rule: connection.rule,
     // Исход по умолчанию показывается узлом конфига, а не пустой строкой:
     // «ни одно правило не совпало» — наблюдаемый факт (ADR-0007).
-    outcome: connection.final ? FINAL_OUTCOME : connection.action,
+    outcome,
     // Цепочка приходит от узла к группе — человек читает её в обратную сторону.
-    chain: [...connection.chain].reverse(),
+    chain,
     upload: connection.upload,
     download: connection.download,
+    downRate: rate.down,
+    upRate: rate.up,
     startedAt: Date.parse(connection.started_at),
+    searchText: [connection.host, connection.source, connection.network, connection.rule, outcome, ...chain]
+      .join(' ')
+      .toLowerCase(),
   };
 }
 

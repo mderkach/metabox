@@ -8,6 +8,8 @@ import {
   type ServiceState,
 } from '@entities/Daemon';
 import { useServiceAction } from '@features/Daemon/DaemonControl';
+import { SECTION_LABEL } from '@shared/lib/styles';
+import { HOURS_IN_DAY, SECONDS_IN_HOUR } from '@shared/lib/time';
 import { Alert, AlertDescription, AlertTitle, Badge, Button, Card, CardContent, CardHeader } from '@shared/ui';
 
 const STATUS_LABEL: Readonly<Record<ServiceState['status'], string>> = {
@@ -15,9 +17,6 @@ const STATUS_LABEL: Readonly<Record<ServiceState['status'], string>> = {
   stopped: 'остановлен',
   failed: 'упал',
 };
-
-const SECONDS_IN_HOUR = 3600;
-const HOURS_IN_DAY = 24;
 
 function formatUptime(seconds: number): string {
   if (seconds === 0) {
@@ -45,7 +44,7 @@ export function DaemonService() {
     return (
       <Card>
         <CardHeader>
-          <h2 className='text-sm font-medium'>Сервис sing-box</h2>
+          <h2 className={SECTION_LABEL}>Сервис sing-box</h2>
         </CardHeader>
         <CardContent>
           <Alert variant='destructive'>
@@ -69,7 +68,7 @@ export function DaemonService() {
   return (
     <Card>
       <CardHeader className='flex flex-row items-center gap-2.5'>
-        <h2 className='text-sm font-medium'>Сервис sing-box</h2>
+        <h2 className={SECTION_LABEL}>Сервис sing-box</h2>
         <Badge variant={running ? 'secondary' : 'destructive'}>{STATUS_LABEL[state.status]}</Badge>
         <span className='grow' />
         <Button

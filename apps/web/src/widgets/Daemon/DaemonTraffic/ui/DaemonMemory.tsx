@@ -33,13 +33,7 @@ export function DaemonMemory({ samples }: { samples: number[] }) {
       role='img'
       aria-label={`Память за десять минут, от ${formatBytes(floor)} до ${formatBytes(peak)}`}
     >
-      <polyline
-        points={points}
-        fill='none'
-        strokeWidth={1.5}
-        strokeLinejoin='round'
-        className='stroke-muted-foreground'
-      />
+      <polyline points={points} fill='none' strokeWidth={1.5} strokeLinejoin='round' className='stroke-primary/70' />
     </svg>
   );
 }

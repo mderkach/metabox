@@ -4,7 +4,7 @@ import type { ProxyGroup, ProxyNode } from '@entities/Proxy';
 import { Alert, AlertDescription, AlertTitle, Card, CardContent, CardHeader } from '@shared/ui';
 
 import { ProxyGroupCard } from './ProxyGroupCard';
-import { ProxyNodeRow } from './ProxyNodeRow';
+import { ProxyNodeTile } from './ProxyNodeTile';
 
 const NO_OP = () => undefined;
 
@@ -40,13 +40,13 @@ export function ProxyGroups({ groups, nodes }: { groups: ProxyGroup[]; nodes: Pr
 
       <Card className='gap-0 overflow-hidden py-0'>
         <CardHeader className='flex flex-row items-center gap-2.5 border-b border-border px-4 py-3'>
-          <h2 className='text-sm font-medium'>Аутбаунды конфига</h2>
+          <h2 className='font-mono text-sm font-medium'>Аутбаунды конфига</h2>
           <p className='text-xs text-muted-foreground'>{nodes.length}</p>
         </CardHeader>
-        <CardContent className='px-0'>
-          <ul>
+        <CardContent className='px-4 py-3'>
+          <ul className='grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3'>
             {nodes.map((node) => (
-              <ProxyNodeRow key={node.name} node={node} selectable={false} onSelect={NO_OP} />
+              <ProxyNodeTile key={node.name} node={node} selectable={false} onSelect={NO_OP} />
             ))}
           </ul>
         </CardContent>

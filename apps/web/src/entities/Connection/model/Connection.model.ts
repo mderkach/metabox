@@ -12,7 +12,22 @@ export interface ConnectionRow {
   chain: string[];
   upload: number;
   download: number;
+  /**
+   * Скорость за последний интервал снапшотов, байт в секунду. Считает панель:
+   * рантайм отдаёт только накопленные счётчики, а вопрос «кто сейчас ест канал»
+   * по ним не отвечается.
+   */
+  downRate: number;
+  upRate: number;
   startedAt: number;
+  /** Хост, источник, правило, исход и цепочка одной строкой — по ней ищет экран. */
+  searchText: string;
+}
+
+/** Байт в секунду за интервал между двумя снапшотами. */
+export interface ConnectionRate {
+  down: number;
+  up: number;
 }
 
 export interface ConnectionTotals {

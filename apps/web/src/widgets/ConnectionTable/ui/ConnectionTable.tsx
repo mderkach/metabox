@@ -1,15 +1,16 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, type ReactNode } from 'react';
 
 import type { ConnectionRow as ConnectionRowModel } from '@entities/Connection';
 import { useCloseConnection } from '@features/Connection/ConnectionClose';
 import { cn } from '@shared/lib/utils';
 
+import { useNow } from '../lib';
 import { CONNECTION_COLUMN } from './ConnectionColumns';
 import { ConnectionRow } from './ConnectionRow';
 
 /** Оценка для первого кадра: точную высоту виртуализатор измеряет сам. */
-const ROW_ESTIMATE = 52;
+const ROW_ESTIMATE = 48;
 const OVERSCAN = 10;
 
 /** Строка заголовка тоже строка таблицы: нумерация строк начинается с неё. */
@@ -32,17 +33,21 @@ const HEADER_ROWS = 1;
 export function ConnectionTable({
   rows,
   closable,
+  empty,
   selectedId = null,
   onExplain = null,
 }: {
   rows: ConnectionRowModel[];
   closable: boolean;
+  /** Что показать вместо таблицы, когда строк нет. */
+  empty: ReactNode;
   selectedId?: string | null;
   /** `null` — объяснение маршрута выключено: у демона нет источника рантайма. */
   onExplain?: ((id: string) => void) | null;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const close = useCloseConnection();
+  const now = useNow();
 
   const onClose = useCallback(
     (id: string) => {
@@ -60,9 +65,9 @@ export function ConnectionTable({
 
   if (rows.length === 0) {
     return (
-      <p className='rounded-xl bg-muted px-3.5 py-3 text-sm text-muted-foreground'>
-        Соединений нет. Поток идёт: строки появятся, как только трафик пойдёт через sing-box.
-      </p>
+      <div className='w-full self-start rounded-xl border border-dashed border-border px-4 py-10 text-center'>
+        {empty}
+      </div>
     );
   }
 
@@ -74,20 +79,27 @@ export function ConnectionTable({
       className='flex min-h-0 grow flex-col overflow-x-auto rounded-xl bg-card ring-1 ring-foreground/10'
     >
       <div role='rowgroup' className='shrink-0'>
-        <div role='row' aria-rowindex={1} className={cn(CONNECTION_COLUMN.Row, 'text-xs text-muted-foreground')}>
-          <span role='columnheader' className={CONNECTION_COLUMN.Close} />
+        <div
+          role='row'
+          aria-rowindex={1}
+          className={cn(
+            CONNECTION_COLUMN.Row,
+            'bg-muted/30 text-2xs font-medium tracking-[0.06em] text-muted-foreground uppercase'
+          )}
+        >
           <span role='columnheader' className={CONNECTION_COLUMN.Host}>
             Хост и источник
           </span>
-          <span role='columnheader' className={CONNECTION_COLUMN.Rule}>
-            Правило
-          </span>
-          <span role='columnheader' className={CONNECTION_COLUMN.Chain}>
-            Цепочка
+          <span role='columnheader' className={CONNECTION_COLUMN.Route}>
+            Правило, исход и цепочка
           </span>
           <span role='columnheader' className={CONNECTION_COLUMN.Traffic}>
-            Трафик
+            Скорость и объём
           </span>
+          <span role='columnheader' className={CONNECTION_COLUMN.Age}>
+            Возраст
+          </span>
+          <span role='columnheader' className={CONNECTION_COLUMN.Close} />
         </div>
       </div>
 
@@ -107,6 +119,7 @@ export function ConnectionTable({
                 <ConnectionRow
                   connection={row}
                   rowIndex={item.index + 1 + HEADER_ROWS}
+                  now={now}
                   onClose={closable ? onClose : null}
                   onExplain={onExplain}
                   selected={row.id === selectedId}

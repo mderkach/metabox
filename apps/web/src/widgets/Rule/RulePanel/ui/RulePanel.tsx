@@ -5,6 +5,7 @@ import { ConfigDocumentState } from '@entities/Config';
 import type { RuleRow } from '@entities/Rule';
 import { RuleEditForm } from '@features/Rule/RuleEdit';
 import { RuleRawEditor } from '@features/Rule/RuleRaw';
+import { SECTION_LABEL } from '@shared/lib/styles';
 import {
   Alert,
   AlertDescription,
@@ -57,7 +58,9 @@ export function RulePanel({
         </Button>
       </header>
 
-      <div className='flex min-h-0 grow flex-col gap-3 overflow-y-auto p-4'>
+      <div className='flex min-h-0 grow flex-col gap-4 overflow-y-auto p-4'>
+        <RuleConditions rule={rule} />
+
         {!recognized && (
           <Alert>
             <AlertTitle>Схема этот узел не знает</AlertTitle>
@@ -94,5 +97,48 @@ export function RulePanel({
         </p>
       </div>
     </aside>
+  );
+}
+
+/**
+ * Условия правила только на чтение: форма правит исход, а не условия.
+ * Значения показываются целиком, без свёртки в «и ещё N», — в отличие от
+ * строки списка, где на них нет места.
+ */
+function RuleConditions({ rule }: { rule: RuleRow }) {
+  if (rule.isCatchAll) {
+    return (
+      <p className='rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground'>
+        Условий нет — правило применяется ко всему трафику и обрывает список.
+      </p>
+    );
+  }
+
+  if (rule.group !== null) {
+    return (
+      <p className='rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground'>
+        Логическое правило: условия склеены «{rule.group.mode}» во вложенных ветках. Читать и править их можно на
+        вкладке JSON.
+      </p>
+    );
+  }
+
+  return (
+    <section className='flex flex-col gap-1.5'>
+      <h3 className={SECTION_LABEL}>Условия</h3>
+      <dl className='flex flex-col gap-1'>
+        {rule.matchers.map((matcher) => (
+          <div key={matcher.key} className='flex gap-3 border-t border-border py-1.5 text-xs first:border-t-0'>
+            <dt className='w-32 shrink-0 truncate font-mono text-muted-foreground'>{matcher.key}</dt>
+            <dd className='min-w-0 grow font-mono break-all'>{matcher.values.join(', ')}</dd>
+          </div>
+        ))}
+      </dl>
+      {rule.invert && (
+        <p className='text-xs text-muted-foreground'>
+          Условие перевёрнуто: правило срабатывает, когда оно не выполняется.
+        </p>
+      )}
+    </section>
   );
 }

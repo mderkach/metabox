@@ -3,12 +3,15 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { useSidebarCollapsed } from '../lib/AppSidebar.lib';
 
-/** `matchMedia` в jsdom нет вовсе — подставляем ответ на запрос ширины. */
+/**
+ * `matchMedia` в jsdom нет вовсе — подставляем ответ на запрос ширины.
+ * Подписка тоже нужна: хук следит за сменой ширины, а не замеряет её однажды.
+ */
 function mockNarrowScreen(matches: boolean): void {
   vi.stubGlobal(
     'matchMedia',
     vi.fn(function matchMediaStub(query: string) {
-      return { matches, media: query };
+      return { matches, media: query, addEventListener: vi.fn<() => void>(), removeEventListener: vi.fn<() => void>() };
     })
   );
 }
@@ -35,13 +38,23 @@ describe('свёрнутость сайдбара', () => {
     expect(result.current.collapsed).toBe(false);
   });
 
-  it('прежний выбор пользователя сильнее ширины экрана', () => {
-    mockNarrowScreen(true);
+  it('прежний выбор пользователя сильнее ширины экрана, пока экран широкий', () => {
+    mockNarrowScreen(false);
     globalThis.localStorage.setItem('metabox.sidebar.collapsed', 'false');
 
     const { result } = renderHook(() => useSidebarCollapsed());
 
     expect(result.current.collapsed).toBe(false);
+  });
+
+  it('на узком экране сохранённое «развёрнуто» не действует', () => {
+    mockNarrowScreen(true);
+    globalThis.localStorage.setItem('metabox.sidebar.collapsed', 'false');
+
+    const { result } = renderHook(() => useSidebarCollapsed());
+
+    expect(result.current.collapsed).toBe(true);
+    expect(result.current.narrow).toBe(true);
   });
 
   it('переключение сохраняется и переживает перемонтирование', () => {

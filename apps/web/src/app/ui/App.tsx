@@ -10,7 +10,7 @@ import { DaemonBanner } from './DaemonBanner';
 
 export function App() {
   return (
-    <ThemeProvider attribute='class' defaultTheme='dark' enableSystem={false} disableTransitionOnChange>
+    <ThemeProvider attribute='class' defaultTheme='dark' enableSystem disableTransitionOnChange>
       <QueryClientProvider client={QueryClientInstance}>
         {/* Высоту экрана задаёт оболочка, а не страница: иначе баннер
             недоступности сдвигает страницу за нижний край. */}

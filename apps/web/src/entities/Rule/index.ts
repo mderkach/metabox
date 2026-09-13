@@ -1,4 +1,6 @@
 export { checkRuleNode, isRuleRecognized, toRuleRows, toRuleRowsFromNodes } from './model/Rule.adapter';
 export { RULE_ACTION_FIELDS, RULE_MATCHER_KEYS } from './model/Rule.constants';
+export { filterRules, toTargetGroups } from './model/Rule.filter';
+export type { RuleTargetFilter, RuleTargetGroup } from './model/Rule.filter';
 export { RULE_TARGET } from './model/Rule.model';
 export type { RuleBranch, RuleGroup, RuleMatcher, RuleRow, RuleTargetKind } from './model/Rule.model';

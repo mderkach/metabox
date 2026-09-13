@@ -72,12 +72,14 @@ describe('экран обзора', () => {
     expect(tiles.getByText('7')).toBeInTheDocument();
   });
 
-  it('подписывает ось графика значением, которого он достигает', () => {
+  it('подписывает обе оси графика значениями, которых достигает каждый ряд', () => {
     RuntimeStore.getState().pushTraffic({ up: 1000, down: 100_000 });
 
     renderWithQuery(<OverviewPage />);
 
-    expect(screen.getByRole('img', { name: 'Трафик за минуту, пик 97.7 кБ/с' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('img', { name: 'Трафик за минуту: входящий до 97.7 кБ/с, исходящий до 1000 Б/с' })
+    ).toBeInTheDocument();
   });
 
   it('различает «демон отвечает» и «не отвечает»', async () => {

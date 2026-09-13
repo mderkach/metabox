@@ -163,22 +163,23 @@ describe('идентичность строк между снапшотами', 
 
 describe('строка соединения', () => {
   const base = makeConnectionsSnapshot(1).connections[0];
+  const NO_RATE = { down: 0, up: 0 };
 
   it('исход по умолчанию показывает узлом конфига, а не пустой строкой', () => {
-    const row = toConnectionRow({ ...base, rule: '', action: '', final: true });
+    const row = toConnectionRow({ ...base, rule: '', action: '', final: true }, NO_RATE);
 
     expect(row.rule).toBe('');
     expect(row.outcome).toBe(FINAL_OUTCOME);
   });
 
   it('правило без условий исходом по умолчанию не считает', () => {
-    const row = toConnectionRow({ ...base, rule: '', action: 'route(direct)', final: false });
+    const row = toConnectionRow({ ...base, rule: '', action: 'route(direct)', final: false }, NO_RATE);
 
     expect(row.outcome).toBe('route(direct)');
   });
 
   it('цепочку переворачивает в порядок чтения человеком', () => {
-    const row = toConnectionRow({ ...base, chain: ['hk-01', 'proxy'] });
+    const row = toConnectionRow({ ...base, chain: ['hk-01', 'proxy'] }, NO_RATE);
 
     expect(row.chain).toEqual(['proxy', 'hk-01']);
   });

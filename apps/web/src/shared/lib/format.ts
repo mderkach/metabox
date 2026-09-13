@@ -1,3 +1,5 @@
+import { HOURS_IN_DAY, MINUTES_IN_HOUR, SECONDS_IN_MINUTE } from './time';
+
 const BYTE_UNITS = ['Б', 'кБ', 'МБ', 'ГБ', 'ТБ'] as const;
 const BYTE_STEP = 1024;
 
@@ -44,4 +46,25 @@ export function plural(count: number, forms: readonly [string, string, string]):
   }
 
   return last >= FEW_FROM && last <= FEW_TO ? `${String(count)} ${forms[1]}` : `${String(count)} ${forms[2]}`;
+}
+
+/**
+ * Сколько прошло, коротко: колонка узкая, а точность до секунды нужна только на
+ * первой минуте. Возраст считается от переданного момента, а не от `Date.now()`
+ * внутри, — иначе значение менялось бы между рендерами одного снапшота.
+ */
+export function formatAge(seconds: number): string {
+  if (seconds < SECONDS_IN_MINUTE) {
+    return `${String(Math.max(0, Math.floor(seconds)))} с`;
+  }
+
+  const minutes = Math.floor(seconds / SECONDS_IN_MINUTE);
+
+  if (minutes < MINUTES_IN_HOUR) {
+    return `${String(minutes)} мин`;
+  }
+
+  const hours = Math.floor(minutes / MINUTES_IN_HOUR);
+
+  return hours < HOURS_IN_DAY ? `${String(hours)} ч` : `${String(Math.floor(hours / HOURS_IN_DAY))} д`;
 }

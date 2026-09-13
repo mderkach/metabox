@@ -1,106 +1,137 @@
+import { useId } from 'react';
+
 import type { TrafficSample } from '@entities/Daemon';
 import { formatRate } from '@shared/lib/format';
 
-const WIDTH = 640;
-const HEIGHT = 180;
-// Полоса под подписи шкалы: самая широкая — «123.4 МБ/с», десять знаков
-// моноширинного шрифта в единицах viewBox, иначе подпись срезается слева.
-const PAD_LEFT = 68;
-const PAD_BOTTOM = 20;
-const PAD_TOP = 10;
-const TICKS = 3;
+/**
+ * Координаты рисуются в долях, а сетка растягивается по месту: подписи осей
+ * остаются HTML снаружи SVG. Внутри они масштабировались вместе с областью и на
+ * широком экране печатались крупнее заголовка страницы.
+ */
+const PLOT = 100;
 
-/** Подпись центрируется по половине высоты своей строки. */
-const LABEL_BASELINE = 3.5;
-/** Отступ подписи оси времени от нижнего края. */
-const LABEL_BOTTOM = 4;
-/** Зазор между подписью шкалы и линией сетки. */
-const LABEL_GAP = 8;
+/** Ось посередине: половина области под входящий ряд, половина под исходящий. */
+const HALVES = 2;
+const MID = PLOT / HALVES;
 
-function toPoints(values: number[], max: number, count: number): string {
-  const plotWidth = WIDTH - PAD_LEFT - PAD_TOP;
-  const plotHeight = HEIGHT - PAD_TOP - PAD_BOTTOM;
-  const step = count > 1 ? plotWidth / (count - 1) : 0;
+/** Сотые доли области: точнее округлять незачем, площадь всё равно растягивается. */
+const COORD_PRECISION = 2;
 
-  return values
-    .map((value, index) => {
-      const x = PAD_LEFT + step * index;
-      const y = PAD_TOP + plotHeight * (1 - value / max);
+/** По одной точке линию не проведёшь. */
+const MIN_POINTS = 2;
 
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(' ');
+function toGeometry(values: number[], peak: number, down: boolean): { line: string; area: string } {
+  const step = PLOT / (values.length - 1);
+  const points = values.map((value, index) => {
+    const offset = MID * (value / peak);
+
+    return `${(step * index).toFixed(COORD_PRECISION)},${(down ? MID - offset : MID + offset).toFixed(COORD_PRECISION)}`;
+  });
+
+  return {
+    line: points.join(' '),
+    area: `M0,${String(MID)} L${points.join(' L')} L${String(PLOT)},${String(MID)} Z`,
+  };
 }
 
 /**
- * Трафик за минуту. Своя полилиния, а не библиотека графиков: два ряда по
- * шестьдесят точек без интерактива не стоят ста килобайт в бандле.
+ * Трафик за минуту двумя зеркальными областями: входящий вверх от оси,
+ * исходящий вниз. Половины масштабируются каждая по своему пику — при общей
+ * шкале всплеск входящего в сто раз прижимал исходящий к оси, и весь ряд
+ * переставал читаться (это ровно то, что видно на живом роутере).
  *
- * Ряды разведены светлотой, а не цветом: в палитре панели все токены графиков
- * серые, и цветной ряд выбивался бы из неё сильнее, чем помогал.
+ * Своя графика, а не библиотека: два ряда по шестьдесят точек без интерактива
+ * не стоят ста килобайт в бандле.
  */
 export function DaemonTraffic({ samples }: { samples: TrafficSample[] }) {
   const down = samples.map((sample) => sample.down);
   const up = samples.map((sample) => sample.up);
-  const peak = Math.max(...down, ...up, 1);
-  const plotHeight = HEIGHT - PAD_TOP - PAD_BOTTOM;
+  const peakDown = Math.max(...down, 1);
+  const peakUp = Math.max(...up, 1);
+  const enough = samples.length >= MIN_POINTS;
+
+  const downGeometry = enough ? toGeometry(down, peakDown, true) : null;
+  const upGeometry = enough ? toGeometry(up, peakUp, false) : null;
+  // Ссылка `url(#id)` разрешается по документу: два графика на странице с общим
+  // id отдали бы заливку первого обоим.
+  const gradient = useId();
 
   return (
-    <svg
-      width='100%'
-      viewBox={`0 0 ${String(WIDTH)} ${String(HEIGHT)}`}
-      role='img'
-      aria-label={`Трафик за минуту, пик ${formatRate(peak)}`}
-    >
-      {Array.from({ length: TICKS + 1 }, (_, index) => {
-        const value = (peak / TICKS) * index;
-        const y = PAD_TOP + plotHeight * (1 - index / TICKS);
+    <figure className='flex flex-col gap-1.5'>
+      <div className='flex gap-3'>
+        <div className='flex w-20 shrink-0 flex-col justify-between py-0.5 text-right font-mono text-2xs tabular-nums'>
+          <span className='text-series-down'>{formatRate(peakDown)}</span>
+          <span className='text-muted-foreground'>0</span>
+          <span className='text-series-up'>{formatRate(peakUp)}</span>
+        </div>
 
-        return (
-          <g key={index}>
-            <line x1={PAD_LEFT} y1={y} x2={WIDTH - PAD_TOP} y2={y} stroke='currentColor' className='text-border' />
-            <text
-              x={PAD_LEFT - LABEL_GAP}
-              y={y + LABEL_BASELINE}
-              textAnchor='end'
-              className='fill-muted-foreground font-mono text-[0.625rem]'
-            >
-              {formatRate(value)}
-            </text>
-          </g>
-        );
-      })}
+        <svg
+          viewBox={`0 0 ${String(PLOT)} ${String(PLOT)}`}
+          preserveAspectRatio='none'
+          role='img'
+          aria-label={`Трафик за минуту: входящий до ${formatRate(peakDown)}, исходящий до ${formatRate(peakUp)}`}
+          className='h-44 min-w-0 grow'
+        >
+          <defs>
+            <linearGradient id={`${gradient}-down`} x1='0' y1='0' x2='0' y2='1'>
+              <stop offset='0%' stopColor='var(--series-down)' stopOpacity='0.3' />
+              <stop offset='100%' stopColor='var(--series-down)' stopOpacity='0.02' />
+            </linearGradient>
+            <linearGradient id={`${gradient}-up`} x1='0' y1='1' x2='0' y2='0'>
+              <stop offset='0%' stopColor='var(--series-up)' stopOpacity='0.3' />
+              <stop offset='100%' stopColor='var(--series-up)' stopOpacity='0.02' />
+            </linearGradient>
+          </defs>
 
-      {samples.length > 1 && (
-        <>
-          <polyline
-            points={toPoints(down, peak, samples.length)}
-            fill='none'
-            strokeWidth={2}
-            strokeLinejoin='round'
-            className='stroke-foreground'
+          <line
+            x1='0'
+            y1={MID}
+            x2={PLOT}
+            y2={MID}
+            vectorEffect='non-scaling-stroke'
+            className='stroke-border'
+            strokeWidth={1}
           />
-          <polyline
-            points={toPoints(up, peak, samples.length)}
-            fill='none'
-            strokeWidth={2}
-            strokeLinejoin='round'
-            className='stroke-muted-foreground'
-          />
-        </>
-      )}
 
-      <text x={PAD_LEFT} y={HEIGHT - LABEL_BOTTOM} className='fill-muted-foreground font-mono text-[0.625rem]'>
-        −60 с
-      </text>
-      <text
-        x={WIDTH - PAD_TOP}
-        y={HEIGHT - LABEL_BOTTOM}
-        textAnchor='end'
-        className='fill-muted-foreground font-mono text-[0.625rem]'
-      >
-        сейчас
-      </text>
-    </svg>
+          {downGeometry !== null && (
+            <g>
+              <path d={downGeometry.area} fill={`url(#${gradient}-down)`} stroke='none' />
+              <polyline
+                points={downGeometry.line}
+                fill='none'
+                strokeWidth={1.5}
+                strokeLinejoin='round'
+                vectorEffect='non-scaling-stroke'
+                className='stroke-series-down'
+              />
+            </g>
+          )}
+
+          {upGeometry !== null && (
+            <g>
+              <path d={upGeometry.area} fill={`url(#${gradient}-up)`} stroke='none' />
+              <polyline
+                points={upGeometry.line}
+                fill='none'
+                strokeWidth={1.5}
+                strokeLinejoin='round'
+                vectorEffect='non-scaling-stroke'
+                className='stroke-series-up'
+              />
+            </g>
+          )}
+        </svg>
+      </div>
+
+      {/* Подпись времени идёт той же сеткой, что и график: посчитанный вручную
+          отступ уехал бы от смены ширины колонки подписей или зазора. */}
+      <figcaption className='flex gap-3 font-mono text-2xs text-muted-foreground'>
+        <span className='w-20 shrink-0' aria-hidden='true' />
+        <span className='flex min-w-0 grow justify-between'>
+          <span>−60 с</span>
+          <span>сейчас</span>
+        </span>
+      </figcaption>
+    </figure>
   );
 }

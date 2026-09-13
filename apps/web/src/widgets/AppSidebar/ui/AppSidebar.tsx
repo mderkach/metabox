@@ -1,7 +1,8 @@
 import { Link } from '@tanstack/react-router';
 import { Activity, Boxes, Gauge, PanelLeftClose, PanelLeftOpen, Share2, SlidersHorizontal } from 'lucide-react';
 
-import { useDaemonStatus } from '@entities/Daemon';
+import { SERVICE_STATUS, useDaemonStatus, useServiceState, type ServiceStatus } from '@entities/Daemon';
+import { ThemeSwitch } from '@features/Theme/ThemeSwitch';
 import { cn } from '@shared/lib/utils';
 
 import { useSidebarCollapsed } from '../lib/AppSidebar.lib';
@@ -15,43 +16,80 @@ const NAV_ITEMS = [
   { key: 'connections', label: 'Соединения', icon: Activity, to: '/connections' },
 ] as const;
 
-const ITEM_CLASS = 'flex h-8 items-center gap-2.5 rounded-lg px-2.5 text-sm';
+const ITEM_CLASS =
+  'relative flex h-8 items-center gap-2.5 rounded-md px-2.5 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none';
+
+/** Кромка отличает текущий раздел от соседнего под курсором. */
+const ACTIVE_CLASS =
+  'bg-sidebar-accent font-medium text-sidebar-accent-foreground before:absolute before:inset-y-1 before:left-0 before:w-0.5 before:rounded-full before:bg-primary';
+
+const STATUS_TONE: Readonly<Record<ServiceStatus, string>> = {
+  [SERVICE_STATUS.Running]: 'bg-signal-ok',
+  [SERVICE_STATUS.Stopped]: 'bg-signal-idle',
+  [SERVICE_STATUS.Failed]: 'bg-signal-bad',
+};
+
+const STATUS_LABEL: Readonly<Record<ServiceStatus, string>> = {
+  [SERVICE_STATUS.Running]: 'sing-box работает',
+  [SERVICE_STATUS.Stopped]: 'sing-box остановлен',
+  [SERVICE_STATUS.Failed]: 'sing-box упал',
+};
 
 export function AppSidebar() {
   const status = useDaemonStatus();
+  const service = useServiceState();
   const sidebar = useSidebarCollapsed();
 
   return (
     <aside
       className={cn(
-        'flex shrink-0 flex-col border-r border-border bg-sidebar transition-[width]',
+        'flex h-full shrink-0 flex-col border-r border-sidebar-border bg-sidebar transition-[width]',
         sidebar.collapsed ? 'w-14' : 'w-58'
       )}
     >
       <div
         className={cn(
-          'flex h-14 items-center gap-2 border-b border-border',
+          'flex h-14 shrink-0 items-center gap-2 border-b border-sidebar-border',
           sidebar.collapsed ? 'justify-center px-2' : 'px-4'
         )}
       >
-        {!sidebar.collapsed && (
+        {sidebar.collapsed ? (
+          <span
+            title='metabox'
+            className='flex size-7 items-center justify-center rounded-md bg-primary text-sm font-semibold text-primary-foreground'
+          >
+            m
+          </span>
+        ) : (
           <>
-            <span className='flex size-6 shrink-0 items-center justify-center rounded-md bg-primary text-xs font-semibold text-primary-foreground'>
+            <span className='flex size-7 shrink-0 items-center justify-center rounded-md bg-primary text-sm font-semibold text-primary-foreground'>
               m
             </span>
-            <p className='grow text-sm font-semibold tracking-tight'>metabox</p>
+            <p className='grow text-base font-semibold tracking-tight'>metabox</p>
+            <button
+              type='button'
+              onClick={sidebar.toggle}
+              aria-label='Свернуть панель'
+              aria-expanded
+              className='flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none'
+            >
+              <PanelLeftClose className='size-4' />
+            </button>
           </>
         )}
+      </div>
+
+      {sidebar.collapsed && !sidebar.narrow && (
         <button
           type='button'
           onClick={sidebar.toggle}
-          aria-label={sidebar.collapsed ? 'Развернуть панель' : 'Свернуть панель'}
-          aria-expanded={!sidebar.collapsed}
-          className='flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground'
+          aria-label='Развернуть панель'
+          aria-expanded={false}
+          className='mx-auto mt-2 flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none'
         >
-          {sidebar.collapsed ? <PanelLeftOpen className='size-4' /> : <PanelLeftClose className='size-4' />}
+          <PanelLeftOpen className='size-4' />
         </button>
-      </div>
+      )}
 
       <nav aria-label='Разделы панели' className='p-2.5'>
         <ul className='flex flex-col gap-0.5'>
@@ -64,9 +102,9 @@ export function AppSidebar() {
                   className={cn(
                     ITEM_CLASS,
                     sidebar.collapsed && 'justify-center px-0',
-                    'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    'text-muted-foreground hover:bg-sidebar-accent hover:text-foreground'
                   )}
-                  activeProps={{ className: 'bg-muted font-medium text-foreground' }}
+                  activeProps={{ className: ACTIVE_CLASS, 'aria-current': 'page' }}
                 >
                   <item.icon className='size-4 shrink-0' />
                   {!sidebar.collapsed && item.label}
@@ -75,10 +113,17 @@ export function AppSidebar() {
                 <span
                   aria-disabled='true'
                   title={`${item.label} — раздел ещё не сделан`}
-                  className={cn(ITEM_CLASS, sidebar.collapsed && 'justify-center px-0', 'text-muted-foreground/60')}
+                  className={cn(ITEM_CLASS, sidebar.collapsed && 'justify-center px-0', 'text-muted-foreground/50')}
                 >
                   <item.icon className='size-4 shrink-0' />
-                  {!sidebar.collapsed && item.label}
+                  {!sidebar.collapsed && (
+                    <>
+                      <span className='grow truncate'>{item.label}</span>
+                      <span className='shrink-0 rounded-sm bg-muted px-1 text-2xs tracking-wide text-muted-foreground/70 uppercase'>
+                        скоро
+                      </span>
+                    </>
+                  )}
                 </span>
               )}
             </li>
@@ -86,13 +131,42 @@ export function AppSidebar() {
         </ul>
       </nav>
 
-      {!sidebar.collapsed && (
-        <footer className='mt-auto border-t border-border px-4 py-3.5'>
-          <p className='truncate text-xs text-muted-foreground'>
-            {status.isSuccess ? <span className='font-mono'>{status.data.version}</span> : 'демон не отвечает'}
-          </p>
-        </footer>
-      )}
+      <footer
+        className={cn(
+          'mt-auto flex shrink-0 border-t border-sidebar-border',
+          sidebar.collapsed ? 'flex-col items-center gap-2 px-2 py-3' : 'flex-col gap-3 px-4 py-3.5'
+        )}
+      >
+        <ServiceDot status={service.data?.status ?? null} collapsed={sidebar.collapsed} />
+
+        {!sidebar.collapsed && (
+          <dl className='flex items-baseline justify-between gap-2 text-xs'>
+            <dt className='text-muted-foreground'>демон</dt>
+            <dd className='truncate font-mono text-muted-foreground'>
+              {status.isSuccess ? status.data.version : 'не отвечает'}
+            </dd>
+          </dl>
+        )}
+
+        <ThemeSwitch vertical={sidebar.collapsed} />
+      </footer>
     </aside>
+  );
+}
+
+/**
+ * Состояние сервиса в оболочке, а не только на «Обзоре»: по UX-7 его видно без
+ * перехода на отдельный экран.
+ */
+function ServiceDot({ status, collapsed }: { status: ServiceStatus | null; collapsed: boolean }) {
+  const label = status === null ? 'состояние sing-box неизвестно' : STATUS_LABEL[status];
+  const tone = status === null ? 'bg-signal-idle' : STATUS_TONE[status];
+
+  return (
+    <p title={label} className='flex items-center gap-2 text-xs text-muted-foreground'>
+      <span aria-hidden='true' className={cn('size-2 shrink-0 rounded-full', tone)} />
+      {!collapsed && <span className='truncate'>{label}</span>}
+      {collapsed && <span className='sr-only'>{label}</span>}
+    </p>
   );
 }

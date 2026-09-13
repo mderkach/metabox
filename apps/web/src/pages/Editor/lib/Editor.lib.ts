@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import {
   ConfigDocumentState,
@@ -9,7 +9,14 @@ import {
   useConfigText,
 } from '@entities/Config';
 import type { ConfigDocument } from '@entities/Config';
-import { toRuleRowsFromNodes, type RuleRow } from '@entities/Rule';
+import {
+  filterRules,
+  toRuleRowsFromNodes,
+  toTargetGroups,
+  type RuleRow,
+  type RuleTargetFilter,
+  type RuleTargetGroup,
+} from '@entities/Rule';
 
 /** Теги аутбаундов конфига: из них выбирается исход правила. */
 function toOutboundTags(config: ConfigDocument | null): string[] {
@@ -102,4 +109,37 @@ export function useRouteEditor(): RouteEditorState {
  */
 export function toSelectedRuleId(rule: number | undefined): string | null {
   return rule === undefined ? null : String(rule - 1);
+}
+
+export interface RuleFilterState {
+  query: string;
+  setQuery: (query: string) => void;
+  target: RuleTargetFilter;
+  setTarget: (target: RuleTargetFilter) => void;
+  /** Исходы считаются по всему списку: фасет не должен исчезать от своего выбора. */
+  targets: RuleTargetGroup[];
+  rules: RuleRow[];
+  filtered: boolean;
+}
+
+/**
+ * Поиск и отбор по исходу. Отбор клиентский: конфиг целиком уже в панели, и
+ * до 500 правил (NFR-2) фильтруются за доли миллисекунды.
+ */
+export function useRuleFilter(rules: RuleRow[]): RuleFilterState {
+  const [query, setQuery] = useState('');
+  const [target, setTarget] = useState<RuleTargetFilter>(null);
+
+  const targets = useMemo(() => toTargetGroups(rules), [rules]);
+  const shown = useMemo(() => filterRules(rules, query, target), [rules, query, target]);
+
+  return {
+    query,
+    setQuery,
+    target,
+    setTarget,
+    targets,
+    rules: shown,
+    filtered: query.length > 0 || target !== null,
+  };
 }

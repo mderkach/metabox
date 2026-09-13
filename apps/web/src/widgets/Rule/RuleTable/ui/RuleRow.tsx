@@ -7,6 +7,7 @@ import { cn } from '@shared/lib/utils';
 import { RULE_COLUMN } from './RuleColumns';
 import { RuleGroupChips } from './RuleGroupChips';
 import { RuleMatcherChip } from './RuleMatcherChip';
+import { toTargetTone } from './RuleTargetTone';
 
 function RuleRowProto({
   rule,
@@ -27,8 +28,9 @@ function RuleRowProto({
       }}
       className={cn(
         RULE_COLUMN.Row,
-        'w-full border-b border-border text-left hover:bg-muted/50',
-        selected && 'bg-muted/60'
+        'w-full border-b border-border text-left transition-colors hover:bg-muted/40',
+        'focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:-outline-offset-2 focus-visible:outline-none',
+        selected && 'bg-selected before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-selected-edge'
       )}
     >
       <span className={RULE_COLUMN.Index}>{rule.index}</span>
@@ -53,7 +55,7 @@ function RuleRowProto({
         <ArrowRight className='size-4 shrink-0 text-muted-foreground' />
 
         <span className={cn(RULE_COLUMN.Target, 'flex flex-col')} title={rule.target}>
-          <span className='truncate'>{rule.target}</span>
+          <span className={cn('truncate', toTargetTone(rule.targetKind, rule.target))}>{rule.target}</span>
           {rule.targetDetail !== null && (
             <span className='truncate font-sans text-xs font-normal text-muted-foreground'>{rule.targetDetail}</span>
           )}

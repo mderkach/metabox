@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { z } from 'zod';
 
 const STORAGE_KEY = 'metabox.sidebar.collapsed';
@@ -9,11 +9,8 @@ const StoredCollapsedSchema = z.enum(['true', 'false']);
 /** Ширина, ниже которой развёрнутая панель съедает половину экрана. */
 const NARROW_SCREEN = '(max-width: 48rem)';
 
-/**
- * Выбора не было — решает ширина экрана. В jsdom `matchMedia` нет вовсе,
- * поэтому наличие функции проверяется, а не предполагается.
- */
-function prefersCollapsed(): boolean {
+/** В jsdom `matchMedia` нет вовсе, поэтому наличие функции проверяется. */
+function matchNarrow(): boolean {
   return typeof globalThis.matchMedia === 'function' && globalThis.matchMedia(NARROW_SCREEN).matches;
 }
 
@@ -29,7 +26,7 @@ function readCollapsed(): boolean {
     // Хранилище недоступно — остаётся ширина экрана.
   }
 
-  return prefersCollapsed();
+  return matchNarrow();
 }
 
 function writeCollapsed(collapsed: boolean) {
@@ -40,9 +37,42 @@ function writeCollapsed(collapsed: boolean) {
   }
 }
 
-/** Выбор переживает перезагрузку страницы. */
+/**
+ * Узкий экран следится подпиской, а не одним замером на старте: сохранённый
+ * выбор «развёрнуто» иначе переживал бы поворот телефона и оставлял под
+ * содержимое полторы сотни пикселей.
+ */
+function useNarrowScreen(): boolean {
+  const [narrow, setNarrow] = useState(matchNarrow);
+
+  useEffect(function watchWidth() {
+    if (typeof globalThis.matchMedia !== 'function') {
+      return;
+    }
+
+    const query = globalThis.matchMedia(NARROW_SCREEN);
+
+    function syncNarrow(event: MediaQueryListEvent) {
+      setNarrow(event.matches);
+    }
+
+    query.addEventListener('change', syncNarrow);
+
+    return function stopWatchingWidth() {
+      query.removeEventListener('change', syncNarrow);
+    };
+  }, []);
+
+  return narrow;
+}
+
+/**
+ * Состояние боковой панели. Выбор переживает перезагрузку страницы, но на узком
+ * экране не действует: там панель всегда свёрнута до полосы значков.
+ */
 export function useSidebarCollapsed() {
   const [collapsed, setCollapsed] = useState(readCollapsed);
+  const narrow = useNarrowScreen();
 
   const toggle = useCallback(() => {
     setCollapsed((current) => {
@@ -52,5 +82,5 @@ export function useSidebarCollapsed() {
     });
   }, []);
 
-  return { collapsed, toggle };
+  return { collapsed: collapsed || narrow, narrow, toggle };
 }
