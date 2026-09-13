@@ -1,5 +1,6 @@
 import { ApiError } from '@shared/api';
 import { decodeResponse } from '@shared/api';
+import { MS_IN_SECOND } from '@shared/lib/time';
 
 import {
   CheckDetailsSchema,
@@ -8,8 +9,6 @@ import {
   type ConfigVersionWire,
 } from '../api/Config.schema';
 import type { CheckFailure, ConfigVersion } from './Config.model';
-
-const MS_IN_SECOND = 1000;
 
 function toConfigVersion(wire: ConfigVersionWire): ConfigVersion {
   return {

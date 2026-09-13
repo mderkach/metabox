@@ -1,10 +1,12 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse } from 'axios';
 
+import { MS_IN_SECOND } from '../lib/time';
 import { API_FAILURE, ApiError } from './ApiError';
 import { ErrorSchema } from './daemon.generated';
 
 /** Полный цикл Apply укладывается в 15 секунд (NFR-5) — дольше уже отказ. */
-const REQUEST_TIMEOUT = 15_000;
+const REQUEST_TIMEOUT_SECONDS = 15;
+const REQUEST_TIMEOUT = REQUEST_TIMEOUT_SECONDS * MS_IN_SECOND;
 
 const BAD_GATEWAY = 502;
 const SERVICE_UNAVAILABLE = 503;

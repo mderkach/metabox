@@ -1,15 +1,16 @@
 import { useEffect } from 'react';
 
 import { createReactSelectors, stateCreator, useStore } from '@shared/lib/state';
+import { SECONDS_IN_MINUTE } from '@shared/lib/time';
 
 import type { MemorySample, TrafficSample } from './Daemon.model';
 
 /** Минута трафика при шаге снапшота в секунду. */
-export const TRAFFIC_POINTS = 60;
+export const TRAFFIC_POINTS = SECONDS_IN_MINUTE;
 
 /** Память показывается за десять минут: берём каждый десятый сэмпл. */
-export const MEMORY_POINTS = 60;
 export const MEMORY_EVERY = 10;
+export const MEMORY_POINTS = SECONDS_IN_MINUTE;
 
 interface RuntimeState {
   /** Кольцевой буфер: история потока не копится, экрану нужен хвост. */

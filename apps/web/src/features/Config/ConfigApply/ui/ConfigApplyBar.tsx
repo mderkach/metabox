@@ -2,6 +2,7 @@ import { CircleAlert, Info } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { APPLY_PHASE, type ApplyTransaction } from '@entities/Daemon';
+import { MS_IN_SECOND, NS_IN_SECOND } from '@shared/lib/time';
 import { Alert, AlertAction, AlertDescription, AlertTitle, Button } from '@shared/ui';
 
 import { useConfigApply } from '../lib/ConfigApply.lib';
@@ -79,12 +80,6 @@ export function ConfigApplyBar() {
   );
 }
 
-/** Go отдаёт `time.Duration` наносекундами. */
-const NS_IN_SECOND = 1_000_000_000;
-
-/** Шаг отсчёта: окно подтверждения считается в секундах. */
-const TICK_INTERVAL = 1000;
-
 /**
  * Окно подтверждения. Остаток приходит от демона — он считает его монотонными
  * часами, потому что часов реального времени у роутера нет (ADR-0002), — а
@@ -133,7 +128,8 @@ function useCountdown(seconds: number): number {
   useEffect(function countDown() {
     const timer = setInterval(function tick() {
       setLeft((current) => Math.max(0, current - 1));
-    }, TICK_INTERVAL);
+      // Окно подтверждения считается в секундах (NFR-5), шаг отсчёта тот же.
+    }, MS_IN_SECOND);
 
     return function stopCountdown() {
       clearInterval(timer);

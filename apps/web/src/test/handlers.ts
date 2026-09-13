@@ -6,11 +6,12 @@ import { createStatefulDaemonHandlers } from '@entities/Daemon/__tests__/Daemon.
 import { createStatefulProxyHandlers } from '@entities/Proxy/__tests__/Proxy.handlers';
 import { routeHandlers } from '@entities/Route/__tests__/Route.handlers';
 import { RUNTIME_TOPIC } from '@shared/api';
+import { MS_IN_SECOND } from '@shared/lib/time';
 
 import { runtimeStreamHandler } from './runtimeStream';
 
 /** Шаг потока на устройстве — замер 2026-09-10: сэмпл раз в секунду. */
-const STREAM_INTERVAL = 1000;
+const STREAM_INTERVAL = MS_IN_SECOND;
 
 let memorySample = 0;
 
