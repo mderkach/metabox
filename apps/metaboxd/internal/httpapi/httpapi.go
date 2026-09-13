@@ -101,6 +101,7 @@ type Options struct {
 // у потребителя.
 type HistoryReader interface {
 	Points() []history.Point
+	Device() []history.DevicePoint
 	Step() int
 }
 
@@ -402,6 +403,7 @@ func (s *Server) handleHistory(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(s.log, w, http.StatusOK, contract.History{
 		StepSeconds: s.history.Step(),
 		Points:      s.history.Points(),
+		Device:      s.history.Device(),
 	})
 }
 

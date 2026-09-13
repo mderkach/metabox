@@ -65,6 +65,8 @@ type Service struct {
 type History struct {
 	StepSeconds int             `json:"step_seconds"`
 	Points      []history.Point `json:"points"`
+	// Device — показания платы тем же шагом: загрузка, температура, память.
+	Device []history.DevicePoint `json:"device"`
 }
 
 // Error — единый формат отказа на границе HTTP. Внутренние подробности — пути

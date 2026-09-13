@@ -13,8 +13,8 @@ import (
 type Sink interface {
 	// AddProxy прибавляет байты, прошедшие через sing-box за интервал.
 	AddProxy(bytes int64)
-	// SampleUplink снимает счётчики интерфейса наружу.
-	SampleUplink()
+	// SampleDevice снимает показания устройства и счётчики канала.
+	SampleDevice(ctx context.Context)
 }
 
 // Recorder принимает сэмпл потока для истории. nil означает, что историю никто
@@ -134,14 +134,14 @@ func (a *Accounting) countUplink(ctx context.Context) {
 	ticker := time.NewTicker(a.opts.SystemInterval)
 	defer ticker.Stop()
 
-	a.sink.SampleUplink()
+	a.sink.SampleDevice(ctx)
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			a.sink.SampleUplink()
+			a.sink.SampleDevice(ctx)
 		}
 	}
 }

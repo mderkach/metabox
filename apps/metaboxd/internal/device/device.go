@@ -26,8 +26,9 @@ const (
 	defaultProc = "/proc"
 	defaultSys  = "/sys"
 
-	// Ядро отдаёт память в килобайтах.
-	bytesInKB = 1024
+	// Ядро отдаёт память в килобайтах, а температуру в тысячных долях градуса.
+	bytesInKB    = 1024
+	milliDegrees = 1000
 )
 
 // Load — средняя загрузка. Приводить её к процентам нельзя: это длина очереди
@@ -94,11 +95,19 @@ type Stat struct {
 // меняется вместе с конфигом.
 type PortResolver func(ctx context.Context) (int, error)
 
+// Recorder принимает снятые показания. Интерфейс объявлен здесь, у
+// потребителя: читателю всё равно, кто и как хранит историю.
+type Recorder interface {
+	Record(load, celsius float64, memory int64)
+}
+
 // Options задаёт корни файловых систем и способ найти порт Clash API.
 type Options struct {
 	Proc string
 	Sys  string
 	Port PortResolver
+	// History копит показания. nil означает, что историю никто не ведёт.
+	History Recorder
 	// Now подменяется в тестах: окно наблюдения считается от первого снятия
 	// показаний, и ждать его реальными секундами тест не должен.
 	Now func() time.Time
@@ -106,10 +115,11 @@ type Options struct {
 
 // Reader читает показания и помнит найденный процесс sing-box.
 type Reader struct {
-	proc string
-	sys  string
-	port PortResolver
-	now  func() time.Time
+	proc    string
+	sys     string
+	port    PortResolver
+	history Recorder
+	now     func() time.Time
 
 	// link и proxy копят приращения счётчиков: канал считает сам читатель,
 	// объём sing-box приходит снаружи — его знает только поток соединений.
@@ -133,7 +143,7 @@ type Reader struct {
 
 // New собирает читателя. Пустые корни берут устройственные значения.
 func New(opts Options) *Reader {
-	reader := &Reader{proc: opts.Proc, sys: opts.Sys, port: opts.Port, now: opts.Now}
+	reader := &Reader{proc: opts.Proc, sys: opts.Sys, port: opts.Port, history: opts.History, now: opts.Now}
 
 	if reader.proc == "" {
 		reader.proc = defaultProc
@@ -156,18 +166,25 @@ func (r *Reader) AddProxy(bytes int64) {
 	r.proxy.Add(bytes)
 }
 
-// SampleUplink снимает счётчики интерфейса наружу.
+// SampleDevice снимает показания в историю и в счётчики канала.
 //
-// Зовётся и учётом, и снятием показаний: счётчик монотонный, и лишнее чтение
-// прибавляет нулевое приращение. Окно наблюдения начинается с первого вызова —
-// у демона это его собственный запуск.
-func (r *Reader) SampleUplink() {
-	link, err := r.uplink()
-	if err != nil {
+// Зовёт его учёт, а не панель: график и доля обязаны копиться и при закрытой
+// вкладке. Счётчик канала монотонный, поэтому лишнее чтение прибавляет нулевое
+// приращение, а окно наблюдения начинается с первого вызова — у демона это его
+// собственный запуск.
+func (r *Reader) SampleDevice(ctx context.Context) {
+	stat, _ := r.Read(ctx)
+
+	if r.history == nil {
 		return
 	}
 
-	r.observeUplink(link)
+	hottest := 0.0
+	for _, zone := range stat.Thermal {
+		hottest = max(hottest, float64(zone.Milli)/milliDegrees)
+	}
+
+	r.history.Record(stat.Load.One, hottest, stat.Memory.Total-stat.Memory.Available)
 }
 
 // Read снимает показания. Ошибка перечисляет то, что прочитать не удалось;

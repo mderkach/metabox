@@ -73,10 +73,22 @@ export const PointSchema = z.object({
   up: z.int(),
 })
 
+/** DevicePoint — усреднённые показания платы за шаг. */
+export const DevicePointSchema = z.object({
+  /** Load — средняя загрузка за минуту, как её отдаёт ядро. */
+  load: z.number(),
+  /** Celsius — самая горячая зона платы; ноль означает, что зон нет. */
+  celsius: z.number(),
+  /** Memory — занятая память платы в байтах. */
+  memory: z.int(),
+})
+
 /** History — ответ `GET /api/history`: трафик за всё время, что копил демон. Время точки не передаётся: часов у роутера до синхронизации NTP нет, и абсолютная метка соврала бы. Точки идут подряд с шагом StepSeconds, последняя — самая свежая, а подписи оси панель считает по своим часам. */
 export const HistorySchema = z.object({
   step_seconds: z.int(),
   points: z.array(PointSchema),
+  /** Device — показания платы тем же шагом: загрузка, температура, память. */
+  device: z.array(DevicePointSchema),
 })
 
 /** Error — единый формат отказа на границе HTTP. Внутренние подробности — пути на диске, аргументы команд, содержимое конфига — в него не попадают; Details несёт только то, что показывают пользователю. */
@@ -237,6 +249,7 @@ export type CheckDetailsWire = z.infer<typeof CheckDetailsSchema>
 export type ConnectionWire = z.infer<typeof ConnectionSchema>
 export type ConnectionsSnapshotWire = z.infer<typeof ConnectionsSnapshotSchema>
 export type DaemonWire = z.infer<typeof DaemonSchema>
+export type DevicePointWire = z.infer<typeof DevicePointSchema>
 export type ErrorWire = z.infer<typeof ErrorSchema>
 export type EventWire = z.infer<typeof EventSchema>
 export type ExplanationWire = z.infer<typeof ExplanationSchema>

@@ -1,15 +1,73 @@
-// Package history копит историю трафика на стороне демона.
+// Package history копит историю рантайма на стороне демона.
 //
 // Панель держит в памяти вкладки только последнюю минуту, и после перезагрузки
-// страницы график начинается заново. История нужна глубже, а хранить её негде,
-// кроме демона: поток `/traffic` отдаёт скорость за секунду и назад не мотает.
+// страницы график начинается заново. История нужна за всё время работы демона,
+// а хранить её негде, кроме него самого: поток `/traffic` отдаёт скорость за
+// секунду и назад не мотает.
 //
-// Буфер кольцевой и живёт в памяти: запись на флеш роутера ради графика не
-// стоит его ресурса, а перезапуск демона историю обнуляет — это то же, что
-// делает b4 со своими счётчиками.
+// Окно не скользящее: заполненное кольцо не выбрасывает старые точки, а
+// укрупняет шаг вдвое, сливая соседние. График всегда покрывает всё время
+// работы демона, а память остаётся в границах — цена в том, что чем дольше
+// работает демон, тем грубее давние участки.
+//
+// Буфер живёт в памяти: запись на флеш роутера ради графика не стоит его
+// ресурса, а перезапуск демона историю обнуляет — так же, как счётчики b4.
 package history
 
 import "sync"
+
+// ring — кольцо точек с укрупнением шага.
+type ring[T any] struct {
+	points []T
+	first  int
+	filled int
+}
+
+// push кладёт точку. Заполненное кольцо сначала сливает соседние точки попарно
+// и освобождает половину места; в этом случае возвращается true — вызывающий
+// удваивает шаг.
+func (r *ring[T]) push(point T, merge func(older, newer T) T) bool {
+	if len(r.points) == 0 {
+		return false
+	}
+
+	compacted := false
+
+	if r.filled == len(r.points) {
+		r.compact(merge)
+		compacted = true
+	}
+
+	r.points[(r.first+r.filled)%len(r.points)] = point
+	r.filled++
+
+	return compacted
+}
+
+// compact сливает соседние точки попарно, оставляя половину. После него данные
+// лежат с начала буфера.
+func (r *ring[T]) compact(merge func(older, newer T) T) {
+	merged := make([]T, 0, r.filled/2)
+
+	for index := 0; index+1 < r.filled; index += 2 {
+		older := r.points[(r.first+index)%len(r.points)]
+		newer := r.points[(r.first+index+1)%len(r.points)]
+		merged = append(merged, merge(older, newer))
+	}
+
+	copy(r.points, merged)
+	r.first = 0
+	r.filled = len(merged)
+}
+
+func (r *ring[T]) all() []T {
+	points := make([]T, 0, r.filled)
+	for index := range r.filled {
+		points = append(points, r.points[(r.first+index)%len(r.points)])
+	}
+
+	return points
+}
 
 // Point — средняя скорость за шаг, байт в секунду.
 type Point struct {
@@ -17,29 +75,36 @@ type Point struct {
 	Up   int64 `json:"up"`
 }
 
-// Traffic — кольцо точек фиксированного шага.
+// DevicePoint — усреднённые показания платы за шаг.
+type DevicePoint struct {
+	// Load — средняя загрузка за минуту, как её отдаёт ядро.
+	Load float64 `json:"load"`
+	// Celsius — самая горячая зона платы; ноль означает, что зон нет.
+	Celsius float64 `json:"celsius"`
+	// Memory — занятая память платы в байтах.
+	Memory int64 `json:"memory"`
+}
+
+// Traffic — история трафика.
 //
-// Шаг считается сэмплами, а не часами: форк шлёт ровно один сэмпл в секунду, а
-// часов у роутера до синхронизации NTP нет — они прыгают, и время точки по ним
-// восстановить нельзя.
+// Шаг считается снятиями, а не часами: часов у роутера до синхронизации NTP
+// нет — они прыгают, и время точки по ним не восстановить.
 type Traffic struct {
 	mu sync.Mutex
 
-	// step — сколько сэмплов усредняется в одну точку.
-	step int
-	// points — кольцо, samples — сколько точек в нём занято.
-	points []Point
-	first  int
-	filled int
+	perPoint    int
+	stepSeconds int
+	ring        ring[Point]
 
 	sumDown int64
 	sumUp   int64
 	counted int
 }
 
-// New собирает кольцо на `points` точек по `step` сэмплов в каждой.
-func New(step, points int) *Traffic {
-	return &Traffic{step: step, points: make([]Point, points)}
+// New собирает историю трафика: `perPoint` снятий на точку, `stepSeconds`
+// секунд между точками, `points` точек до первого укрупнения шага.
+func New(perPoint, stepSeconds, points int) *Traffic {
+	return &Traffic{perPoint: perPoint, stepSeconds: stepSeconds, ring: ring[Point]{points: make([]Point, points)}}
 }
 
 // Record принимает сэмпл потока: скорость за секунду.
@@ -51,29 +116,20 @@ func (t *Traffic) Record(up, down int64) {
 	t.sumDown += down
 	t.counted++
 
-	if t.counted < t.step {
+	if t.counted < t.perPoint {
 		return
 	}
 
-	t.push(Point{Down: t.sumDown / int64(t.counted), Up: t.sumUp / int64(t.counted)})
+	point := Point{Down: t.sumDown / int64(t.counted), Up: t.sumUp / int64(t.counted)}
 	t.sumDown, t.sumUp, t.counted = 0, 0, 0
+
+	if t.ring.push(point, mergePoints) {
+		t.stepSeconds *= 2
+	}
 }
 
-// push кладёт точку в кольцо, вытесняя самую старую. Вызывается под t.mu.
-func (t *Traffic) push(point Point) {
-	if len(t.points) == 0 {
-		return
-	}
-
-	if t.filled < len(t.points) {
-		t.points[(t.first+t.filled)%len(t.points)] = point
-		t.filled++
-
-		return
-	}
-
-	t.points[t.first] = point
-	t.first = (t.first + 1) % len(t.points)
+func mergePoints(older, newer Point) Point {
+	return Point{Down: (older.Down + newer.Down) / 2, Up: (older.Up + newer.Up) / 2}
 }
 
 // Points отдаёт историю от старой точки к новой.
@@ -81,15 +137,74 @@ func (t *Traffic) Points() []Point {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	points := make([]Point, 0, t.filled)
-	for index := range t.filled {
-		points = append(points, t.points[(t.first+index)%len(t.points)])
-	}
-
-	return points
+	return t.ring.all()
 }
 
-// Step отдаёт шаг точки в сэмплах: у потока это секунды.
+// Step отдаёт текущий шаг между точками в секундах: он растёт вместе с
+// временем работы демона.
 func (t *Traffic) Step() int {
-	return t.step
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	return t.stepSeconds
+}
+
+// Device — история показаний платы тем же шагом, что и трафик.
+type Device struct {
+	mu sync.Mutex
+
+	perPoint int
+	ring     ring[DevicePoint]
+
+	sumLoad    float64
+	sumCelsius float64
+	sumMemory  int64
+	counted    int
+}
+
+// NewDevice собирает историю платы: `perPoint` снятий на точку, `points` точек
+// до первого укрупнения шага.
+func NewDevice(perPoint, points int) *Device {
+	return &Device{perPoint: perPoint, ring: ring[DevicePoint]{points: make([]DevicePoint, points)}}
+}
+
+// Record принимает снятие показаний.
+func (d *Device) Record(load, celsius float64, memory int64) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	d.sumLoad += load
+	d.sumCelsius += celsius
+	d.sumMemory += memory
+	d.counted++
+
+	if d.counted < d.perPoint {
+		return
+	}
+
+	counted := float64(d.counted)
+	point := DevicePoint{
+		Load:    d.sumLoad / counted,
+		Celsius: d.sumCelsius / counted,
+		Memory:  d.sumMemory / int64(d.counted),
+	}
+	d.sumLoad, d.sumCelsius, d.sumMemory, d.counted = 0, 0, 0, 0
+
+	d.ring.push(point, mergeDevicePoints)
+}
+
+func mergeDevicePoints(older, newer DevicePoint) DevicePoint {
+	return DevicePoint{
+		Load:    (older.Load + newer.Load) / 2,
+		Celsius: (older.Celsius + newer.Celsius) / 2,
+		Memory:  (older.Memory + newer.Memory) / 2,
+	}
+}
+
+// Points отдаёт показания от старых к новым.
+func (d *Device) Points() []DevicePoint {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	return d.ring.all()
 }

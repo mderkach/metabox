@@ -411,8 +411,8 @@ type fakeSink struct {
 	samples atomic.Int64
 }
 
-func (f *fakeSink) AddProxy(bytes int64) { f.proxy.Add(bytes) }
-func (f *fakeSink) SampleUplink()        { f.samples.Add(1) }
+func (f *fakeSink) AddProxy(bytes int64)         { f.proxy.Add(bytes) }
+func (f *fakeSink) SampleDevice(context.Context) { f.samples.Add(1) }
 
 // fakeRecorder считает сэмплы, ушедшие в историю.
 type fakeRecorder struct {

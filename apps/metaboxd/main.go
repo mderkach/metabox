@@ -47,13 +47,16 @@ const (
 	// Периоды опроса источников потока; чем они заданы — events.Options.
 	connectionsInterval = time.Second
 	serviceInterval     = 5 * time.Second
-
-	// История трафика: точка на десять сэмплов потока и шесть часов глубины.
-	// Это 2160 точек по два счётчика — десятки килобайт на всё окно.
-	historyStep         = 10
-	historyPoints       = 6 * int(time.Hour/time.Second) / historyStep
 	systemInterval      = 2 * time.Second
 	streamRetryInterval = 3 * time.Second
+
+	// История рантайма: точка раз в десять секунд, 2160 точек до первого
+	// укрупнения шага — шесть часов. Дальше кольцо не выбрасывает старое, а
+	// сливает соседние точки и удваивает шаг, поэтому график всегда покрывает
+	// всё время работы демона (ADR-0015).
+	historyStepSeconds = 10
+	historyTrafficStep = historyStepSeconds
+	historyPoints      = 6 * int(time.Hour/time.Second) / historyStepSeconds
 )
 
 // settings — то, что демон получает флагами. Значения по умолчанию
@@ -147,7 +150,8 @@ func run(log *slog.Logger, s settings) error {
 		clashHandler = clash
 	}
 
-	sysinfo := device.New(device.Options{Port: clashPort(store)})
+	deviceHistory := history.NewDevice(historyStepSeconds/int(systemInterval/time.Second), historyPoints)
+	sysinfo := device.New(device.Options{Port: clashPort(store), History: deviceHistory})
 
 	source := events.NewClashSource(
 		clashSettings(store),
@@ -169,7 +173,7 @@ func run(log *slog.Logger, s settings) error {
 
 	// Доля канала через sing-box считается за всё время работы демона, поэтому
 	// учёт не ждёт подписчика: приращения, не снятые вовремя, теряются.
-	traffic := history.New(historyStep, historyPoints)
+	traffic := history.New(historyTrafficStep, historyStepSeconds, historyPoints)
 
 	accounting := events.NewAccounting(source, sysinfo, traffic, log, events.Options{
 		SystemInterval: systemInterval,
@@ -188,7 +192,7 @@ func run(log *slog.Logger, s settings) error {
 		Events:         hub,
 		Clash:          clashHandler,
 		Explain:        route.NewExplainer(source),
-		History:        traffic,
+		History:        historyOf(traffic, deviceHistory),
 		Runtime:        sysinfo.Alive,
 		ConfigPath:     store.Path(),
 	})
@@ -292,6 +296,19 @@ func systemState(reader *device.Reader, log *slog.Logger) events.SystemReader {
 
 		return json.Marshal(stat)
 	}
+}
+
+// historyOf сводит два кольца в одного читателя: ручка истории отдаёт трафик и
+// показания платы одним ответом, а колец у них два — шаг считается по-разному.
+type historyReader struct {
+	*history.Traffic
+	device *history.Device
+}
+
+func (h historyReader) Device() []history.DevicePoint { return h.device.Points() }
+
+func historyOf(traffic *history.Traffic, device *history.Device) httpapi.HistoryReader {
+	return historyReader{Traffic: traffic, device: device}
 }
 
 // clashPort отдаёт порт контроллера из применённого конфига: по нему демон

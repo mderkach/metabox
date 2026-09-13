@@ -280,7 +280,7 @@ func TestShareCountsWithoutReads(t *testing.T) {
 
 	reader := fs.reader(clashPort)
 
-	reader.SampleUplink()
+	reader.SampleDevice(t.Context())
 	reader.AddProxy(1200)
 	reader.AddProxy(800)
 
@@ -288,7 +288,7 @@ func TestShareCountsWithoutReads(t *testing.T) {
 		"Inter-|   Receive                          |  Transmit\n"+
 			" face |bytes    packets errs drop fifo frame compressed multicast|bytes packets\n"+
 			"pppoe-wan: 9394996569 7036038 0 0 0 0 0 0 1413850620 6544688 0 0 0 0 0 0\n")
-	reader.SampleUplink()
+	reader.SampleDevice(t.Context())
 
 	stat, _ := reader.Read(t.Context())
 
