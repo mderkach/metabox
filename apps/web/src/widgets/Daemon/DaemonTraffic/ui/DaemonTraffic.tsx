@@ -20,6 +20,13 @@ const COORD_PRECISION = 2;
 /** По одной точке линию не проведёшь. */
 const MIN_POINTS = 2;
 
+/** Отсечки времени: минута делится на четыре шага по пятнадцать секунд. */
+const TIME_TICKS = ['−60 с', '−45 с', '−30 с', '−15 с', 'сейчас'];
+
+/** Середины половин: по ним читается высота всплеска, а не только его форма. */
+const QUARTER = MID / HALVES;
+const GRID = [QUARTER, PLOT - QUARTER];
+
 function toGeometry(values: number[], peak: number, down: boolean): { line: string; area: string } {
   const step = PLOT / (values.length - 1);
   const points = values.map((value, index) => {
@@ -43,7 +50,17 @@ function toGeometry(values: number[], peak: number, down: boolean): { line: stri
  * Своя графика, а не библиотека: два ряда по шестьдесят точек без интерактива
  * не стоят ста килобайт в бандле.
  */
-export function DaemonTraffic({ samples }: { samples: TrafficSample[] }) {
+export function DaemonTraffic({
+  samples,
+  ticks = TIME_TICKS,
+  window = 'за минуту',
+}: {
+  samples: TrafficSample[];
+  /** Подписи оси времени, слева направо. */
+  ticks?: string[];
+  /** Окно графика словами: уходит в доступное имя картинки. */
+  window?: string;
+}) {
   const down = samples.map((sample) => sample.down);
   const up = samples.map((sample) => sample.up);
   const peakDown = Math.max(...down, 1);
@@ -59,7 +76,7 @@ export function DaemonTraffic({ samples }: { samples: TrafficSample[] }) {
   return (
     <figure className='flex flex-col gap-1.5'>
       <div className='flex gap-3'>
-        <div className='flex w-20 shrink-0 flex-col justify-between py-0.5 text-right font-mono text-2xs tabular-nums'>
+        <div className='flex w-20 shrink-0 flex-col justify-between py-0.5 text-right font-mono text-xs tabular-nums'>
           <span className='text-series-down'>{formatRate(peakDown)}</span>
           <span className='text-muted-foreground'>0</span>
           <span className='text-series-up'>{formatRate(peakUp)}</span>
@@ -69,7 +86,7 @@ export function DaemonTraffic({ samples }: { samples: TrafficSample[] }) {
           viewBox={`0 0 ${String(PLOT)} ${String(PLOT)}`}
           preserveAspectRatio='none'
           role='img'
-          aria-label={`Трафик за минуту: входящий до ${formatRate(peakDown)}, исходящий до ${formatRate(peakUp)}`}
+          aria-label={`Трафик ${window}: входящий до ${formatRate(peakDown)}, исходящий до ${formatRate(peakUp)}`}
           className='h-44 min-w-0 grow'
         >
           <defs>
@@ -82,6 +99,20 @@ export function DaemonTraffic({ samples }: { samples: TrafficSample[] }) {
               <stop offset='100%' stopColor='var(--series-up)' stopOpacity='0.02' />
             </linearGradient>
           </defs>
+
+          {GRID.map((line) => (
+            <line
+              key={line}
+              x1='0'
+              y1={line}
+              x2={PLOT}
+              y2={line}
+              vectorEffect='non-scaling-stroke'
+              className='stroke-border'
+              strokeWidth={1}
+              strokeDasharray='2 3'
+            />
+          ))}
 
           <line
             x1='0'
@@ -125,11 +156,12 @@ export function DaemonTraffic({ samples }: { samples: TrafficSample[] }) {
 
       {/* Подпись времени идёт той же сеткой, что и график: посчитанный вручную
           отступ уехал бы от смены ширины колонки подписей или зазора. */}
-      <figcaption className='flex gap-3 font-mono text-2xs text-muted-foreground'>
+      <figcaption className='flex gap-3 font-mono text-xs text-muted-foreground'>
         <span className='w-20 shrink-0' aria-hidden='true' />
         <span className='flex min-w-0 grow justify-between'>
-          <span>−60 с</span>
-          <span>сейчас</span>
+          {ticks.map((tick) => (
+            <span key={tick}>{tick}</span>
+          ))}
         </span>
       </figcaption>
     </figure>

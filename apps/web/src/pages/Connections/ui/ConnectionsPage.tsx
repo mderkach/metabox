@@ -1,7 +1,7 @@
 import { Download, Search } from 'lucide-react';
 import { useCallback, useState } from 'react';
 
-import { ConnectionState, useConnectionCounts, useConnectionStream } from '@entities/Connection';
+import { CONNECTION_FORMS, ConnectionState, useConnectionCounts, useConnectionStream } from '@entities/Connection';
 import { useCloseAllConnections } from '@features/Connection/ConnectionClose';
 import { downloadConnections, EXPORT_FORMAT } from '@features/Connection/ConnectionExport';
 import { plural } from '@shared/lib/format';
@@ -12,8 +12,6 @@ import { ConnectionTable } from '@widgets/ConnectionTable';
 import { RouteExplanation } from '@widgets/RouteExplanation';
 
 import { CONNECTION_TAB, useConnectionsScreen } from '../lib';
-
-const CONNECTION_FORMS = ['соединение', 'соединения', 'соединений'] as const;
 
 /** Сколько устройств показать сразу: на роутере их бывает под три десятка. */
 const VISIBLE_SOURCES = 8;

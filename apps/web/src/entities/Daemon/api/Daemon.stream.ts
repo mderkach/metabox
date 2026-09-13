@@ -1,6 +1,6 @@
 import { listenTopic, RUNTIME_TOPIC, type StreamSource } from '@shared/api';
 
-import { toMemoryFrame, toServiceFrame, toTrafficFrame } from '../model/Daemon.adapter';
+import { toMemoryFrame, toServiceFrame, toSystemFrame, toTrafficFrame } from '../model/Daemon.adapter';
 import { RuntimeStore } from '../model/Daemon.store';
 import type { ServiceStateWire } from './Daemon.schema';
 
@@ -25,6 +25,17 @@ export function listenMemory(source: StreamSource): () => void {
 
     if (sample !== null) {
       RuntimeStore.getState().pushMemory(sample);
+    }
+  });
+}
+
+/** Показания устройства идут тем же потоком, что и трафик (ADR-0010). */
+export function listenSystem(source: StreamSource): () => void {
+  return listenTopic(source, RUNTIME_TOPIC.System, (frame) => {
+    const stat = toSystemFrame(frame);
+
+    if (stat !== null) {
+      RuntimeStore.getState().pushSystem(stat);
     }
   });
 }

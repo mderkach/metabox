@@ -2,13 +2,14 @@ import { fakeEventSource } from '@test/fakeEventSource';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { RUNTIME_TOPIC } from '@shared/api';
+import { SECONDS_IN_MINUTE } from '@shared/lib/time';
 
 import { listenConnections } from '../api/Connection.api';
 import type { ConnectionWire } from '../api/Connection.schema';
 import { toConnectionRow } from '../model/Connection.adapter';
-import { CLOSED_LIMIT, FINAL_OUTCOME } from '../model/Connection.model';
+import { CLOSED_LIMIT, FINAL_OUTCOME, TOP_LIMIT } from '../model/Connection.model';
 import { ConnectionStore } from '../model/Connection.store';
-import { makeConnectionsSnapshot } from './Connection.fixture';
+import { CONNECTIONS_FIXTURE, makeConnectionsSnapshot } from './Connection.fixture';
 
 describe('поток соединений', () => {
   beforeEach(() => {
@@ -195,5 +196,75 @@ describe('отбраковка снапшота', () => {
 
     expect(ConnectionStore.getState().dropped).toBe(1);
     expect(ConnectionStore.getState().active).toHaveLength(3);
+  });
+});
+
+describe('сводка и история снапшота', () => {
+  it('пишет число открытых соединений в буфер длиной в минуту', () => {
+    const store = ConnectionStore.getState();
+
+    store.reset();
+
+    for (let tick = 0; tick <= SECONDS_IN_MINUTE; tick += 1) {
+      store.apply(makeConnectionsSnapshot(2));
+    }
+
+    const { history } = ConnectionStore.getState();
+
+    expect(history).toHaveLength(SECONDS_IN_MINUTE);
+    expect(history.at(-1)).toBe(2);
+  });
+
+  it('считает сводку тем же снапшотом, что и список', () => {
+    const store = ConnectionStore.getState();
+
+    store.reset();
+    store.apply(CONNECTIONS_FIXTURE);
+
+    const { summary, active } = ConnectionStore.getState();
+    const counted = summary.outcomes.reduce((sum, share) => sum + share.count, 0);
+
+    expect(counted).toBe(active.length);
+    expect(summary.sources.length).toBeGreaterThan(0);
+  });
+
+  it('в узлы сводки берёт конец цепочки и только у маршрута через прокси', () => {
+    const store = ConnectionStore.getState();
+
+    store.reset();
+    store.apply(CONNECTIONS_FIXTURE);
+
+    const { summary, active } = ConnectionStore.getState();
+    const proxied = active.filter((row) => row.outcome.includes('route(') && !row.outcome.includes('direct'));
+
+    expect(summary.nodes.map((share) => share.key)).toEqual(
+      expect.arrayContaining(proxied.map((row) => row.chain.at(-1)))
+    );
+    expect(summary.nodes.every((share) => share.key !== 'direct')).toBe(true);
+  });
+
+  it('в столбчатой сводке держит только первые группы', () => {
+    const store = ConnectionStore.getState();
+    const sample = CONNECTIONS_FIXTURE.connections[0];
+    const many = Array.from({ length: TOP_LIMIT + 3 }, (_, index) => ({
+      ...sample,
+      id: `${sample.id}-${String(index)}`,
+      source: `192.168.1.${String(index)}`,
+    }));
+
+    store.reset();
+    store.apply({ ...CONNECTIONS_FIXTURE, connections: many });
+
+    expect(ConnectionStore.getState().summary.sources).toHaveLength(TOP_LIMIT);
+  });
+
+  it('сбрасывает сводку и историю вместе со списком', () => {
+    const store = ConnectionStore.getState();
+
+    store.apply(CONNECTIONS_FIXTURE);
+    ConnectionStore.getState().reset();
+
+    expect(ConnectionStore.getState().history).toEqual([]);
+    expect(ConnectionStore.getState().summary.outcomes).toEqual([]);
   });
 });

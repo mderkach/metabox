@@ -8,6 +8,7 @@ import {
   getServiceStateOptions,
   listenMemory,
   listenService,
+  listenSystem,
   listenTraffic,
   RuntimeState,
 } from '@entities/Daemon';
@@ -62,6 +63,7 @@ export function useRuntimeStreams(): void {
         watchSequence(source, refetchRuntime),
         listenTraffic(source),
         listenMemory(source),
+        listenSystem(source),
         listenConnections(source),
         // Состояние службы в потоке и в ручке — одно тело, поэтому событие
         // кладётся в кэш запроса: карточка службы читает его своим хуком и не

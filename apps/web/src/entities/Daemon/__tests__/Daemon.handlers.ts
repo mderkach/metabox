@@ -4,7 +4,12 @@ import { CONFIG_ENDPOINT } from '@entities/Config';
 
 import { DAEMON_ENDPOINT } from '../api/Daemon.endpoints';
 import type { ApplyTransactionWire } from '../api/Daemon.schema';
-import { CLASH_CONFIGS_FIXTURE, DAEMON_STATUS_FIXTURE, SERVICE_RUNNING_FIXTURE } from './Daemon.fixture';
+import {
+  CLASH_CONFIGS_FIXTURE,
+  DAEMON_STATUS_FIXTURE,
+  SERVICE_RUNNING_FIXTURE,
+  TRAFFIC_HISTORY_FIXTURE,
+} from './Daemon.fixture';
 
 /** Окно подтверждения демона — минута (NFR-5), в наносекундах `time.Duration`. */
 const CONFIRM_WINDOW_NS = 60_000_000_000;
@@ -66,5 +71,6 @@ export function createStatefulDaemonHandlers() {
     http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE)),
     http.post(DAEMON_ENDPOINT.serviceAction(':action'), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE)),
     http.get(DAEMON_ENDPOINT.clashConfigs(), () => HttpResponse.json(CLASH_CONFIGS_FIXTURE)),
+    http.get(DAEMON_ENDPOINT.history(), () => HttpResponse.json(TRAFFIC_HISTORY_FIXTURE)),
   ];
 }

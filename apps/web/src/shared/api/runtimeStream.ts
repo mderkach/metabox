@@ -11,6 +11,7 @@ export const RUNTIME_TOPIC = {
   Memory: 'memory',
   Connections: 'connections',
   Service: 'service',
+  System: 'system',
 } as const;
 
 export type RuntimeTopic = (typeof RUNTIME_TOPIC)[keyof typeof RUNTIME_TOPIC];

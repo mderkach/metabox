@@ -1,10 +1,25 @@
 import { createReactSelectors, stateCreator, useStore } from '@shared/lib/state';
-import { MS_IN_SECOND } from '@shared/lib/time';
+import { MS_IN_SECOND, SECONDS_IN_MINUTE } from '@shared/lib/time';
 
 import { toConnectionRow, toConnectionsSnapshot } from './Connection.adapter';
-import { CLOSED_LIMIT, type ConnectionRate, type ConnectionRow, type ConnectionTotals } from './Connection.model';
+import {
+  CLOSED_LIMIT,
+  EMPTY_SUMMARY,
+  ROUTE_KIND,
+  toRouteKind,
+  TOP_LIMIT,
+  type ConnectionRate,
+  type ConnectionRow,
+  type ConnectionShare,
+  type ConnectionSummary,
+  type ConnectionTotals,
+  type RouteKind,
+} from './Connection.model';
 
 const EMPTY_TOTALS: ConnectionTotals = { upload: 0, download: 0, memory: 0 };
+
+/** Минута числа соединений при шаге снапшота в секунду. */
+const HISTORY_POINTS = SECONDS_IN_MINUTE;
 const NO_RATE: ConnectionRate = { down: 0, up: 0 };
 
 /**
@@ -25,6 +40,62 @@ function toRate(current: number, previous: number, seconds: number): number {
   return seconds > 0 ? Math.max(0, (current - previous) / seconds) : 0;
 }
 
+function add<Key extends string>(groups: Map<Key, ConnectionShare<Key>>, key: Key, rate: number): void {
+  const group = groups.get(key);
+
+  if (group === undefined) {
+    groups.set(key, { key, count: 1, rate });
+
+    return;
+  }
+
+  group.count += 1;
+  group.rate += rate;
+}
+
+/** Быстрые первыми, при равной скорости — многочисленные, затем по алфавиту. */
+function byLoad(left: ConnectionShare, right: ConnectionShare): number {
+  return right.rate - left.rate || right.count - left.count || left.key.localeCompare(right.key);
+}
+
+/**
+ * Сводка живого снапшота. Считается здесь и одним проходом: панелей на экране
+ * несколько, и селектор у каждой дал бы свой обход списка каждую секунду, а в
+ * нём до пяти тысяч строк (NFR-2).
+ *
+ * Сводка — вычисленное панелью, а не показания рантайма (UX-8): источник
+ * отдаёт только плоский список соединений.
+ */
+function toSummary(rows: ConnectionRow[]): ConnectionSummary {
+  const outcomes = new Map<RouteKind, ConnectionShare<RouteKind>>();
+  const networks = new Map<string, ConnectionShare>();
+  const nodes = new Map<string, ConnectionShare>();
+  const sources = new Map<string, ConnectionShare>();
+
+  for (const row of rows) {
+    const rate = row.downRate + row.upRate;
+    const kind = toRouteKind(row.outcome, row.chain);
+    // Конец цепочки — узел, через который соединение вышло наружу; начало —
+    // группа, которая его выбрала.
+    const node = row.chain.at(-1);
+
+    add(outcomes, kind, rate);
+    add(networks, row.network, rate);
+    add(sources, row.source, rate);
+
+    if (node !== undefined && kind === ROUTE_KIND.Proxy) {
+      add(nodes, node, rate);
+    }
+  }
+
+  return {
+    outcomes: [...outcomes.values()].sort(byLoad),
+    networks: [...networks.values()].sort(byLoad),
+    nodes: [...nodes.values()].sort(byLoad).slice(0, TOP_LIMIT),
+    sources: [...sources.values()].sort(byLoad).slice(0, TOP_LIMIT),
+  };
+}
+
 interface ConnectionState {
   /** Открытые соединения в порядке снапшота. */
   active: ConnectionRow[];
@@ -36,6 +107,10 @@ interface ConnectionState {
    */
   closed: ConnectionRow[];
   totals: ConnectionTotals;
+  /** Сводка живого снапшота: считается здесь, чтобы панели не обходили список. */
+  summary: ConnectionSummary;
+  /** Кольцевой буфер числа открытых соединений — минута при шаге в секунду. */
+  history: number[];
   /** Поток остановлен пользователем: экран замирает, подписка живёт. */
   paused: boolean;
   /** Сколько экранов сейчас смотрит поток: по нулю подписка закрывается. */
@@ -57,6 +132,8 @@ const ConnectionStateProto = stateCreator<ConnectionState>(
     index: new Map(),
     closed: [],
     totals: EMPTY_TOTALS,
+    summary: EMPTY_SUMMARY,
+    history: [],
     paused: false,
     readers: 0,
     dropped: 0,
@@ -112,6 +189,12 @@ const ConnectionStateProto = stateCreator<ConnectionState>(
         state.active = rows;
         state.index = next;
         state.sampledAt = receivedAt;
+        state.summary = toSummary(rows);
+        state.history.push(rows.length);
+
+        if (state.history.length > HISTORY_POINTS) {
+          state.history.shift();
+        }
 
         if (gone.length > 0) {
           // Скорость снимается: колонка говорит про настоящее время, а закрытое
@@ -148,6 +231,8 @@ const ConnectionStateProto = stateCreator<ConnectionState>(
         state.index = new Map();
         state.closed = [];
         state.totals = EMPTY_TOTALS;
+        state.summary = EMPTY_SUMMARY;
+        state.history = [];
         state.paused = false;
         state.dropped = 0;
         state.sampledAt = null;

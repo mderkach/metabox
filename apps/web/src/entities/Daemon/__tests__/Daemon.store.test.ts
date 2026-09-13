@@ -1,11 +1,11 @@
 import { fakeEventSource } from '@test/fakeEventSource';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { RUNTIME_TOPIC } from '@shared/api';
 
-import { listenMemory, listenTraffic } from '../api/Daemon.stream';
+import { listenMemory, listenSystem, listenTraffic } from '../api/Daemon.stream';
 import { MEMORY_EVERY, RuntimeStore, TRAFFIC_POINTS } from '../model/Daemon.store';
-import { MEMORY_SAMPLES } from './Daemon.fixture';
+import { MEMORY_SAMPLES, SYSTEM_FIXTURE } from './Daemon.fixture';
 
 describe('поток трафика', () => {
   beforeEach(() => {
@@ -71,6 +71,63 @@ describe('поток памяти', () => {
 
     expect(RuntimeStore.getState().memory).toHaveLength(3);
     expect(RuntimeStore.getState().memoryNow).toBe(MEMORY_EVERY * 3 * 1000);
+
+    unsubscribe();
+  });
+});
+
+describe('показания устройства', () => {
+  beforeEach(() => {
+    RuntimeStore.getState().reset();
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('первый снимок скорость канала не считает: считать её не с чем', () => {
+    const { source, send } = fakeEventSource();
+    const unsubscribe = listenSystem(source);
+
+    send(RUNTIME_TOPIC.System, SYSTEM_FIXTURE);
+
+    expect(RuntimeStore.getState().system?.thermal[0].celsius).toBe(42.578);
+    expect(RuntimeStore.getState().uplink).toEqual({ rx: 0, tx: 0 });
+
+    unsubscribe();
+  });
+
+  it('скорость канала считает по приращению счётчиков за интервал', async () => {
+    const { source, send } = fakeEventSource();
+    const unsubscribe = listenSystem(source);
+    const uplink = SYSTEM_FIXTURE.uplink;
+
+    if (uplink === undefined) {
+      throw new Error('в фикстуре нет интерфейса наружу');
+    }
+
+    send(RUNTIME_TOPIC.System, SYSTEM_FIXTURE);
+    await vi.advanceTimersByTimeAsync(2000);
+    send(RUNTIME_TOPIC.System, {
+      ...SYSTEM_FIXTURE,
+      uplink: { ...uplink, rx: uplink.rx + 4000, tx: uplink.tx + 2000 },
+    });
+
+    expect(RuntimeStore.getState().uplink).toEqual({ rx: 2000, tx: 1000 });
+
+    unsubscribe();
+  });
+
+  it('смена интерфейса скорость обнуляет: счётчики у нового свои', async () => {
+    const { source, send } = fakeEventSource();
+    const unsubscribe = listenSystem(source);
+
+    send(RUNTIME_TOPIC.System, SYSTEM_FIXTURE);
+    await vi.advanceTimersByTimeAsync(2000);
+    send(RUNTIME_TOPIC.System, { ...SYSTEM_FIXTURE, uplink: { name: 'wwan0', rx: 10, tx: 10 } });
+
+    expect(RuntimeStore.getState().uplink).toEqual({ rx: 0, tx: 0 });
 
     unsubscribe();
   });

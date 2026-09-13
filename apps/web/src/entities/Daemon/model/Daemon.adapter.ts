@@ -1,6 +1,13 @@
 import { decodeFrame, decodeResponse } from '@shared/api';
 
-import type { ApplyTransactionWire, ClashConfigsWire, DaemonStatusWire, ServiceStateWire } from '../api/Daemon.schema';
+import type {
+  ApplyTransactionWire,
+  ClashConfigsWire,
+  DaemonStatusWire,
+  ServiceStateWire,
+  SystemStatWire,
+  TrafficHistoryWire,
+} from '../api/Daemon.schema';
 import {
   ApplyTransactionSchema,
   ClashConfigsSchema,
@@ -8,6 +15,8 @@ import {
   ClashTrafficSampleSchema,
   DaemonStatusSchema,
   ServiceStateSchema,
+  SystemStatSchema,
+  TrafficHistorySchema,
 } from '../api/Daemon.schema';
 import {
   APPLY_PHASE,
@@ -21,6 +30,8 @@ import {
   type MemorySample,
   type ServiceState,
   type ServiceStatus,
+  type SystemStat,
+  type TrafficHistory,
   type TrafficSample,
 } from './Daemon.model';
 
@@ -92,12 +103,19 @@ function toState(wire: ServiceStateWire): ServiceState {
     status: toServiceStatus(wire.status),
     uptime: wire.uptime,
     binary: wire.binary,
+    managed: wire.managed,
     lastError: wire.lastError,
   };
 }
 
 export function toServiceState(raw: ServiceStateWire): ServiceState {
   return toState(decodeResponse(ServiceStateSchema, raw, 'service'));
+}
+
+export function toTrafficHistory(raw: TrafficHistoryWire): TrafficHistory {
+  const wire = decodeResponse(TrafficHistorySchema, raw, 'history');
+
+  return { stepSeconds: wire.step_seconds, points: wire.points };
 }
 
 export function toClashConfigs(raw: ClashConfigsWire): ClashConfigs {
@@ -124,6 +142,28 @@ export function toTrafficFrame(raw: unknown): TrafficSample | null {
 
 export function toMemoryFrame(raw: unknown): MemorySample | null {
   return decodeFrame(ClashMemorySampleSchema, raw, 'memory');
+}
+
+/** Демон отдаёт температуру тысячными долями градуса, как её отдаёт ядро. */
+const MILLI_DEGREES = 1000;
+
+function toStat(wire: SystemStatWire): SystemStat {
+  return {
+    load: wire.load,
+    memory: wire.memory,
+    thermal: wire.thermal.map((zone) => ({ name: zone.name, celsius: zone.milli / MILLI_DEGREES })),
+    uplink: wire.uplink,
+    share: wire.share,
+    singbox: wire.singbox,
+    daemon: wire.daemon,
+    uptime: wire.uptime,
+  };
+}
+
+export function toSystemFrame(raw: unknown): SystemStat | null {
+  const wire = decodeFrame(SystemStatSchema, raw, 'system');
+
+  return wire === null ? null : toStat(wire);
 }
 
 /** Кадр кладётся в кэш `/api/service` (ADR-0010), поэтому не переводится. */

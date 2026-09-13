@@ -174,6 +174,9 @@
   --color-series-down: var(--series-down);
   --color-series-up: var(--series-up);
 
+  /* Дорожка шкалы: поверхность, а не альфа поверх фона (ADR-0013). */
+  --color-meter-track: var(--meter-track);
+
   /* Подсветка JSON: своя группа, чтобы правка тона исхода её не задевала. */
   --color-code-string: var(--code-string);
   --color-code-number: var(--code-number);
@@ -225,6 +228,8 @@
 
   --series-down: oklch(0.51 0.16 240);
   --series-up: oklch(0.62 0.13 70);
+
+  --meter-track: oklch(0.905 0.008 265);
 
   --code-string: oklch(0.46 0.11 155);
   --code-number: oklch(0.52 0.14 35);
@@ -280,6 +285,8 @@
   --series-down: oklch(0.74 0.15 235);
   --series-up: oklch(0.81 0.135 78);
 
+  --meter-track: oklch(0.285 0.01 265);
+
   --code-string: oklch(0.78 0.12 155);
   --code-number: oklch(0.79 0.12 40);
   --code-literal: oklch(0.75 0.14 300);
@@ -304,6 +311,33 @@
   }
   html {
     @apply font-sans;
+  }
+
+  /* Курсор по умолчанию — стрелка. Каретка над нередактируемым текстом мигает
+   * на каждом движении мыши и читается как приглашение печатать, которого
+   * панель не даёт. Выделение текста это не запрещает: меняется только вид
+   * указателя. */
+  body {
+    cursor: default;
+  }
+  :where(input, textarea, [contenteditable='true']) {
+    cursor: text;
+  }
+
+  /* Tailwind v4 убрал `cursor: pointer` у кнопок из preflight, и нажимаемое
+   * перестало отличаться от текста под курсором. Селектор без `:where`:
+   * нулевая специфичность проиграла бы правилу браузера. */
+  button:not(:disabled),
+  [role='button']:not(:disabled),
+  a[href],
+  label[for],
+  summary,
+  select:not(:disabled) {
+    cursor: pointer;
+  }
+  :disabled,
+  [aria-disabled='true'] {
+    cursor: not-allowed;
   }
 
   /* Поверхности, которые рисует браузер, а не панель: без них выделение,

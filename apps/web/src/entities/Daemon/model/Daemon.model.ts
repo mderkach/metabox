@@ -46,6 +46,12 @@ export interface ServiceState {
   status: ServiceStatus;
   /** Секунды с момента старта; `0`, когда сервис не запущен. */
   uptime: number;
+  /**
+   * Процессом владеет служба, которой управляет демон. Ложь при статусе
+   * «работает» означает, что sing-box поднят чужой службой: команды панели к
+   * этому процессу не относятся, а возраст его procd не знает.
+   */
+  managed: boolean;
   /** Версия установленного на устройстве бинаря sing-box. */
   binary: string;
   /** Вывод последнего падения: показывается дословно, разбирать его нельзя. */
@@ -92,4 +98,92 @@ export interface TrafficSample {
 export interface MemorySample {
   inuse: number;
   oslimit: number;
+}
+
+/** Средняя загрузка: очередь на выполнение, а не проценты. */
+export interface SystemLoad {
+  one: number;
+  five: number;
+  fifteen: number;
+  /** Сколько ядер видит система: без этого числа загрузка не читается. */
+  cores: number;
+}
+
+export interface SystemMemory {
+  total: number;
+  available: number;
+}
+
+/** Термозона платы; градусы уже переведены из тысячных долей ядра. */
+export interface ThermalZone {
+  name: string;
+  celsius: number;
+}
+
+/** Счётчики интерфейса, которым устройство ходит наружу, в байтах с подъёма линка. */
+export interface SystemUplink {
+  name: string;
+  rx: number;
+  tx: number;
+}
+
+export interface SystemProcess {
+  pid: number;
+  /**
+   * Резидентная память процесса. У sing-box она больше того, что отдаёт Clash
+   * API: тот считает только память рантайма Go, а сюда входит и резидентный
+   * код бинаря — у статического sing-box это десятки мегабайт.
+   */
+  rss: number;
+}
+
+export interface DaemonProcess {
+  rss: number;
+  heap: number;
+  goroutines: number;
+}
+
+/** Показания устройства: топик `system` единого потока. */
+export interface SystemStat {
+  load: SystemLoad;
+  memory: SystemMemory;
+  thermal: ThermalZone[];
+  uplink?: SystemUplink;
+  /** Объёмы канала и sing-box за время наблюдения демона. */
+  share: TrafficShare;
+  /** Пусто, когда процесс маршрутизации на устройстве не найден. */
+  singbox?: SystemProcess;
+  daemon: DaemonProcess;
+  /** Секунды с загрузки устройства. */
+  uptime: number;
+}
+
+/**
+ * История трафика с демона: точки идут подряд с шагом `stepSeconds`, последняя
+ * самая свежая. Абсолютного времени у точки нет — часов у роутера до
+ * синхронизации NTP не существует, и подписи оси панель считает по своим.
+ */
+export interface TrafficHistory {
+  stepSeconds: number;
+  points: TrafficSample[];
+}
+
+/** Скорость интерфейса за интервал между снимками, байт в секунду. */
+export interface UplinkRate {
+  rx: number;
+  tx: number;
+}
+
+/**
+ * Сколько байт прошло через канал и через sing-box за время наблюдения.
+ *
+ * Приращения копит демон: счётчик интерфейса идёт с подъёма линка, счётчик
+ * Clash API — с запуска процесса, и сравнивать их можно только за общее окно.
+ * Секундное отношение для этого не годится — оно прыгает от каждого всплеска.
+ */
+export interface TrafficShare {
+  link: number;
+  proxy: number;
+  /** Секунды наблюдения: по ним видно, за какое окно посчитана доля. */
+  seconds: number;
 }

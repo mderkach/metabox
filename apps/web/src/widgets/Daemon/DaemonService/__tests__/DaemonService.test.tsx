@@ -10,6 +10,7 @@ import {
   SERVICE_DRIFT_FIXTURE,
   SERVICE_FAILED_FIXTURE,
   SERVICE_RUNNING_FIXTURE,
+  SERVICE_UNMANAGED_FIXTURE,
 } from '@entities/Daemon/__tests__/Daemon.fixture';
 
 import { DaemonService } from '../ui/DaemonService';
@@ -22,17 +23,30 @@ describe('состояние сервиса', () => {
   it('показывает работающий сервис и предлагает перезапуск', async () => {
     serveService(SERVICE_RUNNING_FIXTURE);
 
-    renderWithQuery(<DaemonService />);
+    renderWithQuery(<DaemonService heap={0} />);
 
     expect(await screen.findByText('работает')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Перезапустить' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Остановить' })).toBeInTheDocument();
   });
 
+  // AC-36: маршрутизацию на устройстве может вести чужой пакет — «Запустить»
+  // подняло бы вторую копию sing-box рядом с работающей.
+  it('процесс мимо службы показывает работающим, но без команд', async () => {
+    serveService(SERVICE_UNMANAGED_FIXTURE);
+
+    renderWithQuery(<DaemonService heap={0} />);
+
+    expect(await screen.findByText('работает')).toBeInTheDocument();
+    expect(screen.getByText('поднят другой службой')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Запустить' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Перезапустить' })).not.toBeInTheDocument();
+  });
+
   it('на упавшем сервисе показывает вывод бинаря дословно', async () => {
     serveService(SERVICE_FAILED_FIXTURE);
 
-    renderWithQuery(<DaemonService />);
+    renderWithQuery(<DaemonService heap={0} />);
 
     expect(await screen.findByText('упал')).toBeInTheDocument();
     expect(screen.getByText(/provider sub-nl not found/)).toBeInTheDocument();
@@ -59,7 +73,7 @@ describe('состояние сервиса', () => {
 
     const user = userEvent.setup();
 
-    renderWithQuery(<DaemonService />);
+    renderWithQuery(<DaemonService heap={0} />);
 
     await user.click(await screen.findByRole('button', { name: 'Запустить' }));
 
@@ -72,19 +86,19 @@ describe('состояние сервиса', () => {
   it('расхождение версии бинаря со схемой предупреждает, но ничего не запрещает', async () => {
     serveService(SERVICE_DRIFT_FIXTURE);
 
-    renderWithQuery(<DaemonService />);
+    renderWithQuery(<DaemonService heap={0} />);
 
-    expect(await screen.findByText('Бинарь новее схемы панели')).toBeInTheDocument();
+    expect(await screen.findByText('Версия sing-box разошлась со схемой форм')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Перезапустить' })).toBeEnabled();
   });
 
   it('на совпадающих версиях предупреждения нет', async () => {
     serveService(SERVICE_RUNNING_FIXTURE);
 
-    renderWithQuery(<DaemonService />);
+    renderWithQuery(<DaemonService heap={0} />);
 
     await screen.findByText('работает');
 
-    expect(screen.queryByText('Бинарь новее схемы панели')).not.toBeInTheDocument();
+    expect(screen.queryByText('Версия sing-box разошлась со схемой форм')).not.toBeInTheDocument();
   });
 });

@@ -2,8 +2,8 @@ import { queryOptions, useQuery } from '@tanstack/react-query';
 
 import { CACHE_TIME, POLL_INTERVAL } from '@shared/api';
 
-import { toClashConfigs, toDaemonStatus, toServiceState } from '../model/Daemon.adapter';
-import { getClashConfigs, getDaemonStatus, getServiceState } from './Daemon.api';
+import { toClashConfigs, toDaemonStatus, toServiceState, toTrafficHistory } from '../model/Daemon.adapter';
+import { getClashConfigs, getDaemonStatus, getServiceState, getTrafficHistory } from './Daemon.api';
 
 /** Значение флагов демона по умолчанию: то же, что в `main.go`. */
 const DEFAULT_CONFIG_PATH = '/etc/sing-box/config.json';
@@ -11,6 +11,7 @@ const DEFAULT_CONFIG_PATH = '/etc/sing-box/config.json';
 export const DAEMON_QUERY = {
   all: ['daemon'] as const,
   status: () => [...DAEMON_QUERY.all, 'status'] as const,
+  history: () => [...DAEMON_QUERY.all, 'history'] as const,
   service: () => [...DAEMON_QUERY.all, 'service'] as const,
   clashConfigs: () => [...DAEMON_QUERY.all, 'clash-configs'] as const,
 } as const;
@@ -26,6 +27,22 @@ export function getDaemonStatusOptions() {
     // неудачный опрос: опрос идёт постоянно и завалил бы экран.
     meta: { showError: false },
   });
+}
+
+export function getTrafficHistoryOptions() {
+  return queryOptions({
+    queryKey: DAEMON_QUERY.history(),
+    queryFn: getTrafficHistory,
+    staleTime: POLL_INTERVAL.History,
+    gcTime: CACHE_TIME.Minute,
+    refetchInterval: POLL_INTERVAL.History,
+    meta: { showError: false },
+  });
+}
+
+/** История трафика с демона: панель держит в памяти только последнюю минуту. */
+export function useTrafficHistory() {
+  return useQuery({ ...getTrafficHistoryOptions(), select: toTrafficHistory });
 }
 
 /**

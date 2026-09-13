@@ -1,23 +1,18 @@
-/**
- * Цвет исхода. Таблица «подстрока → тон», а не цепочка условий: исход приходит
- * строкой рантайма (`route(direct)`, `hijack-dns`, `sniff`), и новый вид узла
- * добавляется сюда записью.
- *
- * Порядок значим — проверка идёт до первого совпадения, поэтому `block` стоит
- * раньше общего `route(`.
- */
-const OUTCOME_TONES = [
-  { match: 'direct', tone: 'text-route-direct' },
-  { match: 'block', tone: 'text-route-block' },
-  { match: 'reject', tone: 'text-route-block' },
-  { match: 'dns', tone: 'text-route-dns' },
-  { match: 'route(', tone: 'text-route-proxy' },
-] as const;
+import { ROUTE_KIND, toRouteKind, type RouteKind } from '@entities/Connection';
 
-const NEUTRAL_TONE = 'text-route-neutral';
+/**
+ * Цвет исхода. Сам исход разбирает слайс соединения — здесь только таблица
+ * «судьба пакета → тон» (ADR-0013): держать вторую таблицу подстрок рядом
+ * значило бы чинить разбор в двух местах.
+ */
+const KIND_TONES: Readonly<Record<RouteKind, string>> = {
+  [ROUTE_KIND.Direct]: 'text-route-direct',
+  [ROUTE_KIND.Proxy]: 'text-route-proxy',
+  [ROUTE_KIND.Block]: 'text-route-block',
+  [ROUTE_KIND.Dns]: 'text-route-dns',
+  [ROUTE_KIND.Other]: 'text-route-neutral',
+};
 
 export function toOutcomeTone(outcome: string): string {
-  const lower = outcome.toLowerCase();
-
-  return OUTCOME_TONES.find((entry) => lower.includes(entry.match))?.tone ?? NEUTRAL_TONE;
+  return KIND_TONES[toRouteKind(outcome)];
 }

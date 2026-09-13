@@ -10,6 +10,7 @@
 export const DAEMON_ENDPOINT = {
   status: () => '/api/status',
   events: () => '/api/events',
+  history: () => '/api/history',
   service: () => '/api/service',
   serviceAction: (action: string) => `/api/service/${action}`,
   apply: () => '/api/apply',

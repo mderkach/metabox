@@ -1,4 +1,5 @@
 import { CircleAlert, TriangleAlert } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 import {
   matchesSchemaVersion,
@@ -6,11 +7,14 @@ import {
   SERVICE_ACTION,
   useServiceState,
   type ServiceState,
+  type SystemProcess,
 } from '@entities/Daemon';
 import { useServiceAction } from '@features/Daemon/DaemonControl';
+import { formatBytes } from '@shared/lib/format';
 import { SECTION_LABEL } from '@shared/lib/styles';
 import { HOURS_IN_DAY, SECONDS_IN_HOUR } from '@shared/lib/time';
-import { Alert, AlertDescription, AlertTitle, Badge, Button, Card, CardContent, CardHeader } from '@shared/ui';
+import { cn } from '@shared/lib/utils';
+import { Alert, AlertDescription, AlertTitle, Button, Card, CardContent, CardHeader } from '@shared/ui';
 
 const STATUS_LABEL: Readonly<Record<ServiceState['status'], string>> = {
   running: 'работает',
@@ -18,11 +22,14 @@ const STATUS_LABEL: Readonly<Record<ServiceState['status'], string>> = {
   failed: 'упал',
 };
 
-function formatUptime(seconds: number): string {
-  if (seconds === 0) {
-    return '—';
-  }
+/** Состояние читается тоном, а не только словом (ADR-0013). */
+const STATUS_TONE: Readonly<Record<ServiceState['status'], string>> = {
+  running: 'bg-signal-ok',
+  stopped: 'bg-signal-idle',
+  failed: 'bg-signal-bad',
+};
 
+function formatUptime(seconds: number): string {
   const hours = Math.floor(seconds / SECONDS_IN_HOUR);
 
   return hours >= HOURS_IN_DAY
@@ -31,12 +38,28 @@ function formatUptime(seconds: number): string {
 }
 
 /**
- * Состояние sing-box и управление им.
+ * Процесс sing-box: состояние службы, память и управление.
  *
  * Остановленный сервис — данные экрана, а не отказ панели: редактор конфига
  * остаётся доступным, иначе поднять упавший sing-box было бы нечем (NFR-1).
+ *
+ * Команды показываются, только когда процессом владеет служба демона
+ * (`managed`). Чужой процесс ими не управляется: на устройстве маршрутизацию
+ * может вести другой пакет, и «Запустить» подняло бы вторую копию sing-box
+ * рядом с работающей (AC-36).
  */
-export function DaemonService() {
+export function DaemonService({
+  process,
+  heap,
+  heapChart,
+}: {
+  /** Показания процесса из топика `system`; пусто, когда процесс не найден. */
+  process?: SystemProcess;
+  /** Память рантайма Go из Clash API: она меньше RSS на резидентный код. */
+  heap: number;
+  /** Готовым узлом: слайсы одного слоя друг друга не импортируют. */
+  heapChart?: ReactNode;
+}) {
   const service = useServiceState();
   const action = useServiceAction();
 
@@ -44,7 +67,7 @@ export function DaemonService() {
     return (
       <Card>
         <CardHeader>
-          <h2 className={SECTION_LABEL}>Сервис sing-box</h2>
+          <h3 className={SECTION_LABEL}>sing-box</h3>
         </CardHeader>
         <CardContent>
           <Alert variant='destructive'>
@@ -67,21 +90,27 @@ export function DaemonService() {
 
   return (
     <Card>
-      <CardHeader className='flex flex-row items-center gap-2.5'>
-        <h2 className={SECTION_LABEL}>Сервис sing-box</h2>
-        <Badge variant={running ? 'secondary' : 'destructive'}>{STATUS_LABEL[state.status]}</Badge>
+      <CardHeader className='flex flex-row flex-wrap items-center gap-2.5'>
+        <h3 className={SECTION_LABEL}>sing-box</h3>
+        <p className='flex items-center gap-1.5 text-xs'>
+          <span aria-hidden='true' className={cn('size-2 shrink-0 rounded-full', STATUS_TONE[state.status])} />
+          {STATUS_LABEL[state.status]}
+        </p>
+        {running && !state.managed && <span className='text-xs text-muted-foreground'>поднят другой службой</span>}
         <span className='grow' />
-        <Button
-          variant='outline'
-          size='sm'
-          disabled={action.isPending}
-          onClick={() => {
-            action.mutate(running ? SERVICE_ACTION.Restart : SERVICE_ACTION.Start);
-          }}
-        >
-          {running ? 'Перезапустить' : 'Запустить'}
-        </Button>
-        {running && (
+        {state.managed && (
+          <Button
+            variant='outline'
+            size='sm'
+            disabled={action.isPending}
+            onClick={() => {
+              action.mutate(SERVICE_ACTION.Restart);
+            }}
+          >
+            Перезапустить
+          </Button>
+        )}
+        {state.managed && (
           <Button
             variant='outline'
             size='sm'
@@ -93,13 +122,28 @@ export function DaemonService() {
             Остановить
           </Button>
         )}
+        {!running && (
+          <Button
+            variant='outline'
+            size='sm'
+            disabled={action.isPending}
+            onClick={() => {
+              action.mutate(SERVICE_ACTION.Start);
+            }}
+          >
+            Запустить
+          </Button>
+        )}
       </CardHeader>
 
       <CardContent className='flex flex-col gap-3'>
         <dl className='text-sm'>
-          <Row label='Аптайм' value={formatUptime(state.uptime)} />
-          <Row label='Бинарь на устройстве' value={state.binary} mono />
-          <Row label='Схема панели собрана на' value={SCHEMA_VERSION} mono />
+          {state.managed && <Row label='Аптайм службы' value={formatUptime(state.uptime)} />}
+          <Row label='Бинарь' value={state.binary} mono />
+          {process !== undefined && (
+            <Row label='Память процесса' value={`${formatBytes(process.rss)} · pid ${String(process.pid)}`} />
+          )}
+          {heap > 0 && <Row label='Память Go' value={formatBytes(heap)} chart={heapChart} />}
         </dl>
 
         {state.status !== 'running' && state.lastError !== undefined && (
@@ -117,10 +161,11 @@ export function DaemonService() {
         {drifted && (
           <Alert>
             <TriangleAlert />
-            <AlertTitle>Бинарь новее схемы панели</AlertTitle>
+            <AlertTitle>Версия sing-box разошлась со схемой форм</AlertTitle>
             <AlertDescription>
-              Поля, которых нет в схеме, панель покажет сырыми блоками и сохранит как есть. Запретить их она не может:
-              арбитр валидности — <code className='font-mono'>sing-box check</code>, а не схема metabox.
+              Формы собраны под {SCHEMA_VERSION}, на устройстве {state.binary}. Поле, которого нет в этой версии бинаря,
+              отклонит `sing-box check` при Apply — запретить его панель не может: арбитр валидности сам бинарь, а не
+              схема metabox (UX-4).
             </AlertDescription>
           </Alert>
         )}
@@ -129,11 +174,24 @@ export function DaemonService() {
   );
 }
 
-function Row({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
+function Row({
+  label,
+  value,
+  mono = false,
+  chart,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+  chart?: ReactNode;
+}) {
   return (
-    <div className='flex justify-between gap-4 border-t border-border py-1.5 first:border-t-0'>
+    <div className='flex items-center justify-between gap-4 border-t border-border py-2 first:border-t-0'>
       <dt className='text-muted-foreground'>{label}</dt>
-      <dd className={mono ? 'font-mono' : undefined}>{value}</dd>
+      <dd className={cn('flex min-w-0 items-center gap-3 truncate', mono && 'font-mono text-xs')}>
+        {chart}
+        {value}
+      </dd>
     </div>
   );
 }

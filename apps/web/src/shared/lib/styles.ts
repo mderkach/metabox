@@ -4,8 +4,15 @@
  * того же элемента на соседних экранах.
  */
 
-/** Заголовок секции: капитель с трекингом вместо ещё одной ступени кегля. */
-export const SECTION_LABEL = 'text-2xs font-medium tracking-[0.08em] text-muted-foreground uppercase';
+/**
+ * Заголовок карточки: капитель с трекингом вместо ещё одной ступени кегля.
+ * Кегль 12px, а не 10: функциональный текст ниже одиннадцати не читается на
+ * рабочем расстоянии, а этим набором подписана каждая карточка панели.
+ */
+export const SECTION_LABEL = 'text-xs font-medium tracking-[0.06em] text-muted-foreground uppercase';
+
+/** Заголовок секции экрана: на ступень крупнее заголовка карточки внутри неё. */
+export const SECTION_HEADING = 'text-sm font-semibold';
 
 /** Чип отбора: фасет по устройству на соединениях и по исходу на правилах. */
 export const FACET_CLASS =

@@ -1,12 +1,16 @@
 import { z } from 'zod';
 
 export {
+  HistorySchema as TrafficHistorySchema,
   ServiceSchema as ServiceStateSchema,
+  StatSchema as SystemStatSchema,
   StatusSchema as DaemonStatusSchema,
   TransactionSchema as ApplyTransactionSchema,
 } from '@shared/api/daemon.generated';
 export type {
+  HistoryWire as TrafficHistoryWire,
   ServiceWire as ServiceStateWire,
+  StatWire as SystemStatWire,
   StatusWire as DaemonStatusWire,
   TransactionWire as ApplyTransactionWire,
 } from '@shared/api/daemon.generated';
