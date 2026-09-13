@@ -1,7 +1,6 @@
 import { formatBytes } from '@shared/lib/format';
 
-const WIDTH = 120;
-const HEIGHT = 24;
+import { DaemonSparkline } from './DaemonSparkline';
 
 /** По одной точке линию не проведёшь. */
 const MIN_POINTS = 2;
@@ -16,24 +15,10 @@ export function DaemonMemory({ samples }: { samples: number[] }) {
     return null;
   }
 
-  const peak = Math.max(...samples);
-  const floor = Math.min(...samples);
-  const span = peak - floor || peak || 1;
-  const step = WIDTH / (samples.length - 1);
-
-  const points = samples
-    .map((value, index) => `${(step * index).toFixed(1)},${(HEIGHT * (1 - (value - floor) / span)).toFixed(1)}`)
-    .join(' ');
-
   return (
-    <svg
-      width={WIDTH}
-      height={HEIGHT}
-      viewBox={`0 0 ${String(WIDTH)} ${String(HEIGHT)}`}
-      role='img'
-      aria-label={`Память за десять минут, от ${formatBytes(floor)} до ${formatBytes(peak)}`}
-    >
-      <polyline points={points} fill='none' strokeWidth={1.5} strokeLinejoin='round' className='stroke-primary/70' />
-    </svg>
+    <DaemonSparkline
+      samples={samples}
+      label={`Память за десять минут, от ${formatBytes(Math.min(...samples))} до ${formatBytes(Math.max(...samples))}`}
+    />
   );
 }

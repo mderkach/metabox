@@ -166,6 +166,15 @@ export interface SystemStat {
 export interface TrafficHistory {
   stepSeconds: number;
   points: TrafficSample[];
+  /** Показания платы тем же шагом: загрузка, температура, занятая память. */
+  device: DeviceHistoryPoint[];
+}
+
+export interface DeviceHistoryPoint {
+  load: number;
+  /** Самая горячая зона платы; ноль означает, что зон нет. */
+  celsius: number;
+  memory: number;
 }
 
 /** Скорость интерфейса за интервал между снимками, байт в секунду. */

@@ -8,6 +8,7 @@ export {
   TransactionSchema as ApplyTransactionSchema,
 } from '@shared/api/daemon.generated';
 export type {
+  DevicePointWire,
   HistoryWire as TrafficHistoryWire,
   ServiceWire as ServiceStateWire,
   StatWire as SystemStatWire,

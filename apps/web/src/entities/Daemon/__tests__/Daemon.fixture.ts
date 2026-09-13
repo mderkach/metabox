@@ -74,6 +74,11 @@ export const TRAFFIC_HISTORY_FIXTURE: TrafficHistoryWire = {
     down: 40_000 + index * 900,
     up: 6000 + ((index * 7) % 11) * 400,
   })),
+  device: Array.from({ length: 40 }, (_, index) => ({
+    load: 0.1 + ((index * 3) % 7) / 10,
+    celsius: 41 + ((index * 5) % 9) / 3,
+    memory: 350_000_000 + index * 1_200_000,
+  })),
 };
 
 /** Показания устройства: снято на BPI-R4 Pro 2026-09-13. */

@@ -16,6 +16,7 @@ export { APPLY_PHASE, CLASH_MODE, SERVICE_ACTION, SERVICE_STATUS } from './model
 export type {
   ApplyPhase,
   DaemonProcess,
+  DeviceHistoryPoint,
   ApplyTransaction,
   ClashConfigs,
   ClashMode,

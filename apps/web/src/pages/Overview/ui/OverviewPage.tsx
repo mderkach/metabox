@@ -1,7 +1,14 @@
 import type { ReactNode } from 'react';
 
 import { useConnectionStream } from '@entities/Connection';
-import { SCHEMA_VERSION, useClashConfigs, useConfigPath, useDaemonStatus, useRuntimeStream } from '@entities/Daemon';
+import {
+  SCHEMA_VERSION,
+  useClashConfigs,
+  useConfigPath,
+  useDaemonStatus,
+  useRuntimeStream,
+  useTrafficHistory,
+} from '@entities/Daemon';
 import { formatAge, formatBytes, formatRate, plural } from '@shared/lib/format';
 import { SECTION_HEADING, SECTION_LABEL } from '@shared/lib/styles';
 import { cn } from '@shared/lib/utils';
@@ -14,7 +21,7 @@ import {
   ConnectionSummaryVolume,
 } from '@widgets/ConnectionSummary';
 import { DaemonService } from '@widgets/Daemon/DaemonService';
-import { DaemonHistory, DaemonMemory, DaemonTraffic } from '@widgets/Daemon/DaemonTraffic';
+import { DaemonMemory, DaemonSparkline, DaemonTraffic } from '@widgets/Daemon/DaemonTraffic';
 import { ProxyLatency } from '@widgets/ProxyLatency';
 
 import { useOverviewRuntime, useOverviewVerdict, VERDICT_TONE, type VerdictTone } from '../lib';
@@ -42,6 +49,8 @@ export function OverviewPage() {
   const status = useDaemonStatus();
   const configPath = useConfigPath();
   const clash = useClashConfigs();
+  const history = useTrafficHistory();
+  const deviceHistory = history.data?.device ?? [];
 
   const system = runtime.system;
   const linkRate = runtime.uplink.rx + runtime.uplink.tx;
@@ -114,8 +123,6 @@ export function OverviewPage() {
 
             <ConnectionSummaryVolume totals={runtime.totals} />
           </div>
-
-          <DaemonHistory />
         </Section>
 
         <Section title='Соединения' note='сводку считает панель'>
@@ -167,18 +174,35 @@ export function OverviewPage() {
                 label='Загрузка'
                 value={system === null ? '—' : system.load.one.toFixed(LOAD_PRECISION)}
                 context={system === null ? 'ждём снимок' : `из ${plural(system.load.cores, CORE_FORMS)}`}
-                meter={system === null ? undefined : system.load.one / system.load.cores}
+                chart={
+                  <DaemonSparkline
+                    samples={deviceHistory.map((point) => point.load)}
+                    label='Загрузка за всё время работы демона'
+                  />
+                }
               />
               <Tile
                 label='Температура'
                 value={hottest === undefined ? '—' : `${hottest.celsius.toFixed(DEGREE_PRECISION)} °C`}
                 context={hottest === undefined ? 'зон нет' : hottest.name}
+                chart={
+                  <DaemonSparkline
+                    samples={deviceHistory.map((point) => point.celsius)}
+                    label='Температура платы за всё время работы демона'
+                    tone='text-signal-warn'
+                  />
+                }
               />
               <Tile
                 label='Память платы'
                 value={system === null ? '—' : formatBytes(usedMemory)}
                 context={system === null ? 'ждём снимок' : `из ${formatBytes(system.memory.total)}`}
-                meter={system === null ? undefined : usedMemory / system.memory.total}
+                chart={
+                  <DaemonSparkline
+                    samples={deviceHistory.map((point) => point.memory)}
+                    label='Память платы за всё время работы демона'
+                  />
+                }
               />
               <Tile
                 label='Аптайм'
@@ -275,12 +299,15 @@ function Tile({
   context,
   tone,
   meter,
+  chart,
 }: {
   label: string;
   value: string;
   context: string;
   tone?: string;
   meter?: number;
+  /** Ряд под числом: динамика там, где у величины нет потолка. */
+  chart?: ReactNode;
 }) {
   return (
     <li className='flex flex-col gap-1 bg-card px-4 py-3.5'>
@@ -288,7 +315,10 @@ function Tile({
         <dt className='text-xs text-muted-foreground'>{label}</dt>
         <dd className={cn('text-xl font-semibold tabular-nums', tone)}>{value}</dd>
       </dl>
-      <p className='text-xs text-muted-foreground'>{context}</p>
+      <div className='flex items-end justify-between gap-2'>
+        <p className='text-xs text-muted-foreground'>{context}</p>
+        {chart}
+      </div>
       {meter !== undefined && (
         <span className='block h-1 overflow-hidden rounded-full bg-meter-track'>
           <span

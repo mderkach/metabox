@@ -115,7 +115,7 @@ export function toServiceState(raw: ServiceStateWire): ServiceState {
 export function toTrafficHistory(raw: TrafficHistoryWire): TrafficHistory {
   const wire = decodeResponse(TrafficHistorySchema, raw, 'history');
 
-  return { stepSeconds: wire.step_seconds, points: wire.points };
+  return { stepSeconds: wire.step_seconds, points: wire.points, device: wire.device };
 }
 
 export function toClashConfigs(raw: ClashConfigsWire): ClashConfigs {
