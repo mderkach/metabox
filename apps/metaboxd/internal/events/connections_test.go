@@ -8,7 +8,7 @@ import (
 func decodeSnapshot(t *testing.T, body string) ConnectionsSnapshot {
 	t.Helper()
 
-	raw, err := connectionsSnapshot(json.RawMessage(body))
+	raw, _, err := connectionsSnapshot(json.RawMessage(body))
 	if err != nil {
 		t.Fatalf("перевод снапшота: %v", err)
 	}
@@ -149,8 +149,21 @@ func TestConnectionsSnapshotEmpty(t *testing.T) {
 	}
 }
 
+// Долю канала через sing-box считает демон, и накопленный счётчик виден только
+// в снимке соединений.
+func TestConnectionsSnapshotTotal(t *testing.T) {
+	_, total, err := connectionsSnapshot(json.RawMessage(`{"connections":[],"uploadTotal":100,"downloadTotal":200}`))
+	if err != nil {
+		t.Fatalf("перевод снапшота: %v", err)
+	}
+
+	if total != 300 {
+		t.Errorf("счётчик байт: получили %d, ожидали 300", total)
+	}
+}
+
 func TestConnectionsSnapshotBroken(t *testing.T) {
-	if _, err := connectionsSnapshot(json.RawMessage(`[`)); err == nil {
+	if _, _, err := connectionsSnapshot(json.RawMessage(`[`)); err == nil {
 		t.Error("неразобранный снапшот обязан стать ошибкой")
 	}
 }

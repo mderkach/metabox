@@ -15,6 +15,10 @@ import (
 // и без него, просто без топика service.
 var errNoService = errors.New("источник состояния службы не задан")
 
+// errNoSystem означает, что показания устройства читать нечем: поток живёт и
+// без них, просто без топика system.
+var errNoSystem = errors.New("источник показаний устройства не задан")
+
 // Settings — адрес и секрет контроллера на момент запроса.
 type Settings struct {
 	BaseURL string
@@ -29,22 +33,33 @@ type Resolver func(ctx context.Context) (Settings, error)
 // `/api/service`. Интерфейс объявлен здесь, у потребителя.
 type ServiceReader func(ctx context.Context) (json.RawMessage, error)
 
+// SystemReader отдаёт показания устройства. Читает их не Clash API, но в поток
+// они идут тем же путём, что и остальное.
+type SystemReader func(ctx context.Context) (json.RawMessage, error)
+
 // ClashSource читает рантайм у Clash API. Потоки `/traffic` и `/memory` форк
 // отдаёт и без WebSocket — обычным chunked-ответом по строке в секунду,
 // поэтому клиента WebSocket в демоне не заводится.
 type ClashSource struct {
 	resolve Resolver
 	service ServiceReader
+	system  SystemReader
 	client  *http.Client
 	// snapshotTimeout ограничивает разовый запрос; потоки живут без дедлайна.
 	snapshotTimeout time.Duration
 }
 
 // NewClashSource собирает источник.
-func NewClashSource(resolve Resolver, service ServiceReader, snapshotTimeout time.Duration) *ClashSource {
+func NewClashSource(
+	resolve Resolver,
+	service ServiceReader,
+	system SystemReader,
+	snapshotTimeout time.Duration,
+) *ClashSource {
 	return &ClashSource{
 		resolve:         resolve,
 		service:         service,
+		system:          system,
 		client:          &http.Client{},
 		snapshotTimeout: snapshotTimeout,
 	}
@@ -87,6 +102,15 @@ func (s *ClashSource) ServiceState(ctx context.Context) (json.RawMessage, error)
 	}
 
 	return s.service(ctx)
+}
+
+// SystemState отдаёт показания устройства.
+func (s *ClashSource) SystemState(ctx context.Context) (json.RawMessage, error) {
+	if s.system == nil {
+		return nil, errNoSystem
+	}
+
+	return s.system(ctx)
 }
 
 func (s *ClashSource) do(ctx context.Context, path string) (*http.Response, error) {

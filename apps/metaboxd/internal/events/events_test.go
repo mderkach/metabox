@@ -27,6 +27,7 @@ type fakeSource struct {
 	streams  atomic.Int64
 	snapshot json.RawMessage
 	service  json.RawMessage
+	system   json.RawMessage
 
 	// lines шлются в поток по одной на подписку.
 	lines []json.RawMessage
@@ -64,10 +65,19 @@ func (f *fakeSource) ServiceState(context.Context) (json.RawMessage, error) {
 	return f.service, nil
 }
 
+func (f *fakeSource) SystemState(context.Context) (json.RawMessage, error) {
+	if f.system == nil {
+		return nil, errors.New("показаний нет")
+	}
+
+	return f.system, nil
+}
+
 func fastOptions() Options {
 	return Options{
 		ConnectionsInterval: 10 * time.Millisecond,
 		ServiceInterval:     10 * time.Millisecond,
+		SystemInterval:      10 * time.Millisecond,
 		RetryInterval:       10 * time.Millisecond,
 	}
 }
@@ -393,4 +403,50 @@ func TestHubCloseReleasesSubscribers(t *testing.T) {
 	if left != 0 {
 		t.Errorf("после Close осталось читателей: %d", left)
 	}
+}
+
+// fakeSink считает, что накопил учёт.
+type fakeSink struct {
+	proxy   atomic.Int64
+	samples atomic.Int64
+}
+
+func (f *fakeSink) AddProxy(bytes int64) { f.proxy.Add(bytes) }
+func (f *fakeSink) SampleUplink()        { f.samples.Add(1) }
+
+// fakeRecorder считает сэмплы, ушедшие в историю.
+type fakeRecorder struct {
+	records atomic.Int64
+}
+
+func (f *fakeRecorder) Record(int64, int64) { f.records.Add(1) }
+
+// Доля канала считается за всё время работы демона, поэтому учёт идёт и без
+// единого читателя потока.
+func TestAccountingCountsWithoutReaders(t *testing.T) {
+	source := &fakeSource{lines: []json.RawMessage{
+		json.RawMessage(`{"up":100,"down":900}`),
+		json.RawMessage(`{"up":50,"down":450}`),
+	}}
+	sink := &fakeSink{}
+	recorder := &fakeRecorder{}
+
+	accounting := NewAccounting(source, sink, recorder, testLogger(t), fastOptions())
+
+	accounting.Start()
+	t.Cleanup(accounting.Close)
+
+	deadline := time.Now().Add(time.Second)
+	for time.Now().Before(deadline) {
+		if sink.proxy.Load() == 1500 && sink.samples.Load() > 0 && recorder.records.Load() == 2 {
+			return
+		}
+
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	t.Errorf(
+		"учёт накопил %d байт за %d снятий, в историю ушло %d сэмплов",
+		sink.proxy.Load(), sink.samples.Load(), recorder.records.Load(),
+	)
 }

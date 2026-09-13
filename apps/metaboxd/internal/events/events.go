@@ -28,6 +28,7 @@ const (
 	TopicMemory      = "memory"
 	TopicConnections = "connections"
 	TopicService     = "service"
+	TopicSystem      = "system"
 )
 
 // Event — конверт. Seq считается для каждого читателя отдельно и растёт без
@@ -57,6 +58,10 @@ type Source interface {
 	Snapshot(ctx context.Context, path string) (json.RawMessage, error)
 	// ServiceState отдаёт состояние службы в том же виде, что и ручка.
 	ServiceState(ctx context.Context) (json.RawMessage, error)
+	// SystemState отдаёт показания устройства. Источник у них не Clash API, но
+	// ходит он туда же, куда и остальные: Hub не должен знать, кто и откуда
+	// читает — он владеет только подписками.
+	SystemState(ctx context.Context) (json.RawMessage, error)
 }
 
 // Options задаёт периоды опроса тех источников, которые сами ничего не шлют.
@@ -68,6 +73,9 @@ type Options struct {
 	// ServiceInterval — период опроса службы. Он дороже остальных: это запуск
 	// внешних процессов, поэтому реже.
 	ServiceInterval time.Duration
+	// SystemInterval — период съёма показаний устройства. Загрузка и
+	// температура меняются медленнее трафика, а чтение procfs не бесплатно.
+	SystemInterval time.Duration
 	// RetryInterval — пауза перед повторной попыткой после обрыва источника.
 	RetryInterval time.Duration
 	// KeepAlive — период комментария в поток, когда источники молчат. Без него
@@ -210,7 +218,9 @@ func (h *Hub) start() {
 				return nil, err
 			}
 
-			return connectionsSnapshot(raw)
+			body, _, err := connectionsSnapshot(raw)
+
+			return body, err
 		})
 	}()
 
@@ -219,6 +229,13 @@ func (h *Hub) start() {
 	go func() {
 		defer wg.Done()
 		h.runPoll(ctx, TopicService, h.opts.ServiceInterval, h.source.ServiceState)
+	}()
+
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+		h.runPoll(ctx, TopicSystem, h.opts.SystemInterval, h.source.SystemState)
 	}()
 
 	go func() {

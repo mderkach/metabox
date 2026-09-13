@@ -10,6 +10,7 @@ package contract
 import (
 	"metabox/internal/apply"
 	"metabox/internal/config"
+	"metabox/internal/history"
 )
 
 // Health — ответ `GET /healthz`.
@@ -47,8 +48,23 @@ type Service struct {
 	Uptime int `json:"uptime"`
 	// Binary — версия бинаря на устройстве. Схему панель знает свою и сверяет
 	// расхождение сама.
-	Binary    string `json:"binary"`
+	Binary string `json:"binary"`
+	// Managed означает, что процессом владеет служба, которой управляет демон.
+	// Ложь при статусе `running` читается так: sing-box на устройстве работает,
+	// но поднят не ею — маршрутизацией владеет чужой пакет, и кнопки службы к
+	// этому процессу не относятся.
+	Managed   bool   `json:"managed"`
 	LastError string `json:"lastError,omitempty"`
+}
+
+// History — ответ `GET /api/history`: трафик за всё время, что копил демон.
+//
+// Время точки не передаётся: часов у роутера до синхронизации NTP нет, и
+// абсолютная метка соврала бы. Точки идут подряд с шагом StepSeconds, последняя
+// — самая свежая, а подписи оси панель считает по своим часам.
+type History struct {
+	StepSeconds int             `json:"step_seconds"`
+	Points      []history.Point `json:"points"`
 }
 
 // Error — единый формат отказа на границе HTTP. Внутренние подробности — пути

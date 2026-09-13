@@ -62,7 +62,21 @@ export const ServiceSchema = z.object({
   uptime: z.int(),
   /** Binary — версия бинаря на устройстве. Схему панель знает свою и сверяет расхождение сама. */
   binary: z.string(),
+  /** Managed означает, что процессом владеет служба, которой управляет демон. Ложь при статусе `running` читается так: sing-box на устройстве работает, но поднят не ею — маршрутизацией владеет чужой пакет, и кнопки службы к этому процессу не относятся. */
+  managed: z.boolean(),
   lastError: z.string().optional(),
+})
+
+/** Point — средняя скорость за шаг, байт в секунду. */
+export const PointSchema = z.object({
+  down: z.int(),
+  up: z.int(),
+})
+
+/** History — ответ `GET /api/history`: трафик за всё время, что копил демон. Время точки не передаётся: часов у роутера до синхронизации NTP нет, и абсолютная метка соврала бы. Точки идут подряд с шагом StepSeconds, последняя — самая свежая, а подписи оси панель считает по своим часам. */
+export const HistorySchema = z.object({
+  step_seconds: z.int(),
+  points: z.array(PointSchema),
 })
 
 /** Error — единый формат отказа на границе HTTP. Внутренние подробности — пути на диске, аргументы команд, содержимое конфига — в него не попадают; Details несёт только то, что показывают пользователю. */
@@ -77,6 +91,75 @@ export const CheckDetailsSchema = z.object({
   stdout: z.string(),
   stderr: z.string(),
   exit_code: z.int(),
+})
+
+/** Load — средняя загрузка. Приводить её к процентам нельзя: это длина очереди на выполнение, и на четырёх ядрах значение 4.0 означает полную занятость. */
+export const LoadSchema = z.object({
+  one: z.number(),
+  five: z.number(),
+  fifteen: z.number(),
+  /** Cores — сколько ядер видит система: без него значение не читается. */
+  cores: z.int(),
+})
+
+/** Memory — память устройства в байтах. */
+export const MemorySchema = z.object({
+  total: z.int(),
+  /** Available — то, что система готова отдать без свопа, а не `MemFree`: свободного на роутере мало всегда, кэш занимает остальное. */
+  available: z.int(),
+})
+
+/** Zone — одна термозона ядра. */
+export const ZoneSchema = z.object({
+  /** Name — `type` зоны: на плате их бывает несколько, и различаются они им. */
+  name: z.string(),
+  /** Milli — тысячные доли градуса Цельсия, ровно как отдаёт ядро. */
+  milli: z.int(),
+})
+
+/** Link — счётчики интерфейса с момента его подъёма, в байтах. */
+export const LinkSchema = z.object({
+  name: z.string(),
+  rx: z.int(),
+  tx: z.int(),
+})
+
+/** Share — сколько прошло через канал и через sing-box за время наблюдения. Доля считается делением одного на другое и осмысленна только вместе с Seconds: окно начинается, когда демон впервые снял показания. */
+export const ShareSchema = z.object({
+  link: z.int(),
+  proxy: z.int(),
+  seconds: z.int(),
+})
+
+/** Process — показания чужого процесса. */
+export const ProcessSchema = z.object({
+  pid: z.int(),
+  /** RSS — резидентная память процесса в байтах. У sing-box она больше, чем `memory` из Clash API: тот отдаёт только память рантайма Go, а здесь весь процесс вместе с резидентным кодом бинаря. */
+  rss: z.int(),
+})
+
+/** Daemon — показания самого metaboxd. */
+export const DaemonSchema = z.object({
+  rss: z.int(),
+  heap: z.int(),
+  goroutines: z.int(),
+})
+
+/** Stat — показания устройства на момент опроса. */
+export const StatSchema = z.object({
+  load: LoadSchema,
+  memory: MemorySchema,
+  /** Thermal пуст, когда термозон у платы нет. */
+  thermal: z.array(ZoneSchema),
+  /** Uplink пуст, когда маршрута по умолчанию нет. */
+  uplink: LinkSchema.optional(),
+  /** Share — объёмы канала и sing-box за время наблюдения демона. */
+  share: ShareSchema,
+  /** Singbox пуст, когда процесс не найден: маршрутизации на устройстве может не быть вовсе. */
+  singbox: ProcessSchema.optional(),
+  daemon: DaemonSchema,
+  /** Uptime — секунды с загрузки устройства. */
+  uptime: z.int(),
 })
 
 /** Connection — соединение в контракте демона. Форма панели не зависит от того, каким источником соединение прочитано (ADR-0006): Clash API и gRPC форка расходятся и в наборе полей, и в формате правила, поэтому сведение к одной модели делает демон, а не фронт. */
@@ -153,14 +236,24 @@ export type ChainWire = z.infer<typeof ChainSchema>
 export type CheckDetailsWire = z.infer<typeof CheckDetailsSchema>
 export type ConnectionWire = z.infer<typeof ConnectionSchema>
 export type ConnectionsSnapshotWire = z.infer<typeof ConnectionsSnapshotSchema>
+export type DaemonWire = z.infer<typeof DaemonSchema>
 export type ErrorWire = z.infer<typeof ErrorSchema>
 export type EventWire = z.infer<typeof EventSchema>
 export type ExplanationWire = z.infer<typeof ExplanationSchema>
 export type HealthWire = z.infer<typeof HealthSchema>
+export type HistoryWire = z.infer<typeof HistorySchema>
+export type LinkWire = z.infer<typeof LinkSchema>
+export type LoadWire = z.infer<typeof LoadSchema>
 export type MatchWire = z.infer<typeof MatchSchema>
+export type MemoryWire = z.infer<typeof MemorySchema>
+export type PointWire = z.infer<typeof PointSchema>
+export type ProcessWire = z.infer<typeof ProcessSchema>
 export type RuleWire = z.infer<typeof RuleSchema>
 export type ServiceWire = z.infer<typeof ServiceSchema>
+export type ShareWire = z.infer<typeof ShareSchema>
+export type StatWire = z.infer<typeof StatSchema>
 export type StatusWire = z.infer<typeof StatusSchema>
 export type TransactionWire = z.infer<typeof TransactionSchema>
 export type VersionWire = z.infer<typeof VersionSchema>
 export type VersionsWire = z.infer<typeof VersionsSchema>
+export type ZoneWire = z.infer<typeof ZoneSchema>

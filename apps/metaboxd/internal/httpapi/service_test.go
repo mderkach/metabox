@@ -58,6 +58,7 @@ type serviceBody struct {
 	Status    string `json:"status"`
 	Uptime    int    `json:"uptime"`
 	Binary    string `json:"binary"`
+	Managed   bool   `json:"managed"`
 	LastError string `json:"lastError"`
 }
 
@@ -211,5 +212,49 @@ func TestServiceAbsent(t *testing.T) {
 
 	if got.status != http.StatusNotFound {
 		t.Errorf("код ответа: получили %d, ожидали %d", got.status, http.StatusNotFound)
+	}
+}
+
+// Маршрутизацией на устройстве может владеть чужой пакет: он поднимает тот же
+// бинарь своей службой, и procd о нём ничего не знает.
+func TestServiceStateObservedRuntime(t *testing.T) {
+	tests := []struct {
+		name        string
+		running     bool
+		observed    bool
+		wantStatus  string
+		wantManaged bool
+	}{
+		{"служба ведёт процесс", true, true, "running", true},
+		{"процесс жив мимо службы", false, true, "running", false},
+		{"процесса нет", false, false, "stopped", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			srv := httptest.NewServer(httpapi.NewServer(
+				&fakeApplier{},
+				fakeReader{},
+				testLogger(t),
+				httpapi.Options{
+					Version:        "test",
+					SingboxVersion: testSingboxVersion,
+					Service:        &fakeService{running: tt.running, uptime: time.Minute},
+					Runtime:        func(context.Context) bool { return tt.observed },
+				},
+			))
+			t.Cleanup(srv.Close)
+
+			var body serviceBody
+			request(t, srv, http.MethodGet, "/api/service", "", nil).decode(t, &body)
+
+			if body.Status != tt.wantStatus {
+				t.Errorf("состояние: получили %q, ожидали %q", body.Status, tt.wantStatus)
+			}
+
+			if body.Managed != tt.wantManaged {
+				t.Errorf("владение процессом: получили %v, ожидали %v", body.Managed, tt.wantManaged)
+			}
+		})
 	}
 }

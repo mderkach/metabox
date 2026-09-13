@@ -69,11 +69,13 @@ type clashSnapshot struct {
 	Memory        int64             `json:"memory"`
 }
 
-// connectionsSnapshot переводит снапшот Clash API в контракт демона.
-func connectionsSnapshot(raw json.RawMessage) (json.RawMessage, error) {
+// connectionsSnapshot переводит снапшот Clash API в контракт демона и отдаёт
+// накопленный счётчик байт: по нему считается доля канала через sing-box, а
+// виден он только здесь.
+func connectionsSnapshot(raw json.RawMessage) (json.RawMessage, int64, error) {
 	var source clashSnapshot
 	if err := json.Unmarshal(raw, &source); err != nil {
-		return nil, fmt.Errorf("разбор снапшота соединений: %w", err)
+		return nil, 0, fmt.Errorf("разбор снапшота соединений: %w", err)
 	}
 
 	snapshot := ConnectionsSnapshot{
@@ -103,10 +105,10 @@ func connectionsSnapshot(raw json.RawMessage) (json.RawMessage, error) {
 
 	body, err := json.Marshal(snapshot)
 	if err != nil {
-		return nil, fmt.Errorf("сборка снапшота соединений: %w", err)
+		return nil, 0, fmt.Errorf("сборка снапшота соединений: %w", err)
 	}
 
-	return body, nil
+	return body, snapshot.UploadTotal + snapshot.DownloadTotal, nil
 }
 
 // splitRule разводит условия и исход правила и отмечает исход по умолчанию.

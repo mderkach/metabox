@@ -14,6 +14,7 @@ import (
 	"metabox/internal/clashapi"
 	"metabox/internal/config"
 	"metabox/internal/contract"
+	"metabox/internal/history"
 	"metabox/internal/route"
 	"metabox/internal/singbox"
 )
@@ -82,12 +83,30 @@ type Options struct {
 	// Explain объясняет маршрут соединения (ADR-0007). nil означает, что
 	// источника рантайма нет: экран соединений остаётся без объяснения.
 	Explain Explainer
+	// History отдаёт историю трафика, накопленную демоном. nil означает, что
+	// её никто не копит: график глубже минуты не показывается.
+	History HistoryReader
+	// Runtime сообщает, работает ли на устройстве процесс sing-box. nil
+	// означает, что наблюдать нечем: состояние службы тогда читается только у
+	// procd, и чужой процесс панель не увидит.
+	Runtime RuntimeObserver
 	// ConfigPath — путь файла, которым владеет демон. Панель показывает его
 	// как факт об устройстве, а задаётся он флагами `-config-dir` и
 	// `-config-name`: без этого поля интерфейс показывал бы значение по
 	// умолчанию независимо от того, с чем демон запущен.
 	ConfigPath string
 }
+
+// HistoryReader отдаёт накопленную историю трафика. Интерфейс объявлен здесь,
+// у потребителя.
+type HistoryReader interface {
+	Points() []history.Point
+	Step() int
+}
+
+// RuntimeObserver сообщает, работает ли на устройстве процесс sing-box.
+// Интерфейс объявлен здесь, у потребителя.
+type RuntimeObserver func(ctx context.Context) bool
 
 // Server держит зависимости обработчиков и собранную цепочку middleware.
 type Server struct {
@@ -102,6 +121,8 @@ type Server struct {
 	events         http.Handler
 	clash          http.Handler
 	explain        Explainer
+	history        HistoryReader
+	runtime        RuntimeObserver
 	configPath     string
 	handler        http.Handler
 }
@@ -121,6 +142,8 @@ func NewServer(applier Applier, reader ConfigReader, log *slog.Logger, opts Opti
 		events:         opts.Events,
 		clash:          opts.Clash,
 		explain:        opts.Explain,
+		history:        opts.History,
+		runtime:        opts.Runtime,
 		configPath:     opts.ConfigPath,
 	}
 	s.handler = s.routes()
@@ -148,6 +171,10 @@ func (s *Server) routes() http.Handler {
 
 	if s.explain != nil {
 		mux.HandleFunc("GET /api/connections/{id}/route", s.handleExplain)
+	}
+
+	if s.history != nil {
+		mux.HandleFunc("GET /api/history", s.handleHistory)
 	}
 
 	if s.service != nil {
@@ -335,7 +362,11 @@ func (s *Server) handleExplain(w http.ResponseWriter, r *http.Request) {
 // ServiceState приводит состояние службы к форме ответа. Экспортируется,
 // потому что то же тело уходит в поток событий: панель обязана получать один
 // формат независимо от того, ручкой оно пришло или потоком (ADR-0006).
-func ServiceState(state singbox.State, binary string, err error) any {
+//
+// Аргумент observed — найден ли на устройстве живой процесс sing-box. Он важен,
+// когда служба демона остановлена: маршрутизацией может владеть чужой пакет,
+// и без этого признака панель показывала бы «остановлен» при идущем трафике.
+func ServiceState(state singbox.State, binary string, err error, observed bool) any {
 	body := contract.Service{Status: "stopped", Binary: binary}
 
 	if err != nil {
@@ -348,11 +379,30 @@ func ServiceState(state singbox.State, binary string, err error) any {
 	case state.Running:
 		body.Status = "running"
 		body.Uptime = int(state.Uptime.Seconds())
+		body.Managed = true
+	case observed:
+		// Процесс есть, но поднят не службой демона: возраст его procd не
+		// знает, и панель показывает возраст прочерком.
+		body.Status = "running"
 	case state.Failed:
 		body.Status = "failed"
 	}
 
 	return body
+}
+
+// observeRuntime отвечает на вопрос «процесс sing-box вообще жив». Без
+// наблюдателя ответ отрицательный: это то же, что было до его появления.
+func (s *Server) observeRuntime(ctx context.Context) bool {
+	return s.runtime != nil && s.runtime(ctx)
+}
+
+// handleHistory отдаёт историю трафика: точки идут подряд с шагом ответа.
+func (s *Server) handleHistory(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(s.log, w, http.StatusOK, contract.History{
+		StepSeconds: s.history.Step(),
+		Points:      s.history.Points(),
+	})
 }
 
 // handleServiceState отдаёт состояние сервиса. Ошибка опроса — не отказ
@@ -363,7 +413,7 @@ func (s *Server) handleServiceState(w http.ResponseWriter, r *http.Request) {
 		s.log.Warn("состояние сервиса не прочитано", "err", err)
 	}
 
-	writeJSON(s.log, w, http.StatusOK, ServiceState(state, s.singboxVersion, err))
+	writeJSON(s.log, w, http.StatusOK, ServiceState(state, s.singboxVersion, err, s.observeRuntime(r.Context())))
 }
 
 // handleServiceAction выполняет действие и отдаёт новое состояние: гадать по

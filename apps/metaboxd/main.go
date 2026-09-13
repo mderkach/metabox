@@ -9,16 +9,20 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
 	"metabox/internal/apply"
 	"metabox/internal/clashapi"
 	"metabox/internal/config"
+	"metabox/internal/device"
 	"metabox/internal/events"
+	"metabox/internal/history"
 	"metabox/internal/httpapi"
 	"metabox/internal/procd"
 	"metabox/internal/route"
@@ -43,6 +47,12 @@ const (
 	// Периоды опроса источников потока; чем они заданы — events.Options.
 	connectionsInterval = time.Second
 	serviceInterval     = 5 * time.Second
+
+	// История трафика: точка на десять сэмплов потока и шесть часов глубины.
+	// Это 2160 точек по два счётчика — десятки килобайт на всё окно.
+	historyStep         = 10
+	historyPoints       = 6 * int(time.Hour/time.Second) / historyStep
+	systemInterval      = 2 * time.Second
 	streamRetryInterval = 3 * time.Second
 )
 
@@ -137,7 +147,14 @@ func run(log *slog.Logger, s settings) error {
 		clashHandler = clash
 	}
 
-	source := events.NewClashSource(clashSettings(store), serviceState(service, singboxVersion), healthRequestTimeout)
+	sysinfo := device.New(device.Options{Port: clashPort(store)})
+
+	source := events.NewClashSource(
+		clashSettings(store),
+		serviceState(service, singboxVersion, sysinfo),
+		systemState(sysinfo, log),
+		healthRequestTimeout,
+	)
 
 	hub := events.New(
 		source,
@@ -145,9 +162,22 @@ func run(log *slog.Logger, s settings) error {
 		events.Options{
 			ConnectionsInterval: connectionsInterval,
 			ServiceInterval:     serviceInterval,
+			SystemInterval:      systemInterval,
 			RetryInterval:       streamRetryInterval,
 		},
 	)
+
+	// Доля канала через sing-box считается за всё время работы демона, поэтому
+	// учёт не ждёт подписчика: приращения, не снятые вовремя, теряются.
+	traffic := history.New(historyStep, historyPoints)
+
+	accounting := events.NewAccounting(source, sysinfo, traffic, log, events.Options{
+		SystemInterval: systemInterval,
+		RetryInterval:  streamRetryInterval,
+	})
+
+	accounting.Start()
+	defer accounting.Close()
 
 	api := httpapi.NewServer(manager, store, log, httpapi.Options{
 		Version:        version.Version,
@@ -158,6 +188,8 @@ func run(log *slog.Logger, s settings) error {
 		Events:         hub,
 		Clash:          clashHandler,
 		Explain:        route.NewExplainer(source),
+		History:        traffic,
+		Runtime:        sysinfo.Alive,
 		ConfigPath:     store.Path(),
 	})
 
@@ -237,14 +269,48 @@ func clashSettings(store *config.Store) events.Resolver {
 
 // serviceState отдаёт в поток то же состояние службы, что и ручка: панель
 // обязана видеть одно и то же независимо от того, откуда пришло.
-func serviceState(service *singbox.Client, binary string) events.ServiceReader {
+func serviceState(service *singbox.Client, binary string, sysinfo *device.Reader) events.ServiceReader {
 	return func(ctx context.Context) (json.RawMessage, error) {
 		// Отказ опроса не прерывает публикацию: иначе поток замирал бы на
 		// последнем удачном значении, и панель показывала бы упавший сервис
 		// работающим.
 		state, err := service.State(ctx)
 
-		return json.Marshal(httpapi.ServiceState(state, binary, err))
+		return json.Marshal(httpapi.ServiceState(state, binary, err, sysinfo.Alive(ctx)))
+	}
+}
+
+// systemState отдаёт в поток показания устройства. Частичный отказ чтения не
+// отменяет публикацию: термозон может не быть, а процесс sing-box может быть
+// не запущен — остальные показания при этом читаются.
+func systemState(reader *device.Reader, log *slog.Logger) events.SystemReader {
+	return func(ctx context.Context) (json.RawMessage, error) {
+		stat, err := reader.Read(ctx)
+		if err != nil {
+			log.Debug("показания устройства прочитаны частично", "err", err)
+		}
+
+		return json.Marshal(stat)
+	}
+}
+
+// clashPort отдаёт порт контроллера из применённого конфига: по нему демон
+// находит процесс, который ведёт маршрутизацию.
+func clashPort(store *config.Store) device.PortResolver {
+	resolve := configSettings(store)
+
+	return func(ctx context.Context) (int, error) {
+		settings, err := resolve(ctx)
+		if err != nil {
+			return 0, err
+		}
+
+		_, port, err := net.SplitHostPort(settings.Address)
+		if err != nil {
+			return 0, fmt.Errorf("адрес контроллера %q: %w", settings.Address, err)
+		}
+
+		return strconv.Atoi(port)
 	}
 }
 
