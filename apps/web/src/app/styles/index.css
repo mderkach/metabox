@@ -222,12 +222,12 @@
   --route-neutral: oklch(0.485 0.016 265);
 
   --signal-ok: oklch(0.48 0.1 178);
-  --signal-warn: oklch(0.58 0.13 70);
+  --signal-warn: oklch(0.51 0.13 70);
   --signal-bad: oklch(0.53 0.2 24);
   --signal-idle: oklch(0.66 0.012 265);
 
   --series-down: oklch(0.51 0.16 240);
-  --series-up: oklch(0.62 0.13 70);
+  --series-up: oklch(0.51 0.13 70);
 
   --meter-track: oklch(0.905 0.008 265);
 
