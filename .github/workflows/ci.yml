@@ -17,6 +17,10 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: .go-version
+          # У демона зависимостей нет и go.sum тоже, поэтому кэш считается по
+          # манифесту генератора: без пути setup-go ищет go.mod в корне, не
+          # находит и каждый прогон тянет модули заново.
+          cache-dependency-path: tools/schemagen/go.sum
 
       - uses: pnpm/action-setup@v4
 
@@ -70,6 +74,7 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: .go-version
+          cache-dependency-path: tools/schemagen/go.sum
 
       - name: Сборка демона под целевую систему
         # OpenWrt на musl: бинарь с glibc там не запускается
