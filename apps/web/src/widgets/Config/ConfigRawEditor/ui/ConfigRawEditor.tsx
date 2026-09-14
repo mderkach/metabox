@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from 'react';
 import { cn } from '@shared/lib/utils';
 import { Badge, Button, Input } from '@shared/ui';
 
-import { findMatches, lineIndexOf, toJsonTokens } from '../lib';
+import { findMatches, firstParseError, lineIndexOf, toJsonTokens } from '../lib';
 
 /** Один класс на все три слоя: при наложении метрики обязаны совпадать до пикселя. */
 const CODE_CLASS = 'font-mono text-xs/5';
@@ -12,25 +12,19 @@ const CODE_CLASS = 'font-mono text-xs/5';
 /** Совпадение ставится в середину видимой области, а не к её краю. */
 const HALVES = 2;
 
-/** Разбор JSON сообщает позицию в символах — экрану нужна строка. */
+/** Разбор сообщает позицию в символах — экрану нужна строка. */
 function lineOfPosition(text: string, position: number): number {
   return lineIndexOf(text, position) + 1;
 }
 
 function parseError(text: string): string | null {
-  try {
-    JSON.parse(text);
+  const failure = firstParseError(text);
 
+  if (failure === null) {
     return null;
-  } catch (error) {
-    if (!(error instanceof SyntaxError)) {
-      return 'JSON не разобран';
-    }
-
-    const at = /position (\d+)/.exec(error.message)?.[1];
-
-    return at === undefined ? error.message : `строка ${String(lineOfPosition(text, Number(at)))}: ${error.message}`;
   }
+
+  return `строка ${String(lineOfPosition(text, failure.offset))}: ${failure.text}`;
 }
 
 /**

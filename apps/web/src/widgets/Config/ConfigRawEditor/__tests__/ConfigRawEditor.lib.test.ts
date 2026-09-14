@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { findMatches, lineIndexOf, toJsonTokens } from '../lib/ConfigRawEditor.lib';
+import { findMatches, firstParseError, lineIndexOf, toJsonTokens } from '../lib/ConfigRawEditor.lib';
 
 describe('разбор конфига на цветные куски', () => {
   it('склеенные куски дословно повторяют исходный текст', () => {
@@ -66,5 +66,26 @@ describe('номер строки по позиции', () => {
   it('считает переводы строки до позиции, а не включая её', () => {
     expect(lineIndexOf('a\nb\nc', 2)).toBe(1);
     expect(lineIndexOf('a\nb\nc', 4)).toBe(2);
+  });
+});
+
+describe('разбор текста конфига', () => {
+  it('принимает комментарии — их принимает и сам бинарь', () => {
+    expect(firstParseError('{\n  // адрес панели\n  "log": { "level": "info" }\n}')).toBeNull();
+  });
+
+  it('принимает запятую перед закрывающей скобкой', () => {
+    expect(firstParseError('{ "outbounds": [{ "tag": "direct" },], }')).toBeNull();
+  });
+
+  it('называет ошибку по-русски и показывает, где она', () => {
+    const failure = firstParseError('{\n  "log": { "level": "info" \n}');
+
+    expect(failure?.text).toBe('не закрыта фигурная скобка');
+    expect(lineIndexOf('{\n  "log": { "level": "info" \n}', failure?.offset ?? 0)).toBe(2);
+  });
+
+  it('пустой текст считает ошибкой: конфиг не может быть пустым', () => {
+    expect(firstParseError('')).not.toBeNull();
   });
 });

@@ -1,4 +1,49 @@
-import { createScanner } from 'jsonc-parser';
+import { createScanner, type ParseError, parse } from 'jsonc-parser';
+
+/**
+ * Коды разбора `jsonc-parser` человеческим текстом. Сам он печатает их
+ * английскими именами вроде `CloseBraceExpected`, а починить по ним опечатку
+ * владельцу роутера нечем.
+ */
+const PARSE_ERROR_TEXT: Record<number, string | undefined> = {
+  1: 'непонятный символ',
+  2: 'неверная запись числа',
+  3: 'ожидалось имя поля',
+  4: 'ожидалось значение',
+  5: 'пропущено двоеточие',
+  6: 'пропущена запятая',
+  7: 'не закрыта фигурная скобка',
+  8: 'не закрыта квадратная скобка',
+  9: 'лишнее содержимое после конца конфига',
+  10: 'непонятный комментарий',
+  11: 'не закрыт комментарий',
+  12: 'не закрыта строка',
+  13: 'оборванное число',
+  14: 'неверная escape-последовательность Unicode',
+  15: 'неверная escape-последовательность',
+  16: 'недопустимый символ',
+};
+
+/**
+ * Первая ошибка разбора или `null`, когда текст разобран.
+ *
+ * Диалект тот же, что у бинаря: комментарии и запятая перед закрывающей
+ * скобкой — не ошибка, sing-box такой конфиг принимает, а `JSON.parse` на нём
+ * спотыкается и показал бы владельцу выдуманную ошибку в его рабочем файле.
+ */
+export function firstParseError(text: string): { offset: number; text: string } | null {
+  const errors: ParseError[] = [];
+
+  parse(text, errors, { allowTrailingComma: true, allowEmptyContent: false });
+
+  if (errors.length === 0) {
+    return null;
+  }
+
+  const [first] = errors;
+
+  return { offset: first.offset, text: PARSE_ERROR_TEXT[first.error] ?? 'конфиг не разобран' };
+}
 
 export interface JsonToken {
   text: string;
