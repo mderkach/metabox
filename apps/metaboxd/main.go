@@ -79,7 +79,8 @@ type settings struct {
 func main() {
 	var s settings
 
-	flag.StringVar(&s.addr, "listen", "127.0.0.1:8080", "адрес и порт, который слушает демон")
+	flag.StringVar(&s.addr, "listen", "127.0.0.1:8080",
+		"адреса и порты, которые слушает демон; несколько — через запятую")
 	flag.StringVar(&s.allowedOrigin, "allowed-origin", "",
 		"дополнительный разрешённый Origin мутирующих запросов; нужен дев-стенду")
 	flag.StringVar(&s.configDir, "config-dir", "/etc/sing-box", "каталог конфига sing-box")
@@ -197,8 +198,16 @@ func run(log *slog.Logger, s settings) error {
 		ConfigPath:     store.Path(),
 	})
 
+	listeners, failures, err := httpapi.Listen(httpapi.Addrs(s.addr))
+	if err != nil {
+		return fmt.Errorf("слушатели: %w", err)
+	}
+
+	for _, failure := range failures {
+		log.Warn("адрес не открыт, панель на нём недоступна", "err", failure)
+	}
+
 	srv := &http.Server{
-		Addr:              s.addr,
 		Handler:           api,
 		ReadHeaderTimeout: readHeaderTimeout,
 		ReadTimeout:       readTimeout,
@@ -212,16 +221,19 @@ func run(log *slog.Logger, s settings) error {
 	// остановка демона с открытой панелью упиралась бы в таймаут.
 	srv.RegisterOnShutdown(hub.Close)
 
-	serveErr := make(chan error, 1)
-	go func() {
-		err := srv.ListenAndServe()
-		if errors.Is(err, http.ErrServerClosed) {
-			err = nil
-		}
-		serveErr <- err
-	}()
+	serveErr := make(chan error, len(listeners))
 
-	log.Info("демон запущен", "addr", s.addr, "version", version.Version)
+	for _, listener := range listeners {
+		go func() {
+			err := srv.Serve(listener)
+			if errors.Is(err, http.ErrServerClosed) {
+				err = nil
+			}
+			serveErr <- err
+		}()
+	}
+
+	log.Info("демон запущен", "addr", httpapi.Bound(listeners), "version", version.Version)
 
 	select {
 	case err := <-serveErr:

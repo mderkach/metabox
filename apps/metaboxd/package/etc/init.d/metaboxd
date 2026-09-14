@@ -6,13 +6,21 @@ USE_PROCD=1
 
 PROG=/usr/bin/metaboxd
 
-# Адрес по умолчанию берётся у интерфейса lan: демон обязан слушать только его
-# (AC-18), а зашитый в скрипт адрес разъехался бы с сетью владельца.
-lan_address() {
+# Адреса берутся у сетей из listen_interface: панель обязана быть доступна со
+# всех локальных сетей владельца и ни с одной чужой, а зашитый в скрипт адрес
+# разъехался бы с его сетью. Список адресов уходит демону через запятую.
+local_addresses() {
 	. /lib/functions/network.sh
-	local addr
+	local iface addr list=""
+
 	network_flush_cache
-	network_get_ipaddr addr lan && echo "$addr"
+
+	for iface in $1; do
+		network_get_ipaddr addr "$iface" || continue
+		list="${list:+$list,}$addr:$2"
+	done
+
+	echo "$list"
 }
 
 start_service() {
@@ -23,7 +31,7 @@ start_service() {
 
 	config_load metabox
 
-	local enabled listen_addr listen_port
+	local enabled listen_addr listen_port listen_interface listen
 	local config_dir config_name state_dir
 	local singbox init_script ubus clash_port log_level
 
@@ -32,6 +40,7 @@ start_service() {
 
 	config_get listen_addr main listen_addr ""
 	config_get listen_port main listen_port 8088
+	config_get listen_interface main listen_interface "lan"
 	config_get config_dir main config_dir /etc/sing-box
 	config_get config_name main config_name config.json
 	config_get state_dir main state_dir /etc/metabox
@@ -41,9 +50,14 @@ start_service() {
 	config_get clash_port main clash_port 9090
 	config_get log_level main log_level info
 
-	[ -n "$listen_addr" ] || listen_addr="$(lan_address)"
-	[ -n "$listen_addr" ] || {
-		echo "metaboxd: адрес lan не определён, задайте listen_addr в /etc/config/metabox" >&2
+	if [ -n "$listen_addr" ]; then
+		listen="$listen_addr:$listen_port"
+	else
+		listen="$(local_addresses "$listen_interface" "$listen_port")"
+	fi
+
+	[ -n "$listen" ] || {
+		echo "metaboxd: у сетей '$listen_interface' нет адресов, задайте listen_addr в /etc/config/metabox" >&2
 		return 1
 	}
 
@@ -52,7 +66,7 @@ start_service() {
 
 	procd_open_instance metaboxd
 	procd_set_param command "$PROG" \
-		-listen "$listen_addr:$listen_port" \
+		-listen "$listen" \
 		-config-dir "$config_dir" \
 		-config-name "$config_name" \
 		-state-dir "$state_dir" \
@@ -68,9 +82,18 @@ start_service() {
 }
 
 service_triggers() {
+	local iface
+
 	procd_add_reload_trigger metabox
-	# Адрес берётся у lan: смена сети должна поднимать демон на новом адресе.
-	procd_add_reload_interface_trigger lan
+
+	# Адреса берутся у сетей: поднятая позже гостевая сеть должна получить
+	# панель без ручного рестарта.
+	config_load metabox
+	config_get iface main listen_interface "lan"
+
+	for iface in $iface; do
+		procd_add_reload_interface_trigger "$iface"
+	done
 }
 
 # Без своей reload_service триггеры выше только перечитали бы конфигурацию, не

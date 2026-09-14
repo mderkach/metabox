@@ -4,9 +4,12 @@
 
 config metabox 'main'
 	option enabled '1'
-	# Пустой адрес означает «взять у интерфейса lan».
+	# Пустой адрес означает «взять у интерфейсов из listen_interface».
 	option listen_addr ''
 	option listen_port '8088'
+	# Сети, с которых доступна панель. Гостевую или отдельную беспроводную
+	# добавляют сюда же: демон слушает адрес каждой из них и ни одной больше.
+	list listen_interface 'lan'
 	option config_dir '/etc/sing-box'
 	option config_name 'config.json'
 	option state_dir '/etc/metabox'
