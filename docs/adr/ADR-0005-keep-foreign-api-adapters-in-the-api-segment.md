@@ -1,6 +1,6 @@
 # ADR-0005. Держать адаптеры чужих API в `api`-сегменте слайса, а не отдельным слоем `src/adapters`
 
-- Статус: Proposed
+- Статус: Accepted
 - Дата: 2026-09-12
 - Ответственные: владелец репозитория
 
@@ -8,16 +8,16 @@
 
 [PRD, A.2](../PRD.md) задаёт трёхслойную модель конфига: схема форка → адаптер → модель приложения. Экран зависит от модели приложения, поэтому ломающее изменение схемы форка не доходит до экранов. Требование это не отменяется — вопрос только в том, где живёт средний слой.
 
-Гайд [Architecture&Style](../../apps/web/docs/guides/Architecture%26Style.md) до этого решения обещал каталог `src/adapters/` вне слоёв FSD: «при ломающем изменении API форка правится только он». Алиас `@adapters` объявлен в `vite.config.ts`, `tsconfig.json`, `tsconfig.app.json`, `tsconfig.mocks.json` и в списке слоёв линтера границ `tools/fsdBoundaries.js`.
+Гайд [Architecture&Style](../../apps/web/docs/guides/Architecture&Style.md) до этого решения обещал каталог `src/adapters/` вне слоёв FSD: «при ломающем изменении API форка правится только он». Алиас `@adapters` объявлен в `vite.config.ts`, `tsconfig.json`, `tsconfig.app.json`, `tsconfig.mocks.json` и в списке слоёв линтера границ `tools/fsdBoundaries.js`.
 
 Фактически за шесть экранов каталог не появился, а адаптация чужих форматов разошлась по `api`-сегментам слайсов:
 
-- `entities/Connection/api/Connection.dto.ts` — формы ответов Clash API `/connections`;
-- `entities/Proxy/api/Proxy.dto.ts` — `/proxies` и `/providers/proxies`;
-- `entities/Daemon/api/Daemon.dto.ts` — `/version`, `/configs`, `/traffic`, `/memory` и состояние сервиса;
-- `entities/*/model/*.mapper.ts` — перевод DTO в модель экрана (`toConnectionRow`, `toProxyGroups`, `toRuleRows`).
+- `entities/Connection/api` — формы снапшота соединений;
+- `entities/Proxy/api` — `/proxies` и `/providers/proxies`;
+- `entities/Daemon/api` — статус демона, топики потока рантайма и состояние службы;
+- `entities/*/model` — перевод DTO в модель экрана.
 
-Владелец репозитория назвал это правилом по ходу работ: «адаптеры в апи слое должны лежать, а не отдельной папкой». Расхождение записано в [TechDebt](../TechDebt.md) и до сих пор не закрыто: правило действует, а гайд, PRD и пять конфигов говорят обратное.
+Владелец репозитория назвал это правилом по ходу работ: «адаптеры в апи слое должны лежать, а не отдельной папкой». На момент постановки вопроса правило действовало, а гайд, PRD и пять конфигов говорили обратное.
 
 В scope: где размещается код, переводящий чужой формат в модель приложения, и что делать с алиасом `@adapters`. Вне scope: сама трёхслойная модель из A.2 и способ получения схемы (ADR-0001) — они не меняются.
 
