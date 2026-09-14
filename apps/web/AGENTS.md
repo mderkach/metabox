@@ -18,5 +18,5 @@
 ## Правки в `apps/web/`
 
 - `src/shared/ui/**` — вендорная зона shadcn/ui: файлы генерирует CLI, правила нейминга к ним не применяются, переименовывать нельзя. Наружу зона видна через `src/shared/ui/index.ts`.
-- `src/shared/api/generated.ts` — артефакт `tools/schemagen`, руками не правится.
+- `src/shared/api/generated.ts` — артефакт `tools/schemagen`, руками не правится. То же и `src/shared/api/daemon.generated.ts` — его пишет `cmd/contractgen` демона, пересобирает `make schema-daemon`.
 - Форматирование и линт — `pnpm format`, `pnpm lint`. Руками стиль не выравнивать.

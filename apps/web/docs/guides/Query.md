@@ -18,15 +18,17 @@ TanStack Query v5 поверх axios. Транспорт закрыт врапп
 
 ```ts
 export const CONFIG_ENDPOINT = {
-  draft: () => '/api/config/draft',
-  applied: () => '/api/config',
-  apply: () => '/api/config/apply',
+  config: () => '/api/config',
+  versions: () => '/api/config/versions',
+  version: (id: number) => `/api/config/versions/${id}`,
 } as const;
 
-export async function getDraftConfig(config?: AxiosRequestConfig): Promise<ConfigDto> {
-  return ApiClientInstance.get<ConfigDto>(CONFIG_ENDPOINT.draft(), config);
+export async function getConfigVersions(config?: AxiosRequestConfig): Promise<ConfigVersionsWire> {
+  return ApiClientInstance.get<ConfigVersionsWire>(CONFIG_ENDPOINT.versions(), config);
 }
 ```
+
+Ручки записи конфига нет: черновик живёт в сторе документа, а файл пишет только протокол Apply. Заводить `PUT /api/config` нельзя.
 
 Требования:
 
@@ -53,10 +55,9 @@ queryFn: async ({ signal }) => toRouteExplanation(await getRouteExplanation(id, 
 ```ts
 export const CONFIG_QUERY = {
   all: ['config'] as const,
-  draft: () => [...CONFIG_QUERY.all, 'draft'] as const,
-  applied: () => [...CONFIG_QUERY.all, 'applied'] as const,
+  current: () => [...CONFIG_QUERY.all, 'current'] as const,
   history: () => [...CONFIG_QUERY.all, 'history'] as const,
-  version: (id: string) => [...CONFIG_QUERY.history(), id] as const,
+  apply: (id: string) => [...CONFIG_QUERY.all, 'apply', id] as const,
 } as const;
 ```
 
@@ -67,18 +68,18 @@ export const CONFIG_QUERY = {
 ## Фабрика опций и хук
 
 ```ts
-export function getDraftConfigOptions() {
+export function getConfigOptions() {
   return queryOptions({
-    queryKey: CONFIG_QUERY.draft(),
-    queryFn: ({ signal }) => getDraftConfig({ signal }),
+    queryKey: CONFIG_QUERY.current(),
+    queryFn: getConfig,
     gcTime: CACHE_TIME.Hour,
     staleTime: CACHE_TIME.Minute,
-    meta: { showError: true, errorMessageKey: 'config.draft.fetchFailed' },
+    meta: { showError: true, errorMessageKey: 'config.fetchFailed' },
   });
 }
 
-export function useDraftConfig() {
-  return useQuery(getDraftConfigOptions());
+export function useConfig() {
+  return useQuery(getConfigOptions());
 }
 ```
 
@@ -87,12 +88,13 @@ export function useDraftConfig() {
 Константы времени живут в `shared/api`:
 
 ```ts
-const MINUTE = 60 * 1000;
+const SECOND = MS_IN_SECOND;
+const MINUTE = SECONDS_IN_MINUTE * SECOND;
 
 export const CACHE_TIME = {
+  Second: SECOND,
   Minute: MINUTE,
-  Hour: MINUTE * 60,
-  Day: MINUTE * 60 * 24,
+  Hour: MINUTES_IN_HOUR * MINUTE,
 } as const;
 ```
 
@@ -207,18 +209,24 @@ export function useApplyConfig() {
 
 ## Что идёт мимо Query
 
-WebSocket-потоки дашборда (трафик, список соединений) в Query **не заворачиваются** — они пишут напрямую в стор потока. Причина в PRD, A.10: кэш поверх высокочастотного потока даёт устаревшие данные и лишние рендеры на 5000 соединений.
+Рантайм дашборда — трафик, память, показания платы, соединения и состояние службы — приходит одним SSE-потоком `GET /api/events`. В Query он **не заворачивается** — топики пишут напрямую в сторы своих слайсов. Причина: кэш поверх высокочастотного потока даёт устаревшие данные и лишние рендеры на 5000 соединений (NFR-2).
 
-Подписка инициализируется в `app/`, обработчики живут в сегменте `api` соответствующего слайса и **обязаны возвращать функцию отписки**:
+WebSocket в панели нет: демон отдаёт поток обычным HTTP-ответом и отклоняет апгрейд на ветке прокси `/api/clash/*`. Всё, что панель меняет, она меняет обычными запросами.
+
+Одно соединение `EventSource` открывает `app/`, и оно же раздаётся слайсам. Обработчик живёт в сегменте `api` своего слайса, берёт данные из конверта через `listenTopic` и **обязан возвращать функцию отписки**:
 
 ```ts
-export function listenConnections(socket: WebSocket) {
-  const handler = (event: MessageEvent) => {
-    StreamStateProto.getState().pushSnapshot(parseSnapshot(event.data));
-  };
+export function listenTraffic(source: StreamSource): () => void {
+  return listenTopic(source, RUNTIME_TOPIC.Traffic, (frame) => {
+    const sample = toTrafficFrame(frame);
 
-  socket.addEventListener('message', handler);
-
-  return () => socket.removeEventListener('message', handler);
+    if (sample !== null) {
+      RuntimeStore.getState().pushTraffic(sample);
+    }
+  });
 }
 ```
+
+Обработчик принимает `StreamSource` — узкий интерфейс подписки, а не сам `EventSource`: так его можно проверить без транспорта.
+
+Конверт несёт сквозной `seq`. Разрыв нумерации означает, что демон отбросил событие медленному читателю, — тогда состояние перезапрашивается запросом, а не достраивается по потоку. Следит за этим `watchSequence` в `shared/api`.
