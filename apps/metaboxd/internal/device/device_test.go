@@ -160,8 +160,13 @@ func TestReadWithoutOptionalSources(t *testing.T) {
 		t.Errorf("остальные показания потеряны: %+v", stat)
 	}
 
-	if stat.Singbox != nil || stat.Thermal != nil {
+	if stat.Singbox != nil || len(stat.Thermal) != 0 {
 		t.Errorf("недостающие источники выдуманы: %+v", stat)
+	}
+
+	// nil уходит в JSON как `null`, и панель теряет на нём весь топик показаний.
+	if stat.Thermal == nil {
+		t.Error("пустые термозоны отданы как nil, панель потеряет весь топик")
 	}
 }
 

@@ -335,23 +335,25 @@ func (r *Reader) uptime() (int, error) {
 	return int(seconds), nil
 }
 
+// thermal читает термозоны платы. Список никогда не nil: nil уходит в JSON
+// как `null`, схема панели ждёт массив и на непонятом поле теряет весь топик
+// показаний целиком — вместе с памятью и аптаймом.
 func (r *Reader) thermal() ([]Zone, error) {
 	root := filepath.Join(r.sys, "class", "thermal")
+
+	zones := []Zone{}
 
 	entries, err := os.ReadDir(root)
 	if err != nil {
 		// Платы без термозон — штатный случай, а не отказ.
 		if errors.Is(err, os.ErrNotExist) {
-			return nil, nil
+			return zones, nil
 		}
 
-		return nil, fmt.Errorf("чтение %s: %w", root, err)
+		return zones, fmt.Errorf("чтение %s: %w", root, err)
 	}
 
-	var (
-		zones    []Zone
-		failures []error
-	)
+	var failures []error
 
 	for _, entry := range entries {
 		if !strings.HasPrefix(entry.Name(), "thermal_zone") {
