@@ -3,6 +3,9 @@ DEVICE_BIN := dist/metaboxd-linux-arm64
 VERSION    ?= dev
 LDFLAGS    := -s -w -X metabox/internal/version.Version=$(VERSION)
 
+# Прижимает версию вниз: директива `go` в go.mod поднимает, но не опускает.
+export GOTOOLCHAIN := go$(shell cat .go-version)
+
 .PHONY: all schema schema-daemon web embed daemon daemon-device daemon-target dev dev-mock dev-mock-missing test test-schemagen lint hooks clean up down sh target-sh apply-check stand-reset
 
 all: daemon

@@ -57,7 +57,7 @@
     "msw": "2.15.0",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
-    "oxlint-tsgolint": "7.0.2001",
+    "oxlint-tsgolint": "catalog:",
     "tailwindcss": "4.3.3",
     "typescript": "6.0.3",
     "vite": "8.2.2",

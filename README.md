@@ -18,7 +18,7 @@
 
 ## Как работать
 
-Нужны Go, Node из [`.nvmrc`](./.nvmrc) и pnpm из поля `packageManager` в [`package.json`](./package.json). Первым делом `pnpm install` — он же ставит git-хуки.
+Нужны Go из [`.go-version`](./.go-version), Node и pnpm из полей `engines` и `packageManager` в [`package.json`](./package.json). Первым делом `pnpm install` — он же ставит git-хуки.
 
 Go-команды выполняются из каталога модуля, поэтому запускать их напрямую из корня не нужно: всё идёт через `make`.
 

@@ -14,7 +14,12 @@
     "@commitlint/config-conventional": "21.2.2",
     "lefthook": "2.1.12",
     "oxfmt": "catalog:",
-    "oxlint": "catalog:"
+    "oxlint": "catalog:",
+    "oxlint-tsgolint": "catalog:"
   },
-  "packageManager": "pnpm@11.25.0"
+  "engines": {
+    "node": "24.21.0",
+    "pnpm": "12.4.1"
+  },
+  "packageManager": "pnpm@12.4.1"
 }

@@ -1,7 +1,6 @@
 # Среда разработки: Go + Node. Целевое окружение — отдельный образ, см. target/Dockerfile.
-# Версия Go пиньуется точно: форк sing-box-extended объявляет `go 1.26.4`, ниже не соберётся.
-ARG GO_VERSION=1.26.7
-FROM golang:${GO_VERSION}-trixie
+# Ветка, а не патч: точную версию задаёт GOTOOLCHAIN из целей Makefile.
+FROM golang:1.26-trixie
 
 # ca-certificates и git нужны go mod; jq и curl — скриптам проверки цикла Apply
 RUN apt-get update \
@@ -11,8 +10,8 @@ RUN apt-get update \
 
 # Версии Node и pnpm берутся из тех же файлов, что читают инструменты
 # разработчика и CI: пакетный репозиторий дал бы свежий мажор, а не тот же.
-COPY .nvmrc package.json /tmp/pin/
-RUN NODE_VERSION="$(tr -d 'v \n' < /tmp/pin/.nvmrc)" \
+COPY package.json /tmp/pin/
+RUN NODE_VERSION="$(jq -r .engines.node /tmp/pin/package.json)" \
  && case "$(dpkg --print-architecture)" in \
       amd64) NODE_ARCH=x64 ;; \
       arm64) NODE_ARCH=arm64 ;; \

@@ -102,4 +102,4 @@ DI-контейнеров и генераторов проводки не бер
 
 `go fix` в Go 1.26 получил набор модернизаторов и умеет переписывать код под новые API. Запускать его массово по репозиторию не нужно: это тот самый unrelated refactor. Точечно на своём диффе — можно.
 
-Версия Go — `1.26.x`, зафиксирована в обоих `go.mod` и в CI. Сборка под устройство: `CGO_ENABLED=0`, `GOOS=linux`, `GOARCH=arm64`, `-ldflags "-s -w -X metabox/internal/version.Version=..."` ([`Makefile`](../../../../Makefile)).
+Версия Go — в `.go-version`; `Makefile` экспортирует из неё `GOTOOLCHAIN`, CI читает тот же файл ([ADR-0016](../../../../docs/adr/ADR-0016-pin-tool-versions-where-tools-read-them.md)). Директива `go` в обоих `go.mod` объявляет ту же версию, но вниз не прижимает — собирать и тестировать через `make`. Сборка под устройство: `CGO_ENABLED=0`, `GOOS=linux`, `GOARCH=arm64`, `-ldflags "-s -w -X metabox/internal/version.Version=..."` ([`Makefile`](../../../../Makefile)).

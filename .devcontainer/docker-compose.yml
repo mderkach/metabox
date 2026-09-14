@@ -8,8 +8,6 @@ services:
       # `.nvmrc` и `packageManager`, а не из собственных копий.
       context: ..
       dockerfile: .devcontainer/Dockerfile.dev
-      args:
-        GO_VERSION: ${GO_VERSION:-1.26.7}
     working_dir: /workspace
     volumes:
       - ../:/workspace
@@ -41,8 +39,6 @@ services:
       # `.nvmrc` и `packageManager`, а не из собственных копий.
       context: ..
       dockerfile: .devcontainer/Dockerfile.dev
-      args:
-        GO_VERSION: ${GO_VERSION:-1.26.7}
     working_dir: /workspace/apps/web
     volumes:
       - ../:/workspace

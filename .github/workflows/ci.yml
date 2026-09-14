@@ -16,14 +16,13 @@ jobs:
 
       - uses: actions/setup-go@v6
         with:
-          # Форк sing-box-extended объявляет `go 1.26.4`, ниже не соберётся
-          go-version: '1.26.7'
+          go-version-file: .go-version
 
       - uses: pnpm/action-setup@v4
 
       - uses: actions/setup-node@v6
         with:
-          node-version-file: .nvmrc
+          node-version-file: package.json
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
@@ -70,7 +69,7 @@ jobs:
 
       - uses: actions/setup-go@v6
         with:
-          go-version: '1.26.7'
+          go-version-file: .go-version
 
       - name: Сборка демона под целевую систему
         # OpenWrt на musl: бинарь с glibc там не запускается
