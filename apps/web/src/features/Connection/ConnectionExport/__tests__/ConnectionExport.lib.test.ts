@@ -60,9 +60,10 @@ describe('выгрузка соединений', () => {
     expect(toExportBody([], EXPORT_FORMAT.Csv).split('\n')).toHaveLength(1);
   });
 
-  it('JSON отдаёт модель строки как есть', () => {
+  it('JSON отдаёт колонки экрана и не выносит индекс поиска', () => {
+    const { searchText: _searchText, ...columns } = makeRow();
     const parsed: unknown = JSON.parse(toExportBody([makeRow()], EXPORT_FORMAT.Json));
 
-    expect(parsed).toEqual([makeRow()]);
+    expect(parsed).toEqual([columns]);
   });
 });

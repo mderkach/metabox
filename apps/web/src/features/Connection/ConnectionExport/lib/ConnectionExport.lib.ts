@@ -65,7 +65,14 @@ function toCsv(rows: ConnectionRow[]): string {
 }
 
 export function toExportBody(rows: ConnectionRow[], format: ExportFormat): string {
-  return format === EXPORT_FORMAT.Csv ? toCsv(rows) : JSON.stringify(rows, null, JSON_INDENT);
+  if (format === EXPORT_FORMAT.Csv) {
+    return toCsv(rows);
+  }
+
+  // searchText — индекс поиска экрана, а не колонка: в файле он только мешает.
+  const columns = rows.map(({ searchText: _searchText, ...rest }) => rest);
+
+  return JSON.stringify(columns, null, JSON_INDENT);
 }
 
 /**
