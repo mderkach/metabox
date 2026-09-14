@@ -1,7 +1,3 @@
-# Хуки ставятся при `pnpm install` (скрипт prepare) или командой `make hooks`.
-# Разделение по стоимости: коммит проверяет только изменённое, push — весь
-# репозиторий целиком, теми же командами, что и CI.
-
 pre-commit:
   parallel: true
   jobs:
@@ -10,30 +6,21 @@ pre-commit:
       run: gofmt -l {staged_files}
       fail_text: Не отформатировано, прогони gofmt -w
 
-    # go vet работает по пакетам, а не по файлам: сузить до изменённого нечем.
     - name: go-vet
       glob: '*.go'
       run: cd apps/metaboxd && go vet ./... && cd ../../tools/schemagen && go vet ./...
 
-    # Артефакт едет в коммите вместе с генератором (CONTRIBUTING.md), иначе
-    # фронт разъезжается со схемой. Правка артефакта в одиночку означает, что
-    # его писали руками.
     - name: generated-schema
       glob: 'apps/web/src/shared/api/generated.ts'
       run: git diff --cached --name-only | grep -q '^tools/schemagen/'
       fail_text: Файл собирает `make schema`; коммить его вместе с правкой tools/schemagen
 
-    # То же для контракта демона: артефакт едет вместе с правкой демона или
-    # генератора, иначе панель разъезжается с тем, что демон отдаёт.
     - name: generated-contract
       glob: 'apps/web/src/shared/api/daemon.generated.ts'
       run: git diff --cached --name-only | grep -qE '^apps/metaboxd/'
       fail_text: Файл собирает `make schema-daemon`; коммить его вместе с правкой apps/metaboxd
 
-    # Сгенерированная схема исключена из обоих списков: она закрыта
-    # `ignorePatterns`, а oxlint и oxfmt выходят с ошибкой, когда после игнора
-    # не остаётся ни одного файла, — коммит одной лишь схемы падал бы на пустом
-    # месте.
+    # oxlint и oxfmt падают, когда после игнора не осталось ни одного файла.
     - name: lint
       glob: '*.{ts,tsx,js,mjs}'
       exclude:
@@ -53,9 +40,6 @@ commit-msg:
     - name: commitlint
       run: node_modules/.bin/commitlint --config commitlint.config.mjs --edit {1}
 
-# Перед push проверяется весь репозиторий: type-aware правила видят проект
-# целиком, и правка одного файла ломает типы в другом — по изменённым файлам
-# это не ловится. У репозитория нет remote, поэтому CI пока не подстрахует.
 pre-push:
   parallel: true
   jobs:
