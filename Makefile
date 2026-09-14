@@ -11,14 +11,17 @@ export GOTOOLCHAIN := go$(shell cat .go-version)
 all: daemon
 
 # Без with_wireguard схема теряет тип warp; go:linkname в форке требует
-# -checklinkname=0.
+# -checklinkname=0. with_purego добавлен сверх набора форка: иначе
+# with_naive_outbound тянет cronet, чей libcronet.a GNU ld на CI отвергает
+# («skipping incompatible»). Схема с purego получается байт в байт та же.
 SINGBOX_DIR = $(shell cd tools/schemagen && go list -m -f '{{.Dir}}' github.com/sagernet/sing-box)
+SCHEMA_TAGS = $(shell cat '$(SINGBOX_DIR)/release/DEFAULT_BUILD_TAGS'),with_purego
+SCHEMA_LDFLAGS = $(shell cat '$(SINGBOX_DIR)/release/LDFLAGS')
 
 schema:
 	mkdir -p apps/web/src/shared/api
 	cd tools/schemagen && go run \
-		-tags "$$(cat '$(SINGBOX_DIR)/release/DEFAULT_BUILD_TAGS')" \
-		-ldflags "$$(cat '$(SINGBOX_DIR)/release/LDFLAGS')" . \
+		-tags "$(SCHEMA_TAGS)" -ldflags "$(SCHEMA_LDFLAGS)" . \
 		-out ../../apps/web/src/shared/api/generated.ts
 
 schema-daemon:
@@ -63,15 +66,13 @@ test:
 
 test-schemagen:
 	cd tools/schemagen && go test \
-		-tags "$$(cat '$(SINGBOX_DIR)/release/DEFAULT_BUILD_TAGS')" \
-		-ldflags "$$(cat '$(SINGBOX_DIR)/release/LDFLAGS')" ./...
+		-tags "$(SCHEMA_TAGS)" -ldflags "$(SCHEMA_LDFLAGS)" ./...
 
 GOLANGCI = go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.2
 
 lint:
 	cd apps/metaboxd && $(GOLANGCI) run ./...
-	cd tools/schemagen && $(GOLANGCI) run \
-		--build-tags "$$(cat '$(SINGBOX_DIR)/release/DEFAULT_BUILD_TAGS')" ./...
+	cd tools/schemagen && $(GOLANGCI) run --build-tags "$(SCHEMA_TAGS)" ./...
 
 hooks:
 	pnpm exec lefthook install
