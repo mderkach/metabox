@@ -1,21 +1,15 @@
-# Целевое окружение: настоящий OpenWrt rootfs с procd и init.d.
-# Заглушки procd здесь намеренно нет: AC-21 требует, чтобы цикл Apply
-# (sing-box check → запись → restart → healthcheck) отрабатывал так же, как на роутере.
+# Настоящий procd, а не заглушка: цикл Apply должен отрабатывать как на роутере.
 
 ARG SINGBOX_VERSION=1.14.0-extended-2.7.1
 ARG SINGBOX_ARCH=arm64
 ARG OPENWRT_TAG=aarch64_generic-24.10.8
-# OpenWrt публикует манифест с нестандартной архитектурой (`linux/aarch64_generic`,
-# `linux/x86-64`), которую Docker не сопоставляет с платформой хоста автоматически.
-# Поэтому платформа задаётся явно и должна совпадать с тегом и с SINGBOX_ARCH.
-# Все глобальные ARG объявлены до первой FROM: объявленные ниже BuildKit относит
-# к стадии, и на уровне следующего FROM они разворачиваются в пустую строку.
+# Архитектура в манифесте OpenWrt нестандартная (`linux/aarch64_generic`), Docker
+# не сопоставит её с хостом сам — платформа задаётся явно и совпадает с тегом.
+# Глобальные ARG объявлены до первой FROM: ниже BuildKit отнёс бы их к стадии.
 ARG OPENWRT_PLATFORM=linux/aarch64_generic
 
-# Бинарь качаем отдельной стадией: в rootfs OpenWrt нет ни curl, ни install,
-# а тянуть их через opkg — лишняя точка отказа (версии репозиториев, сеть, TLS).
-# $BUILDPLATFORM — платформа самой машины сборки: сервис объявляет
-# platform: linux/aarch64_generic, и без этого BuildKit искал бы под неё же и alpine.
+# Отдельная стадия: в rootfs OpenWrt нет ни curl, ни install, а opkg — лишняя
+# точка отказа. $BUILDPLATFORM: иначе BuildKit искал бы alpine под aarch64_generic.
 FROM --platform=$BUILDPLATFORM alpine:3 AS fetch
 ARG SINGBOX_VERSION
 ARG SINGBOX_ARCH
@@ -34,16 +28,11 @@ FROM --platform=${OPENWRT_PLATFORM} openwrt/rootfs:${OPENWRT_TAG}
 COPY --from=fetch /out/sing-box /usr/bin/sing-box
 COPY files/ /
 
-# netifd забирает eth0 в br-lan и присваивает 192.168.1.1, теряя адрес, выданный
-# Docker, — после этого проброс портов в контейнер не работает. Сетевая подсистема
-# роутера стенду не нужна: AC-21 проверяет цикл Apply через procd, а не маршрутизацию.
-# Отключаем именно её, procd/ubus/logd/rpcd остаются настоящими.
-# `/etc/init.d/<svc> disable` на этапе сборки не срабатывает: procd и ubus ещё
-# не запущены. Снимаем симлинки автозапуска напрямую.
-#
-# /var в rootfs OpenWrt — симлинк на /tmp, а /tmp в образе пуст. Без /var/lock и
-# /var/run ubusd не создаёт сокет, и procd поднимается, не запустив ни одного
-# сервиса: контейнер при этом выглядит рабочим.
+# netifd забирает eth0 в br-lan и теряет адрес от Docker — проброс портов после
+# этого не работает; procd/ubus/logd/rpcd остаются настоящими. `init.d disable`
+# на сборке не срабатывает (procd и ubus ещё не подняты) — снимаем симлинки.
+# /var в rootfs — симлинк на пустой /tmp: без /var/lock и /var/run ubusd не создаст
+# сокет, и procd поднимется, не запустив ни одного сервиса.
 RUN rm -f /etc/rc.d/S*dnsmasq /etc/rc.d/S*firewall /etc/rc.d/S*odhcpd /etc/rc.d/S*uhttpd \
  && rm -f /etc/rc.d/S*network /etc/rc.d/K*network \
  && ln -sf ../init.d/sing-box /etc/rc.d/S99sing-box \
@@ -52,13 +41,10 @@ RUN rm -f /etc/rc.d/S*dnsmasq /etc/rc.d/S*firewall /etc/rc.d/S*odhcpd /etc/rc.d/
  && chmod +x /etc/init.d/sing-box /etc/init.d/metaboxd /usr/bin/apply-cycle-check \
  && /usr/bin/sing-box version
 
-# metaboxd приезжает смонтированным томом из dist/ — собирается в dev-контейнере,
-# обе стороны linux/<та же арка>, кросс-компиляция не нужна.
 VOLUME /opt/metabox
 
 EXPOSE 8080 9090
 
-# procd запускается напрямую, а не через /sbin/init: цепочка preinit
-# (/lib/preinit/10_indicate_preinit) гасит сетевые устройства, и контейнер теряет
-# адрес, выданный Docker. Нам нужен именно procd как PID 1 — он и поднимает init.d.
+# Не /sbin/init: цепочка preinit гасит сетевые устройства, и контейнер теряет
+# адрес от Docker.
 CMD ["/sbin/procd"]

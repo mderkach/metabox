@@ -1,42 +1,29 @@
 name: metabox
 
 services:
-  # Среда разработки: здесь живут Go-сборка, Vite и тесты.
   dev:
     build:
-      # Контекст — корень репозитория: версии Node и pnpm образ берёт из
-      # `.nvmrc` и `packageManager`, а не из собственных копий.
       context: ..
       dockerfile: .devcontainer/Dockerfile.dev
     working_dir: /workspace
     volumes:
       - ../:/workspace
-      # Собственный node_modules: в хостовом лежат нативные бинарники под darwin
-      # (rolldown, esbuild), в linux-контейнере они не загружаются.
+      # Свои node_modules: в хостовых лежат нативные бинарники под darwin.
       - web-node-modules:/workspace/apps/web/node_modules
-      # Корневой node_modules тоже свой: pnpm пишет в него состояние воркспейса,
-      # и общий с хостом каталог после установки в контейнере заставляет
-      # хостовый pnpm переустанавливать зависимости.
       - root-node-modules:/workspace/node_modules
       - go-mod:/cache/go/mod
       - go-build:/cache/go/build
       - pnpm-store:/cache/pnpm
     environment:
-      # Демон живёт в target, dev-сервер проксирует к нему запросы API
       METABOX_API_TARGET: http://target:8080
-    # sleep infinity намеренно: к этому сервису подключается devcontainer, и
-    # главный процесс обязан переживать падения инструментов.
+    # К сервису подключается devcontainer: главный процесс обязан переживать
+    # падения инструментов.
     command: sleep infinity
     depends_on:
       - target
 
-  # Дев-сервер вынесен из dev отдельным сервисом: AC-20 требует поднимать фронт
-  # с HMR той же командой, что и остальное, а занимать им главный процесс dev
-  # нельзя — к нему подключается devcontainer.
   vite:
     build:
-      # Контекст — корень репозитория: версии Node и pnpm образ берёт из
-      # `.nvmrc` и `packageManager`, а не из собственных копий.
       context: ..
       dockerfile: .devcontainer/Dockerfile.dev
     working_dir: /workspace/apps/web
@@ -49,15 +36,12 @@ services:
       - '5173:5173' # Vite HMR
     environment:
       METABOX_API_TARGET: http://target:8080
-      # Без TTY pnpm отказывается пересобирать node_modules и падает
-      # (ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY). CI=true — штатный для
-      # pnpm способ работать без интерактивного подтверждения.
+      # Без TTY pnpm не пересоберёт node_modules и упадёт на подтверждении.
       CI: 'true'
     command: pnpm dev --host 0.0.0.0
     depends_on:
       - target
 
-  # Целевое окружение: OpenWrt с procd, init.d и sing-box-extended.
   target:
     build:
       context: ./target
@@ -67,9 +51,8 @@ services:
         OPENWRT_PLATFORM: ${OPENWRT_PLATFORM:-linux/aarch64_generic}
         SINGBOX_VERSION: ${SINGBOX_VERSION:-1.14.0-extended-2.7.1}
         SINGBOX_ARCH: ${SINGBOX_ARCH:-arm64}
-    # procd — это init: ему нужны собственные namespace и право поднимать сервисы.
-    # Границу безопасности держит сам контейнер, внутрь смонтирован только dist/.
     platform: ${OPENWRT_PLATFORM:-linux/aarch64_generic}
+    # procd как init: нужны свои namespace и право поднимать сервисы.
     privileged: true
     volumes:
       - ../dist:/opt/metabox:ro
