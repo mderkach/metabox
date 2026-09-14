@@ -39,7 +39,7 @@ func Read(data []byte) (Settings, error) {
 		} `json:"experimental"`
 	}
 
-	if err := json.Unmarshal(data, &cfg); err != nil {
+	if err := json.Unmarshal(mask(data), &cfg); err != nil {
 		return Settings{}, fmt.Errorf("чтение clash_api: %w", err)
 	}
 
@@ -79,18 +79,22 @@ func (s Settings) BaseURL() (string, error) {
 // «авторизация не нужна», и дописать его означало бы сломать уже настроенных
 // клиентов Clash API (ADR-0002).
 func Ensure(data []byte, port int) ([]byte, bool, error) {
-	if !json.Valid(data) {
+	// Разбор идёт по копии без комментариев, а правка — по исходным байтам:
+	// длины совпадают, поэтому найденные смещения годятся для обеих.
+	parsed := mask(data)
+
+	if !json.Valid(parsed) {
 		return nil, false, errNotJSON
 	}
 
 	address := net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
 
-	top, err := objectStart(data)
+	top, err := objectStart(parsed)
 	if err != nil {
 		return nil, false, err
 	}
 
-	experimental, ok, err := findMember(data, top, "experimental")
+	experimental, ok, err := findMember(parsed, top, "experimental")
 	if err != nil {
 		return nil, false, err
 	}
@@ -101,7 +105,7 @@ func Ensure(data []byte, port int) ([]byte, bool, error) {
 		return insertMember(data, top, section), true, nil
 	}
 
-	clash, ok, err := findMember(data, experimental.start, "clash_api")
+	clash, ok, err := findMember(parsed, experimental.start, "clash_api")
 	if errors.Is(err, errNotObject) {
 		return nil, false, fmt.Errorf("experimental: %w", err)
 	}
@@ -114,7 +118,7 @@ func Ensure(data []byte, port int) ([]byte, bool, error) {
 		return insertMember(data, experimental.start, section), true, nil
 	}
 
-	controller, ok, err := findMember(data, clash.start, "external_controller")
+	controller, ok, err := findMember(parsed, clash.start, "external_controller")
 	if errors.Is(err, errNotObject) {
 		return nil, false, fmt.Errorf("clash_api: %w", err)
 	}
