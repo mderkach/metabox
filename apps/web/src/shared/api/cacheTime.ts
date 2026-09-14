@@ -10,6 +10,18 @@ export const CACHE_TIME = {
   Hour: MINUTES_IN_HOUR * MINUTE,
 } as const;
 
+const REQUEST_TIMEOUT_SECONDS = 15;
+/** Замер задержки идёт внутри запроса к демону и обязан уложиться в его потолок. */
+const PROBE_TIMEOUT_SECONDS = 5;
+
+/** Потолки ожидания. Свой таймаут у запроса нужен всегда: у `fetch` его нет, и зависший демон держал бы запрос до закрытия вкладки. */
+export const TIMEOUT = {
+  /** Полный цикл Apply укладывается в 15 секунд — дольше уже отказ. */
+  Request: REQUEST_TIMEOUT_SECONDS * SECOND,
+  /** Сколько Clash API ждёт ответа узла при замере задержки. */
+  Probe: PROBE_TIMEOUT_SECONDS * SECOND,
+} as const;
+
 const STATUS_POLL_SECONDS = 5;
 /** Шаг истории на демоне — десять секунд; чаще спрашивать нечего. */
 const HISTORY_POLL_SECONDS = 10;

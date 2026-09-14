@@ -1,12 +1,8 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse } from 'axios';
 
-import { MS_IN_SECOND } from '../lib/time';
 import { API_FAILURE, ApiError } from './ApiError';
+import { TIMEOUT } from './cacheTime';
 import { ErrorSchema } from './daemon.generated';
-
-/** Полный цикл Apply укладывается в 15 секунд (NFR-5) — дольше уже отказ. */
-const REQUEST_TIMEOUT_SECONDS = 15;
-const REQUEST_TIMEOUT = REQUEST_TIMEOUT_SECONDS * MS_IN_SECOND;
 
 const BAD_GATEWAY = 502;
 const SERVICE_UNAVAILABLE = 503;
@@ -86,7 +82,7 @@ export class ApiClient {
   private readonly http: AxiosInstance;
 
   constructor(config?: AxiosRequestConfig) {
-    this.http = axios.create({ timeout: REQUEST_TIMEOUT, ...config });
+    this.http = axios.create({ timeout: TIMEOUT.Request, ...config });
 
     this.http.interceptors.response.use(undefined, (error: unknown) => {
       throw toApiError(error);
