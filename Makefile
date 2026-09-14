@@ -79,9 +79,12 @@ hooks:
 
 DC := docker compose -f .devcontainer/docker-compose.yml
 
+# GOTOOLCHAIN уезжает в контейнер явно: образ golang держит его в `local`, и
+# версия из .go-version там не подхватывается — сборка падает, как только
+# go.mod требует патч свежее того, что вмёрз в образ.
 daemon-target:
 	$(DC) up -d dev
-	$(DC) exec -T dev sh -c 'cd apps/metaboxd && go build -ldflags "$(LDFLAGS)" -o ../../$(BIN) .'
+	$(DC) exec -T -e GOTOOLCHAIN=$(GOTOOLCHAIN) dev sh -c 'cd apps/metaboxd && go build -ldflags "$(LDFLAGS)" -o ../../$(BIN) .'
 
 # --build обязателен: иначе подъём версии sing-box в target/Dockerfile
 # не доезжает до стенда.
