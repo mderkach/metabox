@@ -184,7 +184,7 @@ type fakeClock struct {
 }
 
 func newClock() *fakeClock {
-	return &fakeClock{fired: make(chan time.Time, 1), called: make(chan time.Duration, 4)}
+	return &fakeClock{fired: make(chan time.Time), called: make(chan time.Duration, 4)}
 }
 
 func (c *fakeClock) After(d time.Duration) <-chan time.Time {
@@ -193,6 +193,10 @@ func (c *fakeClock) After(d time.Duration) <-chan time.Time {
 	return c.fired
 }
 
+// fire отдаёт срок и возвращается только после того, как его приняли: канал
+// без буфера делает отправку точкой синхронизации. С буфером тест успевал
+// закрыть менеджер до того, как горутина войдёт в select, — в нём оказывались
+// готовы сразу две ветви, и Go выбирал между откатом и остановкой случайно.
 func (c *fakeClock) fire() {
 	c.fired <- time.Time{}
 }
