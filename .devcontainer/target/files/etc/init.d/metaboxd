@@ -8,6 +8,11 @@ PROG=/opt/metabox/metaboxd
 # По умолчанию демон слушает 127.0.0.1 — на стенде это отрезало бы проброс портов
 # наружу контейнера. На роутере адрес задаётся отдельно, здесь это стендовая настройка.
 LISTEN=0.0.0.0:8080
+# Панель на стенде живёт на дев-сервере Vite, а её запросы приходят через его
+# прокси: Origin остаётся исходным, и без послабления демон отбивает все
+# мутирующие запросы.
+DEV_ORIGIN=http://localhost:5173
+STATE_DIR=/etc/metabox
 
 start_service() {
 	[ -x "$PROG" ] || {
@@ -15,8 +20,16 @@ start_service() {
 		return 1
 	}
 
+	# Каталог состояния демон сам не заводит, его создаёт init-скрипт: на
+	# роутере это делает пакетный скрипт, здесь — стендовый.
+	mkdir -p "$STATE_DIR"
+	chmod 0700 "$STATE_DIR"
+
 	procd_open_instance metaboxd
-	procd_set_param command "$PROG" -listen "$LISTEN"
+	procd_set_param command "$PROG" \
+		-listen "$LISTEN" \
+		-allowed-origin "$DEV_ORIGIN" \
+		-state-dir "$STATE_DIR"
 	procd_set_param stdout 1
 	procd_set_param stderr 1
 	procd_set_param respawn 3600 5 5
