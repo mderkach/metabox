@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import { ConfigDocumentState, ruleNodePath } from '@entities/Config';
 import { checkRuleNode } from '@entities/Rule';
+import { parseJsonc } from '@shared/lib/jsonc';
 import { Alert, AlertDescription, AlertTitle, Button, Textarea } from '@shared/ui';
 
 /** Отступ узла: тот же, что у файла конфига на устройстве. */
@@ -24,12 +25,10 @@ export function RuleRawEditor({ index, node }: { index: number; node: unknown })
   const [warning, setWarning] = useState<string | null>(null);
 
   const apply = () => {
-    let parsed: unknown;
+    const { value: parsed, failure } = parseJsonc(text);
 
-    try {
-      parsed = JSON.parse(text);
-    } catch (cause) {
-      setError(cause instanceof SyntaxError ? cause.message : 'JSON не разобран');
+    if (failure !== null) {
+      setError(failure.text);
 
       return;
     }

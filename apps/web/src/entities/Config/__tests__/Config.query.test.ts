@@ -50,6 +50,6 @@ describe('parseConfig', () => {
     const parsed = parseConfig('{ "route": ');
 
     expect(parsed.config).toBeNull();
-    expect(parsed.issues[0]).toContain('JSON');
+    expect(parsed.issues[0]).toContain('не разбирается');
   });
 });

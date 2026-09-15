@@ -1,10 +1,11 @@
 import { ChevronDown, ChevronUp, CircleAlert, CircleCheck, Search } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 
+import { firstJsoncError } from '@shared/lib/jsonc';
 import { cn } from '@shared/lib/utils';
 import { Badge, Button, Input } from '@shared/ui';
 
-import { findMatches, firstParseError, lineIndexOf, toJsonTokens } from '../lib';
+import { findMatches, lineIndexOf, toJsonTokens } from '../lib';
 
 /** Один класс на все три слоя: при наложении метрики обязаны совпадать до пикселя. */
 const CODE_CLASS = 'font-mono text-xs/5';
@@ -18,7 +19,7 @@ function lineOfPosition(text: string, position: number): number {
 }
 
 function parseError(text: string): string | null {
-  const failure = firstParseError(text);
+  const failure = firstJsoncError(text);
 
   if (failure === null) {
     return null;
