@@ -4,6 +4,7 @@ import (
 	"context"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -12,6 +13,11 @@ import (
 var ansi = regexp.MustCompile(`\x1b\[[0-9;]*m`)
 
 const (
+	// Сколько последних сообщений просить у логгера. Лог устройства идёт на
+	// десятки тысяч строк и вывод команды обрезается по объёму — причём с
+	// хвоста, где и лежит падение; отбор оставляем логгеру.
+	failureScan = 200
+
 	// Причина — последние строки, а не весь лог: сервис под procd падает в
 	// цикле, и один и тот же отказ повторяется десятки раз.
 	failureLines = 3
@@ -29,7 +35,9 @@ func (c *Client) failure(ctx context.Context) string {
 		return ""
 	}
 
-	res, err := c.runner.Run(ctx, c.logread)
+	// Фильтр и лимит отдаются логгеру: он умеет и то и другое, а тащить в
+	// демон весь лог роутера незачем.
+	res, err := c.runner.Run(ctx, c.logread, "-e", c.processName(), "-l", strconv.Itoa(failureScan))
 	if err != nil || res.ExitCode != 0 {
 		return ""
 	}
