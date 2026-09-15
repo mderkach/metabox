@@ -183,15 +183,17 @@ func (s *schema) write(b *strings.Builder, indent string) {
 	}
 }
 
-// writeObject печатает z.looseObject: неизвестные поля обязаны переживать
-// round-trip (AC-3), а strip по умолчанию их бы потерял.
+// writeObject печатает z.strictObject: поле, которого нет в схеме, — это то,
+// чего панель не знает, и молчать об этом нельзя. Узел с таким полем она
+// показывает как нераспознанный и правит текстом; сохранность его байтов от
+// схемы не зависит — конфиг правится по тексту файла.
 func (s *schema) writeObject(b *strings.Builder, indent string) {
 	if s.base != "" && len(s.fields) == 0 {
 		b.WriteString(s.base)
 		return
 	}
 	if len(s.fields) == 0 {
-		b.WriteString("z.looseObject({})")
+		b.WriteString("z.strictObject({})")
 		return
 	}
 	// Вариант, у которого есть общая часть, печатается её расширением:
@@ -199,7 +201,7 @@ func (s *schema) writeObject(b *strings.Builder, indent string) {
 	if s.base != "" {
 		fmt.Fprintf(b, "%s.extend({\n", s.base)
 	} else {
-		b.WriteString("z.looseObject({\n")
+		b.WriteString("z.strictObject({\n")
 	}
 	inner := indent + "  "
 	for _, f := range s.fields {

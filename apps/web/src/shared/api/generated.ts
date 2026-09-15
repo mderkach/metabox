@@ -13,19 +13,19 @@ import * as z from "zod"
 export const SCHEMA_FORK_VERSION = "v1.14.0-extended-2.7.1"
 
 export const ACMEDNS01ChallengeOptionsSchema = z.union([
-  z.looseObject({
+  z.strictObject({
     provider: z.literal("alidns").optional(),
     access_key_id: z.string().optional(),
     access_key_secret: z.string().optional(),
     region_id: z.string().optional(),
     security_token: z.string().optional(),
   }),
-  z.looseObject({
+  z.strictObject({
     provider: z.literal("cloudflare").optional(),
     api_token: z.string().optional(),
     zone_token: z.string().optional(),
   }),
-  z.looseObject({
+  z.strictObject({
     provider: z.literal("acmedns").optional(),
     username: z.string().optional(),
     password: z.string().optional(),
@@ -34,7 +34,7 @@ export const ACMEDNS01ChallengeOptionsSchema = z.union([
   }),
 ])
 
-export const ACMEExternalAccountOptionsSchema = z.looseObject({
+export const ACMEExternalAccountOptionsSchema = z.strictObject({
   key_id: z.string().optional(),
   mac_key: z.string().optional(),
 })
@@ -42,19 +42,19 @@ export const ACMEExternalAccountOptionsSchema = z.looseObject({
 export const ACMEKeyTypeSchema = z.string()
 
 export const ACMEProviderDNS01ChallengeOptionsSchema = z.union([
-  z.looseObject({
+  z.strictObject({
     provider: z.literal("alidns").optional(),
     access_key_id: z.string().optional(),
     access_key_secret: z.string().optional(),
     region_id: z.string().optional(),
     security_token: z.string().optional(),
   }),
-  z.looseObject({
+  z.strictObject({
     provider: z.literal("cloudflare").optional(),
     api_token: z.string().optional(),
     zone_token: z.string().optional(),
   }),
-  z.looseObject({
+  z.strictObject({
     provider: z.literal("acmedns").optional(),
     username: z.string().optional(),
     password: z.string().optional(),
@@ -66,7 +66,7 @@ export const ACMEProviderDNS01ChallengeOptionsSchema = z.union([
 export const APIDashboardOptionsSchema = z.union([
   z.boolean(),
   z.string(),
-  z.looseObject({
+  z.strictObject({
     enabled: z.boolean().optional(),
     path: z.string().optional(),
     download_url: z.string().optional(),
@@ -77,12 +77,12 @@ export const APIDashboardOptionsSchema = z.union([
   }),
 ])
 
-export const AnyTLSUserSchema = z.looseObject({
+export const AnyTLSUserSchema = z.strictObject({
   name: z.string().optional(),
   password: z.string().optional(),
 })
 
-export const BandwidthLimiterUserSchema = z.looseObject({
+export const BandwidthLimiterUserSchema = z.strictObject({
   name: z.string().optional(),
   strategy: z.string().optional(),
   connection_type: z.string().optional(),
@@ -93,7 +93,7 @@ export const BandwidthLimiterUserSchema = z.looseObject({
   ]).optional(),
 })
 
-export const BondOutboundSchema = z.looseObject({
+export const BondOutboundSchema = z.strictObject({
   get outbound() {
     return OutboundSchema.optional()
   },
@@ -102,18 +102,18 @@ export const BondOutboundSchema = z.looseObject({
   count: z.int().nonnegative().optional(),
 })
 
-export const BrutalOptionsSchema = z.looseObject({
+export const BrutalOptionsSchema = z.strictObject({
   enabled: z.boolean().optional(),
   up_mbps: z.int().optional(),
   down_mbps: z.int().optional(),
 })
 
-export const CCMUserSchema = z.looseObject({
+export const CCMUserSchema = z.strictObject({
   name: z.string().optional(),
   token: z.string().optional(),
 })
 
-export const CacheFileOptionsSchema = z.looseObject({
+export const CacheFileOptionsSchema = z.strictObject({
   enabled: z.boolean().optional(),
   path: z.string().optional(),
   cache_id: z.string().optional(),
@@ -126,14 +126,14 @@ export const CacheFileOptionsSchema = z.looseObject({
   store_dns: z.boolean().optional(),
 })
 
-export const CallCookieSchema = z.looseObject({
+export const CallCookieSchema = z.strictObject({
   name: z.string().optional(),
   value: z.string().optional(),
 })
 
 export const CallCookieListSchema = z.array(CallCookieSchema)
 
-export const CertificateOptionsSchema = z.looseObject({
+export const CertificateOptionsSchema = z.strictObject({
   store: z.string().optional(),
   certificate: z.union([
     z.string(),
@@ -149,7 +149,7 @@ export const CertificateOptionsSchema = z.looseObject({
   ]).optional(),
 })
 
-export const CertificateProviderAcmeSchema = z.looseObject({
+export const CertificateProviderAcmeSchema = z.strictObject({
   type: z.literal("acme"),
   tag: z.string().optional(),
   domain: z.union([
@@ -180,7 +180,7 @@ export const CertificateProviderAcmeSchema = z.looseObject({
   },
 })
 
-export const CertificateProviderCloudflareOriginCaSchema = z.looseObject({
+export const CertificateProviderCloudflareOriginCaSchema = z.strictObject({
   type: z.literal("cloudflare-origin-ca"),
   tag: z.string().optional(),
   domain: z.union([
@@ -201,7 +201,7 @@ export const CertificateProviderCloudflareOriginCaSchema = z.looseObject({
   },
 })
 
-export const CertificateProviderTailscaleSchema = z.looseObject({
+export const CertificateProviderTailscaleSchema = z.strictObject({
   type: z.literal("tailscale"),
   tag: z.string().optional(),
   endpoint: z.string().optional(),
@@ -218,7 +218,7 @@ export const CertificateProviderOptionsSchema = z.union([
   CertificateProviderSchema,
 ])
 
-export const ClashAPIOptionsSchema = z.looseObject({
+export const ClashAPIOptionsSchema = z.strictObject({
   external_controller: z.string().optional(),
   external_ui: z.string().optional(),
   external_ui_download_url: z.string().optional(),
@@ -248,7 +248,7 @@ export const CloudflareOriginCARequestTypeSchema = z.string()
 
 export const CloudflareOriginCARequestValiditySchema = z.int().nonnegative()
 
-export const CloudflareProfileSchema = z.looseObject({
+export const CloudflareProfileSchema = z.strictObject({
   id: z.string().optional(),
   auth_token: z.string().optional(),
   private_key: z.string().optional(),
@@ -257,7 +257,7 @@ export const CloudflareProfileSchema = z.looseObject({
   detour: z.string().optional(),
 })
 
-export const ConnectionLimiterUserSchema = z.looseObject({
+export const ConnectionLimiterUserSchema = z.strictObject({
   name: z.string().optional(),
   strategy: z.string().optional(),
   connection_type: z.string().optional(),
@@ -266,7 +266,7 @@ export const ConnectionLimiterUserSchema = z.looseObject({
 
 export const CurvePreferenceSchema = z.enum(["P256", "P384", "P521", "X25519", "X25519MLKEM768"])
 
-export const DERPMeshOptionsSchema = z.looseObject({
+export const DERPMeshOptionsSchema = z.strictObject({
   server: z.string().optional(),
   server_port: z.int().nonnegative().optional(),
   host: z.string().optional(),
@@ -318,7 +318,7 @@ export const DERPMeshOptionsSchema = z.looseObject({
 
 export const DERPSTUNListenOptionsSchema = z.union([
   z.int().nonnegative(),
-  z.looseObject({
+  z.strictObject({
     enabled: z.boolean().optional(),
     listen: z.string().optional(),
     listen_port: z.int().nonnegative().optional(),
@@ -355,7 +355,7 @@ export const DERPSTUNListenOptionsSchema = z.union([
 export const DERPVerifyClientURLOptionsSchema = z.union([
   z.string(),
   z.union([
-    z.looseObject({
+    z.strictObject({
       version: z.literal("0").optional(),
       idle_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
       keep_alive_period: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
@@ -369,10 +369,10 @@ export const DERPVerifyClientURLOptionsSchema = z.union([
       ]).optional(),
       max_concurrent_streams: z.int().optional(),
     }),
-    z.looseObject({
+    z.strictObject({
       version: z.literal("1").optional(),
     }),
-    z.looseObject({
+    z.strictObject({
       version: z.literal("2").optional(),
       idle_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
       keep_alive_period: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
@@ -386,7 +386,7 @@ export const DERPVerifyClientURLOptionsSchema = z.union([
       ]).optional(),
       max_concurrent_streams: z.int().optional(),
     }),
-    z.looseObject({
+    z.strictObject({
       version: z.literal("3").optional(),
       idle_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
       keep_alive_period: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
@@ -405,7 +405,7 @@ export const DERPVerifyClientURLOptionsSchema = z.union([
   ]),
 ])
 
-export const DNSOptionsSchema = z.looseObject({
+export const DNSOptionsSchema = z.strictObject({
   get servers() {
     return z.array(DnsSchema).optional()
   },
@@ -438,7 +438,7 @@ export const DNSRCodeSchema = z.union([
   z.enum(["BADALG", "BADCOOKIE", "BADKEY", "BADMODE", "BADNAME", "BADSIG", "BADTIME", "BADTRUNC", "DSOTYPENI", "FORMERR", "NOERROR", "NOTAUTH", "NOTIMP", "NOTIMPL", "NOTZONE", "NXDOMAIN", "NXRRSET", "REFUSED", "SERVFAIL", "YXDOMAIN", "YXRRSET"]),
 ])
 
-export const DNSRecordOptionsSchema = z.looseObject({
+export const DNSRecordOptionsSchema = z.strictObject({
   RR: z.unknown().optional(),
 })
 
@@ -447,7 +447,7 @@ export const DNSRuleMatchResponseSchema = z.union([
   z.string(),
 ])
 
-export const DefaultDNSRuleBaseSchema = z.looseObject({
+export const DefaultDNSRuleBaseSchema = z.strictObject({
   type: z.literal("default").optional(),
   inbound: z.union([
     z.string(),
@@ -698,7 +698,7 @@ export const DNSRuleSchema = z.union([
       ]).optional()
     },
   }),
-  z.looseObject({
+  z.strictObject({
     type: z.literal("logical").optional(),
     mode: z.string().optional(),
     get rules() {
@@ -718,7 +718,7 @@ export const DNSRuleSchema = z.union([
     client_subnet: z.string().optional(),
     remove_client_subnet: z.boolean().optional(),
   }),
-  z.looseObject({
+  z.strictObject({
     type: z.literal("logical").optional(),
     mode: z.string().optional(),
     get rules() {
@@ -736,7 +736,7 @@ export const DNSRuleSchema = z.union([
     client_subnet: z.string().optional(),
     remove_client_subnet: z.boolean().optional(),
   }),
-  z.looseObject({
+  z.strictObject({
     type: z.literal("logical").optional(),
     mode: z.string().optional(),
     get rules() {
@@ -747,7 +747,7 @@ export const DNSRuleSchema = z.union([
     method: z.string().optional(),
     no_drop: z.boolean().optional(),
   }),
-  z.looseObject({
+  z.strictObject({
     type: z.literal("logical").optional(),
     mode: z.string().optional(),
     get rules() {
@@ -779,7 +779,7 @@ export const DNSRuleSchema = z.union([
   }),
 ])
 
-export const DebugOptionsSchema = z.looseObject({
+export const DebugOptionsSchema = z.strictObject({
   listen: z.string().optional(),
   gc_percent: z.int().optional(),
   max_stack: z.int().optional(),
@@ -793,7 +793,7 @@ export const DebugOptionsSchema = z.looseObject({
   oom_killer: z.boolean().optional(),
 })
 
-export const DefaultRuleBaseSchema = z.looseObject({
+export const DefaultRuleBaseSchema = z.strictObject({
   type: z.literal("default").optional(),
   inbound: z.union([
     z.string(),
@@ -949,7 +949,7 @@ export const DefaultRuleBaseSchema = z.looseObject({
   rule_set_ipcidr_match_source: z.boolean().optional(),
 })
 
-export const DialerOptionsSchema = z.looseObject({
+export const DialerOptionsSchema = z.strictObject({
   detour: z.string().optional(),
   bind_interface: z.string().optional(),
   inet4_bind_address: z.string().optional(),
@@ -993,7 +993,7 @@ export const DialerOptionsSchema = z.looseObject({
   },
 })
 
-export const DnsDhcpSchema = z.looseObject({
+export const DnsDhcpSchema = z.strictObject({
   type: z.literal("dhcp"),
   tag: z.string().optional(),
   detour: z.string().optional(),
@@ -1045,14 +1045,14 @@ export const DnsDhcpSchema = z.looseObject({
   interface: z.string().optional(),
 })
 
-export const DnsFakeipSchema = z.looseObject({
+export const DnsFakeipSchema = z.strictObject({
   type: z.literal("fakeip"),
   tag: z.string().optional(),
   inet4_range: z.string().optional(),
   inet6_range: z.string().optional(),
 })
 
-export const DnsFallbackSchema = z.looseObject({
+export const DnsFallbackSchema = z.strictObject({
   type: z.literal("fallback"),
   tag: z.string().optional(),
   servers: z.array(z.string()).optional(),
@@ -1060,7 +1060,7 @@ export const DnsFallbackSchema = z.looseObject({
   timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
 })
 
-export const DnsH3Schema = z.looseObject({
+export const DnsH3Schema = z.strictObject({
   type: z.literal("h3"),
   tag: z.string().optional(),
   detour: z.string().optional(),
@@ -1117,7 +1117,7 @@ export const DnsH3Schema = z.looseObject({
   ])).optional(),
 })
 
-export const DnsHostsSchema = z.looseObject({
+export const DnsHostsSchema = z.strictObject({
   type: z.literal("hosts"),
   tag: z.string().optional(),
   path: z.union([
@@ -1130,7 +1130,7 @@ export const DnsHostsSchema = z.looseObject({
   ])).optional(),
 })
 
-export const DnsHttpsSchema = z.looseObject({
+export const DnsHttpsSchema = z.strictObject({
   type: z.literal("https"),
   tag: z.string().optional(),
   detour: z.string().optional(),
@@ -1187,7 +1187,7 @@ export const DnsHttpsSchema = z.looseObject({
   ])).optional(),
 })
 
-export const DnsLocalSchema = z.looseObject({
+export const DnsLocalSchema = z.strictObject({
   type: z.literal("local"),
   tag: z.string().optional(),
   detour: z.string().optional(),
@@ -1238,7 +1238,7 @@ export const DnsLocalSchema = z.looseObject({
   ]).optional(),
 })
 
-export const DnsMdnsSchema = z.looseObject({
+export const DnsMdnsSchema = z.strictObject({
   type: z.literal("mdns"),
   tag: z.string().optional(),
   detour: z.string().optional(),
@@ -1293,7 +1293,7 @@ export const DnsMdnsSchema = z.looseObject({
   ]).optional(),
 })
 
-export const DnsOpenconnectSchema = z.looseObject({
+export const DnsOpenconnectSchema = z.strictObject({
   type: z.literal("openconnect"),
   tag: z.string().optional(),
   endpoint: z.string().optional(),
@@ -1301,7 +1301,7 @@ export const DnsOpenconnectSchema = z.looseObject({
   accept_search_domain: z.boolean().optional(),
 })
 
-export const DnsOpenvpnSchema = z.looseObject({
+export const DnsOpenvpnSchema = z.strictObject({
   type: z.literal("openvpn"),
   tag: z.string().optional(),
   endpoint: z.string().optional(),
@@ -1309,7 +1309,7 @@ export const DnsOpenvpnSchema = z.looseObject({
   accept_search_domain: z.boolean().optional(),
 })
 
-export const DnsQuicSchema = z.looseObject({
+export const DnsQuicSchema = z.strictObject({
   type: z.literal("quic"),
   tag: z.string().optional(),
   detour: z.string().optional(),
@@ -1360,14 +1360,14 @@ export const DnsQuicSchema = z.looseObject({
   },
 })
 
-export const DnsResolvedSchema = z.looseObject({
+export const DnsResolvedSchema = z.strictObject({
   type: z.literal("resolved"),
   tag: z.string().optional(),
   service: z.string().optional(),
   accept_default_resolvers: z.boolean().optional(),
 })
 
-export const DnsSdnsSchema = z.looseObject({
+export const DnsSdnsSchema = z.strictObject({
   type: z.literal("sdns"),
   tag: z.string().optional(),
   detour: z.string().optional(),
@@ -1416,7 +1416,7 @@ export const DnsSdnsSchema = z.looseObject({
   stamp: z.string().optional(),
 })
 
-export const DnsTailscaleSchema = z.looseObject({
+export const DnsTailscaleSchema = z.strictObject({
   type: z.literal("tailscale"),
   tag: z.string().optional(),
   endpoint: z.string().optional(),
@@ -1424,7 +1424,7 @@ export const DnsTailscaleSchema = z.looseObject({
   accept_search_domain: z.boolean().optional(),
 })
 
-export const DnsTcpSchema = z.looseObject({
+export const DnsTcpSchema = z.strictObject({
   type: z.literal("tcp"),
   tag: z.string().optional(),
   detour: z.string().optional(),
@@ -1472,7 +1472,7 @@ export const DnsTcpSchema = z.looseObject({
   server_port: z.int().nonnegative().optional(),
 })
 
-export const DnsTlsSchema = z.looseObject({
+export const DnsTlsSchema = z.strictObject({
   type: z.literal("tls"),
   tag: z.string().optional(),
   detour: z.string().optional(),
@@ -1523,7 +1523,7 @@ export const DnsTlsSchema = z.looseObject({
   },
 })
 
-export const DnsUdpSchema = z.looseObject({
+export const DnsUdpSchema = z.strictObject({
   type: z.literal("udp"),
   tag: z.string().optional(),
   detour: z.string().optional(),
@@ -1593,7 +1593,7 @@ export const DnsSchema = z.discriminatedUnion("type", [
 
 export const DomainResolveOptionsSchema = z.union([
   z.string(),
-  z.looseObject({
+  z.strictObject({
     server: z.string().optional(),
     timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
     get strategy() {
@@ -1608,7 +1608,7 @@ export const DomainResolveOptionsSchema = z.union([
 
 export const DomainStrategySchema = z.enum(["", "as_is", "prefer_ipv4", "prefer_ipv6", "ipv4_only", "ipv6_only"])
 
-export const EndpointOpenconnectSchema = z.looseObject({
+export const EndpointOpenconnectSchema = z.strictObject({
   type: z.literal("openconnect"),
   tag: z.string().optional(),
   detour: z.string().optional(),
@@ -1716,7 +1716,7 @@ export const EndpointOpenconnectSchema = z.looseObject({
   },
 })
 
-export const EndpointOpenvpnClientSchema = z.looseObject({
+export const EndpointOpenvpnClientSchema = z.strictObject({
   type: z.literal("openvpn-client"),
   tag: z.string().optional(),
   detour: z.string().optional(),
@@ -1847,7 +1847,7 @@ export const EndpointOpenvpnClientSchema = z.looseObject({
   },
 })
 
-export const EndpointOpenvpnServerSchema = z.looseObject({
+export const EndpointOpenvpnServerSchema = z.strictObject({
   type: z.literal("openvpn-server"),
   tag: z.string().optional(),
   listen: z.string().optional(),
@@ -1902,7 +1902,7 @@ export const EndpointOpenvpnServerSchema = z.looseObject({
   peer_address_ipv6: z.string().optional(),
   topology: z.string().optional(),
   duplicate_cn: z.boolean().optional(),
-  users: z.array(z.looseObject({
+  users: z.array(z.strictObject({
     Username: z.string().optional(),
     Password: z.string().optional(),
   })).optional(),
@@ -1939,7 +1939,7 @@ export const EndpointOpenvpnServerSchema = z.looseObject({
   handshake_window: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
 })
 
-export const EndpointTailscaleSchema = z.looseObject({
+export const EndpointTailscaleSchema = z.strictObject({
   type: z.literal("tailscale"),
   tag: z.string().optional(),
   detour: z.string().optional(),
@@ -2012,7 +2012,7 @@ export const EndpointTailscaleSchema = z.looseObject({
   taildrop_directory: z.string().optional(),
 })
 
-export const EndpointVpnClientSchema = z.looseObject({
+export const EndpointVpnClientSchema = z.strictObject({
   type: z.literal("vpn-client"),
   tag: z.string().optional(),
   address: z.string().optional(),
@@ -2026,7 +2026,7 @@ export const EndpointVpnClientSchema = z.looseObject({
   default_gateway: z.string().optional(),
 })
 
-export const EndpointVpnServerSchema = z.looseObject({
+export const EndpointVpnServerSchema = z.strictObject({
   type: z.literal("vpn-server"),
   tag: z.string().optional(),
   address: z.string().optional(),
@@ -2041,7 +2041,7 @@ export const EndpointVpnServerSchema = z.looseObject({
   default_gateway: z.string().optional(),
 })
 
-export const EndpointWarpSchema = z.looseObject({
+export const EndpointWarpSchema = z.strictObject({
   type: z.literal("warp"),
   tag: z.string().optional(),
   system: z.boolean().optional(),
@@ -2103,7 +2103,7 @@ export const EndpointWarpSchema = z.looseObject({
   },
 })
 
-export const EndpointWireguardSchema = z.looseObject({
+export const EndpointWireguardSchema = z.strictObject({
   type: z.literal("wireguard"),
   tag: z.string().optional(),
   system: z.boolean().optional(),
@@ -2186,7 +2186,7 @@ export const EndpointSchema = z.discriminatedUnion("type", [
   EndpointWireguardSchema,
 ])
 
-export const ExperimentalOptionsSchema = z.looseObject({
+export const ExperimentalOptionsSchema = z.strictObject({
   get cache_file() {
     return CacheFileOptionsSchema.optional()
   },
@@ -2209,13 +2209,13 @@ export const FwMarkSchema = z.union([
   z.string(),
 ])
 
-export const GeoIPOptionsSchema = z.looseObject({
+export const GeoIPOptionsSchema = z.strictObject({
   path: z.string().optional(),
   download_url: z.string().optional(),
   download_detour: z.string().optional(),
 })
 
-export const GeositeOptionsSchema = z.looseObject({
+export const GeositeOptionsSchema = z.strictObject({
   path: z.string().optional(),
   download_url: z.string().optional(),
   download_detour: z.string().optional(),
@@ -2224,7 +2224,7 @@ export const GeositeOptionsSchema = z.looseObject({
 export const HTTPClientOptionsSchema = z.union([
   z.string(),
   z.union([
-    z.looseObject({
+    z.strictObject({
       version: z.literal(0).optional(),
       tag: z.string().optional(),
       engine: z.string().optional(),
@@ -2245,7 +2245,7 @@ export const HTTPClientOptionsSchema = z.union([
       ]).optional(),
       max_concurrent_streams: z.int().optional(),
     }),
-    z.looseObject({
+    z.strictObject({
       version: z.literal(1).optional(),
       tag: z.string().optional(),
       engine: z.string().optional(),
@@ -2255,7 +2255,7 @@ export const HTTPClientOptionsSchema = z.union([
         z.array(z.string()),
       ])).optional(),
     }),
-    z.looseObject({
+    z.strictObject({
       version: z.literal(2).optional(),
       tag: z.string().optional(),
       engine: z.string().optional(),
@@ -2276,7 +2276,7 @@ export const HTTPClientOptionsSchema = z.union([
       ]).optional(),
       max_concurrent_streams: z.int().optional(),
     }),
-    z.looseObject({
+    z.strictObject({
       version: z.literal(3).optional(),
       tag: z.string().optional(),
       engine: z.string().optional(),
@@ -2303,7 +2303,7 @@ export const HTTPClientOptionsSchema = z.union([
 ])
 
 export const HTTPClientSchema = z.union([
-  z.looseObject({
+  z.strictObject({
     version: z.literal(0).optional(),
     tag: z.string().optional(),
     engine: z.string().optional(),
@@ -2324,7 +2324,7 @@ export const HTTPClientSchema = z.union([
     ]).optional(),
     max_concurrent_streams: z.int().optional(),
   }),
-  z.looseObject({
+  z.strictObject({
     version: z.literal(1).optional(),
     tag: z.string().optional(),
     engine: z.string().optional(),
@@ -2334,7 +2334,7 @@ export const HTTPClientSchema = z.union([
       z.array(z.string()),
     ])).optional(),
   }),
-  z.looseObject({
+  z.strictObject({
     version: z.literal(2).optional(),
     tag: z.string().optional(),
     engine: z.string().optional(),
@@ -2355,7 +2355,7 @@ export const HTTPClientSchema = z.union([
     ]).optional(),
     max_concurrent_streams: z.int().optional(),
   }),
-  z.looseObject({
+  z.strictObject({
     version: z.literal(3).optional(),
     tag: z.string().optional(),
     engine: z.string().optional(),
@@ -2380,7 +2380,7 @@ export const HTTPClientSchema = z.union([
   }),
 ])
 
-export const HTTPProxyOptionsSchema = z.looseObject({
+export const HTTPProxyOptionsSchema = z.strictObject({
   enabled: z.boolean().optional(),
   server: z.string().optional(),
   server_port: z.int().nonnegative().optional(),
@@ -2395,7 +2395,7 @@ export const HTTPProxyOptionsSchema = z.looseObject({
 })
 
 export const HeadlessRuleSchema = z.union([
-  z.looseObject({
+  z.strictObject({
     type: z.literal("default").optional(),
     get query_type() {
       return z.union([
@@ -2493,7 +2493,7 @@ export const HeadlessRuleSchema = z.union([
     ]).optional(),
     invert: z.boolean().optional(),
   }),
-  z.looseObject({
+  z.strictObject({
     type: z.literal("logical").optional(),
     mode: z.string().optional(),
     get rules() {
@@ -2503,7 +2503,7 @@ export const HeadlessRuleSchema = z.union([
   }),
 ])
 
-export const Hysteria2InboundRealmSchema = z.looseObject({
+export const Hysteria2InboundRealmSchema = z.strictObject({
   server_url: z.string().optional(),
   token: z.string().optional(),
   realm_id: z.string().optional(),
@@ -2524,16 +2524,16 @@ export const Hysteria2InboundRealmSchema = z.looseObject({
 })
 
 export const Hysteria2MasqueradeSchema = z.union([
-  z.looseObject({
+  z.strictObject({
     type: z.literal("file").optional(),
     directory: z.string().optional(),
   }),
-  z.looseObject({
+  z.strictObject({
     type: z.literal("proxy").optional(),
     url: z.string().optional(),
     rewrite_host: z.boolean().optional(),
   }),
-  z.looseObject({
+  z.strictObject({
     type: z.literal("string").optional(),
     status_code: z.int().optional(),
     headers: z.record(z.string(), z.union([
@@ -2545,11 +2545,11 @@ export const Hysteria2MasqueradeSchema = z.union([
 ])
 
 export const Hysteria2ObfsSchema = z.union([
-  z.looseObject({
+  z.strictObject({
     type: z.literal("salamander").optional(),
     password: z.string().optional(),
   }),
-  z.looseObject({
+  z.strictObject({
     type: z.literal("gecko").optional(),
     password: z.string().optional(),
     min_packet_size: z.int().optional(),
@@ -2557,13 +2557,13 @@ export const Hysteria2ObfsSchema = z.union([
   }),
 ])
 
-export const Hysteria2RealmPortMappingSchema = z.looseObject({
+export const Hysteria2RealmPortMappingSchema = z.strictObject({
   enabled: z.boolean().optional(),
   timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
   lifetime: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
 })
 
-export const Hysteria2RealmSchema = z.looseObject({
+export const Hysteria2RealmSchema = z.strictObject({
   server_url: z.string().optional(),
   token: z.string().optional(),
   realm_id: z.string().optional(),
@@ -2580,24 +2580,24 @@ export const Hysteria2RealmSchema = z.looseObject({
   },
 })
 
-export const Hysteria2UserSchema = z.looseObject({
+export const Hysteria2UserSchema = z.strictObject({
   name: z.string().optional(),
   password: z.string().optional(),
 })
 
-export const HysteriaRealmUserSchema = z.looseObject({
+export const HysteriaRealmUserSchema = z.strictObject({
   name: z.string().optional(),
   token: z.string().optional(),
   max_realms: z.int().optional(),
 })
 
-export const HysteriaUserSchema = z.looseObject({
+export const HysteriaUserSchema = z.strictObject({
   name: z.string().optional(),
   auth: z.string().optional(),
   auth_str: z.string().optional(),
 })
 
-export const InboundACMEOptionsSchema = z.looseObject({
+export const InboundACMEOptionsSchema = z.strictObject({
   domain: z.union([
     z.string(),
     z.array(z.string()),
@@ -2619,7 +2619,7 @@ export const InboundACMEOptionsSchema = z.looseObject({
   profile: z.string().optional(),
 })
 
-export const InboundAnytlsSchema = z.looseObject({
+export const InboundAnytlsSchema = z.strictObject({
   type: z.literal("anytls"),
   tag: z.string().optional(),
   listen: z.string().optional(),
@@ -2663,7 +2663,7 @@ export const InboundAnytlsSchema = z.looseObject({
   ]).optional(),
 })
 
-export const InboundBondSchema = z.looseObject({
+export const InboundBondSchema = z.strictObject({
   type: z.literal("bond"),
   tag: z.string().optional(),
   get inbounds() {
@@ -2671,7 +2671,7 @@ export const InboundBondSchema = z.looseObject({
   },
 })
 
-export const InboundCallSchema = z.looseObject({
+export const InboundCallSchema = z.strictObject({
   type: z.literal("call"),
   tag: z.string().optional(),
   detour: z.string().optional(),
@@ -2729,7 +2729,7 @@ export const InboundCallSchema = z.looseObject({
   password: z.string().optional(),
 })
 
-export const InboundCloudflaredSchema = z.looseObject({
+export const InboundCloudflaredSchema = z.strictObject({
   type: z.literal("cloudflared"),
   tag: z.string().optional(),
   token: z.string().optional(),
@@ -2748,7 +2748,7 @@ export const InboundCloudflaredSchema = z.looseObject({
   },
 })
 
-export const InboundDirectSchema = z.looseObject({
+export const InboundDirectSchema = z.strictObject({
   type: z.literal("direct"),
   tag: z.string().optional(),
   listen: z.string().optional(),
@@ -2787,7 +2787,7 @@ export const InboundDirectSchema = z.looseObject({
   override_port: z.int().nonnegative().optional(),
 })
 
-export const InboundECHOptionsSchema = z.looseObject({
+export const InboundECHOptionsSchema = z.strictObject({
   enabled: z.boolean().optional(),
   key: z.union([
     z.string(),
@@ -2800,7 +2800,7 @@ export const InboundECHOptionsSchema = z.looseObject({
   dynamic_record_sizing_disabled: z.boolean().optional(),
 })
 
-export const InboundFailoverSchema = z.looseObject({
+export const InboundFailoverSchema = z.strictObject({
   type: z.literal("failover"),
   tag: z.string().optional(),
   get inbounds() {
@@ -2808,7 +2808,7 @@ export const InboundFailoverSchema = z.looseObject({
   },
 })
 
-export const InboundHttpSchema = z.looseObject({
+export const InboundHttpSchema = z.strictObject({
   type: z.literal("http"),
   tag: z.string().optional(),
   listen: z.string().optional(),
@@ -2840,7 +2840,7 @@ export const InboundHttpSchema = z.looseObject({
     return DomainStrategySchema.optional()
   },
   udp_disable_domain_unmapping: z.boolean().optional(),
-  users: z.array(z.looseObject({
+  users: z.array(z.strictObject({
     Username: z.string().optional(),
     Password: z.string().optional(),
   })).optional(),
@@ -2853,7 +2853,7 @@ export const InboundHttpSchema = z.looseObject({
   },
 })
 
-export const InboundHysteria2Schema = z.looseObject({
+export const InboundHysteria2Schema = z.strictObject({
   type: z.literal("hysteria2"),
   tag: z.string().optional(),
   listen: z.string().optional(),
@@ -2920,7 +2920,7 @@ export const InboundHysteria2Schema = z.looseObject({
   },
 })
 
-export const InboundHysteriaSchema = z.looseObject({
+export const InboundHysteriaSchema = z.strictObject({
   type: z.literal("hysteria"),
   tag: z.string().optional(),
   listen: z.string().optional(),
@@ -2992,7 +2992,7 @@ export const InboundHysteriaSchema = z.looseObject({
   disable_path_mtu_discovery: z.boolean().optional(),
 })
 
-export const InboundMieruSchema = z.looseObject({
+export const InboundMieruSchema = z.strictObject({
   type: z.literal("mieru"),
   tag: z.string().optional(),
   listen: z.string().optional(),
@@ -3037,7 +3037,7 @@ export const InboundMieruSchema = z.looseObject({
   mtu: z.int().nonnegative().optional(),
 })
 
-export const InboundMixedSchema = z.looseObject({
+export const InboundMixedSchema = z.strictObject({
   type: z.literal("mixed"),
   tag: z.string().optional(),
   listen: z.string().optional(),
@@ -3069,7 +3069,7 @@ export const InboundMixedSchema = z.looseObject({
     return DomainStrategySchema.optional()
   },
   udp_disable_domain_unmapping: z.boolean().optional(),
-  users: z.array(z.looseObject({
+  users: z.array(z.strictObject({
     Username: z.string().optional(),
     Password: z.string().optional(),
   })).optional(),
@@ -3082,7 +3082,7 @@ export const InboundMixedSchema = z.looseObject({
   },
 })
 
-export const InboundMtproxySchema = z.looseObject({
+export const InboundMtproxySchema = z.strictObject({
   type: z.literal("mtproxy"),
   tag: z.string().optional(),
   listen: z.string().optional(),
@@ -3135,7 +3135,7 @@ export const InboundMtproxySchema = z.looseObject({
   throttle_check_interval: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
 })
 
-export const InboundMultiplexOptionsSchema = z.looseObject({
+export const InboundMultiplexOptionsSchema = z.strictObject({
   enabled: z.boolean().optional(),
   padding: z.boolean().optional(),
   get brutal() {
@@ -3143,7 +3143,7 @@ export const InboundMultiplexOptionsSchema = z.looseObject({
   },
 })
 
-export const InboundNaiveSchema = z.looseObject({
+export const InboundNaiveSchema = z.strictObject({
   type: z.literal("naive"),
   tag: z.string().optional(),
   listen: z.string().optional(),
@@ -3175,7 +3175,7 @@ export const InboundNaiveSchema = z.looseObject({
     return DomainStrategySchema.optional()
   },
   udp_disable_domain_unmapping: z.boolean().optional(),
-  users: z.array(z.looseObject({
+  users: z.array(z.strictObject({
     Username: z.string().optional(),
     Password: z.string().optional(),
   })).optional(),
@@ -3188,7 +3188,7 @@ export const InboundNaiveSchema = z.looseObject({
   },
 })
 
-export const InboundRealityHandshakeOptionsSchema = z.looseObject({
+export const InboundRealityHandshakeOptionsSchema = z.strictObject({
   server: z.string().optional(),
   server_port: z.int().nonnegative().optional(),
   detour: z.string().optional(),
@@ -3234,7 +3234,7 @@ export const InboundRealityHandshakeOptionsSchema = z.looseObject({
   },
 })
 
-export const InboundRealityOptionsSchema = z.looseObject({
+export const InboundRealityOptionsSchema = z.strictObject({
   enabled: z.boolean().optional(),
   get handshake() {
     return InboundRealityHandshakeOptionsSchema.optional()
@@ -3247,7 +3247,7 @@ export const InboundRealityOptionsSchema = z.looseObject({
   max_time_difference: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
 })
 
-export const InboundRedirectSchema = z.looseObject({
+export const InboundRedirectSchema = z.strictObject({
   type: z.literal("redirect"),
   tag: z.string().optional(),
   listen: z.string().optional(),
@@ -3281,7 +3281,7 @@ export const InboundRedirectSchema = z.looseObject({
   udp_disable_domain_unmapping: z.boolean().optional(),
 })
 
-export const InboundShadowsocksSchema = z.looseObject({
+export const InboundShadowsocksSchema = z.strictObject({
   type: z.literal("shadowsocks"),
   tag: z.string().optional(),
   listen: z.string().optional(),
@@ -3330,7 +3330,7 @@ export const InboundShadowsocksSchema = z.looseObject({
   managed: z.boolean().optional(),
 })
 
-export const InboundShadowtlsSchema = z.looseObject({
+export const InboundShadowtlsSchema = z.strictObject({
   type: z.literal("shadowtls"),
   tag: z.string().optional(),
   listen: z.string().optional(),
@@ -3379,7 +3379,7 @@ export const InboundShadowtlsSchema = z.looseObject({
   },
 })
 
-export const InboundSnellSchema = z.looseObject({
+export const InboundSnellSchema = z.strictObject({
   type: z.literal("snell"),
   tag: z.string().optional(),
   version: z.int().optional(),
@@ -3418,7 +3418,7 @@ export const InboundSnellSchema = z.looseObject({
   },
 })
 
-export const InboundSocksSchema = z.looseObject({
+export const InboundSocksSchema = z.strictObject({
   type: z.literal("socks"),
   tag: z.string().optional(),
   listen: z.string().optional(),
@@ -3450,7 +3450,7 @@ export const InboundSocksSchema = z.looseObject({
     return DomainStrategySchema.optional()
   },
   udp_disable_domain_unmapping: z.boolean().optional(),
-  users: z.array(z.looseObject({
+  users: z.array(z.strictObject({
     Username: z.string().optional(),
     Password: z.string().optional(),
   })).optional(),
@@ -3459,7 +3459,7 @@ export const InboundSocksSchema = z.looseObject({
   },
 })
 
-export const InboundSshSchema = z.looseObject({
+export const InboundSshSchema = z.strictObject({
   type: z.literal("ssh"),
   tag: z.string().optional(),
   listen: z.string().optional(),
@@ -3509,7 +3509,7 @@ export const InboundSshSchema = z.looseObject({
   },
 })
 
-export const InboundSudokuSchema = z.looseObject({
+export const InboundSudokuSchema = z.strictObject({
   type: z.literal("sudoku"),
   tag: z.string().optional(),
   listen: z.string().optional(),
@@ -3556,7 +3556,7 @@ export const InboundSudokuSchema = z.looseObject({
   fallback: z.string().optional(),
 })
 
-export const InboundTproxySchema = z.looseObject({
+export const InboundTproxySchema = z.strictObject({
   type: z.literal("tproxy"),
   tag: z.string().optional(),
   listen: z.string().optional(),
@@ -3600,7 +3600,7 @@ export const InboundTproxySchema = z.looseObject({
   udp_nat_max: z.int().nonnegative().optional(),
 })
 
-export const InboundTrojanSchema = z.looseObject({
+export const InboundTrojanSchema = z.strictObject({
   type: z.literal("trojan"),
   tag: z.string().optional(),
   listen: z.string().optional(),
@@ -3652,7 +3652,7 @@ export const InboundTrojanSchema = z.looseObject({
   },
 })
 
-export const InboundTrusttunnelSchema = z.looseObject({
+export const InboundTrusttunnelSchema = z.strictObject({
   type: z.literal("trusttunnel"),
   tag: z.string().optional(),
   listen: z.string().optional(),
@@ -3697,7 +3697,7 @@ export const InboundTrusttunnelSchema = z.looseObject({
   cwnd: z.int().optional(),
 })
 
-export const InboundTuicSchema = z.looseObject({
+export const InboundTuicSchema = z.strictObject({
   type: z.literal("tuic"),
   tag: z.string().optional(),
   listen: z.string().optional(),
@@ -3754,7 +3754,7 @@ export const InboundTuicSchema = z.looseObject({
   disable_path_mtu_discovery: z.boolean().optional(),
 })
 
-export const InboundTunSchema = z.looseObject({
+export const InboundTunSchema = z.strictObject({
   type: z.literal("tun"),
   tag: z.string().optional(),
   interface_name: z.string().optional(),
@@ -3907,7 +3907,7 @@ export const InboundTunSchema = z.looseObject({
   endpoint_independent_nat: z.boolean().optional(),
 })
 
-export const InboundVlessSchema = z.looseObject({
+export const InboundVlessSchema = z.strictObject({
   type: z.literal("vless"),
   tag: z.string().optional(),
   listen: z.string().optional(),
@@ -3954,7 +3954,7 @@ export const InboundVlessSchema = z.looseObject({
   },
 })
 
-export const InboundVmessSchema = z.looseObject({
+export const InboundVmessSchema = z.strictObject({
   type: z.literal("vmess"),
   tag: z.string().optional(),
   listen: z.string().optional(),
@@ -4030,7 +4030,7 @@ export const InboundSchema = z.discriminatedUnion("type", [
   InboundVmessSchema,
 ])
 
-export const InboundTLSOptionsSchema = z.looseObject({
+export const InboundTLSOptionsSchema = z.strictObject({
   enabled: z.boolean().optional(),
   server_name: z.string().optional(),
   insecure: z.boolean().optional(),
@@ -4095,14 +4095,14 @@ export const InboundTLSOptionsSchema = z.looseObject({
 
 export const InterfaceTypeSchema = z.enum(["cellular", "ethernet", "other", "wifi"])
 
-export const LogOptionsSchema = z.looseObject({
+export const LogOptionsSchema = z.strictObject({
   disabled: z.boolean().optional(),
   level: z.string().optional(),
   output: z.string().optional(),
   timestamp: z.boolean().optional(),
 })
 
-export const MASQUEOutboundTLSOptionsSchema = z.looseObject({
+export const MASQUEOutboundTLSOptionsSchema = z.strictObject({
   server_name: z.string().optional(),
   insecure: z.boolean().optional(),
   cipher_suites: z.union([
@@ -4122,22 +4122,22 @@ export const MASQUEOutboundTLSOptionsSchema = z.looseObject({
   kernel_rx: z.boolean().optional(),
 })
 
-export const MTProxyUserSchema = z.looseObject({
+export const MTProxyUserSchema = z.strictObject({
   name: z.string().optional(),
   secret: z.string().optional(),
 })
 
-export const ManagerServiceDatabaseSchema = z.looseObject({
+export const ManagerServiceDatabaseSchema = z.strictObject({
   driver: z.string().optional(),
   dsn: z.string().optional(),
 })
 
-export const MieruUserSchema = z.looseObject({
+export const MieruUserSchema = z.strictObject({
   name: z.string().optional(),
   password: z.string().optional(),
 })
 
-export const NTPOptionsSchema = z.looseObject({
+export const NTPOptionsSchema = z.strictObject({
   enabled: z.boolean().optional(),
   interval: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
   write_to_system: z.boolean().optional(),
@@ -4192,12 +4192,12 @@ export const NetworkListSchema = z.union([
 ])
 
 export const NetworkNamespaceSchema = z.union([
-  z.looseObject({
+  z.strictObject({
     type: z.literal("default").optional(),
     tag: z.string().optional(),
     path: z.string().optional(),
   }),
-  z.looseObject({
+  z.strictObject({
     type: z.literal("unshare").optional(),
     tag: z.string().optional(),
     pid_file: z.string().optional(),
@@ -4206,16 +4206,16 @@ export const NetworkNamespaceSchema = z.union([
 
 export const NetworkStrategySchema = z.enum(["default", "fallback", "hybrid"])
 
-export const OCMUserSchema = z.looseObject({
+export const OCMUserSchema = z.strictObject({
   name: z.string().optional(),
   token: z.string().optional(),
 })
 
-export const OpenConnectCSDOptionsSchema = z.looseObject({
+export const OpenConnectCSDOptionsSchema = z.strictObject({
   wrapper_path: z.string().optional(),
 })
 
-export const OpenConnectFormEntryOptionsSchema = z.looseObject({
+export const OpenConnectFormEntryOptionsSchema = z.strictObject({
   form_id: z.string().optional(),
   submission_key: z.string().optional(),
   name: z.string().optional(),
@@ -4223,22 +4223,22 @@ export const OpenConnectFormEntryOptionsSchema = z.looseObject({
   promote: z.boolean().optional(),
 })
 
-export const OpenConnectFortinetHostCheckOptionsSchema = z.looseObject({
+export const OpenConnectFortinetHostCheckOptionsSchema = z.strictObject({
   hostcheck: z.string().optional(),
   check_virtual_desktop: z.string().optional(),
 })
 
-export const OpenConnectHIPOptionsSchema = z.looseObject({
+export const OpenConnectHIPOptionsSchema = z.strictObject({
   wrapper_path: z.string().optional(),
 })
 
-export const OpenConnectMobileOptionsSchema = z.looseObject({
+export const OpenConnectMobileOptionsSchema = z.strictObject({
   platform_version: z.string().optional(),
   device_type: z.string().optional(),
   device_unique_id: z.string().optional(),
 })
 
-export const OpenConnectTLSOptionsSchema = z.looseObject({
+export const OpenConnectTLSOptionsSchema = z.strictObject({
   insecure: z.boolean().optional(),
   server_name: z.string().optional(),
   peer_fingerprint: z.union([
@@ -4275,7 +4275,7 @@ export const OpenConnectTLSOptionsSchema = z.looseObject({
   mca_key_password: z.string().optional(),
 })
 
-export const OpenConnectTNCCCertificateOptionsSchema = z.looseObject({
+export const OpenConnectTNCCCertificateOptionsSchema = z.strictObject({
   certificate: z.union([
     z.string(),
     z.array(z.string()),
@@ -4283,7 +4283,7 @@ export const OpenConnectTNCCCertificateOptionsSchema = z.looseObject({
   certificate_path: z.string().optional(),
 })
 
-export const OpenConnectTNCCOptionsSchema = z.looseObject({
+export const OpenConnectTNCCOptionsSchema = z.strictObject({
   wrapper_path: z.string().optional(),
   device_id: z.string().optional(),
   user_agent: z.string().optional(),
@@ -4293,7 +4293,7 @@ export const OpenConnectTNCCOptionsSchema = z.looseObject({
   },
 })
 
-export const OpenConnectTokenOptionsSchema = z.looseObject({
+export const OpenConnectTokenOptionsSchema = z.strictObject({
   mode: z.string().optional(),
   secret: z.string().optional(),
   secret_path: z.string().optional(),
@@ -4303,7 +4303,7 @@ export const OpenConnectTokenOptionsSchema = z.looseObject({
   counter: z.int().nonnegative().optional(),
 })
 
-export const OpenVPNControlWrapOptionsSchema = z.looseObject({
+export const OpenVPNControlWrapOptionsSchema = z.strictObject({
   type: z.string().optional(),
   key: z.union([
     z.string(),
@@ -4313,7 +4313,7 @@ export const OpenVPNControlWrapOptionsSchema = z.looseObject({
   direction: z.string().optional(),
 })
 
-export const OpenVPNInboundControlWrapOptionsSchema = z.looseObject({
+export const OpenVPNInboundControlWrapOptionsSchema = z.strictObject({
   type: z.string().optional(),
   key: z.union([
     z.string(),
@@ -4324,7 +4324,7 @@ export const OpenVPNInboundControlWrapOptionsSchema = z.looseObject({
   force_cookie: z.boolean().optional(),
 })
 
-export const OpenVPNInboundTLSOptionsSchema = z.looseObject({
+export const OpenVPNInboundTLSOptionsSchema = z.strictObject({
   certificate: z.union([
     z.string(),
     z.array(z.string()),
@@ -4365,7 +4365,7 @@ export const OpenVPNInboundTLSOptionsSchema = z.looseObject({
   },
 })
 
-export const OpenVPNOutboundTLSOptionsSchema = z.looseObject({
+export const OpenVPNOutboundTLSOptionsSchema = z.strictObject({
   server_name: z.string().optional(),
   server_name_type: z.string().optional(),
   certificate: z.union([
@@ -4405,12 +4405,12 @@ export const OpenVPNOutboundTLSOptionsSchema = z.looseObject({
   },
 })
 
-export const OpenVPNPullFilterOptionsSchema = z.looseObject({
+export const OpenVPNPullFilterOptionsSchema = z.strictObject({
   action: z.string().optional(),
   text: z.string().optional(),
 })
 
-export const OpenVPNPushDNSServerOptionsSchema = z.looseObject({
+export const OpenVPNPushDNSServerOptionsSchema = z.strictObject({
   priority: z.int().optional(),
   addresses: z.union([
     z.string(),
@@ -4425,7 +4425,7 @@ export const OpenVPNPushDNSServerOptionsSchema = z.looseObject({
   sni: z.string().optional(),
 })
 
-export const OpenVPNPushOptionsSchema = z.looseObject({
+export const OpenVPNPushOptionsSchema = z.strictObject({
   routes: z.union([
     z.string(),
     z.array(z.string()),
@@ -4455,7 +4455,7 @@ export const OpenVPNPushOptionsSchema = z.looseObject({
   ping_restart: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
 })
 
-export const OpenVPNRemoteOptionsSchema = z.looseObject({
+export const OpenVPNRemoteOptionsSchema = z.strictObject({
   server: z.string().optional(),
   server_port: z.int().nonnegative().optional(),
   network: z.string().optional(),
@@ -4463,13 +4463,13 @@ export const OpenVPNRemoteOptionsSchema = z.looseObject({
 
 export const OptimisticDNSOptionsSchema = z.union([
   z.boolean(),
-  z.looseObject({
+  z.strictObject({
     enabled: z.boolean().optional(),
     timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
   }),
 ])
 
-export const OptionsSchema = z.looseObject({
+export const OptionsSchema = z.strictObject({
   $schema: z.string().optional(),
   get log() {
     return LogOptionsSchema.optional()
@@ -4515,7 +4515,7 @@ export const OptionsSchema = z.looseObject({
   },
 })
 
-export const OutboundAnytlsSchema = z.looseObject({
+export const OutboundAnytlsSchema = z.strictObject({
   type: z.literal("anytls"),
   tag: z.string().optional(),
   detour: z.string().optional(),
@@ -4571,7 +4571,7 @@ export const OutboundAnytlsSchema = z.looseObject({
   client_metadata: z.string().optional(),
 })
 
-export const OutboundBandwidthLimiterSchema = z.looseObject({
+export const OutboundBandwidthLimiterSchema = z.strictObject({
   type: z.literal("bandwidth-limiter"),
   tag: z.string().optional(),
   strategy: z.string().optional(),
@@ -4590,7 +4590,7 @@ export const OutboundBandwidthLimiterSchema = z.looseObject({
   },
 })
 
-export const OutboundBondSchema = z.looseObject({
+export const OutboundBondSchema = z.strictObject({
   type: z.literal("bond"),
   tag: z.string().optional(),
   get outbounds() {
@@ -4598,7 +4598,7 @@ export const OutboundBondSchema = z.looseObject({
   },
 })
 
-export const OutboundBridgeSchema = z.looseObject({
+export const OutboundBridgeSchema = z.strictObject({
   type: z.literal("bridge"),
   tag: z.string().optional(),
   interface: z.string().optional(),
@@ -4607,7 +4607,7 @@ export const OutboundBridgeSchema = z.looseObject({
   iproute2_rule_index: z.int().optional(),
 })
 
-export const OutboundCallSchema = z.looseObject({
+export const OutboundCallSchema = z.strictObject({
   type: z.literal("call"),
   tag: z.string().optional(),
   detour: z.string().optional(),
@@ -4662,7 +4662,7 @@ export const OutboundCallSchema = z.looseObject({
   },
 })
 
-export const OutboundConnectionLimiterSchema = z.looseObject({
+export const OutboundConnectionLimiterSchema = z.strictObject({
   type: z.literal("connection-limiter"),
   tag: z.string().optional(),
   strategy: z.string().optional(),
@@ -4676,7 +4676,7 @@ export const OutboundConnectionLimiterSchema = z.looseObject({
   },
 })
 
-export const OutboundDirectSchema = z.looseObject({
+export const OutboundDirectSchema = z.strictObject({
   type: z.literal("direct"),
   tag: z.string().optional(),
   detour: z.string().optional(),
@@ -4725,7 +4725,7 @@ export const OutboundDirectSchema = z.looseObject({
   proxy_protocol: z.int().nonnegative().optional(),
 })
 
-export const OutboundECHOptionsSchema = z.looseObject({
+export const OutboundECHOptionsSchema = z.strictObject({
   enabled: z.boolean().optional(),
   config: z.union([
     z.string(),
@@ -4739,7 +4739,7 @@ export const OutboundECHOptionsSchema = z.looseObject({
   dynamic_record_sizing_disabled: z.boolean().optional(),
 })
 
-export const OutboundFailoverSchema = z.looseObject({
+export const OutboundFailoverSchema = z.strictObject({
   type: z.literal("failover"),
   tag: z.string().optional(),
   strategy: z.string().optional(),
@@ -4749,14 +4749,14 @@ export const OutboundFailoverSchema = z.looseObject({
   },
 })
 
-export const OutboundFallbackSchema = z.looseObject({
+export const OutboundFallbackSchema = z.strictObject({
   type: z.literal("fallback"),
   tag: z.string().optional(),
   outbounds: z.array(z.string()).optional(),
   blacklist_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
 })
 
-export const OutboundHttpSchema = z.looseObject({
+export const OutboundHttpSchema = z.strictObject({
   type: z.literal("http"),
   tag: z.string().optional(),
   detour: z.string().optional(),
@@ -4814,7 +4814,7 @@ export const OutboundHttpSchema = z.looseObject({
   ])).optional(),
 })
 
-export const OutboundHysteria2Schema = z.looseObject({
+export const OutboundHysteria2Schema = z.strictObject({
   type: z.literal("hysteria2"),
   tag: z.string().optional(),
   detour: z.string().optional(),
@@ -4899,7 +4899,7 @@ export const OutboundHysteria2Schema = z.looseObject({
   },
 })
 
-export const OutboundHysteriaSchema = z.looseObject({
+export const OutboundHysteriaSchema = z.strictObject({
   type: z.literal("hysteria"),
   tag: z.string().optional(),
   detour: z.string().optional(),
@@ -4990,7 +4990,7 @@ export const OutboundHysteriaSchema = z.looseObject({
   disable_path_mtu_discovery: z.boolean().optional(),
 })
 
-export const OutboundMasqueSchema = z.looseObject({
+export const OutboundMasqueSchema = z.strictObject({
   type: z.literal("masque"),
   tag: z.string().optional(),
   detour: z.string().optional(),
@@ -5058,7 +5058,7 @@ export const OutboundMasqueSchema = z.looseObject({
   },
 })
 
-export const OutboundMieruSchema = z.looseObject({
+export const OutboundMieruSchema = z.strictObject({
   type: z.literal("mieru"),
   tag: z.string().optional(),
   detour: z.string().optional(),
@@ -5117,7 +5117,7 @@ export const OutboundMieruSchema = z.looseObject({
   handshake_mode: z.string().optional(),
 })
 
-export const OutboundMultiplexOptionsSchema = z.looseObject({
+export const OutboundMultiplexOptionsSchema = z.strictObject({
   enabled: z.boolean().optional(),
   protocol: z.string().optional(),
   max_connections: z.int().optional(),
@@ -5129,7 +5129,7 @@ export const OutboundMultiplexOptionsSchema = z.looseObject({
   },
 })
 
-export const OutboundNaiveSchema = z.looseObject({
+export const OutboundNaiveSchema = z.strictObject({
   type: z.literal("naive"),
   tag: z.string().optional(),
   detour: z.string().optional(),
@@ -5200,7 +5200,7 @@ export const OutboundNaiveSchema = z.looseObject({
   },
 })
 
-export const OutboundParserSchema = z.looseObject({
+export const OutboundParserSchema = z.strictObject({
   type: z.literal("parser"),
   tag: z.string().optional(),
   detour: z.string().optional(),
@@ -5247,7 +5247,7 @@ export const OutboundParserSchema = z.looseObject({
   link: z.string().optional(),
 })
 
-export const OutboundRateLimiterSchema = z.looseObject({
+export const OutboundRateLimiterSchema = z.strictObject({
   type: z.literal("rate-limiter"),
   tag: z.string().optional(),
   strategy: z.string().optional(),
@@ -5262,13 +5262,13 @@ export const OutboundRateLimiterSchema = z.looseObject({
   },
 })
 
-export const OutboundRealityOptionsSchema = z.looseObject({
+export const OutboundRealityOptionsSchema = z.strictObject({
   enabled: z.boolean().optional(),
   public_key: z.string().optional(),
   short_id: z.string().optional(),
 })
 
-export const OutboundSelectorSchema = z.looseObject({
+export const OutboundSelectorSchema = z.strictObject({
   type: z.literal("selector"),
   tag: z.string().optional(),
   outbounds: z.array(z.string()).optional(),
@@ -5283,7 +5283,7 @@ export const OutboundSelectorSchema = z.looseObject({
   interrupt_exist_connections: z.boolean().optional(),
 })
 
-export const OutboundShadowsocksSchema = z.looseObject({
+export const OutboundShadowsocksSchema = z.strictObject({
   type: z.literal("shadowsocks"),
   tag: z.string().optional(),
   detour: z.string().optional(),
@@ -5344,7 +5344,7 @@ export const OutboundShadowsocksSchema = z.looseObject({
   },
 })
 
-export const OutboundShadowtlsSchema = z.looseObject({
+export const OutboundShadowtlsSchema = z.strictObject({
   type: z.literal("shadowtls"),
   tag: z.string().optional(),
   detour: z.string().optional(),
@@ -5397,7 +5397,7 @@ export const OutboundShadowtlsSchema = z.looseObject({
   },
 })
 
-export const OutboundSnellSchema = z.looseObject({
+export const OutboundSnellSchema = z.strictObject({
   type: z.literal("snell"),
   tag: z.string().optional(),
   version: z.int().optional(),
@@ -5452,7 +5452,7 @@ export const OutboundSnellSchema = z.looseObject({
   },
 })
 
-export const OutboundSocksSchema = z.looseObject({
+export const OutboundSocksSchema = z.strictObject({
   type: z.literal("socks"),
   tag: z.string().optional(),
   detour: z.string().optional(),
@@ -5509,7 +5509,7 @@ export const OutboundSocksSchema = z.looseObject({
   },
 })
 
-export const OutboundSshSchema = z.looseObject({
+export const OutboundSshSchema = z.strictObject({
   type: z.literal("ssh"),
   tag: z.string().optional(),
   detour: z.string().optional(),
@@ -5586,7 +5586,7 @@ export const OutboundSshSchema = z.looseObject({
   ]).optional(),
 })
 
-export const OutboundSudokuSchema = z.looseObject({
+export const OutboundSudokuSchema = z.strictObject({
   type: z.literal("sudoku"),
   tag: z.string().optional(),
   detour: z.string().optional(),
@@ -5645,7 +5645,7 @@ export const OutboundSudokuSchema = z.looseObject({
   },
 })
 
-export const OutboundTorSchema = z.looseObject({
+export const OutboundTorSchema = z.strictObject({
   type: z.literal("tor"),
   tag: z.string().optional(),
   detour: z.string().optional(),
@@ -5695,7 +5695,7 @@ export const OutboundTorSchema = z.looseObject({
   torrc: z.record(z.string(), z.string()).optional(),
 })
 
-export const OutboundTrafficLimiterSchema = z.looseObject({
+export const OutboundTrafficLimiterSchema = z.strictObject({
   type: z.literal("traffic-limiter"),
   tag: z.string().optional(),
   strategy: z.string().optional(),
@@ -5712,7 +5712,7 @@ export const OutboundTrafficLimiterSchema = z.looseObject({
   },
 })
 
-export const OutboundTrojanSchema = z.looseObject({
+export const OutboundTrojanSchema = z.strictObject({
   type: z.literal("trojan"),
   tag: z.string().optional(),
   detour: z.string().optional(),
@@ -5773,7 +5773,7 @@ export const OutboundTrojanSchema = z.looseObject({
   },
 })
 
-export const OutboundTrusttunnelSchema = z.looseObject({
+export const OutboundTrusttunnelSchema = z.strictObject({
   type: z.literal("trusttunnel"),
   tag: z.string().optional(),
   detour: z.string().optional(),
@@ -5836,7 +5836,7 @@ export const OutboundTrusttunnelSchema = z.looseObject({
   },
 })
 
-export const OutboundTuicSchema = z.looseObject({
+export const OutboundTuicSchema = z.strictObject({
   type: z.literal("tuic"),
   tag: z.string().optional(),
   detour: z.string().optional(),
@@ -5910,7 +5910,7 @@ export const OutboundTuicSchema = z.looseObject({
   disable_path_mtu_discovery: z.boolean().optional(),
 })
 
-export const OutboundUrltestSchema = z.looseObject({
+export const OutboundUrltestSchema = z.strictObject({
   type: z.literal("urltest"),
   tag: z.string().optional(),
   outbounds: z.array(z.string()).optional(),
@@ -5928,7 +5928,7 @@ export const OutboundUrltestSchema = z.looseObject({
   interrupt_exist_connections: z.boolean().optional(),
 })
 
-export const OutboundVlessSchema = z.looseObject({
+export const OutboundVlessSchema = z.strictObject({
   type: z.literal("vless"),
   tag: z.string().optional(),
   detour: z.string().optional(),
@@ -5992,7 +5992,7 @@ export const OutboundVlessSchema = z.looseObject({
   packet_encoding: z.string().optional(),
 })
 
-export const OutboundVmessSchema = z.looseObject({
+export const OutboundVmessSchema = z.strictObject({
   type: z.literal("vmess"),
   tag: z.string().optional(),
   detour: z.string().optional(),
@@ -6093,7 +6093,7 @@ export const OutboundSchema = z.discriminatedUnion("type", [
   OutboundVmessSchema,
 ])
 
-export const OutboundTLSOptionsSchema = z.looseObject({
+export const OutboundTLSOptionsSchema = z.strictObject({
   enabled: z.boolean().optional(),
   engine: z.string().optional(),
   disable_sni: z.boolean().optional(),
@@ -6153,19 +6153,19 @@ export const OutboundTLSOptionsSchema = z.looseObject({
   },
 })
 
-export const OutboundUTLSOptionsSchema = z.looseObject({
+export const OutboundUTLSOptionsSchema = z.strictObject({
   enabled: z.boolean().optional(),
   fingerprint: z.string().optional(),
 })
 
-export const ProviderHealthCheckOptionsSchema = z.looseObject({
+export const ProviderHealthCheckOptionsSchema = z.strictObject({
   enabled: z.boolean().optional(),
   url: z.string().optional(),
   interval: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
   timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
 })
 
-export const ProviderInlineSchema = z.looseObject({
+export const ProviderInlineSchema = z.strictObject({
   type: z.literal("inline"),
   tag: z.string().optional(),
   get outbounds() {
@@ -6180,7 +6180,7 @@ export const ProviderInlineSchema = z.looseObject({
   },
 })
 
-export const ProviderLocalSchema = z.looseObject({
+export const ProviderLocalSchema = z.strictObject({
   type: z.literal("local"),
   tag: z.string().optional(),
   path: z.string().optional(),
@@ -6193,7 +6193,7 @@ export const ProviderLocalSchema = z.looseObject({
   },
 })
 
-export const ProviderRemoteSchema = z.looseObject({
+export const ProviderRemoteSchema = z.strictObject({
   type: z.literal("remote"),
   tag: z.string().optional(),
   url: z.string().optional(),
@@ -6221,7 +6221,7 @@ export const ProviderSchema = z.discriminatedUnion("type", [
   ProviderRemoteSchema,
 ])
 
-export const RateLimiterUserSchema = z.looseObject({
+export const RateLimiterUserSchema = z.strictObject({
   name: z.string().optional(),
   strategy: z.string().optional(),
   connection_type: z.string().optional(),
@@ -6229,7 +6229,7 @@ export const RateLimiterUserSchema = z.looseObject({
   interval: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
 })
 
-export const RouteOptionsSchema = z.looseObject({
+export const RouteOptionsSchema = z.strictObject({
   get geoip() {
     return GeoIPOptionsSchema.optional()
   },
@@ -6405,7 +6405,7 @@ export const RuleSchema = z.union([
     rewrite_ttl: z.int().nonnegative().optional(),
     client_subnet: z.string().optional(),
   }),
-  z.looseObject({
+  z.strictObject({
     type: z.literal("logical").optional(),
     mode: z.string().optional(),
     get rules() {
@@ -6430,7 +6430,7 @@ export const RuleSchema = z.union([
     tls_spoof: z.string().optional(),
     tls_spoof_method: z.string().optional(),
   }),
-  z.looseObject({
+  z.strictObject({
     type: z.literal("logical").optional(),
     mode: z.string().optional(),
     get rules() {
@@ -6454,7 +6454,7 @@ export const RuleSchema = z.union([
     tls_spoof: z.string().optional(),
     tls_spoof_method: z.string().optional(),
   }),
-  z.looseObject({
+  z.strictObject({
     type: z.literal("logical").optional(),
     mode: z.string().optional(),
     get rules() {
@@ -6503,7 +6503,7 @@ export const RuleSchema = z.union([
       return DomainStrategySchema.optional()
     },
   }),
-  z.looseObject({
+  z.strictObject({
     type: z.literal("logical").optional(),
     mode: z.string().optional(),
     get rules() {
@@ -6528,7 +6528,7 @@ export const RuleSchema = z.union([
     tls_spoof: z.string().optional(),
     tls_spoof_method: z.string().optional(),
   }),
-  z.looseObject({
+  z.strictObject({
     type: z.literal("logical").optional(),
     mode: z.string().optional(),
     get rules() {
@@ -6539,7 +6539,7 @@ export const RuleSchema = z.union([
     method: z.string().optional(),
     no_drop: z.boolean().optional(),
   }),
-  z.looseObject({
+  z.strictObject({
     type: z.literal("logical").optional(),
     mode: z.string().optional(),
     get rules() {
@@ -6548,7 +6548,7 @@ export const RuleSchema = z.union([
     invert: z.boolean().optional(),
     action: z.literal("hijack-dns").optional(),
   }),
-  z.looseObject({
+  z.strictObject({
     type: z.literal("logical").optional(),
     mode: z.string().optional(),
     get rules() {
@@ -6562,7 +6562,7 @@ export const RuleSchema = z.union([
     ]).optional(),
     timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
   }),
-  z.looseObject({
+  z.strictObject({
     type: z.literal("logical").optional(),
     mode: z.string().optional(),
     get rules() {
@@ -6583,7 +6583,7 @@ export const RuleSchema = z.union([
 ])
 
 export const RuleSetSchema = z.union([
-  z.looseObject({
+  z.strictObject({
     type: z.literal("inline").optional(),
     tag: z.union([
       z.string(),
@@ -6594,7 +6594,7 @@ export const RuleSetSchema = z.union([
       return z.array(HeadlessRuleSchema).optional()
     },
   }),
-  z.looseObject({
+  z.strictObject({
     type: z.literal("local").optional(),
     tag: z.union([
       z.string(),
@@ -6603,7 +6603,7 @@ export const RuleSetSchema = z.union([
     format: z.string().optional(),
     path: z.string().optional(),
   }),
-  z.looseObject({
+  z.strictObject({
     type: z.literal("remote").optional(),
     tag: z.union([
       z.string(),
@@ -6621,7 +6621,7 @@ export const RuleSetSchema = z.union([
   }),
 ])
 
-export const SSHCAOptionsSchema = z.looseObject({
+export const SSHCAOptionsSchema = z.strictObject({
   private_key: z.union([
     z.string(),
     z.array(z.string()),
@@ -6630,7 +6630,7 @@ export const SSHCAOptionsSchema = z.looseObject({
   private_key_passphrase: z.string().optional(),
 })
 
-export const SSHFallbackServerOptionsSchema = z.looseObject({
+export const SSHFallbackServerOptionsSchema = z.strictObject({
   detour: z.string().optional(),
   bind_interface: z.string().optional(),
   inet4_bind_address: z.string().optional(),
@@ -6695,7 +6695,7 @@ export const SSHFallbackServerOptionsSchema = z.looseObject({
   client_version: z.string().optional(),
 })
 
-export const SSHUserSchema = z.looseObject({
+export const SSHUserSchema = z.strictObject({
   name: z.string().optional(),
   password: z.string().optional(),
   authorized_keys: z.union([
@@ -6704,12 +6704,12 @@ export const SSHUserSchema = z.looseObject({
   ]).optional(),
 })
 
-export const ServerOptionsSchema = z.looseObject({
+export const ServerOptionsSchema = z.strictObject({
   server: z.string().optional(),
   server_port: z.int().nonnegative().optional(),
 })
 
-export const ServiceAdminPanelSchema = z.looseObject({
+export const ServiceAdminPanelSchema = z.strictObject({
   type: z.literal("admin-panel"),
   tag: z.string().optional(),
   listen: z.string().optional(),
@@ -6746,7 +6746,7 @@ export const ServiceAdminPanelSchema = z.looseObject({
   },
 })
 
-export const ServiceApiSchema = z.looseObject({
+export const ServiceApiSchema = z.strictObject({
   type: z.literal("api"),
   tag: z.string().optional(),
   listen: z.string().optional(),
@@ -6792,7 +6792,7 @@ export const ServiceApiSchema = z.looseObject({
   },
 })
 
-export const ServiceCcmSchema = z.looseObject({
+export const ServiceCcmSchema = z.strictObject({
   type: z.literal("ccm"),
   tag: z.string().optional(),
   listen: z.string().optional(),
@@ -6838,7 +6838,7 @@ export const ServiceCcmSchema = z.looseObject({
   usages_path: z.string().optional(),
 })
 
-export const ServiceDerpSchema = z.looseObject({
+export const ServiceDerpSchema = z.strictObject({
   type: z.literal("derp"),
   tag: z.string().optional(),
   listen: z.string().optional(),
@@ -6898,7 +6898,7 @@ export const ServiceDerpSchema = z.looseObject({
   },
 })
 
-export const ServiceHysteriaRealmSchema = z.looseObject({
+export const ServiceHysteriaRealmSchema = z.strictObject({
   type: z.literal("hysteria-realm"),
   tag: z.string().optional(),
   listen: z.string().optional(),
@@ -6949,14 +6949,14 @@ export const ServiceHysteriaRealmSchema = z.looseObject({
   },
 })
 
-export const ServiceManagerApiSchema = z.looseObject({
+export const ServiceManagerApiSchema = z.strictObject({
   type: z.literal("manager-api"),
   tag: z.string().optional(),
   api_type: z.string().optional(),
   protocol_type: z.string().optional(),
 })
 
-export const ServiceManagerSchema = z.looseObject({
+export const ServiceManagerSchema = z.strictObject({
   type: z.literal("manager"),
   tag: z.string().optional(),
   inbounds: z.array(z.string()).optional(),
@@ -6965,13 +6965,13 @@ export const ServiceManagerSchema = z.looseObject({
   },
 })
 
-export const ServiceNodeManagerApiSchema = z.looseObject({
+export const ServiceNodeManagerApiSchema = z.strictObject({
   type: z.literal("node-manager-api"),
   tag: z.string().optional(),
   api_type: z.string().optional(),
 })
 
-export const ServiceNodeSchema = z.looseObject({
+export const ServiceNodeSchema = z.strictObject({
   type: z.literal("node"),
   tag: z.string().optional(),
   uuid: z.string().optional(),
@@ -6983,7 +6983,7 @@ export const ServiceNodeSchema = z.looseObject({
   manager: z.string().optional(),
 })
 
-export const ServiceOcmSchema = z.looseObject({
+export const ServiceOcmSchema = z.strictObject({
   type: z.literal("ocm"),
   tag: z.string().optional(),
   listen: z.string().optional(),
@@ -7029,7 +7029,7 @@ export const ServiceOcmSchema = z.looseObject({
   usages_path: z.string().optional(),
 })
 
-export const ServiceOomKillerSchema = z.looseObject({
+export const ServiceOomKillerSchema = z.strictObject({
   type: z.literal("oom-killer"),
   tag: z.string().optional(),
   memory_limit: z.union([
@@ -7044,7 +7044,7 @@ export const ServiceOomKillerSchema = z.looseObject({
   max_interval: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
 })
 
-export const ServiceProfilerSchema = z.looseObject({
+export const ServiceProfilerSchema = z.strictObject({
   type: z.literal("profiler"),
   tag: z.string().optional(),
   listen: z.string().optional(),
@@ -7078,7 +7078,7 @@ export const ServiceProfilerSchema = z.looseObject({
   udp_disable_domain_unmapping: z.boolean().optional(),
 })
 
-export const ServiceResolvedSchema = z.looseObject({
+export const ServiceResolvedSchema = z.strictObject({
   type: z.literal("resolved"),
   tag: z.string().optional(),
   listen: z.string().optional(),
@@ -7112,7 +7112,7 @@ export const ServiceResolvedSchema = z.looseObject({
   udp_disable_domain_unmapping: z.boolean().optional(),
 })
 
-export const ServiceSsmApiSchema = z.looseObject({
+export const ServiceSsmApiSchema = z.strictObject({
   type: z.literal("ssm-api"),
   tag: z.string().optional(),
   listen: z.string().optional(),
@@ -7151,7 +7151,7 @@ export const ServiceSsmApiSchema = z.looseObject({
   },
 })
 
-export const ServiceUsbipClientSchema = z.looseObject({
+export const ServiceUsbipClientSchema = z.strictObject({
   type: z.literal("usbip-client"),
   tag: z.string().optional(),
   detour: z.string().optional(),
@@ -7202,7 +7202,7 @@ export const ServiceUsbipClientSchema = z.looseObject({
   },
 })
 
-export const ServiceUsbipServerSchema = z.looseObject({
+export const ServiceUsbipServerSchema = z.strictObject({
   type: z.literal("usbip-server"),
   tag: z.string().optional(),
   listen: z.string().optional(),
@@ -7256,7 +7256,7 @@ export const ServiceSchema = z.discriminatedUnion("type", [
   ServiceUsbipServerSchema,
 ])
 
-export const ShadowTLSHandshakeOptionsSchema = z.looseObject({
+export const ShadowTLSHandshakeOptionsSchema = z.strictObject({
   server: z.string().optional(),
   server_port: z.int().nonnegative().optional(),
   detour: z.string().optional(),
@@ -7302,29 +7302,29 @@ export const ShadowTLSHandshakeOptionsSchema = z.looseObject({
   },
 })
 
-export const ShadowTLSUserSchema = z.looseObject({
+export const ShadowTLSUserSchema = z.strictObject({
   name: z.string().optional(),
   password: z.string().optional(),
 })
 
-export const ShadowsocksDestinationSchema = z.looseObject({
+export const ShadowsocksDestinationSchema = z.strictObject({
   name: z.string().optional(),
   password: z.string().optional(),
   server: z.string().optional(),
   server_port: z.int().nonnegative().optional(),
 })
 
-export const ShadowsocksUserSchema = z.looseObject({
+export const ShadowsocksUserSchema = z.strictObject({
   name: z.string().optional(),
   password: z.string().optional(),
 })
 
-export const SnellUserSchema = z.looseObject({
+export const SnellUserSchema = z.strictObject({
   name: z.string().optional(),
   userkey: z.string().optional(),
 })
 
-export const SudokuHTTPMaskSchema = z.looseObject({
+export const SudokuHTTPMaskSchema = z.strictObject({
   enabled: z.boolean().optional(),
   mode: z.string().optional(),
   host: z.string().optional(),
@@ -7335,7 +7335,7 @@ export const SudokuHTTPMaskSchema = z.looseObject({
   },
 })
 
-export const TUICUserSchema = z.looseObject({
+export const TUICUserSchema = z.strictObject({
   name: z.string().optional(),
   uuid: z.string().optional(),
   password: z.string().optional(),
@@ -7343,7 +7343,7 @@ export const TUICUserSchema = z.looseObject({
 
 export const TailscaleSSHServerOptionsSchema = z.union([
   z.boolean(),
-  z.looseObject({
+  z.strictObject({
     enabled: z.boolean().optional(),
     disable_pty: z.boolean().optional(),
     disable_sftp: z.boolean().optional(),
@@ -7351,7 +7351,7 @@ export const TailscaleSSHServerOptionsSchema = z.union([
   }),
 ])
 
-export const TrafficLimiterUserSchema = z.looseObject({
+export const TrafficLimiterUserSchema = z.strictObject({
   name: z.string().optional(),
   strategy: z.string().optional(),
   mode: z.string().optional(),
@@ -7361,24 +7361,24 @@ export const TrafficLimiterUserSchema = z.looseObject({
   ]).optional(),
 })
 
-export const TrojanUserSchema = z.looseObject({
+export const TrojanUserSchema = z.strictObject({
   name: z.string().optional(),
   password: z.string().optional(),
 })
 
-export const TrustTunnelMultiplexOptionsSchema = z.looseObject({
+export const TrustTunnelMultiplexOptionsSchema = z.strictObject({
   enabled: z.boolean().optional(),
   max_connections: z.int().optional(),
   min_streams: z.int().optional(),
   max_streams: z.int().optional(),
 })
 
-export const TrustTunnelUserSchema = z.looseObject({
+export const TrustTunnelUserSchema = z.strictObject({
   name: z.string().optional(),
   password: z.string().optional(),
 })
 
-export const TunPlatformOptionsSchema = z.looseObject({
+export const TunPlatformOptionsSchema = z.strictObject({
   get http_proxy() {
     return HTTPProxyOptionsSchema.optional()
   },
@@ -7388,7 +7388,7 @@ export const UDPNATBehaviorSchema = z.int().nonnegative()
 
 export const UDPOverTCPOptionsSchema = z.union([
   z.boolean(),
-  z.looseObject({
+  z.strictObject({
     enabled: z.boolean().optional(),
     version: z.int().nonnegative().optional(),
   }),
@@ -7399,25 +7399,25 @@ export const UDPTimeoutCompatSchema = z.union([
   z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/),
 ])
 
-export const USBIPDeviceMatchSchema = z.looseObject({
+export const USBIPDeviceMatchSchema = z.strictObject({
   bus_id: z.string().optional(),
   vendor_id: z.int().nonnegative().optional(),
   product_id: z.int().nonnegative().optional(),
   serial: z.string().optional(),
 })
 
-export const UnifiedDelayOptionsSchema = z.looseObject({
+export const UnifiedDelayOptionsSchema = z.strictObject({
   enabled: z.boolean().optional(),
 })
 
-export const V2RayAPIOptionsSchema = z.looseObject({
+export const V2RayAPIOptionsSchema = z.strictObject({
   listen: z.string().optional(),
   get stats() {
     return V2RayStatsServiceOptionsSchema.optional()
   },
 })
 
-export const V2RayStatsServiceOptionsSchema = z.looseObject({
+export const V2RayStatsServiceOptionsSchema = z.strictObject({
   enabled: z.boolean().optional(),
   inbounds: z.array(z.string()).optional(),
   outbounds: z.array(z.string()).optional(),
@@ -7425,7 +7425,7 @@ export const V2RayStatsServiceOptionsSchema = z.looseObject({
 })
 
 export const V2RayTransportOptionsSchema = z.discriminatedUnion("type", [
-  z.looseObject({
+  z.strictObject({
     type: z.literal("http"),
     host: z.union([
       z.string(),
@@ -7440,7 +7440,7 @@ export const V2RayTransportOptionsSchema = z.discriminatedUnion("type", [
     idle_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
     ping_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
   }),
-  z.looseObject({
+  z.strictObject({
     type: z.literal("ws"),
     path: z.string().optional(),
     headers: z.record(z.string(), z.union([
@@ -7450,17 +7450,17 @@ export const V2RayTransportOptionsSchema = z.discriminatedUnion("type", [
     max_early_data: z.int().nonnegative().optional(),
     early_data_header_name: z.string().optional(),
   }),
-  z.looseObject({
+  z.strictObject({
     type: z.literal("quic"),
   }),
-  z.looseObject({
+  z.strictObject({
     type: z.literal("grpc"),
     service_name: z.string().optional(),
     idle_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
     ping_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
     permit_without_stream: z.boolean().optional(),
   }),
-  z.looseObject({
+  z.strictObject({
     type: z.literal("httpupgrade"),
     host: z.string().optional(),
     path: z.string().optional(),
@@ -7469,7 +7469,7 @@ export const V2RayTransportOptionsSchema = z.discriminatedUnion("type", [
       z.array(z.string()),
     ])).optional(),
   }),
-  z.looseObject({
+  z.strictObject({
     type: z.literal("xhttp"),
     mode: z.string().optional(),
     host: z.string().optional(),
@@ -7481,7 +7481,7 @@ export const V2RayTransportOptionsSchema = z.discriminatedUnion("type", [
     x_padding_bytes: z.union([
       z.int(),
       z.string(),
-      z.looseObject({
+      z.strictObject({
         from: z.int(),
         to: z.int(),
       }),
@@ -7491,7 +7491,7 @@ export const V2RayTransportOptionsSchema = z.discriminatedUnion("type", [
     sc_max_each_post_bytes: z.union([
       z.int(),
       z.string(),
-      z.looseObject({
+      z.strictObject({
         from: z.int(),
         to: z.int(),
       }),
@@ -7499,7 +7499,7 @@ export const V2RayTransportOptionsSchema = z.discriminatedUnion("type", [
     sc_min_posts_interval_ms: z.union([
       z.int(),
       z.string(),
-      z.looseObject({
+      z.strictObject({
         from: z.int(),
         to: z.int(),
       }),
@@ -7508,7 +7508,7 @@ export const V2RayTransportOptionsSchema = z.discriminatedUnion("type", [
     sc_stream_up_server_secs: z.union([
       z.int(),
       z.string(),
-      z.looseObject({
+      z.strictObject({
         from: z.int(),
         to: z.int(),
       }),
@@ -7536,7 +7536,7 @@ export const V2RayTransportOptionsSchema = z.discriminatedUnion("type", [
     uplink_chunk_size: z.union([
       z.int(),
       z.string(),
-      z.looseObject({
+      z.strictObject({
         from: z.int(),
         to: z.int(),
       }),
@@ -7545,7 +7545,7 @@ export const V2RayTransportOptionsSchema = z.discriminatedUnion("type", [
     session_id_length: z.union([
       z.int(),
       z.string(),
-      z.looseObject({
+      z.strictObject({
         from: z.int(),
         to: z.int(),
       }),
@@ -7556,7 +7556,7 @@ export const V2RayTransportOptionsSchema = z.discriminatedUnion("type", [
       return V2RayXHTTPDownloadOptionsSchema.optional()
     },
   }),
-  z.looseObject({
+  z.strictObject({
     type: z.literal("mkcp"),
     mtu: z.int().nonnegative().optional(),
     tti: z.int().nonnegative().optional(),
@@ -7570,7 +7570,7 @@ export const V2RayTransportOptionsSchema = z.discriminatedUnion("type", [
   }),
 ])
 
-export const V2RayXHTTPDownloadOptionsSchema = z.looseObject({
+export const V2RayXHTTPDownloadOptionsSchema = z.strictObject({
   host: z.string().optional(),
   path: z.string().optional(),
   headers: z.record(z.string(), z.string()).optional(),
@@ -7580,7 +7580,7 @@ export const V2RayXHTTPDownloadOptionsSchema = z.looseObject({
   x_padding_bytes: z.union([
     z.int(),
     z.string(),
-    z.looseObject({
+    z.strictObject({
       from: z.int(),
       to: z.int(),
     }),
@@ -7590,7 +7590,7 @@ export const V2RayXHTTPDownloadOptionsSchema = z.looseObject({
   sc_max_each_post_bytes: z.union([
     z.int(),
     z.string(),
-    z.looseObject({
+    z.strictObject({
       from: z.int(),
       to: z.int(),
     }),
@@ -7598,7 +7598,7 @@ export const V2RayXHTTPDownloadOptionsSchema = z.looseObject({
   sc_min_posts_interval_ms: z.union([
     z.int(),
     z.string(),
-    z.looseObject({
+    z.strictObject({
       from: z.int(),
       to: z.int(),
     }),
@@ -7607,7 +7607,7 @@ export const V2RayXHTTPDownloadOptionsSchema = z.looseObject({
   sc_stream_up_server_secs: z.union([
     z.int(),
     z.string(),
-    z.looseObject({
+    z.strictObject({
       from: z.int(),
       to: z.int(),
     }),
@@ -7635,7 +7635,7 @@ export const V2RayXHTTPDownloadOptionsSchema = z.looseObject({
   uplink_chunk_size: z.union([
     z.int(),
     z.string(),
-    z.looseObject({
+    z.strictObject({
       from: z.int(),
       to: z.int(),
     }),
@@ -7644,7 +7644,7 @@ export const V2RayXHTTPDownloadOptionsSchema = z.looseObject({
   session_id_length: z.union([
     z.int(),
     z.string(),
-    z.looseObject({
+    z.strictObject({
       from: z.int(),
       to: z.int(),
     }),
@@ -7659,11 +7659,11 @@ export const V2RayXHTTPDownloadOptionsSchema = z.looseObject({
   detour: z.string().optional(),
 })
 
-export const V2RayXHTTPXmuxOptionsSchema = z.looseObject({
+export const V2RayXHTTPXmuxOptionsSchema = z.strictObject({
   max_concurrency: z.union([
     z.int(),
     z.string(),
-    z.looseObject({
+    z.strictObject({
       from: z.int(),
       to: z.int(),
     }),
@@ -7671,7 +7671,7 @@ export const V2RayXHTTPXmuxOptionsSchema = z.looseObject({
   max_connections: z.union([
     z.int(),
     z.string(),
-    z.looseObject({
+    z.strictObject({
       from: z.int(),
       to: z.int(),
     }),
@@ -7679,7 +7679,7 @@ export const V2RayXHTTPXmuxOptionsSchema = z.looseObject({
   c_max_reuse_times: z.union([
     z.int(),
     z.string(),
-    z.looseObject({
+    z.strictObject({
       from: z.int(),
       to: z.int(),
     }),
@@ -7687,7 +7687,7 @@ export const V2RayXHTTPXmuxOptionsSchema = z.looseObject({
   h_max_request_times: z.union([
     z.int(),
     z.string(),
-    z.looseObject({
+    z.strictObject({
       from: z.int(),
       to: z.int(),
     }),
@@ -7695,7 +7695,7 @@ export const V2RayXHTTPXmuxOptionsSchema = z.looseObject({
   h_max_reusable_secs: z.union([
     z.int(),
     z.string(),
-    z.looseObject({
+    z.strictObject({
       from: z.int(),
       to: z.int(),
     }),
@@ -7703,24 +7703,24 @@ export const V2RayXHTTPXmuxOptionsSchema = z.looseObject({
   h_keep_alive_period: z.int().optional(),
 })
 
-export const VLESSUserSchema = z.looseObject({
+export const VLESSUserSchema = z.strictObject({
   name: z.string().optional(),
   uuid: z.string().optional(),
   flow: z.string().optional(),
 })
 
-export const VMessUserSchema = z.looseObject({
+export const VMessUserSchema = z.strictObject({
   name: z.string().optional(),
   uuid: z.string().optional(),
   alterId: z.int().optional(),
 })
 
-export const VPNUserSchema = z.looseObject({
+export const VPNUserSchema = z.strictObject({
   address: z.string().optional(),
   key: z.string().optional(),
 })
 
-export const WARPAmneziaSchema = z.looseObject({
+export const WARPAmneziaSchema = z.strictObject({
   jc: z.int().optional(),
   jmin: z.int().optional(),
   jmax: z.int().optional(),
@@ -7732,7 +7732,7 @@ export const WARPAmneziaSchema = z.looseObject({
   content_padding_addition: z.union([
     z.int().nonnegative(),
     z.string(),
-    z.looseObject({
+    z.strictObject({
       from: z.int().nonnegative(),
       to: z.int().nonnegative(),
     }),
@@ -7740,7 +7740,7 @@ export const WARPAmneziaSchema = z.looseObject({
   rekey_after_time: z.union([
     z.int().nonnegative(),
     z.string(),
-    z.looseObject({
+    z.strictObject({
       from: z.int().nonnegative(),
       to: z.int().nonnegative(),
     }),
@@ -7748,7 +7748,7 @@ export const WARPAmneziaSchema = z.looseObject({
   rekey_timeout: z.union([
     z.int().nonnegative(),
     z.string(),
-    z.looseObject({
+    z.strictObject({
       from: z.int().nonnegative(),
       to: z.int().nonnegative(),
     }),
@@ -7756,7 +7756,7 @@ export const WARPAmneziaSchema = z.looseObject({
   reject_after_time: z.union([
     z.int().nonnegative(),
     z.string(),
-    z.looseObject({
+    z.strictObject({
       from: z.int().nonnegative(),
       to: z.int().nonnegative(),
     }),
@@ -7764,7 +7764,7 @@ export const WARPAmneziaSchema = z.looseObject({
   keepalive_timeout: z.union([
     z.int().nonnegative(),
     z.string(),
-    z.looseObject({
+    z.strictObject({
       from: z.int().nonnegative(),
       to: z.int().nonnegative(),
     }),
@@ -7772,7 +7772,7 @@ export const WARPAmneziaSchema = z.looseObject({
   max_handshake_attempts: z.union([
     z.int().nonnegative(),
     z.string(),
-    z.looseObject({
+    z.strictObject({
       from: z.int().nonnegative(),
       to: z.int().nonnegative(),
     }),
@@ -7781,7 +7781,7 @@ export const WARPAmneziaSchema = z.looseObject({
 
 export const WildcardSNISchema = z.enum(["", "off", "authed", "all"])
 
-export const WireGuardAmneziaSchema = z.looseObject({
+export const WireGuardAmneziaSchema = z.strictObject({
   jc: z.int().optional(),
   jmin: z.int().optional(),
   jmax: z.int().optional(),
@@ -7792,7 +7792,7 @@ export const WireGuardAmneziaSchema = z.looseObject({
   h1: z.union([
     z.int().nonnegative(),
     z.string(),
-    z.looseObject({
+    z.strictObject({
       from: z.int().nonnegative(),
       to: z.int().nonnegative(),
     }),
@@ -7800,7 +7800,7 @@ export const WireGuardAmneziaSchema = z.looseObject({
   h2: z.union([
     z.int().nonnegative(),
     z.string(),
-    z.looseObject({
+    z.strictObject({
       from: z.int().nonnegative(),
       to: z.int().nonnegative(),
     }),
@@ -7808,7 +7808,7 @@ export const WireGuardAmneziaSchema = z.looseObject({
   h3: z.union([
     z.int().nonnegative(),
     z.string(),
-    z.looseObject({
+    z.strictObject({
       from: z.int().nonnegative(),
       to: z.int().nonnegative(),
     }),
@@ -7816,7 +7816,7 @@ export const WireGuardAmneziaSchema = z.looseObject({
   h4: z.union([
     z.int().nonnegative(),
     z.string(),
-    z.looseObject({
+    z.strictObject({
       from: z.int().nonnegative(),
       to: z.int().nonnegative(),
     }),
@@ -7830,7 +7830,7 @@ export const WireGuardAmneziaSchema = z.looseObject({
   content_padding_addition: z.union([
     z.int().nonnegative(),
     z.string(),
-    z.looseObject({
+    z.strictObject({
       from: z.int().nonnegative(),
       to: z.int().nonnegative(),
     }),
@@ -7838,7 +7838,7 @@ export const WireGuardAmneziaSchema = z.looseObject({
   rekey_after_time: z.union([
     z.int().nonnegative(),
     z.string(),
-    z.looseObject({
+    z.strictObject({
       from: z.int().nonnegative(),
       to: z.int().nonnegative(),
     }),
@@ -7846,7 +7846,7 @@ export const WireGuardAmneziaSchema = z.looseObject({
   rekey_timeout: z.union([
     z.int().nonnegative(),
     z.string(),
-    z.looseObject({
+    z.strictObject({
       from: z.int().nonnegative(),
       to: z.int().nonnegative(),
     }),
@@ -7854,7 +7854,7 @@ export const WireGuardAmneziaSchema = z.looseObject({
   reject_after_time: z.union([
     z.int().nonnegative(),
     z.string(),
-    z.looseObject({
+    z.strictObject({
       from: z.int().nonnegative(),
       to: z.int().nonnegative(),
     }),
@@ -7862,7 +7862,7 @@ export const WireGuardAmneziaSchema = z.looseObject({
   keepalive_timeout: z.union([
     z.int().nonnegative(),
     z.string(),
-    z.looseObject({
+    z.strictObject({
       from: z.int().nonnegative(),
       to: z.int().nonnegative(),
     }),
@@ -7870,14 +7870,14 @@ export const WireGuardAmneziaSchema = z.looseObject({
   max_handshake_attempts: z.union([
     z.int().nonnegative(),
     z.string(),
-    z.looseObject({
+    z.strictObject({
       from: z.int().nonnegative(),
       to: z.int().nonnegative(),
     }),
   ]).optional(),
 })
 
-export const WireGuardPeerSchema = z.looseObject({
+export const WireGuardPeerSchema = z.strictObject({
   address: z.string().optional(),
   port: z.int().nonnegative().optional(),
   public_key: z.string().optional(),
