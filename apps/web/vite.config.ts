@@ -1,6 +1,7 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
+import { brotliCompressSync, constants, gzipSync } from 'node:zlib';
 
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
@@ -156,9 +157,78 @@ function metaboxI18n(): Plugin {
   };
 }
 
+/** Что сжимать: остальное либо уже сжато (woff2), либо мельче заголовка ответа. */
+const COMPRESSIBLE = new Set(['.js', '.css', '.html', '.json', '.svg']);
+const MIN_COMPRESS_BYTES = 256;
+/** Ниже этого выигрыша второй файл в бинаре не окупается. */
+const MIN_COMPRESS_RATIO = 0.9;
+
+/**
+ * Предсжатие статики. Демон компрессора не имеет и не должен: сжимать один и
+ * тот же файл на каждый запрос — это процессорное время роутера на ровном
+ * месте. Сборка кладёт рядом `.br` и `.gz`, демон выбирает по `Accept-Encoding`.
+ *
+ * Оба формата, а не только brotli: браузеры объявляют `br` не на всяком
+ * соединении, а панель живёт по обычному http в локальной сети.
+ */
+function metaboxCompress(): Plugin {
+  let outDir = 'dist';
+
+  return {
+    name: 'metabox-compress',
+    apply: 'build',
+    configResolved(config) {
+      outDir = path.resolve(config.root, config.build.outDir);
+    },
+    closeBundle() {
+      for (const file of walk(outDir)) {
+        if (!COMPRESSIBLE.has(path.extname(file))) {
+          continue;
+        }
+
+        const raw = readFileSync(file);
+
+        if (raw.byteLength < MIN_COMPRESS_BYTES) {
+          continue;
+        }
+
+        writeIfSmaller(
+          `${file}.br`,
+          raw,
+          brotliCompressSync(raw, {
+            params: {
+              [constants.BROTLI_PARAM_QUALITY]: constants.BROTLI_MAX_QUALITY,
+              [constants.BROTLI_PARAM_SIZE_HINT]: raw.byteLength,
+            },
+          })
+        );
+        writeIfSmaller(`${file}.gz`, raw, gzipSync(raw, { level: 9 }));
+      }
+    },
+  };
+}
+
+function writeIfSmaller(target: string, raw: Buffer, compressed: Buffer) {
+  if (compressed.byteLength < raw.byteLength * MIN_COMPRESS_RATIO) {
+    writeFileSync(target, compressed);
+  }
+}
+
+function* walk(dir: string): Generator<string> {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+
+    if (entry.isDirectory()) {
+      yield* walk(full);
+    } else if (entry.isFile()) {
+      yield full;
+    }
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss(), metaboxI18n(), metaboxMocks()],
+  plugins: [react(), tailwindcss(), metaboxI18n(), metaboxCompress(), metaboxMocks()],
   resolve: {
     alias: {
       ...Object.fromEntries(LAYERS.map((layer) => [`@${layer}`, path.resolve(import.meta.dirname, `./src/${layer}`)])),
