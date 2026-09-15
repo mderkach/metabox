@@ -1,0 +1,4 @@
+{
+  "outbounds": [{ "type": "direct", "tag": "direct" }],
+  "route": { "rules": [], "final": "direct" }
+}

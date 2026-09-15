@@ -1,0 +1,26 @@
+{
+  "log": { "level": "warn" },
+  "vendor_extension": {
+    "enabled": true,
+    "profiles": [{ "name": "own", "weight": 3 }]
+  },
+  "outbounds": [
+    { "type": "direct", "tag": "direct" },
+    {
+      "type": "shadowsocks",
+      "tag": "node-b",
+      "server": "node-b.example",
+      "server_port": 8388,
+      "method": "2022-blake3-aes-128-gcm",
+      "password": "REDACTED",
+      "unknown_option": { "kind": "future" }
+    }
+  ],
+  "route": {
+    "rules": [
+      { "unknown_matcher": ["own"], "outbound": "direct" },
+      { "domain_keyword": ["ads"], "action": "reject" }
+    ],
+    "final": "direct"
+  }
+}

@@ -1,0 +1,662 @@
+{
+  "log": {
+    "level": "error",
+    "timestamp": true,
+    "output": "/var/log/sing-box.log"
+  },
+  "dns": {
+    "servers": [
+      {
+        "type": "hosts",
+        "tag": "dns-hosts",
+        "predefined": {
+          "node-a.example": ["198.51.100.10"],
+          "node-b.example": ["198.51.100.11"],
+          "node-c.example": ["198.51.100.12"]
+        }
+      },
+      {
+        "type": "https",
+        "tag": "dns-direct-cf",
+        "server": "1.1.1.1",
+        "tls": {
+          "enabled": true,
+          "server_name": "cloudflare-dns.com"
+        }
+      },
+      {
+        "type": "https",
+        "tag": "dns-remote-google",
+        "detour": "proxy",
+        "server": "8.8.8.8",
+        "tls": {
+          "enabled": true,
+          "server_name": "dns.google"
+        }
+      },
+      {
+        "type": "https",
+        "tag": "dns-alt-google",
+        "detour": "alt-fallback",
+        "server": "8.8.8.8",
+        "tls": {
+          "enabled": true,
+          "server_name": "dns.google"
+        }
+      },
+      {
+        "type": "https",
+        "tag": "dns-direct-google",
+        "server": "8.8.8.8",
+        "tls": {
+          "enabled": true,
+          "server_name": "dns.google"
+        }
+      },
+      {
+        "type": "tls",
+        "tag": "dns-direct-yandex",
+        "server": "77.88.8.8",
+        "tls": {
+          "enabled": true,
+          "server_name": "common.dot.dns.yandex.net"
+        }
+      },
+      {
+        "type": "https",
+        "tag": "dns-remote-cf",
+        "detour": "proxy",
+        "server": "1.1.1.1",
+        "tls": {
+          "enabled": true,
+          "server_name": "cloudflare-dns.com"
+        }
+      },
+      {
+        "type": "https",
+        "tag": "dns-remote-quad9",
+        "detour": "proxy",
+        "server": "9.9.9.9",
+        "tls": {
+          "enabled": true,
+          "server_name": "dns.quad9.net"
+        }
+      },
+      {
+        "type": "fallback",
+        "tag": "dns-direct",
+        "servers": ["dns-direct-cf", "dns-direct-google", "dns-direct-yandex"],
+        "strategy": "sequential",
+        "timeout": "10s"
+      },
+      {
+        "type": "fallback",
+        "tag": "dns-remote",
+        "servers": ["dns-remote-google", "dns-remote-cf", "dns-remote-quad9"],
+        "strategy": "sequential",
+        "timeout": "10s"
+      },
+      {
+        "type": "fallback",
+        "tag": "dns-alt",
+        "servers": ["dns-alt-google", "dns-remote-cf", "dns-remote-quad9"],
+        "strategy": "sequential",
+        "timeout": "10s"
+      }
+    ],
+    "rules": [
+      {
+        "domain": ["node-a.example", "node-b.example", "node-c.example"],
+        "action": "route",
+        "server": "dns-hosts"
+      },
+      {
+        "clash_mode": "Direct",
+        "action": "route",
+        "server": "dns-direct"
+      },
+      {
+        "clash_mode": "Global",
+        "action": "route",
+        "server": "dns-remote"
+      },
+      {
+        "rule_set": ["google-ip", "google-site", "gemini", "openai", "anthropic", "stripe", "hccaptcha", "cursor"],
+        "action": "route",
+        "server": "dns-alt"
+      },
+      {
+        "domain_suffix": ["media-a.example", "media-b.example", "media-b.example"],
+        "action": "route",
+        "server": "dns-alt"
+      },
+      {
+        "rule_set": [
+          "notion",
+          "spotify",
+          "adobe",
+          "tilda",
+          "apple",
+          "soundcloud",
+          "atlassian",
+          "cloudfront",
+          "github",
+          "twitch"
+        ],
+        "action": "route",
+        "server": "dns-remote"
+      },
+      {
+        "domain_suffix": [
+          "video-a.example",
+          "video-b.example",
+          "video-c.example",
+          "video-d.example",
+          "video-e.example",
+          "video-f.example"
+        ],
+        "action": "route",
+        "server": "dns-remote"
+      },
+      {
+        "domain_suffix": [
+          "games-a.example",
+          "games-b.example",
+          "games-c.example",
+          "games-d.example",
+          "games-e.example",
+          "games-f.example",
+          "misc-a.example",
+          "misc-b.example",
+          "misc-c.example",
+          "misc-e.example",
+          "misc-d.example",
+          "misc-f.example"
+        ],
+        "action": "route",
+        "server": "dns-remote"
+      },
+      {
+        "domain_suffix": ["maker-a.example", "maker-b.example", "maker-c.example"],
+        "action": "route",
+        "server": "dns-remote"
+      },
+      {
+        "domain_regex": [
+          ".*docs-a.*",
+          ".*blog-a.*",
+          ".*tunnel.*",
+          "\\.dev$",
+          ".*ui-docs.*",
+          ".*labs-cdn.*",
+          ".*builder.*",
+          "(^|\\.)[^.]*ai-lab[^.]*\\.example$",
+          ".*router-vendor.*",
+          ".*firmware.*"
+        ],
+        "action": "route",
+        "server": "dns-remote"
+      },
+      {
+        "domain_suffix": ["personal.example"],
+        "action": "route",
+        "server": "dns-direct"
+      },
+      {
+        "action": "route",
+        "server": "dns-direct"
+      }
+    ],
+    "strategy": "ipv4_only",
+    "reverse_mapping": true,
+    "independent_cache": true
+  },
+  "inbounds": [
+    {
+      "type": "direct",
+      "tag": "dns-in",
+      "listen": "127.0.0.1",
+      "listen_port": 5333
+    },
+    {
+      "type": "redirect",
+      "tag": "redirect-in",
+      "listen": "0.0.0.0",
+      "listen_port": 5331
+    },
+    {
+      "type": "tproxy",
+      "listen": "0.0.0.0",
+      "listen_port": 5332,
+      "tag": "tproxy-in"
+    }
+  ],
+  "outbounds": [
+    {
+      "type": "vless",
+      "tag": "node-a-vless-reality",
+      "server": "node-a.example.invalid",
+      "server_port": 443,
+      "uuid": "REDACTED",
+      "flow": "xtls-rprx-vision",
+      "tls": {
+        "enabled": true,
+        "server_name": "www.example.com",
+        "utls": {
+          "enabled": true,
+          "fingerprint": "chrome"
+        },
+        "reality": {
+          "enabled": true,
+          "public_key": "REDACTED",
+          "short_id": "REDACTED"
+        }
+      },
+      "connect_timeout": "5s",
+      "tcp_keep_alive": "5m",
+      "tcp_keep_alive_interval": "75s",
+      "packet_encoding": "xudp"
+    },
+    {
+      "type": "urltest",
+      "tag": "proxy",
+      "outbounds": ["node-a-vless-reality"],
+      "providers": ["sub-a", "sub-c"],
+      "url": "https://example.invalid/sub/REDACTED",
+      "interval": "1m",
+      "tolerance": 50,
+      "interrupt_exist_connections": true
+    },
+    {
+      "type": "urltest",
+      "tag": "alt",
+      "outbounds": ["node-a-vless-reality"],
+      "providers": ["sub-b"],
+      "url": "https://example.invalid/sub/REDACTED",
+      "interval": "1m",
+      "tolerance": 50,
+      "interrupt_exist_connections": true
+    },
+    {
+      "type": "selector",
+      "tag": "alt-fallback",
+      "outbounds": ["alt", "proxy"]
+    },
+    {
+      "type": "direct",
+      "tag": "direct"
+    }
+  ],
+  "route": {
+    "rules": [
+      {
+        "action": "sniff"
+      },
+      {
+        "inbound": ["dns-in"],
+        "action": "hijack-dns"
+      },
+      {
+        "port": 53,
+        "action": "hijack-dns"
+      },
+      {
+        "source_ip_cidr": ["192.168.1.100/32"],
+        "source_port": [25565],
+        "outbound": "direct"
+      },
+      {
+        "clash_mode": "Direct",
+        "outbound": "direct"
+      },
+      {
+        "clash_mode": "Global",
+        "outbound": "proxy"
+      },
+      {
+        "rule_set": ["google-ip"],
+        "outbound": "alt-fallback"
+      },
+      {
+        "rule_set": ["google-site"],
+        "outbound": "alt-fallback"
+      },
+      {
+        "rule_set": ["gemini"],
+        "outbound": "alt-fallback"
+      },
+      {
+        "rule_set": ["openai"],
+        "outbound": "alt-fallback"
+      },
+      {
+        "rule_set": ["anthropic"],
+        "outbound": "alt-fallback"
+      },
+      {
+        "rule_set": ["cursor"],
+        "outbound": "alt-fallback"
+      },
+      {
+        "rule_set": ["stripe"],
+        "outbound": "alt-fallback"
+      },
+      {
+        "rule_set": ["hccaptcha"],
+        "outbound": "alt-fallback"
+      },
+      {
+        "domain_suffix": ["media-a.example", "media-b.example", "media-c.example"],
+        "outbound": "alt-fallback"
+      },
+      {
+        "domain_suffix": ["personal.example"],
+        "outbound": "direct"
+      },
+      {
+        "domain_suffix": ["shop-a.example", "shop-b.example", "media-d.example"],
+        "outbound": "direct"
+      },
+      {
+        "rule_set": ["notion"],
+        "outbound": "proxy"
+      },
+      {
+        "rule_set": ["spotify"],
+        "outbound": "proxy"
+      },
+      {
+        "rule_set": ["adobe"],
+        "outbound": "proxy"
+      },
+      {
+        "rule_set": ["tilda"],
+        "outbound": "proxy"
+      },
+      {
+        "rule_set": ["apple"],
+        "outbound": "proxy"
+      },
+      {
+        "rule_set": ["soundcloud"],
+        "outbound": "proxy"
+      },
+      {
+        "rule_set": ["atlassian"],
+        "outbound": "proxy"
+      },
+      {
+        "rule_set": ["cloudfront"],
+        "outbound": "proxy"
+      },
+      {
+        "rule_set": ["github"],
+        "outbound": "proxy"
+      },
+      {
+        "rule_set": ["twitch"],
+        "outbound": "proxy"
+      },
+      {
+        "domain_suffix": [
+          "video-a.example",
+          "video-b.example",
+          "video-c.example",
+          "video-d.example",
+          "video-e.example",
+          "video-f.example"
+        ],
+        "outbound": "proxy"
+      },
+      {
+        "domain_suffix": ["maker-a.example", "maker-b.example", "maker-c.example"],
+        "outbound": "proxy"
+      },
+      {
+        "domain_suffix": [
+          "games-a.example",
+          "games-b.example",
+          "games-c.example",
+          "games-d.example",
+          "games-e.example",
+          "games-f.example",
+          "misc-a.example",
+          "misc-b.example",
+          "misc-c.example",
+          "misc-e.example",
+          "misc-d.example",
+          "misc-f.example",
+          "video-g.example",
+          "video-h.example",
+          "video-i.example"
+        ],
+        "outbound": "proxy"
+      },
+      {
+        "domain_regex": [
+          ".*docs-a.*",
+          ".*blog-a.*",
+          ".*tunnel.*",
+          "\\.dev$",
+          ".*ui-docs.*",
+          ".*labs-cdn.*",
+          ".*builder.*",
+          "(^|\\.)[^.]*ai-lab[^.]*\\.example$",
+          ".*router-vendor.*",
+          ".*firmware.*"
+        ],
+        "outbound": "proxy"
+      },
+      {
+        "outbound": "direct"
+      }
+    ],
+    "rule_set": [
+      {
+        "type": "remote",
+        "tag": "gemini",
+        "format": "binary",
+        "url": "https://example.invalid/sub/REDACTED",
+        "download_detour": "proxy",
+        "update_interval": "24h"
+      },
+      {
+        "type": "remote",
+        "tag": "openai",
+        "format": "binary",
+        "url": "https://example.invalid/sub/REDACTED",
+        "download_detour": "proxy",
+        "update_interval": "24h"
+      },
+      {
+        "type": "remote",
+        "tag": "notion",
+        "format": "binary",
+        "url": "https://example.invalid/sub/REDACTED",
+        "download_detour": "proxy",
+        "update_interval": "24h"
+      },
+      {
+        "type": "remote",
+        "tag": "anthropic",
+        "format": "binary",
+        "url": "https://example.invalid/sub/REDACTED",
+        "download_detour": "proxy",
+        "update_interval": "24h"
+      },
+      {
+        "type": "remote",
+        "tag": "spotify",
+        "format": "binary",
+        "url": "https://example.invalid/sub/REDACTED",
+        "download_detour": "proxy",
+        "update_interval": "24h"
+      },
+      {
+        "type": "remote",
+        "tag": "stripe",
+        "format": "binary",
+        "url": "https://example.invalid/sub/REDACTED",
+        "download_detour": "proxy",
+        "update_interval": "24h"
+      },
+      {
+        "type": "remote",
+        "tag": "hccaptcha",
+        "format": "binary",
+        "url": "https://example.invalid/sub/REDACTED",
+        "download_detour": "proxy",
+        "update_interval": "24h"
+      },
+      {
+        "type": "remote",
+        "tag": "twitch",
+        "format": "binary",
+        "url": "https://example.invalid/sub/REDACTED",
+        "download_detour": "proxy",
+        "update_interval": "24h"
+      },
+      {
+        "type": "remote",
+        "tag": "adobe",
+        "format": "binary",
+        "url": "https://example.invalid/sub/REDACTED",
+        "download_detour": "proxy",
+        "update_interval": "24h"
+      },
+      {
+        "type": "remote",
+        "tag": "tilda",
+        "format": "binary",
+        "url": "https://example.invalid/sub/REDACTED",
+        "download_detour": "proxy",
+        "update_interval": "24h"
+      },
+      {
+        "type": "remote",
+        "tag": "apple",
+        "format": "binary",
+        "url": "https://example.invalid/sub/REDACTED",
+        "download_detour": "proxy",
+        "update_interval": "24h"
+      },
+      {
+        "type": "remote",
+        "tag": "google-ip",
+        "format": "binary",
+        "url": "https://example.invalid/sub/REDACTED",
+        "download_detour": "proxy",
+        "update_interval": "24h"
+      },
+      {
+        "type": "remote",
+        "tag": "google-site",
+        "format": "binary",
+        "url": "https://example.invalid/sub/REDACTED",
+        "download_detour": "proxy",
+        "update_interval": "24h"
+      },
+      {
+        "type": "remote",
+        "tag": "soundcloud",
+        "format": "binary",
+        "url": "https://example.invalid/sub/REDACTED",
+        "download_detour": "proxy",
+        "update_interval": "24h"
+      },
+      {
+        "type": "remote",
+        "tag": "atlassian",
+        "format": "binary",
+        "url": "https://example.invalid/sub/REDACTED",
+        "download_detour": "proxy",
+        "update_interval": "24h"
+      },
+      {
+        "type": "remote",
+        "tag": "cloudfront",
+        "format": "binary",
+        "url": "https://example.invalid/sub/REDACTED",
+        "download_detour": "proxy",
+        "update_interval": "24h"
+      },
+      {
+        "type": "remote",
+        "tag": "github",
+        "format": "binary",
+        "url": "https://example.invalid/sub/REDACTED",
+        "download_detour": "proxy",
+        "update_interval": "24h"
+      },
+      {
+        "type": "remote",
+        "tag": "cursor",
+        "format": "binary",
+        "url": "https://example.invalid/sub/REDACTED",
+        "download_detour": "proxy",
+        "update_interval": "24h"
+      }
+    ],
+    "default_domain_resolver": "dns-direct",
+    "default_mark": 100
+  },
+  "experimental": {
+    "cache_file": {
+      "enabled": true,
+      "path": "/var/lib/sing-box/cache.db"
+    },
+    "clash_api": {
+      "external_controller": "0.0.0.0:9090",
+      "external_ui": "ui",
+      "external_ui_download_url": "https://github.com/MetaCubeX/metacubexd/archive/refs/heads/gh-pages.zip",
+      "external_ui_download_detour": "proxy",
+      "default_mode": "Rule",
+      "access_control_allow_origin": ["*"],
+      "access_control_allow_private_network": true
+    }
+  },
+  "providers": [
+    {
+      "type": "remote",
+      "tag": "sub-a",
+      "url": "https://example.invalid/sub/REDACTED",
+      "download_detour": "direct",
+      "update_interval": "12h",
+      "remove_emojis": true,
+      "health_check": {
+        "enabled": true,
+        "url": "https://example.invalid/sub/REDACTED",
+        "interval": "5m",
+        "timeout": "5s"
+      }
+    },
+    {
+      "type": "remote",
+      "tag": "sub-b",
+      "url": "https://example.invalid/sub/REDACTED",
+      "download_detour": "direct",
+      "update_interval": "12h",
+      "remove_emojis": true,
+      "health_check": {
+        "enabled": true,
+        "url": "https://example.invalid/sub/REDACTED",
+        "interval": "5m",
+        "timeout": "5s"
+      }
+    },
+    {
+      "type": "remote",
+      "tag": "sub-c",
+      "url": "https://example.invalid/sub/REDACTED",
+      "download_detour": "direct",
+      "update_interval": "12h",
+      "remove_emojis": true,
+      "health_check": {
+        "enabled": true,
+        "url": "https://example.invalid/sub/REDACTED",
+        "interval": "5m",
+        "timeout": "5s"
+      }
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "log": { "level": "info" },
+  "outbounds": [{ "type": "direct", "tag": "direct" }],
+  "route": {
+    "rules": [{ "domain_suffix": [".example"], "outbound": "direct" }],
+    "final": "direct"
+  }
+}
