@@ -1,0 +1,17 @@
+{
+  "parseError": "строка {{line}}: {{reason}}",
+  "search": {
+    "placeholder": "Найти в конфиге",
+    "label": "Поиск по тексту конфига",
+    "empty": "ничего не найдено",
+    "position": "{{current}} из {{total}}",
+    "previous": "Предыдущее совпадение",
+    "next": "Следующее совпадение"
+  },
+  "editor": { "label": "Конфиг sing-box текстом" },
+  "lines_one": "{{count}} строка",
+  "lines_few": "{{count}} строки",
+  "lines_many": "{{count}} строк",
+  "parsed": "JSON разобран",
+  "issues": "замечаний схемы: {{count}} — сохранить черновик они не мешают, отказать может только <code>sing-box check</code>"
+}

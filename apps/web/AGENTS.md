@@ -19,4 +19,5 @@
 
 - `src/shared/ui/**` — вендорная зона shadcn/ui: файлы генерирует CLI, правила нейминга к ним не применяются, переименовывать нельзя. Наружу зона видна через `src/shared/ui/index.ts`.
 - `src/shared/api/generated.ts` — артефакт `tools/schemagen`, руками не правится. То же и `src/shared/api/daemon.generated.ts` — его пишет `cmd/contractgen` демона, пересобирает `make schema-daemon`.
+- `src/i18n.generated.d.ts` — карта неймспейсов i18next, артефакт `tools/i18n.ts`. Пересобирается `pnpm --filter web gen:i18n`, на дев-сервере и в сборке — сама.
 - Форматирование и линт — `pnpm format`, `pnpm lint`. Руками стиль не выравнивать.

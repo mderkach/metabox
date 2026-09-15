@@ -1,0 +1,12 @@
+{
+  "title": "Node delay",
+  "testing": "Testing",
+  "test": "Test",
+  "unread": "The node list was not read",
+  "empty": "No groups with a selected node",
+  "node": {
+    "untested": "not tested",
+    "timedOut": "no answer",
+    "delay": "{{value}} ms"
+  }
+}

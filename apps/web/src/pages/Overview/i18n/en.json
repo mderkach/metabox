@@ -1,0 +1,69 @@
+{
+  "title": "Overview",
+  "verdict": {
+    "waiting": "waiting for the first runtime data",
+    "silent": "the runtime stream is silent, the numbers are frozen",
+    "stopped": "sing-box is not running",
+    "nodeDown": "the selected node does not respond",
+    "hot": "the board is hot: {{celsius}} °C",
+    "warm": "the board is warm: {{celsius}} °C",
+    "ok": "everything works"
+  },
+  "traffic": {
+    "title": "Traffic",
+    "note": "{{link}} · {{rate}} now",
+    "label": "Rate",
+    "proxy": "Through sing-box",
+    "proxyShare": "{{percent}}% of the link",
+    "proxyUnknown": "the link has not been measured yet",
+    "uplink": "Uplink",
+    "uplinkSince": "over {{age}} of daemon uptime",
+    "down": "Inbound",
+    "up": "Outbound",
+    "peak": "peak this minute {{value}}",
+    "noPeak": "no peak yet"
+  },
+  "connections": {
+    "title": "Connections",
+    "note": "the summary is computed by the panel",
+    "label": "Connection counters",
+    "open": "Open",
+    "peak": "peak this minute {{count}}",
+    "closed": "Closed",
+    "keptByPanel": "kept by the panel",
+    "none": "none so far",
+    "topNodes": "Top proxy nodes",
+    "topNodesEmpty": "Nothing goes through the proxy right now",
+    "topSources": "Top devices",
+    "topSourcesEmpty": "No live connections"
+  },
+  "device": {
+    "title": "Router",
+    "label": "Device readings",
+    "load": "Load",
+    "loadHistory": "Load over the whole daemon uptime",
+    "ofCores": "of {{cores}}",
+    "temperature": "Temperature",
+    "temperatureHistory": "Board temperature over the whole daemon uptime",
+    "noZones": "no zones",
+    "memory": "Board memory",
+    "memoryHistory": "Board memory over the whole daemon uptime",
+    "ofTotal": "of {{total}}",
+    "uptime": "Uptime",
+    "sinceBoot": "since the last boot",
+    "waiting": "waiting for a snapshot"
+  },
+  "process": {
+    "title": "Processes",
+    "panel": "Panel",
+    "daemonUp": "the daemon responds",
+    "daemonDown": "the daemon does not respond",
+    "streamUp": "the stream is running",
+    "streamDown": "the stream is silent",
+    "daemon": "Daemon",
+    "schema": "Form schema",
+    "config": "Config",
+    "clashMode": "Clash API mode",
+    "memory": "Daemon memory"
+  }
+}

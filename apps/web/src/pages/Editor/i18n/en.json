@@ -1,0 +1,25 @@
+{
+  "title": "Configuration",
+  "draft": "draft",
+  "raw": "Whole config as text",
+  "order": "Rules are checked <accent>top to bottom, the first match wins</accent> — not the most specific one. A rule below one that already matched never runs, so the order here is the logic.",
+  "pending": "Loading the config…",
+  "search": {
+    "placeholder": "Domain, IP or outbound tag",
+    "label": "Search the rules"
+  },
+  "targets": {
+    "label": "Rule outcomes",
+    "collapse": "Collapse",
+    "more": "{{count}} more"
+  },
+  "shown": "{{shown}} of {{total}}",
+  "notFound": "Nothing matches this query.",
+  "resetFilter": "Reset the filter",
+  "broken": {
+    "title": "The config does not match the schema",
+    "description": "The file on the device is untouched. Rules cannot be shown — first we need to understand what is wrong with it.",
+    "more_one": "and {{count}} more schema issue",
+    "more_other": "and {{count}} more schema issues"
+  }
+}

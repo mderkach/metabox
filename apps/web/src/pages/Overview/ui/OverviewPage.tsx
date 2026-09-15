@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useConnectionStream } from '@entities/Connection';
 import {
@@ -9,7 +10,7 @@ import {
   useRuntimeStream,
   useTrafficHistory,
 } from '@entities/Daemon';
-import { formatAge, formatBytes, formatRate, plural } from '@shared/lib/format';
+import { formatAge, formatBytes, formatRate } from '@shared/lib/format';
 import { SECTION_HEADING, SECTION_LABEL } from '@shared/lib/styles';
 import { cn } from '@shared/lib/utils';
 import { Card, CardContent, CardHeader } from '@shared/ui';
@@ -26,9 +27,6 @@ import { ProxyLatency } from '@widgets/ProxyLatency';
 
 import { useOverviewRuntime, useOverviewVerdict, VERDICT_TONE, type VerdictTone } from '../lib';
 
-const GOROUTINE_FORMS = ['горутина', 'горутины', 'горутин'] as const;
-const CORE_FORMS = ['ядра', 'ядер', 'ядер'] as const;
-
 const PERCENT = 100;
 const DEGREE_PRECISION = 1;
 /** Загрузка печатается сотыми: десятых мало, чтобы отличить простой от работы. */
@@ -41,6 +39,7 @@ const VERDICT_DOT: Readonly<Record<VerdictTone, string>> = {
 };
 
 export function OverviewPage() {
+  const { t } = useTranslation('pages/Overview');
   useConnectionStream();
   useRuntimeStream();
 
@@ -66,7 +65,7 @@ export function OverviewPage() {
   return (
     <>
       <header className='flex min-h-14 shrink-0 flex-wrap items-baseline gap-x-4 gap-y-1 border-b border-border px-4 py-3 sm:px-6'>
-        <h1 className='text-2xl font-semibold'>Обзор</h1>
+        <h1 className='text-2xl font-semibold'>{t('title')}</h1>
         <p className='flex items-center gap-2 text-sm text-muted-foreground'>
           <span className={cn('size-2 shrink-0 rounded-full', VERDICT_DOT[verdict.tone])} aria-hidden='true' />
           {verdict.text}
@@ -75,43 +74,58 @@ export function OverviewPage() {
 
       <div className='flex min-h-0 grow flex-col gap-6 overflow-y-auto px-4 py-5 *:shrink-0 sm:px-6'>
         <Section
-          title='Трафик'
-          note={system?.uplink === undefined ? undefined : `${system.uplink.name} · ${formatRate(linkRate)} сейчас`}
+          title={t('traffic.title')}
+          note={
+            system?.uplink === undefined
+              ? undefined
+              : t('traffic.note', { link: system.uplink.name, rate: formatRate(linkRate) })
+          }
         >
           <div className='grid items-start gap-4 xl:grid-cols-[minmax(0,2.6fr)_minmax(0,1fr)]'>
             <Card className='gap-0 py-0'>
               <div className='flex flex-col xl:flex-row'>
-                <ul aria-label='Скорость' className='grid min-w-0 grow grid-cols-1 gap-px bg-border sm:grid-cols-2'>
+                <ul
+                  aria-label={t('traffic.label')}
+                  className='grid min-w-0 grow grid-cols-1 gap-px bg-border sm:grid-cols-2'
+                >
                   <Tile
-                    label='Через sing-box'
+                    label={t('traffic.proxy')}
                     value={runtime.share.proxy > 0 ? formatBytes(runtime.share.proxy) : '—'}
                     context={
                       runtime.share.link > 0
-                        ? `${String(Math.round(proxyShare * PERCENT))}% от канала`
-                        : 'канал ещё не мерился'
+                        ? t('traffic.proxyShare', { percent: Math.round(proxyShare * PERCENT) })
+                        : t('traffic.proxyUnknown')
                     }
                     meter={runtime.share.link > 0 ? proxyShare : undefined}
                   />
                   <Tile
-                    label='Канал наружу'
+                    label={t('traffic.uplink')}
                     value={runtime.share.link > 0 ? formatBytes(runtime.share.link) : '—'}
                     context={
-                      runtime.share.seconds > 0 ? `за ${formatAge(runtime.share.seconds)} работы демона` : 'ждём снимок'
+                      runtime.share.seconds > 0
+                        ? t('traffic.uplinkSince', { age: formatAge(runtime.share.seconds) })
+                        : t('device.waiting')
                     }
                   />
                   <Tile
-                    label='Входящий'
+                    label={t('traffic.down')}
                     value={formatRate(runtime.now.down)}
                     tone='text-series-down'
                     context={
-                      runtime.peakDown > 0 ? `пик за минуту ${formatRate(runtime.peakDown)}` : 'пика ещё не было'
+                      runtime.peakDown > 0
+                        ? t('traffic.peak', { value: formatRate(runtime.peakDown) })
+                        : t('traffic.noPeak')
                     }
                   />
                   <Tile
-                    label='Исходящий'
+                    label={t('traffic.up')}
                     value={formatRate(runtime.now.up)}
                     tone='text-series-up'
-                    context={runtime.peakUp > 0 ? `пик за минуту ${formatRate(runtime.peakUp)}` : 'пика ещё не было'}
+                    context={
+                      runtime.peakUp > 0
+                        ? t('traffic.peak', { value: formatRate(runtime.peakUp) })
+                        : t('traffic.noPeak')
+                    }
                   />
                 </ul>
 
@@ -125,19 +139,19 @@ export function OverviewPage() {
           </div>
         </Section>
 
-        <Section title='Соединения' note='сводку считает панель'>
+        <Section title={t('connections.title')} note={t('connections.note')}>
           <div className='grid items-start gap-4 sm:grid-cols-2 xl:grid-cols-3'>
             <Card className='gap-0 py-0'>
-              <ul aria-label='Счётчики соединений' className='grid grid-cols-2 gap-px bg-border'>
+              <ul aria-label={t('connections.label')} className='grid grid-cols-2 gap-px bg-border'>
                 <Tile
-                  label='Открыто'
+                  label={t('connections.open')}
                   value={String(runtime.counts.active)}
-                  context={`пик за минуту ${String(Math.max(...runtime.history, runtime.counts.active))}`}
+                  context={t('connections.peak', { count: Math.max(...runtime.history, runtime.counts.active) })}
                 />
                 <Tile
-                  label='Закрыто'
+                  label={t('connections.closed')}
                   value={String(runtime.counts.closed)}
-                  context={runtime.counts.closed > 0 ? 'держит панель' : 'пока ни одного'}
+                  context={runtime.counts.closed > 0 ? t('connections.keptByPanel') : t('connections.none')}
                 />
               </ul>
             </Card>
@@ -149,71 +163,76 @@ export function OverviewPage() {
 
           <div className='grid items-start gap-4 sm:grid-cols-2 xl:grid-cols-3'>
             <ConnectionSummaryTop
-              title='Топ узлов прокси'
+              title={t('connections.topNodes')}
               href='/proxies'
               shares={runtime.summary.nodes}
-              empty='Через прокси сейчас никто не идёт'
+              empty={t('connections.topNodesEmpty')}
             />
             <ConnectionSummaryTop
-              title='Топ устройств'
+              title={t('connections.topSources')}
               href='/connections'
               shares={runtime.summary.sources}
-              empty='Живых соединений нет'
+              empty={t('connections.topSourcesEmpty')}
             />
             <ProxyLatency />
           </div>
         </Section>
 
-        <Section title='Роутер'>
+        <Section title={t('device.title')}>
           <Card className='gap-0 py-0'>
             <ul
-              aria-label='Показания устройства'
+              aria-label={t('device.label')}
               className='grid grid-cols-1 gap-px bg-border sm:grid-cols-2 lg:grid-cols-4'
             >
               <Tile
-                label='Загрузка'
+                label={t('device.load')}
                 value={system === null ? '—' : system.load.one.toFixed(LOAD_PRECISION)}
-                context={system === null ? 'ждём снимок' : `из ${plural(system.load.cores, CORE_FORMS)}`}
+                context={
+                  system === null
+                    ? t('device.waiting')
+                    : t('device.ofCores', { cores: t('count.core', { ns: 'shared', count: system.load.cores }) })
+                }
                 chart={
-                  <DaemonSparkline
-                    samples={deviceHistory.map((point) => point.load)}
-                    label='Загрузка за всё время работы демона'
-                  />
+                  <DaemonSparkline samples={deviceHistory.map((point) => point.load)} label={t('device.loadHistory')} />
                 }
               />
               <Tile
-                label='Температура'
+                label={t('device.temperature')}
                 value={hottest === undefined ? '—' : `${hottest.celsius.toFixed(DEGREE_PRECISION)} °C`}
-                context={hottest === undefined ? 'зон нет' : hottest.name}
+                context={hottest === undefined ? t('device.noZones') : hottest.name}
                 chart={
                   <DaemonSparkline
                     samples={deviceHistory.map((point) => point.celsius)}
-                    label='Температура платы за всё время работы демона'
+                    label={t('device.temperatureHistory')}
                     tone='text-signal-warn'
                   />
                 }
               />
               <Tile
-                label='Память платы'
+                label={t('device.memory')}
                 value={system === null ? '—' : formatBytes(usedMemory)}
-                context={system === null ? 'ждём снимок' : `из ${formatBytes(system.memory.total)}`}
+                context={
+                  system === null
+                    ? t('device.waiting')
+                    : t('device.ofTotal', { total: formatBytes(system.memory.total) })
+                }
                 chart={
                   <DaemonSparkline
                     samples={deviceHistory.map((point) => point.memory)}
-                    label='Память платы за всё время работы демона'
+                    label={t('device.memoryHistory')}
                   />
                 }
               />
               <Tile
-                label='Аптайм'
+                label={t('device.uptime')}
                 value={system === null ? '—' : formatAge(system.uptime)}
-                context={system === null ? 'ждём снимок' : 'с последней загрузки'}
+                context={system === null ? t('device.waiting') : t('device.sinceBoot')}
               />
             </ul>
           </Card>
         </Section>
 
-        <Section title='Процессы'>
+        <Section title={t('process.title')}>
           <div className='grid items-start gap-4 xl:grid-cols-2'>
             <DaemonService
               process={system?.singbox}
@@ -223,33 +242,36 @@ export function OverviewPage() {
 
             <Card>
               <CardHeader className='flex flex-row flex-wrap items-center gap-x-2.5 gap-y-1'>
-                <h3 className={SECTION_LABEL}>Панель</h3>
+                <h3 className={SECTION_LABEL}>{t('process.panel')}</h3>
                 <p className='flex items-center gap-1.5 text-xs'>
                   <span
                     aria-hidden='true'
                     className={cn('size-2 shrink-0 rounded-full', status.isSuccess ? 'bg-signal-ok' : 'bg-signal-bad')}
                   />
-                  {status.isSuccess ? 'демон отвечает' : 'демон не отвечает'}
+                  {status.isSuccess ? t('process.daemonUp') : t('process.daemonDown')}
                 </p>
                 <p className='flex items-center gap-1.5 text-xs'>
                   <span
                     aria-hidden='true'
                     className={cn('size-2 shrink-0 rounded-full', runtime.live ? 'bg-signal-ok' : 'bg-signal-warn')}
                   />
-                  {runtime.live ? 'поток идёт' : 'поток молчит'}
+                  {runtime.live ? t('process.streamUp') : t('process.streamDown')}
                 </p>
               </CardHeader>
 
               <CardContent>
                 <dl>
-                  <Row label='Демон' value={status.data?.version ?? '—'} mono />
-                  <Row label='Схема форм' value={SCHEMA_VERSION} mono />
-                  <Row label='Конфиг' value={configPath} mono />
-                  <Row label='Режим Clash API' value={clash.data?.mode ?? '—'} />
+                  <Row label={t('process.daemon')} value={status.data?.version ?? '—'} mono />
+                  <Row label={t('process.schema')} value={SCHEMA_VERSION} mono />
+                  <Row label={t('process.config')} value={configPath} mono />
+                  <Row label={t('process.clashMode')} value={clash.data?.mode ?? '—'} />
                   {system !== null && (
                     <Row
-                      label='Память демона'
-                      value={`${formatBytes(system.daemon.rss)} · ${plural(system.daemon.goroutines, GOROUTINE_FORMS)}`}
+                      label={t('process.memory')}
+                      value={`${formatBytes(system.daemon.rss)} · ${t('count.goroutine', {
+                        ns: 'shared',
+                        count: system.daemon.goroutines,
+                      })}`}
                     />
                   )}
                 </dl>

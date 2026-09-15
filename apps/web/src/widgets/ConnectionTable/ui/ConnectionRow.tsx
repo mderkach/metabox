@@ -1,5 +1,6 @@
 import { X } from 'lucide-react';
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { ConnectionRow as ConnectionRowModel } from '@entities/Connection';
 import { formatAge, formatBytes, formatRate } from '@shared/lib/format';
@@ -29,6 +30,7 @@ function ConnectionRowProto({
   onExplain: ((id: string) => void) | null;
   selected: boolean;
 }) {
+  const { t } = useTranslation('widgets/ConnectionTable');
   const chain = connection.chain.join(' → ');
 
   return (
@@ -57,7 +59,7 @@ function ConnectionRowProto({
           <button
             type='button'
             aria-pressed={selected}
-            aria-label={`Почему соединение ${connection.host} пошло этим маршрутом`}
+            aria-label={t('row.explain', { host: connection.host })}
             className='flex w-full min-w-0 flex-col rounded-md px-1 py-0.5 text-left hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none'
             onClick={() => {
               onExplain(connection.id);
@@ -96,7 +98,7 @@ function ConnectionRowProto({
         {onClose !== null && (
           <button
             type='button'
-            aria-label={`Закрыть соединение ${connection.host}`}
+            aria-label={t('row.close', { host: connection.host })}
             className='flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-destructive focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none'
             onClick={() => {
               onClose(connection.id);
@@ -112,10 +114,11 @@ function ConnectionRowProto({
 
 /** Правило и цепочка одной колонкой: раздельным колонкам цепочки не хватало ширины. */
 function RouteCell({ connection, chain }: { connection: ConnectionRowModel; chain: string }) {
+  const { t } = useTranslation('widgets/ConnectionTable');
   return (
     <>
       <span className='flex w-full min-w-0 items-baseline gap-1.5 font-mono text-xs'>
-        <span className='truncate'>{connection.rule.length > 0 ? connection.rule : 'без условий'}</span>
+        <span className='truncate'>{connection.rule.length > 0 ? connection.rule : t('row.unconditional')}</span>
         <span aria-hidden='true' className='shrink-0 text-muted-foreground'>
           →
         </span>

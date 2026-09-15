@@ -1,0 +1,19 @@
+{
+  "outcome": {
+    "title": "Where the traffic goes",
+    "proxy": "through the proxy",
+    "direct": "direct",
+    "block": "blocked",
+    "dns": "DNS hijack",
+    "other": "other"
+  },
+  "network": { "title": "Network types" },
+  "volume": {
+    "title": "Transferred in total",
+    "down": "Received",
+    "up": "Sent",
+    "empty": "Counters have not arrived yet"
+  },
+  "idle": "idle",
+  "empty": "No live connections"
+}

@@ -6,6 +6,8 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { defineConfig, type Plugin } from 'vitest/config';
 
+import { LOCALE_ROOT, checkLocales, collectLocales, hashedLocaleUrl, localeKey, writeI18nTypes } from './tools/i18n.ts';
+
 // Слои FSD; тот же список — в `paths` обоих tsconfig.
 const LAYERS = ['app', 'pages', 'widgets', 'features', 'entities', 'shared'];
 
@@ -46,9 +48,117 @@ function metaboxMocks(): Plugin | false {
   };
 }
 
+const LOCALE_SEGMENT = 'i18n';
+const LOCALE_GLOB = `src/**/${LOCALE_SEGMENT}/*.json`;
+
+/** Карта адресов словарей приезжает в бандл модулем: лишнего запроса за ней нет. */
+const LOCALE_MODULE = 'virtual:metabox-locales';
+
+/**
+ * Оснастка локалей: карта неймспейсов (артефакт `tools/i18n.ts`), сверка
+ * словарей между языками и раздача самих словарей.
+ *
+ * Словари уезжают в `dist/locales/<неймспейс>/<язык>.json` файлами, а не
+ * чанками: рантайм берёт их `fetch`, поэтому текст не попадает ни в один
+ * модуль сборки — ни ошибкой импорта, ни ленивым чанком. Хэша в имени нет
+ * намеренно: демон отдаёт такие файлы с `no-cache`, и словарь обновляется
+ * вместе с версией демона, а не живёт в кэше браузера вечно.
+ *
+ * Карту меняет только появление и исчезновение локали — ключи берутся из
+ * самого JSON. Правка текста внутри файла карту не трогает, но перезагружает
+ * страницу: загруженный словарь лежит в памяти i18next, и горячее обновление
+ * модуля до него не доходит.
+ */
+function metaboxI18n(): Plugin {
+  const root = import.meta.dirname;
+  let isBuild = false;
+  const urls = new Map<string, string>();
+
+  function report(problems: readonly string[]) {
+    if (problems.length > 0) {
+      console.warn(`[I18N] словари разошлись:\n${problems.map((problem) => `  ${problem}`).join('\n')}`);
+    }
+  }
+
+  return {
+    name: 'metabox-i18n',
+    configResolved(config) {
+      isBuild = config.command === 'build';
+    },
+    resolveId(id) {
+      return id === LOCALE_MODULE ? `\0${LOCALE_MODULE}` : undefined;
+    },
+    load(id) {
+      if (id !== `\0${LOCALE_MODULE}`) {
+        return undefined;
+      }
+
+      return `export const LOCALE_URLS = ${JSON.stringify(Object.fromEntries(urls))};`;
+    },
+    buildStart() {
+      writeI18nTypes(root);
+
+      const problems = checkLocales(root);
+
+      report(problems);
+
+      if (problems.length > 0) {
+        this.error('[I18N] словари языков не сошлись по ключам');
+      }
+
+      urls.clear();
+
+      for (const locale of collectLocales(path.join(root, 'src'))) {
+        const source = readFileSync(locale.file, 'utf8');
+        // На дев-сервере словарь читает middleware ниже — там он берётся из
+        // исходника, и отпечаток в имени только мешал бы правке.
+        const url = isBuild ? hashedLocaleUrl(locale, source) : locale.url;
+
+        urls.set(localeKey(locale.language, locale.namespace), `/${url}`);
+
+        if (isBuild) {
+          this.emitFile({ type: 'asset', fileName: url, source });
+        }
+      }
+    },
+    configureServer(server) {
+      server.watcher.add(path.join(root, LOCALE_GLOB));
+
+      // Дев-сервер отдаёт словари с тех же адресов, что и сборка: иначе
+      // рантайм пришлось бы учить двум способам их искать.
+      server.middlewares.use(`/${LOCALE_ROOT}/`, (request, response, next) => {
+        const locale = collectLocales(path.join(root, 'src')).find(
+          (candidate) => `/${candidate.url}` === `/${LOCALE_ROOT}${request.url ?? ''}`
+        );
+
+        if (locale === undefined) {
+          next();
+
+          return;
+        }
+
+        response.setHeader('Content-Type', 'application/json; charset=utf-8');
+        response.end(readFileSync(locale.file, 'utf8'));
+      });
+
+      function onLocaleChange(file: string) {
+        if (!file.endsWith('.json') || !file.includes(`${path.sep}${LOCALE_SEGMENT}${path.sep}`)) {
+          return;
+        }
+
+        writeI18nTypes(root);
+        report(checkLocales(root));
+        server.ws.send({ type: 'full-reload' });
+      }
+
+      server.watcher.on('add', onLocaleChange).on('change', onLocaleChange).on('unlink', onLocaleChange);
+    },
+  };
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss(), metaboxMocks()],
+  plugins: [react(), tailwindcss(), metaboxI18n(), metaboxMocks()],
   resolve: {
     alias: {
       ...Object.fromEntries(LAYERS.map((layer) => [`@${layer}`, path.resolve(import.meta.dirname, `./src/${layer}`)])),

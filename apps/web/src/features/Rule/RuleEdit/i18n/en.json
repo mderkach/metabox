@@ -1,0 +1,14 @@
+{
+  "action": {
+    "route": "send to an outbound",
+    "reject": "reject",
+    "hijack-dns": "hijack DNS",
+    "sniff": "sniff the protocol"
+  },
+  "field": {
+    "action": { "label": "What to do" },
+    "outbound": { "label": "Where to send", "placeholder": "pick an outbound" }
+  },
+  "submit": "Apply to draft",
+  "error": { "outboundRequired": "pick an outbound" }
+}

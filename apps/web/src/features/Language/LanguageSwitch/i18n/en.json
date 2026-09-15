@@ -1,0 +1,11 @@
+{
+  "group": { "label": "Interface language" },
+  "language": {
+    "ru": "Russian",
+    "en": "English"
+  },
+  "short": {
+    "ru": "RU",
+    "en": "EN"
+  }
+}

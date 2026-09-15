@@ -1,0 +1,26 @@
+{
+  "section": {
+    "overview": "Overview",
+    "config": "Configuration",
+    "ruleSets": "Rule-set catalog",
+    "proxies": "Proxies",
+    "connections": "Connections"
+  },
+  "nav": {
+    "label": "Panel sections",
+    "collapse": "Collapse the sidebar",
+    "expand": "Expand the sidebar",
+    "soon": "soon",
+    "unavailable": "{{section}} — the section is not built yet"
+  },
+  "daemon": {
+    "term": "daemon",
+    "silent": "not responding"
+  },
+  "service": {
+    "running": "sing-box is running",
+    "stopped": "sing-box is stopped",
+    "failed": "sing-box crashed",
+    "unknown": "sing-box state is unknown"
+  }
+}

@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import type { z } from 'zod';
 
 export interface UnknownField {
@@ -56,12 +57,16 @@ export function describeIssues(issues: readonly z.core.$ZodIssue[]): string[] {
   const unknown = toUnknownFields(issues);
 
   if (unknown !== null) {
-    return unknown.map((item) =>
-      item.path === ''
-        ? `панель не знает поля: ${item.fields.join(', ')}`
-        : `${item.path}: панель не знает поля: ${item.fields.join(', ')}`
-    );
+    return unknown.map((item) => {
+      const fields = item.fields.join(', ');
+
+      return item.path === ''
+        ? i18next.t('schema.unknownFields', { ns: 'shared', fields })
+        : i18next.t('schema.unknownFieldsAt', { ns: 'shared', path: item.path, fields });
+    });
   }
 
-  return issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`);
+  return issues.map((issue) =>
+    i18next.t('schema.issue', { ns: 'shared', path: issue.path.join('.'), message: issue.message })
+  );
 }

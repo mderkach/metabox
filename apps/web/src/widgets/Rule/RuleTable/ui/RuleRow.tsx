@@ -1,5 +1,6 @@
 import { ArrowRight } from 'lucide-react';
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { RuleRow as RuleRowModel } from '@entities/Rule';
 import { cn } from '@shared/lib/utils';
@@ -19,11 +20,12 @@ function RuleRowProto({
   selected: boolean;
   onSelect: (id: string) => void;
 }) {
+  const { t } = useTranslation('widgets/Rule/RuleTable');
   return (
     <button
       type='button'
       aria-pressed={selected}
-      aria-label={`Правило ${String(rule.index)}`}
+      aria-label={t('row.label', { index: rule.index })}
       onClick={() => {
         onSelect(rule.id);
       }}
@@ -41,18 +43,20 @@ function RuleRowProto({
             просто схема не знает его поля и показать его нечем. */}
         {rule.isCatchAll &&
           (rule.recognized ? (
-            <span className='text-sm text-muted-foreground'>без условий — применяется ко всему трафику</span>
+            <span className='text-sm text-muted-foreground'>{t('row.unconditional')}</span>
           ) : (
-            <span className='text-sm text-muted-foreground'>условия не показаны — схема не знает это правило</span>
+            <span className='text-sm text-muted-foreground'>{t('row.unknown')}</span>
           ))}
 
         {!rule.recognized && (
           <Badge variant='outline' className='shrink-0'>
-            UI не покрывает
+            {t('row.uncovered')}
           </Badge>
         )}
 
-        {rule.invert && rule.group === null && <span className='shrink-0 text-xs text-muted-foreground'>кроме</span>}
+        {rule.invert && rule.group === null && (
+          <span className='shrink-0 text-xs text-muted-foreground'>{t('group.invert')}</span>
+        )}
 
         {rule.matchers.map((matcher) => (
           <RuleMatcherChip key={matcher.key} matcher={matcher} />

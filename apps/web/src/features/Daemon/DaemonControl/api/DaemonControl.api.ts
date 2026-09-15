@@ -8,7 +8,7 @@ export function useServiceAction() {
 
   return useMutation({
     mutationFn: runServiceAction,
-    meta: { showError: true, errorMessageKey: 'service.action.failed' },
+    meta: { showError: true, errorMessageKey: 'toast.service.action.failed' },
     onSuccess: (state) => {
       queryClient.setQueryData(getServiceStateOptions().queryKey, state);
     },

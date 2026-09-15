@@ -1,0 +1,11 @@
+{
+  "title": "Config as text",
+  "draft": "draft",
+  "reset": "Restore the device version",
+  "toForms": "Back to forms",
+  "pending": "Loading the config…",
+  "rejected": {
+    "title": "The schema rejected this config",
+    "description": "Forms cannot be built from it, while the text mode works: this is exactly the case it exists for. The file on the device stays untouched until Apply is pressed."
+  }
+}

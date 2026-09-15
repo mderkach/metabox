@@ -36,9 +36,6 @@ export interface ConnectionTotals {
   memory: number;
 }
 
-/** Русское числительное для счёта соединений: экран и панели считают их вслух. */
-export const CONNECTION_FORMS = ['соединение', 'соединения', 'соединений'] as const;
-
 /** Исход соединения, не совпавшего ни с одним правилом: узел `route.final`. */
 export const FINAL_OUTCOME = 'route.final';
 

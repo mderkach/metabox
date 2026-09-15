@@ -1,0 +1,9 @@
+{
+  "title": "Proxies",
+  "subtitle": "sing-box runtime: these actions do not change the config",
+  "pending": "Loading the proxies…",
+  "providers": {
+    "title": "Subscriptions",
+    "subtitle": "nodes come from them, not from the config"
+  }
+}

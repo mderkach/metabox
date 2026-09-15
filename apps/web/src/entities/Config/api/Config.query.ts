@@ -1,4 +1,5 @@
 import { queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
+import i18next from 'i18next';
 
 import {
   DAEMON_ENDPOINT,
@@ -28,7 +29,7 @@ export function getConfigOptions() {
     queryFn: getConfig,
     staleTime: CACHE_TIME.Minute,
     gcTime: CACHE_TIME.Hour,
-    meta: { showError: true, errorMessageKey: 'config.draft.fetchFailed' },
+    meta: { showError: true, errorMessageKey: 'toast.config.draft.fetchFailed' },
   });
 }
 
@@ -56,7 +57,12 @@ export function parseConfig(text: string): ParsedConfig {
   const { value, failure } = parseJsonc(text);
 
   if (failure !== null) {
-    return { text, config: null, issues: [`файл не разбирается: ${failure.text}`], unknown: [] };
+    return {
+      text,
+      config: null,
+      issues: [i18next.t('jsonc.fileUnparsed', { ns: 'shared', reason: failure.text })],
+      unknown: [],
+    };
   }
 
   const parsed = ConfigSchema.safeParse(value);
@@ -92,7 +98,7 @@ export function getConfigVersionsOptions() {
     queryFn: getConfigVersions,
     staleTime: CACHE_TIME.Second,
     gcTime: CACHE_TIME.Minute,
-    meta: { showError: true, errorMessageKey: 'config.versions.fetchFailed' },
+    meta: { showError: true, errorMessageKey: 'toast.config.versions.fetchFailed' },
   });
 }
 

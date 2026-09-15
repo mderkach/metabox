@@ -1,12 +1,14 @@
+import type { ParseKeys } from 'i18next';
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { RuleBranch, RuleGroup } from '@entities/Rule';
 
 import { RuleMatcherChip } from './RuleMatcherChip';
 
-const MODE_LABEL: Readonly<Record<string, string>> = {
-  and: 'и',
-  or: 'или',
+const MODE_LABEL: Readonly<Record<string, ParseKeys<'widgets/Rule/RuleTable'> | undefined>> = {
+  and: 'group.and',
+  or: 'group.or',
 };
 
 /**
@@ -14,11 +16,13 @@ const MODE_LABEL: Readonly<Record<string, string>> = {
  * без них правило `or` читается как `and`, а это разные правила.
  */
 function RuleGroupChipsProto({ group }: { group: RuleGroup }) {
-  const label = MODE_LABEL[group.mode] ?? group.mode;
+  const { t } = useTranslation('widgets/Rule/RuleTable');
+  const mode = MODE_LABEL[group.mode];
+  const label = mode === undefined ? group.mode : t(mode);
 
   return (
     <span className='flex min-w-0 items-center gap-1.5'>
-      {group.invert && <span className='shrink-0 text-xs text-muted-foreground'>кроме</span>}
+      {group.invert && <span className='shrink-0 text-xs text-muted-foreground'>{t('group.invert')}</span>}
       <span className='shrink-0 text-xs text-muted-foreground'>(</span>
       {group.children.map((branch, position) => (
         <BranchChips

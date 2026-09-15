@@ -1,0 +1,74 @@
+{
+  "toast": {
+    "apply": {
+      "confirm": { "done": "Link confirmed, the config stays" },
+      "start": { "accepted": "Config accepted, applying" }
+    },
+    "config": {
+      "draft": { "fetchFailed": "Could not load the config" },
+      "versions": { "fetchFailed": "Could not read the version history" }
+    },
+    "connection": { "close": { "failed": "Could not close the connection" } },
+    "error": { "unknown": "Something went wrong" },
+    "proxy": {
+      "delay": { "failed": "Could not measure the delay" },
+      "list": { "fetchFailed": "Could not read the proxy list" },
+      "providers": { "fetchFailed": "Could not read the subscriptions" },
+      "select": { "failed": "Could not switch the node" }
+    },
+    "route": { "explain": { "failed": "Could not explain the route" } },
+    "service": { "action": { "failed": "The service command failed" } },
+    "status": { "fetchFailed": "The daemon is not responding" }
+  },
+  "daemon": { "silent": "the daemon is not responding" },
+  "response": { "unparsed": "{{source}}: response not parsed" },
+  "jsonc": {
+    "unparsed": "config not parsed",
+    "fileUnparsed": "file does not parse: {{reason}}",
+    "invalidSymbol": "unexpected symbol",
+    "invalidNumberFormat": "malformed number",
+    "propertyNameExpected": "property name expected",
+    "valueExpected": "value expected",
+    "colonExpected": "missing colon",
+    "commaExpected": "missing comma",
+    "closeBraceExpected": "unclosed brace",
+    "closeBracketExpected": "unclosed bracket",
+    "endOfFileExpected": "extra content after the end of the config",
+    "invalidCommentToken": "malformed comment",
+    "unexpectedEndOfComment": "unclosed comment",
+    "unexpectedEndOfString": "unclosed string",
+    "unexpectedEndOfNumber": "truncated number",
+    "invalidUnicode": "invalid Unicode escape",
+    "invalidEscapeCharacter": "invalid escape sequence",
+    "invalidCharacter": "invalid character"
+  },
+  "schema": {
+    "unknownFields": "the panel does not know the fields: {{fields}}",
+    "unknownFieldsAt": "{{path}}: the panel does not know the fields: {{fields}}",
+    "issue": "{{path}}: {{message}}"
+  },
+  "unit": {
+    "byte": "B",
+    "kilobyte": "kB",
+    "megabyte": "MB",
+    "gigabyte": "GB",
+    "terabyte": "TB",
+    "rate": "{{value}}/s",
+    "second": "{{value}} s",
+    "minute": "{{value}} min",
+    "hour": "{{value}} h",
+    "day": "{{value}} d"
+  },
+  "count": {
+    "connection_one": "{{count}} connection",
+    "connection_other": "{{count}} connections",
+    "node_one": "{{count}} node",
+    "node_other": "{{count}} nodes",
+    "core_one": "{{count}} core",
+    "core_other": "{{count}} cores",
+    "goroutine_one": "{{count}} goroutine",
+    "goroutine_other": "{{count}} goroutines",
+    "rule_one": "{{count}} rule",
+    "rule_other": "{{count}} rules"
+  }
+}

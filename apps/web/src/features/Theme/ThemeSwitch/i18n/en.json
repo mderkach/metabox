@@ -1,0 +1,10 @@
+{
+  "group": {
+    "label": "Appearance"
+  },
+  "option": {
+    "system": "Match system",
+    "light": "Light",
+    "dark": "Dark"
+  }
+}

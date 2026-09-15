@@ -1,5 +1,6 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useCallback, useRef, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { ConnectionRow as ConnectionRowModel } from '@entities/Connection';
 import { useCloseConnection } from '@features/Connection/ConnectionClose';
@@ -45,6 +46,7 @@ export function ConnectionTable({
   /** `null` — объяснение маршрута выключено: у демона нет источника рантайма. */
   onExplain?: ((id: string) => void) | null;
 }) {
+  const { t } = useTranslation('widgets/ConnectionTable');
   const scrollRef = useRef<HTMLDivElement>(null);
   const close = useCloseConnection();
   const now = useNow();
@@ -74,7 +76,7 @@ export function ConnectionTable({
   return (
     <div
       role='table'
-      aria-label='Соединения'
+      aria-label={t('label')}
       aria-rowcount={rows.length + HEADER_ROWS}
       className='flex min-h-0 grow flex-col overflow-x-auto rounded-xl bg-card ring-1 ring-foreground/10'
     >
@@ -88,16 +90,16 @@ export function ConnectionTable({
           )}
         >
           <span role='columnheader' className={CONNECTION_COLUMN.Host}>
-            Хост и источник
+            {t('column.host')}
           </span>
           <span role='columnheader' className={CONNECTION_COLUMN.Route}>
-            Правило, исход и цепочка
+            {t('column.route')}
           </span>
           <span role='columnheader' className={CONNECTION_COLUMN.Traffic}>
-            Скорость и объём
+            {t('column.traffic')}
           </span>
           <span role='columnheader' className={CONNECTION_COLUMN.Age}>
-            Возраст
+            {t('column.age')}
           </span>
           <span role='columnheader' className={CONNECTION_COLUMN.Close} />
         </div>

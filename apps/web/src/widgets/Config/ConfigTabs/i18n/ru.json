@@ -1,0 +1,14 @@
+{
+  "label": "Секции конфига",
+  "unavailable": "Раздел ещё не сделан",
+  "section": {
+    "route": "Маршрутизация",
+    "ruleSet": "Rule-set'ы",
+    "inbounds": "Инбаунды",
+    "outbounds": "Аутбаунды",
+    "providers": "Провайдеры",
+    "dns": "DNS",
+    "log": "Логи",
+    "experimental": "Эксперименты"
+  }
+}

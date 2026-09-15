@@ -1,0 +1,6 @@
+{
+  "banner": {
+    "unreachable": "metabox is not responding. The panel shows the last loaded data; changes cannot be applied.",
+    "schema": "The panel could not parse the metabox response: the daemon is newer than the panel. Screens may show incomplete data."
+  }
+}

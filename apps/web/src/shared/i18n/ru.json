@@ -1,0 +1,79 @@
+{
+  "toast": {
+    "apply": {
+      "confirm": { "done": "Связь подтверждена, конфиг оставлен" },
+      "start": { "accepted": "Конфиг принят, идёт применение" }
+    },
+    "config": {
+      "draft": { "fetchFailed": "Не удалось загрузить конфиг" },
+      "versions": { "fetchFailed": "Не удалось получить историю версий" }
+    },
+    "connection": { "close": { "failed": "Закрыть соединение не удалось" } },
+    "error": { "unknown": "Что-то пошло не так" },
+    "proxy": {
+      "delay": { "failed": "Проверить задержку не удалось" },
+      "list": { "fetchFailed": "Не удалось получить список прокси" },
+      "providers": { "fetchFailed": "Не удалось получить подписки" },
+      "select": { "failed": "Переключить узел не удалось" }
+    },
+    "route": { "explain": { "failed": "Не удалось объяснить маршрут" } },
+    "service": { "action": { "failed": "Команда сервису не прошла" } },
+    "status": { "fetchFailed": "Демон не отвечает" }
+  },
+  "daemon": { "silent": "демон не отвечает" },
+  "response": { "unparsed": "{{source}}: ответ не разобран" },
+  "jsonc": {
+    "unparsed": "конфиг не разобран",
+    "fileUnparsed": "файл не разбирается: {{reason}}",
+    "invalidSymbol": "непонятный символ",
+    "invalidNumberFormat": "неверная запись числа",
+    "propertyNameExpected": "ожидалось имя поля",
+    "valueExpected": "ожидалось значение",
+    "colonExpected": "пропущено двоеточие",
+    "commaExpected": "пропущена запятая",
+    "closeBraceExpected": "не закрыта фигурная скобка",
+    "closeBracketExpected": "не закрыта квадратная скобка",
+    "endOfFileExpected": "лишнее содержимое после конца конфига",
+    "invalidCommentToken": "непонятный комментарий",
+    "unexpectedEndOfComment": "не закрыт комментарий",
+    "unexpectedEndOfString": "не закрыта строка",
+    "unexpectedEndOfNumber": "оборванное число",
+    "invalidUnicode": "неверная escape-последовательность Unicode",
+    "invalidEscapeCharacter": "неверная escape-последовательность",
+    "invalidCharacter": "недопустимый символ"
+  },
+  "schema": {
+    "unknownFields": "панель не знает поля: {{fields}}",
+    "unknownFieldsAt": "{{path}}: панель не знает поля: {{fields}}",
+    "issue": "{{path}}: {{message}}"
+  },
+  "unit": {
+    "byte": "Б",
+    "kilobyte": "кБ",
+    "megabyte": "МБ",
+    "gigabyte": "ГБ",
+    "terabyte": "ТБ",
+    "rate": "{{value}}/с",
+    "second": "{{value}} с",
+    "minute": "{{value}} мин",
+    "hour": "{{value}} ч",
+    "day": "{{value}} д"
+  },
+  "count": {
+    "connection_one": "{{count}} соединение",
+    "connection_few": "{{count}} соединения",
+    "connection_many": "{{count}} соединений",
+    "node_one": "{{count}} узел",
+    "node_few": "{{count}} узла",
+    "node_many": "{{count}} узлов",
+    "core_one": "{{count}} ядра",
+    "core_few": "{{count}} ядер",
+    "core_many": "{{count}} ядер",
+    "goroutine_one": "{{count}} горутина",
+    "goroutine_few": "{{count}} горутины",
+    "goroutine_many": "{{count}} горутин",
+    "rule_one": "{{count}} правило",
+    "rule_few": "{{count}} правила",
+    "rule_many": "{{count}} правил"
+  }
+}

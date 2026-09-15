@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 import { useDaemonStatus } from '@entities/Daemon';
 import { API_FAILURE, ApiError } from '@shared/api';
 
@@ -13,6 +15,7 @@ import { API_FAILURE, ApiError } from '@shared/api';
  * исправной.
  */
 export function DaemonBanner() {
+  const { t } = useTranslation('app');
   const status = useDaemonStatus();
   const error = status.error;
 
@@ -24,9 +27,7 @@ export function DaemonBanner() {
 
   return (
     <div role='status' className='shrink-0 bg-destructive/10 px-6 py-2 text-sm text-destructive'>
-      {kind === API_FAILURE.Unreachable
-        ? 'metabox не отвечает. Панель показывает последние загруженные данные, применять изменения нельзя.'
-        : 'Панель не разобрала ответ metabox: версия демона новее панели. Данные на экранах могут быть неполными.'}
+      {kind === API_FAILURE.Unreachable ? t('banner.unreachable') : t('banner.schema')}
     </div>
   );
 }

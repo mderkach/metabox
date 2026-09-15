@@ -1,26 +1,27 @@
+import type { ParseKeys } from 'i18next';
 import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { ProxyGroup } from '@entities/Proxy';
 import { useTestProxyDelay } from '@features/Proxy/ProxyDelay';
 import { useSelectProxy } from '@features/Proxy/ProxySelect';
-import { plural } from '@shared/lib/format';
 import { Badge, Button, Card, CardContent, CardHeader } from '@shared/ui';
 
 import { ProxyNodeTile } from './ProxyNodeTile';
 
-const NODE_FORMS = ['узел', 'узла', 'узлов'] as const;
-
-const GROUP_LABEL: Readonly<Record<string, string>> = {
-  Selector: 'селектор',
-  URLTest: 'URL-тест',
-  Fallback: 'резерв',
-  LoadBalance: 'балансировка',
+const GROUP_LABEL: Readonly<Record<string, ParseKeys<'widgets/ProxyGroups'> | undefined>> = {
+  Selector: 'type.selector',
+  URLTest: 'type.urlTest',
+  Fallback: 'type.fallback',
+  LoadBalance: 'type.loadBalance',
 };
 
 export function ProxyGroupCard({ group }: { group: ProxyGroup }) {
+  const { t } = useTranslation('widgets/ProxyGroups');
   const select = useSelectProxy();
   const delay = useTestProxyDelay();
-  const kind = GROUP_LABEL[group.type] ?? group.type;
+  const label = GROUP_LABEL[group.type];
+  const kind = label === undefined ? group.type : t(label);
   const active = group.nodes.find((node) => node.selected) ?? null;
 
   const onSelect = useCallback(
@@ -35,11 +36,9 @@ export function ProxyGroupCard({ group }: { group: ProxyGroup }) {
       <CardHeader className='flex flex-row flex-wrap items-center gap-x-2.5 gap-y-1 border-b border-border px-4 py-3'>
         <h2 className='font-mono text-sm font-medium'>{group.name}</h2>
         <Badge variant='outline'>{kind}</Badge>
-        <p className='text-xs text-muted-foreground'>
-          {group.selectable ? 'узел выбираете вы' : 'узел выбирается автоматически, по задержке'}
-        </p>
+        <p className='text-xs text-muted-foreground'>{group.selectable ? t('card.manual') : t('card.automatic')}</p>
         <span className='grow' />
-        <p className='text-xs text-muted-foreground'>{plural(group.nodes.length, NODE_FORMS)}</p>
+        <p className='text-xs text-muted-foreground'>{t('count.node', { ns: 'shared', count: group.nodes.length })}</p>
         <Button
           variant='outline'
           size='sm'
@@ -48,7 +47,7 @@ export function ProxyGroupCard({ group }: { group: ProxyGroup }) {
             delay.mutate(group.name);
           }}
         >
-          Проверить
+          {t('card.test')}
         </Button>
       </CardHeader>
 
@@ -56,9 +55,9 @@ export function ProxyGroupCard({ group }: { group: ProxyGroup }) {
         {/* Активный узел назван словами: в большой группе выбранная плитка уезжает
             за пределы первого ряда. */}
         <p className='text-xs text-muted-foreground'>
-          сейчас:{' '}
+          {t('card.current')}{' '}
           {active === null ? (
-            <span className='text-muted-foreground'>не выбран</span>
+            <span className='text-muted-foreground'>{t('card.none')}</span>
           ) : (
             <span className='font-mono text-foreground'>{active.name}</span>
           )}
@@ -70,11 +69,7 @@ export function ProxyGroupCard({ group }: { group: ProxyGroup }) {
           ))}
         </ul>
 
-        {!group.selectable && (
-          <p className='text-xs text-muted-foreground'>
-            Чтобы закреплять узел вручную, группа в конфиге должна быть селектором.
-          </p>
-        )}
+        {!group.selectable && <p className='text-xs text-muted-foreground'>{t('card.hint')}</p>}
       </CardContent>
     </Card>
   );

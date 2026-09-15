@@ -1,10 +1,10 @@
 import { Download, Search } from 'lucide-react';
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
-import { CONNECTION_FORMS, ConnectionState, useConnectionCounts, useConnectionStream } from '@entities/Connection';
+import { ConnectionState, useConnectionCounts, useConnectionStream } from '@entities/Connection';
 import { useCloseAllConnections } from '@features/Connection/ConnectionClose';
 import { downloadConnections, EXPORT_FORMAT } from '@features/Connection/ConnectionExport';
-import { plural } from '@shared/lib/format';
 import { FACET_ACTIVE, FACET_CLASS, FACET_IDLE, FACET_MORE } from '@shared/lib/styles';
 import { cn } from '@shared/lib/utils';
 import { Alert, AlertDescription, Badge, Button, Input, Tabs, TabsContent, TabsList, TabsTrigger } from '@shared/ui';
@@ -17,6 +17,7 @@ import { CONNECTION_TAB, useConnectionsScreen } from '../lib';
 const VISIBLE_SOURCES = 8;
 
 export function ConnectionsPage() {
+  const { t } = useTranslation('pages/Connections');
   useConnectionStream();
 
   const screen = useConnectionsScreen();
@@ -39,11 +40,11 @@ export function ConnectionsPage() {
   return (
     <>
       <header className='flex min-h-14 shrink-0 flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border px-4 py-3 sm:px-6'>
-        <h1 className='text-2xl font-semibold'>Соединения</h1>
-        <p className='text-xs text-muted-foreground'>поток идёт снапшотами раз в секунду</p>
+        <h1 className='text-2xl font-semibold'>{t('title')}</h1>
+        <p className='text-xs text-muted-foreground'>{t('subtitle')}</p>
         {dropped > 0 && (
           <p role='status' className='text-xs text-destructive'>
-            снапшотов не разобрано: {dropped}
+            {t('dropped', { count: dropped })}
           </p>
         )}
         <span className='grow' />
@@ -54,7 +55,7 @@ export function ConnectionsPage() {
             setPaused(!paused);
           }}
         >
-          {paused ? 'Продолжить' : 'Пауза'}
+          {paused ? t('resume') : t('pause')}
         </Button>
         <Button
           variant='outline'
@@ -85,7 +86,7 @@ export function ConnectionsPage() {
             closeAll.mutate();
           }}
         >
-          Закрыть все
+          {t('closeAll')}
         </Button>
       </header>
 
@@ -98,11 +99,11 @@ export function ConnectionsPage() {
       >
         <TabsList variant='line'>
           <TabsTrigger value={CONNECTION_TAB.Active}>
-            Активные
+            {t('tab.active')}
             <Badge variant='secondary'>{counts.active}</Badge>
           </TabsTrigger>
           <TabsTrigger value={CONNECTION_TAB.Closed}>
-            Закрытые
+            {t('tab.closed')}
             <Badge variant='secondary'>{counts.closed}</Badge>
           </TabsTrigger>
         </TabsList>
@@ -115,13 +116,13 @@ export function ConnectionsPage() {
               onChange={(event) => {
                 screen.setQuery(event.target.value);
               }}
-              placeholder='Хост, источник, правило или узел'
+              placeholder={t('search.placeholder')}
               className='pl-8'
-              aria-label='Поиск по соединениям'
+              aria-label={t('search.label')}
             />
           </div>
 
-          <ul aria-label='Устройства' className='flex min-w-0 flex-wrap items-center gap-1.5'>
+          <ul aria-label={t('sources.label')} className='flex min-w-0 flex-wrap items-center gap-1.5'>
             <li>
               <button
                 type='button'
@@ -131,7 +132,7 @@ export function ConnectionsPage() {
                 }}
                 className={cn(FACET_CLASS, screen.source === null ? FACET_ACTIVE : FACET_IDLE)}
               >
-                Все
+                {t('sources.all')}
                 <span className='font-mono tabular-nums'>{screen.total}</span>
               </button>
             </li>
@@ -160,7 +161,9 @@ export function ConnectionsPage() {
                   }}
                   className={cn(FACET_CLASS, FACET_MORE)}
                 >
-                  {allSources ? 'Свернуть' : `Ещё ${String(screen.sources.length - VISIBLE_SOURCES)}`}
+                  {allSources
+                    ? t('sources.collapse')
+                    : t('sources.more', { count: screen.sources.length - VISIBLE_SOURCES })}
                 </button>
               </li>
             )}
@@ -168,7 +171,10 @@ export function ConnectionsPage() {
 
           {screen.filtered && (
             <p role='status' className='text-xs text-muted-foreground'>
-              {plural(screen.rows.length, CONNECTION_FORMS)} из {screen.total}
+              {t('shown', {
+                shown: t('count.connection', { ns: 'shared', count: screen.rows.length }),
+                total: screen.total,
+              })}
             </p>
           )}
         </div>
@@ -189,10 +195,7 @@ export function ConnectionsPage() {
 
         <TabsContent value={CONNECTION_TAB.Closed} className='flex min-h-0 grow flex-col gap-4'>
           <Alert>
-            <AlertDescription>
-              Закрытые собирает панель: рантайм отдаёт только живые, и соединение, пропавшее между снапшотами, иначе
-              исчезло бы без следа. История держится, пока открыта вкладка.
-            </AlertDescription>
+            <AlertDescription>{t('closedNote')}</AlertDescription>
           </Alert>
 
           <ConnectionTable
@@ -207,20 +210,17 @@ export function ConnectionsPage() {
 }
 
 function EmptyState({ filtered, onReset }: { filtered: boolean; onReset: () => void }) {
+  const { t } = useTranslation('pages/Connections');
   if (filtered) {
     return (
       <div className='flex flex-col items-center gap-2'>
-        <p className='text-sm text-muted-foreground'>Ничего не нашлось по этому запросу.</p>
+        <p className='text-sm text-muted-foreground'>{t('notFound')}</p>
         <Button variant='outline' size='sm' onClick={onReset}>
-          Сбросить отбор
+          {t('resetFilter')}
         </Button>
       </div>
     );
   }
 
-  return (
-    <p className='text-sm text-muted-foreground'>
-      Соединений нет. Поток идёт: строки появятся, как только трафик пойдёт через sing-box.
-    </p>
-  );
+  return <p className='text-sm text-muted-foreground'>{t('empty')}</p>;
 }

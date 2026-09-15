@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 import { formatBytes } from '@shared/lib/format';
 
 import { DaemonSparkline } from './DaemonSparkline';
@@ -11,6 +13,8 @@ const MIN_POINTS = 2;
  * одна величина).
  */
 export function DaemonMemory({ samples }: { samples: number[] }) {
+  const { t } = useTranslation('widgets/Daemon/DaemonTraffic');
+
   if (samples.length < MIN_POINTS) {
     return null;
   }
@@ -18,7 +22,7 @@ export function DaemonMemory({ samples }: { samples: number[] }) {
   return (
     <DaemonSparkline
       samples={samples}
-      label={`Память за десять минут, от ${formatBytes(Math.min(...samples))} до ${formatBytes(Math.max(...samples))}`}
+      label={t('memory.label', { from: formatBytes(Math.min(...samples)), to: formatBytes(Math.max(...samples)) })}
     />
   );
 }

@@ -1,0 +1,14 @@
+{
+  "row": {
+    "label": "Rule {{index}}",
+    "unconditional": "no conditions — applies to all traffic",
+    "unknown": "conditions are not shown — the schema does not know this rule",
+    "uncovered": "not covered by the UI"
+  },
+  "matcher": { "more": "{{count}} more" },
+  "group": {
+    "and": "and",
+    "or": "or",
+    "invert": "except"
+  }
+}

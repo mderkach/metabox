@@ -1,3 +1,4 @@
+import i18next, { type ParseKeys } from 'i18next';
 import { type ParseError, parse } from 'jsonc-parser';
 
 /**
@@ -5,24 +6,28 @@ import { type ParseError, parse } from 'jsonc-parser';
  * английскими именами вроде `CloseBraceExpected`, а починить по ним опечатку
  * владельцу роутера нечем.
  */
-const PARSE_ERROR_TEXT: Record<number, string | undefined> = {
-  1: 'непонятный символ',
-  2: 'неверная запись числа',
-  3: 'ожидалось имя поля',
-  4: 'ожидалось значение',
-  5: 'пропущено двоеточие',
-  6: 'пропущена запятая',
-  7: 'не закрыта фигурная скобка',
-  8: 'не закрыта квадратная скобка',
-  9: 'лишнее содержимое после конца конфига',
-  10: 'непонятный комментарий',
-  11: 'не закрыт комментарий',
-  12: 'не закрыта строка',
-  13: 'оборванное число',
-  14: 'неверная escape-последовательность Unicode',
-  15: 'неверная escape-последовательность',
-  16: 'недопустимый символ',
+const PARSE_ERROR_KEY: Record<number, ParseKeys<'shared'> | undefined> = {
+  1: 'jsonc.invalidSymbol',
+  2: 'jsonc.invalidNumberFormat',
+  3: 'jsonc.propertyNameExpected',
+  4: 'jsonc.valueExpected',
+  5: 'jsonc.colonExpected',
+  6: 'jsonc.commaExpected',
+  7: 'jsonc.closeBraceExpected',
+  8: 'jsonc.closeBracketExpected',
+  9: 'jsonc.endOfFileExpected',
+  10: 'jsonc.invalidCommentToken',
+  11: 'jsonc.unexpectedEndOfComment',
+  12: 'jsonc.unexpectedEndOfString',
+  13: 'jsonc.unexpectedEndOfNumber',
+  14: 'jsonc.invalidUnicode',
+  15: 'jsonc.invalidEscapeCharacter',
+  16: 'jsonc.invalidCharacter',
 };
+
+function parseErrorText(code: number): string {
+  return i18next.t(PARSE_ERROR_KEY[code] ?? 'jsonc.unparsed', { ns: 'shared' });
+}
 
 /**
  * Диалект конфига sing-box: комментарии обоих видов и запятая перед
@@ -49,7 +54,7 @@ export function firstJsoncError(text: string): JsoncFailure | null {
 
   const [first] = errors;
 
-  return { offset: first.offset, text: PARSE_ERROR_TEXT[first.error] ?? 'конфиг не разобран' };
+  return { offset: first.offset, text: parseErrorText(first.error) };
 }
 
 /**
@@ -67,5 +72,5 @@ export function parseJsonc(text: string): { value: unknown; failure: JsoncFailur
 
   const [first] = errors;
 
-  return { value, failure: { offset: first.offset, text: PARSE_ERROR_TEXT[first.error] ?? 'конфиг не разобран' } };
+  return { value, failure: { offset: first.offset, text: parseErrorText(first.error) } };
 }

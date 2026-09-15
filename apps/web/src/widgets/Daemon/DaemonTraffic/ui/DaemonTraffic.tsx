@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { TrafficSample } from '@entities/Daemon';
 import { formatRate } from '@shared/lib/format';
@@ -21,7 +22,7 @@ const COORD_PRECISION = 2;
 const MIN_POINTS = 2;
 
 /** Отсечки времени: минута делится на четыре шага по пятнадцать секунд. */
-const TIME_TICKS = ['−60 с', '−45 с', '−30 с', '−15 с', 'сейчас'];
+const TIME_TICKS = ['tick.minus60', 'tick.minus45', 'tick.minus30', 'tick.minus15', 'tick.now'] as const;
 
 /** Середины половин: по ним читается высота всплеска, а не только его форма. */
 const QUARTER = MID / HALVES;
@@ -52,8 +53,8 @@ function toGeometry(values: number[], peak: number, down: boolean): { line: stri
  */
 export function DaemonTraffic({
   samples,
-  ticks = TIME_TICKS,
-  window = 'за минуту',
+  ticks,
+  window,
 }: {
   samples: TrafficSample[];
   /** Подписи оси времени, слева направо. */
@@ -61,6 +62,9 @@ export function DaemonTraffic({
   /** Окно графика словами: уходит в доступное имя картинки. */
   window?: string;
 }) {
+  const { t } = useTranslation('widgets/Daemon/DaemonTraffic');
+  const timeTicks = ticks ?? TIME_TICKS.map((tick) => t(tick));
+  const timeWindow = window ?? t('window.minute');
   const down = samples.map((sample) => sample.down);
   const up = samples.map((sample) => sample.up);
   const peakDown = Math.max(...down, 1);
@@ -86,7 +90,7 @@ export function DaemonTraffic({
           viewBox={`0 0 ${String(PLOT)} ${String(PLOT)}`}
           preserveAspectRatio='none'
           role='img'
-          aria-label={`Трафик ${window}: входящий до ${formatRate(peakDown)}, исходящий до ${formatRate(peakUp)}`}
+          aria-label={t('chart.label', { window: timeWindow, down: formatRate(peakDown), up: formatRate(peakUp) })}
           className='h-44 min-w-0 grow'
         >
           <defs>
@@ -159,7 +163,7 @@ export function DaemonTraffic({
       <figcaption className='flex gap-3 font-mono text-xs text-muted-foreground'>
         <span className='w-20 shrink-0' aria-hidden='true' />
         <span className='flex min-w-0 grow justify-between'>
-          {ticks.map((tick) => (
+          {timeTicks.map((tick) => (
             <span key={tick}>{tick}</span>
           ))}
         </span>

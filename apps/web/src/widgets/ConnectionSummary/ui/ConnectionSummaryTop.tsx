@@ -1,10 +1,10 @@
-import { CONNECTION_FORMS, type ConnectionShare } from '@entities/Connection';
-import { formatRate, plural } from '@shared/lib/format';
+import { useTranslation } from 'react-i18next';
+
+import type { ConnectionShare } from '@entities/Connection';
+import { formatRate } from '@shared/lib/format';
 
 import { ConnectionSummaryBars, type SummaryBar } from './ConnectionSummaryBars';
 import { ConnectionSummaryPanel } from './ConnectionSummaryPanel';
-
-const IDLE_CAPTION = 'молчит';
 
 /** Скорость считает панель: рантайм отдаёт только накопленные счётчики. */
 export function ConnectionSummaryTop({
@@ -18,15 +18,16 @@ export function ConnectionSummaryTop({
   shares: ConnectionShare[];
   empty: string;
 }) {
+  const { t } = useTranslation('widgets/ConnectionSummary');
   const peak = shares.reduce((max, share) => Math.max(max, share.rate), 0);
   const bars: SummaryBar[] = shares.map((share) => ({
     key: share.key,
     label: share.key,
     value: share.rate,
-    caption:
-      share.rate > 0
-        ? `${formatRate(share.rate)} · ${plural(share.count, CONNECTION_FORMS)}`
-        : `${IDLE_CAPTION} · ${plural(share.count, CONNECTION_FORMS)}`,
+    caption: `${share.rate > 0 ? formatRate(share.rate) : t('idle')} · ${t('count.connection', {
+      ns: 'shared',
+      count: share.count,
+    })}`,
     tone: 'bg-primary',
   }));
 

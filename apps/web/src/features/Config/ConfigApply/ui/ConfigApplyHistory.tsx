@@ -1,5 +1,6 @@
 import { History } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { toCheckFailure, useConfigVersions, type ConfigVersion } from '@entities/Config';
 import { formatBytes } from '@shared/lib/format';
@@ -27,6 +28,7 @@ import { ConfigApplyCheck } from './ConfigApplyCheck';
  * подтверждения ждёт бар, а окно ограничено минутой.
  */
 export function ConfigApplyHistory() {
+  const { t } = useTranslation('features/Config/ConfigApply');
   const [open, setOpen] = useState(false);
   const versions = useConfigVersions();
   const restore = useRestoreConfigVersion();
@@ -44,26 +46,21 @@ export function ConfigApplyHistory() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button variant='outline' size='sm' />}>
         <History />
-        История версий
+        {t('history.open')}
       </DialogTrigger>
 
       <DialogContent className='sm:max-w-xl'>
         <DialogHeader>
-          <DialogTitle>История конфига</DialogTitle>
-          <DialogDescription>
-            Демон хранит десять последних применённых версий. Откат проходит полный цикл: проверка бинарём, запись,
-            рестарт и окно подтверждения.
-          </DialogDescription>
+          <DialogTitle>{t('history.title')}</DialogTitle>
+          <DialogDescription>{t('history.description')}</DialogDescription>
         </DialogHeader>
 
         {check !== null && <ConfigApplyCheck check={check} />}
 
-        {versions.isPending && <p className='text-sm text-muted-foreground'>Читаю историю…</p>}
+        {versions.isPending && <p className='text-sm text-muted-foreground'>{t('history.pending')}</p>}
 
         {versions.isSuccess && versions.data.length === 0 && (
-          <p className='text-sm text-muted-foreground'>
-            История пуста: конфиг ещё не применялся через metabox, и возвращаться не к чему.
-          </p>
+          <p className='text-sm text-muted-foreground'>{t('history.empty')}</p>
         )}
 
         {versions.isSuccess && versions.data.length > 0 && (
@@ -89,11 +86,12 @@ function VersionRow({
   disabled: boolean;
   onRestore: (id: number) => void;
 }) {
+  const { t } = useTranslation('features/Config/ConfigApply');
   return (
     <li className='flex items-center gap-3 border-t border-border py-2 first:border-t-0'>
-      <span className='text-sm font-medium'>№ {version.id}</span>
+      <span className='text-sm font-medium'>{t('history.version', { id: version.id })}</span>
       {version.savedAt === null ? (
-        <span className='text-xs text-muted-foreground'>время сохранения неизвестно</span>
+        <span className='text-xs text-muted-foreground'>{t('history.unknownTime')}</span>
       ) : (
         <SavedAt at={version.savedAt} />
       )}
@@ -107,7 +105,7 @@ function VersionRow({
           onRestore(version.id);
         }}
       >
-        Вернуть
+        {t('history.restore')}
       </Button>
     </li>
   );

@@ -1,7 +1,10 @@
 import { Link } from '@tanstack/react-router';
+import type { ParseKeys } from 'i18next';
 import { Activity, Boxes, Gauge, PanelLeftClose, PanelLeftOpen, Share2, SlidersHorizontal } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { SERVICE_STATUS, useDaemonStatus, useServiceState, type ServiceStatus } from '@entities/Daemon';
+import { LanguageSwitch } from '@features/Language/LanguageSwitch';
 import { ThemeSwitch } from '@features/Theme/ThemeSwitch';
 import { cn } from '@shared/lib/utils';
 
@@ -9,11 +12,11 @@ import { useSidebarCollapsed } from '../lib/AppSidebar.lib';
 
 /** `to` есть только у сделанных разделов: остальные пункты не кликаются. */
 const NAV_ITEMS = [
-  { key: 'overview', label: 'Обзор', icon: Gauge, to: '/overview' },
-  { key: 'config', label: 'Конфигурация', icon: SlidersHorizontal, to: '/config' },
-  { key: 'ruleSets', label: 'Каталог rule-set', icon: Boxes },
-  { key: 'proxies', label: 'Прокси', icon: Share2, to: '/proxies' },
-  { key: 'connections', label: 'Соединения', icon: Activity, to: '/connections' },
+  { key: 'section.overview', icon: Gauge, to: '/overview' },
+  { key: 'section.config', icon: SlidersHorizontal, to: '/config' },
+  { key: 'section.ruleSets', icon: Boxes },
+  { key: 'section.proxies', icon: Share2, to: '/proxies' },
+  { key: 'section.connections', icon: Activity, to: '/connections' },
 ] as const;
 
 const ITEM_CLASS =
@@ -35,13 +38,14 @@ const STATUS_TONE: Readonly<Record<ServiceStatus, string>> = {
   [SERVICE_STATUS.Failed]: 'bg-signal-bad',
 };
 
-const STATUS_LABEL: Readonly<Record<ServiceStatus, string>> = {
-  [SERVICE_STATUS.Running]: 'sing-box работает',
-  [SERVICE_STATUS.Stopped]: 'sing-box остановлен',
-  [SERVICE_STATUS.Failed]: 'sing-box упал',
-};
+const STATUS_LABEL = {
+  [SERVICE_STATUS.Running]: 'service.running',
+  [SERVICE_STATUS.Stopped]: 'service.stopped',
+  [SERVICE_STATUS.Failed]: 'service.failed',
+} as const satisfies Readonly<Record<ServiceStatus, ParseKeys<'widgets/AppSidebar'>>>;
 
 export function AppSidebar() {
+  const { t } = useTranslation('widgets/AppSidebar');
   const status = useDaemonStatus();
   const service = useServiceState();
   const sidebar = useSidebarCollapsed();
@@ -68,7 +72,7 @@ export function AppSidebar() {
             <button
               type='button'
               onClick={sidebar.toggle}
-              aria-label='Свернуть панель'
+              aria-label={t('nav.collapse')}
               aria-expanded
               className={TOGGLE_CLASS}
             >
@@ -78,14 +82,14 @@ export function AppSidebar() {
         )}
       </div>
 
-      <nav aria-label='Разделы панели' className='p-2.5'>
+      <nav aria-label={t('nav.label')} className='p-2.5'>
         <ul className='flex flex-col gap-0.5'>
           {NAV_ITEMS.map((item) => (
             <li key={item.key}>
               {'to' in item ? (
                 <Link
                   to={item.to}
-                  title={item.label}
+                  title={t(item.key)}
                   className={cn(
                     ITEM_CLASS,
                     sidebar.collapsed && 'justify-center px-0',
@@ -94,20 +98,20 @@ export function AppSidebar() {
                   activeProps={{ className: ACTIVE_CLASS, 'aria-current': 'page' }}
                 >
                   <item.icon className='size-4 shrink-0' />
-                  {!sidebar.collapsed && item.label}
+                  {!sidebar.collapsed && t(item.key)}
                 </Link>
               ) : (
                 <span
                   aria-disabled='true'
-                  title={`${item.label} — раздел ещё не сделан`}
+                  title={t('nav.unavailable', { section: t(item.key) })}
                   className={cn(ITEM_CLASS, sidebar.collapsed && 'justify-center px-0', 'text-muted-foreground/50')}
                 >
                   <item.icon className='size-4 shrink-0' />
                   {!sidebar.collapsed && (
                     <>
-                      <span className='grow truncate'>{item.label}</span>
+                      <span className='grow truncate'>{t(item.key)}</span>
                       <span className='shrink-0 rounded-sm bg-muted px-1 text-2xs tracking-wide text-muted-foreground/70 uppercase'>
-                        скоро
+                        {t('nav.soon')}
                       </span>
                     </>
                   )}
@@ -128,14 +132,17 @@ export function AppSidebar() {
 
         {!sidebar.collapsed && (
           <dl className='flex items-baseline justify-between gap-2 text-xs'>
-            <dt className='text-muted-foreground'>демон</dt>
+            <dt className='text-muted-foreground'>{t('daemon.term')}</dt>
             <dd className='truncate font-mono text-muted-foreground'>
-              {status.isSuccess ? status.data.version : 'не отвечает'}
+              {status.isSuccess ? status.data.version : t('daemon.silent')}
             </dd>
           </dl>
         )}
 
-        <ThemeSwitch vertical={sidebar.collapsed} />
+        <div className={cn('flex gap-1.5', sidebar.collapsed && 'flex-col')}>
+          <ThemeSwitch vertical={sidebar.collapsed} />
+          <LanguageSwitch vertical={sidebar.collapsed} />
+        </div>
       </footer>
     </aside>
   );
@@ -143,6 +150,7 @@ export function AppSidebar() {
 
 /** `expand` пуст на узком экране: там панель свёрнута принудительно. */
 function Logo({ expand }: { expand?: () => void }) {
+  const { t } = useTranslation('widgets/AppSidebar');
   if (expand === undefined) {
     return (
       <span title='metabox' className={LOGO_CLASS}>
@@ -155,7 +163,7 @@ function Logo({ expand }: { expand?: () => void }) {
     <button
       type='button'
       onClick={expand}
-      aria-label='Развернуть панель'
+      aria-label={t('nav.expand')}
       aria-expanded={false}
       className={cn(
         LOGO_CLASS,
@@ -173,7 +181,8 @@ function Logo({ expand }: { expand?: () => void }) {
  * перехода на отдельный экран.
  */
 function ServiceDot({ status, collapsed }: { status: ServiceStatus | null; collapsed: boolean }) {
-  const label = status === null ? 'состояние sing-box неизвестно' : STATUS_LABEL[status];
+  const { t } = useTranslation('widgets/AppSidebar');
+  const label = t(status === null ? 'service.unknown' : STATUS_LABEL[status]);
   const tone = status === null ? 'bg-signal-idle' : STATUS_TONE[status];
 
   return (

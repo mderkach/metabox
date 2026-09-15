@@ -1,4 +1,5 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse } from 'axios';
+import i18next from 'i18next';
 
 import { API_FAILURE, ApiError } from './ApiError';
 import { TIMEOUT } from './cacheTime';
@@ -45,7 +46,7 @@ function fromResponse(response: AxiosResponse<unknown>): ApiError {
   }
 
   if (GATEWAY_STATUS.has(response.status)) {
-    return new ApiError(API_FAILURE.Unreachable, 'демон не отвечает', {
+    return new ApiError(API_FAILURE.Unreachable, i18next.t('daemon.silent', { ns: 'shared' }), {
       status: response.status,
     });
   }
@@ -66,7 +67,7 @@ function toApiError(error: unknown): unknown {
   }
 
   if (error.response === undefined) {
-    return new ApiError(API_FAILURE.Unreachable, 'демон не отвечает', {
+    return new ApiError(API_FAILURE.Unreachable, i18next.t('daemon.silent', { ns: 'shared' }), {
       cause: error,
     });
   }

@@ -1,7 +1,14 @@
+import i18next, { type ParseKeys } from 'i18next';
 import { toast } from 'sonner';
 
-import { t, type MessageKey } from '../lib/i18n';
 import { API_FAILURE, ApiError } from './ApiError';
+
+/**
+ * Тексты тостов живут в неймспейсе `shared`, а не в слайсе запроса: показывает
+ * их одно место на всё приложение, и словарь слайса к этому моменту может быть
+ * ещё не загружен.
+ */
+export type MessageKey = ParseKeys<'shared'>;
 
 /**
  * Показ ошибки. Union, а не набор необязательных полей: иначе компилируется
@@ -42,10 +49,10 @@ function isDaemonUnreachable(error: unknown): boolean {
 
 function errorText(meta: ErrorMeta, error: unknown): string {
   if (meta.errorMessageKey !== undefined) {
-    return t(meta.errorMessageKey);
+    return i18next.t(meta.errorMessageKey, { ns: 'shared' });
   }
 
-  return error instanceof Error ? error.message : t('error.unknown');
+  return error instanceof Error ? error.message : i18next.t('toast.error.unknown', { ns: 'shared' });
 }
 
 export function showQueryError(meta: QueryMeta | undefined, error: unknown) {
@@ -61,5 +68,5 @@ export function showQuerySuccess(meta: QueryMeta | undefined) {
     return;
   }
 
-  toast.success(t(meta.successMessageKey));
+  toast.success(i18next.t(meta.successMessageKey, { ns: 'shared' }));
 }

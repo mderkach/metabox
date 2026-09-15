@@ -10,7 +10,7 @@ export function useTestProxyDelay() {
     mutationFn: async function requestProxyDelay(name: string) {
       return testProxyDelay(name);
     },
-    meta: { showError: true, errorMessageKey: 'proxy.delay.failed' },
+    meta: { showError: true, errorMessageKey: 'toast.proxy.delay.failed' },
     onSettled: async () => queryClient.invalidateQueries({ queryKey: PROXY_QUERY.list() }),
   });
 }

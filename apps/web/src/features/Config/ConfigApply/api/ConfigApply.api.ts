@@ -11,7 +11,7 @@ export function useApplyConfig() {
 
   return useMutation({
     mutationFn: applyConfig,
-    meta: { showError: true, showSuccess: true, successMessageKey: 'apply.start.accepted' },
+    meta: { showError: true, showSuccess: true, successMessageKey: 'toast.apply.start.accepted' },
     onSuccess: onTransaction,
   });
 }
@@ -21,7 +21,7 @@ export function useConfirmApply() {
 
   return useMutation({
     mutationFn: confirmApply,
-    meta: { showError: true, showSuccess: true, successMessageKey: 'apply.confirm.done' },
+    meta: { showError: true, showSuccess: true, successMessageKey: 'toast.apply.confirm.done' },
     onSuccess: onTransaction,
   });
 }
@@ -32,7 +32,7 @@ export function useRestoreConfigVersion() {
 
   return useMutation({
     mutationFn: restoreConfigVersion,
-    meta: { showError: true, showSuccess: true, successMessageKey: 'apply.start.accepted' },
+    meta: { showError: true, showSuccess: true, successMessageKey: 'toast.apply.start.accepted' },
     onSuccess: onTransaction,
   });
 }

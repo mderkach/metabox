@@ -1,0 +1,24 @@
+{
+  "title": "Connections",
+  "subtitle": "the stream sends a snapshot every second",
+  "dropped": "snapshots not parsed: {{count}}",
+  "resume": "Resume",
+  "pause": "Pause",
+  "closeAll": "Close all",
+  "tab": { "active": "Active", "closed": "Closed" },
+  "search": {
+    "placeholder": "Host, source, rule or node",
+    "label": "Search the connections"
+  },
+  "sources": {
+    "label": "Devices",
+    "all": "All",
+    "collapse": "Collapse",
+    "more": "{{count}} more"
+  },
+  "shown": "{{shown}} of {{total}}",
+  "closedNote": "Closed connections are collected by the panel: the runtime reports only live ones, so a connection that disappears between snapshots would otherwise vanish without a trace. The history lives while the tab is open.",
+  "notFound": "Nothing matches this query.",
+  "resetFilter": "Reset the filter",
+  "empty": "No connections. The stream is running: rows appear as soon as traffic goes through sing-box."
+}

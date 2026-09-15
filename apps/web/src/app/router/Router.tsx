@@ -1,6 +1,7 @@
 import { createRootRoute, createRoute, createRouter, lazyRouteComponent, redirect } from '@tanstack/react-router';
 import { z } from 'zod';
 
+import { preloadNamespaces } from '../lib/i18n';
 import { AppLayout } from '../ui/AppLayout';
 
 /**
@@ -9,6 +10,10 @@ import { AppLayout } from '../ui/AppLayout';
  *
  * Экран подключается только тогда, когда он сделан: маршрут-заглушка в меню
  * неотличим от готового раздела и врёт о состоянии панели.
+ *
+ * Словари экрана догружает `loader` вместе с его кодом: без этого первый кадр
+ * маршрута уходит в `Suspense` и показывает заглушку вместо текста. Неймспейсы
+ * оболочки в списках не повторяются — их грузит вход приложения.
  */
 const rootRoute = createRootRoute({ component: AppLayout });
 
@@ -37,6 +42,15 @@ function parseRuleSearch(search: Record<string, unknown>): { rule?: number } {
 
 const configRoute = createRoute({
   getParentRoute: () => rootRoute,
+  loader: async () =>
+    preloadNamespaces([
+      'pages/Editor',
+      'widgets/Config/ConfigTabs',
+      'widgets/Rule/RuleTable',
+      'widgets/Rule/RulePanel',
+      'features/Rule/RuleEdit',
+      'features/Rule/RuleRaw',
+    ]),
   path: '/config',
   validateSearch: parseRuleSearch,
   component: lazyRouteComponent(async () => import('@pages/Editor'), 'EditorPage'),
@@ -44,24 +58,36 @@ const configRoute = createRoute({
 
 const proxiesRoute = createRoute({
   getParentRoute: () => rootRoute,
+  loader: async () => preloadNamespaces(['pages/Proxies', 'widgets/ProxyGroups']),
   path: '/proxies',
   component: lazyRouteComponent(async () => import('@pages/Proxies'), 'ProxiesPage'),
 });
 
 const connectionsRoute = createRoute({
   getParentRoute: () => rootRoute,
+  loader: async () => preloadNamespaces(['pages/Connections', 'widgets/ConnectionTable', 'widgets/RouteExplanation']),
   path: '/connections',
   component: lazyRouteComponent(async () => import('@pages/Connections'), 'ConnectionsPage'),
 });
 
 const overviewRoute = createRoute({
   getParentRoute: () => rootRoute,
+  loader: async () =>
+    preloadNamespaces([
+      'pages/Overview',
+      'widgets/ConnectionSummary',
+      'widgets/ConnectionHistory',
+      'widgets/Daemon/DaemonService',
+      'widgets/Daemon/DaemonTraffic',
+      'widgets/ProxyLatency',
+    ]),
   path: '/overview',
   component: lazyRouteComponent(async () => import('@pages/Overview'), 'OverviewPage'),
 });
 
 const rawConfigRoute = createRoute({
   getParentRoute: () => rootRoute,
+  loader: async () => preloadNamespaces(['pages/RawConfig', 'widgets/Config/ConfigRawEditor']),
   path: '/config/raw',
   component: lazyRouteComponent(async () => import('@pages/RawConfig'), 'RawConfigPage'),
 });

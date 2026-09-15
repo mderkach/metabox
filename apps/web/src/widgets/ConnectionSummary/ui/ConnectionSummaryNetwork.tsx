@@ -1,5 +1,6 @@
-import { CONNECTION_FORMS, type ConnectionShare } from '@entities/Connection';
-import { plural } from '@shared/lib/format';
+import { useTranslation } from 'react-i18next';
+
+import type { ConnectionShare } from '@entities/Connection';
 
 import { ConnectionSummaryDonut, type DonutSlice } from './ConnectionSummaryDonut';
 import { ConnectionSummaryPanel } from './ConnectionSummaryPanel';
@@ -22,17 +23,18 @@ function byProtocol(left: ConnectionShare, right: ConnectionShare): number {
 }
 
 export function ConnectionSummaryNetwork({ shares }: { shares: ConnectionShare[] }) {
+  const { t } = useTranslation('widgets/ConnectionSummary');
   const slices: DonutSlice[] = shares.toSorted(byProtocol).map((share) => ({
     key: share.key,
     label: share.key.toUpperCase(),
     value: share.count,
-    caption: plural(share.count, CONNECTION_FORMS),
+    caption: t('count.connection', { ns: 'shared', count: share.count }),
     tone: PROTOCOL_TONES[share.key] ?? OTHER_TONE,
   }));
 
   return (
-    <ConnectionSummaryPanel title='Типы сети'>
-      <ConnectionSummaryDonut slices={slices} empty='Живых соединений нет' />
+    <ConnectionSummaryPanel title={t('network.title')}>
+      <ConnectionSummaryDonut slices={slices} empty={t('empty')} />
     </ConnectionSummaryPanel>
   );
 }

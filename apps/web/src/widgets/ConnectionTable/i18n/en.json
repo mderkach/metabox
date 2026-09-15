@@ -1,0 +1,15 @@
+{
+  "label": "Connections",
+  "column": {
+    "host": "Host and source",
+    "route": "Rule, outcome and chain",
+    "traffic": "Rate and volume",
+    "age": "Age",
+    "action": "Action"
+  },
+  "row": {
+    "explain": "Why connection {{host}} took this route",
+    "close": "Close connection {{host}}",
+    "unconditional": "no conditions"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "empty": {
+    "title": "There are no groups in the config — that is a working setup",
+    "description": "Rules point straight at outbounds, so the active exit is set by a routing rule, not by a choice here. To switch the exit on the fly, the config needs a selector group.",
+    "outbounds": "Config outbounds"
+  },
+  "type": {
+    "selector": "selector",
+    "urlTest": "URL test",
+    "fallback": "fallback",
+    "loadBalance": "load balance"
+  },
+  "card": {
+    "manual": "you pick the node",
+    "automatic": "the node is picked automatically, by delay",
+    "test": "Test",
+    "current": "now:",
+    "none": "not selected",
+    "hint": "To pin a node by hand, the group in the config must be a selector."
+  },
+  "node": {
+    "untested": "not tested",
+    "timedOut": "no answer",
+    "delay": "{{value}} ms",
+    "selected": "selected now"
+  }
+}

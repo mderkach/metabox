@@ -11,6 +11,7 @@
       "Edit(./.env.*)",
       "Edit(./apps/web/src/shared/api/generated.ts)",
       "Edit(./apps/web/src/shared/api/daemon.generated.ts)",
+      "Edit(./apps/web/src/i18n.generated.d.ts)",
       "Edit(./pnpm-lock.yaml)",
       "Edit(./dist/**)",
       "Edit(./apps/web/dist/**)"

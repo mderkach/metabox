@@ -74,7 +74,7 @@ export function getConfigOptions() {
     queryFn: getConfig,
     gcTime: CACHE_TIME.Hour,
     staleTime: CACHE_TIME.Minute,
-    meta: { showError: true, errorMessageKey: 'config.fetchFailed' },
+    meta: { showError: true, errorMessageKey: 'toast.config.draft.fetchFailed' },
   });
 }
 
@@ -104,12 +104,14 @@ export const CACHE_TIME = {
 
 Тосты не разбросаны по хукам — они выводятся в `QueryCache` / `MutationCache` на основании `meta`. Поля `meta` readonly, сообщения задаются **ключами локализации**, а не готовыми строками.
 
+Ключ берётся из неймспейса `shared` (`MessageKey` = `ParseKeys<'shared'>`), а не из словаря своего слайса: тост показывает одно место на всё приложение, и к этому моменту словарь слайса может быть ещё не загружен.
+
 ```ts
 export interface QueryMeta {
   readonly showError?: boolean;
   readonly showSuccess?: boolean;
-  readonly errorMessageKey?: string;
-  readonly successMessageKey?: string;
+  readonly errorMessageKey?: MessageKey;
+  readonly successMessageKey?: MessageKey;
 }
 ```
 
@@ -166,7 +168,7 @@ export function useApplyConfig() {
 
   return useMutation({
     mutationFn: applyConfig,
-    meta: { showSuccess: true, successMessageKey: 'config.apply.done' },
+    meta: { showSuccess: true, successMessageKey: 'toast.apply.start.accepted' },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: CONFIG_QUERY.all });
     },

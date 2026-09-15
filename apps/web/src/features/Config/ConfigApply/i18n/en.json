@@ -1,0 +1,53 @@
+{
+  "bar": {
+    "label": "Config apply",
+    "applying": "Applying the config on the device…",
+    "dirty": "The draft has changes that are not on the device yet",
+    "apply": "Apply",
+    "discard": "Discard changes"
+  },
+  "confirm": {
+    "prompt": "The config is applied. Confirm that the link is alive —",
+    "left": "<time>{{seconds}} s</time> left",
+    "rollback": "otherwise the daemon restores the previous one",
+    "submit": "Link is alive, keep it"
+  },
+  "clashApi": {
+    "title": "metabox added experimental.clash_api to the config",
+    "description": "Without that section the runtime screens have nothing to read. The section is already in the applied file — the change was made by metabox, not by you."
+  },
+  "failure": {
+    "rolledBack": "No confirmation arrived — the previous config was restored",
+    "failed": "Apply did not go through",
+    "dismiss": "Hide"
+  },
+  "check": {
+    "title": "sing-box rejected the config — nothing was written to the device",
+    "exitCode": "Exit code: {{code}}. The draft is kept, fix it and apply again."
+  },
+  "diff": {
+    "open": "Show diff",
+    "title": "What goes to the device",
+    "same": "The draft matches the file on the device.",
+    "changed": "Changed lines: {{count}}. The rest of the file goes byte for byte.",
+    "caption": "Line by line difference between the draft and the applied config",
+    "column": {
+      "before": "Line in the applied config",
+      "after": "Line in the draft",
+      "content": "Content"
+    },
+    "skipped_one": "… {{count}} matching line",
+    "skipped_other": "… {{count}} matching lines",
+    "apply": "Apply"
+  },
+  "history": {
+    "open": "Version history",
+    "title": "Config history",
+    "description": "The daemon keeps the ten most recent applied versions. A rollback runs the full cycle: binary check, write, restart and the confirmation window.",
+    "pending": "Reading the history…",
+    "empty": "The history is empty: the config has never been applied through metabox, so there is nothing to go back to.",
+    "version": "No. {{id}}",
+    "unknownTime": "save time unknown",
+    "restore": "Restore"
+  }
+}

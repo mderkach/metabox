@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { z } from 'zod';
 
 import { API_FAILURE, ApiError } from './ApiError';
@@ -17,7 +18,7 @@ export function decodeResponse<Schema extends z.ZodType>(
     return parsed.data;
   }
 
-  throw new ApiError(API_FAILURE.Schema, `${source}: ответ не разобран`, {
+  throw new ApiError(API_FAILURE.Schema, i18next.t('response.unparsed', { ns: 'shared', source }), {
     cause: parsed.error,
     details: z.prettifyError(parsed.error),
   });

@@ -1,0 +1,29 @@
+{
+  "status": {
+    "running": "running",
+    "stopped": "stopped",
+    "failed": "crashed",
+    "foreign": "started by another service"
+  },
+  "uptime": {
+    "hours": "{{hours}} h",
+    "days": "{{days}} d {{hours}} h"
+  },
+  "action": {
+    "restart": "Restart",
+    "stop": "Stop",
+    "start": "Start"
+  },
+  "row": {
+    "uptime": "Service uptime",
+    "binary": "Binary",
+    "processMemory": "Process memory",
+    "goMemory": "Go memory"
+  },
+  "unread": "The service state was not read",
+  "crashed": "The service did not start",
+  "drift": {
+    "title": "The sing-box version diverged from the form schema",
+    "description": "The forms are built for {{schema}}, the device runs {{binary}}. A field missing from that binary version will be rejected by `sing-box check` on Apply — the panel cannot forbid it: the binary is the arbiter of validity, not the metabox schema (UX-4)."
+  }
+}

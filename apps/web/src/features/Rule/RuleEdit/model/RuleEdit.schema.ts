@@ -9,6 +9,14 @@ export const RULE_ACTION = {
 } as const;
 
 /**
+ * Отказы формы кодами: текст подставляет `ui`, потому что словарь слайса —
+ * его забота, а схема о языке ничего не знает.
+ */
+export const RULE_EDIT_ERROR = {
+  OutboundRequired: 'outboundRequired',
+} as const;
+
+/**
  * Что правит форма исхода. Условия сюда не входят: их сорок с лишним видов,
  * и до авторендерера они правятся текстом узла.
  */
@@ -30,7 +38,7 @@ export type RuleEditModel = z.infer<typeof RuleEditSchema>;
  */
 export const RuleEditAdapterSchema = RuleEditSchema.refine(
   (data) => data.action !== RULE_ACTION.Route || data.outbound.length > 0,
-  { path: ['outbound'], message: 'rule.outbound.required' }
+  { path: ['outbound'], message: RULE_EDIT_ERROR.OutboundRequired }
 ).transform((data) => ({
   action: data.action,
   ...(data.action === RULE_ACTION.Route && { outbound: data.outbound }),

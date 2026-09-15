@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { RuleMatcher } from '@entities/Rule';
 
@@ -6,6 +7,7 @@ import type { RuleMatcher } from '@entities/Rule';
 const VISIBLE_VALUES = 2;
 
 function RuleMatcherChipProto({ matcher }: { matcher: RuleMatcher }) {
+  const { t } = useTranslation('widgets/Rule/RuleTable');
   const shown = matcher.values.slice(0, VISIBLE_VALUES);
   const hidden = matcher.values.length - shown.length;
 
@@ -17,7 +19,7 @@ function RuleMatcherChipProto({ matcher }: { matcher: RuleMatcher }) {
           {value}
         </span>
       ))}
-      {hidden > 0 && <span className='text-muted-foreground'>и ещё {hidden}</span>}
+      {hidden > 0 && <span className='text-muted-foreground'>{t('matcher.more', { count: hidden })}</span>}
     </span>
   );
 }

@@ -1,8 +1,7 @@
 import { useId } from 'react';
+import { useTranslation } from 'react-i18next';
 
-import { CONNECTION_FORMS } from '@entities/Connection';
 import { toAreaGeometry } from '@shared/lib/chart';
-import { plural } from '@shared/lib/format';
 import { SECTION_LABEL } from '@shared/lib/styles';
 import { Card, CardContent, CardHeader } from '@shared/ui';
 
@@ -17,13 +16,14 @@ const QUARTERS = 4;
 const GRID = Array.from({ length: QUARTERS - 1 }, (_, index) => ((index + 1) * PLOT) / QUARTERS);
 
 /** Отсечки времени: минута делится на четыре шага по пятнадцать секунд. */
-const TIME_TICKS = ['−60 с', '−45 с', '−30 с', '−15 с', 'сейчас'];
+const TIME_TICKS = ['tick.minus60', 'tick.minus45', 'tick.minus30', 'tick.minus15', 'tick.now'] as const;
 
 /**
  * Открытые соединения за минуту. Буфер копит панель: рантайм отдаёт только
  * снимок живых, и число открытых в прошлую секунду нигде не хранится.
  */
 export function ConnectionHistory({ samples }: { samples: number[] }) {
+  const { t } = useTranslation('widgets/ConnectionHistory');
   const peak = Math.max(...samples, 1);
   const geometry = toAreaGeometry(samples, peak * HEADROOM, PLOT, PLOT);
   const gradient = useId();
@@ -31,7 +31,7 @@ export function ConnectionHistory({ samples }: { samples: number[] }) {
   return (
     <Card className='gap-3'>
       <CardHeader>
-        <h3 className={SECTION_LABEL}>Соединения за минуту</h3>
+        <h3 className={SECTION_LABEL}>{t('title')}</h3>
       </CardHeader>
 
       <CardContent>
@@ -43,15 +43,13 @@ export function ConnectionHistory({ samples }: { samples: number[] }) {
             </div>
 
             {geometry === null ? (
-              <p className='flex h-32 min-w-0 grow items-center text-xs text-muted-foreground'>
-                Ждём второй снимок потока
-              </p>
+              <p className='flex h-32 min-w-0 grow items-center text-xs text-muted-foreground'>{t('pending')}</p>
             ) : (
               <svg
                 viewBox={`0 0 ${String(PLOT)} ${String(PLOT)}`}
                 preserveAspectRatio='none'
                 role='img'
-                aria-label={`Открытые соединения за минуту, пик ${plural(peak, CONNECTION_FORMS)}`}
+                aria-label={t('chart', { peak: t('count.connection', { ns: 'shared', count: peak }) })}
                 className='h-32 min-w-0 grow'
               >
                 <defs>
@@ -92,7 +90,7 @@ export function ConnectionHistory({ samples }: { samples: number[] }) {
             <span className='w-10 shrink-0' aria-hidden='true' />
             <span className='flex min-w-0 grow justify-between'>
               {TIME_TICKS.map((tick) => (
-                <span key={tick}>{tick}</span>
+                <span key={tick}>{t(tick)}</span>
               ))}
             </span>
           </figcaption>

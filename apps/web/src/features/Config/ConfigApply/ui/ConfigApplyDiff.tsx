@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useConfigDiff } from '@entities/Config';
 import { DIFF_KIND, toDiffHunks, type DiffLine } from '@shared/lib/diff';
@@ -36,6 +37,7 @@ const LINE_MARK: Readonly<Record<DiffLine['kind'], string>> = {
  * байты, что видны здесь (ADR-0004, AC-2).
  */
 export function ConfigApplyDiff({ canApply, onApply }: { canApply: boolean; onApply: () => void }) {
+  const { t } = useTranslation('features/Config/ConfigApply');
   const lines = useConfigDiff();
   // Диалог перерисовывается на каждое нажатие снаружи, а проход идёт по всему
   // файлу: на конфиге в полторы тысячи строк это заметная работа.
@@ -44,26 +46,24 @@ export function ConfigApplyDiff({ canApply, onApply }: { canApply: boolean; onAp
 
   return (
     <Dialog>
-      <DialogTrigger render={<Button variant='outline' size='sm' />}>Посмотреть диф</DialogTrigger>
+      <DialogTrigger render={<Button variant='outline' size='sm' />}>{t('diff.open')}</DialogTrigger>
 
       <DialogContent className='sm:max-w-3xl'>
         <DialogHeader>
-          <DialogTitle>Что уйдёт на устройство</DialogTitle>
+          <DialogTitle>{t('diff.title')}</DialogTitle>
           <DialogDescription>
-            {changed === 0
-              ? 'Черновик совпадает с файлом на устройстве.'
-              : `Изменённых строк: ${String(changed)}. Остальной файл уходит байт в байт.`}
+            {changed === 0 ? t('diff.same') : t('diff.changed', { count: changed })}
           </DialogDescription>
         </DialogHeader>
 
         <ScrollArea className='max-h-[60vh] rounded-lg border border-border'>
           <table className='w-full border-collapse font-mono text-xs'>
-            <caption className='sr-only'>Построчные отличия черновика от применённого конфига</caption>
+            <caption className='sr-only'>{t('diff.caption')}</caption>
             <thead className='sr-only'>
               <tr>
-                <th scope='col'>Строка в применённом конфиге</th>
-                <th scope='col'>Строка в черновике</th>
-                <th scope='col'>Содержимое</th>
+                <th scope='col'>{t('diff.column.before')}</th>
+                <th scope='col'>{t('diff.column.after')}</th>
+                <th scope='col'>{t('diff.column.content')}</th>
               </tr>
             </thead>
             {hunks.map((hunk) => (
@@ -71,7 +71,7 @@ export function ConfigApplyDiff({ canApply, onApply }: { canApply: boolean; onAp
                 {hunk.skipped > 0 && (
                   <tr>
                     <td colSpan={3} className='bg-muted px-2 py-1 text-muted-foreground'>
-                      … {hunk.skipped} совпадающих строк
+                      {t('diff.skipped', { count: hunk.skipped })}
                     </td>
                   </tr>
                 )}
@@ -97,7 +97,7 @@ export function ConfigApplyDiff({ canApply, onApply }: { canApply: boolean; onAp
           {/* Закрытие диалога — часть действия: после запуска смотреть в диф
               нечего, ход применения показывает бар. */}
           <DialogClose render={<Button size='sm' disabled={!canApply} />} onClick={onApply}>
-            Применить
+            {t('diff.apply')}
           </DialogClose>
         </DialogFooter>
       </DialogContent>

@@ -1,5 +1,7 @@
+import type { ParseKeys, TFunction } from 'i18next';
 import { CircleAlert, TriangleAlert } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import {
   matchesSchemaVersion,
@@ -16,11 +18,11 @@ import { HOURS_IN_DAY, SECONDS_IN_HOUR } from '@shared/lib/time';
 import { cn } from '@shared/lib/utils';
 import { Alert, AlertDescription, AlertTitle, Button, Card, CardContent, CardHeader } from '@shared/ui';
 
-const STATUS_LABEL: Readonly<Record<ServiceState['status'], string>> = {
-  running: 'работает',
-  stopped: 'остановлен',
-  failed: 'упал',
-};
+const STATUS_LABEL = {
+  running: 'status.running',
+  stopped: 'status.stopped',
+  failed: 'status.failed',
+} as const satisfies Readonly<Record<ServiceState['status'], ParseKeys<'widgets/Daemon/DaemonService'>>>;
 
 /** Состояние читается тоном, а не только словом (ADR-0013). */
 const STATUS_TONE: Readonly<Record<ServiceState['status'], string>> = {
@@ -29,12 +31,12 @@ const STATUS_TONE: Readonly<Record<ServiceState['status'], string>> = {
   failed: 'bg-signal-bad',
 };
 
-function formatUptime(seconds: number): string {
+function formatUptime(t: TFunction<'widgets/Daemon/DaemonService'>, seconds: number): string {
   const hours = Math.floor(seconds / SECONDS_IN_HOUR);
 
   return hours >= HOURS_IN_DAY
-    ? `${String(Math.floor(hours / HOURS_IN_DAY))} д ${String(hours % HOURS_IN_DAY)} ч`
-    : `${String(hours)} ч`;
+    ? t('uptime.days', { days: Math.floor(hours / HOURS_IN_DAY), hours: hours % HOURS_IN_DAY })
+    : t('uptime.hours', { hours });
 }
 
 /**
@@ -60,6 +62,7 @@ export function DaemonService({
   /** Готовым узлом: слайсы одного слоя друг друга не импортируют. */
   heapChart?: ReactNode;
 }) {
+  const { t } = useTranslation('widgets/Daemon/DaemonService');
   const service = useServiceState();
   const action = useServiceAction();
 
@@ -72,7 +75,7 @@ export function DaemonService({
         <CardContent>
           <Alert variant='destructive'>
             <CircleAlert />
-            <AlertTitle>Состояние сервиса не прочитано</AlertTitle>
+            <AlertTitle>{t('unread')}</AlertTitle>
             <AlertDescription>{service.error.message}</AlertDescription>
           </Alert>
         </CardContent>
@@ -94,9 +97,9 @@ export function DaemonService({
         <h3 className={SECTION_LABEL}>sing-box</h3>
         <p className='flex items-center gap-1.5 text-xs'>
           <span aria-hidden='true' className={cn('size-2 shrink-0 rounded-full', STATUS_TONE[state.status])} />
-          {STATUS_LABEL[state.status]}
+          {t(STATUS_LABEL[state.status])}
         </p>
-        {running && !state.managed && <span className='text-xs text-muted-foreground'>поднят другой службой</span>}
+        {running && !state.managed && <span className='text-xs text-muted-foreground'>{t('status.foreign')}</span>}
         <span className='grow' />
         {state.managed && (
           <Button
@@ -107,7 +110,7 @@ export function DaemonService({
               action.mutate(SERVICE_ACTION.Restart);
             }}
           >
-            Перезапустить
+            {t('action.restart')}
           </Button>
         )}
         {state.managed && (
@@ -119,7 +122,7 @@ export function DaemonService({
               action.mutate(SERVICE_ACTION.Stop);
             }}
           >
-            Остановить
+            {t('action.stop')}
           </Button>
         )}
         {!running && (
@@ -131,25 +134,25 @@ export function DaemonService({
               action.mutate(SERVICE_ACTION.Start);
             }}
           >
-            Запустить
+            {t('action.start')}
           </Button>
         )}
       </CardHeader>
 
       <CardContent className='flex flex-col gap-3'>
         <dl className='text-sm'>
-          {state.managed && <Row label='Аптайм службы' value={formatUptime(state.uptime)} />}
-          <Row label='Бинарь' value={state.binary} mono />
+          {state.managed && <Row label={t('row.uptime')} value={formatUptime(t, state.uptime)} />}
+          <Row label={t('row.binary')} value={state.binary} mono />
           {process !== undefined && (
-            <Row label='Память процесса' value={`${formatBytes(process.rss)} · pid ${String(process.pid)}`} />
+            <Row label={t('row.processMemory')} value={`${formatBytes(process.rss)} · pid ${String(process.pid)}`} />
           )}
-          {heap > 0 && <Row label='Память Go' value={formatBytes(heap)} chart={heapChart} />}
+          {heap > 0 && <Row label={t('row.goMemory')} value={formatBytes(heap)} chart={heapChart} />}
         </dl>
 
         {state.status !== 'running' && state.lastError !== undefined && (
           <Alert variant='destructive'>
             <CircleAlert />
-            <AlertTitle>Сервис не поднялся</AlertTitle>
+            <AlertTitle>{t('crashed')}</AlertTitle>
             <AlertDescription>
               {/* Вывод бинаря показывается дословно: разобранный до узла он
                   соврал бы, а сокращённый — потерял бы причину (UX-5). */}
@@ -161,11 +164,9 @@ export function DaemonService({
         {drifted && (
           <Alert>
             <TriangleAlert />
-            <AlertTitle>Версия sing-box разошлась со схемой форм</AlertTitle>
+            <AlertTitle>{t('drift.title')}</AlertTitle>
             <AlertDescription>
-              Формы собраны под {SCHEMA_VERSION}, на устройстве {state.binary}. Поле, которого нет в этой версии бинаря,
-              отклонит `sing-box check` при Apply — запретить его панель не может: арбитр валидности сам бинарь, а не
-              схема metabox (UX-4).
+              {t('drift.description', { schema: SCHEMA_VERSION, binary: state.binary })}
             </AlertDescription>
           </Alert>
         )}

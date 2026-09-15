@@ -3,11 +3,14 @@ import { cleanup } from '@testing-library/react';
 import { enableMapSet } from 'immer';
 import { afterAll, afterEach, beforeAll } from 'vitest';
 
+import { initTestI18n } from './i18n';
 import { server } from './server';
 
 // Тесты поднимают сторы без входа приложения, а `Map` в состоянии требует
 // плагина immer — там он включается в `app/main.tsx`.
 enableMapSet();
+
+await initTestI18n();
 
 // Глобалы vitest выключены, поэтому Testing Library не регистрирует свою очистку.
 afterEach(cleanup);

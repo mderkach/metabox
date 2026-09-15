@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { ConfigDocumentState, ruleNodePath } from '@entities/Config';
 import { checkRuleNode } from '@entities/Rule';
@@ -19,6 +20,7 @@ const JSON_INDENT = 2;
  * Ошибка разбора не стирает введённое: иначе исправить опечатку было бы нечем.
  */
 export function RuleRawEditor({ index, node }: { index: number; node: unknown }) {
+  const { t } = useTranslation('features/Rule/RuleRaw');
   const edit = ConfigDocumentState.use.edit();
   const [text, setText] = useState(() => JSON.stringify(node, null, JSON_INDENT));
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +46,7 @@ export function RuleRawEditor({ index, node }: { index: number; node: unknown })
     <section className='flex flex-col gap-2'>
       <Textarea
         id={`rule-raw-${String(index)}`}
-        aria-label={`Правило ${String(index)} текстом`}
+        aria-label={t('editor.label', { index })}
         spellCheck={false}
         value={text}
         onChange={(event) => {
@@ -55,7 +57,7 @@ export function RuleRawEditor({ index, node }: { index: number; node: unknown })
 
       {error !== null && (
         <Alert variant='destructive'>
-          <AlertTitle>JSON не разобран</AlertTitle>
+          <AlertTitle>{t('parseFailed')}</AlertTitle>
           <AlertDescription>
             <pre className='font-mono text-xs whitespace-pre-wrap'>{error}</pre>
           </AlertDescription>
@@ -64,7 +66,7 @@ export function RuleRawEditor({ index, node }: { index: number; node: unknown })
 
       {warning !== null && (
         <Alert>
-          <AlertTitle>Схема этот узел не знает — записан как есть</AlertTitle>
+          <AlertTitle>{t('unknownNode')}</AlertTitle>
           <AlertDescription>
             <pre className='font-mono text-xs whitespace-pre-wrap'>{warning}</pre>
           </AlertDescription>
@@ -72,7 +74,7 @@ export function RuleRawEditor({ index, node }: { index: number; node: unknown })
       )}
 
       <Button size='sm' variant='outline' onClick={apply}>
-        Записать в черновик
+        {t('submit')}
       </Button>
     </section>
   );

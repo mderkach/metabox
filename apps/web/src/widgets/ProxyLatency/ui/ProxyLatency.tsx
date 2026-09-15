@@ -1,3 +1,6 @@
+import type { TFunction } from 'i18next';
+import { useTranslation } from 'react-i18next';
+
 import { DELAY_STATE, DELAY_TIMEOUT, useProxies, type ProxyGroup, type ProxyNode } from '@entities/Proxy';
 import { useTestProxyDelay } from '@features/Proxy/ProxyDelay';
 import { toShare } from '@shared/lib/chart';
@@ -37,13 +40,13 @@ function toSelected(groups: ProxyGroup[]): GroupDelay[] {
   });
 }
 
-function toDelayLabel(node: ProxyNode): string {
+function toDelayLabel(t: TFunction<'widgets/ProxyLatency'>, node: ProxyNode): string {
   if (node.delay === null) {
-    return 'не проверялся';
+    return t('node.untested');
   }
 
   // Отказ соединиться, а не задержка: рантайм отдаёт его числом 65535.
-  return node.delay >= DELAY_TIMEOUT ? 'не ответил' : `${String(node.delay)} мс`;
+  return node.delay >= DELAY_TIMEOUT ? t('node.timedOut') : t('node.delay', { value: node.delay });
 }
 
 function toMeter(node: ProxyNode): number {
@@ -56,6 +59,7 @@ function toMeter(node: ProxyNode): number {
 
 /** Замер делает sing-box (AC-11): из браузера мерялся бы канал до панели. */
 export function ProxyLatency() {
+  const { t } = useTranslation('widgets/ProxyLatency');
   const proxies = useProxies();
   const delay = useTestProxyDelay();
   const selected = proxies.data === undefined ? [] : toSelected(proxies.data.groups);
@@ -63,7 +67,7 @@ export function ProxyLatency() {
   return (
     <Card className='gap-3'>
       <CardHeader className='flex flex-row items-baseline justify-between gap-3'>
-        <h3 className={SECTION_LABEL}>Задержка узлов</h3>
+        <h3 className={SECTION_LABEL}>{t('title')}</h3>
         <Button
           variant='outline'
           size='sm'
@@ -74,15 +78,13 @@ export function ProxyLatency() {
             }
           }}
         >
-          {delay.isPending ? 'Проверяю' : 'Проверить'}
+          {delay.isPending ? t('testing') : t('test')}
         </Button>
       </CardHeader>
 
       <CardContent>
         {selected.length === 0 ? (
-          <p className='text-xs text-muted-foreground'>
-            {proxies.isError ? 'Список узлов не прочитан' : 'Групп с выбранным узлом нет'}
-          </p>
+          <p className='text-xs text-muted-foreground'>{proxies.isError ? t('unread') : t('empty')}</p>
         ) : (
           <ul className='flex flex-col gap-2.5'>
             {selected.map((entry) => (
@@ -92,7 +94,7 @@ export function ProxyLatency() {
                   <span className='text-muted-foreground'> · </span>
                   <span className='font-mono'>{entry.node.name}</span>
                 </p>
-                <p className='font-mono text-xs text-muted-foreground tabular-nums'>{toDelayLabel(entry.node)}</p>
+                <p className='font-mono text-xs text-muted-foreground tabular-nums'>{toDelayLabel(t, entry.node)}</p>
                 <span className='col-span-2 block h-1.5 overflow-hidden rounded-full bg-meter-track'>
                   <span
                     className={cn('block h-full rounded-full', DELAY_TONE[entry.node.delayState])}

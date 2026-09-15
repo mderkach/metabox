@@ -1,5 +1,6 @@
 import { X } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { ConfigDocumentState } from '@entities/Config';
 import type { RuleRow } from '@entities/Rule';
@@ -42,6 +43,7 @@ export function RulePanel({
   outbounds: string[];
   onClose: () => void;
 }) {
+  const { t } = useTranslation('widgets/Rule/RulePanel');
   const [tab, setTab] = useState<string>(recognized ? TAB.Form : TAB.Raw);
   const revision = ConfigDocumentState.use.revision();
 
@@ -49,11 +51,11 @@ export function RulePanel({
     <aside className='flex w-full max-w-md shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-card'>
       <header className='flex items-center gap-2.5 border-b border-border px-4 py-3'>
         <div className='flex min-w-0 grow flex-col'>
-          <h2 className='text-sm font-medium'>Правило {rule.index}</h2>
+          <h2 className='text-sm font-medium'>{t('title', { index: rule.index })}</h2>
           <p className='font-mono text-xs text-muted-foreground'>route.rules[{rule.index - 1}]</p>
         </div>
-        {!recognized && <Badge variant='outline'>UI не покрывает</Badge>}
-        <Button variant='outline' size='icon-sm' aria-label='Закрыть панель' onClick={onClose}>
+        {!recognized && <Badge variant='outline'>{t('uncovered')}</Badge>}
+        <Button variant='outline' size='icon-sm' aria-label={t('close')} onClick={onClose}>
           <X />
         </Button>
       </header>
@@ -63,19 +65,15 @@ export function RulePanel({
 
         {!recognized && (
           <Alert>
-            <AlertTitle>Схема этот узел не знает</AlertTitle>
-            <AlertDescription>
-              Форму по нему построить нельзя, но он сохраняется байт в байт и уезжает на устройство как есть. Такое
-              бывает, когда бинарь на устройстве новее схемы панели: запретить то, что принимает бинарь, схема не
-              вправе.
-            </AlertDescription>
+            <AlertTitle>{t('unknown.title')}</AlertTitle>
+            <AlertDescription>{t('unknown.description')}</AlertDescription>
           </Alert>
         )}
 
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList variant='line'>
             <TabsTrigger value={TAB.Form} disabled={!recognized}>
-              Форма
+              {t('tab.form')}
             </TabsTrigger>
             <TabsTrigger value={TAB.Raw}>JSON</TabsTrigger>
           </TabsList>
@@ -92,9 +90,7 @@ export function RulePanel({
           </TabsContent>
         </Tabs>
 
-        <p className='text-xs text-muted-foreground'>
-          Правка меняет одну строку файла: порядок ключей и незнакомые узлы остаются как были.
-        </p>
+        <p className='text-xs text-muted-foreground'>{t('note')}</p>
       </div>
     </aside>
   );
@@ -106,36 +102,28 @@ export function RulePanel({
  * строки списка, где на них нет места.
  */
 function RuleConditions({ rule }: { rule: RuleRow }) {
+  const { t } = useTranslation('widgets/Rule/RulePanel');
   // Нераспознанный узел «без условий» не бывает: условие в нём есть, просто
   // схема не знает его поля, и показать его формой нечем.
   if (rule.isCatchAll && !rule.recognized) {
-    return (
-      <p className='rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground'>
-        Условия не показаны: схема не знает полей этого правила. Смотреть и править их можно на вкладке JSON.
-      </p>
-    );
+    return <p className='rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground'>{t('conditions.unknown')}</p>;
   }
 
   if (rule.isCatchAll) {
-    return (
-      <p className='rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground'>
-        Условий нет — правило применяется ко всему трафику и обрывает список.
-      </p>
-    );
+    return <p className='rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground'>{t('conditions.empty')}</p>;
   }
 
   if (rule.group !== null) {
     return (
       <p className='rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground'>
-        Логическое правило: условия склеены «{rule.group.mode}» во вложенных ветках. Читать и править их можно на
-        вкладке JSON.
+        {t('conditions.group', { mode: rule.group.mode })}
       </p>
     );
   }
 
   return (
     <section className='flex flex-col gap-1.5'>
-      <h3 className={SECTION_LABEL}>Условия</h3>
+      <h3 className={SECTION_LABEL}>{t('conditions.title')}</h3>
       <dl className='flex flex-col gap-1'>
         {rule.matchers.map((matcher) => (
           <div key={matcher.key} className='flex gap-3 border-t border-border py-1.5 text-xs first:border-t-0'>
@@ -144,11 +132,7 @@ function RuleConditions({ rule }: { rule: RuleRow }) {
           </div>
         ))}
       </dl>
-      {rule.invert && (
-        <p className='text-xs text-muted-foreground'>
-          Условие перевёрнуто: правило срабатывает, когда оно не выполняется.
-        </p>
-      )}
+      {rule.invert && <p className='text-xs text-muted-foreground'>{t('conditions.inverted')}</p>}
     </section>
   );
 }

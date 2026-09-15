@@ -1,0 +1,16 @@
+{
+  "parseError": "line {{line}}: {{reason}}",
+  "search": {
+    "placeholder": "Find in the config",
+    "label": "Search the config text",
+    "empty": "nothing found",
+    "position": "{{current}} of {{total}}",
+    "previous": "Previous match",
+    "next": "Next match"
+  },
+  "editor": { "label": "sing-box config as text" },
+  "lines_one": "{{count}} line",
+  "lines_other": "{{count}} lines",
+  "parsed": "JSON parsed",
+  "issues": "schema issues: {{count}} — they do not block saving the draft, only <code>sing-box check</code> can reject it"
+}

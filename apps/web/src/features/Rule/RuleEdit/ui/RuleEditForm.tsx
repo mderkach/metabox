@@ -1,18 +1,22 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import type { ParseKeys, TFunction } from 'i18next';
 import { Controller, FormProvider, useForm, useFormContext } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 
 import { ConfigDocumentState, ruleNodePath } from '@entities/Config';
 import type { RuleRow } from '@entities/Rule';
-import { t } from '@shared/lib/i18n';
 import { Button, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/ui';
 
-import { RULE_ACTION, RuleEditAdapterSchema, type RuleEditModel, type RuleEditPatch } from '../model/RuleEdit.schema';
+import {
+  RULE_ACTION,
+  RULE_EDIT_ERROR,
+  RuleEditAdapterSchema,
+  type RuleEditModel,
+  type RuleEditPatch,
+} from '../model/RuleEdit.schema';
 
-const ACTION_LABEL: Readonly<Record<string, string>> = {
-  [RULE_ACTION.Route]: 'отправить в outbound',
-  [RULE_ACTION.Reject]: 'оборвать',
-  [RULE_ACTION.HijackDns]: 'перехватить DNS',
-  [RULE_ACTION.Sniff]: 'определить протокол',
+const ERROR_KEY: Readonly<Record<string, ParseKeys<'features/Rule/RuleEdit'> | undefined>> = {
+  [RULE_EDIT_ERROR.OutboundRequired]: 'error.outboundRequired',
 };
 
 /**
@@ -22,6 +26,7 @@ const ACTION_LABEL: Readonly<Record<string, string>> = {
  * порядок ключей и незнакомые узлы остаются как были.
  */
 export function RuleEditForm({ rule, outbounds }: { rule: RuleRow; outbounds: string[] }) {
+  const { t } = useTranslation('features/Rule/RuleEdit');
   const edit = ConfigDocumentState.use.edit();
 
   const form = useForm<RuleEditModel, unknown, RuleEditPatch>({
@@ -63,7 +68,7 @@ export function RuleEditForm({ rule, outbounds }: { rule: RuleRow; outbounds: st
         <OutboundField outbounds={outbounds} />
 
         <Button type='submit' size='sm' disabled={!form.formState.isDirty}>
-          Применить к черновику
+          {t('submit')}
         </Button>
       </form>
     </FormProvider>
@@ -71,6 +76,7 @@ export function RuleEditForm({ rule, outbounds }: { rule: RuleRow; outbounds: st
 }
 
 function ActionField() {
+  const { t } = useTranslation('features/Rule/RuleEdit');
   const { control } = useFormContext<RuleEditModel>();
 
   return (
@@ -79,7 +85,7 @@ function ActionField() {
       name='action'
       render={({ field }) => (
         <div className='flex flex-col gap-1.5'>
-          <Label htmlFor='rule-action'>Что делать</Label>
+          <Label htmlFor='rule-action'>{t('field.action.label')}</Label>
           <Select value={field.value} onValueChange={field.onChange}>
             <SelectTrigger id='rule-action'>
               <SelectValue />
@@ -87,7 +93,7 @@ function ActionField() {
             <SelectContent>
               {Object.values(RULE_ACTION).map((action) => (
                 <SelectItem key={action} value={action}>
-                  {ACTION_LABEL[action]}
+                  {t(`action.${action}`)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -99,6 +105,7 @@ function ActionField() {
 }
 
 function OutboundField({ outbounds }: { outbounds: string[] }) {
+  const { t } = useTranslation('features/Rule/RuleEdit');
   const { control, watch } = useFormContext<RuleEditModel>();
   const action = watch('action');
 
@@ -112,10 +119,10 @@ function OutboundField({ outbounds }: { outbounds: string[] }) {
       name='outbound'
       render={({ field, fieldState }) => (
         <div className='flex flex-col gap-1.5'>
-          <Label htmlFor='rule-outbound'>Куда отправить</Label>
+          <Label htmlFor='rule-outbound'>{t('field.outbound.label')}</Label>
           <Select value={field.value} onValueChange={field.onChange}>
             <SelectTrigger id='rule-outbound'>
-              <SelectValue placeholder='выберите outbound' />
+              <SelectValue placeholder={t('field.outbound.placeholder')} />
             </SelectTrigger>
             <SelectContent>
               {outbounds.map((tag) => (
@@ -127,13 +134,20 @@ function OutboundField({ outbounds }: { outbounds: string[] }) {
           </Select>
           {fieldState.error !== undefined && (
             <p role='alert' className='text-xs text-destructive'>
-              {t(fieldState.error.message ?? '')}
+              {errorText(t, fieldState.error.message)}
             </p>
           )}
         </div>
       )}
     />
   );
+}
+
+/** Код отказа из схемы в текст: сообщение приходит строкой, ключи — свои. */
+function errorText(t: TFunction<'features/Rule/RuleEdit'>, message: string | undefined): string | null {
+  const key = message === undefined ? undefined : ERROR_KEY[message];
+
+  return key === undefined ? null : t(key);
 }
 
 function isKnownAction(target: string, kind: RuleRow['targetKind']): target is RuleEditModel['action'] {

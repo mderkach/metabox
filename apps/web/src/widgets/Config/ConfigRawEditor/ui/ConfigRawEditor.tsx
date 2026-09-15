@@ -1,5 +1,7 @@
+import type { TFunction } from 'i18next';
 import { ChevronDown, ChevronUp, CircleAlert, CircleCheck, Search } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 
 import { firstJsoncError } from '@shared/lib/jsonc';
 import { cn } from '@shared/lib/utils';
@@ -18,14 +20,14 @@ function lineOfPosition(text: string, position: number): number {
   return lineIndexOf(text, position) + 1;
 }
 
-function parseError(text: string): string | null {
+function parseError(t: TFunction<'widgets/Config/ConfigRawEditor'>, text: string): string | null {
   const failure = firstJsoncError(text);
 
   if (failure === null) {
     return null;
   }
 
-  return `строка ${String(lineOfPosition(text, failure.offset))}: ${failure.text}`;
+  return t('parseError', { line: lineOfPosition(text, failure.offset), reason: failure.text });
 }
 
 /**
@@ -51,6 +53,7 @@ export function ConfigRawEditor({
   onChange: (text: string) => void;
   issues: string[];
 }) {
+  const { t } = useTranslation('widgets/Config/ConfigRawEditor');
   const [draft, setDraft] = useState(text);
   const [query, setQuery] = useState('');
   const [match, setMatch] = useState(0);
@@ -62,7 +65,7 @@ export function ConfigRawEditor({
   const tokens = useMemo(() => toJsonTokens(draft), [draft]);
   const matches = useMemo(() => findMatches(draft, query), [draft, query]);
   const lines = useMemo(() => draft.split('\n').length, [draft]);
-  const error = parseError(draft);
+  const error = parseError(t, draft);
 
   function syncScroll() {
     const input = inputRef.current;
@@ -116,21 +119,23 @@ export function ConfigRawEditor({
               setQuery(event.target.value);
               setMatch(0);
             }}
-            placeholder='Найти в конфиге'
+            placeholder={t('search.placeholder')}
             className='pl-8'
-            aria-label='Поиск по тексту конфига'
+            aria-label={t('search.label')}
           />
         </div>
 
         {query.length > 0 && (
           <>
             <p role='status' className='text-xs text-muted-foreground tabular-nums'>
-              {matches.length === 0 ? 'ничего не найдено' : `${String(match + 1)} из ${String(matches.length)}`}
+              {matches.length === 0
+                ? t('search.empty')
+                : t('search.position', { current: match + 1, total: matches.length })}
             </p>
             <Button
               variant='outline'
               size='icon-sm'
-              aria-label='Предыдущее совпадение'
+              aria-label={t('search.previous')}
               disabled={matches.length === 0}
               onClick={() => {
                 goToMatch((match - 1 + matches.length) % matches.length);
@@ -141,7 +146,7 @@ export function ConfigRawEditor({
             <Button
               variant='outline'
               size='icon-sm'
-              aria-label='Следующее совпадение'
+              aria-label={t('search.next')}
               disabled={matches.length === 0}
               onClick={() => {
                 goToMatch((match + 1) % matches.length);
@@ -188,7 +193,7 @@ export function ConfigRawEditor({
           <textarea
             ref={inputRef}
             id='config-raw'
-            aria-label='Конфиг sing-box текстом'
+            aria-label={t('editor.label')}
             spellCheck={false}
             wrap='off'
             value={draft}
@@ -207,12 +212,12 @@ export function ConfigRawEditor({
       </div>
 
       <footer className='flex shrink-0 flex-wrap items-center gap-2.5 text-xs'>
-        <Badge variant='outline'>{lines} строк</Badge>
+        <Badge variant='outline'>{t('lines', { count: lines })}</Badge>
 
         {error === null ? (
           <p className='flex items-center gap-1.5 text-signal-ok'>
             <CircleCheck className='size-3.5' aria-hidden='true' />
-            JSON разобран
+            {t('parsed')}
           </p>
         ) : (
           <p role='alert' className='flex items-center gap-1.5 text-destructive'>
@@ -223,8 +228,12 @@ export function ConfigRawEditor({
 
         {issues.length > 0 && (
           <p className='text-muted-foreground'>
-            замечаний схемы: {issues.length} — сохранить черновик они не мешают, отказать может только{' '}
-            <code className='font-mono'>sing-box check</code>
+            <Trans
+              t={t}
+              i18nKey='issues'
+              values={{ count: issues.length }}
+              components={{ code: <code className='font-mono' /> }}
+            />
           </p>
         )}
       </footer>

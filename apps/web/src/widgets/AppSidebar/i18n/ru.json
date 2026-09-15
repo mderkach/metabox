@@ -1,0 +1,26 @@
+{
+  "section": {
+    "overview": "Обзор",
+    "config": "Конфигурация",
+    "ruleSets": "Каталог rule-set",
+    "proxies": "Прокси",
+    "connections": "Соединения"
+  },
+  "nav": {
+    "label": "Разделы панели",
+    "collapse": "Свернуть панель",
+    "expand": "Развернуть панель",
+    "soon": "скоро",
+    "unavailable": "{{section}} — раздел ещё не сделан"
+  },
+  "daemon": {
+    "term": "демон",
+    "silent": "не отвечает"
+  },
+  "service": {
+    "running": "sing-box работает",
+    "stopped": "sing-box остановлен",
+    "failed": "sing-box упал",
+    "unknown": "состояние sing-box неизвестно"
+  }
+}

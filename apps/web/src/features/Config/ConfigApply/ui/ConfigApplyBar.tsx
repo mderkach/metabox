@@ -1,5 +1,6 @@
 import { CircleAlert, Info } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 
 import { APPLY_PHASE, type ApplyTransaction } from '@entities/Daemon';
 import { MS_IN_SECOND, NS_IN_SECOND } from '@shared/lib/time';
@@ -15,6 +16,7 @@ import { ConfigApplyDiff } from './ConfigApplyDiff';
  * (UX-7), а переход между экранами не должен терять окно.
  */
 export function ConfigApplyBar() {
+  const { t } = useTranslation('features/Config/ConfigApply');
   const apply = useConfigApply();
   const [dismissed, setDismissed] = useState<string | null>(null);
   const phase = apply.transaction?.phase;
@@ -34,7 +36,7 @@ export function ConfigApplyBar() {
 
   return (
     <section
-      aria-label='Применение конфига'
+      aria-label={t('bar.label')}
       className='flex shrink-0 flex-col gap-2 border-b border-border bg-card px-4 py-2.5 sm:px-6'
     >
       {awaiting && apply.transaction !== null ? (
@@ -48,18 +50,16 @@ export function ConfigApplyBar() {
         />
       ) : (
         <div className='flex flex-wrap items-center gap-x-2.5 gap-y-1'>
-          <p className='text-sm'>
-            {apply.isApplying ? 'Применяю конфиг на устройстве…' : 'Правки в черновике, на устройстве их ещё нет'}
-          </p>
+          <p className='text-sm'>{apply.isApplying ? t('bar.applying') : t('bar.dirty')}</p>
           <span className='grow' />
           {!apply.isApplying && (
             <>
               <ConfigApplyDiff canApply={apply.canApply} onApply={apply.apply} />
               <Button size='sm' disabled={!apply.canApply} onClick={apply.apply}>
-                Применить
+                {t('bar.apply')}
               </Button>
               <Button variant='ghost' size='sm' onClick={apply.discard}>
-                Отменить правки
+                {t('bar.discard')}
               </Button>
             </>
           )}
@@ -96,24 +96,28 @@ function ConfirmWindow({
   isConfirming: boolean;
   onConfirm: () => void;
 }) {
+  const { t } = useTranslation('features/Config/ConfigApply');
   const remaining = useCountdown(Math.ceil(transaction.window / NS_IN_SECOND));
 
   return (
     <div className='flex flex-col gap-2'>
       <div className='flex flex-wrap items-center gap-x-2.5 gap-y-1'>
         <p className='text-sm'>
-          Конфиг применён. Подтвердите, что связь жива, —{' '}
+          {t('confirm.prompt')}{' '}
           {remaining > 0 ? (
-            <>
-              осталось <data value={remaining}>{remaining} с</data>
-            </>
+            <Trans
+              t={t}
+              i18nKey='confirm.left'
+              values={{ seconds: remaining }}
+              components={{ time: <data value={remaining} /> }}
+            />
           ) : (
-            <>иначе демон вернёт предыдущий</>
+            t('confirm.rollback')
           )}
         </p>
         <span className='grow' />
         <Button size='sm' disabled={isConfirming} onClick={onConfirm}>
-          Связь есть, оставить
+          {t('confirm.submit')}
         </Button>
       </div>
 
@@ -145,27 +149,24 @@ function useCountdown(seconds: number): number {
  * файле, а не как его собственная.
  */
 function ClashAPIAdded() {
+  const { t } = useTranslation('features/Config/ConfigApply');
   return (
     <Alert>
       <Info />
-      <AlertTitle>metabox дописал в конфиг experimental.clash_api</AlertTitle>
-      <AlertDescription>
-        Без этой секции экраны рантайма читать нечего. Секция уже в применённом файле — изменение сделал metabox, а не
-        вы.
-      </AlertDescription>
+      <AlertTitle>{t('clashApi.title')}</AlertTitle>
+      <AlertDescription>{t('clashApi.description')}</AlertDescription>
     </Alert>
   );
 }
 
 /** Цикл не дошёл до конца: демон уже вернул предыдущий конфиг или пытался. */
 function ApplyFailure({ transaction, onDismiss }: { transaction: ApplyTransaction; onDismiss: () => void }) {
+  const { t } = useTranslation('features/Config/ConfigApply');
   return (
     <Alert variant='destructive'>
       <CircleAlert />
       <AlertTitle>
-        {transaction.phase === APPLY_PHASE.RolledBack
-          ? 'Подтверждения не было — предыдущий конфиг возвращён'
-          : 'Применение не прошло'}
+        {transaction.phase === APPLY_PHASE.RolledBack ? t('failure.rolledBack') : t('failure.failed')}
       </AlertTitle>
       {transaction.reason !== undefined && (
         <AlertDescription>
@@ -174,7 +175,7 @@ function ApplyFailure({ transaction, onDismiss }: { transaction: ApplyTransactio
       )}
       <AlertAction>
         <Button variant='ghost' size='sm' onClick={onDismiss}>
-          Скрыть
+          {t('failure.dismiss')}
         </Button>
       </AlertAction>
     </Alert>

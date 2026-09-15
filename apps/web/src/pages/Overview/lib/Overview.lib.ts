@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import {
   ConnectionState,
@@ -139,19 +140,20 @@ export interface Verdict {
  * недостоверными.
  */
 export function useOverviewVerdict(system: SystemStat | null, live: boolean, awaiting: boolean): Verdict {
+  const { t } = useTranslation('pages/Overview');
   const service = useServiceState();
   const proxies = useProxies();
 
   if (awaiting) {
-    return { tone: VERDICT_TONE.Warn, text: 'ждём первые данные рантайма' };
+    return { tone: VERDICT_TONE.Warn, text: t('verdict.waiting') };
   }
 
   if (!live) {
-    return { tone: VERDICT_TONE.Bad, text: 'поток рантайма молчит, числа замерли' };
+    return { tone: VERDICT_TONE.Bad, text: t('verdict.silent') };
   }
 
   if (service.data !== undefined && service.data.status !== SERVICE_STATUS.Running) {
-    return { tone: VERDICT_TONE.Bad, text: 'sing-box не работает' };
+    return { tone: VERDICT_TONE.Bad, text: t('verdict.stopped') };
   }
 
   const failed = (proxies.data?.groups ?? []).some((group) =>
@@ -159,18 +161,18 @@ export function useOverviewVerdict(system: SystemStat | null, live: boolean, awa
   );
 
   if (failed) {
-    return { tone: VERDICT_TONE.Warn, text: 'выбранный узел не отвечает' };
+    return { tone: VERDICT_TONE.Warn, text: t('verdict.nodeDown') };
   }
 
   const hottest = system === null ? 0 : system.thermal.reduce((max, zone) => Math.max(max, zone.celsius), 0);
 
   if (hottest >= HOT_CELSIUS) {
-    return { tone: VERDICT_TONE.Bad, text: `плата греется: ${String(Math.round(hottest))} °C` };
+    return { tone: VERDICT_TONE.Bad, text: t('verdict.hot', { celsius: Math.round(hottest) }) };
   }
 
   if (hottest >= WARM_CELSIUS) {
-    return { tone: VERDICT_TONE.Warn, text: `плата тёплая: ${String(Math.round(hottest))} °C` };
+    return { tone: VERDICT_TONE.Warn, text: t('verdict.warm', { celsius: Math.round(hottest) }) };
   }
 
-  return { tone: VERDICT_TONE.Ok, text: 'всё работает' };
+  return { tone: VERDICT_TONE.Ok, text: t('verdict.ok') };
 }

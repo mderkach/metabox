@@ -1,12 +1,13 @@
 import { Monitor, Moon, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import { useTranslation } from 'react-i18next';
 
 import { cn } from '@shared/lib/utils';
 
 const THEME_OPTIONS = [
-  { value: 'system', label: 'Как в системе', icon: Monitor },
-  { value: 'light', label: 'Светлая', icon: Sun },
-  { value: 'dark', label: 'Тёмная', icon: Moon },
+  { value: 'system', label: 'option.system', icon: Monitor },
+  { value: 'light', label: 'option.light', icon: Sun },
+  { value: 'dark', label: 'option.dark', icon: Moon },
 ] as const;
 
 /**
@@ -16,22 +17,24 @@ const THEME_OPTIONS = [
  */
 export function ThemeSwitch({ vertical = false }: { vertical?: boolean }) {
   const { theme, setTheme } = useTheme();
+  const { t } = useTranslation('features/Theme/ThemeSwitch');
 
   return (
     <div
       role='group'
-      aria-label='Оформление'
+      aria-label={t('group.label')}
       className={cn('flex gap-0.5 rounded-md bg-muted/60 p-0.5', vertical && 'flex-col')}
     >
       {THEME_OPTIONS.map((option) => {
         const active = theme === option.value;
+        const label = t(option.label);
 
         return (
           <button
             key={option.value}
             type='button'
-            title={option.label}
-            aria-label={option.label}
+            title={label}
+            aria-label={label}
             aria-pressed={active}
             onClick={() => {
               setTheme(option.value);
