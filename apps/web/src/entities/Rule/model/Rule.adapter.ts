@@ -1,4 +1,5 @@
 import { RuleSchema, type Config } from '@shared/api/generated';
+import { describeIssues } from '@shared/lib/schemaIssues';
 
 import { RULE_ACTION_FIELDS, RULE_MATCHER_KEYS } from './Rule.constants';
 import { RULE_TARGET, type RuleBranch, type RuleGroup, type RuleMatcher, type RuleRow } from './Rule.model';
@@ -121,7 +122,7 @@ export function toRuleRows(config: Config | null): RuleRow[] {
  *
  * Экран правил обязан открываться и тогда, когда схема не приняла конфиг
  * целиком: одно незнакомое правило иначе спрятало бы весь список, а
- * пользователю нужно как раз найти это правило (UX-3, AC-25).
+ * пользователю нужно как раз найти это правило.
  */
 export function toRuleRowsFromNodes(nodes: readonly unknown[]): RuleRow[] {
   const rows: RuleRow[] = [];
@@ -145,6 +146,7 @@ export function toRuleRowsFromNodes(nodes: readonly unknown[]): RuleRow[] {
       invert: Reflect.get(node, 'invert') === true,
       targetDetail: toTargetDetail(node, target.target),
       isCatchAll: branch.matchers.length === 0 && branch.group === null,
+      recognized: isRuleRecognized(node),
       searchText: [...toSearchText(branch), target.target].join(' '),
       ...target,
     });
@@ -162,9 +164,8 @@ export function isRuleRecognized(node: unknown): boolean {
  * Замечания схемы к узлу правила; пусто — узел принят.
  *
  * Замечание не запрещает запись: арбитр валидности — `sing-box check` на
- * устройстве, а не схема панели (UX-4). Иначе узел, которого схема не знает,
- * нельзя было бы ни поправить, ни сохранить, — а именно текстом его и правят
- * (AC-25).
+ * устройстве, а не схема панели. Иначе узел, которого схема не знает, нельзя
+ * было бы ни поправить, ни сохранить, — а именно текстом его и правят.
  */
 export function checkRuleNode(node: unknown): string[] {
   const checked = RuleSchema.safeParse(node);
@@ -173,5 +174,5 @@ export function checkRuleNode(node: unknown): string[] {
     return [];
   }
 
-  return checked.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`);
+  return describeIssues(checked.error.issues);
 }

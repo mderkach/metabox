@@ -64,6 +64,23 @@ describe('корпус конфигов', () => {
     expect(after).toContain('/* Порядок правил и есть логика');
   });
 
+  it('поля, которых схема не знает, названы поимённо', () => {
+    const file = FILES.find((item) => item.name === 'unknown-nodes.json');
+    const parsed = parseConfig(file?.text ?? '');
+
+    expect(parsed.config).not.toBeNull();
+    expect(parsed.unknown.map((item) => item.path)).toEqual(
+      expect.arrayContaining(['', 'outbounds.1', 'route.rules.0'])
+    );
+    expect(parsed.unknown.flatMap((item) => item.fields)).toEqual(
+      expect.arrayContaining(['vendor_extension', 'unknown_option', 'unknown_matcher'])
+    );
+  });
+
+  it.each(FILES.filter((item) => item.name !== 'unknown-nodes.json'))('$name схема принимает целиком', ({ text }) => {
+    expect(parseConfig(text).unknown).toEqual([]);
+  });
+
   it('незнакомые узлы переживают правку соседнего поля', () => {
     const file = FILES.find((item) => item.name === 'unknown-nodes.json');
 
@@ -72,7 +89,7 @@ describe('корпус конфигов', () => {
     const after = setValue(file?.text ?? '', ['log', 'level'], 'debug');
     const parsed = parseConfig(after).config;
 
-    expect(parsed?.vendor_extension).toEqual({
+    expect(Reflect.get(parsed ?? {}, 'vendor_extension')).toEqual({
       enabled: true,
       profiles: [{ name: 'own', weight: 3 }],
     });

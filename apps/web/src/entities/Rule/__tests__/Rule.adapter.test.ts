@@ -2,14 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import type { Config } from '@shared/api/generated';
 
-import { toRuleRows, toRuleRowsFromNodes } from '../model/Rule.adapter';
+import { checkRuleNode, isRuleRecognized, toRuleRows, toRuleRowsFromNodes } from '../model/Rule.adapter';
 import { RULE_TARGET } from '../model/Rule.model';
 
 function configWithRules(rules: object[]): Config {
-  // Правила в схеме — union из 57 веток; фикстура теста собирается литералом,
-  // и сузить его до нужной ветки может только утверждение.
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- см. выше
-  return { route: { rules } } as Config;
+  return { route: { rules } };
 }
 
 describe('toRuleRows', () => {
@@ -167,5 +164,26 @@ describe('действия кроме route', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]?.index).toBe(2);
     expect(rows[0]?.id).toBe('1');
+  });
+});
+
+describe('узлы, которых схема не знает', () => {
+  it('правило с незнакомым условием не считается распознанным', () => {
+    expect(isRuleRecognized({ unknown_matcher: ['своё'], outbound: 'direct' })).toBe(false);
+  });
+
+  it('обычное правило по-прежнему распознаётся', () => {
+    expect(isRuleRecognized({ domain_suffix: ['example.com'], outbound: 'direct' })).toBe(true);
+  });
+
+  it('строка списка помечает такое правило, а не выдаёт его за безусловное', () => {
+    const [row] = toRuleRowsFromNodes([{ unknown_matcher: ['своё'], outbound: 'direct' }]);
+
+    expect(row.recognized).toBe(false);
+    expect(row.isCatchAll).toBe(true);
+  });
+
+  it('замечание схемы называет поле, которого она не знает', () => {
+    expect(checkRuleNode({ unknown_matcher: ['своё'], outbound: 'direct' }).join(' ')).toContain('unknown_matcher');
   });
 });

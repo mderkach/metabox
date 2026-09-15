@@ -22,7 +22,7 @@ describe('parseConfig', () => {
     const parsed = parseConfig(JSON.stringify({ ...CONFIG_FIXTURE, unknown_section: { a: 1 } }));
 
     expect(parsed.issues).toEqual([]);
-    expect(parsed.config?.unknown_section).toEqual({ a: 1 });
+    expect(Reflect.get(parsed.config ?? {}, 'unknown_section')).toEqual({ a: 1 });
   });
 
   it('на неразобранном конфиге отдаёт замечания, а не пустой результат', () => {

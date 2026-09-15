@@ -10,6 +10,7 @@ import {
 import { CACHE_TIME, POLL_INTERVAL } from '@shared/api';
 import { ConfigSchema, type Config } from '@shared/api/generated';
 import { parseJsonc } from '@shared/lib/jsonc';
+import { type UnknownField, toUnknownFields } from '@shared/lib/schemaIssues';
 
 import { toConfigVersions } from '../model/Config.adapter';
 import { getApplyState, getConfig, getConfigVersions } from './Config.api';
@@ -37,30 +38,47 @@ export interface ParsedConfig {
   /** `null` — схема конфиг не приняла; что именно, сказано в `issues`. */
   config: Config | null;
   issues: string[];
+  /** Узлы с полями, которых схема не знает: путь узла → имена полей. */
+  unknown: UnknownField[];
 }
 
 /**
- * Схема `looseObject`, поэтому незнакомые узлы разбор переживают. Провал не
- * бросает: панель обязана открываться и на непонятом конфиге. Диалект тот же,
- * что у бинаря, — с комментариями и запятой перед закрывающей скобкой.
+ * Схемы строгие: поле, которого в схеме нет, разбор отмечает, а не пропускает
+ * молча. Узел с таким полем панель показывает нераспознанным и правит текстом.
+ *
+ * Модель при этом строится всё равно: схема собрана из релизной сборки форка и
+ * заведомо знает меньше бинаря, а один незнакомый ключ не должен гасить экраны
+ * с формами. Провал не бросает — панель обязана открываться и на непонятом
+ * конфиге. Диалект тот же, что у бинаря: комментарии и запятая перед
+ * закрывающей скобкой.
  */
 export function parseConfig(text: string): ParsedConfig {
   const { value, failure } = parseJsonc(text);
 
   if (failure !== null) {
-    return { text, config: null, issues: [`файл не разбирается: ${failure.text}`] };
+    return { text, config: null, issues: [`файл не разбирается: ${failure.text}`], unknown: [] };
   }
 
   const parsed = ConfigSchema.safeParse(value);
 
   if (parsed.success) {
-    return { text, config: parsed.data, issues: [] };
+    return { text, config: parsed.data, issues: [], unknown: [] };
+  }
+
+  const unknown = toUnknownFields(parsed.error.issues);
+
+  if (unknown !== null) {
+    // Известные поля схема проверила, остались только лишние — значение уже
+    // имеет нужную форму, и второй проход дал бы ровно его.
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- см. выше
+    return { text, config: value as Config, issues: [], unknown };
   }
 
   return {
     text,
     config: null,
     issues: parsed.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`),
+    unknown: [],
   };
 }
 

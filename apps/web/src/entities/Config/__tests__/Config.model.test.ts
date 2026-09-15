@@ -61,7 +61,7 @@ describe('setValue', () => {
     const text = JSON.stringify({ route: { final: 'proxy' }, unknown_section: { a: [1, 2] } }, null, 2);
     const after = setValue(text, ['route', 'final'], 'direct');
 
-    expect(parseConfig(after).config?.unknown_section).toEqual({ a: [1, 2] });
+    expect(Reflect.get(parseConfig(after).config ?? {}, 'unknown_section')).toEqual({ a: [1, 2] });
   });
 
   it('вставка повторяет отступ файла, отбитого табами', () => {
