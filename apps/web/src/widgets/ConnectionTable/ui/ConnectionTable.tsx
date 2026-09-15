@@ -101,7 +101,9 @@ export function ConnectionTable({
           <span role='columnheader' className={CONNECTION_COLUMN.Age}>
             {t('column.age')}
           </span>
-          <span role='columnheader' className={CONNECTION_COLUMN.Close} />
+          <span role='columnheader' className={CONNECTION_COLUMN.Close}>
+            <span className='sr-only'>{t('column.action')}</span>
+          </span>
         </div>
       </div>
 
