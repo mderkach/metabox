@@ -45,6 +45,9 @@ type Client struct {
 	runner     Runner
 	binary     string
 	initScript string
+	// logread — утилита логгера устройства; пустая означает «причину падения
+	// брать неоткуда», и состояние службы сводится к факту отказа.
+	logread string
 }
 
 // New собирает клиента. Пути обязаны быть абсолютными: под procd переменная
@@ -52,14 +55,24 @@ type Client struct {
 // тот файл или не разрешится вовсе.
 // New собирает клиента. supervisor необязателен: без него состояние сводится
 // к коду возврата init-скрипта, панель продолжает работать (NFR-1).
-func New(runner Runner, binary, initScript string, supervisor Supervisor) (*Client, error) {
+func New(runner Runner, binary, initScript, logread string, supervisor Supervisor) (*Client, error) {
 	for _, path := range []string{binary, initScript} {
 		if !filepath.IsAbs(path) {
 			return nil, fmt.Errorf("путь %q не абсолютный", path)
 		}
 	}
 
-	return &Client{runner: runner, supervisor: supervisor, binary: binary, initScript: initScript}, nil
+	if logread != "" && !filepath.IsAbs(logread) {
+		return nil, fmt.Errorf("путь %q не абсолютный", logread)
+	}
+
+	return &Client{
+		runner:     runner,
+		supervisor: supervisor,
+		binary:     binary,
+		initScript: initScript,
+		logread:    logread,
+	}, nil
 }
 
 // Check валидирует каталог-кандидат. Проверяется каталог, а не отдельный файл:
@@ -148,6 +161,9 @@ func (c *Client) service(ctx context.Context, action string) error {
 // State — состояние сервиса для панели.
 type State struct {
 	Running bool
+	// LastError — чем процесс объяснил своё падение в логе устройства. Пусто,
+	// когда объяснения нет: логгер недоступен или сервис в нём не отметился.
+	LastError string
 	// Failed означает, что procd службу знает, но ни один инстанс не поднят:
 	// её запускали и она отвалилась. Просто остановленную службу procd не
 	// помнит вовсе, поэтому различить их иначе нечем.
@@ -200,6 +216,10 @@ func (c *Client) State(ctx context.Context) (State, error) {
 	}
 
 	state.Failed = supervised.Known
+
+	if state.Failed {
+		state.LastError = c.failure(ctx)
+	}
 
 	return state, nil
 }

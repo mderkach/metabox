@@ -387,6 +387,7 @@ func ServiceState(state singbox.State, binary string, err error, observed bool) 
 		body.Status = "running"
 	case state.Failed:
 		body.Status = "failed"
+		body.LastError = state.LastError
 	}
 
 	return body

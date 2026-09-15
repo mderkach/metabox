@@ -29,7 +29,7 @@ func (f *fakeRunner) Run(_ context.Context, name string, args ...string) (singbo
 func newClient(t *testing.T, runner singbox.Runner) *singbox.Client {
 	t.Helper()
 
-	client, err := singbox.New(runner, binary, initScript, nil)
+	client, err := singbox.New(runner, binary, initScript, "", nil)
 	if err != nil {
 		t.Fatalf("сборка клиента: %v", err)
 	}
@@ -50,7 +50,7 @@ func TestNewRejectsRelativePaths(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if _, err := singbox.New(&fakeRunner{}, tt.binary, tt.initScript, nil); err == nil {
+			if _, err := singbox.New(&fakeRunner{}, tt.binary, tt.initScript, "", nil); err == nil {
 				t.Error("путь принят: под procd PATH не тот, что в шелле")
 			}
 		})

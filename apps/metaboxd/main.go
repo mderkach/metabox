@@ -70,6 +70,7 @@ type settings struct {
 	binary        string
 	initScript    string
 	ubus          string
+	logread       string
 	clashPort     int
 	confirmWindow time.Duration
 	cycleTimeout  time.Duration
@@ -90,6 +91,8 @@ func main() {
 	flag.StringVar(&s.binary, "singbox", "/usr/bin/sing-box", "путь к бинарю sing-box")
 	flag.StringVar(&s.initScript, "init-script", "/etc/init.d/sing-box", "путь к init-скрипту сервиса")
 	flag.StringVar(&s.ubus, "ubus", "/bin/ubus", "путь к ubus: через него читается состояние службы у procd")
+	flag.StringVar(&s.logread, "logread", "/sbin/logread",
+		"путь к logread: из него берётся причина падения sing-box; пустой отключает чтение")
 	flag.IntVar(&s.clashPort, "clash-port", 9090, "порт Clash API, если демон заводит секцию сам")
 	flag.DurationVar(&s.confirmWindow, "confirm-window", time.Minute,
 		"сколько ждать подтверждения связи до автоотката")
@@ -367,7 +370,7 @@ func build(log *slog.Logger, s settings) (*apply.Manager, *config.Store, *singbo
 
 	exec := singbox.NewExec(binaryTimeout)
 
-	service, err := singbox.New(exec, s.binary, s.initScript, procd.New(runCommand(exec), s.ubus))
+	service, err := singbox.New(exec, s.binary, s.initScript, s.logread, procd.New(runCommand(exec), s.ubus))
 	if err != nil {
 		return nil, nil, nil, err
 	}
