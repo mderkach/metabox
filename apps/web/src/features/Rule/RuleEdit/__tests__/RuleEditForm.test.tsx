@@ -30,6 +30,7 @@ const RULE: RuleRow = {
   targetKind: RULE_TARGET.Outbound,
   targetDetail: null,
   isCatchAll: false,
+  recognized: true,
   searchText: 'rule_set github proxy',
 };
 

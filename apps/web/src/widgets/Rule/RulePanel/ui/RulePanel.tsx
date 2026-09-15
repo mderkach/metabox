@@ -27,7 +27,7 @@ const TAB = {
  * Панель правила: форма исхода и тот же узел текстом.
  *
  * Узел, который схема не приняла, формы не получает вовсе — он показывается
- * сырым блоком с пометкой и правится только текстом (AC-25, UX-3).
+ * сырым блоком с пометкой и правится только текстом.
  */
 export function RulePanel({
   rule,
@@ -106,6 +106,16 @@ export function RulePanel({
  * строки списка, где на них нет места.
  */
 function RuleConditions({ rule }: { rule: RuleRow }) {
+  // Нераспознанный узел «без условий» не бывает: условие в нём есть, просто
+  // схема не знает его поля, и показать его формой нечем.
+  if (rule.isCatchAll && !rule.recognized) {
+    return (
+      <p className='rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground'>
+        Условия не показаны: схема не знает полей этого правила. Смотреть и править их можно на вкладке JSON.
+      </p>
+    );
+  }
+
   if (rule.isCatchAll) {
     return (
       <p className='rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground'>

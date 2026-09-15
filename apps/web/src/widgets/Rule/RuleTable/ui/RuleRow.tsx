@@ -3,6 +3,7 @@ import { memo } from 'react';
 
 import type { RuleRow as RuleRowModel } from '@entities/Rule';
 import { cn } from '@shared/lib/utils';
+import { Badge } from '@shared/ui';
 
 import { RULE_COLUMN } from './RuleColumns';
 import { RuleGroupChips } from './RuleGroupChips';
@@ -36,8 +37,19 @@ function RuleRowProto({
       <span className={RULE_COLUMN.Index}>{rule.index}</span>
 
       <div className='flex min-w-0 grow flex-wrap items-center gap-1.5'>
-        {rule.isCatchAll && (
-          <span className='text-sm text-muted-foreground'>без условий — применяется ко всему трафику</span>
+        {/* Нераспознанный узел «без условий» не бывает: условие в нём есть,
+            просто схема не знает его поля и показать его нечем. */}
+        {rule.isCatchAll &&
+          (rule.recognized ? (
+            <span className='text-sm text-muted-foreground'>без условий — применяется ко всему трафику</span>
+          ) : (
+            <span className='text-sm text-muted-foreground'>условия не показаны — схема не знает это правило</span>
+          ))}
+
+        {!rule.recognized && (
+          <Badge variant='outline' className='shrink-0'>
+            UI не покрывает
+          </Badge>
         )}
 
         {rule.invert && rule.group === null && <span className='shrink-0 text-xs text-muted-foreground'>кроме</span>}
