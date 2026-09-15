@@ -123,3 +123,138 @@ func TestEmbeddedDirectoryCompiles(t *testing.T) {
 		t.Errorf("встроенный каталог не читается: %v", err)
 	}
 }
+
+// compressed повторяет то, что кладёт сборка панели: рядом с файлом лежат
+// заранее сжатые варианты.
+func compressed() fstest.MapFS {
+	files := spa()
+	files["assets/index-D4f8Ka1x.js.br"] = &fstest.MapFile{Data: []byte("сжато brotli")}
+	files["assets/index-D4f8Ka1x.js.gz"] = &fstest.MapFile{Data: []byte("сжато gzip")}
+	files["locales/shared/ru-Z1k8dm97.json"] = &fstest.MapFile{Data: []byte(`{"a":"б"}`)}
+	files["locales/shared/ru-Z1k8dm97.json.br"] = &fstest.MapFile{Data: []byte("словарь brotli")}
+
+	return files
+}
+
+func serveWith(t *testing.T, files fstest.MapFS, path, accept string) *httptest.ResponseRecorder {
+	t.Helper()
+
+	h, err := newHandler(files)
+	if err != nil {
+		t.Fatalf("сборка раздачи: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, path, nil)
+	if accept != "" {
+		req.Header.Set("Accept-Encoding", accept)
+	}
+
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	return rec
+}
+
+// Сжимает сборка панели, а не демон: процессорное время роутера на повторное
+// сжатие одного и того же файла не тратится.
+func TestPrecompressedVariants(t *testing.T) {
+	tests := []struct {
+		name         string
+		path         string
+		accept       string
+		wantEncoding string
+		wantBody     string
+		wantType     string
+	}{
+		{
+			name:         "brotli когда клиент его принимает",
+			path:         "/assets/index-D4f8Ka1x.js",
+			accept:       "gzip, deflate, br, zstd",
+			wantEncoding: "br",
+			wantBody:     "сжато brotli",
+			wantType:     "text/javascript; charset=utf-8",
+		},
+		{
+			name:         "gzip когда brotli не предложен",
+			path:         "/assets/index-D4f8Ka1x.js",
+			accept:       "gzip, deflate",
+			wantEncoding: "gzip",
+			wantBody:     "сжато gzip",
+			wantType:     "text/javascript; charset=utf-8",
+		},
+		{
+			name:         "исходный файл, когда сжатое не принимают",
+			path:         "/assets/index-D4f8Ka1x.js",
+			accept:       "identity",
+			wantEncoding: "",
+			wantBody:     "console.log(1)",
+			wantType:     "text/javascript; charset=utf-8",
+		},
+		{
+			name:         "исходный файл, когда варианта нет",
+			path:         "/assets/index-B7cQ2m0p.css",
+			accept:       "br, gzip",
+			wantEncoding: "",
+			wantBody:     "body{}",
+			wantType:     "text/css; charset=utf-8",
+		},
+		{
+			name:         "словарь отдаётся сжатым",
+			path:         "/locales/shared/ru-Z1k8dm97.json",
+			accept:       "br",
+			wantEncoding: "br",
+			wantBody:     "словарь brotli",
+			wantType:     "application/json",
+		},
+		{
+			name:         "нулевой вес считается отказом",
+			path:         "/assets/index-D4f8Ka1x.js",
+			accept:       "br;q=0, gzip",
+			wantEncoding: "gzip",
+			wantBody:     "сжато gzip",
+			wantType:     "text/javascript; charset=utf-8",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rec := serveWith(t, compressed(), tt.path, tt.accept)
+
+			if rec.Code != http.StatusOK {
+				t.Fatalf("код %d, ожидали %d", rec.Code, http.StatusOK)
+			}
+			if got := rec.Header().Get("Content-Encoding"); got != tt.wantEncoding {
+				t.Errorf("Content-Encoding %q, ожидали %q", got, tt.wantEncoding)
+			}
+			if got := rec.Body.String(); got != tt.wantBody {
+				t.Errorf("тело %q, ожидали %q", got, tt.wantBody)
+			}
+			if got := rec.Header().Get("Content-Type"); got != tt.wantType {
+				t.Errorf("Content-Type %q, ожидали %q", got, tt.wantType)
+			}
+			if got := rec.Header().Get("Vary"); got != "Accept-Encoding" {
+				t.Errorf("Vary %q, ожидали Accept-Encoding", got)
+			}
+		})
+	}
+}
+
+// Словарь несёт отпечаток в имени, как и остальные ассеты: он обязан попадать
+// под вечный кэш, иначе каждый заход перепрашивает все словари экрана.
+func TestHashedLocaleIsImmutable(t *testing.T) {
+	rec := serveWith(t, compressed(), "/locales/shared/ru-Z1k8dm97.json", "")
+
+	if got := rec.Header().Get("Cache-Control"); got != assetCache {
+		t.Errorf("Cache-Control %q, ожидали %q", got, assetCache)
+	}
+}
+
+// Прямой запрос сжатого варианта отдал бы клиенту нераспакованные байты без
+// Content-Encoding, поэтому такой адрес раздаче неизвестен.
+func TestEncodedVariantIsNotAnAddress(t *testing.T) {
+	rec := serveWith(t, compressed(), "/assets/index-D4f8Ka1x.js.br", "br")
+
+	if got := rec.Header().Get("Content-Type"); got != "text/html; charset=utf-8" {
+		t.Errorf("Content-Type %q, ожидали оболочку", got)
+	}
+}

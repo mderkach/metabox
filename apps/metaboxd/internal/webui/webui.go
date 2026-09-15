@@ -5,11 +5,15 @@
 package webui
 
 import (
+	"bytes"
 	"embed"
 	"errors"
 	"io/fs"
+	"mime"
 	"net/http"
+	"path"
 	"strings"
+	"time"
 )
 
 // Префикс all: нужен, чтобы каталог с одним лишь .gitkeep всё-таки собрался:
@@ -29,6 +33,17 @@ const (
 	// кэшировать навсегда.
 	assetCache = "public, max-age=31536000, immutable"
 )
+
+// encodings — сжатые варианты по убыванию выигрыша. Сжимает их сборка панели,
+// а не демон: жать один и тот же файл на каждый запрос — процессорное время
+// роутера на ровном месте, и оно тратится тем чаще, чем слабее железо.
+var encodings = []struct {
+	token  string
+	suffix string
+}{
+	{token: "br", suffix: ".br"},
+	{token: "gzip", suffix: ".gz"},
+}
 
 // ErrNotBuilt — SPA в бинарь не попала: демон собран без `make daemon`.
 var ErrNotBuilt = errors.New("SPA не собрана")
@@ -70,7 +85,9 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// index.html отдаётся своими руками: http.FileServerFS канонизирует этот
 	// адрес редиректом на «/», а браузеру незачем ходить дважды за той же
 	// страницей.
-	if name == "" || name == indexFile || !exists(h.root, name) {
+	// Сжатый вариант — не самостоятельный адрес: отданный напрямую, он приедет
+	// без Content-Encoding и распакован не будет.
+	if name == "" || name == indexFile || isEncoded(name) || !exists(h.root, name) {
 		h.serveIndex(w, r)
 
 		return
@@ -82,7 +99,79 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", indexCache)
 	}
 
+	// Vary стоит и на несжатом ответе: без него общий кэш отдал бы клиенту без
+	// brotli тело, сжатое для клиента с ним.
+	w.Header().Set("Vary", "Accept-Encoding")
+
+	if h.serveEncoded(w, r, name) {
+		return
+	}
+
 	h.files.ServeHTTP(w, r)
+}
+
+// serveEncoded отдаёт заранее сжатый вариант файла, если он есть в бинаре и
+// клиент его принимает. Сообщает, взялся ли за ответ: иначе файл уходит как
+// есть.
+//
+// Тип содержимого берётся у исходного имени: у варианта расширение своё
+// (.br, .gz), и по нему тип определился бы как «поток байт».
+func (h *handler) serveEncoded(w http.ResponseWriter, r *http.Request, name string) bool {
+	mediaType := mime.TypeByExtension(path.Ext(name))
+	if mediaType == "" {
+		return false
+	}
+
+	accepted := r.Header.Get("Accept-Encoding")
+
+	for _, encoding := range encodings {
+		if !accepts(accepted, encoding.token) {
+			continue
+		}
+
+		body, err := fs.ReadFile(h.root, name+encoding.suffix)
+		if err != nil {
+			continue
+		}
+
+		w.Header().Set("Content-Type", mediaType)
+		w.Header().Set("Content-Encoding", encoding.token)
+		// Время не передаётся: у файлов из embed его нет, а выдуманное дало бы
+		// клиенту повод считать ответ свежим по ошибке.
+		http.ServeContent(w, r, "", time.Time{}, bytes.NewReader(body))
+
+		return true
+	}
+
+	return false
+}
+
+func isEncoded(name string) bool {
+	for _, encoding := range encodings {
+		if strings.HasSuffix(name, encoding.suffix) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// accepts разбирает Accept-Encoding: токен принят, если он перечислен и его
+// вес не нулевой. Явный «br;q=0» означает отказ, а не выбор.
+func accepts(header, token string) bool {
+	for part := range strings.SplitSeq(header, ",") {
+		value, params, _ := strings.Cut(strings.TrimSpace(part), ";")
+
+		if !strings.EqualFold(strings.TrimSpace(value), token) {
+			continue
+		}
+
+		quality, ok := strings.CutPrefix(strings.TrimSpace(params), "q=")
+
+		return !ok || (quality != "0" && !strings.HasPrefix(quality, "0.0"))
+	}
+
+	return false
 }
 
 func (h *handler) serveIndex(w http.ResponseWriter, r *http.Request) {
