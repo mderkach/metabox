@@ -19,7 +19,14 @@
   "failure": {
     "rolledBack": "No confirmation arrived — the previous config was restored",
     "failed": "Apply did not go through",
-    "dismiss": "Hide"
+    "dismiss": "Hide",
+    "reason": {
+      "backup_failed": "the previous config was not saved, there is nothing to write over",
+      "write_failed": "the config was not written to the device",
+      "restart_failed": "the service did not restart with the new config",
+      "healthcheck_failed": "the service started, but the runtime did not answer",
+      "rollback_failed": "the previous config could not be restored — the new one stayed on the device"
+    }
   },
   "check": {
     "title": "sing-box rejected the config — nothing was written to the device",

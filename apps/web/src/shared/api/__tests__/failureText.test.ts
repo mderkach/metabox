@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { API_FAILURE, ApiError } from '../ApiError';
-import { API_FAILURE_CODE, failureText } from '../failureText';
+import { failureText } from '../failureText';
 import { showQueryError } from '../queryMeta';
 
 vi.mock('sonner', () => ({
@@ -16,7 +16,7 @@ function failure(code: string, message: string): ApiError {
 
 describe('failureText', () => {
   it('переводит отказ по коду, а не берёт сообщение демона', () => {
-    expect(failureText(failure(API_FAILURE_CODE.RuntimeUnavailable, 'рантайм sing-box недоступен'))).toBe(
+    expect(failureText(failure('runtime_unavailable', 'рантайм sing-box недоступен'))).toBe(
       'рантайм sing-box не отвечает'
     );
   });
@@ -34,7 +34,7 @@ describe('showQueryError', () => {
   it('показывает, что не вышло и почему', () => {
     showQueryError(
       { showError: true, errorMessageKey: 'toast.proxy.delay.failed' },
-      failure(API_FAILURE_CODE.RuntimeUnavailable, 'рантайм sing-box недоступен')
+      failure('runtime_unavailable', 'рантайм sing-box недоступен')
     );
 
     expect(toast.error).toHaveBeenCalledWith('Проверить задержку не удалось: рантайм sing-box не отвечает');

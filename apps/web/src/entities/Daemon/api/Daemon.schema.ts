@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 export {
+  REASON_CODE as APPLY_REASON_CODE,
   HistorySchema as TrafficHistorySchema,
   ServiceSchema as ServiceStateSchema,
   StatSchema as SystemStatSchema,

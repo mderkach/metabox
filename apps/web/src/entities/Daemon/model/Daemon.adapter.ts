@@ -17,12 +17,14 @@ import {
   ServiceStateSchema,
   SystemStatSchema,
   TrafficHistorySchema,
+  APPLY_REASON_CODE,
 } from '../api/Daemon.schema';
 import {
   APPLY_PHASE,
   CLASH_MODE,
   SERVICE_STATUS,
   type ApplyPhase,
+  type ApplyReasonCode,
   type ApplyTransaction,
   type ClashConfigs,
   type ClashMode,
@@ -71,12 +73,18 @@ function toMode(value: string): ClashMode {
   return isMode(value) ? value : CLASH_MODE.Rule;
 }
 
+/** Незнакомый код читается как «шаг не назван»: текст тогда берётся из `reason`. */
+function toReasonCode(value: string | undefined): ApplyReasonCode | undefined {
+  return APPLY_REASON_CODE.find((code) => code === value);
+}
+
 function toTransaction(wire: NonNullable<DaemonStatusWire['transaction']>): ApplyTransaction {
   return {
     id: wire.id,
     phase: toPhase(wire.phase),
     window: wire.window,
     sum: wire.sha256,
+    reasonCode: toReasonCode(wire.reason_code),
     reason: wire.reason,
     clashApiAdded: wire.clash_api_added,
   };

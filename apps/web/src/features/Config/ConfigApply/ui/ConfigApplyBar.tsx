@@ -1,8 +1,9 @@
+import type { ParseKeys } from 'i18next';
 import { CircleAlert, Info } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
-import { APPLY_PHASE, type ApplyTransaction } from '@entities/Daemon';
+import { APPLY_PHASE, type ApplyReasonCode, type ApplyTransaction } from '@entities/Daemon';
 import { MS_IN_SECOND, NS_IN_SECOND } from '@shared/lib/time';
 import { Alert, AlertAction, AlertDescription, AlertTitle, Button } from '@shared/ui';
 
@@ -160,14 +161,31 @@ function ClashAPIAdded() {
 }
 
 /** Цикл не дошёл до конца: демон уже вернул предыдущий конфиг или пытался. */
+/**
+ * Шаг, на котором встал цикл, — словами пользователя. Таблица обязана покрывать
+ * набор демона целиком: новый шаг у него — ошибка компиляции здесь.
+ */
+const REASON_KEY: Readonly<Record<ApplyReasonCode, ParseKeys<'features/Config/ConfigApply'>>> = {
+  backup_failed: 'failure.reason.backup_failed',
+  write_failed: 'failure.reason.write_failed',
+  restart_failed: 'failure.reason.restart_failed',
+  healthcheck_failed: 'failure.reason.healthcheck_failed',
+  rollback_failed: 'failure.reason.rollback_failed',
+};
+
 function ApplyFailure({ transaction, onDismiss }: { transaction: ApplyTransaction; onDismiss: () => void }) {
   const { t } = useTranslation('features/Config/ConfigApply');
+  const reasonKey = transaction.reasonCode === undefined ? undefined : REASON_KEY[transaction.reasonCode];
+
   return (
     <Alert variant='destructive'>
       <CircleAlert />
       <AlertTitle>
         {transaction.phase === APPLY_PHASE.RolledBack ? t('failure.rolledBack') : t('failure.failed')}
       </AlertTitle>
+      {/* Причина — переводом по коду шага, а ошибка демона под ней: она на его
+          языке, но по ней чинят. */}
+      {reasonKey !== undefined && <AlertDescription>{t(reasonKey)}</AlertDescription>}
       {transaction.reason !== undefined && (
         <AlertDescription>
           <pre className='font-mono text-xs whitespace-pre-wrap'>{transaction.reason}</pre>

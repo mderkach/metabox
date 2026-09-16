@@ -1,3 +1,5 @@
+import { APPLY_REASON_CODE } from '../api/Daemon.schema';
+
 /** Стадия применения. Значения приходят с демона (`apply.Phase`). */
 export const APPLY_PHASE = {
   Applying: 'applying',
@@ -9,6 +11,9 @@ export const APPLY_PHASE = {
 
 export type ApplyPhase = (typeof APPLY_PHASE)[keyof typeof APPLY_PHASE];
 
+/** Коды шагов цикла применения — набор объявлен демоном и приезжает контрактом. */
+export type ApplyReasonCode = (typeof APPLY_REASON_CODE)[number];
+
 /** Снимок применения — `apply.Transaction`. */
 export interface ApplyTransaction {
   id: string;
@@ -16,6 +21,9 @@ export interface ApplyTransaction {
   /** Остаток окна подтверждения в наносекундах: Go отдаёт `time.Duration`. */
   window: number;
   sum?: string;
+  /** На каком шаге встал цикл; по коду панель берёт текст отказа. */
+  reasonCode?: ApplyReasonCode;
+  /** Исходная ошибка шага словами демона: запасной текст и подробность для того, кто чинит. */
   reason?: string;
   /** Демон дописал в конфиг секцию Clash API, чтобы читать рантайм (AC-31). */
   clashApiAdded?: boolean;
