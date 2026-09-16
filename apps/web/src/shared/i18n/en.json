@@ -1,27 +1,63 @@
 {
   "toast": {
     "apply": {
-      "confirm": { "done": "Link confirmed, the config stays" },
-      "start": { "accepted": "Config accepted, applying" }
+      "confirm": {
+        "done": "Link confirmed, the config stays"
+      },
+      "start": {
+        "accepted": "Config accepted, applying"
+      }
     },
     "config": {
-      "draft": { "fetchFailed": "Could not load the config" },
-      "versions": { "fetchFailed": "Could not read the version history" }
+      "draft": {
+        "fetchFailed": "Could not load the config"
+      },
+      "versions": {
+        "fetchFailed": "Could not read the version history"
+      }
     },
-    "connection": { "close": { "failed": "Could not close the connection" } },
-    "error": { "unknown": "Something went wrong" },
+    "connection": {
+      "close": {
+        "failed": "Could not close the connection"
+      }
+    },
+    "error": {
+      "unknown": "Something went wrong"
+    },
     "proxy": {
-      "delay": { "failed": "Could not measure the delay" },
-      "list": { "fetchFailed": "Could not read the proxy list" },
-      "providers": { "fetchFailed": "Could not read the subscriptions" },
-      "select": { "failed": "Could not switch the node" }
+      "delay": {
+        "failed": "Could not measure the delay"
+      },
+      "list": {
+        "fetchFailed": "Could not read the proxy list"
+      },
+      "providers": {
+        "fetchFailed": "Could not read the subscriptions"
+      },
+      "select": {
+        "failed": "Could not switch the node"
+      }
     },
-    "route": { "explain": { "failed": "Could not explain the route" } },
-    "service": { "action": { "failed": "The service command failed" } },
-    "status": { "fetchFailed": "The daemon is not responding" }
+    "route": {
+      "explain": {
+        "failed": "Could not explain the route"
+      }
+    },
+    "service": {
+      "action": {
+        "failed": "The service command failed"
+      }
+    },
+    "status": {
+      "fetchFailed": "The daemon is not responding"
+    }
   },
-  "daemon": { "silent": "the daemon is not responding" },
-  "response": { "unparsed": "{{source}}: response not parsed" },
+  "daemon": {
+    "silent": "the daemon is not responding"
+  },
+  "response": {
+    "unparsed": "{{source}}: response not parsed"
+  },
   "jsonc": {
     "unparsed": "config not parsed",
     "fileUnparsed": "file does not parse: {{reason}}",
@@ -70,5 +106,22 @@
     "goroutine_other": "{{count}} goroutines",
     "rule_one": "{{count}} rule",
     "rule_other": "{{count}} rules"
+  },
+  "failure": {
+    "withReason": "{{action}}: {{reason}}",
+    "not_found": "the daemon does not know this request",
+    "origin_mismatch": "the daemon rejected the request: the source does not match the panel address",
+    "upgrade_unsupported": "the daemon does not support this connection",
+    "config_missing": "there is no config on the device",
+    "version_missing": "there is no such version in the history",
+    "connection_missing": "the connection is already closed",
+    "runtime_unavailable": "the sing-box runtime does not respond",
+    "unknown_transaction": "the daemon does not know an apply with this id",
+    "apply_in_progress": "an apply is already running",
+    "nothing_to_confirm": "there is nothing to confirm: the confirmation window is closed",
+    "config_modified": "the config file was changed outside metabox",
+    "config_too_large": "the config is longer than the daemon accepts",
+    "check_failed": "sing-box rejected the config",
+    "internal": "an internal daemon error"
   }
 }

@@ -12,6 +12,7 @@ import {
   type SystemProcess,
 } from '@entities/Daemon';
 import { useServiceAction } from '@features/Daemon/DaemonControl';
+import { failureText } from '@shared/api';
 import { formatBytes } from '@shared/lib/format';
 import { SECTION_LABEL } from '@shared/lib/styles';
 import { HOURS_IN_DAY, SECONDS_IN_HOUR } from '@shared/lib/time';
@@ -76,7 +77,7 @@ export function DaemonService({
           <Alert variant='destructive'>
             <CircleAlert />
             <AlertTitle>{t('unread')}</AlertTitle>
-            <AlertDescription>{service.error.message}</AlertDescription>
+            <AlertDescription>{failureText(service.error) ?? service.error.message}</AlertDescription>
           </Alert>
         </CardContent>
       </Card>

@@ -1,27 +1,63 @@
 {
   "toast": {
     "apply": {
-      "confirm": { "done": "Связь подтверждена, конфиг оставлен" },
-      "start": { "accepted": "Конфиг принят, идёт применение" }
+      "confirm": {
+        "done": "Связь подтверждена, конфиг оставлен"
+      },
+      "start": {
+        "accepted": "Конфиг принят, идёт применение"
+      }
     },
     "config": {
-      "draft": { "fetchFailed": "Не удалось загрузить конфиг" },
-      "versions": { "fetchFailed": "Не удалось получить историю версий" }
+      "draft": {
+        "fetchFailed": "Не удалось загрузить конфиг"
+      },
+      "versions": {
+        "fetchFailed": "Не удалось получить историю версий"
+      }
     },
-    "connection": { "close": { "failed": "Закрыть соединение не удалось" } },
-    "error": { "unknown": "Что-то пошло не так" },
+    "connection": {
+      "close": {
+        "failed": "Закрыть соединение не удалось"
+      }
+    },
+    "error": {
+      "unknown": "Что-то пошло не так"
+    },
     "proxy": {
-      "delay": { "failed": "Проверить задержку не удалось" },
-      "list": { "fetchFailed": "Не удалось получить список прокси" },
-      "providers": { "fetchFailed": "Не удалось получить подписки" },
-      "select": { "failed": "Переключить узел не удалось" }
+      "delay": {
+        "failed": "Проверить задержку не удалось"
+      },
+      "list": {
+        "fetchFailed": "Не удалось получить список прокси"
+      },
+      "providers": {
+        "fetchFailed": "Не удалось получить подписки"
+      },
+      "select": {
+        "failed": "Переключить узел не удалось"
+      }
     },
-    "route": { "explain": { "failed": "Не удалось объяснить маршрут" } },
-    "service": { "action": { "failed": "Команда сервису не прошла" } },
-    "status": { "fetchFailed": "Демон не отвечает" }
+    "route": {
+      "explain": {
+        "failed": "Не удалось объяснить маршрут"
+      }
+    },
+    "service": {
+      "action": {
+        "failed": "Команда сервису не прошла"
+      }
+    },
+    "status": {
+      "fetchFailed": "Демон не отвечает"
+    }
   },
-  "daemon": { "silent": "демон не отвечает" },
-  "response": { "unparsed": "{{source}}: ответ не разобран" },
+  "daemon": {
+    "silent": "демон не отвечает"
+  },
+  "response": {
+    "unparsed": "{{source}}: ответ не разобран"
+  },
   "jsonc": {
     "unparsed": "конфиг не разобран",
     "fileUnparsed": "файл не разбирается: {{reason}}",
@@ -75,5 +111,22 @@
     "rule_one": "{{count}} правило",
     "rule_few": "{{count}} правила",
     "rule_many": "{{count}} правил"
+  },
+  "failure": {
+    "withReason": "{{action}}: {{reason}}",
+    "not_found": "демон не знает такого запроса",
+    "origin_mismatch": "демон отклонил запрос: источник не совпадает с адресом панели",
+    "upgrade_unsupported": "демон не поддерживает такое соединение",
+    "config_missing": "конфига на устройстве нет",
+    "version_missing": "такой версии в истории нет",
+    "connection_missing": "соединение уже закрылось",
+    "runtime_unavailable": "рантайм sing-box не отвечает",
+    "unknown_transaction": "применение с таким номером демону неизвестно",
+    "apply_in_progress": "применение уже идёт",
+    "nothing_to_confirm": "подтверждать нечего: окно подтверждения закрыто",
+    "config_modified": "файл конфига изменён мимо metabox",
+    "config_too_large": "конфиг длиннее, чем демон принимает",
+    "check_failed": "sing-box отверг конфиг",
+    "internal": "внутренняя ошибка демона"
   }
 }

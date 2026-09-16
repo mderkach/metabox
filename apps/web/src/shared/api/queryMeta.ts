@@ -2,6 +2,7 @@ import i18next, { type ParseKeys } from 'i18next';
 import { toast } from 'sonner';
 
 import { API_FAILURE, ApiError } from './ApiError';
+import { failureText } from './failureText';
 
 /**
  * Тексты тостов живут в неймспейсе `shared`, а не в слайсе запроса: показывает
@@ -47,12 +48,20 @@ function isDaemonUnreachable(error: unknown): boolean {
   return error instanceof ApiError && error.kind === API_FAILURE.Unreachable;
 }
 
+/**
+ * Текст отказа: что не вышло и почему. Причину демон присылает кодом, и
+ * перевод её — забота панели; сообщение демона идёт в ход, только когда код
+ * незнаком, — оно на его языке, а не на языке пользователя.
+ */
 function errorText(meta: ErrorMeta, error: unknown): string {
-  if (meta.errorMessageKey !== undefined) {
-    return i18next.t(meta.errorMessageKey, { ns: 'shared' });
+  const action = meta.errorMessageKey === undefined ? null : i18next.t(meta.errorMessageKey, { ns: 'shared' });
+  const reason = failureText(error) ?? (error instanceof Error ? error.message : null);
+
+  if (action !== null && reason !== null) {
+    return i18next.t('failure.withReason', { ns: 'shared', action, reason });
   }
 
-  return error instanceof Error ? error.message : i18next.t('toast.error.unknown', { ns: 'shared' });
+  return action ?? reason ?? i18next.t('toast.error.unknown', { ns: 'shared' });
 }
 
 export function showQueryError(meta: QueryMeta | undefined, error: unknown) {
