@@ -49,7 +49,12 @@ export const ROUTE_FINAL_FIXTURE: RouteExplanationWire = {
  */
 export const ROUTE_UNKNOWN_FIXTURE: RouteExplanationWire = {
   connection_id: 'c-3',
-  match: { origin: 'unknown', kind: 'unknown', reason: 'правила соединения нет в списке работающего процесса' },
+  match: {
+    origin: 'unknown',
+    kind: 'unknown',
+    reason_code: 'not_in_process_list',
+    reason: 'правила соединения нет в списке работающего процесса',
+  },
   chain: { origin: 'observed', nodes: ['direct'] },
   rules: [],
 };

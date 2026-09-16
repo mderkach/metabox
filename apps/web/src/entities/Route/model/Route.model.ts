@@ -1,3 +1,8 @@
+import { ROUTE_REASON_CODE } from '../api/Route.schema';
+
+/** Коды причин, по которым правило определить не вышло: набор объявлен демоном. */
+export type RouteReasonCode = (typeof ROUTE_REASON_CODE)[number];
+
 /**
  * Происхождение утверждения. Значений ровно три, и утверждение без
  * происхождения на экран не попадает (AC-34, ADR-0007).
@@ -39,6 +44,8 @@ export interface RouteMatch {
   conditions: string;
   action: string;
   /** Почему вычислить не удалось; пусто у найденного правила. */
+  reasonCode: RouteReasonCode | null;
+  /** Та же причина словами демона: запасной текст для незнакомого кода. */
   reason: string;
 }
 

@@ -37,6 +37,7 @@ describe('toRouteExplanation', () => {
     expect(explanation.match.conditions).toBe('');
     expect(explanation.match.action).toBe('');
     expect(explanation.match.reason).toBe(ROUTE_UNKNOWN_FIXTURE.match.reason);
+    expect(explanation.match.reasonCode).toBe('not_in_process_list');
   });
 
   it('читает пустую цепочку как пустую', () => {

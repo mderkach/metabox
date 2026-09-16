@@ -1,12 +1,24 @@
 import { Link } from '@tanstack/react-router';
+import type { ParseKeys, TFunction } from 'i18next';
 import { X } from 'lucide-react';
 import { Trans, useTranslation } from 'react-i18next';
 
-import { ROUTE_MATCH, ROUTE_ORIGIN, type RouteExplanation as RouteExplanationModel } from '@entities/Route';
+import {
+  ROUTE_MATCH,
+  ROUTE_ORIGIN,
+  type RouteExplanation as RouteExplanationModel,
+  type RouteMatch,
+  type RouteReasonCode,
+} from '@entities/Route';
 import { Alert, AlertDescription, AlertTitle, Button, buttonVariants } from '@shared/ui';
 
 import { useRouteExplanationState } from '../lib/RouteExplanation.lib';
 import { RouteOriginBadge } from './RouteOriginBadge';
+
+/** Таблица обязана покрывать набор демона: новый код — ошибка компиляции здесь. */
+const REASON_KEY: Readonly<Record<RouteReasonCode, ParseKeys<'widgets/RouteExplanation'>>> = {
+  not_in_process_list: 'unknown.reason.not_in_process_list',
+};
 
 /**
  * Объяснение строится на наблюдаемых данных core: список правил и сработавшее
@@ -87,7 +99,7 @@ function Matched({
   }
 
   if (match.kind === ROUTE_MATCH.Unknown || match.index === null) {
-    return <Unknown reason={match.reason.length > 0 ? match.reason : t('unknown.missing')} />;
+    return <Unknown reason={unknownReason(t, match)} />;
   }
 
   // Номер узла показывается только при сошедшихся списках: в чужом документе
@@ -123,6 +135,18 @@ function Matched({
       )}
     </section>
   );
+}
+
+/**
+ * Причина — перевод по коду демона. Текст из ответа идёт в ход, только когда
+ * код незнаком: он на языке демона, но объясняет больше, чем общая фраза.
+ */
+function unknownReason(t: TFunction<'widgets/RouteExplanation'>, match: RouteMatch): string {
+  if (match.reasonCode !== null) {
+    return t(REASON_KEY[match.reasonCode]);
+  }
+
+  return match.reason.length > 0 ? match.reason : t('unknown.missing');
 }
 
 function Unknown({ reason }: { reason: string }) {

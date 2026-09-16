@@ -20,7 +20,10 @@
   "unknown": {
     "title": "The rule is undetermined",
     "missing": "The rule of this connection is not in the process list.",
-    "drifted": "The process rule list diverged from the applied config, there is nothing to determine the node with."
+    "drifted": "The process rule list diverged from the applied config, there is nothing to determine the node with.",
+    "reason": {
+      "not_in_process_list": "the rule of this connection is not in the running process list"
+    }
   },
   "matched": {
     "title": "Rule {{number}} matched",

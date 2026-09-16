@@ -95,7 +95,9 @@ describe('RouteExplanation', () => {
     renderWithRouter(() => <RouteExplanation connectionId='c-1' onClose={vi.fn<() => void>()} />);
 
     expect(await screen.findByText('Правило не определено')).toBeInTheDocument();
-    expect(screen.getByText(ROUTE_UNKNOWN_FIXTURE.match.reason ?? '')).toBeInTheDocument();
+    // Причина — перевод панели по коду демона, а не его строка: она на его языке.
+    expect(screen.getByText('правила этого соединения нет в списке работающего процесса')).toBeInTheDocument();
+    expect(screen.queryByText(ROUTE_UNKNOWN_FIXTURE.match.reason ?? '')).not.toBeInTheDocument();
     expect(screen.getByText('неизвестно')).toBeInTheDocument();
   });
 

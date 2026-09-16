@@ -1,7 +1,14 @@
 import { decodeResponse } from '@shared/api';
 
-import { RouteExplanationSchema, type RouteExplanationWire } from '../api/Route.schema';
-import { ROUTE_MATCH, ROUTE_ORIGIN, type RouteExplanation, type RouteMatchKind, type RouteOrigin } from './Route.model';
+import { ROUTE_REASON_CODE, RouteExplanationSchema, type RouteExplanationWire } from '../api/Route.schema';
+import {
+  ROUTE_MATCH,
+  ROUTE_ORIGIN,
+  type RouteExplanation,
+  type RouteMatchKind,
+  type RouteOrigin,
+  type RouteReasonCode,
+} from './Route.model';
 
 const ORIGINS = new Set<string>(Object.values(ROUTE_ORIGIN));
 const KINDS = new Set<string>(Object.values(ROUTE_MATCH));
@@ -29,6 +36,11 @@ function toKind(value: string): RouteMatchKind {
   return isKind(value) ? value : ROUTE_MATCH.Unknown;
 }
 
+/** Незнакомый код читается как «причина не названа»: текст берётся из `reason`. */
+function toReasonCode(value: string | undefined): RouteReasonCode | null {
+  return ROUTE_REASON_CODE.find((code) => code === value) ?? null;
+}
+
 function toMatch(dto: RouteExplanationWire['match']) {
   const kind = toKind(dto.kind);
 
@@ -38,6 +50,7 @@ function toMatch(dto: RouteExplanationWire['match']) {
     index: kind === ROUTE_MATCH.Rule ? (dto.index ?? null) : null,
     conditions: dto.conditions ?? '',
     action: dto.action ?? '',
+    reasonCode: toReasonCode(dto.reason_code),
     reason: dto.reason ?? '',
   };
 }
