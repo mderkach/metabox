@@ -440,10 +440,10 @@ func TestApplyMapsDomainErrors(t *testing.T) {
 		name     string
 		err      error
 		want     int
-		wantCode string
+		wantCode contract.ErrorCode
 	}{
-		{"применение уже идёт", apply.ErrBusy, http.StatusConflict, "apply_in_progress"},
-		{"конфиг правили извне", apply.ErrConfigModified, http.StatusConflict, "config_modified"},
+		{"применение уже идёт", apply.ErrBusy, http.StatusConflict, contract.ErrApplyInProgress},
+		{"конфиг правили извне", apply.ErrConfigModified, http.StatusConflict, contract.ErrConfigModified},
 	}
 
 	for _, tt := range tests {

@@ -69,13 +69,55 @@ type History struct {
 	Device []history.DevicePoint `json:"device"`
 }
 
+// ErrorCode — машинный идентификатор отказа. Набор закрытый и объявлен здесь,
+// а не строками по хендлерам: по коду панель выбирает текст на языке
+// пользователя, поэтому новый код — это изменение контракта, а не детали
+// реализации.
+type ErrorCode string
+
+const (
+	// ErrNotFound — ручки под таким адресом нет.
+	ErrNotFound ErrorCode = "not_found"
+	// ErrOriginMismatch — источник мутирующего запроса не совпал с адресом панели.
+	ErrOriginMismatch ErrorCode = "origin_mismatch"
+	// ErrUpgradeUnsupported — попытка поднять WebSocket: рантайм идёт потоком
+	// `/api/events` (ADR-0010).
+	ErrUpgradeUnsupported ErrorCode = "upgrade_unsupported"
+	// ErrConfigMissing — файла конфига на устройстве нет.
+	ErrConfigMissing ErrorCode = "config_missing"
+	// ErrVersionMissing — такой версии в истории нет.
+	ErrVersionMissing ErrorCode = "version_missing"
+	// ErrConnectionMissing — соединение закрылось, пока панель спрашивала о нём.
+	ErrConnectionMissing ErrorCode = "connection_missing"
+	// ErrRuntimeUnavailable — рантайм sing-box не отвечает; сам демон при этом жив.
+	ErrRuntimeUnavailable ErrorCode = "runtime_unavailable"
+	// ErrUnknownTransaction — транзакции применения с таким идентификатором нет.
+	ErrUnknownTransaction ErrorCode = "unknown_transaction"
+	// ErrApplyInProgress — применение уже идёт, второе не начинается.
+	ErrApplyInProgress ErrorCode = "apply_in_progress"
+	// ErrNothingToConfirm — подтверждать нечего: окна подтверждения нет.
+	ErrNothingToConfirm ErrorCode = "nothing_to_confirm"
+	// ErrConfigModified — файл конфига изменён мимо metabox, и правка легла бы
+	// на чужой текст.
+	ErrConfigModified ErrorCode = "config_modified"
+	// ErrConfigTooLarge — тело запроса длиннее допустимого.
+	ErrConfigTooLarge ErrorCode = "config_too_large"
+	// ErrCheckFailed — `sing-box check` отверг конфиг; вывод бинаря лежит в Details.
+	ErrCheckFailed ErrorCode = "check_failed"
+	// ErrInternal — отказ, о котором наружу говорить нечего: подробности в логе.
+	ErrInternal ErrorCode = "internal"
+)
+
 // Error — единый формат отказа на границе HTTP. Внутренние подробности — пути
 // на диске, аргументы команд, содержимое конфига — в него не попадают; Details
 // несёт только то, что показывают пользователю.
+//
+// Code — контракт, Message — запасной текст: панель показывает свой перевод по
+// коду, а сообщение берёт, только когда код ей незнаком.
 type Error struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
-	Details any    `json:"details,omitempty"`
+	Code    ErrorCode `json:"code"`
+	Message string    `json:"message"`
+	Details any       `json:"details,omitempty"`
 }
 
 // CheckDetails — вывод sing-box дословно. Единственное исключение из правила

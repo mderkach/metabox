@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"metabox/internal/config"
+	"metabox/internal/contract"
 )
 
 func TestStatusFor(t *testing.T) {
@@ -17,13 +18,13 @@ func TestStatusFor(t *testing.T) {
 		name       string
 		err        error
 		wantStatus int
-		wantCode   string
+		wantCode   contract.ErrorCode
 	}{
-		{"ручки нет", errNotFound, http.StatusNotFound, "not_found"},
-		{"чужой источник", errOriginMismatch, http.StatusForbidden, "origin_mismatch"},
-		{"обёрнутый sentinel", fmt.Errorf("маршрут: %w", errNotFound), http.StatusNotFound, "not_found"},
-		{"конфига нет", config.ErrNoConfig, http.StatusNotFound, "config_missing"},
-		{"незнакомая ошибка", errors.New("что-то своё"), http.StatusInternalServerError, "internal"},
+		{"ручки нет", errNotFound, http.StatusNotFound, contract.ErrNotFound},
+		{"чужой источник", errOriginMismatch, http.StatusForbidden, contract.ErrOriginMismatch},
+		{"обёрнутый sentinel", fmt.Errorf("маршрут: %w", errNotFound), http.StatusNotFound, contract.ErrNotFound},
+		{"конфига нет", config.ErrNoConfig, http.StatusNotFound, contract.ErrConfigMissing},
+		{"незнакомая ошибка", errors.New("что-то своё"), http.StatusInternalServerError, contract.ErrInternal},
 	}
 
 	for _, tt := range tests {

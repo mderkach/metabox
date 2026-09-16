@@ -37,7 +37,7 @@ func fail(log *slog.Logger, w http.ResponseWriter, r *http.Request, err error) {
 
 	if checkErr, ok := errors.AsType[*singbox.CheckError](err); ok {
 		writeJSON(log, w, http.StatusUnprocessableEntity, contract.Error{
-			Code:    "check_failed",
+			Code:    contract.ErrCheckFailed,
 			Message: "sing-box отверг конфиг",
 			Details: contract.CheckDetails{
 				Stdout:   checkErr.Stdout,
@@ -60,36 +60,36 @@ func fail(log *slog.Logger, w http.ResponseWriter, r *http.Request, err error) {
 	writeJSON(log, w, status, contract.Error{Code: code, Message: message})
 }
 
-func statusFor(err error) (status int, code string) {
+func statusFor(err error) (status int, code contract.ErrorCode) {
 	var tooLarge *http.MaxBytesError
 
 	switch {
 	case errors.Is(err, errNotFound):
-		return http.StatusNotFound, "not_found"
+		return http.StatusNotFound, contract.ErrNotFound
 	case errors.Is(err, errOriginMismatch):
-		return http.StatusForbidden, "origin_mismatch"
+		return http.StatusForbidden, contract.ErrOriginMismatch
 	case errors.Is(err, errUpgradeUnsupported):
-		return http.StatusBadRequest, "upgrade_unsupported"
+		return http.StatusBadRequest, contract.ErrUpgradeUnsupported
 	case errors.Is(err, config.ErrNoConfig):
-		return http.StatusNotFound, "config_missing"
+		return http.StatusNotFound, contract.ErrConfigMissing
 	case errors.Is(err, config.ErrNoVersion):
-		return http.StatusNotFound, "version_missing"
+		return http.StatusNotFound, contract.ErrVersionMissing
 	case errors.Is(err, route.ErrNoConnection):
-		return http.StatusNotFound, "connection_missing"
+		return http.StatusNotFound, contract.ErrConnectionMissing
 	case errors.Is(err, route.ErrRuntimeUnavailable):
-		return http.StatusBadGateway, "runtime_unavailable"
+		return http.StatusBadGateway, contract.ErrRuntimeUnavailable
 	case errors.Is(err, apply.ErrUnknownTransaction):
-		return http.StatusNotFound, "unknown_transaction"
+		return http.StatusNotFound, contract.ErrUnknownTransaction
 	case errors.Is(err, apply.ErrBusy):
-		return http.StatusConflict, "apply_in_progress"
+		return http.StatusConflict, contract.ErrApplyInProgress
 	case errors.Is(err, apply.ErrNothingToConfirm):
-		return http.StatusConflict, "nothing_to_confirm"
+		return http.StatusConflict, contract.ErrNothingToConfirm
 	case errors.Is(err, apply.ErrConfigModified):
-		return http.StatusConflict, "config_modified"
+		return http.StatusConflict, contract.ErrConfigModified
 	case errors.As(err, &tooLarge):
-		return http.StatusRequestEntityTooLarge, "config_too_large"
+		return http.StatusRequestEntityTooLarge, contract.ErrConfigTooLarge
 	default:
-		return http.StatusInternalServerError, "internal"
+		return http.StatusInternalServerError, contract.ErrInternal
 	}
 }
 
@@ -107,7 +107,7 @@ func ProxyError(log *slog.Logger) func(w http.ResponseWriter, r *http.Request, e
 		log.Warn("рантайм sing-box недоступен", "path", r.URL.Path, "err", err)
 
 		writeJSON(log, w, http.StatusBadGateway, contract.Error{
-			Code:    "runtime_unavailable",
+			Code:    contract.ErrRuntimeUnavailable,
 			Message: "рантайм sing-box недоступен",
 		})
 	}
