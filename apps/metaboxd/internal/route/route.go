@@ -30,6 +30,17 @@ const (
 	OriginUnknown Origin = "unknown"
 )
 
+// ReasonCode — почему правило определить не вышло. Набор закрытый: текст
+// пользователю выбирает панель по коду, а Reason остаётся подробностью на
+// языке демона (ADR-0019).
+type ReasonCode string
+
+const (
+	// ReasonNotInProcessList — условия у соединения есть, а правила с ними в
+	// списке работающего процесса нет.
+	ReasonNotInProcessList ReasonCode = "not_in_process_list"
+)
+
 // Kind — чем закончился подбор сработавшего правила.
 type Kind string
 
@@ -72,7 +83,11 @@ type Match struct {
 	Index      *int   `json:"index,omitempty"`
 	Conditions string `json:"conditions,omitempty"`
 	Action     string `json:"action,omitempty"`
-	// Reason заполняется только у Kind == KindUnknown.
+	// ReasonCode заполняется только у Kind == KindUnknown: по нему панель берёт
+	// текст на языке пользователя.
+	ReasonCode ReasonCode `json:"reason_code,omitempty"`
+	// Reason — та же причина словами демона. Запасной текст для кода, которого
+	// панель не знает.
 	Reason string `json:"reason,omitempty"`
 }
 
@@ -235,9 +250,10 @@ func matchRule(rule string, rules []Rule) Match {
 	}
 
 	return Match{
-		Origin: OriginUnknown,
-		Kind:   KindUnknown,
-		Reason: "правила соединения нет в списке работающего процесса",
+		Origin:     OriginUnknown,
+		Kind:       KindUnknown,
+		ReasonCode: ReasonNotInProcessList,
+		Reason:     "правила соединения нет в списке работающего процесса",
 	}
 }
 

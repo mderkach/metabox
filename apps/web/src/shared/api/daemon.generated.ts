@@ -14,7 +14,7 @@ export const PHASE = [
   'failed',
 ] as const
 
-export const REASON_CODE = [
+export const APPLY_REASON_CODE = [
   'backup_failed',
   'write_failed',
   'restart_failed',
@@ -49,6 +49,10 @@ export const KIND = [
   'rule',
   'final',
   'unknown',
+] as const
+
+export const ROUTE_REASON_CODE = [
+  'not_in_process_list',
 ] as const
 
 /** Health — ответ `GET /healthz`. */
@@ -263,7 +267,9 @@ export const MatchSchema = z.object({
   index: z.int().optional(),
   conditions: z.string().optional(),
   action: z.string().optional(),
-  /** Reason заполняется только у Kind == KindUnknown. */
+  /** ReasonCode заполняется только у Kind == KindUnknown: по нему панель берёт текст на языке пользователя. */
+  reason_code: z.string().optional(),
+  /** Reason — та же причина словами демона. Запасной текст для кода, которого панель не знает. */
   reason: z.string().optional(),
 })
 
