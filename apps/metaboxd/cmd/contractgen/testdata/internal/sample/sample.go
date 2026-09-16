@@ -36,3 +36,22 @@ type Sample struct {
 	Hidden      string            `json:"-"`
 	Untagged    string
 }
+
+// Kind — перечисление: значения уезжают в схему списком.
+type Kind string
+
+const (
+	// KindFirst — первое значение.
+	KindFirst Kind = "first"
+	// KindSecond — второе значение.
+	KindSecond Kind = "second"
+)
+
+// Loose — константа без типа рядом с перечислением: она не член Kind, и в его
+// список попасть не должна.
+const Loose = "loose"
+
+// Tagged — владелец перечисления: по нему генератор до Kind и добирается.
+type Tagged struct {
+	Kind Kind `json:"kind"`
+}

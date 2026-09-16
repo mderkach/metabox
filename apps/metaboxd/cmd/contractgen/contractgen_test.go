@@ -61,6 +61,55 @@ func TestGenerateSample(t *testing.T) {
 	}
 }
 
+// Тёзки из разных пакетов — разные перечисления. Склеить их значит молча
+// подменить одно другим, а одинаковое имя константы не даст собрать артефакт.
+func TestGenerateSeparatesSameNamedEnums(t *testing.T) {
+	out, err := generate("testdata", []rootType{
+		{pkg: "internal/sample", name: "Tagged"},
+		{pkg: "internal/twin", name: "Holder"},
+	})
+	if err != nil {
+		t.Fatalf("генерация: %v", err)
+	}
+
+	for _, want := range []string{
+		"export const SAMPLE_KIND = [\n  'first',\n  'second',\n] as const",
+		"export const TWIN_KIND = [\n  'other',\n] as const",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("в схеме нет %q", want)
+		}
+	}
+
+	if strings.Contains(out, "export const KIND") {
+		t.Error("тёзки не разведены: имя константы осталось общим")
+	}
+}
+
+// Значения именованного типа уезжают списком, а константа без типа — не член
+// перечисления: приписать её соседу значит выдумать значение, которого у типа
+// нет.
+func TestGenerateEmitsEnumValues(t *testing.T) {
+	out, err := generate("testdata", []rootType{{pkg: "internal/sample", name: "Tagged"}})
+	if err != nil {
+		t.Fatalf("генерация: %v", err)
+	}
+
+	if want := "export const KIND = [\n  'first',\n  'second',\n] as const"; !strings.Contains(out, want) {
+		t.Errorf("в схеме нет %q", want)
+	}
+
+	if strings.Contains(out, "loose") {
+		t.Error("константа без типа попала в перечисление")
+	}
+
+	// Поле остаётся строкой: незнакомое значение читает адаптер, а не
+	// отбраковывает разбор (ADR-0021).
+	if want := "kind: z.string(),"; !strings.Contains(out, want) {
+		t.Errorf("поле перечисления описано не строкой: нет %q", want)
+	}
+}
+
 // TestGenerateIsStable: два прогона на одном дереве дают один файл, иначе
 // `make schema-daemon` шумит в diff без правок демона.
 func TestGenerateIsStable(t *testing.T) {

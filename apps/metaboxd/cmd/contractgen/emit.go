@@ -25,10 +25,11 @@ type walker struct {
 	printed map[string]bool
 	order   []string
 	bodies  map[string]string
-	// enums — именованные типы с константами, которые встретились в контракте.
-	// Их значения уезжают в схему списком, а порядок держится отдельно: карта
+	// enums — именованные типы с константами, которые встретились в контракте,
+	// по ключу `пакет.Тип`. Ключ полный: два разных типа с одним именем — это
+	// два перечисления, и склеивать их нельзя. Порядок держится отдельно: карта
 	// его не хранит, а артефакт обязан быть одинаковым от прогона к прогону.
-	enums      map[string][]string
+	enums      map[string]enumDecl
 	enumsOrder []string
 }
 
@@ -48,7 +49,7 @@ func generate(root string, roots []rootType) (string, error) {
 		return "", err
 	}
 
-	w := &walker{src: src, printed: map[string]bool{}, bodies: map[string]string{}, enums: map[string][]string{}}
+	w := &walker{src: src, printed: map[string]bool{}, bodies: map[string]string{}, enums: map[string]enumDecl{}}
 
 	for _, item := range roots {
 		if err := w.schema(item.pkg, item.name); err != nil {
@@ -168,7 +169,7 @@ func (w *walker) named(name string) (string, error) {
 	// ответа из-за одного поля стоила бы дороже. Строгость нужна там, где ловит
 	// расхождение панели с демоном на компиляции, а не на проводе.
 	if values, ok := w.src.values[key]; ok {
-		w.rememberEnum(name, values)
+		w.rememberEnum(key, enumDecl{pkg: w.pkg, name: name, values: values})
 	}
 
 	// Тип объявлен не структурой — печатается по базовому типу: `Phase string`
@@ -218,21 +219,67 @@ func (w *walker) qualified(node *ast.SelectorExpr) (string, error) {
 	return "", fmt.Errorf("тип %s не описан: добавьте правило в таблицу", qualified)
 }
 
-func (w *walker) rememberEnum(name string, values []string) {
-	if _, ok := w.enums[name]; ok {
+// enumDecl — перечисление, как его объявил демон.
+type enumDecl struct {
+	pkg    string
+	name   string
+	values []string
+}
+
+// rememberEnum запоминает тип один раз: на один и тот же тип контракт
+// ссылается из нескольких мест, а константа нужна одна.
+func (w *walker) rememberEnum(key string, decl enumDecl) {
+	if _, ok := w.enums[key]; ok {
 		return
 	}
 
-	w.enums[name] = values
-	w.enumsOrder = append(w.enumsOrder, name)
+	w.enums[key] = decl
+	w.enumsOrder = append(w.enumsOrder, key)
+}
+
+// enumNames раздаёт имена константам. Совпавшие имена разных типов разводятся
+// пакетом: `route.Kind` и `events.Kind` дали бы один `KIND`, и одно
+// перечисление молча вытеснило бы другое.
+func (w *walker) enumNames() map[string]string {
+	count := map[string]int{}
+
+	for _, key := range w.enumsOrder {
+		count[constantName(w.enums[key].name)]++
+	}
+
+	names := make(map[string]string, len(w.enumsOrder))
+
+	for _, key := range w.enumsOrder {
+		decl := w.enums[key]
+		name := constantName(decl.name)
+
+		if count[name] > 1 {
+			name = constantName(packageName(decl.pkg)) + "_" + name
+		}
+
+		names[key] = name
+	}
+
+	return names
+}
+
+// packageName — последний сегмент пути пакета: `internal/route` → `route`.
+func packageName(pkg string) string {
+	if i := strings.LastIndexByte(pkg, '/'); i >= 0 {
+		return pkg[i+1:]
+	}
+
+	return pkg
 }
 
 func (w *walker) render() string {
 	parts := make([]string, 0, len(w.order)+len(w.enumsOrder)+1)
 	parts = append(parts, header)
 
-	for _, name := range w.enumsOrder {
-		parts = append(parts, enumBody(name, w.enums[name]))
+	names := w.enumNames()
+
+	for _, key := range w.enumsOrder {
+		parts = append(parts, enumBody(names[key], w.enums[key].values))
 	}
 
 	for _, name := range w.order {
@@ -261,7 +308,7 @@ func enumBody(name string, values []string) string {
 		quoted = append(quoted, "  '"+value+"',")
 	}
 
-	return fmt.Sprintf("export const %s = [\n%s\n] as const\n", constantName(name), strings.Join(quoted, "\n"))
+	return fmt.Sprintf("export const %s = [\n%s\n] as const\n", name, strings.Join(quoted, "\n"))
 }
 
 // constantName переводит имя типа в имя константы: ErrorCode → ERROR_CODE.
