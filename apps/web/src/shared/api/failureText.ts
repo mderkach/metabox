@@ -1,47 +1,31 @@
 import i18next, { type ParseKeys } from 'i18next';
 
 import { ApiError } from './ApiError';
+import { ERROR_CODE } from './daemon.generated';
 
 /**
- * Коды отказа демона. Набор объявлен у него в `internal/contract`, здесь его
- * зеркало: по коду панель выбирает текст на языке пользователя, а `message`
- * из ответа остаётся запасным — его показывать приходится, только если код
- * незнаком.
+ * Код отказа демона. Набор объявлен у него в `internal/contract` и приезжает
+ * сюда списком в схеме контракта, поэтому таблица ниже обязана покрывать его
+ * целиком: новый код у демона — ошибка компиляции у панели, а не
+ * непереведённый текст на экране.
  */
-export const API_FAILURE_CODE = {
-  NotFound: 'not_found',
-  OriginMismatch: 'origin_mismatch',
-  UpgradeUnsupported: 'upgrade_unsupported',
-  ConfigMissing: 'config_missing',
-  VersionMissing: 'version_missing',
-  ConnectionMissing: 'connection_missing',
-  RuntimeUnavailable: 'runtime_unavailable',
-  UnknownTransaction: 'unknown_transaction',
-  ApplyInProgress: 'apply_in_progress',
-  NothingToConfirm: 'nothing_to_confirm',
-  ConfigModified: 'config_modified',
-  ConfigTooLarge: 'config_too_large',
-  CheckFailed: 'check_failed',
-  Internal: 'internal',
-} as const;
-
-export type ApiFailureCode = (typeof API_FAILURE_CODE)[keyof typeof API_FAILURE_CODE];
+export type ApiFailureCode = (typeof ERROR_CODE)[number];
 
 const FAILURE_KEY: Readonly<Record<ApiFailureCode, ParseKeys<'shared'>>> = {
-  [API_FAILURE_CODE.NotFound]: 'failure.not_found',
-  [API_FAILURE_CODE.OriginMismatch]: 'failure.origin_mismatch',
-  [API_FAILURE_CODE.UpgradeUnsupported]: 'failure.upgrade_unsupported',
-  [API_FAILURE_CODE.ConfigMissing]: 'failure.config_missing',
-  [API_FAILURE_CODE.VersionMissing]: 'failure.version_missing',
-  [API_FAILURE_CODE.ConnectionMissing]: 'failure.connection_missing',
-  [API_FAILURE_CODE.RuntimeUnavailable]: 'failure.runtime_unavailable',
-  [API_FAILURE_CODE.UnknownTransaction]: 'failure.unknown_transaction',
-  [API_FAILURE_CODE.ApplyInProgress]: 'failure.apply_in_progress',
-  [API_FAILURE_CODE.NothingToConfirm]: 'failure.nothing_to_confirm',
-  [API_FAILURE_CODE.ConfigModified]: 'failure.config_modified',
-  [API_FAILURE_CODE.ConfigTooLarge]: 'failure.config_too_large',
-  [API_FAILURE_CODE.CheckFailed]: 'failure.check_failed',
-  [API_FAILURE_CODE.Internal]: 'failure.internal',
+  not_found: 'failure.not_found',
+  origin_mismatch: 'failure.origin_mismatch',
+  upgrade_unsupported: 'failure.upgrade_unsupported',
+  config_missing: 'failure.config_missing',
+  version_missing: 'failure.version_missing',
+  connection_missing: 'failure.connection_missing',
+  runtime_unavailable: 'failure.runtime_unavailable',
+  unknown_transaction: 'failure.unknown_transaction',
+  apply_in_progress: 'failure.apply_in_progress',
+  nothing_to_confirm: 'failure.nothing_to_confirm',
+  config_modified: 'failure.config_modified',
+  config_too_large: 'failure.config_too_large',
+  check_failed: 'failure.check_failed',
+  internal: 'failure.internal',
 };
 
 function isKnownCode(code: string | null): code is ApiFailureCode {

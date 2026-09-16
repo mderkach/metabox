@@ -30,16 +30,21 @@ type field struct {
 type sources struct {
 	decls map[string]*ast.TypeSpec
 	docs  map[string]string
-	root  string
-	read  map[string]bool
+	// values — строковые константы именованного типа в порядке объявления:
+	// `contract.ErrorCode` → коды отказа. Они уезжают в схему списком, и панель
+	// типизирует ими свои таблицы (ADR-0021).
+	values map[string][]string
+	root   string
+	read   map[string]bool
 }
 
 func parseSources(root string, pkgs []string) (*sources, error) {
 	out := &sources{
-		decls: map[string]*ast.TypeSpec{},
-		docs:  map[string]string{},
-		root:  root,
-		read:  map[string]bool{},
+		decls:  map[string]*ast.TypeSpec{},
+		docs:   map[string]string{},
+		values: map[string][]string{},
+		root:   root,
+		read:   map[string]bool{},
 	}
 
 	for _, pkg := range pkgs {
@@ -96,19 +101,57 @@ func isSource(name string) bool {
 func collectDecls(out *sources, pkg string, file *ast.File) {
 	for _, decl := range file.Decls {
 		group, ok := decl.(*ast.GenDecl)
-		if !ok || group.Tok != token.TYPE {
+		if !ok {
 			continue
 		}
 
-		for _, spec := range group.Specs {
-			typeSpec, ok := spec.(*ast.TypeSpec)
-			if !ok {
+		if group.Tok == token.TYPE {
+			collectTypes(out, pkg, group)
+		}
+
+		if group.Tok == token.CONST {
+			collectValues(out, pkg, group)
+		}
+	}
+}
+
+func collectTypes(out *sources, pkg string, group *ast.GenDecl) {
+	for _, spec := range group.Specs {
+		typeSpec, ok := spec.(*ast.TypeSpec)
+		if !ok {
+			continue
+		}
+
+		key := pkg + "." + typeSpec.Name.Name
+		out.decls[key] = typeSpec
+		out.docs[key] = docText(group.Doc, typeSpec.Doc)
+	}
+}
+
+// collectValues запоминает строковые константы именованных типов. Тип обязан
+// стоять у самой записи: константа без него — не член перечисления, а обычная
+// строка, и приписывать её типу соседа значит выдумать значение, которого у
+// того нет.
+func collectValues(out *sources, pkg string, group *ast.GenDecl) {
+	for _, spec := range group.Specs {
+		value, ok := spec.(*ast.ValueSpec)
+		if !ok {
+			continue
+		}
+
+		named, ok := value.Type.(*ast.Ident)
+		if !ok {
+			continue
+		}
+
+		for _, expr := range value.Values {
+			literal, ok := expr.(*ast.BasicLit)
+			if !ok || literal.Kind != token.STRING {
 				continue
 			}
 
-			key := pkg + "." + typeSpec.Name.Name
-			out.decls[key] = typeSpec
-			out.docs[key] = docText(group.Doc, typeSpec.Doc)
+			key := pkg + "." + named.Name
+			out.values[key] = append(out.values[key], strings.Trim(literal.Value, `"`))
 		}
 	}
 }

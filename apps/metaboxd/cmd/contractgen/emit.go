@@ -25,6 +25,11 @@ type walker struct {
 	printed map[string]bool
 	order   []string
 	bodies  map[string]string
+	// enums — именованные типы с константами, которые встретились в контракте.
+	// Их значения уезжают в схему списком, а порядок держится отдельно: карта
+	// его не хранит, а артефакт обязан быть одинаковым от прогона к прогону.
+	enums      map[string][]string
+	enumsOrder []string
 }
 
 func generate(root string, roots []rootType) (string, error) {
@@ -43,7 +48,7 @@ func generate(root string, roots []rootType) (string, error) {
 		return "", err
 	}
 
-	w := &walker{src: src, printed: map[string]bool{}, bodies: map[string]string{}}
+	w := &walker{src: src, printed: map[string]bool{}, bodies: map[string]string{}, enums: map[string][]string{}}
 
 	for _, item := range roots {
 		if err := w.schema(item.pkg, item.name); err != nil {
@@ -157,6 +162,15 @@ func (w *walker) named(name string) (string, error) {
 		return schemaName(name), nil
 	}
 
+	// Набор значений именованного типа уезжает в схему отдельной константой, а
+	// поле остаётся строкой. Разбор обязан быть терпимым: значение, которого
+	// панель не знает, адаптер читает как «неизвестно», и отбраковка всего
+	// ответа из-за одного поля стоила бы дороже. Строгость нужна там, где ловит
+	// расхождение панели с демоном на компиляции, а не на проводе.
+	if values, ok := w.src.values[key]; ok {
+		w.rememberEnum(name, values)
+	}
+
 	// Тип объявлен не структурой — печатается по базовому типу: `Phase string`
 	// на проводе остаётся строкой.
 	spec, ok := w.src.decls[key]
@@ -204,9 +218,22 @@ func (w *walker) qualified(node *ast.SelectorExpr) (string, error) {
 	return "", fmt.Errorf("тип %s не описан: добавьте правило в таблицу", qualified)
 }
 
+func (w *walker) rememberEnum(name string, values []string) {
+	if _, ok := w.enums[name]; ok {
+		return
+	}
+
+	w.enums[name] = values
+	w.enumsOrder = append(w.enumsOrder, name)
+}
+
 func (w *walker) render() string {
-	parts := make([]string, 0, len(w.order)+1)
+	parts := make([]string, 0, len(w.order)+len(w.enumsOrder)+1)
 	parts = append(parts, header)
+
+	for _, name := range w.enumsOrder {
+		parts = append(parts, enumBody(name, w.enums[name]))
+	}
 
 	for _, name := range w.order {
 		parts = append(parts, w.bodies[name])
@@ -223,6 +250,33 @@ func (w *walker) render() string {
 	parts = append(parts, strings.Join(types, "\n")+"\n")
 
 	return strings.Join(parts, "\n")
+}
+
+// enumBody печатает значения именованного типа списком: по нему панель
+// типизирует свои таблицы и не может разойтись с демоном молча.
+func enumBody(name string, values []string) string {
+	quoted := make([]string, 0, len(values))
+
+	for _, value := range values {
+		quoted = append(quoted, "  '"+value+"',")
+	}
+
+	return fmt.Sprintf("export const %s = [\n%s\n] as const\n", constantName(name), strings.Join(quoted, "\n"))
+}
+
+// constantName переводит имя типа в имя константы: ErrorCode → ERROR_CODE.
+func constantName(name string) string {
+	var out strings.Builder
+
+	for i, r := range name {
+		if unicode.IsUpper(r) && i > 0 {
+			out.WriteByte('_')
+		}
+
+		out.WriteRune(unicode.ToUpper(r))
+	}
+
+	return out.String()
 }
 
 func isByte(node ast.Expr) bool {

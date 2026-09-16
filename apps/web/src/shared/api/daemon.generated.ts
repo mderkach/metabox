@@ -6,6 +6,51 @@
 
 import { z } from 'zod'
 
+export const PHASE = [
+  'applying',
+  'awaiting_confirm',
+  'confirmed',
+  'rolled_back',
+  'failed',
+] as const
+
+export const REASON_CODE = [
+  'backup_failed',
+  'write_failed',
+  'restart_failed',
+  'healthcheck_failed',
+  'rollback_failed',
+] as const
+
+export const ERROR_CODE = [
+  'not_found',
+  'origin_mismatch',
+  'upgrade_unsupported',
+  'config_missing',
+  'version_missing',
+  'connection_missing',
+  'runtime_unavailable',
+  'unknown_transaction',
+  'apply_in_progress',
+  'nothing_to_confirm',
+  'config_modified',
+  'config_too_large',
+  'check_failed',
+  'internal',
+] as const
+
+export const ORIGIN = [
+  'observed',
+  'computed',
+  'unknown',
+] as const
+
+export const KIND = [
+  'rule',
+  'final',
+  'unknown',
+] as const
+
 /** Health — ответ `GET /healthz`. */
 export const HealthSchema = z.object({
   status: z.string(),
@@ -20,7 +65,9 @@ export const TransactionSchema = z.object({
   window: z.int(),
   /** Sum — sha256 конфига, записанного демоном. По нему ловится правка файла извне. */
   sha256: z.string().optional(),
-  /** Reason заполняется, когда применение не дошло до конца. */
+  /** ReasonCode — на каком шаге встал цикл. Пусто, если применение прошло или отказ не привязан к шагу. */
+  reason_code: z.string().optional(),
+  /** Reason заполняется, когда применение не дошло до конца: исходная ошибка шага, как её записал демон. Показывать её пользователю — запасной путь, текст отказа панель берёт по ReasonCode. */
   reason: z.string().optional(),
   /** ClashAPIAdded отмечает, что демон сам добавил секцию (AC-32). */
   clash_api_added: z.boolean().optional(),
