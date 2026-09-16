@@ -66,7 +66,7 @@ func (m *Manager) cycle(ctx context.Context, data []byte, settings clashapi.Sett
 
 	if err := m.apply(ctx, data, settings); err != nil {
 		log.Error("применение не прошло", "err", err)
-		m.release(PhaseFailed, err.Error())
+		m.release(PhaseFailed, err)
 		m.rollback(context.WithoutCancel(ctx), log)
 
 		return
@@ -84,7 +84,7 @@ func (m *Manager) apply(ctx context.Context, data []byte, settings clashapi.Sett
 		// До первого применения конфига может не быть — откатываться тогда не
 		// на что, но и применение это не останавливает.
 		if !errors.Is(err, fs.ErrNotExist) {
-			return fmt.Errorf("бэкап: %w", err)
+			return stepFailed(ReasonBackupFailed, fmt.Errorf("бэкап: %w", err))
 		}
 		m.log.Warn("бэкапа нет: конфига на устройстве ещё не было")
 	}
@@ -98,7 +98,7 @@ func (m *Manager) apply(ctx context.Context, data []byte, settings clashapi.Sett
 	}
 
 	if err := m.store.Write(ctx, data); err != nil {
-		return fmt.Errorf("запись конфига: %w", err)
+		return stepFailed(ReasonWriteFailed, fmt.Errorf("запись конфига: %w", err))
 	}
 
 	m.mu.Lock()
@@ -106,10 +106,14 @@ func (m *Manager) apply(ctx context.Context, data []byte, settings clashapi.Sett
 	m.mu.Unlock()
 
 	if err := m.service.Restart(ctx); err != nil {
-		return err
+		return stepFailed(ReasonRestartFailed, err)
 	}
 
-	return m.health.Wait(ctx, settings)
+	if err := m.health.Wait(ctx, settings); err != nil {
+		return stepFailed(ReasonHealthcheckFailed, err)
+	}
+
+	return nil
 }
 
 // await держит окно подтверждения. Без подтверждения в срок конфиг
@@ -162,7 +166,7 @@ func (m *Manager) rollback(ctx context.Context, log *slog.Logger) {
 
 	if err := errors.Join(restoreErr, restartErr); err != nil {
 		log.Error("откат не прошёл", "err", err)
-		m.release(PhaseFailed, err.Error())
+		m.release(PhaseFailed, stepFailed(ReasonRollbackFailed, err))
 
 		return
 	}

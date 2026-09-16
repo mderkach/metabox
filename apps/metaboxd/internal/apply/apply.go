@@ -39,6 +39,53 @@ const (
 	PhaseFailed Phase = "failed"
 )
 
+// ReasonCode — на каком шаге цикл встал. Набор закрытый: по коду панель
+// выбирает текст на языке пользователя, а Reason остаётся подробностью для
+// того, кто чинит — там исходная ошибка шага.
+type ReasonCode string
+
+const (
+	// ReasonBackupFailed — предыдущий конфиг не сохранился, и откатываться было
+	// бы не на что; до записи цикл не дошёл.
+	ReasonBackupFailed ReasonCode = "backup_failed"
+	// ReasonWriteFailed — конфиг не записан на устройство.
+	ReasonWriteFailed ReasonCode = "write_failed"
+	// ReasonRestartFailed — служба не перезапустилась с новым конфигом.
+	ReasonRestartFailed ReasonCode = "restart_failed"
+	// ReasonHealthcheckFailed — служба поднялась, но рантайм не ответил.
+	ReasonHealthcheckFailed ReasonCode = "healthcheck_failed"
+	// ReasonRollbackFailed — вернуть предыдущий конфиг не вышло: это худший
+	// исход цикла, и устройство остаётся с чужим конфигом.
+	ReasonRollbackFailed ReasonCode = "rollback_failed"
+)
+
+// StepError — отказ шага цикла: код уходит панели, исходная ошибка — в лог и
+// в подробности.
+type StepError struct {
+	Code ReasonCode
+	Err  error
+}
+
+func (e *StepError) Error() string { return e.Err.Error() }
+
+func (e *StepError) Unwrap() error { return e.Err }
+
+// stepFailed заворачивает ошибку шага в код. Отдельная функция, чтобы шаги
+// читались одинаково и код не терялся при обёртке.
+func stepFailed(code ReasonCode, err error) error {
+	return &StepError{Code: code, Err: err}
+}
+
+// reasonOf достаёт код шага. Ошибка без кода — отказ, которого цикл не ждал:
+// он остаётся с пустым кодом, и панель покажет текст ошибки как есть.
+func reasonOf(err error) ReasonCode {
+	if step, ok := errors.AsType[*StepError](err); ok {
+		return step.Code
+	}
+
+	return ""
+}
+
 // Transaction — снимок применения. Он же формат файла состояния: то, что
 // демон отдаёт клиенту, и то, по чему доигрывает себя после перезагрузки.
 type Transaction struct {
@@ -51,7 +98,12 @@ type Transaction struct {
 	// Sum — sha256 конфига, записанного демоном. По нему ловится правка файла
 	// извне.
 	Sum string `json:"sha256,omitempty"`
-	// Reason заполняется, когда применение не дошло до конца.
+	// ReasonCode — на каком шаге встал цикл. Пусто, если применение прошло или
+	// отказ не привязан к шагу.
+	ReasonCode ReasonCode `json:"reason_code,omitempty"`
+	// Reason заполняется, когда применение не дошло до конца: исходная ошибка
+	// шага, как её записал демон. Показывать её пользователю — запасной путь,
+	// текст отказа панель берёт по ReasonCode.
 	Reason string `json:"reason,omitempty"`
 	// ClashAPIAdded отмечает, что демон сам добавил секцию (AC-32).
 	ClashAPIAdded bool `json:"clash_api_added,omitempty"`
@@ -335,12 +387,13 @@ func (m *Manager) begin(tx Transaction) {
 	m.confirmed = make(chan struct{})
 }
 
-func (m *Manager) release(phase Phase, reason string) {
+func (m *Manager) release(phase Phase, err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	m.current.Phase = phase
-	m.current.Reason = reason
+	m.current.ReasonCode = reasonOf(err)
+	m.current.Reason = err.Error()
 }
 
 func (m *Manager) persist(ctx context.Context, tx Transaction) error {

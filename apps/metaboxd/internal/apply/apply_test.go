@@ -537,3 +537,61 @@ func TestClashAPIIsGuaranteed(t *testing.T) {
 		t.Error("записан конфиг без работающего clash_api (AC-31)")
 	}
 }
+
+// Причина отказа уходит панели кодом шага: по нему она берёт текст на языке
+// пользователя, а не показывает ошибку демона как есть.
+func TestFailureCarriesStepCode(t *testing.T) {
+	tests := []struct {
+		name  string
+		setup func(h *harness)
+		want  apply.ReasonCode
+	}{
+		{
+			name:  "конфиг не записался",
+			setup: func(h *harness) { h.store.writeErr = errors.New("диск переполнен") },
+			want:  apply.ReasonWriteFailed,
+		},
+		{
+			name:  "рантайм не ответил",
+			setup: func(h *harness) { h.health.err = errors.New("порт молчит") },
+			want:  apply.ReasonHealthcheckFailed,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := newHarness(t)
+			tt.setup(h)
+
+			if _, err := h.manager.Start(t.Context(), []byte(validConfig)); err != nil {
+				t.Fatalf("применение: %v", err)
+			}
+
+			tx := waitPhase(t, h, apply.PhaseRolledBack)
+
+			if tx.ReasonCode != tt.want {
+				t.Errorf("код причины %q, ожидали %q", tx.ReasonCode, tt.want)
+			}
+			if tx.Reason == "" {
+				t.Error("подробность шага потеряна: чинить отказ будет не по чему")
+			}
+		})
+	}
+}
+
+// waitPhase ждёт, пока цикл дойдёт до фазы: шаги идут в своей горутине.
+func waitPhase(t *testing.T, h *harness, phase apply.Phase) apply.Transaction {
+	t.Helper()
+
+	for range 100 {
+		if tx := h.manager.Current(); tx.Phase == phase {
+			return tx
+		}
+
+		time.Sleep(time.Millisecond)
+	}
+
+	t.Fatalf("фаза %q не наступила: текущая %q", phase, h.manager.Current().Phase)
+
+	return apply.Transaction{}
+}
