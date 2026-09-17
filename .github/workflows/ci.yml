@@ -58,16 +58,18 @@ jobs:
       # до go:embed и попадает в бинарь (AC-17).
       - run: make daemon
 
-  # AC-22: интеграционный прогон на том же образе целевого окружения,
-  # что и в devcontainer. Отличаются только архитектура и тег rootfs.
+  # AC-22: интеграционный прогон на образе целевого окружения той же ветки
+  # OpenWrt, что на устройстве. Прошивки устройства в CI нет, поэтому база —
+  # публичный rootfs; отличаются от стенда владельца только архитектура и то,
+  # что ветка релизная, а не SNAPSHOT.
   integration:
     runs-on: ubuntu-latest
     env:
-      OPENWRT_TAG: x86-64-24.10.8
+      METABOX_BASE_IMAGE: openwrt/rootfs:x86-64-25.12.4
       # У тега x86-64 архитектура в манифесте обычная (amd64), в отличие от
       # aarch64_generic — поэтому здесь платформа нормальная.
       OPENWRT_PLATFORM: linux/amd64
-      SINGBOX_ARCH: amd64
+      DAEMON_BINARY: dist/metaboxd-linux-amd64
     steps:
       - uses: actions/checkout@v5
 
@@ -82,7 +84,7 @@ jobs:
           CGO_ENABLED: '0'
         run: |
           mkdir -p dist
-          cd apps/metaboxd && go build -ldflags "-s -w -X metabox/internal/version.Version=ci" -o ../../dist/metaboxd .
+          cd apps/metaboxd && go build -ldflags "-s -w -X metabox/internal/version.Version=ci" -o "../../$DAEMON_BINARY" .
 
       - name: Поднять целевое окружение
         run: docker compose -f .devcontainer/docker-compose.yml up -d target
@@ -101,6 +103,9 @@ jobs:
 
       - name: Цикл Apply (AC-21)
         run: docker compose -f .devcontainer/docker-compose.yml exec -T target sh /usr/bin/apply-cycle-check
+
+      - name: Доступность панели по сетям
+        run: make reach-check
 
       - name: Логи целевого окружения при провале
         if: failure()
