@@ -14,7 +14,7 @@
   },
   "clashApi": {
     "title": "metabox added experimental.clash_api to the config",
-    "description": "Without that section the runtime screens have nothing to read. The section is already in the applied file — the change was made by metabox, not by you."
+    "description": "Without that section the runtime screens have nothing to read. The section is already in the applied file — the change was made by metabox, not by you. So that sing-box reads it, the service was restarted by the same apply cycle."
   },
   "failure": {
     "rolledBack": "No confirmation arrived — the previous config was restored",
