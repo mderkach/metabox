@@ -206,6 +206,7 @@ func (s *Server) handleStatus(w http.ResponseWriter, _ *http.Request) {
 		Version:        s.version,
 		SingboxVersion: s.singboxVersion,
 		ConfigPath:     s.configPath,
+		Runtime:        s.runtimeSources(),
 	}
 
 	if tx := s.applier.Current(); tx.ID != "" {
@@ -214,6 +215,25 @@ func (s *Server) handleStatus(w http.ResponseWriter, _ *http.Request) {
 	}
 
 	writeJSON(s.log, w, http.StatusOK, body)
+}
+
+// runtimeSources собирает состав источников по тому, что демону передали:
+// поток читает рантайм у Clash API, прокси отдаёт его ручки как есть. Выбирать
+// источник соединений пока не из чего — gRPC-ветка ADR-0006 не реализована.
+func (s *Server) runtimeSources() contract.Runtime {
+	// Пустой срез, а не nil: nil уезжает в JSON как null, и панель разбирала бы
+	// список источников не массивом.
+	out := contract.Runtime{Sources: []contract.RuntimeSource{}}
+
+	if s.events != nil || s.clash != nil {
+		out.Sources = append(out.Sources, contract.SourceClashAPI)
+	}
+
+	if s.events != nil {
+		out.Connections = contract.SourceClashAPI
+	}
+
+	return out
 }
 
 // handleConfig отдаёт конфиг ровно теми байтами, какими он лежит на диске:

@@ -26,12 +26,36 @@ type Status struct {
 	SingboxVersion string `json:"singbox_version,omitempty"`
 	// ConfigPath — файл, которым демон владеет: путь задаётся флагами запуска,
 	// и вычислить его на стороне панели нельзя.
-	ConfigPath  string             `json:"config_path,omitempty"`
+	ConfigPath string `json:"config_path,omitempty"`
+	// Runtime — откуда демон читает рантайм. Молчаливая подмена одного источника
+	// другим запрещена, поэтому состав объявлен контрактом (ADR-0006).
+	Runtime     Runtime            `json:"runtime"`
 	Transaction *apply.Transaction `json:"transaction,omitempty"`
 	// TransactionHref — адрес идущего применения. Без него перезагрузка
 	// страницы теряет транзакцию: её идентификатор жил только в ответе на
 	// POST (ADR-0002).
 	TransactionHref string `json:"transaction_href,omitempty"`
+}
+
+// RuntimeSource — источник рантайм-данных (ADR-0006).
+type RuntimeSource string
+
+// SourceClashAPI — Clash API sing-box: базовый источник и пока единственный.
+// gRPC-ветка ADR-0006 ждёт замера на целевом железе.
+const SourceClashAPI RuntimeSource = "clash_api"
+
+// Runtime — источники рантайма в `GET /api/status`.
+//
+// Поля отвечают, что демон умеет читать, а не отвечает ли sing-box сейчас:
+// живость процесса идёт `GET /api/service` и топиком `service` потока, и второй
+// правды о ней здесь не заводится.
+type Runtime struct {
+	// Sources — источники, которые демон собрал.
+	Sources []RuntimeSource `json:"sources"`
+	// Connections — источник, из которого панель получает соединения. Пустая
+	// строка означает, что читать их нечем: экран деградирует, а панель
+	// остаётся доступной.
+	Connections RuntimeSource `json:"connections,omitempty"`
 }
 
 // Versions — ответ `GET /api/config/versions`.

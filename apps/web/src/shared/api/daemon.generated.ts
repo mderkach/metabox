@@ -6,6 +6,10 @@
 
 import { z } from 'zod'
 
+export const RUNTIME_SOURCE = [
+  'clash_api',
+] as const
+
 export const PHASE = [
   'applying',
   'awaiting_confirm',
@@ -61,6 +65,14 @@ export const HealthSchema = z.object({
   version: z.string(),
 })
 
+/** Runtime — источники рантайма в `GET /api/status`. Поля отвечают, что демон умеет читать, а не отвечает ли sing-box сейчас: живость процесса идёт `GET /api/service` и топиком `service` потока, и второй правды о ней здесь не заводится. */
+export const RuntimeSchema = z.object({
+  /** Sources — источники, которые демон собрал. */
+  sources: z.array(z.string()),
+  /** Connections — источник, из которого панель получает соединения. Пустая строка означает, что читать их нечем: экран деградирует, а панель остаётся доступной. */
+  connections: z.string().optional(),
+})
+
 /** Transaction — снимок применения. Он же формат файла состояния: то, что демон отдаёт клиенту, и то, по чему доигрывает себя после перезагрузки. */
 export const TransactionSchema = z.object({
   id: z.string(),
@@ -84,6 +96,8 @@ export const StatusSchema = z.object({
   singbox_version: z.string().optional(),
   /** ConfigPath — файл, которым демон владеет: путь задаётся флагами запуска, и вычислить его на стороне панели нельзя. */
   config_path: z.string().optional(),
+  /** Runtime — откуда демон читает рантайм. Молчаливая подмена одного источника другим запрещена, поэтому состав объявлен контрактом (ADR-0006). */
+  runtime: RuntimeSchema,
   transaction: TransactionSchema.optional(),
   /** TransactionHref — адрес идущего применения. Без него перезагрузка страницы теряет транзакцию: её идентификатор жил только в ответе на POST (ADR-0002). */
   transaction_href: z.string().optional(),
@@ -315,6 +329,7 @@ export type MemoryWire = z.infer<typeof MemorySchema>
 export type PointWire = z.infer<typeof PointSchema>
 export type ProcessWire = z.infer<typeof ProcessSchema>
 export type RuleWire = z.infer<typeof RuleSchema>
+export type RuntimeWire = z.infer<typeof RuntimeSchema>
 export type ServiceWire = z.infer<typeof ServiceSchema>
 export type ShareWire = z.infer<typeof ShareSchema>
 export type StatWire = z.infer<typeof StatSchema>

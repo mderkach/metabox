@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ConfigDocumentState } from '@entities/Config';
 import { CONFIG_ENDPOINT } from '@entities/Config';
 import { DAEMON_ENDPOINT } from '@entities/Daemon';
+import { DAEMON_STATUS_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture';
 
 import { ConfigApplyBar } from '../ui/ConfigApplyBar';
 
@@ -24,7 +25,7 @@ const TRANSACTION = {
 };
 
 function serveStatus(transaction?: unknown) {
-  server.use(http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json({ version: 'dev', transaction })));
+  server.use(http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json({ ...DAEMON_STATUS_FIXTURE, transaction })));
 }
 
 function loadDocument(draft = true) {

@@ -7,14 +7,13 @@ import { describe, expect, it } from 'vitest';
 
 import { CONFIG_ENDPOINT } from '@entities/Config';
 import { DAEMON_ENDPOINT } from '@entities/Daemon';
+import { DAEMON_STATUS_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture';
 
 import { Router } from '../Router';
 
 function serveDaemon() {
   server.use(
-    http.get(DAEMON_ENDPOINT.status(), () =>
-      HttpResponse.json({ version: 'dev', singbox_version: '1.14.0-extended-2.7.1' })
-    ),
+    http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE)),
     http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(MINIMAL_CONFIG))
   );
 }

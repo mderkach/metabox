@@ -9,6 +9,7 @@ import { CONNECTIONS_FIXTURE, makeConnectionsSnapshot } from '@entities/Connecti
 import { DAEMON_ENDPOINT, RuntimeStore, SCHEMA_VERSION } from '@entities/Daemon';
 import {
   CLASH_CONFIGS_FIXTURE,
+  DAEMON_STATUS_FIXTURE,
   SERVICE_RUNNING_FIXTURE,
   SYSTEM_FIXTURE,
   TRAFFIC_HISTORY_FIXTURE,
@@ -20,7 +21,11 @@ import { OverviewPage } from '../ui/OverviewPage';
 function serveStatus(configPath?: string, singboxVersion = SCHEMA_VERSION) {
   server.use(
     http.get(DAEMON_ENDPOINT.status(), () =>
-      HttpResponse.json({ version: 'dev', singbox_version: singboxVersion, config_path: configPath })
+      HttpResponse.json({
+        ...DAEMON_STATUS_FIXTURE,
+        singbox_version: singboxVersion,
+        config_path: configPath,
+      })
     ),
     http.get(DAEMON_ENDPOINT.clashConfigs(), () => HttpResponse.json(CLASH_CONFIGS_FIXTURE)),
     // Карточка службы и вердикт в шапке читают одно и то же состояние: без

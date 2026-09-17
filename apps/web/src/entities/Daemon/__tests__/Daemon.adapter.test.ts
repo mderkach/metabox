@@ -22,7 +22,7 @@ describe('toDaemonStatus', () => {
 
   it('читает незнакомую стадию применения как отказ, а не как подтверждение', () => {
     const status = toDaemonStatus({
-      version: '0.1.0',
+      ...DAEMON_STATUS_FIXTURE,
       transaction: { id: 'a', phase: 'teleporting', window: 0 },
     });
 

@@ -11,6 +11,7 @@ export const DAEMON_STATUS_FIXTURE: DaemonStatusWire = {
   version: 'dev',
   singbox_version: '1.14.0-extended-2.7.1',
   config_path: '/etc/sing-box/config.json',
+  runtime: { sources: ['clash_api'], connections: 'clash_api' },
 };
 
 /** Версия и режим, снятые с устройства 2026-09-10. */
