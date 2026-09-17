@@ -70,9 +70,8 @@ func checkOrigin(log *slog.Logger, allowedOrigin string, next http.Handler) http
 
 		origin := r.Header.Get("Origin")
 
-		// Послабление дев-стенда: vite-прокси ходит с changeOrigin: true, то
-		// есть с переписанным Host и исходным Origin, — сверять их бесполезно.
-		// Значение флага сравнивается целиком, со схемой и портом.
+		// Послабление для источника, который задан флагом: сравнивается целиком,
+		// со схемой и портом.
 		exempt := allowedOrigin != "" && origin == allowedOrigin
 
 		if !originAllowed(origin, r.Host) && !exempt {
