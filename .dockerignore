@@ -5,6 +5,9 @@ node_modules
 **/node_modules
 .pnpm-store
 dist
+# Бинарь под целевую систему: из него собирается пакет панели для стенда.
+!dist/metaboxd-linux-arm64
+!dist/metaboxd-linux-amd64
 apps/web/dist
 apps/metaboxd/internal/webui/static/assets
 bin

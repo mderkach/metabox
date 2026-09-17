@@ -19,10 +19,14 @@ services:
     # К сервису подключается devcontainer: главный процесс обязан переживать
     # падения инструментов.
     command: sleep infinity
+    networks: [lan]
     depends_on:
       - target
 
   vite:
+    # Дев-сервер поднимается отдельным режимом (`make up-dev`): по умолчанию стенд
+    # отдаёт панель так же, как роутер, — из бинаря демона.
+    profiles: [dev]
     build:
       context: ..
       dockerfile: .devcontainer/Dockerfile.dev
@@ -39,28 +43,61 @@ services:
       # Без TTY pnpm не пересоберёт node_modules и упадёт на подтверждении.
       CI: 'true'
     command: pnpm dev --host 0.0.0.0
+    # Дев-сервер стоит в проводной сети — там же, где машина владельца.
+    networks: [lan]
     depends_on:
       - target
 
   target:
     build:
-      context: ./target
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: .devcontainer/target/Dockerfile
       args:
-        OPENWRT_TAG: ${OPENWRT_TAG:-aarch64_generic-24.10.8}
-        OPENWRT_PLATFORM: ${OPENWRT_PLATFORM:-linux/aarch64_generic}
+        # Образ из прошивки устройства, если он собран (`make stand-base`), иначе
+        # публичный rootfs OpenWrt: в CI прошивки нет. Переменные стенда живут в
+        # `.devcontainer/.env`, его читает docker compose.
+        BASE_IMAGE: ${METABOX_BASE_IMAGE:-openwrt/rootfs:aarch64_generic-25.12.4}
         SINGBOX_VERSION: ${SINGBOX_VERSION:-1.14.0-extended-2.7.1}
-        SINGBOX_ARCH: ${SINGBOX_ARCH:-arm64}
+        DAEMON_BINARY: ${DAEMON_BINARY:-dist/metaboxd-linux-arm64}
     platform: ${OPENWRT_PLATFORM:-linux/aarch64_generic}
     # procd как init: нужны свои namespace и право поднимать сервисы.
     privileged: true
     volumes:
-      - ../dist:/opt/metabox:ro
       - singbox-etc:/etc/sing-box
     ports:
       - '8080:8080' # REST API демона
       - '9090:9090' # Clash API sing-box
+    # Три сети вместо одной: панель обязана быть доступна со всех локальных и ни
+    # с одной внешней. Адреса фиксированы — по ним stand-init опознаёт роль
+    # интерфейса, имена eth* Docker раздаёт в произвольном порядке.
+    networks:
+      # Проброшенный на хост порт Docker доставляет на адрес той сети, с которой
+      # контейнер создан, — первой по приоритету. Это проводная сеть: браузер
+      # владельца стоит в ней же, а панель на её адресе слушает.
+      lan:
+        priority: 100
+        ipv4_address: 192.168.210.2
+      guest:
+        priority: 50
+        ipv4_address: 192.168.220.2
+      wan:
+        priority: 10
+        ipv4_address: 192.168.230.2
     stop_signal: SIGTERM
+
+networks:
+  lan:
+    ipam:
+      config: [{ subnet: 192.168.210.0/24 }]
+  guest:
+    ipam:
+      config: [{ subnet: 192.168.220.0/24 }]
+  wan:
+    # Внешняя сеть: маршрута в остальные сети стенда у неё нет, как у роутера нет
+    # маршрута из интернета в свой lan.
+    internal: true
+    ipam:
+      config: [{ subnet: 192.168.230.0/24 }]
 
 volumes:
   web-node-modules:

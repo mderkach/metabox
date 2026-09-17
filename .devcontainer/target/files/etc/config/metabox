@@ -1,0 +1,18 @@
+# Настройки панели на стенде. Пакет ставит свои значения, рассчитанные на
+# роутер; здесь заданы стендовые: другой порт и гостевая сеть рядом с проводной.
+# Адрес пустой — его, как и на устройстве, берут у сетей из listen_interface.
+
+config metabox 'main'
+	option enabled '1'
+	option listen_addr ''
+	option listen_port '8080'
+	list listen_interface 'lan'
+	list listen_interface 'guest'
+	option config_dir '/etc/sing-box'
+	option config_name 'config.json'
+	option state_dir '/etc/metabox'
+	option singbox '/usr/bin/sing-box'
+	option init_script '/etc/init.d/sing-box'
+	option ubus '/bin/ubus'
+	option clash_port '9090'
+	option log_level 'info'

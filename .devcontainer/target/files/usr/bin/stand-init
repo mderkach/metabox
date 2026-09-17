@@ -1,0 +1,84 @@
+#!/bin/sh
+# Раскладывает сети стенда по ролям и отдаёт управление procd.
+#
+# На роутере интерфейсы описаны прошивкой, здесь их создаёт Docker — и имена
+# eth* он раздаёт в произвольном порядке: между двумя запусками одна и та же
+# сеть получает разные имена. Опознать сеть можно только по адресу, поэтому
+# /etc/config/network собирается при старте, а не лежит в образе готовым.
+#
+# Маршрут по умолчанию восстанавливается тем же интерфейсом, которым его выдал
+# Docker: netifd переписывает таблицу маршрутов целиком, а без маршрута ответы
+# на проброшенный порт не уходят на хост.
+set -eu
+
+CONF=/etc/config/network
+DEFAULT_ROUTE="$(ip route show default | head -1)"
+GATEWAY="$(echo "$DEFAULT_ROUTE" | awk '{ for (i = 1; i < NF; i++) if ($i == "via") print $(i + 1) }')"
+GATEWAY_DEVICE="$(echo "$DEFAULT_ROUTE" | awk '{ for (i = 1; i < NF; i++) if ($i == "dev") print $(i + 1) }')"
+
+role_of() {
+	case "$1" in
+	192.168.210.*) echo lan ;;
+	192.168.220.*) echo guest ;;
+	192.168.230.*) echo wan ;;
+	*) echo "" ;;
+	esac
+}
+
+netmask_of() {
+	full=$(( $1 / 8 ))
+	rest=$(( $1 % 8 ))
+	mask=""
+	octet=0
+	i=1
+
+	while [ "$i" -le 4 ]; do
+		if [ "$i" -le "$full" ]; then
+			octet=255
+		elif [ "$i" -eq $(( full + 1 )) ]; then
+			octet=$(( 256 - 2 ** ( 8 - rest ) ))
+		else
+			octet=0
+		fi
+
+		mask="${mask:+$mask.}$octet"
+		i=$(( i + 1 ))
+	done
+
+	printf '%s' "$mask"
+}
+
+cat >"$CONF" <<'LOOPBACK'
+config interface 'loopback'
+	option device 'lo'
+	option proto 'static'
+	option ipaddr '127.0.0.1'
+	option netmask '255.0.0.0'
+LOOPBACK
+
+ip -o -4 addr show | while read -r _ device _ cidr _; do
+	if [ "$device" = "lo" ]; then
+		continue
+	fi
+
+	address="${cidr%/*}"
+	role="$(role_of "$address")"
+	if [ -z "$role" ]; then
+		continue
+	fi
+
+	cat >>"$CONF" <<INTERFACE
+
+config interface '$role'
+	option device '$device'
+	option proto 'static'
+	option ipaddr '$address'
+	option netmask '$(netmask_of "${cidr#*/}")'
+INTERFACE
+
+	if [ "$device" = "$GATEWAY_DEVICE" ] && [ -n "$GATEWAY" ]; then
+		printf "\toption gateway '%s'\n" "$GATEWAY" >>"$CONF"
+	fi
+done
+
+exec /sbin/procd
