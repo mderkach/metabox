@@ -5,6 +5,7 @@ import { brotliCompressSync, constants, gzipSync } from 'node:zlib';
 
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
+import type { ProxyOptions } from 'vite';
 import { defineConfig, type Plugin } from 'vitest/config';
 
 import { LOCALE_ROOT, checkLocales, collectLocales, hashedLocaleUrl, localeKey, writeI18nTypes } from './tools/i18n.ts';
@@ -226,6 +227,17 @@ function* walk(dir: string): Generator<string> {
   }
 }
 
+const daemonTarget = process.env.METABOX_API_TARGET ?? 'http://127.0.0.1:8080';
+
+// changeOrigin подменяет только Host, а демон сверяет Origin с адресом панели и
+// без совпадения отбивает любой мутирующий запрос. Дев-сервер представляется
+// самим демоном — иначе демону пришлось бы открывать чужой источник.
+const sendDaemonOrigin: ProxyOptions['configure'] = (proxy) => {
+  proxy.on('proxyReq', (request) => {
+    request.setHeader('origin', daemonTarget);
+  });
+};
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss(), metaboxI18n(), metaboxCompress(), metaboxMocks()],
@@ -245,15 +257,17 @@ export default defineConfig({
     proxy: {
       // Демон живёт в целевом окружении (контейнер target), а не рядом с dev-сервером.
       '/api': {
-        target: process.env.METABOX_API_TARGET ?? 'http://127.0.0.1:8080',
+        target: daemonTarget,
         changeOrigin: true,
+        configure: sendDaemonOrigin,
         // Поток соединений и трафика ходит под тем же префиксом: без этого
         // апгрейд до WebSocket упирается в дев-сервер, а не в демона.
         ws: true,
       },
       '/healthz': {
-        target: process.env.METABOX_API_TARGET ?? 'http://127.0.0.1:8080',
+        target: daemonTarget,
         changeOrigin: true,
+        configure: sendDaemonOrigin,
       },
     },
   },
