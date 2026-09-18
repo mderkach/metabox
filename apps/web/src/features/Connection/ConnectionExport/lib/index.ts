@@ -1,1 +1,1 @@
-export * from './ConnectionExport.lib';
+export { downloadConnections } from './ConnectionExport.download';

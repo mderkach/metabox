@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import type { ConnectionRow } from '@entities/Connection';
 
-import { EXPORT_FORMAT, toExportBody } from '../lib/ConnectionExport.lib';
+import { toExportBody } from '../lib/ConnectionExport.serialize';
+import { EXPORT_FORMAT } from '../model/ConnectionExport.constants';
 
 function makeRow(overrides: Partial<ConnectionRow> = {}): ConnectionRow {
   return {
