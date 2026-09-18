@@ -29,3 +29,4 @@ apps/metaboxd/internal/webui/static/*
 # то же для генератора контракта: `go build ./cmd/...` кладёт его рядом с модулем
 /apps/metaboxd/contractgen
 .playwright-mcp
+.impeccable
