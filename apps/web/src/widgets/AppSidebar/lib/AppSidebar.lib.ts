@@ -39,13 +39,14 @@ export function useSidebarCollapsed() {
   const [collapsed, setCollapsed] = useState(readCollapsed);
   const narrow = useNarrowScreen();
 
+  // Хранилище пишется снаружи обновления состояния: React зовёт обновляющую
+  // функцию дважды в строгом режиме, и запись ушла бы в неё вместе с остальным.
   const toggle = useCallback(() => {
-    setCollapsed((current) => {
-      writeCollapsed(!current);
+    const next = !collapsed;
 
-      return !current;
-    });
-  }, []);
+    writeCollapsed(next);
+    setCollapsed(next);
+  }, [collapsed]);
 
   return { collapsed: collapsed || narrow, narrow, toggle };
 }
