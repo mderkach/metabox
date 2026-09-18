@@ -1,5 +1,9 @@
 import { configHandlers } from '@entities/Config/__tests__/Config.handlers';
-import { CONNECTIONS_FIXTURE, makeConnectionsSnapshot } from '@entities/Connection/__tests__/Connection.fixture';
+import {
+  advanceConnectionsSnapshot,
+  CONNECTIONS_FIXTURE,
+  makeConnectionsSnapshot,
+} from '@entities/Connection/__tests__/Connection.fixture';
 import { connectionHandlers } from '@entities/Connection/__tests__/Connection.handlers';
 import {
   MEMORY_SAMPLES,
@@ -19,6 +23,7 @@ import { runtimeStreamHandler } from './runtimeStream';
 const STREAM_INTERVAL = MS_IN_SECOND;
 
 let memorySample = 0;
+let connectionsFrame = 0;
 
 /**
  * Сборка моков для дев-режима. Сами хендлеры и фикстуры лежат в `__tests__`
@@ -31,9 +36,17 @@ let memorySample = 0;
  * до перезагрузки страницы, иначе ручная проверка выглядит поломкой.
  */
 export function createMissingHandlers(connections = 0) {
-  // Снапшот собирается один раз: раздувать пять тысяч строк на каждый тик
-  // означало бы мерить генератор, а не панель.
-  const snapshot = connections > 0 ? makeConnectionsSnapshot(connections, { vary: true }) : CONNECTIONS_FIXTURE;
+  // Снапшот собирается один раз и дальше меняется на месте: раздувать пять
+  // тысяч строк на каждый тик означало бы мерить генератор, а не панель. Копия
+  // обязательна: сам `CONNECTIONS_FIXTURE` делит массив соединений с образцами,
+  // из которых собираются кадры, и правка на месте испортила бы эталон.
+  const snapshot =
+    connections > 0
+      ? makeConnectionsSnapshot(connections, { vary: true })
+      : {
+          ...CONNECTIONS_FIXTURE,
+          connections: CONNECTIONS_FIXTURE.connections.map((row) => ({ ...row, chain: [...row.chain] })),
+        };
 
   return [
     ...configHandlers,
@@ -44,7 +57,14 @@ export function createMissingHandlers(connections = 0) {
     runtimeStreamHandler(
       [
         { topic: RUNTIME_TOPIC.Service, data: () => SERVICE_RUNNING_FIXTURE },
-        { topic: RUNTIME_TOPIC.Connections, data: () => snapshot },
+        {
+          topic: RUNTIME_TOPIC.Connections,
+          data: () => {
+            connectionsFrame += 1;
+
+            return advanceConnectionsSnapshot(snapshot, connectionsFrame);
+          },
+        },
         { topic: RUNTIME_TOPIC.Traffic, data: () => TRAFFIC_SAMPLE },
         { topic: RUNTIME_TOPIC.System, data: () => SYSTEM_FIXTURE },
         {

@@ -1,8 +1,8 @@
 import { sortFn_alphanumeric, sortFn_basic, sortFn_text } from '@tanstack/react-table';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { ConnectionStore, type ConnectionRow } from '@entities/Connection';
-import { makeConnectionsSnapshot } from '@entities/Connection/__tests__/Connection.fixture';
+import { advanceConnectionsSnapshot, makeConnectionsSnapshot } from '@entities/Connection/__tests__/Connection.fixture';
 
 import { CONNECTION_COLUMNS, CONNECTION_FIELD } from '../ui/ConnectionColumns';
 
@@ -24,8 +24,41 @@ const RUNS = 5;
  */
 const SORT_BUDGET_MS = 60;
 
+/**
+ * Разбор снапшота с оборотом соединений: счётчики выросли, часть строк
+ * пересобирается, часть ушла в закрытые.
+ *
+ * Замер 2026-09-18 в браузере на живых кадрах: 3 мс без замедления, 8.6 мс при
+ * замедлении процессора вчетверо. До снятия черновика immer со сторов было
+ * 14.9 и 61.3 мс — почти весь бюджет тика уходил на обёртки прокси
+ * ([ADR-0024](../../../../../../docs/adr/ADR-0024-drop-the-immer-draft-from-frontend-stores.md)).
+ *
+ * В этом окружении разбор идёт 3.8 мс. Порог держится ниже того, до чего довела
+ * бы обёртка: пересчёт замеров из браузера даёт около 19 мс, и с порогом в
+ * десятки миллисекунд её возврат прошёл бы незамеченным.
+ *
+ * Прогонов больше, чем у сортировки: первый после сброса дороже остальных —
+ * индекс пуст, и ни одна из пяти тысяч строк не отдаётся прежним объектом.
+ * Короткая выборка из-за этого целиком уезжает вверх, когда соседние файлы
+ * тестов отбирают процессор.
+ */
+const APPLY_BUDGET_MS = 12;
+const APPLY_RUNS = 9;
+
+/** Шаг потока: с ним разбор считает скорости, без него — пропускает их вовсе. */
+const STREAM_STEP_MS = 500;
+
 function median(values: number[]): number {
   return [...values].sort((left, right) => left - right)[Math.floor(values.length / 2)];
+}
+
+/**
+ * Лучший из прогонов. Медиана здесь плывёт: файлы тестов идут параллельно, и
+ * соседи отбирают процессор в произвольный момент, а шум замер только замедляет
+ * — значит нижняя граница и есть собственная стоимость разбора.
+ */
+function fastest(values: number[]): number {
+  return Math.min(...values);
 }
 
 /** Ключи снимаются тем же `accessorFn`, что и в работе. */
@@ -52,7 +85,9 @@ describe('бюджет таблицы соединений', () => {
   beforeAll(() => {
     ConnectionStore.getState().reset();
     ConnectionStore.getState().apply(makeConnectionsSnapshot(SNAPSHOT_SIZE));
-    rows = ConnectionStore.getState().active;
+    // Копия, а не ссылка: замер разбора ниже чистит стор, и сортировка осталась
+    // бы без строк.
+    rows = [...ConnectionStore.getState().active];
   });
 
   it('сортирует 5000 строк по числовой колонке в пределах бюджета', () => {
@@ -65,6 +100,40 @@ describe('бюджет таблицы соединений', () => {
     const runs = Array.from({ length: RUNS }, () => sortBy(CONNECTION_FIELD.Host, rows));
 
     expect(median(runs)).toBeLessThan(SORT_BUDGET_MS);
+  });
+
+  it('разбирает снапшот на 5000 соединений в пределах бюджета', () => {
+    const snapshot = makeConnectionsSnapshot(SNAPSHOT_SIZE, { vary: true });
+    // Часы сдвигаются на шаг потока: подряд идущие вызовы разбор считает
+    // неправдоподобно частыми и скорости не считает, а это основная работа.
+    let clock = Date.now();
+    const now = vi.spyOn(Date, 'now').mockImplementation(() => clock);
+
+    ConnectionStore.getState().reset();
+
+    const runs = Array.from({ length: APPLY_RUNS }, (_, run) => {
+      const frame = advanceConnectionsSnapshot(snapshot, run + 1);
+
+      clock += STREAM_STEP_MS;
+
+      const start = performance.now();
+
+      ConnectionStore.getState().apply(frame);
+
+      return performance.now() - start;
+    });
+
+    now.mockRestore();
+
+    const state = ConnectionStore.getState();
+
+    expect(state.active).toHaveLength(SNAPSHOT_SIZE);
+    // Оборот соединений в кадре обязан доходить до закрытых, а счётчики — до
+    // скоростей: без того и другого замер прошёл бы мимо основной работы
+    // разбора и мерил бы возврат прежних строк.
+    expect(state.closed.length).toBeGreaterThan(0);
+    expect(state.active.some((row) => row.downRate > 0)).toBe(true);
+    expect(fastest(runs)).toBeLessThan(APPLY_BUDGET_MS);
   });
 
   it('объявляет сравнение для каждой колонки: без него список молча идёт в порядке потока', () => {

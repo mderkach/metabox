@@ -132,13 +132,24 @@ const CONNECTIONS: ConnectionWire[] = [
   }),
 ];
 
+// Образцы заморожены: живые кадры правят снапшот на месте, и потребитель,
+// забывший сделать копию, испортил бы эталон — счётчики разъехались бы у всех,
+// кто из него собирается. Заморозка превращает такую правку в немедленный
+// `TypeError` вместо тихо расходящихся данных.
+for (const sample of CONNECTIONS) {
+  Object.freeze(sample.chain);
+  Object.freeze(sample);
+}
+
+Object.freeze(CONNECTIONS);
+
 /** Снапшот топика `connections`: то же тело, что приходит раз в секунду. */
-export const CONNECTIONS_FIXTURE: ConnectionsSnapshotWire = {
+export const CONNECTIONS_FIXTURE: ConnectionsSnapshotWire = Object.freeze({
   connections: CONNECTIONS,
   upload_total: 12376739,
   download_total: 109672289,
   memory: 51380224,
-};
+});
 
 /**
  * Снапшот произвольного размера для проверки NFR-2: соединения размножаются из
@@ -177,3 +188,76 @@ export function makeConnectionsSnapshot(count: number, { vary = false } = {}): C
 /** Сколько разных имён и устройств разводит `vary`: у домашнего роутера столько и бывает. */
 const VARIED_HOSTS = 64;
 const VARIED_DEVICES = 24;
+
+/** Какая доля соединений набирает байты за секунду: остальные молчат. */
+const ACTIVE_SHARE = 3;
+/** Сколько соединений закрывается и открывается за кадр на каждую тысячу. */
+const CHURN_PER_THOUSAND = 8;
+const THOUSAND = 1000;
+/** Разброс прироста байт: у одного соединения за секунду от килобайта до мегабайта. */
+const MIN_STEP = 1024;
+const MAX_STEP = 1024 * 1024;
+
+/**
+ * Следующий кадр потока: счётчики растут, часть соединений закрывается, на их
+ * месте открываются новые.
+ *
+ * **Снапшот меняется на месте.** Вызывающий отдаёт сюда собственный экземпляр и
+ * дальше владеет им один. `CONNECTIONS_FIXTURE` передавать нельзя: он делит
+ * массив с образцами, из которых собираются кадры, и заморожен — попытка
+ * провернуть кадр прямо на нём бросит `TypeError`.
+ *
+ * Список не пересобирается: пять тысяч строк на каждый тик стоили бы дороже
+ * самой панели, и стенд мерил бы генератор. При этом неподвижный снапшот мерит
+ * не ту ветку — при неизменных счётчиках разбор отдаёт прежние строки целиком и
+ * не собирает ни одной новой.
+ *
+ * Оборот соединений нужен не для правдоподобия: закрытые панель собирает сама,
+ * сравнивая соседние кадры, и без оборота эта ветка не выполняется ни разу.
+ */
+export function advanceConnectionsSnapshot(snapshot: ConnectionsSnapshotWire, seq: number): ConnectionsSnapshotWire {
+  const churn = Math.max(1, Math.round((snapshot.connections.length * CHURN_PER_THOUSAND) / THOUSAND));
+  let addedUpload = 0;
+  let addedDownload = 0;
+
+  for (let index = 0; index < snapshot.connections.length; index += 1) {
+    if ((index + seq) % ACTIVE_SHARE !== 0) {
+      continue;
+    }
+
+    const current = snapshot.connections[index];
+    const step = MIN_STEP + ((index * seq) % (MAX_STEP - MIN_STEP));
+
+    current.upload += step;
+    current.download += step * 2;
+    addedUpload += step;
+    addedDownload += step * 2;
+  }
+
+  // Выбывшие разбросаны по списку, а не идут подряд с начала: панель сверяет
+  // кадры по id, и подмены id достаточно, чтобы соединение считалось новым, но
+  // оборот в первых строках виртуализованного списка читался бы как мельтешение
+  // таблицы, которого на устройстве нет.
+  const stride = Math.max(1, Math.floor(snapshot.connections.length / churn));
+
+  for (let step = 0; step < churn; step += 1) {
+    const index = (step * stride + seq) % snapshot.connections.length;
+    const sample = CONNECTIONS[(step + seq) % CONNECTIONS.length];
+    const [name] = sample.host.split(':');
+
+    snapshot.connections[index] = {
+      ...sample,
+      id: `${sample.id}-${String(seq)}-${String(step)}`,
+      host: `${name}-${String((index + seq) % VARIED_HOSTS)}:${PORT}`,
+      source: `192.168.1.${String((index % VARIED_DEVICES) + 2)}`,
+      started_at: new Date().toISOString(),
+    };
+  }
+
+  // Счётчики растут, а не пересчитываются по списку: в снапшоте это объём с
+  // запуска sing-box, и он больше суммы по живым соединениям.
+  snapshot.upload_total += addedUpload;
+  snapshot.download_total += addedDownload;
+
+  return snapshot;
+}
