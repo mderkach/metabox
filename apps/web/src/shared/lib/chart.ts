@@ -65,14 +65,13 @@ export function toPercents(values: number[]): number[] {
   const exact = values.map((value) => toShare(value, total) * PERCENT);
   const floors = exact.map((value) => Math.floor(value));
   const spare = PERCENT - floors.reduce((sum, value) => sum + value, 0);
+  const remainders = exact.map((value, index) => value - floors[index]);
 
-  const order = exact
-    .map((value, index) => ({ index, remainder: value - floors[index] }))
-    .sort((left, right) => right.remainder - left.remainder)
-    .slice(0, Math.max(0, spare))
-    .map((entry) => entry.index);
+  const order = new Set(
+    [...remainders.keys()].sort((left, right) => remainders[right] - remainders[left]).slice(0, Math.max(0, spare))
+  );
 
-  return floors.map((value, index) => (order.includes(index) ? value + 1 : value));
+  return floors.map((value, index) => (order.has(index) ? value + 1 : value));
 }
 
 export interface DonutSegment {
