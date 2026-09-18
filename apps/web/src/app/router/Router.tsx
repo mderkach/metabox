@@ -56,6 +56,20 @@ const configRoute = createRoute({
   component: lazyRouteComponent(async () => import('@pages/Editor'), 'EditorPage'),
 });
 
+const ruleSetsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  loader: async () =>
+    preloadNamespaces([
+      'pages/RuleSets',
+      'widgets/Config/ConfigTabs',
+      'widgets/RuleSet/RuleSetTable',
+      'features/RuleSet/RuleSetAdd',
+      'features/Config/ConfigCacheFile',
+    ]),
+  path: '/config/rule-set',
+  component: lazyRouteComponent(async () => import('@pages/RuleSets'), 'RuleSetsPage'),
+});
+
 const proxiesRoute = createRoute({
   getParentRoute: () => rootRoute,
   loader: async () => preloadNamespaces(['pages/Proxies', 'widgets/ProxyGroups']),
@@ -96,6 +110,7 @@ export const Router = createRouter({
   routeTree: rootRoute.addChildren([
     indexRoute,
     configRoute,
+    ruleSetsRoute,
     rawConfigRoute,
     proxiesRoute,
     connectionsRoute,

@@ -10,15 +10,18 @@ declare module 'i18next' {
     resources: {
       app: typeof import('./app/i18n/ru.json');
       'features/Config/ConfigApply': typeof import('./features/Config/ConfigApply/i18n/ru.json');
+      'features/Config/ConfigCacheFile': typeof import('./features/Config/ConfigCacheFile/i18n/ru.json');
       'features/Language/LanguageSwitch': typeof import('./features/Language/LanguageSwitch/i18n/ru.json');
       'features/Rule/RuleEdit': typeof import('./features/Rule/RuleEdit/i18n/ru.json');
       'features/Rule/RuleRaw': typeof import('./features/Rule/RuleRaw/i18n/ru.json');
+      'features/RuleSet/RuleSetAdd': typeof import('./features/RuleSet/RuleSetAdd/i18n/ru.json');
       'features/Theme/ThemeSwitch': typeof import('./features/Theme/ThemeSwitch/i18n/ru.json');
       'pages/Connections': typeof import('./pages/Connections/i18n/ru.json');
       'pages/Editor': typeof import('./pages/Editor/i18n/ru.json');
       'pages/Overview': typeof import('./pages/Overview/i18n/ru.json');
       'pages/Proxies': typeof import('./pages/Proxies/i18n/ru.json');
       'pages/RawConfig': typeof import('./pages/RawConfig/i18n/ru.json');
+      'pages/RuleSets': typeof import('./pages/RuleSets/i18n/ru.json');
       shared: typeof import('./shared/i18n/ru.json');
       'widgets/AppSidebar': typeof import('./widgets/AppSidebar/i18n/ru.json');
       'widgets/Config/ConfigRawEditor': typeof import('./widgets/Config/ConfigRawEditor/i18n/ru.json');
@@ -33,6 +36,7 @@ declare module 'i18next' {
       'widgets/RouteExplanation': typeof import('./widgets/RouteExplanation/i18n/ru.json');
       'widgets/Rule/RulePanel': typeof import('./widgets/Rule/RulePanel/i18n/ru.json');
       'widgets/Rule/RuleTable': typeof import('./widgets/Rule/RuleTable/i18n/ru.json');
+      'widgets/RuleSet/RuleSetTable': typeof import('./widgets/RuleSet/RuleSetTable/i18n/ru.json');
     };
   }
 }

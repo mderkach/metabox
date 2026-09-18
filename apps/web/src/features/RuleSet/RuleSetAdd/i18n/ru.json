@@ -1,0 +1,41 @@
+{
+  "field": {
+    "provider": { "label": "Источник", "custom": "Свой адрес" },
+    "category": {
+      "label": "Категория",
+      "placeholder": "например, google",
+      "suggestions": "Частые категории",
+      "hint": "Списки собирает источник. Нужной категории в подсказках нет — впишите её имя, адрес соберётся сам.",
+      "more": "и ещё {{count}}"
+    },
+    "mirror": { "label": "Зеркало" },
+    "url": { "label": "Адрес сета", "placeholder": "https://example.com/list.srs" },
+    "tag": { "label": "Имя сета", "placeholder": "geosite-google" },
+    "format": {
+      "label": "Формат файла",
+      "placeholder": "выберите формат",
+      "hint": "У адреса нет расширения .srs или .json, поэтому формат придётся назвать: иначе sing-box не поймёт, что скачал."
+    },
+    "interval": {
+      "label": "Как часто обновлять",
+      "placeholder": "1d",
+      "hint": "Пусто — sing-box перекачивает раз в сутки. Формат: 12h, 3d, 1w."
+    },
+    "detour": {
+      "label": "Качать через узел",
+      "placeholder": "тег outbound",
+      "hint": "Пусто — напрямую. Пригодится, когда источник недоступен без прокси."
+    }
+  },
+  "format": { "binary": "binary — скомпилированный .srs", "source": "source — исходный .json" },
+  "extra": { "toggle": "Ещё настройки" },
+  "submit": "Подключить",
+  "cancel": "Отмена",
+  "error": {
+    "urlRequired": "без адреса скачивать нечего",
+    "urlScheme": "адрес начинается с http:// или https://",
+    "tagRequired": "без имени на сет не сослаться из правила",
+    "tagTaken": "такое имя уже занято другим сетом",
+    "formatRequired": "выберите формат файла"
+  }
+}

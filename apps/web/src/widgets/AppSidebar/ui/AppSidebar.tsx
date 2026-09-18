@@ -1,6 +1,7 @@
-import { Link } from '@tanstack/react-router';
+import { Link, type LinkProps } from '@tanstack/react-router';
 import type { ParseKeys } from 'i18next';
 import { Activity, Boxes, Gauge, PanelLeftClose, PanelLeftOpen, Share2, SlidersHorizontal } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { SERVICE_STATUS, useDaemonStatus, useServiceState, type ServiceStatus } from '@entities/Daemon';
@@ -10,14 +11,20 @@ import { cn } from '@shared/lib/utils';
 
 import { useSidebarCollapsed } from '../lib/AppSidebar.lib';
 
-/** `to` есть только у сделанных разделов: остальные пункты не кликаются. */
-const NAV_ITEMS = [
+interface NavItem {
+  key: ParseKeys<'widgets/AppSidebar'>;
+  icon: LucideIcon;
+  /** Маршрут есть только у сделанных разделов: остальные пункты не кликаются. */
+  to?: LinkProps['to'];
+}
+
+const NAV_ITEMS: readonly NavItem[] = [
   { key: 'section.overview', icon: Gauge, to: '/overview' },
   { key: 'section.config', icon: SlidersHorizontal, to: '/config' },
-  { key: 'section.ruleSets', icon: Boxes },
+  { key: 'section.ruleSets', icon: Boxes, to: '/config/rule-set' },
   { key: 'section.proxies', icon: Share2, to: '/proxies' },
   { key: 'section.connections', icon: Activity, to: '/connections' },
-] as const;
+];
 
 const ITEM_CLASS =
   'relative flex h-8 items-center gap-2.5 rounded-md px-2.5 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none';
@@ -86,7 +93,7 @@ export function AppSidebar() {
         <ul className='flex flex-col gap-0.5'>
           {NAV_ITEMS.map((item) => (
             <li key={item.key}>
-              {'to' in item ? (
+              {item.to !== undefined ? (
                 <Link
                   to={item.to}
                   title={t(item.key)}

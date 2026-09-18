@@ -1,0 +1,16 @@
+{
+  "title": "Подключённые сеты",
+  "type": { "local": "файл на устройстве", "inline": "правила в конфиге" },
+  "row": {
+    "untagged": "без имени",
+    "uncovered": "UI не покрывает",
+    "ownSource": "свой адрес",
+    "interval": "обновление {{interval}}",
+    "detour": "через {{detour}}",
+    "unused": "ни в одном правиле",
+    "usedBy_one": "в {{count}} правиле",
+    "usedBy_few": "в {{count}} правилах",
+    "usedBy_many": "в {{count}} правилах",
+    "remove": "Убрать сет {{tag}}"
+  }
+}

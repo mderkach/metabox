@@ -1,58 +1,56 @@
-import type { ParseKeys } from 'i18next';
+import { Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 
-import { CONFIG_SECTION, sectionSize, type ConfigDocument, type ConfigSection } from '@entities/Config';
+import { sectionSize, type ConfigDocument } from '@entities/Config';
 import { cn } from '@shared/lib/utils';
 
-/**
- * Секции конфига в том же порядке, в каком они лежат в файле, — так вкладка
- * находится по памяти о `config.json`, а не по алфавиту. Сколько в секции
- * элементов, знает слайс-владелец документа.
- */
-const SECTIONS = [
-  { key: CONFIG_SECTION.Route, label: 'section.route', ready: true },
-  { key: CONFIG_SECTION.RuleSet, label: 'section.ruleSet', ready: false },
-  { key: CONFIG_SECTION.Inbounds, label: 'section.inbounds', ready: false },
-  { key: CONFIG_SECTION.Outbounds, label: 'section.outbounds', ready: false },
-  { key: CONFIG_SECTION.Providers, label: 'section.providers', ready: false },
-  { key: CONFIG_SECTION.Dns, label: 'section.dns', ready: false },
-  { key: CONFIG_SECTION.Log, label: 'section.log', ready: false },
-  { key: CONFIG_SECTION.Experimental, label: 'section.experimental', ready: false },
-] as const satisfies ReadonlyArray<{
-  key: ConfigSection;
-  label: ParseKeys<'widgets/Config/ConfigTabs'>;
-  ready: boolean;
-}>;
+import { CONFIG_TAB_CLASS, CONFIG_TAB_UNDERLINE, CONFIG_TABS } from '../model';
 
 export function ConfigTabs({ config }: { config: ConfigDocument | null }) {
   const { t } = useTranslation('widgets/Config/ConfigTabs');
-  return (
-    <div
-      role='tablist'
-      aria-label={t('label')}
-      className='flex h-11 shrink-0 items-end gap-1 border-b border-border px-6'
-    >
-      {SECTIONS.map((section) => {
-        const count = sectionSize(config, section.key);
 
-        return (
-          <span
-            key={section.key}
-            role='tab'
-            aria-selected={section.ready}
-            aria-disabled={!section.ready}
-            title={section.ready ? undefined : t('unavailable')}
-            className={cn(
-              'relative mb-1 inline-flex h-8 items-center gap-1.5 rounded-md px-1.5 text-sm font-medium whitespace-nowrap',
-              section.ready ? 'text-foreground' : 'text-muted-foreground/60'
-            )}
-          >
-            {t(section.label)}
-            {count !== null && <span className='text-xs text-muted-foreground tabular-nums'>{count}</span>}
-            {section.ready && <span className='absolute inset-x-0 -bottom-1.5 h-0.5 bg-foreground' />}
-          </span>
-        );
-      })}
-    </div>
+  return (
+    <nav aria-label={t('label')} className='shrink-0 border-b border-border'>
+      <ul className='flex h-11 items-end gap-1 overflow-x-auto px-4 sm:px-6'>
+        {CONFIG_TABS.map((section) => {
+          const count = sectionSize(config, section.key);
+
+          return (
+            <li key={section.key}>
+              {section.route === null ? (
+                <span
+                  aria-disabled='true'
+                  title={t('unavailable')}
+                  className={cn(CONFIG_TAB_CLASS, 'text-muted-foreground/60')}
+                >
+                  {t(section.label)}
+                  {count !== null && <SectionCount count={count} />}
+                </span>
+              ) : (
+                <Link
+                  to={section.route}
+                  activeOptions={{ exact: true }}
+                  activeProps={{ 'aria-current': 'page' }}
+                  className={cn(
+                    CONFIG_TAB_CLASS,
+                    'group text-muted-foreground transition-colors hover:text-foreground',
+                    'focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none',
+                    'aria-[current=page]:text-foreground'
+                  )}
+                >
+                  {t(section.label)}
+                  {count !== null && <SectionCount count={count} />}
+                  <span className={cn(CONFIG_TAB_UNDERLINE, 'hidden group-aria-[current=page]:block')} />
+                </Link>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
   );
+}
+
+function SectionCount({ count }: { count: number }) {
+  return <span className='text-xs text-muted-foreground tabular-nums'>{count}</span>;
 }

@@ -1,0 +1,41 @@
+{
+  "field": {
+    "provider": { "label": "Source", "custom": "Custom address" },
+    "category": {
+      "label": "Category",
+      "placeholder": "google, for example",
+      "suggestions": "Common categories",
+      "hint": "The lists are built by the source. No matching suggestion — type the category name and the address builds itself.",
+      "more": "and {{count}} more"
+    },
+    "mirror": { "label": "Mirror" },
+    "url": { "label": "Set address", "placeholder": "https://example.com/list.srs" },
+    "tag": { "label": "Set name", "placeholder": "geosite-google" },
+    "format": {
+      "label": "File format",
+      "placeholder": "pick a format",
+      "hint": "The address ends in neither .srs nor .json, so the format has to be named: otherwise sing-box cannot tell what it downloaded."
+    },
+    "interval": {
+      "label": "Refresh every",
+      "placeholder": "1d",
+      "hint": "Empty — sing-box refetches once a day. Format: 12h, 3d, 1w."
+    },
+    "detour": {
+      "label": "Download through",
+      "placeholder": "outbound tag",
+      "hint": "Empty — straight out. Useful when the source is out of reach without a proxy."
+    }
+  },
+  "format": { "binary": "binary — compiled .srs", "source": "source — plain .json" },
+  "extra": { "toggle": "More settings" },
+  "submit": "Connect",
+  "cancel": "Cancel",
+  "error": {
+    "urlRequired": "nothing to download without an address",
+    "urlScheme": "the address starts with http:// or https://",
+    "tagRequired": "without a name no rule can point at this set",
+    "tagTaken": "another set already goes by that name",
+    "formatRequired": "pick the file format"
+  }
+}

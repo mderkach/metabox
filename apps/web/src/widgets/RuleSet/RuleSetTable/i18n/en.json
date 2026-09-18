@@ -1,0 +1,15 @@
+{
+  "title": "Connected sets",
+  "type": { "local": "file on the device", "inline": "rules inside the config" },
+  "row": {
+    "untagged": "unnamed",
+    "uncovered": "not covered by the UI",
+    "ownSource": "custom address",
+    "interval": "refresh {{interval}}",
+    "detour": "through {{detour}}",
+    "unused": "in no rule",
+    "usedBy_one": "in {{count}} rule",
+    "usedBy_other": "in {{count}} rules",
+    "remove": "Remove the {{tag}} set"
+  }
+}

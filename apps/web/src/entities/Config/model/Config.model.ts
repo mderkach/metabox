@@ -103,6 +103,29 @@ export function readRules(text: string): unknown[] {
   return Array.isArray(rules) ? rules : [];
 }
 
+/** Где в документе лежат наборы правил. */
+export const RULE_SETS_PATH: JSONPath = ['route', 'rule_set'];
+
+/** Путь узла набора по его позиции в списке, считая с нуля. */
+export function ruleSetNodePath(index: number): JSONPath {
+  return [...RULE_SETS_PATH, index];
+}
+
+/** Наборы документа как есть; узел, не принятый схемой, из списка не выпадает. */
+export function readRuleSets(text: string): unknown[] {
+  const sets: unknown = findValue(text, RULE_SETS_PATH);
+
+  return Array.isArray(sets) ? sets : [];
+}
+
+/** Где лежит кэш наборов: без него недоступный поставщик обрывает старт. */
+export const CACHE_FILE_PATH: JSONPath = ['experimental', 'cache_file', 'enabled'];
+
+/** Включён ли кэш наборов в документе. */
+export function hasRuleSetCache(text: string): boolean {
+  return findValue(text, CACHE_FILE_PATH) === true;
+}
+
 /**
  * Документ конфига в модели приложения. Имя своё, а не из форка: переименование
  * типа в схеме правится здесь, а не в каждом экране, который документ читает

@@ -35,14 +35,20 @@ describe('маршруты панели', () => {
     expect(Router.state.location.pathname).toBe('/config');
   });
 
-  it('в навигации кликается только сделанный раздел', async () => {
+  // Раздел наборов правил сделан, и пункт меню обязан вести на него: пункт без
+  // маршрута выглядит так же, как рабочий, и врёт о состоянии панели.
+  it('в навигации сделанные разделы ведут на свои маршруты', async () => {
     serveDaemon();
 
     renderWithQuery(<RouterProvider router={Router} />);
 
-    const link = await screen.findByRole('link', { name: 'Конфигурация' });
+    await screen.findByRole('navigation', { name: 'Разделы панели' });
 
-    expect(link).toHaveAttribute('href', '/config');
-    expect(screen.getByTitle('Каталог rule-set — раздел ещё не сделан')).toHaveAttribute('aria-disabled', 'true');
+    // Пункт проверяется адресом, а не подписью: подпись — предмет правок текста,
+    // а обещание меню в том, куда он ведёт.
+    const targets = screen.getAllByRole('link').map((link) => link.getAttribute('href'));
+
+    expect(targets).toContain('/config');
+    expect(targets).toContain('/config/rule-set');
   });
 });

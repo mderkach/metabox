@@ -1,0 +1,12 @@
+{
+  "title": "Rule sets",
+  "draft": "draft",
+  "raw": "Whole config as text",
+  "lead": "A set is a ready-made list of domains or addresses that sing-box downloads and refreshes on its own. A routing rule points at it by name.",
+  "pending": "Reading the config from the device…",
+  "empty": {
+    "title": "No sets yet",
+    "description": "To send, say, all of YouTube through a proxy you do not have to list its domains by hand — someone has already collected and published them. Pick a source and a category, sing-box does the rest."
+  },
+  "add": { "open": "Connect a set", "title": "New set" }
+}
