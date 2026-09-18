@@ -73,14 +73,10 @@ const RuntimeStateProto = stateCreator<RuntimeState>((set) => {
     pushTraffic: (sample) => {
       const receivedAt = Date.now();
 
-      set((state) => {
-        state.sampledAt = receivedAt;
-        state.traffic.push(sample);
-
-        if (state.traffic.length > TRAFFIC_POINTS) {
-          state.traffic.shift();
-        }
-      });
+      set((state) => ({
+        sampledAt: receivedAt,
+        traffic: [...state.traffic, sample].slice(-TRAFFIC_POINTS),
+      }));
     },
     pushMemory: (sample) => {
       // Первый сэмпл потока всегда нулевой (PRD, OQ-5): показать его значило
@@ -92,17 +88,12 @@ const RuntimeStateProto = stateCreator<RuntimeState>((set) => {
       memoryTick += 1;
 
       set((state) => {
-        state.memoryNow = sample.inuse;
+        const kept = memoryTick % MEMORY_EVERY !== 1 && state.memory.length > 0;
 
-        if (memoryTick % MEMORY_EVERY !== 1 && state.memory.length > 0) {
-          return;
-        }
-
-        state.memory.push(sample.inuse);
-
-        if (state.memory.length > MEMORY_POINTS) {
-          state.memory.shift();
-        }
+        return {
+          memoryNow: sample.inuse,
+          memory: kept ? state.memory : [...state.memory, sample.inuse].slice(-MEMORY_POINTS),
+        };
       });
     },
     pushSystem: (stat) => {
@@ -116,36 +107,33 @@ const RuntimeStateProto = stateCreator<RuntimeState>((set) => {
         // Смена интерфейса сбрасывает сравнение: счётчики у нового свои.
         const comparable = previous !== undefined && link !== undefined && measurable && link.name === previous.name;
 
-        if (comparable) {
-          state.uplink = { rx: toRate(link.rx, previous.rx, seconds), tx: toRate(link.tx, previous.tx, seconds) };
-        } else {
-          state.uplink = NO_UPLINK_RATE;
-        }
-        state.system = stat;
         sampledAt = receivedAt;
+
+        return {
+          uplink: comparable
+            ? { rx: toRate(link.rx, previous.rx, seconds), tx: toRate(link.tx, previous.tx, seconds) }
+            : NO_UPLINK_RATE,
+          system: stat,
+        };
       });
     },
     addReader: () => {
-      set((state) => {
-        state.readers += 1;
-      });
+      set((state) => ({ readers: state.readers + 1 }));
     },
     removeReader: () => {
-      set((state) => {
-        state.readers = Math.max(0, state.readers - 1);
-      });
+      set((state) => ({ readers: Math.max(0, state.readers - 1) }));
     },
     reset: () => {
       memoryTick = 0;
       sampledAt = null;
 
-      set((state) => {
-        state.traffic = [];
-        state.memory = [];
-        state.memoryNow = 0;
-        state.system = null;
-        state.uplink = NO_UPLINK_RATE;
-        state.sampledAt = null;
+      set({
+        traffic: [],
+        memory: [],
+        memoryNow: 0,
+        system: null,
+        uplink: NO_UPLINK_RATE,
+        sampledAt: null,
       });
     },
   };

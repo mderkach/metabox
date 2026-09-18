@@ -144,13 +144,11 @@ const ConnectionStateProto = stateCreator<ConnectionState>(
 
       set((state) => {
         if (state.paused) {
-          return;
+          return state;
         }
 
         if (snapshot === null) {
-          state.dropped += 1;
-
-          return;
+          return { dropped: state.dropped + 1 };
         }
 
         const next = new Map<string, ConnectionRow>();
@@ -185,57 +183,46 @@ const ConnectionStateProto = stateCreator<ConnectionState>(
         });
 
         const gone = state.active.filter((row) => !next.has(row.id));
+        const history = [...state.history, rows.length].slice(-HISTORY_POINTS);
+        // Скорость снимается: колонка говорит про настоящее время, а закрытое
+        // соединение навсегда осталось бы со скоростью последнего живого кадра.
+        const stopped = gone.map((row) => ({ ...row, downRate: 0, upRate: 0 }));
 
-        state.active = rows;
-        state.index = next;
-        state.sampledAt = receivedAt;
-        state.summary = toSummary(rows);
-        state.history.push(rows.length);
-
-        if (state.history.length > HISTORY_POINTS) {
-          state.history.shift();
-        }
-
-        if (gone.length > 0) {
-          // Скорость снимается: колонка говорит про настоящее время, а закрытое
-          // соединение навсегда осталось бы со скоростью последнего живого кадра.
-          const stopped = gone.map((row) => ({ ...row, downRate: 0, upRate: 0 }));
-
-          state.closed = [...stopped, ...state.closed].slice(0, CLOSED_LIMIT);
-        }
-        state.totals = {
-          upload: snapshot.upload_total,
-          download: snapshot.download_total,
-          memory: snapshot.memory,
+        return {
+          active: rows,
+          index: next,
+          sampledAt: receivedAt,
+          summary: toSummary(rows),
+          history,
+          closed: gone.length > 0 ? [...stopped, ...state.closed].slice(0, CLOSED_LIMIT) : state.closed,
+          totals: {
+            upload: snapshot.upload_total,
+            download: snapshot.download_total,
+            memory: snapshot.memory,
+          },
         };
       });
     },
     setPaused: (paused) => {
-      set((state) => {
-        state.paused = paused;
-      });
+      set({ paused });
     },
     addReader: () => {
-      set((state) => {
-        state.readers += 1;
-      });
+      set((state) => ({ readers: state.readers + 1 }));
     },
     removeReader: () => {
-      set((state) => {
-        state.readers = Math.max(0, state.readers - 1);
-      });
+      set((state) => ({ readers: Math.max(0, state.readers - 1) }));
     },
     reset: () => {
-      set((state) => {
-        state.active = [];
-        state.index = new Map();
-        state.closed = [];
-        state.totals = EMPTY_TOTALS;
-        state.summary = EMPTY_SUMMARY;
-        state.history = [];
-        state.paused = false;
-        state.dropped = 0;
-        state.sampledAt = null;
+      set({
+        active: [],
+        index: new Map(),
+        closed: [],
+        totals: EMPTY_TOTALS,
+        summary: EMPTY_SUMMARY,
+        history: [],
+        paused: false,
+        dropped: 0,
+        sampledAt: null,
       });
     },
   }),

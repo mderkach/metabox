@@ -44,7 +44,7 @@ const ConfigDocumentStateProto = stateCreator<ConfigDocumentState>((set, get) =>
     set((state) => {
       const text = state.draft ?? state.applied;
 
-      if (text !== null) state.draft = edit(text);
+      return text === null ? state : { draft: edit(text) };
     });
   };
 
@@ -54,19 +54,16 @@ const ConfigDocumentStateProto = stateCreator<ConfigDocumentState>((set, get) =>
     revision: 0,
 
     load: (text) => {
-      set((state) => {
-        if (state.applied === text) return;
-
-        state.applied = text;
-        state.revision += 1;
-      });
+      set((state) => (state.applied === text ? state : { applied: text, revision: state.revision + 1 }));
     },
 
     replace: (text) => {
       set((state) => {
         // Черновик равен применённому тексту — правок нет, и держать его
         // отдельно значило бы показывать бейдж «черновик» без причины.
-        state.draft = text === state.applied ? null : text;
+        const draft = text === state.applied ? null : text;
+
+        return draft === state.draft ? state : { draft };
       });
     },
 
@@ -86,31 +83,22 @@ const ConfigDocumentStateProto = stateCreator<ConfigDocumentState>((set, get) =>
       set((state) => {
         const text = state.draft ?? state.applied;
 
-        if (text === null || from === to) return;
+        if (text === null || from === to) return state;
 
         const node = findValue(text, [...path, from]);
 
-        if (node === undefined) return;
+        if (node === undefined) return state;
 
-        state.draft = insertValue(removeValue(text, [...path, from]), [...path, to], node);
+        return { draft: insertValue(removeValue(text, [...path, from]), [...path, to], node) };
       });
     },
 
     discard: () => {
-      set((state) => {
-        if (state.draft === null) return;
-
-        state.draft = null;
-        state.revision += 1;
-      });
+      set((state) => (state.draft === null ? state : { draft: null, revision: state.revision + 1 }));
     },
 
     reset: () => {
-      set((state) => {
-        state.applied = null;
-        state.draft = null;
-        state.revision += 1;
-      });
+      set((state) => ({ applied: null, draft: null, revision: state.revision + 1 }));
     },
 
     current: () => get().draft ?? get().applied,
