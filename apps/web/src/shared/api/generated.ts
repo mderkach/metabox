@@ -44,6 +44,14 @@ export const ACMEKeyTypeSchema = z.string()
 export const ACMEProviderDNS01ChallengeOptionsSchema = z.union([
   z.strictObject({
     provider: z.literal("alidns").optional(),
+    ttl: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+    propagation_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+    propagation_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+    resolvers: z.union([
+      z.string(),
+      z.array(z.string()),
+    ]).optional(),
+    override_domain: z.string().optional(),
     access_key_id: z.string().optional(),
     access_key_secret: z.string().optional(),
     region_id: z.string().optional(),
@@ -51,11 +59,27 @@ export const ACMEProviderDNS01ChallengeOptionsSchema = z.union([
   }),
   z.strictObject({
     provider: z.literal("cloudflare").optional(),
+    ttl: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+    propagation_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+    propagation_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+    resolvers: z.union([
+      z.string(),
+      z.array(z.string()),
+    ]).optional(),
+    override_domain: z.string().optional(),
     api_token: z.string().optional(),
     zone_token: z.string().optional(),
   }),
   z.strictObject({
     provider: z.literal("acmedns").optional(),
+    ttl: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+    propagation_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+    propagation_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+    resolvers: z.union([
+      z.string(),
+      z.array(z.string()),
+    ]).optional(),
+    override_domain: z.string().optional(),
     username: z.string().optional(),
     password: z.string().optional(),
     subdomain: z.string().optional(),
@@ -2233,6 +2257,50 @@ export const HTTPClientOptionsSchema = z.union([
         z.string(),
         z.array(z.string()),
       ])).optional(),
+      get tls() {
+        return OutboundTLSOptionsSchema.optional()
+      },
+      detour: z.string().optional(),
+      bind_interface: z.string().optional(),
+      inet4_bind_address: z.string().optional(),
+      inet6_bind_address: z.string().optional(),
+      bind_address_no_port: z.boolean().optional(),
+      protect_path: z.string().optional(),
+      get routing_mark() {
+        return FwMarkSchema.optional()
+      },
+      reuse_addr: z.boolean().optional(),
+      netns: z.string().optional(),
+      connect_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+      tcp_fast_open: z.boolean().optional(),
+      tcp_multi_path: z.boolean().optional(),
+      disable_tcp_keep_alive: z.boolean().optional(),
+      tcp_keep_alive: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+      tcp_keep_alive_interval: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+      udp_fragment: z.boolean().optional(),
+      get domain_resolver() {
+        return DomainResolveOptionsSchema.optional()
+      },
+      get network_strategy() {
+        return NetworkStrategySchema.optional()
+      },
+      get network_type() {
+        return z.union([
+          InterfaceTypeSchema,
+          z.array(InterfaceTypeSchema),
+        ]).optional()
+      },
+      get fallback_network_type() {
+        return z.union([
+          InterfaceTypeSchema,
+          z.array(InterfaceTypeSchema),
+        ]).optional()
+      },
+      fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+      /** Deprecated: migrated to domain resolver */
+      get domain_strategy() {
+        return DomainStrategySchema.optional()
+      },
       idle_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
       keep_alive_period: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
       stream_receive_window: z.union([
@@ -2254,6 +2322,50 @@ export const HTTPClientOptionsSchema = z.union([
         z.string(),
         z.array(z.string()),
       ])).optional(),
+      get tls() {
+        return OutboundTLSOptionsSchema.optional()
+      },
+      detour: z.string().optional(),
+      bind_interface: z.string().optional(),
+      inet4_bind_address: z.string().optional(),
+      inet6_bind_address: z.string().optional(),
+      bind_address_no_port: z.boolean().optional(),
+      protect_path: z.string().optional(),
+      get routing_mark() {
+        return FwMarkSchema.optional()
+      },
+      reuse_addr: z.boolean().optional(),
+      netns: z.string().optional(),
+      connect_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+      tcp_fast_open: z.boolean().optional(),
+      tcp_multi_path: z.boolean().optional(),
+      disable_tcp_keep_alive: z.boolean().optional(),
+      tcp_keep_alive: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+      tcp_keep_alive_interval: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+      udp_fragment: z.boolean().optional(),
+      get domain_resolver() {
+        return DomainResolveOptionsSchema.optional()
+      },
+      get network_strategy() {
+        return NetworkStrategySchema.optional()
+      },
+      get network_type() {
+        return z.union([
+          InterfaceTypeSchema,
+          z.array(InterfaceTypeSchema),
+        ]).optional()
+      },
+      get fallback_network_type() {
+        return z.union([
+          InterfaceTypeSchema,
+          z.array(InterfaceTypeSchema),
+        ]).optional()
+      },
+      fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+      /** Deprecated: migrated to domain resolver */
+      get domain_strategy() {
+        return DomainStrategySchema.optional()
+      },
     }),
     z.strictObject({
       version: z.literal(2).optional(),
@@ -2264,6 +2376,50 @@ export const HTTPClientOptionsSchema = z.union([
         z.string(),
         z.array(z.string()),
       ])).optional(),
+      get tls() {
+        return OutboundTLSOptionsSchema.optional()
+      },
+      detour: z.string().optional(),
+      bind_interface: z.string().optional(),
+      inet4_bind_address: z.string().optional(),
+      inet6_bind_address: z.string().optional(),
+      bind_address_no_port: z.boolean().optional(),
+      protect_path: z.string().optional(),
+      get routing_mark() {
+        return FwMarkSchema.optional()
+      },
+      reuse_addr: z.boolean().optional(),
+      netns: z.string().optional(),
+      connect_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+      tcp_fast_open: z.boolean().optional(),
+      tcp_multi_path: z.boolean().optional(),
+      disable_tcp_keep_alive: z.boolean().optional(),
+      tcp_keep_alive: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+      tcp_keep_alive_interval: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+      udp_fragment: z.boolean().optional(),
+      get domain_resolver() {
+        return DomainResolveOptionsSchema.optional()
+      },
+      get network_strategy() {
+        return NetworkStrategySchema.optional()
+      },
+      get network_type() {
+        return z.union([
+          InterfaceTypeSchema,
+          z.array(InterfaceTypeSchema),
+        ]).optional()
+      },
+      get fallback_network_type() {
+        return z.union([
+          InterfaceTypeSchema,
+          z.array(InterfaceTypeSchema),
+        ]).optional()
+      },
+      fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+      /** Deprecated: migrated to domain resolver */
+      get domain_strategy() {
+        return DomainStrategySchema.optional()
+      },
       idle_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
       keep_alive_period: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
       stream_receive_window: z.union([
@@ -2285,6 +2441,50 @@ export const HTTPClientOptionsSchema = z.union([
         z.string(),
         z.array(z.string()),
       ])).optional(),
+      get tls() {
+        return OutboundTLSOptionsSchema.optional()
+      },
+      detour: z.string().optional(),
+      bind_interface: z.string().optional(),
+      inet4_bind_address: z.string().optional(),
+      inet6_bind_address: z.string().optional(),
+      bind_address_no_port: z.boolean().optional(),
+      protect_path: z.string().optional(),
+      get routing_mark() {
+        return FwMarkSchema.optional()
+      },
+      reuse_addr: z.boolean().optional(),
+      netns: z.string().optional(),
+      connect_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+      tcp_fast_open: z.boolean().optional(),
+      tcp_multi_path: z.boolean().optional(),
+      disable_tcp_keep_alive: z.boolean().optional(),
+      tcp_keep_alive: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+      tcp_keep_alive_interval: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+      udp_fragment: z.boolean().optional(),
+      get domain_resolver() {
+        return DomainResolveOptionsSchema.optional()
+      },
+      get network_strategy() {
+        return NetworkStrategySchema.optional()
+      },
+      get network_type() {
+        return z.union([
+          InterfaceTypeSchema,
+          z.array(InterfaceTypeSchema),
+        ]).optional()
+      },
+      get fallback_network_type() {
+        return z.union([
+          InterfaceTypeSchema,
+          z.array(InterfaceTypeSchema),
+        ]).optional()
+      },
+      fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+      /** Deprecated: migrated to domain resolver */
+      get domain_strategy() {
+        return DomainStrategySchema.optional()
+      },
       idle_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
       keep_alive_period: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
       stream_receive_window: z.union([
@@ -2312,6 +2512,50 @@ export const HTTPClientSchema = z.union([
       z.string(),
       z.array(z.string()),
     ])).optional(),
+    get tls() {
+      return OutboundTLSOptionsSchema.optional()
+    },
+    detour: z.string().optional(),
+    bind_interface: z.string().optional(),
+    inet4_bind_address: z.string().optional(),
+    inet6_bind_address: z.string().optional(),
+    bind_address_no_port: z.boolean().optional(),
+    protect_path: z.string().optional(),
+    get routing_mark() {
+      return FwMarkSchema.optional()
+    },
+    reuse_addr: z.boolean().optional(),
+    netns: z.string().optional(),
+    connect_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+    tcp_fast_open: z.boolean().optional(),
+    tcp_multi_path: z.boolean().optional(),
+    disable_tcp_keep_alive: z.boolean().optional(),
+    tcp_keep_alive: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+    tcp_keep_alive_interval: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+    udp_fragment: z.boolean().optional(),
+    get domain_resolver() {
+      return DomainResolveOptionsSchema.optional()
+    },
+    get network_strategy() {
+      return NetworkStrategySchema.optional()
+    },
+    get network_type() {
+      return z.union([
+        InterfaceTypeSchema,
+        z.array(InterfaceTypeSchema),
+      ]).optional()
+    },
+    get fallback_network_type() {
+      return z.union([
+        InterfaceTypeSchema,
+        z.array(InterfaceTypeSchema),
+      ]).optional()
+    },
+    fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+    /** Deprecated: migrated to domain resolver */
+    get domain_strategy() {
+      return DomainStrategySchema.optional()
+    },
     idle_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
     keep_alive_period: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
     stream_receive_window: z.union([
@@ -2333,6 +2577,50 @@ export const HTTPClientSchema = z.union([
       z.string(),
       z.array(z.string()),
     ])).optional(),
+    get tls() {
+      return OutboundTLSOptionsSchema.optional()
+    },
+    detour: z.string().optional(),
+    bind_interface: z.string().optional(),
+    inet4_bind_address: z.string().optional(),
+    inet6_bind_address: z.string().optional(),
+    bind_address_no_port: z.boolean().optional(),
+    protect_path: z.string().optional(),
+    get routing_mark() {
+      return FwMarkSchema.optional()
+    },
+    reuse_addr: z.boolean().optional(),
+    netns: z.string().optional(),
+    connect_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+    tcp_fast_open: z.boolean().optional(),
+    tcp_multi_path: z.boolean().optional(),
+    disable_tcp_keep_alive: z.boolean().optional(),
+    tcp_keep_alive: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+    tcp_keep_alive_interval: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+    udp_fragment: z.boolean().optional(),
+    get domain_resolver() {
+      return DomainResolveOptionsSchema.optional()
+    },
+    get network_strategy() {
+      return NetworkStrategySchema.optional()
+    },
+    get network_type() {
+      return z.union([
+        InterfaceTypeSchema,
+        z.array(InterfaceTypeSchema),
+      ]).optional()
+    },
+    get fallback_network_type() {
+      return z.union([
+        InterfaceTypeSchema,
+        z.array(InterfaceTypeSchema),
+      ]).optional()
+    },
+    fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+    /** Deprecated: migrated to domain resolver */
+    get domain_strategy() {
+      return DomainStrategySchema.optional()
+    },
   }),
   z.strictObject({
     version: z.literal(2).optional(),
@@ -2343,6 +2631,50 @@ export const HTTPClientSchema = z.union([
       z.string(),
       z.array(z.string()),
     ])).optional(),
+    get tls() {
+      return OutboundTLSOptionsSchema.optional()
+    },
+    detour: z.string().optional(),
+    bind_interface: z.string().optional(),
+    inet4_bind_address: z.string().optional(),
+    inet6_bind_address: z.string().optional(),
+    bind_address_no_port: z.boolean().optional(),
+    protect_path: z.string().optional(),
+    get routing_mark() {
+      return FwMarkSchema.optional()
+    },
+    reuse_addr: z.boolean().optional(),
+    netns: z.string().optional(),
+    connect_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+    tcp_fast_open: z.boolean().optional(),
+    tcp_multi_path: z.boolean().optional(),
+    disable_tcp_keep_alive: z.boolean().optional(),
+    tcp_keep_alive: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+    tcp_keep_alive_interval: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+    udp_fragment: z.boolean().optional(),
+    get domain_resolver() {
+      return DomainResolveOptionsSchema.optional()
+    },
+    get network_strategy() {
+      return NetworkStrategySchema.optional()
+    },
+    get network_type() {
+      return z.union([
+        InterfaceTypeSchema,
+        z.array(InterfaceTypeSchema),
+      ]).optional()
+    },
+    get fallback_network_type() {
+      return z.union([
+        InterfaceTypeSchema,
+        z.array(InterfaceTypeSchema),
+      ]).optional()
+    },
+    fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+    /** Deprecated: migrated to domain resolver */
+    get domain_strategy() {
+      return DomainStrategySchema.optional()
+    },
     idle_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
     keep_alive_period: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
     stream_receive_window: z.union([
@@ -2364,6 +2696,50 @@ export const HTTPClientSchema = z.union([
       z.string(),
       z.array(z.string()),
     ])).optional(),
+    get tls() {
+      return OutboundTLSOptionsSchema.optional()
+    },
+    detour: z.string().optional(),
+    bind_interface: z.string().optional(),
+    inet4_bind_address: z.string().optional(),
+    inet6_bind_address: z.string().optional(),
+    bind_address_no_port: z.boolean().optional(),
+    protect_path: z.string().optional(),
+    get routing_mark() {
+      return FwMarkSchema.optional()
+    },
+    reuse_addr: z.boolean().optional(),
+    netns: z.string().optional(),
+    connect_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+    tcp_fast_open: z.boolean().optional(),
+    tcp_multi_path: z.boolean().optional(),
+    disable_tcp_keep_alive: z.boolean().optional(),
+    tcp_keep_alive: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+    tcp_keep_alive_interval: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+    udp_fragment: z.boolean().optional(),
+    get domain_resolver() {
+      return DomainResolveOptionsSchema.optional()
+    },
+    get network_strategy() {
+      return NetworkStrategySchema.optional()
+    },
+    get network_type() {
+      return z.union([
+        InterfaceTypeSchema,
+        z.array(InterfaceTypeSchema),
+      ]).optional()
+    },
+    get fallback_network_type() {
+      return z.union([
+        InterfaceTypeSchema,
+        z.array(InterfaceTypeSchema),
+      ]).optional()
+    },
+    fallback_delay: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
+    /** Deprecated: migrated to domain resolver */
+    get domain_strategy() {
+      return DomainStrategySchema.optional()
+    },
     idle_timeout: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
     keep_alive_period: z.string().regex(/^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/).optional(),
     stream_receive_window: z.union([

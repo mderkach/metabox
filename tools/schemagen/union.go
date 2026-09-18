@@ -23,7 +23,7 @@ func (w *walker) registryUnion(group registryGroup, shadow reflect.Type) *schema
 			name:   "type",
 			schema: scalar(fmt.Sprintf("z.literal(%q)", entry.key)),
 		})
-		w.appendCommonFields(body, shadow, "type")
+		w.appendCommonFields(body, shadow, "type", group.name+":"+entry.key)
 
 		payload := entry.typ
 		for payload.Kind() == reflect.Pointer {

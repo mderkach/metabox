@@ -42,7 +42,7 @@ func (w *walker) taggedUnion(t reflect.Type, spec taggedSpec, path string) *sche
 			schema:   scalar(literalOf(option.tag, spec.numeric)),
 			optional: discrOptional,
 		})
-		w.appendCommonFields(body, t, spec.discr)
+		w.appendCommonFields(body, t, spec.discr, path)
 
 		if option.field == "" {
 			out.variants = append(out.variants, variant{body})
@@ -72,21 +72,22 @@ func literalOf(tag string, numeric bool) string {
 
 // appendCommonFields переносит поля, общие для всех вариантов union'а: сам
 // дискриминатор и поля вариантов (json:"-") пропускаются.
-func (w *walker) appendCommonFields(out *schema, t reflect.Type, discr string) {
-	for i := range t.NumField() {
-		f := t.Field(i)
-		if f.PkgPath != "" {
+//
+// Обход тот же, что у обычной структуры: встроенные поля форк кладёт в JSON
+// плоско, и своя укороченная копия обхода теряла бы их целиком — у встроенного
+// поля нет тега json, и по имени оно не отбирается.
+func (w *walker) appendCommonFields(out *schema, t reflect.Type, discr, path string) {
+	common := &schema{kind: kindObject}
+
+	if unions := w.appendFields(common, t, path); len(unions) > 0 {
+		panic(fmt.Sprintf("schemagen: %s: встроенный union внутри union'а по %q", goTypeName(t), discr))
+	}
+
+	for _, f := range dedupe(common.fields) {
+		if f.name == discr {
 			continue
 		}
-		name, _, _ := strings.Cut(f.Tag.Get("json"), ",")
-		if name == "" || name == "-" || name == discr {
-			continue
-		}
-		out.fields = append(out.fields, field{
-			name:     name,
-			schema:   w.build(f.Type, name),
-			optional: true,
-		})
+		out.fields = append(out.fields, f)
 	}
 }
 

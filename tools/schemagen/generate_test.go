@@ -50,6 +50,47 @@ func TestGenerateCarriesDocs(t *testing.T) {
 	}
 }
 
+// Встроенные структуры уплощаются и внутри union'а по дискриминатору. У
+// клиента HTTP настройки набора соединения и TLS приходят встраиванием, и без
+// них строгая схема отвергала бы конфиг с `http_client.detour`, а панель
+// помечала бы такой узел как непокрытый (ADR-0018).
+func TestGenerateFlattensEmbeddedInTaggedUnion(t *testing.T) {
+	out, err := generate()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	body := schemaBody(t, out, "HTTPClientSchema")
+
+	for _, want := range []string{"detour:", "bind_interface:", "get tls()"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("в HTTPClientSchema нет %q: встроенные поля потеряны", want)
+		}
+	}
+}
+
+// schemaBody вырезает объявление схемы по имени: искать подстроку по всему
+// файлу бессмысленно — те же поля есть у десятков других типов.
+func schemaBody(t *testing.T, out, name string) string {
+	t.Helper()
+
+	const marker = "\nexport const "
+
+	start := strings.Index(out, marker+name+" = ")
+	if start == -1 {
+		t.Fatalf("в схеме нет %s", name)
+	}
+
+	rest := out[start+len(marker):]
+
+	end := strings.Index(rest, marker)
+	if end == -1 {
+		return rest
+	}
+
+	return rest[:end]
+}
+
 // Генерация должна быть детерминированной: иначе make schema даёт разный
 // файл на одном и том же форке и diff перестаёт что-либо значить.
 func TestGenerateIsStable(t *testing.T) {
