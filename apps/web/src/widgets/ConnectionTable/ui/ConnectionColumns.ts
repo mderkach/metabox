@@ -46,6 +46,12 @@ export const CONNECTION_FIELD = {
 
 export type ConnectionField = (typeof CONNECTION_FIELD)[keyof typeof CONNECTION_FIELD];
 
+export interface ConnectionCellProps {
+  connection: ConnectionRow;
+  /** Момент отсчёта давности. Снаружи, иначе строка врала бы про свежесть. */
+  now: number;
+}
+
 /** Видимая колонка в том виде, в каком её рисует строка. */
 export interface ConnectionCell {
   id: ConnectionField;
