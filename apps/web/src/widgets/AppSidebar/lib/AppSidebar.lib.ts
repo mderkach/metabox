@@ -1,18 +1,12 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { z } from 'zod';
+
+import { matchNarrow, useNarrowScreen } from '@shared/lib/media';
 
 const STORAGE_KEY = 'metabox.sidebar.collapsed';
 
 /** Хранилище отдаёт строку, и она может быть чем угодно: ключ переживает версии панели. */
 const StoredCollapsedSchema = z.enum(['true', 'false']);
-
-/** Ширина, ниже которой развёрнутая панель съедает половину экрана. */
-const NARROW_SCREEN = '(max-width: 48rem)';
-
-/** В jsdom `matchMedia` нет вовсе, поэтому наличие функции проверяется. */
-function matchNarrow(): boolean {
-  return typeof globalThis.matchMedia === 'function' && globalThis.matchMedia(NARROW_SCREEN).matches;
-}
 
 /** В приватном окне обращение к хранилищу бросает. */
 function readCollapsed(): boolean {
@@ -35,35 +29,6 @@ function writeCollapsed(collapsed: boolean) {
   } catch {
     // Не сохранилось — панель вернётся к развёрнутому виду.
   }
-}
-
-/**
- * Узкий экран следится подпиской, а не одним замером на старте: сохранённый
- * выбор «развёрнуто» иначе переживал бы поворот телефона и оставлял под
- * содержимое полторы сотни пикселей.
- */
-function useNarrowScreen(): boolean {
-  const [narrow, setNarrow] = useState(matchNarrow);
-
-  useEffect(function watchWidth() {
-    if (typeof globalThis.matchMedia !== 'function') {
-      return;
-    }
-
-    const query = globalThis.matchMedia(NARROW_SCREEN);
-
-    function syncNarrow(event: MediaQueryListEvent) {
-      setNarrow(event.matches);
-    }
-
-    query.addEventListener('change', syncNarrow);
-
-    return function stopWatchingWidth() {
-      query.removeEventListener('change', syncNarrow);
-    };
-  }, []);
-
-  return narrow;
 }
 
 /**

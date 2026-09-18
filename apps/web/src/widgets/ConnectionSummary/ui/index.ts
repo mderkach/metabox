@@ -1,4 +1,4 @@
 export { ConnectionSummaryNetwork } from './ConnectionSummaryNetwork';
-export { ConnectionSummaryOutcome } from './ConnectionSummaryOutcome';
+export { ConnectionSummaryAction } from './ConnectionSummaryAction';
 export { ConnectionSummaryTop } from './ConnectionSummaryTop';
 export { ConnectionSummaryVolume } from './ConnectionSummaryVolume';

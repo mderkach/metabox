@@ -1,5 +1,5 @@
 import { setupWorker } from 'msw/browser';
 
-import { missingHandlers } from '../src/test/handlers';
+import { createMissingHandlers } from '../src/test/handlers';
 
-export const worker = setupWorker(...missingHandlers);
+export const worker = setupWorker(...createMissingHandlers(__METABOX_MOCK_CONNECTIONS__));

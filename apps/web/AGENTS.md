@@ -12,6 +12,7 @@
 | создавать или менять стор, селектор, любой код состояния  | [StateManagement.md](./docs/guides/StateManagement.md)                                                     |
 | писать fetch-функцию, query-ключ, хук запроса или мутацию | [Query.md](./docs/guides/Query.md)                                                                         |
 | писать форму или Zod-схему                                | [Form&Validation.md](./docs/guides/Form&Validation.md)                                                     |
+| создавать или менять список, таблицу, её колонки и отбор  | [Tables.md](./docs/guides/Tables.md)                                                                       |
 | писать или править тесты                                  | [UnitTesting.md](./docs/guides/UnitTesting.md)                                                             |
 | сдавать фронтовую правку                                  | [ReviewChecklist.md](./docs/guides/ReviewChecklist.md) — пройти по чеклисту                                |
 

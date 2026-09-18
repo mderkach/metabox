@@ -17,7 +17,7 @@ import { Card, CardContent, CardHeader } from '@shared/ui';
 import { ConnectionHistory } from '@widgets/ConnectionHistory';
 import {
   ConnectionSummaryNetwork,
-  ConnectionSummaryOutcome,
+  ConnectionSummaryAction,
   ConnectionSummaryTop,
   ConnectionSummaryVolume,
 } from '@widgets/ConnectionSummary';
@@ -157,7 +157,7 @@ export function OverviewPage() {
             </Card>
 
             <ConnectionHistory samples={runtime.history} />
-            <ConnectionSummaryOutcome shares={runtime.summary.outcomes} />
+            <ConnectionSummaryAction shares={runtime.summary.actions} />
             <ConnectionSummaryNetwork shares={runtime.summary.networks} />
           </div>
 

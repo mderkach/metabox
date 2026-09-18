@@ -67,19 +67,19 @@ function byLoad(left: ConnectionShare, right: ConnectionShare): number {
  * отдаёт только плоский список соединений.
  */
 function toSummary(rows: ConnectionRow[]): ConnectionSummary {
-  const outcomes = new Map<RouteKind, ConnectionShare<RouteKind>>();
+  const actions = new Map<RouteKind, ConnectionShare<RouteKind>>();
   const networks = new Map<string, ConnectionShare>();
   const nodes = new Map<string, ConnectionShare>();
   const sources = new Map<string, ConnectionShare>();
 
   for (const row of rows) {
     const rate = row.downRate + row.upRate;
-    const kind = toRouteKind(row.outcome, row.chain);
+    const kind = toRouteKind(row.action, row.chain);
     // Конец цепочки — узел, через который соединение вышло наружу; начало —
     // группа, которая его выбрала.
     const node = row.chain.at(-1);
 
-    add(outcomes, kind, rate);
+    add(actions, kind, rate);
     add(networks, row.network, rate);
     add(sources, row.source, rate);
 
@@ -89,7 +89,7 @@ function toSummary(rows: ConnectionRow[]): ConnectionSummary {
   }
 
   return {
-    outcomes: [...outcomes.values()].sort(byLoad),
+    actions: [...actions.values()].sort(byLoad),
     networks: [...networks.values()].sort(byLoad),
     nodes: [...nodes.values()].sort(byLoad).slice(0, TOP_LIMIT),
     sources: [...sources.values()].sort(byLoad).slice(0, TOP_LIMIT),

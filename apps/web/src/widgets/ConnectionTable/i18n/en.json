@@ -1,11 +1,29 @@
 {
   "label": "Connections",
   "column": {
-    "host": "Host and source",
-    "route": "Rule, outcome and chain",
-    "traffic": "Rate and volume",
-    "age": "Duration",
-    "action": "Action"
+    "source": "From",
+    "host": "To",
+    "network": "Network",
+    "rule": "Rule",
+    "action": "Action",
+    "chain": "Chain",
+    "rate": "Rate",
+    "volume": "Volume",
+    "age": "Time",
+    "rowActions": "Row actions"
+  },
+  "fields": {
+    "title": "Fields to show",
+    "label": "Fields",
+    "always": "always",
+    "reset": "Default",
+    "hidden_one": "Fields · {{count}} hidden",
+    "hidden_other": "Fields · {{count}} hidden"
+  },
+  "footer": {
+    "rows_one": "{{count}} connection",
+    "rows_other": "{{count}} connections",
+    "shown": "Showing {{shown}} of {{total}}"
   },
   "row": {
     "explain": "Why connection {{host}} took this route",

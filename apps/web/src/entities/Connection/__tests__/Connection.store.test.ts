@@ -7,7 +7,7 @@ import { SECONDS_IN_MINUTE } from '@shared/lib/time';
 import { listenConnections } from '../api/Connection.api';
 import type { ConnectionWire } from '../api/Connection.schema';
 import { toConnectionRow } from '../model/Connection.adapter';
-import { CLOSED_LIMIT, FINAL_OUTCOME, TOP_LIMIT } from '../model/Connection.model';
+import { CLOSED_LIMIT, FINAL_ACTION, TOP_LIMIT } from '../model/Connection.model';
 import { ConnectionStore } from '../model/Connection.store';
 import { CONNECTIONS_FIXTURE, makeConnectionsSnapshot } from './Connection.fixture';
 
@@ -170,13 +170,13 @@ describe('строка соединения', () => {
     const row = toConnectionRow({ ...base, rule: '', action: '', final: true }, NO_RATE);
 
     expect(row.rule).toBe('');
-    expect(row.outcome).toBe(FINAL_OUTCOME);
+    expect(row.action).toBe(FINAL_ACTION);
   });
 
   it('правило без условий исходом по умолчанию не считает', () => {
     const row = toConnectionRow({ ...base, rule: '', action: 'route(direct)', final: false }, NO_RATE);
 
-    expect(row.outcome).toBe('route(direct)');
+    expect(row.action).toBe('route(direct)');
   });
 
   it('цепочку переворачивает в порядок чтения человеком', () => {
@@ -222,7 +222,7 @@ describe('сводка и история снапшота', () => {
     store.apply(CONNECTIONS_FIXTURE);
 
     const { summary, active } = ConnectionStore.getState();
-    const counted = summary.outcomes.reduce((sum, share) => sum + share.count, 0);
+    const counted = summary.actions.reduce((sum, share) => sum + share.count, 0);
 
     expect(counted).toBe(active.length);
     expect(summary.sources.length).toBeGreaterThan(0);
@@ -235,7 +235,7 @@ describe('сводка и история снапшота', () => {
     store.apply(CONNECTIONS_FIXTURE);
 
     const { summary, active } = ConnectionStore.getState();
-    const proxied = active.filter((row) => row.outcome.includes('route(') && !row.outcome.includes('direct'));
+    const proxied = active.filter((row) => row.action.includes('route(') && !row.action.includes('direct'));
 
     expect(summary.nodes.map((share) => share.key)).toEqual(
       expect.arrayContaining(proxied.map((row) => row.chain.at(-1)))
@@ -265,6 +265,6 @@ describe('сводка и история снапшота', () => {
     ConnectionStore.getState().reset();
 
     expect(ConnectionStore.getState().history).toEqual([]);
-    expect(ConnectionStore.getState().summary.outcomes).toEqual([]);
+    expect(ConnectionStore.getState().summary.actions).toEqual([]);
   });
 });

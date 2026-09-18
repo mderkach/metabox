@@ -144,13 +144,36 @@ export const CONNECTIONS_FIXTURE: ConnectionsSnapshotWire = {
  * Снапшот произвольного размера для проверки NFR-2: соединения размножаются из
  * образцов, а не хранятся файлом. Размножается именно снапшот целиком — поток
  * отдаёт полный список, и разбор этого списка и есть стоимость.
+ *
+ * `vary` разводит хост, устройство и счётчики по индексу. Без него все копии
+ * одного образца совпадают, и отбор с сортировкой работают на восьми разных
+ * значениях — для замера разбора это неважно, а для ручной проверки списка под
+ * нагрузкой даёт неправдоподобно однородную картину. Тесты зовут генератор без
+ * него, чтобы не зависеть от распределения.
  */
-export function makeConnectionsSnapshot(count: number): ConnectionsSnapshotWire {
+export function makeConnectionsSnapshot(count: number, { vary = false } = {}): ConnectionsSnapshotWire {
   const connections = Array.from({ length: count }, (_, index) => {
     const sample = CONNECTIONS[index % CONNECTIONS.length];
+    const copy = { ...sample, id: `${sample.id}-${String(index)}` };
 
-    return { ...sample, id: `${sample.id}-${String(index)}` };
+    if (!vary) {
+      return copy;
+    }
+
+    const [name] = sample.host.split(':');
+
+    return {
+      ...copy,
+      host: `${name}-${String(index % VARIED_HOSTS)}:${PORT}`,
+      source: `192.168.1.${String((index % VARIED_DEVICES) + 2)}`,
+      upload: sample.upload + index,
+      download: sample.download + index * 3,
+    };
   });
 
   return { ...CONNECTIONS_FIXTURE, connections };
 }
+
+/** Сколько разных имён и устройств разводит `vary`: у домашнего роутера столько и бывает. */
+const VARIED_HOSTS = 64;
+const VARIED_DEVICES = 24;

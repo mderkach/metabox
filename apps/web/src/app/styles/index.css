@@ -157,7 +157,7 @@
   --color-selected: var(--selected);
   --color-selected-edge: var(--selected-edge);
 
-  /* Исход маршрута: три разных судьбы пакета (ADR-0013). */
+  /* Действие правила: разные судьбы пакета (ADR-0013). */
   --color-route-direct: var(--route-direct);
   --color-route-proxy: var(--route-proxy);
   --color-route-block: var(--route-block);
@@ -177,7 +177,7 @@
   /* Дорожка шкалы: поверхность, а не альфа поверх фона (ADR-0013). */
   --color-meter-track: var(--meter-track);
 
-  /* Подсветка JSON: своя группа, чтобы правка тона исхода её не задевала. */
+  /* Подсветка JSON: своя группа, чтобы правка тона действия её не задевала. */
   --color-code-string: var(--code-string);
   --color-code-number: var(--code-number);
   --color-code-literal: var(--code-literal);

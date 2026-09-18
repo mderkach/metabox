@@ -6,6 +6,7 @@
 | [Управление состоянием](./guides/StateManagement.md)      | Zustand + immer: зона ответственности, `stateCreator`, селекторы, запреты                            |
 | [Работа с запросами](./guides/Query.md)                   | TanStack Query: fetch-функции, фабрики ключей и опций, `meta`, инвалидация, поток рантайма мимо кэша |
 | [Формы и валидация](./guides/Form&Validation.md)          | React Hook Form + Zod, ограничения путей полей, схемы-адаптеры, генерируемые схемы                   |
+| [Списки и таблицы](./guides/Tables.md)                    | Движок таблиц, анатомия списка, виртуализация, сортировка, фильтры, плотность, состояния             |
 | [Тестирование](./guides/UnitTesting.md)                   | Vitest + Testing Library, моки, golden round-trip, покрытие                                          |
 | [Чеклист код-ревью](./guides/ReviewChecklist.md)          | Сводный проверяемый список правил                                                                    |
 

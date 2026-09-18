@@ -15,7 +15,7 @@
   },
   "final": {
     "title": "No rule matched",
-    "description": "The traffic went to <code>route.final</code> — the default outcome, not a missed rule."
+    "description": "The traffic went to <code>route.final</code> — the default action, not a missed rule."
   },
   "unknown": {
     "title": "The rule is undetermined",

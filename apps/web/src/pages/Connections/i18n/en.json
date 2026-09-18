@@ -20,5 +20,9 @@
   "closedNote": "Closed connections are collected by the panel: sing-box reports only live ones, so a connection that disappears between updates would otherwise vanish without a trace. The history lives while the tab is open.",
   "notFound": "Nothing matches this query.",
   "resetFilter": "Reset the filter",
-  "empty": "No connections. The stream is running: rows appear as soon as traffic goes through sing-box."
+  "empty": "No connections. The stream is running: rows appear as soon as traffic goes through sing-box.",
+  "export": {
+    "csv": "Export CSV",
+    "json": "Export JSON"
+  }
 }

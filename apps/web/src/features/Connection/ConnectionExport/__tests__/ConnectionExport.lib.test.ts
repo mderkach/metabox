@@ -11,7 +11,7 @@ function makeRow(overrides: Partial<ConnectionRow> = {}): ConnectionRow {
     network: 'tcp',
     source: '192.168.1.60',
     rule: 'rule_set=anthropic',
-    outcome: 'route(us-west-fallback)',
+    action: 'route(us-west-fallback)',
     chain: ['us-west-fallback', 'us-west'],
     upload: 2048,
     download: 4096,
@@ -27,7 +27,7 @@ describe('выгрузка соединений', () => {
   it('CSV начинается с шапки колонок', () => {
     const [header] = toExportBody([makeRow()], EXPORT_FORMAT.Csv).split('\n');
 
-    expect(header).toBe('host,source,network,rule,outcome,chain,download,upload,downRate,upRate,startedAt');
+    expect(header).toBe('host,source,network,rule,action,chain,download,upload,downRate,upRate,startedAt');
   });
 
   it('CSV пишет строку данных под шапкой', () => {

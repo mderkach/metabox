@@ -9,7 +9,7 @@
     "label": "Search the rules"
   },
   "targets": {
-    "label": "Rule outcomes",
+    "label": "Rule actions",
     "collapse": "Collapse",
     "more": "{{count}} more"
   },

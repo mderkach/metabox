@@ -6,8 +6,8 @@ export interface ConnectionRow {
   source: string;
   /** Условия сработавшего правила: у безусловного правила пусто. */
   rule: string;
-  /** Исход правила: `route(proxy)`, `hijack-dns`, `sniff`. */
-  outcome: string;
+  /** Действие правила, словом sing-box: `route(proxy)`, `hijack-dns`, `sniff`. */
+  action: string;
   /** Цепочка в порядке чтения человеком: группа → узел. */
   chain: string[];
   upload: number;
@@ -36,11 +36,11 @@ export interface ConnectionTotals {
   memory: number;
 }
 
-/** Исход соединения, не совпавшего ни с одним правилом: узел `route.final`. */
-export const FINAL_OUTCOME = 'route.final';
+/** Действие для соединения, не совпавшего ни с одним правилом: узел `route.final`. */
+export const FINAL_ACTION = 'route.final';
 
 /**
- * Судьба пакета. Рантайм отдаёт исход строкой (`route(direct)`, `hijack-dns`,
+ * Судьба пакета. Рантайм отдаёт действие строкой (`route(direct)`, `hijack-dns`,
  * `sniff`), и новый вид узла добавляется записью в таблицу ниже, а не веткой
  * условия.
  */
@@ -55,7 +55,7 @@ export const ROUTE_KIND = {
 export type RouteKind = (typeof ROUTE_KIND)[keyof typeof ROUTE_KIND];
 
 /** Порядок значим: проверка идёт до первого совпадения, `block` стоит раньше общего `route(`. */
-const OUTCOME_KINDS: readonly { match: string; kind: RouteKind }[] = [
+const ACTION_KINDS: readonly { match: string; kind: RouteKind }[] = [
   { match: 'direct', kind: ROUTE_KIND.Direct },
   { match: 'block', kind: ROUTE_KIND.Block },
   { match: 'reject', kind: ROUTE_KIND.Block },
@@ -67,18 +67,18 @@ const OUTCOME_KINDS: readonly { match: string; kind: RouteKind }[] = [
 const DIRECT_NODE = 'direct';
 
 /**
- * Исход соединения. У `route.final` условий нет и по строке исход не читается —
+ * Действие соединения. У `route.final` условий нет и по строке действие не читается —
  * там судьбу показывает цепочка: она наблюдаема так же, как правило (ADR-0007).
  */
-export function toRouteKind(outcome: string, chain: readonly string[] = []): RouteKind {
-  const lower = outcome.toLowerCase();
-  const matched = OUTCOME_KINDS.find((entry) => lower.includes(entry.match));
+export function toRouteKind(action: string, chain: readonly string[] = []): RouteKind {
+  const lower = action.toLowerCase();
+  const matched = ACTION_KINDS.find((entry) => lower.includes(entry.match));
 
   if (matched !== undefined) {
     return matched.kind;
   }
 
-  if (outcome !== FINAL_OUTCOME || chain.length === 0) {
+  if (action !== FINAL_ACTION || chain.length === 0) {
     return ROUTE_KIND.Other;
   }
 
@@ -87,7 +87,7 @@ export function toRouteKind(outcome: string, chain: readonly string[] = []): Rou
 
 /** Доля сводки: сколько соединений и сколько канала на них приходится. */
 export interface ConnectionShare<Key extends string = string> {
-  /** Ключ группы — исход, тип сети, узел цепочки или адрес устройства. */
+  /** Ключ группы — действие, тип сети, узел цепочки или адрес устройства. */
   key: Key;
   count: number;
   /** Байт в секунду, входящий и исходящий вместе. */
@@ -96,7 +96,7 @@ export interface ConnectionShare<Key extends string = string> {
 
 /** Сводка живого снапшота: то, что панели показывают вместо списка. */
 export interface ConnectionSummary {
-  outcomes: ConnectionShare<RouteKind>[];
+  actions: ConnectionShare<RouteKind>[];
   networks: ConnectionShare[];
   /** Конечные узлы цепочки, самые быстрые первыми. */
   nodes: ConnectionShare[];
@@ -104,7 +104,7 @@ export interface ConnectionSummary {
   sources: ConnectionShare[];
 }
 
-export const EMPTY_SUMMARY: ConnectionSummary = { outcomes: [], networks: [], nodes: [], sources: [] };
+export const EMPTY_SUMMARY: ConnectionSummary = { actions: [], networks: [], nodes: [], sources: [] };
 
 /** Сколько групп показывает столбчатая сводка: дальше идёт хвост из единиц. */
 export const TOP_LIMIT = 5;

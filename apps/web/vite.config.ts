@@ -22,6 +22,10 @@ const WORKER_PATH = '/mockServiceWorker.js';
  * только на дев-сервере: `apply: 'serve'` не даёт плагину участвовать в сборке,
  * поэтому подменённого входа в `dist` не бывает.
  *
+ * `METABOX_MOCK_CONNECTIONS=<число>` раздувает снапшот соединений до указанного
+ * размера: панель обязана держать пять тысяч живых соединений (NFR-2), и
+ * проверить это руками больше нечем — на стенде столько трафика не бывает.
+ *
  * Скрипт воркера отдаётся из `node_modules`, а не кладётся в `public/`: файл в
  * `public/` уехал бы в `dist`, а оттуда через `go:embed` — в бинарь демона.
  */
@@ -35,7 +39,12 @@ function metaboxMocks(): Plugin | false {
   return {
     name: 'metabox-mocks',
     apply: 'serve',
-    config: () => ({ define: { __METABOX_MOCK__: JSON.stringify(mode) } }),
+    config: () => ({
+      define: {
+        __METABOX_MOCK__: JSON.stringify(mode),
+        __METABOX_MOCK_CONNECTIONS__: JSON.stringify(Number(process.env.METABOX_MOCK_CONNECTIONS ?? 0)),
+      },
+    }),
     configureServer(server) {
       const require = createRequire(import.meta.url);
       const worker = path.join(path.dirname(require.resolve('msw/package.json')), 'lib/mockServiceWorker.js');

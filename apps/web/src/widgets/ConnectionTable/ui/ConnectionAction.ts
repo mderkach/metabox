@@ -13,6 +13,6 @@ const KIND_TONES: Readonly<Record<RouteKind, string>> = {
   [ROUTE_KIND.Other]: 'text-route-neutral',
 };
 
-export function toOutcomeTone(outcome: string): string {
-  return KIND_TONES[toRouteKind(outcome)];
+export function toActionTone(action: string): string {
+  return KIND_TONES[toRouteKind(action)];
 }

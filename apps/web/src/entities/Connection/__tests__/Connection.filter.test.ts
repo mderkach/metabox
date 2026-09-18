@@ -10,7 +10,7 @@ function makeRow(overrides: Partial<ConnectionRow> = {}): ConnectionRow {
     network: 'tcp',
     source: '192.168.1.60',
     rule: 'rule_set=anthropic',
-    outcome: 'route(us-west-fallback)',
+    action: 'route(us-west-fallback)',
     chain: ['us-west-fallback', 'us-west', 'sub-us/USA'],
     upload: 0,
     download: 0,
@@ -26,7 +26,7 @@ function makeRow(overrides: Partial<ConnectionRow> = {}): ConnectionRow {
 function withSearchText(row: ConnectionRow): ConnectionRow {
   return {
     ...row,
-    searchText: [row.host, row.source, row.network, row.rule, row.outcome, ...row.chain].join(' ').toLowerCase(),
+    searchText: [row.host, row.source, row.network, row.rule, row.action, ...row.chain].join(' ').toLowerCase(),
   };
 }
 

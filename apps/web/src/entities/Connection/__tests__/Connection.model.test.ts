@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { FINAL_OUTCOME, ROUTE_KIND, toRouteKind } from '../model/Connection.model';
+import { FINAL_ACTION, ROUTE_KIND, toRouteKind } from '../model/Connection.model';
 
 describe('toRouteKind', () => {
   it('читает исход по подстроке рантайма', () => {
@@ -16,12 +16,12 @@ describe('toRouteKind', () => {
 
   // ADR-0007: у соединения без правила условий нет, и судьбу показывает цепочка.
   it('у соединения без правила исход читает по цепочке', () => {
-    expect(toRouteKind(FINAL_OUTCOME, ['direct'])).toBe(ROUTE_KIND.Direct);
-    expect(toRouteKind(FINAL_OUTCOME, ['proxy', 'sub/node'])).toBe(ROUTE_KIND.Proxy);
+    expect(toRouteKind(FINAL_ACTION, ['direct'])).toBe(ROUTE_KIND.Direct);
+    expect(toRouteKind(FINAL_ACTION, ['proxy', 'sub/node'])).toBe(ROUTE_KIND.Proxy);
   });
 
   it('без правила и без цепочки исход не выдумывает', () => {
-    expect(toRouteKind(FINAL_OUTCOME)).toBe(ROUTE_KIND.Other);
+    expect(toRouteKind(FINAL_ACTION)).toBe(ROUTE_KIND.Other);
     expect(toRouteKind('sniff')).toBe(ROUTE_KIND.Other);
   });
 });

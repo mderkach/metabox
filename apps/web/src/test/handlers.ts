@@ -1,5 +1,5 @@
 import { configHandlers } from '@entities/Config/__tests__/Config.handlers';
-import { CONNECTIONS_FIXTURE } from '@entities/Connection/__tests__/Connection.fixture';
+import { CONNECTIONS_FIXTURE, makeConnectionsSnapshot } from '@entities/Connection/__tests__/Connection.fixture';
 import { connectionHandlers } from '@entities/Connection/__tests__/Connection.handlers';
 import {
   MEMORY_SAMPLES,
@@ -30,27 +30,33 @@ let memorySample = 0;
  * вариантами с состоянием — выбор узла и окно подтверждения должны держаться
  * до перезагрузки страницы, иначе ручная проверка выглядит поломкой.
  */
-export const missingHandlers = [
-  ...configHandlers,
-  ...createStatefulDaemonHandlers(),
-  ...createStatefulProxyHandlers(),
-  ...connectionHandlers,
-  ...routeHandlers,
-  runtimeStreamHandler(
-    [
-      { topic: RUNTIME_TOPIC.Service, data: () => SERVICE_RUNNING_FIXTURE },
-      { topic: RUNTIME_TOPIC.Connections, data: () => CONNECTIONS_FIXTURE },
-      { topic: RUNTIME_TOPIC.Traffic, data: () => TRAFFIC_SAMPLE },
-      { topic: RUNTIME_TOPIC.System, data: () => SYSTEM_FIXTURE },
-      {
-        topic: RUNTIME_TOPIC.Memory,
-        data: () => {
-          memorySample += 1;
+export function createMissingHandlers(connections = 0) {
+  // Снапшот собирается один раз: раздувать пять тысяч строк на каждый тик
+  // означало бы мерить генератор, а не панель.
+  const snapshot = connections > 0 ? makeConnectionsSnapshot(connections, { vary: true }) : CONNECTIONS_FIXTURE;
 
-          return { inuse: MEMORY_SAMPLES[memorySample % MEMORY_SAMPLES.length], oslimit: 0 };
+  return [
+    ...configHandlers,
+    ...createStatefulDaemonHandlers(),
+    ...createStatefulProxyHandlers(),
+    ...connectionHandlers,
+    ...routeHandlers,
+    runtimeStreamHandler(
+      [
+        { topic: RUNTIME_TOPIC.Service, data: () => SERVICE_RUNNING_FIXTURE },
+        { topic: RUNTIME_TOPIC.Connections, data: () => snapshot },
+        { topic: RUNTIME_TOPIC.Traffic, data: () => TRAFFIC_SAMPLE },
+        { topic: RUNTIME_TOPIC.System, data: () => SYSTEM_FIXTURE },
+        {
+          topic: RUNTIME_TOPIC.Memory,
+          data: () => {
+            memorySample += 1;
+
+            return { inuse: MEMORY_SAMPLES[memorySample % MEMORY_SAMPLES.length], oslimit: 0 };
+          },
         },
-      },
-    ],
-    STREAM_INTERVAL
-  ),
-];
+      ],
+      STREAM_INTERVAL
+    ),
+  ];
+}

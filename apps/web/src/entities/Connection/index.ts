@@ -4,7 +4,7 @@ export { useConnectionStream } from './api/Connection.query';
 export { toConnectionRow } from './model/Connection.adapter';
 export { filterConnections, toSourceGroups } from './model/Connection.filter';
 export type { ConnectionSource, ConnectionSourceGroup } from './model/Connection.filter';
-export { CLOSED_LIMIT, FINAL_OUTCOME, ROUTE_KIND, toRouteKind } from './model/Connection.model';
+export { CLOSED_LIMIT, FINAL_ACTION, ROUTE_KIND, toRouteKind } from './model/Connection.model';
 export type {
   ConnectionRate,
   ConnectionRow,

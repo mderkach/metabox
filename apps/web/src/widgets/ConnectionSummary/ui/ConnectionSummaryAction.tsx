@@ -9,15 +9,15 @@ import { ConnectionSummaryPanel } from './ConnectionSummaryPanel';
 
 /** Тон исхода — ADR-0013. Порядок строк фиксирован: по нагрузке он не устойчив. */
 const KIND_VIEW = [
-  { kind: ROUTE_KIND.Proxy, label: 'outcome.proxy', tone: 'bg-route-proxy' },
-  { kind: ROUTE_KIND.Direct, label: 'outcome.direct', tone: 'bg-route-direct' },
-  { kind: ROUTE_KIND.Block, label: 'outcome.block', tone: 'bg-route-block' },
-  { kind: ROUTE_KIND.Dns, label: 'outcome.dns', tone: 'bg-route-dns' },
-  { kind: ROUTE_KIND.Other, label: 'outcome.other', tone: 'bg-route-neutral' },
+  { kind: ROUTE_KIND.Proxy, label: 'action.proxy', tone: 'bg-route-proxy' },
+  { kind: ROUTE_KIND.Direct, label: 'action.direct', tone: 'bg-route-direct' },
+  { kind: ROUTE_KIND.Block, label: 'action.block', tone: 'bg-route-block' },
+  { kind: ROUTE_KIND.Dns, label: 'action.dns', tone: 'bg-route-dns' },
+  { kind: ROUTE_KIND.Other, label: 'action.other', tone: 'bg-route-neutral' },
 ] as const satisfies readonly { kind: RouteKind; label: ParseKeys<'widgets/ConnectionSummary'>; tone: string }[];
 
 /** Столбец длиной в соединения: молчащее соединение — тоже маршрут. */
-export function ConnectionSummaryOutcome({ shares }: { shares: ConnectionShare<RouteKind>[] }) {
+export function ConnectionSummaryAction({ shares }: { shares: ConnectionShare<RouteKind>[] }) {
   const { t } = useTranslation('widgets/ConnectionSummary');
   const total = shares.reduce((sum, share) => sum + share.count, 0);
   const bars: SummaryBar[] = KIND_VIEW.flatMap((view) => {
@@ -39,7 +39,7 @@ export function ConnectionSummaryOutcome({ shares }: { shares: ConnectionShare<R
   });
 
   return (
-    <ConnectionSummaryPanel title={t('outcome.title')}>
+    <ConnectionSummaryPanel title={t('action.title')}>
       <ConnectionSummaryBars bars={bars} total={total} empty={t('empty')} />
     </ConnectionSummaryPanel>
   );
