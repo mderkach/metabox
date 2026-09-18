@@ -34,15 +34,15 @@ jobs:
 
       # govet входит в набор golangci-lint, отдельный шаг не нужен. Генератор
       # проверяется с тегами форка, чего `go vet` здесь не делал.
-      - name: Линт Go (оба модуля)
+      - name: Go lint
         run: make lint
 
       # -race ловит гонки, которые на одном ядре разработчика не видны.
       - run: cd apps/metaboxd && go test -race ./...
       # Генератор — отдельный модуль, шаг выше его не видит.
-      - name: Тесты генератора
+      - name: Schemagen tests
         run: make test-schemagen
-      - name: Сообщения коммитов
+      - name: Commitlint
         if: github.event_name == 'pull_request'
         run: >
           pnpm exec commitlint --config commitlint.config.mjs
@@ -78,7 +78,7 @@ jobs:
           go-version-file: .go-version
           cache-dependency-path: tools/schemagen/go.sum
 
-      - name: Сборка демона под целевую систему
+      - name: Daemon build
         # OpenWrt на musl: бинарь с glibc там не запускается
         env:
           CGO_ENABLED: '0'
@@ -86,10 +86,10 @@ jobs:
           mkdir -p dist
           cd apps/metaboxd && go build -ldflags "-s -w -X metabox/internal/version.Version=ci" -o "../../$DAEMON_BINARY" .
 
-      - name: Поднять целевое окружение
+      - name: Environment
         run: docker compose -f .devcontainer/docker-compose.yml up -d target
 
-      - name: Дождаться запуска сервисов
+      - name: Daemon ready
         run: |
           for i in $(seq 1 30); do
             if curl -fsS http://localhost:8080/healthz >/dev/null 2>&1; then
@@ -101,12 +101,12 @@ jobs:
           docker compose -f .devcontainer/docker-compose.yml logs target
           exit 1
 
-      - name: Цикл Apply (AC-21)
+      - name: Apply cycle
         run: docker compose -f .devcontainer/docker-compose.yml exec -T target sh /usr/bin/apply-cycle-check
 
-      - name: Доступность панели по сетям
+      - name: Reach check
         run: make reach-check
 
-      - name: Логи целевого окружения при провале
+      - name: Target logs
         if: failure()
         run: docker compose -f .devcontainer/docker-compose.yml logs target
