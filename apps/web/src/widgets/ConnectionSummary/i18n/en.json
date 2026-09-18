@@ -14,6 +14,6 @@
     "up": "Sent",
     "empty": "Counters have not arrived yet"
   },
-  "idle": "idle",
+  "idle": "no traffic",
   "empty": "No live connections"
 }

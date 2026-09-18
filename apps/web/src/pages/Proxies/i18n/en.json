@@ -1,6 +1,6 @@
 {
   "title": "Proxies",
-  "subtitle": "sing-box runtime: these actions do not change the config",
+  "subtitle": "these actions change how sing-box runs, not the config",
   "pending": "Loading the proxies…",
   "providers": {
     "title": "Subscriptions",

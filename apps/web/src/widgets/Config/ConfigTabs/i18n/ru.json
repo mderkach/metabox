@@ -3,10 +3,10 @@
   "unavailable": "Раздел ещё не сделан",
   "section": {
     "route": "Маршрутизация",
-    "ruleSet": "Rule-set'ы",
+    "ruleSet": "Сеты правил",
     "inbounds": "Инбаунды",
     "outbounds": "Аутбаунды",
-    "providers": "Провайдеры",
+    "providers": "Подписки",
     "dns": "DNS",
     "log": "Логи",
     "experimental": "Эксперименты"

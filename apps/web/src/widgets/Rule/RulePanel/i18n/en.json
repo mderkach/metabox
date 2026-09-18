@@ -4,7 +4,7 @@
   "close": "Close the panel",
   "unknown": {
     "title": "The schema does not know this node",
-    "description": "A form cannot be built from it, but it is kept byte for byte and goes to the device as is. That happens when the binary on the device is newer than the panel schema: the schema is not entitled to forbid what the binary accepts."
+    "description": "A form cannot be built from it, but it is kept byte for byte and goes to the device as is. That happens when sing-box on the device is newer than the form schema: the schema is not entitled to forbid what sing-box accepts."
   },
   "tab": { "form": "Form" },
   "note": "An edit changes one line of the file: key order and unknown nodes stay as they were.",

@@ -4,7 +4,7 @@
     "host": "Host and source",
     "route": "Rule, outcome and chain",
     "traffic": "Rate and volume",
-    "age": "Age",
+    "age": "Duration",
     "action": "Action"
   },
   "row": {

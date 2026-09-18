@@ -16,9 +16,7 @@ function failure(code: string, message: string): ApiError {
 
 describe('failureText', () => {
   it('переводит отказ по коду, а не берёт сообщение демона', () => {
-    expect(failureText(failure('runtime_unavailable', 'рантайм sing-box недоступен'))).toBe(
-      'рантайм sing-box не отвечает'
-    );
+    expect(failureText(failure('runtime_unavailable', 'рантайм sing-box недоступен'))).toBe('sing-box не отвечает');
   });
 
   it('молчит о незнакомом коде: перевода у панели для него нет', () => {
@@ -37,7 +35,7 @@ describe('showQueryError', () => {
       failure('runtime_unavailable', 'рантайм sing-box недоступен')
     );
 
-    expect(toast.error).toHaveBeenCalledWith('Проверить задержку не удалось: рантайм sing-box не отвечает');
+    expect(toast.error).toHaveBeenCalledWith('Проверить задержку не удалось: sing-box не отвечает');
   });
 
   it('незнакомый код оставляет сообщение демона запасным текстом', () => {

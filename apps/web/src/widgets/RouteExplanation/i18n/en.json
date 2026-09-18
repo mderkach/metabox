@@ -3,15 +3,15 @@
   "close": "Close the explanation",
   "pending": "Asking sing-box…",
   "drift": {
-    "title": "The process runs a different config",
-    "description": "The running sing-box has {{running}} rules, while the applied file has {{document}}. The rule number is not shown: it would point into a document the process never read.",
-    "notCompared": "The applied config was not read, so there is nothing to compare the process rule list with — there is no jump to the node."
+    "title": "sing-box runs a different config",
+    "description": "The running sing-box has {{running}} rules, while the applied file has {{document}}. The rule number is not shown: it would point into a file sing-box never read.",
+    "notCompared": "The applied config was not read, so there is nothing to compare the sing-box rule list with — there is no jump to the node."
   },
   "origin": {
-    "observed": "from core",
+    "observed": "from sing-box",
     "computed": "computed",
     "unknown": "unknown",
-    "note": "«From core» means data from the running sing-box. The panel does not compute why the rules above did not match: it does not reimplement rule semantics, and the arbiter of the route is the binary."
+    "note": "«From sing-box» means the value came from sing-box itself, not from the panel. The panel does not compute why the rules above did not match: it does not reimplement rule logic — sing-box picks the route."
   },
   "final": {
     "title": "No rule matched",
@@ -19,10 +19,10 @@
   },
   "unknown": {
     "title": "The rule is undetermined",
-    "missing": "The rule of this connection is not in the process list.",
-    "drifted": "The process rule list diverged from the applied config, there is nothing to determine the node with.",
+    "missing": "The rule of this connection is not in the sing-box rule list.",
+    "drifted": "The sing-box rule list diverged from the applied config, there is nothing to determine the node with.",
     "reason": {
-      "not_in_process_list": "the rule of this connection is not in the running process list"
+      "not_in_process_list": "the rule of this connection is not in the running sing-box rule list"
     }
   },
   "matched": {

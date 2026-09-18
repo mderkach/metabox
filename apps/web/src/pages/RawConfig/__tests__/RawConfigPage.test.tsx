@@ -87,7 +87,7 @@ describe('конфиг текстом', () => {
     const editor = await screen.findByRole('textbox', { name: 'Конфиг sing-box текстом' });
 
     await user.type(editor, ' ');
-    await user.click(await screen.findByRole('button', { name: 'Вернуть как на устройстве' }));
+    await user.click(await screen.findByRole('button', { name: 'Вернуть версию с устройства' }));
 
     expect(ConfigDocumentState.getState().draft).toBeNull();
   });
@@ -102,7 +102,7 @@ describe('конфиг текстом', () => {
     const editor = await screen.findByRole('textbox', { name: 'Конфиг sing-box текстом' });
 
     await user.type(editor, 'ЛИШНЕЕ');
-    await user.click(await screen.findByRole('button', { name: 'Вернуть как на устройстве' }));
+    await user.click(await screen.findByRole('button', { name: 'Вернуть версию с устройства' }));
 
     // Редактор пересоздан вместе с документом, поэтому поле ищется заново.
     await waitFor(async () => {

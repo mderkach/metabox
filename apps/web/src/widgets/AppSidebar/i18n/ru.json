@@ -2,7 +2,7 @@
   "section": {
     "overview": "Обзор",
     "config": "Конфигурация",
-    "ruleSets": "Каталог rule-set",
+    "ruleSets": "Каталог сетов",
     "proxies": "Прокси",
     "connections": "Соединения"
   },

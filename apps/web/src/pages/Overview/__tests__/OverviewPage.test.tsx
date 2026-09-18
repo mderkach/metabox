@@ -111,7 +111,7 @@ describe('экран обзора', () => {
 
     renderWithRouter(OverviewPage);
 
-    expect(await screen.findAllByText('сводку считает панель')).toHaveLength(1);
+    expect(await screen.findAllByText('счётчики живут, пока открыта вкладка')).toHaveLength(1);
   });
 
   it('показывает показания устройства отдельной секцией', async () => {
@@ -131,14 +131,14 @@ describe('экран обзора', () => {
   it('без второго снимка потока график соединений не рисует линию', async () => {
     renderWithRouter(OverviewPage);
 
-    expect(await screen.findByText('Ждём второй снимок потока')).toBeInTheDocument();
+    expect(await screen.findByText('Ждём второе обновление')).toBeInTheDocument();
   });
 
   // Вердикт отвечает на вопрос, ради которого экран открывают, и стоит в шапке.
   it('до первых данных рантайма говорит, что ждёт их', async () => {
     renderWithRouter(OverviewPage);
 
-    expect(await screen.findByText('ждём первые данные рантайма')).toBeInTheDocument();
+    expect(await screen.findByText('ждём первые данные от sing-box')).toBeInTheDocument();
   });
 
   it('показывает доступность демона и живость потока', async () => {

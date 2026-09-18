@@ -45,7 +45,7 @@
     },
     "service": {
       "action": {
-        "failed": "Команда сервису не прошла"
+        "failed": "Служба не приняла команду"
       }
     },
     "status": {
@@ -120,12 +120,12 @@
     "config_missing": "конфига на устройстве нет",
     "version_missing": "такой версии в истории нет",
     "connection_missing": "соединение уже закрылось",
-    "runtime_unavailable": "рантайм sing-box не отвечает",
+    "runtime_unavailable": "sing-box не отвечает",
     "unknown_transaction": "применение с таким номером демону неизвестно",
     "apply_in_progress": "применение уже идёт",
     "nothing_to_confirm": "подтверждать нечего: окно подтверждения закрыто",
     "config_modified": "файл конфига изменён мимо metabox",
-    "config_too_large": "конфиг длиннее, чем демон принимает",
+    "config_too_large": "конфиг больше допустимого размера",
     "check_failed": "sing-box отверг конфиг",
     "internal": "внутренняя ошибка демона"
   }

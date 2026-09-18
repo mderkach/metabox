@@ -82,6 +82,6 @@ describe('экран соединений', () => {
 
     await user.click(screen.getByRole('tab', { name: /Закрытые/ }));
 
-    expect(screen.getByText(/рантайм отдаёт только живые/)).toBeInTheDocument();
+    expect(screen.getByText(/sing-box отдаёт только живые/)).toBeInTheDocument();
   });
 });

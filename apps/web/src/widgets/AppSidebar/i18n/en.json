@@ -2,7 +2,7 @@
   "section": {
     "overview": "Overview",
     "config": "Configuration",
-    "ruleSets": "Rule-set catalog",
+    "ruleSets": "Rule set catalog",
     "proxies": "Proxies",
     "connections": "Connections"
   },

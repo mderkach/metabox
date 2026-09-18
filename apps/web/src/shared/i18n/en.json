@@ -45,7 +45,7 @@
     },
     "service": {
       "action": {
-        "failed": "The service command failed"
+        "failed": "The service did not accept the command"
       }
     },
     "status": {
@@ -115,12 +115,12 @@
     "config_missing": "there is no config on the device",
     "version_missing": "there is no such version in the history",
     "connection_missing": "the connection is already closed",
-    "runtime_unavailable": "the sing-box runtime does not respond",
+    "runtime_unavailable": "sing-box does not respond",
     "unknown_transaction": "the daemon does not know an apply with this id",
     "apply_in_progress": "an apply is already running",
     "nothing_to_confirm": "there is nothing to confirm: the confirmation window is closed",
     "config_modified": "the config file was changed outside metabox",
-    "config_too_large": "the config is longer than the daemon accepts",
+    "config_too_large": "the config is larger than allowed",
     "check_failed": "sing-box rejected the config",
     "internal": "an internal daemon error"
   }

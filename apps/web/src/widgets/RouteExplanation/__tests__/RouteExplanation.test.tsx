@@ -50,7 +50,7 @@ describe('RouteExplanation', () => {
     // Индексы демона считаются с нуля, на экране правила нумеруются с единицы.
     expect(await screen.findByText('Сработало правило 7')).toBeInTheDocument();
     expect(screen.getByText('rule_set=google-ip')).toBeInTheDocument();
-    expect(screen.getAllByText('от core').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('от sing-box').length).toBeGreaterThan(0);
   });
 
   it('ведёт к правилу в редакторе, когда список процесса сходится с конфигом', async () => {
@@ -70,7 +70,7 @@ describe('RouteExplanation', () => {
 
     renderWithRouter(() => <RouteExplanation connectionId='c-1' onClose={vi.fn<() => void>()} />);
 
-    expect(await screen.findByText('Процесс исполняет другой конфиг')).toBeInTheDocument();
+    expect(await screen.findByText('sing-box работает по другому конфигу')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Открыть правило в редакторе' })).not.toBeInTheDocument();
     // Номер узла чужого документа не показывается вовсе: он указал бы на
     // другое правило (ADR-0007).
@@ -96,7 +96,7 @@ describe('RouteExplanation', () => {
 
     expect(await screen.findByText('Правило не определено')).toBeInTheDocument();
     // Причина — перевод панели по коду демона, а не его строка: она на его языке.
-    expect(screen.getByText('правила этого соединения нет в списке работающего процесса')).toBeInTheDocument();
+    expect(screen.getByText('правила этого соединения нет в списке работающего sing-box')).toBeInTheDocument();
     expect(screen.queryByText(ROUTE_UNKNOWN_FIXTURE.match.reason ?? '')).not.toBeInTheDocument();
     expect(screen.getByText('неизвестно')).toBeInTheDocument();
   });

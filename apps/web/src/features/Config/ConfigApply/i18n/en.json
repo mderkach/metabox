@@ -14,7 +14,7 @@
   },
   "clashApi": {
     "title": "metabox added experimental.clash_api to the config",
-    "description": "Without that section the runtime screens have nothing to read. The section is already in the applied file — the change was made by metabox, not by you. So that sing-box reads it, the service was restarted by the same apply cycle."
+    "description": "Without that section the status screens have nothing to read. The section is already in the applied file — the change was made by metabox, not by you. So that sing-box reads it, the service was restarted by the same apply cycle."
   },
   "failure": {
     "rolledBack": "No confirmation arrived — the previous config was restored",
@@ -24,7 +24,7 @@
       "backup_failed": "the previous config was not saved, there is nothing to write over",
       "write_failed": "the config was not written to the device",
       "restart_failed": "the service did not restart with the new config",
-      "healthcheck_failed": "the service started, but the runtime did not answer",
+      "healthcheck_failed": "the service started, but sing-box did not answer",
       "rollback_failed": "the previous config could not be restored — the new one stayed on the device"
     }
   },
@@ -50,7 +50,7 @@
   "history": {
     "open": "Version history",
     "title": "Config history",
-    "description": "The daemon keeps the ten most recent applied versions. A rollback runs the full cycle: binary check, write, restart and the confirmation window.",
+    "description": "The daemon keeps the ten most recent applied versions. A rollback runs the full cycle: a sing-box check, write, restart and the confirmation window.",
     "pending": "Reading the history…",
     "empty": "The history is empty: the config has never been applied through metabox, so there is nothing to go back to.",
     "version": "No. {{id}}",

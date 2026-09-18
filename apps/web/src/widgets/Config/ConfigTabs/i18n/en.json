@@ -3,10 +3,10 @@
   "unavailable": "The section is not built yet",
   "section": {
     "route": "Routing",
-    "ruleSet": "Rule-sets",
+    "ruleSet": "Rule sets",
     "inbounds": "Inbounds",
     "outbounds": "Outbounds",
-    "providers": "Providers",
+    "providers": "Subscriptions",
     "dns": "DNS",
     "log": "Logs",
     "experimental": "Experimental"
