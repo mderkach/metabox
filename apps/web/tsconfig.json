@@ -9,6 +9,9 @@
     },
     {
       "path": "./tsconfig.mocks.json"
+    },
+    {
+      "path": "./tsconfig.dev.json"
     }
   ],
   "compilerOptions": {

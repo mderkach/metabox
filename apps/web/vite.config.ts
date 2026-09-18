@@ -59,6 +59,29 @@ function metaboxMocks(): Plugin | false {
   };
 }
 
+const SCAN_ENTRY = '/dev/scan.ts';
+
+/**
+ * Съём ререндеров react-scan. Включается `METABOX_SCAN=1` и живёт только на
+ * дев-сервере: `apply: 'serve'` не даёт плагину участвовать в сборке, а
+ * инструментирование рендеров стоит времени и в замер NFR-2 попадать не должно.
+ *
+ * Скрипт идёт в `head` — раньше входа приложения: bippy подменяет хук
+ * девтулзов, и до первого рендера React это сделать уже нельзя.
+ */
+function metaboxScan(): Plugin | false {
+  if (process.env.METABOX_SCAN !== '1') {
+    return false;
+  }
+
+  return {
+    name: 'metabox-scan',
+    apply: 'serve',
+    transformIndexHtml: (html) =>
+      html.replace('</head>', `  <script type="module" src="${SCAN_ENTRY}"></script>\n  </head>`),
+  };
+}
+
 const LOCALE_SEGMENT = 'i18n';
 const LOCALE_GLOB = `src/**/${LOCALE_SEGMENT}/*.json`;
 
@@ -249,7 +272,7 @@ const sendDaemonOrigin: ProxyOptions['configure'] = (proxy) => {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss(), metaboxI18n(), metaboxCompress(), metaboxMocks()],
+  plugins: [react(), tailwindcss(), metaboxI18n(), metaboxCompress(), metaboxMocks(), metaboxScan()],
   resolve: {
     alias: {
       ...Object.fromEntries(LAYERS.map((layer) => [`@${layer}`, path.resolve(import.meta.dirname, `./src/${layer}`)])),
