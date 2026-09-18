@@ -54,6 +54,13 @@ jobs:
       - run: pnpm --filter web test
       - run: pnpm --filter web build
 
+      # Совет, а не проверка: набор правил живёт у поставщика и меняется между
+      # минорными версиями, поэтому падение шага сборку не валит. Что репозиторий
+      # уже принял как норму, отключено в `apps/web/doctor.config.jsonc`.
+      - name: React doctor
+        continue-on-error: true
+        run: pnpm --filter web run lint:react
+
       # Сборка целиком: только здесь проверяется, что собранная SPA доезжает
       # до go:embed и попадает в бинарь (AC-17).
       - run: make daemon

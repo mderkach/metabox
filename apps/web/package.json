@@ -14,7 +14,8 @@
     "preview": "vite preview",
     "gen:i18n": "node tools/i18n.ts",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "lint:react": "react-doctor --no-telemetry --no-supply-chain"
   },
   "dependencies": {
     "@base-ui/react": "1.8.0",
@@ -63,6 +64,7 @@
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
     "oxlint-tsgolint": "catalog:",
+    "react-doctor": "0.9.14",
     "react-scan": "0.5.7",
     "tailwindcss": "4.3.3",
     "typescript": "7.0.2",

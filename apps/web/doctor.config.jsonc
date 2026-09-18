@@ -1,0 +1,28 @@
+{
+  // Выключено то, что репозиторный oxlint уже проверяет — но со своими
+  // исключениями, которых react-doctor не видит: вендорная зона shadcn
+  // (`src/shared/ui/**`) и плагины линтера (`tools/**`) выведены из-под части
+  // правил в `.oxlintrc.json`. Без этого списка каждый прогон отдаёт около
+  // двухсот замечаний, которые репозиторий уже принял как норму.
+  //
+  // Область сканирования конфигом не задаётся: ключи `exclude`, `ignore` и
+  // `ignorePatterns` в 0.9.14 не действуют, а несколько каталогов в аргументах
+  // CLI не принимает.
+  "rules": {
+    "eslint/no-magic-numbers": "off",
+    "no-magic-numbers": "off",
+    "unicorn/filename-case": "off",
+    "react/function-component-definition": "off",
+    "react/only-export-components": "off",
+    "react-doctor/only-export-components": "off",
+    "tailwind/no-restricted-classes": "off",
+    "tailwind/no-unknown-classes": "off",
+    "import/no-default-export": "off",
+    "jsx-a11y/label-has-associated-control": "off",
+    // Виртуализованная таблица собрана ролями вынужденно: абсолютное
+    // позиционирование строк внутри `table` ломает разбор вспомогательными
+    // технологиями. То же исключение стоит и в `.oxlintrc.json`.
+    "react-doctor/prefer-tag-over-role": "off",
+    "jsx-a11y/prefer-tag-over-role": "off",
+  },
+}
