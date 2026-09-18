@@ -1,0 +1,30 @@
+import type { ReactNode } from 'react';
+
+import { SECTION_HEADING } from '@shared/lib/styles';
+import { cn } from '@shared/lib/utils';
+
+export function OverviewSection({
+  title,
+  note,
+  children,
+}: {
+  title: string;
+  /** Правая подпись: происхождение данных или общий для секции контекст. */
+  note?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className='flex flex-col gap-3'>
+      <div className='flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm text-muted-foreground'>
+        <h2 className={cn(SECTION_HEADING, 'text-foreground')}>{title}</h2>
+        {note !== undefined && (
+          <p>
+            <span aria-hidden='true'>· </span>
+            {note}
+          </p>
+        )}
+      </div>
+      {children}
+    </section>
+  );
+}
