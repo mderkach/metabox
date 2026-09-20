@@ -28,6 +28,7 @@ export {
   ruleSetNodePath,
   sectionSize,
   setValue,
+  toOutboundTags,
 } from './model/Config.model';
 export type { CheckFailure, ConfigDocument, ConfigSection, ConfigVersion } from './model/Config.model';
 export { ConfigDocumentState, useConfigDiff, useConfigDirty, useConfigText } from './model/Config.store';

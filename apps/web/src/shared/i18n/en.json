@@ -95,6 +95,16 @@
     "hour": "{{value}} h",
     "day": "{{value}} d"
   },
+  "interval": {
+    "minute_one": "every minute",
+    "minute_other": "every {{count}} min",
+    "hour_one": "hourly",
+    "hour_other": "every {{count}} h",
+    "day_one": "daily",
+    "day_other": "every {{count}} days",
+    "week_one": "weekly",
+    "week_other": "every {{count}} weeks"
+  },
   "count": {
     "connection_one": "{{count}} connection",
     "connection_other": "{{count}} connections",

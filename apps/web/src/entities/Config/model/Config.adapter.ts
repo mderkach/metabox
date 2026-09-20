@@ -34,7 +34,7 @@ const CHECK_FAILED = 'check_failed';
 
 /**
  * Достаёт вывод `sing-box check` из отказа применения. `null` — отказ другой:
- * конфиг мог не дойти до бинаря вовсе, и показывать тогда нечего (AC-26).
+ * конфиг мог не дойти до бинаря вовсе, и показывать тогда нечего.
  */
 export function toCheckFailure(error: unknown): CheckFailure | null {
   if (!(error instanceof ApiError) || error.code !== CHECK_FAILED) {

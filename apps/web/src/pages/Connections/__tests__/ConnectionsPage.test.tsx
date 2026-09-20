@@ -1,24 +1,37 @@
 import { renderWithQuery } from '@test/renderWithQuery';
 import { server } from '@test/server';
 import { mockVirtualSizes } from '@test/virtualSizes';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { CONFIG_ENDPOINT } from '@entities/Config';
+import { CONFIG_FIXTURE } from '@entities/Config/__tests__/Config.fixture';
 import { ConnectionStore } from '@entities/Connection';
 import { CONNECTION_ENDPOINT } from '@entities/Connection';
 import { makeConnectionsSnapshot } from '@entities/Connection/__tests__/Connection.fixture';
 
 import { ConnectionsPage } from '../ui/ConnectionsPage';
 
+/** Тег `direct` у узла типа `selector`: по имени такая строка читалась бы как прямая. */
+const PROXY_NAMED_DIRECT = { outbounds: [{ type: 'selector', tag: 'direct', outbounds: ['proxy'] }] };
+
+/** Конфиг с устройства: действие строки красится по типу её аутбаунда, а не по тегу. */
+function serveConfig(config: unknown = CONFIG_FIXTURE) {
+  server.use(http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(JSON.stringify(config))));
+}
+
 describe('экран соединений', () => {
   beforeEach(() => {
     ConnectionStore.getState().reset();
     mockVirtualSizes();
+    serveConfig();
   });
 
   afterEach(() => {
+    // Карту типов `reset` не трогает, а следующий тест ждёт разбор по тегу.
+    ConnectionStore.getState().setOutboundTypes(new Map());
     vi.restoreAllMocks();
   });
 
@@ -73,6 +86,74 @@ describe('экран соединений', () => {
     expect(screen.getByRole('button', { name: 'Продолжить' })).toBeInTheDocument();
   });
 
+  it('рвёт все соединения только после подтверждения', async () => {
+    const closedAll = vi.fn<() => void>();
+
+    server.use(
+      http.delete(CONNECTION_ENDPOINT.connections(), () => {
+        closedAll();
+
+        return new HttpResponse(null, { status: 204 });
+      })
+    );
+
+    const user = userEvent.setup();
+
+    ConnectionStore.getState().apply(makeConnectionsSnapshot(3));
+    renderWithQuery(<ConnectionsPage />);
+
+    await user.click(screen.getByRole('button', { name: 'Закрыть все' }));
+
+    const dialog = await screen.findByRole('alertdialog');
+
+    expect(dialog).toHaveTextContent('Оборвать все живые соединения?');
+    expect(closedAll).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'Отмена' }));
+
+    expect(closedAll).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'Закрыть все' }));
+    await user.click(await screen.findByRole('button', { name: 'Оборвать' }));
+
+    await waitFor(() => {
+      expect(closedAll).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('фасет по действию отбирает строки', async () => {
+    const user = userEvent.setup();
+
+    ConnectionStore.getState().apply(makeConnectionsSnapshot(8));
+    renderWithQuery(<ConnectionsPage />);
+
+    const kinds = screen.getByRole('list', { name: 'Действие' });
+    const direct = within(kinds).getByRole('button', { name: /напрямую/ });
+
+    await user.click(direct);
+
+    expect(direct).toHaveAttribute('aria-pressed', 'true');
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent('Показано 4 из 8');
+    });
+  });
+
+  it('действие строки берёт из типа аутбаунда конфига, а не из его тега', async () => {
+    serveConfig(PROXY_NAMED_DIRECT);
+    ConnectionStore.getState().apply(makeConnectionsSnapshot(8));
+    renderWithQuery(<ConnectionsPage />);
+
+    const kinds = screen.getByRole('list', { name: 'Действие' });
+
+    // Пока конфиг не прочитан, четыре строки `route(direct)` читаются по тегу.
+    expect(within(kinds).getByRole('button', { name: /напрямую/ })).toHaveTextContent('4');
+
+    await waitFor(() => {
+      expect(within(kinds).queryByRole('button', { name: /напрямую/ })).not.toBeInTheDocument();
+    });
+    expect(within(kinds).getByRole('button', { name: /через прокси/ })).toHaveTextContent('8');
+  });
+
   it('закрытые собирает панель, потому что рантайм отдаёт только живые', async () => {
     const user = userEvent.setup();
 
@@ -82,6 +163,72 @@ describe('экран соединений', () => {
 
     await user.click(screen.getByRole('tab', { name: /Закрытые/ }));
 
-    expect(screen.getByText(/sing-box отдаёт только живые/)).toBeInTheDocument();
+    // Обе вкладки остаются в DOM, поэтому пояснение ищется в показанной.
+    // Показанная остаётся одна не сразу: Base UI снимает прежнюю панель после
+    // своего перехода.
+    await waitFor(() => {
+      expect(within(screen.getByRole('tabpanel')).getByText(/sing-box отдаёт только живые/)).toBeInTheDocument();
+    });
+  });
+
+  it('переключение вкладок сохраняет фильтр колонки активной таблицы', async () => {
+    const user = userEvent.setup();
+
+    ConnectionStore.getState().apply(makeConnectionsSnapshot(8));
+    renderWithQuery(<ConnectionsPage />);
+
+    await user.click(await screen.findByRole('button', { name: 'Фильтр по колонке Куда' }));
+    await user.type(await screen.findByRole('textbox', { name: 'Подстрока в колонке Куда' }), 'google');
+
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent('Показано 1 из 8');
+    });
+
+    await user.keyboard('{Escape}');
+    await user.click(screen.getByRole('tab', { name: /Закрытые/ }));
+    await user.click(screen.getByRole('tab', { name: /Активные/ }));
+
+    expect(screen.getByRole('button', { name: 'Фильтр по колонке Куда: активен' })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent('Показано 1 из 8');
+    });
+  });
+});
+
+describe('экран соединений на телефоне', () => {
+  beforeEach(() => {
+    ConnectionStore.getState().reset();
+    mockVirtualSizes();
+    serveConfig();
+    vi.stubGlobal('matchMedia', function matchNarrowQuery(media: string) {
+      return { matches: true, media, addEventListener: vi.fn<() => void>(), removeEventListener: vi.fn<() => void>() };
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it('прячет срезы под кнопку тулбара и считает выбранные', async () => {
+    const user = userEvent.setup();
+
+    ConnectionStore.getState().apply(makeConnectionsSnapshot(8));
+    renderWithQuery(<ConnectionsPage />);
+
+    const toggle = screen.getByRole('button', { name: 'Отбор' });
+
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('list', { name: 'Действие' })).not.toBeInTheDocument();
+
+    await user.click(toggle);
+
+    const kinds = await screen.findByRole('list', { name: 'Действие' });
+
+    await user.click(within(kinds).getByRole('button', { name: /напрямую/ }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Отбор: 1 срез' })).toBeInTheDocument();
+    });
   });
 });

@@ -31,7 +31,7 @@ export function RuleEditForm({ rule, outbounds }: { rule: RuleRow; outbounds: st
 
   const form = useForm<RuleEditModel, unknown, RuleEditPatch>({
     // Значения берутся из узла как есть: дефолт, дописанный формой, попал бы
-    // в диф правкой, которой пользователь не делал (AC-2).
+    // в диф правкой, которой пользователь не делал.
     defaultValues: {
       action: isKnownAction(rule.target, rule.targetKind) ? rule.target : RULE_ACTION.Route,
       outbound: rule.targetKind === 'outbound' ? rule.target : '',
@@ -46,7 +46,7 @@ export function RuleEditForm({ rule, outbounds }: { rule: RuleRow; outbounds: st
 
     // Пишутся только тронутые поля. Правило без ключа `action` — обычное дело
     // (`route` подразумевается), и дописанный ключ попал бы в диф правкой,
-    // которой пользователь не делал (AC-2).
+    // которой пользователь не делал.
     if (touched.action === true) {
       edit([...path, 'action'], patch.action);
     }
@@ -86,7 +86,11 @@ function ActionField() {
       render={({ field }) => (
         <div className='flex flex-col gap-1.5'>
           <Label htmlFor='rule-action'>{t('field.action.label')}</Label>
-          <Select value={field.value} onValueChange={field.onChange}>
+          <Select
+            items={Object.values(RULE_ACTION).map((action) => ({ value: action, label: t(`action.${action}`) }))}
+            value={field.value}
+            onValueChange={field.onChange}
+          >
             <SelectTrigger id='rule-action'>
               <SelectValue />
             </SelectTrigger>

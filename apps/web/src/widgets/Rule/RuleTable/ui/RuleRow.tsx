@@ -11,36 +11,52 @@ import { RuleGroupChips } from './RuleGroupChips';
 import { RuleMatcherChip } from './RuleMatcherChip';
 import { toTargetTone } from './RuleTargetTone';
 
+/**
+ * Кнопка выбора занимает строку целиком, оставаясь внутри своей ячейки:
+ * ячейками строку разбирает скринридер, а мышью правило выбирают в любом её
+ * месте, и номер — слишком мелкая цель.
+ */
+const SELECT_CLASS =
+  'rounded-sm after:absolute after:inset-0 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none';
+
 function RuleRowProto({
   rule,
+  rowIndex,
   selected,
   onSelect,
 }: {
   rule: RuleRowModel;
+  rowIndex: number;
   selected: boolean;
   onSelect: (id: string) => void;
 }) {
   const { t } = useTranslation('widgets/Rule/RuleTable');
+
   return (
-    <button
-      type='button'
-      aria-pressed={selected}
-      aria-label={t('row.label', { index: rule.index })}
-      onClick={() => {
-        onSelect(rule.id);
-      }}
+    <div
+      role='row'
+      aria-rowindex={rowIndex}
       className={cn(
         RULE_COLUMN.Row,
-        'w-full border-b border-border text-left transition-colors hover:bg-muted/40',
-        'focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:-outline-offset-2 focus-visible:outline-none',
+        'border-b border-border transition-colors hover:bg-muted/40',
         selected && 'bg-selected before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-selected-edge'
       )}
     >
-      <span className={RULE_COLUMN.Index}>{rule.index}</span>
+      <span role='cell' className={cn(RULE_COLUMN.Index, 'font-mono text-xs text-muted-foreground')}>
+        <button
+          type='button'
+          aria-pressed={selected}
+          aria-label={t('row.label', { index: rule.index })}
+          onClick={() => {
+            onSelect(rule.id);
+          }}
+          className={SELECT_CLASS}
+        >
+          {rule.index}
+        </button>
+      </span>
 
-      <div className='flex min-w-0 grow flex-wrap items-center gap-1.5'>
-        {/* Нераспознанный узел «без условий» не бывает: условие в нём есть,
-            просто схема не знает его поля и показать его нечем. */}
+      <span role='cell' className={RULE_COLUMN.Conditions}>
         {rule.isCatchAll &&
           (rule.recognized ? (
             <span className='text-sm text-muted-foreground'>{t('row.unconditional')}</span>
@@ -63,21 +79,22 @@ function RuleRowProto({
         ))}
 
         {rule.group !== null && <RuleGroupChips group={rule.group} />}
-      </div>
+      </span>
 
-      {/* Стрелка и исход переносятся вместе: оторванная от исхода стрелка
-          читается как часть условия. */}
-      <span className='flex shrink-0 items-center gap-3'>
-        <ArrowRight className='size-4 shrink-0 text-muted-foreground' />
+      <span role='cell' className={RULE_COLUMN.TargetGroup}>
+        <ArrowRight className={cn(RULE_COLUMN.Arrow, 'text-muted-foreground')} />
 
-        <span className={cn(RULE_COLUMN.Target, 'flex flex-col')} title={rule.target}>
+        <span
+          className={cn(RULE_COLUMN.Target, 'flex flex-col truncate font-mono text-sm font-medium')}
+          title={rule.target}
+        >
           <span className={cn('truncate', toTargetTone(rule.targetKind, rule.target))}>{rule.target}</span>
           {rule.targetDetail !== null && (
             <span className='truncate font-sans text-xs font-normal text-muted-foreground'>{rule.targetDetail}</span>
           )}
         </span>
       </span>
-    </button>
+    </div>
   );
 }
 

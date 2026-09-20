@@ -33,8 +33,8 @@ export type RuleEditModel = z.infer<typeof RuleEditSchema>;
  * Правка, которая ляжет в узел конфига.
  *
  * `outbound` уходит только у `route`: у остальных действий поля в схеме нет, и
- * записанный пустой тег добавил бы в диф правку, которой пользователь не делал
- * (AC-2). Пустой тег у `route` — ошибка формы, а не повод писать пустую строку.
+ * записанный пустой тег добавил бы в диф правку, которой пользователь не делал.
+ * Пустой тег у `route` — ошибка формы, а не повод писать пустую строку.
  */
 export const RuleEditAdapterSchema = RuleEditSchema.refine(
   (data) => data.action !== RULE_ACTION.Route || data.outbound.length > 0,

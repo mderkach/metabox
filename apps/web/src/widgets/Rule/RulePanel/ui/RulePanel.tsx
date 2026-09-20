@@ -1,5 +1,5 @@
 import { X } from 'lucide-react';
-import { useState } from 'react';
+import { useState, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ConfigDocumentState } from '@entities/Config';
@@ -7,6 +7,7 @@ import type { RuleRow } from '@entities/Rule';
 import { RuleEditForm } from '@features/Rule/RuleEdit';
 import { RuleRawEditor } from '@features/Rule/RuleRaw';
 import { SECTION_LABEL } from '@shared/lib/styles';
+import { useFocusReturn } from '@shared/lib/useFocusReturn';
 import {
   Alert,
   AlertDescription,
@@ -31,12 +32,14 @@ const TAB = {
  * сырым блоком с пометкой и правится только текстом.
  */
 export function RulePanel({
+  id,
   rule,
   node,
   recognized,
   outbounds,
   onClose,
 }: {
+  id?: string;
   rule: RuleRow;
   node: unknown;
   recognized: boolean;
@@ -46,12 +49,29 @@ export function RulePanel({
   const { t } = useTranslation('widgets/Rule/RulePanel');
   const [tab, setTab] = useState<string>(recognized ? TAB.Form : TAB.Raw);
   const revision = ConfigDocumentState.use.revision();
+  const headingRef = useFocusReturn<HTMLHeadingElement>();
+
+  function onKeyDown(event: KeyboardEvent<HTMLElement>) {
+    if (event.key === 'Escape') {
+      onClose();
+    }
+  }
 
   return (
-    <aside className='flex w-full max-w-md shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-card'>
+    // Escape закрывает панель: обработчик на контейнере — обычный паттерн для
+    // панелей и диалогов, интерактивная роль aside для этого не нужна.
+    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- см. выше
+    <aside
+      id={id}
+      aria-label={t('title', { index: rule.index })}
+      onKeyDown={onKeyDown}
+      className='flex w-full max-w-md shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-card'
+    >
       <header className='flex items-center gap-2.5 border-b border-border px-4 py-3'>
         <div className='flex min-w-0 grow flex-col'>
-          <h2 className='text-sm font-medium'>{t('title', { index: rule.index })}</h2>
+          <h2 ref={headingRef} tabIndex={-1} className='text-sm font-medium'>
+            {t('title', { index: rule.index })}
+          </h2>
           <p className='font-mono text-xs text-muted-foreground'>route.rules[{rule.index - 1}]</p>
         </div>
         {!recognized && <Badge variant='outline'>{t('uncovered')}</Badge>}
@@ -83,9 +103,6 @@ export function RulePanel({
           </TabsContent>
 
           <TabsContent value={TAB.Raw} className='pt-3'>
-            {/* Обновление документа не от пользователя — загрузка с устройства,
-                отмена правок, подтверждённое применение — пересоздаёт редактор:
-                иначе в поле остаётся текст, которого в конфиге уже нет. */}
             <RuleRawEditor key={revision} index={rule.index} node={node} />
           </TabsContent>
         </Tabs>

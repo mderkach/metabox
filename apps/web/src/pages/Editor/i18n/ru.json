@@ -13,7 +13,6 @@
     "collapse": "Свернуть",
     "more": "Ещё {{count}}"
   },
-  "shown": "{{shown}} из {{total}}",
   "notFound": "Ничего не нашлось по этому запросу.",
   "resetFilter": "Сбросить отбор",
   "broken": {

@@ -4,7 +4,10 @@ import { useTranslation } from 'react-i18next';
 
 import { findProvider, RULE_SET_TYPE, type RuleSetRow as RuleSetRowModel } from '@entities/RuleSet';
 import { cn } from '@shared/lib/utils';
-import { Badge, Button } from '@shared/ui';
+import { Badge, Button, Separator } from '@shared/ui';
+
+import { RULE_SET_COLUMN } from './RuleSetColumns';
+import { formatUpdateInterval } from './RuleSetInterval';
 
 /**
  * Строка набора.
@@ -13,22 +16,38 @@ import { Badge, Button } from '@shared/ui';
  * идёт происхождение — чьему списку доверяет маршрут, — а справа то, ради чего
  * набор вообще подключали: сколько правил им пользуется.
  */
-function RuleSetRowProto({ set, onRemove }: { set: RuleSetRowModel; onRemove: (index: number) => void }) {
+function RuleSetRowProto({
+  set,
+  rowIndex,
+  onRemove,
+}: {
+  set: RuleSetRowModel;
+  rowIndex: number;
+  onRemove: (index: number) => void;
+}) {
   const { t } = useTranslation('widgets/RuleSet/RuleSetTable');
   const provider = findProvider(set.source.providerId);
 
   return (
-    <div className='flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-border px-4 py-3 last:border-b-0'>
-      <div className='flex min-w-0 grow flex-col gap-1'>
-        <div className='flex flex-wrap items-center gap-x-2 gap-y-1'>
+    <div role='row' aria-rowindex={rowIndex} className={RULE_SET_COLUMN.Row}>
+      <span role='cell' className={RULE_SET_COLUMN.Tag}>
+        <span className='flex flex-wrap items-center gap-x-2 gap-y-1'>
           <span className='font-mono text-sm break-all'>{set.tag === '' ? t('row.untagged') : set.tag}</span>
 
           {set.type !== RULE_SET_TYPE.Remote && <Badge variant='secondary'>{t(`type.${set.type}`)}</Badge>}
 
           {!set.recognized && <Badge variant='outline'>{t('row.uncovered')}</Badge>}
-        </div>
+        </span>
 
-        <p className='flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted-foreground'>
+        {set.location !== '' && (
+          <span className='truncate font-mono text-2xs text-muted-foreground/80' title={set.location}>
+            {set.location}
+          </span>
+        )}
+      </span>
+
+      <span role='cell' className={RULE_SET_COLUMN.Source}>
+        <span className='flex flex-wrap items-center gap-x-1.5 gap-y-0.5'>
           <span>{provider === null ? t('row.ownSource') : provider.name}</span>
           {set.source.category !== null && (
             <>
@@ -39,7 +58,7 @@ function RuleSetRowProto({ set, onRemove }: { set: RuleSetRowModel; onRemove: (i
           {set.updateInterval !== null && (
             <>
               <span aria-hidden='true'>·</span>
-              <span>{t('row.interval', { interval: set.updateInterval })}</span>
+              <span>{t('row.interval', { interval: formatUpdateInterval(set.updateInterval) })}</span>
             </>
           )}
           {set.detour !== null && (
@@ -48,17 +67,14 @@ function RuleSetRowProto({ set, onRemove }: { set: RuleSetRowModel; onRemove: (i
               <span>{t('row.detour', { detour: set.detour })}</span>
             </>
           )}
-        </p>
+        </span>
+      </span>
 
-        {set.location !== '' && (
-          <p className='truncate font-mono text-2xs text-muted-foreground/80' title={set.location}>
-            {set.location}
-          </p>
-        )}
-      </div>
-
-      <div className='flex shrink-0 items-center gap-2'>
+      <span role='cell' className={RULE_SET_COLUMN.Usage}>
         <UsageMark usedBy={set.usedBy} />
+      </span>
+      <span role='cell' className={RULE_SET_COLUMN.RowActions}>
+        <Separator orientation='vertical' className='h-5' />
 
         <Button
           variant='ghost'
@@ -70,7 +86,7 @@ function RuleSetRowProto({ set, onRemove }: { set: RuleSetRowModel; onRemove: (i
         >
           <Trash2 />
         </Button>
-      </div>
+      </span>
     </div>
   );
 }

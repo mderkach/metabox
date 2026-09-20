@@ -28,10 +28,7 @@ export function renderWithRouter(Component: FunctionComponent) {
 
   return render(
     <QueryClientProvider client={queryClient}>
-      {/* Роутер собран под этот тест, а глобальный тип зарегистрирован под
-          настоящий: приведение уточняет тип до того, что ждёт провайдер. */}
-      {/* oxlint-disable-next-line typescript/no-unsafe-type-assertion -- см. выше */}
-      <RouterProvider router={router as never} />
+      <RouterProvider router={router} />
     </QueryClientProvider>
   );
 }

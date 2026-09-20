@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { ConnectionRow } from '@entities/Connection';
+import { ROUTE_KIND, type ConnectionRow } from '@entities/Connection';
 
 import { toExportBody } from '../lib/ConnectionExport.serialize';
 import { EXPORT_FORMAT } from '../model/ConnectionExport.constants';
@@ -13,6 +13,7 @@ function makeRow(overrides: Partial<ConnectionRow> = {}): ConnectionRow {
     source: '192.168.1.60',
     rule: 'rule_set=anthropic',
     action: 'route(us-west-fallback)',
+    kind: ROUTE_KIND.Proxy,
     chain: ['us-west-fallback', 'us-west'],
     upload: 2048,
     download: 4096,

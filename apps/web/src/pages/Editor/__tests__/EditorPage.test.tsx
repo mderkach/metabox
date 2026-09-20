@@ -9,6 +9,8 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { ConfigDocumentState, findValue } from '@entities/Config';
 import { CONFIG_ENDPOINT } from '@entities/Config';
+import { DAEMON_ENDPOINT } from '@entities/Daemon';
+import { DAEMON_STATUS_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture';
 
 import { toSelectedRuleId } from '../lib/Editor.lib';
 import { EditorPage } from '../ui/EditorPage';
@@ -23,7 +25,7 @@ const CONFIG = JSON.stringify(
       rules: [
         { rule_set: ['github'], outbound: 'proxy' },
         { port: 53, action: 'hijack-dns' },
-        // Схема правил — `looseObject`, лишние ключи она принимает (AC-3).
+        // Схема правил — `looseObject`, лишние ключи она принимает.
         // Нераспознанным узел делает значение, которого нет ни в одной ветке
         // union: такое приходит от бинаря новее схемы панели.
         { action: 'quantum-teleport' },
@@ -48,7 +50,12 @@ const RECOGNIZED_CONFIG = JSON.stringify(
 );
 
 function serveConfig(text = CONFIG) {
-  server.use(http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(text)));
+  server.use(
+    http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(text)),
+    // Шапка экрана открывает историю версий, а бар применения опрашивает демона.
+    http.get(CONFIG_ENDPOINT.versions(), () => HttpResponse.json({ versions: [] })),
+    http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE))
+  );
 }
 
 describe('экран правил', () => {
@@ -56,6 +63,29 @@ describe('экран правил', () => {
     ConfigDocumentState.getState().reset();
     mockVirtualSizes();
     serveConfig();
+  });
+
+  it('шапка называет колонки, подвал считает правила', async () => {
+    renderWithRouter(EditorPage);
+
+    const table = await screen.findByRole('table', { name: 'Правила маршрутизации' });
+
+    expect(
+      within(table)
+        .getAllByRole('columnheader')
+        .map((cell) => cell.textContent)
+    ).toEqual(['№', 'Условия', 'Исход']);
+    expect(screen.getByRole('status')).toHaveTextContent('3 правила');
+  });
+
+  it('поиск отбирает строки, подвал сообщает обе величины', async () => {
+    const user = userEvent.setup();
+
+    renderWithRouter(EditorPage);
+
+    await user.type(await screen.findByRole('textbox', { name: 'Поиск по правилам' }), 'github');
+
+    expect(screen.getByRole('status')).toHaveTextContent('Показано 1 из 3');
   });
 
   it('открывает панель по строке правила и закрывает её', async () => {
@@ -72,6 +102,25 @@ describe('экран правил', () => {
     await user.click(within(panel).getByRole('button', { name: 'Закрыть панель' }));
 
     expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+  });
+
+  it('фокус уходит в панель, а Escape закрывает её и возвращает фокус на строку', async () => {
+    const user = userEvent.setup();
+
+    renderWithRouter(EditorPage);
+
+    const ruleButton = await screen.findByRole('button', { name: 'Правило 1' });
+
+    await user.click(ruleButton);
+
+    const panel = await screen.findByRole('complementary');
+
+    expect(within(panel).getByRole('heading', { name: 'Правило 1' })).toHaveFocus();
+
+    await user.keyboard('{Escape}');
+
+    expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+    expect(ruleButton).toHaveFocus();
   });
 
   it('форма исхода открывается на значении из конфига и не даёт применить пустую правку', async () => {

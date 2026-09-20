@@ -7,6 +7,8 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { ConfigDocumentState } from '@entities/Config';
 import { CONFIG_ENDPOINT } from '@entities/Config';
+import { DAEMON_ENDPOINT } from '@entities/Daemon';
+import { DAEMON_STATUS_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture';
 
 import { RawConfigPage } from '../ui/RawConfigPage';
 
@@ -16,7 +18,11 @@ const VALID_CONFIG = JSON.stringify({ route: { rules: [{ outbound: 'direct' }] }
 const UNPARSED_CONFIG = JSON.stringify({ route: { rules: 'всё направо' } }, null, 2);
 
 function serveConfig(text: string) {
-  server.use(http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(text)));
+  server.use(
+    http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(text)),
+    // Бар применения живёт в оболочке и опрашивает демона на каждом экране.
+    http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE))
+  );
 }
 
 describe('конфиг текстом', () => {

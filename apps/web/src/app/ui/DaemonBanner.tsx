@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-import { useDaemonStatus } from '@entities/Daemon';
+import { useDaemonReachable, useDaemonStatus } from '@entities/Daemon';
 import { API_FAILURE, ApiError } from '@shared/api';
 
 /**
@@ -9,7 +9,7 @@ import { API_FAILURE, ApiError } from '@shared/api';
  * пользователю несколько разных сообщений об одной беде (Query.md).
  *
  * «Сервис лежит» сюда не попадает: об остановленном sing-box демон сообщает
- * ответом, и это состояние экрана, а не отказ панели (NFR-1).
+ * ответом, и это состояние экрана, а не отказ панели.
  *
  * Непонятый ответ показывается здесь же: пустая панель без сообщения выглядит
  * исправной.
@@ -17,13 +17,13 @@ import { API_FAILURE, ApiError } from '@shared/api';
 export function DaemonBanner() {
   const { t } = useTranslation('app');
   const status = useDaemonStatus();
-  const error = status.error;
+  const reachable = useDaemonReachable();
 
-  const kind = error instanceof ApiError ? error.kind : null;
-
-  if (kind !== API_FAILURE.Unreachable && kind !== API_FAILURE.Schema) {
+  if (reachable) {
     return null;
   }
+
+  const kind = status.error instanceof ApiError ? status.error.kind : null;
 
   return (
     <div role='status' className='shrink-0 bg-destructive/10 px-6 py-2 text-sm text-destructive'>

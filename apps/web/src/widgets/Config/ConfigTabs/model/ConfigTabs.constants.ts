@@ -27,5 +27,11 @@ export const CONFIG_TABS = [
 export const CONFIG_TAB_CLASS =
   'relative mb-1 inline-flex h-8 items-center gap-1.5 rounded-md px-1.5 text-sm font-medium whitespace-nowrap';
 
-/** Полоса под выбранным разделом: второй признак выбора помимо цвета. */
-export const CONFIG_TAB_UNDERLINE = 'absolute inset-x-0 -bottom-1.5 h-0.5 bg-foreground';
+/**
+ * Полоса под выбранным разделом: второй признак выбора помимо цвета.
+ *
+ * Имя View Transitions одно на всю навигацию: полоса показана только под
+ * текущим разделом, и при смене раздела переезжает под новый.
+ */
+export const CONFIG_TAB_UNDERLINE =
+  'absolute inset-x-0 -bottom-1.5 h-0.5 bg-foreground [view-transition-name:config-tab-underline]';

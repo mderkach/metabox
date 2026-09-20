@@ -4,8 +4,18 @@
   "dropped": "updates not parsed: {{count}}",
   "resume": "Resume",
   "pause": "Pause",
-  "closeAll": "Close all",
-  "tab": { "active": "Active", "closed": "Closed" },
+  "closeAll": {
+    "action": "Close all",
+    "title": "Cut every live connection?",
+    "description_one": "{{count}} live connection will be cut. Devices reconnect on their own, but downloads and calls in progress will break.",
+    "description_other": "{{count}} live connections will be cut. Devices reconnect on their own, but downloads and calls in progress will break.",
+    "confirm": "Cut",
+    "cancel": "Cancel"
+  },
+  "tab": {
+    "active": "Active",
+    "closed": "Closed"
+  },
   "search": {
     "placeholder": "Host, source, rule or node",
     "label": "Search the connections"
@@ -24,5 +34,20 @@
   "export": {
     "csv": "Export CSV",
     "json": "Export JSON"
+  },
+  "kinds": {
+    "label": "Action",
+    "all": "Any",
+    "proxy": "through proxy",
+    "direct": "direct",
+    "block": "blocked",
+    "dns": "DNS hijack",
+    "other": "other"
+  },
+  "facets": {
+    "label": "Filters",
+    "title": "Slices of the list",
+    "active_one": "Filters: {{count}} slice",
+    "active_other": "Filters: {{count}} slices"
   }
 }

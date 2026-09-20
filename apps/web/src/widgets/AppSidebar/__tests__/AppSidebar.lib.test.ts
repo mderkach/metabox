@@ -1,7 +1,28 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { useSidebarCollapsed } from '../lib/AppSidebar.lib';
+import { pickActiveNav, useSidebarCollapsed } from '../lib/AppSidebar.lib';
+
+describe('текущий пункт меню', () => {
+  const TARGETS = ['/overview', '/config', '/config/rule-set', '/connections'];
+
+  it('вложенный раздел подсвечивает только себя, а не родителя вместе с ним', () => {
+    expect(pickActiveNav('/config/rule-set', TARGETS)).toBe('/config/rule-set');
+  });
+
+  it('вкладка без своего пункта подсвечивает ближайший раздел', () => {
+    expect(pickActiveNav('/config/raw', TARGETS)).toBe('/config');
+  });
+
+  it('точное совпадение подсвечивает раздел', () => {
+    expect(pickActiveNav('/config', TARGETS)).toBe('/config');
+  });
+
+  it('неизвестный адрес не подсвечивает ничего', () => {
+    expect(pickActiveNav('/nope', TARGETS)).toBeNull();
+    expect(pickActiveNav('/configuration', TARGETS)).toBeNull();
+  });
+});
 
 /**
  * `matchMedia` в jsdom нет вовсе — подставляем ответ на запрос ширины.
@@ -20,6 +41,7 @@ describe('свёрнутость сайдбара', () => {
   afterEach(() => {
     globalThis.localStorage.clear();
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   it('без прежнего выбора на узком экране открывается свёрнутым', () => {

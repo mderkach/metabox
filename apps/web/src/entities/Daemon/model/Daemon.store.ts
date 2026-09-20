@@ -79,7 +79,7 @@ const RuntimeStateProto = stateCreator<RuntimeState>((set) => {
       }));
     },
     pushMemory: (sample) => {
-      // Первый сэмпл потока всегда нулевой (PRD, OQ-5): показать его значило
+      // Первый сэмпл потока всегда нулевой: показать его значило
       // бы соврать, что sing-box не занимает памяти.
       if (sample.inuse === 0) {
         return;

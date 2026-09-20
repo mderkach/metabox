@@ -4,7 +4,7 @@ import { applyConfig, confirmApply, restoreConfigVersion, useSaveApplyTransactio
 
 /**
  * Применение черновика. Без ретраев: повтор запустил бы на устройстве второй
- * цикл (Query.md). Тело — текст черновика, а не пересобранный JSON (AC-2).
+ * цикл (Query.md). Тело — текст черновика, а не пересобранный JSON.
  */
 export function useApplyConfig() {
   const onTransaction = useSaveApplyTransaction();

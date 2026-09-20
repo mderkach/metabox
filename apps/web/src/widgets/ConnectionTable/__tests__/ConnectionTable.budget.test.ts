@@ -6,7 +6,7 @@ import { advanceConnectionsSnapshot, makeConnectionsSnapshot } from '@entities/C
 
 import { CONNECTION_COLUMNS, CONNECTION_FIELD } from '../ui/ConnectionColumns';
 
-/** Потолок NFR-2: столько соединений панель обязана держать. */
+/** Потолок нагрузки: столько соединений панель обязана держать. */
 const SNAPSHOT_SIZE = 5000;
 const RUNS = 5;
 

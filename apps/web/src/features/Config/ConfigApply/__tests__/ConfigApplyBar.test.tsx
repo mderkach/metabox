@@ -1,6 +1,6 @@
 import { renderWithQuery } from '@test/renderWithQuery';
 import { server } from '@test/server';
-import { screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -26,6 +26,22 @@ const TRANSACTION = {
 
 function serveStatus(transaction?: unknown) {
   server.use(http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json({ ...DAEMON_STATUS_FIXTURE, transaction })));
+}
+
+const POLL_STEP = 50;
+const POLL_LIMIT = 6000;
+const REAL_YIELD = 1;
+/** Снято до подмены таймеров: ответы моков и отложенный рендер React идут вне фейковых часов. */
+const waitReal = globalThis.setTimeout;
+
+/** Двигает фейковые часы шагами, отдавая между ними такт настоящим. */
+async function advanceUntil(happened: () => boolean): Promise<void> {
+  for (let waited = 0; waited < POLL_LIMIT && !happened(); waited += POLL_STEP) {
+    await vi.advanceTimersByTimeAsync(POLL_STEP);
+    await new Promise<void>((resolve) => {
+      waitReal(resolve, REAL_YIELD);
+    });
+  }
 }
 
 function loadDocument(draft = true) {
@@ -109,6 +125,37 @@ describe('ConfigApplyBar', () => {
     });
   });
 
+  it('пересинхронизирует остаток с ответом опроса, а не досчитывает старое значение', async () => {
+    let transaction: typeof TRANSACTION = TRANSACTION;
+
+    server.use(http.get(DAEMON_ENDPOINT.applyState(TRANSACTION.id), () => HttpResponse.json(transaction)));
+    serveStatus(TRANSACTION);
+    loadDocument();
+
+    vi.useFakeTimers();
+    renderWithQuery(<ConfigApplyBar />);
+
+    // Окно подтверждения приходит отложенным рендером: `act` доводит его вместе
+    // с эффектом отсчёта до DOM, пока фейковые часы стоят на месте.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    await advanceUntil(() => screen.queryByText('60 с') !== null);
+
+    expect(screen.getByText('60 с')).toBeInTheDocument();
+
+    // Локальный тик без нового значения от опроса: остаток считается от 60 сам.
+    await advanceUntil(() => screen.queryByText('55 с') !== null);
+
+    expect(screen.getByText('55 с')).toBeInTheDocument();
+
+    transaction = { ...TRANSACTION, window: 20_000_000_000 };
+
+    await advanceUntil(() => screen.queryByText('20 с') !== null);
+
+    expect(screen.getByText('20 с')).toBeInTheDocument();
+  });
+
   it('показывает вывод sing-box, когда бинарь отверг конфиг', async () => {
     server.use(
       http.post(DAEMON_ENDPOINT.apply(), () =>
@@ -130,7 +177,7 @@ describe('ConfigApplyBar', () => {
 
     expect(await screen.findByText('FATAL decode config: unknown field')).toBeInTheDocument();
     expect(screen.getByText(/Код выхода: 1/)).toBeInTheDocument();
-    // Черновик остаётся: на нём пользователь чинит конфиг (AC-26, UX-3).
+    // Черновик остаётся: на нём пользователь чинит конфиг.
     expect(ConfigDocumentState.getState().draft).toBe(DRAFT);
   });
 

@@ -57,7 +57,7 @@ function toMeter(node: ProxyNode): number {
   return node.delay >= DELAY_TIMEOUT ? 1 : toShare(Math.min(node.delay, SCALE_CEILING), SCALE_CEILING);
 }
 
-/** Замер делает sing-box (AC-11): из браузера мерялся бы канал до панели. */
+/** Замер делает sing-box: из браузера мерялся бы канал до панели. */
 export function ProxyLatency() {
   const { t } = useTranslation('widgets/ProxyLatency');
   const proxies = useProxies();

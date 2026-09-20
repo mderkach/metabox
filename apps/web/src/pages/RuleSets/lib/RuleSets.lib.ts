@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import {
   ConfigDocumentState,
@@ -6,12 +6,19 @@ import {
   parseConfig,
   readRules,
   readRuleSets,
+  toOutboundTags,
   useConfig,
   useConfigDirty,
   useConfigText,
   type ConfigDocument,
 } from '@entities/Config';
-import { countRuleSetUsage, RULE_SET_TYPE, toRuleSetRowsFromNodes, type RuleSetRow } from '@entities/RuleSet';
+import {
+  countRuleSetUsage,
+  filterRuleSets,
+  RULE_SET_TYPE,
+  toRuleSetRowsFromNodes,
+  type RuleSetRow,
+} from '@entities/RuleSet';
 
 export interface RuleSetEditorState {
   isPending: boolean;
@@ -19,6 +26,8 @@ export interface RuleSetEditorState {
   sets: RuleSetRow[];
   /** Имена уже подключённых наборов: второй набор с тем же именем не заводится. */
   takenTags: string[];
+  /** Теги аутбаундов: через один из них набор можно качать. */
+  outbounds: string[];
   /** Кэш наборов выключен, а удалённые наборы в конфиге есть. */
   needsCache: boolean;
   isDirty: boolean;
@@ -29,7 +38,7 @@ export interface RuleSetEditorState {
  *
  * Узлы читаются из текста, а не из разобранной модели: набор, который схема не
  * приняла, обязан остаться видимым — иначе пользователь не найдёт как раз тот,
- * который надо чинить (UX-3).
+ * который надо чинить.
  */
 export function useRuleSetEditor(): RuleSetEditorState {
   const config = useConfig();
@@ -72,7 +81,31 @@ export function useRuleSetEditor(): RuleSetEditorState {
     config: document,
     sets,
     takenTags: sets.map((set) => set.tag).filter((tag) => tag !== ''),
+    outbounds: toOutboundTags(document),
     needsCache,
     isDirty,
   };
+}
+
+export interface RuleSetFilterState {
+  query: string;
+  setQuery: (query: string) => void;
+  reset: () => void;
+  sets: RuleSetRow[];
+}
+
+/**
+ * Поиск по подключённым наборам. Отбор клиентский: конфиг целиком уже в панели,
+ * и наборов в нём десятки.
+ */
+export function useRuleSetFilter(sets: RuleSetRow[]): RuleSetFilterState {
+  const [query, setQuery] = useState('');
+
+  const shown = useMemo(() => filterRuleSets(sets, query), [sets, query]);
+
+  const reset = useCallback(() => {
+    setQuery('');
+  }, []);
+
+  return { query, setQuery, reset, sets: shown };
 }

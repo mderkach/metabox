@@ -1,10 +1,25 @@
 import { decodeFrame } from '@shared/api';
 
 import { ConnectionsSnapshotSchema, type ConnectionWire } from '../api/Connection.schema';
-import { FINAL_ACTION, type ConnectionRate, type ConnectionRow } from './Connection.model';
+import {
+  EMPTY_OUTBOUND_TYPES,
+  FINAL_ACTION,
+  toRouteKind,
+  type ConnectionRate,
+  type ConnectionRow,
+} from './Connection.model';
 
-/** Скорости приходят извне: считать их можно только рядом с прошлым снапшотом. */
-export function toConnectionRow(connection: ConnectionWire, rate: ConnectionRate): ConnectionRow {
+/**
+ * Скорости приходят извне: считать их можно только рядом с прошлым снапшотом.
+ *
+ * `outboundTypes` — типы аутбаундов применённого конфига; без неё тон действия
+ * читается по строке рантайма.
+ */
+export function toConnectionRow(
+  connection: ConnectionWire,
+  rate: ConnectionRate,
+  outboundTypes: ReadonlyMap<string, string> = EMPTY_OUTBOUND_TYPES
+): ConnectionRow {
   const action = connection.final ? FINAL_ACTION : connection.action;
   const chain = [...connection.chain].reverse();
 
@@ -17,6 +32,7 @@ export function toConnectionRow(connection: ConnectionWire, rate: ConnectionRate
     // Исход по умолчанию показывается узлом конфига, а не пустой строкой:
     // «ни одно правило не совпало» — наблюдаемый факт (ADR-0007).
     action,
+    kind: toRouteKind(action, chain, outboundTypes),
     // Цепочка приходит от узла к группе — человек читает её в обратную сторону.
     chain,
     upload: connection.upload,

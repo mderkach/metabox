@@ -20,7 +20,7 @@ const SEND_TEXT: AxiosRequestConfig = { headers: { 'Content-Type': 'application/
 
 /**
  * Конфиг забирается текстом: правки применяются к исходным байтам, иначе
- * порядок ключей пользователя переписывается целиком (ADR-0004, AC-2).
+ * порядок ключей пользователя переписывается целиком (ADR-0004).
  */
 export async function getConfig(config?: AxiosRequestConfig): Promise<string> {
   return ApiClientInstance.get<string>(CONFIG_ENDPOINT.config(), { ...AS_TEXT, ...config });
@@ -42,7 +42,7 @@ export async function getConfigVersion(id: number, config?: AxiosRequestConfig):
 /**
  * Запускает применение. Ответ приходит после `sing-box check`, но до конца
  * цикла: применение живёт дольше запроса (ADR-0002). Отказ проверки возвращает
- * 422 с выводом бинаря в `details` — его показывает вызывающий (AC-26).
+ * 422 с выводом бинаря в `details` — его показывает вызывающий.
  */
 export async function applyConfig(text: string): Promise<ApplyTransactionWire> {
   return ApiClientInstance.post<ApplyTransactionWire, string>(DAEMON_ENDPOINT.apply(), text, SEND_TEXT);

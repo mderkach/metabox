@@ -4,10 +4,11 @@ import { MS_IN_SECOND, SECONDS_IN_MINUTE } from '@shared/lib/time';
 import { toConnectionRow, toConnectionsSnapshot } from './Connection.adapter';
 import {
   CLOSED_LIMIT,
+  EMPTY_OUTBOUND_TYPES,
   EMPTY_SUMMARY,
   ROUTE_KIND,
-  toRouteKind,
   TOP_LIMIT,
+  toRouteKind,
   type ConnectionRate,
   type ConnectionRow,
   type ConnectionShare,
@@ -40,17 +41,18 @@ function toRate(current: number, previous: number, seconds: number): number {
   return seconds > 0 ? Math.max(0, (current - previous) / seconds) : 0;
 }
 
-function add<Key extends string>(groups: Map<Key, ConnectionShare<Key>>, key: Key, rate: number): void {
+function add<Key extends string>(groups: Map<Key, ConnectionShare<Key>>, key: Key, rate: number, volume: number): void {
   const group = groups.get(key);
 
   if (group === undefined) {
-    groups.set(key, { key, count: 1, rate });
+    groups.set(key, { key, count: 1, rate, volume });
 
     return;
   }
 
   group.count += 1;
   group.rate += rate;
+  group.volume += volume;
 }
 
 /** Быстрые первыми, при равной скорости — многочисленные, затем по алфавиту. */
@@ -61,9 +63,9 @@ function byLoad(left: ConnectionShare, right: ConnectionShare): number {
 /**
  * Сводка живого снапшота. Считается здесь и одним проходом: панелей на экране
  * несколько, и селектор у каждой дал бы свой обход списка каждую секунду, а в
- * нём до пяти тысяч строк (NFR-2).
+ * нём до пяти тысяч строк.
  *
- * Сводка — вычисленное панелью, а не показания рантайма (UX-8): источник
+ * Сводка — вычисленное панелью, а не показания рантайма: источник
  * отдаёт только плоский список соединений.
  */
 function toSummary(rows: ConnectionRow[]): ConnectionSummary {
@@ -74,17 +76,17 @@ function toSummary(rows: ConnectionRow[]): ConnectionSummary {
 
   for (const row of rows) {
     const rate = row.downRate + row.upRate;
-    const kind = toRouteKind(row.action, row.chain);
+    const volume = row.download + row.upload;
     // Конец цепочки — узел, через который соединение вышло наружу; начало —
     // группа, которая его выбрала.
     const node = row.chain.at(-1);
 
-    add(actions, kind, rate);
-    add(networks, row.network, rate);
-    add(sources, row.source, rate);
+    add(actions, row.kind, rate, volume);
+    add(networks, row.network, rate, volume);
+    add(sources, row.source, rate, volume);
 
-    if (node !== undefined && kind === ROUTE_KIND.Proxy) {
-      add(nodes, node, rate);
+    if (node !== undefined && row.kind === ROUTE_KIND.Proxy) {
+      add(nodes, node, rate, volume);
     }
   }
 
@@ -115,6 +117,11 @@ interface ConnectionState {
   paused: boolean;
   /** Сколько экранов сейчас смотрит поток: по нулю подписка закрывается. */
   readers: number;
+  /**
+   * Тип аутбаунда применённого конфига по его тегу: по нему разбирается тон
+   * действия. Пустая карта — конфиг ещё не прочитан.
+   */
+  outboundTypes: ReadonlyMap<string, string>;
   /** Снапшотов, которые схема не приняла: экран замер бы без этого признака. */
   dropped: number;
   /** Когда пришёл прошлый разобранный снапшот: от него считается скорость. */
@@ -123,6 +130,12 @@ interface ConnectionState {
   setPaused: (paused: boolean) => void;
   addReader: () => void;
   removeReader: () => void;
+  /**
+   * Перекрашивает уже разобранные строки: конфиг приходит позже первого
+   * снапшота, а простаивающее соединение отдаётся прежним объектом и само
+   * тон не обновит. Строка, чей тон не изменился, остаётся тем же объектом.
+   */
+  setOutboundTypes: (outboundTypes: ReadonlyMap<string, string>) => void;
   reset: () => void;
 }
 
@@ -136,6 +149,7 @@ const ConnectionStateProto = stateCreator<ConnectionState>(
     history: [],
     paused: false,
     readers: 0,
+    outboundTypes: EMPTY_OUTBOUND_TYPES,
     dropped: 0,
     sampledAt: null,
     apply: (frame) => {
@@ -167,15 +181,15 @@ const ConnectionStateProto = stateCreator<ConnectionState>(
           // Неизменившаяся строка отдаётся прежним объектом: иначе `memo` на
           // строке списка не спасает — пропс был бы новым каждый снапшот.
           // Сверка идёт по снапшоту, до разбора: на пяти тысячах соединений
-          // (NFR-2) собирать строку, чтобы тут же её выбросить, — основная
-          // работа обработчика, а меняются у большинства только счётчики байт.
+          // собирать строку, чтобы тут же её выбросить, — основная работа
+          // обработчика, а меняются у большинства только счётчики байт.
           const kept =
             previous !== undefined &&
             previous.upload === connection.upload &&
             previous.download === connection.download &&
             previous.downRate === rate.down &&
             previous.upRate === rate.up;
-          const row = kept ? previous : toConnectionRow(connection, rate);
+          const row = kept ? previous : toConnectionRow(connection, rate, state.outboundTypes);
 
           next.set(row.id, row);
 
@@ -211,6 +225,30 @@ const ConnectionStateProto = stateCreator<ConnectionState>(
     },
     removeReader: () => {
       set((state) => ({ readers: Math.max(0, state.readers - 1) }));
+    },
+    setOutboundTypes: (outboundTypes) => {
+      set((state) => {
+        if (state.outboundTypes === outboundTypes) {
+          return state;
+        }
+
+        const active = state.active.map((row) => {
+          const kind = toRouteKind(row.action, row.chain, outboundTypes);
+
+          return kind === row.kind ? row : { ...row, kind };
+        });
+
+        if (active.every((row, position) => row === state.active[position])) {
+          return { outboundTypes };
+        }
+
+        return {
+          outboundTypes,
+          active,
+          index: new Map(active.map((row) => [row.id, row])),
+          summary: toSummary(active),
+        };
+      });
     },
     reset: () => {
       set({

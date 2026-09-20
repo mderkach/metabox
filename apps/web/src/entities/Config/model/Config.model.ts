@@ -44,7 +44,7 @@ function edit(text: string, path: JSONPath, value: unknown, options?: Modificati
  *
  * Узла по пути может не быть — тогда он создаётся. Возвращается новый текст:
  * именно он уходит телом `POST /api/apply`, поэтому пересобирать конфиг из
- * разобранной модели нельзя (ADR-0004, AC-2).
+ * разобранной модели нельзя (ADR-0004).
  */
 export function setValue(text: string, path: JSONPath, value: unknown): string {
   return edit(text, path, value);
@@ -95,7 +95,7 @@ export function ruleNodePath(index: number): JSONPath {
 
 /**
  * Правила документа как есть. Узел, который схема не приняла, остаётся в
- * списке: одно незнакомое правило не должно прятать остальные (UX-3).
+ * списке: одно незнакомое правило не должно прятать остальные.
  */
 export function readRules(text: string): unknown[] {
   const rules: unknown = findValue(text, RULES_PATH);
@@ -176,6 +176,67 @@ export function sectionSize(config: ConfigDocument | null, section: ConfigSectio
     case CONFIG_SECTION.Experimental:
       return null;
   }
+}
+
+interface TaggedOutbound {
+  tag: string;
+  node: object;
+}
+
+/**
+ * Аутбаунды документа, у которых есть тег. Узлы читаются как есть, а не через
+ * схему: документ может не пройти разбор целиком, а список узлов нужен и тогда.
+ */
+function toTaggedOutbounds(config: ConfigDocument | null): TaggedOutbound[] {
+  const outbounds: unknown = config?.outbounds;
+
+  if (!Array.isArray(outbounds)) {
+    return [];
+  }
+
+  const tagged: TaggedOutbound[] = [];
+
+  for (const item of outbounds) {
+    const node: unknown = item;
+
+    if (typeof node !== 'object' || node === null) {
+      continue;
+    }
+
+    const tag: unknown = Reflect.get(node, 'tag');
+
+    if (typeof tag === 'string' && tag.length > 0) {
+      tagged.push({ tag, node });
+    }
+  }
+
+  return tagged;
+}
+
+/** Теги аутбаундов документа; узел без тега пропускается. */
+export function toOutboundTags(config: ConfigDocument | null): string[] {
+  return toTaggedOutbounds(config).map((outbound) => outbound.tag);
+}
+
+/**
+ * Тип аутбаунда по его тегу. Тип — единственное точное указание на то, куда
+ * узел ведёт трафик: тег пишет пользователь, и по имени судить о нём нельзя
+ * (ADR-0013). Что тип означает для интерфейса, решает потребитель карты.
+ *
+ * Узел без тега или без типа в карту не попадает: сослаться на него нечем.
+ */
+export function toOutboundTypes(config: ConfigDocument | null): ReadonlyMap<string, string> {
+  const types = new Map<string, string>();
+
+  for (const outbound of toTaggedOutbounds(config)) {
+    const type: unknown = Reflect.get(outbound.node, 'type');
+
+    if (typeof type === 'string' && type.length > 0) {
+      types.set(outbound.tag, type);
+    }
+  }
+
+  return types;
 }
 
 /** Запись истории конфига в виде, в котором её показывает экран. */

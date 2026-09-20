@@ -64,6 +64,11 @@
     "schema": "Form schema",
     "config": "Config",
     "clashMode": "Clash API mode",
+    "mode": {
+      "rule": "by rules",
+      "global": "globally",
+      "direct": "direct"
+    },
     "memory": "Daemon memory"
   }
 }

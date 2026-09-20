@@ -44,12 +44,12 @@ function formatUptime(t: TFunction<'widgets/Daemon/DaemonService'>, seconds: num
  * Процесс sing-box: состояние службы, память и управление.
  *
  * Остановленный сервис — данные экрана, а не отказ панели: редактор конфига
- * остаётся доступным, иначе поднять упавший sing-box было бы нечем (NFR-1).
+ * остаётся доступным, иначе поднять упавший sing-box было бы нечем.
  *
  * Команды показываются, только когда процессом владеет служба демона
  * (`managed`). Чужой процесс ими не управляется: на устройстве маршрутизацию
  * может вести другой пакет, и «Запустить» подняло бы вторую копию sing-box
- * рядом с работающей (AC-36).
+ * рядом с работающей.
  */
 export function DaemonService({
   process,
@@ -155,8 +155,6 @@ export function DaemonService({
             <CircleAlert />
             <AlertTitle>{t('crashed')}</AlertTitle>
             <AlertDescription>
-              {/* Вывод бинаря показывается дословно: разобранный до узла он
-                  соврал бы, а сокращённый — потерял бы причину (UX-5). */}
               <pre className='font-mono text-xs whitespace-pre-wrap'>{state.lastError}</pre>
             </AlertDescription>
           </Alert>

@@ -158,8 +158,6 @@ export function DaemonTraffic({
         </svg>
       </div>
 
-      {/* Подпись времени идёт той же сеткой, что и график: посчитанный вручную
-          отступ уехал бы от смены ширины колонки подписей или зазора. */}
       <figcaption className='flex gap-3 font-mono text-xs text-muted-foreground'>
         <span className='w-20 shrink-0' aria-hidden='true' />
         <span className='flex min-w-0 grow justify-between'>

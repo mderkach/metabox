@@ -13,7 +13,6 @@
     "collapse": "Collapse",
     "more": "{{count}} more"
   },
-  "shown": "{{shown}} of {{total}}",
   "notFound": "Nothing matches this query.",
   "resetFilter": "Reset the filter",
   "broken": {

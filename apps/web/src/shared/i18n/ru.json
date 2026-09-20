@@ -95,6 +95,20 @@
     "hour": "{{value}} ч",
     "day": "{{value}} д"
   },
+  "interval": {
+    "minute_one": "каждую минуту",
+    "minute_few": "каждые {{count}} мин",
+    "minute_many": "каждые {{count}} мин",
+    "hour_one": "каждый час",
+    "hour_few": "каждые {{count}} ч",
+    "hour_many": "каждые {{count}} ч",
+    "day_one": "раз в сутки",
+    "day_few": "каждые {{count}} дня",
+    "day_many": "каждые {{count}} дней",
+    "week_one": "раз в неделю",
+    "week_few": "каждые {{count}} недели",
+    "week_many": "каждые {{count}} недель"
+  },
   "count": {
     "connection_one": "{{count}} соединение",
     "connection_few": "{{count}} соединения",

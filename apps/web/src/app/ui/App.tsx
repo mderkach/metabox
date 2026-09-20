@@ -12,8 +12,6 @@ export function App() {
   return (
     <ThemeProvider attribute='class' defaultTheme='dark' enableSystem disableTransitionOnChange>
       <QueryClientProvider client={QueryClientInstance}>
-        {/* Высоту экрана задаёт оболочка, а не страница: иначе баннер
-            недоступности сдвигает страницу за нижний край. */}
         <div className='flex h-svh flex-col overflow-hidden'>
           <DaemonBanner />
           <div className='min-h-0 grow'>

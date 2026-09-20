@@ -1,6 +1,13 @@
 import { z } from 'zod';
 
-import { buildRuleSetURL, defaultFormatOf, RULE_SET_PROVIDERS, RULE_SET_TYPE, suggestTag } from '@entities/RuleSet';
+import {
+  buildRuleSetURL,
+  defaultFormatOf,
+  parseDuration,
+  RULE_SET_PROVIDERS,
+  RULE_SET_TYPE,
+  suggestTag,
+} from '@entities/RuleSet';
 
 import { HTTP_SCHEME, RULE_SET_ADD_ERROR } from './RuleSetAdd.constants';
 
@@ -80,16 +87,22 @@ export interface RuleSetAddPatch {
 }
 
 /**
- * Схема с проверками, зависящими от документа: занятые теги приходят снаружи,
- * потому что тег — ссылка, по которой правило находит набор, и второй набор с
- * тем же именем сделал бы её двусмысленной.
+ * Схема с проверками, зависящими от документа: занятые теги и теги аутбаундов
+ * приходят снаружи. Тег — ссылка, по которой правило находит набор, и второй
+ * набор с тем же именем сделал бы её двусмысленной; узел, через который набор
+ * качается, обязан существовать — иначе опечатка доезжает до устройства и
+ * обрывает старт sing-box.
+ *
+ * Пустой список аутбаундов ничего не запрещает: он означает, что конфиг не
+ * разобран, а не что узлов в нём нет.
  *
  * `format` требуется только тогда, когда адрес не даёт вывести его сам: поле,
  * равное выведенному значению, ядро при сохранении всё равно отбрасывает, а в
- * дифе оно выглядело бы правкой пользователя (AC-2).
+ * дифе оно выглядело бы правкой пользователя.
  */
-export function makeRuleSetAddSchema(takenTags: readonly string[]) {
+export function makeRuleSetAddSchema(takenTags: readonly string[], outbounds: readonly string[] = []) {
   const taken = new Set(takenTags);
+  const known = new Set(outbounds);
 
   return RuleSetAddSchema.superRefine((data, ctx) => {
     const url = data.url.trim();
@@ -110,6 +123,18 @@ export function makeRuleSetAddSchema(takenTags: readonly string[]) {
 
     if (url !== '' && defaultFormatOf(url) === '' && data.format === '') {
       ctx.addIssue({ code: 'custom', path: ['format'], message: RULE_SET_ADD_ERROR.FormatRequired });
+    }
+
+    const interval = data.updateInterval.trim();
+
+    if (interval !== '' && parseDuration(interval) === null) {
+      ctx.addIssue({ code: 'custom', path: ['updateInterval'], message: RULE_SET_ADD_ERROR.IntervalFormat });
+    }
+
+    const detour = data.detour.trim();
+
+    if (detour !== '' && known.size > 0 && !known.has(detour)) {
+      ctx.addIssue({ code: 'custom', path: ['detour'], message: RULE_SET_ADD_ERROR.DetourUnknown });
     }
   });
 }

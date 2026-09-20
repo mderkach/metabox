@@ -1,6 +1,9 @@
 import {
+  columnFilteringFeature,
   columnVisibilityFeature,
+  createFilteredRowModel,
   createSortedRowModel,
+  filterFn_includesString,
   rowSortingFeature,
   sortFn_alphanumeric,
   sortFn_basic,
@@ -19,7 +22,7 @@ import type { ConnectionRow } from '@entities/Connection';
  * растягивается по остатку, остальное держит фиксированную ширину.
  */
 export const CONNECTION_COLUMN = {
-  Row: 'flex w-full items-center gap-3 border-b border-border px-3.5 py-2 text-sm',
+  Row: 'flex w-full items-center gap-3 border-b border-border px-3.5 text-sm',
   Source: 'w-28 shrink-0',
   Host: 'w-52 shrink-0',
   Network: 'w-16 shrink-0',
@@ -67,8 +70,11 @@ export interface ConnectionCell {
 export const CONNECTION_TABLE_FEATURES = tableFeatures({
   rowSortingFeature,
   columnVisibilityFeature,
+  columnFilteringFeature,
+  filteredRowModel: createFilteredRowModel(),
   sortedRowModel: createSortedRowModel(),
   sortFns: { text: sortFn_text, basic: sortFn_basic, alphanumeric: sortFn_alphanumeric },
+  filterFns: { includesString: filterFn_includesString },
 });
 
 export type ConnectionTableFeatures = typeof CONNECTION_TABLE_FEATURES;
@@ -146,36 +152,42 @@ export const CONNECTION_COLUMNS: readonly ConnectionColumnDef[] = [
     // Посимвольное сравнение ставит 192.168.1.120 перед 192.168.1.36: в адресе
     // числовые куски сравниваются как числа, а не как текст.
     sortFn: 'alphanumeric',
+    filterFn: 'includesString',
     meta: { label: 'column.source', className: CONNECTION_COLUMN.Source, width: 7, required: false },
   },
   {
     id: CONNECTION_FIELD.Host,
     accessorFn: (row) => row.host,
     sortFn: 'alphanumeric',
+    filterFn: 'includesString',
     meta: { label: 'column.host', className: CONNECTION_COLUMN.Host, width: 13, required: true },
   },
   {
     id: CONNECTION_FIELD.Network,
     accessorFn: (row) => row.network,
     sortFn: 'text',
+    filterFn: 'includesString',
     meta: { label: 'column.network', className: CONNECTION_COLUMN.Network, width: 4, required: false },
   },
   {
     id: CONNECTION_FIELD.Rule,
     accessorFn: (row) => row.rule,
     sortFn: 'text',
+    filterFn: 'includesString',
     meta: { label: 'column.rule', className: CONNECTION_COLUMN.Rule, width: RULE_MIN_WIDTH, required: false },
   },
   {
     id: CONNECTION_FIELD.Action,
     accessorFn: (row) => row.action,
     sortFn: 'text',
+    filterFn: 'includesString',
     meta: { label: 'column.action', className: CONNECTION_COLUMN.Action, width: 11, required: true },
   },
   {
     id: CONNECTION_FIELD.Chain,
     accessorFn: (row) => row.chain.join(' '),
     sortFn: 'text',
+    filterFn: 'includesString',
     meta: { label: 'column.chain', className: CONNECTION_COLUMN.Chain, width: 11, required: false },
   },
   {
@@ -183,6 +195,7 @@ export const CONNECTION_COLUMNS: readonly ConnectionColumnDef[] = [
     accessorFn: (row) => row.downRate + row.upRate,
     sortFn: 'basic',
     sortDescFirst: true,
+    enableColumnFilter: false,
     meta: { label: 'column.rate', className: CONNECTION_COLUMN.Rate, width: 7, required: false },
   },
   {
@@ -190,6 +203,7 @@ export const CONNECTION_COLUMNS: readonly ConnectionColumnDef[] = [
     accessorFn: (row) => row.download + row.upload,
     sortFn: 'basic',
     sortDescFirst: true,
+    enableColumnFilter: false,
     meta: { label: 'column.volume', className: CONNECTION_COLUMN.Volume, width: 7, required: false },
   },
   {
@@ -198,6 +212,7 @@ export const CONNECTION_COLUMNS: readonly ConnectionColumnDef[] = [
     accessorFn: (row) => row.startedAt,
     sortFn: 'basic',
     sortDescFirst: true,
+    enableColumnFilter: false,
     meta: { label: 'column.age', className: CONNECTION_COLUMN.Age, width: 6, required: false },
   },
 ];

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { filterConnections, toSourceGroups } from '../model/Connection.filter';
-import type { ConnectionRow } from '../model/Connection.model';
+import { filterConnections, toKindGroups, toSourceGroups } from '../model/Connection.filter';
+import { ROUTE_KIND, type ConnectionRow } from '../model/Connection.model';
 
 function makeRow(overrides: Partial<ConnectionRow> = {}): ConnectionRow {
   return {
@@ -11,6 +11,7 @@ function makeRow(overrides: Partial<ConnectionRow> = {}): ConnectionRow {
     source: '192.168.1.60',
     rule: 'rule_set=anthropic',
     action: 'route(us-west-fallback)',
+    kind: ROUTE_KIND.Proxy,
     chain: ['us-west-fallback', 'us-west', 'sub-us/USA'],
     upload: 0,
     download: 0,
@@ -84,10 +85,42 @@ describe('устройства-источники', () => {
   });
 });
 
+describe('судьбы пакета', () => {
+  it('держит заданный порядок, а не порядок по числу соединений', () => {
+    const rows = [
+      makeRow({ id: '1', kind: ROUTE_KIND.Block }),
+      makeRow({ id: '2', kind: ROUTE_KIND.Direct }),
+      makeRow({ id: '3', kind: ROUTE_KIND.Direct }),
+      makeRow({ id: '4', kind: ROUTE_KIND.Proxy }),
+    ];
+
+    expect(toKindGroups(rows)).toEqual([
+      { kind: ROUTE_KIND.Proxy, count: 1 },
+      { kind: ROUTE_KIND.Direct, count: 2 },
+      { kind: ROUTE_KIND.Block, count: 1 },
+    ]);
+  });
+
+  it('пустые группы не показывает', () => {
+    expect(toKindGroups([makeRow({ kind: ROUTE_KIND.Dns })])).toEqual([{ kind: ROUTE_KIND.Dns, count: 1 }]);
+  });
+
+  it('на пустом списке отдаёт пустой список', () => {
+    expect(toKindGroups([])).toEqual([]);
+  });
+});
+
 describe('отбор соединений', () => {
   const rows = [
     makeSearchableRow({ id: '1', source: '192.168.1.60', host: 'claude.example:443' }),
-    makeSearchableRow({ id: '2', source: '192.168.1.65', host: 'telegram.example:443', rule: '', chain: ['direct'] }),
+    makeSearchableRow({
+      id: '2',
+      source: '192.168.1.65',
+      host: 'telegram.example:443',
+      rule: '',
+      kind: ROUTE_KIND.Direct,
+      chain: ['direct'],
+    }),
   ];
 
   it('без устройства и запроса отдаёт всё', () => {
@@ -101,5 +134,14 @@ describe('отбор соединений', () => {
   it('складывает устройство и запрос, а не выбирает одно из них', () => {
     expect(filterConnections(rows, 'claude', '192.168.1.65')).toEqual([]);
     expect(filterConnections(rows, 'claude', '192.168.1.60').map((row) => row.id)).toEqual(['1']);
+  });
+
+  it('сужает по действию', () => {
+    expect(filterConnections(rows, '', null, ROUTE_KIND.Direct).map((row) => row.id)).toEqual(['2']);
+  });
+
+  it('складывает действие с устройством и запросом', () => {
+    expect(filterConnections(rows, '', '192.168.1.60', ROUTE_KIND.Direct)).toEqual([]);
+    expect(filterConnections(rows, 'telegram', '192.168.1.65', ROUTE_KIND.Direct).map((row) => row.id)).toEqual(['2']);
   });
 });

@@ -12,6 +12,8 @@ export const RULE_SET_ADD_ERROR = {
   TagRequired: 'tagRequired',
   TagTaken: 'tagTaken',
   FormatRequired: 'formatRequired',
+  IntervalFormat: 'intervalFormat',
+  DetourUnknown: 'detourUnknown',
 } as const;
 
 /** Код отказа в ключ словаря: пропущенный перевод ловится компиляцией. */
@@ -21,6 +23,8 @@ export const RULE_SET_ADD_ERROR_KEY: Readonly<Record<string, ParseKeys<'features
   [RULE_SET_ADD_ERROR.TagRequired]: 'error.tagRequired',
   [RULE_SET_ADD_ERROR.TagTaken]: 'error.tagTaken',
   [RULE_SET_ADD_ERROR.FormatRequired]: 'error.formatRequired',
+  [RULE_SET_ADD_ERROR.IntervalFormat]: 'error.intervalFormat',
+  [RULE_SET_ADD_ERROR.DetourUnknown]: 'error.detourUnknown',
 };
 
 /** Значение поля «источник», когда адрес вписан руками. */

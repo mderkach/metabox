@@ -1,5 +1,6 @@
 import { queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
 import i18next from 'i18next';
+import { useMemo } from 'react';
 
 import {
   DAEMON_ENDPOINT,
@@ -14,6 +15,7 @@ import { parseJsonc } from '@shared/lib/jsonc';
 import { type UnknownField, toUnknownFields } from '@shared/lib/schemaIssues';
 
 import { toConfigVersions } from '../model/Config.adapter';
+import { toOutboundTypes } from '../model/Config.model';
 import { getApplyState, getConfig, getConfigVersions } from './Config.api';
 
 export const CONFIG_QUERY = {
@@ -90,6 +92,14 @@ export function parseConfig(text: string): ParsedConfig {
 
 export function useConfig() {
   return useQuery({ ...getConfigOptions(), select: parseConfig });
+}
+
+/** Тип каждого аутбаунда применённого конфига по его тегу. */
+export function useOutboundTypes(): ReadonlyMap<string, string> {
+  const config = useConfig();
+  const document = config.data?.config ?? null;
+
+  return useMemo(() => toOutboundTypes(document), [document]);
 }
 
 export function getConfigVersionsOptions() {

@@ -1,4 +1,4 @@
-import { Link } from '@tanstack/react-router';
+import { Link, useRouterState } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 
 import { sectionSize, type ConfigDocument } from '@entities/Config';
@@ -8,9 +8,15 @@ import { CONFIG_TAB_CLASS, CONFIG_TAB_UNDERLINE, CONFIG_TABS } from '../model';
 
 export function ConfigTabs({ config }: { config: ConfigDocument | null }) {
   const { t } = useTranslation('widgets/Config/ConfigTabs');
+  // Подчёркивание идёт за завершённым адресом, а не за текущим: текущий роутер
+  // меняет в начале навигации, а снимок «до» переход снимает в её конце — по
+  // текущему полоса уже стояла бы под новой вкладкой, и переезжать было бы нечему.
+  const resolvedPath = useRouterState({
+    select: (state) => state.resolvedLocation?.pathname ?? state.location.pathname,
+  });
 
   return (
-    <nav aria-label={t('label')} className='shrink-0 border-b border-border'>
+    <nav aria-label={t('label')} className='shrink-0 border-b border-border [view-transition-name:config-tabs]'>
       <ul className='flex h-11 items-end gap-1 overflow-x-auto px-4 sm:px-6'>
         {CONFIG_TABS.map((section) => {
           const count = sectionSize(config, section.key);
@@ -33,14 +39,14 @@ export function ConfigTabs({ config }: { config: ConfigDocument | null }) {
                   activeProps={{ 'aria-current': 'page' }}
                   className={cn(
                     CONFIG_TAB_CLASS,
-                    'group text-muted-foreground transition-colors hover:text-foreground',
+                    'text-muted-foreground transition-colors hover:text-foreground',
                     'focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none',
                     'aria-[current=page]:text-foreground'
                   )}
                 >
                   {t(section.label)}
                   {count !== null && <SectionCount count={count} />}
-                  <span className={cn(CONFIG_TAB_UNDERLINE, 'hidden group-aria-[current=page]:block')} />
+                  {section.route === resolvedPath && <span className={CONFIG_TAB_UNDERLINE} />}
                 </Link>
               )}
             </li>

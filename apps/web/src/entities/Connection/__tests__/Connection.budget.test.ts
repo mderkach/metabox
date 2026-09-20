@@ -4,7 +4,7 @@ import { ConnectionsSnapshotSchema } from '../api/Connection.schema';
 import { ConnectionStore } from '../model/Connection.store';
 import { makeConnectionsSnapshot } from './Connection.fixture';
 
-/** Потолок NFR-2: столько соединений панель обязана держать. */
+/** Потолок нагрузки: столько соединений панель обязана держать. */
 const SNAPSHOT_SIZE = 5000;
 const RUNS = 5;
 
@@ -14,8 +14,7 @@ const RUNS = 5;
  *
  * Пороги на порядок выше замера: файлы тестов идут параллельно, и под нагрузкой
  * соседей те же 11.8 мс превращались в 40+. Сторожить микрорегрессию в таком
- * окружении нечем — тест ловит подорожание в разы, которое и было предметом
- * опасений про NFR-2.
+ * окружении нечем — тест ловит подорожание в разы, которого и опасались.
  */
 const PARSE_BUDGET_MS = 10;
 const APPLY_BUDGET_MS = 120;

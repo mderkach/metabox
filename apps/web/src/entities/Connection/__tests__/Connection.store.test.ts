@@ -7,7 +7,7 @@ import { SECONDS_IN_MINUTE } from '@shared/lib/time';
 import { listenConnections } from '../api/Connection.api';
 import type { ConnectionWire } from '../api/Connection.schema';
 import { toConnectionRow } from '../model/Connection.adapter';
-import { CLOSED_LIMIT, FINAL_ACTION, TOP_LIMIT } from '../model/Connection.model';
+import { CLOSED_LIMIT, FINAL_ACTION, ROUTE_KIND, TOP_LIMIT, toRouteKind } from '../model/Connection.model';
 import { ConnectionStore } from '../model/Connection.store';
 import { CONNECTIONS_FIXTURE, makeConnectionsSnapshot } from './Connection.fixture';
 
@@ -243,6 +243,50 @@ describe('сводка и история снапшота', () => {
     expect(summary.nodes.every((share) => share.key !== 'direct')).toBe(true);
   });
 
+  it('считает объём группы суммой байт входящих в неё соединений', () => {
+    const store = ConnectionStore.getState();
+
+    store.reset();
+    store.apply(CONNECTIONS_FIXTURE);
+
+    const { summary, active } = ConnectionStore.getState();
+    const volumeByAction = new Map<string, number>();
+    const volumeByNetwork = new Map<string, number>();
+    const volumeByNode = new Map<string, number>();
+    const volumeBySource = new Map<string, number>();
+
+    for (const row of active) {
+      const volume = row.download + row.upload;
+      const kind = toRouteKind(row.action, row.chain);
+
+      volumeByAction.set(kind, (volumeByAction.get(kind) ?? 0) + volume);
+      volumeByNetwork.set(row.network, (volumeByNetwork.get(row.network) ?? 0) + volume);
+      volumeBySource.set(row.source, (volumeBySource.get(row.source) ?? 0) + volume);
+
+      const node = row.chain.at(-1);
+
+      if (node !== undefined && kind === ROUTE_KIND.Proxy) {
+        volumeByNode.set(node, (volumeByNode.get(node) ?? 0) + volume);
+      }
+    }
+
+    for (const share of summary.actions) {
+      expect(share.volume).toBe(volumeByAction.get(share.key));
+    }
+
+    for (const share of summary.networks) {
+      expect(share.volume).toBe(volumeByNetwork.get(share.key));
+    }
+
+    for (const share of summary.nodes) {
+      expect(share.volume).toBe(volumeByNode.get(share.key));
+    }
+
+    for (const share of summary.sources) {
+      expect(share.volume).toBe(volumeBySource.get(share.key));
+    }
+  });
+
   it('в столбчатой сводке держит только первые группы', () => {
     const store = ConnectionStore.getState();
     const sample = CONNECTIONS_FIXTURE.connections[0];
@@ -266,5 +310,74 @@ describe('сводка и история снапшота', () => {
 
     expect(ConnectionStore.getState().history).toEqual([]);
     expect(ConnectionStore.getState().summary.actions).toEqual([]);
+  });
+});
+
+describe('тон действия по типам аутбаундов', () => {
+  const OUTBOUND_TYPES = new Map([
+    ['direct', 'shadowsocks'],
+    ['proxy', 'urltest'],
+    ['us-fallback', 'selector'],
+  ]);
+
+  afterEach(() => {
+    ConnectionStore.getState().setOutboundTypes(new Map());
+    ConnectionStore.getState().reset();
+  });
+
+  it('разбирает снапшот по карте: тег `direct` типа `shadowsocks` — прокси', () => {
+    const store = ConnectionStore.getState();
+
+    store.reset();
+    store.setOutboundTypes(OUTBOUND_TYPES);
+    store.apply(CONNECTIONS_FIXTURE);
+
+    const { active } = ConnectionStore.getState();
+
+    expect(active).toHaveLength(CONNECTIONS_FIXTURE.connections.length);
+    expect(active.every((row) => row.kind === ROUTE_KIND.Proxy)).toBe(true);
+  });
+
+  it('без карты тот же снапшот читает по строке действия', () => {
+    const store = ConnectionStore.getState();
+
+    store.reset();
+    store.apply(CONNECTIONS_FIXTURE);
+
+    const direct = ConnectionStore.getState().active.filter((row) => row.action === 'route(direct)');
+
+    expect(direct.length).toBeGreaterThan(0);
+    expect(direct.every((row) => row.kind === ROUTE_KIND.Direct)).toBe(true);
+  });
+
+  it('карта, пришедшая после снапшота, перекрашивает уже разобранные строки', () => {
+    const store = ConnectionStore.getState();
+
+    store.reset();
+    store.apply(CONNECTIONS_FIXTURE);
+
+    const before = ConnectionStore.getState();
+    const untouched = before.active.filter((row) => row.action !== 'route(direct)');
+
+    store.setOutboundTypes(OUTBOUND_TYPES);
+
+    const after = ConnectionStore.getState();
+    const direct = after.active.filter((row) => row.action === 'route(direct)');
+
+    expect(direct.length).toBeGreaterThan(0);
+    expect(direct.every((row) => row.kind === ROUTE_KIND.Proxy)).toBe(true);
+    for (const row of untouched) {
+      expect(after.index.get(row.id)).toBe(row);
+    }
+    expect(after.summary.actions.find((share) => share.key === ROUTE_KIND.Direct)).toBeUndefined();
+  });
+
+  it('сброс списка карту не теряет: конфиг перечитывать незачем', () => {
+    const store = ConnectionStore.getState();
+
+    store.setOutboundTypes(OUTBOUND_TYPES);
+    ConnectionStore.getState().reset();
+
+    expect(ConnectionStore.getState().outboundTypes).toBe(OUTBOUND_TYPES);
   });
 });

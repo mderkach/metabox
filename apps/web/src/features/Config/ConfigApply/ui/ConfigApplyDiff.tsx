@@ -34,7 +34,7 @@ const LINE_MARK: Readonly<Record<DiffLine['kind'], string>> = {
 
 /**
  * Диалог показывает текст файла, а не разобранную модель: в Apply уйдут те же
- * байты, что видны здесь (ADR-0004, AC-2).
+ * байты, что видны здесь (ADR-0004).
  */
 export function ConfigApplyDiff({ canApply, onApply }: { canApply: boolean; onApply: () => void }) {
   const { t } = useTranslation('features/Config/ConfigApply');
@@ -94,8 +94,6 @@ export function ConfigApplyDiff({ canApply, onApply }: { canApply: boolean; onAp
         </ScrollArea>
 
         <DialogFooter>
-          {/* Закрытие диалога — часть действия: после запуска смотреть в диф
-              нечего, ход применения показывает бар. */}
           <DialogClose render={<Button size='sm' disabled={!canApply} />} onClick={onApply}>
             {t('diff.apply')}
           </DialogClose>

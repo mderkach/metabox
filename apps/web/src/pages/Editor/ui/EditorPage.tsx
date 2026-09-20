@@ -1,6 +1,6 @@
 import { Link, useSearch } from '@tanstack/react-router';
 import { Info, Search } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { startTransition, useCallback, useState, ViewTransition } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
 import { useConfigPath } from '@entities/Daemon';
@@ -10,10 +10,11 @@ import { FACET_ACTIVE, FACET_CLASS, FACET_IDLE, FACET_MORE } from '@shared/lib/s
 import { cn } from '@shared/lib/utils';
 import { Badge, Button, buttonVariants, Input } from '@shared/ui';
 import { ConfigTabs } from '@widgets/Config/ConfigTabs';
+import { PageHeader } from '@widgets/PageHeader';
 import { RulePanel } from '@widgets/Rule/RulePanel';
 import { RuleTable } from '@widgets/Rule/RuleTable';
 
-import { toSelectedRuleId, useRouteEditor, useRuleFilter } from '../lib/Editor.lib';
+import { toSelectedRuleId, useRouteEditor, useRuleFilter, type RuleFilterState } from '../lib/Editor.lib';
 
 /** Сколько замечаний схемы показывать, чтобы они не вытеснили экран. */
 const VISIBLE_ISSUES = 5;
@@ -31,32 +32,39 @@ export function EditorPage() {
   // открывалась бы заново на каждый рендер.
   const { rule } = useSearch({ strict: false });
   const [selectedId, setSelectedId] = useState<string | null>(() => toSelectedRuleId(rule));
-  const [allTargets, setAllTargets] = useState(false);
 
+  // Без Transition обновление срочное, и граница вокруг панели не анимируется.
   const onSelect = useCallback((id: string) => {
-    setSelectedId((current) => (current === id ? null : id));
+    startTransition(() => {
+      setSelectedId((current) => (current === id ? null : id));
+    });
   }, []);
 
   const onClose = useCallback(() => {
-    setSelectedId(null);
+    startTransition(() => {
+      setSelectedId(null);
+    });
   }, []);
 
   const selected = editor.rules.find((row) => row.id === selectedId) ?? null;
   const selectedNode = selected === null ? null : editor.nodes[selected.index - 1];
-  const shownTargets = allTargets ? filter.targets : filter.targets.slice(0, VISIBLE_TARGETS);
 
   return (
     <>
-      <header className='flex min-h-14 shrink-0 flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border px-4 py-3 sm:px-6'>
-        <h1 className='text-2xl font-semibold'>{t('title')}</h1>
+      <PageHeader
+        title={t('title')}
+        actions={
+          <>
+            <ConfigApplyHistory />
+            <Link to='/config/raw' className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+              {t('raw')}
+            </Link>
+          </>
+        }
+      >
         <p className='font-mono text-xs text-muted-foreground'>{configPath}</p>
         {editor.isDirty && <Badge variant='secondary'>{t('draft')}</Badge>}
-        <span className='grow' />
-        <ConfigApplyHistory />
-        <Link to='/config/raw' className={buttonVariants({ variant: 'outline', size: 'sm' })}>
-          {t('raw')}
-        </Link>
-      </header>
+      </PageHeader>
 
       <ConfigTabs config={editor.config} />
 
@@ -73,92 +81,21 @@ export function EditorPage() {
         {editor.issues.length > 0 && <ConfigNotParsed issues={editor.issues} />}
 
         {editor.rules.length > 0 && (
-          <>
-            <div className='flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2'>
-              <div className='relative w-full max-w-80'>
-                <Search className='pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground' />
-                <Input
-                  value={filter.query}
-                  onChange={(event) => {
-                    filter.setQuery(event.target.value);
-                  }}
-                  placeholder={t('search.placeholder')}
-                  className='pl-8'
-                  aria-label={t('search.label')}
-                />
-              </div>
+          <div className='flex min-h-0 grow flex-col gap-4 lg:flex-row'>
+            <RuleTable
+              rules={filter.rules}
+              total={editor.rules.length}
+              selectedId={selectedId}
+              onSelect={onSelect}
+              search={<RuleSearch filter={filter} />}
+              facets={<RuleTargetFacets filter={filter} />}
+              empty={<EmptyState filter={filter} />}
+            />
 
-              <ul aria-label={t('targets.label')} className='flex min-w-0 flex-wrap items-center gap-1.5'>
-                {shownTargets.map((group) => (
-                  <li key={group.target}>
-                    <button
-                      type='button'
-                      aria-pressed={filter.target === group.target}
-                      onClick={() => {
-                        filter.setTarget(filter.target === group.target ? null : group.target);
-                      }}
-                      className={cn(
-                        FACET_CLASS,
-                        'font-mono',
-                        filter.target === group.target ? FACET_ACTIVE : FACET_IDLE
-                      )}
-                    >
-                      {group.target}
-                      <span className='tabular-nums'>{group.count}</span>
-                    </button>
-                  </li>
-                ))}
-                {filter.targets.length > VISIBLE_TARGETS && (
-                  <li>
-                    <button
-                      type='button'
-                      aria-expanded={allTargets}
-                      onClick={() => {
-                        setAllTargets((current) => !current);
-                      }}
-                      className={cn(FACET_CLASS, FACET_MORE)}
-                    >
-                      {allTargets
-                        ? t('targets.collapse')
-                        : t('targets.more', { count: filter.targets.length - VISIBLE_TARGETS })}
-                    </button>
-                  </li>
-                )}
-              </ul>
-
-              <p role='status' className='text-xs text-muted-foreground'>
-                {filter.filtered
-                  ? t('shown', {
-                      shown: t('count.rule', { ns: 'shared', count: filter.rules.length }),
-                      total: editor.rules.length,
-                    })
-                  : t('count.rule', { ns: 'shared', count: editor.rules.length })}
-              </p>
-            </div>
-
-            <div className='flex min-h-0 grow flex-col gap-4 lg:flex-row'>
-              <RuleTable
-                rules={filter.rules}
-                selectedId={selectedId}
-                onSelect={onSelect}
-                empty={
-                  <div className='flex flex-col items-center gap-2'>
-                    <p className='text-sm text-muted-foreground'>{t('notFound')}</p>
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      onClick={() => {
-                        filter.setQuery('');
-                        filter.setTarget(null);
-                      }}
-                    >
-                      {t('resetFilter')}
-                    </Button>
-                  </div>
-                }
-              />
-
-              {selected !== null && (
+            {selected !== null && (
+              // Граница снаружи `key`: смена строки идёт как `update`, а не
+              // как exit и enter одновременно, иначе панель мигает.
+              <ViewTransition enter='panel-in' exit='panel-out'>
                 <RulePanel
                   key={selected.id}
                   rule={selected}
@@ -167,12 +104,93 @@ export function EditorPage() {
                   outbounds={editor.outbounds}
                   onClose={onClose}
                 />
-              )}
-            </div>
-          </>
+              </ViewTransition>
+            )}
+          </div>
         )}
       </div>
     </>
+  );
+}
+
+/** Поиск: левый край тулбара таблицы. */
+function RuleSearch({ filter }: { filter: RuleFilterState }) {
+  const { t } = useTranslation('pages/Editor');
+
+  return (
+    <div className='relative w-full max-w-80'>
+      <Search className='pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground' />
+      <Input
+        value={filter.query}
+        onChange={(event) => {
+          filter.setQuery(event.target.value);
+        }}
+        placeholder={t('search.placeholder')}
+        className='pl-8'
+        aria-label={t('search.label')}
+      />
+    </div>
+  );
+}
+
+/** Срез по исходу: вторая строка тулбара, потому что исходов бывает полтора десятка. */
+function RuleTargetFacets({ filter }: { filter: RuleFilterState }) {
+  const { t } = useTranslation('pages/Editor');
+  const [allTargets, setAllTargets] = useState(false);
+  const shown = allTargets ? filter.targets : filter.targets.slice(0, VISIBLE_TARGETS);
+
+  return (
+    <ul aria-label={t('targets.label')} className='flex min-w-0 flex-wrap items-center gap-1.5'>
+      {shown.map((group) => (
+        <li key={group.target}>
+          <button
+            type='button'
+            aria-pressed={filter.target === group.target}
+            onClick={() => {
+              filter.setTarget(filter.target === group.target ? null : group.target);
+            }}
+            className={cn(FACET_CLASS, 'font-mono', filter.target === group.target ? FACET_ACTIVE : FACET_IDLE)}
+          >
+            {group.target}
+            <span className='tabular-nums'>{group.count}</span>
+          </button>
+        </li>
+      ))}
+      {filter.targets.length > VISIBLE_TARGETS && (
+        <li>
+          <button
+            type='button'
+            aria-expanded={allTargets}
+            onClick={() => {
+              setAllTargets((current) => !current);
+            }}
+            className={cn(FACET_CLASS, FACET_MORE)}
+          >
+            {allTargets ? t('targets.collapse') : t('targets.more', { count: filter.targets.length - VISIBLE_TARGETS })}
+          </button>
+        </li>
+      )}
+    </ul>
+  );
+}
+
+function EmptyState({ filter }: { filter: RuleFilterState }) {
+  const { t } = useTranslation('pages/Editor');
+
+  return (
+    <div className='flex flex-col items-center gap-2'>
+      <p className='text-sm text-muted-foreground'>{t('notFound')}</p>
+      <Button
+        variant='outline'
+        size='sm'
+        onClick={() => {
+          filter.setQuery('');
+          filter.setTarget(null);
+        }}
+      >
+        {t('resetFilter')}
+      </Button>
+    </div>
   );
 }
 

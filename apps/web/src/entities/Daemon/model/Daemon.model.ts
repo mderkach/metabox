@@ -25,7 +25,7 @@ export interface ApplyTransaction {
   reasonCode?: ApplyReasonCode;
   /** Исходная ошибка шага словами демона: запасной текст и подробность для того, кто чинит. */
   reason?: string;
-  /** Демон дописал в конфиг секцию Clash API, чтобы читать рантайм (AC-31). */
+  /** Демон дописал в конфиг секцию Clash API, чтобы читать рантайм. */
   clashApiAdded?: boolean;
 }
 

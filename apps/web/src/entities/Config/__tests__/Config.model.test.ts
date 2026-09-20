@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { parseConfig } from '../api/Config.query';
-import { insertValue, removeValue, setValue } from '../model/Config.model';
+import { insertValue, removeValue, setValue, toOutboundTypes } from '../model/Config.model';
 import { CONFIG_FIXTURE } from './Config.fixture';
 
 const TEXT = JSON.stringify(CONFIG_FIXTURE, null, 2);
@@ -107,5 +107,26 @@ describe('insertValue', () => {
     expect(left).toHaveLength(rules.length + 1);
     expect(left[1]).toEqual({ action: 'route', outbound: 'direct' });
     expect(left[2]).toEqual(rules[1]);
+  });
+});
+
+describe('toOutboundTypes', () => {
+  it('сводит тег аутбаунда к его типу', () => {
+    const types = toOutboundTypes(CONFIG_FIXTURE);
+
+    expect(types.get('node-a-vless-reality')).toBe('vless');
+    expect(types.get('proxy')).toBe('urltest');
+    expect(types.get('alt-fallback')).toBe('selector');
+    expect(types.get('direct')).toBe('direct');
+  });
+
+  it('аутбаунд без тега в карту не попадает: сослаться на него нечем', () => {
+    const types = toOutboundTypes({ ...CONFIG_FIXTURE, outbounds: [{ type: 'direct' }] });
+
+    expect(types.size).toBe(0);
+  });
+
+  it('конфига нет — карта пуста', () => {
+    expect(toOutboundTypes(null).size).toBe(0);
   });
 });

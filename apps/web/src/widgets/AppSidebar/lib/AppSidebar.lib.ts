@@ -32,6 +32,25 @@ function writeCollapsed(collapsed: boolean) {
 }
 
 /**
+ * Текущий пункт меню по адресу: точное совпадение, иначе самый длинный
+ * префикс. Префиксное совпадение роутера подсвечивало бы на `/config/rule-set`
+ * и «Конфигурацию», и «Каталог сетов» разом — два текущих раздела сразу.
+ */
+export function pickActiveNav(pathname: string, targets: readonly string[]): string | null {
+  let active: string | null = null;
+
+  for (const target of targets) {
+    const matches = pathname === target || pathname.startsWith(`${target}/`);
+
+    if (matches && (active === null || target.length > active.length)) {
+      active = target;
+    }
+  }
+
+  return active;
+}
+
+/**
  * Состояние боковой панели. Выбор переживает перезагрузку страницы, но на узком
  * экране не действует: там панель всегда свёрнута до полосы значков.
  */

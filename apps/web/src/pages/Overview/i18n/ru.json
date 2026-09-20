@@ -64,6 +64,11 @@
     "schema": "Схема форм",
     "config": "Конфиг",
     "clashMode": "Режим Clash API",
+    "mode": {
+      "rule": "по правилам",
+      "global": "глобально",
+      "direct": "напрямую"
+    },
     "memory": "Память демона"
   }
 }

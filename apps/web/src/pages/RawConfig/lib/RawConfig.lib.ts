@@ -21,7 +21,7 @@ export interface RawConfigState {
  * Текст конфига для правки руками.
  *
  * Экран открывается и тогда, когда схема конфиг не приняла: разбор нужен формам
- * и подсказкам, а текстовому режиму — нет (UX-1, AC-24).
+ * и подсказкам, а текстовому режиму — нет.
  */
 export function useRawConfig(): RawConfigState {
   const config = useConfig();

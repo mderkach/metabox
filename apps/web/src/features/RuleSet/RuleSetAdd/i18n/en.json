@@ -6,7 +6,8 @@
       "placeholder": "google, for example",
       "suggestions": "Common categories",
       "hint": "The lists are built by the source. No matching suggestion — type the category name and the address builds itself.",
-      "more": "and {{count}} more"
+      "more": "and {{count}} more",
+      "offCatalog": "This category is not in the metabox catalog. If the provider has no such file, sing-box will not start when the config is applied."
     },
     "mirror": { "label": "Mirror" },
     "url": { "label": "Set address", "placeholder": "https://example.com/list.srs" },
@@ -36,6 +37,8 @@
     "urlScheme": "the address starts with http:// or https://",
     "tagRequired": "without a name no rule can point at this set",
     "tagTaken": "another set already goes by that name",
-    "formatRequired": "pick the file format"
+    "formatRequired": "pick the file format",
+    "intervalFormat": "a duration looks like 12h, 3d or 1h30m",
+    "detourUnknown": "no outbound in the config goes by that name"
   }
 }

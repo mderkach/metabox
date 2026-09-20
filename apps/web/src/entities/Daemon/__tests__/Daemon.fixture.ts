@@ -25,7 +25,7 @@ export const CLASH_CONFIGS_FIXTURE: ClashConfigsWire = {
   ipv6: false,
 };
 
-/** Первый сэмпл памяти на устройстве нулевой (PRD, OQ-5) — мок это повторяет. */
+/** Первый сэмпл памяти на устройстве нулевой — мок это повторяет. */
 export const MEMORY_SAMPLES = [0, 47_923_200, 51_380_224];
 
 /** Сэмпл трафика: замер на устройстве 2026-09-10, байты в секунду. */
@@ -60,7 +60,7 @@ export const SERVICE_FAILED_FIXTURE: ServiceStateWire = {
     'FATAL[0000] start service: initialize outbound/urltest[proxy]: provider sub-nl not found\nprocd: instance sing-box::instance1 exit code 1, restart in 5s',
 };
 
-/** Бинарь новее схемы: панель обязана продолжать работать (UX-4, AC-28). */
+/** Бинарь новее схемы: панель обязана продолжать работать. */
 export const SERVICE_DRIFT_FIXTURE: ServiceStateWire = {
   status: 'running',
   uptime: 120,

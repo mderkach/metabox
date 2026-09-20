@@ -1,4 +1,4 @@
-import { useTable, type ColumnVisibilityState, type SortingState } from '@tanstack/react-table';
+import { useTable, type ColumnFiltersState } from '@tanstack/react-table';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -7,26 +7,29 @@ import type { ConnectionRow as ConnectionRowModel } from '@entities/Connection';
 import { useCloseConnection } from '@features/Connection/ConnectionClose';
 import { useNarrowScreen } from '@shared/lib/media';
 
-import { useNow } from '../lib';
+import { DENSITY_ROW_ESTIMATE, useNow, type ConnectionView } from '../lib';
 import { ConnectionCard } from './ConnectionCard';
 import { ConnectionColumnPicker } from './ConnectionColumnPicker';
-import {
-  CONNECTION_COLUMNS,
-  CONNECTION_COLUMNS_HIDDEN,
-  CONNECTION_TABLE_FEATURES,
-  toTableColumns,
-  toTableMinWidth,
-} from './ConnectionColumns';
+import { CONNECTION_COLUMNS, CONNECTION_TABLE_FEATURES, toTableColumns, toTableMinWidth } from './ConnectionColumns';
+import { ConnectionDensityToggle } from './ConnectionDensityToggle';
+import { ConnectionRefreshSelect } from './ConnectionRefreshSelect';
 import { ConnectionRow } from './ConnectionRow';
 import { ConnectionTableHeader } from './ConnectionTableHeader';
 
-/** Оценки для первого кадра: точную высоту виртуализатор измеряет сам. */
-const ROW_ESTIMATE = 48;
+/** Оценка карточки узкого экрана для первого кадра: точную высоту виртуализатор измеряет сам. */
 const CARD_ESTIMATE = 220;
 const OVERSCAN = 10;
 
 /** Строка заголовка тоже строка таблицы: нумерация строк начинается с неё. */
 const HEADER_ROWS = 1;
+
+/** Что показать вместо таблицы, когда после всех отборов не осталось строк. */
+export interface ConnectionTableEmpty {
+  /** Отбор действует: поиск и фасеты экрана или фильтры колонок самой таблицы. */
+  filtered: boolean;
+  /** Снимает и то, и другое: кнопка на пустом экране обязана вернуть список. */
+  reset: () => void;
+}
 
 /**
  * Список соединений: тулбар, шапка с сортировкой, виртуализованные строки и
@@ -43,28 +46,47 @@ export function ConnectionTable({
   total,
   closable,
   empty,
+  filtered,
+  onReset,
+  view,
   search = null,
   actions = null,
   facets = null,
   footer = null,
   selectedId = null,
+  explainPanelId,
   onExplain = null,
 }: {
   rows: ConnectionRowModel[];
   /** Сколько строк во вкладке до отбора: подвал сообщает обе величины. */
   total: number;
   closable: boolean;
-  /** Что показать вместо таблицы, когда строк нет. */
-  empty: ReactNode;
+  /**
+   * Что показать вместо таблицы, когда строк нет. Признак отбора и его сброс
+   * считает таблица: фильтры колонок живут в ней и экрану не видны.
+   */
+  empty: (state: ConnectionTableEmpty) => ReactNode;
+  /** Отбор экрана: поиск и фасеты. Свои фильтры таблица добавляет к нему сама. */
+  filtered: boolean;
+  /** Снять отбор экрана; фильтры колонок таблица снимает сама. */
+  onReset: () => void;
+  /** Вид списка: он переживает перезагрузку, поэтому живёт снаружи таблицы. */
+  view: ConnectionView;
   /** Поиск: левый край тулбара. */
   search?: ReactNode;
   /** Действия над списком: живут в карточке таблицы, а не в шапке страницы. */
   actions?: ReactNode;
-  /** Срезы по вопросу экрана: вторая строка тулбара. */
+  /** Срезы по вопросу экрана: вторая строка тулбара, на телефоне — первая. */
   facets?: ReactNode;
-  /** Выгрузка: подвал, рядом со счётчиком — выгружается ровно то, что он называет. */
-  footer?: ReactNode;
+  /**
+   * Выгрузка: подвал, рядом со счётчиком. Получает строки после всех отборов,
+   * включая фильтры колонок, которых экран не видит, — уходит ровно то, что
+   * счётчик называет.
+   */
+  footer?: ((rows: ConnectionRowModel[]) => ReactNode) | null;
   selectedId?: string | null;
+  /** Идентификатор панели объяснения: строка ссылается на неё `aria-controls`. */
+  explainPanelId?: string;
   /** `null` — объяснение маршрута выключено: у демона нет источника рантайма. */
   onExplain?: ((id: string) => void) | null;
 }) {
@@ -73,8 +95,7 @@ export function ConnectionTable({
   const close = useCloseConnection();
   const now = useNow();
   const narrow = useNarrowScreen();
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnVisibility, setColumnVisibility] = useState<ColumnVisibilityState>(CONNECTION_COLUMNS_HIDDEN);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 
   const onClose = useCallback(
     (id: string) => {
@@ -83,36 +104,45 @@ export function ConnectionTable({
     [close]
   );
 
+  const onResetAll = useCallback(() => {
+    setColumnFilters([]);
+    onReset();
+  }, [onReset]);
+
   const table = useTable(
     {
       features: CONNECTION_TABLE_FEATURES,
       columns: CONNECTION_COLUMNS,
       data: rows,
-      state: { sorting, columnVisibility },
-      onSortingChange: setSorting,
-      onColumnVisibilityChange: setColumnVisibility,
+      state: { sorting: view.sorting, columnVisibility: view.columns, columnFilters },
+      onSortingChange: view.setSorting,
+      onColumnVisibilityChange: view.setColumns,
+      onColumnFiltersChange: setColumnFilters,
     },
     (state) => state
   );
 
-  const sorted = table.getRowModel().rows;
+  // Модель уже прошла и фильтры колонок, и сортировку: подвал считает по ней, и
+  // «пусто из-за отбора» показывается в том числе от одного фильтра колонки.
+  const visible = table.getRowModel().rows;
+  const shownRows = useMemo(() => visible.map((row) => row.original), [visible]);
   const columns = toTableColumns(table).filter(({ column }) => column.getIsVisible());
   // Ссылка обязана быть стабильной: `ConnectionRow` мемоизирована, и новый
   // массив на каждый снапшот обнулял бы мемоизацию всех отрисованных строк.
   const cells = useMemo(
     () =>
-      CONNECTION_COLUMNS.filter((def) => columnVisibility[def.id] !== false).map((def) => ({
+      CONNECTION_COLUMNS.filter((def) => view.columns[def.id] !== false).map((def) => ({
         id: def.id,
         className: def.meta.className,
         label: def.meta.label,
       })),
-    [columnVisibility]
+    [view.columns]
   );
 
   const virtualizer = useVirtualizer({
-    count: sorted.length,
+    count: visible.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => (narrow ? CARD_ESTIMATE : ROW_ESTIMATE),
+    estimateSize: () => (narrow ? CARD_ESTIMATE : DENSITY_ROW_ESTIMATE[view.density]),
     overscan: OVERSCAN,
   });
 
@@ -122,27 +152,30 @@ export function ConnectionTable({
         <div className='flex flex-wrap items-center gap-2'>
           {search}
           <span className='grow' />
+          {narrow && facets}
           <ConnectionColumnPicker table={table} />
+          <ConnectionDensityToggle density={view.density} onDensityChange={view.setDensity} />
+          <ConnectionRefreshSelect interval={view.interval} onIntervalChange={view.setInterval} />
           {actions}
         </div>
-        {facets}
+        {!narrow && facets}
       </div>
 
-      {rows.length === 0 ? (
-        <div className='flex grow items-center justify-center px-4 py-10 text-center'>{empty}</div>
+      {visible.length === 0 ? (
+        <div className='flex grow items-center justify-center px-4 py-10 text-center'>
+          {empty({ filtered: filtered || columnFilters.length > 0, reset: onResetAll })}
+        </div>
       ) : (
         <div
           ref={scrollRef}
           data-virtual-viewport=''
           role={narrow ? 'list' : 'table'}
           aria-label={t('label')}
-          aria-rowcount={narrow ? undefined : sorted.length + HEADER_ROWS}
+          aria-rowcount={narrow ? undefined : visible.length + HEADER_ROWS}
           className='min-h-0 grow overflow-auto'
         >
-          {/* Ширина задаётся здесь, а не на строке: одно значение держит шапку
-              и строки вместе, и по нему же таблица сужается, когда колонки скрыты. */}
           <div style={narrow ? undefined : { minWidth: toTableMinWidth(columns) }}>
-            {!narrow && <ConnectionTableHeader columns={columns} />}
+            {!narrow && <ConnectionTableHeader columns={columns} density={view.density} />}
 
             <div
               role={narrow ? undefined : 'rowgroup'}
@@ -150,7 +183,7 @@ export function ConnectionTable({
               style={{ height: `${String(virtualizer.getTotalSize())}px` }}
             >
               {virtualizer.getVirtualItems().map((item) => {
-                const row = sorted[item.index].original;
+                const row = visible[item.index].original;
 
                 return (
                   <div
@@ -168,16 +201,19 @@ export function ConnectionTable({
                         onClose={closable ? onClose : null}
                         onExplain={onExplain}
                         selected={row.id === selectedId}
+                        panelId={explainPanelId}
                       />
                     ) : (
                       <ConnectionRow
                         connection={row}
                         cells={cells}
+                        density={view.density}
                         rowIndex={item.index + 1 + HEADER_ROWS}
                         now={now}
                         onClose={closable ? onClose : null}
                         onExplain={onExplain}
                         selected={row.id === selectedId}
+                        panelId={explainPanelId}
                       />
                     )}
                   </div>
@@ -190,12 +226,12 @@ export function ConnectionTable({
 
       <div className='flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-t border-border px-3.5 py-2 text-xs text-muted-foreground'>
         <p role='status'>
-          {sorted.length === total
+          {visible.length === total
             ? t('footer.rows', { count: total })
-            : t('footer.shown', { shown: sorted.length, total })}
+            : t('footer.shown', { shown: visible.length, total })}
         </p>
         <span className='grow' />
-        {footer}
+        {footer !== null && footer(shownRows)}
       </div>
     </section>
   );

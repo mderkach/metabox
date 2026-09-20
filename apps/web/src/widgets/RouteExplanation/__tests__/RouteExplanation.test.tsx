@@ -1,6 +1,7 @@
 import { renderWithRouter } from '@test/renderWithRouter';
 import { server } from '@test/server';
 import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -110,5 +111,29 @@ describe('RouteExplanation', () => {
     const chain = await screen.findByRole('list', { name: 'Цепочка прокси' });
 
     expect(chain).toHaveTextContent('alt-fallbackhk-01');
+  });
+
+  it('называется по своему заголовку', async () => {
+    serveExplanation(ROUTE_EXPLANATION_FIXTURE);
+    serveConfig(configWithRules(ROUTE_EXPLANATION_FIXTURE.rules.length));
+
+    renderWithRouter(() => <RouteExplanation connectionId='c-1' onClose={vi.fn<() => void>()} />);
+
+    expect(await screen.findByRole('complementary', { name: 'Маршрут соединения' })).toBeInTheDocument();
+  });
+
+  it('закрывается по Escape', async () => {
+    serveExplanation(ROUTE_EXPLANATION_FIXTURE);
+    serveConfig(configWithRules(ROUTE_EXPLANATION_FIXTURE.rules.length));
+
+    const onClose = vi.fn<() => void>();
+    const user = userEvent.setup();
+
+    renderWithRouter(() => <RouteExplanation connectionId='c-1' onClose={onClose} />);
+
+    await screen.findByRole('complementary');
+    await user.keyboard('{Escape}');
+
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

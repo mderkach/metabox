@@ -29,5 +29,22 @@
     "explain": "Why connection {{host}} took this route",
     "close": "Close connection {{host}}",
     "unconditional": "no conditions"
+  },
+  "filter": {
+    "title": "Filter by {{column}}",
+    "label": "Filter by column {{column}}",
+    "active": "Filter by column {{column}}: active",
+    "input": "Substring in column {{column}}",
+    "placeholder": "Substring",
+    "clear": "Clear"
+  },
+  "density": {
+    "label": "Compact rows"
+  },
+  "refresh": {
+    "label": "How often the list refreshes",
+    "live": "1 s",
+    "slow": "5 s",
+    "slower": "15 s"
   }
 }

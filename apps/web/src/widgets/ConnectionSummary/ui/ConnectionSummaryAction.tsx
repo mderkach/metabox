@@ -2,7 +2,7 @@ import type { ParseKeys } from 'i18next';
 import { useTranslation } from 'react-i18next';
 
 import { ROUTE_KIND, type ConnectionShare, type RouteKind } from '@entities/Connection';
-import { formatRate } from '@shared/lib/format';
+import { formatBytes, formatRate } from '@shared/lib/format';
 
 import { ConnectionSummaryBars, type SummaryBar } from './ConnectionSummaryBars';
 import { ConnectionSummaryPanel } from './ConnectionSummaryPanel';
@@ -16,10 +16,10 @@ const KIND_VIEW = [
   { kind: ROUTE_KIND.Other, label: 'action.other', tone: 'bg-route-neutral' },
 ] as const satisfies readonly { kind: RouteKind; label: ParseKeys<'widgets/ConnectionSummary'>; tone: string }[];
 
-/** Столбец длиной в соединения: молчащее соединение — тоже маршрут. */
+/** Столбец длиной в объём трафика, а не в число соединений: молчащее соединение остаётся в списке, но веса не добавляет. */
 export function ConnectionSummaryAction({ shares }: { shares: ConnectionShare<RouteKind>[] }) {
   const { t } = useTranslation('widgets/ConnectionSummary');
-  const total = shares.reduce((sum, share) => sum + share.count, 0);
+  const total = shares.reduce((sum, share) => sum + share.volume, 0);
   const bars: SummaryBar[] = KIND_VIEW.flatMap((view) => {
     const share = shares.find((entry) => entry.key === view.kind);
 
@@ -31,8 +31,8 @@ export function ConnectionSummaryAction({ shares }: { shares: ConnectionShare<Ro
       {
         key: view.kind,
         label: t(view.label),
-        value: share.count,
-        caption: `${t('count.connection', { ns: 'shared', count: share.count })} · ${formatRate(share.rate)}`,
+        value: share.volume,
+        caption: `${t('count.connection', { ns: 'shared', count: share.count })} · ${formatRate(share.rate)} · ${formatBytes(share.volume)}`,
         tone: view.tone,
       },
     ];

@@ -1,2 +1,2 @@
-export { useRuleSetEditor } from './RuleSets.lib';
-export type { RuleSetEditorState } from './RuleSets.lib';
+export { useRuleSetEditor, useRuleSetFilter } from './RuleSets.lib';
+export type { RuleSetEditorState, RuleSetFilterState } from './RuleSets.lib';

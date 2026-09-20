@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import { SECTION_LABEL } from '@shared/lib/styles';
 import { Card, CardContent, CardHeader } from '@shared/ui';
 
-/** Пометку «считает панель» несёт заголовок секции, а не карточка (UX-8). */
+/** Пометку «считает панель» несёт заголовок секции, а не карточка. */
 export function ConnectionSummaryPanel({
   title,
   href,

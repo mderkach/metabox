@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { TFunction } from 'i18next';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, TriangleAlert } from 'lucide-react';
 import { useId, useState } from 'react';
 import { Controller, FormProvider, useForm, useFormContext, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -34,7 +34,16 @@ import {
  * и правится руками: вписанный адрес переводит форму в «свой источник», и
  * ни одна категория не оказывается недостижимой.
  */
-export function RuleSetAddForm({ takenTags, onDone }: { takenTags: readonly string[]; onDone?: () => void }) {
+export function RuleSetAddForm({
+  takenTags,
+  outbounds,
+  onDone,
+}: {
+  takenTags: readonly string[];
+  /** Теги аутбаундов документа; пустой список — конфиг не разобран. */
+  outbounds: readonly string[];
+  onDone?: () => void;
+}) {
   const { t } = useTranslation('features/RuleSet/RuleSetAdd');
   const insert = ConfigDocumentState.use.insert();
   const count = takenTags.length;
@@ -42,7 +51,7 @@ export function RuleSetAddForm({ takenTags, onDone }: { takenTags: readonly stri
   const form = useForm<RuleSetAddModel>({
     defaultValues: ruleSetAddDefaults(),
     mode: 'onSubmit',
-    resolver: zodResolver(makeRuleSetAddSchema(takenTags)),
+    resolver: zodResolver(makeRuleSetAddSchema(takenTags, outbounds)),
   });
 
   const onSubmit = form.handleSubmit((data) => {
@@ -64,7 +73,7 @@ export function RuleSetAddForm({ takenTags, onDone }: { takenTags: readonly stri
         <AddressField />
         <TagField />
         <FormatField />
-        <ExtraFields />
+        <ExtraFields outbounds={outbounds} />
 
         <div className='flex flex-wrap items-center gap-2'>
           <Button type='submit'>{t('submit')}</Button>
@@ -93,6 +102,10 @@ function ProviderField() {
         <div className='flex flex-col gap-1.5'>
           <Label htmlFor={id}>{t('field.provider.label')}</Label>
           <Select
+            items={[
+              ...RULE_SET_PROVIDERS.map((provider) => ({ value: provider.id, label: provider.name })),
+              { value: CUSTOM_PROVIDER, label: t('field.provider.custom') },
+            ]}
             value={field.value}
             onValueChange={(value: string | null) => {
               const next = value ?? CUSTOM_PROVIDER;
@@ -241,7 +254,34 @@ function AddressField() {
           </>
         )}
       />
+
+      <CategoryNotice />
     </div>
+  );
+}
+
+/**
+ * Категория вне каталога панели. Не отказ: каталог неполон по замыслу, и
+ * поставщик вполне может отдавать такой файл. Предупреждение называет
+ * последствие, потому что проверить адрес панель не может — это сделает бинарь
+ * при применении.
+ */
+function CategoryNotice() {
+  const { t } = useTranslation('features/RuleSet/RuleSetAdd');
+  const { control } = useFormContext<RuleSetAddModel>();
+  const providerId = useWatch({ control, name: 'providerId' });
+  const category = useWatch({ control, name: 'category' }).trim();
+  const provider = findProvider(providerId);
+
+  if (provider === null || category === '' || provider.categories.includes(category)) {
+    return null;
+  }
+
+  return (
+    <p role='status' className='flex items-start gap-1.5 text-xs text-pretty text-signal-warn'>
+      <TriangleAlert className='mt-px size-3.5 shrink-0' aria-hidden='true' />
+      <span>{t('field.category.offCatalog')}</span>
+    </p>
   );
 }
 
@@ -267,6 +307,7 @@ function MirrorField() {
             {t('field.mirror.label')}
           </Label>
           <Select
+            items={provider.mirrors.map((mirror) => ({ value: mirror.id, label: mirror.name }))}
             value={field.value}
             onValueChange={(value: string | null) => {
               const next = value ?? provider.mirrors[0].id;
@@ -343,7 +384,11 @@ function FormatField() {
       render={({ field, fieldState }) => (
         <div className='flex flex-col gap-1.5'>
           <Label htmlFor={id}>{t('field.format.label')}</Label>
-          <Select value={field.value} onValueChange={field.onChange}>
+          <Select
+            items={RULE_SET_FORMAT_OPTIONS.map((format) => ({ value: format, label: t(`format.${format}`) }))}
+            value={field.value}
+            onValueChange={field.onChange}
+          >
             <SelectTrigger id={id}>
               <SelectValue placeholder={t('field.format.placeholder')} />
             </SelectTrigger>
@@ -365,37 +410,42 @@ function FormatField() {
 
 /**
  * Интервал обновления и узел для скачивания. Свёрнуты: оба нужны редко, а
- * развёрнутыми занимают половину формы на узком экране.
+ * развёрнутыми занимают половину формы на узком экране. Отказ на любом из них
+ * раскрывает блок принудительно — иначе сообщение осталось бы под свёрткой.
  */
-function ExtraFields() {
+function ExtraFields({ outbounds }: { outbounds: readonly string[] }) {
   const { t } = useTranslation('features/RuleSet/RuleSetAdd');
-  const { control } = useFormContext<RuleSetAddModel>();
+  const { control, formState } = useFormContext<RuleSetAddModel>();
   const [open, setOpen] = useState(false);
   const intervalId = useId();
   const detourId = useId();
   const panelId = useId();
+  const detourListId = useId();
+
+  const rejected = formState.errors.updateInterval !== undefined || formState.errors.detour !== undefined;
+  const expanded = open || rejected;
 
   return (
     <div className='flex flex-col gap-3'>
       <button
         type='button'
-        aria-expanded={open}
+        aria-expanded={expanded}
         aria-controls={panelId}
         onClick={() => {
           setOpen((current) => !current);
         }}
         className='flex w-fit items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none'
       >
-        <ChevronDown className={cn('size-4 transition-transform', open && 'rotate-180')} />
+        <ChevronDown className={cn('size-4 transition-transform', expanded && 'rotate-180')} />
         {t('extra.toggle')}
       </button>
 
-      {open && (
+      {expanded && (
         <div id={panelId} className='flex flex-col gap-3 border-l border-border pl-3.5'>
           <Controller
             control={control}
             name='updateInterval'
-            render={({ field }) => (
+            render={({ field, fieldState }) => (
               <div className='flex flex-col gap-1.5'>
                 <Label htmlFor={intervalId}>{t('field.interval.label')}</Label>
                 <Input
@@ -405,8 +455,10 @@ function ExtraFields() {
                   placeholder={t('field.interval.placeholder')}
                   autoComplete='off'
                   className='font-mono'
+                  aria-invalid={fieldState.error !== undefined}
                 />
                 <p className='text-xs text-muted-foreground'>{t('field.interval.hint')}</p>
+                <FieldError message={fieldState.error?.message} />
               </div>
             )}
           />
@@ -414,7 +466,7 @@ function ExtraFields() {
           <Controller
             control={control}
             name='detour'
-            render={({ field }) => (
+            render={({ field, fieldState }) => (
               <div className='flex flex-col gap-1.5'>
                 <Label htmlFor={detourId}>{t('field.detour.label')}</Label>
                 <Input
@@ -424,8 +476,18 @@ function ExtraFields() {
                   placeholder={t('field.detour.placeholder')}
                   autoComplete='off'
                   className='font-mono'
+                  list={outbounds.length === 0 ? undefined : detourListId}
+                  aria-invalid={fieldState.error !== undefined}
                 />
+                {outbounds.length > 0 && (
+                  <datalist id={detourListId}>
+                    {outbounds.map((tag) => (
+                      <option key={tag}>{tag}</option>
+                    ))}
+                  </datalist>
+                )}
                 <p className='text-xs text-muted-foreground'>{t('field.detour.hint')}</p>
+                <FieldError message={fieldState.error?.message} />
               </div>
             )}
           />

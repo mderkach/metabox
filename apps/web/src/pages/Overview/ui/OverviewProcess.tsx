@@ -1,3 +1,4 @@
+import type { ParseKeys, TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 
 import { SCHEMA_VERSION, useClashConfigs, useConfigPath, useDaemonStatus } from '@entities/Daemon';
@@ -10,6 +11,19 @@ import { DaemonMemory } from '@widgets/Daemon/DaemonTraffic';
 
 import type { OverviewRuntime } from '../lib';
 import { OverviewSection } from './OverviewSection';
+
+/** Демон отдаёт режим в любом регистре; незнакомое значение показывается как есть. */
+const CLASH_MODE_LABEL: Readonly<Record<string, ParseKeys<'pages/Overview'> | undefined>> = {
+  rule: 'process.mode.rule',
+  global: 'process.mode.global',
+  direct: 'process.mode.direct',
+};
+
+function toClashModeLabel(t: TFunction<'pages/Overview'>, mode: string): string {
+  const key = CLASH_MODE_LABEL[mode.toLowerCase()];
+
+  return key === undefined ? mode : t(key);
+}
 
 export function OverviewProcess({ runtime }: { runtime: OverviewRuntime }) {
   const { t } = useTranslation('pages/Overview');
@@ -51,7 +65,10 @@ export function OverviewProcess({ runtime }: { runtime: OverviewRuntime }) {
               <ProcessRow label={t('process.daemon')} value={status.data?.version ?? '—'} mono />
               <ProcessRow label={t('process.schema')} value={SCHEMA_VERSION} mono />
               <ProcessRow label={t('process.config')} value={configPath} mono />
-              <ProcessRow label={t('process.clashMode')} value={clash.data?.mode ?? '—'} />
+              <ProcessRow
+                label={t('process.clashMode')}
+                value={clash.data === undefined ? '—' : toClashModeLabel(t, clash.data.mode)}
+              />
               {system !== null && (
                 <ProcessRow
                   label={t('process.memory')}

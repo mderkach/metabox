@@ -3,19 +3,10 @@ import { z } from 'zod';
 
 import { preloadNamespaces } from '../lib/i18n';
 import { AppLayout } from '../ui/AppLayout';
+import { NotFoundPage } from '../ui/NotFoundPage';
+import { toPageTransitionTypes } from './Router.transition';
 
-/**
- * Маршруты объявлены кодом, а не файлами: файловый роутинг завёл бы вторую
- * структуру каталогов поверх слоёв FSD и генерируемое дерево маршрутов в git.
- *
- * Экран подключается только тогда, когда он сделан: маршрут-заглушка в меню
- * неотличим от готового раздела и врёт о состоянии панели.
- *
- * Словари экрана догружает `loader` вместе с его кодом: без этого первый кадр
- * маршрута уходит в `Suspense` и показывает заглушку вместо текста. Неймспейсы
- * оболочки в списках не повторяются — их грузит вход приложения.
- */
-const rootRoute = createRootRoute({ component: AppLayout });
+const rootRoute = createRootRoute({ component: AppLayout, notFoundComponent: NotFoundPage });
 
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -116,6 +107,7 @@ export const Router = createRouter({
     connectionsRoute,
     overviewRoute,
   ]),
+  defaultViewTransition: { types: toPageTransitionTypes },
 });
 
 declare module '@tanstack/react-router' {

@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useProxies, useProxyProviders } from '@entities/Proxy';
 import { Card, CardContent, CardHeader } from '@shared/ui';
+import { PageHeader } from '@widgets/PageHeader';
 import { ProxyGroups } from '@widgets/ProxyGroups';
 
 /** `updatedAt` приходит в ISO; экрану нужна дата без времени. */
@@ -18,10 +19,9 @@ export function ProxiesPage() {
 
   return (
     <>
-      <header className='flex min-h-14 shrink-0 flex-wrap items-baseline gap-x-2.5 gap-y-1 border-b border-border px-4 py-2.5 sm:px-6'>
-        <h1 className='text-base font-medium'>{t('title')}</h1>
+      <PageHeader title={t('title')}>
         <p className='text-xs text-muted-foreground'>{t('subtitle')}</p>
-      </header>
+      </PageHeader>
 
       <div className='flex min-h-0 grow flex-col gap-4 overflow-y-auto px-4 py-5 *:shrink-0 sm:px-6'>
         {proxies.isPending && <p className='text-sm text-muted-foreground'>{t('pending')}</p>}

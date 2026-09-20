@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import type { ParseKeys, TFunction } from 'i18next';
 import { X } from 'lucide-react';
+import type { KeyboardEvent } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
 import {
@@ -10,6 +11,7 @@ import {
   type RouteMatch,
   type RouteReasonCode,
 } from '@entities/Route';
+import { useFocusReturn } from '@shared/lib/useFocusReturn';
 import { Alert, AlertDescription, AlertTitle, Button, buttonVariants } from '@shared/ui';
 
 import { useRouteExplanationState } from '../lib/RouteExplanation.lib';
@@ -26,14 +28,39 @@ const REASON_KEY: Readonly<Record<RouteReasonCode, ParseKeys<'widgets/RouteExpla
  * по которой не подошли предыдущие правила, не вычисляется: у каждого
  * утверждения на экране видно происхождение, и догадка не подаётся как факт.
  */
-export function RouteExplanation({ connectionId, onClose }: { connectionId: string; onClose: () => void }) {
+export function RouteExplanation({
+  id,
+  connectionId,
+  onClose,
+}: {
+  id?: string;
+  connectionId: string;
+  onClose: () => void;
+}) {
   const { t } = useTranslation('widgets/RouteExplanation');
   const state = useRouteExplanationState(connectionId);
+  const headingRef = useFocusReturn<HTMLHeadingElement>();
+
+  function onKeyDown(event: KeyboardEvent<HTMLElement>) {
+    if (event.key === 'Escape') {
+      onClose();
+    }
+  }
 
   return (
-    <aside className='flex w-full max-w-md shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-card'>
+    // Escape закрывает панель: обработчик на контейнере — обычный паттерн для
+    // панелей и диалогов, интерактивная роль aside для этого не нужна.
+    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- см. выше
+    <aside
+      id={id}
+      aria-label={t('title')}
+      onKeyDown={onKeyDown}
+      className='flex w-full max-w-md shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-card'
+    >
       <header className='flex items-center gap-2.5 border-b border-border px-4 py-3'>
-        <h2 className='grow text-sm font-medium'>{t('title')}</h2>
+        <h2 ref={headingRef} tabIndex={-1} className='grow text-sm font-medium'>
+          {t('title')}
+        </h2>
         <Button variant='outline' size='icon-sm' aria-label={t('close')} onClick={onClose}>
           <X />
         </Button>
@@ -174,8 +201,6 @@ function Chain({ nodes, origin }: { nodes: string[]; origin: RouteExplanationMod
         <h3 className='text-sm font-medium'>{t('chain.title')}</h3>
         <RouteOriginBadge origin={origin} />
       </div>
-      {/* Core отдаёт цепочку от конечного узла к группе — человек читает её
-          в обратную сторону. */}
       <ol aria-label={t('chain.label')} className='flex flex-wrap items-center gap-1.5 font-mono text-xs'>
         {[...nodes].reverse().map((node) => (
           <li key={node} className='rounded-md bg-muted px-2 py-1'>

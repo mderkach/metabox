@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router';
-import { Info, Plus } from 'lucide-react';
+import { Info, Plus, Search } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -8,11 +8,12 @@ import { useConfigPath } from '@entities/Daemon';
 import { ConfigApplyHistory } from '@features/Config/ConfigApply';
 import { ConfigCacheNotice } from '@features/Config/ConfigCacheFile';
 import { RuleSetAddForm } from '@features/RuleSet/RuleSetAdd';
-import { Badge, Button, buttonVariants } from '@shared/ui';
+import { Badge, Button, buttonVariants, Input } from '@shared/ui';
 import { ConfigTabs } from '@widgets/Config/ConfigTabs';
+import { PageHeader } from '@widgets/PageHeader';
 import { RuleSetTable } from '@widgets/RuleSet/RuleSetTable';
 
-import { useRuleSetEditor } from '../lib/RuleSets.lib';
+import { useRuleSetEditor, useRuleSetFilter, type RuleSetFilterState } from '../lib/RuleSets.lib';
 
 /**
  * Наборы правил: что подключено и чем это пополнить.
@@ -24,6 +25,7 @@ import { useRuleSetEditor } from '../lib/RuleSets.lib';
 export function RuleSetsPage() {
   const { t } = useTranslation('pages/RuleSets');
   const editor = useRuleSetEditor();
+  const filter = useRuleSetFilter(editor.sets);
   const configPath = useConfigPath();
   const remove = ConfigDocumentState.use.remove();
   const [adding, setAdding] = useState(false);
@@ -43,16 +45,20 @@ export function RuleSetsPage() {
 
   return (
     <>
-      <header className='flex min-h-14 shrink-0 flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border px-4 py-3 sm:px-6'>
-        <h1 className='text-2xl font-semibold'>{t('title')}</h1>
+      <PageHeader
+        title={t('title')}
+        actions={
+          <>
+            <ConfigApplyHistory />
+            <Link to='/config/raw' className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+              {t('raw')}
+            </Link>
+          </>
+        }
+      >
         <p className='font-mono text-xs text-muted-foreground'>{configPath}</p>
         {editor.isDirty && <Badge variant='secondary'>{t('draft')}</Badge>}
-        <span className='grow' />
-        <ConfigApplyHistory />
-        <Link to='/config/raw' className={buttonVariants({ variant: 'outline', size: 'sm' })}>
-          {t('raw')}
-        </Link>
-      </header>
+      </PageHeader>
 
       <ConfigTabs config={editor.config} />
 
@@ -72,16 +78,22 @@ export function RuleSetsPage() {
               <h2 className='text-sm font-semibold'>{t('empty.title')}</h2>
               <p className='max-w-prose text-sm text-pretty text-muted-foreground'>{t('empty.description')}</p>
             </div>
-            <RuleSetAddForm takenTags={editor.takenTags} />
+            <RuleSetAddForm takenTags={editor.takenTags} outbounds={editor.outbounds} />
           </section>
         ) : (
           <>
-            <RuleSetTable sets={editor.sets} onRemove={onRemove} />
+            <RuleSetTable
+              sets={filter.sets}
+              total={editor.sets.length}
+              onRemove={onRemove}
+              search={<RuleSetSearch filter={filter} />}
+              empty={<EmptyState onReset={filter.reset} />}
+            />
 
             {adding ? (
               <section className='flex flex-col gap-4 rounded-xl border border-border bg-card p-4 sm:p-5'>
                 <h2 className='text-sm font-semibold'>{t('add.title')}</h2>
-                <RuleSetAddForm takenTags={editor.takenTags} onDone={closeForm} />
+                <RuleSetAddForm takenTags={editor.takenTags} outbounds={editor.outbounds} onDone={closeForm} />
               </section>
             ) : (
               <Button
@@ -99,5 +111,38 @@ export function RuleSetsPage() {
         )}
       </div>
     </>
+  );
+}
+
+/** Поиск: левый край тулбара таблицы. */
+function RuleSetSearch({ filter }: { filter: RuleSetFilterState }) {
+  const { t } = useTranslation('pages/RuleSets');
+
+  return (
+    <div className='relative w-full max-w-80'>
+      <Search className='pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground' />
+      <Input
+        value={filter.query}
+        onChange={(event) => {
+          filter.setQuery(event.target.value);
+        }}
+        placeholder={t('search.placeholder')}
+        className='pl-8'
+        aria-label={t('search.label')}
+      />
+    </div>
+  );
+}
+
+function EmptyState({ onReset }: { onReset: () => void }) {
+  const { t } = useTranslation('pages/RuleSets');
+
+  return (
+    <div className='flex flex-col items-center gap-2'>
+      <p className='text-sm text-muted-foreground'>{t('notFound')}</p>
+      <Button variant='outline' size='sm' onClick={onReset}>
+        {t('resetFilter')}
+      </Button>
+    </div>
   );
 }

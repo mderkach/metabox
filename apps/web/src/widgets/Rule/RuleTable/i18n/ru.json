@@ -1,4 +1,11 @@
 {
+  "label": "Правила маршрутизации",
+  "column": {
+    "index": "№",
+    "conditions": "Условия",
+    "target": "Исход"
+  },
+  "footer": { "shown": "Показано {{shown}} из {{total}}" },
   "row": {
     "label": "Правило {{index}}",
     "unconditional": "без условий — применяется ко всему трафику",

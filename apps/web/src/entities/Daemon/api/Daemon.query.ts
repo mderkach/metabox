@@ -1,6 +1,6 @@
 import { queryOptions, useQuery } from '@tanstack/react-query';
 
-import { CACHE_TIME, POLL_INTERVAL } from '@shared/api';
+import { API_FAILURE, ApiError, CACHE_TIME, POLL_INTERVAL } from '@shared/api';
 
 import { toClashConfigs, toDaemonStatus, toServiceState, toTrafficHistory } from '../model/Daemon.adapter';
 import { getClashConfigs, getDaemonStatus, getServiceState, getTrafficHistory } from './Daemon.api';
@@ -48,10 +48,23 @@ export function useTrafficHistory() {
 /**
  * Состояние демона. Отказ этого запроса — единственный признак, по которому
  * панель отличает «демон не поднят» от «сервис лежит»: второе демон сообщает
- * ответом, первое — молчанием (NFR-1).
+ * ответом, первое — молчанием.
  */
 export function useDaemonStatus() {
   return useQuery({ ...getDaemonStatusOptions(), select: toDaemonStatus });
+}
+
+/**
+ * Демон отвечает или молчит. Молчанием считаются те же исходы, что красят
+ * баннер недоступности: обрыв запроса и непонятая схема ответа. Ответ с кодом
+ * ошибки демона молчанием не считается — это отказ конкретной ручки, а не
+ * панели целиком.
+ */
+export function useDaemonReachable(): boolean {
+  const status = useDaemonStatus();
+  const kind = status.error instanceof ApiError ? status.error.kind : null;
+
+  return kind !== API_FAILURE.Unreachable && kind !== API_FAILURE.Schema;
 }
 
 /**
@@ -81,7 +94,7 @@ export function getServiceStateOptions() {
 /**
  * Состояние сервиса. Отдельный запрос от `GET /api/status`: остановленный
  * sing-box — данные экрана, а молчание демона — отказ панели, и смешивать их
- * в одном состоянии нельзя (NFR-1).
+ * в одном состоянии нельзя.
  *
  * Живым состояние держит топик `service` единого потока, а поток открыт, пока
  * экран объявил себя читателем рантайма (`useRuntimeStream`). Экран, который

@@ -5,6 +5,8 @@ import { makeRuleSetAddSchema, ruleSetAddDefaults, toRuleSetPatch } from '../mod
 
 const GEOSITE_GOOGLE = 'https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-google.srs';
 
+const OUTBOUNDS = ['direct', 'proxy'];
+
 function filled(overrides: Partial<ReturnType<typeof ruleSetAddDefaults>> = {}) {
   return { ...ruleSetAddDefaults(), category: 'google', url: GEOSITE_GOOGLE, tag: 'geosite-google', ...overrides };
 }
@@ -36,11 +38,36 @@ describe('makeRuleSetAddSchema', () => {
 
     expect(parsed.error?.issues[0].message).toBe(RULE_SET_ADD_ERROR.FormatRequired);
   });
+
+  it('принимает длительность в формате бинаря и отвергает остальное', () => {
+    expect(makeRuleSetAddSchema([]).safeParse(filled({ updateInterval: '12h' })).success).toBe(true);
+    expect(makeRuleSetAddSchema([]).safeParse(filled({ updateInterval: '1h30m' })).success).toBe(true);
+    expect(makeRuleSetAddSchema([]).safeParse(filled({ updateInterval: '' })).success).toBe(true);
+
+    for (const interval of ['12 hours', 'abc']) {
+      const parsed = makeRuleSetAddSchema([]).safeParse(filled({ updateInterval: interval }));
+
+      expect(parsed.error?.issues[0].message).toBe(RULE_SET_ADD_ERROR.IntervalFormat);
+    }
+  });
+
+  it('требует, чтобы узел скачивания был среди аутбаундов', () => {
+    expect(makeRuleSetAddSchema([], OUTBOUNDS).safeParse(filled({ detour: 'proxy' })).success).toBe(true);
+    expect(makeRuleSetAddSchema([], OUTBOUNDS).safeParse(filled({ detour: '' })).success).toBe(true);
+
+    const parsed = makeRuleSetAddSchema([], OUTBOUNDS).safeParse(filled({ detour: 'proxi' }));
+
+    expect(parsed.error?.issues[0].message).toBe(RULE_SET_ADD_ERROR.DetourUnknown);
+  });
+
+  it('без списка аутбаундов узел скачивания не проверяет', () => {
+    expect(makeRuleSetAddSchema([], []).safeParse(filled({ detour: 'proxi' })).success).toBe(true);
+  });
 });
 
 describe('toRuleSetPatch', () => {
   // Значение, равное выведенному, ядро при сохранении отбрасывает само, а в
-  // дифе оно выглядело бы правкой, которой пользователь не делал (AC-2).
+  // дифе оно выглядело бы правкой, которой пользователь не делал.
   it('не пишет формат, когда его видно по расширению', () => {
     expect(toRuleSetPatch(filled({ format: 'binary' }))).toEqual({
       type: 'remote',

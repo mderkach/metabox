@@ -35,8 +35,8 @@ function fromResponse(response: AxiosResponse<unknown>): ApiError {
   const body = ApiErrorBodySchema.safeParse(asErrorBody(response.data));
 
   // Тело в формате демона разбирается раньше статуса: шлюзовой код демон
-  // ставит и сам — так он сообщает, что недоступен рантайм sing-box, а не он
-  // (NFR-1). Без этой проверки лежащий sing-box читался бы как молчащий демон.
+  // ставит и сам — так он сообщает, что недоступен рантайм sing-box, а не он.
+  // Без этой проверки лежащий sing-box читался бы как молчащий демон.
   if (body.success) {
     return new ApiError(API_FAILURE.Response, body.data.message, {
       status: response.status,

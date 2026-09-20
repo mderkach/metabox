@@ -6,7 +6,7 @@ import type { ConnectionCellProps } from './ConnectionColumns';
 export function ConnectionActionCell({ connection }: ConnectionCellProps) {
   return (
     <span
-      className={cn('block truncate font-mono text-xs font-medium', toActionTone(connection.action))}
+      className={cn('block truncate font-mono text-xs font-medium', toActionTone(connection.kind))}
       title={connection.action}
     >
       {connection.action}

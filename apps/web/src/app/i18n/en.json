@@ -2,5 +2,13 @@
   "banner": {
     "unreachable": "metabox is not responding. The panel shows the last loaded data; changes cannot be applied.",
     "schema": "The panel could not parse the metabox response: the daemon is newer than the panel. Screens may show incomplete data."
+  },
+  "notFound": {
+    "title": "Page not found",
+    "message": "Check the address in the browser — the panel has no such section.",
+    "back": "Go to the configuration"
+  },
+  "skip": {
+    "content": "Skip to content"
   }
 }

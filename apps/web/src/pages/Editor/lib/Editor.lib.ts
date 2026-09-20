@@ -4,6 +4,7 @@ import {
   ConfigDocumentState,
   parseConfig,
   readRules,
+  toOutboundTags,
   useConfig,
   useConfigDirty,
   useConfigText,
@@ -17,31 +18,6 @@ import {
   type RuleTargetFilter,
   type RuleTargetGroup,
 } from '@entities/Rule';
-
-/** Теги аутбаундов конфига: из них выбирается исход правила. */
-function toOutboundTags(config: ConfigDocument | null): string[] {
-  const outbounds: unknown = config?.outbounds;
-
-  if (!Array.isArray(outbounds)) {
-    return [];
-  }
-
-  const tags: string[] = [];
-
-  for (const outbound of outbounds) {
-    if (typeof outbound !== 'object' || outbound === null) {
-      continue;
-    }
-
-    const tag: unknown = Reflect.get(outbound, 'tag');
-
-    if (typeof tag === 'string' && tag.length > 0) {
-      tags.push(tag);
-    }
-  }
-
-  return tags;
-}
 
 export interface RouteEditorState {
   isPending: boolean;
@@ -59,7 +35,7 @@ export interface RouteEditorState {
  * Связывает запрос конфига, документ и список правил для экрана.
  *
  * Маппинг вызывается здесь, а не в разметке: он пробегает весь список, и на
- * 500 правилах (NFR-2) повторялся бы на каждое нажатие клавиши в поиске.
+ * 500 правилах повторялся бы на каждое нажатие клавиши в поиске.
  */
 export function useRouteEditor(): RouteEditorState {
   const config = useConfig();
@@ -82,7 +58,7 @@ export function useRouteEditor(): RouteEditorState {
   const document = shown?.config ?? null;
 
   // Узлы читаются из текста, а не из разобранной модели: правило, которое
-  // схема не приняла, обязано остаться видимым в списке (UX-3).
+  // схема не приняла, обязано остаться видимым в списке.
   const shownText = useConfigText() ?? text;
 
   const nodes = useMemo(() => (shownText === null ? [] : readRules(shownText)), [shownText]);
@@ -119,12 +95,11 @@ export interface RuleFilterState {
   /** Исходы считаются по всему списку: фасет не должен исчезать от своего выбора. */
   targets: RuleTargetGroup[];
   rules: RuleRow[];
-  filtered: boolean;
 }
 
 /**
  * Поиск и отбор по исходу. Отбор клиентский: конфиг целиком уже в панели, и
- * до 500 правил (NFR-2) фильтруются за доли миллисекунды.
+ * до 500 правил фильтруются за доли миллисекунды.
  */
 export function useRuleFilter(rules: RuleRow[]): RuleFilterState {
   const [query, setQuery] = useState('');
@@ -140,6 +115,5 @@ export function useRuleFilter(rules: RuleRow[]): RuleFilterState {
     setTarget,
     targets,
     rules: shown,
-    filtered: query.length > 0 || target !== null,
   };
 }

@@ -25,6 +25,7 @@ function ConnectionCardProto({
   onClose,
   onExplain,
   selected,
+  panelId,
 }: {
   connection: ConnectionRowModel;
   cells: readonly ConnectionCell[];
@@ -33,6 +34,7 @@ function ConnectionCardProto({
   onClose: ((id: string) => void) | null;
   onExplain: ((id: string) => void) | null;
   selected: boolean;
+  panelId?: string;
 }) {
   const { t } = useTranslation('widgets/ConnectionTable');
 
@@ -60,7 +62,13 @@ function ConnectionCardProto({
       </dl>
 
       <div className='flex items-center justify-end gap-1'>
-        <ConnectionRowActions connection={connection} onClose={onClose} onExplain={onExplain} selected={selected} />
+        <ConnectionRowActions
+          connection={connection}
+          onClose={onClose}
+          onExplain={onExplain}
+          selected={selected}
+          panelId={panelId}
+        />
       </div>
     </div>
   );

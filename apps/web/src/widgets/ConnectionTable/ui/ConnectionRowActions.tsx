@@ -13,11 +13,13 @@ export function ConnectionRowActions({
   onClose,
   onExplain,
   selected,
+  panelId,
 }: {
   connection: ConnectionRowModel;
   onClose: ((id: string) => void) | null;
   onExplain: ((id: string) => void) | null;
   selected: boolean;
+  panelId?: string;
 }) {
   const { t } = useTranslation('widgets/ConnectionTable');
 
@@ -26,7 +28,10 @@ export function ConnectionRowActions({
       {onExplain !== null && (
         <button
           type='button'
-          aria-pressed={selected}
+          aria-expanded={selected}
+          // Ссылка ставится только на открытую этой строкой панель: у остальных
+          // строк такого элемента в документе нет.
+          aria-controls={selected ? panelId : undefined}
           aria-label={t('row.explain', { host: connection.host })}
           className={cn(ROW_ACTION, 'hover:bg-muted hover:text-foreground', selected && 'text-foreground')}
           onClick={() => {

@@ -1,4 +1,3 @@
-import type { ParseKeys } from 'i18next';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -7,21 +6,14 @@ import { useTestProxyDelay } from '@features/Proxy/ProxyDelay';
 import { useSelectProxy } from '@features/Proxy/ProxySelect';
 import { Badge, Button, Card, CardContent, CardHeader } from '@shared/ui';
 
+import { toGroupLabel } from './ProxyGroupLabel';
 import { ProxyNodeTile } from './ProxyNodeTile';
-
-const GROUP_LABEL: Readonly<Record<string, ParseKeys<'widgets/ProxyGroups'> | undefined>> = {
-  Selector: 'type.selector',
-  URLTest: 'type.urlTest',
-  Fallback: 'type.fallback',
-  LoadBalance: 'type.loadBalance',
-};
 
 export function ProxyGroupCard({ group }: { group: ProxyGroup }) {
   const { t } = useTranslation('widgets/ProxyGroups');
   const select = useSelectProxy();
   const delay = useTestProxyDelay();
-  const label = GROUP_LABEL[group.type];
-  const kind = label === undefined ? group.type : t(label);
+  const kind = toGroupLabel(t, group.type);
   const active = group.nodes.find((node) => node.selected) ?? null;
 
   const onSelect = useCallback(
@@ -52,8 +44,6 @@ export function ProxyGroupCard({ group }: { group: ProxyGroup }) {
       </CardHeader>
 
       <CardContent className='flex flex-col gap-3 px-4 py-3'>
-        {/* Активный узел назван словами: в большой группе выбранная плитка уезжает
-            за пределы первого ряда. */}
         <p className='text-xs text-muted-foreground'>
           {t('card.current')}{' '}
           {active === null ? (

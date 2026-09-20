@@ -4,6 +4,7 @@ import { screen, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { CONFIG_ENDPOINT } from '@entities/Config';
 import { ConnectionStore } from '@entities/Connection';
 import { CONNECTIONS_FIXTURE, makeConnectionsSnapshot } from '@entities/Connection/__tests__/Connection.fixture';
 import { DAEMON_ENDPOINT, RuntimeStore, SCHEMA_VERSION } from '@entities/Daemon';
@@ -32,9 +33,14 @@ function serveStatus(configPath?: string, singboxVersion = SCHEMA_VERSION) {
     // мока экран показал бы «состояние не прочитано» вместо данных.
     http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE)),
     http.get(PROXY_ENDPOINT.proxies(), () => HttpResponse.json({ proxies: {} })),
-    http.get(DAEMON_ENDPOINT.history(), () => HttpResponse.json(TRAFFIC_HISTORY_FIXTURE))
+    http.get(DAEMON_ENDPOINT.history(), () => HttpResponse.json(TRAFFIC_HISTORY_FIXTURE)),
+    // Поток соединений читает конфиг ради типов аутбаундов: без мока сводка
+    // считалась бы по таблице подстрок, а не по документу.
+    http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(MINIMAL_CONFIG))
   );
 }
+
+const MINIMAL_CONFIG = JSON.stringify({ outbounds: [{ type: 'direct', tag: 'direct' }] }, null, 2);
 
 describe('экран обзора', () => {
   beforeEach(() => {
@@ -54,7 +60,7 @@ describe('экран обзора', () => {
     expect(tiles.getByText('8.3 кБ/с')).toBeInTheDocument();
   });
 
-  // Первый сэмпл потока нулевой (PRD, OQ-5): показывать «0 Б» значило бы
+  // Первый сэмпл потока нулевой: показывать «0 Б» значило бы
   // соврать, что процессу не нужно памяти.
   it('нулевой сэмпл памяти строкой не показывает', async () => {
     RuntimeStore.getState().pushMemory({ inuse: 0, oslimit: 0 });
@@ -104,7 +110,7 @@ describe('экран обзора', () => {
     expect(screen.getByText('192.168.1.60')).toBeInTheDocument();
   });
 
-  // UX-8: признак стоит один раз на секцию, а не на каждой карточке — иначе он
+  // Признак стоит один раз на секцию, а не на каждой карточке — иначе он
   // перестаёт различать наблюдённое и вычисленное.
   it('помечает сводку как счёт панели один раз на секцию', async () => {
     ConnectionStore.getState().apply(CONNECTIONS_FIXTURE);
@@ -148,10 +154,21 @@ describe('экран обзора', () => {
     expect(screen.getByText('поток молчит')).toBeInTheDocument();
   });
 
-  it('показывает режим Clash API: с ним сверяется правило clash_mode в конфиге', async () => {
+  it('показывает режим Clash API словами, а не полем ответа: с ним сверяется правило clash_mode в конфиге', async () => {
     renderWithRouter(OverviewPage);
 
-    expect(await screen.findByText('Rule')).toBeInTheDocument();
+    expect(await screen.findByText('по правилам')).toBeInTheDocument();
+    expect(screen.queryByText('Rule')).not.toBeInTheDocument();
+  });
+
+  it('переводит и другие значения режима, не только Rule', async () => {
+    server.use(
+      http.get(DAEMON_ENDPOINT.clashConfigs(), () => HttpResponse.json({ ...CLASH_CONFIGS_FIXTURE, mode: 'Global' }))
+    );
+
+    renderWithRouter(OverviewPage);
+
+    expect(await screen.findByText('глобально')).toBeInTheDocument();
   });
 
   it('путь конфига берётся у демона: он задаётся флагами запуска, а не панелью', async () => {

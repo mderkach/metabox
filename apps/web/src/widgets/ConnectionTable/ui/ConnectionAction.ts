@@ -1,4 +1,4 @@
-import { ROUTE_KIND, toRouteKind, type RouteKind } from '@entities/Connection';
+import { ROUTE_KIND, type RouteKind } from '@entities/Connection';
 
 /**
  * Цвет исхода. Сам исход разбирает слайс соединения — здесь только таблица
@@ -13,6 +13,6 @@ const KIND_TONES: Readonly<Record<RouteKind, string>> = {
   [ROUTE_KIND.Other]: 'text-route-neutral',
 };
 
-export function toActionTone(action: string): string {
-  return KIND_TONES[toRouteKind(action)];
+export function toActionTone(kind: RouteKind): string {
+  return KIND_TONES[kind];
 }

@@ -2,7 +2,7 @@
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
 /* Шрифты лежат файлами в репозитории, а не приезжают пакетом: панель обязана
- * открываться при неработающем sing-box (NFR-1), а сборка — идти без сети.
+ * открываться при неработающем sing-box, а сборка — идти без сети.
  * Подмножества оставлены только те, что нужны русскому интерфейсу и латинице
  * доменов; греческое, вьетнамское и символьное отброшены.
  * Начертания вариативные: Geist 100-900, Fira Code 300-700. */
@@ -352,5 +352,226 @@
   * {
     scrollbar-width: thin;
     scrollbar-color: var(--input) transparent;
+  }
+}
+
+:root {
+  --view-transition-page-out: 120ms;
+  --view-transition-page-in: 200ms;
+  --view-transition-page-lag: 60ms;
+  --view-transition-move: 240ms;
+  --view-transition-panel: 140ms;
+  --view-transition-ease: cubic-bezier(0.2, 0, 0, 1);
+  --view-transition-ease-in: cubic-bezier(0.4, 0, 1, 1);
+}
+
+/* Смену экрана запускает роутер (`defaultViewTransition`), тип перехода
+ * считает `toPageTransitionTypes`. Корень при этом живой: сайдбар и бар
+ * применения не растворяются, а обновления, пришедшие во время перехода,
+ * видны сразу. Слой перехода не ловит указатель — панель остаётся кликабельной. */
+::view-transition {
+  pointer-events: none;
+}
+
+::view-transition-group(root) {
+  animation-duration: 0s;
+}
+
+::view-transition-old(root) {
+  display: none;
+}
+
+::view-transition-new(root) {
+  animation: none;
+}
+
+/* Экран, его шапка и полоса вкладок конфига — именованные группы. Вне
+ * перехода роутера — при анимациях панели, бара и вкладок — они показываются
+ * живыми, без снимка и растворения. */
+::view-transition-group(page),
+::view-transition-group(page-header),
+::view-transition-group(config-tabs),
+::view-transition-group(config-tab-underline) {
+  animation-duration: 0s;
+}
+
+::view-transition-old(page),
+::view-transition-old(page-header),
+::view-transition-old(config-tabs),
+::view-transition-old(config-tab-underline) {
+  display: none;
+}
+
+::view-transition-new(page),
+::view-transition-new(page-header),
+::view-transition-new(config-tabs),
+::view-transition-new(config-tab-underline) {
+  animation: none;
+}
+
+:active-view-transition-type(page-forward) {
+  --page-offset: 0.75rem;
+}
+
+:active-view-transition-type(page-backward) {
+  --page-offset: -0.75rem;
+}
+
+/* Переход роутера: экран уходит и приходит со сдвигом по направлению, шапка
+ * растворяется на месте, полоса вкладок и её подчёркивание без пары уходят
+ * вместе с экраном, а с парой стоят — под новый раздел переезжает только
+ * подчёркивание. Подчёркивание именовано отдельно и в снимок полосы не входит,
+ * поэтому ветка без пары нужна и ему. */
+:is(
+  :active-view-transition-type(page-forward),
+  :active-view-transition-type(page-backward),
+  :active-view-transition-type(page-fade)
+) {
+  &::view-transition-old(page),
+  &::view-transition-old(config-tabs):only-child,
+  &::view-transition-old(config-tab-underline):only-child {
+    display: block;
+    animation: page-out var(--view-transition-page-out) var(--view-transition-ease-in) both;
+  }
+
+  &::view-transition-new(page),
+  &::view-transition-new(config-tabs):only-child,
+  &::view-transition-new(config-tab-underline):only-child {
+    animation: page-in var(--view-transition-page-in) var(--view-transition-ease) var(--view-transition-page-lag) both;
+  }
+
+  &::view-transition-group(page-header),
+  &::view-transition-group(config-tab-underline) {
+    animation-duration: var(--view-transition-move);
+    animation-timing-function: var(--view-transition-ease);
+  }
+
+  &::view-transition-old(page-header) {
+    display: block;
+    animation: fade-out var(--view-transition-page-out) var(--view-transition-ease-in) both;
+  }
+
+  &::view-transition-new(page-header) {
+    animation: fade-in var(--view-transition-page-in) var(--view-transition-ease) var(--view-transition-page-lag) both;
+  }
+}
+
+::view-transition-new(.fade-in) {
+  animation: fade-in var(--view-transition-panel) var(--view-transition-ease);
+}
+
+::view-transition-old(.fade-out) {
+  animation: fade-out var(--view-transition-panel) var(--view-transition-ease);
+}
+
+::view-transition-new(.panel-in) {
+  animation: panel-in var(--view-transition-panel) var(--view-transition-ease);
+}
+
+::view-transition-old(.panel-out) {
+  animation: panel-out var(--view-transition-panel) var(--view-transition-ease);
+}
+
+::view-transition-new(.bar-in) {
+  animation: bar-in var(--view-transition-panel) var(--view-transition-ease);
+}
+
+::view-transition-old(.bar-out) {
+  animation: bar-out var(--view-transition-panel) var(--view-transition-ease);
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    translate: 0.5rem 0;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes panel-out {
+  from {
+    opacity: 1;
+    translate: 0 0;
+  }
+  to {
+    opacity: 0;
+    translate: 0.5rem 0;
+  }
+}
+
+@keyframes bar-in {
+  from {
+    opacity: 0;
+    translate: 0 -0.5rem;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes bar-out {
+  from {
+    opacity: 1;
+    translate: 0 0;
+  }
+  to {
+    opacity: 0;
+    translate: 0 -0.5rem;
+  }
+}
+
+/* `--page-offset` задаёт тип перехода на корне; без него — чистое растворение. */
+@keyframes page-out {
+  from {
+    opacity: 1;
+    translate: 0 0;
+  }
+  to {
+    opacity: 0;
+    translate: 0 calc(-1 * var(--page-offset, 0rem));
+  }
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    translate: 0 var(--page-offset, 0rem);
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Браузер не снимает анимации View Transitions по системной настройке сам:
+ * без этого правила они идут и при выключенной анимации интерфейса. */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
   }
 }

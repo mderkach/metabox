@@ -11,7 +11,7 @@ import {
   TRAFFIC_HISTORY_FIXTURE,
 } from './Daemon.fixture';
 
-/** Окно подтверждения демона — минута (NFR-5), в наносекундах `time.Duration`. */
+/** Окно подтверждения демона — минута, в наносекундах `time.Duration`. */
 const CONFIRM_WINDOW_NS = 60_000_000_000;
 
 /**

@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { DELAY_STATE, DELAY_TIMEOUT, type ProxyNode } from '@entities/Proxy';
 import { cn } from '@shared/lib/utils';
 
+import { toGroupLabel } from './ProxyGroupLabel';
+
 const DELAY_TONE: Readonly<Record<string, string>> = {
   [DELAY_STATE.Fast]: 'text-signal-ok',
   [DELAY_STATE.Slow]: 'text-signal-warn',
@@ -49,7 +51,7 @@ function ProxyNodeTileProto({
         <span className='min-w-0 grow truncate font-mono text-xs'>{node.name}</span>
       </span>
       <span className='flex items-center justify-between gap-2'>
-        <span className='truncate text-2xs text-muted-foreground'>{node.type}</span>
+        <span className='truncate text-2xs text-muted-foreground'>{toGroupLabel(t, node.type)}</span>
         <DelayValue node={node} />
       </span>
     </>
