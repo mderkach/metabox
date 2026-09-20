@@ -52,7 +52,7 @@ var ErrNotBuilt = errors.New("SPA не собрана")
 // у SPA клиентский, и адрес вроде /connections существует только в браузере.
 //
 // Возвращает ErrNotBuilt, если статики в бинаре нет. Вызывающий решает, чем
-// это заменить: демон обязан подниматься и без UI (NFR-1).
+// это заменить: демон обязан подниматься и без UI.
 func Handler() (http.Handler, error) {
 	root, err := fs.Sub(embedded, "static")
 	if err != nil {

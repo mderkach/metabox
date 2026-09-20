@@ -47,7 +47,7 @@ func TestConfigVersionsEmpty(t *testing.T) {
 }
 
 // Версия отдаётся ровно теми байтами, какими лежит: форматирование и порядок
-// ключей владельца сохраняются (AC-2).
+// ключей владельца сохраняются.
 func TestConfigVersionContent(t *testing.T) {
 	raw := "{\n  \"log\": {\"level\": \"error\"}\n}\n"
 	reader := fakeReader{byID: map[int][]byte{7: []byte(raw)}}

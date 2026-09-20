@@ -100,7 +100,7 @@ func TestServiceState(t *testing.T) {
 
 			got := request(t, srv, http.MethodGet, "/api/service", "", nil)
 
-			// Опрос сервиса упал, а экран обязан открыться (NFR-1): отказом
+			// Опрос сервиса упал, а экран обязан открыться: отказом
 			// панели это не является.
 			if got.status != http.StatusOK {
 				t.Fatalf("код ответа: получили %d, ожидали %d", got.status, http.StatusOK)

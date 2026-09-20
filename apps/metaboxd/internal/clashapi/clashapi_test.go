@@ -28,7 +28,7 @@ func ensure(t *testing.T, data string) (string, bool) {
 	return string(out), changed
 }
 
-// AC-31: конфиг с уже настроенным контроллером не трогается вовсе — это
+// Конфиг с уже настроенным контроллером не трогается вовсе — это
 // проверяется по sha256, а не по глазам.
 func TestExistingControllerIsUntouched(t *testing.T) {
 	data := []byte(`{

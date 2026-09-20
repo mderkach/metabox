@@ -103,7 +103,7 @@ func TestExplainRoute(t *testing.T) {
 		t.Errorf("индекс узла route.rules: получили %v, ожидали 2", body.Match.Index)
 	}
 
-	// AC-34: утверждений без происхождения ручка не отдаёт.
+	// Утверждений без происхождения ручка не отдаёт.
 	if body.Match.Origin == "" {
 		t.Error("сработавшее правило ушло без происхождения")
 	}
@@ -174,7 +174,7 @@ func TestExplainRouteMissingConnection(t *testing.T) {
 }
 
 // Без источника рантайма ручки объяснения нет: панель открывается, а экран
-// соединений остаётся без объяснения (NFR-1).
+// соединений остаётся без объяснения.
 func TestExplainRouteAbsent(t *testing.T) {
 	srv := httptest.NewServer(httpapi.NewServer(
 		&fakeApplier{},

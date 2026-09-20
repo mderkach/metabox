@@ -34,8 +34,8 @@ func objectStart(data []byte) (int, error) {
 
 // findMember ищет член объекта, начинающегося на data[start], и отдаёт границы
 // его значения в координатах data. Границы нужны, чтобы править байты точечно:
-// разбор в структуру и обратная сериализация переписали бы порядок ключей и
-// нарушили AC-2.
+// разбор в структуру и обратная сериализация переписали бы порядок ключей
+// пользователя.
 func findMember(data []byte, start int, key string) (span, bool, error) {
 	dec := json.NewDecoder(bytes.NewReader(data[start:]))
 

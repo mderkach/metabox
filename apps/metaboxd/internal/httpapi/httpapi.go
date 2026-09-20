@@ -21,7 +21,7 @@ import (
 
 // maxConfigBytes — потолок на тело запроса. Конфиг приходит байтами, и без
 // лимита один запрос забирает столько памяти, сколько прислали. Четыре
-// мегабайта с запасом перекрывают конфиг из NFR-2 на 500 правил.
+// мегабайта с запасом перекрывают конфиг на 500 правил.
 const maxConfigBytes = 4 << 20
 
 // Applier — цикл применения. Интерфейс объявлен здесь, у потребителя, и
@@ -78,7 +78,7 @@ type Options struct {
 	Events http.Handler
 	// Clash проксирует рантайм sing-box под веткой clashapi.Prefix. nil
 	// означает, что прокси не собран: панель откроется, а экраны рантайма
-	// деградируют (NFR-1).
+	// деградируют.
 	Clash http.Handler
 	// Explain объясняет маршрут соединения (ADR-0007). nil означает, что
 	// источника рантайма нет: экран соединений остаётся без объяснения.
@@ -238,7 +238,7 @@ func (s *Server) runtimeSources() contract.Runtime {
 
 // handleConfig отдаёт конфиг ровно теми байтами, какими он лежит на диске:
 // демон его не разбирает и не переформатирует (ADR-0002), иначе round-trip
-// рукописного конфига терял бы форматирование (AC-2).
+// рукописного конфига терял бы форматирование.
 func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 	data, err := s.reader.Read(r.Context())
 	if err != nil {
@@ -368,7 +368,7 @@ func (s *Server) handleApplyConfirm(w http.ResponseWriter, r *http.Request) {
 
 // handleExplain объясняет маршрут соединения: сработавшее правило, его индекс
 // в route.rules и цепочку. Каждое утверждение несёт происхождение, и ответов
-// без него у ручки не бывает (AC-34, ADR-0007).
+// без него у ручки не бывает (ADR-0007).
 func (s *Server) handleExplain(w http.ResponseWriter, r *http.Request) {
 	explanation, err := s.explain.Explain(r.Context(), r.PathValue("id"))
 	if err != nil {
@@ -429,7 +429,7 @@ func (s *Server) handleHistory(w http.ResponseWriter, _ *http.Request) {
 }
 
 // handleServiceState отдаёт состояние сервиса. Ошибка опроса — не отказ
-// панели: NFR-1 требует, чтобы экран открылся и при недоступном сервисе.
+// панели: экран обязан открыться и при недоступном сервисе.
 func (s *Server) handleServiceState(w http.ResponseWriter, r *http.Request) {
 	state, err := s.service.State(r.Context())
 	if err != nil {
@@ -491,8 +491,7 @@ func (s *Server) handleAPINotFound(w http.ResponseWriter, r *http.Request) {
 }
 
 // spaHandler отдаёт встроенный интерфейс, а без него — объяснение. Демон
-// обязан подниматься и обслуживать API, даже когда фронт в бинарь не попал
-// (NFR-1).
+// обязан подниматься и обслуживать API, даже когда фронт в бинарь не попал.
 func (s *Server) spaHandler() http.Handler {
 	if s.spa != nil {
 		return s.spa

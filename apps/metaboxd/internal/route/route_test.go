@@ -208,7 +208,7 @@ func TestExplainUnknownConnection(t *testing.T) {
 }
 
 // Молчащий рантайм — отказ источника, а не внутренняя ошибка демона: панель
-// обязана отличать «данных нет» от «демон сломался» (NFR-1).
+// обязана отличать «данных нет» от «демон сломался».
 func TestExplainRuntimeUnavailable(t *testing.T) {
 	source := &fakeSource{err: errors.New("соединение отклонено")}
 

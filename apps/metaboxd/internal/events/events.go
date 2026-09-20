@@ -68,7 +68,7 @@ type Source interface {
 type Options struct {
 	// ConnectionsInterval — период снапшота соединений. Clash API отдаёт их
 	// только целиком, поэтому частота здесь напрямую превращается в трафик
-	// между sing-box и демоном (NFR-2).
+	// между sing-box и демоном.
 	ConnectionsInterval time.Duration
 	// ServiceInterval — период опроса службы. Он дороже остальных: это запуск
 	// внешних процессов, поэтому реже.

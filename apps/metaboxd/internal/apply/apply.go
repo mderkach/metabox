@@ -105,7 +105,7 @@ type Transaction struct {
 	// шага, как её записал демон. Показывать её пользователю — запасной путь,
 	// текст отказа панель берёт по ReasonCode.
 	Reason string `json:"reason,omitempty"`
-	// ClashAPIAdded отмечает, что демон сам добавил секцию (AC-32).
+	// ClashAPIAdded отмечает, что демон сам добавил секцию.
 	ClashAPIAdded bool `json:"clash_api_added,omitempty"`
 }
 
@@ -172,7 +172,7 @@ func (SystemClock) After(d time.Duration) <-chan time.Time {
 
 // Options — настройки применения, приходящие в демон флагами.
 type Options struct {
-	// Window — окно подтверждения. NFR-5 задаёт 60 секунд.
+	// Window — окно подтверждения, по умолчанию минута.
 	Window time.Duration
 	// ClashPort — порт, который демон пропишет в external_controller, если
 	// секции нет.
@@ -223,7 +223,7 @@ func New(store Store, service Service, health Health, clock Clock, log *slog.Log
 //
 // Window в снимке — остаток окна, а не его длительность: панель показывает эту
 // цифру пользователю, и после перезагрузки страницы полные шестьдесят секунд
-// означали бы обещание, которого демон не даёт (NFR-5).
+// означали бы обещание, которого демон не даёт.
 func (m *Manager) Current() Transaction {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -237,7 +237,7 @@ func (m *Manager) Current() Transaction {
 }
 
 // Start запускает применение. Проверка бинарём идёт синхронно — на её выводе
-// пользователь чинит конфиг, и ответ на запрос обязан его содержать (AC-26).
+// пользователь чинит конфиг, и ответ на запрос обязан его содержать.
 // Всё, что после неё, живёт своим контекстом: применение переживает запрос
 // (ADR-0002).
 func (m *Manager) Start(ctx context.Context, cfg []byte) (Transaction, error) {

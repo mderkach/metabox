@@ -110,7 +110,7 @@ func TestUptimeFromProc(t *testing.T) {
 }
 
 // Недоступный /proc возраст обнуляет, но состояние службы остаётся верным:
-// панель обязана открыться и без него (NFR-1).
+// панель обязана открыться и без него.
 func TestUptimeUnavailable(t *testing.T) {
 	client := New(runnerWith(procList(4242), 0, nil), "/bin/ubus")
 	client.procDir = filepath.Join(t.TempDir(), "нет-такого")

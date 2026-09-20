@@ -137,14 +137,14 @@ func run(log *slog.Logger, s settings) error {
 	}
 
 	// Неудача не останавливает демон: панель обязана работать и при
-	// отсутствующем sing-box (NFR-1), просто без версии бинаря.
+	// отсутствующем sing-box, просто без версии бинаря.
 	singboxVersion, err := service.Version(ctx)
 	if err != nil {
 		log.Warn("версия sing-box не прочитана", "err", err)
 	}
 
 	// Отсутствие прокси не останавливает демон: панель обязана открываться
-	// и без рантайма (NFR-1), просто с деградировавшими экранами.
+	// и без рантайма, просто с деградировавшими экранами.
 	var clashHandler http.Handler
 
 	clash, err := clashapi.NewProxy(configSettings(store), httpapi.ProxyError(log))

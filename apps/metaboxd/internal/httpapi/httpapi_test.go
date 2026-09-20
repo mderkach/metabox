@@ -400,7 +400,7 @@ func TestApplyStartsTransaction(t *testing.T) {
 }
 
 // Вывод бинаря — единственное исключение из правила «внутренние подробности
-// наружу не идут»: на нём пользователь чинит конфиг (ADR-0002, AC-26).
+// наружу не идут»: на нём пользователь чинит конфиг (ADR-0002).
 func TestApplyReturnsCheckOutputVerbatim(t *testing.T) {
 	applier := &fakeApplier{startErr: &singbox.CheckError{
 		Stdout:   "разбор конфига",
@@ -645,7 +645,7 @@ func TestAPIPathNeverReachesSPA(t *testing.T) {
 }
 
 // Демон, собранный без фронта, обязан подниматься и обслуживать API: панель
-// объясняет, чего не хватает, а не молчит 404 (NFR-1).
+// объясняет, чего не хватает, а не молчит 404.
 func TestDaemonWithoutSPAStillServesAPI(t *testing.T) {
 	srv := newTestServer(t, &fakeApplier{}, "")
 

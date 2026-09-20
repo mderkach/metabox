@@ -262,7 +262,7 @@ func TestApplyFollowsProtocolOrder(t *testing.T) {
 	}
 
 	// SaveVersion стоит между бэкапом и записью: история хранит то, что было
-	// применено до этого цикла (AC-15).
+	// применено до этого цикла.
 	want := []string{
 		"StageCandidate", "Check", "WriteState", "Backup", "SaveVersion", "Write", "Restart", "Wait", "WriteState",
 	}
@@ -276,7 +276,7 @@ func TestApplyFollowsProtocolOrder(t *testing.T) {
 }
 
 // Панель показывает остаток окна пользователю: полная длительность после
-// перезагрузки страницы была бы обещанием, которого демон не даёт (NFR-5).
+// перезагрузки страницы была бы обещанием, которого демон не даёт.
 func TestCurrentReportsRemainingWindow(t *testing.T) {
 	h := newHarness(t)
 
@@ -397,7 +397,7 @@ func TestConfirmClosesWindow(t *testing.T) {
 	}
 }
 
-// Без подтверждения в срок конфиг обязан вернуться (AC-14).
+// Без подтверждения в срок конфиг обязан вернуться.
 func TestRollbackWithoutConfirmation(t *testing.T) {
 	h := newHarness(t)
 
@@ -526,7 +526,7 @@ func TestClashAPIIsGuaranteed(t *testing.T) {
 	h.waitWindow(t)
 
 	if !tx.ClashAPIAdded {
-		t.Error("добавление секции не отмечено в транзакции: пользователь его не увидит (AC-32)")
+		t.Error("добавление секции не отмечено в транзакции: пользователь его не увидит")
 	}
 
 	settings, err := clashapi.Read(h.store.config())
@@ -534,7 +534,7 @@ func TestClashAPIIsGuaranteed(t *testing.T) {
 		t.Fatalf("чтение секции: %v", err)
 	}
 	if settings.Address == "" {
-		t.Error("записан конфиг без работающего clash_api (AC-31)")
+		t.Error("записан конфиг без работающего clash_api")
 	}
 }
 

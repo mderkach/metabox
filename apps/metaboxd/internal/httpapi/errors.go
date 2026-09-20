@@ -95,7 +95,7 @@ func statusFor(err error) (status int, code contract.ErrorCode) {
 
 // ProxyError отдаёт отказ прокси в формате демона. Причину наружу не пускаем:
 // в ней адрес контроллера и текст ошибки транспорта. Экран рантайма обязан
-// увидеть отказ, а не HTML от net/http (NFR-1).
+// увидеть отказ, а не HTML от net/http.
 func ProxyError(log *slog.Logger) func(w http.ResponseWriter, r *http.Request, err error) {
 	return func(w http.ResponseWriter, r *http.Request, err error) {
 		if errors.Is(err, context.Canceled) {

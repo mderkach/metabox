@@ -38,7 +38,7 @@ func TestGenerate(t *testing.T) {
 }
 
 // Описания полей форка доходят до схемы: подсказки видит и разработчик, и
-// авторендерер непокрытых узлов (AC-5, Form&Validation).
+// авторендерер непокрытых узлов (Form&Validation).
 func TestGenerateCarriesDocs(t *testing.T) {
 	out, err := generate()
 	if err != nil {
@@ -108,7 +108,7 @@ func TestGenerateIsStable(t *testing.T) {
 }
 
 // Примеры конфигов из форка — готовый корпус для проверки, что схема
-// принимает реальные конфиги (AC-1). Тест только собирает список: разбор
+// принимает реальные конфиги. Тест только собирает список: разбор
 // идёт на стороне фронта, где схема исполняется.
 func TestForkExamplesArePresent(t *testing.T) {
 	dir, err := forkDir()

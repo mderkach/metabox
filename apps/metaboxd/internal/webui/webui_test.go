@@ -107,7 +107,7 @@ func TestHashed(t *testing.T) {
 }
 
 // Демон обязан подниматься и без интерфейса: API работает, панель объясняет,
-// чего не хватает (NFR-1).
+// чего не хватает.
 func TestNotBuilt(t *testing.T) {
 	_, err := newHandler(fstest.MapFS{".gitkeep": {Data: []byte("пусто")}})
 

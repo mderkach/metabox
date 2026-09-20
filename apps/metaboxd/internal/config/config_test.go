@@ -217,7 +217,7 @@ func TestWriteNewConfigIsPrivate(t *testing.T) {
 	}
 }
 
-// Отказ до rename обязан оставить прежний конфиг побайтово нетронутым (AC-29).
+// Отказ до rename обязан оставить прежний конфиг побайтово нетронутым.
 func TestFailedWriteKeepsFileIntact(t *testing.T) {
 	if os.Geteuid() == 0 {
 		t.Skip("под root права каталога не мешают записи")

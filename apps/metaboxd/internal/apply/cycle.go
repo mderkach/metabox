@@ -37,7 +37,7 @@ func (m *Manager) check(ctx context.Context, data []byte) error {
 }
 
 // run уводит применение в фоновую горутину: цикл переживает запрос, а окно
-// подтверждения тянется до минуты (ADR-0002, NFR-5). Останавливает горутину
+// подтверждения тянется до минуты (ADR-0002). Останавливает горутину
 // Close, ошибки уходят в лог и в состояние транзакции, дожидается — wg.
 func (m *Manager) run(data []byte, settings clashapi.Settings) {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -90,7 +90,7 @@ func (m *Manager) apply(ctx context.Context, data []byte, settings clashapi.Sett
 	}
 
 	// История надстроена над бэкапом и к откату отношения не имеет: её отказ
-	// применение не останавливает (AC-15).
+	// применение не останавливает.
 	if previous, err := m.store.Read(ctx); err == nil {
 		if err := m.store.SaveVersion(ctx, previous); err != nil {
 			m.log.Warn("версия не сохранена в историю", "err", err)
@@ -117,7 +117,7 @@ func (m *Manager) apply(ctx context.Context, data []byte, settings clashapi.Sett
 }
 
 // await держит окно подтверждения. Без подтверждения в срок конфиг
-// возвращается на предыдущий (AC-14).
+// возвращается на предыдущий.
 func (m *Manager) await(ctx context.Context, log *slog.Logger, confirmed <-chan struct{}) {
 	m.mu.Lock()
 	m.current.Phase = PhaseAwaitingConfirm

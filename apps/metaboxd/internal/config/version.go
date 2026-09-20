@@ -76,7 +76,7 @@ func (s *Store) SaveVersion(ctx context.Context, data []byte) error {
 	defer func() { _ = root.Close() }()
 
 	// Номера читаются без содержимого: хэшировать всю историю ради следующего
-	// номера значит держать её целиком в памяти, а бюджет демона — NFR-4.
+	// номера значит держать её целиком в памяти, а памяти у демона немного.
 	saved, err := listIDs(root)
 	if err != nil {
 		return err

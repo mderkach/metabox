@@ -85,7 +85,7 @@ export const TransactionSchema = z.object({
   reason_code: z.string().optional(),
   /** Reason заполняется, когда применение не дошло до конца: исходная ошибка шага, как её записал демон. Показывать её пользователю — запасной путь, текст отказа панель берёт по ReasonCode. */
   reason: z.string().optional(),
-  /** ClashAPIAdded отмечает, что демон сам добавил секцию (AC-32). */
+  /** ClashAPIAdded отмечает, что демон сам добавил секцию. */
   clash_api_added: z.boolean().optional(),
 })
 

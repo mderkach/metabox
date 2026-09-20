@@ -1,6 +1,6 @@
 // Package singbox вызывает бинарь sing-box и управляет его сервисом через
 // procd. Содержимое конфига пакет не разбирает: единственный арбитр
-// валидности — сам бинарь (ADR-0002, UX-4 PRD).
+// валидности — сам бинарь (ADR-0002).
 package singbox
 
 import (
@@ -54,7 +54,7 @@ type Client struct {
 // PATH не та, что в интерактивном шелле, и относительное имя разрешится не в
 // тот файл или не разрешится вовсе.
 // New собирает клиента. supervisor необязателен: без него состояние сводится
-// к коду возврата init-скрипта, панель продолжает работать (NFR-1).
+// к коду возврата init-скрипта, панель продолжает работать.
 func New(runner Runner, binary, initScript, logread string, supervisor Supervisor) (*Client, error) {
 	for _, path := range []string{binary, initScript} {
 		if !filepath.IsAbs(path) {
@@ -128,7 +128,7 @@ func parseVersion(stdout string) string {
 }
 
 // Restart перезапускает сервис через init-скрипт. Остановленный сервис —
-// штатный путь: скрипт его поднимет (AC-16).
+// штатный путь: скрипт его поднимет.
 func (c *Client) Restart(ctx context.Context) error {
 	return c.service(ctx, "restart")
 }
@@ -179,7 +179,7 @@ type Supervisor interface {
 }
 
 // Running отвечает, поднят ли сервис. Ненулевой код возврата означает «не
-// запущен», а не отказ: панель обязана работать при лежащем сервисе (NFR-1).
+// запущен», а не отказ: панель обязана работать при лежащем сервисе.
 func (c *Client) Running(ctx context.Context) (bool, error) {
 	res, err := c.runner.Run(ctx, c.initScript, "running")
 	if err != nil {
