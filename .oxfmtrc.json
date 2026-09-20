@@ -33,7 +33,7 @@
             "style",
             "unknown"
           ],
-          "internalPattern": ["@app/", "@pages/", "@widgets/", "@features/", "@entities/", "@shared/", "@adapters/"],
+          "internalPattern": ["@app/", "@pages/", "@widgets/", "@features/", "@entities/", "@shared/"],
           "newlinesBetween": true
         },
         "sortTailwindcss": {
