@@ -1,13 +1,44 @@
+import { z } from 'zod';
+
 import { countGroups } from '@shared/lib/group';
 import { matchesWords, toQueryWords } from '@shared/lib/search';
 
 import { ROUTE_KIND, type ConnectionRow, type RouteKind } from './Connection.model';
+
+/** Какой набор соединений показан: живые или уже закрытые. */
+export const CONNECTION_TAB = {
+  Active: 'active',
+  Closed: 'closed',
+} as const;
+
+export type ConnectionTab = (typeof CONNECTION_TAB)[keyof typeof CONNECTION_TAB];
 
 /** Источник, по которому отбираются соединения; `null` — все сразу. */
 export type ConnectionSource = string | null;
 
 /** Судьба пакета, по которой отбираются соединения; `null` — все сразу. */
 export type ConnectionKind = RouteKind | null;
+
+/**
+ * Отбор в адресе: ссылка на отфильтрованный список — то, чем делятся, когда
+ * спрашивают «почему сюда идёт трафик». Значения по умолчанию в адрес не
+ * пишутся, поэтому чистый список открывается чистым адресом.
+ */
+export const ConnectionSearchSchema = z.object({
+  tab: z.enum([CONNECTION_TAB.Active, CONNECTION_TAB.Closed]).optional(),
+  q: z.string().min(1).optional(),
+  source: z.string().min(1).optional(),
+  kind: z.enum(Object.values(ROUTE_KIND)).optional(),
+});
+
+export type ConnectionSearch = z.infer<typeof ConnectionSearchSchema>;
+
+/** Непонятое значение отбрасывается целиком: половина отбора хуже, чем его отсутствие. */
+export function parseConnectionSearch(search: Record<string, unknown>): ConnectionSearch {
+  const parsed = ConnectionSearchSchema.safeParse(search);
+
+  return parsed.success ? parsed.data : {};
+}
 
 export interface ConnectionSourceGroup {
   source: string;

@@ -1,6 +1,8 @@
 import { createRootRoute, createRoute, createRouter, lazyRouteComponent, redirect } from '@tanstack/react-router';
 import { z } from 'zod';
 
+import { parseConnectionSearch } from '@entities/Connection';
+
 import { preloadNamespaces } from '../lib/i18n';
 import { AppLayout } from '../ui/AppLayout';
 import { ConfigLayout } from '../ui/ConfigLayout';
@@ -90,6 +92,7 @@ const connectionsRoute = createRoute({
   getParentRoute: () => rootRoute,
   loader: async () => preloadNamespaces(['pages/Connections', 'widgets/ConnectionTable', 'widgets/RouteExplanation']),
   path: '/connections',
+  validateSearch: parseConnectionSearch,
   component: lazyRouteComponent(async () => import('@pages/Connections'), 'ConnectionsPage'),
 });
 

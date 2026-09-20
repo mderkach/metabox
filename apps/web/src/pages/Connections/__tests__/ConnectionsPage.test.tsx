@@ -1,4 +1,4 @@
-import { renderWithQuery } from '@test/renderWithQuery';
+import { renderWithRouter } from '@test/renderWithRouter';
 import { server } from '@test/server';
 import { mockVirtualSizes } from '@test/virtualSizes';
 import { screen, waitFor, within } from '@testing-library/react';
@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CONFIG_ENDPOINT } from '@entities/Config';
 import { CONFIG_FIXTURE } from '@entities/Config/__tests__/Config.fixture';
-import { ConnectionStore } from '@entities/Connection';
+import { ConnectionStore, parseConnectionSearch } from '@entities/Connection';
 import { CONNECTION_ENDPOINT } from '@entities/Connection';
 import { makeConnectionsSnapshot } from '@entities/Connection/__tests__/Connection.fixture';
 
@@ -20,6 +20,15 @@ const PROXY_NAMED_DIRECT = { outbounds: [{ type: 'selector', tag: 'direct', outb
 /** Конфиг с устройства: действие строки красится по типу её аутбаунда, а не по тегу. */
 function serveConfig(config: unknown = CONFIG_FIXTURE) {
   server.use(http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(JSON.stringify(config))));
+}
+
+/** Отбор экрана живёт в адресе, поэтому монтируем его на своём маршруте. */
+function renderScreen(search = '') {
+  return renderWithRouter(ConnectionsPage, {
+    path: '/connections',
+    validateSearch: parseConnectionSearch,
+    initialEntry: `/connections${search}`,
+  });
 }
 
 describe('экран соединений', () => {
@@ -37,7 +46,7 @@ describe('экран соединений', () => {
 
   it('на тысячах соединений держит в DOM окно, а не весь список', async () => {
     ConnectionStore.getState().apply(makeConnectionsSnapshot(5000));
-    renderWithQuery(<ConnectionsPage />);
+    renderScreen();
 
     await waitFor(() => {
       expect(screen.getAllByRole('button', { name: /Закрыть соединение/ }).length).toBeGreaterThan(0);
@@ -62,7 +71,7 @@ describe('экран соединений', () => {
     const user = userEvent.setup();
 
     ConnectionStore.getState().apply(makeConnectionsSnapshot(3));
-    renderWithQuery(<ConnectionsPage />);
+    renderScreen();
 
     const button = await screen.findAllByRole('button', { name: /Закрыть соединение/ });
 
@@ -76,10 +85,10 @@ describe('экран соединений', () => {
   it('на паузе новые снапшоты не меняют экран', async () => {
     const user = userEvent.setup();
 
-    renderWithQuery(<ConnectionsPage />);
+    renderScreen();
     ConnectionStore.getState().apply(makeConnectionsSnapshot(3));
 
-    await user.click(screen.getByRole('button', { name: 'Пауза' }));
+    await user.click(await screen.findByRole('button', { name: 'Пауза' }));
     ConnectionStore.getState().apply(makeConnectionsSnapshot(40));
 
     expect(ConnectionStore.getState().active).toHaveLength(3);
@@ -100,9 +109,9 @@ describe('экран соединений', () => {
     const user = userEvent.setup();
 
     ConnectionStore.getState().apply(makeConnectionsSnapshot(3));
-    renderWithQuery(<ConnectionsPage />);
+    renderScreen();
 
-    await user.click(screen.getByRole('button', { name: 'Закрыть все' }));
+    await user.click(await screen.findByRole('button', { name: 'Закрыть все' }));
 
     const dialog = await screen.findByRole('alertdialog');
 
@@ -113,7 +122,7 @@ describe('экран соединений', () => {
 
     expect(closedAll).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole('button', { name: 'Закрыть все' }));
+    await user.click(await screen.findByRole('button', { name: 'Закрыть все' }));
     await user.click(await screen.findByRole('button', { name: 'Оборвать' }));
 
     await waitFor(() => {
@@ -125,9 +134,9 @@ describe('экран соединений', () => {
     const user = userEvent.setup();
 
     ConnectionStore.getState().apply(makeConnectionsSnapshot(8));
-    renderWithQuery(<ConnectionsPage />);
+    renderScreen();
 
-    const kinds = screen.getByRole('list', { name: 'Действие' });
+    const kinds = await screen.findByRole('list', { name: 'Действие' });
     const direct = within(kinds).getByRole('button', { name: /напрямую/ });
 
     await user.click(direct);
@@ -141,9 +150,9 @@ describe('экран соединений', () => {
   it('действие строки берёт из типа аутбаунда конфига, а не из его тега', async () => {
     serveConfig(PROXY_NAMED_DIRECT);
     ConnectionStore.getState().apply(makeConnectionsSnapshot(8));
-    renderWithQuery(<ConnectionsPage />);
+    renderScreen();
 
-    const kinds = screen.getByRole('list', { name: 'Действие' });
+    const kinds = await screen.findByRole('list', { name: 'Действие' });
 
     // Пока конфиг не прочитан, четыре строки `route(direct)` читаются по тегу.
     expect(within(kinds).getByRole('button', { name: /напрямую/ })).toHaveTextContent('4');
@@ -157,11 +166,11 @@ describe('экран соединений', () => {
   it('закрытые собирает панель, потому что рантайм отдаёт только живые', async () => {
     const user = userEvent.setup();
 
-    renderWithQuery(<ConnectionsPage />);
+    renderScreen();
     ConnectionStore.getState().apply(makeConnectionsSnapshot(4));
     ConnectionStore.getState().apply(makeConnectionsSnapshot(1));
 
-    await user.click(screen.getByRole('tab', { name: /Закрытые/ }));
+    await user.click(await screen.findByRole('tab', { name: /Закрытые/ }));
 
     // Обе вкладки остаются в DOM, поэтому пояснение ищется в показанной.
     // Показанная остаётся одна не сразу: Base UI снимает прежнюю панель после
@@ -171,11 +180,39 @@ describe('экран соединений', () => {
     });
   });
 
+  // Отбор в адресе: ссылкой на отфильтрованный список делятся, когда
+  // спрашивают, почему трафик идёт не туда.
+  it('поднимает срез из адреса', async () => {
+    renderScreen('?kind=direct');
+    ConnectionStore.getState().apply(makeConnectionsSnapshot(4));
+
+    const kinds = await screen.findByRole('list', { name: 'Действие' });
+    const direct = within(kinds).getByRole('button', { name: /напрямую/ });
+
+    expect(direct).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('записывает срез в адрес, а не в историю переходов', async () => {
+    const user = userEvent.setup();
+
+    const { router } = renderScreen();
+    ConnectionStore.getState().apply(makeConnectionsSnapshot(4));
+
+    const kinds = await screen.findByRole('list', { name: 'Действие' });
+
+    await user.click(within(kinds).getByRole('button', { name: /напрямую/ }));
+
+    await waitFor(() => {
+      expect(router.state.location.search).toEqual({ kind: 'direct' });
+    });
+    expect(router.history.length).toBe(1);
+  });
+
   it('переключение вкладок сохраняет фильтр колонки активной таблицы', async () => {
     const user = userEvent.setup();
 
     ConnectionStore.getState().apply(makeConnectionsSnapshot(8));
-    renderWithQuery(<ConnectionsPage />);
+    renderScreen();
 
     await user.click(await screen.findByRole('button', { name: 'Фильтр по колонке Куда' }));
     await user.type(await screen.findByRole('textbox', { name: 'Подстрока в колонке Куда' }), 'google');
@@ -214,9 +251,9 @@ describe('экран соединений на телефоне', () => {
     const user = userEvent.setup();
 
     ConnectionStore.getState().apply(makeConnectionsSnapshot(8));
-    renderWithQuery(<ConnectionsPage />);
+    renderScreen();
 
-    const toggle = screen.getByRole('button', { name: 'Отбор' });
+    const toggle = await screen.findByRole('button', { name: 'Отбор' });
 
     expect(toggle).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByRole('list', { name: 'Действие' })).not.toBeInTheDocument();

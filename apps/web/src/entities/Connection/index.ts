@@ -9,6 +9,8 @@ export type {
   ConnectionSource,
   ConnectionSourceGroup,
 } from './model/Connection.filter';
+export { CONNECTION_TAB, parseConnectionSearch } from './model/Connection.filter';
+export type { ConnectionSearch, ConnectionTab } from './model/Connection.filter';
 export { CLOSED_LIMIT, FINAL_ACTION, ROUTE_KIND, toRouteKind } from './model/Connection.model';
 export type {
   ConnectionRate,

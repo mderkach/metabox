@@ -1,6 +1,8 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useNavigate, useSearch } from '@tanstack/react-router';
+import { useCallback, useMemo } from 'react';
 
 import {
+  CONNECTION_TAB,
   ConnectionState,
   filterConnections,
   toKindGroups,
@@ -10,16 +12,11 @@ import {
   type ConnectionRow,
   type ConnectionSource,
   type ConnectionSourceGroup,
+  type ConnectionSearch,
+  type ConnectionTab,
 } from '@entities/Connection';
 
 import { useThrottledRows } from './Connections.throttle';
-
-export const CONNECTION_TAB = {
-  Active: 'active',
-  Closed: 'closed',
-} as const;
-
-export type ConnectionTab = (typeof CONNECTION_TAB)[keyof typeof CONNECTION_TAB];
 
 /** Набор одной вкладки: обе живут одновременно, поэтому у каждой он свой. */
 export interface ConnectionTabRows {
@@ -70,10 +67,54 @@ function useTabRows(
  * подвал говорят про него же, а не про последний пришедший снапшот.
  */
 export function useConnectionsScreen(interval: number): ConnectionsScreen {
-  const [tab, setTab] = useState<ConnectionTab>(CONNECTION_TAB.Active);
-  const [query, setQuery] = useState('');
-  const [source, setSource] = useState<ConnectionSource>(null);
-  const [kind, setKind] = useState<ConnectionKind>(null);
+  const search = useSearch({ from: '/connections' });
+  const navigate = useNavigate({ from: '/connections' });
+
+  const tab = search.tab ?? CONNECTION_TAB.Active;
+  const query = search.q ?? '';
+  const source = search.source ?? null;
+  const kind = search.kind ?? null;
+
+  // Отбор заменяет адрес, а не добавляет запись в историю: иначе «назад» после
+  // набранного запроса откручивало бы его по букве. Пустое значение из адреса
+  // убирается, а не остаётся хвостом `?q=`.
+  const patchSearch = useCallback(
+    (patch: Partial<ConnectionSearch>) => {
+      void navigate({
+        search: (previous) => ({ ...previous, ...patch }),
+        replace: true,
+      });
+    },
+    [navigate]
+  );
+
+  const setTab = useCallback(
+    (next: ConnectionTab) => {
+      patchSearch({ tab: next === CONNECTION_TAB.Active ? undefined : next });
+    },
+    [patchSearch]
+  );
+
+  const setQuery = useCallback(
+    (next: string) => {
+      patchSearch({ q: next === '' ? undefined : next });
+    },
+    [patchSearch]
+  );
+
+  const setSource = useCallback(
+    (next: ConnectionSource) => {
+      patchSearch({ source: next ?? undefined });
+    },
+    [patchSearch]
+  );
+
+  const setKind = useCallback(
+    (next: ConnectionKind) => {
+      patchSearch({ kind: next ?? undefined });
+    },
+    [patchSearch]
+  );
 
   // Дроссель стоит до отбора и свой у каждой вкладки: нажатие на фасет обязано
   // отозваться сразу, а переключение вкладки — показать её собственный набор, а
@@ -94,10 +135,8 @@ export function useConnectionsScreen(interval: number): ConnectionsScreen {
   const kinds = useMemo(() => toKindGroups(all), [all]);
 
   const reset = useCallback(() => {
-    setQuery('');
-    setSource(null);
-    setKind(null);
-  }, []);
+    patchSearch({ q: undefined, source: undefined, kind: undefined });
+  }, [patchSearch]);
 
   return {
     tab,

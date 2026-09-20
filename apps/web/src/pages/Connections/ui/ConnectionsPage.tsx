@@ -1,14 +1,14 @@
 import { Activity, startTransition, useCallback, useId, useState, ViewTransition } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { ConnectionState, useConnectionStream, type ConnectionRow } from '@entities/Connection';
+import { CONNECTION_TAB, ConnectionState, useConnectionStream, type ConnectionRow } from '@entities/Connection';
 import { useCloseAllConnections } from '@features/Connection/ConnectionClose';
 import { Alert, AlertDescription, Badge, Tabs, TabsContent, TabsList, TabsTrigger } from '@shared/ui';
 import { ConnectionTable, useConnectionView, type ConnectionTableEmpty } from '@widgets/ConnectionTable';
 import { PageHeader } from '@widgets/PageHeader';
 import { RouteExplanation } from '@widgets/RouteExplanation';
 
-import { CONNECTION_TAB, useConnectionsScreen } from '../lib';
+import { useConnectionsScreen } from '../lib';
 import { ConnectionActions } from './ConnectionActions';
 import { ConnectionExport } from './ConnectionExport';
 import { ConnectionFacets } from './ConnectionFacets';
