@@ -242,8 +242,46 @@
         "react/function-component-definition": "error",
         "unicorn/filename-case": "error",
         "no-magic-numbers": "error",
-        "tailwind/no-unknown-classes": "error",
-        "tailwind/no-restricted-classes": "error",
+        "tailwind/no-unknown-classes": [
+          "error",
+          {
+            "variables": [
+              [
+                "^[A-Z][A-Z0-9_]*$",
+                [
+                  {
+                    "match": "strings"
+                  }
+                ]
+              ]
+            ]
+          }
+        ],
+        "tailwind/no-restricted-classes": [
+          "error",
+          {
+            "restrict": [
+              {
+                "pattern": "^-?[wh]-\\[.*\\]$",
+                "message": "Жёсткие размеры не проставляем: компонент занимает место по сетке."
+              },
+              {
+                "pattern": "^-?(?:size|min-w|max-w|min-h|max-h|basis|text|leading|tracking|gap|gap-x|gap-y|p|px|py|pt|pr|pb|pl|m|mx|my|mt|mr|mb|ml|space-x|space-y|top|right|bottom|left|inset|inset-x|inset-y)-\\[-?[0-9.]+px\\]$",
+                "message": "Кегль, отступы и размеры — в rem: они обязаны масштабироваться вместе с настройкой шрифта у пользователя. px остаётся границам, focus-ring и теням."
+              }
+            ],
+            "variables": [
+              [
+                "^[A-Z][A-Z0-9_]*$",
+                [
+                  {
+                    "match": "strings"
+                  }
+                ]
+              ]
+            ]
+          }
+        ],
         "jsx-a11y/label-has-associated-control": "error",
         "typescript/strict-boolean-expressions": "error",
         "typescript/no-unsafe-type-assertion": "error",
