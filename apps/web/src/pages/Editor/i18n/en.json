@@ -1,7 +1,4 @@
 {
-  "title": "Configuration",
-  "draft": "draft",
-  "raw": "Whole config as text",
   "order": "Rules are checked <accent>top to bottom, the first match wins</accent> — not the most specific one. A rule below one that already matched never runs, so the order here is the logic.",
   "pending": "Loading the config…",
   "search": {

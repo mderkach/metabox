@@ -14,10 +14,9 @@ import {
 import { useServiceAction } from '@features/Daemon/DaemonControl';
 import { failureText } from '@shared/api';
 import { formatBytes } from '@shared/lib/format';
-import { SECTION_LABEL } from '@shared/lib/styles';
 import { HOURS_IN_DAY, SECONDS_IN_HOUR } from '@shared/lib/time';
 import { cn } from '@shared/lib/utils';
-import { Alert, AlertDescription, AlertTitle, Button, Card, CardContent, CardHeader } from '@shared/ui';
+import { Alert, AlertDescription, AlertTitle, Button, Card, CardContent, CardHeader, SECTION_LABEL } from '@shared/ui';
 
 const STATUS_LABEL = {
   running: 'status.running',

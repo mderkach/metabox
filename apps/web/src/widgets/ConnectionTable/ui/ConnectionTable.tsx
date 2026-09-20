@@ -6,6 +6,8 @@ import { useTranslation } from 'react-i18next';
 import type { ConnectionRow as ConnectionRowModel } from '@entities/Connection';
 import { useCloseConnection } from '@features/Connection/ConnectionClose';
 import { useNarrowScreen } from '@shared/lib/media';
+import { cn } from '@shared/lib/utils';
+import { SURFACE } from '@shared/ui';
 
 import { DENSITY_ROW_ESTIMATE, useNow, type ConnectionView } from '../lib';
 import { ConnectionCard } from './ConnectionCard';
@@ -147,7 +149,7 @@ export function ConnectionTable({
   });
 
   return (
-    <section className='flex min-h-0 grow flex-col overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10'>
+    <section className={cn('flex min-h-0 grow flex-col overflow-hidden', SURFACE)}>
       <div className='flex shrink-0 flex-col gap-2 border-b border-border px-3.5 py-2.5'>
         <div className='flex flex-wrap items-center gap-2'>
           {search}

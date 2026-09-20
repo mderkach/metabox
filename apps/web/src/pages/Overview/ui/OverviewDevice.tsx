@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useTrafficHistory, type SystemStat } from '@entities/Daemon';
 import { formatAge, formatBytes } from '@shared/lib/format';
-import { Card } from '@shared/ui';
+import { CARD_FLUSH, Card } from '@shared/ui';
 import { DaemonSparkline } from '@widgets/Daemon/DaemonTraffic';
 
 import { OverviewSection } from './OverviewSection';
@@ -24,7 +24,7 @@ export function OverviewDevice({ system }: { system: SystemStat | null }) {
 
   return (
     <OverviewSection title={t('device.title')}>
-      <Card className='gap-0 py-0'>
+      <Card className={CARD_FLUSH}>
         <ul aria-label={t('device.label')} className='grid grid-cols-1 gap-px bg-border sm:grid-cols-2 lg:grid-cols-4'>
           <OverviewTile
             label={t('device.load')}

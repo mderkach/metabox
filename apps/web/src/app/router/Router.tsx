@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { preloadNamespaces } from '../lib/i18n';
 import { AppLayout } from '../ui/AppLayout';
+import { ConfigLayout } from '../ui/ConfigLayout';
 import { NotFoundPage } from '../ui/NotFoundPage';
 import { toPageTransitionTypes } from './Router.transition';
 
@@ -31,34 +32,51 @@ function parseRuleSearch(search: Record<string, unknown>): { rule?: number } {
   return parsed.success ? parsed.data : {};
 }
 
-const configRoute = createRoute({
+/**
+ * Раздел конфигурации: оболочка с шапкой и полосой вкладок, под ней вкладка.
+ * Вкладки — дочерние маршруты, поэтому переход между ними меняет один узел
+ * дерева, а не пересобирает раздел целиком.
+ */
+const configLayoutRoute = createRoute({
   getParentRoute: () => rootRoute,
+  loader: async () => preloadNamespaces(['widgets/Config/ConfigTabs']),
+  path: '/config',
+  component: ConfigLayout,
+});
+
+const routeEditorRoute = createRoute({
+  getParentRoute: () => configLayoutRoute,
   loader: async () =>
     preloadNamespaces([
       'pages/Editor',
-      'widgets/Config/ConfigTabs',
       'widgets/Rule/RuleTable',
       'widgets/Rule/RulePanel',
       'features/Rule/RuleEdit',
       'features/Rule/RuleRaw',
     ]),
-  path: '/config',
+  path: '/',
   validateSearch: parseRuleSearch,
   component: lazyRouteComponent(async () => import('@pages/Editor'), 'EditorPage'),
 });
 
 const ruleSetsRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => configLayoutRoute,
   loader: async () =>
     preloadNamespaces([
       'pages/RuleSets',
-      'widgets/Config/ConfigTabs',
       'widgets/RuleSet/RuleSetTable',
       'features/RuleSet/RuleSetAdd',
       'features/Config/ConfigCacheFile',
     ]),
-  path: '/config/rule-set',
+  path: 'rule-set',
   component: lazyRouteComponent(async () => import('@pages/RuleSets'), 'RuleSetsPage'),
+});
+
+const rawConfigRoute = createRoute({
+  getParentRoute: () => configLayoutRoute,
+  loader: async () => preloadNamespaces(['pages/RawConfig', 'widgets/Config/ConfigRawEditor']),
+  path: 'raw',
+  component: lazyRouteComponent(async () => import('@pages/RawConfig'), 'RawConfigPage'),
 });
 
 const proxiesRoute = createRoute({
@@ -90,19 +108,10 @@ const overviewRoute = createRoute({
   component: lazyRouteComponent(async () => import('@pages/Overview'), 'OverviewPage'),
 });
 
-const rawConfigRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  loader: async () => preloadNamespaces(['pages/RawConfig', 'widgets/Config/ConfigRawEditor']),
-  path: '/config/raw',
-  component: lazyRouteComponent(async () => import('@pages/RawConfig'), 'RawConfigPage'),
-});
-
 export const Router = createRouter({
   routeTree: rootRoute.addChildren([
     indexRoute,
-    configRoute,
-    ruleSetsRoute,
-    rawConfigRoute,
+    configLayoutRoute.addChildren([routeEditorRoute, ruleSetsRoute, rawConfigRoute]),
     proxiesRoute,
     connectionsRoute,
     overviewRoute,

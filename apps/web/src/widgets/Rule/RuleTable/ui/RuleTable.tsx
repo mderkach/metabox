@@ -3,6 +3,8 @@ import { useRef, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { RuleRow as RuleRowModel } from '@entities/Rule';
+import { cn } from '@shared/lib/utils';
+import { SURFACE } from '@shared/ui';
 
 import { RuleRow } from './RuleRow';
 import { RuleTableHeader } from './RuleTableHeader';
@@ -57,7 +59,7 @@ export function RuleTable({
   });
 
   return (
-    <section className='flex min-h-0 grow flex-col overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10'>
+    <section className={cn('flex min-h-0 grow flex-col overflow-hidden', SURFACE)}>
       <div className='flex shrink-0 flex-col gap-2 border-b border-border px-3.5 py-2.5'>
         <div className='flex flex-wrap items-center gap-2'>{search}</div>
         {facets}

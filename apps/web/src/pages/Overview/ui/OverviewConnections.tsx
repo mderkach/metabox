@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-import { Card } from '@shared/ui';
+import { CARD_FLUSH, Card } from '@shared/ui';
 import { ConnectionHistory } from '@widgets/ConnectionHistory';
 import { ConnectionSummaryAction, ConnectionSummaryNetwork, ConnectionSummaryTop } from '@widgets/ConnectionSummary';
 import { ProxyLatency } from '@widgets/ProxyLatency';
@@ -15,7 +15,7 @@ export function OverviewConnections({ runtime }: { runtime: OverviewRuntime }) {
   return (
     <OverviewSection title={t('connections.title')} note={t('connections.note')}>
       <div className='grid items-start gap-4 sm:grid-cols-2 xl:grid-cols-3'>
-        <Card className='gap-0 py-0'>
+        <Card className={CARD_FLUSH}>
           <ul aria-label={t('connections.label')} className='grid grid-cols-2 gap-px bg-border'>
             <OverviewTile
               label={t('connections.open')}

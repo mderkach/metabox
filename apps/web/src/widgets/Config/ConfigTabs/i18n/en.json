@@ -10,5 +10,10 @@
     "dns": "DNS",
     "log": "Logs",
     "experimental": "Experimental"
+  },
+  "mode": {
+    "label": "How the document is shown",
+    "forms": "Forms",
+    "text": "Text"
   }
 }

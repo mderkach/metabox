@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
-import { SECTION_HEADING } from '@shared/lib/styles';
 import { cn } from '@shared/lib/utils';
+import { SECTION_HEADING } from '@shared/ui';
 
 export function OverviewSection({
   title,

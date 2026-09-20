@@ -34,14 +34,22 @@ describe('направление перехода между экранами', 
     expect(toPageTransitionTypes(toChange('/connections', '/config'))).toEqual([PAGE_TRANSITION.Backward]);
   });
 
-  // «Каталог сетов» — отдельный пункт меню под «Конфигурацией», хотя адрес
-  // вложен в неё.
-  it('вложенный адрес считается по своему пункту меню', () => {
-    expect(toPageTransitionTypes(toChange('/config', '/config/rule-set'))).toEqual([PAGE_TRANSITION.Forward]);
+  // Оболочку раздела держит маршрут-раскладка, и при переходе между вкладками
+  // она стоит: шапка на них одна и та же, растворять её нечего.
+  it('переход между вкладками раздела оболочку не трогает', () => {
+    expect(toPageTransitionTypes(toChange('/config', '/config/rule-set'))).toEqual([PAGE_TRANSITION.Hold]);
+    expect(toPageTransitionTypes(toChange('/config', '/config/raw'))).toEqual([PAGE_TRANSITION.Hold]);
+    expect(toPageTransitionTypes(toChange('/config/raw', '/config/rule-set'))).toEqual([PAGE_TRANSITION.Hold]);
   });
 
-  it('адреса одного пункта меню сменяются растворением', () => {
-    expect(toPageTransitionTypes(toChange('/config', '/config/raw'))).toEqual([PAGE_TRANSITION.Fade]);
+  // Раздел считается первым сегментом адреса, и корень своего раздела не имеет:
+  // иначе `/` и `/config` считались бы одним разделом и переход бы пропал.
+  it('корень и раздел разделами не совпадают', () => {
+    expect(toPageTransitionTypes(toChange('/', '/config'))).toEqual([PAGE_TRANSITION.Fade]);
+  });
+
+  it('разные разделы с общим началом имени не путаются', () => {
+    expect(toPageTransitionTypes(toChange('/config', '/connections'))).not.toEqual([PAGE_TRANSITION.Hold]);
   });
 
   it('путь вне меню сменяется растворением', () => {

@@ -2,8 +2,8 @@ import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { ConnectionSource, ConnectionSourceGroup } from '@entities/Connection';
-import { FACET_ACTIVE, FACET_CLASS, FACET_IDLE, FACET_MORE } from '@shared/lib/styles';
 import { cn } from '@shared/lib/utils';
+import { FACET_ACTIVE, FACET_CLASS, FACET_IDLE, FACET_MORE } from '@shared/ui';
 
 /** Сколько устройств показать сразу: на роутере их бывает под три десятка. */
 const VISIBLE_SOURCES = 8;

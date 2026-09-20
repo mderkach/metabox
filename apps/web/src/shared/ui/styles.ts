@@ -28,3 +28,22 @@ export const FACET_CLASS =
 export const FACET_ACTIVE = 'border-selected-edge bg-selected text-foreground';
 export const FACET_IDLE = 'border-border text-muted-foreground hover:text-foreground';
 export const FACET_MORE = 'border-dashed border-border text-muted-foreground hover:text-foreground';
+
+/**
+ * Край поверхности: карточки, списка, панели.
+ *
+ * Значения повторяют `Card` вендорной зоны дословно. Править её нельзя — файл
+ * перезаписывает CLI, — а расходиться с ней поверхностям тем более нельзя: на
+ * экранах конфигурации и соединений список и панель стоят рядом, и разный край
+ * читается как разный вид элемента.
+ */
+export const SURFACE = 'rounded-xl bg-card ring-1 ring-foreground/10';
+
+/** Полоса заголовка поверхности: у списка, панели и карточки со своей шапкой. */
+export const SURFACE_HEAD = 'border-b border-border px-4 py-3';
+
+/**
+ * `Card`, чьё содержимое задаёт отступы само. Под полосой заголовка они обязаны
+ * идти до краёв, а собственные отступы карточки этому мешают.
+ */
+export const CARD_FLUSH = 'gap-0 py-0';

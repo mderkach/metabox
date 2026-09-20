@@ -10,5 +10,9 @@
   },
   "skip": {
     "content": "Skip to content"
+  },
+  "config": {
+    "title": "Configuration",
+    "draft": "draft"
   }
 }

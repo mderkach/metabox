@@ -2,7 +2,17 @@ import { Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import type { ProxyGroup, ProxyNode } from '@entities/Proxy';
-import { Alert, AlertDescription, AlertTitle, Card, CardContent, CardHeader } from '@shared/ui';
+import { cn } from '@shared/lib/utils';
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+  CARD_FLUSH,
+  Card,
+  CardContent,
+  CardHeader,
+  SURFACE_HEAD,
+} from '@shared/ui';
 
 import { ProxyGroupCard } from './ProxyGroupCard';
 import { ProxyNodeTile } from './ProxyNodeTile';
@@ -37,8 +47,8 @@ export function ProxyGroups({ groups, nodes }: { groups: ProxyGroup[]; nodes: Pr
         <AlertDescription>{t('empty.description')}</AlertDescription>
       </Alert>
 
-      <Card className='gap-0 overflow-hidden py-0'>
-        <CardHeader className='flex flex-row items-center gap-2.5 border-b border-border px-4 py-3'>
+      <Card className={cn(CARD_FLUSH, 'overflow-hidden')}>
+        <CardHeader className={cn('flex flex-row items-center gap-2.5', SURFACE_HEAD)}>
           <h2 className='font-mono text-sm font-medium'>{t('empty.outbounds')}</h2>
           <p className='text-xs text-muted-foreground'>{nodes.length}</p>
         </CardHeader>

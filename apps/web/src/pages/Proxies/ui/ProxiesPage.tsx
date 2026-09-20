@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
 
 import { useProxies, useProxyProviders } from '@entities/Proxy';
-import { Card, CardContent, CardHeader } from '@shared/ui';
+import { cn } from '@shared/lib/utils';
+import { CARD_FLUSH, Card, CardContent, CardHeader, SURFACE_HEAD } from '@shared/ui';
 import { PageHeader } from '@widgets/PageHeader';
 import { ProxyGroups } from '@widgets/ProxyGroups';
 
@@ -29,8 +30,8 @@ export function ProxiesPage() {
         {proxies.isSuccess && <ProxyGroups groups={groups} nodes={nodes} />}
 
         {subscriptions.length > 0 && (
-          <Card className='gap-0 overflow-hidden py-0'>
-            <CardHeader className='flex flex-row items-center gap-2.5 border-b border-border px-4 py-3'>
+          <Card className={cn(CARD_FLUSH, 'overflow-hidden')}>
+            <CardHeader className={cn('flex flex-row items-center gap-2.5', SURFACE_HEAD)}>
               <h2 className='text-sm font-medium'>{t('providers.title')}</h2>
               <p className='text-xs text-muted-foreground'>{t('providers.subtitle')}</p>
             </CardHeader>

@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next';
 import type { ProxyGroup } from '@entities/Proxy';
 import { useTestProxyDelay } from '@features/Proxy/ProxyDelay';
 import { useSelectProxy } from '@features/Proxy/ProxySelect';
-import { Badge, Button, Card, CardContent, CardHeader } from '@shared/ui';
+import { cn } from '@shared/lib/utils';
+import { Badge, Button, CARD_FLUSH, Card, CardContent, CardHeader, SURFACE_HEAD } from '@shared/ui';
 
 import { toGroupLabel } from './ProxyGroupLabel';
 import { ProxyNodeTile } from './ProxyNodeTile';
@@ -24,8 +25,8 @@ export function ProxyGroupCard({ group }: { group: ProxyGroup }) {
   );
 
   return (
-    <Card className='gap-0 py-0'>
-      <CardHeader className='flex flex-row flex-wrap items-center gap-x-2.5 gap-y-1 border-b border-border px-4 py-3'>
+    <Card className={CARD_FLUSH}>
+      <CardHeader className={cn('flex flex-row flex-wrap items-center gap-x-2.5 gap-y-1', SURFACE_HEAD)}>
         <h2 className='font-mono text-sm font-medium'>{group.name}</h2>
         <Badge variant='outline'>{kind}</Badge>
         <p className='text-xs text-muted-foreground'>{group.selectable ? t('card.manual') : t('card.automatic')}</p>

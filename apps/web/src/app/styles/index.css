@@ -417,15 +417,17 @@
   --page-offset: -0.75rem;
 }
 
-/* Переход роутера: экран уходит и приходит со сдвигом по направлению, шапка
- * растворяется на месте, полоса вкладок и её подчёркивание без пары уходят
- * вместе с экраном, а с парой стоят — под новый раздел переезжает только
- * подчёркивание. Подчёркивание именовано отдельно и в снимок полосы не входит,
- * поэтому ветка без пары нужна и ему. */
+/* Содержимое уходит и приходит при любом переходе роутера: со сдвигом по
+ * направлению, когда меняется раздел, и растворением внутри раздела. Полоса
+ * вкладок и её подчёркивание без пары уходят вместе с содержимым, а с парой
+ * стоят — под новую вкладку переезжает только подчёркивание. Подчёркивание
+ * именовано отдельно и в снимок полосы не входит, поэтому ветка без пары нужна
+ * и ему. */
 :is(
   :active-view-transition-type(page-forward),
   :active-view-transition-type(page-backward),
-  :active-view-transition-type(page-fade)
+  :active-view-transition-type(page-fade),
+  :active-view-transition-type(page-hold)
 ) {
   &::view-transition-old(page),
   &::view-transition-old(config-tabs):only-child,
@@ -440,8 +442,39 @@
     animation: page-in var(--view-transition-page-in) var(--view-transition-ease) var(--view-transition-page-lag) both;
   }
 
-  &::view-transition-group(page-header),
   &::view-transition-group(config-tab-underline) {
+    animation-duration: var(--view-transition-move);
+    animation-timing-function: var(--view-transition-ease);
+  }
+}
+
+/* Внутри раздела шапка стоит, но у неизвестного адреса под `/config` раскладки
+ * нет вовсе — заглушка подменяет корневой `Outlet`. Шапка остаётся без пары и
+ * должна уйти вместе с содержимым, как уходит полоса вкладок, а не пропасть
+ * срезом. Отдельным блоком, а не веткой в правиле выше: там `:only-child`
+ * специфичнее и перебил бы растворение шапки при смене раздела. */
+:active-view-transition-type(page-hold) {
+  &::view-transition-old(page-header):only-child {
+    display: block;
+    animation: page-out var(--view-transition-page-out) var(--view-transition-ease-in) both;
+  }
+
+  &::view-transition-new(page-header):only-child {
+    animation: page-in var(--view-transition-page-in) var(--view-transition-ease) var(--view-transition-page-lag) both;
+  }
+}
+
+/* Шапка растворяется, только когда меняется раздел. Внутри раздела она стоит
+ * живой: заголовок, путь файла и история версий на всех его вкладках те же, и
+ * растворение читалось бы миганием на ровном месте. Пара снимков у шапки есть
+ * всегда — она стоит на каждом экране, — поэтому отличить эти случаи веткой
+ * `:only-child`, как у полосы вкладок, нельзя: их различает тип перехода. */
+:is(
+  :active-view-transition-type(page-forward),
+  :active-view-transition-type(page-backward),
+  :active-view-transition-type(page-fade)
+) {
+  &::view-transition-group(page-header) {
     animation-duration: var(--view-transition-move);
     animation-timing-function: var(--view-transition-ease);
   }

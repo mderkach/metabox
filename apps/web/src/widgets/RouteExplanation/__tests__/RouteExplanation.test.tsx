@@ -63,6 +63,10 @@ describe('RouteExplanation', () => {
     const link = await screen.findByRole('link', { name: 'Открыть правило в редакторе' });
 
     expect(link).toHaveAttribute('href', '/config?rule=7');
+    // Классы варианта прогоняются через `cn`: иначе `border-transparent` базы
+    // доживает рядом с `border-border` варианта, и ссылка остаётся без рамки.
+    expect(link).toHaveClass('border-border');
+    expect(link).not.toHaveClass('border-transparent');
   });
 
   it('отключает переход к узлу, когда процесс исполняет другой конфиг', async () => {

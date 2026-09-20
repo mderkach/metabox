@@ -3,9 +3,8 @@ import { useTranslation } from 'react-i18next';
 
 import { SCHEMA_VERSION, useClashConfigs, useConfigPath, useDaemonStatus } from '@entities/Daemon';
 import { formatBytes } from '@shared/lib/format';
-import { SECTION_LABEL } from '@shared/lib/styles';
 import { cn } from '@shared/lib/utils';
-import { Card, CardContent, CardHeader } from '@shared/ui';
+import { Card, CardContent, CardHeader, SECTION_LABEL } from '@shared/ui';
 import { DaemonService } from '@widgets/Daemon/DaemonService';
 import { DaemonMemory } from '@widgets/Daemon/DaemonTraffic';
 

@@ -12,7 +12,8 @@ import {
   type RouteReasonCode,
 } from '@entities/Route';
 import { useFocusReturn } from '@shared/lib/useFocusReturn';
-import { Alert, AlertDescription, AlertTitle, Button, buttonVariants } from '@shared/ui';
+import { cn } from '@shared/lib/utils';
+import { Alert, AlertDescription, AlertTitle, Button, SURFACE, SURFACE_HEAD, buttonVariants } from '@shared/ui';
 
 import { useRouteExplanationState } from '../lib/RouteExplanation.lib';
 import { RouteOriginBadge } from './RouteOriginBadge';
@@ -55,9 +56,9 @@ export function RouteExplanation({
       id={id}
       aria-label={t('title')}
       onKeyDown={onKeyDown}
-      className='flex w-full max-w-md shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-card'
+      className={cn('flex w-full max-w-md shrink-0 flex-col overflow-hidden', SURFACE)}
     >
-      <header className='flex items-center gap-2.5 border-b border-border px-4 py-3'>
+      <header className={cn('flex items-center gap-2.5', SURFACE_HEAD)}>
         <h2 ref={headingRef} tabIndex={-1} className='grow text-sm font-medium'>
           {t('title')}
         </h2>
@@ -155,7 +156,9 @@ function Matched({
         <Link
           to='/config'
           search={{ rule: match.index + 1 }}
-          className={buttonVariants({ variant: 'outline', size: 'sm' })}
+          // Покрашена кнопкой, но остаётся ссылкой: `Button` с `render` ставит
+          // `role="button"` поверх `<a href>` даже при `nativeButton={false}`.
+          className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}
         >
           {t('matched.open')}
         </Link>

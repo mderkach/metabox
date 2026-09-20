@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
-import { TABLE_HEADER } from '@shared/lib/styles';
 import { cn } from '@shared/lib/utils';
+import { TABLE_HEADER } from '@shared/ui';
 
 import { RULE_COLUMN } from './RuleColumns';
 

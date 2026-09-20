@@ -5,7 +5,7 @@ import { Trans, useTranslation } from 'react-i18next';
 
 import { firstJsoncError } from '@shared/lib/jsonc';
 import { cn } from '@shared/lib/utils';
-import { Badge, Button, Input } from '@shared/ui';
+import { Badge, Button, Input, SURFACE } from '@shared/ui';
 
 import { findMatches, lineIndexOf, toJsonTokens } from '../lib';
 
@@ -158,7 +158,7 @@ export function ConfigRawEditor({
         )}
       </div>
 
-      <div className='flex min-h-0 grow overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10'>
+      <div className={cn('flex min-h-0 grow overflow-hidden', SURFACE)}>
         <div
           ref={gutterRef}
           aria-hidden='true'

@@ -236,6 +236,22 @@
       }
     },
     {
+      "files": ["src/shared/ui/styles.ts"],
+      "rules": {
+        "react/only-export-components": "error",
+        "react/function-component-definition": "error",
+        "unicorn/filename-case": "error",
+        "no-magic-numbers": "error",
+        "tailwind/no-unknown-classes": "error",
+        "tailwind/no-restricted-classes": "error",
+        "jsx-a11y/label-has-associated-control": "error",
+        "typescript/strict-boolean-expressions": "error",
+        "typescript/no-unsafe-type-assertion": "error",
+        "typescript/no-unnecessary-condition": "error",
+        "typescript/promise-function-async": "error"
+      }
+    },
+    {
       "files": ["tools/**"],
       "rules": {
         "import/no-default-export": "off",

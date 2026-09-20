@@ -2,6 +2,8 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { RuleSetRow as RuleSetRowModel } from '@entities/RuleSet';
+import { cn } from '@shared/lib/utils';
+import { SURFACE } from '@shared/ui';
 
 import { RuleSetRow } from './RuleSetRow';
 import { RuleSetTableHeader } from './RuleSetTableHeader';
@@ -37,7 +39,7 @@ export function RuleSetTable({
   const { t } = useTranslation('widgets/RuleSet/RuleSetTable');
 
   return (
-    <section className='flex flex-col overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10'>
+    <section className={cn('flex flex-col overflow-hidden', SURFACE)}>
       <h2 className='sr-only'>{t('title')}</h2>
 
       <div className='flex flex-wrap items-center gap-2 border-b border-border px-3.5 py-2.5'>{search}</div>

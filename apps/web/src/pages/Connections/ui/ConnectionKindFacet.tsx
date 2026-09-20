@@ -2,8 +2,8 @@ import type { ParseKeys } from 'i18next';
 import { useTranslation } from 'react-i18next';
 
 import { ROUTE_KIND, type ConnectionKind, type ConnectionKindGroup, type RouteKind } from '@entities/Connection';
-import { FACET_ACTIVE, FACET_CLASS, FACET_IDLE } from '@shared/lib/styles';
 import { cn } from '@shared/lib/utils';
+import { FACET_ACTIVE, FACET_CLASS, FACET_IDLE } from '@shared/ui';
 
 /**
  * Подпись судьбы пакета. Текст показывает тот, кто его показывает: у сводки на

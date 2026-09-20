@@ -1,8 +1,4 @@
 {
-  "title": "Config as text",
-  "draft": "draft",
-  "reset": "Restore the device version",
-  "toForms": "Back to forms",
   "pending": "Loading the config…",
   "rejected": {
     "title": "The schema rejected this config",

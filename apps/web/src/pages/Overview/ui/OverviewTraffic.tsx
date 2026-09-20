@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
 import { formatAge, formatBytes, formatRate } from '@shared/lib/format';
-import { Card } from '@shared/ui';
+import { CARD_FLUSH, Card } from '@shared/ui';
 import { ConnectionSummaryVolume } from '@widgets/ConnectionSummary';
 import { DaemonTraffic } from '@widgets/Daemon/DaemonTraffic';
 
@@ -25,7 +25,7 @@ export function OverviewTraffic({ runtime }: { runtime: OverviewRuntime }) {
       note={uplink === undefined ? undefined : t('traffic.note', { link: uplink.name, rate: formatRate(linkRate) })}
     >
       <div className='grid items-start gap-4 xl:grid-cols-[minmax(0,2.6fr)_minmax(0,1fr)]'>
-        <Card className='gap-0 py-0'>
+        <Card className={CARD_FLUSH}>
           <div className='flex flex-col xl:flex-row'>
             <ul
               aria-label={t('traffic.label')}

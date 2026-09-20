@@ -1,17 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
-import {
-  ConfigDocumentState,
-  hasRuleSetCache,
-  parseConfig,
-  readRules,
-  readRuleSets,
-  toOutboundTags,
-  useConfig,
-  useConfigDirty,
-  useConfigText,
-  type ConfigDocument,
-} from '@entities/Config';
+import { hasRuleSetCache, readRules, readRuleSets, toOutboundTags, useConfigDocument } from '@entities/Config';
 import {
   countRuleSetUsage,
   filterRuleSets,
@@ -22,7 +11,6 @@ import {
 
 export interface RuleSetEditorState {
   isPending: boolean;
-  config: ConfigDocument | null;
   sets: RuleSetRow[];
   /** Имена уже подключённых наборов: второй набор с тем же именем не заводится. */
   takenTags: string[];
@@ -30,60 +18,43 @@ export interface RuleSetEditorState {
   outbounds: string[];
   /** Кэш наборов выключен, а удалённые наборы в конфиге есть. */
   needsCache: boolean;
-  isDirty: boolean;
 }
 
 /**
- * Связывает запрос конфига, документ и список наборов для экрана.
+ * Список наборов для экрана. Документ раздела читает общий хук, здесь остаётся
+ * только его разбор в строки.
  *
  * Узлы читаются из текста, а не из разобранной модели: набор, который схема не
  * приняла, обязан остаться видимым — иначе пользователь не найдёт как раз тот,
  * который надо чинить.
  */
 export function useRuleSetEditor(): RuleSetEditorState {
-  const config = useConfig();
-  const load = ConfigDocumentState.use.load();
-  const draft = ConfigDocumentState.use.draft();
-  const isDirty = useConfigDirty();
-  const text = config.data?.text ?? null;
+  const document = useConfigDocument();
+  const text = document.text;
 
-  useEffect(
-    function loadDocument() {
-      if (text !== null) load(text);
-    },
-    [text, load]
-  );
-
-  const shownText = useConfigText() ?? text;
-
-  const edited = useMemo(() => (draft === null ? null : parseConfig(draft)), [draft]);
-  const document = edited?.config ?? config.data?.config ?? null;
-
-  const nodes = useMemo(() => (shownText === null ? [] : readRuleSets(shownText)), [shownText]);
+  const nodes = useMemo(() => (text === null ? [] : readRuleSets(text)), [text]);
 
   // Ссылки считаются по тем же узлам правил, что показывает соседняя вкладка:
   // правило, сославшееся на набор изнутри логической группы, ссылается на него
   // не меньше прямого.
-  const usage = useMemo(() => countRuleSetUsage(shownText === null ? [] : readRules(shownText)), [shownText]);
+  const usage = useMemo(() => countRuleSetUsage(text === null ? [] : readRules(text)), [text]);
 
   const sets = useMemo(() => toRuleSetRowsFromNodes(nodes, usage), [nodes, usage]);
 
   const needsCache = useMemo(() => {
-    if (shownText === null) {
+    if (text === null) {
       return false;
     }
 
-    return sets.some((set) => set.type === RULE_SET_TYPE.Remote) && !hasRuleSetCache(shownText);
-  }, [sets, shownText]);
+    return sets.some((set) => set.type === RULE_SET_TYPE.Remote) && !hasRuleSetCache(text);
+  }, [sets, text]);
 
   return {
-    isPending: config.isPending,
-    config: document,
+    isPending: document.isPending,
     sets,
     takenTags: sets.map((set) => set.tag).filter((tag) => tag !== ''),
-    outbounds: toOutboundTags(document),
+    outbounds: toOutboundTags(document.config),
     needsCache,
-    isDirty,
   };
 }
 

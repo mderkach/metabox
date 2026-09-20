@@ -1,6 +1,6 @@
 import { renderWithRouter } from '@test/renderWithRouter';
 import { server } from '@test/server';
-import { screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -80,25 +80,20 @@ describe('конфиг текстом', () => {
       expect(ConfigDocumentState.getState().draft).not.toBeNull();
     });
     expect(ConfigDocumentState.getState().applied).toBe(VALID_CONFIG);
-    expect(await screen.findByText('черновик')).toBeInTheDocument();
   });
 
-  it('возврат к состоянию устройства снимает черновик', async () => {
+  // Одно действие не существует под двумя именами: откатом владеет бар применения.
+  it('своей кнопки отката у экрана нет: документом владеет бар применения', async () => {
     serveConfig(VALID_CONFIG);
-
-    const user = userEvent.setup();
 
     renderWithRouter(RawConfigPage);
 
-    const editor = await screen.findByRole('textbox', { name: 'Конфиг sing-box текстом' });
+    await screen.findByRole('textbox', { name: 'Конфиг sing-box текстом' });
 
-    await user.type(editor, ' ');
-    await user.click(await screen.findByRole('button', { name: 'Вернуть версию с устройства' }));
-
-    expect(ConfigDocumentState.getState().draft).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Вернуть версию с устройства' })).not.toBeInTheDocument();
   });
 
-  it('возврат к состоянию устройства возвращает текст в поле, а не только в стор', async () => {
+  it('отменённый черновик возвращает текст в поле, а не только в стор', async () => {
     serveConfig(VALID_CONFIG);
 
     const user = userEvent.setup();
@@ -108,7 +103,15 @@ describe('конфиг текстом', () => {
     const editor = await screen.findByRole('textbox', { name: 'Конфиг sing-box текстом' });
 
     await user.type(editor, 'ЛИШНЕЕ');
-    await user.click(await screen.findByRole('button', { name: 'Вернуть версию с устройства' }));
+
+    await waitFor(() => {
+      expect(ConfigDocumentState.getState().draft).not.toBeNull();
+    });
+
+    // Отмену делает бар применения; экран обязан подхватить её полем ввода.
+    act(() => {
+      ConfigDocumentState.getState().discard();
+    });
 
     // Редактор пересоздан вместе с документом, поэтому поле ищется заново.
     await waitFor(async () => {

@@ -2,8 +2,7 @@ import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { toAreaGeometry } from '@shared/lib/chart';
-import { SECTION_LABEL } from '@shared/lib/styles';
-import { Card, CardContent, CardHeader } from '@shared/ui';
+import { Card, CardContent, CardHeader, SECTION_LABEL } from '@shared/ui';
 
 /** Координаты в долях области: сетка растягивается по месту, подписи остаются HTML. */
 const PLOT = 100;

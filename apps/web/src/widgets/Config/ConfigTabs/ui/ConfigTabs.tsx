@@ -5,6 +5,7 @@ import { sectionSize, type ConfigDocument } from '@entities/Config';
 import { cn } from '@shared/lib/utils';
 
 import { CONFIG_TAB_CLASS, CONFIG_TAB_UNDERLINE, CONFIG_TABS } from '../model';
+import { ConfigModeSwitch } from './ConfigModeSwitch';
 
 export function ConfigTabs({ config }: { config: ConfigDocument | null }) {
   const { t } = useTranslation('widgets/Config/ConfigTabs');
@@ -16,44 +17,50 @@ export function ConfigTabs({ config }: { config: ConfigDocument | null }) {
   });
 
   return (
-    <nav aria-label={t('label')} className='shrink-0 border-b border-border [view-transition-name:config-tabs]'>
-      <ul className='flex h-11 items-end gap-1 overflow-x-auto px-4 sm:px-6'>
-        {CONFIG_TABS.map((section) => {
-          const count = sectionSize(config, section.key);
+    <div className='flex shrink-0 items-stretch gap-3 border-b border-border px-4 [view-transition-name:config-tabs] sm:px-6'>
+      <nav aria-label={t('label')} className='min-w-0 grow'>
+        <ul className='flex h-11 items-end gap-1 overflow-x-auto'>
+          {CONFIG_TABS.map((section) => {
+            const count = sectionSize(config, section.key);
 
-          return (
-            <li key={section.key}>
-              {section.route === null ? (
-                <span
-                  aria-disabled='true'
-                  title={t('unavailable')}
-                  className={cn(CONFIG_TAB_CLASS, 'text-muted-foreground/60')}
-                >
-                  {t(section.label)}
-                  {count !== null && <SectionCount count={count} />}
-                </span>
-              ) : (
-                <Link
-                  to={section.route}
-                  activeOptions={{ exact: true }}
-                  activeProps={{ 'aria-current': 'page' }}
-                  className={cn(
-                    CONFIG_TAB_CLASS,
-                    'text-muted-foreground transition-colors hover:text-foreground',
-                    'focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none',
-                    'aria-[current=page]:text-foreground'
-                  )}
-                >
-                  {t(section.label)}
-                  {count !== null && <SectionCount count={count} />}
-                  {section.route === resolvedPath && <span className={CONFIG_TAB_UNDERLINE} />}
-                </Link>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-    </nav>
+            return (
+              <li key={section.key}>
+                {section.route === null ? (
+                  <span
+                    aria-disabled='true'
+                    title={t('unavailable')}
+                    className={cn(CONFIG_TAB_CLASS, 'text-muted-foreground/60')}
+                  >
+                    {t(section.label)}
+                    {count !== null && <SectionCount count={count} />}
+                  </span>
+                ) : (
+                  <Link
+                    to={section.route}
+                    activeOptions={{ exact: true }}
+                    activeProps={{ 'aria-current': 'page' }}
+                    className={cn(
+                      CONFIG_TAB_CLASS,
+                      'text-muted-foreground transition-colors hover:text-foreground',
+                      'focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none',
+                      'aria-[current=page]:text-foreground'
+                    )}
+                  >
+                    {t(section.label)}
+                    {count !== null && <SectionCount count={count} />}
+                    {section.route === resolvedPath && <span className={CONFIG_TAB_UNDERLINE} />}
+                  </Link>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+
+      <div className='flex shrink-0 items-center'>
+        <ConfigModeSwitch />
+      </div>
+    </div>
   );
 }
 

@@ -1,16 +1,11 @@
-import { Link, useSearch } from '@tanstack/react-router';
+import { useSearch } from '@tanstack/react-router';
 import { Info, Search } from 'lucide-react';
 import { startTransition, useCallback, useState, ViewTransition } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
-import { useConfigPath } from '@entities/Daemon';
 import { isRuleRecognized } from '@entities/Rule';
-import { ConfigApplyHistory } from '@features/Config/ConfigApply';
-import { FACET_ACTIVE, FACET_CLASS, FACET_IDLE, FACET_MORE } from '@shared/lib/styles';
 import { cn } from '@shared/lib/utils';
-import { Badge, Button, buttonVariants, Input } from '@shared/ui';
-import { ConfigTabs } from '@widgets/Config/ConfigTabs';
-import { PageHeader } from '@widgets/PageHeader';
+import { Button, FACET_ACTIVE, FACET_CLASS, FACET_IDLE, FACET_MORE, Input } from '@shared/ui';
 import { RulePanel } from '@widgets/Rule/RulePanel';
 import { RuleTable } from '@widgets/Rule/RuleTable';
 
@@ -25,7 +20,6 @@ const VISIBLE_TARGETS = 6;
 export function EditorPage() {
   const { t } = useTranslation('pages/Editor');
   const editor = useRouteEditor();
-  const configPath = useConfigPath();
   const filter = useRuleFilter(editor.rules);
   // Номер правила из адреса — начальный выбор: экран соединений ведёт сюда на
   // сработавший узел. Дальше выбором владеет сам экран, иначе закрытая панель
@@ -50,66 +44,47 @@ export function EditorPage() {
   const selectedNode = selected === null ? null : editor.nodes[selected.index - 1];
 
   return (
-    <>
-      <PageHeader
-        title={t('title')}
-        actions={
-          <>
-            <ConfigApplyHistory />
-            <Link to='/config/raw' className={buttonVariants({ variant: 'outline', size: 'sm' })}>
-              {t('raw')}
-            </Link>
-          </>
-        }
-      >
-        <p className='font-mono text-xs text-muted-foreground'>{configPath}</p>
-        {editor.isDirty && <Badge variant='secondary'>{t('draft')}</Badge>}
-      </PageHeader>
+    <div className='flex min-h-0 grow flex-col gap-4 px-4 py-5 sm:px-6'>
+      <p className='flex items-start gap-2 text-sm text-pretty text-muted-foreground'>
+        <Info className='mt-0.5 size-4 shrink-0 text-primary' aria-hidden='true' />
+        <span>
+          <Trans t={t} i18nKey='order' components={{ accent: <span className='font-medium text-foreground' /> }} />
+        </span>
+      </p>
 
-      <ConfigTabs config={editor.config} />
+      {editor.isPending && <p className='text-sm text-muted-foreground'>{t('pending')}</p>}
 
-      <div className='flex min-h-0 grow flex-col gap-4 px-4 py-5 sm:px-6'>
-        <p className='flex items-start gap-2 text-sm text-pretty text-muted-foreground'>
-          <Info className='mt-0.5 size-4 shrink-0 text-primary' aria-hidden='true' />
-          <span>
-            <Trans t={t} i18nKey='order' components={{ accent: <span className='font-medium text-foreground' /> }} />
-          </span>
-        </p>
+      {editor.issues.length > 0 && <ConfigNotParsed issues={editor.issues} />}
 
-        {editor.isPending && <p className='text-sm text-muted-foreground'>{t('pending')}</p>}
+      {editor.rules.length > 0 && (
+        <div className='flex min-h-0 grow flex-col gap-4 lg:flex-row'>
+          <RuleTable
+            rules={filter.rules}
+            total={editor.rules.length}
+            selectedId={selectedId}
+            onSelect={onSelect}
+            search={<RuleSearch filter={filter} />}
+            facets={<RuleTargetFacets filter={filter} />}
+            empty={<EmptyState filter={filter} />}
+          />
 
-        {editor.issues.length > 0 && <ConfigNotParsed issues={editor.issues} />}
-
-        {editor.rules.length > 0 && (
-          <div className='flex min-h-0 grow flex-col gap-4 lg:flex-row'>
-            <RuleTable
-              rules={filter.rules}
-              total={editor.rules.length}
-              selectedId={selectedId}
-              onSelect={onSelect}
-              search={<RuleSearch filter={filter} />}
-              facets={<RuleTargetFacets filter={filter} />}
-              empty={<EmptyState filter={filter} />}
-            />
-
-            {selected !== null && (
-              // Граница снаружи `key`: смена строки идёт как `update`, а не
-              // как exit и enter одновременно, иначе панель мигает.
-              <ViewTransition enter='panel-in' exit='panel-out'>
-                <RulePanel
-                  key={selected.id}
-                  rule={selected}
-                  node={selectedNode}
-                  recognized={isRuleRecognized(selectedNode)}
-                  outbounds={editor.outbounds}
-                  onClose={onClose}
-                />
-              </ViewTransition>
-            )}
-          </div>
-        )}
-      </div>
-    </>
+          {selected !== null && (
+            // Граница снаружи `key`: смена строки идёт как `update`, а не
+            // как exit и enter одновременно, иначе панель мигает.
+            <ViewTransition enter='panel-in' exit='panel-out'>
+              <RulePanel
+                key={selected.id}
+                rule={selected}
+                node={selectedNode}
+                recognized={isRuleRecognized(selectedNode)}
+                outbounds={editor.outbounds}
+                onClose={onClose}
+              />
+            </ViewTransition>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 

@@ -13,6 +13,7 @@ export * from './scroll-area';
 export * from './select';
 export * from './separator';
 export * from './sonner';
+export * from './styles';
 export * from './switch';
 export * from './tabs';
 export * from './textarea';

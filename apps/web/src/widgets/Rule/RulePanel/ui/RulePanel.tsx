@@ -6,14 +6,17 @@ import { ConfigDocumentState } from '@entities/Config';
 import type { RuleRow } from '@entities/Rule';
 import { RuleEditForm } from '@features/Rule/RuleEdit';
 import { RuleRawEditor } from '@features/Rule/RuleRaw';
-import { SECTION_LABEL } from '@shared/lib/styles';
 import { useFocusReturn } from '@shared/lib/useFocusReturn';
+import { cn } from '@shared/lib/utils';
 import {
   Alert,
   AlertDescription,
   AlertTitle,
   Badge,
   Button,
+  SECTION_LABEL,
+  SURFACE,
+  SURFACE_HEAD,
   Tabs,
   TabsContent,
   TabsList,
@@ -65,9 +68,9 @@ export function RulePanel({
       id={id}
       aria-label={t('title', { index: rule.index })}
       onKeyDown={onKeyDown}
-      className='flex w-full max-w-md shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-card'
+      className={cn('flex w-full max-w-md shrink-0 flex-col overflow-hidden', SURFACE)}
     >
-      <header className='flex items-center gap-2.5 border-b border-border px-4 py-3'>
+      <header className={cn('flex items-center gap-2.5', SURFACE_HEAD)}>
         <div className='flex min-w-0 grow flex-col'>
           <h2 ref={headingRef} tabIndex={-1} className='text-sm font-medium'>
             {t('title', { index: rule.index })}

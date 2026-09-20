@@ -7,9 +7,20 @@ import { useTranslation } from 'react-i18next';
 
 import { ConfigDocumentState, RULE_SETS_PATH } from '@entities/Config';
 import { defaultFormatOf, filterCategories, findProvider, RULE_SET_PROVIDERS } from '@entities/RuleSet';
-import { FACET_CLASS, FACET_IDLE, SECTION_LABEL } from '@shared/lib/styles';
 import { cn } from '@shared/lib/utils';
-import { Button, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/ui';
+import {
+  Button,
+  FACET_CLASS,
+  FACET_IDLE,
+  Input,
+  Label,
+  SECTION_LABEL,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@shared/ui';
 
 import {
   CUSTOM_PROVIDER,

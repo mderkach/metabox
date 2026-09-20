@@ -4,9 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { DELAY_STATE, DELAY_TIMEOUT, useProxies, type ProxyGroup, type ProxyNode } from '@entities/Proxy';
 import { useTestProxyDelay } from '@features/Proxy/ProxyDelay';
 import { toShare } from '@shared/lib/chart';
-import { SECTION_LABEL } from '@shared/lib/styles';
 import { cn } from '@shared/lib/utils';
-import { Button, Card, CardContent, CardHeader } from '@shared/ui';
+import { Button, Card, CardContent, CardHeader, SECTION_LABEL } from '@shared/ui';
 
 const DELAY_TONE: Readonly<Record<string, string>> = {
   [DELAY_STATE.Fast]: 'bg-signal-ok',
