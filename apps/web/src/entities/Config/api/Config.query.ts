@@ -3,13 +3,14 @@ import i18next from 'i18next';
 import { useMemo } from 'react';
 
 import {
+  ApplyTransactionSchema,
   DAEMON_ENDPOINT,
   getDaemonStatusOptions,
   isApplyActive,
   toApplyTransaction,
   type ApplyTransactionWire,
 } from '@entities/Daemon/@x/config';
-import { CACHE_TIME, POLL_INTERVAL } from '@shared/api';
+import { CACHE_TIME, POLL_INTERVAL, decodeResponse } from '@shared/api';
 import { ConfigSchema, type Config } from '@shared/api/generated';
 import { parseJsonc } from '@shared/lib/jsonc';
 import { type UnknownField, toUnknownFields } from '@shared/lib/schemaIssues';
@@ -17,6 +18,7 @@ import { type UnknownField, toUnknownFields } from '@shared/lib/schemaIssues';
 import { toConfigVersions } from '../model/Config.adapter';
 import { toOutboundTypes } from '../model/Config.model';
 import { getApplyState, getConfig, getConfigVersions } from './Config.api';
+import { ConfigVersionsSchema } from './Config.schema';
 
 export const CONFIG_QUERY = {
   all: ['config'] as const,
@@ -105,7 +107,8 @@ export function useOutboundTypes(): ReadonlyMap<string, string> {
 export function getConfigVersionsOptions() {
   return queryOptions({
     queryKey: CONFIG_QUERY.history(),
-    queryFn: getConfigVersions,
+    queryFn: async (context) =>
+      decodeResponse(ConfigVersionsSchema, await getConfigVersions(context), 'config versions'),
     staleTime: CACHE_TIME.Second,
     gcTime: CACHE_TIME.Minute,
     meta: { showError: true, errorMessageKey: 'toast.config.versions.fetchFailed' },
@@ -121,7 +124,7 @@ export function getApplyStateOptions(id: string) {
   return queryOptions({
     queryKey: CONFIG_QUERY.apply(id),
     queryFn: async function fetchApplyState({ signal }) {
-      return getApplyState(id, { signal });
+      return decodeResponse(ApplyTransactionSchema, await getApplyState(id, { signal }), 'apply');
     },
     staleTime: 0,
     gcTime: CACHE_TIME.Minute,

@@ -1,9 +1,10 @@
 import { queryOptions, useQuery } from '@tanstack/react-query';
 
-import { CACHE_TIME } from '@shared/api';
+import { CACHE_TIME, decodeResponse } from '@shared/api';
 
 import { toProxyProviders, toProxyRuntime } from '../model/Proxy.adapter';
 import { getProxies, getProxyProviders } from './Proxy.api';
+import { ClashProvidersSchema, ClashProxiesSchema } from './Proxy.schema';
 
 export const PROXY_QUERY = {
   all: ['proxy'] as const,
@@ -14,7 +15,7 @@ export const PROXY_QUERY = {
 export function getProxiesOptions() {
   return queryOptions({
     queryKey: PROXY_QUERY.list(),
-    queryFn: getProxies,
+    queryFn: async (context) => decodeResponse(ClashProxiesSchema, await getProxies(context), 'proxies'),
     staleTime: CACHE_TIME.Second,
     gcTime: CACHE_TIME.Minute,
     meta: { showError: true, errorMessageKey: 'toast.proxy.list.fetchFailed' },
@@ -24,7 +25,8 @@ export function getProxiesOptions() {
 export function getProxyProvidersOptions() {
   return queryOptions({
     queryKey: PROXY_QUERY.providers(),
-    queryFn: getProxyProviders,
+    queryFn: async (context) =>
+      decodeResponse(ClashProvidersSchema, await getProxyProviders(context), 'proxy providers'),
     staleTime: CACHE_TIME.Minute,
     gcTime: CACHE_TIME.Hour,
     meta: { showError: true, errorMessageKey: 'toast.proxy.providers.fetchFailed' },

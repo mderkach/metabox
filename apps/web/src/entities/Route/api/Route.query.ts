@@ -1,9 +1,10 @@
 import { queryOptions, useQuery } from '@tanstack/react-query';
 
-import { CACHE_TIME } from '@shared/api';
+import { CACHE_TIME, decodeResponse } from '@shared/api';
 
 import { toRouteExplanation } from '../model/Route.adapter';
 import { getRouteExplanation } from './Route.api';
+import { RouteExplanationSchema } from './Route.schema';
 
 export const ROUTE_QUERY = {
   all: ['route'] as const,
@@ -14,7 +15,7 @@ export function getRouteExplanationOptions(id: string) {
   return queryOptions({
     queryKey: ROUTE_QUERY.explanation(id),
     queryFn: async function fetchRouteExplanation({ signal }) {
-      return getRouteExplanation(id, { signal });
+      return decodeResponse(RouteExplanationSchema, await getRouteExplanation(id, { signal }), 'route');
     },
     staleTime: CACHE_TIME.Second,
     gcTime: CACHE_TIME.Minute,

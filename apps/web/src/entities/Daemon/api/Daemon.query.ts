@@ -1,9 +1,10 @@
 import { queryOptions, useQuery } from '@tanstack/react-query';
 
-import { API_FAILURE, ApiError, CACHE_TIME, POLL_INTERVAL } from '@shared/api';
+import { API_FAILURE, ApiError, CACHE_TIME, POLL_INTERVAL, decodeResponse } from '@shared/api';
 
 import { toClashConfigs, toDaemonStatus, toServiceState, toTrafficHistory } from '../model/Daemon.adapter';
 import { getClashConfigs, getDaemonStatus, getServiceState, getTrafficHistory } from './Daemon.api';
+import { ClashConfigsSchema, DaemonStatusSchema, ServiceStateSchema, TrafficHistorySchema } from './Daemon.schema';
 
 /** Значение флагов демона по умолчанию: то же, что в `main.go`. */
 const DEFAULT_CONFIG_PATH = '/etc/sing-box/config.json';
@@ -19,7 +20,7 @@ export const DAEMON_QUERY = {
 export function getDaemonStatusOptions() {
   return queryOptions({
     queryKey: DAEMON_QUERY.status(),
-    queryFn: getDaemonStatus,
+    queryFn: async (context) => decodeResponse(DaemonStatusSchema, await getDaemonStatus(context), 'status'),
     staleTime: CACHE_TIME.Second,
     gcTime: CACHE_TIME.Minute,
     refetchInterval: POLL_INTERVAL.Status,
@@ -32,7 +33,7 @@ export function getDaemonStatusOptions() {
 export function getTrafficHistoryOptions() {
   return queryOptions({
     queryKey: DAEMON_QUERY.history(),
-    queryFn: getTrafficHistory,
+    queryFn: async (context) => decodeResponse(TrafficHistorySchema, await getTrafficHistory(context), 'history'),
     staleTime: POLL_INTERVAL.History,
     gcTime: CACHE_TIME.Minute,
     refetchInterval: POLL_INTERVAL.History,
@@ -81,7 +82,7 @@ export function useConfigPath(): string {
 export function getServiceStateOptions() {
   return queryOptions({
     queryKey: DAEMON_QUERY.service(),
-    queryFn: getServiceState,
+    queryFn: async (context) => decodeResponse(ServiceStateSchema, await getServiceState(context), 'service'),
     staleTime: CACHE_TIME.Second,
     gcTime: CACHE_TIME.Minute,
     // Опроса нет: состояние обновляет топик `service` единого потока, а тело
@@ -108,7 +109,7 @@ export function useServiceState() {
 export function getClashConfigsOptions() {
   return queryOptions({
     queryKey: DAEMON_QUERY.clashConfigs(),
-    queryFn: getClashConfigs,
+    queryFn: async (context) => decodeResponse(ClashConfigsSchema, await getClashConfigs(context), 'clash configs'),
     staleTime: CACHE_TIME.Minute,
     gcTime: CACHE_TIME.Hour,
     meta: { showError: false },

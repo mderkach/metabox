@@ -38,13 +38,23 @@ export async function getConfigVersions(config?: AxiosRequestConfig): Promise<Co
 
 ## Разбор ответа
 
-Ответ разбирается схемой слайса в `queryFn` фабрики опций, и в кэш ложится модель:
+Ответ проверяется схемой слайса в `queryFn` фабрики опций, и в кэш ложится проверенная форма источника:
 
 ```ts
-queryFn: async ({ signal }) => toRouteExplanation(await getRouteExplanation(id, { signal })),
+queryFn: async (context) => decodeResponse(ClashProxiesSchema, await getProxies(context), 'proxies'),
 ```
 
-`select` для этого не годится: он меняет то, что видит хук, но не то, что лежит в кэше. При разборе в `select` чужая форма остаётся в кэше, и `getQueryData` по тому же ключу вернёт её любому слою, а `setQueryData` — запишет.
+Перевод в модель экрана делает `select` — он берёт уже проверенные данные и в кэш не пишет:
+
+```ts
+return useQuery({ ...getProxiesOptions(), select: toProxyRuntime });
+```
+
+Разделение обязательное, и обе половины держатся на своих причинах.
+
+**Проверка — только в `queryFn`.** Исключение, брошенное из `select`, query-core держит у наблюдателя (`#selectError`) и в `QueryCache.onError` не проводит: глобального тоста на непонятый ответ не будет, и до правила повтора отказ тоже не дойдёт. Отказ, брошенный из `queryFn`, проходит обычным путём. Закреплено тестом `shared/api/__tests__/schemaFailure.test.ts`.
+
+**В кэше — форма источника, а не модель.** По ключу запроса ходят оптимистичные обновления: `ProxySelect` правит выбранный узел прямо в кэше (`withSelectedNode`), а `useSaveApplyTransaction` кладёт туда ответ на запуск применения. Обе операции написаны на форме источника, и модель на её месте их сломает.
 
 Непонятый ответ становится `ApiError` вида `Schema` (`decodeResponse` в `shared/api`). Повторов у него нет: форма ответа от второго запроса не меняется. Транспорт такую ошибку не рождает — она приходит с границы слайса, поэтому `status` и `code` у неё пусты, а разбор ошибки лежит в `details`.
 
@@ -145,22 +155,9 @@ declare module '@tanstack/react-query' {
 
 ## Преобразование данных
 
-Данные в кэше — то, что пришло с сервера, в первозданном виде. Всё остальное — через `select`, он не трогает кэш:
+Данные в кэше — форма источника, проверенная схемой в `queryFn`. Перевод в модель экрана — через `select`, он кэш не трогает; адаптер получает уже проверенные данные и сам ничего не разбирает. Подробности и причины — в разделе «Разбор ответа».
 
-```ts
-export function useOutbounds() {
-  return useQuery({
-    ...getDraftConfigOptions(),
-    select: (data) => {
-      const parsed = ConfigSchema.safeParse(data);
-
-      return parsed.success ? toOutboundList(parsed.data) : [];
-    },
-  });
-}
-```
-
-Здесь же место валидации ответа: `safeParse` без выброса, с осмысленным поведением при провале. Схема берётся из `@shared/api/generated` или из `model`-сегмента своего слайса — руками дублировать не нужно.
+Исключение одно: конфиг. `parseConfig` в `select` не бросает вовсе — узел, которого схема не знает, становится записью в `issues`, а не отказом, потому что такой конфиг обязан остаться правимым ([ADR-0018](../../../../docs/adr/ADR-0018-generate-strict-schemas-and-mark-what-the-panel-does-not-know.md)).
 
 ## Мутации и инвалидация
 

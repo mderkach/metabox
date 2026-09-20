@@ -1,6 +1,4 @@
-import { decodeResponse } from '@shared/api';
-
-import { ROUTE_REASON_CODE, RouteExplanationSchema, type RouteExplanationWire } from '../api/Route.schema';
+import { ROUTE_REASON_CODE, type RouteExplanationWire } from '../api/Route.schema';
 import {
   ROUTE_MATCH,
   ROUTE_ORIGIN,
@@ -74,9 +72,7 @@ function toRule(dto: RouteExplanationWire['rules'][number]) {
  * ответ становится отказом, а не пустым экраном: «правило не найдено» и «ответ
  * не разобран» — разные вещи, и вторую пользователь обязан видеть (ADR-0007).
  */
-export function toRouteExplanation(raw: RouteExplanationWire): RouteExplanation {
-  const dto = decodeResponse(RouteExplanationSchema, raw, 'route');
-
+export function toRouteExplanation(dto: RouteExplanationWire): RouteExplanation {
   return {
     connectionId: dto.connection_id,
     match: toMatch(dto.match),

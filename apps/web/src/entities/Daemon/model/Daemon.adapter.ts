@@ -1,4 +1,4 @@
-import { decodeFrame, decodeResponse } from '@shared/api';
+import { decodeFrame } from '@shared/api';
 
 import type {
   ApplyTransactionWire,
@@ -9,14 +9,10 @@ import type {
   TrafficHistoryWire,
 } from '../api/Daemon.schema';
 import {
-  ApplyTransactionSchema,
-  ClashConfigsSchema,
   ClashMemorySampleSchema,
   ClashTrafficSampleSchema,
-  DaemonStatusSchema,
   ServiceStateSchema,
   SystemStatSchema,
-  TrafficHistorySchema,
   APPLY_REASON_CODE,
 } from '../api/Daemon.schema';
 import {
@@ -90,13 +86,11 @@ function toTransaction(wire: NonNullable<DaemonStatusWire['transaction']>): Appl
   };
 }
 
-export function toApplyTransaction(raw: ApplyTransactionWire): ApplyTransaction {
-  return toTransaction(decodeResponse(ApplyTransactionSchema, raw, 'apply'));
+export function toApplyTransaction(wire: ApplyTransactionWire): ApplyTransaction {
+  return toTransaction(wire);
 }
 
-export function toDaemonStatus(raw: DaemonStatusWire): DaemonStatus {
-  const wire = decodeResponse(DaemonStatusSchema, raw, 'status');
-
+export function toDaemonStatus(wire: DaemonStatusWire): DaemonStatus {
   return {
     version: wire.version,
     singboxVersion: wire.singbox_version,
@@ -116,19 +110,15 @@ function toState(wire: ServiceStateWire): ServiceState {
   };
 }
 
-export function toServiceState(raw: ServiceStateWire): ServiceState {
-  return toState(decodeResponse(ServiceStateSchema, raw, 'service'));
+export function toServiceState(wire: ServiceStateWire): ServiceState {
+  return toState(wire);
 }
 
-export function toTrafficHistory(raw: TrafficHistoryWire): TrafficHistory {
-  const wire = decodeResponse(TrafficHistorySchema, raw, 'history');
-
+export function toTrafficHistory(wire: TrafficHistoryWire): TrafficHistory {
   return { stepSeconds: wire.step_seconds, points: wire.points, device: wire.device };
 }
 
-export function toClashConfigs(raw: ClashConfigsWire): ClashConfigs {
-  const wire = decodeResponse(ClashConfigsSchema, raw, 'clash configs');
-
+export function toClashConfigs(wire: ClashConfigsWire): ClashConfigs {
   return {
     mode: toMode(wire.mode),
     modeList: wire['mode-list'].map(toMode),

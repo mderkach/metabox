@@ -1,12 +1,4 @@
-import { decodeResponse } from '@shared/api';
-
-import {
-  ClashProvidersSchema,
-  ClashProxiesSchema,
-  type ClashProvidersWire,
-  type ClashProxiesWire,
-  type ClashProxyWire,
-} from '../api/Proxy.schema';
+import type { ClashProvidersWire, ClashProxiesWire, ClashProxyWire } from '../api/Proxy.schema';
 import {
   DELAY_STATE,
   DELAY_TIMEOUT,
@@ -111,15 +103,11 @@ export function withSelectedNode(proxies: ClashProxiesWire, group: string, node:
   return { proxies: { ...proxies.proxies, [group]: { ...proxies.proxies[group], now: node } } };
 }
 
-export function toProxyRuntime(raw: ClashProxiesWire): ProxyRuntime {
-  const wire = decodeResponse(ClashProxiesSchema, raw, 'proxies');
-
+export function toProxyRuntime(wire: ClashProxiesWire): ProxyRuntime {
   return { groups: toGroups(wire), standalone: toStandalone(wire) };
 }
 
-export function toProxyProviders(raw: ClashProvidersWire): ProxyProvider[] {
-  const wire = decodeResponse(ClashProvidersSchema, raw, 'proxy providers');
-
+export function toProxyProviders(wire: ClashProvidersWire): ProxyProvider[] {
   return Object.values(wire.providers).map((provider) => ({
     name: provider.name,
     nodes: provider.proxies.length,
