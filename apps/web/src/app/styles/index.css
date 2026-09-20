@@ -177,6 +177,12 @@
   /* Дорожка шкалы: поверхность, а не альфа поверх фона (ADR-0013). */
   --color-meter-track: var(--meter-track);
 
+  /* Состояния строки таблицы. Непрозрачные: колонка-якорь закреплена при
+   * горизонтальной прокрутке, и сквозь альфу под ней просвечивали бы
+   * уезжающие ячейки. */
+  --color-row-hover: var(--row-hover);
+  --color-table-head: var(--table-head);
+
   /* Подсветка JSON: своя группа, чтобы правка тона действия её не задевала. */
   --color-code-string: var(--code-string);
   --color-code-number: var(--code-number);
@@ -230,6 +236,11 @@
   --series-up: oklch(0.51 0.13 70);
 
   --meter-track: oklch(0.905 0.008 265);
+
+  /* Считаются от темы: объявление одно, а `--muted` и `--card` под `.dark`
+   * свои, и подстановка идёт уже в контексте элемента. */
+  --row-hover: color-mix(in oklch, var(--muted) 40%, var(--card));
+  --table-head: color-mix(in oklch, var(--muted) 30%, var(--card));
 
   --code-string: oklch(0.46 0.11 155);
   --code-number: oklch(0.52 0.14 35);

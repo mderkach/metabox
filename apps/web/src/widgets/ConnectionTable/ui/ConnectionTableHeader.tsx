@@ -43,7 +43,7 @@ export function ConnectionTableHeader({
       <div
         role='row'
         aria-rowindex={1}
-        className={cn(CONNECTION_COLUMN.Row, DENSITY_PADDING[density], TABLE_HEADER, 'bg-muted/30')}
+        className={cn(CONNECTION_COLUMN.Row, DENSITY_PADDING[density], TABLE_HEADER, 'bg-table-head')}
       >
         {columns.map(({ def, column }) => {
           const direction = column.getIsSorted();

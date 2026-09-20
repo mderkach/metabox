@@ -38,7 +38,7 @@ function ConnectionRowProto({
       className={cn(
         CONNECTION_COLUMN.Row,
         DENSITY_PADDING[density],
-        'relative hover:bg-muted/40',
+        'relative bg-card hover:bg-row-hover',
         selected && 'bg-selected before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-selected-edge'
       )}
     >

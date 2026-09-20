@@ -24,7 +24,7 @@ import type { ConnectionRow } from '@entities/Connection';
 export const CONNECTION_COLUMN = {
   Row: 'flex w-full items-center gap-3 border-b border-border px-3.5 text-sm',
   Source: 'w-28 shrink-0',
-  Host: 'w-52 shrink-0',
+  Host: 'sticky left-0 z-10 w-52 shrink-0 bg-inherit',
   Network: 'w-16 shrink-0',
   Rule: 'min-w-0 grow',
   Action: 'w-44 shrink-0',
