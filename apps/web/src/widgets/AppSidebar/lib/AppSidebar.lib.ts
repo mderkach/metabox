@@ -33,8 +33,8 @@ function writeCollapsed(collapsed: boolean) {
 
 /**
  * Текущий пункт меню по адресу: точное совпадение, иначе самый длинный
- * префикс. Префиксное совпадение роутера подсвечивало бы на `/config/rule-set`
- * и «Конфигурацию», и «Каталог сетов» разом — два текущих раздела сразу.
+ * префикс. Вкладки раздела конфигурации живут на своих адресах, и без
+ * префикса пункт «Конфигурация» гас бы на каждой из них, кроме первой.
  */
 export function pickActiveNav(pathname: string, targets: readonly string[]): string | null {
   let active: string | null = null;

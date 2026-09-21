@@ -1,8 +1,8 @@
 {
+  "label": "Панель разделов",
   "section": {
     "overview": "Обзор",
     "config": "Конфигурация",
-    "ruleSets": "Каталог сетов",
     "proxies": "Прокси",
     "connections": "Соединения"
   },

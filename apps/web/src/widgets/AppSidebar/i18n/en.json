@@ -1,8 +1,8 @@
 {
+  "label": "Section panel",
   "section": {
     "overview": "Overview",
     "config": "Configuration",
-    "ruleSets": "Rule set catalog",
     "proxies": "Proxies",
     "connections": "Connections"
   },

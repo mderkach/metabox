@@ -154,8 +154,8 @@ describe('маршруты панели', () => {
     expect(screen.getByRole('navigation', { name: 'Разделы панели' })).toBeInTheDocument();
   });
 
-  // Совпадение ссылки по умолчанию префиксное: на вкладке сетов подсвечивались бы
-  // и «Конфигурация», и «Каталог сетов» — два текущих раздела одновременно.
+  // Вкладки раздела живут на своих адресах, и точное совпадение ссылки гасило
+  // бы «Конфигурацию» на всех, кроме первой.
   it('в навигации текущим помечен один пункт, даже когда адрес вложен в другой', async () => {
     serveDaemon();
 
@@ -172,6 +172,6 @@ describe('маршруты панели', () => {
     const current = within(sidebar).getAllByRole('link', { current: 'page' });
 
     expect(current).toHaveLength(1);
-    expect(current[0]).toHaveAttribute('href', '/config/rule-set');
+    expect(current[0]).toHaveAttribute('href', '/config');
   });
 });

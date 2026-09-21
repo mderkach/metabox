@@ -18,13 +18,13 @@ import { pickActiveNav, useSidebarCollapsed } from '../lib/AppSidebar.lib';
 import { NAV_ITEMS, NAV_TARGETS } from '../model';
 
 const ITEM_CLASS =
-  'relative flex h-8 items-center gap-2.5 rounded-md px-2.5 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none';
+  'relative flex h-8 items-center gap-2.5 rounded-md px-2.5 text-sm transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none max-md:h-11';
 
 const LOGO_CLASS =
   'flex size-7 shrink-0 items-center justify-center rounded-md bg-primary text-sm font-semibold text-primary-foreground';
 
 const TOGGLE_CLASS =
-  'flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none';
+  'flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none';
 
 /** Кромка отличает текущий раздел от соседнего под курсором. */
 const ACTIVE_CLASS =
@@ -53,6 +53,7 @@ export function AppSidebar() {
 
   return (
     <aside
+      aria-label={t('label')}
       className={cn(
         'flex h-full shrink-0 flex-col border-r border-sidebar-border bg-sidebar transition-[width]',
         sidebar.collapsed ? 'w-14' : 'w-58'
@@ -110,13 +111,13 @@ export function AppSidebar() {
                 <span
                   aria-disabled='true'
                   title={t('nav.unavailable', { section: t(item.key) })}
-                  className={cn(ITEM_CLASS, sidebar.collapsed && 'justify-center px-0', 'text-muted-foreground/50')}
+                  className={cn(ITEM_CLASS, sidebar.collapsed && 'justify-center px-0', 'text-muted-foreground')}
                 >
                   <item.icon className='size-4 shrink-0' />
                   {!sidebar.collapsed && (
                     <>
                       <span className='grow truncate'>{t(item.key)}</span>
-                      <span className='shrink-0 rounded-sm bg-muted px-1 text-2xs tracking-wide text-muted-foreground/70 uppercase'>
+                      <span className='shrink-0 rounded-sm bg-muted px-1 text-2xs tracking-wide text-muted-foreground uppercase'>
                         {t('nav.soon')}
                       </span>
                     </>
@@ -173,7 +174,7 @@ function Logo({ expand }: { expand?: () => void }) {
       aria-expanded={false}
       className={cn(
         LOGO_CLASS,
-        'group transition-colors hover:bg-primary/85 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none'
+        'group transition-colors hover:bg-primary/85 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none'
       )}
     >
       <span className='group-hover:hidden group-focus-visible:hidden'>m</span>
