@@ -79,7 +79,7 @@ describe('экран прокси', () => {
 
     renderWithQuery(<ProxiesPage />);
 
-    const nested = await screen.findByRole('button', { name: /us/ });
+    const nested = await screen.findByRole('button', { name: 'us, URL-тест, 609 мс' });
 
     expect(within(nested).getByText('URL-тест')).toBeInTheDocument();
     expect(within(nested).queryByText('URLTest')).not.toBeInTheDocument();

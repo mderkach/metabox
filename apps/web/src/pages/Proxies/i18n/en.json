@@ -2,6 +2,13 @@
   "title": "Proxies",
   "subtitle": "these actions change how sing-box runs, not the config",
   "pending": "Loading the proxies…",
+  "groups": {
+    "title": "Node groups"
+  },
+  "testAll": {
+    "action": "Test all",
+    "testing": "Testing"
+  },
   "providers": {
     "title": "Subscriptions",
     "subtitle": "nodes come from them, not from the config"

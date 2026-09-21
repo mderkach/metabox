@@ -16,6 +16,7 @@ export function ProxyGroupCard({ group }: { group: ProxyGroup }) {
   const delay = useTestProxyDelay();
   const kind = toGroupLabel(t, group.type);
   const active = group.nodes.find((node) => node.selected) ?? null;
+  const testing = delay.isPending && delay.variables === group.name;
 
   const onSelect = useCallback(
     (node: string) => {
@@ -32,15 +33,20 @@ export function ProxyGroupCard({ group }: { group: ProxyGroup }) {
         <p className='text-xs text-muted-foreground'>{group.selectable ? t('card.manual') : t('card.automatic')}</p>
         <span className='grow' />
         <p className='text-xs text-muted-foreground'>{t('count.node', { ns: 'shared', count: group.nodes.length })}</p>
+        {/* Имя различает три одинаковые кнопки на экране: с клавиатуры подряд
+            идут «Проверить», «Проверить», «Проверить», и какая из них чья —
+            неизвестно. Подпись на время замера меняется только у своей
+            карточки: мутация одна на экран, а работает она с одной группой. */}
         <Button
           variant='outline'
           size='sm'
           disabled={delay.isPending}
+          aria-label={t('card.testGroup', { group: group.name })}
           onClick={() => {
             delay.mutate(group.name);
           }}
         >
-          {t('card.test')}
+          {testing ? t('card.testing') : t('card.test')}
         </Button>
       </CardHeader>
 
