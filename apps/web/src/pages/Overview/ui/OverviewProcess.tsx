@@ -24,6 +24,13 @@ function toClashModeLabel(t: TFunction<'pages/Overview'>, mode: string): string 
   return key === undefined ? mode : t(key);
 }
 
+/**
+ * Процессы и их показания.
+ *
+ * Память демона, число горутин и куча Go остаются на экране намеренно: роутер
+ * маломощный, и сколько съедает сама панель — вопрос владельца устройства, а не
+ * только отладки.
+ */
 export function OverviewProcess({ runtime }: { runtime: OverviewRuntime }) {
   const { t } = useTranslation('pages/Overview');
   const status = useDaemonStatus();
