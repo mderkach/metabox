@@ -1,11 +1,21 @@
 import { useSearch } from '@tanstack/react-router';
-import { Info, Search } from 'lucide-react';
+import { CircleAlert, Info, Search } from 'lucide-react';
 import { startTransition, useCallback, useState, ViewTransition } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
 import { isRuleRecognized } from '@entities/Rule';
 import { cn } from '@shared/lib/utils';
-import { Button, FACET_ACTIVE, FACET_CLASS, FACET_IDLE, FACET_MORE, Input } from '@shared/ui';
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+  Button,
+  FACET_ACTIVE,
+  FACET_CLASS,
+  FACET_IDLE,
+  FACET_MORE,
+  Input,
+} from '@shared/ui';
 import { RulePanel } from '@widgets/Rule/RulePanel';
 import { RuleTable } from '@widgets/Rule/RuleTable';
 
@@ -56,8 +66,11 @@ export function EditorPage() {
 
       {editor.issues.length > 0 && <ConfigNotParsed issues={editor.issues} />}
 
+      {/* Ниже lg это колонка: панель забирает свою высоту, и списку с
+          `min-h-0 grow` доставался ноль. Там обе части получают высоту, а
+          прокручивается сама колонка. */}
       {editor.rules.length > 0 && (
-        <div className='flex min-h-0 grow flex-col gap-4 lg:flex-row'>
+        <div className='flex min-h-0 grow flex-col gap-4 max-lg:overflow-y-auto lg:flex-row'>
           <RuleTable
             rules={filter.rules}
             total={editor.rules.length}
@@ -182,15 +195,18 @@ function ConfigNotParsed({ issues }: { issues: string[] }) {
   const hidden = issues.length - shown.length;
 
   return (
-    <div className='rounded-xl border border-destructive/30 bg-destructive/10 px-3.5 py-3 text-sm text-destructive'>
-      <p className='font-medium'>{t('broken.title')}</p>
-      <p className='mt-1 text-pretty'>{t('broken.description')}</p>
-      <ul className='mt-2 flex flex-col gap-1 font-mono text-xs'>
-        {shown.map((issue) => (
-          <li key={issue}>{issue}</li>
-        ))}
-      </ul>
-      {hidden > 0 && <p className='mt-1 text-xs'>{t('broken.more', { count: hidden })}</p>}
-    </div>
+    <Alert variant='destructive'>
+      <CircleAlert />
+      <AlertTitle>{t('broken.title')}</AlertTitle>
+      <AlertDescription>
+        <p className='text-pretty'>{t('broken.description')}</p>
+        <ul className='mt-2 flex flex-col gap-1 font-mono text-xs'>
+          {shown.map((issue) => (
+            <li key={issue}>{issue}</li>
+          ))}
+        </ul>
+        {hidden > 0 && <p className='mt-1 text-xs'>{t('broken.more', { count: hidden })}</p>}
+      </AlertDescription>
+    </Alert>
   );
 }

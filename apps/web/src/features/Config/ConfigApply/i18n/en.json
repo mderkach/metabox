@@ -6,6 +6,12 @@
     "apply": "Apply",
     "discard": "Discard changes"
   },
+  "discard": {
+    "title": "Discard every draft edit?",
+    "description": "The draft returns to the config currently on the device. There is no way back: the document has no step-by-step undo.",
+    "confirm": "Reset the draft",
+    "cancel": "Keep the draft"
+  },
   "confirm": {
     "prompt": "The config is applied. Confirm that the link is alive —",
     "left": "<time>{{seconds}} s</time> left",

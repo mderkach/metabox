@@ -76,11 +76,14 @@ describe('ConfigApplyBar', () => {
     expect(screen.getByRole('button', { name: 'Посмотреть диф' })).toBeInTheDocument();
   });
 
-  it('отменяет правки: черновик снят, файл с устройства на месте', async () => {
+  it('отменяет правки только после подтверждения: черновик снят, файл с устройства на месте', async () => {
     loadDocument();
     renderWithQuery(<ConfigApplyBar />);
 
     await userEvent.click(screen.getByRole('button', { name: 'Отменить правки' }));
+    expect(ConfigDocumentState.getState().draft).not.toBeNull();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Сбросить черновик' }));
 
     expect(ConfigDocumentState.getState().draft).toBeNull();
     expect(ConfigDocumentState.getState().applied).toBe(APPLIED);

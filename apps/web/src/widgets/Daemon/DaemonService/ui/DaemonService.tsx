@@ -16,7 +16,18 @@ import { failureText } from '@shared/api';
 import { formatBytes } from '@shared/lib/format';
 import { HOURS_IN_DAY, SECONDS_IN_HOUR } from '@shared/lib/time';
 import { cn } from '@shared/lib/utils';
-import { Alert, AlertDescription, AlertTitle, Button, Card, CardContent, CardHeader, SECTION_LABEL } from '@shared/ui';
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  DESTRUCTIVE_OUTLINE,
+  SECTION_LABEL,
+  Separator,
+} from '@shared/ui';
 
 const STATUS_LABEL = {
   running: 'status.running',
@@ -114,16 +125,22 @@ export function DaemonService({
           </Button>
         )}
         {state.managed && (
-          <Button
-            variant='outline'
-            size='sm'
-            disabled={action.isPending}
-            onClick={() => {
-              action.mutate(SERVICE_ACTION.Stop);
-            }}
-          >
-            {t('action.stop')}
-          </Button>
+          <>
+            {/* Остановка обрывает маршрутизацию на роутере целиком, перезапуск
+                нет. Одинаковыми кнопками подряд эти два исхода не различить. */}
+            <Separator orientation='vertical' className='mx-0.5 h-5' />
+            <Button
+              variant='outline'
+              size='sm'
+              disabled={action.isPending}
+              className={DESTRUCTIVE_OUTLINE}
+              onClick={() => {
+                action.mutate(SERVICE_ACTION.Stop);
+              }}
+            >
+              {t('action.stop')}
+            </Button>
+          </>
         )}
         {!running && (
           <Button

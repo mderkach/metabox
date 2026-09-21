@@ -5,11 +5,12 @@ import { Trans, useTranslation } from 'react-i18next';
 
 import { APPLY_PHASE, type ApplyReasonCode, type ApplyTransaction } from '@entities/Daemon';
 import { MS_IN_SECOND, NS_IN_SECOND } from '@shared/lib/time';
-import { Alert, AlertAction, AlertDescription, AlertTitle, Button } from '@shared/ui';
+import { Alert, AlertAction, AlertDescription, AlertTitle, Button, Separator } from '@shared/ui';
 
 import { useConfigApply } from '../lib/ConfigApply.lib';
 import { ConfigApplyCheck } from './ConfigApplyCheck';
 import { ConfigApplyDiff } from './ConfigApplyDiff';
+import { ConfigApplyDiscard } from './ConfigApplyDiscard';
 
 /**
  * Бар живёт в оболочке, а не на экране редактора: неприменённые правки и окно
@@ -73,9 +74,8 @@ export function ConfigApplyBar() {
                 <Button size='sm' disabled={!apply.canApply} onClick={apply.apply}>
                   {t('bar.apply')}
                 </Button>
-                <Button variant='ghost' size='sm' onClick={apply.discard}>
-                  {t('bar.discard')}
-                </Button>
+                <Separator orientation='vertical' className='mx-0.5 h-5' />
+                <ConfigApplyDiscard onDiscard={apply.discard} />
               </>
             )}
           </div>
@@ -195,7 +195,7 @@ function ApplyFailure({ transaction, onDismiss }: { transaction: ApplyTransactio
   const reasonKey = transaction.reasonCode === undefined ? undefined : REASON_KEY[transaction.reasonCode];
 
   return (
-    <Alert variant='destructive'>
+    <Alert variant='destructive' className='max-sm:pr-2.5'>
       <CircleAlert />
       <AlertTitle>
         {transaction.phase === APPLY_PHASE.RolledBack ? t('failure.rolledBack') : t('failure.failed')}
@@ -206,7 +206,9 @@ function ApplyFailure({ transaction, onDismiss }: { transaction: ApplyTransactio
           <pre className='font-mono text-xs whitespace-pre-wrap'>{transaction.reason}</pre>
         </AlertDescription>
       )}
-      <AlertAction>
+      {/* Примитив ставит действие абсолютом в угол; на узком экране оно
+          наезжает на заголовок, поэтому там уходит в поток. */}
+      <AlertAction className='static col-start-2 mt-2 justify-self-start sm:absolute sm:mt-0'>
         <Button variant='ghost' size='sm' onClick={onDismiss}>
           {t('failure.dismiss')}
         </Button>

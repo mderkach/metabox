@@ -30,6 +30,15 @@ export const FACET_IDLE = 'border-border text-muted-foreground hover:text-foregr
 export const FACET_MORE = 'border-dashed border-border text-muted-foreground hover:text-foreground';
 
 /**
+ * Разрушительное действие: контур в тоне опасности, а не заливка. Залитый тон
+ * среди обычных кнопок читается как сообщение об ошибке, а не как доступное
+ * действие. Носят его «Закрыть все соединения», «Остановить» и «Отменить
+ * правки» — всё, чего нельзя вернуть кнопкой рядом.
+ */
+export const DESTRUCTIVE_OUTLINE =
+  'border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive';
+
+/**
  * Край поверхности: карточки, списка, панели.
  *
  * Значения повторяют `Card` вендорной зоны дословно. Править её нельзя — файл

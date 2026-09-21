@@ -21,11 +21,13 @@ export function ConfigCacheNotice() {
   const edit = ConfigDocumentState.use.edit();
 
   return (
-    <Alert>
+    <Alert variant='destructive' className='max-sm:pr-2.5'>
       <TriangleAlert />
       <AlertTitle>{t('title')}</AlertTitle>
       <AlertDescription>{t('description')}</AlertDescription>
-      <AlertAction>
+      {/* Примитив ставит действие абсолютом в правый верхний угол; на узком
+          экране оно наезжает на заголовок, поэтому там уходит в поток. */}
+      <AlertAction className='static col-start-2 mt-2 justify-self-start sm:absolute sm:mt-0'>
         <Button
           size='sm'
           onClick={() => {

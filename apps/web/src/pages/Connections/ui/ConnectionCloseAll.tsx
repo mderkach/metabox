@@ -12,6 +12,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
   Button,
+  DESTRUCTIVE_OUTLINE,
 } from '@shared/ui';
 
 /**
@@ -41,14 +42,7 @@ export function ConnectionCloseAll({
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger
-        render={
-          <Button
-            variant='outline'
-            size='sm'
-            disabled={disabled}
-            className='border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive'
-          />
-        }
+        render={<Button variant='outline' size='sm' disabled={disabled} className={DESTRUCTIVE_OUTLINE} />}
       >
         {t('closeAll.action')}
       </AlertDialogTrigger>
