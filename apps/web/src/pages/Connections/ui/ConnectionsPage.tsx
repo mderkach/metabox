@@ -26,6 +26,7 @@ export function ConnectionsPage() {
   const explainPanelId = useId();
   const paused = ConnectionState.use.paused();
   const dropped = ConnectionState.use.dropped();
+  const sampledAt = ConnectionState.use.sampledAt();
   const setPaused = ConnectionState.use.setPaused();
   const closeAll = useCloseAllConnections();
 
@@ -50,8 +51,10 @@ export function ConnectionsPage() {
     closeAll.mutate();
   }, [closeAll]);
 
+  const explainedHost = screen.active.rows.find((row) => row.id === explainedId)?.host ?? '';
+
   const renderEmpty = ({ filtered, reset }: ConnectionTableEmpty) => (
-    <ConnectionsEmpty filtered={filtered} onReset={reset} />
+    <ConnectionsEmpty filtered={filtered} pending={sampledAt === null} onReset={reset} />
   );
 
   const renderFooter = (rows: ConnectionRow[]) => <ConnectionExport rows={rows} />;
@@ -93,7 +96,10 @@ export function ConnectionsPage() {
         <TabsContent value={CONNECTION_TAB.Active} keepMounted className='flex min-h-0 grow flex-col'>
           <Activity mode={screen.tab === CONNECTION_TAB.Active ? 'visible' : 'hidden'}>
             <ViewTransition enter='fade-in' exit='fade-out' default='none'>
-              <div className='flex min-h-0 grow flex-col gap-4 lg:flex-row'>
+              {/* Ниже lg это колонка: панель забирает свою высоту, и списку с
+                  `min-h-0 grow` доставался ноль. Там обе части получают высоту, а
+                  прокручивается сама колонка. */}
+              <div className='flex min-h-0 grow flex-col gap-4 max-lg:overflow-y-auto lg:flex-row'>
                 <ConnectionTable
                   rows={screen.active.rows}
                   total={screen.active.total}
@@ -124,6 +130,7 @@ export function ConnectionsPage() {
                       key={explainedId}
                       id={explainPanelId}
                       connectionId={explainedId}
+                      host={explainedHost}
                       onClose={onCloseExplanation}
                     />
                   </ViewTransition>

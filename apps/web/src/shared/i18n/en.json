@@ -19,6 +19,9 @@
     "connection": {
       "close": {
         "failed": "Could not close the connection"
+      },
+      "closeAll": {
+        "done": "Connections dropped"
       }
     },
     "error": {
@@ -35,7 +38,8 @@
         "fetchFailed": "Could not read the subscriptions"
       },
       "select": {
-        "failed": "Could not switch the node"
+        "failed": "Could not switch the node",
+        "done": "Node switched"
       }
     },
     "route": {

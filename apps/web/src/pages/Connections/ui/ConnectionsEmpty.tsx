@@ -3,11 +3,27 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@shared/ui';
 
 /**
- * «Пусто» и «пусто из-за отбора» — разные экраны: во втором есть кнопка,
- * возвращающая список.
+ * Состояния пустого списка.
+ *
+ * «Ждём снимок» отделён от «пусто»: до первого кадра потока про соединения
+ * ничего не известно, и фраза «соединений нет» в этот момент — неправда.
+ * «Пусто из-за отбора» — третий экран, у него есть кнопка, возвращающая список.
  */
-export function ConnectionsEmpty({ filtered, onReset }: { filtered: boolean; onReset: () => void }) {
+export function ConnectionsEmpty({
+  filtered,
+  pending,
+  onReset,
+}: {
+  filtered: boolean;
+  /** Поток ещё не прислал ни одного снимка. */
+  pending: boolean;
+  onReset: () => void;
+}) {
   const { t } = useTranslation('pages/Connections');
+
+  if (pending) {
+    return <p className='text-sm text-muted-foreground'>{t('pendingStream')}</p>;
+  }
 
   if (filtered) {
     return (

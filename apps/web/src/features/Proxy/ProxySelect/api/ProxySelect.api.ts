@@ -19,7 +19,12 @@ export function useSelectProxy() {
     mutationFn: async function requestSelect({ group, node }: SelectVariables) {
       return selectProxy(group, node);
     },
-    meta: { showError: true, errorMessageKey: 'toast.proxy.select.failed' },
+    meta: {
+      showError: true,
+      errorMessageKey: 'toast.proxy.select.failed',
+      showSuccess: true,
+      successMessageKey: 'toast.proxy.select.done',
+    },
     onMutate: async ({ group, node }: SelectVariables) => {
       await queryClient.cancelQueries({ queryKey: PROXY_QUERY.list() });
 

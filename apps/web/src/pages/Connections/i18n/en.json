@@ -31,6 +31,7 @@
   "notFound": "Nothing matches this query.",
   "resetFilter": "Reset the filter",
   "empty": "No connections. The stream is running: rows appear as soon as traffic goes through sing-box.",
+  "pendingStream": "Waiting for the first stream snapshot…",
   "export": {
     "csv": "Export CSV",
     "json": "Export JSON"
