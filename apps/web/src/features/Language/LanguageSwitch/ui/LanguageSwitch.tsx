@@ -31,7 +31,7 @@ export function LanguageSwitch({ vertical = false }: { vertical?: boolean }) {
           }}
           className={cn(
             'flex size-6 shrink-0 items-center justify-center rounded-sm text-2xs font-medium text-muted-foreground transition-colors',
-            'focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none',
+            'focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none',
             language === active ? 'bg-card text-foreground shadow-[0_1px_2px_rgb(0_0_0/0.18)]' : 'hover:text-foreground'
           )}
         >

@@ -61,7 +61,7 @@ export function ConnectionTableHeader({
                 type='button'
                 onClick={column.getToggleSortingHandler()}
                 className={cn(
-                  'group/sort inline-flex max-w-full min-w-0 items-center gap-1 rounded-md px-1 py-0.5 transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none',
+                  'group/sort inline-flex max-w-full min-w-0 items-center gap-1 rounded-md px-1 py-0.5 transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none',
                   direction !== false && 'text-foreground'
                 )}
               >

@@ -8,7 +8,7 @@ import { useRuntimeStreams } from '../lib/useRuntimeStreams';
 
 /** Тон primary и позиция поверх макета: ссылка не должна теряться под сайдбаром. */
 const SKIP_LINK_CLASS =
-  'sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-primary-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none';
+  'sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-primary-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none';
 
 /**
  * Оболочка всех экранов. Навигация живёт здесь, а не на странице: она общая для

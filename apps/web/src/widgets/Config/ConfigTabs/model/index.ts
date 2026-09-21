@@ -6,6 +6,7 @@ export {
   CONFIG_MODE_ROUTE,
   CONFIG_MODES,
   CONFIG_TAB_CLASS,
+  CONFIG_TAB_SOON,
   CONFIG_TAB_UNDERLINE,
   CONFIG_TABS,
 } from './ConfigTabs.constants';

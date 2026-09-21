@@ -149,7 +149,7 @@ export function ConnectionTable({
   });
 
   return (
-    <section className={cn('flex min-h-0 grow flex-col overflow-hidden', SURFACE)}>
+    <section className={cn('flex min-h-0 grow flex-col overflow-hidden max-lg:min-h-96', SURFACE)}>
       <div className='flex shrink-0 flex-col gap-2 border-b border-border px-3.5 py-2.5'>
         <div className='flex flex-wrap items-center gap-2'>
           {search}

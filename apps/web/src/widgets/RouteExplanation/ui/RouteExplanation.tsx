@@ -32,10 +32,13 @@ const REASON_KEY: Readonly<Record<RouteReasonCode, ParseKeys<'widgets/RouteExpla
 export function RouteExplanation({
   id,
   connectionId,
+  host,
   onClose,
 }: {
   id?: string;
   connectionId: string;
+  /** Узел назначения: панель обязана называть соединение, о котором рассказывает. */
+  host: string;
   onClose: () => void;
 }) {
   const { t } = useTranslation('widgets/RouteExplanation');
@@ -54,13 +57,14 @@ export function RouteExplanation({
     // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- см. выше
     <aside
       id={id}
-      aria-label={t('title')}
+      aria-label={t('titleFor', { host })}
       onKeyDown={onKeyDown}
-      className={cn('flex w-full max-w-md shrink-0 flex-col overflow-hidden', SURFACE)}
+      className={cn('flex w-full max-w-md shrink-0 flex-col overflow-hidden max-lg:max-h-[70vh]', SURFACE)}
     >
       <header className={cn('flex items-center gap-2.5', SURFACE_HEAD)}>
-        <h2 ref={headingRef} tabIndex={-1} className='grow text-sm font-medium'>
+        <h2 ref={headingRef} tabIndex={-1} className='flex min-w-0 grow flex-col text-sm font-medium'>
           {t('title')}
+          <span className='truncate font-mono text-xs font-normal text-muted-foreground'>{host}</span>
         </h2>
         <Button variant='outline' size='icon-sm' aria-label={t('close')} onClick={onClose}>
           <X />

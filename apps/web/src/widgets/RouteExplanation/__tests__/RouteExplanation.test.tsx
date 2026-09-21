@@ -46,7 +46,9 @@ describe('RouteExplanation', () => {
     serveExplanation(ROUTE_EXPLANATION_FIXTURE);
     serveConfig(configWithRules(ROUTE_EXPLANATION_FIXTURE.rules.length));
 
-    renderWithRouter(() => <RouteExplanation connectionId='c-1' onClose={vi.fn<() => void>()} />);
+    renderWithRouter(() => (
+      <RouteExplanation connectionId='c-1' host='video.example:443' onClose={vi.fn<() => void>()} />
+    ));
 
     // Индексы демона считаются с нуля, на экране правила нумеруются с единицы.
     expect(await screen.findByText('Сработало правило 7')).toBeInTheDocument();
@@ -58,7 +60,9 @@ describe('RouteExplanation', () => {
     serveExplanation(ROUTE_EXPLANATION_FIXTURE);
     serveConfig(configWithRules(ROUTE_EXPLANATION_FIXTURE.rules.length));
 
-    renderWithRouter(() => <RouteExplanation connectionId='c-1' onClose={vi.fn<() => void>()} />);
+    renderWithRouter(() => (
+      <RouteExplanation connectionId='c-1' host='video.example:443' onClose={vi.fn<() => void>()} />
+    ));
 
     const link = await screen.findByRole('link', { name: 'Открыть правило в редакторе' });
 
@@ -73,7 +77,9 @@ describe('RouteExplanation', () => {
     serveExplanation(ROUTE_EXPLANATION_FIXTURE);
     serveConfig(CONFIG_TEXT);
 
-    renderWithRouter(() => <RouteExplanation connectionId='c-1' onClose={vi.fn<() => void>()} />);
+    renderWithRouter(() => (
+      <RouteExplanation connectionId='c-1' host='video.example:443' onClose={vi.fn<() => void>()} />
+    ));
 
     expect(await screen.findByText('sing-box работает по другому конфигу')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Открыть правило в редакторе' })).not.toBeInTheDocument();
@@ -87,7 +93,9 @@ describe('RouteExplanation', () => {
     serveExplanation(ROUTE_FINAL_FIXTURE);
     serveConfig(configWithRules(ROUTE_FINAL_FIXTURE.rules.length));
 
-    renderWithRouter(() => <RouteExplanation connectionId='c-1' onClose={vi.fn<() => void>()} />);
+    renderWithRouter(() => (
+      <RouteExplanation connectionId='c-1' host='video.example:443' onClose={vi.fn<() => void>()} />
+    ));
 
     expect(await screen.findByText('Ни одно правило не совпало')).toBeInTheDocument();
     expect(screen.queryByText('неизвестно')).not.toBeInTheDocument();
@@ -97,7 +105,9 @@ describe('RouteExplanation', () => {
     serveExplanation(ROUTE_UNKNOWN_FIXTURE);
     serveConfig(configWithRules(0));
 
-    renderWithRouter(() => <RouteExplanation connectionId='c-1' onClose={vi.fn<() => void>()} />);
+    renderWithRouter(() => (
+      <RouteExplanation connectionId='c-1' host='video.example:443' onClose={vi.fn<() => void>()} />
+    ));
 
     expect(await screen.findByText('Правило не определено')).toBeInTheDocument();
     // Причина — перевод панели по коду демона, а не его строка: она на его языке.
@@ -110,20 +120,26 @@ describe('RouteExplanation', () => {
     serveExplanation(ROUTE_EXPLANATION_FIXTURE);
     serveConfig(configWithRules(ROUTE_EXPLANATION_FIXTURE.rules.length));
 
-    renderWithRouter(() => <RouteExplanation connectionId='c-1' onClose={vi.fn<() => void>()} />);
+    renderWithRouter(() => (
+      <RouteExplanation connectionId='c-1' host='video.example:443' onClose={vi.fn<() => void>()} />
+    ));
 
     const chain = await screen.findByRole('list', { name: 'Цепочка прокси' });
 
     expect(chain).toHaveTextContent('alt-fallbackhk-01');
   });
 
-  it('называется по своему заголовку', async () => {
+  it('называется соединением, о котором рассказывает', async () => {
     serveExplanation(ROUTE_EXPLANATION_FIXTURE);
     serveConfig(configWithRules(ROUTE_EXPLANATION_FIXTURE.rules.length));
 
-    renderWithRouter(() => <RouteExplanation connectionId='c-1' onClose={vi.fn<() => void>()} />);
+    renderWithRouter(() => (
+      <RouteExplanation connectionId='c-1' host='video.example:443' onClose={vi.fn<() => void>()} />
+    ));
 
-    expect(await screen.findByRole('complementary', { name: 'Маршрут соединения' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('complementary', { name: 'Маршрут соединения video.example:443' })
+    ).toBeInTheDocument();
   });
 
   it('закрывается по Escape', async () => {
@@ -133,7 +149,7 @@ describe('RouteExplanation', () => {
     const onClose = vi.fn<() => void>();
     const user = userEvent.setup();
 
-    renderWithRouter(() => <RouteExplanation connectionId='c-1' onClose={onClose} />);
+    renderWithRouter(() => <RouteExplanation connectionId='c-1' host='video.example:443' onClose={onClose} />);
 
     await screen.findByRole('complementary');
     await user.keyboard('{Escape}');

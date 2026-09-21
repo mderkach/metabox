@@ -17,7 +17,7 @@ import { toTargetTone } from './RuleTargetTone';
  * месте, и номер — слишком мелкая цель.
  */
 const SELECT_CLASS =
-  'rounded-sm after:absolute after:inset-0 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none';
+  'rounded-sm after:absolute after:inset-0 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none';
 
 function RuleRowProto({
   rule,
@@ -46,7 +46,10 @@ function RuleRowProto({
         <button
           type='button'
           aria-pressed={selected}
-          aria-label={t('row.label', { index: rule.index })}
+          // Кнопка растянута на строку, поэтому её имя — имя строки. Одного
+          // номера мало: он перекрывает содержимое, и правило звучит как
+          // «Правило 4», без условия и исхода.
+          aria-label={t('row.label', { index: rule.index, target: rule.target })}
           onClick={() => {
             onSelect(rule.id);
           }}

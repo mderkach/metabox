@@ -1,5 +1,6 @@
 {
   "title": "Connection route",
+  "titleFor": "Route of connection {{host}}",
   "close": "Close the explanation",
   "pending": "Asking sing-box…",
   "drift": {

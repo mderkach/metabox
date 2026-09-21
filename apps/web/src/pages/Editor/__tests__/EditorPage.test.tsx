@@ -93,7 +93,7 @@ describe('экран правил', () => {
 
     renderWithRouter(EditorPage);
 
-    await user.click(await screen.findByRole('button', { name: 'Правило 1' }));
+    await user.click(await screen.findByRole('button', { name: /^Правило 1, / }));
 
     const panel = await screen.findByRole('complementary');
 
@@ -109,7 +109,7 @@ describe('экран правил', () => {
 
     renderWithRouter(EditorPage);
 
-    const ruleButton = await screen.findByRole('button', { name: 'Правило 1' });
+    const ruleButton = await screen.findByRole('button', { name: /^Правило 1, / });
 
     await user.click(ruleButton);
 
@@ -128,7 +128,7 @@ describe('экран правил', () => {
 
     renderWithRouter(EditorPage);
 
-    await user.click(await screen.findByRole('button', { name: 'Правило 1' }));
+    await user.click(await screen.findByRole('button', { name: /^Правило 1, / }));
 
     const panel = await screen.findByRole('complementary');
 
@@ -146,7 +146,7 @@ describe('экран правил', () => {
 
     renderWithRouter(EditorPage);
 
-    await user.click(await screen.findByRole('button', { name: 'Правило 1' }));
+    await user.click(await screen.findByRole('button', { name: /^Правило 1, / }));
 
     const panel = await screen.findByRole('complementary');
     const outbound = within(panel).getByRole('combobox', { name: 'Куда отправить' });
@@ -172,7 +172,7 @@ describe('экран правил', () => {
 
     renderWithRouter(EditorPage);
 
-    await user.click(await screen.findByRole('button', { name: 'Правило 3' }));
+    await user.click(await screen.findByRole('button', { name: /^Правило 3, / }));
 
     const panel = await screen.findByRole('complementary');
 
@@ -186,7 +186,7 @@ describe('экран правил', () => {
 
     renderWithRouter(EditorPage);
 
-    await user.click(await screen.findByRole('button', { name: 'Правило 2' }));
+    await user.click(await screen.findByRole('button', { name: /^Правило 2, / }));
 
     const panel = await screen.findByRole('complementary');
 
@@ -208,7 +208,7 @@ describe('экран правил', () => {
 
     renderWithRouter(EditorPage);
 
-    await user.click(await screen.findByRole('button', { name: 'Правило 1' }));
+    await user.click(await screen.findByRole('button', { name: /^Правило 1, / }));
 
     const panel = await screen.findByRole('complementary');
 
@@ -218,7 +218,7 @@ describe('экран правил', () => {
       JSON.stringify({ rule_set: ['github'], outbound: 'proxy' }, null, 2)
     );
 
-    await user.click(screen.getByRole('button', { name: 'Правило 2' }));
+    await user.click(screen.getByRole('button', { name: /^Правило 2, / }));
 
     // Панель пересоздана и открылась на форме — вкладку выбираем заново.
     await user.click(within(await screen.findByRole('complementary')).getByRole('tab', { name: 'JSON' }));
@@ -233,7 +233,7 @@ describe('экран правил', () => {
 
     renderWithRouter(EditorPage);
 
-    await user.click(await screen.findByRole('button', { name: 'Правило 3' }));
+    await user.click(await screen.findByRole('button', { name: /^Правило 3, / }));
 
     const panel = await screen.findByRole('complementary');
     const editor = within(panel).getByRole('textbox', { name: 'Правило 3 текстом' });

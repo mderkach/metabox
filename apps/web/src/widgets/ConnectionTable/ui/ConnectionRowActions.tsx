@@ -5,7 +5,7 @@ import type { ConnectionRow as ConnectionRowModel } from '@entities/Connection';
 import { cn } from '@shared/lib/utils';
 
 const ROW_ACTION =
-  'flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none';
+  'flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none';
 
 /** Закрыть и объяснить: одни и те же действия в таблице и в списке. */
 export function ConnectionRowActions({

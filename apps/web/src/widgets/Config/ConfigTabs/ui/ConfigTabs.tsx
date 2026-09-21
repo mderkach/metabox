@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { sectionSize, type ConfigDocument } from '@entities/Config';
 import { cn } from '@shared/lib/utils';
 
-import { CONFIG_TAB_CLASS, CONFIG_TAB_UNDERLINE, CONFIG_TABS } from '../model';
+import { CONFIG_TAB_CLASS, CONFIG_TAB_SOON, CONFIG_TAB_UNDERLINE, CONFIG_TABS } from '../model';
 import { ConfigModeSwitch } from './ConfigModeSwitch';
 
 export function ConfigTabs({ config }: { config: ConfigDocument | null }) {
@@ -26,13 +26,10 @@ export function ConfigTabs({ config }: { config: ConfigDocument | null }) {
             return (
               <li key={section.key}>
                 {section.route === null ? (
-                  <span
-                    aria-disabled='true'
-                    title={t('unavailable')}
-                    className={cn(CONFIG_TAB_CLASS, 'text-muted-foreground/60')}
-                  >
-                    {t(section.label)}
+                  <span aria-disabled='true' title={t('unavailable')} className={cn(CONFIG_TAB_CLASS, 'font-normal')}>
+                    <span className='text-muted-foreground'>{t(section.label)}</span>
                     {count !== null && <SectionCount count={count} />}
+                    <span className={CONFIG_TAB_SOON}>{t('soon')}</span>
                   </span>
                 ) : (
                   <Link
@@ -42,7 +39,7 @@ export function ConfigTabs({ config }: { config: ConfigDocument | null }) {
                     className={cn(
                       CONFIG_TAB_CLASS,
                       'text-muted-foreground transition-colors hover:text-foreground',
-                      'focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none',
+                      'focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none',
                       'aria-[current=page]:text-foreground'
                     )}
                   >

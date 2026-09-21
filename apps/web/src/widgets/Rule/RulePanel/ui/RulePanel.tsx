@@ -68,7 +68,7 @@ export function RulePanel({
       id={id}
       aria-label={t('title', { index: rule.index })}
       onKeyDown={onKeyDown}
-      className={cn('flex w-full max-w-md shrink-0 flex-col overflow-hidden', SURFACE)}
+      className={cn('flex w-full max-w-md shrink-0 flex-col overflow-hidden max-lg:max-h-[70vh]', SURFACE)}
     >
       <header className={cn('flex items-center gap-2.5', SURFACE_HEAD)}>
         <div className='flex min-w-0 grow flex-col'>
