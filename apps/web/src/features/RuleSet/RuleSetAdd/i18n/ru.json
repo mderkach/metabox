@@ -1,6 +1,9 @@
 {
   "field": {
-    "provider": { "label": "Источник", "custom": "Свой адрес" },
+    "provider": {
+      "label": "Источник",
+      "custom": "Свой адрес"
+    },
     "category": {
       "label": "Категория",
       "placeholder": "например, google",
@@ -9,9 +12,17 @@
       "more": "и ещё {{count}}",
       "offCatalog": "Категории нет в каталоге metabox. Если файла нет у поставщика, sing-box не запустится при применении."
     },
-    "mirror": { "label": "Зеркало" },
-    "url": { "label": "Адрес сета", "placeholder": "https://example.com/list.srs" },
-    "tag": { "label": "Имя сета", "placeholder": "geosite-google" },
+    "mirror": {
+      "label": "Зеркало"
+    },
+    "url": {
+      "label": "Адрес сета",
+      "placeholder": "https://example.com/list.srs"
+    },
+    "tag": {
+      "label": "Имя сета",
+      "placeholder": "geosite-google"
+    },
     "format": {
       "label": "Формат файла",
       "placeholder": "выберите формат",
@@ -28,9 +39,15 @@
       "hint": "Пусто — напрямую. Пригодится, когда источник недоступен без прокси."
     }
   },
-  "format": { "binary": "binary — скомпилированный .srs", "source": "source — исходный .json" },
-  "extra": { "toggle": "Ещё настройки" },
+  "format": {
+    "binary": "binary — скомпилированный .srs",
+    "source": "source — исходный .json"
+  },
+  "extra": {
+    "toggle": "Ещё настройки"
+  },
   "submit": "Подключить",
+  "added": "Набор {{tag}} добавлен в черновик. Он уедет на устройство, когда вы примените конфиг.",
   "cancel": "Отмена",
   "error": {
     "urlRequired": "без адреса скачивать нечего",

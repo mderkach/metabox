@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { TFunction } from 'i18next';
-import { ChevronDown, TriangleAlert } from 'lucide-react';
+import { ChevronDown, CircleCheck, TriangleAlert } from 'lucide-react';
 import { useId, useState } from 'react';
 import { Controller, FormProvider, useForm, useFormContext, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +10,7 @@ import { defaultFormatOf, filterCategories, findProvider, RULE_SET_PROVIDERS } f
 import { cn } from '@shared/lib/utils';
 import {
   Button,
+  FACET_ACTIVE,
   FACET_CLASS,
   FACET_IDLE,
   Input,
@@ -58,16 +59,20 @@ export function RuleSetAddForm({
   const { t } = useTranslation('features/RuleSet/RuleSetAdd');
   const insert = ConfigDocumentState.use.insert();
   const count = takenTags.length;
+  // Форма, которая остаётся на экране, о своём успехе должна сказать: набор
+  // уезжает в черновик, и без строки таблицы рядом это ничем не видно.
+  const [added, setAdded] = useState<string | null>(null);
 
   const form = useForm<RuleSetAddModel>({
     defaultValues: ruleSetAddDefaults(),
-    mode: 'onSubmit',
+    mode: 'onTouched',
     resolver: zodResolver(makeRuleSetAddSchema(takenTags, outbounds)),
   });
 
   const onSubmit = form.handleSubmit((data) => {
     insert([...RULE_SETS_PATH, count], toRuleSetPatch(data));
     form.reset(ruleSetAddDefaults());
+    setAdded(data.tag);
     onDone?.();
   });
 
@@ -94,6 +99,13 @@ export function RuleSetAddForm({
             </Button>
           )}
         </div>
+
+        {added !== null && onDone === undefined && (
+          <p role='status' className='flex items-start gap-1.5 text-xs text-pretty text-signal-ok'>
+            <CircleCheck className='mt-px size-3.5 shrink-0' aria-hidden='true' />
+            <span>{t('added', { tag: added })}</span>
+          </p>
+        )}
       </form>
     </FormProvider>
   );
@@ -201,17 +213,18 @@ function CategoryField() {
                 <li key={name}>
                   <button
                     type='button'
+                    aria-pressed={field.value === name}
                     onClick={() => {
                       pick(name);
                     }}
-                    className={cn(FACET_CLASS, FACET_IDLE, 'font-mono')}
+                    className={cn(FACET_CLASS, 'font-mono', field.value === name ? FACET_ACTIVE : FACET_IDLE)}
                   >
                     {name}
                   </button>
                 </li>
               ))}
               {hidden > 0 && (
-                <li className='text-xs text-muted-foreground'>{t('field.category.more', { count: hidden })}</li>
+                <li className='px-1 text-xs text-muted-foreground'>{t('field.category.more', { count: hidden })}</li>
               )}
             </ul>
           )}
@@ -233,14 +246,12 @@ function AddressField() {
   const { control, setValue } = useFormContext<RuleSetAddModel>();
   const providerId = useWatch({ control, name: 'providerId' });
   const id = useId();
+  const errorId = useId();
   const provider = findProvider(providerId);
 
   return (
     <div className='flex flex-col gap-1.5'>
-      <div className='flex flex-wrap items-end justify-between gap-2'>
-        <Label htmlFor={id}>{t('field.url.label')}</Label>
-        {provider !== null && provider.mirrors.length > 1 && <MirrorField />}
-      </div>
+      <Label htmlFor={id}>{t('field.url.label')}</Label>
 
       <Controller
         control={control}
@@ -255,16 +266,19 @@ function AddressField() {
               spellCheck={false}
               className='font-mono text-xs'
               aria-invalid={fieldState.error !== undefined}
+              aria-describedby={fieldState.error === undefined ? undefined : errorId}
               onChange={(event) => {
                 field.onChange(event.target.value);
                 setValue('providerId', CUSTOM_PROVIDER);
                 setValue('mirrorId', '');
               }}
             />
-            <FieldError message={fieldState.error?.message} />
+            <FieldError id={errorId} message={fieldState.error?.message} />
           </>
         )}
       />
+
+      {provider !== null && provider.mirrors.length > 1 && <MirrorField />}
 
       <CategoryNotice />
     </div>
@@ -348,6 +362,7 @@ function TagField() {
   const { t } = useTranslation('features/RuleSet/RuleSetAdd');
   const { control } = useFormContext<RuleSetAddModel>();
   const id = useId();
+  const errorId = useId();
 
   return (
     <Controller
@@ -365,8 +380,9 @@ function TagField() {
             spellCheck={false}
             className='font-mono'
             aria-invalid={fieldState.error !== undefined}
+            aria-describedby={fieldState.error === undefined ? undefined : errorId}
           />
-          <FieldError message={fieldState.error?.message} />
+          <FieldError id={errorId} message={fieldState.error?.message} />
         </div>
       )}
     />
@@ -383,6 +399,8 @@ function FormatField() {
   const { control } = useFormContext<RuleSetAddModel>();
   const url = useWatch({ control, name: 'url' });
   const id = useId();
+  const hintId = useId();
+  const errorId = useId();
 
   if (url.trim() === '' || defaultFormatOf(url.trim()) !== '') {
     return null;
@@ -400,7 +418,10 @@ function FormatField() {
             value={field.value}
             onValueChange={field.onChange}
           >
-            <SelectTrigger id={id}>
+            <SelectTrigger
+              id={id}
+              aria-describedby={describedBy(hintId, fieldState.error === undefined ? undefined : errorId)}
+            >
               <SelectValue placeholder={t('field.format.placeholder')} />
             </SelectTrigger>
             <SelectContent>
@@ -411,8 +432,10 @@ function FormatField() {
               ))}
             </SelectContent>
           </Select>
-          <p className='text-xs text-muted-foreground'>{t('field.format.hint')}</p>
-          <FieldError message={fieldState.error?.message} />
+          <p id={hintId} className='text-xs text-muted-foreground'>
+            {t('field.format.hint')}
+          </p>
+          <FieldError id={errorId} message={fieldState.error?.message} />
         </div>
       )}
     />
@@ -429,7 +452,11 @@ function ExtraFields({ outbounds }: { outbounds: readonly string[] }) {
   const { control, formState } = useFormContext<RuleSetAddModel>();
   const [open, setOpen] = useState(false);
   const intervalId = useId();
+  const intervalHintId = useId();
+  const intervalErrorId = useId();
   const detourId = useId();
+  const detourHintId = useId();
+  const detourErrorId = useId();
   const panelId = useId();
   const detourListId = useId();
 
@@ -445,7 +472,7 @@ function ExtraFields({ outbounds }: { outbounds: readonly string[] }) {
         onClick={() => {
           setOpen((current) => !current);
         }}
-        className='flex w-fit items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none'
+        className='flex w-fit items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none'
       >
         <ChevronDown className={cn('size-4 transition-transform', expanded && 'rotate-180')} />
         {t('extra.toggle')}
@@ -467,9 +494,15 @@ function ExtraFields({ outbounds }: { outbounds: readonly string[] }) {
                   autoComplete='off'
                   className='font-mono'
                   aria-invalid={fieldState.error !== undefined}
+                  aria-describedby={describedBy(
+                    intervalHintId,
+                    fieldState.error === undefined ? undefined : intervalErrorId
+                  )}
                 />
-                <p className='text-xs text-muted-foreground'>{t('field.interval.hint')}</p>
-                <FieldError message={fieldState.error?.message} />
+                <p id={intervalHintId} className='text-xs text-muted-foreground'>
+                  {t('field.interval.hint')}
+                </p>
+                <FieldError id={intervalErrorId} message={fieldState.error?.message} />
               </div>
             )}
           />
@@ -489,6 +522,10 @@ function ExtraFields({ outbounds }: { outbounds: readonly string[] }) {
                   className='font-mono'
                   list={outbounds.length === 0 ? undefined : detourListId}
                   aria-invalid={fieldState.error !== undefined}
+                  aria-describedby={describedBy(
+                    detourHintId,
+                    fieldState.error === undefined ? undefined : detourErrorId
+                  )}
                 />
                 {outbounds.length > 0 && (
                   <datalist id={detourListId}>
@@ -497,8 +534,10 @@ function ExtraFields({ outbounds }: { outbounds: readonly string[] }) {
                     ))}
                   </datalist>
                 )}
-                <p className='text-xs text-muted-foreground'>{t('field.detour.hint')}</p>
-                <FieldError message={fieldState.error?.message} />
+                <p id={detourHintId} className='text-xs text-muted-foreground'>
+                  {t('field.detour.hint')}
+                </p>
+                <FieldError id={detourErrorId} message={fieldState.error?.message} />
               </div>
             )}
           />
@@ -508,12 +547,19 @@ function ExtraFields({ outbounds }: { outbounds: readonly string[] }) {
   );
 }
 
-function FieldError({ message }: { message: string | undefined }) {
+/** Описания поля одной строкой: `aria-describedby` принимает идентификаторы через пробел. */
+function describedBy(...ids: (string | undefined)[]): string | undefined {
+  const list = ids.filter((id) => id !== undefined);
+
+  return list.length === 0 ? undefined : list.join(' ');
+}
+
+function FieldError({ id, message }: { id: string; message: string | undefined }) {
   const { t } = useTranslation('features/RuleSet/RuleSetAdd');
   const text = errorText(t, message);
 
   return text === null ? null : (
-    <p role='alert' className='text-xs text-destructive'>
+    <p id={id} role='alert' className='text-xs text-destructive'>
       {text}
     </p>
   );

@@ -1,6 +1,9 @@
 {
   "field": {
-    "provider": { "label": "Source", "custom": "Custom address" },
+    "provider": {
+      "label": "Source",
+      "custom": "Custom address"
+    },
     "category": {
       "label": "Category",
       "placeholder": "google, for example",
@@ -9,9 +12,17 @@
       "more": "and {{count}} more",
       "offCatalog": "This category is not in the metabox catalog. If the provider has no such file, sing-box will not start when the config is applied."
     },
-    "mirror": { "label": "Mirror" },
-    "url": { "label": "Set address", "placeholder": "https://example.com/list.srs" },
-    "tag": { "label": "Set name", "placeholder": "geosite-google" },
+    "mirror": {
+      "label": "Mirror"
+    },
+    "url": {
+      "label": "Set address",
+      "placeholder": "https://example.com/list.srs"
+    },
+    "tag": {
+      "label": "Set name",
+      "placeholder": "geosite-google"
+    },
     "format": {
       "label": "File format",
       "placeholder": "pick a format",
@@ -28,9 +39,15 @@
       "hint": "Empty — straight out. Useful when the source is out of reach without a proxy."
     }
   },
-  "format": { "binary": "binary — compiled .srs", "source": "source — plain .json" },
-  "extra": { "toggle": "More settings" },
+  "format": {
+    "binary": "binary — compiled .srs",
+    "source": "source — plain .json"
+  },
+  "extra": {
+    "toggle": "More settings"
+  },
   "submit": "Connect",
+  "added": "Set {{tag}} is in the draft. It reaches the device once you apply the config.",
   "cancel": "Cancel",
   "error": {
     "urlRequired": "nothing to download without an address",
