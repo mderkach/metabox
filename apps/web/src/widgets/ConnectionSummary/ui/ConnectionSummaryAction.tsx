@@ -19,7 +19,6 @@ const KIND_VIEW = [
 /** Столбец длиной в объём трафика, а не в число соединений: молчащее соединение остаётся в списке, но веса не добавляет. */
 export function ConnectionSummaryAction({ shares }: { shares: ConnectionShare<RouteKind>[] }) {
   const { t } = useTranslation('widgets/ConnectionSummary');
-  const total = shares.reduce((sum, share) => sum + share.volume, 0);
   const bars: SummaryBar[] = KIND_VIEW.flatMap((view) => {
     const share = shares.find((entry) => entry.key === view.kind);
 
@@ -40,7 +39,7 @@ export function ConnectionSummaryAction({ shares }: { shares: ConnectionShare<Ro
 
   return (
     <ConnectionSummaryPanel title={t('action.title')}>
-      <ConnectionSummaryBars bars={bars} total={total} empty={t('empty')} />
+      <ConnectionSummaryBars bars={bars} empty={t('empty')} />
     </ConnectionSummaryPanel>
   );
 }

@@ -19,7 +19,6 @@ export function ConnectionSummaryTop({
   empty: string;
 }) {
   const { t } = useTranslation('widgets/ConnectionSummary');
-  const peak = shares.reduce((max, share) => Math.max(max, share.rate), 0);
   const bars: SummaryBar[] = shares.map((share) => ({
     key: share.key,
     label: share.key,
@@ -33,7 +32,7 @@ export function ConnectionSummaryTop({
 
   return (
     <ConnectionSummaryPanel title={title} href={href}>
-      <ConnectionSummaryBars bars={bars} total={peak} empty={empty} />
+      <ConnectionSummaryBars bars={bars} empty={empty} />
     </ConnectionSummaryPanel>
   );
 }

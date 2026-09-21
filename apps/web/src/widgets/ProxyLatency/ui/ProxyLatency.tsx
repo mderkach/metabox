@@ -48,9 +48,10 @@ function toDelayLabel(t: TFunction<'widgets/ProxyLatency'>, node: ProxyNode): st
   return node.delay >= DELAY_TIMEOUT ? t('node.timedOut') : t('node.delay', { value: node.delay });
 }
 
-function toMeter(node: ProxyNode): number {
+/** Длина столбца — доля от потолка шкалы; непроверенный узел столбца не получает вовсе. */
+function toMeter(node: ProxyNode): number | null {
   if (node.delay === null) {
-    return 0;
+    return null;
   }
 
   return node.delay >= DELAY_TIMEOUT ? 1 : toShare(Math.min(node.delay, SCALE_CEILING), SCALE_CEILING);
@@ -65,8 +66,12 @@ export function ProxyLatency() {
 
   return (
     <Card className='gap-3'>
-      <CardHeader className='flex flex-row items-baseline justify-between gap-3'>
+      <CardHeader className='flex flex-row flex-wrap items-baseline gap-x-2.5 gap-y-1'>
         <h3 className={SECTION_LABEL}>{t('title')}</h3>
+        {/* Столбец здесь меряет абсолют, а не долю от соседей: без названной
+            шкалы длина читалась бы так же, как в соседних панелях сводки. */}
+        <p className='text-xs text-muted-foreground'>{t('scale', { ceiling: SCALE_CEILING })}</p>
+        <span className='grow' />
         <Button
           variant='outline'
           size='sm'
@@ -94,17 +99,34 @@ export function ProxyLatency() {
                   <span className='font-mono'>{entry.node.name}</span>
                 </p>
                 <p className='font-mono text-xs text-muted-foreground tabular-nums'>{toDelayLabel(t, entry.node)}</p>
-                <span className='col-span-2 block h-1.5 overflow-hidden rounded-full bg-meter-track'>
-                  <span
-                    className={cn('block h-full rounded-full', DELAY_TONE[entry.node.delayState])}
-                    style={{ width: `${String(toMeter(entry.node) * PERCENT)}%` }}
-                  />
-                </span>
+                <Meter node={entry.node} />
               </li>
             ))}
           </ul>
         )}
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * Столбец задержки. Непроверенный узел получает пустую дорожку пунктиром:
+ * сплошная дорожка с нулевой заливкой читается как «ноль миллисекунд», то есть
+ * как самый быстрый узел списка.
+ */
+function Meter({ node }: { node: ProxyNode }) {
+  const share = toMeter(node);
+
+  if (share === null) {
+    return <span className='col-span-2 block h-1.5 rounded-full border border-dashed border-border' />;
+  }
+
+  return (
+    <span className='col-span-2 block h-1.5 overflow-hidden rounded-full bg-meter-track'>
+      <span
+        className={cn('block h-full rounded-full', DELAY_TONE[node.delayState])}
+        style={{ width: `${String(share * PERCENT)}%` }}
+      />
+    </span>
   );
 }

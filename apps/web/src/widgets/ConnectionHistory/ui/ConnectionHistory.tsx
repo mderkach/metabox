@@ -24,7 +24,10 @@ const TIME_TICKS = ['tick.minus60', 'tick.minus45', 'tick.minus30', 'tick.minus1
 export function ConnectionHistory({ samples }: { samples: number[] }) {
   const { t } = useTranslation('widgets/ConnectionHistory');
   const peak = Math.max(...samples, 1);
-  const geometry = toAreaGeometry(samples, peak * HEADROOM, PLOT, PLOT);
+  // Подписана верхняя кромка, а не пик: геометрия строится от потолка, и пик,
+  // напечатанный у края, обещал бы ряду высоту, которой он не достигает.
+  const ceiling = Math.ceil(peak * HEADROOM);
+  const geometry = toAreaGeometry(samples, ceiling, PLOT, PLOT);
   const gradient = useId();
 
   return (
@@ -37,7 +40,7 @@ export function ConnectionHistory({ samples }: { samples: number[] }) {
         <figure className='flex flex-col gap-1.5'>
           <div className='flex gap-3'>
             <div className='flex w-10 shrink-0 flex-col justify-between py-0.5 text-right font-mono text-xs text-muted-foreground tabular-nums'>
-              <span>{peak}</span>
+              <span>{ceiling}</span>
               <span>0</span>
             </div>
 

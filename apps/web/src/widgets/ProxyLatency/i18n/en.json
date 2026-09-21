@@ -1,5 +1,6 @@
 {
   "title": "Node delay",
+  "scale": "scale 0–{{ceiling}} ms",
   "testing": "Testing",
   "test": "Test",
   "unread": "The node list was not read",
