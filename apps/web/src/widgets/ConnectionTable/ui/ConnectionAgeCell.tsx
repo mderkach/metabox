@@ -7,7 +7,7 @@ export function ConnectionAgeCell({ connection, now }: ConnectionCellProps) {
   return (
     <time
       dateTime={new Date(connection.startedAt).toISOString()}
-      className='font-mono text-2xs text-muted-foreground tabular-nums'
+      className='font-mono text-xs text-muted-foreground tabular-nums'
     >
       {formatAge((now - connection.startedAt) / MS_IN_SECOND)}
     </time>

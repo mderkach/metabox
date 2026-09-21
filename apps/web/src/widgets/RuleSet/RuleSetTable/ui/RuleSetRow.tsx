@@ -40,7 +40,7 @@ function RuleSetRowProto({
         </span>
 
         {set.location !== '' && (
-          <span className='truncate font-mono text-2xs text-muted-foreground/80' title={set.location}>
+          <span className='truncate font-mono text-xs text-muted-foreground' title={set.location}>
             {set.location}
           </span>
         )}

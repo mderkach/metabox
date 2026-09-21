@@ -52,7 +52,7 @@ function ConnectionCardProto({
 
           return (
             <div key={id} className='flex min-w-0 items-baseline justify-between gap-3'>
-              <dt className='shrink-0 text-2xs tracking-[0.06em] text-muted-foreground uppercase'>{t(label)}</dt>
+              <dt className='shrink-0 text-xs tracking-[0.06em] text-muted-foreground uppercase'>{t(label)}</dt>
               <dd className='flex min-w-0 justify-end text-right'>
                 <Cell connection={connection} now={now} />
               </dd>

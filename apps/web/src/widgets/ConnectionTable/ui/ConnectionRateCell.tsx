@@ -8,7 +8,7 @@ const IDLE_RATE = 1;
 
 export function ConnectionRateCell({ connection }: ConnectionCellProps) {
   return (
-    <span className='grid gap-y-0.5 font-mono text-2xs'>
+    <span className='grid gap-y-0.5 font-mono text-xs'>
       <span
         className={cn('tabular-nums', connection.downRate >= IDLE_RATE ? 'text-series-down' : 'text-muted-foreground')}
       >
