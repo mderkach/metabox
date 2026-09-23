@@ -64,7 +64,7 @@ export function ConnectionsPage() {
 
   return (
     <>
-      <PageHeader title={t('title')}>
+      <PageHeader title={t('section.connections', { ns: 'shared' })}>
         <p className='text-xs text-muted-foreground'>{t('subtitle')}</p>
         {dropped > 0 && (
           <p role='status' className='text-xs text-destructive'>

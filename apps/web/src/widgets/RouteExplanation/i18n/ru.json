@@ -27,9 +27,7 @@
   },
   "matched": {
     "title": "Сработало правило {{number}}",
-    "conditions": "Условия",
     "action": "Действие",
-    "unconditional": "без условий",
     "open": "Открыть правило в редакторе"
   },
   "chain": {

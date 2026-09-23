@@ -18,10 +18,12 @@ const DELAY_TONE: Readonly<Record<string, string>> = {
 /** Задержка словами: та же подпись идёт в имя плитки и в её видимый угол. */
 function toDelayText(t: TFunction<'widgets/ProxyGroups'>, node: ProxyNode): string {
   if (node.delay === null) {
-    return t('node.untested');
+    return t('delay.untested', { ns: 'shared' });
   }
 
-  return node.delay >= DELAY_TIMEOUT ? t('node.timedOut') : t('node.delay', { value: node.delay });
+  return node.delay >= DELAY_TIMEOUT
+    ? t('delay.timedOut', { ns: 'shared' })
+    : t('delay.value', { ns: 'shared', value: node.delay });
 }
 
 function DelayValue({ node }: { node: ProxyNode }) {

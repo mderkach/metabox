@@ -5,16 +5,13 @@ import { ROUTE_KIND, type ConnectionKind, type ConnectionKindGroup, type RouteKi
 import { cn } from '@shared/lib/utils';
 import { FACET_ACTIVE, FACET_CLASS, FACET_IDLE } from '@shared/ui';
 
-/**
- * Подпись судьбы пакета. Текст показывает тот, кто его показывает: у сводки на
- * обзоре свой словарь, и общий на два экрана связал бы их загрузку.
- */
-const KIND_LABELS: Readonly<Record<RouteKind, ParseKeys<'pages/Connections'>>> = {
-  [ROUTE_KIND.Proxy]: 'kinds.proxy',
-  [ROUTE_KIND.Direct]: 'kinds.direct',
-  [ROUTE_KIND.Block]: 'kinds.block',
-  [ROUTE_KIND.Dns]: 'kinds.dns',
-  [ROUTE_KIND.Other]: 'kinds.other',
+/** Подпись судьбы пакета: её же показывает сводка на обзоре, поэтому словарь общий. */
+const KIND_LABELS: Readonly<Record<RouteKind, ParseKeys<'shared'>>> = {
+  [ROUTE_KIND.Proxy]: 'route.proxy',
+  [ROUTE_KIND.Direct]: 'route.direct',
+  [ROUTE_KIND.Block]: 'route.block',
+  [ROUTE_KIND.Dns]: 'route.dns',
+  [ROUTE_KIND.Other]: 'route.other',
 };
 
 /** Срез по действию: «куда ушло». Порядок чипов задан моделью, а не счётчиками. */
@@ -57,7 +54,7 @@ export function ConnectionKindFacet({
             }}
             className={cn(FACET_CLASS, kind === group.kind ? FACET_ACTIVE : FACET_IDLE)}
           >
-            {t(KIND_LABELS[group.kind])}
+            {t(KIND_LABELS[group.kind], { ns: 'shared' })}
             <span className='font-mono tabular-nums'>{group.count}</span>
           </button>
         </li>

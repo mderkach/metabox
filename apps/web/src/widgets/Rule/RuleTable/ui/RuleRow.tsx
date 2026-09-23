@@ -69,7 +69,7 @@ function RuleRowProto({
 
         {!rule.recognized && (
           <Badge variant='outline' className='shrink-0'>
-            {t('row.uncovered')}
+            {t('rule.uncovered', { ns: 'shared' })}
           </Badge>
         )}
 

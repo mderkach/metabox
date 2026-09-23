@@ -36,7 +36,7 @@ function RuleSetRowProto({
 
           {set.type !== RULE_SET_TYPE.Remote && <Badge variant='secondary'>{t(`type.${set.type}`)}</Badge>}
 
-          {!set.recognized && <Badge variant='outline'>{t('row.uncovered')}</Badge>}
+          {!set.recognized && <Badge variant='outline'>{t('rule.uncovered', { ns: 'shared' })}</Badge>}
         </span>
 
         {set.location !== '' && (
@@ -48,7 +48,7 @@ function RuleSetRowProto({
 
       <span role='cell' className={RULE_SET_COLUMN.Source}>
         <span className='flex flex-wrap items-center gap-x-1.5 gap-y-0.5'>
-          <span>{provider === null ? t('row.ownSource') : provider.name}</span>
+          <span>{provider === null ? t('ruleSet.ownSource', { ns: 'shared' }) : provider.name}</span>
           {set.source.category !== null && (
             <>
               <span aria-hidden='true'>·</span>

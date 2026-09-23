@@ -135,11 +135,11 @@ function EmptyState({ onReset }: { onReset: () => void }) {
   return (
     <Empty>
       <EmptyHeader>
-        <EmptyTitle>{t('notFound')}</EmptyTitle>
+        <EmptyTitle>{t('list.notFound', { ns: 'shared' })}</EmptyTitle>
       </EmptyHeader>
       <EmptyContent>
         <Button variant='outline' size='sm' onClick={onReset}>
-          {t('resetFilter')}
+          {t('list.resetFilter', { ns: 'shared' })}
         </Button>
       </EmptyContent>
     </Empty>

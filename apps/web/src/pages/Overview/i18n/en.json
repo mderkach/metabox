@@ -1,5 +1,4 @@
 {
-  "title": "Overview",
   "verdict": {
     "waiting": "waiting for the first data from sing-box",
     "silent": "sing-box is silent, the numbers are frozen",
@@ -24,7 +23,6 @@
     "noPeak": "no peak yet"
   },
   "connections": {
-    "title": "Connections",
     "note": "counters live while the tab is open",
     "label": "Connection counters",
     "open": "Open",
@@ -34,8 +32,7 @@
     "none": "none so far",
     "topNodes": "Top proxy nodes",
     "topNodesEmpty": "Nothing goes through the proxy right now",
-    "topSources": "Top devices",
-    "topSourcesEmpty": "No live connections"
+    "topSources": "Top devices"
   },
   "device": {
     "title": "Router",
@@ -49,7 +46,6 @@
     "memory": "Memory",
     "memoryHistory": "Router memory over the whole daemon uptime",
     "ofTotal": "of {{total}}",
-    "uptime": "Uptime",
     "sinceBoot": "since the last boot",
     "waiting": "waiting for a snapshot"
   },
@@ -57,10 +53,8 @@
     "title": "Processes",
     "panel": "Panel",
     "daemonUp": "the daemon responds",
-    "daemonDown": "the daemon does not respond",
     "streamUp": "the stream is running",
     "streamDown": "the stream is silent",
-    "daemon": "Daemon",
     "schema": "Form schema",
     "config": "Config",
     "clashMode": "Clash API mode",

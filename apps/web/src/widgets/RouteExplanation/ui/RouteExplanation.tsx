@@ -162,8 +162,8 @@ function Matched({
 
       <dl className='text-sm'>
         <Row
-          label={t('matched.conditions')}
-          value={match.conditions.length > 0 ? match.conditions : t('matched.unconditional')}
+          label={t('rule.conditions', { ns: 'shared' })}
+          value={match.conditions.length > 0 ? match.conditions : t('rule.unconditional', { ns: 'shared' })}
         />
         <Row label={t('matched.action')} value={match.action} />
       </dl>
@@ -241,7 +241,7 @@ function Before({ rules }: { rules: RouteExplanationModel['rules'] }) {
           <li key={rule.index} className='flex gap-2 font-mono text-xs text-muted-foreground'>
             <span className='shrink-0'>{rule.index + 1}</span>
             <span className='truncate'>
-              {rule.conditions.length > 0 ? rule.conditions : t('matched.unconditional')}
+              {rule.conditions.length > 0 ? rule.conditions : t('rule.unconditional', { ns: 'shared' })}
             </span>
           </li>
         ))}

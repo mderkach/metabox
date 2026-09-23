@@ -95,7 +95,7 @@ export function ConfigApplyDiff({ canApply, onApply }: { canApply: boolean; onAp
 
         <DialogFooter>
           <DialogClose render={<Button size='sm' disabled={!canApply} />} onClick={onApply}>
-            {t('diff.apply')}
+            {t('bar.apply')}
           </DialogClose>
         </DialogFooter>
       </DialogContent>

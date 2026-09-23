@@ -2,20 +2,15 @@
   "title": "Connected sets",
   "column": {
     "set": "Set",
-    "source": "Source",
-    "usage": "Usage",
-    "rowActions": "Row actions"
+    "usage": "Usage"
   },
   "footer": {
     "rows_one": "{{count}} set",
-    "rows_other": "{{count}} sets",
-    "shown": "Showing {{shown}} of {{total}}"
+    "rows_other": "{{count}} sets"
   },
   "type": { "local": "file on the device", "inline": "rules inside the config" },
   "row": {
     "untagged": "unnamed",
-    "uncovered": "not covered by the UI",
-    "ownSource": "custom address",
     "interval": "refreshes {{interval}}",
     "detour": "through {{detour}}",
     "unused": "in no rule",

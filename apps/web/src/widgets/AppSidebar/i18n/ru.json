@@ -1,20 +1,12 @@
 {
   "label": "Панель разделов",
-  "section": {
-    "overview": "Обзор",
-    "config": "Конфигурация",
-    "proxies": "Прокси",
-    "connections": "Соединения"
-  },
   "nav": {
     "label": "Разделы панели",
     "collapse": "Свернуть панель",
     "expand": "Развернуть панель",
-    "soon": "скоро",
     "unavailable": "{{section}} — раздел ещё не сделан"
   },
   "daemon": {
-    "term": "демон",
     "silent": "не отвечает"
   },
   "service": {

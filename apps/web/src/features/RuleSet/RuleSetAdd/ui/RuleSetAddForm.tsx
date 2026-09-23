@@ -95,7 +95,7 @@ export function RuleSetAddForm({
           <Button type='submit'>{t('submit')}</Button>
           {onDone !== undefined && (
             <Button type='button' variant='ghost' onClick={onDone}>
-              {t('cancel')}
+              {t('action.cancel', { ns: 'shared' })}
             </Button>
           )}
         </div>
@@ -123,11 +123,11 @@ function ProviderField() {
       name='providerId'
       render={({ field }) => (
         <div className='flex flex-col gap-1.5'>
-          <Label htmlFor={id}>{t('field.provider.label')}</Label>
+          <Label htmlFor={id}>{t('ruleSet.source', { ns: 'shared' })}</Label>
           <Select
             items={[
               ...RULE_SET_PROVIDERS.map((provider) => ({ value: provider.id, label: provider.name })),
-              { value: CUSTOM_PROVIDER, label: t('field.provider.custom') },
+              { value: CUSTOM_PROVIDER, label: t('ruleSet.ownSource', { ns: 'shared' }) },
             ]}
             value={field.value}
             onValueChange={(value: string | null) => {
@@ -152,7 +152,7 @@ function ProviderField() {
                   {provider.name}
                 </SelectItem>
               ))}
-              <SelectItem value={CUSTOM_PROVIDER}>{t('field.provider.custom')}</SelectItem>
+              <SelectItem value={CUSTOM_PROVIDER}>{t('ruleSet.ownSource', { ns: 'shared' })}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -224,7 +224,9 @@ function CategoryField() {
                 </li>
               ))}
               {hidden > 0 && (
-                <li className='px-1 text-xs text-muted-foreground'>{t('field.category.more', { count: hidden })}</li>
+                <li className='px-1 text-xs text-muted-foreground'>
+                  {t('list.andMore', { ns: 'shared', count: hidden })}
+                </li>
               )}
             </ul>
           )}

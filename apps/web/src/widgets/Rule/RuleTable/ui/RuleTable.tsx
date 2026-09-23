@@ -107,7 +107,7 @@ export function RuleTable({
         <p role='status'>
           {rules.length === total
             ? t('count.rule', { ns: 'shared', count: total })
-            : t('footer.shown', { shown: rules.length, total })}
+            : t('list.shown', { ns: 'shared', shown: rules.length, total })}
         </p>
       </div>
     </section>

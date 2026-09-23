@@ -4,8 +4,6 @@
     "placeholder": "Name, source or category",
     "label": "Search the sets"
   },
-  "notFound": "Nothing matches this query.",
-  "resetFilter": "Reset the filter",
   "empty": {
     "title": "No sets yet",
     "description": "To send, say, all of YouTube through a proxy you do not have to list its domains by hand — someone has already collected and published them. Pick a source and a category, sing-box does the rest."

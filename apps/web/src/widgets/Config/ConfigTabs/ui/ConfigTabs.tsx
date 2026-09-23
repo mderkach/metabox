@@ -29,7 +29,7 @@ export function ConfigTabs({ config }: { config: ConfigDocument | null }) {
                   <span aria-disabled='true' title={t('unavailable')} className={cn(CONFIG_TAB_CLASS, 'font-normal')}>
                     <span className='text-muted-foreground'>{t(section.label)}</span>
                     {count !== null && <SectionCount count={count} />}
-                    <span className={CONFIG_TAB_SOON}>{t('soon')}</span>
+                    <span className={CONFIG_TAB_SOON}>{t('soon', { ns: 'shared' })}</span>
                   </span>
                 ) : (
                   <Link

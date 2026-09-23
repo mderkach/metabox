@@ -61,7 +61,7 @@ function errorText(meta: ErrorMeta, error: unknown): string {
     return i18next.t('failure.withReason', { ns: 'shared', action, reason });
   }
 
-  return action ?? reason ?? i18next.t('toast.error.unknown', { ns: 'shared' });
+  return action ?? reason ?? i18next.t('error.unknown', { ns: 'shared' });
 }
 
 export function showQueryError(meta: QueryMeta | undefined, error: unknown) {

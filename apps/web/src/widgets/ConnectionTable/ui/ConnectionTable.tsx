@@ -172,7 +172,7 @@ export function ConnectionTable({
           ref={scrollRef}
           data-virtual-viewport=''
           role={narrow ? 'list' : 'table'}
-          aria-label={t('label')}
+          aria-label={t('section.connections', { ns: 'shared' })}
           aria-rowcount={narrow ? undefined : visible.length + HEADER_ROWS}
           className='min-h-0 grow overflow-auto'
         >
@@ -229,8 +229,8 @@ export function ConnectionTable({
       <div className='flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-t border-border px-3.5 py-2 text-xs text-muted-foreground'>
         <p role='status'>
           {visible.length === total
-            ? t('footer.rows', { count: total })
-            : t('footer.shown', { shown: visible.length, total })}
+            ? t('count.connection', { ns: 'shared', count: total })
+            : t('list.shown', { ns: 'shared', shown: visible.length, total })}
         </p>
         <span className='grow' />
         {footer !== null && footer(shownRows)}

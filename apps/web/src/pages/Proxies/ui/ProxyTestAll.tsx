@@ -25,7 +25,7 @@ export function ProxyTestAll({ groups }: { groups: ProxyGroup[] }) {
         }
       }}
     >
-      {delay.isPending ? t('testAll.testing') : t('testAll.action')}
+      {delay.isPending ? t('delay.testing', { ns: 'shared' }) : t('testAll.action')}
     </Button>
   );
 }

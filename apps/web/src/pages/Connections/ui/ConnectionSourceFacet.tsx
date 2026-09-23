@@ -60,7 +60,9 @@ export function ConnectionSourceFacet({
       {groups.length > VISIBLE_SOURCES && (
         <li>
           <button type='button' aria-expanded={all} onClick={onToggleAll} className={cn(FACET_CLASS, FACET_MORE)}>
-            {all ? t('sources.collapse') : t('sources.more', { count: groups.length - VISIBLE_SOURCES })}
+            {all
+              ? t('list.collapse', { ns: 'shared' })
+              : t('list.more', { ns: 'shared', count: groups.length - VISIBLE_SOURCES })}
           </button>
         </li>
       )}

@@ -12,11 +12,9 @@
     "content": "Skip to content"
   },
   "config": {
-    "title": "Configuration",
     "draft": "draft"
   },
   "error": {
-    "title": "Something went wrong",
     "description": "This section failed to open because of an error in the panel itself. The config and sing-box on the router are not affected.",
     "reload": "Reload the page",
     "details": "Details for a bug report"

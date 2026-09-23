@@ -13,7 +13,7 @@ export function OverviewConnections({ runtime }: { runtime: OverviewRuntime }) {
   const { t } = useTranslation('pages/Overview');
 
   return (
-    <OverviewSection title={t('connections.title')} note={t('connections.note')}>
+    <OverviewSection title={t('section.connections', { ns: 'shared' })} note={t('connections.note')}>
       <div className='grid items-start gap-4 sm:grid-cols-2 xl:grid-cols-3'>
         <Card className={CARD_FLUSH}>
           <ul aria-label={t('connections.label')} className='grid grid-cols-2 gap-px bg-border'>
@@ -51,7 +51,6 @@ export function OverviewConnections({ runtime }: { runtime: OverviewRuntime }) {
           title={t('connections.topSources')}
           href='/connections'
           shares={runtime.summary.sources}
-          empty={t('connections.topSourcesEmpty')}
         />
         <div className='sm:col-span-2'>
           <ProxyLatency />

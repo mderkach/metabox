@@ -32,7 +32,7 @@ export function ProxiesPage() {
 
   return (
     <>
-      <PageHeader title={t('title')} actions={<ProxyTestAll groups={groups} />}>
+      <PageHeader title={t('section.proxies', { ns: 'shared' })} actions={<ProxyTestAll groups={groups} />}>
         <p className='text-xs text-muted-foreground'>{t('subtitle')}</p>
       </PageHeader>
 

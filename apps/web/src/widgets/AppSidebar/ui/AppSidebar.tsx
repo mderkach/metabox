@@ -91,7 +91,7 @@ export function AppSidebar() {
               {item.to !== undefined ? (
                 <Link
                   to={item.to}
-                  title={t(item.key)}
+                  title={t(item.key, { ns: 'shared' })}
                   // Ссылка сама помечает себя текущей по префиксу адреса; точное
                   // совпадение оставляет это ей, а вложенные пути решает `active`.
                   activeOptions={{ exact: true }}
@@ -105,20 +105,20 @@ export function AppSidebar() {
                   )}
                 >
                   <item.icon className='size-4 shrink-0' />
-                  {!sidebar.collapsed && t(item.key)}
+                  {!sidebar.collapsed && t(item.key, { ns: 'shared' })}
                 </Link>
               ) : (
                 <span
                   aria-disabled='true'
-                  title={t('nav.unavailable', { section: t(item.key) })}
+                  title={t('nav.unavailable', { section: t(item.key, { ns: 'shared' }) })}
                   className={cn(ITEM_CLASS, sidebar.collapsed && 'justify-center px-0', 'text-muted-foreground')}
                 >
                   <item.icon className='size-4 shrink-0' />
                   {!sidebar.collapsed && (
                     <>
-                      <span className='grow truncate'>{t(item.key)}</span>
+                      <span className='grow truncate'>{t(item.key, { ns: 'shared' })}</span>
                       <span className='shrink-0 rounded-sm bg-muted px-1 text-2xs tracking-wide text-muted-foreground uppercase'>
-                        {t('nav.soon')}
+                        {t('soon', { ns: 'shared' })}
                       </span>
                     </>
                   )}
@@ -139,7 +139,7 @@ export function AppSidebar() {
 
         {!sidebar.collapsed && (
           <dl className='flex items-baseline justify-between gap-2 text-xs'>
-            <dt className='text-muted-foreground'>{t('daemon.term')}</dt>
+            <dt className='text-muted-foreground'>{t('daemon.name', { ns: 'shared' })}</dt>
             <dd className='truncate font-mono text-muted-foreground'>
               {status.isSuccess ? status.data.version : t('daemon.silent')}
             </dd>

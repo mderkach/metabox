@@ -1,5 +1,4 @@
 {
-  "title": "Connections",
   "subtitle": "updates every second",
   "dropped": "updates not parsed: {{count}}",
   "resume": "Resume",
@@ -9,8 +8,7 @@
     "title": "Cut every live connection?",
     "description_one": "{{count}} live connection will be cut. Devices reconnect on their own, but downloads and calls in progress will break.",
     "description_other": "{{count}} live connections will be cut. Devices reconnect on their own, but downloads and calls in progress will break.",
-    "confirm": "Cut",
-    "cancel": "Cancel"
+    "confirm": "Cut"
   },
   "tab": {
     "active": "Active",
@@ -22,14 +20,10 @@
   },
   "sources": {
     "label": "Devices",
-    "all": "All",
-    "collapse": "Collapse",
-    "more": "{{count}} more"
+    "all": "All"
   },
   "shown": "{{shown}} of {{total}}",
   "closedNote": "Closed connections are collected by the panel: sing-box reports only live ones, so a connection that disappears between updates would otherwise vanish without a trace. The history lives while the tab is open.",
-  "notFound": "Nothing matches this query.",
-  "resetFilter": "Reset the filter",
   "empty": {
     "title": "No connections",
     "description": "The stream is running: rows appear as soon as traffic goes through sing-box."
@@ -40,12 +34,7 @@
   },
   "kinds": {
     "label": "Action",
-    "all": "Any",
-    "proxy": "through proxy",
-    "direct": "direct",
-    "block": "blocked",
-    "dns": "DNS hijack",
-    "other": "other"
+    "all": "Any"
   },
   "facets": {
     "label": "Filters",

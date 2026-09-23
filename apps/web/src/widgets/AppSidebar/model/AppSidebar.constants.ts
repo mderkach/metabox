@@ -4,7 +4,7 @@ import { Activity, Gauge, Share2, SlidersHorizontal } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 interface NavItem {
-  key: ParseKeys<'widgets/AppSidebar'>;
+  key: ParseKeys<'shared'>;
   icon: LucideIcon;
   /** Маршрут есть только у сделанных разделов: остальные пункты не кликаются. */
   to?: LinkProps['to'];

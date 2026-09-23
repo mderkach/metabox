@@ -1,12 +1,10 @@
 {
-  "title": "Proxies",
   "subtitle": "these actions change how sing-box runs, not the config",
   "groups": {
     "title": "Node groups"
   },
   "testAll": {
-    "action": "Test all",
-    "testing": "Testing"
+    "action": "Test all"
   },
   "providers": {
     "title": "Subscriptions",

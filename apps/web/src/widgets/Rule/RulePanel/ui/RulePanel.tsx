@@ -77,7 +77,7 @@ export function RulePanel({
           </h2>
           <p className='font-mono text-xs text-muted-foreground'>route.rules[{rule.index - 1}]</p>
         </div>
-        {!recognized && <Badge variant='outline'>{t('uncovered')}</Badge>}
+        {!recognized && <Badge variant='outline'>{t('rule.uncovered', { ns: 'shared' })}</Badge>}
         <Button variant='outline' size='icon-sm' aria-label={t('close')} onClick={onClose}>
           <X />
         </Button>
@@ -143,7 +143,7 @@ function RuleConditions({ rule }: { rule: RuleRow }) {
 
   return (
     <section className='flex flex-col gap-1.5'>
-      <h3 className={SECTION_LABEL}>{t('conditions.title')}</h3>
+      <h3 className={SECTION_LABEL}>{t('rule.conditions', { ns: 'shared' })}</h3>
       <dl className='flex flex-col gap-1'>
         {rule.matchers.map((matcher) => (
           <div key={matcher.key} className='flex gap-3 border-t border-border py-1.5 text-xs first:border-t-0'>

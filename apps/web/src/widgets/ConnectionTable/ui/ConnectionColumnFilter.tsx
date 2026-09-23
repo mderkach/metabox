@@ -37,7 +37,7 @@ export function ConnectionColumnFilter({
           <Button
             variant='ghost'
             size='icon-xs'
-            aria-label={text.length === 0 ? t('filter.label', { column: name }) : t('filter.active', { column: name })}
+            aria-label={text.length === 0 ? t('filter.title', { column: name }) : t('filter.active', { column: name })}
             className={cn(
               'text-muted-foreground hover:text-foreground',
               text.length > 0 && 'bg-selected text-foreground ring-1 ring-selected-edge'

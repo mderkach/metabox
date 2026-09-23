@@ -27,9 +27,7 @@
   },
   "matched": {
     "title": "Rule {{number}} matched",
-    "conditions": "Conditions",
     "action": "Action",
-    "unconditional": "no conditions",
     "open": "Open the rule in the editor"
   },
   "chain": {

@@ -158,7 +158,7 @@ export function DaemonService({
 
       <CardContent className='flex flex-col gap-3'>
         <dl className='text-sm'>
-          {state.managed && <Row label={t('row.uptime')} value={formatUptime(t, state.uptime)} />}
+          {state.managed && <Row label={t('stat.uptime', { ns: 'shared' })} value={formatUptime(t, state.uptime)} />}
           <Row label={t('row.binary')} value={state.binary} mono />
           {process !== undefined && (
             <Row label={t('row.processMemory')} value={`${formatBytes(process.rss)} · pid ${String(process.pid)}`} />

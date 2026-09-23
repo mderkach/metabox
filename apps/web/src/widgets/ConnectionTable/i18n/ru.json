@@ -1,5 +1,4 @@
 {
-  "label": "Соединения",
   "column": {
     "source": "Откуда",
     "host": "Куда",
@@ -9,8 +8,7 @@
     "chain": "Цепочка",
     "rate": "Скорость",
     "volume": "Объём",
-    "age": "Время",
-    "rowActions": "Действия над строкой"
+    "age": "Время"
   },
   "fields": {
     "title": "Какие поля показывать",
@@ -21,20 +19,13 @@
     "hidden_few": "Поля · {{count}} скрыто",
     "hidden_many": "Поля · {{count}} скрыто"
   },
-  "footer": {
-    "rows_one": "{{count}} соединение",
-    "rows_few": "{{count}} соединения",
-    "rows_many": "{{count}} соединений",
-    "shown": "Показано {{shown}} из {{total}}"
-  },
+  "footer": {},
   "row": {
     "explain": "Почему соединение {{host}} пошло этим маршрутом",
-    "close": "Закрыть соединение {{host}}",
-    "unconditional": "без условий"
+    "close": "Закрыть соединение {{host}}"
   },
   "filter": {
     "title": "Фильтр по колонке {{column}}",
-    "label": "Фильтр по колонке {{column}}",
     "active": "Фильтр по колонке {{column}}: активен",
     "input": "Подстрока в колонке {{column}}",
     "placeholder": "Подстрока",

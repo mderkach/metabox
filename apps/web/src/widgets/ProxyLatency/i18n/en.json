@@ -1,12 +1,5 @@
 {
   "title": "Node delay",
   "scale": "scale 0–{{ceiling}} ms",
-  "testing": "Testing",
-  "test": "Test",
-  "empty": "No groups with a selected node",
-  "node": {
-    "untested": "not tested",
-    "timedOut": "no answer",
-    "delay": "{{value}} ms"
-  }
+  "empty": "No groups with a selected node"
 }

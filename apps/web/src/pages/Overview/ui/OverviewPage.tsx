@@ -27,7 +27,7 @@ export function OverviewPage() {
 
   return (
     <>
-      <PageHeader title={t('title')}>
+      <PageHeader title={t('section.overview', { ns: 'shared' })}>
         <p className='flex items-center gap-2 text-sm text-muted-foreground'>
           <span className={cn('size-2 shrink-0 rounded-full', VERDICT_DOT[verdict.tone])} aria-hidden='true' />
           {verdict.text}

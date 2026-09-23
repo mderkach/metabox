@@ -46,7 +46,7 @@ export function ProxyGroupCard({ group }: { group: ProxyGroup }) {
             delay.mutate(group.name);
           }}
         >
-          {testing ? t('card.testing') : t('card.test')}
+          {testing ? t('delay.testing', { ns: 'shared' }) : t('delay.test', { ns: 'shared' })}
         </Button>
       </CardHeader>
 

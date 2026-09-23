@@ -19,7 +19,9 @@ function RuleMatcherChipProto({ matcher }: { matcher: RuleMatcher }) {
           {value}
         </span>
       ))}
-      {hidden > 0 && <span className='text-muted-foreground'>{t('matcher.more', { count: hidden })}</span>}
+      {hidden > 0 && (
+        <span className='text-muted-foreground'>{t('list.andMore', { ns: 'shared', count: hidden })}</span>
+      )}
     </span>
   );
 }

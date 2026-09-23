@@ -68,7 +68,7 @@ export function OverviewDevice({ system }: { system: SystemStat | null }) {
             }
           />
           <OverviewTile
-            label={t('device.uptime')}
+            label={t('stat.uptime', { ns: 'shared' })}
             value={system === null ? null : formatAge(system.uptime)}
             context={system === null ? null : t('device.sinceBoot')}
           />

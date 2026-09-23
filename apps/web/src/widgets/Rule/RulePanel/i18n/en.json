@@ -1,6 +1,5 @@
 {
   "title": "Rule {{index}}",
-  "uncovered": "not covered by the UI",
   "close": "Close the panel",
   "unknown": {
     "title": "The schema does not know this node",
@@ -9,7 +8,6 @@
   "tab": { "form": "Form" },
   "note": "An edit changes one line of the file: key order and unknown nodes stay as they were.",
   "conditions": {
-    "title": "Conditions",
     "unknown": "Conditions are not shown: the schema does not know the fields of this rule. They can be read and edited on the JSON tab.",
     "empty": "No conditions — the rule applies to all traffic and ends the list.",
     "group": "Logical rule: conditions are joined by «{{mode}}» in nested branches. They can be read and edited on the JSON tab.",

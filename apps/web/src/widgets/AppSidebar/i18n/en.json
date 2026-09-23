@@ -1,20 +1,12 @@
 {
   "label": "Section panel",
-  "section": {
-    "overview": "Overview",
-    "config": "Configuration",
-    "proxies": "Proxies",
-    "connections": "Connections"
-  },
   "nav": {
     "label": "Panel sections",
     "collapse": "Collapse the sidebar",
     "expand": "Expand the sidebar",
-    "soon": "soon",
     "unavailable": "{{section}} — the section is not built yet"
   },
   "daemon": {
-    "term": "daemon",
     "silent": "not responding"
   },
   "service": {

@@ -2,6 +2,7 @@ import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { toAreaGeometry } from '@shared/lib/chart';
+import { SECONDS_IN_MINUTE } from '@shared/lib/time';
 import { Card, CardContent, CardHeader, SECTION_LABEL, SkeletonRows } from '@shared/ui';
 
 /** Координаты в долях области: сетка растягивается по месту, подписи остаются HTML. */
@@ -14,8 +15,12 @@ const HEADROOM = 1.2;
 const QUARTERS = 4;
 const GRID = Array.from({ length: QUARTERS - 1 }, (_, index) => ((index + 1) * PLOT) / QUARTERS);
 
-/** Отсечки времени: минута делится на четыре шага по пятнадцать секунд. */
-const TIME_TICKS = ['tick.minus60', 'tick.minus45', 'tick.minus30', 'tick.minus15', 'tick.now'] as const;
+/** Отсечки времени, секунды назад: минута делится на четыре шага. */
+const TICK_STEPS = 4;
+const TIME_TICKS = Array.from(
+  { length: TICK_STEPS + 1 },
+  (_, index) => SECONDS_IN_MINUTE - (index * SECONDS_IN_MINUTE) / TICK_STEPS
+);
 
 /**
  * Открытые соединения за минуту. Буфер копит панель: рантайм отдаёт только
@@ -92,7 +97,9 @@ export function ConnectionHistory({ samples }: { samples: number[] }) {
             <span className='w-10 shrink-0' aria-hidden='true' />
             <span className='flex min-w-0 grow justify-between'>
               {TIME_TICKS.map((tick) => (
-                <span key={tick}>{t(tick)}</span>
+                <span key={tick}>
+                  {tick === 0 ? t('chart.now', { ns: 'shared' }) : t('chart.ago', { ns: 'shared', value: tick })}
+                </span>
               ))}
             </span>
           </figcaption>

@@ -13,17 +13,12 @@
   "card": {
     "manual": "you pick the node",
     "automatic": "the node is picked automatically, by delay",
-    "test": "Test",
-    "testing": "Testing",
     "testGroup": "Test the nodes of group {{group}}",
     "current": "now:",
     "none": "not selected",
     "hint": "To pin a node by hand, the group in the config must be a selector."
   },
   "node": {
-    "untested": "not tested",
-    "timedOut": "no answer",
-    "delay": "{{value}} ms",
     "selected": "selected now",
     "label": "{{name}}, {{type}}, {{delay}}"
   }

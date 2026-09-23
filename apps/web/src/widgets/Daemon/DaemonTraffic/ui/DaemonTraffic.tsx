@@ -26,7 +26,7 @@ function toTimeLabels(t: TFunction<'widgets/Daemon/DaemonTraffic'>, splits: numb
   return splits.map((value) => {
     const age = Math.round(max - value);
 
-    return age === 0 ? t('tick.now') : t('tick.ago', { value: age });
+    return age === 0 ? t('chart.now', { ns: 'shared' }) : t('chart.ago', { ns: 'shared', value: age });
   });
 }
 

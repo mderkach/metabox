@@ -16,7 +16,8 @@ export function ConnectionSummaryTop({
   title: string;
   href?: string;
   shares: ConnectionShare[];
-  empty: string;
+  /** Подпись пустого ряда; без неё — общая «живых соединений нет». */
+  empty?: string;
 }) {
   const { t } = useTranslation('widgets/ConnectionSummary');
   const bars: SummaryBar[] = shares.map((share) => ({
@@ -32,7 +33,7 @@ export function ConnectionSummaryTop({
 
   return (
     <ConnectionSummaryPanel title={title} href={href}>
-      <ConnectionSummaryBars bars={bars} empty={empty} format={formatRate} />
+      <ConnectionSummaryBars bars={bars} empty={empty ?? t('empty')} format={formatRate} />
     </ConnectionSummaryPanel>
   );
 }

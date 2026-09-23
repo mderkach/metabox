@@ -16,9 +16,6 @@
         "done": "Connections dropped"
       }
     },
-    "error": {
-      "unknown": "Something went wrong"
-    },
     "proxy": {
       "delay": {
         "failed": "Could not measure the delay"
@@ -38,7 +35,8 @@
     }
   },
   "daemon": {
-    "silent": "the daemon is not responding"
+    "silent": "the daemon is not responding",
+    "name": "daemon"
   },
   "response": {
     "unparsed": "{{source}}: response not parsed"
@@ -128,5 +126,57 @@
     "proxies": "Could not read the proxy list",
     "providers": "Could not read the subscriptions",
     "route": "Could not explain the route"
+  },
+  "list": {
+    "notFound": "Nothing matches this query.",
+    "resetFilter": "Reset the filter",
+    "shown": "Showing {{shown}} of {{total}}",
+    "rowActions": "Row actions",
+    "more": "{{count}} more",
+    "collapse": "Collapse",
+    "andMore": "and {{count}} more"
+  },
+  "delay": {
+    "value": "{{value}} ms",
+    "untested": "not tested",
+    "timedOut": "no answer",
+    "test": "Test",
+    "testing": "Testing"
+  },
+  "route": {
+    "proxy": "through the proxy",
+    "direct": "direct",
+    "block": "blocked",
+    "dns": "DNS hijack",
+    "other": "other"
+  },
+  "rule": {
+    "unconditional": "no conditions",
+    "uncovered": "not covered by the UI",
+    "conditions": "Conditions"
+  },
+  "chart": {
+    "now": "now",
+    "ago": "−{{value}} s"
+  },
+  "soon": "soon",
+  "action": {
+    "cancel": "Cancel"
+  },
+  "section": {
+    "overview": "Overview",
+    "config": "Configuration",
+    "proxies": "Proxies",
+    "connections": "Connections"
+  },
+  "stat": {
+    "uptime": "Uptime"
+  },
+  "ruleSet": {
+    "source": "Source",
+    "ownSource": "custom address"
+  },
+  "error": {
+    "unknown": "Something went wrong"
   }
 }

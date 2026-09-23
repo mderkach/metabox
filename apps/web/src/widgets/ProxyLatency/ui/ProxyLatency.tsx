@@ -54,11 +54,13 @@ function toSelected(groups: ProxyGroup[]): GroupDelay[] {
 
 function toDelayLabel(t: TFunction<'widgets/ProxyLatency'>, node: ProxyNode): string {
   if (node.delay === null) {
-    return t('node.untested');
+    return t('delay.untested', { ns: 'shared' });
   }
 
   // Отказ соединиться, а не задержка: рантайм отдаёт его числом 65535.
-  return node.delay >= DELAY_TIMEOUT ? t('node.timedOut') : t('node.delay', { value: node.delay });
+  return node.delay >= DELAY_TIMEOUT
+    ? t('delay.timedOut', { ns: 'shared' })
+    : t('delay.value', { ns: 'shared', value: node.delay });
 }
 
 /** Длина столбца — доля от потолка шкалы; непроверенный узел столбца не получает вовсе. */
@@ -95,7 +97,7 @@ export function ProxyLatency() {
             }
           }}
         >
-          {delay.isPending ? t('testing') : t('test')}
+          {delay.isPending ? t('delay.testing', { ns: 'shared' }) : t('delay.test', { ns: 'shared' })}
         </Button>
       </CardHeader>
 
@@ -118,7 +120,7 @@ export function ProxyLatency() {
                 </li>
               ))}
             </ul>
-            <ValueAxis scale={SCALE} format={(value) => t('node.delay', { value })} />
+            <ValueAxis scale={SCALE} format={(value) => t('delay.value', { ns: 'shared', value })} />
           </div>
         )}
       </CardContent>

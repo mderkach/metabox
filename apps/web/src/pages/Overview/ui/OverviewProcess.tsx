@@ -55,7 +55,7 @@ export function OverviewProcess({ runtime }: { runtime: OverviewRuntime }) {
                 aria-hidden='true'
                 className={cn('size-2 shrink-0 rounded-full', status.isSuccess ? 'bg-signal-ok' : 'bg-signal-bad')}
               />
-              {status.isSuccess ? t('process.daemonUp') : t('process.daemonDown')}
+              {status.isSuccess ? t('process.daemonUp') : t('daemon.silent', { ns: 'shared' })}
             </p>
             <p className='flex items-center gap-1.5 text-xs'>
               <span
@@ -69,7 +69,7 @@ export function OverviewProcess({ runtime }: { runtime: OverviewRuntime }) {
           <CardContent>
             <dl>
               <ProcessRow
-                label={t('process.daemon')}
+                label={t('daemon.name', { ns: 'shared' })}
                 value={status.isPending ? null : (status.data?.version ?? '—')}
                 mono
               />

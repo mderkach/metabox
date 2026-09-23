@@ -21,7 +21,7 @@ export function RuleTableHeader() {
         </span>
 
         <span role='columnheader' className={RULE_COLUMN.Conditions}>
-          {t('column.conditions')}
+          {t('rule.conditions', { ns: 'shared' })}
         </span>
 
         <span role='columnheader' className={RULE_COLUMN.TargetGroup}>

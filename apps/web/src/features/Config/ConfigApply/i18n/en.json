@@ -50,8 +50,7 @@
       "content": "Content"
     },
     "skipped_one": "… {{count}} matching line",
-    "skipped_other": "… {{count}} matching lines",
-    "apply": "Apply"
+    "skipped_other": "… {{count}} matching lines"
   },
   "history": {
     "open": "Version history",

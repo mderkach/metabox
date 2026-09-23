@@ -16,7 +16,7 @@ export function RuleSetTableHeader() {
         </span>
 
         <span role='columnheader' className={RULE_SET_COLUMN.Source}>
-          {t('column.source')}
+          {t('ruleSet.source', { ns: 'shared' })}
         </span>
 
         <span role='columnheader' className={RULE_SET_COLUMN.Usage}>
@@ -24,7 +24,7 @@ export function RuleSetTableHeader() {
         </span>
 
         <span role='columnheader' className={RULE_SET_COLUMN.RowActions}>
-          <span className='sr-only'>{t('column.rowActions')}</span>
+          <span className='sr-only'>{t('list.rowActions', { ns: 'shared' })}</span>
         </span>
       </div>
     </div>

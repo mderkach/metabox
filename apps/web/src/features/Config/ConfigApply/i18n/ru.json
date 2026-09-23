@@ -51,8 +51,7 @@
     },
     "skipped_one": "… {{count}} совпадающая строка",
     "skipped_few": "… {{count}} совпадающие строки",
-    "skipped_many": "… {{count}} совпадающих строк",
-    "apply": "Применить"
+    "skipped_many": "… {{count}} совпадающих строк"
   },
   "history": {
     "open": "История версий",

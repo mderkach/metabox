@@ -2,20 +2,12 @@
   "label": "Routing rules",
   "column": {
     "index": "#",
-    "conditions": "Conditions",
     "target": "Outcome"
-  },
-  "footer": {
-    "shown": "Showing {{shown}} of {{total}}"
   },
   "row": {
     "label": "Rule {{index}}, outcome {{target}}",
     "unconditional": "no conditions — applies to all traffic",
-    "unknown": "conditions are not shown — the schema does not know this rule",
-    "uncovered": "not covered by the UI"
-  },
-  "matcher": {
-    "more": "{{count}} more"
+    "unknown": "conditions are not shown — the schema does not know this rule"
   },
   "group": {
     "and": "and",

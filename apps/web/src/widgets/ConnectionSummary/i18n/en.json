@@ -1,11 +1,6 @@
 {
   "action": {
-    "title": "Where the traffic goes",
-    "proxy": "through the proxy",
-    "direct": "direct",
-    "block": "blocked",
-    "dns": "DNS hijack",
-    "other": "other"
+    "title": "Where the traffic goes"
   },
   "network": { "title": "Network types" },
   "volume": {

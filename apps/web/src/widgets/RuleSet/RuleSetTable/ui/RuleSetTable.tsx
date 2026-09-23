@@ -62,7 +62,7 @@ export function RuleSetTable({
         <p role='status'>
           {sets.length === total
             ? t('footer.rows', { count: total })
-            : t('footer.shown', { shown: sets.length, total })}
+            : t('list.shown', { ns: 'shared', shown: sets.length, total })}
         </p>
       </div>
     </section>

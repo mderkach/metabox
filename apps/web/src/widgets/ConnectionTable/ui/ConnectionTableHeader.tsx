@@ -80,7 +80,7 @@ export function ConnectionTableHeader({
         })}
 
         <span role='columnheader' className={CONNECTION_COLUMN.RowActions}>
-          <span className='sr-only'>{t('column.rowActions')}</span>
+          <span className='sr-only'>{t('list.rowActions', { ns: 'shared' })}</span>
         </span>
       </div>
     </div>

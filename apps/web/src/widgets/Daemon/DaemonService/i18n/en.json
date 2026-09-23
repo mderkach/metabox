@@ -15,7 +15,6 @@
     "start": "Start"
   },
   "row": {
-    "uptime": "Uptime",
     "binary": "sing-box version",
     "processMemory": "Process memory",
     "goMemory": "Go memory"

@@ -15,7 +15,6 @@
     "start": "Запустить"
   },
   "row": {
-    "uptime": "Время работы",
     "binary": "Версия sing-box",
     "processMemory": "Память процесса",
     "goMemory": "Память Go"

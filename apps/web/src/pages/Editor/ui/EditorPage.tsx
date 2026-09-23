@@ -166,7 +166,9 @@ function RuleTargetFacets({ filter }: { filter: RuleFilterState }) {
             }}
             className={cn(FACET_CLASS, FACET_MORE)}
           >
-            {allTargets ? t('targets.collapse') : t('targets.more', { count: filter.targets.length - VISIBLE_TARGETS })}
+            {allTargets
+              ? t('list.collapse', { ns: 'shared' })
+              : t('list.more', { ns: 'shared', count: filter.targets.length - VISIBLE_TARGETS })}
           </button>
         </li>
       )}
@@ -180,7 +182,7 @@ function EmptyState({ filter }: { filter: RuleFilterState }) {
   return (
     <Empty>
       <EmptyHeader>
-        <EmptyTitle>{t('notFound')}</EmptyTitle>
+        <EmptyTitle>{t('list.notFound', { ns: 'shared' })}</EmptyTitle>
       </EmptyHeader>
       <EmptyContent>
         <Button
@@ -191,7 +193,7 @@ function EmptyState({ filter }: { filter: RuleFilterState }) {
             filter.setTarget(null);
           }}
         >
-          {t('resetFilter')}
+          {t('list.resetFilter', { ns: 'shared' })}
         </Button>
       </EmptyContent>
     </Empty>

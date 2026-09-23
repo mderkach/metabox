@@ -22,7 +22,7 @@ export function ConfigLayout() {
 
   return (
     <>
-      <PageHeader title={t('config.title')} actions={<ConfigApplyHistory />}>
+      <PageHeader title={t('section.config', { ns: 'shared' })} actions={<ConfigApplyHistory />}>
         <p className='font-mono text-xs text-muted-foreground'>{configPath}</p>
         {document.isDirty && <Badge variant='secondary'>{t('config.draft')}</Badge>}
       </PageHeader>

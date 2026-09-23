@@ -23,7 +23,7 @@ export function ErrorPage({ error }: ErrorComponentProps) {
           <TriangleAlert />
         </EmptyMedia>
         <EmptyTitle>
-          <h1>{t('error.title')}</h1>
+          <h1>{t('error.unknown', { ns: 'shared' })}</h1>
         </EmptyTitle>
         <EmptyDescription>{reason ?? t('error.description')}</EmptyDescription>
       </EmptyHeader>

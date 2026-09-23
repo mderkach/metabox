@@ -1,5 +1,4 @@
 {
-  "label": "Connections",
   "column": {
     "source": "From",
     "host": "To",
@@ -9,8 +8,7 @@
     "chain": "Chain",
     "rate": "Rate",
     "volume": "Volume",
-    "age": "Time",
-    "rowActions": "Row actions"
+    "age": "Time"
   },
   "fields": {
     "title": "Fields to show",
@@ -20,19 +18,13 @@
     "hidden_one": "Fields · {{count}} hidden",
     "hidden_other": "Fields · {{count}} hidden"
   },
-  "footer": {
-    "rows_one": "{{count}} connection",
-    "rows_other": "{{count}} connections",
-    "shown": "Showing {{shown}} of {{total}}"
-  },
+  "footer": {},
   "row": {
     "explain": "Why connection {{host}} took this route",
-    "close": "Close connection {{host}}",
-    "unconditional": "no conditions"
+    "close": "Close connection {{host}}"
   },
   "filter": {
     "title": "Filter by {{column}}",
-    "label": "Filter by column {{column}}",
     "active": "Filter by column {{column}}: active",
     "input": "Substring in column {{column}}",
     "placeholder": "Substring",

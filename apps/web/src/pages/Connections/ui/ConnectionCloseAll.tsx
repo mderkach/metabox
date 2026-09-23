@@ -54,7 +54,7 @@ export function ConnectionCloseAll({
         </AlertDialogHeader>
 
         <AlertDialogFooter>
-          <AlertDialogCancel>{t('closeAll.cancel')}</AlertDialogCancel>
+          <AlertDialogCancel>{t('action.cancel', { ns: 'shared' })}</AlertDialogCancel>
           <AlertDialogAction variant='destructive' onClick={onConfirmClick}>
             {t('closeAll.confirm')}
           </AlertDialogAction>

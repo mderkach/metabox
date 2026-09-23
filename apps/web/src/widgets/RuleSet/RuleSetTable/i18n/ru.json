@@ -2,21 +2,16 @@
   "title": "Подключённые сеты",
   "column": {
     "set": "Сет",
-    "source": "Источник",
-    "usage": "Использование",
-    "rowActions": "Действия над строкой"
+    "usage": "Использование"
   },
   "footer": {
     "rows_one": "{{count}} сет",
     "rows_few": "{{count}} сета",
-    "rows_many": "{{count}} сетов",
-    "shown": "Показано {{shown}} из {{total}}"
+    "rows_many": "{{count}} сетов"
   },
   "type": { "local": "файл на устройстве", "inline": "правила в конфиге" },
   "row": {
     "untagged": "без имени",
-    "uncovered": "UI не покрывает",
-    "ownSource": "свой адрес",
     "interval": "обновляется {{interval}}",
     "detour": "через {{detour}}",
     "unused": "ни в одном правиле",
