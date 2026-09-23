@@ -101,3 +101,31 @@ func TestDeviceKeepsPeaksAndAveragesMemory(t *testing.T) {
 		t.Errorf("память шага и слияния — среднее: %+v", points[0])
 	}
 }
+
+// График минуты берёт последние сэмплы как есть: демон держит их, пока панель
+// закрыта, и отдаёт ровно минуту.
+func TestTrafficKeepsLastMinuteRaw(t *testing.T) {
+	traffic := history.New(10, 10, 4)
+
+	for value := range int64(history.RecentPoints + 5) {
+		traffic.Record(value, value*10)
+	}
+
+	recent := traffic.Recent()
+	if len(recent) != history.RecentPoints || recent[0].Up != 5 || recent[len(recent)-1].Down != 640 {
+		t.Errorf("последняя минута: получили %d точек, первая %+v, последняя %+v", len(recent), recent[0], recent[len(recent)-1])
+	}
+}
+
+func TestConnectionsKeepLastMinute(t *testing.T) {
+	var connections history.Connections
+
+	for count := range history.RecentPoints + 3 {
+		connections.Record(count)
+	}
+
+	recent := connections.Recent()
+	if len(recent) != history.RecentPoints || recent[0] != 3 {
+		t.Errorf("последняя минута соединений: получили %d точек, первая %d", len(recent), recent[0])
+	}
+}

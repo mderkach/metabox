@@ -132,6 +132,11 @@ interface ConnectionState {
   /** Когда пришёл прошлый разобранный снапшот: от него считается скорость. */
   sampledAt: number | null;
   apply: (snapshot: unknown) => void;
+  /**
+   * Заполняет пустой буфер числа соединений минутой, которую копил демон:
+   * график открывается полным. Буфер, в который поток уже писал, не трогается.
+   */
+  seedHistory: (counts: number[]) => void;
   setPaused: (paused: boolean) => void;
   addReader: () => void;
   removeReader: () => void;
@@ -254,6 +259,11 @@ const ConnectionStateProto = stateCreator<ConnectionState>(
           summary: toSummary(active),
         };
       });
+    },
+    seedHistory: (counts) => {
+      set((state) =>
+        state.history.length > 0 || counts.length === 0 ? state : { history: counts.slice(-HISTORY_POINTS) }
+      );
     },
     reset: () => {
       set({

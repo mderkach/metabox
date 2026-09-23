@@ -48,7 +48,7 @@
     "ofTotal": "of {{total}}",
     "sinceBoot": "since the last boot",
     "waiting": "waiting for a snapshot",
-    "trend": "over {{window}} · {{from}} to {{to}}"
+    "trend": "over {{window}} · {{from}} to {{to}} · scale up to {{ceiling}}"
   },
   "process": {
     "title": "Processes",

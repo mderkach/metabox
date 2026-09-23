@@ -190,7 +190,8 @@ func run(log *slog.Logger, s settings) error {
 
 	// Счёт правил, как и учёт трафика, идёт с запуска демона и не ждёт панель:
 	// соединение, не замеченное вовремя, задним числом не засчитать.
-	hits := route.NewCounter(source, log, connectionsInterval)
+	connectionSizes := &history.Connections{}
+	hits := route.NewCounter(source, log, connectionsInterval, connectionSizes)
 	hits.Start()
 	defer hits.Close()
 
@@ -205,7 +206,7 @@ func run(log *slog.Logger, s settings) error {
 		Clash:          clashHandler,
 		Explain:        route.NewExplainer(source),
 		Hits:           hits,
-		History:        historyOf(traffic, deviceHistory),
+		History:        historyOf(traffic, deviceHistory, connectionSizes),
 		Runtime:        sysinfo.Alive,
 		ConfigPath:     store.Path(),
 	})
@@ -326,13 +327,16 @@ func systemState(reader *device.Reader, log *slog.Logger) events.SystemReader {
 // показания платы одним ответом, а колец у них два — шаг считается по-разному.
 type historyReader struct {
 	*history.Traffic
-	device *history.Device
+	device      *history.Device
+	connections *history.Connections
 }
 
 func (h historyReader) Device() []history.DevicePoint { return h.device.Points() }
 
-func historyOf(traffic *history.Traffic, device *history.Device) httpapi.HistoryReader {
-	return historyReader{Traffic: traffic, device: device}
+func (h historyReader) Connections() []int { return h.connections.Recent() }
+
+func historyOf(traffic *history.Traffic, device *history.Device, connections *history.Connections) httpapi.HistoryReader {
+	return historyReader{Traffic: traffic, device: device, connections: connections}
 }
 
 // clashPort отдаёт порт контроллера из применённого конфига: по нему демон

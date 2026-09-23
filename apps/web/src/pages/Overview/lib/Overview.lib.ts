@@ -3,14 +3,17 @@ import { useTranslation } from 'react-i18next';
 
 import {
   ConnectionState,
+  ConnectionStore,
   useConnectionCounts,
   type ConnectionSummary,
   type ConnectionTotals,
 } from '@entities/Connection';
 import {
   RuntimeState,
+  RuntimeStore,
   SERVICE_STATUS,
   useServiceState,
+  useTrafficHistory,
   useTrafficNow,
   type SystemStat,
   type TrafficSample,
@@ -38,6 +41,8 @@ export interface OverviewRuntime {
   now: TrafficSample;
   peakDown: number;
   peakUp: number;
+  /** Пик скорости в любую сторону за историю демона: верх шкалы графика трафика. */
+  historyPeak: number;
   memory: number;
   totals: ConnectionTotals;
   /** Показания устройства; `null` — снимок ещё не приходил. */
@@ -56,6 +61,8 @@ export interface OverviewRuntime {
   awaiting: boolean;
   /** Когда пришёл последний кадр трафика, миллисекунды эпохи. */
   sampledAt: number | null;
+  /** Когда получена последняя точка трафика: от неё считается время графика. */
+  trafficAt: number | null;
   /** Снимка соединений ещё не было: счётчики показывают загрузку, а не ноль. */
   connectionsAwaiting: boolean;
 }
@@ -70,6 +77,7 @@ export function useOverviewRuntime(): OverviewRuntime {
   const now = useTrafficNow();
   const memory = RuntimeState.use.memoryNow();
   const sampledAt = RuntimeState.use.sampledAt();
+  const trafficAt = RuntimeState.use.trafficAt();
   const system = RuntimeState.use.system();
   const uplink = RuntimeState.use.uplink();
   const totals = ConnectionState.use.totals();
@@ -77,6 +85,30 @@ export function useOverviewRuntime(): OverviewRuntime {
   const history = ConnectionState.use.history();
   const counts = useConnectionCounts();
   const connectionsAt = ConnectionState.use.sampledAt();
+  const trafficHistory = useTrafficHistory();
+  const recent = trafficHistory.data?.recent;
+  const points = trafficHistory.data?.points;
+  const connectionCounts = trafficHistory.data?.connections;
+
+  // Графики минуты открываются тем, что копил демон, а не пустыми: панель
+  // открывают не всегда, а поток знает только то, что было при открытой вкладке.
+  useEffect(
+    function seedMinuteCharts() {
+      if (recent !== undefined) {
+        RuntimeStore.getState().seedTraffic(recent);
+      }
+
+      if (connectionCounts !== undefined) {
+        ConnectionStore.getState().seedHistory(connectionCounts);
+      }
+    },
+    [recent, connectionCounts]
+  );
+
+  const historyPeak = useMemo(
+    () => [...(points ?? []), ...(recent ?? [])].reduce((max, sample) => Math.max(max, sample.down, sample.up), 0),
+    [points, recent]
+  );
 
   // Обрыв потока сам о себе не сообщает: кадры просто перестают приходить, и
   // без своего тика экран навсегда остался бы с последним «живым» состоянием.
@@ -105,6 +137,7 @@ export function useOverviewRuntime(): OverviewRuntime {
     now,
     peakDown: peaks.down,
     peakUp: peaks.up,
+    historyPeak,
     memory,
     totals,
     system,
@@ -116,6 +149,7 @@ export function useOverviewRuntime(): OverviewRuntime {
     live: sampledAt !== null && Math.max(checkedAt, sampledAt) - sampledAt < STALE_AFTER,
     awaiting: sampledAt === null,
     sampledAt,
+    trafficAt,
     connectionsAwaiting: connectionsAt === null,
   };
 }

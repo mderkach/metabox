@@ -1,15 +1,13 @@
 import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { toAreaGeometry } from '@shared/lib/chart';
+import { COUNT_STEPS, toAreaGeometry, toValueScale } from '@shared/lib/chart';
 import { SECONDS_IN_MINUTE } from '@shared/lib/time';
+import { useStickyCeiling } from '@shared/lib/useStickyCeiling';
 import { Card, CardContent, CardHeader, SECTION_LABEL, SkeletonRows } from '@shared/ui';
 
 /** Координаты в долях области: сетка растягивается по месту, подписи остаются HTML. */
 const PLOT = 100;
-
-/** Запас над пиком: без него ровный ряд заливает область целиком. */
-const HEADROOM = 1.2;
 
 /** Линии сетки: по ним читается половина и четверти пика. */
 const QUARTERS = 4;
@@ -23,15 +21,17 @@ const TIME_TICKS = Array.from(
 );
 
 /**
- * Открытые соединения за минуту. Буфер копит панель: рантайм отдаёт только
- * снимок живых, и число открытых в прошлую секунду нигде не хранится.
+ * Открытые соединения за минуту. Живой буфер копит панель, а открывается он
+ * минутой, которую держит демон: рантайм отдаёт только снимок живых.
  */
 export function ConnectionHistory({ samples }: { samples: number[] }) {
   const { t } = useTranslation('widgets/ConnectionHistory');
   const peak = Math.max(...samples, 1);
   // Подписана верхняя кромка, а не пик: геометрия строится от потолка, и пик,
   // напечатанный у края, обещал бы ряду высоту, которой он не достигает.
-  const ceiling = Math.ceil(peak * HEADROOM);
+  // Кромка круглая с запасом на колебания: число соединений гуляет каждую
+  // секунду, и кромка по пику меняла бы подпись оси на каждом кадре.
+  const ceiling = useStickyCeiling(toValueScale(peak, COUNT_STEPS).ceiling);
   const geometry = toAreaGeometry(samples, ceiling, PLOT, PLOT);
   const gradient = useId();
 

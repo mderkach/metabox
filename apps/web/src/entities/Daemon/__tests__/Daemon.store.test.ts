@@ -137,4 +137,26 @@ describe('время точек трафика', () => {
   it('раскладывает точки назад от последней с шагом потока, а не по времени прихода', () => {
     expect(toTrafficTimes(3, 10_000)).toEqual([8, 9, 10]);
   });
+
+  it('заполняет пустой буфер трафика минутой от демона, а заполненный не трогает', () => {
+    const store = RuntimeStore.getState();
+
+    store.reset();
+    store.seedTraffic([
+      { down: 1, up: 2 },
+      { down: 3, up: 4 },
+    ]);
+
+    expect(RuntimeStore.getState().traffic).toEqual([
+      { down: 1, up: 2 },
+      { down: 3, up: 4 },
+    ]);
+    expect(RuntimeStore.getState().trafficAt).not.toBeNull();
+    // Минута от демона — не кадр потока: живым поток она не делает.
+    expect(RuntimeStore.getState().sampledAt).toBeNull();
+
+    store.seedTraffic([{ down: 9, up: 9 }]);
+
+    expect(RuntimeStore.getState().traffic).toHaveLength(2);
+  });
 });

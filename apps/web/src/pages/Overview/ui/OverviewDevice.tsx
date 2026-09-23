@@ -92,7 +92,6 @@ export function OverviewDevice({ system }: { system: SystemStat | null }) {
               <OverviewTrend
                 samples={deviceHistory.map((point) => point.memory)}
                 stepSeconds={stepSeconds}
-                capacity={system?.memory.total}
                 format={formatBytes}
                 label={t('device.memoryHistory')}
               />

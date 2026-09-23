@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  COUNT_STEPS,
   toSparkCeiling,
   toStickyCeiling,
   BYTE_STEPS,
@@ -10,9 +11,14 @@ import {
   toPercents,
   toShare,
   toTimeTicks,
-  toTimeWindow,
   toValueScale,
 } from '../chart';
+
+describe('COUNT_STEPS', () => {
+  it('даёт круглую кромку для числа соединений', () => {
+    expect(toValueScale(207, COUNT_STEPS).ceiling).toBe(300);
+  });
+});
 
 describe('toSparkCeiling', () => {
   it('с ёмкостью ставит верх на неё, а не на пик ряда', () => {
@@ -107,16 +113,6 @@ describe('toValueScale', () => {
 
   it('делит байты по ступеням килобайта, а не по десяткам', () => {
     expect(toValueScale(3000, BYTE_STEPS).ticks).toEqual([0, 1024, 2048, 3072]);
-  });
-});
-
-describe('toTimeWindow', () => {
-  it('пока буфер не заполнен, начинается с первой точки', () => {
-    expect(toTimeWindow(90, 100, 59)).toEqual({ min: 90, max: 100 });
-  });
-
-  it('на заполненном буфере держит постоянную ширину окна', () => {
-    expect(toTimeWindow(10, 100, 59)).toEqual({ min: 41, max: 100 });
   });
 });
 

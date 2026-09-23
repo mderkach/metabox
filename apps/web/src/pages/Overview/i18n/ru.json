@@ -48,7 +48,7 @@
     "ofTotal": "из {{total}}",
     "sinceBoot": "с последней загрузки",
     "waiting": "ждём снимок",
-    "trend": "за {{window}} · от {{from}} до {{to}}"
+    "trend": "за {{window}} · от {{from}} до {{to}} · шкала до {{ceiling}}"
   },
   "process": {
     "title": "Процессы",

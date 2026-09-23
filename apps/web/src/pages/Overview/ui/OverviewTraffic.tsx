@@ -79,9 +79,10 @@ export function OverviewTraffic({ runtime }: { runtime: OverviewRuntime }) {
             <div className='min-w-0 border-t border-border px-4 py-4 xl:w-1/2 xl:border-t-0 xl:border-l'>
               <DaemonTraffic
                 samples={runtime.traffic}
-                sampledAt={runtime.sampledAt}
+                sampledAt={runtime.trafficAt}
                 peakDown={runtime.peakDown}
                 peakUp={runtime.peakUp}
+                historyPeak={runtime.historyPeak}
               />
             </div>
           </div>

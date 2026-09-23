@@ -113,6 +113,8 @@ type HitsReader interface {
 // у потребителя.
 type HistoryReader interface {
 	Points() []history.Point
+	Recent() []history.Point
+	Connections() []int
 	Device() []history.DevicePoint
 	Step() int
 }
@@ -460,6 +462,8 @@ func (s *Server) handleHistory(w http.ResponseWriter, _ *http.Request) {
 		StepSeconds: s.history.Step(),
 		Points:      s.history.Points(),
 		Device:      s.history.Device(),
+		Recent:      s.history.Recent(),
+		Connections: s.history.Connections(),
 	})
 }
 

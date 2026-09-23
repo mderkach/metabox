@@ -106,6 +106,11 @@ export const TRAFFIC_HISTORY_FIXTURE: TrafficHistoryWire = {
     singbox: 88_000_000 + index * 150_000,
     daemon: 14_000_000,
   })),
+  connections: Array.from({ length: 60 }, (_, index) => 150 + ((index * 7) % 13)),
+  recent: Array.from({ length: 60 }, (_, index) => ({
+    down: 40_000 + ((index * 13) % 17) * 1200,
+    up: 6000 + ((index * 7) % 11) * 300,
+  })),
 };
 
 /** Показания устройства: снято на BPI-R4 Pro 2026-09-13. */

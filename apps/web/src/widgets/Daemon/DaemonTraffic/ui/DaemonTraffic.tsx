@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { TRAFFIC_STEP_SECONDS, TRAFFIC_WINDOW_SECONDS, toTrafficTimes, type TrafficSample } from '@entities/Daemon';
-import { BYTE_STEPS, toMirroredTicks, toTimeTicks, toTimeWindow, toValueScale } from '@shared/lib/chart';
+import { BYTE_STEPS, toMirroredTicks, toTimeTicks, toValueScale } from '@shared/lib/chart';
 import { formatRate } from '@shared/lib/format';
 import { useReducedMotion } from '@shared/lib/media';
 import { useStickyCeiling } from '@shared/lib/useStickyCeiling';
@@ -18,7 +18,7 @@ import {
 } from '@shared/ui';
 
 import { useFollowNow } from '../lib';
-import { FILL_ALPHA, GRID_DASH, HALF_INTERVALS, LINE_WIDTH, TIME_TICK_SECONDS } from '../model';
+import { FILL_ALPHA, GRID_DASH, HALF_INTERVALS, LINE_WIDTH, TIME_TICK_SECONDS, TRAFFIC_MIN_CEILING } from '../model';
 
 /** По одной точке линию не проведёшь. */
 const MIN_POINTS = 2;
@@ -44,8 +44,13 @@ function buildOptions(t: TFunction<'widgets/Daemon/DaemonTraffic'>): PlotOptions
     series: [{}, SERIES, SERIES],
     axes: [
       {
-        splits: (chart) =>
-          toTimeTicks({ min: chart.scales.x.min ?? 0, max: chart.scales.x.max ?? 0 }, TIME_TICK_SECONDS),
+        // Деление на самой левой кромке не подписывается: его подпись легла бы
+        // на нижнее деление шкалы скорости.
+        splits: (chart) => {
+          const min = chart.scales.x.min ?? 0;
+
+          return toTimeTicks({ min, max: chart.scales.x.max ?? 0 }, TIME_TICK_SECONDS).filter((tick) => tick > min);
+        },
         values: (chart, splits) => toTimeLabels(t, splits, chart.scales.x.max ?? 0),
       },
       {
@@ -62,18 +67,26 @@ function buildOptions(t: TFunction<'widgets/Daemon/DaemonTraffic'>): PlotOptions
  * исходящий вниз. Шкала у половин общая: по своей на каждую равные на вид
  * области отличались бы в разы, и сравнить направления по картинке было бы
  * нельзя.
+ *
+ * Оси стоят на месте, меняются только данные. Время — всегда минута до
+ * «сейчас». Шкала — от пика за всё время работы демона (`historyPeak`), а не за
+ * минуту на экране: иначе она пересчитывалась бы каждый раз, когда всплеск
+ * уходит за левую кромку, и одна и та же скорость рисовалась бы разной высотой.
  */
 export function DaemonTraffic({
   samples,
   sampledAt,
   peakDown,
   peakUp,
+  historyPeak = 0,
 }: {
   samples: TrafficSample[];
   /** Когда пришла последняя точка, миллисекунды эпохи; `null` — точек ещё не было. */
   sampledAt: number | null;
   peakDown: number;
   peakUp: number;
+  /** Пик скорости в любую сторону за историю демона, байт в секунду. */
+  historyPeak?: number;
 }) {
   const { t } = useTranslation('widgets/Daemon/DaemonTraffic');
   const reducedMotion = useReducedMotion();
@@ -89,9 +102,9 @@ export function DaemonTraffic({
     () => [times, samples.map((sample) => sample.down), samples.map((sample) => -sample.up)],
     [times, samples]
   );
-  // Пик окна меняется, когда всплеск уходит за левую кромку: без запаса шкала
-  // прыгала бы вместе с ним, и та же скорость рисовалась бы разной высотой.
-  const ceiling = useStickyCeiling(toValueScale(Math.max(peakDown, peakUp), BYTE_STEPS, HALF_INTERVALS).ceiling);
+  const ceiling = useStickyCeiling(
+    toValueScale(Math.max(peakDown, peakUp, historyPeak, TRAFFIC_MIN_CEILING), BYTE_STEPS, HALF_INTERVALS).ceiling
+  );
   const scales = useMemo<PlotScales>(() => {
     const y = { min: -ceiling, max: ceiling };
 
@@ -99,7 +112,9 @@ export function DaemonTraffic({
       return { y };
     }
 
-    return { x: toTimeWindow(times[0], times[times.length - 1], TRAFFIC_WINDOW_SECONDS), y };
+    const last = times[times.length - 1];
+
+    return { x: { min: last - TRAFFIC_WINDOW_SECONDS, max: last }, y };
   }, [ceiling, reducedMotion, times]);
 
   useFollowNow(chart, TRAFFIC_WINDOW_SECONDS, TRAFFIC_STEP_SECONDS, !reducedMotion);

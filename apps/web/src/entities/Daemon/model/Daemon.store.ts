@@ -12,11 +12,10 @@ export const TRAFFIC_STEP_SECONDS = 1;
 export const TRAFFIC_POINTS = SECONDS_IN_MINUTE / TRAFFIC_STEP_SECONDS;
 
 /**
- * Окно графика на шаг короче буфера: при заполненном буфере левая кромка
- * иначе шла бы за первой точкой, которая уходит раз в шаг, и ось сдвигалась
- * бы рывками.
+ * Окно графика трафика в секундах — ровно минута, как у графика соединений:
+ * подписи оси у обоих заканчиваются на «−60 с».
  */
-export const TRAFFIC_WINDOW_SECONDS = (TRAFFIC_POINTS - 1) * TRAFFIC_STEP_SECONDS;
+export const TRAFFIC_WINDOW_SECONDS = TRAFFIC_POINTS * TRAFFIC_STEP_SECONDS;
 
 /**
  * Время точек буфера в секундах эпохи. Считается от прихода последней точки
@@ -68,9 +67,20 @@ interface RuntimeState {
    * без этой отметки замершие числа неотличимы от затихшего трафика.
    */
   sampledAt: number | null;
+  /**
+   * Когда получена последняя точка трафика — из потока или минутой от демона.
+   * От неё считается время точек графика; живость потока по ней не судится.
+   */
+  trafficAt: number | null;
   /** Сколько экранов смотрит поток рантайма. */
   readers: number;
   pushTraffic: (sample: TrafficSample) => void;
+  /**
+   * Заполняет пустой буфер последней минутой, которую копил демон: график
+   * открывается полным, а не начинается с того момента, как открыта вкладка.
+   * Буфер, в который поток уже писал, не трогается.
+   */
+  seedTraffic: (samples: TrafficSample[]) => void;
   pushMemory: (sample: MemorySample) => void;
   pushSystem: (stat: SystemStat) => void;
   addReader: () => void;
@@ -91,14 +101,23 @@ const RuntimeStateProto = stateCreator<RuntimeState>((set) => {
     system: null,
     uplink: NO_UPLINK_RATE,
     sampledAt: null,
+    trafficAt: null,
     readers: 0,
     pushTraffic: (sample) => {
       const receivedAt = Date.now();
 
       set((state) => ({
         sampledAt: receivedAt,
+        trafficAt: receivedAt,
         traffic: [...state.traffic, sample].slice(-TRAFFIC_POINTS),
       }));
+    },
+    seedTraffic: (samples) => {
+      set((state) =>
+        state.traffic.length > 0 || samples.length === 0
+          ? state
+          : { traffic: samples.slice(-TRAFFIC_POINTS), trafficAt: Date.now() }
+      );
     },
     pushMemory: (sample) => {
       // Первый сэмпл потока всегда нулевой: показать его значило
@@ -156,6 +175,7 @@ const RuntimeStateProto = stateCreator<RuntimeState>((set) => {
         system: null,
         uplink: NO_UPLINK_RATE,
         sampledAt: null,
+        trafficAt: null,
       });
     },
   };

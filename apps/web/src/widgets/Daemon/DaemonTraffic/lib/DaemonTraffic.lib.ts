@@ -1,13 +1,13 @@
 import { useEffect } from 'react';
 
-import { toTimeWindow } from '@shared/lib/chart';
 import { MS_IN_SECOND } from '@shared/lib/time';
 import type { PlotInstance } from '@shared/ui';
 
 /**
  * Сдвиг оси времени по кадрам: данные приходят раз в секунду, а окно едет
  * непрерывно. Линия не догоняет новую точку — точка появляется сразу,
- * двигается только ось. Выключенный сдвиг оставляет ось тому, кто ставит её
+ * двигается только ось. Окно всегда полной длины: подписи оси стоят на
+ * месте, а неполный буфер оставляет левую часть пустой. Выключенный сдвиг оставляет ось тому, кто ставит её
  * вместе с данными.
  *
  * Правая кромка отстаёт от «сейчас» на `lag` — шаг потока. Иначе между
@@ -23,12 +23,9 @@ export function useFollowNow(chart: PlotInstance | null, span: number, lag: numb
       }
 
       let frame = requestAnimationFrame(function shiftWindow() {
-        const first = chart.data[0].at(0);
+        const now = Date.now() / MS_IN_SECOND - lag;
 
-        if (first !== undefined) {
-          chart.setScale('x', toTimeWindow(first, Date.now() / MS_IN_SECOND - lag, span));
-        }
-
+        chart.setScale('x', { min: now - span, max: now });
         frame = requestAnimationFrame(shiftWindow);
       });
 

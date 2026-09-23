@@ -125,6 +125,13 @@ export const BYTE_STEPS: readonly number[] = Array.from({ length: BYTE_STAGES },
   NICE_MULTIPLIERS.map((multiplier) => multiplier * BYTE_BASE ** stage)
 ).flat();
 
+const DECIMAL_DECADES = 6;
+
+/** Шаги 1–2–5 для счётных величин: соединений, запросов. */
+export const COUNT_STEPS: readonly number[] = Array.from({ length: DECIMAL_DECADES }, (_, decade) =>
+  Object.values(NICE).map((multiplier) => multiplier * DECADE ** decade)
+).flat();
+
 export interface ValueScale {
   /** Правая или верхняя кромка шкалы: кратна шагу и не ниже максимума. */
   ceiling: number;
@@ -177,14 +184,6 @@ export function toStickyCeiling(current: number, needed: number): number {
 export interface TimeWindow {
   min: number;
   max: number;
-}
-
-/**
- * Окно оси времени. Левая кромка — первая накопленная точка, пока буфер не
- * заполнен: полная длина окна подписала бы время, за которое данных нет.
- */
-export function toTimeWindow(firstAt: number, now: number, span: number): TimeWindow {
-  return { min: Math.min(now, Math.max(firstAt, now - span)), max: now };
 }
 
 /** Отсечки назад от правой кромки с шагом `step`, пока они внутри окна. */

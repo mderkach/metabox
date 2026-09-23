@@ -10,7 +10,7 @@ import (
 )
 
 func newTestCounter(source Source) *Counter {
-	return NewCounter(source, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second)
+	return NewCounter(source, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, nil)
 }
 
 func hitsOf(t *testing.T, counter *Counter) []uint64 {
@@ -189,5 +189,26 @@ func TestCounterMarksUnobservableRules(t *testing.T) {
 
 	if want := []bool{false, false, false, true, true}; !slices.Equal(got, want) {
 		t.Errorf("видимость правил %v, ожидали %v", got, want)
+	}
+}
+
+type sizes []int
+
+func (s *sizes) Record(count int) { *s = append(*s, count) }
+
+func TestCounterRecordsSnapshotSize(t *testing.T) {
+	source := &fakeSource{bodies: map[string]string{
+		"/rules":       rulesBody,
+		"/connections": `{"connections":[{"id":"a","rule":"final"},{"id":"b","rule":"final"}]}`,
+	}}
+	recorded := &sizes{}
+	counter := NewCounter(source, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, recorded)
+
+	if err := counter.observe(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+
+	if !slices.Equal(*recorded, []int{2}) {
+		t.Errorf("число соединений снимков %v, ожидали [2]", *recorded)
 	}
 }

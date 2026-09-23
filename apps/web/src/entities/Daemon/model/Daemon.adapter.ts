@@ -105,7 +105,13 @@ export function toServiceState(wire: ServiceStateWire): ServiceState {
 }
 
 export function toTrafficHistory(wire: TrafficHistoryWire): TrafficHistory {
-  return { stepSeconds: wire.step_seconds, points: wire.points, device: wire.device };
+  return {
+    stepSeconds: wire.step_seconds,
+    points: wire.points,
+    device: wire.device,
+    recent: wire.recent,
+    connections: wire.connections,
+  };
 }
 
 export function toClashConfigs(wire: ClashConfigsWire): ClashConfigs {

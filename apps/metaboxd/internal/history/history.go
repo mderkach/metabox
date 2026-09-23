@@ -108,7 +108,15 @@ type Traffic struct {
 	sumDown int64
 	sumUp   int64
 	counted int
+
+	// recent — последние сэмплы как есть, по одному в секунду. График минуты
+	// в панели берёт их при открытии: иначе он начинался бы с пустого места и
+	// показывал только то, что пришло, пока вкладка открыта.
+	recent []Point
 }
+
+// RecentPoints — сколько последних сэмплов держится без усреднения: минута.
+const RecentPoints = 60
 
 // New собирает историю трафика: `perPoint` снятий на точку, `stepSeconds`
 // секунд между точками, `points` точек до первого укрупнения шага.
@@ -120,6 +128,11 @@ func New(perPoint, stepSeconds, points int) *Traffic {
 func (t *Traffic) Record(up, down int64) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
+
+	t.recent = append(t.recent, Point{Down: down, Up: up})
+	if len(t.recent) > RecentPoints {
+		t.recent = t.recent[len(t.recent)-RecentPoints:]
+	}
 
 	t.sumUp += up
 	t.sumDown += down
@@ -147,6 +160,14 @@ func (t *Traffic) Points() []Point {
 	defer t.mu.Unlock()
 
 	return t.ring.all()
+}
+
+// Recent отдаёт последние сэмплы без усреднения, от старого к новому.
+func (t *Traffic) Recent() []Point {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	return append([]Point(nil), t.recent...)
 }
 
 // Step отдаёт текущий шаг между точками в секундах: он растёт вместе с
@@ -219,4 +240,31 @@ func (d *Device) Points() []DevicePoint {
 	defer d.mu.Unlock()
 
 	return d.ring.all()
+}
+
+// Connections — число живых соединений за последнюю минуту, по снимку в
+// секунду. График соединений в панели берёт его при открытии: без этого он
+// начинался бы с пустого места и знал только то, что было при открытой вкладке.
+type Connections struct {
+	mu     sync.Mutex
+	recent []int
+}
+
+// Record кладёт число соединений из очередного снимка.
+func (c *Connections) Record(count int) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.recent = append(c.recent, count)
+	if len(c.recent) > RecentPoints {
+		c.recent = c.recent[len(c.recent)-RecentPoints:]
+	}
+}
+
+// Recent отдаёт числа от старого снимка к новому.
+func (c *Connections) Recent() []int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	return append([]int{}, c.recent...)
 }

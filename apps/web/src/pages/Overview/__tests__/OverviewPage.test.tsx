@@ -155,12 +155,15 @@ describe('экран обзора', () => {
     expect(screen.getAllByText(/^за 6 мин · от /)).toHaveLength(5);
   });
 
-  it('без второго снимка потока графики трафика и соединений линию не рисуют', async () => {
+  // Панель открывают не всегда: минута трафика копится у демона, и график
+  // открывается полным, а не с того момента, как открыта вкладка.
+  it('рисует графики трафика и соединений минутой от демона ещё до первого кадра потока', async () => {
     renderWithRouter(OverviewPage);
 
-    expect(await screen.findByText('Трафик')).toBeInTheDocument();
-    expect(screen.queryByRole('img', { name: /Трафик за минуту/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole('img', { name: /Открытые соединения за минуту/ })).not.toBeInTheDocument();
+    expect(await screen.findByRole('img', { name: /Трафик за минуту/ })).toBeInTheDocument();
+    expect(await screen.findByRole('img', { name: /Открытые соединения за минуту/ })).toBeInTheDocument();
+    expect(RuntimeStore.getState().traffic).toHaveLength(60);
+    expect(ConnectionStore.getState().history).toHaveLength(60);
   });
 
   // Вердикт отвечает на вопрос, ради которого экран открывают, и стоит в шапке.

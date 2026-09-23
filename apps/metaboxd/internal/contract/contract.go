@@ -101,6 +101,12 @@ type History struct {
 	Points      []history.Point `json:"points"`
 	// Device — показания платы тем же шагом: загрузка, температура, память.
 	Device []history.DevicePoint `json:"device"`
+	// Recent — последняя минута трафика по секунде, без усреднения. Пуста,
+	// пока демон не получил ни одного сэмпла.
+	Recent []history.Point `json:"recent"`
+	// Connections — число живых соединений за последнюю минуту, по снимку в
+	// секунду.
+	Connections []int `json:"connections"`
 }
 
 // ErrorCode — машинный идентификатор отказа. Набор закрытый и объявлен здесь,

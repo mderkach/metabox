@@ -55,6 +55,8 @@ type Counter struct {
 	source   Source
 	log      *slog.Logger
 	interval time.Duration
+	// sizes принимает число живых соединений каждого снимка; nil — не нужно.
+	sizes SizeRecorder
 
 	seen  map[string]struct{}
 	rules []Rule
@@ -68,12 +70,20 @@ type Counter struct {
 	done chan struct{}
 }
 
+// SizeRecorder принимает число живых соединений снимка. Снимок счётчик и так
+// снимает раз в секунду, поэтому историю числа соединений ведёт он же, а не
+// второй опрос.
+type SizeRecorder interface {
+	Record(count int)
+}
+
 // NewCounter собирает счётчик. Опроса он не начинает: его поднимает Start.
-func NewCounter(source Source, log *slog.Logger, interval time.Duration) *Counter {
+func NewCounter(source Source, log *slog.Logger, interval time.Duration, sizes SizeRecorder) *Counter {
 	return &Counter{
 		source:   source,
 		log:      log,
 		interval: interval,
+		sizes:    sizes,
 		seen:     map[string]struct{}{},
 		hits:     map[string]uint64{},
 	}
@@ -140,6 +150,10 @@ func (c *Counter) observe(ctx context.Context) error {
 	var snapshot clashConnections
 	if err := json.Unmarshal(body, &snapshot); err != nil {
 		return fmt.Errorf("разбор снапшота соединений: %w", err)
+	}
+
+	if c.sizes != nil {
+		c.sizes.Record(len(snapshot.Connections))
 	}
 
 	// seen и rules трогает только горутина опроса, под мьютексом лежит лишь

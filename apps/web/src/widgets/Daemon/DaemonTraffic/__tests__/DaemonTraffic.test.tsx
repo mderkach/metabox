@@ -2,7 +2,7 @@ import { FakePlot } from '@test/fakePlot';
 import { render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { TRAFFIC_STEP_SECONDS } from '@entities/Daemon';
+import { TRAFFIC_STEP_SECONDS, TRAFFIC_WINDOW_SECONDS } from '@entities/Daemon';
 import { MS_IN_SECOND } from '@shared/lib/time';
 
 import { DaemonTraffic } from '../ui/DaemonTraffic';
@@ -10,6 +10,7 @@ import { DaemonTraffic } from '../ui/DaemonTraffic';
 const NOW = 1_700_000_000 * MS_IN_SECOND;
 const PARTIAL_BUFFER = 20;
 const HALF_FRAME = MS_IN_SECOND / 2;
+const MIB = 1024 * 1024;
 
 function samplesOf(count: number) {
   return Array.from({ length: count }, () => ({ down: 10, up: 10 }));
@@ -26,21 +27,35 @@ describe('DaemonTraffic', () => {
   });
 
   it('рисует обе половины от одной кромки, даже когда пики различаются в сотню раз', () => {
-    render(<DaemonTraffic samples={samplesOf(2)} sampledAt={NOW} peakDown={100_000} peakUp={1000} />);
+    render(<DaemonTraffic samples={samplesOf(2)} sampledAt={NOW} peakDown={5 * MIB} peakUp={50 * 1024} />);
 
     const { y } = FakePlot.latest().scales;
 
-    expect(y).toEqual({ min: -102_400, max: 102_400 });
+    expect(y).toEqual({ min: -5 * MIB, max: 5 * MIB });
   });
 
-  it('при неполном буфере не подписывает время, за которое данных нет', () => {
+  it('берёт шкалу от пика истории демона, а не от минуты на экране', () => {
+    render(
+      <DaemonTraffic samples={samplesOf(2)} sampledAt={NOW} peakDown={2000} peakUp={1000} historyPeak={5 * MIB} />
+    );
+
+    expect(FakePlot.latest().scales.y.max).toBe(5 * MIB);
+  });
+
+  it('на простаивающем канале не сжимает шкалу ниже мегабайта в секунду', () => {
+    render(<DaemonTraffic samples={samplesOf(2)} sampledAt={NOW} peakDown={300} peakUp={100} />);
+
+    expect(FakePlot.latest().scales.y.max).toBe(MIB);
+  });
+
+  it('при неполном буфере держит окно в полную минуту: подписи оси стоят на месте', () => {
     render(<DaemonTraffic samples={samplesOf(PARTIAL_BUFFER)} sampledAt={NOW} peakDown={10} peakUp={10} />);
     vi.advanceTimersToNextFrame();
 
     const plot = FakePlot.latest();
 
-    expect(plot.scales.x.min).toBe(NOW / MS_IN_SECOND - (PARTIAL_BUFFER - 1));
-    expect(plot.axisLabels(0)).toEqual(['−15 с', 'сейчас']);
+    expect((plot.scales.x.max ?? 0) - (plot.scales.x.min ?? 0)).toBeCloseTo(TRAFFIC_WINDOW_SECONDS, 5);
+    expect(plot.axisLabels(0)).toEqual(['−45 с', '−30 с', '−15 с', 'сейчас']);
   });
 
   it('сдвигает ось времени по кадрам, не пересоздавая график', () => {
@@ -84,7 +99,7 @@ describe('DaemonTraffic', () => {
     vi.advanceTimersToNextFrame();
 
     expect(FakePlot.latest().scales.x).toEqual({
-      min: NOW / MS_IN_SECOND - (PARTIAL_BUFFER - 1),
+      min: NOW / MS_IN_SECOND - TRAFFIC_WINDOW_SECONDS,
       max: NOW / MS_IN_SECOND,
     });
 
