@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 import { BYTE_STEPS, toPercents, toShare, toValueScale } from '@shared/lib/chart';
 import { useStickyCeiling } from '@shared/lib/useStickyCeiling';
 import { cn } from '@shared/lib/utils';
@@ -28,26 +30,29 @@ export interface SummaryBar {
  * дорожки не получает: на простаивающем роутере ряд пустых дорожек выглядит
  * как сломанный график.
  *
- * Ряд обновляется раз в секунду, поэтому высота у него постоянная: строка не
- * переносится, место под дорожку держится и у строки без величины, а `slots`
- * резервирует строки, которых пока нет.
+ * Ряд обновляется раз в секунду, поэтому высота у него не пляшет: строка не
+ * переносится, место под дорожку держится и у строки без величины, а под
+ * пропавшие строки остаётся место — столько, сколько их уже бывало. Резерв
+ * наперёд под весь топ оставлял бы пустую карточку там, где узлов два.
  */
 export function ConnectionSummaryBars({
   bars,
   empty,
   format,
-  slots = 0,
 }: {
   bars: SummaryBar[];
   empty: string;
   /** Подпись деления оси в единицах величины. */
   format: (value: number) => string;
-  /** Сколько строк держать местом, даже когда их меньше. */
-  slots?: number;
 }) {
   const values = bars.map((bar) => bar.value);
   const peak = values.length === 0 ? 0 : Math.max(...values);
   const ceiling = useStickyCeiling(toValueScale(peak, BYTE_STEPS, AXIS_INTERVALS).ceiling);
+  const [rows, setRows] = useState(bars.length);
+
+  if (bars.length > rows) {
+    setRows(bars.length);
+  }
 
   if (bars.length === 0) {
     return (
@@ -61,7 +66,7 @@ export function ConnectionSummaryBars({
 
   const percents = toPercents(values);
   const scale = toValueScale(ceiling, BYTE_STEPS, AXIS_INTERVALS);
-  const reserved = Math.max(0, slots - bars.length);
+  const reserved = Math.max(0, rows - bars.length);
 
   return (
     <div className='flex flex-col gap-2.5'>

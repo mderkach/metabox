@@ -47,7 +47,8 @@
     "memoryHistory": "Память роутера за всё время работы демона",
     "ofTotal": "из {{total}}",
     "sinceBoot": "с последней загрузки",
-    "waiting": "ждём снимок"
+    "waiting": "ждём снимок",
+    "trend": "за {{window}} · от {{from}} до {{to}}"
   },
   "process": {
     "title": "Процессы",

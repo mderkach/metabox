@@ -26,10 +26,18 @@ describe('ConnectionSummaryBars', () => {
     expect(screen.queryByText('0 Б')).not.toBeInTheDocument();
   });
 
-  it('держит место под недостающие строки, чтобы карточка не прыгала по высоте', () => {
-    render(<ConnectionSummaryBars bars={[barOf('proxy', 3000)]} empty='пусто' format={formatBytes} slots={5} />);
+  it('держит место под пропавшие строки, чтобы карточка не прыгала по высоте', () => {
+    const { rerender } = render(
+      <ConnectionSummaryBars
+        bars={[barOf('proxy', 3000), barOf('direct', 1000), barOf('block', 500)]}
+        empty='пусто'
+        format={formatBytes}
+      />
+    );
 
-    expect(screen.getAllByRole('listitem', { hidden: true })).toHaveLength(5);
+    rerender(<ConnectionSummaryBars bars={[barOf('proxy', 3000)]} empty='пусто' format={formatBytes} />);
+
+    expect(screen.getAllByRole('listitem', { hidden: true })).toHaveLength(3);
     expect(screen.getAllByRole('listitem')).toHaveLength(1);
   });
 

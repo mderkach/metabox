@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-import { TOP_LIMIT, type ConnectionShare } from '@entities/Connection';
+import type { ConnectionShare } from '@entities/Connection';
 import { formatBytes, formatRate } from '@shared/lib/format';
 
 import { ConnectionSummaryBars, type SummaryBar } from './ConnectionSummaryBars';
@@ -38,7 +38,7 @@ export function ConnectionSummaryTop({
 
   return (
     <ConnectionSummaryPanel title={title} href={href}>
-      <ConnectionSummaryBars bars={bars} empty={empty ?? t('empty')} format={formatBytes} slots={TOP_LIMIT} />
+      <ConnectionSummaryBars bars={bars} empty={empty ?? t('empty')} format={formatBytes} />
     </ConnectionSummaryPanel>
   );
 }

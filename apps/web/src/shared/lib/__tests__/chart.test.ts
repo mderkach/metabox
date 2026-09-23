@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  toSparkCeiling,
   toStickyCeiling,
   BYTE_STEPS,
   toAreaGeometry,
@@ -12,6 +13,20 @@ import {
   toTimeWindow,
   toValueScale,
 } from '../chart';
+
+describe('toSparkCeiling', () => {
+  it('с ёмкостью ставит верх на неё, а не на пик ряда', () => {
+    expect(toSparkCeiling(386, 7800)).toBe(7800);
+  });
+
+  it('ряд, переросший ёмкость, растягивает шкалу до пика', () => {
+    expect(toSparkCeiling(6, 4)).toBe(6);
+  });
+
+  it('без ёмкости берёт пик с запасом', () => {
+    expect(toSparkCeiling(100)).toBeCloseTo(115);
+  });
+});
 
 describe('toStickyCeiling', () => {
   it('растёт сразу, как только величина переросла кромку', () => {

@@ -144,6 +144,19 @@ export function toValueScale(max: number, steps: readonly number[], intervals = 
   return { ceiling: step * count, ticks: Array.from({ length: count + 1 }, (_, index) => index * step) };
 }
 
+/** Запас над пиком ряда без ёмкости: иначе ровный ряд прижимается к верхней кромке. */
+const HEADROOM = 1.15;
+
+/**
+ * Верх шкалы ряда без осей. С ёмкостью — число ядер, объём памяти — высота
+ * говорит, какая часть её занята; ряд, переросший ёмкость, растягивает шкалу
+ * до своего пика. Без ёмкости верх — пик с запасом, и график показывает только
+ * форму ряда.
+ */
+export function toSparkCeiling(peak: number, capacity?: number): number {
+  return capacity === undefined ? peak * HEADROOM : Math.max(capacity, peak);
+}
+
 /** Во сколько раз величина должна упасть, чтобы шкала сжалась. */
 const SHRINK_RATIO = 4;
 

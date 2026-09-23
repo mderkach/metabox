@@ -47,7 +47,8 @@
     "memoryHistory": "Router memory over the whole daemon uptime",
     "ofTotal": "of {{total}}",
     "sinceBoot": "since the last boot",
-    "waiting": "waiting for a snapshot"
+    "waiting": "waiting for a snapshot",
+    "trend": "over {{window}} · {{from}} to {{to}}"
   },
   "process": {
     "title": "Processes",

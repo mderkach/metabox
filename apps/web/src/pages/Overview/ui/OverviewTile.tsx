@@ -20,7 +20,7 @@ export function OverviewTile({
   context: string | null;
   tone?: string;
   meter?: number;
-  /** Ряд под числом: динамика там, где у величины нет потолка. */
+  /** Ряд под числом во всю ширину плитки. */
   chart?: ReactNode;
 }) {
   return (
@@ -31,14 +31,12 @@ export function OverviewTile({
           {value ?? <Skeleton aria-hidden='true' className={cn('h-7 w-24', PENDING_REVEAL)} />}
         </dd>
       </dl>
-      <div className='flex flex-wrap items-end justify-between gap-2'>
-        {context === null ? (
-          <Skeleton aria-hidden='true' className={cn('h-4 w-32', PENDING_REVEAL)} />
-        ) : (
-          <p className='text-xs text-muted-foreground'>{context}</p>
-        )}
-        {chart}
-      </div>
+      {context === null ? (
+        <Skeleton aria-hidden='true' className={cn('h-4 w-32', PENDING_REVEAL)} />
+      ) : (
+        <p className='text-xs text-muted-foreground'>{context}</p>
+      )}
+      {chart}
       {meter !== undefined && (
         <span className='block h-1 overflow-hidden rounded-full bg-meter-track'>
           <span
