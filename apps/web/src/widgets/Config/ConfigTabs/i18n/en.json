@@ -1,6 +1,5 @@
 {
   "label": "Config sections",
-  "unavailable": "The section is not built yet",
   "section": {
     "route": "Routing",
     "ruleSet": "Rule sets",

@@ -55,7 +55,9 @@ describe('маршруты панели', () => {
 
     // Пункт проверяется адресом, а не подписью: подпись — предмет правок текста,
     // а обещание меню в том, куда он ведёт.
-    const targets = screen.getAllByRole('link').map((link) => link.getAttribute('href'));
+    const targets = [...screen.getAllByRole('link'), ...screen.getAllByRole('tab')].map((link) =>
+      link.getAttribute('href')
+    );
 
     expect(targets).toContain('/config');
     expect(targets).toContain('/config/rule-set');
@@ -70,10 +72,10 @@ describe('маршруты панели', () => {
 
     Router.history.push('/config/raw');
 
-    const sections = await screen.findByRole('navigation', { name: 'Секции конфига' });
+    const sections = await screen.findByRole('tablist', { name: 'Секции конфига' });
     const targets = within(sections)
-      .getAllByRole('link')
-      .map((link) => link.getAttribute('href'));
+      .getAllByRole('tab')
+      .map((tab) => tab.getAttribute('href'));
 
     expect(targets).toContain('/config');
     expect(targets).toContain('/config/rule-set');

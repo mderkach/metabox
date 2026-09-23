@@ -24,25 +24,6 @@ export const CONFIG_TABS = [
   route: '/config' | '/config/rule-set' | null;
 }>;
 
-export const CONFIG_TAB_CLASS =
-  'relative mb-1 inline-flex h-8 items-center gap-1.5 rounded-md px-1.5 text-sm font-medium whitespace-nowrap';
-
-/**
- * Секция без экрана. Не приглушённая вкладка, а другой класс элемента: метка
- * «скоро» рядом с именем говорит то, чего приглушённостью не скажешь, а полный
- * тон оставляет читаемым счётчик, который она несёт.
- */
-export const CONFIG_TAB_SOON = 'rounded-sm bg-muted px-1 text-2xs tracking-wide text-muted-foreground uppercase';
-
-/**
- * Полоса под выбранным разделом: второй признак выбора помимо цвета.
- *
- * Имя View Transitions одно на всю навигацию: полоса показана только под
- * текущим разделом, и при смене раздела переезжает под новый.
- */
-export const CONFIG_TAB_UNDERLINE =
-  'absolute inset-x-0 -bottom-1.5 h-0.5 bg-foreground [view-transition-name:config-tab-underline]';
-
 export const CONFIG_MODE_ROUTE = {
   Forms: '/config',
   Text: '/config/raw',
