@@ -2,16 +2,15 @@ import { Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import type { ProxyGroup, ProxyNode } from '@entities/Proxy';
-import { cn } from '@shared/lib/utils';
 import {
   Alert,
   AlertDescription,
   AlertTitle,
-  CARD_FLUSH,
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
-  SURFACE_HEAD,
+  CardTitle,
 } from '@shared/ui';
 
 import { ProxyGroupCard } from './ProxyGroupCard';
@@ -47,12 +46,14 @@ export function ProxyGroups({ groups, nodes }: { groups: ProxyGroup[]; nodes: Pr
         <AlertDescription>{t('empty.description')}</AlertDescription>
       </Alert>
 
-      <Card className={cn(CARD_FLUSH, 'overflow-hidden')}>
-        <CardHeader className={cn('flex flex-row items-center gap-2.5', SURFACE_HEAD)}>
-          <h2 className='font-mono text-sm font-medium'>{t('empty.outbounds')}</h2>
-          <p className='text-xs text-muted-foreground'>{nodes.length}</p>
+      <Card>
+        <CardHeader className='border-b'>
+          <CardTitle>
+            <h2 className='font-mono'>{t('empty.outbounds')}</h2>
+          </CardTitle>
+          <CardDescription>{nodes.length}</CardDescription>
         </CardHeader>
-        <CardContent className='px-4 py-3'>
+        <CardContent>
           <ul className='grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3'>
             {nodes.map((node) => (
               <ProxyNodeTile key={node.name} node={node} selectable={false} onSelect={NO_OP} />

@@ -4,8 +4,7 @@ import { useTranslation } from 'react-i18next';
 import type { ProxyGroup } from '@entities/Proxy';
 import { useTestProxyDelay } from '@features/Proxy/ProxyDelay';
 import { useSelectProxy } from '@features/Proxy/ProxySelect';
-import { cn } from '@shared/lib/utils';
-import { Badge, Button, CARD_FLUSH, Card, CardContent, CardHeader, SURFACE_HEAD } from '@shared/ui';
+import { Badge, Button, Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/ui';
 
 import { toGroupLabel } from './ProxyGroupLabel';
 import { ProxyNodeTile } from './ProxyNodeTile';
@@ -26,31 +25,37 @@ export function ProxyGroupCard({ group }: { group: ProxyGroup }) {
   );
 
   return (
-    <Card className={CARD_FLUSH}>
-      <CardHeader className={cn('flex flex-row flex-wrap items-center gap-x-2.5 gap-y-1', SURFACE_HEAD)}>
-        <h2 className='font-mono text-sm font-medium'>{group.name}</h2>
-        <Badge variant='outline'>{kind}</Badge>
-        <p className='text-xs text-muted-foreground'>{group.selectable ? t('card.manual') : t('card.automatic')}</p>
-        <span className='grow' />
-        <p className='text-xs text-muted-foreground'>{t('count.node', { ns: 'shared', count: group.nodes.length })}</p>
-        {/* Имя различает три одинаковые кнопки на экране: с клавиатуры подряд
-            идут «Проверить», «Проверить», «Проверить», и какая из них чья —
-            неизвестно. Подпись на время замера меняется только у своей
-            карточки: мутация одна на экран, а работает она с одной группой. */}
-        <Button
-          variant='outline'
-          size='sm'
-          disabled={delay.isPending}
-          aria-label={t('card.testGroup', { group: group.name })}
-          onClick={() => {
-            delay.mutate(group.name);
-          }}
-        >
-          {testing ? t('delay.testing', { ns: 'shared' }) : t('delay.test', { ns: 'shared' })}
-        </Button>
+    <Card>
+      <CardHeader className='border-b'>
+        <CardTitle className='flex flex-wrap items-center gap-x-2.5 gap-y-1'>
+          <h2 className='font-mono'>{group.name}</h2>
+          <Badge variant='outline'>{kind}</Badge>
+        </CardTitle>
+        <CardDescription>
+          {group.selectable ? t('card.manual') : t('card.automatic')}
+          {' · '}
+          {t('count.node', { ns: 'shared', count: group.nodes.length })}
+        </CardDescription>
+        <CardAction>
+          {/* Имя различает три одинаковые кнопки на экране: с клавиатуры подряд
+              идут «Проверить», «Проверить», «Проверить», и какая из них чья —
+              неизвестно. Подпись на время замера меняется только у своей
+              карточки: мутация одна на экран, а работает она с одной группой. */}
+          <Button
+            variant='outline'
+            size='sm'
+            disabled={delay.isPending}
+            aria-label={t('card.testGroup', { group: group.name })}
+            onClick={() => {
+              delay.mutate(group.name);
+            }}
+          >
+            {testing ? t('delay.testing', { ns: 'shared' }) : t('delay.test', { ns: 'shared' })}
+          </Button>
+        </CardAction>
       </CardHeader>
 
-      <CardContent className='flex flex-col gap-3 px-4 py-3'>
+      <CardContent className='flex flex-col gap-3'>
         <p className='text-xs text-muted-foreground'>
           {t('card.current')}{' '}
           {active === null ? (

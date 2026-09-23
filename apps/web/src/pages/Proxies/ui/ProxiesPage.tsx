@@ -1,16 +1,14 @@
 import { useTranslation } from 'react-i18next';
 
 import { useProxies, useProxyProviders } from '@entities/Proxy';
-import { cn } from '@shared/lib/utils';
 import {
-  CARD_FLUSH,
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   QueryFailure,
   SECTION_HEADING,
   SURFACE,
-  SURFACE_HEAD,
   SkeletonRows,
 } from '@shared/ui';
 import { PageHeader } from '@widgets/PageHeader';
@@ -53,14 +51,14 @@ export function ProxiesPage() {
         {subscriptions.length > 0 && (
           <section className='flex flex-col gap-3'>
             <h2 className={SECTION_HEADING}>{t('providers.title')}</h2>
-            <Card className={cn(CARD_FLUSH, 'overflow-hidden')}>
-              <CardHeader className={cn('flex flex-row items-center gap-2.5', SURFACE_HEAD)}>
-                <p className='text-xs text-muted-foreground'>{t('providers.subtitle')}</p>
+            <Card>
+              <CardHeader className='border-b'>
+                <CardDescription>{t('providers.subtitle')}</CardDescription>
               </CardHeader>
               <CardContent className='px-0'>
-                <ul>
+                <ul className='divide-y divide-border'>
                   {subscriptions.map((provider) => (
-                    <li key={provider.name} className='flex items-center gap-3 border-t border-border px-4 py-2.5'>
+                    <li key={provider.name} className='flex items-center gap-3 px-(--card-spacing) py-2.5'>
                       <span className='min-w-0 grow truncate text-sm'>{provider.name}</span>
                       <span className='text-xs text-muted-foreground'>
                         {t('count.node', { ns: 'shared', count: provider.nodes })}
