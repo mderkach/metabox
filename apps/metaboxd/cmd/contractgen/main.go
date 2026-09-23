@@ -29,6 +29,7 @@ var roots = []rootType{
 	{pkg: "internal/events", name: "ConnectionsSnapshot"},
 	{pkg: "internal/events", name: "Event"},
 	{pkg: "internal/route", name: "Explanation"},
+	{pkg: "internal/route", name: "Hits"},
 }
 
 func main() {

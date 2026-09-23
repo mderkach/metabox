@@ -63,6 +63,9 @@ type Options struct {
 	// одну версию форка, и расхождение с бинарём видно только отсюда. Пустая
 	// строка означает, что версию прочитать не удалось.
 	SingboxVersion string
+	// SingboxTags — build-теги бинаря. nil означает, что состав сборки не
+	// прочитан, пустой список — что бинарь собран без тегов.
+	SingboxTags []string
 	// AllowedOrigin — разрешённый Origin сверх совпадения с Host. Пустая
 	// строка означает, что послаблений нет: правило из ADR-0002 действует
 	// в чистом виде.
@@ -83,6 +86,9 @@ type Options struct {
 	// Explain объясняет маршрут соединения (ADR-0007). nil означает, что
 	// источника рантайма нет: экран соединений остаётся без объяснения.
 	Explain Explainer
+	// Hits отдаёт счёт срабатываний правил. nil означает, что его никто не
+	// ведёт: список правил остаётся без колонки срабатываний.
+	Hits HitsReader
 	// History отдаёт историю трафика, накопленную демоном. nil означает, что
 	// её никто не копит: график глубже минуты не показывается.
 	History HistoryReader
@@ -95,6 +101,12 @@ type Options struct {
 	// `-config-name`: без этого поля интерфейс показывал бы значение по
 	// умолчанию независимо от того, с чем демон запущен.
 	ConfigPath string
+}
+
+// HitsReader отдаёт счёт срабатываний правил. Интерфейс объявлен здесь, у
+// потребителя.
+type HitsReader interface {
+	Hits(ctx context.Context) (route.Hits, error)
 }
 
 // HistoryReader отдаёт накопленную историю трафика. Интерфейс объявлен здесь,
@@ -116,12 +128,14 @@ type Server struct {
 	log            *slog.Logger
 	version        string
 	singboxVersion string
+	singboxTags    []string
 	allowedOrigin  string
 	spa            http.Handler
 	service        Service
 	events         http.Handler
 	clash          http.Handler
 	explain        Explainer
+	hits           HitsReader
 	history        HistoryReader
 	runtime        RuntimeObserver
 	configPath     string
@@ -137,12 +151,14 @@ func NewServer(applier Applier, reader ConfigReader, log *slog.Logger, opts Opti
 		log:            log,
 		version:        opts.Version,
 		singboxVersion: opts.SingboxVersion,
+		singboxTags:    opts.SingboxTags,
 		allowedOrigin:  opts.AllowedOrigin,
 		spa:            opts.SPA,
 		service:        opts.Service,
 		events:         opts.Events,
 		clash:          opts.Clash,
 		explain:        opts.Explain,
+		hits:           opts.Hits,
 		history:        opts.History,
 		runtime:        opts.Runtime,
 		configPath:     opts.ConfigPath,
@@ -172,6 +188,10 @@ func (s *Server) routes() http.Handler {
 
 	if s.explain != nil {
 		mux.HandleFunc("GET /api/connections/{id}/route", s.handleExplain)
+	}
+
+	if s.hits != nil {
+		mux.HandleFunc("GET /api/rules/hits", s.handleHits)
 	}
 
 	if s.history != nil {
@@ -207,6 +227,10 @@ func (s *Server) handleStatus(w http.ResponseWriter, _ *http.Request) {
 		SingboxVersion: s.singboxVersion,
 		ConfigPath:     s.configPath,
 		Runtime:        s.runtimeSources(),
+	}
+
+	if s.singboxTags != nil {
+		body.SingboxBuild = &contract.SingboxBuild{Tags: s.singboxTags}
 	}
 
 	if tx := s.applier.Current(); tx.ID != "" {
@@ -378,6 +402,17 @@ func (s *Server) handleExplain(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(s.log, w, http.StatusOK, explanation)
+}
+
+func (s *Server) handleHits(w http.ResponseWriter, r *http.Request) {
+	hits, err := s.hits.Hits(r.Context())
+	if err != nil {
+		fail(s.log, w, r, err)
+
+		return
+	}
+
+	writeJSON(s.log, w, http.StatusOK, hits)
 }
 
 // ServiceState приводит состояние службы к форме ответа. Экспортируется,

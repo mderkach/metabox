@@ -138,7 +138,8 @@ func run(log *slog.Logger, s settings) error {
 
 	// Неудача не останавливает демон: панель обязана работать и при
 	// отсутствующем sing-box, просто без версии бинаря.
-	singboxVersion, err := service.Version(ctx)
+	build, err := service.Build(ctx)
+	singboxVersion := build.Version
 	if err != nil {
 		log.Warn("версия sing-box не прочитана", "err", err)
 	}
@@ -187,15 +188,23 @@ func run(log *slog.Logger, s settings) error {
 	accounting.Start()
 	defer accounting.Close()
 
+	// Счёт правил, как и учёт трафика, идёт с запуска демона и не ждёт панель:
+	// соединение, не замеченное вовремя, задним числом не засчитать.
+	hits := route.NewCounter(source, log, connectionsInterval)
+	hits.Start()
+	defer hits.Close()
+
 	api := httpapi.NewServer(manager, store, log, httpapi.Options{
 		Version:        version.Version,
 		SingboxVersion: singboxVersion,
+		SingboxTags:    build.Tags,
 		AllowedOrigin:  s.allowedOrigin,
 		SPA:            spa,
 		Service:        service,
 		Events:         hub,
 		Clash:          clashHandler,
 		Explain:        route.NewExplainer(source),
+		Hits:           hits,
 		History:        historyOf(traffic, deviceHistory),
 		Runtime:        sysinfo.Alive,
 		ConfigPath:     store.Path(),

@@ -91,28 +91,37 @@ func (c *Client) Check(ctx context.Context, dir string) error {
 	return nil
 }
 
-// Version возвращает версию бинаря.
+// Build — версия бинаря и build-теги, с которыми он собран.
+type Build struct {
+	Version string
+	// Tags — теги из строки `Tags:` вывода `sing-box version`. Пустой список
+	// значит сборку без тегов, а не незнание: тип узла, закрытый тегом, такой
+	// бинарь не запустит.
+	Tags []string
+}
+
+// Build читает версию и состав сборки бинаря.
 //
 // Значение предназначено для однократного чтения при старте демона: запуск
 // процесса на каждый опрос /api/status слишком дорог для роутера, поэтому
 // бинарь, подменённый под работающим демоном, попадёт в панель только после
 // его перезапуска.
-func (c *Client) Version(ctx context.Context) (string, error) {
+func (c *Client) Build(ctx context.Context) (Build, error) {
 	res, err := c.runner.Run(ctx, c.binary, "version")
 	if err != nil {
-		return "", fmt.Errorf("версия sing-box: %w", err)
+		return Build{}, fmt.Errorf("версия sing-box: %w", err)
 	}
 
 	if res.ExitCode != 0 {
-		return "", fmt.Errorf("версия sing-box: код %d, %s", res.ExitCode, firstLine(res.Stderr))
+		return Build{}, fmt.Errorf("версия sing-box: код %d, %s", res.ExitCode, firstLine(res.Stderr))
 	}
 
 	version := parseVersion(res.Stdout)
 	if version == "" {
-		return "", fmt.Errorf("версия sing-box: вывод %q не разобран", firstLine(res.Stdout))
+		return Build{}, fmt.Errorf("версия sing-box: вывод %q не разобран", firstLine(res.Stdout))
 	}
 
-	return version, nil
+	return Build{Version: version, Tags: parseTags(res.Stdout)}, nil
 }
 
 // parseVersion берёт номер из первой строки вида
@@ -125,6 +134,28 @@ func parseVersion(stdout string) string {
 	}
 
 	return fields[2]
+}
+
+// parseTags берёт теги из строки `Tags: with_quic,with_utls`. Строки нет,
+// когда бинарь собран без тегов: sing-box печатает её, только если список
+// не пуст.
+func parseTags(stdout string) []string {
+	tags := []string{}
+
+	for line := range strings.Lines(stdout) {
+		list, ok := strings.CutPrefix(strings.TrimSpace(line), "Tags:")
+		if !ok {
+			continue
+		}
+
+		for tag := range strings.SplitSeq(list, ",") {
+			if tag = strings.TrimSpace(tag); tag != "" {
+				tags = append(tags, tag)
+			}
+		}
+	}
+
+	return tags
 }
 
 // Restart перезапускает сервис через init-скрипт. Остановленный сервис —

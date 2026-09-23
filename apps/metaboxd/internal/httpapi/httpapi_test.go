@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -539,6 +540,50 @@ func TestStatusReportsSingboxVersion(t *testing.T) {
 
 	if status.SingboxVersion != testSingboxVersion {
 		t.Errorf("версия %q, ожидали %q", status.SingboxVersion, testSingboxVersion)
+	}
+}
+
+// Без состава сборки панель не отличит «типа нет в бинаре» от «бинарь не
+// прочитан», поэтому второе выражается отсутствием поля, а не пустым списком.
+func TestStatusReportsSingboxBuild(t *testing.T) {
+	tests := []struct {
+		name string
+		tags []string
+		want *[]string
+	}{
+		{"теги прочитаны", []string{"with_quic"}, &[]string{"with_quic"}},
+		{"сборка без тегов", []string{}, &[]string{}},
+		{"бинарь не прочитан", nil, nil},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			srv := httptest.NewServer(httpapi.NewServer(&fakeApplier{}, nil, testLogger(t), httpapi.Options{
+				Version:     "test",
+				SingboxTags: tt.tags,
+			}))
+			t.Cleanup(srv.Close)
+
+			var status struct {
+				SingboxBuild *struct {
+					Tags []string `json:"tags"`
+				} `json:"singbox_build"`
+			}
+			request(t, srv, http.MethodGet, "/api/status", "", nil).decode(t, &status)
+
+			if tt.want == nil {
+				if status.SingboxBuild != nil {
+					t.Errorf("состав сборки %v, ожидали отсутствие поля", status.SingboxBuild)
+				}
+				return
+			}
+			if status.SingboxBuild == nil || !slices.Equal(status.SingboxBuild.Tags, *tt.want) {
+				t.Errorf("состав сборки %v, ожидали теги %v", status.SingboxBuild, *tt.want)
+			}
+			if status.SingboxBuild.Tags == nil {
+				t.Error("пустой список тегов ушёл как null")
+			}
+		})
 	}
 }
 

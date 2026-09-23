@@ -107,18 +107,21 @@ func TestCheckWrapsLaunchFailure(t *testing.T) {
 	}
 }
 
-func TestVersionReadsFirstLine(t *testing.T) {
+func TestBuildReadsVersionAndTags(t *testing.T) {
 	runner := &fakeRunner{result: singbox.Result{
-		Stdout: "sing-box version 1.14.0-extended-2.7.1\n\nEnvironment: go1.26.6 linux/arm64\nTags: with_quic\n",
+		Stdout: "sing-box version 1.14.0-extended-2.7.1\n\nEnvironment: go1.26.6 linux/arm64\nTags: with_quic, with_utls\nCGO: disabled\n",
 	}}
 
-	got, err := newClient(t, runner).Version(t.Context())
+	got, err := newClient(t, runner).Build(t.Context())
 	if err != nil {
 		t.Fatalf("версия: %v", err)
 	}
 
-	if got != "1.14.0-extended-2.7.1" {
-		t.Errorf("версия %q, ожидали 1.14.0-extended-2.7.1", got)
+	if got.Version != "1.14.0-extended-2.7.1" {
+		t.Errorf("версия %q, ожидали 1.14.0-extended-2.7.1", got.Version)
+	}
+	if !slices.Equal(got.Tags, []string{"with_quic", "with_utls"}) {
+		t.Errorf("теги %v, ожидали [with_quic with_utls]", got.Tags)
 	}
 
 	want := []string{binary, "version"}
@@ -127,10 +130,45 @@ func TestVersionReadsFirstLine(t *testing.T) {
 	}
 }
 
+// Вывод бинаря с устройства, 2026-09-23: строка окружения несёт свои флаги
+// через дефис, а тегов — полтора десятка.
+func TestBuildReadsDeviceOutput(t *testing.T) {
+	runner := &fakeRunner{result: singbox.Result{Stdout: "sing-box version 1.14.0-extended-2.7.1\n\n" +
+		"Environment: go1.26.6-X:nodwarf5 linux/arm64\n" +
+		"Tags: with_gvisor,with_quic,with_dhcp,with_wireguard,with_utls,with_acme,with_clash_api,with_tailscale," +
+		"with_masque,with_mtproxy,with_trusttunnel,with_call,with_sudoku,with_manager,with_admin_panel," +
+		"with_profiler,badlinkname,tfogo_checklinkname0\n" +
+		"Revision: 217f77643f19e915ea38ba2a9ac7e28e22a0cec5\nCGO: disabled\n"}}
+
+	got, err := newClient(t, runner).Build(t.Context())
+	if err != nil {
+		t.Fatalf("версия: %v", err)
+	}
+
+	if len(got.Tags) != 18 || !slices.Contains(got.Tags, "with_quic") || slices.Contains(got.Tags, "with_ccm") {
+		t.Errorf("теги %v: ожидали 18, с with_quic и без with_ccm", got.Tags)
+	}
+}
+
+// sing-box не печатает строку `Tags:` для сборки без тегов, и это знание
+// «тегов нет», а не «теги неизвестны».
+func TestBuildWithoutTags(t *testing.T) {
+	runner := &fakeRunner{result: singbox.Result{Stdout: "sing-box version 1.14.0\n\nEnvironment: go1.26.6 linux/arm64\n"}}
+
+	got, err := newClient(t, runner).Build(t.Context())
+	if err != nil {
+		t.Fatalf("версия: %v", err)
+	}
+
+	if got.Tags == nil || len(got.Tags) != 0 {
+		t.Errorf("теги %#v, ожидали пустой список", got.Tags)
+	}
+}
+
 // Панель должна работать и при сломанном sing-box, поэтому неудача
 // возвращается ошибкой, а не пустой версией, которую вызывающий примет за
 // прочитанную.
-func TestVersionFails(t *testing.T) {
+func TestBuildFails(t *testing.T) {
 	tests := []struct {
 		name   string
 		result singbox.Result
@@ -142,7 +180,7 @@ func TestVersionFails(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if _, err := newClient(t, &fakeRunner{result: tt.result}).Version(t.Context()); err == nil {
+			if _, err := newClient(t, &fakeRunner{result: tt.result}).Build(t.Context()); err == nil {
 				t.Error("версия принята")
 			}
 		})

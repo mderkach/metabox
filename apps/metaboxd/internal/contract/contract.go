@@ -24,6 +24,9 @@ type Status struct {
 	// Version — версия демона; версия бинаря sing-box идёт отдельным полем.
 	Version        string `json:"version"`
 	SingboxVersion string `json:"singbox_version,omitempty"`
+	// SingboxBuild — состав сборки бинаря. Нет поля — бинарь не прочитан, и
+	// судить, каких типов узлов в нём нет, панели не по чему.
+	SingboxBuild *SingboxBuild `json:"singbox_build,omitempty"`
 	// ConfigPath — файл, которым демон владеет: путь задаётся флагами запуска,
 	// и вычислить его на стороне панели нельзя.
 	ConfigPath string `json:"config_path,omitempty"`
@@ -35,6 +38,13 @@ type Status struct {
 	// страницы теряет транзакцию: её идентификатор жил только в ответе на
 	// POST (ADR-0002).
 	TransactionHref string `json:"transaction_href,omitempty"`
+}
+
+// SingboxBuild — то, с чем собран бинарь sing-box на устройстве.
+type SingboxBuild struct {
+	// Tags — build-теги из `sing-box version`. Пустой список значит сборку без
+	// тегов: типы узлов, закрытые тегом, такой бинарь откажется запускать.
+	Tags []string `json:"tags"`
 }
 
 // RuntimeSource — источник рантайм-данных (ADR-0006).

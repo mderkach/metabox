@@ -65,6 +65,12 @@ export const HealthSchema = z.object({
   version: z.string(),
 })
 
+/** SingboxBuild — то, с чем собран бинарь sing-box на устройстве. */
+export const SingboxBuildSchema = z.object({
+  /** Tags — build-теги из `sing-box version`. Пустой список значит сборку без тегов: типы узлов, закрытые тегом, такой бинарь откажется запускать. */
+  tags: z.array(z.string()),
+})
+
 /** Runtime — источники рантайма в `GET /api/status`. Поля отвечают, что демон умеет читать, а не отвечает ли sing-box сейчас: живость процесса идёт `GET /api/service` и топиком `service` потока, и второй правды о ней здесь не заводится. */
 export const RuntimeSchema = z.object({
   /** Sources — источники, которые демон собрал. */
@@ -94,6 +100,8 @@ export const StatusSchema = z.object({
   /** Version — версия демона; версия бинаря sing-box идёт отдельным полем. */
   version: z.string(),
   singbox_version: z.string().optional(),
+  /** SingboxBuild — состав сборки бинаря. Нет поля — бинарь не прочитан, и судить, каких типов узлов в нём нет, панели не по чему. */
+  singbox_build: SingboxBuildSchema.optional(),
   /** ConfigPath — файл, которым демон владеет: путь задаётся флагами запуска, и вычислить его на стороне панели нельзя. */
   config_path: z.string().optional(),
   /** Runtime — откуда демон читает рантайм. Молчаливая подмена одного источника другим запрещена, поэтому состав объявлен контрактом (ADR-0006). */
@@ -311,6 +319,22 @@ export const ExplanationSchema = z.object({
   rules: z.array(RuleSchema),
 })
 
+/** RuleHits — срабатывания одного правила работающего процесса. */
+export const RuleHitsSchema = z.object({
+  index: z.int(),
+  hits: z.int(),
+})
+
+/** Hits — ответ ручки счётчика срабатываний. Счёт наблюдаемый, а не точный: соединение, которое открылось и закрылось между двумя снапшотами, core уже не покажет, и в счёт оно не попадёт. */
+export const HitsSchema = z.object({
+  /** Seconds — сколько идёт счёт. Он живёт в памяти демона и начинается с его запуска: у роутера нет часов реального времени, поэтому отдаётся длительность, а не момент начала. */
+  seconds: z.int(),
+  /** Rules — по записи на каждое правило работающего процесса, в его порядке. Длину панель сверяет с route.rules применённого документа, как и у объяснения маршрута (ADR-0007). */
+  rules: z.array(RuleHitsSchema),
+  /** Final — соединения, которые не совпали ни с одним правилом и ушли в route.final. */
+  final: z.int(),
+})
+
 export type ChainWire = z.infer<typeof ChainSchema>
 export type CheckDetailsWire = z.infer<typeof CheckDetailsSchema>
 export type ConnectionWire = z.infer<typeof ConnectionSchema>
@@ -322,16 +346,19 @@ export type EventWire = z.infer<typeof EventSchema>
 export type ExplanationWire = z.infer<typeof ExplanationSchema>
 export type HealthWire = z.infer<typeof HealthSchema>
 export type HistoryWire = z.infer<typeof HistorySchema>
+export type HitsWire = z.infer<typeof HitsSchema>
 export type LinkWire = z.infer<typeof LinkSchema>
 export type LoadWire = z.infer<typeof LoadSchema>
 export type MatchWire = z.infer<typeof MatchSchema>
 export type MemoryWire = z.infer<typeof MemorySchema>
 export type PointWire = z.infer<typeof PointSchema>
 export type ProcessWire = z.infer<typeof ProcessSchema>
+export type RuleHitsWire = z.infer<typeof RuleHitsSchema>
 export type RuleWire = z.infer<typeof RuleSchema>
 export type RuntimeWire = z.infer<typeof RuntimeSchema>
 export type ServiceWire = z.infer<typeof ServiceSchema>
 export type ShareWire = z.infer<typeof ShareSchema>
+export type SingboxBuildWire = z.infer<typeof SingboxBuildSchema>
 export type StatWire = z.infer<typeof StatSchema>
 export type StatusWire = z.infer<typeof StatusSchema>
 export type TransactionWire = z.infer<typeof TransactionSchema>

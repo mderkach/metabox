@@ -154,7 +154,7 @@ func (e *Explainer) Explain(ctx context.Context, id string) (Explanation, error)
 		return Explanation{}, err
 	}
 
-	rules, err := e.rules(ctx)
+	rules, err := readRules(ctx, e.source)
 	if err != nil {
 		return Explanation{}, err
 	}
@@ -187,8 +187,9 @@ func (e *Explainer) connection(ctx context.Context, id string) (clashConnection,
 	return clashConnection{}, ErrNoConnection
 }
 
-func (e *Explainer) rules(ctx context.Context) ([]Rule, error) {
-	body, err := e.source.Snapshot(ctx, "/rules")
+// readRules читает список правил работающего процесса.
+func readRules(ctx context.Context, source Source) ([]Rule, error) {
+	body, err := source.Snapshot(ctx, "/rules")
 	if err != nil {
 		return nil, fmt.Errorf("%w: список правил: %w", ErrRuntimeUnavailable, err)
 	}
