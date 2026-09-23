@@ -18,6 +18,5 @@ export * from './shadcn/tabs';
 export * from './shadcn/textarea';
 export * from './shadcn/tooltip';
 export * from './Plot';
-export * from './plotColor';
 export * from './styles';
 export * from './ValueAxis';

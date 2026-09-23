@@ -6,7 +6,7 @@ import { TRAFFIC_WINDOW_SECONDS, toTrafficTimes, type TrafficSample } from '@ent
 import { BYTE_STEPS, toMirroredTicks, toTimeTicks, toTimeWindow, toValueScale } from '@shared/lib/chart';
 import { formatRate } from '@shared/lib/format';
 import { useReducedMotion } from '@shared/lib/media';
-import { Plot, plotColor, type PlotData, type PlotInstance, type PlotOptions, type PlotScales } from '@shared/ui';
+import { Plot, type PlotData, type PlotInstance, type PlotOptions, type PlotScales, type PlotTone } from '@shared/ui';
 
 import { useFollowNow } from '../lib';
 import { FILL_ALPHA, GRID_DASH, HALF_INTERVALS, LINE_WIDTH, TIME_TICK_SECONDS } from '../model';
@@ -22,20 +22,17 @@ function toTimeLabels(t: TFunction<'widgets/Daemon/DaemonTraffic'>, splits: numb
   });
 }
 
-function toSeries(token: string) {
-  return {
-    stroke: plotColor(token),
-    fill: plotColor(token, FILL_ALPHA),
-    fillTo: 0,
-    width: LINE_WIDTH,
-    points: { show: false },
-  };
-}
+const SERIES = { fillTo: 0, width: LINE_WIDTH, points: { show: false } };
+
+const TONES: readonly PlotTone[] = [
+  { token: '--series-down', fillAlpha: FILL_ALPHA },
+  { token: '--series-up', fillAlpha: FILL_ALPHA },
+];
 
 function buildOptions(t: TFunction<'widgets/Daemon/DaemonTraffic'>): PlotOptions {
   return {
     scales: { x: { time: false, auto: false }, y: { auto: false } },
-    series: [{}, toSeries('--series-down'), toSeries('--series-up')],
+    series: [{}, SERIES, SERIES],
     axes: [
       {
         splits: (chart) =>
@@ -45,7 +42,7 @@ function buildOptions(t: TFunction<'widgets/Daemon/DaemonTraffic'>): PlotOptions
       {
         splits: (chart) => toMirroredTicks(toValueScale(chart.scales.y.max ?? 0, BYTE_STEPS, HALF_INTERVALS).ticks),
         values: (_, splits) => splits.map((value) => formatRate(Math.abs(value))),
-        grid: { show: true, stroke: plotColor('--border'), width: 1, dash: GRID_DASH },
+        grid: { show: true, dash: GRID_DASH },
       },
     ],
   };
@@ -103,6 +100,7 @@ export function DaemonTraffic({
   return (
     <Plot
       options={options}
+      tones={TONES}
       data={data}
       scales={scales}
       onChart={setChart}
