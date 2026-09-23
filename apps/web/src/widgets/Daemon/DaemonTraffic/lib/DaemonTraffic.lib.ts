@@ -9,8 +9,13 @@ import type { PlotInstance } from '@shared/ui';
  * непрерывно. Линия не догоняет новую точку — точка появляется сразу,
  * двигается только ось. Выключенный сдвиг оставляет ось тому, кто ставит её
  * вместе с данными.
+ *
+ * Правая кромка отстаёт от «сейчас» на `lag` — шаг потока. Иначе между
+ * кадрами хвост области отставал бы от кромки почти на секунду и прыгал к ней
+ * с каждой новой точкой; с отставанием новая точка приходит за кромкой и
+ * въезжает в окно плавно.
  */
-export function useFollowNow(chart: PlotInstance | null, span: number, enabled: boolean) {
+export function useFollowNow(chart: PlotInstance | null, span: number, lag: number, enabled: boolean) {
   useEffect(
     function followNow() {
       if (chart === null || !enabled) {
@@ -21,7 +26,7 @@ export function useFollowNow(chart: PlotInstance | null, span: number, enabled: 
         const first = chart.data[0].at(0);
 
         if (first !== undefined) {
-          chart.setScale('x', toTimeWindow(first, Date.now() / MS_IN_SECOND, span));
+          chart.setScale('x', toTimeWindow(first, Date.now() / MS_IN_SECOND - lag, span));
         }
 
         frame = requestAnimationFrame(shiftWindow);
@@ -31,6 +36,6 @@ export function useFollowNow(chart: PlotInstance | null, span: number, enabled: 
         cancelAnimationFrame(frame);
       };
     },
-    [chart, span, enabled]
+    [chart, span, lag, enabled]
   );
 }

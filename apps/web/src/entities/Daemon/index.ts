@@ -42,6 +42,7 @@ export { toApplyTransaction } from './model/Daemon.adapter';
 export {
   RuntimeState,
   RuntimeStore,
+  TRAFFIC_STEP_SECONDS,
   TRAFFIC_WINDOW_SECONDS,
   toTrafficTimes,
   useRuntimeStream,

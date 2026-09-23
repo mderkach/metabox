@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  toStickyCeiling,
   BYTE_STEPS,
   toAreaGeometry,
   toMirroredTicks,
@@ -11,6 +12,17 @@ import {
   toTimeWindow,
   toValueScale,
 } from '../chart';
+
+describe('toStickyCeiling', () => {
+  it('растёт сразу, как только величина переросла кромку', () => {
+    expect(toStickyCeiling(2048, 5120)).toBe(5120);
+  });
+
+  it('держит кромку, пока величина не упала вчетверо', () => {
+    expect(toStickyCeiling(5120, 2048)).toBe(5120);
+    expect(toStickyCeiling(5120, 1024)).toBe(1024);
+  });
+});
 
 describe('toShare', () => {
   it('на нулевой сумме отдаёт ноль, а не NaN', () => {

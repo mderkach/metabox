@@ -26,6 +26,23 @@ describe('ConnectionSummaryBars', () => {
     expect(screen.queryByText('0 Б')).not.toBeInTheDocument();
   });
 
+  it('держит место под недостающие строки, чтобы карточка не прыгала по высоте', () => {
+    render(<ConnectionSummaryBars bars={[barOf('proxy', 3000)]} empty='пусто' format={formatBytes} slots={5} />);
+
+    expect(screen.getAllByRole('listitem', { hidden: true })).toHaveLength(5);
+    expect(screen.getAllByRole('listitem')).toHaveLength(1);
+  });
+
+  it('не сжимает шкалу вслед за небольшим спадом величины', () => {
+    const { rerender } = render(
+      <ConnectionSummaryBars bars={[barOf('proxy', 3000)]} empty='пусто' format={formatBytes} />
+    );
+
+    rerender(<ConnectionSummaryBars bars={[barOf('proxy', 1500)]} empty='пусто' format={formatBytes} />);
+
+    expect(screen.getByText('4.0 кБ')).toBeInTheDocument();
+  });
+
   it('без величин не подписывает ось шкалой в один байт', () => {
     render(<ConnectionSummaryBars bars={[barOf('proxy', 0)]} empty='пусто' format={formatBytes} />);
 

@@ -2,6 +2,7 @@ import { FakePlot } from '@test/fakePlot';
 import { render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { TRAFFIC_STEP_SECONDS } from '@entities/Daemon';
 import { MS_IN_SECOND } from '@shared/lib/time';
 
 import { DaemonTraffic } from '../ui/DaemonTraffic';
@@ -53,6 +54,22 @@ describe('DaemonTraffic', () => {
 
     expect(FakePlot.latest().scales.x.max).toBeGreaterThan(before);
     expect(FakePlot.instances).toHaveLength(1);
+  });
+
+  it('держит правую кромку на шаг позади «сейчас», чтобы новая точка въезжала плавно', () => {
+    render(<DaemonTraffic samples={samplesOf(2)} sampledAt={NOW} peakDown={2} peakUp={2} />);
+    vi.advanceTimersToNextFrame();
+
+    expect(FakePlot.latest().scales.x.max).toBeCloseTo(Date.now() / MS_IN_SECOND - TRAFFIC_STEP_SECONDS, 1);
+  });
+
+  it('не сжимает шкалу, когда пик окна немного спал', () => {
+    const { rerender } = render(<DaemonTraffic samples={samplesOf(2)} sampledAt={NOW} peakDown={3000} peakUp={0} />);
+    const before = FakePlot.latest().scales.y.max;
+
+    rerender(<DaemonTraffic samples={samplesOf(2)} sampledAt={NOW} peakDown={1500} peakUp={0} />);
+
+    expect(FakePlot.latest().scales.y.max).toBe(before);
   });
 
   it('при просьбе системы не двигать интерфейс ставит ось вместе с данными, а не по кадрам', () => {

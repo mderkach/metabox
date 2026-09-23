@@ -243,6 +243,21 @@ describe('сводка и история снапшота', () => {
     expect(summary.nodes.every((share) => share.key !== 'direct')).toBe(true);
   });
 
+  it('ставит топы узлов и устройств по объёму, а не по скорости: иначе строки менялись бы местами каждую секунду', () => {
+    const store = ConnectionStore.getState();
+
+    store.reset();
+    store.apply(CONNECTIONS_FIXTURE);
+
+    const { summary } = ConnectionStore.getState();
+
+    for (const top of [summary.nodes, summary.sources]) {
+      const volumes = top.map((share) => share.volume);
+
+      expect(volumes).toEqual([...volumes].sort((left, right) => right - left));
+    }
+  });
+
   it('считает объём группы суммой байт входящих в неё соединений', () => {
     const store = ConnectionStore.getState();
 

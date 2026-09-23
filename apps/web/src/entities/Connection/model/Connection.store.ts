@@ -60,6 +60,11 @@ function byLoad(left: ConnectionShare, right: ConnectionShare): number {
   return right.rate - left.rate || right.count - left.count || left.key.localeCompare(right.key);
 }
 
+/** Топы идут по объёму: он копится и не переставляет строки каждую секунду. */
+function byVolume(left: ConnectionShare, right: ConnectionShare): number {
+  return right.volume - left.volume || left.key.localeCompare(right.key);
+}
+
 /**
  * Сводка живого снапшота. Считается здесь и одним проходом: панелей на экране
  * несколько, и селектор у каждой дал бы свой обход списка каждую секунду, а в
@@ -93,8 +98,8 @@ function toSummary(rows: ConnectionRow[]): ConnectionSummary {
   return {
     actions: [...actions.values()].sort(byLoad),
     networks: [...networks.values()].sort(byLoad),
-    nodes: [...nodes.values()].sort(byLoad).slice(0, TOP_LIMIT),
-    sources: [...sources.values()].sort(byLoad).slice(0, TOP_LIMIT),
+    nodes: [...nodes.values()].sort(byVolume).slice(0, TOP_LIMIT),
+    sources: [...sources.values()].sort(byVolume).slice(0, TOP_LIMIT),
   };
 }
 

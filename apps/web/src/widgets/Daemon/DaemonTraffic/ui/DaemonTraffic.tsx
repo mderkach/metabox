@@ -2,10 +2,11 @@ import type { TFunction } from 'i18next';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { TRAFFIC_WINDOW_SECONDS, toTrafficTimes, type TrafficSample } from '@entities/Daemon';
+import { TRAFFIC_STEP_SECONDS, TRAFFIC_WINDOW_SECONDS, toTrafficTimes, type TrafficSample } from '@entities/Daemon';
 import { BYTE_STEPS, toMirroredTicks, toTimeTicks, toTimeWindow, toValueScale } from '@shared/lib/chart';
 import { formatRate } from '@shared/lib/format';
 import { useReducedMotion } from '@shared/lib/media';
+import { useStickyCeiling } from '@shared/lib/useStickyCeiling';
 import {
   Plot,
   SkeletonRows,
@@ -88,7 +89,9 @@ export function DaemonTraffic({
     () => [times, samples.map((sample) => sample.down), samples.map((sample) => -sample.up)],
     [times, samples]
   );
-  const ceiling = toValueScale(Math.max(peakDown, peakUp), BYTE_STEPS, HALF_INTERVALS).ceiling;
+  // Пик окна меняется, когда всплеск уходит за левую кромку: без запаса шкала
+  // прыгала бы вместе с ним, и та же скорость рисовалась бы разной высотой.
+  const ceiling = useStickyCeiling(toValueScale(Math.max(peakDown, peakUp), BYTE_STEPS, HALF_INTERVALS).ceiling);
   const scales = useMemo<PlotScales>(() => {
     const y = { min: -ceiling, max: ceiling };
 
@@ -99,7 +102,7 @@ export function DaemonTraffic({
     return { x: toTimeWindow(times[0], times[times.length - 1], TRAFFIC_WINDOW_SECONDS), y };
   }, [ceiling, reducedMotion, times]);
 
-  useFollowNow(chart, TRAFFIC_WINDOW_SECONDS, !reducedMotion);
+  useFollowNow(chart, TRAFFIC_WINDOW_SECONDS, TRAFFIC_STEP_SECONDS, !reducedMotion);
 
   if (sampledAt === null || samples.length < MIN_POINTS) {
     return <SkeletonRows rows={1} rowClassName='h-44' className='p-0' />;

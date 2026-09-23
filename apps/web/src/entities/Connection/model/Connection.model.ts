@@ -164,9 +164,9 @@ export interface ConnectionShare<Key extends string = string> {
 export interface ConnectionSummary {
   actions: ConnectionShare<RouteKind>[];
   networks: ConnectionShare[];
-  /** Конечные узлы цепочки, самые быстрые первыми. */
+  /** Конечные узлы цепочки, передавшие больше всего первыми. */
   nodes: ConnectionShare[];
-  /** Устройства локальной сети, самые быстрые первыми. */
+  /** Устройства локальной сети, передавшие больше всего первыми. */
   sources: ConnectionShare[];
 }
 

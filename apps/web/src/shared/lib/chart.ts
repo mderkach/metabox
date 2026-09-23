@@ -144,6 +144,23 @@ export function toValueScale(max: number, steps: readonly number[], intervals = 
   return { ceiling: step * count, ticks: Array.from({ length: count + 1 }, (_, index) => index * step) };
 }
 
+/** Во сколько раз величина должна упасть, чтобы шкала сжалась. */
+const SHRINK_RATIO = 4;
+
+/**
+ * Кромка шкалы с запасом на колебания: растёт сразу, как только величина её
+ * переросла, а сжимается, лишь когда величина упала вчетверо. Иначе живой
+ * ряд, который гуляет вокруг ступени, перерисовывал бы деления каждую секунду
+ * и сравнивать кадры между собой было бы нельзя.
+ */
+export function toStickyCeiling(current: number, needed: number): number {
+  if (needed > current || needed * SHRINK_RATIO <= current) {
+    return needed;
+  }
+
+  return current;
+}
+
 export interface TimeWindow {
   min: number;
   max: number;

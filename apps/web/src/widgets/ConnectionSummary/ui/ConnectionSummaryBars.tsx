@@ -1,8 +1,12 @@
 import { BYTE_STEPS, toPercents, toShare, toValueScale } from '@shared/lib/chart';
+import { useStickyCeiling } from '@shared/lib/useStickyCeiling';
 import { cn } from '@shared/lib/utils';
 import { Empty, EMPTY_INLINE, EmptyDescription, EmptyHeader, ValueAxis } from '@shared/ui';
 
 const PERCENT = 100;
+
+const ROW = 'grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 gap-y-1';
+const LANE = 'col-span-2 block h-1.5 overflow-hidden rounded-full';
 
 /** Два деления: карточка сводки узкая, и больше подписей в строку не встаёт. */
 const AXIS_INTERVALS = 2;
@@ -23,17 +27,28 @@ export interface SummaryBar {
  * от суммы ряда рядом с величиной — на «какая часть». Строка без величины
  * дорожки не получает: на простаивающем роутере ряд пустых дорожек выглядит
  * как сломанный график.
+ *
+ * Ряд обновляется раз в секунду, поэтому высота у него постоянная: строка не
+ * переносится, место под дорожку держится и у строки без величины, а `slots`
+ * резервирует строки, которых пока нет.
  */
 export function ConnectionSummaryBars({
   bars,
   empty,
   format,
+  slots = 0,
 }: {
   bars: SummaryBar[];
   empty: string;
   /** Подпись деления оси в единицах величины. */
   format: (value: number) => string;
+  /** Сколько строк держать местом, даже когда их меньше. */
+  slots?: number;
 }) {
+  const values = bars.map((bar) => bar.value);
+  const peak = values.length === 0 ? 0 : Math.max(...values);
+  const ceiling = useStickyCeiling(toValueScale(peak, BYTE_STEPS, AXIS_INTERVALS).ceiling);
+
   if (bars.length === 0) {
     return (
       <Empty className={EMPTY_INLINE}>
@@ -44,30 +59,35 @@ export function ConnectionSummaryBars({
     );
   }
 
-  const values = bars.map((bar) => bar.value);
   const percents = toPercents(values);
-  const peak = Math.max(...values);
-  const scale = toValueScale(peak, BYTE_STEPS, AXIS_INTERVALS);
+  const scale = toValueScale(ceiling, BYTE_STEPS, AXIS_INTERVALS);
+  const reserved = Math.max(0, slots - bars.length);
 
   return (
     <div className='flex flex-col gap-2.5'>
       <ul className='flex flex-col gap-2.5'>
         {bars.map((bar, index) => (
-          <li key={bar.key} className='flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1'>
+          <li key={bar.key} className={ROW}>
             <p className='min-w-0 truncate text-xs' title={bar.label}>
               {bar.label}
             </p>
-            <p className='ml-auto font-mono text-xs text-muted-foreground tabular-nums'>
+            <p className='font-mono text-xs whitespace-nowrap text-muted-foreground tabular-nums'>
               {bar.caption} · {percents[index]}%
             </p>
-            {bar.value > 0 && (
-              <span className='block h-1.5 basis-full overflow-hidden rounded-full bg-meter-track'>
+            <span className={cn(LANE, bar.value > 0 && 'bg-meter-track')}>
+              {bar.value > 0 && (
                 <span
                   className={cn('block h-full rounded-full', bar.tone)}
                   style={{ width: `${String(toShare(bar.value, scale.ceiling) * PERCENT)}%` }}
                 />
-              </span>
-            )}
+              )}
+            </span>
+          </li>
+        ))}
+        {Array.from({ length: reserved }, (_slot, index) => (
+          <li key={`slot-${String(index)}`} aria-hidden='true' className={ROW}>
+            <p className='text-xs'>&nbsp;</p>
+            <span className={LANE} />
           </li>
         ))}
       </ul>
