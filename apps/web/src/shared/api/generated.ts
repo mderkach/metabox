@@ -12,6 +12,63 @@ import * as z from "zod"
  */
 export const SCHEMA_FORK_VERSION = "v1.14.0-extended-2.7.1"
 
+/**
+ * Build-тег, без которого бинарь форка не запустит тип узла: реестр → тип → тег.
+ * Прочитано из include/ форка. С какими тегами собран бинарь на устройстве,
+ * сообщает демон; тип без записи здесь есть в любой сборке.
+ */
+export const BUILD_TAG_OF_TYPE: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  "certificate_provider": {
+    "acme": "with_acme",
+    "tailscale": "with_tailscale",
+  },
+  "dns": {
+    "dhcp": "with_dhcp",
+    "h3": "with_quic",
+    "openconnect": "with_openconnect",
+    "openvpn": "with_openvpn",
+    "quic": "with_quic",
+    "tailscale": "with_tailscale",
+  },
+  "endpoint": {
+    "openconnect": "with_openconnect",
+    "openvpn-client": "with_openvpn",
+    "openvpn-server": "with_openvpn",
+    "tailscale": "with_tailscale",
+    "warp": "with_wireguard",
+    "wireguard": "with_wireguard",
+  },
+  "inbound": {
+    "call": "with_call",
+    "cloudflared": "with_cloudflared",
+    "hysteria": "with_quic",
+    "hysteria2": "with_quic",
+    "mtproxy": "with_mtproxy",
+    "sudoku": "with_sudoku",
+    "trusttunnel": "with_trusttunnel",
+    "tuic": "with_quic",
+  },
+  "outbound": {
+    "call": "with_call",
+    "hysteria": "with_quic",
+    "hysteria2": "with_quic",
+    "masque": "with_masque",
+    "naive": "with_naive_outbound",
+    "sudoku": "with_sudoku",
+    "trusttunnel": "with_trusttunnel",
+    "tuic": "with_quic",
+  },
+  "service": {
+    "ccm": "with_ccm",
+    "derp": "with_tailscale",
+    "hysteria-realm": "with_quic",
+    "ocm": "with_ocm",
+    "profiler": "with_profiler",
+    "usbip-client": "with_usbip",
+    "usbip-server": "with_usbip",
+  },
+}
+
 export const ACMEDNS01ChallengeOptionsSchema = z.union([
   z.strictObject({
     provider: z.literal("alidns").optional(),

@@ -102,38 +102,15 @@ func constantStrings() ([]string, error) {
 		return nil, err
 	}
 
-	fset := token.NewFileSet()
-	pkgs, err := parser.ParseDir(fset, filepath.Join(dir, "constant"), nil, 0)
+	values, err := constantValues(dir)
 	if err != nil {
-		return nil, fmt.Errorf("разбор пакета constant: %w", err)
+		return nil, err
 	}
 
 	seen := map[string]bool{}
-	for _, pkg := range pkgs {
-		for _, file := range pkg.Files {
-			for _, decl := range file.Decls {
-				gen, ok := decl.(*ast.GenDecl)
-				if !ok || gen.Tok != token.CONST {
-					continue
-				}
-				for _, spec := range gen.Specs {
-					value, ok := spec.(*ast.ValueSpec)
-					if !ok {
-						continue
-					}
-					for _, expr := range value.Values {
-						lit, ok := expr.(*ast.BasicLit)
-						if !ok || lit.Kind != token.STRING {
-							continue
-						}
-						s, err := strconv.Unquote(lit.Value)
-						if err != nil || s == "" {
-							continue
-						}
-						seen[s] = true
-					}
-				}
-			}
+	for _, value := range values {
+		if value != "" {
+			seen[value] = true
 		}
 	}
 	if len(seen) == 0 {
@@ -146,6 +123,44 @@ func constantStrings() ([]string, error) {
 	}
 	sort.Strings(names)
 	return names, nil
+}
+
+// constantValues — имя строковой константы пакета constant форка → значение.
+func constantValues(dir string) (map[string]string, error) {
+	fset := token.NewFileSet()
+	pkgs, err := parser.ParseDir(fset, filepath.Join(dir, "constant"), nil, parser.SkipObjectResolution)
+	if err != nil {
+		return nil, fmt.Errorf("разбор пакета constant: %w", err)
+	}
+
+	values := map[string]string{}
+	for _, pkg := range pkgs {
+		for _, file := range pkg.Files {
+			for _, decl := range file.Decls {
+				gen, ok := decl.(*ast.GenDecl)
+				if !ok || gen.Tok != token.CONST {
+					continue
+				}
+				for _, spec := range gen.Specs {
+					value, ok := spec.(*ast.ValueSpec)
+					if !ok {
+						continue
+					}
+					for i, expr := range value.Values {
+						lit, ok := expr.(*ast.BasicLit)
+						if !ok || lit.Kind != token.STRING || i >= len(value.Names) {
+							continue
+						}
+						if s, err := strconv.Unquote(lit.Value); err == nil {
+							values[value.Names[i].Name] = s
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return values, nil
 }
 
 // forkDir отдаёт каталог форка в module cache. Команда читает go.mod, поэтому

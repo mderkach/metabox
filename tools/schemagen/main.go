@@ -68,7 +68,12 @@ func generate() (string, error) {
 			len(report), strings.Join(report, "\n"))
 	}
 
-	return emit(w.set, root, forkVersion), nil
+	gates, err := buildGates(dir)
+	if err != nil {
+		return "", err
+	}
+
+	return emit(w.set, root, forkVersion, gates, groups), nil
 }
 
 // registryUnions строит union'ы реестров до обхода корня: в дереве опций они
