@@ -179,11 +179,16 @@ export interface TrafficHistory {
   device: DeviceHistoryPoint[];
 }
 
+/** Загрузка и температура — пик шага, память — среднее за шаг. */
 export interface DeviceHistoryPoint {
   load: number;
   /** Самая горячая зона платы; ноль означает, что зон нет. */
   celsius: number;
   memory: number;
+  /** Резидентная память sing-box; ноль — процесс не найден. */
+  singbox: number;
+  /** Резидентная память демона. */
+  daemon: number;
 }
 
 /** Скорость интерфейса за интервал между снимками, байт в секунду. */

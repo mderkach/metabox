@@ -39,7 +39,6 @@ export interface OverviewRuntime {
   peakDown: number;
   peakUp: number;
   memory: number;
-  memoryHistory: number[];
   totals: ConnectionTotals;
   /** Показания устройства; `null` — снимок ещё не приходил. */
   system: SystemStat | null;
@@ -70,7 +69,6 @@ export function useOverviewRuntime(): OverviewRuntime {
   const traffic = RuntimeState.use.traffic();
   const now = useTrafficNow();
   const memory = RuntimeState.use.memoryNow();
-  const memoryHistory = RuntimeState.use.memory();
   const sampledAt = RuntimeState.use.sampledAt();
   const system = RuntimeState.use.system();
   const uplink = RuntimeState.use.uplink();
@@ -108,7 +106,6 @@ export function useOverviewRuntime(): OverviewRuntime {
     peakDown: peaks.down,
     peakUp: peaks.up,
     memory,
-    memoryHistory,
     totals,
     system,
     uplink,

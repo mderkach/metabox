@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"metabox/internal/device"
+	"metabox/internal/history"
 )
 
 const (
@@ -299,5 +300,28 @@ func TestShareCountsWithoutReads(t *testing.T) {
 
 	if stat.Share.Proxy != 2000 || stat.Share.Link != 1500 {
 		t.Errorf("накопленное без единого снимка: получили %+v", stat.Share)
+	}
+}
+
+// Утечку ищут по памяти процесса sing-box за дни работы, а не по памяти платы:
+// история обязана копить её вместе с остальными показаниями.
+func TestSampleDeviceRecordsProcessMemory(t *testing.T) {
+	fs := newTree(t)
+	fs.listener(t, clashPortHex, socketInode)
+	fs.process(t, 5872, "sing-box", socketInode, 83900)
+
+	recorded := history.NewDevice(1, 4)
+	reader := device.New(device.Options{
+		Proc:    fs.proc,
+		Sys:     fs.sys,
+		Port:    func(context.Context) (int, error) { return clashPort, nil },
+		History: recorded,
+	})
+
+	reader.SampleDevice(t.Context())
+
+	points := recorded.Points()
+	if len(points) != 1 || points[0].Singbox != 83900*1024 || points[0].Daemon != 12000*1024 {
+		t.Errorf("история процессов: получили %+v", points)
 	}
 }

@@ -1,16 +1,16 @@
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 
-import { SCHEMA_VERSION, useClashConfigs, useConfigPath, useDaemonStatus } from '@entities/Daemon';
+import { SCHEMA_VERSION, useClashConfigs, useConfigPath, useDaemonStatus, useTrafficHistory } from '@entities/Daemon';
 import { toClashModeLabel } from '@features/Daemon/DaemonMode';
 import { formatBytes } from '@shared/lib/format';
 import { cn } from '@shared/lib/utils';
 import { Card, CardContent, CardHeader, PENDING_REVEAL, SECTION_LABEL, Skeleton } from '@shared/ui';
 import { DaemonService } from '@widgets/Daemon/DaemonService';
-import { DaemonMemory } from '@widgets/Daemon/DaemonTraffic';
 
 import type { OverviewRuntime } from '../lib';
 import { OverviewSection } from './OverviewSection';
+import { OverviewTrend } from './OverviewTrend';
 
 /**
  * Процессы и их показания.
@@ -26,6 +26,9 @@ export function OverviewProcess({ runtime }: { runtime: OverviewRuntime }) {
   const clash = useClashConfigs();
   const { t: tShared } = useTranslation('shared');
   const system = runtime.system;
+  const history = useTrafficHistory();
+  const points = history.data?.device ?? [];
+  const stepSeconds = history.data?.stepSeconds ?? 0;
 
   return (
     <OverviewSection title={t('process.title')}>
@@ -33,7 +36,14 @@ export function OverviewProcess({ runtime }: { runtime: OverviewRuntime }) {
         <DaemonService
           process={system?.singbox}
           heap={runtime.memory}
-          heapChart={<DaemonMemory samples={runtime.memoryHistory} />}
+          memoryTrend={
+            <OverviewTrend
+              samples={points.map((point) => point.singbox)}
+              stepSeconds={stepSeconds}
+              format={formatBytes}
+              label={t('process.singboxHistory')}
+            />
+          }
         />
 
         <Card>
@@ -75,6 +85,12 @@ export function OverviewProcess({ runtime }: { runtime: OverviewRuntime }) {
                 />
               )}
             </dl>
+            <OverviewTrend
+              samples={points.map((point) => point.daemon)}
+              stepSeconds={stepSeconds}
+              format={formatBytes}
+              label={t('process.daemonHistory')}
+            />
           </CardContent>
         </Card>
       </div>

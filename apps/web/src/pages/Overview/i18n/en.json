@@ -59,6 +59,8 @@
     "schema": "Form schema",
     "config": "Config",
     "clashMode": "Clash API mode",
-    "memory": "Daemon memory"
+    "memory": "Daemon memory",
+    "singboxHistory": "sing-box process memory over the daemon uptime",
+    "daemonHistory": "Daemon memory over its uptime"
   }
 }

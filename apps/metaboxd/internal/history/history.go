@@ -75,14 +75,23 @@ type Point struct {
 	Up   int64 `json:"up"`
 }
 
-// DevicePoint — усреднённые показания платы за шаг.
+// DevicePoint — показания платы и процессов за шаг.
+//
+// Загрузка и температура берутся пиком шага, память — средним. История нужна,
+// чтобы заметить перегрев и утечку за дни работы, а при укрупнении шага среднее
+// растворило бы короткий перегрев в соседних спокойных минутах.
 type DevicePoint struct {
-	// Load — средняя загрузка за минуту, как её отдаёт ядро.
+	// Load — средняя загрузка за минуту, как её отдаёт ядро; пик шага.
 	Load float64 `json:"load"`
-	// Celsius — самая горячая зона платы; ноль означает, что зон нет.
+	// Celsius — самая горячая зона платы, пик шага; ноль означает, что зон нет.
 	Celsius float64 `json:"celsius"`
 	// Memory — занятая память платы в байтах.
 	Memory int64 `json:"memory"`
+	// Singbox — резидентная память процесса sing-box в байтах; ноль — процесс
+	// не найден. По ней и видна утечка: память платы в целом её размывает.
+	Singbox int64 `json:"singbox"`
+	// Daemon — резидентная память самого демона в байтах.
+	Daemon int64 `json:"daemon"`
 }
 
 // Traffic — история трафика.
@@ -156,10 +165,8 @@ type Device struct {
 	perPoint int
 	ring     ring[DevicePoint]
 
-	sumLoad    float64
-	sumCelsius float64
-	sumMemory  int64
-	counted    int
+	step    DevicePoint
+	counted int64
 }
 
 // NewDevice собирает историю платы: `perPoint` снятий на точку, `points` точек
@@ -169,35 +176,40 @@ func NewDevice(perPoint, points int) *Device {
 }
 
 // Record принимает снятие показаний.
-func (d *Device) Record(load, celsius float64, memory int64) {
+func (d *Device) Record(sample DevicePoint) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	d.sumLoad += load
-	d.sumCelsius += celsius
-	d.sumMemory += memory
+	d.step.Load = max(d.step.Load, sample.Load)
+	d.step.Celsius = max(d.step.Celsius, sample.Celsius)
+	d.step.Memory += sample.Memory
+	d.step.Singbox += sample.Singbox
+	d.step.Daemon += sample.Daemon
 	d.counted++
 
-	if d.counted < d.perPoint {
+	if d.counted < int64(d.perPoint) {
 		return
 	}
 
-	counted := float64(d.counted)
 	point := DevicePoint{
-		Load:    d.sumLoad / counted,
-		Celsius: d.sumCelsius / counted,
-		Memory:  d.sumMemory / int64(d.counted),
+		Load:    d.step.Load,
+		Celsius: d.step.Celsius,
+		Memory:  d.step.Memory / d.counted,
+		Singbox: d.step.Singbox / d.counted,
+		Daemon:  d.step.Daemon / d.counted,
 	}
-	d.sumLoad, d.sumCelsius, d.sumMemory, d.counted = 0, 0, 0, 0
+	d.step, d.counted = DevicePoint{}, 0
 
 	d.ring.push(point, mergeDevicePoints)
 }
 
 func mergeDevicePoints(older, newer DevicePoint) DevicePoint {
 	return DevicePoint{
-		Load:    (older.Load + newer.Load) / 2,
-		Celsius: (older.Celsius + newer.Celsius) / 2,
+		Load:    max(older.Load, newer.Load),
+		Celsius: max(older.Celsius, newer.Celsius),
 		Memory:  (older.Memory + newer.Memory) / 2,
+		Singbox: (older.Singbox + newer.Singbox) / 2,
+		Daemon:  (older.Daemon + newer.Daemon) / 2,
 	}
 }
 

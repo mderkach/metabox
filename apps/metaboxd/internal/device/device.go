@@ -20,6 +20,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"metabox/internal/history"
 )
 
 const (
@@ -98,7 +100,7 @@ type PortResolver func(ctx context.Context) (int, error)
 // Recorder принимает снятые показания. Интерфейс объявлен здесь, у
 // потребителя: читателю всё равно, кто и как хранит историю.
 type Recorder interface {
-	Record(load, celsius float64, memory int64)
+	Record(sample history.DevicePoint)
 }
 
 // Options задаёт корни файловых систем и способ найти порт Clash API.
@@ -184,7 +186,17 @@ func (r *Reader) SampleDevice(ctx context.Context) {
 		hottest = max(hottest, float64(zone.Milli)/milliDegrees)
 	}
 
-	r.history.Record(stat.Load.One, hottest, stat.Memory.Total-stat.Memory.Available)
+	sample := history.DevicePoint{
+		Load:    stat.Load.One,
+		Celsius: hottest,
+		Memory:  stat.Memory.Total - stat.Memory.Available,
+		Daemon:  stat.Daemon.RSS,
+	}
+	if stat.Singbox != nil {
+		sample.Singbox = stat.Singbox.RSS
+	}
+
+	r.history.Record(sample)
 }
 
 // Read снимает показания. Ошибка перечисляет то, что прочитать не удалось;

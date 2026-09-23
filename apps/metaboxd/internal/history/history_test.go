@@ -68,11 +68,36 @@ func TestTrafficWidensStep(t *testing.T) {
 func TestDeviceKeepsOrder(t *testing.T) {
 	device := history.NewDevice(1, 3)
 
-	device.Record(0.5, 40, 100)
-	device.Record(1.5, 44, 300)
+	device.Record(history.DevicePoint{Load: 0.5, Celsius: 40, Memory: 100, Singbox: 10, Daemon: 1})
+	device.Record(history.DevicePoint{Load: 1.5, Celsius: 44, Memory: 300, Singbox: 30, Daemon: 3})
 
 	points := device.Points()
-	if len(points) != 2 || points[0].Load != 0.5 || points[1].Memory != 300 {
+	if len(points) != 2 || points[0].Load != 0.5 || points[1].Memory != 300 || points[1].Singbox != 30 {
 		t.Errorf("показания платы: получили %+v", points)
+	}
+}
+
+// Перегрев на одно снятие из шага не должен раствориться в соседних: история
+// нужна, чтобы его заметить.
+func TestDeviceKeepsPeaksAndAveragesMemory(t *testing.T) {
+	device := history.NewDevice(2, 2)
+
+	device.Record(history.DevicePoint{Load: 0.2, Celsius: 40, Memory: 100, Singbox: 10})
+	device.Record(history.DevicePoint{Load: 3.5, Celsius: 90, Memory: 300, Singbox: 30})
+	device.Record(history.DevicePoint{Load: 0.1, Celsius: 41, Memory: 100, Singbox: 10})
+	device.Record(history.DevicePoint{Load: 0.1, Celsius: 41, Memory: 100, Singbox: 10})
+	// Кольцо на две точки заполнено: следующая сливает их в одну.
+	device.Record(history.DevicePoint{Load: 0.1, Celsius: 41, Memory: 100, Singbox: 10})
+	device.Record(history.DevicePoint{Load: 0.1, Celsius: 41, Memory: 100, Singbox: 10})
+
+	points := device.Points()
+	if len(points) != 2 {
+		t.Fatalf("точек %d, ожидали 2: %+v", len(points), points)
+	}
+	if points[0].Load != 3.5 || points[0].Celsius != 90 {
+		t.Errorf("пик шага растворился при слиянии: %+v", points[0])
+	}
+	if points[0].Memory != 150 || points[0].Singbox != 15 {
+		t.Errorf("память шага и слияния — среднее: %+v", points[0])
 	}
 }

@@ -1,5 +1,8 @@
 {
-  "window": { "minute": "this minute" },
-  "chart": { "label": "Traffic {{window}}: inbound up to {{down}}, outbound up to {{up}}" },
-  "memory": { "label": "Memory over ten minutes, from {{from}} to {{to}}" }
+  "window": {
+    "minute": "this minute"
+  },
+  "chart": {
+    "label": "Traffic {{window}}: inbound up to {{down}}, outbound up to {{up}}"
+  }
 }

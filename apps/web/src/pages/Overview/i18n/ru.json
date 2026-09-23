@@ -59,6 +59,8 @@
     "schema": "Схема форм",
     "config": "Конфиг",
     "clashMode": "Режим Clash API",
-    "memory": "Память демона"
+    "memory": "Память демона",
+    "singboxHistory": "Память процесса sing-box за время работы демона",
+    "daemonHistory": "Память демона за время его работы"
   }
 }

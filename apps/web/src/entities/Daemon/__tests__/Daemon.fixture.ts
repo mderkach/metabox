@@ -103,6 +103,8 @@ export const TRAFFIC_HISTORY_FIXTURE: TrafficHistoryWire = {
     load: 0.1 + ((index * 3) % 7) / 10,
     celsius: 41 + ((index * 5) % 9) / 3,
     memory: 350_000_000 + index * 1_200_000,
+    singbox: 88_000_000 + index * 150_000,
+    daemon: 14_000_000,
   })),
 };
 

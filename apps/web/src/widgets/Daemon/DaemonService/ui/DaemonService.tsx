@@ -64,14 +64,17 @@ function formatUptime(t: TFunction<'widgets/Daemon/DaemonService'>, seconds: num
 export function DaemonService({
   process,
   heap,
-  heapChart,
+  memoryTrend,
 }: {
   /** Показания процесса из топика `system`; пусто, когда процесс не найден. */
   process?: SystemProcess;
   /** Память рантайма Go из Clash API: она меньше RSS на резидентный код. */
   heap: number;
-  /** Готовым узлом: слайсы одного слоя друг друга не импортируют. */
-  heapChart?: ReactNode;
+  /**
+   * История памяти процесса под строками — по ней видна утечка. Готовым узлом:
+   * слайсы одного слоя друг друга не импортируют.
+   */
+  memoryTrend?: ReactNode;
 }) {
   const { t } = useTranslation('widgets/Daemon/DaemonService');
   const service = useServiceState();
@@ -163,8 +166,10 @@ export function DaemonService({
           {process !== undefined && (
             <Row label={t('row.processMemory')} value={`${formatBytes(process.rss)} · pid ${String(process.pid)}`} />
           )}
-          {heap > 0 && <Row label={t('row.goMemory')} value={formatBytes(heap)} chart={heapChart} />}
+          {heap > 0 && <Row label={t('row.goMemory')} value={formatBytes(heap)} />}
         </dl>
+
+        {memoryTrend}
 
         {state.status !== 'running' && state.lastError !== undefined && (
           <Alert variant='destructive'>

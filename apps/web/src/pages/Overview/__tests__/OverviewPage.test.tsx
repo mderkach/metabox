@@ -142,6 +142,19 @@ describe('экран обзора', () => {
     expect(cells.getByText('0.49')).toBeInTheDocument();
   });
 
+  // Утечку и перегрев видно за часы работы, а не за минуту вкладки: ряды
+  // берутся из истории демона и называют своё окно и размах.
+  it('показывает память sing-box и показания платы рядом за всё окно истории демона', async () => {
+    RuntimeStore.getState().pushSystem({ ...SYSTEM_FIXTURE, thermal: [{ name: 'cpu-thermal', celsius: 42.5 }] });
+
+    renderWithRouter(OverviewPage);
+
+    expect(
+      await screen.findByRole('img', { name: 'Память процесса sing-box за время работы демона' })
+    ).toBeInTheDocument();
+    expect(screen.getAllByText(/^за 6 мин · от /)).toHaveLength(5);
+  });
+
   it('без второго снимка потока графики трафика и соединений линию не рисуют', async () => {
     renderWithRouter(OverviewPage);
 
