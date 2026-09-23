@@ -78,8 +78,11 @@ function ProxyNodeTileProto({
     delay: toDelayText(t, node),
   });
 
+  // `relative` держит внутри плитки скрытую подпись: `sr-only` позиционирован
+  // абсолютно, и без позиционированного предка он уходит за прокрутку экрана и
+  // удлиняет документ — нижняя навигация уезжает вверх.
   const className = cn(
-    'flex w-full flex-col gap-1.5 rounded-md border px-2.5 py-2 text-left transition-colors',
+    'relative flex w-full flex-col gap-1.5 rounded-md border px-2.5 py-2 text-left transition-colors',
     node.selected ? 'border-selected-edge bg-selected' : 'border-border bg-card'
   );
 

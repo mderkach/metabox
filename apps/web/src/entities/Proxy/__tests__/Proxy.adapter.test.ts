@@ -10,7 +10,21 @@ describe('toProxyRuntime', () => {
     const names = toProxyRuntime(CLASH_PROXIES_FIXTURE).groups.map((group) => group.name);
 
     expect(names).not.toContain('GLOBAL');
-    expect(names).toEqual(['proxy', 'us', 'us-fallback']);
+    expect(names).toEqual(['us-fallback', 'proxy', 'us']);
+  });
+
+  it('ставит селекторы первыми и не меняет порядок внутри вида', () => {
+    const group = (name: string, type: string) => ({ type, name, udp: true, history: [], now: 'direct', all: [] });
+    const wire: ClashProxiesWire = {
+      proxies: {
+        auto: group('auto', 'URLTest'),
+        manual: group('manual', 'Selector'),
+        backup: group('backup', 'Fallback'),
+        streaming: group('streaming', 'Selector'),
+      },
+    };
+
+    expect(toProxyRuntime(wire).groups.map((item) => item.name)).toEqual(['manual', 'streaming', 'auto', 'backup']);
   });
 
   it('разрешает выбор узла только у селектора', () => {

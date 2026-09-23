@@ -6,6 +6,7 @@ import { http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 
 import { PROXY_ENDPOINT } from '@entities/Proxy';
+import { CLASH_PROVIDERS_FIXTURE } from '@entities/Proxy/__tests__/Proxy.fixture';
 import { proxyHandlers } from '@entities/Proxy/__tests__/Proxy.handlers';
 
 import { ProxiesPage } from '../ui/ProxiesPage';
@@ -80,6 +81,17 @@ describe('экран прокси', () => {
     renderWithQuery(<ProxiesPage />);
 
     expect(await screen.findByText('sub-eu')).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { name: 'Подписки' })).toHaveLength(1);
+  });
+
+  it('дату обновления подписки печатает форматом панели, а в разметке оставляет машинную', async () => {
+    serveProxies();
+
+    renderWithQuery(<ProxiesPage />);
+
+    const dates = await screen.findAllByText('10.09.2026');
+
+    expect(dates[0]).toHaveAttribute('dateTime', CLASH_PROVIDERS_FIXTURE.providers['sub-eu'].updatedAt);
   });
 
   // В фикстуре группа us вложена в us-fallback: проверяется её плитка.

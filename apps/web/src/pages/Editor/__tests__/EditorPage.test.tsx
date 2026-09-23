@@ -92,6 +92,19 @@ describe('экран правил', () => {
     expect(screen.getByRole('status')).toHaveTextContent('3 правила');
   });
 
+  it('над списком суть порядка одной строкой, а объяснение — по кнопке «?»', async () => {
+    const user = userEvent.setup();
+
+    renderWithRouter(EditorPage);
+
+    expect(await screen.findByText('сверху вниз, срабатывает первое подходящее')).toBeInTheDocument();
+    expect(screen.queryByText(/никогда не выполнится/)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Как работает порядок правил' }));
+
+    expect(await screen.findByText(/никогда не выполнится/)).toBeInTheDocument();
+  });
+
   it('показывает счёт срабатываний и окно счёта, чтобы ноль не читался как «правило мёртвое»', async () => {
     renderWithRouter(EditorPage);
 

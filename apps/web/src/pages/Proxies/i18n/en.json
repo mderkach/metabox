@@ -1,13 +1,13 @@
 {
-  "subtitle": "these actions change how sing-box runs, not the config",
   "groups": {
-    "title": "Node groups"
+    "title": "Node groups",
+    "note": "picking a node changes how sing-box runs, not the config"
   },
   "testAll": {
     "action": "Test all"
   },
   "providers": {
     "title": "Subscriptions",
-    "subtitle": "nodes come from them, not from the config"
+    "note": "nodes come from them, not from the config"
   }
 }

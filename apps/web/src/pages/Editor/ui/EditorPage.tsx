@@ -1,5 +1,5 @@
 import { useSearch } from '@tanstack/react-router';
-import { CircleAlert, Info, Search } from 'lucide-react';
+import { CircleAlert, CircleQuestionMark, Search } from 'lucide-react';
 import { startTransition, useCallback, useState, ViewTransition } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
@@ -21,7 +21,11 @@ import {
   FACET_IDLE,
   FACET_MORE,
   Input,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   QueryFailure,
+  SEARCH_FIELD,
   SURFACE,
   SkeletonRows,
 } from '@shared/ui';
@@ -37,7 +41,6 @@ const VISIBLE_ISSUES = 5;
 const VISIBLE_TARGETS = 6;
 
 export function EditorPage() {
-  const { t } = useTranslation('pages/Editor');
   const editor = useRouteEditor();
   const filter = useRuleFilter(editor.rules);
   const marks = useRuleMarks(editor);
@@ -66,12 +69,7 @@ export function EditorPage() {
 
   return (
     <div className='flex min-h-0 grow flex-col gap-4 px-4 py-5 sm:px-6'>
-      <p className='flex items-start gap-2 text-sm text-pretty text-muted-foreground'>
-        <Info className='mt-0.5 size-4 shrink-0 text-primary' aria-hidden='true' />
-        <span>
-          <Trans t={t} i18nKey='order' components={{ accent: <span className='font-medium text-foreground' /> }} />
-        </span>
-      </p>
+      <RuleOrderHint />
 
       {editor.source.isPending && <SkeletonRows className={SURFACE} />}
 
@@ -127,12 +125,36 @@ export function EditorPage() {
   );
 }
 
+/**
+ * Суть порядка стоит строкой, объяснение — по запросу: читают его один раз, а
+ * место над списком оно занимало бы на каждом заходе.
+ */
+function RuleOrderHint() {
+  const { t } = useTranslation('pages/Editor');
+
+  return (
+    <div className='flex items-center gap-1 text-sm text-muted-foreground'>
+      <p className='text-pretty'>
+        <Trans t={t} i18nKey='order.short' components={{ accent: <span className='font-medium text-foreground' /> }} />
+      </p>
+      <Popover>
+        <PopoverTrigger render={<Button variant='ghost' size='icon-xs' aria-label={t('order.more')} />}>
+          <CircleQuestionMark />
+        </PopoverTrigger>
+        <PopoverContent align='start' className='w-80'>
+          <p className='text-pretty'>{t('order.details')}</p>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
 /** Поиск: левый край тулбара таблицы. */
 function RuleSearch({ filter }: { filter: RuleFilterState }) {
   const { t } = useTranslation('pages/Editor');
 
   return (
-    <div className='relative w-full max-w-80'>
+    <div className={SEARCH_FIELD}>
       <Search className='pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground' />
       <Input
         value={filter.query}

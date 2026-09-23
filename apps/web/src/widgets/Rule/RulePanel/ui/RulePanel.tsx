@@ -1,5 +1,5 @@
 import { X } from 'lucide-react';
-import { useState, type KeyboardEvent } from 'react';
+import { useState, type KeyboardEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ConfigDocumentState } from '@entities/Config';
@@ -24,6 +24,8 @@ import {
   TabsList,
   TabsTrigger,
 } from '@shared/ui';
+
+const BREAK_POINT = /(?=\.)|(?<=_)/;
 
 const TAB = {
   Form: 'form',
@@ -85,7 +87,14 @@ export function RulePanel({
           {sheet ? (
             <SheetTitle className={SECTION_HEADING}>{t('title', { index: rule.index })}</SheetTitle>
           ) : (
-            <h2 ref={headingRef} tabIndex={-1} className={SECTION_HEADING}>
+            <h2
+              ref={headingRef}
+              tabIndex={-1}
+              className={cn(
+                '-mx-1.5 -my-0.5 rounded-md px-1.5 py-0.5 outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
+                SECTION_HEADING
+              )}
+            >
               {t('title', { index: rule.index })}
             </h2>
           )}
@@ -131,6 +140,15 @@ export function RulePanel({
 }
 
 /**
+ * Места переноса перед точкой домена или адреса и после подчёркивания в имени
+ * поля: браузер сам их там не видит и рвал бы длинное значение на произвольной
+ * букве. Посреди части перенос остаётся только для части шире строки.
+ */
+function withBreaks(text: string): ReactNode[] {
+  return text.split(BREAK_POINT).flatMap((part, index) => (index === 0 ? [part] : [<wbr key={index} />, part]));
+}
+
+/**
  * Условия правила только на чтение: форма правит выход, а не условия.
  * Значения показываются целиком, без свёртки в «и ещё N», — в отличие от
  * строки списка, где на них нет места.
@@ -161,8 +179,17 @@ function RuleConditions({ rule }: { rule: RuleRow }) {
       <dl className='flex flex-col gap-1'>
         {rule.matchers.map((matcher) => (
           <div key={matcher.key} className='flex gap-3 border-t border-border py-1.5 text-xs first:border-t-0'>
-            <dt className='w-32 shrink-0 truncate font-mono text-muted-foreground'>{matcher.key}</dt>
-            <dd className='min-w-0 grow font-mono break-all'>{matcher.values.join(', ')}</dd>
+            <dt className='w-32 shrink-0 font-mono wrap-anywhere text-muted-foreground'>{withBreaks(matcher.key)}</dt>
+            <dd className='min-w-0 grow font-mono wrap-anywhere'>
+              <ul>
+                {matcher.values.map((value, index) => (
+                  <li key={index} className='inline'>
+                    {withBreaks(value)}
+                    {index < matcher.values.length - 1 && ', '}
+                  </li>
+                ))}
+              </ul>
+            </dd>
           </div>
         ))}
       </dl>

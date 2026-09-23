@@ -1,5 +1,9 @@
 {
-  "order": "Rules are checked <accent>top to bottom, the first match wins</accent> — not the most specific one. A rule below one that already matched never runs, so the order here is the logic.",
+  "order": {
+    "short": "Rules are checked <accent>top to bottom, the first match wins</accent>.",
+    "details": "The first matching rule wins, not the most specific one. A rule below one that already matched never runs, so the order here is the logic.",
+    "more": "How rule order works"
+  },
   "search": {
     "placeholder": "Domain, IP or outbound tag",
     "label": "Search the rules"

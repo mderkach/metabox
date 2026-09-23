@@ -37,7 +37,15 @@ const REASON_KEY: Readonly<Record<RouteReasonCode, ParseKeys<'widgets/RouteExpla
   not_in_process_list: 'unknown.reason.not_in_process_list',
 };
 
-const HEADING = cn('flex min-w-0 grow flex-col', SECTION_HEADING);
+/**
+ * Заголовок получает фокус при открытии панели. Кольцу нужен зазор, как у
+ * кнопки: внутренний отступ отодвигает его от текста, а отрицательное поле
+ * оставляет текст на месте.
+ */
+const HEADING = cn(
+  '-mx-1.5 -my-0.5 flex min-w-0 grow flex-col rounded-md px-1.5 py-0.5 outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
+  SECTION_HEADING
+);
 
 /**
  * Объяснение строится на наблюдаемых данных core: список правил и сработавшее

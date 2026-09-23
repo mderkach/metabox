@@ -15,6 +15,7 @@ import { ConnectionExport } from './ConnectionExport';
 import { ConnectionFacets } from './ConnectionFacets';
 import { ConnectionSearch } from './ConnectionSearch';
 import { ConnectionsEmpty } from './ConnectionsEmpty';
+import { ConnectionsStreamStatus } from './ConnectionsStreamStatus';
 
 /** Счётчик вкладки: тот же вид, что у вкладок разделов конфигурации. */
 const TAB_COUNT = 'text-xs text-muted-foreground tabular-nums';
@@ -70,7 +71,7 @@ export function ConnectionsPage() {
   return (
     <>
       <PageHeader title={t('section.connections', { ns: 'shared' })}>
-        <p className='text-xs text-muted-foreground'>{t('subtitle')}</p>
+        <ConnectionsStreamStatus paused={paused} interval={view.interval} />
         {dropped > 0 && (
           <p role='status' className='text-xs text-destructive'>
             {t('dropped', { count: dropped })}

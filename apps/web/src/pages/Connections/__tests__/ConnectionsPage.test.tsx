@@ -96,6 +96,20 @@ describe('экран соединений', () => {
     expect(screen.getByRole('button', { name: 'Продолжить' })).toBeInTheDocument();
   });
 
+  it('шапка называет состояние потока: частоту обновления, а на паузе — паузу', async () => {
+    const user = userEvent.setup();
+
+    renderScreen();
+
+    const header = await screen.findByRole('banner');
+
+    expect(within(header).getByText('обновляется каждую секунду')).toBeInTheDocument();
+
+    await user.click(await screen.findByRole('button', { name: 'Пауза' }));
+
+    expect(within(header).getByText('на паузе: строки не обновляются')).toBeInTheDocument();
+  });
+
   it('рвёт все соединения только после подтверждения', async () => {
     const closedAll = vi.fn<() => void>();
 

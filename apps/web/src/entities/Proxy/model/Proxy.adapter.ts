@@ -44,6 +44,10 @@ function toNode(proxy: ClashProxyWire, selected: boolean): ProxyNode {
 /**
  * Группы конфига. Служебные `GLOBAL` и `DIRECT` отброшены: в файле их нет, а
  * переключение `GLOBAL` увело бы весь трафик мимо правил маршрутизации.
+ *
+ * Селекторы идут первыми: только в них узел переключают руками, а за
+ * остальными группами экран лишь наблюдает. Внутри вида порядок рантайма
+ * сохраняется.
  */
 function toGroups(source: ClashProxiesWire): ProxyGroup[] {
   const groups: ProxyGroup[] = [];
@@ -77,7 +81,7 @@ function toGroups(source: ClashProxiesWire): ProxyGroup[] {
     });
   }
 
-  return groups;
+  return [...groups.filter((group) => group.selectable), ...groups.filter((group) => !group.selectable)];
 }
 
 /**

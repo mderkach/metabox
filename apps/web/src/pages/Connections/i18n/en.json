@@ -1,5 +1,10 @@
 {
-  "subtitle": "updates every second",
+  "stream": {
+    "everySecond": "updates every second",
+    "live_one": "updates every {{count}} second",
+    "live_other": "updates every {{count}} seconds",
+    "paused": "paused: rows are not updating"
+  },
   "dropped": "updates not parsed: {{count}}",
   "resume": "Resume",
   "pause": "Pause",
