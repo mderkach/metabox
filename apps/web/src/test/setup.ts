@@ -1,7 +1,8 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
-import { afterAll, afterEach, beforeAll } from 'vitest';
+import { afterAll, afterEach, beforeAll, vi } from 'vitest';
 
+import { FakePlot } from './fakePlot';
 import { initTestI18n } from './i18n';
 import { server } from './server';
 
@@ -9,6 +10,12 @@ await initTestI18n();
 
 // Глобалы vitest выключены, поэтому Testing Library не регистрирует свою очистку.
 afterEach(cleanup);
+
+vi.mock('uplot', async () => ({ default: (await import('./fakePlot')).FakePlot }));
+
+afterEach(() => {
+  FakePlot.reset();
+});
 
 /**
  * ResizeObserver в jsdom нет вовсе, а виртуализатор списков без него не

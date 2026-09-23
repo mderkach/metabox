@@ -30,12 +30,13 @@ export function OverviewConnections({ runtime }: { runtime: OverviewRuntime }) {
           </ul>
         </Card>
 
-        <ConnectionHistory samples={runtime.history} />
+        {/* Семь карточек на три колонки: две растянуты, иначе в последнем
+            ряду остаётся пустая ячейка. */}
+        <div className='xl:col-span-2'>
+          <ConnectionHistory samples={runtime.history} />
+        </div>
         <ConnectionSummaryAction shares={runtime.summary.actions} />
         <ConnectionSummaryNetwork shares={runtime.summary.networks} />
-      </div>
-
-      <div className='grid items-start gap-4 sm:grid-cols-2 xl:grid-cols-3'>
         <ConnectionSummaryTop
           title={t('connections.topNodes')}
           href='/proxies'
@@ -48,7 +49,9 @@ export function OverviewConnections({ runtime }: { runtime: OverviewRuntime }) {
           shares={runtime.summary.sources}
           empty={t('connections.topSourcesEmpty')}
         />
-        <ProxyLatency />
+        <div className='sm:col-span-2'>
+          <ProxyLatency />
+        </div>
       </div>
     </OverviewSection>
   );

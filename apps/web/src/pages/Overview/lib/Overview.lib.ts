@@ -55,6 +55,8 @@ export interface OverviewRuntime {
   live: boolean;
   /** Ни одного кадра ещё не было: экран показывает ожидание, а не нули. */
   awaiting: boolean;
+  /** Когда пришёл последний кадр трафика, миллисекунды эпохи. */
+  sampledAt: number | null;
 }
 
 /**
@@ -113,6 +115,7 @@ export function useOverviewRuntime(): OverviewRuntime {
     counts,
     live: sampledAt !== null && Math.max(checkedAt, sampledAt) - sampledAt < STALE_AFTER,
     awaiting: sampledAt === null,
+    sampledAt,
   };
 }
 

@@ -39,7 +39,7 @@ export function ConnectionSummaryAction({ shares }: { shares: ConnectionShare<Ro
 
   return (
     <ConnectionSummaryPanel title={t('action.title')}>
-      <ConnectionSummaryBars bars={bars} empty={t('empty')} />
+      <ConnectionSummaryBars bars={bars} empty={t('empty')} format={formatBytes} />
     </ConnectionSummaryPanel>
   );
 }

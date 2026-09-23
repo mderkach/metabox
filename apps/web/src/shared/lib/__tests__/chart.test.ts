@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
-import { toAreaGeometry, toDonutSegments, toPercents, toShare } from '../chart';
+import {
+  BYTE_STEPS,
+  toAreaGeometry,
+  toMirroredTicks,
+  toDonutSegments,
+  toPercents,
+  toShare,
+  toTimeTicks,
+  toTimeWindow,
+  toValueScale,
+} from '../chart';
 
 describe('toShare', () => {
   it('на нулевой сумме отдаёт ноль, а не NaN', () => {
@@ -52,5 +62,45 @@ describe('toDonutSegments', () => {
 
     expect(segments.map((segment) => segment.turn)).toEqual([0, 180]);
     expect(segments[0].dash).toBe('50.00 100.00');
+  });
+});
+
+describe('toValueScale', () => {
+  it('берёт наименьший шаг, при котором максимум укладывается в деления', () => {
+    expect(toValueScale(700, [100, 200, 500])).toEqual({ ceiling: 800, ticks: [0, 200, 400, 600, 800] });
+  });
+
+  it('на нулевом максимуме строит шкалу в один шаг, а не вырожденную', () => {
+    expect(toValueScale(0, [100, 200])).toEqual({ ceiling: 100, ticks: [0, 100] });
+  });
+
+  it('держит постоянный потолок при шаге в его треть', () => {
+    expect(toValueScale(900, [300]).ticks).toEqual([0, 300, 600, 900]);
+  });
+
+  it('делит байты по ступеням килобайта, а не по десяткам', () => {
+    expect(toValueScale(3000, BYTE_STEPS).ticks).toEqual([0, 1024, 2048, 3072]);
+  });
+});
+
+describe('toTimeWindow', () => {
+  it('пока буфер не заполнен, начинается с первой точки', () => {
+    expect(toTimeWindow(90, 100, 59)).toEqual({ min: 90, max: 100 });
+  });
+
+  it('на заполненном буфере держит постоянную ширину окна', () => {
+    expect(toTimeWindow(10, 100, 59)).toEqual({ min: 41, max: 100 });
+  });
+});
+
+describe('toTimeTicks', () => {
+  it('ставит отсечки назад от правой кромки и не выходит за окно', () => {
+    expect(toTimeTicks({ min: 81, max: 100 }, 15)).toEqual([85, 100]);
+  });
+});
+
+describe('toMirroredTicks', () => {
+  it('отражает деления вниз и не повторяет ноль', () => {
+    expect(toMirroredTicks([0, 5, 10])).toEqual([-10, -5, 0, 5, 10]);
   });
 });

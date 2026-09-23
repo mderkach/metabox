@@ -1,171 +1,113 @@
-import { useId } from 'react';
+import type { TFunction } from 'i18next';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import type { TrafficSample } from '@entities/Daemon';
+import { TRAFFIC_WINDOW_SECONDS, toTrafficTimes, type TrafficSample } from '@entities/Daemon';
+import { BYTE_STEPS, toMirroredTicks, toTimeTicks, toTimeWindow, toValueScale } from '@shared/lib/chart';
 import { formatRate } from '@shared/lib/format';
+import { useReducedMotion } from '@shared/lib/media';
+import { Plot, plotColor, type PlotData, type PlotInstance, type PlotOptions, type PlotScales } from '@shared/ui';
 
-/**
- * Координаты рисуются в долях, а сетка растягивается по месту: подписи осей
- * остаются HTML снаружи SVG. Внутри они масштабировались вместе с областью и на
- * широком экране печатались крупнее заголовка страницы.
- */
-const PLOT = 100;
-
-/** Ось посередине: половина области под входящий ряд, половина под исходящий. */
-const HALVES = 2;
-const MID = PLOT / HALVES;
-
-/** Сотые доли области: точнее округлять незачем, площадь всё равно растягивается. */
-const COORD_PRECISION = 2;
+import { useFollowNow } from '../lib';
+import { FILL_ALPHA, GRID_DASH, HALF_INTERVALS, LINE_WIDTH, TIME_TICK_SECONDS } from '../model';
 
 /** По одной точке линию не проведёшь. */
 const MIN_POINTS = 2;
 
-/** Отсечки времени: минута делится на четыре шага по пятнадцать секунд. */
-const TIME_TICKS = ['tick.minus60', 'tick.minus45', 'tick.minus30', 'tick.minus15', 'tick.now'] as const;
+function toTimeLabels(t: TFunction<'widgets/Daemon/DaemonTraffic'>, splits: number[], max: number): string[] {
+  return splits.map((value) => {
+    const age = Math.round(max - value);
 
-/** Середины половин: по ним читается высота всплеска, а не только его форма. */
-const QUARTER = MID / HALVES;
-const GRID = [QUARTER, PLOT - QUARTER];
-
-function toGeometry(values: number[], peak: number, down: boolean): { line: string; area: string } {
-  const step = PLOT / (values.length - 1);
-  const points = values.map((value, index) => {
-    const offset = MID * (value / peak);
-
-    return `${(step * index).toFixed(COORD_PRECISION)},${(down ? MID - offset : MID + offset).toFixed(COORD_PRECISION)}`;
+    return age === 0 ? t('tick.now') : t('tick.ago', { value: age });
   });
+}
 
+function toSeries(token: string) {
   return {
-    line: points.join(' '),
-    area: `M0,${String(MID)} L${points.join(' L')} L${String(PLOT)},${String(MID)} Z`,
+    stroke: plotColor(token),
+    fill: plotColor(token, FILL_ALPHA),
+    fillTo: 0,
+    width: LINE_WIDTH,
+    points: { show: false },
+  };
+}
+
+function buildOptions(t: TFunction<'widgets/Daemon/DaemonTraffic'>): PlotOptions {
+  return {
+    scales: { x: { time: false, auto: false }, y: { auto: false } },
+    series: [{}, toSeries('--series-down'), toSeries('--series-up')],
+    axes: [
+      {
+        splits: (chart) =>
+          toTimeTicks({ min: chart.scales.x.min ?? 0, max: chart.scales.x.max ?? 0 }, TIME_TICK_SECONDS),
+        values: (chart, splits) => toTimeLabels(t, splits, chart.scales.x.max ?? 0),
+      },
+      {
+        splits: (chart) => toMirroredTicks(toValueScale(chart.scales.y.max ?? 0, BYTE_STEPS, HALF_INTERVALS).ticks),
+        values: (_, splits) => splits.map((value) => formatRate(Math.abs(value))),
+        grid: { show: true, stroke: plotColor('--border'), width: 1, dash: GRID_DASH },
+      },
+    ],
   };
 }
 
 /**
  * Трафик за минуту двумя зеркальными областями: входящий вверх от оси,
- * исходящий вниз. Половины масштабируются каждая по своему пику — при общей
- * шкале всплеск входящего в сто раз прижимал исходящий к оси, и весь ряд
- * переставал читаться (это ровно то, что видно на живом роутере).
- *
- * Своя графика, а не библиотека: два ряда по шестьдесят точек без интерактива
- * не стоят ста килобайт в бандле.
+ * исходящий вниз. Шкала у половин общая: по своей на каждую равные на вид
+ * области отличались бы в разы, и сравнить направления по картинке было бы
+ * нельзя.
  */
 export function DaemonTraffic({
   samples,
-  ticks,
-  window,
+  sampledAt,
+  peakDown,
+  peakUp,
 }: {
   samples: TrafficSample[];
-  /** Подписи оси времени, слева направо. */
-  ticks?: string[];
-  /** Окно графика словами: уходит в доступное имя картинки. */
-  window?: string;
+  /** Когда пришла последняя точка, миллисекунды эпохи; `null` — точек ещё не было. */
+  sampledAt: number | null;
+  peakDown: number;
+  peakUp: number;
 }) {
   const { t } = useTranslation('widgets/Daemon/DaemonTraffic');
-  const timeTicks = ticks ?? TIME_TICKS.map((tick) => t(tick));
-  const timeWindow = window ?? t('window.minute');
-  const down = samples.map((sample) => sample.down);
-  const up = samples.map((sample) => sample.up);
-  const peakDown = Math.max(...down, 1);
-  const peakUp = Math.max(...up, 1);
-  const enough = samples.length >= MIN_POINTS;
+  const reducedMotion = useReducedMotion();
+  const [chart, setChart] = useState<PlotInstance | null>(null);
+  const options = useMemo(() => buildOptions(t), [t]);
+  // Страница рендерится и по тику свежести потока, а не только по новому кадру:
+  // без мемоизации график перестраивал бы пути на каждый такой рендер.
+  const times = useMemo(
+    () => (sampledAt === null ? [] : toTrafficTimes(samples.length, sampledAt)),
+    [samples.length, sampledAt]
+  );
+  const data = useMemo<PlotData>(
+    () => [times, samples.map((sample) => sample.down), samples.map((sample) => -sample.up)],
+    [times, samples]
+  );
+  const ceiling = toValueScale(Math.max(peakDown, peakUp), BYTE_STEPS, HALF_INTERVALS).ceiling;
+  const scales = useMemo<PlotScales>(() => {
+    const y = { min: -ceiling, max: ceiling };
 
-  const downGeometry = enough ? toGeometry(down, peakDown, true) : null;
-  const upGeometry = enough ? toGeometry(up, peakUp, false) : null;
-  // Ссылка `url(#id)` разрешается по документу: два графика на странице с общим
-  // id отдали бы заливку первого обоим.
-  const gradient = useId();
+    if (!reducedMotion || times.length === 0) {
+      return { y };
+    }
+
+    return { x: toTimeWindow(times[0], times[times.length - 1], TRAFFIC_WINDOW_SECONDS), y };
+  }, [ceiling, reducedMotion, times]);
+
+  useFollowNow(chart, TRAFFIC_WINDOW_SECONDS, !reducedMotion);
+
+  if (sampledAt === null || samples.length < MIN_POINTS) {
+    return <p className='flex h-44 items-center text-xs text-muted-foreground'>{t('pending')}</p>;
+  }
 
   return (
-    <figure className='flex flex-col gap-1.5'>
-      <div className='flex gap-3'>
-        <div className='flex w-20 shrink-0 flex-col justify-between py-0.5 text-right font-mono text-xs tabular-nums'>
-          <span className='text-series-down'>{formatRate(peakDown)}</span>
-          <span className='text-muted-foreground'>0</span>
-          <span className='text-series-up'>{formatRate(peakUp)}</span>
-        </div>
-
-        <svg
-          viewBox={`0 0 ${String(PLOT)} ${String(PLOT)}`}
-          preserveAspectRatio='none'
-          role='img'
-          aria-label={t('chart.label', { window: timeWindow, down: formatRate(peakDown), up: formatRate(peakUp) })}
-          className='h-44 min-w-0 grow'
-        >
-          <defs>
-            <linearGradient id={`${gradient}-down`} x1='0' y1='0' x2='0' y2='1'>
-              <stop offset='0%' stopColor='var(--series-down)' stopOpacity='0.3' />
-              <stop offset='100%' stopColor='var(--series-down)' stopOpacity='0.02' />
-            </linearGradient>
-            <linearGradient id={`${gradient}-up`} x1='0' y1='1' x2='0' y2='0'>
-              <stop offset='0%' stopColor='var(--series-up)' stopOpacity='0.3' />
-              <stop offset='100%' stopColor='var(--series-up)' stopOpacity='0.02' />
-            </linearGradient>
-          </defs>
-
-          {GRID.map((line) => (
-            <line
-              key={line}
-              x1='0'
-              y1={line}
-              x2={PLOT}
-              y2={line}
-              vectorEffect='non-scaling-stroke'
-              className='stroke-border'
-              strokeWidth={1}
-              strokeDasharray='2 3'
-            />
-          ))}
-
-          <line
-            x1='0'
-            y1={MID}
-            x2={PLOT}
-            y2={MID}
-            vectorEffect='non-scaling-stroke'
-            className='stroke-border'
-            strokeWidth={1}
-          />
-
-          {downGeometry !== null && (
-            <g>
-              <path d={downGeometry.area} fill={`url(#${gradient}-down)`} stroke='none' />
-              <polyline
-                points={downGeometry.line}
-                fill='none'
-                strokeWidth={1.5}
-                strokeLinejoin='round'
-                vectorEffect='non-scaling-stroke'
-                className='stroke-series-down'
-              />
-            </g>
-          )}
-
-          {upGeometry !== null && (
-            <g>
-              <path d={upGeometry.area} fill={`url(#${gradient}-up)`} stroke='none' />
-              <polyline
-                points={upGeometry.line}
-                fill='none'
-                strokeWidth={1.5}
-                strokeLinejoin='round'
-                vectorEffect='non-scaling-stroke'
-                className='stroke-series-up'
-              />
-            </g>
-          )}
-        </svg>
-      </div>
-
-      <figcaption className='flex gap-3 font-mono text-xs text-muted-foreground'>
-        <span className='w-20 shrink-0' aria-hidden='true' />
-        <span className='flex min-w-0 grow justify-between'>
-          {timeTicks.map((tick) => (
-            <span key={tick}>{tick}</span>
-          ))}
-        </span>
-      </figcaption>
-    </figure>
+    <Plot
+      options={options}
+      data={data}
+      scales={scales}
+      onChart={setChart}
+      label={t('chart.label', { window: t('window.minute'), down: formatRate(peakDown), up: formatRate(peakUp) })}
+      className='h-44'
+    />
   );
 }

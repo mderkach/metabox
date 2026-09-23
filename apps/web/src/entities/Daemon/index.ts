@@ -39,6 +39,13 @@ export type {
   UplinkRate,
 } from './model/Daemon.model';
 export { toApplyTransaction } from './model/Daemon.adapter';
-export { RuntimeState, RuntimeStore, useRuntimeStream, useTrafficNow } from './model/Daemon.store';
+export {
+  RuntimeState,
+  RuntimeStore,
+  TRAFFIC_WINDOW_SECONDS,
+  toTrafficTimes,
+  useRuntimeStream,
+  useTrafficNow,
+} from './model/Daemon.store';
 export { isApplyActive } from './model/Daemon.transaction';
 export { matchesSchemaVersion, SCHEMA_VERSION } from './model/Daemon.version';

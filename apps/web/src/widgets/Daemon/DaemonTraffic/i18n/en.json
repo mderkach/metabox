@@ -1,12 +1,10 @@
 {
   "tick": {
-    "minus60": "−60 s",
-    "minus45": "−45 s",
-    "minus30": "−30 s",
-    "minus15": "−15 s",
+    "ago": "−{{value}} s",
     "now": "now"
   },
   "window": { "minute": "this minute" },
   "chart": { "label": "Traffic {{window}}: inbound up to {{down}}, outbound up to {{up}}" },
-  "memory": { "label": "Memory over ten minutes, from {{from}} to {{to}}" }
+  "memory": { "label": "Memory over ten minutes, from {{from}} to {{to}}" },
+  "pending": "Waiting for the second update"
 }

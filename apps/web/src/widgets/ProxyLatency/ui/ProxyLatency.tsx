@@ -3,9 +3,9 @@ import { useTranslation } from 'react-i18next';
 
 import { DELAY_STATE, DELAY_TIMEOUT, useProxies, type ProxyGroup, type ProxyNode } from '@entities/Proxy';
 import { useTestProxyDelay } from '@features/Proxy/ProxyDelay';
-import { toShare } from '@shared/lib/chart';
+import { toShare, toValueScale } from '@shared/lib/chart';
 import { cn } from '@shared/lib/utils';
-import { Button, Card, CardContent, CardHeader, SECTION_LABEL } from '@shared/ui';
+import { Button, Card, CardContent, CardHeader, SECTION_LABEL, ValueAxis } from '@shared/ui';
 
 const DELAY_TONE: Readonly<Record<string, string>> = {
   [DELAY_STATE.Fast]: 'bg-signal-ok',
@@ -18,6 +18,10 @@ const PERCENT = 100;
 
 /** Потолок абсолютной шкалы, миллисекунды: втрое выше порога «быстрый». */
 const SCALE_CEILING = 900;
+
+/** Деления по трети потолка: первое из них — порог «быстрый». */
+const SCALE_INTERVALS = 3;
+const SCALE = toValueScale(SCALE_CEILING, [SCALE_CEILING / SCALE_INTERVALS]);
 
 interface GroupDelay {
   group: string;
@@ -68,8 +72,8 @@ export function ProxyLatency() {
     <Card className='gap-3'>
       <CardHeader className='flex flex-row flex-wrap items-baseline gap-x-2.5 gap-y-1'>
         <h3 className={SECTION_LABEL}>{t('title')}</h3>
-        {/* Столбец здесь меряет абсолют, а не долю от соседей: без названной
-            шкалы длина читалась бы так же, как в соседних панелях сводки. */}
+        {/* Потолок здесь постоянный, а у соседних панелей сводки идёт за
+            лидером ряда: без названной шкалы длины читались бы одинаково. */}
         <p className='text-xs text-muted-foreground'>{t('scale', { ceiling: SCALE_CEILING })}</p>
         <span className='grow' />
         <Button
@@ -90,19 +94,22 @@ export function ProxyLatency() {
         {selected.length === 0 ? (
           <p className='text-xs text-muted-foreground'>{proxies.isError ? t('unread') : t('empty')}</p>
         ) : (
-          <ul className='flex flex-col gap-2.5'>
-            {selected.map((entry) => (
-              <li key={entry.group} className='grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 gap-y-1'>
-                <p className='truncate text-xs' title={`${entry.group} · ${entry.node.name}`}>
-                  {entry.group}
-                  <span className='text-muted-foreground'> · </span>
-                  <span className='font-mono'>{entry.node.name}</span>
-                </p>
-                <p className='font-mono text-xs text-muted-foreground tabular-nums'>{toDelayLabel(t, entry.node)}</p>
-                <Meter node={entry.node} />
-              </li>
-            ))}
-          </ul>
+          <div className='flex flex-col gap-2.5'>
+            <ul className='flex flex-col gap-2.5'>
+              {selected.map((entry) => (
+                <li key={entry.group} className='grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 gap-y-1'>
+                  <p className='truncate text-xs' title={`${entry.group} · ${entry.node.name}`}>
+                    {entry.group}
+                    <span className='text-muted-foreground'> · </span>
+                    <span className='font-mono'>{entry.node.name}</span>
+                  </p>
+                  <p className='font-mono text-xs text-muted-foreground tabular-nums'>{toDelayLabel(t, entry.node)}</p>
+                  <Meter node={entry.node} />
+                </li>
+              ))}
+            </ul>
+            <ValueAxis scale={SCALE} format={(value) => t('node.delay', { value })} />
+          </div>
         )}
       </CardContent>
     </Card>

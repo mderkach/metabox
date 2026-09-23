@@ -5,8 +5,30 @@ import { MS_IN_SECOND, SECONDS_IN_MINUTE } from '@shared/lib/time';
 
 import type { MemorySample, SystemStat, TrafficSample, UplinkRate } from './Daemon.model';
 
+/** Демон шлёт кадр трафика раз в секунду; своего времени у кадра нет. */
+export const TRAFFIC_STEP_SECONDS = 1;
+
 /** Минута трафика при шаге снапшота в секунду. */
-export const TRAFFIC_POINTS = SECONDS_IN_MINUTE;
+export const TRAFFIC_POINTS = SECONDS_IN_MINUTE / TRAFFIC_STEP_SECONDS;
+
+/**
+ * Окно графика на шаг короче буфера: при заполненном буфере левая кромка
+ * иначе шла бы за первой точкой, которая уходит раз в шаг, и ось сдвигалась
+ * бы рывками.
+ */
+export const TRAFFIC_WINDOW_SECONDS = (TRAFFIC_POINTS - 1) * TRAFFIC_STEP_SECONDS;
+
+/**
+ * Время точек буфера в секундах эпохи. Считается от прихода последней точки
+ * назад с шагом потока, а не от прихода каждой: свёрнутая вкладка отдаёт
+ * накопленные кадры пачкой, и по времени прихода они слиплись бы в одну
+ * секунду.
+ */
+export function toTrafficTimes(count: number, lastAt: number): number[] {
+  const last = lastAt / MS_IN_SECOND;
+
+  return Array.from({ length: count }, (_, index) => last - (count - 1 - index) * TRAFFIC_STEP_SECONDS);
+}
 
 /** Память показывается за десять минут: берём каждый десятый сэмпл. */
 export const MEMORY_EVERY = 10;

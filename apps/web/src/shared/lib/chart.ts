@@ -1,8 +1,6 @@
 /**
- * Геометрия графиков панели. Библиотеки нет намеренно: рядов немного, они без
- * интерактива, и сто килобайт в бандле за них не отдаются: панель открывается
- * с устройства. Здесь только счёт координат, разметку и цвета держат сами
- * графики.
+ * Счёт графиков панели: доли, шкалы, деления и геометрия. Разметку и цвета
+ * держат сами графики.
  */
 
 /** По одной точке линию не проведёшь. */
@@ -101,4 +99,78 @@ export function toDonutSegments(values: number[], circumference: number): DonutS
       turn,
     };
   });
+}
+
+/** Делений на шкале не больше четырёх: подписи в узкой карточке иначе наезжают друг на друга. */
+const TICK_INTERVALS = 4;
+
+/** Круглые множители шкалы: 1, 2 и 5 на каждом десятичном разряде. */
+const NICE = { One: 1, Two: 2, Five: 5 } as const;
+const DECADE = 10;
+const DECADES_IN_STAGE = 3;
+
+const BYTE_BASE = 1024;
+const BYTE_STAGES = 5;
+
+const NICE_MULTIPLIERS = Array.from({ length: DECADES_IN_STAGE }, (_, decade) =>
+  Object.values(NICE).map((multiplier) => multiplier * DECADE ** decade)
+).flat();
+
+/**
+ * Шаги 1–2–5 внутри каждой ступени килобайта. Десятичные шаги дали бы
+ * подписи «97.7 kB» — шкала читается по круглым значениям в тех единицах,
+ * которые печатает `formatBytes`.
+ */
+export const BYTE_STEPS: readonly number[] = Array.from({ length: BYTE_STAGES }, (_, stage) =>
+  NICE_MULTIPLIERS.map((multiplier) => multiplier * BYTE_BASE ** stage)
+).flat();
+
+export interface ValueScale {
+  /** Правая или верхняя кромка шкалы: кратна шагу и не ниже максимума. */
+  ceiling: number;
+  /** Деления от нуля до кромки включительно. */
+  ticks: number[];
+}
+
+/**
+ * Шкала от нуля: первый шаг, при котором максимум укладывается в заданное
+ * число делений. Нулевой максимум даёт шкалу в один наименьший шаг, а не
+ * вырожденную.
+ */
+export function toValueScale(max: number, steps: readonly number[], intervals = TICK_INTERVALS): ValueScale {
+  const step = steps.find((candidate) => candidate * intervals >= max) ?? steps[steps.length - 1];
+  const count = Math.max(1, Math.ceil(max / step));
+
+  return { ceiling: step * count, ticks: Array.from({ length: count + 1 }, (_, index) => index * step) };
+}
+
+export interface TimeWindow {
+  min: number;
+  max: number;
+}
+
+/**
+ * Окно оси времени. Левая кромка — первая накопленная точка, пока буфер не
+ * заполнен: полная длина окна подписала бы время, за которое данных нет.
+ */
+export function toTimeWindow(firstAt: number, now: number, span: number): TimeWindow {
+  return { min: Math.min(now, Math.max(firstAt, now - span)), max: now };
+}
+
+/** Отсечки назад от правой кромки с шагом `step`, пока они внутри окна. */
+export function toTimeTicks({ min, max }: TimeWindow, step: number): number[] {
+  const count = Math.floor((max - min) / step);
+
+  return Array.from({ length: count + 1 }, (_, index) => max - (count - index) * step);
+}
+
+/** Деления шкалы от нуля, отражённые вниз: для двух рядов по разные стороны оси. */
+export function toMirroredTicks(ticks: number[]): number[] {
+  return [
+    ...ticks
+      .slice(1)
+      .toReversed()
+      .map((tick) => -tick),
+    ...ticks,
+  ];
 }

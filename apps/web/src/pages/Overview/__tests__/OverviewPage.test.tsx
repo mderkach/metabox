@@ -89,7 +89,8 @@ describe('экран обзора', () => {
     expect(counters.getByText('7')).toBeInTheDocument();
   });
 
-  it('подписывает обе оси графика значениями, которых достигает каждый ряд', async () => {
+  it('называет в имени графика трафика пик каждого направления', async () => {
+    RuntimeStore.getState().pushTraffic({ up: 500, down: 20_000 });
     RuntimeStore.getState().pushTraffic({ up: 1000, down: 100_000 });
 
     renderWithRouter(OverviewPage);
@@ -134,10 +135,10 @@ describe('экран обзора', () => {
     expect(cells.getByText('0.49')).toBeInTheDocument();
   });
 
-  it('без второго снимка потока график соединений не рисует линию', async () => {
+  it('без второго снимка потока графики трафика и соединений линию не рисуют', async () => {
     renderWithRouter(OverviewPage);
 
-    expect(await screen.findByText('Ждём второе обновление')).toBeInTheDocument();
+    expect(await screen.findAllByText('Ждём второе обновление')).toHaveLength(2);
   });
 
   // Вердикт отвечает на вопрос, ради которого экран открывают, и стоит в шапке.

@@ -32,7 +32,7 @@ export function ConnectionSummaryTop({
 
   return (
     <ConnectionSummaryPanel title={title} href={href}>
-      <ConnectionSummaryBars bars={bars} empty={empty} />
+      <ConnectionSummaryBars bars={bars} empty={empty} format={formatRate} />
     </ConnectionSummaryPanel>
   );
 }

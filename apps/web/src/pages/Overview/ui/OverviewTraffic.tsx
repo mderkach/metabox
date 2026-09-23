@@ -71,7 +71,12 @@ export function OverviewTraffic({ runtime }: { runtime: OverviewRuntime }) {
             </ul>
 
             <div className='min-w-0 border-t border-border px-4 py-4 xl:w-1/2 xl:border-t-0 xl:border-l'>
-              <DaemonTraffic samples={runtime.traffic} />
+              <DaemonTraffic
+                samples={runtime.traffic}
+                sampledAt={runtime.sampledAt}
+                peakDown={runtime.peakDown}
+                peakUp={runtime.peakUp}
+              />
             </div>
           </div>
         </Card>
