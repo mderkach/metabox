@@ -50,15 +50,26 @@
       "content": "Content"
     },
     "skipped_one": "… {{count}} matching line",
-    "skipped_other": "… {{count}} matching lines"
+    "skipped_other": "… {{count}} matching lines",
+    "rules": {
+      "label": "Routing rule changes",
+      "target": "Rule {{index}}: {{from}} → {{to}}",
+      "added": "Rule {{index}} added",
+      "removed": "Rule {{index}} removed",
+      "changed": "Rule {{index}} changed",
+      "moved": "Rule {{previous}} moved to position {{index}}",
+      "more_one": "And {{count}} more change",
+      "more_other": "And {{count}} more changes"
+    }
   },
   "history": {
     "open": "Version history",
-    "title": "Config history",
+    "title": "Version history",
     "description": "The daemon keeps the ten most recent applied versions. A rollback runs the full cycle: a sing-box check, write, restart and the confirmation window.",
     "empty": "The history is empty: the config has never been applied through metabox, so there is nothing to go back to.",
     "version": "No. {{id}}",
     "unknownTime": "save time unknown",
-    "restore": "Restore"
+    "restore": "Restore",
+    "current": "current"
   }
 }

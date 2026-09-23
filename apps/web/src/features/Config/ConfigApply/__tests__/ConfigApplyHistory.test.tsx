@@ -1,6 +1,6 @@
 import { renderWithQuery } from '@test/renderWithQuery';
 import { server } from '@test/server';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
@@ -15,11 +15,51 @@ const VERSIONS = [
   { id: 2, size: 8192, sum: 'b'.repeat(64), saved_at: 0 },
 ];
 
-function serveVersions(versions: unknown[] = VERSIONS) {
-  server.use(http.get(CONFIG_ENDPOINT.versions(), () => HttpResponse.json({ versions })));
+function serveVersions(versions: unknown[] = VERSIONS, currentSum?: string) {
+  server.use(http.get(CONFIG_ENDPOINT.versions(), () => HttpResponse.json({ versions, current_sum: currentSum })));
 }
 
 describe('ConfigApplyHistory', () => {
+  it('называет диалог так же, как кнопку', async () => {
+    serveVersions();
+    renderWithQuery(<ConfigApplyHistory />);
+
+    await userEvent.click(screen.getByRole('button', { name: /История версий/ }));
+
+    expect(await screen.findByRole('dialog', { name: 'История версий' })).toBeInTheDocument();
+  });
+
+  it('печатает время сохранения до минуты', async () => {
+    serveVersions();
+    renderWithQuery(<ConfigApplyHistory />);
+
+    await userEvent.click(screen.getByRole('button', { name: /История версий/ }));
+
+    const [, oldest] = await screen.findAllByRole('listitem');
+
+    expect(within(oldest).getByText(/^\d{2}\.\d{2}\.\d{4}, \d{2}:\d{2}$/)).toBeInTheDocument();
+  });
+
+  it('отмечает версию, совпадающую с файлом на устройстве, и не предлагает на неё откатиться', async () => {
+    serveVersions(
+      [
+        { id: 1, size: 4096, sum: 'a'.repeat(64), saved_at: 1_757_500_000 },
+        { id: 2, size: 4210, sum: 'c'.repeat(64), saved_at: 1_757_600_000 },
+      ],
+      'c'.repeat(64)
+    );
+    renderWithQuery(<ConfigApplyHistory />);
+
+    await userEvent.click(screen.getByRole('button', { name: /История версий/ }));
+
+    const [newest, oldest] = await screen.findAllByRole('listitem');
+
+    expect(await within(newest).findByText('текущая')).toBeInTheDocument();
+    expect(within(newest).queryByRole('button', { name: 'Вернуть' })).not.toBeInTheDocument();
+    expect(within(oldest).queryByText('текущая')).not.toBeInTheDocument();
+    expect(within(oldest).getByRole('button', { name: 'Вернуть' })).toBeInTheDocument();
+  });
+
   it('показывает версии от свежей к старой', async () => {
     serveVersions();
     renderWithQuery(<ConfigApplyHistory />);

@@ -65,7 +65,7 @@ function toBranch(rule: object): RuleBranch {
   return { matchers: toMatchers(rule), group: toGroup(rule) };
 }
 
-function toTarget(rule: object): Pick<RuleRow, 'target' | 'targetKind'> {
+export function toTarget(rule: object): Pick<RuleRow, 'target' | 'targetKind'> {
   const outbound: unknown = Reflect.get(rule, 'outbound');
 
   if (typeof outbound === 'string' && outbound.length > 0) {

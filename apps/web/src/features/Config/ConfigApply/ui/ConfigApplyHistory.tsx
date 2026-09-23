@@ -3,8 +3,9 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { toCheckFailure, useConfigVersions, type ConfigVersion } from '@entities/Config';
-import { formatBytes } from '@shared/lib/format';
+import { formatBytes, formatDateTime } from '@shared/lib/format';
 import {
+  Badge,
   Button,
   Dialog,
   DialogContent,
@@ -88,6 +89,7 @@ export function ConfigApplyHistory() {
   );
 }
 
+/** Откат на текущую версию перезапустил бы службу ради того же конфига, поэтому кнопки у неё нет. */
 function VersionRow({
   version,
   disabled,
@@ -108,16 +110,20 @@ function VersionRow({
       )}
       <span className='font-mono text-xs text-muted-foreground'>{formatBytes(version.size)}</span>
       <span className='grow' />
-      <Button
-        variant='outline'
-        size='sm'
-        disabled={disabled}
-        onClick={() => {
-          onRestore(version.id);
-        }}
-      >
-        {t('history.restore')}
-      </Button>
+      {version.current ? (
+        <Badge variant='secondary'>{t('history.current')}</Badge>
+      ) : (
+        <Button
+          variant='outline'
+          size='sm'
+          disabled={disabled}
+          onClick={() => {
+            onRestore(version.id);
+          }}
+        >
+          {t('history.restore')}
+        </Button>
+      )}
     </li>
   );
 }
@@ -127,7 +133,7 @@ function SavedAt({ at }: { at: number }) {
 
   return (
     <time dateTime={saved.toISOString()} className='text-xs text-muted-foreground'>
-      {saved.toLocaleString('ru-RU')}
+      {formatDateTime(saved)}
     </time>
   );
 }

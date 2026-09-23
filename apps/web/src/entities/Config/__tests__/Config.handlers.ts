@@ -22,7 +22,9 @@ const CONFIG_TEXT = JSON.stringify(CONFIG_FIXTURE, null, JSON_INDENT);
  */
 export const configHandlers = [
   http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(CONFIG_TEXT)),
-  http.get(CONFIG_ENDPOINT.versions(), () => HttpResponse.json({ versions: VERSIONS_FIXTURE })),
+  http.get(CONFIG_ENDPOINT.versions(), () =>
+    HttpResponse.json({ versions: VERSIONS_FIXTURE, current_sum: VERSIONS_FIXTURE[1].sum })
+  ),
   // Номер версии в адресе — шаблон msw, поэтому адрес собирается от базовой
   // ручки: сам номер в константу демона не подставить.
   http.get(`${CONFIG_ENDPOINT.versions()}/:id`, () => HttpResponse.text(CONFIG_TEXT)),

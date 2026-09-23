@@ -4,11 +4,12 @@ import { MS_IN_SECOND } from '@shared/lib/time';
 import { CheckDetailsSchema, type ConfigVersionsWire, type ConfigVersionWire } from '../api/Config.schema';
 import type { CheckFailure, ConfigVersion } from './Config.model';
 
-function toConfigVersion(wire: ConfigVersionWire): ConfigVersion {
+function toConfigVersion(wire: ConfigVersionWire, currentSum: string | undefined): ConfigVersion {
   return {
     id: wire.id,
     size: wire.size,
     sum: wire.sum,
+    current: wire.sum === currentSum,
     savedAt: wire.saved_at > 0 ? wire.saved_at * MS_IN_SECOND : null,
   };
 }
@@ -18,7 +19,9 @@ function toConfigVersion(wire: ConfigVersionWire): ConfigVersion {
  * откатываются обычно на предыдущий конфиг, а не на самый старый.
  */
 export function toConfigVersions(wire: ConfigVersionsWire): ConfigVersion[] {
-  return [...wire.versions].sort((left, right) => right.id - left.id).map(toConfigVersion);
+  return [...wire.versions]
+    .sort((left, right) => right.id - left.id)
+    .map((version) => toConfigVersion(version, wire.current_sum));
 }
 
 /** Код отказа демона, у которого в `details` лежит вывод бинаря. */

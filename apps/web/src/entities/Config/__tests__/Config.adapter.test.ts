@@ -30,6 +30,16 @@ describe('toConfigVersions', () => {
     expect(newest.savedAt).toBeNull();
   });
 
+  it('отмечает текущей версию с отпечатком файла на устройстве', () => {
+    const versions = toConfigVersions({ ...VERSIONS_WIRE, current_sum: 'b2' });
+
+    expect(versions.filter((version) => version.current).map((version) => version.id)).toEqual([2]);
+  });
+
+  it('без отпечатка файла текущей не отмечает ни одну', () => {
+    expect(toConfigVersions(VERSIONS_WIRE).some((version) => version.current)).toBe(false);
+  });
+
   it('не принимает версию без номера: порядок истории задаёт именно он', () => {
     expect(ConfigVersionsSchema.safeParse({ versions: [{ size: 1, sum: 'x', saved_at: 0 }] }).success).toBe(false);
   });

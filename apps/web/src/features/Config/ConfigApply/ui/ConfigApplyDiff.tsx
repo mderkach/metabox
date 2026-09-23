@@ -16,16 +16,18 @@ import {
   ScrollArea,
 } from '@shared/ui';
 
+import { ConfigApplyRuleChanges } from './ConfigApplyRuleChanges';
+
 /** Строк вокруг правки: меньше — и непонятно, в какой секции она сделана. */
 const DIFF_CONTEXT = 3;
 
 const LINE_STYLE: Readonly<Record<DiffLine['kind'], string>> = {
   [DIFF_KIND.Same]: 'text-muted-foreground',
-  [DIFF_KIND.Added]: 'bg-foreground/10 font-medium text-foreground',
+  [DIFF_KIND.Added]: 'bg-signal-ok/10 text-signal-ok',
   [DIFF_KIND.Removed]: 'bg-destructive/10 text-destructive',
 };
 
-/** Знак ставится текстом: тема монохромная, и цвет один различать не должен. */
+/** Знак ставится текстом: цвет не должен быть единственным признаком правки. */
 const LINE_MARK: Readonly<Record<DiffLine['kind'], string>> = {
   [DIFF_KIND.Same]: ' ',
   [DIFF_KIND.Added]: '+',
@@ -55,6 +57,8 @@ export function ConfigApplyDiff({ canApply, onApply }: { canApply: boolean; onAp
             {changed === 0 ? t('diff.same') : t('diff.changed', { count: changed })}
           </DialogDescription>
         </DialogHeader>
+
+        <ConfigApplyRuleChanges />
 
         <ScrollArea className='max-h-[60vh] rounded-lg border border-border'>
           <table className='w-full border-collapse font-mono text-xs'>

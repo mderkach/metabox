@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   CONFIG_QUERY,
   ConfigDocumentState,
+  readRules,
   toCheckFailure,
   useApplyTransaction,
   useConfigDirty,
@@ -11,6 +12,7 @@ import {
   type CheckFailure,
 } from '@entities/Config';
 import { APPLY_PHASE, isApplyActive, useDaemonStatus, type ApplyTransaction } from '@entities/Daemon';
+import { toRuleChanges, type RuleChange } from '@entities/Rule';
 
 import { useApplyConfig, useConfirmApply } from '../api/ConfigApply.api';
 
@@ -105,4 +107,15 @@ export function useConfigApply(): ConfigApplyState {
     confirm: onConfirm,
     discard,
   };
+}
+
+/** Изменения правил маршрутизации, которые принесёт Apply; без черновика — пусто. */
+export function useRuleChanges(): RuleChange[] {
+  const applied = ConfigDocumentState.use.applied();
+  const draft = ConfigDocumentState.use.draft();
+
+  return useMemo(
+    () => (applied === null || draft === null ? [] : toRuleChanges(readRules(applied), readRules(draft))),
+    [applied, draft]
+  );
 }

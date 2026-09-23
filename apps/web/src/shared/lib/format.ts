@@ -53,3 +53,20 @@ export function formatAge(seconds: number): string {
     ? i18next.t('unit.hour', { ns: 'shared', value: hours })
     : i18next.t('unit.day', { ns: 'shared', value: Math.floor(hours / HOURS_IN_DAY) });
 }
+
+const DATE_PARTS = { day: '2-digit', month: '2-digit', year: 'numeric' } as const satisfies Intl.DateTimeFormatOptions;
+const TIME_PARTS = { hour: '2-digit', minute: '2-digit' } as const satisfies Intl.DateTimeFormatOptions;
+
+/**
+ * Дата одним форматом на всю панель. Порядок частей задаёт язык интерфейса, а
+ * не браузера: иначе английская панель в русской системе печатала бы даты
+ * по-русски.
+ */
+export function formatDate(at: Date): string {
+  return at.toLocaleDateString(i18next.language, DATE_PARTS);
+}
+
+/** Дата с временем до минуты, в том же формате даты, что `formatDate`. */
+export function formatDateTime(at: Date): string {
+  return at.toLocaleString(i18next.language, { ...DATE_PARTS, ...TIME_PARTS });
+}
