@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { FINAL_ACTION, ROUTE_KIND, toRouteKind } from '../model/Connection.model';
 
 describe('toRouteKind', () => {
-  it('читает исход по подстроке рантайма', () => {
+  it('читает выход по подстроке рантайма', () => {
     expect(toRouteKind('route(direct)')).toBe(ROUTE_KIND.Direct);
     expect(toRouteKind('route(proxy)')).toBe(ROUTE_KIND.Proxy);
     expect(toRouteKind('hijack-dns')).toBe(ROUTE_KIND.Dns);
@@ -15,12 +15,12 @@ describe('toRouteKind', () => {
   });
 
   // ADR-0007: у соединения без правила условий нет, и судьбу показывает цепочка.
-  it('у соединения без правила исход читает по цепочке', () => {
+  it('у соединения без правила выход читает по цепочке', () => {
     expect(toRouteKind(FINAL_ACTION, ['direct'])).toBe(ROUTE_KIND.Direct);
     expect(toRouteKind(FINAL_ACTION, ['proxy', 'sub/node'])).toBe(ROUTE_KIND.Proxy);
   });
 
-  it('без правила и без цепочки исход не выдумывает', () => {
+  it('без правила и без цепочки выход не выдумывает', () => {
     expect(toRouteKind(FINAL_ACTION)).toBe(ROUTE_KIND.Other);
     expect(toRouteKind('sniff')).toBe(ROUTE_KIND.Other);
   });
@@ -62,7 +62,7 @@ describe('toRouteKind по типам аутбаундов', () => {
     expect(toRouteKind(FINAL_ACTION, ['lan'], types)).toBe(ROUTE_KIND.Direct);
   });
 
-  it('цепочки нет в конфиге — исход читает по её узлам', () => {
+  it('цепочки нет в конфиге — выход читает по её узлам', () => {
     expect(toRouteKind(FINAL_ACTION, ['direct'], new Map([['proxy', 'urltest']]))).toBe(ROUTE_KIND.Direct);
   });
 });

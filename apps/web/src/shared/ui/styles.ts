@@ -26,7 +26,7 @@ export const SECTION_HEADING = 'text-lg font-semibold';
  */
 export const TABLE_HEADER = 'text-xs font-medium tracking-[0.06em] text-muted-foreground uppercase';
 
-/** Чип отбора: фасет по устройству на соединениях и по исходу на правилах. */
+/** Чип отбора: фасет по устройству на соединениях и по выходу на правилах. */
 export const FACET_CLASS =
   'flex h-6 shrink-0 items-center gap-1.5 rounded-md border px-2 text-xs transition-colors focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none';
 

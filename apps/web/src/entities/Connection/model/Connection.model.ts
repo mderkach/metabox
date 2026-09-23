@@ -22,7 +22,7 @@ export interface ConnectionRow {
   downRate: number;
   upRate: number;
   startedAt: number;
-  /** Хост, источник, правило, исход и цепочка одной строкой — по ней ищет экран. */
+  /** Хост, источник, правило, выход и цепочка одной строкой — по ней ищет экран. */
   searchText: string;
 }
 

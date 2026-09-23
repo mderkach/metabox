@@ -33,7 +33,7 @@ import { toSelectedRuleId, useRouteEditor, useRuleFilter, useRuleMarks, type Rul
 /** Сколько замечаний схемы показывать, чтобы они не вытеснили экран. */
 const VISIBLE_ISSUES = 5;
 
-/** Сколько исходов показать сразу: в большом конфиге их полтора десятка. */
+/** Сколько выходов показать сразу: в большом конфиге их полтора десятка. */
 const VISIBLE_TARGETS = 6;
 
 export function EditorPage() {
@@ -147,7 +147,7 @@ function RuleSearch({ filter }: { filter: RuleFilterState }) {
   );
 }
 
-/** Срез по исходу: вторая строка тулбара, потому что исходов бывает полтора десятка. */
+/** Срез по выходу: вторая строка тулбара, потому что выходов бывает полтора десятка. */
 function RuleTargetFacets({ filter }: { filter: RuleFilterState }) {
   const { t } = useTranslation('pages/Editor');
   const [allTargets, setAllTargets] = useState(false);

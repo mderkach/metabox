@@ -34,7 +34,7 @@ const RULE: RuleRow = {
   searchText: 'rule_set github proxy',
 };
 
-describe('форма исхода правила', () => {
+describe('форма выхода правила', () => {
   beforeEach(() => {
     ConfigDocumentState.getState().reset();
     ConfigDocumentState.getState().load(CONFIG);
@@ -47,7 +47,7 @@ describe('форма исхода правила', () => {
     expect(screen.getByRole('button', { name: 'Сохранить в черновик' })).toBeDisabled();
   });
 
-  it('смена исхода правит одну строку файла, остальное правило не трогает', async () => {
+  it('смена выхода правит одну строку файла, остальное правило не трогает', async () => {
     const user = userEvent.setup();
 
     render(<RuleEditForm rule={RULE} outbounds={['direct', 'proxy']} />);
@@ -66,7 +66,7 @@ describe('форма исхода правила', () => {
     });
   });
 
-  it('смена действия на не-маршрутизацию убирает исход из узла, а не обнуляет его', async () => {
+  it('смена действия на не-маршрутизацию убирает выход из узла, а не обнуляет его', async () => {
     const user = userEvent.setup();
 
     render(<RuleEditForm rule={RULE} outbounds={['direct', 'proxy']} />);

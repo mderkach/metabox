@@ -54,8 +54,8 @@ func TestConnectionsSnapshot(t *testing.T) {
 		got  string
 		want string
 	}{
-		{"условия отделены от исхода", connection.Rule, "rule_set=google-ip"},
-		{"исход отделён от условий", connection.Action, "route(alt-fallback)"},
+		{"условия отделены от выхода", connection.Rule, "rule_set=google-ip"},
+		{"выход отделён от условий", connection.Action, "route(alt-fallback)"},
 		{"имя из sniff с портом", connection.Host, "clients.google.example:443"},
 		{"сеть", connection.Network, "tcp"},
 		{"источник", connection.Source, "192.168.1.60"},
@@ -92,10 +92,10 @@ func TestConnectionsSnapshotFinal(t *testing.T) {
 			connection := snapshot.Connections[0]
 
 			if !connection.Final {
-				t.Error("исход по умолчанию обязан отличаться от правила без условий")
+				t.Error("выход по умолчанию обязан отличаться от правила без условий")
 			}
 			if connection.Rule != "" || connection.Action != "" {
-				t.Errorf("правилом этот исход не является: получили %q и %q", connection.Rule, connection.Action)
+				t.Errorf("правилом этот выход не является: получили %q и %q", connection.Rule, connection.Action)
 			}
 		})
 	}
@@ -108,7 +108,7 @@ func TestConnectionsSnapshotRuleWithoutConditions(t *testing.T) {
 	connection := snapshot.Connections[0]
 
 	if connection.Final {
-		t.Error("правило без условий — не исход по умолчанию")
+		t.Error("правило без условий — не выход по умолчанию")
 	}
 	if connection.Action != "route(direct)" {
 		t.Errorf("действие: получили %q, ожидали %q", connection.Action, "route(direct)")

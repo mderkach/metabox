@@ -166,14 +166,14 @@ describe('строка соединения', () => {
   const base = makeConnectionsSnapshot(1).connections[0];
   const NO_RATE = { down: 0, up: 0 };
 
-  it('исход по умолчанию показывает узлом конфига, а не пустой строкой', () => {
+  it('выход по умолчанию показывает узлом конфига, а не пустой строкой', () => {
     const row = toConnectionRow({ ...base, rule: '', action: '', final: true }, NO_RATE);
 
     expect(row.rule).toBe('');
     expect(row.action).toBe(FINAL_ACTION);
   });
 
-  it('правило без условий исходом по умолчанию не считает', () => {
+  it('правило без условий выходом по умолчанию не считает', () => {
     const row = toConnectionRow({ ...base, rule: '', action: 'route(direct)', final: false }, NO_RATE);
 
     expect(row.action).toBe('route(direct)');

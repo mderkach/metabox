@@ -88,7 +88,7 @@ func TestMatchRuleEmpty(t *testing.T) {
 		t.Errorf("вид совпадения: получили %q, ожидали %q", match.Kind, KindFinal)
 	}
 	if match.Index != nil {
-		t.Error("индекс у исхода по умолчанию не отдаётся")
+		t.Error("индекс у выхода по умолчанию не отдаётся")
 	}
 }
 

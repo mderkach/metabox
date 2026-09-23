@@ -130,7 +130,7 @@ export function DaemonService({
         {state.managed && (
           <>
             {/* Остановка обрывает маршрутизацию на роутере целиком, перезапуск
-                нет. Одинаковыми кнопками подряд эти два исхода не различить. */}
+                нет. Одинаковыми кнопками подряд эти два действия не различить. */}
             <Separator orientation='vertical' className='mx-0.5 h-5' />
             <Button
               variant='outline'

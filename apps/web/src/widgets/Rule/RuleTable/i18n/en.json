@@ -2,11 +2,11 @@
   "label": "Routing rules",
   "column": {
     "index": "#",
-    "target": "Outcome",
+    "target": "Outbound",
     "hits": "Hits"
   },
   "row": {
-    "label": "Rule {{index}}, outcome {{target}}",
+    "label": "Rule {{index}}, outbound {{target}}",
     "unconditional": "no conditions — applies to all traffic",
     "unknown": "conditions are not shown — the schema does not know this rule",
     "edited": "changed in the draft"

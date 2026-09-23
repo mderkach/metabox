@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { RULE_ACTION, RuleEditAdapterSchema } from '../model/RuleEdit.schema';
 
-describe('правка исхода правила', () => {
+describe('правка выхода правила', () => {
   it('у маршрутизации отдаёт выбранный outbound', () => {
     const patch = RuleEditAdapterSchema.parse({ action: RULE_ACTION.Route, outbound: 'proxy' });
 
@@ -16,7 +16,7 @@ describe('правка исхода правила', () => {
     expect('outbound' in patch).toBe(false);
   });
 
-  it('не принимает маршрутизацию без исхода: пустой тег попал бы в диф правкой, которой не делали', () => {
+  it('не принимает маршрутизацию без выхода: пустой тег попал бы в диф правкой, которой не делали', () => {
     const result = RuleEditAdapterSchema.safeParse({ action: RULE_ACTION.Route, outbound: '' });
 
     expect(result.success).toBe(false);

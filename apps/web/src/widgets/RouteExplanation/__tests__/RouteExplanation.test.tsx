@@ -89,7 +89,7 @@ describe('RouteExplanation', () => {
     expect(screen.getByText('Правило не определено')).toBeInTheDocument();
   });
 
-  it('исход по умолчанию показывает наблюдением, а не неизвестностью', async () => {
+  it('выход по умолчанию показывает наблюдением, а не неизвестностью', async () => {
     serveExplanation(ROUTE_FINAL_FIXTURE);
     serveConfig(configWithRules(ROUTE_FINAL_FIXTURE.rules.length));
 

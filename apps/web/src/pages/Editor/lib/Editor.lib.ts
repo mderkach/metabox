@@ -124,13 +124,13 @@ export interface RuleFilterState {
   setQuery: (query: string) => void;
   target: RuleTargetFilter;
   setTarget: (target: RuleTargetFilter) => void;
-  /** Исходы считаются по всему списку: фасет не должен исчезать от своего выбора. */
+  /** Выходы считаются по всему списку: фасет не должен исчезать от своего выбора. */
   targets: RuleTargetGroup[];
   rules: RuleRow[];
 }
 
 /**
- * Поиск и отбор по исходу. Отбор клиентский: конфиг целиком уже в панели, и
+ * Поиск и отбор по выходу. Отбор клиентский: конфиг целиком уже в панели, и
  * до 500 правил фильтруются за доли миллисекунды.
  */
 export function useRuleFilter(rules: RuleRow[]): RuleFilterState {

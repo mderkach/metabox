@@ -55,7 +55,7 @@ export function RuleTable({
   empty: ReactNode;
   /** Поиск: левый край тулбара. */
   search?: ReactNode;
-  /** Срезы по исходу: вторая строка тулбара. */
+  /** Срезы по выходу: вторая строка тулбара. */
   facets?: ReactNode;
   /** Строки, изменённые в черновике. */
   edited?: ReadonlySet<string>;

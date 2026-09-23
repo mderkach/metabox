@@ -38,7 +38,7 @@ describe('поиск по правилу', () => {
   });
 });
 
-describe('исходы правил', () => {
+describe('выходы правил', () => {
   it('считает правила и ставит частые первыми', () => {
     const rules = [
       makeRule({ id: '0', target: 'direct' }),
@@ -52,7 +52,7 @@ describe('исходы правил', () => {
     ]);
   });
 
-  it('действие считает наравне с аутбаундом: для отбора это такой же исход', () => {
+  it('действие считает наравне с аутбаундом: для отбора это такой же выход', () => {
     const rules = [makeRule({ id: '0', target: 'sniff', targetKind: RULE_TARGET.Action }), makeRule({ id: '1' })];
 
     expect(toTargetGroups(rules).map((group) => group.target)).toEqual(['us-west-fallback', 'sniff']);
@@ -65,11 +65,11 @@ describe('отбор правил', () => {
     makeRule({ id: '1', target: 'proxy', searchText: 'rule_set github proxy' }),
   ];
 
-  it('сужает по исходу', () => {
+  it('сужает по выходу', () => {
     expect(filterRules(rules, '', 'proxy').map((rule) => rule.id)).toEqual(['1']);
   });
 
-  it('складывает исход и запрос', () => {
+  it('складывает выход и запрос', () => {
     expect(filterRules(rules, 'github', 'direct')).toEqual([]);
     expect(filterRules(rules, 'github', 'proxy').map((rule) => rule.id)).toEqual(['1']);
   });

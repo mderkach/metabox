@@ -46,7 +46,7 @@ export interface DaemonStatus {
   transactionHref?: string;
 }
 
-/** Состояние службы sing-box: `procd` знает только эти три исхода (ADR-0009). */
+/** Состояние службы sing-box: `procd` знает только эти три состояния (ADR-0009). */
 export const SERVICE_STATUS = {
   Running: 'running',
   Stopped: 'stopped',

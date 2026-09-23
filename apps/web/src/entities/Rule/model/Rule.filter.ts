@@ -3,7 +3,7 @@ import { matchesWords, toQueryWords } from '@shared/lib/search';
 
 import type { RuleRow } from './Rule.model';
 
-/** Исход, по которому отбираются правила; `null` — все сразу. */
+/** Выход, по которому отбираются правила; `null` — все сразу. */
 export type RuleTargetFilter = string | null;
 
 export interface RuleTargetGroup {
@@ -11,7 +11,7 @@ export interface RuleTargetGroup {
   count: number;
 }
 
-/** Исходы в порядке убывания числа правил: по ним собираются фасеты экрана. */
+/** Выходы в порядке убывания числа правил: по ним собираются фасеты экрана. */
 export function toTargetGroups(rules: RuleRow[]): RuleTargetGroup[] {
   return countGroups(rules, (rule) => rule.target).map((group) => ({ target: group.value, count: group.count }));
 }

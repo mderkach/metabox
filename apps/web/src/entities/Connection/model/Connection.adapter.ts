@@ -29,7 +29,7 @@ export function toConnectionRow(
     network: connection.network,
     source: connection.source,
     rule: connection.rule,
-    // Исход по умолчанию показывается узлом конфига, а не пустой строкой:
+    // Выход по умолчанию показывается узлом конфига, а не пустой строкой:
     // «ни одно правило не совпало» — наблюдаемый факт (ADR-0007).
     action,
     kind: toRouteKind(action, chain, outboundTypes),

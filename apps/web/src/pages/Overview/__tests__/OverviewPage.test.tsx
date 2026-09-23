@@ -100,7 +100,7 @@ describe('экран обзора', () => {
     ).toBeInTheDocument();
   });
 
-  it('показывает сводку живого снапшота: исход маршрута, типы сети и топ устройств', async () => {
+  it('показывает сводку живого снапшота: выход маршрута, типы сети и топ устройств', async () => {
     ConnectionStore.getState().apply(CONNECTIONS_FIXTURE);
 
     renderWithRouter(OverviewPage);

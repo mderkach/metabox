@@ -55,7 +55,7 @@ const (
 	// ReasonHealthcheckFailed — служба поднялась, но рантайм не ответил.
 	ReasonHealthcheckFailed ReasonCode = "healthcheck_failed"
 	// ReasonRollbackFailed — вернуть предыдущий конфиг не вышло: это худший
-	// исход цикла, и устройство остаётся с чужим конфигом.
+	// результат цикла, и устройство остаётся с чужим конфигом.
 	ReasonRollbackFailed ReasonCode = "rollback_failed"
 )
 

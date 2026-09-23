@@ -38,7 +38,7 @@ const CONFIG = JSON.stringify(
   2
 );
 
-/** То же, но все узлы схема принимает: тогда у правила есть список исходов. */
+/** То же, но все узлы схема принимает: тогда у правила есть список выходов. */
 const RECOGNIZED_CONFIG = JSON.stringify(
   {
     outbounds: [
@@ -88,7 +88,7 @@ describe('экран правил', () => {
       within(table)
         .getAllByRole('columnheader')
         .map((cell) => cell.textContent)
-    ).toEqual(['№', 'Условия', 'Исход', 'Сработало']);
+    ).toEqual(['№', 'Условия', 'Выход', 'Сработало']);
     expect(screen.getByRole('status')).toHaveTextContent('3 правила');
   });
 
@@ -170,7 +170,7 @@ describe('экран правил', () => {
     expect(ruleButton).toHaveFocus();
   });
 
-  it('форма исхода открывается на значении из конфига и не даёт применить пустую правку', async () => {
+  it('форма выхода открывается на значении из конфига и не даёт применить пустую правку', async () => {
     const user = userEvent.setup();
 
     renderWithRouter(EditorPage);
@@ -183,8 +183,8 @@ describe('экран правил', () => {
     expect(within(panel).getByRole('button', { name: 'Сохранить в черновик' })).toBeDisabled();
   });
 
-  it('смена исхода в панели меняет одну строку файла, остальное правило не трогает', async () => {
-    // Конфиг без нераспознанного узла: список исходов строится по разобранному
+  it('смена выхода в панели меняет одну строку файла, остальное правило не трогает', async () => {
+    // Конфиг без нераспознанного узла: список выходов строится по разобранному
     // конфигу, а узел, который схема не приняла, оставляет его пустым — тогда
     // выбирать было бы не из чего.
     serveConfig(RECOGNIZED_CONFIG);
@@ -214,7 +214,7 @@ describe('экран правил', () => {
     });
     expect(within(panel).getByRole('button', { name: 'Сохранить в черновик' })).toBeDisabled();
     expect(
-      await screen.findByRole('button', { name: 'Правило 1, исход direct, изменено в черновике' })
+      await screen.findByRole('button', { name: 'Правило 1, выход direct, изменено в черновике' })
     ).toBeInTheDocument();
   });
 

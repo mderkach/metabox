@@ -165,7 +165,7 @@
   --color-route-dns: var(--route-dns);
   --color-route-neutral: var(--route-neutral);
 
-  /* Состояние: задержка узла, статус сервиса, исход применения. */
+  /* Состояние: задержка узла, статус сервиса, результат применения. */
   --color-signal-ok: var(--signal-ok);
   --color-signal-warn: var(--signal-warn);
   --color-signal-bad: var(--signal-bad);
