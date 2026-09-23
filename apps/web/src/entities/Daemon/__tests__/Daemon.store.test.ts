@@ -4,7 +4,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { RUNTIME_TOPIC } from '@shared/api';
 
 import { listenMemory, listenSystem, listenTraffic } from '../api/Daemon.stream';
-import { MEMORY_EVERY, RuntimeStore, TRAFFIC_POINTS, toTrafficTimes } from '../model/Daemon.store';
+import {
+  MEMORY_EVERY,
+  RuntimeStore,
+  TRAFFIC_POINTS,
+  TRAFFIC_STEP_SECONDS,
+  TRAFFIC_WINDOW_SECONDS,
+  toTrafficTimes,
+} from '../model/Daemon.store';
 import { MEMORY_SAMPLES, SYSTEM_FIXTURE } from './Daemon.fixture';
 
 describe('поток трафика', () => {
@@ -136,6 +143,14 @@ describe('показания устройства', () => {
 describe('время точек трафика', () => {
   it('раскладывает точки назад от последней с шагом потока, а не по времени прихода', () => {
     expect(toTrafficTimes(3, 10_000)).toEqual([8, 9, 10]);
+  });
+
+  it('полный буфер начинается не правее левой кромки окна, даже когда точка только что пришла', () => {
+    const arrivedAt = 100_000;
+    const [oldest] = toTrafficTimes(TRAFFIC_POINTS, arrivedAt);
+    const leftEdge = arrivedAt / 1000 - TRAFFIC_STEP_SECONDS - TRAFFIC_WINDOW_SECONDS;
+
+    expect(oldest).toBeLessThanOrEqual(leftEdge);
   });
 
   it('заполняет пустой буфер трафика минутой от демона, а заполненный не трогает', () => {

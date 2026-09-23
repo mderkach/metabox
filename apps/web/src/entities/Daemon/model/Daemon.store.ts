@@ -8,14 +8,24 @@ import type { MemorySample, SystemStat, TrafficSample, UplinkRate } from './Daem
 /** Демон шлёт кадр трафика раз в секунду; своего времени у кадра нет. */
 export const TRAFFIC_STEP_SECONDS = 1;
 
-/** Минута трафика при шаге снапшота в секунду. */
-export const TRAFFIC_POINTS = SECONDS_IN_MINUTE / TRAFFIC_STEP_SECONDS;
-
 /**
  * Окно графика трафика в секундах — ровно минута, как у графика соединений:
  * подписи оси у обоих заканчиваются на «−60 с».
  */
-export const TRAFFIC_WINDOW_SECONDS = TRAFFIC_POINTS * TRAFFIC_STEP_SECONDS;
+export const TRAFFIC_WINDOW_SECONDS = SECONDS_IN_MINUTE;
+
+/** Точек в окне графика: по ним считается пик минуты. */
+export const TRAFFIC_WINDOW_POINTS = TRAFFIC_WINDOW_SECONDS / TRAFFIC_STEP_SECONDS;
+
+/**
+ * Точек за левой кромкой окна. Правая кромка отстаёт от «сейчас» на шаг, и
+ * буфер ровно в окно начинался бы внутри графика: область отходила от левой
+ * кромки и раз в секунду прыгала за выпавшей точкой. Одна точка покрывает
+ * отставание, вторая даёт отрезку, который кромка режет, начало.
+ */
+const TRAFFIC_OFFSCREEN_POINTS = 2;
+
+export const TRAFFIC_POINTS = TRAFFIC_WINDOW_POINTS + TRAFFIC_OFFSCREEN_POINTS;
 
 /**
  * Время точек буфера в секундах эпохи. Считается от прихода последней точки

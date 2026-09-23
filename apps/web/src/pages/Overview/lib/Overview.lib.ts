@@ -10,6 +10,7 @@ import {
 } from '@entities/Connection';
 import {
   RuntimeState,
+  TRAFFIC_WINDOW_POINTS,
   RuntimeStore,
   SERVICE_STATUS,
   useServiceState,
@@ -116,13 +117,15 @@ export function useOverviewRuntime(): OverviewRuntime {
     };
   }, []);
 
-  const peaks = useMemo(
-    () => ({
-      down: traffic.reduce((max, sample) => Math.max(max, sample.down), 0),
-      up: traffic.reduce((max, sample) => Math.max(max, sample.up), 0),
-    }),
-    [traffic]
-  );
+  // Буфер длиннее окна на точки за левой кромкой: пик минуты считается только по видимым.
+  const peaks = useMemo(() => {
+    const visible = traffic.slice(-TRAFFIC_WINDOW_POINTS);
+
+    return {
+      down: visible.reduce((max, sample) => Math.max(max, sample.down), 0),
+      up: visible.reduce((max, sample) => Math.max(max, sample.up), 0),
+    };
+  }, [traffic]);
 
   return {
     traffic,

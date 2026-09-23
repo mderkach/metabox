@@ -43,6 +43,7 @@ export {
   RuntimeState,
   RuntimeStore,
   TRAFFIC_STEP_SECONDS,
+  TRAFFIC_WINDOW_POINTS,
   TRAFFIC_WINDOW_SECONDS,
   toTrafficTimes,
   useRuntimeStream,
