@@ -34,18 +34,30 @@ describe('DaemonTraffic', () => {
     expect(y).toEqual({ min: -5 * MIB, max: 5 * MIB });
   });
 
-  it('берёт шкалу от пика истории демона, а не от минуты на экране', () => {
-    render(
-      <DaemonTraffic samples={samplesOf(2)} sampledAt={NOW} peakDown={2000} peakUp={1000} historyPeak={5 * MIB} />
-    );
+  it('берёт шкалу от пика минуты на экране', () => {
+    render(<DaemonTraffic samples={samplesOf(2)} sampledAt={NOW} peakDown={3 * MIB} peakUp={1000} />);
 
-    expect(FakePlot.latest().scales.y.max).toBe(5 * MIB);
+    expect(FakePlot.latest().scales.y.max).toBe(4 * MIB);
   });
 
-  it('на простаивающем канале не сжимает шкалу ниже мегабайта в секунду', () => {
+  it('сжимает шкалу, только когда пик минуты упал вчетверо', () => {
+    const { rerender } = render(
+      <DaemonTraffic samples={samplesOf(2)} sampledAt={NOW} peakDown={3 * MIB} peakUp={1000} />
+    );
+
+    rerender(<DaemonTraffic samples={samplesOf(2)} sampledAt={NOW} peakDown={1.5 * MIB} peakUp={1000} />);
+
+    expect(FakePlot.latest().scales.y.max).toBe(4 * MIB);
+
+    rerender(<DaemonTraffic samples={samplesOf(2)} sampledAt={NOW} peakDown={0.5 * MIB} peakUp={1000} />);
+
+    expect(FakePlot.latest().scales.y.max).toBe(1000 * 1024);
+  });
+
+  it('на простаивающем канале не сжимает шкалу ниже мегабита в секунду', () => {
     render(<DaemonTraffic samples={samplesOf(2)} sampledAt={NOW} peakDown={300} peakUp={100} />);
 
-    expect(FakePlot.latest().scales.y.max).toBe(MIB);
+    expect(FakePlot.latest().scales.y.max).toBe(200 * 1024);
   });
 
   it('при неполном буфере держит окно в полную минуту: подписи оси стоят на месте', () => {

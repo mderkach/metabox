@@ -68,25 +68,23 @@ function buildOptions(t: TFunction<'widgets/Daemon/DaemonTraffic'>): PlotOptions
  * области отличались бы в разы, и сравнить направления по картинке было бы
  * нельзя.
  *
- * Оси стоят на месте, меняются только данные. Время — всегда минута до
- * «сейчас». Шкала — от пика за всё время работы демона (`historyPeak`), а не за
- * минуту на экране: иначе она пересчитывалась бы каждый раз, когда всплеск
- * уходит за левую кромку, и одна и та же скорость рисовалась бы разной высотой.
+ * Время — всегда минута до «сейчас». Шкала — от пика этой минуты, не ниже
+ * `TRAFFIC_MIN_CEILING`: пик за всю работу демона держал бы обычную минуту
+ * прижатой к нулю. Растёт шкала сразу, а сжимается, только когда пик упал
+ * вчетверо (`useStickyCeiling`), — иначе она перестраивалась бы каждый раз,
+ * когда всплеск уходит за левую кромку.
  */
 export function DaemonTraffic({
   samples,
   sampledAt,
   peakDown,
   peakUp,
-  historyPeak = 0,
 }: {
   samples: TrafficSample[];
   /** Когда пришла последняя точка, миллисекунды эпохи; `null` — точек ещё не было. */
   sampledAt: number | null;
   peakDown: number;
   peakUp: number;
-  /** Пик скорости в любую сторону за историю демона, байт в секунду. */
-  historyPeak?: number;
 }) {
   const { t } = useTranslation('widgets/Daemon/DaemonTraffic');
   const reducedMotion = useReducedMotion();
@@ -103,7 +101,7 @@ export function DaemonTraffic({
     [times, samples]
   );
   const ceiling = useStickyCeiling(
-    toValueScale(Math.max(peakDown, peakUp, historyPeak, TRAFFIC_MIN_CEILING), BYTE_STEPS, HALF_INTERVALS).ceiling
+    toValueScale(Math.max(peakDown, peakUp, TRAFFIC_MIN_CEILING), BYTE_STEPS, HALF_INTERVALS).ceiling
   );
   const scales = useMemo<PlotScales>(() => {
     const y = { min: -ceiling, max: ceiling };

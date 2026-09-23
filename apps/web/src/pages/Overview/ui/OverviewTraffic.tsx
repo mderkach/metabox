@@ -82,7 +82,6 @@ export function OverviewTraffic({ runtime }: { runtime: OverviewRuntime }) {
                 sampledAt={runtime.trafficAt}
                 peakDown={runtime.peakDown}
                 peakUp={runtime.peakUp}
-                historyPeak={runtime.historyPeak}
               />
             </div>
           </div>

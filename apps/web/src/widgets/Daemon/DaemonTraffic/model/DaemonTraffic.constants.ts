@@ -12,12 +12,12 @@ const DASH_GAP = 3;
 /** Пунктир сетки в пикселях. */
 export const GRID_DASH = [DASH_STROKE, DASH_GAP];
 
-const BYTES_IN_KIBIBYTE = 1024;
-const BYTES_IN_MEBIBYTE = BYTES_IN_KIBIBYTE * BYTES_IN_KIBIBYTE;
+const BITS_IN_BYTE = 8;
+const BITS_IN_MEGABIT = 1_000_000;
 
 /**
- * Нижний предел шкалы трафика, байт в секунду. Без него на простаивающем
- * канале шкала сжималась бы до килобайт, и фоновый шум рисовался бы пиками во
- * всю высоту.
+ * Нижний предел шкалы трафика — мегабит в секунду, в байтах. Без него на
+ * простаивающем канале шкала сжималась бы до килобайт, и фоновый шум рисовался
+ * бы пиками во всю высоту.
  */
-export const TRAFFIC_MIN_CEILING = BYTES_IN_MEBIBYTE;
+export const TRAFFIC_MIN_CEILING = BITS_IN_MEGABIT / BITS_IN_BYTE;

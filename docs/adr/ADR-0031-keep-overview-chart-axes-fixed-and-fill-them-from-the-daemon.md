@@ -4,6 +4,7 @@
 - Дата: 2026-09-23
 - Ответственные: владелец репозитория
 - Заменяет: раздел «Окно оси времени» в [ADR-0027](./ADR-0027-draw-the-traffic-chart-with-uplot-and-keep-bars-in-html.md)
+- Заменён решением (в части шкалы скорости): [ADR-0032](./ADR-0032-scale-the-traffic-chart-by-the-visible-minute.md)
 
 ## Контекст и постановка проблемы
 

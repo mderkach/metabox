@@ -41,8 +41,6 @@ export interface OverviewRuntime {
   now: TrafficSample;
   peakDown: number;
   peakUp: number;
-  /** Пик скорости в любую сторону за историю демона: верх шкалы графика трафика. */
-  historyPeak: number;
   memory: number;
   totals: ConnectionTotals;
   /** Показания устройства; `null` — снимок ещё не приходил. */
@@ -87,7 +85,6 @@ export function useOverviewRuntime(): OverviewRuntime {
   const connectionsAt = ConnectionState.use.sampledAt();
   const trafficHistory = useTrafficHistory();
   const recent = trafficHistory.data?.recent;
-  const points = trafficHistory.data?.points;
   const connectionCounts = trafficHistory.data?.connections;
 
   // Графики минуты открываются тем, что копил демон, а не пустыми: панель
@@ -103,11 +100,6 @@ export function useOverviewRuntime(): OverviewRuntime {
       }
     },
     [recent, connectionCounts]
-  );
-
-  const historyPeak = useMemo(
-    () => [...(points ?? []), ...(recent ?? [])].reduce((max, sample) => Math.max(max, sample.down, sample.up), 0),
-    [points, recent]
   );
 
   // Обрыв потока сам о себе не сообщает: кадры просто перестают приходить, и
@@ -137,7 +129,6 @@ export function useOverviewRuntime(): OverviewRuntime {
     now,
     peakDown: peaks.down,
     peakUp: peaks.up,
-    historyPeak,
     memory,
     totals,
     system,
