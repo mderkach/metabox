@@ -8,11 +8,13 @@ interface NavItem {
   icon: LucideIcon;
   /** Маршрут есть только у сделанных разделов: остальные пункты не кликаются. */
   to?: LinkProps['to'];
+  /** Подпись в нижней панели, если полное название не помещается в её колонку на телефоне. */
+  short?: ParseKeys<'widgets/AppSidebar'>;
 }
 
 export const NAV_ITEMS: readonly NavItem[] = [
   { key: 'section.overview', icon: Gauge, to: '/overview' },
-  { key: 'section.config', icon: SlidersHorizontal, to: '/config' },
+  { key: 'section.config', icon: SlidersHorizontal, to: '/config', short: 'short.config' },
   { key: 'section.proxies', icon: Share2, to: '/proxies' },
   { key: 'section.connections', icon: Activity, to: '/connections' },
 ];

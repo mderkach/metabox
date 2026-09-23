@@ -1,4 +1,11 @@
-import { createRootRoute, createRoute, createRouter, lazyRouteComponent, redirect } from '@tanstack/react-router';
+import {
+  createRootRoute,
+  createRoute,
+  createRouter,
+  lazyRouteComponent,
+  redirect,
+  type RouterHistory,
+} from '@tanstack/react-router';
 import { z } from 'zod';
 
 import { getConfigOptions } from '@entities/Config';
@@ -6,6 +13,7 @@ import { parseConnectionSearch } from '@entities/Connection';
 import { getTrafficHistoryOptions } from '@entities/Daemon';
 import { getProxiesOptions, getProxyProvidersOptions } from '@entities/Proxy';
 import { QueryClientInstance } from '@shared/api';
+import { matchNarrow } from '@shared/lib/media';
 
 import { preloadNamespaces } from '../lib/i18n';
 import { AppLayout } from '../ui/AppLayout';
@@ -29,11 +37,16 @@ const PENDING_MS = 300;
 
 const rootRoute = createRootRoute({ component: AppLayout, notFoundComponent: NotFoundPage });
 
+/**
+ * Стартовый экран зависит от ширины: с телефона на роутер заходят проверить,
+ * что всё работает, — это обзор; за столом правят конфигурацию. Ширина
+ * замеряется в момент перехода, подписка здесь не нужна.
+ */
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
   beforeLoad: () => {
-    throw redirect({ to: '/config' });
+    throw redirect({ to: matchNarrow() ? '/overview' : '/config' });
   },
 });
 
@@ -142,19 +155,30 @@ const overviewRoute = createRoute({
   component: lazyRouteComponent(async () => import('@pages/Overview'), 'OverviewPage'),
 });
 
-export const Router = createRouter({
-  routeTree: rootRoute.addChildren([
-    indexRoute,
-    configLayoutRoute.addChildren([routeEditorRoute, ruleSetsRoute, rawConfigRoute]),
-    proxiesRoute,
-    connectionsRoute,
-    overviewRoute,
-  ]),
-  defaultViewTransition: { types: toPageTransitionTypes },
-  defaultPendingMs: PENDING_MS,
-  defaultPendingComponent: PendingPage,
-  defaultErrorComponent: ErrorPage,
-});
+const routeTree = rootRoute.addChildren([
+  indexRoute,
+  configLayoutRoute.addChildren([routeEditorRoute, ruleSetsRoute, rawConfigRoute]),
+  proxiesRoute,
+  connectionsRoute,
+  overviewRoute,
+]);
+
+/**
+ * `history` подменяют тесты: каждому нужен свой роутер со своим адресом —
+ * общий экземпляр хранит адрес, на котором остановился предыдущий тест.
+ */
+export function createPanelRouter(history?: RouterHistory) {
+  return createRouter({
+    routeTree,
+    history,
+    defaultViewTransition: { types: toPageTransitionTypes },
+    defaultPendingMs: PENDING_MS,
+    defaultPendingComponent: PendingPage,
+    defaultErrorComponent: ErrorPage,
+  });
+}
+
+export const Router = createPanelRouter();
 
 declare module '@tanstack/react-router' {
   interface Register {

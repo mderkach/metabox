@@ -24,64 +24,27 @@ describe('текущий пункт меню', () => {
   });
 });
 
-/**
- * `matchMedia` в jsdom нет вовсе — подставляем ответ на запрос ширины.
- * Подписка тоже нужна: хук следит за сменой ширины, а не замеряет её однажды.
- */
-function mockNarrowScreen(matches: boolean): void {
-  vi.stubGlobal(
-    'matchMedia',
-    vi.fn(function matchMediaStub(query: string) {
-      return { matches, media: query, addEventListener: vi.fn<() => void>(), removeEventListener: vi.fn<() => void>() };
-    })
-  );
-}
-
 describe('свёрнутость сайдбара', () => {
   afterEach(() => {
     globalThis.localStorage.clear();
-    vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 
-  it('без прежнего выбора на узком экране открывается свёрнутым', () => {
-    mockNarrowScreen(true);
-
-    const { result } = renderHook(() => useSidebarCollapsed());
-
-    expect(result.current.collapsed).toBe(true);
-  });
-
-  it('без прежнего выбора на широком экране открывается развёрнутым', () => {
-    mockNarrowScreen(false);
-
+  it('без прежнего выбора открывается развёрнутым', () => {
     const { result } = renderHook(() => useSidebarCollapsed());
 
     expect(result.current.collapsed).toBe(false);
   });
 
-  it('прежний выбор пользователя сильнее ширины экрана, пока экран широкий', () => {
-    mockNarrowScreen(false);
-    globalThis.localStorage.setItem('metabox.sidebar.collapsed', 'false');
-
-    const { result } = renderHook(() => useSidebarCollapsed());
-
-    expect(result.current.collapsed).toBe(false);
-  });
-
-  it('на узком экране сохранённое «развёрнуто» не действует', () => {
-    mockNarrowScreen(true);
-    globalThis.localStorage.setItem('metabox.sidebar.collapsed', 'false');
+  it('открывается так, как пользователь оставил её в прошлый раз', () => {
+    globalThis.localStorage.setItem('metabox.sidebar.collapsed', 'true');
 
     const { result } = renderHook(() => useSidebarCollapsed());
 
     expect(result.current.collapsed).toBe(true);
-    expect(result.current.narrow).toBe(true);
   });
 
   it('переключение сохраняется и переживает перемонтирование', () => {
-    mockNarrowScreen(false);
-
     const first = renderHook(() => useSidebarCollapsed());
 
     act(() => {
@@ -96,7 +59,6 @@ describe('свёрнутость сайдбара', () => {
   });
 
   it('недоступное хранилище не роняет панель', () => {
-    mockNarrowScreen(false);
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(function denyRead() {
       throw new Error('доступ к хранилищу закрыт');
     });

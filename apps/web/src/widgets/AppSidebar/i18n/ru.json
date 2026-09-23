@@ -14,5 +14,13 @@
     "stopped": "sing-box остановлен",
     "failed": "sing-box упал",
     "unknown": "состояние sing-box неизвестно"
+  },
+  "more": {
+    "label": "Ещё",
+    "title": "Состояние и настройки",
+    "close": "Закрыть"
+  },
+  "short": {
+    "config": "Конфиг"
   }
 }

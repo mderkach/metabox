@@ -1,8 +1,6 @@
 import { useCallback, useState } from 'react';
 import { z } from 'zod';
 
-import { matchNarrow, useNarrowScreen } from '@shared/lib/media';
-
 const STORAGE_KEY = 'metabox.sidebar.collapsed';
 
 /** Хранилище отдаёт строку, и она может быть чем угодно: ключ переживает версии панели. */
@@ -17,10 +15,10 @@ function readCollapsed(): boolean {
       return stored.data === 'true';
     }
   } catch {
-    // Хранилище недоступно — остаётся ширина экрана.
+    // Хранилище недоступно — панель открывается развёрнутой.
   }
 
-  return matchNarrow();
+  return false;
 }
 
 function writeCollapsed(collapsed: boolean) {
@@ -51,12 +49,12 @@ export function pickActiveNav(pathname: string, targets: readonly string[]): str
 }
 
 /**
- * Состояние боковой панели. Выбор переживает перезагрузку страницы, но на узком
- * экране не действует: там панель всегда свёрнута до полосы значков.
+ * Состояние боковой панели. Выбор переживает перезагрузку страницы. На узком
+ * экране боковой панели нет вовсе — там навигация в нижней панели, — поэтому
+ * ширина здесь не учитывается.
  */
 export function useSidebarCollapsed() {
   const [collapsed, setCollapsed] = useState(readCollapsed);
-  const narrow = useNarrowScreen();
 
   // Хранилище пишется снаружи обновления состояния: React зовёт обновляющую
   // функцию дважды в строгом режиме, и запись ушла бы в неё вместе с остальным.
@@ -67,5 +65,5 @@ export function useSidebarCollapsed() {
     setCollapsed(next);
   }, [collapsed]);
 
-  return { collapsed: collapsed || narrow, narrow, toggle };
+  return { collapsed, toggle };
 }

@@ -14,5 +14,13 @@
     "stopped": "sing-box is stopped",
     "failed": "sing-box crashed",
     "unknown": "sing-box state is unknown"
+  },
+  "more": {
+    "label": "More",
+    "title": "Status and settings",
+    "close": "Close"
+  },
+  "short": {
+    "config": "Config"
   }
 }

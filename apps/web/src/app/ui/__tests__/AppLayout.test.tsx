@@ -7,10 +7,10 @@ import {
   RouterProvider,
 } from '@tanstack/react-router';
 import { server } from '@test/server';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { DAEMON_ENDPOINT } from '@entities/Daemon';
 import {
@@ -18,6 +18,7 @@ import {
   DAEMON_STATUS_FIXTURE,
   SERVICE_RUNNING_FIXTURE,
 } from '@entities/Daemon/__tests__/Daemon.fixture';
+import { NARROW_SCREEN } from '@shared/lib/media';
 
 import { AppLayout } from '../AppLayout';
 
@@ -53,7 +54,23 @@ function serveDaemon() {
   );
 }
 
+/** `matchMedia` в jsdom нет — подставляем ответ только на запрос узкой ширины. */
+function mockNarrowScreen() {
+  vi.stubGlobal('matchMedia', function matchNarrowQuery(media: string) {
+    return {
+      matches: media === NARROW_SCREEN,
+      media,
+      addEventListener: vi.fn<() => void>(),
+      removeEventListener: vi.fn<() => void>(),
+    };
+  });
+}
+
 describe('AppLayout', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it('ссылка «к содержимому» первая в порядке табуляции и ведёт на #content', async () => {
     serveDaemon();
     const user = userEvent.setup();
@@ -88,5 +105,28 @@ describe('AppLayout', () => {
 
     expect(await screen.findByText(/metabox не отвечает/)).toBeInTheDocument();
     expect(screen.getByRole('main')).toHaveTextContent('Экран содержимого');
+  });
+
+  it('на широком экране разделы в боковой панели, нижней панели нет', async () => {
+    serveDaemon();
+
+    renderAppLayout();
+
+    expect(await screen.findByRole('complementary', { name: 'Панель разделов' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Ещё' })).not.toBeInTheDocument();
+  });
+
+  it('на телефоне боковой панели нет: разделы в нижней панели после содержимого', async () => {
+    serveDaemon();
+    mockNarrowScreen();
+
+    renderAppLayout();
+
+    const nav = await screen.findByRole('navigation', { name: 'Разделы панели' });
+
+    expect(screen.queryByRole('complementary', { name: 'Панель разделов' })).not.toBeInTheDocument();
+    expect(within(nav).getByRole('button', { name: 'Ещё' })).toBeInTheDocument();
+    // Панель в потоке после `main`, а не поверх него: экран под ней не прячется.
+    expect(screen.getByRole('main').compareDocumentPosition(nav) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });

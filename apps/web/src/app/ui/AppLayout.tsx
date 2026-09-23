@@ -2,7 +2,9 @@ import { Outlet } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 
 import { ConfigApplyBar } from '@features/Config/ConfigApply';
-import { AppSidebar } from '@widgets/AppSidebar';
+import { useNarrowScreen } from '@shared/lib/media';
+import { cn } from '@shared/lib/utils';
+import { AppSidebar, AppSidebarBottomNav } from '@widgets/AppSidebar';
 
 import { useRuntimeStreams } from '../lib/useRuntimeStreams';
 import { DaemonBanner } from './DaemonBanner';
@@ -14,19 +16,28 @@ const SKIP_LINK_CLASS =
 /**
  * Оболочка всех экранов. Навигация живёт здесь, а не на странице: она общая для
  * всех маршрутов, и её перемонтирование при переходе сбрасывало бы состояние
- * свёрнутости.
+ * свёрнутости. На узком экране боковую панель сменяет нижняя: содержимое
+ * получает всю ширину.
  */
 export function AppLayout() {
   useRuntimeStreams();
   const { t } = useTranslation('app');
+  const narrow = useNarrowScreen();
 
   return (
-    <div className='flex h-full bg-background text-foreground'>
+    // `viewport-fit=cover` отдаёт панели весь экран, вместе с вырезами по бокам
+    // в альбомной ориентации: отступы держат содержимое вне них.
+    <div
+      className={cn(
+        'flex h-full bg-background pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)] text-foreground',
+        narrow && 'flex-col'
+      )}
+    >
       <a href='#content' className={SKIP_LINK_CLASS}>
         {t('skip.content')}
       </a>
-      <AppSidebar />
-      <div className='flex min-w-0 grow flex-col'>
+      {!narrow && <AppSidebar />}
+      <div className='flex min-h-0 min-w-0 grow flex-col'>
         <DaemonBanner />
         <ConfigApplyBar />
         {/* Экран — своя группа View Transitions для перехода роутера; граница
@@ -35,6 +46,7 @@ export function AppLayout() {
           <Outlet />
         </main>
       </div>
+      {narrow && <AppSidebarBottomNav />}
     </div>
   );
 }

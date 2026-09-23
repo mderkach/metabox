@@ -1,16 +1,23 @@
-import { RouterProvider } from '@tanstack/react-router';
+import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import { renderWithQuery } from '@test/renderWithQuery';
 import { server } from '@test/server';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CONFIG_ENDPOINT, ConfigDocumentState } from '@entities/Config';
 import { DAEMON_ENDPOINT } from '@entities/Daemon';
-import { DAEMON_STATUS_FIXTURE, SERVICE_RUNNING_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture';
+import {
+  CLASH_CONFIGS_FIXTURE,
+  DAEMON_STATUS_FIXTURE,
+  SERVICE_RUNNING_FIXTURE,
+  TRAFFIC_HISTORY_FIXTURE,
+} from '@entities/Daemon/__tests__/Daemon.fixture';
+import { PROXY_ENDPOINT } from '@entities/Proxy';
+import { NARROW_SCREEN } from '@shared/lib/media';
 
-import { Router } from '../Router';
+import { createPanelRouter } from '../Router';
 
 function serveDaemon() {
   server.use(
@@ -24,25 +31,87 @@ function serveDaemon() {
 /** Экрану достаточно разбираемого конфига: список правил здесь не проверяется. */
 const MINIMAL_CONFIG = JSON.stringify({ route: { rules: [{ outbound: 'direct' }] } }, null, 2);
 
+/** `matchMedia` в jsdom нет — подставляем ответ только на запрос узкой ширины. */
+function mockNarrowScreen() {
+  vi.stubGlobal('matchMedia', function matchNarrowQuery(media: string) {
+    return {
+      matches: media === NARROW_SCREEN,
+      media,
+      addEventListener: vi.fn<() => void>(),
+      removeEventListener: vi.fn<() => void>(),
+    };
+  });
+}
+
+/**
+ * Обзор читает поток рантайма, и оболочка открывает `EventSource`, которого в
+ * jsdom нет: без заглушки маршрут падал бы в экран ошибки. Кадры здесь не
+ * нужны — тест проверяет, какой экран открылся.
+ */
+class SilentEventSource {
+  addEventListener(): void {
+    // Кадров не будет: слушать нечего.
+  }
+
+  removeEventListener(): void {
+    // Подписок нет: снимать нечего.
+  }
+
+  close(): void {
+    // Соединения нет: закрывать нечего.
+  }
+}
+
+/** Свой роутер на тест: открывается сразу на нужном адресе и не делит его с соседями. */
+function renderRouter(path = '/') {
+  const router = createPanelRouter(createMemoryHistory({ initialEntries: [path] }));
+
+  renderWithQuery(<RouterProvider router={router} />);
+
+  return router;
+}
+
 describe('маршруты панели', () => {
-  // Роутер один на модуль и живёт поверх адреса jsdom: без сброса тест получал
-  // бы адрес, на котором остановился предыдущий.
   beforeEach(() => {
     ConfigDocumentState.getState().reset();
-    Router.history.push('/');
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it('открывает конфигурацию с корня: пустого экрана на / нет', async () => {
     serveDaemon();
 
-    renderWithQuery(<RouterProvider router={Router} />);
+    const router = renderRouter();
 
     // Заголовок экрана повторяет название пункта меню, поэтому опознаём экран
     // по пути к файлу — он есть только на самой странице.
     await waitFor(() => {
       expect(screen.getByText('/etc/sing-box/config.json')).toBeInTheDocument();
     });
-    expect(Router.state.location.pathname).toBe('/config');
+    expect(router.state.location.pathname).toBe('/config');
+  });
+
+  // С телефона на роутер заходят проверить, что всё работает, а не править конфиг.
+  it('на телефоне открывает с корня обзор', async () => {
+    serveDaemon();
+    server.use(
+      http.get(DAEMON_ENDPOINT.clashConfigs(), () => HttpResponse.json(CLASH_CONFIGS_FIXTURE)),
+      http.get(PROXY_ENDPOINT.proxies(), () => HttpResponse.json({ proxies: {} })),
+      http.get(DAEMON_ENDPOINT.history(), () => HttpResponse.json(TRAFFIC_HISTORY_FIXTURE))
+    );
+    mockNarrowScreen();
+    vi.stubGlobal('EventSource', SilentEventSource);
+
+    const router = renderRouter();
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Обзор' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/overview');
+
+    const nav = screen.getByRole('navigation', { name: 'Разделы панели' });
+
+    expect(within(nav).getByRole('link', { current: 'page' })).toHaveAttribute('href', '/overview');
   });
 
   // Раздел наборов правил сделан, и пункт меню обязан вести на него: пункт без
@@ -50,7 +119,7 @@ describe('маршруты панели', () => {
   it('в навигации сделанные разделы ведут на свои маршруты', async () => {
     serveDaemon();
 
-    renderWithQuery(<RouterProvider router={Router} />);
+    renderRouter();
 
     await screen.findByRole('navigation', { name: 'Разделы панели' });
 
@@ -70,7 +139,7 @@ describe('маршруты панели', () => {
     serveDaemon();
     const user = userEvent.setup();
 
-    renderWithQuery(<RouterProvider router={Router} />);
+    renderRouter();
 
     const sections = await screen.findByRole('tablist', { name: 'Секции конфига' });
 
@@ -89,9 +158,7 @@ describe('маршруты панели', () => {
   it('текстовый режим остаётся внутри раздела: вкладки и переключатель на месте', async () => {
     serveDaemon();
 
-    renderWithQuery(<RouterProvider router={Router} />);
-
-    Router.history.push('/config/raw');
+    renderRouter('/config/raw');
 
     const sections = await screen.findByRole('tablist', { name: 'Секции конфига' });
     const targets = within(sections)
@@ -114,15 +181,9 @@ describe('маршруты панели', () => {
   it('шапка и история версий существуют в разделе в одном экземпляре', async () => {
     serveDaemon();
 
-    renderWithQuery(<RouterProvider router={Router} />);
+    renderRouter('/config/rule-set');
 
-    Router.history.push('/config/rule-set');
-
-    await waitFor(() => {
-      expect(Router.state.location.pathname).toBe('/config/rule-set');
-    });
-
-    expect(screen.getAllByRole('heading', { level: 1, name: 'Конфигурация' })).toHaveLength(1);
+    expect(await screen.findAllByRole('heading', { level: 1, name: 'Конфигурация' })).toHaveLength(1);
     expect(screen.getAllByRole('button', { name: 'История версий' })).toHaveLength(1);
   });
 
@@ -131,15 +192,9 @@ describe('маршруты панели', () => {
   it('на вкладке сетов текущим режимом остаются «Формы»', async () => {
     serveDaemon();
 
-    renderWithQuery(<RouterProvider router={Router} />);
+    renderRouter('/config/rule-set');
 
-    Router.history.push('/config/rule-set');
-
-    await waitFor(() => {
-      expect(Router.state.location.pathname).toBe('/config/rule-set');
-    });
-
-    const mode = screen.getByRole('tablist', { name: 'Как показан документ' });
+    const mode = await screen.findByRole('tablist', { name: 'Как показан документ' });
 
     expect(within(mode).getByRole('tab', { selected: true })).toHaveAttribute('href', '/config');
     expect(within(mode).queryAllByRole('tab', { current: 'page' })).toHaveLength(0);
@@ -149,7 +204,7 @@ describe('маршруты панели', () => {
   it('бейдж черновика показывает шапка раздела, и он один', async () => {
     serveDaemon();
 
-    renderWithQuery(<RouterProvider router={Router} />);
+    renderRouter();
 
     await waitFor(() => {
       expect(screen.getByText('/etc/sing-box/config.json')).toBeInTheDocument();
@@ -169,9 +224,7 @@ describe('маршруты панели', () => {
   it('на неизвестном пути показывает переведённую заглушку вместе с навигацией панели', async () => {
     serveDaemon();
 
-    renderWithQuery(<RouterProvider router={Router} />);
-
-    Router.history.push('/nope');
+    renderRouter('/nope');
 
     expect(await screen.findByRole('heading', { name: 'Такой страницы нет' })).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Разделы панели' })).toBeInTheDocument();
@@ -182,16 +235,10 @@ describe('маршруты панели', () => {
   it('в навигации текущим помечен один пункт, даже когда адрес вложен в другой', async () => {
     serveDaemon();
 
-    renderWithQuery(<RouterProvider router={Router} />);
-
-    Router.history.push('/config/rule-set');
-
-    await waitFor(() => {
-      expect(Router.state.location.pathname).toBe('/config/rule-set');
-    });
+    renderRouter('/config/rule-set');
 
     // Вкладки конфигурации — отдельная навигация со своим текущим пунктом.
-    const sidebar = screen.getByRole('navigation', { name: 'Разделы панели' });
+    const sidebar = await screen.findByRole('navigation', { name: 'Разделы панели' });
     const current = within(sidebar).getAllByRole('link', { current: 'page' });
 
     expect(current).toHaveLength(1);
