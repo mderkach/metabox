@@ -17,6 +17,20 @@ export type RuleHitsColumn =
       state: typeof RULE_HITS_STATE.Counted;
       /** Сколько идёт счёт: с запуска демона. */
       seconds: number;
-      /** Срабатывания по идентификатору строки; строки без записи счёта не имеют. */
-      counts: ReadonlyMap<string, number>;
+      /**
+       * Срабатывания по идентификатору строки. Строки без записи счёта не
+       * имеют — правило изменено в черновике; `null` — правило в списке
+       * соединений core не видно, и ноль про него был бы неправдой.
+       */
+      counts: ReadonlyMap<string, number | null>;
     };
+
+/** Что стоит в ячейке срабатываний, кроме числа. */
+export const RULE_HIT = {
+  /** Правило изменено в черновике: счёт есть только у применённого. */
+  Edited: 'edited',
+  /** Правило в списке соединений core не видно. */
+  Unobserved: 'unobserved',
+} as const;
+
+export type RuleHitCell = number | (typeof RULE_HIT)[keyof typeof RULE_HIT];

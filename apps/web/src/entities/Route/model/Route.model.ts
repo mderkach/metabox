@@ -67,8 +67,12 @@ export interface RouteExplanation {
 export interface RuleHits {
   /** Сколько идёт счёт: с запуска демона, перезапуск его обнуляет. */
   seconds: number;
-  /** Срабатывания по индексу `route.rules` процесса, считая с нуля. */
-  byIndex: readonly number[];
+  /**
+   * Срабатывания по индексу `route.rules` процесса, считая с нуля. `null` —
+   * правило в списке соединений core не видно: `sniff` не останавливает
+   * перебор, а перехваченный DNS и отклонённое соединение туда не попадают.
+   */
+  byIndex: readonly (number | null)[];
   /** Соединения, ушедшие в `route.final`. */
   final: number;
 }

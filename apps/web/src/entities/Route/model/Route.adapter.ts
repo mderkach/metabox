@@ -83,10 +83,10 @@ export function toRouteExplanation(dto: RouteExplanationWire): RouteExplanation 
 }
 
 export function toRuleHits(dto: RuleHitsWire): RuleHits {
-  const byIndex = Array.from({ length: dto.rules.length }, () => 0);
+  const byIndex = Array.from({ length: dto.rules.length }, (): number | null => null);
 
   for (const rule of dto.rules) {
-    byIndex[rule.index] = rule.hits;
+    byIndex[rule.index] = rule.counted ? rule.hits : null;
   }
 
   return { seconds: dto.seconds, byIndex, final: dto.final };

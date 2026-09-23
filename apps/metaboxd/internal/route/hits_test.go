@@ -161,3 +161,33 @@ func TestCounterReportsCountingWindow(t *testing.T) {
 		}
 	})
 }
+
+// Clash API не показывает соединения по правилам, которые не завершают перебор
+// или не уводят трафик в outbound: ноль у них значил бы «не видно», а не «не
+// срабатывало».
+func TestCounterMarksUnobservableRules(t *testing.T) {
+	source := &fakeSource{bodies: map[string]string{
+		"/rules": `{"rules":[
+			{"type":"default","payload":"","proxy":"sniff"},
+			{"type":"default","payload":"inbound=dns-in","proxy":"hijack-dns"},
+			{"type":"default","payload":"rule_set=ads","proxy":"reject"},
+			{"type":"default","payload":"rule_set=google-ip","proxy":"route(proxy)"},
+			{"type":"default","payload":"ip_is_private=true","proxy":"bypass(direct)"}
+		]}`,
+		"/connections": `{"connections":[]}`,
+	}}
+
+	hits, err := newTestCounter(source).Hits(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got := make([]bool, 0, len(hits.Rules))
+	for _, rule := range hits.Rules {
+		got = append(got, rule.Counted)
+	}
+
+	if want := []bool{false, false, false, true, true}; !slices.Equal(got, want) {
+		t.Errorf("видимость правил %v, ожидали %v", got, want)
+	}
+}

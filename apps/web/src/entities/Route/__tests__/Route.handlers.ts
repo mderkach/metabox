@@ -19,23 +19,31 @@ const SILENT_EVERY = 5;
 const HITS_STEP = 37;
 const FINAL_HITS = 12;
 
+/** Как у демона: в списке соединений core видны только маршруты в outbound. */
+function isCounted(rule: unknown): boolean {
+  const action: unknown = typeof rule === 'object' && rule !== null ? Reflect.get(rule, 'action') : undefined;
+
+  return action === undefined || action === 'route' || action === 'bypass';
+}
+
 /**
  * Счёт по правилу на каждый узел `route.rules`: число правил процесса
- * совпадает с файлом, как на устройстве после применения. Длина приходит
+ * совпадает с файлом, как на устройстве после применения. Правила приходят
  * снаружи — конфиг стенда лежит в соседнем слайсе.
  */
-function toRuleHitsFixture(rules: number): RuleHitsWire {
+function toRuleHitsFixture(rules: readonly unknown[]): RuleHitsWire {
   return {
     seconds: HITS_SECONDS,
-    rules: Array.from({ length: rules }, (_rule, index) => ({
+    rules: rules.map((rule, index) => ({
       index,
       hits: (index + 1) % SILENT_EVERY === 0 ? 0 : (index + 1) * HITS_STEP,
+      counted: isCounted(rule),
     })),
     final: FINAL_HITS,
   };
 }
 
-export function createRuleHitsHandler(rules: number) {
+export function createRuleHitsHandler(rules: readonly unknown[]) {
   return http.get(ROUTE_ENDPOINT.hits(), () => HttpResponse.json(toRuleHitsFixture(rules)));
 }
 

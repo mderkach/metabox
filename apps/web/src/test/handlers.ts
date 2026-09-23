@@ -55,7 +55,7 @@ export function createMissingHandlers(connections = 0) {
     ...createStatefulProxyHandlers(),
     ...connectionHandlers,
     ...routeHandlers,
-    createRuleHitsHandler(CONFIG_FIXTURE.route?.rules?.length ?? 0),
+    createRuleHitsHandler(CONFIG_FIXTURE.route?.rules ?? []),
     runtimeStreamHandler(
       [
         { topic: RUNTIME_TOPIC.Service, data: () => SERVICE_RUNNING_FIXTURE },

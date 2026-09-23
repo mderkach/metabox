@@ -20,6 +20,8 @@
     "window": "Hit count covers {{age}} since metaboxd started; a restart resets it",
     "failed": "Hit count unavailable",
     "mismatch": "sing-box runs a different config — hit count is not shown",
-    "edited": "• — rule changed in the draft; only the applied one has a count"
+    "edited": "• — rule changed in the draft; only the applied one has a count",
+    "unobservedCell": "not seen",
+    "unobserved": "“not seen” — sing-box does not list such connections: sniff and resolve do not stop matching, hijacked DNS and reject never reach the connection list"
   }
 }

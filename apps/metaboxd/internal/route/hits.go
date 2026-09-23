@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 	"time"
 )
@@ -13,6 +14,12 @@ import (
 type RuleHits struct {
 	Index int    `json:"index"`
 	Hits  uint64 `json:"hits"`
+	// Counted — видно ли правило в списке соединений вообще. Clash API пишет у
+	// соединения только правило, на котором перебор остановился, и только
+	// соединения, ушедшие в outbound: `sniff` и `resolve` не останавливают
+	// перебор, перехваченный DNS и отклонённое соединение в список не попадают.
+	// У таких правил ноль значил бы не «не срабатывало», а «не видно».
+	Counted bool `json:"counted"`
 }
 
 // Hits — ответ ручки счётчика срабатываний.
@@ -215,10 +222,26 @@ func (c *Counter) Hits(ctx context.Context) (Hits, error) {
 			hits = c.hits[key]
 		}
 
-		out.Rules = append(out.Rules, RuleHits{Index: rule.Index, Hits: hits})
+		out.Rules = append(out.Rules, RuleHits{Index: rule.Index, Hits: hits, Counted: countable(rule.Action)})
 	}
 
 	return out, nil
+}
+
+// countable отвечает, может ли соединение с этим действием оказаться в списке
+// соединений с этим правилом: только маршрут в outbound, `route(...)` или
+// `bypass(...)` с outbound.
+func countable(action string) bool {
+	name, arguments, _ := strings.Cut(action, "(")
+
+	switch name {
+	case "route":
+		return true
+	case "bypass":
+		return strings.TrimSuffix(arguments, ")") != ""
+	default:
+		return false
+	}
 }
 
 func hitKey(conditions, action string) string {

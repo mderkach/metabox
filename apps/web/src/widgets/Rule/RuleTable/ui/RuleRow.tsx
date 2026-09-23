@@ -6,6 +6,7 @@ import type { RuleRow as RuleRowModel } from '@entities/Rule';
 import { cn } from '@shared/lib/utils';
 import { Badge } from '@shared/ui';
 
+import { RULE_HIT, type RuleHitCell } from '../model';
 import { RULE_COLUMN } from './RuleColumns';
 import { RuleGroupChips } from './RuleGroupChips';
 import { RuleMatcherChip } from './RuleMatcherChip';
@@ -32,8 +33,8 @@ function RuleRowProto({
   selected: boolean;
   /** Правила нет в применённом конфиге: оно новое или изменено в черновике. */
   edited: boolean;
-  /** `undefined` — колонки нет; `null` — у строки счёта нет, правило изменено. */
-  hits: number | null | undefined;
+  /** `undefined` — колонки нет. */
+  hits: RuleHitCell | undefined;
   onSelect: (id: string) => void;
 }) {
   const { t, i18n } = useTranslation('widgets/Rule/RuleTable');
@@ -113,11 +114,7 @@ function RuleRowProto({
 
       {hits !== undefined && (
         <span role='cell' className={cn(RULE_COLUMN.Hits, 'font-mono text-xs text-muted-foreground tabular-nums')}>
-          {hits === null ? (
-            <span aria-hidden='true'>—</span>
-          ) : (
-            <data value={hits}>{hits.toLocaleString(i18n.language)}</data>
-          )}
+          <RuleHitValue hits={hits} language={i18n.language} />
         </span>
       )}
     </div>
@@ -125,3 +122,17 @@ function RuleRowProto({
 }
 
 export const RuleRow = memo(RuleRowProto);
+
+function RuleHitValue({ hits, language }: { hits: RuleHitCell; language: string }) {
+  const { t } = useTranslation('widgets/Rule/RuleTable');
+
+  if (hits === RULE_HIT.Edited) {
+    return <span aria-hidden='true'>—</span>;
+  }
+
+  if (hits === RULE_HIT.Unobserved) {
+    return <span>{t('hits.unobservedCell')}</span>;
+  }
+
+  return <data value={hits}>{hits.toLocaleString(language)}</data>;
+}

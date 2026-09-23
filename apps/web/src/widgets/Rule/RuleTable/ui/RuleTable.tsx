@@ -7,7 +7,7 @@ import { formatAge } from '@shared/lib/format';
 import { cn } from '@shared/lib/utils';
 import { SURFACE } from '@shared/ui';
 
-import { RULE_HITS_STATE, type RuleHitsColumn } from '../model';
+import { RULE_HIT, RULE_HITS_STATE, type RuleHitCell, type RuleHitsColumn } from '../model';
 import { RuleRow } from './RuleRow';
 import { RuleTableHeader } from './RuleTableHeader';
 
@@ -111,7 +111,7 @@ export function RuleTable({
                     rowIndex={item.index + 1 + HEADER_ROWS}
                     selected={rule.id === selectedId}
                     edited={edited.has(rule.id)}
-                    hits={counts === null ? undefined : (counts.get(rule.id) ?? null)}
+                    hits={counts === null ? undefined : toHitCell(counts, rule.id)}
                     onSelect={onSelect}
                   />
                 </div>
@@ -128,10 +128,19 @@ export function RuleTable({
             : t('list.shown', { ns: 'shared', shown: rules.length, total })}
         </p>
         {edited.size > 0 && <p>{t('hits.edited')}</p>}
+        {counts !== null && [...counts.values()].includes(null) && <p>{t('hits.unobserved')}</p>}
         <HitsNote hits={hits} />
       </div>
     </section>
   );
+}
+
+function toHitCell(counts: ReadonlyMap<string, number | null>, id: string): RuleHitCell {
+  if (!counts.has(id)) {
+    return RULE_HIT.Edited;
+  }
+
+  return counts.get(id) ?? RULE_HIT.Unobserved;
 }
 
 /**

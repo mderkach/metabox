@@ -92,7 +92,7 @@ export function useRuleMarks(editor: RouteEditorState): RuleMarks {
       return { state: RULE_HITS_STATE.Mismatch };
     }
 
-    const counts = new Map<string, number>();
+    const counts = new Map<string, number | null>();
 
     for (const [position, rule] of rules.entries()) {
       const index = applied[position];

@@ -55,9 +55,9 @@ const RECOGNIZED_CONFIG = JSON.stringify(
 const HITS = {
   seconds: 2 * 60 * 60,
   rules: [
-    { index: 0, hits: 1234 },
-    { index: 1, hits: 0 },
-    { index: 2, hits: 5 },
+    { index: 0, hits: 1234, counted: true },
+    { index: 1, hits: 0, counted: false },
+    { index: 2, hits: 5, counted: true },
   ],
   final: 0,
 };
@@ -102,6 +102,16 @@ describe('экран правил', () => {
       await screen.findByText('Счёт срабатываний — за 2 ч с запуска metaboxd, перезапуск его обнуляет')
     ).toBeInTheDocument();
     expect(firstRow).toHaveTextContent('1 234');
+  });
+
+  it('правило, которого core в списке соединений не показывает, получает «не видно», а не ноль', async () => {
+    renderWithRouter(EditorPage);
+
+    const table = await screen.findByRole('table', { name: 'Правила маршрутизации' });
+    const [, , dnsRow] = within(table).getAllByRole('row');
+
+    expect(dnsRow).toHaveTextContent('не видно');
+    expect(await screen.findByText(/^«не видно» — sing-box не показывает такие соединения/)).toBeInTheDocument();
   });
 
   it('процесс на другом конфиге не раздаёт свой счёт строкам этого', async () => {
