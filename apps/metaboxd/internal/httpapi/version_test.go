@@ -122,3 +122,35 @@ func TestConfigVersionRestoreUnknown(t *testing.T) {
 		t.Errorf("применение запущено на неизвестной версии: %q", applier.received)
 	}
 }
+
+func TestConfigVersionsCurrentSum(t *testing.T) {
+	applied := []byte("{\"log\": {}}\n")
+
+	t.Run("отпечаток применённого конфига идёт рядом с версиями", func(t *testing.T) {
+		got := request(t, newTestServerWithReader(t, fakeReader{data: applied}), http.MethodGet, "/api/config/versions", "", nil)
+
+		var body struct {
+			CurrentSum string `json:"current_sum"`
+		}
+		got.decode(t, &body)
+
+		if want := config.Sum(applied); body.CurrentSum != want {
+			t.Errorf("отпечаток %q, ожидали %q", body.CurrentSum, want)
+		}
+	})
+
+	t.Run("без конфига на устройстве поля нет, а список отдаётся", func(t *testing.T) {
+		got := request(t, newTestServerWithReader(t, fakeReader{readErr: config.ErrNoConfig}), http.MethodGet, "/api/config/versions", "", nil)
+
+		if got.status != http.StatusOK {
+			t.Fatalf("код ответа: получили %d, ожидали %d", got.status, http.StatusOK)
+		}
+
+		var body map[string]any
+		got.decode(t, &body)
+
+		if _, ok := body["current_sum"]; ok {
+			t.Errorf("поле current_sum есть в ответе: %v", body["current_sum"])
+		}
+	})
+}

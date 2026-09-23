@@ -95,8 +95,10 @@ func (a *fakeApplier) body() []byte {
 // fakeReader подменяет владельца файла конфига: чтение с диска проверяется в
 // internal/config, здесь важно, что байты доходят до ответа неизменными.
 type fakeReader struct {
-	data     []byte
-	err      error
+	data []byte
+	err  error
+	// readErr ломает только чтение конфига, оставляя историю доступной.
+	readErr  error
 	versions []config.Version
 	// byID подменяет содержимое версий; пустая карта означает, что версии нет.
 	byID map[int][]byte
@@ -105,6 +107,10 @@ type fakeReader struct {
 func (r fakeReader) Read(context.Context) ([]byte, error) {
 	if r.err != nil {
 		return nil, r.err
+	}
+
+	if r.readErr != nil {
+		return nil, r.readErr
 	}
 
 	return r.data, nil

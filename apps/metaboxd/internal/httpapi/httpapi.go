@@ -5,6 +5,7 @@ package httpapi
 
 import (
 	"context"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -293,7 +294,20 @@ func (s *Server) handleVersions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(s.log, w, http.StatusOK, contract.Versions{Versions: versions})
+	out := contract.Versions{Versions: versions}
+
+	data, err := s.reader.Read(r.Context())
+	switch {
+	case errors.Is(err, config.ErrNoConfig):
+	case err != nil:
+		fail(s.log, w, r, err)
+
+		return
+	default:
+		out.CurrentSum = config.Sum(data)
+	}
+
+	writeJSON(s.log, w, http.StatusOK, out)
 }
 
 // handleVersion отдаёт версию теми же байтами, какими она была применена:

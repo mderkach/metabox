@@ -236,11 +236,10 @@ func listVersions(root *os.Root) ([]Version, error) {
 			continue
 		}
 
-		sum := sha256.Sum256(data)
 		versions = append(versions, Version{
 			ID:      id,
 			Size:    info.Size(),
-			Sum:     hex.EncodeToString(sum[:]),
+			Sum:     Sum(data),
 			SavedAt: info.ModTime().Unix(),
 		})
 	}
@@ -322,4 +321,12 @@ func versionID(name string) (int, bool) {
 	}
 
 	return id, true
+}
+
+// Sum — отпечаток содержимого в той записи, в какой его видит панель: sha256
+// шестнадцатеричной строкой.
+func Sum(data []byte) string {
+	sum := sha256.Sum256(data)
+
+	return hex.EncodeToString(sum[:])
 }

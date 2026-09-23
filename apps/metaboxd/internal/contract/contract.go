@@ -71,6 +71,12 @@ type Runtime struct {
 // Versions — ответ `GET /api/config/versions`.
 type Versions struct {
 	Versions []config.Version `json:"versions"`
+	// CurrentSum — sha256 применённого конфига в той же записи, что у
+	// `Version.Sum`: по нему панель отмечает версию, совпадающую с файлом на
+	// устройстве. Считает демон, потому что `crypto.subtle` браузер даёт только
+	// в защищённом контексте, а панель открывают по http. Поля нет — конфига на
+	// устройстве нет.
+	CurrentSum string `json:"current_sum,omitempty"`
 }
 
 // Service — ответ `GET /api/service` и того же вида событие потока: панель
