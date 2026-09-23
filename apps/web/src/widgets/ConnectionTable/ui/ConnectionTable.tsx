@@ -19,7 +19,7 @@ import { ConnectionRow } from './ConnectionRow';
 import { ConnectionTableHeader } from './ConnectionTableHeader';
 
 /** Оценка карточки узкого экрана для первого кадра: точную высоту виртуализатор измеряет сам. */
-const CARD_ESTIMATE = 220;
+const CARD_ESTIMATE = 108;
 const OVERSCAN = 10;
 
 /** Строка заголовка тоже строка таблицы: нумерация строк начинается с неё. */

@@ -1,7 +1,7 @@
 import { renderWithQuery } from '@test/renderWithQuery';
 import { selectOption } from '@test/selectOption';
 import { mockVirtualSizes } from '@test/virtualSizes';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -189,5 +189,63 @@ describe('вид списка', () => {
     expect(screen.getByRole('button', { name: 'Плотные строки' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.queryByRole('columnheader', { name: /Сеть/ })).not.toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Частота обновления списка' })).toHaveTextContent('1 с');
+  });
+});
+
+describe('карточка узкого экрана', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    mockVirtualSizes();
+    vi.stubGlobal('matchMedia', function matchNarrowQuery(media: string) {
+      return { matches: true, media, addEventListener: vi.fn<() => void>(), removeEventListener: vi.fn<() => void>() };
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  function firstCard() {
+    const [card] = within(screen.getByRole('list', { name: 'Соединения' })).getAllByRole('listitem');
+
+    return card;
+  }
+
+  function fieldLabels(card: HTMLElement) {
+    return within(card)
+      .getAllByRole('term')
+      .map((term) => term.textContent);
+  }
+
+  it('начинается с хоста назначения и действий строки, а не заканчивается ими', () => {
+    renderWithQuery(<TableHarness rows={makeRows(3)} onReset={vi.fn<() => void>()} />);
+
+    const card = firstCard();
+    const [title, firstField] = within(card).getAllByRole('definition');
+    const close = within(card).getByRole('button', { name: 'Закрыть соединение video.example:443' });
+
+    expect(fieldLabels(card)[0]).toBe('Куда');
+    expect(title).toHaveTextContent('video.example:443');
+    expect(title).toHaveAttribute('title', 'video.example:443');
+    expect(close.compareDocumentPosition(firstField) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('подписывает для скринридера каждое видимое поле и не показывает скрытые', () => {
+    renderWithQuery(<TableHarness rows={makeRows(3)} onReset={vi.fn<() => void>()} />);
+
+    expect(fieldLabels(firstCard())).toEqual(['Куда', 'Правило', 'Действие', 'Цепочка', 'Откуда', 'Время', 'Объём']);
+  });
+
+  it('показывает включённую колонку и прячет выключенную', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ columns: { network: true, rate: false, chain: false } }));
+
+    renderWithQuery(<TableHarness rows={makeRows(3)} onReset={vi.fn<() => void>()} />);
+
+    const labels = fieldLabels(firstCard());
+
+    expect(labels).toContain('Сеть');
+    expect(labels).not.toContain('Цепочка');
+    expect(labels).not.toContain('Скорость');
   });
 });
