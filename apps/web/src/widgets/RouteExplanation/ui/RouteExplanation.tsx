@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import type { ParseKeys, TFunction } from 'i18next';
 import { X } from 'lucide-react';
-import type { KeyboardEvent } from 'react';
+import { useState, type KeyboardEvent, type ReactNode } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
 import {
@@ -19,8 +19,12 @@ import {
   AlertTitle,
   Button,
   QueryFailure,
+  SECTION_HEADING,
   SURFACE,
   SURFACE_HEAD,
+  Sheet,
+  SheetContent,
+  SheetTitle,
   SkeletonRows,
   buttonVariants,
 } from '@shared/ui';
@@ -32,6 +36,8 @@ import { RouteOriginBadge } from './RouteOriginBadge';
 const REASON_KEY: Readonly<Record<RouteReasonCode, ParseKeys<'widgets/RouteExplanation'>>> = {
   not_in_process_list: 'unknown.reason.not_in_process_list',
 };
+
+const HEADING = cn('flex min-w-0 grow flex-col', SECTION_HEADING);
 
 /**
  * Объяснение строится на наблюдаемых данных core: список правил и сработавшее
@@ -52,7 +58,6 @@ export function RouteExplanation({
   onClose: () => void;
 }) {
   const { t } = useTranslation('widgets/RouteExplanation');
-  const state = useRouteExplanationState(connectionId);
   const headingRef = useFocusReturn<HTMLHeadingElement>();
 
   function onKeyDown(event: KeyboardEvent<HTMLElement>) {
@@ -69,50 +74,133 @@ export function RouteExplanation({
       id={id}
       aria-label={t('titleFor', { host })}
       onKeyDown={onKeyDown}
-      className={cn('flex w-full max-w-md shrink-0 flex-col overflow-hidden max-lg:max-h-[70vh]', SURFACE)}
+      className={cn('flex w-full max-w-md shrink-0 flex-col overflow-hidden', SURFACE)}
     >
-      <header className={cn('flex items-center gap-2.5', SURFACE_HEAD)}>
-        <h2 ref={headingRef} tabIndex={-1} className='flex min-w-0 grow flex-col text-sm font-medium'>
-          {t('title')}
-          <span className='truncate font-mono text-xs font-normal text-muted-foreground'>{host}</span>
-        </h2>
-        <Button variant='outline' size='icon-sm' aria-label={t('close')} onClick={onClose}>
-          <X />
-        </Button>
-      </header>
-
-      <div className='flex min-h-0 grow flex-col gap-3 overflow-y-auto p-4'>
-        {state.isPending && <SkeletonRows rows={4} className='p-0' />}
-
-        {state.query.isLoadingError && <QueryFailure messageKey='source.route' query={state.query} />}
-
-        {state.explanation !== null && (
-          <>
-            <Matched explanation={state.explanation} trusted={state.trusted} compared={state.compared} />
-
-            {state.compared && !state.trusted && (
-              <Alert variant='destructive'>
-                <AlertTitle>{t('drift.title')}</AlertTitle>
-                <AlertDescription>
-                  {t('drift.description', {
-                    running: state.explanation.rules.length,
-                    document: state.inDocument,
-                  })}
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {!state.compared && <p className='text-xs text-pretty text-muted-foreground'>{t('drift.notCompared')}</p>}
-
-            <Chain nodes={state.explanation.chain.nodes} origin={state.explanation.chain.origin} />
-
-            {state.before.length > 0 && <Before rules={state.before} />}
-
-            <p className='text-xs text-pretty text-muted-foreground'>{t('origin.note')}</p>
-          </>
-        )}
-      </div>
+      <Header
+        heading={
+          <h2 ref={headingRef} tabIndex={-1} className={HEADING}>
+            <Title host={host} />
+          </h2>
+        }
+        onClose={onClose}
+      />
+      <Body connectionId={connectionId} />
     </aside>
+  );
+}
+
+/**
+ * То же объяснение листом поверх списка — для экрана, где панели рядом со
+ * списком нет места. Escape, щелчок мимо и кнопка закрытия зовут `onClose`, как
+ * у панели.
+ */
+export function RouteExplanationSheet({
+  id,
+  connectionId,
+  host,
+  onClose,
+}: {
+  id?: string;
+  /** `null` — соединение не выбрано, лист закрыт. */
+  connectionId: string | null;
+  host: string;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation('widgets/RouteExplanation');
+  // Лист уезжает анимацией уже после сброса выбора и всё это время
+  // показывает последнее соединение, а не пустоту.
+  const [shown, setShown] = useState({ connectionId, host });
+
+  if (connectionId !== null && (connectionId !== shown.connectionId || host !== shown.host)) {
+    setShown({ connectionId, host });
+  }
+
+  return (
+    <Sheet
+      open={connectionId !== null}
+      onOpenChange={(open) => {
+        if (!open) {
+          onClose();
+        }
+      }}
+    >
+      <SheetContent id={id} side='bottom' showCloseButton={false} className='max-h-[85svh] gap-0'>
+        <Header
+          heading={
+            // Имя листа Base UI берёт из заголовка, а видимый текст склеил бы
+            // подпись с узлом без пробела.
+            <SheetTitle aria-label={t('titleFor', { host: shown.host })} className={HEADING}>
+              <Title host={shown.host} />
+            </SheetTitle>
+          }
+          onClose={onClose}
+        />
+        {shown.connectionId !== null && <Body connectionId={shown.connectionId} />}
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function Header({ heading, onClose }: { heading: ReactNode; onClose: () => void }) {
+  const { t } = useTranslation('widgets/RouteExplanation');
+
+  return (
+    <header className={cn('flex items-center gap-2.5', SURFACE_HEAD)}>
+      {heading}
+      <Button variant='outline' size='icon-sm' aria-label={t('close')} onClick={onClose}>
+        <X />
+      </Button>
+    </header>
+  );
+}
+
+function Title({ host }: { host: string }) {
+  const { t } = useTranslation('widgets/RouteExplanation');
+
+  return (
+    <>
+      {t('title')}
+      <span className='truncate font-mono text-xs font-normal text-muted-foreground'>{host}</span>
+    </>
+  );
+}
+
+function Body({ connectionId }: { connectionId: string }) {
+  const { t } = useTranslation('widgets/RouteExplanation');
+  const state = useRouteExplanationState(connectionId);
+
+  return (
+    <div className='flex min-h-0 grow flex-col gap-3 overflow-y-auto p-4'>
+      {state.isPending && <SkeletonRows rows={4} className='p-0' />}
+
+      {state.query.isLoadingError && <QueryFailure messageKey='source.route' query={state.query} />}
+
+      {state.explanation !== null && (
+        <>
+          <Matched explanation={state.explanation} trusted={state.trusted} compared={state.compared} />
+
+          {state.compared && !state.trusted && (
+            <Alert variant='destructive'>
+              <AlertTitle>{t('drift.title')}</AlertTitle>
+              <AlertDescription>
+                {t('drift.description', {
+                  running: state.explanation.rules.length,
+                  document: state.inDocument,
+                })}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {!state.compared && <p className='text-xs text-pretty text-muted-foreground'>{t('drift.notCompared')}</p>}
+
+          <Chain nodes={state.explanation.chain.nodes} origin={state.explanation.chain.origin} />
+
+          {state.before.length > 0 && <Before rules={state.before} />}
+
+          <p className='text-xs text-pretty text-muted-foreground'>{t('origin.note')}</p>
+        </>
+      )}
+    </div>
   );
 }
 

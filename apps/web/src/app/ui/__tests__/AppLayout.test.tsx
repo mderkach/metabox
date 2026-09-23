@@ -13,7 +13,11 @@ import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 
 import { DAEMON_ENDPOINT } from '@entities/Daemon';
-import { DAEMON_STATUS_FIXTURE, SERVICE_RUNNING_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture';
+import {
+  CLASH_CONFIGS_FIXTURE,
+  DAEMON_STATUS_FIXTURE,
+  SERVICE_RUNNING_FIXTURE,
+} from '@entities/Daemon/__tests__/Daemon.fixture';
 
 import { AppLayout } from '../AppLayout';
 
@@ -44,7 +48,8 @@ function renderAppLayout() {
 function serveDaemon() {
   server.use(
     http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE)),
-    http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE))
+    http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE)),
+    http.get(DAEMON_ENDPOINT.clashConfigs(), () => HttpResponse.json(CLASH_CONFIGS_FIXTURE))
   );
 }
 
@@ -73,5 +78,15 @@ describe('AppLayout', () => {
 
     expect(main).toHaveAttribute('id', 'content');
     expect(main).toHaveTextContent('Экран содержимого');
+  });
+
+  it('показывает полосу недоступности демона над экраном, а экран остаётся на месте', async () => {
+    serveDaemon();
+    server.use(http.get(DAEMON_ENDPOINT.status(), () => new HttpResponse(null, { status: 503 })));
+
+    renderAppLayout();
+
+    expect(await screen.findByText(/metabox не отвечает/)).toBeInTheDocument();
+    expect(screen.getByRole('main')).toHaveTextContent('Экран содержимого');
   });
 });

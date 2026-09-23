@@ -31,6 +31,8 @@ export {
   toOutboundTags,
 } from './model/Config.model';
 export type { CheckFailure, ConfigDocument, ConfigSection, ConfigVersion } from './model/Config.model';
+export { findUnbuiltNodes } from './model/Config.build';
+export type { UnbuiltNode } from './model/Config.build';
 export { useConfigDocument } from './model/Config.document';
 export type { ConfigDocumentView } from './model/Config.document';
 export { ConfigDocumentState, useConfigDiff, useConfigDirty, useConfigText } from './model/Config.store';

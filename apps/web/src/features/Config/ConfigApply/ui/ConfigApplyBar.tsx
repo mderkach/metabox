@@ -1,10 +1,12 @@
 import type { ParseKeys } from 'i18next';
-import { CircleAlert, Info } from 'lucide-react';
-import { useDeferredValue, useEffect, useMemo, useState, ViewTransition } from 'react';
+import { CircleAlert, FilePen, Info, LoaderCircle, Timer } from 'lucide-react';
+import { useEffect, useMemo, useState, type TransitionEvent } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
 import { APPLY_PHASE, type ApplyReasonCode, type ApplyTransaction } from '@entities/Daemon';
+import { useReducedMotion } from '@shared/lib/media';
 import { MS_IN_SECOND, NS_IN_SECOND } from '@shared/lib/time';
+import { cn } from '@shared/lib/utils';
 import { Alert, AlertAction, AlertDescription, AlertTitle, Button, Separator } from '@shared/ui';
 
 import { useConfigApply } from '../lib/ConfigApply.lib';
@@ -30,69 +32,105 @@ export function ConfigApplyBar() {
     apply.transaction.id !== dismissed &&
     (phase === APPLY_PHASE.Failed || phase === APPLY_PHASE.RolledBack);
 
-  // Стор обновляет видимость срочно, а срочное обновление анимации не даёт:
-  // `useDeferredValue` переводит смену в Transition. Откладывается весь снимок —
-  // иначе уходящий бар перерисовался бы свежими данными и таял с чужим текстом.
   const visible = apply.isDirty || awaiting || failure || phase === APPLY_PHASE.Applying;
-  const state = useMemo(
+  const current = useMemo(
     () => ({
-      visible,
       awaiting,
       failure,
       isApplying: apply.isApplying,
       transaction: apply.transaction,
       check: apply.check,
     }),
-    [visible, awaiting, failure, apply.isApplying, apply.transaction, apply.check]
+    [awaiting, failure, apply.isApplying, apply.transaction, apply.check]
   );
-  const shown = useDeferredValue(state);
+  // Уходящий бар сворачивается с тем текстом, с которым его видели: свежее
+  // состояние за время сворачивания подменило бы, например, окно подтверждения
+  // строкой «правки в черновике».
+  const [held, setHeld] = useState<typeof current | null>(null);
+  const reducedMotion = useReducedMotion();
 
-  if (!shown.visible) {
-    return null;
+  if (visible && held !== current) {
+    setHeld(current);
   }
 
+  // Без анимации `transitionend` не придёт, и снимок остался бы в DOM вместе
+  // с тикающим таймером окна подтверждения.
+  if (!visible && reducedMotion && held !== null) {
+    setHeld(null);
+  }
+
+  const shown = visible ? current : held;
+
+  function dropHeld(event: TransitionEvent<HTMLDivElement>) {
+    if (!visible && event.target === event.currentTarget) {
+      setHeld(null);
+    }
+  }
+
+  // Высоту анимирует CSS, а не граница `<ViewTransition>`: экран под баром —
+  // именованная группа `page`, вне перехода роутера она стоит без анимации
+  // (ADR-0026), и содержимое прыгало бы на высоту бара.
   return (
-    <ViewTransition enter='bar-in' exit='bar-out'>
-      <section
-        aria-label={t('bar.label')}
-        className='flex shrink-0 flex-col gap-2 border-b border-border bg-card px-4 py-2.5 sm:px-6'
-      >
-        {shown.awaiting && shown.transaction !== null ? (
-          <ConfirmWindow
-            key={shown.transaction.id}
-            transaction={shown.transaction}
-            isConfirming={apply.isConfirming}
-            onConfirm={apply.confirm}
-          />
-        ) : (
-          <div className='flex flex-wrap items-center gap-x-2.5 gap-y-1'>
-            <p className='text-sm'>{shown.isApplying ? t('bar.applying') : t('bar.dirty')}</p>
-            <span className='grow' />
-            {!shown.isApplying && (
-              <>
-                <ConfigApplyDiff canApply={apply.canApply} onApply={apply.apply} />
-                <Button size='sm' disabled={!apply.canApply} onClick={apply.apply}>
-                  {t('bar.apply')}
-                </Button>
-                <Separator orientation='vertical' className='mx-0.5 h-5' />
-                <ConfigApplyDiscard onDiscard={apply.discard} />
-              </>
+    <div
+      inert={!visible}
+      aria-hidden={!visible}
+      onTransitionEnd={dropHeld}
+      className={cn(
+        'grid shrink-0 transition-[grid-template-rows] duration-(--view-transition-panel) ease-(--view-transition-ease) motion-reduce:transition-none',
+        visible ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+      )}
+    >
+      <div className='min-h-0 overflow-hidden'>
+        {shown !== null && (
+          <section
+            aria-label={t('bar.label')}
+            className='flex flex-col gap-2 border-b border-border bg-card px-4 py-2.5 sm:px-6'
+          >
+            {shown.awaiting && shown.transaction !== null ? (
+              <ConfirmWindow
+                key={shown.transaction.id}
+                transaction={shown.transaction}
+                isConfirming={apply.isConfirming}
+                onConfirm={apply.confirm}
+              />
+            ) : (
+              <div className='flex min-h-7 flex-wrap items-center gap-x-2.5 gap-y-1'>
+                {shown.isApplying ? (
+                  <LoaderCircle className='size-4 shrink-0 animate-spin text-muted-foreground motion-reduce:animate-none' />
+                ) : (
+                  <FilePen className='size-4 shrink-0 text-muted-foreground' />
+                )}
+                <p className='text-sm'>{shown.isApplying ? t('bar.applying') : t('bar.dirty')}</p>
+                <span className='grow' />
+                {/* Сброс держится с краю группы, подальше от «Применить»:
+                    промах по соседней кнопке открывал бы сброс вместо применения. */}
+                {!shown.isApplying && (
+                  <>
+                    <ConfigApplyDiscard onDiscard={apply.discard} />
+                    <Separator orientation='vertical' className='mx-1.5 h-5' />
+                    <ConfigApplyDiff canApply={apply.canApply} onApply={apply.apply} />
+                    <Button size='sm' disabled={!apply.canApply} onClick={apply.apply}>
+                      {t('bar.apply')}
+                    </Button>
+                  </>
+                )}
+              </div>
             )}
-          </div>
-        )}
 
-        {shown.check !== null && <ConfigApplyCheck check={shown.check} />}
+            {shown.check !== null && <ConfigApplyCheck check={shown.check} />}
 
-        {shown.failure && shown.transaction !== null && (
-          <ApplyFailure
-            transaction={shown.transaction}
-            onDismiss={() => {
-              setDismissed(shown.transaction?.id ?? null);
-            }}
-          />
+            {shown.failure && shown.transaction !== null && (
+              <ApplyFailure
+                transaction={shown.transaction}
+                onDismiss={() => {
+                  setDismissed(shown.transaction?.id ?? null);
+                }}
+              />
+            )}
+          </section>
         )}
-      </section>
-    </ViewTransition>
+      </div>
+    </div>
   );
 }
 
@@ -117,7 +155,8 @@ function ConfirmWindow({
 
   return (
     <div className='flex flex-col gap-2'>
-      <div className='flex flex-wrap items-center gap-x-2.5 gap-y-1'>
+      <div className='flex min-h-7 flex-wrap items-center gap-x-2.5 gap-y-1'>
+        <Timer className='size-4 shrink-0 text-muted-foreground' />
         <p className='text-sm'>
           {/* Живая область только у неизменной части: иначе тикающий остаток
               переобъявлял бы окно целиком каждую секунду. */}

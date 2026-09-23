@@ -9,6 +9,6 @@
     "action": { "label": "What to do" },
     "outbound": { "label": "Where to send", "placeholder": "pick an outbound" }
   },
-  "submit": "Apply to draft",
+  "submit": "Save to draft",
   "error": { "outboundRequired": "pick an outbound" }
 }

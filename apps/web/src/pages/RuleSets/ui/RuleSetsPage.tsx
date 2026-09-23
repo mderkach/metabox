@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 import { ConfigDocumentState, ruleSetNodePath } from '@entities/Config';
 import { ConfigCacheNotice } from '@features/Config/ConfigCacheFile';
 import { RuleSetAddForm } from '@features/RuleSet/RuleSetAdd';
-import { cn } from '@shared/lib/utils';
 import {
   Button,
   Empty,
@@ -15,6 +14,7 @@ import {
   EmptyTitle,
   Input,
   QueryFailure,
+  SECTION_HEADING,
   SURFACE,
   SkeletonRows,
 } from '@shared/ui';
@@ -77,33 +77,34 @@ export function RuleSetsPage() {
       )}
 
       {loaded && editor.sets.length > 0 && (
-        <>
-          <RuleSetTable
-            sets={filter.sets}
-            total={editor.sets.length}
-            onRemove={onRemove}
-            search={<RuleSetSearch filter={filter} />}
-            empty={<EmptyState onReset={filter.reset} />}
-          />
-
-          {adding ? (
-            <section className={cn('flex flex-col gap-4 p-4 sm:p-5', SURFACE)}>
-              <h2 className='text-sm font-semibold'>{t('add.title')}</h2>
-              <RuleSetAddForm takenTags={editor.takenTags} outbounds={editor.outbounds} onDone={closeForm} />
-            </section>
-          ) : (
+        <RuleSetTable
+          sets={filter.sets}
+          total={editor.sets.length}
+          onRemove={onRemove}
+          search={<RuleSetSearch filter={filter} />}
+          empty={<EmptyState onReset={filter.reset} />}
+          actions={
             <Button
               variant='outline'
-              className='w-fit'
+              size='sm'
+              aria-expanded={adding}
               onClick={() => {
-                setAdding(true);
+                setAdding((open) => !open);
               }}
             >
-              <Plus />
+              <Plus data-icon='inline-start' />
               {t('add.open')}
             </Button>
-          )}
-        </>
+          }
+          form={
+            adding ? (
+              <section className='flex max-w-2xl flex-col gap-4'>
+                <h3 className={SECTION_HEADING}>{t('add.title')}</h3>
+                <RuleSetAddForm takenTags={editor.takenTags} outbounds={editor.outbounds} onDone={closeForm} />
+              </section>
+            ) : null
+          }
+        />
       )}
     </div>
   );

@@ -25,6 +25,8 @@ export function RuleSetTable({
   total,
   empty,
   search = null,
+  actions = null,
+  form = null,
   onRemove,
 }: {
   sets: RuleSetRowModel[];
@@ -34,6 +36,10 @@ export function RuleSetTable({
   empty: ReactNode;
   /** Поиск: левый край тулбара. */
   search?: ReactNode;
+  /** Действия над списком: правый край тулбара. */
+  actions?: ReactNode;
+  /** Форма действия из тулбара: открывается под ним, над строками. */
+  form?: ReactNode;
   onRemove: (index: number) => void;
 }) {
   const { t } = useTranslation('widgets/RuleSet/RuleSetTable');
@@ -42,7 +48,12 @@ export function RuleSetTable({
     <section className={cn('flex flex-col overflow-hidden', SURFACE)}>
       <h2 className='sr-only'>{t('title')}</h2>
 
-      <div className='flex flex-wrap items-center gap-2 border-b border-border px-3.5 py-2.5'>{search}</div>
+      <div className='flex flex-wrap items-center gap-2 border-b border-border px-3.5 py-2.5'>
+        {search}
+        {actions !== null && <div className='ml-auto flex items-center gap-2'>{actions}</div>}
+      </div>
+
+      {form !== null && <div className='border-b border-border p-4 sm:p-5'>{form}</div>}
 
       {sets.length === 0 ? (
         <div className='flex items-center justify-center px-4 py-10 text-center'>{empty}</div>

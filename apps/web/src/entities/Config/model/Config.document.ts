@@ -42,6 +42,8 @@ export interface ConfigDocumentView {
   config: ConfigDocument | null;
   /** Его же текст: узлы читаются отсюда, чтобы непринятые схемой остались видимыми. */
   text: string | null;
+  /** Текст файла с устройства, без правок: с ним сверяется черновик. */
+  appliedText: string | null;
   /** Замечания схемы к показанному документу. */
   issues: string[];
   /** Схема не приняла файл с устройства: формы по нему не строятся, текст правится. */
@@ -81,6 +83,7 @@ export function useConfigDocument(): ConfigDocumentView {
     query: config,
     config: shown?.config ?? null,
     text: current ?? applied,
+    appliedText: applied,
     issues: shown?.issues ?? [],
     notParsed: config.data?.config === null,
     revision,

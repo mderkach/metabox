@@ -1,3 +1,4 @@
+import { CONFIG_FIXTURE } from '@entities/Config/__tests__/Config.fixture';
 import { configHandlers } from '@entities/Config/__tests__/Config.handlers';
 import {
   advanceConnectionsSnapshot,
@@ -13,7 +14,7 @@ import {
 } from '@entities/Daemon/__tests__/Daemon.fixture';
 import { createStatefulDaemonHandlers } from '@entities/Daemon/__tests__/Daemon.handlers';
 import { createStatefulProxyHandlers } from '@entities/Proxy/__tests__/Proxy.handlers';
-import { routeHandlers } from '@entities/Route/__tests__/Route.handlers';
+import { createRuleHitsHandler, routeHandlers } from '@entities/Route/__tests__/Route.handlers';
 import { RUNTIME_TOPIC } from '@shared/api';
 import { MS_IN_SECOND } from '@shared/lib/time';
 
@@ -54,6 +55,7 @@ export function createMissingHandlers(connections = 0) {
     ...createStatefulProxyHandlers(),
     ...connectionHandlers,
     ...routeHandlers,
+    createRuleHitsHandler(CONFIG_FIXTURE.route?.rules?.length ?? 0),
     runtimeStreamHandler(
       [
         { topic: RUNTIME_TOPIC.Service, data: () => SERVICE_RUNNING_FIXTURE },

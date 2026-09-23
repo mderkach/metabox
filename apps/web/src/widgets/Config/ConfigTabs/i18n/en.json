@@ -14,5 +14,10 @@
     "label": "How the document is shown",
     "forms": "Forms",
     "text": "Text"
+  },
+  "soon": {
+    "trigger_one": "{{count}} more section",
+    "trigger_other": "{{count}} more sections",
+    "title": "Sections without a screen — edit them as text"
   }
 }

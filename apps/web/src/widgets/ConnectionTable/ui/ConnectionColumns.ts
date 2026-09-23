@@ -27,11 +27,11 @@ export const CONNECTION_COLUMN = {
   Host: 'sticky left-0 z-10 w-52 shrink-0 bg-inherit',
   Network: 'w-16 shrink-0',
   Rule: 'min-w-0 grow',
-  Action: 'w-44 shrink-0',
-  Chain: 'w-44 shrink-0',
+  Action: 'w-40 shrink-0',
+  Chain: 'w-36 shrink-0',
   Rate: 'w-28 shrink-0 text-right',
-  Volume: 'w-28 shrink-0 text-right',
-  Age: 'w-24 shrink-0 text-right',
+  Volume: 'w-24 shrink-0 text-right',
+  Age: 'w-20 shrink-0 text-right',
   RowActions: 'w-14 shrink-0',
 } as const;
 
@@ -100,7 +100,7 @@ const ROW_PADDING = 1.75;
 
 /** Ширина колонки действий строки и её минимум для растягивающейся колонки правила. */
 const ROW_ACTIONS_WIDTH = 3.5;
-const RULE_MIN_WIDTH = 12;
+const RULE_MIN_WIDTH = 10;
 
 /**
  * Минимальная ширина таблицы под видимый набор колонок.
@@ -110,7 +110,7 @@ const RULE_MIN_WIDTH = 12;
  * и контейнер строк — когда они расходятся, фон шапки обрывается на середине
  * прокрутки.
  */
-export function toTableMinWidth(columns: readonly ConnectionTableColumn[]): string {
+export function toTableMinWidth(columns: readonly Pick<ConnectionTableColumn, 'def'>[]): string {
   const cells = columns.reduce((sum, { def }) => sum + def.meta.width, ROW_ACTIONS_WIDTH);
   const gaps = columns.length * CELL_GAP;
 
@@ -181,14 +181,14 @@ export const CONNECTION_COLUMNS: readonly ConnectionColumnDef[] = [
     accessorFn: (row) => row.action,
     sortFn: 'text',
     filterFn: 'includesString',
-    meta: { label: 'column.action', className: CONNECTION_COLUMN.Action, width: 11, required: true },
+    meta: { label: 'column.action', className: CONNECTION_COLUMN.Action, width: 10, required: true },
   },
   {
     id: CONNECTION_FIELD.Chain,
     accessorFn: (row) => row.chain.join(' '),
     sortFn: 'text',
     filterFn: 'includesString',
-    meta: { label: 'column.chain', className: CONNECTION_COLUMN.Chain, width: 11, required: false },
+    meta: { label: 'column.chain', className: CONNECTION_COLUMN.Chain, width: 9, required: false },
   },
   {
     id: CONNECTION_FIELD.Rate,
@@ -204,7 +204,7 @@ export const CONNECTION_COLUMNS: readonly ConnectionColumnDef[] = [
     sortFn: 'basic',
     sortDescFirst: true,
     enableColumnFilter: false,
-    meta: { label: 'column.volume', className: CONNECTION_COLUMN.Volume, width: 7, required: false },
+    meta: { label: 'column.volume', className: CONNECTION_COLUMN.Volume, width: 6, required: false },
   },
   {
     id: CONNECTION_FIELD.Age,
@@ -213,7 +213,7 @@ export const CONNECTION_COLUMNS: readonly ConnectionColumnDef[] = [
     sortFn: 'basic',
     sortDescFirst: true,
     enableColumnFilter: false,
-    meta: { label: 'column.age', className: CONNECTION_COLUMN.Age, width: 6, required: false },
+    meta: { label: 'column.age', className: CONNECTION_COLUMN.Age, width: 5, required: false },
   },
 ];
 

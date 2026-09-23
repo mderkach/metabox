@@ -2,6 +2,7 @@ import { RouterProvider } from '@tanstack/react-router';
 import { renderWithQuery } from '@test/renderWithQuery';
 import { server } from '@test/server';
 import { act, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 
@@ -63,6 +64,26 @@ describe('маршруты панели', () => {
     expect(targets).toContain('/config/rule-set');
   });
 
+  // Секции без экрана не занимают полосу вкладками, но и не пропадают: их
+  // список вместе с размером секции — по кнопке рядом с полосой.
+  it('секции без экрана собраны в список с меткой «скоро», а не в отключённые вкладки', async () => {
+    serveDaemon();
+    const user = userEvent.setup();
+
+    renderWithQuery(<RouterProvider router={Router} />);
+
+    const sections = await screen.findByRole('tablist', { name: 'Секции конфига' });
+
+    expect(within(sections).getAllByRole('tab')).toHaveLength(2);
+
+    await user.click(screen.getByRole('button', { name: 'Ещё 6 секций' }));
+
+    const soon = await screen.findByRole('dialog', { name: 'Секции без экрана — правятся текстом' });
+
+    expect(within(soon).getByText('Эксперименты')).toBeInTheDocument();
+    expect(within(soon).getAllByText('скоро')).toHaveLength(6);
+  });
+
   // Текстовый режим — вторая ось раздела, а не выход из него: секции отвечают
   // на «какую часть смотрю», режим — на «формами или текстом».
   it('текстовый режим остаётся внутри раздела: вкладки и переключатель на месте', async () => {
@@ -80,9 +101,10 @@ describe('маршруты панели', () => {
     expect(targets).toContain('/config');
     expect(targets).toContain('/config/rule-set');
 
-    const mode = screen.getByRole('navigation', { name: 'Как показан документ' });
-    const current = within(mode).getAllByRole('link', { current: 'page' });
+    const mode = screen.getByRole('tablist', { name: 'Как показан документ' });
+    const current = within(mode).getAllByRole('tab', { current: 'page' });
 
+    expect(within(mode).getByRole('tab', { selected: true })).toHaveAttribute('href', '/config/raw');
     expect(current).toHaveLength(1);
     expect(current[0]).toHaveAttribute('href', '/config/raw');
   });
@@ -104,8 +126,8 @@ describe('маршруты панели', () => {
     expect(screen.getAllByRole('button', { name: 'История версий' })).toHaveLength(1);
   });
 
-  // Вне /config/raw «Формы» помечает текущими только наша разметка: `Link`
-  // считает `/config` активной лишь при точном совпадении адреса.
+  // Вне /config/raw «Формы» выбирает полоса по адресу раздела, а текущей
+  // страницей `Link` её не помечает: `/config` активна лишь при точном совпадении.
   it('на вкладке сетов текущим режимом остаются «Формы»', async () => {
     serveDaemon();
 
@@ -117,11 +139,10 @@ describe('маршруты панели', () => {
       expect(Router.state.location.pathname).toBe('/config/rule-set');
     });
 
-    const mode = screen.getByRole('navigation', { name: 'Как показан документ' });
-    const current = within(mode).getAllByRole('link', { current: 'page' });
+    const mode = screen.getByRole('tablist', { name: 'Как показан документ' });
 
-    expect(current).toHaveLength(1);
-    expect(current[0]).toHaveAttribute('href', '/config');
+    expect(within(mode).getByRole('tab', { selected: true })).toHaveAttribute('href', '/config');
+    expect(within(mode).queryAllByRole('tab', { current: 'page' })).toHaveLength(0);
   });
 
   // Бейдж черновика принадлежит шапке раздела и виден с любой его вкладки.

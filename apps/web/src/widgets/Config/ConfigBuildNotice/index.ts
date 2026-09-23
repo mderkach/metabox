@@ -1,0 +1,1 @@
+export { ConfigBuildNotice } from './ui';

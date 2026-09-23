@@ -3,9 +3,11 @@ import { useRef, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { RuleRow as RuleRowModel } from '@entities/Rule';
+import { formatAge } from '@shared/lib/format';
 import { cn } from '@shared/lib/utils';
 import { SURFACE } from '@shared/ui';
 
+import { RULE_HITS_STATE, type RuleHitsColumn } from '../model';
 import { RuleRow } from './RuleRow';
 import { RuleTableHeader } from './RuleTableHeader';
 
@@ -15,6 +17,13 @@ const OVERSCAN = 8;
 
 /** Строка заголовка тоже строка таблицы: нумерация строк начинается с неё. */
 const HEADER_ROWS = 1;
+
+const NO_EDITS: ReadonlySet<string> = new Set();
+
+const HITS_NOTE = {
+  [RULE_HITS_STATE.Failed]: 'hits.failed',
+  [RULE_HITS_STATE.Mismatch]: 'hits.mismatch',
+} as const;
 
 /**
  * Список правил в порядке файла: тулбар, шапка колонок, виртуализованные строки
@@ -34,6 +43,8 @@ export function RuleTable({
   empty,
   search = null,
   facets = null,
+  edited = NO_EDITS,
+  hits = null,
   onSelect,
 }: {
   rules: RuleRowModel[];
@@ -46,9 +57,14 @@ export function RuleTable({
   search?: ReactNode;
   /** Срезы по исходу: вторая строка тулбара. */
   facets?: ReactNode;
+  /** Строки, изменённые в черновике. */
+  edited?: ReadonlySet<string>;
+  /** Счёт срабатываний; `null` — экран его не показывает. */
+  hits?: RuleHitsColumn | null;
   onSelect: (id: string) => void;
 }) {
   const { t } = useTranslation('widgets/Rule/RuleTable');
+  const counts = hits?.state === RULE_HITS_STATE.Counted ? hits.counts : null;
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const virtualizer = useVirtualizer({
@@ -76,7 +92,7 @@ export function RuleTable({
           aria-rowcount={rules.length + HEADER_ROWS}
           className='min-h-0 grow overflow-y-auto'
         >
-          <RuleTableHeader />
+          <RuleTableHeader hits={counts !== null} />
 
           <div role='rowgroup' className='relative' style={{ height: `${String(virtualizer.getTotalSize())}px` }}>
             {virtualizer.getVirtualItems().map((item) => {
@@ -94,6 +110,8 @@ export function RuleTable({
                     rule={rule}
                     rowIndex={item.index + 1 + HEADER_ROWS}
                     selected={rule.id === selectedId}
+                    edited={edited.has(rule.id)}
+                    hits={counts === null ? undefined : (counts.get(rule.id) ?? null)}
                     onSelect={onSelect}
                   />
                 </div>
@@ -109,7 +127,29 @@ export function RuleTable({
             ? t('count.rule', { ns: 'shared', count: total })
             : t('list.shown', { ns: 'shared', shown: rules.length, total })}
         </p>
+        {edited.size > 0 && <p>{t('hits.edited')}</p>}
+        <HitsNote hits={hits} />
       </div>
     </section>
+  );
+}
+
+/**
+ * Окно счёта рядом со счётчиком строк: ноль без него читался бы как «правило
+ * мёртвое», а он значит «не срабатывало с запуска демона».
+ */
+function HitsNote({ hits }: { hits: RuleHitsColumn | null }) {
+  const { t } = useTranslation('widgets/Rule/RuleTable');
+
+  if (hits === null || hits.state === RULE_HITS_STATE.Pending) {
+    return null;
+  }
+
+  return (
+    <p className='ml-auto'>
+      {hits.state === RULE_HITS_STATE.Counted
+        ? t('hits.window', { age: formatAge(hits.seconds) })
+        : t(HITS_NOTE[hits.state])}
+    </p>
   );
 }

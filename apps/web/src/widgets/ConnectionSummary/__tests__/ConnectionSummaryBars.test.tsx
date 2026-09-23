@@ -19,6 +19,13 @@ describe('ConnectionSummaryBars', () => {
     expect(screen.getByText('4.0 кБ')).toBeInTheDocument();
   });
 
+  it('без строк показывает подпись пустого ряда вместо шкалы', () => {
+    render(<ConnectionSummaryBars bars={[]} empty='пусто' format={formatBytes} />);
+
+    expect(screen.getByText('пусто')).toBeInTheDocument();
+    expect(screen.queryByText('0 Б')).not.toBeInTheDocument();
+  });
+
   it('без величин не подписывает ось шкалой в один байт', () => {
     render(<ConnectionSummaryBars bars={[barOf('proxy', 0)]} empty='пусто' format={formatBytes} />);
 

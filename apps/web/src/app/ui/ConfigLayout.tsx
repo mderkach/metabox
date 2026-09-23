@@ -5,6 +5,7 @@ import { useConfigDocument } from '@entities/Config';
 import { useConfigPath } from '@entities/Daemon';
 import { ConfigApplyHistory } from '@features/Config/ConfigApply';
 import { Badge } from '@shared/ui';
+import { ConfigBuildNotice } from '@widgets/Config/ConfigBuildNotice';
 import { ConfigTabs } from '@widgets/Config/ConfigTabs';
 import { PageHeader } from '@widgets/PageHeader';
 
@@ -28,6 +29,10 @@ export function ConfigLayout() {
       </PageHeader>
 
       <ConfigTabs config={document.config} />
+
+      <div className='shrink-0 px-4 pt-4 empty:hidden sm:px-6'>
+        <ConfigBuildNotice config={document.config} />
+      </div>
 
       <Outlet />
     </>

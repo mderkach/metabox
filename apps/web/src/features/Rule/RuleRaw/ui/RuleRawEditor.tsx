@@ -23,6 +23,9 @@ export function RuleRawEditor({ index, node }: { index: number; node: unknown })
   const { t } = useTranslation('features/Rule/RuleRaw');
   const edit = ConfigDocumentState.use.edit();
   const [text, setText] = useState(() => JSON.stringify(node, null, JSON_INDENT));
+  // Сравнивается разобранный узел, а не текст: сохранённый в другом
+  // форматировании узел иначе оставлял бы кнопку активной.
+  const unchanged = JSON.stringify(parseJsonc(text).value) === JSON.stringify(node);
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
 
@@ -73,7 +76,7 @@ export function RuleRawEditor({ index, node }: { index: number; node: unknown })
         </Alert>
       )}
 
-      <Button size='sm' variant='outline' onClick={apply}>
+      <Button size='sm' disabled={unchanged} onClick={apply}>
         {t('submit')}
       </Button>
     </section>

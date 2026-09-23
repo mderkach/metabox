@@ -1,0 +1,6 @@
+{
+  "title_one": "The binary on the device will not start {{count}} node",
+  "title_other": "The binary on the device will not start {{count}} nodes",
+  "description": "The sing-box binary on the device is built without these types. The draft can be saved and edited, but not applied: the config check on the device will reject it.",
+  "node": "{{name}} — {{type}}, needs a build with {{tag}}"
+}

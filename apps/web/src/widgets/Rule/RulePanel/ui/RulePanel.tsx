@@ -14,9 +14,11 @@ import {
   AlertTitle,
   Badge,
   Button,
+  SECTION_HEADING,
   SECTION_LABEL,
   SURFACE,
   SURFACE_HEAD,
+  SheetTitle,
   Tabs,
   TabsContent,
   TabsList,
@@ -33,6 +35,9 @@ const TAB = {
  *
  * Узел, который схема не приняла, формы не получает вовсе — он показывается
  * сырым блоком с пометкой и правится только текстом.
+ *
+ * `sheet` — панель стоит внутри листа поверх списка: рамку и фокус держит лист,
+ * а заголовок панели становится его заголовком.
  */
 export function RulePanel({
   id,
@@ -40,6 +45,7 @@ export function RulePanel({
   node,
   recognized,
   outbounds,
+  sheet = false,
   onClose,
 }: {
   id?: string;
@@ -47,6 +53,7 @@ export function RulePanel({
   node: unknown;
   recognized: boolean;
   outbounds: string[];
+  sheet?: boolean;
   onClose: () => void;
 }) {
   const { t } = useTranslation('widgets/Rule/RulePanel');
@@ -68,13 +75,20 @@ export function RulePanel({
       id={id}
       aria-label={t('title', { index: rule.index })}
       onKeyDown={onKeyDown}
-      className={cn('flex w-full max-w-md shrink-0 flex-col overflow-hidden max-lg:max-h-[70vh]', SURFACE)}
+      className={cn(
+        'flex min-h-0 flex-col overflow-hidden',
+        !sheet && ['w-full max-w-md shrink-0 max-lg:max-h-[70vh]', SURFACE]
+      )}
     >
       <header className={cn('flex items-center gap-2.5', SURFACE_HEAD)}>
         <div className='flex min-w-0 grow flex-col'>
-          <h2 ref={headingRef} tabIndex={-1} className='text-sm font-medium'>
-            {t('title', { index: rule.index })}
-          </h2>
+          {sheet ? (
+            <SheetTitle className={SECTION_HEADING}>{t('title', { index: rule.index })}</SheetTitle>
+          ) : (
+            <h2 ref={headingRef} tabIndex={-1} className={SECTION_HEADING}>
+              {t('title', { index: rule.index })}
+            </h2>
+          )}
           <p className='font-mono text-xs text-muted-foreground'>route.rules[{rule.index - 1}]</p>
         </div>
         {!recognized && <Badge variant='outline'>{t('rule.uncovered', { ns: 'shared' })}</Badge>}

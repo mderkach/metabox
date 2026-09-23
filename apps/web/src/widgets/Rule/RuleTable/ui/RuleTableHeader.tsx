@@ -5,8 +5,11 @@ import { TABLE_HEADER } from '@shared/ui';
 
 import { RULE_COLUMN } from './RuleColumns';
 
-/** Липкая: скроллер один, и вынесенная из него шапка уехала бы из-под строк. */
-export function RuleTableHeader() {
+/**
+ * Липкая: скроллер один, и вынесенная из него шапка уехала бы из-под строк.
+ * `hits` — показывать ли колонку срабатываний: без счёта её нет и в строках.
+ */
+export function RuleTableHeader({ hits }: { hits: boolean }) {
   const { t } = useTranslation('widgets/Rule/RuleTable');
 
   return (
@@ -14,7 +17,7 @@ export function RuleTableHeader() {
       <div
         role='row'
         aria-rowindex={1}
-        className={cn(RULE_COLUMN.Row, 'border-b border-border bg-muted/30 py-2', TABLE_HEADER)}
+        className={cn(RULE_COLUMN.Row, 'border-b border-border bg-table-head py-2', TABLE_HEADER)}
       >
         <span role='columnheader' className={RULE_COLUMN.Index}>
           {t('column.index')}
@@ -28,6 +31,12 @@ export function RuleTableHeader() {
           <span aria-hidden='true' className={RULE_COLUMN.Arrow} />
           <span className={cn(RULE_COLUMN.Target, 'truncate')}>{t('column.target')}</span>
         </span>
+
+        {hits && (
+          <span role='columnheader' className={RULE_COLUMN.Hits}>
+            {t('column.hits')}
+          </span>
+        )}
       </div>
     </div>
   );

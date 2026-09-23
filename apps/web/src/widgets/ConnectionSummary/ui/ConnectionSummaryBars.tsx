@@ -1,6 +1,6 @@
 import { BYTE_STEPS, toPercents, toShare, toValueScale } from '@shared/lib/chart';
 import { cn } from '@shared/lib/utils';
-import { ValueAxis } from '@shared/ui';
+import { Empty, EMPTY_INLINE, EmptyDescription, EmptyHeader, ValueAxis } from '@shared/ui';
 
 const PERCENT = 100;
 
@@ -35,7 +35,13 @@ export function ConnectionSummaryBars({
   format: (value: number) => string;
 }) {
   if (bars.length === 0) {
-    return <p className='text-xs text-muted-foreground'>{empty}</p>;
+    return (
+      <Empty className={EMPTY_INLINE}>
+        <EmptyHeader>
+          <EmptyDescription>{empty}</EmptyDescription>
+        </EmptyHeader>
+      </Empty>
+    );
   }
 
   const values = bars.map((bar) => bar.value);
@@ -47,15 +53,15 @@ export function ConnectionSummaryBars({
     <div className='flex flex-col gap-2.5'>
       <ul className='flex flex-col gap-2.5'>
         {bars.map((bar, index) => (
-          <li key={bar.key} className='grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 gap-y-1'>
-            <p className='truncate text-xs' title={bar.label}>
+          <li key={bar.key} className='flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1'>
+            <p className='min-w-0 truncate text-xs' title={bar.label}>
               {bar.label}
             </p>
-            <p className='font-mono text-xs text-muted-foreground tabular-nums'>
+            <p className='ml-auto font-mono text-xs text-muted-foreground tabular-nums'>
               {bar.caption} · {percents[index]}%
             </p>
             {bar.value > 0 && (
-              <span className='col-span-2 block h-1.5 overflow-hidden rounded-full bg-meter-track'>
+              <span className='block h-1.5 basis-full overflow-hidden rounded-full bg-meter-track'>
                 <span
                   className={cn('block h-full rounded-full', bar.tone)}
                   style={{ width: `${String(toShare(bar.value, scale.ceiling) * PERCENT)}%` }}

@@ -10,6 +10,30 @@ import type {
 export const DAEMON_STATUS_FIXTURE: DaemonStatusWire = {
   version: 'dev',
   singbox_version: '1.14.0-extended-2.7.1',
+  // Теги бинаря на устройстве, `sing-box version` 2026-09-23: ccm, ocm,
+  // cloudflared, naive, usbip, openvpn и openconnect в сборку не вошли.
+  singbox_build: {
+    tags: [
+      'with_gvisor',
+      'with_quic',
+      'with_dhcp',
+      'with_wireguard',
+      'with_utls',
+      'with_acme',
+      'with_clash_api',
+      'with_tailscale',
+      'with_masque',
+      'with_mtproxy',
+      'with_trusttunnel',
+      'with_call',
+      'with_sudoku',
+      'with_manager',
+      'with_admin_panel',
+      'with_profiler',
+      'badlinkname',
+      'tfogo_checklinkname0',
+    ],
+  },
   config_path: '/etc/sing-box/config.json',
   runtime: { sources: ['clash_api'], connections: 'clash_api' },
 };

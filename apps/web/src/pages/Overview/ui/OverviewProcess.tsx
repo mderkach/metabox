@@ -1,7 +1,8 @@
-import type { ParseKeys, TFunction } from 'i18next';
+import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 
 import { SCHEMA_VERSION, useClashConfigs, useConfigPath, useDaemonStatus } from '@entities/Daemon';
+import { toClashModeLabel } from '@features/Daemon/DaemonMode';
 import { formatBytes } from '@shared/lib/format';
 import { cn } from '@shared/lib/utils';
 import { Card, CardContent, CardHeader, PENDING_REVEAL, SECTION_LABEL, Skeleton } from '@shared/ui';
@@ -10,19 +11,6 @@ import { DaemonMemory } from '@widgets/Daemon/DaemonTraffic';
 
 import type { OverviewRuntime } from '../lib';
 import { OverviewSection } from './OverviewSection';
-
-/** Демон отдаёт режим в любом регистре; незнакомое значение показывается как есть. */
-const CLASH_MODE_LABEL: Readonly<Record<string, ParseKeys<'pages/Overview'> | undefined>> = {
-  rule: 'process.mode.rule',
-  global: 'process.mode.global',
-  direct: 'process.mode.direct',
-};
-
-function toClashModeLabel(t: TFunction<'pages/Overview'>, mode: string): string {
-  const key = CLASH_MODE_LABEL[mode.toLowerCase()];
-
-  return key === undefined ? mode : t(key);
-}
 
 /**
  * Процессы и их показания.
@@ -36,6 +24,7 @@ export function OverviewProcess({ runtime }: { runtime: OverviewRuntime }) {
   const status = useDaemonStatus();
   const configPath = useConfigPath();
   const clash = useClashConfigs();
+  const { t: tShared } = useTranslation('shared');
   const system = runtime.system;
 
   return (
@@ -75,7 +64,7 @@ export function OverviewProcess({ runtime }: { runtime: OverviewRuntime }) {
               />
               <ProcessRow label={t('process.schema')} value={SCHEMA_VERSION} mono />
               <ProcessRow label={t('process.config')} value={configPath} mono />
-              <ProcessRow label={t('process.clashMode')} value={toClashMode(t, clash)} />
+              <ProcessRow label={t('process.clashMode')} value={toClashMode(tShared, clash)} />
               {system !== null && (
                 <ProcessRow
                   label={t('process.memory')}
@@ -94,7 +83,7 @@ export function OverviewProcess({ runtime }: { runtime: OverviewRuntime }) {
 }
 
 /** `null` — ответа ещё нет; прочерк — режим не прочитан. */
-function toClashMode(t: TFunction<'pages/Overview'>, clash: ReturnType<typeof useClashConfigs>): string | null {
+function toClashMode(t: TFunction<'shared'>, clash: ReturnType<typeof useClashConfigs>): string | null {
   if (clash.isPending) {
     return null;
   }

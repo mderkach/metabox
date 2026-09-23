@@ -10,6 +10,10 @@ import {
   Card,
   CardContent,
   CardHeader,
+  Empty,
+  EMPTY_INLINE,
+  EmptyDescription,
+  EmptyHeader,
   QueryFailure,
   SECTION_LABEL,
   SkeletonRows,
@@ -104,7 +108,13 @@ export function ProxyLatency() {
       <CardContent>
         {proxies.isPending && <SkeletonRows rows={2} className='p-0' />}
         {proxies.isLoadingError && <QueryFailure messageKey='source.proxies' query={proxies} />}
-        {proxies.isSuccess && selected.length === 0 && <p className='text-xs text-muted-foreground'>{t('empty')}</p>}
+        {proxies.isSuccess && selected.length === 0 && (
+          <Empty className={EMPTY_INLINE}>
+            <EmptyHeader>
+              <EmptyDescription>{t('empty')}</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        )}
         {selected.length > 0 && (
           <div className='flex flex-col gap-2.5'>
             <ul className='flex flex-col gap-2.5'>

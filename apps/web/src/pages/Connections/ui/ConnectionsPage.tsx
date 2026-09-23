@@ -3,10 +3,11 @@ import { useTranslation } from 'react-i18next';
 
 import { CONNECTION_TAB, ConnectionState, useConnectionStream, type ConnectionRow } from '@entities/Connection';
 import { useCloseAllConnections } from '@features/Connection/ConnectionClose';
-import { Alert, AlertDescription, Badge, Tabs, TabsContent, TabsList, TabsTrigger } from '@shared/ui';
+import { usePanelAsSheet } from '@shared/lib/media';
+import { Alert, AlertDescription, Tabs, TabsContent, TabsList, TabsTrigger } from '@shared/ui';
 import { ConnectionTable, useConnectionView, type ConnectionTableEmpty } from '@widgets/ConnectionTable';
 import { PageHeader } from '@widgets/PageHeader';
-import { RouteExplanation } from '@widgets/RouteExplanation';
+import { RouteExplanation, RouteExplanationSheet } from '@widgets/RouteExplanation';
 
 import { useConnectionsScreen } from '../lib';
 import { ConnectionActions } from './ConnectionActions';
@@ -14,6 +15,9 @@ import { ConnectionExport } from './ConnectionExport';
 import { ConnectionFacets } from './ConnectionFacets';
 import { ConnectionSearch } from './ConnectionSearch';
 import { ConnectionsEmpty } from './ConnectionsEmpty';
+
+/** Счётчик вкладки: тот же вид, что у вкладок разделов конфигурации. */
+const TAB_COUNT = 'text-xs text-muted-foreground tabular-nums';
 
 export function ConnectionsPage() {
   const { t } = useTranslation('pages/Connections');
@@ -29,6 +33,7 @@ export function ConnectionsPage() {
   const sampledAt = ConnectionState.use.sampledAt();
   const setPaused = ConnectionState.use.setPaused();
   const closeAll = useCloseAllConnections();
+  const sheet = usePanelAsSheet();
 
   // Без Transition обновление срочное, и граница вокруг панели не анимируется.
   const onExplain = useCallback((id: string) => {
@@ -85,20 +90,20 @@ export function ConnectionsPage() {
         <TabsList variant='line'>
           <TabsTrigger value={CONNECTION_TAB.Active}>
             {t('tab.active')}
-            <Badge variant='secondary'>{screen.active.total}</Badge>
+            <span className={TAB_COUNT}>{screen.active.total}</span>
           </TabsTrigger>
           <TabsTrigger value={CONNECTION_TAB.Closed}>
             {t('tab.closed')}
-            <Badge variant='secondary'>{screen.closed.total}</Badge>
+            <span className={TAB_COUNT}>{screen.closed.total}</span>
           </TabsTrigger>
         </TabsList>
         {/* `default='none'`: обновления строк внутри вкладки — не её анимация. */}
         <TabsContent value={CONNECTION_TAB.Active} keepMounted className='flex min-h-0 grow flex-col'>
           <Activity mode={screen.tab === CONNECTION_TAB.Active ? 'visible' : 'hidden'}>
             <ViewTransition enter='fade-in' exit='fade-out' default='none'>
-              {/* Ниже lg это колонка: панель забирает свою высоту, и списку с
-                  `min-h-0 grow` доставался ноль. Там обе части получают высоту, а
-                  прокручивается сама колонка. */}
+              {/* Ниже lg объяснение открывается листом, и в колонке остаётся
+                  один список. Колонка прокручивается на низком экране, где
+                  списку не хватает его минимальной высоты. */}
               <div className='flex min-h-0 grow flex-col gap-4 max-lg:overflow-y-auto lg:flex-row'>
                 <ConnectionTable
                   rows={screen.active.rows}
@@ -124,7 +129,7 @@ export function ConnectionsPage() {
                   }
                 />
 
-                {explainedId !== null && (
+                {!sheet && explainedId !== null && (
                   <ViewTransition enter='panel-in' exit='panel-out'>
                     <RouteExplanation
                       key={explainedId}
@@ -134,6 +139,15 @@ export function ConnectionsPage() {
                       onClose={onCloseExplanation}
                     />
                   </ViewTransition>
+                )}
+
+                {sheet && (
+                  <RouteExplanationSheet
+                    id={explainPanelId}
+                    connectionId={explainedId}
+                    host={explainedHost}
+                    onClose={onCloseExplanation}
+                  />
                 )}
               </div>
             </ViewTransition>

@@ -3,6 +3,7 @@ import { useTheme } from 'next-themes';
 import { useTranslation } from 'react-i18next';
 
 import { cn } from '@shared/lib/utils';
+import { ToggleGroup, ToggleGroupItem } from '@shared/ui';
 
 const THEME_OPTIONS = [
   { value: 'system', label: 'option.system', icon: Monitor },
@@ -20,35 +21,33 @@ export function ThemeSwitch({ vertical = false }: { vertical?: boolean }) {
   const { t } = useTranslation('features/Theme/ThemeSwitch');
 
   return (
-    <div
-      role='group'
+    <ToggleGroup
       aria-label={t('group.label')}
-      className={cn('flex gap-0.5 rounded-md bg-muted/60 p-0.5', vertical && 'flex-col')}
+      size='sm'
+      spacing={0.5}
+      orientation={vertical ? 'vertical' : 'horizontal'}
+      value={theme === undefined ? [] : [theme]}
+      onValueChange={(value) => {
+        // Повторное нажатие на отмеченный вариант снимает его, а темы «никакой» нет.
+        if (value.length > 0) setTheme(value[0]);
+      }}
+      className={cn('rounded-md bg-muted/60 p-0.5', vertical && 'flex-col')}
     >
       {THEME_OPTIONS.map((option) => {
-        const active = theme === option.value;
         const label = t(option.label);
 
         return (
-          <button
+          <ToggleGroupItem
             key={option.value}
-            type='button'
+            value={option.value}
             title={label}
             aria-label={label}
-            aria-pressed={active}
-            onClick={() => {
-              setTheme(option.value);
-            }}
-            className={cn(
-              'flex size-6 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition-colors',
-              'focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none',
-              active ? 'bg-card text-foreground shadow-[0_1px_2px_rgb(0_0_0/0.18)]' : 'hover:text-foreground'
-            )}
+            className='size-6 min-w-6 rounded-sm px-0 text-muted-foreground aria-pressed:bg-card aria-pressed:text-foreground aria-pressed:shadow-[0_1px_2px_rgb(0_0_0/0.18)]'
           >
             <option.icon className='size-3.5' />
-          </button>
+          </ToggleGroupItem>
         );
       })}
-    </div>
+    </ToggleGroup>
   );
 }

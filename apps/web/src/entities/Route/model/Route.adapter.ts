@@ -1,4 +1,4 @@
-import { ROUTE_REASON_CODE, type RouteExplanationWire } from '../api/Route.schema';
+import { ROUTE_REASON_CODE, type RouteExplanationWire, type RuleHitsWire } from '../api/Route.schema';
 import {
   ROUTE_MATCH,
   ROUTE_ORIGIN,
@@ -6,6 +6,7 @@ import {
   type RouteMatchKind,
   type RouteOrigin,
   type RouteReasonCode,
+  type RuleHits,
 } from './Route.model';
 
 const ORIGINS = new Set<string>(Object.values(ROUTE_ORIGIN));
@@ -79,4 +80,14 @@ export function toRouteExplanation(dto: RouteExplanationWire): RouteExplanation 
     chain: toChain(dto.chain),
     rules: dto.rules.map(toRule),
   };
+}
+
+export function toRuleHits(dto: RuleHitsWire): RuleHits {
+  const byIndex = Array.from({ length: dto.rules.length }, () => 0);
+
+  for (const rule of dto.rules) {
+    byIndex[rule.index] = rule.hits;
+  }
+
+  return { seconds: dto.seconds, byIndex, final: dto.final };
 }

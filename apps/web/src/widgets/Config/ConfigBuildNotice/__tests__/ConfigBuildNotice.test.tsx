@@ -1,0 +1,46 @@
+import { renderWithQuery } from '@test/renderWithQuery';
+import { server } from '@test/server';
+import { screen, waitFor } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
+import { describe, expect, it } from 'vitest';
+
+import type { ConfigDocument } from '@entities/Config';
+import { DAEMON_ENDPOINT } from '@entities/Daemon';
+import { DAEMON_STATUS_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture';
+
+import { ConfigBuildNotice } from '../ui/ConfigBuildNotice';
+
+const CONFIG = {
+  outbounds: [{ type: 'direct', tag: 'direct' }],
+  services: [{ type: 'ccm' }],
+} satisfies ConfigDocument;
+
+describe('ConfigBuildNotice', () => {
+  it('называет узел, которого нет в сборке, и последствие', async () => {
+    server.use(http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE)));
+    renderWithQuery(<ConfigBuildNotice config={CONFIG} />);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Бинарь на устройстве не запустит 1 узел');
+    expect(screen.getByText('services[0] — ccm, нужна сборка с with_ccm')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('применить не выйдет');
+  });
+
+  it('молчит, когда демон не прочитал бинарь', async () => {
+    const { singbox_build: _build, ...status } = DAEMON_STATUS_FIXTURE;
+    let answered = false;
+    server.use(
+      http.get(DAEMON_ENDPOINT.status(), () => {
+        answered = true;
+
+        return HttpResponse.json(status);
+      })
+    );
+    renderWithQuery(<ConfigBuildNotice config={CONFIG} />);
+
+    await waitFor(() => {
+      expect(answered).toBe(true);
+    });
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+});

@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import {
   CONFIG_QUERY,
@@ -51,6 +51,7 @@ export interface ConfigApplyState {
   canApply: boolean;
   /** `null` — применений не было ни в этой сессии, ни до перезагрузки. */
   transaction: ApplyTransaction | null;
+  /** Ссылка меняется только со сменой ошибки запуска: бар сравнивает снимки состояния по ссылке. */
   check: CheckFailure | null;
   isApplying: boolean;
   isConfirming: boolean;
@@ -79,6 +80,8 @@ export function useConfigApply(): ConfigApplyState {
 
   useDocumentRefresh(transaction);
 
+  const check = useMemo(() => toCheckFailure(start.error), [start.error]);
+
   const onApply = useCallback(() => {
     if (text === null) return;
 
@@ -95,7 +98,7 @@ export function useConfigApply(): ConfigApplyState {
     isDirty,
     canApply: isDirty && !start.isPending && !isApplyActive(transaction?.phase),
     transaction,
-    check: toCheckFailure(start.error),
+    check,
     isApplying: start.isPending || transaction?.phase === APPLY_PHASE.Applying,
     isConfirming: confirm.isPending,
     apply: onApply,

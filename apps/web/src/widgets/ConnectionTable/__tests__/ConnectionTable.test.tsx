@@ -104,6 +104,19 @@ describe('фильтр по колонке', () => {
   });
 });
 
+describe('шапка таблицы', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    mockVirtualSizes();
+  });
+
+  it('подпись в кнопке сортировки наследует капитель шапки', () => {
+    renderWithQuery(<TableHarness rows={makeRows(4)} onReset={vi.fn<() => void>()} />);
+
+    expect(screen.getByRole('button', { name: 'Куда' })).toHaveClass('[text-transform:inherit]');
+  });
+});
+
 describe('вид списка', () => {
   beforeEach(() => {
     localStorage.clear();

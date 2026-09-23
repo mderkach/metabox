@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 
 import { LANGUAGES, changeLanguage, currentLanguage } from '@shared/lib/i18n';
 import { cn } from '@shared/lib/utils';
+import { ToggleGroup, ToggleGroupItem } from '@shared/ui';
 
 /**
  * Выбор языка интерфейса. Активный язык берётся у i18next напрямую: он же
@@ -10,34 +11,33 @@ import { cn } from '@shared/lib/utils';
  */
 export function LanguageSwitch({ vertical = false }: { vertical?: boolean }) {
   const { t } = useTranslation('features/Language/LanguageSwitch');
-  const active = currentLanguage();
 
   return (
-    <div
-      role='group'
+    <ToggleGroup
       aria-label={t('group.label')}
-      className={cn('flex gap-0.5 rounded-md bg-muted/60 p-0.5', vertical && 'flex-col')}
+      size='sm'
+      spacing={0.5}
+      orientation={vertical ? 'vertical' : 'horizontal'}
+      value={[currentLanguage()]}
+      onValueChange={(value) => {
+        // Повторное нажатие на отмеченный язык снимает его, а без языка интерфейса нет.
+        const next = LANGUAGES.find((language) => language === value[0]);
+        if (next !== undefined) void changeLanguage(next);
+      }}
+      className={cn('rounded-md bg-muted/60 p-0.5', vertical && 'flex-col')}
     >
       {LANGUAGES.map((language) => (
-        <button
+        <ToggleGroupItem
           key={language}
-          type='button'
+          value={language}
           lang={language}
           title={t(`language.${language}`)}
           aria-label={t(`language.${language}`)}
-          aria-pressed={language === active}
-          onClick={() => {
-            void changeLanguage(language);
-          }}
-          className={cn(
-            'flex size-6 shrink-0 items-center justify-center rounded-sm text-2xs font-medium text-muted-foreground transition-colors',
-            'focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none',
-            language === active ? 'bg-card text-foreground shadow-[0_1px_2px_rgb(0_0_0/0.18)]' : 'hover:text-foreground'
-          )}
+          className='size-6 min-w-6 rounded-sm px-0 text-xs text-muted-foreground aria-pressed:bg-card aria-pressed:text-foreground aria-pressed:shadow-[0_1px_2px_rgb(0_0_0/0.18)]'
         >
           {t(`short.${language}`)}
-        </button>
+        </ToggleGroupItem>
       ))}
-    </div>
+    </ToggleGroup>
   );
 }

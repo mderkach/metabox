@@ -1,6 +1,6 @@
 import { renderWithRouter } from '@test/renderWithRouter';
 import { server } from '@test/server';
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -15,7 +15,7 @@ import {
   ROUTE_UNKNOWN_FIXTURE,
 } from '@entities/Route/__tests__/Route.fixture';
 
-import { RouteExplanation } from '../ui/RouteExplanation';
+import { RouteExplanation, RouteExplanationSheet } from '../ui/RouteExplanation';
 
 const JSON_INDENT = 2;
 
@@ -155,5 +155,45 @@ describe('RouteExplanation', () => {
     await user.keyboard('{Escape}');
 
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('RouteExplanationSheet', () => {
+  beforeEach(() => {
+    ConfigDocumentState.getState().reset();
+    serveExplanation(ROUTE_EXPLANATION_FIXTURE);
+    serveConfig(configWithRules(ROUTE_EXPLANATION_FIXTURE.rules.length));
+  });
+
+  it('открыта, пока выбрано соединение, и называется им', async () => {
+    renderWithRouter(() => (
+      <RouteExplanationSheet connectionId='c-1' host='video.example:443' onClose={vi.fn<() => void>()} />
+    ));
+
+    const sheet = await screen.findByRole('dialog', { name: 'Маршрут соединения video.example:443' });
+
+    expect(await within(sheet).findByText('Сработало правило 7')).toBeInTheDocument();
+  });
+
+  it('без выбранного соединения закрыта', () => {
+    renderWithRouter(() => <RouteExplanationSheet connectionId={null} host='' onClose={vi.fn<() => void>()} />);
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('закрывается по Escape и кнопкой закрытия', async () => {
+    const onClose = vi.fn<() => void>();
+    const user = userEvent.setup();
+
+    renderWithRouter(() => <RouteExplanationSheet connectionId='c-1' host='video.example:443' onClose={onClose} />);
+
+    await screen.findByRole('dialog');
+    await user.keyboard('{Escape}');
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole('button', { name: 'Закрыть объяснение' }));
+
+    expect(onClose).toHaveBeenCalledTimes(2);
   });
 });

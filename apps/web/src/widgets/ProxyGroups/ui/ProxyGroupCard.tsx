@@ -4,7 +4,18 @@ import { useTranslation } from 'react-i18next';
 import type { ProxyGroup } from '@entities/Proxy';
 import { useTestProxyDelay } from '@features/Proxy/ProxyDelay';
 import { useSelectProxy } from '@features/Proxy/ProxySelect';
-import { Badge, Button, Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/ui';
+import { cn } from '@shared/lib/utils';
+import {
+  Badge,
+  Button,
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  SECTION_HEADING,
+} from '@shared/ui';
 
 import { toGroupLabel } from './ProxyGroupLabel';
 import { ProxyNodeTile } from './ProxyNodeTile';
@@ -27,8 +38,8 @@ export function ProxyGroupCard({ group }: { group: ProxyGroup }) {
   return (
     <Card>
       <CardHeader className='border-b'>
-        <CardTitle className='flex flex-wrap items-center gap-x-2.5 gap-y-1'>
-          <h2 className='font-mono'>{group.name}</h2>
+        <CardTitle className={cn('flex flex-wrap items-center gap-x-2.5 gap-y-1', SECTION_HEADING)}>
+          <h3 className='font-mono'>{group.name}</h3>
           <Badge variant='outline'>{kind}</Badge>
         </CardTitle>
         <CardDescription>

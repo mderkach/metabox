@@ -61,7 +61,7 @@ const configLayoutRoute = createRoute({
   getParentRoute: () => rootRoute,
   loader: async () =>
     Promise.all([
-      preloadNamespaces(['widgets/Config/ConfigTabs']),
+      preloadNamespaces(['widgets/Config/ConfigTabs', 'widgets/Config/ConfigBuildNotice']),
       QueryClientInstance.query(getConfigOptions()).catch(keepFailureForScreen),
     ]),
   path: '/config',

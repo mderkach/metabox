@@ -44,7 +44,7 @@ describe('форма исхода правила', () => {
     render(<RuleEditForm rule={RULE} outbounds={['direct', 'proxy']} />);
 
     expect(screen.getByRole('combobox', { name: 'Куда отправить' })).toHaveTextContent('proxy');
-    expect(screen.getByRole('button', { name: 'Применить к черновику' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Сохранить в черновик' })).toBeDisabled();
   });
 
   it('смена исхода правит одну строку файла, остальное правило не трогает', async () => {
@@ -58,7 +58,7 @@ describe('форма исхода правила', () => {
 
     expect(outbound).toHaveTextContent('direct');
 
-    await user.click(screen.getByRole('button', { name: 'Применить к черновику' }));
+    await user.click(screen.getByRole('button', { name: 'Сохранить в черновик' }));
 
     expect(findValue(ConfigDocumentState.getState().draft ?? '', ['route', 'rules', 0])).toEqual({
       rule_set: ['github'],
@@ -75,7 +75,7 @@ describe('форма исхода правила', () => {
 
     expect(screen.queryByRole('combobox', { name: 'Куда отправить' })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Применить к черновику' }));
+    await user.click(screen.getByRole('button', { name: 'Сохранить в черновик' }));
 
     expect(findValue(ConfigDocumentState.getState().draft ?? '', ['route', 'rules', 0])).toEqual({
       rule_set: ['github'],

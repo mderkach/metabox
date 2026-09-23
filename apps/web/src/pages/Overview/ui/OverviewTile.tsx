@@ -31,7 +31,7 @@ export function OverviewTile({
           {value ?? <Skeleton aria-hidden='true' className={cn('h-7 w-24', PENDING_REVEAL)} />}
         </dd>
       </dl>
-      <div className='flex items-end justify-between gap-2'>
+      <div className='flex flex-wrap items-end justify-between gap-2'>
         {context === null ? (
           <Skeleton aria-hidden='true' className={cn('h-4 w-32', PENDING_REVEAL)} />
         ) : (

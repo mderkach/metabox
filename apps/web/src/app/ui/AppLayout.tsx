@@ -5,6 +5,7 @@ import { ConfigApplyBar } from '@features/Config/ConfigApply';
 import { AppSidebar } from '@widgets/AppSidebar';
 
 import { useRuntimeStreams } from '../lib/useRuntimeStreams';
+import { DaemonBanner } from './DaemonBanner';
 
 /** Тон primary и позиция поверх макета: ссылка не должна теряться под сайдбаром. */
 const SKIP_LINK_CLASS =
@@ -26,6 +27,7 @@ export function AppLayout() {
       </a>
       <AppSidebar />
       <div className='flex min-w-0 grow flex-col'>
+        <DaemonBanner />
         <ConfigApplyBar />
         {/* Экран — своя группа View Transitions для перехода роутера; граница
             `<ViewTransition>` вокруг `Outlet` не сработает (ADR-0026). */}

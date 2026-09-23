@@ -5,12 +5,14 @@ import { mockVirtualSizes } from '@test/virtualSizes';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ConfigDocumentState, findValue } from '@entities/Config';
 import { CONFIG_ENDPOINT } from '@entities/Config';
 import { DAEMON_ENDPOINT } from '@entities/Daemon';
 import { DAEMON_STATUS_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture';
+import { ROUTE_ENDPOINT } from '@entities/Route';
+import { PANEL_AS_SHEET } from '@shared/lib/media';
 
 import { toSelectedRuleId } from '../lib/Editor.lib';
 import { EditorPage } from '../ui/EditorPage';
@@ -49,8 +51,20 @@ const RECOGNIZED_CONFIG = JSON.stringify(
   2
 );
 
-function serveConfig(text = CONFIG) {
+/** Счёт процесса, который работает на `CONFIG`: по правилу на узел. */
+const HITS = {
+  seconds: 2 * 60 * 60,
+  rules: [
+    { index: 0, hits: 1234 },
+    { index: 1, hits: 0 },
+    { index: 2, hits: 5 },
+  ],
+  final: 0,
+};
+
+function serveConfig(text = CONFIG, hits: typeof HITS = HITS) {
   server.use(
+    http.get(ROUTE_ENDPOINT.hits(), () => HttpResponse.json(hits)),
     http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(text)),
     // Шапка экрана открывает историю версий, а бар применения опрашивает демона.
     http.get(CONFIG_ENDPOINT.versions(), () => HttpResponse.json({ versions: [] })),
@@ -74,8 +88,31 @@ describe('экран правил', () => {
       within(table)
         .getAllByRole('columnheader')
         .map((cell) => cell.textContent)
-    ).toEqual(['№', 'Условия', 'Исход']);
+    ).toEqual(['№', 'Условия', 'Исход', 'Сработало']);
     expect(screen.getByRole('status')).toHaveTextContent('3 правила');
+  });
+
+  it('показывает счёт срабатываний и окно счёта, чтобы ноль не читался как «правило мёртвое»', async () => {
+    renderWithRouter(EditorPage);
+
+    const table = await screen.findByRole('table', { name: 'Правила маршрутизации' });
+    const [, firstRow] = within(table).getAllByRole('row');
+
+    expect(
+      await screen.findByText('Счёт срабатываний — за 2 ч с запуска metaboxd, перезапуск его обнуляет')
+    ).toBeInTheDocument();
+    expect(firstRow).toHaveTextContent('1 234');
+  });
+
+  it('процесс на другом конфиге не раздаёт свой счёт строкам этого', async () => {
+    serveConfig(CONFIG, { ...HITS, rules: HITS.rules.slice(0, 2) });
+
+    renderWithRouter(EditorPage);
+
+    expect(
+      await screen.findByText('sing-box работает не на этом конфиге — счёт срабатываний не показан')
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'Сработало' })).not.toBeInTheDocument();
   });
 
   it('поиск отбирает строки, подвал сообщает обе величины', async () => {
@@ -133,7 +170,7 @@ describe('экран правил', () => {
     const panel = await screen.findByRole('complementary');
 
     expect(within(panel).getByRole('combobox', { name: 'Куда отправить' })).toHaveTextContent('proxy');
-    expect(within(panel).getByRole('button', { name: 'Применить к черновику' })).toBeDisabled();
+    expect(within(panel).getByRole('button', { name: 'Сохранить в черновик' })).toBeDisabled();
   });
 
   it('смена исхода в панели меняет одну строку файла, остальное правило не трогает', async () => {
@@ -155,7 +192,7 @@ describe('экран правил', () => {
 
     expect(outbound).toHaveTextContent('direct');
 
-    await user.click(within(panel).getByRole('button', { name: 'Применить к черновику' }));
+    await user.click(within(panel).getByRole('button', { name: 'Сохранить в черновик' }));
 
     await waitFor(() => {
       expect(ConfigDocumentState.getState().draft).not.toBeNull();
@@ -165,6 +202,10 @@ describe('экран правил', () => {
       rule_set: ['github'],
       outbound: 'direct',
     });
+    expect(within(panel).getByRole('button', { name: 'Сохранить в черновик' })).toBeDisabled();
+    expect(
+      await screen.findByRole('button', { name: 'Правило 1, исход direct, изменено в черновике' })
+    ).toBeInTheDocument();
   });
 
   it('нераспознанный узел не получает формы, но правится текстом', async () => {
@@ -196,7 +237,7 @@ describe('экран правил', () => {
 
     await user.clear(editor);
     await user.type(editor, '{{ "port": ');
-    await user.click(within(panel).getByRole('button', { name: 'Записать в черновик' }));
+    await user.click(within(panel).getByRole('button', { name: 'Сохранить в черновик' }));
 
     expect(await within(panel).findByText('JSON не разобран')).toBeInTheDocument();
     expect(editor).toHaveValue('{ "port": ');
@@ -240,7 +281,7 @@ describe('экран правил', () => {
 
     await user.clear(editor);
     await user.type(editor, '{{ "action": "quantum-teleport", "port": 443 }');
-    await user.click(within(panel).getByRole('button', { name: 'Записать в черновик' }));
+    await user.click(within(panel).getByRole('button', { name: 'Сохранить в черновик' }));
 
     await waitFor(() => {
       expect(ConfigDocumentState.getState().draft).not.toBeNull();
@@ -281,6 +322,44 @@ describe('экран правил', () => {
     renderWithRouter(EditorPage);
 
     expect(await screen.findByText('Правил нет')).toBeInTheDocument();
+  });
+});
+
+describe('экран правил на узком экране', () => {
+  beforeEach(() => {
+    ConfigDocumentState.getState().reset();
+    mockVirtualSizes();
+    serveConfig();
+    vi.stubGlobal('matchMedia', function matchQuery(media: string) {
+      return {
+        matches: media === PANEL_AS_SHEET,
+        media,
+        addEventListener: vi.fn<() => void>(),
+        removeEventListener: vi.fn<() => void>(),
+      };
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('открывает правило листом поверх списка, а не под ним', async () => {
+    const user = userEvent.setup();
+
+    renderWithRouter(EditorPage);
+
+    await user.click(await screen.findByRole('button', { name: /^Правило 1, / }));
+
+    const sheet = await screen.findByRole('dialog', { name: 'Правило 1' });
+
+    expect(within(sheet).getByText('route.rules[0]')).toBeInTheDocument();
+
+    await user.keyboard('{Escape}');
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
   });
 });
 

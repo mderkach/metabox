@@ -232,6 +232,7 @@
         "typescript/strict-boolean-expressions": "off",
         "typescript/no-unsafe-type-assertion": "off",
         "typescript/no-unnecessary-condition": "off",
+        "typescript/prefer-nullish-coalescing": "off",
         "typescript/promise-function-async": "off"
       }
     },

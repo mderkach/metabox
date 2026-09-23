@@ -1,5 +1,6 @@
 import { toDonutSegments, toPercents } from '@shared/lib/chart';
 import { cn } from '@shared/lib/utils';
+import { Empty, EMPTY_INLINE, EmptyDescription, EmptyHeader } from '@shared/ui';
 
 export interface DonutSlice {
   key: string;
@@ -26,7 +27,13 @@ export function ConnectionSummaryDonut({ slices, empty }: { slices: DonutSlice[]
   const total = slices.reduce((sum, slice) => sum + slice.value, 0);
 
   if (total === 0) {
-    return <p className='text-xs text-muted-foreground'>{empty}</p>;
+    return (
+      <Empty className={EMPTY_INLINE}>
+        <EmptyHeader>
+          <EmptyDescription>{empty}</EmptyDescription>
+        </EmptyHeader>
+      </Empty>
+    );
   }
 
   const values = slices.map((slice) => slice.value);

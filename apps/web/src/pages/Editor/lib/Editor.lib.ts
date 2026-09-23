@@ -1,14 +1,17 @@
 import { useMemo, useState } from 'react';
 
 import { readRules, toOutboundTags, useConfigDocument, type ConfigDocumentView } from '@entities/Config';
+import { useRuleHits } from '@entities/Route';
 import {
   filterRules,
+  toAppliedIndices,
   toRuleRowsFromNodes,
   toTargetGroups,
   type RuleRow,
   type RuleTargetFilter,
   type RuleTargetGroup,
 } from '@entities/Rule';
+import { RULE_HITS_STATE, type RuleHitsColumn } from '@widgets/Rule/RuleTable';
 
 export interface RouteEditorState {
   /** Запрос конфига: отказ источника — своё состояние экрана, а не пустой список. */
@@ -18,6 +21,8 @@ export interface RouteEditorState {
   outbounds: string[];
   /** Узлы правил как есть: панель правит текст узла, а не разобранную модель. */
   nodes: unknown[];
+  /** Узлы правил файла с устройства, без правок черновика. */
+  appliedNodes: unknown[];
 }
 
 /**
@@ -37,13 +42,70 @@ export function useRouteEditor(): RouteEditorState {
 
   const rules = useMemo(() => toRuleRowsFromNodes(nodes), [nodes]);
 
+  const appliedText = document.appliedText;
+  const appliedNodes = useMemo(() => (appliedText === null ? [] : readRules(appliedText)), [appliedText]);
+
   return {
     source: document.query,
     issues: document.issues,
     rules,
     outbounds: toOutboundTags(document.config),
     nodes,
+    appliedNodes,
   };
+}
+
+export interface RuleMarks {
+  /** Строки, которых в применённом конфиге нет: новые и изменённые в черновике. */
+  edited: ReadonlySet<string>;
+  hits: RuleHitsColumn;
+}
+
+/**
+ * Отметки строк по применённому конфигу: что изменено в черновике и сколько
+ * раз сработало. Счёт демон ведёт по правилам работающего процесса, поэтому
+ * строка получает его через своё правило в применённом файле, а не по номеру.
+ */
+export function useRuleMarks(editor: RouteEditorState): RuleMarks {
+  const hits = useRuleHits();
+  const { rules, nodes, appliedNodes } = editor;
+
+  const applied = useMemo(() => toAppliedIndices(nodes, appliedNodes), [nodes, appliedNodes]);
+
+  const edited = useMemo(
+    () => new Set(rules.filter((_rule, position) => applied[position] === null).map((rule) => rule.id)),
+    [rules, applied]
+  );
+
+  const column = useMemo((): RuleHitsColumn => {
+    if (hits.isPending) {
+      return { state: RULE_HITS_STATE.Pending };
+    }
+
+    if (hits.isError) {
+      return { state: RULE_HITS_STATE.Failed };
+    }
+
+    // Список правил процесса другой длины — процесс работает не на файле с
+    // устройства, и его номера к строкам не относятся (ADR-0007).
+    if (hits.data.byIndex.length !== appliedNodes.length) {
+      return { state: RULE_HITS_STATE.Mismatch };
+    }
+
+    const counts = new Map<string, number>();
+
+    for (const [position, rule] of rules.entries()) {
+      const index = applied[position];
+
+      if (index !== null) {
+        counts.set(rule.id, hits.data.byIndex[index]);
+      }
+    }
+
+    return { state: RULE_HITS_STATE.Counted, seconds: hits.data.seconds, counts };
+  }, [hits.isPending, hits.isError, hits.data, rules, applied, appliedNodes.length]);
+
+  return { edited, hits: column };
 }
 
 /**

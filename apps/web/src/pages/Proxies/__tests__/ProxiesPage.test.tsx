@@ -28,6 +28,15 @@ describe('экран прокси', () => {
     expect(screen.queryByRole('heading', { name: 'GLOBAL' })).not.toBeInTheDocument();
   });
 
+  it('заголовок группы вложен в секцию групп, а не стоит с ней на одном уровне', async () => {
+    serveProxies();
+
+    renderWithQuery(<ProxiesPage />);
+
+    expect(await screen.findByRole('heading', { level: 3, name: 'proxy' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Группы узлов' })).toBeInTheDocument();
+  });
+
   it('переключает узел только в селекторе и шлёт выбор в рантайм', async () => {
     const selected = vi.fn<(body: unknown) => void>();
 

@@ -59,3 +59,16 @@ export interface RouteExplanation {
   };
   rules: RouteRule[];
 }
+
+/**
+ * Счёт срабатываний правил работающего процесса. Наблюдаемый: соединение,
+ * закрывшееся между двумя снапшотами демона, в него не попадает.
+ */
+export interface RuleHits {
+  /** Сколько идёт счёт: с запуска демона, перезапуск его обнуляет. */
+  seconds: number;
+  /** Срабатывания по индексу `route.rules` процесса, считая с нуля. */
+  byIndex: readonly number[];
+  /** Соединения, ушедшие в `route.final`. */
+  final: number;
+}

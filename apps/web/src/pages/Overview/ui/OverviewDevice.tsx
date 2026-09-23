@@ -34,7 +34,7 @@ export function OverviewDevice({ system }: { system: SystemStat | null }) {
   return (
     <OverviewSection title={t('device.title')}>
       <Card className={CARD_FLUSH}>
-        <ul aria-label={t('device.label')} className='grid grid-cols-1 gap-px bg-border sm:grid-cols-2 lg:grid-cols-4'>
+        <ul aria-label={t('device.label')} className='grid grid-cols-2 gap-px bg-border lg:grid-cols-4'>
           <OverviewTile
             label={t('device.load')}
             value={system === null ? null : system.load.one.toFixed(LOAD_PRECISION)}

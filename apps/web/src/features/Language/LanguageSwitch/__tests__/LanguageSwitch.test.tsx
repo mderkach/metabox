@@ -28,4 +28,21 @@ describe('LanguageSwitch', () => {
     expect(document.documentElement.lang).toBe('en');
     expect(screen.getByRole('button', { name: 'English' })).toHaveAttribute('aria-pressed', 'true');
   });
+
+  it('повторное нажатие не снимает выбор: без языка интерфейса нет', async () => {
+    render(<LanguageSwitch />);
+
+    const russian = screen.getByRole('button', { name: 'Русский' });
+
+    await userEvent.click(russian);
+
+    expect(i18next.language).toBe('ru');
+    expect(russian).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('в вертикальном виде остаётся той же именованной группой', () => {
+    render(<LanguageSwitch vertical />);
+
+    expect(screen.getByRole('group', { name: 'Язык интерфейса' })).toBeInTheDocument();
+  });
 });

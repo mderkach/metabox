@@ -54,6 +54,10 @@ export function RuleEditForm({ rule, outbounds }: { rule: RuleRow; outbounds: st
     if (touched.outbound === true || touched.action === true) {
       edit([...path, 'outbound'], 'outbound' in patch ? patch.outbound : undefined);
     }
+
+    // Сохранённое становится новой точкой отсчёта: кнопка гаснет, пока форма
+    // снова не разойдётся с черновиком.
+    form.reset(form.getValues());
   });
 
   return (

@@ -35,6 +35,11 @@ export interface DaemonStatus {
   version: string;
   /** Версия sing-box на устройстве; пусто, если демон её не прочитал. */
   singboxVersion?: string;
+  /**
+   * Build-теги бинаря. `null` — бинарь не прочитан, и судить о составе
+   * сборки не по чему; пустой список — сборка без тегов.
+   */
+  singboxTags: readonly string[] | null;
   /** Файл, которым владеет демон: путь задаётся флагами его запуска. */
   configPath?: string;
   transaction?: ApplyTransaction;
@@ -76,17 +81,13 @@ export const SERVICE_ACTION = {
 export type ServiceAction = (typeof SERVICE_ACTION)[keyof typeof SERVICE_ACTION];
 
 /** Режим маршрутизации Clash API; правило `clash_mode` в конфиге сверяется с ним. */
-export const CLASH_MODE = {
-  Rule: 'Rule',
-  Global: 'Global',
-  Direct: 'Direct',
-} as const;
-
-export type ClashMode = (typeof CLASH_MODE)[keyof typeof CLASH_MODE];
-
 export interface ClashConfigs {
-  mode: ClashMode;
-  modeList: ClashMode[];
+  /**
+   * Режимы не закрытый набор: sing-box собирает список из значений
+   * `clash_mode` в правилах конфига и добавляет к ним режим по умолчанию.
+   */
+  mode: string;
+  modeList: string[];
   logLevel: string;
   allowLan: boolean;
   bindAddress: string;

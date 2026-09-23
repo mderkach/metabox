@@ -8,7 +8,7 @@ import {
   toServiceState,
   toTrafficFrame,
 } from '../model/Daemon.adapter';
-import { APPLY_PHASE, CLASH_MODE, SERVICE_STATUS } from '../model/Daemon.model';
+import { APPLY_PHASE, SERVICE_STATUS } from '../model/Daemon.model';
 import { CLASH_CONFIGS_FIXTURE, DAEMON_STATUS_FIXTURE, SERVICE_RUNNING_FIXTURE } from './Daemon.fixture';
 
 describe('toDaemonStatus', () => {
@@ -53,10 +53,17 @@ describe('toClashConfigs', () => {
   it('переводит ключи Clash API в модель', () => {
     const configs = toClashConfigs(CLASH_CONFIGS_FIXTURE);
 
-    expect(configs.mode).toBe(CLASH_MODE.Rule);
+    expect(configs.mode).toBe(CLASH_CONFIGS_FIXTURE.mode);
     expect(configs.modeList).toEqual(CLASH_CONFIGS_FIXTURE['mode-list']);
     expect(configs.logLevel).toBe(CLASH_CONFIGS_FIXTURE['log-level']);
     expect(configs.bindAddress).toBe(CLASH_CONFIGS_FIXTURE['bind-address']);
+  });
+
+  it('оставляет режим из правил конфига как есть, а не подменяет режимом по умолчанию', () => {
+    const configs = toClashConfigs({ ...CLASH_CONFIGS_FIXTURE, mode: 'Proxy', 'mode-list': ['Rule', 'Proxy'] });
+
+    expect(configs.mode).toBe('Proxy');
+    expect(configs.modeList).toEqual(['Rule', 'Proxy']);
   });
 });
 

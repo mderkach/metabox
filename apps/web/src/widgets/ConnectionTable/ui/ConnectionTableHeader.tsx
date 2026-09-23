@@ -57,11 +57,13 @@ export function ConnectionTableHeader({
               aria-sort={direction === false ? 'none' : ARIA_SORT[direction]}
               className={cn(def.meta.className, filterable && 'flex min-w-0 items-center gap-0.5')}
             >
+              {/* Preflight Tailwind ставит кнопкам `text-transform: none`: без
+                  наследования подпись теряет капитель шапки. */}
               <button
                 type='button'
                 onClick={column.getToggleSortingHandler()}
                 className={cn(
-                  'group/sort inline-flex max-w-full min-w-0 items-center gap-1 rounded-md px-1 py-0.5 transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none',
+                  'group/sort inline-flex max-w-full min-w-0 items-center gap-1 rounded-md px-1 py-0.5 [text-transform:inherit] transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none',
                   direction !== false && 'text-foreground'
                 )}
               >

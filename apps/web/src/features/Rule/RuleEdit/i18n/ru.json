@@ -9,6 +9,6 @@
     "action": { "label": "Что делать" },
     "outbound": { "label": "Куда отправить", "placeholder": "выберите outbound" }
   },
-  "submit": "Применить к черновику",
+  "submit": "Сохранить в черновик",
   "error": { "outboundRequired": "выберите outbound" }
 }

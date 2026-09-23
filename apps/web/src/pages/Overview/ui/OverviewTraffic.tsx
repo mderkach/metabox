@@ -50,10 +50,7 @@ export function OverviewTraffic({ runtime }: { runtime: OverviewRuntime }) {
       <div className='grid items-start gap-4 xl:grid-cols-[minmax(0,2.6fr)_minmax(0,1fr)]'>
         <Card className={CARD_FLUSH}>
           <div className='flex flex-col xl:flex-row'>
-            <ul
-              aria-label={t('traffic.label')}
-              className='grid min-w-0 grow grid-cols-1 gap-px bg-border sm:grid-cols-2'
-            >
+            <ul aria-label={t('traffic.label')} className='grid min-w-0 grow grid-cols-2 gap-px bg-border'>
               <OverviewTile
                 label={t('traffic.proxy')}
                 value={toVolume(noSnapshot, runtime.share.proxy)}

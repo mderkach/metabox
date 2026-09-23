@@ -10,6 +10,7 @@ import {
   useServiceState,
   type ServiceStatus,
 } from '@entities/Daemon';
+import { DaemonModeSwitch } from '@features/Daemon/DaemonMode';
 import { LanguageSwitch } from '@features/Language/LanguageSwitch';
 import { ThemeSwitch } from '@features/Theme/ThemeSwitch';
 import { cn } from '@shared/lib/utils';
@@ -136,6 +137,8 @@ export function AppSidebar() {
         )}
       >
         <ServiceDot status={reachable ? (service.data?.status ?? null) : null} collapsed={sidebar.collapsed} />
+
+        <DaemonModeSwitch compact={sidebar.collapsed} />
 
         {!sidebar.collapsed && (
           <dl className='flex items-baseline justify-between gap-2 text-xs'>

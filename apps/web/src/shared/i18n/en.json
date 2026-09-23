@@ -32,6 +32,9 @@
     },
     "status": {
       "fetchFailed": "The daemon is not responding"
+    },
+    "clashMode": {
+      "failed": "Could not switch the mode"
     }
   },
   "daemon": {
@@ -178,5 +181,14 @@
   },
   "error": {
     "unknown": "Something went wrong"
+  },
+  "clashMode": {
+    "label": "Routing mode",
+    "rule": "by rules",
+    "global": "globally",
+    "direct": "direct",
+    "unavailable": "sing-box is not responding — mode unknown",
+    "short": "Mode",
+    "pending": "reading the mode"
   }
 }

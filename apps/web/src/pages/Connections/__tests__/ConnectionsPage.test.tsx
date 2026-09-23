@@ -11,6 +11,7 @@ import { CONFIG_FIXTURE } from '@entities/Config/__tests__/Config.fixture';
 import { ConnectionStore, parseConnectionSearch } from '@entities/Connection';
 import { CONNECTION_ENDPOINT } from '@entities/Connection';
 import { makeConnectionsSnapshot } from '@entities/Connection/__tests__/Connection.fixture';
+import { routeHandlers } from '@entities/Route/__tests__/Route.handlers';
 
 import { ConnectionsPage } from '../ui/ConnectionsPage';
 
@@ -208,6 +209,21 @@ describe('экран соединений', () => {
     expect(router.history.length).toBe(1);
   });
 
+  it('объясняет маршрут панелью рядом со списком', async () => {
+    server.use(...routeHandlers);
+    const user = userEvent.setup();
+
+    ConnectionStore.getState().apply(makeConnectionsSnapshot(3));
+    renderScreen();
+
+    const [explain] = await screen.findAllByRole('button', { name: /Почему соединение/ });
+
+    await user.click(explain);
+
+    expect(await screen.findByRole('complementary', { name: /Маршрут соединения/ })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
   it('переключение вкладок сохраняет фильтр колонки активной таблицы', async () => {
     const user = userEvent.setup();
 
@@ -267,5 +283,27 @@ describe('экран соединений на телефоне', () => {
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Отбор: 1 срез' })).toBeInTheDocument();
     });
+  });
+
+  it('объясняет маршрут листом поверх списка и снимает выбор по Escape', async () => {
+    server.use(...routeHandlers);
+    const user = userEvent.setup();
+
+    ConnectionStore.getState().apply(makeConnectionsSnapshot(3));
+    renderScreen();
+
+    const [explain] = await screen.findAllByRole('button', { name: /Почему соединение/ });
+
+    await user.click(explain);
+
+    expect(await screen.findByRole('dialog', { name: /Маршрут соединения/ })).toBeInTheDocument();
+    expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+
+    await user.keyboard('{Escape}');
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+    expect(explain).toHaveAttribute('aria-expanded', 'false');
   });
 });

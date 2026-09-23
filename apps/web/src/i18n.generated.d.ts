@@ -24,6 +24,7 @@ declare module 'i18next' {
       'pages/RuleSets': typeof import('./pages/RuleSets/i18n/ru.json');
       shared: typeof import('./shared/i18n/ru.json');
       'widgets/AppSidebar': typeof import('./widgets/AppSidebar/i18n/ru.json');
+      'widgets/Config/ConfigBuildNotice': typeof import('./widgets/Config/ConfigBuildNotice/i18n/ru.json');
       'widgets/Config/ConfigRawEditor': typeof import('./widgets/Config/ConfigRawEditor/i18n/ru.json');
       'widgets/Config/ConfigTabs': typeof import('./widgets/Config/ConfigTabs/i18n/ru.json');
       'widgets/ConnectionHistory': typeof import('./widgets/ConnectionHistory/i18n/ru.json');

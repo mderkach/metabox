@@ -121,6 +121,13 @@ describe('экран обзора', () => {
     expect(await screen.findAllByText('счётчики живут, пока открыта вкладка')).toHaveLength(1);
   });
 
+  it('без живых соединений и выбранных узлов карточки сводки говорят, что данных нет', async () => {
+    renderWithRouter(OverviewPage);
+
+    expect(await screen.findAllByText('Живых соединений нет')).not.toHaveLength(0);
+    expect(await screen.findByText('Групп с выбранным узлом нет')).toBeInTheDocument();
+  });
+
   it('показывает показания устройства отдельной секцией', async () => {
     RuntimeStore.getState().pushSystem({
       ...SYSTEM_FIXTURE,

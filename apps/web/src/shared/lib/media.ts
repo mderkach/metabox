@@ -6,6 +6,13 @@ import { useEffect, useState } from 'react';
  */
 export const NARROW_SCREEN = '(max-width: 48rem)';
 
+/**
+ * Ширина, ниже которой боковой панели нет места рядом со списком: там она
+ * открывается листом поверх него. Совпадает с `lg` Tailwind, по которому
+ * раскладка экрана переходит из строки в колонку.
+ */
+export const PANEL_AS_SHEET = '(width < 64rem)';
+
 const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
 
 /** В jsdom `matchMedia` нет вовсе, поэтому наличие функции проверяется. */
@@ -50,6 +57,10 @@ function useMediaQuery(query: string): boolean {
 
 export function useNarrowScreen(): boolean {
   return useMediaQuery(NARROW_SCREEN);
+}
+
+export function usePanelAsSheet(): boolean {
+  return useMediaQuery(PANEL_AS_SHEET);
 }
 
 export function useReducedMotion(): boolean {

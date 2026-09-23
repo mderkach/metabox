@@ -15,7 +15,6 @@ import {
   FACET_IDLE,
   Input,
   Label,
-  SECTION_LABEL,
   Select,
   SelectContent,
   SelectItem,
@@ -330,9 +329,7 @@ function MirrorField() {
       name='mirrorId'
       render={({ field }) => (
         <div className='flex items-center gap-2'>
-          <Label htmlFor={id} className={SECTION_LABEL}>
-            {t('field.mirror.label')}
-          </Label>
+          <Label htmlFor={id}>{t('field.mirror.label')}</Label>
           <Select
             items={provider.mirrors.map((mirror) => ({ value: mirror.id, label: mirror.name }))}
             value={field.value}

@@ -504,14 +504,6 @@
   animation: panel-out var(--view-transition-panel) var(--view-transition-ease);
 }
 
-::view-transition-new(.bar-in) {
-  animation: bar-in var(--view-transition-panel) var(--view-transition-ease);
-}
-
-::view-transition-old(.bar-out) {
-  animation: bar-out var(--view-transition-panel) var(--view-transition-ease);
-}
-
 @keyframes panel-in {
   from {
     opacity: 0;
@@ -531,28 +523,6 @@
   to {
     opacity: 0;
     translate: 0.5rem 0;
-  }
-}
-
-@keyframes bar-in {
-  from {
-    opacity: 0;
-    translate: 0 -0.5rem;
-  }
-  to {
-    opacity: 1;
-    translate: 0 0;
-  }
-}
-
-@keyframes bar-out {
-  from {
-    opacity: 1;
-    translate: 0 0;
-  }
-  to {
-    opacity: 0;
-    translate: 0 -0.5rem;
   }
 }
 

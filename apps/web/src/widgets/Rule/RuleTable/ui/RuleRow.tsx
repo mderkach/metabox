@@ -23,14 +23,21 @@ function RuleRowProto({
   rule,
   rowIndex,
   selected,
+  edited,
+  hits,
   onSelect,
 }: {
   rule: RuleRowModel;
   rowIndex: number;
   selected: boolean;
+  /** Правила нет в применённом конфиге: оно новое или изменено в черновике. */
+  edited: boolean;
+  /** `undefined` — колонки нет; `null` — у строки счёта нет, правило изменено. */
+  hits: number | null | undefined;
   onSelect: (id: string) => void;
 }) {
-  const { t } = useTranslation('widgets/Rule/RuleTable');
+  const { t, i18n } = useTranslation('widgets/Rule/RuleTable');
+  const label = t('row.label', { index: rule.index, target: rule.target });
 
   return (
     <div
@@ -49,7 +56,7 @@ function RuleRowProto({
           // Кнопка растянута на строку, поэтому её имя — имя строки. Одного
           // номера мало: он перекрывает содержимое, и правило звучит как
           // «Правило 4», без условия и исхода.
-          aria-label={t('row.label', { index: rule.index, target: rule.target })}
+          aria-label={edited ? `${label}, ${t('row.edited')}` : label}
           onClick={() => {
             onSelect(rule.id);
           }}
@@ -57,6 +64,12 @@ function RuleRowProto({
         >
           {rule.index}
         </button>
+        {edited && (
+          <span
+            aria-hidden='true'
+            className='absolute top-1/2 left-1.5 size-1.5 -translate-y-1/2 rounded-full bg-primary'
+          />
+        )}
       </span>
 
       <span role='cell' className={RULE_COLUMN.Conditions}>
@@ -97,6 +110,16 @@ function RuleRowProto({
           )}
         </span>
       </span>
+
+      {hits !== undefined && (
+        <span role='cell' className={cn(RULE_COLUMN.Hits, 'font-mono text-xs text-muted-foreground tabular-nums')}>
+          {hits === null ? (
+            <span aria-hidden='true'>—</span>
+          ) : (
+            <data value={hits}>{hits.toLocaleString(i18n.language)}</data>
+          )}
+        </span>
+      )}
     </div>
   );
 }

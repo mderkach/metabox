@@ -17,13 +17,11 @@ import {
 } from '../api/Daemon.schema';
 import {
   APPLY_PHASE,
-  CLASH_MODE,
   SERVICE_STATUS,
   type ApplyPhase,
   type ApplyReasonCode,
   type ApplyTransaction,
   type ClashConfigs,
-  type ClashMode,
   type DaemonStatus,
   type MemorySample,
   type ServiceState,
@@ -35,7 +33,6 @@ import {
 
 const PHASES = new Set<string>(Object.values(APPLY_PHASE));
 const STATUSES = new Set<string>(Object.values(SERVICE_STATUS));
-const MODES = new Set<string>(Object.values(CLASH_MODE));
 
 function isPhase(value: string): value is ApplyPhase {
   return PHASES.has(value);
@@ -43,10 +40,6 @@ function isPhase(value: string): value is ApplyPhase {
 
 function isServiceStatus(value: string): value is ServiceStatus {
   return STATUSES.has(value);
-}
-
-function isMode(value: string): value is ClashMode {
-  return MODES.has(value);
 }
 
 /**
@@ -63,10 +56,6 @@ function toPhase(value: string): ApplyPhase {
 /** Незнакомое состояние службы читается как падение, а не как работа. */
 function toServiceStatus(value: string): ServiceStatus {
   return isServiceStatus(value) ? value : SERVICE_STATUS.Failed;
-}
-
-function toMode(value: string): ClashMode {
-  return isMode(value) ? value : CLASH_MODE.Rule;
 }
 
 /** Незнакомый код читается как «шаг не назван»: текст тогда берётся из `reason`. */
@@ -94,6 +83,7 @@ export function toDaemonStatus(wire: DaemonStatusWire): DaemonStatus {
   return {
     version: wire.version,
     singboxVersion: wire.singbox_version,
+    singboxTags: wire.singbox_build?.tags ?? null,
     configPath: wire.config_path,
     transaction: wire.transaction === undefined ? undefined : toTransaction(wire.transaction),
     transactionHref: wire.transaction_href,
@@ -120,8 +110,8 @@ export function toTrafficHistory(wire: TrafficHistoryWire): TrafficHistory {
 
 export function toClashConfigs(wire: ClashConfigsWire): ClashConfigs {
   return {
-    mode: toMode(wire.mode),
-    modeList: wire['mode-list'].map(toMode),
+    mode: wire.mode,
+    modeList: wire['mode-list'],
     logLevel: wire['log-level'],
     allowLan: wire['allow-lan'],
     bindAddress: wire['bind-address'],

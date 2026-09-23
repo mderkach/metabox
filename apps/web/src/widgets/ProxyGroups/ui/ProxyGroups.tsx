@@ -11,6 +11,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  SECTION_HEADING,
 } from '@shared/ui';
 
 import { ProxyGroupCard } from './ProxyGroupCard';
@@ -48,8 +49,8 @@ export function ProxyGroups({ groups, nodes }: { groups: ProxyGroup[]; nodes: Pr
 
       <Card>
         <CardHeader className='border-b'>
-          <CardTitle>
-            <h2 className='font-mono'>{t('empty.outbounds')}</h2>
+          <CardTitle className={SECTION_HEADING}>
+            <h3>{t('empty.outbounds')}</h3>
           </CardTitle>
           <CardDescription>{nodes.length}</CardDescription>
         </CardHeader>

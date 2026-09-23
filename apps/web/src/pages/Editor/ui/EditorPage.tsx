@@ -4,6 +4,7 @@ import { startTransition, useCallback, useState, ViewTransition } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
 import { isRuleRecognized } from '@entities/Rule';
+import { usePanelAsSheet } from '@shared/lib/media';
 import { cn } from '@shared/lib/utils';
 import {
   Alert,
@@ -24,10 +25,10 @@ import {
   SURFACE,
   SkeletonRows,
 } from '@shared/ui';
-import { RulePanel } from '@widgets/Rule/RulePanel';
+import { RulePanel, RulePanelSheet } from '@widgets/Rule/RulePanel';
 import { RuleTable } from '@widgets/Rule/RuleTable';
 
-import { toSelectedRuleId, useRouteEditor, useRuleFilter, type RuleFilterState } from '../lib/Editor.lib';
+import { toSelectedRuleId, useRouteEditor, useRuleFilter, useRuleMarks, type RuleFilterState } from '../lib/Editor.lib';
 
 /** Сколько замечаний схемы показывать, чтобы они не вытеснили экран. */
 const VISIBLE_ISSUES = 5;
@@ -39,6 +40,8 @@ export function EditorPage() {
   const { t } = useTranslation('pages/Editor');
   const editor = useRouteEditor();
   const filter = useRuleFilter(editor.rules);
+  const marks = useRuleMarks(editor);
+  const asSheet = usePanelAsSheet();
   // Номер правила из адреса — начальный выбор: экран соединений ведёт сюда на
   // сработавший узел. Дальше выбором владеет сам экран, иначе закрытая панель
   // открывалась бы заново на каждый рендер.
@@ -78,22 +81,21 @@ export function EditorPage() {
 
       {editor.source.isSuccess && editor.rules.length === 0 && editor.issues.length === 0 && <NoRules />}
 
-      {/* Ниже lg это колонка: панель забирает свою высоту, и списку с
-          `min-h-0 grow` доставался ноль. Там обе части получают высоту, а
-          прокручивается сама колонка. */}
       {editor.rules.length > 0 && (
-        <div className='flex min-h-0 grow flex-col gap-4 max-lg:overflow-y-auto lg:flex-row'>
+        <div className='flex min-h-0 grow flex-col gap-4 lg:flex-row'>
           <RuleTable
             rules={filter.rules}
             total={editor.rules.length}
             selectedId={selectedId}
+            edited={marks.edited}
+            hits={marks.hits}
             onSelect={onSelect}
             search={<RuleSearch filter={filter} />}
             facets={<RuleTargetFacets filter={filter} />}
             empty={<EmptyState filter={filter} />}
           />
 
-          {selected !== null && (
+          {selected !== null && !asSheet && (
             // Граница снаружи `key`: смена строки идёт как `update`, а не
             // как exit и enter одновременно, иначе панель мигает.
             <ViewTransition enter='panel-in' exit='panel-out'>
@@ -108,6 +110,18 @@ export function EditorPage() {
             </ViewTransition>
           )}
         </div>
+      )}
+
+      {/* Ниже lg панели рядом со списком нет места, а под ним она уходит ниже
+          сгиба и сжимает список до трёх строк: там она открывается листом. */}
+      {asSheet && (
+        <RulePanelSheet
+          rule={selected}
+          node={selectedNode}
+          recognized={isRuleRecognized(selectedNode)}
+          outbounds={editor.outbounds}
+          onClose={onClose}
+        />
       )}
     </div>
   );

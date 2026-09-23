@@ -30,3 +30,13 @@ export async function runServiceAction(action: ServiceAction): Promise<ServiceSt
 export async function getClashConfigs(config?: AxiosRequestConfig): Promise<ClashConfigsWire> {
   return ApiClientInstance.get<ClashConfigsWire>(DAEMON_ENDPOINT.clashConfigs(), config);
 }
+
+/**
+ * Смена режима идёт в рантайм, а не в конфиг: файл не меняется, и после
+ * рестарта режим вернётся к `default_mode`, если `cache_file` не включён.
+ * Незнакомый режим sing-box молча пропускает и всё равно отвечает 204,
+ * поэтому принятый режим видно только по следующему чтению.
+ */
+export async function setClashMode(mode: string): Promise<void> {
+  return ApiClientInstance.patch<void>(DAEMON_ENDPOINT.clashConfigs(), { mode });
+}

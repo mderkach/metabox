@@ -44,12 +44,3 @@ export const CONFIG_MODES = [
   label: ParseKeys<'widgets/Config/ConfigTabs'>;
   route: ConfigModeRoute;
 }>;
-
-/** Сегментированный переключатель режима: группа и её кнопки. */
-export const CONFIG_MODE_GROUP = 'inline-flex h-6 shrink-0 items-center rounded-lg border border-border p-0.5';
-
-export const CONFIG_MODE_ITEM =
-  'inline-flex h-5 items-center rounded-md px-2 text-xs font-medium whitespace-nowrap transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none';
-
-export const CONFIG_MODE_ACTIVE = 'bg-selected text-foreground';
-export const CONFIG_MODE_IDLE = 'text-muted-foreground hover:text-foreground';

@@ -25,6 +25,7 @@ const CONFIRM_WINDOW_NS = 60_000_000_000;
  */
 export function createStatefulDaemonHandlers() {
   let transaction: ApplyTransactionWire | null = null;
+  let clashConfigs = CLASH_CONFIGS_FIXTURE;
 
   const start = (): ApplyTransactionWire => {
     transaction = {
@@ -70,7 +71,18 @@ export function createStatefulDaemonHandlers() {
 
     http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE)),
     http.post(DAEMON_ENDPOINT.serviceAction(':action'), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE)),
-    http.get(DAEMON_ENDPOINT.clashConfigs(), () => HttpResponse.json(CLASH_CONFIGS_FIXTURE)),
+    http.get(DAEMON_ENDPOINT.clashConfigs(), () => HttpResponse.json(clashConfigs)),
+    http.patch(DAEMON_ENDPOINT.clashConfigs(), async ({ request }) => {
+      const body: unknown = await request.json();
+      const mode = typeof body === 'object' && body !== null && 'mode' in body ? String(body.mode) : '';
+
+      // Как и sing-box, незнакомый режим пропускается молча, ответ всё равно 204.
+      if (clashConfigs['mode-list'].includes(mode)) {
+        clashConfigs = { ...clashConfigs, mode };
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    }),
     http.get(DAEMON_ENDPOINT.history(), () => HttpResponse.json(TRAFFIC_HISTORY_FIXTURE)),
   ];
 }
