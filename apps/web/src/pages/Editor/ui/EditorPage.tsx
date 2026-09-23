@@ -10,11 +10,19 @@ import {
   AlertDescription,
   AlertTitle,
   Button,
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
   FACET_ACTIVE,
   FACET_CLASS,
   FACET_IDLE,
   FACET_MORE,
   Input,
+  QueryFailure,
+  SURFACE,
+  SkeletonRows,
 } from '@shared/ui';
 import { RulePanel } from '@widgets/Rule/RulePanel';
 import { RuleTable } from '@widgets/Rule/RuleTable';
@@ -62,9 +70,13 @@ export function EditorPage() {
         </span>
       </p>
 
-      {editor.isPending && <p className='text-sm text-muted-foreground'>{t('pending')}</p>}
+      {editor.source.isPending && <SkeletonRows className={SURFACE} />}
+
+      {editor.source.isLoadingError && <QueryFailure messageKey='source.config' query={editor.source} />}
 
       {editor.issues.length > 0 && <ConfigNotParsed issues={editor.issues} />}
+
+      {editor.source.isSuccess && editor.rules.length === 0 && editor.issues.length === 0 && <NoRules />}
 
       {/* Ниже lg это колонка: панель забирает свою высоту, и списку с
           `min-h-0 grow` доставался ноль. Там обе части получают высоту, а
@@ -166,19 +178,37 @@ function EmptyState({ filter }: { filter: RuleFilterState }) {
   const { t } = useTranslation('pages/Editor');
 
   return (
-    <div className='flex flex-col items-center gap-2'>
-      <p className='text-sm text-muted-foreground'>{t('notFound')}</p>
-      <Button
-        variant='outline'
-        size='sm'
-        onClick={() => {
-          filter.setQuery('');
-          filter.setTarget(null);
-        }}
-      >
-        {t('resetFilter')}
-      </Button>
-    </div>
+    <Empty>
+      <EmptyHeader>
+        <EmptyTitle>{t('notFound')}</EmptyTitle>
+      </EmptyHeader>
+      <EmptyContent>
+        <Button
+          variant='outline'
+          size='sm'
+          onClick={() => {
+            filter.setQuery('');
+            filter.setTarget(null);
+          }}
+        >
+          {t('resetFilter')}
+        </Button>
+      </EmptyContent>
+    </Empty>
+  );
+}
+
+/** Конфиг прочитан, а правил в нём нет: это состояние конфига, а не загрузки. */
+function NoRules() {
+  const { t } = useTranslation('pages/Editor');
+
+  return (
+    <Empty className='border'>
+      <EmptyHeader>
+        <EmptyTitle>{t('empty.title')}</EmptyTitle>
+        <EmptyDescription>{t('empty.description')}</EmptyDescription>
+      </EmptyHeader>
+    </Empty>
   );
 }
 

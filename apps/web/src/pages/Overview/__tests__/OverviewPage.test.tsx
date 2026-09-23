@@ -138,7 +138,9 @@ describe('экран обзора', () => {
   it('без второго снимка потока графики трафика и соединений линию не рисуют', async () => {
     renderWithRouter(OverviewPage);
 
-    expect(await screen.findAllByText('Ждём второе обновление')).toHaveLength(2);
+    expect(await screen.findByText('Трафик')).toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: /Трафик за минуту/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: /Открытые соединения за минуту/ })).not.toBeInTheDocument();
   });
 
   // Вердикт отвечает на вопрос, ради которого экран открывают, и стоит в шапке.

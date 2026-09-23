@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-import { Button } from '@shared/ui';
+import { Button, Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle, SkeletonRows } from '@shared/ui';
 
 /**
  * Состояния пустого списка.
@@ -22,19 +22,30 @@ export function ConnectionsEmpty({
   const { t } = useTranslation('pages/Connections');
 
   if (pending) {
-    return <p className='text-sm text-muted-foreground'>{t('pendingStream')}</p>;
+    return <SkeletonRows className='w-full self-start' />;
   }
 
   if (filtered) {
     return (
-      <div className='flex flex-col items-center gap-2'>
-        <p className='text-sm text-muted-foreground'>{t('notFound')}</p>
-        <Button variant='outline' size='sm' onClick={onReset}>
-          {t('resetFilter')}
-        </Button>
-      </div>
+      <Empty>
+        <EmptyHeader>
+          <EmptyTitle>{t('notFound')}</EmptyTitle>
+        </EmptyHeader>
+        <EmptyContent>
+          <Button variant='outline' size='sm' onClick={onReset}>
+            {t('resetFilter')}
+          </Button>
+        </EmptyContent>
+      </Empty>
     );
   }
 
-  return <p className='text-sm text-muted-foreground'>{t('empty')}</p>;
+  return (
+    <Empty>
+      <EmptyHeader>
+        <EmptyTitle>{t('empty.title')}</EmptyTitle>
+        <EmptyDescription>{t('empty.description')}</EmptyDescription>
+      </EmptyHeader>
+    </Empty>
+  );
 }

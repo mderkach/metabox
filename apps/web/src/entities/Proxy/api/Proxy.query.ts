@@ -18,7 +18,7 @@ export function getProxiesOptions() {
     queryFn: async (context) => decodeResponse(ClashProxiesSchema, await getProxies(context), 'proxies'),
     staleTime: CACHE_TIME.Second,
     gcTime: CACHE_TIME.Minute,
-    meta: { showError: true, errorMessageKey: 'toast.proxy.list.fetchFailed' },
+    meta: { showError: true, errorMessageKey: 'source.proxies' },
   });
 }
 
@@ -29,7 +29,7 @@ export function getProxyProvidersOptions() {
       decodeResponse(ClashProvidersSchema, await getProxyProviders(context), 'proxy providers'),
     staleTime: CACHE_TIME.Minute,
     gcTime: CACHE_TIME.Hour,
-    meta: { showError: true, errorMessageKey: 'toast.proxy.providers.fetchFailed' },
+    meta: { showError: true, errorMessageKey: 'source.providers' },
   });
 }
 

@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 
 import { formatAge, formatBytes, formatRate } from '@shared/lib/format';
@@ -11,6 +12,19 @@ import { OverviewTile } from './OverviewTile';
 
 const PERCENT = 100;
 
+/** `null` — снимка устройства ещё не было; прочерк — объём за окно наблюдения нулевой. */
+function toVolume(pending: boolean, bytes: number): string | null {
+  if (pending) {
+    return null;
+  }
+
+  return bytes > 0 ? formatBytes(bytes) : '—';
+}
+
+function toPeak(t: TFunction<'pages/Overview'>, peak: number): string {
+  return peak > 0 ? t('traffic.peak', { value: formatRate(peak) }) : t('traffic.noPeak');
+}
+
 export function OverviewTraffic({ runtime }: { runtime: OverviewRuntime }) {
   const { t } = useTranslation('pages/Overview');
   const uplink = runtime.system?.uplink;
@@ -18,6 +32,15 @@ export function OverviewTraffic({ runtime }: { runtime: OverviewRuntime }) {
   // Инкапсуляция прокси добавляет байт поверх исходного трафика, поэтому доля
   // упирается в сотню.
   const proxyShare = Math.min(1, runtime.share.link > 0 ? runtime.share.proxy / runtime.share.link : 0);
+  const noSnapshot = runtime.system === null;
+  const proxyContext =
+    runtime.share.link > 0
+      ? t('traffic.proxyShare', { percent: Math.round(proxyShare * PERCENT) })
+      : t('traffic.proxyUnknown');
+  const uplinkContext =
+    runtime.share.seconds > 0
+      ? t('traffic.uplinkSince', { age: formatAge(runtime.share.seconds) })
+      : t('device.waiting');
 
   return (
     <OverviewSection
@@ -33,40 +56,26 @@ export function OverviewTraffic({ runtime }: { runtime: OverviewRuntime }) {
             >
               <OverviewTile
                 label={t('traffic.proxy')}
-                value={runtime.share.proxy > 0 ? formatBytes(runtime.share.proxy) : '—'}
-                context={
-                  runtime.share.link > 0
-                    ? t('traffic.proxyShare', { percent: Math.round(proxyShare * PERCENT) })
-                    : t('traffic.proxyUnknown')
-                }
+                value={toVolume(noSnapshot, runtime.share.proxy)}
+                context={noSnapshot ? null : proxyContext}
                 meter={runtime.share.link > 0 ? proxyShare : undefined}
               />
               <OverviewTile
                 label={t('traffic.uplink')}
-                value={runtime.share.link > 0 ? formatBytes(runtime.share.link) : '—'}
-                context={
-                  runtime.share.seconds > 0
-                    ? t('traffic.uplinkSince', { age: formatAge(runtime.share.seconds) })
-                    : t('device.waiting')
-                }
+                value={toVolume(noSnapshot, runtime.share.link)}
+                context={noSnapshot ? null : uplinkContext}
               />
               <OverviewTile
                 label={t('traffic.down')}
-                value={formatRate(runtime.now.down)}
+                value={runtime.awaiting ? null : formatRate(runtime.now.down)}
                 tone='text-series-down'
-                context={
-                  runtime.peakDown > 0
-                    ? t('traffic.peak', { value: formatRate(runtime.peakDown) })
-                    : t('traffic.noPeak')
-                }
+                context={runtime.awaiting ? null : toPeak(t, runtime.peakDown)}
               />
               <OverviewTile
                 label={t('traffic.up')}
-                value={formatRate(runtime.now.up)}
+                value={runtime.awaiting ? null : formatRate(runtime.now.up)}
                 tone='text-series-up'
-                context={
-                  runtime.peakUp > 0 ? t('traffic.peak', { value: formatRate(runtime.peakUp) }) : t('traffic.noPeak')
-                }
+                context={runtime.awaiting ? null : toPeak(t, runtime.peakUp)}
               />
             </ul>
 

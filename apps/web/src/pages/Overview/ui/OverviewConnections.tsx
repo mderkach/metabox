@@ -19,12 +19,16 @@ export function OverviewConnections({ runtime }: { runtime: OverviewRuntime }) {
           <ul aria-label={t('connections.label')} className='grid grid-cols-2 gap-px bg-border'>
             <OverviewTile
               label={t('connections.open')}
-              value={String(runtime.counts.active)}
-              context={t('connections.peak', { count: Math.max(...runtime.history, runtime.counts.active) })}
+              value={runtime.connectionsAwaiting ? null : String(runtime.counts.active)}
+              context={
+                runtime.connectionsAwaiting
+                  ? null
+                  : t('connections.peak', { count: Math.max(...runtime.history, runtime.counts.active) })
+              }
             />
             <OverviewTile
               label={t('connections.closed')}
-              value={String(runtime.counts.closed)}
+              value={runtime.connectionsAwaiting ? null : String(runtime.counts.closed)}
               context={runtime.counts.closed > 0 ? t('connections.keptByPanel') : t('connections.none')}
             />
           </ul>

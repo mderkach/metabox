@@ -12,6 +12,15 @@ const DEGREE_PRECISION = 1;
 /** Загрузка печатается сотыми: десятых мало, чтобы отличить простой от работы. */
 const LOAD_PRECISION = 2;
 
+/** Прочерк — у платы нет термозон; `null` — снимка ещё не было. */
+function toTemperature(system: SystemStat | null, hottest: SystemStat['thermal'][number] | undefined): string | null {
+  if (system === null) {
+    return null;
+  }
+
+  return hottest === undefined ? '—' : `${hottest.celsius.toFixed(DEGREE_PRECISION)} °C`;
+}
+
 export function OverviewDevice({ system }: { system: SystemStat | null }) {
   const { t } = useTranslation('pages/Overview');
   const history = useTrafficHistory();
@@ -28,10 +37,10 @@ export function OverviewDevice({ system }: { system: SystemStat | null }) {
         <ul aria-label={t('device.label')} className='grid grid-cols-1 gap-px bg-border sm:grid-cols-2 lg:grid-cols-4'>
           <OverviewTile
             label={t('device.load')}
-            value={system === null ? '—' : system.load.one.toFixed(LOAD_PRECISION)}
+            value={system === null ? null : system.load.one.toFixed(LOAD_PRECISION)}
             context={
               system === null
-                ? t('device.waiting')
+                ? null
                 : t('device.ofCores', { cores: t('count.core', { ns: 'shared', count: system.load.cores }) })
             }
             chart={
@@ -40,8 +49,8 @@ export function OverviewDevice({ system }: { system: SystemStat | null }) {
           />
           <OverviewTile
             label={t('device.temperature')}
-            value={hottest === undefined ? '—' : `${hottest.celsius.toFixed(DEGREE_PRECISION)} °C`}
-            context={hottest === undefined ? t('device.noZones') : hottest.name}
+            value={toTemperature(system, hottest)}
+            context={system === null ? null : (hottest?.name ?? t('device.noZones'))}
             chart={
               <DaemonSparkline
                 samples={deviceHistory.map((point) => point.celsius)}
@@ -52,18 +61,16 @@ export function OverviewDevice({ system }: { system: SystemStat | null }) {
           />
           <OverviewTile
             label={t('device.memory')}
-            value={system === null ? '—' : formatBytes(usedMemory)}
-            context={
-              system === null ? t('device.waiting') : t('device.ofTotal', { total: formatBytes(system.memory.total) })
-            }
+            value={system === null ? null : formatBytes(usedMemory)}
+            context={system === null ? null : t('device.ofTotal', { total: formatBytes(system.memory.total) })}
             chart={
               <DaemonSparkline samples={deviceHistory.map((point) => point.memory)} label={t('device.memoryHistory')} />
             }
           />
           <OverviewTile
             label={t('device.uptime')}
-            value={system === null ? '—' : formatAge(system.uptime)}
-            context={system === null ? t('device.waiting') : t('device.sinceBoot')}
+            value={system === null ? null : formatAge(system.uptime)}
+            context={system === null ? null : t('device.sinceBoot')}
           />
         </ul>
       </Card>

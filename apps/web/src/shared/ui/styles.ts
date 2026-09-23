@@ -56,3 +56,10 @@ export const SURFACE_HEAD = 'border-b border-border px-4 py-3';
  * идти до краёв, а собственные отступы карточки этому мешают.
  */
 export const CARD_FLUSH = 'gap-0 py-0';
+
+/**
+ * Проявление скелетона с задержкой: на быстром ответе он так и не становится
+ * видимым и не мигает. Висит на обёртке, а не на `Skeleton`: у того своя
+ * анимация пульса, и вторая её перебила бы.
+ */
+export const PENDING_REVEAL = 'animate-in fade-in fill-mode-backwards delay-200 duration-300';

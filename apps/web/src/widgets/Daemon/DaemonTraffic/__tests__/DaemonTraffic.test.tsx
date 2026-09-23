@@ -74,10 +74,10 @@ describe('DaemonTraffic', () => {
     vi.unstubAllGlobals();
   });
 
-  it('до второй точки показывает ожидание, а не пустую ось', () => {
+  it('до второй точки показывает загрузку, а не пустую ось', () => {
     render(<DaemonTraffic samples={samplesOf(1)} sampledAt={NOW} peakDown={10} peakUp={10} />);
 
-    expect(screen.getByText('Ждём второе обновление')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Загружаю');
     expect(FakePlot.instances).toHaveLength(0);
   });
 });

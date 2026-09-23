@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 
-import { readRules, toOutboundTags, useConfigDocument } from '@entities/Config';
+import { readRules, toOutboundTags, useConfigDocument, type ConfigDocumentView } from '@entities/Config';
 import {
   filterRules,
   toRuleRowsFromNodes,
@@ -11,7 +11,8 @@ import {
 } from '@entities/Rule';
 
 export interface RouteEditorState {
-  isPending: boolean;
+  /** Запрос конфига: отказ источника — своё состояние экрана, а не пустой список. */
+  source: ConfigDocumentView['query'];
   issues: string[];
   rules: RuleRow[];
   outbounds: string[];
@@ -37,7 +38,7 @@ export function useRouteEditor(): RouteEditorState {
   const rules = useMemo(() => toRuleRowsFromNodes(nodes), [nodes]);
 
   return {
-    isPending: document.isPending,
+    source: document.query,
     issues: document.issues,
     rules,
     outbounds: toOutboundTags(document.config),

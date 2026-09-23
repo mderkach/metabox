@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { SCHEMA_VERSION, useClashConfigs, useConfigPath, useDaemonStatus } from '@entities/Daemon';
 import { formatBytes } from '@shared/lib/format';
 import { cn } from '@shared/lib/utils';
-import { Card, CardContent, CardHeader, SECTION_LABEL } from '@shared/ui';
+import { Card, CardContent, CardHeader, PENDING_REVEAL, SECTION_LABEL, Skeleton } from '@shared/ui';
 import { DaemonService } from '@widgets/Daemon/DaemonService';
 import { DaemonMemory } from '@widgets/Daemon/DaemonTraffic';
 
@@ -68,13 +68,14 @@ export function OverviewProcess({ runtime }: { runtime: OverviewRuntime }) {
 
           <CardContent>
             <dl>
-              <ProcessRow label={t('process.daemon')} value={status.data?.version ?? '—'} mono />
+              <ProcessRow
+                label={t('process.daemon')}
+                value={status.isPending ? null : (status.data?.version ?? '—')}
+                mono
+              />
               <ProcessRow label={t('process.schema')} value={SCHEMA_VERSION} mono />
               <ProcessRow label={t('process.config')} value={configPath} mono />
-              <ProcessRow
-                label={t('process.clashMode')}
-                value={clash.data === undefined ? '—' : toClashModeLabel(t, clash.data.mode)}
-              />
+              <ProcessRow label={t('process.clashMode')} value={toClashMode(t, clash)} />
               {system !== null && (
                 <ProcessRow
                   label={t('process.memory')}
@@ -92,11 +93,23 @@ export function OverviewProcess({ runtime }: { runtime: OverviewRuntime }) {
   );
 }
 
-function ProcessRow({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
+/** `null` — ответа ещё нет; прочерк — режим не прочитан. */
+function toClashMode(t: TFunction<'pages/Overview'>, clash: ReturnType<typeof useClashConfigs>): string | null {
+  if (clash.isPending) {
+    return null;
+  }
+
+  return clash.data === undefined ? '—' : toClashModeLabel(t, clash.data.mode);
+}
+
+/** `null` вместо значения — ответа ещё нет: скелетон, а не прочерк. */
+function ProcessRow({ label, value, mono = false }: { label: string; value: string | null; mono?: boolean }) {
   return (
     <div className='flex justify-between gap-4 border-t border-border py-2 text-sm first:border-t-0'>
       <dt className='text-muted-foreground'>{label}</dt>
-      <dd className={cn('min-w-0 truncate', mono && 'font-mono text-xs')}>{value}</dd>
+      <dd className={cn('min-w-0 truncate', mono && 'font-mono text-xs')}>
+        {value ?? <Skeleton aria-hidden='true' className={cn('h-4 w-24', PENDING_REVEAL)} />}
+      </dd>
     </div>
   );
 }

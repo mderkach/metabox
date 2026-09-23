@@ -254,6 +254,34 @@ describe('экран правил', () => {
       port: 443,
     });
   });
+
+  it('отказ источника показывает причину и повтор, а не пустой список', async () => {
+    const user = userEvent.setup();
+
+    server.use(
+      http.get(CONFIG_ENDPOINT.config(), () =>
+        HttpResponse.json({ code: 'config_missing', message: 'config not found' }, { status: 404 })
+      )
+    );
+
+    renderWithRouter(EditorPage);
+
+    expect(await screen.findByText('Не удалось загрузить конфиг')).toBeInTheDocument();
+    expect(screen.getByText('конфига на устройстве нет')).toBeInTheDocument();
+
+    serveConfig();
+    await user.click(screen.getByRole('button', { name: 'Повторить' }));
+
+    expect(await screen.findByRole('table', { name: 'Правила маршрутизации' })).toBeInTheDocument();
+  });
+
+  it('конфиг без правил называет это, а не показывает пустое место', async () => {
+    serveConfig(JSON.stringify({ outbounds: [{ type: 'direct', tag: 'direct' }] }));
+
+    renderWithRouter(EditorPage);
+
+    expect(await screen.findByText('Правил нет')).toBeInTheDocument();
+  });
 });
 
 describe('номер правила из адреса', () => {

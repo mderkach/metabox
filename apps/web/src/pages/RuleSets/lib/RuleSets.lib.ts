@@ -1,6 +1,13 @@
 import { useCallback, useMemo, useState } from 'react';
 
-import { hasRuleSetCache, readRules, readRuleSets, toOutboundTags, useConfigDocument } from '@entities/Config';
+import {
+  hasRuleSetCache,
+  readRules,
+  readRuleSets,
+  toOutboundTags,
+  useConfigDocument,
+  type ConfigDocumentView,
+} from '@entities/Config';
 import {
   countRuleSetUsage,
   filterRuleSets,
@@ -10,7 +17,8 @@ import {
 } from '@entities/RuleSet';
 
 export interface RuleSetEditorState {
-  isPending: boolean;
+  /** Запрос конфига: отказ источника — своё состояние экрана, а не пустой список. */
+  source: ConfigDocumentView['query'];
   sets: RuleSetRow[];
   /** Имена уже подключённых наборов: второй набор с тем же именем не заводится. */
   takenTags: string[];
@@ -50,7 +58,7 @@ export function useRuleSetEditor(): RuleSetEditorState {
   }, [sets, text]);
 
   return {
-    isPending: document.isPending,
+    source: document.query,
     sets,
     takenTags: sets.map((set) => set.tag).filter((tag) => tag !== ''),
     outbounds: toOutboundTags(document.config),

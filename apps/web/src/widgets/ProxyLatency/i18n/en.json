@@ -3,7 +3,6 @@
   "scale": "scale 0–{{ceiling}} ms",
   "testing": "Testing",
   "test": "Test",
-  "unread": "The node list was not read",
   "empty": "No groups with a selected node",
   "node": {
     "untested": "not tested",

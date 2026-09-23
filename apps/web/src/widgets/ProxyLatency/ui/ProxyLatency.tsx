@@ -5,7 +5,16 @@ import { DELAY_STATE, DELAY_TIMEOUT, useProxies, type ProxyGroup, type ProxyNode
 import { useTestProxyDelay } from '@features/Proxy/ProxyDelay';
 import { toShare, toValueScale } from '@shared/lib/chart';
 import { cn } from '@shared/lib/utils';
-import { Button, Card, CardContent, CardHeader, SECTION_LABEL, ValueAxis } from '@shared/ui';
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  QueryFailure,
+  SECTION_LABEL,
+  SkeletonRows,
+  ValueAxis,
+} from '@shared/ui';
 
 const DELAY_TONE: Readonly<Record<string, string>> = {
   [DELAY_STATE.Fast]: 'bg-signal-ok',
@@ -91,9 +100,10 @@ export function ProxyLatency() {
       </CardHeader>
 
       <CardContent>
-        {selected.length === 0 ? (
-          <p className='text-xs text-muted-foreground'>{proxies.isError ? t('unread') : t('empty')}</p>
-        ) : (
+        {proxies.isPending && <SkeletonRows rows={2} className='p-0' />}
+        {proxies.isLoadingError && <QueryFailure messageKey='source.proxies' query={proxies} />}
+        {proxies.isSuccess && selected.length === 0 && <p className='text-xs text-muted-foreground'>{t('empty')}</p>}
+        {selected.length > 0 && (
           <div className='flex flex-col gap-2.5'>
             <ul className='flex flex-col gap-2.5'>
               {selected.map((entry) => (

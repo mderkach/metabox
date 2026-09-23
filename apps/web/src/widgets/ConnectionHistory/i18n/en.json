@@ -1,6 +1,5 @@
 {
   "title": "Connections this minute",
-  "pending": "Waiting for the second update",
   "chart": "Open connections this minute, peak {{peak}}",
   "tick": {
     "minus60": "−60 s",

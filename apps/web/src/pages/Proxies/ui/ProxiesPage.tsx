@@ -2,7 +2,17 @@ import { useTranslation } from 'react-i18next';
 
 import { useProxies, useProxyProviders } from '@entities/Proxy';
 import { cn } from '@shared/lib/utils';
-import { CARD_FLUSH, Card, CardContent, CardHeader, SECTION_HEADING, SURFACE_HEAD } from '@shared/ui';
+import {
+  CARD_FLUSH,
+  Card,
+  CardContent,
+  CardHeader,
+  QueryFailure,
+  SECTION_HEADING,
+  SURFACE,
+  SURFACE_HEAD,
+  SkeletonRows,
+} from '@shared/ui';
 import { PageHeader } from '@widgets/PageHeader';
 import { ProxyGroups } from '@widgets/ProxyGroups';
 
@@ -27,7 +37,9 @@ export function ProxiesPage() {
       </PageHeader>
 
       <div className='flex min-h-0 grow flex-col gap-5 overflow-y-auto px-4 py-5 *:shrink-0 sm:px-6'>
-        {proxies.isPending && <p className='text-sm text-muted-foreground'>{t('pending')}</p>}
+        {proxies.isPending && <SkeletonRows className={SURFACE} />}
+
+        {proxies.isLoadingError && <QueryFailure messageKey='source.proxies' query={proxies} />}
 
         {proxies.isSuccess && (
           <section className='flex flex-col gap-3'>

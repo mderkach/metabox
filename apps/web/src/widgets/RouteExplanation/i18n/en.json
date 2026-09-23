@@ -2,7 +2,6 @@
   "title": "Connection route",
   "titleFor": "Route of connection {{host}}",
   "close": "Close the explanation",
-  "pending": "Asking sing-box…",
   "drift": {
     "title": "sing-box runs a different config",
     "description": "The running sing-box has {{running}} rules, while the applied file has {{document}}. The rule number is not shown: it would point into a file sing-box never read.",

@@ -1,13 +1,31 @@
 import { createRootRoute, createRoute, createRouter, lazyRouteComponent, redirect } from '@tanstack/react-router';
 import { z } from 'zod';
 
+import { getConfigOptions } from '@entities/Config';
 import { parseConnectionSearch } from '@entities/Connection';
+import { getTrafficHistoryOptions } from '@entities/Daemon';
+import { getProxiesOptions, getProxyProvidersOptions } from '@entities/Proxy';
+import { QueryClientInstance } from '@shared/api';
 
 import { preloadNamespaces } from '../lib/i18n';
 import { AppLayout } from '../ui/AppLayout';
 import { ConfigLayout } from '../ui/ConfigLayout';
+import { ErrorPage } from '../ui/ErrorPage';
 import { NotFoundPage } from '../ui/NotFoundPage';
+import { PendingPage } from '../ui/PendingPage';
 import { toPageTransitionTypes } from './Router.transition';
+
+/**
+ * Загрузчик ждёт данные экрана, но отказ не бросает: экран панели обязан
+ * открыться и при лежащем источнике. Запрос остаётся в кэше с ошибкой, и её
+ * показывает блок экрана.
+ */
+function keepFailureForScreen(): undefined {
+  return undefined;
+}
+
+/** Порог скелетона экрана: быстрее этого ответ читается как мгновенный, и скелетон только мигнул бы. */
+const PENDING_MS = 300;
 
 const rootRoute = createRootRoute({ component: AppLayout, notFoundComponent: NotFoundPage });
 
@@ -41,7 +59,11 @@ function parseRuleSearch(search: Record<string, unknown>): { rule?: number } {
  */
 const configLayoutRoute = createRoute({
   getParentRoute: () => rootRoute,
-  loader: async () => preloadNamespaces(['widgets/Config/ConfigTabs']),
+  loader: async () =>
+    Promise.all([
+      preloadNamespaces(['widgets/Config/ConfigTabs']),
+      QueryClientInstance.query(getConfigOptions()).catch(keepFailureForScreen),
+    ]),
   path: '/config',
   component: ConfigLayout,
 });
@@ -83,7 +105,12 @@ const rawConfigRoute = createRoute({
 
 const proxiesRoute = createRoute({
   getParentRoute: () => rootRoute,
-  loader: async () => preloadNamespaces(['pages/Proxies', 'widgets/ProxyGroups']),
+  loader: async () =>
+    Promise.all([
+      preloadNamespaces(['pages/Proxies', 'widgets/ProxyGroups']),
+      QueryClientInstance.query(getProxiesOptions()).catch(keepFailureForScreen),
+      QueryClientInstance.query(getProxyProvidersOptions()).catch(keepFailureForScreen),
+    ]),
   path: '/proxies',
   component: lazyRouteComponent(async () => import('@pages/Proxies'), 'ProxiesPage'),
 });
@@ -99,13 +126,17 @@ const connectionsRoute = createRoute({
 const overviewRoute = createRoute({
   getParentRoute: () => rootRoute,
   loader: async () =>
-    preloadNamespaces([
-      'pages/Overview',
-      'widgets/ConnectionSummary',
-      'widgets/ConnectionHistory',
-      'widgets/Daemon/DaemonService',
-      'widgets/Daemon/DaemonTraffic',
-      'widgets/ProxyLatency',
+    Promise.all([
+      preloadNamespaces([
+        'pages/Overview',
+        'widgets/ConnectionSummary',
+        'widgets/ConnectionHistory',
+        'widgets/Daemon/DaemonService',
+        'widgets/Daemon/DaemonTraffic',
+        'widgets/ProxyLatency',
+      ]),
+      QueryClientInstance.query(getProxiesOptions()).catch(keepFailureForScreen),
+      QueryClientInstance.query(getTrafficHistoryOptions()).catch(keepFailureForScreen),
     ]),
   path: '/overview',
   component: lazyRouteComponent(async () => import('@pages/Overview'), 'OverviewPage'),
@@ -120,6 +151,9 @@ export const Router = createRouter({
     overviewRoute,
   ]),
   defaultViewTransition: { types: toPageTransitionTypes },
+  defaultPendingMs: PENDING_MS,
+  defaultPendingComponent: PendingPage,
+  defaultErrorComponent: ErrorPage,
 });
 
 declare module '@tanstack/react-router' {

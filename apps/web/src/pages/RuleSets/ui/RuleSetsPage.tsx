@@ -6,7 +6,18 @@ import { ConfigDocumentState, ruleSetNodePath } from '@entities/Config';
 import { ConfigCacheNotice } from '@features/Config/ConfigCacheFile';
 import { RuleSetAddForm } from '@features/RuleSet/RuleSetAdd';
 import { cn } from '@shared/lib/utils';
-import { Button, Input, SURFACE } from '@shared/ui';
+import {
+  Button,
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+  Input,
+  QueryFailure,
+  SURFACE,
+  SkeletonRows,
+} from '@shared/ui';
 import { RuleSetTable } from '@widgets/RuleSet/RuleSetTable';
 
 import { useRuleSetEditor, useRuleSetFilter, type RuleSetFilterState } from '../lib/RuleSets.lib';
@@ -36,7 +47,7 @@ export function RuleSetsPage() {
     setAdding(false);
   }, []);
 
-  const empty = editor.sets.length === 0;
+  const loaded = editor.source.isSuccess;
 
   return (
     <div className='flex min-h-0 grow flex-col gap-4 overflow-y-auto px-4 py-5 sm:px-6'>
@@ -45,19 +56,27 @@ export function RuleSetsPage() {
         <span>{t('lead')}</span>
       </p>
 
-      {editor.isPending && <p className='text-sm text-muted-foreground'>{t('pending')}</p>}
+      {editor.source.isPending && <SkeletonRows className={SURFACE} />}
+
+      {editor.source.isLoadingError && <QueryFailure messageKey='source.config' query={editor.source} />}
 
       {editor.needsCache && <ConfigCacheNotice />}
 
-      {empty ? (
-        <section className='flex flex-col gap-4 rounded-xl border border-dashed border-border p-4 sm:p-5'>
-          <div className='flex flex-col gap-1.5'>
-            <h2 className='text-sm font-semibold'>{t('empty.title')}</h2>
-            <p className='max-w-prose text-sm text-pretty text-muted-foreground'>{t('empty.description')}</p>
-          </div>
-          <RuleSetAddForm takenTags={editor.takenTags} outbounds={editor.outbounds} />
-        </section>
-      ) : (
+      {loaded && editor.sets.length === 0 && (
+        <Empty className='items-stretch border text-left'>
+          <EmptyHeader className='items-start'>
+            <EmptyTitle>
+              <h2>{t('empty.title')}</h2>
+            </EmptyTitle>
+            <EmptyDescription className='max-w-prose text-pretty'>{t('empty.description')}</EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent className='max-w-none items-stretch'>
+            <RuleSetAddForm takenTags={editor.takenTags} outbounds={editor.outbounds} />
+          </EmptyContent>
+        </Empty>
+      )}
+
+      {loaded && editor.sets.length > 0 && (
         <>
           <RuleSetTable
             sets={filter.sets}
@@ -114,11 +133,15 @@ function EmptyState({ onReset }: { onReset: () => void }) {
   const { t } = useTranslation('pages/RuleSets');
 
   return (
-    <div className='flex flex-col items-center gap-2'>
-      <p className='text-sm text-muted-foreground'>{t('notFound')}</p>
-      <Button variant='outline' size='sm' onClick={onReset}>
-        {t('resetFilter')}
-      </Button>
-    </div>
+    <Empty>
+      <EmptyHeader>
+        <EmptyTitle>{t('notFound')}</EmptyTitle>
+      </EmptyHeader>
+      <EmptyContent>
+        <Button variant='outline' size='sm' onClick={onReset}>
+          {t('resetFilter')}
+        </Button>
+      </EmptyContent>
+    </Empty>
   );
 }

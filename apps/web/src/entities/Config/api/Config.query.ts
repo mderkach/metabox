@@ -33,7 +33,7 @@ export function getConfigOptions() {
     queryFn: getConfig,
     staleTime: CACHE_TIME.Minute,
     gcTime: CACHE_TIME.Hour,
-    meta: { showError: true, errorMessageKey: 'toast.config.draft.fetchFailed' },
+    meta: { showError: true, errorMessageKey: 'source.config' },
   });
 }
 
@@ -111,7 +111,7 @@ export function getConfigVersionsOptions() {
       decodeResponse(ConfigVersionsSchema, await getConfigVersions(context), 'config versions'),
     staleTime: CACHE_TIME.Second,
     gcTime: CACHE_TIME.Minute,
-    meta: { showError: true, errorMessageKey: 'toast.config.versions.fetchFailed' },
+    meta: { showError: true, errorMessageKey: 'source.versions' },
   });
 }
 

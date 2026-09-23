@@ -57,6 +57,8 @@ export interface OverviewRuntime {
   awaiting: boolean;
   /** Когда пришёл последний кадр трафика, миллисекунды эпохи. */
   sampledAt: number | null;
+  /** Снимка соединений ещё не было: счётчики показывают загрузку, а не ноль. */
+  connectionsAwaiting: boolean;
 }
 
 /**
@@ -76,6 +78,7 @@ export function useOverviewRuntime(): OverviewRuntime {
   const summary = ConnectionState.use.summary();
   const history = ConnectionState.use.history();
   const counts = useConnectionCounts();
+  const connectionsAt = ConnectionState.use.sampledAt();
 
   // Обрыв потока сам о себе не сообщает: кадры просто перестают приходить, и
   // без своего тика экран навсегда остался бы с последним «живым» состоянием.
@@ -116,6 +119,7 @@ export function useOverviewRuntime(): OverviewRuntime {
     live: sampledAt !== null && Math.max(checkedAt, sampledAt) - sampledAt < STALE_AFTER,
     awaiting: sampledAt === null,
     sampledAt,
+    connectionsAwaiting: connectionsAt === null,
   };
 }
 

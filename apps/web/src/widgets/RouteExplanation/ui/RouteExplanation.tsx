@@ -13,7 +13,17 @@ import {
 } from '@entities/Route';
 import { useFocusReturn } from '@shared/lib/useFocusReturn';
 import { cn } from '@shared/lib/utils';
-import { Alert, AlertDescription, AlertTitle, Button, SURFACE, SURFACE_HEAD, buttonVariants } from '@shared/ui';
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+  Button,
+  QueryFailure,
+  SURFACE,
+  SURFACE_HEAD,
+  SkeletonRows,
+  buttonVariants,
+} from '@shared/ui';
 
 import { useRouteExplanationState } from '../lib/RouteExplanation.lib';
 import { RouteOriginBadge } from './RouteOriginBadge';
@@ -72,7 +82,9 @@ export function RouteExplanation({
       </header>
 
       <div className='flex min-h-0 grow flex-col gap-3 overflow-y-auto p-4'>
-        {state.isPending && <p className='text-sm text-muted-foreground'>{t('pending')}</p>}
+        {state.isPending && <SkeletonRows rows={4} className='p-0' />}
+
+        {state.query.isLoadingError && <QueryFailure messageKey='source.route' query={state.query} />}
 
         {state.explanation !== null && (
           <>

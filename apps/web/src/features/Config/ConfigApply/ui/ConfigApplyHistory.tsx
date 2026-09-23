@@ -12,7 +12,12 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  QueryFailure,
   ScrollArea,
+  SkeletonRows,
 } from '@shared/ui';
 
 import { useRestoreConfigVersion } from '../api/ConfigApply.api';
@@ -57,10 +62,16 @@ export function ConfigApplyHistory() {
 
         {check !== null && <ConfigApplyCheck check={check} />}
 
-        {versions.isPending && <p className='text-sm text-muted-foreground'>{t('history.pending')}</p>}
+        {versions.isPending && <SkeletonRows rows={3} className='p-0' />}
+
+        {versions.isLoadingError && <QueryFailure messageKey='source.versions' query={versions} />}
 
         {versions.isSuccess && versions.data.length === 0 && (
-          <p className='text-sm text-muted-foreground'>{t('history.empty')}</p>
+          <Empty>
+            <EmptyHeader>
+              <EmptyDescription>{t('history.empty')}</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         )}
 
         {versions.isSuccess && versions.data.length > 0 && (

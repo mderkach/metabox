@@ -6,7 +6,15 @@ import { TRAFFIC_WINDOW_SECONDS, toTrafficTimes, type TrafficSample } from '@ent
 import { BYTE_STEPS, toMirroredTicks, toTimeTicks, toTimeWindow, toValueScale } from '@shared/lib/chart';
 import { formatRate } from '@shared/lib/format';
 import { useReducedMotion } from '@shared/lib/media';
-import { Plot, type PlotData, type PlotInstance, type PlotOptions, type PlotScales, type PlotTone } from '@shared/ui';
+import {
+  Plot,
+  SkeletonRows,
+  type PlotData,
+  type PlotInstance,
+  type PlotOptions,
+  type PlotScales,
+  type PlotTone,
+} from '@shared/ui';
 
 import { useFollowNow } from '../lib';
 import { FILL_ALPHA, GRID_DASH, HALF_INTERVALS, LINE_WIDTH, TIME_TICK_SECONDS } from '../model';
@@ -94,7 +102,7 @@ export function DaemonTraffic({
   useFollowNow(chart, TRAFFIC_WINDOW_SECONDS, !reducedMotion);
 
   if (sampledAt === null || samples.length < MIN_POINTS) {
-    return <p className='flex h-44 items-center text-xs text-muted-foreground'>{t('pending')}</p>;
+    return <SkeletonRows rows={1} rowClassName='h-44' className='p-0' />;
   }
 
   return (

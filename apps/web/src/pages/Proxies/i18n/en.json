@@ -1,7 +1,6 @@
 {
   "title": "Proxies",
   "subtitle": "these actions change how sing-box runs, not the config",
-  "pending": "Loading the proxies…",
   "groups": {
     "title": "Node groups"
   },

@@ -1,6 +1,5 @@
 {
   "lead": "A set is a ready-made list of domains or addresses that sing-box downloads and refreshes on its own. A routing rule points at it by name.",
-  "pending": "Reading the config from the device…",
   "search": {
     "placeholder": "Name, source or category",
     "label": "Search the sets"

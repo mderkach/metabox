@@ -57,7 +57,6 @@
     "open": "Version history",
     "title": "Config history",
     "description": "The daemon keeps the ten most recent applied versions. A rollback runs the full cycle: a sing-box check, write, restart and the confirmation window.",
-    "pending": "Reading the history…",
     "empty": "The history is empty: the config has never been applied through metabox, so there is nothing to go back to.",
     "version": "No. {{id}}",
     "unknownTime": "save time unknown",

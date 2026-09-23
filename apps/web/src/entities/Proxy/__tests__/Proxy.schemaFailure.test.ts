@@ -30,7 +30,7 @@ describe('схемный отказ', () => {
   });
 
   it('доходит до тоста, а не гаснет внутри запроса', async () => {
-    await expect(QueryClientInstance.fetchQuery(getProxiesOptions())).rejects.toThrow(ApiError);
+    await expect(QueryClientInstance.query(getProxiesOptions())).rejects.toThrow(ApiError);
 
     expect(toast.error).toHaveBeenCalledTimes(1);
   });
@@ -46,7 +46,7 @@ describe('схемный отказ', () => {
       })
     );
 
-    await expect(QueryClientInstance.fetchQuery(getProxiesOptions())).rejects.toMatchObject({
+    await expect(QueryClientInstance.query(getProxiesOptions())).rejects.toMatchObject({
       kind: API_FAILURE.Schema,
     });
 

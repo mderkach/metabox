@@ -19,7 +19,7 @@ export function getRouteExplanationOptions(id: string) {
     },
     staleTime: CACHE_TIME.Second,
     gcTime: CACHE_TIME.Minute,
-    meta: { showError: true, errorMessageKey: 'toast.route.explain.failed' },
+    meta: { showError: true, errorMessageKey: 'source.route' },
   });
 }
 

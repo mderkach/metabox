@@ -8,6 +8,8 @@ const VISIBLE_BEFORE = 5;
 
 export interface RouteExplanationState {
   isPending: boolean;
+  /** Запрос объяснения: отказ — своё состояние панели, а не пустое место под заголовком. */
+  query: ReturnType<typeof useRouteExplanation>;
   explanation: RouteExplanation | null;
   /**
    * Список правил процесса сходится с применённым документом по длине.
@@ -49,6 +51,7 @@ export function useRouteExplanationState(connectionId: string | null): RouteExpl
 
   return {
     isPending: query.isPending && connectionId !== null,
+    query,
     explanation,
     trusted: compared && inDocument === explanation.rules.length,
     inDocument,

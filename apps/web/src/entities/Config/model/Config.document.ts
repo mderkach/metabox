@@ -1,3 +1,4 @@
+import type { UseQueryResult } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
 import { parseConfig, useConfig, type ParsedConfig } from '../api/Config.query';
@@ -26,6 +27,11 @@ function parseDraft(text: string): ParsedConfig {
 
 export interface ConfigDocumentView {
   isPending: boolean;
+  /**
+   * Запрос файла с устройства. Его флаги и есть состояния экрана: отказ здесь
+   * даёт пустой документ, и по пустоте его не отличить от конфига без правил.
+   */
+  query: UseQueryResult<ParsedConfig>;
   /**
    * Документ, который видит пользователь: черновик, а до правок — файл с
    * устройства. Черновик, который схема не приняла, даёт `null` — вместе с ним
@@ -72,6 +78,7 @@ export function useConfigDocument(): ConfigDocumentView {
 
   return {
     isPending: config.isPending,
+    query: config,
     config: shown?.config ?? null,
     text: current ?? applied,
     issues: shown?.issues ?? [],

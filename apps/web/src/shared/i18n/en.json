@@ -8,14 +8,6 @@
         "accepted": "Config accepted, applying"
       }
     },
-    "config": {
-      "draft": {
-        "fetchFailed": "Could not load the config"
-      },
-      "versions": {
-        "fetchFailed": "Could not read the version history"
-      }
-    },
     "connection": {
       "close": {
         "failed": "Could not close the connection"
@@ -31,20 +23,9 @@
       "delay": {
         "failed": "Could not measure the delay"
       },
-      "list": {
-        "fetchFailed": "Could not read the proxy list"
-      },
-      "providers": {
-        "fetchFailed": "Could not read the subscriptions"
-      },
       "select": {
         "failed": "Could not switch the node",
         "done": "Node switched"
-      }
-    },
-    "route": {
-      "explain": {
-        "failed": "Could not explain the route"
       }
     },
     "service": {
@@ -137,5 +118,15 @@
     "config_too_large": "the config is larger than allowed",
     "check_failed": "sing-box rejected the config",
     "internal": "an internal daemon error"
+  },
+  "source": {
+    "retry": "Retry",
+    "retrying": "Retrying",
+    "loading": "Loading",
+    "config": "Could not load the config",
+    "versions": "Could not read the version history",
+    "proxies": "Could not read the proxy list",
+    "providers": "Could not read the subscriptions",
+    "route": "Could not explain the route"
   }
 }

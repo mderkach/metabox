@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
 import { cn } from '@shared/lib/utils';
+import { PENDING_REVEAL, Skeleton } from '@shared/ui';
 
 const PERCENT = 100;
 
@@ -14,8 +15,9 @@ export function OverviewTile({
   chart,
 }: {
   label: string;
-  value: string;
-  context: string;
+  /** `null` — снимок ещё не пришёл: скелетон, а не прочерк или ноль. Прочерк — величины нет вовсе. */
+  value: string | null;
+  context: string | null;
   tone?: string;
   meter?: number;
   /** Ряд под числом: динамика там, где у величины нет потолка. */
@@ -25,10 +27,16 @@ export function OverviewTile({
     <li className='flex flex-col gap-1 bg-card px-4 py-3.5'>
       <dl className='flex flex-col gap-0.5'>
         <dt className='text-xs text-muted-foreground'>{label}</dt>
-        <dd className={cn('text-xl font-semibold tabular-nums', tone)}>{value}</dd>
+        <dd className={cn('text-xl font-semibold tabular-nums', tone)}>
+          {value ?? <Skeleton aria-hidden='true' className={cn('h-7 w-24', PENDING_REVEAL)} />}
+        </dd>
       </dl>
       <div className='flex items-end justify-between gap-2'>
-        <p className='text-xs text-muted-foreground'>{context}</p>
+        {context === null ? (
+          <Skeleton aria-hidden='true' className={cn('h-4 w-32', PENDING_REVEAL)} />
+        ) : (
+          <p className='text-xs text-muted-foreground'>{context}</p>
+        )}
         {chart}
       </div>
       {meter !== undefined && (

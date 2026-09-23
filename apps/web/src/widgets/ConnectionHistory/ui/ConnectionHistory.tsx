@@ -2,7 +2,7 @@ import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { toAreaGeometry } from '@shared/lib/chart';
-import { Card, CardContent, CardHeader, SECTION_LABEL } from '@shared/ui';
+import { Card, CardContent, CardHeader, SECTION_LABEL, SkeletonRows } from '@shared/ui';
 
 /** Координаты в долях области: сетка растягивается по месту, подписи остаются HTML. */
 const PLOT = 100;
@@ -45,7 +45,7 @@ export function ConnectionHistory({ samples }: { samples: number[] }) {
             </div>
 
             {geometry === null ? (
-              <p className='flex h-32 min-w-0 grow items-center text-xs text-muted-foreground'>{t('pending')}</p>
+              <SkeletonRows rows={1} rowClassName='h-32' className='min-w-0 grow p-0' />
             ) : (
               <svg
                 viewBox={`0 0 ${String(PLOT)} ${String(PLOT)}`}

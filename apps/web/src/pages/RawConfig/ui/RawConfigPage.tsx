@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
 import { ConfigDocumentState, useConfigDocument } from '@entities/Config';
-import { Alert, AlertDescription, AlertTitle } from '@shared/ui';
+import { Alert, AlertDescription, AlertTitle, QueryFailure, SURFACE, SkeletonRows } from '@shared/ui';
 import { ConfigRawEditor } from '@widgets/Config/ConfigRawEditor';
 
 /**
@@ -17,7 +17,9 @@ export function RawConfigPage() {
 
   return (
     <div className='flex min-h-0 grow flex-col gap-4 px-4 py-5 sm:px-6'>
-      {raw.isPending && <p className='text-sm text-muted-foreground'>{t('pending')}</p>}
+      {raw.query.isPending && <SkeletonRows className={SURFACE} />}
+
+      {raw.query.isLoadingError && <QueryFailure messageKey='source.config' query={raw.query} />}
 
       {raw.notParsed && (
         <Alert>
