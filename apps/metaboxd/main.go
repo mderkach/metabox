@@ -26,6 +26,7 @@ import (
 	"metabox/internal/httpapi"
 	"metabox/internal/procd"
 	"metabox/internal/route"
+	"metabox/internal/ruleset"
 	"metabox/internal/singbox"
 	"metabox/internal/version"
 	"metabox/internal/webui"
@@ -57,6 +58,12 @@ const (
 	historyStepSeconds = 10
 	historyTrafficStep = historyStepSeconds
 	historyPoints      = 6 * int(time.Hour/time.Second) / historyStepSeconds
+
+	// Каталог наборов: потолок на запрос дерева к GitHub и пауза перед
+	// повтором неудачной сверки — на старте роутера сеть и часы поднимаются
+	// позже демона.
+	ruleSetRequestTimeout = 30 * time.Second
+	ruleSetRetryInterval  = time.Hour
 )
 
 // settings — то, что демон получает флагами. Значения по умолчанию
@@ -74,6 +81,7 @@ type settings struct {
 	clashPort     int
 	confirmWindow time.Duration
 	cycleTimeout  time.Duration
+	ruleSetPeriod time.Duration
 	logLevel      slog.Level
 }
 
@@ -98,6 +106,8 @@ func main() {
 		"сколько ждать подтверждения связи до автоотката")
 	flag.DurationVar(&s.cycleTimeout, "cycle-timeout", 2*time.Minute,
 		"потолок на шаги применения от бэкапа до healthcheck")
+	flag.DurationVar(&s.ruleSetPeriod, "rule-set-refresh", 24*time.Hour,
+		"как часто сверять каталог наборов с поставщиками; 0 — без сверки: каталог из кэша или встроенного снимка")
 
 	s.logLevel = slog.LevelInfo
 	flag.TextVar(&s.logLevel, "log-level", slog.LevelInfo, "уровень логов: debug, info, warn, error")
@@ -195,6 +205,16 @@ func run(log *slog.Logger, s settings) error {
 	hits.Start()
 	defer hits.Close()
 
+	github := ruleset.NewGitHub(ruleset.GitHubAPI, "metaboxd/"+version.Version, ruleSetRequestTimeout)
+
+	ruleSets, err := ruleset.NewUpdater(ctx, github, store, log, s.ruleSetPeriod, ruleSetRetryInterval)
+	if err != nil {
+		return fmt.Errorf("каталог наборов: %w", err)
+	}
+
+	ruleSets.Start()
+	defer ruleSets.Close()
+
 	api := httpapi.NewServer(manager, store, log, httpapi.Options{
 		Version:        version.Version,
 		SingboxVersion: singboxVersion,
@@ -207,6 +227,7 @@ func run(log *slog.Logger, s settings) error {
 		Explain:        route.NewExplainer(source),
 		Hits:           hits,
 		History:        historyOf(traffic, deviceHistory, connectionSizes),
+		RuleSets:       ruleSets,
 		Runtime:        sysinfo.Alive,
 		ConfigPath:     store.Path(),
 	})

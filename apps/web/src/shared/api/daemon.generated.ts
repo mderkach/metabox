@@ -59,6 +59,16 @@ export const ROUTE_REASON_CODE = [
   'not_in_process_list',
 ] as const
 
+export const LIST_KIND = [
+  'geosite',
+  'geoip',
+] as const
+
+export const LIST_SOURCE = [
+  'snapshot',
+  'provider',
+] as const
+
 /** Health — ответ `GET /healthz`. */
 export const HealthSchema = z.object({
   status: z.string(),
@@ -347,6 +357,42 @@ export const HitsSchema = z.object({
   final: z.int(),
 })
 
+/** Mirror — адрес, по которому sing-box качает файлы набора. До основного адреса из России дотягиваются не всегда, поэтому зеркал несколько. */
+export const MirrorSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  /** Base — начало адреса до имени файла, со слэшем на конце. */
+  base: z.string(),
+})
+
+/** List — один вид списков у поставщика. */
+export const ListSchema = z.object({
+  kind: z.string(),
+  /** Prefix — приставка имени файла: `geosite-` + категория + `.srs`. */
+  prefix: z.string(),
+  mirrors: z.array(MirrorSchema),
+  /** Featured — что показать, пока поле категории пустое, в порядке от общего к частному. */
+  featured: z.array(z.string()),
+  /** Categories — все категории, для которых у поставщика есть файл `.srs`, по алфавиту. */
+  categories: z.array(z.string()),
+  source: z.string(),
+  /** UpdatedAt — когда перечень последний раз сверен с поставщиком, а у снимка — когда снимок собран; секунды Unix. Справочная величина: у роутера нет часов реального времени, но сверка идёт по TLS, а он без синхронизованных часов не пройдёт. */
+  updated_at: z.int(),
+})
+
+/** Provider — поставщик готовых наборов. */
+export const ProviderSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  lists: z.array(ListSchema),
+})
+
+/** Catalog — ответ ручки каталога. */
+export const CatalogSchema = z.object({
+  providers: z.array(ProviderSchema),
+})
+
+export type CatalogWire = z.infer<typeof CatalogSchema>
 export type ChainWire = z.infer<typeof ChainSchema>
 export type CheckDetailsWire = z.infer<typeof CheckDetailsSchema>
 export type ConnectionWire = z.infer<typeof ConnectionSchema>
@@ -360,11 +406,14 @@ export type HealthWire = z.infer<typeof HealthSchema>
 export type HistoryWire = z.infer<typeof HistorySchema>
 export type HitsWire = z.infer<typeof HitsSchema>
 export type LinkWire = z.infer<typeof LinkSchema>
+export type ListWire = z.infer<typeof ListSchema>
 export type LoadWire = z.infer<typeof LoadSchema>
 export type MatchWire = z.infer<typeof MatchSchema>
 export type MemoryWire = z.infer<typeof MemorySchema>
+export type MirrorWire = z.infer<typeof MirrorSchema>
 export type PointWire = z.infer<typeof PointSchema>
 export type ProcessWire = z.infer<typeof ProcessSchema>
+export type ProviderWire = z.infer<typeof ProviderSchema>
 export type RuleHitsWire = z.infer<typeof RuleHitsSchema>
 export type RuleWire = z.infer<typeof RuleSchema>
 export type RuntimeWire = z.infer<typeof RuntimeSchema>

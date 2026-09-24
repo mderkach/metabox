@@ -37,13 +37,15 @@ var (
 // Имена служебных файлов в каталоге демона. Они не настраиваются: каталог
 // задаётся флагом, а раскладка внутри него — забота самого демона.
 const (
-	backupName = "config.backup"
-	stateName  = "apply.json"
+	backupName   = "config.backup"
+	stateName    = "apply.json"
+	ruleSetsName = "rule-sets.json"
 )
 
-// Store — единственный владелец файла конфига, его бэкапа и состояния
-// транзакции. Один владелец на все три файла требует Architecture&Style:
-// параллельный доступ закрыт методами, снаружи мьютекса быть не должно.
+// Store — единственный владелец файла конфига и служебного каталога демона:
+// бэкапа, состояния транзакции, истории версий и кэша каталога наборов. Один
+// владелец требует Architecture&Style: параллельный доступ закрыт методами,
+// снаружи мьютекса быть не должно.
 type Store struct {
 	mu         sync.Mutex
 	dir        string
@@ -394,4 +396,53 @@ func (s *Store) ClearState(ctx context.Context) error {
 	}
 
 	return syncDir(root)
+}
+
+// ReadRuleSets отдаёт сохранённый каталог наборов. Отсутствие файла или
+// служебного каталога — ошибка, для которой errors.Is(err, fs.ErrNotExist):
+// демон ещё не сверялся с поставщиками.
+func (s *Store) ReadRuleSets(ctx context.Context) ([]byte, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	root, err := openRoot(s.serviceDir)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = root.Close() }()
+
+	data, err := root.ReadFile(ruleSetsName)
+	if err != nil {
+		return nil, fmt.Errorf("чтение каталога наборов в %s: %w", s.serviceDir, err)
+	}
+
+	return data, nil
+}
+
+// WriteRuleSets сохраняет каталог наборов атомарно. Служебный каталог
+// создаётся, если его ещё нет: сверка может случиться раньше первого
+// применения.
+func (s *Store) WriteRuleSets(ctx context.Context, data []byte) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if err := os.MkdirAll(s.serviceDir, secureDirPerm); err != nil {
+		return fmt.Errorf("создание служебного каталога %s: %w", s.serviceDir, err)
+	}
+
+	root, err := openRoot(s.serviceDir)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = root.Close() }()
+
+	return writeAtomic(root, ruleSetsName, data, securePerm)
 }

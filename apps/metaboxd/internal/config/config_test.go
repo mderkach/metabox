@@ -484,3 +484,40 @@ func TestCancelledContext(t *testing.T) {
 		t.Errorf("конфиг стал %q при отменённом контексте", got)
 	}
 }
+
+func TestRuleSetsRoundTrip(t *testing.T) {
+	root := t.TempDir()
+	stateDir := filepath.Join(root, "metabox")
+
+	store, err := config.NewStore(filepath.Join(root, "sing-box"), configName, stateDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := store.ReadRuleSets(t.Context()); !errors.Is(err, fs.ErrNotExist) {
+		t.Fatalf("каталога ещё нет, а чтение дало %v", err)
+	}
+
+	want := []byte(`{"lists":{}}`)
+	if err := store.WriteRuleSets(t.Context(), want); err != nil {
+		t.Fatalf("запись без служебного каталога: %v", err)
+	}
+
+	got, err := store.ReadRuleSets(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !bytes.Equal(got, want) {
+		t.Errorf("прочитали %s, записали %s", got, want)
+	}
+
+	info, err := os.Stat(filepath.Join(stateDir, "rule-sets.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if info.Mode().Perm() != 0o600 {
+		t.Errorf("права %v, ожидали 0600", info.Mode().Perm())
+	}
+}

@@ -6,7 +6,7 @@ LDFLAGS    := -s -w -X metabox/internal/version.Version=$(VERSION)
 # Прижимает версию вниз: директива `go` в go.mod поднимает, но не опускает.
 export GOTOOLCHAIN := go$(shell cat .go-version)
 
-.PHONY: all schema schema-daemon web embed daemon daemon-device daemon-target dev dev-mock dev-mock-missing test test-schemagen lint hooks clean up up-dev down sh target-sh apply-check reach-check package stand-base stand-reset
+.PHONY: all schema schema-daemon rule-set-snapshot web embed daemon daemon-device daemon-target dev dev-mock dev-mock-missing test test-schemagen lint hooks clean up up-dev down sh target-sh apply-check reach-check package stand-base stand-reset
 
 all: daemon
 
@@ -29,6 +29,11 @@ schema-daemon:
 	cd apps/metaboxd && go run ./cmd/contractgen \
 		-root . \
 		-out ../../apps/web/src/shared/api/daemon.generated.ts
+
+# Снимок каталога наборов, встроенный в бинарь: с ним демон стартует, пока не
+# сверился с поставщиками сам. Ходит в GitHub API, поэтому в сборку не входит.
+rule-set-snapshot:
+	cd apps/metaboxd && go run ./cmd/rulesetsnap -out internal/ruleset/snapshot.json
 
 web:
 	pnpm --filter web build

@@ -30,6 +30,7 @@ var roots = []rootType{
 	{pkg: "internal/events", name: "Event"},
 	{pkg: "internal/route", name: "Explanation"},
 	{pkg: "internal/route", name: "Hits"},
+	{pkg: "internal/ruleset", name: "Catalog"},
 }
 
 func main() {

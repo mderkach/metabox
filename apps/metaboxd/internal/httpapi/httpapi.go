@@ -17,6 +17,7 @@ import (
 	"metabox/internal/contract"
 	"metabox/internal/history"
 	"metabox/internal/route"
+	"metabox/internal/ruleset"
 	"metabox/internal/singbox"
 )
 
@@ -93,6 +94,9 @@ type Options struct {
 	// History отдаёт историю трафика, накопленную демоном. nil означает, что
 	// её никто не копит: график глубже минуты не показывается.
 	History HistoryReader
+	// RuleSets отдаёт каталог готовых наборов. nil означает, что каталога нет:
+	// форма подключения набора остаётся со своим адресом.
+	RuleSets RuleSetsReader
 	// Runtime сообщает, работает ли на устройстве процесс sing-box. nil
 	// означает, что наблюдать нечем: состояние службы тогда читается только у
 	// procd, и чужой процесс панель не увидит.
@@ -120,6 +124,12 @@ type HistoryReader interface {
 	Step() int
 }
 
+// RuleSetsReader отдаёт каталог готовых наборов. Интерфейс объявлен здесь, у
+// потребителя.
+type RuleSetsReader interface {
+	Catalog() ruleset.Catalog
+}
+
 // RuntimeObserver сообщает, работает ли на устройстве процесс sing-box.
 // Интерфейс объявлен здесь, у потребителя.
 type RuntimeObserver func(ctx context.Context) bool
@@ -140,6 +150,7 @@ type Server struct {
 	explain        Explainer
 	hits           HitsReader
 	history        HistoryReader
+	ruleSets       RuleSetsReader
 	runtime        RuntimeObserver
 	configPath     string
 	handler        http.Handler
@@ -163,6 +174,7 @@ func NewServer(applier Applier, reader ConfigReader, log *slog.Logger, opts Opti
 		explain:        opts.Explain,
 		hits:           opts.Hits,
 		history:        opts.History,
+		ruleSets:       opts.RuleSets,
 		runtime:        opts.Runtime,
 		configPath:     opts.ConfigPath,
 	}
@@ -199,6 +211,10 @@ func (s *Server) routes() http.Handler {
 
 	if s.history != nil {
 		mux.HandleFunc("GET /api/history", s.handleHistory)
+	}
+
+	if s.ruleSets != nil {
+		mux.HandleFunc("GET /api/rule-sets/catalog", s.handleRuleSets)
 	}
 
 	if s.service != nil {
@@ -429,6 +445,10 @@ func (s *Server) handleHits(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(s.log, w, http.StatusOK, hits)
+}
+
+func (s *Server) handleRuleSets(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(s.log, w, http.StatusOK, s.ruleSets.Catalog())
 }
 
 // ServiceState приводит состояние службы к форме ответа. Экспортируется,
