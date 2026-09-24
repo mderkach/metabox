@@ -8,6 +8,8 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { CONFIG_ENDPOINT, ConfigDocumentState } from '@entities/Config';
 import { DAEMON_ENDPOINT } from '@entities/Daemon';
 import { DAEMON_STATUS_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture';
+import { RULE_SET_ENDPOINT } from '@entities/RuleSet';
+import { ruleSetHandlers } from '@entities/RuleSet/__tests__/RuleSet.handlers';
 
 import { RuleSetsPage } from '../ui/RuleSetsPage';
 
@@ -50,7 +52,8 @@ describe('экран сетов', () => {
       http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(CONFIG)),
       // Шапка экрана открывает историю версий, а бар применения опрашивает демона.
       http.get(CONFIG_ENDPOINT.versions(), () => HttpResponse.json({ versions: [] })),
-      http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE))
+      http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE)),
+      ...ruleSetHandlers
     );
   });
 
@@ -64,6 +67,29 @@ describe('экран сетов', () => {
         .getAllByRole('columnheader')
         .map((cell) => cell.textContent)
     ).toEqual(['Сет', 'Источник', 'Использование', 'Действия над строкой']);
+  });
+
+  it('называет поставщика и вид списка по каталогу демона', async () => {
+    renderWithRouter(RuleSetsPage);
+
+    const table = await screen.findByRole('table', { name: 'Подключённые сеты' });
+    const rows = within(table).getAllByRole('row').slice(HEADER_ROWS);
+
+    expect(rows[0]).toHaveTextContent('v2fly·geosite·google');
+    expect(rows[1]).toHaveTextContent('v2fly·geoip·ru');
+  });
+
+  // Каталог нужен подсказкам и подписям, а не самому списку: без него наборы
+  // видны и удаляются.
+  it('при отказе каталога показывает список и говорит об отказе', async () => {
+    server.use(http.get(RULE_SET_ENDPOINT.catalog(), () => HttpResponse.json({}, { status: 500 })));
+
+    renderWithRouter(RuleSetsPage);
+
+    const table = await screen.findByRole('table', { name: 'Подключённые сеты' });
+
+    expect(within(table).getAllByRole('row')).toHaveLength(HEADER_ROWS + 2);
+    expect(screen.getByText('Не удалось получить каталог наборов')).toBeInTheDocument();
   });
 
   // Сырое `24h` из конфига владелец роутера читать не обязан.

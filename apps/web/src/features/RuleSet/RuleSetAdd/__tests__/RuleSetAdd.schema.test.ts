@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
+import { toRuleSetCatalog } from '@entities/RuleSet';
+import { RULE_SET_CATALOG_FIXTURE } from '@entities/RuleSet/__tests__/RuleSet.fixture';
+
 import { RULE_SET_ADD_ERROR } from '../model/RuleSetAdd.constants';
 import { makeRuleSetAddSchema, ruleSetAddDefaults, toRuleSetPatch } from '../model/RuleSetAdd.schema';
 
@@ -8,7 +11,13 @@ const GEOSITE_GOOGLE = 'https://raw.githubusercontent.com/SagerNet/sing-geosite/
 const OUTBOUNDS = ['direct', 'proxy'];
 
 function filled(overrides: Partial<ReturnType<typeof ruleSetAddDefaults>> = {}) {
-  return { ...ruleSetAddDefaults(), category: 'google', url: GEOSITE_GOOGLE, tag: 'geosite-google', ...overrides };
+  return {
+    ...ruleSetAddDefaults(toRuleSetCatalog(RULE_SET_CATALOG_FIXTURE)),
+    category: 'google',
+    url: GEOSITE_GOOGLE,
+    tag: 'geosite-google',
+    ...overrides,
+  };
 }
 
 describe('makeRuleSetAddSchema', () => {

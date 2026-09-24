@@ -8,6 +8,7 @@ export * from './shadcn/dialog';
 export * from './shadcn/empty';
 export * from './shadcn/field';
 export * from './shadcn/input';
+export * from './shadcn/input-group';
 export * from './shadcn/label';
 export * from './shadcn/popover';
 export * from './shadcn/scroll-area';

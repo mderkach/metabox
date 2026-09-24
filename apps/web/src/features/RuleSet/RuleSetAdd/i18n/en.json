@@ -3,8 +3,11 @@
     "category": {
       "label": "Category",
       "placeholder": "ru-blocked, for example",
-      "hint": "The list is a snapshot of the provider's catalog. No matching category — type its name and the address builds itself.",
-      "offCatalog": "This category is not in the metabox catalog. If the provider has no such file, sing-box will not start when the config is applied."
+      "hint": "No matching suggestion — type the category name and the address builds itself.",
+      "offCatalog": "This category is not in the provider's list. If the provider has no such file, sing-box will not start when the config is applied.",
+      "checked": "The list was checked against the provider on {{date}}.",
+      "snapshot": "The list comes from the panel build of {{date}} and has not been checked against the provider yet.",
+      "undated": "The list date is unknown."
     },
     "mirror": {
       "label": "Mirror"
@@ -31,6 +34,9 @@
       "label": "Download through",
       "placeholder": "outbound tag",
       "hint": "Empty — straight out. Useful when the source is out of reach without a proxy."
+    },
+    "kind": {
+      "label": "List contents"
     }
   },
   "format": {
@@ -50,5 +56,9 @@
     "formatRequired": "pick the file format",
     "intervalFormat": "a duration looks like 12h, 3d or 1h30m",
     "detourUnknown": "no outbound in the config goes by that name"
+  },
+  "kind": {
+    "geosite": "Domains",
+    "geoip": "IP addresses"
   }
 }

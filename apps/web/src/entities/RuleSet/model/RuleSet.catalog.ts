@@ -1,75 +1,78 @@
-import SNAPSHOT from './RuleSet.categories.generated.json';
-import { RULE_SET_PROVIDERS, SET_EXTENSION } from './RuleSet.constants';
-import type { RuleSetProvider, RuleSetSource } from './RuleSet.model';
+import { SET_EXTENSION } from './RuleSet.constants';
+import type { RuleSetCatalog, RuleSetList, RuleSetProvider, RuleSetSource } from './RuleSet.model';
 
-const CATEGORIES: Readonly<Record<string, readonly string[] | undefined>> = SNAPSHOT;
-
-const categorySets = new Map<string, ReadonlySet<string>>();
-
-/** Все категории поставщика из снимка каталога. */
-function categoriesOf(provider: RuleSetProvider): readonly string[] {
-  return CATEGORIES[provider.id] ?? [];
-}
-
-/** Есть ли у поставщика файл с таким именем — по снимку каталога. */
-export function isCatalogCategory(provider: RuleSetProvider, category: string): boolean {
-  let known = categorySets.get(provider.id);
-
-  if (known === undefined) {
-    known = new Set(categoriesOf(provider));
-    categorySets.set(provider.id, known);
-  }
-
-  return known.has(category);
-}
+const UNKNOWN_SOURCE: RuleSetSource = { providerId: null, providerName: null, kind: null, category: null };
 
 /** Поставщик по идентификатору; `null` — такого в каталоге нет. */
-export function findProvider(id: string | null): RuleSetProvider | null {
+export function findProvider(catalog: RuleSetCatalog, id: string | null): RuleSetProvider | null {
   if (id === null) {
     return null;
   }
 
-  return RULE_SET_PROVIDERS.find((provider) => provider.id === id) ?? null;
-}
-
-/** Собирает адрес набора по шаблону поставщика. */
-export function buildRuleSetURL(provider: RuleSetProvider, mirrorId: string, category: string): string {
-  const mirror = provider.mirrors.find((item) => item.id === mirrorId) ?? provider.mirrors[0];
-
-  return `${mirror.base}${provider.prefix}${category}${SET_EXTENSION.Binary}`;
-}
-
-/** Тег, который панель предлагает для категории: имя файла без расширения. */
-export function suggestTag(provider: RuleSetProvider, category: string): string {
-  return category === '' ? '' : `${provider.prefix}${category}`;
+  return catalog.providers.find((provider) => provider.id === id) ?? null;
 }
 
 /**
- * Узнаёт в адресе поставщика и категорию. Узнать удаётся не всегда: адрес мог
- * быть вписан руками, и выдавать его за известный источник нельзя — по
- * поставщику пользователь судит, чьему списку доверяет маршрут.
+ * Список поставщика нужного вида; `null` — такого у поставщика нет. Вид
+ * принимается строкой: он приходит из поля формы, а не из каталога.
  */
-export function describeURL(url: string): RuleSetSource {
-  for (const provider of RULE_SET_PROVIDERS) {
-    for (const mirror of provider.mirrors) {
-      if (!url.startsWith(mirror.base)) {
+export function findList(catalog: RuleSetCatalog, providerId: string | null, kind: string): RuleSetList | null {
+  return findProvider(catalog, providerId)?.lists.find((list) => list.kind === kind) ?? null;
+}
+
+/** Собирает адрес набора по шаблону списка. */
+export function buildRuleSetURL(list: RuleSetList, mirrorId: string, category: string): string {
+  const mirror = list.mirrors.find((item) => item.id === mirrorId) ?? list.mirrors.at(0);
+
+  return mirror === undefined ? '' : `${mirror.base}${list.prefix}${category}${SET_EXTENSION.Binary}`;
+}
+
+/** Тег, который панель предлагает для категории: имя файла без расширения. */
+export function suggestTag(list: RuleSetList, category: string): string {
+  return category === '' ? '' : `${list.prefix}${category}`;
+}
+
+/**
+ * Узнаёт в адресе поставщика, вид списка и категорию. Узнать удаётся не
+ * всегда: адрес мог быть вписан руками, и выдавать его за известный источник
+ * нельзя — по поставщику пользователь судит, чьему списку доверяет маршрут.
+ */
+export function describeURL(catalog: RuleSetCatalog, url: string): RuleSetSource {
+  for (const provider of catalog.providers) {
+    for (const list of provider.lists) {
+      const mirror = list.mirrors.find((item) => url.startsWith(item.base));
+
+      if (mirror === undefined) {
         continue;
       }
 
       const file = url.slice(mirror.base.length);
-
-      if (!file.startsWith(provider.prefix) || !file.endsWith(SET_EXTENSION.Binary)) {
-        return { providerId: provider.id, category: null };
-      }
+      const known = file.startsWith(list.prefix) && file.endsWith(SET_EXTENSION.Binary);
 
       return {
         providerId: provider.id,
-        category: file.slice(provider.prefix.length, -SET_EXTENSION.Binary.length),
+        providerName: provider.name,
+        kind: list.kind,
+        category: known ? file.slice(list.prefix.length, -SET_EXTENSION.Binary.length) : null,
       };
     }
   }
 
-  return { providerId: null, category: null };
+  return UNKNOWN_SOURCE;
+}
+
+const categorySets = new WeakMap<RuleSetList, ReadonlySet<string>>();
+
+/** Есть ли у поставщика файл с таким именем — по перечню, который сверяет демон. */
+export function isCatalogCategory(list: RuleSetList, category: string): boolean {
+  let known = categorySets.get(list);
+
+  if (known === undefined) {
+    known = new Set(list.categories);
+    categorySets.set(list, known);
+  }
+
+  return known.has(category);
 }
 
 /**
@@ -78,17 +81,17 @@ export function describeURL(url: string): RuleSetSource {
  * Совпавшие с начала идут первыми: набравший «goog» ищет `google`, а не
  * `category-google-cn`.
  */
-export function filterCategories(provider: RuleSetProvider, query: string): string[] {
+export function filterCategories(list: RuleSetList, query: string): string[] {
   const needle = query.trim().toLowerCase();
 
   if (needle === '') {
-    return [...provider.featured];
+    return [...list.featured];
   }
 
   const starts: string[] = [];
   const contains: string[] = [];
 
-  for (const category of categoriesOf(provider)) {
+  for (const category of list.categories) {
     if (category.startsWith(needle)) {
       starts.push(category);
       continue;

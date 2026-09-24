@@ -9,15 +9,22 @@ import { ConfigDocumentState, RULE_SETS_PATH } from '@entities/Config';
 import {
   defaultFormatOf,
   filterCategories,
+  findList,
   findProvider,
   isCatalogCategory,
-  RULE_SET_PROVIDERS,
+  RULE_SET_LIST_SOURCE,
+  type RuleSetCatalog,
+  type RuleSetList,
 } from '@entities/RuleSet';
+import { formatDate } from '@shared/lib/format';
 import { matchesWords, toQueryWords } from '@shared/lib/search';
 import { cn } from '@shared/lib/utils';
 import {
   Autocomplete,
   Button,
+  FACET_ACTIVE,
+  FACET_CLASS,
+  FACET_IDLE,
   Input,
   Label,
   Select,
@@ -25,6 +32,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  ToggleGroup,
+  ToggleGroupItem,
 } from '@shared/ui';
 
 import {
@@ -45,16 +54,20 @@ import {
 /**
  * Подключение готового набора.
  *
- * Якорь формы — собранный адрес: поставщик, зеркало и категория это лишь
- * способ его собрать, а в конфиг уходит он сам. Поэтому адрес показан целиком
- * и правится руками: вписанный адрес переводит форму в «свой источник», и
- * ни одна категория не оказывается недостижимой.
+ * Якорь формы — собранный адрес: поставщик, вид списка, зеркало и категория
+ * это лишь способ его собрать, а в конфиг уходит он сам. Поэтому адрес показан
+ * целиком и правится руками: вписанный адрес переводит форму в «свой
+ * источник», и ни одна категория не оказывается недостижимой.
+ *
+ * Каталог приходит от демона: он сверяет перечни с поставщиками сам.
  */
 export function RuleSetAddForm({
+  catalog,
   takenTags,
   outbounds,
   onDone,
 }: {
+  catalog: RuleSetCatalog;
   takenTags: readonly string[];
   /** Теги аутбаундов документа; пустой список — конфиг не разобран. */
   outbounds: readonly string[];
@@ -68,14 +81,14 @@ export function RuleSetAddForm({
   const [added, setAdded] = useState<string | null>(null);
 
   const form = useForm<RuleSetAddModel>({
-    defaultValues: ruleSetAddDefaults(),
+    defaultValues: ruleSetAddDefaults(catalog),
     mode: 'onTouched',
     resolver: zodResolver(makeRuleSetAddSchema(takenTags, outbounds)),
   });
 
   const onSubmit = form.handleSubmit((data) => {
     insert([...RULE_SETS_PATH, count], toRuleSetPatch(data));
-    form.reset(ruleSetAddDefaults());
+    form.reset(ruleSetAddDefaults(catalog));
     setAdded(data.tag);
     onDone?.();
   });
@@ -88,9 +101,10 @@ export function RuleSetAddForm({
           void onSubmit(event);
         }}
       >
-        <ProviderField />
-        <CategoryField />
-        <AddressField />
+        <ProviderField catalog={catalog} />
+        <KindField catalog={catalog} />
+        <CategoryField catalog={catalog} />
+        <AddressField catalog={catalog} />
         <TagField />
         <FormatField />
         <ExtraFields outbounds={outbounds} />
@@ -115,10 +129,39 @@ export function RuleSetAddForm({
   );
 }
 
+/** Выбранный в форме список каталога; `null` — свой адрес или такого вида у поставщика нет. */
+function useSelectedList(catalog: RuleSetCatalog): RuleSetList | null {
+  const { control } = useFormContext<RuleSetAddModel>();
+  const providerId = useWatch({ control, name: 'providerId' });
+  const kind = useWatch({ control, name: 'kind' });
+
+  return findList(catalog, providerId, kind);
+}
+
+/**
+ * Пересобирает адрес и имя под выбранные поставщика и вид списка. Зеркало
+ * сохраняется, если у нового списка оно есть, иначе берётся первое.
+ */
+function useRecompose(catalog: RuleSetCatalog) {
+  const { setValue, getValues } = useFormContext<RuleSetAddModel>();
+
+  return (providerId: string, kind: string) => {
+    const list = findList(catalog, providerId, kind);
+    const mirrorId = getValues('mirrorId');
+    const nextMirror = list?.mirrors.find((mirror) => mirror.id === mirrorId)?.id ?? list?.mirrors.at(0)?.id ?? '';
+    const category = getValues('category');
+
+    setValue('mirrorId', nextMirror);
+    setValue('url', composeRuleSetURL(list, nextMirror, category));
+    setValue('tag', composeRuleSetTag(list, category));
+  };
+}
+
 /** Источник: поставщик из каталога или свой адрес. */
-function ProviderField() {
+function ProviderField({ catalog }: { catalog: RuleSetCatalog }) {
   const { t } = useTranslation('features/RuleSet/RuleSetAdd');
   const { control, setValue, getValues } = useFormContext<RuleSetAddModel>();
+  const recompose = useRecompose(catalog);
   const id = useId();
 
   return (
@@ -130,7 +173,7 @@ function ProviderField() {
           <Label htmlFor={id}>{t('ruleSet.source', { ns: 'shared' })}</Label>
           <Select
             items={[
-              ...RULE_SET_PROVIDERS.map((provider) => ({ value: provider.id, label: provider.name })),
+              ...catalog.providers.map((provider) => ({ value: provider.id, label: provider.name })),
               { value: CUSTOM_PROVIDER, label: t('ruleSet.ownSource', { ns: 'shared' }) },
             ]}
             value={field.value}
@@ -138,20 +181,20 @@ function ProviderField() {
               const next = value ?? CUSTOM_PROVIDER;
               field.onChange(next);
 
-              const provider = findProvider(next);
-              const mirrorId = provider === null ? '' : provider.mirrors[0].id;
-              setValue('mirrorId', mirrorId);
-
-              const category = getValues('category');
-              setValue('url', composeRuleSetURL(next, mirrorId, category));
-              setValue('tag', composeRuleSetTag(next, category));
+              // Вид списка переносится, если он есть у нового поставщика:
+              // сменивший источник обычно ищет ту же категорию у другого.
+              const lists = findProvider(catalog, next)?.lists ?? [];
+              const kind = getValues('kind');
+              const nextKind = lists.some((list) => list.kind === kind) ? kind : (lists.at(0)?.kind ?? kind);
+              setValue('kind', nextKind);
+              recompose(next, nextKind);
             }}
           >
             <SelectTrigger id={id}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {RULE_SET_PROVIDERS.map((provider) => (
+              {catalog.providers.map((provider) => (
                 <SelectItem key={provider.id} value={provider.id}>
                   {provider.name}
                 </SelectItem>
@@ -166,29 +209,87 @@ function ProviderField() {
 }
 
 /**
- * Категория у поставщика. Подсказки берутся из снимка каталога, но имя,
- * которого в нём нет, вводится тем же полем и собирается в адрес тем же
- * шаблоном: снимок стареет, а поставщик добавляет категории.
+ * Вид списка: домены или адреса. Отдельно от поставщика, потому что это два
+ * разных вопроса — чьему списку доверять и что в нём искать.
  */
-function CategoryField() {
+function KindField({ catalog }: { catalog: RuleSetCatalog }) {
   const { t } = useTranslation('features/RuleSet/RuleSetAdd');
-  const { control, setValue, getValues } = useFormContext<RuleSetAddModel>();
+  const { control } = useFormContext<RuleSetAddModel>();
   const providerId = useWatch({ control, name: 'providerId' });
-  const category = useWatch({ control, name: 'category' });
-  const id = useId();
-  const hintId = useId();
-  const provider = findProvider(providerId);
+  const recompose = useRecompose(catalog);
+  const labelId = useId();
+  const lists = findProvider(catalog, providerId)?.lists ?? [];
 
-  if (provider === null) {
+  if (lists.length === 0) {
     return null;
   }
 
-  const suggestions = filterCategories(provider, category).slice(0, SUGGESTION_LIMIT);
+  return (
+    <Controller
+      control={control}
+      name='kind'
+      render={({ field }) => (
+        <div className='flex flex-col gap-1.5'>
+          <span id={labelId} className='text-sm leading-none font-medium'>
+            {t('field.kind.label')}
+          </span>
+          <ToggleGroup
+            aria-labelledby={labelId}
+            spacing={1.5}
+            value={[field.value]}
+            onValueChange={(value) => {
+              const next = lists.find((list) => list.kind === value[0])?.kind;
+
+              // Повторное нажатие на отмеченный вид снимает его, а без вида
+              // адрес не собрать.
+              if (next === undefined) {
+                return;
+              }
+
+              field.onChange(next);
+              recompose(providerId, next);
+            }}
+            className='w-fit'
+          >
+            {lists.map((list) => (
+              <ToggleGroupItem
+                key={list.kind}
+                value={list.kind}
+                className={cn(FACET_CLASS, field.value === list.kind ? FACET_ACTIVE : FACET_IDLE)}
+              >
+                {t(`kind.${list.kind}`)}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        </div>
+      )}
+    />
+  );
+}
+
+/**
+ * Категория у поставщика. Подсказки берутся из перечня, который сверяет демон,
+ * но имя, которого в нём нет, вводится тем же полем и собирается в адрес тем же
+ * шаблоном: поставщик мог добавить категорию после сверки.
+ */
+function CategoryField({ catalog }: { catalog: RuleSetCatalog }) {
+  const { t } = useTranslation('features/RuleSet/RuleSetAdd');
+  const { control, setValue, getValues } = useFormContext<RuleSetAddModel>();
+  const category = useWatch({ control, name: 'category' });
+  const list = useSelectedList(catalog);
+  const id = useId();
+  const hintId = useId();
+
+  if (list === null) {
+    return null;
+  }
+
+  const suggestions = filterCategories(list, category).slice(0, SUGGESTION_LIMIT);
 
   const pick = (next: string) => {
     setValue('category', next);
-    setValue('url', composeRuleSetURL(providerId, getValues('mirrorId'), next));
-    setValue('tag', composeRuleSetTag(providerId, next));
+    setValue('url', composeRuleSetURL(list, getValues('mirrorId'), next));
+    setValue('tag', composeRuleSetTag(list, next));
   };
 
   return (
@@ -210,8 +311,8 @@ function CategoryField() {
             listClassName='font-mono'
             aria-describedby={hintId}
           />
-          <p id={hintId} className='text-xs text-muted-foreground'>
-            {t('field.category.hint')}
+          <p id={hintId} className='text-xs text-pretty text-muted-foreground'>
+            {listFreshness(t, list)} {t('field.category.hint')}
           </p>
         </div>
       )}
@@ -219,18 +320,30 @@ function CategoryField() {
   );
 }
 
+/** Откуда перечень и какой он свежести: пользователь судит по этому, можно ли верить подсказкам. */
+function listFreshness(t: TFunction<'features/RuleSet/RuleSetAdd'>, list: RuleSetList): string {
+  if (list.updatedAt === null) {
+    return t('field.category.undated');
+  }
+
+  const date = formatDate(list.updatedAt);
+
+  return list.source === RULE_SET_LIST_SOURCE.Provider
+    ? t('field.category.checked', { date })
+    : t('field.category.snapshot', { date });
+}
+
 /**
  * Адрес и зеркало. Показан целиком: по нему видно, что именно уедет в конфиг,
  * а правка руками переводит форму в «свой источник» — угадывать поставщика по
  * чужому адресу панель не вправе.
  */
-function AddressField() {
+function AddressField({ catalog }: { catalog: RuleSetCatalog }) {
   const { t } = useTranslation('features/RuleSet/RuleSetAdd');
   const { control, setValue } = useFormContext<RuleSetAddModel>();
-  const providerId = useWatch({ control, name: 'providerId' });
+  const list = useSelectedList(catalog);
   const id = useId();
   const errorId = useId();
-  const provider = findProvider(providerId);
 
   return (
     <div className='flex flex-col gap-1.5'>
@@ -261,27 +374,24 @@ function AddressField() {
         )}
       />
 
-      {provider !== null && provider.mirrors.length > 1 && <MirrorField />}
+      {list !== null && list.mirrors.length > 1 && <MirrorField list={list} />}
 
-      <CategoryNotice />
+      <CategoryNotice list={list} />
     </div>
   );
 }
 
 /**
- * Категория вне каталога панели. Не отказ: каталог неполон по замыслу, и
- * поставщик вполне может отдавать такой файл. Предупреждение называет
- * последствие, потому что проверить адрес панель не может — это сделает бинарь
- * при применении.
+ * Категория вне перечня. Не отказ: поставщик мог добавить её после сверки.
+ * Предупреждение называет последствие, потому что проверить адрес панель не
+ * может — это сделает бинарь при применении.
  */
-function CategoryNotice() {
+function CategoryNotice({ list }: { list: RuleSetList | null }) {
   const { t } = useTranslation('features/RuleSet/RuleSetAdd');
   const { control } = useFormContext<RuleSetAddModel>();
-  const providerId = useWatch({ control, name: 'providerId' });
   const category = useWatch({ control, name: 'category' }).trim();
-  const provider = findProvider(providerId);
 
-  if (provider === null || category === '' || isCatalogCategory(provider, category)) {
+  if (list === null || category === '' || isCatalogCategory(list, category)) {
     return null;
   }
 
@@ -294,16 +404,10 @@ function CategoryNotice() {
 }
 
 /** Зеркало поставщика: пересобирает адрес, не трогая остальную форму. */
-function MirrorField() {
+function MirrorField({ list }: { list: RuleSetList }) {
   const { t } = useTranslation('features/RuleSet/RuleSetAdd');
   const { control, setValue, getValues } = useFormContext<RuleSetAddModel>();
-  const providerId = useWatch({ control, name: 'providerId' });
   const id = useId();
-  const provider = findProvider(providerId);
-
-  if (provider === null) {
-    return null;
-  }
 
   return (
     <Controller
@@ -313,19 +417,19 @@ function MirrorField() {
         <div className='flex items-center gap-2'>
           <Label htmlFor={id}>{t('field.mirror.label')}</Label>
           <Select
-            items={provider.mirrors.map((mirror) => ({ value: mirror.id, label: mirror.name }))}
+            items={list.mirrors.map((mirror) => ({ value: mirror.id, label: mirror.name }))}
             value={field.value}
             onValueChange={(value: string | null) => {
-              const next = value ?? provider.mirrors[0].id;
+              const next = value ?? list.mirrors[0].id;
               field.onChange(next);
-              setValue('url', composeRuleSetURL(providerId, next, getValues('category')));
+              setValue('url', composeRuleSetURL(list, next, getValues('category')));
             }}
           >
             <SelectTrigger id={id} size='sm' className='w-32'>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {provider.mirrors.map((mirror) => (
+              {list.mirrors.map((mirror) => (
                 <SelectItem key={mirror.id} value={mirror.id}>
                   {mirror.name}
                 </SelectItem>

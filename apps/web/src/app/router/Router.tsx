@@ -12,6 +12,7 @@ import { getConfigOptions } from '@entities/Config';
 import { parseConnectionSearch } from '@entities/Connection';
 import { getTrafficHistoryOptions } from '@entities/Daemon';
 import { getProxiesOptions, getProxyProvidersOptions } from '@entities/Proxy';
+import { getRuleSetCatalogOptions } from '@entities/RuleSet';
 import { QueryClientInstance } from '@shared/api';
 import { matchNarrow } from '@shared/lib/media';
 
@@ -99,11 +100,14 @@ const routeEditorRoute = createRoute({
 const ruleSetsRoute = createRoute({
   getParentRoute: () => configLayoutRoute,
   loader: async () =>
-    preloadNamespaces([
-      'pages/RuleSets',
-      'widgets/RuleSet/RuleSetTable',
-      'features/RuleSet/RuleSetAdd',
-      'features/Config/ConfigCacheFile',
+    Promise.all([
+      preloadNamespaces([
+        'pages/RuleSets',
+        'widgets/RuleSet/RuleSetTable',
+        'features/RuleSet/RuleSetAdd',
+        'features/Config/ConfigCacheFile',
+      ]),
+      QueryClientInstance.query(getRuleSetCatalogOptions()).catch(keepFailureForScreen),
     ]),
   path: 'rule-set',
   component: lazyRouteComponent(async () => import('@pages/RuleSets'), 'RuleSetsPage'),

@@ -1,13 +1,15 @@
-import { MINUTES_IN_HOUR, MS_IN_SECOND, SECONDS_IN_MINUTE } from '../lib/time';
+import { HOURS_IN_DAY, MINUTES_IN_HOUR, MS_IN_SECOND, SECONDS_IN_MINUTE } from '../lib/time';
 
 const SECOND = MS_IN_SECOND;
 const MINUTE = SECONDS_IN_MINUTE * SECOND;
+const HOUR = MINUTES_IN_HOUR * MINUTE;
 
 /** Ступени кэша. Клиент по умолчанию не кэширует — время задаётся осознанно. */
 export const CACHE_TIME = {
   Second: SECOND,
   Minute: MINUTE,
-  Hour: MINUTES_IN_HOUR * MINUTE,
+  Hour: HOUR,
+  Day: HOURS_IN_DAY * HOUR,
 } as const;
 
 const REQUEST_TIMEOUT_SECONDS = 15;

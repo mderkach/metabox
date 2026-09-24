@@ -1,8 +1,18 @@
 import { RuleSetSchema } from '@shared/api/generated';
+import { MS_IN_SECOND } from '@shared/lib/time';
 
+import { LIST_KIND, LIST_SOURCE, type RuleSetCatalogWire, type RuleSetListWire } from '../api/RuleSet.schema';
 import { describeURL } from './RuleSet.catalog';
-import { RULE_SET_TYPE } from './RuleSet.constants';
-import type { RuleSetRow, RuleSetType } from './RuleSet.model';
+import { RULE_SET_LIST_SOURCE, RULE_SET_TYPE } from './RuleSet.constants';
+import type {
+  RuleSetCatalog,
+  RuleSetList,
+  RuleSetListKind,
+  RuleSetListSource,
+  RuleSetRow,
+  RuleSetSource,
+  RuleSetType,
+} from './RuleSet.model';
 
 /** Набор без `type` ядро читает как удалённый. */
 const DEFAULT_TYPE: RuleSetType = RULE_SET_TYPE.Remote;
@@ -59,6 +69,49 @@ function toDetour(node: object): string | null {
   return toOptionalText(Reflect.get(client, 'detour'));
 }
 
+const LIST_KINDS = new Set<string>(LIST_KIND);
+const LIST_SOURCES = new Set<string>(LIST_SOURCE);
+
+function isListKind(value: string): value is RuleSetListKind {
+  return LIST_KINDS.has(value);
+}
+
+function isListSource(value: string): value is RuleSetListSource {
+  return LIST_SOURCES.has(value);
+}
+
+function toList(wire: RuleSetListWire): RuleSetList | null {
+  if (!isListKind(wire.kind)) {
+    return null;
+  }
+
+  return {
+    kind: wire.kind,
+    prefix: wire.prefix,
+    mirrors: wire.mirrors,
+    featured: wire.featured,
+    categories: wire.categories,
+    source: isListSource(wire.source) ? wire.source : RULE_SET_LIST_SOURCE.Snapshot,
+    updatedAt: wire.updated_at > 0 ? new Date(wire.updated_at * MS_IN_SECOND) : null,
+  };
+}
+
+/**
+ * Каталог демона в модель экрана. Список незнакомого вида пропускается, а не
+ * гасит каталог: демон может оказаться новее панели.
+ */
+export function toRuleSetCatalog(wire: RuleSetCatalogWire): RuleSetCatalog {
+  return {
+    providers: wire.providers.map((provider) => ({
+      id: provider.id,
+      name: provider.name,
+      lists: provider.lists.map(toList).filter((list) => list !== null),
+    })),
+  };
+}
+
+const NO_SOURCE: RuleSetSource = { providerId: null, providerName: null, kind: null, category: null };
+
 /** Узел принят схемой форка: для него есть форма, а не только текстовый режим. */
 export function isRuleSetRecognized(node: unknown): boolean {
   return RuleSetSchema.safeParse(node).success;
@@ -70,7 +123,11 @@ export function isRuleSetRecognized(node: unknown): boolean {
  * Сколько правил ссылается на набор, считается снаружи и приходит картой: сам
  * слайс наборов о правилах не знает, а экрану это нужно одним проходом.
  */
-export function toRuleSetRowsFromNodes(nodes: readonly unknown[], usage: ReadonlyMap<string, number>): RuleSetRow[] {
+export function toRuleSetRowsFromNodes(
+  nodes: readonly unknown[],
+  usage: ReadonlyMap<string, number>,
+  catalog: RuleSetCatalog
+): RuleSetRow[] {
   const rows: RuleSetRow[] = [];
 
   for (const [position, node] of nodes.entries()) {
@@ -91,7 +148,7 @@ export function toRuleSetRowsFromNodes(nodes: readonly unknown[], usage: Readonl
       type,
       format: toText(Reflect.get(node, 'format')),
       location,
-      source: type === RULE_SET_TYPE.Remote ? describeURL(location) : { providerId: null, category: null },
+      source: type === RULE_SET_TYPE.Remote ? describeURL(catalog, location) : NO_SOURCE,
       updateInterval: toOptionalText(Reflect.get(node, 'update_interval')),
       detour: toDetour(node),
       usedBy: usage.get(tag) ?? 0,

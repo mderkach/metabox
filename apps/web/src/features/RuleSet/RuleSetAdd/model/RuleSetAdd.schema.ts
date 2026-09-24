@@ -4,12 +4,14 @@ import {
   buildRuleSetURL,
   defaultFormatOf,
   parseDuration,
-  RULE_SET_PROVIDERS,
+  RULE_SET_LIST_KIND,
   RULE_SET_TYPE,
   suggestTag,
+  type RuleSetCatalog,
+  type RuleSetList,
 } from '@entities/RuleSet';
 
-import { HTTP_SCHEME, RULE_SET_ADD_ERROR } from './RuleSetAdd.constants';
+import { CUSTOM_PROVIDER, HTTP_SCHEME, RULE_SET_ADD_ERROR } from './RuleSetAdd.constants';
 
 /**
  * Что правит форма подключения.
@@ -21,6 +23,8 @@ import { HTTP_SCHEME, RULE_SET_ADD_ERROR } from './RuleSetAdd.constants';
 export const RuleSetAddSchema = z.object({
   /** Поставщик из каталога; `custom` — адрес вписан руками */
   providerId: z.string(),
+  /** Вид списка у поставщика: домены или адреса */
+  kind: z.string(),
   /** Зеркало поставщика: до основного адреса дотягиваются не всегда */
   mirrorId: z.string(),
   /** Имя категории у поставщика */
@@ -40,16 +44,18 @@ export const RuleSetAddSchema = z.object({
 export type RuleSetAddModel = z.infer<typeof RuleSetAddSchema>;
 
 /**
- * Форма открывается на первом поставщике каталога, а не на пустом бланке:
- * «свой адрес» — запасной путь, и предлагать его первым значит начинать с
- * самого трудного.
+ * Форма открывается на первом поставщике каталога и его списке доменов, а не
+ * на пустом бланке: «свой адрес» — запасной путь, и предлагать его первым
+ * значит начинать с самого трудного. Пустой каталог оставляет только его.
  */
-export function ruleSetAddDefaults(): RuleSetAddModel {
-  const provider = RULE_SET_PROVIDERS[0];
+export function ruleSetAddDefaults(catalog: RuleSetCatalog): RuleSetAddModel {
+  const provider = catalog.providers.at(0);
+  const list = provider?.lists.find((item) => item.kind === RULE_SET_LIST_KIND.Geosite) ?? provider?.lists.at(0);
 
   return {
-    providerId: provider.id,
-    mirrorId: provider.mirrors[0].id,
+    providerId: provider?.id ?? CUSTOM_PROVIDER,
+    kind: list?.kind ?? RULE_SET_LIST_KIND.Geosite,
+    mirrorId: list?.mirrors.at(0)?.id ?? '',
     category: '',
     url: '',
     tag: '',
@@ -59,21 +65,18 @@ export function ruleSetAddDefaults(): RuleSetAddModel {
   };
 }
 
-/** Адрес и предложенный тег для выбранной категории. */
-export function composeRuleSetURL(providerId: string, mirrorId: string, category: string): string {
-  const provider = RULE_SET_PROVIDERS.find((item) => item.id === providerId);
-
-  if (provider === undefined || category.trim() === '') {
+/** Адрес набора для выбранной категории; без списка или категории — пусто. */
+export function composeRuleSetURL(list: RuleSetList | null, mirrorId: string, category: string): string {
+  if (list === null || category.trim() === '') {
     return '';
   }
 
-  return buildRuleSetURL(provider, mirrorId, category.trim());
+  return buildRuleSetURL(list, mirrorId, category.trim());
 }
 
-export function composeRuleSetTag(providerId: string, category: string): string {
-  const provider = RULE_SET_PROVIDERS.find((item) => item.id === providerId);
-
-  return provider === undefined ? '' : suggestTag(provider, category.trim());
+/** Тег, который форма предлагает для категории. */
+export function composeRuleSetTag(list: RuleSetList | null, category: string): string {
+  return list === null ? '' : suggestTag(list, category.trim());
 }
 
 /** Узел, который ляжет в `route.rule_set`. */

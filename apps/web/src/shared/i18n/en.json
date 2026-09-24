@@ -128,7 +128,8 @@
     "versions": "Could not read the version history",
     "proxies": "Could not read the proxy list",
     "providers": "Could not read the subscriptions",
-    "route": "Could not explain the route"
+    "route": "Could not explain the route",
+    "ruleSetCatalog": "Could not get the rule-set catalog"
   },
   "list": {
     "notFound": "Nothing matches this query.",
@@ -174,6 +175,9 @@
   },
   "stat": {
     "uptime": "Uptime"
+  },
+  "autocomplete": {
+    "toggle": "Show options"
   },
   "ruleSet": {
     "source": "Source",

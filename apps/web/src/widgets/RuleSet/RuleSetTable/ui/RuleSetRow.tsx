@@ -2,7 +2,7 @@ import { Trash2 } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { findProvider, RULE_SET_TYPE, type RuleSetRow as RuleSetRowModel } from '@entities/RuleSet';
+import { RULE_SET_TYPE, type RuleSetRow as RuleSetRowModel } from '@entities/RuleSet';
 import { cn } from '@shared/lib/utils';
 import { Badge, Button, Separator } from '@shared/ui';
 
@@ -26,7 +26,7 @@ function RuleSetRowProto({
   onRemove: (index: number) => void;
 }) {
   const { t } = useTranslation('widgets/RuleSet/RuleSetTable');
-  const provider = findProvider(set.source.providerId);
+  const { providerName, kind, category } = set.source;
 
   return (
     <div role='row' aria-rowindex={rowIndex} className={RULE_SET_COLUMN.Row}>
@@ -48,11 +48,17 @@ function RuleSetRowProto({
 
       <span role='cell' className={RULE_SET_COLUMN.Source}>
         <span className='flex flex-wrap items-center gap-x-1.5 gap-y-0.5'>
-          <span>{provider === null ? t('ruleSet.ownSource', { ns: 'shared' }) : provider.name}</span>
-          {set.source.category !== null && (
+          <span>{providerName ?? t('ruleSet.ownSource', { ns: 'shared' })}</span>
+          {kind !== null && (
             <>
               <span aria-hidden='true'>·</span>
-              <span className='font-mono'>{set.source.category}</span>
+              <span className='font-mono'>{kind}</span>
+            </>
+          )}
+          {category !== null && (
+            <>
+              <span aria-hidden='true'>·</span>
+              <span className='font-mono'>{category}</span>
             </>
           )}
           {set.updateInterval !== null && (

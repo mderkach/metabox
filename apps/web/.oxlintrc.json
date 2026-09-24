@@ -229,6 +229,8 @@
         "tailwind/no-unknown-classes": "off",
         "tailwind/no-restricted-classes": "off",
         "jsx-a11y/label-has-associated-control": "off",
+        "jsx-a11y/click-events-have-key-events": "off",
+        "jsx-a11y/no-noninteractive-element-interactions": "off",
         "typescript/strict-boolean-expressions": "off",
         "typescript/no-unsafe-type-assertion": "off",
         "typescript/no-unnecessary-condition": "off",

@@ -1,8 +1,10 @@
 import { Autocomplete as AutocompletePrimitive } from '@base-ui/react/autocomplete';
+import { ChevronDownIcon } from 'lucide-react';
 import { useState, type ComponentProps } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { cn } from '../lib/utils';
-import { Input } from './shadcn/input';
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from './shadcn/input-group';
 
 /**
  * Поле со свободным вводом и подсказками. Значение — сам текст поля: подсказка
@@ -22,6 +24,7 @@ export function Autocomplete({
   onValueChange,
   className,
   listClassName,
+  onFocus,
   ...props
 }: Omit<ComponentProps<'input'>, 'value' | 'defaultValue' | 'onChange'> & {
   items: readonly string[];
@@ -29,6 +32,7 @@ export function Autocomplete({
   onValueChange: (value: string) => void;
   listClassName?: string;
 }) {
+  const { t } = useTranslation('shared');
   const [open, setOpen] = useState(false);
 
   return (
@@ -43,7 +47,23 @@ export function Autocomplete({
       onOpenChange={setOpen}
       openOnInputClick
     >
-      <AutocompletePrimitive.Input render={<Input className={className} />} {...props} />
+      <AutocompletePrimitive.InputGroup render={<InputGroup />}>
+        <AutocompletePrimitive.Input
+          render={<InputGroupInput className={className} />}
+          onFocus={(event) => {
+            setOpen(true);
+            onFocus?.(event);
+          }}
+          {...props}
+        />
+        <InputGroupAddon align='inline-end'>
+          <AutocompletePrimitive.Trigger
+            render={<InputGroupButton size='icon-xs' aria-label={t('autocomplete.toggle')} />}
+          >
+            <ChevronDownIcon className='pointer-events-none size-4 text-muted-foreground' />
+          </AutocompletePrimitive.Trigger>
+        </InputGroupAddon>
+      </AutocompletePrimitive.InputGroup>
       <AutocompletePrimitive.Portal>
         <AutocompletePrimitive.Positioner sideOffset={4} align='start' className='isolate z-50'>
           <AutocompletePrimitive.Popup

@@ -13,12 +13,19 @@ import {
   filterRuleSets,
   RULE_SET_TYPE,
   toRuleSetRowsFromNodes,
+  useRuleSetCatalog,
+  type RuleSetCatalog,
   type RuleSetRow,
 } from '@entities/RuleSet';
+
+const EMPTY_CATALOG: RuleSetCatalog = { providers: [] };
 
 export interface RuleSetEditorState {
   /** Запрос конфига: отказ источника — своё состояние экрана, а не пустой список. */
   source: ConfigDocumentView['query'];
+  /** Запрос каталога: без него строки не узнают поставщика, а форма — категорий. */
+  catalogQuery: ReturnType<typeof useRuleSetCatalog>;
+  catalog: RuleSetCatalog;
   sets: RuleSetRow[];
   /** Имена уже подключённых наборов: второй набор с тем же именем не заводится. */
   takenTags: string[];
@@ -38,6 +45,8 @@ export interface RuleSetEditorState {
  */
 export function useRuleSetEditor(): RuleSetEditorState {
   const document = useConfigDocument();
+  const catalogQuery = useRuleSetCatalog();
+  const catalog = catalogQuery.data ?? EMPTY_CATALOG;
   const text = document.text;
 
   const nodes = useMemo(() => (text === null ? [] : readRuleSets(text)), [text]);
@@ -47,7 +56,7 @@ export function useRuleSetEditor(): RuleSetEditorState {
   // не меньше прямого.
   const usage = useMemo(() => countRuleSetUsage(text === null ? [] : readRules(text)), [text]);
 
-  const sets = useMemo(() => toRuleSetRowsFromNodes(nodes, usage), [nodes, usage]);
+  const sets = useMemo(() => toRuleSetRowsFromNodes(nodes, usage, catalog), [nodes, usage, catalog]);
 
   const needsCache = useMemo(() => {
     if (text === null) {
@@ -59,6 +68,8 @@ export function useRuleSetEditor(): RuleSetEditorState {
 
   return {
     source: document.query,
+    catalogQuery,
+    catalog,
     sets,
     takenTags: sets.map((set) => set.tag).filter((tag) => tag !== ''),
     outbounds: toOutboundTags(document.config),

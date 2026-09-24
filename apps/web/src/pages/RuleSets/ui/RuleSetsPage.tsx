@@ -48,7 +48,11 @@ export function RuleSetsPage() {
     setAdding(false);
   }, []);
 
-  const loaded = editor.source.isSuccess;
+  // Каталог нужен подсказкам и подписям источника, но не самому списку: без
+  // него наборы видны и удаляются, а форма остаётся со своим адресом.
+  const catalogSettled = !editor.catalogQuery.isPending;
+  const loaded = editor.source.isSuccess && catalogSettled;
+  const pending = editor.source.isPending || (editor.source.isSuccess && !catalogSettled);
 
   return (
     <div className='flex min-h-0 grow flex-col gap-4 overflow-y-auto px-4 py-5 sm:px-6'>
@@ -57,9 +61,13 @@ export function RuleSetsPage() {
         <span>{t('lead')}</span>
       </p>
 
-      {editor.source.isPending && <SkeletonRows className={SURFACE} />}
+      {pending && <SkeletonRows className={SURFACE} />}
 
       {editor.source.isLoadingError && <QueryFailure messageKey='source.config' query={editor.source} />}
+
+      {editor.catalogQuery.isLoadingError && (
+        <QueryFailure messageKey='source.ruleSetCatalog' query={editor.catalogQuery} />
+      )}
 
       {editor.needsCache && <ConfigCacheNotice />}
 
@@ -72,7 +80,7 @@ export function RuleSetsPage() {
             <EmptyDescription className='max-w-prose text-pretty'>{t('empty.description')}</EmptyDescription>
           </EmptyHeader>
           <EmptyContent className='max-w-none items-stretch'>
-            <RuleSetAddForm takenTags={editor.takenTags} outbounds={editor.outbounds} />
+            <RuleSetAddForm catalog={editor.catalog} takenTags={editor.takenTags} outbounds={editor.outbounds} />
           </EmptyContent>
         </Empty>
       )}
@@ -101,7 +109,12 @@ export function RuleSetsPage() {
             adding ? (
               <section className='flex max-w-2xl flex-col gap-4'>
                 <h3 className={SECTION_HEADING}>{t('add.title')}</h3>
-                <RuleSetAddForm takenTags={editor.takenTags} outbounds={editor.outbounds} onDone={closeForm} />
+                <RuleSetAddForm
+                  catalog={editor.catalog}
+                  takenTags={editor.takenTags}
+                  outbounds={editor.outbounds}
+                  onDone={closeForm}
+                />
               </section>
             ) : null
           }
