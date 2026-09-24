@@ -13,6 +13,7 @@
     "build": "node tools/i18n.ts && tsc -b && vite build",
     "preview": "vite preview",
     "gen:i18n": "node tools/i18n.ts",
+    "gen:rule-sets": "node tools/ruleSetCatalog.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint:react": "react-doctor --no-telemetry --no-supply-chain"

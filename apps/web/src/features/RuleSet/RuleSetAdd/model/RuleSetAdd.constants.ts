@@ -35,5 +35,8 @@ export const HTTP_SCHEME = /^https?:\/\/\S+$/u;
 
 export const RULE_SET_FORMAT_OPTIONS = [RULE_SET_FORMAT.Binary, RULE_SET_FORMAT.Source] as const;
 
-/** Сколько категорий показать подсказкой: остальные ищутся строкой поиска. */
-export const VISIBLE_CATEGORIES = 8;
+/**
+ * Сколько подсказок держать в списке: у поставщика до двух тысяч категорий, и
+ * рисовать их все на каждое нажатие клавиши незачем — нужное находится вводом.
+ */
+export const SUGGESTION_LIMIT = 50;

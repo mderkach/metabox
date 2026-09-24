@@ -8,6 +8,8 @@ import { RuleSetAddForm } from '../ui/RuleSetAddForm';
 
 const CATALOG_CATEGORY = 'google';
 const OFF_CATALOG_CATEGORY = 'mystuff';
+const RUNET_BLOCKED_ALL =
+  'https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/release/sing-box/rule-set-geosite/geosite-ru-blocked-all.srs';
 
 describe('форма подключения сета', () => {
   beforeEach(() => {
@@ -43,5 +45,32 @@ describe('форма подключения сета', () => {
     await user.type(screen.getByLabelText('Адрес сета'), 'https://example.com/list.srs');
 
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  it('подсказывает категорию из полного каталога и собирает её адрес', async () => {
+    const user = userEvent.setup();
+
+    render(<RuleSetAddForm takenTags={[]} outbounds={[]} />);
+
+    await user.type(screen.getByLabelText('Категория'), 'ru-blocked-a');
+    expect(await screen.findByRole('option', { name: 'ru-blocked-all' })).toBeInTheDocument();
+
+    await user.keyboard('{ArrowDown}{Enter}');
+
+    expect(screen.getByLabelText('Адрес сета')).toHaveValue(RUNET_BLOCKED_ALL);
+    expect(screen.getByLabelText('Имя сета')).toHaveValue('geosite-ru-blocked-all');
+  });
+
+  it('подсказывает узел для скачивания из аутбаундов конфига', async () => {
+    const user = userEvent.setup();
+
+    render(<RuleSetAddForm takenTags={[]} outbounds={['direct', 'proxy', 'proxy-fi']} />);
+
+    await user.click(screen.getByRole('button', { name: 'Ещё настройки' }));
+    await user.type(screen.getByLabelText('Качать через узел'), 'prox');
+
+    const options = await screen.findAllByRole('option');
+
+    expect(options.map((option) => option.textContent)).toEqual(['proxy', 'proxy-fi']);
   });
 });

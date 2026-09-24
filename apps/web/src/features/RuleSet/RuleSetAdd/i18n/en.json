@@ -2,9 +2,8 @@
   "field": {
     "category": {
       "label": "Category",
-      "placeholder": "google, for example",
-      "suggestions": "Common categories",
-      "hint": "The lists are built by the source. No matching suggestion — type the category name and the address builds itself.",
+      "placeholder": "ru-blocked, for example",
+      "hint": "The list is a snapshot of the provider's catalog. No matching category — type its name and the address builds itself.",
       "offCatalog": "This category is not in the metabox catalog. If the provider has no such file, sing-box will not start when the config is applied."
     },
     "mirror": {

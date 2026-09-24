@@ -8,9 +8,10 @@ import type { RuleSetProvider } from './RuleSet.model';
  * вшийся старт sing-box. Источник, которого здесь нет, подключается своим
  * адресом — этот путь остаётся всегда.
  *
- * Перечень категорий — не полный каталог поставщика, а часто спрашиваемое:
- * полным его делает демон, когда начнёт обновлять индекс. Поэтому имя, которого
- * в списке нет, вводится руками и собирается в адрес тем же шаблоном.
+ * Полный перечень категорий — снимок `RuleSet.categories.generated.json`,
+ * его обновляет `pnpm --filter web gen:rule-sets`. Снимок стареет, поэтому имя,
+ * которого в нём нет, по-прежнему вводится руками и собирается в адрес тем же
+ * шаблоном.
  */
 
 export const RULE_SET_TYPE = {
@@ -30,6 +31,86 @@ export const SET_EXTENSION = {
   Source: '.json',
 } as const;
 
+const RUNET_FREEDOM_BASE = 'runetfreedom/russia-v2ray-rules-dat';
+
+const RUNET_GEOSITE: RuleSetProvider = {
+  id: 'runetfreedom-geosite',
+  name: 'Runet Freedom geosite',
+  kind: 'domain',
+  prefix: 'geosite-',
+  mirrors: [
+    {
+      id: 'github',
+      name: 'GitHub',
+      base: `https://raw.githubusercontent.com/${RUNET_FREEDOM_BASE}/release/sing-box/rule-set-geosite/`,
+    },
+    {
+      id: 'jsdelivr',
+      name: 'jsDelivr',
+      base: `https://cdn.jsdelivr.net/gh/${RUNET_FREEDOM_BASE}@release/sing-box/rule-set-geosite/`,
+    },
+  ],
+  featured: [
+    'ru-blocked',
+    'ru-blocked-all',
+    'ru-available-only-inside',
+    'category-ads-all',
+    'youtube',
+    'google',
+    'telegram',
+    'discord',
+    'openai',
+    'meta',
+    'instagram',
+    'facebook',
+    'twitter',
+    'tiktok',
+    'whatsapp',
+    'netflix',
+    'spotify',
+    'github',
+    'cloudflare',
+    'microsoft',
+    'apple',
+    'category-gov-ru',
+    'win-spy',
+    'category-porn',
+    'private',
+  ],
+};
+
+const RUNET_GEOIP: RuleSetProvider = {
+  id: 'runetfreedom-geoip',
+  name: 'Runet Freedom geoip',
+  kind: 'ip',
+  prefix: 'geoip-',
+  mirrors: [
+    {
+      id: 'github',
+      name: 'GitHub',
+      base: `https://raw.githubusercontent.com/${RUNET_FREEDOM_BASE}/release/sing-box/rule-set-geoip/`,
+    },
+    {
+      id: 'jsdelivr',
+      name: 'jsDelivr',
+      base: `https://cdn.jsdelivr.net/gh/${RUNET_FREEDOM_BASE}@release/sing-box/rule-set-geoip/`,
+    },
+  ],
+  featured: [
+    'ru-blocked',
+    'ru-blocked-community',
+    're-filter',
+    'ru-whitelist',
+    'ru',
+    'private',
+    'telegram',
+    'cloudflare',
+    'google',
+    'ddos-guard',
+    'yandex',
+  ],
+};
+
 const SING_GEOSITE: RuleSetProvider = {
   id: 'sing-geosite',
   name: 'v2fly geosite',
@@ -39,7 +120,7 @@ const SING_GEOSITE: RuleSetProvider = {
     { id: 'github', name: 'GitHub', base: 'https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/' },
     { id: 'jsdelivr', name: 'jsDelivr', base: 'https://cdn.jsdelivr.net/gh/SagerNet/sing-geosite@rule-set/' },
   ],
-  categories: [
+  featured: [
     'google',
     'google-play',
     'youtube',
@@ -71,7 +152,6 @@ const SING_GEOSITE: RuleSetProvider = {
     'geolocation-cn',
     'geolocation-!cn',
     'cn',
-    'ru',
     'private',
   ],
 };
@@ -85,7 +165,7 @@ const SING_GEOIP: RuleSetProvider = {
     { id: 'github', name: 'GitHub', base: 'https://raw.githubusercontent.com/SagerNet/sing-geoip/rule-set/' },
     { id: 'jsdelivr', name: 'jsDelivr', base: 'https://cdn.jsdelivr.net/gh/SagerNet/sing-geoip@rule-set/' },
   ],
-  categories: ['ru', 'cn', 'us', 'de', 'nl', 'gb', 'fr', 'jp', 'sg', 'tr', 'ir', 'by', 'kz', 'ua'],
+  featured: ['ru', 'cn', 'us', 'de', 'nl', 'gb', 'fr', 'jp', 'sg', 'tr', 'ir', 'by', 'kz', 'ua'],
 };
 
-export const RULE_SET_PROVIDERS: readonly RuleSetProvider[] = [SING_GEOSITE, SING_GEOIP];
+export const RULE_SET_PROVIDERS: readonly RuleSetProvider[] = [RUNET_GEOSITE, RUNET_GEOIP, SING_GEOSITE, SING_GEOIP];

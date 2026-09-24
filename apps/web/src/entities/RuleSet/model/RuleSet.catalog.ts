@@ -1,5 +1,27 @@
+import SNAPSHOT from './RuleSet.categories.generated.json';
 import { RULE_SET_PROVIDERS, SET_EXTENSION } from './RuleSet.constants';
 import type { RuleSetProvider, RuleSetSource } from './RuleSet.model';
+
+const CATEGORIES: Readonly<Record<string, readonly string[] | undefined>> = SNAPSHOT;
+
+const categorySets = new Map<string, ReadonlySet<string>>();
+
+/** Все категории поставщика из снимка каталога. */
+function categoriesOf(provider: RuleSetProvider): readonly string[] {
+  return CATEGORIES[provider.id] ?? [];
+}
+
+/** Есть ли у поставщика файл с таким именем — по снимку каталога. */
+export function isCatalogCategory(provider: RuleSetProvider, category: string): boolean {
+  let known = categorySets.get(provider.id);
+
+  if (known === undefined) {
+    known = new Set(categoriesOf(provider));
+    categorySets.set(provider.id, known);
+  }
+
+  return known.has(category);
+}
 
 /** Поставщик по идентификатору; `null` — такого в каталоге нет. */
 export function findProvider(id: string | null): RuleSetProvider | null {
@@ -51,20 +73,22 @@ export function describeURL(url: string): RuleSetSource {
 }
 
 /**
- * Отбор категорий по подстроке. Совпавшие с начала идут первыми: набравший
- * «goog» ищет `google`, а не `category-google-cn`.
+ * Отбор категорий по подстроке. Пустой запрос отдаёт подборку поставщика: у
+ * полного перечня алфавитный порядок, и начинается он с `0x0` и `115`.
+ * Совпавшие с начала идут первыми: набравший «goog» ищет `google`, а не
+ * `category-google-cn`.
  */
 export function filterCategories(provider: RuleSetProvider, query: string): string[] {
   const needle = query.trim().toLowerCase();
 
   if (needle === '') {
-    return [...provider.categories];
+    return [...provider.featured];
   }
 
   const starts: string[] = [];
   const contains: string[] = [];
 
-  for (const category of provider.categories) {
+  for (const category of categoriesOf(provider)) {
     if (category.startsWith(needle)) {
       starts.push(category);
       continue;

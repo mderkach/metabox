@@ -6,13 +6,18 @@ import { Controller, FormProvider, useForm, useFormContext, useWatch } from 'rea
 import { useTranslation } from 'react-i18next';
 
 import { ConfigDocumentState, RULE_SETS_PATH } from '@entities/Config';
-import { defaultFormatOf, filterCategories, findProvider, RULE_SET_PROVIDERS } from '@entities/RuleSet';
+import {
+  defaultFormatOf,
+  filterCategories,
+  findProvider,
+  isCatalogCategory,
+  RULE_SET_PROVIDERS,
+} from '@entities/RuleSet';
+import { matchesWords, toQueryWords } from '@shared/lib/search';
 import { cn } from '@shared/lib/utils';
 import {
+  Autocomplete,
   Button,
-  FACET_ACTIVE,
-  FACET_CLASS,
-  FACET_IDLE,
   Input,
   Label,
   Select,
@@ -26,7 +31,7 @@ import {
   CUSTOM_PROVIDER,
   RULE_SET_ADD_ERROR_KEY,
   RULE_SET_FORMAT_OPTIONS,
-  VISIBLE_CATEGORIES,
+  SUGGESTION_LIMIT,
 } from '../model/RuleSetAdd.constants';
 import {
   composeRuleSetTag,
@@ -161,9 +166,9 @@ function ProviderField() {
 }
 
 /**
- * Категория у поставщика. Подсказки — не каталог целиком, а часто спрашиваемое,
- * поэтому имя, которого в них нет, вводится тем же полем и собирается в адрес
- * тем же шаблоном.
+ * Категория у поставщика. Подсказки берутся из снимка каталога, но имя,
+ * которого в нём нет, вводится тем же полем и собирается в адрес тем же
+ * шаблоном: снимок стареет, а поставщик добавляет категории.
  */
 function CategoryField() {
   const { t } = useTranslation('features/RuleSet/RuleSetAdd');
@@ -171,15 +176,14 @@ function CategoryField() {
   const providerId = useWatch({ control, name: 'providerId' });
   const category = useWatch({ control, name: 'category' });
   const id = useId();
+  const hintId = useId();
   const provider = findProvider(providerId);
 
   if (provider === null) {
     return null;
   }
 
-  const matches = filterCategories(provider, category);
-  const shown = matches.slice(0, VISIBLE_CATEGORIES);
-  const hidden = matches.length - shown.length;
+  const suggestions = filterCategories(provider, category).slice(0, SUGGESTION_LIMIT);
 
   const pick = (next: string) => {
     setValue('category', next);
@@ -194,43 +198,21 @@ function CategoryField() {
       render={({ field }) => (
         <div className='flex flex-col gap-1.5'>
           <Label htmlFor={id}>{t('field.category.label')}</Label>
-          <Input
+          <Autocomplete
             id={id}
+            items={suggestions}
             value={field.value}
+            onValueChange={pick}
             placeholder={t('field.category.placeholder')}
             autoComplete='off'
             spellCheck={false}
             className='font-mono'
-            onChange={(event) => {
-              pick(event.target.value);
-            }}
+            listClassName='font-mono'
+            aria-describedby={hintId}
           />
-
-          {shown.length > 0 && (
-            <ul aria-label={t('field.category.suggestions')} className='flex flex-wrap items-center gap-1.5 pt-0.5'>
-              {shown.map((name) => (
-                <li key={name}>
-                  <button
-                    type='button'
-                    aria-pressed={field.value === name}
-                    onClick={() => {
-                      pick(name);
-                    }}
-                    className={cn(FACET_CLASS, 'font-mono', field.value === name ? FACET_ACTIVE : FACET_IDLE)}
-                  >
-                    {name}
-                  </button>
-                </li>
-              ))}
-              {hidden > 0 && (
-                <li className='px-1 text-xs text-muted-foreground'>
-                  {t('list.andMore', { ns: 'shared', count: hidden })}
-                </li>
-              )}
-            </ul>
-          )}
-
-          <p className='text-xs text-muted-foreground'>{t('field.category.hint')}</p>
+          <p id={hintId} className='text-xs text-muted-foreground'>
+            {t('field.category.hint')}
+          </p>
         </div>
       )}
     />
@@ -299,7 +281,7 @@ function CategoryNotice() {
   const category = useWatch({ control, name: 'category' }).trim();
   const provider = findProvider(providerId);
 
-  if (provider === null || category === '' || provider.categories.includes(category)) {
+  if (provider === null || category === '' || isCatalogCategory(provider, category)) {
     return null;
   }
 
@@ -457,7 +439,6 @@ function ExtraFields({ outbounds }: { outbounds: readonly string[] }) {
   const detourHintId = useId();
   const detourErrorId = useId();
   const panelId = useId();
-  const detourListId = useId();
 
   const rejected = formState.errors.updateInterval !== undefined || formState.errors.detour !== undefined;
   const expanded = open || rejected;
@@ -512,27 +493,22 @@ function ExtraFields({ outbounds }: { outbounds: readonly string[] }) {
             render={({ field, fieldState }) => (
               <div className='flex flex-col gap-1.5'>
                 <Label htmlFor={detourId}>{t('field.detour.label')}</Label>
-                <Input
+                <Autocomplete
                   id={detourId}
+                  items={matchOutbounds(outbounds, field.value)}
                   value={field.value}
-                  onChange={field.onChange}
+                  onValueChange={field.onChange}
                   placeholder={t('field.detour.placeholder')}
                   autoComplete='off'
+                  spellCheck={false}
                   className='font-mono'
-                  list={outbounds.length === 0 ? undefined : detourListId}
+                  listClassName='font-mono'
                   aria-invalid={fieldState.error !== undefined}
                   aria-describedby={describedBy(
                     detourHintId,
                     fieldState.error === undefined ? undefined : detourErrorId
                   )}
                 />
-                {outbounds.length > 0 && (
-                  <datalist id={detourListId}>
-                    {outbounds.map((tag) => (
-                      <option key={tag}>{tag}</option>
-                    ))}
-                  </datalist>
-                )}
                 <p id={detourHintId} className='text-xs text-muted-foreground'>
                   {t('field.detour.hint')}
                 </p>
@@ -544,6 +520,13 @@ function ExtraFields({ outbounds }: { outbounds: readonly string[] }) {
       )}
     </div>
   );
+}
+
+/** Узлы, подходящие под набранное: подсказка сужается так же, как поиск по спискам панели. */
+function matchOutbounds(outbounds: readonly string[], query: string): string[] {
+  const words = toQueryWords(query);
+
+  return outbounds.filter((tag) => matchesWords(tag.toLowerCase(), words)).slice(0, SUGGESTION_LIMIT);
 }
 
 /** Описания поля одной строкой: `aria-describedby` принимает идентификаторы через пробел. */

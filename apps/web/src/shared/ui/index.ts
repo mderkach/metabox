@@ -22,6 +22,7 @@ export * from './shadcn/textarea';
 export * from './shadcn/toggle';
 export * from './shadcn/toggle-group';
 export * from './shadcn/tooltip';
+export * from './Autocomplete';
 export * from './Plot';
 export * from './QueryFailure';
 export * from './SkeletonRows';
