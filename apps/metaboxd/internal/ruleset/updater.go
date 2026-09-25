@@ -2,6 +2,7 @@ package ruleset
 
 import (
 	"context"
+	"crypto/sha256"
 	_ "embed"
 	"encoding/json"
 	"errors"
@@ -55,6 +56,10 @@ type Updater struct {
 	mu    sync.Mutex
 	lists map[string]entry
 
+	// saved — отпечаток последнего записанного кэша. Пишет его только
+	// горутина сверки, а до Start — конструктор.
+	saved [sha256.Size]byte
+
 	stop context.CancelFunc
 	done chan struct{}
 }
@@ -97,6 +102,8 @@ func NewUpdater(ctx context.Context, lister Lister, store Store, log *slog.Logge
 				u.lists[name] = e
 			}
 		}
+
+		u.saved = sha256.Sum256(cached)
 	}
 
 	return u, nil
@@ -298,6 +305,9 @@ func (u *Updater) apply(name, prefix string, listing Listing, now time.Time) err
 
 // save пишет сверенные списки. Списки, ещё не сверенные ни разу, в кэш не
 // попадают: иначе снимок после перезапуска выдавал бы себя за сверенный.
+// Совпавшее с записанным содержимое не перезаписывается: сверка, которая
+// провалилась целиком, повторяется каждый час и иначе писала бы на флеш тот
+// же файл.
 func (u *Updater) save(ctx context.Context) error {
 	u.mu.Lock()
 	f := file{Lists: map[string]entry{}}
@@ -317,9 +327,16 @@ func (u *Updater) save(ctx context.Context) error {
 		return fmt.Errorf("кэш каталога: %w", err)
 	}
 
+	sum := sha256.Sum256(data)
+	if sum == u.saved {
+		return nil
+	}
+
 	if err := u.store.WriteRuleSets(ctx, data); err != nil {
 		return fmt.Errorf("кэш каталога: %w", err)
 	}
+
+	u.saved = sum
 
 	return nil
 }

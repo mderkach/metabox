@@ -466,3 +466,47 @@ func TestNewUpdaterRejectsShortInterval(t *testing.T) {
 		t.Error("интервал короче паузы повтора принят")
 	}
 }
+
+func TestSaveSkipsUnchangedCache(t *testing.T) {
+	store := &fakeStore{}
+	fail := false
+	lister := &fakeLister{list: func(Tree, string) (Listing, error) {
+		if fail {
+			return Listing{}, errors.New("сеть")
+		}
+
+		return Listing{Names: []string{"geosite-a.srs", "geoip-a.srs"}}, nil
+	}}
+
+	u, err := NewUpdater(t.Context(), lister, store, discardLog(), testInterval, testRetry)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := u.refresh(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+
+	fail = true
+
+	if err := u.refresh(t.Context()); err == nil {
+		t.Fatal("отказ сверки не вернул ошибку")
+	}
+
+	if store.writes != 1 {
+		t.Errorf("неизменный кэш переписан: записей %d, ожидали 1", store.writes)
+	}
+
+	restarted, err := NewUpdater(t.Context(), lister, store, discardLog(), testInterval, testRetry)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := restarted.refresh(t.Context()); err == nil {
+		t.Fatal("отказ сверки не вернул ошибку")
+	}
+
+	if store.writes != 1 {
+		t.Errorf("после перезапуска тот же кэш переписан: записей %d", store.writes)
+	}
+}
