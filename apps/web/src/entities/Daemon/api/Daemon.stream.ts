@@ -5,7 +5,7 @@ import { RuntimeStore } from '../model/Daemon.store';
 import type { ServiceStateWire } from './Daemon.schema';
 
 /**
- * Трафик и память приходят топиками единого потока (ADR-0010). Копить их
+ * Трафик и память приходят топиками единого потока. Копить их
  * пачкой незачем: сэмпл — два числа раз в секунду, пачка нужна там, где
  * сообщение весит десятки килобайт.
  */
@@ -29,7 +29,7 @@ export function listenMemory(source: StreamSource): () => void {
   });
 }
 
-/** Показания устройства идут тем же потоком, что и трафик (ADR-0010). */
+/** Показания устройства идут тем же потоком, что и трафик. */
 export function listenSystem(source: StreamSource): () => void {
   return listenTopic(source, RUNTIME_TOPIC.System, (frame) => {
     const stat = toSystemFrame(frame);
@@ -41,8 +41,8 @@ export function listenSystem(source: StreamSource): () => void {
 }
 
 /**
- * Состояние службы в потоке и в ручке `/api/service` — одно и то же тело
- * (ADR-0010), поэтому событие кладётся в кэш запроса: экран продолжает читать
+ * Состояние службы в потоке и в ручке `/api/service` — одно и то же тело,
+ * поэтому событие кладётся в кэш запроса: экран продолжает читать
  * состояние своим хуком и не знает, пришло оно потоком или запросом.
  */
 export function listenService(source: StreamSource, apply: (state: ServiceStateWire) => void): () => void {

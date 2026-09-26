@@ -146,7 +146,7 @@ func checkOrigin(log *slog.Logger, allowedOrigin string, next http.Handler) http
 	})
 }
 
-// originAllowed — правило ADR-0002 в чистом виде: запрос без Origin
+// originAllowed — правило проверки источника в чистом виде: запрос без Origin
 // отклоняется, иначе хост из Origin обязан совпасть с Host запроса.
 func originAllowed(origin, host string) bool {
 	if origin == "" {

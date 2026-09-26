@@ -1,7 +1,7 @@
 // Package contract объявляет формы, которые демон отдаёт наружу.
 //
 // Пакет существует, чтобы у контракта была явная граница: панель строит схемы
-// по этим типам (ADR-0012), и приватная структура хендлера контрактом быть не
+// по этим типам, и приватная структура хендлера контрактом быть не
 // может — её переименование молча доходило бы до панели. Доменные типы,
 // попадающие в ответ целиком, остаются в своих пакетах: contract ссылается на
 // них, а не копирует.
@@ -31,12 +31,12 @@ type Status struct {
 	// и вычислить его на стороне панели нельзя.
 	ConfigPath string `json:"config_path,omitempty"`
 	// Runtime — откуда демон читает рантайм. Молчаливая подмена одного источника
-	// другим запрещена, поэтому состав объявлен контрактом (ADR-0006).
+	// другим запрещена, поэтому состав объявлен контрактом.
 	Runtime     Runtime            `json:"runtime"`
 	Transaction *apply.Transaction `json:"transaction,omitempty"`
 	// TransactionHref — адрес идущего применения. Без него перезагрузка
 	// страницы теряет транзакцию: её идентификатор жил только в ответе на
-	// POST (ADR-0002).
+	// POST.
 	TransactionHref string `json:"transaction_href,omitempty"`
 }
 
@@ -47,11 +47,11 @@ type SingboxBuild struct {
 	Tags []string `json:"tags"`
 }
 
-// RuntimeSource — источник рантайм-данных (ADR-0006).
+// RuntimeSource — источник рантайм-данных.
 type RuntimeSource string
 
 // SourceClashAPI — Clash API sing-box: базовый источник и пока единственный.
-// gRPC-ветка ADR-0006 ждёт замера на целевом железе.
+// gRPC-ветка ждёт замера на целевом железе.
 const SourceClashAPI RuntimeSource = "clash_api"
 
 // Runtime — источники рантайма в `GET /api/status`.
@@ -80,7 +80,7 @@ type Versions struct {
 }
 
 // Service — ответ `GET /api/service` и того же вида событие потока: панель
-// получает один формат независимо от источника (ADR-0010).
+// получает один формат независимо от источника.
 type Service struct {
 	Status string `json:"status"`
 	// Uptime — секунды с момента старта. Ноль означает, что возраст узнать не
@@ -127,7 +127,7 @@ const (
 	// ErrOriginMismatch — источник мутирующего запроса не совпал с адресом панели.
 	ErrOriginMismatch ErrorCode = "origin_mismatch"
 	// ErrUpgradeUnsupported — попытка поднять WebSocket: рантайм идёт потоком
-	// `/api/events` (ADR-0010).
+	// `/api/events`.
 	ErrUpgradeUnsupported ErrorCode = "upgrade_unsupported"
 	// ErrConfigMissing — файла конфига на устройстве нет.
 	ErrConfigMissing ErrorCode = "config_missing"
@@ -167,8 +167,8 @@ type Error struct {
 }
 
 // CheckDetails — вывод sing-box дословно. Единственное исключение из правила
-// «внутренние подробности наружу не идут», и оно задано ADR-0002: на этих
-// строках пользователь чинит конфиг.
+// «внутренние подробности наружу не идут»: на этих строках пользователь
+// чинит конфиг.
 type CheckDetails struct {
 	Stdout   string `json:"stdout"`
 	Stderr   string `json:"stderr"`

@@ -14,7 +14,7 @@ describe('toRouteKind', () => {
     expect(toRouteKind('route(block-out)')).toBe(ROUTE_KIND.Block);
   });
 
-  // ADR-0007: у соединения без правила условий нет, и судьбу показывает цепочка.
+  // У соединения без правила условий нет, и судьбу показывает цепочка.
   it('у соединения без правила выход читает по цепочке', () => {
     expect(toRouteKind(FINAL_ACTION, ['direct'])).toBe(ROUTE_KIND.Direct);
     expect(toRouteKind(FINAL_ACTION, ['proxy', 'sub/node'])).toBe(ROUTE_KIND.Proxy);

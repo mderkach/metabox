@@ -86,7 +86,7 @@ export function getServiceStateOptions() {
     staleTime: CACHE_TIME.Second,
     gcTime: CACHE_TIME.Minute,
     // Опроса нет: состояние обновляет топик `service` единого потока, а тело
-    // у потока и у ручки одно (ADR-0010). Запрос остаётся первым значением —
+    // у потока и у ручки одно. Запрос остаётся первым значением —
     // до первого события экрану надо что-то показать.
     meta: { showError: false },
   });

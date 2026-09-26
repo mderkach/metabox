@@ -7,7 +7,7 @@ import { formatBytes, formatRate } from '@shared/lib/format';
 import { ConnectionSummaryBars, type SummaryBar } from './ConnectionSummaryBars';
 import { ConnectionSummaryPanel } from './ConnectionSummaryPanel';
 
-/** Тон выхода — ADR-0013. Порядок строк фиксирован: по нагрузке он не устойчив. */
+/** Порядок строк фиксирован: по нагрузке он не устойчив. */
 const KIND_VIEW = [
   { kind: ROUTE_KIND.Proxy, label: 'route.proxy', tone: 'bg-route-proxy' },
   { kind: ROUTE_KIND.Direct, label: 'route.direct', tone: 'bg-route-direct' },

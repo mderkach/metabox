@@ -407,7 +407,7 @@ func TestApplyStartsTransaction(t *testing.T) {
 }
 
 // Вывод бинаря — единственное исключение из правила «внутренние подробности
-// наружу не идут»: на нём пользователь чинит конфиг (ADR-0002).
+// наружу не идут»: на нём пользователь чинит конфиг.
 func TestApplyReturnsCheckOutputVerbatim(t *testing.T) {
 	applier := &fakeApplier{startErr: &singbox.CheckError{
 		Stdout:   "разбор конфига",
@@ -609,7 +609,7 @@ func TestStatusReportsConfigPath(t *testing.T) {
 }
 
 // Перезагрузка страницы не должна терять идущее применение: его идентификатор
-// жил только в ответе на POST (ADR-0002).
+// жил только в ответе на POST.
 func TestStatusLinksActiveTransaction(t *testing.T) {
 	applier := &fakeApplier{}
 	srv := newTestServer(t, applier, "")

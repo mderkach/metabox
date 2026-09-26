@@ -18,7 +18,7 @@ export type {
 } from '@shared/api/daemon.generated';
 
 /**
- * Формы ручек Clash API, которые демон проксирует дословно (ADR-0006): своих
+ * Формы ручек Clash API, которые демон проксирует дословно: своих
  * типов у него для них нет, поэтому схемы рукописные.
  */
 export const ClashConfigsSchema = z.object({

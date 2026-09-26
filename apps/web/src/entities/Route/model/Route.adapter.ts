@@ -25,7 +25,7 @@ function isKind(value: string): value is RouteMatchKind {
  *
  * Демон отдаёт ровно три значения, но бинарь и демон обновляются порознь:
  * ослаблять пометку до `observed` на неизвестном значении нельзя — это ровно
- * тот случай, когда прогноз выдают за факт (ADR-0007).
+ * тот случай, когда прогноз выдают за факт.
  */
 function toOrigin(value: string): RouteOrigin {
   return isOrigin(value) ? value : ROUTE_ORIGIN.Unknown;
@@ -71,7 +71,7 @@ function toRule(dto: RouteExplanationWire['rules'][number]) {
 /**
  * Объяснение маршрута из ответа демона. Форма проверяется схемой, и непонятый
  * ответ становится отказом, а не пустым экраном: «правило не найдено» и «ответ
- * не разобран» — разные вещи, и вторую пользователь обязан видеть (ADR-0007).
+ * не разобран» — разные вещи, и вторую пользователь обязан видеть.
  */
 export function toRouteExplanation(dto: RouteExplanationWire): RouteExplanation {
   return {

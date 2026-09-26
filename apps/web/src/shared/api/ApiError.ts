@@ -12,7 +12,7 @@ export const API_FAILURE = {
 
 export type ApiFailure = (typeof API_FAILURE)[keyof typeof API_FAILURE];
 
-/** `details` у `check_failed` несёт дословный вывод sing-box (ADR-0002). */
+/** `details` у `check_failed` несёт дословный вывод sing-box. */
 export class ApiError extends Error {
   readonly kind: ApiFailure;
   readonly status: number | null;

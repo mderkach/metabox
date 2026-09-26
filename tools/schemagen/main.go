@@ -1,6 +1,5 @@
 // Command schemagen generates Zod schemas from the sing-box-extended option
 // types: it imports the fork as a library and inspects it with reflection.
-// See docs/adr/ADR-0001 for the rationale and the algorithm.
 //
 // This is a separate Go module on purpose, so the fork's dependency tree is
 // never linked into the daemon.

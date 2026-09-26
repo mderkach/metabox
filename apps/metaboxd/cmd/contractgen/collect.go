@@ -32,7 +32,7 @@ type sources struct {
 	docs  map[string]string
 	// values — строковые константы именованного типа в порядке объявления:
 	// `contract.ErrorCode` → коды отказа. Они уезжают в схему списком, и панель
-	// типизирует ими свои таблицы (ADR-0021).
+	// типизирует ими свои таблицы.
 	values map[string][]string
 	root   string
 	read   map[string]bool

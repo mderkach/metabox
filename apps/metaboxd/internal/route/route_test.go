@@ -78,7 +78,7 @@ func TestMatchRuleFinal(t *testing.T) {
 }
 
 // Пустое поле правила gRPC значит то же, что `final` у Clash API: подбирать
-// по нему первое правило без условий нельзя (ADR-0007).
+// по нему первое правило без условий нельзя.
 func TestMatchRuleEmpty(t *testing.T) {
 	rules := []Rule{{Origin: OriginObserved, Index: 0, Conditions: "", Action: "route(direct)"}}
 

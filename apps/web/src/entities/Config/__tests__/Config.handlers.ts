@@ -3,7 +3,7 @@ import { http, HttpResponse } from 'msw';
 import { CONFIG_ENDPOINT } from '../api/Config.endpoints';
 import { CONFIG_FIXTURE } from './Config.fixture';
 
-/** Отступ файла на устройстве: конфиг отдаётся текстом, а не объектом (ADR-0004). */
+/** Отступ файла на устройстве: конфиг отдаётся текстом, а не объектом. */
 const JSON_INDENT = 2;
 
 /** Длина sha256 в шестнадцатеричной записи: демон отдаёт её такой же. */

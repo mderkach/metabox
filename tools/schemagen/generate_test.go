@@ -31,7 +31,7 @@ func TestGenerate(t *testing.T) {
 	// Трансформ превращает ZodObject в ZodPipe: пропадают .extend, .omit и
 	// .pick, на которых собрана схема правил, а z.toJSONSchema перестаёт
 	// печатать выходную сторону — авторендерер получит пустой узел вместо поля
-	// (docs/adr/ADR-0001).
+	//.
 	if strings.Contains(out, ".transform(") {
 		t.Error("в генерируемой схеме есть .transform(): ломаются .extend и z.toJSONSchema")
 	}
@@ -53,7 +53,7 @@ func TestGenerateCarriesDocs(t *testing.T) {
 // Встроенные структуры уплощаются и внутри union'а по дискриминатору. У
 // клиента HTTP настройки набора соединения и TLS приходят встраиванием, и без
 // них строгая схема отвергала бы конфиг с `http_client.detour`, а панель
-// помечала бы такой узел как непокрытый (ADR-0018).
+// помечала бы такой узел как непокрытый.
 func TestGenerateFlattensEmbeddedInTaggedUnion(t *testing.T) {
 	out, err := generate()
 	if err != nil {

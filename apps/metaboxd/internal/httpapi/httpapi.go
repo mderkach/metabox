@@ -69,7 +69,7 @@ type Options struct {
 	// прочитан, пустой список — что бинарь собран без тегов.
 	SingboxTags []string
 	// AllowedOrigin — разрешённый Origin сверх совпадения с Host. Пустая
-	// строка означает, что послаблений нет: правило из ADR-0002 действует
+	// строка означает, что послаблений нет: правило проверки источника действует
 	// в чистом виде.
 	AllowedOrigin string
 	// SPA раздаёт встроенный интерфейс. nil означает, что бинарь собран без
@@ -78,14 +78,14 @@ type Options struct {
 	// Service управляет сервисом sing-box. nil означает, что управление
 	// недоступно: панель откроется, а карточка сервиса не покажется.
 	Service Service
-	// Events — единый поток рантайма к панели (ADR-0006). nil означает, что
+	// Events — единый поток рантайма к панели. nil означает, что
 	// поток не собран: экраны остаются на прокси Clash API.
 	Events http.Handler
 	// Clash проксирует рантайм sing-box под веткой clashapi.Prefix. nil
 	// означает, что прокси не собран: панель откроется, а экраны рантайма
 	// деградируют.
 	Clash http.Handler
-	// Explain объясняет маршрут соединения (ADR-0007). nil означает, что
+	// Explain объясняет маршрут соединения. nil означает, что
 	// источника рантайма нет: экран соединений остаётся без объяснения.
 	Explain Explainer
 	// Hits отдаёт счёт срабатываний правил. nil означает, что его никто не
@@ -262,7 +262,7 @@ func (s *Server) handleStatus(w http.ResponseWriter, _ *http.Request) {
 
 // runtimeSources собирает состав источников по тому, что демону передали:
 // поток читает рантайм у Clash API, прокси отдаёт его ручки как есть. Выбирать
-// источник соединений пока не из чего — gRPC-ветка ADR-0006 не реализована.
+// источник соединений пока не из чего — gRPC-ветка не реализована.
 func (s *Server) runtimeSources() contract.Runtime {
 	// Пустой срез, а не nil: nil уезжает в JSON как null, и панель разбирала бы
 	// список источников не массивом.
@@ -280,7 +280,7 @@ func (s *Server) runtimeSources() contract.Runtime {
 }
 
 // handleConfig отдаёт конфиг ровно теми байтами, какими он лежит на диске:
-// демон его не разбирает и не переформатирует (ADR-0002), иначе round-trip
+// демон его не разбирает и не переформатирует, иначе round-trip
 // рукописного конфига терял бы форматирование.
 func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 	data, err := s.reader.Read(r.Context())
@@ -327,7 +327,7 @@ func (s *Server) handleVersions(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleVersion отдаёт версию теми же байтами, какими она была применена:
-// история хранит документ целиком, а не разбор (ADR-0002).
+// история хранит документ целиком, а не разбор.
 func (s *Server) handleVersion(w http.ResponseWriter, r *http.Request) {
 	data, err := s.readVersion(r)
 	if err != nil {
@@ -351,7 +351,7 @@ func (s *Server) handleVersion(w http.ResponseWriter, r *http.Request) {
 
 // handleVersionRestore возвращает версию обычным применением: отдельной записи
 // в обход протокола нет, иначе откат на битую версию отрезал бы доступ без
-// проверки бинарём, рестарта и окна подтверждения (ADR-0002).
+// проверки бинарём, рестарта и окна подтверждения.
 func (s *Server) handleVersionRestore(w http.ResponseWriter, r *http.Request) {
 	data, err := s.readVersion(r)
 	if err != nil {
@@ -381,7 +381,7 @@ func (s *Server) readVersion(r *http.Request) ([]byte, error) {
 
 // handleApply принимает конфиг байтами и запускает применение. Ответ приходит
 // после проверки бинарём, но до конца цикла: применение асинхронно и живёт
-// дольше запроса (ADR-0002).
+// дольше запроса.
 func (s *Server) handleApply(w http.ResponseWriter, r *http.Request) {
 	cfg, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxConfigBytes))
 	if err != nil {
@@ -424,7 +424,7 @@ func (s *Server) handleApplyConfirm(w http.ResponseWriter, r *http.Request) {
 
 // handleExplain объясняет маршрут соединения: сработавшее правило, его индекс
 // в route.rules и цепочку. Каждое утверждение несёт происхождение, и ответов
-// без него у ручки не бывает (ADR-0007).
+// без него у ручки не бывает.
 func (s *Server) handleExplain(w http.ResponseWriter, r *http.Request) {
 	explanation, err := s.explain.Explain(r.Context(), r.PathValue("id"))
 	if err != nil {
@@ -453,7 +453,7 @@ func (s *Server) handleRuleSets(w http.ResponseWriter, _ *http.Request) {
 
 // ServiceState приводит состояние службы к форме ответа. Экспортируется,
 // потому что то же тело уходит в поток событий: панель обязана получать один
-// формат независимо от того, ручкой оно пришло или потоком (ADR-0006).
+// формат независимо от того, ручкой оно пришло или потоком.
 //
 // Аргумент observed — найден ли на устройстве живой процесс sing-box. Он важен,
 // когда служба демона остановлена: маршрутизацией может владеть чужой пакет,
@@ -541,7 +541,7 @@ func (s *Server) handleServiceAction(w http.ResponseWriter, r *http.Request) {
 
 // noUpgrade закрывает апгрейд до WebSocket на ветке прокси.
 //
-// Рантайм идёт панели одним потоком `GET /api/events` (ADR-0010), и второго
+// Рантайм идёт панели одним потоком `GET /api/events`, и второго
 // пути к тем же данным быть не должно: прокси остаётся для ручек
 // запрос-ответ. Отказ явный, потому что молча снятый заголовок превратил бы
 // апгрейд в другой ответ того же адреса.

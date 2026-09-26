@@ -30,7 +30,7 @@ export function fakeEventSource() {
 
   return {
     source,
-    /** Событие в конверте демона: топик, номер и данные (ADR-0010). */
+    /** Событие в конверте демона: топик, номер и данные. */
     send: (topic: RuntimeTopic, data: unknown) => {
       seq += 1;
       emit(topic, JSON.stringify({ topic, seq, data }));

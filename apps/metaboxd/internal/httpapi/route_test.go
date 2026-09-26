@@ -192,7 +192,7 @@ func TestExplainRouteAbsent(t *testing.T) {
 }
 
 // Апгрейд до WebSocket на ветке прокси закрыт: рантайм идёт одним потоком
-// `/api/events`, и второго пути к тем же данным быть не должно (ADR-0010).
+// `/api/events`, и второго пути к тем же данным быть не должно.
 func TestClashProxyRejectsUpgrade(t *testing.T) {
 	var proxied int
 

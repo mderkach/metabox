@@ -41,7 +41,7 @@ export function AppLayout() {
         <DaemonBanner />
         <ConfigApplyBar />
         {/* Экран — своя группа View Transitions для перехода роутера; граница
-            `<ViewTransition>` вокруг `Outlet` не сработает (ADR-0026). */}
+            `<ViewTransition>` вокруг `Outlet` не сработает. */}
         <main id='content' tabIndex={-1} className='flex min-h-0 grow flex-col [view-transition-name:page]'>
           <Outlet />
         </main>

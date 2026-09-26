@@ -12,7 +12,7 @@ const GATEWAY_TIMEOUT = 504;
 /** Без тела демона они значат то же, что оборванный запрос: ответил посредник. */
 const GATEWAY_STATUS = new Set([BAD_GATEWAY, SERVICE_UNAVAILABLE, GATEWAY_TIMEOUT]);
 
-/** Тело отказа демона приходит из его контракта (ADR-0012). */
+/** Тело отказа демона приходит из его контракта. */
 const ApiErrorBodySchema = ErrorSchema;
 
 /**

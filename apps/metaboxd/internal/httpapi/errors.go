@@ -22,7 +22,7 @@ var (
 	// DNS rebinding, когда чужой домен перекинули на адрес роутера.
 	errHostMismatch = errors.New("адрес запроса не совпадает с адресом панели")
 	// errUpgradeUnsupported — попытка поднять WebSocket на ветке прокси.
-	// Рантайм идёт одним потоком `/api/events` (ADR-0010).
+	// Рантайм идёт одним потоком `/api/events`.
 	errUpgradeUnsupported = errors.New("рантайм идёт потоком /api/events, апгрейд не поддерживается")
 )
 

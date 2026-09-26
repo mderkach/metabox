@@ -1,4 +1,4 @@
-/** Адреса прокси: демон проксирует их в Clash API дословно (ADR-0006). */
+/** Адреса прокси: демон проксирует их в Clash API дословно. */
 export const PROXY_ENDPOINT = {
   proxies: () => '/api/clash/proxies',
   proxy: (name: string) => `/api/clash/proxies/${encodeURIComponent(name)}`,

@@ -6,7 +6,7 @@ import type { RouteExplanationWire } from '../api/Route.schema';
  *
  * Правил здесь семь, а в конфиге фикстуры их 32, поэтому в дев-режиме панель
  * показывает расхождение списков и отключает переход к узлу. Это не поломка:
- * так выглядит случай «процесс исполняет другой конфиг» из ADR-0007.
+ * так выглядит случай «процесс исполняет другой конфиг».
  */
 export const ROUTE_EXPLANATION_FIXTURE: RouteExplanationWire = {
   connection_id: 'c-1',
@@ -45,7 +45,7 @@ export const ROUTE_FINAL_FIXTURE: RouteExplanationWire = {
 
 /**
  * Условия у соединения есть, а в списке процесса не нашлись: объяснение
- * помечается неизвестностью с причиной, а не догадкой (ADR-0007).
+ * помечается неизвестностью с причиной, а не догадкой.
  */
 export const ROUTE_UNKNOWN_FIXTURE: RouteExplanationWire = {
   connection_id: 'c-3',

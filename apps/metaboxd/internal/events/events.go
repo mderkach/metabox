@@ -2,8 +2,7 @@
 //
 // Источники у форка разные — посекундные строки `/traffic` и `/memory`,
 // снапшот `/connections`, опрос службы, — а панель получает один конверт и не
-// знает, какой источник сработал (ADR-0006). Транспорт, конверт и владение
-// подписками заданы ADR-0010: SSE выбран потому, что сервера WebSocket в
+// знает, какой источник сработал. SSE выбран потому, что сервера WebSocket в
 // стандартной библиотеке нет, а зависимость в демоне требует отдельного
 // решения.
 package events
@@ -212,7 +211,7 @@ func (h *Hub) start() {
 		defer wg.Done()
 		h.runPoll(ctx, TopicConnections, h.opts.ConnectionsInterval, func(ctx context.Context) (json.RawMessage, error) {
 			// Форма соединений принадлежит демону, а не источнику: панель не
-			// должна знать, каким API они прочитаны (ADR-0006).
+			// должна знать, каким API они прочитаны.
 			raw, err := h.source.Snapshot(ctx, "/connections")
 			if err != nil {
 				return nil, err

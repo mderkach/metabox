@@ -84,7 +84,7 @@ describe('RouteExplanation', () => {
     expect(await screen.findByText('sing-box работает по другому конфигу')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Открыть правило в редакторе' })).not.toBeInTheDocument();
     // Номер узла чужого документа не показывается вовсе: он указал бы на
-    // другое правило (ADR-0007).
+    // другое правило.
     expect(screen.queryByText('Сработало правило 7')).not.toBeInTheDocument();
     expect(screen.getByText('Правило не определено')).toBeInTheDocument();
   });

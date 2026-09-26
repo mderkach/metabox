@@ -35,7 +35,7 @@ const STATUS_LABEL = {
   failed: 'status.failed',
 } as const satisfies Readonly<Record<ServiceState['status'], ParseKeys<'widgets/Daemon/DaemonService'>>>;
 
-/** Состояние читается тоном, а не только словом (ADR-0013). */
+/** Состояние читается тоном, а не только словом. */
 const STATUS_TONE: Readonly<Record<ServiceState['status'], string>> = {
   running: 'bg-signal-ok',
   stopped: 'bg-signal-idle',

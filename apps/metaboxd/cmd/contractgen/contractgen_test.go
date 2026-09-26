@@ -104,7 +104,7 @@ func TestGenerateEmitsEnumValues(t *testing.T) {
 	}
 
 	// Поле остаётся строкой: незнакомое значение читает адаптер, а не
-	// отбраковывает разбор (ADR-0021).
+	// отбраковывает разбор.
 	if want := "kind: z.string(),"; !strings.Contains(out, want) {
 		t.Errorf("поле перечисления описано не строкой: нет %q", want)
 	}

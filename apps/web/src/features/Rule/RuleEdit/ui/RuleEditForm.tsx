@@ -22,7 +22,7 @@ const ERROR_KEY: Readonly<Record<string, ParseKeys<'features/Rule/RuleEdit'> | u
 /**
  * Выход правила: что делать с трафиком и куда его отправить.
  *
- * Правка ложится на текст файла по пути узла (ADR-0004): меняется одна строка,
+ * Правка ложится на текст файла по пути узла: меняется одна строка,
  * порядок ключей и незнакомые узлы остаются как были.
  */
 export function RuleEditForm({ rule, outbounds }: { rule: RuleRow; outbounds: string[] }) {

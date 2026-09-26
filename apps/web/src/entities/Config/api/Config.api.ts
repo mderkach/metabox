@@ -9,7 +9,7 @@ import type { ConfigVersionsWire } from './Config.schema';
 /** Axios разобрал бы тело в объект, а нам нужны исходные байты файла. */
 const KEEP_RAW = [(data: string) => data];
 
-/** Ответ читается текстом: форматирование файла сохраняется (ADR-0004). */
+/** Ответ читается текстом: форматирование файла сохраняется. */
 const AS_TEXT: AxiosRequestConfig = { responseType: 'text', transformResponse: KEEP_RAW };
 
 /**
@@ -20,7 +20,7 @@ const SEND_TEXT: AxiosRequestConfig = { headers: { 'Content-Type': 'application/
 
 /**
  * Конфиг забирается текстом: правки применяются к исходным байтам, иначе
- * порядок ключей пользователя переписывается целиком (ADR-0004).
+ * порядок ключей пользователя переписывается целиком.
  */
 export async function getConfig(config?: AxiosRequestConfig): Promise<string> {
   return ApiClientInstance.get<string>(CONFIG_ENDPOINT.config(), { ...AS_TEXT, ...config });
@@ -41,7 +41,7 @@ export async function getConfigVersion(id: number, config?: AxiosRequestConfig):
 
 /**
  * Запускает применение. Ответ приходит после `sing-box check`, но до конца
- * цикла: применение живёт дольше запроса (ADR-0002). Отказ проверки возвращает
+ * цикла: применение живёт дольше запроса. Отказ проверки возвращает
  * 422 с выводом бинаря в `details` — его показывает вызывающий.
  */
 export async function applyConfig(text: string): Promise<ApplyTransactionWire> {
@@ -55,7 +55,7 @@ export async function confirmApply(id: string): Promise<ApplyTransactionWire> {
 
 /**
  * Откат на версию. Демон проводит её обычным протоколом Apply, поэтому ответ —
- * такая же транзакция с окном подтверждения (ADR-0008).
+ * такая же транзакция с окном подтверждения.
  */
 export async function restoreConfigVersion(id: number): Promise<ApplyTransactionWire> {
   return ApiClientInstance.post<ApplyTransactionWire>(CONFIG_ENDPOINT.versionRestore(id));

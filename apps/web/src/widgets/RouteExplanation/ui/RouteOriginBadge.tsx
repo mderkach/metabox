@@ -13,7 +13,7 @@ const ORIGIN_LABEL = {
 /**
  * Наблюдение и вычисленное различаются на экране, а не только в ответе API:
  * прогноз, поданный как факт, — самый дорогой класс ошибок для панели, чья
- * ценность в доверии к объяснению (ADR-0007).
+ * ценность в доверии к объяснению.
  */
 export function RouteOriginBadge({ origin }: { origin: RouteOrigin }) {
   const { t } = useTranslation('widgets/RouteExplanation');

@@ -87,7 +87,7 @@ export function useRuleMarks(editor: RouteEditorState): RuleMarks {
     }
 
     // Список правил процесса другой длины — процесс работает не на файле с
-    // устройства, и его номера к строкам не относятся (ADR-0007).
+    // устройства, и его номера к строкам не относятся.
     if (hits.data.byIndex.length !== appliedNodes.length) {
       return { state: RULE_HITS_STATE.Mismatch };
     }
@@ -113,7 +113,7 @@ export function useRuleMarks(editor: RouteEditorState): RuleMarks {
  *
  * В адресе номер как в интерфейсе, с единицы, а строка адресуется индексом
  * узла `route.rules`, считая с нуля: экран соединений ведёт сюда на конкретный
- * узел, и промах на единицу открыл бы соседнее правило (ADR-0007).
+ * узел, и промах на единицу открыл бы соседнее правило.
  */
 export function toSelectedRuleId(rule: number | undefined): string | null {
   return rule === undefined ? null : String(rule - 1);

@@ -22,7 +22,7 @@ const FIRST_INDENT = /\n([\t ]+)\S/;
  *
  * `jsonc-parser` форматирует только вставляемые узлы и собственного определения
  * отступа не имеет: без этого новая секция встала бы двумя пробелами в файл,
- * отбитый табами (ADR-0004).
+ * отбитый табами.
  */
 function detectFormatting(text: string): FormattingOptions {
   const eol = text.includes('\r\n') ? '\r\n' : '\n';
@@ -44,7 +44,7 @@ function edit(text: string, path: JSONPath, value: unknown, options?: Modificati
  *
  * Узла по пути может не быть — тогда он создаётся. Возвращается новый текст:
  * именно он уходит телом `POST /api/apply`, поэтому пересобирать конфиг из
- * разобранной модели нельзя (ADR-0004).
+ * разобранной модели нельзя.
  */
 export function setValue(text: string, path: JSONPath, value: unknown): string {
   return edit(text, path, value);
@@ -221,7 +221,7 @@ export function toOutboundTags(config: ConfigDocument | null): string[] {
 /**
  * Тип аутбаунда по его тегу. Тип — единственное точное указание на то, куда
  * узел ведёт трафик: тег пишет пользователь, и по имени судить о нём нельзя
- * (ADR-0013). Что тип означает для интерфейса, решает потребитель карты.
+ *. Что тип означает для интерфейса, решает потребитель карты.
  *
  * Узел без тега или без типа в карту не попадает: сослаться на него нечем.
  */

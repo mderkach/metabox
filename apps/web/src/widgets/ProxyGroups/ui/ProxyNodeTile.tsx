@@ -46,7 +46,7 @@ function DelayValue({ node }: { node: ProxyNode }) {
   );
 }
 
-/** Выбранный узел несёт кромку и галочку: два признака, один не цветовой (ADR-0013). */
+/** Выбранный узел несёт кромку и галочку: два признака, один не цветовой. */
 function ProxyNodeTileProto({
   node,
   selectable,

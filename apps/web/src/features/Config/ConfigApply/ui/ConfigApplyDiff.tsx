@@ -36,7 +36,7 @@ const LINE_MARK: Readonly<Record<DiffLine['kind'], string>> = {
 
 /**
  * Диалог показывает текст файла, а не разобранную модель: в Apply уйдут те же
- * байты, что видны здесь (ADR-0004).
+ * байты, что видны здесь.
  */
 export function ConfigApplyDiff({ canApply, onApply }: { canApply: boolean; onApply: () => void }) {
   const { t } = useTranslation('features/Config/ConfigApply');

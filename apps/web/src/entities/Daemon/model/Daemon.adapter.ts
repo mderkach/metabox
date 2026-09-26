@@ -47,7 +47,7 @@ function isServiceStatus(value: string): value is ServiceStatus {
  *
  * Демон и панель обновляются порознь, и стадия, которой панель не знает, не
  * имеет права выглядеть как успешное подтверждение: окно подтверждения тогда
- * закрылось бы само, а конфиг остался бы неподтверждённым (ADR-0002).
+ * закрылось бы само, а конфиг остался бы неподтверждённым.
  */
 function toPhase(value: string): ApplyPhase {
   return isPhase(value) ? value : APPLY_PHASE.Failed;
@@ -128,7 +128,7 @@ export function toClashConfigs(wire: ClashConfigsWire): ClashConfigs {
 /**
  * Сэмплы и состояние службы приходят кадрами потока, поэтому непонятый кадр
  * отбраковывается, а не роняет подписку: следующий придёт через секунду
- * (ADR-0010).
+ *.
  */
 export function toTrafficFrame(raw: unknown): TrafficSample | null {
   return decodeFrame(ClashTrafficSampleSchema, raw, 'traffic');
@@ -160,7 +160,7 @@ export function toSystemFrame(raw: unknown): SystemStat | null {
   return wire === null ? null : toStat(wire);
 }
 
-/** Кадр кладётся в кэш `/api/service` (ADR-0010), поэтому не переводится. */
+/** Кадр кладётся в кэш `/api/service`, поэтому не переводится. */
 export function toServiceFrame(raw: unknown): ServiceStateWire | null {
   return decodeFrame(ServiceStateSchema, raw, 'service');
 }

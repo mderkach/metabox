@@ -19,7 +19,7 @@ import (
 // на входе), а не по документации.
 
 // duration: badoption.Duration принимает строку в формате time.ParseDuration.
-// Регулярка вместо transform — иначе ломается z.toJSONSchema (ADR-0001).
+// Регулярка вместо transform — иначе ломается z.toJSONSchema.
 const durationPattern = `^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$`
 
 func durationSchema() *schema {

@@ -30,7 +30,7 @@ export function toConnectionRow(
     source: connection.source,
     rule: connection.rule,
     // Выход по умолчанию показывается узлом конфига, а не пустой строкой:
-    // «ни одно правило не совпало» — наблюдаемый факт (ADR-0007).
+    // «ни одно правило не совпало» — наблюдаемый факт.
     action,
     kind: toRouteKind(action, chain, outboundTypes),
     // Цепочка приходит от узла к группе — человек читает её в обратную сторону.

@@ -8,7 +8,7 @@ import (
 )
 
 // Checker ждёт, пока Clash API поднимется после рестарта сервиса — шаг 7
-// протокола ADR-0002.
+// протокола применения.
 type Checker struct {
 	client   *http.Client
 	interval time.Duration
