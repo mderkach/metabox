@@ -71,7 +71,7 @@ func writeAtomic(dir, name string, data []byte, perm os.FileMode) (err error) {
 ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 defer cancel()
 
-cmd := exec.CommandContext(ctx, s.binary, "check", "-C", candidateDir)
+cmd := exec.CommandContext(ctx, s.binary, "check", "-D", candidateDir, "-C", candidateDir)
 cmd.WaitDelay = 5 * time.Second
 
 var stdout, stderr bytes.Buffer
@@ -87,7 +87,7 @@ err := cmd.Run()
 - `stdout` и `stderr` собираются раздельно и отдаются вызывающему дословно. Вывод ограничивается по размеру: битый конфиг может дать мегабайты диагностики;
 - код возврата — из `*exec.ExitError` через `errors.AsType`, а не разбором текста.
 
-Проверяется каталог-кандидат (`check -C`), а не отдельный файл: сервис поднимется на слиянии всех `.json`, и валидировать нужно ровно то, что запустится.
+Проверяется каталог-кандидат (`check -C`), а не отдельный файл: сервис поднимется на слиянии всех `.json`, и валидировать нужно ровно то, что запустится. `-D` указывает на тот же кандидат — служба идёт с `-D` на рабочем каталоге, и относительные пути конфига обязаны резолвиться от той же базы, — поэтому кандидат несёт и подкаталоги рабочего каталога.
 
 ## Сервис через procd
 
