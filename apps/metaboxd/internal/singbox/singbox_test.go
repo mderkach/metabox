@@ -58,7 +58,8 @@ func TestNewRejectsRelativePaths(t *testing.T) {
 }
 
 // Проверяется каталог-кандидат, а не отдельный файл: сервис поднимется на
-// слиянии всех .json каталога.
+// слиянии всех .json каталога. -D — та же база относительных путей, что у
+// службы.
 func TestCheckValidatesDirectory(t *testing.T) {
 	runner := &fakeRunner{}
 
@@ -66,7 +67,7 @@ func TestCheckValidatesDirectory(t *testing.T) {
 		t.Fatalf("проверка: %v", err)
 	}
 
-	want := []string{binary, "check", "-C", "/tmp/candidate"}
+	want := []string{binary, "check", "-D", "/tmp/candidate", "-C", "/tmp/candidate"}
 	if len(runner.calls) != 1 || !slices.Equal(runner.calls[0], want) {
 		t.Errorf("вызвано %v, ожидали %v", runner.calls, want)
 	}

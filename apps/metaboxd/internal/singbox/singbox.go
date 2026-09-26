@@ -1,6 +1,6 @@
 // Package singbox вызывает бинарь sing-box и управляет его сервисом через
 // procd. Содержимое конфига пакет не разбирает: единственный арбитр
-// валидности — сам бинарь (ADR-0002).
+// валидности — сам бинарь.
 package singbox
 
 import (
@@ -28,7 +28,7 @@ type Runner interface {
 }
 
 // CheckError несёт вывод бинаря дословно: на нём пользователь чинит конфиг,
-// поэтому ADR-0002 запрещает переформулировать эти строки.
+// переформулировать эти строки нельзя.
 type CheckError struct {
 	Stdout   string
 	Stderr   string
@@ -77,9 +77,11 @@ func New(runner Runner, binary, initScript, logread string, supervisor Superviso
 
 // Check валидирует каталог-кандидат. Проверяется каталог, а не отдельный файл:
 // сервис поднимается на слиянии всех .json каталога, и валидировать надо ровно
-// то, что запустится (ADR-0002).
+// то, что запустится. -D указывает на тот же каталог: служба идёт
+// с -D на рабочем каталоге, и относительные пути конфига обязаны резолвиться
+// от той же базы — иначе вердикты check и рантайма расходятся.
 func (c *Client) Check(ctx context.Context, dir string) error {
-	res, err := c.runner.Run(ctx, c.binary, "check", "-C", dir)
+	res, err := c.runner.Run(ctx, c.binary, "check", "-D", dir, "-C", dir)
 	if err != nil {
 		return fmt.Errorf("проверка конфига: %w", err)
 	}

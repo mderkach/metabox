@@ -383,6 +383,36 @@ func TestStageCandidate(t *testing.T) {
 	}
 }
 
+// Подкаталоги едут в кандидата целиком: check идёт с -D на нём, и файл, на
+// который конфиг ссылается относительным путём, обязан найтись там же, где
+// его найдёт служба.
+func TestStageCandidateCopiesSubdirectories(t *testing.T) {
+	store, cfgDir := newStore(t)
+	writeConfig(t, cfgDir, configName, []byte(`{"старое":true}`), 0o600)
+
+	nested := filepath.Join(cfgDir, "rule-sets", "local")
+	if err := os.MkdirAll(nested, 0o700); err != nil {
+		t.Fatalf("подготовка подкаталога: %v", err)
+	}
+	ruleSet := []byte("domain:example.org")
+	if err := os.WriteFile(filepath.Join(nested, "my.txt"), ruleSet, 0o600); err != nil {
+		t.Fatalf("подготовка файла набора: %v", err)
+	}
+
+	dst := t.TempDir()
+	if err := store.StageCandidate(t.Context(), dst, []byte(`{"новое":true}`)); err != nil {
+		t.Fatalf("раскладка кандидата: %v", err)
+	}
+
+	got, err := os.ReadFile(filepath.Join(dst, "rule-sets", "local", "my.txt"))
+	if err != nil {
+		t.Fatalf("файл подкаталога не переехал: %v", err)
+	}
+	if !bytes.Equal(got, ruleSet) {
+		t.Errorf("получили %q, ожидали %q", got, ruleSet)
+	}
+}
+
 func TestStageCandidateSkipsSymlinkOutside(t *testing.T) {
 	store, cfgDir := newStore(t)
 	writeConfig(t, cfgDir, configName, []byte("{}"), 0o600)

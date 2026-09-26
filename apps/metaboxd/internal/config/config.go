@@ -1,7 +1,7 @@
 // Package config владеет файлом конфига sing-box на устройстве: читает его,
 // пишет атомарно, держит бэкап для отката и раскладывает каталог-кандидат под
-// проверку бинарём. Содержимое пакет не разбирает — по ADR-0002 конфиг для
-// демона это последовательность байт.
+// проверку бинарём. Содержимое пакет не разбирает: конфиг для демона — это
+// последовательность байт.
 //
 // Все файловые операции идут через os.Root: демон работает с правами root, а в
 // рабочем каталоге может оказаться симлинк, оставленный владельцем или чужим
@@ -57,7 +57,7 @@ type Store struct {
 // демона под бэкап и состояние. Пути приходят флагами, пакет их не выдумывает.
 //
 // Служебный каталог внутри каталога конфига сервис слил бы в рабочую
-// конфигурацию — он поднимается в режиме каталога (ADR-0002), — поэтому такая
+// конфигурацию — он поднимается в режиме каталога, — поэтому такая
 // раскладка отвергается на старте, а не выясняется на устройстве.
 func NewStore(dir, name, serviceDir string) (*Store, error) {
 	if name == "" {
@@ -177,7 +177,7 @@ func (s *Store) Write(ctx context.Context, data []byte) error {
 }
 
 // Backup сохраняет текущий конфиг для отката. Вызывается до записи нового
-// (шаг 4 протокола ADR-0002).
+// (шаг 4 протокола применения).
 func (s *Store) Backup(ctx context.Context) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -233,10 +233,12 @@ func (s *Store) Restore(ctx context.Context) error {
 	return s.write(data)
 }
 
-// StageCandidate раскладывает каталог-кандидат: конфиг с новым содержимым плюс
-// остальные .json рабочего каталога. Проверять надо ровно то, что поднимет
-// сервис, а он сливает весь каталог (ADR-0002). Каталог создаёт и удаляет
-// вызывающий.
+// StageCandidate раскладывает каталог-кандидат: конфиг с новым содержимым,
+// остальные .json рабочего каталога и его подкаталоги целиком. Проверять надо
+// ровно то, что поднимет сервис: он сливает все .json каталога, а
+// check идёт с -D на кандидате, и файлы, на которые конфиг ссылается
+// относительным путём, обязаны лежать в нём той же раскладкой. Каталог
+// создаёт и удаляет вызывающий.
 func (s *Store) StageCandidate(ctx context.Context, dst string, data []byte) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -263,7 +265,14 @@ func (s *Store) StageCandidate(ctx context.Context, dst string, data []byte) err
 	}
 
 	for _, entry := range entries {
-		if entry.IsDir() || entry.Name() == s.name || !strings.HasSuffix(entry.Name(), ".json") {
+		if entry.IsDir() {
+			if err := copyTree(srcRoot, dstRoot, entry.Name()); err != nil {
+				return err
+			}
+
+			continue
+		}
+		if entry.Name() == s.name || !strings.HasSuffix(entry.Name(), ".json") {
 			continue
 		}
 
@@ -301,6 +310,27 @@ func openRoot(dir string) (*os.Root, error) {
 	}
 
 	return root, nil
+}
+
+// copyTree копирует подкаталог рекурсивно. Симлинк на файл разрешается как и
+// на верхнем уровне: внутрь каталога — копируется содержимое цели, наружу —
+// os.Root его не откроет и раскладка остановится с ошибкой.
+func copyTree(src, dst *os.Root, dir string) error {
+	return fs.WalkDir(src.FS(), dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return fmt.Errorf("обход %s: %w", path, err)
+		}
+
+		if d.IsDir() {
+			if err := dst.Mkdir(path, secureDirPerm); err != nil {
+				return fmt.Errorf("каталог %s в %s: %w", path, dst.Name(), err)
+			}
+
+			return nil
+		}
+
+		return copyFile(src, dst, path)
+	})
 }
 
 func copyFile(src, dst *os.Root, name string) error {
@@ -357,7 +387,7 @@ func (s *Store) ReadState(ctx context.Context) ([]byte, error) {
 
 // WriteState сохраняет состояние транзакции атомарно. Вызывается до записи
 // конфига: питание, снятое между записью и стартом таймера, иначе оставило бы
-// устройство на новом конфиге без автоотката (ADR-0002).
+// устройство на новом конфиге без автоотката.
 func (s *Store) WriteState(ctx context.Context, data []byte) error {
 	if err := ctx.Err(); err != nil {
 		return err
