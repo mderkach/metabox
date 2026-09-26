@@ -103,6 +103,41 @@ func TestProxyDropsClientCredentials(t *testing.T) {
 	}
 }
 
+// Контроллер с незаданным access_control_allow_origin отвечает
+// Access-Control-Allow-Origin: * на всё. Наружу эти заголовки уходить не
+// должны: прокси авторизует запросы секретом, и с ними ветку /api/clash/*
+// читал бы любой сайт в браузере пользователя.
+func TestProxyStripsUpstreamCORS(t *testing.T) {
+	controller := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "Authorization")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE")
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer controller.Close()
+
+	proxy, err := clashapi.NewProxy(
+		resolver(strings.TrimPrefix(controller.URL, "http://"), ""),
+		func(w http.ResponseWriter, _ *http.Request, _ error) { w.WriteHeader(http.StatusBadGateway) },
+	)
+	if err != nil {
+		t.Fatalf("сборка прокси: %v", err)
+	}
+
+	rec := httptest.NewRecorder()
+	proxy.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, clashapi.Prefix+"/connections", nil))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("код ответа: получили %d, ожидали %d", rec.Code, http.StatusOK)
+	}
+
+	for name := range rec.Header() {
+		if strings.HasPrefix(name, "Access-Control-") {
+			t.Errorf("%s дошёл до клиента: %q", name, rec.Header().Get(name))
+		}
+	}
+}
+
 func TestProxyReportsUnreachableController(t *testing.T) {
 	tests := []struct {
 		name    string

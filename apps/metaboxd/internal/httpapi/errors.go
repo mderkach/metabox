@@ -18,6 +18,9 @@ import (
 var (
 	errNotFound       = errors.New("ручка не найдена")
 	errOriginMismatch = errors.New("источник запроса не совпадает с адресом панели")
+	// errHostMismatch — Host запроса не похож на адрес панели: так выглядит
+	// DNS rebinding, когда чужой домен перекинули на адрес роутера.
+	errHostMismatch = errors.New("адрес запроса не совпадает с адресом панели")
 	// errUpgradeUnsupported — попытка поднять WebSocket на ветке прокси.
 	// Рантайм идёт одним потоком `/api/events` (ADR-0010).
 	errUpgradeUnsupported = errors.New("рантайм идёт потоком /api/events, апгрейд не поддерживается")
@@ -67,6 +70,10 @@ func statusFor(err error) (status int, code contract.ErrorCode) {
 	case errors.Is(err, errNotFound):
 		return http.StatusNotFound, contract.ErrNotFound
 	case errors.Is(err, errOriginMismatch):
+		return http.StatusForbidden, contract.ErrOriginMismatch
+	// Код общий с отказом по Origin: класс тот же — запрос отклонён по
+	// источнику, — а новый код был бы изменением контракта.
+	case errors.Is(err, errHostMismatch):
 		return http.StatusForbidden, contract.ErrOriginMismatch
 	case errors.Is(err, errUpgradeUnsupported):
 		return http.StatusBadRequest, contract.ErrUpgradeUnsupported

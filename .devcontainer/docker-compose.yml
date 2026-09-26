@@ -15,7 +15,9 @@ services:
       - go-build:/cache/go/build
       - pnpm-store:/cache/pnpm
     environment:
-      METABOX_API_TARGET: http://target:8080
+      # Адрес — IP проводной сети, а не имя сервиса: дев-прокси передаёт
+      # цель в Host, а демон отвечает только на Host с IP-литералом.
+      METABOX_API_TARGET: http://192.168.210.2:8080
     # К сервису подключается devcontainer: главный процесс обязан переживать
     # падения инструментов.
     command: sleep infinity
@@ -39,7 +41,9 @@ services:
     ports:
       - '5173:5173' # Vite HMR
     environment:
-      METABOX_API_TARGET: http://target:8080
+      # Адрес — IP проводной сети, а не имя сервиса: дев-прокси передаёт
+      # цель в Host, а демон отвечает только на Host с IP-литералом.
+      METABOX_API_TARGET: http://192.168.210.2:8080
       # Без TTY pnpm не пересоберёт node_modules и упадёт на подтверждении.
       CI: 'true'
     command: pnpm dev --host 0.0.0.0

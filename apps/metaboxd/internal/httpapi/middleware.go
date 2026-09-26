@@ -3,9 +3,12 @@ package httpapi
 import (
 	"errors"
 	"log/slog"
+	"net"
 	"net/http"
+	"net/netip"
 	"net/url"
 	"runtime/debug"
+	"strings"
 	"time"
 )
 
@@ -13,7 +16,8 @@ func (s *Server) middleware(next http.Handler) http.Handler {
 	// recoverPanic снаружи: паника в логировании иначе уронит процесс.
 	return recoverPanic(s.log,
 		logRequests(s.log,
-			checkOrigin(s.log, s.allowedOrigin, next)))
+			checkHost(s.log, s.allowedOrigin,
+				checkOrigin(s.log, s.allowedOrigin, next))))
 }
 
 func recoverPanic(log *slog.Logger, next http.Handler) http.Handler {
@@ -57,6 +61,58 @@ func logRequests(log *slog.Logger, next http.Handler) http.Handler {
 			"duration_ms", time.Since(start).Milliseconds(),
 		)
 	})
+}
+
+// checkHost отсекает DNS rebinding: домен атакующего, перекинутый на адрес
+// панели, приходит со своим именем в Host, и для его страницы панель —
+// same-origin, так что проверка Origin такой запрос не ловит. Проверяются все
+// методы: у чтения через rebinding утекают конфиг с секретами и соединения
+// сети.
+func checkHost(log *slog.Logger, allowedOrigin string, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !hostAllowed(r.Host, allowedOrigin) {
+			log.Warn("запрос отклонён по Host",
+				"host", r.Host,
+				"method", r.Method,
+				"path", r.URL.Path,
+			)
+			fail(log, w, r, errHostMismatch)
+
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+// hostAllowed принимает IP-литерал, localhost и хост из -allowed-origin.
+// Список закрытый: отличить DNS-имя владельца от домена атакующего с
+// перекинутой записью демону не по чему, а легитимный доступ к роутеру идёт
+// по адресу.
+func hostAllowed(hostport, allowedOrigin string) bool {
+	host := hostport
+	if h, _, err := net.SplitHostPort(hostport); err == nil {
+		host = h
+	}
+	// IPv6-литерал без порта приходит в скобках, SplitHostPort его не берёт.
+	host = strings.TrimSuffix(strings.TrimPrefix(host, "["), "]")
+
+	if host == "" {
+		return false
+	}
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	if _, err := netip.ParseAddr(host); err == nil {
+		return true
+	}
+	if allowedOrigin == "" {
+		return false
+	}
+
+	u, err := url.Parse(allowedOrigin)
+
+	return err == nil && u.Host != "" && strings.EqualFold(host, u.Hostname())
 }
 
 // checkOrigin — единственная защита мутирующих запросов: аутентификации в v1

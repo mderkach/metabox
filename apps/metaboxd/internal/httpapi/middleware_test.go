@@ -32,6 +32,74 @@ func TestOriginAllowed(t *testing.T) {
 	}
 }
 
+func TestHostAllowed(t *testing.T) {
+	tests := []struct {
+		name          string
+		host          string
+		allowedOrigin string
+		want          bool
+	}{
+		{"IP с портом", "192.168.1.1:8080", "", true},
+		{"IP без порта", "192.168.1.1", "", true},
+		{"IPv6 с портом", "[fe80::1]:8080", "", true},
+		{"IPv6 без порта", "[fe80::1]", "", true},
+		{"localhost", "localhost:5173", "", true},
+		{"localhost без порта", "localhost", "", true},
+		{"чужое имя", "evil.test:8080", "", false},
+		{"имя роутера без флага", "router.lan:8080", "", false},
+		{"имя из -allowed-origin", "panel.lan:8080", "http://panel.lan:5173", true},
+		{"другое имя при заданном флаге", "evil.test:8080", "http://panel.lan:5173", false},
+		{"пустой Host", "", "", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := hostAllowed(tt.host, tt.allowedOrigin); got != tt.want {
+				t.Errorf("host %q при -allowed-origin %q: получили %v, ожидали %v", tt.host, tt.allowedOrigin, got, tt.want)
+			}
+		})
+	}
+}
+
+// Пара Origin↔Host, согласованная атакующим через DNS rebinding, не должна
+// проходить: Host с чужим именем отклоняется независимо от Origin и метода.
+func TestCheckHostRejectsForeignName(t *testing.T) {
+	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	for _, method := range []string{http.MethodGet, http.MethodPost} {
+		t.Run(method, func(t *testing.T) {
+			req := httptest.NewRequest(method, "/api/config", nil)
+			req.Host = "evil.test"
+			req.Header.Set("Origin", "http://evil.test")
+
+			rec := httptest.NewRecorder()
+			checkHost(testLogger(t), "", next).ServeHTTP(rec, req)
+
+			if rec.Code != http.StatusForbidden {
+				t.Errorf("код %d, ожидали %d", rec.Code, http.StatusForbidden)
+			}
+		})
+	}
+}
+
+func TestCheckHostPassesPanelAddress(t *testing.T) {
+	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/status", nil)
+	req.Host = "192.168.1.1:8080"
+
+	rec := httptest.NewRecorder()
+	checkHost(testLogger(t), "", next).ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("код %d, ожидали %d", rec.Code, http.StatusOK)
+	}
+}
+
 func TestMutating(t *testing.T) {
 	tests := []struct {
 		method string

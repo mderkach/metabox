@@ -55,8 +55,9 @@ func NewProxy(resolve Resolver, onError ErrorHandler) (*Proxy, error) {
 		Rewrite: rewrite,
 		// -1 отключает буферизацию: `/traffic` и `/memory` отдают по строке
 		// раз в секунду, и с буфером панель увидела бы их пачкой.
-		FlushInterval: -1,
-		ErrorHandler:  onError,
+		FlushInterval:  -1,
+		ModifyResponse: stripCORS,
+		ErrorHandler:   onError,
 	}
 
 	return p, nil
@@ -86,6 +87,20 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	ctx := context.WithValue(r.Context(), targetKey{}, target{base: parsed, secret: settings.Secret})
 	p.proxy.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// stripCORS снимает CORS-заголовки контроллера: при пустом
+// access_control_allow_origin форк отвечает Access-Control-Allow-Origin: * на
+// всё, и пропустить это наружу — отдать ветку прокси, авторизованную
+// секретом, любому сайту в браузере пользователя.
+func stripCORS(resp *http.Response) error {
+	for name := range resp.Header {
+		if strings.HasPrefix(name, "Access-Control-") {
+			resp.Header.Del(name)
+		}
+	}
+
+	return nil
 }
 
 func rewrite(pr *httputil.ProxyRequest) {
