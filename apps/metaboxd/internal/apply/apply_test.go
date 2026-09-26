@@ -22,7 +22,7 @@ const (
 	clashPort    = 9090
 )
 
-// recorder хранит порядок вызовов: протокол ADR-0002 задаёт не только набор
+// recorder хранит порядок вызовов: протокол применения задаёт не только набор
 // шагов, но и их очерёдность — состояние обязано лечь на диск до конфига.
 type recorder struct {
 	mu    sync.Mutex
@@ -174,6 +174,9 @@ func (s *fakeStore) config() []byte {
 type fakeService struct {
 	rec      *recorder
 	checkErr error
+
+	mu         sync.Mutex
+	restartErr error
 }
 
 func (s *fakeService) Check(context.Context, string) error {
@@ -185,7 +188,17 @@ func (s *fakeService) Check(context.Context, string) error {
 func (s *fakeService) Restart(context.Context) error {
 	s.rec.add("Restart")
 
-	return nil
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.restartErr
+}
+
+func (s *fakeService) setRestartErr(err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.restartErr = err
 }
 
 type fakeHealth struct {
@@ -683,6 +696,33 @@ func TestConfirmHoldsApplyUntilStateCleared(t *testing.T) {
 
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig)); !errors.Is(err, apply.ErrBusy) {
 		t.Errorf("третье применение при активной транзакции: получили %v, ожидали ErrBusy", err)
+	}
+}
+
+// Проваленный откат не должен заклинивать применение: на диске неизвестно
+// что, и сверка со старой суммой давала бы ложное «конфиг изменён вне
+// metabox» на каждый следующий Start.
+func TestFailedRollbackDoesNotJamApply(t *testing.T) {
+	h := newHarness(t)
+
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig)); err != nil {
+		t.Fatalf("применение: %v", err)
+	}
+	h.waitWindow(t)
+
+	h.service.setRestartErr(errors.New("procd завис"))
+	h.clock.fire()
+	h.manager.Close()
+
+	tx := h.manager.Current()
+	if tx.Phase != apply.PhaseFailed || tx.ReasonCode != apply.ReasonRollbackFailed {
+		t.Fatalf("фаза %q с кодом %q, ожидали отказ отката", tx.Phase, tx.ReasonCode)
+	}
+
+	h.service.setRestartErr(nil)
+
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig)); errors.Is(err, apply.ErrConfigModified) {
+		t.Error("после проваленного отката применение заклинило ложной внешней правкой")
 	}
 }
 

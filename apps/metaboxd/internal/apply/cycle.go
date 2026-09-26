@@ -37,7 +37,7 @@ func (m *Manager) check(ctx context.Context, data []byte) error {
 }
 
 // run уводит применение в фоновую горутину: цикл переживает запрос, а окно
-// подтверждения тянется до минуты (ADR-0002). Останавливает горутину
+// подтверждения тянется до минуты. Останавливает горутину
 // Close, ошибки уходят в лог и в состояние транзакции, дожидается — wg.
 func (m *Manager) run(data []byte, settings clashapi.Settings, token uint64) {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -188,6 +188,14 @@ func (m *Manager) rollback(ctx context.Context, log *slog.Logger) {
 		log.Error("откат не прошёл", "err", err)
 		m.release(PhaseFailed, stepFailed(ReasonRollbackFailed, err))
 
+		// Что легло на диск, неизвестно: Restore мог и успеть, и упасть на
+		// середине. Сверка со старым lastSum давала бы ложное «конфиг изменён
+		// вне metabox» на каждый следующий Start — панель нельзя лишать
+		// возможности применить исправленный конфиг.
+		m.mu.Lock()
+		m.lastSum = ""
+		m.mu.Unlock()
+
 		return
 	}
 
@@ -214,7 +222,7 @@ func (m *Manager) rollback(ctx context.Context, log *slog.Logger) {
 
 // Replay доигрывает транзакцию, оставшуюся от прошлой жизни демона. Вызывается
 // на старте: без него питание, снятое в окне подтверждения, оставило бы
-// устройство на неподтверждённом конфиге навсегда (ADR-0002).
+// устройство на неподтверждённом конфиге навсегда.
 func (m *Manager) Replay(ctx context.Context) error {
 	data, err := m.store.ReadState(ctx)
 	if errors.Is(err, config.ErrNoState) {
