@@ -2,6 +2,8 @@ package apply_test
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"log/slog"
 	"slices"
@@ -56,6 +58,13 @@ type fakeStore struct {
 	backupErr  error
 	restoreErr error
 	writeErr   error
+
+	// Ворота для тестов гонок: started закрывается на входе в шаг, release
+	// держит шаг, пока тест не отпустит.
+	restoreStarted chan struct{}
+	restoreRelease chan struct{}
+	clearStarted   chan struct{}
+	clearRelease   chan struct{}
 }
 
 func (s *fakeStore) Sum(context.Context) (string, error) {
@@ -101,6 +110,13 @@ func (s *fakeStore) Backup(context.Context) error {
 func (s *fakeStore) Restore(context.Context) error {
 	s.rec.add("Restore")
 
+	if s.restoreStarted != nil {
+		close(s.restoreStarted)
+	}
+	if s.restoreRelease != nil {
+		<-s.restoreRelease
+	}
+
 	return s.restoreErr
 }
 
@@ -133,6 +149,13 @@ func (s *fakeStore) WriteState(_ context.Context, data []byte) error {
 
 func (s *fakeStore) ClearState(context.Context) error {
 	s.rec.add("ClearState")
+
+	if s.clearStarted != nil {
+		close(s.clearStarted)
+	}
+	if s.clearRelease != nil {
+		<-s.clearRelease
+	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -576,6 +599,90 @@ func TestFailureCarriesStepCode(t *testing.T) {
 				t.Error("подробность шага потеряна: чинить отказ будет не по чему")
 			}
 		})
+	}
+}
+
+// Подтверждение на последних секундах окна: таймер успел первым, откат уже
+// трогает диск. Confirm обязан получить отказ, а не вернуть успех на фоне
+// отката, и новый Start в этот момент тоже не пускается.
+func TestConfirmDuringRollbackIsRejected(t *testing.T) {
+	h := newHarness(t)
+	h.store.restoreStarted = make(chan struct{})
+	h.store.restoreRelease = make(chan struct{})
+
+	tx, err := h.manager.Start(t.Context(), []byte(validConfig))
+	if err != nil {
+		t.Fatalf("применение: %v", err)
+	}
+	h.waitWindow(t)
+
+	h.clock.fire()
+	<-h.store.restoreStarted
+
+	if _, err := h.manager.Confirm(t.Context(), tx.ID); !errors.Is(err, apply.ErrNothingToConfirm) {
+		t.Errorf("подтверждение во время отката: получили %v, ожидали ErrNothingToConfirm", err)
+	}
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig)); !errors.Is(err, apply.ErrBusy) {
+		t.Errorf("применение во время отката: получили %v, ожидали ErrBusy", err)
+	}
+
+	close(h.store.restoreRelease)
+	h.manager.Close()
+
+	if got := h.manager.Current().Phase; got != apply.PhaseRolledBack {
+		t.Errorf("фаза %q, ожидали откат", got)
+	}
+}
+
+// Пока Confirm не убрал состояние с диска, новый Start не пускается: иначе
+// ClearState стёр бы файл состояния уже следующей транзакции, и питание в её
+// окне не доиграется.
+func TestConfirmHoldsApplyUntilStateCleared(t *testing.T) {
+	h := newHarness(t)
+	h.store.clearStarted = make(chan struct{})
+	h.store.clearRelease = make(chan struct{})
+
+	tx, err := h.manager.Start(t.Context(), []byte(validConfig))
+	if err != nil {
+		t.Fatalf("применение: %v", err)
+	}
+	h.waitWindow(t)
+
+	done := make(chan struct{})
+
+	go func() {
+		defer close(done)
+
+		if _, err := h.manager.Confirm(t.Context(), tx.ID); err != nil {
+			t.Errorf("подтверждение: %v", err)
+		}
+	}()
+
+	<-h.store.clearStarted
+
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig)); !errors.Is(err, apply.ErrBusy) {
+		t.Errorf("применение во время очистки состояния: получили %v, ожидали ErrBusy", err)
+	}
+
+	close(h.store.clearRelease)
+	<-done
+
+	// После подтверждения сверка внешних правок живая: фейку отдаётся sha
+	// записанного конфига, как его посчитал бы настоящий Store.
+	digest := sha256.Sum256(h.store.config())
+	h.store.mu.Lock()
+	h.store.sum = hex.EncodeToString(digest[:])
+	h.store.mu.Unlock()
+
+	// Владение занято вторым применением; выход фоновой горутины первого не
+	// должен его снимать.
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig)); err != nil {
+		t.Fatalf("применение после подтверждения: %v", err)
+	}
+	h.waitWindow(t)
+
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig)); !errors.Is(err, apply.ErrBusy) {
+		t.Errorf("третье применение при активной транзакции: получили %v, ожидали ErrBusy", err)
 	}
 }
 

@@ -193,8 +193,16 @@ type Manager struct {
 	mu sync.Mutex
 	// busy закрывает применение с момента резервирования: транзакция
 	// появляется позже, и до неё второй Start проскакивал бы проверку.
-	busy    bool
-	current Transaction
+	busy bool
+	// epoch нумерует владения busy. Фоновая горутина освобождает применение
+	// по номеру своего владения: к её выходу busy может держать уже следующий
+	// Start, и безусловное снятие впускало бы два применения разом.
+	epoch uint64
+	// rollingBack закрывает Confirm на время отката: фаза остаётся
+	// awaiting_confirm до конца Restore и Restart, и без этого признака
+	// подтверждение вклинивалось бы в уже идущий откат.
+	rollingBack bool
+	current     Transaction
 	// lastSum — sha256 того, что записал сам демон. Переживает перезапуск через
 	// файл состояния.
 	lastSum string
@@ -251,14 +259,15 @@ func (m *Manager) Start(ctx context.Context, cfg []byte) (Transaction, error) {
 		return Transaction{}, err
 	}
 
-	if err := m.reserve(ctx); err != nil {
+	token, err := m.reserve(ctx)
+	if err != nil {
 		return Transaction{}, err
 	}
 
 	// Отказ check не заводит транзакции: ничего не применялось, а вердикт
 	// бинаря уезжает вызывающему этой же ошибкой.
 	if err := m.check(ctx, prepared); err != nil {
-		m.unreserve()
+		m.unreserve(token)
 
 		return Transaction{}, err
 	}
@@ -272,13 +281,13 @@ func (m *Manager) Start(ctx context.Context, cfg []byte) (Transaction, error) {
 	}
 
 	if err := m.persist(ctx, tx); err != nil {
-		m.unreserve()
+		m.unreserve(token)
 
 		return Transaction{}, err
 	}
 
 	m.begin(tx)
-	m.run(prepared, settings)
+	m.run(prepared, settings, token)
 
 	return tx, nil
 }
@@ -292,7 +301,7 @@ func (m *Manager) Confirm(ctx context.Context, id string) (Transaction, error) {
 
 		return Transaction{}, ErrUnknownTransaction
 	}
-	if m.current.Phase != PhaseAwaitingConfirm {
+	if m.current.Phase != PhaseAwaitingConfirm || m.rollingBack {
 		m.mu.Unlock()
 
 		return Transaction{}, ErrNothingToConfirm
@@ -300,20 +309,25 @@ func (m *Manager) Confirm(ctx context.Context, id string) (Transaction, error) {
 
 	m.current.Phase = PhaseConfirmed
 	m.current.Window = 0
-	// Применение свободно сразу, а не когда выйдет фоновая горутина: иначе
-	// клиент, подтвердивший и тут же применивший снова, получал бы отказ.
-	m.busy = false
 	tx := m.current
 	confirmed := m.confirmed
 	m.confirmed = nil
 	m.mu.Unlock()
 
-	if confirmed != nil {
-		close(confirmed)
-	}
-
+	// Состояние убирается до освобождения busy: снятый раньше busy впускает
+	// следующий Start, и ClearState стирал бы уже его файл состояния. Ответ
+	// уходит после очистки, так что «подтвердил и тут же применил» в
+	// занятость не упирается.
 	if err := m.store.ClearState(ctx); err != nil {
 		m.log.Error("состояние подтверждённой транзакции не убрано", "err", err, "transaction_id", id)
+	}
+
+	m.mu.Lock()
+	m.busy = false
+	m.mu.Unlock()
+
+	if confirmed != nil {
+		close(confirmed)
 	}
 
 	m.log.Info("применение подтверждено", "transaction_id", id)
@@ -337,46 +351,53 @@ func (m *Manager) Close() {
 
 // reserve занимает применение под одну транзакцию и заодно ловит правку файла
 // извне: конфиг мог поправить владелец по SSH, и затирать это молча нельзя.
-func (m *Manager) reserve(ctx context.Context) error {
+// Возвращает номер владения для unreserve.
+func (m *Manager) reserve(ctx context.Context) (uint64, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	if m.busy || m.current.Active() {
-		return ErrBusy
+		return 0, ErrBusy
 	}
 
 	if m.lastSum == "" {
-		m.busy = true
-
-		return nil
+		return m.hold(), nil
 	}
 
 	current, err := m.store.Sum(ctx)
 	if errors.Is(err, fs.ErrNotExist) {
 		// Конфиг унесли из-под демона — сверять не с чем, применение это не
 		// останавливает.
-		m.busy = true
-
-		return nil
+		return m.hold(), nil
 	}
 	if err != nil {
-		return fmt.Errorf("сверка конфига: %w", err)
+		return 0, fmt.Errorf("сверка конфига: %w", err)
 	}
 	if current != m.lastSum {
-		return ErrConfigModified
+		return 0, ErrConfigModified
 	}
 
-	m.busy = true
-
-	return nil
+	return m.hold(), nil
 }
 
-// unreserve освобождает применение, когда до транзакции дело не дошло.
-func (m *Manager) unreserve() {
+// hold занимает применение и отдаёт номер владения. Вызывается под mu.
+func (m *Manager) hold() uint64 {
+	m.busy = true
+	m.epoch++
+
+	return m.epoch
+}
+
+// unreserve освобождает применение, если владение всё ещё за тем, кто его
+// брал: Confirm и откат отдают busy сами, и к выходу фоновой горутины оно
+// может принадлежать уже следующему Start.
+func (m *Manager) unreserve(token uint64) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	m.busy = false
+	if m.epoch == token {
+		m.busy = false
+	}
 }
 
 func (m *Manager) begin(tx Transaction) {
@@ -394,6 +415,7 @@ func (m *Manager) release(phase Phase, err error) {
 	m.current.Phase = phase
 	m.current.ReasonCode = reasonOf(err)
 	m.current.Reason = err.Error()
+	m.rollingBack = false
 }
 
 func (m *Manager) persist(ctx context.Context, tx Transaction) error {

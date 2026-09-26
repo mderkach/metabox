@@ -26,11 +26,14 @@ func seedState(t *testing.T, h *harness, tx apply.Transaction) {
 	h.rec.mu.Unlock()
 }
 
-// Цикл оборвался, не дойдя до окна: что успело записаться, неизвестно, значит
-// возвращаем предыдущий конфиг.
+// Цикл оборвался после записи конфига: sha на диске совпал с суммой из
+// состояния, значит возвращаем предыдущий конфиг.
 func TestReplayRollsBackInterruptedApply(t *testing.T) {
 	h := newHarness(t)
-	seedState(t, h, apply.Transaction{ID: "прерванная", Phase: apply.PhaseApplying, Window: window})
+	h.store.mu.Lock()
+	h.store.sum = "записанный"
+	h.store.mu.Unlock()
+	seedState(t, h, apply.Transaction{ID: "прерванная", Phase: apply.PhaseApplying, Window: window, Sum: "записанный"})
 
 	if err := h.manager.Replay(t.Context()); err != nil {
 		t.Fatalf("доигрывание: %v", err)
@@ -41,6 +44,28 @@ func TestReplayRollsBackInterruptedApply(t *testing.T) {
 	}
 	if got := h.manager.Current().Phase; got != apply.PhaseRolledBack {
 		t.Errorf("фаза %q, ожидали откат", got)
+	}
+}
+
+// Питание снято между записью состояния и конфига: на диске конфиг прежнего
+// поколения, а бэкап мог остаться от прошлой транзакции — откат по нему
+// молча потерял бы подтверждённую версию.
+func TestReplaySkipsRollbackWhenConfigWasNotWritten(t *testing.T) {
+	h := newHarness(t)
+	h.store.mu.Lock()
+	h.store.sum = "подтверждённый"
+	h.store.mu.Unlock()
+	seedState(t, h, apply.Transaction{ID: "оборванная", Phase: apply.PhaseApplying, Window: window, Sum: "новый"})
+
+	if err := h.manager.Replay(t.Context()); err != nil {
+		t.Fatalf("доигрывание: %v", err)
+	}
+
+	if got := h.rec.snapshot(); slices.Contains(got, "Restore") || slices.Contains(got, "Restart") {
+		t.Errorf("шаги %v, ожидали только очистку состояния", got)
+	}
+	if state, _ := h.store.ReadState(t.Context()); state != nil {
+		t.Error("состояние несостоявшейся записи осталось на диске")
 	}
 }
 
