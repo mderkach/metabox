@@ -11,5 +11,9 @@
   "add": {
     "open": "Connect a set",
     "title": "New set"
+  },
+  "custom": {
+    "open": "Own list",
+    "title": "Own list of domains and addresses"
   }
 }

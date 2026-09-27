@@ -1,0 +1,21 @@
+{
+  "field": {
+    "tag": {
+      "label": "List name",
+      "placeholder": "my-domains"
+    },
+    "entries": {
+      "label": "Domains and addresses",
+      "placeholder": "example.com\n203.0.113.0/24",
+      "hint": "One entry per line: a domain goes to domain_suffix — the domain and its subdomains — an address or subnet to ip_cidr. Empty lines and lines with # are skipped."
+    }
+  },
+  "submit": "Save to draft",
+  "added": "List {{tag}} is in the draft: apply the config to make it work",
+  "error": {
+    "tagRequired": "Name the list: rules reference it by name",
+    "tagTaken": "The name is already taken by another set",
+    "entriesRequired": "The list is empty: add at least one line",
+    "entryInvalid": "Line “{{entry}}” looks like neither a domain nor an address"
+  }
+}

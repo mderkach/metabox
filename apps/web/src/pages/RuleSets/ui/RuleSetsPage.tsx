@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { ConfigDocumentState, ruleSetNodePath } from '@entities/Config';
 import { ConfigCacheNotice } from '@features/Config/ConfigCacheFile';
 import { RuleSetAddForm } from '@features/RuleSet/RuleSetAdd';
+import { RuleSetCustomForm } from '@features/RuleSet/RuleSetCustom';
 import {
   Button,
   Empty,
@@ -35,7 +36,7 @@ export function RuleSetsPage() {
   const editor = useRuleSetEditor();
   const filter = useRuleSetFilter(editor.sets);
   const remove = ConfigDocumentState.use.remove();
-  const [adding, setAdding] = useState(false);
+  const [mode, setMode] = useState<'catalog' | 'custom' | null>(null);
 
   const onRemove = useCallback(
     (index: number) => {
@@ -45,7 +46,7 @@ export function RuleSetsPage() {
   );
 
   const closeForm = useCallback(() => {
-    setAdding(false);
+    setMode(null);
   }, []);
 
   // Каталог нужен подсказкам и подписям источника, но не самому списку: без
@@ -81,6 +82,20 @@ export function RuleSetsPage() {
           </EmptyHeader>
           <EmptyContent className='max-w-none items-stretch'>
             <RuleSetAddForm catalog={editor.catalog} takenTags={editor.takenTags} outbounds={editor.outbounds} />
+            <div className='flex flex-col items-start gap-4'>
+              <Button
+                variant='outline'
+                size='sm'
+                aria-expanded={mode === 'custom'}
+                onClick={() => {
+                  setMode((current) => (current === 'custom' ? null : 'custom'));
+                }}
+              >
+                <Plus data-icon='inline-start' />
+                {t('custom.open')}
+              </Button>
+              {mode === 'custom' && <RuleSetCustomForm takenTags={editor.takenTags} />}
+            </div>
           </EmptyContent>
         </Empty>
       )}
@@ -93,30 +108,47 @@ export function RuleSetsPage() {
           search={<RuleSetSearch filter={filter} />}
           empty={<EmptyState onReset={filter.reset} />}
           actions={
-            <Button
-              variant='outline'
-              size='sm'
-              aria-expanded={adding}
-              onClick={() => {
-                setAdding((open) => !open);
-              }}
-            >
-              <Plus data-icon='inline-start' />
-              {t('add.open')}
-            </Button>
+            <>
+              <Button
+                variant='outline'
+                size='sm'
+                aria-expanded={mode === 'catalog'}
+                onClick={() => {
+                  setMode((current) => (current === 'catalog' ? null : 'catalog'));
+                }}
+              >
+                <Plus data-icon='inline-start' />
+                {t('add.open')}
+              </Button>
+              <Button
+                variant='outline'
+                size='sm'
+                aria-expanded={mode === 'custom'}
+                onClick={() => {
+                  setMode((current) => (current === 'custom' ? null : 'custom'));
+                }}
+              >
+                <Plus data-icon='inline-start' />
+                {t('custom.open')}
+              </Button>
+            </>
           }
           form={
-            adding ? (
+            mode === null ? null : (
               <section className='flex max-w-2xl flex-col gap-4'>
-                <h3 className={SECTION_HEADING}>{t('add.title')}</h3>
-                <RuleSetAddForm
-                  catalog={editor.catalog}
-                  takenTags={editor.takenTags}
-                  outbounds={editor.outbounds}
-                  onDone={closeForm}
-                />
+                <h3 className={SECTION_HEADING}>{mode === 'catalog' ? t('add.title') : t('custom.title')}</h3>
+                {mode === 'catalog' ? (
+                  <RuleSetAddForm
+                    catalog={editor.catalog}
+                    takenTags={editor.takenTags}
+                    outbounds={editor.outbounds}
+                    onDone={closeForm}
+                  />
+                ) : (
+                  <RuleSetCustomForm takenTags={editor.takenTags} onDone={closeForm} />
+                )}
               </section>
-            ) : null
+            )
           }
         />
       )}
