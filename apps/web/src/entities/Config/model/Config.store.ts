@@ -9,6 +9,12 @@ import { findValue, insertValue, removeValue, setValue } from './Config.model';
 export interface ConfigDocumentState {
   /** Текст с устройства. `null` — конфиг ещё не прочитан. */
   applied: string | null;
+  /**
+   * Отпечаток `applied` из `ETag` ответа демона; с ним черновик уходит в
+   * `If-Match` применения. `null` — отпечатка не было, применение идёт без
+   * сверки базы.
+   */
+  appliedEtag: string | null;
   /** Правки пользователя поверх `applied`. `null` — правок не было. */
   draft: string | null;
   /**
@@ -18,7 +24,7 @@ export interface ConfigDocumentState {
    * бы на каждый набранный символ.
    */
   revision: number;
-  load: (text: string) => void;
+  load: (text: string, etag?: string | null) => void;
   /** Замена текста целиком: режим правки всего конфига руками. */
   replace: (text: string) => void;
   edit: (path: JSONPath, value: unknown) => void;
@@ -50,11 +56,20 @@ const ConfigDocumentStateProto = stateCreator<ConfigDocumentState>((set, get) =>
 
   return {
     applied: null,
+    appliedEtag: null,
     draft: null,
     revision: 0,
 
-    load: (text) => {
-      set((state) => (state.applied === text ? state : { applied: text, revision: state.revision + 1 }));
+    load: (text, etag = null) => {
+      set((state) => {
+        if (state.applied === text && state.appliedEtag === etag) return state;
+
+        // Ревизию двигает только новый текст: одинаковые байты дают одинаковый
+        // отпечаток, и сменившийся etag сам по себе содержимое редактора не старит.
+        return state.applied === text
+          ? { appliedEtag: etag }
+          : { applied: text, appliedEtag: etag, revision: state.revision + 1 };
+      });
     },
 
     replace: (text) => {
@@ -98,7 +113,7 @@ const ConfigDocumentStateProto = stateCreator<ConfigDocumentState>((set, get) =>
     },
 
     reset: () => {
-      set((state) => ({ applied: null, draft: null, revision: state.revision + 1 }));
+      set((state) => ({ applied: null, appliedEtag: null, draft: null, revision: state.revision + 1 }));
     },
 
     current: () => get().draft ?? get().applied,

@@ -17,7 +17,7 @@ import { type UnknownField, toUnknownFields } from '@shared/lib/schemaIssues';
 
 import { toConfigVersions } from '../model/Config.adapter';
 import { toOutboundTypes } from '../model/Config.model';
-import { getApplyState, getConfig, getConfigVersions } from './Config.api';
+import { getApplyState, getConfig, getConfigVersions, type ConfigFile } from './Config.api';
 import { ConfigVersionsSchema } from './Config.schema';
 
 export const CONFIG_QUERY = {
@@ -92,8 +92,17 @@ export function parseConfig(text: string): ParsedConfig {
   };
 }
 
+export interface ParsedConfigFile extends ParsedConfig {
+  /** Отпечаток файла из `ETag`: с ним черновик уходит в `If-Match` применения. */
+  etag: string | null;
+}
+
+function parseConfigFile(file: ConfigFile): ParsedConfigFile {
+  return { ...parseConfig(file.text), etag: file.etag };
+}
+
 export function useConfig() {
-  return useQuery({ ...getConfigOptions(), select: parseConfig });
+  return useQuery({ ...getConfigOptions(), select: parseConfigFile });
 }
 
 /** Тип каждого аутбаунда применённого конфига по его тегу. */

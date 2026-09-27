@@ -68,12 +68,13 @@ export function useConfigDocument(): ConfigDocumentView {
   const isDirty = useConfigDirty();
   const current = useConfigText();
   const applied = config.data?.text ?? null;
+  const etag = config.data?.etag ?? null;
 
   useEffect(
     function loadDocument() {
-      if (applied !== null) load(applied);
+      if (applied !== null) load(applied, etag);
     },
-    [applied, load]
+    [applied, etag, load]
   );
 
   const shown = (draft === null ? null : parseDraft(draft)) ?? config.data ?? null;

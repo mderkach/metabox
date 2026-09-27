@@ -13,6 +13,7 @@ import { DAEMON_STATUS_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture
 import { ConfigApplyBar } from '../ui/ConfigApplyBar';
 
 const APPLIED = '{\n  "log": { "level": "info" }\n}';
+const APPLIED_ETAG = `"${'e'.repeat(64)}"`;
 const DRAFT = '{\n  "log": { "level": "debug" }\n}';
 
 const CONFIRM_WINDOW_NS = 60_000_000_000;
@@ -45,7 +46,7 @@ async function advanceUntil(happened: () => boolean): Promise<void> {
 }
 
 function loadDocument(draft = true) {
-  ConfigDocumentState.getState().load(APPLIED);
+  ConfigDocumentState.getState().load(APPLIED, APPLIED_ETAG);
 
   if (draft) ConfigDocumentState.getState().replace(DRAFT);
 }
@@ -101,12 +102,12 @@ describe('ConfigApplyBar', () => {
     expect(ConfigDocumentState.getState().applied).toBe(APPLIED);
   });
 
-  it('отправляет в Apply текст черновика, а не разобранный конфиг', async () => {
-    const sent: string[] = [];
+  it('отправляет в Apply текст черновика и отпечаток базы, а не разобранный конфиг', async () => {
+    const sent: { text: string; base: string | null }[] = [];
 
     server.use(
       http.post(DAEMON_ENDPOINT.apply(), async ({ request }) => {
-        sent.push(await request.text());
+        sent.push({ text: await request.text(), base: request.headers.get('If-Match') });
 
         return HttpResponse.json(TRANSACTION, { status: 202 });
       }),
@@ -119,7 +120,7 @@ describe('ConfigApplyBar', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
 
     await waitFor(() => {
-      expect(sent).toEqual([DRAFT]);
+      expect(sent).toEqual([{ text: DRAFT, base: APPLIED_ETAG }]);
     });
   });
 

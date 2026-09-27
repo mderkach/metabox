@@ -12,7 +12,7 @@ function state() {
 
 describe('ConfigDocumentState', () => {
   beforeEach(() => {
-    ConfigDocumentState.setState({ applied: null, draft: null });
+    ConfigDocumentState.setState({ applied: null, appliedEtag: null, draft: null });
   });
 
   it('до чтения конфига править нечего', () => {
@@ -28,6 +28,33 @@ describe('ConfigDocumentState', () => {
     expect(state().draft).toBeNull();
     expect(state().isDirty()).toBe(false);
     expect(state().current()).toBe(TEXT);
+  });
+
+  it('запоминает отпечаток файла и снимает его на сбросе', () => {
+    state().load(TEXT, '"abc"');
+
+    expect(state().appliedEtag).toBe('"abc"');
+
+    state().reset();
+
+    expect(state().appliedEtag).toBeNull();
+  });
+
+  it('без отпечатка база пуста: применение пойдёт без сверки', () => {
+    state().load(TEXT);
+
+    expect(state().appliedEtag).toBeNull();
+  });
+
+  it('новый отпечаток того же текста ревизию не двигает', () => {
+    state().load(TEXT, '"a"');
+
+    const { revision } = state();
+
+    state().load(TEXT, '"b"');
+
+    expect(state().appliedEtag).toBe('"b"');
+    expect(state().revision).toBe(revision);
   });
 
   it('правка уходит в черновик, применённый конфиг остаётся прежним', () => {

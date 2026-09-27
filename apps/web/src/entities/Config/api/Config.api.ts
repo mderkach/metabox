@@ -16,14 +16,26 @@ const AS_TEXT: AxiosRequestConfig = { responseType: 'text', transformResponse: K
  * Тело уходит строкой, и тип ставится руками: для строки axios заголовок сам
  * не выставляет, а демон принимает конфиг как JSON.
  */
-const SEND_TEXT: AxiosRequestConfig = { headers: { 'Content-Type': 'application/json' } };
+const SEND_TEXT = { 'Content-Type': 'application/json' } as const;
+
+export interface ConfigFile {
+  /** Байты файла как есть. */
+  text: string;
+  /** `ETag` ответа — отпечаток файла; уходит в `If-Match` применения. */
+  etag: string | null;
+}
 
 /**
  * Конфиг забирается текстом: правки применяются к исходным байтам, иначе
  * порядок ключей пользователя переписывается целиком.
  */
-export async function getConfig(config?: AxiosRequestConfig): Promise<string> {
-  return ApiClientInstance.get<string>(CONFIG_ENDPOINT.config(), { ...AS_TEXT, ...config });
+export async function getConfig(config?: AxiosRequestConfig): Promise<ConfigFile> {
+  const { body, etag } = await ApiClientInstance.getTagged<string>(CONFIG_ENDPOINT.config(), {
+    ...AS_TEXT,
+    ...config,
+  });
+
+  return { text: body, etag };
 }
 
 export async function getApplyState(id: string, config?: AxiosRequestConfig): Promise<ApplyTransactionWire> {
@@ -39,13 +51,26 @@ export async function getConfigVersion(id: number, config?: AxiosRequestConfig):
   return ApiClientInstance.get<string>(CONFIG_ENDPOINT.version(id), { ...AS_TEXT, ...config });
 }
 
+export interface ApplyDraft {
+  /** Текст черновика как есть, без пересборки. */
+  text: string;
+  /**
+   * `ConfigFile.etag` конфига, поверх которого писался черновик. Демон сверяет
+   * его с файлом и отклоняет применение поверх правки мимо панели. `null` —
+   * применить без сверки.
+   */
+  base: string | null;
+}
+
 /**
  * Запускает применение. Ответ приходит после `sing-box check`, но до конца
  * цикла: применение живёт дольше запроса. Отказ проверки возвращает
  * 422 с выводом бинаря в `details` — его показывает вызывающий.
  */
-export async function applyConfig(text: string): Promise<ApplyTransactionWire> {
-  return ApiClientInstance.post<ApplyTransactionWire, string>(DAEMON_ENDPOINT.apply(), text, SEND_TEXT);
+export async function applyConfig({ text, base }: ApplyDraft): Promise<ApplyTransactionWire> {
+  const headers = base === null ? SEND_TEXT : { ...SEND_TEXT, 'If-Match': base };
+
+  return ApiClientInstance.post<ApplyTransactionWire, string>(DAEMON_ENDPOINT.apply(), text, { headers });
 }
 
 /** Подтверждает, что связь жива: без этого демон вернёт предыдущий конфиг. */

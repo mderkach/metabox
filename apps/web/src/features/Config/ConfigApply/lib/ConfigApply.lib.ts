@@ -71,6 +71,7 @@ export interface ConfigApplyState {
 export function useConfigApply(): ConfigApplyState {
   const status = useDaemonStatus();
   const text = useConfigText();
+  const base = ConfigDocumentState.use.appliedEtag();
   const isDirty = useConfigDirty();
   const discard = ConfigDocumentState.use.discard();
   const start = useApplyConfig();
@@ -87,8 +88,8 @@ export function useConfigApply(): ConfigApplyState {
   const onApply = useCallback(() => {
     if (text === null) return;
 
-    start.mutate(text);
-  }, [text, start]);
+    start.mutate({ text, base });
+  }, [text, base, start]);
 
   const onConfirm = useCallback(() => {
     if (transaction === null) return;

@@ -16,12 +16,15 @@ const VERSIONS_FIXTURE = [
 
 const CONFIG_TEXT = JSON.stringify(CONFIG_FIXTURE, null, JSON_INDENT);
 
+/** Демон отдаёт отпечаток файла в `ETag`, в кавычках; панель возвращает его в `If-Match`. */
+const CONFIG_ETAG = `"${'c'.repeat(SUM_LENGTH)}"`;
+
 /**
  * Моки документа и его истории. Сам откат на версию запускает транзакцию и
  * живёт в моках демона, вместе с остальным циклом применения.
  */
 export const configHandlers = [
-  http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(CONFIG_TEXT)),
+  http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(CONFIG_TEXT, { headers: { ETag: CONFIG_ETAG } })),
   http.get(CONFIG_ENDPOINT.versions(), () =>
     HttpResponse.json({ versions: VERSIONS_FIXTURE, current_sum: VERSIONS_FIXTURE[1].sum })
   ),

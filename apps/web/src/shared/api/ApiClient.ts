@@ -75,6 +75,18 @@ function toApiError(error: unknown): unknown {
   return fromResponse(error.response);
 }
 
+export interface TaggedResponse<T> {
+  body: T;
+  /** `ETag` как прислал сервер, с кавычками: он возвращается в `If-Match` без разбора. */
+  etag: string | null;
+}
+
+function readEtag(response: AxiosResponse<unknown>): string | null {
+  const value: unknown = response.headers['etag'];
+
+  return typeof value === 'string' ? value : null;
+}
+
 /**
  * Отдаёт тело ответа, а не конверт транспорта. Ретраев нет: ими заведует Query,
  * а второй слой повторов запустил бы на устройстве второй цикл применения.
@@ -94,6 +106,13 @@ export class ApiClient {
     const response = await this.http.get<T>(url, config);
 
     return response.data;
+  }
+
+  /** Тот же `get`, но с `ETag` ответа: он нужен ручкам с оптимистичной блокировкой. */
+  async getTagged<T>(url: string, config?: AxiosRequestConfig): Promise<TaggedResponse<T>> {
+    const response = await this.http.get<T>(url, config);
+
+    return { body: response.data, etag: readEtag(response) };
   }
 
   async post<T, P = unknown>(url: string, data?: P, config?: AxiosRequestConfig): Promise<T> {
