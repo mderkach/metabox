@@ -12,7 +12,7 @@ import {
 } from '@entities/Daemon/@x/config';
 import { CACHE_TIME, POLL_INTERVAL, decodeResponse } from '@shared/api';
 import { ConfigSchema, type Config } from '@shared/api/generated';
-import { parseJsonc } from '@shared/lib/jsonc';
+import { jsonPathLocator, lineOfOffset, parseJsonc } from '@shared/lib/jsonc';
 import { type UnknownField, toUnknownFields } from '@shared/lib/schemaIssues';
 
 import { toConfigVersions } from '../model/Config.adapter';
@@ -37,12 +37,20 @@ export function getConfigOptions() {
   });
 }
 
+/** Замечание к показанному документу: что не так и где это в тексте. */
+export interface ConfigIssue {
+  /** Готовый текст: узел, причина и строка, когда узел найден в тексте. */
+  text: string;
+  /** Смещение узла в исходном тексте; `null` — узел в тексте не найден. */
+  offset: number | null;
+}
+
 export interface ParsedConfig {
   /** Текст файла как есть: правки применяются к нему, а не к модели. */
   text: string;
   /** `null` — схема конфиг не приняла; что именно, сказано в `issues`. */
   config: Config | null;
-  issues: string[];
+  issues: ConfigIssue[];
   /** Узлы с полями, которых схема не знает: путь узла → имена полей. */
   unknown: UnknownField[];
 }
@@ -64,7 +72,12 @@ export function parseConfig(text: string): ParsedConfig {
     return {
       text,
       config: null,
-      issues: [i18next.t('jsonc.fileUnparsed', { ns: 'shared', reason: failure.text })],
+      issues: [
+        {
+          text: i18next.t('jsonc.fileUnparsed', { ns: 'shared', reason: failure.text }),
+          offset: failure.offset,
+        },
+      ],
       unknown: [],
     };
   }
@@ -84,10 +97,28 @@ export function parseConfig(text: string): ParsedConfig {
     return { text, config: value as Config, issues: [], unknown };
   }
 
+  const locate = jsonPathLocator(text);
+
   return {
     text,
     config: null,
-    issues: parsed.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`),
+    issues: parsed.error.issues.map((issue) => {
+      const path = issue.path.join('.');
+      const offset = locate(issue.path.filter((key) => typeof key !== 'symbol'));
+
+      return {
+        text:
+          offset === null
+            ? i18next.t('schema.issue', { ns: 'shared', path, message: issue.message })
+            : i18next.t('schema.issueAtLine', {
+                ns: 'shared',
+                line: lineOfOffset(text, offset),
+                path,
+                message: issue.message,
+              }),
+        offset,
+      };
+    }),
     unknown: [],
   };
 }

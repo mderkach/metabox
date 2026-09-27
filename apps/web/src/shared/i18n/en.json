@@ -67,7 +67,8 @@
   "schema": {
     "unknownFields": "the panel does not know the fields: {{fields}}",
     "unknownFieldsAt": "{{path}}: the panel does not know the fields: {{fields}}",
-    "issue": "{{path}}: {{message}}"
+    "issue": "{{path}}: {{message}}",
+    "issueAtLine": "line {{line}}, {{path}}: {{message}}"
   },
   "unit": {
     "byte": "B",

@@ -3,6 +3,7 @@ import { CircleAlert, CircleQuestionMark, Search } from 'lucide-react';
 import { startTransition, useCallback, useState, ViewTransition } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
+import type { ConfigIssue } from '@entities/Config';
 import { isRuleRecognized } from '@entities/Rule';
 import { usePanelAsSheet } from '@shared/lib/media';
 import { cn } from '@shared/lib/utils';
@@ -257,7 +258,7 @@ function NoRules() {
  * пользователь начал бы чинить не то. Замечания схемы показываются дословно:
  * по ним видно, какой узел не разобран.
  */
-function ConfigNotParsed({ issues }: { issues: string[] }) {
+function ConfigNotParsed({ issues }: { issues: ConfigIssue[] }) {
   const { t } = useTranslation('pages/Editor');
   const shown = issues.slice(0, VISIBLE_ISSUES);
   const hidden = issues.length - shown.length;
@@ -270,7 +271,7 @@ function ConfigNotParsed({ issues }: { issues: string[] }) {
         <p className='text-pretty'>{t('broken.description')}</p>
         <ul className='mt-2 flex flex-col gap-1 font-mono text-xs'>
           {shown.map((issue) => (
-            <li key={issue}>{issue}</li>
+            <li key={issue.text}>{issue.text}</li>
           ))}
         </ul>
         {hidden > 0 && <p className='mt-1 text-xs'>{t('broken.more', { count: hidden })}</p>}

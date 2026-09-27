@@ -1,7 +1,7 @@
 import type { UseQueryResult } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
-import { parseConfig, useConfig, type ParsedConfig } from '../api/Config.query';
+import { parseConfig, useConfig, type ConfigIssue, type ParsedConfig } from '../api/Config.query';
 import type { ConfigDocument } from './Config.model';
 import { ConfigDocumentState, useConfigDirty, useConfigText } from './Config.store';
 
@@ -45,7 +45,7 @@ export interface ConfigDocumentView {
   /** Текст файла с устройства, без правок: с ним сверяется черновик. */
   appliedText: string | null;
   /** Замечания схемы к показанному документу. */
-  issues: string[];
+  issues: ConfigIssue[];
   /** Схема не приняла файл с устройства: формы по нему не строятся, текст правится. */
   notParsed: boolean;
   /**

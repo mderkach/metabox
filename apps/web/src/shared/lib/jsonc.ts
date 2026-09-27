@@ -1,5 +1,5 @@
 import i18next, { type ParseKeys } from 'i18next';
-import { type ParseError, parse } from 'jsonc-parser';
+import { type JSONPath, type ParseError, findNodeAtLocation, parse, parseTree } from 'jsonc-parser';
 
 /**
  * Коды разбора `jsonc-parser` человеческим текстом. Сам он печатает их
@@ -73,4 +73,34 @@ export function parseJsonc(text: string): { value: unknown; failure: JsoncFailur
   const [first] = errors;
 
   return { value, failure: { offset: first.offset, text: parseErrorText(first.error) } };
+}
+
+/**
+ * Локатор узлов по пути документа. Дерево строится один раз на текст — по нему
+ * ищутся все замечания разбора, — и по исходным байтам, поэтому смещения верны
+ * и в файле с комментариями и висячими запятыми.
+ */
+export function jsonPathLocator(text: string): (path: JSONPath) => number | null {
+  const tree = parseTree(text, undefined, DIALECT);
+
+  return (path) => {
+    if (tree === undefined) {
+      return null;
+    }
+
+    return findNodeAtLocation(tree, path)?.offset ?? null;
+  };
+}
+
+/** Строка смещения в тексте, с единицы: так замечание показывается человеку. */
+export function lineOfOffset(text: string, offset: number): number {
+  let line = 1;
+
+  for (let index = 0; index < offset && index < text.length; index++) {
+    if (text[index] === '\n') {
+      line++;
+    }
+  }
+
+  return line;
 }

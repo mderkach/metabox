@@ -3,6 +3,7 @@ import { ChevronDown, ChevronUp, CircleAlert, CircleCheck, Search } from 'lucide
 import { useMemo, useRef, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
+import type { ConfigIssue } from '@entities/Config';
 import { firstJsoncError } from '@shared/lib/jsonc';
 import { cn } from '@shared/lib/utils';
 import { Badge, Button, Input, SEARCH_FIELD, SURFACE } from '@shared/ui';
@@ -14,6 +15,9 @@ const CODE_CLASS = 'font-mono text-xs/5';
 
 /** Совпадение ставится в середину видимой области, а не к её краю. */
 const HALVES = 2;
+
+/** Замечания сверх этого числа названы счётчиком: подвал — не журнал. */
+const VISIBLE_ISSUES = 3;
 
 /** Разбор сообщает позицию в символах — экрану нужна строка. */
 function lineOfPosition(text: string, position: number): number {
@@ -51,7 +55,7 @@ export function ConfigRawEditor({
 }: {
   text: string;
   onChange: (text: string) => void;
-  issues: string[];
+  issues: ConfigIssue[];
 }) {
   const { t } = useTranslation('widgets/Config/ConfigRawEditor');
   const [draft, setDraft] = useState(text);
@@ -86,18 +90,15 @@ export function ConfigRawEditor({
     }
   }
 
-  function goToMatch(next: number) {
+  function goToOffset(at: number, length: number) {
     const input = inputRef.current;
 
-    if (input === null || next >= matches.length) {
+    if (input === null) {
       return;
     }
 
-    const at = matches[next];
-
-    setMatch(next);
     input.focus();
-    input.setSelectionRange(at, at + query.length);
+    input.setSelectionRange(at, at + length);
     // Выделение само не прокручивает поле. Шаг строки берётся из DOM, а не
     // константой: кегль задан в `rem` и растёт вместе с настройкой шрифта
     // браузера, а константа в пикселях давала промах тем больше, чем дальше
@@ -106,6 +107,15 @@ export function ConfigRawEditor({
 
     input.scrollTop = Math.max(0, lineIndexOf(draft, at) * step - input.clientHeight / HALVES);
     syncScroll();
+  }
+
+  function goToMatch(next: number) {
+    if (next >= matches.length) {
+      return;
+    }
+
+    setMatch(next);
+    goToOffset(matches[next], query.length);
   }
 
   return (
@@ -224,14 +234,38 @@ export function ConfigRawEditor({
         )}
 
         {issues.length > 0 && (
-          <p className='text-muted-foreground'>
-            <Trans
-              t={t}
-              i18nKey='issues'
-              values={{ count: issues.length }}
-              components={{ code: <code className='font-mono' /> }}
-            />
-          </p>
+          <div className='w-full text-muted-foreground'>
+            <p>
+              <Trans
+                t={t}
+                i18nKey='issues'
+                values={{ count: issues.length }}
+                components={{ code: <code className='font-mono' /> }}
+              />
+            </p>
+            <ul className='mt-1 flex flex-col items-start gap-0.5'>
+              {issues.slice(0, VISIBLE_ISSUES).map((issue) => (
+                <li key={issue.text} className='font-mono text-xs'>
+                  {issue.offset === null ? (
+                    issue.text
+                  ) : (
+                    <Button
+                      variant='link'
+                      className='h-auto p-0 font-mono text-xs whitespace-normal text-muted-foreground underline decoration-dotted'
+                      onClick={() => {
+                        goToOffset(Math.min(issue.offset ?? 0, draft.length), 0);
+                      }}
+                    >
+                      {issue.text}
+                    </Button>
+                  )}
+                </li>
+              ))}
+              {issues.length > VISIBLE_ISSUES && (
+                <li className='text-xs'>{t('issuesMore', { count: issues.length - VISIBLE_ISSUES })}</li>
+              )}
+            </ul>
+          </div>
         )}
       </footer>
     </section>

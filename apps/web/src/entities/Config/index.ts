@@ -11,7 +11,7 @@ export {
   useConfigVersions,
   useSaveApplyTransaction,
 } from './api/Config.query';
-export type { ParsedConfig } from './api/Config.query';
+export type { ConfigIssue, ParsedConfig } from './api/Config.query';
 export { toCheckFailure, toConfigVersions } from './model/Config.adapter';
 export {
   CACHE_FILE_PATH,

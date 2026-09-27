@@ -1,6 +1,12 @@
 import { useMemo, useState } from 'react';
 
-import { readRules, toOutboundTags, useConfigDocument, type ConfigDocumentView } from '@entities/Config';
+import {
+  readRules,
+  toOutboundTags,
+  useConfigDocument,
+  type ConfigDocumentView,
+  type ConfigIssue,
+} from '@entities/Config';
 import { useRuleHits } from '@entities/Route';
 import {
   filterRules,
@@ -16,7 +22,7 @@ import { RULE_HITS_STATE, type RuleHitsColumn } from '@widgets/Rule/RuleTable';
 export interface RouteEditorState {
   /** Запрос конфига: отказ источника — своё состояние экрана, а не пустой список. */
   source: ConfigDocumentView['query'];
-  issues: string[];
+  issues: ConfigIssue[];
   rules: RuleRow[];
   outbounds: string[];
   /** Узлы правил как есть: панель правит текст узла, а не разобранную модель. */

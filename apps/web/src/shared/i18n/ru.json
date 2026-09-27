@@ -67,7 +67,8 @@
   "schema": {
     "unknownFields": "панель не знает поля: {{fields}}",
     "unknownFieldsAt": "{{path}}: панель не знает поля: {{fields}}",
-    "issue": "{{path}}: {{message}}"
+    "issue": "{{path}}: {{message}}",
+    "issueAtLine": "строка {{line}}, {{path}}: {{message}}"
   },
   "unit": {
     "byte": "Б",

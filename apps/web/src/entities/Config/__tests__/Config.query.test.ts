@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { CONFIG_QUERY, parseConfig } from '../api/Config.query';
 import { CONFIG_FIXTURE } from './Config.fixture';
+import handwritten from './corpus/handwritten.jsonc?raw';
 
 describe('CONFIG_QUERY', () => {
   it('строит частный ключ от общего, чтобы работала массовая инвалидация', () => {
@@ -30,7 +31,22 @@ describe('parseConfig', () => {
 
     expect(parsed.config).toBeNull();
     expect(parsed.issues.length).toBeGreaterThan(0);
-    expect(parsed.issues[0]).toContain('inbounds');
+    expect(parsed.issues[0].text).toContain('inbounds');
+  });
+
+  it('называет узел, причину и строку невалидного значения в файле с комментариями', () => {
+    const broken = handwritten.replace('"level": "info"', '"level": 42');
+
+    expect(broken).not.toBe(handwritten);
+
+    const parsed = parseConfig(broken);
+
+    expect(parsed.config).toBeNull();
+
+    const issue = parsed.issues.find((item) => item.text.includes('log.level'));
+
+    expect(issue?.text).toContain('строка 3');
+    expect(issue?.offset).toBe(broken.indexOf('"level": 42') + '"level": '.length);
   });
 
   it('отдаёт исходный текст обратно: правки применяются к нему, а не к модели', () => {
@@ -50,6 +66,7 @@ describe('parseConfig', () => {
     const parsed = parseConfig('{ "route": ');
 
     expect(parsed.config).toBeNull();
-    expect(parsed.issues[0]).toContain('не разбирается');
+    expect(parsed.issues[0].text).toContain('не разбирается');
+    expect(parsed.issues[0].offset).not.toBeNull();
   });
 });
