@@ -25,6 +25,14 @@ describe('ConfigBuildNotice', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('применить не выйдет');
   });
 
+  it('называет опцию, тег которой не вошёл в сборку', async () => {
+    server.use(http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE)));
+    renderWithQuery(<ConfigBuildNotice config={{ experimental: { v2ray_api: {} } }} />);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Бинарь на устройстве не запустит 1 узел конфига');
+    expect(screen.getByText('experimental.v2ray_api — нужна сборка с with_v2ray_api')).toBeInTheDocument();
+  });
+
   it('молчит, когда демон не прочитал бинарь', async () => {
     const { singbox_build: _build, ...status } = DAEMON_STATUS_FIXTURE;
     let answered = false;

@@ -1,12 +1,12 @@
 import { TriangleAlert } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { findUnbuiltNodes, type ConfigDocument, type UnbuiltNode } from '@entities/Config';
+import { findUnbuiltNodes, findUnbuiltOptions, type ConfigDocument, type UnbuiltNode } from '@entities/Config';
 import { useDaemonStatus } from '@entities/Daemon';
 import { Alert, AlertDescription, AlertTitle } from '@shared/ui';
 
 /**
- * Узлы, которые бинарь на устройстве не запустит: их типа нет в его сборке.
+ * Узлы и опции, которые бинарь на устройстве не запустит: их нет в его сборке.
  *
  * Панель такой конфиг не запрещает — черновик сохраняется и правится, — но
  * называет последствие: `sing-box check` его отвергнет, и применение не
@@ -16,22 +16,29 @@ import { Alert, AlertDescription, AlertTitle } from '@shared/ui';
 export function ConfigBuildNotice({ config }: { config: ConfigDocument | null }) {
   const { t } = useTranslation('widgets/Config/ConfigBuildNotice');
   const status = useDaemonStatus();
-  const nodes = findUnbuiltNodes(config, status.data?.singboxTags ?? null);
+  const tags = status.data?.singboxTags ?? null;
+  const nodes = findUnbuiltNodes(config, tags);
+  const options = findUnbuiltOptions(config, tags);
 
-  if (nodes.length === 0) {
+  if (nodes.length + options.length === 0) {
     return null;
   }
 
   return (
     <Alert variant='destructive'>
       <TriangleAlert />
-      <AlertTitle>{t('title', { count: nodes.length })}</AlertTitle>
+      <AlertTitle>{t('title', { count: nodes.length + options.length })}</AlertTitle>
       <AlertDescription>
         <p>{t('description')}</p>
         <ul className='mt-1 flex flex-col gap-0.5'>
           {nodes.map((node) => (
             <li key={`${node.section}.${String(node.index)}`} className='font-mono text-xs'>
               {t('node', { name: toNodeName(node), type: node.type, tag: node.buildTag })}
+            </li>
+          ))}
+          {options.map((option) => (
+            <li key={option.path} className='font-mono text-xs'>
+              {t('option', { path: option.path, tag: option.buildTag })}
             </li>
           ))}
         </ul>
