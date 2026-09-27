@@ -203,6 +203,26 @@ export const CheckDetailsSchema = z.object({
   exit_code: z.int(),
 })
 
+/** RuleSetFiles — файлы своих списков из подкаталога rule-sets каталога конфига, как их отдаёт GET /api/config/rule-sets. */
+export const RuleSetFilesSchema = z.object({
+  /** Files — имя файла → содержимое байт в байт. */
+  files: z.record(z.string(), z.string()),
+  /** Etag — отпечаток набора; клиент возвращает его в lists_base применения. */
+  etag: z.string(),
+})
+
+/** ApplyEnvelope — применение конфига вместе с файлами списков подкаталога rule-sets. Идёт в POST /api/apply с Content-Type application/vnd.metabox.apply+json; тело без этого типа демон читает как голые байты конфига. */
+export const ApplyEnvelopeSchema = z.object({
+  /** Config — текст конфига как есть, с комментариями и висячими запятыми. */
+  config: z.string(),
+  /** Lists — имя файла в подкаталоге rule-sets → его содержимое. */
+  lists: z.record(z.string(), z.string()).optional(),
+  /** RemoveLists — файлы подкаталога rule-sets, которые применение удаляет. */
+  remove_lists: z.array(z.string()).optional(),
+  /** ListsBase — отпечаток набора файлов, от которого редактировал клиент: значение etag из GET /api/config/rule-sets. Пустой — применить без сверки. */
+  lists_base: z.string().optional(),
+})
+
 /** Load — средняя загрузка. Приводить её к процентам нельзя: это длина очереди на выполнение, и на четырёх ядрах значение 4.0 означает полную занятость. */
 export const LoadSchema = z.object({
   one: z.number(),
@@ -397,6 +417,7 @@ export const CatalogSchema = z.object({
   providers: z.array(ProviderSchema),
 })
 
+export type ApplyEnvelopeWire = z.infer<typeof ApplyEnvelopeSchema>
 export type CatalogWire = z.infer<typeof CatalogSchema>
 export type ChainWire = z.infer<typeof ChainSchema>
 export type CheckDetailsWire = z.infer<typeof CheckDetailsSchema>
@@ -420,6 +441,7 @@ export type PointWire = z.infer<typeof PointSchema>
 export type ProcessWire = z.infer<typeof ProcessSchema>
 export type ProviderWire = z.infer<typeof ProviderSchema>
 export type RuleHitsWire = z.infer<typeof RuleHitsSchema>
+export type RuleSetFilesWire = z.infer<typeof RuleSetFilesSchema>
 export type RuleWire = z.infer<typeof RuleSchema>
 export type RuntimeWire = z.infer<typeof RuntimeSchema>
 export type ServiceWire = z.infer<typeof ServiceSchema>
