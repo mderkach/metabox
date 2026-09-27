@@ -64,6 +64,10 @@
     "invalidEscapeCharacter": "invalid escape sequence",
     "invalidCharacter": "invalid character"
   },
+  "nodeEditor": {
+    "parseFailed": "JSON not parsed",
+    "submit": "Save to draft"
+  },
   "schema": {
     "unknownFields": "the panel does not know the fields: {{fields}}",
     "unknownFieldsAt": "{{path}}: the panel does not know the fields: {{fields}}",

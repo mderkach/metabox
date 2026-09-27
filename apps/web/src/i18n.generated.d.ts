@@ -22,6 +22,7 @@ declare module 'i18next' {
       'pages/Proxies': typeof import('./pages/Proxies/i18n/ru.json');
       'pages/RawConfig': typeof import('./pages/RawConfig/i18n/ru.json');
       'pages/RuleSets': typeof import('./pages/RuleSets/i18n/ru.json');
+      'pages/Section': typeof import('./pages/Section/i18n/ru.json');
       shared: typeof import('./shared/i18n/ru.json');
       'widgets/AppSidebar': typeof import('./widgets/AppSidebar/i18n/ru.json');
       'widgets/Config/ConfigBuildNotice': typeof import('./widgets/Config/ConfigBuildNotice/i18n/ru.json');

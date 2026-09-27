@@ -60,7 +60,7 @@ export function RuleRawEditor({ index, node }: { index: number; node: unknown })
 
       {error !== null && (
         <Alert variant='destructive'>
-          <AlertTitle>{t('parseFailed')}</AlertTitle>
+          <AlertTitle>{t('nodeEditor.parseFailed', { ns: 'shared' })}</AlertTitle>
           <AlertDescription>
             <pre className='font-mono text-xs whitespace-pre-wrap'>{error}</pre>
           </AlertDescription>
@@ -77,7 +77,7 @@ export function RuleRawEditor({ index, node }: { index: number; node: unknown })
       )}
 
       <Button size='sm' disabled={unchanged} onClick={apply}>
-        {t('submit')}
+        {t('nodeEditor.submit', { ns: 'shared' })}
       </Button>
     </section>
   );

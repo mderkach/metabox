@@ -3,12 +3,13 @@ import {
   createRoute,
   createRouter,
   lazyRouteComponent,
+  notFound,
   redirect,
   type RouterHistory,
 } from '@tanstack/react-router';
 import { z } from 'zod';
 
-import { getConfigOptions } from '@entities/Config';
+import { getConfigOptions, isGenericSection } from '@entities/Config';
 import { parseConnectionSearch } from '@entities/Connection';
 import { getTrafficHistoryOptions } from '@entities/Daemon';
 import { getProxiesOptions, getProxyProvidersOptions } from '@entities/Proxy';
@@ -120,6 +121,23 @@ const rawConfigRoute = createRoute({
   component: lazyRouteComponent(async () => import('@pages/RawConfig'), 'RawConfigPage'),
 });
 
+/**
+ * Секции без собственных форм — один экран с параметром: их узлы открываются
+ * и правятся как JSON. Статические `rule-set` и `raw` матчатся раньше
+ * параметра, а чужое имя секции — обычный 404.
+ */
+const configSectionRoute = createRoute({
+  getParentRoute: () => configLayoutRoute,
+  path: '$section',
+  beforeLoad: ({ params }) => {
+    if (!isGenericSection(params.section)) {
+      throw notFound();
+    }
+  },
+  loader: async () => preloadNamespaces(['pages/Section']),
+  component: lazyRouteComponent(async () => import('@pages/Section'), 'SectionPage'),
+});
+
 const proxiesRoute = createRoute({
   getParentRoute: () => rootRoute,
   loader: async () =>
@@ -161,7 +179,7 @@ const overviewRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   indexRoute,
-  configLayoutRoute.addChildren([routeEditorRoute, ruleSetsRoute, rawConfigRoute]),
+  configLayoutRoute.addChildren([routeEditorRoute, ruleSetsRoute, rawConfigRoute, configSectionRoute]),
   proxiesRoute,
   connectionsRoute,
   overviewRoute,

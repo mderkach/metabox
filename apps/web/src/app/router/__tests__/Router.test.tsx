@@ -2,7 +2,6 @@ import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import { renderWithQuery } from '@test/renderWithQuery';
 import { server } from '@test/server';
 import { act, screen, waitFor, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -135,22 +134,17 @@ describe('маршруты панели', () => {
 
   // Секции без экрана не занимают полосу вкладками, но и не пропадают: их
   // список вместе с размером секции — по кнопке рядом с полосой.
-  it('секции без экрана собраны в список с меткой «скоро», а не в отключённые вкладки', async () => {
+  it('каждая секция — вкладка, а без своих форм она открывается экраном узлов', async () => {
     serveDaemon();
-    const user = userEvent.setup();
 
-    renderRouter();
+    renderRouter('/config/log');
 
     const sections = await screen.findByRole('tablist', { name: 'Секции конфига' });
 
-    expect(within(sections).getAllByRole('tab')).toHaveLength(2);
+    expect(within(sections).getAllByRole('tab')).toHaveLength(8);
 
-    await user.click(screen.getByRole('button', { name: 'Ещё 6 секций' }));
-
-    const soon = await screen.findByRole('dialog', { name: 'Секции без экрана — правятся текстом' });
-
-    expect(within(soon).getByText('Эксперименты')).toBeInTheDocument();
-    expect(within(soon).getAllByText('скоро')).toHaveLength(6);
+    // Секции в файле нет — редактор предлагает пустой узел, сохранение создаст её.
+    expect(await screen.findByRole('textbox', { name: 'Узел log текстом' })).toHaveValue('{}');
   });
 
   // Текстовый режим — вторая ось раздела, а не выход из него: секции отвечают

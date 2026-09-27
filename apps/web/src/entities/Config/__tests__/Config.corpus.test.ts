@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { parseConfig } from '../api/Config.query';
-import { readRules, setValue } from '../model/Config.model';
+import { findValue, readRules, setValue } from '../model/Config.model';
 
 /**
  * Корпус подхватывается каталогом целиком: новый конфиг достаточно положить
@@ -79,6 +79,26 @@ describe('корпус конфигов', () => {
 
   it.each(FILES.filter((item) => item.name !== 'unknown-nodes.json'))('$name схема принимает целиком', ({ text }) => {
     expect(parseConfig(text).unknown).toEqual([]);
+  });
+
+  it('правка узла целиком не трогает комментарии и соседние узлы', () => {
+    const file = FILES.find((item) => item.name === 'handwritten.jsonc');
+
+    expect(file).toBeDefined();
+
+    const text = file?.text ?? '';
+    const node = findValue(text, ['outbounds', 0]);
+
+    expect(node).toBeDefined();
+
+    const after = setValue(text, ['outbounds', 0], { ...(typeof node === 'object' ? node : {}), tag: 'renamed' });
+
+    const commentsOf = (source: string) => source.split('\n').filter((line) => line.includes('//')).length;
+
+    expect(commentsOf(after)).toBe(commentsOf(text));
+    expect(topLevelKeys(after)).toEqual(topLevelKeys(text));
+    expect(JSON.stringify(findValue(after, ['outbounds', 1]))).toBe(JSON.stringify(findValue(text, ['outbounds', 1])));
+    expect(findValue(after, ['outbounds', 0, 'tag'])).toBe('renamed');
   });
 
   it('незнакомые узлы переживают правку соседнего поля', () => {

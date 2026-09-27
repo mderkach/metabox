@@ -148,6 +148,49 @@ export const CONFIG_SECTION = {
 export type ConfigSection = (typeof CONFIG_SECTION)[keyof typeof CONFIG_SECTION];
 
 /**
+ * Секции без собственного экрана: где лежат их узлы и правятся ли они
+ * списком. У `route` и `ruleSet` свои экраны, здесь их нет; `dns` показывается
+ * списком серверов — остальные его поля правятся текстовым режимом.
+ */
+export const GENERIC_SECTIONS = {
+  [CONFIG_SECTION.Inbounds]: { kind: 'list', path: ['inbounds'] },
+  [CONFIG_SECTION.Outbounds]: { kind: 'list', path: ['outbounds'] },
+  [CONFIG_SECTION.Providers]: { kind: 'list', path: ['providers'] },
+  [CONFIG_SECTION.Dns]: { kind: 'list', path: ['dns', 'servers'] },
+  [CONFIG_SECTION.Log]: { kind: 'object', path: ['log'] },
+  [CONFIG_SECTION.Experimental]: { kind: 'object', path: ['experimental'] },
+} as const satisfies Partial<Record<ConfigSection, { kind: 'list' | 'object'; path: JSONPath }>>;
+
+export type GenericSection = keyof typeof GENERIC_SECTIONS;
+
+export function isGenericSection(value: string): value is GenericSection {
+  return value in GENERIC_SECTIONS;
+}
+
+/**
+ * Узлы секции как есть, из текста: узел, который схема не приняла, из списка
+ * не выпадает. Секция-объект отдаёт один узел; той, которой в файле нет, —
+ * пустой список.
+ */
+export function readSectionNodes(text: string, section: GenericSection): unknown[] {
+  const shape = GENERIC_SECTIONS[section];
+  const value = findValue(text, shape.path);
+
+  if (shape.kind === 'object') {
+    return value === undefined ? [] : [value];
+  }
+
+  return Array.isArray(value) ? value : [];
+}
+
+/** Путь узла секции по его позиции; у секции-объекта позиция одна. */
+export function sectionNodePath(section: GenericSection, index: number): JSONPath {
+  const shape = GENERIC_SECTIONS[section];
+
+  return shape.kind === 'object' ? shape.path : [...shape.path, index];
+}
+
+/**
  * Сколько элементов в секции; `null` — считать нечего, у логов и экспериментов
  * списка нет.
  *

@@ -1,6 +1,4 @@
 {
   "editor": { "label": "Rule {{index}} as text" },
-  "parseFailed": "JSON not parsed",
-  "unknownNode": "The schema does not know this node — it is kept as is",
-  "submit": "Save to draft"
+  "unknownNode": "The schema does not know this node — it is kept as is"
 }

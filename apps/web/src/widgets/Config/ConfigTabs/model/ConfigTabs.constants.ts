@@ -1,28 +1,37 @@
 import type { ParseKeys } from 'i18next';
 
-import { CONFIG_SECTION, type ConfigSection } from '@entities/Config';
+import { CONFIG_SECTION, type ConfigSection, type GenericSection } from '@entities/Config';
+
+/** Цель ссылки вкладки в терминах роутера: секции без своего экрана идут параметром общего. */
+type TabLink = { to: '/config' | '/config/rule-set' } | { to: '/config/$section'; params: { section: GenericSection } };
+
+function sectionLink(section: GenericSection): TabLink {
+  return { to: '/config/$section', params: { section } };
+}
 
 /**
  * Секции конфига в том же порядке, в каком они лежат в файле, — так вкладка
  * находится по памяти о `config.json`, а не по алфавиту.
- *
- * `route` у секции без экрана нет: вкладка-заглушка, ведущая в никуда, хуже
- * видимой недоступной — по ней непонятно, что раздела ещё не сделали.
  */
 export const CONFIG_TABS = [
-  { key: CONFIG_SECTION.Route, label: 'section.route', route: '/config' },
-  { key: CONFIG_SECTION.RuleSet, label: 'section.ruleSet', route: '/config/rule-set' },
-  { key: CONFIG_SECTION.Inbounds, label: 'section.inbounds', route: null },
-  { key: CONFIG_SECTION.Outbounds, label: 'section.outbounds', route: null },
-  { key: CONFIG_SECTION.Providers, label: 'section.providers', route: null },
-  { key: CONFIG_SECTION.Dns, label: 'section.dns', route: null },
-  { key: CONFIG_SECTION.Log, label: 'section.log', route: null },
-  { key: CONFIG_SECTION.Experimental, label: 'section.experimental', route: null },
+  { key: CONFIG_SECTION.Route, label: 'section.route', link: { to: '/config' } },
+  { key: CONFIG_SECTION.RuleSet, label: 'section.ruleSet', link: { to: '/config/rule-set' } },
+  { key: CONFIG_SECTION.Inbounds, label: 'section.inbounds', link: sectionLink(CONFIG_SECTION.Inbounds) },
+  { key: CONFIG_SECTION.Outbounds, label: 'section.outbounds', link: sectionLink(CONFIG_SECTION.Outbounds) },
+  { key: CONFIG_SECTION.Providers, label: 'section.providers', link: sectionLink(CONFIG_SECTION.Providers) },
+  { key: CONFIG_SECTION.Dns, label: 'section.dns', link: sectionLink(CONFIG_SECTION.Dns) },
+  { key: CONFIG_SECTION.Log, label: 'section.log', link: sectionLink(CONFIG_SECTION.Log) },
+  { key: CONFIG_SECTION.Experimental, label: 'section.experimental', link: sectionLink(CONFIG_SECTION.Experimental) },
 ] as const satisfies ReadonlyArray<{
   key: ConfigSection;
   label: ParseKeys<'widgets/Config/ConfigTabs'>;
-  route: '/config' | '/config/rule-set' | null;
+  link: TabLink;
 }>;
+
+/** Адрес вкладки для сверки с текущим: у общего экрана он собран из параметра. */
+export function tabPath(tab: (typeof CONFIG_TABS)[number]): string {
+  return 'params' in tab.link ? `/config/${tab.link.params.section}` : tab.link.to;
+}
 
 export const CONFIG_MODE_ROUTE = {
   Forms: '/config',

@@ -64,6 +64,10 @@
     "invalidEscapeCharacter": "неверная escape-последовательность",
     "invalidCharacter": "недопустимый символ"
   },
+  "nodeEditor": {
+    "parseFailed": "JSON не разобран",
+    "submit": "Сохранить в черновик"
+  },
   "schema": {
     "unknownFields": "панель не знает поля: {{fields}}",
     "unknownFieldsAt": "{{path}}: панель не знает поля: {{fields}}",
