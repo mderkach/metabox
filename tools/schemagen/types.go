@@ -167,18 +167,24 @@ func constantValues(dir string) (map[string]string, error) {
 // генератор запускается из каталога своего модуля — так его и зовёт
 // цель schema в Makefile.
 func forkDir() (string, error) {
-	command := exec.Command("go", "list", "-m", "-f", "{{.Dir}}", forkModule)
+	return moduleDir(forkModule)
+}
+
+// moduleDir отдаёт каталог модуля из графа сборки в module cache.
+func moduleDir(module string) (string, error) {
+	//nolint:gosec // имя модуля приходит из констант генератора, не от пользователя
+	command := exec.Command("go", "list", "-m", "-f", "{{.Dir}}", module)
 	var stderr strings.Builder
 	command.Stderr = &stderr
 
 	out, err := command.Output()
 	if err != nil {
-		return "", fmt.Errorf("go list %s: %w: %s", forkModule, err,
+		return "", fmt.Errorf("go list %s: %w: %s", module, err,
 			strings.TrimSpace(stderr.String()))
 	}
 	dir := strings.TrimSpace(string(out))
 	if dir == "" {
-		return "", fmt.Errorf("go list %s вернул пустой путь", forkModule)
+		return "", fmt.Errorf("go list %s вернул пустой путь", module)
 	}
 	return dir, nil
 }

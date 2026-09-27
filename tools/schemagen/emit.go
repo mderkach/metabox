@@ -25,10 +25,18 @@ export const SCHEMA_FORK_VERSION = "%[1]s"
 // разрешаются при обращении к полю, поэтому взаимная рекурсия порядка не
 // требует; всё остальное — массивы, union'ы, .extend() — вычисляется сразу
 // при объявлении, и такие схемы schemaSet.sorted ставит после их зависимостей.
-func emit(set *schemaSet, root *schema, version string, gates map[string]map[string]string, groups []registryGroup) string {
+func emit(
+	set *schemaSet,
+	root *schema,
+	version string,
+	gates map[string]map[string]string,
+	options []optionGate,
+	groups []registryGroup,
+) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, fileHeader, version)
 	emitGates(&b, gates, groups)
+	emitOptionGates(&b, options)
 
 	for _, named := range set.sorted() {
 		fmt.Fprintf(&b, "export const %s = ", named.name)

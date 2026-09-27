@@ -72,7 +72,12 @@ func generate() (string, error) {
 		return "", err
 	}
 
-	return emit(w.set, root, forkVersion, gates, groups), nil
+	options, err := buildOptionGates()
+	if err != nil {
+		return "", err
+	}
+
+	return emit(w.set, root, forkVersion, gates, options, groups), nil
 }
 
 // registryUnions строит union'ы реестров до обхода корня: в дереве опций они

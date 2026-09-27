@@ -69,6 +69,18 @@ export const BUILD_TAG_OF_TYPE: Readonly<Record<string, Readonly<Record<string, 
   },
 }
 
+/**
+ * Build-тег, без которого бинарь форка не запустит опцию конфига: путь → тег.
+ * Существование затвора сверено с заглушками форка при генерации. С какими
+ * тегами собран бинарь на устройстве, сообщает демон.
+ */
+export const BUILD_TAG_OF_OPTION = {
+  "experimental.clash_api": "with_clash_api",
+  "experimental.v2ray_api": "with_v2ray_api",
+  "tls.utls": "with_utls",
+  "tun.stack": "with_gvisor",
+} as const
+
 export const ACMEDNS01ChallengeOptionsSchema = z.union([
   z.strictObject({
     provider: z.literal("alidns").optional(),
