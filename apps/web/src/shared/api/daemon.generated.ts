@@ -39,6 +39,7 @@ export const ERROR_CODE = [
   'nothing_to_confirm',
   'config_modified',
   'config_too_large',
+  'list_invalid',
   'check_failed',
   'internal',
 ] as const
@@ -97,6 +98,10 @@ export const TransactionSchema = z.object({
   window: z.int(),
   /** Sum — sha256 конфига, записанного демоном. По нему ловится правка файла извне. */
   sha256: z.string().optional(),
+  /** Lists — sha256 файлов списков, которые транзакция записывает: имя → отпечаток нового содержимого. Только реально меняемые файлы: по совпадению отпечатка доигрывание судит, началась ли запись. */
+  lists: z.record(z.string(), z.string()).optional(),
+  /** RemovedLists — файлы списков, которые транзакция удаляет; на момент запуска они существовали. */
+  removed_lists: z.array(z.string()).optional(),
   /** ReasonCode — на каком шаге встал цикл. Пусто, если применение прошло или отказ не привязан к шагу. */
   reason_code: z.string().optional(),
   /** Reason заполняется, когда применение не дошло до конца: исходная ошибка шага, как её записал демон. Показывать её пользователю — запасной путь, текст отказа панель берёт по ReasonCode. */

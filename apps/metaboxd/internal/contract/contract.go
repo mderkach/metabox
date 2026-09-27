@@ -148,11 +148,39 @@ const (
 	ErrConfigModified ErrorCode = "config_modified"
 	// ErrConfigTooLarge — тело запроса длиннее допустимого.
 	ErrConfigTooLarge ErrorCode = "config_too_large"
+	// ErrListInvalid — файл списка не принят: имя вне правил подкаталога
+	// rule-sets либо конверт применения не разобран.
+	ErrListInvalid ErrorCode = "list_invalid"
 	// ErrCheckFailed — `sing-box check` отверг конфиг; вывод бинаря лежит в Details.
 	ErrCheckFailed ErrorCode = "check_failed"
 	// ErrInternal — отказ, о котором наружу говорить нечего: подробности в логе.
 	ErrInternal ErrorCode = "internal"
 )
+
+// ApplyEnvelope — применение конфига вместе с файлами списков подкаталога
+// rule-sets. Идёт в POST /api/apply с Content-Type
+// application/vnd.metabox.apply+json; тело без этого типа демон читает как
+// голые байты конфига.
+type ApplyEnvelope struct {
+	// Config — текст конфига как есть, с комментариями и висячими запятыми.
+	Config string `json:"config"`
+	// Lists — имя файла в подкаталоге rule-sets → его содержимое; null
+	// удаляет файл.
+	Lists map[string]*string `json:"lists,omitempty"`
+	// ListsBase — отпечаток набора файлов, от которого редактировал клиент:
+	// значение etag из GET /api/config/rule-sets. Пустой — применить без
+	// сверки.
+	ListsBase string `json:"lists_base,omitempty"`
+}
+
+// RuleSetFiles — файлы своих списков из подкаталога rule-sets каталога
+// конфига, как их отдаёт GET /api/config/rule-sets.
+type RuleSetFiles struct {
+	// Files — имя файла → содержимое байт в байт.
+	Files map[string]string `json:"files"`
+	// Etag — отпечаток набора; клиент возвращает его в lists_base применения.
+	Etag string `json:"etag"`
+}
 
 // Error — единый формат отказа на границе HTTP. Внутренние подробности — пути
 // на диске, аргументы команд, содержимое конфига — в него не попадают; Details

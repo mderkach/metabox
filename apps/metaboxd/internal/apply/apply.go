@@ -9,11 +9,16 @@ package apply
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
 	"log/slog"
+	"regexp"
+	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -98,6 +103,13 @@ type Transaction struct {
 	// Sum — sha256 конфига, записанного демоном. По нему ловится правка файла
 	// извне.
 	Sum string `json:"sha256,omitempty"`
+	// Lists — sha256 файлов списков, которые транзакция записывает: имя →
+	// отпечаток нового содержимого. Только реально меняемые файлы: по
+	// совпадению отпечатка доигрывание судит, началась ли запись.
+	Lists map[string]string `json:"lists,omitempty"`
+	// RemovedLists — файлы списков, которые транзакция удаляет; на момент
+	// запуска они существовали.
+	RemovedLists []string `json:"removed_lists,omitempty"`
 	// ReasonCode — на каком шаге встал цикл. Пусто, если применение прошло или
 	// отказ не привязан к шагу.
 	ReasonCode ReasonCode `json:"reason_code,omitempty"`
@@ -128,7 +140,28 @@ var (
 	// ErrConfigModified — конфиг правили в обход демона. Затирать такую правку
 	// молча нельзя: её мог сделать владелец по SSH.
 	ErrConfigModified = errors.New("файл конфига изменён вне metabox")
+
+	// ErrListsModified — файлы списков правили в обход демона; класс отказа
+	// тот же, что у ErrConfigModified.
+	ErrListsModified = errors.New("файлы списков изменены вне metabox")
+
+	// ErrListName — имя файла списка не подходит подкаталогу: путь строит
+	// панель, и всё остальное — попытка выйти из него или слиться с конфигом.
+	ErrListName = errors.New("недопустимое имя файла списка")
 )
+
+// Lists — изменения файлов списков, едущие с применением: put пишется в
+// подкаталог списков, remove удаляется из него. Оба применяются той же
+// транзакцией, что и конфиг: проверка, запись, откат и доигрывание общие.
+type Lists struct {
+	Put    map[string][]byte
+	Remove []string
+}
+
+// empty отвечает, есть ли в изменениях хоть что-то.
+func (l Lists) empty() bool {
+	return len(l.Put) == 0 && len(l.Remove) == 0
+}
 
 // Store — файлы, которыми владеет config.Store. Интерфейс объявлен здесь,
 // у потребителя, и содержит только то, что нужно применению.
@@ -139,7 +172,9 @@ type Store interface {
 	Backup(ctx context.Context) error
 	SaveVersion(ctx context.Context, data []byte) error
 	Restore(ctx context.Context) error
-	StageCandidate(ctx context.Context, dst string, data []byte) error
+	StageCandidate(ctx context.Context, dst string, data []byte, putLists map[string][]byte, removeLists []string) error
+	ListSums(ctx context.Context) (map[string]string, error)
+	WriteLists(ctx context.Context, put map[string][]byte, remove []string) error
 	ReadState(ctx context.Context) ([]byte, error)
 	WriteState(ctx context.Context, data []byte) error
 	ClearState(ctx context.Context) error
@@ -206,6 +241,10 @@ type Manager struct {
 	// lastSum — sha256 того, что записал сам демон. Переживает перезапуск через
 	// файл состояния.
 	lastSum string
+	// lastListsSum — отпечаток набора файлов списков после записи демоном.
+	// Живёт только в памяти: после перезапуска сверку берёт на себя база
+	// клиента, как и у конфига.
+	lastListsSum string
 	// windowEndsAt — когда закрывается окно подтверждения. Хранится монотонной
 	// меткой Go и только в памяти: на диск уходит длительность, потому что у
 	// роутера нет часов реального времени и между жизнями демона метку сравнить
@@ -248,11 +287,16 @@ func (m *Manager) Current() Transaction {
 // пользователь чинит конфиг, и ответ на запрос обязан его содержать. Всё, что
 // после неё, живёт своим контекстом: применение переживает запрос.
 //
-// base — sha256 конфига, от которого редактировал клиент; пустая строка
-// означает, что клиент базу не назвал. Заданная база сверяется с файлом на
-// диске вместо внутренней сверки: клиент видел ровно эту версию файла, и его
-// применение поверх неё правку извне не затирает.
-func (m *Manager) Start(ctx context.Context, cfg []byte, base string) (Transaction, error) {
+// base — sha256 конфига, от которого редактировал клиент; listsBase — тот же
+// смысл для набора файлов списков (ListsEtag). Пустая строка означает, что
+// клиент базу не назвал. Заданная база сверяется с диском вместо внутренней
+// сверки: клиент видел ровно эту версию, и его применение поверх неё правку
+// извне не затирает.
+func (m *Manager) Start(ctx context.Context, cfg []byte, lists Lists, base, listsBase string) (Transaction, error) {
+	if err := validateLists(lists); err != nil {
+		return Transaction{}, err
+	}
+
 	prepared, added, err := clashapi.Ensure(cfg, m.opts.ClashPort)
 	if err != nil {
 		return Transaction{}, fmt.Errorf("гарантия clash_api: %w", err)
@@ -263,14 +307,24 @@ func (m *Manager) Start(ctx context.Context, cfg []byte, base string) (Transacti
 		return Transaction{}, err
 	}
 
-	token, err := m.reserve(ctx, base)
+	token, err := m.reserve(ctx, base, listsBase)
 	if err != nil {
+		return Transaction{}, err
+	}
+
+	// Изменения сводятся к реально меняемым файлам: неизменённый не пишется,
+	// а его совпадение с диском не должно читаться доигрыванием как
+	// свидетельство начатой записи.
+	changed, removed, err := m.narrowLists(ctx, lists)
+	if err != nil {
+		m.unreserve(token)
+
 		return Transaction{}, err
 	}
 
 	// Отказ check не заводит транзакции: ничего не применялось, а вердикт
 	// бинаря уезжает вызывающему этой же ошибкой.
-	if err := m.check(ctx, prepared); err != nil {
+	if err := m.check(ctx, prepared, changed, removed); err != nil {
 		m.unreserve(token)
 
 		return Transaction{}, err
@@ -281,6 +335,8 @@ func (m *Manager) Start(ctx context.Context, cfg []byte, base string) (Transacti
 		Phase:         PhaseApplying,
 		Window:        m.opts.Window,
 		Sum:           sum(prepared),
+		Lists:         listSums(changed),
+		RemovedLists:  removed,
 		ClashAPIAdded: added,
 	}
 
@@ -291,9 +347,105 @@ func (m *Manager) Start(ctx context.Context, cfg []byte, base string) (Transacti
 	}
 
 	m.begin(tx)
-	m.run(prepared, settings, token)
+	m.run(prepared, changed, removed, settings, token)
 
 	return tx, nil
+}
+
+// Имя файла списка: панель строит его из тега, и всё за пределами простого
+// имени с расширением .json — либо попытка выйти из подкаталога, либо файл,
+// который служба слила бы с конфигом.
+var listNamePattern = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._-]*\.json$`)
+
+// maxListName ограничивает имя: длиннее не принимают файловые системы устройств.
+const maxListName = 128
+
+func validListName(name string) bool {
+	return len(name) <= maxListName && listNamePattern.MatchString(name) && !strings.Contains(name, "..")
+}
+
+func validateLists(lists Lists) error {
+	for name := range lists.Put {
+		if !validListName(name) {
+			return fmt.Errorf("%w: %q", ErrListName, name)
+		}
+	}
+
+	for _, name := range lists.Remove {
+		if !validListName(name) {
+			return fmt.Errorf("%w: %q", ErrListName, name)
+		}
+
+		if _, ok := lists.Put[name]; ok {
+			return fmt.Errorf("%w: %q и пишется, и удаляется", ErrListName, name)
+		}
+	}
+
+	return nil
+}
+
+// narrowLists сводит изменения к реально меняемым: запись файла с тем же
+// содержимым и удаление несуществующего — пустые действия.
+func (m *Manager) narrowLists(ctx context.Context, lists Lists) (map[string][]byte, []string, error) {
+	if lists.empty() {
+		return nil, nil, nil
+	}
+
+	current, err := m.store.ListSums(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("сверка списков: %w", err)
+	}
+
+	changed := make(map[string][]byte, len(lists.Put))
+
+	for name, data := range lists.Put {
+		if current[name] != sum(data) {
+			changed[name] = data
+		}
+	}
+
+	var removed []string
+
+	for _, name := range lists.Remove {
+		if _, ok := current[name]; ok {
+			removed = append(removed, name)
+		}
+	}
+
+	return changed, removed, nil
+}
+
+func listSums(files map[string][]byte) map[string]string {
+	if len(files) == 0 {
+		return nil
+	}
+
+	sums := make(map[string]string, len(files))
+	for name, data := range files {
+		sums[name] = sum(data)
+	}
+
+	return sums
+}
+
+// ListsEtag — отпечаток набора файлов списков: имена с суммами в стабильном
+// порядке. Его отдаёт чтение списков и его же клиент возвращает базой
+// применения.
+func ListsEtag(sums map[string]string) string {
+	names := make([]string, 0, len(sums))
+	for name := range sums {
+		names = append(names, name)
+	}
+
+	sort.Strings(names)
+
+	h := sha256.New()
+	for _, name := range names {
+		// Запись в hash.Hash не отказывает по контракту пакета hash.
+		_, _ = fmt.Fprintf(h, "%s:%s\n", name, sums[name])
+	}
+
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 // Confirm закрывает окно подтверждения: связь жива, откат не нужен.
@@ -353,14 +505,14 @@ func (m *Manager) Close() {
 	m.wg.Wait()
 }
 
-// reserve занимает применение под одну транзакцию и заодно ловит правку файла
-// извне: конфиг мог поправить владелец по SSH, и затирать это молча нельзя.
-// Возвращает номер владения для unreserve.
+// reserve занимает применение под одну транзакцию и заодно ловит правку
+// извне: конфиг и файлы списков мог поправить владелец по SSH, и затирать это
+// молча нельзя. Возвращает номер владения для unreserve.
 //
 // Названная клиентом база главнее внутренней сверки: lastSum живёт в памяти
 // процесса и после перезапуска пуст, а база приходит с каждым применением и
 // разблокирует Apply, когда клиент перечитал правленный извне файл.
-func (m *Manager) reserve(ctx context.Context, base string) (uint64, error) {
+func (m *Manager) reserve(ctx context.Context, base, listsBase string) (uint64, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -368,41 +520,78 @@ func (m *Manager) reserve(ctx context.Context, base string) (uint64, error) {
 		return 0, ErrBusy
 	}
 
+	if err := m.verifyConfigBase(ctx, base); err != nil {
+		return 0, err
+	}
+
+	if err := m.verifyListsBase(ctx, listsBase); err != nil {
+		return 0, err
+	}
+
+	return m.hold(), nil
+}
+
+// verifyConfigBase сверяет конфиг на диске с базой клиента, а без неё — с тем,
+// что записал сам демон. Вызывается под mu.
+func (m *Manager) verifyConfigBase(ctx context.Context, base string) error {
 	if base != "" {
 		current, err := m.store.Sum(ctx)
 		if errors.Is(err, fs.ErrNotExist) {
 			// База есть, а файла нет: клиент редактировал конфиг, который
 			// из-под него унесли.
-			return 0, ErrConfigModified
+			return ErrConfigModified
 		}
 		if err != nil {
-			return 0, fmt.Errorf("сверка конфига: %w", err)
+			return fmt.Errorf("сверка конфига: %w", err)
 		}
 		if current != base {
-			return 0, ErrConfigModified
+			return ErrConfigModified
 		}
 
-		return m.hold(), nil
+		return nil
 	}
 
 	if m.lastSum == "" {
-		return m.hold(), nil
+		return nil
 	}
 
 	current, err := m.store.Sum(ctx)
 	if errors.Is(err, fs.ErrNotExist) {
 		// Конфиг унесли из-под демона — сверять не с чем, применение это не
 		// останавливает.
-		return m.hold(), nil
+		return nil
 	}
 	if err != nil {
-		return 0, fmt.Errorf("сверка конфига: %w", err)
+		return fmt.Errorf("сверка конфига: %w", err)
 	}
 	if current != m.lastSum {
-		return 0, ErrConfigModified
+		return ErrConfigModified
 	}
 
-	return m.hold(), nil
+	return nil
+}
+
+// verifyListsBase — та же сверка для набора файлов списков. Вызывается под mu.
+func (m *Manager) verifyListsBase(ctx context.Context, listsBase string) error {
+	expected := listsBase
+	if expected == "" {
+		expected = m.lastListsSum
+	}
+
+	if expected == "" {
+		return nil
+	}
+
+	current, err := m.store.ListSums(ctx)
+	if err != nil {
+		return fmt.Errorf("сверка списков: %w", err)
+	}
+
+	if ListsEtag(current) != expected {
+		return ErrListsModified
+	}
+
+	return nil
 }
 
 // hold занимает применение и отдаёт номер владения. Вызывается под mu.

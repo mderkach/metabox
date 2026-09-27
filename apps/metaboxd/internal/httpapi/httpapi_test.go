@@ -48,10 +48,17 @@ type fakeApplier struct {
 	startErr   error
 	confirmErr error
 	received   []byte
+	lists      apply.Lists
 	base       string
+	listsBase  string
 }
 
-func (a *fakeApplier) Start(_ context.Context, cfg []byte, base string) (apply.Transaction, error) {
+func (a *fakeApplier) Start(
+	_ context.Context,
+	cfg []byte,
+	lists apply.Lists,
+	base, listsBase string,
+) (apply.Transaction, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -60,7 +67,9 @@ func (a *fakeApplier) Start(_ context.Context, cfg []byte, base string) (apply.T
 	}
 
 	a.received = cfg
+	a.lists = lists
 	a.base = base
+	a.listsBase = listsBase
 	a.current = apply.Transaction{ID: "tx-1", Phase: apply.PhaseApplying}
 
 	return a.current, nil
@@ -106,8 +115,9 @@ func (a *fakeApplier) sentBase() string {
 // fakeReader подменяет владельца файла конфига: чтение с диска проверяется в
 // internal/config, здесь важно, что байты доходят до ответа неизменными.
 type fakeReader struct {
-	data []byte
-	err  error
+	data  []byte
+	lists map[string][]byte
+	err   error
 	// readErr ломает только чтение конфига, оставляя историю доступной.
 	readErr  error
 	versions []config.Version
@@ -125,6 +135,14 @@ func (r fakeReader) Read(context.Context) ([]byte, error) {
 	}
 
 	return r.data, nil
+}
+
+func (r fakeReader) ReadLists(context.Context) (map[string][]byte, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+
+	return r.lists, nil
 }
 
 func (r fakeReader) Versions(context.Context) ([]config.Version, error) {

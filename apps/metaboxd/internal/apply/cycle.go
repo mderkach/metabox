@@ -17,8 +17,9 @@ import (
 )
 
 // check раскладывает кандидата во временный каталог и отдаёт его бинарю.
-// Проверяется каталог, а не файл: сервис поднимется на слиянии всех .json.
-func (m *Manager) check(ctx context.Context, data []byte) error {
+// Проверяется каталог, а не файл: сервис поднимется на слиянии всех .json, а
+// изменения списков ложатся в кандидата теми же путями, какими лягут на диск.
+func (m *Manager) check(ctx context.Context, data []byte, putLists map[string][]byte, removeLists []string) error {
 	dir, err := os.MkdirTemp("", "metabox-candidate-")
 	if err != nil {
 		return fmt.Errorf("каталог кандидата: %w", err)
@@ -29,7 +30,7 @@ func (m *Manager) check(ctx context.Context, data []byte) error {
 		}
 	}()
 
-	if err := m.store.StageCandidate(ctx, dir, data); err != nil {
+	if err := m.store.StageCandidate(ctx, dir, data, putLists, removeLists); err != nil {
 		return err
 	}
 
@@ -39,7 +40,7 @@ func (m *Manager) check(ctx context.Context, data []byte) error {
 // run уводит применение в фоновую горутину: цикл переживает запрос, а окно
 // подтверждения тянется до минуты. Останавливает горутину
 // Close, ошибки уходят в лог и в состояние транзакции, дожидается — wg.
-func (m *Manager) run(data []byte, settings clashapi.Settings, token uint64) {
+func (m *Manager) run(data []byte, putLists map[string][]byte, removeLists []string, settings clashapi.Settings, token uint64) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	m.mu.Lock()
@@ -54,17 +55,26 @@ func (m *Manager) run(data []byte, settings clashapi.Settings, token uint64) {
 		defer cancel()
 		defer m.unreserve(token)
 
-		m.cycle(ctx, data, settings, confirmed)
+		m.cycle(ctx, data, putLists, removeLists, settings, confirmed)
 	}()
 }
 
-func (m *Manager) cycle(ctx context.Context, data []byte, settings clashapi.Settings, confirmed <-chan struct{}) {
+func (m *Manager) cycle(
+	ctx context.Context,
+	data []byte,
+	putLists map[string][]byte,
+	removeLists []string,
+	settings clashapi.Settings,
+	confirmed <-chan struct{},
+) {
 	id := m.Current().ID
 	log := m.log.With("transaction_id", id)
 
-	log.Info("применение начато", "sha256", short(sum(data)), "size", len(data))
+	log.Info("применение начато",
+		"sha256", short(sum(data)), "size", len(data),
+		"lists_put", len(putLists), "lists_removed", len(removeLists))
 
-	if err := m.apply(ctx, data, settings); err != nil {
+	if err := m.apply(ctx, data, putLists, removeLists, settings); err != nil {
 		log.Error("применение не прошло", "err", err)
 		m.release(PhaseFailed, err)
 		m.rollback(context.WithoutCancel(ctx), log)
@@ -76,7 +86,15 @@ func (m *Manager) cycle(ctx context.Context, data []byte, settings clashapi.Sett
 }
 
 // apply выполняет шаги 4–7 протокола: бэкап, запись, рестарт, healthcheck.
-func (m *Manager) apply(ctx context.Context, data []byte, settings clashapi.Settings) error {
+// Файлы списков пишутся до конфига: конфиг — точка фиксации транзакции, и
+// доигрывание судит о начатой записи по нему и по изменяемым файлам.
+func (m *Manager) apply(
+	ctx context.Context,
+	data []byte,
+	putLists map[string][]byte,
+	removeLists []string,
+	settings clashapi.Settings,
+) error {
 	ctx, cancel := context.WithTimeout(ctx, m.opts.CycleTimeout)
 	defer cancel()
 
@@ -97,12 +115,26 @@ func (m *Manager) apply(ctx context.Context, data []byte, settings clashapi.Sett
 		}
 	}
 
+	if err := m.store.WriteLists(ctx, putLists, removeLists); err != nil {
+		return stepFailed(ReasonWriteFailed, fmt.Errorf("запись списков: %w", err))
+	}
+
 	if err := m.store.Write(ctx, data); err != nil {
 		return stepFailed(ReasonWriteFailed, fmt.Errorf("запись конфига: %w", err))
 	}
 
+	lastLists, err := m.store.ListSums(ctx)
+	if err != nil {
+		// Сверять следующее применение будет не с чем — как после перезапуска.
+		m.log.Warn("отпечаток списков после записи не снят", "err", err)
+	}
+
 	m.mu.Lock()
 	m.lastSum = sum(data)
+	m.lastListsSum = ""
+	if err == nil {
+		m.lastListsSum = ListsEtag(lastLists)
+	}
 	m.mu.Unlock()
 
 	if err := m.service.Restart(ctx); err != nil {
@@ -194,6 +226,7 @@ func (m *Manager) rollback(ctx context.Context, log *slog.Logger) {
 		// возможности применить исправленный конфиг.
 		m.mu.Lock()
 		m.lastSum = ""
+		m.lastListsSum = ""
 		m.mu.Unlock()
 
 		return
@@ -204,6 +237,7 @@ func (m *Manager) rollback(ctx context.Context, log *slog.Logger) {
 	m.current.Window = 0
 	m.windowEndsAt = time.Time{}
 	m.lastSum = ""
+	m.lastListsSum = ""
 	m.rollingBack = false
 	m.mu.Unlock()
 
@@ -277,22 +311,47 @@ func (m *Manager) Replay(ctx context.Context) error {
 	return nil
 }
 
-// writeHappened отвечает, успел ли оборванный цикл записать конфиг: sha файла
-// на диске сверяется с суммой из состояния транзакции.
+// writeHappened отвечает, успел ли оборванный цикл тронуть диск: sha конфига
+// сверяется с суммой из состояния, а следом — изменяемые файлы списков.
+// Транзакция несёт только реально меняемые, поэтому совпадение любого из них
+// означает начатую запись, а не файл, который и не менялся.
 func (m *Manager) writeHappened(ctx context.Context, tx Transaction) bool {
 	current, err := m.store.Sum(ctx)
-	if errors.Is(err, fs.ErrNotExist) {
-		return false
-	}
-	if err != nil {
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		// Сверить не вышло — считаем, что запись случилась: лишний откат
 		// вернёт бэкап, а пропущенный оставил бы устройство без автоотката.
 		m.log.Warn("сверка конфига при доигрывании не прошла", "err", err)
 
 		return true
 	}
+	if err == nil && current == tx.Sum {
+		return true
+	}
 
-	return current == tx.Sum
+	if len(tx.Lists) == 0 && len(tx.RemovedLists) == 0 {
+		return false
+	}
+
+	sums, err := m.store.ListSums(ctx)
+	if err != nil {
+		m.log.Warn("сверка списков при доигрывании не прошла", "err", err)
+
+		return true
+	}
+
+	for name, target := range tx.Lists {
+		if sums[name] == target {
+			return true
+		}
+	}
+
+	for _, name := range tx.RemovedLists {
+		if _, ok := sums[name]; !ok {
+			return true
+		}
+	}
+
+	return false
 }
 
 // restoreWindow поднимает таймер заново на срок из состояния. Сколько его

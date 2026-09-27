@@ -24,6 +24,8 @@ var (
 	// errUpgradeUnsupported — попытка поднять WebSocket на ветке прокси.
 	// Рантайм идёт одним потоком `/api/events`.
 	errUpgradeUnsupported = errors.New("рантайм идёт потоком /api/events, апгрейд не поддерживается")
+	// errBadApplyEnvelope — тело с типом конверта применения не разобралось.
+	errBadApplyEnvelope = errors.New("конверт применения не разобран")
 )
 
 // fail — единственное место, где ошибка превращается в ответ: новый вид отказа
@@ -93,6 +95,12 @@ func statusFor(err error) (status int, code contract.ErrorCode) {
 		return http.StatusConflict, contract.ErrNothingToConfirm
 	case errors.Is(err, apply.ErrConfigModified):
 		return http.StatusConflict, contract.ErrConfigModified
+	// Код общий с правкой конфига: класс тот же — на устройстве не то, от чего
+	// редактировал клиент.
+	case errors.Is(err, apply.ErrListsModified):
+		return http.StatusConflict, contract.ErrConfigModified
+	case errors.Is(err, apply.ErrListName), errors.Is(err, errBadApplyEnvelope):
+		return http.StatusBadRequest, contract.ErrListInvalid
 	case errors.As(err, &tooLarge):
 		return http.StatusRequestEntityTooLarge, contract.ErrConfigTooLarge
 	default:

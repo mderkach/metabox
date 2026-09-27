@@ -363,7 +363,7 @@ func TestStageCandidate(t *testing.T) {
 	dst := t.TempDir()
 	candidate := []byte(`{"новое":true}`)
 
-	if err := store.StageCandidate(t.Context(), dst, candidate); err != nil {
+	if err := store.StageCandidate(t.Context(), dst, candidate, nil, nil); err != nil {
 		t.Fatalf("раскладка кандидата: %v", err)
 	}
 
@@ -400,7 +400,7 @@ func TestStageCandidateCopiesSubdirectories(t *testing.T) {
 	}
 
 	dst := t.TempDir()
-	if err := store.StageCandidate(t.Context(), dst, []byte(`{"новое":true}`)); err != nil {
+	if err := store.StageCandidate(t.Context(), dst, []byte(`{"новое":true}`), nil, nil); err != nil {
 		t.Fatalf("раскладка кандидата: %v", err)
 	}
 
@@ -426,7 +426,7 @@ func TestStageCandidateSkipsSymlinkOutside(t *testing.T) {
 	}
 
 	dst := t.TempDir()
-	if err := store.StageCandidate(t.Context(), dst, []byte(`{"новое":true}`)); err == nil {
+	if err := store.StageCandidate(t.Context(), dst, []byte(`{"новое":true}`), nil, nil); err == nil {
 		t.Fatal("симлинк наружу разложился молча: демон работает под root")
 	}
 
@@ -447,7 +447,7 @@ func TestStageCandidateFollowsSymlinkInside(t *testing.T) {
 	}
 
 	dst := t.TempDir()
-	if err := store.StageCandidate(t.Context(), dst, []byte(`{"новое":true}`)); err != nil {
+	if err := store.StageCandidate(t.Context(), dst, []byte(`{"новое":true}`), nil, nil); err != nil {
 		t.Fatalf("раскладка кандидата: %v", err)
 	}
 
@@ -465,7 +465,7 @@ func TestStageCandidateLeavesWorkingDirIntact(t *testing.T) {
 	original := []byte(`{"старое":true}`)
 	writeConfig(t, cfgDir, configName, original, 0o600)
 
-	if err := store.StageCandidate(t.Context(), t.TempDir(), []byte(`{"новое":true}`)); err != nil {
+	if err := store.StageCandidate(t.Context(), t.TempDir(), []byte(`{"новое":true}`), nil, nil); err != nil {
 		t.Fatalf("раскладка кандидата: %v", err)
 	}
 

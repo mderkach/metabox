@@ -176,8 +176,8 @@ func (s *Store) Write(ctx context.Context, data []byte) error {
 	return s.write(data)
 }
 
-// Backup сохраняет текущий конфиг для отката. Вызывается до записи нового
-// (шаг 4 протокола применения).
+// Backup сохраняет для отката текущий конфиг и снимок каталога списков.
+// Вызывается до записи нового (шаг 4 протокола применения).
 func (s *Store) Backup(ctx context.Context) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -203,11 +203,55 @@ func (s *Store) Backup(ctx context.Context) error {
 	}
 	defer func() { _ = serviceRoot.Close() }()
 
-	return writeAtomic(serviceRoot, backupName, data, securePerm)
+	if err := writeAtomic(serviceRoot, backupName, data, securePerm); err != nil {
+		return err
+	}
+
+	return s.backupLists(serviceRoot)
 }
 
-// Restore возвращает конфиг из бэкапа. Права целевого файла сохраняются:
-// откат не должен менять то, что владелец сузил осознанно.
+// backupLists кладёт снимок каталога списков рядом с бэкапом конфига. Снимок
+// сначала собирается целиком под временным именем и только потом подменяет
+// прежний: обрыв на середине не должен оставлять откат без файлов списков.
+func (s *Store) backupLists(serviceRoot *os.Root) error {
+	files, err := s.readLists()
+	if err != nil {
+		return fmt.Errorf("чтение списков под бэкап: %w", err)
+	}
+
+	if err := serviceRoot.RemoveAll(listsBackupStaging); err != nil {
+		return fmt.Errorf("очистка черновика бэкапа списков: %w", err)
+	}
+
+	if err := serviceRoot.Mkdir(listsBackupStaging, secureDirPerm); err != nil {
+		return fmt.Errorf("каталог черновика бэкапа списков: %w", err)
+	}
+
+	staging, err := serviceRoot.OpenRoot(listsBackupStaging)
+	if err != nil {
+		return fmt.Errorf("открытие черновика бэкапа списков: %w", err)
+	}
+	defer func() { _ = staging.Close() }()
+
+	for name, data := range files {
+		if err := writeAtomic(staging, name, data, securePerm); err != nil {
+			return fmt.Errorf("бэкап списка %s: %w", name, err)
+		}
+	}
+
+	if err := serviceRoot.RemoveAll(listsBackupName); err != nil {
+		return fmt.Errorf("снятие прежнего бэкапа списков: %w", err)
+	}
+
+	if err := serviceRoot.Rename(listsBackupStaging, listsBackupName); err != nil {
+		return fmt.Errorf("подмена бэкапа списков: %w", err)
+	}
+
+	return syncDir(serviceRoot)
+}
+
+// Restore возвращает из бэкапа конфиг и каталог списков. Права целевого файла
+// сохраняются: откат не должен менять то, что владелец сузил осознанно.
 func (s *Store) Restore(ctx context.Context) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -230,16 +274,98 @@ func (s *Store) Restore(ctx context.Context) error {
 		return fmt.Errorf("чтение бэкапа %s: %w", s.BackupPath(), err)
 	}
 
+	if err := s.restoreLists(serviceRoot); err != nil {
+		return err
+	}
+
 	return s.write(data)
 }
 
+// restoreLists приводит каталог списков к снимку бэкапа: файлы возвращаются
+// побайтово, появившиеся после снимка — удаляются. Бэкап без снимка означает,
+// что он снят до появления списков, и каталог не трогается.
+func (s *Store) restoreLists(serviceRoot *os.Root) error {
+	backup, err := serviceRoot.OpenRoot(listsBackupName)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("открытие бэкапа списков: %w", err)
+	}
+	defer func() { _ = backup.Close() }()
+
+	entries, err := fs.ReadDir(backup.FS(), ".")
+	if err != nil {
+		return fmt.Errorf("чтение бэкапа списков: %w", err)
+	}
+
+	saved := make(map[string][]byte, len(entries))
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		data, err := backup.ReadFile(entry.Name())
+		if err != nil {
+			return fmt.Errorf("чтение бэкапа списка %s: %w", entry.Name(), err)
+		}
+
+		saved[entry.Name()] = data
+	}
+
+	current, err := s.readLists()
+	if err != nil {
+		return err
+	}
+
+	var remove []string
+
+	for name := range current {
+		if _, ok := saved[name]; !ok {
+			remove = append(remove, name)
+		}
+	}
+
+	root, err := s.listsRoot(len(saved) > 0)
+	if errors.Is(err, errNoLists) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	defer func() { _ = root.Close() }()
+
+	for name, data := range saved {
+		if err := writeAtomic(root, name, data, permOf(root, name)); err != nil {
+			return fmt.Errorf("возврат списка %s: %w", name, err)
+		}
+	}
+
+	for _, name := range remove {
+		if err := root.Remove(name); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("снятие списка %s: %w", name, err)
+		}
+	}
+
+	return syncDir(root)
+}
+
 // StageCandidate раскладывает каталог-кандидат: конфиг с новым содержимым,
-// остальные .json рабочего каталога и его подкаталоги целиком. Проверять надо
-// ровно то, что поднимет сервис: он сливает все .json каталога, а
-// check идёт с -D на кандидате, и файлы, на которые конфиг ссылается
-// относительным путём, обязаны лежать в нём той же раскладкой. Каталог
-// создаёт и удаляет вызывающий.
-func (s *Store) StageCandidate(ctx context.Context, dst string, data []byte) error {
+// остальные .json рабочего каталога и его подкаталоги целиком. Каталог списков
+// собирается с изменениями транзакции — putLists ложатся поверх текущих
+// файлов, removeLists в кандидата не попадают: проверять надо ровно то, что
+// ляжет на диск после записи. Проверяется каталог, потому что сервис сливает
+// все .json, а check идёт с -D на кандидате, и файлы, на которые конфиг
+// ссылается относительным путём, обязаны лежать в нём той же раскладкой.
+// Каталог создаёт и удаляет вызывающий.
+func (s *Store) StageCandidate(
+	ctx context.Context,
+	dst string,
+	data []byte,
+	putLists map[string][]byte,
+	removeLists []string,
+) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -285,8 +411,46 @@ func (s *Store) StageCandidate(ctx context.Context, dst string, data []byte) err
 		}
 	}
 
+	if err := s.stageLists(dstRoot, putLists, removeLists); err != nil {
+		return err
+	}
+
 	if err := dstRoot.WriteFile(s.name, data, securePerm); err != nil {
 		return fmt.Errorf("запись кандидата в %s: %w", dst, err)
+	}
+
+	return nil
+}
+
+// stageLists ложит изменения транзакции поверх скопированного каталога
+// списков: removeLists из кандидата убираются, putLists записываются. Всё
+// остальное содержимое подкаталога — вложенные каталоги, чужие файлы — уже
+// скопировано как есть: проверяется ровно то, что ляжет на диск.
+func (s *Store) stageLists(dstRoot *os.Root, put map[string][]byte, remove []string) error {
+	if len(put) == 0 && len(remove) == 0 {
+		return nil
+	}
+
+	if err := dstRoot.Mkdir(listsDirName, secureDirPerm); err != nil && !errors.Is(err, fs.ErrExist) {
+		return fmt.Errorf("каталог списков кандидата: %w", err)
+	}
+
+	listsRoot, err := dstRoot.OpenRoot(listsDirName)
+	if err != nil {
+		return fmt.Errorf("открытие каталога списков кандидата: %w", err)
+	}
+	defer func() { _ = listsRoot.Close() }()
+
+	for _, name := range remove {
+		if err := listsRoot.Remove(name); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("снятие списка %s в кандидате: %w", name, err)
+		}
+	}
+
+	for name, data := range put {
+		if err := listsRoot.WriteFile(name, data, securePerm); err != nil {
+			return fmt.Errorf("список %s в кандидате: %w", name, err)
+		}
 	}
 
 	return nil

@@ -7,9 +7,11 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"io"
 	"log/slog"
+	"mime"
 	"net/http"
 	"strconv"
 	"strings"
@@ -29,10 +31,19 @@ import (
 // мегабайта с запасом перекрывают конфиг на 500 правил.
 const maxConfigBytes = 4 << 20
 
+// maxApplyBytes — потолок конверта применения: сверх конфига в нём едут файлы
+// списков, а большой список — это мегабайты доменов.
+const maxApplyBytes = 16 << 20
+
+// applyJSONType — тип тела конверта применения. Свой, а не application/json:
+// сам конфиг — тоже JSON, и по общему типу конверт не отличить от голых байт
+// конфига.
+const applyJSONType = "application/vnd.metabox.apply+json"
+
 // Applier — цикл применения. Интерфейс объявлен здесь, у потребителя, и
 // содержит только те методы, которыми пользуются хендлеры.
 type Applier interface {
-	Start(ctx context.Context, cfg []byte, base string) (apply.Transaction, error)
+	Start(ctx context.Context, cfg []byte, lists apply.Lists, base, listsBase string) (apply.Transaction, error)
 	Confirm(ctx context.Context, id string) (apply.Transaction, error)
 	Current() apply.Transaction
 }
@@ -51,6 +62,7 @@ type Service interface {
 // config.Store, а запись идёт протоколом Apply.
 type ConfigReader interface {
 	Read(ctx context.Context) ([]byte, error)
+	ReadLists(ctx context.Context) (map[string][]byte, error)
 	Versions(ctx context.Context) ([]config.Version, error)
 	ReadVersion(ctx context.Context, id int) ([]byte, error)
 }
@@ -197,6 +209,7 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /healthz", s.handleHealth)
 	mux.HandleFunc("GET /api/status", s.handleStatus)
 	mux.HandleFunc("GET /api/config", s.handleConfig)
+	mux.HandleFunc("GET /api/config/rule-sets", s.handleConfigLists)
 	mux.HandleFunc("GET /api/config/versions", s.handleVersions)
 	mux.HandleFunc("GET /api/config/versions/{id}", s.handleVersion)
 	mux.HandleFunc("POST /api/config/versions/{id}/restore", s.handleVersionRestore)
@@ -309,6 +322,31 @@ func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// handleConfigLists отдаёт файлы своих списков из подкаталога rule-sets вместе
+// с отпечатком набора: панель возвращает его в lists_base применения, и правка
+// файла между чтением и Apply не затирается молча.
+func (s *Server) handleConfigLists(w http.ResponseWriter, r *http.Request) {
+	files, err := s.reader.ReadLists(r.Context())
+	if err != nil {
+		fail(s.log, w, r, err)
+
+		return
+	}
+
+	out := contract.RuleSetFiles{Files: make(map[string]string, len(files))}
+	sums := make(map[string]string, len(files))
+
+	for name, data := range files {
+		out.Files[name] = string(data)
+		sums[name] = config.Sum(data)
+	}
+
+	out.Etag = apply.ListsEtag(sums)
+
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(s.log, w, http.StatusOK, out)
+}
+
 func (s *Server) handleVersions(w http.ResponseWriter, r *http.Request) {
 	versions, err := s.reader.Versions(r.Context())
 	if err != nil {
@@ -368,8 +406,9 @@ func (s *Server) handleVersionRestore(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Восстановление версии — осознанный откат на её байты, а не правка
-	// поверх текущего файла: базы для сверки у него нет.
-	tx, err := s.applier.Start(r.Context(), data, "")
+	// поверх текущего файла: базы для сверки у него нет. Файлы списков
+	// восстановление не трогает: история хранит только конфиг.
+	tx, err := s.applier.Start(r.Context(), data, apply.Lists{}, "", "")
 	if err != nil {
 		fail(s.log, w, r, err)
 
@@ -388,18 +427,19 @@ func (s *Server) readVersion(r *http.Request) ([]byte, error) {
 	return s.reader.ReadVersion(r.Context(), id)
 }
 
-// handleApply принимает конфиг байтами и запускает применение. Ответ приходит
-// после проверки бинарём, но до конца цикла: применение асинхронно и живёт
-// дольше запроса.
+// handleApply принимает конфиг и запускает применение. Тело — либо голые
+// байты конфига, либо конверт с файлами списков под своим Content-Type. Ответ
+// приходит после проверки бинарём, но до конца цикла: применение асинхронно и
+// живёт дольше запроса.
 func (s *Server) handleApply(w http.ResponseWriter, r *http.Request) {
-	cfg, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxConfigBytes))
+	cfg, lists, listsBase, err := readApplyBody(w, r)
 	if err != nil {
 		fail(s.log, w, r, err)
 
 		return
 	}
 
-	tx, err := s.applier.Start(r.Context(), cfg, baseSum(r.Header.Get("If-Match")))
+	tx, err := s.applier.Start(r.Context(), cfg, lists, baseSum(r.Header.Get("If-Match")), listsBase)
 	if err != nil {
 		fail(s.log, w, r, err)
 
@@ -407,6 +447,44 @@ func (s *Server) handleApply(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(s.log, w, http.StatusAccepted, tx)
+}
+
+func readApplyBody(w http.ResponseWriter, r *http.Request) ([]byte, apply.Lists, string, error) {
+	mediaType, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
+
+	if mediaType != applyJSONType {
+		cfg, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxConfigBytes))
+
+		return cfg, apply.Lists{}, "", err
+	}
+
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxApplyBytes))
+	if err != nil {
+		return nil, apply.Lists{}, "", err
+	}
+
+	var envelope contract.ApplyEnvelope
+	if err := json.Unmarshal(body, &envelope); err != nil {
+		return nil, apply.Lists{}, "", errors.Join(errBadApplyEnvelope, err)
+	}
+
+	lists := apply.Lists{}
+
+	for name, content := range envelope.Lists {
+		if content == nil {
+			lists.Remove = append(lists.Remove, name)
+
+			continue
+		}
+
+		if lists.Put == nil {
+			lists.Put = map[string][]byte{}
+		}
+
+		lists.Put[name] = []byte(*content)
+	}
+
+	return []byte(envelope.Config), lists, envelope.ListsBase, nil
 }
 
 // baseSum достаёт sha256 базы из If-Match: значение приходит тем же ETag, что

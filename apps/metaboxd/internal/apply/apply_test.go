@@ -56,6 +56,8 @@ type fakeStore struct {
 	sumErr     error
 	written    []byte
 	state      []byte
+	lists      map[string][]byte
+	listsErr   error
 	backupErr  error
 	restoreErr error
 	writeErr   error
@@ -121,8 +123,49 @@ func (s *fakeStore) Restore(context.Context) error {
 	return s.restoreErr
 }
 
-func (s *fakeStore) StageCandidate(context.Context, string, []byte) error {
+func (s *fakeStore) StageCandidate(context.Context, string, []byte, map[string][]byte, []string) error {
 	s.rec.add("StageCandidate")
+
+	return nil
+}
+
+func (s *fakeStore) ListSums(context.Context) (map[string]string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.listsErr != nil {
+		return nil, s.listsErr
+	}
+
+	sums := make(map[string]string, len(s.lists))
+	for name, data := range s.lists {
+		sums[name] = config.Sum(data)
+	}
+
+	return sums, nil
+}
+
+func (s *fakeStore) WriteLists(_ context.Context, put map[string][]byte, remove []string) error {
+	s.rec.add("WriteLists")
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.writeErr != nil {
+		return s.writeErr
+	}
+
+	if s.lists == nil {
+		s.lists = map[string][]byte{}
+	}
+
+	for name, data := range put {
+		s.lists[name] = data
+	}
+
+	for _, name := range remove {
+		delete(s.lists, name)
+	}
 
 	return nil
 }
@@ -286,7 +329,7 @@ const validConfig = `{"log":{"level":"info"}}`
 func TestApplyFollowsProtocolOrder(t *testing.T) {
 	h := newHarness(t)
 
-	tx, err := h.manager.Start(t.Context(), []byte(validConfig), "")
+	tx, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", "")
 	if err != nil {
 		t.Fatalf("применение: %v", err)
 	}
@@ -301,7 +344,7 @@ func TestApplyFollowsProtocolOrder(t *testing.T) {
 	// SaveVersion стоит между бэкапом и записью: история хранит то, что было
 	// применено до этого цикла.
 	want := []string{
-		"StageCandidate", "Check", "WriteState", "Backup", "SaveVersion", "Write", "Restart", "Wait", "WriteState",
+		"StageCandidate", "Check", "WriteState", "Backup", "SaveVersion", "WriteLists", "Write", "Restart", "Wait", "WriteState",
 	}
 	if got := h.rec.snapshot(); !slices.Equal(got, want) {
 		t.Errorf("порядок шагов %v, ожидали %v", got, want)
@@ -317,7 +360,7 @@ func TestApplyFollowsProtocolOrder(t *testing.T) {
 func TestCurrentReportsRemainingWindow(t *testing.T) {
 	h := newHarness(t)
 
-	if _, err := h.manager.Start(t.Context(), []byte(validConfig), ""); err != nil {
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
 		t.Fatalf("применение: %v", err)
 	}
 	h.waitWindow(t)
@@ -337,7 +380,7 @@ func TestCurrentReportsRemainingWindow(t *testing.T) {
 func TestStateIsWrittenBeforeConfig(t *testing.T) {
 	h := newHarness(t)
 
-	if _, err := h.manager.Start(t.Context(), []byte(validConfig), ""); err != nil {
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
 		t.Fatalf("применение: %v", err)
 	}
 	h.waitWindow(t)
@@ -352,7 +395,7 @@ func TestCheckFailureWritesNothing(t *testing.T) {
 	h := newHarness(t)
 	h.service.checkErr = &singboxCheckError{}
 
-	if _, err := h.manager.Start(t.Context(), []byte(validConfig), ""); err == nil {
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err == nil {
 		t.Fatal("битый конфиг принят")
 	}
 
@@ -365,7 +408,7 @@ func TestCheckFailureWritesNothing(t *testing.T) {
 
 	// Отказ обязан освободить применение, иначе первый же битый конфиг
 	// заклинивает демон до перезапуска.
-	if _, err := h.manager.Start(t.Context(), []byte(validConfig), ""); errors.Is(err, apply.ErrBusy) {
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); errors.Is(err, apply.ErrBusy) {
 		t.Error("после отказа check применение осталось занятым")
 	}
 }
@@ -389,7 +432,7 @@ func TestConcurrentStartsAreSerialised(t *testing.T) {
 		go func() {
 			defer wg.Done()
 
-			if _, err := h.manager.Start(t.Context(), []byte(validConfig), ""); err == nil {
+			if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err == nil {
 				mu.Lock()
 				accepted++
 				mu.Unlock()
@@ -410,7 +453,7 @@ func (*singboxCheckError) Error() string { return "sing-box check: код 1" }
 func TestConfirmClosesWindow(t *testing.T) {
 	h := newHarness(t)
 
-	tx, err := h.manager.Start(t.Context(), []byte(validConfig), "")
+	tx, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", "")
 	if err != nil {
 		t.Fatalf("применение: %v", err)
 	}
@@ -438,7 +481,7 @@ func TestConfirmClosesWindow(t *testing.T) {
 func TestRollbackWithoutConfirmation(t *testing.T) {
 	h := newHarness(t)
 
-	if _, err := h.manager.Start(t.Context(), []byte(validConfig), ""); err != nil {
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
 		t.Fatalf("применение: %v", err)
 	}
 	h.waitWindow(t)
@@ -460,7 +503,7 @@ func TestRollbackWithoutConfirmation(t *testing.T) {
 func TestConfirmRejectsForeignTransaction(t *testing.T) {
 	h := newHarness(t)
 
-	tx, err := h.manager.Start(t.Context(), []byte(validConfig), "")
+	tx, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", "")
 	if err != nil {
 		t.Fatalf("применение: %v", err)
 	}
@@ -483,12 +526,12 @@ func TestConfirmRejectsForeignTransaction(t *testing.T) {
 func TestSecondApplyIsRejected(t *testing.T) {
 	h := newHarness(t)
 
-	if _, err := h.manager.Start(t.Context(), []byte(validConfig), ""); err != nil {
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
 		t.Fatalf("первое применение: %v", err)
 	}
 	h.waitWindow(t)
 
-	if _, err := h.manager.Start(t.Context(), []byte(validConfig), ""); !errors.Is(err, apply.ErrBusy) {
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); !errors.Is(err, apply.ErrBusy) {
 		t.Errorf("получили %v, ожидали ErrBusy", err)
 	}
 }
@@ -498,7 +541,7 @@ func TestSecondApplyIsRejected(t *testing.T) {
 func TestApplyIsFreeRightAfterConfirm(t *testing.T) {
 	h := newHarness(t)
 
-	tx, err := h.manager.Start(t.Context(), []byte(validConfig), "")
+	tx, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", "")
 	if err != nil {
 		t.Fatalf("первое применение: %v", err)
 	}
@@ -508,7 +551,7 @@ func TestApplyIsFreeRightAfterConfirm(t *testing.T) {
 		t.Fatalf("подтверждение: %v", err)
 	}
 
-	if _, err := h.manager.Start(t.Context(), []byte(validConfig), ""); errors.Is(err, apply.ErrBusy) {
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); errors.Is(err, apply.ErrBusy) {
 		t.Error("после подтверждения применение осталось занятым")
 	}
 }
@@ -518,7 +561,7 @@ func TestApplyIsFreeRightAfterConfirm(t *testing.T) {
 func TestApplyIsFreeRightAfterRollback(t *testing.T) {
 	h := newHarness(t)
 
-	if _, err := h.manager.Start(t.Context(), []byte(validConfig), ""); err != nil {
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
 		t.Fatalf("первое применение: %v", err)
 	}
 	h.waitWindow(t)
@@ -526,7 +569,7 @@ func TestApplyIsFreeRightAfterRollback(t *testing.T) {
 	h.clock.fire()
 	h.manager.Close()
 
-	if _, err := h.manager.Start(t.Context(), []byte(validConfig), ""); errors.Is(err, apply.ErrBusy) {
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); errors.Is(err, apply.ErrBusy) {
 		t.Error("после отката применение осталось занятым")
 	}
 }
@@ -535,7 +578,7 @@ func TestApplyIsFreeRightAfterRollback(t *testing.T) {
 func TestExternalEditIsDetected(t *testing.T) {
 	h := newHarness(t)
 
-	tx, err := h.manager.Start(t.Context(), []byte(validConfig), "")
+	tx, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", "")
 	if err != nil {
 		t.Fatalf("применение: %v", err)
 	}
@@ -548,7 +591,7 @@ func TestExternalEditIsDetected(t *testing.T) {
 	h.store.sum = "правка мимо демона"
 	h.store.mu.Unlock()
 
-	if _, err := h.manager.Start(t.Context(), []byte(validConfig), ""); !errors.Is(err, apply.ErrConfigModified) {
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); !errors.Is(err, apply.ErrConfigModified) {
 		t.Errorf("получили %v, ожидали ErrConfigModified", err)
 	}
 }
@@ -556,7 +599,7 @@ func TestExternalEditIsDetected(t *testing.T) {
 func TestClashAPIIsGuaranteed(t *testing.T) {
 	h := newHarness(t)
 
-	tx, err := h.manager.Start(t.Context(), []byte(validConfig), "")
+	tx, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", "")
 	if err != nil {
 		t.Fatalf("применение: %v", err)
 	}
@@ -600,7 +643,7 @@ func TestFailureCarriesStepCode(t *testing.T) {
 			h := newHarness(t)
 			tt.setup(h)
 
-			if _, err := h.manager.Start(t.Context(), []byte(validConfig), ""); err != nil {
+			if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
 				t.Fatalf("применение: %v", err)
 			}
 
@@ -624,7 +667,7 @@ func TestConfirmDuringRollbackIsRejected(t *testing.T) {
 	h.store.restoreStarted = make(chan struct{})
 	h.store.restoreRelease = make(chan struct{})
 
-	tx, err := h.manager.Start(t.Context(), []byte(validConfig), "")
+	tx, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", "")
 	if err != nil {
 		t.Fatalf("применение: %v", err)
 	}
@@ -636,7 +679,7 @@ func TestConfirmDuringRollbackIsRejected(t *testing.T) {
 	if _, err := h.manager.Confirm(t.Context(), tx.ID); !errors.Is(err, apply.ErrNothingToConfirm) {
 		t.Errorf("подтверждение во время отката: получили %v, ожидали ErrNothingToConfirm", err)
 	}
-	if _, err := h.manager.Start(t.Context(), []byte(validConfig), ""); !errors.Is(err, apply.ErrBusy) {
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); !errors.Is(err, apply.ErrBusy) {
 		t.Errorf("применение во время отката: получили %v, ожидали ErrBusy", err)
 	}
 
@@ -656,7 +699,7 @@ func TestConfirmHoldsApplyUntilStateCleared(t *testing.T) {
 	h.store.clearStarted = make(chan struct{})
 	h.store.clearRelease = make(chan struct{})
 
-	tx, err := h.manager.Start(t.Context(), []byte(validConfig), "")
+	tx, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", "")
 	if err != nil {
 		t.Fatalf("применение: %v", err)
 	}
@@ -674,7 +717,7 @@ func TestConfirmHoldsApplyUntilStateCleared(t *testing.T) {
 
 	<-h.store.clearStarted
 
-	if _, err := h.manager.Start(t.Context(), []byte(validConfig), ""); !errors.Is(err, apply.ErrBusy) {
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); !errors.Is(err, apply.ErrBusy) {
 		t.Errorf("применение во время очистки состояния: получили %v, ожидали ErrBusy", err)
 	}
 
@@ -690,12 +733,12 @@ func TestConfirmHoldsApplyUntilStateCleared(t *testing.T) {
 
 	// Владение занято вторым применением; выход фоновой горутины первого не
 	// должен его снимать.
-	if _, err := h.manager.Start(t.Context(), []byte(validConfig), ""); err != nil {
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
 		t.Fatalf("применение после подтверждения: %v", err)
 	}
 	h.waitWindow(t)
 
-	if _, err := h.manager.Start(t.Context(), []byte(validConfig), ""); !errors.Is(err, apply.ErrBusy) {
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); !errors.Is(err, apply.ErrBusy) {
 		t.Errorf("третье применение при активной транзакции: получили %v, ожидали ErrBusy", err)
 	}
 }
@@ -707,7 +750,7 @@ func TestStartChecksClientBase(t *testing.T) {
 	t.Run("совпавшая база пускает применение поверх чужой правки", func(t *testing.T) {
 		h := newHarness(t)
 
-		tx, err := h.manager.Start(t.Context(), []byte(validConfig), "")
+		tx, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", "")
 		if err != nil {
 			t.Fatalf("применение: %v", err)
 		}
@@ -722,7 +765,7 @@ func TestStartChecksClientBase(t *testing.T) {
 		h.store.sum = "правка мимо демона"
 		h.store.mu.Unlock()
 
-		if _, err := h.manager.Start(t.Context(), []byte(validConfig), "правка мимо демона"); err != nil {
+		if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "правка мимо демона", ""); err != nil {
 			t.Errorf("применение с совпавшей базой: %v", err)
 		}
 	})
@@ -733,7 +776,7 @@ func TestStartChecksClientBase(t *testing.T) {
 		h.store.sum = "на диске"
 		h.store.mu.Unlock()
 
-		if _, err := h.manager.Start(t.Context(), []byte(validConfig), "у клиента"); !errors.Is(err, apply.ErrConfigModified) {
+		if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "у клиента", ""); !errors.Is(err, apply.ErrConfigModified) {
 			t.Errorf("получили %v, ожидали ErrConfigModified", err)
 		}
 	})
@@ -744,7 +787,7 @@ func TestStartChecksClientBase(t *testing.T) {
 		h.store.sumErr = fs.ErrNotExist
 		h.store.mu.Unlock()
 
-		if _, err := h.manager.Start(t.Context(), []byte(validConfig), "у клиента"); !errors.Is(err, apply.ErrConfigModified) {
+		if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "у клиента", ""); !errors.Is(err, apply.ErrConfigModified) {
 			t.Errorf("получили %v, ожидали ErrConfigModified", err)
 		}
 	})
@@ -756,7 +799,7 @@ func TestStartChecksClientBase(t *testing.T) {
 func TestFailedRollbackDoesNotJamApply(t *testing.T) {
 	h := newHarness(t)
 
-	if _, err := h.manager.Start(t.Context(), []byte(validConfig), ""); err != nil {
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
 		t.Fatalf("применение: %v", err)
 	}
 	h.waitWindow(t)
@@ -772,7 +815,7 @@ func TestFailedRollbackDoesNotJamApply(t *testing.T) {
 
 	h.service.setRestartErr(nil)
 
-	if _, err := h.manager.Start(t.Context(), []byte(validConfig), ""); errors.Is(err, apply.ErrConfigModified) {
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); errors.Is(err, apply.ErrConfigModified) {
 		t.Error("после проваленного отката применение заклинило ложной внешней правкой")
 	}
 }
