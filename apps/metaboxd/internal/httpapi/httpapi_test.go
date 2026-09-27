@@ -3,6 +3,8 @@ package httpapi_test
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"io"
@@ -46,9 +48,10 @@ type fakeApplier struct {
 	startErr   error
 	confirmErr error
 	received   []byte
+	base       string
 }
 
-func (a *fakeApplier) Start(_ context.Context, cfg []byte) (apply.Transaction, error) {
+func (a *fakeApplier) Start(_ context.Context, cfg []byte, base string) (apply.Transaction, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -57,6 +60,7 @@ func (a *fakeApplier) Start(_ context.Context, cfg []byte) (apply.Transaction, e
 	}
 
 	a.received = cfg
+	a.base = base
 	a.current = apply.Transaction{ID: "tx-1", Phase: apply.PhaseApplying}
 
 	return a.current, nil
@@ -90,6 +94,13 @@ func (a *fakeApplier) body() []byte {
 	defer a.mu.Unlock()
 
 	return a.received
+}
+
+func (a *fakeApplier) sentBase() string {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	return a.base
 }
 
 // fakeReader подменяет владельца файла конфига: чтение с диска проверяется в
@@ -266,6 +277,21 @@ func TestConfigServedVerbatim(t *testing.T) {
 	}
 }
 
+func TestConfigCarriesEtag(t *testing.T) {
+	raw := []byte(rawConfig)
+	digest := sha256.Sum256(raw)
+	want := `"` + hex.EncodeToString(digest[:]) + `"`
+
+	got := request(t, newTestServerWithReader(t, fakeReader{data: raw}), http.MethodGet, "/api/config", "", nil)
+
+	if got.status != http.StatusOK {
+		t.Fatalf("код %d, ожидали %d", got.status, http.StatusOK)
+	}
+	if etag := got.header.Get("ETag"); etag != want {
+		t.Errorf("ETag %q, ожидали %q: панели нечего вернуть в If-Match", etag, want)
+	}
+}
+
 func TestConfigMissingIsNotFound(t *testing.T) {
 	got := request(t, newTestServerWithReader(t, fakeReader{err: config.ErrNoConfig}),
 		http.MethodGet, "/api/config", "", nil)
@@ -403,6 +429,51 @@ func TestApplyStartsTransaction(t *testing.T) {
 	}
 	if !bytes.Equal(applier.body(), []byte(rawConfig)) {
 		t.Errorf("до применения доехало %q, отправляли %q", applier.body(), rawConfig)
+	}
+}
+
+func TestApplyPassesClientBase(t *testing.T) {
+	tests := []struct {
+		name    string
+		ifMatch string
+		want    string
+	}{
+		{"без заголовка применение идёт без сверки", "", ""},
+		{"ETag передаётся без кавычек", `"abc123"`, "abc123"},
+		{"слабый валидатор принимается", `W/"abc123"`, "abc123"},
+		{"звёздочка означает «любая база»", "*", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			applier := &fakeApplier{}
+			srv := newTestServer(t, applier, "")
+
+			req, err := http.NewRequestWithContext(t.Context(), http.MethodPost,
+				srv.URL+"/api/apply", strings.NewReader(rawConfig))
+			if err != nil {
+				t.Fatalf("сборка запроса: %v", err)
+			}
+			req.Header.Set("Origin", srv.URL)
+			if tt.ifMatch != "" {
+				req.Header.Set("If-Match", tt.ifMatch)
+			}
+
+			resp, err := srv.Client().Do(req)
+			if err != nil {
+				t.Fatalf("запрос применения: %v", err)
+			}
+			if err := resp.Body.Close(); err != nil {
+				t.Errorf("закрытие тела ответа: %v", err)
+			}
+
+			if resp.StatusCode != http.StatusAccepted {
+				t.Fatalf("код %d, ожидали %d", resp.StatusCode, http.StatusAccepted)
+			}
+			if got := applier.sentBase(); got != tt.want {
+				t.Errorf("база %q, ожидали %q", got, tt.want)
+			}
+		})
 	}
 }
 

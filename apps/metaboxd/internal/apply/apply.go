@@ -245,10 +245,14 @@ func (m *Manager) Current() Transaction {
 }
 
 // Start запускает применение. Проверка бинарём идёт синхронно — на её выводе
-// пользователь чинит конфиг, и ответ на запрос обязан его содержать.
-// Всё, что после неё, живёт своим контекстом: применение переживает запрос
-//.
-func (m *Manager) Start(ctx context.Context, cfg []byte) (Transaction, error) {
+// пользователь чинит конфиг, и ответ на запрос обязан его содержать. Всё, что
+// после неё, живёт своим контекстом: применение переживает запрос.
+//
+// base — sha256 конфига, от которого редактировал клиент; пустая строка
+// означает, что клиент базу не назвал. Заданная база сверяется с файлом на
+// диске вместо внутренней сверки: клиент видел ровно эту версию файла, и его
+// применение поверх неё правку извне не затирает.
+func (m *Manager) Start(ctx context.Context, cfg []byte, base string) (Transaction, error) {
 	prepared, added, err := clashapi.Ensure(cfg, m.opts.ClashPort)
 	if err != nil {
 		return Transaction{}, fmt.Errorf("гарантия clash_api: %w", err)
@@ -259,7 +263,7 @@ func (m *Manager) Start(ctx context.Context, cfg []byte) (Transaction, error) {
 		return Transaction{}, err
 	}
 
-	token, err := m.reserve(ctx)
+	token, err := m.reserve(ctx, base)
 	if err != nil {
 		return Transaction{}, err
 	}
@@ -352,12 +356,33 @@ func (m *Manager) Close() {
 // reserve занимает применение под одну транзакцию и заодно ловит правку файла
 // извне: конфиг мог поправить владелец по SSH, и затирать это молча нельзя.
 // Возвращает номер владения для unreserve.
-func (m *Manager) reserve(ctx context.Context) (uint64, error) {
+//
+// Названная клиентом база главнее внутренней сверки: lastSum живёт в памяти
+// процесса и после перезапуска пуст, а база приходит с каждым применением и
+// разблокирует Apply, когда клиент перечитал правленный извне файл.
+func (m *Manager) reserve(ctx context.Context, base string) (uint64, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	if m.busy || m.current.Active() {
 		return 0, ErrBusy
+	}
+
+	if base != "" {
+		current, err := m.store.Sum(ctx)
+		if errors.Is(err, fs.ErrNotExist) {
+			// База есть, а файла нет: клиент редактировал конфиг, который
+			// из-под него унесли.
+			return 0, ErrConfigModified
+		}
+		if err != nil {
+			return 0, fmt.Errorf("сверка конфига: %w", err)
+		}
+		if current != base {
+			return 0, ErrConfigModified
+		}
+
+		return m.hold(), nil
 	}
 
 	if m.lastSum == "" {

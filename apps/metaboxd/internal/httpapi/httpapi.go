@@ -5,11 +5,14 @@ package httpapi
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"io"
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"metabox/internal/apply"
 	"metabox/internal/clashapi"
@@ -29,7 +32,7 @@ const maxConfigBytes = 4 << 20
 // Applier — цикл применения. Интерфейс объявлен здесь, у потребителя, и
 // содержит только те методы, которыми пользуются хендлеры.
 type Applier interface {
-	Start(ctx context.Context, cfg []byte) (apply.Transaction, error)
+	Start(ctx context.Context, cfg []byte, base string) (apply.Transaction, error)
 	Confirm(ctx context.Context, id string) (apply.Transaction, error)
 	Current() apply.Transaction
 }
@@ -294,6 +297,10 @@ func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 	// Конфиг меняется вне запросов клиента — применением, откатом, правкой по
 	// SSH, — поэтому ответ не кэшируется.
 	w.Header().Set("Cache-Control", "no-store")
+	// Отпечаток отданных байт: панель возвращает его в If-Match применения,
+	// и правка файла между чтением и Apply не затирается молча.
+	digest := sha256.Sum256(data)
+	w.Header().Set("ETag", `"`+hex.EncodeToString(digest[:])+`"`)
 	w.WriteHeader(http.StatusOK)
 
 	if _, err := w.Write(data); err != nil {
@@ -360,7 +367,9 @@ func (s *Server) handleVersionRestore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tx, err := s.applier.Start(r.Context(), data)
+	// Восстановление версии — осознанный откат на её байты, а не правка
+	// поверх текущего файла: базы для сверки у него нет.
+	tx, err := s.applier.Start(r.Context(), data, "")
 	if err != nil {
 		fail(s.log, w, r, err)
 
@@ -390,7 +399,7 @@ func (s *Server) handleApply(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tx, err := s.applier.Start(r.Context(), cfg)
+	tx, err := s.applier.Start(r.Context(), cfg, baseSum(r.Header.Get("If-Match")))
 	if err != nil {
 		fail(s.log, w, r, err)
 
@@ -398,6 +407,21 @@ func (s *Server) handleApply(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(s.log, w, http.StatusAccepted, tx)
+}
+
+// baseSum достаёт sha256 базы из If-Match: значение приходит тем же ETag, что
+// отдал GET /api/config. Пустое значение и «*» означают применение без
+// сверки — так же работает запрос совсем без заголовка.
+func baseSum(header string) string {
+	value := strings.TrimSpace(header)
+	value = strings.TrimPrefix(value, "W/")
+	value = strings.Trim(value, `"`)
+
+	if value == "*" {
+		return ""
+	}
+
+	return value
 }
 
 func (s *Server) handleApplyState(w http.ResponseWriter, r *http.Request) {
