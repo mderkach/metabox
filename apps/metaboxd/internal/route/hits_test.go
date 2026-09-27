@@ -1,16 +1,24 @@
 package route
 
 import (
+	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"slices"
+	"strings"
 	"testing"
 	"testing/synctest"
 	"time"
 )
 
 func newTestCounter(source Source) *Counter {
-	return NewCounter(source, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, nil)
+	return NewCounter(source, discardLogger(), CounterOptions{Interval: time.Second})
+}
+
+func discardLogger() *slog.Logger {
+	return slog.New(slog.NewTextHandler(io.Discard, nil))
 }
 
 func hitsOf(t *testing.T, counter *Counter) []uint64 {
@@ -202,7 +210,7 @@ func TestCounterRecordsSnapshotSize(t *testing.T) {
 		"/connections": `{"connections":[{"id":"a","rule":"final"},{"id":"b","rule":"final"}]}`,
 	}}
 	recorded := &sizes{}
-	counter := NewCounter(source, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, recorded)
+	counter := NewCounter(source, discardLogger(), CounterOptions{Interval: time.Second, Sizes: recorded})
 
 	if err := counter.observe(t.Context()); err != nil {
 		t.Fatal(err)
@@ -211,4 +219,96 @@ func TestCounterRecordsSnapshotSize(t *testing.T) {
 	if !slices.Equal(*recorded, []int{2}) {
 		t.Errorf("число соединений снимков %v, ожидали [2]", *recorded)
 	}
+}
+
+// Поток рантайма читает соединения из снапшота счётчика: сырое тело уходит в
+// Snapshots на каждый удачный опрос и не уходит на неудачный.
+func TestCounterFeedsSnapshotSink(t *testing.T) {
+	const body = `{"connections":[{"id":"a","rule":"final"}]}`
+
+	source := &fakeSource{bodies: map[string]string{"/rules": rulesBody, "/connections": body}}
+
+	var got []string
+
+	counter := NewCounter(source, discardLogger(), CounterOptions{
+		Interval:  time.Second,
+		Snapshots: func(raw json.RawMessage) { got = append(got, string(raw)) },
+	})
+
+	if err := counter.observe(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+
+	source.setErr(errors.New("sing-box лежит"))
+
+	if err := counter.observe(t.Context()); err == nil {
+		t.Fatal("опрос лежащего источника прошёл")
+	}
+
+	if len(got) != 1 || got[0] != body {
+		t.Errorf("в поток ушло %d снапшотов (%v), ожидали один исходный", len(got), got)
+	}
+}
+
+// При лежащем sing-box счётчик ждёт паузу ретрая, а не стучится каждый
+// интервал: постоянные опросы демона ведут себя одинаково.
+func TestCounterWaitsRetryAfterFailure(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		source := &fakeSource{}
+		counter := NewCounter(source, discardLogger(), CounterOptions{
+			Interval: time.Second,
+			Retry:    3 * time.Second,
+		})
+
+		counter.Start()
+		defer counter.Close()
+
+		// Опросы на 0, 3, 6 и 9 секундах: следующего в 9.5 ещё нет.
+		time.Sleep(9*time.Second + 500*time.Millisecond)
+		synctest.Wait()
+
+		if got := source.callCount(); got != 4 {
+			t.Errorf("опросов %d, ожидали 4", got)
+		}
+	})
+}
+
+// Бенчмарк держит потолок NFR-2: пять тысяч живых соединений, цена одного
+// опроса счётчика в установившемся режиме — все соединения уже засчитаны.
+func BenchmarkCounterObserve5000(b *testing.B) {
+	source := &fakeSource{bodies: map[string]string{
+		"/rules":       rulesBody,
+		"/connections": connectionsBody(5000),
+	}}
+	counter := NewCounter(source, discardLogger(), CounterOptions{Interval: time.Second})
+
+	if err := counter.observe(b.Context()); err != nil {
+		b.Fatal(err)
+	}
+
+	b.ReportAllocs()
+
+	for b.Loop() {
+		if err := counter.observe(b.Context()); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func connectionsBody(count int) string {
+	var sb strings.Builder
+
+	sb.WriteString(`{"connections":[`)
+
+	for i := range count {
+		if i > 0 {
+			sb.WriteByte(',')
+		}
+
+		fmt.Fprintf(&sb, `{"id":"c-%d","rule":"rule_set=google-ip => route(proxy)"}`, i)
+	}
+
+	sb.WriteString(`]}`)
+
+	return sb.String()
 }

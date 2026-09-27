@@ -46,6 +46,8 @@ const (
 	healthPollInterval   = 500 * time.Millisecond
 
 	// Периоды опроса источников потока; чем они заданы — events.Options.
+	// connectionsInterval — период счётчика срабатываний: снапшот соединений
+	// снимает он и он же отдаёт его потоку.
 	connectionsInterval = time.Second
 	serviceInterval     = 5 * time.Second
 	systemInterval      = 2 * time.Second
@@ -179,10 +181,9 @@ func run(log *slog.Logger, s settings) error {
 		source,
 		log,
 		events.Options{
-			ConnectionsInterval: connectionsInterval,
-			ServiceInterval:     serviceInterval,
-			SystemInterval:      systemInterval,
-			RetryInterval:       streamRetryInterval,
+			ServiceInterval: serviceInterval,
+			SystemInterval:  systemInterval,
+			RetryInterval:   streamRetryInterval,
 		},
 	)
 
@@ -199,9 +200,16 @@ func run(log *slog.Logger, s settings) error {
 	defer accounting.Close()
 
 	// Счёт правил, как и учёт трафика, идёт с запуска демона и не ждёт панель:
-	// соединение, не замеченное вовремя, задним числом не засчитать.
+	// соединение, не замеченное вовремя, задним числом не засчитать. Его же
+	// снапшот кормит топик соединений потока — при открытой панели опрос
+	// `/connections` остаётся одним.
 	connectionSizes := &history.Connections{}
-	hits := route.NewCounter(source, log, connectionsInterval, connectionSizes)
+	hits := route.NewCounter(source, log, route.CounterOptions{
+		Interval:  connectionsInterval,
+		Retry:     streamRetryInterval,
+		Sizes:     connectionSizes,
+		Snapshots: hub.PublishConnections,
+	})
 	hits.Start()
 	defer hits.Close()
 

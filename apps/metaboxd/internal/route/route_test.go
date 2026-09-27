@@ -4,17 +4,24 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"sync"
 	"testing"
 )
 
 // fakeSource отдаёт заранее заданные ответы Clash API.
 type fakeSource struct {
+	// mu закрывает поля от горутины опроса счётчика: тесты пейсинга читают
+	// счёт вызовов, пока опрос идёт.
+	mu     sync.Mutex
 	bodies map[string]string
 	err    error
 	calls  []string
 }
 
 func (f *fakeSource) Snapshot(_ context.Context, path string) (json.RawMessage, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
 	f.calls = append(f.calls, path)
 
 	if f.err != nil {
@@ -27,6 +34,20 @@ func (f *fakeSource) Snapshot(_ context.Context, path string) (json.RawMessage, 
 	}
 
 	return json.RawMessage(body), nil
+}
+
+func (f *fakeSource) callCount() int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	return len(f.calls)
+}
+
+func (f *fakeSource) setErr(err error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	f.err = err
 }
 
 const rulesBody = `{"rules":[

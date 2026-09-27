@@ -2,6 +2,8 @@ package events
 
 import (
 	"encoding/json"
+	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -165,5 +167,37 @@ func TestConnectionsSnapshotTotal(t *testing.T) {
 func TestConnectionsSnapshotBroken(t *testing.T) {
 	if _, _, err := connectionsSnapshot(json.RawMessage(`[`)); err == nil {
 		t.Error("неразобранный снапшот обязан стать ошибкой")
+	}
+}
+
+// Бенчмарк держит потолок NFR-2: перевод снапшота на пять тысяч соединений в
+// контракт демона — цена одного события топика при открытой панели.
+func BenchmarkConnectionsSnapshot5000(b *testing.B) {
+	var sb strings.Builder
+
+	sb.WriteString(`{"connections":[`)
+
+	for i := range 5000 {
+		if i > 0 {
+			sb.WriteByte(',')
+		}
+
+		fmt.Fprintf(&sb,
+			`{"id":"c-%d","rule":"rule_set=google-ip => route(proxy)","chains":["hk-01","proxy"],`+
+				`"upload":%d,"download":%d,"start":"2026-09-27T00:00:00Z",`+
+				`"metadata":{"network":"tcp","sourceIP":"192.168.1.%d","host":"example-%d.com","destinationPort":"443"}}`,
+			i, i*10, i*100, i%250, i)
+	}
+
+	sb.WriteString(`],"uploadTotal":1,"downloadTotal":2,"memory":1024}`)
+
+	raw := json.RawMessage(sb.String())
+
+	b.ReportAllocs()
+
+	for b.Loop() {
+		if _, _, err := connectionsSnapshot(raw); err != nil {
+			b.Fatal(err)
+		}
 	}
 }

@@ -53,8 +53,6 @@ type Source interface {
 	// Stream читает построчный поток и отдаёт каждую строку в sink. Возврат
 	// без ошибки означает, что поток закончился штатно.
 	Stream(ctx context.Context, path string, sink func(json.RawMessage)) error
-	// Snapshot читает разовый ответ.
-	Snapshot(ctx context.Context, path string) (json.RawMessage, error)
 	// ServiceState отдаёт состояние службы в том же виде, что и ручка.
 	ServiceState(ctx context.Context) (json.RawMessage, error)
 	// SystemState отдаёт показания устройства. Источник у них не Clash API, но
@@ -64,11 +62,9 @@ type Source interface {
 }
 
 // Options задаёт периоды опроса тех источников, которые сами ничего не шлют.
+// Снапшот соединений Hub не снимает: его приносит счётчик срабатываний через
+// PublishConnections, и частоту задаёт он.
 type Options struct {
-	// ConnectionsInterval — период снапшота соединений. Clash API отдаёт их
-	// только целиком, поэтому частота здесь напрямую превращается в трафик
-	// между sing-box и демоном.
-	ConnectionsInterval time.Duration
 	// ServiceInterval — период опроса службы. Он дороже остальных: это запуск
 	// внешних процессов, поэтому реже.
 	ServiceInterval time.Duration
@@ -209,24 +205,6 @@ func (h *Hub) start() {
 
 	go func() {
 		defer wg.Done()
-		h.runPoll(ctx, TopicConnections, h.opts.ConnectionsInterval, func(ctx context.Context) (json.RawMessage, error) {
-			// Форма соединений принадлежит демону, а не источнику: панель не
-			// должна знать, каким API они прочитаны.
-			raw, err := h.source.Snapshot(ctx, "/connections")
-			if err != nil {
-				return nil, err
-			}
-
-			body, _, err := connectionsSnapshot(raw)
-
-			return body, err
-		})
-	}()
-
-	wg.Add(1)
-
-	go func() {
-		defer wg.Done()
 		h.runPoll(ctx, TopicService, h.opts.ServiceInterval, h.source.ServiceState)
 	}()
 
@@ -300,6 +278,29 @@ func (h *Hub) runPoll(
 			return
 		}
 	}
+}
+
+// PublishConnections принимает сырой снапшот Clash API — его снимает счётчик
+// срабатываний, и второй опрос `/connections` демону не нужен. Без читателей
+// снапшот отбрасывается до разбора: форма соединений принадлежит демону, но
+// цена перевода в контракт не платится, пока панель закрыта.
+func (h *Hub) PublishConnections(raw json.RawMessage) {
+	h.mu.Lock()
+	idle := len(h.subscribers) == 0
+	h.mu.Unlock()
+
+	if idle {
+		return
+	}
+
+	body, _, err := connectionsSnapshot(raw)
+	if err != nil {
+		h.log.Debug("опрос рантайма не удался", "topic", TopicConnections, "err", err)
+
+		return
+	}
+
+	h.publish(TopicConnections, body)
 }
 
 func (h *Hub) publish(topic string, data json.RawMessage) {

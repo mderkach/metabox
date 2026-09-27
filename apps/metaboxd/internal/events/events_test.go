@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -24,10 +25,9 @@ func testLogger(t *testing.T) *slog.Logger {
 type fakeSource struct {
 	mu sync.Mutex
 
-	streams  atomic.Int64
-	snapshot json.RawMessage
-	service  json.RawMessage
-	system   json.RawMessage
+	streams atomic.Int64
+	service json.RawMessage
+	system  json.RawMessage
 
 	// lines шлются в поток по одной на подписку.
 	lines []json.RawMessage
@@ -49,14 +49,6 @@ func (f *fakeSource) Stream(ctx context.Context, _ string, sink func(json.RawMes
 	return ctx.Err()
 }
 
-func (f *fakeSource) Snapshot(context.Context, string) (json.RawMessage, error) {
-	if f.snapshot == nil {
-		return nil, errors.New("снапшота нет")
-	}
-
-	return f.snapshot, nil
-}
-
 func (f *fakeSource) ServiceState(context.Context) (json.RawMessage, error) {
 	if f.service == nil {
 		return nil, errors.New("состояния нет")
@@ -75,11 +67,36 @@ func (f *fakeSource) SystemState(context.Context) (json.RawMessage, error) {
 
 func fastOptions() Options {
 	return Options{
-		ConnectionsInterval: 10 * time.Millisecond,
-		ServiceInterval:     10 * time.Millisecond,
-		SystemInterval:      10 * time.Millisecond,
-		RetryInterval:       10 * time.Millisecond,
+		ServiceInterval: 10 * time.Millisecond,
+		SystemInterval:  10 * time.Millisecond,
+		RetryInterval:   10 * time.Millisecond,
 	}
+}
+
+// pushConnections кормит Hub снапшотами с частотой счётчика, пока тест идёт.
+func pushConnections(t *testing.T, hub *Hub, raw string) {
+	t.Helper()
+
+	stop := make(chan struct{})
+	done := make(chan struct{})
+
+	go func() {
+		defer close(done)
+
+		for {
+			select {
+			case <-stop:
+				return
+			case <-time.After(2 * time.Millisecond):
+				hub.PublishConnections(json.RawMessage(raw))
+			}
+		}
+	}()
+
+	t.Cleanup(func() {
+		close(stop)
+		<-done
+	})
 }
 
 func readEvents(t *testing.T, body io.Reader, want int) []Event {
@@ -102,7 +119,7 @@ func readEvents(t *testing.T, body io.Reader, want int) []Event {
 // Поток не поднимается, пока нет читателя: устройство большую часть времени
 // простаивает, и фоновый опрос без потребителя там не нужен.
 func TestHubIdleWithoutSubscribers(t *testing.T) {
-	source := &fakeSource{snapshot: json.RawMessage(`{"connections":[]}`), service: json.RawMessage(`{}`)}
+	source := &fakeSource{service: json.RawMessage(`{}`)}
 	New(source, testLogger(t), fastOptions())
 
 	time.Sleep(50 * time.Millisecond)
@@ -119,12 +136,14 @@ const clashSnapshotBody = `{"connections":[{"id":"a","rule":"domain=example.com 
 
 func TestHubStreamsToSubscriber(t *testing.T) {
 	source := &fakeSource{
-		snapshot: json.RawMessage(clashSnapshotBody),
-		service:  json.RawMessage(`{"status":"running"}`),
-		lines:    []json.RawMessage{json.RawMessage(`{"up":1,"down":2}`)},
+		service: json.RawMessage(`{"status":"running"}`),
+		lines:   []json.RawMessage{json.RawMessage(`{"up":1,"down":2}`)},
 	}
 
-	srv := httptest.NewServer(New(source, testLogger(t), fastOptions()))
+	hub := New(source, testLogger(t), fastOptions())
+	pushConnections(t, hub, clashSnapshotBody)
+
+	srv := httptest.NewServer(hub)
 	defer srv.Close()
 
 	response, err := srv.Client().Get(srv.URL) //nolint:noctx // соединение закрывается ниже
@@ -137,16 +156,30 @@ func TestHubStreamsToSubscriber(t *testing.T) {
 		t.Fatalf("тип ответа %q, ожидали text/event-stream", got)
 	}
 
+	want := []string{TopicTraffic, TopicMemory, TopicConnections, TopicService}
 	seen := make(map[string]bool)
-	for _, event := range readEvents(t, response.Body, 6) {
-		seen[event.Topic] = true
+	reader := newSSEReader(response.Body)
+
+	// Порядок топиков не определён: читается до полного набора, а не ровно
+	// столько событий, сколько топиков.
+	for range 100 {
+		event, err := reader.next()
+		if err != nil {
+			t.Fatalf("чтение события: %v", err)
+		}
 
 		if event.Seq == 0 {
 			t.Errorf("событие без номера: %+v", event)
 		}
+
+		seen[event.Topic] = true
+
+		if len(seen) == len(want) {
+			break
+		}
 	}
 
-	for _, topic := range []string{TopicTraffic, TopicMemory, TopicConnections, TopicService} {
+	for _, topic := range want {
 		if !seen[topic] {
 			t.Errorf("топик %q в потоке не появился, пришли %v", topic, seen)
 		}
@@ -155,7 +188,7 @@ func TestHubStreamsToSubscriber(t *testing.T) {
 
 // Второй читатель не удваивает нагрузку на sing-box: апстрим остаётся один.
 func TestHubSharesUpstream(t *testing.T) {
-	source := &fakeSource{snapshot: json.RawMessage(`{"connections":[]}`), service: json.RawMessage(`{}`)}
+	source := &fakeSource{service: json.RawMessage(`{}`)}
 	hub := New(source, testLogger(t), fastOptions())
 
 	srv := httptest.NewServer(hub)
@@ -189,7 +222,7 @@ func TestHubSharesUpstream(t *testing.T) {
 // Подключившийся читатель получает текущее состояние сразу, а не через период
 // опроса: иначе экран после перезагрузки страницы был бы пустым до секунды.
 func TestHubReplaysLastState(t *testing.T) {
-	source := &fakeSource{snapshot: json.RawMessage(clashSnapshotBody), service: json.RawMessage(`{"status":"running"}`)}
+	source := &fakeSource{service: json.RawMessage(`{"status":"running"}`)}
 	hub := New(source, testLogger(t), fastOptions())
 
 	srv := httptest.NewServer(hub)
@@ -240,7 +273,7 @@ func TestHubReplaysLastState(t *testing.T) {
 
 // Уход последнего читателя останавливает опрос: горутины не остаются висеть.
 func TestHubStopsWithLastSubscriber(t *testing.T) {
-	source := &fakeSource{snapshot: json.RawMessage(`{"connections":[]}`), service: json.RawMessage(`{}`)}
+	source := &fakeSource{service: json.RawMessage(`{}`)}
 	hub := New(source, testLogger(t), fastOptions())
 
 	sub, _, cancel := hub.subscribe()
@@ -306,9 +339,8 @@ func waitStreams(t *testing.T, source *fakeSource, want int64) {
 // подключении: иначе панель приняла бы начало потока за пропуск.
 func TestHubNumbersPerSubscriber(t *testing.T) {
 	source := &fakeSource{
-		snapshot: json.RawMessage(`{"connections":[]}`),
-		service:  json.RawMessage(`{}`),
-		lines:    []json.RawMessage{json.RawMessage(`{"up":1}`)},
+		service: json.RawMessage(`{}`),
+		lines:   []json.RawMessage{json.RawMessage(`{"up":1}`)},
 	}
 
 	srv := httptest.NewServer(New(source, testLogger(t), fastOptions()))
@@ -341,9 +373,8 @@ func TestHubNumbersPerSubscriber(t *testing.T) {
 // Битая строка источника не должна оседать в состоянии топика.
 func TestHubSkipsInvalidLines(t *testing.T) {
 	source := &fakeSource{
-		snapshot: json.RawMessage(`{"connections":[]}`),
-		service:  json.RawMessage(`{}`),
-		lines:    []json.RawMessage{json.RawMessage("не json"), json.RawMessage(`{"up":7}`)},
+		service: json.RawMessage(`{}`),
+		lines:   []json.RawMessage{json.RawMessage("не json"), json.RawMessage(`{"up":7}`)},
 	}
 
 	srv := httptest.NewServer(New(source, testLogger(t), fastOptions()))
@@ -364,7 +395,7 @@ func TestHubSkipsInvalidLines(t *testing.T) {
 
 // Уход апстрима не должен оставлять новому читателю данные мёртвого потока.
 func TestHubForgetsStateAfterStop(t *testing.T) {
-	source := &fakeSource{snapshot: json.RawMessage(clashSnapshotBody), service: json.RawMessage(`{}`)}
+	source := &fakeSource{service: json.RawMessage(`{}`)}
 	hub := New(source, testLogger(t), fastOptions())
 
 	sub, _, cancel := hub.subscribe()
@@ -388,7 +419,7 @@ func TestHubForgetsStateAfterStop(t *testing.T) {
 
 // Close закрывает читателей: без этого остановка демона ждала бы их ухода.
 func TestHubCloseReleasesSubscribers(t *testing.T) {
-	hub := New(&fakeSource{snapshot: json.RawMessage(`{"connections":[]}`), service: json.RawMessage(`{}`)}, testLogger(t), fastOptions())
+	hub := New(&fakeSource{service: json.RawMessage(`{}`)}, testLogger(t), fastOptions())
 
 	sub, _, _ := hub.subscribe()
 	hub.Close()
@@ -402,6 +433,51 @@ func TestHubCloseReleasesSubscribers(t *testing.T) {
 
 	if left != 0 {
 		t.Errorf("после Close осталось читателей: %d", left)
+	}
+}
+
+// Снапшот счётчика переводится в контракт демона и доходит до читателя.
+func TestHubPublishesCounterSnapshot(t *testing.T) {
+	hub := New(&fakeSource{service: json.RawMessage(`{}`)}, testLogger(t), fastOptions())
+
+	sub, _, cancel := hub.subscribe()
+	defer cancel()
+
+	hub.PublishConnections(json.RawMessage(clashSnapshotBody))
+
+	deadline := time.After(time.Second)
+
+	for {
+		select {
+		case event := <-sub.ch:
+			if event.Topic != TopicConnections {
+				continue
+			}
+
+			if !strings.Contains(string(event.Data), `"host":"example.com:443"`) {
+				t.Errorf("снапшот не переведён в контракт: %s", event.Data)
+			}
+
+			return
+		case <-deadline:
+			t.Fatal("снапшот счётчика до читателя не дошёл")
+		}
+	}
+}
+
+// Без читателей снапшот отбрасывается и не оседает в состоянии топика: данные
+// умершего к моменту подписки апстрима не должны выглядеть текущими.
+func TestHubDropsConnectionsWithoutReaders(t *testing.T) {
+	hub := New(&fakeSource{service: json.RawMessage(`{}`)}, testLogger(t), fastOptions())
+
+	hub.PublishConnections(json.RawMessage(clashSnapshotBody))
+
+	hub.mu.Lock()
+	remembered := len(hub.last)
+	hub.mu.Unlock()
+
+	if remembered != 0 {
+		t.Errorf("без читателей в состоянии осело %d топиков", remembered)
 	}
 }
 

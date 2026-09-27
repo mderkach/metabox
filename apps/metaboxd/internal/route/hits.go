@@ -47,16 +47,16 @@ type Hits struct {
 // из правила «фоновых опросов без потребителя нет» после учёта трафика:
 // соединение, не замеченное вовремя, задним числом не восстанавливается.
 // Цена в простое — один снапшот соединений в интервал и список правил, когда
-// встретилось правило, которого в запомненном списке нет.
+// встретилось правило, которого в запомненном списке нет. Этот же снапшот
+// через Snapshots читает поток рантайма: второго опроса `/connections` у
+// демона нет.
 //
 // Счёт ведётся по условиям и действию правила, а не по номеру: после
 // применения, которое переставило правила, счёт остаётся за своим правилом.
 type Counter struct {
-	source   Source
-	log      *slog.Logger
-	interval time.Duration
-	// sizes принимает число живых соединений каждого снимка; nil — не нужно.
-	sizes SizeRecorder
+	source Source
+	log    *slog.Logger
+	opts   CounterOptions
 
 	seen  map[string]struct{}
 	rules []Rule
@@ -77,15 +77,30 @@ type SizeRecorder interface {
 	Record(count int)
 }
 
+// CounterOptions задаёт период опроса и потребителей снятого снапшота.
+type CounterOptions struct {
+	// Interval — период снапшота `/connections`.
+	Interval time.Duration
+	// Retry — пауза после неудачного снапшота, тот же смысл, что RetryInterval
+	// у потока рантайма: при лежащем sing-box постоянные опросы демона ждут
+	// одинаково. Ноль — Interval.
+	Retry time.Duration
+	// Sizes принимает число живых соединений каждого снимка; nil — не нужно.
+	Sizes SizeRecorder
+	// Snapshots принимает сырой снапшот каждого удачного опроса — так поток
+	// рантайма получает соединения без собственного похода в Clash API.
+	// nil — не нужно.
+	Snapshots func(json.RawMessage)
+}
+
 // NewCounter собирает счётчик. Опроса он не начинает: его поднимает Start.
-func NewCounter(source Source, log *slog.Logger, interval time.Duration, sizes SizeRecorder) *Counter {
+func NewCounter(source Source, log *slog.Logger, opts CounterOptions) *Counter {
 	return &Counter{
-		source:   source,
-		log:      log,
-		interval: interval,
-		sizes:    sizes,
-		seen:     map[string]struct{}{},
-		hits:     map[string]uint64{},
+		source: source,
+		log:    log,
+		opts:   opts,
+		seen:   map[string]struct{}{},
+		hits:   map[string]uint64{},
 	}
 }
 
@@ -124,18 +139,25 @@ func (c *Counter) Close() {
 }
 
 func (c *Counter) run(ctx context.Context) {
-	ticker := time.NewTicker(c.interval)
-	defer ticker.Stop()
-
 	for {
-		if err := c.observe(ctx); err != nil && ctx.Err() == nil {
+		err := c.observe(ctx)
+		if err != nil && ctx.Err() == nil {
 			c.log.Debug("снапшот для счёта правил не снят", "err", err)
 		}
 
+		pause := c.opts.Interval
+		if err != nil && c.opts.Retry > 0 {
+			pause = c.opts.Retry
+		}
+
+		timer := time.NewTimer(pause)
+
 		select {
 		case <-ctx.Done():
+			timer.Stop()
+
 			return
-		case <-ticker.C:
+		case <-timer.C:
 		}
 	}
 }
@@ -152,8 +174,12 @@ func (c *Counter) observe(ctx context.Context) error {
 		return fmt.Errorf("разбор снапшота соединений: %w", err)
 	}
 
-	if c.sizes != nil {
-		c.sizes.Record(len(snapshot.Connections))
+	if c.opts.Sizes != nil {
+		c.opts.Sizes.Record(len(snapshot.Connections))
+	}
+
+	if c.opts.Snapshots != nil {
+		c.opts.Snapshots(body)
 	}
 
 	// seen и rules трогает только горутина опроса, под мьютексом лежит лишь
