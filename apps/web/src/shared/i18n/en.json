@@ -135,7 +135,8 @@
     "proxies": "Could not read the proxy list",
     "providers": "Could not read the subscriptions",
     "route": "Could not explain the route",
-    "ruleSetCatalog": "Could not get the rule-set catalog"
+    "ruleSetCatalog": "Could not get the rule-set catalog",
+    "ruleSetFiles": "Could not get the list files"
   },
   "list": {
     "notFound": "Nothing matches this query.",

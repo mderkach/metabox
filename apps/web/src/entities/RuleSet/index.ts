@@ -24,7 +24,7 @@ export {
 } from './model/RuleSet.constants';
 export { parseDuration } from './model/RuleSet.duration';
 export { filterRuleSets } from './model/RuleSet.filter';
-export { defaultFormatOf } from './model/RuleSet.model';
+export { defaultFormatOf, localListFile } from './model/RuleSet.model';
 export type {
   RuleSetCatalog,
   RuleSetFormat,

@@ -4,6 +4,7 @@
  */
 export const CONFIG_ENDPOINT = {
   config: () => '/api/config',
+  ruleSetFiles: () => '/api/config/rule-sets',
   versions: () => '/api/config/versions',
   version: (id: number) => `/api/config/versions/${id}`,
   versionRestore: (id: number) => `/api/config/versions/${id}/restore`,

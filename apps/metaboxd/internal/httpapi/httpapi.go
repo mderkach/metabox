@@ -468,20 +468,13 @@ func readApplyBody(w http.ResponseWriter, r *http.Request) ([]byte, apply.Lists,
 		return nil, apply.Lists{}, "", errors.Join(errBadApplyEnvelope, err)
 	}
 
-	lists := apply.Lists{}
+	lists := apply.Lists{Remove: envelope.RemoveLists}
 
-	for name, content := range envelope.Lists {
-		if content == nil {
-			lists.Remove = append(lists.Remove, name)
-
-			continue
+	if len(envelope.Lists) > 0 {
+		lists.Put = make(map[string][]byte, len(envelope.Lists))
+		for name, content := range envelope.Lists {
+			lists.Put[name] = []byte(content)
 		}
-
-		if lists.Put == nil {
-			lists.Put = map[string][]byte{}
-		}
-
-		lists.Put[name] = []byte(*content)
 	}
 
 	return []byte(envelope.Config), lists, envelope.ListsBase, nil

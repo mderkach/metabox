@@ -3,11 +3,13 @@ export { applyConfig, confirmApply, getConfig, getConfigVersion, restoreConfigVe
 export {
   CONFIG_QUERY,
   getApplyStateOptions,
+  getConfigListsOptions,
   getConfigOptions,
   getConfigVersionsOptions,
   parseConfig,
   useApplyTransaction,
   useConfig,
+  useConfigLists,
   useConfigVersions,
   useSaveApplyTransaction,
 } from './api/Config.query';
@@ -39,4 +41,11 @@ export { findUnbuiltNodes, findUnbuiltOptions } from './model/Config.build';
 export type { UnbuiltNode, UnbuiltOption } from './model/Config.build';
 export { useConfigDocument } from './model/Config.document';
 export type { ConfigDocumentView } from './model/Config.document';
-export { ConfigDocumentState, useConfigDiff, useConfigDirty, useConfigText } from './model/Config.store';
+export {
+  ConfigDocumentState,
+  useConfigDiff,
+  useConfigDirty,
+  useConfigText,
+  useListChanges,
+} from './model/Config.store';
+export type { ListChanges } from './model/Config.store';

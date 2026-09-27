@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useConfigDiff } from '@entities/Config';
+import { useConfigDiff, useListChanges } from '@entities/Config';
 import { DIFF_KIND, toDiffHunks, type DiffLine } from '@shared/lib/diff';
 import {
   Button,
@@ -59,6 +59,7 @@ export function ConfigApplyDiff({ canApply, onApply }: { canApply: boolean; onAp
         </DialogHeader>
 
         <ConfigApplyRuleChanges />
+        <ConfigApplyListChanges />
 
         <ScrollArea className='max-h-[60vh] rounded-lg border border-border'>
           <table className='w-full border-collapse font-mono text-xs'>
@@ -104,5 +105,36 @@ export function ConfigApplyDiff({ canApply, onApply }: { canApply: boolean; onAp
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/**
+ * Файлы списков, которые уедут этим применением. Их содержимое в построчный
+ * диф не попадает — файл виден на экране сетов, — но состав изменений диалог
+ * обязан назвать: применяется не только текст конфига.
+ */
+function ConfigApplyListChanges() {
+  const { t } = useTranslation('features/Config/ConfigApply');
+  const lists = useListChanges();
+  const put = Object.keys(lists.put);
+
+  if (put.length + lists.remove.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className='flex flex-col gap-1 text-sm'>
+      <h3 className='font-medium'>{t('lists.title', { count: put.length + lists.remove.length })}</h3>
+      <ul className='flex flex-col gap-0.5 font-mono text-xs'>
+        {put.map((name) => (
+          <li key={name}>rule-sets/{name}</li>
+        ))}
+        {lists.remove.map((name) => (
+          <li key={name} className='text-destructive'>
+            rule-sets/{name} — {t('lists.removed')}
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

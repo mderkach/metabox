@@ -36,6 +36,27 @@ describe('свой список', () => {
     expect(screen.getByRole('status')).toHaveTextContent('my-list');
   });
 
+  it('файлом: узел local и файл уезжают в черновик вместе', async () => {
+    const user = userEvent.setup();
+
+    render(<RuleSetCustomForm takenTags={[]} />);
+
+    await user.type(screen.getByLabelText('Имя списка'), 'big-list');
+    await user.click(screen.getByRole('button', { name: 'Файлом' }));
+    await user.click(screen.getByLabelText('Домены и адреса'));
+    await user.paste('example.com');
+    await user.click(screen.getByRole('button', { name: 'Сохранить в черновик' }));
+
+    await waitFor(() => {
+      expect(ConfigDocumentState.getState().listsDraft['big-list.json']).toContain('"version": 1');
+    });
+
+    const draft = ConfigDocumentState.getState().draft ?? '';
+
+    expect(draft).toContain('"type": "local"');
+    expect(draft).toContain('"path": "rule-sets/big-list.json"');
+  });
+
   it('называет непонятую строку и в черновик не пишет', async () => {
     const user = userEvent.setup();
 

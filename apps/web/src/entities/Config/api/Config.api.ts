@@ -2,6 +2,7 @@ import type { AxiosRequestConfig } from 'axios';
 
 import { DAEMON_ENDPOINT, type ApplyTransactionWire } from '@entities/Daemon/@x/config';
 import { ApiClientInstance } from '@shared/api';
+import type { ApplyEnvelopeWire, RuleSetFilesWire } from '@shared/api/daemon.generated';
 
 import { CONFIG_ENDPOINT } from './Config.endpoints';
 import type { ConfigVersionsWire } from './Config.schema';
@@ -38,6 +39,11 @@ export async function getConfig(config?: AxiosRequestConfig): Promise<ConfigFile
   return { text: body, etag };
 }
 
+/** Файлы своих списков из подкаталога `rule-sets/` вместе с отпечатком набора. */
+export async function getConfigLists(config?: AxiosRequestConfig): Promise<RuleSetFilesWire> {
+  return ApiClientInstance.get<RuleSetFilesWire>(CONFIG_ENDPOINT.ruleSetFiles(), config);
+}
+
 export async function getApplyState(id: string, config?: AxiosRequestConfig): Promise<ApplyTransactionWire> {
   return ApiClientInstance.get<ApplyTransactionWire>(DAEMON_ENDPOINT.applyState(id), config);
 }
@@ -51,6 +57,9 @@ export async function getConfigVersion(id: number, config?: AxiosRequestConfig):
   return ApiClientInstance.get<string>(CONFIG_ENDPOINT.version(id), { ...AS_TEXT, ...config });
 }
 
+/** Тип конверта применения: по нему демон отличает конверт от голых байт конфига. */
+const SEND_ENVELOPE = { 'Content-Type': 'application/vnd.metabox.apply+json' } as const;
+
 export interface ApplyDraft {
   /** Текст черновика как есть, без пересборки. */
   text: string;
@@ -60,17 +69,42 @@ export interface ApplyDraft {
    * применить без сверки.
    */
   base: string | null;
+  /** Изменения файлов списков; без них тело остаётся голыми байтами конфига. */
+  lists?: {
+    put: Record<string, string>;
+    remove: string[];
+    /** Отпечаток набора файлов, от которого редактировал клиент; `null` — без сверки. */
+    base: string | null;
+  };
 }
 
 /**
  * Запускает применение. Ответ приходит после `sing-box check`, но до конца
  * цикла: применение живёт дольше запроса. Отказ проверки возвращает
  * 422 с выводом бинаря в `details` — его показывает вызывающий.
+ *
+ * С изменениями файлов списков тело уезжает конвертом со своим Content-Type:
+ * сам конфиг — тоже JSON, и по общему типу конверт было бы не отличить.
  */
-export async function applyConfig({ text, base }: ApplyDraft): Promise<ApplyTransactionWire> {
-  const headers = base === null ? SEND_TEXT : { ...SEND_TEXT, 'If-Match': base };
+export async function applyConfig({ text, base, lists }: ApplyDraft): Promise<ApplyTransactionWire> {
+  const match = base === null ? {} : { 'If-Match': base };
 
-  return ApiClientInstance.post<ApplyTransactionWire, string>(DAEMON_ENDPOINT.apply(), text, { headers });
+  if (lists === undefined || (Object.keys(lists.put).length === 0 && lists.remove.length === 0)) {
+    return ApiClientInstance.post<ApplyTransactionWire, string>(DAEMON_ENDPOINT.apply(), text, {
+      headers: { ...SEND_TEXT, ...match },
+    });
+  }
+
+  const envelope: ApplyEnvelopeWire = {
+    config: text,
+    lists: lists.put,
+    remove_lists: lists.remove,
+    ...(lists.base === null ? {} : { lists_base: lists.base }),
+  };
+
+  return ApiClientInstance.post<ApplyTransactionWire, ApplyEnvelopeWire>(DAEMON_ENDPOINT.apply(), envelope, {
+    headers: { ...SEND_ENVELOPE, ...match },
+  });
 }
 
 /** Подтверждает, что связь жива: без этого демон вернёт предыдущий конфиг. */

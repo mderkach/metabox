@@ -9,6 +9,7 @@ import {
   useApplyTransaction,
   useConfigDirty,
   useConfigText,
+  useListChanges,
   type CheckFailure,
 } from '@entities/Config';
 import { APPLY_PHASE, isApplyActive, useDaemonStatus, type ApplyTransaction } from '@entities/Daemon';
@@ -72,6 +73,8 @@ export function useConfigApply(): ConfigApplyState {
   const status = useDaemonStatus();
   const text = useConfigText();
   const base = ConfigDocumentState.use.appliedEtag();
+  const listsBase = ConfigDocumentState.use.listsEtag();
+  const lists = useListChanges();
   const isDirty = useConfigDirty();
   const discard = ConfigDocumentState.use.discard();
   const start = useApplyConfig();
@@ -88,8 +91,8 @@ export function useConfigApply(): ConfigApplyState {
   const onApply = useCallback(() => {
     if (text === null) return;
 
-    start.mutate({ text, base });
-  }, [text, base, start]);
+    start.mutate({ text, base, lists: { ...lists, base: listsBase } });
+  }, [text, base, lists, listsBase, start]);
 
   const onConfirm = useCallback(() => {
     if (transaction === null) return;

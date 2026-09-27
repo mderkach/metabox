@@ -38,6 +38,11 @@
     "title": "sing-box rejected the config — nothing was written to the device",
     "exitCode": "Exit code: {{code}}. The draft is kept, fix it and apply again."
   },
+  "lists": {
+    "title_one": "{{count}} list file will change",
+    "title_other": "{{count}} list files will change",
+    "removed": "will be removed"
+  },
   "diff": {
     "open": "Show diff",
     "title": "What goes to the device",

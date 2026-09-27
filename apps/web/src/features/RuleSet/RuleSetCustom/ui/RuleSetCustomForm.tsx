@@ -6,29 +6,48 @@ import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import { ConfigDocumentState, RULE_SETS_PATH } from '@entities/Config';
-import { Button, Input, Label, Textarea } from '@shared/ui';
+import { cn } from '@shared/lib/utils';
+import {
+  Button,
+  FACET_ACTIVE,
+  FACET_CLASS,
+  FACET_IDLE,
+  Input,
+  Label,
+  Textarea,
+  ToggleGroup,
+  ToggleGroupItem,
+} from '@shared/ui';
 
 import {
+  LIST_STORAGE,
   RULE_SET_CUSTOM_ERROR,
+  listFileName,
   makeRuleSetCustomSchema,
   parseListEntries,
   ruleSetCustomDefaults,
   toInlineRuleSet,
+  toListFileContent,
+  toLocalRuleSet,
+  type ListStorage,
   type RuleSetCustomModel,
 } from '../model/RuleSetCustom.schema';
 
 /**
- * Свой список доменов и адресов. Уходит в черновик узлом `inline` — правила
- * лежат в самом конфиге и применяются тем же протоколом, что и остальные
- * правки; большой список файлом `local` собирается отдельно.
+ * Свой список доменов и адресов. Небольшой уходит в черновик узлом `inline` —
+ * правила лежат в самом конфиге; большой — файлом `rule-sets/<имя>.json` под
+ * узлом `local`: конфиг остаётся компактным, а файл едет тем же применением.
  */
 export function RuleSetCustomForm({ takenTags, onDone }: { takenTags: readonly string[]; onDone?: () => void }) {
   const { t } = useTranslation('features/RuleSet/RuleSetCustom');
   const insert = ConfigDocumentState.use.insert();
+  const editList = ConfigDocumentState.use.editList();
   const count = takenTags.length;
   const [added, setAdded] = useState<string | null>(null);
   const tagId = useId();
   const tagErrorId = useId();
+  const storageLabelId = useId();
+  const storageHintId = useId();
   const entriesId = useId();
   const entriesHintId = useId();
   const entriesErrorId = useId();
@@ -40,7 +59,13 @@ export function RuleSetCustomForm({ takenTags, onDone }: { takenTags: readonly s
   });
 
   const onSubmit = form.handleSubmit((data) => {
-    insert([...RULE_SETS_PATH, count], toInlineRuleSet(data));
+    if (data.storage === LIST_STORAGE.File) {
+      editList(listFileName(data.tag), toListFileContent(data));
+      insert([...RULE_SETS_PATH, count], toLocalRuleSet(data));
+    } else {
+      insert([...RULE_SETS_PATH, count], toInlineRuleSet(data));
+    }
+
     form.reset(ruleSetCustomDefaults());
     setAdded(data.tag.trim());
     onDone?.();
@@ -71,6 +96,48 @@ export function RuleSetCustomForm({ takenTags, onDone }: { takenTags: readonly s
               aria-describedby={fieldState.error === undefined ? undefined : tagErrorId}
             />
             <FieldError id={tagErrorId} t={t} error={fieldState.error?.message} entries={field.value} />
+          </div>
+        )}
+      />
+
+      <Controller
+        control={form.control}
+        name='storage'
+        render={({ field }) => (
+          <div className='flex flex-col gap-1.5'>
+            <span id={storageLabelId} className='text-sm leading-none font-medium'>
+              {t('field.storage.label')}
+            </span>
+            <ToggleGroup
+              aria-labelledby={storageLabelId}
+              aria-describedby={storageHintId}
+              spacing={1.5}
+              value={[field.value]}
+              onValueChange={(value) => {
+                // Повторное нажатие снимает отметку, а без места хранения
+                // список не собрать.
+                if (value[0] === LIST_STORAGE.Inline || value[0] === LIST_STORAGE.File) {
+                  field.onChange(value[0] satisfies ListStorage);
+                }
+              }}
+              className='w-fit'
+            >
+              <ToggleGroupItem
+                value={LIST_STORAGE.Inline}
+                className={cn(FACET_CLASS, field.value === LIST_STORAGE.Inline ? FACET_ACTIVE : FACET_IDLE)}
+              >
+                {t('field.storage.inline')}
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value={LIST_STORAGE.File}
+                className={cn(FACET_CLASS, field.value === LIST_STORAGE.File ? FACET_ACTIVE : FACET_IDLE)}
+              >
+                {t('field.storage.file')}
+              </ToggleGroupItem>
+            </ToggleGroup>
+            <p id={storageHintId} className='text-xs text-pretty text-muted-foreground'>
+              {t('field.storage.hint')}
+            </p>
           </div>
         )}
       />
@@ -151,6 +218,8 @@ function errorText(
       return t('error.tagRequired');
     case RULE_SET_CUSTOM_ERROR.TagTaken:
       return t('error.tagTaken');
+    case RULE_SET_CUSTOM_ERROR.TagNotFileName:
+      return t('error.tagNotFileName');
     case RULE_SET_CUSTOM_ERROR.EntriesRequired:
       return t('error.entriesRequired');
     case RULE_SET_CUSTOM_ERROR.EntryInvalid:

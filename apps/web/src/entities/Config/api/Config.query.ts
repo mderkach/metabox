@@ -11,18 +11,20 @@ import {
   type ApplyTransactionWire,
 } from '@entities/Daemon/@x/config';
 import { CACHE_TIME, POLL_INTERVAL, decodeResponse } from '@shared/api';
+import { RuleSetFilesSchema } from '@shared/api/daemon.generated';
 import { ConfigSchema, type Config } from '@shared/api/generated';
 import { jsonPathLocator, lineOfOffset, parseJsonc } from '@shared/lib/jsonc';
 import { type UnknownField, toUnknownFields } from '@shared/lib/schemaIssues';
 
 import { toConfigVersions } from '../model/Config.adapter';
 import { toOutboundTypes } from '../model/Config.model';
-import { getApplyState, getConfig, getConfigVersions, type ConfigFile } from './Config.api';
+import { getApplyState, getConfig, getConfigLists, getConfigVersions, type ConfigFile } from './Config.api';
 import { ConfigVersionsSchema } from './Config.schema';
 
 export const CONFIG_QUERY = {
   all: ['config'] as const,
   current: () => [...CONFIG_QUERY.all, 'current'] as const,
+  lists: () => [...CONFIG_QUERY.all, 'lists'] as const,
   history: () => [...CONFIG_QUERY.all, 'history'] as const,
   apply: (id: string) => [...CONFIG_QUERY.all, 'apply', id] as const,
 } as const;
@@ -134,6 +136,21 @@ function parseConfigFile(file: ConfigFile): ParsedConfigFile {
 
 export function useConfig() {
   return useQuery({ ...getConfigOptions(), select: parseConfigFile });
+}
+
+export function getConfigListsOptions() {
+  return queryOptions({
+    queryKey: CONFIG_QUERY.lists(),
+    queryFn: async (context) => decodeResponse(RuleSetFilesSchema, await getConfigLists(context), 'rule-set files'),
+    staleTime: CACHE_TIME.Minute,
+    gcTime: CACHE_TIME.Hour,
+    meta: { showError: true, errorMessageKey: 'source.ruleSetFiles' },
+  });
+}
+
+/** Файлы своих списков с отпечатком набора: он уходит в `lists_base` применения. */
+export function useConfigLists() {
+  return useQuery(getConfigListsOptions());
 }
 
 /** Тип каждого аутбаунда применённого конфига по его тегу. */

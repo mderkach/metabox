@@ -12,7 +12,7 @@ function state() {
 
 describe('ConfigDocumentState', () => {
   beforeEach(() => {
-    ConfigDocumentState.setState({ applied: null, appliedEtag: null, draft: null });
+    ConfigDocumentState.getState().reset();
   });
 
   it('до чтения конфига править нечего', () => {
@@ -136,5 +136,41 @@ describe('ConfigDocumentState', () => {
     expect(left).toHaveLength(rules.length);
     expect(left[0]).toEqual({ action: 'route', outbound: 'direct' });
     expect(left[1]).toEqual(rules[1]);
+  });
+});
+
+describe('файлы списков в черновике', () => {
+  beforeEach(() => {
+    ConfigDocumentState.getState().reset();
+    state().load(TEXT);
+    state().loadLists({ 'my.json': '{"version":1}' }, 'etag-1');
+  });
+
+  it('изменения сводятся к реальным: то же содержимое и чужое удаление выпадают', () => {
+    state().editList('my.json', '{"version":1}');
+    state().removeList('absent.json');
+
+    expect(state().listChanges()).toEqual({ put: {}, remove: [] });
+    expect(state().isDirty()).toBe(false);
+  });
+
+  it('правка и удаление файлов делают документ черновиком без правки текста', () => {
+    state().editList('new.json', '{"version":1,"rules":[]}');
+    state().removeList('my.json');
+
+    expect(state().listChanges()).toEqual({
+      put: { 'new.json': '{"version":1,"rules":[]}' },
+      remove: ['my.json'],
+    });
+    expect(state().isDirty()).toBe(true);
+    expect(state().draft).toBeNull();
+  });
+
+  it('отмена правок снимает и файлы', () => {
+    state().editList('new.json', '{}');
+    state().discard();
+
+    expect(state().listChanges()).toEqual({ put: {}, remove: [] });
+    expect(state().isDirty()).toBe(false);
   });
 });

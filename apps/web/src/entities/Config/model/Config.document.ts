@@ -1,7 +1,7 @@
 import type { UseQueryResult } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
-import { parseConfig, useConfig, type ConfigIssue, type ParsedConfig } from '../api/Config.query';
+import { parseConfig, useConfig, useConfigLists, type ConfigIssue, type ParsedConfig } from '../api/Config.query';
 import type { ConfigDocument } from './Config.model';
 import { ConfigDocumentState, useConfigDirty, useConfigText } from './Config.store';
 
@@ -62,19 +62,32 @@ export interface ConfigDocumentView {
  */
 export function useConfigDocument(): ConfigDocumentView {
   const config = useConfig();
+  const lists = useConfigLists();
   const load = ConfigDocumentState.use.load();
+  const loadLists = ConfigDocumentState.use.loadLists();
   const draft = ConfigDocumentState.use.draft();
   const revision = ConfigDocumentState.use.revision();
   const isDirty = useConfigDirty();
   const current = useConfigText();
   const applied = config.data?.text ?? null;
   const etag = config.data?.etag ?? null;
+  const listFiles = lists.data?.files;
+  const listsEtag = lists.data?.etag ?? null;
 
   useEffect(
     function loadDocument() {
       if (applied !== null) load(applied, etag);
     },
     [applied, etag, load]
+  );
+
+  // Файлы списков едут в стор тем же путём, что текст конфига: применение
+  // берёт из него и изменения файлов, и базу набора.
+  useEffect(
+    function loadListFiles() {
+      if (listFiles !== undefined) loadLists(listFiles, listsEtag);
+    },
+    [listFiles, listsEtag, loadLists]
   );
 
   const shown = (draft === null ? null : parseDraft(draft)) ?? config.data ?? null;

@@ -5,6 +5,8 @@ import {
   makeRuleSetCustomSchema,
   parseListEntries,
   toInlineRuleSet,
+  toListFileContent,
+  toLocalRuleSet,
 } from '../model/RuleSetCustom.schema';
 
 describe('parseListEntries', () => {
@@ -32,14 +34,18 @@ describe('makeRuleSetCustomSchema', () => {
   const schema = makeRuleSetCustomSchema(['taken']);
 
   it('принимает свежее имя и разобранный список', () => {
-    expect(schema.safeParse({ tag: 'my-list', entries: 'example.com' }).success).toBe(true);
+    expect(schema.safeParse({ tag: 'my-list', storage: 'inline', entries: 'example.com' }).success).toBe(true);
   });
 
   it.each([
-    ['пустое имя', { tag: '  ', entries: 'example.com' }, RULE_SET_CUSTOM_ERROR.TagRequired],
-    ['занятое имя', { tag: 'taken', entries: 'example.com' }, RULE_SET_CUSTOM_ERROR.TagTaken],
-    ['пустой список', { tag: 'ok', entries: '# только комментарий' }, RULE_SET_CUSTOM_ERROR.EntriesRequired],
-    ['непонятая строка', { tag: 'ok', entries: 'so wrong' }, RULE_SET_CUSTOM_ERROR.EntryInvalid],
+    ['пустое имя', { tag: '  ', storage: 'inline', entries: 'example.com' }, RULE_SET_CUSTOM_ERROR.TagRequired],
+    ['занятое имя', { tag: 'taken', storage: 'inline', entries: 'example.com' }, RULE_SET_CUSTOM_ERROR.TagTaken],
+    [
+      'пустой список',
+      { tag: 'ok', storage: 'inline', entries: '# только комментарий' },
+      RULE_SET_CUSTOM_ERROR.EntriesRequired,
+    ],
+    ['непонятая строка', { tag: 'ok', storage: 'inline', entries: 'so wrong' }, RULE_SET_CUSTOM_ERROR.EntryInvalid],
   ])('отклоняет %s', (_name, value, code) => {
     const parsed = schema.safeParse(value);
 
@@ -50,7 +56,7 @@ describe('makeRuleSetCustomSchema', () => {
 
 describe('toInlineRuleSet', () => {
   it('собирает узел inline без пустых условий', () => {
-    expect(toInlineRuleSet({ tag: ' my-list ', entries: 'example.com\nexample.org' })).toEqual({
+    expect(toInlineRuleSet({ tag: ' my-list ', storage: 'inline', entries: 'example.com\nexample.org' })).toEqual({
       type: 'inline',
       tag: 'my-list',
       rules: [{ domain_suffix: ['example.com', 'example.org'] }],
@@ -58,10 +64,38 @@ describe('toInlineRuleSet', () => {
   });
 
   it('кладёт адреса в ip_cidr', () => {
-    expect(toInlineRuleSet({ tag: 'ips', entries: '203.0.113.0/24' })).toEqual({
+    expect(toInlineRuleSet({ tag: 'ips', storage: 'inline', entries: '203.0.113.0/24' })).toEqual({
       type: 'inline',
       tag: 'ips',
       rules: [{ ip_cidr: ['203.0.113.0/24'] }],
+    });
+  });
+});
+
+describe('список файлом', () => {
+  const model = { tag: 'my-list', storage: 'file', entries: 'example.com' } as const;
+
+  it('имя файла с недопустимыми символами отклоняется только в режиме файла', () => {
+    const schema = makeRuleSetCustomSchema([]);
+    const withColon = { ...model, tag: 'мой список' };
+
+    expect(schema.safeParse(withColon).success).toBe(false);
+    expect(schema.safeParse({ ...withColon, storage: 'inline' }).success).toBe(true);
+  });
+
+  it('узел local ссылается на файл в подкаталоге rule-sets', () => {
+    expect(toLocalRuleSet(model)).toEqual({
+      type: 'local',
+      tag: 'my-list',
+      format: 'source',
+      path: 'rule-sets/my-list.json',
+    });
+  });
+
+  it('файл собирается в формате source первой версии', () => {
+    expect(JSON.parse(toListFileContent(model))).toEqual({
+      version: 1,
+      rules: [{ domain_suffix: ['example.com'] }],
     });
   });
 });

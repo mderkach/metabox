@@ -4,6 +4,12 @@
       "label": "List name",
       "placeholder": "my-domains"
     },
+    "storage": {
+      "label": "Where to store",
+      "inline": "In the config",
+      "file": "As a file",
+      "hint": "A small list is handy right in the config. A large one goes to a rule-sets/<name>.json file: the config stays compact, and the file is applied, checked and rolled back together with it."
+    },
     "entries": {
       "label": "Domains and addresses",
       "placeholder": "example.com\n203.0.113.0/24",
@@ -15,6 +21,7 @@
   "error": {
     "tagRequired": "Name the list: rules reference it by name",
     "tagTaken": "The name is already taken by another set",
+    "tagNotFileName": "For a file the list name is limited to Latin letters, digits, dots and dashes: the file name is built from it",
     "entriesRequired": "The list is empty: add at least one line",
     "entryInvalid": "Line “{{entry}}” looks like neither a domain nor an address"
   }

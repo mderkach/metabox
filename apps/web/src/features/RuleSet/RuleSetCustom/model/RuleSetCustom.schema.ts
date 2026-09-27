@@ -59,33 +59,58 @@ export function parseListEntries(text: string): { rules: CustomListRules; invali
 export const RULE_SET_CUSTOM_ERROR = {
   TagRequired: 'tag_required',
   TagTaken: 'tag_taken',
+  TagNotFileName: 'tag_not_file_name',
   EntriesRequired: 'entries_required',
   EntryInvalid: 'entry_invalid',
 } as const;
 
+/** Где живёт список: узлом в самом конфиге или файлом рядом с ним. */
+export const LIST_STORAGE = {
+  Inline: 'inline',
+  File: 'file',
+} as const;
+
+export type ListStorage = (typeof LIST_STORAGE)[keyof typeof LIST_STORAGE];
+
+/** Имя файла строится из имени списка, поэтому в режиме файла оно ограничено. */
+const FILE_TAG = /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/;
+
 export interface RuleSetCustomModel {
   tag: string;
+  storage: ListStorage;
   entries: string;
 }
 
 export function ruleSetCustomDefaults(): RuleSetCustomModel {
-  return { tag: '', entries: '' };
+  return { tag: '', storage: LIST_STORAGE.Inline, entries: '' };
 }
 
 export function makeRuleSetCustomSchema(takenTags: readonly string[]) {
   const taken = new Set(takenTags);
 
-  return z.object({
-    tag: z
-      .string()
-      .trim()
-      .min(1, RULE_SET_CUSTOM_ERROR.TagRequired)
-      .refine((tag) => !taken.has(tag), RULE_SET_CUSTOM_ERROR.TagTaken),
-    entries: z
-      .string()
-      .refine((text) => listEntries(text).length > 0, RULE_SET_CUSTOM_ERROR.EntriesRequired)
-      .refine((text) => parseListEntries(text).invalid === null, RULE_SET_CUSTOM_ERROR.EntryInvalid),
-  });
+  return z
+    .object({
+      tag: z
+        .string()
+        .trim()
+        .min(1, RULE_SET_CUSTOM_ERROR.TagRequired)
+        .refine((tag) => !taken.has(tag), RULE_SET_CUSTOM_ERROR.TagTaken),
+      storage: z.enum([LIST_STORAGE.Inline, LIST_STORAGE.File]),
+      entries: z
+        .string()
+        .refine((text) => listEntries(text).length > 0, RULE_SET_CUSTOM_ERROR.EntriesRequired)
+        .refine((text) => parseListEntries(text).invalid === null, RULE_SET_CUSTOM_ERROR.EntryInvalid),
+    })
+    .superRefine((model, ctx) => {
+      if (model.storage === LIST_STORAGE.File && !FILE_TAG.test(model.tag.trim())) {
+        ctx.addIssue({ code: 'custom', path: ['tag'], message: RULE_SET_CUSTOM_ERROR.TagNotFileName });
+      }
+    });
+}
+
+/** Имя файла списка в подкаталоге `rule-sets/`. */
+export function listFileName(tag: string): string {
+  return `${tag.trim()}.json`;
 }
 
 /**
@@ -94,6 +119,34 @@ export function makeRuleSetCustomSchema(takenTags: readonly string[]) {
  * Пустое условие в узел не пишется.
  */
 export function toInlineRuleSet(model: RuleSetCustomModel): object {
+  return { type: 'inline', tag: model.tag.trim(), rules: [toHeadlessRule(model)] };
+}
+
+/**
+ * Узел `local` со ссылкой на файл в подкаталоге `rule-sets/`: конфиг остаётся
+ * компактным, а файл пишется, проверяется и откатывается тем же применением.
+ */
+export function toLocalRuleSet(model: RuleSetCustomModel): object {
+  return {
+    type: 'local',
+    tag: model.tag.trim(),
+    format: 'source',
+    path: `rule-sets/${listFileName(model.tag)}`,
+  };
+}
+
+/** Отступ файла списка: тот же, что у файла конфига на устройстве. */
+const FILE_INDENT = 2;
+
+/**
+ * Содержимое файла списка в формате source. Версия 1 — самая старая из
+ * читаемых бинарём: условиям списка новее не нужно, а совместимость шире.
+ */
+export function toListFileContent(model: RuleSetCustomModel): string {
+  return `${JSON.stringify({ version: 1, rules: [toHeadlessRule(model)] }, null, FILE_INDENT)}\n`;
+}
+
+function toHeadlessRule(model: RuleSetCustomModel): Record<string, string[]> {
   const { rules } = parseListEntries(model.entries);
   const rule: Record<string, string[]> = {};
 
@@ -105,5 +158,5 @@ export function toInlineRuleSet(model: RuleSetCustomModel): object {
     rule.ip_cidr = rules.cidrs;
   }
 
-  return { type: 'inline', tag: model.tag.trim(), rules: [rule] };
+  return rule;
 }

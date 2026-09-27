@@ -55,12 +55,27 @@ export function SectionNodes({ section }: { section: GenericSection }) {
       )}
 
       {document.query.isSuccess && shape.kind === 'object' && (
-        <NodeCard section={section} index={0} node={nodes.length === 0 ? undefined : nodes[0]} name={section} />
+        <NodeCard
+          key={document.revision}
+          section={section}
+          index={0}
+          node={nodes.length === 0 ? undefined : nodes[0]}
+          name={section}
+        />
       )}
 
       {shape.kind === 'list' &&
         nodes.map((node, index) => (
-          <NodeCard key={index} section={section} index={index} node={node} name={nodeName(section, node, index)} />
+          // Ревизия в ключе пересоздаёт редактор на обновлении не от
+          // пользователя: после отмены правок поле не должно держать
+          // отменённый текст.
+          <NodeCard
+            key={`${String(document.revision)}:${String(index)}`}
+            section={section}
+            index={index}
+            node={node}
+            name={nodeName(section, node, index)}
+          />
         ))}
     </div>
   );

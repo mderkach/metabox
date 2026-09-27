@@ -2,7 +2,8 @@ import { Info, Plus, Search } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { ConfigDocumentState, ruleSetNodePath } from '@entities/Config';
+import { ConfigDocumentState, readRuleSets, ruleSetNodePath } from '@entities/Config';
+import { localListFile } from '@entities/RuleSet';
 import { ConfigCacheNotice } from '@features/Config/ConfigCacheFile';
 import { RuleSetAddForm } from '@features/RuleSet/RuleSetAdd';
 import { RuleSetCustomForm } from '@features/RuleSet/RuleSetCustom';
@@ -36,13 +37,20 @@ export function RuleSetsPage() {
   const editor = useRuleSetEditor();
   const filter = useRuleSetFilter(editor.sets);
   const remove = ConfigDocumentState.use.remove();
+  const removeList = ConfigDocumentState.use.removeList();
   const [mode, setMode] = useState<'catalog' | 'custom' | null>(null);
 
   const onRemove = useCallback(
     (index: number) => {
+      // Файл своего списка уезжает вместе с узлом: осиротевший файл не виден
+      // в конфиге, но остаётся на устройстве.
+      const file = localListFile(readRuleSets(ConfigDocumentState.getState().current() ?? '')[index]);
+
       remove(ruleSetNodePath(index));
+
+      if (file !== null) removeList(file);
     },
-    [remove]
+    [remove, removeList]
   );
 
   const closeForm = useCallback(() => {

@@ -164,9 +164,10 @@ const (
 type ApplyEnvelope struct {
 	// Config — текст конфига как есть, с комментариями и висячими запятыми.
 	Config string `json:"config"`
-	// Lists — имя файла в подкаталоге rule-sets → его содержимое; null
-	// удаляет файл.
-	Lists map[string]*string `json:"lists,omitempty"`
+	// Lists — имя файла в подкаталоге rule-sets → его содержимое.
+	Lists map[string]string `json:"lists,omitempty"`
+	// RemoveLists — файлы подкаталога rule-sets, которые применение удаляет.
+	RemoveLists []string `json:"remove_lists,omitempty"`
 	// ListsBase — отпечаток набора файлов, от которого редактировал клиент:
 	// значение etag из GET /api/config/rule-sets. Пустой — применить без
 	// сверки.

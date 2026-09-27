@@ -33,7 +33,7 @@ func TestApplyEnvelopeCarriesLists(t *testing.T) {
 	applier := &fakeApplier{}
 	srv := newTestServer(t, applier, "")
 
-	body := `{"config":"{\"log\":{}}","lists":{"my.json":"{\"rules\":[]}","gone.json":null},"lists_base":"base-1"}`
+	body := `{"config":"{\"log\":{}}","lists":{"my.json":"{\"rules\":[]}"},"remove_lists":["gone.json"],"lists_base":"base-1"}`
 
 	resp, err := srv.Client().Do(envelopeRequest(t, srv.URL, body))
 	if err != nil {

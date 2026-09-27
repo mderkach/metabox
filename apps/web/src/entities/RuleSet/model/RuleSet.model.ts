@@ -93,6 +93,27 @@ export interface RuleSetRow {
  * обязана знать, когда поле можно не писать, — записанное значение, равное
  * выведенному, добавило бы в диф правку, которой пользователь не делал.
  */
+/**
+ * Имя файла своего списка, когда узел — `local` из подкаталога `rule-sets/`;
+ * иначе `null`. Удаление такого узла обязано увезти и файл: осиротевший файл
+ * не виден в конфиге, но остаётся на устройстве.
+ */
+export function localListFile(node: unknown): string | null {
+  if (typeof node !== 'object' || node === null || Reflect.get(node, 'type') !== RULE_SET_TYPE.Local) {
+    return null;
+  }
+
+  const path: unknown = Reflect.get(node, 'path');
+
+  if (typeof path !== 'string' || !path.startsWith('rule-sets/')) {
+    return null;
+  }
+
+  const name = path.slice('rule-sets/'.length);
+
+  return name === '' || name.includes('/') ? null : name;
+}
+
 export function defaultFormatOf(url: string): RuleSetFormat | '' {
   const path = url.split(/[?#]/u, 1)[0];
 
