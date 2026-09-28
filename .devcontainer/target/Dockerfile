@@ -72,10 +72,16 @@ COPY .devcontainer/target/files/ /
 #
 # /var в rootfs — симлинк на пустой /tmp: без /var/lock и /var/run ubusd не
 # создаст сокет, и procd поднимется, не запустив ни одного сервиса.
+#
+# Рабочий каталог службы sing-box — каталог конфига: относительный path узла
+# local (rule-sets/<имя>.json) резолвится от каталога -D, и с пакетным
+# /usr/share/sing-box служба не находит файлы списков, которые пишет Apply.
 RUN set -eu; \
     apk add --allow-untrusted /tmp/sing-box.apk /tmp/metaboxd.apk; \
     rm -f /tmp/sing-box.apk /tmp/metaboxd.apk; \
     grep -q "option listen_port '8080'" /etc/config/metabox; \
+    sed -i "s|option workdir '/usr/share/sing-box'|option workdir '/etc/sing-box'|" /etc/config/sing-box; \
+    grep -q "option workdir '/etc/sing-box'" /etc/config/sing-box; \
     rm -f /etc/rc.d/S*dnsmasq /etc/rc.d/S*firewall /etc/rc.d/S*odhcpd /etc/rc.d/S*uhttpd; \
     ln -sf ../init.d/sing-box /etc/rc.d/S99sing-box; \
     ln -sf ../init.d/metaboxd /etc/rc.d/S98metaboxd; \
