@@ -47,6 +47,7 @@ export function RulePanel({
   node,
   recognized,
   outbounds,
+  actions = null,
   sheet = false,
   onClose,
 }: {
@@ -55,6 +56,8 @@ export function RulePanel({
   node: unknown;
   recognized: boolean;
   outbounds: string[];
+  /** Действия над правилом: шапка, перед кнопкой закрытия. */
+  actions?: ReactNode;
   sheet?: boolean;
   onClose: () => void;
 }) {
@@ -101,6 +104,7 @@ export function RulePanel({
           <p className='font-mono text-xs text-muted-foreground'>route.rules[{rule.index - 1}]</p>
         </div>
         {!recognized && <Badge variant='outline'>{t('rule.uncovered', { ns: 'shared' })}</Badge>}
+        {actions !== null && <div className='flex shrink-0 items-center gap-0.5'>{actions}</div>}
         <Button variant='outline' size='icon-sm' aria-label={t('close')} onClick={onClose}>
           <X />
         </Button>

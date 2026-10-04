@@ -1,5 +1,5 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { useRef, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { RuleRow as RuleRowModel } from '@entities/Rule';
@@ -44,6 +44,7 @@ export function RuleTable({
   selectedId,
   empty,
   search = null,
+  actions = null,
   facets = null,
   edited = NO_EDITS,
   hits = null,
@@ -58,6 +59,8 @@ export function RuleTable({
   empty: ReactNode;
   /** Поиск: левый край тулбара. */
   search?: ReactNode;
+  /** Действия над списком: правый край тулбара. */
+  actions?: ReactNode;
   /** Срезы по выходу: вторая строка тулбара. */
   facets?: ReactNode;
   /** Строки, изменённые в черновике. */
@@ -79,10 +82,27 @@ export function RuleTable({
     overscan: OVERSCAN,
   });
 
+  const selectedPosition = useMemo(() => rules.findIndex((rule) => rule.id === selectedId), [rules, selectedId]);
+
+  // Выбранная строка может оказаться за окном: новое правило встаёт в конец
+  // списка, переставленное уезжает со своего места. Видимую строку `auto` не
+  // двигает, поэтому выбор мышью список не дёргает.
+  useEffect(
+    function revealSelected() {
+      if (selectedPosition >= 0) {
+        virtualizer.scrollToIndex(selectedPosition, { align: 'auto' });
+      }
+    },
+    [selectedPosition, virtualizer]
+  );
+
   return (
     <section className={cn('flex min-h-0 grow flex-col overflow-hidden max-lg:min-h-96', SURFACE)}>
       <div className='flex shrink-0 flex-col gap-2 border-b border-border px-3.5 py-2.5'>
-        <div className='flex flex-wrap items-center gap-2'>{search}</div>
+        <div className='flex flex-wrap items-center gap-2'>
+          {search}
+          {actions !== null && <div className='ml-auto flex items-center gap-2'>{actions}</div>}
+        </div>
         {facets}
       </div>
 

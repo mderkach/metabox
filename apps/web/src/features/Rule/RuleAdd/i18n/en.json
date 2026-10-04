@@ -1,0 +1,4 @@
+{
+  "add": "Add rule",
+  "unavailable": "A new rule has no outbound to use: there is neither route.final nor an outbound, or the config does not match the schema"
+}

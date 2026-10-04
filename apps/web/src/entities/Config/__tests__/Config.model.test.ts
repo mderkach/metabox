@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
 import { parseConfig } from '../api/Config.query';
-import { insertValue, removeValue, setValue, toOutboundTypes } from '../model/Config.model';
+import {
+  insertValue,
+  removeValue,
+  setValue,
+  toFinalOutbound,
+  toOutboundTypes,
+  type ConfigDocument,
+} from '../model/Config.model';
 import { CONFIG_FIXTURE } from './Config.fixture';
 
 const TEXT = JSON.stringify(CONFIG_FIXTURE, null, 2);
@@ -128,5 +135,26 @@ describe('toOutboundTypes', () => {
 
   it('конфига нет — карта пуста', () => {
     expect(toOutboundTypes(null).size).toBe(0);
+  });
+});
+
+describe('toFinalOutbound', () => {
+  const OUTBOUNDS: ConfigDocument['outbounds'] = [
+    { type: 'direct', tag: 'direct' },
+    { type: 'direct', tag: 'isp' },
+  ];
+
+  it('берёт route.final, если он задан', () => {
+    expect(toFinalOutbound({ outbounds: OUTBOUNDS, route: { final: 'isp' } })).toBe('isp');
+  });
+
+  it('без route.final — первый аутбаунд, как решает sing-box', () => {
+    expect(toFinalOutbound({ outbounds: OUTBOUNDS, route: {} })).toBe('direct');
+    expect(toFinalOutbound({ outbounds: OUTBOUNDS })).toBe('direct');
+  });
+
+  it('без route.final и аутбаундов выхода нет', () => {
+    expect(toFinalOutbound({})).toBeNull();
+    expect(toFinalOutbound(null)).toBeNull();
   });
 });

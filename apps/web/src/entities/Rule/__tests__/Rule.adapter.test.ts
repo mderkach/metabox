@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { Config } from '@shared/api/generated';
 
 import { checkRuleNode, isRuleRecognized, toRuleRows, toRuleRowsFromNodes } from '../model/Rule.adapter';
-import { RULE_TARGET } from '../model/Rule.model';
+import { newRuleNode, RULE_TARGET } from '../model/Rule.model';
 
 function configWithRules(rules: object[]): Config {
   return { route: { rules } };
@@ -185,5 +185,18 @@ describe('узлы, которых схема не знает', () => {
 
   it('замечание схемы называет поле, которого она не знает', () => {
     expect(checkRuleNode({ unknown_matcher: ['своё'], outbound: 'direct' }).join(' ')).toContain('unknown_matcher');
+  });
+});
+
+describe('newRuleNode', () => {
+  it('новое правило принимает схема, а строка списка читает его безусловным с выходом', () => {
+    const node = newRuleNode('direct');
+    const [row] = toRuleRowsFromNodes([node]);
+
+    expect(node).toEqual({ outbound: 'direct' });
+    expect(isRuleRecognized(node)).toBe(true);
+    expect(row.isCatchAll).toBe(true);
+    expect(row.target).toBe('direct');
+    expect(row.targetKind).toBe(RULE_TARGET.Outbound);
   });
 });

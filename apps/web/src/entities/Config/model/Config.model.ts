@@ -262,6 +262,21 @@ export function toOutboundTags(config: ConfigDocument | null): string[] {
 }
 
 /**
+ * Куда уходит трафик, не попавший ни под одно правило: `route.final`, а без
+ * него — первый аутбаунд, как решает sing-box. `null` — документа нет или
+ * схема его не приняла, либо в нём нет ни того, ни другого.
+ */
+export function toFinalOutbound(config: ConfigDocument | null): string | null {
+  const final = config?.route?.final;
+
+  if (final !== undefined && final.length > 0) {
+    return final;
+  }
+
+  return toOutboundTags(config).at(0) ?? null;
+}
+
+/**
  * Тип аутбаунда по его тегу. Тип — единственное точное указание на то, куда
  * узел ведёт трафик: тег пишет пользователь, и по имени судить о нём нельзя
  *. Что тип означает для интерфейса, решает потребитель карты.

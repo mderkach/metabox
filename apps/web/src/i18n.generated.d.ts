@@ -12,8 +12,11 @@ declare module 'i18next' {
       'features/Config/ConfigApply': typeof import('./features/Config/ConfigApply/i18n/ru.json');
       'features/Config/ConfigCacheFile': typeof import('./features/Config/ConfigCacheFile/i18n/ru.json');
       'features/Language/LanguageSwitch': typeof import('./features/Language/LanguageSwitch/i18n/ru.json');
+      'features/Rule/RuleAdd': typeof import('./features/Rule/RuleAdd/i18n/ru.json');
+      'features/Rule/RuleDelete': typeof import('./features/Rule/RuleDelete/i18n/ru.json');
       'features/Rule/RuleEdit': typeof import('./features/Rule/RuleEdit/i18n/ru.json');
       'features/Rule/RuleRaw': typeof import('./features/Rule/RuleRaw/i18n/ru.json');
+      'features/Rule/RuleReorder': typeof import('./features/Rule/RuleReorder/i18n/ru.json');
       'features/RuleSet/RuleSetAdd': typeof import('./features/RuleSet/RuleSetAdd/i18n/ru.json');
       'features/RuleSet/RuleSetCustom': typeof import('./features/RuleSet/RuleSetCustom/i18n/ru.json');
       'features/Theme/ThemeSwitch': typeof import('./features/Theme/ThemeSwitch/i18n/ru.json');

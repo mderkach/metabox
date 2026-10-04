@@ -27,6 +27,17 @@ export const RULE_TARGET = {
 
 export type RuleTargetKind = (typeof RULE_TARGET)[keyof typeof RULE_TARGET];
 
+/**
+ * Узел нового правила: без условий, с одним выходом. Пустой узел форк
+ * отвергает (`missing conditions`), `action: route` без выхода — тоже
+ * (`missing outbound field`), а безусловное правило с выходом `sing-box check`
+ * принимает. С выходом в маршрут по умолчанию в конце списка такое правило
+ * маршрутизацию не меняет, пока ему не зададут условия.
+ */
+export function newRuleNode(outbound: string): { outbound: string } {
+  return { outbound };
+}
+
 export interface RuleRow {
   /** Позиция в списке: собственного идентификатора у правил sing-box нет. */
   id: string;

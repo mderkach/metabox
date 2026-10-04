@@ -48,6 +48,20 @@ describe('ConfigApplyDiff', () => {
     ).toEqual(['Правило 2: proxy → direct', 'Правило 5 удалено', 'Правило 7 добавлено']);
   });
 
+  it('переставленное правило называет перемещением, а не удалением и добавлением', async () => {
+    const [first, second, ...rest] = RULES;
+
+    await openDiff(RULES, [second, first, ...rest]);
+
+    const summary = await screen.findByRole('list', { name: 'Изменения правил маршрутизации' });
+
+    expect(
+      within(summary)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent)
+    ).toEqual(['Правило 1 перемещено на место 2']);
+  });
+
   it('длинную сводку обрезает и говорит, сколько осталось', async () => {
     await openDiff([], RULES);
 

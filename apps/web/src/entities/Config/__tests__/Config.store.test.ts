@@ -124,6 +124,36 @@ describe('ConfigDocumentState', () => {
     expect(state().isDirty()).toBe(false);
   });
 
+  it('перестановка последнего шага кладёт правило в конец списка', () => {
+    const rules = CONFIG_FIXTURE.route?.rules ?? [];
+    const last = rules.length - 1;
+
+    state().load(TEXT);
+    state().move(['route', 'rules'], last - 1, last);
+
+    const left = parseConfig(state().current() ?? '').config?.route?.rules ?? [];
+
+    expect(left.at(-1)).toEqual(rules[last - 1]);
+    expect(left.at(-2)).toEqual(rules[last]);
+    expect((state().current() ?? '').split('\n').sort()).toEqual(TEXT.split('\n').sort());
+  });
+
+  it('вставка в конфиг без route.rules создаёт список и не трогает остальной текст', () => {
+    const text = JSON.stringify(
+      { outbounds: [{ type: 'direct', tag: 'direct' }], route: { final: 'direct' } },
+      null,
+      2
+    );
+
+    state().load(text);
+    state().insert(['route', 'rules', 0], { outbound: 'direct' });
+
+    const rules = ['    "rules": [', '      {', '        "outbound": "direct"', '      }', '    ]'].join('\n');
+
+    // Прежние строки стоят как были; у `final` только запятая перед новым ключом.
+    expect(state().current()).toBe(text.replace('"final": "direct"', `"final": "direct",\n${rules}`));
+  });
+
   it('удаление и вставка правила идут тем же черновиком', () => {
     const rules = CONFIG_FIXTURE.route?.rules ?? [];
 

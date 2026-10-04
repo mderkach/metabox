@@ -52,6 +52,31 @@ const RECOGNIZED_CONFIG = JSON.stringify(
   2
 );
 
+/** Правила для правки списка: все узлы схема принимает, маршрут по умолчанию задан. */
+const EDIT_RULES = [
+  { rule_set: ['github'], outbound: 'proxy' },
+  { port: 53, action: 'hijack-dns' },
+  { domain_suffix: ['example.org'], outbound: 'direct' },
+];
+
+function editConfig(rules: unknown[]): string {
+  return JSON.stringify(
+    {
+      outbounds: [
+        { type: 'direct', tag: 'direct' },
+        { type: 'selector', tag: 'proxy', outbounds: ['direct'] },
+      ],
+      route: { rules, final: 'proxy' },
+    },
+    null,
+    2
+  );
+}
+
+function draftRules(): unknown {
+  return findValue(ConfigDocumentState.getState().draft ?? '', ['route', 'rules']);
+}
+
 /** Счёт процесса, который работает на `CONFIG`: по правилу на узел. */
 const HITS = {
   seconds: 2 * 60 * 60,
@@ -349,6 +374,149 @@ describe('экран правил', () => {
   });
 });
 
+describe('правка списка правил', () => {
+  beforeEach(() => {
+    ConfigDocumentState.getState().reset();
+    mockVirtualSizes();
+    serveConfig(editConfig(EDIT_RULES));
+  });
+
+  it('добавляет правило в конец, ведёт его в route.final и открывает в панели', async () => {
+    const user = userEvent.setup();
+
+    renderWithRouter(EditorPage);
+
+    await user.click(await screen.findByRole('button', { name: 'Добавить правило' }));
+
+    expect(draftRules()).toEqual([...EDIT_RULES, { outbound: 'proxy' }]);
+
+    const panel = await screen.findByRole('complementary', { name: 'Правило 4' });
+
+    expect(within(panel).getByText('route.rules[3]')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Правило 4, выход proxy, изменено в черновике' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+  });
+
+  it('в конфиге без правил кнопка пустого состояния создаёт route.rules', async () => {
+    serveConfig(JSON.stringify({ outbounds: [{ type: 'direct', tag: 'direct' }] }, null, 2));
+
+    const user = userEvent.setup();
+
+    renderWithRouter(EditorPage);
+
+    expect(await screen.findByText('Правил нет')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Добавить правило' }));
+
+    expect(draftRules()).toEqual([{ outbound: 'direct' }]);
+    expect(await screen.findByRole('table', { name: 'Правила маршрутизации' })).toBeInTheDocument();
+    expect(screen.getByRole('complementary', { name: 'Правило 1' })).toBeInTheDocument();
+  });
+
+  it('без аутбаундов и route.final новому правилу неоткуда взять выход — кнопка выключена и говорит почему', async () => {
+    serveConfig('{}');
+
+    renderWithRouter(EditorPage);
+
+    expect(await screen.findByRole('button', { name: 'Добавить правило' })).toBeDisabled();
+    expect(screen.getByText(/нет ни route\.final, ни аутбаунда/)).toBeInTheDocument();
+  });
+
+  it('добавление при активном поиске снимает отбор: новое правило видно в списке', async () => {
+    const user = userEvent.setup();
+
+    renderWithRouter(EditorPage);
+
+    const search = await screen.findByRole('textbox', { name: 'Поиск по правилам' });
+
+    await user.type(search, 'github');
+
+    expect(screen.getByRole('status')).toHaveTextContent('Показано 1 из 3');
+
+    await user.click(screen.getByRole('button', { name: 'Добавить правило' }));
+
+    expect(search).toHaveValue('');
+    expect(screen.getByRole('status')).toHaveTextContent('4 правила');
+    expect(
+      await screen.findByRole('button', { name: 'Правило 4, выход proxy, изменено в черновике' })
+    ).toBeInTheDocument();
+  });
+
+  it('удаление убирает узел и закрывает панель, а соседей не трогает', async () => {
+    const user = userEvent.setup();
+
+    renderWithRouter(EditorPage);
+
+    await user.click(await screen.findByRole('button', { name: /^Правило 2, / }));
+    await user.click(
+      within(await screen.findByRole('complementary')).getByRole('button', { name: 'Удалить правило 2' })
+    );
+
+    expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+    // Файл без правила 2 — тот же текст, что был, строка в строку.
+    expect(ConfigDocumentState.getState().draft).toBe(editConfig([EDIT_RULES[0], EDIT_RULES[2]]));
+    expect(screen.getByRole('status')).toHaveTextContent('2 правила');
+  });
+
+  it('«Выше» переставляет правило, а панель остаётся на нём вместе с вкладкой и фокусом', async () => {
+    const user = userEvent.setup();
+
+    renderWithRouter(EditorPage);
+
+    await user.click(await screen.findByRole('button', { name: /^Правило 3, / }));
+
+    const panel = await screen.findByRole('complementary');
+
+    await user.click(within(panel).getByRole('tab', { name: 'JSON' }));
+    await user.click(within(panel).getByRole('button', { name: 'Поднять правило 3 выше' }));
+
+    expect(draftRules()).toEqual([EDIT_RULES[0], EDIT_RULES[2], EDIT_RULES[1]]);
+    expect(within(panel).getByRole('heading', { name: 'Правило 2' })).toBeInTheDocument();
+    expect(within(panel).getByText('route.rules[1]')).toBeInTheDocument();
+    // Панель не пересоздана: открытая вкладка осталась, а текст узла — тот же.
+    expect(within(panel).getByRole('tab', { name: 'JSON' })).toHaveAttribute('aria-selected', 'true');
+    expect(within(panel).getByRole('textbox', { name: 'Правило 2 текстом' })).toHaveValue(
+      JSON.stringify(EDIT_RULES[2], null, 2)
+    );
+    expect(within(panel).getByRole('button', { name: 'Поднять правило 2 выше' })).toHaveFocus();
+  });
+
+  it('на первом месте «Выше» гаснет, и фокус уходит на «Ниже», а не теряется', async () => {
+    const user = userEvent.setup();
+
+    renderWithRouter(EditorPage);
+
+    await user.click(await screen.findByRole('button', { name: /^Правило 2, / }));
+
+    const panel = await screen.findByRole('complementary');
+
+    await user.click(within(panel).getByRole('button', { name: 'Поднять правило 2 выше' }));
+
+    expect(within(panel).getByRole('button', { name: 'Поднять правило 1 выше' })).toBeDisabled();
+    expect(within(panel).getByRole('button', { name: 'Опустить правило 1 ниже' })).toHaveFocus();
+  });
+
+  it('переставленное правило сохраняет счёт срабатываний и не помечается изменённым', async () => {
+    const user = userEvent.setup();
+
+    renderWithRouter(EditorPage);
+
+    await user.click(await screen.findByRole('button', { name: /^Правило 1, / }));
+    await user.click(
+      within(await screen.findByRole('complementary')).getByRole('button', { name: 'Опустить правило 1 ниже' })
+    );
+
+    const table = screen.getByRole('table', { name: 'Правила маршрутизации' });
+    const [, , secondRow] = within(table).getAllByRole('row');
+
+    expect(within(secondRow).getByRole('button', { name: 'Правило 2, выход proxy' })).toBeInTheDocument();
+    expect(await within(secondRow).findByText('1 234')).toBeInTheDocument();
+    expect(screen.queryByText('изменено в черновике', { exact: false })).not.toBeInTheDocument();
+  });
+});
+
 describe('экран правил на узком экране', () => {
   beforeEach(() => {
     ConfigDocumentState.getState().reset();
@@ -384,6 +552,43 @@ describe('экран правил на узком экране', () => {
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
+  });
+});
+
+describe('правка списка правил на узком экране', () => {
+  beforeEach(() => {
+    ConfigDocumentState.getState().reset();
+    mockVirtualSizes();
+    serveConfig(editConfig(EDIT_RULES));
+    vi.stubGlobal('matchMedia', function matchQuery(media: string) {
+      return {
+        matches: media === PANEL_AS_SHEET,
+        media,
+        addEventListener: vi.fn<() => void>(),
+        removeEventListener: vi.fn<() => void>(),
+      };
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('лист остаётся на переставленном правиле и не пересоздаётся', async () => {
+    const user = userEvent.setup();
+
+    renderWithRouter(EditorPage);
+
+    await user.click(await screen.findByRole('button', { name: /^Правило 1, / }));
+
+    const sheet = await screen.findByRole('dialog', { name: 'Правило 1' });
+
+    await user.click(within(sheet).getByRole('tab', { name: 'JSON' }));
+    await user.click(within(sheet).getByRole('button', { name: 'Опустить правило 1 ниже' }));
+
+    expect(await screen.findByRole('dialog', { name: 'Правило 2' })).toBe(sheet);
+    expect(within(sheet).getByRole('tab', { name: 'JSON' })).toHaveAttribute('aria-selected', 'true');
+    expect(draftRules()).toEqual([EDIT_RULES[1], EDIT_RULES[0], EDIT_RULES[2]]);
   });
 });
 

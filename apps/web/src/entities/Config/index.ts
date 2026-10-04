@@ -34,6 +34,7 @@ export {
   sectionNodePath,
   sectionSize,
   setValue,
+  toFinalOutbound,
   toOutboundTags,
   toOutboundTypes,
 } from './model/Config.model';

@@ -1,10 +1,13 @@
 import { useSearch } from '@tanstack/react-router';
 import { CircleAlert, CircleQuestionMark, Search, X } from 'lucide-react';
-import { startTransition, useCallback, useState, ViewTransition } from 'react';
+import { useCallback, useState, ViewTransition, type ReactNode } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
 import type { ConfigIssue } from '@entities/Config';
 import { isRuleRecognized } from '@entities/Rule';
+import { RuleAddButton } from '@features/Rule/RuleAdd';
+import { RuleDeleteButton } from '@features/Rule/RuleDelete';
+import { RuleReorderButtons } from '@features/Rule/RuleReorder';
 import { usePanelAsSheet } from '@shared/lib/media';
 import { cn } from '@shared/lib/utils';
 import {
@@ -27,13 +30,21 @@ import {
   PopoverTrigger,
   QueryFailure,
   SEARCH_FIELD,
+  Separator,
   SURFACE,
   SkeletonRows,
 } from '@shared/ui';
 import { RulePanel, RulePanelSheet } from '@widgets/Rule/RulePanel';
 import { RuleTable } from '@widgets/Rule/RuleTable';
 
-import { toSelectedRuleId, useRouteEditor, useRuleFilter, useRuleMarks, type RuleFilterState } from '../lib/Editor.lib';
+import {
+  toSelectedRuleId,
+  useRouteEditor,
+  useRuleFilter,
+  useRuleMarks,
+  useRuleSelection,
+  type RuleFilterState,
+} from '../lib/Editor.lib';
 
 /** Сколько замечаний схемы показывать, чтобы они не вытеснили экран. */
 const VISIBLE_ISSUES = 5;
@@ -50,23 +61,33 @@ export function EditorPage() {
   // сработавший узел. Дальше выбором владеет сам экран, иначе закрытая панель
   // открывалась бы заново на каждый рендер.
   const { rule } = useSearch({ strict: false });
-  const [selectedId, setSelectedId] = useState<string | null>(() => toSelectedRuleId(rule));
+  const selection = useRuleSelection(toSelectedRuleId(rule));
+  const { reset: resetFilter } = filter;
+  const { onAdded: selectAdded } = selection;
 
-  // Без Transition обновление срочное, и граница вокруг панели не анимируется.
-  const onSelect = useCallback((id: string) => {
-    startTransition(() => {
-      setSelectedId((current) => (current === id ? null : id));
-    });
-  }, []);
+  // Новое правило под отбор почти никогда не попадает: без снятия отбора оно
+  // открылось бы в панели, но в списке его бы не было.
+  const onAdded = useCallback(
+    (index: number) => {
+      resetFilter();
+      selectAdded(index);
+    },
+    [resetFilter, selectAdded]
+  );
 
-  const onClose = useCallback(() => {
-    startTransition(() => {
-      setSelectedId(null);
-    });
-  }, []);
-
-  const selected = editor.rules.find((row) => row.id === selectedId) ?? null;
+  const selected = editor.rules.find((row) => row.id === selection.id) ?? null;
   const selectedNode = selected === null ? null : editor.nodes[selected.index - 1];
+  // Номер нового правила — по узлам файла, а не по строкам: строку получает
+  // только узел-объект, а вставка адресуется позицией в массиве.
+  const add = <RuleAddButton index={editor.nodes.length + 1} outbound={editor.finalOutbound} onAdded={onAdded} />;
+  const actions =
+    selected === null ? null : (
+      <>
+        <RuleReorderButtons index={selected.index} total={editor.nodes.length} onMoved={selection.onMoved} />
+        <Separator orientation='vertical' className='mx-1 h-5' />
+        <RuleDeleteButton index={selected.index} onDeleted={selection.onDeleted} />
+      </>
+    );
 
   return (
     <div className='flex min-h-0 grow flex-col gap-4 px-4 py-5 sm:px-6'>
@@ -78,24 +99,25 @@ export function EditorPage() {
 
       {editor.issues.length > 0 && <ConfigNotParsed issues={editor.issues} />}
 
-      {editor.source.isSuccess && editor.rules.length === 0 && editor.issues.length === 0 && <NoRules />}
+      {editor.source.isSuccess && editor.rules.length === 0 && editor.issues.length === 0 && <NoRules add={add} />}
 
       {editor.rules.length > 0 && (
         <div className='flex min-h-0 grow flex-col gap-4 lg:flex-row'>
           <RuleTable
             rules={filter.rules}
             total={editor.rules.length}
-            selectedId={selectedId}
+            selectedId={selection.id}
             edited={marks.edited}
             hits={marks.hits}
             outboundTypes={editor.outboundTypes}
-            onSelect={onSelect}
+            onSelect={selection.select}
             search={
               <>
                 <RuleSearch filter={filter} />
                 <RuleSetChip filter={filter} />
               </>
             }
+            actions={add}
             facets={<RuleTargetFacets filter={filter} />}
             empty={<EmptyState filter={filter} />}
           />
@@ -105,12 +127,13 @@ export function EditorPage() {
             // как exit и enter одновременно, иначе панель мигает.
             <ViewTransition enter='panel-in' exit='panel-out'>
               <RulePanel
-                key={selected.id}
+                key={selection.key}
                 rule={selected}
                 node={selectedNode}
                 recognized={isRuleRecognized(selectedNode)}
                 outbounds={editor.outbounds}
-                onClose={onClose}
+                actions={actions}
+                onClose={selection.close}
               />
             </ViewTransition>
           )}
@@ -124,8 +147,10 @@ export function EditorPage() {
           rule={selected}
           node={selectedNode}
           recognized={isRuleRecognized(selectedNode)}
+          panelKey={selection.key}
           outbounds={editor.outbounds}
-          onClose={onClose}
+          actions={actions}
+          onClose={selection.close}
         />
       )}
     </div>
@@ -255,15 +280,7 @@ function EmptyState({ filter }: { filter: RuleFilterState }) {
         <EmptyTitle>{t('list.notFound', { ns: 'shared' })}</EmptyTitle>
       </EmptyHeader>
       <EmptyContent>
-        <Button
-          variant='outline'
-          size='sm'
-          onClick={() => {
-            filter.setQuery('');
-            filter.setTarget(null);
-            filter.setRuleSet(null);
-          }}
-        >
+        <Button variant='outline' size='sm' onClick={filter.reset}>
           {t('list.resetFilter', { ns: 'shared' })}
         </Button>
       </EmptyContent>
@@ -272,7 +289,7 @@ function EmptyState({ filter }: { filter: RuleFilterState }) {
 }
 
 /** Конфиг прочитан, а правил в нём нет: это состояние конфига, а не загрузки. */
-function NoRules() {
+function NoRules({ add }: { add: ReactNode }) {
   const { t } = useTranslation('pages/Editor');
 
   return (
@@ -281,6 +298,7 @@ function NoRules() {
         <EmptyTitle>{t('empty.title')}</EmptyTitle>
         <EmptyDescription>{t('empty.description')}</EmptyDescription>
       </EmptyHeader>
+      <EmptyContent>{add}</EmptyContent>
     </Empty>
   );
 }

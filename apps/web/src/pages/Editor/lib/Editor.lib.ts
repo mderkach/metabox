@@ -1,8 +1,9 @@
 import { useNavigate, useSearch } from '@tanstack/react-router';
-import { useCallback, useMemo, useState } from 'react';
+import { startTransition, useCallback, useMemo, useState } from 'react';
 
 import {
   readRules,
+  toFinalOutbound,
   toOutboundTags,
   toOutboundTypes,
   useConfigDocument,
@@ -28,6 +29,8 @@ export interface RouteEditorState {
   issues: ConfigIssue[];
   rules: RuleRow[];
   outbounds: string[];
+  /** Выход нового правила — маршрут по умолчанию; `null` — выхода нет. */
+  finalOutbound: string | null;
   /** Тип аутбаунда по тегу: выход правила красится по нему, а не по имени. */
   outboundTypes: ReadonlyMap<string, string>;
   /** Узлы правил как есть: панель правит текст узла, а не разобранную модель. */
@@ -64,6 +67,7 @@ export function useRouteEditor(): RouteEditorState {
     issues: document.issues,
     rules,
     outbounds: toOutboundTags(config),
+    finalOutbound: toFinalOutbound(config),
     outboundTypes,
     nodes,
     appliedNodes,
@@ -131,7 +135,82 @@ export function useRuleMarks(editor: RouteEditorState): RuleMarks {
  * узел, и промах на единицу открыл бы соседнее правило.
  */
 export function toSelectedRuleId(rule: number | undefined): string | null {
-  return rule === undefined ? null : String(rule - 1);
+  return rule === undefined ? null : toRuleId(rule);
+}
+
+/** Строка списка по номеру правила с единицы: её `id` — индекс узла с нуля. */
+function toRuleId(index: number): string {
+  return String(index - 1);
+}
+
+interface RuleSelectionState {
+  /** Выбранная строка; `null` — панель закрыта. */
+  id: string | null;
+  /**
+   * Ключ панели. Растёт, когда пользователь выбирает правило или добавляет
+   * новое, и стоит на месте при перестановке: панель остаётся той же — с
+   * открытой вкладкой, введённым текстом и фокусом, — хотя правило переехало
+   * на другой номер. При закрытии не сбрасывается: лист на узком экране держит
+   * прежнее содержимое, и совпавший ключ не пересоздал бы его для другого
+   * правила.
+   */
+  key: number;
+}
+
+export interface RuleSelection extends RuleSelectionState {
+  /** Выбор строкой списка; повторный выбор той же строки закрывает панель. */
+  select: (id: string) => void;
+  close: () => void;
+  /** Новое правило открывается в панели. */
+  onAdded: (index: number) => void;
+  /** Панель идёт за переставленным правилом на его новый номер. */
+  onMoved: (index: number) => void;
+  onDeleted: () => void;
+}
+
+/**
+ * Выбранное правило и ключ его панели.
+ *
+ * Строка адресуется позицией в `route.rules`, а не собственным идентификатором
+ * — его у правил sing-box нет, — поэтому перестановка и удаление обязаны
+ * сдвигать выбор тем же обновлением, что и черновик. Они идут без
+ * `startTransition`: стор обновляется синхронно, и в Transition был бы кадр,
+ * где выбор указывает на прежнюю позицию, а под ней уже соседний узел — панель
+ * показала бы чужое правило.
+ */
+export function useRuleSelection(initialId: string | null): RuleSelection {
+  const [selection, setSelection] = useState<RuleSelectionState>({ id: initialId, key: 0 });
+
+  // Без Transition обновление срочное, и граница вокруг панели не анимируется.
+  const select = useCallback((id: string) => {
+    startTransition(() => {
+      setSelection((current) => (current.id === id ? { ...current, id: null } : { id, key: current.key + 1 }));
+    });
+  }, []);
+
+  const close = useCallback(() => {
+    startTransition(() => {
+      setSelection((current) => ({ ...current, id: null }));
+    });
+  }, []);
+
+  // Новое правило встаёт в конец и номера остальных не сдвигает: прежний выбор
+  // остаётся верным, пока Transition не закончится.
+  const onAdded = useCallback((index: number) => {
+    startTransition(() => {
+      setSelection((current) => ({ id: toRuleId(index), key: current.key + 1 }));
+    });
+  }, []);
+
+  const onMoved = useCallback((index: number) => {
+    setSelection((current) => ({ ...current, id: toRuleId(index) }));
+  }, []);
+
+  const onDeleted = useCallback(() => {
+    setSelection((current) => ({ ...current, id: null }));
+  }, []);
+
+  return { ...selection, select, close, onAdded, onMoved, onDeleted };
 }
 
 export interface RuleFilterState {
@@ -142,6 +221,8 @@ export interface RuleFilterState {
   /** Сет из адреса: с ним приходят из каталога наборов. */
   ruleSet: RuleSetFilter;
   setRuleSet: (ruleSet: RuleSetFilter) => void;
+  /** Снять поиск и оба отбора: показать список целиком. */
+  reset: () => void;
   /** Выходы считаются по всему списку: фасет не должен исчезать от своего выбора. */
   targets: RuleTargetGroup[];
   rules: RuleRow[];
@@ -174,6 +255,15 @@ export function useRuleFilter(rules: RuleRow[]): RuleFilterState {
     [navigate]
   );
 
+  const reset = useCallback(() => {
+    setQuery('');
+    setTarget(null);
+
+    if (ruleSet !== null) {
+      setRuleSet(null);
+    }
+  }, [ruleSet, setRuleSet]);
+
   const targets = useMemo(() => toTargetGroups(rules), [rules]);
   const shown = useMemo(() => filterRules(rules, query, target, ruleSet), [rules, query, target, ruleSet]);
 
@@ -184,6 +274,7 @@ export function useRuleFilter(rules: RuleRow[]): RuleFilterState {
     setTarget,
     ruleSet,
     setRuleSet,
+    reset,
     targets,
     rules: shown,
   };
