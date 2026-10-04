@@ -42,8 +42,7 @@ export function ConnectionsPage() {
   const sheet = usePanelAsSheet();
   // Строка уходит из списка молча: что соединение закрыто, скринридеру
   // объявляет одна область на экран.
-  const live = useLiveRegion();
-  const { announce } = live;
+  const { message, announce } = useLiveRegion();
 
   // Без Transition обновление срочное, и граница вокруг панели не анимируется.
   const onExplain = useCallback((id: string) => {
@@ -96,7 +95,7 @@ export function ConnectionsPage() {
         )}
       </PageHeader>
 
-      <LiveRegion message={live.message} />
+      <LiveRegion message={message} />
 
       <Tabs
         value={screen.tab}

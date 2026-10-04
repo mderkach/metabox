@@ -22,8 +22,7 @@ export function ProxiesPage() {
 
   // Результат действия видно глазами — отметка узла, число задержки, — а
   // скринридеру его объявляет одна область на экран.
-  const live = useLiveRegion();
-  const { announce } = live;
+  const { message, announce } = useLiveRegion();
 
   const onSelected = useCallback(
     (group: string, node: string) => {
@@ -50,7 +49,7 @@ export function ProxiesPage() {
         actions={<ProxyTestAll groups={groups} onTested={onTestedAll} />}
       />
 
-      <LiveRegion message={live.message} />
+      <LiveRegion message={message} />
 
       <div className='flex min-h-0 grow flex-col gap-5 overflow-y-auto px-4 py-5 *:shrink-0 sm:px-6'>
         {proxies.isPending && <SkeletonRows className={SURFACE} />}
