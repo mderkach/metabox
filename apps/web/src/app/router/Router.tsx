@@ -110,9 +110,9 @@ const rawConfigRoute = createRoute({
 });
 
 /**
- * Секции без собственных форм — один экран с параметром: их узлы открываются
- * и правятся как JSON. Статические `rule-set` и `raw` матчатся раньше
- * параметра, а чужое имя секции — обычный 404.
+ * Секции без собственного экрана — один экран с параметром: их узлы
+ * открываются формой по схеме и текстом. Статические `rule-set` и `raw`
+ * матчатся раньше параметра, а чужое имя секции — обычный 404.
  */
 const configSectionRoute = createRoute({
   getParentRoute: () => configLayoutRoute,
@@ -122,7 +122,8 @@ const configSectionRoute = createRoute({
       throw notFound();
     }
   },
-  loader: async () => preloadNamespaces(['pages/Section']),
+  loader: async () =>
+    preloadNamespaces(['pages/Section', 'widgets/Config/ConfigNode', 'features/Config/ConfigNodeForm']),
   component: lazyRouteComponent(async () => import('@pages/Section'), 'SectionPage'),
 });
 

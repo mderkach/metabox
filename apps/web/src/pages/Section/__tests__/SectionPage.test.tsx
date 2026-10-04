@@ -1,6 +1,6 @@
 import { renderWithRouter } from '@test/renderWithRouter';
 import { server } from '@test/server';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -58,33 +58,68 @@ describe('экран секции', () => {
     ConfigDocumentState.getState().reset();
   });
 
-  it('показывает каждый узел секции редактором JSON', async () => {
-    serveConfig(CONFIG_TEXT);
-
-    renderWithRouter(OutboundsSection);
-
-    const editor = await screen.findByRole('textbox', { name: 'Узел hk-01 текстом' });
-
-    expect(editor).toHaveValue(JSON.stringify({ type: 'vless', tag: 'hk-01', server: 'a.example' }, null, 2));
-    expect(screen.getByRole('heading', { name: 'direct' })).toBeInTheDocument();
-  });
-
-  it('правка узла уходит в черновик точечно: комментарий и соседний узел целы', async () => {
+  it('открывает узел аутбаунда формой, а тот же узел текстом — на вкладке JSON', async () => {
     serveConfig(CONFIG_TEXT);
 
     const user = userEvent.setup();
 
     renderWithRouter(OutboundsSection);
 
-    const editor = await screen.findByRole('textbox', { name: 'Узел direct текстом' });
+    const node = within(await screen.findByRole('region', { name: 'hk-01' }));
+
+    expect(node.getByRole('tab', { name: 'Форма' })).toHaveAttribute('aria-selected', 'true');
+    expect(node.getByRole('textbox', { name: 'server' })).toHaveValue('a.example');
+
+    await user.click(node.getByRole('tab', { name: 'JSON' }));
+
+    expect(node.getByRole('textbox', { name: 'Узел hk-01 текстом' })).toHaveValue(
+      JSON.stringify({ type: 'vless', tag: 'hk-01', server: 'a.example' }, null, 2)
+    );
+    expect(screen.getByRole('heading', { name: 'direct' })).toBeInTheDocument();
+  });
+
+  it('правка поля формой ложится одной строкой: комментарий и соседний узел целы', async () => {
+    serveConfig(CONFIG_TEXT);
+
+    const user = userEvent.setup();
+
+    renderWithRouter(OutboundsSection);
+
+    const node = within(await screen.findByRole('region', { name: 'hk-01' }));
+    const server = node.getByRole('textbox', { name: 'server' });
+
+    await user.clear(server);
+    await user.type(server, 'b.example');
+    await user.click(node.getByRole('button', { name: 'Сохранить в черновик' }));
+
+    await waitFor(() => {
+      expect(findValue(ConfigDocumentState.getState().draft ?? '{}', ['outbounds', 1, 'server'])).toBe('b.example');
+    });
+
+    const draft = ConfigDocumentState.getState().draft ?? '';
+    const lines = CONFIG_TEXT.split('\n');
+
+    expect(draft.split('\n').filter((line, index) => line !== lines[index])).toHaveLength(1);
+    expect(draft).toContain('// выходы');
+    expect(findValue(draft, ['outbounds', 0])).toEqual({ type: 'direct', tag: 'direct' });
+  });
+
+  it('правка узла текстом уходит в черновик точечно: комментарий и соседний узел целы', async () => {
+    serveConfig(CONFIG_TEXT);
+
+    const user = userEvent.setup();
+
+    renderWithRouter(OutboundsSection);
+
+    const node = within(await screen.findByRole('region', { name: 'direct' }));
+
+    await user.click(node.getByRole('tab', { name: 'JSON' }));
+
+    const editor = node.getByRole('textbox', { name: 'Узел direct текстом' });
 
     await user.clear(editor);
     await user.paste('{ "type": "direct", "tag": "main" }');
-
-    // Кнопка у каждого узла своя; порядок кнопок повторяет порядок узлов.
-    const [saveDirect] = screen.getAllByRole('button', { name: 'Сохранить в черновик' });
-
-    await user.click(saveDirect);
+    await user.click(node.getByRole('button', { name: 'Сохранить в черновик' }));
 
     await waitFor(() => {
       expect(ConfigDocumentState.getState().draft).toContain('"tag": "main"');

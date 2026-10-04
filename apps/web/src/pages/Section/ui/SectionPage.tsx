@@ -6,13 +6,11 @@ import {
   GENERIC_SECTIONS,
   isGenericSection,
   readSectionNodes,
-  sectionNodePath,
   useConfigDocument,
   type GenericSection,
 } from '@entities/Config';
-import { ConfigNodeRawEditor } from '@features/Config/ConfigNodeRaw';
-import { cn } from '@shared/lib/utils';
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle, QueryFailure, SURFACE, SkeletonRows } from '@shared/ui';
+import { ConfigNode } from '@widgets/Config/ConfigNode';
 
 const routeApi = getRouteApi('/config/$section');
 
@@ -28,9 +26,10 @@ export function SectionPage() {
 }
 
 /**
- * Секция конфига без собственных форм: каждый её узел открывается и правится
- * как JSON. Узлы читаются из текста, а не из разобранной модели — узел,
- * который схема не приняла, обязан остаться на экране и правиться.
+ * Секция конфига без собственного экрана: каждый её узел открывается формой по
+ * схеме типа, если она ему положена, и текстом. Узлы читаются из текста, а не
+ * из разобранной модели — узел, который схема не приняла, обязан остаться на
+ * экране и правиться.
  */
 export function SectionNodes({ section }: { section: GenericSection }) {
   const { t } = useTranslation('pages/Section');
@@ -55,7 +54,7 @@ export function SectionNodes({ section }: { section: GenericSection }) {
       )}
 
       {document.query.isSuccess && shape.kind === 'object' && (
-        <NodeCard
+        <ConfigNode
           key={document.revision}
           section={section}
           index={0}
@@ -66,10 +65,10 @@ export function SectionNodes({ section }: { section: GenericSection }) {
 
       {shape.kind === 'list' &&
         nodes.map((node, index) => (
-          // Ревизия в ключе пересоздаёт редактор на обновлении не от
+          // Ревизия в ключе пересоздаёт форму и редактор на обновлении не от
           // пользователя: после отмены правок поле не должно держать
           // отменённый текст.
-          <NodeCard
+          <ConfigNode
             key={`${String(document.revision)}:${String(index)}`}
             section={section}
             index={index}
@@ -78,32 +77,6 @@ export function SectionNodes({ section }: { section: GenericSection }) {
           />
         ))}
     </div>
-  );
-}
-
-function NodeCard({
-  section,
-  index,
-  node,
-  name,
-}: {
-  section: GenericSection;
-  index: number;
-  node: unknown;
-  name: string;
-}) {
-  const { t } = useTranslation('pages/Section');
-
-  return (
-    <section className={cn('flex flex-col gap-2 p-4', SURFACE)}>
-      <h2 className='font-mono text-sm'>{name}</h2>
-      <ConfigNodeRawEditor
-        path={sectionNodePath(section, index)}
-        node={node}
-        editorId={`section-node-${section}-${String(index)}`}
-        label={t('editor.label', { name })}
-      />
-    </section>
   );
 }
 

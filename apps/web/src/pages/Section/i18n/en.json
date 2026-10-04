@@ -2,6 +2,5 @@
   "empty": {
     "title": "No nodes",
     "description": "The section is empty or missing from the config file. Add a node in the text mode."
-  },
-  "editor": { "label": "Node {{name}} as text" }
+  }
 }
