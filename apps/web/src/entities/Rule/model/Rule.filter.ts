@@ -21,7 +21,7 @@ const RULE_SET_KEY = 'rule_set';
  */
 export const RuleSearchSchema = z.object({
   rule: z.coerce.number().int().positive().optional(),
-  rule_set: z.string().min(1).optional(),
+  rule_set: z.coerce.string().min(1).optional(),
 });
 
 export type RuleSearch = z.infer<typeof RuleSearchSchema>;

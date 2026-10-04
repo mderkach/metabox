@@ -108,6 +108,12 @@ describe('отбор правил в адресе', () => {
     expect(parseRuleSearch({ rule: '3', rule_set: 'geoip-ru' })).toEqual({ rule: 3, rule_set: 'geoip-ru' });
   });
 
+  // Роутер разбирает `?rule_set=123`, набранный руками, как число: тег из цифр
+  // остаётся тегом, а не роняет вместе с собой номер правила.
+  it('тег из цифр читается строкой', () => {
+    expect(parseRuleSearch({ rule: 3, rule_set: 123 })).toEqual({ rule: 3, rule_set: '123' });
+  });
+
   it('пустой сет отбрасывает отбор целиком', () => {
     expect(parseRuleSearch({ rule: 3, rule_set: '' })).toEqual({});
   });
