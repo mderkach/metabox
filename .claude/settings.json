@@ -1,6 +1,19 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "enableAllProjectMcpServers": true,
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "timeout": 300,
+            "command": "[ \"$CLAUDE_CODE_REMOTE\" = \"true\" ] || exit 0; claude plugin list 2>/dev/null | grep -q \"oh-my-claudecode@omc\" && exit 0; claude plugin marketplace add \"Yeachan-Heo/oh-my-claudecode#v5.6.1\" >/dev/null 2>&1 && claude plugin install oh-my-claudecode@omc --scope user >/dev/null 2>&1 || echo \"oh-my-claudecode: установка не удалась\" >&2; exit 0"
+          }
+        ]
+      }
+    ]
+  },
   "permissions": {
     "deny": [
       "Read(./.claude/settings.local.json)",
