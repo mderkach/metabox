@@ -331,4 +331,18 @@ func TestPIDFails(t *testing.T) {
 			t.Error("отказ procd не сообщён")
 		}
 	})
+
+	// Незнакомую службу procd отдаёт пустым состоянием без ошибки; нулевой pid
+	// здесь не «не поднят», а «не у кого спросить», иначе применение ждало бы
+	// новый процесс до таймаута цикла и откатывалось.
+	t.Run("procd не знает службу", func(t *testing.T) {
+		client, err := singbox.New(&fakeRunner{}, binary, initScript, "", &fakeSupervisor{state: procd.State{}})
+		if err != nil {
+			t.Fatalf("сборка клиента: %v", err)
+		}
+
+		if _, err := client.PID(t.Context()); !errors.Is(err, singbox.ErrUnknownService) {
+			t.Errorf("получили %v, ожидали ErrUnknownService", err)
+		}
+	})
 }

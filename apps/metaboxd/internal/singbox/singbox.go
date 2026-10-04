@@ -227,6 +227,10 @@ func (c *Client) Running(ctx context.Context) (bool, error) {
 // кого.
 var ErrNoSupervisor = errors.New("менеджер процессов не подключён")
 
+// ErrUnknownService — procd службы не знает: init-скрипт не под procd или
+// служба зарегистрирована под другим именем, и pid процесса узнать неоткуда.
+var ErrUnknownService = errors.New("служба не зарегистрирована в procd")
+
 // PID отдаёт pid поднятого процесса службы у procd; ноль — ни один инстанс не
 // поднят. По смене pid применение отличает процесс после рестарта от прежнего:
 // init-скрипт возвращается раньше, чем procd заменит процесс.
@@ -238,6 +242,10 @@ func (c *Client) PID(ctx context.Context) (int, error) {
 	state, err := c.supervisor.Service(ctx, c.serviceName())
 	if err != nil {
 		return 0, fmt.Errorf("pid службы: %w", err)
+	}
+
+	if !state.Known {
+		return 0, ErrUnknownService
 	}
 
 	return state.PID, nil
