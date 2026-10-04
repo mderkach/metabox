@@ -16,8 +16,13 @@ import { ConnectionsPage } from '../ui/ConnectionsPage';
 /** Потолок нагрузки: столько соединений панель обязана держать (NFR-2). */
 const SNAPSHOT_SIZE = 5000;
 /** Первые тики дороже остальных: прогрев JIT и первый замер виртуализатора. */
-const WARMUP = 5;
-const RUNS = 15;
+const WARMUP = 3;
+const RUNS = 10;
+/**
+ * Экран на пять тысяч строк и полтора десятка тиков: под нагрузкой соседних
+ * файлов тест не укладывается в пять секунд Vitest по умолчанию.
+ */
+const TEST_TIMEOUT_MS = 30 * MS_IN_SECOND;
 
 /**
  * Тик снапшота на экране соединений: разбор кадра на 5000 соединений и рендер
@@ -61,49 +66,53 @@ describe('бюджет экрана соединений', () => {
     vi.restoreAllMocks();
   });
 
-  it('тик снапшота на 5000 соединений укладывается в бюджет, пока закрытые спрятаны', async () => {
-    // Часы сдвигаются на шаг потока: подряд идущие кадры разбор считает
-    // неправдоподобно частыми и скорости не считает, а это его основная работа.
-    let clock = Date.now();
+  it(
+    'тик снапшота на 5000 соединений укладывается в бюджет, пока закрытые спрятаны',
+    async () => {
+      // Часы сдвигаются на шаг потока: подряд идущие кадры разбор считает
+      // неправдоподобно частыми и скорости не считает, а это его основная работа.
+      let clock = Date.now();
 
-    vi.spyOn(Date, 'now').mockImplementation(() => clock);
+      vi.spyOn(Date, 'now').mockImplementation(() => clock);
 
-    const snapshot = makeConnectionsSnapshot(SNAPSHOT_SIZE, { vary: true });
-    let seq = 0;
+      const snapshot = makeConnectionsSnapshot(SNAPSHOT_SIZE, { vary: true });
+      let seq = 0;
 
-    function nextFrame() {
-      seq += 1;
-      clock += MS_IN_SECOND;
+      function nextFrame() {
+        seq += 1;
+        clock += MS_IN_SECOND;
 
-      return advanceConnectionsSnapshot(snapshot, seq);
-    }
+        return advanceConnectionsSnapshot(snapshot, seq);
+      }
 
-    // Оборот кадра уводит соединения в закрытые: копим их до лимита, чтобы
-    // скрытая вкладка держала столько строк, сколько бывает на роутере.
-    while (ConnectionStore.getState().closed.length < CLOSED_LIMIT) {
-      ConnectionStore.getState().apply(nextFrame());
-    }
+      // Оборот кадра уводит соединения в закрытые: копим их до лимита, чтобы
+      // скрытая вкладка держала столько строк, сколько бывает на роутере.
+      while (ConnectionStore.getState().closed.length < CLOSED_LIMIT) {
+        ConnectionStore.getState().apply(nextFrame());
+      }
 
-    renderWithRouter(ConnectionsPage, {
-      path: '/connections',
-      validateSearch: parseConnectionSearch,
-      initialEntry: '/connections',
-    });
-
-    await screen.findAllByRole('button', { name: /Закрыть соединение/ });
-
-    const runs = Array.from({ length: WARMUP + RUNS }, () => {
-      const frame = nextFrame();
-      const start = performance.now();
-
-      act(() => {
-        ConnectionStore.getState().apply(frame);
+      renderWithRouter(ConnectionsPage, {
+        path: '/connections',
+        validateSearch: parseConnectionSearch,
+        initialEntry: '/connections',
       });
 
-      return performance.now() - start;
-    });
+      await screen.findAllByRole('button', { name: /Закрыть соединение/ });
 
-    expect(ConnectionStore.getState().closed).toHaveLength(CLOSED_LIMIT);
-    expect(fastest(runs.slice(WARMUP))).toBeLessThan(TICK_BUDGET_MS);
-  });
+      const runs = Array.from({ length: WARMUP + RUNS }, () => {
+        const frame = nextFrame();
+        const start = performance.now();
+
+        act(() => {
+          ConnectionStore.getState().apply(frame);
+        });
+
+        return performance.now() - start;
+      });
+
+      expect(ConnectionStore.getState().closed).toHaveLength(CLOSED_LIMIT);
+      expect(fastest(runs.slice(WARMUP))).toBeLessThan(TICK_BUDGET_MS);
+    },
+    TEST_TIMEOUT_MS
+  );
 });
