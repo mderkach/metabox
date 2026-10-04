@@ -88,6 +88,26 @@ describe('поток соединений', () => {
     expect(ConnectionStore.getState().closed).toHaveLength(CLOSED_LIMIT);
   });
 
+  it('считает закрытые, вытесненные по лимиту', () => {
+    const store = ConnectionStore.getState();
+
+    store.apply(makeConnectionsSnapshot(CLOSED_LIMIT - 10));
+    store.apply(makeConnectionsSnapshot(0));
+
+    expect(ConnectionStore.getState().evicted).toBe(0);
+
+    store.apply(makeConnectionsSnapshot(30));
+    store.apply(makeConnectionsSnapshot(0));
+
+    // Закрылось 220: в списке остаются 200, ещё 20 вытеснено.
+    expect(ConnectionStore.getState().closed).toHaveLength(CLOSED_LIMIT);
+    expect(ConnectionStore.getState().evicted).toBe(20);
+
+    store.reset();
+
+    expect(ConnectionStore.getState().evicted).toBe(0);
+  });
+
   it('на паузе снапшот не применяется', async () => {
     const { source, send } = fakeEventSource();
     const unsubscribe = listenConnections(source);

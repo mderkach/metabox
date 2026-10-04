@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CONFIG_ENDPOINT } from '@entities/Config';
 import { CONFIG_FIXTURE } from '@entities/Config/__tests__/Config.fixture';
-import { ConnectionStore, parseConnectionSearch } from '@entities/Connection';
+import { CLOSED_LIMIT, ConnectionStore, parseConnectionSearch } from '@entities/Connection';
 import { CONNECTION_ENDPOINT } from '@entities/Connection';
 import { CONNECTIONS_FIXTURE, makeConnectionsSnapshot } from '@entities/Connection/__tests__/Connection.fixture';
 import { ROUTE_DRIFTED_CHAIN_FIXTURE } from '@entities/Route/__tests__/Route.fixture';
@@ -194,6 +194,37 @@ describe('экран соединений', () => {
     await waitFor(() => {
       expect(within(screen.getByRole('tabpanel')).getByText(/sing-box отдаёт только живые/)).toBeInTheDocument();
     });
+  });
+
+  it('в подвале закрытых называет вытесненные по лимиту', async () => {
+    const user = userEvent.setup();
+
+    renderScreen();
+    ConnectionStore.getState().apply(makeConnectionsSnapshot(CLOSED_LIMIT + 50));
+    ConnectionStore.getState().apply(makeConnectionsSnapshot(0));
+
+    await user.click(await screen.findByRole('tab', { name: /Закрытые/ }));
+
+    await waitFor(() => {
+      expect(
+        within(screen.getByRole('tabpanel')).getByText('показано 200 из 250 закрытых, остальные вытеснены')
+      ).toBeInTheDocument();
+    });
+  });
+
+  it('пока лимит не достигнут, о вытеснении молчит', async () => {
+    const user = userEvent.setup();
+
+    renderScreen();
+    ConnectionStore.getState().apply(makeConnectionsSnapshot(4));
+    ConnectionStore.getState().apply(makeConnectionsSnapshot(0));
+
+    await user.click(await screen.findByRole('tab', { name: /Закрытые/ }));
+
+    await waitFor(() => {
+      expect(within(screen.getByRole('tabpanel')).getByRole('status')).toHaveTextContent('4 соединения');
+    });
+    expect(screen.queryByText(/вытеснены/)).not.toBeInTheDocument();
   });
 
   // Отбор в адресе: ссылкой на отфильтрованный список делятся, когда

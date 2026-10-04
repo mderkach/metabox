@@ -28,6 +28,7 @@
     "all": "All"
   },
   "shown": "{{shown}} of {{total}}",
+  "closedOverflow": "showing {{shown}} of {{total}} closed, the rest were evicted",
   "closedNote": "Closed connections are collected by the panel: sing-box reports only live ones, so a connection that disappears between updates would otherwise vanish without a trace. The history lives while the tab is open.",
   "empty": {
     "title": "No connections",

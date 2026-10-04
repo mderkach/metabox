@@ -55,6 +55,7 @@ export function ConnectionTable({
   actions = null,
   facets = null,
   footer = null,
+  overflow = null,
   selectedId = null,
   explainPanelId,
   onExplain = null,
@@ -86,6 +87,8 @@ export function ConnectionTable({
    * счётчик называет.
    */
   footer?: ((rows: ConnectionRowModel[]) => ReactNode) | null;
+  /** Переполнение источника: строки, которых в списке уже нет. Стоит рядом со счётчиком. */
+  overflow?: ReactNode;
   selectedId?: string | null;
   /** Идентификатор панели объяснения: строка ссылается на неё `aria-controls`. */
   explainPanelId?: string;
@@ -232,6 +235,7 @@ export function ConnectionTable({
             ? t('count.connection', { ns: 'shared', count: total })
             : t('list.shown', { ns: 'shared', shown: visible.length, total })}
         </p>
+        {overflow}
         <span className='grow' />
         {footer !== null && footer(shownRows)}
       </div>

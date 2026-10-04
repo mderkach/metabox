@@ -31,6 +31,7 @@ export function ConnectionsPage() {
   const explainPanelId = useId();
   const paused = ConnectionState.use.paused();
   const dropped = ConnectionState.use.dropped();
+  const evicted = ConnectionState.use.evicted();
   const sampledAt = ConnectionState.use.sampledAt();
   const setPaused = ConnectionState.use.setPaused();
   const closeAll = useCloseAllConnections();
@@ -170,6 +171,11 @@ export function ConnectionsPage() {
                   search={search}
                   facets={facets}
                   footer={renderFooter}
+                  overflow={
+                    evicted > 0 && (
+                      <p>{t('closedOverflow', { shown: screen.closed.total, total: screen.closed.total + evicted })}</p>
+                    )
+                  }
                   empty={renderEmpty}
                   filtered={screen.filtered}
                   onReset={screen.reset}

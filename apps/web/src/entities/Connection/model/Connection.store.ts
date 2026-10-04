@@ -140,6 +140,11 @@ interface ConnectionState {
    * пропавшее между снапшотами, иначе исчезло бы без следа.
    */
   closed: ConnectionRow[];
+  /**
+   * Сколько закрытых вытеснено из списка по `CLOSED_LIMIT`: без него обрезка
+   * молчала бы, и подвал не мог бы назвать, из скольких показан список.
+   */
+  evicted: number;
   totals: ConnectionTotals;
   /** Сводка живого снапшота: считается здесь, чтобы панели не обходили список. */
   summary: ConnectionSummary;
@@ -183,6 +188,7 @@ const ConnectionStateProto = stateCreator<ConnectionState>(
     active: [],
     index: new Map(),
     closed: [],
+    evicted: 0,
     totals: EMPTY_TOTALS,
     summary: EMPTY_SUMMARY,
     history: [],
@@ -241,6 +247,7 @@ const ConnectionStateProto = stateCreator<ConnectionState>(
         // Скорость снимается: колонка говорит про настоящее время, а закрытое
         // соединение навсегда осталось бы со скоростью последнего живого кадра.
         const stopped = gone.map((row) => ({ ...row, downRate: 0, upRate: 0 }));
+        const overflow = Math.max(0, stopped.length + state.closed.length - CLOSED_LIMIT);
 
         return {
           active: rows,
@@ -250,6 +257,7 @@ const ConnectionStateProto = stateCreator<ConnectionState>(
           history,
           historyAt: receivedAt,
           closed: gone.length > 0 ? [...stopped, ...state.closed].slice(0, CLOSED_LIMIT) : state.closed,
+          evicted: state.evicted + overflow,
           totals: {
             upload: snapshot.upload_total,
             download: snapshot.download_total,
@@ -303,6 +311,7 @@ const ConnectionStateProto = stateCreator<ConnectionState>(
         active: [],
         index: new Map(),
         closed: [],
+        evicted: 0,
         totals: EMPTY_TOTALS,
         summary: EMPTY_SUMMARY,
         history: [],
