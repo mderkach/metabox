@@ -1,4 +1,5 @@
 import { renderWithRouter } from '@test/renderWithRouter';
+import { selectOption } from '@test/selectOption';
 import { server } from '@test/server';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -24,6 +25,10 @@ function serveConfig(text: string) {
     http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(text)),
     http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE))
   );
+}
+
+function draft(): string {
+  return ConfigDocumentState.getState().draft ?? '';
 }
 
 function OutboundsSection() {
@@ -202,5 +207,139 @@ describe('экран секции', () => {
 
     expect(draft).toContain('// выходы');
     expect(findValue(draft, ['outbounds', 1])).toEqual({ type: 'vless', tag: 'hk-01', server: 'a.example' });
+  });
+
+  it('кнопка тулбара открывает панель с фокусом на заголовке, Escape закрывает и возвращает фокус', async () => {
+    serveConfig(CONFIG_TEXT);
+
+    const user = userEvent.setup();
+
+    renderWithRouter(OutboundsSection);
+
+    const open = await screen.findByRole('button', { name: 'Добавить узел' });
+
+    await user.click(open);
+
+    const panel = screen.getByRole('complementary', { name: 'Новый узел' });
+
+    expect(within(panel).getByRole('heading', { name: 'Новый узел' })).toHaveFocus();
+    expect(open).toHaveAttribute('aria-expanded', 'true');
+
+    await user.keyboard('{Escape}');
+
+    await waitFor(() => {
+      expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+    });
+    expect(open).toHaveFocus();
+  });
+
+  it('добавляет аутбаунд direct с тегом: узел ложится в конец секции, комментарий цел', async () => {
+    serveConfig(CONFIG_TEXT);
+
+    const user = userEvent.setup();
+
+    renderWithRouter(OutboundsSection);
+
+    await user.click(await screen.findByRole('button', { name: 'Добавить узел' }));
+
+    const panel = within(screen.getByRole('complementary', { name: 'Новый узел' }));
+
+    await selectOption(user, panel.getByRole('combobox', { name: 'Тип' }), 'direct');
+    await user.type(panel.getByRole('textbox', { name: 'Тег' }), 'direct-2');
+    await user.click(panel.getByRole('button', { name: 'Добавить' }));
+
+    await waitFor(() => {
+      expect(findValue(draft(), ['outbounds', 2])).toEqual({ type: 'direct', tag: 'direct-2' });
+    });
+    expect(draft()).toContain('// выходы');
+    expect(findValue(draft(), ['outbounds', 1])).toEqual({ type: 'vless', tag: 'hk-01', server: 'a.example' });
+    expect(await screen.findByRole('region', { name: 'direct-2' })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByRole('complementary', { name: 'Новый узел' })).not.toBeInTheDocument();
+    });
+  });
+
+  it('отвергает тег, занятый другим узлом, и ничего не пишет', async () => {
+    serveConfig(CONFIG_TEXT);
+
+    const user = userEvent.setup();
+
+    renderWithRouter(OutboundsSection);
+
+    await user.click(await screen.findByRole('button', { name: 'Добавить узел' }));
+
+    const panel = within(screen.getByRole('complementary', { name: 'Новый узел' }));
+
+    await selectOption(user, panel.getByRole('combobox', { name: 'Тип' }), 'direct');
+    await user.type(panel.getByRole('textbox', { name: 'Тег' }), 'hk-01');
+    await user.click(panel.getByRole('button', { name: 'Добавить' }));
+
+    expect(await panel.findByRole('alert')).toHaveTextContent('Тег уже занят другим узлом');
+    expect(ConfigDocumentState.getState().draft).toBeNull();
+  });
+
+  it('тип вне сборки бинаря помечен в выборе, но выбирается и добавляется', async () => {
+    let statusServed = false;
+
+    server.use(
+      http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(CONFIG_TEXT)),
+      http.get(DAEMON_ENDPOINT.status(), () => {
+        statusServed = true;
+
+        return HttpResponse.json({ ...DAEMON_STATUS_FIXTURE, singbox_build: { tags: ['with_utls'] } });
+      })
+    );
+
+    const user = userEvent.setup();
+
+    renderWithRouter(OutboundsSection);
+
+    await user.click(await screen.findByRole('button', { name: 'Добавить узел' }));
+    await waitFor(() => {
+      expect(statusServed).toBe(true);
+    });
+
+    const panel = within(screen.getByRole('complementary', { name: 'Новый узел' }));
+
+    await selectOption(user, panel.getByRole('combobox', { name: 'Тип' }), 'hysteria2нет в сборке: with_quic');
+
+    expect(panel.getByText(/собран без with_quic/)).toBeInTheDocument();
+
+    await user.type(panel.getByRole('textbox', { name: 'Тег' }), 'hy2');
+    await user.click(panel.getByRole('button', { name: 'Добавить' }));
+
+    await waitFor(() => {
+      expect(findValue(draft(), ['outbounds', 2])).toEqual({ type: 'hysteria2', tag: 'hy2' });
+    });
+  });
+
+  it('пустая секция с реестром добавляет первый узел и создаёт массив', async () => {
+    serveConfig(CONFIG_TEXT);
+
+    const user = userEvent.setup();
+
+    renderWithRouter(ProvidersSection);
+
+    await user.click(await screen.findByRole('button', { name: 'Добавить узел' }));
+
+    const panel = within(screen.getByRole('complementary', { name: 'Новый узел' }));
+
+    await selectOption(user, panel.getByRole('combobox', { name: 'Тип' }), 'inline');
+    await user.type(panel.getByRole('textbox', { name: 'Тег' }), 'own');
+    await user.click(panel.getByRole('button', { name: 'Добавить' }));
+
+    await waitFor(() => {
+      expect(findValue(draft(), ['providers'])).toEqual([{ type: 'inline', tag: 'own' }]);
+    });
+    expect(draft()).toContain('// выходы');
+  });
+
+  it('у секции-объекта и списка без реестра кнопки добавления нет', async () => {
+    serveConfig(DNS_TEXT);
+
+    renderWithRouter(DnsRulesSection);
+
+    expect(await screen.findByRole('heading', { name: 'dns.rules[0]' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Добавить узел' })).not.toBeInTheDocument();
   });
 });

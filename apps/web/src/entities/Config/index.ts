@@ -57,6 +57,7 @@ export {
   NODE_REGISTRY,
   nodeSchemaOf,
   nodeVariants,
+  readNodeTags,
   registryOfSection,
 } from './model/Config.registry';
 export type { NodeRegistry } from './model/Config.registry';

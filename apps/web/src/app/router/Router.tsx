@@ -123,7 +123,12 @@ const configSectionRoute = createRoute({
     }
   },
   loader: async () =>
-    preloadNamespaces(['pages/Section', 'widgets/Config/ConfigNode', 'features/Config/ConfigNodeForm']),
+    preloadNamespaces([
+      'pages/Section',
+      'widgets/Config/ConfigNode',
+      'features/Config/ConfigNodeForm',
+      'features/Config/ConfigNodeAdd',
+    ]),
   component: lazyRouteComponent(async () => import('@pages/Section'), 'SectionPage'),
 });
 

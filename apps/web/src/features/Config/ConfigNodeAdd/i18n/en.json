@@ -1,0 +1,22 @@
+{
+  "field": {
+    "type": {
+      "label": "Type",
+      "placeholder": "Choose a type"
+    },
+    "tag": {
+      "label": "Tag",
+      "hint": "Node name: rules and other nodes refer to the node by it"
+    }
+  },
+  "unbuilt": {
+    "badge": "not in build: {{tag}}",
+    "hint": "The binary on the device is built without {{tag}}: the node is saved, but sing-box check rejects a config with it"
+  },
+  "submit": "Add",
+  "error": {
+    "typeRequired": "Choose a node type",
+    "tagRequired": "Enter a tag",
+    "tagTaken": "Another node already uses this tag"
+  }
+}

@@ -8,6 +8,7 @@ import {
   NODE_REGISTRY,
   nodeSchemaOf,
   nodeVariants,
+  readNodeTags,
   registryOfSection,
 } from '../model/Config.registry';
 
@@ -78,5 +79,19 @@ describe('buildTagOfType', () => {
 describe('newSectionNode', () => {
   it('создаёт узел только из типа и тега', () => {
     expect(newSectionNode('vless', 'hk-01')).toEqual({ type: 'vless', tag: 'hk-01' });
+  });
+});
+
+describe('readNodeTags', () => {
+  it('собирает теги всех секций с реестром и пропускает узлы без тега', () => {
+    const text = `{
+      // входы
+      "inbounds": [{ "type": "mixed", "tag": "mixed-in" }],
+      "outbounds": [{ "type": "direct", "tag": "direct" }, { "type": "block" }],
+      "dns": { "servers": [{ "type": "local", "tag": "local" }], "rules": [{ "server": "local" }] },
+      "route": { "rule_set": [{ "type": "inline", "tag": "ads" }] },
+    }`;
+
+    expect(readNodeTags(text)).toEqual(['mixed-in', 'direct', 'local']);
   });
 });

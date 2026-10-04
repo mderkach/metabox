@@ -11,6 +11,7 @@ declare module 'i18next' {
       app: typeof import('./app/i18n/ru.json');
       'features/Config/ConfigApply': typeof import('./features/Config/ConfigApply/i18n/ru.json');
       'features/Config/ConfigCacheFile': typeof import('./features/Config/ConfigCacheFile/i18n/ru.json');
+      'features/Config/ConfigNodeAdd': typeof import('./features/Config/ConfigNodeAdd/i18n/ru.json');
       'features/Config/ConfigNodeForm': typeof import('./features/Config/ConfigNodeForm/i18n/ru.json');
       'features/Language/LanguageSwitch': typeof import('./features/Language/LanguageSwitch/i18n/ru.json');
       'features/Rule/RuleAdd': typeof import('./features/Rule/RuleAdd/i18n/ru.json');

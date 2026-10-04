@@ -12,7 +12,7 @@ import {
 } from '@shared/api/generated';
 import { toVariants, type SchemaVariant } from '@shared/lib/schemaShape';
 
-import { CONFIG_SECTION, type GenericSection } from './Config.model';
+import { CONFIG_SECTION, readSectionNodes, type GenericSection } from './Config.model';
 
 /**
  * Реестр типов форка: из него секция берёт типы своих узлов. Значения — имена
@@ -103,4 +103,15 @@ export function buildTagOfType(registry: NodeRegistry, type: string): string | n
  */
 export function newSectionNode(type: string, tag: string): { type: string; tag: string } {
   return { type, tag };
+}
+
+/**
+ * Теги узлов всех секций с реестром. Новый узел не повторяет ни один из них:
+ * по тегу на узел ссылаются правила, `detour` и DNS, и одинаковое имя в двух
+ * секциях делало бы такую ссылку двусмысленной для читающего конфиг.
+ */
+export function readNodeTags(text: string): string[] {
+  return SECTION_REGISTRY.flatMap(({ section }) => readSectionNodes(text, section))
+    .map((node): unknown => (typeof node === 'object' && node !== null ? Reflect.get(node, 'tag') : undefined))
+    .filter((tag): tag is string => typeof tag === 'string' && tag.length > 0);
 }
