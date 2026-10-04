@@ -26,6 +26,7 @@ function RuleRowProto({
   selected,
   edited,
   hits,
+  outboundTypes,
   onSelect,
 }: {
   rule: RuleRowModel;
@@ -35,6 +36,8 @@ function RuleRowProto({
   edited: boolean;
   /** `undefined` — колонки нет. */
   hits: RuleHitCell | undefined;
+  /** Тип аутбаунда по тегу: по нему красится выход. */
+  outboundTypes: ReadonlyMap<string, string>;
   onSelect: (id: string) => void;
 }) {
   const { t, i18n } = useTranslation('widgets/Rule/RuleTable');
@@ -105,7 +108,9 @@ function RuleRowProto({
           className={cn(RULE_COLUMN.Target, 'flex flex-col truncate font-mono text-sm font-medium')}
           title={rule.target}
         >
-          <span className={cn('truncate', toTargetTone(rule.targetKind, rule.target))}>{rule.target}</span>
+          <span className={cn('truncate', toTargetTone(rule.targetKind, rule.target, outboundTypes))}>
+            {rule.target}
+          </span>
           {rule.targetDetail !== null && (
             <span className='truncate font-sans text-xs font-normal text-muted-foreground'>{rule.targetDetail}</span>
           )}

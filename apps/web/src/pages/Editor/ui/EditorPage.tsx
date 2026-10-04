@@ -88,6 +88,7 @@ export function EditorPage() {
             selectedId={selectedId}
             edited={marks.edited}
             hits={marks.hits}
+            outboundTypes={editor.outboundTypes}
             onSelect={onSelect}
             search={<RuleSearch filter={filter} />}
             facets={<RuleTargetFacets filter={filter} />}

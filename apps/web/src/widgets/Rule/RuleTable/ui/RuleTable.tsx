@@ -20,6 +20,8 @@ const HEADER_ROWS = 1;
 
 const NO_EDITS: ReadonlySet<string> = new Set();
 
+const NO_OUTBOUND_TYPES: ReadonlyMap<string, string> = new Map();
+
 const HITS_NOTE = {
   [RULE_HITS_STATE.Failed]: 'hits.failed',
   [RULE_HITS_STATE.Mismatch]: 'hits.mismatch',
@@ -45,6 +47,7 @@ export function RuleTable({
   facets = null,
   edited = NO_EDITS,
   hits = null,
+  outboundTypes = NO_OUTBOUND_TYPES,
   onSelect,
 }: {
   rules: RuleRowModel[];
@@ -61,6 +64,8 @@ export function RuleTable({
   edited?: ReadonlySet<string>;
   /** Счёт срабатываний; `null` — экран его не показывает. */
   hits?: RuleHitsColumn | null;
+  /** Тип аутбаунда по тегу; тег, которого здесь нет, красится по имени. */
+  outboundTypes?: ReadonlyMap<string, string>;
   onSelect: (id: string) => void;
 }) {
   const { t } = useTranslation('widgets/Rule/RuleTable');
@@ -112,6 +117,7 @@ export function RuleTable({
                     selected={rule.id === selectedId}
                     edited={edited.has(rule.id)}
                     hits={counts === null ? undefined : toHitCell(counts, rule.id)}
+                    outboundTypes={outboundTypes}
                     onSelect={onSelect}
                   />
                 </div>

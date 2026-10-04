@@ -35,6 +35,7 @@ export {
   sectionSize,
   setValue,
   toOutboundTags,
+  toOutboundTypes,
 } from './model/Config.model';
 export type {
   CheckFailure,

@@ -90,8 +90,11 @@ const ROUTE_ACTION = /^route\((.+)\)$/;
 /** Карта типов ещё не пришла: разбор обходится таблицей подстрок. */
 export const EMPTY_OUTBOUND_TYPES: ReadonlyMap<string, string> = new Map();
 
-/** Тон по типу узла; `null` — тега в конфиге нет, тип неизвестен. */
-function toTypeKind(tag: string | undefined, outboundTypes: ReadonlyMap<string, string>): RouteKind | null {
+/**
+ * Судьба пакета по типу аутбаунда с этим тегом; `null` — тега в конфиге нет,
+ * тип неизвестен, и решать остаётся запасной таблице подстрок потребителя.
+ */
+export function toOutboundKind(tag: string | undefined, outboundTypes: ReadonlyMap<string, string>): RouteKind | null {
   if (tag === undefined) {
     return null;
   }
@@ -117,7 +120,7 @@ export function toRouteKind(
   chain: readonly string[] = [],
   outboundTypes: ReadonlyMap<string, string> = EMPTY_OUTBOUND_TYPES
 ): RouteKind {
-  const typed = toTypeKind(ROUTE_ACTION.exec(action)?.[1], outboundTypes);
+  const typed = toOutboundKind(ROUTE_ACTION.exec(action)?.[1], outboundTypes);
 
   if (typed !== null) {
     return typed;
@@ -127,7 +130,7 @@ export function toRouteKind(
   // узел часто приходит из подписки, которой в документе нет.
   if (action === FINAL_ACTION) {
     for (const node of chain) {
-      const kind = toTypeKind(node, outboundTypes);
+      const kind = toOutboundKind(node, outboundTypes);
 
       if (kind !== null) {
         return kind;

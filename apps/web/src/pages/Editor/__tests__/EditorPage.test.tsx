@@ -386,6 +386,40 @@ describe('экран правил на узком экране', () => {
   });
 });
 
+describe('тон выхода правила', () => {
+  beforeEach(() => {
+    ConfigDocumentState.getState().reset();
+    mockVirtualSizes();
+  });
+
+  it('выход красится по типу аутбаунда, а не по имени тега', async () => {
+    serveConfig(
+      JSON.stringify({
+        outbounds: [
+          { type: 'direct', tag: 'direct' },
+          { type: 'vless', tag: 'directional', server: 'example.com', server_port: 443, uuid: 'REDACTED' },
+        ],
+        route: {
+          rules: [
+            { domain_suffix: ['example.org'], outbound: 'directional' },
+            { domain_suffix: ['ru'], outbound: 'direct' },
+          ],
+        },
+      })
+    );
+
+    renderWithRouter(EditorPage);
+
+    const table = await screen.findByRole('table', { name: 'Правила маршрутизации' });
+    const [, proxyRow, directRow] = within(table).getAllByRole('row');
+
+    // Предмет теста — сам тон: по нему читается судьба трафика.
+    expect(within(proxyRow).getByText('directional')).toHaveClass('text-route-proxy');
+    expect(within(proxyRow).getByText('directional')).not.toHaveClass('text-route-direct');
+    expect(within(directRow).getByText('direct')).toHaveClass('text-route-direct');
+  });
+});
+
 describe('номер правила из адреса', () => {
   it('переводит номер интерфейса в индекс узла', () => {
     expect(toSelectedRuleId(1)).toBe('0');

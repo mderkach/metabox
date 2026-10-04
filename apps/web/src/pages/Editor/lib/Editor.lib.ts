@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import {
   readRules,
   toOutboundTags,
+  toOutboundTypes,
   useConfigDocument,
   type ConfigDocumentView,
   type ConfigIssue,
@@ -25,6 +26,8 @@ export interface RouteEditorState {
   issues: ConfigIssue[];
   rules: RuleRow[];
   outbounds: string[];
+  /** Тип аутбаунда по тегу: выход правила красится по нему, а не по имени. */
+  outboundTypes: ReadonlyMap<string, string>;
   /** Узлы правил как есть: панель правит текст узла, а не разобранную модель. */
   nodes: unknown[];
   /** Узлы правил файла с устройства, без правок черновика. */
@@ -48,6 +51,9 @@ export function useRouteEditor(): RouteEditorState {
 
   const rules = useMemo(() => toRuleRowsFromNodes(nodes), [nodes]);
 
+  const config = document.config;
+  const outboundTypes = useMemo(() => toOutboundTypes(config), [config]);
+
   const appliedText = document.appliedText;
   const appliedNodes = useMemo(() => (appliedText === null ? [] : readRules(appliedText)), [appliedText]);
 
@@ -55,7 +61,8 @@ export function useRouteEditor(): RouteEditorState {
     source: document.query,
     issues: document.issues,
     rules,
-    outbounds: toOutboundTags(document.config),
+    outbounds: toOutboundTags(config),
+    outboundTypes,
     nodes,
     appliedNodes,
   };
