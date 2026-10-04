@@ -84,7 +84,7 @@ type Error struct {
 
 `log/slog`, один логгер, передаётся явно через конструктор. `slog.Default()` и глобальные функции пакета в коде демона не используем — они прячут зависимость.
 
-Вывод — в stdout: procd поднимает демон с `procd_set_param stdout 1` ([`init.d/metaboxd:20`](../../../../.devcontainer/target/files/etc/init.d/metaboxd)) и сам уводит поток в syslog. Своих файлов логов демон не заводит — ротацией владеет система.
+Вывод — в stdout: procd поднимает демон с `procd_set_param stdout 1` ([`package/etc/init.d/metaboxd`](../../package/etc/init.d/metaboxd)) и сам уводит поток в syslog. Своих файлов логов демон не заводит — ротацией владеет система.
 
 Формат по умолчанию — `slog.NewTextHandler`: читаемо в `logread` и дешевле по объёму. JSON — под флагом, если понадобится внешний сбор. `slog.NewMultiHandler` (Go 1.26) позволяет вести оба вывода сразу, но заводить его без реального потребителя не нужно.
 

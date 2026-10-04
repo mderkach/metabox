@@ -1,6 +1,6 @@
 # Тестирование Go
 
-Только `testing` из стандартной библиотеки. Корневой модуль не имеет зависимостей и не получит их ради ассертов: `require` в `go.mod` — отдельное решение ([Architecture&Style](./Architecture&Style.md)), а сам testify даёт свой диалект поверх языка и ломает семантику `t.Fatal` в горутинах. Сравнение — обычным `if`, различие печатается сообщением с got и want.
+Только `testing` из стандартной библиотеки. Модуль демона не имеет зависимостей и не получит их ради ассертов: `require` в `go.mod` — отдельное решение ([Architecture&Style](./Architecture&Style.md)), а сам testify даёт свой диалект поверх языка и ломает семантику `t.Fatal` в горутинах. Сравнение — обычным `if`, различие печатается сообщением с got и want.
 
 ## Размещение
 
@@ -132,11 +132,11 @@ func TestRollbackAfterDeadline(t *testing.T) {
 ## HTTP
 
 ```go
-srv := httptest.NewServer(newServer(fakeApplier{}, testLogger(t)).routes())
+srv := httptest.NewServer(httpapi.NewServer(&fakeApplier{}, nil, testLogger(t), httpapi.Options{}))
 defer srv.Close()
 ```
 
-Сквозная проверка через `httptest.NewServer` — когда важна цепочка middleware (`Origin`, паника, логи). Отдельный обработчик проверяется напрямую с `httptest.NewRecorder`, без поднятия сервера. Проверяются код, `Content-Type` и разобранное тело — не байты ответа целиком.
+Сквозная проверка через `httptest.NewServer` — когда важна цепочка middleware (`Host`, `Origin`, паника, логи). Отдельный обработчик проверяется напрямую с `httptest.NewRecorder`, без поднятия сервера. Проверяются код, `Content-Type` и разобранное тело — не байты ответа целиком.
 
 ## Golden-файлы
 
@@ -146,13 +146,9 @@ defer srv.Close()
 
 ## Интеграционные тесты
 
-Полный цикл Apply против живого sing-box идёт на стенде и отделяется тегом сборки:
+Go-тестов против живого sing-box в модуле нет, тега сборки под них тоже. Полный цикл против живого окружения гоняет стенд: скрипт `apply-cycle-check` внутри контейнера `target` (`make up`, `make apply-check`), в CI — джоба `integration`: тот же образ под другую архитектуру и тег rootfs, готовность демона по `/healthz`, тот же скрипт и `make reach-check` ([`ci.yml`](../../../../.github/workflows/ci.yml)).
 
-```go
-//go:build integration
-```
-
-Такие тесты не запускаются `make test` на хосте: им нужны procd, бинарь sing-box и `/etc/sing-box`. Запуск — внутри контейнера `target` (`make up`, `make apply-check`). В CI поднимается тот же образ, но под другую архитектуру и тег rootfs ([`ci.yml`](../../../../.github/workflows/ci.yml)).
+Go-тест, которому понадобятся procd, бинарь sing-box и `/etc/sing-box`, отделяется тегом сборки `//go:build integration`: на хосте этого нет, и `make test` там ломаться не должен.
 
 Проверка стенда `apply-cycle-check` ([`.devcontainer/target/files/usr/bin/apply-cycle-check`](../../../../.devcontainer/target/files/usr/bin/apply-cycle-check)) остаётся независимой от демона: она проверяет само окружение.
 

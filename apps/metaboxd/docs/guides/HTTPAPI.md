@@ -45,19 +45,20 @@ func (s *Server) routes() http.Handler {
 
 ```go
 func (s *Server) handleApply(w http.ResponseWriter, r *http.Request) {
-	cfg, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxConfigBytes))
+	// Тело читается под http.MaxBytesReader: конфиг и, в конверте, файлы списков.
+	cfg, lists, listsBase, err := readApplyBody(w, r)
 	if err != nil {
-		s.fail(w, r, err)
+		fail(s.log, w, r, err)
 		return
 	}
 
-	tx, err := s.applier.Start(r.Context(), cfg)
+	tx, err := s.applier.Start(r.Context(), cfg, lists, baseSum(r.Header.Get("If-Match")), listsBase)
 	if err != nil {
-		s.fail(w, r, err)
+		fail(s.log, w, r, err)
 		return
 	}
 
-	s.writeJSON(w, http.StatusAccepted, tx)
+	writeJSON(s.log, w, http.StatusAccepted, tx)
 }
 ```
 
@@ -75,7 +76,8 @@ func (s *Server) handleApply(w http.ResponseWriter, r *http.Request) {
 func (s *Server) middleware(next http.Handler) http.Handler {
 	return recoverPanic(s.log,
 		logRequests(s.log,
-			checkOrigin(s.allowedOrigin, next)))
+			checkHost(s.log, s.allowedOrigin,
+				checkOrigin(s.log, s.allowedOrigin, next))))
 }
 ```
 
