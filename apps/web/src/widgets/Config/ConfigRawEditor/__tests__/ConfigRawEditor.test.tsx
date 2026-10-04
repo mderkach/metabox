@@ -32,6 +32,7 @@ describe('ConfigRawEditor', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   it('замечание с позицией ведёт к узлу в тексте', async () => {
