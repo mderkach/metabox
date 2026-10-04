@@ -11,6 +11,9 @@ interface SelectVariables {
  * Переключение узла в группе. Обновление оптимистичное: ответ рантайма ничего
  * не добавляет к тому, что уже известно, а задержка ответа читалась бы как
  * зависший интерфейс. Цену Apply это не имеет — конфиг не пишется.
+ *
+ * Тоста об успехе нет: отметка узла видна сразу, а скринридеру выбор объявляет
+ * живая область экрана. Тост `sonner` объявил бы его второй раз.
  */
 export function useSelectProxy() {
   const queryClient = useQueryClient();
@@ -19,12 +22,7 @@ export function useSelectProxy() {
     mutationFn: async function requestSelect({ group, node }: SelectVariables) {
       return selectProxy(group, node);
     },
-    meta: {
-      showError: true,
-      errorMessageKey: 'toast.proxy.select.failed',
-      showSuccess: true,
-      successMessageKey: 'toast.proxy.select.done',
-    },
+    meta: { showError: true, errorMessageKey: 'toast.proxy.select.failed' },
     onMutate: async ({ group, node }: SelectVariables) => {
       await queryClient.cancelQueries({ queryKey: PROXY_QUERY.list() });
 

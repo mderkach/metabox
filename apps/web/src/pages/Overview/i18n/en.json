@@ -62,5 +62,8 @@
     "memory": "Daemon memory",
     "singboxHistory": "sing-box process memory over the daemon uptime",
     "daemonHistory": "Daemon memory over its uptime"
+  },
+  "announce": {
+    "latencyTested": "Latency of the selected nodes updated"
   }
 }

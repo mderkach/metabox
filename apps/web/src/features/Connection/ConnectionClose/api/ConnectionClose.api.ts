@@ -10,17 +10,13 @@ export function useCloseConnection() {
 }
 
 /**
- * Обрыв всех живых соединений. Успех подтверждается тостом, в отличие от
- * обрыва одного: там результат виден строкой, которая ушла из списка.
+ * Обрыв всех живых соединений. Тоста об успехе нет, как и у обрыва одного:
+ * результат видно по строкам, ушедшим из списка, а скринридеру его объявляет
+ * живая область экрана. Тост `sonner` объявил бы его второй раз.
  */
 export function useCloseAllConnections() {
   return useMutation({
     mutationFn: closeAllConnections,
-    meta: {
-      showError: true,
-      errorMessageKey: 'toast.connection.close.failed',
-      showSuccess: true,
-      successMessageKey: 'toast.connection.closeAll.done',
-    },
+    meta: { showError: true, errorMessageKey: 'toast.connection.close.failed' },
   });
 }

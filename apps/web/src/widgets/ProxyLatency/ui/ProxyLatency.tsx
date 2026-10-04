@@ -77,7 +77,12 @@ function toMeter(node: ProxyNode): number | null {
 }
 
 /** Замер делает sing-box: из браузера мерялся бы канал до панели. */
-export function ProxyLatency() {
+export function ProxyLatency({
+  onTested,
+}: {
+  /** Замер прошёл у всех выбранных узлов: отказ хотя бы одного показывает тост ошибки. */
+  onTested: () => void;
+}) {
   const { t } = useTranslation('widgets/ProxyLatency');
   const proxies = useProxies();
   const delay = useTestProxyDelay();
@@ -96,9 +101,15 @@ export function ProxyLatency() {
           size='sm'
           disabled={selected.length === 0 || delay.isPending}
           onClick={() => {
-            for (const entry of selected) {
-              delay.mutate(entry.node.name);
-            }
+            // Колбэк `mutate` срабатывает только у последнего вызова, поэтому
+            // объявление ждёт все замеры сразу, а не последний начатый.
+            void Promise.allSettled(selected.map(async (entry) => delay.mutateAsync(entry.node.name))).then(
+              function announceTested(results) {
+                if (results.every((result) => result.status === 'fulfilled')) {
+                  onTested();
+                }
+              }
+            );
           }}
         >
           {delay.isPending ? t('delay.testing', { ns: 'shared' }) : t('delay.test', { ns: 'shared' })}

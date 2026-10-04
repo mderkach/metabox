@@ -1,6 +1,7 @@
 import { renderWithRouter } from '@test/renderWithRouter';
 import { server } from '@test/server';
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 
@@ -16,6 +17,7 @@ import {
   TRAFFIC_HISTORY_FIXTURE,
 } from '@entities/Daemon/__tests__/Daemon.fixture';
 import { PROXY_ENDPOINT } from '@entities/Proxy';
+import { proxyHandlers } from '@entities/Proxy/__tests__/Proxy.handlers';
 
 import { OverviewPage } from '../ui/OverviewPage';
 
@@ -126,6 +128,26 @@ describe('экран обзора', () => {
 
     expect(await screen.findAllByText('Живых соединений нет')).not.toHaveLength(0);
     expect(await screen.findByText('Групп с выбранным узлом нет')).toBeInTheDocument();
+  });
+
+  // Замер меняет числа на месте: глазами это видно, а скринридеру результат
+  // объявляет живая область экрана.
+  it('объявляет живой областью, что задержка выбранных узлов обновлена', async () => {
+    server.use(...proxyHandlers);
+
+    const user = userEvent.setup();
+
+    renderWithRouter(OverviewPage);
+
+    const region = await screen.findByRole('status', { name: 'Результат действия' });
+
+    expect(region).toHaveTextContent(/^$/);
+
+    await user.click(await screen.findByRole('button', { name: 'Проверить' }));
+
+    await waitFor(() => {
+      expect(region).toHaveTextContent('Задержка выбранных узлов обновлена');
+    });
   });
 
   it('показывает показания устройства отдельной секцией', async () => {

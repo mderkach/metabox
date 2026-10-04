@@ -9,7 +9,13 @@ import type { OverviewRuntime } from '../lib';
 import { OverviewSection } from './OverviewSection';
 import { OverviewTile } from './OverviewTile';
 
-export function OverviewConnections({ runtime }: { runtime: OverviewRuntime }) {
+export function OverviewConnections({
+  runtime,
+  onLatencyTested,
+}: {
+  runtime: OverviewRuntime;
+  onLatencyTested: () => void;
+}) {
   const { t } = useTranslation('pages/Overview');
 
   return (
@@ -53,7 +59,7 @@ export function OverviewConnections({ runtime }: { runtime: OverviewRuntime }) {
           shares={runtime.summary.sources}
         />
         <div className='sm:col-span-2'>
-          <ProxyLatency />
+          <ProxyLatency onTested={onLatencyTested} />
         </div>
       </div>
     </OverviewSection>

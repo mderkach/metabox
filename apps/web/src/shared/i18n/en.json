@@ -11,9 +11,6 @@
     "connection": {
       "close": {
         "failed": "Could not close the connection"
-      },
-      "closeAll": {
-        "done": "Connections dropped"
       }
     },
     "proxy": {
@@ -21,8 +18,7 @@
         "failed": "Could not measure the delay"
       },
       "select": {
-        "failed": "Could not switch the node",
-        "done": "Node switched"
+        "failed": "Could not switch the node"
       }
     },
     "service": {

@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { useLiveRegion } from '../../lib/useLiveRegion';
 import { LiveRegion } from '../LiveRegion';
 
-const DONE = 'Узел переключён';
+const DONE = 'Группа proxy: выбран узел us-1';
 
 function Harness() {
   const { message, announce } = useLiveRegion();
