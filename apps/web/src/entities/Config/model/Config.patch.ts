@@ -11,12 +11,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * Значение, каким оно ляжет в документ: пустая строка, пустой список и пустой
- * объект значат «ключа нет», у объекта выпадают пустые ключи. Форма держит
- * очищенное поле пустым, а черновик полей не добавляет.
+ * Значение, каким оно ляжет в документ: `null`, пустая строка, пустой список и
+ * пустой объект значат «ключа нет», у объекта выпадают пустые ключи. Форма
+ * держит очищенное поле пустым — `undefined` React Hook Form читает как «взять
+ * значение по умолчанию», — а черновик полей не добавляет. `undefined` —
+ * ключа нет и в самом документе.
  */
-function compact(value: unknown): unknown {
-  if (value === '' || (Array.isArray(value) && value.length === 0)) {
+export function compactNode(value: unknown): unknown {
+  if (value === null || value === '' || (Array.isArray(value) && value.length === 0)) {
     return undefined;
   }
 
@@ -25,7 +27,7 @@ function compact(value: unknown): unknown {
   }
 
   const entries = Object.entries(value).flatMap(([key, item]) => {
-    const next = compact(item);
+    const next = compactNode(item);
 
     return next === undefined ? [] : [[key, next] as const];
   });
@@ -62,7 +64,8 @@ function isEqual(left: unknown, right: unknown): boolean {
  * дифа, а комментарии и порядок ключей внутри узла остаются как были, —
  * запись узла целиком переписала бы его весь (ADR-0004).
  *
- * `base` — путь узла в документе, к нему приклеиваются ключи листьев.
+ * `base` — путь узла в документе, к нему приклеиваются ключи листьев. Пустые
+ * значения — те же, что у `compactNode`: очищенное поле удаляет ключ.
  */
 export function diffNode(base: JSONPath, before: unknown, after: unknown): NodeEdit[] {
   if (isRecord(before) && isRecord(after)) {
@@ -71,9 +74,9 @@ export function diffNode(base: JSONPath, before: unknown, after: unknown): NodeE
     return [...keys].flatMap((key) => diffNode([...base, key], before[key], after[key]));
   }
 
-  const next = compact(after);
+  const next = compactNode(after);
 
-  if (compact(before) === undefined && next === undefined) {
+  if (compactNode(before) === undefined && next === undefined) {
     return [];
   }
 

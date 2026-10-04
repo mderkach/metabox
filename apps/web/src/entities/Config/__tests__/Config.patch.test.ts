@@ -32,6 +32,7 @@ describe('diffNode', () => {
 
   it.each([
     ['пустой строкой', ''],
+    ['через null', null],
     ['без значения', undefined],
   ])('очищенное %s поле удаляется', (_, value) => {
     expect(diffNode(PATH, NODE, { ...NODE, server: value })).toEqual([

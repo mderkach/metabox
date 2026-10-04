@@ -1,0 +1,408 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`обход реестров схемы > перечисляет поля, ушедшие в raw 1`] = `
+{
+  "certificate_provider/acme": [
+    "dns01_challenge",
+    "http_client",
+  ],
+  "certificate_provider/cloudflare-origin-ca": [
+    "http_client",
+  ],
+  "certificate_provider/tailscale": [],
+  "dns/dhcp": [
+    "domain_resolver",
+  ],
+  "dns/fakeip": [],
+  "dns/fallback": [],
+  "dns/h3": [
+    "domain_resolver",
+    "headers",
+  ],
+  "dns/hosts": [
+    "predefined",
+  ],
+  "dns/https": [
+    "domain_resolver",
+    "headers",
+  ],
+  "dns/local": [
+    "domain_resolver",
+  ],
+  "dns/mdns": [
+    "domain_resolver",
+  ],
+  "dns/openconnect": [],
+  "dns/openvpn": [],
+  "dns/quic": [
+    "domain_resolver",
+  ],
+  "dns/resolved": [],
+  "dns/sdns": [
+    "domain_resolver",
+  ],
+  "dns/tailscale": [],
+  "dns/tcp": [
+    "domain_resolver",
+  ],
+  "dns/tls": [
+    "domain_resolver",
+  ],
+  "dns/udp": [
+    "domain_resolver",
+  ],
+  "endpoint/openconnect": [
+    "domain_resolver",
+    "tncc.certificates",
+    "form_entries",
+  ],
+  "endpoint/openvpn-client": [
+    "domain_resolver",
+    "servers",
+    "pull_filters",
+  ],
+  "endpoint/openvpn-server": [
+    "users",
+    "push.dns_servers",
+  ],
+  "endpoint/tailscale": [
+    "domain_resolver",
+    "ssh_server",
+  ],
+  "endpoint/vpn-client": [
+    "outbound",
+  ],
+  "endpoint/vpn-server": [
+    "users",
+    "inbounds",
+  ],
+  "endpoint/warp": [
+    "amnezia.content_padding_addition",
+    "amnezia.rekey_after_time",
+    "amnezia.rekey_timeout",
+    "amnezia.reject_after_time",
+    "amnezia.keepalive_timeout",
+    "amnezia.max_handshake_attempts",
+    "domain_resolver",
+  ],
+  "endpoint/wireguard": [
+    "peers",
+    "amnezia.h1",
+    "amnezia.h2",
+    "amnezia.h3",
+    "amnezia.h4",
+    "amnezia.content_padding_addition",
+    "amnezia.rekey_after_time",
+    "amnezia.rekey_timeout",
+    "amnezia.reject_after_time",
+    "amnezia.keepalive_timeout",
+    "amnezia.max_handshake_attempts",
+    "domain_resolver",
+  ],
+  "inbound/anytls": [
+    "tls.certificate_provider",
+    "tls.acme.dns01_challenge",
+    "tls.reality.handshake.domain_resolver",
+    "users",
+  ],
+  "inbound/bond": [
+    "inbounds",
+  ],
+  "inbound/call": [
+    "domain_resolver",
+    "cookies",
+  ],
+  "inbound/cloudflared": [
+    "control_dialer.domain_resolver",
+    "tunnel_dialer.domain_resolver",
+  ],
+  "inbound/direct": [],
+  "inbound/failover": [
+    "inbounds",
+  ],
+  "inbound/http": [
+    "users",
+    "domain_resolver",
+    "tls.certificate_provider",
+    "tls.acme.dns01_challenge",
+    "tls.reality.handshake.domain_resolver",
+  ],
+  "inbound/hysteria": [
+    "users",
+    "tls.certificate_provider",
+    "tls.acme.dns01_challenge",
+    "tls.reality.handshake.domain_resolver",
+  ],
+  "inbound/hysteria2": [
+    "obfs",
+    "users",
+    "tls.certificate_provider",
+    "tls.acme.dns01_challenge",
+    "tls.reality.handshake.domain_resolver",
+    "masquerade",
+    "realm.http_client",
+    "realm.stun_domain_resolver",
+  ],
+  "inbound/mieru": [
+    "users",
+  ],
+  "inbound/mixed": [
+    "users",
+    "domain_resolver",
+    "tls.certificate_provider",
+    "tls.acme.dns01_challenge",
+    "tls.reality.handshake.domain_resolver",
+  ],
+  "inbound/mtproxy": [
+    "users",
+  ],
+  "inbound/naive": [
+    "users",
+    "tls.certificate_provider",
+    "tls.acme.dns01_challenge",
+    "tls.reality.handshake.domain_resolver",
+  ],
+  "inbound/redirect": [],
+  "inbound/shadowsocks": [
+    "users",
+    "destinations",
+  ],
+  "inbound/shadowtls": [
+    "users",
+    "handshake.domain_resolver",
+    "handshake_for_server_name",
+  ],
+  "inbound/snell": [
+    "users",
+  ],
+  "inbound/socks": [
+    "users",
+    "domain_resolver",
+  ],
+  "inbound/ssh": [
+    "users",
+    "fallback.domain_resolver",
+  ],
+  "inbound/sudoku": [],
+  "inbound/tproxy": [],
+  "inbound/trojan": [
+    "users",
+    "tls.certificate_provider",
+    "tls.acme.dns01_challenge",
+    "tls.reality.handshake.domain_resolver",
+    "fallback_for_alpn",
+    "transport",
+  ],
+  "inbound/trusttunnel": [
+    "tls.certificate_provider",
+    "tls.acme.dns01_challenge",
+    "tls.reality.handshake.domain_resolver",
+    "users",
+  ],
+  "inbound/tuic": [
+    "users",
+    "tls.certificate_provider",
+    "tls.acme.dns01_challenge",
+    "tls.reality.handshake.domain_resolver",
+  ],
+  "inbound/tun": [
+    "include_uid",
+    "exclude_uid",
+    "include_android_user",
+  ],
+  "inbound/vless": [
+    "users",
+    "tls.certificate_provider",
+    "tls.acme.dns01_challenge",
+    "tls.reality.handshake.domain_resolver",
+    "transport",
+  ],
+  "inbound/vmess": [
+    "users",
+    "tls.certificate_provider",
+    "tls.acme.dns01_challenge",
+    "tls.reality.handshake.domain_resolver",
+    "transport",
+  ],
+  "outbound/anytls": [
+    "domain_resolver",
+  ],
+  "outbound/bandwidth-limiter": [
+    "users",
+    "route.rules",
+    "route.rule_set",
+    "route.default_domain_resolver",
+  ],
+  "outbound/bond": [
+    "outbounds",
+  ],
+  "outbound/bridge": [],
+  "outbound/call": [
+    "domain_resolver",
+    "cookies",
+  ],
+  "outbound/connection-limiter": [
+    "users",
+    "route.rules",
+    "route.rule_set",
+    "route.default_domain_resolver",
+  ],
+  "outbound/direct": [
+    "domain_resolver",
+  ],
+  "outbound/failover": [
+    "outbounds",
+  ],
+  "outbound/fallback": [],
+  "outbound/http": [
+    "domain_resolver",
+    "headers",
+  ],
+  "outbound/hysteria": [
+    "domain_resolver",
+  ],
+  "outbound/hysteria2": [
+    "domain_resolver",
+    "obfs",
+    "realm.http_client",
+  ],
+  "outbound/masque": [
+    "domain_resolver",
+  ],
+  "outbound/mieru": [
+    "domain_resolver",
+  ],
+  "outbound/naive": [
+    "domain_resolver",
+    "extra_headers",
+    "udp_over_tcp",
+  ],
+  "outbound/parser": [
+    "domain_resolver",
+  ],
+  "outbound/rate-limiter": [
+    "users",
+    "route.rules",
+    "route.rule_set",
+    "route.default_domain_resolver",
+  ],
+  "outbound/selector": [],
+  "outbound/shadowsocks": [
+    "domain_resolver",
+    "udp_over_tcp",
+  ],
+  "outbound/shadowtls": [
+    "domain_resolver",
+  ],
+  "outbound/snell": [
+    "domain_resolver",
+  ],
+  "outbound/socks": [
+    "domain_resolver",
+    "udp_over_tcp",
+  ],
+  "outbound/ssh": [
+    "domain_resolver",
+  ],
+  "outbound/sudoku": [
+    "domain_resolver",
+  ],
+  "outbound/tor": [
+    "domain_resolver",
+    "torrc",
+  ],
+  "outbound/traffic-limiter": [
+    "users",
+    "route.rules",
+    "route.rule_set",
+    "route.default_domain_resolver",
+  ],
+  "outbound/trojan": [
+    "domain_resolver",
+    "transport",
+  ],
+  "outbound/trusttunnel": [
+    "domain_resolver",
+  ],
+  "outbound/tuic": [
+    "domain_resolver",
+  ],
+  "outbound/urltest": [],
+  "outbound/vless": [
+    "domain_resolver",
+    "transport",
+  ],
+  "outbound/vmess": [
+    "domain_resolver",
+    "transport",
+  ],
+  "provider/inline": [
+    "outbounds",
+    "override_dialer_options.domain_resolver",
+  ],
+  "provider/local": [
+    "override_dialer_options.domain_resolver",
+  ],
+  "provider/remote": [
+    "headers",
+    "override_dialer_options.domain_resolver",
+  ],
+  "service/admin-panel": [
+    "tls.certificate_provider",
+    "tls.acme.dns01_challenge",
+    "tls.reality.handshake.domain_resolver",
+  ],
+  "service/api": [
+    "dashboard",
+    "tls.certificate_provider",
+    "tls.acme.dns01_challenge",
+    "tls.reality.handshake.domain_resolver",
+  ],
+  "service/ccm": [
+    "tls.certificate_provider",
+    "tls.acme.dns01_challenge",
+    "tls.reality.handshake.domain_resolver",
+    "users",
+    "headers",
+  ],
+  "service/derp": [
+    "tls.certificate_provider",
+    "tls.acme.dns01_challenge",
+    "tls.reality.handshake.domain_resolver",
+    "verify_client_url",
+    "mesh_with",
+    "stun",
+  ],
+  "service/hysteria-realm": [
+    "tls.certificate_provider",
+    "tls.acme.dns01_challenge",
+    "tls.reality.handshake.domain_resolver",
+    "users",
+  ],
+  "service/manager": [],
+  "service/manager-api": [],
+  "service/node": [],
+  "service/node-manager-api": [],
+  "service/ocm": [
+    "tls.certificate_provider",
+    "tls.acme.dns01_challenge",
+    "tls.reality.handshake.domain_resolver",
+    "users",
+    "headers",
+  ],
+  "service/oom-killer": [],
+  "service/profiler": [],
+  "service/resolved": [],
+  "service/ssm-api": [
+    "servers",
+    "tls.certificate_provider",
+    "tls.acme.dns01_challenge",
+    "tls.reality.handshake.domain_resolver",
+  ],
+  "service/usbip-client": [
+    "domain_resolver",
+    "devices",
+  ],
+  "service/usbip-server": [],
+}
+`;

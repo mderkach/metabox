@@ -48,7 +48,7 @@ export type {
   WorkdirMismatch,
 } from './model/Config.model';
 export { findUnbuiltNodes, findUnbuiltOptions } from './model/Config.build';
-export { diffNode } from './model/Config.patch';
+export { compactNode, diffNode } from './model/Config.patch';
 export type { NodeEdit } from './model/Config.patch';
 export {
   buildTagOfType,

@@ -1,0 +1,18 @@
+{
+  "boolean": {
+    "unset": "не задано",
+    "reset": "Сбросить {{name}}"
+  },
+  "enum": { "unset": "не задано" },
+  "duration": { "placeholder": "10s, 1m30s" },
+  "list": { "hint": "По значению на строку" },
+  "raw": { "hint": "JSON-значение поля" },
+  "group": { "toggle": "Поля {{name}}" },
+  "error": {
+    "duration": "Длительность в формате 10s, 1m30s, 500ms",
+    "tooSmall": "Не меньше 0",
+    "type": "Значение не того типа",
+    "invalid": "Значение не проходит схему",
+    "parse": "JSON не разобран: {{reason}}"
+  }
+}

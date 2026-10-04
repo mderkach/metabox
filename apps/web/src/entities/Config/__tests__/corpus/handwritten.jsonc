@@ -22,6 +22,7 @@
     { "type": "direct", "tag": "direct" },
     {
       "type": "vless",
+      // Узел с Reality: ключ и short_id — с сервера.
       "tag": "node-a",
       "server": "node-a.example",
       "server_port": 443,
