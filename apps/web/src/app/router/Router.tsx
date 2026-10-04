@@ -7,12 +7,12 @@ import {
   redirect,
   type RouterHistory,
 } from '@tanstack/react-router';
-import { z } from 'zod';
 
 import { getConfigOptions, isGenericSection } from '@entities/Config';
 import { parseConnectionSearch } from '@entities/Connection';
 import { getTrafficHistoryOptions } from '@entities/Daemon';
 import { getProxiesOptions, getProxyProvidersOptions } from '@entities/Proxy';
+import { parseRuleSearch } from '@entities/Rule';
 import { getRuleSetCatalogOptions } from '@entities/RuleSet';
 import { QueryClientInstance } from '@shared/api';
 import { matchNarrow } from '@shared/lib/media';
@@ -51,21 +51,6 @@ const indexRoute = createRoute({
     throw redirect({ to: matchNarrow() ? '/overview' : '/config' });
   },
 });
-
-/**
- * Номер правила в адресе: экран соединений ведёт на сработавший узел, и без
- * параметра переход открывал бы просто список. Номер — как в UI,
- * с единицы; значение, которое не похоже на номер, отбрасывается.
- */
-const RuleSearchSchema = z.object({
-  rule: z.coerce.number().int().positive().optional(),
-});
-
-function parseRuleSearch(search: Record<string, unknown>): { rule?: number } {
-  const parsed = RuleSearchSchema.safeParse(search);
-
-  return parsed.success ? parsed.data : {};
-}
 
 /**
  * Раздел конфигурации: оболочка с шапкой и полосой вкладок, под ней вкладка.

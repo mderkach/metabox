@@ -12,6 +12,7 @@ import { CONFIG_ENDPOINT } from '@entities/Config';
 import { DAEMON_ENDPOINT } from '@entities/Daemon';
 import { DAEMON_STATUS_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture';
 import { ROUTE_ENDPOINT } from '@entities/Route';
+import { parseRuleSearch } from '@entities/Rule';
 import { PANEL_AS_SHEET } from '@shared/lib/media';
 
 import { toSelectedRuleId } from '../lib/Editor.lib';
@@ -417,6 +418,52 @@ describe('тон выхода правила', () => {
     expect(within(proxyRow).getByText('directional')).toHaveClass('text-route-proxy');
     expect(within(proxyRow).getByText('directional')).not.toHaveClass('text-route-direct');
     expect(within(directRow).getByText('direct')).toHaveClass('text-route-direct');
+  });
+});
+
+describe('отбор по сету из адреса', () => {
+  beforeEach(() => {
+    ConfigDocumentState.getState().reset();
+    mockVirtualSizes();
+    serveConfig();
+  });
+
+  function renderWithRuleSet(tag: string) {
+    return renderWithRouter(EditorPage, {
+      validateSearch: parseRuleSearch,
+      initialEntry: `/?rule_set=${tag}`,
+    });
+  }
+
+  it('показывает только правила, которые ссылаются на сет', async () => {
+    renderWithRuleSet('github');
+
+    const table = await screen.findByRole('table', { name: 'Правила маршрутизации' });
+
+    expect(within(table).getAllByRole('row')).toHaveLength(2);
+    expect(screen.getByRole('status')).toHaveTextContent('Показано 1 из 3');
+  });
+
+  it('снимается кнопкой отбора и уходит из адреса', async () => {
+    const user = userEvent.setup();
+    const { router } = renderWithRuleSet('github');
+
+    await user.click(await screen.findByRole('button', { name: 'Снять отбор: сет github' }));
+
+    expect(await screen.findByRole('status')).toHaveTextContent('3 правила');
+    expect(router.state.location.search).toEqual({});
+  });
+
+  it('сет без правил даёт пустой отбор, а его сброс возвращает список', async () => {
+    const user = userEvent.setup();
+
+    renderWithRuleSet('geoip-ru');
+
+    expect(await screen.findByText('Ничего не нашлось по этому запросу.')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Сбросить отбор' }));
+
+    expect(await screen.findByRole('status')).toHaveTextContent('3 правила');
   });
 });
 

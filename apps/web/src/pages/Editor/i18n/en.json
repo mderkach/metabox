@@ -11,6 +11,10 @@
   "targets": {
     "label": "Rule actions"
   },
+  "ruleSet": {
+    "label": "set",
+    "clear": "Clear filter: set {{tag}}"
+  },
   "broken": {
     "title": "The config does not match the schema",
     "description": "The file on the device is untouched. Rules cannot be shown — first we need to understand what is wrong with it.",

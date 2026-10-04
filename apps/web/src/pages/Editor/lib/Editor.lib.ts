@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useNavigate, useSearch } from '@tanstack/react-router';
+import { useCallback, useMemo, useState } from 'react';
 
 import {
   readRules,
@@ -15,6 +16,7 @@ import {
   toRuleRowsFromNodes,
   toTargetGroups,
   type RuleRow,
+  type RuleSetFilter,
   type RuleTargetFilter,
   type RuleTargetGroup,
 } from '@entities/Rule';
@@ -137,27 +139,51 @@ export interface RuleFilterState {
   setQuery: (query: string) => void;
   target: RuleTargetFilter;
   setTarget: (target: RuleTargetFilter) => void;
+  /** Сет из адреса: с ним приходят из каталога наборов. */
+  ruleSet: RuleSetFilter;
+  setRuleSet: (ruleSet: RuleSetFilter) => void;
   /** Выходы считаются по всему списку: фасет не должен исчезать от своего выбора. */
   targets: RuleTargetGroup[];
   rules: RuleRow[];
 }
 
 /**
- * Поиск и отбор по выходу. Отбор клиентский: конфиг целиком уже в панели, и
- * до 500 правил фильтруются за доли миллисекунды.
+ * Поиск и отбор по выходу и сету. Отбор клиентский: конфиг целиком уже в
+ * панели, и до 500 правил фильтруются за доли миллисекунды.
+ *
+ * Сет живёт в адресе — на него ведёт ссылка из каталога наборов, — а поиск и
+ * выход остаются состоянием экрана.
  */
 export function useRuleFilter(rules: RuleRow[]): RuleFilterState {
   const [query, setQuery] = useState('');
   const [target, setTarget] = useState<RuleTargetFilter>(null);
+  const search = useSearch({ strict: false });
+  const navigate = useNavigate();
+  const ruleSet = search.rule_set ?? null;
+
+  // Снятый отбор заменяет адрес, а не добавляет запись в историю: «назад»
+  // вернул бы отбор, который пользователь только что снял.
+  const setRuleSet = useCallback(
+    (next: RuleSetFilter) => {
+      void navigate({
+        to: '.',
+        search: (previous) => ({ ...previous, rule_set: next ?? undefined }),
+        replace: true,
+      });
+    },
+    [navigate]
+  );
 
   const targets = useMemo(() => toTargetGroups(rules), [rules]);
-  const shown = useMemo(() => filterRules(rules, query, target), [rules, query, target]);
+  const shown = useMemo(() => filterRules(rules, query, target, ruleSet), [rules, query, target, ruleSet]);
 
   return {
     query,
     setQuery,
     target,
     setTarget,
+    ruleSet,
+    setRuleSet,
     targets,
     rules: shown,
   };

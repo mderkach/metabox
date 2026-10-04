@@ -100,6 +100,23 @@ describe('экран сетов', () => {
     expect(screen.getByText('обновляется каждые 12 ч')).toBeInTheDocument();
   });
 
+  it('отметка использования ведёт на правила, отобранные по сету', async () => {
+    renderWithRouter(RuleSetsPage);
+
+    const table = await screen.findByRole('table', { name: 'Подключённые сеты' });
+
+    expect(within(table).getByRole('link', { name: 'в 1 правиле' })).toHaveAttribute(
+      'href',
+      '/config?rule_set=geosite-google'
+    );
+    // Неиспользуемый сет — тот, ради которого ссылка и заведена: следующий шаг
+    // после подключения — сослаться на него из правила.
+    expect(within(table).getByRole('link', { name: 'ни в одном правиле' })).toHaveAttribute(
+      'href',
+      '/config?rule_set=geoip-ru'
+    );
+  });
+
   it('поиск отбирает строки и сбрасывается кнопкой пустого экрана', async () => {
     const user = userEvent.setup();
 

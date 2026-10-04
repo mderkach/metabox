@@ -1,5 +1,5 @@
 import { useSearch } from '@tanstack/react-router';
-import { CircleAlert, CircleQuestionMark, Search } from 'lucide-react';
+import { CircleAlert, CircleQuestionMark, Search, X } from 'lucide-react';
 import { startTransition, useCallback, useState, ViewTransition } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
@@ -90,7 +90,12 @@ export function EditorPage() {
             hits={marks.hits}
             outboundTypes={editor.outboundTypes}
             onSelect={onSelect}
-            search={<RuleSearch filter={filter} />}
+            search={
+              <>
+                <RuleSearch filter={filter} />
+                <RuleSetChip filter={filter} />
+              </>
+            }
             facets={<RuleTargetFacets filter={filter} />}
             empty={<EmptyState filter={filter} />}
           />
@@ -171,6 +176,33 @@ function RuleSearch({ filter }: { filter: RuleFilterState }) {
   );
 }
 
+/**
+ * Отбор по сету из адреса. Снимается здесь же: без признака урезанный список
+ * читался бы как весь.
+ */
+function RuleSetChip({ filter }: { filter: RuleFilterState }) {
+  const { t } = useTranslation('pages/Editor');
+
+  if (filter.ruleSet === null) {
+    return null;
+  }
+
+  return (
+    <button
+      type='button'
+      aria-label={t('ruleSet.clear', { tag: filter.ruleSet })}
+      onClick={() => {
+        filter.setRuleSet(null);
+      }}
+      className={cn(FACET_CLASS, FACET_ACTIVE)}
+    >
+      {t('ruleSet.label')}
+      <span className='font-mono'>{filter.ruleSet}</span>
+      <X className='size-3' aria-hidden='true' />
+    </button>
+  );
+}
+
 /** Срез по выходу: вторая строка тулбара, потому что выходов бывает полтора десятка. */
 function RuleTargetFacets({ filter }: { filter: RuleFilterState }) {
   const { t } = useTranslation('pages/Editor');
@@ -229,6 +261,7 @@ function EmptyState({ filter }: { filter: RuleFilterState }) {
           onClick={() => {
             filter.setQuery('');
             filter.setTarget(null);
+            filter.setRuleSet(null);
           }}
         >
           {t('list.resetFilter', { ns: 'shared' })}

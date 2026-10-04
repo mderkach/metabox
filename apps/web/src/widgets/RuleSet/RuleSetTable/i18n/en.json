@@ -16,6 +16,7 @@
     "unused": "in no rule",
     "usedBy_one": "in {{count}} rule",
     "usedBy_other": "in {{count}} rules",
+    "rules": "Rules that use the {{tag}} set",
     "remove": "Remove the {{tag}} set"
   }
 }

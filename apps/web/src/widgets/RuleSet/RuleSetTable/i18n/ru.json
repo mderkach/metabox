@@ -18,6 +18,7 @@
     "usedBy_one": "в {{count}} правиле",
     "usedBy_few": "в {{count}} правилах",
     "usedBy_many": "в {{count}} правилах",
+    "rules": "Правила с сетом {{tag}}",
     "remove": "Убрать сет {{tag}}"
   }
 }

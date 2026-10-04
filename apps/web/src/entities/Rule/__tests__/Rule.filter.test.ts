@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { filterRules, toTargetGroups } from '../model/Rule.filter';
+import { filterRules, parseRuleSearch, toTargetGroups } from '../model/Rule.filter';
 import { RULE_TARGET } from '../model/Rule.model';
 import type { RuleRow } from '../model/Rule.model';
 
@@ -72,5 +72,43 @@ describe('отбор правил', () => {
   it('складывает выход и запрос', () => {
     expect(filterRules(rules, 'github', 'direct')).toEqual([]);
     expect(filterRules(rules, 'github', 'proxy').map((rule) => rule.id)).toEqual(['1']);
+  });
+});
+
+describe('отбор по сету', () => {
+  const rules = [
+    makeRule({ id: '0', matchers: [{ key: 'rule_set', values: ['geoip-ru', 'geosite-ru'] }] }),
+    makeRule({
+      id: '1',
+      matchers: [],
+      group: {
+        mode: 'and',
+        invert: false,
+        children: [
+          { matchers: [{ key: 'network', values: ['udp'] }], group: null },
+          { matchers: [{ key: 'rule_set', values: ['geosite-ru'] }], group: null },
+        ],
+      },
+    }),
+    // Тег сета в другом условии — не ссылка на сет.
+    makeRule({ id: '2', matchers: [{ key: 'domain_suffix', values: ['geosite-ru'] }] }),
+  ];
+
+  it('берёт правила, которые ссылаются на сет, в том числе из вложенной ветки', () => {
+    expect(filterRules(rules, '', null, 'geosite-ru').map((rule) => rule.id)).toEqual(['0', '1']);
+  });
+
+  it('не путает сет с совпадением по подстроке', () => {
+    expect(filterRules(rules, '', null, 'geosite')).toEqual([]);
+  });
+});
+
+describe('отбор правил в адресе', () => {
+  it('принимает номер правила и сет', () => {
+    expect(parseRuleSearch({ rule: '3', rule_set: 'geoip-ru' })).toEqual({ rule: 3, rule_set: 'geoip-ru' });
+  });
+
+  it('пустой сет отбрасывает отбор целиком', () => {
+    expect(parseRuleSearch({ rule: 3, rule_set: '' })).toEqual({});
   });
 });
