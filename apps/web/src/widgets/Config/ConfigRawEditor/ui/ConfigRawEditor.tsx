@@ -1,6 +1,6 @@
 import type { TFunction } from 'i18next';
 import { ChevronDown, ChevronUp, CircleAlert, CircleCheck, Search, WrapText } from 'lucide-react';
-import { useMemo, useRef, useState } from 'react';
+import { useDeferredValue, useMemo, useRef, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
 import type { ConfigIssue } from '@entities/Config';
@@ -85,7 +85,11 @@ export function ConfigRawEditor({
   const tokens = useMemo(() => toJsonTokens(draft), [draft]);
   const matches = useMemo(() => findMatches(draft, query), [draft, query]);
   const lines = useMemo(() => draft.split('\n').length, [draft]);
-  const error = parseError(t, draft);
+  // Ошибку разбора ищет проход по всему тексту, и ей кадр отставания не
+  // страшен — она откладывается за вводом. Подсветку откладывать нельзя: поле
+  // прозрачное поверх неё, и отставший слой разошёлся бы с текстом под кареткой.
+  const checkedDraft = useDeferredValue(draft);
+  const error = useMemo(() => parseError(t, checkedDraft), [t, checkedDraft]);
 
   function syncScroll() {
     const input = inputRef.current;

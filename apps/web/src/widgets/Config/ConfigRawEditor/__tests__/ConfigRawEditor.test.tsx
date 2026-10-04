@@ -64,6 +64,23 @@ describe('ConfigRawEditor', () => {
     expect(screen.getByText(ISSUE_TEXT)).toBeInTheDocument();
   });
 
+  // Разбор отложен за вводом, поэтому ошибку ждём, а не проверяем сразу.
+  it('после ввода показывает ошибку разбора со строкой и оставляет введённое', async () => {
+    const user = userEvent.setup();
+
+    renderEditor();
+
+    const input = screen.getByLabelText('Конфиг sing-box текстом');
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
+    await user.clear(input);
+    await user.type(input, '{{ "log": ');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/^строка 1: /);
+    expect(input).toHaveValue('{ "log": ');
+  });
+
   describe('оглавление', () => {
     const ROUTED =
       '{\n  // логи\n  "log": {},\n  "route": {\n    "rules": [{ "outbound": "direct" }],\n    "final": "direct",\n  },\n}';
