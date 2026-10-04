@@ -23,7 +23,7 @@ export function OverviewConnections({ runtime }: { runtime: OverviewRuntime }) {
               context={
                 runtime.connectionsAwaiting
                   ? null
-                  : t('connections.peak', { count: Math.max(...runtime.history, runtime.counts.active) })
+                  : t('connections.peak', { count: Math.max(runtime.historyPeak, runtime.counts.active) })
               }
             />
             <OverviewTile
@@ -37,7 +37,7 @@ export function OverviewConnections({ runtime }: { runtime: OverviewRuntime }) {
         {/* Семь карточек на три колонки: две растянуты, иначе в последнем
             ряду остаётся пустая ячейка. */}
         <div className='xl:col-span-2'>
-          <ConnectionHistory samples={runtime.history} />
+          <ConnectionHistory samples={runtime.history} sampledAt={runtime.historyAt} peak={runtime.historyPeak} />
         </div>
         <ConnectionSummaryAction shares={runtime.summary.actions} />
         <ConnectionSummaryNetwork shares={runtime.summary.networks} />

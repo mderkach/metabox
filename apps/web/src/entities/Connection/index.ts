@@ -20,4 +20,12 @@ export type {
   ConnectionTotals,
   RouteKind,
 } from './model/Connection.model';
-export { ConnectionState, ConnectionStore, useConnectionCounts } from './model/Connection.store';
+export {
+  ConnectionState,
+  ConnectionStore,
+  HISTORY_STEP_SECONDS,
+  HISTORY_WINDOW_POINTS,
+  HISTORY_WINDOW_SECONDS,
+  toHistoryTimes,
+  useConnectionCounts,
+} from './model/Connection.store';

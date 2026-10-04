@@ -19,8 +19,35 @@ import {
 
 const EMPTY_TOTALS: ConnectionTotals = { upload: 0, download: 0, memory: 0 };
 
-/** Минута числа соединений при шаге снапшота в секунду. */
-const HISTORY_POINTS = SECONDS_IN_MINUTE;
+/** Снапшот соединений приходит раз в секунду; своего времени у него нет. */
+export const HISTORY_STEP_SECONDS = 1;
+
+/** Окно графика числа соединений — минута, как у графика трафика. */
+export const HISTORY_WINDOW_SECONDS = SECONDS_IN_MINUTE;
+
+/** Точек в окне графика: по ним считается пик минуты. */
+export const HISTORY_WINDOW_POINTS = HISTORY_WINDOW_SECONDS / HISTORY_STEP_SECONDS;
+
+/**
+ * Точек за левой кромкой окна — по той же причине, что у трафика
+ * (`TRAFFIC_POINTS`): правая кромка отстаёт от «сейчас» на шаг, и буфер ровно
+ * в окно начинался бы внутри графика и прыгал за выпавшей точкой.
+ */
+const HISTORY_OFFSCREEN_POINTS = 2;
+
+const HISTORY_POINTS = HISTORY_WINDOW_POINTS + HISTORY_OFFSCREEN_POINTS;
+
+/**
+ * Время точек буфера числа соединений в секундах эпохи: от прихода последней
+ * назад с шагом снапшота, а не от прихода каждой — свёрнутая вкладка отдаёт
+ * снапшоты пачкой.
+ */
+export function toHistoryTimes(count: number, lastAt: number): number[] {
+  const last = lastAt / MS_IN_SECOND;
+
+  return Array.from({ length: count }, (_, index) => last - (count - 1 - index) * HISTORY_STEP_SECONDS);
+}
+
 const NO_RATE: ConnectionRate = { down: 0, up: 0 };
 
 /**
@@ -116,8 +143,10 @@ interface ConnectionState {
   totals: ConnectionTotals;
   /** Сводка живого снапшота: считается здесь, чтобы панели не обходили список. */
   summary: ConnectionSummary;
-  /** Кольцевой буфер числа открытых соединений — минута при шаге в секунду. */
+  /** Кольцевой буфер числа открытых соединений — минута при шаге в секунду и точки за кромкой окна. */
   history: number[];
+  /** Когда получена последняя точка `history`: от неё считается время графика. */
+  historyAt: number | null;
   /** Поток остановлен пользователем: экран замирает, подписка живёт. */
   paused: boolean;
   /** Сколько экранов сейчас смотрит поток: по нулю подписка закрывается. */
@@ -157,6 +186,7 @@ const ConnectionStateProto = stateCreator<ConnectionState>(
     totals: EMPTY_TOTALS,
     summary: EMPTY_SUMMARY,
     history: [],
+    historyAt: null,
     paused: false,
     readers: 0,
     outboundTypes: EMPTY_OUTBOUND_TYPES,
@@ -218,6 +248,7 @@ const ConnectionStateProto = stateCreator<ConnectionState>(
           sampledAt: receivedAt,
           summary: toSummary(rows),
           history,
+          historyAt: receivedAt,
           closed: gone.length > 0 ? [...stopped, ...state.closed].slice(0, CLOSED_LIMIT) : state.closed,
           totals: {
             upload: snapshot.upload_total,
@@ -262,7 +293,9 @@ const ConnectionStateProto = stateCreator<ConnectionState>(
     },
     seedHistory: (counts) => {
       set((state) =>
-        state.history.length > 0 || counts.length === 0 ? state : { history: counts.slice(-HISTORY_POINTS) }
+        state.history.length > 0 || counts.length === 0
+          ? state
+          : { history: counts.slice(-HISTORY_POINTS), historyAt: Date.now() }
       );
     },
     reset: () => {
@@ -273,6 +306,7 @@ const ConnectionStateProto = stateCreator<ConnectionState>(
         totals: EMPTY_TOTALS,
         summary: EMPTY_SUMMARY,
         history: [],
+        historyAt: null,
         paused: false,
         dropped: 0,
         sampledAt: null,

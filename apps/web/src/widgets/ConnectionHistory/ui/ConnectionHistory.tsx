@@ -1,39 +1,109 @@
-import { useId } from 'react';
+import type { TFunction } from 'i18next';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { COUNT_STEPS, toAreaGeometry, toValueScale } from '@shared/lib/chart';
-import { SECONDS_IN_MINUTE } from '@shared/lib/time';
+import { HISTORY_STEP_SECONDS, HISTORY_WINDOW_SECONDS, toHistoryTimes } from '@entities/Connection';
+import { COUNT_STEPS, toTimeTicks, toValueScale } from '@shared/lib/chart';
+import { useReducedMotion } from '@shared/lib/media';
 import { useStickyCeiling } from '@shared/lib/useStickyCeiling';
-import { Card, CardContent, CardHeader, SECTION_LABEL, SkeletonRows } from '@shared/ui';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  Plot,
+  SECTION_LABEL,
+  SkeletonRows,
+  type PlotData,
+  type PlotInstance,
+  type PlotOptions,
+  type PlotScales,
+  type PlotTone,
+  useFollowNow,
+} from '@shared/ui';
 
-/** Координаты в долях области: сетка растягивается по месту, подписи остаются HTML. */
-const PLOT = 100;
+import { FILL_ALPHA, GRID_DASH, LINE_WIDTH, TIME_TICK_SECONDS } from '../model';
 
-/** Линии сетки: по ним читается половина и четверти пика. */
-const QUARTERS = 4;
-const GRID = Array.from({ length: QUARTERS - 1 }, (_, index) => ((index + 1) * PLOT) / QUARTERS);
+/** По одной точке линию не проведёшь. */
+const MIN_POINTS = 2;
 
-/** Отсечки времени, секунды назад: минута делится на четыре шага. */
-const TICK_STEPS = 4;
-const TIME_TICKS = Array.from(
-  { length: TICK_STEPS + 1 },
-  (_, index) => SECONDS_IN_MINUTE - (index * SECONDS_IN_MINUTE) / TICK_STEPS
-);
+function toTimeLabels(t: TFunction<'widgets/ConnectionHistory'>, splits: number[], max: number): string[] {
+  return splits.map((value) => {
+    const age = Math.round(max - value);
+
+    return age === 0 ? t('chart.now', { ns: 'shared' }) : t('chart.ago', { ns: 'shared', value: age });
+  });
+}
+
+const TONES: readonly PlotTone[] = [{ token: '--primary', fillAlpha: FILL_ALPHA }];
+
+function buildOptions(t: TFunction<'widgets/ConnectionHistory'>): PlotOptions {
+  return {
+    scales: { x: { time: false, auto: false }, y: { auto: false } },
+    series: [{}, { fillTo: 0, width: LINE_WIDTH, points: { show: false } }],
+    axes: [
+      {
+        // Деление на самой левой кромке не подписывается: его подпись легла бы
+        // на нижнее деление шкалы.
+        splits: (chart) => {
+          const min = chart.scales.x.min ?? 0;
+
+          return toTimeTicks({ min, max: chart.scales.x.max ?? 0 }, TIME_TICK_SECONDS).filter((tick) => tick > min);
+        },
+        values: (chart, splits) => toTimeLabels(t, splits, chart.scales.x.max ?? 0),
+      },
+      {
+        splits: (chart) => toValueScale(chart.scales.y.max ?? 0, COUNT_STEPS).ticks,
+        values: (_, splits) => splits.map(String),
+        grid: { show: true, dash: GRID_DASH },
+      },
+    ],
+  };
+}
 
 /**
  * Открытые соединения за минуту. Живой буфер копит панель, а открывается он
  * минутой, которую держит демон: рантайм отдаёт только снимок живых.
+ *
+ * Ось времени устроена как у графика трафика: время точек считает модель
+ * (`toHistoryTimes`), окно — всегда минута до «сейчас», и неполный буфер
+ * оставляет левую часть пустой, а не растягивается на всю ось. Кромка шкалы
+ * круглая с запасом на колебания (`useStickyCeiling`): число соединений гуляет
+ * каждую секунду, и кромка по пику меняла бы подписи оси на каждом кадре.
  */
-export function ConnectionHistory({ samples }: { samples: number[] }) {
+export function ConnectionHistory({
+  samples,
+  sampledAt,
+  peak,
+}: {
+  samples: number[];
+  /** Когда пришла последняя точка, миллисекунды эпохи; `null` — точек ещё не было. */
+  sampledAt: number | null;
+  /** Пик видимой минуты. */
+  peak: number;
+}) {
   const { t } = useTranslation('widgets/ConnectionHistory');
-  const peak = Math.max(...samples, 1);
-  // Подписана верхняя кромка, а не пик: геометрия строится от потолка, и пик,
-  // напечатанный у края, обещал бы ряду высоту, которой он не достигает.
-  // Кромка круглая с запасом на колебания: число соединений гуляет каждую
-  // секунду, и кромка по пику меняла бы подпись оси на каждом кадре.
+  const reducedMotion = useReducedMotion();
+  const [chart, setChart] = useState<PlotInstance | null>(null);
+  const options = useMemo(() => buildOptions(t), [t]);
+  const times = useMemo(
+    () => (sampledAt === null ? [] : toHistoryTimes(samples.length, sampledAt)),
+    [samples.length, sampledAt]
+  );
+  const data = useMemo<PlotData>(() => [times, samples], [times, samples]);
   const ceiling = useStickyCeiling(toValueScale(peak, COUNT_STEPS).ceiling);
-  const geometry = toAreaGeometry(samples, ceiling, PLOT, PLOT);
-  const gradient = useId();
+  const scales = useMemo<PlotScales>(() => {
+    const y = { min: 0, max: ceiling };
+
+    if (!reducedMotion || times.length === 0) {
+      return { y };
+    }
+
+    const last = times[times.length - 1];
+
+    return { x: { min: last - HISTORY_WINDOW_SECONDS, max: last }, y };
+  }, [ceiling, reducedMotion, times]);
+
+  useFollowNow(chart, HISTORY_WINDOW_SECONDS, HISTORY_STEP_SECONDS, !reducedMotion);
 
   return (
     <Card className='gap-3'>
@@ -42,68 +112,19 @@ export function ConnectionHistory({ samples }: { samples: number[] }) {
       </CardHeader>
 
       <CardContent>
-        <figure className='flex flex-col gap-1.5'>
-          <div className='flex gap-3'>
-            <div className='flex w-10 shrink-0 flex-col justify-between py-0.5 text-right font-mono text-xs text-muted-foreground tabular-nums'>
-              <span>{ceiling}</span>
-              <span>0</span>
-            </div>
-
-            {geometry === null ? (
-              <SkeletonRows rows={1} rowClassName='h-32' className='min-w-0 grow p-0' />
-            ) : (
-              <svg
-                viewBox={`0 0 ${String(PLOT)} ${String(PLOT)}`}
-                preserveAspectRatio='none'
-                role='img'
-                aria-label={t('chart', { peak: t('count.connection', { ns: 'shared', count: peak }) })}
-                className='h-32 min-w-0 grow'
-              >
-                <defs>
-                  <linearGradient id={gradient} x1='0' y1='0' x2='0' y2='1'>
-                    <stop offset='0%' stopColor='var(--primary)' stopOpacity='0.28' />
-                    <stop offset='100%' stopColor='var(--primary)' stopOpacity='0.02' />
-                  </linearGradient>
-                </defs>
-
-                {GRID.map((line) => (
-                  <line
-                    key={line}
-                    x1='0'
-                    y1={line}
-                    x2={PLOT}
-                    y2={line}
-                    vectorEffect='non-scaling-stroke'
-                    className='stroke-border'
-                    strokeWidth={1}
-                    strokeDasharray='2 3'
-                  />
-                ))}
-
-                <path d={geometry.area} fill={`url(#${gradient})`} stroke='none' />
-                <polyline
-                  points={geometry.line}
-                  fill='none'
-                  strokeWidth={1.5}
-                  strokeLinejoin='round'
-                  vectorEffect='non-scaling-stroke'
-                  className='stroke-primary'
-                />
-              </svg>
-            )}
-          </div>
-
-          <figcaption className='flex gap-3 font-mono text-xs text-muted-foreground'>
-            <span className='w-10 shrink-0' aria-hidden='true' />
-            <span className='flex min-w-0 grow justify-between'>
-              {TIME_TICKS.map((tick) => (
-                <span key={tick}>
-                  {tick === 0 ? t('chart.now', { ns: 'shared' }) : t('chart.ago', { ns: 'shared', value: tick })}
-                </span>
-              ))}
-            </span>
-          </figcaption>
-        </figure>
+        {sampledAt === null || samples.length < MIN_POINTS ? (
+          <SkeletonRows rows={1} rowClassName='h-36' className='p-0' />
+        ) : (
+          <Plot
+            options={options}
+            tones={TONES}
+            data={data}
+            scales={scales}
+            onChart={setChart}
+            label={t('chart', { peak: t('count.connection', { ns: 'shared', count: peak }) })}
+            className='h-36'
+          />
+        )}
       </CardContent>
     </Card>
   );

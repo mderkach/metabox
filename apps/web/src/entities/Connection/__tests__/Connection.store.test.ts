@@ -2,13 +2,19 @@ import { fakeEventSource } from '@test/fakeEventSource';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { RUNTIME_TOPIC } from '@shared/api';
-import { SECONDS_IN_MINUTE } from '@shared/lib/time';
+import { MS_IN_SECOND } from '@shared/lib/time';
 
 import { listenConnections } from '../api/Connection.api';
 import type { ConnectionWire } from '../api/Connection.schema';
 import { toConnectionRow } from '../model/Connection.adapter';
 import { CLOSED_LIMIT, FINAL_ACTION, ROUTE_KIND, TOP_LIMIT, toRouteKind } from '../model/Connection.model';
-import { ConnectionStore } from '../model/Connection.store';
+import {
+  ConnectionStore,
+  HISTORY_STEP_SECONDS,
+  HISTORY_WINDOW_POINTS,
+  HISTORY_WINDOW_SECONDS,
+  toHistoryTimes,
+} from '../model/Connection.store';
 import { CONNECTIONS_FIXTURE, makeConnectionsSnapshot } from './Connection.fixture';
 
 describe('поток соединений', () => {
@@ -200,19 +206,76 @@ describe('отбраковка снапшота', () => {
 });
 
 describe('сводка и история снапшота', () => {
-  it('пишет число открытых соединений в буфер длиной в минуту', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('пишет число открытых соединений в буфер, который дальше минуты не копит', () => {
     const store = ConnectionStore.getState();
 
     store.reset();
 
-    for (let tick = 0; tick <= SECONDS_IN_MINUTE; tick += 1) {
+    for (let tick = 0; tick < 2 * HISTORY_WINDOW_POINTS; tick += 1) {
       store.apply(makeConnectionsSnapshot(2));
     }
 
     const { history } = ConnectionStore.getState();
 
-    expect(history).toHaveLength(SECONDS_IN_MINUTE);
+    expect(history.length).toBeGreaterThanOrEqual(HISTORY_WINDOW_POINTS);
+    expect(history.length).toBeLessThan(2 * HISTORY_WINDOW_POINTS);
     expect(history.at(-1)).toBe(2);
+  });
+
+  it('запоминает, когда пришла последняя точка истории: от неё считается время графика', () => {
+    const store = ConnectionStore.getState();
+
+    store.reset();
+    vi.setSystemTime(1_000 * MS_IN_SECOND);
+    store.apply(makeConnectionsSnapshot(2));
+
+    expect(ConnectionStore.getState().historyAt).toBe(1_000 * MS_IN_SECOND);
+  });
+
+  it('засевает пустую историю минутой от демона со временем засева, а заполненную не трогает', () => {
+    const store = ConnectionStore.getState();
+
+    store.reset();
+    vi.setSystemTime(2_000 * MS_IN_SECOND);
+    store.seedHistory([1, 2, 3]);
+
+    expect(ConnectionStore.getState()).toMatchObject({ history: [1, 2, 3], historyAt: 2_000 * MS_IN_SECOND });
+
+    ConnectionStore.getState().seedHistory([9, 9]);
+
+    expect(ConnectionStore.getState().history).toEqual([1, 2, 3]);
+  });
+
+  it('считает время точек истории от последней назад с шагом снапшота', () => {
+    expect(toHistoryTimes(3, 10 * MS_IN_SECOND)).toEqual([
+      10 - 2 * HISTORY_STEP_SECONDS,
+      10 - HISTORY_STEP_SECONDS,
+      10,
+    ]);
+  });
+
+  it('полный буфер истории начинается не правее левой кромки окна, даже когда точка только что пришла', () => {
+    const store = ConnectionStore.getState();
+
+    store.reset();
+
+    for (let tick = 0; tick < 2 * HISTORY_WINDOW_POINTS; tick += 1) {
+      store.apply(makeConnectionsSnapshot(1));
+    }
+
+    const arrivedAt = 100 * MS_IN_SECOND;
+    const [oldest] = toHistoryTimes(ConnectionStore.getState().history.length, arrivedAt);
+    const leftEdge = arrivedAt / MS_IN_SECOND - HISTORY_STEP_SECONDS - HISTORY_WINDOW_SECONDS;
+
+    expect(oldest).toBeLessThanOrEqual(leftEdge);
   });
 
   it('считает сводку тем же снапшотом, что и список', () => {
@@ -324,6 +387,7 @@ describe('сводка и история снапшота', () => {
     ConnectionStore.getState().reset();
 
     expect(ConnectionStore.getState().history).toEqual([]);
+    expect(ConnectionStore.getState().historyAt).toBeNull();
     expect(ConnectionStore.getState().summary.actions).toEqual([]);
   });
 });

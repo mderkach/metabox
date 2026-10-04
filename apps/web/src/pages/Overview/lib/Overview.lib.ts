@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   ConnectionState,
   ConnectionStore,
+  HISTORY_WINDOW_POINTS,
   useConnectionCounts,
   type ConnectionSummary,
   type ConnectionTotals,
@@ -53,6 +54,10 @@ export interface OverviewRuntime {
   summary: ConnectionSummary;
   /** Число открытых соединений за минуту. */
   history: number[];
+  /** Когда получена последняя точка `history`: от неё считается время графика. */
+  historyAt: number | null;
+  /** Пик открытых соединений за видимую минуту. */
+  historyPeak: number;
   counts: { active: number; closed: number };
   /** Кадры рантайма приходят прямо сейчас. */
   live: boolean;
@@ -82,6 +87,7 @@ export function useOverviewRuntime(): OverviewRuntime {
   const totals = ConnectionState.use.totals();
   const summary = ConnectionState.use.summary();
   const history = ConnectionState.use.history();
+  const historyAt = ConnectionState.use.historyAt();
   const counts = useConnectionCounts();
   const connectionsAt = ConnectionState.use.sampledAt();
   const trafficHistory = useTrafficHistory();
@@ -126,6 +132,7 @@ export function useOverviewRuntime(): OverviewRuntime {
       up: visible.reduce((max, sample) => Math.max(max, sample.up), 0),
     };
   }, [traffic]);
+  const historyPeak = useMemo(() => Math.max(0, ...history.slice(-HISTORY_WINDOW_POINTS)), [history]);
 
   return {
     traffic,
@@ -139,6 +146,8 @@ export function useOverviewRuntime(): OverviewRuntime {
     share: system?.share ?? NO_SHARE,
     summary,
     history,
+    historyAt,
+    historyPeak,
     counts,
     live: sampledAt !== null && Math.max(checkedAt, sampledAt) - sampledAt < STALE_AFTER,
     awaiting: sampledAt === null,
