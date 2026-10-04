@@ -1,5 +1,5 @@
 import type { ColumnOrderState, ColumnVisibilityState, OnChangeFn, SortingState } from '@tanstack/react-table';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { z } from 'zod';
 
 import { MS_IN_SECOND } from '@shared/lib/time';
@@ -126,38 +126,40 @@ export interface ConnectionView extends StoredView {
  */
 export function useConnectionView(): ConnectionView {
   const [view, setView] = useState(readView);
+  // Последний вид лежит в ref, а не берётся из замыкания: сброс зовёт два
+  // сеттера одним обработчиком, и второй, закрытый над видом того же рендера,
+  // затёр бы правку первого — и в состоянии, и в хранилище.
+  const latest = useRef(view);
 
   // Хранилище пишется снаружи обновления состояния: React зовёт обновляющую
   // функцию дважды в строгом режиме, и запись ушла бы в неё вместе с остальным.
-  const update = useCallback(
-    (patch: Partial<StoredView>) => {
-      const next = { ...view, ...patch };
+  const update = useCallback((patch: Partial<StoredView>) => {
+    const next = { ...latest.current, ...patch };
 
-      writeView(next);
-      setView(next);
-    },
-    [view]
-  );
+    latest.current = next;
+    writeView(next);
+    setView(next);
+  }, []);
 
   const onSortingChange: OnChangeFn<SortingState> = useCallback(
     (updater) => {
-      update({ sorting: typeof updater === 'function' ? updater(view.sorting) : updater });
+      update({ sorting: typeof updater === 'function' ? updater(latest.current.sorting) : updater });
     },
-    [update, view.sorting]
+    [update]
   );
 
   const onColumnsChange: OnChangeFn<ColumnVisibilityState> = useCallback(
     (updater) => {
-      update({ columns: typeof updater === 'function' ? updater(view.columns) : updater });
+      update({ columns: typeof updater === 'function' ? updater(latest.current.columns) : updater });
     },
-    [update, view.columns]
+    [update]
   );
 
   const onOrderChange: OnChangeFn<ColumnOrderState> = useCallback(
     (updater) => {
-      update({ order: typeof updater === 'function' ? updater(view.order) : updater });
+      update({ order: typeof updater === 'function' ? updater(latest.current.order) : updater });
     },
-    [update, view.order]
+    [update]
   );
 
   const onDensityChange = useCallback(
