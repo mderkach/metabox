@@ -6,7 +6,7 @@
 
 ## Контекст и постановка проблемы
 
-Стенд `.devcontainer/` служит заменой роутера: на нём проверяются цикл Apply, поведение службы и доступность панели. До этого решения он собирался на публичном `openwrt/rootfs:aarch64_generic-24.10.8` — ветка 24.10 с opkg, тогда как устройство (PRD A.7) работает на собственной сборке OpenWrt SNAPSHOT r35944+4, таргет `mediatek/filogic`, арка `aarch64_cortex-a53`, пакетный менеджер apk 3.0.5.
+Стенд `.devcontainer/` служит заменой роутера: на нём проверяются цикл Apply, поведение службы и доступность панели. До этого решения он собирался на публичном `openwrt/rootfs:aarch64_generic-24.10.8` — ветка 24.10 с opkg, тогда как устройство ([ADR-0042](./ADR-0042-target-the-bpi-r4-pro-and-build-for-aarch64-only.md)) работает на собственной сборке OpenWrt SNAPSHOT r35944+4, таргет `mediatek/filogic`, арка `aarch64_cortex-a53`, пакетный менеджер apk 3.0.5.
 
 Расхождение было не только в базе. Панель в стенде не ставилась, а монтировалась бинарём из `dist/` и запускалась стендовым init-скриптом с зашитым адресом; пакетный init-скрипт из [`apps/metaboxd/package/`](../../apps/metaboxd/package/), который читает UCI и берёт адреса у сетей, не исполнялся ни разу. sing-box распаковывался из tar.gz, поэтому его init-скрипт тоже был стендовой копией — с командой `check`, которой в пакете форка нет. Сетевая подсистема была выключена целиком: в `/etc/config/network` оставался только loopback.
 
@@ -97,7 +97,8 @@
 
 ## Ссылки
 
-- [`docs/PRD.md`](../PRD.md), раздел A.7 и критерии AC-14, AC-17, AC-18, AC-21, AC-22;
+- [ADR-0042](./ADR-0042-target-the-bpi-r4-pro-and-build-for-aarch64-only.md) — целевое устройство;
+- [`docs/PRD.md`](../PRD.md), критерии AC-14, AC-17, AC-18, AC-21, AC-22;
 - [ADR-0011](./ADR-0011-ship-the-daemon-as-an-apk-package.md) — поставка панели пакетом apk;
 - [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md) — владение конфигом и протокол Apply;
 - [`.devcontainer/target/Dockerfile`](../../.devcontainer/target/Dockerfile), [`.devcontainer/target/device-base/Dockerfile`](../../.devcontainer/target/device-base/Dockerfile), [`.devcontainer/docker-compose.yml`](../../.devcontainer/docker-compose.yml);

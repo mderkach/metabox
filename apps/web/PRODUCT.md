@@ -41,7 +41,7 @@ web
 - Шрифты подключены локально и уезжают в бинарь: `Geist Variable` — текст, `Fira Code Variable` — моно.
 - Кегли и радиусы кратны двум, размеры — в `rem`. Обе темы объявляют `color-scheme`.
 - Тексты интерфейса лежат в слайсе рядом с экраном и приезжают вместе с ним — [ADR-0019](../../docs/adr/ADR-0019-keep-interface-texts-in-the-slice-and-load-them-over-the-network.md).
-- Остальное — гайды [`apps/web/docs/`](./docs/README.md), раздел 9 и приложение A.10 PRD.
+- Остальное — гайды [`apps/web/docs/`](./docs/README.md), раздел 9 PRD и [ADR-0045](../../docs/adr/ADR-0045-split-document-and-server-state-and-keep-a-folder-per-project.md).
 
 Открытые вопросы, которые меняют интерфейс и решаются владельцем, а не по ходу дизайн-правки: текстовый DSL для правил (OQ-4), отключённое правило (OQ-11). Раздел 10.1 PRD.
 

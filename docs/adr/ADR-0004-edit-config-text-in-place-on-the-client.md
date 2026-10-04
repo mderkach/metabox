@@ -109,7 +109,7 @@ Non-goal: клиент не приводит конфиг к каноничес�
 
 ## Ссылки
 
-- [PRD](../PRD.md): AC-2, AC-3, AC-13, AC-26; приложение A.10 — стек фронтенда;
+- [PRD](../PRD.md): AC-2, AC-3, AC-13, AC-26; [ADR-0045](./ADR-0045-split-document-and-server-state-and-keep-a-folder-per-project.md) — стек фронтенда;
 - [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md) — владение конфигом и протокол Apply;
 - `apps/web/src/entities/Config/api/Config.query.ts` — текущий разбор ответа схемой;
 - `apps/metaboxd/internal/clashapi/splice.go` — точечная правка байт на стороне демона;

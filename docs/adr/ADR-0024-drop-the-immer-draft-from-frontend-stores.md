@@ -6,7 +6,7 @@
 
 ## Контекст и постановка проблемы
 
-Фабрика `apps/web/src/shared/lib/state/stateCreator.ts` собирала каждый стор панели из двух middleware — `devtools` и `immer`. Черновик immer брали ради правки вложенного узла конфига присваиванием: так записано в PRD (раздел 9 и таблица A.10) и в [гайде по состоянию](../../apps/web/docs/guides/StateManagement.md).
+Фабрика `apps/web/src/shared/lib/state/stateCreator.ts` собирала каждый стор панели из двух middleware — `devtools` и `immer`. Черновик immer брали ради правки вложенного узла конфига присваиванием: так записано в PRD (раздел 9 и таблица A.10, теперь — [ADR-0045](./ADR-0045-split-document-and-server-state-and-keep-a-folder-per-project.md)) и в [гайде по состоянию](../../apps/web/docs/guides/StateManagement.md).
 
 К моменту решения ни один из трёх сторов вложенных узлов не правит:
 
@@ -75,7 +75,7 @@ Non-goal: возвращать immer точечно в отдельный сто
 
 - Обработчик, меняющий несколько полей, теперь перечисляет их в возвращаемом объекте; правка «в одну строку по месту» больше не работает.
 - Ветка «ничего не менять» требует явного `return state`. Пустой `return` тихо перезапишет состояние неопределённым значением, и линтер этого не ловит: от ошибки страхует только вывод типов.
-- Состав стека записан в PRD (раздел 9 и таблица A.10) и в гайде по состоянию, поэтому решение правит и их: код и документы расходиться не должны.
+- Состав стека записан в PRD (раздел 9), в [ADR-0045](./ADR-0045-split-document-and-server-state-and-keep-a-folder-per-project.md) и в гайде по состоянию, поэтому решение правит и их: код и документы расходиться не должны.
 
 ### Нейтральные или отложенные
 
@@ -95,7 +95,7 @@ Non-goal: возвращать immer точечно в отдельный сто
 
 ## Ссылки
 
-- [PRD](../PRD.md), раздел 9 и таблица A.10 — стек фронтенда; NFR-2 — бюджет отзывчивости;
+- [PRD](../PRD.md), раздел 9, и [ADR-0045](./ADR-0045-split-document-and-server-state-and-keep-a-folder-per-project.md) — стек фронтенда; NFR-2 — бюджет отзывчивости;
 - [ADR-0004](./ADR-0004-edit-config-text-in-place-on-the-client.md) — документ конфига правится текстом, а не деревом;
 - [Управление состоянием](../../apps/web/docs/guides/StateManagement.md);
 - `apps/web/src/shared/lib/state/stateCreator.ts`, `apps/web/src/entities/Connection/model/Connection.store.ts`.
