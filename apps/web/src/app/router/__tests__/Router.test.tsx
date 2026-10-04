@@ -2,6 +2,7 @@ import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import { renderWithQuery } from '@test/renderWithQuery';
 import { server } from '@test/server';
 import { act, screen, waitFor, within } from '@testing-library/react';
+import i18next from 'i18next';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -76,6 +77,7 @@ describe('маршруты панели', () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
 
@@ -192,6 +194,30 @@ describe('маршруты панели', () => {
 
     expect(within(mode).getByRole('tab', { selected: true })).toHaveAttribute('href', '/config');
     expect(within(mode).queryAllByRole('tab', { current: 'page' })).toHaveLength(0);
+  });
+
+  // Словарь, не догруженный лоадером, уводит часть экрана в `Suspense`: форма
+  // «Свой набор» открывается через заглушку вместо текста. В тесте словари лежат
+  // в памяти, поэтому проверяется то, что лоадер о них просит.
+  it('лоадер сетов догружает словари каждого слайса, который показывает экран', async () => {
+    serveDaemon();
+    const loadNamespaces = vi.spyOn(i18next, 'loadNamespaces');
+
+    renderRouter('/config/rule-set');
+
+    await screen.findAllByRole('heading', { level: 1, name: 'Конфигурация' });
+
+    const requested = loadNamespaces.mock.calls.flatMap(([namespaces]) => [namespaces].flat());
+
+    expect(requested).toEqual(
+      expect.arrayContaining([
+        'pages/RuleSets',
+        'widgets/RuleSet/RuleSetTable',
+        'features/RuleSet/RuleSetAdd',
+        'features/RuleSet/RuleSetCustom',
+        'features/Config/ConfigCacheFile',
+      ])
+    );
   });
 
   // Бейдж черновика принадлежит шапке раздела и виден с любой его вкладки.

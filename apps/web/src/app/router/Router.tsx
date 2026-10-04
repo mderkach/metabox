@@ -94,6 +94,7 @@ const ruleSetsRoute = createRoute({
         'pages/RuleSets',
         'widgets/RuleSet/RuleSetTable',
         'features/RuleSet/RuleSetAdd',
+        'features/RuleSet/RuleSetCustom',
         'features/Config/ConfigCacheFile',
       ]),
       QueryClientInstance.query(getRuleSetCatalogOptions()).catch(keepFailureForScreen),
