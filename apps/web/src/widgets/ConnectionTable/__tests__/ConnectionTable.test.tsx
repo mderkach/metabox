@@ -10,6 +10,7 @@ import { makeConnectionsSnapshot } from '@entities/Connection/__tests__/Connecti
 
 import { useConnectionView } from '../lib';
 import { ConnectionTable, type ConnectionTableEmpty } from '../ui';
+import { CONNECTION_COLUMNS_HIDDEN } from '../ui/ConnectionColumns';
 
 const STORAGE_KEY = 'metabox.connections.view';
 
@@ -222,6 +223,36 @@ describe('вид списка', () => {
     );
     expect(headerLabels()).toEqual(['Куда', 'Откуда', 'Правило', 'Действие', 'Цепочка', 'Объём', 'Время']);
     expect(screen.getByRole('button', { name: 'Опустить поле Откуда ниже' })).toHaveFocus();
+  });
+
+  it('сброс вида возвращает набор и порядок колонок разом, и хранилище получает вид по умолчанию', async () => {
+    const user = userEvent.setup();
+    const rows = makeRows(4);
+    const first = renderWithQuery(<TableHarness rows={rows} onReset={vi.fn<() => void>()} />);
+
+    await user.click(screen.getByRole('button', { name: /^Поля/ }));
+    await user.click(await screen.findByRole('checkbox', { name: 'Сеть' }));
+    await user.click(screen.getByRole('button', { name: 'Поднять поле Куда выше' }));
+
+    expect(screen.getByRole('columnheader', { name: /Сеть/ })).toBeInTheDocument();
+    expect(headerLabels()[0]).toBe('Куда');
+
+    // Сброс пишет колонки и порядок двумя сеттерами подряд: второй не должен
+    // затирать первый видом, снятым до него.
+    await user.click(screen.getByRole('button', { name: 'По умолчанию' }));
+
+    expect(headerLabels()).toEqual(['Откуда', 'Куда', 'Правило', 'Действие', 'Цепочка', 'Объём', 'Время']);
+    expect(screen.queryByRole('columnheader', { name: /Сеть/ })).not.toBeInTheDocument();
+
+    first.unmount();
+    renderWithQuery(<TableHarness rows={rows} onReset={vi.fn<() => void>()} />);
+
+    expect(headerLabels()).toEqual(['Откуда', 'Куда', 'Правило', 'Действие', 'Цепочка', 'Объём', 'Время']);
+    expect(screen.queryByRole('columnheader', { name: /Сеть/ })).not.toBeInTheDocument();
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}')).toMatchObject({
+      columns: CONNECTION_COLUMNS_HIDDEN,
+      order: [],
+    });
   });
 
   it('сброс вида возвращает и порядок колонок', async () => {
