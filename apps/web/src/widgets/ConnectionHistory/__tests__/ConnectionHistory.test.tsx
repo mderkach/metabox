@@ -67,6 +67,13 @@ describe('ConnectionHistory', () => {
     expect(FakePlot.latest().scales.y).toEqual(before);
   });
 
+  // Подписи оси в канвасе имени не дают: фигура называет то, что на ней видно.
+  it('называет фигуру графика пиком минуты', () => {
+    render(<ConnectionHistory samples={samplesOf(2, 7)} sampledAt={NOW} peak={7} />);
+
+    expect(screen.getByRole('figure', { name: 'Открытые соединения за минуту, пик 7 соединений' })).toBeInTheDocument();
+  });
+
   it('до второй точки показывает загрузку, а не пустую ось', () => {
     render(<ConnectionHistory samples={samplesOf(1)} sampledAt={NOW} peak={3} />);
 

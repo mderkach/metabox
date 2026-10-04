@@ -141,12 +141,15 @@ export function Plot({
   tones: readonly PlotTone[];
   data: PlotData;
   scales?: PlotScales;
-  /** Доступное имя картинки: канвас скринридер не читает. */
+  /**
+   * Доступное имя фигуры графика: канвас скринридер не читает, поэтому имя
+   * задаётся явно и называет то, что на графике видно глазами.
+   */
   label: string;
   className?: string;
   onChart?: (chart: PlotInstance | null) => void;
 }) {
-  const container = useRef<HTMLDivElement>(null);
+  const container = useRef<HTMLElement>(null);
   const chart = useRef<PlotInstance | null>(null);
 
   useEffect(
@@ -214,5 +217,5 @@ export function Plot({
     [options, data, scales]
   );
 
-  return <div ref={container} role='img' aria-label={label} className={cn('min-w-0 font-mono text-xs', className)} />;
+  return <figure ref={container} aria-label={label} className={cn('min-w-0 font-mono text-xs', className)} />;
 }

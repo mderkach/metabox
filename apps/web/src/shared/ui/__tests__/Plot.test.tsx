@@ -46,9 +46,10 @@ describe('Plot', () => {
     expect(plot.destroy).toHaveBeenCalledOnce();
   });
 
-  it('читается картинкой с доступным именем', () => {
+  it('читается фигурой с явно заданным доступным именем', () => {
     render(<Plot options={OPTIONS} tones={TONES} data={[[1], [1]]} label='трафик' />);
 
-    expect(screen.getByRole('img', { name: 'трафик' })).toBeInTheDocument();
+    expect(screen.getByRole('figure', { name: 'трафик' })).toBeInTheDocument();
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
   });
 });

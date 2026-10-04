@@ -96,7 +96,7 @@ describe('экран обзора', () => {
     renderWithRouter(OverviewPage);
 
     expect(
-      await screen.findByRole('img', { name: 'Трафик за минуту: входящий до 97.7 кБ/с, исходящий до 1000 Б/с' })
+      await screen.findByRole('figure', { name: 'Трафик за минуту: входящий до 97.7 кБ/с, исходящий до 1000 Б/с' })
     ).toBeInTheDocument();
   });
 
@@ -160,8 +160,8 @@ describe('экран обзора', () => {
   it('рисует графики трафика и соединений минутой от демона ещё до первого кадра потока', async () => {
     renderWithRouter(OverviewPage);
 
-    expect(await screen.findByRole('img', { name: /Трафик за минуту/ })).toBeInTheDocument();
-    expect(await screen.findByRole('img', { name: /Открытые соединения за минуту/ })).toBeInTheDocument();
+    expect(await screen.findByRole('figure', { name: /Трафик за минуту/ })).toBeInTheDocument();
+    expect(await screen.findByRole('figure', { name: /Открытые соединения за минуту/ })).toBeInTheDocument();
     expect(RuntimeStore.getState().traffic).toHaveLength(60);
     expect(ConnectionStore.getState().history).toHaveLength(60);
   });
