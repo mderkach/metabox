@@ -40,6 +40,25 @@ describe('toConfigVersions', () => {
     expect(toConfigVersions(VERSIONS_WIRE).some((version) => version.current)).toBe(false);
   });
 
+  it('не отмечает текущей версию с тем же конфигом, но другими списками: её откат вернёт списки', () => {
+    const versions = toConfigVersions({
+      versions: [
+        { id: 1, size: 2048, sum: 'a1', saved_at: 0, lists_sum: 'l1' },
+        { id: 2, size: 2048, sum: 'a1', saved_at: 0, lists_sum: 'l2' },
+      ],
+      current_sum: 'a1',
+      current_lists_sum: 'l2',
+    });
+
+    expect(versions.filter((version) => version.current).map((version) => version.id)).toEqual([2]);
+  });
+
+  it('у версии без снимка списков сравнивает только конфиг: её откат списков не трогает', () => {
+    const versions = toConfigVersions({ ...VERSIONS_WIRE, current_sum: 'b2', current_lists_sum: 'l1' });
+
+    expect(versions.filter((version) => version.current).map((version) => version.id)).toEqual([2]);
+  });
+
   it('не принимает версию без номера: порядок истории задаёт именно он', () => {
     expect(ConfigVersionsSchema.safeParse({ versions: [{ size: 1, sum: 'x', saved_at: 0 }] }).success).toBe(false);
   });

@@ -9,12 +9,23 @@ import {
 } from '../api/Config.schema';
 import type { CheckFailure, ConfigVersion, WorkdirMismatch } from './Config.model';
 
-function toConfigVersion(wire: ConfigVersionWire, currentSum: string | undefined): ConfigVersion {
+/**
+ * Версия совпадает с устройством, когда совпадают конфиг и набор файлов
+ * списков. Версия без `lists_sum` сохранена до снимков списков: её
+ * восстановление списков не трогает, и сравнивать их не с чем.
+ */
+function isCurrent(wire: ConfigVersionWire, versions: ConfigVersionsWire): boolean {
+  return (
+    wire.sum === versions.current_sum && (wire.lists_sum === undefined || wire.lists_sum === versions.current_lists_sum)
+  );
+}
+
+function toConfigVersion(wire: ConfigVersionWire, versions: ConfigVersionsWire): ConfigVersion {
   return {
     id: wire.id,
     size: wire.size,
     sum: wire.sum,
-    current: wire.sum === currentSum,
+    current: isCurrent(wire, versions),
     savedAt: wire.saved_at > 0 ? wire.saved_at * MS_IN_SECOND : null,
   };
 }
@@ -24,9 +35,7 @@ function toConfigVersion(wire: ConfigVersionWire, currentSum: string | undefined
  * откатываются обычно на предыдущий конфиг, а не на самый старый.
  */
 export function toConfigVersions(wire: ConfigVersionsWire): ConfigVersion[] {
-  return [...wire.versions]
-    .sort((left, right) => right.id - left.id)
-    .map((version) => toConfigVersion(version, wire.current_sum));
+  return [...wire.versions].sort((left, right) => right.id - left.id).map((version) => toConfigVersion(version, wire));
 }
 
 /** Код отказа демона, у которого в `details` лежит вывод бинаря. */
