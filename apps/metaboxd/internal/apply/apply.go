@@ -64,6 +64,10 @@ const (
 	// ReasonRollbackFailed — вернуть предыдущий конфиг не вышло: это худший
 	// результат цикла, и устройство остаётся с чужим конфигом.
 	ReasonRollbackFailed ReasonCode = "rollback_failed"
+	// ReasonNoBackup — откат понадобился, но возвращать нечего: до применения
+	// конфига на устройстве не было. Служба остаётся на том, что успело
+	// записаться, и не перезапускается.
+	ReasonNoBackup ReasonCode = "no_backup"
 )
 
 // StepError — отказ шага цикла: код уходит панели, исходная ошибка — в лог и
@@ -202,6 +206,8 @@ type Service interface {
 	Restart(ctx context.Context) error
 	// Workdir — рабочий каталог службы; пустая строка — узнать неоткуда.
 	Workdir(ctx context.Context) (string, error)
+	// PID отдаёт pid поднятого процесса службы; ноль — не поднят ни один.
+	PID(ctx context.Context) (int, error)
 }
 
 // Health ждёт, пока Clash API поднимется после рестарта.
@@ -235,6 +241,9 @@ type Options struct {
 	// ConfigDir — каталог конфига: с ним сверяется рабочий каталог службы
 	// перед применением файлов списков.
 	ConfigDir string
+	// ProcessInterval — пауза между опросами procd, пока после рестарта ждём
+	// новый процесс службы.
+	ProcessInterval time.Duration
 }
 
 // Manager — единственный владелец цикла применения.
@@ -542,7 +551,16 @@ func (m *Manager) Confirm(ctx context.Context, id string) (Transaction, error) {
 	// уходит после очистки, так что «подтвердил и тут же применил» в
 	// занятость не упирается.
 	if err := m.store.ClearState(ctx); err != nil {
-		m.log.Error("состояние подтверждённой транзакции не убрано", "err", err, "transaction_id", id)
+		// На диске осталось awaiting_confirm, и после перезагрузки доигрывание
+		// откатило бы подтверждённый конфиг. Терминальную фазу Replay не
+		// откатывает, а только убирает.
+		if persistErr := m.persist(ctx, tx); persistErr != nil {
+			m.log.Error("состояние подтверждённой транзакции не убрано и не переписано",
+				"err", errors.Join(err, persistErr), "transaction_id", id)
+		} else {
+			m.log.Warn("состояние подтверждённой транзакции не убрано, записана терминальная фаза",
+				"err", err, "transaction_id", id)
+		}
 	}
 
 	m.mu.Lock()

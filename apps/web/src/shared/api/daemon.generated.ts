@@ -24,6 +24,7 @@ export const APPLY_REASON_CODE = [
   'restart_failed',
   'healthcheck_failed',
   'rollback_failed',
+  'no_backup',
 ] as const
 
 export const ERROR_CODE = [

@@ -52,8 +52,8 @@ func TestServiceReadsState(t *testing.T) {
 				t.Errorf("работает: получили %v, ожидали %v", got.Running, tt.wantRunning)
 			}
 
-			if got.pid != tt.wantPID {
-				t.Errorf("pid: получили %d, ожидали %d", got.pid, tt.wantPID)
+			if got.PID != tt.wantPID {
+				t.Errorf("pid: получили %d, ожидали %d", got.PID, tt.wantPID)
 			}
 		})
 	}

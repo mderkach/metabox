@@ -5,6 +5,7 @@ package singbox
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -220,6 +221,26 @@ func (c *Client) Running(ctx context.Context) (bool, error) {
 	}
 
 	return res.ExitCode == 0, nil
+}
+
+// ErrNoSupervisor — менеджер процессов не подключён, и pid службы узнать не у
+// кого.
+var ErrNoSupervisor = errors.New("менеджер процессов не подключён")
+
+// PID отдаёт pid поднятого процесса службы у procd; ноль — ни один инстанс не
+// поднят. По смене pid применение отличает процесс после рестарта от прежнего:
+// init-скрипт возвращается раньше, чем procd заменит процесс.
+func (c *Client) PID(ctx context.Context) (int, error) {
+	if c.supervisor == nil {
+		return 0, ErrNoSupervisor
+	}
+
+	state, err := c.supervisor.Service(ctx, c.serviceName())
+	if err != nil {
+		return 0, fmt.Errorf("pid службы: %w", err)
+	}
+
+	return state.PID, nil
 }
 
 // State дополняет ответ init-скрипта данными procd. Init-скрипт отдаёт только

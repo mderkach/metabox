@@ -2,11 +2,14 @@ package apply_test
 
 import (
 	"encoding/json"
+	"errors"
+	"log/slog"
 	"slices"
 	"testing"
 	"time"
 
 	"metabox/internal/apply"
+	"metabox/internal/config"
 )
 
 // seedState кладёт состояние так, как его оставила бы прошлая жизнь демона.
@@ -148,6 +151,83 @@ func TestReplayClearsFinishedState(t *testing.T) {
 
 	if !slices.Contains(h.rec.snapshot(), "ClearState") {
 		t.Errorf("состояние завершённой транзакции осталось: %v", h.rec.snapshot())
+	}
+}
+
+// Состояние подтверждённой транзакции не удалилось: на диске остаётся
+// терминальная фаза, и перезагрузка не откатывает подтверждённый конфиг.
+func TestReplayKeepsConfirmedWhenStateNotCleared(t *testing.T) {
+	h := newHarness(t)
+	h.store.clearErr = errors.New("файловая система только для чтения")
+
+	tx, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", "")
+	if err != nil {
+		t.Fatalf("применение: %v", err)
+	}
+	h.waitWindow(t)
+
+	if _, err := h.manager.Confirm(t.Context(), tx.ID); err != nil {
+		t.Fatalf("подтверждение: %v", err)
+	}
+	h.manager.Close()
+
+	data, err := h.store.ReadState(t.Context())
+	if err != nil {
+		t.Fatalf("чтение состояния: %v", err)
+	}
+
+	var saved apply.Transaction
+	if err := json.Unmarshal(data, &saved); err != nil {
+		t.Fatalf("разбор состояния: %v", err)
+	}
+	if saved.Phase != apply.PhaseConfirmed {
+		t.Fatalf("на диске фаза %q, ожидали подтверждение", saved.Phase)
+	}
+
+	// Следующая жизнь демона на том же диске.
+	h.rec.mu.Lock()
+	h.rec.calls = nil
+	h.rec.mu.Unlock()
+
+	h.store.clearErr = nil
+	restarted := apply.New(h.store, h.service, h.health, h.clock, slog.New(slog.DiscardHandler),
+		apply.Options{Window: window, ClashPort: clashPort, CycleTimeout: cycleTimeout, ProcessInterval: time.Millisecond})
+	t.Cleanup(restarted.Close)
+
+	if err := restarted.Replay(t.Context()); err != nil {
+		t.Fatalf("доигрывание: %v", err)
+	}
+
+	if got := h.rec.snapshot(); slices.Contains(got, "Restore") || slices.Contains(got, "Restart") {
+		t.Errorf("шаги %v: подтверждённый конфиг откатился после перезагрузки", got)
+	}
+	if state, _ := h.store.ReadState(t.Context()); state != nil {
+		t.Error("терминальное состояние не убрано доигрыванием")
+	}
+}
+
+// Цикл оборвался после записи первого конфига: бэкапа нет, и доигрывание
+// закрывает транзакцию своей причиной, а не откатом с лишним рестартом.
+func TestReplayWithoutBackup(t *testing.T) {
+	h := newHarness(t)
+	h.store.restoreErr = config.ErrNoBackup
+	h.store.mu.Lock()
+	h.store.sum = "записанный"
+	h.store.mu.Unlock()
+	seedState(t, h, apply.Transaction{ID: "первая", Phase: apply.PhaseApplying, Window: window, Sum: "записанный"})
+
+	if err := h.manager.Replay(t.Context()); err != nil {
+		t.Fatalf("доигрывание: %v", err)
+	}
+
+	if got := h.rec.snapshot(); slices.Contains(got, "Restart") {
+		t.Errorf("шаги %v: служба перезапущена, хотя возвращать было нечего", got)
+	}
+	if tx := h.manager.Current(); tx.Phase != apply.PhaseFailed || tx.ReasonCode != apply.ReasonNoBackup {
+		t.Errorf("фаза %q с кодом %q, ожидали отказ с причиной no_backup", tx.Phase, tx.ReasonCode)
+	}
+	if state, _ := h.store.ReadState(t.Context()); state != nil {
+		t.Error("состояние закрытой транзакции осталось на диске")
 	}
 }
 

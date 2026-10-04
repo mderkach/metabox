@@ -273,4 +273,27 @@ describe('ConfigApplyBar', () => {
     // Бар сворачивается с прежним текстом, но из дерева доступности уходит сразу.
     expect(screen.queryByRole('region', { name: 'Применение конфига' })).not.toBeInTheDocument();
   });
+
+  it('не выдаёт первое применение без бэкапа за откат', async () => {
+    const noBackup = {
+      ...TRANSACTION,
+      phase: 'failed',
+      window: 0,
+      reason_code: 'no_backup',
+      reason: 'бэкапа нет',
+    };
+
+    serveStatus(noBackup);
+    server.use(
+      http.get(DAEMON_ENDPOINT.applyState(TRANSACTION.id), () => HttpResponse.json(noBackup)),
+      http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(APPLIED))
+    );
+
+    loadDocument(false);
+    renderWithQuery(<ConfigApplyBar />);
+
+    expect(await screen.findByText('Применение не прошло')).toBeInTheDocument();
+    expect(screen.getByText(/откатывать было не на что/)).toBeInTheDocument();
+    expect(screen.queryByText('Подтверждения не было — предыдущий конфиг возвращён')).not.toBeInTheDocument();
+  });
 });

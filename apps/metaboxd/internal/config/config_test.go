@@ -515,6 +515,63 @@ func TestCancelledContext(t *testing.T) {
 	}
 }
 
+// Демон, запущенный не init-скриптом, не находит служебного каталога: первый
+// Apply обязан его создать, а не упасть на записи состояния или бэкапа.
+func TestServiceDirIsCreatedOnDemand(t *testing.T) {
+	tests := []struct {
+		name  string
+		write func(t *testing.T, store *config.Store) error
+		file  string
+	}{
+		{
+			name:  "состояние",
+			write: func(t *testing.T, store *config.Store) error { return store.WriteState(t.Context(), []byte("{}")) },
+			file:  "apply.json",
+		},
+		{
+			name:  "бэкап",
+			write: func(t *testing.T, store *config.Store) error { return store.Backup(t.Context()) },
+			file:  "config.backup",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			root := t.TempDir()
+			cfgDir := filepath.Join(root, "sing-box")
+			stateDir := filepath.Join(root, "etc", "metabox")
+
+			if err := os.Mkdir(cfgDir, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			writeConfig(t, cfgDir, configName, []byte(`{"log":{}}`), 0o644)
+
+			store, err := config.NewStore(cfgDir, configName, stateDir)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if err := tt.write(t, store); err != nil {
+				t.Fatalf("запись без служебного каталога: %v", err)
+			}
+
+			for _, dir := range []string{filepath.Dir(stateDir), stateDir} {
+				info, err := os.Stat(dir)
+				if err != nil {
+					t.Fatalf("каталог %s не создан: %v", dir, err)
+				}
+				if perm := info.Mode().Perm(); perm != 0o700 {
+					t.Errorf("права %s — %o, ожидали 700: внутри ключи пользователя", dir, perm)
+				}
+			}
+
+			if _, err := os.Stat(filepath.Join(stateDir, tt.file)); err != nil {
+				t.Errorf("файл %s не записан: %v", tt.file, err)
+			}
+		})
+	}
+}
+
 func TestRuleSetsRoundTrip(t *testing.T) {
 	root := t.TempDir()
 	stateDir := filepath.Join(root, "metabox")

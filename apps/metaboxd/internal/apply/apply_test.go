@@ -62,6 +62,8 @@ type fakeStore struct {
 	backupErr  error
 	restoreErr error
 	writeErr   error
+	readErr    error
+	clearErr   error
 
 	// Ворота для тестов гонок: started закрывается на входе в шаг, release
 	// держит шаг, пока тест не отпустит.
@@ -95,6 +97,10 @@ func (s *fakeStore) Write(_ context.Context, data []byte) error {
 func (s *fakeStore) Read(context.Context) ([]byte, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	if s.readErr != nil {
+		return nil, s.readErr
+	}
 
 	return s.written, nil
 }
@@ -204,6 +210,10 @@ func (s *fakeStore) ClearState(context.Context) error {
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	if s.clearErr != nil {
+		return s.clearErr
+	}
 	s.state = nil
 
 	return nil
@@ -225,6 +235,15 @@ type fakeService struct {
 
 	mu         sync.Mutex
 	restartErr error
+	// pid — процесс службы, как его видит procd: каждый рестарт поднимает
+	// новый.
+	pid    int
+	pidErr error
+	// lag — сколько опросов после рестарта procd ещё отдаёт прежний pid;
+	// отрицательный — прежний отдаётся всегда. stale — остаток текущего
+	// рестарта.
+	lag   int
+	stale int
 }
 
 func (s *fakeService) Check(context.Context, string) error {
@@ -239,7 +258,35 @@ func (s *fakeService) Restart(context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	return s.restartErr
+	if s.restartErr != nil {
+		return s.restartErr
+	}
+
+	s.pid++
+	s.stale = s.lag
+
+	return nil
+}
+
+func (s *fakeService) PID(context.Context) (int, error) {
+	s.rec.add("PID")
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.pidErr != nil {
+		return 0, s.pidErr
+	}
+
+	if s.stale != 0 {
+		if s.stale > 0 {
+			s.stale--
+		}
+
+		return s.pid - 1, nil
+	}
+
+	return s.pid, nil
 }
 
 func (s *fakeService) Workdir(context.Context) (string, error) {
@@ -301,6 +348,14 @@ type harness struct {
 func newHarness(t *testing.T) *harness {
 	t.Helper()
 
+	return newHarnessWith(t, cycleTimeout, slog.New(slog.DiscardHandler))
+}
+
+// newHarnessWith — тот же стенд с заданным потолком цикла и логгером: тесты
+// отказа по таймауту не ждут полминуты, а тесты логов читают записи.
+func newHarnessWith(t *testing.T, timeout time.Duration, log *slog.Logger) *harness {
+	t.Helper()
+
 	rec := &recorder{}
 	h := &harness{
 		rec:     rec,
@@ -309,9 +364,13 @@ func newHarness(t *testing.T) *harness {
 		health:  &fakeHealth{rec: rec},
 		clock:   newClock(),
 	}
-	h.manager = apply.New(h.store, h.service, h.health, h.clock,
-		slog.New(slog.DiscardHandler),
-		apply.Options{Window: window, ClashPort: clashPort, CycleTimeout: cycleTimeout, ConfigDir: configDir})
+	h.manager = apply.New(h.store, h.service, h.health, h.clock, log, apply.Options{
+		Window:          window,
+		ClashPort:       clashPort,
+		CycleTimeout:    timeout,
+		ConfigDir:       configDir,
+		ProcessInterval: time.Millisecond,
+	})
 
 	t.Cleanup(h.manager.Close)
 
@@ -350,9 +409,11 @@ func TestApplyFollowsProtocolOrder(t *testing.T) {
 	}
 
 	// SaveVersion стоит между бэкапом и записью: история хранит то, что было
-	// применено до этого цикла.
+	// применено до этого цикла. pid службы снимается до рестарта и сверяется
+	// после него, до опроса API.
 	want := []string{
-		"StageCandidate", "Check", "WriteState", "Backup", "SaveVersion", "WriteLists", "Write", "Restart", "Wait", "WriteState",
+		"StageCandidate", "Check", "WriteState", "Backup", "SaveVersion", "WriteLists", "Write",
+		"PID", "Restart", "PID", "Wait", "WriteState",
 	}
 	if got := h.rec.snapshot(); !slices.Equal(got, want) {
 		t.Errorf("порядок шагов %v, ожидали %v", got, want)

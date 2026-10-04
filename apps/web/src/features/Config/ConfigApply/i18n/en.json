@@ -31,7 +31,8 @@
       "write_failed": "the config was not written to the device",
       "restart_failed": "the service did not restart with the new config",
       "healthcheck_failed": "the service started, but sing-box did not answer",
-      "rollback_failed": "the previous config could not be restored — the new one stayed on the device"
+      "rollback_failed": "the previous config could not be restored — the new one stayed on the device",
+      "no_backup": "there was nothing to roll back to: the device had no config before this apply, so the service stayed on the new one"
     }
   },
   "check": {

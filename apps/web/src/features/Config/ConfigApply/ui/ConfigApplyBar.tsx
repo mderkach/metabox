@@ -231,6 +231,7 @@ const REASON_KEY: Readonly<Record<ApplyReasonCode, ParseKeys<'features/Config/Co
   restart_failed: 'failure.reason.restart_failed',
   healthcheck_failed: 'failure.reason.healthcheck_failed',
   rollback_failed: 'failure.reason.rollback_failed',
+  no_backup: 'failure.reason.no_backup',
 };
 
 function ApplyFailure({ transaction, onDismiss }: { transaction: ApplyTransaction; onDismiss: () => void }) {

@@ -109,10 +109,16 @@ func (m *Manager) apply(
 
 	// История надстроена над бэкапом и к откату отношения не имеет: её отказ
 	// применение не останавливает.
-	if previous, err := m.store.Read(ctx); err == nil {
+	previous, err := m.store.Read(ctx)
+	switch {
+	case err == nil:
 		if err := m.store.SaveVersion(ctx, previous); err != nil {
 			m.log.Warn("версия не сохранена в историю", "err", err)
 		}
+	case errors.Is(err, config.ErrNoConfig):
+		// Первое применение: сохранять в историю нечего.
+	default:
+		m.log.Warn("конфиг не прочитан, версия в историю не сохранена", "err", err)
 	}
 
 	if err := m.store.WriteLists(ctx, putLists, removeLists); err != nil {
@@ -137,8 +143,22 @@ func (m *Manager) apply(
 	}
 	m.mu.Unlock()
 
+	// pid до рестарта — граница, по которой ответ API засчитывается только
+	// новому процессу. Без procd сверять не с чем: healthcheck остаётся на
+	// одном опросе API, а итог по-прежнему страхует окно подтверждения.
+	before, pidErr := m.service.PID(ctx)
+	if pidErr != nil {
+		m.log.Warn("pid службы до рестарта не прочитан, healthcheck без сверки процесса", "err", pidErr)
+	}
+
 	if err := m.service.Restart(ctx); err != nil {
 		return stepFailed(ReasonRestartFailed, err)
+	}
+
+	if pidErr == nil {
+		if err := m.awaitProcess(ctx, before); err != nil {
+			return stepFailed(ReasonHealthcheckFailed, err)
+		}
 	}
 
 	if err := m.health.Wait(ctx, settings); err != nil {
@@ -146,6 +166,38 @@ func (m *Manager) apply(
 	}
 
 	return nil
+}
+
+// awaitProcess ждёт, пока procd отчитается о новом процессе службы. Init-скрипт
+// возвращается раньше, чем procd заменит процесс, и первые запросы к API мог
+// бы обслужить прежний — healthcheck засчитал бы новому конфигу чужой ответ.
+// Новым считается поднятый процесс с pid, отличным от прежнего: before = 0
+// означает, что до рестарта служба лежала, и годится любой поднятый.
+func (m *Manager) awaitProcess(ctx context.Context, before int) error {
+	ticker := time.NewTicker(m.opts.ProcessInterval)
+	defer ticker.Stop()
+
+	var last error
+	for {
+		pid, err := m.service.PID(ctx)
+
+		switch {
+		case err != nil:
+			last = err
+		case pid > 0 && pid != before:
+			return nil
+		case pid == 0:
+			last = errors.New("служба не поднята")
+		default:
+			last = fmt.Errorf("procd отдаёт прежний pid %d", pid)
+		}
+
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("ожидание нового процесса службы: %w, последняя попытка: %w", ctx.Err(), last)
+		case <-ticker.C:
+		}
+	}
 }
 
 // await держит окно подтверждения. Без подтверждения в срок конфиг
@@ -206,13 +258,18 @@ func (m *Manager) rollback(ctx context.Context, log *slog.Logger) {
 	defer cancel()
 
 	restoreErr := m.store.Restore(ctx)
-	if errors.Is(restoreErr, config.ErrNoBackup) {
-		log.Warn("откатываться не на что: бэкапа нет")
+
+	// Бэкапа нет — до применения конфига на устройстве не было. Рестарт ничего
+	// бы не вернул, а rolled_back соврал бы, что прежний конфиг на месте:
+	// транзакция закрывается отказом со своей причиной.
+	noBackup := errors.Is(restoreErr, config.ErrNoBackup)
+	if noBackup {
+		log.Warn("откатываться не на что: бэкапа нет, служба остаётся на записанном")
 		restoreErr = nil
 	}
 
 	var restartErr error
-	if restoreErr == nil {
+	if restoreErr == nil && !noBackup {
 		restartErr = m.service.Restart(ctx)
 	}
 
@@ -233,12 +290,24 @@ func (m *Manager) rollback(ctx context.Context, log *slog.Logger) {
 	}
 
 	m.mu.Lock()
-	m.current.Phase = PhaseRolledBack
 	m.current.Window = 0
 	m.windowEndsAt = time.Time{}
-	m.lastSum = ""
-	m.lastListsSum = ""
 	m.rollingBack = false
+
+	if noBackup {
+		// Отказ шага, если он был, остаётся подробностью: по нему видно, почему
+		// понадобился откат. lastSum не трогается: отката не было, и на диске
+		// ровно то, что оставил цикл.
+		m.current.Phase = PhaseFailed
+		m.current.ReasonCode = ReasonNoBackup
+		if m.current.Reason == "" {
+			m.current.Reason = config.ErrNoBackup.Error()
+		}
+	} else {
+		m.current.Phase = PhaseRolledBack
+		m.lastSum = ""
+		m.lastListsSum = ""
+	}
 	m.mu.Unlock()
 
 	// Состояние убирается до освобождения busy: снятый раньше busy впускает
@@ -251,7 +320,9 @@ func (m *Manager) rollback(ctx context.Context, log *slog.Logger) {
 	m.busy = false
 	m.mu.Unlock()
 
-	log.Info("предыдущий конфиг возвращён")
+	if !noBackup {
+		log.Info("предыдущий конфиг возвращён")
+	}
 }
 
 // Replay доигрывает транзакцию, оставшуюся от прошлой жизни демона. Вызывается

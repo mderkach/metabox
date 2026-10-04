@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -169,8 +170,8 @@ var errNoHistory = errors.New("каталога истории нет")
 // историю, а не ошибку.
 func (s *Store) versionsRoot(create bool) (*os.Root, error) {
 	if create {
-		if err := os.MkdirAll(s.serviceDir, secureDirPerm); err != nil {
-			return nil, fmt.Errorf("создание служебного каталога %s: %w", s.serviceDir, err)
+		if err := ensureDir(s.serviceDir); err != nil {
+			return nil, fmt.Errorf("служебный каталог: %w", err)
 		}
 	}
 
@@ -188,8 +189,16 @@ func (s *Store) versionsRoot(create bool) (*os.Root, error) {
 	defer func() { _ = serviceRoot.Close() }()
 
 	if create {
-		if err := serviceRoot.Mkdir(versionsDir, secureDirPerm); err != nil && !errors.Is(err, fs.ErrExist) {
+		err := serviceRoot.Mkdir(versionsDir, secureDirPerm)
+		if err != nil && !errors.Is(err, fs.ErrExist) {
 			return nil, fmt.Errorf("создание каталога истории %s: %w", s.VersionsPath(), err)
+		}
+
+		// Свежий каталог закрепляется fsync родителя, как в ensureDir.
+		if err == nil {
+			if err := syncDir(serviceRoot); err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -231,7 +240,7 @@ func listVersions(root *os.Root) ([]Version, error) {
 			continue
 		}
 
-		data, err := root.ReadFile(entry.Name())
+		sum, err := streamSum(root, entry.Name())
 		if err != nil {
 			continue
 		}
@@ -239,7 +248,7 @@ func listVersions(root *os.Root) ([]Version, error) {
 		versions = append(versions, Version{
 			ID:      id,
 			Size:    info.Size(),
-			Sum:     Sum(data),
+			Sum:     sum,
 			SavedAt: info.ModTime().Unix(),
 		})
 	}
@@ -247,6 +256,24 @@ func listVersions(root *os.Root) ([]Version, error) {
 	sort.Slice(versions, func(i, j int) bool { return versions[i].ID > versions[j].ID })
 
 	return versions, nil
+}
+
+// streamSum считает sha256 версии потоком: список истории запрашивается на
+// каждый заход в панель, и поднимать ради отпечатка все версии в память
+// незачем.
+func streamSum(root *os.Root, name string) (string, error) {
+	f, err := root.Open(name)
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = f.Close() }()
+
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+
+	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
 // trimVersions удаляет всё, что не помещается в maxVersions. Отказ удаления не

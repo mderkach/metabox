@@ -291,3 +291,44 @@ func TestWorkdir(t *testing.T) {
 		}
 	})
 }
+
+// pid берётся у procd под именем init-скрипта: по его смене применение узнаёт,
+// что после рестарта отвечает уже новый процесс.
+func TestPIDReadsSupervisor(t *testing.T) {
+	supervisor := &fakeSupervisor{state: procd.State{Known: true, Running: true, PID: 4242}}
+
+	client, err := singbox.New(&fakeRunner{}, binary, initScript, "", supervisor)
+	if err != nil {
+		t.Fatalf("сборка клиента: %v", err)
+	}
+
+	pid, err := client.PID(t.Context())
+	if err != nil {
+		t.Fatalf("pid службы: %v", err)
+	}
+	if pid != 4242 {
+		t.Errorf("pid %d, ожидали 4242", pid)
+	}
+	if !slices.Equal(supervisor.names, []string{"sing-box"}) {
+		t.Errorf("procd спрошен о %v, ожидали службу init-скрипта", supervisor.names)
+	}
+}
+
+func TestPIDFails(t *testing.T) {
+	t.Run("без менеджера процессов", func(t *testing.T) {
+		if _, err := newClient(t, &fakeRunner{}).PID(t.Context()); !errors.Is(err, singbox.ErrNoSupervisor) {
+			t.Errorf("получили %v, ожидали ErrNoSupervisor", err)
+		}
+	})
+
+	t.Run("procd не ответил", func(t *testing.T) {
+		client, err := singbox.New(&fakeRunner{}, binary, initScript, "", &fakeSupervisor{err: errors.New("ubus молчит")})
+		if err != nil {
+			t.Fatalf("сборка клиента: %v", err)
+		}
+
+		if _, err := client.PID(t.Context()); err == nil {
+			t.Error("отказ procd не сообщён")
+		}
+	})
+}

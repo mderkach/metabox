@@ -1,8 +1,8 @@
 // Package procd читает состояние службы у procd — менеджера процессов OpenWrt.
 //
 // Управление службой остаётся за init-скриптом (DeviceIO): здесь только
-// чтение. Процесс по pid отсюда не останавливается и не запускается, pid нужен
-// исключительно чтобы узнать возраст процесса.
+// чтение. Процесс по pid отсюда не останавливается и не запускается: pid нужен,
+// чтобы узнать возраст процесса и отличить процесс после рестарта от прежнего.
 package procd
 
 import (
@@ -34,9 +34,10 @@ type State struct {
 	Known bool
 	// Running — поднят ли хоть один инстанс.
 	Running bool
-	// pid поднятого инстанса. Не экспортируется: наружу он не нужен, службой
-	// управляет init-скрипт, а здесь он только для возраста процесса.
-	pid int
+	// PID поднятого инстанса; ноль, когда ни один не поднят. Только для
+	// чтения: службой управляет init-скрипт, а по pid применение узнаёт, что
+	// после рестарта отвечает уже новый процесс.
+	PID int
 	// Uptime — возраст процесса. Ноль, когда узнать не удалось: procd
 	// возраста не отдаёт, он считается по /proc и на чужой системе может
 	// быть недоступен.
@@ -118,7 +119,7 @@ func (c *Client) Service(ctx context.Context, name string) (State, error) {
 
 	instance := service.Instances[names[0]]
 	state.Running = true
-	state.pid = instance.PID
+	state.PID = instance.PID
 	state.Uptime = c.uptime(instance.PID)
 	state.Workdir = c.workdir(instance.PID, instance.Command)
 

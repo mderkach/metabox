@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path/filepath"
 )
 
 const (
@@ -106,6 +107,47 @@ func syncDir(root *os.Root) error {
 	}
 
 	return nil
+}
+
+// ensureDir создаёт каталог вместе с недостающими родителями и закрепляет
+// каждое созданное звено fsync родителя: без него сбой питания может унести
+// свежий каталог вместе с файлами, которые в нём уже успели синкнуть.
+// Путь приходит флагом, а не снаружи, поэтому идёт мимо os.Root.
+func ensureDir(dir string) error {
+	info, err := os.Stat(dir)
+	if err == nil {
+		if !info.IsDir() {
+			return fmt.Errorf("%s не каталог", dir)
+		}
+
+		return nil
+	}
+	if !errors.Is(err, fs.ErrNotExist) {
+		return fmt.Errorf("каталог %s: %w", dir, err)
+	}
+
+	parent := filepath.Dir(dir)
+	if parent != dir {
+		if err := ensureDir(parent); err != nil {
+			return err
+		}
+	}
+
+	if err := os.Mkdir(dir, secureDirPerm); err != nil {
+		if errors.Is(err, fs.ErrExist) {
+			return nil
+		}
+
+		return fmt.Errorf("создание каталога %s: %w", dir, err)
+	}
+
+	root, err := openRoot(parent)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = root.Close() }()
+
+	return syncDir(root)
 }
 
 // permOf отдаёт права существующего файла, а для нового — securePerm. Права

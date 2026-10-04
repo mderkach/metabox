@@ -420,10 +420,11 @@ func build(log *slog.Logger, s settings) (*apply.Manager, *config.Store, *singbo
 	health := clashapi.NewChecker(healthRequestTimeout, healthPollInterval)
 
 	manager := apply.New(store, service, health, nil, log, apply.Options{
-		Window:       s.confirmWindow,
-		ClashPort:    s.clashPort,
-		CycleTimeout: s.cycleTimeout,
-		ConfigDir:    s.configDir,
+		Window:          s.confirmWindow,
+		ClashPort:       s.clashPort,
+		CycleTimeout:    s.cycleTimeout,
+		ConfigDir:       s.configDir,
+		ProcessInterval: healthPollInterval,
 	})
 
 	return manager, store, service, nil

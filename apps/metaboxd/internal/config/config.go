@@ -177,7 +177,8 @@ func (s *Store) Write(ctx context.Context, data []byte) error {
 }
 
 // Backup сохраняет для отката текущий конфиг и снимок каталога списков.
-// Вызывается до записи нового (шаг 4 протокола применения).
+// Вызывается до записи нового (шаг 4 протокола применения). Служебный каталог
+// создаётся, если его нет, — как и в WriteState.
 func (s *Store) Backup(ctx context.Context) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -195,6 +196,10 @@ func (s *Store) Backup(ctx context.Context) error {
 	data, err := cfgRoot.ReadFile(s.name)
 	if err != nil {
 		return fmt.Errorf("чтение конфига %s под бэкап: %w", s.Path(), err)
+	}
+
+	if err := ensureDir(s.serviceDir); err != nil {
+		return fmt.Errorf("служебный каталог: %w", err)
 	}
 
 	serviceRoot, err := openRoot(s.serviceDir)
@@ -551,7 +556,8 @@ func (s *Store) ReadState(ctx context.Context) ([]byte, error) {
 
 // WriteState сохраняет состояние транзакции атомарно. Вызывается до записи
 // конфига: питание, снятое между записью и стартом таймера, иначе оставило бы
-// устройство на новом конфиге без автоотката.
+// устройство на новом конфиге без автоотката. Служебный каталог создаётся,
+// если его нет: демон, запущенный не init-скриптом, иначе валил бы первый Apply.
 func (s *Store) WriteState(ctx context.Context, data []byte) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -559,6 +565,10 @@ func (s *Store) WriteState(ctx context.Context, data []byte) error {
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	if err := ensureDir(s.serviceDir); err != nil {
+		return fmt.Errorf("служебный каталог: %w", err)
+	}
 
 	root, err := openRoot(s.serviceDir)
 	if err != nil {
@@ -628,8 +638,8 @@ func (s *Store) WriteRuleSets(ctx context.Context, data []byte) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if err := os.MkdirAll(s.serviceDir, secureDirPerm); err != nil {
-		return fmt.Errorf("создание служебного каталога %s: %w", s.serviceDir, err)
+	if err := ensureDir(s.serviceDir); err != nil {
+		return fmt.Errorf("служебный каталог: %w", err)
 	}
 
 	root, err := openRoot(s.serviceDir)
