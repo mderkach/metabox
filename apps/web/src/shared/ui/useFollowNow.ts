@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 
-import { MS_IN_SECOND } from '@shared/lib/time';
-import type { PlotInstance } from '@shared/ui';
+import { MS_IN_SECOND } from '../lib/time';
+import type { PlotInstance } from './Plot';
 
 /**
  * Сдвиг оси времени по кадрам: данные приходят раз в секунду, а окно едет

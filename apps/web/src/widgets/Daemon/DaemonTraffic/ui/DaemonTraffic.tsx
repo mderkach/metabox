@@ -15,9 +15,9 @@ import {
   type PlotOptions,
   type PlotScales,
   type PlotTone,
+  useFollowNow,
 } from '@shared/ui';
 
-import { useFollowNow } from '../lib';
 import { FILL_ALPHA, GRID_DASH, HALF_INTERVALS, LINE_WIDTH, TIME_TICK_SECONDS, TRAFFIC_MIN_CEILING } from '../model';
 
 /** По одной точке линию не проведёшь. */

@@ -28,4 +28,5 @@ export * from './Plot';
 export * from './QueryFailure';
 export * from './SkeletonRows';
 export * from './styles';
+export * from './useFollowNow';
 export * from './ValueAxis';
