@@ -38,6 +38,11 @@
     "title": "sing-box rejected the config — nothing was written to the device",
     "exitCode": "Exit code: {{code}}. The draft is kept, fix it and apply again."
   },
+  "workdir": {
+    "title": "The sing-box service does not run from the config directory — nothing was written to the device",
+    "description": "The list files go to {{configDir}}, but the service looks for them relative to its working directory {{workdir}} and would crash after the apply. Point it at the config directory, restart it and apply again:",
+    "sideEffect": "Other relative paths of the service will resolve from the config directory too — for example, cache.db without an explicit cache_file.path moves there as well."
+  },
   "lists": {
     "title_one": "{{count}} list file will change",
     "title_other": "{{count}} list files will change",

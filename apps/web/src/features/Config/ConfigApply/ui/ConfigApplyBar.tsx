@@ -13,6 +13,7 @@ import { useConfigApply } from '../lib/ConfigApply.lib';
 import { ConfigApplyCheck } from './ConfigApplyCheck';
 import { ConfigApplyDiff } from './ConfigApplyDiff';
 import { ConfigApplyDiscard } from './ConfigApplyDiscard';
+import { ConfigApplyWorkdir } from './ConfigApplyWorkdir';
 
 /**
  * Бар живёт в оболочке, а не на экране редактора: неприменённые правки и окно
@@ -40,8 +41,9 @@ export function ConfigApplyBar() {
       isApplying: apply.isApplying,
       transaction: apply.transaction,
       check: apply.check,
+      workdir: apply.workdir,
     }),
-    [awaiting, failure, apply.isApplying, apply.transaction, apply.check]
+    [awaiting, failure, apply.isApplying, apply.transaction, apply.check, apply.workdir]
   );
   // Уходящий бар сворачивается с тем текстом, с которым его видели: свежее
   // состояние за время сворачивания подменило бы, например, окно подтверждения
@@ -118,6 +120,8 @@ export function ConfigApplyBar() {
             )}
 
             {shown.check !== null && <ConfigApplyCheck check={shown.check} />}
+
+            {shown.workdir !== null && <ConfigApplyWorkdir mismatch={shown.workdir} />}
 
             {shown.failure && shown.transaction !== null && (
               <ApplyFailure

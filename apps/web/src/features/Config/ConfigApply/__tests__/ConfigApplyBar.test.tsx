@@ -207,6 +207,38 @@ describe('ConfigApplyBar', () => {
     expect(ConfigDocumentState.getState().draft).toBe(DRAFT);
   });
 
+  it('подсказывает команду, когда рабочий каталог службы не совпал с каталогом конфига', async () => {
+    server.use(
+      http.post(DAEMON_ENDPOINT.apply(), () =>
+        HttpResponse.json(
+          {
+            code: 'workdir_mismatch',
+            message: 'рабочий каталог службы sing-box не совпадает с каталогом конфига',
+            details: { workdir: '/usr/share/sing-box', config_dir: '/etc/sing-box' },
+          },
+          { status: 409 }
+        )
+      )
+    );
+
+    loadDocument();
+    renderWithQuery(<ConfigApplyBar />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
+
+    expect(
+      await screen.findByText('Служба sing-box запущена не из каталога конфига — на устройство ничего не записано')
+    ).toBeInTheDocument();
+    expect(screen.getByText(/от своего рабочего каталога \/usr\/share\/sing-box/)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'uci set sing-box.main.workdir=/etc/sing-box && uci commit sing-box && /etc/init.d/sing-box restart'
+      )
+    ).toBeInTheDocument();
+    // Черновик остаётся: после настройки службы его применяют снова.
+    expect(ConfigDocumentState.getState().draft).toBe(DRAFT);
+  });
+
   it('сообщает, что секцию clash_api дописал демон', async () => {
     serveStatus({ ...TRANSACTION, clash_api_added: true });
     server.use(

@@ -1,8 +1,13 @@
 import { ApiError } from '@shared/api';
 import { MS_IN_SECOND } from '@shared/lib/time';
 
-import { CheckDetailsSchema, type ConfigVersionsWire, type ConfigVersionWire } from '../api/Config.schema';
-import type { CheckFailure, ConfigVersion } from './Config.model';
+import {
+  CheckDetailsSchema,
+  WorkdirDetailsSchema,
+  type ConfigVersionsWire,
+  type ConfigVersionWire,
+} from '../api/Config.schema';
+import type { CheckFailure, ConfigVersion, WorkdirMismatch } from './Config.model';
 
 function toConfigVersion(wire: ConfigVersionWire, currentSum: string | undefined): ConfigVersion {
   return {
@@ -43,4 +48,26 @@ export function toCheckFailure(error: unknown): CheckFailure | null {
   }
 
   return { stdout: details.data.stdout, stderr: details.data.stderr, exitCode: details.data.exit_code };
+}
+
+/** Код отказа демона, у которого в `details` лежат рабочий каталог службы и каталог конфига. */
+const WORKDIR_MISMATCH = 'workdir_mismatch';
+
+/**
+ * Достаёт каталоги из отказа применения по рабочему каталогу службы. `null` —
+ * отказ другой либо подробности не разобрались: подсказку тогда собрать не из
+ * чего, и остаётся текст отказа.
+ */
+export function toWorkdirMismatch(error: unknown): WorkdirMismatch | null {
+  if (!(error instanceof ApiError) || error.code !== WORKDIR_MISMATCH) {
+    return null;
+  }
+
+  const details = WorkdirDetailsSchema.safeParse(error.details);
+
+  if (!details.success) {
+    return null;
+  }
+
+  return { workdir: details.data.workdir, configDir: details.data.config_dir };
 }

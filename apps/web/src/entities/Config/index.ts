@@ -14,7 +14,7 @@ export {
   useSaveApplyTransaction,
 } from './api/Config.query';
 export type { ConfigIssue, ParsedConfig } from './api/Config.query';
-export { toCheckFailure, toConfigVersions } from './model/Config.adapter';
+export { toCheckFailure, toConfigVersions, toWorkdirMismatch } from './model/Config.adapter';
 export {
   CACHE_FILE_PATH,
   CONFIG_SECTION,
@@ -36,7 +36,14 @@ export {
   setValue,
   toOutboundTags,
 } from './model/Config.model';
-export type { CheckFailure, ConfigDocument, ConfigSection, ConfigVersion, GenericSection } from './model/Config.model';
+export type {
+  CheckFailure,
+  ConfigDocument,
+  ConfigSection,
+  ConfigVersion,
+  GenericSection,
+  WorkdirMismatch,
+} from './model/Config.model';
 export { findUnbuiltNodes, findUnbuiltOptions } from './model/Config.build';
 export type { UnbuiltNode, UnbuiltOption } from './model/Config.build';
 export { useConfigDocument } from './model/Config.document';

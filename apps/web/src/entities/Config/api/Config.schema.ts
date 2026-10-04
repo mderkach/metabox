@@ -1,4 +1,8 @@
-export { CheckDetailsSchema, VersionsSchema as ConfigVersionsSchema } from '@shared/api/daemon.generated';
+export {
+  CheckDetailsSchema,
+  VersionsSchema as ConfigVersionsSchema,
+  WorkdirDetailsSchema,
+} from '@shared/api/daemon.generated';
 export type {
   VersionsWire as ConfigVersionsWire,
   VersionWire as ConfigVersionWire,

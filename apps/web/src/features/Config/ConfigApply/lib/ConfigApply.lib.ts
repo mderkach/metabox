@@ -6,11 +6,13 @@ import {
   ConfigDocumentState,
   readRules,
   toCheckFailure,
+  toWorkdirMismatch,
   useApplyTransaction,
   useConfigDirty,
   useConfigText,
   useListChanges,
   type CheckFailure,
+  type WorkdirMismatch,
 } from '@entities/Config';
 import { APPLY_PHASE, isApplyActive, useDaemonStatus, type ApplyTransaction } from '@entities/Daemon';
 import { toRuleChanges, type RuleChange } from '@entities/Rule';
@@ -56,6 +58,8 @@ export interface ConfigApplyState {
   transaction: ApplyTransaction | null;
   /** Ссылка меняется только со сменой ошибки запуска: бар сравнивает снимки состояния по ссылке. */
   check: CheckFailure | null;
+  /** Отказ по рабочему каталогу службы; ссылка меняется так же, как у `check`. */
+  workdir: WorkdirMismatch | null;
   isApplying: boolean;
   isConfirming: boolean;
   apply: () => void;
@@ -87,6 +91,7 @@ export function useConfigApply(): ConfigApplyState {
   useDocumentRefresh(transaction);
 
   const check = useMemo(() => toCheckFailure(start.error), [start.error]);
+  const workdir = useMemo(() => toWorkdirMismatch(start.error), [start.error]);
 
   const onApply = useCallback(() => {
     if (text === null) return;
@@ -105,6 +110,7 @@ export function useConfigApply(): ConfigApplyState {
     canApply: isDirty && !start.isPending && !isApplyActive(transaction?.phase),
     transaction,
     check,
+    workdir,
     isApplying: start.isPending || transaction?.phase === APPLY_PHASE.Applying,
     isConfirming: confirm.isPending,
     apply: onApply,

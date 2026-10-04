@@ -309,3 +309,13 @@ export interface CheckFailure {
   stderr: string;
   exitCode: number;
 }
+
+/**
+ * Применение со списками отклонено до записи: служба sing-box резолвит
+ * относительный путь файла списка от своего рабочего каталога, а он не совпал
+ * с каталогом конфига.
+ */
+export interface WorkdirMismatch {
+  workdir: string;
+  configDir: string;
+}

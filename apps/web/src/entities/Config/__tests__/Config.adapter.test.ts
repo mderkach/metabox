@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { API_FAILURE, ApiError } from '@shared/api';
 
 import { ConfigVersionsSchema } from '../api/Config.schema';
-import { toCheckFailure, toConfigVersions } from '../model/Config.adapter';
+import { toCheckFailure, toConfigVersions, toWorkdirMismatch } from '../model/Config.adapter';
 
 const VERSIONS_WIRE = {
   versions: [
@@ -64,5 +64,27 @@ describe('toCheckFailure', () => {
     const error = new ApiError(API_FAILURE.Response, 'отказ', { code: 'check_failed', details: 'просто строка' });
 
     expect(toCheckFailure(error)).toBeNull();
+  });
+});
+
+describe('toWorkdirMismatch', () => {
+  const details = { workdir: '/usr/share/sing-box', config_dir: '/etc/sing-box' };
+
+  it('достаёт оба каталога из отказа по рабочему каталогу службы', () => {
+    const error = new ApiError(API_FAILURE.Response, 'отказ', { code: 'workdir_mismatch', details });
+
+    expect(toWorkdirMismatch(error)).toEqual({ workdir: '/usr/share/sing-box', configDir: '/etc/sing-box' });
+  });
+
+  it('молчит, когда отказ другой', () => {
+    const error = new ApiError(API_FAILURE.Response, 'отказ', { code: 'check_failed', details });
+
+    expect(toWorkdirMismatch(error)).toBeNull();
+  });
+
+  it('молчит, когда каталогов в отказе нет: собрать команду не из чего', () => {
+    const error = new ApiError(API_FAILURE.Response, 'отказ', { code: 'workdir_mismatch', details: { workdir: 1 } });
+
+    expect(toWorkdirMismatch(error)).toBeNull();
   });
 });
