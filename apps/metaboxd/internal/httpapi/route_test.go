@@ -3,8 +3,11 @@ package httpapi_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"metabox/internal/httpapi"
@@ -170,6 +173,40 @@ func TestExplainRouteMissingConnection(t *testing.T) {
 	}
 	if body.Code != "connection_missing" {
 		t.Errorf("код отказа: получили %q, ожидали %q", body.Code, "connection_missing")
+	}
+}
+
+// Лежащий sing-box отвечает тем же текстом, что и прокси Clash API: адрес
+// контроллера и ошибка транспорта остаются в логе.
+func TestExplainRouteRuntimeUnavailable(t *testing.T) {
+	const cause = `Get "http://127.0.0.1:9090/connections": dial tcp 127.0.0.1:9090: connect: connection refused`
+
+	srv := newExplainServer(t, &fakeExplainer{
+		err: fmt.Errorf("%w: соединения: %w", route.ErrRuntimeUnavailable, errors.New(cause)),
+	})
+
+	got := request(t, srv, http.MethodGet, "/api/connections/c-1/route", "", nil)
+
+	if got.status != http.StatusBadGateway {
+		t.Fatalf("код ответа: получили %d, ожидали %d", got.status, http.StatusBadGateway)
+	}
+
+	var body struct {
+		Code    string `json:"code"`
+		Message string `json:"message"`
+	}
+
+	if err := json.Unmarshal([]byte(got.body), &body); err != nil {
+		t.Fatalf("разбор ответа: %v", err)
+	}
+	if body.Code != "runtime_unavailable" {
+		t.Errorf("код отказа: получили %q, ожидали runtime_unavailable", body.Code)
+	}
+	if body.Message != "рантайм sing-box недоступен" {
+		t.Errorf("сообщение %q, ожидали фиксированный текст без причины", body.Message)
+	}
+	if strings.Contains(got.body, "127.0.0.1") {
+		t.Errorf("тело %q уносит наружу адрес контроллера", got.body)
 	}
 }
 

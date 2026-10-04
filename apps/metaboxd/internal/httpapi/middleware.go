@@ -10,6 +10,8 @@ import (
 	"runtime/debug"
 	"strings"
 	"time"
+
+	"metabox/internal/contract"
 )
 
 func (s *Server) middleware(next http.Handler) http.Handler {
@@ -40,7 +42,14 @@ func recoverPanic(log *slog.Logger, next http.Handler) http.Handler {
 				"path", r.URL.Path,
 				"stack", string(debug.Stack()),
 			)
-			w.WriteHeader(http.StatusInternalServerError)
+			// Ответ в формате контракта: панель разбирает тело любой ошибки
+			// и без него показала бы сбой разбора вместо отказа. Паника
+			// посреди уже начатого ответа допишет тело в его хвост — заголовок
+			// к тому времени ушёл, и отказать иначе уже нечем.
+			writeJSON(log, w, http.StatusInternalServerError, contract.Error{
+				Code:    contract.ErrInternal,
+				Message: "внутренняя ошибка",
+			})
 		}()
 
 		next.ServeHTTP(w, r)

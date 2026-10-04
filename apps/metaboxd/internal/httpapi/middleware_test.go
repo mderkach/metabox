@@ -1,10 +1,14 @@
 package httpapi
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+
+	"metabox/internal/contract"
 )
 
 func TestOriginAllowed(t *testing.T) {
@@ -134,8 +138,19 @@ func TestRecoverPanic(t *testing.T) {
 	if rec.Code != http.StatusInternalServerError {
 		t.Errorf("код %d, ожидали %d", rec.Code, http.StatusInternalServerError)
 	}
-	if body := rec.Body.String(); body != "" {
-		t.Errorf("тело %q, ожидали пустое: внутренние подробности наружу не идут", body)
+	if got := rec.Header().Get("Content-Type"); !strings.HasPrefix(got, "application/json") {
+		t.Errorf("тип ответа %q, ожидали application/json", got)
+	}
+
+	var body contract.Error
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("тело %q не в формате контракта: %v", rec.Body.String(), err)
+	}
+	if body.Code != contract.ErrInternal {
+		t.Errorf("код отказа %q, ожидали %q", body.Code, contract.ErrInternal)
+	}
+	if strings.Contains(body.Message, "обработчик упал") {
+		t.Errorf("сообщение %q: внутренние подробности наружу не идут", body.Message)
 	}
 }
 

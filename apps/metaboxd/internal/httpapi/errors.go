@@ -28,6 +28,10 @@ var (
 	errBadApplyEnvelope = errors.New("конверт применения не разобран")
 )
 
+// runtimeUnavailable — текст отказа рантайма для клиента. Причина остаётся в
+// логе: в ней адрес контроллера и текст ошибки транспорта.
+const runtimeUnavailable = "рантайм sing-box недоступен"
+
 // fail — единственное место, где ошибка превращается в ответ: новый вид отказа
 // добавляется в statusFor, а не в хендлер. Текст неизвестной ошибки наружу не
 // уходит — в ней бывают пути, аргументы команд и содержимое конфига.
@@ -57,9 +61,16 @@ func fail(log *slog.Logger, w http.ResponseWriter, r *http.Request, err error) {
 	status, code := statusFor(err)
 
 	message := err.Error()
-	if status == http.StatusInternalServerError {
+
+	switch {
+	case status == http.StatusInternalServerError:
 		log.Error("запрос не обслужен", "err", err, "method", r.Method, "path", r.URL.Path)
 		message = "внутренняя ошибка"
+	// Отказ рантайма отвечает так же, как прокси Clash API: две ручки одного
+	// слоя не должны вести себя противоположно.
+	case code == contract.ErrRuntimeUnavailable:
+		log.Warn(runtimeUnavailable, "err", err, "method", r.Method, "path", r.URL.Path)
+		message = runtimeUnavailable
 	}
 
 	writeJSON(log, w, status, contract.Error{Code: code, Message: message})
@@ -119,11 +130,11 @@ func ProxyError(log *slog.Logger) func(w http.ResponseWriter, r *http.Request, e
 			return
 		}
 
-		log.Warn("рантайм sing-box недоступен", "path", r.URL.Path, "err", err)
+		log.Warn(runtimeUnavailable, "path", r.URL.Path, "err", err)
 
 		writeJSON(log, w, http.StatusBadGateway, contract.Error{
 			Code:    contract.ErrRuntimeUnavailable,
-			Message: "рантайм sing-box недоступен",
+			Message: runtimeUnavailable,
 		})
 	}
 }
