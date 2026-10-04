@@ -1,17 +1,35 @@
 #!/bin/sh
 # Проверка цикла Apply на целевом окружении (AC-21): sing-box check → запись →
-# рестарт через procd → healthcheck. Запускается внутри контейнера target,
-# используется и локально (make apply-check), и в CI (AC-22).
+# рестарт через procd → healthcheck. Следом — то, на чём держатся списки
+# файлом (AC-8): рабочий каталог службы равен каталогу конфига, и local
+# rule-set из rule-sets/ резолвится от него. Запускается внутри контейнера
+# target, используется и локально (make apply-check), и в CI (AC-22).
 set -eu
 
-CONF=/etc/sing-box/config.json
+CONF_DIR=/etc/sing-box
+CONF=$CONF_DIR/config.json
 TMP=/tmp/config.candidate.json
+API=http://127.0.0.1:9090
 
 fail() { echo "ПРОВАЛ: $1" >&2; exit 1; }
 
+# wait_api ждёт, пока Clash API ответит после рестарта: init-скрипт
+# возвращается раньше, чем служба поднимется.
+wait_api() {
+	i=0
+	while [ $i -lt 30 ]; do
+		if wget -qO- "$API/version" >/dev/null 2>&1; then
+			return 0
+		fi
+		i=$((i + 1))
+		sleep 1
+	done
+	return 1
+}
+
 echo "1. Исходное состояние"
 /etc/init.d/sing-box running || fail "sing-box не запущен до начала цикла"
-before=$(wget -qO- http://127.0.0.1:9090/version) || fail "Clash API не отвечает до начала цикла"
+before=$(wget -qO- "$API/version") || fail "Clash API не отвечает до начала цикла"
 echo "   $before"
 
 echo "2. Кандидат конфига: добавляем правило маршрутизации"
@@ -33,20 +51,93 @@ cp "$TMP" "$CONF"
 /etc/init.d/sing-box restart
 
 echo "6. Healthcheck"
-i=0
-while [ $i -lt 30 ]; do
-	if wget -qO- http://127.0.0.1:9090/version >/dev/null 2>&1; then
-		echo "   Clash API поднялся после рестарта"
-		break
-	fi
-	i=$((i + 1))
-	sleep 1
-done
-[ $i -lt 30 ] || fail "сервис не поднялся за 30 секунд после рестарта"
+wait_api || fail "сервис не поднялся за 30 секунд после рестарта"
+echo "   Clash API поднялся после рестарта"
 
 echo "7. Применённое правило действительно в рантайме"
-wget -qO- http://127.0.0.1:9090/configs >/dev/null || fail "Clash API не отдаёт конфигурацию"
+wget -qO- "$API/configs" >/dev/null || fail "Clash API не отдаёт конфигурацию"
 grep -q example.com "$CONF" || fail "правило не сохранилось в конфиге"
+
+echo "8. Рабочий каталог службы — каталог конфига"
+# Относительный path узла local sing-box резолвит от каталога -D, а не от
+# каталога конфига: с пакетным workdir служба не найдёт файлы списков.
+service=$(ubus call service list '{"name": "sing-box"}' | jsonfilter -e "@['sing-box']") ||
+	fail "procd не знает службу sing-box"
+workdir=$(echo "$service" | jsonfilter -e '@.instances.*.command[*]' | awk '
+	take { dir = $0; take = 0; next }
+	$0 == "-D" || $0 == "--directory" { take = 1; next }
+	/^--directory=/ { dir = substr($0, 13) }
+	END { print dir }')
+[ "$workdir" = "$CONF_DIR" ] || fail "служба поднята с -D '$workdir', ожидали $CONF_DIR"
+pid=$(echo "$service" | jsonfilter -e '@.instances.*.pid' | head -1)
+[ -n "$pid" ] || fail "procd не отдал pid службы"
+cwd=$(readlink "/proc/$pid/cwd") || fail "рабочий каталог процесса $pid не прочитан"
+[ "$cwd" = "$CONF_DIR" ] || fail "процесс $pid работает в '$cwd', ожидали $CONF_DIR"
+echo "   -D и cwd процесса — $CONF_DIR"
+
+echo "9. Список файлом: local rule-set из rule-sets/"
+LISTS_DIR=$CONF_DIR/rule-sets
+LIST_NAME=metabox-check.json
+LIST_BODY='{"version": 1, "rules": [{"domain_suffix": ["metabox-check.example"]}]}'
+CANDIDATE=/tmp/metabox-lists-candidate
+ORIGINAL=/tmp/config.before-lists.json
+lists_dir_created=0
+
+# Правило и набор встают в конфиг, оставленный шагом 5: правила в нём уже не
+# пусты, и запятая после вставки корректна.
+rm -rf "$CANDIDATE"
+mkdir -p "$CANDIDATE/rule-sets"
+sed -e 's|"rules": \[|"rules": [{"rule_set": "metabox-check", "outbound": "direct"}, |' \
+	-e 's|"final": "direct"|"rule_set": [{"type": "local", "tag": "metabox-check", "format": "source", "path": "rule-sets/'"$LIST_NAME"'"}], "final": "direct"|' \
+	"$CONF" > "$CANDIDATE/config.json"
+grep -q '"rule_set": "metabox-check"' "$CANDIDATE/config.json" || fail "правило с набором не подставилось, шаблон конфига изменился"
+grep -q '"type": "local"' "$CANDIDATE/config.json" || fail "набор не подставился, шаблон конфига изменился"
+printf '%s\n' "$LIST_BODY" > "$CANDIDATE/rule-sets/$LIST_NAME"
+
+# Кандидат проверяется так же, как его проверяет демон: -D на нём самом, иначе
+# относительный путь резолвился бы от чужого каталога.
+sing-box check -D "$CANDIDATE" -C "$CANDIDATE" || fail "check отверг кандидата с файлом списка"
+rm "$CANDIDATE/rule-sets/$LIST_NAME"
+if sing-box check -D "$CANDIDATE" -C "$CANDIDATE" 2>/dev/null; then
+	fail "check пропустил кандидата, у которого нет файла списка"
+fi
+echo "   check: с файлом проходит, без файла отвергнут"
+
+# restore_lists возвращает стенд в исходное при любом выходе: конфиг до шага 9,
+# без файла списка, на поднятой службе. Код выхода проверки сохраняется.
+restore_lists() {
+	code=$?
+	trap - EXIT
+	echo "   возвращаем стенд в исходное"
+	cp "$ORIGINAL" "$CONF" || code=1
+	rm -f "$LISTS_DIR/$LIST_NAME"
+	if [ "$lists_dir_created" = 1 ]; then
+		rmdir "$LISTS_DIR" 2>/dev/null || true
+	fi
+	/etc/init.d/sing-box restart || code=1
+	if ! wait_api; then
+		echo "ПРОВАЛ: стенд не вернулся в исходное: Clash API молчит после рестарта" >&2
+		code=1
+	fi
+	rm -rf "$CANDIDATE" "$ORIGINAL"
+	exit $code
+}
+
+cp "$CONF" "$ORIGINAL"
+trap restore_lists EXIT
+trap 'exit 1' INT TERM
+
+# Файл списка ложится до конфига — тем же порядком пишет демон.
+if [ ! -d "$LISTS_DIR" ]; then
+	mkdir "$LISTS_DIR"
+	lists_dir_created=1
+fi
+printf '%s\n' "$LIST_BODY" > "$LISTS_DIR/$LIST_NAME"
+cp "$CANDIDATE/config.json" "$CONF"
+/etc/init.d/sing-box restart
+wait_api || fail "сервис не поднялся за 30 секунд с конфигом, ссылающимся на файл списка"
+wget -qO- "$API/rules" | grep -q metabox-check || fail "правило с набором metabox-check не видно в рантайме"
+echo "   служба поднялась, набор metabox-check в рантайме"
 
 echo
 echo "Цикл Apply пройден полностью (AC-21)."
