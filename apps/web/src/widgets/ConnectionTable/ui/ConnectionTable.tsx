@@ -113,7 +113,13 @@ export function ConnectionTable({
 
   const onClose = useCallback(
     (id: string) => {
-      close.mutate(id, { onSuccess: () => onClosed?.() });
+      // Колбэк `mutate` срабатывает только у последнего вызова: две строки,
+      // закрытые подряд, дали бы одно объявление. Отказ показывает сама мутация.
+      void Promise.allSettled([close.mutateAsync(id)]).then(function announceClosed([result]) {
+        if (result.status === 'fulfilled') {
+          onClosed?.();
+        }
+      });
     },
     [close, onClosed]
   );
