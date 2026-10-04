@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { CONFIG_ENDPOINT, ConfigDocumentState } from '@entities/Config';
+import { CONFIG_ENDPOINT, ConfigDocumentState, findValue } from '@entities/Config';
 import { DAEMON_ENDPOINT } from '@entities/Daemon';
 import { DAEMON_STATUS_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture';
 import { RULE_SET_ENDPOINT } from '@entities/RuleSet';
@@ -41,6 +41,41 @@ const CONFIG = JSON.stringify(
   null,
   2
 );
+
+/** Удалённый сет без кэша: недоступный поставщик обрывает старт sing-box. */
+const CONFIG_WITHOUT_CACHE = JSON.stringify(
+  {
+    outbounds: [{ type: 'direct', tag: 'direct' }],
+    route: {
+      rule_set: [
+        {
+          type: 'remote',
+          tag: 'geoip-ru',
+          url: 'https://raw.githubusercontent.com/SagerNet/sing-geoip/rule-set/geoip-ru.srs',
+        },
+      ],
+    },
+  },
+  null,
+  2
+);
+
+/** Сеты без скачивания: кэш им не нужен, хотя его и нет. */
+const CONFIG_WITHOUT_REMOTE = JSON.stringify(
+  {
+    outbounds: [{ type: 'direct', tag: 'direct' }],
+    route: {
+      rule_set: [
+        { type: 'inline', tag: 'my-list', rules: [{ domain: ['a.example'] }] },
+        { type: 'local', tag: 'big-list', format: 'source', path: 'rule-sets/big-list.json' },
+      ],
+    },
+  },
+  null,
+  2
+);
+
+const CACHE_NOTICE = 'Кэш сетов выключен';
 
 /** Шапка тоже строка таблицы, поэтому строк на единицу больше, чем наборов. */
 const HEADER_ROWS = 1;
@@ -141,5 +176,47 @@ describe('экран сетов', () => {
     await user.click(screen.getByRole('button', { name: 'Сбросить отбор' }));
 
     expect(await screen.findByRole('table', { name: 'Подключённые сеты' })).toBeInTheDocument();
+  });
+});
+
+describe('предупреждение о кэше сетов', () => {
+  beforeEach(() => {
+    ConfigDocumentState.getState().reset();
+    server.use(
+      http.get(CONFIG_ENDPOINT.versions(), () => HttpResponse.json({ versions: [] })),
+      http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE)),
+      ...ruleSetHandlers
+    );
+  });
+
+  it('remote-сет без experimental.cache_file: кнопка включает кэш в черновике, и предупреждение гаснет', async () => {
+    server.use(http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(CONFIG_WITHOUT_CACHE)));
+
+    const user = userEvent.setup();
+
+    renderWithRouter(RuleSetsPage);
+
+    expect(await screen.findByText(CACHE_NOTICE)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Включить кэш' }));
+
+    const draft = ConfigDocumentState.getState().draft ?? '';
+
+    expect(findValue(draft, ['experimental'])).toEqual({ cache_file: { enabled: true } });
+    // Секция дописана к файлу, а не собрана заново: остальное не тронуто.
+    expect(findValue(draft, ['route'])).toEqual(findValue(CONFIG_WITHOUT_CACHE, ['route']));
+    expect(findValue(draft, ['outbounds'])).toEqual(findValue(CONFIG_WITHOUT_CACHE, ['outbounds']));
+    expect(screen.queryByText(CACHE_NOTICE)).not.toBeInTheDocument();
+  });
+
+  it('документ без remote-сетов предупреждения не показывает', async () => {
+    server.use(http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(CONFIG_WITHOUT_REMOTE)));
+
+    renderWithRouter(RuleSetsPage);
+
+    const table = await screen.findByRole('table', { name: 'Подключённые сеты' });
+
+    expect(within(table).getAllByRole('row')).toHaveLength(2 + HEADER_ROWS);
+    expect(screen.queryByText(CACHE_NOTICE)).not.toBeInTheDocument();
   });
 });
