@@ -1,6 +1,6 @@
 import { useTable, type ColumnFiltersState } from '@tanstack/react-table';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
+import { memo, useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { ConnectionRow as ConnectionRowModel } from '@entities/Connection';
@@ -40,16 +40,72 @@ export interface ConnectionTableEmpty {
 }
 
 /**
- * Список соединений: тулбар, шапка с сортировкой, виртуализованные строки и
- * подвал со счётчиком.
+ * Карточка списка соединений: тулбар над вкладками и тело каждой вкладки.
+ *
+ * Тулбар один на экран, а тело своё у каждой вкладки: поиск, срезы и вид общие,
+ * а фильтры колонок, прокрутка и строки — нет. Поэтому таблица собрана из
+ * частей, а не одним компонентом: экран ставит один `Toolbar` над вкладками и
+ * по `Body` в каждую.
  *
  * Анатомия, виртуализация, политика сортировки и устройство прокрутки —
- * [гайд по таблицам](../../../../docs/guides/Tables.md). Здесь важно только
- * одно, что легко сломать правкой: скроллер один и на обе оси, а шапка внутри
- * него липкая. Вертикальный вьюпорт внутри горизонтального заводит собственную
- * горизонтальную прокрутку и уезжает из-под шапки.
+ * [гайд по таблицам](../../../../docs/guides/Tables.md).
  */
-export function ConnectionTable({
+function ConnectionTableRoot({ children }: { children: ReactNode }) {
+  return (
+    <section className={cn('flex min-h-0 grow flex-col overflow-hidden max-lg:min-h-96', SURFACE)}>{children}</section>
+  );
+}
+
+/**
+ * Тулбар карточки: поиск, срезы, вид списка и действия над ним. Вид меняет
+ * картинку, а не систему, поэтому стоит слева от действий и в их ряд не входит.
+ */
+function ConnectionTableToolbar({
+  view,
+  search = null,
+  actions = null,
+  facets = null,
+}: {
+  /** Вид списка: он переживает перезагрузку, поэтому живёт снаружи таблицы. */
+  view: ConnectionView;
+  /** Поиск: левый край тулбара. */
+  search?: ReactNode;
+  /** Действия над списком: живут в карточке таблицы, а не в шапке страницы. */
+  actions?: ReactNode;
+  /** Срезы по вопросу экрана: вторая строка тулбара, на телефоне — первая. */
+  facets?: ReactNode;
+}) {
+  const narrow = useNarrowScreen();
+
+  return (
+    <div className='flex shrink-0 flex-col gap-2 border-b border-border px-3.5 py-2.5'>
+      <div className='flex flex-wrap items-center gap-2'>
+        {search}
+        <span className='grow' />
+        {narrow && facets}
+        <ConnectionColumnPicker view={view} />
+        <ConnectionDensityToggle density={view.density} onDensityChange={view.setDensity} />
+        <ConnectionRefreshSelect interval={view.interval} onIntervalChange={view.setInterval} />
+        {actions}
+      </div>
+      {!narrow && facets}
+    </div>
+  );
+}
+
+/**
+ * Тело вкладки: шапка с сортировкой, виртуализованные строки и подвал со
+ * счётчиком.
+ *
+ * Мемоизировано ради скрытой вкладки: под `Activity` она перерисовывается
+ * пониженным приоритетом на каждый новый пропс, а экран отдаёт ей замороженный
+ * набор строк и стабильные колбэки — и тело не перерисовывается вовсе.
+ *
+ * Здесь важно одно, что легко сломать правкой: скроллер один и на обе оси, а
+ * шапка внутри него липкая. Вертикальный вьюпорт внутри горизонтального
+ * заводит собственную горизонтальную прокрутку и уезжает из-под шапки.
+ */
+function ConnectionTableBodyProto({
   rows,
   total,
   closable,
@@ -57,9 +113,6 @@ export function ConnectionTable({
   filtered,
   onReset,
   view,
-  search = null,
-  actions = null,
-  facets = null,
   footer = null,
   overflow = null,
   selectedId = null,
@@ -80,14 +133,7 @@ export function ConnectionTable({
   filtered: boolean;
   /** Снять отбор экрана; фильтры колонок таблица снимает сама. */
   onReset: () => void;
-  /** Вид списка: он переживает перезагрузку, поэтому живёт снаружи таблицы. */
   view: ConnectionView;
-  /** Поиск: левый край тулбара. */
-  search?: ReactNode;
-  /** Действия над списком: живут в карточке таблицы, а не в шапке страницы. */
-  actions?: ReactNode;
-  /** Срезы по вопросу экрана: вторая строка тулбара, на телефоне — первая. */
-  facets?: ReactNode;
   /**
    * Выгрузка: подвал, рядом со счётчиком. Получает строки после всех отборов,
    * включая фильтры колонок, которых экран не видит, — уходит ровно то, что
@@ -170,20 +216,7 @@ export function ConnectionTable({
   });
 
   return (
-    <section className={cn('flex min-h-0 grow flex-col overflow-hidden max-lg:min-h-96', SURFACE)}>
-      <div className='flex shrink-0 flex-col gap-2 border-b border-border px-3.5 py-2.5'>
-        <div className='flex flex-wrap items-center gap-2'>
-          {search}
-          <span className='grow' />
-          {narrow && facets}
-          <ConnectionColumnPicker table={table} order={view.order} />
-          <ConnectionDensityToggle density={view.density} onDensityChange={view.setDensity} />
-          <ConnectionRefreshSelect interval={view.interval} onIntervalChange={view.setInterval} />
-          {actions}
-        </div>
-        {!narrow && facets}
-      </div>
-
+    <div className='flex min-h-0 grow flex-col'>
       {visible.length === 0 ? (
         <div className='flex grow items-center justify-center px-4 py-10 text-center'>
           {empty({ filtered: filtered || columnFilters.length > 0, reset: onResetAll })}
@@ -257,6 +290,13 @@ export function ConnectionTable({
         <span className='grow' />
         {footer !== null && footer(shownRows)}
       </div>
-    </section>
+    </div>
   );
 }
+
+const ConnectionTableBody = memo(ConnectionTableBodyProto);
+
+// Части собираются в `ConnectionTable.Root`, `.Toolbar` и `.Body` реэкспортом
+// модуля целиком (`ui/index.ts`): объект-обёртка в этом файле выключил бы Fast
+// Refresh для всех трёх.
+export { ConnectionTableBody as Body, ConnectionTableRoot as Root, ConnectionTableToolbar as Toolbar };

@@ -1,7 +1,7 @@
 import { renderWithRouter } from '@test/renderWithRouter';
 import { server } from '@test/server';
 import { mockVirtualSizes } from '@test/virtualSizes';
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -195,14 +195,14 @@ describe('экран соединений', () => {
     ConnectionStore.getState().apply(makeConnectionsSnapshot(4));
     ConnectionStore.getState().apply(makeConnectionsSnapshot(1));
 
-    await user.click(await screen.findByRole('tab', { name: /Закрытые/ }));
+    const closedTab = await screen.findByRole('tab', { name: /Закрытые/ });
 
-    // Обе вкладки остаются в DOM, поэтому пояснение ищется в показанной.
-    // Показанная остаётся одна не сразу: Base UI снимает прежнюю панель после
-    // своего перехода.
-    await waitFor(() => {
-      expect(within(screen.getByRole('tabpanel')).getByText(/sing-box отдаёт только живые/)).toBeInTheDocument();
-    });
+    // Пояснение стоит над карточкой списка и только на вкладке закрытых.
+    expect(screen.queryByText(/sing-box отдаёт только живые/)).not.toBeInTheDocument();
+
+    await user.click(closedTab);
+
+    expect(await screen.findByText(/sing-box отдаёт только живые/)).toBeInTheDocument();
   });
 
   it('в подвале закрытых называет вытесненные по лимиту', async () => {
@@ -312,6 +312,41 @@ describe('экран соединений', () => {
 
     expect(chain).toHaveTextContent([...ROUTE_DRIFTED_CHAIN_FIXTURE.chain.nodes].reverse().join(''));
     expect(screen.queryByTitle(/us-hysteria/)).not.toBeInTheDocument();
+  });
+
+  it('поиск и срезы стоят на экране один раз, а не в каждой вкладке', async () => {
+    ConnectionStore.getState().apply(makeConnectionsSnapshot(8));
+    renderScreen();
+
+    await screen.findAllByRole('button', { name: /Закрыть соединение/ });
+
+    // Скрытая вкладка тоже в DOM, поэтому считаются и скрытые узлы.
+    expect(screen.getAllByRole('textbox', { name: 'Поиск по соединениям', hidden: true })).toHaveLength(1);
+    expect(screen.getAllByRole('list', { name: 'Устройства', hidden: true })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: 'Пауза', hidden: true })).toHaveLength(1);
+  });
+
+  it('скрытая вкладка стоит на снимке, а число на её ярлыке живое', async () => {
+    const user = userEvent.setup();
+
+    renderScreen();
+
+    const closedTab = await screen.findByRole('tab', { name: /Закрытые/ });
+    const [, closedPanel] = screen.getAllByRole('tabpanel', { hidden: true });
+
+    act(() => {
+      ConnectionStore.getState().apply(makeConnectionsSnapshot(4));
+      ConnectionStore.getState().apply(makeConnectionsSnapshot(1));
+    });
+
+    expect(closedTab).toHaveTextContent('3');
+    // Строки скрытой вкладки не отбираются и не рисуются на каждый снапшот.
+    expect(within(closedPanel).getByRole('status', { hidden: true })).toHaveTextContent('0 соединений');
+
+    await user.click(closedTab);
+
+    // Открытая вкладка показывает текущий набор сразу, а не снимок.
+    expect(within(closedPanel).getByRole('status')).toHaveTextContent('3 соединения');
   });
 
   it('переключение вкладок сохраняет фильтр колонки активной таблицы', async () => {

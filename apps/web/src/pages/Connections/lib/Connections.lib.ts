@@ -1,5 +1,5 @@
 import { useNavigate, useSearch } from '@tanstack/react-router';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import {
   CONNECTION_TAB,
@@ -18,11 +18,45 @@ import {
 
 import { useThrottledRows } from './Connections.throttle';
 
-/** Набор одной вкладки: обе живут одновременно, поэтому у каждой он свой. */
+/**
+ * Набор одной вкладки: обе живут одновременно, поэтому у каждой он свой. У
+ * скрытой вкладки он заморожен — см. `useWhileVisible`.
+ */
 export interface ConnectionTabRows {
   rows: ConnectionRow[];
   /** Сколько строк во вкладке до отбора: подвал сообщает обе величины. */
   total: number;
+}
+
+/** Живые счётчики вкладок: число на ярлыке не ждёт, пока вкладку откроют. */
+export type ConnectionTabCounts = Readonly<Record<ConnectionTab, number>>;
+
+interface VisibleValue<T> {
+  visible: boolean;
+  value: T;
+}
+
+/**
+ * Значение, которое скрытая вкладка видит замороженным: пока она спрятана, хук
+ * отдаёт то, что было в момент, когда её спрятали, а показанная получает
+ * текущее в тот же кадр, в котором становится видимой.
+ *
+ * Скрытая вкладка стоит под `Activity` и перерисовывается пониженным
+ * приоритетом на каждый новый пропс. Новый снапшот раз в секунду — новый
+ * пропс, и вкладку, которую никто не видит, отбирали бы и рисовали заново на
+ * каждый тик.
+ *
+ * Состояние меняется только на смене видимости, а не на каждом значении: иначе
+ * каждый тик стоил бы лишнего прохода по экрану.
+ */
+export function useWhileVisible<T>(value: T, visible: boolean): T {
+  const [frozen, setFrozen] = useState<VisibleValue<T>>({ visible, value });
+
+  if (frozen.visible !== visible) {
+    setFrozen({ visible, value });
+  }
+
+  return visible ? value : frozen.value;
 }
 
 export interface ConnectionsScreen {
@@ -42,6 +76,7 @@ export interface ConnectionsScreen {
   kinds: ConnectionKindGroup[];
   active: ConnectionTabRows;
   closed: ConnectionTabRows;
+  counts: ConnectionTabCounts;
   /** Сколько строк в показанной вкладке до отбора: число на чипе «Любое» в срезе устройств. */
   total: number;
   filtered: boolean;
@@ -121,11 +156,13 @@ export function useConnectionsScreen(interval: number): ConnectionsScreen {
   // не набор соседней до конца периода.
   const liveRows = useThrottledRows(ConnectionState.use.active(), interval);
   const closedRows = useThrottledRows(ConnectionState.use.closed(), interval);
-  // Отбор считается обеим вкладкам сразу: они обе смонтированы, и вкладка под
-  // `Activity` обязана показать актуальный набор в тот же кадр, в котором
-  // становится видимой.
-  const active = useTabRows(liveRows, query, source, kind);
-  const closed = useTabRows(closedRows, query, source, kind);
+  // Скрытая вкладка получает набор, замороженный на момент, когда её спрятали:
+  // отбор по нему не пересчитывается на каждый снапшот, а тело таблицы не
+  // перерисовывается. Показанная получает текущий набор в тот же кадр, в
+  // котором становится видимой.
+  const active = useTabRows(useWhileVisible(liveRows, tab === CONNECTION_TAB.Active), query, source, kind);
+  const closed = useTabRows(useWhileVisible(closedRows, tab === CONNECTION_TAB.Closed), query, source, kind);
+  const counts = { [CONNECTION_TAB.Active]: liveRows.length, [CONNECTION_TAB.Closed]: closedRows.length };
 
   // Фасеты и поиск общие, но считаются по показанной вкладке: иначе срез по
   // устройству называл бы числа соседней.
@@ -152,6 +189,7 @@ export function useConnectionsScreen(interval: number): ConnectionsScreen {
     kinds,
     active,
     closed,
+    counts,
     total: all.length,
     filtered: query.length > 0 || source !== null || kind !== null,
   };

@@ -1,5 +1,5 @@
 import type { ColumnOrderState, ColumnVisibilityState, OnChangeFn, SortingState } from '@tanstack/react-table';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { z } from 'zod';
 
 import { MS_IN_SECOND } from '@shared/lib/time';
@@ -123,6 +123,9 @@ export interface ConnectionView extends StoredView {
  * Вид списка соединений: сортировка, видимые колонки и их порядок, плотность
  * и частота обновления. Настройка личная, как тема и язык: панель роутера открывают
  * несколько человек, и общая на всех была бы ограничением.
+ *
+ * Объект вида стабилен между снапшотами: он уходит в мемоизированное тело
+ * таблицы, и новая ссылка на каждый тик перерисовывала бы скрытую вкладку.
  */
 export function useConnectionView(): ConnectionView {
   const [view, setView] = useState(readView);
@@ -174,12 +177,15 @@ export function useConnectionView(): ConnectionView {
     [update]
   );
 
-  return {
-    ...view,
-    setSorting: onSortingChange,
-    setColumns: onColumnsChange,
-    setOrder: onOrderChange,
-    setDensity: onDensityChange,
-    setInterval: onIntervalChange,
-  };
+  return useMemo(
+    () => ({
+      ...view,
+      setSorting: onSortingChange,
+      setColumns: onColumnsChange,
+      setOrder: onOrderChange,
+      setDensity: onDensityChange,
+      setInterval: onIntervalChange,
+    }),
+    [view, onSortingChange, onColumnsChange, onOrderChange, onDensityChange, onIntervalChange]
+  );
 }

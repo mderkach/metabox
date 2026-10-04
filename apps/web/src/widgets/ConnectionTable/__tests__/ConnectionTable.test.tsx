@@ -9,7 +9,7 @@ import { ConnectionStore, type ConnectionRow } from '@entities/Connection';
 import { makeConnectionsSnapshot } from '@entities/Connection/__tests__/Connection.fixture';
 
 import { useConnectionView } from '../lib';
-import { ConnectionTable, type ConnectionTableEmpty } from '../ui/ConnectionTable';
+import { ConnectionTable, type ConnectionTableEmpty } from '../ui';
 
 const STORAGE_KEY = 'metabox.connections.view';
 
@@ -29,20 +29,27 @@ function renderEmpty({ filtered, reset }: ConnectionTableEmpty) {
   );
 }
 
-/** Вид живёт снаружи таблицы, поэтому обёртка берёт его тем же хуком, что и экран. */
+/**
+ * Вид живёт снаружи таблицы, поэтому обёртка берёт его тем же хуком, что и
+ * экран, и отдаёт его тулбару и телу — выбор полей работает с видом, а не с
+ * моделью таблицы.
+ */
 function TableHarness({ rows, onReset }: { rows: ConnectionRow[]; onReset: () => void }) {
   const view = useConnectionView();
 
   return (
-    <ConnectionTable
-      rows={rows}
-      total={rows.length}
-      closable
-      filtered={false}
-      onReset={onReset}
-      view={view}
-      empty={renderEmpty}
-    />
+    <ConnectionTable.Root>
+      <ConnectionTable.Toolbar view={view} />
+      <ConnectionTable.Body
+        rows={rows}
+        total={rows.length}
+        closable
+        filtered={false}
+        onReset={onReset}
+        view={view}
+        empty={renderEmpty}
+      />
+    </ConnectionTable.Root>
   );
 }
 

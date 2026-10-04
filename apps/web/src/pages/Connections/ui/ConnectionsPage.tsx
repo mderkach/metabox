@@ -1,4 +1,4 @@
-import { Activity, startTransition, useCallback, useId, useState, ViewTransition } from 'react';
+import { Activity, startTransition, useCallback, useId, useMemo, useState, ViewTransition } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { CONNECTION_TAB, ConnectionState, useConnectionStream, type ConnectionRow } from '@entities/Connection';
@@ -10,7 +10,7 @@ import { ConnectionTable, useConnectionView, type ConnectionTableEmpty } from '@
 import { PageHeader } from '@widgets/PageHeader';
 import { RouteExplanation, RouteExplanationSheet } from '@widgets/RouteExplanation';
 
-import { useConnectionsScreen } from '../lib';
+import { useConnectionsScreen, useWhileVisible } from '../lib';
 import { ConnectionActions } from './ConnectionActions';
 import { ConnectionExport } from './ConnectionExport';
 import { ConnectionFacets } from './ConnectionFacets';
@@ -74,15 +74,28 @@ export function ConnectionsPage() {
   }, [announce, t]);
 
   const explainedHost = screen.active.rows.find((row) => row.id === explainedId)?.host ?? '';
+  const activeShown = screen.tab === CONNECTION_TAB.Active;
+  const closedShown = screen.tab === CONNECTION_TAB.Closed;
+  const pending = sampledAt === null;
 
-  const renderEmpty = ({ filtered, reset }: ConnectionTableEmpty) => (
-    <ConnectionsEmpty filtered={filtered} pending={sampledAt === null} onReset={reset} />
+  // Тела вкладок мемоизированы, и колбэки им отдаются стабильными: иначе скрытая
+  // вкладка перерисовывалась бы на каждый тик ради новой ссылки на функцию.
+  const renderEmpty = useCallback(
+    ({ filtered, reset }: ConnectionTableEmpty) => (
+      <ConnectionsEmpty filtered={filtered} pending={pending} onReset={reset} />
+    ),
+    [pending]
   );
 
-  const renderFooter = (rows: ConnectionRow[]) => <ConnectionExport rows={rows} />;
+  const renderFooter = useCallback((rows: ConnectionRow[]) => <ConnectionExport rows={rows} />, []);
 
-  const search = <ConnectionSearch query={screen.query} onQueryChange={screen.setQuery} />;
-  const facets = <ConnectionFacets screen={screen} />;
+  // Подвал закрытых называет вытесненные; пока вкладка спрятана, числа стоят.
+  const keptShown = useWhileVisible(kept, closedShown);
+  const evictedShown = useWhileVisible(evicted, closedShown);
+  const closedOverflow = useMemo(
+    () => evictedShown > 0 && <p>{t('closedOverflow', { shown: keptShown, total: keptShown + evictedShown })}</p>,
+    [evictedShown, keptShown, t]
+  );
 
   return (
     <>
@@ -109,104 +122,107 @@ export function ConnectionsPage() {
         <TabsList variant='line'>
           <TabsTrigger value={CONNECTION_TAB.Active}>
             {t('tab.active')}
-            <span className={TAB_COUNT}>{screen.active.total}</span>
+            <span className={TAB_COUNT}>{screen.counts.active}</span>
           </TabsTrigger>
           <TabsTrigger value={CONNECTION_TAB.Closed}>
             {t('tab.closed')}
-            <span className={TAB_COUNT}>{screen.closed.total}</span>
+            <span className={TAB_COUNT}>{screen.counts.closed}</span>
           </TabsTrigger>
         </TabsList>
-        {/* `default='none'`: обновления строк внутри вкладки — не её анимация. */}
-        <TabsContent value={CONNECTION_TAB.Active} keepMounted className='flex min-h-0 grow flex-col'>
-          <Activity mode={screen.tab === CONNECTION_TAB.Active ? 'visible' : 'hidden'}>
-            <ViewTransition enter='fade-in' exit='fade-out' default='none'>
-              {/* Ниже lg объяснение открывается листом, и в колонке остаётся
-                  один список. Колонка прокручивается на низком экране, где
-                  списку не хватает его минимальной высоты. */}
-              <div className='flex min-h-0 grow flex-col gap-4 max-lg:overflow-y-auto lg:flex-row'>
-                <ConnectionTable
-                  rows={screen.active.rows}
-                  total={screen.active.total}
-                  closable
-                  selectedId={explainedId}
-                  explainPanelId={explainPanelId}
-                  onExplain={onExplain}
-                  onClosed={onClosed}
-                  search={search}
-                  facets={facets}
-                  footer={renderFooter}
-                  empty={renderEmpty}
-                  filtered={screen.filtered}
-                  onReset={screen.reset}
-                  view={view}
-                  actions={
-                    <ConnectionActions
-                      paused={paused}
-                      onTogglePause={onTogglePause}
-                      closableCount={screen.active.total}
-                      onCloseAll={onCloseAll}
-                    />
-                  }
+
+        {closedShown && (
+          <Alert>
+            <AlertDescription>{t('closedNote')}</AlertDescription>
+          </Alert>
+        )}
+
+        {/* Ниже lg объяснение открывается листом, и в колонке остаётся один
+            список. Колонка прокручивается на низком экране, где списку не
+            хватает его минимальной высоты. */}
+        <div className='flex min-h-0 grow flex-col gap-4 max-lg:overflow-y-auto lg:flex-row'>
+          {/* Поиск, срезы, вид и действия — один тулбар на обе вкладки: под
+              `Activity` остаётся только то, что у вкладки своё. */}
+          <ConnectionTable.Root>
+            <ConnectionTable.Toolbar
+              view={view}
+              search={<ConnectionSearch query={screen.query} onQueryChange={screen.setQuery} />}
+              facets={<ConnectionFacets screen={screen} />}
+              actions={
+                <ConnectionActions
+                  paused={paused}
+                  onTogglePause={onTogglePause}
+                  closableCount={activeShown ? screen.counts.active : null}
+                  onCloseAll={onCloseAll}
                 />
+              }
+            />
 
-                {!sheet && explainedId !== null && (
-                  <ViewTransition enter='panel-in' exit='panel-out'>
-                    <RouteExplanation
-                      key={explainedId}
-                      id={explainPanelId}
-                      connectionId={explainedId}
-                      host={explainedHost}
-                      onClose={onCloseExplanation}
-                    />
-                  </ViewTransition>
-                )}
-
-                {sheet && (
-                  <RouteExplanationSheet
-                    id={explainPanelId}
-                    connectionId={explainedId}
-                    host={explainedHost}
-                    onClose={onCloseExplanation}
+            {/* `default='none'`: обновления строк внутри вкладки — не её анимация. */}
+            <TabsContent value={CONNECTION_TAB.Active} keepMounted className='flex min-h-0 grow flex-col'>
+              <Activity mode={activeShown ? 'visible' : 'hidden'}>
+                <ViewTransition enter='fade-in' exit='fade-out' default='none'>
+                  <ConnectionTable.Body
+                    rows={screen.active.rows}
+                    total={screen.active.total}
+                    closable
+                    selectedId={explainedId}
+                    explainPanelId={explainPanelId}
+                    onExplain={onExplain}
+                    onClosed={onClosed}
+                    footer={renderFooter}
+                    empty={renderEmpty}
+                    filtered={screen.filtered}
+                    onReset={screen.reset}
+                    view={view}
                   />
-                )}
-              </div>
-            </ViewTransition>
-          </Activity>
-        </TabsContent>
+                </ViewTransition>
+              </Activity>
+            </TabsContent>
 
-        <TabsContent value={CONNECTION_TAB.Closed} keepMounted className='flex min-h-0 grow flex-col'>
-          <Activity mode={screen.tab === CONNECTION_TAB.Closed ? 'visible' : 'hidden'}>
-            <ViewTransition enter='fade-in' exit='fade-out' default='none'>
-              <div className='flex min-h-0 grow flex-col gap-4'>
-                <Alert>
-                  <AlertDescription>{t('closedNote')}</AlertDescription>
-                </Alert>
+            <TabsContent value={CONNECTION_TAB.Closed} keepMounted className='flex min-h-0 grow flex-col'>
+              <Activity mode={closedShown ? 'visible' : 'hidden'}>
+                <ViewTransition enter='fade-in' exit='fade-out' default='none'>
+                  <ConnectionTable.Body
+                    rows={screen.closed.rows}
+                    total={screen.closed.total}
+                    closable={false}
+                    footer={renderFooter}
+                    overflow={closedOverflow}
+                    empty={renderEmpty}
+                    filtered={screen.filtered}
+                    onReset={screen.reset}
+                    view={view}
+                  />
+                </ViewTransition>
+              </Activity>
+            </TabsContent>
+          </ConnectionTable.Root>
 
-                <ConnectionTable
-                  rows={screen.closed.rows}
-                  total={screen.closed.total}
-                  closable={false}
-                  search={search}
-                  facets={facets}
-                  footer={renderFooter}
-                  overflow={evicted > 0 && <p>{t('closedOverflow', { shown: kept, total: kept + evicted })}</p>}
-                  empty={renderEmpty}
-                  filtered={screen.filtered}
-                  onReset={screen.reset}
-                  view={view}
-                  actions={
-                    <ConnectionActions
-                      paused={paused}
-                      onTogglePause={onTogglePause}
-                      closableCount={null}
-                      onCloseAll={onCloseAll}
-                    />
-                  }
+          {/* Объяснение принадлежит строке активной вкладки и прячется вместе с
+              ней, сохраняя своё состояние. */}
+          <Activity mode={activeShown ? 'visible' : 'hidden'}>
+            {!sheet && explainedId !== null && (
+              <ViewTransition enter='panel-in' exit='panel-out'>
+                <RouteExplanation
+                  key={explainedId}
+                  id={explainPanelId}
+                  connectionId={explainedId}
+                  host={explainedHost}
+                  onClose={onCloseExplanation}
                 />
-              </div>
-            </ViewTransition>
+              </ViewTransition>
+            )}
           </Activity>
-        </TabsContent>
+        </div>
+
+        {sheet && (
+          <RouteExplanationSheet
+            id={explainPanelId}
+            connectionId={explainedId}
+            host={explainedHost}
+            onClose={onCloseExplanation}
+          />
+        )}
       </Tabs>
     </>
   );

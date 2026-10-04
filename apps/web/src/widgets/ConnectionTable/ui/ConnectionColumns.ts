@@ -260,8 +260,9 @@ export function toOrderedColumns(order: ColumnOrderState): ConnectionColumnDef[]
  *
  * Обход идёт по собственным описаниям, а не по `getVisibleLeafColumns`: там
  * `id` — строка, а `meta` необязательна, здесь гарантированы обе. Отбор по
- * видимости каждый вызывающий делает сам: шапке нужны видимые, списку колонок —
- * все.
+ * видимости вызывающий делает сам. Выбор полей обходится без модели таблицы и
+ * читает вид напрямую через `toOrderedColumns`: тулбар у вкладок соединений
+ * один, а модель у каждой своя.
  */
 export function toTableColumns(
   table: Table<ConnectionTableFeatures, ConnectionRow>,

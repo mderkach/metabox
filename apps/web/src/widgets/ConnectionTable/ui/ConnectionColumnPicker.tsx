@@ -1,18 +1,12 @@
-import type { ColumnOrderState, Table } from '@tanstack/react-table';
 import { ChevronDown, ChevronUp, Columns3, RotateCcw } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import type { ConnectionRow } from '@entities/Connection';
 import { cn } from '@shared/lib/utils';
 import { Button, Checkbox, Label, Popover, PopoverContent, PopoverTitle, PopoverTrigger } from '@shared/ui';
 
-import {
-  CONNECTION_COLUMNS,
-  CONNECTION_COLUMNS_HIDDEN,
-  toTableColumns,
-  type ConnectionTableFeatures,
-} from './ConnectionColumns';
+import type { ConnectionView } from '../lib';
+import { CONNECTION_COLUMNS, CONNECTION_COLUMNS_HIDDEN, toOrderedColumns } from './ConnectionColumns';
 
 /** Куда сдвигается колонка: на одну позицию назад или вперёд. */
 const MOVE = {
@@ -44,18 +38,19 @@ function toMoveButtonId(field: string, move: Move): string {
  * доступны с клавиатуры и скринридеру без отдельного протокола. Фокус после
  * перестановки остаётся на кнопке переставленного поля — иначе он теряется
  * вместе с переехавшим узлом списка.
+ *
+ * Выбор работает с видом, а не с моделью таблицы: тулбар один на обе вкладки
+ * соединений, а модель у каждой своя.
  */
 export function ConnectionColumnPicker({
-  table,
-  order,
+  view,
 }: {
-  table: Table<ConnectionTableFeatures, ConnectionRow>;
-  order: ColumnOrderState;
+  view: Pick<ConnectionView, 'columns' | 'order' | 'setColumns' | 'setOrder'>;
 }) {
   const { t } = useTranslation('widgets/ConnectionTable');
-  const columns = toTableColumns(table, order);
-  const hidden = columns.filter(({ column }) => !column.getIsVisible()).length;
-  const reordered = columns.some(({ def }, index) => def.id !== CONNECTION_COLUMNS[index].id);
+  const columns = toOrderedColumns(view.order);
+  const hidden = columns.filter((def) => view.columns[def.id] === false).length;
+  const reordered = columns.some((def, index) => def.id !== CONNECTION_COLUMNS[index].id);
   const changed = hidden !== Object.keys(CONNECTION_COLUMNS_HIDDEN).length || reordered;
   const focusAfterMove = useRef<string | null>(null);
 
@@ -68,11 +63,11 @@ export function ConnectionColumnPicker({
       document.getElementById(focusAfterMove.current)?.focus();
       focusAfterMove.current = null;
     },
-    [order]
+    [view.order]
   );
 
   function move(index: number, step: Move) {
-    const ids = columns.map(({ def }) => def.id);
+    const ids = columns.map((def) => def.id);
     const target = index + step;
     const [field] = ids.splice(index, 1);
 
@@ -82,7 +77,7 @@ export function ConnectionColumnPicker({
     const back = step === MOVE.Up ? MOVE.Down : MOVE.Up;
 
     focusAfterMove.current = toMoveButtonId(field, atEdge ? back : step);
-    table.setColumnOrder(ids);
+    view.setOrder(ids);
   }
 
   return (
@@ -112,8 +107,8 @@ export function ConnectionColumnPicker({
               size='xs'
               className='text-muted-foreground hover:text-foreground'
               onClick={() => {
-                table.setColumnVisibility(CONNECTION_COLUMNS_HIDDEN);
-                table.setColumnOrder([]);
+                view.setColumns(CONNECTION_COLUMNS_HIDDEN);
+                view.setOrder([]);
               }}
             >
               <RotateCcw />
@@ -123,18 +118,19 @@ export function ConnectionColumnPicker({
         </div>
 
         <ul className='mt-2 flex flex-col gap-2'>
-          {columns.map(({ def, column }, index) => {
+          {columns.map((def, index) => {
             const id = `connection-field-${def.id}`;
             const label = t(def.meta.label);
+            const visible = view.columns[def.id] !== false;
 
             return (
               <li key={def.id} className='flex items-center gap-2'>
                 <Checkbox
                   id={id}
-                  checked={column.getIsVisible()}
+                  checked={visible}
                   disabled={def.meta.required}
                   onCheckedChange={() => {
-                    column.toggleVisibility();
+                    view.setColumns((current) => ({ ...current, [def.id]: !visible }));
                   }}
                 />
                 <Label htmlFor={id} className='text-sm font-normal'>
