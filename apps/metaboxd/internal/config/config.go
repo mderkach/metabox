@@ -27,7 +27,8 @@ var (
 	// Штатный случай, на устройстве sing-box могли ещё не настраивать.
 	ErrNoConfig = errors.New("файла конфига нет")
 
-	// ErrNoBackup — откатываться не на что: демон ещё ничего не применял.
+	// ErrNoBackup — откатываться не на что: до применения конфига на
+	// устройстве не было.
 	ErrNoBackup = errors.New("бэкапа нет")
 
 	// ErrNoState — незавершённой транзакции нет, доигрывать нечего.
@@ -179,6 +180,10 @@ func (s *Store) Write(ctx context.Context, data []byte) error {
 // Backup сохраняет для отката текущий конфиг и снимок каталога списков.
 // Вызывается до записи нового (шаг 4 протокола применения). Служебный каталог
 // создаётся, если его нет, — как и в WriteState.
+//
+// Конфига на месте нет — ErrNoConfig, и бэкап прошлой транзакции снимается:
+// владелец мог удалить конфиг по SSH, и откат этого применения обязан вернуть
+// «ничего» (Restore даст ErrNoBackup), а не удалённый конфиг.
 func (s *Store) Backup(ctx context.Context) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -188,12 +193,18 @@ func (s *Store) Backup(ctx context.Context) error {
 	defer s.mu.Unlock()
 
 	cfgRoot, err := openRoot(s.dir)
+	if errors.Is(err, fs.ErrNotExist) {
+		return s.dropBackup()
+	}
 	if err != nil {
 		return err
 	}
 	defer func() { _ = cfgRoot.Close() }()
 
 	data, err := cfgRoot.ReadFile(s.name)
+	if errors.Is(err, fs.ErrNotExist) {
+		return s.dropBackup()
+	}
 	if err != nil {
 		return fmt.Errorf("чтение конфига %s под бэкап: %w", s.Path(), err)
 	}
@@ -213,6 +224,37 @@ func (s *Store) Backup(ctx context.Context) error {
 	}
 
 	return s.backupLists(serviceRoot)
+}
+
+// dropBackup снимает бэкап прошлой транзакции вместе со снимком списков и
+// отдаёт ErrNoConfig. Бэкап конфига снимается первым: обрыв на середине
+// оставит снимок списков без бэкапа, а такой Restore не читает. Служебного
+// каталога нет — снимать нечего. Вызывается под mu.
+func (s *Store) dropBackup() error {
+	serviceRoot, err := openRoot(s.serviceDir)
+	if errors.Is(err, fs.ErrNotExist) {
+		return ErrNoConfig
+	}
+	if err != nil {
+		return err
+	}
+	defer func() { _ = serviceRoot.Close() }()
+
+	if err := serviceRoot.Remove(backupName); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return fmt.Errorf("снятие устаревшего бэкапа %s: %w", s.BackupPath(), err)
+	}
+
+	for _, name := range []string{listsBackupName, listsBackupStaging} {
+		if err := serviceRoot.RemoveAll(name); err != nil {
+			return fmt.Errorf("снятие устаревшего бэкапа списков %s: %w", name, err)
+		}
+	}
+
+	if err := syncDir(serviceRoot); err != nil {
+		return err
+	}
+
+	return ErrNoConfig
 }
 
 // backupLists кладёт снимок каталога списков рядом с бэкапом конфига. Снимок

@@ -140,6 +140,69 @@ func TestRollbackWithoutBackup(t *testing.T) {
 	})
 }
 
+// Бэкап не прошёл — записи ещё не было, на диске прежний конфиг. Откат по
+// бэкапу прошлой транзакции потерял бы то, что работает: транзакция
+// закрывается отказом без Restore и рестарта.
+func TestBackupFailureSkipsRollback(t *testing.T) {
+	h := newHarness(t)
+	h.store.backupErr = errors.New("диск переполнен")
+
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
+		t.Fatalf("применение: %v", err)
+	}
+	h.manager.Close()
+
+	tx := h.manager.Current()
+	if tx.Phase != apply.PhaseFailed || tx.ReasonCode != apply.ReasonBackupFailed {
+		t.Errorf("фаза %q с кодом %q, ожидали отказ с причиной backup_failed", tx.Phase, tx.ReasonCode)
+	}
+	if !strings.Contains(tx.Reason, "диск переполнен") {
+		t.Errorf("подробность %q потеряла отказ бэкапа", tx.Reason)
+	}
+
+	calls := h.rec.snapshot()
+	for _, step := range []string{"Restore", "WriteLists", "Write", "Restart"} {
+		if slices.Contains(calls, step) {
+			t.Errorf("после отказа бэкапа вызван %s: шаги %v", step, calls)
+		}
+	}
+	if state, _ := h.store.ReadState(t.Context()); state != nil {
+		t.Error("состояние закрытой транзакции осталось на диске")
+	}
+
+	h.store.backupErr = nil
+
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
+		t.Errorf("применение после отказа бэкапа: %v", err)
+	}
+}
+
+// Конфига на устройстве нет — первый запуск или удалён владельцем. Применение
+// не останавливается, а откат этого применения возвращать нечего.
+func TestBackupWithoutConfigContinues(t *testing.T) {
+	h := newHarness(t)
+	h.store.backupErr = config.ErrNoConfig
+
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
+		t.Fatalf("применение: %v", err)
+	}
+	h.waitWindow(t)
+
+	if !slices.Contains(h.rec.snapshot(), "Write") {
+		t.Error("без конфига на устройстве применение не дошло до записи")
+	}
+
+	// Бэкап прошлой транзакции снят вместе с конфигом: откат возвращать нечего.
+	h.store.restoreErr = config.ErrNoBackup
+	h.clock.fire()
+	h.manager.Close()
+
+	tx := h.manager.Current()
+	if tx.Phase != apply.PhaseFailed || tx.ReasonCode != apply.ReasonNoBackup {
+		t.Errorf("фаза %q с кодом %q, ожидали отказ с причиной no_backup", tx.Phase, tx.ReasonCode)
+	}
+}
+
 // Отказ чтения конфига перед историей применение не останавливает, но и не
 // проходит молча; отсутствие конфига — штатный первый запуск без записи.
 func TestReadFailureBeforeSaveVersionIsLogged(t *testing.T) {

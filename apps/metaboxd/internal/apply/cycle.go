@@ -77,6 +77,13 @@ func (m *Manager) cycle(
 	if err := m.apply(ctx, data, putLists, removeLists, settings); err != nil {
 		log.Error("применение не прошло", "err", err)
 		m.release(PhaseFailed, err)
+
+		if reasonOf(err) == ReasonBackupFailed {
+			m.closeUnwritten(context.WithoutCancel(ctx), log)
+
+			return
+		}
+
 		m.rollback(context.WithoutCancel(ctx), log)
 
 		return
@@ -99,12 +106,13 @@ func (m *Manager) apply(
 	defer cancel()
 
 	if err := m.store.Backup(ctx); err != nil {
-		// До первого применения конфига может не быть — откатываться тогда не
-		// на что, но и применение это не останавливает.
-		if !errors.Is(err, fs.ErrNotExist) {
+		// Конфига может не быть — до первого применения или после удаления
+		// владельцем. Откатываться тогда не на что, но и применение это не
+		// останавливает.
+		if !errors.Is(err, config.ErrNoConfig) {
 			return stepFailed(ReasonBackupFailed, fmt.Errorf("бэкап: %w", err))
 		}
-		m.log.Warn("бэкапа нет: конфига на устройстве ещё не было")
+		m.log.Warn("конфига на устройстве нет, бэкапа нет")
 	}
 
 	// История надстроена над бэкапом и к откату отношения не имеет: её отказ
@@ -324,6 +332,32 @@ func (m *Manager) rollback(ctx context.Context, log *slog.Logger) {
 	if !noBackup {
 		log.Info("предыдущий конфиг возвращён")
 	}
+}
+
+// closeUnwritten закрывает транзакцию, вставшую на бэкапе. Записи ещё не было,
+// на диске прежний конфиг, а бэкап остался от прошлой транзакции или
+// недописан: откат по нему потерял бы то, что сейчас работает. Поэтому ни
+// Restore, ни рестарта; lastSum не трогается — на диске ровно то, что было до
+// применения.
+func (m *Manager) closeUnwritten(ctx context.Context, log *slog.Logger) {
+	ctx, cancel := context.WithTimeout(ctx, m.opts.CycleTimeout)
+	defer cancel()
+
+	m.mu.Lock()
+	m.current.Window = 0
+	m.windowEndsAt = time.Time{}
+	m.mu.Unlock()
+
+	// Состояние убирается до освобождения busy — по той же причине, что в
+	// rollback. Оставшееся на диске applying доигрывание закроет без отката:
+	// writeHappened записи не найдёт.
+	if err := m.store.ClearState(ctx); err != nil {
+		log.Error("состояние транзакции без записи не убрано", "err", err)
+	}
+
+	m.mu.Lock()
+	m.busy = false
+	m.mu.Unlock()
 }
 
 // Replay доигрывает транзакцию, оставшуюся от прошлой жизни демона. Вызывается

@@ -354,6 +354,115 @@ func TestRestoreWithoutBackup(t *testing.T) {
 	}
 }
 
+// Владелец удалил конфиг по SSH и применил новый: откат этого применения
+// обязан вернуть «ничего», а не удалённый конфиг из бэкапа прошлой транзакции.
+func TestBackupWithoutConfigDropsStaleBackup(t *testing.T) {
+	tests := []struct {
+		name string
+		drop func(cfgDir string) error
+		// listsKept — файлы списков лежат в каталоге конфига и переживают
+		// удаление одного файла конфига.
+		listsKept bool
+	}{
+		{
+			name:      "конфиг удалён",
+			drop:      func(cfgDir string) error { return os.Remove(filepath.Join(cfgDir, configName)) },
+			listsKept: true,
+		},
+		{
+			name: "каталога конфига нет вовсе",
+			drop: os.RemoveAll,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store, cfgDir := newStore(t)
+			writeConfig(t, cfgDir, configName, []byte(`{"было":true}`), 0o600)
+
+			list := []byte(`{"rules":[]}`)
+			if err := store.WriteLists(t.Context(), map[string][]byte{"my.json": list}, nil); err != nil {
+				t.Fatalf("подготовка списка: %v", err)
+			}
+			if err := store.Backup(t.Context()); err != nil {
+				t.Fatalf("бэкап прошлой транзакции: %v", err)
+			}
+
+			if err := tt.drop(cfgDir); err != nil {
+				t.Fatal(err)
+			}
+
+			if err := store.Backup(t.Context()); !errors.Is(err, config.ErrNoConfig) {
+				t.Fatalf("бэкап без конфига: получили %v, ожидали ErrNoConfig", err)
+			}
+
+			for _, path := range []string{store.BackupPath(), backupListsPath(store)} {
+				if _, err := os.Stat(path); !errors.Is(err, fs.ErrNotExist) {
+					t.Errorf("%s пережил удаление конфига: %v", path, err)
+				}
+			}
+
+			if err := store.Restore(t.Context()); !errors.Is(err, config.ErrNoBackup) {
+				t.Errorf("откат: получили %v, ожидали ErrNoBackup", err)
+			}
+
+			if !tt.listsKept {
+				return
+			}
+
+			files, err := store.ReadLists(t.Context())
+			if err != nil {
+				t.Fatalf("чтение списков: %v", err)
+			}
+			if !bytes.Equal(files["my.json"], list) {
+				t.Errorf("список после снятия бэкапа: %q, ожидали нетронутый", files["my.json"])
+			}
+		})
+	}
+}
+
+// Первый запуск: ни конфига, ни бэкапа. Backup отвечает ErrNoConfig и ничего
+// не создаёт — снимать нечего.
+func TestBackupWithoutConfigOrBackup(t *testing.T) {
+	t.Run("служебный каталог есть", func(t *testing.T) {
+		store, _ := newStore(t)
+
+		if err := store.Backup(t.Context()); !errors.Is(err, config.ErrNoConfig) {
+			t.Fatalf("получили %v, ожидали ErrNoConfig", err)
+		}
+
+		entries, err := os.ReadDir(filepath.Dir(store.BackupPath()))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(entries) != 0 {
+			t.Errorf("в служебном каталоге появилось: %v", entries)
+		}
+	})
+
+	t.Run("служебного каталога нет", func(t *testing.T) {
+		root := t.TempDir()
+		cfgDir := filepath.Join(root, "sing-box")
+		stateDir := filepath.Join(root, "metabox")
+
+		if err := os.Mkdir(cfgDir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+
+		store, err := config.NewStore(cfgDir, configName, stateDir)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if err := store.Backup(t.Context()); !errors.Is(err, config.ErrNoConfig) {
+			t.Fatalf("получили %v, ожидали ErrNoConfig", err)
+		}
+		if _, err := os.Stat(stateDir); !errors.Is(err, fs.ErrNotExist) {
+			t.Errorf("служебный каталог создан без бэкапа: %v", err)
+		}
+	})
+}
+
 func TestStageCandidate(t *testing.T) {
 	store, cfgDir := newStore(t)
 	writeConfig(t, cfgDir, configName, []byte(`{"старое":true}`), 0o600)
