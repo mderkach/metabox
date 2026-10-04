@@ -15,6 +15,8 @@
     "label": "Поля",
     "always": "всегда",
     "reset": "По умолчанию",
+    "moveUp": "Поднять поле {{column}} выше",
+    "moveDown": "Опустить поле {{column}} ниже",
     "hidden_one": "Поля · {{count}} скрыто",
     "hidden_few": "Поля · {{count}} скрыто",
     "hidden_many": "Поля · {{count}} скрыто"

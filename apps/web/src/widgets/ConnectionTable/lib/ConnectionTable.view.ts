@@ -1,4 +1,4 @@
-import type { ColumnVisibilityState, OnChangeFn, SortingState } from '@tanstack/react-table';
+import type { ColumnOrderState, ColumnVisibilityState, OnChangeFn, SortingState } from '@tanstack/react-table';
 import { useCallback, useState } from 'react';
 import { z } from 'zod';
 
@@ -50,6 +50,9 @@ const STORAGE_KEY = 'metabox.connections.view';
 const StoredViewSchema = z.object({
   sorting: z.array(z.object({ id: z.string(), desc: z.boolean() })).optional(),
   columns: z.record(z.string(), z.boolean()).optional(),
+  // Поле появилось позже остальных: вид, сохранённый до него, читается с
+  // порядком описаний, а не сбрасывается целиком.
+  order: z.array(z.string()).optional(),
   density: z.enum(TABLE_DENSITY).optional(),
   interval: z.literal([REFRESH_INTERVAL.Live, REFRESH_INTERVAL.Slow, REFRESH_INTERVAL.Slower]).optional(),
 });
@@ -58,6 +61,8 @@ const StoredViewSchema = z.object({
 interface StoredView {
   sorting: SortingState;
   columns: ColumnVisibilityState;
+  /** Порядок колонок идентификаторами; пустой — порядок описаний. */
+  order: ColumnOrderState;
   density: TableDensity;
   interval: RefreshInterval;
 }
@@ -65,6 +70,7 @@ interface StoredView {
 const DEFAULT_VIEW: StoredView = {
   sorting: [],
   columns: CONNECTION_COLUMNS_HIDDEN,
+  order: [],
   density: TABLE_DENSITY.Comfortable,
   interval: REFRESH_INTERVAL.Live,
 };
@@ -87,6 +93,7 @@ function readView(): StoredView {
     return {
       sorting: stored.data.sorting ?? DEFAULT_VIEW.sorting,
       columns: stored.data.columns ?? DEFAULT_VIEW.columns,
+      order: stored.data.order ?? DEFAULT_VIEW.order,
       density: stored.data.density ?? DEFAULT_VIEW.density,
       interval: stored.data.interval ?? DEFAULT_VIEW.interval,
     };
@@ -107,13 +114,14 @@ function writeView(view: StoredView): void {
 export interface ConnectionView extends StoredView {
   setSorting: OnChangeFn<SortingState>;
   setColumns: OnChangeFn<ColumnVisibilityState>;
+  setOrder: OnChangeFn<ColumnOrderState>;
   setDensity: (density: TableDensity) => void;
   setInterval: (interval: RefreshInterval) => void;
 }
 
 /**
- * Вид списка соединений: порядок, видимые колонки, плотность и частота
- * обновления. Настройка личная, как тема и язык: панель роутера открывают
+ * Вид списка соединений: сортировка, видимые колонки и их порядок, плотность
+ * и частота обновления. Настройка личная, как тема и язык: панель роутера открывают
  * несколько человек, и общая на всех была бы ограничением.
  */
 export function useConnectionView(): ConnectionView {
@@ -145,6 +153,13 @@ export function useConnectionView(): ConnectionView {
     [update, view.columns]
   );
 
+  const onOrderChange: OnChangeFn<ColumnOrderState> = useCallback(
+    (updater) => {
+      update({ order: typeof updater === 'function' ? updater(view.order) : updater });
+    },
+    [update, view.order]
+  );
+
   const onDensityChange = useCallback(
     (density: TableDensity) => {
       update({ density });
@@ -163,6 +178,7 @@ export function useConnectionView(): ConnectionView {
     ...view,
     setSorting: onSortingChange,
     setColumns: onColumnsChange,
+    setOrder: onOrderChange,
     setDensity: onDensityChange,
     setInterval: onIntervalChange,
   };

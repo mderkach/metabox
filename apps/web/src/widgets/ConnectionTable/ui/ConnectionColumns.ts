@@ -1,5 +1,6 @@
 import {
   columnFilteringFeature,
+  columnOrderingFeature,
   columnVisibilityFeature,
   createFilteredRowModel,
   createSortedRowModel,
@@ -11,6 +12,7 @@ import {
   tableFeatures,
   type AccessorFnColumnDef,
   type Column,
+  type ColumnOrderState,
   type Table,
 } from '@tanstack/react-table';
 import type { ParseKeys } from 'i18next';
@@ -71,6 +73,7 @@ export const CONNECTION_TABLE_FEATURES = tableFeatures({
   rowSortingFeature,
   columnVisibilityFeature,
   columnFilteringFeature,
+  columnOrderingFeature,
   filteredRowModel: createFilteredRowModel(),
   sortedRowModel: createSortedRowModel(),
   sortFns: { text: sortFn_text, basic: sortFn_basic, alphanumeric: sortFn_alphanumeric },
@@ -237,15 +240,34 @@ export interface ConnectionTableColumn {
 }
 
 /**
- * Колонки таблицы в порядке описаний.
+ * Описания колонок в порядке, который выбрал пользователь.
+ *
+ * Порядок хранится списком идентификаторов и переживает версии панели:
+ * незнакомый идентификатор пропускается, а колонка, которой в списке нет, —
+ * новая или из вида до перестановки — встаёт после упорядоченных в порядке
+ * описаний. Пустой список — порядок описаний.
+ */
+export function toOrderedColumns(order: ColumnOrderState): ConnectionColumnDef[] {
+  const position = new Map(order.map((id, index) => [id, index]));
+
+  return CONNECTION_COLUMNS.map((def, index) => ({ def, rank: position.get(def.id) ?? order.length + index }))
+    .sort((left, right) => left.rank - right.rank)
+    .map(({ def }) => def);
+}
+
+/**
+ * Колонки таблицы в выбранном порядке.
  *
  * Обход идёт по собственным описаниям, а не по `getVisibleLeafColumns`: там
  * `id` — строка, а `meta` необязательна, здесь гарантированы обе. Отбор по
  * видимости каждый вызывающий делает сам: шапке нужны видимые, списку колонок —
  * все.
  */
-export function toTableColumns(table: Table<ConnectionTableFeatures, ConnectionRow>): ConnectionTableColumn[] {
-  return CONNECTION_COLUMNS.flatMap((def) => {
+export function toTableColumns(
+  table: Table<ConnectionTableFeatures, ConnectionRow>,
+  order: ColumnOrderState
+): ConnectionTableColumn[] {
+  return toOrderedColumns(order).flatMap((def) => {
     const column = table.getColumn(def.id);
 
     return column === undefined ? [] : [{ def, column }];

@@ -46,6 +46,15 @@ function TableHarness({ rows, onReset }: { rows: ConnectionRow[]; onReset: () =>
   );
 }
 
+/** Подписи колонок в порядке шапки: первая кнопка заголовка — сортировка с подписью колонки. */
+function headerLabels() {
+  return screen.getAllByRole('columnheader').flatMap((header) => {
+    const sort = within(header).queryAllByRole('button').at(0);
+
+    return sort === undefined ? [] : [sort.textContent];
+  });
+}
+
 async function openHostFilter(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole('button', { name: 'Фильтр по колонке Куда' }));
 
@@ -161,6 +170,72 @@ describe('вид списка', () => {
     renderWithQuery(<TableHarness rows={rows} onReset={vi.fn<() => void>()} />);
 
     expect(screen.getByRole('combobox', { name: 'Частота обновления списка' })).toHaveTextContent('5 с');
+  });
+
+  it('переставляет колонку из выбора полей, и порядок переживает перезагрузку', async () => {
+    const user = userEvent.setup();
+    const rows = makeRows(4);
+    const first = renderWithQuery(<TableHarness rows={rows} onReset={vi.fn<() => void>()} />);
+
+    expect(headerLabels()).toEqual(['Откуда', 'Куда', 'Правило', 'Действие', 'Цепочка', 'Объём', 'Время']);
+
+    await user.click(screen.getByRole('button', { name: /^Поля/ }));
+    await user.click(await screen.findByRole('button', { name: 'Поднять поле Куда выше' }));
+
+    expect(headerLabels()).toEqual(['Куда', 'Откуда', 'Правило', 'Действие', 'Цепочка', 'Объём', 'Время']);
+    // Поле встало первым, «выше» погасла — фокус переходит на соседнюю кнопку
+    // того же поля, а не теряется.
+    expect(screen.getByRole('button', { name: 'Поднять поле Куда выше' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Опустить поле Куда ниже' })).toHaveFocus();
+
+    first.unmount();
+    renderWithQuery(<TableHarness rows={rows} onReset={vi.fn<() => void>()} />);
+
+    expect(headerLabels()).toEqual(['Куда', 'Откуда', 'Правило', 'Действие', 'Цепочка', 'Объём', 'Время']);
+  });
+
+  it('переставляет колонку с клавиатуры, не теряя фокус', async () => {
+    const user = userEvent.setup();
+
+    renderWithQuery(<TableHarness rows={makeRows(4)} onReset={vi.fn<() => void>()} />);
+
+    await user.click(screen.getByRole('button', { name: /^Поля/ }));
+    screen.getByRole('button', { name: 'Опустить поле Откуда ниже' }).focus();
+    await user.keyboard('{Enter}');
+    await user.keyboard('{Enter}');
+
+    // Скрытая колонка в выборе полей тоже стоит на своём месте: второй шаг
+    // проводит поле мимо неё, и шапка его не замечает.
+    expect(
+      screen.getAllByRole('button', { name: /^Опустить поле/ }).map((button) => button.getAttribute('aria-label'))
+    ).toEqual(
+      ['Куда', 'Сеть', 'Откуда', 'Правило', 'Действие', 'Цепочка', 'Скорость', 'Объём', 'Время'].map(
+        (column) => `Опустить поле ${column} ниже`
+      )
+    );
+    expect(headerLabels()).toEqual(['Куда', 'Откуда', 'Правило', 'Действие', 'Цепочка', 'Объём', 'Время']);
+    expect(screen.getByRole('button', { name: 'Опустить поле Откуда ниже' })).toHaveFocus();
+  });
+
+  it('сброс вида возвращает и порядок колонок', async () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ order: ['age', 'host'] }));
+    const user = userEvent.setup();
+
+    renderWithQuery(<TableHarness rows={makeRows(4)} onReset={vi.fn<() => void>()} />);
+
+    await user.click(screen.getByRole('button', { name: /^Поля/ }));
+    await user.click(await screen.findByRole('button', { name: 'По умолчанию' }));
+
+    expect(headerLabels()).toEqual(['Откуда', 'Куда', 'Правило', 'Действие', 'Цепочка', 'Объём', 'Время']);
+  });
+
+  it('сохранённый порядок другой версии панели: незнакомое пропускает, недостающее ставит в конец', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ order: ['age', 'telepathy', 'host'], density: 'compact' }));
+
+    renderWithQuery(<TableHarness rows={makeRows(4)} onReset={vi.fn<() => void>()} />);
+
+    expect(headerLabels()).toEqual(['Время', 'Куда', 'Откуда', 'Правило', 'Действие', 'Цепочка', 'Объём']);
+    expect(screen.getByRole('button', { name: 'Плотные строки' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('на мусоре в хранилище показывает вид по умолчанию, а не падает', () => {

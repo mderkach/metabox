@@ -12,7 +12,13 @@ import { SURFACE } from '@shared/ui';
 import { DENSITY_ROW_ESTIMATE, useNow, type ConnectionView } from '../lib';
 import { ConnectionCard } from './ConnectionCard';
 import { ConnectionColumnPicker } from './ConnectionColumnPicker';
-import { CONNECTION_COLUMNS, CONNECTION_TABLE_FEATURES, toTableColumns, toTableMinWidth } from './ConnectionColumns';
+import {
+  CONNECTION_COLUMNS,
+  CONNECTION_TABLE_FEATURES,
+  toOrderedColumns,
+  toTableColumns,
+  toTableMinWidth,
+} from './ConnectionColumns';
 import { ConnectionDensityToggle } from './ConnectionDensityToggle';
 import { ConnectionRefreshSelect } from './ConnectionRefreshSelect';
 import { ConnectionRow } from './ConnectionRow';
@@ -119,9 +125,10 @@ export function ConnectionTable({
       features: CONNECTION_TABLE_FEATURES,
       columns: CONNECTION_COLUMNS,
       data: rows,
-      state: { sorting: view.sorting, columnVisibility: view.columns, columnFilters },
+      state: { sorting: view.sorting, columnVisibility: view.columns, columnOrder: view.order, columnFilters },
       onSortingChange: view.setSorting,
       onColumnVisibilityChange: view.setColumns,
+      onColumnOrderChange: view.setOrder,
       onColumnFiltersChange: setColumnFilters,
     },
     (state) => state
@@ -131,17 +138,19 @@ export function ConnectionTable({
   // «пусто из-за отбора» показывается в том числе от одного фильтра колонки.
   const visible = table.getRowModel().rows;
   const shownRows = useMemo(() => visible.map((row) => row.original), [visible]);
-  const columns = toTableColumns(table).filter(({ column }) => column.getIsVisible());
+  const columns = toTableColumns(table, view.order).filter(({ column }) => column.getIsVisible());
   // Ссылка обязана быть стабильной: `ConnectionRow` мемоизирована, и новый
   // массив на каждый снапшот обнулял бы мемоизацию всех отрисованных строк.
   const cells = useMemo(
     () =>
-      CONNECTION_COLUMNS.filter((def) => view.columns[def.id] !== false).map((def) => ({
-        id: def.id,
-        className: def.meta.className,
-        label: def.meta.label,
-      })),
-    [view.columns]
+      toOrderedColumns(view.order)
+        .filter((def) => view.columns[def.id] !== false)
+        .map((def) => ({
+          id: def.id,
+          className: def.meta.className,
+          label: def.meta.label,
+        })),
+    [view.columns, view.order]
   );
 
   const virtualizer = useVirtualizer({
@@ -158,7 +167,7 @@ export function ConnectionTable({
           {search}
           <span className='grow' />
           {narrow && facets}
-          <ConnectionColumnPicker table={table} />
+          <ConnectionColumnPicker table={table} order={view.order} />
           <ConnectionDensityToggle density={view.density} onDensityChange={view.setDensity} />
           <ConnectionRefreshSelect interval={view.interval} onIntervalChange={view.setInterval} />
           {actions}

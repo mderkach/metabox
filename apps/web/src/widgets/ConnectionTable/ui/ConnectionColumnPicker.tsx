@@ -1,31 +1,89 @@
-import type { Table } from '@tanstack/react-table';
-import { Columns3, RotateCcw } from 'lucide-react';
+import type { ColumnOrderState, Table } from '@tanstack/react-table';
+import { ChevronDown, ChevronUp, Columns3, RotateCcw } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { ConnectionRow } from '@entities/Connection';
 import { cn } from '@shared/lib/utils';
 import { Button, Checkbox, Label, Popover, PopoverContent, PopoverTitle, PopoverTrigger } from '@shared/ui';
 
-import { CONNECTION_COLUMNS_HIDDEN, toTableColumns, type ConnectionTableFeatures } from './ConnectionColumns';
+import {
+  CONNECTION_COLUMNS,
+  CONNECTION_COLUMNS_HIDDEN,
+  toTableColumns,
+  type ConnectionTableFeatures,
+} from './ConnectionColumns';
+
+/** Куда сдвигается колонка: на одну позицию назад или вперёд. */
+const MOVE = {
+  Up: -1,
+  Down: 1,
+} as const;
+
+type Move = (typeof MOVE)[keyof typeof MOVE];
+
+function toMoveButtonId(field: string, move: Move): string {
+  return `connection-field-${field}-${move === MOVE.Up ? 'up' : 'down'}`;
+}
 
 /**
  * Выбор показываемых полей — управление видом, а не действие над данными,
  * поэтому стоит отдельно от действий списка.
  *
- * Кнопка несёт активное состояние, когда набор отличается от исходного: иначе
- * пропавшее поле выглядит как потеря данных, а не как собственный выбор.
- * Счётчик словом её не заменяет — на узком экране на слово нет места.
+ * Кнопка несёт активное состояние, когда набор или порядок отличается от
+ * исходного: иначе пропавшее поле выглядит как потеря данных, а не как
+ * собственный выбор. Счётчик словом её не заменяет — на узком экране на слово
+ * нет места.
  *
  * Поле с пометкой `required` в списке есть, но выключить его нельзя: без хоста
  * и действия строка перестаёт отвечать на вопрос, ради которого экран
  * открывают. Скрытый флажок вместо запрещённого оставил бы гадать, почему
  * полей в списке меньше, чем в строке.
+ *
+ * Порядок меняется кнопками «выше» и «ниже», а не перетаскиванием: кнопки
+ * доступны с клавиатуры и скринридеру без отдельного протокола. Фокус после
+ * перестановки остаётся на кнопке переставленного поля — иначе он теряется
+ * вместе с переехавшим узлом списка.
  */
-export function ConnectionColumnPicker({ table }: { table: Table<ConnectionTableFeatures, ConnectionRow> }) {
+export function ConnectionColumnPicker({
+  table,
+  order,
+}: {
+  table: Table<ConnectionTableFeatures, ConnectionRow>;
+  order: ColumnOrderState;
+}) {
   const { t } = useTranslation('widgets/ConnectionTable');
-  const columns = toTableColumns(table);
+  const columns = toTableColumns(table, order);
   const hidden = columns.filter(({ column }) => !column.getIsVisible()).length;
-  const changed = hidden !== Object.keys(CONNECTION_COLUMNS_HIDDEN).length;
+  const reordered = columns.some(({ def }, index) => def.id !== CONNECTION_COLUMNS[index].id);
+  const changed = hidden !== Object.keys(CONNECTION_COLUMNS_HIDDEN).length || reordered;
+  const focusAfterMove = useRef<string | null>(null);
+
+  useEffect(
+    function focusMovedField() {
+      if (focusAfterMove.current === null) {
+        return;
+      }
+
+      document.getElementById(focusAfterMove.current)?.focus();
+      focusAfterMove.current = null;
+    },
+    [order]
+  );
+
+  function move(index: number, step: Move) {
+    const ids = columns.map(({ def }) => def.id);
+    const target = index + step;
+    const [field] = ids.splice(index, 1);
+
+    ids.splice(target, 0, field);
+    // На краю списка кнопка того же направления гаснет, и фокус уходит на соседнюю.
+    const atEdge = target === 0 || target === ids.length - 1;
+    const back = step === MOVE.Up ? MOVE.Down : MOVE.Up;
+
+    focusAfterMove.current = toMoveButtonId(field, atEdge ? back : step);
+    table.setColumnOrder(ids);
+  }
 
   return (
     <Popover>
@@ -45,7 +103,7 @@ export function ConnectionColumnPicker({ table }: { table: Table<ConnectionTable
         <Columns3 />
       </PopoverTrigger>
 
-      <PopoverContent className='w-56'>
+      <PopoverContent className='w-64'>
         <div className='flex items-baseline justify-between gap-2'>
           <PopoverTitle>{t('fields.title')}</PopoverTitle>
           {changed && (
@@ -55,6 +113,7 @@ export function ConnectionColumnPicker({ table }: { table: Table<ConnectionTable
               className='text-muted-foreground hover:text-foreground'
               onClick={() => {
                 table.setColumnVisibility(CONNECTION_COLUMNS_HIDDEN);
+                table.setColumnOrder([]);
               }}
             >
               <RotateCcw />
@@ -64,8 +123,9 @@ export function ConnectionColumnPicker({ table }: { table: Table<ConnectionTable
         </div>
 
         <ul className='mt-2 flex flex-col gap-2'>
-          {columns.map(({ def, column }) => {
+          {columns.map(({ def, column }, index) => {
             const id = `connection-field-${def.id}`;
+            const label = t(def.meta.label);
 
             return (
               <li key={def.id} className='flex items-center gap-2'>
@@ -78,11 +138,35 @@ export function ConnectionColumnPicker({ table }: { table: Table<ConnectionTable
                   }}
                 />
                 <Label htmlFor={id} className='text-sm font-normal'>
-                  {t(def.meta.label)}
+                  {label}
                 </Label>
-                {def.meta.required && (
-                  <span className='ml-auto text-2xs text-muted-foreground'>{t('fields.always')}</span>
-                )}
+                {def.meta.required && <span className='text-2xs text-muted-foreground'>{t('fields.always')}</span>}
+                <span className='ml-auto flex'>
+                  <Button
+                    id={toMoveButtonId(def.id, MOVE.Up)}
+                    variant='ghost'
+                    size='icon-xs'
+                    aria-label={t('fields.moveUp', { column: label })}
+                    disabled={index === 0}
+                    onClick={() => {
+                      move(index, MOVE.Up);
+                    }}
+                  >
+                    <ChevronUp />
+                  </Button>
+                  <Button
+                    id={toMoveButtonId(def.id, MOVE.Down)}
+                    variant='ghost'
+                    size='icon-xs'
+                    aria-label={t('fields.moveDown', { column: label })}
+                    disabled={index === columns.length - 1}
+                    onClick={() => {
+                      move(index, MOVE.Down);
+                    }}
+                  >
+                    <ChevronDown />
+                  </Button>
+                </span>
               </li>
             );
           })}
