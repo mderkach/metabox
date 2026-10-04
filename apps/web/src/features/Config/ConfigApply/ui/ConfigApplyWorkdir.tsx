@@ -12,6 +12,11 @@ import { Alert, AlertDescription, AlertTitle } from '@shared/ui';
 const UCI_WORKDIR = 'sing-box.main.workdir';
 const UCI_COMMIT = 'uci commit sing-box && /etc/init.d/sing-box restart';
 
+/** Путь уходит в shell одним словом: пробел или метасимвол в нём не разобьют команду. */
+function toShellWord(value: string): string {
+  return `'${value.replaceAll("'", `'\\''`)}'`;
+}
+
 /** Команда собирается из каталога, который назвал демон: панель путь конфига не выдумывает. */
 export function ConfigApplyWorkdir({ mismatch }: { mismatch: WorkdirMismatch }) {
   const { t } = useTranslation('features/Config/ConfigApply');
@@ -23,7 +28,7 @@ export function ConfigApplyWorkdir({ mismatch }: { mismatch: WorkdirMismatch }) 
       <AlertDescription>
         <p>{t('workdir.description', { workdir: mismatch.workdir, configDir: mismatch.configDir })}</p>
         <pre className='font-mono text-xs whitespace-pre-wrap'>
-          {`uci set ${UCI_WORKDIR}=${mismatch.configDir} && ${UCI_COMMIT}`}
+          {`uci set ${UCI_WORKDIR}=${toShellWord(mismatch.configDir)} && ${UCI_COMMIT}`}
         </pre>
         <p className='text-xs'>{t('workdir.sideEffect')}</p>
       </AlertDescription>

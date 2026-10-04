@@ -232,7 +232,7 @@ describe('ConfigApplyBar', () => {
     expect(screen.getByText(/от своего рабочего каталога \/usr\/share\/sing-box/)).toBeInTheDocument();
     expect(
       screen.getByText(
-        'uci set sing-box.main.workdir=/etc/sing-box && uci commit sing-box && /etc/init.d/sing-box restart'
+        "uci set sing-box.main.workdir='/etc/sing-box' && uci commit sing-box && /etc/init.d/sing-box restart"
       )
     ).toBeInTheDocument();
     // Черновик остаётся: после настройки службы его применяют снова.
