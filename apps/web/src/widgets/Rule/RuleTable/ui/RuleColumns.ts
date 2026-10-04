@@ -12,7 +12,8 @@ export const RULE_COLUMN = {
   TargetGroup: 'flex shrink-0 items-center gap-3',
   /** Счёт срабатываний: у правого края, отдельно от пары «условия → выход». */
   Hits: 'ml-auto w-20 shrink-0 text-right',
-  Target: 'w-auto shrink-0 sm:w-44',
+  /** На широком экране выход шире: место есть, и длинный тег узла не обрезается зря. */
+  Target: 'w-auto shrink-0 sm:w-44 xl:w-64',
   /** Ширина стрелки «условия → выход». В шапке её занимает пустое место. */
   Arrow: 'size-4 shrink-0',
   Row: 'relative flex flex-wrap items-center gap-x-3 gap-y-1.5 px-3.5 py-3',

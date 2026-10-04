@@ -1,10 +1,10 @@
 import { ArrowRight } from 'lucide-react';
-import { memo } from 'react';
+import { memo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { RuleRow as RuleRowModel } from '@entities/Rule';
 import { cn } from '@shared/lib/utils';
-import { Badge } from '@shared/ui';
+import { Badge, Tooltip, TooltipContent, TooltipTrigger } from '@shared/ui';
 
 import { RULE_HIT, type RuleHitCell } from '../model';
 import { RULE_COLUMN } from './RuleColumns';
@@ -19,6 +19,11 @@ import { toTargetTone } from './RuleTargetTone';
  */
 const SELECT_CLASS =
   'rounded-sm after:absolute after:inset-0 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none';
+
+/** Выход обрезан: строка выхода или его параметров шире своей ячейки. */
+function isTruncated(target: HTMLElement | null): boolean {
+  return target !== null && [...target.children].some((line) => line.scrollWidth > line.clientWidth);
+}
 
 function RuleRowProto({
   rule,
@@ -42,6 +47,8 @@ function RuleRowProto({
 }) {
   const { t, i18n } = useTranslation('widgets/Rule/RuleTable');
   const label = t('row.label', { index: rule.index, target: rule.target });
+  const targetRef = useRef<HTMLSpanElement>(null);
+  const [hint, setHint] = useState(false);
 
   return (
     <div
@@ -54,20 +61,37 @@ function RuleRowProto({
       )}
     >
       <span role='cell' className={cn(RULE_COLUMN.Index, 'font-mono text-xs text-muted-foreground')}>
-        <button
-          type='button'
-          aria-pressed={selected}
-          // Кнопка растянута на строку, поэтому её имя — имя строки. Одного
-          // номера мало: он перекрывает содержимое, и правило звучит как
-          // «Правило 4», без условия и выхода.
-          aria-label={edited ? `${label}, ${t('row.edited')}` : label}
-          onClick={() => {
-            onSelect(rule.id);
+        {/* Кнопка перекрывает строку, и `title` обрезанного выхода под ней не
+            показался бы. Полный выход — подсказкой самой кнопки и только при
+            обрезке: скринридеру он уже назван в имени кнопки. Подсказка идёт
+            за курсором по горизонтали, потому что якорь у неё — кнопка, а
+            она растянута на всю строку. */}
+        <Tooltip
+          open={hint}
+          trackCursorAxis='x'
+          onOpenChange={(open) => {
+            setHint(open && isTruncated(targetRef.current));
           }}
-          className={SELECT_CLASS}
         >
-          {rule.index}
-        </button>
+          <TooltipTrigger
+            type='button'
+            aria-pressed={selected}
+            // Кнопка растянута на строку, поэтому её имя — имя строки. Одного
+            // номера мало: он перекрывает содержимое, и правило звучит как
+            // «Правило 4», без условия и выхода.
+            aria-label={edited ? `${label}, ${t('row.edited')}` : label}
+            onClick={() => {
+              onSelect(rule.id);
+            }}
+            className={SELECT_CLASS}
+          >
+            {rule.index}
+          </TooltipTrigger>
+          <TooltipContent>
+            {rule.target}
+            {rule.targetDetail !== null && <> · {rule.targetDetail}</>}
+          </TooltipContent>
+        </Tooltip>
         {edited && (
           <span
             aria-hidden='true'
@@ -105,8 +129,8 @@ function RuleRowProto({
         <ArrowRight className={cn(RULE_COLUMN.Arrow, 'text-muted-foreground')} />
 
         <span
+          ref={targetRef}
           className={cn(RULE_COLUMN.Target, 'flex flex-col truncate font-mono text-sm font-medium')}
-          title={rule.target}
         >
           <span className={cn('truncate', toTargetTone(rule.targetKind, rule.target, outboundTypes))}>
             {rule.target}
