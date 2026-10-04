@@ -34,12 +34,12 @@ SOLID (пять принципов объектного проектирован
 
 ### Слои
 
-Набор слоёв урезан: экранов шесть. Пустой слой авансом не заводится.
+Набор слоёв урезан: экранов семь. Пустой слой авансом не заводится.
 
 | Слой        | Назначение                                                                                 | Заводим            |
 | ----------- | ------------------------------------------------------------------------------------------ | ------------------ |
 | `app/`      | запуск: роутер, провайдеры, глобальные стили, точка входа                                  | сразу              |
-| `pages/`    | экраны роутера (Editor, RuleSets, RawConfig, Overview, Proxies, Connections)               | сразу              |
+| `pages/`    | экраны роутера (Editor, RuleSets, RawConfig, Section, Overview, Proxies, Connections)      | сразу              |
 | `widgets/`  | самодостаточные куски экрана: дерево конфига, панель дифа, таблица соединений              | по мере надобности |
 | `features/` | действия пользователя: `Config/ConfigApply`, `Rule/RuleEdit`, `Connection/ConnectionClose` | по мере надобности |
 | `entities/` | доменные сущности: `Config`, `Rule`, `RuleSet`, `Route`, `Proxy`, `Connection`, `Daemon`   | сразу              |
@@ -171,7 +171,7 @@ export type { RuleRow } from './model/Rule.model';
 
 Алиас слоя — это вход снаружи. Внутри своего слоя и слайса ходим относительными путями: так [требует FSD](https://feature-sliced.design/docs/reference/public-api) и так модуль не тянет сам себя через собственный баррель.
 
-Алиас на каждый слой: `@app`, `@pages`, `@widgets`, `@features`, `@entities`, `@shared`. Общего `@/` нет: путь начинается со слоя, направление импорта видно в строке. Объявлены в `tsconfig.json`, `tsconfig.app.json` и `vite.config.ts`.
+Алиас на каждый слой: `@app`, `@pages`, `@widgets`, `@features`, `@entities`, `@shared`. Отдельный алиас `@test` ведёт к оснастке тестов `src/test`: это не слой, но тесты внутри слоёв ходят к ней по нему. Общего `@/` нет: путь начинается со слоя, направление импорта видно в строке. Объявлены в `tsconfig.json`, `tsconfig.app.json`, `tsconfig.mocks.json` и `vite.config.ts`.
 
 ```ts
 import { useQuery } from '@tanstack/react-query'; // внешнее
@@ -372,7 +372,7 @@ Tailwind v4, вход — `src/app/styles/index.css`: глобальные ст�
 - `options.typeAware` объявлен **только** в корневом `.oxlintrc.json`: в конфиге фронта oxlint его не принимает и отбрасывает весь файл, а вместе с ним и все фронтовые исключения;
 - в VS Code формат и автофиксы работают на сохранении: `.vscode/settings.json` назначает `oxc.oxc-vscode` форматтером для TS/JS, JSON, CSS и Markdown, иначе встроенные форматтеры разойдутся с `format:check`.
 
-Линт типозависимый: `strict` в обоих tsconfig, `options.typeAware` в `.oxlintrc.json`, пакет `oxlint-tsgolint`. Через `jsPlugins` подключены плагины TanStack Query, Testing Library, jest-dom, Tailwind и `check-file`; `jsx-a11y` в oxlint встроенный и включается именем в `plugins`. Границы FSD проверяет локальный `fsd/boundaries` (`apps/web/tools/fsdBoundaries.js`): импорт вверх по слоям, соседний слайс мимо `@x`, обход Public API, путь без Public API (группа вместо слайса), относительный путь за пределами слайса, оба конца кросс-импорта — `@x` открыт одному соседу своего слоя, а не всем и не сверху, — и импорт сгенерированной схемы: `@shared/api/generated` и `daemon.generated` читают только `api` и `model` сущностей да тесты, экраны берут их модель. Слайс он ищет по Public API — папка без `index.ts` считается группой, поэтому `@features/Rule/RuleEdit` разрешён, а `@features/Rule/RuleEdit/ui/RuleEditForm` — нет. Правила проекта, которых нет в готовых наборах, лежат в `apps/web/tools/projectRules.js`: `project/named-effect` (колбэк эффекта и его отписка именуются), `project/no-query-destructuring`. Перечень остальных — в конфиге, риски `jsPlugins` — в [`docs/TechDebt.md`](../../../../docs/TechDebt.md).
+Линт типозависимый: `strict` во всех четырёх проектах tsconfig (`app`, `node`, `mocks`, `dev`), `options.typeAware` в `.oxlintrc.json`, пакет `oxlint-tsgolint`. Через `jsPlugins` подключены плагины TanStack Query, Testing Library, jest-dom, Tailwind и `check-file`; `jsx-a11y` в oxlint встроенный и включается именем в `plugins`. Границы FSD проверяет локальный `fsd/boundaries` (`apps/web/tools/fsdBoundaries.js`): импорт вверх по слоям, соседний слайс мимо `@x`, обход Public API, путь без Public API (группа вместо слайса), относительный путь за пределами слайса, оба конца кросс-импорта — `@x` открыт одному соседу своего слоя, а не всем и не сверху, — и импорт сгенерированной схемы: `@shared/api/generated` и `daemon.generated` читают только `api` и `model` сущностей да тесты, экраны берут их модель. Слайс он ищет по Public API — папка без `index.ts` считается группой, поэтому `@features/Rule/RuleEdit` разрешён, а `@features/Rule/RuleEdit/ui/RuleEditForm` — нет. Правила проекта, которых нет в готовых наборах, лежат в `apps/web/tools/projectRules.js`: `project/named-effect` (колбэк эффекта и его отписка именуются), `project/no-query-destructuring`. Перечень остальных — в конфиге, риски `jsPlugins` — в [`docs/TechDebt.md`](../../../../docs/TechDebt.md).
 
 Оба плагина отдают объект через `export default` — иначе Node их не загрузит, — поэтому `import/no-default-export` для `tools/**` выключен в `apps/web/.oxlintrc.json`. Прогон из корня (`pnpm lint`) вложенный конфиг применяет, и файлы плагинов проходят; отдельный прогон корневым конфигом мимо него — нет. Сам `.oxlintrc.json` — строгий JSON и комментариев не держит, поэтому причина записана здесь.
 
