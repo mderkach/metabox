@@ -125,6 +125,14 @@ export function toInputText(value: unknown): string {
   return typeof value === 'number' ? String(value) : '';
 }
 
+/**
+ * Одинаковы ли значения поля как JSON. Форма копирует значения на каждом
+ * сбросе, поэтому сравнение по ссылке видело бы смену там, где её нет.
+ */
+export function isSameValue(left: unknown, right: unknown): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
 /** Группа, в которой что-то задано: такая открывается сразу. */
 export function isFilledGroup(value: unknown): boolean {
   return typeof value === 'object' && value !== null && Object.keys(value).length > 0;

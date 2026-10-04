@@ -8,7 +8,7 @@ import { ConfigDocumentState, diffNode, nodeSchemaOf, type NodeRegistry } from '
 import { toFieldPlan, type FieldPlan } from '@shared/lib/schemaShape';
 import { Button } from '@shared/ui';
 
-import { toFieldName, toNodeFormResolver, type ConfigNodeFormModel } from '../model';
+import { isSameValue, toFieldName, toNodeFormResolver, type ConfigNodeFormModel } from '../model';
 import { RAW_PARSE_ERROR, RawFailuresContext } from './ConfigNodeForm.context';
 import { CONFIG_NODE_FORM_WIDGET } from './ConfigNodeForm.widgets';
 
@@ -52,7 +52,7 @@ function ConfigNodeFormBody({
   const editMany = ConfigDocumentState.use.editMany();
   const plan = useMemo(() => toFieldPlan(schema), [schema]);
   const resolver = useMemo(() => toNodeFormResolver(schema), [schema]);
-  const [failures] = useState(() => new Set<string>());
+  const [failures] = useState(() => new Map<string, unknown>());
   // Узел из разбора текста — объекты без прототипа: RHF такие не копирует, и
   // правка поля переписала бы заодно и исходные значения — форма не узнала бы,
   // что её тронули. Копия даёт обычные объекты с теми же значениями.
@@ -71,8 +71,10 @@ function ConfigNodeFormBody({
 
   const onSubmit = form.handleSubmit(() => {
     // Неразобранный JSON raw-поля резолвер не видит: значение у поля прежнее.
-    if (failures.size > 0) {
-      for (const name of failures) {
+    const unparsed = [...failures].filter(([name, value]) => isSameValue(form.getValues(name), value));
+
+    if (unparsed.length > 0) {
+      for (const [name] of unparsed) {
         form.setError(name, { type: RAW_PARSE_ERROR }, { shouldFocus: true });
       }
 

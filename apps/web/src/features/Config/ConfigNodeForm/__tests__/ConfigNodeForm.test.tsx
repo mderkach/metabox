@@ -259,6 +259,35 @@ describe('форма узла по схеме', () => {
     });
   });
 
+  it('неразобранный текст, переписанный правкой узла снаружи, запись не держит', async () => {
+    const user = userEvent.setup();
+
+    renderVless();
+
+    const resolver = screen.getByRole('textbox', { name: 'domain_resolver' });
+
+    await user.click(resolver);
+    await user.paste('{ "server": ');
+
+    ConfigDocumentState.getState().edit([...VLESS, 'domain_resolver'], 'local');
+
+    await waitFor(() => {
+      expect(resolver).toHaveValue('"local"');
+    });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
+    const server = screen.getByRole('textbox', { name: 'server' });
+
+    await user.clear(server);
+    await user.type(server, 'b.example');
+    await user.click(save());
+
+    await waitFor(() => {
+      expect(findValue(draft(), [...VLESS, 'server'])).toBe('b.example');
+    });
+    expect(findValue(draft(), [...VLESS, 'domain_resolver'])).toBe('local');
+  });
+
   it('правка того же узла текстом доходит до формы, набранное не стирается', async () => {
     const user = userEvent.setup();
 

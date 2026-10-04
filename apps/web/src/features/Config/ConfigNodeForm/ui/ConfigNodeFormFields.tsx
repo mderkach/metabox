@@ -1,6 +1,6 @@
 import type { ParseKeys, TFunction } from 'i18next';
 import { ChevronRight, RotateCcw } from 'lucide-react';
-import { use, useId, useState, type ReactNode } from 'react';
+import { use, useEffect, useId, useState, type ReactNode } from 'react';
 import { Controller, useFormContext, type FieldError as FormFieldError } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
@@ -26,6 +26,7 @@ import {
 
 import {
   isFilledGroup,
+  isSameValue,
   isUnset,
   listToText,
   packList,
@@ -121,7 +122,7 @@ function FieldRow({
 function useFieldText(value: unknown, format: (value: unknown) => string) {
   const [draft, setDraft] = useState(() => ({ text: format(value), value }));
 
-  if (JSON.stringify(draft.value) !== JSON.stringify(value)) {
+  if (!isSameValue(draft.value, value)) {
     const synced = { text: format(value), value };
 
     setDraft(synced);
@@ -473,40 +474,57 @@ export function RawField({ field, name }: NodeFieldProps) {
   const id = useId();
   const errorId = useId();
   const hintId = useId();
-  const [failure, setFailure] = useState<string | null>(null);
+  const [failure, setFailure] = useState<{ reason: string; value: unknown } | null>(null);
+
+  // Свёрнутая группа снимает поле вместе с набранным текстом: его отказ
+  // запись больше не останавливает.
+  useEffect(
+    function trackRawFailure() {
+      return function forgetRawFailure() {
+        failures.delete(name);
+      };
+    },
+    [failures, name]
+  );
 
   return (
     <Controller
       control={control}
       name={name}
-      render={({ field: input, fieldState }) => (
-        <FieldRow
-          id={id}
-          label={field.key}
-          errorId={errorId}
-          error={failure === null ? errorText(t, fieldState.error) : t('error.parse', { reason: failure })}
-        >
-          <RawInput
+      render={({ field: input, fieldState }) => {
+        // Отказ относится к значению, при котором текст не разобрался: значение,
+        // сменившееся снаружи, переписало и текст поля.
+        const reason = failure !== null && isSameValue(failure.value, input.value) ? failure.reason : null;
+
+        return (
+          <FieldRow
             id={id}
-            value={input.value}
-            invalid={failure !== null || fieldState.invalid}
-            describedBy={failure !== null || fieldState.invalid ? `${hintId} ${errorId}` : hintId}
-            onBlur={input.onBlur}
-            onParsed={(value) => {
-              failures.delete(name);
-              setFailure(null);
-              input.onChange(value);
-            }}
-            onFailure={(reason) => {
-              failures.add(name);
-              setFailure(reason);
-            }}
-          />
-          <p id={hintId} className='text-xs text-muted-foreground'>
-            {t('raw.hint')}
-          </p>
-        </FieldRow>
-      )}
+            label={field.key}
+            errorId={errorId}
+            error={reason === null ? errorText(t, fieldState.error) : t('error.parse', { reason })}
+          >
+            <RawInput
+              id={id}
+              value={input.value}
+              invalid={reason !== null || fieldState.invalid}
+              describedBy={reason !== null || fieldState.invalid ? `${hintId} ${errorId}` : hintId}
+              onBlur={input.onBlur}
+              onParsed={(value) => {
+                failures.delete(name);
+                setFailure(null);
+                input.onChange(value);
+              }}
+              onFailure={(text) => {
+                failures.set(name, input.value);
+                setFailure({ reason: text, value: input.value });
+              }}
+            />
+            <p id={hintId} className='text-xs text-muted-foreground'>
+              {t('raw.hint')}
+            </p>
+          </FieldRow>
+        );
+      }}
     />
   );
 }
