@@ -74,7 +74,7 @@ export function SectionNodes({ section }: { section: GenericSection }) {
             section={section}
             index={index}
             node={node}
-            name={nodeName(section, node, index)}
+            name={nodeName(shape.path, node, index)}
           />
         ))}
     </div>
@@ -107,8 +107,11 @@ function NodeCard({
   );
 }
 
-/** Имя узла на экране: тег, без него — тип, без обоих — позиция в секции. */
-function nodeName(section: GenericSection, node: unknown, index: number): string {
+/**
+ * Имя узла на экране: тег, без него — тип, без обоих — путь в файле
+ * (`dns.rules[3]`), а не имя вкладки: по нему узел находится в тексте.
+ */
+function nodeName(path: readonly string[], node: unknown, index: number): string {
   if (typeof node === 'object' && node !== null) {
     const tag: unknown = Reflect.get(node, 'tag');
 
@@ -123,5 +126,5 @@ function nodeName(section: GenericSection, node: unknown, index: number): string
     }
   }
 
-  return `${section}[${String(index)}]`;
+  return `${path.join('.')}[${String(index)}]`;
 }

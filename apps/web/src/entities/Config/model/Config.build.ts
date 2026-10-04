@@ -1,6 +1,6 @@
 import { BUILD_TAG_OF_OPTION, BUILD_TAG_OF_TYPE } from '@shared/api/generated';
 
-import type { ConfigDocument } from './Config.model';
+import { readPath, type ConfigDocument } from './Config.model';
 
 /** Узел, тип которого бинарь на устройстве не запустит. */
 export interface UnbuiltNode {
@@ -24,16 +24,6 @@ const SECTION_REGISTRY: readonly { path: readonly string[]; registry: string }[]
   { path: ['certificate_providers'], registry: 'certificate_provider' },
   { path: ['dns', 'servers'], registry: 'dns' },
 ];
-
-function readPath(config: ConfigDocument, path: readonly string[]): unknown {
-  let node: unknown = config;
-
-  for (const key of path) {
-    node = typeof node === 'object' && node !== null ? Reflect.get(node, key) : undefined;
-  }
-
-  return node;
-}
 
 function readString(node: object, key: string): string | null {
   const value: unknown = Reflect.get(node, key);

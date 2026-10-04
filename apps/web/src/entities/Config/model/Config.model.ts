@@ -150,7 +150,15 @@ export const CONFIG_SECTION = {
   Inbounds: 'inbounds',
   Outbounds: 'outbounds',
   Providers: 'providers',
+  Endpoints: 'endpoints',
   Dns: 'dns',
+  DnsRules: 'dnsRules',
+  Services: 'services',
+  Ntp: 'ntp',
+  Certificate: 'certificate',
+  CertificateProviders: 'certificateProviders',
+  HttpClients: 'httpClients',
+  NetworkNamespaces: 'networkNamespaces',
   Log: 'log',
   Experimental: 'experimental',
 } as const;
@@ -159,14 +167,22 @@ export type ConfigSection = (typeof CONFIG_SECTION)[keyof typeof CONFIG_SECTION]
 
 /**
  * Секции без собственного экрана: где лежат их узлы и правятся ли они
- * списком. У `route` и `ruleSet` свои экраны, здесь их нет; `dns` показывается
- * списком серверов — остальные его поля правятся текстовым режимом.
+ * списком. У `route` и `ruleSet` свои экраны, здесь их нет; `dns` разложен на
+ * списки серверов и правил — его скалярные поля правятся текстовым режимом.
  */
 export const GENERIC_SECTIONS = {
   [CONFIG_SECTION.Inbounds]: { kind: 'list', path: ['inbounds'] },
   [CONFIG_SECTION.Outbounds]: { kind: 'list', path: ['outbounds'] },
   [CONFIG_SECTION.Providers]: { kind: 'list', path: ['providers'] },
+  [CONFIG_SECTION.Endpoints]: { kind: 'list', path: ['endpoints'] },
   [CONFIG_SECTION.Dns]: { kind: 'list', path: ['dns', 'servers'] },
+  [CONFIG_SECTION.DnsRules]: { kind: 'list', path: ['dns', 'rules'] },
+  [CONFIG_SECTION.Services]: { kind: 'list', path: ['services'] },
+  [CONFIG_SECTION.Ntp]: { kind: 'object', path: ['ntp'] },
+  [CONFIG_SECTION.Certificate]: { kind: 'object', path: ['certificate'] },
+  [CONFIG_SECTION.CertificateProviders]: { kind: 'list', path: ['certificate_providers'] },
+  [CONFIG_SECTION.HttpClients]: { kind: 'list', path: ['http_clients'] },
+  [CONFIG_SECTION.NetworkNamespaces]: { kind: 'list', path: ['network_namespaces'] },
   [CONFIG_SECTION.Log]: { kind: 'object', path: ['log'] },
   [CONFIG_SECTION.Experimental]: { kind: 'object', path: ['experimental'] },
 } as const satisfies Partial<Record<ConfigSection, { kind: 'list' | 'object'; path: JSONPath }>>;
@@ -201,7 +217,23 @@ export function sectionNodePath(section: GenericSection, index: number): JSONPat
 }
 
 /**
- * Сколько элементов в секции; `null` — считать нечего, у логов и экспериментов
+ * Значение по пути в разобранном документе; `undefined` — узла нет.
+ *
+ * Документ идёт как есть, а не через схему: узел, который схема не приняла,
+ * тоже читается.
+ */
+export function readPath(config: ConfigDocument, path: readonly string[]): unknown {
+  let node: unknown = config;
+
+  for (const key of path) {
+    node = typeof node === 'object' && node !== null ? Reflect.get(node, key) : undefined;
+  }
+
+  return node;
+}
+
+/**
+ * Сколько элементов в секции; `null` — считать нечего: у секции-объекта
  * списка нет.
  *
  * Адресация узлов документа живёт в слайсе-владельце: иначе переименование
@@ -212,23 +244,23 @@ export function sectionSize(config: ConfigDocument | null, section: ConfigSectio
     return null;
   }
 
-  switch (section) {
-    case CONFIG_SECTION.Route:
-      return config.route?.rules?.length ?? 0;
-    case CONFIG_SECTION.RuleSet:
-      return config.route?.rule_set?.length ?? 0;
-    case CONFIG_SECTION.Inbounds:
-      return config.inbounds?.length ?? 0;
-    case CONFIG_SECTION.Outbounds:
-      return config.outbounds?.length ?? 0;
-    case CONFIG_SECTION.Providers:
-      return config.providers?.length ?? 0;
-    case CONFIG_SECTION.Dns:
-      return config.dns?.servers?.length ?? 0;
-    case CONFIG_SECTION.Log:
-    case CONFIG_SECTION.Experimental:
-      return null;
+  if (section === CONFIG_SECTION.Route) {
+    return config.route?.rules?.length ?? 0;
   }
+
+  if (section === CONFIG_SECTION.RuleSet) {
+    return config.route?.rule_set?.length ?? 0;
+  }
+
+  const shape = GENERIC_SECTIONS[section];
+
+  if (shape.kind === 'object') {
+    return null;
+  }
+
+  const nodes = readPath(config, shape.path);
+
+  return Array.isArray(nodes) ? nodes.length : 0;
 }
 
 interface TaggedOutbound {

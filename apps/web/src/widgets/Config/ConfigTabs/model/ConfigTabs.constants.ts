@@ -19,7 +19,23 @@ export const CONFIG_TABS = [
   { key: CONFIG_SECTION.Inbounds, label: 'section.inbounds', link: sectionLink(CONFIG_SECTION.Inbounds) },
   { key: CONFIG_SECTION.Outbounds, label: 'section.outbounds', link: sectionLink(CONFIG_SECTION.Outbounds) },
   { key: CONFIG_SECTION.Providers, label: 'section.providers', link: sectionLink(CONFIG_SECTION.Providers) },
+  { key: CONFIG_SECTION.Endpoints, label: 'section.endpoints', link: sectionLink(CONFIG_SECTION.Endpoints) },
   { key: CONFIG_SECTION.Dns, label: 'section.dns', link: sectionLink(CONFIG_SECTION.Dns) },
+  { key: CONFIG_SECTION.DnsRules, label: 'section.dnsRules', link: sectionLink(CONFIG_SECTION.DnsRules) },
+  { key: CONFIG_SECTION.Services, label: 'section.services', link: sectionLink(CONFIG_SECTION.Services) },
+  { key: CONFIG_SECTION.Ntp, label: 'section.ntp', link: sectionLink(CONFIG_SECTION.Ntp) },
+  { key: CONFIG_SECTION.Certificate, label: 'section.certificate', link: sectionLink(CONFIG_SECTION.Certificate) },
+  {
+    key: CONFIG_SECTION.CertificateProviders,
+    label: 'section.certificateProviders',
+    link: sectionLink(CONFIG_SECTION.CertificateProviders),
+  },
+  { key: CONFIG_SECTION.HttpClients, label: 'section.httpClients', link: sectionLink(CONFIG_SECTION.HttpClients) },
+  {
+    key: CONFIG_SECTION.NetworkNamespaces,
+    label: 'section.networkNamespaces',
+    link: sectionLink(CONFIG_SECTION.NetworkNamespaces),
+  },
   { key: CONFIG_SECTION.Log, label: 'section.log', link: sectionLink(CONFIG_SECTION.Log) },
   { key: CONFIG_SECTION.Experimental, label: 'section.experimental', link: sectionLink(CONFIG_SECTION.Experimental) },
 ] as const satisfies ReadonlyArray<{

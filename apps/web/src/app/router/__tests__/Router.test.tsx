@@ -5,7 +5,7 @@ import { act, screen, waitFor, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { CONFIG_ENDPOINT, ConfigDocumentState } from '@entities/Config';
+import { CONFIG_ENDPOINT, CONFIG_SECTION, ConfigDocumentState } from '@entities/Config';
 import { DAEMON_ENDPOINT } from '@entities/Daemon';
 import {
   CLASH_CONFIGS_FIXTURE,
@@ -141,7 +141,7 @@ describe('маршруты панели', () => {
 
     const sections = await screen.findByRole('tablist', { name: 'Секции конфига' });
 
-    expect(within(sections).getAllByRole('tab')).toHaveLength(8);
+    expect(within(sections).getAllByRole('tab')).toHaveLength(Object.values(CONFIG_SECTION).length);
 
     // Секции в файле нет — редактор предлагает пустой узел, сохранение создаст её.
     expect(await screen.findByRole('textbox', { name: 'Узел log текстом' })).toHaveValue('{}');

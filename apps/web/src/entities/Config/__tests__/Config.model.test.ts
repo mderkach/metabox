@@ -1,9 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
+import { OptionsSchema } from '@shared/api/generated';
+
 import { parseConfig } from '../api/Config.query';
 import {
+  CONFIG_SECTION,
+  GENERIC_SECTIONS,
   insertValue,
+  readSectionNodes,
   removeValue,
+  sectionNodePath,
+  sectionSize,
   setValue,
   toFinalOutbound,
   toOutboundTypes,
@@ -156,5 +163,74 @@ describe('toFinalOutbound', () => {
   it('без route.final и аутбаундов выхода нет', () => {
     expect(toFinalOutbound({})).toBeNull();
     expect(toFinalOutbound(null)).toBeNull();
+  });
+});
+
+describe('readSectionNodes', () => {
+  const DNS_TEXT = `{
+  "dns": {
+    "servers": [{ "type": "local", "tag": "local" }],
+    "rules": [{ "domain": ["a.example"], "server": "local" }, { "query_type": ["AAAA"], "action": "reject" }],
+  },
+}`;
+
+  it('DNS-правила читаются из dns.rules, а не из списка серверов', () => {
+    expect(readSectionNodes(DNS_TEXT, CONFIG_SECTION.DnsRules)).toEqual([
+      { domain: ['a.example'], server: 'local' },
+      { query_type: ['AAAA'], action: 'reject' },
+    ]);
+  });
+
+  it('путь DNS-правила ведёт в dns.rules по позиции', () => {
+    expect(sectionNodePath(CONFIG_SECTION.DnsRules, 1)).toEqual(['dns', 'rules', 1]);
+  });
+
+  it('ntp — секция-объект: один узел, путь без позиции', () => {
+    const text = '{ "ntp": { "enabled": true, "server": "time.example" } }';
+
+    expect(readSectionNodes(text, CONFIG_SECTION.Ntp)).toEqual([{ enabled: true, server: 'time.example' }]);
+    expect(sectionNodePath(CONFIG_SECTION.Ntp, 0)).toEqual(['ntp']);
+  });
+
+  it('секции, которой в файле нет, узлов нет', () => {
+    expect(readSectionNodes('{}', CONFIG_SECTION.Ntp)).toEqual([]);
+    expect(readSectionNodes('{}', CONFIG_SECTION.Endpoints)).toEqual([]);
+  });
+});
+
+describe('sectionSize', () => {
+  it('считает элементы списка по его пути в документе', () => {
+    const config: ConfigDocument = {
+      dns: { servers: [{ type: 'local', tag: 'local' }], rules: [{ server: 'local' }, { server: 'local' }] },
+    };
+
+    expect(sectionSize(config, CONFIG_SECTION.Dns)).toBe(1);
+    expect(sectionSize(config, CONFIG_SECTION.DnsRules)).toBe(2);
+  });
+
+  it('отсутствующая секция-список — ноль', () => {
+    expect(sectionSize({}, CONFIG_SECTION.Endpoints)).toBe(0);
+    expect(sectionSize({}, CONFIG_SECTION.NetworkNamespaces)).toBe(0);
+  });
+
+  it('у секции-объекта счёта нет', () => {
+    expect(sectionSize({ ntp: { enabled: true } }, CONFIG_SECTION.Ntp)).toBeNull();
+    expect(sectionSize({}, CONFIG_SECTION.Certificate)).toBeNull();
+  });
+
+  it('без документа счёта нет', () => {
+    expect(sectionSize(null, CONFIG_SECTION.Services)).toBeNull();
+  });
+});
+
+describe('GENERIC_SECTIONS', () => {
+  // Сторожевой тест: секция, которую форк добавит в схему, без записи здесь
+  // осталась бы без вкладки и правилась бы только текстом всего файла.
+  // `route` правится своими экранами, `$schema` — не секция.
+  it('покрывает каждую секцию верхнего уровня схемы', () => {
+    const covered = new Set<string>(Object.values(GENERIC_SECTIONS).map((shape) => shape.path[0]));
+    const sections = Object.keys(OptionsSchema.shape).filter((key) => key !== '$schema' && key !== 'route');
+
+    expect(sections.filter((key) => !covered.has(key))).toEqual([]);
   });
 });
