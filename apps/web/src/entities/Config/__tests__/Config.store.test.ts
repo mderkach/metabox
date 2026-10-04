@@ -77,6 +77,43 @@ describe('ConfigDocumentState', () => {
     expect(config?.route?.final).toBe('direct');
   });
 
+  it('пачка правок ложится одним обновлением стора', () => {
+    state().load(TEXT);
+
+    let updates = 0;
+    const unsubscribe = ConfigDocumentState.subscribe(() => {
+      updates += 1;
+    });
+
+    state().editMany([
+      { path: ['route', 'default_mark'], value: 200 },
+      { path: ['route', 'final'], value: 'direct' },
+    ]);
+    unsubscribe();
+
+    const config = parseConfig(state().current() ?? '').config;
+
+    expect(updates).toBe(1);
+    expect(config?.route?.default_mark).toBe(200);
+    expect(config?.route?.final).toBe('direct');
+  });
+
+  it('правка пачкой без значения удаляет ключ', () => {
+    state().load(TEXT);
+    expect(parseConfig(TEXT).config?.route).toHaveProperty('default_domain_resolver');
+
+    state().editMany([{ path: ['route', 'default_domain_resolver'], value: undefined }]);
+
+    expect(parseConfig(state().current() ?? '').config?.route).not.toHaveProperty('default_domain_resolver');
+  });
+
+  it('пустая пачка черновика не заводит', () => {
+    state().load(TEXT);
+    state().editMany([]);
+
+    expect(state().draft).toBeNull();
+  });
+
   it('отмена возвращает применённый конфиг', () => {
     state().load(TEXT);
     state().edit(['route', 'final'], 'direct');

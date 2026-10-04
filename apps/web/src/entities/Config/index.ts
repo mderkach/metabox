@@ -48,6 +48,18 @@ export type {
   WorkdirMismatch,
 } from './model/Config.model';
 export { findUnbuiltNodes, findUnbuiltOptions } from './model/Config.build';
+export { diffNode } from './model/Config.patch';
+export type { NodeEdit } from './model/Config.patch';
+export {
+  buildTagOfType,
+  isNodeRecognized,
+  newSectionNode,
+  NODE_REGISTRY,
+  nodeSchemaOf,
+  nodeVariants,
+  registryOfSection,
+} from './model/Config.registry';
+export type { NodeRegistry } from './model/Config.registry';
 export type { UnbuiltNode, UnbuiltOption } from './model/Config.build';
 export { useConfigDocument } from './model/Config.document';
 export type { ConfigDocumentView } from './model/Config.document';

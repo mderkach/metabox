@@ -5,6 +5,7 @@ import { diffLines, type DiffLine } from '@shared/lib/diff';
 import { createReactSelectors, stateCreator, useStore } from '@shared/lib/state';
 
 import { findValue, insertValue, removeValue, setValue } from './Config.model';
+import type { NodeEdit } from './Config.patch';
 
 /** Изменения файлов списков, готовые уехать конвертом применения. */
 export interface ListChanges {
@@ -41,6 +42,11 @@ export interface ConfigDocumentState {
   /** Замена текста целиком: режим правки всего конфига руками. */
   replace: (text: string) => void;
   edit: (path: JSONPath, value: unknown) => void;
+  /**
+   * Несколько правок одним обновлением: форма узла отдаёт изменённые листья
+   * пачкой, и подписчики видят один новый текст, а не промежуточные.
+   */
+  editMany: (edits: readonly NodeEdit[]) => void;
   remove: (path: JSONPath) => void;
   insert: (path: JSONPath, value: unknown) => void;
   move: (path: JSONPath, from: number, to: number) => void;
@@ -125,6 +131,12 @@ const ConfigDocumentStateProto = stateCreator<ConfigDocumentState>((set, get) =>
 
     edit: (path, value) => {
       patch((text) => setValue(text, path, value));
+    },
+
+    editMany: (edits) => {
+      if (edits.length === 0) return;
+
+      patch((text) => edits.reduce((next, { path, value }) => setValue(next, path, value), text));
     },
 
     remove: (path) => {

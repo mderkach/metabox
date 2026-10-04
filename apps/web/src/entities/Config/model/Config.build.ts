@@ -1,6 +1,7 @@
 import { BUILD_TAG_OF_OPTION, BUILD_TAG_OF_TYPE } from '@shared/api/generated';
 
-import { readPath, type ConfigDocument } from './Config.model';
+import { GENERIC_SECTIONS, readPath, type ConfigDocument } from './Config.model';
+import { SECTION_REGISTRY } from './Config.registry';
 
 /** Узел, тип которого бинарь на устройстве не запустит. */
 export interface UnbuiltNode {
@@ -13,17 +14,6 @@ export interface UnbuiltNode {
   /** Build-тег, без которого бинарь этот тип не запускает. */
   buildTag: string;
 }
-
-/** Секция документа и реестр форка, из которого она берёт типы. */
-const SECTION_REGISTRY: readonly { path: readonly string[]; registry: string }[] = [
-  { path: ['inbounds'], registry: 'inbound' },
-  { path: ['outbounds'], registry: 'outbound' },
-  { path: ['endpoints'], registry: 'endpoint' },
-  { path: ['providers'], registry: 'provider' },
-  { path: ['services'], registry: 'service' },
-  { path: ['certificate_providers'], registry: 'certificate_provider' },
-  { path: ['dns', 'servers'], registry: 'dns' },
-];
 
 function readString(node: object, key: string): string | null {
   const value: unknown = Reflect.get(node, key);
@@ -46,7 +36,8 @@ export function findUnbuiltNodes(config: ConfigDocument | null, tags: readonly s
   const built = new Set(tags);
   const found: UnbuiltNode[] = [];
 
-  for (const { path, registry } of SECTION_REGISTRY) {
+  for (const { section, registry } of SECTION_REGISTRY) {
+    const { path } = GENERIC_SECTIONS[section];
     const nodes = readPath(config, path);
     const gates = BUILD_TAG_OF_TYPE[registry] ?? {};
 
