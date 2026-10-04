@@ -6,12 +6,20 @@ import type { JSONPath } from 'jsonc-parser';
 import { useMemo } from 'react';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { ConfigDocumentState, findValue, NODE_REGISTRY, RULES_PATH, useConfigText } from '@entities/Config';
+import {
+  ConfigDocumentState,
+  findValue,
+  newSectionNode,
+  NODE_REGISTRY,
+  RULES_PATH,
+  useConfigText,
+  type NodeRegistry,
+} from '@entities/Config';
 import { ConfigNodeAddForm } from '@features/Config/ConfigNodeAdd';
 import { ConfigSchema } from '@shared/api/generated';
 import { parseJsonc } from '@shared/lib/jsonc';
 
-import { NODE_OVERRIDE_ERROR, nodeOverrideOf, overrideIssues } from '../model';
+import { NODE_OVERRIDE_ERROR, nodeOverrideOf, nodePreset, overrideIssues } from '../model';
 import { ConfigNodeForm } from '../ui/ConfigNodeForm';
 
 /** Ключ Reality в формате клиента форка: base64url без паддинга, 32 байта. Не настоящий. */
@@ -53,13 +61,19 @@ function save() {
 }
 
 /** Узел читается из стора, как на экране: форма видит каждую правку текста. */
-function NodeFromStore({ path, builtTags = null }: { path: JSONPath; builtTags?: readonly string[] | null }) {
+function NodeFromStore({
+  path,
+  registry = NODE_REGISTRY.Outbound,
+  builtTags = null,
+}: {
+  path: JSONPath;
+  registry?: NodeRegistry;
+  builtTags?: readonly string[] | null;
+}) {
   const text = useConfigText();
   const node = useMemo(() => (text === null ? undefined : findValue(text, path)), [text, path]);
 
-  return isRecord(node) ? (
-    <ConfigNodeForm registry={NODE_REGISTRY.Outbound} path={path} node={node} builtTags={builtTags} />
-  ) : null;
+  return isRecord(node) ? <ConfigNodeForm registry={registry} path={path} node={node} builtTags={builtTags} /> : null;
 }
 
 /** Идут ли элементы в документе в том порядке, в каком перечислены. */
@@ -153,7 +167,7 @@ describe('оверрайд формы VLESS/Reality', () => {
     expect(ConfigDocumentState.getState().draft).toBeNull();
 
     await user.clear(key);
-    await user.type(key, PUBLIC_KEY);
+    await user.paste(PUBLIC_KEY);
     await user.click(save());
 
     await waitFor(() => {
@@ -256,12 +270,19 @@ describe('VLESS/Reality с нуля', () => {
     add.unmount();
     render(<NodeFromStore path={VLESS} builtTags={['with_utls']} />);
 
-    await user.type(screen.getByRole('textbox', { name: 'server' }), 'a.example');
-    await user.type(screen.getByRole('spinbutton', { name: 'server_port' }), '443');
-    await user.type(screen.getByRole('textbox', { name: 'uuid' }), UUID);
-    await user.type(screen.getByRole('textbox', { name: 'tls.server_name' }), 'www.example');
-    await user.type(screen.getByRole('textbox', { name: 'tls.reality.public_key' }), PUBLIC_KEY);
-    await user.type(screen.getByRole('textbox', { name: 'tls.reality.short_id' }), '0123456789abcdef');
+    // Длинные значения вставляются, а не печатаются: посимвольный ввод с
+    // проверкой на каждый символ под нагрузкой упирается в таймаут теста.
+    const fill = async (role: 'textbox' | 'spinbutton', name: string, value: string) => {
+      await user.click(screen.getByRole(role, { name }));
+      await user.paste(value);
+    };
+
+    await fill('textbox', 'server', 'a.example');
+    await fill('spinbutton', 'server_port', '443');
+    await fill('textbox', 'uuid', UUID);
+    await fill('textbox', 'tls.server_name', 'www.example');
+    await fill('textbox', 'tls.reality.public_key', PUBLIC_KEY);
+    await fill('textbox', 'tls.reality.short_id', '0123456789abcdef');
     await user.click(save());
 
     await waitFor(() => {
@@ -292,5 +313,46 @@ describe('VLESS/Reality с нуля', () => {
       route: { rules: [{ outbound: 'vless-out' }] },
     });
     expect(ConfigSchema.safeParse(value).success).toBe(true);
+  });
+});
+
+describe('оверрайд службы api', () => {
+  const API: JSONPath = ['services', 0];
+
+  it('новая служба слушает loopback и получает случайный секрет, порт не подставлен', () => {
+    const first = nodePreset(NODE_REGISTRY.Service, 'api', 'api', newSectionNode);
+    const second = nodePreset(NODE_REGISTRY.Service, 'api', 'api', newSectionNode);
+
+    expect({ ...first, secret: null }).toEqual({ type: 'api', tag: 'api', listen: '127.0.0.1', secret: null });
+    const secret: unknown = Reflect.get(first, 'secret');
+
+    expect(secret).toMatch(/^[\w-]{32}$/);
+    expect(first).not.toEqual(second);
+  });
+
+  it('без порта не сохраняется, с портом — пишется в узел', async () => {
+    const user = userEvent.setup();
+
+    ConfigDocumentState.getState().reset();
+    ConfigDocumentState.getState().load(
+      JSON.stringify({ services: [nodePreset(NODE_REGISTRY.Service, 'api', 'api', newSectionNode)] }, null, 2)
+    );
+    render(<NodeFromStore path={API} registry={NODE_REGISTRY.Service} />);
+
+    expect(screen.getByRole('textbox', { name: 'listen' })).toHaveValue('127.0.0.1');
+    expect(screen.getByRole('button', { name: 'Поля tls' })).toBeInTheDocument();
+
+    await user.type(screen.getByRole('textbox', { name: 'tag' }), '-grpc');
+    await user.click(save());
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Обязательное поле');
+    expect(ConfigDocumentState.getState().draft).toBeNull();
+
+    await user.type(screen.getByRole('spinbutton', { name: 'listen_port' }), '9091');
+    await user.click(save());
+
+    await waitFor(() => {
+      expect(findValue(draft(), [...API, 'listen_port'])).toBe(9091);
+    });
   });
 });

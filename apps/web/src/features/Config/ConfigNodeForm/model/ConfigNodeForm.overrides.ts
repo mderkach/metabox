@@ -158,17 +158,53 @@ const VLESS_OVERRIDE: NodeOverride = {
   ],
 };
 
+/** Длина секрета службы `api` в байтах: 24 байта — 32 символа base64url. */
+const API_SECRET_BYTES = 24;
+
+/**
+ * Случайный секрет: base64url без паддинга из криптографического генератора.
+ * Пустой `secret` оставил бы gRPC-сервис форка открытым всем, кто достучится
+ * до порта.
+ */
+function randomSecret(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(API_SECRET_BYTES));
+
+  return btoa(String.fromCharCode(...bytes))
+    .replaceAll('+', '-')
+    .replaceAll('/', '_')
+    .replace(/=+$/, '');
+}
+
+/**
+ * Служба `api` — gRPC-сервис форка, единственная служба с формой (PRD, раздел
+ * 8; ADR-0006). Слушает loopback: наружу демон его не открывает и сам к нему
+ * ходит с той же машины. Порт не подставляется: 9090 по умолчанию занят Clash
+ * API (флаг `-clash-port` демона), а свободный порт на устройстве форма не
+ * знает, поэтому он обязателен. `dashboard` остаётся в «Дополнительно» JSON-текстом.
+ */
+const API_OVERRIDE: NodeOverride = {
+  primary: ['tag', 'listen', 'listen_port', 'secret', 'access_control_allow_origin', 'tls'],
+  required: ['listen_port'],
+  preset: (tag) => ({ type: 'api', tag, listen: '127.0.0.1', secret: randomSecret() }),
+};
+
 /**
  * Оверрайды форм по типам. Тип без записи открывается автоформой, если её
  * разрешает политика реестра; запись добавляется сюда, а не веткой в рендерере.
  */
 export const NODE_OVERRIDE: Readonly<Partial<Record<NodeOverrideKey, NodeOverride>>> = {
   'outbound/vless': VLESS_OVERRIDE,
+  'service/api': API_OVERRIDE,
 };
 
 /** Оверрайд типа; `null` — тип открывается автоформой как есть. */
 export function nodeOverrideOf(registry: NodeRegistry, type: string): NodeOverride | null {
   return NODE_OVERRIDE[`${registry}/${type}`] ?? null;
+}
+
+/** Есть ли у типа рукописный оверрайд: по нему открывают форму реестры без автоформы. */
+export function hasNodeOverride(registry: NodeRegistry, type: string): boolean {
+  return nodeOverrideOf(registry, type) !== null;
 }
 
 /**

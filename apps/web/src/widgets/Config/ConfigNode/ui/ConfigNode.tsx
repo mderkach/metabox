@@ -2,7 +2,7 @@ import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { isNodeRecognized, registryOfSection, sectionNodePath, type GenericSection } from '@entities/Config';
-import { ConfigNodeForm } from '@features/Config/ConfigNodeForm';
+import { ConfigNodeForm, hasNodeOverride } from '@features/Config/ConfigNodeForm';
 import { ConfigNodeRawEditor } from '@features/Config/ConfigNodeRaw';
 import { cn } from '@shared/lib/utils';
 import { Badge, SURFACE, Tabs, TabsContent, TabsList, TabsTrigger } from '@shared/ui';
@@ -22,7 +22,7 @@ function isNodeObject(node: unknown): node is Record<string, unknown> {
  * Узел секции конфига: форма по схеме его типа и тот же узел текстом.
  *
  * Форму получает узел секции с реестром типов, если политика реестра её
- * разрешает. Узел, который схема его типа не принимает, формы не получает
+ * разрешает: автоформу — любой тип, «только оверрайды» — тип с оверрайдом. Узел, который схема его типа не принимает, формы не получает
  * вовсе: вкладка выключена, узел помечен и открыт текстом (ADR-0018).
  * Секции-объекты и секции без реестра правятся только текстом.
  */
@@ -45,7 +45,10 @@ export function ConfigNode({
   const { t } = useTranslation('widgets/Config/ConfigNode');
   const registry = registryOfSection(section);
   const path = sectionNodePath(section, index);
-  const hasForm = registry !== null && NODE_FORM_POLICY[registry] === FORM_POLICY.Auto;
+  const type: unknown = isNodeObject(node) ? node.type : undefined;
+  const hasForm =
+    registry !== null &&
+    (NODE_FORM_POLICY[registry] === FORM_POLICY.Auto || (typeof type === 'string' && hasNodeOverride(registry, type)));
   const recognized = hasForm && isNodeRecognized(registry, node);
   const [tab, setTab] = useState<string>(recognized ? TAB.Form : TAB.Raw);
   const headingId = useId();

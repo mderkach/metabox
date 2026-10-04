@@ -12,7 +12,7 @@ export type FormPolicy = (typeof FORM_POLICY)[keyof typeof FORM_POLICY];
 
 /**
  * Политика форм по реестрам. У служб форма положена только `api` (PRD, раздел
- * 8): рукописной формы у неё пока нет, поэтому службы правятся текстом.
+ * 8): она открывается своим оверрайдом, остальные службы правятся текстом.
  */
 export const NODE_FORM_POLICY: Readonly<Record<NodeRegistry, FormPolicy>> = {
   [NODE_REGISTRY.Inbound]: FORM_POLICY.Auto,

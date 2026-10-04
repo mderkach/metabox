@@ -32,11 +32,27 @@ describe('узел секции', () => {
     expect(screen.getByRole('textbox', { name: 'Узел hk-01 текстом' })).toHaveValue(JSON.stringify(node, null, 2));
   });
 
-  it('служба правится только текстом: автоформ у служб нет', () => {
-    render(<ConfigNode section={CONFIG_SECTION.Services} index={0} node={{ type: 'api', tag: 'api' }} name='api' />);
+  it('служба api открывается формой своего оверрайда', () => {
+    const node = { type: 'api', tag: 'api', listen: '127.0.0.1', listen_port: 9091 };
+
+    render(<ConfigNode section={CONFIG_SECTION.Services} index={0} node={node} name='api' />);
+
+    expect(screen.getByRole('tab', { name: 'Форма' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('spinbutton', { name: 'listen_port' })).toHaveValue(9091);
+  });
+
+  it('прочая служба правится только текстом: автоформ у служб нет', () => {
+    render(
+      <ConfigNode
+        section={CONFIG_SECTION.Services}
+        index={0}
+        node={{ type: 'resolved', tag: 'resolved' }}
+        name='resolved'
+      />
+    );
 
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: 'Узел api текстом' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Узел resolved текстом' })).toBeInTheDocument();
   });
 
   it.each([
