@@ -178,7 +178,8 @@
   },
   "soon": "скоро",
   "action": {
-    "cancel": "Отмена"
+    "cancel": "Отмена",
+    "closePanel": "Закрыть панель"
   },
   "section": {
     "overview": "Обзор",

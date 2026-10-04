@@ -1,15 +1,16 @@
 import { renderWithRouter } from '@test/renderWithRouter';
 import { server } from '@test/server';
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CONFIG_ENDPOINT, ConfigDocumentState, findValue } from '@entities/Config';
 import { DAEMON_ENDPOINT } from '@entities/Daemon';
 import { DAEMON_STATUS_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture';
 import { RULE_SET_ENDPOINT } from '@entities/RuleSet';
 import { ruleSetHandlers } from '@entities/RuleSet/__tests__/RuleSet.handlers';
+import { PANEL_AS_SHEET } from '@shared/lib/media';
 
 import { RuleSetsPage } from '../ui/RuleSetsPage';
 
@@ -176,6 +177,120 @@ describe('экран сетов', () => {
     await user.click(screen.getByRole('button', { name: 'Сбросить отбор' }));
 
     expect(await screen.findByRole('table', { name: 'Подключённые сеты' })).toBeInTheDocument();
+  });
+});
+
+describe('панель сета', () => {
+  beforeEach(() => {
+    ConfigDocumentState.getState().reset();
+    server.use(
+      http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(CONFIG)),
+      http.get(CONFIG_ENDPOINT.versions(), () => HttpResponse.json({ versions: [] })),
+      http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE)),
+      ...ruleSetHandlers
+    );
+  });
+
+  it('кнопка тулбара открывает форму в панели рядом со списком и переводит фокус на её заголовок', async () => {
+    const user = userEvent.setup();
+
+    renderWithRouter(RuleSetsPage);
+
+    const table = await screen.findByRole('table', { name: 'Подключённые сеты' });
+    const open = screen.getByRole('button', { name: 'Подключить сет' });
+
+    await user.click(open);
+
+    const panel = await screen.findByRole('complementary', { name: 'Новый сет' });
+
+    expect(within(panel).getByRole('heading', { name: 'Новый сет' })).toHaveFocus();
+    expect(within(panel).getByLabelText('Категория')).toBeInTheDocument();
+    expect(open).toHaveAttribute('aria-expanded', 'true');
+    // Форма не встаёт в карточку списка: строки остаются на месте.
+    expect(within(table).queryByLabelText('Категория')).not.toBeInTheDocument();
+  });
+
+  it('Escape закрывает панель и возвращает фокус на кнопку, которая её открыла', async () => {
+    const user = userEvent.setup();
+
+    renderWithRouter(RuleSetsPage);
+
+    await screen.findByRole('table', { name: 'Подключённые сеты' });
+
+    const open = screen.getByRole('button', { name: 'Свой список' });
+
+    await user.click(open);
+    await screen.findByRole('complementary', { name: 'Свой список доменов и адресов' });
+    await user.keyboard('{Escape}');
+
+    expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+    expect(open).toHaveFocus();
+  });
+
+  it('свой список из панели встаёт в список, а панель закрывается', async () => {
+    const user = userEvent.setup();
+
+    renderWithRouter(RuleSetsPage);
+
+    const table = await screen.findByRole('table', { name: 'Подключённые сеты' });
+
+    await user.click(screen.getByRole('button', { name: 'Свой список' }));
+
+    const panel = await screen.findByRole('complementary', { name: 'Свой список доменов и адресов' });
+
+    await user.type(within(panel).getByLabelText('Имя списка'), 'my-list');
+    await user.click(within(panel).getByLabelText('Домены и адреса'));
+    await user.paste('example.com');
+    await user.click(within(panel).getByRole('button', { name: 'Сохранить в черновик' }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+    });
+    expect(within(table).getAllByRole('row')).toHaveLength(3 + HEADER_ROWS);
+    expect(within(table).getByText('my-list')).toBeInTheDocument();
+  });
+});
+
+describe('панель сета на узком экране', () => {
+  beforeEach(() => {
+    ConfigDocumentState.getState().reset();
+    server.use(
+      http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(CONFIG)),
+      http.get(CONFIG_ENDPOINT.versions(), () => HttpResponse.json({ versions: [] })),
+      http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE)),
+      ...ruleSetHandlers
+    );
+    vi.stubGlobal('matchMedia', function matchQuery(media: string) {
+      return {
+        matches: media === PANEL_AS_SHEET,
+        media,
+        addEventListener: vi.fn<() => void>(),
+        removeEventListener: vi.fn<() => void>(),
+      };
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('открывает форму листом поверх списка, а не рядом с ним', async () => {
+    const user = userEvent.setup();
+
+    renderWithRouter(RuleSetsPage);
+
+    await screen.findByRole('table', { name: 'Подключённые сеты' });
+    await user.click(screen.getByRole('button', { name: 'Подключить сет' }));
+
+    const sheet = await screen.findByRole('dialog', { name: 'Новый сет' });
+
+    expect(within(sheet).getByLabelText('Категория')).toBeInTheDocument();
+
+    await user.keyboard('{Escape}');
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
   });
 });
 

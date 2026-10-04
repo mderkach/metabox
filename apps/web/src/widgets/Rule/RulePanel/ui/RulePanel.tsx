@@ -108,7 +108,12 @@ export function RulePanel({
         </div>
         {!recognized && <Badge variant='outline'>{t('rule.uncovered', { ns: 'shared' })}</Badge>}
         {actions !== null && <div className='flex shrink-0 items-center gap-0.5'>{actions}</div>}
-        <Button variant='outline' size='icon-sm' aria-label={t('close')} onClick={onClose}>
+        <Button
+          variant='outline'
+          size='icon-sm'
+          aria-label={t('action.closePanel', { ns: 'shared' })}
+          onClick={onClose}
+        >
           <X />
         </Button>
       </header>

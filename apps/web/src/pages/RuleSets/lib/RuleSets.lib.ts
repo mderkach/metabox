@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { startTransition, useCallback, useMemo, useState } from 'react';
 
 import {
   hasRuleSetCache,
@@ -98,4 +98,52 @@ export function useRuleSetFilter(sets: RuleSetRow[]): RuleSetFilterState {
   }, []);
 
   return { query, setQuery, reset, sets: shown };
+}
+
+/** Какая форма открыта в панели сета. */
+export const RULE_SET_FORM = {
+  Catalog: 'catalog',
+  Custom: 'custom',
+} as const;
+
+export type RuleSetForm = (typeof RULE_SET_FORM)[keyof typeof RULE_SET_FORM];
+
+export interface RuleSetPanelState {
+  /** `null` — панель закрыта. */
+  form: RuleSetForm | null;
+  /**
+   * Последняя открытая форма: лист уезжает анимацией уже после закрытия и всё
+   * это время показывает её, а не пустоту.
+   */
+  shown: RuleSetForm;
+  /** Кнопка тулбара открывает свою форму, а повторное нажатие закрывает её. */
+  toggle: (form: RuleSetForm) => void;
+  close: () => void;
+}
+
+/**
+ * Форма в панели сета. Открытие и закрытие идут в `startTransition`: без
+ * Transition обновление срочное, и граница вокруг панели не анимируется.
+ */
+export function useRuleSetPanel(): RuleSetPanelState {
+  const [form, setForm] = useState<RuleSetForm | null>(null);
+  const [shown, setShown] = useState<RuleSetForm>(RULE_SET_FORM.Catalog);
+
+  if (form !== null && form !== shown) {
+    setShown(form);
+  }
+
+  const toggle = useCallback((next: RuleSetForm) => {
+    startTransition(() => {
+      setForm((current) => (current === next ? null : next));
+    });
+  }, []);
+
+  const close = useCallback(() => {
+    startTransition(() => {
+      setForm(null);
+    });
+  }, []);
+
+  return { form, shown, toggle, close };
 }

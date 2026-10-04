@@ -169,7 +169,8 @@
   },
   "soon": "soon",
   "action": {
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "closePanel": "Close the panel"
   },
   "section": {
     "overview": "Overview",

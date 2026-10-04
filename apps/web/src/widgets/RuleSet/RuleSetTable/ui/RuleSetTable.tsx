@@ -13,7 +13,8 @@ const HEADER_ROWS = 1;
 
 /**
  * Подключённые наборы в порядке файла: тулбар с поиском, шапка колонок, строки
- * и подвал со счётчиком.
+ * и подвал со счётчиком. Форм список не держит: кнопка тулбара открывает
+ * форму в панели рядом с ним (ADR-0037).
  *
  * Список не виртуализован намеренно: наборов в конфиге десятки, а не сотни —
  * виртуализатор здесь стоил бы абсолютного позиционирования ради экономии,
@@ -26,7 +27,6 @@ export function RuleSetTable({
   empty,
   search = null,
   actions = null,
-  form = null,
   onRemove,
 }: {
   sets: RuleSetRowModel[];
@@ -38,22 +38,18 @@ export function RuleSetTable({
   search?: ReactNode;
   /** Действия над списком: правый край тулбара. */
   actions?: ReactNode;
-  /** Форма действия из тулбара: открывается под ним, над строками. */
-  form?: ReactNode;
   onRemove: (index: number) => void;
 }) {
   const { t } = useTranslation('widgets/RuleSet/RuleSetTable');
 
   return (
-    <section className={cn('flex flex-col overflow-hidden', SURFACE)}>
+    <section className={cn('flex min-w-0 grow flex-col overflow-hidden', SURFACE)}>
       <h2 className='sr-only'>{t('title')}</h2>
 
       <div className='flex flex-wrap items-center gap-2 border-b border-border px-3.5 py-2.5'>
         {search}
         {actions !== null && <div className='ml-auto flex items-center gap-2'>{actions}</div>}
       </div>
-
-      {form !== null && <div className='border-b border-border p-4 sm:p-5'>{form}</div>}
 
       {sets.length === 0 ? (
         <div className='flex items-center justify-center px-4 py-10 text-center'>{empty}</div>
