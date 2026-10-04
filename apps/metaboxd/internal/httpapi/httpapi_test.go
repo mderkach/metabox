@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -528,6 +529,36 @@ func TestApplyReturnsCheckOutputVerbatim(t *testing.T) {
 	}
 	if apiErr.Details.ExitCode != 1 {
 		t.Errorf("код возврата %d, ожидали 1", apiErr.Details.ExitCode)
+	}
+}
+
+// Расхождение рабочего каталога службы с каталогом конфига уходит кодом с
+// обоими каталогами: по ним панель собирает команду настройки службы.
+func TestApplyReturnsWorkdirMismatch(t *testing.T) {
+	applier := &fakeApplier{startErr: fmt.Errorf("сверка: %w", &apply.WorkdirError{
+		Workdir:   "/usr/share/sing-box",
+		ConfigDir: "/etc/sing-box",
+	})}
+
+	got := applyRequest(t, newTestServer(t, applier, ""), []byte(rawConfig))
+
+	if got.status != http.StatusConflict {
+		t.Fatalf("код %d, ожидали %d", got.status, http.StatusConflict)
+	}
+
+	var apiErr struct {
+		Code    string                  `json:"code"`
+		Details contract.WorkdirDetails `json:"details"`
+	}
+	got.decode(t, &apiErr)
+
+	if apiErr.Code != string(contract.ErrWorkdirMismatch) {
+		t.Errorf("код ошибки %q, ожидали %q", apiErr.Code, contract.ErrWorkdirMismatch)
+	}
+
+	want := contract.WorkdirDetails{Workdir: "/usr/share/sing-box", ConfigDir: "/etc/sing-box"}
+	if apiErr.Details != want {
+		t.Errorf("подробности %+v, ожидали %+v", apiErr.Details, want)
 	}
 }
 

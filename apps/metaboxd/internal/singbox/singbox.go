@@ -257,6 +257,23 @@ func (c *Client) State(ctx context.Context) (State, error) {
 	return state, nil
 }
 
+// Workdir отдаёт рабочий каталог службы — базу, от которой sing-box резолвит
+// относительные пути конфига. Пустая строка без ошибки — узнать неоткуда:
+// менеджера процессов нет, служба ему незнакома или запущена без -D и не
+// поднята.
+func (c *Client) Workdir(ctx context.Context) (string, error) {
+	if c.supervisor == nil {
+		return "", nil
+	}
+
+	state, err := c.supervisor.Service(ctx, c.serviceName())
+	if err != nil {
+		return "", err
+	}
+
+	return state.Workdir, nil
+}
+
 // serviceName выводит имя службы в procd из пути init-скрипта: procd
 // регистрирует службу под именем скрипта.
 func (c *Client) serviceName() string {

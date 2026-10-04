@@ -58,6 +58,21 @@ func fail(log *slog.Logger, w http.ResponseWriter, r *http.Request, err error) {
 		return
 	}
 
+	// Каталоги едут подробностью: из них панель собирает команду, которая
+	// настраивает рабочий каталог службы.
+	if workdirErr, ok := errors.AsType[*apply.WorkdirError](err); ok {
+		writeJSON(log, w, http.StatusConflict, contract.Error{
+			Code:    contract.ErrWorkdirMismatch,
+			Message: "рабочий каталог службы sing-box не совпадает с каталогом конфига",
+			Details: contract.WorkdirDetails{
+				Workdir:   workdirErr.Workdir,
+				ConfigDir: workdirErr.ConfigDir,
+			},
+		})
+
+		return
+	}
+
 	status, code := statusFor(err)
 
 	message := err.Error()

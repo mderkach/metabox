@@ -9,7 +9,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
+	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -38,6 +41,12 @@ type State struct {
 	// возраста не отдаёт, он считается по /proc и на чужой системе может
 	// быть недоступен.
 	Uptime time.Duration
+	// Workdir — рабочий каталог службы: от него sing-box резолвит относительные
+	// пути конфига. Берётся из флага -D команды, с которой procd поднимает
+	// инстанс, — упавший инстанс procd помнит вместе с командой, и каталог
+	// виден без процесса. Без флага — каталог живого процесса из
+	// /proc/<pid>/cwd. Пусто, когда узнать не удалось.
+	Workdir string
 }
 
 // Client спрашивает procd через ubus.
@@ -68,8 +77,9 @@ func (c *Client) Service(ctx context.Context, name string) (State, error) {
 
 	var services map[string]struct {
 		Instances map[string]struct {
-			Running bool `json:"running"`
-			PID     int  `json:"pid"`
+			Running bool     `json:"running"`
+			PID     int      `json:"pid"`
+			Command []string `json:"command"`
 		} `json:"instances"`
 	}
 
@@ -95,6 +105,12 @@ func (c *Client) Service(ctx context.Context, name string) (State, error) {
 	}
 
 	if len(names) == 0 {
+		if len(service.Instances) > 0 {
+			// Порядок тот же, что у поднятых: первый по имени.
+			first := slices.Min(slices.Collect(maps.Keys(service.Instances)))
+			state.Workdir = directoryFlag(service.Instances[first].Command)
+		}
+
 		return state, nil
 	}
 
@@ -104,8 +120,56 @@ func (c *Client) Service(ctx context.Context, name string) (State, error) {
 	state.Running = true
 	state.pid = instance.PID
 	state.Uptime = c.uptime(instance.PID)
+	state.Workdir = c.workdir(instance.PID, instance.Command)
 
 	return state, nil
+}
+
+// workdir берёт рабочий каталог из команды инстанса, а без флага -D — у
+// живого процесса: sing-box без флага резолвит пути от каталога, в котором
+// его запустили.
+func (c *Client) workdir(pid int, command []string) string {
+	if dir := directoryFlag(command); dir != "" {
+		return dir
+	}
+
+	if pid <= 0 {
+		return ""
+	}
+
+	dir, err := os.Readlink(c.procDir + "/" + strconv.Itoa(pid) + "/cwd")
+	if err != nil || !filepath.IsAbs(dir) {
+		return ""
+	}
+
+	return dir
+}
+
+// directoryFlag достаёт значение -D (--directory) из команды sing-box во всех
+// формах, которые принимает его разбор флагов; повтор флага — побеждает
+// последний. Относительный путь не отдаётся: от какого каталога его считать,
+// знает только procd.
+func directoryFlag(command []string) string {
+	var dir string
+
+	for i, arg := range command {
+		switch {
+		case arg == "-D" || arg == "--directory":
+			if i+1 < len(command) {
+				dir = command[i+1]
+			}
+		case strings.HasPrefix(arg, "--directory="):
+			dir = strings.TrimPrefix(arg, "--directory=")
+		case strings.HasPrefix(arg, "-D"):
+			dir = strings.TrimPrefix(strings.TrimPrefix(arg, "-D"), "=")
+		}
+	}
+
+	if !filepath.IsAbs(dir) {
+		return ""
+	}
+
+	return dir
 }
 
 // uptime считает возраст процесса как разницу между аптаймом системы и

@@ -423,6 +423,7 @@ func build(log *slog.Logger, s settings) (*apply.Manager, *config.Store, *singbo
 		Window:       s.confirmWindow,
 		ClashPort:    s.clashPort,
 		CycleTimeout: s.cycleTimeout,
+		ConfigDir:    s.configDir,
 	})
 
 	return manager, store, service, nil

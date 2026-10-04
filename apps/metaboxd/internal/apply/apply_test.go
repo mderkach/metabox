@@ -21,6 +21,7 @@ const (
 	window       = time.Minute
 	cycleTimeout = 30 * time.Second
 	clashPort    = 9090
+	configDir    = "/etc/sing-box"
 )
 
 // recorder хранит порядок вызовов: протокол применения задаёт не только набор
@@ -218,6 +219,9 @@ func (s *fakeStore) config() []byte {
 type fakeService struct {
 	rec      *recorder
 	checkErr error
+	// workdir — рабочий каталог службы; пусто — неизвестен.
+	workdir    string
+	workdirErr error
 
 	mu         sync.Mutex
 	restartErr error
@@ -236,6 +240,10 @@ func (s *fakeService) Restart(context.Context) error {
 	defer s.mu.Unlock()
 
 	return s.restartErr
+}
+
+func (s *fakeService) Workdir(context.Context) (string, error) {
+	return s.workdir, s.workdirErr
 }
 
 func (s *fakeService) setRestartErr(err error) {
@@ -303,7 +311,7 @@ func newHarness(t *testing.T) *harness {
 	}
 	h.manager = apply.New(h.store, h.service, h.health, h.clock,
 		slog.New(slog.DiscardHandler),
-		apply.Options{Window: window, ClashPort: clashPort, CycleTimeout: cycleTimeout})
+		apply.Options{Window: window, ClashPort: clashPort, CycleTimeout: cycleTimeout, ConfigDir: configDir})
 
 	t.Cleanup(h.manager.Close)
 

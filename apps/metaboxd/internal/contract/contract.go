@@ -151,6 +151,11 @@ const (
 	// ErrListInvalid — файл списка не принят: имя вне правил подкаталога
 	// rule-sets либо конверт применения не разобран.
 	ErrListInvalid ErrorCode = "list_invalid"
+	// ErrWorkdirMismatch — применение с файлами списков отклонено до записи:
+	// рабочий каталог службы sing-box не совпадает с каталогом конфига, и
+	// относительный path узла local служба не нашла бы. Каталоги лежат в
+	// Details.
+	ErrWorkdirMismatch ErrorCode = "workdir_mismatch"
 	// ErrCheckFailed — `sing-box check` отверг конфиг; вывод бинаря лежит в Details.
 	ErrCheckFailed ErrorCode = "check_failed"
 	// ErrInternal — отказ, о котором наружу говорить нечего: подробности в логе.
@@ -202,4 +207,14 @@ type CheckDetails struct {
 	Stdout   string `json:"stdout"`
 	Stderr   string `json:"stderr"`
 	ExitCode int    `json:"exit_code"`
+}
+
+// WorkdirDetails — каталоги отказа `workdir_mismatch`. Пути наружу идут
+// намеренно: путь конфига панель и так знает из `GET /api/status`, а по этим
+// двум она собирает команду, которая настраивает службу.
+type WorkdirDetails struct {
+	// Workdir — рабочий каталог, с которым procd поднимает службу.
+	Workdir string `json:"workdir"`
+	// ConfigDir — каталог конфига, которым владеет демон.
+	ConfigDir string `json:"config_dir"`
 }

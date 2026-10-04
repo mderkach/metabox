@@ -6,6 +6,7 @@ import (
 	"slices"
 	"testing"
 
+	"metabox/internal/procd"
 	"metabox/internal/singbox"
 )
 
@@ -233,4 +234,60 @@ func TestRunning(t *testing.T) {
 			}
 		})
 	}
+}
+
+type fakeSupervisor struct {
+	state procd.State
+	err   error
+	names []string
+}
+
+func (f *fakeSupervisor) Service(_ context.Context, name string) (procd.State, error) {
+	f.names = append(f.names, name)
+
+	return f.state, f.err
+}
+
+// Рабочий каталог спрашивается у procd по имени init-скрипта; без менеджера
+// процессов он неизвестен, и это не отказ.
+func TestWorkdir(t *testing.T) {
+	t.Run("каталог от procd", func(t *testing.T) {
+		supervisor := &fakeSupervisor{state: procd.State{Known: true, Workdir: "/etc/sing-box"}}
+
+		client, err := singbox.New(&fakeRunner{}, binary, initScript, "", supervisor)
+		if err != nil {
+			t.Fatalf("сборка клиента: %v", err)
+		}
+
+		got, err := client.Workdir(t.Context())
+		if err != nil {
+			t.Fatalf("рабочий каталог: %v", err)
+		}
+		if got != "/etc/sing-box" {
+			t.Errorf("получили %q, ожидали /etc/sing-box", got)
+		}
+		if !slices.Equal(supervisor.names, []string{"sing-box"}) {
+			t.Errorf("procd спрошен о %v, ожидали службу sing-box", supervisor.names)
+		}
+	})
+
+	t.Run("отказ procd отдаётся вызывающему", func(t *testing.T) {
+		supervisor := &fakeSupervisor{err: errors.New("ubus не отвечает")}
+
+		client, err := singbox.New(&fakeRunner{}, binary, initScript, "", supervisor)
+		if err != nil {
+			t.Fatalf("сборка клиента: %v", err)
+		}
+
+		if _, err := client.Workdir(t.Context()); err == nil {
+			t.Error("отказ procd проглочен")
+		}
+	})
+
+	t.Run("без procd каталог неизвестен", func(t *testing.T) {
+		got, err := newClient(t, &fakeRunner{}).Workdir(t.Context())
+		if err != nil || got != "" {
+			t.Errorf("получили %q, %v; ожидали пустой каталог без ошибки", got, err)
+		}
+	})
 }

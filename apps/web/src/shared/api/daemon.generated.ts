@@ -40,6 +40,7 @@ export const ERROR_CODE = [
   'config_modified',
   'config_too_large',
   'list_invalid',
+  'workdir_mismatch',
   'check_failed',
   'internal',
 ] as const
@@ -201,6 +202,14 @@ export const CheckDetailsSchema = z.object({
   stdout: z.string(),
   stderr: z.string(),
   exit_code: z.int(),
+})
+
+/** WorkdirDetails — каталоги отказа `workdir_mismatch`. Пути наружу идут намеренно: путь конфига панель и так знает из `GET /api/status`, а по этим двум она собирает команду, которая настраивает службу. */
+export const WorkdirDetailsSchema = z.object({
+  /** Workdir — рабочий каталог, с которым procd поднимает службу. */
+  workdir: z.string(),
+  /** ConfigDir — каталог конфига, которым владеет демон. */
+  config_dir: z.string(),
 })
 
 /** RuleSetFiles — файлы своих списков из подкаталога rule-sets каталога конфига, как их отдаёт GET /api/config/rule-sets. */
@@ -452,4 +461,5 @@ export type StatusWire = z.infer<typeof StatusSchema>
 export type TransactionWire = z.infer<typeof TransactionSchema>
 export type VersionWire = z.infer<typeof VersionSchema>
 export type VersionsWire = z.infer<typeof VersionsSchema>
+export type WorkdirDetailsWire = z.infer<typeof WorkdirDetailsSchema>
 export type ZoneWire = z.infer<typeof ZoneSchema>

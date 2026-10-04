@@ -154,3 +154,97 @@ func writeProcFile(t *testing.T, dir, name, content string) {
 		t.Fatalf("запись %s: %v", name, err)
 	}
 }
+
+// Рабочий каталог берётся из -D команды инстанса: procd помнит её и у
+// упавшего инстанса, а именно с ней служба поднимется на рестарте Apply.
+func TestServiceReadsWorkdir(t *testing.T) {
+	tests := []struct {
+		name string
+		list string
+		want string
+	}{
+		{
+			"флаг отдельным аргументом",
+			`{"sing-box": {"instances": {"sing-box.main": {"running": true, "pid": 0,
+				"command": ["/usr/bin/sing-box", "run", "-c", "/etc/sing-box/config.json", "-D", "/usr/share/sing-box"]}}}}`,
+			"/usr/share/sing-box",
+		},
+		{
+			"длинная форма через равно",
+			`{"sing-box": {"instances": {"main": {"running": true, "pid": 0,
+				"command": ["/usr/bin/sing-box", "--directory=/etc/sing-box", "run"]}}}}`,
+			"/etc/sing-box",
+		},
+		{
+			"упавший инстанс",
+			`{"sing-box": {"instances": {"main": {"running": false,
+				"command": ["/usr/bin/sing-box", "-D", "/etc/sing-box", "-C", "/etc/sing-box", "run"]}}}}`,
+			"/etc/sing-box",
+		},
+		{
+			"повтор флага — побеждает последний",
+			`{"sing-box": {"instances": {"main": {"running": true, "pid": 0,
+				"command": ["/usr/bin/sing-box", "-D", "/a", "-D/b", "run"]}}}}`,
+			"/b",
+		},
+		{
+			"относительный путь не отдаётся",
+			`{"sing-box": {"instances": {"main": {"running": true, "pid": 0,
+				"command": ["/usr/bin/sing-box", "-D", "etc", "run"]}}}}`,
+			"",
+		},
+		{
+			"без флага и без процесса — неизвестно",
+			`{"sing-box": {"instances": {"main": {"running": false, "command": ["/usr/bin/sing-box", "run"]}}}}`,
+			"",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client := New(runnerWith(tt.list, 0, nil), "/bin/ubus")
+			client.procDir = t.TempDir()
+
+			got, err := client.Service(t.Context(), "sing-box")
+			if err != nil {
+				t.Fatalf("опрос службы: %v", err)
+			}
+
+			if got.Workdir != tt.want {
+				t.Errorf("рабочий каталог: получили %q, ожидали %q", got.Workdir, tt.want)
+			}
+		})
+	}
+}
+
+// Без -D sing-box резолвит пути от каталога, в котором его запустили: его
+// отдаёт /proc/<pid>/cwd живого процесса.
+func TestServiceReadsWorkdirFromProc(t *testing.T) {
+	const pid = 4242
+
+	dir := t.TempDir()
+	cwd := t.TempDir()
+
+	if err := os.MkdirAll(filepath.Join(dir, strconv.Itoa(pid)), 0o700); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := os.Symlink(cwd, filepath.Join(dir, strconv.Itoa(pid), "cwd")); err != nil {
+		t.Fatal(err)
+	}
+
+	list := `{"sing-box": {"instances": {"main": {"running": true, "pid": ` + strconv.Itoa(pid) +
+		`, "command": ["/usr/bin/sing-box", "run"]}}}}`
+
+	client := New(runnerWith(list, 0, nil), "/bin/ubus")
+	client.procDir = dir
+
+	got, err := client.Service(t.Context(), "sing-box")
+	if err != nil {
+		t.Fatalf("опрос службы: %v", err)
+	}
+
+	if got.Workdir != cwd {
+		t.Errorf("рабочий каталог: получили %q, ожидали %q", got.Workdir, cwd)
+	}
+}

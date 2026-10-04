@@ -16,6 +16,8 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -150,6 +152,20 @@ var (
 	ErrListName = errors.New("недопустимое имя файла списка")
 )
 
+// WorkdirError — рабочий каталог службы не совпадает с каталогом конфига.
+// Относительный path узла local служба резолвит от рабочего каталога, а не от
+// каталога конфига: записанные файлы списков она бы не нашла, упала бы после
+// рестарта, и цикл откатился бы по healthcheck. Каталоги едут в ошибке, потому
+// что из них собирается подсказка, как это исправить.
+type WorkdirError struct {
+	Workdir   string
+	ConfigDir string
+}
+
+func (e *WorkdirError) Error() string {
+	return fmt.Sprintf("рабочий каталог службы %s не совпадает с каталогом конфига %s", e.Workdir, e.ConfigDir)
+}
+
 // Lists — изменения файлов списков, едущие с применением: put пишется в
 // подкаталог списков, remove удаляется из него. Оба применяются той же
 // транзакцией, что и конфиг: проверка, запись, откат и доигрывание общие.
@@ -184,6 +200,8 @@ type Store interface {
 type Service interface {
 	Check(ctx context.Context, dir string) error
 	Restart(ctx context.Context) error
+	// Workdir — рабочий каталог службы; пустая строка — узнать неоткуда.
+	Workdir(ctx context.Context) (string, error)
 }
 
 // Health ждёт, пока Clash API поднимется после рестарта.
@@ -214,6 +232,9 @@ type Options struct {
 	ClashPort int
 	// CycleTimeout ограничивает шаги от бэкапа до healthcheck.
 	CycleTimeout time.Duration
+	// ConfigDir — каталог конфига: с ним сверяется рабочий каталог службы
+	// перед применением файлов списков.
+	ConfigDir string
 }
 
 // Manager — единственный владелец цикла применения.
@@ -295,6 +316,12 @@ func (m *Manager) Current() Transaction {
 func (m *Manager) Start(ctx context.Context, cfg []byte, lists Lists, base, listsBase string) (Transaction, error) {
 	if err := validateLists(lists); err != nil {
 		return Transaction{}, err
+	}
+
+	if len(lists.Put) > 0 {
+		if err := m.verifyWorkdir(ctx); err != nil {
+			return Transaction{}, err
+		}
 	}
 
 	prepared, added, err := clashapi.Ensure(cfg, m.opts.ClashPort)
@@ -382,6 +409,46 @@ func validateLists(lists Lists) error {
 	}
 
 	return nil
+}
+
+// verifyWorkdir сверяет рабочий каталог службы с каталогом конфига до записи:
+// расхождение иначе выяснилось бы только падением службы на новом конфиге.
+// Неизвестный каталог применение не останавливает — procd может не быть, а
+// служба могла не подниматься ни разу, и отказ тогда был бы ложным.
+func (m *Manager) verifyWorkdir(ctx context.Context) error {
+	workdir, err := m.service.Workdir(ctx)
+	if err != nil {
+		m.log.Warn("рабочий каталог службы не прочитан, сверка с каталогом конфига пропущена", "err", err)
+
+		return nil
+	}
+
+	if workdir == "" || sameDir(workdir, m.opts.ConfigDir) {
+		return nil
+	}
+
+	return &WorkdirError{Workdir: workdir, ConfigDir: m.opts.ConfigDir}
+}
+
+// sameDir сравнивает каталоги по пути, а при расхождении — по самому каталогу:
+// /proc/<pid>/cwd отдаёт путь с раскрытыми симлинками, и один каталог под двумя
+// именами отказом считаться не должен.
+func sameDir(a, b string) bool {
+	if filepath.Clean(a) == filepath.Clean(b) {
+		return true
+	}
+
+	left, err := os.Stat(a)
+	if err != nil {
+		return false
+	}
+
+	right, err := os.Stat(b)
+	if err != nil {
+		return false
+	}
+
+	return os.SameFile(left, right)
 }
 
 // narrowLists сводит изменения к реально меняемым: запись файла с тем же

@@ -198,3 +198,67 @@ func TestApplyWritesLists(t *testing.T) {
 		t.Errorf("на диск уехало %q", written)
 	}
 }
+
+// Относительный path списка служба резолвит от своего рабочего каталога:
+// расхождение с каталогом конфига отказывает в применении до записи, а не
+// откатом по healthcheck. Неизвестный каталог применение не останавливает.
+func TestStartVerifiesWorkdir(t *testing.T) {
+	tests := []struct {
+		name       string
+		workdir    string
+		workdirErr error
+		wantRefuse bool
+	}{
+		{"каталоги совпадают", configDir, nil, false},
+		{"совпадают с точностью до записи пути", configDir + "/", nil, false},
+		{"рабочий каталог пакета по умолчанию", "/usr/share/sing-box", nil, true},
+		{"каталог неизвестен", "", nil, false},
+		{"procd не ответил", "", errors.New("ubus не отвечает"), false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := newHarness(t)
+			h.service.workdir = tt.workdir
+			h.service.workdirErr = tt.workdirErr
+			lists := apply.Lists{Put: map[string][]byte{"my.json": []byte(`{"rules":[]}`)}}
+
+			_, err := h.manager.Start(t.Context(), []byte(validConfig), lists, "", "")
+
+			if !tt.wantRefuse {
+				if err != nil {
+					t.Fatalf("применение: %v", err)
+				}
+
+				h.waitWindow(t)
+
+				return
+			}
+
+			workdirErr, ok := errors.AsType[*apply.WorkdirError](err)
+			if !ok {
+				t.Fatalf("ошибка %v, ожидали WorkdirError", err)
+			}
+			if workdirErr.Workdir != tt.workdir || workdirErr.ConfigDir != configDir {
+				t.Errorf("каталоги в отказе %q и %q, ожидали %q и %q",
+					workdirErr.Workdir, workdirErr.ConfigDir, tt.workdir, configDir)
+			}
+			if got := h.rec.snapshot(); len(got) != 0 {
+				t.Errorf("до транзакции дошло: %v", got)
+			}
+		})
+	}
+}
+
+// Без файлов списков рабочий каталог не важен: конфиг без local применяется
+// как раньше, даже когда служба запущена из каталога пакета.
+func TestStartIgnoresWorkdirWithoutLists(t *testing.T) {
+	h := newHarness(t)
+	h.service.workdir = "/usr/share/sing-box"
+
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
+		t.Fatalf("применение: %v", err)
+	}
+
+	h.waitWindow(t)
+}
