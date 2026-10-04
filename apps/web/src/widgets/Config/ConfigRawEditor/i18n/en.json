@@ -14,5 +14,6 @@
   "parsed": "JSON parsed",
   "issues": "schema issues: {{count}} — they do not block saving the draft, only <code>sing-box check</code> can reject it",
   "issuesMore_one": "and {{count}} more issue",
-  "issuesMore_other": "and {{count}} more issues"
+  "issuesMore_other": "and {{count}} more issues",
+  "wrap": "Wrap lines"
 }

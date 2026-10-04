@@ -1,5 +1,5 @@
 import type { TFunction } from 'i18next';
-import { ChevronDown, ChevronUp, CircleAlert, CircleCheck, Search } from 'lucide-react';
+import { ChevronDown, ChevronUp, CircleAlert, CircleCheck, Search, WrapText } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
@@ -8,10 +8,19 @@ import { firstJsoncError } from '@shared/lib/jsonc';
 import { cn } from '@shared/lib/utils';
 import { Badge, Button, Input, SEARCH_FIELD, SURFACE } from '@shared/ui';
 
-import { findMatches, lineIndexOf, toJsonTokens } from '../lib';
+import { findMatches, lineIndexOf, toJsonTokens, tokenIndexAt, useRawEditorWrap } from '../lib';
 
 /** Один класс на все три слоя: при наложении метрики обязаны совпадать до пикселя. */
 const CODE_CLASS = 'font-mono text-xs/5';
+
+/**
+ * Раскладка текста у поля и слоя подсветки — одна на оба, иначе перенос
+ * разойдётся. Место под полосу прокрутки держат оба слоя: у поля она есть, у
+ * подсветки нет, и без запаса ширина строки у них различалась бы на её толщину.
+ */
+const LAYER_CLASS = 'absolute inset-0 px-3 py-3 [scrollbar-gutter:stable]';
+const LAYOUT_WRAP = 'whitespace-pre-wrap wrap-break-word';
+const LAYOUT_NO_WRAP = 'whitespace-pre';
 
 /** Совпадение ставится в середину видимой области, а не к её краю. */
 const HALVES = 2;
@@ -47,6 +56,11 @@ function parseError(t: TFunction<'widgets/Config/ConfigRawEditor'>, text: string
  * `jsonc-parser`, который уже стоит в зависимостях ради разбора конфига.
  * Из-за наложения метрики шрифта у слоёв обязаны совпадать до пикселя, поэтому
  * кегль и интерлиньяж заданы одной константой на оба.
+ *
+ * Нумерации строк в режиме переноса нет: колонка номеров рисует по строке на
+ * номер, а перенесённая строка занимает несколько. Согласовать их можно только
+ * замером высоты каждой строки, и ради этого слой подсветки пришлось бы
+ * разбивать по строкам.
  */
 export function ConfigRawEditor({
   text,
@@ -61,6 +75,7 @@ export function ConfigRawEditor({
   const [draft, setDraft] = useState(text);
   const [query, setQuery] = useState('');
   const [match, setMatch] = useState(0);
+  const { wrap, toggle: toggleWrap } = useRawEditorWrap();
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const highlightRef = useRef<HTMLPreElement>(null);
@@ -90,6 +105,25 @@ export function ConfigRawEditor({
     }
   }
 
+  /**
+   * Высота позиции в тексте. Без переноса строка — это строка файла. С
+   * переносом высоту даёт кусок слоя подсветки: перенос у него тот же.
+   */
+  function offsetTop(input: HTMLTextAreaElement, at: number): number {
+    if (wrap) {
+      const token = highlightRef.current?.children.item(tokenIndexAt(tokens, at));
+
+      if (token instanceof HTMLElement) {
+        return token.offsetTop;
+      }
+    }
+
+    // Шаг строки берётся из DOM, а не константой: кегль задан в `rem` и растёт
+    // вместе с настройкой шрифта браузера, а константа в пикселях давала промах
+    // тем больше, чем дальше строка.
+    return lineIndexOf(draft, at) * parseFloat(globalThis.getComputedStyle(input).lineHeight);
+  }
+
   function goToOffset(at: number, length: number) {
     const input = inputRef.current;
 
@@ -99,13 +133,8 @@ export function ConfigRawEditor({
 
     input.focus();
     input.setSelectionRange(at, at + length);
-    // Выделение само не прокручивает поле. Шаг строки берётся из DOM, а не
-    // константой: кегль задан в `rem` и растёт вместе с настройкой шрифта
-    // браузера, а константа в пикселях давала промах тем больше, чем дальше
-    // строка.
-    const step = parseFloat(globalThis.getComputedStyle(input).lineHeight);
-
-    input.scrollTop = Math.max(0, lineIndexOf(draft, at) * step - input.clientHeight / HALVES);
+    // Выделение само не прокручивает поле.
+    input.scrollTop = Math.max(0, offsetTop(input, at) - input.clientHeight / HALVES);
     syncScroll();
   }
 
@@ -166,29 +195,50 @@ export function ConfigRawEditor({
             </Button>
           </>
         )}
+
+        <Button
+          variant='ghost'
+          size='icon-sm'
+          aria-pressed={wrap}
+          aria-label={t('wrap')}
+          onClick={toggleWrap}
+          className={cn(
+            'ml-auto text-muted-foreground hover:text-foreground',
+            wrap && 'bg-selected text-foreground ring-1 ring-selected-edge'
+          )}
+        >
+          <WrapText />
+        </Button>
       </div>
 
       <div className={cn('flex min-h-0 grow overflow-hidden', SURFACE)}>
-        <div
-          ref={gutterRef}
-          aria-hidden='true'
-          className={cn(
-            'shrink-0 overflow-hidden border-r border-border bg-muted/20 py-3 text-right select-none',
-            CODE_CLASS
-          )}
-        >
-          {Array.from({ length: lines }, (_, index) => (
-            <div key={index} className='px-2.5 text-muted-foreground/60 tabular-nums'>
-              {index + 1}
-            </div>
-          ))}
-        </div>
+        {!wrap && (
+          <div
+            ref={gutterRef}
+            aria-hidden='true'
+            className={cn(
+              'shrink-0 overflow-hidden border-r border-border bg-muted/20 py-3 text-right select-none',
+              CODE_CLASS
+            )}
+          >
+            {Array.from({ length: lines }, (_, index) => (
+              <div key={index} className='px-2.5 text-muted-foreground/60 tabular-nums'>
+                {index + 1}
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className='relative min-w-0 grow'>
           <pre
             ref={highlightRef}
             aria-hidden='true'
-            className={cn('pointer-events-none absolute inset-0 overflow-hidden px-3 py-3 whitespace-pre', CODE_CLASS)}
+            className={cn(
+              'pointer-events-none overflow-hidden',
+              LAYER_CLASS,
+              wrap ? LAYOUT_WRAP : LAYOUT_NO_WRAP,
+              CODE_CLASS
+            )}
           >
             {tokens.map((token, index) => (
               <span key={index} className={token.tone}>
@@ -202,7 +252,7 @@ export function ConfigRawEditor({
             id='config-raw'
             aria-label={t('editor.label')}
             spellCheck={false}
-            wrap='off'
+            wrap={wrap ? 'soft' : 'off'}
             value={draft}
             onScroll={syncScroll}
             onChange={(event) => {
@@ -211,7 +261,9 @@ export function ConfigRawEditor({
               setMatch(0);
             }}
             className={cn(
-              'absolute inset-0 size-full resize-none overflow-auto bg-transparent px-3 py-3 whitespace-pre text-transparent caret-foreground outline-none',
+              'size-full resize-none overflow-auto bg-transparent text-transparent caret-foreground outline-none',
+              LAYER_CLASS,
+              wrap ? LAYOUT_WRAP : LAYOUT_NO_WRAP,
               CODE_CLASS
             )}
           />

@@ -16,5 +16,6 @@
   "issues": "замечаний схемы: {{count}} — сохранить черновик они не мешают, отказать может только <code>sing-box check</code>",
   "issuesMore_one": "и ещё {{count}} замечание",
   "issuesMore_few": "и ещё {{count}} замечания",
-  "issuesMore_many": "и ещё {{count}} замечаний"
+  "issuesMore_many": "и ещё {{count}} замечаний",
+  "wrap": "Перенос строк"
 }

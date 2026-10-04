@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { findMatches, lineIndexOf, toJsonTokens } from '../lib/ConfigRawEditor.lib';
+import { findMatches, lineIndexOf, toJsonTokens, tokenIndexAt } from '../lib/ConfigRawEditor.lib';
 
 describe('разбор конфига на цветные куски', () => {
   it('склеенные куски дословно повторяют исходный текст', () => {
@@ -66,5 +66,20 @@ describe('номер строки по позиции', () => {
   it('считает переводы строки до позиции, а не включая её', () => {
     expect(lineIndexOf('a\nb\nc', 2)).toBe(1);
     expect(lineIndexOf('a\nb\nc', 4)).toBe(2);
+  });
+});
+
+describe('кусок подсветки по позиции текста', () => {
+  it('находит кусок, в который попадает позиция', () => {
+    const text = '{"tag": "direct"}';
+    const tokens = toJsonTokens(text);
+
+    expect(tokens[tokenIndexAt(tokens, text.indexOf('direct'))].text).toBe('"direct"');
+  });
+
+  it('позиция в конце текста даёт последний кусок', () => {
+    const tokens = toJsonTokens('{}');
+
+    expect(tokenIndexAt(tokens, 2)).toBe(tokens.length - 1);
   });
 });

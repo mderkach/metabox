@@ -102,6 +102,25 @@ export function toJsonTokens(text: string): JsonToken[] {
   return tokens;
 }
 
+/**
+ * Номер куска подсветки, в который попадает позиция текста. При переносе строк
+ * номер строки уже не даёт высоты — её даёт кусок слоя подсветки, где перенос
+ * тот же, что у поля ввода.
+ */
+export function tokenIndexAt(tokens: readonly JsonToken[], position: number): number {
+  let end = 0;
+
+  for (const [index, token] of tokens.entries()) {
+    end += token.text.length;
+
+    if (position < end) {
+      return index;
+    }
+  }
+
+  return tokens.length - 1;
+}
+
 /** Позиции всех вхождений строки поиска; регистр не учитывается. */
 export function findMatches(text: string, query: string): number[] {
   if (query.length === 0) {
