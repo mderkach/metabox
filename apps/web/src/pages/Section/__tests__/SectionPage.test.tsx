@@ -12,11 +12,14 @@ import { DAEMON_STATUS_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture
 
 import { SectionNodes } from '../ui/SectionPage';
 
+/** Узел VLESS из текста ниже: сервер, порт и UUID — то, без чего форма его не сохранит. */
+const HK_01 = { type: 'vless', tag: 'hk-01', server: 'a.example', server_port: 443, uuid: 'REDACTED' };
+
 const CONFIG_TEXT = `{
   // выходы
   "outbounds": [
     { "type": "direct", "tag": "direct" },
-    { "type": "vless", "tag": "hk-01", "server": "a.example" },
+    { "type": "vless", "tag": "hk-01", "server": "a.example", "server_port": 443, "uuid": "REDACTED" },
   ],
 }`;
 
@@ -77,9 +80,7 @@ describe('экран секции', () => {
 
     await user.click(node.getByRole('tab', { name: 'JSON' }));
 
-    expect(node.getByRole('textbox', { name: 'Узел hk-01 текстом' })).toHaveValue(
-      JSON.stringify({ type: 'vless', tag: 'hk-01', server: 'a.example' }, null, 2)
-    );
+    expect(node.getByRole('textbox', { name: 'Узел hk-01 текстом' })).toHaveValue(JSON.stringify(HK_01, null, 2));
     expect(screen.getByRole('heading', { name: 'direct' })).toBeInTheDocument();
   });
 
@@ -206,7 +207,7 @@ describe('экран секции', () => {
     const draft = ConfigDocumentState.getState().draft ?? '';
 
     expect(draft).toContain('// выходы');
-    expect(findValue(draft, ['outbounds', 1])).toEqual({ type: 'vless', tag: 'hk-01', server: 'a.example' });
+    expect(findValue(draft, ['outbounds', 1])).toEqual(HK_01);
   });
 
   it('кнопка тулбара открывает панель с фокусом на заголовке, Escape закрывает и возвращает фокус', async () => {
@@ -252,10 +253,34 @@ describe('экран секции', () => {
       expect(findValue(draft(), ['outbounds', 2])).toEqual({ type: 'direct', tag: 'direct-2' });
     });
     expect(draft()).toContain('// выходы');
-    expect(findValue(draft(), ['outbounds', 1])).toEqual({ type: 'vless', tag: 'hk-01', server: 'a.example' });
+    expect(findValue(draft(), ['outbounds', 1])).toEqual(HK_01);
     expect(await screen.findByRole('region', { name: 'direct-2' })).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.queryByRole('complementary', { name: 'Новый узел' })).not.toBeInTheDocument();
+    });
+  });
+
+  it('VLESS добавляется заготовкой оверрайда: TLS с uTLS и Reality уже включены', async () => {
+    serveConfig(CONFIG_TEXT);
+
+    const user = userEvent.setup();
+
+    renderWithRouter(OutboundsSection);
+
+    await user.click(await screen.findByRole('button', { name: 'Добавить узел' }));
+
+    const panel = within(screen.getByRole('complementary', { name: 'Новый узел' }));
+
+    await selectOption(user, panel.getByRole('combobox', { name: 'Тип' }), 'vless');
+    await user.type(panel.getByRole('textbox', { name: 'Тег' }), 'vless-out');
+    await user.click(panel.getByRole('button', { name: 'Добавить' }));
+
+    await waitFor(() => {
+      expect(findValue(draft(), ['outbounds', 2])).toEqual({
+        type: 'vless',
+        tag: 'vless-out',
+        tls: { enabled: true, utls: { enabled: true, fingerprint: 'chrome' }, reality: { enabled: true } },
+      });
     });
   });
 

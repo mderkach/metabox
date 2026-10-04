@@ -13,6 +13,11 @@
     "tooSmall": "Must be 0 or more",
     "type": "Value of the wrong type",
     "invalid": "Value does not match the schema",
-    "parse": "JSON not parsed: {{reason}}"
-  }
+    "parse": "JSON not parsed: {{reason}}",
+    "required": "Required field",
+    "realityPublicKey": "Reality key: base64url without padding, 32 bytes (43 characters)",
+    "realityShortId": "Short ID: hex, up to 16 characters, even length"
+  },
+  "unbuilt": "not in build: {{tag}}",
+  "advanced": "Advanced"
 }

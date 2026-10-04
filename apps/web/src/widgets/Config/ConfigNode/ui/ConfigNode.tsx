@@ -31,6 +31,7 @@ export function ConfigNode({
   index,
   node,
   name,
+  builtTags = null,
 }: {
   section: GenericSection;
   index: number;
@@ -38,6 +39,8 @@ export function ConfigNode({
   node: unknown;
   /** Имя узла на экране: тег, тип или путь в файле. */
   name: string;
+  /** Теги сборки бинаря: по ним форма помечает опции вне сборки; `null` — не прочитаны. */
+  builtTags?: readonly string[] | null;
 }) {
   const { t } = useTranslation('widgets/Config/ConfigNode');
   const registry = registryOfSection(section);
@@ -75,7 +78,9 @@ export function ConfigNode({
           </TabsList>
 
           <TabsContent value={TAB.Form} className='pt-3'>
-            {recognized && isNodeObject(node) && <ConfigNodeForm registry={registry} path={path} node={node} />}
+            {recognized && isNodeObject(node) && (
+              <ConfigNodeForm registry={registry} path={path} node={node} builtTags={builtTags} />
+            )}
           </TabsContent>
 
           <TabsContent value={TAB.Raw} className='pt-3'>

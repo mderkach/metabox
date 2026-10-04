@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { findUnbuiltNodes, findUnbuiltOptions } from '../model/Config.build';
+import { findUnbuiltNodes, findUnbuiltOptions, unbuiltOptionOf } from '../model/Config.build';
 import type { ConfigDocument } from '../model/Config.model';
 
 const CONFIG = {
@@ -91,5 +91,18 @@ describe('findUnbuiltOptions', () => {
       'inbounds[0].stack',
       'inbounds[1].stack',
     ]);
+  });
+});
+
+describe('unbuiltOptionOf', () => {
+  it('называет тег опции узла и всего, что под ней, когда его нет в сборке', () => {
+    expect(unbuiltOptionOf('tls.utls', ['with_quic'])).toBe('with_utls');
+    expect(unbuiltOptionOf('tls.utls.fingerprint', ['with_quic'])).toBe('with_utls');
+  });
+
+  it('молчит об опции из сборки, о поле не из таблицы и о непрочитанном бинаре', () => {
+    expect(unbuiltOptionOf('tls.utls', ['with_utls'])).toBeNull();
+    expect(unbuiltOptionOf('tls.server_name', [])).toBeNull();
+    expect(unbuiltOptionOf('tls.utls', null)).toBeNull();
   });
 });

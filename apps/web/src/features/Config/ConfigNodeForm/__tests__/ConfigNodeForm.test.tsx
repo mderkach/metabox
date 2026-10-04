@@ -21,7 +21,7 @@ const TEXT = `{
   "outbounds": [
     { "type": "direct", "tag": "direct" },
     {
-      "type": "vless",
+      "type": "vmess",
       // узел в Гонконге
       "tag": "hk-01",
       "server": "a.example",
@@ -36,7 +36,7 @@ const TEXT = `{
   ],
 }`;
 
-const VLESS: JSONPath = ['outbounds', 1];
+const VMESS: JSONPath = ['outbounds', 1];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -50,8 +50,8 @@ function NodeFromStore({ registry, path }: { registry: NodeRegistry; path: JSONP
   return isRecord(node) ? <ConfigNodeForm registry={registry} path={path} node={node} /> : null;
 }
 
-function renderVless() {
-  return render(<NodeFromStore registry={NODE_REGISTRY.Outbound} path={VLESS} />);
+function renderVmess() {
+  return render(<NodeFromStore registry={NODE_REGISTRY.Outbound} path={VMESS} />);
 }
 
 function draft(): string {
@@ -76,7 +76,7 @@ describe('форма узла по схеме', () => {
   });
 
   it('рисует поле по его виду и не рисует тип узла', () => {
-    renderVless();
+    renderVmess();
 
     expect(screen.getByRole('textbox', { name: 'server' })).toHaveValue('a.example');
     expect(screen.getByRole('spinbutton', { name: 'server_port' })).toHaveValue(443);
@@ -90,7 +90,7 @@ describe('форма узла по схеме', () => {
   it('правка поля ложится одной строкой: комментарий внутри узла цел', async () => {
     const user = userEvent.setup();
 
-    renderVless();
+    renderVmess();
 
     const server = screen.getByRole('textbox', { name: 'server' });
 
@@ -108,34 +108,34 @@ describe('форма узла по схеме', () => {
   it('очищенное поле удаляется из узла, а не пишется пустым', async () => {
     const user = userEvent.setup();
 
-    renderVless();
+    renderVmess();
 
     await user.clear(screen.getByRole('spinbutton', { name: 'server_port' }));
     await user.click(save());
 
     await waitFor(() => {
-      expect(findValue(draft(), VLESS)).not.toHaveProperty('server_port');
+      expect(findValue(draft(), VMESS)).not.toHaveProperty('server_port');
     });
   });
 
   it('флаг сбрасывается до незаданного: ключ уходит из файла', async () => {
     const user = userEvent.setup();
 
-    renderVless();
+    renderVmess();
 
     // Группа tls задана в узле и открыта сразу.
     await user.click(screen.getByRole('button', { name: 'Сбросить enabled' }));
     await user.click(save());
 
     await waitFor(() => {
-      expect(findValue(draft(), [...VLESS, 'tls'])).toEqual({ server_name: 'a.example', alpn: 'h2' });
+      expect(findValue(draft(), [...VMESS, 'tls'])).toEqual({ server_name: 'a.example', alpn: 'h2' });
     });
   });
 
   it('listable из одной строки остаётся строкой, из двух — становится списком', async () => {
     const user = userEvent.setup();
 
-    renderVless();
+    renderVmess();
 
     const alpn = screen.getByRole('textbox', { name: 'alpn' });
 
@@ -146,54 +146,54 @@ describe('форма узла по схеме', () => {
     await user.click(save());
 
     await waitFor(() => {
-      expect(findValue(draft(), [...VLESS, 'tls', 'alpn'])).toBe('http/1.1');
+      expect(findValue(draft(), [...VMESS, 'tls', 'alpn'])).toBe('http/1.1');
     });
 
     await user.type(alpn, '{Enter}h2');
     await user.click(save());
 
     await waitFor(() => {
-      expect(findValue(draft(), [...VLESS, 'tls', 'alpn'])).toEqual(['http/1.1', 'h2']);
+      expect(findValue(draft(), [...VMESS, 'tls', 'alpn'])).toEqual(['http/1.1', 'h2']);
     });
   });
 
   it('набор значений пишется в порядке схемы', async () => {
     const user = userEvent.setup();
 
-    renderVless();
+    renderVmess();
 
     await user.click(screen.getByRole('button', { name: 'udp' }));
     await user.click(save());
 
     await waitFor(() => {
-      expect(findValue(draft(), [...VLESS, 'network'])).toEqual(['tcp', 'udp']);
+      expect(findValue(draft(), [...VMESS, 'network'])).toEqual(['tcp', 'udp']);
     });
   });
 
   it('значение перечисления выбирается из схемы, пустой пункт снимает ключ', async () => {
     const user = userEvent.setup();
 
-    renderVless();
+    renderVmess();
 
     await selectOption(user, screen.getByRole('combobox', { name: 'domain_strategy' }), 'prefer_ipv4');
     await user.click(save());
 
     await waitFor(() => {
-      expect(findValue(draft(), [...VLESS, 'domain_strategy'])).toBe('prefer_ipv4');
+      expect(findValue(draft(), [...VMESS, 'domain_strategy'])).toBe('prefer_ipv4');
     });
 
     await selectOption(user, screen.getByRole('combobox', { name: 'domain_strategy' }), 'не задано');
     await user.click(save());
 
     await waitFor(() => {
-      expect(findValue(draft(), VLESS)).not.toHaveProperty('domain_strategy');
+      expect(findValue(draft(), VMESS)).not.toHaveProperty('domain_strategy');
     });
   });
 
   it('группа без значений свёрнута, с значениями — открыта', async () => {
     const user = userEvent.setup();
 
-    renderVless();
+    renderVmess();
 
     expect(screen.getByRole('button', { name: 'Поля tls' })).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByRole('textbox', { name: 'server_name' })).toHaveValue('a.example');
@@ -211,7 +211,7 @@ describe('форма узла по схеме', () => {
   it('называет длительность не в том формате и не пишет её', async () => {
     const user = userEvent.setup();
 
-    renderVless();
+    renderVmess();
 
     await user.type(screen.getByRole('textbox', { name: 'connect_timeout' }), '10 секунд');
 
@@ -225,20 +225,20 @@ describe('форма узла по схеме', () => {
   it('поле «строка или число» пишет цифры числом', async () => {
     const user = userEvent.setup();
 
-    renderVless();
+    renderVmess();
 
     await user.type(screen.getByRole('textbox', { name: 'routing_mark' }), '255');
     await user.click(save());
 
     await waitFor(() => {
-      expect(findValue(draft(), [...VLESS, 'routing_mark'])).toBe(255);
+      expect(findValue(draft(), [...VMESS, 'routing_mark'])).toBe(255);
     });
   });
 
   it('незнакомый вид правится JSON-текстом, неразобранный текст запись останавливает', async () => {
     const user = userEvent.setup();
 
-    renderVless();
+    renderVmess();
 
     const resolver = screen.getByRole('textbox', { name: 'domain_resolver' });
 
@@ -255,21 +255,21 @@ describe('форма узла по схеме', () => {
     await user.click(save());
 
     await waitFor(() => {
-      expect(findValue(draft(), [...VLESS, 'domain_resolver'])).toEqual({ server: 'local' });
+      expect(findValue(draft(), [...VMESS, 'domain_resolver'])).toEqual({ server: 'local' });
     });
   });
 
   it('неразобранный текст, переписанный правкой узла снаружи, запись не держит', async () => {
     const user = userEvent.setup();
 
-    renderVless();
+    renderVmess();
 
     const resolver = screen.getByRole('textbox', { name: 'domain_resolver' });
 
     await user.click(resolver);
     await user.paste('{ "server": ');
 
-    ConfigDocumentState.getState().edit([...VLESS, 'domain_resolver'], 'local');
+    ConfigDocumentState.getState().edit([...VMESS, 'domain_resolver'], 'local');
 
     await waitFor(() => {
       expect(resolver).toHaveValue('"local"');
@@ -283,22 +283,22 @@ describe('форма узла по схеме', () => {
     await user.click(save());
 
     await waitFor(() => {
-      expect(findValue(draft(), [...VLESS, 'server'])).toBe('b.example');
+      expect(findValue(draft(), [...VMESS, 'server'])).toBe('b.example');
     });
-    expect(findValue(draft(), [...VLESS, 'domain_resolver'])).toBe('local');
+    expect(findValue(draft(), [...VMESS, 'domain_resolver'])).toBe('local');
   });
 
   it('правка того же узла текстом доходит до формы, набранное не стирается', async () => {
     const user = userEvent.setup();
 
-    renderVless();
+    renderVmess();
 
     const server = screen.getByRole('textbox', { name: 'server' });
 
     await user.clear(server);
     await user.type(server, 'typed.example');
 
-    ConfigDocumentState.getState().edit([...VLESS, 'uuid'], 'REDACTED');
+    ConfigDocumentState.getState().edit([...VMESS, 'uuid'], 'REDACTED');
 
     expect(await screen.findByDisplayValue('REDACTED')).toBeInTheDocument();
     expect(server).toHaveValue('typed.example');

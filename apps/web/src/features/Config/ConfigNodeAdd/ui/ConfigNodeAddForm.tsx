@@ -13,6 +13,7 @@ import {
   type GenericSection,
   type NodeRegistry,
 } from '@entities/Config';
+import { nodePreset } from '@features/Config/ConfigNodeForm/@x/ConfigNodeAdd';
 import { Badge, Button, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/ui';
 
 import { nodeTypeOptions } from '../model/ConfigNodeAdd.model';
@@ -24,6 +25,8 @@ const NS = 'features/Config/ConfigNodeAdd';
  * Новый узел секции с реестром типов: тип и тег. Остальные поля необязательны
  * по схеме и правятся уже формой узла — форма добавления их не дописывает,
  * иначе в дифе оказались бы значения, которых пользователь не задавал.
+ * Исключение — заготовка оверрайда типа: она заполняет то, без чего тип не
+ * соберётся (VLESS с Reality без uTLS клиент форка не создаёт).
  *
  * `takenTags` — теги, которые новый узел не вправе повторить; `builtTags` —
  * состав сборки бинаря, `null` — не прочитан.
@@ -86,7 +89,7 @@ function NodeAddForm({
     // отсутствующий в файле массив вставка создаёт.
     const count = readSectionNodes(ConfigDocumentState.getState().current() ?? '{}', section).length;
 
-    insert(sectionNodePath(section, count), newSectionNode(data.type, tag));
+    insert(sectionNodePath(section, count), nodePreset(registry, data.type, tag, newSectionNode));
     form.reset(NODE_ADD_DEFAULTS);
     onAdded?.(tag);
   });

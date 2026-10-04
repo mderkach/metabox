@@ -29,6 +29,7 @@ import {
   isSameValue,
   isUnset,
   listToText,
+  NODE_OVERRIDE_ERROR,
   packList,
   parseNumber,
   parseScalar,
@@ -58,13 +59,17 @@ export interface NodeFieldProps {
 }
 
 /**
- * Код замечания Zod в текст: сгенерированная схема кодов отказа не несёт,
- * переводить приходится по коду замечания, который резолвер кладёт в `type`.
+ * Код замечания в текст. Сгенерированная схема кодов отказа не несёт,
+ * переводить приходится по коду замечания Zod, который резолвер кладёт в
+ * `type`; проверки оверрайда кладут туда свой код.
  */
 const ERROR_KEY: Readonly<Record<string, ParseKeys<typeof NS> | undefined>> = {
   invalid_format: 'error.duration',
   too_small: 'error.tooSmall',
   invalid_type: 'error.type',
+  [NODE_OVERRIDE_ERROR.Required]: 'error.required',
+  [NODE_OVERRIDE_ERROR.RealityPublicKey]: 'error.realityPublicKey',
+  [NODE_OVERRIDE_ERROR.RealityShortId]: 'error.realityShortId',
 };
 
 function errorText(t: TFunction<typeof NS>, error: FormFieldError | undefined): string | null {

@@ -13,6 +13,11 @@
     "tooSmall": "Не меньше 0",
     "type": "Значение не того типа",
     "invalid": "Значение не проходит схему",
-    "parse": "JSON не разобран: {{reason}}"
-  }
+    "parse": "JSON не разобран: {{reason}}",
+    "required": "Обязательное поле",
+    "realityPublicKey": "Ключ Reality: base64url без паддинга, 32 байта (43 символа)",
+    "realityShortId": "Short ID: hex, не длиннее 16 символов, чётной длины"
+  },
+  "unbuilt": "нет в сборке: {{tag}}",
+  "advanced": "Дополнительно"
 }

@@ -1,4 +1,5 @@
 export {
+  arrangePlan,
   isFilledGroup,
   isSameValue,
   isUnset,
@@ -14,3 +15,5 @@ export {
   unpackList,
 } from './ConfigNodeForm.model';
 export type { ConfigNodeFormModel } from './ConfigNodeForm.model';
+export { NODE_OVERRIDE_ERROR, nodeOverrideOf, nodePreset, overrideIssues } from './ConfigNodeForm.overrides';
+export type { NodeOverride } from './ConfigNodeForm.overrides';

@@ -63,6 +63,7 @@ export function SectionNodes({ section }: { section: GenericSection }) {
   const text = document.text;
   const nodes = useMemo(() => (text === null ? [] : readSectionNodes(text, section)), [text, section]);
   const takenTags = useMemo(() => (text === null ? [] : readNodeTags(text)), [text]);
+  const builtTags = status.data?.singboxTags ?? null;
   const shape = GENERIC_SECTIONS[section];
   const addable = shape.kind === 'list' && registryOfSection(section) !== null;
   const loaded = document.query.isSuccess;
@@ -87,12 +88,7 @@ export function SectionNodes({ section }: { section: GenericSection }) {
   );
 
   const addForm = (
-    <ConfigNodeAddForm
-      section={section}
-      takenTags={takenTags}
-      builtTags={status.data?.singboxTags ?? null}
-      onAdded={closeAdding}
-    />
+    <ConfigNodeAddForm section={section} takenTags={takenTags} builtTags={builtTags} onAdded={closeAdding} />
   );
 
   return (
@@ -136,6 +132,7 @@ export function SectionNodes({ section }: { section: GenericSection }) {
                 index={index}
                 node={node}
                 name={nodeName(shape.path, node, index)}
+                builtTags={builtTags}
               />
             ))}
         </div>

@@ -47,7 +47,7 @@ export type {
   GenericSection,
   WorkdirMismatch,
 } from './model/Config.model';
-export { findUnbuiltNodes, findUnbuiltOptions } from './model/Config.build';
+export { findUnbuiltNodes, findUnbuiltOptions, unbuiltOptionOf } from './model/Config.build';
 export { compactNode, diffNode } from './model/Config.patch';
 export type { NodeEdit } from './model/Config.patch';
 export {

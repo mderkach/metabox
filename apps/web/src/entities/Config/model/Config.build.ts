@@ -198,3 +198,33 @@ export function findUnbuiltOptions(config: ConfigDocument | null, tags: readonly
 
   return found;
 }
+
+/** Таблица тегов опций по пути: обычный `Map` читается строкой без приведения к ключам литерала. */
+const OPTION_TAGS: ReadonlyMap<string, string> = new Map(Object.entries(BUILD_TAG_OF_OPTION));
+
+/**
+ * Build-тег опции, которой нет в сборке бинаря, по пути поля внутри узла:
+ * `tls.utls` и всё под ним — `with_utls`. Путь сверяется с ключами
+ * `BUILD_TAG_OF_OPTION` вместе с предками, поэтому поле, поднятое формой из
+ * своей группы (`tls.utls.fingerprint`), помечается так же, как группа.
+ *
+ * `null` — путь не опция из таблицы, тег в сборке есть или бинарь не прочитан
+ * (`tags` — `null`): о составе сборки тогда ничего не известно.
+ */
+export function unbuiltOptionOf(path: string, tags: readonly string[] | null): string | null {
+  if (tags === null) {
+    return null;
+  }
+
+  const keys = path.split('.');
+
+  for (let depth = 1; depth <= keys.length; depth += 1) {
+    const tag = OPTION_TAGS.get(keys.slice(0, depth).join('.'));
+
+    if (tag !== undefined) {
+      return tags.includes(tag) ? null : tag;
+    }
+  }
+
+  return null;
+}
