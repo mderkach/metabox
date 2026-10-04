@@ -1,7 +1,6 @@
 package events
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
@@ -73,8 +72,18 @@ func (s *ClashSource) Stream(ctx context.Context, path string, sink func(json.Ra
 	}
 	defer func() { _ = response.Body.Close() }()
 
-	return lines(bufio.NewReader(response.Body), sink)
+	return lines(response.Body, sink)
 }
+
+// maxSnapshotBytes — потолок на разовый ответ. Самый крупный — `/connections`
+// загруженного роутера, единицы мегабайт; потолок перекрывает его с запасом и
+// не даёт процессу, занявшему порт контроллера при лежащем sing-box, забрать
+// память роутера.
+const maxSnapshotBytes = 16 << 20
+
+// errSnapshotTooLarge — разовый ответ больше maxSnapshotBytes. Обрезанный JSON
+// не разобрался бы, а разбор целиком без потолка стоил бы памяти.
+var errSnapshotTooLarge = errors.New("ответ больше допустимого")
 
 // Snapshot читает разовый ответ целиком.
 func (s *ClashSource) Snapshot(ctx context.Context, path string) (json.RawMessage, error) {
@@ -87,9 +96,15 @@ func (s *ClashSource) Snapshot(ctx context.Context, path string) (json.RawMessag
 	}
 	defer func() { _ = response.Body.Close() }()
 
-	body, err := io.ReadAll(response.Body)
+	// Байт сверх потолка читается намеренно: по нему превышение отличается от
+	// ответа ровно в потолок.
+	body, err := io.ReadAll(io.LimitReader(response.Body, maxSnapshotBytes+1))
 	if err != nil {
 		return nil, fmt.Errorf("чтение %s: %w", path, err)
+	}
+
+	if len(body) > maxSnapshotBytes {
+		return nil, fmt.Errorf("чтение %s: %w", path, errSnapshotTooLarge)
 	}
 
 	return body, nil

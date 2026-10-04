@@ -77,6 +77,10 @@ type Options struct {
 	// оборванное соединение не обнаруживает ни одна из сторон: в сокет ничего
 	// не пишется, и ошибка не возникает.
 	KeepAlive time.Duration
+	// WriteTimeout — дедлайн каждой записи в поток. Глобального WriteTimeout
+	// у сервера нет, и без него клиент, который держит сокет и не читает,
+	// держал бы хендлер до TCP-таймаута ретрансмиссий.
+	WriteTimeout time.Duration
 }
 
 // Hub держит один набор подписок на источники, пока есть хоть один читатель,
@@ -99,6 +103,15 @@ type Hub struct {
 	order []string
 	stop  context.CancelFunc
 	done  chan struct{}
+	// gen — поколение комплекта источников, растёт на каждой остановке.
+	// Горутины комплекта публикуют со своим номером, и всё, что ушедший
+	// комплект присылает, пока досыпает до отмены, отбрасывается: остановка
+	// ждёт его без мьютекса, и в это окно новый читатель успевает поднять
+	// следующий комплект.
+	gen uint64
+	// closed — Hub закрыт остановкой демона: источники больше не поднимаются,
+	// а читатель, пришедший после Close, сразу получает закрытый канал.
+	closed bool
 }
 
 // New собирает Hub. Опросов он не начинает: фоновый опрос без потребителя на
@@ -124,6 +137,13 @@ func (h *Hub) subscribe() (*subscriber, []Event, func()) {
 	sub := &subscriber{ch: make(chan Event, buffer)}
 
 	h.mu.Lock()
+	if h.closed {
+		h.mu.Unlock()
+		close(sub.ch)
+
+		return sub, nil, func() {}
+	}
+
 	h.subscribers[sub] = struct{}{}
 
 	recent := make([]Event, 0, len(h.order))
@@ -168,6 +188,8 @@ func (h *Hub) Close() {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
+	h.closed = true
+
 	for sub := range h.subscribers {
 		h.removeLocked(sub)
 	}
@@ -181,6 +203,7 @@ func (h *Hub) start() {
 	done := make(chan struct{})
 	h.stop = cancel
 	h.done = done
+	gen := h.gen
 
 	var wg sync.WaitGroup
 
@@ -197,7 +220,7 @@ func (h *Hub) start() {
 
 		go func() {
 			defer wg.Done()
-			h.runStream(ctx, s.topic, s.path)
+			h.runStream(ctx, gen, s.topic, s.path)
 		}()
 	}
 
@@ -205,14 +228,14 @@ func (h *Hub) start() {
 
 	go func() {
 		defer wg.Done()
-		h.runPoll(ctx, TopicService, h.opts.ServiceInterval, h.source.ServiceState)
+		h.runPoll(ctx, gen, TopicService, h.opts.ServiceInterval, h.source.ServiceState)
 	}()
 
 	wg.Add(1)
 
 	go func() {
 		defer wg.Done()
-		h.runPoll(ctx, TopicSystem, h.opts.SystemInterval, h.source.SystemState)
+		h.runPoll(ctx, gen, TopicSystem, h.opts.SystemInterval, h.source.SystemState)
 	}()
 
 	go func() {
@@ -230,25 +253,29 @@ func (h *Hub) stopLocked() {
 	stop, done := h.stop, h.done
 	h.stop, h.done = nil, nil
 
+	// Поколение сменяется до того, как мьютекс отпущен: горутина, не
+	// успевшая завершиться, состояние уже не запишет, и чистить его можно
+	// сразу. Данные умершего апстрима не должны достаться следующему
+	// читателю как текущие.
+	h.gen++
+	h.last = make(map[string]json.RawMessage)
+	h.order = nil
+
 	// Ожидание идёт без мьютекса: горутины публикуют события и взяли бы его.
+	// Комплект, поднятый за это время новым читателем, после возврата не
+	// трогается.
 	h.mu.Unlock()
 	stop()
 	<-done
 	h.mu.Lock()
-
-	// Чистится после ожидания, а не до: горутина, не успевшая завершиться,
-	// записала бы состояние заново. Данные умершего апстрима не должны
-	// достаться следующему читателю как текущие.
-	h.last = make(map[string]json.RawMessage)
-	h.order = nil
 }
 
 // runStream держит построчный источник, переподключаясь после обрыва. Обрыв
 // штатен: sing-box перезапускают, и поток на этом заканчивается.
-func (h *Hub) runStream(ctx context.Context, topic, path string) {
+func (h *Hub) runStream(ctx context.Context, gen uint64, topic, path string) {
 	for ctx.Err() == nil {
 		err := h.source.Stream(ctx, path, func(line json.RawMessage) {
-			h.publish(topic, line)
+			h.publish(gen, topic, line)
 		})
 		if err != nil && ctx.Err() == nil {
 			h.log.Debug("поток рантайма оборван", "topic", topic, "err", err)
@@ -262,6 +289,7 @@ func (h *Hub) runStream(ctx context.Context, topic, path string) {
 
 func (h *Hub) runPoll(
 	ctx context.Context,
+	gen uint64,
 	topic string,
 	interval time.Duration,
 	read func(context.Context) (json.RawMessage, error),
@@ -269,7 +297,7 @@ func (h *Hub) runPoll(
 	for {
 		data, err := read(ctx)
 		if err == nil {
-			h.publish(topic, data)
+			h.publish(gen, topic, data)
 		} else if ctx.Err() == nil {
 			h.log.Debug("опрос рантайма не удался", "topic", topic, "err", err)
 		}
@@ -287,6 +315,7 @@ func (h *Hub) runPoll(
 func (h *Hub) PublishConnections(raw json.RawMessage) {
 	h.mu.Lock()
 	idle := len(h.subscribers) == 0
+	gen := h.gen
 	h.mu.Unlock()
 
 	if idle {
@@ -300,10 +329,12 @@ func (h *Hub) PublishConnections(raw json.RawMessage) {
 		return
 	}
 
-	h.publish(TopicConnections, body)
+	h.publish(gen, TopicConnections, body)
 }
 
-func (h *Hub) publish(topic string, data json.RawMessage) {
+// publish раздаёт событие комплекта gen. Событие ушедшего комплекта
+// отбрасывается: его данные к текущему апстриму не относятся.
+func (h *Hub) publish(gen uint64, topic string, data json.RawMessage) {
 	// Проверка стоит здесь, в единственной точке публикации: невалидные данные
 	// осели бы в последнем состоянии топика, и тогда сборка конверта падала бы
 	// у каждого подключающегося читателя — вышел бы шторм переподключений.
@@ -315,6 +346,10 @@ func (h *Hub) publish(topic string, data json.RawMessage) {
 
 	h.mu.Lock()
 	defer h.mu.Unlock()
+
+	if gen != h.gen {
+		return
+	}
 
 	if _, seen := h.last[topic]; !seen {
 		h.order = append(h.order, topic)
@@ -351,16 +386,24 @@ func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// writer через Unwrap, по которому контроллер и ходит.
 	control := http.NewResponseController(w)
 
+	// Дедлайн ставится перед каждой записью и сдвигается следующей: поток
+	// живёт сколько угодно, а одна запись — не дольше WriteTimeout. Отказ
+	// контроллера не мешает потоку: без дедлайна он работает как раньше.
+	arm := func() { _ = control.SetWriteDeadline(time.Now().Add(h.writeTimeout())) }
+
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-store")
 	// Ответ идёт до конца соединения, поэтому промежуточные прокси не должны
 	// его буферизовать.
 	w.Header().Set("X-Accel-Buffering", "no")
+	arm()
 	w.WriteHeader(http.StatusOK)
 	_ = control.Flush()
 
 	sub, recent, cancel := h.subscribe()
 	defer cancel()
+
+	arm()
 
 	for _, event := range recent {
 		if !writeEvent(w, event) {
@@ -380,6 +423,8 @@ func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case <-keepAlive.C:
 			// Комментарий SSE: панель его игнорирует, а запись в сокет
 			// обнаруживает обрыв.
+			arm()
+
 			if _, err := io.WriteString(w, ": keep-alive\n\n"); err != nil {
 				return
 			}
@@ -391,6 +436,8 @@ func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if !ok {
 				return
 			}
+
+			arm()
 
 			if !writeEvent(w, event) {
 				return
@@ -426,6 +473,18 @@ func (h *Hub) keepAlive() time.Duration {
 	return h.opts.KeepAlive
 }
 
+// writeTimeout отдаёт дедлайн записи; ноль означает значение по умолчанию,
+// чтобы собранный без него Hub не обрывал каждую запись сразу.
+func (h *Hub) writeTimeout() time.Duration {
+	const fallback = 10 * time.Second
+
+	if h.opts.WriteTimeout <= 0 {
+		return fallback
+	}
+
+	return h.opts.WriteTimeout
+}
+
 // supportsFlush отвечает, доберётся ли контроллер до writer со сбросом. Обход
 // повторяет то, что делает http.NewResponseController, но без записи в ответ.
 func supportsFlush(w http.ResponseWriter) bool {
@@ -456,17 +515,31 @@ func sleep(ctx context.Context, d time.Duration) bool {
 	}
 }
 
-// lines разбирает построчный ответ источника. Вынесено сюда, чтобы адаптер
-// источника не повторял разбор для каждого потока.
-func lines(r *bufio.Reader, sink func(json.RawMessage)) error {
-	for {
-		line, err := r.ReadBytes('\n')
-		if trimmed := bytes.TrimSpace(line); len(trimmed) > 0 {
-			sink(json.RawMessage(trimmed))
-		}
+// maxLineBytes — потолок на строку потока. Строки `/traffic` и `/memory` —
+// десятки байт; потолок с запасом перекрывает их и не даёт процессу, занявшему
+// порт контроллера при лежащем sing-box, кормить демона бесконечной строкой.
+const maxLineBytes = 64 << 10
 
-		if err != nil {
-			return err
+// lines разбирает построчный ответ источника. Вынесено сюда, чтобы адаптер
+// источника не повторял разбор для каждого потока. Строка длиннее
+// maxLineBytes обрывает поток ошибкой bufio.ErrTooLong.
+func lines(r io.Reader, sink func(json.RawMessage)) error {
+	scanner := bufio.NewScanner(r)
+	scanner.Buffer(nil, maxLineBytes)
+
+	for scanner.Scan() {
+		// Буфер сканера переиспользуется, а строка оседает в состоянии
+		// топика, поэтому уходит копией.
+		if trimmed := bytes.TrimSpace(scanner.Bytes()); len(trimmed) > 0 {
+			sink(json.RawMessage(bytes.Clone(trimmed)))
 		}
 	}
+
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("чтение потока: %w", err)
+	}
+
+	// Конец ответа для потока — обрыв, а не штатное завершение: у потока
+	// рантайма конца нет, его обрывает только перезапуск sing-box.
+	return io.EOF
 }

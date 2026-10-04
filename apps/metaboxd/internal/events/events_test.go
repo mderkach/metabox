@@ -1,11 +1,13 @@
 package events
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -525,4 +527,246 @@ func TestAccountingCountsWithoutReaders(t *testing.T) {
 		"учёт накопил %d байт за %d снятий, в историю ушло %d сэмплов",
 		sink.proxy.Load(), sink.samples.Load(), recorder.records.Load(),
 	)
+}
+
+// stallSource держит горутины первого комплекта после отмены, пока тест не
+// закроет release: окно, в котором остановка ждёт их без мьютекса, остаётся
+// открытым сколько нужно.
+type stallSource struct {
+	fakeSource
+
+	calls   atomic.Int64
+	release chan struct{}
+}
+
+func (s *stallSource) Stream(ctx context.Context, path string, sink func(json.RawMessage)) error {
+	// Первый комплект поднимает два потока — /traffic и /memory.
+	first := s.calls.Add(1) <= 2
+
+	err := s.fakeSource.Stream(ctx, path, sink)
+	if first {
+		<-s.release
+	}
+
+	return err
+}
+
+func newStallSource() *stallSource {
+	return &stallSource{
+		fakeSource: fakeSource{
+			service: json.RawMessage(`{}`),
+			lines:   []json.RawMessage{json.RawMessage(`{"up":1}`)},
+		},
+		release: make(chan struct{}),
+	}
+}
+
+// slowOptions публикует каждый топик один раз за комплект: состояние, которое
+// осталось после стыка, не перезапишется следующим периодом опроса.
+func slowOptions() Options {
+	return Options{
+		ServiceInterval: time.Hour,
+		SystemInterval:  time.Hour,
+		RetryInterval:   time.Hour,
+	}
+}
+
+// waitStopping ждёт, пока остановка отпустит мьютекс и уйдёт ждать горутины.
+func waitStopping(t *testing.T, hub *Hub) {
+	t.Helper()
+
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		hub.mu.Lock()
+		stopping := hub.stop == nil
+		hub.mu.Unlock()
+
+		if stopping {
+			return
+		}
+
+		time.Sleep(time.Millisecond)
+	}
+
+	t.Fatal("остановка источников не началась")
+}
+
+func readTopics(t *testing.T, ch <-chan Event, want int) {
+	t.Helper()
+
+	for range want {
+		select {
+		case <-ch:
+		case <-time.After(2 * time.Second):
+			t.Fatal("комплект источников не прислал состояние")
+		}
+	}
+}
+
+// Последний читатель ушёл, первый пришёл, пока остановка ждёт горутины:
+// вернувшаяся остановка не стирает состояние уже нового комплекта.
+func TestHubStopKeepsNextGeneration(t *testing.T) {
+	source := newStallSource()
+	hub := New(source, testLogger(t), slowOptions())
+
+	first, _, leave := hub.subscribe()
+	readTopics(t, first.ch, 3)
+
+	left := make(chan struct{})
+
+	go func() {
+		defer close(left)
+		leave()
+	}()
+
+	waitStopping(t, hub)
+
+	next, _, cancel := hub.subscribe()
+	defer cancel()
+
+	// traffic, memory и service нового комплекта.
+	readTopics(t, next.ch, 3)
+
+	close(source.release)
+	<-left
+
+	hub.mu.Lock()
+	remembered, running := len(hub.last), hub.stop != nil
+	hub.mu.Unlock()
+
+	if !running {
+		t.Error("вернувшаяся остановка погасила новый комплект")
+	}
+	if remembered != 3 {
+		t.Errorf("после стыка помнится %d топиков, ожидали 3 нового комплекта", remembered)
+	}
+}
+
+// Читатель, пришедший, пока Close ждёт горутины, получает закрытый канал:
+// иначе его хендлер держал бы остановку демона до таймаута.
+func TestHubCloseRejectsLateSubscriber(t *testing.T) {
+	source := newStallSource()
+	hub := New(source, testLogger(t), slowOptions())
+
+	first, _, _ := hub.subscribe()
+	readTopics(t, first.ch, 3)
+
+	closed := make(chan struct{})
+
+	go func() {
+		defer close(closed)
+		hub.Close()
+	}()
+
+	waitStopping(t, hub)
+
+	late, recent, cancel := hub.subscribe()
+	defer cancel()
+
+	if len(recent) != 0 {
+		t.Errorf("после Close повторено %d событий", len(recent))
+	}
+
+	select {
+	case _, ok := <-late.ch:
+		if ok {
+			t.Error("читатель после Close получает события")
+		}
+	case <-time.After(time.Second):
+		t.Error("канал читателя после Close не закрыт")
+	}
+
+	close(source.release)
+	<-closed
+
+	hub.mu.Lock()
+	running := hub.stop != nil
+	hub.mu.Unlock()
+
+	if running {
+		t.Error("после Close источники подняты заново")
+	}
+}
+
+// floodSource шлёт строки без пауз, пока подписка жива.
+type floodSource struct {
+	fakeSource
+}
+
+func (s *floodSource) Stream(ctx context.Context, _ string, sink func(json.RawMessage)) error {
+	line := json.RawMessage(`{"pad":"` + strings.Repeat("x", 32<<10) + `"}`)
+
+	for ctx.Err() == nil {
+		sink(line)
+	}
+
+	return ctx.Err()
+}
+
+// Клиент, который держит сокет и не читает, отпускает хендлер по дедлайну
+// записи, а не по TCP-таймауту ретрансмиссий.
+func TestHubWriteDeadline(t *testing.T) {
+	opts := fastOptions()
+	opts.WriteTimeout = 50 * time.Millisecond
+
+	hub := New(&floodSource{}, testLogger(t), opts)
+	returned := make(chan struct{})
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer close(returned)
+		hub.ServeHTTP(w, r)
+	}))
+	defer srv.Close()
+
+	conn, err := net.Dial("tcp", srv.Listener.Addr().String())
+	if err != nil {
+		t.Fatalf("подключение: %v", err)
+	}
+	defer func() { _ = conn.Close() }()
+
+	// Запрос уходит, ответ не читается: буферы сокета заполняются, и запись
+	// хендлера встаёт.
+	if _, err := io.WriteString(conn, "GET / HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n"); err != nil {
+		t.Fatalf("запрос: %v", err)
+	}
+
+	select {
+	case <-returned:
+	case <-time.After(10 * time.Second):
+		t.Fatal("хендлер держит нечитающего клиента: дедлайн записи не сработал")
+	}
+}
+
+// Строка длиннее потолка обрывает поток, а не копится в памяти.
+func TestLinesLimit(t *testing.T) {
+	long := `{"pad":"` + strings.Repeat("x", maxLineBytes) + `"}`
+
+	var got []string
+
+	err := lines(strings.NewReader("{\"up\":1}\n"+long+"\n{\"up\":2}\n"), func(line json.RawMessage) {
+		got = append(got, string(line))
+	})
+
+	if !errors.Is(err, bufio.ErrTooLong) {
+		t.Errorf("ошибка %v, ожидали bufio.ErrTooLong", err)
+	}
+	if len(got) != 1 || got[0] != `{"up":1}` {
+		t.Errorf("до обрыва отданы строки %q, ожидали только первую", got)
+	}
+}
+
+// Конец ответа — обрыв потока: источник переподключается после паузы.
+func TestLinesEOF(t *testing.T) {
+	var got []string
+
+	err := lines(strings.NewReader("{\"up\":1}\r\n\n  {\"up\":2}"), func(line json.RawMessage) {
+		got = append(got, string(line))
+	})
+
+	if !errors.Is(err, io.EOF) {
+		t.Errorf("ошибка %v, ожидали io.EOF", err)
+	}
+	if len(got) != 2 || got[0] != `{"up":1}` || got[1] != `{"up":2}` {
+		t.Errorf("отданы строки %q, ожидали две строки без пробелов по краям", got)
+	}
 }
