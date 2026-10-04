@@ -1,3 +1,5 @@
+import { RULE_SET_MATCHER } from './Rule.constants';
+
 export interface RuleMatcher {
   key: string;
   values: string[];
@@ -63,4 +65,12 @@ export interface RuleRow {
   recognized: boolean;
   /** Условия и цель одной строкой — по ней ищет поиск таблицы. */
   searchText: string;
+}
+
+/**
+ * Теги наборов, на которые правило ссылается само, без вложенных веток.
+ * Строка `"rule_set": "x"` приходит списком из одного тега.
+ */
+export function ruleSetsOf(rule: RuleRow): string[] {
+  return rule.matchers.find((matcher) => matcher.key === RULE_SET_MATCHER)?.values ?? [];
 }

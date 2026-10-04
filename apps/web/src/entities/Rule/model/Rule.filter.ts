@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { countGroups } from '@shared/lib/group';
 import { matchesWords, toQueryWords } from '@shared/lib/search';
 
+import { RULE_SET_MATCHER } from './Rule.constants';
 import type { RuleBranch, RuleRow } from './Rule.model';
 
 /** Выход, по которому отбираются правила; `null` — все сразу. */
@@ -10,9 +11,6 @@ export type RuleTargetFilter = string | null;
 
 /** Тег сета, на который ссылаются отобранные правила; `null` — все сразу. */
 export type RuleSetFilter = string | null;
-
-/** Условие, которым правило ссылается на сет. */
-const RULE_SET_KEY = 'rule_set';
 
 /**
  * Состояние экрана правил в адресе. Номер правила — как в UI, с единицы: экран
@@ -50,7 +48,7 @@ export function toTargetGroups(rules: RuleRow[]): RuleTargetGroup[] {
  */
 function usesRuleSet(branch: RuleBranch, tag: string): boolean {
   return (
-    branch.matchers.some((matcher) => matcher.key === RULE_SET_KEY && matcher.values.includes(tag)) ||
+    branch.matchers.some((matcher) => matcher.key === RULE_SET_MATCHER && matcher.values.includes(tag)) ||
     (branch.group?.children.some((child) => usesRuleSet(child, tag)) ?? false)
   );
 }

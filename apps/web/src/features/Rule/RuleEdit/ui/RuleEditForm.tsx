@@ -1,10 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { ParseKeys, TFunction } from 'i18next';
+import { TriangleAlert } from 'lucide-react';
 import { Controller, FormProvider, useForm, useFormContext } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import { ConfigDocumentState, ruleNodePath } from '@entities/Config';
-import type { RuleRow } from '@entities/Rule';
+import { RULE_SET_MATCHER, ruleSetsOf, type RuleRow } from '@entities/Rule';
 import { Button, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/ui';
 
 import {
@@ -20,14 +21,28 @@ const ERROR_KEY: Readonly<Record<string, ParseKeys<'features/Rule/RuleEdit'> | u
 };
 
 /**
- * Выход правила: что делать с трафиком и куда его отправить.
+ * Выход правила — что делать с трафиком и куда его отправить — и сеты, на
+ * которые оно ссылается.
  *
  * Правка ложится на текст файла по пути узла: меняется одна строка,
  * порядок ключей и незнакомые узлы остаются как были.
+ *
+ * `ruleSets` — теги наборов документа. Логическое правило поля сетов не
+ * получает: у его ветки схемы `rule_set` нет, сеты живут во вложенных правилах.
  */
-export function RuleEditForm({ rule, outbounds }: { rule: RuleRow; outbounds: string[] }) {
+export function RuleEditForm({
+  rule,
+  outbounds,
+  ruleSets,
+}: {
+  rule: RuleRow;
+  outbounds: string[];
+  ruleSets: string[];
+}) {
   const { t } = useTranslation('features/Rule/RuleEdit');
   const edit = ConfigDocumentState.use.edit();
+  const initialSets = ruleSetsOf(rule);
+  const onlySets = hasOnlyRuleSets(rule);
 
   const form = useForm<RuleEditModel, unknown, RuleEditPatch>({
     // Значения берутся из узла как есть: дефолт, дописанный формой, попал бы
@@ -35,6 +50,9 @@ export function RuleEditForm({ rule, outbounds }: { rule: RuleRow; outbounds: st
     defaultValues: {
       action: isKnownAction(rule.target, rule.targetKind) ? rule.target : RULE_ACTION.Route,
       outbound: rule.targetKind === 'outbound' ? rule.target : '',
+      // Строка `"rule_set": "x"` приходит списком; пока поле не тронуто,
+      // узел не переписывается и строка остаётся строкой.
+      ruleSet: initialSets,
     },
     mode: 'onChange',
     resolver: zodResolver(RuleEditAdapterSchema),
@@ -55,6 +73,12 @@ export function RuleEditForm({ rule, outbounds }: { rule: RuleRow; outbounds: st
       edit([...path, 'outbound'], 'outbound' in patch ? patch.outbound : undefined);
     }
 
+    // Сеты сравниваются множествами, а не `dirtyFields`: у массива RHF отдаёт
+    // флаги по элементам, а снятый и снова выбранный сет меняет только порядок.
+    if (!sameTags(form.getValues('ruleSet'), form.formState.defaultValues?.ruleSet ?? [])) {
+      edit([...path, RULE_SET_MATCHER], 'rule_set' in patch ? patch.rule_set : undefined);
+    }
+
     // Сохранённое становится новой точкой отсчёта: кнопка гаснет, пока форма
     // снова не разойдётся с черновиком.
     form.reset(form.getValues());
@@ -70,6 +94,7 @@ export function RuleEditForm({ rule, outbounds }: { rule: RuleRow; outbounds: st
       >
         <ActionField />
         <OutboundField outbounds={outbounds} />
+        {rule.group === null && <RuleSetField ruleSets={ruleSets} initial={initialSets} onlySets={onlySets} />}
 
         <Button type='submit' size='sm' disabled={!form.formState.isDirty}>
           {t('submit')}
@@ -149,6 +174,75 @@ function OutboundField({ outbounds }: { outbounds: string[] }) {
       )}
     />
   );
+}
+
+/**
+ * Сеты правила. Опции — наборы документа и сеты самого правила: тег, которого
+ * в документе нет, остаётся выбранным и помечается, а не пропадает молча, —
+ * запрещать запись может только `sing-box check`.
+ *
+ * `onlySets` — кроме сетов, условий у правила нет: сняв последний, пользователь
+ * получит правило без условий — оно заберёт весь трафик, и правила ниже не
+ * сработают. Предупреждение не блокирует запись.
+ */
+function RuleSetField({ ruleSets, initial, onlySets }: { ruleSets: string[]; initial: string[]; onlySets: boolean }) {
+  const { t } = useTranslation('features/Rule/RuleEdit');
+  const { control, watch } = useFormContext<RuleEditModel>();
+  const value = watch('ruleSet');
+  const known = new Set(ruleSets);
+  const options = [...new Set([...ruleSets, ...initial, ...value])];
+
+  return (
+    <Controller
+      control={control}
+      name='ruleSet'
+      render={({ field }) => (
+        <div className='flex flex-col gap-1.5'>
+          <Label htmlFor='rule-rule-set'>{t('field.ruleSet.label')}</Label>
+          <Select multiple value={field.value} onValueChange={field.onChange}>
+            <SelectTrigger id='rule-rule-set' className='w-full'>
+              {/* В режиме `multiple` значение — список: подпись собирается
+                  функцией, `placeholder` её не заменит. */}
+              <SelectValue className='min-w-0'>
+                {(tags: readonly string[]) => (
+                  <span className='truncate'>{tags.length > 0 ? tags.join(', ') : t('field.ruleSet.empty')}</span>
+                )}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {options.map((tag) => (
+                <SelectItem key={tag} value={tag}>
+                  {tag}
+                  {!known.has(tag) && <span className='text-muted-foreground'>{t('field.ruleSet.missing')}</span>}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {onlySets && value.length === 0 && (
+            <p role='status' className='flex items-start gap-1.5 text-xs text-pretty text-signal-warn'>
+              <TriangleAlert className='mt-px size-3.5 shrink-0' aria-hidden='true' />
+              <span>{t('warning.catchAll')}</span>
+            </p>
+          )}
+        </div>
+      )}
+    />
+  );
+}
+
+/**
+ * Сеты — единственное условие правила. Флаги `rule_set_ip_cidr_*` начинаются
+ * с того же имени и условием не считаются: без сетов им нечего уточнять.
+ */
+function hasOnlyRuleSets(rule: RuleRow): boolean {
+  return ruleSetsOf(rule).length > 0 && rule.matchers.every((matcher) => matcher.key.startsWith(RULE_SET_MATCHER));
+}
+
+/** Одинаковы ли наборы тегов без учёта порядка. */
+function sameTags(left: readonly (string | undefined)[], right: readonly (string | undefined)[]): boolean {
+  const tags = new Set(left);
+
+  return tags.size === new Set(right).size && right.every((tag) => tags.has(tag));
 }
 
 /** Код отказа из схемы в текст: сообщение приходит строкой, ключи — свои. */

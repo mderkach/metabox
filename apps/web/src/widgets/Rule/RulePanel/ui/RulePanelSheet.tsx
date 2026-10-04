@@ -23,6 +23,7 @@ export function RulePanelSheet({
   recognized,
   panelKey,
   outbounds,
+  ruleSets,
   actions = null,
   onClose,
 }: {
@@ -36,6 +37,7 @@ export function RulePanelSheet({
    */
   panelKey: number;
   outbounds: string[];
+  ruleSets: string[];
   /** Действия над правилом: шапка панели, перед кнопкой закрытия. */
   actions?: ReactNode;
   onClose: () => void;
@@ -66,6 +68,7 @@ export function RulePanelSheet({
             node={shown.node}
             recognized={shown.recognized}
             outbounds={outbounds}
+            ruleSets={ruleSets}
             actions={actions}
             sheet
             onClose={onClose}

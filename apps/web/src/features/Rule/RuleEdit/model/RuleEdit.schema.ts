@@ -17,14 +17,17 @@ export const RULE_EDIT_ERROR = {
 } as const;
 
 /**
- * Что правит форма выхода. Условия сюда не входят: их сорок с лишним видов,
- * и до авторендерера они правятся текстом узла.
+ * Что правит форма правила: выход и сеты. Из условий сюда входят только сеты —
+ * они ссылаются на наборы документа, и выбрать их можно из списка. Остальных
+ * условий сорок с лишним видов, и до авторендерера они правятся текстом узла.
  */
 export const RuleEditSchema = z.object({
   /** Что делать с трафиком, подошедшим под условия правила */
   action: z.enum([RULE_ACTION.Route, RULE_ACTION.Reject, RULE_ACTION.HijackDns, RULE_ACTION.Sniff]),
   /** Тег outbound'а; обязателен только у `route` */
   outbound: z.string(),
+  /** Теги наборов из `route.rule_set`; пустой список — поля в узле нет */
+  ruleSet: z.array(z.string()),
 });
 
 export type RuleEditModel = z.infer<typeof RuleEditSchema>;
@@ -35,6 +38,9 @@ export type RuleEditModel = z.infer<typeof RuleEditSchema>;
  * `outbound` уходит только у `route`: у остальных действий поля в схеме нет, и
  * записанный пустой тег добавил бы в диф правку, которой пользователь не делал.
  * Пустой тег у `route` — ошибка формы, а не повод писать пустую строку.
+ *
+ * `rule_set` уходит только непустым: пустой список остался бы в узле полем,
+ * которое ни на что не ссылается, — снятые сеты убирают поле целиком.
  */
 export const RuleEditAdapterSchema = RuleEditSchema.refine(
   (data) => data.action !== RULE_ACTION.Route || data.outbound.length > 0,
@@ -42,6 +48,7 @@ export const RuleEditAdapterSchema = RuleEditSchema.refine(
 ).transform((data) => ({
   action: data.action,
   ...(data.action === RULE_ACTION.Route && { outbound: data.outbound }),
+  ...(data.ruleSet.length > 0 && { rule_set: data.ruleSet }),
 }));
 
 export type RuleEditPatch = z.infer<typeof RuleEditAdapterSchema>;

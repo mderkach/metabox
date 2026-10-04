@@ -7,8 +7,12 @@
   },
   "field": {
     "action": { "label": "Что делать" },
-    "outbound": { "label": "Куда отправить", "placeholder": "выберите outbound" }
+    "outbound": { "label": "Куда отправить", "placeholder": "выберите outbound" },
+    "ruleSet": { "label": "Сеты правил", "empty": "без сетов", "missing": "нет в документе" }
   },
   "submit": "Сохранить в черновик",
-  "error": { "outboundRequired": "выберите outbound" }
+  "error": { "outboundRequired": "выберите outbound" },
+  "warning": {
+    "catchAll": "Без сетов у правила не останется условий: оно заберёт весь трафик, и правила ниже не сработают."
+  }
 }

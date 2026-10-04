@@ -19,6 +19,13 @@ export const RULE_MATCHER_KEYS: readonly string[] = Object.keys(DefaultRuleBaseS
 );
 
 /**
+ * Условие, которым правило ссылается на наборы из `route.rule_set`. Флаги
+ * `rule_set_ip_cidr_*` начинаются так же, но условием не являются: они
+ * уточняют, как сопоставлять адреса наборов.
+ */
+export const RULE_SET_MATCHER = 'rule_set';
+
+/**
  * Поля, уточняющие действие. Показываются рядом с ним: `reject` без `method`
  * и `reject` с `method: drop` ведут себя по-разному, а в списке выглядели бы
  * одинаково.

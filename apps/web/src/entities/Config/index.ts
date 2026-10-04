@@ -25,6 +25,7 @@ export {
   isGenericSection,
   readRules,
   readRuleSets,
+  readRuleSetTags,
   readSectionNodes,
   removeValue,
   ruleNodePath,

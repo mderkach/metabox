@@ -7,8 +7,12 @@
   },
   "field": {
     "action": { "label": "What to do" },
-    "outbound": { "label": "Where to send", "placeholder": "pick an outbound" }
+    "outbound": { "label": "Where to send", "placeholder": "pick an outbound" },
+    "ruleSet": { "label": "Rule sets", "empty": "no rule sets", "missing": "not in the config" }
   },
   "submit": "Save to draft",
-  "error": { "outboundRequired": "pick an outbound" }
+  "error": { "outboundRequired": "pick an outbound" },
+  "warning": {
+    "catchAll": "Without rule sets the rule has no conditions left: it will take all traffic, and the rules below will never match."
+  }
 }

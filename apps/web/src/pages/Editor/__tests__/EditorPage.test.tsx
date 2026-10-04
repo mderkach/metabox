@@ -672,6 +672,69 @@ describe('отбор по сету из адреса', () => {
   });
 });
 
+describe('сеты правила из панели', () => {
+  /** Правила для правки и два набора, на которые можно сослаться. */
+  const WITH_RULE_SETS = JSON.stringify(
+    {
+      outbounds: [
+        { type: 'direct', tag: 'direct' },
+        { type: 'selector', tag: 'proxy', outbounds: ['direct'] },
+      ],
+      route: {
+        rules: EDIT_RULES,
+        final: 'proxy',
+        rule_set: [
+          { type: 'remote', tag: 'github', format: 'binary', url: 'https://example.invalid/github.srs' },
+          { type: 'remote', tag: 'geoip-cn', format: 'binary', url: 'https://example.invalid/geoip-cn.srs' },
+        ],
+      },
+    },
+    null,
+    2
+  );
+
+  beforeEach(() => {
+    ConfigDocumentState.getState().reset();
+    mockVirtualSizes();
+    serveConfig(WITH_RULE_SETS);
+  });
+
+  it('сет, выбранный в форме, виден в условиях правила и в отборе по сету', async () => {
+    const user = userEvent.setup();
+    const { router } = renderWithRouter(EditorPage, { validateSearch: parseRuleSearch });
+
+    await user.click(await screen.findByRole('button', { name: /^Правило 3, / }));
+
+    const panel = await screen.findByRole('complementary');
+
+    await selectOption(user, within(panel).getByRole('combobox', { name: 'Сеты правил' }), 'geoip-cn');
+    await user.keyboard('{Escape}');
+
+    // Escape закрывает список, а не панель вокруг него.
+    expect(panel).toBeInTheDocument();
+
+    await user.click(within(panel).getByRole('button', { name: 'Сохранить в черновик' }));
+
+    await waitFor(() => {
+      expect(
+        within(panel)
+          .getAllByRole('definition')
+          .map((value) => value.textContent)
+      ).toContain('geoip-cn');
+    });
+    expect(draftRules()).toEqual([
+      EDIT_RULES[0],
+      EDIT_RULES[1],
+      { domain_suffix: ['example.org'], outbound: 'direct', rule_set: ['geoip-cn'] },
+    ]);
+
+    await router.navigate({ to: '/', search: { rule_set: 'geoip-cn' } });
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Показано 1 из 3');
+    expect(screen.getByRole('button', { name: /^Правило 3, / })).toBeInTheDocument();
+  });
+});
+
 describe('номер правила из адреса', () => {
   it('переводит номер интерфейса в индекс узла', () => {
     expect(toSelectedRuleId(1)).toBe('0');

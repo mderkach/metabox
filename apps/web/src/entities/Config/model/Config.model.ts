@@ -118,6 +118,16 @@ export function readRuleSets(text: string): unknown[] {
   return Array.isArray(sets) ? sets : [];
 }
 
+/**
+ * Теги наборов документа — то, на что может сослаться правило. Узел без тега
+ * пропускается: сослаться на него нечем.
+ */
+export function readRuleSetTags(text: string): string[] {
+  return readRuleSets(text)
+    .map((node): unknown => (typeof node === 'object' && node !== null ? Reflect.get(node, 'tag') : undefined))
+    .filter((tag): tag is string => typeof tag === 'string' && tag.length > 0);
+}
+
 /** Где лежит кэш наборов: без него недоступный поставщик обрывает старт. */
 export const CACHE_FILE_PATH: JSONPath = ['experimental', 'cache_file', 'enabled'];
 

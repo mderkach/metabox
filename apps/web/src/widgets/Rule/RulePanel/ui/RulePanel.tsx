@@ -47,6 +47,7 @@ export function RulePanel({
   node,
   recognized,
   outbounds,
+  ruleSets,
   actions = null,
   sheet = false,
   onClose,
@@ -56,6 +57,8 @@ export function RulePanel({
   node: unknown;
   recognized: boolean;
   outbounds: string[];
+  /** Теги наборов документа: из них форма выбирает сеты правила. */
+  ruleSets: string[];
   /** Действия над правилом: шапка, перед кнопкой закрытия. */
   actions?: ReactNode;
   sheet?: boolean;
@@ -129,7 +132,7 @@ export function RulePanel({
           </TabsList>
 
           <TabsContent value={TAB.Form} className='pt-3'>
-            {recognized && <RuleEditForm rule={rule} outbounds={outbounds} />}
+            {recognized && <RuleEditForm rule={rule} outbounds={outbounds} ruleSets={ruleSets} />}
           </TabsContent>
 
           <TabsContent value={TAB.Raw} className='pt-3'>
@@ -153,8 +156,8 @@ function withBreaks(text: string): ReactNode[] {
 }
 
 /**
- * Условия правила только на чтение: форма правит выход, а не условия.
- * Значения показываются целиком, без свёртки в «и ещё N», — в отличие от
+ * Условия правила только на чтение: из них форма правит одни сеты, остальные
+ * правятся текстом узла. Значения показываются целиком, без свёртки в «и ещё N», — в отличие от
  * строки списка, где на них нет места.
  */
 function RuleConditions({ rule }: { rule: RuleRow }) {

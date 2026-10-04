@@ -3,6 +3,7 @@ import { startTransition, useCallback, useMemo, useState } from 'react';
 
 import {
   readRules,
+  readRuleSetTags,
   toFinalOutbound,
   toOutboundTags,
   toOutboundTypes,
@@ -29,6 +30,8 @@ export interface RouteEditorState {
   issues: ConfigIssue[];
   rules: RuleRow[];
   outbounds: string[];
+  /** Теги наборов документа: на них правило может сослаться из формы. */
+  ruleSets: string[];
   /** Выход нового правила — маршрут по умолчанию; `null` — выхода нет. */
   finalOutbound: string | null;
   /** Тип аутбаунда по тегу: выход правила красится по нему, а не по имени. */
@@ -55,6 +58,7 @@ export function useRouteEditor(): RouteEditorState {
   const nodes = useMemo(() => (text === null ? [] : readRules(text)), [text]);
 
   const rules = useMemo(() => toRuleRowsFromNodes(nodes), [nodes]);
+  const ruleSets = useMemo(() => (text === null ? [] : readRuleSetTags(text)), [text]);
 
   const config = document.config;
   const outboundTypes = useMemo(() => toOutboundTypes(config), [config]);
@@ -67,6 +71,7 @@ export function useRouteEditor(): RouteEditorState {
     issues: document.issues,
     rules,
     outbounds: toOutboundTags(config),
+    ruleSets,
     finalOutbound: toFinalOutbound(config),
     outboundTypes,
     nodes,

@@ -132,6 +132,7 @@ export function EditorPage() {
                 node={selectedNode}
                 recognized={isRuleRecognized(selectedNode)}
                 outbounds={editor.outbounds}
+                ruleSets={editor.ruleSets}
                 actions={actions}
                 onClose={selection.close}
               />
@@ -149,6 +150,7 @@ export function EditorPage() {
           recognized={isRuleRecognized(selectedNode)}
           panelKey={selection.key}
           outbounds={editor.outbounds}
+          ruleSets={editor.ruleSets}
           actions={actions}
           onClose={selection.close}
         />
