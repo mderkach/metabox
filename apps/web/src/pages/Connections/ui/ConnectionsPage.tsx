@@ -33,6 +33,9 @@ export function ConnectionsPage() {
   const paused = ConnectionState.use.paused();
   const dropped = ConnectionState.use.dropped();
   const evicted = ConnectionState.use.evicted();
+  // Оба числа переполнения — из стора одного момента: прореженная выдача
+  // таблицы на медленном интервале отстаёт от счётчика вытесненных.
+  const kept = ConnectionState.use.closed().length;
   const sampledAt = ConnectionState.use.sampledAt();
   const setPaused = ConnectionState.use.setPaused();
   const closeAll = useCloseAllConnections();
@@ -187,11 +190,7 @@ export function ConnectionsPage() {
                   search={search}
                   facets={facets}
                   footer={renderFooter}
-                  overflow={
-                    evicted > 0 && (
-                      <p>{t('closedOverflow', { shown: screen.closed.total, total: screen.closed.total + evicted })}</p>
-                    )
-                  }
+                  overflow={evicted > 0 && <p>{t('closedOverflow', { shown: kept, total: kept + evicted })}</p>}
                   empty={renderEmpty}
                   filtered={screen.filtered}
                   onReset={screen.reset}
