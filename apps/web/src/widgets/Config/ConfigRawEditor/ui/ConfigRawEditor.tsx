@@ -214,7 +214,13 @@ export function ConfigRawEditor({
       <div className={cn('flex min-h-0 grow overflow-hidden', SURFACE)}>
         {!wrap && (
           <div
-            ref={gutterRef}
+            // Колонка возвращается при выключении переноса с нулевой прокруткой,
+            // а поле своей не теряет и события scroll не шлёт: без сверки при
+            // монтировании номера начинались бы с единицы над серединой файла.
+            ref={(node) => {
+              gutterRef.current = node;
+              syncScroll();
+            }}
             aria-hidden='true'
             className={cn(
               'shrink-0 overflow-hidden border-r border-border bg-muted/20 py-3 text-right select-none',

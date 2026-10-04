@@ -94,6 +94,29 @@ describe('ConfigRawEditor', () => {
       expect(screen.getByLabelText('Конфиг sing-box текстом')).toHaveAttribute('wrap', 'soft');
     });
 
+    it('вернувшиеся номера строк стоят на прокрутке поля', async () => {
+      mockNarrowScreen();
+      const user = userEvent.setup();
+      renderEditor();
+      const input = screen.getByLabelText('Конфиг sing-box текстом');
+
+      // jsdom прокрутку не считает: значение подставляется полю напрямую, а
+      // запись в колонку номеров ловится на сеттере.
+      Object.defineProperty(input, 'scrollTop', { configurable: true, value: 120 });
+      const setScroll = vi.spyOn(Element.prototype, 'scrollTop', 'set');
+
+      await user.click(screen.getByRole('button', { name: 'Перенос строк' }));
+
+      // Номер последней строки есть только в колонке номеров.
+      const lastLine = screen.getByText('3');
+      const written = setScroll.mock.calls.filter(
+        (_, index) =>
+          setScroll.mock.contexts[index] instanceof Element && setScroll.mock.contexts[index].contains(lastLine)
+      );
+
+      expect(written).toContainEqual([120]);
+    });
+
     it('сохранённый выбор перекрывает ширину экрана', async () => {
       const user = userEvent.setup();
       const first = renderEditor();
