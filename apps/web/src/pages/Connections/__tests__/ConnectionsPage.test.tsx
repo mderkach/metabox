@@ -82,6 +82,10 @@ describe('экран соединений', () => {
     await waitFor(() => {
       expect(closed).toHaveBeenCalledTimes(1);
     });
+    // Строка уходит из списка молча: о закрытии говорит живая область экрана.
+    await waitFor(() => {
+      expect(screen.getByRole('status', { name: 'Результат действия' })).toHaveTextContent('Соединение закрыто');
+    });
   });
 
   it('на паузе новые снапшоты не меняют экран', async () => {
@@ -144,6 +148,11 @@ describe('экран соединений', () => {
     await waitFor(() => {
       expect(closedAll).toHaveBeenCalledTimes(1);
     });
+    await waitFor(() => {
+      expect(screen.getByRole('status', { name: 'Результат действия' })).toHaveTextContent(
+        'Все живые соединения оборваны'
+      );
+    });
   });
 
   it('фасет по действию отбирает строки', async () => {
@@ -159,7 +168,7 @@ describe('экран соединений', () => {
 
     expect(direct).toHaveAttribute('aria-pressed', 'true');
     await waitFor(() => {
-      expect(screen.getByRole('status')).toHaveTextContent('Показано 4 из 8');
+      expect(screen.getByText('Показано 4 из 8')).toHaveAttribute('role', 'status');
     });
   });
 
@@ -315,7 +324,7 @@ describe('экран соединений', () => {
     await user.type(await screen.findByRole('textbox', { name: 'Подстрока в колонке Куда' }), 'google');
 
     await waitFor(() => {
-      expect(screen.getByRole('status')).toHaveTextContent('Показано 1 из 8');
+      expect(screen.getByText('Показано 1 из 8')).toHaveAttribute('role', 'status');
     });
 
     await user.keyboard('{Escape}');
@@ -324,7 +333,7 @@ describe('экран соединений', () => {
 
     expect(screen.getByRole('button', { name: 'Фильтр по колонке Куда: активен' })).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByRole('status')).toHaveTextContent('Показано 1 из 8');
+      expect(screen.getByText('Показано 1 из 8')).toHaveAttribute('role', 'status');
     });
   });
 });

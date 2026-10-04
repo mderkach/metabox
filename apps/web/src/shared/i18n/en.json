@@ -202,5 +202,8 @@
     "unavailable": "sing-box is not responding — mode unknown",
     "short": "Mode",
     "pending": "reading the mode"
+  },
+  "liveRegion": {
+    "label": "Action result"
   }
 }

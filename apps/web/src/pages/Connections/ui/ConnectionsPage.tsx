@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { CONNECTION_TAB, ConnectionState, useConnectionStream, type ConnectionRow } from '@entities/Connection';
 import { useCloseAllConnections } from '@features/Connection/ConnectionClose';
 import { usePanelAsSheet } from '@shared/lib/media';
-import { Alert, AlertDescription, Tabs, TabsContent, TabsList, TabsTrigger } from '@shared/ui';
+import { useLiveRegion } from '@shared/lib/useLiveRegion';
+import { Alert, AlertDescription, LiveRegion, Tabs, TabsContent, TabsList, TabsTrigger } from '@shared/ui';
 import { ConnectionTable, useConnectionView, type ConnectionTableEmpty } from '@widgets/ConnectionTable';
 import { PageHeader } from '@widgets/PageHeader';
 import { RouteExplanation, RouteExplanationSheet } from '@widgets/RouteExplanation';
@@ -36,6 +37,10 @@ export function ConnectionsPage() {
   const setPaused = ConnectionState.use.setPaused();
   const closeAll = useCloseAllConnections();
   const sheet = usePanelAsSheet();
+  // Строка уходит из списка молча: что соединение закрыто, скринридеру
+  // объявляет одна область на экран.
+  const live = useLiveRegion();
+  const { announce } = live;
 
   // Без Transition обновление срочное, и граница вокруг панели не анимируется.
   const onExplain = useCallback((id: string) => {
@@ -55,8 +60,16 @@ export function ConnectionsPage() {
   }, [paused, setPaused]);
 
   const onCloseAll = useCallback(() => {
-    closeAll.mutate();
-  }, [closeAll]);
+    closeAll.mutate(undefined, {
+      onSuccess: () => {
+        announce(t('announce.closedAll'));
+      },
+    });
+  }, [announce, closeAll, t]);
+
+  const onClosed = useCallback(() => {
+    announce(t('announce.closed'));
+  }, [announce, t]);
 
   const explainedHost = screen.active.rows.find((row) => row.id === explainedId)?.host ?? '';
 
@@ -79,6 +92,8 @@ export function ConnectionsPage() {
           </p>
         )}
       </PageHeader>
+
+      <LiveRegion message={live.message} />
 
       <Tabs
         value={screen.tab}
@@ -114,6 +129,7 @@ export function ConnectionsPage() {
                   selectedId={explainedId}
                   explainPanelId={explainPanelId}
                   onExplain={onExplain}
+                  onClosed={onClosed}
                   search={search}
                   facets={facets}
                   footer={renderFooter}

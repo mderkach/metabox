@@ -65,6 +65,7 @@ export function ConnectionTable({
   selectedId = null,
   explainPanelId,
   onExplain = null,
+  onClosed = null,
 }: {
   rows: ConnectionRowModel[];
   /** Сколько строк во вкладке до отбора: подвал сообщает обе величины. */
@@ -100,6 +101,8 @@ export function ConnectionTable({
   explainPanelId?: string;
   /** `null` — объяснение маршрута выключено: у демона нет источника рантайма. */
   onExplain?: ((id: string) => void) | null;
+  /** Рантайм закрыл соединение строки: экран объявляет это своей живой областью. */
+  onClosed?: (() => void) | null;
 }) {
   const { t } = useTranslation('widgets/ConnectionTable');
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -110,9 +113,9 @@ export function ConnectionTable({
 
   const onClose = useCallback(
     (id: string) => {
-      close.mutate(id);
+      close.mutate(id, { onSuccess: () => onClosed?.() });
     },
-    [close]
+    [close, onClosed]
   );
 
   const onResetAll = useCallback(() => {

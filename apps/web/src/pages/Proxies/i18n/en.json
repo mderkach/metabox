@@ -9,5 +9,10 @@
   "providers": {
     "title": "Subscriptions",
     "note": "nodes come from them, not from the config"
+  },
+  "announce": {
+    "selected": "Group {{group}}: node {{node}} selected",
+    "tested": "Group {{group}}: latency updated",
+    "testedAll": "Latency of all groups updated"
   }
 }

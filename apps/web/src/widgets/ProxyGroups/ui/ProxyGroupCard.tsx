@@ -20,7 +20,15 @@ import {
 import { toGroupLabel } from './ProxyGroupLabel';
 import { ProxyNodeTile } from './ProxyNodeTile';
 
-export function ProxyGroupCard({ group }: { group: ProxyGroup }) {
+export function ProxyGroupCard({
+  group,
+  onSelected,
+  onTested,
+}: {
+  group: ProxyGroup;
+  onSelected: (group: string, node: string) => void;
+  onTested: (group: string) => void;
+}) {
   const { t } = useTranslation('widgets/ProxyGroups');
   const select = useSelectProxy();
   const delay = useTestProxyDelay();
@@ -30,9 +38,16 @@ export function ProxyGroupCard({ group }: { group: ProxyGroup }) {
 
   const onSelect = useCallback(
     (node: string) => {
-      select.mutate({ group: group.name, node });
+      select.mutate(
+        { group: group.name, node },
+        {
+          onSuccess: () => {
+            onSelected(group.name, node);
+          },
+        }
+      );
     },
-    [group.name, select]
+    [group.name, onSelected, select]
   );
 
   return (
@@ -58,7 +73,11 @@ export function ProxyGroupCard({ group }: { group: ProxyGroup }) {
             disabled={delay.isPending}
             aria-label={t('card.testGroup', { group: group.name })}
             onClick={() => {
-              delay.mutate(group.name);
+              delay.mutate(group.name, {
+                onSuccess: () => {
+                  onTested(group.name);
+                },
+              });
             }}
           >
             {testing ? t('delay.testing', { ns: 'shared' }) : t('delay.test', { ns: 'shared' })}

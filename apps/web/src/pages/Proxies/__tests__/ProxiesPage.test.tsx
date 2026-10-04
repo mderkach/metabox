@@ -63,6 +63,46 @@ describe('экран прокси', () => {
     });
   });
 
+  it('объявляет выбор узла живой областью экрана', async () => {
+    serveProxies();
+
+    const user = userEvent.setup();
+
+    renderWithQuery(<ProxiesPage />);
+
+    await user.click(await screen.findByRole('button', { name: /proxy Группа|proxy/, pressed: false }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('status', { name: 'Результат действия' })).toHaveTextContent(
+        'Группа us-fallback: выбран узел proxy'
+      );
+    });
+  });
+
+  it('объявляет обновление задержки группы и всех групп', async () => {
+    serveProxies();
+
+    const user = userEvent.setup();
+
+    renderWithQuery(<ProxiesPage />);
+
+    await user.click(await screen.findByRole('button', { name: 'Проверить узлы группы us-fallback' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('status', { name: 'Результат действия' })).toHaveTextContent(
+        'Группа us-fallback: задержка обновлена'
+      );
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Проверить все' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('status', { name: 'Результат действия' })).toHaveTextContent(
+        'Задержка всех групп обновлена'
+      );
+    });
+  });
+
   it('узел URL-теста не кликается: выбор там делает sing-box', async () => {
     serveProxies();
 

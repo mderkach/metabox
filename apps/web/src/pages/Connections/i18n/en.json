@@ -47,5 +47,9 @@
     "title": "Slices of the list",
     "active_one": "Filters: {{count}} slice",
     "active_other": "Filters: {{count}} slices"
+  },
+  "announce": {
+    "closed": "Connection closed",
+    "closedAll": "All live connections closed"
   }
 }

@@ -50,5 +50,9 @@
     "active_one": "Отбор: {{count}} срез",
     "active_few": "Отбор: {{count}} среза",
     "active_many": "Отбор: {{count}} срезов"
+  },
+  "announce": {
+    "closed": "Соединение закрыто",
+    "closedAll": "Все живые соединения оборваны"
   }
 }

@@ -25,14 +25,26 @@ const NO_OP = () => undefined;
  * Конфиг без групп — обычный случай, а не пустое состояние: правила ссылаются
  * прямо на аутбаунды, и переключать в рантайме нечего.
  */
-export function ProxyGroups({ groups, nodes }: { groups: ProxyGroup[]; nodes: ProxyNode[] }) {
+export function ProxyGroups({
+  groups,
+  nodes,
+  onSelected,
+  onTested,
+}: {
+  groups: ProxyGroup[];
+  nodes: ProxyNode[];
+  /** Рантайм принял выбор узла: экран объявляет результат своей живой областью. */
+  onSelected: (group: string, node: string) => void;
+  /** Замер задержки группы прошёл. */
+  onTested: (group: string) => void;
+}) {
   const { t } = useTranslation('widgets/ProxyGroups');
   if (groups.length > 0) {
     return (
       <ul className='flex flex-col gap-3'>
         {groups.map((group) => (
           <li key={group.name}>
-            <ProxyGroupCard group={group} />
+            <ProxyGroupCard group={group} onSelected={onSelected} onTested={onTested} />
           </li>
         ))}
       </ul>
