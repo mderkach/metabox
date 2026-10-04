@@ -2,6 +2,7 @@ package apply_test
 
 import (
 	"errors"
+	"maps"
 	"slices"
 	"testing"
 
@@ -77,13 +78,13 @@ func TestStartChecksListsBase(t *testing.T) {
 	h.store.lists = map[string][]byte{"my.json": []byte("{}")}
 	h.store.mu.Unlock()
 
-	stale := apply.ListsEtag(map[string]string{})
+	stale := config.ListsEtag(map[string]string{})
 
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", stale); !errors.Is(err, apply.ErrListsModified) {
 		t.Fatalf("ошибка %v, ожидали ErrListsModified", err)
 	}
 
-	fresh := apply.ListsEtag(map[string]string{"my.json": config.Sum([]byte("{}"))})
+	fresh := config.ListsEtag(map[string]string{"my.json": config.Sum([]byte("{}"))})
 
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", fresh); err != nil {
 		t.Fatalf("применение с верной базой: %v", err)
@@ -261,4 +262,69 @@ func TestStartIgnoresWorkdirWithoutLists(t *testing.T) {
 	}
 
 	h.waitWindow(t)
+}
+
+// Восстановление версии приводит каталог списков к снимку: файлы снимка
+// пишутся, лишние удаляются, а имён, которых применение не примет, конверт не
+// несёт — иначе чужой файл в подкаталоге валил бы восстановление.
+func TestSnapshotLists(t *testing.T) {
+	data := []byte(`{"rules":[]}`)
+
+	tests := []struct {
+		name       string
+		snapshot   map[string][]byte
+		current    map[string]string
+		wantPut    []string
+		wantRemove []string
+	}{
+		{
+			name:     "снимок поверх пустого каталога",
+			snapshot: map[string][]byte{"a.json": data},
+			wantPut:  []string{"a.json"},
+		},
+		{
+			name:       "пустой снимок снимает текущие",
+			snapshot:   map[string][]byte{},
+			current:    map[string]string{"a.json": "x", "b.json": "y"},
+			wantRemove: []string{"a.json", "b.json"},
+		},
+		{
+			name:       "общие пишутся, лишние снимаются",
+			snapshot:   map[string][]byte{"a.json": data},
+			current:    map[string]string{"a.json": "x", "b.json": "y"},
+			wantPut:    []string{"a.json"},
+			wantRemove: []string{"b.json"},
+		},
+		{
+			name:     "недопустимое имя в снимке пропускается",
+			snapshot: map[string][]byte{"a.json": data, "README": data},
+			wantPut:  []string{"a.json"},
+		},
+		{
+			name:     "недопустимое имя в каталоге не удаляется",
+			snapshot: map[string][]byte{},
+			current:  map[string]string{"notes.txt": "x"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := apply.SnapshotLists(tt.snapshot, tt.current)
+
+			put := slices.Sorted(maps.Keys(got.Put))
+			if !slices.Equal(put, tt.wantPut) {
+				t.Errorf("пишутся %v, ожидали %v", put, tt.wantPut)
+			}
+
+			if !slices.Equal(got.Remove, tt.wantRemove) {
+				t.Errorf("удаляются %v, ожидали %v", got.Remove, tt.wantRemove)
+			}
+
+			for name, content := range got.Put {
+				if string(content) != string(tt.snapshot[name]) {
+					t.Errorf("файл %s: пишется %q, ожидали %q", name, content, tt.snapshot[name])
+				}
+			}
+		})
+	}
 }

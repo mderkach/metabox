@@ -63,8 +63,10 @@ type Service interface {
 type ConfigReader interface {
 	Read(ctx context.Context) ([]byte, error)
 	ReadLists(ctx context.Context) (map[string][]byte, error)
+	ListSums(ctx context.Context) (map[string]string, error)
 	Versions(ctx context.Context) ([]config.Version, error)
 	ReadVersion(ctx context.Context, id int) ([]byte, error)
+	ReadVersionLists(ctx context.Context, id int) (map[string][]byte, error)
 }
 
 // Explainer объясняет маршрут соединения. Интерфейс объявлен здесь, у
@@ -341,7 +343,7 @@ func (s *Server) handleConfigLists(w http.ResponseWriter, r *http.Request) {
 		sums[name] = config.Sum(data)
 	}
 
-	out.Etag = apply.ListsEtag(sums)
+	out.Etag = config.ListsEtag(sums)
 
 	w.Header().Set("Cache-Control", "no-store")
 	writeJSON(s.log, w, http.StatusOK, out)
@@ -367,6 +369,15 @@ func (s *Server) handleVersions(w http.ResponseWriter, r *http.Request) {
 	default:
 		out.CurrentSum = config.Sum(data)
 	}
+
+	sums, err := s.reader.ListSums(r.Context())
+	if err != nil {
+		fail(s.log, w, r, err)
+
+		return
+	}
+
+	out.CurrentListsSum = config.ListsEtag(sums)
 
 	writeJSON(s.log, w, http.StatusOK, out)
 }
@@ -405,10 +416,16 @@ func (s *Server) handleVersionRestore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	lists, err := s.versionLists(r)
+	if err != nil {
+		fail(s.log, w, r, err)
+
+		return
+	}
+
 	// Восстановление версии — осознанный откат на её байты, а не правка
-	// поверх текущего файла: базы для сверки у него нет. Файлы списков
-	// восстановление не трогает: история хранит только конфиг.
-	tx, err := s.applier.Start(r.Context(), data, apply.Lists{}, "", "")
+	// поверх текущего файла: базы для сверки у него нет.
+	tx, err := s.applier.Start(r.Context(), data, lists, "", "")
 	if err != nil {
 		fail(s.log, w, r, err)
 
@@ -418,13 +435,47 @@ func (s *Server) handleVersionRestore(w http.ResponseWriter, r *http.Request) {
 	writeJSON(s.log, w, http.StatusAccepted, tx)
 }
 
+// versionLists собирает изменения файлов списков, возвращающие их к снимку
+// версии. Версия без снимка сохранена демоном, который списков не снимал, —
+// её восстановление списков не трогает, как и раньше.
+func (s *Server) versionLists(r *http.Request) (apply.Lists, error) {
+	id, err := pathVersionID(r)
+	if err != nil {
+		return apply.Lists{}, err
+	}
+
+	snapshot, err := s.reader.ReadVersionLists(r.Context(), id)
+	if errors.Is(err, config.ErrNoVersionLists) {
+		return apply.Lists{}, nil
+	}
+	if err != nil {
+		return apply.Lists{}, err
+	}
+
+	current, err := s.reader.ListSums(r.Context())
+	if err != nil {
+		return apply.Lists{}, err
+	}
+
+	return apply.SnapshotLists(snapshot, current), nil
+}
+
 func (s *Server) readVersion(r *http.Request) ([]byte, error) {
-	id, err := strconv.Atoi(r.PathValue("id"))
-	if err != nil || id <= 0 {
-		return nil, config.ErrNoVersion
+	id, err := pathVersionID(r)
+	if err != nil {
+		return nil, err
 	}
 
 	return s.reader.ReadVersion(r.Context(), id)
+}
+
+func pathVersionID(r *http.Request) (int, error) {
+	id, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil || id <= 0 {
+		return 0, config.ErrNoVersion
+	}
+
+	return id, nil
 }
 
 // handleApply принимает конфиг и запускает применение. Тело — либо голые

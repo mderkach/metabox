@@ -124,6 +124,11 @@ type fakeReader struct {
 	versions []config.Version
 	// byID подменяет содержимое версий; пустая карта означает, что версии нет.
 	byID map[int][]byte
+	// versionLists — снимки списков версий; версии без записи сохранены без
+	// снимка.
+	versionLists map[int]map[string][]byte
+	// listSums — суммы текущих файлов списков.
+	listSums map[string]string
 }
 
 func (r fakeReader) Read(context.Context) ([]byte, error) {
@@ -146,6 +151,14 @@ func (r fakeReader) ReadLists(context.Context) (map[string][]byte, error) {
 	return r.lists, nil
 }
 
+func (r fakeReader) ListSums(context.Context) (map[string]string, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+
+	return r.listSums, nil
+}
+
 func (r fakeReader) Versions(context.Context) ([]config.Version, error) {
 	if r.err != nil {
 		return nil, r.err
@@ -161,6 +174,19 @@ func (r fakeReader) ReadVersion(_ context.Context, id int) ([]byte, error) {
 	}
 
 	return data, nil
+}
+
+func (r fakeReader) ReadVersionLists(_ context.Context, id int) (map[string][]byte, error) {
+	if _, ok := r.byID[id]; !ok {
+		return nil, config.ErrNoVersion
+	}
+
+	files, ok := r.versionLists[id]
+	if !ok {
+		return nil, config.ErrNoVersionLists
+	}
+
+	return files, nil
 }
 
 func newTestServer(t *testing.T, applier httpapi.Applier, allowedOrigin string) *httptest.Server {

@@ -147,7 +147,7 @@ func (m *Manager) apply(
 	m.lastSum = sum(data)
 	m.lastListsSum = ""
 	if err == nil {
-		m.lastListsSum = ListsEtag(lastLists)
+		m.lastListsSum = config.ListsEtag(lastLists)
 	}
 	m.mu.Unlock()
 

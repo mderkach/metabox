@@ -2,9 +2,12 @@ package httpapi_test
 
 import (
 	"net/http"
+	"slices"
 	"testing"
 
+	"metabox/internal/apply"
 	"metabox/internal/config"
+	"metabox/internal/contract"
 )
 
 func TestConfigVersionsList(t *testing.T) {
@@ -153,4 +156,104 @@ func TestConfigVersionsCurrentSum(t *testing.T) {
 			t.Errorf("поле current_sum есть в ответе: %v", body["current_sum"])
 		}
 	})
+}
+
+// Версия со снимком восстанавливается вместе со списками: файлы снимка
+// пишутся, текущие сверх снимка удаляются, базы сверки нет.
+func TestConfigVersionRestoreCarriesLists(t *testing.T) {
+	raw := []byte(`{"log":{"level":"warn"}}`)
+	snapshot := map[string][]byte{"my.json": []byte(`{"rules":[]}`)}
+	applier := &fakeApplier{}
+	reader := fakeReader{
+		byID:         map[int][]byte{2: raw},
+		versionLists: map[int]map[string][]byte{2: snapshot},
+		listSums:     map[string]string{"my.json": "x", "late.json": "y"},
+	}
+
+	srv := newTestServerWith(t, applier, reader, "", nil)
+	got := request(t, srv, http.MethodPost, "/api/config/versions/2/restore", srv.URL, nil)
+
+	if got.status != http.StatusAccepted {
+		t.Fatalf("код ответа: получили %d, ожидали %d", got.status, http.StatusAccepted)
+	}
+
+	if string(applier.lists.Put["my.json"]) != string(snapshot["my.json"]) || len(applier.lists.Put) != 1 {
+		t.Errorf("пишутся %q, ожидали файлы снимка %q", applier.lists.Put, snapshot)
+	}
+
+	if want := []string{"late.json"}; !slices.Equal(applier.lists.Remove, want) {
+		t.Errorf("удаляются %v, ожидали %v", applier.lists.Remove, want)
+	}
+
+	if applier.base != "" || applier.listsBase != "" {
+		t.Errorf("у восстановления базы сверки %q и %q, ожидали пусто", applier.base, applier.listsBase)
+	}
+}
+
+// Версия, сохранённая до снимков списков, восстанавливается одним конфигом:
+// файлы списков остаются как есть.
+func TestConfigVersionRestoreLegacyKeepsLists(t *testing.T) {
+	raw := []byte(`{"log":{"level":"warn"}}`)
+	applier := &fakeApplier{}
+	reader := fakeReader{
+		byID:     map[int][]byte{2: raw},
+		listSums: map[string]string{"my.json": "x"},
+	}
+
+	srv := newTestServerWith(t, applier, reader, "", nil)
+	got := request(t, srv, http.MethodPost, "/api/config/versions/2/restore", srv.URL, nil)
+
+	if got.status != http.StatusAccepted {
+		t.Fatalf("код ответа: получили %d, ожидали %d", got.status, http.StatusAccepted)
+	}
+
+	if applier.lists.Put != nil || applier.lists.Remove != nil {
+		t.Errorf("восстановление старой версии тронуло списки: %+v", applier.lists)
+	}
+}
+
+// Восстановление со списками проходит ту же сверку рабочего каталога, что и
+// правка из редактора, и отказ уходит тем же кодом.
+func TestConfigVersionRestoreWorkdirMismatch(t *testing.T) {
+	applier := &fakeApplier{startErr: &apply.WorkdirError{Workdir: "/usr/share/sing-box", ConfigDir: "/etc/sing-box"}}
+	reader := fakeReader{
+		byID:         map[int][]byte{2: []byte("{}")},
+		versionLists: map[int]map[string][]byte{2: {"my.json": []byte("{}")}},
+	}
+
+	srv := newTestServerWith(t, applier, reader, "", nil)
+	got := request(t, srv, http.MethodPost, "/api/config/versions/2/restore", srv.URL, nil)
+
+	if got.status != http.StatusConflict {
+		t.Fatalf("код ответа: получили %d, ожидали %d", got.status, http.StatusConflict)
+	}
+
+	var apiErr struct {
+		Code string `json:"code"`
+	}
+	got.decode(t, &apiErr)
+
+	if apiErr.Code != string(contract.ErrWorkdirMismatch) {
+		t.Errorf("код ошибки %q, ожидали %q", apiErr.Code, contract.ErrWorkdirMismatch)
+	}
+}
+
+// Отпечаток текущего набора списков идёт рядом с версиями в той же записи,
+// что и отпечаток снимка версии.
+func TestConfigVersionsCurrentListsSum(t *testing.T) {
+	sums := map[string]string{"my.json": config.Sum([]byte("{}"))}
+	reader := fakeReader{data: []byte("{}"), listSums: sums}
+
+	got := request(t, newTestServerWithReader(t, reader), http.MethodGet, "/api/config/versions", "", nil)
+
+	if got.status != http.StatusOK {
+		t.Fatalf("код ответа: получили %d, ожидали %d", got.status, http.StatusOK)
+	}
+
+	var body contract.Versions
+	got.decode(t, &body)
+
+	if want := config.ListsEtag(sums); body.CurrentListsSum != want {
+		t.Errorf("отпечаток списков %q, ожидали %q", body.CurrentListsSum, want)
+	}
 }

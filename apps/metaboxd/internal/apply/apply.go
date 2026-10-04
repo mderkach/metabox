@@ -9,8 +9,6 @@ package apply
 import (
 	"context"
 	"crypto/rand"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,12 +17,13 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
+	"slices"
 	"strings"
 	"sync"
 	"time"
 
 	"metabox/internal/clashapi"
+	"metabox/internal/config"
 )
 
 // Phase — стадия транзакции. Значения уезжают в API и на диск, поэтому
@@ -318,7 +317,7 @@ func (m *Manager) Current() Transaction {
 // после неё, живёт своим контекстом: применение переживает запрос.
 //
 // base — sha256 конфига, от которого редактировал клиент; listsBase — тот же
-// смысл для набора файлов списков (ListsEtag). Пустая строка означает, что
+// смысл для набора файлов списков (config.ListsEtag). Пустая строка означает, что
 // клиент базу не назвал. Заданная база сверяется с диском вместо внутренней
 // сверки: клиент видел ровно эту версию, и его применение поверх неё правку
 // извне не затирает.
@@ -420,6 +419,39 @@ func validateLists(lists Lists) error {
 	return nil
 }
 
+// SnapshotLists — изменения, которые приводят каталог списков к снимку версии:
+// файлы снимка пишутся, текущие файлы сверх снимка удаляются. current — суммы
+// текущих файлов, важны только имена. Имена, которых применение не примет,
+// пропускаются: чужой файл в подкаталоге демон не пишет и не удаляет, и
+// восстановление версии из-за него отказывать не должно.
+func SnapshotLists(snapshot map[string][]byte, current map[string]string) Lists {
+	var lists Lists
+
+	for name, data := range snapshot {
+		if !validListName(name) {
+			continue
+		}
+
+		if lists.Put == nil {
+			lists.Put = make(map[string][]byte, len(snapshot))
+		}
+
+		lists.Put[name] = data
+	}
+
+	for name := range current {
+		if _, ok := snapshot[name]; ok || !validListName(name) {
+			continue
+		}
+
+		lists.Remove = append(lists.Remove, name)
+	}
+
+	slices.Sort(lists.Remove)
+
+	return lists
+}
+
 // verifyWorkdir сверяет рабочий каталог службы с каталогом конфига до записи:
 // расхождение иначе выяснилось бы только падением службы на новом конфиге.
 // Неизвестный каталог применение не останавливает — procd может не быть, а
@@ -502,26 +534,6 @@ func listSums(files map[string][]byte) map[string]string {
 	}
 
 	return sums
-}
-
-// ListsEtag — отпечаток набора файлов списков: имена с суммами в стабильном
-// порядке. Его отдаёт чтение списков и его же клиент возвращает базой
-// применения.
-func ListsEtag(sums map[string]string) string {
-	names := make([]string, 0, len(sums))
-	for name := range sums {
-		names = append(names, name)
-	}
-
-	sort.Strings(names)
-
-	h := sha256.New()
-	for _, name := range names {
-		// Запись в hash.Hash не отказывает по контракту пакета hash.
-		_, _ = fmt.Fprintf(h, "%s:%s\n", name, sums[name])
-	}
-
-	return hex.EncodeToString(h.Sum(nil))
 }
 
 // Confirm закрывает окно подтверждения: связь жива, откат не нужен.
@@ -672,7 +684,7 @@ func (m *Manager) verifyListsBase(ctx context.Context, listsBase string) error {
 		return fmt.Errorf("сверка списков: %w", err)
 	}
 
-	if ListsEtag(current) != expected {
+	if config.ListsEtag(current) != expected {
 		return ErrListsModified
 	}
 

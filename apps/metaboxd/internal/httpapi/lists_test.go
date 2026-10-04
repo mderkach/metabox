@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"metabox/internal/apply"
 	"metabox/internal/config"
 	"metabox/internal/contract"
 )
@@ -115,7 +114,7 @@ func TestConfigListsServed(t *testing.T) {
 		t.Errorf("файл отдан как %q", files.Files["my.json"])
 	}
 
-	want := apply.ListsEtag(map[string]string{"my.json": config.Sum(lists["my.json"])})
+	want := config.ListsEtag(map[string]string{"my.json": config.Sum(lists["my.json"])})
 	if files.Etag != want {
 		t.Errorf("etag %q, ожидали %q", files.Etag, want)
 	}

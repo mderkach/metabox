@@ -10,12 +10,20 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
+	"strings"
 )
 
-// ErrNoVersion — версии с таким номером в истории нет.
-var ErrNoVersion = errors.New("версии конфига нет")
+var (
+	// ErrNoVersion — версии с таким номером в истории нет.
+	ErrNoVersion = errors.New("версии конфига нет")
+
+	// ErrNoVersionLists — версия сохранена без снимка файлов списков: демоном,
+	// который их ещё не снимал. Восстановление такой версии списков не трогает.
+	ErrNoVersionLists = errors.New("у версии нет снимка списков")
+)
 
 const (
 	// versionsDir — подкаталог служебного каталога демона. В каталоге конфига
@@ -35,6 +43,15 @@ const (
 	// versionDigits задаёт ширину номера: имена сортируются как строки, и без
 	// выравнивания десятая версия встала бы перед второй.
 	versionDigits = 6
+
+	// versionListsSuffix — суффикс соседнего каталога со снимком списков:
+	// 000007 и 000007.rule-sets. Номером такое имя не разбирается, поэтому
+	// демон прежней версии каталог пропускает и счётчик у него тот же.
+	versionListsSuffix = "." + listsDirName
+
+	// versionListsStaging — черновик снимка. Начинается с точки, чтобы ни
+	// номером, ни снимком его не приняли.
+	versionListsStaging = ".rule-sets.next"
 )
 
 // Version — запись истории. Содержимое конфига демон не разбирает,
@@ -52,6 +69,10 @@ type Version struct {
 	// SavedAt — отметка времени файла, секунды Unix. Справочная: показывает
 	// часы устройства на момент сохранения и врёт, если они не синхронизованы.
 	SavedAt int64 `json:"saved_at"`
+	// ListsSum — отпечаток снимка файлов списков в той же записи, что etag
+	// `GET /api/config/rule-sets`. Поля нет — версия сохранена без снимка, и её
+	// восстановление списков не трогает.
+	ListsSum string `json:"lists_sum,omitempty"`
 }
 
 // VersionsPath отдаёт каталог истории.
@@ -59,9 +80,11 @@ func (s *Store) VersionsPath() string {
 	return filepath.Join(s.serviceDir, versionsDir)
 }
 
-// SaveVersion кладёт содержимое в историю новым номером и подрезает её до
-// maxVersions. Вызывается рядом с Backup — до записи нового конфига, — поэтому
-// история хранит то, что было применено раньше.
+// SaveVersion кладёт содержимое в историю новым номером вместе со снимком
+// файлов списков и подрезает её до maxVersions. Вызывается рядом с Backup — до
+// записи нового конфига, — поэтому история хранит то, что было применено
+// раньше. Точка фиксации — файл версии: снимок пишется до него, и обрыв между
+// ними оставляет каталог без номера, которого перечисление не видит.
 func (s *Store) SaveVersion(ctx context.Context, data []byte) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -83,15 +106,30 @@ func (s *Store) SaveVersion(ctx context.Context, data []byte) error {
 		return err
 	}
 
+	lists, err := s.readLists()
+	if err != nil {
+		return fmt.Errorf("чтение списков под версию: %w", err)
+	}
+
+	// prev — суммы снимка самой свежей версии: по ним ловится повтор и
+	// выбираются файлы, которые можно связать ссылкой, а не копировать.
+	var prev map[string]string
+
 	if len(saved) > 0 {
+		prev, err = snapshotSums(root, saved[0])
+		if err != nil && !errors.Is(err, ErrNoVersionLists) {
+			return err
+		}
+
 		same, err := sameContent(root, saved[0], data)
 		if err != nil {
 			return err
 		}
 
-		// Повторное применение того же конфига в историю не пишется: десять
-		// одинаковых применений вытеснили бы всё, что там было.
-		if same {
+		// Повторное применение того же конфига с теми же списками в историю
+		// не пишется: десять одинаковых применений вытеснили бы всё, что там
+		// было.
+		if same && sameLists(prev, lists) {
 			return nil
 		}
 	}
@@ -101,11 +139,88 @@ func (s *Store) SaveVersion(ctx context.Context, data []byte) error {
 		next = saved[0] + 1
 	}
 
+	if err := saveVersionLists(root, next, prev, lists); err != nil {
+		return err
+	}
+
 	if err := writeAtomic(root, versionName(next), data, securePerm); err != nil {
 		return err
 	}
 
 	return trimVersions(root, append([]int{next}, saved...))
+}
+
+// saveVersionLists кладёт снимок списков в соседний каталог версии next.
+// Снимок собирается целиком в черновике и только потом получает имя: обрыв на
+// середине не должен оставлять под номером неполный набор. Файл с тем же
+// содержимым, что в снимке prev предыдущей версии, связывается жёсткой ссылкой —
+// неизменённый список не должен стоить места в каждой версии. Ссылки
+// файловая система может не дать, и тогда файл копируется: экономия места не
+// повод отказать в версии.
+func saveVersionLists(root *os.Root, next int, prev map[string]string, lists map[string][]byte) error {
+	// Сирота того же номера — след обрыва до записи файла версии: номер
+	// тогда не занят, и снимок собирается заново.
+	for _, name := range []string{versionListsName(next), versionListsStaging} {
+		if err := root.RemoveAll(name); err != nil {
+			return fmt.Errorf("очистка черновика снимка списков %s: %w", name, err)
+		}
+	}
+
+	if err := root.Mkdir(versionListsStaging, secureDirPerm); err != nil {
+		return fmt.Errorf("каталог черновика снимка списков: %w", err)
+	}
+
+	staging, err := root.OpenRoot(versionListsStaging)
+	if err != nil {
+		return fmt.Errorf("открытие черновика снимка списков: %w", err)
+	}
+	defer func() { _ = staging.Close() }()
+
+	for name, data := range lists {
+		if sum, ok := prev[name]; ok && sum == Sum(data) {
+			from := versionListsName(next-1) + "/" + name
+			if root.Link(from, versionListsStaging+"/"+name) == nil {
+				continue
+			}
+		}
+
+		if err := writeAtomic(staging, name, data, securePerm); err != nil {
+			return fmt.Errorf("снимок списка %s: %w", name, err)
+		}
+	}
+
+	// Ссылки ложатся мимо writeAtomic, и их записи в каталоге закрепляются
+	// отдельно.
+	if err := syncDir(staging); err != nil {
+		return err
+	}
+
+	if err := root.Rename(versionListsStaging, versionListsName(next)); err != nil {
+		return fmt.Errorf("снимок списков версии %d: %w", next, err)
+	}
+
+	return syncDir(root)
+}
+
+// sameLists отвечает, совпадает ли набор файлов со снимком. Версия без снимка
+// (prev == nil) равна только пустому набору: иначе первое применение со
+// списками после обновления демона в историю бы не попало.
+func sameLists(prev map[string]string, lists map[string][]byte) bool {
+	if prev == nil {
+		return len(lists) == 0
+	}
+
+	if len(prev) != len(lists) {
+		return false
+	}
+
+	for name, data := range lists {
+		if sum, ok := prev[name]; !ok || sum != Sum(data) {
+			return false
+		}
+	}
+
+	return true
 }
 
 // Versions отдаёт историю от свежей к старой.
@@ -159,6 +274,65 @@ func (s *Store) ReadVersion(ctx context.Context, id int) ([]byte, error) {
 	}
 
 	return data, nil
+}
+
+// ReadVersionLists отдаёт снимок файлов списков версии: имя → содержимое.
+// Пустая карта — на момент сохранения списков не было, ErrNoVersionLists —
+// версия сохранена без снимка.
+func (s *Store) ReadVersionLists(ctx context.Context, id int) (map[string][]byte, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	root, err := s.versionsRoot(false)
+	if errors.Is(err, errNoHistory) {
+		return nil, ErrNoVersion
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = root.Close() }()
+
+	// Снимок без файла версии — сирота оборванной записи, а не версия.
+	if _, err := root.Stat(versionName(id)); errors.Is(err, fs.ErrNotExist) {
+		return nil, ErrNoVersion
+	} else if err != nil {
+		return nil, fmt.Errorf("версия %d: %w", id, err)
+	}
+
+	snapshot, err := root.OpenRoot(versionListsName(id))
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, ErrNoVersionLists
+	}
+	if err != nil {
+		return nil, fmt.Errorf("открытие снимка списков версии %d: %w", id, err)
+	}
+	defer func() { _ = snapshot.Close() }()
+
+	entries, err := fs.ReadDir(snapshot.FS(), ".")
+	if err != nil {
+		return nil, fmt.Errorf("чтение снимка списков версии %d: %w", id, err)
+	}
+
+	files := make(map[string][]byte, len(entries))
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		data, err := snapshot.ReadFile(entry.Name())
+		if err != nil {
+			return nil, fmt.Errorf("чтение снимка списка %s версии %d: %w", entry.Name(), id, err)
+		}
+
+		files[entry.Name()] = data
+	}
+
+	return files, nil
 }
 
 // errNoHistory — каталога истории ещё нет. Для чтения это пустая история, а не
@@ -245,12 +419,23 @@ func listVersions(root *os.Root) ([]Version, error) {
 			continue
 		}
 
-		versions = append(versions, Version{
+		version := Version{
 			ID:      id,
 			Size:    info.Size(),
 			Sum:     sum,
 			SavedAt: info.ModTime().Unix(),
-		})
+		}
+
+		lists, err := snapshotSums(root, id)
+		switch {
+		case err == nil:
+			version.ListsSum = ListsEtag(lists)
+		case errors.Is(err, ErrNoVersionLists):
+		default:
+			continue
+		}
+
+		versions = append(versions, version)
 	}
 
 	sort.Slice(versions, func(i, j int) bool { return versions[i].ID > versions[j].ID })
@@ -276,17 +461,33 @@ func streamSum(root *os.Root, name string) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-// trimVersions удаляет всё, что не помещается в maxVersions. Отказ удаления не
-// останавливает применение: лишний файл истории безвреден, а прерванный цикл
-// Apply — нет.
+// trimVersions удаляет всё, что не помещается в maxVersions, вместе с
+// соседними каталогами снимков, а заодно снимки без файла версии среди
+// оставленных номеров: сироты оборванной записи и каталоги, которые оставила
+// подрезка демона прежней версии. Отказ удаления не останавливает применение:
+// лишний файл истории безвреден, а прерванный цикл Apply — нет.
 func trimVersions(root *os.Root, ids []int) error {
-	if len(ids) <= maxVersions {
-		return nil
-	}
+	kept := ids[:min(len(ids), maxVersions)]
 
-	for _, stale := range ids[maxVersions:] {
+	for _, stale := range ids[len(kept):] {
 		if err := root.Remove(versionName(stale)); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return fmt.Errorf("удаление версии %d: %w", stale, err)
+		}
+	}
+
+	entries, err := fs.ReadDir(root.FS(), ".")
+	if err != nil {
+		return fmt.Errorf("чтение каталога истории: %w", err)
+	}
+
+	for _, entry := range entries {
+		id, ok := versionListsID(entry.Name())
+		if !ok || slices.Contains(kept, id) {
+			continue
+		}
+
+		if err := root.RemoveAll(entry.Name()); err != nil {
+			return fmt.Errorf("удаление снимка списков %s: %w", entry.Name(), err)
 		}
 	}
 
@@ -330,8 +531,53 @@ func sameContent(root *os.Root, id int, data []byte) (bool, error) {
 	return sha256.Sum256(saved) == sha256.Sum256(data), nil
 }
 
+// snapshotSums считает sha256 файлов снимка версии потоком, не поднимая
+// снимок в память: список истории запрашивается на каждый заход в панель.
+// ErrNoVersionLists — снимка у версии нет.
+func snapshotSums(root *os.Root, id int) (map[string]string, error) {
+	dir := versionListsName(id)
+
+	entries, err := fs.ReadDir(root.FS(), dir)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, ErrNoVersionLists
+	}
+	if err != nil {
+		return nil, fmt.Errorf("чтение снимка списков версии %d: %w", id, err)
+	}
+
+	sums := make(map[string]string, len(entries))
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		sum, err := streamSum(root, dir+"/"+entry.Name())
+		if err != nil {
+			return nil, fmt.Errorf("снимок списка %s версии %d: %w", entry.Name(), id, err)
+		}
+
+		sums[entry.Name()] = sum
+	}
+
+	return sums, nil
+}
+
 func versionName(id int) string {
 	return fmt.Sprintf("%0*d", versionDigits, id)
+}
+
+func versionListsName(id int) string {
+	return versionName(id) + versionListsSuffix
+}
+
+func versionListsID(name string) (int, bool) {
+	prefix, ok := strings.CutSuffix(name, versionListsSuffix)
+	if !ok {
+		return 0, false
+	}
+
+	return versionID(prefix)
 }
 
 func versionID(name string) (int, bool) {
@@ -356,4 +602,24 @@ func Sum(data []byte) string {
 	sum := sha256.Sum256(data)
 
 	return hex.EncodeToString(sum[:])
+}
+
+// ListsEtag — отпечаток набора файлов списков: имена с суммами в стабильном
+// порядке. Его отдаёт чтение списков, его же клиент возвращает базой
+// применения, и в той же записи история отдаёт отпечаток снимка версии.
+func ListsEtag(sums map[string]string) string {
+	names := make([]string, 0, len(sums))
+	for name := range sums {
+		names = append(names, name)
+	}
+
+	sort.Strings(names)
+
+	h := sha256.New()
+	for _, name := range names {
+		// Запись в hash.Hash не отказывает по контракту пакета hash.
+		_, _ = fmt.Fprintf(h, "%s:%s\n", name, sums[name])
+	}
+
+	return hex.EncodeToString(h.Sum(nil))
 }

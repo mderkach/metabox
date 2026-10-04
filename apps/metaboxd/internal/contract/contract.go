@@ -77,6 +77,11 @@ type Versions struct {
 	// в защищённом контексте, а панель открывают по http. Поля нет — конфига на
 	// устройстве нет.
 	CurrentSum string `json:"current_sum,omitempty"`
+	// CurrentListsSum — отпечаток текущего набора файлов списков в той же
+	// записи, что у `Version.ListsSum`: версия совпадает с устройством, только
+	// когда совпадают и конфиг, и списки. Поля нет у демона, который снимков
+	// списков не хранит.
+	CurrentListsSum string `json:"current_lists_sum,omitempty"`
 }
 
 // Service — ответ `GET /api/service` и того же вида событие потока: панель
