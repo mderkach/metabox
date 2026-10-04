@@ -66,13 +66,13 @@
 
 - правило и объяснение маршрута уже следуют решению;
 - сеты переводятся в панель этим же изменением: `widgets/RuleSet/RuleSetPanel`, слот `form` у `RuleSetTable` снимается;
-- экран секции переводится отдельным изменением: карточки узлов становятся строками списка, а `ConfigNode` с вкладками «Форма» и «JSON» — содержимым панели. До этого экран секции — известное исключение.
+- на экране секции создание узла уже открывается в панели (`widgets/Config/ConfigNodePanel`), а правка переводится отдельным изменением: карточки узлов становятся строками списка, а `ConfigNode` с вкладками «Форма» и «JSON» — содержимым панели. До этого правка узла секции — известное исключение.
 
 Non-goals: общий компонент панели в `shared/ui` — пока панелей три и у каждой своя шапка, общий каркас стоил бы пропсов на каждое расхождение. Правка существующего сета — отдельная задача; когда она появится, она откроется в той же панели.
 
 ### Область действия и границы
 
-`apps/web/src/widgets/Rule/RulePanel`, `apps/web/src/widgets/RouteExplanation`, `apps/web/src/widgets/RuleSet/RuleSetPanel`, `apps/web/src/widgets/RuleSet/RuleSetTable`, `apps/web/src/pages/Editor`, `apps/web/src/pages/RuleSets`, `apps/web/src/pages/Section` и `apps/web/src/widgets/Config/ConfigNode` (отдельным изменением).
+`apps/web/src/widgets/Rule/RulePanel`, `apps/web/src/widgets/RouteExplanation`, `apps/web/src/widgets/RuleSet/RuleSetPanel`, `apps/web/src/widgets/RuleSet/RuleSetTable`, `apps/web/src/pages/Editor`, `apps/web/src/pages/RuleSets`, `apps/web/src/pages/Section`, `apps/web/src/widgets/Config/ConfigNodePanel`, `apps/web/src/widgets/Config/ConfigNode` (правка — отдельным изменением).
 
 ## Последствия
 
@@ -87,7 +87,7 @@ Non-goals: общий компонент панели в `shared/ui` — пок�
 - На `lg` и шире открытая панель сужает список на ширину до `max-w-md`; на ширине около `lg` колонки сетов теснее.
 - Каждая сущность держит пару «панель и лист»: шапку и закрытие приходится повторять в двух компонентах, пока общего каркаса нет.
 - Форма создания сета живёт в двух местах — на пустом экране и в панели. Правка формы видна в обоих.
-- Экран секции до своего перевода остаётся исключением: форма и JSON там встроены в карточку узла.
+- Правка узла секции до своего перевода остаётся исключением: форма и JSON там встроены в карточку узла.
 
 ### Нейтральные или отложенные
 
