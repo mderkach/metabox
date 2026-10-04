@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -62,6 +62,46 @@ describe('ConfigRawEditor', () => {
 
     expect(screen.queryByRole('button', { name: ISSUE_TEXT })).not.toBeInTheDocument();
     expect(screen.getByText(ISSUE_TEXT)).toBeInTheDocument();
+  });
+
+  describe('оглавление', () => {
+    const ROUTED =
+      '{\n  // логи\n  "log": {},\n  "route": {\n    "rules": [{ "outbound": "direct" }],\n    "final": "direct",\n  },\n}';
+
+    it('ведёт из оглавления к вложенной секции и ставит на её ключ курсор', async () => {
+      const user = userEvent.setup();
+
+      render(<ConfigRawEditor text={ROUTED} onChange={vi.fn<(next: string) => void>()} issues={[]} />);
+      await user.click(screen.getByRole('button', { name: 'Перейти к секции' }));
+
+      const outline = within(await screen.findByRole('list', { name: 'Секции конфига' }));
+
+      expect(outline.getByRole('button', { name: 'route' })).toBeInTheDocument();
+      expect(outline.queryByRole('button', { name: /final/ })).not.toBeInTheDocument();
+
+      await user.click(outline.getByRole('button', { name: /^rules/ }));
+
+      // Фокус проверяется, когда окно уже закрыто: закрытие не должно вернуть
+      // его на кнопку оглавления.
+      await waitFor(() => {
+        expect(screen.queryByRole('list', { name: 'Секции конфига' })).not.toBeInTheDocument();
+      });
+
+      const input = screen.getByLabelText('Конфиг sing-box текстом');
+
+      expect(input).toHaveFocus();
+      expect(input).toHaveProperty('selectionStart', ROUTED.indexOf('"rules"'));
+      expect(input).toHaveProperty('selectionEnd', ROUTED.indexOf('"rules"') + '"rules"'.length);
+    });
+
+    it('на тексте без объекта в корне говорит, что секций нет', async () => {
+      const user = userEvent.setup();
+
+      render(<ConfigRawEditor text='[' onChange={vi.fn<(next: string) => void>()} issues={[]} />);
+      await user.click(screen.getByRole('button', { name: 'Перейти к секции' }));
+
+      expect(await screen.findByText('Секций нет: текст не разобран')).toBeInTheDocument();
+    });
   });
 
   describe('перенос строк', () => {

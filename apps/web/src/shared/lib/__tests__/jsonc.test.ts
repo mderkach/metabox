@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { firstJsoncError, parseJsonc } from '../jsonc';
+import { firstJsoncError, jsoncOutline, parseJsonc } from '../jsonc';
 
 /** Номер строки по смещению: разбор сообщает позицию в символах. */
 function lineOf(text: string, offset: number): number {
@@ -40,5 +40,45 @@ describe('parseJsonc', () => {
     const { failure } = parseJsonc('{ "a": }');
 
     expect(failure?.text).toBe('ожидалось значение');
+  });
+});
+
+describe('jsoncOutline', () => {
+  const TEXT = [
+    '{',
+    '  // уровень логов',
+    '  "log": { "level": "info" },',
+    '  "route": {',
+    '    "rules": [{ "outbound": "direct" }, { "outbound": "proxy" },],',
+    '    "rule_set": [],',
+    '    "final": "proxy",',
+    '  },',
+    '}',
+  ].join('\n');
+
+  it('ставит ключи корня на их место в тексте с комментариями и висячей запятой', () => {
+    const outline = jsoncOutline(TEXT);
+
+    expect(outline.map((entry) => entry.key)).toEqual(['log', 'route']);
+    expect(outline[0]).toMatchObject({ offset: TEXT.indexOf('"log"'), length: '"log"'.length, size: null });
+  });
+
+  it('под свойством корня перечисляет вложенные объекты и массивы, а скаляры пропускает', () => {
+    const route = jsoncOutline(TEXT).find((entry) => entry.key === 'route');
+
+    expect(route?.children.map((entry) => entry.key)).toEqual(['rules', 'rule_set']);
+    expect(route?.children[0]).toMatchObject({ offset: TEXT.indexOf('"rules"'), size: 2 });
+    expect(route?.children[1]).toMatchObject({ size: 0 });
+  });
+
+  it('на битом тексте отдаёт то, что разобрано до ошибки', () => {
+    const broken = '{ "log": {}, "route": { "rules": [1, 2 "final": "x" }, "dns": {} }';
+
+    expect(jsoncOutline(broken).map((entry) => entry.key)).toEqual(['log', 'route']);
+  });
+
+  it('у текста без объекта в корне оглавления нет', () => {
+    expect(jsoncOutline('[1, 2]')).toEqual([]);
+    expect(jsoncOutline('')).toEqual([]);
   });
 });

@@ -9,6 +9,7 @@ import { cn } from '@shared/lib/utils';
 import { Badge, Button, Input, SEARCH_FIELD, SURFACE } from '@shared/ui';
 
 import { findMatches, lineIndexOf, toJsonTokens, tokenIndexAt, useRawEditorWrap } from '../lib';
+import { ConfigRawOutline } from './ConfigRawOutline';
 
 /** Один класс на все три слоя: при наложении метрики обязаны совпадать до пикселя. */
 const CODE_CLASS = 'font-mono text-xs/5';
@@ -196,6 +197,8 @@ export function ConfigRawEditor({
           </>
         )}
 
+        <ConfigRawOutline text={draft} onJump={goToOffset} />
+
         <Button
           variant='ghost'
           size='icon-sm'
@@ -203,7 +206,7 @@ export function ConfigRawEditor({
           aria-label={t('wrap')}
           onClick={toggleWrap}
           className={cn(
-            'ml-auto text-muted-foreground hover:text-foreground',
+            'text-muted-foreground hover:text-foreground',
             wrap && 'bg-selected text-foreground ring-1 ring-selected-edge'
           )}
         >

@@ -15,5 +15,10 @@
   "issues": "schema issues: {{count}} — they do not block saving the draft, only <code>sing-box check</code> can reject it",
   "issuesMore_one": "and {{count}} more issue",
   "issuesMore_other": "and {{count}} more issues",
-  "wrap": "Wrap lines"
+  "wrap": "Wrap lines",
+  "outline": {
+    "open": "Go to a section",
+    "label": "Config sections",
+    "empty": "No sections: the text is not parsed"
+  }
 }
