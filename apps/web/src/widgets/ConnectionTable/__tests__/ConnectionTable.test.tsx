@@ -236,6 +236,25 @@ describe('вид списка', () => {
     expect(headerLabels()).toEqual(['Откуда', 'Куда', 'Правило', 'Действие', 'Цепочка', 'Объём', 'Время']);
   });
 
+  // Сброс — одно изменение вида: два сеттера подряд брали бы вид из одного и
+  // того же замыкания, и второй затирал бы результат первого.
+  it('сброс вида возвращает и скрытые колонки, когда порядок тоже менялся', async () => {
+    const user = userEvent.setup();
+
+    renderWithQuery(<TableHarness rows={makeRows(4)} onReset={vi.fn<() => void>()} />);
+
+    await user.click(screen.getByRole('button', { name: /^Поля/ }));
+    await user.click(await screen.findByRole('checkbox', { name: 'Цепочка' }));
+    await user.click(screen.getByRole('button', { name: 'Поднять поле Куда выше' }));
+
+    expect(headerLabels()).toEqual(['Куда', 'Откуда', 'Правило', 'Действие', 'Объём', 'Время']);
+
+    await user.click(screen.getByRole('button', { name: 'По умолчанию' }));
+
+    expect(headerLabels()).toEqual(['Откуда', 'Куда', 'Правило', 'Действие', 'Цепочка', 'Объём', 'Время']);
+    expect(screen.getByRole('checkbox', { name: 'Цепочка' })).toBeChecked();
+  });
+
   it('сохранённый порядок другой версии панели: незнакомое пропускает, недостающее ставит в конец', () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ order: ['age', 'telepathy', 'host'], density: 'compact' }));
 

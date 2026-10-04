@@ -45,7 +45,7 @@ function toMoveButtonId(field: string, move: Move): string {
 export function ConnectionColumnPicker({
   view,
 }: {
-  view: Pick<ConnectionView, 'columns' | 'order' | 'setColumns' | 'setOrder'>;
+  view: Pick<ConnectionView, 'columns' | 'order' | 'setColumns' | 'setOrder' | 'resetColumns'>;
 }) {
   const { t } = useTranslation('widgets/ConnectionTable');
   const columns = toOrderedColumns(view.order);
@@ -106,10 +106,7 @@ export function ConnectionColumnPicker({
               variant='ghost'
               size='xs'
               className='text-muted-foreground hover:text-foreground'
-              onClick={() => {
-                view.setColumns(CONNECTION_COLUMNS_HIDDEN);
-                view.setOrder([]);
-              }}
+              onClick={view.resetColumns}
             >
               <RotateCcw />
               {t('fields.reset')}

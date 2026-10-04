@@ -115,6 +115,8 @@ export interface ConnectionView extends StoredView {
   setSorting: OnChangeFn<SortingState>;
   setColumns: OnChangeFn<ColumnVisibilityState>;
   setOrder: OnChangeFn<ColumnOrderState>;
+  /** Возвращает видимость колонок и их порядок одним изменением вида; остальное в виде не трогает. */
+  resetColumns: () => void;
   setDensity: (density: TableDensity) => void;
   setInterval: (interval: RefreshInterval) => void;
 }
@@ -163,6 +165,10 @@ export function useConnectionView(): ConnectionView {
     [update, view.order]
   );
 
+  const onColumnsReset = useCallback(() => {
+    update({ columns: CONNECTION_COLUMNS_HIDDEN, order: DEFAULT_VIEW.order });
+  }, [update]);
+
   const onDensityChange = useCallback(
     (density: TableDensity) => {
       update({ density });
@@ -183,9 +189,10 @@ export function useConnectionView(): ConnectionView {
       setSorting: onSortingChange,
       setColumns: onColumnsChange,
       setOrder: onOrderChange,
+      resetColumns: onColumnsReset,
       setDensity: onDensityChange,
       setInterval: onIntervalChange,
     }),
-    [view, onSortingChange, onColumnsChange, onOrderChange, onDensityChange, onIntervalChange]
+    [view, onSortingChange, onColumnsChange, onOrderChange, onColumnsReset, onDensityChange, onIntervalChange]
   );
 }
