@@ -4,7 +4,7 @@ import type { RouteExplanationWire } from '../api/Route.schema';
  * Ответ демона на соединение, ушедшее в `alt-fallback` по rule-set.
  * Индексы правил считаются с нуля — это индексы узлов `route.rules`.
  *
- * Правил здесь семь, а в конфиге фикстуры их 32, поэтому в дев-режиме панель
+ * Правил здесь семь, а в конфиге фикстуры их 32, поэтому рядом с ним панель
  * показывает расхождение списков и отключает переход к узлу. Это не поломка:
  * так выглядит случай «процесс исполняет другой конфиг».
  */
@@ -57,4 +57,41 @@ export const ROUTE_UNKNOWN_FIXTURE: RouteExplanationWire = {
   },
   chain: { origin: 'observed', nodes: ['direct'] },
   rules: [],
+};
+
+/**
+ * Список правил процесса для объяснений по снимку соединений: условия и
+ * действия — ровно те, что несут строки снимка, поэтому каждое соединение
+ * находит в нём своё правило. С конфигом фикстуры список не сходится, и
+ * панель по-прежнему показывает расхождение списков.
+ */
+export const ROUTE_PROCESS_RULES_FIXTURE: RouteExplanationWire['rules'] = [
+  { origin: 'observed', index: 0, type: 'default', conditions: '', action: 'sniff' },
+  { origin: 'observed', index: 1, type: 'default', conditions: 'inbound=dns-in', action: 'hijack-dns' },
+  { origin: 'observed', index: 2, type: 'default', conditions: 'port=53', action: 'hijack-dns' },
+  { origin: 'observed', index: 3, type: 'default', conditions: 'rule_set=google-ip', action: 'route(us-fallback)' },
+  { origin: 'observed', index: 4, type: 'default', conditions: 'rule_set=github', action: 'route(proxy)' },
+  { origin: 'observed', index: 5, type: 'default', conditions: 'rule_set=openai', action: 'route(proxy)' },
+  { origin: 'observed', index: 6, type: 'default', conditions: '', action: 'route(direct)' },
+];
+
+/**
+ * Цепочка объяснения разошлась с цепочкой строки. Случай штатный
+ * (ADR-0007): строка пришла снимком потока, объяснение — отдельной ручкой
+ * позже, и `urltest` за это время перевёл трафик на другой узел.
+ *
+ * Идентификатор — соединение `clients.google.example` из снимка соединений:
+ * в строке у него `sub-us/us-reality`, в объяснении — `sub-us/us-hysteria`.
+ */
+export const ROUTE_DRIFTED_CHAIN_FIXTURE: RouteExplanationWire = {
+  connection_id: '3c9f0b71-5d43-4a1f-8c6e-9a1b2c3d4e5f',
+  match: {
+    origin: 'observed',
+    kind: 'rule',
+    index: 3,
+    conditions: 'rule_set=google-ip',
+    action: 'route(us-fallback)',
+  },
+  chain: { origin: 'observed', nodes: ['sub-us/us-hysteria', 'us', 'us-fallback'] },
+  rules: ROUTE_PROCESS_RULES_FIXTURE,
 };

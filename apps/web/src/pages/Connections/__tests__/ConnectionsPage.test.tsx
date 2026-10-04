@@ -10,8 +10,9 @@ import { CONFIG_ENDPOINT } from '@entities/Config';
 import { CONFIG_FIXTURE } from '@entities/Config/__tests__/Config.fixture';
 import { ConnectionStore, parseConnectionSearch } from '@entities/Connection';
 import { CONNECTION_ENDPOINT } from '@entities/Connection';
-import { makeConnectionsSnapshot } from '@entities/Connection/__tests__/Connection.fixture';
-import { routeHandlers } from '@entities/Route/__tests__/Route.handlers';
+import { CONNECTIONS_FIXTURE, makeConnectionsSnapshot } from '@entities/Connection/__tests__/Connection.fixture';
+import { ROUTE_DRIFTED_CHAIN_FIXTURE } from '@entities/Route/__tests__/Route.fixture';
+import { createRouteHandlers } from '@entities/Route/__tests__/Route.handlers';
 
 import { ConnectionsPage } from '../ui/ConnectionsPage';
 
@@ -224,7 +225,7 @@ describe('экран соединений', () => {
   });
 
   it('объясняет маршрут панелью рядом со списком', async () => {
-    server.use(...routeHandlers);
+    server.use(...createRouteHandlers(CONNECTIONS_FIXTURE.connections));
     const user = userEvent.setup();
 
     ConnectionStore.getState().apply(makeConnectionsSnapshot(3));
@@ -236,6 +237,41 @@ describe('экран соединений', () => {
 
     expect(await screen.findByRole('complementary', { name: /Маршрут соединения/ })).toBeInTheDocument();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('у каждой строки своё объяснение с цепочкой этой строки', async () => {
+    server.use(...createRouteHandlers(CONNECTIONS_FIXTURE.connections));
+    const user = userEvent.setup();
+
+    ConnectionStore.getState().apply(CONNECTIONS_FIXTURE);
+    renderScreen();
+
+    await user.click(await screen.findByRole('button', { name: /Почему соединение api\.git\.example/ }));
+
+    const panel = await screen.findByRole('complementary', { name: /api\.git\.example/ });
+
+    expect(await within(panel).findByRole('list', { name: 'Цепочка прокси' })).toHaveTextContent(
+      'proxysub-eu/eu-reality'
+    );
+  });
+
+  // Цепочку строки принёс снимок потока, цепочку панели — отдельная ручка
+  // позже: они расходятся штатно (ADR-0007), и панель показывает свою, не
+  // подменяя её цепочкой строки.
+  it('показывает цепочку объяснения, когда она разошлась с цепочкой строки', async () => {
+    server.use(...createRouteHandlers(CONNECTIONS_FIXTURE.connections));
+    const user = userEvent.setup();
+
+    ConnectionStore.getState().apply(CONNECTIONS_FIXTURE);
+    renderScreen();
+
+    await user.click(await screen.findByRole('button', { name: /Почему соединение clients\.google\.example/ }));
+
+    const panel = await screen.findByRole('complementary', { name: /clients\.google\.example/ });
+    const chain = await within(panel).findByRole('list', { name: 'Цепочка прокси' });
+
+    expect(chain).toHaveTextContent([...ROUTE_DRIFTED_CHAIN_FIXTURE.chain.nodes].reverse().join(''));
+    expect(screen.queryByTitle(/us-hysteria/)).not.toBeInTheDocument();
   });
 
   it('переключение вкладок сохраняет фильтр колонки активной таблицы', async () => {
@@ -300,7 +336,7 @@ describe('экран соединений на телефоне', () => {
   });
 
   it('объясняет маршрут листом поверх списка и снимает выбор по Escape', async () => {
-    server.use(...routeHandlers);
+    server.use(...createRouteHandlers(CONNECTIONS_FIXTURE.connections));
     const user = userEvent.setup();
 
     ConnectionStore.getState().apply(makeConnectionsSnapshot(3));

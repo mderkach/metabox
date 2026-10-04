@@ -14,7 +14,7 @@ import {
 } from '@entities/Daemon/__tests__/Daemon.fixture';
 import { createStatefulDaemonHandlers } from '@entities/Daemon/__tests__/Daemon.handlers';
 import { createStatefulProxyHandlers } from '@entities/Proxy/__tests__/Proxy.handlers';
-import { createRuleHitsHandler, routeHandlers } from '@entities/Route/__tests__/Route.handlers';
+import { createRouteHandlers, createRuleHitsHandler } from '@entities/Route/__tests__/Route.handlers';
 import { ruleSetHandlers } from '@entities/RuleSet/__tests__/RuleSet.handlers';
 import { RUNTIME_TOPIC } from '@shared/api';
 import { MS_IN_SECOND } from '@shared/lib/time';
@@ -55,7 +55,7 @@ export function createMissingHandlers(connections = 0) {
     ...createStatefulDaemonHandlers(),
     ...createStatefulProxyHandlers(),
     ...connectionHandlers,
-    ...routeHandlers,
+    ...createRouteHandlers(CONNECTIONS_FIXTURE.connections),
     ...ruleSetHandlers,
     createRuleHitsHandler(CONFIG_FIXTURE.route?.rules ?? []),
     runtimeStreamHandler(
