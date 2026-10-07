@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import type userEvent from '@testing-library/user-event';
 import { expect } from 'vitest';
 
@@ -21,9 +21,12 @@ const OPEN_TIMEOUT_MS = 250;
  *
  * Выбор — с клавиатуры: клик по опции Base UI обрабатывает по pointer-событиям,
  * которых jsdom не воспроизводит, и значение не меняется.
+ *
+ * Опции ищутся в списке своего триггера, а не во всём документе: только что
+ * закрытый соседний список ещё доигрывает выход и держит свои опции в DOM.
  */
 export async function selectOption(user: User, trigger: HTMLElement, option: string): Promise<void> {
-  for (let attempt = 0; attempt < OPEN_ATTEMPTS && screen.queryAllByRole('option').length === 0; attempt += 1) {
+  for (let attempt = 0; attempt < OPEN_ATTEMPTS && optionsOf(trigger).length === 0; attempt += 1) {
     // Перед каждой попыткой: дать сработать таймерам прошлых тестов и погасить
     // то, что они навесили. Слушатели одноразовые, и одно отпускание снимает их
     // разом; своих у закрытого списка ещё нет.
@@ -38,14 +41,14 @@ export async function selectOption(user: User, trigger: HTMLElement, option: str
     // слушатель, не успевший погаснуть, закрывает список тем же кликом, каким
     // он открывается, и без ожидания попытки совпадают по фазе — каждая
     // открывает список и тут же его теряет.
-    await waitForOptions();
+    await waitForOptions(trigger);
   }
 
   await waitFor(() => {
-    expect(screen.getAllByRole('option').length).toBeGreaterThan(0);
+    expect(optionsOf(trigger).length).toBeGreaterThan(0);
   });
 
-  const options = screen.getAllByRole('option');
+  const options = optionsOf(trigger);
   const target = options.find((item) => item.textContent === option);
 
   if (target === undefined) {
@@ -67,12 +70,24 @@ export async function selectOption(user: User, trigger: HTMLElement, option: str
   await user.keyboard('{Enter}');
 }
 
+/** Опции открытого списка этого триггера; у закрытого — ни одной. */
+function optionsOf(trigger: HTMLElement): HTMLElement[] {
+  if (trigger.getAttribute('aria-expanded') !== 'true') {
+    return [];
+  }
+
+  const listId = trigger.getAttribute('aria-controls');
+  const list = screen.queryAllByRole('listbox').find((item) => item.id === listId);
+
+  return list === undefined ? [] : within(list).queryAllByRole('option');
+}
+
 /** Ждёт опций; не дождавшись, отдаёт управление следующей попытке. */
-async function waitForOptions(): Promise<void> {
+async function waitForOptions(trigger: HTMLElement): Promise<void> {
   try {
     await waitFor(
       () => {
-        expect(screen.getAllByRole('option').length).toBeGreaterThan(0);
+        expect(optionsOf(trigger).length).toBeGreaterThan(0);
       },
       { timeout: OPEN_TIMEOUT_MS }
     );
