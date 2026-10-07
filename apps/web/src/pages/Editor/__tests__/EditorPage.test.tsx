@@ -2,7 +2,7 @@ import { renderWithRouter } from '@test/renderWithRouter';
 import { selectOption } from '@test/selectOption';
 import { server } from '@test/server';
 import { mockVirtualSizes } from '@test/virtualSizes';
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -257,6 +257,27 @@ describe('экран правил', () => {
     ).toBeInTheDocument();
   });
 
+  it('выбранный в форме выход переживает переход на JSON и обратно', async () => {
+    serveConfig(RECOGNIZED_CONFIG);
+
+    const user = userEvent.setup();
+
+    renderWithRouter(EditorPage);
+
+    await user.click(await screen.findByRole('button', { name: /^Правило 1, / }));
+
+    const panel = await screen.findByRole('complementary');
+
+    await selectOption(user, within(panel).getByRole('combobox', { name: 'Куда отправить' }), 'direct');
+    await user.click(within(panel).getByRole('tab', { name: 'JSON' }));
+    await waitFor(() => {
+      expect(within(panel).queryByRole('combobox', { name: 'Куда отправить' })).not.toBeInTheDocument();
+    });
+    await user.click(within(panel).getByRole('tab', { name: 'Форма' }));
+
+    expect(within(panel).getByRole('combobox', { name: 'Куда отправить' })).toHaveTextContent('direct');
+  });
+
   it('нераспознанный узел не получает формы, но правится текстом', async () => {
     const user = userEvent.setup();
 
@@ -481,6 +502,29 @@ describe('правка списка правил', () => {
       JSON.stringify(EDIT_RULES[2], null, 2)
     );
     expect(within(panel).getByRole('button', { name: 'Поднять правило 2 выше' })).toHaveFocus();
+  });
+
+  it('отмена черновика после перестановки открывает в форме узел, который теперь на месте выбора', async () => {
+    const user = userEvent.setup();
+
+    renderWithRouter(EditorPage);
+
+    await user.click(await screen.findByRole('button', { name: /^Правило 3, / }));
+
+    const panel = await screen.findByRole('complementary');
+
+    await user.click(within(panel).getByRole('button', { name: 'Поднять правило 3 выше' }));
+    await user.click(within(panel).getByRole('button', { name: 'Поднять правило 2 выше' }));
+
+    expect(within(panel).getByRole('combobox', { name: 'Куда отправить' })).toHaveTextContent('direct');
+
+    act(() => {
+      ConfigDocumentState.getState().discard();
+    });
+
+    // Выбор остался на первой позиции, а там снова правило 1 файла.
+    expect(within(panel).getByRole('heading', { name: 'Правило 1' })).toBeInTheDocument();
+    expect(within(panel).getByRole('combobox', { name: 'Куда отправить' })).toHaveTextContent('proxy');
   });
 
   it('на первом месте «Выше» гаснет, и фокус уходит на «Ниже», а не теряется', async () => {

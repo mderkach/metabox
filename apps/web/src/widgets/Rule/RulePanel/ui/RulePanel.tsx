@@ -1,5 +1,5 @@
 import { X } from 'lucide-react';
-import { useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useMemo, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ConfigDocumentState } from '@entities/Config';
@@ -67,6 +67,10 @@ export function RulePanel({
   const { t } = useTranslation('widgets/Rule/RulePanel');
   const [tab, setTab] = useState<string>(recognized ? TAB.Form : TAB.Raw);
   const revision = ConfigDocumentState.use.revision();
+  // Форма читает узел однажды, а выбор держит позицию: отмена черновика или
+  // правка текстом ставят на неё другой узел, и форма должна смениться вместе с
+  // ним. Перестановка узел не меняет — набранное в форме остаётся.
+  const nodeKey = useMemo(() => JSON.stringify(node), [node]);
   const headingRef = useFocusReturn<HTMLHeadingElement>();
 
   function onKeyDown(event: KeyboardEvent<HTMLElement>) {
@@ -136,8 +140,9 @@ export function RulePanel({
             <TabsTrigger value={TAB.Raw}>JSON</TabsTrigger>
           </TabsList>
 
-          <TabsContent value={TAB.Form} className='pt-3'>
-            {recognized && <RuleEditForm rule={rule} outbounds={outbounds} ruleSets={ruleSets} />}
+          {/* Форма держит набранное, пока узел сверяют текстом: размонтирование его стирает. */}
+          <TabsContent value={TAB.Form} keepMounted className='pt-3'>
+            {recognized && <RuleEditForm key={nodeKey} rule={rule} outbounds={outbounds} ruleSets={ruleSets} />}
           </TabsContent>
 
           <TabsContent value={TAB.Raw} className='pt-3'>
