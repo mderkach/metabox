@@ -80,7 +80,8 @@ export function ConfigNode({
             <TabsTrigger value={TAB.Raw}>JSON</TabsTrigger>
           </TabsList>
 
-          <TabsContent value={TAB.Form} className='pt-3'>
+          {/* Форма держит набранное, пока узел сверяют текстом: размонтирование его стирает. */}
+          <TabsContent value={TAB.Form} keepMounted className='pt-3'>
             {recognized && isNodeObject(node) && (
               <ConfigNodeForm registry={registry} path={path} node={node} builtTags={builtTags} />
             )}

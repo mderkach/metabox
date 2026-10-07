@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { ConfigDocumentState, CONFIG_SECTION } from '@entities/Config';
@@ -19,6 +20,27 @@ describe('узел секции', () => {
     expect(screen.getByRole('tab', { name: 'Форма' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('textbox', { name: 'server' })).toHaveValue('a.example');
     expect(screen.queryByText('UI не покрывает')).not.toBeInTheDocument();
+  });
+
+  it('набранное в форме переживает переход на JSON и обратно', async () => {
+    const user = userEvent.setup();
+
+    render(<ConfigNode section={CONFIG_SECTION.Outbounds} index={0} node={VLESS} name='hk-01' />);
+
+    const server = screen.getByRole('textbox', { name: 'server' });
+
+    await user.clear(server);
+    await user.type(server, 'b.example');
+    await user.click(screen.getByRole('tab', { name: 'JSON' }));
+
+    expect(screen.getByRole('textbox', { name: 'Узел hk-01 текстом' })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByRole('textbox', { name: 'server' })).not.toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('tab', { name: 'Форма' }));
+
+    expect(screen.getByRole('textbox', { name: 'server' })).toHaveValue('b.example');
   });
 
   it('узел с полем, которого схема не знает, помечен и открыт текстом, форма выключена', () => {
