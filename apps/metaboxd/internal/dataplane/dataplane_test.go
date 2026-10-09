@@ -208,3 +208,16 @@ func TestAppliedCanceled(t *testing.T) {
 		t.Errorf("отмена потерялась: %v", err)
 	}
 }
+
+func TestChains(t *testing.T) {
+	runner := &fakeRunner{replies: map[string]reply{testNFT: {stdout: fixture(t, "nft-chains-metabox.json")}}}
+
+	got, reason, err := newReader(runner, testNFT).Chains(t.Context())
+	if err != nil || reason != "" {
+		t.Fatalf("отказ: %v/%q", err, reason)
+	}
+
+	if !reflect.DeepEqual(got, []string{"metabox_redirect"}) {
+		t.Errorf("цепочки %q, ожидали только metabox_redirect из fw4", got)
+	}
+}

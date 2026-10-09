@@ -131,6 +131,12 @@ type Options struct {
 	// Dataplane читает модель сетевой обвязки. nil означает, что читать её
 	// нечем: ручки обвязки нет.
 	Dataplane DataplaneReader
+	// Logs читает лог sing-box. nil означает, что читать его нечем: ручек лога
+	// нет.
+	Logs LogReader
+	// Diag проверяет сетевую обвязку. nil означает, что проверять нечем: ручки
+	// диагностики нет.
+	Diag Diagnoser
 	// ConfigPath — путь файла, которым владеет демон. Панель показывает его
 	// как факт об устройстве, а задаётся он флагами `-config-dir` и
 	// `-config-name`: без этого поля интерфейс показывал бы значение по
@@ -198,6 +204,8 @@ type Server struct {
 	runtime        RuntimeObserver
 	devices        DeviceRegistry
 	dataplane      DataplaneReader
+	logs           LogReader
+	diag           Diagnoser
 	configPath     string
 	handler        http.Handler
 }
@@ -224,6 +232,8 @@ func NewServer(applier Applier, reader ConfigReader, log *slog.Logger, opts Opti
 		runtime:        opts.Runtime,
 		devices:        opts.Devices,
 		dataplane:      opts.Dataplane,
+		logs:           opts.Logs,
+		diag:           opts.Diag,
 		configPath:     opts.ConfigPath,
 	}
 	s.handler = s.routes()
@@ -273,6 +283,16 @@ func (s *Server) routes() http.Handler {
 
 	if s.dataplane != nil {
 		mux.HandleFunc("GET /api/dataplane", s.handleDataplane)
+	}
+
+	if s.logs != nil {
+		mux.HandleFunc("GET /api/logs", s.handleLogs)
+		mux.HandleFunc("GET /api/logs/stream", s.handleLogStream)
+		mux.HandleFunc("POST /api/logs/clear", s.handleLogsClear)
+	}
+
+	if s.diag != nil {
+		mux.HandleFunc("GET /api/diag", s.handleDiag)
 	}
 
 	if s.service != nil {

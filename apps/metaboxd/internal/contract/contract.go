@@ -13,6 +13,7 @@ import (
 	"metabox/internal/dataplane"
 	"metabox/internal/devices"
 	"metabox/internal/history"
+	"metabox/internal/logs"
 )
 
 // Health — ответ `GET /healthz`.
@@ -191,6 +192,17 @@ const (
 	// ErrDataplaneInvalid — модель сетевой обвязки в UCI не принята; поля с
 	// ошибкой лежат в Details.
 	ErrDataplaneInvalid ErrorCode = "dataplane_invalid"
+	// ErrLogUnavailable — лог sing-box не читается: logread не задан или
+	// отказал, файл log.output не открылся.
+	ErrLogUnavailable ErrorCode = "log_unavailable"
+	// ErrLogQueryInvalid — уровень или число строк в запросе лога не разобраны.
+	ErrLogQueryInvalid ErrorCode = "log_query_invalid"
+	// ErrLogStreamLimit — открыто предельное число потоков лога; новый
+	// откроется, когда закроется один из них.
+	ErrLogStreamLimit ErrorCode = "log_stream_limit"
+	// ErrLogClearForbidden — файл log.output лежит вне каталога конфига, /var/run
+	// и /tmp: такой файл демон не усекает.
+	ErrLogClearForbidden ErrorCode = "log_clear_forbidden"
 	// ErrCheckFailed — `sing-box check` отверг конфиг; вывод бинаря лежит в Details.
 	ErrCheckFailed ErrorCode = "check_failed"
 	// ErrInternal — отказ, о котором наружу говорить нечего: подробности в логе.
@@ -250,6 +262,29 @@ type Dataplane struct {
 // DataplaneDetails — поля отказа `dataplane_invalid`.
 type DataplaneDetails struct {
 	Fields []dataplane.FieldError `json:"fields"`
+}
+
+// Logs — ответ `GET /api/logs`: последние строки лога sing-box, старые первыми.
+type Logs struct {
+	Source logs.Source `json:"source"`
+	// Since — отметка последней очистки в RFC 3339: строки раньше неё не
+	// отдаются. Нет поля — очистки не было с запуска демона.
+	Since   string       `json:"since,omitempty"`
+	Entries []logs.Entry `json:"entries"`
+}
+
+// LogEvent — событие `log` потока `GET /api/logs/stream`.
+type LogEvent struct {
+	// Seq растёт на единицу с каждой строкой, в том числе отброшенной из-за
+	// медленного читателя: разрыв означает потерю строк.
+	Seq   uint64     `json:"seq"`
+	Entry logs.Entry `json:"entry"`
+}
+
+// LogsCleared — ответ `POST /api/logs/clear`.
+type LogsCleared struct {
+	// Since — отметка очистки в RFC 3339.
+	Since string `json:"since"`
 }
 
 // Error — единый формат отказа на границе HTTP. Внутренние подробности — пути

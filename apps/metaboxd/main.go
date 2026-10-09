@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"syscall"
 	"time"
@@ -23,9 +24,11 @@ import (
 	"metabox/internal/dataplane"
 	"metabox/internal/device"
 	"metabox/internal/devices"
+	"metabox/internal/diag"
 	"metabox/internal/events"
 	"metabox/internal/history"
 	"metabox/internal/httpapi"
+	"metabox/internal/logs"
 	"metabox/internal/procd"
 	"metabox/internal/route"
 	"metabox/internal/ruleset"
@@ -74,6 +77,13 @@ const (
 	// позже демона.
 	ruleSetRequestTimeout = 30 * time.Second
 	ruleSetRetryInterval  = time.Hour
+
+	// Потолок одной проверки диагностики: замер узла через Clash API и запрос
+	// напрямую идут параллельно, и отчёт ждёт самый медленный из них.
+	diagTimeout = 5 * time.Second
+
+	// Период опроса файла log.output в потоке лога.
+	logPollInterval = 500 * time.Millisecond
 )
 
 // settings — то, что демон получает флагами. Значения по умолчанию
@@ -93,6 +103,7 @@ type settings struct {
 	uci           string
 	nft           string
 	healthDNSName string
+	diagURL       string
 	clashPort     int
 	confirmWindow time.Duration
 	cycleTimeout  time.Duration
@@ -117,7 +128,7 @@ func main() {
 		"инстанс procd, в котором служба init-скрипта держит sing-box; пустой — единственный инстанс службы")
 	flag.StringVar(&s.ubus, "ubus", "/bin/ubus", "путь к ubus: через него читается состояние службы у procd")
 	flag.StringVar(&s.logread, "logread", "/sbin/logread",
-		"путь к logread: из него берётся причина падения sing-box; пустой отключает чтение")
+		"путь к logread: из него берутся лог и причина падения sing-box; пустой отключает чтение")
 	flag.StringVar(&s.dhcpLeases, "dhcp-leases", "/tmp/dhcp.leases", "файл аренд dnsmasq: из него берутся устройства LAN")
 	flag.StringVar(&s.uci, "uci", "/sbin/uci",
 		"путь к uci: через него читаются статические аренды из UCI dhcp и модель обвязки из UCI metabox")
@@ -125,6 +136,8 @@ func main() {
 		"путь к nft: через него демон видит, стоят ли правила обвязки; пустой отключает проверку")
 	flag.StringVar(&s.healthDNSName, "health-dns-name", "cloudflare.com",
 		"имя, которое dns-in sing-box обязан разрешить после рестарта, иначе откат; пустое выключает DNS-пробу")
+	flag.StringVar(&s.diagURL, "diag-url", "https://www.gstatic.com/generate_204",
+		"адрес, по которому диагностика проверяет выход в интернет через узел и напрямую")
 	flag.IntVar(&s.clashPort, "clash-port", 9090, "порт Clash API, если демон заводит секцию сам")
 	flag.DurationVar(&s.confirmWindow, "confirm-window", time.Minute,
 		"сколько ждать подтверждения связи до автоотката")
@@ -264,6 +277,11 @@ func run(log *slog.Logger, s settings) error {
 		lan = registry
 	}
 
+	var probe diag.DNSProber
+	if s.healthDNSName != "" {
+		probe = clashapi.NewDNSProbe(s.healthDNSName, dnsProbeTimeout, healthPollInterval, 1)
+	}
+
 	api := httpapi.NewServer(manager, store, log, httpapi.Options{
 		Version:        version.Version,
 		SingboxVersion: singboxVersion,
@@ -280,7 +298,19 @@ func run(log *slog.Logger, s settings) error {
 		Runtime:        sysinfo.Alive,
 		Devices:        lan,
 		Dataplane:      plane,
-		ConfigPath:     store.Path(),
+		Logs: logs.New(logs.Exec, store, logs.Options{
+			Logread:      s.logread,
+			Process:      filepath.Base(s.binary),
+			ConfigDir:    s.configDir,
+			TruncateDirs: []string{s.configDir, "/var/run", "/tmp"},
+			PollInterval: logPollInterval,
+		}),
+		Diag: diag.New(plane, store, probe, diag.Options{
+			ProcNet: "/proc/net",
+			URL:     s.diagURL,
+			Timeout: diagTimeout,
+		}),
+		ConfigPath: store.Path(),
 	})
 
 	listeners, failures, err := httpapi.Listen(httpapi.Addrs(s.addr))

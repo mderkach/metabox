@@ -375,7 +375,7 @@ func (h *Hub) publish(gen uint64, topic string, data json.RawMessage) {
 func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Поддержка проверяется до первой записи: сама попытка сброса отправила бы
 	// заголовок, и отказать после этого было бы уже нечем.
-	if !supportsFlush(w) {
+	if !SupportsFlush(w) {
 		http.Error(w, "поток не поддерживается", http.StatusInternalServerError)
 
 		return
@@ -485,9 +485,9 @@ func (h *Hub) writeTimeout() time.Duration {
 	return h.opts.WriteTimeout
 }
 
-// supportsFlush отвечает, доберётся ли контроллер до writer со сбросом. Обход
+// SupportsFlush отвечает, доберётся ли контроллер до writer со сбросом. Обход
 // повторяет то, что делает http.NewResponseController, но без записи в ответ.
-func supportsFlush(w http.ResponseWriter) bool {
+func SupportsFlush(w http.ResponseWriter) bool {
 	for {
 		if _, ok := w.(http.Flusher); ok {
 			return true

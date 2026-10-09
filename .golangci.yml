@@ -61,3 +61,17 @@ linters:
       - path: internal/singbox/failure\.go
         text: 'G304|G703'
         linters: [gosec]
+
+      # G304: файл лога назван в log.output конфига — по той же причине, что
+      # выше, os.Root его не удержит; читается только хвост с потолком строки,
+      # а усечение идёт через os.Root разрешённых каталогов. G204: имя команды —
+      # путь к logread из флага, аргументы — списком, шелла в цепочке нет.
+      - path: internal/logs/
+        text: 'G304|G204'
+        linters: [gosec]
+
+      # G304: путь собирается из корня /proc/net, заданного полем Options, и
+      # имени таблицы из константного списка.
+      - path: internal/diag/
+        text: 'G304'
+        linters: [gosec]

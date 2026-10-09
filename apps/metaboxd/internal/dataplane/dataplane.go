@@ -161,24 +161,46 @@ func (r *Reader) Model(ctx context.Context) (Model, error) {
 	return Defaults(), nil
 }
 
+// ExpectedChains — цепочки, которые init-скрипт службы кладёт в таблицу fw4
+// при включённой модели. Имена — контракт с его рендером правил.
+func ExpectedChains() []string {
+	return []string{
+		"metabox_redirect_lanac",
+		"metabox_redirect",
+		"metabox_output_redir",
+		"metabox_mangle_lanac",
+		"metabox_mangle_prerouting",
+		"metabox_mangle_output",
+	}
+}
+
 // Applied сообщает, стоят ли цепочки обвязки в таблице fw4. Отказ nft отказом
 // не считается: панель обязана показать модель и без него. Ошибка — только
 // отмена контекста.
+func (r *Reader) Applied(ctx context.Context) (bool, AppliedReason, error) {
+	chains, reason, err := r.Chains(ctx)
+
+	return len(chains) > 0, reason, err
+}
+
+// Chains отдаёт имена цепочек обвязки, которые стоят в таблице fw4. Причина
+// непуста, когда nft не прочитан, — список тогда пуст и ни о чём не говорит.
+// Ошибка — только отмена контекста.
 //
 // Читается `list chains`, а не `list ruleset`: правила не нужны, а вывод
 // ruleset с fw4 больше потолка вывода команды и пришёл бы обрезанным.
-func (r *Reader) Applied(ctx context.Context) (bool, AppliedReason, error) {
+func (r *Reader) Chains(ctx context.Context) ([]string, AppliedReason, error) {
 	if r.nft == "" {
-		return false, NFTUnavailable, nil
+		return nil, NFTUnavailable, nil
 	}
 
 	out, code, err := r.run(ctx, r.nft, "-j", "list", "chains")
 	if ctxErr := ctx.Err(); ctxErr != nil {
-		return false, "", ctxErr
+		return nil, "", ctxErr
 	}
 
 	if err != nil || code != 0 {
-		return false, NFTUnavailable, nil
+		return nil, NFTUnavailable, nil
 	}
 
 	var ruleset struct {
@@ -192,17 +214,19 @@ func (r *Reader) Applied(ctx context.Context) (bool, AppliedReason, error) {
 	}
 
 	if err := json.Unmarshal([]byte(out), &ruleset); err != nil {
-		return false, NFTUnparsed, nil
+		return nil, NFTUnparsed, nil
 	}
+
+	var chains []string
 
 	for _, item := range ruleset.Nftables {
 		c := item.Chain
 		if c != nil && c.Family == fw4Family && c.Table == fw4Table && strings.HasPrefix(c.Name, chainPrefix) {
-			return true, "", nil
+			chains = append(chains, c.Name)
 		}
 	}
 
-	return false, "", nil
+	return chains, "", nil
 }
 
 func decode(s uci.Section) (Model, error) {

@@ -11,6 +11,7 @@ import (
 	"metabox/internal/contract"
 	"metabox/internal/dataplane"
 	"metabox/internal/devices"
+	"metabox/internal/logs"
 	"metabox/internal/route"
 	"metabox/internal/singbox"
 )
@@ -30,6 +31,8 @@ var (
 	errBadApplyEnvelope = errors.New("конверт применения не разобран")
 	// errBadDeviceBody — тело правки имени устройства не разобрано.
 	errBadDeviceBody = errors.New("тело правки имени устройства не разобрано")
+	// errBadLogQuery — уровень или число строк запроса лога не разобраны.
+	errBadLogQuery = errors.New("параметры запроса лога не разобраны")
 )
 
 // runtimeUnavailable — текст отказа рантайма для клиента. Причина остаётся в
@@ -100,6 +103,10 @@ func fail(log *slog.Logger, w http.ResponseWriter, r *http.Request, err error) {
 	case code == contract.ErrLaunchMismatch:
 		log.Warn("применение отклонено: служба поднимается не на конфиге демона", "err", err)
 		message = "служба sing-box поднимается не на конфиге, которым владеет metabox"
+	// Причина остаётся в логе: в ней путь файла лога и отказ процесса.
+	case code == contract.ErrLogUnavailable:
+		log.Warn("лог sing-box не прочитан", "err", err)
+		message = logs.ErrUnavailable.Error()
 	// Отказ рантайма отвечает так же, как прокси Clash API: две ручки одного
 	// слоя не должны вести себя противоположно.
 	case code == contract.ErrRuntimeUnavailable:
@@ -153,6 +160,14 @@ func statusFor(err error) (status int, code contract.ErrorCode) {
 	case errors.Is(err, devices.ErrInvalidMAC), errors.Is(err, devices.ErrInvalidName),
 		errors.Is(err, devices.ErrTooManyNames), errors.Is(err, errBadDeviceBody):
 		return http.StatusBadRequest, contract.ErrDeviceInvalid
+	case errors.Is(err, logs.ErrUnavailable):
+		return http.StatusServiceUnavailable, contract.ErrLogUnavailable
+	case errors.Is(err, logs.ErrTooManyStreams):
+		return http.StatusTooManyRequests, contract.ErrLogStreamLimit
+	case errors.Is(err, logs.ErrClearForbidden):
+		return http.StatusConflict, contract.ErrLogClearForbidden
+	case errors.Is(err, errBadLogQuery):
+		return http.StatusBadRequest, contract.ErrLogQueryInvalid
 	case errors.As(err, &tooLarge):
 		return http.StatusRequestEntityTooLarge, contract.ErrConfigTooLarge
 	default:

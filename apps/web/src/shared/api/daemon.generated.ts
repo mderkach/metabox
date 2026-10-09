@@ -52,6 +52,10 @@ export const ERROR_CODE = [
   'launch_mismatch',
   'device_invalid',
   'dataplane_invalid',
+  'log_unavailable',
+  'log_query_invalid',
+  'log_stream_limit',
+  'log_clear_forbidden',
   'check_failed',
   'internal',
 ] as const
@@ -78,6 +82,56 @@ export const FIELD_REASON = [
   'out_of_range',
   'duplicate',
   'required',
+] as const
+
+export const SOURCE = [
+  'logread',
+  'file',
+] as const
+
+export const LEVEL = [
+  'trace',
+  'debug',
+  'info',
+  'warn',
+  'error',
+  'fatal',
+  'panic',
+] as const
+
+export const CHECK_NAME = [
+  'redirect_port',
+  'tproxy_port',
+  'dns_port',
+  'dns_probe',
+  'nft_chains',
+  'proxy',
+  'direct',
+] as const
+
+export const CHECK_STATUS = [
+  'ok',
+  'fail',
+  'skipped',
+] as const
+
+export const CHECK_REASON = [
+  'model_unavailable',
+  'interception_disabled',
+  'not_listening',
+  'proc_unavailable',
+  'config_missing',
+  'no_dns_inbound',
+  'dns_name_unset',
+  'no_answer',
+  'nft_unavailable',
+  'nft_unparsed',
+  'chains_missing',
+  'proxy_unset',
+  'proxy_missing',
+  'runtime_unavailable',
+  'request_failed',
+  'unsupported',
 ] as const
 
 export const ORIGIN = [
@@ -358,6 +412,36 @@ export const DataplaneDetailsSchema = z.object({
   fields: z.array(FieldErrorSchema),
 })
 
+/** Entry — строка лога sing-box. */
+export const EntrySchema = z.object({
+  /** Time — метка времени строки в RFC 3339; пусто, когда метки нет. У строк логгера это время logd, у файла — метка log.timestamp sing-box. Часов реального времени у роутера нет: до синхронизации NTP метки в прошлом. */
+  time: z.string().optional(),
+  /** Level — пусто, когда уровень не разобран: продолжение многострочного сообщения, стек паники. Такие строки фильтр по уровню пропускает. */
+  level: z.string().optional(),
+  message: z.string(),
+})
+
+/** Logs — ответ `GET /api/logs`: последние строки лога sing-box, старые первыми. */
+export const LogsSchema = z.object({
+  source: z.string(),
+  /** Since — отметка последней очистки в RFC 3339: строки раньше неё не отдаются. Нет поля — очистки не было с запуска демона. */
+  since: z.string().optional(),
+  entries: z.array(EntrySchema),
+})
+
+/** LogEvent — событие `log` потока `GET /api/logs/stream`. */
+export const LogEventSchema = z.object({
+  /** Seq растёт на единицу с каждой строкой, в том числе отброшенной из-за медленного читателя: разрыв означает потерю строк. */
+  seq: z.int(),
+  entry: EntrySchema,
+})
+
+/** LogsCleared — ответ `POST /api/logs/clear`. */
+export const LogsClearedSchema = z.object({
+  /** Since — отметка очистки в RFC 3339. */
+  since: z.string(),
+})
+
 /** Load — средняя загрузка. Приводить её к процентам нельзя: это длина очереди на выполнение, и на четырёх ядрах значение 4.0 означает полную занятость. */
 export const LoadSchema = z.object({
   one: z.number(),
@@ -425,6 +509,25 @@ export const StatSchema = z.object({
   daemon: DaemonSchema,
   /** Uptime — секунды с загрузки устройства. */
   uptime: z.int(),
+})
+
+/** Check — одна проверка. */
+export const CheckSchema = z.object({
+  name: z.string(),
+  status: z.string(),
+  /** Reason — пусто при ok. */
+  reason: z.string().optional(),
+  /** Detail — подробность на языке демона: порт, исходная ошибка, ответ Clash API. Панель показывает её под своим текстом, а не вместо него. */
+  detail: z.string().optional(),
+  /** Missing — отсутствующие цепочки при chains_missing. */
+  missing: z.array(z.string()).optional(),
+  /** DelayMS — задержка при ok у proxy и direct. */
+  delay_ms: z.int().optional(),
+})
+
+/** Report — отчёт в фиксированном порядке проверок. */
+export const ReportSchema = z.object({
+  checks: z.array(CheckSchema),
 })
 
 /** Connection — соединение в контракте демона. Форма панели не зависит от того, каким источником соединение прочитано: Clash API и gRPC форка расходятся и в наборе полей, и в формате правила, поэтому сведение к одной модели делает демон, а не фронт. */
@@ -556,6 +659,7 @@ export type ApplyEnvelopeWire = z.infer<typeof ApplyEnvelopeSchema>
 export type CatalogWire = z.infer<typeof CatalogSchema>
 export type ChainWire = z.infer<typeof ChainSchema>
 export type CheckDetailsWire = z.infer<typeof CheckDetailsSchema>
+export type CheckWire = z.infer<typeof CheckSchema>
 export type ConnectionWire = z.infer<typeof ConnectionSchema>
 export type ConnectionsSnapshotWire = z.infer<typeof ConnectionsSnapshotSchema>
 export type DaemonWire = z.infer<typeof DaemonSchema>
@@ -565,6 +669,7 @@ export type DeviceNameWire = z.infer<typeof DeviceNameSchema>
 export type DevicePointWire = z.infer<typeof DevicePointSchema>
 export type DeviceWire = z.infer<typeof DeviceSchema>
 export type DevicesWire = z.infer<typeof DevicesSchema>
+export type EntryWire = z.infer<typeof EntrySchema>
 export type ErrorWire = z.infer<typeof ErrorSchema>
 export type EventWire = z.infer<typeof EventSchema>
 export type ExplanationWire = z.infer<typeof ExplanationSchema>
@@ -575,6 +680,9 @@ export type HitsWire = z.infer<typeof HitsSchema>
 export type LinkWire = z.infer<typeof LinkSchema>
 export type ListWire = z.infer<typeof ListSchema>
 export type LoadWire = z.infer<typeof LoadSchema>
+export type LogEventWire = z.infer<typeof LogEventSchema>
+export type LogsClearedWire = z.infer<typeof LogsClearedSchema>
+export type LogsWire = z.infer<typeof LogsSchema>
 export type MatchWire = z.infer<typeof MatchSchema>
 export type MemoryWire = z.infer<typeof MemorySchema>
 export type MirrorWire = z.infer<typeof MirrorSchema>
@@ -582,6 +690,7 @@ export type ModelWire = z.infer<typeof ModelSchema>
 export type PointWire = z.infer<typeof PointSchema>
 export type ProcessWire = z.infer<typeof ProcessSchema>
 export type ProviderWire = z.infer<typeof ProviderSchema>
+export type ReportWire = z.infer<typeof ReportSchema>
 export type RuleHitsWire = z.infer<typeof RuleHitsSchema>
 export type RuleSetFilesWire = z.infer<typeof RuleSetFilesSchema>
 export type RuleWire = z.infer<typeof RuleSchema>
