@@ -124,8 +124,9 @@ func hostAllowed(hostport, allowedOrigin string) bool {
 	return err == nil && u.Host != "" && strings.EqualFold(host, u.Hostname())
 }
 
-// checkOrigin — единственная защита мутирующих запросов: аутентификации в v1
-// нет по решению A.6 PRD.
+// checkOrigin — единственная защита мутирующих запросов: аутентификации у
+// демона нет, и чужая страница в браузере владельца иначе могла бы применить
+// конфиг его же запросом.
 func checkOrigin(log *slog.Logger, allowedOrigin string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !mutating(r.Method) {

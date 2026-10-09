@@ -138,8 +138,7 @@ export function hasRuleSetCache(text: string): boolean {
 
 /**
  * Документ конфига в модели приложения. Имя своё, а не из форка: переименование
- * типа в схеме правится здесь, а не в каждом экране, который документ читает
- * (PRD, A.2).
+ * типа в схеме правится здесь, а не в каждом экране, который документ читает.
  */
 export type ConfigDocument = Config;
 
@@ -237,7 +236,7 @@ export function readPath(config: ConfigDocument, path: readonly string[]): unkno
  * списка нет.
  *
  * Адресация узлов документа живёт в слайсе-владельце: иначе переименование
- * секции в форке правилось бы по всем экранам, которые её показывают (PRD, A.2).
+ * секции в форке правилось бы по всем экранам, которые её показывают.
  */
 export function sectionSize(config: ConfigDocument | null, section: ConfigSection): number | null {
   if (config === null) {
