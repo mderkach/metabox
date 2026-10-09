@@ -35,7 +35,12 @@ before=$(wget -qO- "$API/version") || fail "Clash API не отвечает до
 echo "   $before"
 
 echo "2. Кандидат конфига: добавляем правило маршрутизации"
-sed 's/"rules": \[\]/"rules": [{"domain_suffix": ["example.com"], "outbound": "direct"}]/' "$CONF" > "$TMP"
+# Правило дописывается разбором JSON, а не заменой текста: в конфиге стенда
+# правила маршрута уже есть, и пустого списка, за который можно зацепиться, нет.
+ucode -e "import { readfile } from 'fs';
+let c = json(readfile('$CONF'));
+push(c.route.rules, { domain_suffix: ['example.com'], outbound: 'direct' });
+printf('%.J\\n', c);" > "$TMP"
 grep -q example.com "$TMP" || fail "правило не подставилось, шаблон конфига изменился"
 
 echo "3. sing-box check на кандидате"
@@ -95,15 +100,15 @@ CANDIDATE=/tmp/metabox-lists-candidate
 ORIGINAL=/tmp/config.before-lists.json
 lists_dir_created=0
 
-# Правило и набор встают в конфиг, оставленный шагом 5: правила в нём уже не
-# пусты, и запятая после вставки корректна.
 rm -rf "$CANDIDATE"
 mkdir -p "$CANDIDATE/rule-sets"
-sed -e 's|"rules": \[|"rules": [{"rule_set": "metabox-check", "outbound": "direct"}, |' \
-	-e 's|"final": "direct"|"rule_set": [{"type": "local", "tag": "metabox-check", "format": "source", "path": "rule-sets/'"$LIST_NAME"'"}], "final": "direct"|' \
-	"$CONF" > "$CANDIDATE/config.json"
+ucode -e "import { readfile } from 'fs';
+let c = json(readfile('$CONF'));
+unshift(c.route.rules, { rule_set: 'metabox-check', outbound: 'direct' });
+c.route.rule_set = [{ type: 'local', tag: 'metabox-check', format: 'source', path: 'rule-sets/$LIST_NAME' }];
+printf('%.J\\n', c);" > "$CANDIDATE/config.json"
 grep -q '"rule_set": "metabox-check"' "$CANDIDATE/config.json" || fail "правило с набором не подставилось, шаблон конфига изменился"
-grep -q '"type": "local"' "$CANDIDATE/config.json" || fail "набор не подставился, шаблон конфига изменился"
+grep -q "rule-sets/$LIST_NAME" "$CANDIDATE/config.json" || fail "набор не подставился, шаблон конфига изменился"
 printf '%s\n' "$LIST_BODY" > "$CANDIDATE/rule-sets/$LIST_NAME"
 
 # Кандидат проверяется так же, как его проверяет демон: тем же режимом, что у

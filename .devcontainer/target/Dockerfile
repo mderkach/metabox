@@ -68,7 +68,9 @@ COPY .devcontainer/target/files/ /
 #
 # Снимаются с автозапуска службы, которым в контейнере не на чем работать.
 # `init.d disable` на сборке не срабатывает — procd и ubus ещё не подняты, —
-# поэтому снимаются симлинки.
+# поэтому снимаются симлинки. dnsmasq, наоборот, в автозапуск ставится явно —
+# обвязка шлёт в него DNS клиентов, и от того, включила ли его база, это не
+# должно зависеть.
 #
 # /var в rootfs — симлинк на пустой /tmp: без /var/lock и /var/run ubusd не
 # создаст сокет, и procd поднимется, не запустив ни одного сервиса.
@@ -76,12 +78,13 @@ RUN set -eu; \
     apk add --allow-untrusted /tmp/sing-box.apk /tmp/metaboxd.apk; \
     rm -f /tmp/sing-box.apk /tmp/metaboxd.apk; \
     grep -q "option listen_port '8080'" /etc/config/metabox; \
-    rm -f /etc/rc.d/S*dnsmasq /etc/rc.d/S*odhcpd /etc/rc.d/S*uhttpd; \
+    rm -f /etc/rc.d/S*odhcpd /etc/rc.d/S*uhttpd; \
+    ln -sf ../init.d/dnsmasq /etc/rc.d/S19dnsmasq; \
     rm -f /etc/rc.d/S99sing-box; \
     ln -sf ../init.d/metabox-singbox /etc/rc.d/S97metabox-singbox; \
     ln -sf ../init.d/metaboxd /etc/rc.d/S98metaboxd; \
     mkdir -p /var/lock /var/run; \
-    chmod +x /usr/bin/apply-cycle-check /usr/bin/stand-init; \
+    chmod +x /usr/bin/apply-cycle-check /usr/bin/dataplane-check /usr/bin/stand-init; \
     /usr/bin/sing-box version
 
 EXPOSE 8080 9090

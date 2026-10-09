@@ -1,0 +1,146 @@
+#!/bin/sh
+# Шаги проверки обвязки перехвата внутри стенда. Клиентов в проводной сети
+# поднимает хост (`make dataplane-check`), а этот скрипт читает и меняет то,
+# что видно только изнутри роутера: счётчики nft, ip rule, фрагмент dnsmasq,
+# pid процессов. Каждый шаг — отдельная команда, чтобы хост мог чередовать их
+# с запросами клиентов.
+set -eu
+
+SERVICE=metabox-singbox
+INSTANCE=sing-box
+API=http://127.0.0.1:9090
+NFT_FILE=/var/run/metabox/fw4_post.nft
+
+fail() {
+	echo "ПРОВАЛ: $1" >&2
+	exit 1
+}
+
+singbox_pid() {
+	ubus call service list "{\"name\": \"$SERVICE\"}" 2>/dev/null |
+		jsonfilter -e "@['$SERVICE'].instances['$INSTANCE'].pid" 2>/dev/null || true
+}
+
+dnsmasq_pid() {
+	pidof dnsmasq || true
+}
+
+# Счётчик последнего правила цепочки inet fw4, в тексте которого есть образец:
+# в цепочках обвязки последним идёт общее правило, а выше — частные случаи.
+counter() {
+	nft list chain inet fw4 "$1" 2>/dev/null | grep -F -- "$2" | tail -1 |
+		sed -n 's/.*counter packets \([0-9]*\) .*/\1/p'
+}
+
+dnsmasq_fragment() {
+	ls /tmp/dnsmasq.*.d/metabox.conf 2>/dev/null || true
+}
+
+state() {
+	echo "nft: $(nft list ruleset | grep -c metabox_) строк с metabox_"
+	echo "ip rule: $(ip rule list | grep -c 'fwmark 0x65 lookup 100') правил fwmark 0x65"
+	echo "route table 100: $(ip route show table 100 2>/dev/null | grep -c 'local default dev lo')"
+	echo "dnsmasq: фрагмент '$(dnsmasq_fragment)', pid $(dnsmasq_pid)"
+	echo "uci firewall.metabox_post: $(uci -q get firewall.metabox_post || echo нет)"
+	echo "sing-box: pid $(singbox_pid)"
+}
+
+expect_up() {
+	[ "$(nft list ruleset | grep -c metabox_)" -gt 0 ] || fail "цепочек metabox_ в nft нет"
+	ip rule list | grep -q 'fwmark 0x65 lookup 100' || fail "ip rule fwmark 0x65 нет"
+	ip route show table 100 | grep -q 'local default dev lo' || fail "local-маршрута в таблице 100 нет"
+	grep -q '^server=127.0.0.1#5333$' "$(dnsmasq_fragment)" 2>/dev/null || fail "фрагмента dnsmasq нет"
+	[ -n "$(dnsmasq_pid)" ] || fail "dnsmasq не запущен"
+}
+
+expect_down() {
+	n=$(nft list ruleset | grep -c metabox_ || true)
+	[ "$n" = 0 ] || fail "после stop в nft осталось $n строк с metabox_"
+	! ip rule list | grep -q 'fwmark 0x65' || fail "после stop осталось ip rule fwmark 0x65"
+	[ -z "$(ip route show table 100 2>/dev/null)" ] || fail "после stop таблица 100 не пуста"
+	[ -z "$(dnsmasq_fragment)" ] || fail "после stop остался фрагмент dnsmasq"
+	! uci -q get firewall.metabox_post >/dev/null || fail "после stop остался инклюд firewall.metabox_post"
+	[ ! -e "$NFT_FILE" ] || fail "после stop остался $NFT_FILE"
+}
+
+wait_singbox() {
+	i=0
+	while [ $i -lt 30 ]; do
+		if wget -qO- "$API/version" >/dev/null 2>&1 && [ -n "$(singbox_pid)" ]; then
+			return 0
+		fi
+		i=$((i + 1))
+		sleep 1
+	done
+	fail "sing-box не поднялся за 30 секунд"
+}
+
+# Снимок того, что Apply трогать не должен: правила без счётчиков (их двигает
+# любой пакет) и pid dnsmasq.
+snapshot() {
+	echo "$(nft -s list ruleset | sha256sum | cut -d' ' -f1) dnsmasq=$(dnsmasq_pid)"
+}
+
+case "${1:-}" in
+state) state ;;
+expect-up) expect_up && echo "обвязка на месте" ;;
+expect-down) expect_down && echo "следов обвязки нет" ;;
+counter) counter "$2" "$3" ;;
+singbox-pid) singbox_pid ;;
+wait) wait_singbox ;;
+log-has)
+	logread | grep -F -- "$2" | grep -q -F -- "$3" || fail "в логе sing-box нет строки с '$2' и '$3'"
+	;;
+router-tcp)
+	# Исходящий TCP самого роутера: первый пакет проходит nat output и уходит
+	# в redirect, а исходящее sing-box с меткой 100 идёт мимо.
+	wget -q -T 3 -O /dev/null http://1.1.1.1/ >/dev/null 2>&1 || true
+	;;
+router-udp)
+	nslookup example.com 1.1.1.1 >/dev/null 2>&1 || true
+	;;
+b4-sim-up)
+	# Не b4, а его след в nft: отдельная таблица метит UDP роутера до 1.0.0.1
+	# меткой 0x8000, как b4 метит свои пакеты.
+	nft -f - <<-EOF
+		table inet metabox_check_b4 {
+			chain output {
+				type route hook output priority mangle - 10; policy accept;
+				ip daddr 1.0.0.1 udp dport 53 meta mark set 0x8000 counter
+			}
+			chain postrouting {
+				type filter hook postrouting priority mangle; policy accept;
+				ip daddr 1.0.0.1 udp dport 53 meta mark 0x8000 counter
+			}
+		}
+	EOF
+	nslookup example.com 1.0.0.1 >/dev/null 2>&1 || true
+	;;
+b4-sim-counter)
+	nft list chain inet metabox_check_b4 postrouting | sed -n 's/.*counter packets \([0-9]*\) .*/\1/p'
+	;;
+b4-sim-down) nft delete table inet metabox_check_b4 ;;
+snapshot) snapshot ;;
+apply) /usr/bin/apply-cycle-check >/dev/null ;;
+kill)
+	pid=$(singbox_pid)
+	[ -n "$pid" ] || fail "sing-box не запущен"
+	kill -9 "$pid"
+	echo "$pid"
+	;;
+acl)
+	# Смена модели идёт тем же путём, что у демона: UCI и reload через триггер
+	# procd.
+	uci set metabox.dataplane.acl_mode="$2"
+	uci commit metabox
+	reload_config
+	sleep 2
+	wait_singbox
+	;;
+stop) /etc/init.d/$SERVICE stop ;;
+start) /etc/init.d/$SERVICE start ;;
+*)
+	echo "использование: $0 state|expect-up|expect-down|counter <цепочка> <образец>|singbox-pid|wait|log-has <a> <b>|acl all|listed|router-tcp|router-udp|b4-sim-up|b4-sim-counter|b4-sim-down|snapshot|apply|kill|stop|start" >&2
+	exit 2
+	;;
+esac

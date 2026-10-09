@@ -4,7 +4,8 @@
 # На роутере интерфейсы описаны прошивкой, здесь их создаёт Docker — и имена
 # eth* он раздаёт в произвольном порядке: между двумя запусками одна и та же
 # сеть получает разные имена. Опознать сеть можно только по адресу, поэтому
-# /etc/config/network собирается при старте, а не лежит в образе готовым.
+# /etc/config/network собирается при старте, а не лежит в образе готовым. По той
+# же причине сюда же подставляется интерфейс перехвата в модели обвязки.
 #
 # Маршрут по умолчанию восстанавливается тем же интерфейсом, которым его выдал
 # Docker: netifd переписывает таблицу маршрутов целиком, а без маршрута ответы
@@ -75,6 +76,14 @@ config interface '$role'
 	option ipaddr '$address'
 	option netmask '$(netmask_of "${cidr#*/}")'
 INTERFACE
+
+	if [ "$role" = lan ]; then
+		uci -q batch <<-DATAPLANE
+			delete metabox.dataplane.lan_interface
+			add_list metabox.dataplane.lan_interface=$device
+			commit metabox
+		DATAPLANE
+	fi
 
 	if [ "$device" = "$GATEWAY_DEVICE" ] && [ -n "$GATEWAY" ]; then
 		printf "\toption gateway '%s'\n" "$GATEWAY" >>"$CONF"

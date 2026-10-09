@@ -6,7 +6,7 @@ LDFLAGS    := -s -w -X metabox/internal/version.Version=$(VERSION)
 # Прижимает версию вниз: директива `go` в go.mod поднимает, но не опускает.
 export GOTOOLCHAIN := go$(shell cat .go-version)
 
-.PHONY: all schema schema-daemon rule-set-snapshot web embed daemon daemon-device daemon-target dev dev-mock dev-mock-missing test test-schemagen lint hooks clean up up-dev down sh target-sh apply-check reach-check package stand-base stand-reset
+.PHONY: all schema schema-daemon rule-set-snapshot web embed daemon daemon-device daemon-target dev dev-mock dev-mock-missing test test-schemagen lint hooks clean up up-dev down sh target-sh apply-check reach-check dataplane-check package stand-base stand-reset
 
 all: daemon
 
@@ -177,6 +177,12 @@ reach-check:
 	done; \
 	if [ "$$fail" = 1 ]; then echo "ПРОВАЛ: доступность сетей не та, что требуется" >&2; exit 1; fi; \
 	echo; echo "Панель доступна с локальных сетей и недоступна с внешней." 
+
+# Обвязка перехвата: клиенты проводной сети с маршрутом через стенд, счётчики
+# nft, fail-closed при падении sing-box, Apply без рестарта dnsmasq и fw4,
+# stop без следов. Нужны privileged-стенд и ядро с tproxy.
+dataplane-check:
+	sh .devcontainer/dataplane-check.sh
 
 clean:
 	rm -rf dist apps/web/dist

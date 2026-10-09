@@ -17,3 +17,24 @@ config metabox 'main'
 	option ubus '/bin/ubus'
 	option clash_port '9090'
 	option log_level 'info'
+	# Внешнего DNS у стенда может не быть: имя отвечает сам sing-box стенда
+	# сервером hosts, без выхода наружу.
+	option health_dns_name 'dataplane-check.metabox.example'
+
+# Обвязка перехвата: из проводной сети через sing-box идут только клиенты
+# dataplane-check — один по адресу, другой по MAC. Интерфейс подставляет
+# stand-init: имя eth* Docker раздаёт при каждом запуске заново.
+config dataplane 'dataplane'
+	option enabled '1'
+	option redirect_port '5331'
+	option tproxy_port '5332'
+	option dns_port '5333'
+	option dns_hijack '1'
+	option self_mark '100'
+	option tproxy_mark '101'
+	option route_table '100'
+	option acl_mode 'listed'
+	list source_ip '192.168.210.40/32'
+	list source_mac '02:00:00:00:d2:2a'
+	list lan_interface 'br-lan'
+	option ipv6 '0'

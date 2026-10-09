@@ -2,6 +2,29 @@
   "log": {
     "level": "info"
   },
+  "dns": {
+    "servers": [
+      {
+        "type": "local",
+        "tag": "dns-local"
+      },
+      {
+        "type": "hosts",
+        "tag": "dns-hosts",
+        "predefined": {
+          "dataplane-check.metabox.example": "1.2.3.4",
+          "failclosed.metabox.example": "1.2.3.5"
+        }
+      }
+    ],
+    "rules": [
+      {
+        "domain": ["dataplane-check.metabox.example", "failclosed.metabox.example"],
+        "server": "dns-hosts"
+      }
+    ],
+    "final": "dns-local"
+  },
   "experimental": {
     "clash_api": {
       "external_controller": "0.0.0.0:9090"
@@ -13,6 +36,25 @@
       "tag": "mixed-in",
       "listen": "127.0.0.1",
       "listen_port": 2080
+    },
+    {
+      "type": "direct",
+      "tag": "dns-in",
+      "listen": "127.0.0.1",
+      "listen_port": 5333
+    },
+    {
+      "type": "redirect",
+      "tag": "redirect-in",
+      "listen": "0.0.0.0",
+      "listen_port": 5331
+    },
+    {
+      "type": "tproxy",
+      "tag": "tproxy-in",
+      "listen": "0.0.0.0",
+      "listen_port": 5332,
+      "network": "udp"
     }
   ],
   "outbounds": [
@@ -22,7 +64,14 @@
     }
   ],
   "route": {
-    "rules": [],
-    "final": "direct"
+    "rules": [
+      {
+        "inbound": "dns-in",
+        "action": "hijack-dns"
+      }
+    ],
+    "final": "direct",
+    "default_domain_resolver": "dns-local",
+    "default_mark": 100
   }
 }
