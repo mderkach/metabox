@@ -19,7 +19,7 @@ describe('toLogTail', () => {
     const tail = toLogTail({
       source: 'file',
       since: 'вчера',
-      entries: [{ time: 'не время', level: 'notice', message: 'строка' }],
+      entries: [{ time: 'не время', level: 'verbose', message: 'строка' }],
     });
 
     expect(tail.since).toBeNull();
