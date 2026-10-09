@@ -459,7 +459,7 @@ describe('правка списка правил', () => {
     ).toBeInTheDocument();
   });
 
-  it('удаление убирает узел и закрывает панель, а соседей не трогает', async () => {
+  it('удаление после подтверждения убирает узел и закрывает панель, а соседей не трогает', async () => {
     const user = userEvent.setup();
 
     renderWithRouter(EditorPage);
@@ -468,11 +468,35 @@ describe('правка списка правил', () => {
     await user.click(
       within(await screen.findByRole('complementary')).getByRole('button', { name: 'Удалить правило 2' })
     );
+    await user.click(
+      within(screen.getByRole('alertdialog', { name: 'Удалить правило 2?' })).getByRole('button', { name: 'Удалить' })
+    );
 
     expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
     // Файл без правила 2 — тот же текст, что был, строка в строку.
     expect(ConfigDocumentState.getState().draft).toBe(editConfig([EDIT_RULES[0], EDIT_RULES[2]]));
     expect(screen.getByRole('status')).toHaveTextContent('2 правила');
+  });
+
+  it('отмена подтверждения оставляет правило и панель', async () => {
+    const user = userEvent.setup();
+
+    renderWithRouter(EditorPage);
+
+    await user.click(await screen.findByRole('button', { name: /^Правило 2, / }));
+    await user.click(
+      within(await screen.findByRole('complementary')).getByRole('button', { name: 'Удалить правило 2' })
+    );
+    await user.click(
+      within(screen.getByRole('alertdialog', { name: 'Удалить правило 2?' })).getByRole('button', { name: 'Отмена' })
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    });
+    expect(ConfigDocumentState.getState().draft).toBeNull();
+    expect(screen.getByRole('complementary')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('3 правила');
   });
 
   it('«Выше» переставляет правило, а панель остаётся на нём вместе с вкладкой и фокусом', async () => {

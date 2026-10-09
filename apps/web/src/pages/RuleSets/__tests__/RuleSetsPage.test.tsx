@@ -153,6 +153,46 @@ describe('экран сетов', () => {
     );
   });
 
+  it('удаление сета требует подтверждения и называет правила, которые на него ссылаются', async () => {
+    const user = userEvent.setup();
+
+    renderWithRouter(RuleSetsPage);
+
+    await user.click(await screen.findByRole('button', { name: 'Убрать сет geosite-google' }));
+
+    const dialog = screen.getByRole('alertdialog', { name: 'Убрать сет geosite-google?' });
+
+    expect(dialog).toHaveTextContent('На сет ссылается 1 правило');
+
+    await user.click(within(dialog).getByRole('button', { name: 'Убрать' }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    });
+    expect(findValue(ConfigDocumentState.getState().draft ?? '', ['route', 'rule_set'])).toEqual([
+      findValue(CONFIG, ['route', 'rule_set', 1]),
+    ]);
+  });
+
+  it('отмена подтверждения оставляет сет на месте', async () => {
+    const user = userEvent.setup();
+
+    renderWithRouter(RuleSetsPage);
+
+    await user.click(await screen.findByRole('button', { name: 'Убрать сет geoip-ru' }));
+    await user.click(
+      within(screen.getByRole('alertdialog', { name: 'Убрать сет geoip-ru?' })).getByRole('button', { name: 'Отмена' })
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    });
+    expect(ConfigDocumentState.getState().draft).toBeNull();
+    expect(within(screen.getByRole('table', { name: 'Подключённые сеты' })).getAllByRole('row')).toHaveLength(
+      HEADER_ROWS + 2
+    );
+  });
+
   it('поиск отбирает строки и сбрасывается кнопкой пустого экрана', async () => {
     const user = userEvent.setup();
 

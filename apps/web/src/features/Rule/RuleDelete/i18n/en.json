@@ -1,3 +1,8 @@
 {
-  "remove": "Delete rule {{index}}"
+  "remove": "Delete rule {{index}}",
+  "confirm": {
+    "title": "Delete rule {{index}}?",
+    "description": "The rule leaves the draft. A single deletion cannot be undone: the rule comes back only if you discard every change in the draft.",
+    "action": "Delete"
+  }
 }

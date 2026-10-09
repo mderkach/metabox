@@ -1,13 +1,13 @@
 import { Link } from '@tanstack/react-router';
-import { Trash2 } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { RULE_SET_TYPE, type RuleSetRow as RuleSetRowModel } from '@entities/RuleSet';
-import { Badge, Button, Separator } from '@shared/ui';
+import { Badge, Separator } from '@shared/ui';
 
 import { RULE_SET_COLUMN } from './RuleSetColumns';
 import { formatUpdateInterval } from './RuleSetInterval';
+import { RuleSetRemove } from './RuleSetRemove';
 
 /**
  * Строка набора.
@@ -82,16 +82,13 @@ function RuleSetRowProto({
       <span role='cell' className={RULE_SET_COLUMN.RowActions}>
         <Separator orientation='vertical' className='h-5' />
 
-        <Button
-          variant='ghost'
-          size='icon-sm'
-          aria-label={t('row.remove', { tag: set.tag })}
-          onClick={() => {
+        <RuleSetRemove
+          tag={set.tag}
+          usedBy={set.usedBy}
+          onConfirm={() => {
             onRemove(set.index);
           }}
-        >
-          <Trash2 />
-        </Button>
+        />
       </span>
     </div>
   );
