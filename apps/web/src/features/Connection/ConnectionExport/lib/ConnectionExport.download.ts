@@ -1,4 +1,4 @@
-import type { ConnectionRow } from '@entities/Connection';
+import type { ConnectionRow, ConnectionSourceLabel } from '@entities/Connection';
 
 import { MIME, type ExportFormat } from '../model/ConnectionExport.constants';
 import { toExportBody } from './ConnectionExport.serialize';
@@ -15,8 +15,13 @@ const ISO_SECONDS_LENGTH = 19;
  * Firefox не запускает скачивание по клику вне документа, а отзыв сразу после
  * `click()` успевает освободить blob до того, как браузер начнёт его читать.
  */
-export function downloadConnections(rows: ConnectionRow[], format: ExportFormat, stamp: Date) {
-  const body = toExportBody(rows, format);
+export function downloadConnections(
+  rows: ConnectionRow[],
+  format: ExportFormat,
+  stamp: Date,
+  sourceLabel: ConnectionSourceLabel
+) {
+  const body = toExportBody(rows, format, sourceLabel);
   // react-doctor-disable-next-line react-doctor/no-create-object-url-without-revoke -- отзыв стоит в кадре ниже, за границей разбора правила
   const url = URL.createObjectURL(new Blob([body], { type: MIME[format] }));
   const link = document.createElement('a');

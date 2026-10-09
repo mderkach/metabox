@@ -1,9 +1,12 @@
+import { renderWithQuery } from '@test/renderWithQuery';
 import { selectOption } from '@test/selectOption';
-import { render, screen } from '@testing-library/react';
+import { server } from '@test/server';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { ConfigDocumentState, findValue, readRules } from '@entities/Config';
+import { createDeviceHandlers } from '@entities/Device/__tests__/Device.handlers';
 import { RULE_TARGET, toRuleRowsFromNodes, type RuleRow } from '@entities/Rule';
 
 import { RuleEditForm } from '../ui/RuleEditForm';
@@ -281,5 +284,59 @@ describe('условия правила в форме', () => {
     await user.clear(screen.getByRole('textbox', { name: 'Домен' }));
 
     expect(screen.getByRole('status')).toHaveTextContent('заберёт весь трафик');
+  });
+
+  it('устройство из списка ложится в условие адресом источника и предупреждает о динамической аренде', async () => {
+    ConfigDocumentState.getState().reset();
+    ConfigDocumentState.getState().load(CONFIG);
+    server.use(...createDeviceHandlers());
+    const user = userEvent.setup();
+
+    renderWithQuery(<RuleEditForm rule={RULE} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
+
+    await selectOption(
+      user,
+      screen.getByRole('combobox', { name: 'Добавить условие' }),
+      'Устройство или адрес источника'
+    );
+    await selectOption(
+      user,
+      await screen.findByRole('combobox', { name: 'Выбрать устройство' }),
+      'iphone-guest · 192.168.1.120'
+    );
+
+    expect(screen.getByRole('textbox', { name: 'Устройство или адрес источника' })).toHaveValue('192.168.1.120/32');
+
+    const chosen = screen.getByRole('list', { name: 'Устройства в условии' });
+
+    expect(within(chosen).getByText('iphone-guest')).toBeInTheDocument();
+    expect(within(chosen).getByText('Аренда динамическая, адрес может смениться')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Сохранить в черновик' }));
+
+    expect(draftRule()).toEqual({ rule_set: ['github'], outbound: 'proxy', source_ip_cidr: ['192.168.1.120/32'] });
+  });
+
+  it('у устройства со статической арендой о смене адреса не предупреждает', async () => {
+    server.use(...createDeviceHandlers());
+    const user = userEvent.setup();
+
+    renderWithQuery(<RuleEditForm rule={RULE} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
+
+    await selectOption(
+      user,
+      screen.getByRole('combobox', { name: 'Добавить условие' }),
+      'Устройство или адрес источника'
+    );
+    await selectOption(
+      user,
+      await screen.findByRole('combobox', { name: 'Выбрать устройство' }),
+      'Ноутбук · 192.168.1.60'
+    );
+
+    const chosen = screen.getByRole('list', { name: 'Устройства в условии' });
+
+    expect(within(chosen).getByText('Ноутбук')).toBeInTheDocument();
+    expect(within(chosen).queryByText('Аренда динамическая, адрес может смениться')).not.toBeInTheDocument();
   });
 });

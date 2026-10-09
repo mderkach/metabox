@@ -8,6 +8,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ConfigDocumentState } from '@entities/Config';
 import { CONFIG_ENDPOINT } from '@entities/Config';
 import { CONFIG_FIXTURE } from '@entities/Config/__tests__/Config.fixture';
+import { createDeviceHandlers } from '@entities/Device/__tests__/Device.handlers';
 import { ROUTE_ENDPOINT } from '@entities/Route';
 import {
   ROUTE_EXPLANATION_FIXTURE,
@@ -40,6 +41,23 @@ function configWithRules(count: number): string {
 describe('RouteExplanation', () => {
   beforeEach(() => {
     ConfigDocumentState.getState().reset();
+    server.use(...createDeviceHandlers());
+  });
+
+  it('называет источник подписью устройства, а адрес оставляет подсказкой', async () => {
+    serveExplanation(ROUTE_EXPLANATION_FIXTURE);
+    serveConfig(configWithRules(ROUTE_EXPLANATION_FIXTURE.rules.length));
+
+    renderWithRouter(() => (
+      <RouteExplanation
+        connectionId='c-1'
+        host='video.example:443'
+        source='192.168.1.60'
+        onClose={vi.fn<() => void>()}
+      />
+    ));
+
+    expect(await screen.findByText('с устройства Ноутбук')).toHaveAttribute('title', '192.168.1.60');
   });
 
   it('показывает сработавшее правило и его происхождение', async () => {
@@ -47,7 +65,12 @@ describe('RouteExplanation', () => {
     serveConfig(configWithRules(ROUTE_EXPLANATION_FIXTURE.rules.length));
 
     renderWithRouter(() => (
-      <RouteExplanation connectionId='c-1' host='video.example:443' onClose={vi.fn<() => void>()} />
+      <RouteExplanation
+        connectionId='c-1'
+        host='video.example:443'
+        source='192.168.1.60'
+        onClose={vi.fn<() => void>()}
+      />
     ));
 
     // Индексы демона считаются с нуля, на экране правила нумеруются с единицы.
@@ -61,7 +84,12 @@ describe('RouteExplanation', () => {
     serveConfig(configWithRules(ROUTE_EXPLANATION_FIXTURE.rules.length));
 
     renderWithRouter(() => (
-      <RouteExplanation connectionId='c-1' host='video.example:443' onClose={vi.fn<() => void>()} />
+      <RouteExplanation
+        connectionId='c-1'
+        host='video.example:443'
+        source='192.168.1.60'
+        onClose={vi.fn<() => void>()}
+      />
     ));
 
     const link = await screen.findByRole('link', { name: 'Открыть правило в редакторе' });
@@ -78,7 +106,12 @@ describe('RouteExplanation', () => {
     serveConfig(CONFIG_TEXT);
 
     renderWithRouter(() => (
-      <RouteExplanation connectionId='c-1' host='video.example:443' onClose={vi.fn<() => void>()} />
+      <RouteExplanation
+        connectionId='c-1'
+        host='video.example:443'
+        source='192.168.1.60'
+        onClose={vi.fn<() => void>()}
+      />
     ));
 
     expect(await screen.findByText('sing-box работает по другому конфигу')).toBeInTheDocument();
@@ -94,7 +127,12 @@ describe('RouteExplanation', () => {
     serveConfig(configWithRules(ROUTE_FINAL_FIXTURE.rules.length));
 
     renderWithRouter(() => (
-      <RouteExplanation connectionId='c-1' host='video.example:443' onClose={vi.fn<() => void>()} />
+      <RouteExplanation
+        connectionId='c-1'
+        host='video.example:443'
+        source='192.168.1.60'
+        onClose={vi.fn<() => void>()}
+      />
     ));
 
     expect(await screen.findByText('Ни одно правило не совпало')).toBeInTheDocument();
@@ -106,7 +144,12 @@ describe('RouteExplanation', () => {
     serveConfig(configWithRules(0));
 
     renderWithRouter(() => (
-      <RouteExplanation connectionId='c-1' host='video.example:443' onClose={vi.fn<() => void>()} />
+      <RouteExplanation
+        connectionId='c-1'
+        host='video.example:443'
+        source='192.168.1.60'
+        onClose={vi.fn<() => void>()}
+      />
     ));
 
     expect(await screen.findByText('Правило не определено')).toBeInTheDocument();
@@ -121,7 +164,12 @@ describe('RouteExplanation', () => {
     serveConfig(configWithRules(ROUTE_EXPLANATION_FIXTURE.rules.length));
 
     renderWithRouter(() => (
-      <RouteExplanation connectionId='c-1' host='video.example:443' onClose={vi.fn<() => void>()} />
+      <RouteExplanation
+        connectionId='c-1'
+        host='video.example:443'
+        source='192.168.1.60'
+        onClose={vi.fn<() => void>()}
+      />
     ));
 
     const chain = await screen.findByRole('list', { name: 'Цепочка прокси' });
@@ -134,7 +182,12 @@ describe('RouteExplanation', () => {
     serveConfig(configWithRules(ROUTE_EXPLANATION_FIXTURE.rules.length));
 
     renderWithRouter(() => (
-      <RouteExplanation connectionId='c-1' host='video.example:443' onClose={vi.fn<() => void>()} />
+      <RouteExplanation
+        connectionId='c-1'
+        host='video.example:443'
+        source='192.168.1.60'
+        onClose={vi.fn<() => void>()}
+      />
     ));
 
     expect(
@@ -149,7 +202,9 @@ describe('RouteExplanation', () => {
     const onClose = vi.fn<() => void>();
     const user = userEvent.setup();
 
-    renderWithRouter(() => <RouteExplanation connectionId='c-1' host='video.example:443' onClose={onClose} />);
+    renderWithRouter(() => (
+      <RouteExplanation connectionId='c-1' host='video.example:443' source='192.168.1.60' onClose={onClose} />
+    ));
 
     await screen.findByRole('complementary');
     await user.keyboard('{Escape}');
@@ -163,11 +218,17 @@ describe('RouteExplanationSheet', () => {
     ConfigDocumentState.getState().reset();
     serveExplanation(ROUTE_EXPLANATION_FIXTURE);
     serveConfig(configWithRules(ROUTE_EXPLANATION_FIXTURE.rules.length));
+    server.use(...createDeviceHandlers());
   });
 
   it('открыта, пока выбрано соединение, и называется им', async () => {
     renderWithRouter(() => (
-      <RouteExplanationSheet connectionId='c-1' host='video.example:443' onClose={vi.fn<() => void>()} />
+      <RouteExplanationSheet
+        connectionId='c-1'
+        host='video.example:443'
+        source='192.168.1.60'
+        onClose={vi.fn<() => void>()}
+      />
     ));
 
     const sheet = await screen.findByRole('dialog', { name: 'Маршрут соединения video.example:443' });
@@ -176,7 +237,9 @@ describe('RouteExplanationSheet', () => {
   });
 
   it('без выбранного соединения закрыта', () => {
-    renderWithRouter(() => <RouteExplanationSheet connectionId={null} host='' onClose={vi.fn<() => void>()} />);
+    renderWithRouter(() => (
+      <RouteExplanationSheet connectionId={null} host='' source='' onClose={vi.fn<() => void>()} />
+    ));
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
@@ -185,7 +248,9 @@ describe('RouteExplanationSheet', () => {
     const onClose = vi.fn<() => void>();
     const user = userEvent.setup();
 
-    renderWithRouter(() => <RouteExplanationSheet connectionId='c-1' host='video.example:443' onClose={onClose} />);
+    renderWithRouter(() => (
+      <RouteExplanationSheet connectionId='c-1' host='video.example:443' source='192.168.1.60' onClose={onClose} />
+    ));
 
     await screen.findByRole('dialog');
     await user.keyboard('{Escape}');

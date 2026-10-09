@@ -1,23 +1,29 @@
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import type { ConnectionSource, ConnectionSourceGroup } from '@entities/Connection';
+import type { ConnectionSource, ConnectionSourceGroup, ConnectionSourceLabel } from '@entities/Connection';
 import { cn } from '@shared/lib/utils';
 import { FACET_ACTIVE, FACET_CLASS, FACET_IDLE, FACET_MORE } from '@shared/ui';
 
 /** Сколько устройств показать сразу: на роутере их бывает под три десятка. */
 const VISIBLE_SOURCES = 8;
 
-/** Срез по устройству: «чьё оно». Счётчики считаются по вкладке целиком. */
+/**
+ * Срез по устройству: «чьё оно». Счётчики считаются по вкладке целиком. Чип
+ * подписан именем устройства, а в адрес уходит IP: имя можно сменить, и ссылка
+ * на отбор от этого не должна сломаться.
+ */
 export function ConnectionSourceFacet({
   groups,
   total,
   source,
+  sourceLabel,
   onSourceChange,
 }: {
   groups: ConnectionSourceGroup[];
   total: number;
   source: ConnectionSource;
+  sourceLabel: ConnectionSourceLabel;
   onSourceChange: (source: ConnectionSource) => void;
 }) {
   const { t } = useTranslation('pages/Connections');
@@ -52,7 +58,9 @@ export function ConnectionSourceFacet({
             }}
             className={cn(FACET_CLASS, source === group.source ? FACET_ACTIVE : FACET_IDLE)}
           >
-            <span className='font-mono'>{group.source}</span>
+            <span className='font-mono' title={group.source}>
+              {sourceLabel(group.source)}
+            </span>
             <span className='font-mono tabular-nums'>{group.count}</span>
           </button>
         </li>

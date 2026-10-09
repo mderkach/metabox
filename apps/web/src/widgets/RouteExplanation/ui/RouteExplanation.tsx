@@ -4,6 +4,7 @@ import { X } from 'lucide-react';
 import { useState, type KeyboardEvent, type ReactNode } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
+import { deviceLabel, useDeviceIndex } from '@entities/Device';
 import {
   ROUTE_MATCH,
   ROUTE_ORIGIN,
@@ -57,12 +58,15 @@ export function RouteExplanation({
   id,
   connectionId,
   host,
+  source,
   onClose,
 }: {
   id?: string;
   connectionId: string;
   /** Узел назначения: панель обязана называть соединение, о котором рассказывает. */
   host: string;
+  /** Адрес источника; панель называет его подписью устройства. */
+  source: string;
   onClose: () => void;
 }) {
   const { t } = useTranslation('widgets/RouteExplanation');
@@ -87,7 +91,7 @@ export function RouteExplanation({
       <Header
         heading={
           <h2 ref={headingRef} tabIndex={-1} className={HEADING}>
-            <Title host={host} />
+            <Title host={host} source={source} />
           </h2>
         }
         onClose={onClose}
@@ -106,21 +110,23 @@ export function RouteExplanationSheet({
   id,
   connectionId,
   host,
+  source,
   onClose,
 }: {
   id?: string;
   /** `null` — соединение не выбрано, лист закрыт. */
   connectionId: string | null;
   host: string;
+  source: string;
   onClose: () => void;
 }) {
   const { t } = useTranslation('widgets/RouteExplanation');
   // Лист уезжает анимацией уже после сброса выбора и всё это время
   // показывает последнее соединение, а не пустоту.
-  const [shown, setShown] = useState({ connectionId, host });
+  const [shown, setShown] = useState({ connectionId, host, source });
 
   if (connectionId !== null && (connectionId !== shown.connectionId || host !== shown.host)) {
-    setShown({ connectionId, host });
+    setShown({ connectionId, host, source });
   }
 
   return (
@@ -138,7 +144,7 @@ export function RouteExplanationSheet({
             // Имя листа Base UI берёт из заголовка, а видимый текст склеил бы
             // подпись с узлом без пробела.
             <SheetTitle aria-label={t('titleFor', { host: shown.host })} className={HEADING}>
-              <Title host={shown.host} />
+              <Title host={shown.host} source={shown.source} />
             </SheetTitle>
           }
           onClose={onClose}
@@ -162,13 +168,19 @@ function Header({ heading, onClose }: { heading: ReactNode; onClose: () => void 
   );
 }
 
-function Title({ host }: { host: string }) {
+function Title({ host, source }: { host: string; source: string }) {
   const { t } = useTranslation('widgets/RouteExplanation');
+  const devices = useDeviceIndex();
 
   return (
     <>
       {t('title')}
       <span className='truncate font-mono text-xs font-normal text-muted-foreground'>{host}</span>
+      {source !== '' && (
+        <span className='truncate text-xs font-normal text-muted-foreground' title={source}>
+          {t('from', { device: deviceLabel(source, devices) })}
+        </span>
+      )}
     </>
   );
 }

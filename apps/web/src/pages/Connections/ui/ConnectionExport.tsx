@@ -2,7 +2,7 @@ import type { ParseKeys } from 'i18next';
 import { Download } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import type { ConnectionRow } from '@entities/Connection';
+import type { ConnectionRow, ConnectionSourceLabel } from '@entities/Connection';
 import { downloadConnections, EXPORT_FORMAT, type ExportFormat } from '@features/Connection/ConnectionExport';
 import { Button } from '@shared/ui';
 
@@ -12,7 +12,7 @@ const EXPORT_FORMATS = [
 ] as const satisfies readonly { format: ExportFormat; label: ParseKeys<'pages/Connections'> }[];
 
 /** Выгрузка: подвал таблицы, рядом со счётчиком — уходит ровно то, что он называет. */
-export function ConnectionExport({ rows }: { rows: ConnectionRow[] }) {
+export function ConnectionExport({ rows, sourceLabel }: { rows: ConnectionRow[]; sourceLabel: ConnectionSourceLabel }) {
   const { t } = useTranslation('pages/Connections');
 
   return (
@@ -24,7 +24,7 @@ export function ConnectionExport({ rows }: { rows: ConnectionRow[] }) {
           size='xs'
           disabled={rows.length === 0}
           onClick={() => {
-            downloadConnections(rows, format, new Date());
+            downloadConnections(rows, format, new Date(), sourceLabel);
           }}
         >
           <Download />

@@ -287,6 +287,7 @@ function conditionTexts(rule: RuleRow): Record<RuleCondition, string> {
     domain_suffix: text('domain_suffix'),
     domain_keyword: text('domain_keyword'),
     ip_cidr: text('ip_cidr'),
+    source_ip_cidr: text('source_ip_cidr'),
     port: text('port'),
   };
 }

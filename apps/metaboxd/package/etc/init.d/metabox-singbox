@@ -1,11 +1,409 @@
 #!/bin/sh /etc/rc.common
-# Служба sing-box панели metabox. Каталог и имя конфига берутся из
-# /etc/config/metabox — те же, что у демона.
+# Служба sing-box панели metabox и сетевая обвязка вокруг неё: перехват LAN в
+# nft через инклюд fw4, ip rule для tproxy и upstream dnsmasq. Каталог и имя
+# конфига берутся из /etc/config/metabox — те же, что у демона, модель
+# обвязки — оттуда же, секция dataplane.
 
 # После dnsmasq и fw4, но до metaboxd: демон на старте доигрывает транзакцию
 # Apply и рестартует службу, и сеть к этому моменту уже должна быть поднята.
 START=97
 USE_PROCD=1
+
+RUN_DIR=/var/run/metabox
+NFT_FILE=$RUN_DIR/fw4_post.nft
+# С какими метками, таблицей и фрагментом dnsmasq обвязка поставлена: снимать
+# нужно именно их, даже если UCI к моменту stop уже поменяли.
+STATE_FILE=$RUN_DIR/dataplane.state
+FW_INCLUDE=metabox_post
+
+LOCAL_ADDR_V4="0.0.0.0/8, 10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8, 169.254.0.0/16, 172.16.0.0/12, 192.0.0.0/24, 192.0.2.0/24, 192.31.196.0/24, 192.52.193.0/24, 192.88.99.0/24, 192.168.0.0/16, 192.175.48.0/24, 198.18.0.0/15, 198.51.100.0/24, 203.0.113.0/24, 224.0.0.0/4, 240.0.0.0/4"
+
+dp_fail() {
+	echo "metabox-singbox: $*" >&2
+	logger -t metabox-singbox "$*"
+	return 1
+}
+
+dp_number() {
+	case "$1" in
+	'' | *[!0-9]*) return 1 ;;
+	esac
+}
+
+dp_add() {
+	local var="$1" value="$2" pattern="$3" quote="$4"
+
+	[ -n "$value" ] || return 0
+	case "$value" in
+	*[!$pattern]*)
+		dp_fail "недопустимое значение '$value' в metabox.dataplane"
+		dp_invalid=1
+		return 0
+		;;
+	esac
+
+	value="$quote$value$quote"
+	eval "$var=\"\${$var:+\$$var, }\$value\""
+}
+
+dp_add_iface() { dp_add dp_ifaces "$1" 'A-Za-z0-9._@-' '"'; }
+dp_add_ip() { dp_add dp_src_ip "$1" '0-9./'; }
+dp_add_mac() { dp_add dp_src_mac "$(echo "$1" | tr 'A-F' 'a-f')" '0-9a-f:'; }
+dp_add_proxy() { dp_add dp_wan_proxy "$1" '0-9./'; }
+dp_add_direct() { dp_add dp_wan_direct "$1" '0-9./'; }
+
+dp_load() {
+	dp_invalid=0
+	dp_ifaces=
+	dp_src_ip=
+	dp_src_mac=
+	dp_wan_proxy=
+	dp_wan_direct=
+
+	config_get_bool dp_enabled dataplane enabled 1
+	config_get dp_redirect_port dataplane redirect_port 5331
+	config_get dp_tproxy_port dataplane tproxy_port 5332
+	config_get dp_dns_port dataplane dns_port 5333
+	config_get_bool dp_dns_hijack dataplane dns_hijack 1
+	config_get dp_self_mark dataplane self_mark 100
+	config_get dp_tproxy_mark dataplane tproxy_mark 101
+	config_get dp_route_table dataplane route_table 100
+	config_get dp_acl_mode dataplane acl_mode listed
+
+	config_list_foreach dataplane lan_interface dp_add_iface
+	[ -n "$dp_ifaces" ] || dp_ifaces='"br-lan"'
+	config_list_foreach dataplane source_ip dp_add_ip
+	config_list_foreach dataplane source_mac dp_add_mac
+	config_list_foreach dataplane wan_proxy_cidr dp_add_proxy
+	config_list_foreach dataplane wan_direct_cidr dp_add_direct
+
+	local n
+	for n in "$dp_redirect_port" "$dp_tproxy_port" "$dp_dns_port" "$dp_self_mark" "$dp_tproxy_mark" "$dp_route_table"; do
+		dp_number "$n" || {
+			dp_fail "в metabox.dataplane ожидалось десятичное число, получено '$n'"
+			dp_invalid=1
+		}
+	done
+
+	case "$dp_acl_mode" in
+	all | listed) ;;
+	*)
+		dp_fail "acl_mode '$dp_acl_mode' не all и не listed"
+		dp_invalid=1
+		;;
+	esac
+
+	[ "$dp_invalid" = 0 ]
+}
+
+dp_set() {
+	local name="$1" type="$2" elements="$3"
+
+	printf 'set %s {\n\ttype %s\n' "$name" "$type"
+	[ "$type" = ether_addr ] || printf '\tflags interval\n\tauto-merge\n'
+	[ -z "$elements" ] || printf '\telements = { %s }\n' "$elements"
+	printf '}\n\n'
+}
+
+# Источники ACL: в режиме all проверки источника нет вовсе, в listed — только
+# перечисленные адреса и MAC.
+dp_sources() {
+	local target="$1"
+
+	if [ "$dp_acl_mode" = all ]; then
+		printf '\tcounter goto %s\n' "$target"
+		return
+	fi
+
+	printf '\tip saddr @metabox_src_ip counter goto %s\n' "$target"
+	printf '\tether saddr @metabox_src_mac counter goto %s\n' "$target"
+}
+
+# Фрагмент читается внутри table inet fw4 (инклюд table-append), поэтому
+# объявленные здесь dstnat, mangle_prerouting и mangle_output дописывают
+# правила в конец цепочек fw4, а не создают новые.
+#
+# Трафик самого роутера с чужой меткой (b4 метит свои пакеты через SO_MARK)
+# пропускается мимо перехвата: его уже ведёт другая служба, а tproxy затёр бы
+# её метку.
+dp_render() {
+	dp_set metabox_local_addr_v4 ipv4_addr "$LOCAL_ADDR_V4"
+	dp_set metabox_wan_proxy_addr_v4 ipv4_addr "$dp_wan_proxy"
+	dp_set metabox_wan_direct_addr_v4 ipv4_addr "$dp_wan_direct"
+	dp_set metabox_src_ip ipv4_addr "$dp_src_ip"
+	dp_set metabox_src_mac ether_addr "$dp_src_mac"
+
+	cat <<EOF
+chain metabox_redirect_lanac {
+	meta mark $dp_self_mark counter return
+	iifname != { $dp_ifaces } return
+$(dp_sources metabox_redirect)
+}
+
+chain metabox_redirect {
+	ip daddr @metabox_wan_proxy_addr_v4 meta l4proto tcp counter redirect to :$dp_redirect_port
+	ip daddr @metabox_local_addr_v4 return
+	ip daddr @metabox_wan_direct_addr_v4 return
+	meta l4proto tcp counter redirect to :$dp_redirect_port
+}
+
+chain metabox_output_redir {
+	type nat hook output priority -105; policy accept;
+	meta mark $dp_self_mark counter return
+	meta mark != 0 counter return
+	meta nfproto ipv4 meta l4proto tcp counter jump metabox_redirect
+}
+
+chain metabox_mangle_lanac {
+	iifname "lo" meta mark $dp_tproxy_mark counter goto metabox_mangle_prerouting
+	meta mark $dp_self_mark counter return
+	iifname != { $dp_ifaces } return
+	udp dport 53 return
+$(dp_sources metabox_mangle_prerouting)
+}
+
+chain metabox_mangle_prerouting {
+	ip daddr @metabox_wan_proxy_addr_v4 meta l4proto udp meta mark set $dp_tproxy_mark tproxy ip to 127.0.0.1:$dp_tproxy_port counter accept
+	ip daddr @metabox_local_addr_v4 return
+	ip daddr @metabox_wan_direct_addr_v4 return
+	meta l4proto udp meta mark set $dp_tproxy_mark tproxy ip to 127.0.0.1:$dp_tproxy_port counter accept
+}
+
+chain metabox_mangle_output {
+	meta mark $dp_self_mark counter return
+	meta mark != 0 counter return
+	ip daddr @metabox_wan_proxy_addr_v4 meta mark set $dp_tproxy_mark counter return
+	ip daddr @metabox_local_addr_v4 return
+	ip daddr @metabox_wan_direct_addr_v4 return
+	meta mark set $dp_tproxy_mark counter
+}
+
+chain dstnat {
+EOF
+	[ "$dp_dns_hijack" = 0 ] ||
+		printf '\tiifname { %s } meta nfproto ipv4 udp dport 53 counter redirect to :53\n' "$dp_ifaces"
+	cat <<EOF
+	meta nfproto ipv4 meta l4proto tcp jump metabox_redirect_lanac
+}
+
+chain mangle_prerouting {
+	meta nfproto ipv4 meta l4proto udp jump metabox_mangle_lanac
+}
+
+chain mangle_output {
+	meta nfproto ipv4 meta l4proto udp jump metabox_mangle_output
+}
+EOF
+}
+
+dp_fw_registered() {
+	[ "$(uci -q get firewall.$FW_INCLUDE)" = include ] &&
+		[ "$(uci -q get firewall.$FW_INCLUDE.type)" = nftables ] &&
+		[ "$(uci -q get firewall.$FW_INCLUDE.path)" = "$NFT_FILE" ] &&
+		[ "$(uci -q get firewall.$FW_INCLUDE.position)" = table-append ]
+}
+
+dp_fw_register() {
+	dp_fw_registered && return 0
+
+	uci -q batch <<-EOF
+		set firewall.$FW_INCLUDE=include
+		set firewall.$FW_INCLUDE.type=nftables
+		set firewall.$FW_INCLUDE.path=$NFT_FILE
+		set firewall.$FW_INCLUDE.position=table-append
+		commit firewall
+	EOF
+}
+
+dp_fw_unregister() {
+	uci -q get firewall.$FW_INCLUDE >/dev/null || return 0
+	uci -q batch <<-EOF
+		delete firewall.$FW_INCLUDE
+		commit firewall
+	EOF
+}
+
+dp_fw_loaded() {
+	nft list chain inet fw4 metabox_redirect_lanac >/dev/null 2>&1
+}
+
+# fw4 reload пересобирает весь набор правил, поэтому зовётся только когда
+# фрагмент действительно изменился или его нет в ядре. Сломанный фрагмент
+# уронил бы весь межсетевой экран: он сначала проверяется fw4 check, и при
+# отказе возвращается прежний.
+dp_nft_up() {
+	dp_render >"$NFT_FILE.new" || return 1
+
+	if cmp -s "$NFT_FILE.new" "$NFT_FILE" && dp_fw_registered && dp_fw_loaded; then
+		rm -f "$NFT_FILE.new"
+		return 0
+	fi
+
+	rm -f "$NFT_FILE.old"
+	[ -f "$NFT_FILE" ] && mv "$NFT_FILE" "$NFT_FILE.old"
+	mv "$NFT_FILE.new" "$NFT_FILE"
+	dp_fw_register
+
+	if ! fw4 -q check; then
+		if [ -f "$NFT_FILE.old" ]; then
+			mv "$NFT_FILE.old" "$NFT_FILE"
+		else
+			rm -f "$NFT_FILE"
+			dp_fw_unregister
+		fi
+		dp_fail "фрагмент nft не прошёл fw4 check, перехват не изменён"
+		return 1
+	fi
+
+	rm -f "$NFT_FILE.old"
+	fw4 -q reload || {
+		dp_fail "fw4 reload не прошёл"
+		return 1
+	}
+	dp_sets_sync
+}
+
+dp_set_sync() {
+	printf 'flush set inet fw4 %s\n' "$1"
+	[ -z "$2" ] || printf 'add element inet fw4 %s { %s }\n' "$1" "$2"
+}
+
+# flush table в fw4 reload не трогает элементы наборов: удалённый из модели
+# источник остался бы в наборе. Наборы перезаливаются одной транзакцией nft,
+# поэтому пустыми они не бывают ни на миг.
+dp_sets_sync() {
+	{
+		dp_set_sync metabox_local_addr_v4 "$LOCAL_ADDR_V4"
+		dp_set_sync metabox_wan_proxy_addr_v4 "$dp_wan_proxy"
+		dp_set_sync metabox_wan_direct_addr_v4 "$dp_wan_direct"
+		dp_set_sync metabox_src_ip "$dp_src_ip"
+		dp_set_sync metabox_src_mac "$dp_src_mac"
+	} | nft -f - || dp_fail "наборы metabox_ не перезалиты"
+}
+
+# fw4 reload делает flush table: правила уходят, а объявленные инклюдом цепочки
+# и наборы остаются пустыми, и их приходится удалять отдельно.
+dp_nft_down() {
+	local loaded=0 objects
+
+	dp_fw_loaded && loaded=1
+	dp_fw_unregister
+	rm -f "$NFT_FILE" "$NFT_FILE.new" "$NFT_FILE.old"
+	[ "$loaded" = 0 ] || fw4 -q reload
+
+	objects=$(
+		nft list chains inet 2>/dev/null | sed -n 's/^[[:space:]]*chain \(metabox_[A-Za-z0-9_]*\) .*/delete chain inet fw4 \1/p'
+		nft list sets inet 2>/dev/null | sed -n 's/^[[:space:]]*set \(metabox_[A-Za-z0-9_]*\) .*/delete set inet fw4 \1/p'
+	)
+	[ -z "$objects" ] || echo "$objects" | nft -f -
+}
+
+dp_hex() {
+	printf '0x%x' "$1"
+}
+
+dp_rule_present() {
+	ip rule list | grep -q "fwmark $(dp_hex "$1") lookup $2 *\$"
+}
+
+dp_route_up() {
+	dp_rule_present "$dp_tproxy_mark" "$dp_route_table" ||
+		ip rule add fwmark "$dp_tproxy_mark" table "$dp_route_table"
+	ip route replace local 0.0.0.0/0 dev lo table "$dp_route_table"
+}
+
+dp_route_down() {
+	local mark="$1" table="$2"
+
+	while dp_rule_present "$mark" "$table"; do
+		ip rule del fwmark "$mark" table "$table" || break
+	done
+	ip route flush table "$table" 2>/dev/null
+}
+
+# conf-dir dnsmasq — у каждого инстанса свой (/tmp/dnsmasq.<секция>.d или
+# опция confdir), общего /tmp/dnsmasq.d init dnsmasq не читает. Берётся первый
+# инстанс, как у homeproxy.
+dp_dnsmasq_file() {
+	local section dir
+
+	section=$(uci -q show 'dhcp.@dnsmasq[0]' | sed -n '1s/^dhcp\.\([^.=]*\)=dnsmasq$/\1/p')
+	[ -n "$section" ] || return 1
+	dir=$(uci -q get "dhcp.$section.confdir") || dir="/tmp/dnsmasq.$section.d"
+	echo "${dir%%,*}/metabox.conf"
+}
+
+dp_dnsmasq_restart() {
+	[ -x /etc/init.d/dnsmasq ] && /etc/init.d/dnsmasq restart
+}
+
+dp_dnsmasq_up() {
+	local file="$1"
+
+	mkdir -p "${file%/*}"
+	printf 'no-resolv\nno-poll\nserver=127.0.0.1#%s\n' "$dp_dns_port" >"$file.new"
+
+	if cmp -s "$file.new" "$file"; then
+		rm -f "$file.new"
+		return 0
+	fi
+
+	mv "$file.new" "$file"
+	dp_dnsmasq_restart
+}
+
+dp_dnsmasq_down() {
+	local file="$1"
+
+	[ -n "$file" ] && [ -f "$file" ] || return 0
+	rm -f "$file"
+	dp_dnsmasq_restart
+}
+
+dp_state_read() {
+	st_mark=
+	st_table=
+	st_dnsmasq=
+	# shellcheck disable=SC1090
+	[ -f "$STATE_FILE" ] && . "$STATE_FILE"
+}
+
+# Снимает обвязку целиком. Без файла состояния (перезагрузка стёрла /var/run,
+# а инклюд в UCI остался) метки и путь берутся из текущей модели.
+dp_down() {
+	dp_state_read
+	[ -n "$st_mark" ] || st_mark="$dp_tproxy_mark"
+	[ -n "$st_table" ] || st_table="$dp_route_table"
+	[ -n "$st_dnsmasq" ] || st_dnsmasq=$(dp_dnsmasq_file)
+
+	dp_nft_down
+	dp_number "$st_mark" && dp_number "$st_table" && dp_route_down "$st_mark" "$st_table"
+	dp_dnsmasq_down "$st_dnsmasq"
+	rm -f "$STATE_FILE"
+}
+
+# Ставит обвязку или доводит её до модели. Каждый шаг сверяет текущее состояние
+# и ничего не трогает, если оно уже совпадает: этот путь проходит каждый
+# рестарт sing-box, а Apply конфига не должен перезагружать fw4 и dnsmasq.
+dp_up() {
+	local dnsmasq_file
+
+	mkdir -p "$RUN_DIR"
+	dnsmasq_file=$(dp_dnsmasq_file) || dp_fail "секция dnsmasq в /etc/config/dhcp не найдена"
+
+	dp_state_read
+	if [ -n "$st_mark" ] && [ "$st_mark:$st_table" != "$dp_tproxy_mark:$dp_route_table" ]; then
+		dp_route_down "$st_mark" "$st_table"
+	fi
+	if [ -n "$st_dnsmasq" ] && [ "$st_dnsmasq" != "$dnsmasq_file" ]; then
+		dp_dnsmasq_down "$st_dnsmasq"
+	fi
+
+	dp_route_up
+	printf 'st_mark=%s\nst_table=%s\nst_dnsmasq=%s\n' "$dp_tproxy_mark" "$dp_route_table" "$dnsmasq_file" >"$STATE_FILE"
+	[ -z "$dnsmasq_file" ] || dp_dnsmasq_up "$dnsmasq_file"
+	dp_nft_up
+}
 
 start_service() {
 	config_load metabox
@@ -27,6 +425,16 @@ start_service() {
 		return 1
 	}
 
+	# Ошибка в модели не снимает уже поставленную обвязку: снять её значило бы
+	# пустить трафик мимо прокси, а это решает только явный stop.
+	if dp_load; then
+		if [ "$dp_enabled" = 1 ]; then
+			dp_up
+		else
+			dp_down
+		fi
+	fi
+
 	# Рабочий каталог — каталог конфига: относительный path узла local
 	# sing-box резолвит от -D, а файлы списков демон пишет рядом с конфигом.
 	# Демон проверяет кандидата той же командой, поэтому -c здесь один.
@@ -41,12 +449,24 @@ start_service() {
 	procd_close_instance
 }
 
+stop_service() {
+	config_load metabox
+	dp_load
+	dp_down
+}
+
+# Рестарт и reload меняют только процесс sing-box: обвязка остаётся на месте,
+# пока он поднимается, и трафик перечисленных устройств не уходит напрямую.
+# Модель обвязки start перечитывает и доводит до неё правила сам.
+restart() {
+	procd_kill "$(basename "${basescript:-$initscript}")" sing-box >/dev/null 2>&1
+	start "$@"
+}
+
 service_triggers() {
 	procd_add_reload_trigger metabox
 }
 
-# Новый конфиг и новые пути sing-box применяет только при старте.
 reload_service() {
-	stop
-	start
+	restart
 }

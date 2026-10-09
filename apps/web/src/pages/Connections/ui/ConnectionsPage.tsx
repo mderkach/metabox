@@ -73,7 +73,9 @@ export function ConnectionsPage() {
     announce(t('announce.closed'));
   }, [announce, t]);
 
-  const explainedHost = screen.active.rows.find((row) => row.id === explainedId)?.host ?? '';
+  const explained = screen.active.rows.find((row) => row.id === explainedId);
+  const explainedHost = explained?.host ?? '';
+  const explainedSource = explained?.source ?? '';
   const activeShown = screen.tab === CONNECTION_TAB.Active;
   const closedShown = screen.tab === CONNECTION_TAB.Closed;
   const pending = sampledAt === null;
@@ -87,7 +89,11 @@ export function ConnectionsPage() {
     [pending]
   );
 
-  const renderFooter = useCallback((rows: ConnectionRow[]) => <ConnectionExport rows={rows} />, []);
+  const { sourceLabel } = screen;
+  const renderFooter = useCallback(
+    (rows: ConnectionRow[]) => <ConnectionExport rows={rows} sourceLabel={sourceLabel} />,
+    [sourceLabel]
+  );
 
   // Подвал закрытых называет вытесненные; пока вкладка спрятана, числа стоят.
   const keptShown = useWhileVisible(kept, closedShown);
@@ -208,6 +214,7 @@ export function ConnectionsPage() {
                   id={explainPanelId}
                   connectionId={explainedId}
                   host={explainedHost}
+                  source={explainedSource}
                   onClose={onCloseExplanation}
                 />
               </ViewTransition>
@@ -220,6 +227,7 @@ export function ConnectionsPage() {
             id={explainPanelId}
             connectionId={explainedId}
             host={explainedHost}
+            source={explainedSource}
             onClose={onCloseExplanation}
           />
         )}

@@ -17,7 +17,7 @@
     "closed": "Closed"
   },
   "search": {
-    "placeholder": "Host, source, rule or node",
+    "placeholder": "Host, device, rule or node",
     "label": "Search the connections"
   },
   "sources": {

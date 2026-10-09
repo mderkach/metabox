@@ -1,5 +1,7 @@
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { deviceLabel, useDeviceIndex } from '@entities/Device';
 import { CARD_FLUSH, Card } from '@shared/ui';
 import { ConnectionHistory } from '@widgets/ConnectionHistory';
 import { ConnectionSummaryAction, ConnectionSummaryNetwork, ConnectionSummaryTop } from '@widgets/ConnectionSummary';
@@ -17,6 +19,10 @@ export function OverviewConnections({
   onLatencyTested: () => void;
 }) {
   const { t } = useTranslation('pages/Overview');
+  // Обзор держат открытым часами: новое устройство в сети должно получить имя
+  // без перезагрузки, поэтому список устройств здесь опрашивается.
+  const devices = useDeviceIndex({ poll: true });
+  const sourceLabel = useCallback((ip: string) => deviceLabel(ip, devices), [devices]);
 
   return (
     <OverviewSection title={t('section.connections', { ns: 'shared' })}>
@@ -57,6 +63,7 @@ export function OverviewConnections({
           title={t('connections.topSources')}
           href='/connections'
           shares={runtime.summary.sources}
+          label={sourceLabel}
         />
         <div className='sm:col-span-2'>
           <ProxyLatency onTested={onLatencyTested} />

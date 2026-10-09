@@ -1,6 +1,7 @@
 {
   "title": "Connection route",
   "titleFor": "Route of connection {{host}}",
+  "from": "from {{device}}",
   "close": "Close the explanation",
   "drift": {
     "title": "sing-box runs a different config",

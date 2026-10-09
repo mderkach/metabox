@@ -8,6 +8,7 @@ export type {
   ConnectionKindGroup,
   ConnectionSource,
   ConnectionSourceGroup,
+  ConnectionSourceLabel,
 } from './model/Connection.filter';
 export { CONNECTION_TAB, parseConnectionSearch } from './model/Connection.filter';
 export type { ConnectionSearch, ConnectionTab } from './model/Connection.filter';

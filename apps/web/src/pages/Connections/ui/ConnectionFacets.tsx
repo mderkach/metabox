@@ -19,6 +19,7 @@ export function ConnectionFacets({ screen }: { screen: ConnectionsScreen }) {
         groups={screen.sources}
         total={screen.total}
         source={screen.source}
+        sourceLabel={screen.sourceLabel}
         onSourceChange={screen.setSource}
       />
       <ConnectionKindFacet groups={screen.kinds} kind={screen.kind} onKindChange={screen.setKind} />

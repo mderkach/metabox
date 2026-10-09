@@ -1,6 +1,6 @@
 import type { LinkProps } from '@tanstack/react-router';
 import type { ParseKeys } from 'i18next';
-import { Activity, Gauge, Share2, SlidersHorizontal } from 'lucide-react';
+import { Activity, Gauge, MonitorSmartphone, Share2, SlidersHorizontal } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 interface NavItem {
@@ -17,6 +17,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { key: 'section.config', icon: SlidersHorizontal, to: '/config', short: 'short.config' },
   { key: 'section.proxies', icon: Share2, to: '/proxies' },
   { key: 'section.connections', icon: Activity, to: '/connections' },
+  { key: 'section.devices', icon: MonitorSmartphone, to: '/devices' },
 ];
 
 /** Адреса разделов в порядке меню: по нему роутер выбирает направление перехода. */

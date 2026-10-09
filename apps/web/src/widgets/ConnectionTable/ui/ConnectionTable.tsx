@@ -4,6 +4,7 @@ import { memo, useCallback, useMemo, useRef, useState, type ReactNode } from 're
 import { useTranslation } from 'react-i18next';
 
 import type { ConnectionRow as ConnectionRowModel } from '@entities/Connection';
+import { deviceLabel, useDeviceIndex } from '@entities/Device';
 import { useCloseConnection } from '@features/Connection/ConnectionClose';
 import { useNarrowScreen } from '@shared/lib/media';
 import { cn } from '@shared/lib/utils';
@@ -13,8 +14,8 @@ import { DENSITY_ROW_ESTIMATE, useNow, type ConnectionView } from '../lib';
 import { ConnectionCard } from './ConnectionCard';
 import { ConnectionColumnPicker } from './ConnectionColumnPicker';
 import {
-  CONNECTION_COLUMNS,
   CONNECTION_TABLE_FEATURES,
+  toLabeledColumns,
   toOrderedColumns,
   toTableColumns,
   toTableMinWidth,
@@ -175,10 +176,15 @@ function ConnectionTableBodyProto({
     onReset();
   }, [onReset]);
 
+  const devices = useDeviceIndex();
+  // Новые описания колонок пересортировывают таблицу, поэтому они меняются
+  // вместе со списком устройств, а не на каждый снапшот.
+  const columnDefs = useMemo(() => toLabeledColumns((ip) => deviceLabel(ip, devices)), [devices]);
+
   const table = useTable(
     {
       features: CONNECTION_TABLE_FEATURES,
-      columns: CONNECTION_COLUMNS,
+      columns: columnDefs,
       data: rows,
       state: { sorting: view.sorting, columnVisibility: view.columns, columnOrder: view.order, columnFilters },
       onSortingChange: view.setSorting,

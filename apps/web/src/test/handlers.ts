@@ -13,6 +13,7 @@ import {
   TRAFFIC_SAMPLE,
 } from '@entities/Daemon/__tests__/Daemon.fixture';
 import { createStatefulDaemonHandlers } from '@entities/Daemon/__tests__/Daemon.handlers';
+import { createDeviceHandlers } from '@entities/Device/__tests__/Device.handlers';
 import { createStatefulProxyHandlers } from '@entities/Proxy/__tests__/Proxy.handlers';
 import { createRouteHandlers, createRuleHitsHandler } from '@entities/Route/__tests__/Route.handlers';
 import { ruleSetHandlers } from '@entities/RuleSet/__tests__/RuleSet.handlers';
@@ -54,6 +55,7 @@ export function createMissingHandlers(connections = 0) {
     ...configHandlers,
     ...createStatefulDaemonHandlers(),
     ...createStatefulProxyHandlers(),
+    ...createDeviceHandlers(),
     ...connectionHandlers,
     ...createRouteHandlers(CONNECTIONS_FIXTURE.connections),
     ...ruleSetHandlers,

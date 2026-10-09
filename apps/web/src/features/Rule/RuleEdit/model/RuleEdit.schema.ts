@@ -18,15 +18,16 @@ export const RULE_EDIT_ERROR = {
 } as const;
 
 /**
- * Условия, которые форма правит списком по строке на значение: ими задаётся
- * сценарий «домен или адрес — через выход». Остальных видов сорок с лишним,
- * они правятся текстом узла.
+ * Условия, которые форма правит списком по строке на значение: ими задаются
+ * сценарии «домен или адрес — через выход» и «устройство — через выход».
+ * Остальных видов сорок с лишним, они правятся текстом узла.
  */
 export const RULE_CONDITION = {
   Domain: 'domain',
   DomainSuffix: 'domain_suffix',
   DomainKeyword: 'domain_keyword',
   IpCidr: 'ip_cidr',
+  SourceIpCidr: 'source_ip_cidr',
   Port: 'port',
 } as const;
 
@@ -60,6 +61,7 @@ const ConditionsSchema = z.object({
   [RULE_CONDITION.DomainSuffix]: z.string(),
   [RULE_CONDITION.DomainKeyword]: z.string(),
   [RULE_CONDITION.IpCidr]: z.string(),
+  [RULE_CONDITION.SourceIpCidr]: z.string(),
   [RULE_CONDITION.Port]: z.string(),
 });
 
@@ -107,6 +109,7 @@ export const RuleEditAdapterSchema = RuleEditSchema.refine(
       [RULE_CONDITION.DomainSuffix]: nonEmpty(conditionLines(data.conditions.domain_suffix)),
       [RULE_CONDITION.DomainKeyword]: nonEmpty(conditionLines(data.conditions.domain_keyword)),
       [RULE_CONDITION.IpCidr]: nonEmpty(conditionLines(data.conditions.ip_cidr)),
+      [RULE_CONDITION.SourceIpCidr]: nonEmpty(conditionLines(data.conditions.source_ip_cidr)),
       [RULE_CONDITION.Port]: nonEmpty(conditionLines(data.conditions.port).map(Number)),
     },
   }));

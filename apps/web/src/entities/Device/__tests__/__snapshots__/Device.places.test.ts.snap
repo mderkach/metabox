@@ -1,0 +1,12 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`места подписи устройства > новое место подписи видно в диффе снапшота 1`] = `
+[
+  "/src/features/Rule/RuleEdit/ui/RuleSourceDevices.tsx",
+  "/src/pages/Connections/lib/Connections.lib.ts",
+  "/src/pages/Overview/ui/OverviewConnections.tsx",
+  "/src/widgets/ConnectionTable/ui/ConnectionSourceCell.tsx",
+  "/src/widgets/ConnectionTable/ui/ConnectionTable.tsx",
+  "/src/widgets/RouteExplanation/ui/RouteExplanation.tsx",
+]
+`;

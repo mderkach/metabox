@@ -1,4 +1,4 @@
-import type { ConnectionRow } from '@entities/Connection';
+import type { ConnectionRow, ConnectionSourceLabel } from '@entities/Connection';
 
 import { CSV_COLUMNS, EXPORT_FORMAT, type ExportFormat } from '../model/ConnectionExport.constants';
 
@@ -14,11 +14,12 @@ function toCsvCell(value: string | number): string {
   return /[",\n]/u.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 }
 
-function toCsv(rows: ConnectionRow[]): string {
+function toCsv(rows: ConnectionRow[], sourceLabel: ConnectionSourceLabel): string {
   const header = CSV_COLUMNS.join(',');
   const lines = rows.map((row) =>
     [
       row.host,
+      sourceLabel(row.source),
       row.source,
       row.network,
       row.rule,
@@ -37,13 +38,13 @@ function toCsv(rows: ConnectionRow[]): string {
   return [header, ...lines].join('\n');
 }
 
-export function toExportBody(rows: ConnectionRow[], format: ExportFormat): string {
+export function toExportBody(rows: ConnectionRow[], format: ExportFormat, sourceLabel: ConnectionSourceLabel): string {
   if (format === EXPORT_FORMAT.Csv) {
-    return toCsv(rows);
+    return toCsv(rows, sourceLabel);
   }
 
   // searchText — индекс поиска экрана, а не колонка: в файле он только мешает.
-  const columns = rows.map(({ searchText: _searchText, ...rest }) => rest);
+  const columns = rows.map(({ searchText: _searchText, ...rest }) => ({ ...rest, device: sourceLabel(rest.source) }));
 
   return JSON.stringify(columns, null, JSON_INDENT);
 }

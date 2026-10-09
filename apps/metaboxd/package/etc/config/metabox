@@ -21,3 +21,22 @@ config metabox 'main'
 	option ubus '/bin/ubus'
 	option clash_port '9090'
 	option log_level 'info'
+
+# Сетевая обвязка службы metabox-singbox: перехват LAN в nft, ip rule для
+# tproxy и upstream dnsmasq. Выключена, пока перехватом владеет homeproxy: две
+# обвязки разом перехватывали бы один и тот же трафик. Без этой секции служба
+# берёт умолчания, а в них обвязка включена.
+config dataplane 'dataplane'
+	option enabled '0'
+	option redirect_port '5331'
+	option tproxy_port '5332'
+	option dns_port '5333'
+	option dns_hijack '1'
+	option self_mark '100'
+	option tproxy_mark '101'
+	option route_table '100'
+	# all — через sing-box все источники с lan_interface, listed — только
+	# перечисленные в source_ip и source_mac.
+	option acl_mode 'listed'
+	list lan_interface 'br-lan'
+	option ipv6 '0'

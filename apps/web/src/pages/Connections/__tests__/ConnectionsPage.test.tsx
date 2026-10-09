@@ -11,6 +11,7 @@ import { CONFIG_FIXTURE } from '@entities/Config/__tests__/Config.fixture';
 import { CLOSED_LIMIT, ConnectionStore, parseConnectionSearch } from '@entities/Connection';
 import { CONNECTION_ENDPOINT } from '@entities/Connection';
 import { CONNECTIONS_FIXTURE, makeConnectionsSnapshot } from '@entities/Connection/__tests__/Connection.fixture';
+import { createDeviceHandlers } from '@entities/Device/__tests__/Device.handlers';
 import { ROUTE_DRIFTED_CHAIN_FIXTURE } from '@entities/Route/__tests__/Route.fixture';
 import { createRouteHandlers } from '@entities/Route/__tests__/Route.handlers';
 
@@ -246,6 +247,41 @@ describe('экран соединений', () => {
     const direct = within(kinds).getByRole('button', { name: /напрямую/ });
 
     expect(direct).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('находит соединение по имени устройства, хотя в строке лежит адрес', async () => {
+    server.use(...createDeviceHandlers());
+    const user = userEvent.setup();
+
+    renderScreen();
+    ConnectionStore.getState().apply(CONNECTIONS_FIXTURE);
+
+    const sources = await screen.findByRole('list', { name: 'Устройства' });
+
+    // Подпись приходит запросом: дождаться её, прежде чем искать по ней.
+    await within(sources).findByRole('button', { name: /Ноутбук/ });
+    await user.type(screen.getByRole('textbox', { name: 'Поиск по соединениям' }), 'ноутбук');
+
+    await waitFor(() => {
+      expect(screen.queryByText('video.example:443')).not.toBeInTheDocument();
+    });
+    expect(screen.getByText('api.git.example:443')).toBeInTheDocument();
+  });
+
+  it('фасет подписывает устройство именем, а в адрес пишет IP', async () => {
+    server.use(...createDeviceHandlers());
+    const user = userEvent.setup();
+
+    const { router } = renderScreen();
+    ConnectionStore.getState().apply(CONNECTIONS_FIXTURE);
+
+    const sources = await screen.findByRole('list', { name: 'Устройства' });
+
+    await user.click(await within(sources).findByRole('button', { name: /Ноутбук/ }));
+
+    await waitFor(() => {
+      expect(router.state.location.search).toEqual({ source: '192.168.1.60' });
+    });
   });
 
   it('записывает срез в адрес, а не в историю переходов', async () => {

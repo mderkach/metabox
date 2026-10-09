@@ -1,14 +1,26 @@
 import type { ParseKeys } from 'i18next';
-import { useId, useState } from 'react';
+import { useId, useState, type ComponentType } from 'react';
 import { Controller, useFormContext } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import { Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea } from '@shared/ui';
 
-import { RULE_CONDITIONS, RULE_EDIT_ERROR, type RuleCondition, type RuleEditModel } from '../model/RuleEdit.schema';
+import {
+  RULE_CONDITION,
+  RULE_CONDITIONS,
+  RULE_EDIT_ERROR,
+  type RuleCondition,
+  type RuleEditModel,
+} from '../model/RuleEdit.schema';
+import { RuleSourceDevices } from './RuleSourceDevices';
 
 const ERROR_KEY: Readonly<Record<string, ParseKeys<'features/Rule/RuleEdit'> | undefined>> = {
   [RULE_EDIT_ERROR.PortInvalid]: 'error.portInvalid',
+};
+
+/** Помощник под полем условия: значение по-прежнему правится текстом, помощник его дописывает. */
+const CONDITION_HELPER: Readonly<Partial<Record<RuleCondition, ComponentType>>> = {
+  [RULE_CONDITION.SourceIpCidr]: RuleSourceDevices,
 };
 
 /**
@@ -64,6 +76,7 @@ function ConditionField({ condition }: { condition: RuleCondition }) {
   const { control } = useFormContext<RuleEditModel>();
   const id = useId();
   const hintId = useId();
+  const Helper = CONDITION_HELPER[condition];
 
   return (
     <Controller
@@ -94,6 +107,7 @@ function ConditionField({ condition }: { condition: RuleCondition }) {
                 {t(errorKey)}
               </p>
             )}
+            {Helper !== undefined && <Helper />}
           </div>
         );
       }}

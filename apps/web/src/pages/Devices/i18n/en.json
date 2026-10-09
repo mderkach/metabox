@@ -1,0 +1,42 @@
+{
+  "title": "Local network devices",
+  "column": {
+    "label": "Device",
+    "ip": "Address",
+    "mac": "MAC",
+    "nameSource": "Name from",
+    "lease": "Lease",
+    "online": "Online"
+  },
+  "nameSource": {
+    "custom": "custom",
+    "static": "static lease",
+    "dhcp": "DHCP",
+    "none": "no name"
+  },
+  "lease": {
+    "static": "static",
+    "dynamic": "dynamic"
+  },
+  "online": {
+    "yes": "online",
+    "no": "offline"
+  },
+  "row": {
+    "rename": "Rename {{device}}",
+    "noIp": "no address",
+    "connections": "Connections",
+    "connectionsOf": "Connections of {{device}}"
+  },
+  "footer": {
+    "rows_one": "{{count}} device",
+    "rows_other": "{{count}} devices"
+  },
+  "empty": {
+    "title": "No devices found",
+    "description": "dnsmasq on the router has neither DHCP leases nor static entries. A device shows up here once it gets an address."
+  },
+  "announce": {
+    "renamed": "The device is now labelled “{{device}}”"
+  }
+}

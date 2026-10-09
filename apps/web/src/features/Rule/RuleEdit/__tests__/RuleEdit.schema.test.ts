@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { RULE_ACTION, RuleEditAdapterSchema } from '../model/RuleEdit.schema';
 
-const NO_CONDITIONS = { domain: '', domain_suffix: '', domain_keyword: '', ip_cidr: '', port: '' };
+const NO_CONDITIONS = { domain: '', domain_suffix: '', domain_keyword: '', ip_cidr: '', source_ip_cidr: '', port: '' };
 
 describe('правка выхода правила', () => {
   it('у маршрутизации отдаёт выбранный outbound', () => {

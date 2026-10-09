@@ -60,6 +60,29 @@ describe('поиск по соединению', () => {
   });
 });
 
+describe('поиск по подписи устройства', () => {
+  const rows = [makeSearchableRow(), makeSearchableRow({ id: 'c2', source: '192.168.1.36' })];
+  const LABELS = new Map([['192.168.1.60', 'Ноутбук гостя']]);
+
+  function sourceLabel(ip: string): string {
+    return LABELS.get(ip) ?? ip;
+  }
+
+  it('находит соединение по имени устройства, хотя в строке поиска лежит адрес', () => {
+    expect(filterConnections(rows, 'ноутбук', null, null, sourceLabel).map((row) => row.id)).toEqual(['c1']);
+  });
+
+  it('слова запроса могут делиться между подписью и остальными полями', () => {
+    expect(filterConnections(rows, 'гостя anthropic', null, null, sourceLabel)).toHaveLength(1);
+    expect(filterConnections(rows, 'гостя telegram', null, null, sourceLabel)).toHaveLength(0);
+  });
+
+  it('без подписи ищет только по адресу', () => {
+    expect(filterConnections(rows, 'ноутбук', null)).toHaveLength(0);
+    expect(filterConnections(rows, '192.168.1.36', null, null, sourceLabel).map((row) => row.id)).toEqual(['c2']);
+  });
+});
+
 describe('устройства-источники', () => {
   it('считает соединения и ставит частые первыми', () => {
     const rows = [

@@ -25,6 +25,11 @@
         "updated": "Subscription updated"
       }
     },
+    "device": {
+      "rename": {
+        "failed": "Could not rename the device"
+      }
+    },
     "service": {
       "action": {
         "failed": "The service did not accept the command"
@@ -140,7 +145,8 @@
     "providers": "Could not read the subscriptions",
     "route": "Could not explain the route",
     "ruleSetCatalog": "Could not get the rule-set catalog",
-    "ruleSetFiles": "Could not get the list files"
+    "ruleSetFiles": "Could not get the list files",
+    "devices": "Could not get the device list"
   },
   "list": {
     "notFound": "Nothing matches this query.",
@@ -183,7 +189,8 @@
     "overview": "Overview",
     "config": "Configuration",
     "proxies": "Proxies",
-    "connections": "Connections"
+    "connections": "Connections",
+    "devices": "Devices"
   },
   "stat": {
     "uptime": "Uptime"

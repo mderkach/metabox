@@ -85,18 +85,41 @@ export function toKindGroups(rows: ConnectionRow[]): ConnectionKindGroup[] {
   });
 }
 
+/** Подпись источника для поиска. Устройства знает их слайс, а не соединение, поэтому подпись приходит снаружи. */
+export type ConnectionSourceLabel = (source: string) => string;
+
+/**
+ * `sourceLabel` дополняет индекс поиска подписью устройства: соединение
+ * находится по имени, хотя в строке поиска лежит адрес. Подпись считается раз
+ * на источник, а не на строку: устройств единицы, строк — тысячи.
+ */
 export function filterConnections(
   rows: ConnectionRow[],
   query: string,
   source: ConnectionSource,
-  kind: ConnectionKind = null
+  kind: ConnectionKind = null,
+  sourceLabel: ConnectionSourceLabel | null = null
 ): ConnectionRow[] {
   const words = toQueryWords(query);
+  const labels = new Map<string, string>();
+
+  function labelText(value: string): string {
+    let text = labels.get(value);
+
+    if (text === undefined) {
+      text = sourceLabel === null ? '' : sourceLabel(value).toLowerCase();
+      labels.set(value, text);
+    }
+
+    return text;
+  }
 
   return rows.filter(
     (row) =>
       (source === null || row.source === source) &&
       (kind === null || row.kind === kind) &&
-      matchesWords(row.searchText, words)
+      (matchesWords(row.searchText, words) ||
+        (sourceLabel !== null &&
+          words.every((word) => row.searchText.includes(word) || labelText(row.source).includes(word))))
   );
 }

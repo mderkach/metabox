@@ -12,9 +12,11 @@ import {
   type ConnectionRow,
   type ConnectionSource,
   type ConnectionSourceGroup,
+  type ConnectionSourceLabel,
   type ConnectionSearch,
   type ConnectionTab,
 } from '@entities/Connection';
+import { deviceLabel, useDeviceIndex } from '@entities/Device';
 
 import { useThrottledRows } from './Connections.throttle';
 
@@ -72,6 +74,8 @@ export interface ConnectionsScreen {
   reset: () => void;
   /** Устройства считаются по вкладке целиком, иначе фасет исчезал бы от своего же выбора. */
   sources: ConnectionSourceGroup[];
+  /** Подпись устройства по адресу: фасет хранит адрес, а показывает её. */
+  sourceLabel: ConnectionSourceLabel;
   /** Судьбы пакета считаются по вкладке целиком — по той же причине, что и устройства. */
   kinds: ConnectionKindGroup[];
   active: ConnectionTabRows;
@@ -86,9 +90,13 @@ function useTabRows(
   all: ConnectionRow[],
   query: string,
   source: ConnectionSource,
-  kind: ConnectionKind
+  kind: ConnectionKind,
+  sourceLabel: ConnectionSourceLabel
 ): ConnectionTabRows {
-  const rows = useMemo(() => filterConnections(all, query, source, kind), [all, query, source, kind]);
+  const rows = useMemo(
+    () => filterConnections(all, query, source, kind, sourceLabel),
+    [all, query, source, kind, sourceLabel]
+  );
 
   return { rows, total: all.length };
 }
@@ -109,6 +117,11 @@ export function useConnectionsScreen(interval: number): ConnectionsScreen {
   const query = search.q ?? '';
   const source = search.source ?? null;
   const kind = search.kind ?? null;
+
+  // Экран соединений — единственный, кто опрашивает список устройств, пока
+  // открыт: ячейки и объяснение маршрута читают тот же кэш без своего таймера.
+  const devices = useDeviceIndex({ poll: true });
+  const sourceLabel = useCallback((ip: string) => deviceLabel(ip, devices), [devices]);
 
   // Отбор заменяет адрес, а не добавляет запись в историю: иначе «назад» после
   // набранного запроса откручивало бы его по букве. Пустое значение из адреса
@@ -160,8 +173,14 @@ export function useConnectionsScreen(interval: number): ConnectionsScreen {
   // отбор по нему не пересчитывается на каждый снапшот, а тело таблицы не
   // перерисовывается. Показанная получает текущий набор в тот же кадр, в
   // котором становится видимой.
-  const active = useTabRows(useWhileVisible(liveRows, tab === CONNECTION_TAB.Active), query, source, kind);
-  const closed = useTabRows(useWhileVisible(closedRows, tab === CONNECTION_TAB.Closed), query, source, kind);
+  const active = useTabRows(useWhileVisible(liveRows, tab === CONNECTION_TAB.Active), query, source, kind, sourceLabel);
+  const closed = useTabRows(
+    useWhileVisible(closedRows, tab === CONNECTION_TAB.Closed),
+    query,
+    source,
+    kind,
+    sourceLabel
+  );
   const counts = { [CONNECTION_TAB.Active]: liveRows.length, [CONNECTION_TAB.Closed]: closedRows.length };
 
   // Фасеты и поиск общие, но считаются по показанной вкладке: иначе срез по
@@ -186,6 +205,7 @@ export function useConnectionsScreen(interval: number): ConnectionsScreen {
     setKind,
     reset,
     sources,
+    sourceLabel,
     kinds,
     active,
     closed,

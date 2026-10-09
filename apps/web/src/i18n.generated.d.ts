@@ -13,6 +13,7 @@ declare module 'i18next' {
       'features/Config/ConfigCacheFile': typeof import('./features/Config/ConfigCacheFile/i18n/ru.json');
       'features/Config/ConfigNodeAdd': typeof import('./features/Config/ConfigNodeAdd/i18n/ru.json');
       'features/Config/ConfigNodeForm': typeof import('./features/Config/ConfigNodeForm/i18n/ru.json');
+      'features/Device/DeviceRename': typeof import('./features/Device/DeviceRename/i18n/ru.json');
       'features/Language/LanguageSwitch': typeof import('./features/Language/LanguageSwitch/i18n/ru.json');
       'features/Rule/RuleAdd': typeof import('./features/Rule/RuleAdd/i18n/ru.json');
       'features/Rule/RuleDelete': typeof import('./features/Rule/RuleDelete/i18n/ru.json');
@@ -23,6 +24,7 @@ declare module 'i18next' {
       'features/RuleSet/RuleSetCustom': typeof import('./features/RuleSet/RuleSetCustom/i18n/ru.json');
       'features/Theme/ThemeSwitch': typeof import('./features/Theme/ThemeSwitch/i18n/ru.json');
       'pages/Connections': typeof import('./pages/Connections/i18n/ru.json');
+      'pages/Devices': typeof import('./pages/Devices/i18n/ru.json');
       'pages/Editor': typeof import('./pages/Editor/i18n/ru.json');
       'pages/Overview': typeof import('./pages/Overview/i18n/ru.json');
       'pages/Proxies': typeof import('./pages/Proxies/i18n/ru.json');

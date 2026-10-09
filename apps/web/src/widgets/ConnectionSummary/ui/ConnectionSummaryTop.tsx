@@ -17,17 +17,20 @@ export function ConnectionSummaryTop({
   href,
   shares,
   empty,
+  label,
 }: {
   title: string;
   href?: string;
   shares: ConnectionShare[];
   /** Подпись пустого ряда; без неё — общая «живых соединений нет». */
   empty?: string;
+  /** Подпись группы по ключу — имя устройства вместо адреса; без неё — сам ключ. */
+  label?: (key: string) => string;
 }) {
   const { t } = useTranslation('widgets/ConnectionSummary');
   const bars: SummaryBar[] = shares.map((share) => ({
     key: share.key,
-    label: share.key,
+    label: label === undefined ? share.key : label(share.key),
     value: share.volume,
     caption: `${share.rate > 0 ? formatRate(share.rate) : t('idle')} · ${t('count.connection', {
       ns: 'shared',

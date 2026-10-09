@@ -17,7 +17,7 @@ import {
 } from '@tanstack/react-table';
 import type { ParseKeys } from 'i18next';
 
-import type { ConnectionRow } from '@entities/Connection';
+import type { ConnectionRow, ConnectionSourceLabel } from '@entities/Connection';
 
 /**
  * Раскладка колонок. Ширины распределены по длине содержимого: правило
@@ -151,6 +151,8 @@ export type ConnectionColumnDef = AccessorFnColumnDef<ConnectionTableFeatures, C
 export const CONNECTION_COLUMNS: readonly ConnectionColumnDef[] = [
   {
     id: CONNECTION_FIELD.Source,
+    // Подпись устройства подставляет `toLabeledColumns`: описание остаётся
+    // данными, а список устройств приходит запросом.
     accessorFn: (row) => row.source,
     // Посимвольное сравнение ставит 192.168.1.120 перед 192.168.1.36: в адресе
     // числовые куски сравниваются как числа, а не как текст.
@@ -219,6 +221,17 @@ export const CONNECTION_COLUMNS: readonly ConnectionColumnDef[] = [
     meta: { label: 'column.age', className: CONNECTION_COLUMN.Age, width: 5, required: false },
   },
 ];
+
+/**
+ * Колонки таблицы с подписью источника: сортировка и фильтр колонки идут по
+ * имени устройства, которое видно в ячейке, а не по адресу под ним. Безымянное
+ * устройство подписано адресом, и порядок адресов остаётся числовым.
+ */
+export function toLabeledColumns(sourceLabel: ConnectionSourceLabel): readonly ConnectionColumnDef[] {
+  return CONNECTION_COLUMNS.map((def) =>
+    def.id === CONNECTION_FIELD.Source ? { ...def, accessorFn: (row: ConnectionRow) => sourceLabel(row.source) } : def
+  );
+}
 
 /**
  * Колонки, скрытые при первом открытии.

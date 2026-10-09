@@ -29,6 +29,11 @@
     "outboundRequired": "pick an outbound",
     "portInvalid": "A port is a number from 0 to 65535, one per line"
   },
+  "device": {
+    "pick": "Pick a device",
+    "chosen": "Devices in the condition",
+    "dynamic": "Dynamic lease, the address may change"
+  },
   "warning": {
     "catchAll": "Without conditions the rule takes all traffic, and the rules below never run."
   },
@@ -48,6 +53,10 @@
     "ip_cidr": {
       "label": "IP or subnet",
       "placeholder": "10.0.0.0/8"
+    },
+    "source_ip_cidr": {
+      "label": "Source device or address",
+      "placeholder": "192.168.1.60/32"
     },
     "port": {
       "label": "Port",
