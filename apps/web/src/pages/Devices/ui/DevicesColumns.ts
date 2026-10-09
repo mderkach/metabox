@@ -10,5 +10,6 @@ export const DEVICES_COLUMN = {
   NameSource: 'w-36 shrink-0 text-xs text-muted-foreground max-md:w-auto',
   Lease: 'w-32 shrink-0 max-md:w-auto',
   Online: 'w-24 shrink-0 text-xs max-md:w-auto',
+  Route: 'w-40 shrink-0 max-md:w-auto',
   RowActions: 'flex w-32 shrink-0 items-center justify-end max-md:w-auto max-md:grow',
 } as const;

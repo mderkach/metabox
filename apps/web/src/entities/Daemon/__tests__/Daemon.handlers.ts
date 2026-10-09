@@ -3,7 +3,7 @@ import { http, HttpResponse } from 'msw';
 import { CONFIG_ENDPOINT } from '@entities/Config';
 
 import { DAEMON_ENDPOINT } from '../api/Daemon.endpoints';
-import type { ApplyTransactionWire } from '../api/Daemon.schema';
+import type { ApplyTransactionWire, DaemonStatusWire } from '../api/Daemon.schema';
 import {
   CLASH_CONFIGS_FIXTURE,
   DAEMON_STATUS_FIXTURE,
@@ -22,8 +22,11 @@ const CONFIRM_WINDOW_NS = 60_000_000_000;
  * подтверждения, которое ничем не закрывается. Ручка отката версии живёт здесь
  * же, хотя адрес у неё конфиговый: она запускает ту же транзакцию, а разводить
  * её по двум мокам значило бы держать два независимых состояния одного цикла.
+ *
+ * `extraStatus` дописывает в статус поля чужого мока — смену модели обвязки:
+ * адрес статуса один, и держит его этот мок.
  */
-export function createStatefulDaemonHandlers() {
+export function createStatefulDaemonHandlers(extraStatus: () => Partial<DaemonStatusWire> = () => ({})) {
   let transaction: ApplyTransactionWire | null = null;
   let clashConfigs = CLASH_CONFIGS_FIXTURE;
 
@@ -40,11 +43,12 @@ export function createStatefulDaemonHandlers() {
 
   return [
     http.get(DAEMON_ENDPOINT.status(), () =>
-      HttpResponse.json(
-        transaction === null
+      HttpResponse.json({
+        ...(transaction === null
           ? DAEMON_STATUS_FIXTURE
-          : { ...DAEMON_STATUS_FIXTURE, transaction, transaction_href: `/api/apply/${transaction.id}` }
-      )
+          : { ...DAEMON_STATUS_FIXTURE, transaction, transaction_href: `/api/apply/${transaction.id}` }),
+        ...extraStatus(),
+      })
     ),
 
     http.post(DAEMON_ENDPOINT.apply(), () => HttpResponse.json(start(), { status: 202 })),

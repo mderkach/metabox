@@ -4,8 +4,10 @@ import { Pencil } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import type { DataplaneModel, RouteSource } from '@entities/Dataplane';
 import { isNameSource, type Device, type NameSource } from '@entities/Device';
 import { DeviceRenameForm } from '@features/Device/DeviceRename';
+import { DeviceRouteSwitch } from '@features/Device/DeviceRoute';
 import { cn } from '@shared/lib/utils';
 import { Badge, Button, buttonVariants } from '@shared/ui';
 
@@ -30,6 +32,9 @@ function DevicesRowProto({
   editing,
   onEdit,
   onDone,
+  routeModel,
+  routeLocked,
+  onRoute,
 }: {
   device: Device;
   rowIndex: number;
@@ -37,6 +42,10 @@ function DevicesRowProto({
   onEdit: (mac: string) => void;
   /** Правка закрылась: `label` — новая подпись или `null`, если её отменили. */
   onDone: (label: string | null) => void;
+  /** Модель обвязки; `null` — не прочитана, и тумблер недоступен. */
+  routeModel: DataplaneModel | null;
+  routeLocked: boolean;
+  onRoute: (source: RouteSource, routed: boolean) => void;
 }) {
   const { t } = useTranslation('pages/Devices');
 
@@ -87,6 +96,16 @@ function DevicesRowProto({
           <span aria-hidden='true' className='size-2 rounded-full bg-current' />
           {device.online ? t('online.yes') : t('online.no')}
         </span>
+      </span>
+
+      <span role='cell' className={DEVICES_COLUMN.Route}>
+        <DeviceRouteSwitch
+          source={device}
+          label={device.label}
+          model={routeModel}
+          locked={routeLocked}
+          onRoute={onRoute}
+        />
       </span>
 
       <span role='cell' className={DEVICES_COLUMN.RowActions}>

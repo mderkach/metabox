@@ -1,11 +1,12 @@
 import type { ParseKeys } from 'i18next';
 import { CircleAlert, FilePen, Info, LoaderCircle, Timer } from 'lucide-react';
-import { useEffect, useMemo, useState, type TransitionEvent } from 'react';
+import { useMemo, useState, type TransitionEvent } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
 import { APPLY_PHASE, type ApplyReasonCode, type ApplyTransaction } from '@entities/Daemon';
 import { useReducedMotion } from '@shared/lib/media';
-import { MS_IN_SECOND, NS_IN_SECOND } from '@shared/lib/time';
+import { NS_IN_SECOND } from '@shared/lib/time';
+import { useCountdown } from '@shared/lib/useCountdown';
 import { cn } from '@shared/lib/utils';
 import { Alert, AlertAction, AlertDescription, AlertTitle, Button, Separator } from '@shared/ui';
 
@@ -189,28 +190,6 @@ function ConfirmWindow({
       {transaction.clashApiAdded === true && <ClashAPIAdded />}
     </div>
   );
-}
-
-function useCountdown(seconds: number): number {
-  const [left, setLeft] = useState(seconds);
-  const [prevSeconds, setPrevSeconds] = useState(seconds);
-
-  if (seconds !== prevSeconds) {
-    setPrevSeconds(seconds);
-    setLeft(seconds);
-  }
-
-  useEffect(function countDown() {
-    const timer = setInterval(function tick() {
-      setLeft((current) => Math.max(0, current - 1));
-    }, MS_IN_SECOND);
-
-    return function stopCountdown() {
-      clearInterval(timer);
-    };
-  }, []);
-
-  return left;
 }
 
 /**

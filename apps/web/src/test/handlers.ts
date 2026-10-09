@@ -13,6 +13,7 @@ import {
   TRAFFIC_SAMPLE,
 } from '@entities/Daemon/__tests__/Daemon.fixture';
 import { createStatefulDaemonHandlers } from '@entities/Daemon/__tests__/Daemon.handlers';
+import { createDataplaneMock } from '@entities/Dataplane/__tests__/Dataplane.handlers';
 import { createDeviceHandlers } from '@entities/Device/__tests__/Device.handlers';
 import { createDiagHandlers } from '@entities/Diag/__tests__/Diag.handlers';
 import { createLogHandlers } from '@entities/Log/__tests__/Log.handlers';
@@ -53,9 +54,12 @@ export function createMissingHandlers(connections = 0) {
           connections: CONNECTIONS_FIXTURE.connections.map((row) => ({ ...row, chain: [...row.chain] })),
         };
 
+  const dataplane = createDataplaneMock();
+
   return [
     ...configHandlers,
-    ...createStatefulDaemonHandlers(),
+    ...createStatefulDaemonHandlers(dataplane.status),
+    ...dataplane.handlers,
     ...createStatefulProxyHandlers(),
     ...createDeviceHandlers(),
     ...createLogHandlers(),

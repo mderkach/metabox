@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useDevices } from '@entities/Device';
+import { DeviceRouteBar, useDeviceRoute } from '@features/Device/DeviceRoute';
 import { useLiveRegion } from '@shared/lib/useLiveRegion';
 import { cn } from '@shared/lib/utils';
 import {
@@ -33,6 +34,7 @@ const HEADER_ROWS = 1;
 export function DevicesPage() {
   const { t } = useTranslation('pages/Devices');
   const devices = useDevices();
+  const route = useDeviceRoute();
   const [editing, setEditing] = useState<string | null>(null);
   const { message, announce } = useLiveRegion();
   const list = devices.data ?? [];
@@ -55,6 +57,8 @@ export function DevicesPage() {
       <LiveRegion message={message} />
 
       <div className='flex min-h-0 grow flex-col gap-5 overflow-y-auto px-4 py-5 *:shrink-0 sm:px-6'>
+        <DeviceRouteBar transaction={route.transaction} isConfirming={route.isConfirming} onConfirm={route.confirm} />
+
         {devices.isPending && <SkeletonRows className={SURFACE} />}
 
         {devices.isLoadingError && <QueryFailure messageKey='source.devices' query={devices} />}
@@ -82,6 +86,9 @@ export function DevicesPage() {
                     editing={editing === device.mac}
                     onEdit={setEditing}
                     onDone={onDone}
+                    routeModel={route.model}
+                    routeLocked={route.locked}
+                    onRoute={route.route}
                   />
                 ))}
               </div>

@@ -34,6 +34,9 @@ export function DevicesTableHeader() {
         <span role='columnheader' className={DEVICES_COLUMN.Online}>
           {t('column.online')}
         </span>
+        <span role='columnheader' className={DEVICES_COLUMN.Route}>
+          {t('column.route')}
+        </span>
         <span role='columnheader' className={DEVICES_COLUMN.RowActions}>
           <span className='sr-only'>{t('list.rowActions', { ns: 'shared' })}</span>
         </span>

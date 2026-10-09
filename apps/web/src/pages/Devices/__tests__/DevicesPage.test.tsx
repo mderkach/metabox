@@ -3,12 +3,41 @@ import { server } from '@test/server';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { DAEMON_ENDPOINT } from '@entities/Daemon';
+import { DAEMON_STATUS_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture';
+import { createStatefulDaemonHandlers } from '@entities/Daemon/__tests__/Daemon.handlers';
+import { DATAPLANE_ENDPOINT } from '@entities/Dataplane';
+import { DATAPLANE_FIXTURE } from '@entities/Dataplane/__tests__/Dataplane.fixture';
+import { createDataplaneMock } from '@entities/Dataplane/__tests__/Dataplane.handlers';
 import { DEVICE_ENDPOINT } from '@entities/Device';
 import { createDeviceHandlers } from '@entities/Device/__tests__/Device.handlers';
 
 import { DevicesPage } from '../ui/DevicesPage';
+
+/** Модель обвязки со сменой и статус демона, который эту смену отдаёт. */
+function serveDataplane(initial = DATAPLANE_FIXTURE) {
+  const mock = createDataplaneMock(initial);
+
+  server.use(...createStatefulDaemonHandlers(mock.status), ...mock.handlers);
+}
+
+/** Base UI рисует тумблер `span`-ом: недоступность видна по `aria-disabled`, а не по `disabled`. */
+function isLocked(toggle: HTMLElement): boolean {
+  return toggle.getAttribute('aria-disabled') === 'true';
+}
+
+/** Тумблер устройства, когда модель прочитана и он стал доступен. */
+async function readySwitch(device: string): Promise<HTMLElement> {
+  const toggle = await screen.findByRole('switch', { name: `Через sing-box: ${device}` });
+
+  await waitFor(() => {
+    expect(isLocked(toggle)).toBe(false);
+  });
+
+  return toggle;
+}
 
 function renderScreen() {
   return renderWithRouter(DevicesPage, { path: '/devices' });
@@ -25,6 +54,10 @@ function rowOf(label: string): HTMLElement {
 }
 
 describe('экран устройств', () => {
+  beforeEach(() => {
+    serveDataplane();
+  });
+
   it('показывает устройства подписью, адресом, MAC, источником имени, арендой и сетью', async () => {
     server.use(...createDeviceHandlers());
 
@@ -165,5 +198,153 @@ describe('экран устройств', () => {
     expect(await screen.findByText('Не удалось получить список устройств')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Повторить' })).toBeInTheDocument();
     expect(screen.queryByText('Устройств не найдено')).not.toBeInTheDocument();
+  });
+
+  describe('тумблер «через sing-box»', () => {
+    it('показывает устройство включённым по MAC в любом регистре и по адресу из source_ip', async () => {
+      server.use(...createDeviceHandlers());
+      renderScreen();
+
+      expect(await screen.findByRole('switch', { name: 'Через sing-box: iphone-guest' })).toBeChecked();
+      expect(await screen.findByRole('switch', { name: 'Через sing-box: tv-living' })).toBeChecked();
+      expect(screen.getByRole('switch', { name: 'Через sing-box: Ноутбук' })).not.toBeChecked();
+    });
+
+    it('после предупреждения шлёт модель с MAC в source_mac и открывает окно подтверждения', async () => {
+      const changed = vi.fn<(body: unknown) => void>();
+      const user = userEvent.setup();
+
+      server.use(
+        http.put(DATAPLANE_ENDPOINT.dataplane(), async ({ request }) => {
+          changed(await request.clone().json());
+        }),
+        ...createDeviceHandlers()
+      );
+      renderScreen();
+
+      await user.click(await readySwitch('192.168.1.36'));
+
+      const dialog = await screen.findByRole('alertdialog', { name: 'Пустить 192.168.1.36 через sing-box?' });
+
+      expect(dialog).toHaveTextContent('перезапускает sing-box и рвёт текущие соединения');
+      expect(changed).not.toHaveBeenCalled();
+
+      await user.click(within(dialog).getByRole('button', { name: 'Применить' }));
+
+      await waitFor(() => {
+        expect(changed).toHaveBeenCalledTimes(1);
+      });
+      expect(changed).toHaveBeenCalledWith({
+        model: {
+          ...DATAPLANE_FIXTURE.model,
+          source_mac: ['AA:BB:CC:00:01:04', 'aa:bb:cc:00:00:40'],
+          source_ip: ['192.168.1.180'],
+        },
+      });
+
+      const bar = await screen.findByRole('region', { name: 'Смена перехвата' });
+
+      expect(bar).toHaveTextContent('Список перехвата сменён');
+      expect(within(bar).getByRole('button', { name: 'Связь есть, оставить' })).toBeEnabled();
+      // Пока смена ждёт подтверждения, вторую не начать.
+      expect(isLocked(screen.getByRole('switch', { name: 'Через sing-box: Ноутбук' }))).toBe(true);
+      await waitFor(() => {
+        expect(screen.getByRole('switch', { name: 'Через sing-box: 192.168.1.36' })).toBeChecked();
+      });
+    });
+
+    it('подтверждение шлёт POST и закрывает окно', async () => {
+      const confirmed = vi.fn<(path: string) => void>();
+      const user = userEvent.setup();
+
+      server.use(
+        http.post(DATAPLANE_ENDPOINT.applyConfirm(':id'), ({ request }) => {
+          confirmed(new URL(request.url).pathname);
+        }),
+        ...createDeviceHandlers()
+      );
+      renderScreen();
+
+      await user.click(await readySwitch('192.168.1.36'));
+      await user.click(await screen.findByRole('button', { name: 'Применить' }));
+      await user.click(await screen.findByRole('button', { name: 'Связь есть, оставить' }));
+
+      await waitFor(() => {
+        expect(screen.queryByRole('region', { name: 'Смена перехвата' })).not.toBeInTheDocument();
+      });
+      expect(confirmed).toHaveBeenCalledWith(expect.stringMatching(/^\/api\/dataplane\/apply\/.+\/confirm$/));
+      await readySwitch('Ноутбук');
+    });
+
+    it('откат показывает, на каком шаге встала смена, и исходную ошибку', async () => {
+      const rolledBack = {
+        id: 'dataplane-1',
+        phase: 'rolled_back',
+        window: 0,
+        reason_code: 'interception_missing',
+        reason: 'nft: нет цепочки metabox_prerouting',
+      };
+      const user = userEvent.setup();
+
+      server.use(
+        http.get(DAEMON_ENDPOINT.status(), () =>
+          HttpResponse.json({ ...DAEMON_STATUS_FIXTURE, dataplane_transaction: rolledBack })
+        ),
+        http.get(DATAPLANE_ENDPOINT.applyState(':id'), () => HttpResponse.json(rolledBack)),
+        ...createDeviceHandlers()
+      );
+      renderScreen();
+
+      const bar = await screen.findByRole('region', { name: 'Смена перехвата' });
+
+      expect(bar).toHaveTextContent('Подтверждения не было — прежний список перехвата возвращён');
+      expect(bar).toHaveTextContent('после перезапуска правила nft перехвата не стоят');
+      expect(bar).toHaveTextContent('nft: нет цепочки metabox_prerouting');
+
+      await user.click(within(bar).getByRole('button', { name: 'Скрыть' }));
+
+      expect(screen.queryByRole('region', { name: 'Смена перехвата' })).not.toBeInTheDocument();
+    });
+
+    it('в режиме перехвата для всех тумблер недоступен и объясняет почему', async () => {
+      server.use(...createDeviceHandlers());
+      serveDataplane({ ...DATAPLANE_FIXTURE, model: { ...DATAPLANE_FIXTURE.model, acl_mode: 'all' } });
+      renderScreen();
+
+      await screen.findByText('Ноутбук');
+      await waitFor(() => {
+        expect(within(rowOf('Ноутбук')).getByText('перехват для всех')).toBeInTheDocument();
+      });
+
+      const toggle = screen.getByRole('switch', { name: 'Через sing-box: Ноутбук' });
+
+      expect(isLocked(toggle)).toBe(true);
+      expect(toggle).toBeChecked();
+    });
+
+    it('смена, отклонённая демоном, окна не открывает и тумблер не запирает', async () => {
+      const rejected = vi.fn<() => void>();
+      const user = userEvent.setup();
+
+      server.use(
+        http.put(DATAPLANE_ENDPOINT.dataplane(), () => {
+          rejected();
+
+          return HttpResponse.json({ code: 'apply_in_progress', message: 'применение уже идёт' }, { status: 409 });
+        }),
+        ...createDeviceHandlers()
+      );
+      renderScreen();
+
+      await user.click(await readySwitch('192.168.1.36'));
+      await user.click(await screen.findByRole('button', { name: 'Применить' }));
+
+      await waitFor(() => {
+        expect(rejected).toHaveBeenCalledTimes(1);
+      });
+      await readySwitch('192.168.1.36');
+      expect(screen.queryByRole('region', { name: 'Смена перехвата' })).not.toBeInTheDocument();
+      expect(screen.getByRole('switch', { name: 'Через sing-box: 192.168.1.36' })).not.toBeChecked();
+    });
   });
 });

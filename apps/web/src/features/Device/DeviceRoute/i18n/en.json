@@ -1,0 +1,36 @@
+{
+  "switch": {
+    "label": "Through sing-box: {{device}}",
+    "forAll": "interception for everyone"
+  },
+  "dialog": {
+    "on": "Route {{device}} through sing-box?",
+    "off": "Route {{device}} around sing-box?",
+    "description": "Changing the interception list restarts sing-box and drops the current connections of every device. After the restart confirm that the connection works, otherwise the previous list returns when the countdown ends.",
+    "apply": "Apply",
+    "cancel": "Cancel"
+  },
+  "bar": {
+    "label": "Interception change",
+    "applying": "Changing the interception list and restarting sing-box…",
+    "prompt": "The interception list has changed. Confirm the connection is alive —",
+    "left": "<time>{{seconds}} s</time> left",
+    "rollback": "otherwise the daemon restores the previous one",
+    "submit": "Connection works, keep it"
+  },
+  "failure": {
+    "rolledBack": "No confirmation — the previous interception list is back",
+    "failed": "The interception change did not go through",
+    "dismiss": "Dismiss",
+    "reason": {
+      "backup_failed": "the snapshot of the previous interception settings was not saved, so the daemon did not change them without a way back",
+      "write_failed": "the interception settings were not written to UCI",
+      "restart_failed": "the service did not restart with the new interception settings",
+      "healthcheck_failed": "the service came up, but sing-box did not respond",
+      "dns_probe_failed": "sing-box did not answer a DNS query through dns-in on the port from the interception settings",
+      "interception_missing": "after the restart the nft interception rules are not in place",
+      "rollback_failed": "the previous interception settings could not be restored — the new ones stayed on the device",
+      "no_backup": "there was nothing to roll back to: the device had no previous interception settings"
+    }
+  }
+}

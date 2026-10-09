@@ -94,6 +94,8 @@ export function toDaemonStatus(wire: DaemonStatusWire): DaemonStatus {
     configPath: wire.config_path,
     transaction: wire.transaction === undefined ? undefined : toTransaction(wire.transaction),
     transactionHref: wire.transaction_href,
+    dataplaneTransaction:
+      wire.dataplane_transaction === undefined ? undefined : toTransaction(wire.dataplane_transaction),
   };
 }
 

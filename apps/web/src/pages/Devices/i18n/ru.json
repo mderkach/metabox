@@ -6,7 +6,8 @@
     "mac": "MAC",
     "nameSource": "Откуда имя",
     "lease": "Аренда",
-    "online": "В сети"
+    "online": "В сети",
+    "route": "Через sing-box"
   },
   "nameSource": {
     "custom": "своё",

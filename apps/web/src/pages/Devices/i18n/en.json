@@ -6,7 +6,8 @@
     "mac": "MAC",
     "nameSource": "Name from",
     "lease": "Lease",
-    "online": "Online"
+    "online": "Online",
+    "route": "Through sing-box"
   },
   "nameSource": {
     "custom": "custom",

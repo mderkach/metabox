@@ -28,6 +28,11 @@
     "device": {
       "rename": {
         "failed": "Could not rename the device"
+      },
+      "route": {
+        "failed": "Could not change the device interception",
+        "confirmed": "Connection confirmed, the interception list stays",
+        "accepted": "Interception list accepted, sing-box is restarting"
       }
     },
     "log": {
@@ -157,7 +162,8 @@
     "ruleSetFiles": "Could not get the list files",
     "devices": "Could not get the device list",
     "logs": "Could not get the sing-box log",
-    "diag": "Could not run the diagnostics"
+    "diag": "Could not run the diagnostics",
+    "dataplane": "Could not read the traffic interception settings"
   },
   "list": {
     "notFound": "Nothing matches this query.",

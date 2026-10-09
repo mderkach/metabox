@@ -44,6 +44,8 @@ export interface DaemonStatus {
   configPath?: string;
   transaction?: ApplyTransaction;
   transactionHref?: string;
+  /** Последняя смена модели обвязки: тот же протокол, что у применения конфига, и одновременно с ним не идёт. */
+  dataplaneTransaction?: ApplyTransaction;
 }
 
 /** Состояние службы sing-box: `procd` знает только эти три состояния. */

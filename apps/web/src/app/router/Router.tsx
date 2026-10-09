@@ -11,6 +11,7 @@ import {
 import { getConfigOptions, isGenericSection } from '@entities/Config';
 import { parseConnectionSearch } from '@entities/Connection';
 import { getTrafficHistoryOptions } from '@entities/Daemon';
+import { getDataplaneOptions } from '@entities/Dataplane';
 import { getDevicesOptions } from '@entities/Device';
 import { DEFAULT_LOG_LEVEL, getLogTailOptions } from '@entities/Log';
 import { getProxiesOptions, getProxyProvidersOptions } from '@entities/Proxy';
@@ -163,8 +164,9 @@ const devicesRoute = createRoute({
   getParentRoute: () => rootRoute,
   loader: async () =>
     Promise.all([
-      preloadNamespaces(['pages/Devices', 'features/Device/DeviceRename']),
+      preloadNamespaces(['pages/Devices', 'features/Device/DeviceRename', 'features/Device/DeviceRoute']),
       QueryClientInstance.query(getDevicesOptions()).catch(keepFailureForScreen),
+      QueryClientInstance.query(getDataplaneOptions()).catch(keepFailureForScreen),
     ]),
   path: '/devices',
   component: lazyRouteComponent(async () => import('@pages/Devices'), 'DevicesPage'),
