@@ -384,6 +384,51 @@ func TestFileTruncateOutsideAllowedDirs(t *testing.T) {
 	}
 }
 
+func TestFileTruncateProtected(t *testing.T) {
+	tests := []struct {
+		name   string
+		output string
+	}{
+		{"файл конфига", "config.json"},
+		{"файл в подкаталоге списков", "rule-sets/ads.json"},
+		{"подкаталог списков через ..", "logs/../rule-sets/ads.json"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			path := filepath.Join(dir, tt.output)
+
+			if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+				t.Fatal(err)
+			}
+
+			if err := os.WriteFile(path, []byte("{}"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+
+			r := New((&fakeStart{}).start, fileConfig(tt.output), Options{
+				ConfigDir:    dir,
+				TruncateDirs: []string{dir},
+				Protected:    []string{filepath.Join(dir, "config.json"), filepath.Join(dir, "rule-sets")},
+			})
+
+			if _, err := r.Clear(t.Context()); !errors.Is(err, ErrClearForbidden) {
+				t.Fatalf("ошибка %v, ожидали ErrClearForbidden", err)
+			}
+
+			data, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if string(data) != "{}" {
+				t.Errorf("защищённый файл изменён: %q", data)
+			}
+		})
+	}
+}
+
 func TestFileFollow(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		dir := t.TempDir()

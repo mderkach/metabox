@@ -248,6 +248,7 @@ func decode(s uci.Section) (Model, error) {
 	d.aclMode(&m.AccessMode)
 	d.list("source_ip", &m.SourceIP, validIPv4)
 	d.list("source_mac", &m.SourceMAC, validMAC)
+	m.SourceMAC = canonicalMACs(m.SourceMAC)
 	d.list("lan_interface", &m.LANInterface, validIface)
 	d.list("wan_proxy_cidr", &m.WANProxyCIDR, validIPv4)
 	d.list("wan_direct_cidr", &m.WANDirectCIDR, validIPv4)
@@ -419,4 +420,18 @@ func validMAC(s string) bool {
 	hw, err := net.ParseMAC(s)
 
 	return err == nil && len(hw) == 6
+}
+
+// canonicalMACs приводит прошедшие validMAC адреса к виду aa:bb:cc:dd:ee:ff:
+// init-скрипт службы принимает MAC только с двоеточиями, а на записи через
+// дефис или точку отвергает модель и оставляет прежние правила.
+func canonicalMACs(macs []string) []string {
+	out := make([]string, 0, len(macs))
+
+	for _, s := range macs {
+		hw, _ := net.ParseMAC(s)
+		out = append(out, hw.String())
+	}
+
+	return out
 }

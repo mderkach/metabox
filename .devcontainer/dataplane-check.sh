@@ -131,12 +131,11 @@ check "mangle output пометил UDP роутера" "$(counter metabox_mangl
 check "помеченный пакет вернулся через lo в tproxy" "$(counter metabox_mangle_lanac 'iifname "lo"')" -gt "$lo"
 
 echo "9. Пакет с чужой меткой (след b4) не уходит в tproxy"
-mark_out=$(counter metabox_mangle_output 'meta mark set 0x00000065')
 foreign=$(counter metabox_mangle_output 'meta mark != 0x00000000')
 in_target b4-sim-up
 check "пакет с меткой 0x8000 пропущен мимо перехвата" "$(counter metabox_mangle_output 'meta mark != 0x00000000')" -gt "$foreign"
-check "метка tproxy не ставилась" "$(counter metabox_mangle_output 'meta mark set 0x00000065')" = "$mark_out"
-check "метка 0x8000 дошла до postrouting" "$(in_target b4-sim-counter)" -gt 0
+check "метка tproxy пробе не ставилась" "$(in_target b4-sim-counter 0x00000065)" = 0
+check "метка 0x8000 дошла до postrouting" "$(in_target b4-sim-counter 0x00008000)" -gt 0
 in_target b4-sim-down
 
 echo "10. Apply конфига не трогает fw4 и dnsmasq"

@@ -360,6 +360,12 @@ dp_dnsmasq_down() {
 	dp_dnsmasq_restart
 }
 
+# Путь из опции confdir dnsmasq приходит из UCI как есть, а файл состояния
+# исполняется через `.`.
+dp_quote() {
+	printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"
+}
+
 dp_state_read() {
 	st_mark=
 	st_table=
@@ -400,7 +406,7 @@ dp_up() {
 	fi
 
 	dp_route_up
-	printf 'st_mark=%s\nst_table=%s\nst_dnsmasq=%s\n' "$dp_tproxy_mark" "$dp_route_table" "$dnsmasq_file" >"$STATE_FILE"
+	printf 'st_mark=%s\nst_table=%s\nst_dnsmasq=%s\n' "$dp_tproxy_mark" "$dp_route_table" "$(dp_quote "$dnsmasq_file")" >"$STATE_FILE"
 	[ -z "$dnsmasq_file" ] || dp_dnsmasq_up "$dnsmasq_file"
 	dp_nft_up
 }

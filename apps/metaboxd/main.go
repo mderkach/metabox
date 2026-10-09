@@ -311,6 +311,7 @@ func run(log *slog.Logger, s settings) error {
 			Process:      filepath.Base(s.binary),
 			ConfigDir:    s.configDir,
 			TruncateDirs: []string{s.configDir, "/var/run", "/tmp"},
+			Protected:    []string{store.Path(), store.ListsPath(), s.serviceDir},
 			PollInterval: logPollInterval,
 		}),
 		Diag: diag.New(plane, store, probe, diag.Options{

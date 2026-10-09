@@ -149,6 +149,7 @@ func TestWriteRejectsInvalidModel(t *testing.T) {
 		{"режим вне набора", func(m *dataplane.Model) { m.AccessMode = "" }, "acl_mode"},
 		{"порт вне диапазона", func(m *dataplane.Model) { m.DNSPort = 0 }, "dns_port"},
 		{"MAC не Ethernet", func(m *dataplane.Model) { m.SourceMAC = []string{"aa:bb"} }, "source_mac"},
+		{"MAC из восьми байт", func(m *dataplane.Model) { m.SourceMAC = []string{"aa:bb:cc:dd:ee:ff:00:11"} }, "source_mac"},
 	}
 
 	for _, tt := range tests {
@@ -172,6 +173,42 @@ func TestWriteRejectsInvalidModel(t *testing.T) {
 				t.Error("невалидная модель ушла в uci")
 			}
 		})
+	}
+}
+
+// init-скрипт службы принимает MAC только с двоеточиями: в UCI и наружу MAC
+// уходит в виде aa:bb:cc:dd:ee:ff, как бы его ни записали.
+func TestWriteCanonicalizesMAC(t *testing.T) {
+	u := &fakeUCI{}
+
+	m := dataplane.Defaults()
+	m.SourceMAC = []string{"AA-BB-CC-DD-EE-01", "aabb.ccdd.ee02"}
+	want := []string{"aa:bb:cc:dd:ee:01", "aa:bb:cc:dd:ee:02"}
+
+	normalized, err := dataplane.Normalize(m)
+	if err != nil {
+		t.Fatalf("нормализация: %v", err)
+	}
+
+	if !slices.Equal(normalized.SourceMAC, want) {
+		t.Errorf("нормализованный source_mac %q, ожидали %q", normalized.SourceMAC, want)
+	}
+
+	if err := newWriter(u).Write(t.Context(), m); err != nil {
+		t.Fatalf("запись: %v", err)
+	}
+
+	if !slices.Equal(u.options["source_mac"], want) {
+		t.Errorf("source_mac в UCI %q, ожидали %q", u.options["source_mac"], want)
+	}
+
+	got, err := newWriter(u).Model(t.Context())
+	if err != nil {
+		t.Fatalf("чтение после записи: %v", err)
+	}
+
+	if !slices.Equal(got.SourceMAC, want) {
+		t.Errorf("прочитанный source_mac %q, ожидали %q", got.SourceMAC, want)
 	}
 }
 

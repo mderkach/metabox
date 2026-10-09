@@ -133,6 +133,10 @@ type Options struct {
 	// усекать. Вне их очистка — ErrClearForbidden: путь задаёт конфиг, и без
 	// ограничения очистка лога обнуляла бы любой файл устройства.
 	TruncateDirs []string
+	// Protected — файлы и каталоги внутри TruncateDirs, которые не усекаются:
+	// конфиг и его подкаталог списков. Сверка по пути, без разрешения
+	// симлинков.
+	Protected []string
 	// PollInterval — период опроса размера файла в потоке.
 	PollInterval time.Duration
 	// Now подменяется в тестах; nil — time.Now.
@@ -259,6 +263,12 @@ func (r *Reader) Clear(ctx context.Context) (time.Time, error) {
 // truncate усекает файл через os.Root разрешённого каталога: путь берётся из
 // конфига, и симлинк не должен вывести запись за пределы каталога.
 func (r *Reader) truncate(path string) error {
+	for _, p := range r.opts.Protected {
+		if rel, err := filepath.Rel(p, path); err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			return ErrClearForbidden
+		}
+	}
+
 	for _, dir := range r.opts.TruncateDirs {
 		rel, err := filepath.Rel(dir, path)
 		if err != nil || rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {

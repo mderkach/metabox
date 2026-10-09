@@ -101,7 +101,9 @@ router-udp)
 	;;
 b4-sim-up)
 	# Не b4, а его след в nft: отдельная таблица метит UDP роутера до 1.0.0.1
-	# меткой 0x8000, как b4 метит свои пакеты.
+	# меткой 0x8000, как b4 метит свои пакеты. В postrouting проба считается
+	# по метке, с которой дошла: общий счётчик метки tproxy в mangle_output
+	# двигает и фоновый UDP роутера.
 	nft -f - <<-EOF
 		table inet metabox_check_b4 {
 			chain output {
@@ -111,13 +113,16 @@ b4-sim-up)
 			chain postrouting {
 				type filter hook postrouting priority mangle; policy accept;
 				ip daddr 1.0.0.1 udp dport 53 meta mark 0x8000 counter
+				ip daddr 1.0.0.1 udp dport 53 meta mark 0x65 counter
 			}
 		}
 	EOF
 	nslookup example.com 1.0.0.1 >/dev/null 2>&1 || true
 	;;
 b4-sim-counter)
-	nft list chain inet metabox_check_b4 postrouting | sed -n 's/.*counter packets \([0-9]*\) .*/\1/p'
+	# $2 — метка в записи nft: 0x00008000 или 0x00000065.
+	nft list chain inet metabox_check_b4 postrouting | grep -F -- "meta mark $2 " |
+		sed -n 's/.*counter packets \([0-9]*\) .*/\1/p'
 	;;
 b4-sim-down) nft delete table inet metabox_check_b4 ;;
 snapshot) snapshot ;;
@@ -140,7 +145,7 @@ acl)
 stop) /etc/init.d/$SERVICE stop ;;
 start) /etc/init.d/$SERVICE start ;;
 *)
-	echo "использование: $0 state|expect-up|expect-down|counter <цепочка> <образец>|singbox-pid|wait|log-has <a> <b>|acl all|listed|router-tcp|router-udp|b4-sim-up|b4-sim-counter|b4-sim-down|snapshot|apply|kill|stop|start" >&2
+	echo "использование: $0 state|expect-up|expect-down|counter <цепочка> <образец>|singbox-pid|wait|log-has <a> <b>|acl all|listed|router-tcp|router-udp|b4-sim-up|b4-sim-counter <метка>|b4-sim-down|snapshot|apply|kill|stop|start" >&2
 	exit 2
 	;;
 esac

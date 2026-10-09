@@ -19,7 +19,7 @@ import { Badge, Button, SURFACE } from '@shared/ui';
  * Свёрнутое тело остаётся смонтированным, набранное не теряется.
  *
  * Секцию с незнакомым полем форма не открывает: схема её не примет, и
- * сохранить не получится ни одного поля (ADR-0018).
+ * сохранить не получится ни одного поля.
  */
 export function ConfigSectionSettings({ section }: { section: SettingsSection }) {
   const { t } = useTranslation('widgets/Config/ConfigSectionSettings');
