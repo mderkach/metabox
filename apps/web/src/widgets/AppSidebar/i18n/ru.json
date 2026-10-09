@@ -22,5 +22,9 @@
   },
   "short": {
     "config": "Конфиг"
+  },
+  "drift": {
+    "newer": "формы отстают от sing-box",
+    "older": "sing-box старше форм"
   }
 }

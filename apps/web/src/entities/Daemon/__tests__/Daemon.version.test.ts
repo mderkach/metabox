@@ -1,21 +1,26 @@
 import { describe, expect, it } from 'vitest';
 
-import { SCHEMA_VERSION, matchesSchemaVersion } from '../model/Daemon.version';
+import { SCHEMA_DRIFT, SCHEMA_VERSION, schemaDrift } from '../model/Daemon.version';
 
-describe('matchesSchemaVersion', () => {
-  it('считает совпадением версию бинаря без ведущей v', () => {
-    expect(matchesSchemaVersion(SCHEMA_VERSION)).toBe(true);
+describe('schemaDrift', () => {
+  it('не видит расхождения у той же версии без ведущей v', () => {
+    expect(schemaDrift(SCHEMA_VERSION)).toBe(SCHEMA_DRIFT.None);
   });
 
-  it('считает совпадением версию бинаря с ведущей v', () => {
-    expect(matchesSchemaVersion(`v${SCHEMA_VERSION}`)).toBe(true);
+  it('не видит расхождения у той же версии с ведущей v', () => {
+    expect(schemaDrift(`v${SCHEMA_VERSION}`)).toBe(SCHEMA_DRIFT.None);
   });
 
-  it('видит расхождение с версией постарше', () => {
-    expect(matchesSchemaVersion('1.13.18-extended-2.6.5')).toBe(false);
+  it('видит бинарь старше схемы', () => {
+    expect(schemaDrift('1.13.18-extended-2.6.5')).toBe(SCHEMA_DRIFT.Older);
+  });
+
+  it('видит бинарь новее схемы по версии форка', () => {
+    expect(schemaDrift(`${SCHEMA_VERSION}.1`)).toBe(SCHEMA_DRIFT.Newer);
+    expect(schemaDrift('99.0.0-extended-0.0.1')).toBe(SCHEMA_DRIFT.Newer);
   });
 
   it('не считает расхождением непрочитанную версию', () => {
-    expect(matchesSchemaVersion(undefined)).toBe(true);
+    expect(schemaDrift(undefined)).toBe(SCHEMA_DRIFT.None);
   });
 });

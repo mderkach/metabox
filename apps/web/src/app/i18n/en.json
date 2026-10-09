@@ -1,8 +1,7 @@
 {
   "banner": {
     "unreachable": "metabox is not responding. The panel shows the last loaded data; changes cannot be applied.",
-    "schema": "The panel could not parse the metabox response: the daemon is newer than the panel. Screens may show incomplete data.",
-    "drift": "The panel forms are built for sing-box {{schema}}, the router runs {{binary}}. Fields this version does not know will be rejected by sing-box on apply."
+    "schema": "The panel could not parse the metabox response: the daemon is newer than the panel. Screens may show incomplete data."
   },
   "notFound": {
     "title": "Page not found",
@@ -19,5 +18,9 @@
     "description": "This section failed to open because of an error in the panel itself. The config and sing-box on the router are not affected.",
     "reload": "Reload the page",
     "details": "Details for a bug report"
+  },
+  "drift": {
+    "newer": "The forms know sing-box {{schema}}; the router runs a newer {{binary}}. Fields of the new version are missing from the forms: edit them in Text mode.",
+    "older": "The forms know sing-box {{schema}}; the router runs an older {{binary}}. A field it does not know will fail the check on apply."
   }
 }

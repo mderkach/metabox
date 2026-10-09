@@ -50,4 +50,5 @@ export {
   useTrafficNow,
 } from './model/Daemon.store';
 export { isApplyActive } from './model/Daemon.transaction';
-export { matchesSchemaVersion, SCHEMA_VERSION } from './model/Daemon.version';
+export { SCHEMA_DRIFT, SCHEMA_VERSION, schemaDrift } from './model/Daemon.version';
+export type { SchemaDrift } from './model/Daemon.version';

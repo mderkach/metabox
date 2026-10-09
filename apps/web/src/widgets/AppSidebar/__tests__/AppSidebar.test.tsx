@@ -8,6 +8,7 @@ import { DAEMON_ENDPOINT } from '@entities/Daemon';
 import {
   CLASH_CONFIGS_FIXTURE,
   DAEMON_STATUS_FIXTURE,
+  SERVICE_DRIFT_FIXTURE,
   SERVICE_RUNNING_FIXTURE,
 } from '@entities/Daemon/__tests__/Daemon.fixture';
 
@@ -28,6 +29,19 @@ describe('AppSidebar', () => {
 
     expect(await screen.findByText('состояние sing-box неизвестно')).toBeInTheDocument();
     expect(screen.queryByText('sing-box работает')).not.toBeInTheDocument();
+  });
+
+  // Подробности расхождения — в разделе конфигурации, а сам факт виден с любого экрана.
+  it('расхождение sing-box со схемой форм помечено в подвале', async () => {
+    server.use(
+      http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE)),
+      http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_DRIFT_FIXTURE)),
+      http.get(DAEMON_ENDPOINT.clashConfigs(), () => HttpResponse.json(CLASH_CONFIGS_FIXTURE))
+    );
+
+    renderWithRouter(AppSidebar);
+
+    expect(await screen.findByText('sing-box старше форм')).toBeInTheDocument();
   });
 
   it('демон отвечает — точка сервиса показывает состояние службы', async () => {

@@ -9,6 +9,8 @@ import { ConfigBuildNotice } from '@widgets/Config/ConfigBuildNotice';
 import { ConfigTabs } from '@widgets/Config/ConfigTabs';
 import { PageHeader } from '@widgets/PageHeader';
 
+import { SchemaDriftNotice } from './SchemaDriftNotice';
+
 /**
  * Оболочка раздела конфигурации: шапка, полоса вкладок и содержимое вкладки.
  *
@@ -30,7 +32,8 @@ export function ConfigLayout() {
 
       <ConfigTabs config={document.config} />
 
-      <div className='shrink-0 px-4 pt-4 empty:hidden sm:px-6'>
+      <div className='flex shrink-0 flex-col gap-3 px-4 pt-4 empty:hidden sm:px-6'>
+        <SchemaDriftNotice />
         <ConfigBuildNotice config={document.config} />
       </div>
 

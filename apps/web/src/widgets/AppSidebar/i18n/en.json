@@ -22,5 +22,9 @@
   },
   "short": {
     "config": "Config"
+  },
+  "drift": {
+    "newer": "forms lag behind sing-box",
+    "older": "sing-box is older than the forms"
   }
 }

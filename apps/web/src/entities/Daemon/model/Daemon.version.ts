@@ -6,17 +6,42 @@ import { SCHEMA_FORK_VERSION } from '@shared/api/generated';
  */
 export const SCHEMA_VERSION = SCHEMA_FORK_VERSION.replace(/^v/, '');
 
+/** Как бинарь на устройстве соотносится со схемой форм. */
+export const SCHEMA_DRIFT = {
+  None: 'none',
+  /** Бинарь новее: полей его версии в формах нет. */
+  Newer: 'newer',
+  /** Бинарь старше: поле из форм он может не знать и отклонить при проверке. */
+  Older: 'older',
+} as const;
+
+export type SchemaDrift = (typeof SCHEMA_DRIFT)[keyof typeof SCHEMA_DRIFT];
+
 /**
- * Знает ли бинарь на устройстве ровно те типы, что знают формы. Схема
- * собирается из одной версии форка: на версии постарше панель предложит поле,
- * которого бинарь не понимает, и `sing-box check` отклонит конфиг на Apply.
+ * Сравнивает версию бинаря со схемой по числам по порядку: версия форка
+ * `1.14.1-extended-2.7.2` несёт и версию upstream, и версию форка.
  *
  * Неизвестная версия расхождением не считается — предупреждать не о чем.
  */
-export function matchesSchemaVersion(singboxVersion: string | undefined): boolean {
+export function schemaDrift(singboxVersion: string | undefined): SchemaDrift {
   if (singboxVersion === undefined || singboxVersion === '') {
-    return true;
+    return SCHEMA_DRIFT.None;
   }
 
-  return singboxVersion.replace(/^v/, '') === SCHEMA_VERSION;
+  const binary = versionNumbers(singboxVersion);
+  const schema = versionNumbers(SCHEMA_VERSION);
+
+  for (let i = 0; i < Math.max(binary.length, schema.length); i++) {
+    const delta = (binary[i] ?? 0) - (schema[i] ?? 0);
+
+    if (delta !== 0) {
+      return delta > 0 ? SCHEMA_DRIFT.Newer : SCHEMA_DRIFT.Older;
+    }
+  }
+
+  return SCHEMA_DRIFT.None;
+}
+
+function versionNumbers(version: string): number[] {
+  return (version.match(/\d+/g) ?? []).map(Number);
 }

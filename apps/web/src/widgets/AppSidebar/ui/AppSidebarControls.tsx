@@ -13,6 +13,8 @@ import { LanguageSwitch } from '@features/Language/LanguageSwitch';
 import { ThemeSwitch } from '@features/Theme/ThemeSwitch';
 import { cn } from '@shared/lib/utils';
 
+import { AppSidebarDrift } from './AppSidebarDrift';
+
 const STATUS_TONE: Readonly<Record<ServiceStatus, string>> = {
   [SERVICE_STATUS.Running]: 'bg-signal-ok',
   [SERVICE_STATUS.Stopped]: 'bg-signal-idle',
@@ -41,6 +43,8 @@ export function AppSidebarControls({ collapsed }: { collapsed: boolean }) {
       <ServiceDot status={reachable ? (service.data?.status ?? null) : null} collapsed={collapsed} />
 
       <DaemonModeSwitch compact={collapsed} />
+
+      <AppSidebarDrift collapsed={collapsed} />
 
       {!collapsed && (
         <dl className='flex items-baseline justify-between gap-2 text-xs'>
