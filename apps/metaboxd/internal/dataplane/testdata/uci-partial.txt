@@ -1,0 +1,5 @@
+metabox.main=metabox
+metabox.main.enabled='1'
+metabox.dataplane=dataplane
+metabox.dataplane.tproxy_port='7332'
+metabox.dataplane.source_ip='192.168.1.36/32'

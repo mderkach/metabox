@@ -9,6 +9,7 @@ import (
 	"metabox/internal/apply"
 	"metabox/internal/config"
 	"metabox/internal/contract"
+	"metabox/internal/dataplane"
 	"metabox/internal/devices"
 	"metabox/internal/route"
 	"metabox/internal/singbox"
@@ -71,6 +72,17 @@ func fail(log *slog.Logger, w http.ResponseWriter, r *http.Request, err error) {
 				Workdir:   workdirErr.Workdir,
 				ConfigDir: workdirErr.ConfigDir,
 			},
+		})
+
+		return
+	}
+
+	// Поля едут подробностью: по ним владелец находит, что чинить в UCI.
+	if invalid, ok := errors.AsType[*dataplane.InvalidError](err); ok {
+		writeJSON(log, w, http.StatusUnprocessableEntity, contract.Error{
+			Code:    contract.ErrDataplaneInvalid,
+			Message: "модель сетевой обвязки в UCI не принята",
+			Details: contract.DataplaneDetails{Fields: invalid.Fields},
 		})
 
 		return

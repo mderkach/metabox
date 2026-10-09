@@ -3,6 +3,8 @@
 // друга.
 package twin
 
+import "metabox/internal/sample"
+
 // Kind — тёзка `sample.Kind` с другими значениями.
 type Kind string
 
@@ -14,4 +16,9 @@ const (
 // Holder — владелец перечисления.
 type Holder struct {
 	Kind Kind `json:"kind"`
+}
+
+// Borrower ссылается на перечисление чужого пакета.
+type Borrower struct {
+	Kind sample.Kind `json:"kind"`
 }

@@ -20,6 +20,7 @@ import (
 	"metabox/internal/clashapi"
 	"metabox/internal/config"
 	"metabox/internal/contract"
+	"metabox/internal/dataplane"
 	"metabox/internal/devices"
 	"metabox/internal/history"
 	"metabox/internal/procd"
@@ -127,6 +128,9 @@ type Options struct {
 	// Devices отдаёт устройства LAN и хранит их свои имена. nil означает, что
 	// список не собран: панель подписывает источники соединений адресами.
 	Devices DeviceRegistry
+	// Dataplane читает модель сетевой обвязки. nil означает, что читать её
+	// нечем: ручки обвязки нет.
+	Dataplane DataplaneReader
 	// ConfigPath — путь файла, которым владеет демон. Панель показывает его
 	// как факт об устройстве, а задаётся он флагами `-config-dir` и
 	// `-config-name`: без этого поля интерфейс показывал бы значение по
@@ -163,6 +167,13 @@ type DeviceRegistry interface {
 	Rename(ctx context.Context, mac, name string) error
 }
 
+// DataplaneReader читает модель сетевой обвязки и признак её применения.
+// Интерфейс объявлен здесь, у потребителя.
+type DataplaneReader interface {
+	Model(ctx context.Context) (dataplane.Model, error)
+	Applied(ctx context.Context) (bool, dataplane.AppliedReason, error)
+}
+
 // RuntimeObserver сообщает, работает ли на устройстве процесс sing-box.
 // Интерфейс объявлен здесь, у потребителя.
 type RuntimeObserver func(ctx context.Context) bool
@@ -186,6 +197,7 @@ type Server struct {
 	ruleSets       RuleSetsReader
 	runtime        RuntimeObserver
 	devices        DeviceRegistry
+	dataplane      DataplaneReader
 	configPath     string
 	handler        http.Handler
 }
@@ -211,6 +223,7 @@ func NewServer(applier Applier, reader ConfigReader, log *slog.Logger, opts Opti
 		ruleSets:       opts.RuleSets,
 		runtime:        opts.Runtime,
 		devices:        opts.Devices,
+		dataplane:      opts.Dataplane,
 		configPath:     opts.ConfigPath,
 	}
 	s.handler = s.routes()
@@ -256,6 +269,10 @@ func (s *Server) routes() http.Handler {
 	if s.devices != nil {
 		mux.HandleFunc("GET /api/devices", s.handleDevices)
 		mux.HandleFunc("PUT /api/devices/{mac}", s.handleDeviceName)
+	}
+
+	if s.dataplane != nil {
+		mux.HandleFunc("GET /api/dataplane", s.handleDataplane)
 	}
 
 	if s.service != nil {
@@ -655,6 +672,24 @@ func (s *Server) handleDeviceName(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.handleDevices(w, r)
+}
+
+func (s *Server) handleDataplane(w http.ResponseWriter, r *http.Request) {
+	model, err := s.dataplane.Model(r.Context())
+	if err != nil {
+		fail(s.log, w, r, err)
+
+		return
+	}
+
+	applied, reason, err := s.dataplane.Applied(r.Context())
+	if err != nil {
+		fail(s.log, w, r, err)
+
+		return
+	}
+
+	writeJSON(s.log, w, http.StatusOK, contract.Dataplane{Model: model, Applied: applied, AppliedReason: reason})
 }
 
 // ServiceState приводит состояние службы к форме ответа. Экспортируется,

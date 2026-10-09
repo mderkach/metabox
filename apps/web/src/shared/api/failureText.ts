@@ -25,6 +25,7 @@ const FAILURE_KEY: Readonly<Record<ApiFailureCode, ParseKeys<'shared'>>> = {
   config_modified: 'failure.config_modified',
   config_too_large: 'failure.config_too_large',
   device_invalid: 'failure.device_invalid',
+  dataplane_invalid: 'failure.dataplane_invalid',
   list_invalid: 'failure.list_invalid',
   workdir_mismatch: 'failure.workdir_mismatch',
   launch_mismatch: 'failure.launch_mismatch',

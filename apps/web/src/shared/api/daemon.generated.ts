@@ -49,6 +49,7 @@ export const ERROR_CODE = [
   'workdir_mismatch',
   'launch_mismatch',
   'device_invalid',
+  'dataplane_invalid',
   'check_failed',
   'internal',
 ] as const
@@ -58,6 +59,23 @@ export const NAME_SOURCE = [
   'static',
   'dhcp',
   'none',
+] as const
+
+export const ACCESS_MODE = [
+  'all',
+  'listed',
+] as const
+
+export const APPLIED_REASON = [
+  'nft_unavailable',
+  'nft_unparsed',
+] as const
+
+export const FIELD_REASON = [
+  'invalid',
+  'out_of_range',
+  'duplicate',
+  'required',
 ] as const
 
 export const ORIGIN = [
@@ -282,6 +300,62 @@ export const DeviceNameSchema = z.object({
   name: z.string(),
 })
 
+/** Model — секция `metabox.dataplane`. Отсутствующая опция получает значение по умолчанию из Defaults; список, заданный пустыми значениями, — пустой. */
+export const ModelSchema = z.object({
+  /** Enabled — ставить ли перехват. Ложь: служба поднимает только sing-box, без nft, ip rule и upstream dnsmasq. */
+  enabled: z.boolean(),
+  /** RedirectPort — порт inbound redirect: сюда уходит TCP из LAN. */
+  redirect_port: z.int(),
+  /** TproxyPort — порт inbound tproxy: сюда уходит UDP из LAN. */
+  tproxy_port: z.int(),
+  /** DNSPort — порт dns-in sing-box, на который dnsmasq отдаёт запросы. */
+  dns_port: z.int(),
+  /** DNSHijack — перехватывать udp/53 из LAN на dnsmasq роутера. */
+  dns_hijack: z.boolean(),
+  /** SelfMark — метка обхода: пакет с ней идёт мимо перехвата. Совпадает с route.default_mark конфига sing-box, иначе его трафик зациклится. */
+  self_mark: z.int(),
+  /** TproxyMark — метка потоков tproxy, по ней ip rule уводит их в RouteTable. */
+  tproxy_mark: z.int(),
+  /** RouteTable — таблица маршрутов с local-маршрутом для tproxy. */
+  route_table: z.int(),
+  acl_mode: z.string(),
+  /** SourceIP — источники режима listed: IPv4-адрес или подсеть. */
+  source_ip: z.array(z.string()),
+  /** SourceMAC — источники режима listed по MAC: не зависят от смены аренды. */
+  source_mac: z.array(z.string()),
+  /** LANInterface — интерфейсы, с которых перехватывается трафик. */
+  lan_interface: z.array(z.string()),
+  /** WANProxyCIDR — назначения, которые всегда идут через sing-box. */
+  wan_proxy_cidr: z.array(z.string()),
+  /** WANDirectCIDR — назначения, которые всегда идут мимо sing-box. */
+  wan_direct_cidr: z.array(z.string()),
+  /** IPv6 — рендерить ли цепочки IPv6; пока ложь, их нет. */
+  ipv6: z.boolean(),
+})
+
+/** Dataplane — ответ `GET /api/dataplane`: модель сетевой обвязки из UCI и то, стоят ли её правила на устройстве. */
+export const DataplaneSchema = z.object({
+  model: ModelSchema,
+  /** Applied — в таблице fw4 есть цепочки обвязки. Ложь без AppliedReason — nft прочитан, цепочек нет. */
+  applied: z.boolean(),
+  /** AppliedReason — почему Applied не наблюдён, а подставлен ложью. */
+  applied_reason: z.string().optional(),
+})
+
+/** FieldError — одно непринятое значение. */
+export const FieldErrorSchema = z.object({
+  /** Field — имя опции UCI. */
+  field: z.string(),
+  /** Value — значение как в UCI; у элемента списка — сам элемент. Пусто у ReasonRequired. */
+  value: z.string(),
+  reason: z.string(),
+})
+
+/** DataplaneDetails — поля отказа `dataplane_invalid`. */
+export const DataplaneDetailsSchema = z.object({
+  fields: z.array(FieldErrorSchema),
+})
+
 /** Load — средняя загрузка. Приводить её к процентам нельзя: это длина очереди на выполнение, и на четырёх ядрах значение 4.0 означает полную занятость. */
 export const LoadSchema = z.object({
   one: z.number(),
@@ -483,6 +557,8 @@ export type CheckDetailsWire = z.infer<typeof CheckDetailsSchema>
 export type ConnectionWire = z.infer<typeof ConnectionSchema>
 export type ConnectionsSnapshotWire = z.infer<typeof ConnectionsSnapshotSchema>
 export type DaemonWire = z.infer<typeof DaemonSchema>
+export type DataplaneDetailsWire = z.infer<typeof DataplaneDetailsSchema>
+export type DataplaneWire = z.infer<typeof DataplaneSchema>
 export type DeviceNameWire = z.infer<typeof DeviceNameSchema>
 export type DevicePointWire = z.infer<typeof DevicePointSchema>
 export type DeviceWire = z.infer<typeof DeviceSchema>
@@ -490,6 +566,7 @@ export type DevicesWire = z.infer<typeof DevicesSchema>
 export type ErrorWire = z.infer<typeof ErrorSchema>
 export type EventWire = z.infer<typeof EventSchema>
 export type ExplanationWire = z.infer<typeof ExplanationSchema>
+export type FieldErrorWire = z.infer<typeof FieldErrorSchema>
 export type HealthWire = z.infer<typeof HealthSchema>
 export type HistoryWire = z.infer<typeof HistorySchema>
 export type HitsWire = z.infer<typeof HitsSchema>
@@ -499,6 +576,7 @@ export type LoadWire = z.infer<typeof LoadSchema>
 export type MatchWire = z.infer<typeof MatchSchema>
 export type MemoryWire = z.infer<typeof MemorySchema>
 export type MirrorWire = z.infer<typeof MirrorSchema>
+export type ModelWire = z.infer<typeof ModelSchema>
 export type PointWire = z.infer<typeof PointSchema>
 export type ProcessWire = z.infer<typeof ProcessSchema>
 export type ProviderWire = z.infer<typeof ProviderSchema>

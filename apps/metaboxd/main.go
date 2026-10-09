@@ -20,6 +20,7 @@ import (
 	"metabox/internal/apply"
 	"metabox/internal/clashapi"
 	"metabox/internal/config"
+	"metabox/internal/dataplane"
 	"metabox/internal/device"
 	"metabox/internal/devices"
 	"metabox/internal/events"
@@ -84,6 +85,7 @@ type settings struct {
 	logread       string
 	dhcpLeases    string
 	uci           string
+	nft           string
 	clashPort     int
 	confirmWindow time.Duration
 	cycleTimeout  time.Duration
@@ -110,7 +112,10 @@ func main() {
 	flag.StringVar(&s.logread, "logread", "/sbin/logread",
 		"путь к logread: из него берётся причина падения sing-box; пустой отключает чтение")
 	flag.StringVar(&s.dhcpLeases, "dhcp-leases", "/tmp/dhcp.leases", "файл аренд dnsmasq: из него берутся устройства LAN")
-	flag.StringVar(&s.uci, "uci", "/sbin/uci", "путь к uci: через него читаются статические аренды из UCI dhcp")
+	flag.StringVar(&s.uci, "uci", "/sbin/uci",
+		"путь к uci: через него читаются статические аренды из UCI dhcp и модель обвязки из UCI metabox")
+	flag.StringVar(&s.nft, "nft", "/usr/sbin/nft",
+		"путь к nft: через него демон видит, стоят ли правила обвязки; пустой отключает проверку")
 	flag.IntVar(&s.clashPort, "clash-port", 9090, "порт Clash API, если демон заводит секцию сам")
 	flag.DurationVar(&s.confirmWindow, "confirm-window", time.Minute,
 		"сколько ждать подтверждения связи до автоотката")
@@ -245,6 +250,11 @@ func run(log *slog.Logger, s settings) error {
 		lan = registry
 	}
 
+	plane := dataplane.New(dataplane.Runner(runCommand(singbox.NewExec(binaryTimeout))), dataplane.Options{
+		UCI: s.uci,
+		NFT: s.nft,
+	})
+
 	api := httpapi.NewServer(manager, store, log, httpapi.Options{
 		Version:        version.Version,
 		SingboxVersion: singboxVersion,
@@ -260,6 +270,7 @@ func run(log *slog.Logger, s settings) error {
 		RuleSets:       ruleSets,
 		Runtime:        sysinfo.Alive,
 		Devices:        lan,
+		Dataplane:      plane,
 		ConfigPath:     store.Path(),
 	})
 

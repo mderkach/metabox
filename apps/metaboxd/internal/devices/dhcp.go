@@ -11,6 +11,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"metabox/internal/uci"
 )
 
 // maxLeasesBytes — потолок чтения файла аренд. Строка аренды — около ста
@@ -125,56 +127,24 @@ func (r *Registry) staticHosts(ctx context.Context) ([]host, error) {
 	return parseHosts(out), nil
 }
 
-// parseHosts разбирает вывод `uci show dhcp`. Секции идут в порядке файла,
-// анонимные — как `@host[N]`, именованные — по имени; список MAC uci печатает
-// несколькими значениями в кавычках, а опцию — одним значением через пробел,
-// и оба вида сводятся к одному списку.
+// parseHosts отбирает секции `host` из вывода `uci show dhcp`. MAC в опции
+// бывают и списком, и одним значением через пробел — оба вида сводятся к
+// одному списку.
 func parseHosts(out string) []host {
-	var order []string
-
-	kinds := map[string]string{}
-	options := map[string]map[string][]string{}
-
-	for line := range strings.Lines(out) {
-		key, value, ok := strings.Cut(strings.TrimRight(line, "\r\n"), "=")
-		if !ok {
-			continue
-		}
-
-		path, ok := strings.CutPrefix(key, "dhcp.")
-		if !ok {
-			continue
-		}
-
-		section, option, isOption := strings.Cut(path, ".")
-		if !isOption {
-			kinds[section] = value
-			order = append(order, section)
-			options[section] = map[string][]string{}
-
-			continue
-		}
-
-		if opts, ok := options[section]; ok {
-			opts[option] = unquote(value)
-		}
-	}
-
 	var hosts []host
 
-	for _, section := range order {
-		if kinds[section] != "host" {
+	for _, section := range uci.Parse(out, "dhcp") {
+		if section.Type != "host" {
 			continue
 		}
 
-		opts := options[section]
-		h := host{name: first(opts["name"])}
+		h := host{name: section.Option("name")}
 
-		if ip, err := netip.ParseAddr(first(opts["ip"])); err == nil {
+		if ip, err := netip.ParseAddr(section.Option("ip")); err == nil {
 			h.ip = ip.String()
 		}
 
-		for _, value := range opts["mac"] {
+		for _, value := range section.Options["mac"] {
 			for raw := range strings.FieldsSeq(value) {
 				if mac, err := normalizeMAC(raw); err == nil {
 					h.macs = append(h.macs, mac)
@@ -188,56 +158,4 @@ func parseHosts(out string) []host {
 	}
 
 	return hosts
-}
-
-func first(values []string) string {
-	if len(values) == 0 {
-		return ""
-	}
-
-	return values[0]
-}
-
-// unquote разбирает значение в записи uci: слова в одинарных кавычках через
-// пробел. Кавычку внутри значения uci печатает так же, как шелл: закрывает
-// кавычки, ставит экранированную кавычку и открывает их снова.
-func unquote(s string) []string {
-	var (
-		out     []string
-		word    strings.Builder
-		inQuote bool
-		started bool
-	)
-
-	for i := 0; i < len(s); i++ {
-		c := s[i]
-
-		switch {
-		case inQuote && c == '\'':
-			inQuote = false
-		case inQuote:
-			word.WriteByte(c)
-		case c == '\'':
-			inQuote, started = true, true
-		case c == '\\' && i+1 < len(s):
-			i++
-			word.WriteByte(s[i])
-			started = true
-		case c == ' ' || c == '\t':
-			if started {
-				out = append(out, word.String())
-				word.Reset()
-				started = false
-			}
-		default:
-			word.WriteByte(c)
-			started = true
-		}
-	}
-
-	if started {
-		out = append(out, word.String())
-	}
-
-	return out
 }

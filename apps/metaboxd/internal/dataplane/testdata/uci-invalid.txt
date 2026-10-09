@@ -1,0 +1,11 @@
+metabox.dataplane=dataplane
+metabox.dataplane.enabled='maybe'
+metabox.dataplane.redirect_port='70000'
+metabox.dataplane.tproxy_port='5333'
+metabox.dataplane.dns_port='5333'
+metabox.dataplane.self_mark='0x64'
+metabox.dataplane.route_table='-1'
+metabox.dataplane.acl_mode='some'
+metabox.dataplane.source_ip='192.168.1.36/32' '192.168.1.5/24' 'fd00::1' 'host'
+metabox.dataplane.source_mac='aa:bb:cc:dd:ee:ff' '00:00:00:00:fe:80:00:00:00:00:00:00:02:00:5e:10:00:00:00:01'
+metabox.dataplane.lan_interface=''

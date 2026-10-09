@@ -213,6 +213,15 @@ func (w *walker) qualified(node *ast.SelectorExpr) (string, error) {
 
 				return schemaName(node.Sel.Name), nil
 			}
+
+			// Не структура — перечисление или псевдоним базового типа:
+			// печатается так же, как объявленный в своём пакете.
+			previous := w.pkg
+			w.pkg = owner
+			expr, err := w.named(node.Sel.Name)
+			w.pkg = previous
+
+			return expr, err
 		}
 	}
 

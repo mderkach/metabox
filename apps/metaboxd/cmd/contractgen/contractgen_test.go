@@ -110,6 +110,19 @@ func TestGenerateEmitsEnumValues(t *testing.T) {
 	}
 }
 
+// Перечисление из чужого пакета печатается тем же списком, что и своё: поле,
+// сославшееся на него, не должно останавливать генерацию.
+func TestGenerateEmitsForeignEnum(t *testing.T) {
+	out, err := generate("testdata", []rootType{{pkg: "internal/twin", name: "Borrower"}})
+	if err != nil {
+		t.Fatalf("генерация: %v", err)
+	}
+
+	if want := "export const KIND = [\n  'first',\n  'second',\n] as const"; !strings.Contains(out, want) {
+		t.Errorf("в схеме нет %q", want)
+	}
+}
+
 // TestGenerateIsStable: два прогона на одном дереве дают один файл, иначе
 // `make schema-daemon` шумит в diff без правок демона.
 func TestGenerateIsStable(t *testing.T) {

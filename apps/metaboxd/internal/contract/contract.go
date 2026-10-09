@@ -10,6 +10,7 @@ package contract
 import (
 	"metabox/internal/apply"
 	"metabox/internal/config"
+	"metabox/internal/dataplane"
 	"metabox/internal/devices"
 	"metabox/internal/history"
 )
@@ -187,6 +188,9 @@ const (
 	// длиннее допустимого или с управляющими символами, тело не разобрано
 	// либо своих имён больше, чем демон хранит.
 	ErrDeviceInvalid ErrorCode = "device_invalid"
+	// ErrDataplaneInvalid — модель сетевой обвязки в UCI не принята; поля с
+	// ошибкой лежат в Details.
+	ErrDataplaneInvalid ErrorCode = "dataplane_invalid"
 	// ErrCheckFailed — `sing-box check` отверг конфиг; вывод бинаря лежит в Details.
 	ErrCheckFailed ErrorCode = "check_failed"
 	// ErrInternal — отказ, о котором наружу говорить нечего: подробности в логе.
@@ -230,6 +234,22 @@ type DeviceName struct {
 	// Name — своё имя устройства. Пустое убирает его, и подпись возвращается к
 	// статической аренде или DHCP.
 	Name string `json:"name"`
+}
+
+// Dataplane — ответ `GET /api/dataplane`: модель сетевой обвязки из UCI и
+// то, стоят ли её правила на устройстве.
+type Dataplane struct {
+	Model dataplane.Model `json:"model"`
+	// Applied — в таблице fw4 есть цепочки обвязки. Ложь без AppliedReason —
+	// nft прочитан, цепочек нет.
+	Applied bool `json:"applied"`
+	// AppliedReason — почему Applied не наблюдён, а подставлен ложью.
+	AppliedReason dataplane.AppliedReason `json:"applied_reason,omitempty"`
+}
+
+// DataplaneDetails — поля отказа `dataplane_invalid`.
+type DataplaneDetails struct {
+	Fields []dataplane.FieldError `json:"fields"`
 }
 
 // Error — единый формат отказа на границе HTTP. Внутренние подробности — пути

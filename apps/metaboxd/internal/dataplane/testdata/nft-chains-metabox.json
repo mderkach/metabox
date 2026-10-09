@@ -1,0 +1,44 @@
+{
+  "nftables": [
+    { "metainfo": { "version": "1.1.3", "release_name": "Commodore Bullmoose #4", "json_schema_version": 1 } },
+    { "table": { "family": "inet", "name": "fw4", "handle": 1 } },
+    {
+      "chain": {
+        "family": "inet",
+        "table": "fw4",
+        "name": "input",
+        "handle": 1,
+        "type": "filter",
+        "hook": "input",
+        "prio": 0,
+        "policy": "accept"
+      }
+    },
+    {
+      "chain": {
+        "family": "inet",
+        "table": "fw4",
+        "name": "dstnat",
+        "handle": 30,
+        "type": "nat",
+        "hook": "prerouting",
+        "prio": -100,
+        "policy": "accept"
+      }
+    },
+    { "chain": { "family": "inet", "table": "fw4", "name": "metabox_redirect", "handle": 61 } },
+    { "table": { "family": "inet", "name": "b4_mangle", "handle": 2 } },
+    {
+      "chain": {
+        "family": "inet",
+        "table": "b4_mangle",
+        "name": "prerouting",
+        "handle": 1,
+        "type": "filter",
+        "hook": "prerouting",
+        "prio": -150,
+        "policy": "accept"
+      }
+    }
+  ]
+}
