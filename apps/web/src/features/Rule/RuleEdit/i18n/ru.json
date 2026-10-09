@@ -6,13 +6,52 @@
     "sniff": "определить протокол"
   },
   "field": {
-    "action": { "label": "Что делать" },
-    "outbound": { "label": "Куда отправить", "placeholder": "выберите outbound" },
-    "ruleSet": { "label": "Сеты правил", "empty": "без сетов", "missing": "нет в документе" }
+    "action": {
+      "label": "Что делать"
+    },
+    "outbound": {
+      "label": "Куда отправить",
+      "placeholder": "выберите outbound"
+    },
+    "ruleSet": {
+      "label": "Сеты правил",
+      "empty": "без сетов",
+      "missing": "нет в документе"
+    },
+    "conditions": {
+      "label": "Условия",
+      "add": "Добавить условие",
+      "hint": "По значению на строку"
+    }
   },
   "submit": "Сохранить в черновик",
-  "error": { "outboundRequired": "выберите outbound" },
+  "error": {
+    "outboundRequired": "выберите outbound",
+    "portInvalid": "Порт — число от 0 до 65535 на строку"
+  },
   "warning": {
-    "catchAll": "Без сетов у правила не останется условий: оно заберёт весь трафик, и правила ниже не сработают."
+    "catchAll": "Без условий правило заберёт весь трафик, и правила ниже не сработают."
+  },
+  "condition": {
+    "domain": {
+      "label": "Домен",
+      "placeholder": "example.com"
+    },
+    "domain_suffix": {
+      "label": "Домен с поддоменами",
+      "placeholder": "example.com"
+    },
+    "domain_keyword": {
+      "label": "Слово в домене",
+      "placeholder": "google"
+    },
+    "ip_cidr": {
+      "label": "IP или подсеть",
+      "placeholder": "10.0.0.0/8"
+    },
+    "port": {
+      "label": "Порт",
+      "placeholder": "443"
+    }
   }
 }

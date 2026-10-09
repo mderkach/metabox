@@ -9,26 +9,30 @@ import { RULE_SET_MATCHER, ruleSetsOf, type RuleRow } from '@entities/Rule';
 import { Button, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/ui';
 
 import {
+  conditionLines,
   RULE_ACTION,
+  RULE_CONDITIONS,
   RULE_EDIT_ERROR,
   RuleEditAdapterSchema,
+  type RuleCondition,
   type RuleEditModel,
   type RuleEditPatch,
 } from '../model/RuleEdit.schema';
+import { RuleConditionFields } from './RuleConditionFields';
 
 const ERROR_KEY: Readonly<Record<string, ParseKeys<'features/Rule/RuleEdit'> | undefined>> = {
   [RULE_EDIT_ERROR.OutboundRequired]: 'error.outboundRequired',
 };
 
 /**
- * Выход правила — что делать с трафиком и куда его отправить — и сеты, на
- * которые оно ссылается.
+ * Выход правила — что делать с трафиком и куда его отправить, — сеты, на
+ * которые оно ссылается, и ходовые условия.
  *
  * Правка ложится на текст файла по пути узла: меняется одна строка,
  * порядок ключей и незнакомые узлы остаются как были.
  *
- * `ruleSets` — теги наборов документа. Логическое правило поля сетов не
- * получает: у его ветки схемы `rule_set` нет, сеты живут во вложенных правилах.
+ * `ruleSets` — теги наборов документа. Логическое правило не получает ни
+ * сетов, ни условий: у его ветки схемы их нет, они живут во вложенных правилах.
  */
 export function RuleEditForm({
   rule,
@@ -42,7 +46,8 @@ export function RuleEditForm({
   const { t } = useTranslation('features/Rule/RuleEdit');
   const edit = ConfigDocumentState.use.edit();
   const initialSets = ruleSetsOf(rule);
-  const onlySets = hasOnlyRuleSets(rule);
+  const initialConditions = conditionTexts(rule);
+  const onlyEditable = hasOnlyEditableConditions(rule);
 
   const form = useForm<RuleEditModel, unknown, RuleEditPatch>({
     // Значения берутся из узла как есть: дефолт, дописанный формой, попал бы
@@ -53,6 +58,7 @@ export function RuleEditForm({
       // Строка `"rule_set": "x"` приходит списком; пока поле не тронуто,
       // узел не переписывается и строка остаётся строкой.
       ruleSet: initialSets,
+      conditions: initialConditions,
     },
     mode: 'onChange',
     resolver: zodResolver(RuleEditAdapterSchema),
@@ -79,6 +85,16 @@ export function RuleEditForm({
       edit([...path, RULE_SET_MATCHER], 'rule_set' in patch ? patch.rule_set : undefined);
     }
 
+    // Условие сравнивается по строкам: лишний пробел или пустая строка правкой
+    // не считаются и в диф не попадают.
+    for (const key of RULE_CONDITIONS) {
+      const before = conditionLines(form.formState.defaultValues?.conditions?.[key] ?? '');
+
+      if (!sameLines(conditionLines(form.getValues(`conditions.${key}`)), before)) {
+        edit([...path, key], patch.conditions[key]);
+      }
+    }
+
     // Сохранённое становится новой точкой отсчёта: кнопка гаснет, пока форма
     // снова не разойдётся с черновиком.
     form.reset(form.getValues());
@@ -94,7 +110,11 @@ export function RuleEditForm({
       >
         <ActionField />
         <OutboundField outbounds={outbounds} />
-        {rule.group === null && <RuleSetField ruleSets={ruleSets} initial={initialSets} onlySets={onlySets} />}
+        {rule.group === null && <RuleSetField ruleSets={ruleSets} initial={initialSets} />}
+        {rule.group === null && (
+          <RuleConditionFields initial={RULE_CONDITIONS.filter((key) => initialConditions[key].length > 0)} />
+        )}
+        {rule.group === null && onlyEditable && <CatchAllWarning />}
 
         <Button type='submit' size='sm' disabled={!form.formState.isDirty}>
           {t('submit')}
@@ -180,12 +200,8 @@ function OutboundField({ outbounds }: { outbounds: string[] }) {
  * Сеты правила. Опции — наборы документа и сеты самого правила: тег, которого
  * в документе нет, остаётся выбранным и помечается, а не пропадает молча, —
  * запрещать запись может только `sing-box check`.
- *
- * `onlySets` — кроме сетов, условий у правила нет: сняв последний, пользователь
- * получит правило без условий — оно заберёт весь трафик, и правила ниже не
- * сработают. Предупреждение не блокирует запись.
  */
-function RuleSetField({ ruleSets, initial, onlySets }: { ruleSets: string[]; initial: string[]; onlySets: boolean }) {
+function RuleSetField({ ruleSets, initial }: { ruleSets: string[]; initial: string[] }) {
   const { t } = useTranslation('features/Rule/RuleEdit');
   const { control, watch } = useFormContext<RuleEditModel>();
   const value = watch('ruleSet');
@@ -218,12 +234,6 @@ function RuleSetField({ ruleSets, initial, onlySets }: { ruleSets: string[]; ini
               ))}
             </SelectContent>
           </Select>
-          {onlySets && value.length === 0 && (
-            <p role='status' className='flex items-start gap-1.5 text-xs text-pretty text-signal-warn'>
-              <TriangleAlert className='mt-px size-3.5 shrink-0' aria-hidden='true' />
-              <span>{t('warning.catchAll')}</span>
-            </p>
-          )}
         </div>
       )}
     />
@@ -231,11 +241,58 @@ function RuleSetField({ ruleSets, initial, onlySets }: { ruleSets: string[]; ini
 }
 
 /**
- * Сеты — единственное условие правила. Флаги `rule_set_ip_cidr_*` начинаются
- * с того же имени и условием не считаются: без сетов им нечего уточнять.
+ * Правило без условий заберёт весь трафик, и правила ниже не сработают.
+ * Предупреждение не блокирует запись: такое правило бывает и намеренно.
  */
-function hasOnlyRuleSets(rule: RuleRow): boolean {
-  return ruleSetsOf(rule).length > 0 && rule.matchers.every((matcher) => matcher.key.startsWith(RULE_SET_MATCHER));
+function CatchAllWarning() {
+  const { t } = useTranslation('features/Rule/RuleEdit');
+  const { watch } = useFormContext<RuleEditModel>();
+  const sets = watch('ruleSet');
+  const conditions = watch('conditions');
+  const empty = sets.length === 0 && RULE_CONDITIONS.every((key) => conditionLines(conditions[key]).length === 0);
+
+  if (!empty) {
+    return null;
+  }
+
+  return (
+    <p role='status' className='flex items-start gap-1.5 text-xs text-pretty text-signal-warn'>
+      <TriangleAlert className='mt-px size-3.5 shrink-0' aria-hidden='true' />
+      <span>{t('warning.catchAll')}</span>
+    </p>
+  );
+}
+
+/**
+ * Все условия правила правятся формой, и хотя бы одно задано: сняв их,
+ * пользователь получит правило без условий. Флаги `rule_set_ip_cidr_*`
+ * начинаются с имени сетов и условием не считаются: без сетов им нечего
+ * уточнять.
+ */
+function hasOnlyEditableConditions(rule: RuleRow): boolean {
+  return (
+    rule.matchers.length > 0 &&
+    rule.matchers.every(
+      (matcher) =>
+        matcher.key.startsWith(RULE_SET_MATCHER) || RULE_CONDITIONS.some((condition) => condition === matcher.key)
+    )
+  );
+}
+
+function conditionTexts(rule: RuleRow): Record<RuleCondition, string> {
+  const text = (key: RuleCondition) => rule.matchers.find((matcher) => matcher.key === key)?.values.join('\n') ?? '';
+
+  return {
+    domain: text('domain'),
+    domain_suffix: text('domain_suffix'),
+    domain_keyword: text('domain_keyword'),
+    ip_cidr: text('ip_cidr'),
+    port: text('port'),
+  };
+}
+
+function sameLines(left: readonly string[], right: readonly string[]): boolean {
+  return left.length === right.length && left.every((line, index) => line === right[index]);
 }
 
 /** Одинаковы ли наборы тегов без учёта порядка. */

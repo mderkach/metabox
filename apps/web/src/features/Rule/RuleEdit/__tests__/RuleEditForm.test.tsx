@@ -205,7 +205,7 @@ describe('сеты правила в форме', () => {
     await selectOption(user, screen.getByRole('combobox', { name: 'Сеты правил' }), 'github');
     await user.keyboard('{Escape}');
 
-    expect(screen.getByRole('status')).toHaveTextContent('оно заберёт весь трафик');
+    expect(screen.getByRole('status')).toHaveTextContent('заберёт весь трафик');
     expect(screen.getByRole('button', { name: 'Сохранить в черновик' })).toBeEnabled();
   });
 
@@ -219,5 +219,67 @@ describe('сеты правила в форме', () => {
     await user.keyboard('{Escape}');
 
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+});
+
+describe('условия правила в форме', () => {
+  it('добавленное условие ложится в узел списком, остальное правило не трогает', async () => {
+    const user = userEvent.setup();
+    const rule = loadRule({ rule_set: ['github'], outbound: 'proxy' });
+
+    render(<RuleEditForm rule={rule} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
+
+    await selectOption(user, screen.getByRole('combobox', { name: 'Добавить условие' }), 'Домен с поддоменами');
+    await user.type(screen.getByRole('textbox', { name: 'Домен с поддоменами' }), 'youtube.com{Enter}googlevideo.com');
+    await user.click(screen.getByRole('button', { name: 'Сохранить в черновик' }));
+
+    expect(draftRule()).toEqual({
+      rule_set: ['github'],
+      outbound: 'proxy',
+      domain_suffix: ['youtube.com', 'googlevideo.com'],
+    });
+  });
+
+  it('открывается на условиях правила, а очищенное условие убирает поле', async () => {
+    const user = userEvent.setup();
+    const rule = loadRule({ domain: ['a.example'], port: [443], outbound: 'proxy' });
+
+    render(<RuleEditForm rule={rule} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
+
+    expect(screen.getByRole('textbox', { name: 'Порт' })).toHaveValue('443');
+
+    await user.clear(screen.getByRole('textbox', { name: 'Домен' }));
+    await user.click(screen.getByRole('button', { name: 'Сохранить в черновик' }));
+
+    expect(draftRule()).toEqual({ port: [443], outbound: 'proxy' });
+  });
+
+  it('порт не числом называет ошибку и не пишет правку', async () => {
+    const user = userEvent.setup();
+    const rule = loadRule({ port: [443], outbound: 'proxy' });
+
+    render(<RuleEditForm rule={rule} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
+
+    const port = screen.getByRole('textbox', { name: 'Порт' });
+
+    await user.clear(port);
+    await user.type(port, 'https');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Порт — число от 0 до 65535 на строку');
+
+    await user.click(screen.getByRole('button', { name: 'Сохранить в черновик' }));
+
+    expect(ConfigDocumentState.getState().draft).toBeNull();
+  });
+
+  it('сняв все условия, предупреждает, что правило заберёт весь трафик', async () => {
+    const user = userEvent.setup();
+    const rule = loadRule({ domain: ['a.example'], outbound: 'proxy' });
+
+    render(<RuleEditForm rule={rule} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
+
+    await user.clear(screen.getByRole('textbox', { name: 'Домен' }));
+
+    expect(screen.getByRole('status')).toHaveTextContent('заберёт весь трафик');
   });
 });

@@ -6,13 +6,52 @@
     "sniff": "sniff the protocol"
   },
   "field": {
-    "action": { "label": "What to do" },
-    "outbound": { "label": "Where to send", "placeholder": "pick an outbound" },
-    "ruleSet": { "label": "Rule sets", "empty": "no rule sets", "missing": "not in the config" }
+    "action": {
+      "label": "What to do"
+    },
+    "outbound": {
+      "label": "Where to send",
+      "placeholder": "pick an outbound"
+    },
+    "ruleSet": {
+      "label": "Rule sets",
+      "empty": "no rule sets",
+      "missing": "not in the config"
+    },
+    "conditions": {
+      "label": "Conditions",
+      "add": "Add condition",
+      "hint": "One value per line"
+    }
   },
   "submit": "Save to draft",
-  "error": { "outboundRequired": "pick an outbound" },
+  "error": {
+    "outboundRequired": "pick an outbound",
+    "portInvalid": "A port is a number from 0 to 65535, one per line"
+  },
   "warning": {
-    "catchAll": "Without rule sets the rule has no conditions left: it will take all traffic, and the rules below will never match."
+    "catchAll": "Without conditions the rule takes all traffic, and the rules below never run."
+  },
+  "condition": {
+    "domain": {
+      "label": "Domain",
+      "placeholder": "example.com"
+    },
+    "domain_suffix": {
+      "label": "Domain and subdomains",
+      "placeholder": "example.com"
+    },
+    "domain_keyword": {
+      "label": "Word in domain",
+      "placeholder": "google"
+    },
+    "ip_cidr": {
+      "label": "IP or subnet",
+      "placeholder": "10.0.0.0/8"
+    },
+    "port": {
+      "label": "Port",
+      "placeholder": "443"
+    }
   }
 }
