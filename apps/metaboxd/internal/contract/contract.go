@@ -100,7 +100,23 @@ type Service struct {
 	// этому процессу не относятся.
 	Managed   bool   `json:"managed"`
 	LastError string `json:"lastError,omitempty"`
+	// LastErrorCode — почему LastError написал демон, а не служба. Пусто,
+	// когда в LastError вывод упавшей службы: его панель показывает дословно.
+	LastErrorCode ServiceErrorCode `json:"lastErrorCode,omitempty"`
 }
+
+// ServiceErrorCode — отказ, из-за которого состояние службы подставлено, а не
+// прочитано. Набор закрытый: по коду панель выбирает текст на языке
+// пользователя, а LastError остаётся подробностью.
+type ServiceErrorCode string
+
+// ServiceStateUnread — procd не ответил о службе sing-box. Статус `stopped` в
+// таком ответе не наблюдён, а подставлен.
+const ServiceStateUnread ServiceErrorCode = "service_state_unread"
+
+// ServiceInstanceAmbiguous — у службы несколько инстансов procd, а имя
+// инстанса демону не задано: какой из них sing-box, он не угадывает.
+const ServiceInstanceAmbiguous ServiceErrorCode = "service_instance_ambiguous"
 
 // History — ответ `GET /api/history`: трафик за всё время, что копил демон.
 //

@@ -1,9 +1,14 @@
 package singbox
 
 import (
+	"context"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
+
+	"metabox/internal/procd"
 )
 
 const crashLog = `Mon Sep 14 20:08:30 2026 daemon.notice procd: /etc/rc.d/S99sing-box: starting
@@ -85,6 +90,161 @@ func TestLastFailureClampsLongOutput(t *testing.T) {
 
 func TestLastFailureOnEmptyLog(t *testing.T) {
 	if got := lastFailure("", "sing-box"); got != "" {
+		t.Errorf("получили %q", got)
+	}
+}
+
+type logreadRunner struct {
+	stdout string
+	calls  int
+}
+
+func (r *logreadRunner) Run(context.Context, string, ...string) (Result, error) {
+	r.calls++
+
+	return Result{Stdout: r.stdout}, nil
+}
+
+const fileLog = `+0000 2026-10-09 17:15:30 INFO sing-box started (0.42s)
++0000 2026-10-09 17:15:43 ERROR [1288842022 5.4s] connection: open connection to 203.0.113.10:443: i/o timeout
++0000 2026-10-09 17:15:50 ERROR router: rule-set geoip-ru: open geoip-ru.srs: no such file or directory
++0000 2026-10-09 17:15:52 ERROR [1455477715 5.4s] connection: open connection to 203.0.113.10:443: i/o timeout
+`
+
+// writeLaunch кладёт в каталог конфиг с log.output и, если задано, сам файл
+// лога; отдаёт команду службы, как её видит procd.
+func writeLaunch(t *testing.T, output, log string) procd.Launch {
+	t.Helper()
+
+	dir := t.TempDir()
+	config := filepath.Join(dir, "config.json")
+
+	body := `{"log": {"level": "info"}}`
+	if output != "" {
+		body = `{
+  // комментарий, который sing-box принимает
+  "log": {"output": "` + output + `", "timestamp": true,},
+}`
+	}
+
+	if err := os.WriteFile(config, []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	if log != "" {
+		path := output
+		if !filepath.IsAbs(path) {
+			path = filepath.Join(dir, path)
+		}
+
+		if err := os.WriteFile(path, []byte(log), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	return procd.Launch{Workdir: dir, Configs: []string{config}}
+}
+
+func newFailureClient(runner Runner) *Client {
+	return &Client{runner: runner, binary: "/usr/bin/sing-box", logread: "/sbin/logread"}
+}
+
+func TestFailureReadsLogOutputFile(t *testing.T) {
+	const want = "ERROR router: rule-set geoip-ru: open geoip-ru.srs: no such file or directory"
+
+	t.Run("абсолютный путь", func(t *testing.T) {
+		launch := writeLaunch(t, filepath.Join(t.TempDir(), "sing-box.log"), fileLog)
+
+		if got := newFailureClient(&logreadRunner{}).failure(t.Context(), launch); got != want {
+			t.Errorf("получили %q, ожидали %q", got, want)
+		}
+	})
+
+	t.Run("относительный путь — от рабочего каталога", func(t *testing.T) {
+		launch := writeLaunch(t, "sing-box.log", fileLog)
+
+		if got := newFailureClient(&logreadRunner{}).failure(t.Context(), launch); got != want {
+			t.Errorf("получили %q, ожидали %q", got, want)
+		}
+	})
+
+	// cwd упавшего процесса демону не виден: файл от каталога конфига мог бы
+	// оказаться чужим.
+	t.Run("относительный путь без рабочего каталога не читается", func(t *testing.T) {
+		launch := writeLaunch(t, "sing-box.log", fileLog)
+		launch.Workdir = ""
+
+		if got := newFailureClient(&logreadRunner{}).failure(t.Context(), launch); got != "" {
+			t.Errorf("получили %q, ожидали пустую причину", got)
+		}
+	})
+}
+
+// FATAL выхода `sing-box run` уходит в stderr, а не в log.output: причина из
+// логгера точнее хвоста файла.
+func TestFailurePrefersLogread(t *testing.T) {
+	launch := writeLaunch(t, filepath.Join(t.TempDir(), "sing-box.log"), fileLog)
+
+	got := newFailureClient(&logreadRunner{stdout: crashLog}).failure(t.Context(), launch)
+
+	if got != "FATAL[0000] start service: default outbound not found: no-such-outbound" {
+		t.Errorf("получили %q", got)
+	}
+}
+
+func TestFailureFallsBackToLogread(t *testing.T) {
+	const want = "FATAL[0000] start service: default outbound not found: no-such-outbound"
+
+	t.Run("log.output не задан", func(t *testing.T) {
+		runner := &logreadRunner{stdout: crashLog}
+
+		if got := newFailureClient(runner).failure(t.Context(), writeLaunch(t, "", "")); got != want {
+			t.Errorf("получили %q, ожидали %q", got, want)
+		}
+		if runner.calls != 1 {
+			t.Errorf("logread вызван %d раз, ожидали один", runner.calls)
+		}
+	})
+
+	t.Run("файла лога нет", func(t *testing.T) {
+		launch := writeLaunch(t, filepath.Join(t.TempDir(), "missing.log"), "")
+
+		if got := newFailureClient(&logreadRunner{stdout: crashLog}).failure(t.Context(), launch); got != want {
+			t.Errorf("получили %q, ожидали %q", got, want)
+		}
+	})
+
+	t.Run("команды службы не видно", func(t *testing.T) {
+		if got := newFailureClient(&logreadRunner{stdout: crashLog}).failure(t.Context(), procd.Launch{}); got != want {
+			t.Errorf("получили %q, ожидали %q", got, want)
+		}
+	})
+}
+
+// Ошибки отдельных соединений службу не роняют, а хвост файла ими забит.
+func TestFileLastFailureSkipsConnectionErrors(t *testing.T) {
+	log := "+0000 2026-10-09 17:15:43 ERROR [1288842022 5.4s] connection: i/o timeout\n" +
+		"FATAL start service: default outbound not found\n" +
+		"ERROR [42 1.0s] connection: refused\n"
+
+	if got := fileLastFailure(log); got != "FATAL start service: default outbound not found" {
+		t.Errorf("получили %q", got)
+	}
+}
+
+func TestReadTailDropsTornLine(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "sing-box.log")
+
+	if err := os.WriteFile(path, []byte("ERROR первая беда\nERROR вторая беда\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := readTail(path, int64(len("я беда\nERROR вторая беда\n")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if got != "ERROR вторая беда\n" {
 		t.Errorf("получили %q", got)
 	}
 }

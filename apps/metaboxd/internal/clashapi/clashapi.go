@@ -1,6 +1,6 @@
 // Package clashapi отвечает за секцию experimental.clash_api: гарантирует её
 // наличие в применяемом конфиге и достаёт из конфига адрес и секрет для
-// healthcheck.
+// healthcheck и файл лога для причины падения службы.
 //
 // Это единственное место, где демон трогает содержимое конфига, и трогает
 // точечно: секция вставляется правкой байт, остальной файл остаётся прежним.
@@ -47,6 +47,28 @@ func Read(data []byte) (Settings, error) {
 		Address: cfg.Experimental.ClashAPI.ExternalController,
 		Secret:  cfg.Experimental.ClashAPI.Secret,
 	}, nil
+}
+
+// LogOutput достаёт файл, куда sing-box пишет лог. Пустая строка — лог идёт в
+// поток процесса (stderr, stdout) или выключен.
+func LogOutput(data []byte) (string, error) {
+	var cfg struct {
+		Log struct {
+			Disabled bool   `json:"disabled"`
+			Output   string `json:"output"`
+		} `json:"log"`
+	}
+
+	if err := json.Unmarshal(mask(data), &cfg); err != nil {
+		return "", fmt.Errorf("чтение log.output: %w", err)
+	}
+
+	switch {
+	case cfg.Log.Disabled, cfg.Log.Output == "stderr", cfg.Log.Output == "stdout":
+		return "", nil
+	}
+
+	return cfg.Log.Output, nil
 }
 
 // BaseURL приводит адрес контроллера к тому, по которому достучится сам демон.

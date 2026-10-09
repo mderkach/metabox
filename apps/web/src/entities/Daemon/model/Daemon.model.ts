@@ -1,4 +1,4 @@
-import { APPLY_REASON_CODE } from '../api/Daemon.schema';
+import { APPLY_REASON_CODE, SERVICE_ERROR_CODE } from '../api/Daemon.schema';
 
 /** Стадия применения. Значения приходят с демона (`apply.Phase`). */
 export const APPLY_PHASE = {
@@ -55,6 +55,9 @@ export const SERVICE_STATUS = {
 
 export type ServiceStatus = (typeof SERVICE_STATUS)[keyof typeof SERVICE_STATUS];
 
+/** Коды отказа чтения состояния службы — набор объявлен демоном и приезжает контрактом. */
+export type ServiceErrorCode = (typeof SERVICE_ERROR_CODE)[number];
+
 export interface ServiceState {
   status: ServiceStatus;
   /** Секунды с момента старта; `0`, когда сервис не запущен. */
@@ -67,8 +70,13 @@ export interface ServiceState {
   managed: boolean;
   /** Версия установленного на устройстве бинаря sing-box. */
   binary: string;
-  /** Вывод последнего падения: показывается дословно, разбирать его нельзя. */
+  /**
+   * Вывод последнего падения либо, при `lastErrorCode`, ошибка демона словами
+   * демона. Показывается дословно, разбирать его нельзя.
+   */
   lastError?: string;
+  /** Состояние подставлено демоном, а не прочитано; по коду панель берёт текст. */
+  lastErrorCode?: ServiceErrorCode;
 }
 
 /** Действия над сервисом: `POST /api/service/{action}`. */

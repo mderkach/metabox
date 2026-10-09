@@ -9,7 +9,7 @@ import type {
 /** Демон отвечает и применений в работе нет: поле `transaction` пустое. */
 export const DAEMON_STATUS_FIXTURE: DaemonStatusWire = {
   version: 'dev',
-  singbox_version: '1.14.0-extended-2.7.1',
+  singbox_version: '1.14.1-extended-2.7.2',
   // Теги бинаря на устройстве, `sing-box version` 2026-09-23: ccm, ocm,
   // cloudflared, naive, usbip, openvpn и openconnect в сборку не вошли.
   singbox_build: {
@@ -59,7 +59,7 @@ export const TRAFFIC_SAMPLE = { up: 8500, down: 43_400 };
 export const SERVICE_RUNNING_FIXTURE: ServiceStateWire = {
   status: 'running',
   uptime: 253_091,
-  binary: '1.14.0-extended-2.7.1',
+  binary: '1.14.1-extended-2.7.2',
   managed: true,
 };
 
@@ -70,7 +70,7 @@ export const SERVICE_RUNNING_FIXTURE: ServiceStateWire = {
 export const SERVICE_UNMANAGED_FIXTURE: ServiceStateWire = {
   status: 'running',
   uptime: 0,
-  binary: '1.14.0-extended-2.7.1',
+  binary: '1.14.1-extended-2.7.2',
   managed: false,
 };
 
@@ -78,10 +78,20 @@ export const SERVICE_UNMANAGED_FIXTURE: ServiceStateWire = {
 export const SERVICE_FAILED_FIXTURE: ServiceStateWire = {
   status: 'failed',
   uptime: 0,
-  binary: '1.14.0-extended-2.7.1',
+  binary: '1.14.1-extended-2.7.2',
   managed: false,
   lastError:
     'FATAL[0000] start service: initialize outbound/urltest[proxy]: provider sub-nl not found\nprocd: instance sing-box::instance1 exit code 1, restart in 5s',
+};
+
+/** procd не ответил демону: статус подставлен, текст демона идёт подробностью к коду. */
+export const SERVICE_UNREAD_FIXTURE: ServiceStateWire = {
+  status: 'stopped',
+  uptime: 0,
+  binary: '1.14.1-extended-2.7.2',
+  managed: false,
+  lastError: 'состояние сервиса не прочитано',
+  lastErrorCode: 'service_state_unread',
 };
 
 /** Бинарь новее схемы: панель обязана продолжать работать. */

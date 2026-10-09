@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export {
   APPLY_REASON_CODE,
+  SERVICE_ERROR_CODE,
   HistorySchema as TrafficHistorySchema,
   ServiceSchema as ServiceStateSchema,
   StatSchema as SystemStatSchema,

@@ -3,7 +3,13 @@ import { CircleAlert } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { SERVICE_ACTION, useServiceState, type ServiceState, type SystemProcess } from '@entities/Daemon';
+import {
+  SERVICE_ACTION,
+  useServiceState,
+  type ServiceErrorCode,
+  type ServiceState,
+  type SystemProcess,
+} from '@entities/Daemon';
 import { useServiceAction } from '@features/Daemon/DaemonControl';
 import { failureText } from '@shared/api';
 import { formatBytes } from '@shared/lib/format';
@@ -34,6 +40,12 @@ const STATUS_TONE: Readonly<Record<ServiceState['status'], string>> = {
   running: 'bg-signal-ok',
   stopped: 'bg-signal-idle',
   failed: 'bg-signal-bad',
+};
+
+/** Почему состояние подставлено, словами пользователя: новый код демона — ошибка компиляции здесь. */
+const REASON_KEY: Readonly<Record<ServiceErrorCode, ParseKeys<'widgets/Daemon/DaemonService'>>> = {
+  service_state_unread: 'reason.service_state_unread',
+  service_instance_ambiguous: 'reason.service_instance_ambiguous',
 };
 
 function formatUptime(t: TFunction<'widgets/Daemon/DaemonService'>, seconds: number): string {
@@ -162,7 +174,9 @@ export function DaemonService({
         {state.status !== 'running' && state.lastError !== undefined && (
           <Alert variant='destructive'>
             <CircleAlert />
-            <AlertTitle>{t('crashed')}</AlertTitle>
+            <AlertTitle>
+              {state.lastErrorCode === undefined ? t('crashed') : t(REASON_KEY[state.lastErrorCode])}
+            </AlertTitle>
             <AlertDescription>
               <pre className='font-mono text-xs whitespace-pre-wrap'>{state.lastError}</pre>
             </AlertDescription>

@@ -8,12 +8,10 @@ package procd
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"maps"
 	"os"
 	"path/filepath"
-	"slices"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -28,13 +26,13 @@ type Runner func(ctx context.Context, name string, args ...string) (stdout strin
 
 // State — то, что procd знает о службе.
 type State struct {
-	// Known отвечает, объявлена ли служба вообще. Незнакомая procd служба и
-	// остановленная — разные случаи: первое означает, что её не поднимали
-	// ни разу с момента загрузки.
+	// Known отвечает, объявлены ли служба и её инстанс вообще. Незнакомая
+	// procd служба и остановленная — разные случаи: первое означает, что её не
+	// поднимали ни разу с момента загрузки.
 	Known bool
-	// Running — поднят ли хоть один инстанс.
+	// Running — поднят ли инстанс службы.
 	Running bool
-	// PID поднятого инстанса; ноль, когда ни один не поднят. Только для
+	// PID поднятого инстанса; ноль, когда он не поднят. Только для
 	// чтения: службой управляет init-скрипт, а по pid применение узнаёт, что
 	// после рестарта отвечает уже новый процесс.
 	PID int
@@ -79,9 +77,18 @@ func New(runner Runner, ubus string) *Client {
 	return &Client{runner: runner, ubus: ubus, procDir: "/proc"}
 }
 
+// ErrAmbiguousInstance — имя инстанса не задано, а у службы их несколько: какой
+// из них sing-box, procd не говорит, а первый попавшийся может оказаться
+// соседним скриптом той же службы.
+var ErrAmbiguousInstance = errors.New("у службы несколько инстансов, а имя инстанса не задано")
+
 // Service отдаёт состояние службы по её имени в procd. Имя — то же, что у
 // init-скрипта: procd регистрирует службу под именем скрипта.
-func (c *Client) Service(ctx context.Context, name string) (State, error) {
+//
+// Состояние, pid и команда берутся только у инстанса instance. Пустое имя
+// означает единственный инстанс службы; при нескольких — ErrAmbiguousInstance.
+// Инстанса с таким именем нет — служба считается незнакомой, Known ложно.
+func (c *Client) Service(ctx context.Context, name, instance string) (State, error) {
 	stdout, code, err := c.runner(ctx, c.ubus, "call", "service", "list")
 	if err != nil {
 		return State{}, fmt.Errorf("опрос procd: %w", err)
@@ -108,38 +115,39 @@ func (c *Client) Service(ctx context.Context, name string) (State, error) {
 		return State{}, nil
 	}
 
-	state := State{Known: true}
+	if len(service.Instances) == 0 {
+		return State{Known: true}, nil
+	}
 
-	// Инстансы приходят картой, а её обход случаен: у службы с несколькими
-	// инстансами pid и возраст прыгали бы между опросами. Берём первый по
-	// имени из поднятых.
-	names := make([]string, 0, len(service.Instances))
-	for name, instance := range service.Instances {
-		if instance.Running {
-			names = append(names, name)
+	if instance == "" {
+		if len(service.Instances) > 1 {
+			return State{}, fmt.Errorf("служба %s: %w", name, ErrAmbiguousInstance)
+		}
+
+		for only := range service.Instances {
+			instance = only
 		}
 	}
 
-	if len(names) == 0 {
-		if len(service.Instances) > 0 {
-			// Порядок тот же, что у поднятых: первый по имени.
-			first := slices.Min(slices.Collect(maps.Keys(service.Instances)))
-			command := service.Instances[first].Command
-			state.Workdir = directoryFlag(command)
-			state.Configs, state.ConfigDirs = configFlags(command, state.Workdir)
-		}
+	selected, ok := service.Instances[instance]
+	if !ok {
+		return State{}, nil
+	}
+
+	state := State{Known: true}
+
+	if !selected.Running {
+		state.Workdir = directoryFlag(selected.Command)
+		state.Configs, state.ConfigDirs = configFlags(selected.Command, state.Workdir)
 
 		return state, nil
 	}
 
-	sort.Strings(names)
-
-	instance := service.Instances[names[0]]
 	state.Running = true
-	state.PID = instance.PID
-	state.Uptime = c.uptime(instance.PID)
-	state.Workdir = c.workdir(instance.PID, instance.Command)
-	state.Configs, state.ConfigDirs = configFlags(instance.Command, state.Workdir)
+	state.PID = selected.PID
+	state.Uptime = c.uptime(selected.PID)
+	state.Workdir = c.workdir(selected.PID, selected.Command)
+	state.Configs, state.ConfigDirs = configFlags(selected.Command, state.Workdir)
 
 	return state, nil
 }

@@ -3,6 +3,7 @@ package singbox_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"slices"
 	"testing"
 
@@ -30,7 +31,7 @@ func (f *fakeRunner) Run(_ context.Context, name string, args ...string) (singbo
 func newClient(t *testing.T, runner singbox.Runner) *singbox.Client {
 	t.Helper()
 
-	client, err := singbox.New(runner, binary, initScript, "", nil)
+	client, err := singbox.New(runner, binary, initScript, "", "", nil)
 	if err != nil {
 		t.Fatalf("сборка клиента: %v", err)
 	}
@@ -51,7 +52,7 @@ func TestNewRejectsRelativePaths(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if _, err := singbox.New(&fakeRunner{}, tt.binary, tt.initScript, "", nil); err == nil {
+			if _, err := singbox.New(&fakeRunner{}, tt.binary, tt.initScript, "", "", nil); err == nil {
 				t.Error("путь принят: под procd PATH не тот, что в шелле")
 			}
 		})
@@ -257,13 +258,15 @@ func TestRunning(t *testing.T) {
 }
 
 type fakeSupervisor struct {
-	state procd.State
-	err   error
-	names []string
+	state     procd.State
+	err       error
+	names     []string
+	instances []string
 }
 
-func (f *fakeSupervisor) Service(_ context.Context, name string) (procd.State, error) {
+func (f *fakeSupervisor) Service(_ context.Context, name, instance string) (procd.State, error) {
 	f.names = append(f.names, name)
+	f.instances = append(f.instances, instance)
 
 	return f.state, f.err
 }
@@ -275,7 +278,7 @@ func TestLaunch(t *testing.T) {
 		want := procd.Launch{Workdir: "/etc/sing-box", Configs: []string{"/etc/sing-box/config.json"}}
 		supervisor := &fakeSupervisor{state: procd.State{Known: true, Launch: want}}
 
-		client, err := singbox.New(&fakeRunner{}, binary, initScript, "", supervisor)
+		client, err := singbox.New(&fakeRunner{}, binary, initScript, "", "", supervisor)
 		if err != nil {
 			t.Fatalf("сборка клиента: %v", err)
 		}
@@ -295,7 +298,7 @@ func TestLaunch(t *testing.T) {
 	t.Run("отказ procd отдаётся вызывающему", func(t *testing.T) {
 		supervisor := &fakeSupervisor{err: errors.New("ubus не отвечает")}
 
-		client, err := singbox.New(&fakeRunner{}, binary, initScript, "", supervisor)
+		client, err := singbox.New(&fakeRunner{}, binary, initScript, "", "", supervisor)
 		if err != nil {
 			t.Fatalf("сборка клиента: %v", err)
 		}
@@ -318,7 +321,7 @@ func TestLaunch(t *testing.T) {
 func TestPIDReadsSupervisor(t *testing.T) {
 	supervisor := &fakeSupervisor{state: procd.State{Known: true, Running: true, PID: 4242}}
 
-	client, err := singbox.New(&fakeRunner{}, binary, initScript, "", supervisor)
+	client, err := singbox.New(&fakeRunner{}, binary, initScript, "", "", supervisor)
 	if err != nil {
 		t.Fatalf("сборка клиента: %v", err)
 	}
@@ -343,7 +346,7 @@ func TestPIDFails(t *testing.T) {
 	})
 
 	t.Run("procd не ответил", func(t *testing.T) {
-		client, err := singbox.New(&fakeRunner{}, binary, initScript, "", &fakeSupervisor{err: errors.New("ubus молчит")})
+		client, err := singbox.New(&fakeRunner{}, binary, initScript, "", "", &fakeSupervisor{err: errors.New("ubus молчит")})
 		if err != nil {
 			t.Fatalf("сборка клиента: %v", err)
 		}
@@ -357,7 +360,7 @@ func TestPIDFails(t *testing.T) {
 	// здесь не «не поднят», а «не у кого спросить», иначе применение ждало бы
 	// новый процесс до таймаута цикла и откатывалось.
 	t.Run("procd не знает службу", func(t *testing.T) {
-		client, err := singbox.New(&fakeRunner{}, binary, initScript, "", &fakeSupervisor{state: procd.State{}})
+		client, err := singbox.New(&fakeRunner{}, binary, initScript, "", "", &fakeSupervisor{state: procd.State{}})
 		if err != nil {
 			t.Fatalf("сборка клиента: %v", err)
 		}
@@ -366,4 +369,50 @@ func TestPIDFails(t *testing.T) {
 			t.Errorf("получили %v, ожидали ErrUnknownService", err)
 		}
 	})
+}
+
+// Инстанс sing-box задаётся именем: и init-скрипт, и procd спрашиваются о нём, а
+// не о службе целиком, где рядом может жить чужой скрипт.
+func TestStateAsksNamedInstance(t *testing.T) {
+	runner := &fakeRunner{}
+	supervisor := &fakeSupervisor{state: procd.State{Known: true, Running: true, PID: 4242}}
+
+	client, err := singbox.New(runner, binary, "/etc/init.d/homeproxy", "proxy", "", supervisor)
+	if err != nil {
+		t.Fatalf("сборка клиента: %v", err)
+	}
+
+	if _, err := client.State(t.Context()); err != nil {
+		t.Fatalf("состояние сервиса: %v", err)
+	}
+
+	want := []string{"/etc/init.d/homeproxy", "running", "proxy"}
+	if len(runner.calls) != 1 || !slices.Equal(runner.calls[0], want) {
+		t.Errorf("init-скрипт вызван как %q, ожидали %q", runner.calls, want)
+	}
+
+	if !slices.Equal(supervisor.instances, []string{"proxy"}) {
+		t.Errorf("procd спрошен об инстансах %q, ожидали proxy", supervisor.instances)
+	}
+}
+
+// Без имени у службы с несколькими инстансами демон не знает, какой процесс
+// его, и состояние не угадывается по init-скрипту.
+func TestStateFailsOnAmbiguousInstance(t *testing.T) {
+	runner := &fakeRunner{}
+	supervisor := &fakeSupervisor{err: fmt.Errorf("служба homeproxy: %w", procd.ErrAmbiguousInstance)}
+
+	client, err := singbox.New(runner, binary, "/etc/init.d/homeproxy", "", "", supervisor)
+	if err != nil {
+		t.Fatalf("сборка клиента: %v", err)
+	}
+
+	if _, err := client.State(t.Context()); !errors.Is(err, procd.ErrAmbiguousInstance) {
+		t.Errorf("получили %v, ожидали ErrAmbiguousInstance", err)
+	}
+
+	want := []string{"/etc/init.d/homeproxy", "running"}
+	if len(runner.calls) != 1 || !slices.Equal(runner.calls[0], want) {
+		t.Errorf("init-скрипт вызван как %q, ожидали %q", runner.calls, want)
+	}
 }

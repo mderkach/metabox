@@ -14,6 +14,7 @@ import {
   ServiceStateSchema,
   SystemStatSchema,
   APPLY_REASON_CODE,
+  SERVICE_ERROR_CODE,
 } from '../api/Daemon.schema';
 import {
   APPLY_PHASE,
@@ -24,6 +25,7 @@ import {
   type ClashConfigs,
   type DaemonStatus,
   type MemorySample,
+  type ServiceErrorCode,
   type ServiceState,
   type ServiceStatus,
   type SystemStat,
@@ -63,6 +65,11 @@ function toReasonCode(value: string | undefined): ApplyReasonCode | undefined {
   return APPLY_REASON_CODE.find((code) => code === value);
 }
 
+/** Незнакомый код читается как его отсутствие: текст тогда берётся из `lastError`. */
+function toServiceErrorCode(value: string | undefined): ServiceErrorCode | undefined {
+  return SERVICE_ERROR_CODE.find((code) => code === value);
+}
+
 function toTransaction(wire: NonNullable<DaemonStatusWire['transaction']>): ApplyTransaction {
   return {
     id: wire.id,
@@ -97,6 +104,7 @@ function toState(wire: ServiceStateWire): ServiceState {
     binary: wire.binary,
     managed: wire.managed,
     lastError: wire.lastError,
+    lastErrorCode: toServiceErrorCode(wire.lastErrorCode),
   };
 }
 

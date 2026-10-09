@@ -3,12 +3,14 @@ package httpapi_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
 	"metabox/internal/httpapi"
+	"metabox/internal/procd"
 	"metabox/internal/singbox"
 )
 
@@ -55,11 +57,12 @@ func (f *fakeService) act(action string) error {
 }
 
 type serviceBody struct {
-	Status    string `json:"status"`
-	Uptime    int    `json:"uptime"`
-	Binary    string `json:"binary"`
-	Managed   bool   `json:"managed"`
-	LastError string `json:"lastError"`
+	Status        string `json:"status"`
+	Uptime        int    `json:"uptime"`
+	Binary        string `json:"binary"`
+	Managed       bool   `json:"managed"`
+	LastError     string `json:"lastError"`
+	LastErrorCode string `json:"lastErrorCode"`
 }
 
 func newServiceServer(t *testing.T, service httpapi.Service) *httptest.Server {
@@ -82,15 +85,24 @@ func TestServiceState(t *testing.T) {
 		service    *fakeService
 		wantStatus string
 		wantError  bool
+		wantCode   string
 	}{
-		{"сервис поднят", &fakeService{running: true, uptime: 90 * time.Second}, "running", false},
-		{"сервис остановлен", &fakeService{running: false}, "stopped", false},
-		{"сервис упал", &fakeService{running: false, failed: true}, "failed", false},
+		{"сервис поднят", &fakeService{running: true, uptime: 90 * time.Second}, "running", false, ""},
+		{"сервис остановлен", &fakeService{running: false}, "stopped", false, ""},
+		{"сервис упал", &fakeService{running: false, failed: true}, "failed", false, ""},
 		{
 			"состояние не прочитано",
 			&fakeService{runningErr: errors.New("init-скрипт не найден")},
 			"stopped",
 			true,
+			"service_state_unread",
+		},
+		{
+			"инстанс не выбран",
+			&fakeService{runningErr: fmt.Errorf("служба sing-box: %w", procd.ErrAmbiguousInstance)},
+			"stopped",
+			true,
+			"service_instance_ambiguous",
 		},
 	}
 
@@ -125,6 +137,10 @@ func TestServiceState(t *testing.T) {
 
 			if hasError := body.LastError != ""; hasError != tt.wantError {
 				t.Errorf("причина отказа: получили %q, ожидали наличие=%v", body.LastError, tt.wantError)
+			}
+
+			if body.LastErrorCode != tt.wantCode {
+				t.Errorf("код отказа: получили %q, ожидали %q", body.LastErrorCode, tt.wantCode)
 			}
 		})
 	}

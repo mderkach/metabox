@@ -2,14 +2,16 @@ import { renderWithQuery } from '@test/renderWithQuery';
 import { server } from '@test/server';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import i18next from 'i18next';
 import { http, HttpResponse } from 'msw';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { DAEMON_ENDPOINT } from '@entities/Daemon';
 import {
   SERVICE_FAILED_FIXTURE,
   SERVICE_RUNNING_FIXTURE,
   SERVICE_UNMANAGED_FIXTURE,
+  SERVICE_UNREAD_FIXTURE,
 } from '@entities/Daemon/__tests__/Daemon.fixture';
 
 import { DaemonService } from '../ui/DaemonService';
@@ -17,6 +19,10 @@ import { DaemonService } from '../ui/DaemonService';
 function serveService(state: typeof SERVICE_RUNNING_FIXTURE) {
   server.use(http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(state)));
 }
+
+afterEach(async () => {
+  await i18next.changeLanguage('ru');
+});
 
 describe('состояние сервиса', () => {
   it('показывает работающий сервис и предлагает перезапуск', async () => {
@@ -51,6 +57,36 @@ describe('состояние сервиса', () => {
     expect(screen.getByText(/provider sub-nl not found/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Запустить' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Остановить' })).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ['ru', 'procd не ответил демону: состояние службы неизвестно'],
+    ['en', 'procd did not answer the daemon: the service state is unknown'],
+  ])('отказ чтения состояния переводит по коду (%s), текст демона — подробностью', async (language, title) => {
+    await i18next.changeLanguage(language);
+    serveService(SERVICE_UNREAD_FIXTURE);
+
+    renderWithQuery(<DaemonService heap={0} />);
+
+    expect(await screen.findByText(title)).toBeInTheDocument();
+    expect(screen.getByText('состояние сервиса не прочитано')).toBeInTheDocument();
+  });
+
+  it.each([
+    ['ru', 'У службы несколько инстансов procd: укажите инстанс sing-box в настройках демона'],
+    ['en', 'The service has several procd instances: name the sing-box instance in the daemon settings'],
+  ])('неоднозначный инстанс переводит по коду (%s)', async (language, title) => {
+    await i18next.changeLanguage(language);
+    serveService({
+      ...SERVICE_UNREAD_FIXTURE,
+      lastError: 'служба sing-box: у службы несколько инстансов, а имя инстанса не задано',
+      lastErrorCode: 'service_instance_ambiguous',
+    });
+
+    renderWithQuery(<DaemonService heap={0} />);
+
+    expect(await screen.findByText(title)).toBeInTheDocument();
+    expect(screen.getByText(/имя инстанса не задано/)).toBeInTheDocument();
   });
 
   it('шлёт команду сервису и показывает новое состояние из ответа', async () => {

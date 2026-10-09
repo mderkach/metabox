@@ -46,6 +46,9 @@ type Client struct {
 	runner     Runner
 	binary     string
 	initScript string
+	// instance — инстанс procd, в котором служба держит sing-box. Пустой —
+	// единственный инстанс службы.
+	instance string
 	// logread — утилита логгера устройства; пустая означает «причину падения
 	// брать неоткуда», и состояние службы сводится к факту отказа.
 	logread string
@@ -56,7 +59,7 @@ type Client struct {
 // тот файл или не разрешится вовсе.
 // New собирает клиента. supervisor необязателен: без него состояние сводится
 // к коду возврата init-скрипта, панель продолжает работать.
-func New(runner Runner, binary, initScript, logread string, supervisor Supervisor) (*Client, error) {
+func New(runner Runner, binary, initScript, instance, logread string, supervisor Supervisor) (*Client, error) {
 	for _, path := range []string{binary, initScript} {
 		if !filepath.IsAbs(path) {
 			return nil, fmt.Errorf("путь %q не абсолютный", path)
@@ -72,6 +75,7 @@ func New(runner Runner, binary, initScript, logread string, supervisor Superviso
 		supervisor: supervisor,
 		binary:     binary,
 		initScript: initScript,
+		instance:   instance,
 		logread:    logread,
 	}, nil
 }
@@ -199,8 +203,8 @@ func (c *Client) service(ctx context.Context, action string) error {
 // State — состояние сервиса для панели.
 type State struct {
 	Running bool
-	// LastError — чем процесс объяснил своё падение в логе устройства. Пусто,
-	// когда объяснения нет: логгер недоступен или сервис в нём не отметился.
+	// LastError — чем процесс объяснил своё падение в логе устройства, а без
+	// него — в файле log.output. Пусто, когда объяснения нет ни там, ни там.
 	LastError string
 	// Failed означает, что procd службу знает, но ни один инстанс не поднят:
 	// её запускали и она отвалилась. Просто остановленную службу procd не
@@ -213,13 +217,13 @@ type State struct {
 // Supervisor отдаёт то, что знает о службе менеджер процессов. Интерфейс
 // объявлен здесь, у потребителя.
 type Supervisor interface {
-	Service(ctx context.Context, name string) (procd.State, error)
+	Service(ctx context.Context, name, instance string) (procd.State, error)
 }
 
 // Running отвечает, поднят ли сервис. Ненулевой код возврата означает «не
 // запущен», а не отказ: панель обязана работать при лежащем сервисе.
 func (c *Client) Running(ctx context.Context) (bool, error) {
-	res, err := c.runner.Run(ctx, c.initScript, "running")
+	res, err := c.running(ctx)
 	if err != nil {
 		return false, fmt.Errorf("состояние сервиса: %w", err)
 	}
@@ -243,7 +247,7 @@ func (c *Client) PID(ctx context.Context) (int, error) {
 		return 0, ErrNoSupervisor
 	}
 
-	state, err := c.supervisor.Service(ctx, c.serviceName())
+	state, err := c.supervisor.Service(ctx, c.serviceName(), c.instance)
 	if err != nil {
 		return 0, fmt.Errorf("pid службы: %w", err)
 	}
@@ -259,7 +263,7 @@ func (c *Client) PID(ctx context.Context) (int, error) {
 // код возврата, поэтому возраст и признак падения берутся у менеджера
 // процессов; его отсутствие ответ не ломает.
 func (c *Client) State(ctx context.Context) (State, error) {
-	running, err := c.runner.Run(ctx, c.initScript, "running")
+	running, err := c.running(ctx)
 	if err != nil {
 		return State{}, fmt.Errorf("состояние сервиса: %w", err)
 	}
@@ -270,7 +274,13 @@ func (c *Client) State(ctx context.Context) (State, error) {
 		return state, nil
 	}
 
-	supervised, err := c.supervisor.Service(ctx, c.serviceName())
+	supervised, err := c.supervisor.Service(ctx, c.serviceName(), c.instance)
+	if errors.Is(err, procd.ErrAmbiguousInstance) {
+		// Остальные отказы procd состояние только обедняют, а этот означает,
+		// что демон не знает, какой процесс его: угадывать нельзя.
+		return State{}, fmt.Errorf("состояние сервиса: %w", err)
+	}
+
 	if err != nil {
 		return state, nil
 	}
@@ -284,7 +294,7 @@ func (c *Client) State(ctx context.Context) (State, error) {
 	state.Failed = supervised.Known
 
 	if state.Failed {
-		state.LastError = c.failure(ctx)
+		state.LastError = c.failure(ctx, supervised.Launch)
 	}
 
 	return state, nil
@@ -298,12 +308,23 @@ func (c *Client) Launch(ctx context.Context) (procd.Launch, error) {
 		return procd.Launch{}, nil
 	}
 
-	state, err := c.supervisor.Service(ctx, c.serviceName())
+	state, err := c.supervisor.Service(ctx, c.serviceName(), c.instance)
 	if err != nil {
 		return procd.Launch{}, err
 	}
 
 	return state.Launch, nil
+}
+
+// running спрашивает init-скрипт, поднят ли инстанс sing-box. Без имени
+// инстанса rc.common отвечает за службу, а у неё могут быть и другие инстансы.
+func (c *Client) running(ctx context.Context) (Result, error) {
+	args := []string{"running"}
+	if c.instance != "" {
+		args = append(args, c.instance)
+	}
+
+	return c.runner.Run(ctx, c.initScript, args...)
 }
 
 // serviceName выводит имя службы в procd из пути init-скрипта: procd

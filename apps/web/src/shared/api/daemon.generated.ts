@@ -27,6 +27,11 @@ export const APPLY_REASON_CODE = [
   'no_backup',
 ] as const
 
+export const SERVICE_ERROR_CODE = [
+  'service_state_unread',
+  'service_instance_ambiguous',
+] as const
+
 export const ERROR_CODE = [
   'not_found',
   'origin_mismatch',
@@ -162,6 +167,8 @@ export const ServiceSchema = z.object({
   /** Managed означает, что процессом владеет служба, которой управляет демон. Ложь при статусе `running` читается так: sing-box на устройстве работает, но поднят не ею — маршрутизацией владеет чужой пакет, и кнопки службы к этому процессу не относятся. */
   managed: z.boolean(),
   lastError: z.string().optional(),
+  /** LastErrorCode — почему LastError написал демон, а не служба. Пусто, когда в LastError вывод упавшей службы: его панель показывает дословно. */
+  lastErrorCode: z.string().optional(),
 })
 
 /** Point — средняя скорость за шаг, байт в секунду. */

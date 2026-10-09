@@ -9,7 +9,12 @@ import {
   toTrafficFrame,
 } from '../model/Daemon.adapter';
 import { APPLY_PHASE, SERVICE_STATUS } from '../model/Daemon.model';
-import { CLASH_CONFIGS_FIXTURE, DAEMON_STATUS_FIXTURE, SERVICE_RUNNING_FIXTURE } from './Daemon.fixture';
+import {
+  CLASH_CONFIGS_FIXTURE,
+  DAEMON_STATUS_FIXTURE,
+  SERVICE_RUNNING_FIXTURE,
+  SERVICE_UNREAD_FIXTURE,
+} from './Daemon.fixture';
 
 describe('toDaemonStatus', () => {
   it('переводит ответ демона в модель', () => {
@@ -46,6 +51,20 @@ describe('toServiceState', () => {
     const state = toServiceState({ ...SERVICE_RUNNING_FIXTURE, status: 'zombie' });
 
     expect(state.status).toBe(SERVICE_STATUS.Failed);
+  });
+
+  it('переносит код отказа чтения вместе с текстом демона', () => {
+    const state = toServiceState(SERVICE_UNREAD_FIXTURE);
+
+    expect(state.lastErrorCode).toBe('service_state_unread');
+    expect(state.lastError).toBe(SERVICE_UNREAD_FIXTURE.lastError);
+  });
+
+  it('незнакомый код отбрасывает, текст демона оставляет', () => {
+    const state = toServiceState({ ...SERVICE_UNREAD_FIXTURE, lastErrorCode: 'procd_gone' });
+
+    expect(state.lastErrorCode).toBeUndefined();
+    expect(state.lastError).toBe(SERVICE_UNREAD_FIXTURE.lastError);
   });
 });
 

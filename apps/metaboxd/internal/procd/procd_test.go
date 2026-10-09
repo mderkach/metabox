@@ -3,6 +3,7 @@ package procd
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -40,7 +41,7 @@ func TestServiceReadsState(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			client := New(runnerWith(listOutput, 0, nil), "/bin/ubus")
 
-			got, err := client.Service(t.Context(), tt.service)
+			got, err := client.Service(t.Context(), tt.service, "")
 			if err != nil {
 				t.Fatalf("опрос службы: %v", err)
 			}
@@ -60,6 +61,88 @@ func TestServiceReadsState(t *testing.T) {
 	}
 }
 
+// У homeproxy рядом с sing-box живёт скрипт чистки логов: состояние и pid
+// берутся только у инстанса с заданным именем.
+func TestServiceSelectsInstance(t *testing.T) {
+	const twoInstances = `{"homeproxy": {"instances": {
+		"proxy": {"running": %s, "pid": %d, "command": ["/usr/bin/sing-box", "run", "-c", "/var/run/homeproxy/proxy.json"]},
+		"log-cleaner": {"running": true, "pid": 7001, "command": ["/etc/homeproxy/scripts/clean_log.sh"]}
+	}}}`
+
+	tests := []struct {
+		name        string
+		list        string
+		service     string
+		instance    string
+		wantKnown   bool
+		wantRunning bool
+		wantPID     int
+		wantConfigs []string
+	}{
+		{
+			"инстанс sing-box упал, соседний жив",
+			fmt.Sprintf(twoInstances, "false", 0), "homeproxy", "proxy",
+			true, false, 0, []string{"/var/run/homeproxy/proxy.json"},
+		},
+		{
+			"инстанс sing-box поднят",
+			fmt.Sprintf(twoInstances, "true", 5810), "homeproxy", "proxy",
+			true, true, 5810, []string{"/var/run/homeproxy/proxy.json"},
+		},
+		{
+			"инстанса с таким именем нет",
+			fmt.Sprintf(twoInstances, "true", 5810), "homeproxy", "sing-box",
+			false, false, 0, nil,
+		},
+		{
+			"имя не задано, инстанс один",
+			`{"sing-box": {"instances": {"instance1": {"running": true, "pid": 4242, "command": ["/usr/bin/sing-box", "run", "-c", "/etc/sing-box/config.json"]}}}}`, "sing-box", "",
+			true, true, 4242, []string{"/etc/sing-box/config.json"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client := New(runnerWith(tt.list, 0, nil), "/bin/ubus")
+			client.procDir = t.TempDir()
+
+			got, err := client.Service(t.Context(), tt.service, tt.instance)
+			if err != nil {
+				t.Fatalf("опрос службы: %v", err)
+			}
+
+			if got.Known != tt.wantKnown || got.Running != tt.wantRunning || got.PID != tt.wantPID {
+				t.Errorf("известна %v, работает %v, pid %d; ожидали %v, %v, %d",
+					got.Known, got.Running, got.PID, tt.wantKnown, tt.wantRunning, tt.wantPID)
+			}
+
+			if !slices.Equal(got.Configs, tt.wantConfigs) {
+				t.Errorf("конфиги %q, ожидали %q", got.Configs, tt.wantConfigs)
+			}
+		})
+	}
+}
+
+// Без имени инстанса у службы с несколькими инстансами выбирать не из чего:
+// первый живой мог бы оказаться соседним скриптом.
+func TestServiceRejectsAmbiguousInstance(t *testing.T) {
+	list := `{"homeproxy": {"instances": {
+		"proxy": {"running": false, "pid": 0},
+		"log-cleaner": {"running": true, "pid": 7001}
+	}}}`
+
+	client := New(runnerWith(list, 0, nil), "/bin/ubus")
+
+	got, err := client.Service(t.Context(), "homeproxy", "")
+	if !errors.Is(err, ErrAmbiguousInstance) {
+		t.Fatalf("получили %v, ожидали ErrAmbiguousInstance", err)
+	}
+
+	if got.PID != 0 || got.Running {
+		t.Errorf("при отказе отдано состояние %+v", got)
+	}
+}
+
 func TestServiceReportsFailures(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -74,7 +157,7 @@ func TestServiceReportsFailures(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			client := New(tt.runner, "/bin/ubus")
 
-			if _, err := client.Service(t.Context(), "homeproxy"); err == nil {
+			if _, err := client.Service(t.Context(), "homeproxy", ""); err == nil {
 				t.Error("отказ не сообщён")
 			}
 		})
@@ -99,7 +182,7 @@ func TestUptimeFromProc(t *testing.T) {
 	client := New(runnerWith(procList(pid), 0, nil), "/bin/ubus")
 	client.procDir = dir
 
-	got, err := client.Service(t.Context(), "homeproxy")
+	got, err := client.Service(t.Context(), "homeproxy", "")
 	if err != nil {
 		t.Fatalf("опрос службы: %v", err)
 	}
@@ -116,7 +199,7 @@ func TestUptimeUnavailable(t *testing.T) {
 	client := New(runnerWith(procList(4242), 0, nil), "/bin/ubus")
 	client.procDir = filepath.Join(t.TempDir(), "нет-такого")
 
-	got, err := client.Service(t.Context(), "homeproxy")
+	got, err := client.Service(t.Context(), "homeproxy", "")
 	if err != nil {
 		t.Fatalf("опрос службы: %v", err)
 	}
@@ -206,7 +289,7 @@ func TestServiceReadsWorkdir(t *testing.T) {
 			client := New(runnerWith(tt.list, 0, nil), "/bin/ubus")
 			client.procDir = t.TempDir()
 
-			got, err := client.Service(t.Context(), "sing-box")
+			got, err := client.Service(t.Context(), "sing-box", "")
 			if err != nil {
 				t.Fatalf("опрос службы: %v", err)
 			}
@@ -285,7 +368,7 @@ func TestServiceReadsConfigFlags(t *testing.T) {
 			client := New(runnerWith(list, 0, nil), "/bin/ubus")
 			client.procDir = t.TempDir()
 
-			got, err := client.Service(t.Context(), "sing-box")
+			got, err := client.Service(t.Context(), "sing-box", "")
 			if err != nil {
 				t.Fatalf("опрос службы: %v", err)
 			}
@@ -319,7 +402,7 @@ func TestServiceReadsWorkdirFromProc(t *testing.T) {
 	client := New(runnerWith(list, 0, nil), "/bin/ubus")
 	client.procDir = dir
 
-	got, err := client.Service(t.Context(), "sing-box")
+	got, err := client.Service(t.Context(), "sing-box", "")
 	if err != nil {
 		t.Fatalf("опрос службы: %v", err)
 	}

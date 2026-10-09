@@ -53,3 +53,11 @@ linters:
       - path: internal/device/
         text: 'G304|G115'
         linters: [gosec]
+
+      # G304, G703: файл лога назван в log.output конфига, и лежать он может где
+      # угодно — /var/run, /tmp, — поэтому os.Root его не удержит. Пишет туда
+      # сам sing-box от root, а в причину падения из файла идут только строки
+      # уровней FATAL, ERROR и PANIC с потолком по длине.
+      - path: internal/singbox/failure\.go
+        text: 'G304|G703'
+        linters: [gosec]

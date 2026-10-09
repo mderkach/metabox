@@ -21,6 +21,10 @@
   },
   "unread": "The service state was not read",
   "crashed": "The service did not start",
+  "reason": {
+    "service_state_unread": "procd did not answer the daemon: the service state is unknown",
+    "service_instance_ambiguous": "The service has several procd instances: name the sing-box instance in the daemon settings"
+  },
   "stop": {
     "title": "Stop sing-box?",
     "description": "Routing will stop: devices on the network lose internet access until sing-box is started again.",

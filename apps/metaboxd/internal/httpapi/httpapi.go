@@ -21,6 +21,7 @@ import (
 	"metabox/internal/config"
 	"metabox/internal/contract"
 	"metabox/internal/history"
+	"metabox/internal/procd"
 	"metabox/internal/route"
 	"metabox/internal/ruleset"
 	"metabox/internal/singbox"
@@ -609,6 +610,12 @@ func ServiceState(state singbox.State, binary string, err error, observed bool) 
 
 	if err != nil {
 		body.LastError = "состояние сервиса не прочитано"
+		body.LastErrorCode = contract.ServiceStateUnread
+
+		if errors.Is(err, procd.ErrAmbiguousInstance) {
+			body.LastError = err.Error()
+			body.LastErrorCode = contract.ServiceInstanceAmbiguous
+		}
 
 		return body
 	}

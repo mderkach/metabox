@@ -1,6 +1,7 @@
 # Настройки демона панели. Значения по умолчанию рассчитаны на пакетную
 # установку sing-box; на роутере с re:HomeProxy конфигом владеет он, и пути
-# надо указать его: /etc/homeproxy, proxy.json, /etc/init.d/homeproxy.
+# надо указать его: /etc/homeproxy, proxy.json, /etc/init.d/homeproxy и
+# инстанс proxy.
 
 config metabox 'main'
 	option enabled '1'
@@ -15,6 +16,9 @@ config metabox 'main'
 	option state_dir '/etc/metabox'
 	option singbox '/usr/bin/sing-box'
 	option init_script '/etc/init.d/sing-box'
+	# Инстанс procd с sing-box. Пустой подходит службе с одним инстансом; у
+	# службы с несколькими состояние без него не читается.
+	option service_instance ''
 	option ubus '/bin/ubus'
 	option clash_port '9090'
 	option log_level 'info'

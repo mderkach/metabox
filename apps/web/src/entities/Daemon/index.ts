@@ -25,6 +25,7 @@ export type {
   DaemonStatus,
   MemorySample,
   ServiceAction,
+  ServiceErrorCode,
   ServiceState,
   ServiceStatus,
   SystemLoad,

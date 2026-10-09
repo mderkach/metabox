@@ -33,7 +33,7 @@ start_service() {
 
 	local enabled listen_addr listen_port listen_interface listen
 	local config_dir config_name state_dir
-	local singbox init_script ubus clash_port log_level
+	local singbox init_script service_instance ubus clash_port log_level
 
 	config_get_bool enabled main enabled 1
 	[ "$enabled" -eq 1 ] || return 0
@@ -46,6 +46,7 @@ start_service() {
 	config_get state_dir main state_dir /etc/metabox
 	config_get singbox main singbox /usr/bin/sing-box
 	config_get init_script main init_script /etc/init.d/sing-box
+	config_get service_instance main service_instance ""
 	config_get ubus main ubus /bin/ubus
 	config_get clash_port main clash_port 9090
 	config_get log_level main log_level info
@@ -72,6 +73,7 @@ start_service() {
 		-state-dir "$state_dir" \
 		-singbox "$singbox" \
 		-init-script "$init_script" \
+		-service-instance "$service_instance" \
 		-ubus "$ubus" \
 		-clash-port "$clash_port" \
 		-log-level "$log_level"

@@ -78,6 +78,7 @@ type settings struct {
 	serviceDir    string
 	binary        string
 	initScript    string
+	instance      string
 	ubus          string
 	logread       string
 	clashPort     int
@@ -100,6 +101,8 @@ func main() {
 		"служебный каталог демона под бэкап и состояние транзакции; вне каталога конфига")
 	flag.StringVar(&s.binary, "singbox", "/usr/bin/sing-box", "путь к бинарю sing-box")
 	flag.StringVar(&s.initScript, "init-script", "/etc/init.d/sing-box", "путь к init-скрипту сервиса")
+	flag.StringVar(&s.instance, "service-instance", "",
+		"инстанс procd, в котором служба init-скрипта держит sing-box; пустой — единственный инстанс службы")
 	flag.StringVar(&s.ubus, "ubus", "/bin/ubus", "путь к ubus: через него читается состояние службы у procd")
 	flag.StringVar(&s.logread, "logread", "/sbin/logread",
 		"путь к logread: из него берётся причина падения sing-box; пустой отключает чтение")
@@ -412,7 +415,7 @@ func build(log *slog.Logger, s settings) (*apply.Manager, *config.Store, *singbo
 
 	exec := singbox.NewExec(binaryTimeout)
 
-	service, err := singbox.New(exec, s.binary, s.initScript, s.logread, procd.New(runCommand(exec), s.ubus))
+	service, err := singbox.New(exec, s.binary, s.initScript, s.instance, s.logread, procd.New(runCommand(exec), s.ubus))
 	if err != nil {
 		return nil, nil, nil, err
 	}

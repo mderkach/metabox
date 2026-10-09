@@ -241,3 +241,30 @@ func TestReadMissingSection(t *testing.T) {
 		t.Errorf("получили %+v, ожидали пустые значения", got)
 	}
 }
+
+func TestLogOutput(t *testing.T) {
+	tests := []struct {
+		name   string
+		config string
+		want   string
+	}{
+		{"файл", `{"log": {"output": "/var/run/sing-box.log"}}`, "/var/run/sing-box.log"},
+		{"файл в конфиге с комментарием", "{\n// лог\n\"log\": {\"output\": \"box.log\",},}", "box.log"},
+		{"поток stderr", `{"log": {"output": "stderr"}}`, ""},
+		{"поток stdout", `{"log": {"output": "stdout"}}`, ""},
+		{"лог выключен", `{"log": {"disabled": true, "output": "/var/run/sing-box.log"}}`, ""},
+		{"секции нет", `{}`, ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := clashapi.LogOutput([]byte(tt.config))
+			if err != nil {
+				t.Fatalf("чтение: %v", err)
+			}
+			if got != tt.want {
+				t.Errorf("получили %q, ожидали %q", got, tt.want)
+			}
+		})
+	}
+}
