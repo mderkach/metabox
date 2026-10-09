@@ -134,6 +134,42 @@ describe('экран прокси', () => {
     expect(dates[0]).toHaveAttribute('dateTime', CLASH_PROVIDERS_FIXTURE.providers['sub-eu'].updatedAt);
   });
 
+  it('обновляет подписку по кнопке и держит кнопку занятой, пока идёт запрос', async () => {
+    const updated = vi.fn<() => void>();
+    let release = () => {};
+    const answered = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    serveProxies();
+    server.use(
+      http.put(PROXY_ENDPOINT.provider('sub-eu'), async () => {
+        updated();
+        await answered;
+
+        return new HttpResponse(null, { status: 204 });
+      })
+    );
+
+    const user = userEvent.setup();
+
+    renderWithQuery(<ProxiesPage />);
+
+    await user.click(await screen.findByRole('button', { name: 'Обновить подписку sub-eu' }));
+
+    await waitFor(() => {
+      expect(updated).toHaveBeenCalledTimes(1);
+    });
+    expect(screen.getByRole('button', { name: 'Обновить подписку sub-eu' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Обновить подписку sub-nl' })).toBeEnabled();
+
+    release();
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Обновить подписку sub-eu' })).toBeEnabled();
+    });
+  });
+
   // В фикстуре группа us вложена в us-fallback: проверяется её плитка.
   it('плитка вложенной группы переводит тип, а не показывает его строкой Clash API', async () => {
     serveProxies();

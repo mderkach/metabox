@@ -6,7 +6,10 @@
     "action": "Проверить все"
   },
   "providers": {
-    "title": "Подписки"
+    "title": "Подписки",
+    "update": "Обновить",
+    "updating": "Обновляю…",
+    "updateLabel": "Обновить подписку {{name}}"
   },
   "announce": {
     "selected": "Группа {{group}}: выбран узел {{node}}",

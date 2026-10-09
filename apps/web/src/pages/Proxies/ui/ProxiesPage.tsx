@@ -9,6 +9,7 @@ import { PageHeader } from '@widgets/PageHeader';
 import { ProxyGroups } from '@widgets/ProxyGroups';
 
 import { ProxiesSection } from './ProxiesSection';
+import { ProxyProviderUpdate } from './ProxyProviderUpdate';
 import { ProxyTestAll } from './ProxyTestAll';
 
 export function ProxiesPage() {
@@ -78,6 +79,7 @@ export function ProxiesPage() {
                     <time dateTime={provider.updatedAt} className='text-xs text-muted-foreground tabular-nums'>
                       {toProviderDate(provider.updatedAt)}
                     </time>
+                    <ProxyProviderUpdate name={provider.name} />
                   </li>
                 ))}
               </ul>

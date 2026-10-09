@@ -32,6 +32,7 @@ function readOnlyHandlers() {
   return [
     http.get(PROXY_ENDPOINT.providers(), () => HttpResponse.json(CLASH_PROVIDERS_FIXTURE)),
     http.get(PROXY_ENDPOINT.proxyDelay(NODE_PATTERN), () => HttpResponse.json(CLASH_DELAY_FIXTURE)),
+    http.put(PROXY_ENDPOINT.provider(NODE_PATTERN), () => new HttpResponse(null, { status: 204 })),
   ];
 }
 

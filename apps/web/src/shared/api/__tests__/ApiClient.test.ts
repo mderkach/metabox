@@ -8,6 +8,7 @@ const OK = 200;
 const NOT_FOUND = 404;
 const UNPROCESSABLE = 422;
 const BAD_GATEWAY = 502;
+const SERVICE_UNAVAILABLE = 503;
 
 const SUCCESS_MIN = 200;
 const SUCCESS_MAX = 300;
@@ -124,6 +125,16 @@ describe('ApiClient', () => {
 
     expect(error.kind).toBe(API_FAILURE.Response);
     expect(error.code).toBe('runtime_unavailable');
+  });
+
+  it('отказ ядра без кода считает ответом и сохраняет его сообщение', async () => {
+    const client = clientAnswering(SERVICE_UNAVAILABLE, { message: 'fetch subscription: 403' });
+
+    const error = asApiError(await client.put('/api/clash/providers/proxies/sub').catch((cause: unknown) => cause));
+
+    expect(error.kind).toBe(API_FAILURE.Response);
+    expect(error.code).toBeNull();
+    expect(error.message).toBe('fetch subscription: 403');
   });
 
   it('не падает на теле, которое не разбирается как отказ демона', async () => {

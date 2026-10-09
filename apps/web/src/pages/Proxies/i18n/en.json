@@ -6,7 +6,10 @@
     "action": "Test all"
   },
   "providers": {
-    "title": "Subscriptions"
+    "title": "Subscriptions",
+    "update": "Update",
+    "updating": "Updating…",
+    "updateLabel": "Update subscription {{name}}"
   },
   "announce": {
     "selected": "Group {{group}}: node {{node}} selected",

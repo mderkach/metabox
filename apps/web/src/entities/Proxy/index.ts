@@ -1,5 +1,5 @@
 export { PROXY_ENDPOINT } from './api/Proxy.endpoints';
-export { getProxies, getProxyProviders, selectProxy, testProxyDelay } from './api/Proxy.api';
+export { getProxies, getProxyProviders, selectProxy, testProxyDelay, updateProxyProvider } from './api/Proxy.api';
 export {
   getProxiesOptions,
   getProxyProvidersOptions,

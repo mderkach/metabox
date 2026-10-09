@@ -24,6 +24,14 @@ export async function getProxyProviders(config?: AxiosRequestConfig): Promise<Cl
 }
 
 /**
+ * Перечитать подписку сейчас, не дожидаясь её интервала. Подписка без
+ * источника для обновления (файл, inline) отвечает успехом и не меняется.
+ */
+export async function updateProxyProvider(name: string, config?: AxiosRequestConfig): Promise<void> {
+  await ApiClientInstance.put<void>(PROXY_ENDPOINT.provider(name), undefined, config);
+}
+
+/**
  * Выбор узла в группе-селекторе. Конфиг при этом не меняется: выбор живёт в
  * рантайме sing-box и переживает только до перезапуска сервиса.
  */

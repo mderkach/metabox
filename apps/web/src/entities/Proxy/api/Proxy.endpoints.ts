@@ -4,4 +4,5 @@ export const PROXY_ENDPOINT = {
   proxy: (name: string) => `/api/clash/proxies/${encodeURIComponent(name)}`,
   proxyDelay: (name: string) => `/api/clash/proxies/${encodeURIComponent(name)}/delay`,
   providers: () => '/api/clash/providers/proxies',
+  provider: (name: string) => `/api/clash/providers/proxies/${encodeURIComponent(name)}`,
 } as const;

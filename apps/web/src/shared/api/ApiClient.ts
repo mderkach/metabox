@@ -1,5 +1,6 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse } from 'axios';
 import i18next from 'i18next';
+import { z } from 'zod';
 
 import { API_FAILURE, ApiError } from './ApiError';
 import { TIMEOUT } from './cacheTime';
@@ -14,6 +15,13 @@ const GATEWAY_STATUS = new Set([BAD_GATEWAY, SERVICE_UNAVAILABLE, GATEWAY_TIMEOU
 
 /** Тело отказа демона приходит из его контракта. */
 const ApiErrorBodySchema = ErrorSchema;
+
+/**
+ * Отказ Clash API, который демон проксирует дословно: кода у него нет. Ядро
+ * ставит ему и 503 — подписка не обновилась, — и без разбора тела такой ответ
+ * читался бы молчанием демона, а тост о нём гасился бы.
+ */
+const ClashErrorBodySchema = z.object({ message: z.string() });
 
 /**
  * Тело отказа приходит строкой, когда запрос просил сырой текст: без разбора
@@ -43,6 +51,12 @@ function fromResponse(response: AxiosResponse<unknown>): ApiError {
       code: body.data.code,
       details: body.data.details,
     });
+  }
+
+  const clashBody = ClashErrorBodySchema.safeParse(asErrorBody(response.data));
+
+  if (clashBody.success) {
+    return new ApiError(API_FAILURE.Response, clashBody.data.message, { status: response.status });
   }
 
   if (GATEWAY_STATUS.has(response.status)) {
