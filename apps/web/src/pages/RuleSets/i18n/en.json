@@ -14,5 +14,8 @@
   "custom": {
     "open": "Own list",
     "title": "Own list of domains and addresses"
+  },
+  "edit": {
+    "title": "Rule set {{tag}}"
   }
 }

@@ -46,6 +46,10 @@ function DnsRulesSection() {
   return <SectionNodes section='dnsRules' />;
 }
 
+function DnsSection() {
+  return <SectionNodes section='dns' />;
+}
+
 function NtpSection() {
   return <SectionNodes section='ntp' />;
 }
@@ -193,6 +197,40 @@ describe('экран секции', () => {
     expect(findValue(draft, ['dns', 'rules', 0])).toEqual({ domain: ['a.example'], server: 'local' });
     expect(findValue(draft, ['dns', 'servers'])).toEqual([{ type: 'local', tag: 'local' }]);
     expect(draft).toContain('// серверы');
+  });
+
+  it('скаляры dns правятся формой над серверами: одна строка, серверы и комментарий целы', async () => {
+    const text = `{
+  "dns": {
+    // серверы
+    "servers": [{ "type": "local", "tag": "local" }],
+    "final": "local",
+  },
+}`;
+    const user = userEvent.setup();
+
+    serveConfig(text);
+    renderWithRouter(DnsSection);
+
+    const settings = within(await screen.findByRole('region', { name: 'Параметры DNS' }));
+
+    expect(screen.getByRole('region', { name: 'local' })).toBeInTheDocument();
+
+    await user.click(settings.getByRole('button', { name: 'Параметры DNS' }));
+    await user.clear(settings.getByRole('textbox', { name: 'final' }));
+    await user.type(settings.getByRole('textbox', { name: 'final' }), 'remote');
+    await user.click(settings.getByRole('button', { name: 'Сохранить в черновик' }));
+
+    await waitFor(() => {
+      expect(findValue(draft(), ['dns', 'final'])).toBe('remote');
+    });
+    expect(
+      draft()
+        .split('\n')
+        .filter((line, index) => line !== text.split('\n')[index])
+    ).toEqual(['    "final": "remote",']);
+    expect(draft()).toContain('// серверы');
+    expect(findValue(draft(), ['dns', 'servers', 0, 'tag'])).toBe('local');
   });
 
   it('узел без тега и типа назван путём в файле, а не именем вкладки', async () => {

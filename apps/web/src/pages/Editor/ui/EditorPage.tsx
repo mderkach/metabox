@@ -3,7 +3,7 @@ import { CircleAlert, Search, X } from 'lucide-react';
 import { useCallback, useState, ViewTransition, type ReactNode } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
-import type { ConfigIssue } from '@entities/Config';
+import { CONFIG_SECTION, type ConfigIssue } from '@entities/Config';
 import { isRuleRecognized } from '@entities/Rule';
 import { RuleAddButton } from '@features/Rule/RuleAdd';
 import { RuleDeleteButton } from '@features/Rule/RuleDelete';
@@ -31,6 +31,7 @@ import {
   SURFACE,
   SkeletonRows,
 } from '@shared/ui';
+import { ConfigSectionSettings } from '@widgets/Config/ConfigSectionSettings';
 import { RulePanel, RulePanelSheet } from '@widgets/Rule/RulePanel';
 import { RuleTable } from '@widgets/Rule/RuleTable';
 
@@ -95,6 +96,8 @@ export function EditorPage() {
       {editor.source.isLoadingError && <QueryFailure messageKey='source.config' query={editor.source} />}
 
       {editor.issues.length > 0 && <ConfigNotParsed issues={editor.issues} />}
+
+      <ConfigSectionSettings section={CONFIG_SECTION.Route} />
 
       {editor.source.isSuccess && editor.rules.length === 0 && editor.issues.length === 0 && <NoRules add={add} />}
 

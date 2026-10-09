@@ -7,6 +7,7 @@ import { localListFile } from '@entities/RuleSet';
 import { ConfigCacheNotice } from '@features/Config/ConfigCacheFile';
 import { RuleSetAddForm } from '@features/RuleSet/RuleSetAdd';
 import { RuleSetCustomForm } from '@features/RuleSet/RuleSetCustom';
+import { RuleSetEditForm } from '@features/RuleSet/RuleSetEdit';
 import { usePanelAsSheet } from '@shared/lib/media';
 import {
   Button,
@@ -29,7 +30,9 @@ import {
   useRuleSetEditor,
   useRuleSetFilter,
   useRuleSetPanel,
+  type RuleSetEditorState,
   type RuleSetFilterState,
+  type RuleSetForm,
 } from '../lib/RuleSets.lib';
 
 /**
@@ -49,8 +52,12 @@ export function RuleSetsPage() {
   const panel = useRuleSetPanel();
   const asSheet = usePanelAsSheet();
 
+  const { form: openForm, close: closePanel } = panel;
   const onRemove = useCallback(
     (index: number) => {
+      // Правка адресует сет позицией: после удаления она указала бы на соседа.
+      if (openForm === RULE_SET_FORM.Edit) closePanel();
+
       // Файл своего списка уезжает вместе с узлом: осиротевший файл не виден
       // в конфиге, но остаётся на устройстве.
       const file = localListFile(readRuleSets(ConfigDocumentState.getState().current() ?? '')[index]);
@@ -59,7 +66,7 @@ export function RuleSetsPage() {
 
       if (file !== null) removeList(file);
     },
-    [remove, removeList]
+    [remove, removeList, openForm, closePanel]
   );
 
   // Каталог нужен подсказкам и подписям источника, но не самому списку: без
@@ -68,18 +75,15 @@ export function RuleSetsPage() {
   const loaded = editor.source.isSuccess && catalogSettled;
   const pending = editor.source.isPending || (editor.source.isSuccess && !catalogSettled);
   const listed = loaded && editor.sets.length > 0;
-  const panelTitle = panel.shown === RULE_SET_FORM.Catalog ? t('add.title') : t('custom.title');
-  const panelForm =
-    panel.shown === RULE_SET_FORM.Catalog ? (
-      <RuleSetAddForm
-        catalog={editor.catalog}
-        takenTags={editor.takenTags}
-        outbounds={editor.outbounds}
-        onDone={panel.close}
-      />
-    ) : (
-      <RuleSetCustomForm takenTags={editor.takenTags} onDone={panel.close} />
-    );
+  const editedTag = editor.sets.find((set) => set.index === panel.editing)?.tag ?? '';
+  const panelTitle = {
+    [RULE_SET_FORM.Catalog]: t('add.title'),
+    [RULE_SET_FORM.Custom]: t('custom.title'),
+    [RULE_SET_FORM.Edit]: t('edit.title', { tag: editedTag }),
+  }[panel.shown];
+  const panelForm = (
+    <RuleSetPanelForm editor={editor} form={panel.shown} editing={panel.editing} onDone={panel.close} />
+  );
 
   return (
     <div className='flex min-h-0 grow flex-col gap-4 overflow-y-auto px-4 py-5 sm:px-6'>
@@ -135,6 +139,7 @@ export function RuleSetsPage() {
           <RuleSetTable
             sets={filter.sets}
             total={editor.sets.length}
+            onEdit={panel.edit}
             onRemove={onRemove}
             search={<RuleSetSearch filter={filter} />}
             empty={<EmptyState onReset={filter.reset} />}
@@ -170,7 +175,7 @@ export function RuleSetsPage() {
             // Граница снаружи `key`: смена формы идёт как `update`, а не как
             // exit и enter одновременно, иначе панель мигает.
             <ViewTransition enter='panel-in' exit='panel-out'>
-              <RuleSetPanel key={panel.form} title={panelTitle} onClose={panel.close}>
+              <RuleSetPanel key={`${panel.form}:${String(panel.editing)}`} title={panelTitle} onClose={panel.close}>
                 {panelForm}
               </RuleSetPanel>
             </ViewTransition>
@@ -185,6 +190,51 @@ export function RuleSetsPage() {
         </RuleSetPanelSheet>
       )}
     </div>
+  );
+}
+
+/** Форма, открытая в панели сета. */
+function RuleSetPanelForm({
+  editor,
+  form,
+  editing,
+  onDone,
+}: {
+  editor: RuleSetEditorState;
+  form: RuleSetForm;
+  editing: number | null;
+  onDone: () => void;
+}) {
+  if (form === RULE_SET_FORM.Custom) {
+    return <RuleSetCustomForm takenTags={editor.takenTags} onDone={onDone} />;
+  }
+
+  if (form === RULE_SET_FORM.Catalog) {
+    return (
+      <RuleSetAddForm
+        catalog={editor.catalog}
+        takenTags={editor.takenTags}
+        outbounds={editor.outbounds}
+        onDone={onDone}
+      />
+    );
+  }
+
+  const node: unknown = editing === null ? undefined : editor.nodes[editing];
+
+  if (editing === null || typeof node !== 'object' || node === null) {
+    return null;
+  }
+
+  return (
+    <RuleSetEditForm
+      key={editing}
+      index={editing}
+      node={{ ...node }}
+      takenTags={editor.takenTags}
+      outbounds={editor.outbounds}
+      onDone={onDone}
+    />
   );
 }
 

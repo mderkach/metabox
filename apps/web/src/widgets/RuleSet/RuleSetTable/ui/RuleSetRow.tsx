@@ -1,9 +1,10 @@
 import { Link } from '@tanstack/react-router';
+import { Pencil } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { RULE_SET_TYPE, type RuleSetRow as RuleSetRowModel } from '@entities/RuleSet';
-import { Badge, Separator } from '@shared/ui';
+import { Badge, Button, Separator } from '@shared/ui';
 
 import { RULE_SET_COLUMN } from './RuleSetColumns';
 import { formatUpdateInterval } from './RuleSetInterval';
@@ -19,10 +20,13 @@ import { RuleSetRemove } from './RuleSetRemove';
 function RuleSetRowProto({
   set,
   rowIndex,
+  onEdit,
   onRemove,
 }: {
   set: RuleSetRowModel;
   rowIndex: number;
+  /** Без него строка правку не предлагает. */
+  onEdit?: (index: number) => void;
   onRemove: (index: number) => void;
 }) {
   const { t } = useTranslation('widgets/RuleSet/RuleSetTable');
@@ -82,6 +86,19 @@ function RuleSetRowProto({
       <span role='cell' className={RULE_SET_COLUMN.RowActions}>
         <Separator orientation='vertical' className='h-5' />
 
+        {onEdit !== undefined && isEditable(set) && (
+          <Button
+            variant='ghost'
+            size='icon-sm'
+            aria-label={t('row.edit', { tag: set.tag })}
+            onClick={() => {
+              onEdit(set.index);
+            }}
+          >
+            <Pencil />
+          </Button>
+        )}
+
         <RuleSetRemove
           tag={set.tag}
           usedBy={set.usedBy}
@@ -92,6 +109,14 @@ function RuleSetRowProto({
       </span>
     </div>
   );
+}
+
+/**
+ * Формой правится только `remote`, принятый схемой и с тегом-строкой: у
+ * остальных видов другие поля, а незнакомое поле форма потеряла бы.
+ */
+function isEditable(set: RuleSetRowModel): boolean {
+  return set.type === RULE_SET_TYPE.Remote && set.recognized && set.tag !== '';
 }
 
 /**

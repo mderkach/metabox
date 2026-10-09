@@ -167,7 +167,7 @@ export type ConfigSection = (typeof CONFIG_SECTION)[keyof typeof CONFIG_SECTION]
 /**
  * Секции без собственного экрана: где лежат их узлы и правятся ли они
  * списком. У `route` и `ruleSet` свои экраны, здесь их нет; `dns` разложен на
- * списки серверов и правил — его скалярные поля правятся текстовым режимом.
+ * списки серверов и правил, его скалярные поля — `Config.settings`.
  */
 export const GENERIC_SECTIONS = {
   [CONFIG_SECTION.Inbounds]: { kind: 'list', path: ['inbounds'] },

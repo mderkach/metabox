@@ -27,6 +27,8 @@ export interface RuleSetEditorState {
   catalogQuery: ReturnType<typeof useRuleSetCatalog>;
   catalog: RuleSetCatalog;
   sets: RuleSetRow[];
+  /** Узлы `route.rule_set` как есть: правка сета сравнивает с ними набранное. */
+  nodes: unknown[];
   /** Имена уже подключённых наборов: второй набор с тем же именем не заводится. */
   takenTags: string[];
   /** Теги аутбаундов: через один из них набор можно качать. */
@@ -71,6 +73,7 @@ export function useRuleSetEditor(): RuleSetEditorState {
     catalogQuery,
     catalog,
     sets,
+    nodes,
     takenTags: sets.map((set) => set.tag).filter((tag) => tag !== ''),
     outbounds: toOutboundTags(document.config),
     needsCache,
@@ -104,6 +107,7 @@ export function useRuleSetFilter(sets: RuleSetRow[]): RuleSetFilterState {
 export const RULE_SET_FORM = {
   Catalog: 'catalog',
   Custom: 'custom',
+  Edit: 'edit',
 } as const;
 
 export type RuleSetForm = (typeof RULE_SET_FORM)[keyof typeof RULE_SET_FORM];
@@ -116,8 +120,12 @@ export interface RuleSetPanelState {
    * это время показывает её, а не пустоту.
    */
   shown: RuleSetForm;
+  /** Позиция сета, открытого на правку; держится и после закрытия, как `shown`. */
+  editing: number | null;
   /** Кнопка тулбара открывает свою форму, а повторное нажатие закрывает её. */
   toggle: (form: RuleSetForm) => void;
+  /** Открывает правку сета по его позиции в `route.rule_set`. */
+  edit: (index: number) => void;
   close: () => void;
 }
 
@@ -128,6 +136,7 @@ export interface RuleSetPanelState {
 export function useRuleSetPanel(): RuleSetPanelState {
   const [form, setForm] = useState<RuleSetForm | null>(null);
   const [shown, setShown] = useState<RuleSetForm>(RULE_SET_FORM.Catalog);
+  const [editing, setEditing] = useState<number | null>(null);
 
   if (form !== null && form !== shown) {
     setShown(form);
@@ -139,11 +148,18 @@ export function useRuleSetPanel(): RuleSetPanelState {
     });
   }, []);
 
+  const edit = useCallback((index: number) => {
+    startTransition(() => {
+      setEditing(index);
+      setForm(RULE_SET_FORM.Edit);
+    });
+  }, []);
+
   const close = useCallback(() => {
     startTransition(() => {
       setForm(null);
     });
   }, []);
 
-  return { form, shown, toggle, close };
+  return { form, shown, editing, toggle, edit, close };
 }

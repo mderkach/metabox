@@ -7,7 +7,7 @@
     "outbounds": "Аутбаунды",
     "providers": "Подписки",
     "endpoints": "Эндпоинты",
-    "dns": "DNS",
+    "dns": "DNS-серверы и параметры",
     "dnsRules": "DNS-правила",
     "services": "Сервисы",
     "ntp": "NTP",

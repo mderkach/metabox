@@ -289,6 +289,31 @@ describe('панель сета', () => {
     expect(within(table).getAllByRole('row')).toHaveLength(3 + HEADER_ROWS);
     expect(within(table).getByText('my-list')).toBeInTheDocument();
   });
+  it('карандаш строки открывает правку сета в панели, сохранение пишет одно поле', async () => {
+    const user = userEvent.setup();
+
+    renderWithRouter(RuleSetsPage);
+
+    await screen.findByRole('table', { name: 'Подключённые сеты' });
+    await user.click(screen.getByRole('button', { name: 'Изменить сет geoip-ru' }));
+
+    const panel = await screen.findByRole('complementary', { name: 'Сет geoip-ru' });
+
+    expect(within(panel).getByRole('heading', { name: 'Сет geoip-ru' })).toHaveFocus();
+    expect(within(panel).getByLabelText('Имя сета')).toHaveValue('geoip-ru');
+
+    await user.clear(within(panel).getByLabelText('Имя сета'));
+    await user.type(within(panel).getByLabelText('Имя сета'), 'geoip-russia');
+    await user.click(within(panel).getByRole('button', { name: 'Сохранить в черновик' }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+    });
+    expect(findValue(ConfigDocumentState.getState().draft ?? '', ['route', 'rule_set', 1, 'tag'])).toBe('geoip-russia');
+    expect(findValue(ConfigDocumentState.getState().draft ?? '', ['route', 'rule_set', 1, 'update_interval'])).toBe(
+      '12h'
+    );
+  });
 });
 
 describe('панель сета на узком экране', () => {

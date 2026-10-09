@@ -27,6 +27,7 @@ export function RuleSetTable({
   empty,
   search = null,
   actions = null,
+  onEdit,
   onRemove,
 }: {
   sets: RuleSetRowModel[];
@@ -38,6 +39,8 @@ export function RuleSetTable({
   search?: ReactNode;
   /** Действия над списком: правый край тулбара. */
   actions?: ReactNode;
+  /** Открывает правку сета; без него строки правку не предлагают. */
+  onEdit?: (index: number) => void;
   onRemove: (index: number) => void;
 }) {
   const { t } = useTranslation('widgets/RuleSet/RuleSetTable');
@@ -59,7 +62,13 @@ export function RuleSetTable({
 
           <div role='rowgroup'>
             {sets.map((set, position) => (
-              <RuleSetRow key={set.id} set={set} rowIndex={position + 1 + HEADER_ROWS} onRemove={onRemove} />
+              <RuleSetRow
+                key={set.id}
+                set={set}
+                rowIndex={position + 1 + HEADER_ROWS}
+                onEdit={onEdit}
+                onRemove={onRemove}
+              />
             ))}
           </div>
         </div>

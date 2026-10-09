@@ -49,6 +49,14 @@ export type {
 } from './model/Config.model';
 export { findUnbuiltNodes, findUnbuiltOptions, unbuiltOptionOf } from './model/Config.build';
 export { compactNode, diffNode } from './model/Config.patch';
+export {
+  isSectionSettingsRecognized,
+  isSettingsSection,
+  readSectionSettings,
+  sectionSettingsPath,
+  sectionSettingsSchema,
+} from './model/Config.settings';
+export type { SettingsSection } from './model/Config.settings';
 export type { NodeEdit } from './model/Config.patch';
 export {
   buildTagOfType,

@@ -34,6 +34,7 @@ declare module 'i18next' {
       'widgets/Config/ConfigBuildNotice': typeof import('./widgets/Config/ConfigBuildNotice/i18n/ru.json');
       'widgets/Config/ConfigNode': typeof import('./widgets/Config/ConfigNode/i18n/ru.json');
       'widgets/Config/ConfigRawEditor': typeof import('./widgets/Config/ConfigRawEditor/i18n/ru.json');
+      'widgets/Config/ConfigSectionSettings': typeof import('./widgets/Config/ConfigSectionSettings/i18n/ru.json');
       'widgets/Config/ConfigTabs': typeof import('./widgets/Config/ConfigTabs/i18n/ru.json');
       'widgets/ConnectionHistory': typeof import('./widgets/ConnectionHistory/i18n/ru.json');
       'widgets/ConnectionSummary': typeof import('./widgets/ConnectionSummary/i18n/ru.json');

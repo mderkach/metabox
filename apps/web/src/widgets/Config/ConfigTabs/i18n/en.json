@@ -7,7 +7,7 @@
     "outbounds": "Outbounds",
     "providers": "Subscriptions",
     "endpoints": "Endpoints",
-    "dns": "DNS",
+    "dns": "DNS servers & options",
     "dnsRules": "DNS rules",
     "services": "Services",
     "ntp": "NTP",

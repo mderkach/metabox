@@ -443,7 +443,7 @@ function MirrorField({ list }: { list: RuleSetList }) {
 }
 
 /** Имя набора: по нему на него ссылаются правила, поэтому оно уникально. */
-function TagField() {
+export function TagField() {
   const { t } = useTranslation('features/RuleSet/RuleSetAdd');
   const { control } = useFormContext<RuleSetAddModel>();
   const id = useId();
@@ -479,7 +479,7 @@ function TagField() {
  * нечем: у `.srs` и `.json` ядро выводит формат само, и записанное значение
  * оказалось бы правкой, которой пользователь не делал.
  */
-function FormatField() {
+export function FormatField() {
   const { t } = useTranslation('features/RuleSet/RuleSetAdd');
   const { control } = useFormContext<RuleSetAddModel>();
   const url = useWatch({ control, name: 'url' });
@@ -532,7 +532,7 @@ function FormatField() {
  * развёрнутыми занимают половину формы на узком экране. Отказ на любом из них
  * раскрывает блок принудительно — иначе сообщение осталось бы под свёрткой.
  */
-function ExtraFields({ outbounds }: { outbounds: readonly string[] }) {
+export function ExtraFields({ outbounds }: { outbounds: readonly string[] }) {
   const { t } = useTranslation('features/RuleSet/RuleSetAdd');
   const { control, formState } = useFormContext<RuleSetAddModel>();
   const [open, setOpen] = useState(false);

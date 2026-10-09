@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import {
   GENERIC_SECTIONS,
   isGenericSection,
+  isSettingsSection,
   readNodeTags,
   readSectionNodes,
   registryOfSection,
@@ -28,6 +29,7 @@ import {
 } from '@shared/ui';
 import { ConfigNode } from '@widgets/Config/ConfigNode';
 import { ConfigNodePanel, ConfigNodePanelSheet } from '@widgets/Config/ConfigNodePanel';
+import { ConfigSectionSettings } from '@widgets/Config/ConfigSectionSettings';
 
 const routeApi = getRouteApi('/config/$section');
 
@@ -52,7 +54,8 @@ export function SectionPage() {
  *
  * Узел секции с реестром типов добавляется формой в панели рядом со списком
  * (ADR-0037); ниже `lg` панель открывается листом. Секции-объекты и списки без
- * реестра пополняются только текстом.
+ * реестра пополняются только текстом. У `dns` над серверами стоят скаляры
+ * самой секции.
  */
 export function SectionNodes({ section }: { section: GenericSection }) {
   const { t } = useTranslation('pages/Section');
@@ -112,6 +115,8 @@ export function SectionNodes({ section }: { section: GenericSection }) {
       {document.isPending && <SkeletonRows className={SURFACE} />}
 
       {document.query.isLoadingError && <QueryFailure messageKey='source.config' query={document.query} />}
+
+      {isSettingsSection(section) && <ConfigSectionSettings section={section} />}
 
       {loaded && addable && nodes.length > 0 && <div className='flex justify-end'>{addButton}</div>}
 

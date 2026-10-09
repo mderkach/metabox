@@ -1,0 +1,8 @@
+{
+  "title": {
+    "route": "Routing options",
+    "dns": "DNS options"
+  },
+  "hint": "Fields of the {{section}} section except lists: rules, rule sets and servers are edited on their own tabs.",
+  "uncovered": "The {{section}} section has fields the panel does not know. Edit its options in Text mode."
+}

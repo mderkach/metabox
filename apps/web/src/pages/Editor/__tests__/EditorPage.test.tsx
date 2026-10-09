@@ -387,6 +387,25 @@ describe('экран правил', () => {
 
     expect(await screen.findByText('Правил нет')).toBeInTheDocument();
   });
+
+  it('скаляры route правятся формой над правилами: route.final меняется, правила целы', async () => {
+    const user = userEvent.setup();
+
+    serveConfig(RECOGNIZED_CONFIG);
+    renderWithRouter(EditorPage);
+
+    const settings = within(await screen.findByRole('region', { name: 'Параметры маршрутизации' }));
+
+    await user.click(settings.getByRole('button', { name: 'Параметры маршрутизации' }));
+    await user.click(settings.getByRole('button', { name: /^Ещё параметры/ }));
+    await user.type(settings.getByRole('textbox', { name: 'final' }), 'proxy');
+    await user.click(settings.getByRole('button', { name: 'Сохранить в черновик' }));
+
+    await waitFor(() => {
+      expect(findValue(ConfigDocumentState.getState().draft ?? '', ['route', 'final'])).toBe('proxy');
+    });
+    expect(findValue(ConfigDocumentState.getState().draft ?? '', ['route', 'rules', 0, 'outbound'])).toBe('proxy');
+  });
 });
 
 describe('правка списка правил', () => {

@@ -1,0 +1,53 @@
+import { describe, expect, it } from 'vitest';
+
+import { toFieldPlan } from '@shared/lib/schemaShape';
+
+import { CONFIG_SECTION } from '../model/Config.model';
+import {
+  isSectionSettingsRecognized,
+  isSettingsSection,
+  readSectionSettings,
+  sectionSettingsPath,
+  sectionSettingsSchema,
+} from '../model/Config.settings';
+
+const TEXT = `{
+  "dns": { "servers": [{ "type": "local" }], "rules": [], "final": "local" },
+  "route": { "rules": [], "rule_set": [], "final": "direct", "default_mark": 1 }
+}`;
+
+describe('скаляры секции', () => {
+  it('узнаёт секции со скалярами', () => {
+    expect(isSettingsSection(CONFIG_SECTION.Route)).toBe(true);
+    expect(isSettingsSection(CONFIG_SECTION.Dns)).toBe(true);
+    expect(isSettingsSection(CONFIG_SECTION.Log)).toBe(false);
+    expect(sectionSettingsPath(CONFIG_SECTION.Route)).toEqual(['route']);
+  });
+
+  it('читает скаляры без списков', () => {
+    expect(readSectionSettings(TEXT, CONFIG_SECTION.Route)).toEqual({ final: 'direct', default_mark: 1 });
+    expect(readSectionSettings(TEXT, CONFIG_SECTION.Dns)).toEqual({ final: 'local' });
+  });
+
+  it('отдаёт пустой объект для отсутствующей секции и null для не-объекта', () => {
+    expect(readSectionSettings('{}', CONFIG_SECTION.Dns)).toEqual({});
+    expect(readSectionSettings('{ "dns": [] }', CONFIG_SECTION.Dns)).toBeNull();
+  });
+
+  it('в схеме формы нет списков секции', () => {
+    const route = toFieldPlan(sectionSettingsSchema(CONFIG_SECTION.Route)).map((field) => field.key);
+    const dns = toFieldPlan(sectionSettingsSchema(CONFIG_SECTION.Dns)).map((field) => field.key);
+
+    expect(route).toContain('final');
+    expect(route).not.toContain('rules');
+    expect(route).not.toContain('rule_set');
+    expect(dns).toContain('strategy');
+    expect(dns).not.toContain('servers');
+    expect(dns).not.toContain('rules');
+  });
+
+  it('незнакомый ключ делает скаляры нераспознанными', () => {
+    expect(isSectionSettingsRecognized(CONFIG_SECTION.Route, { final: 'direct' })).toBe(true);
+    expect(isSectionSettingsRecognized(CONFIG_SECTION.Route, { final: 'direct', unknown_key: 1 })).toBe(false);
+  });
+});

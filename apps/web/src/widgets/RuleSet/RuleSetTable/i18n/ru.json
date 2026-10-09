@@ -19,6 +19,7 @@
     "usedBy_few": "в {{count}} правилах",
     "usedBy_many": "в {{count}} правилах",
     "rules": "Правила с сетом {{tag}}",
+    "edit": "Изменить сет {{tag}}",
     "remove": "Убрать сет {{tag}}"
   },
   "remove": {

@@ -1,0 +1,1 @@
+export { ConfigSectionSettings } from './ui';
