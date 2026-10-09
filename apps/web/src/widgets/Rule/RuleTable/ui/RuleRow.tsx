@@ -160,7 +160,7 @@ function RuleHitValue({ hits, language }: { hits: RuleHitCell; language: string 
   }
 
   if (hits === RULE_HIT.Unobserved) {
-    return <span>{t('hits.unobservedCell')}</span>;
+    return <span title={t('hits.unobserved')}>{t('hits.unobservedCell')}</span>;
   }
 
   return <data value={hits}>{hits.toLocaleString(language)}</data>;

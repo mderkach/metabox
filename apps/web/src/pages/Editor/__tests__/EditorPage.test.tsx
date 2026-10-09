@@ -131,16 +131,15 @@ describe('экран правил', () => {
     expect(await screen.findByText(/никогда не выполнится/)).toBeInTheDocument();
   });
 
-  it('показывает счёт срабатываний и окно счёта, чтобы ноль не читался как «правило мёртвое»', async () => {
+  it('показывает счёт срабатываний в строке правила', async () => {
     renderWithRouter(EditorPage);
 
     const table = await screen.findByRole('table', { name: 'Правила маршрутизации' });
     const [, firstRow] = within(table).getAllByRole('row');
 
-    expect(
-      await screen.findByText('Счёт срабатываний — за 2 ч с запуска metaboxd, перезапуск его обнуляет')
-    ).toBeInTheDocument();
-    expect(firstRow).toHaveTextContent('1 234');
+    await waitFor(() => {
+      expect(firstRow).toHaveTextContent('1 234');
+    });
   });
 
   it('правило, которого core в списке соединений не показывает, получает «не видно», а не ноль', async () => {
@@ -149,8 +148,10 @@ describe('экран правил', () => {
     const table = await screen.findByRole('table', { name: 'Правила маршрутизации' });
     const [, , dnsRow] = within(table).getAllByRole('row');
 
-    expect(dnsRow).toHaveTextContent('не видно');
-    expect(await screen.findByText(/^«не видно» — sing-box не показывает такие соединения/)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(dnsRow).toHaveTextContent('не видно');
+    });
+    expect(within(dnsRow).getByTitle(/^sing-box не показывает такие соединения/)).toBeInTheDocument();
   });
 
   it('процесс на другом конфиге не раздаёт свой счёт строкам этого', async () => {

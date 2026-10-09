@@ -149,8 +149,6 @@ export function RulePanel({
             <RuleRawEditor key={revision} index={rule.index} node={node} />
           </TabsContent>
         </Tabs>
-
-        <p className='text-xs text-muted-foreground'>{t('note')}</p>
       </div>
     </aside>
   );

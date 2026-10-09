@@ -3,7 +3,6 @@ import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { RuleRow as RuleRowModel } from '@entities/Rule';
-import { formatAge } from '@shared/lib/format';
 import { cn } from '@shared/lib/utils';
 import { SURFACE } from '@shared/ui';
 
@@ -153,8 +152,6 @@ export function RuleTable({
             ? t('count.rule', { ns: 'shared', count: total })
             : t('list.shown', { ns: 'shared', shown: rules.length, total })}
         </p>
-        {edited.size > 0 && <p>{t('hits.edited')}</p>}
-        {counts !== null && [...counts.values()].includes(null) && <p>{t('hits.unobserved')}</p>}
         <HitsNote hits={hits} />
       </div>
     </section>
@@ -169,22 +166,13 @@ function toHitCell(counts: ReadonlyMap<string, number | null>, id: string): Rule
   return counts.get(id) ?? RULE_HIT.Unobserved;
 }
 
-/**
- * Окно счёта рядом со счётчиком строк: ноль без него читался бы как «правило
- * мёртвое», а он значит «не срабатывало с запуска демона».
- */
+/** Почему счёта нет: без этой строки пустая колонка выглядела бы поломкой. */
 function HitsNote({ hits }: { hits: RuleHitsColumn | null }) {
   const { t } = useTranslation('widgets/Rule/RuleTable');
 
-  if (hits === null || hits.state === RULE_HITS_STATE.Pending) {
+  if (hits === null || hits.state === RULE_HITS_STATE.Pending || hits.state === RULE_HITS_STATE.Counted) {
     return null;
   }
 
-  return (
-    <p className='ml-auto'>
-      {hits.state === RULE_HITS_STATE.Counted
-        ? t('hits.window', { age: formatAge(hits.seconds) })
-        : t(HITS_NOTE[hits.state])}
-    </p>
-  );
+  return <p className='ml-auto'>{t(HITS_NOTE[hits.state])}</p>;
 }
