@@ -1,5 +1,5 @@
 import type { ParseKeys, TFunction } from 'i18next';
-import { ChevronRight, RotateCcw } from 'lucide-react';
+import { ChevronRight, Eye, EyeOff, RotateCcw } from 'lucide-react';
 import { use, useEffect, useId, useState, type ReactNode } from 'react';
 import { Controller, useFormContext, type FieldError as FormFieldError } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +12,10 @@ import {
   FieldLegend,
   FieldSet,
   Input,
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
   Label,
   Select,
   SelectContent,
@@ -33,11 +37,14 @@ import {
   packList,
   parseNumber,
   parseScalar,
+  SECRET_MASK,
+  secretMaskOf,
   textToList,
   toInputText,
   UNSET,
   unpackList,
   type ConfigNodeFormModel,
+  type SecretMask,
 } from '../model';
 import { RAW_PARSE_ERROR, RawFailuresContext } from './ConfigNodeForm.context';
 
@@ -171,7 +178,91 @@ function TextField({ field, name, placeholder }: NodeFieldProps & { placeholder?
 }
 
 export function StringField(props: NodeFieldProps) {
-  return <TextField {...props} />;
+  const mask = secretMaskOf(props.field.path);
+
+  return mask === null ? <TextField {...props} /> : <SecretField {...props} mask={mask} />;
+}
+
+/** Знаки, которыми замаскирована часть URL после хоста. */
+const URL_MASK = '••••••';
+
+/**
+ * URL с замаскированным всем, что после хоста: учётка, путь, query, якорь.
+ * `null` — прятать нечего, URL из одного хоста.
+ */
+function maskUrl(text: string): string | null {
+  if (!URL.canParse(text)) {
+    return URL_MASK;
+  }
+
+  const url = new URL(text);
+  const tail = `${url.username}${url.password}${url.pathname === '/' ? '' : url.pathname}${url.search}${url.hash}`;
+
+  return tail === '' ? null : `${url.protocol}//${url.host}/${URL_MASK}`;
+}
+
+/**
+ * Секрет: скрыт, пока его не раскрыли кнопкой. Скрытие только на экране —
+ * значение формы, а с ним черновик и диф, остаются полными. Целиком скрытый
+ * секрет правится вслепую, как пароль; у URL видна часть до пути, а правка
+ * открывается раскрытием: замаскированный текст не значение.
+ */
+function SecretField({ field, name, mask }: NodeFieldProps & { mask: SecretMask }) {
+  const { t } = useTranslation(NS);
+  const { control } = useFormContext<ConfigNodeFormModel>();
+  const id = useId();
+  const errorId = useId();
+  const [revealed, setRevealed] = useState(false);
+
+  return (
+    <Controller
+      control={control}
+      name={name}
+      render={({ field: input, fieldState }) => {
+        const text = toInputText(input.value);
+        const masked = mask === SECRET_MASK.AfterHost && !revealed && text !== '' ? maskUrl(text) : null;
+
+        return (
+          <FieldRow id={id} label={field.key} errorId={errorId} error={errorText(t, fieldState.error)}>
+            <InputGroup>
+              <InputGroupInput
+                id={id}
+                type={mask === SECRET_MASK.Whole && !revealed ? 'password' : 'text'}
+                value={masked ?? text}
+                readOnly={masked !== null}
+                autoComplete='off'
+                spellCheck={false}
+                className='font-mono text-xs'
+                aria-invalid={fieldState.invalid}
+                aria-describedby={fieldState.invalid ? errorId : undefined}
+                onBlur={input.onBlur}
+                onChange={(event) => {
+                  // Набираемый в пустое поле URL не прячется на первом же знаке.
+                  if (mask === SECRET_MASK.AfterHost) {
+                    setRevealed(true);
+                  }
+
+                  input.onChange(event.target.value === '' ? UNSET : event.target.value);
+                }}
+              />
+              <InputGroupAddon align='inline-end'>
+                <InputGroupButton
+                  size='icon-xs'
+                  aria-label={t(revealed ? 'secret.hide' : 'secret.show', { name: field.key })}
+                  aria-controls={id}
+                  onClick={() => {
+                    setRevealed(!revealed);
+                  }}
+                >
+                  {revealed ? <EyeOff /> : <Eye />}
+                </InputGroupButton>
+              </InputGroupAddon>
+            </InputGroup>
+          </FieldRow>
+        );
+      }}
+    />
+  );
 }
 
 export function DurationField(props: NodeFieldProps) {

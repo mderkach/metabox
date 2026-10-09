@@ -197,6 +197,40 @@ export const NODE_OVERRIDE: Readonly<Partial<Record<NodeOverrideKey, NodeOverrid
   'service/api': API_OVERRIDE,
 };
 
+/** Как поле-секрет прячет значение: целиком или всё после хоста URL. */
+export const SECRET_MASK = {
+  Whole: 'whole',
+  AfterHost: 'afterHost',
+} as const;
+
+export type SecretMask = (typeof SECRET_MASK)[keyof typeof SECRET_MASK];
+
+/**
+ * Поля-секреты по имени ключа, в узле любого типа и на любой глубине: форма
+ * показывает их маской и раскрывает по кнопке. У URL видна схема и хост — по
+ * ним понятно, чья подписка, а токен лежит в пути или в query. `uuid` не
+ * прячется: это идентификатор пользователя, а не пароль.
+ */
+const SECRET_FIELD: Readonly<Partial<Record<string, SecretMask>>> = {
+  secret: SECRET_MASK.Whole,
+  password: SECRET_MASK.Whole,
+  private_key: SECRET_MASK.Whole,
+  pre_shared_key: SECRET_MASK.Whole,
+  psk: SECRET_MASK.Whole,
+  token: SECRET_MASK.Whole,
+  auth_str: SECRET_MASK.Whole,
+  access_key_secret: SECRET_MASK.Whole,
+  url: SECRET_MASK.AfterHost,
+  download_url: SECRET_MASK.AfterHost,
+};
+
+/** Маска поля по последнему ключу его пути; `null` — поле не секрет. */
+export function secretMaskOf(path: readonly string[]): SecretMask | null {
+  const key = path.at(-1);
+
+  return key === undefined ? null : (SECRET_FIELD[key] ?? null);
+}
+
 /** Оверрайд типа; `null` — тип открывается автоформой как есть. */
 export function nodeOverrideOf(registry: NodeRegistry, type: string): NodeOverride | null {
   return NODE_OVERRIDE[`${registry}/${type}`] ?? null;

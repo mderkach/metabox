@@ -60,7 +60,7 @@ export function ConfigNodeForm({
   return <ConfigNodeFormBody schema={schema} override={override} path={path} node={node} builtTags={builtTags} />;
 }
 
-function ConfigNodeFormBody({
+export function ConfigNodeFormBody({
   schema,
   override,
   path,

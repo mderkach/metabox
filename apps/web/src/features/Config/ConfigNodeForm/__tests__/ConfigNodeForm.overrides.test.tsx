@@ -1,6 +1,6 @@
 import { renderWithQuery } from '@test/renderWithQuery';
 import { selectOption } from '@test/selectOption';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, renderHook, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { JSONPath } from 'jsonc-parser';
 import { useMemo } from 'react';
@@ -12,6 +12,7 @@ import {
   newSectionNode,
   NODE_REGISTRY,
   RULES_PATH,
+  useConfigDiff,
   useConfigText,
   type NodeRegistry,
 } from '@entities/Config';
@@ -354,5 +355,111 @@ describe('оверрайд службы api', () => {
     await waitFor(() => {
       expect(findValue(draft(), [...API, 'listen_port'])).toBe(9091);
     });
+  });
+});
+
+describe('поля-секреты', () => {
+  /** Подписка и пароль — выдуманные. */
+  const SECRET_TEXT = `{
+  "outbounds": [
+    { "type": "shadowsocks", "tag": "ss", "server": "a.example", "server_port": 8388, "password": "hunter2" },
+  ],
+  "providers": [
+    { "type": "remote", "tag": "sub", "url": "https://sub.example/api/v1/client/subscribe?token=abc123" },
+    { "type": "remote", "tag": "bare", "url": "https://bare.example" },
+  ],
+}`;
+
+  const SHADOWSOCKS: JSONPath = ['outbounds', 0];
+
+  beforeEach(() => {
+    ConfigDocumentState.getState().reset();
+    ConfigDocumentState.getState().load(SECRET_TEXT);
+  });
+
+  it('пароль скрыт маской и раскрывается кнопкой, черновик не трогается', async () => {
+    const user = userEvent.setup();
+
+    render(<NodeFromStore path={SHADOWSOCKS} />);
+
+    const password = screen.getByLabelText('password');
+
+    expect(password).toHaveAttribute('type', 'password');
+    expect(password).toHaveValue('hunter2');
+
+    await user.click(screen.getByRole('button', { name: 'Показать password' }));
+
+    expect(password).toHaveAttribute('type', 'text');
+
+    await user.click(screen.getByRole('button', { name: 'Скрыть password' }));
+
+    expect(password).toHaveAttribute('type', 'password');
+    expect(save()).toBeDisabled();
+    expect(ConfigDocumentState.getState().draft).toBeNull();
+  });
+
+  it('пароль, набранный под маской, ложится в черновик и диф целиком', async () => {
+    const user = userEvent.setup();
+
+    render(<NodeFromStore path={SHADOWSOCKS} />);
+
+    const password = screen.getByLabelText('password');
+
+    await user.clear(password);
+    await user.type(password, 'correct-horse');
+    await user.click(save());
+
+    await waitFor(() => {
+      expect(findValue(draft(), [...SHADOWSOCKS, 'password'])).toBe('correct-horse');
+    });
+
+    const { result } = renderHook(() => useConfigDiff());
+
+    expect(result.current.map((line) => line.text).join('\n')).toContain('"password": "correct-horse"');
+  });
+
+  it('у URL подписки виден хост, остальное раскрывается кнопкой и правится', async () => {
+    const user = userEvent.setup();
+    const full = 'https://sub.example/api/v1/client/subscribe?token=abc123';
+
+    render(<NodeFromStore path={['providers', 0]} registry={NODE_REGISTRY.Provider} />);
+
+    const url = screen.getByRole('textbox', { name: 'url' });
+
+    expect(url).toHaveValue('https://sub.example/••••••');
+    expect(url).toHaveAttribute('readonly');
+
+    await user.click(screen.getByRole('button', { name: 'Показать url' }));
+
+    expect(url).toHaveValue(full);
+    expect(url).not.toHaveAttribute('readonly');
+
+    await user.type(url, '2');
+    await user.click(save());
+
+    await waitFor(() => {
+      expect(findValue(draft(), ['providers', 0, 'url'])).toBe(`${full}2`);
+    });
+
+    const { result } = renderHook(() => useConfigDiff());
+
+    expect(result.current.map((line) => line.text).join('\n')).toContain(`${full}2`);
+  });
+
+  it('URL из одного хоста прятать нечего: поле правится сразу', () => {
+    render(<NodeFromStore path={['providers', 1]} registry={NODE_REGISTRY.Provider} />);
+
+    const url = screen.getByRole('textbox', { name: 'url' });
+
+    expect(url).toHaveValue('https://bare.example');
+    expect(url).not.toHaveAttribute('readonly');
+  });
+
+  it('uuid не прячется: это идентификатор, а не пароль', () => {
+    ConfigDocumentState.getState().reset();
+    ConfigDocumentState.getState().load(TEXT);
+    render(<NodeFromStore path={VLESS} />);
+
+    expect(screen.getByRole('textbox', { name: 'uuid' })).toHaveValue('REDACTED');
   });
 });

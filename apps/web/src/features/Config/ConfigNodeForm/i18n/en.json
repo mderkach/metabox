@@ -18,6 +18,10 @@
   "group": {
     "toggle": "{{name}} fields"
   },
+  "secret": {
+    "show": "Show {{name}}",
+    "hide": "Hide {{name}}"
+  },
   "error": {
     "duration": "Duration like 10s, 1m30s, 500ms",
     "tooSmall": "Must be 0 or more",
