@@ -23,6 +23,8 @@ export const APPLY_REASON_CODE = [
   'write_failed',
   'restart_failed',
   'healthcheck_failed',
+  'dns_probe_failed',
+  'interception_missing',
   'rollback_failed',
   'no_backup',
 ] as const

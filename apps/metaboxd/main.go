@@ -47,6 +47,12 @@ const (
 	healthRequestTimeout = 5 * time.Second
 	healthPollInterval   = 500 * time.Millisecond
 
+	// DNS-проба: первый запрос после рестарта поднимает соединение к upstream и
+	// может занять секунды, поэтому попыток несколько. Отказ всех трёх — около
+	// семи секунд сверх опроса API.
+	dnsProbeTimeout  = 2 * time.Second
+	dnsProbeAttempts = 3
+
 	// Периоды опроса источников потока; чем они заданы — events.Options.
 	// connectionsInterval — период счётчика срабатываний: снапшот соединений
 	// снимает он и он же отдаёт его потоку.
@@ -86,6 +92,7 @@ type settings struct {
 	dhcpLeases    string
 	uci           string
 	nft           string
+	healthDNSName string
 	clashPort     int
 	confirmWindow time.Duration
 	cycleTimeout  time.Duration
@@ -116,6 +123,8 @@ func main() {
 		"путь к uci: через него читаются статические аренды из UCI dhcp и модель обвязки из UCI metabox")
 	flag.StringVar(&s.nft, "nft", "/usr/sbin/nft",
 		"путь к nft: через него демон видит, стоят ли правила обвязки; пустой отключает проверку")
+	flag.StringVar(&s.healthDNSName, "health-dns-name", "cloudflare.com",
+		"имя, которое dns-in sing-box обязан разрешить после рестарта, иначе откат; пустое выключает DNS-пробу")
 	flag.IntVar(&s.clashPort, "clash-port", 9090, "порт Clash API, если демон заводит секцию сам")
 	flag.DurationVar(&s.confirmWindow, "confirm-window", time.Minute,
 		"сколько ждать подтверждения связи до автоотката")
@@ -137,7 +146,12 @@ func main() {
 }
 
 func run(log *slog.Logger, s settings) error {
-	manager, store, service, err := build(log, s)
+	plane := dataplane.New(dataplane.Runner(runCommand(singbox.NewExec(binaryTimeout))), dataplane.Options{
+		UCI: s.uci,
+		NFT: s.nft,
+	})
+
+	manager, store, service, err := build(log, s, plane)
 	if err != nil {
 		return err
 	}
@@ -249,11 +263,6 @@ func run(log *slog.Logger, s settings) error {
 	} else {
 		lan = registry
 	}
-
-	plane := dataplane.New(dataplane.Runner(runCommand(singbox.NewExec(binaryTimeout))), dataplane.Options{
-		UCI: s.uci,
-		NFT: s.nft,
-	})
 
 	api := httpapi.NewServer(manager, store, log, httpapi.Options{
 		Version:        version.Version,
@@ -438,7 +447,7 @@ func configSettings(store *config.Store) clashapi.Resolver {
 
 // build собирает граф зависимостей. Отдельной функцией, чтобы run занимался
 // только запуском и остановкой.
-func build(log *slog.Logger, s settings) (*apply.Manager, *config.Store, *singbox.Client, error) {
+func build(log *slog.Logger, s settings, plane *dataplane.Reader) (*apply.Manager, *config.Store, *singbox.Client, error) {
 	store, err := config.NewStore(s.configDir, s.configName, s.serviceDir)
 	if err != nil {
 		return nil, nil, nil, err
@@ -453,6 +462,11 @@ func build(log *slog.Logger, s settings) (*apply.Manager, *config.Store, *singbo
 
 	health := clashapi.NewChecker(healthRequestTimeout, healthPollInterval)
 
+	var dns apply.DNSProber
+	if s.healthDNSName != "" {
+		dns = clashapi.NewDNSProbe(s.healthDNSName, dnsProbeTimeout, healthPollInterval, dnsProbeAttempts)
+	}
+
 	manager := apply.New(store, service, health, nil, log, apply.Options{
 		Window:          s.confirmWindow,
 		ClashPort:       s.clashPort,
@@ -460,6 +474,8 @@ func build(log *slog.Logger, s settings) (*apply.Manager, *config.Store, *singbo
 		ConfigDir:       s.configDir,
 		ConfigName:      s.configName,
 		ProcessInterval: healthPollInterval,
+		Dataplane:       plane,
+		DNS:             dns,
 	})
 
 	return manager, store, service, nil

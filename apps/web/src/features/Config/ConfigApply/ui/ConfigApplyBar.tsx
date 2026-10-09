@@ -234,6 +234,8 @@ const REASON_KEY: Readonly<Record<ApplyReasonCode, ParseKeys<'features/Config/Co
   write_failed: 'failure.reason.write_failed',
   restart_failed: 'failure.reason.restart_failed',
   healthcheck_failed: 'failure.reason.healthcheck_failed',
+  dns_probe_failed: 'failure.reason.dns_probe_failed',
+  interception_missing: 'failure.reason.interception_missing',
   rollback_failed: 'failure.reason.rollback_failed',
   no_backup: 'failure.reason.no_backup',
 };

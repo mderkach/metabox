@@ -15,6 +15,7 @@ import (
 
 	"metabox/internal/clashapi"
 	"metabox/internal/config"
+	"metabox/internal/dataplane"
 )
 
 // check раскладывает кандидата во временный каталог и отдаёт его бинарю тем
@@ -178,6 +179,8 @@ func (m *Manager) apply(
 		m.log.Warn("pid службы до рестарта не прочитан, healthcheck без сверки процесса", "err", pidErr)
 	}
 
+	plane, planeRead := m.planeBefore(ctx)
+
 	if err := m.service.Restart(ctx); err != nil {
 		return stepFailed(ReasonRestartFailed, err)
 	}
@@ -192,7 +195,114 @@ func (m *Manager) apply(
 		return stepFailed(ReasonHealthcheckFailed, err)
 	}
 
+	if !planeRead {
+		return nil
+	}
+
+	if err := m.checkInterception(ctx, plane); err != nil {
+		return stepFailed(ReasonInterceptionMissing, err)
+	}
+
+	if err := m.probeDNS(ctx, data, plane.model.DNSPort); err != nil {
+		return stepFailed(ReasonDNSProbeFailed, err)
+	}
+
 	return nil
+}
+
+// planeState — модель обвязки и признак перехвата до рестарта.
+type planeState struct {
+	model dataplane.Model
+	// intercepted — цепочки обвязки стояли; reason — почему признак не
+	// наблюдён. Оба читаются только при включённой модели.
+	intercepted bool
+	reason      dataplane.AppliedReason
+}
+
+// planeBefore снимает модель обвязки до рестарта. Ложь — модели нет, и проверки
+// после рестарта пропускаются: порт dns-in берётся из неё, а перехват без неё
+// сверять не с чем. Ошибка модели применение не останавливает — init-скрипт
+// при ней тоже оставляет обвязку как есть.
+func (m *Manager) planeBefore(ctx context.Context) (planeState, bool) {
+	if m.opts.Dataplane == nil {
+		return planeState{}, false
+	}
+
+	model, err := m.opts.Dataplane.Model(ctx)
+	if err != nil {
+		m.log.Warn("модель обвязки не прочитана, DNS-проба и проверка перехвата пропущены", "err", err)
+
+		return planeState{}, false
+	}
+
+	state := planeState{model: model}
+	if !model.Enabled {
+		return state, true
+	}
+
+	state.intercepted, state.reason, err = m.opts.Dataplane.Applied(ctx)
+	if err != nil {
+		state.reason = dataplane.NFTUnavailable
+	}
+
+	return state, true
+}
+
+// checkInterception сверяет перехват после рестарта с тем, что стоял до него.
+// Отказ — только когда цепочки были и пропали: перехват, которого не было и до
+// рестарта, применение конфига не снимало и откат его не вернёт. Так же
+// пропускается служба, которая ставит перехват чужими цепочками, — homeproxy в
+// переходном режиме.
+func (m *Manager) checkInterception(ctx context.Context, before planeState) error {
+	switch {
+	case !before.model.Enabled:
+		return nil
+	case before.reason != "":
+		m.log.Warn("перехват не проверен: nft недоступен", "applied_reason", before.reason)
+
+		return nil
+	case !before.intercepted:
+		m.log.Warn("перехват включён, но его цепочек не было и до рестарта; проверка пропущена")
+
+		return nil
+	}
+
+	applied, reason, err := m.opts.Dataplane.Applied(ctx)
+
+	switch {
+	case err != nil:
+		return fmt.Errorf("проверка перехвата: %w", err)
+	case reason != "":
+		m.log.Warn("перехват после рестарта не проверен: nft недоступен", "applied_reason", reason)
+
+		return nil
+	case !applied:
+		return errors.New("цепочек перехвата в nft после рестарта нет")
+	}
+
+	return nil
+}
+
+// probeDNS шлёт контрольный запрос в dns-in кандидата. Нет пробы или dns-in в
+// конфиге — пропуск: без dns-in DNS сети через sing-box не идёт, и проверять
+// нечего.
+func (m *Manager) probeDNS(ctx context.Context, data []byte, port int) error {
+	if m.opts.DNS == nil {
+		return nil
+	}
+
+	inbound, ok, err := clashapi.ReadDNSInbound(data, port)
+	if err != nil {
+		return err
+	}
+
+	if !ok {
+		m.log.Debug("dns-in в конфиге нет, DNS-проба пропущена", "dns_port", port)
+
+		return nil
+	}
+
+	return m.opts.DNS.Probe(ctx, inbound)
 }
 
 // awaitProcess ждёт, пока procd отчитается о новом процессе службы. Init-скрипт

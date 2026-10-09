@@ -22,6 +22,7 @@ import (
 
 	"metabox/internal/clashapi"
 	"metabox/internal/config"
+	"metabox/internal/dataplane"
 	"metabox/internal/procd"
 )
 
@@ -59,6 +60,12 @@ const (
 	ReasonRestartFailed ReasonCode = "restart_failed"
 	// ReasonHealthcheckFailed — служба поднялась, но рантайм не ответил.
 	ReasonHealthcheckFailed ReasonCode = "healthcheck_failed"
+	// ReasonDNSProbeFailed — Clash API ответил, но dns-in нового конфига не
+	// разрешил контрольное имя: DNS сети через sing-box не работает.
+	ReasonDNSProbeFailed ReasonCode = "dns_probe_failed"
+	// ReasonInterceptionMissing — перехват включён и стоял до рестарта, а после
+	// него цепочек обвязки в nft нет: трафик LAN идёт мимо sing-box.
+	ReasonInterceptionMissing ReasonCode = "interception_missing"
 	// ReasonRollbackFailed — вернуть предыдущий конфиг не вышло: это худший
 	// результат цикла, и устройство остаётся с чужим конфигом.
 	ReasonRollbackFailed ReasonCode = "rollback_failed"
@@ -229,6 +236,17 @@ type Health interface {
 	Wait(ctx context.Context, settings clashapi.Settings) error
 }
 
+// Dataplane читает модель обвязки и признак её применения.
+type Dataplane interface {
+	Model(ctx context.Context) (dataplane.Model, error)
+	Applied(ctx context.Context) (bool, dataplane.AppliedReason, error)
+}
+
+// DNSProber шлёт DNS-запрос в dns-in поднятого sing-box.
+type DNSProber interface {
+	Probe(ctx context.Context, inbound clashapi.DNSInbound) error
+}
+
 // Clock отдаёт срабатывание окна подтверждения. Отдельная зависимость, а не
 // прямой вызов time: иначе проверка автоотката превращается в минуту сна.
 type Clock interface {
@@ -260,6 +278,11 @@ type Options struct {
 	// ProcessInterval — пауза между опросами procd, пока после рестарта ждём
 	// новый процесс службы.
 	ProcessInterval time.Duration
+	// Dataplane — откуда healthcheck берёт порт dns-in и признак перехвата.
+	// nil — DNS-проба и проверка перехвата пропускаются.
+	Dataplane Dataplane
+	// DNS — проба dns-in; nil — выключена.
+	DNS DNSProber
 }
 
 // Manager — единственный владелец цикла применения.
