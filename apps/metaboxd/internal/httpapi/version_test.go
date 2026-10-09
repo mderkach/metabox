@@ -1,6 +1,7 @@
 package httpapi_test
 
 import (
+	"errors"
 	"net/http"
 	"slices"
 	"testing"
@@ -209,6 +210,38 @@ func TestConfigVersionRestoreLegacyKeepsLists(t *testing.T) {
 
 	if applier.lists.Put != nil || applier.lists.Remove != nil {
 		t.Errorf("восстановление старой версии тронуло списки: %+v", applier.lists)
+	}
+
+}
+
+// Списки, которые не прочитать, восстановление не угадывает: применение не
+// начинается, а не идёт одним конфигом мимо снимка.
+func TestConfigVersionRestoreUnreadableLists(t *testing.T) {
+	snapshot := map[int]map[string][]byte{2: {"my.json": []byte("{}")}}
+	tests := []struct {
+		name   string
+		reader fakeReader
+	}{
+		{"снимок версии не читается", fakeReader{versionListsErr: errors.New("снимок")}},
+		{"текущие списки не читаются", fakeReader{versionLists: snapshot, listSumsErr: errors.New("списки")}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			applier := &fakeApplier{}
+			tt.reader.byID = map[int][]byte{2: []byte("{}")}
+
+			srv := newTestServerWith(t, applier, tt.reader, "", nil)
+			got := request(t, srv, http.MethodPost, "/api/config/versions/2/restore", srv.URL, nil)
+
+			if got.status != http.StatusInternalServerError {
+				t.Errorf("код ответа: получили %d, ожидали %d", got.status, http.StatusInternalServerError)
+			}
+
+			if applier.received != nil {
+				t.Errorf("применение началось: %q", applier.received)
+			}
+		})
 	}
 }
 

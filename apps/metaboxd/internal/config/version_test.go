@@ -643,3 +643,92 @@ func TestVersionListsArePrivate(t *testing.T) {
 		t.Errorf("права файла снимка %o, ожидали %o", perm, securePerm)
 	}
 }
+
+// Версия без снимка за целую не выдаётся: отказ снимка оставляет историю
+// прежней, и файла версии под новым номером нет.
+func TestSaveVersionFailedSnapshotLeavesNoVersion(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("права каталога root не ограничивают")
+	}
+
+	store := newVersionStore(t)
+	writeVersionLists(t, store, map[string][]byte{"my.json": []byte(`{"rules":[]}`)})
+
+	if err := store.SaveVersion(t.Context(), []byte(`{"v":1}`)); err != nil {
+		t.Fatalf("сохранение первой версии: %v", err)
+	}
+
+	// Сироту, которую нельзя снять, снимок не обходит: очистка его каталога
+	// падает, а каталог истории остаётся открытым на запись.
+	locked := filepath.Join(store.VersionsPath(), versionListsName(2), "locked")
+	if err := os.MkdirAll(locked, secureDirPerm); err != nil {
+		t.Fatalf("каталог сироты: %v", err)
+	}
+
+	if err := os.WriteFile(filepath.Join(locked, "stale.json"), []byte("{}"), securePerm); err != nil {
+		t.Fatalf("файл сироты: %v", err)
+	}
+
+	if err := os.Chmod(locked, 0o500); err != nil {
+		t.Fatalf("права сироты: %v", err)
+	}
+
+	t.Cleanup(func() { _ = os.Chmod(locked, secureDirPerm) })
+
+	writeVersionLists(t, store, map[string][]byte{"my.json": []byte(`{"rules":[{"domain":["a"]}]}`)})
+
+	if err := store.SaveVersion(t.Context(), []byte(`{"v":2}`)); err == nil {
+		t.Fatal("версия сохранилась, хотя снимок списков не записан")
+	}
+
+	if _, err := os.Stat(filepath.Join(store.VersionsPath(), versionName(2))); !errors.Is(err, fs.ErrNotExist) {
+		t.Errorf("файл версии 2 появился без снимка: %v", err)
+	}
+
+	versions, err := store.Versions(t.Context())
+	if err != nil {
+		t.Fatalf("чтение истории: %v", err)
+	}
+
+	if len(versions) != 1 || versions[0].ID != 1 {
+		t.Errorf("история после отказа снимка: %+v, ожидали только версию 1", versions)
+	}
+}
+
+// Снимок версии и её отпечаток берут те же имена, что текущий набор: иначе
+// восстановленная версия никогда не совпала бы с текущей.
+func TestSaveVersionSkipsForeignLists(t *testing.T) {
+	store := newVersionStore(t)
+	writeVersionLists(t, store, map[string][]byte{"my.json": []byte(`{"rules":[]}`)})
+
+	for name, data := range map[string][]byte{"geo.srs": []byte("binary"), ".metabox-1": []byte("{}")} {
+		if err := os.WriteFile(filepath.Join(store.ListsPath(), name), data, 0o600); err != nil {
+			t.Fatalf("чужой файл %s: %v", name, err)
+		}
+	}
+
+	if err := store.SaveVersion(t.Context(), []byte(`{"v":1}`)); err != nil {
+		t.Fatalf("сохранение версии: %v", err)
+	}
+
+	snapshot, err := store.ReadVersionLists(t.Context(), 1)
+	if err != nil {
+		t.Fatalf("чтение снимка: %v", err)
+	}
+	if len(snapshot) != 1 || snapshot["my.json"] == nil {
+		t.Errorf("в снимке %q, ожидали только свои файлы", snapshot)
+	}
+
+	current, err := store.ListSums(t.Context())
+	if err != nil {
+		t.Fatalf("суммы списков: %v", err)
+	}
+
+	versions, err := store.Versions(t.Context())
+	if err != nil {
+		t.Fatalf("чтение истории: %v", err)
+	}
+	if len(versions) != 1 || versions[0].ListsSum != ListsEtag(current) {
+		t.Errorf("отпечаток версии %+v не совпал с текущим набором %q", versions, ListsEtag(current))
+	}
+}

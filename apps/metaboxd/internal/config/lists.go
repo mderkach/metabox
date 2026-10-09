@@ -7,12 +7,14 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 )
 
 const (
 	// listsDirName — подкаталог каталога конфига под файлы своих списков.
-	// В корень такой файл класть нельзя: служба поднимается в режиме каталога
-	// и слила бы его с конфигом как ещё один .json.
+	// В корень такой файл класть нельзя: служба в режиме каталога слила бы его
+	// с конфигом как ещё один .json.
 	listsDirName = "rule-sets"
 
 	// listsBackupName — снимок подкаталога списков в служебном каталоге;
@@ -23,6 +25,23 @@ const (
 	// целиком до подмены: обрыв на середине не должен портить прежний.
 	listsBackupStaging = "rule-sets.backup.next"
 )
+
+// listNamePattern — имя, которое панель строит из тега: простое имя с
+// расширением .json, без выхода из подкаталога.
+var listNamePattern = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._-]*\.json$`)
+
+// maxListName ограничивает имя: длиннее не принимают файловые системы устройств.
+const maxListName = 128
+
+// ValidListName отвечает, управляет ли демон файлом с таким именем в
+// подкаталоге списков. Остальное — попытка выйти из подкаталога, чужой файл
+// владельца (`.srs`, заметки) или остаток оборванной записи `.metabox-*`: их
+// демон не пишет и не удаляет. Чтение, суммы, снимок версии, бэкап и откат
+// видят только такие имена — иначе отпечаток восстановленной версии не сошёлся
+// бы с текущим набором, а откат снимал бы чужие файлы.
+func ValidListName(name string) bool {
+	return len(name) <= maxListName && listNamePattern.MatchString(name) && !strings.Contains(name, "..")
+}
 
 // ListsPath отдаёт каталог файлов списков.
 func (s *Store) ListsPath() string {
@@ -60,7 +79,7 @@ func (s *Store) readLists() (map[string][]byte, error) {
 	files := make(map[string][]byte, len(entries))
 
 	for _, entry := range entries {
-		if entry.IsDir() {
+		if entry.IsDir() || !ValidListName(entry.Name()) {
 			continue
 		}
 
@@ -88,15 +107,37 @@ func (s *Store) ListSums(ctx context.Context) (map[string]string, error) {
 	return s.listSums()
 }
 
+// listSums считает суммы потоком: их спрашивают сверка перед каждым
+// применением и каждый заход в историю, и поднимать ради них все списки в
+// память незачем.
 func (s *Store) listSums() (map[string]string, error) {
-	files, err := s.readLists()
+	root, err := s.listsRoot(false)
+	if errors.Is(err, errNoLists) {
+		return map[string]string{}, nil
+	}
 	if err != nil {
 		return nil, err
 	}
+	defer func() { _ = root.Close() }()
 
-	sums := make(map[string]string, len(files))
-	for name, data := range files {
-		sums[name] = Sum(data)
+	entries, err := fs.ReadDir(root.FS(), ".")
+	if err != nil {
+		return nil, fmt.Errorf("чтение каталога списков %s: %w", s.ListsPath(), err)
+	}
+
+	sums := make(map[string]string, len(entries))
+
+	for _, entry := range entries {
+		if entry.IsDir() || !ValidListName(entry.Name()) {
+			continue
+		}
+
+		sum, err := streamSum(root, entry.Name())
+		if err != nil {
+			return nil, fmt.Errorf("чтение списка %s: %w", entry.Name(), err)
+		}
+
+		sums[entry.Name()] = sum
 	}
 
 	return sums, nil

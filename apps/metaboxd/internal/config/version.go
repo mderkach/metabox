@@ -27,8 +27,8 @@ var (
 
 const (
 	// versionsDir — подкаталог служебного каталога демона. В каталоге конфига
-	// истории не место: сервис поднимается в режиме каталога и слил бы каждую
-	// версию в рабочую конфигурацию.
+	// истории не место: служба в режиме каталога слила бы каждую версию в
+	// рабочую конфигурацию.
 	versionsDir = "versions"
 
 	// maxVersions — сколько версий держим. Конфиг рукописного роутера — это
@@ -147,7 +147,11 @@ func (s *Store) SaveVersion(ctx context.Context, data []byte) error {
 		return err
 	}
 
-	return trimVersions(root, append([]int{next}, saved...))
+	if err := trimVersions(root, append([]int{next}, saved...)); err != nil {
+		return fmt.Errorf("версия %d сохранена, подрезка истории: %w", next, err)
+	}
+
+	return nil
 }
 
 // saveVersionLists кладёт снимок списков в соседний каталог версии next.
@@ -548,7 +552,7 @@ func snapshotSums(root *os.Root, id int) (map[string]string, error) {
 	sums := make(map[string]string, len(entries))
 
 	for _, entry := range entries {
-		if entry.IsDir() {
+		if entry.IsDir() || !ValidListName(entry.Name()) {
 			continue
 		}
 

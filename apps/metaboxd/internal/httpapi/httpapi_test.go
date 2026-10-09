@@ -129,6 +129,10 @@ type fakeReader struct {
 	versionLists map[int]map[string][]byte
 	// listSums — суммы текущих файлов списков.
 	listSums map[string]string
+	// listSumsErr ломает только чтение сумм текущих списков.
+	listSumsErr error
+	// versionListsErr ломает только чтение снимков списков версий.
+	versionListsErr error
 }
 
 func (r fakeReader) Read(context.Context) ([]byte, error) {
@@ -156,6 +160,10 @@ func (r fakeReader) ListSums(context.Context) (map[string]string, error) {
 		return nil, r.err
 	}
 
+	if r.listSumsErr != nil {
+		return nil, r.listSumsErr
+	}
+
 	return r.listSums, nil
 }
 
@@ -179,6 +187,10 @@ func (r fakeReader) ReadVersion(_ context.Context, id int) ([]byte, error) {
 func (r fakeReader) ReadVersionLists(_ context.Context, id int) (map[string][]byte, error) {
 	if _, ok := r.byID[id]; !ok {
 		return nil, config.ErrNoVersion
+	}
+
+	if r.versionListsErr != nil {
+		return nil, r.versionListsErr
 	}
 
 	files, ok := r.versionLists[id]

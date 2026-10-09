@@ -192,3 +192,85 @@ func TestStageCandidateOverlaysLists(t *testing.T) {
 		t.Errorf("раскладка кандидата тронула рабочий каталог: %v", files)
 	}
 }
+
+// foreignLists — файлы подкаталога списков, которыми демон не управляет:
+// скомпилированный набор владельца и остаток оборванной записи.
+var foreignLists = map[string][]byte{"geo.srs": []byte("binary"), ".metabox-123": []byte(`{"rules":[]}`)}
+
+func writeForeignLists(t *testing.T, store *config.Store) {
+	t.Helper()
+
+	for name, data := range foreignLists {
+		if err := os.WriteFile(filepath.Join(store.ListsPath(), name), data, 0o600); err != nil {
+			t.Fatalf("чужой файл %s: %v", name, err)
+		}
+	}
+}
+
+func TestListsSkipForeignNames(t *testing.T) {
+	store, cfgDir := newStore(t)
+	writeConfig(t, cfgDir, configName, []byte("{}"), 0o600)
+
+	own := map[string][]byte{"my.json": []byte(`{"rules":[]}`)}
+	if err := store.WriteLists(t.Context(), own, nil); err != nil {
+		t.Fatalf("запись списков: %v", err)
+	}
+	writeForeignLists(t, store)
+
+	files, err := store.ReadLists(t.Context())
+	if err != nil {
+		t.Fatalf("чтение списков: %v", err)
+	}
+	if len(files) != 1 || files["my.json"] == nil {
+		t.Errorf("чтение отдало %q, ожидали только свои файлы", files)
+	}
+
+	sums, err := store.ListSums(t.Context())
+	if err != nil {
+		t.Fatalf("суммы списков: %v", err)
+	}
+	if len(sums) != 1 || sums["my.json"] != config.Sum(own["my.json"]) {
+		t.Errorf("суммы %v, ожидали только свои файлы", sums)
+	}
+}
+
+// Откат возвращает свои файлы, а чужие, появившиеся после бэкапа, оставляет на
+// месте: их демон не писал и снимать не вправе.
+func TestRestoreKeepsForeignLists(t *testing.T) {
+	store, cfgDir := newStore(t)
+	writeConfig(t, cfgDir, configName, []byte("{}"), 0o600)
+
+	own := map[string][]byte{"my.json": []byte(`{"rules":[]}`)}
+	if err := store.WriteLists(t.Context(), own, nil); err != nil {
+		t.Fatalf("запись списков: %v", err)
+	}
+
+	if err := store.Backup(t.Context()); err != nil {
+		t.Fatalf("бэкап: %v", err)
+	}
+
+	writeForeignLists(t, store)
+
+	if err := store.WriteLists(t.Context(), map[string][]byte{"late.json": []byte("{}")}, []string{"my.json"}); err != nil {
+		t.Fatalf("правка списков после бэкапа: %v", err)
+	}
+
+	if err := store.Restore(t.Context()); err != nil {
+		t.Fatalf("откат: %v", err)
+	}
+
+	for name, want := range foreignLists {
+		got, err := os.ReadFile(filepath.Join(store.ListsPath(), name))
+		if err != nil || !bytes.Equal(got, want) {
+			t.Errorf("чужой файл %s после отката: %q, ошибка %v", name, got, err)
+		}
+	}
+
+	files, err := store.ReadLists(t.Context())
+	if err != nil {
+		t.Fatalf("чтение после отката: %v", err)
+	}
+	if len(files) != 1 || !bytes.Equal(files["my.json"], own["my.json"]) {
+		t.Errorf("свои файлы после отката %q, ожидали %q", files, own)
+	}
+}
