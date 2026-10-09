@@ -1,9 +1,22 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { changeDataplane, confirmDataplaneChange, useSaveDataplaneTransaction } from '@entities/Dataplane';
+import {
+  DATAPLANE_QUERY,
+  changeDataplane,
+  confirmDataplaneChange,
+  useSaveDataplaneTransaction,
+} from '@entities/Dataplane';
+import { ApiError, type ApiFailureCode } from '@shared/api';
 
-/** Без ретраев: повтор запустил бы на устройстве второй цикл смены. */
+const MODIFIED: ApiFailureCode = 'dataplane_modified';
+
+/**
+ * Без ретраев: повтор запустил бы на устройстве второй цикл смены. Отказ
+ * `dataplane_modified` значит, что секцию правили мимо панели: модель
+ * перечитывается, и следующая смена строится уже от неё.
+ */
 export function useChangeDeviceRoute() {
+  const queryClient = useQueryClient();
   const onTransaction = useSaveDataplaneTransaction();
 
   return useMutation({
@@ -15,6 +28,11 @@ export function useChangeDeviceRoute() {
       successMessageKey: 'toast.device.route.accepted',
     },
     onSuccess: onTransaction,
+    onError: (error) => {
+      if (error instanceof ApiError && error.code === MODIFIED) {
+        void queryClient.invalidateQueries({ queryKey: DATAPLANE_QUERY.model() });
+      }
+    },
   });
 }
 

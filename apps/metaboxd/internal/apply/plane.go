@@ -17,6 +17,10 @@ import (
 	"metabox/internal/dataplane"
 )
 
+// ErrDataplaneModified — секцию UCI изменили после того, как клиент прочитал
+// модель: правка по SSH иначе затёрлась бы молча.
+var ErrDataplaneModified = errors.New("модель обвязки изменена вне metabox")
+
 // PlaneEditor — модель обвязки в UCI: снимок секции, запись модели, возврат
 // снимка и цепочки в nft.
 type PlaneEditor interface {
@@ -125,9 +129,10 @@ func (p *Plane) Current() Transaction {
 }
 
 // Start проверяет модель, занимает применение и уводит смену в фоновую
-// горутину. client — адрес, с которого пришёл запрос: смена, которая выводит его
-// из перехвата, отмечается в логе, но идёт тем же протоколом.
-func (p *Plane) Start(ctx context.Context, model dataplane.Model, client netip.Addr) (Transaction, error) {
+// горутину. base — Snapshot.Sum секции, от которой строилась модель; пустой —
+// смена без сверки. client — адрес, с которого пришёл запрос: смена, которая
+// выводит его из перехвата, отмечается в логе, но идёт тем же протоколом.
+func (p *Plane) Start(ctx context.Context, model dataplane.Model, base string, client netip.Addr) (Transaction, error) {
 	next, err := dataplane.Normalize(model)
 	if err != nil {
 		return Transaction{}, err
@@ -143,6 +148,12 @@ func (p *Plane) Start(ctx context.Context, model dataplane.Model, client netip.A
 		p.gate.unreserve(token)
 
 		return Transaction{}, fmt.Errorf("снимок модели обвязки: %w", err)
+	}
+
+	if base != "" && previous.Sum() != base {
+		p.gate.unreserve(token)
+
+		return Transaction{}, ErrDataplaneModified
 	}
 
 	tx := Transaction{ID: rand.Text(), Phase: PhaseApplying, Window: p.opts.Window}

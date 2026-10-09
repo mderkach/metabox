@@ -33,6 +33,9 @@ var (
 	errBadDeviceBody = errors.New("тело правки имени устройства не разобрано")
 	// errBadDataplaneBody — тело смены модели обвязки не разобрано как JSON.
 	errBadDataplaneBody = errors.New("тело смены модели обвязки не разобрано")
+	// errDataplaneBaseMissing — смена модели без If-Match: без него правка
+	// UCI по SSH затёрлась бы молча.
+	errDataplaneBaseMissing = errors.New("нужен If-Match с ETag из GET /api/dataplane")
 	// errBadLogQuery — уровень или число строк запроса лога не разобраны.
 	errBadLogQuery = errors.New("параметры запроса лога не разобраны")
 )
@@ -164,6 +167,10 @@ func statusFor(err error) (status int, code contract.ErrorCode) {
 		return http.StatusBadRequest, contract.ErrDeviceInvalid
 	case errors.Is(err, errBadDataplaneBody):
 		return http.StatusBadRequest, contract.ErrDataplaneInvalid
+	case errors.Is(err, apply.ErrDataplaneModified):
+		return http.StatusPreconditionFailed, contract.ErrDataplaneModified
+	case errors.Is(err, errDataplaneBaseMissing):
+		return http.StatusPreconditionRequired, contract.ErrDataplaneModified
 	case errors.Is(err, logs.ErrUnavailable):
 		return http.StatusServiceUnavailable, contract.ErrLogUnavailable
 	case errors.Is(err, logs.ErrTooManyStreams):

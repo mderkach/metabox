@@ -52,6 +52,7 @@ export const ERROR_CODE = [
   'launch_mismatch',
   'device_invalid',
   'dataplane_invalid',
+  'dataplane_modified',
   'log_unavailable',
   'log_query_invalid',
   'log_stream_limit',

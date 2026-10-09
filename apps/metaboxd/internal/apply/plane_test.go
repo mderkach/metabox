@@ -219,7 +219,7 @@ func TestPlaneConfirm(t *testing.T) {
 	h := newPlaneHarness(t, nil, validConfig, slog.New(slog.DiscardHandler))
 	t.Cleanup(h.plane.Close)
 
-	tx, err := h.plane.Start(t.Context(), aclChange(), admin)
+	tx, err := h.plane.Start(t.Context(), aclChange(), "", admin)
 	if err != nil {
 		t.Fatalf("смена обвязки: %v", err)
 	}
@@ -260,7 +260,7 @@ func TestPlaneRollbackWithoutConfirmation(t *testing.T) {
 	h := newPlaneHarness(t, nil, validConfig, slog.New(slog.NewTextHandler(&logs, nil)))
 	t.Cleanup(h.plane.Close)
 
-	if _, err := h.plane.Start(t.Context(), aclChange(), admin); err != nil {
+	if _, err := h.plane.Start(t.Context(), aclChange(), "", admin); err != nil {
 		t.Fatalf("смена обвязки: %v", err)
 	}
 
@@ -312,7 +312,7 @@ func TestPlaneDNSPortProbeFailureRollsBack(t *testing.T) {
 			h := newPlaneHarness(t, failingProber{}, tt.cfg, slog.New(slog.DiscardHandler))
 			t.Cleanup(h.plane.Close)
 
-			if _, err := h.plane.Start(t.Context(), m, admin); err != nil {
+			if _, err := h.plane.Start(t.Context(), m, "", admin); err != nil {
 				t.Fatalf("смена обвязки: %v", err)
 			}
 
@@ -337,7 +337,7 @@ func TestPlaneMissingChainsRollBack(t *testing.T) {
 	t.Cleanup(h.plane.Close)
 	h.editor.chains = []string{"metabox_redirect"}
 
-	if _, err := h.plane.Start(t.Context(), aclChange(), admin); err != nil {
+	if _, err := h.plane.Start(t.Context(), aclChange(), "", admin); err != nil {
 		t.Fatalf("смена обвязки: %v", err)
 	}
 
@@ -353,13 +353,48 @@ func TestPlaneInvalidModelReservesNothing(t *testing.T) {
 	m := aclChange()
 	m.SourceIP = []string{"not-an-ip"}
 
-	_, err := h.plane.Start(t.Context(), m, admin)
+	_, err := h.plane.Start(t.Context(), m, "", admin)
 	if _, ok := errors.AsType[*dataplane.InvalidError](err); !ok {
 		t.Fatalf("получили %v, ожидали InvalidError", err)
 	}
 
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
 		t.Errorf("после отвергнутой модели применение конфига занято: %v", err)
+	}
+}
+
+// Секцию правили по SSH после того, как панель прочитала модель: смена от
+// устаревшей базы отклоняется до записи и применение не занимает.
+func TestPlaneStaleBase(t *testing.T) {
+	h := newPlaneHarness(t, nil, validConfig, slog.New(slog.DiscardHandler))
+	t.Cleanup(h.plane.Close)
+
+	stale := previousSection().Sum()
+
+	h.editor.mu.Lock()
+	h.editor.section.Options["source_ip"] = []string{"192.168.1.30"}
+	edited := h.editor.section.Sum()
+	h.editor.mu.Unlock()
+
+	if _, err := h.plane.Start(t.Context(), aclChange(), stale, admin); !errors.Is(err, apply.ErrDataplaneModified) {
+		t.Fatalf("получили %v, ожидали ErrDataplaneModified", err)
+	}
+
+	if written, _ := h.editor.counts(); written != 0 {
+		t.Errorf("записей в UCI %d после отказа, ожидали ни одной", written)
+	}
+	if h.pstore.saved() != nil {
+		t.Error("отклонённая смена оставила состояние на диске")
+	}
+
+	if _, err := h.plane.Start(t.Context(), aclChange(), edited, admin); err != nil {
+		t.Fatalf("смена от свежей базы: %v", err)
+	}
+
+	h.waitPlane(t, apply.PhaseAwaitingConfirm)
+
+	if written, _ := h.editor.counts(); written != 1 {
+		t.Errorf("записей в UCI %d, ожидали одну", written)
 	}
 }
 
@@ -373,7 +408,7 @@ func TestPlaneAndApplyAreExclusive(t *testing.T) {
 		}
 		h.waitWindow(t)
 
-		if _, err := h.plane.Start(t.Context(), aclChange(), admin); !errors.Is(err, apply.ErrBusy) {
+		if _, err := h.plane.Start(t.Context(), aclChange(), "", admin); !errors.Is(err, apply.ErrBusy) {
 			t.Errorf("получили %v, ожидали ErrBusy", err)
 		}
 		if written, _ := h.editor.counts(); written != 0 {
@@ -385,7 +420,7 @@ func TestPlaneAndApplyAreExclusive(t *testing.T) {
 		h := newPlaneHarness(t, nil, validConfig, slog.New(slog.DiscardHandler))
 		t.Cleanup(h.plane.Close)
 
-		tx, err := h.plane.Start(t.Context(), aclChange(), admin)
+		tx, err := h.plane.Start(t.Context(), aclChange(), "", admin)
 		if err != nil {
 			t.Fatalf("смена обвязки: %v", err)
 		}
@@ -411,7 +446,7 @@ func TestPlaneAndApplyAreExclusive(t *testing.T) {
 func TestPlaneReplayAfterCrashInWindow(t *testing.T) {
 	h := newPlaneHarness(t, nil, validConfig, slog.New(slog.DiscardHandler))
 
-	if _, err := h.plane.Start(t.Context(), aclChange(), admin); err != nil {
+	if _, err := h.plane.Start(t.Context(), aclChange(), "", admin); err != nil {
 		t.Fatalf("смена обвязки: %v", err)
 	}
 	h.waitWindow(t)

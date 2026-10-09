@@ -17,12 +17,21 @@ function isChange(body: unknown): body is DataplaneChangeWire {
  * Модель обвязки вместе с циклом её смены. Транзакция уходит в статус демона
  * через `status()`: панель ищет идущую смену там, а ручку статуса держит мок
  * демона — вторая ручка с тем же адресом закрыла бы его транзакцию конфига.
+ * `edit` меняет секцию мимо панели, как правка UCI по SSH: `ETag` сменится, и
+ * смена со старым `If-Match` получит 412.
  */
 export function createDataplaneMock(initial: DataplaneWire = DATAPLANE_FIXTURE) {
   let dataplane = initial;
+  let revision = 1;
   let transaction: ApplyTransactionWire | null = null;
 
+  const etag = () => `"dataplane-${String(revision)}"`;
+
   return {
+    edit: (model: DataplaneWire['model']) => {
+      dataplane = { ...dataplane, model };
+      revision += 1;
+    },
     status: () =>
       transaction === null
         ? {}
@@ -31,9 +40,22 @@ export function createDataplaneMock(initial: DataplaneWire = DATAPLANE_FIXTURE) 
             dataplane_transaction_href: DATAPLANE_ENDPOINT.applyState(transaction.id),
           },
     handlers: [
-      http.get(DATAPLANE_ENDPOINT.dataplane(), () => HttpResponse.json(dataplane)),
+      http.get(DATAPLANE_ENDPOINT.dataplane(), () => HttpResponse.json(dataplane, { headers: { ETag: etag() } })),
 
       http.put(DATAPLANE_ENDPOINT.dataplane(), async ({ request }) => {
+        const match = request.headers.get('If-Match');
+
+        if (match === null) {
+          return HttpResponse.json({ code: 'dataplane_modified', message: 'нужен If-Match' }, { status: 428 });
+        }
+
+        if (match !== etag()) {
+          return HttpResponse.json(
+            { code: 'dataplane_modified', message: 'модель обвязки изменена вне metabox' },
+            { status: 412 }
+          );
+        }
+
         const body: unknown = await request.json();
 
         if (!isChange(body)) {
@@ -41,6 +63,7 @@ export function createDataplaneMock(initial: DataplaneWire = DATAPLANE_FIXTURE) 
         }
 
         dataplane = { ...dataplane, model: body.model };
+        revision += 1;
         transaction = { id: `dataplane-${String(Date.now())}`, phase: 'awaiting_confirm', window: CONFIRM_WINDOW_NS };
 
         return HttpResponse.json(transaction, { status: 202 });

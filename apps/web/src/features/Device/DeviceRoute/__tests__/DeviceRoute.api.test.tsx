@@ -5,7 +5,8 @@ import { http, HttpResponse } from 'msw';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { DATAPLANE_ENDPOINT, type DataplaneModel } from '@entities/Dataplane';
+import { DATAPLANE_ENDPOINT, useDataplane, type DataplaneModel } from '@entities/Dataplane';
+import { DATAPLANE_FIXTURE } from '@entities/Dataplane/__tests__/Dataplane.fixture';
 import { createDataplaneMock } from '@entities/Dataplane/__tests__/Dataplane.handlers';
 import { QueryClientInstance } from '@shared/api';
 
@@ -40,11 +41,17 @@ const MODEL: DataplaneModel = {
   ipv6: false,
 };
 
+/** `ETag` свежего мока: секцию ещё никто не менял. */
+const BASE = '"dataplane-1"';
+
 describe('useChangeDeviceRoute', () => {
+  let mock = createDataplaneMock();
+
   beforeEach(() => {
     vi.clearAllMocks();
     QueryClientInstance.clear();
-    server.use(...createDataplaneMock().handlers);
+    mock = createDataplaneMock();
+    server.use(...mock.handlers);
   });
 
   it('смену, отклонённую из-за идущего применения, называет тостом с причиной', async () => {
@@ -56,7 +63,7 @@ describe('useChangeDeviceRoute', () => {
 
     const { result } = renderHook(useChangeDeviceRoute, { wrapper: AppQuery });
 
-    result.current.mutate(MODEL);
+    result.current.mutate({ model: MODEL, base: BASE });
 
     await waitFor(() => {
       expect(result.current.isError).toBe(true);
@@ -67,7 +74,7 @@ describe('useChangeDeviceRoute', () => {
   it('принятую смену объявляет тостом, подтверждение — своим', async () => {
     const change = renderHook(useChangeDeviceRoute, { wrapper: AppQuery });
 
-    change.result.current.mutate(MODEL);
+    change.result.current.mutate({ model: MODEL, base: BASE });
 
     await waitFor(() => {
       expect(change.result.current.isSuccess).toBe(true);
@@ -82,5 +89,48 @@ describe('useChangeDeviceRoute', () => {
       expect(confirm.result.current.data?.phase).toBe('confirmed');
     });
     expect(toast.success).toHaveBeenLastCalledWith('Связь подтверждена, список перехвата оставлен');
+  });
+
+  it('шлёт отпечаток модели в If-Match', async () => {
+    const sent: (string | null)[] = [];
+
+    server.events.on('request:start', ({ request }) => {
+      if (request.method === 'PUT') sent.push(request.headers.get('If-Match'));
+    });
+
+    const { result } = renderHook(useChangeDeviceRoute, { wrapper: AppQuery });
+
+    result.current.mutate({ model: MODEL, base: BASE });
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+    server.events.removeAllListeners('request:start');
+    expect(sent).toEqual([BASE]);
+  });
+
+  it('секцию правили мимо панели: тост с причиной и перечитанная модель', async () => {
+    const { result } = renderHook(() => ({ change: useChangeDeviceRoute(), dataplane: useDataplane() }), {
+      wrapper: AppQuery,
+    });
+
+    await waitFor(() => {
+      expect(result.current.dataplane.data?.etag).toBe(BASE);
+    });
+
+    mock.edit({ ...DATAPLANE_FIXTURE.model, source_mac: ['aa:bb:cc:00:00:99'] });
+    result.current.change.mutate({ model: MODEL, base: BASE });
+
+    await waitFor(() => {
+      expect(result.current.change.isError).toBe(true);
+    });
+    expect(toast.error).toHaveBeenCalledWith(
+      'Сменить перехват устройства не удалось: настройки перехвата трафика изменились на устройстве, список перечитан'
+    );
+
+    await waitFor(() => {
+      expect(result.current.dataplane.data?.etag).toBe('"dataplane-2"');
+    });
+    expect(result.current.dataplane.data?.model.sourceMac).toEqual(['aa:bb:cc:00:00:99']);
   });
 });

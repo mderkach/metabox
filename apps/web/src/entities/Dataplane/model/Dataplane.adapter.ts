@@ -1,3 +1,5 @@
+import type { TaggedResponse } from '@shared/api';
+
 import type { DataplaneChangeWire, DataplaneModelWire, DataplaneWire } from '../api/Dataplane.schema';
 import type { Dataplane, DataplaneModel } from './Dataplane.model';
 
@@ -21,8 +23,8 @@ function toModel(wire: DataplaneModelWire): DataplaneModel {
   };
 }
 
-export function toDataplane(wire: DataplaneWire): Dataplane {
-  return { model: toModel(wire.model) };
+export function toDataplane({ body, etag }: TaggedResponse<DataplaneWire>): Dataplane {
+  return { model: toModel(body.model), etag };
 }
 
 /**

@@ -2,6 +2,9 @@ package dataplane
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"maps"
@@ -52,6 +55,22 @@ func (s Snapshot) Equal(other Snapshot) bool {
 	}
 
 	return s.Type == other.Type && maps.EqualFunc(s.Options, other.Options, slices.Equal)
+}
+
+// Sum — отпечаток секции для оптимистичной блокировки смены модели. JSON
+// детерминирован: ключи карты сортируются, порядок значений списка значим и для
+// UCI. Отсутствующая секция даёт один отпечаток независимо от прочих полей.
+func (s Snapshot) Sum() string {
+	if !s.Exists {
+		s = Snapshot{}
+	}
+
+	// Ошибки здесь не бывает: в снимке только строки, срезы строк и карта со
+	// строковыми ключами.
+	data, _ := json.Marshal(s)
+	digest := sha256.Sum256(data)
+
+	return hex.EncodeToString(digest[:])
 }
 
 // Normalize проверяет модель теми же правилами, что чтение из UCI, и отдаёт её

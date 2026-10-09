@@ -66,6 +66,7 @@ export function useDeviceRoute(): DeviceRouteState {
   const state = useDataplaneTransaction(id);
   const transaction = state.data ?? status.data?.dataplaneTransaction ?? null;
   const model = dataplane.data?.model ?? null;
+  const etag = dataplane.data?.etag ?? null;
 
   useModelRefresh(transaction);
 
@@ -74,9 +75,9 @@ export function useDeviceRoute(): DeviceRouteState {
     (source: RouteSource, routed: boolean) => {
       if (model === null) return;
 
-      mutate(withDeviceRoute(model, source, routed));
+      mutate({ model: withDeviceRoute(model, source, routed), base: etag });
     },
-    [model, mutate]
+    [model, etag, mutate]
   );
 
   const confirmMutate = confirm.mutate;

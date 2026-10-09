@@ -200,6 +200,10 @@ const (
 	// теле `PUT /api/dataplane`. Поля с ошибкой лежат в Details; у тела,
 	// которое не разобралось как JSON, их нет.
 	ErrDataplaneInvalid ErrorCode = "dataplane_invalid"
+	// ErrDataplaneModified — секция `metabox.dataplane` изменилась после
+	// чтения модели клиентом (412), либо `PUT /api/dataplane` пришёл без
+	// If-Match (428).
+	ErrDataplaneModified ErrorCode = "dataplane_modified"
 	// ErrLogUnavailable — лог sing-box не читается: logread не задан или
 	// отказал, файл log.output не открылся.
 	ErrLogUnavailable ErrorCode = "log_unavailable"

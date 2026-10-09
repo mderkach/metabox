@@ -4,7 +4,7 @@ import { toDataplane, toDataplaneChange } from '../model/Dataplane.adapter';
 import { isDeviceRouted, withDeviceRoute, type RouteSource } from '../model/Dataplane.model';
 import { DATAPLANE_FIXTURE } from './Dataplane.fixture';
 
-const MODEL = toDataplane(DATAPLANE_FIXTURE).model;
+const MODEL = toDataplane({ body: DATAPLANE_FIXTURE, etag: null }).model;
 
 const DYNAMIC: RouteSource = { mac: 'aa:bb:cc:00:00:40', ip: '192.168.1.36', static: false };
 const STATIC: RouteSource = { mac: 'aa:bb:cc:00:00:70', ip: '192.168.1.60', static: true };

@@ -176,10 +176,10 @@ type DeviceRegistry interface {
 	Rename(ctx context.Context, mac, name string) error
 }
 
-// DataplaneReader читает модель сетевой обвязки и признак её применения.
+// DataplaneReader читает секцию сетевой обвязки и признак её применения.
 // Интерфейс объявлен здесь, у потребителя.
 type DataplaneReader interface {
-	Model(ctx context.Context) (dataplane.Model, error)
+	Snapshot(ctx context.Context) (dataplane.Snapshot, error)
 	Applied(ctx context.Context) (bool, dataplane.AppliedReason, error)
 }
 
@@ -712,8 +712,18 @@ func (s *Server) handleDeviceName(w http.ResponseWriter, r *http.Request) {
 	s.handleDevices(w, r)
 }
 
+// handleDataplane отдаёт модель и отпечаток секции в ETag: модель разбирается
+// из того же снимка, иначе правка между двумя чтениями UCI дала бы отпечаток
+// не той модели, что ушла клиенту.
 func (s *Server) handleDataplane(w http.ResponseWriter, r *http.Request) {
-	model, err := s.dataplane.Model(r.Context())
+	snap, err := s.dataplane.Snapshot(r.Context())
+	if err != nil {
+		fail(s.log, w, r, err)
+
+		return
+	}
+
+	model, err := snap.Model()
 	if err != nil {
 		fail(s.log, w, r, err)
 
@@ -727,6 +737,7 @@ func (s *Server) handleDataplane(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("ETag", `"`+snap.Sum()+`"`)
 	writeJSON(s.log, w, http.StatusOK, contract.Dataplane{Model: model, Applied: applied, AppliedReason: reason})
 }
 

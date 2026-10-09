@@ -25,7 +25,11 @@ export const DATAPLANE_QUERY = {
 export function getDataplaneOptions() {
   return queryOptions({
     queryKey: DATAPLANE_QUERY.model(),
-    queryFn: async (context) => decodeResponse(DataplaneSchema, await getDataplane(context), 'dataplane'),
+    queryFn: async function fetchDataplane(context) {
+      const { body, etag } = await getDataplane(context);
+
+      return { body: decodeResponse(DataplaneSchema, body, 'dataplane'), etag };
+    },
     staleTime: CACHE_TIME.Minute,
     gcTime: CACHE_TIME.Hour,
     meta: { showError: true, errorMessageKey: 'source.dataplane' },
@@ -82,9 +86,15 @@ export function useSaveDataplaneTransaction() {
   };
 }
 
+export interface DataplaneChange {
+  model: DataplaneModel;
+  /** `Dataplane.etag` модели, от которой строилась смена. */
+  base: string | null;
+}
+
 /** Модель пишется целиком: демон читает отсутствующее поле нулём, а не «оставить как есть». */
-export async function changeDataplane(model: DataplaneModel): Promise<ApplyTransactionWire> {
-  return decodeResponse(ApplyTransactionSchema, await putDataplane(toDataplaneChange(model)), 'dataplane apply');
+export async function changeDataplane({ model, base }: DataplaneChange): Promise<ApplyTransactionWire> {
+  return decodeResponse(ApplyTransactionSchema, await putDataplane(toDataplaneChange(model), base), 'dataplane apply');
 }
 
 export async function confirmDataplaneChange(id: string): Promise<ApplyTransactionWire> {

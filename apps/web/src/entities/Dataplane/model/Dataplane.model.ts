@@ -30,6 +30,8 @@ export interface DataplaneModel {
 
 export interface Dataplane {
   model: DataplaneModel;
+  /** Отпечаток секции из `ETag`: с ним смена уходит в `If-Match`. */
+  etag: string | null;
 }
 
 /** Источник трафика LAN, который можно пустить через sing-box. */

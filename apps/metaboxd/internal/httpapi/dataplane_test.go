@@ -1,8 +1,10 @@
 package httpapi_test
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
@@ -18,13 +20,13 @@ import (
 )
 
 type fakeDataplane struct {
-	model   dataplane.Model
+	snap    dataplane.Snapshot
 	err     error
 	applied bool
 	reason  dataplane.AppliedReason
 }
 
-func (f fakeDataplane) Model(context.Context) (dataplane.Model, error) { return f.model, f.err }
+func (f fakeDataplane) Snapshot(context.Context) (dataplane.Snapshot, error) { return f.snap, f.err }
 
 func (f fakeDataplane) Applied(context.Context) (bool, dataplane.AppliedReason, error) {
 	return f.applied, f.reason, nil
@@ -43,11 +45,15 @@ func newDataplaneServer(t *testing.T, plane httpapi.DataplaneReader) *httptest.S
 }
 
 func TestDataplaneModel(t *testing.T) {
-	srv := newDataplaneServer(t, fakeDataplane{model: dataplane.Defaults(), reason: dataplane.NFTUnavailable})
+	srv := newDataplaneServer(t, fakeDataplane{reason: dataplane.NFTUnavailable})
 
 	got := request(t, srv, http.MethodGet, "/api/dataplane", "", nil)
 	if got.status != http.StatusOK {
 		t.Fatalf("код %d, тело %s", got.status, got.body)
+	}
+
+	if etag := got.header.Get("ETag"); etag != `"`+(dataplane.Snapshot{}).Sum()+`"` {
+		t.Errorf("ETag %q, ожидали отпечаток секции", etag)
 	}
 
 	var body contract.Dataplane
@@ -60,7 +66,9 @@ func TestDataplaneModel(t *testing.T) {
 
 func TestDataplaneInvalid(t *testing.T) {
 	fields := []dataplane.FieldError{{Field: "acl_mode", Value: "some", Reason: dataplane.ReasonInvalid}}
-	srv := newDataplaneServer(t, fakeDataplane{err: &dataplane.InvalidError{Fields: fields}})
+	srv := newDataplaneServer(t, fakeDataplane{snap: dataplane.Snapshot{
+		Exists: true, Type: "dataplane", Options: map[string][]string{"acl_mode": {"some"}},
+	}})
 
 	got := request(t, srv, http.MethodGet, "/api/dataplane", "", nil)
 	if got.status != http.StatusUnprocessableEntity {
@@ -91,10 +99,11 @@ type fakePlaneApplier struct {
 	current  apply.Transaction
 	startErr error
 	model    dataplane.Model
+	base     string
 	client   netip.Addr
 }
 
-func (f *fakePlaneApplier) Start(_ context.Context, m dataplane.Model, client netip.Addr) (apply.Transaction, error) {
+func (f *fakePlaneApplier) Start(_ context.Context, m dataplane.Model, base string, client netip.Addr) (apply.Transaction, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
@@ -102,7 +111,7 @@ func (f *fakePlaneApplier) Start(_ context.Context, m dataplane.Model, client ne
 		return apply.Transaction{}, f.startErr
 	}
 
-	f.model, f.client = m, client
+	f.model, f.base, f.client = m, base, client
 	f.current = apply.Transaction{ID: "plane-1", Phase: apply.PhaseApplying, Window: time.Minute}
 
 	return f.current, nil
@@ -133,7 +142,7 @@ func newPlaneServer(t *testing.T, plane httpapi.PlaneApplier) *httptest.Server {
 
 	srv := httptest.NewServer(httpapi.NewServer(&fakeApplier{}, fakeReader{}, testLogger(t), httpapi.Options{
 		Version:   "test",
-		Dataplane: fakeDataplane{model: dataplane.Defaults()},
+		Dataplane: fakeDataplane{},
 		Plane:     plane,
 	}))
 	t.Cleanup(srv.Close)
@@ -153,7 +162,9 @@ func TestDataplaneChangeCycle(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got := request(t, srv, http.MethodPut, "/api/dataplane", srv.URL, body)
+	etag := request(t, srv, http.MethodGet, "/api/dataplane", "", nil).header.Get("ETag")
+
+	got := putDataplane(t, srv, etag, body)
 	if got.status != http.StatusAccepted {
 		t.Fatalf("код %d, тело %s", got.status, got.body)
 	}
@@ -163,6 +174,9 @@ func TestDataplaneChangeCycle(t *testing.T) {
 
 	if tx.ID != "plane-1" || !slices.Equal(plane.model.SourceIP, model.SourceIP) {
 		t.Errorf("транзакция %+v, модель %+v", tx, plane.model)
+	}
+	if want := (dataplane.Snapshot{}).Sum(); plane.base != want {
+		t.Errorf("база смены %q, ожидали отпечаток из ETag %q", plane.base, want)
 	}
 	if !plane.client.IsLoopback() {
 		t.Errorf("адрес клиента %v, ожидали адрес запроса", plane.client)
@@ -211,13 +225,17 @@ func TestDataplaneChangeRejected(t *testing.T) {
 			`{"model":{}}`, http.StatusUnprocessableEntity, contract.ErrDataplaneInvalid,
 		},
 		{"идёт применение конфига", apply.ErrBusy, `{"model":{}}`, http.StatusConflict, contract.ErrApplyInProgress},
+		{
+			"секция изменилась после чтения", apply.ErrDataplaneModified, `{"model":{}}`,
+			http.StatusPreconditionFailed, contract.ErrDataplaneModified,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			srv := newPlaneServer(t, &fakePlaneApplier{startErr: tt.startErr})
 
-			got := request(t, srv, http.MethodPut, "/api/dataplane", srv.URL, []byte(tt.body))
+			got := putDataplane(t, srv, `"base"`, []byte(tt.body))
 			if got.status != tt.status {
 				t.Fatalf("код %d, ожидали %d; тело %s", got.status, tt.status, got.body)
 			}
@@ -232,10 +250,60 @@ func TestDataplaneChangeRejected(t *testing.T) {
 	}
 }
 
+func TestDataplaneChangeWithoutIfMatch(t *testing.T) {
+	plane := &fakePlaneApplier{}
+	srv := newPlaneServer(t, plane)
+
+	got := request(t, srv, http.MethodPut, "/api/dataplane", srv.URL, []byte(`{"model":{}}`))
+	if got.status != http.StatusPreconditionRequired {
+		t.Fatalf("код %d, тело %s", got.status, got.body)
+	}
+
+	var body contract.Error
+	got.decode(t, &body)
+
+	if body.Code != contract.ErrDataplaneModified {
+		t.Errorf("код отказа %q, ожидали %q", body.Code, contract.ErrDataplaneModified)
+	}
+	if plane.Current().ID != "" {
+		t.Error("смена без If-Match дошла до транзакции")
+	}
+}
+
 func TestDataplaneChangeWithoutPlane(t *testing.T) {
 	srv := newPlaneServer(t, nil)
 
-	if got := request(t, srv, http.MethodPut, "/api/dataplane", srv.URL, []byte(`{"model":{}}`)); got.status != http.StatusNotFound {
+	if got := putDataplane(t, srv, `"base"`, []byte(`{"model":{}}`)); got.status != http.StatusNotFound {
 		t.Errorf("без смены обвязки PUT ответил %d", got.status)
 	}
+}
+
+// putDataplane — PUT /api/dataplane со своим Origin и If-Match.
+func putDataplane(t *testing.T, srv *httptest.Server, ifMatch string, body []byte) response {
+	t.Helper()
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPut, srv.URL+"/api/dataplane", bytes.NewReader(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req.Header.Set("Origin", srv.URL)
+	req.Header.Set("If-Match", ifMatch)
+
+	resp, err := srv.Client().Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			t.Errorf("закрытие тела ответа: %v", err)
+		}
+	}()
+
+	raw, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return response{status: resp.StatusCode, contentType: resp.Header.Get("Content-Type"), header: resp.Header, body: string(raw)}
 }
