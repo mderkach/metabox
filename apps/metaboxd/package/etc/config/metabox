@@ -21,6 +21,9 @@ config metabox 'main'
 	option ubus '/bin/ubus'
 	option clash_port '9090'
 	option log_level 'info'
+	# Имя, которое dns-in sing-box обязан разрешить после рестарта, иначе Apply
+	# откатывается. Пустое значение выключает эту проверку.
+	option health_dns_name 'cloudflare.com'
 
 # Сетевая обвязка службы metabox-singbox: перехват LAN в nft, ip rule для
 # tproxy и upstream dnsmasq. Выключена, пока перехватом владеет homeproxy: две

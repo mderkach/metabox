@@ -33,7 +33,7 @@ start_service() {
 
 	local enabled listen_addr listen_port listen_interface listen
 	local config_dir config_name state_dir
-	local singbox init_script service_instance ubus clash_port log_level
+	local singbox init_script service_instance ubus clash_port log_level health_dns_name
 
 	config_get_bool enabled main enabled 1
 	[ "$enabled" -eq 1 ] || return 0
@@ -50,6 +50,7 @@ start_service() {
 	config_get ubus main ubus /bin/ubus
 	config_get clash_port main clash_port 9090
 	config_get log_level main log_level info
+	config_get health_dns_name main health_dns_name cloudflare.com
 
 	if [ -n "$listen_addr" ]; then
 		listen="$listen_addr:$listen_port"
@@ -76,7 +77,8 @@ start_service() {
 		-service-instance "$service_instance" \
 		-ubus "$ubus" \
 		-clash-port "$clash_port" \
-		-log-level "$log_level"
+		-log-level "$log_level" \
+		-health-dns-name "$health_dns_name"
 	procd_set_param stdout 1
 	procd_set_param stderr 1
 	procd_set_param respawn 3600 5 5
