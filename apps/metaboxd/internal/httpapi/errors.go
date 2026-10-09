@@ -81,6 +81,10 @@ func fail(log *slog.Logger, w http.ResponseWriter, r *http.Request, err error) {
 	case status == http.StatusInternalServerError:
 		log.Error("запрос не обслужен", "err", err, "method", r.Method, "path", r.URL.Path)
 		message = "внутренняя ошибка"
+	// Пути команды службы остаются в логе: в них конфиг чужой службы.
+	case code == contract.ErrLaunchMismatch:
+		log.Warn("применение отклонено: служба поднимается не на конфиге демона", "err", err)
+		message = "служба sing-box поднимается не на конфиге, которым владеет metabox"
 	// Отказ рантайма отвечает так же, как прокси Clash API: две ручки одного
 	// слоя не должны вести себя противоположно.
 	case code == contract.ErrRuntimeUnavailable:
@@ -93,6 +97,10 @@ func fail(log *slog.Logger, w http.ResponseWriter, r *http.Request, err error) {
 
 func statusFor(err error) (status int, code contract.ErrorCode) {
 	var tooLarge *http.MaxBytesError
+
+	if _, ok := errors.AsType[*apply.LaunchError](err); ok {
+		return http.StatusConflict, contract.ErrLaunchMismatch
+	}
 
 	switch {
 	case errors.Is(err, errNotFound):

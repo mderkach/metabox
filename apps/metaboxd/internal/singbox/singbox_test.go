@@ -58,19 +58,39 @@ func TestNewRejectsRelativePaths(t *testing.T) {
 	}
 }
 
-// Проверяется каталог-кандидат, а не отдельный файл: сервис поднимется на
-// слиянии всех .json каталога. -D — та же база относительных путей, что у
-// службы.
-func TestCheckValidatesDirectory(t *testing.T) {
-	runner := &fakeRunner{}
-
-	if err := newClient(t, runner).Check(t.Context(), "/tmp/candidate"); err != nil {
-		t.Fatalf("проверка: %v", err)
+// Кандидат проверяется тем режимом, каким поднимется служба: файлом (-c) или
+// каталогом (-C). -D — та же база относительных путей, что у службы.
+func TestCheckFollowsServiceMode(t *testing.T) {
+	tests := []struct {
+		name    string
+		config  string
+		workdir string
+		want    []string
+	}{
+		{
+			"файл конфига",
+			"/tmp/candidate/config.json", "/usr/share/sing-box",
+			[]string{binary, "check", "-D", "/usr/share/sing-box", "-c", "/tmp/candidate/config.json"},
+		},
+		{
+			"каталог целиком",
+			"", "/tmp/candidate",
+			[]string{binary, "check", "-D", "/tmp/candidate", "-C", "/tmp/candidate"},
+		},
 	}
 
-	want := []string{binary, "check", "-D", "/tmp/candidate", "-C", "/tmp/candidate"}
-	if len(runner.calls) != 1 || !slices.Equal(runner.calls[0], want) {
-		t.Errorf("вызвано %v, ожидали %v", runner.calls, want)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			runner := &fakeRunner{}
+
+			if err := newClient(t, runner).Check(t.Context(), "/tmp/candidate", tt.config, tt.workdir); err != nil {
+				t.Fatalf("проверка: %v", err)
+			}
+
+			if len(runner.calls) != 1 || !slices.Equal(runner.calls[0], tt.want) {
+				t.Errorf("вызвано %v, ожидали %v", runner.calls, tt.want)
+			}
+		})
 	}
 }
 
@@ -81,7 +101,7 @@ func TestCheckReturnsBinaryOutputVerbatim(t *testing.T) {
 		ExitCode: 1,
 	}}
 
-	err := newClient(t, runner).Check(t.Context(), "/tmp/candidate")
+	err := newClient(t, runner).Check(t.Context(), "/tmp/candidate", "", "/tmp/candidate")
 
 	checkErr, ok := errors.AsType[*singbox.CheckError](err)
 	if !ok {
@@ -99,7 +119,7 @@ func TestCheckWrapsLaunchFailure(t *testing.T) {
 	launch := errors.New("executable file not found")
 	runner := &fakeRunner{err: launch}
 
-	err := newClient(t, runner).Check(t.Context(), "/tmp/candidate")
+	err := newClient(t, runner).Check(t.Context(), "/tmp/candidate", "", "/tmp/candidate")
 
 	if !errors.Is(err, launch) {
 		t.Errorf("получили %v, ожидали обёртку над ошибкой запуска", err)
@@ -248,23 +268,24 @@ func (f *fakeSupervisor) Service(_ context.Context, name string) (procd.State, e
 	return f.state, f.err
 }
 
-// Рабочий каталог спрашивается у procd по имени init-скрипта; без менеджера
-// процессов он неизвестен, и это не отказ.
-func TestWorkdir(t *testing.T) {
-	t.Run("каталог от procd", func(t *testing.T) {
-		supervisor := &fakeSupervisor{state: procd.State{Known: true, Workdir: "/etc/sing-box"}}
+// Команда службы спрашивается у procd по имени init-скрипта; без менеджера
+// процессов она неизвестна, и это не отказ.
+func TestLaunch(t *testing.T) {
+	t.Run("команда от procd", func(t *testing.T) {
+		want := procd.Launch{Workdir: "/etc/sing-box", Configs: []string{"/etc/sing-box/config.json"}}
+		supervisor := &fakeSupervisor{state: procd.State{Known: true, Launch: want}}
 
 		client, err := singbox.New(&fakeRunner{}, binary, initScript, "", supervisor)
 		if err != nil {
 			t.Fatalf("сборка клиента: %v", err)
 		}
 
-		got, err := client.Workdir(t.Context())
+		got, err := client.Launch(t.Context())
 		if err != nil {
-			t.Fatalf("рабочий каталог: %v", err)
+			t.Fatalf("команда службы: %v", err)
 		}
-		if got != "/etc/sing-box" {
-			t.Errorf("получили %q, ожидали /etc/sing-box", got)
+		if got.Workdir != want.Workdir || !slices.Equal(got.Configs, want.Configs) {
+			t.Errorf("получили %+v, ожидали %+v", got, want)
 		}
 		if !slices.Equal(supervisor.names, []string{"sing-box"}) {
 			t.Errorf("procd спрошен о %v, ожидали службу sing-box", supervisor.names)
@@ -279,15 +300,15 @@ func TestWorkdir(t *testing.T) {
 			t.Fatalf("сборка клиента: %v", err)
 		}
 
-		if _, err := client.Workdir(t.Context()); err == nil {
+		if _, err := client.Launch(t.Context()); err == nil {
 			t.Error("отказ procd проглочен")
 		}
 	})
 
-	t.Run("без procd каталог неизвестен", func(t *testing.T) {
-		got, err := newClient(t, &fakeRunner{}).Workdir(t.Context())
-		if err != nil || got != "" {
-			t.Errorf("получили %q, %v; ожидали пустой каталог без ошибки", got, err)
+	t.Run("без procd команда неизвестна", func(t *testing.T) {
+		got, err := newClient(t, &fakeRunner{}).Launch(t.Context())
+		if err != nil || got.Workdir != "" || got.Configs != nil || got.ConfigDirs != nil {
+			t.Errorf("получили %+v, %v; ожидали пустую команду без ошибки", got, err)
 		}
 	})
 }

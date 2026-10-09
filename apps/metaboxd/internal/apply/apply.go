@@ -16,14 +16,13 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"regexp"
 	"slices"
-	"strings"
 	"sync"
 	"time"
 
 	"metabox/internal/clashapi"
 	"metabox/internal/config"
+	"metabox/internal/procd"
 )
 
 // Phase — стадия транзакции. Значения уезжают в API и на диск, поэтому
@@ -169,6 +168,20 @@ func (e *WorkdirError) Error() string {
 	return fmt.Sprintf("рабочий каталог службы %s не совпадает с каталогом конфига %s", e.Workdir, e.ConfigDir)
 }
 
+// LaunchError — служба поднимается не на конфиге, которым владеет демон:
+// запись ничего бы ей не поменяла, а проверка проверяла бы не то, что
+// запустится. Configs и ConfigDirs — флаги -c и -C команды службы, Config —
+// путь конфига демона.
+type LaunchError struct {
+	Configs    []string
+	ConfigDirs []string
+	Config     string
+}
+
+func (e *LaunchError) Error() string {
+	return fmt.Sprintf("служба поднимается на %q и %q, а не на конфиге %s", e.Configs, e.ConfigDirs, e.Config)
+}
+
 // Lists — изменения файлов списков, едущие с применением: put пишется в
 // подкаталог списков, remove удаляется из него. Оба применяются той же
 // транзакцией, что и конфиг: проверка, запись, откат и доигрывание общие.
@@ -201,10 +214,12 @@ type Store interface {
 
 // Service — бинарь sing-box и его сервис.
 type Service interface {
-	Check(ctx context.Context, dir string) error
+	// Check проверяет кандидата: config — файл конфига (-c), пусто — каталог
+	// dir целиком (-C); workdir — база относительных путей (-D).
+	Check(ctx context.Context, dir, config, workdir string) error
 	Restart(ctx context.Context) error
-	// Workdir — рабочий каталог службы; пустая строка — узнать неоткуда.
-	Workdir(ctx context.Context) (string, error)
+	// Launch — с чем procd поднимает службу; пустые поля — узнать неоткуда.
+	Launch(ctx context.Context) (procd.Launch, error)
 	// PID отдаёт pid поднятого процесса службы; ноль — не поднят ни один.
 	PID(ctx context.Context) (int, error)
 }
@@ -237,9 +252,11 @@ type Options struct {
 	ClashPort int
 	// CycleTimeout ограничивает шаги от бэкапа до healthcheck.
 	CycleTimeout time.Duration
-	// ConfigDir — каталог конфига: с ним сверяется рабочий каталог службы
-	// перед применением файлов списков.
+	// ConfigDir — каталог конфига: с ним сверяются рабочий каталог и флаг -C
+	// команды службы.
 	ConfigDir string
+	// ConfigName — имя файла конфига в ConfigDir: с ним сверяется флаг -c.
+	ConfigName string
 	// ProcessInterval — пауза между опросами procd, пока после рестарта ждём
 	// новый процесс службы.
 	ProcessInterval time.Duration
@@ -326,10 +343,9 @@ func (m *Manager) Start(ctx context.Context, cfg []byte, lists Lists, base, list
 		return Transaction{}, err
 	}
 
-	if len(lists.Put) > 0 {
-		if err := m.verifyWorkdir(ctx); err != nil {
-			return Transaction{}, err
-		}
+	target, err := m.resolveCheck(ctx, len(lists.Put) > 0)
+	if err != nil {
+		return Transaction{}, err
 	}
 
 	prepared, added, err := clashapi.Ensure(cfg, m.opts.ClashPort)
@@ -359,7 +375,7 @@ func (m *Manager) Start(ctx context.Context, cfg []byte, lists Lists, base, list
 
 	// Отказ check не заводит транзакции: ничего не применялось, а вердикт
 	// бинаря уезжает вызывающему этой же ошибкой.
-	if err := m.check(ctx, prepared, changed, removed); err != nil {
+	if err := m.check(ctx, prepared, changed, removed, target); err != nil {
 		m.unreserve(token)
 
 		return Transaction{}, err
@@ -387,27 +403,15 @@ func (m *Manager) Start(ctx context.Context, cfg []byte, lists Lists, base, list
 	return tx, nil
 }
 
-// Имя файла списка: панель строит его из тега, и всё за пределами простого
-// имени с расширением .json — либо попытка выйти из подкаталога, либо файл,
-// который служба слила бы с конфигом.
-var listNamePattern = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._-]*\.json$`)
-
-// maxListName ограничивает имя: длиннее не принимают файловые системы устройств.
-const maxListName = 128
-
-func validListName(name string) bool {
-	return len(name) <= maxListName && listNamePattern.MatchString(name) && !strings.Contains(name, "..")
-}
-
 func validateLists(lists Lists) error {
 	for name := range lists.Put {
-		if !validListName(name) {
+		if !config.ValidListName(name) {
 			return fmt.Errorf("%w: %q", ErrListName, name)
 		}
 	}
 
 	for _, name := range lists.Remove {
-		if !validListName(name) {
+		if !config.ValidListName(name) {
 			return fmt.Errorf("%w: %q", ErrListName, name)
 		}
 
@@ -428,7 +432,7 @@ func SnapshotLists(snapshot map[string][]byte, current map[string]string) Lists 
 	var lists Lists
 
 	for name, data := range snapshot {
-		if !validListName(name) {
+		if !config.ValidListName(name) {
 			continue
 		}
 
@@ -440,7 +444,7 @@ func SnapshotLists(snapshot map[string][]byte, current map[string]string) Lists 
 	}
 
 	for name := range current {
-		if _, ok := snapshot[name]; ok || !validListName(name) {
+		if _, ok := snapshot[name]; ok || !config.ValidListName(name) {
 			continue
 		}
 
@@ -452,29 +456,77 @@ func SnapshotLists(snapshot map[string][]byte, current map[string]string) Lists 
 	return lists
 }
 
-// verifyWorkdir сверяет рабочий каталог службы с каталогом конфига до записи:
-// расхождение иначе выяснилось бы только падением службы на новом конфиге.
-// Неизвестный каталог применение не останавливает — procd может не быть, а
-// служба могла не подниматься ни разу, и отказ тогда был бы ложным.
-func (m *Manager) verifyWorkdir(ctx context.Context) error {
-	workdir, err := m.service.Workdir(ctx)
-	if err != nil {
-		m.log.Warn("рабочий каталог службы не прочитан, сверка с каталогом конфига пропущена", "err", err)
-
-		return nil
-	}
-
-	if workdir == "" || sameDir(workdir, m.opts.ConfigDir) {
-		return nil
-	}
-
-	return &WorkdirError{Workdir: workdir, ConfigDir: m.opts.ConfigDir}
+// checkTarget — как проверять кандидата: тем режимом и от той базы путей, с
+// какими procd поднимет службу, иначе вердикты check и рантайма расходятся.
+type checkTarget struct {
+	// directory — служба сливает каталог конфига (-C), а не читает один файл.
+	directory bool
+	// workdir — рабочий каталог службы вне каталога конфига; пусто — база
+	// путей сам кандидат.
+	workdir string
 }
 
-// sameDir сравнивает каталоги по пути, а при расхождении — по самому каталогу:
+// resolveCheck сверяет команду службы с конфигом демона до записи: расхождение
+// иначе выяснилось бы только падением службы на новом конфиге или проверкой не
+// того, что запустится. Неизвестную команду применение не останавливает —
+// procd может не быть, а служба могла не подниматься ни разу, и отказ тогда был
+// бы ложным; проверка идёт так, как службу поднимает пакет форка, одним файлом.
+//
+// Рабочий каталог вне каталога конфига проверку не ломает: транзакция его не
+// меняет, и check берёт его базой путей. Отказ — только с файлами списков:
+// относительный path узла local служба резолвит от рабочего каталога и
+// записанных файлов не нашла бы.
+func (m *Manager) resolveCheck(ctx context.Context, withLists bool) (checkTarget, error) {
+	launch, err := m.service.Launch(ctx)
+	if err != nil {
+		m.log.Warn("команда службы не прочитана, кандидат проверяется как у пакета форка", "err", err)
+
+		launch = procd.Launch{}
+	}
+
+	var target checkTarget
+
+	configPath := filepath.Join(m.opts.ConfigDir, m.opts.ConfigName)
+
+	switch {
+	case len(launch.Configs) == 0 && len(launch.ConfigDirs) == 0:
+	case len(launch.ConfigDirs) == 0 && len(launch.Configs) == 1 && samePath(launch.Configs[0], configPath):
+	case len(launch.Configs) == 0 && len(launch.ConfigDirs) == 1 && samePath(launch.ConfigDirs[0], m.opts.ConfigDir):
+		target.directory = true
+	default:
+		return checkTarget{}, &LaunchError{Configs: launch.Configs, ConfigDirs: launch.ConfigDirs, Config: configPath}
+	}
+
+	if launch.Workdir == "" || samePath(launch.Workdir, m.opts.ConfigDir) {
+		return target, nil
+	}
+
+	if withLists {
+		return checkTarget{}, &WorkdirError{Workdir: launch.Workdir, ConfigDir: m.opts.ConfigDir}
+	}
+
+	// Несуществующий каталог -D sing-box создаёт сам, и проверка от него
+	// оставила бы на устройстве след до записи. Служба создаст его на рестарте,
+	// а относительных путей в нём всё равно нет.
+	if info, err := os.Stat(launch.Workdir); err != nil || !info.IsDir() {
+		return target, nil
+	}
+
+	target.workdir = launch.Workdir
+
+	return target, nil
+}
+
+// samePath сравнивает пути по записи, а при расхождении — по самому файлу:
 // /proc/<pid>/cwd отдаёт путь с раскрытыми симлинками, и один каталог под двумя
 // именами отказом считаться не должен.
-func sameDir(a, b string) bool {
+func samePath(a, b string) bool {
+	// Относительный путь из команды службы считать не от чего: cwd демона
+	// не обязан совпадать с каталогом, где procd поднимает службу.
+	if !filepath.IsAbs(a) || !filepath.IsAbs(b) {
+		return false
+	}
+
 	if filepath.Clean(a) == filepath.Clean(b) {
 		return true
 	}

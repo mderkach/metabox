@@ -76,13 +76,17 @@ func New(runner Runner, binary, initScript, logread string, supervisor Superviso
 	}, nil
 }
 
-// Check валидирует каталог-кандидат. Проверяется каталог, а не отдельный файл:
-// сервис поднимается на слиянии всех .json каталога, и валидировать надо ровно
-// то, что запустится. -D указывает на тот же каталог: служба идёт
-// с -D на рабочем каталоге, и относительные пути конфига обязаны резолвиться
-// от той же базы — иначе вердикты check и рантайма расходятся.
-func (c *Client) Check(ctx context.Context, dir string) error {
-	res, err := c.runner.Run(ctx, c.binary, "check", "-D", dir, "-C", dir)
+// Check валидирует кандидата тем режимом, в каком поднимется служба: config —
+// файл конфига (-c), пустая строка — каталог dir целиком (-C), который служба
+// сливает из всех .json. workdir — база относительных путей конфига (-D), та
+// же, что у службы: иначе вердикты check и рантайма расходятся.
+func (c *Client) Check(ctx context.Context, dir, config, workdir string) error {
+	args := []string{"check", "-D", workdir, "-C", dir}
+	if config != "" {
+		args = []string{"check", "-D", workdir, "-c", config}
+	}
+
+	res, err := c.runner.Run(ctx, c.binary, args...)
 	if err != nil {
 		return fmt.Errorf("проверка конфига: %w", err)
 	}
@@ -286,21 +290,20 @@ func (c *Client) State(ctx context.Context) (State, error) {
 	return state, nil
 }
 
-// Workdir отдаёт рабочий каталог службы — базу, от которой sing-box резолвит
-// относительные пути конфига. Пустая строка без ошибки — узнать неоткуда:
-// менеджера процессов нет, служба ему незнакома или запущена без -D и не
-// поднята.
-func (c *Client) Workdir(ctx context.Context) (string, error) {
+// Launch отдаёт, с чем procd поднимает службу: рабочий каталог и конфиг.
+// Пустые поля без ошибки — узнать неоткуда: менеджера процессов нет, служба
+// ему незнакома или запущена без флагов и не поднята.
+func (c *Client) Launch(ctx context.Context) (procd.Launch, error) {
 	if c.supervisor == nil {
-		return "", nil
+		return procd.Launch{}, nil
 	}
 
 	state, err := c.supervisor.Service(ctx, c.serviceName())
 	if err != nil {
-		return "", err
+		return procd.Launch{}, err
 	}
 
-	return state.Workdir, nil
+	return state.Launch, nil
 }
 
 // serviceName выводит имя службы в procd из пути init-скрипта: procd

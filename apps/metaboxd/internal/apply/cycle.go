@@ -10,16 +10,24 @@ import (
 	"io/fs"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"time"
 
 	"metabox/internal/clashapi"
 	"metabox/internal/config"
 )
 
-// check раскладывает кандидата во временный каталог и отдаёт его бинарю.
-// Проверяется каталог, а не файл: сервис поднимется на слиянии всех .json, а
-// изменения списков ложатся в кандидата теми же путями, какими лягут на диск.
-func (m *Manager) check(ctx context.Context, data []byte, putLists map[string][]byte, removeLists []string) error {
+// check раскладывает кандидата во временный каталог и отдаёт его бинарю тем
+// режимом, каким поднимется служба. Кандидат несёт раскладку каталога
+// конфига целиком: в режиме -C служба сливает его .json, а изменения списков
+// ложатся в кандидата теми же путями, какими лягут на диск.
+func (m *Manager) check(
+	ctx context.Context,
+	data []byte,
+	putLists map[string][]byte,
+	removeLists []string,
+	target checkTarget,
+) error {
 	dir, err := os.MkdirTemp("", "metabox-candidate-")
 	if err != nil {
 		return fmt.Errorf("каталог кандидата: %w", err)
@@ -34,7 +42,17 @@ func (m *Manager) check(ctx context.Context, data []byte, putLists map[string][]
 		return err
 	}
 
-	return m.service.Check(ctx, dir)
+	config := filepath.Join(dir, m.opts.ConfigName)
+	if target.directory {
+		config = ""
+	}
+
+	workdir := dir
+	if target.workdir != "" {
+		workdir = target.workdir
+	}
+
+	return m.service.Check(ctx, dir, config, workdir)
 }
 
 // run уводит применение в фоновую горутину: цикл переживает запрос, а окно
@@ -121,7 +139,7 @@ func (m *Manager) apply(
 	switch {
 	case err == nil:
 		if err := m.store.SaveVersion(ctx, previous); err != nil {
-			m.log.Warn("версия не сохранена в историю", "err", err)
+			m.log.Warn("история версий не обновлена", "err", err)
 		}
 	case errors.Is(err, config.ErrNoConfig):
 		// Первое применение: сохранять в историю нечего.

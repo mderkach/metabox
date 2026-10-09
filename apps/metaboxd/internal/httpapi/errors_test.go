@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"metabox/internal/apply"
 	"metabox/internal/config"
 	"metabox/internal/contract"
 )
@@ -71,5 +72,28 @@ func TestFailKeepsKnownMessage(t *testing.T) {
 	}
 	if body := rec.Body.String(); !strings.Contains(body, errNotFound.Error()) {
 		t.Errorf("тело %q, ожидали текст %q", body, errNotFound.Error())
+	}
+}
+
+// Служба на чужом конфиге — отдельный код, а пути её команды остаются в логе.
+func TestFailHidesLaunchPaths(t *testing.T) {
+	rec := httptest.NewRecorder()
+	err := fmt.Errorf("применение: %w", &apply.LaunchError{
+		Configs: []string{"/var/run/homeproxy/sing-box-c.json"},
+		Config:  "/etc/sing-box/config.json",
+	})
+
+	fail(testLogger(t), rec, httptest.NewRequest(http.MethodPost, "/api/apply", nil), err)
+
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("код %d, ожидали %d", rec.Code, http.StatusConflict)
+	}
+
+	body := rec.Body.String()
+	if !strings.Contains(body, string(contract.ErrLaunchMismatch)) {
+		t.Errorf("тело %q, ожидали код %q", body, contract.ErrLaunchMismatch)
+	}
+	if strings.Contains(body, "/var/run") || strings.Contains(body, "/etc/sing-box") {
+		t.Errorf("тело %q: пути команды службы наружу не идут", body)
 	}
 }

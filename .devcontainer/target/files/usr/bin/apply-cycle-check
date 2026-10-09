@@ -69,11 +69,21 @@ workdir=$(echo "$service" | jsonfilter -e '@.instances.*.command[*]' | awk '
 	/^--directory=/ { dir = substr($0, 13) }
 	END { print dir }')
 [ "$workdir" = "$CONF_DIR" ] || fail "служба поднята с -D '$workdir', ожидали $CONF_DIR"
+# Демон проверяет кандидата тем режимом, каким поднимается служба: пакет форка
+# читает один файл -c, и он обязан быть тем конфигом, которым владеет демон.
+configs=$(echo "$service" | jsonfilter -e '@.instances.*.command[*]' | awk '
+	take { print; take = 0; next }
+	$0 == "-c" || $0 == "--config" { take = 1; next }
+	/^--config=/ { print substr($0, 10) }')
+[ "$configs" = "$CONF" ] || fail "служба поднята с -c '$configs', ожидали один файл $CONF"
+if echo "$service" | jsonfilter -e '@.instances.*.command[*]' | grep -qx -e '-C' -e '--config-directory' -e '--config-directory=.*'; then
+	fail "служба поднята в режиме каталога, а пакет форка запускает один файл"
+fi
 pid=$(echo "$service" | jsonfilter -e '@.instances.*.pid' | head -1)
 [ -n "$pid" ] || fail "procd не отдал pid службы"
 cwd=$(readlink "/proc/$pid/cwd") || fail "рабочий каталог процесса $pid не прочитан"
 [ "$cwd" = "$CONF_DIR" ] || fail "процесс $pid работает в '$cwd', ожидали $CONF_DIR"
-echo "   -D и cwd процесса — $CONF_DIR"
+echo "   -c $CONF, -D и cwd процесса — $CONF_DIR"
 
 echo "9. Список файлом: local rule-set из rule-sets/"
 LISTS_DIR=$CONF_DIR/rule-sets
@@ -94,11 +104,12 @@ grep -q '"rule_set": "metabox-check"' "$CANDIDATE/config.json" || fail "прав
 grep -q '"type": "local"' "$CANDIDATE/config.json" || fail "набор не подставился, шаблон конфига изменился"
 printf '%s\n' "$LIST_BODY" > "$CANDIDATE/rule-sets/$LIST_NAME"
 
-# Кандидат проверяется так же, как его проверяет демон: -D на нём самом, иначе
-# относительный путь резолвился бы от чужого каталога.
-sing-box check -D "$CANDIDATE" -C "$CANDIDATE" || fail "check отверг кандидата с файлом списка"
+# Кандидат проверяется так же, как его проверяет демон: тем же режимом, что у
+# службы на шаге 8, и с -D на нём самом, иначе относительный путь резолвился бы
+# от чужого каталога.
+sing-box check -D "$CANDIDATE" -c "$CANDIDATE/config.json" || fail "check отверг кандидата с файлом списка"
 rm "$CANDIDATE/rule-sets/$LIST_NAME"
-if sing-box check -D "$CANDIDATE" -C "$CANDIDATE" 2>/dev/null; then
+if sing-box check -D "$CANDIDATE" -c "$CANDIDATE/config.json" 2>/dev/null; then
 	fail "check пропустил кандидата, у которого нет файла списка"
 fi
 echo "   check: с файлом проходит, без файла отвергнут"

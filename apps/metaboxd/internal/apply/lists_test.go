@@ -8,6 +8,7 @@ import (
 
 	"metabox/internal/apply"
 	"metabox/internal/config"
+	"metabox/internal/procd"
 )
 
 // Плохое имя файла списка отклоняется до того, как транзакция что-то тронула.
@@ -220,8 +221,8 @@ func TestStartVerifiesWorkdir(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			h := newHarness(t)
-			h.service.workdir = tt.workdir
-			h.service.workdirErr = tt.workdirErr
+			h.service.launch = procd.Launch{Workdir: tt.workdir}
+			h.service.launchErr = tt.workdirErr
 			lists := apply.Lists{Put: map[string][]byte{"my.json": []byte(`{"rules":[]}`)}}
 
 			_, err := h.manager.Start(t.Context(), []byte(validConfig), lists, "", "")
@@ -255,7 +256,7 @@ func TestStartVerifiesWorkdir(t *testing.T) {
 // как раньше, даже когда служба запущена из каталога пакета.
 func TestStartIgnoresWorkdirWithoutLists(t *testing.T) {
 	h := newHarness(t)
-	h.service.workdir = "/usr/share/sing-box"
+	h.service.launch = procd.Launch{Workdir: "/usr/share/sing-box"}
 
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
 		t.Fatalf("применение: %v", err)
@@ -324,6 +325,102 @@ func TestSnapshotLists(t *testing.T) {
 				if string(content) != string(tt.snapshot[name]) {
 					t.Errorf("файл %s: пишется %q, ожидали %q", name, content, tt.snapshot[name])
 				}
+			}
+		})
+	}
+}
+
+// Кандидат проверяется тем режимом и от той базы путей, с какими procd поднимет
+// службу; служба на чужом конфиге отказывает до записи.
+func TestStartChecksLikeTheService(t *testing.T) {
+	ours := configDir + "/" + configName
+
+	// packageWorkdir подменяется существующим каталогом: проверка берёт
+	// рабочий каталог базой путей, только если он есть на диске.
+	const packageWorkdir = "<рабочий каталог пакета>"
+
+	tests := []struct {
+		name        string
+		launch      procd.Launch
+		wantFile    bool
+		wantWorkdir string
+		wantRefuse  bool
+	}{
+		{name: "команда неизвестна — как у пакета форка", wantFile: true},
+		{
+			name:        "пакет форка: файл и рабочий каталог пакета",
+			launch:      procd.Launch{Configs: []string{ours}, Workdir: packageWorkdir},
+			wantFile:    true,
+			wantWorkdir: packageWorkdir,
+		},
+		{
+			name:     "рабочего каталога нет на диске — база путей кандидат",
+			launch:   procd.Launch{Configs: []string{ours}, Workdir: "/nonexistent/sing-box"},
+			wantFile: true,
+		},
+		{
+			name:       "команда без -c и -C на чужом рабочем каталоге",
+			launch:     procd.Launch{Configs: []string{"/usr/share/sing-box/config.json"}, Workdir: "/usr/share/sing-box"},
+			wantRefuse: true,
+		},
+		{name: "относительный файл при неизвестном рабочем каталоге", launch: procd.Launch{Configs: []string{"config.json"}}, wantRefuse: true},
+		{
+			name:     "файл при рабочем каталоге конфига",
+			launch:   procd.Launch{Configs: []string{ours}, Workdir: configDir},
+			wantFile: true,
+		},
+		{name: "режим каталога", launch: procd.Launch{ConfigDirs: []string{configDir}, Workdir: configDir}},
+		{name: "чужой файл конфига", launch: procd.Launch{Configs: []string{"/var/run/homeproxy/sing-box-c.json"}}, wantRefuse: true},
+		{name: "несколько файлов", launch: procd.Launch{Configs: []string{ours, configDir + "/extra.json"}}, wantRefuse: true},
+		{name: "файл и каталог разом", launch: procd.Launch{Configs: []string{ours}, ConfigDirs: []string{configDir}}, wantRefuse: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := newHarness(t)
+			h.service.launch = tt.launch
+
+			if tt.launch.Workdir == packageWorkdir {
+				h.service.launch.Workdir = t.TempDir()
+				tt.wantWorkdir = h.service.launch.Workdir
+			}
+
+			_, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", "")
+
+			if tt.wantRefuse {
+				launchErr, ok := errors.AsType[*apply.LaunchError](err)
+				if !ok {
+					t.Fatalf("ошибка %v, ожидали LaunchError", err)
+				}
+				if launchErr.Config != ours {
+					t.Errorf("конфиг демона в отказе %q, ожидали %q", launchErr.Config, ours)
+				}
+				if got := h.rec.snapshot(); len(got) != 0 {
+					t.Errorf("до транзакции дошло: %v", got)
+				}
+
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("применение: %v", err)
+			}
+			h.waitWindow(t)
+
+			h.service.mu.Lock()
+			dir, file, workdir := h.service.checked[0], h.service.checked[1], h.service.checked[2]
+			h.service.mu.Unlock()
+
+			if wantFile := dir + "/" + configName; tt.wantFile != (file == wantFile) || (!tt.wantFile && file != "") {
+				t.Errorf("файл проверки %q при каталоге %q, ожидали файл: %v", file, dir, tt.wantFile)
+			}
+
+			wantWorkdir := tt.wantWorkdir
+			if wantWorkdir == "" {
+				wantWorkdir = dir
+			}
+			if workdir != wantWorkdir {
+				t.Errorf("база путей проверки %q, ожидали %q", workdir, wantWorkdir)
 			}
 		})
 	}

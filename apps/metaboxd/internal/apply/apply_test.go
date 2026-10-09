@@ -15,6 +15,7 @@ import (
 	"metabox/internal/apply"
 	"metabox/internal/clashapi"
 	"metabox/internal/config"
+	"metabox/internal/procd"
 )
 
 const (
@@ -22,6 +23,7 @@ const (
 	cycleTimeout = 30 * time.Second
 	clashPort    = 9090
 	configDir    = "/etc/sing-box"
+	configName   = "config.json"
 )
 
 // recorder хранит порядок вызовов: протокол применения задаёт не только набор
@@ -229,9 +231,12 @@ func (s *fakeStore) config() []byte {
 type fakeService struct {
 	rec      *recorder
 	checkErr error
-	// workdir — рабочий каталог службы; пусто — неизвестен.
-	workdir    string
-	workdirErr error
+	// checked — аргументы последнего Check: каталог, файл конфига, рабочий
+	// каталог.
+	checked [3]string
+	// launch — с чем procd поднимает службу; пусто — неизвестно.
+	launch    procd.Launch
+	launchErr error
 
 	mu         sync.Mutex
 	restartErr error
@@ -246,8 +251,12 @@ type fakeService struct {
 	stale int
 }
 
-func (s *fakeService) Check(context.Context, string) error {
+func (s *fakeService) Check(_ context.Context, dir, config, workdir string) error {
 	s.rec.add("Check")
+
+	s.mu.Lock()
+	s.checked = [3]string{dir, config, workdir}
+	s.mu.Unlock()
 
 	return s.checkErr
 }
@@ -289,8 +298,8 @@ func (s *fakeService) PID(context.Context) (int, error) {
 	return s.pid, nil
 }
 
-func (s *fakeService) Workdir(context.Context) (string, error) {
-	return s.workdir, s.workdirErr
+func (s *fakeService) Launch(context.Context) (procd.Launch, error) {
+	return s.launch, s.launchErr
 }
 
 func (s *fakeService) setRestartErr(err error) {
@@ -369,6 +378,7 @@ func newHarnessWith(t *testing.T, timeout time.Duration, log *slog.Logger) *harn
 		ClashPort:       clashPort,
 		CycleTimeout:    timeout,
 		ConfigDir:       configDir,
+		ConfigName:      configName,
 		ProcessInterval: time.Millisecond,
 	})
 

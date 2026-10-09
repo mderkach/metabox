@@ -42,6 +42,7 @@ export const ERROR_CODE = [
   'config_too_large',
   'list_invalid',
   'workdir_mismatch',
+  'launch_mismatch',
   'check_failed',
   'internal',
 ] as const

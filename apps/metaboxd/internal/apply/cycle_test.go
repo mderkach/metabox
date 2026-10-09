@@ -177,6 +177,54 @@ func TestBackupFailureSkipsRollback(t *testing.T) {
 	}
 }
 
+// Отказ бэкапа и неубранное состояние: применение освобождается, а оставшаяся
+// на диске фаза applying при следующем старте закрывается без отката — записи
+// не было, и откат по бэкапу прошлой транзакции потерял бы рабочий конфиг.
+func TestBackupFailureWithStateLeftReplaysWithoutRollback(t *testing.T) {
+	h := newHarness(t)
+	h.store.backupErr = errors.New("диск переполнен")
+	h.store.clearErr = errors.New("файловая система только для чтения")
+
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
+		t.Fatalf("применение: %v", err)
+	}
+	h.manager.Close()
+
+	if tx := h.manager.Current(); tx.Phase != apply.PhaseFailed || tx.ReasonCode != apply.ReasonBackupFailed {
+		t.Fatalf("фаза %q с кодом %q, ожидали отказ с причиной backup_failed", tx.Phase, tx.ReasonCode)
+	}
+
+	if state, _ := h.store.ReadState(t.Context()); state == nil {
+		t.Fatal("состояние убрано, хотя ClearState отказал: проверять доигрывание нечем")
+	}
+
+	// Следующая жизнь демона на том же диске.
+	h.rec.mu.Lock()
+	h.rec.calls = nil
+	h.rec.mu.Unlock()
+
+	h.store.backupErr = nil
+	h.store.clearErr = nil
+	restarted := apply.New(h.store, h.service, h.health, h.clock, slog.New(slog.DiscardHandler),
+		apply.Options{Window: window, ClashPort: clashPort, CycleTimeout: cycleTimeout, ProcessInterval: time.Millisecond})
+	t.Cleanup(restarted.Close)
+
+	if err := restarted.Replay(t.Context()); err != nil {
+		t.Fatalf("доигрывание: %v", err)
+	}
+
+	calls := h.rec.snapshot()
+	for _, step := range []string{"Restore", "Restart"} {
+		if slices.Contains(calls, step) {
+			t.Errorf("доигрывание транзакции без записи вызвало %s: шаги %v", step, calls)
+		}
+	}
+
+	if state, _ := h.store.ReadState(t.Context()); state != nil {
+		t.Error("доигрывание оставило состояние на диске")
+	}
+}
+
 // Конфига на устройстве нет — первый запуск или удалён владельцем. Применение
 // не останавливается, а откат этого применения возвращать нечего.
 func TestBackupWithoutConfigContinues(t *testing.T) {

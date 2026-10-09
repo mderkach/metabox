@@ -42,12 +42,27 @@ type State struct {
 	// возраста не отдаёт, он считается по /proc и на чужой системе может
 	// быть недоступен.
 	Uptime time.Duration
+	Launch
+}
+
+// Launch — то, с чем procd поднимает службу: рабочий каталог и конфиг.
+type Launch struct {
 	// Workdir — рабочий каталог службы: от него sing-box резолвит относительные
 	// пути конфига. Берётся из флага -D команды, с которой procd поднимает
 	// инстанс, — упавший инстанс procd помнит вместе с командой, и каталог
 	// виден без процесса. Без флага — каталог живого процесса из
 	// /proc/<pid>/cwd. Пусто, когда узнать не удалось.
 	Workdir string
+	// Configs — файлы конфига из флагов -c (--config) той же команды, в
+	// порядке команды; команда без -c и -C — config.json, который sing-box
+	// тогда читает. Относительный путь sing-box читает от рабочего каталога —
+	// он переходит туда до чтения конфига, — и здесь он уже приведён к нему;
+	// при неизвестном рабочем каталоге остаётся как есть. Пусто — команды не
+	// видно.
+	Configs []string
+	// ConfigDirs — каталоги конфига из флагов -C (--config-directory), по тем
+	// же правилам.
+	ConfigDirs []string
 }
 
 // Client спрашивает procd через ubus.
@@ -109,7 +124,9 @@ func (c *Client) Service(ctx context.Context, name string) (State, error) {
 		if len(service.Instances) > 0 {
 			// Порядок тот же, что у поднятых: первый по имени.
 			first := slices.Min(slices.Collect(maps.Keys(service.Instances)))
-			state.Workdir = directoryFlag(service.Instances[first].Command)
+			command := service.Instances[first].Command
+			state.Workdir = directoryFlag(command)
+			state.Configs, state.ConfigDirs = configFlags(command, state.Workdir)
 		}
 
 		return state, nil
@@ -122,6 +139,7 @@ func (c *Client) Service(ctx context.Context, name string) (State, error) {
 	state.PID = instance.PID
 	state.Uptime = c.uptime(instance.PID)
 	state.Workdir = c.workdir(instance.PID, instance.Command)
+	state.Configs, state.ConfigDirs = configFlags(instance.Command, state.Workdir)
 
 	return state, nil
 }
@@ -146,31 +164,90 @@ func (c *Client) workdir(pid int, command []string) string {
 	return dir
 }
 
-// directoryFlag достаёт значение -D (--directory) из команды sing-box во всех
-// формах, которые принимает его разбор флагов; повтор флага — побеждает
-// последний. Относительный путь не отдаётся: от какого каталога его считать,
-// знает только procd.
+// directoryFlag достаёт значение -D (--directory) из команды sing-box; повтор
+// флага — побеждает последний. Относительный путь не отдаётся: от какого
+// каталога его считать, знает только procd.
 func directoryFlag(command []string) string {
-	var dir string
-
-	for i, arg := range command {
-		switch {
-		case arg == "-D" || arg == "--directory":
-			if i+1 < len(command) {
-				dir = command[i+1]
-			}
-		case strings.HasPrefix(arg, "--directory="):
-			dir = strings.TrimPrefix(arg, "--directory=")
-		case strings.HasPrefix(arg, "-D"):
-			dir = strings.TrimPrefix(strings.TrimPrefix(arg, "-D"), "=")
-		}
-	}
-
-	if !filepath.IsAbs(dir) {
+	values := flagValues(command, "-D", "--directory")
+	if len(values) == 0 || !filepath.IsAbs(values[len(values)-1]) {
 		return ""
 	}
 
-	return dir
+	return values[len(values)-1]
+}
+
+// defaultConfig — файл, который sing-box читает от рабочего каталога, когда в
+// команде нет ни -c, ни -C.
+const defaultConfig = "config.json"
+
+// configFlags достаёт файлы (-c) и каталоги (-C) конфига: их sing-box
+// принимает сколько угодно и сливает все. Команда без обоих флагов читает
+// config.json рабочего каталога — так её и отдаём, иначе она не отличалась бы
+// от команды, которой не видно. Относительный путь приводится к рабочему
+// каталогу, если тот известен.
+func configFlags(command []string, workdir string) (configs, dirs []string) {
+	if len(command) == 0 {
+		return nil, nil
+	}
+
+	resolve := func(values []string) []string {
+		for i, value := range values {
+			if !filepath.IsAbs(value) && workdir != "" {
+				values[i] = filepath.Join(workdir, value)
+			}
+		}
+
+		return values
+	}
+
+	configs = flagValues(command, "-c", "--config")
+	dirs = flagValues(command, "-C", "--config-directory")
+
+	if len(configs) == 0 && len(dirs) == 0 {
+		configs = []string{defaultConfig}
+	}
+
+	return resolve(configs), resolve(dirs)
+}
+
+// flagValues собирает значения флага во всех формах, которые принимает разбор
+// флагов sing-box: `-x v`, `-xv`, `-x=v`, `--long v`, `--long=v`. Значение,
+// забранное флагом, само флагом не считается, а после `--` флагов нет.
+func flagValues(command []string, short, long string) []string {
+	var values []string
+
+	for i := 0; i < len(command); i++ {
+		arg := command[i]
+
+		switch {
+		case arg == "--":
+			return values
+		case arg == short || arg == long:
+			if i+1 < len(command) {
+				i++
+				values = append(values, command[i])
+			}
+		case strings.HasPrefix(arg, long+"="):
+			values = append(values, strings.TrimPrefix(arg, long+"="))
+		case strings.HasPrefix(arg, short) && !strings.HasPrefix(arg, "--"):
+			values = append(values, strings.TrimPrefix(strings.TrimPrefix(arg, short), "="))
+		case isValueFlag(arg) && i+1 < len(command):
+			i++
+		}
+	}
+
+	return values
+}
+
+// isValueFlag отвечает, забирает ли флаг sing-box следующий аргумент
+// значением: тогда тот не разбирается как флаг.
+func isValueFlag(arg string) bool {
+	switch arg {
+	case "-c", "--config", "-C", "--config-directory", "-D", "--directory":
+		return true
+	}
+
+	return false
 }
 
 // uptime считает возраст процесса как разницу между аптаймом системы и

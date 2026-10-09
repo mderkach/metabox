@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"testing"
 	"time"
@@ -212,6 +213,85 @@ func TestServiceReadsWorkdir(t *testing.T) {
 
 			if got.Workdir != tt.want {
 				t.Errorf("рабочий каталог: получили %q, ожидали %q", got.Workdir, tt.want)
+			}
+		})
+	}
+}
+
+// Файлы и каталоги конфига берутся из той же команды: по ним применение
+// проверяет кандидата тем режимом, в каком служба поднимется.
+func TestServiceReadsConfigFlags(t *testing.T) {
+	tests := []struct {
+		name     string
+		command  string
+		wantFile []string
+		wantDir  []string
+	}{
+		{
+			"пакет форка: один файл",
+			`["/usr/bin/sing-box", "run", "-c", "/etc/sing-box/config.json", "-D", "/usr/share/sing-box"]`,
+			[]string{"/etc/sing-box/config.json"}, nil,
+		},
+		{
+			"режим каталога",
+			`["/usr/bin/sing-box", "-D", "/etc/sing-box", "-C", "/etc/sing-box", "run"]`,
+			nil, []string{"/etc/sing-box"},
+		},
+		{
+			"длинные формы и повтор",
+			`["/usr/bin/sing-box", "run", "--config=/a.json", "--config", "/b.json", "--config-directory=/c"]`,
+			[]string{"/a.json", "/b.json"}, []string{"/c"},
+		},
+		{
+			"относительный путь — от рабочего каталога",
+			`["/usr/bin/sing-box", "run", "-D", "/etc/sing-box", "-cconfig.json"]`,
+			[]string{"/etc/sing-box/config.json"}, nil,
+		},
+		{
+			"относительный путь без рабочего каталога остаётся как есть",
+			`["/usr/bin/sing-box", "run", "-c", "config.json"]`,
+			[]string{"config.json"}, nil,
+		},
+		{
+			"без -c и -C sing-box читает config.json рабочего каталога",
+			`["/usr/bin/sing-box", "-D", "/usr/share/sing-box", "--disable-color", "run"]`,
+			[]string{"/usr/share/sing-box/config.json"}, nil,
+		},
+		{
+			"повтор -C",
+			`["/usr/bin/sing-box", "run", "-C", "/a", "-C/b"]`,
+			nil, []string{"/a", "/b"},
+		},
+		{
+			"значение флага флагом не считается",
+			`["/usr/bin/sing-box", "run", "-c", "-Cx.json"]`,
+			[]string{"-Cx.json"}, nil,
+		},
+		{
+			"после -- флагов нет",
+			`["/usr/bin/sing-box", "run", "-c", "/a.json", "--", "-C", "/b"]`,
+			[]string{"/a.json"}, nil,
+		},
+		{
+			"флаг последним, без значения",
+			`["/usr/bin/sing-box", "run", "-c"]`,
+			[]string{"config.json"}, nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			list := `{"sing-box": {"instances": {"main": {"running": false, "command": ` + tt.command + `}}}}`
+			client := New(runnerWith(list, 0, nil), "/bin/ubus")
+			client.procDir = t.TempDir()
+
+			got, err := client.Service(t.Context(), "sing-box")
+			if err != nil {
+				t.Fatalf("опрос службы: %v", err)
+			}
+
+			if !slices.Equal(got.Configs, tt.wantFile) || !slices.Equal(got.ConfigDirs, tt.wantDir) {
+				t.Errorf("файлы %q и каталоги %q, ожидали %q и %q", got.Configs, got.ConfigDirs, tt.wantFile, tt.wantDir)
 			}
 		})
 	}

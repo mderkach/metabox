@@ -161,6 +161,11 @@ const (
 	// относительный path узла local служба не нашла бы. Каталоги лежат в
 	// Details.
 	ErrWorkdirMismatch ErrorCode = "workdir_mismatch"
+	// ErrLaunchMismatch — применение отклонено до записи: procd поднимает
+	// службу sing-box не на том конфиге, которым владеет демон, — на чужом
+	// файле, на нескольких или файлом и каталогом разом. Запись ничего бы
+	// службе не поменяла, а проверка проверяла бы не то, что запустится.
+	ErrLaunchMismatch ErrorCode = "launch_mismatch"
 	// ErrCheckFailed — `sing-box check` отверг конфиг; вывод бинаря лежит в Details.
 	ErrCheckFailed ErrorCode = "check_failed"
 	// ErrInternal — отказ, о котором наружу говорить нечего: подробности в логе.

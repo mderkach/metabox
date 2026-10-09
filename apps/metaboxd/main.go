@@ -424,6 +424,7 @@ func build(log *slog.Logger, s settings) (*apply.Manager, *config.Store, *singbo
 		ClashPort:       s.clashPort,
 		CycleTimeout:    s.cycleTimeout,
 		ConfigDir:       s.configDir,
+		ConfigName:      s.configName,
 		ProcessInterval: healthPollInterval,
 	})
 
