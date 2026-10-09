@@ -102,6 +102,20 @@ describe('ConfigApplyBar', () => {
     expect(ConfigDocumentState.getState().applied).toBe(APPLIED);
   });
 
+  it('предупреждает, что конфиг на устройстве сменился с момента черновика, и даёт его отбросить', async () => {
+    loadDocument();
+    ConfigDocumentState.getState().load(APPLIED.replace('info', 'warn'), APPLIED_ETAG);
+    renderWithQuery(<ConfigApplyBar />);
+
+    expect(screen.getByText('Конфиг на устройстве изменился с момента черновика')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Отбросить черновик' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Сбросить черновик' }));
+
+    expect(ConfigDocumentState.getState().draft).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Применение конфига' })).not.toBeInTheDocument();
+  });
+
   it('отправляет в Apply текст черновика и отпечаток базы, а не разобранный конфиг', async () => {
     const sent: { text: string; base: string | null }[] = [];
 

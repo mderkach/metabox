@@ -9,6 +9,7 @@ import {
   toWorkdirMismatch,
   useApplyTransaction,
   useConfigDirty,
+  useConfigStale,
   useConfigText,
   useListChanges,
   type CheckFailure,
@@ -52,6 +53,8 @@ function useDocumentRefresh(transaction: ApplyTransaction | null) {
 
 export interface ConfigApplyState {
   isDirty: boolean;
+  /** Черновик начат от другого конфига, чем сейчас на устройстве. */
+  isStale: boolean;
   /** Есть что применять и предыдущее применение закончилось. */
   canApply: boolean;
   /** `null` — применений не было ни в этой сессии, ни до перезагрузки. */
@@ -80,6 +83,7 @@ export function useConfigApply(): ConfigApplyState {
   const listsBase = ConfigDocumentState.use.listsEtag();
   const lists = useListChanges();
   const isDirty = useConfigDirty();
+  const isStale = useConfigStale();
   const discard = ConfigDocumentState.use.discard();
   const start = useApplyConfig();
   const confirm = useConfirmApply();
@@ -107,6 +111,7 @@ export function useConfigApply(): ConfigApplyState {
 
   return {
     isDirty,
+    isStale,
     canApply: isDirty && !start.isPending && !isApplyActive(transaction?.phase),
     transaction,
     check,

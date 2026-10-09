@@ -12,6 +12,11 @@
     "confirm": "Reset the draft",
     "cancel": "Keep the draft"
   },
+  "stale": {
+    "title": "The config on the device changed since this draft",
+    "description": "The draft was started from an earlier version. Applying it replaces what changed on the device: check the diff or discard the draft.",
+    "discard": "Discard the draft"
+  },
   "confirm": {
     "prompt": "The config is applied. Confirm that the link is alive —",
     "left": "<time>{{seconds}} s</time> left",

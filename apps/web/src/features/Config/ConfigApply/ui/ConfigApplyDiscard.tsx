@@ -22,7 +22,7 @@ import {
  * нажатие уносит всю работу без возврата. Контур в тоне опасности отличает его
  * от кнопок бара, которые правки сохраняют, а не стирают.
  */
-export function ConfigApplyDiscard({ onDiscard }: { onDiscard: () => void }) {
+export function ConfigApplyDiscard({ label, onDiscard }: { label?: string; onDiscard: () => void }) {
   const { t } = useTranslation('features/Config/ConfigApply');
   const [open, setOpen] = useState(false);
 
@@ -34,7 +34,7 @@ export function ConfigApplyDiscard({ onDiscard }: { onDiscard: () => void }) {
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger render={<Button variant='outline' size='sm' className={DESTRUCTIVE_OUTLINE} />}>
-        {t('bar.discard')}
+        {label ?? t('bar.discard')}
       </AlertDialogTrigger>
 
       <AlertDialogContent>

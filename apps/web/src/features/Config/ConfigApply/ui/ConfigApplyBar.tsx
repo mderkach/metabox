@@ -13,6 +13,7 @@ import { useConfigApply } from '../lib/ConfigApply.lib';
 import { ConfigApplyCheck } from './ConfigApplyCheck';
 import { ConfigApplyDiff } from './ConfigApplyDiff';
 import { ConfigApplyDiscard } from './ConfigApplyDiscard';
+import { ConfigApplyStale } from './ConfigApplyStale';
 import { ConfigApplyWorkdir } from './ConfigApplyWorkdir';
 
 /**
@@ -38,12 +39,13 @@ export function ConfigApplyBar() {
     () => ({
       awaiting,
       failure,
+      isStale: apply.isStale,
       isApplying: apply.isApplying,
       transaction: apply.transaction,
       check: apply.check,
       workdir: apply.workdir,
     }),
-    [awaiting, failure, apply.isApplying, apply.transaction, apply.check, apply.workdir]
+    [awaiting, failure, apply.isStale, apply.isApplying, apply.transaction, apply.check, apply.workdir]
   );
   // Уходящий бар сворачивается с тем текстом, с которым его видели: свежее
   // состояние за время сворачивания подменило бы, например, окно подтверждения
@@ -118,6 +120,8 @@ export function ConfigApplyBar() {
                 )}
               </div>
             )}
+
+            {shown.isStale && !shown.isApplying && !shown.awaiting && <ConfigApplyStale onDiscard={apply.discard} />}
 
             {shown.check !== null && <ConfigApplyCheck check={shown.check} />}
 

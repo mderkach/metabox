@@ -1,11 +1,12 @@
 import type { JSONPath } from 'jsonc-parser';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 
 import { diffLines, type DiffLine } from '@shared/lib/diff';
 import { createReactSelectors, stateCreator, useStore } from '@shared/lib/state';
 
 import { findValue, insertValue, removeValue, setValue } from './Config.model';
 import type { NodeEdit } from './Config.patch';
+import { readStoredDraft, writeStoredDraft } from './Config.storage';
 
 /** Изменения файлов списков, готовые уехать конвертом применения. */
 export interface ListChanges {
@@ -24,6 +25,14 @@ export interface ConfigDocumentState {
   appliedEtag: string | null;
   /** Правки пользователя поверх `applied`. `null` — правок не было. */
   draft: string | null;
+  /**
+   * Текст с устройства, от которого начат черновик. Черновик переживает
+   * перезагрузку страницы, а конфиг на устройстве за это время могут
+   * переписать: применение черновика поверх новой базы молча стёрло бы чужие
+   * правки, поэтому расхождение показывается. `null` — черновик начат до
+   * чтения конфига или его нет.
+   */
+  draftBase: string | null;
   /** Файлы своих списков с устройства: имя → содержимое. `null` — не читались. */
   appliedLists: Record<string, string> | null;
   /** Отпечаток набора файлов с устройства; уходит в `lists_base` применения. */
@@ -60,6 +69,8 @@ export interface ConfigDocumentState {
   /** Текст, который увидит пользователь и который уйдёт в Apply. */
   current: () => string | null;
   isDirty: () => boolean;
+  /** Конфиг на устройстве сменился с тех пор, как начат черновик. */
+  isStale: () => boolean;
   /**
    * Изменения файлов, сведённые к реальным: запись того же содержимого и
    * удаление несуществующего файла выбрасываются, как и у сверки демона.
@@ -78,17 +89,19 @@ const ConfigDocumentStateProto = stateCreator<ConfigDocumentState>((set, get) =>
     set((state) => {
       const text = state.draft ?? state.applied;
 
-      return text === null ? state : { draft: edit(text) };
+      return text === null ? state : { draft: edit(text), draftBase: baseOf(state) };
     });
   };
+  const stored = readStoredDraft();
 
   return {
     applied: null,
     appliedEtag: null,
-    draft: null,
+    draft: stored.draft,
+    draftBase: stored.base,
     appliedLists: null,
     listsEtag: null,
-    listsDraft: {},
+    listsDraft: stored.lists,
     revision: 0,
 
     load: (text, etag = null) => {
@@ -125,7 +138,7 @@ const ConfigDocumentStateProto = stateCreator<ConfigDocumentState>((set, get) =>
         // отдельно значило бы показывать бейдж «черновик» без причины.
         const draft = text === state.applied ? null : text;
 
-        return draft === state.draft ? state : { draft };
+        return draft === state.draft ? state : { draft, draftBase: draft === null ? null : baseOf(state) };
       });
     },
 
@@ -157,7 +170,10 @@ const ConfigDocumentStateProto = stateCreator<ConfigDocumentState>((set, get) =>
 
         if (node === undefined) return state;
 
-        return { draft: insertValue(removeValue(text, [...path, from]), [...path, to], node) };
+        return {
+          draft: insertValue(removeValue(text, [...path, from]), [...path, to], node),
+          draftBase: baseOf(state),
+        };
       });
     },
 
@@ -165,7 +181,7 @@ const ConfigDocumentStateProto = stateCreator<ConfigDocumentState>((set, get) =>
       set((state) =>
         state.draft === null && Object.keys(state.listsDraft).length === 0
           ? state
-          : { draft: null, listsDraft: {}, revision: state.revision + 1 }
+          : { draft: null, draftBase: null, listsDraft: {}, revision: state.revision + 1 }
       );
     },
 
@@ -174,6 +190,7 @@ const ConfigDocumentStateProto = stateCreator<ConfigDocumentState>((set, get) =>
         applied: null,
         appliedEtag: null,
         draft: null,
+        draftBase: null,
         appliedLists: null,
         listsEtag: null,
         listsDraft: {},
@@ -190,9 +207,32 @@ const ConfigDocumentStateProto = stateCreator<ConfigDocumentState>((set, get) =>
       return (draft !== null && draft !== applied) || Object.keys(lists.put).length > 0 || lists.remove.length > 0;
     },
 
+    isStale: () => {
+      const { draft, draftBase, applied } = get();
+
+      return draft !== null && draftBase !== null && applied !== null && draft !== applied && draftBase !== applied;
+    },
+
     listChanges: () => toListChanges(get().listsDraft, get().appliedLists),
   };
 }, 'ConfigDocument');
+
+/** Начатый черновик хранит свою базу, новый берёт её у текста с устройства. */
+function baseOf(state: ConfigDocumentState): string | null {
+  return state.draft === null ? state.applied : state.draftBase;
+}
+
+ConfigDocumentStateProto.subscribe(function storeDraft(state, previous) {
+  if (
+    state.draft === previous.draft &&
+    state.draftBase === previous.draftBase &&
+    state.listsDraft === previous.listsDraft
+  ) {
+    return;
+  }
+
+  writeStoredDraft({ base: state.draftBase, draft: state.draft, lists: state.listsDraft });
+});
 
 function toListChanges(
   listsDraft: Record<string, string | null>,
@@ -229,6 +269,38 @@ export function useConfigText(): string | null {
 
 export function useConfigDirty(): boolean {
   return useStore(ConfigDocumentStateProto, (state) => state.isDirty());
+}
+
+export function useConfigStale(): boolean {
+  return useStore(ConfigDocumentStateProto, (state) => state.isStale());
+}
+
+/**
+ * Подтверждение браузера при уходе со страницы, пока в черновике есть
+ * неприменённые правки. Обработчик висит только при грязном черновике:
+ * постоянный `beforeunload` выключает в браузере кэш страницы для «назад».
+ */
+export function useConfigLeaveGuard(): void {
+  const isDirty = useConfigDirty();
+
+  useEffect(
+    function guardLeave() {
+      if (!isDirty) return;
+
+      function confirmLeave(event: BeforeUnloadEvent) {
+        event.preventDefault();
+        // Браузеры до Chrome 119 спрашивают только при выставленном `returnValue`.
+        event.returnValue = true;
+      }
+
+      globalThis.addEventListener('beforeunload', confirmLeave);
+
+      return function releaseLeave() {
+        globalThis.removeEventListener('beforeunload', confirmLeave);
+      };
+    },
+    [isDirty]
+  );
 }
 
 /**

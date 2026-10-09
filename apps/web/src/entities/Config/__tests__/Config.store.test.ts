@@ -1,7 +1,8 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { act, renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { parseConfig } from '../api/Config.query';
-import { ConfigDocumentState } from '../model/Config.store';
+import { ConfigDocumentState, useConfigLeaveGuard } from '../model/Config.store';
 import { CONFIG_FIXTURE } from './Config.fixture';
 
 const TEXT = JSON.stringify(CONFIG_FIXTURE, null, 2);
@@ -239,5 +240,140 @@ describe('файлы списков в черновике', () => {
 
     expect(state().listChanges()).toEqual({ put: {}, remove: [] });
     expect(state().isDirty()).toBe(false);
+  });
+});
+
+/** Тот же конфиг, переписанный на устройстве: уровень лога другой. */
+const CHANGED = TEXT.replace('"error"', '"debug"');
+
+/** Перезагрузка страницы: модуль стора исполняется заново и читает браузер. */
+async function reloadStore() {
+  vi.resetModules();
+
+  const reloaded = await import('../model/Config.store');
+
+  return reloaded.ConfigDocumentState;
+}
+
+function leavePage(): Event {
+  const event = new Event('beforeunload', { cancelable: true });
+
+  globalThis.dispatchEvent(event);
+
+  return event;
+}
+
+describe('ConfigDocumentState: черновик в браузере', () => {
+  beforeEach(() => {
+    ConfigDocumentState.getState().reset();
+    globalThis.localStorage.clear();
+  });
+
+  it('правки переживают перезагрузку и ложатся на тот же конфиг молча', async () => {
+    state().load(TEXT);
+    state().edit(['route', 'final'], 'direct');
+    const draft = state().draft;
+
+    const reloaded = (await reloadStore()).getState();
+
+    expect(reloaded.draft).toBe(draft);
+
+    reloaded.load(TEXT);
+
+    expect(reloaded.isDirty()).toBe(true);
+    expect(reloaded.isStale()).toBe(false);
+  });
+
+  it('файлы списков в черновике тоже переживают перезагрузку', async () => {
+    state().load(TEXT);
+    state().loadLists({}, null);
+    state().editList('ads.json', '{"version":3,"rules":[]}');
+
+    const reloaded = (await reloadStore()).getState();
+
+    reloaded.loadLists({}, null);
+
+    expect(reloaded.listChanges()).toEqual({ put: { 'ads.json': '{"version":3,"rules":[]}' }, remove: [] });
+  });
+
+  it('предупреждает, когда конфиг на устройстве сменился с момента черновика', async () => {
+    state().load(TEXT);
+    state().edit(['route', 'final'], 'direct');
+
+    const reloaded = await reloadStore();
+
+    reloaded.getState().load(CHANGED);
+
+    expect(reloaded.getState().isStale()).toBe(true);
+    expect(reloaded.getState().applied).toBe(CHANGED);
+  });
+
+  it('предупреждение держится до отказа от черновика, и отказ снимает запись в браузере', async () => {
+    state().load(TEXT);
+    state().edit(['route', 'final'], 'direct');
+
+    const store = await reloadStore();
+
+    store.getState().load(CHANGED);
+    store.getState().edit(['route', 'final'], 'block');
+
+    expect(store.getState().isStale()).toBe(true);
+
+    store.getState().discard();
+
+    expect(store.getState().isStale()).toBe(false);
+    expect((await reloadStore()).getState().draft).toBeNull();
+  });
+
+  it('конфиг, сменившийся на устройстве посреди сессии, тоже даёт предупреждение', () => {
+    state().load(TEXT);
+    state().edit(['route', 'final'], 'direct');
+    state().load(CHANGED);
+
+    expect(state().isStale()).toBe(true);
+  });
+
+  it('чужая запись в хранилище читается как отсутствие черновика', async () => {
+    state().load(TEXT);
+    state().edit(['route', 'final'], 'direct');
+
+    for (let index = 0; index < globalThis.localStorage.length; index += 1) {
+      const key = globalThis.localStorage.key(index);
+
+      if (key !== null) globalThis.localStorage.setItem(key, '{"draft":1}');
+    }
+
+    expect((await reloadStore()).getState().draft).toBeNull();
+  });
+});
+
+describe('useConfigLeaveGuard', () => {
+  beforeEach(() => {
+    ConfigDocumentState.getState().reset();
+    ConfigDocumentState.getState().load(TEXT);
+  });
+
+  it('при неприменённых правках просит браузер подтвердить уход', () => {
+    state().edit(['route', 'final'], 'direct');
+    renderHook(useConfigLeaveGuard);
+
+    expect(leavePage().defaultPrevented).toBe(true);
+  });
+
+  it('без правок уходу не мешает', () => {
+    renderHook(useConfigLeaveGuard);
+
+    expect(leavePage().defaultPrevented).toBe(false);
+  });
+
+  it('после отказа от черновика подтверждение снимается', () => {
+    state().edit(['route', 'final'], 'direct');
+    renderHook(useConfigLeaveGuard);
+
+    act(() => {
+      state().discard();
+    });
+
+    expect(leavePage().defaultPrevented).toBe(false);
   });
 });

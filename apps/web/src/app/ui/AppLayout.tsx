@@ -1,6 +1,7 @@
 import { Outlet } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 
+import { useConfigLeaveGuard } from '@entities/Config';
 import { ConfigApplyBar } from '@features/Config/ConfigApply';
 import { useNarrowScreen } from '@shared/lib/media';
 import { cn } from '@shared/lib/utils';
@@ -21,6 +22,7 @@ const SKIP_LINK_CLASS =
  */
 export function AppLayout() {
   useRuntimeStreams();
+  useConfigLeaveGuard();
   const { t } = useTranslation('app');
   const narrow = useNarrowScreen();
 

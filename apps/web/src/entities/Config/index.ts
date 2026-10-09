@@ -68,6 +68,8 @@ export {
   ConfigDocumentState,
   useConfigDiff,
   useConfigDirty,
+  useConfigLeaveGuard,
+  useConfigStale,
   useConfigText,
   useListChanges,
 } from './model/Config.store';
