@@ -4,6 +4,7 @@
 - Дата: 2026-09-08
 - Ответственные: владелец репозитория
 - Заменяет: раздел A.4 [`../PRD.md`](../PRD.md)
+- Заменён решением (в части предмета валидации): [ADR-0046](./ADR-0046-check-the-candidate-the-way-the-service-runs.md)
 
 ## Контекст и постановка проблемы
 
@@ -13,9 +14,9 @@
 
 Ограничения заданы средой и уже проверены:
 
-- Сервис запускается в режиме каталога: `sing-box -D /etc/sing-box -C /etc/sing-box run` ([`../../.devcontainer/target/files/etc/init.d/sing-box:18`](../../.devcontainer/target/files/etc/init.d/sing-box)). В этом режиме бинарь сливает все файлы каталога с суффиксом `.json`.
+- Сервис запускается в режиме каталога: `sing-box -D /etc/sing-box -C /etc/sing-box run` (стендовый `init.d/sing-box` на момент решения; снят коммитом `22088194`, стенд ставит пакет форка, который запускает службу одним файлом `run -c … -D …` — предмет валидации уточняет [ADR-0046](./ADR-0046-check-the-candidate-the-way-the-service-runs.md)). В этом режиме бинарь сливает все файлы каталога с суффиксом `.json`.
 - `/var` в rootfs OpenWrt — симлинк на `/tmp` ([`../../.devcontainer/target/Dockerfile:44`](../../.devcontainer/target/Dockerfile)).
-- Команды `check` у init-скрипта реального пакета нет, она есть только в стенде ([`../TechDebt.md`](../TechDebt.md)).
+- Команды `check` у init-скрипта реального пакета нет; на момент решения она была только у стендового скрипта ([DeviceIO](../../apps/metaboxd/docs/guides/DeviceIO.md), «Сервис через procd»).
 - Clash API форка отключает авторизацию целиком, когда `secret` пуст (`experimental/clashapi/server.go:259` версии `v1.13.18-extended-2.6.5`); на роутере панель отвечает без токена.
 - Дев-сервер проксирует API с `changeOrigin: true` ([`../../apps/web/vite.config.ts:39`](../../apps/web/vite.config.ts)): до демона доходит переписанный `Host` и исходный `Origin`.
 

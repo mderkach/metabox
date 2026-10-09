@@ -10,7 +10,7 @@ AC-5 требует, чтобы каждый тип inbound/outbound из чек
 
 Ограничения, заданные существующими решениями и кодом:
 
-- Схема всех типов форка уже есть и одна: `tools/schemagen` печатает строгие Zod-схемы со 103 типами из семи реестров, реестры собраны в `z.discriminatedUnion("type", …)`, у полей сохранён godoc форка ([ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md), `apps/web/src/shared/api/generated.ts`). Вторая модель тех же типов — расхождение при первом же подъёме форка.
+- Схема всех типов форка уже есть и одна: `tools/schemagen` печатает строгие Zod-схемы со 106 типами из семи реестров (на `v1.14.0-extended-2.7.1`), реестры собраны в `z.discriminatedUnion("type", …)`, у полей сохранён godoc форка ([ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md), `apps/web/src/shared/api/generated.ts`). Вторая модель тех же типов — расхождение при первом же подъёме форка.
 - Узел с полем, которого схема не знает, помечается «UI не покрывает» и правится текстом ([ADR-0018](./ADR-0018-generate-strict-schemas-and-mark-what-the-panel-does-not-know.md)); форма не вправе терять такие поля и обязана уступать текстовому режиму.
 - Правка держится за текст файла: форма отдаёт значение узла, запись идёт `setValue` по пути, соседние байты не трогаются ([ADR-0004](./ADR-0004-edit-config-text-in-place-on-the-client.md)).
 - Тип узла, которого нет в сборке бинаря, панель называет предупреждением; при создании узла тип надо помечать в самом выборе (`BUILD_TAG_OF_TYPE`, `BUILD_TAG_OF_OPTION`, [ADR-0030](./ADR-0030-read-the-build-composition-from-the-binary-and-the-fork-sources.md)).
