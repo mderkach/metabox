@@ -10,6 +10,7 @@ package contract
 import (
 	"metabox/internal/apply"
 	"metabox/internal/config"
+	"metabox/internal/devices"
 	"metabox/internal/history"
 )
 
@@ -182,6 +183,10 @@ const (
 	// файле, на нескольких или файлом и каталогом разом. Запись ничего бы
 	// службе не поменяла, а проверка проверяла бы не то, что запустится.
 	ErrLaunchMismatch ErrorCode = "launch_mismatch"
+	// ErrDeviceInvalid — своё имя устройства не принято: MAC не разобран, имя
+	// длиннее допустимого или с управляющими символами, тело не разобрано
+	// либо своих имён больше, чем демон хранит.
+	ErrDeviceInvalid ErrorCode = "device_invalid"
 	// ErrCheckFailed — `sing-box check` отверг конфиг; вывод бинаря лежит в Details.
 	ErrCheckFailed ErrorCode = "check_failed"
 	// ErrInternal — отказ, о котором наружу говорить нечего: подробности в логе.
@@ -212,6 +217,19 @@ type RuleSetFiles struct {
 	Files map[string]string `json:"files"`
 	// Etag — отпечаток набора; клиент возвращает его в lists_base применения.
 	Etag string `json:"etag"`
+}
+
+// Devices — ответ `GET /api/devices` и `PUT /api/devices/{mac}`: устройства
+// LAN по адресу, без адреса — в конце.
+type Devices struct {
+	Devices []devices.Device `json:"devices"`
+}
+
+// DeviceName — тело `PUT /api/devices/{mac}`.
+type DeviceName struct {
+	// Name — своё имя устройства. Пустое убирает его, и подпись возвращается к
+	// статической аренде или DHCP.
+	Name string `json:"name"`
 }
 
 // Error — единый формат отказа на границе HTTP. Внутренние подробности — пути

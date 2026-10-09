@@ -122,6 +122,7 @@
     "nothing_to_confirm": "there is nothing to confirm: the confirmation window is closed",
     "config_modified": "the config file was changed outside metabox",
     "config_too_large": "the config is larger than allowed",
+    "device_invalid": "the daemon rejected the device name",
     "list_invalid": "the daemon rejected the list file",
     "workdir_mismatch": "the sing-box service working directory does not match the config directory",
     "launch_mismatch": "the sing-box service does not run on the config the panel manages",

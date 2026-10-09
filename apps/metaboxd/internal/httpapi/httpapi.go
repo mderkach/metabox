@@ -20,6 +20,7 @@ import (
 	"metabox/internal/clashapi"
 	"metabox/internal/config"
 	"metabox/internal/contract"
+	"metabox/internal/devices"
 	"metabox/internal/history"
 	"metabox/internal/procd"
 	"metabox/internal/route"
@@ -40,6 +41,10 @@ const maxApplyBytes = 16 << 20
 // сам конфиг — тоже JSON, и по общему типу конверт не отличить от голых байт
 // конфига.
 const applyJSONType = "application/vnd.metabox.apply+json"
+
+// maxDeviceNameBytes — потолок тела правки имени: в нём одна строка до
+// шестидесяти четырёх символов.
+const maxDeviceNameBytes = 4 << 10
 
 // Applier — цикл применения. Интерфейс объявлен здесь, у потребителя, и
 // содержит только те методы, которыми пользуются хендлеры.
@@ -119,6 +124,9 @@ type Options struct {
 	// означает, что наблюдать нечем: состояние службы тогда читается только у
 	// procd, и чужой процесс панель не увидит.
 	Runtime RuntimeObserver
+	// Devices отдаёт устройства LAN и хранит их свои имена. nil означает, что
+	// список не собран: панель подписывает источники соединений адресами.
+	Devices DeviceRegistry
 	// ConfigPath — путь файла, которым владеет демон. Панель показывает его
 	// как факт об устройстве, а задаётся он флагами `-config-dir` и
 	// `-config-name`: без этого поля интерфейс показывал бы значение по
@@ -148,6 +156,13 @@ type RuleSetsReader interface {
 	Catalog() ruleset.Catalog
 }
 
+// DeviceRegistry отдаёт устройства LAN и меняет их свои имена. Интерфейс
+// объявлен здесь, у потребителя.
+type DeviceRegistry interface {
+	List(ctx context.Context) ([]devices.Device, error)
+	Rename(ctx context.Context, mac, name string) error
+}
+
 // RuntimeObserver сообщает, работает ли на устройстве процесс sing-box.
 // Интерфейс объявлен здесь, у потребителя.
 type RuntimeObserver func(ctx context.Context) bool
@@ -170,6 +185,7 @@ type Server struct {
 	history        HistoryReader
 	ruleSets       RuleSetsReader
 	runtime        RuntimeObserver
+	devices        DeviceRegistry
 	configPath     string
 	handler        http.Handler
 }
@@ -194,6 +210,7 @@ func NewServer(applier Applier, reader ConfigReader, log *slog.Logger, opts Opti
 		history:        opts.History,
 		ruleSets:       opts.RuleSets,
 		runtime:        opts.Runtime,
+		devices:        opts.Devices,
 		configPath:     opts.ConfigPath,
 	}
 	s.handler = s.routes()
@@ -234,6 +251,11 @@ func (s *Server) routes() http.Handler {
 
 	if s.ruleSets != nil {
 		mux.HandleFunc("GET /api/rule-sets/catalog", s.handleRuleSets)
+	}
+
+	if s.devices != nil {
+		mux.HandleFunc("GET /api/devices", s.handleDevices)
+		mux.HandleFunc("PUT /api/devices/{mac}", s.handleDeviceName)
 	}
 
 	if s.service != nil {
@@ -596,6 +618,43 @@ func (s *Server) handleHits(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleRuleSets(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(s.log, w, http.StatusOK, s.ruleSets.Catalog())
+}
+
+func (s *Server) handleDevices(w http.ResponseWriter, r *http.Request) {
+	list, err := s.devices.List(r.Context())
+	if err != nil {
+		fail(s.log, w, r, err)
+
+		return
+	}
+
+	writeJSON(s.log, w, http.StatusOK, contract.Devices{Devices: list})
+}
+
+// handleDeviceName задаёт своё имя и отдаёт список целиком: подпись
+// устройства зависит от всех источников сразу, и считать её панели не по чему.
+func (s *Server) handleDeviceName(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxDeviceNameBytes))
+	if err != nil {
+		fail(s.log, w, r, err)
+
+		return
+	}
+
+	var req contract.DeviceName
+	if err := json.Unmarshal(body, &req); err != nil {
+		fail(s.log, w, r, errors.Join(errBadDeviceBody, err))
+
+		return
+	}
+
+	if err := s.devices.Rename(r.Context(), r.PathValue("mac"), req.Name); err != nil {
+		fail(s.log, w, r, err)
+
+		return
+	}
+
+	s.handleDevices(w, r)
 }
 
 // ServiceState приводит состояние службы к форме ответа. Экспортируется,

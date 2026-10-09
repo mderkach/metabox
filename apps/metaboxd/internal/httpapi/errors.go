@@ -9,6 +9,7 @@ import (
 	"metabox/internal/apply"
 	"metabox/internal/config"
 	"metabox/internal/contract"
+	"metabox/internal/devices"
 	"metabox/internal/route"
 	"metabox/internal/singbox"
 )
@@ -26,6 +27,8 @@ var (
 	errUpgradeUnsupported = errors.New("рантайм идёт потоком /api/events, апгрейд не поддерживается")
 	// errBadApplyEnvelope — тело с типом конверта применения не разобралось.
 	errBadApplyEnvelope = errors.New("конверт применения не разобран")
+	// errBadDeviceBody — тело правки имени устройства не разобрано.
+	errBadDeviceBody = errors.New("тело правки имени устройства не разобрано")
 )
 
 // runtimeUnavailable — текст отказа рантайма для клиента. Причина остаётся в
@@ -135,6 +138,9 @@ func statusFor(err error) (status int, code contract.ErrorCode) {
 		return http.StatusConflict, contract.ErrConfigModified
 	case errors.Is(err, apply.ErrListName), errors.Is(err, errBadApplyEnvelope):
 		return http.StatusBadRequest, contract.ErrListInvalid
+	case errors.Is(err, devices.ErrInvalidMAC), errors.Is(err, devices.ErrInvalidName),
+		errors.Is(err, devices.ErrTooManyNames), errors.Is(err, errBadDeviceBody):
+		return http.StatusBadRequest, contract.ErrDeviceInvalid
 	case errors.As(err, &tooLarge):
 		return http.StatusRequestEntityTooLarge, contract.ErrConfigTooLarge
 	default:

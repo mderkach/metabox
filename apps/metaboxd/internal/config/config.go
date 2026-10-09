@@ -41,12 +41,13 @@ const (
 	backupName   = "config.backup"
 	stateName    = "apply.json"
 	ruleSetsName = "rule-sets.json"
+	devicesName  = "devices.json"
 )
 
 // Store — единственный владелец файла конфига и служебного каталога демона:
-// бэкапа, состояния транзакции, истории версий и кэша каталога наборов. Один
-// владелец требует Architecture&Style: параллельный доступ закрыт методами,
-// снаружи мьютекса быть не должно.
+// бэкапа, состояния транзакции, истории версий, кэша каталога наборов и своих
+// имён устройств. Один владелец требует Architecture&Style: параллельный
+// доступ закрыт методами, снаружи мьютекса быть не должно.
 type Store struct {
 	mu         sync.Mutex
 	dir        string
@@ -693,4 +694,52 @@ func (s *Store) WriteRuleSets(ctx context.Context, data []byte) error {
 	defer func() { _ = root.Close() }()
 
 	return writeAtomic(root, ruleSetsName, data, securePerm)
+}
+
+// ReadDevices отдаёт сохранённые имена устройств. Отсутствие файла или
+// служебного каталога — ошибка, для которой errors.Is(err, fs.ErrNotExist):
+// имён ещё не задавали.
+func (s *Store) ReadDevices(ctx context.Context) ([]byte, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	root, err := openRoot(s.serviceDir)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = root.Close() }()
+
+	data, err := root.ReadFile(devicesName)
+	if err != nil {
+		return nil, fmt.Errorf("чтение имён устройств в %s: %w", s.serviceDir, err)
+	}
+
+	return data, nil
+}
+
+// WriteDevices сохраняет имена устройств атомарно. Служебный каталог
+// создаётся, если его ещё нет: имя могут задать раньше первого применения.
+func (s *Store) WriteDevices(ctx context.Context, data []byte) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if err := ensureDir(s.serviceDir); err != nil {
+		return fmt.Errorf("служебный каталог: %w", err)
+	}
+
+	root, err := openRoot(s.serviceDir)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = root.Close() }()
+
+	return writeAtomic(root, devicesName, data, securePerm)
 }

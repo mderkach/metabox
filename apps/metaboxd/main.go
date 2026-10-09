@@ -21,6 +21,7 @@ import (
 	"metabox/internal/clashapi"
 	"metabox/internal/config"
 	"metabox/internal/device"
+	"metabox/internal/devices"
 	"metabox/internal/events"
 	"metabox/internal/history"
 	"metabox/internal/httpapi"
@@ -81,6 +82,8 @@ type settings struct {
 	instance      string
 	ubus          string
 	logread       string
+	dhcpLeases    string
+	uci           string
 	clashPort     int
 	confirmWindow time.Duration
 	cycleTimeout  time.Duration
@@ -106,6 +109,8 @@ func main() {
 	flag.StringVar(&s.ubus, "ubus", "/bin/ubus", "путь к ubus: через него читается состояние службы у procd")
 	flag.StringVar(&s.logread, "logread", "/sbin/logread",
 		"путь к logread: из него берётся причина падения sing-box; пустой отключает чтение")
+	flag.StringVar(&s.dhcpLeases, "dhcp-leases", "/tmp/dhcp.leases", "файл аренд dnsmasq: из него берутся устройства LAN")
+	flag.StringVar(&s.uci, "uci", "/sbin/uci", "путь к uci: через него читаются статические аренды из UCI dhcp")
 	flag.IntVar(&s.clashPort, "clash-port", 9090, "порт Clash API, если демон заводит секцию сам")
 	flag.DurationVar(&s.confirmWindow, "confirm-window", time.Minute,
 		"сколько ждать подтверждения связи до автоотката")
@@ -226,6 +231,20 @@ func run(log *slog.Logger, s settings) error {
 	ruleSets.Start()
 	defer ruleSets.Close()
 
+	// Без списка устройств панель открывается и подписывает источники
+	// адресами; битый файл имён не затирается следующей правкой.
+	var lan httpapi.DeviceRegistry
+
+	registry, err := devices.New(ctx, devices.Runner(runCommand(singbox.NewExec(binaryTimeout))), store, devices.Options{
+		Leases: s.dhcpLeases,
+		UCI:    s.uci,
+	})
+	if err != nil {
+		log.Error("список устройств не собран", "err", err)
+	} else {
+		lan = registry
+	}
+
 	api := httpapi.NewServer(manager, store, log, httpapi.Options{
 		Version:        version.Version,
 		SingboxVersion: singboxVersion,
@@ -240,6 +259,7 @@ func run(log *slog.Logger, s settings) error {
 		History:        historyOf(traffic, deviceHistory, connectionSizes),
 		RuleSets:       ruleSets,
 		Runtime:        sysinfo.Alive,
+		Devices:        lan,
 		ConfigPath:     store.Path(),
 	})
 

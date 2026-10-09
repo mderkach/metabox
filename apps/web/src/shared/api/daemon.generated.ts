@@ -48,8 +48,16 @@ export const ERROR_CODE = [
   'list_invalid',
   'workdir_mismatch',
   'launch_mismatch',
+  'device_invalid',
   'check_failed',
   'internal',
+] as const
+
+export const NAME_SOURCE = [
+  'custom',
+  'static',
+  'dhcp',
+  'none',
 ] as const
 
 export const ORIGIN = [
@@ -243,6 +251,35 @@ export const ApplyEnvelopeSchema = z.object({
   remove_lists: z.array(z.string()).optional(),
   /** ListsBase — отпечаток набора файлов, от которого редактировал клиент: значение etag из GET /api/config/rule-sets. Пустой — применить без сверки. */
   lists_base: z.string().optional(),
+})
+
+/** Device — устройство LAN, сведённое по MAC. */
+export const DeviceSchema = z.object({
+  /** IP — адрес из аренды, а без неё — из статической записи. Пусто, когда адреса нет ни там, ни там: у устройства есть только своё имя. */
+  ip: z.string(),
+  /** MAC — в нижнем регистре через двоеточие; по нему хранится своё имя. */
+  mac: z.string(),
+  /** Name — подпись по приоритету: своё имя, статическая аренда, DHCP. Пусто при NameSource `none`. */
+  name: z.string(),
+  /** NameSource — откуда взята подпись; при `none` панель подписывает устройство адресом. */
+  name_source: z.string(),
+  /** Static — у MAC есть статическая аренда в UCI `dhcp`. */
+  static: z.boolean(),
+  /** Online — аренда не истекла по часам роутера. До синхронизации NTP часы стоят в прошлом, и истёкшая аренда может считаться живой. */
+  online: z.boolean(),
+  /** LeaseExpires — конец аренды в секундах unix. Ноль — аренды нет или она бессрочная; второе отличается признаком Online. */
+  lease_expires: z.int(),
+})
+
+/** Devices — ответ `GET /api/devices` и `PUT /api/devices/{mac}`: устройства LAN по адресу, без адреса — в конце. */
+export const DevicesSchema = z.object({
+  devices: z.array(DeviceSchema),
+})
+
+/** DeviceName — тело `PUT /api/devices/{mac}`. */
+export const DeviceNameSchema = z.object({
+  /** Name — своё имя устройства. Пустое убирает его, и подпись возвращается к статической аренде или DHCP. */
+  name: z.string(),
 })
 
 /** Load — средняя загрузка. Приводить её к процентам нельзя: это длина очереди на выполнение, и на четырёх ядрах значение 4.0 означает полную занятость. */
@@ -446,7 +483,10 @@ export type CheckDetailsWire = z.infer<typeof CheckDetailsSchema>
 export type ConnectionWire = z.infer<typeof ConnectionSchema>
 export type ConnectionsSnapshotWire = z.infer<typeof ConnectionsSnapshotSchema>
 export type DaemonWire = z.infer<typeof DaemonSchema>
+export type DeviceNameWire = z.infer<typeof DeviceNameSchema>
 export type DevicePointWire = z.infer<typeof DevicePointSchema>
+export type DeviceWire = z.infer<typeof DeviceSchema>
+export type DevicesWire = z.infer<typeof DevicesSchema>
 export type ErrorWire = z.infer<typeof ErrorSchema>
 export type EventWire = z.infer<typeof EventSchema>
 export type ExplanationWire = z.infer<typeof ExplanationSchema>

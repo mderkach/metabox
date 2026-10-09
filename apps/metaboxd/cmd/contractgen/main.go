@@ -27,6 +27,8 @@ var roots = []rootType{
 	{pkg: "internal/contract", name: "WorkdirDetails"},
 	{pkg: "internal/contract", name: "RuleSetFiles"},
 	{pkg: "internal/contract", name: "ApplyEnvelope"},
+	{pkg: "internal/contract", name: "Devices"},
+	{pkg: "internal/contract", name: "DeviceName"},
 	{pkg: "internal/device", name: "Stat"},
 	{pkg: "internal/events", name: "Connection"},
 	{pkg: "internal/events", name: "ConnectionsSnapshot"},
