@@ -93,6 +93,7 @@ export const LEVEL = [
   'trace',
   'debug',
   'info',
+  'notice',
   'warn',
   'error',
   'fatal',

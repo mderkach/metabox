@@ -60,18 +60,19 @@ type Level string
 
 // Уровни sing-box от самого подробного.
 const (
-	LevelTrace Level = "trace"
-	LevelDebug Level = "debug"
-	LevelInfo  Level = "info"
-	LevelWarn  Level = "warn"
-	LevelError Level = "error"
-	LevelFatal Level = "fatal"
-	LevelPanic Level = "panic"
+	LevelTrace  Level = "trace"
+	LevelDebug  Level = "debug"
+	LevelInfo   Level = "info"
+	LevelNotice Level = "notice"
+	LevelWarn   Level = "warn"
+	LevelError  Level = "error"
+	LevelFatal  Level = "fatal"
+	LevelPanic  Level = "panic"
 )
 
 // rank отдаёт порядок уровня; -1 — уровень вне набора.
 func rank(level Level) int {
-	return slices.Index([]Level{LevelTrace, LevelDebug, LevelInfo, LevelWarn, LevelError, LevelFatal, LevelPanic}, level)
+	return slices.Index([]Level{LevelTrace, LevelDebug, LevelInfo, LevelNotice, LevelWarn, LevelError, LevelFatal, LevelPanic}, level)
 }
 
 // ParseLevel разбирает уровень без учёта регистра. Пустая строка — LevelTrace:

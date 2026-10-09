@@ -11,6 +11,7 @@ const LEVEL_TONE: Readonly<Record<LogLevel, string>> = {
   trace: 'text-signal-idle',
   debug: 'text-signal-idle',
   info: 'text-signal-ok',
+  notice: 'text-signal-ok',
   warn: 'text-signal-warn',
   error: 'text-signal-bad',
   fatal: 'text-signal-bad',

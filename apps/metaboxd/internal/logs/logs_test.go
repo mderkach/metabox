@@ -70,6 +70,18 @@ func TestParse(t *testing.T) {
 			ok:   true,
 		},
 		{
+			name: "строка logread с уровнем notice",
+			line: "Fri Oct  9 05:38:01 2026 daemon.err sing-box[4233]: NOTICE[0000] started",
+			want: Entry{Time: localRFC3339(t, 2026, 10, 9, 5, 38, 1), Level: LevelNotice, Message: "started"},
+			ok:   true,
+		},
+		{
+			name: "строка logread с цветным notice",
+			line: "Fri Oct  9 05:38:01 2026 daemon.err sing-box[4233]: \x1b[32mNOTICE\x1b[0m[0000] started",
+			want: Entry{Time: localRFC3339(t, 2026, 10, 9, 5, 38, 1), Level: LevelNotice, Message: "started"},
+			ok:   true,
+		},
+		{
 			name: "чужой процесс, упомянувший sing-box",
 			line: "Fri Oct  9 05:38:02 2026 daemon.info dnsmasq[1]: query sing-box[1] example.com",
 		},
@@ -127,6 +139,17 @@ func localRFC3339(t *testing.T, y int, mo time.Month, d, h, mi, s int) string {
 	t.Helper()
 
 	return time.Date(y, mo, d, h, mi, s, 0, time.Local).Format(time.RFC3339)
+}
+
+func TestFilterOrdersNoticeBetweenInfoAndWarn(t *testing.T) {
+	if rank(LevelNotice) <= rank(LevelInfo) || rank(LevelNotice) >= rank(LevelWarn) {
+		t.Errorf("notice ранга %d вне между info %d и warn %d", rank(LevelNotice), rank(LevelInfo), rank(LevelWarn))
+	}
+
+	f := filter{min: rank(LevelWarn)}
+	if f.pass(Entry{Level: LevelNotice}) {
+		t.Error("notice прошёл фильтр warn")
+	}
 }
 
 func TestTailFiltersLevelAndKeepsLast(t *testing.T) {
