@@ -10,6 +10,8 @@ CONF_DIR=/etc/sing-box
 CONF=$CONF_DIR/config.json
 TMP=/tmp/config.candidate.json
 API=http://127.0.0.1:9090
+SERVICE=metabox-singbox
+INSTANCE=sing-box
 
 fail() { echo "ПРОВАЛ: $1" >&2; exit 1; }
 
@@ -28,7 +30,7 @@ wait_api() {
 }
 
 echo "1. Исходное состояние"
-/etc/init.d/sing-box running || fail "sing-box не запущен до начала цикла"
+/etc/init.d/$SERVICE running $INSTANCE || fail "sing-box не запущен до начала цикла"
 before=$(wget -qO- "$API/version") || fail "Clash API не отвечает до начала цикла"
 echo "   $before"
 
@@ -48,7 +50,7 @@ echo "   отвергнут, как и должен"
 
 echo "5. Запись и рестарт через procd"
 cp "$TMP" "$CONF"
-/etc/init.d/sing-box restart
+/etc/init.d/$SERVICE restart
 
 echo "6. Healthcheck"
 wait_api || fail "сервис не поднялся за 30 секунд после рестарта"
@@ -60,26 +62,26 @@ grep -q example.com "$CONF" || fail "правило не сохранилось 
 
 echo "8. Рабочий каталог службы — каталог конфига"
 # Относительный path узла local sing-box резолвит от каталога -D, а не от
-# каталога конфига: с пакетным workdir служба не найдёт файлы списков.
-service=$(ubus call service list '{"name": "sing-box"}' | jsonfilter -e "@['sing-box']") ||
-	fail "procd не знает службу sing-box"
-workdir=$(echo "$service" | jsonfilter -e '@.instances.*.command[*]' | awk '
+# каталога конфига: с другим рабочим каталогом служба не найдёт файлы списков.
+service=$(ubus call service list "{\"name\": \"$SERVICE\"}" | jsonfilter -e "@['$SERVICE'].instances['$INSTANCE']") ||
+	fail "procd не знает инстанс $INSTANCE службы $SERVICE"
+workdir=$(echo "$service" | jsonfilter -e '@.command[*]' | awk '
 	take { dir = $0; take = 0; next }
 	$0 == "-D" || $0 == "--directory" { take = 1; next }
 	/^--directory=/ { dir = substr($0, 13) }
 	END { print dir }')
 [ "$workdir" = "$CONF_DIR" ] || fail "служба поднята с -D '$workdir', ожидали $CONF_DIR"
-# Демон проверяет кандидата тем режимом, каким поднимается служба: пакет форка
-# читает один файл -c, и он обязан быть тем конфигом, которым владеет демон.
-configs=$(echo "$service" | jsonfilter -e '@.instances.*.command[*]' | awk '
+# Демон проверяет кандидата тем режимом, каким поднимается служба: она читает
+# один файл -c, и он обязан быть тем конфигом, которым владеет демон.
+configs=$(echo "$service" | jsonfilter -e '@.command[*]' | awk '
 	take { print; take = 0; next }
 	$0 == "-c" || $0 == "--config" { take = 1; next }
 	/^--config=/ { print substr($0, 10) }')
 [ "$configs" = "$CONF" ] || fail "служба поднята с -c '$configs', ожидали один файл $CONF"
-if echo "$service" | jsonfilter -e '@.instances.*.command[*]' | grep -qx -e '-C' -e '--config-directory' -e '--config-directory=.*'; then
-	fail "служба поднята в режиме каталога, а пакет форка запускает один файл"
+if echo "$service" | jsonfilter -e '@.command[*]' | grep -qx -e '-C' -e '--config-directory' -e '--config-directory=.*'; then
+	fail "служба поднята в режиме каталога, а её init-скрипт запускает один файл"
 fi
-pid=$(echo "$service" | jsonfilter -e '@.instances.*.pid' | head -1)
+pid=$(echo "$service" | jsonfilter -e '@.pid' | head -1)
 [ -n "$pid" ] || fail "procd не отдал pid службы"
 cwd=$(readlink "/proc/$pid/cwd") || fail "рабочий каталог процесса $pid не прочитан"
 [ "$cwd" = "$CONF_DIR" ] || fail "процесс $pid работает в '$cwd', ожидали $CONF_DIR"
@@ -125,7 +127,7 @@ restore_lists() {
 	if [ "$lists_dir_created" = 1 ]; then
 		rmdir "$LISTS_DIR" 2>/dev/null || true
 	fi
-	/etc/init.d/sing-box restart || code=1
+	/etc/init.d/$SERVICE restart || code=1
 	if ! wait_api; then
 		echo "ПРОВАЛ: стенд не вернулся в исходное: Clash API молчит после рестарта" >&2
 		code=1
@@ -145,7 +147,7 @@ if [ ! -d "$LISTS_DIR" ]; then
 fi
 printf '%s\n' "$LIST_BODY" > "$LISTS_DIR/$LIST_NAME"
 cp "$CANDIDATE/config.json" "$CONF"
-/etc/init.d/sing-box restart
+/etc/init.d/$SERVICE restart
 wait_api || fail "сервис не поднялся за 30 секунд с конфигом, ссылающимся на файл списка"
 wget -qO- "$API/rules" | grep -q metabox-check || fail "правило с набором metabox-check не видно в рантайме"
 echo "   служба поднялась, набор metabox-check в рантайме"

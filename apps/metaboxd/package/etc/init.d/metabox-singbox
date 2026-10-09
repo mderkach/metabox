@@ -1,0 +1,52 @@
+#!/bin/sh /etc/rc.common
+# Служба sing-box панели metabox. Каталог и имя конфига берутся из
+# /etc/config/metabox — те же, что у демона.
+
+# После dnsmasq и fw4, но до metaboxd: демон на старте доигрывает транзакцию
+# Apply и рестартует службу, и сеть к этому моменту уже должна быть поднята.
+START=97
+USE_PROCD=1
+
+start_service() {
+	config_load metabox
+
+	local singbox config_dir config_name config
+
+	config_get singbox main singbox /usr/bin/sing-box
+	config_get config_dir main config_dir /etc/sing-box
+	config_get config_name main config_name config.json
+	config="$config_dir/$config_name"
+
+	[ -x "$singbox" ] || {
+		echo "metabox-singbox: $singbox отсутствует" >&2
+		return 1
+	}
+
+	[ -f "$config" ] || {
+		echo "metabox-singbox: конфига $config нет" >&2
+		return 1
+	}
+
+	# Рабочий каталог — каталог конфига: относительный path узла local
+	# sing-box резолвит от -D, а файлы списков демон пишет рядом с конфигом.
+	# Демон проверяет кандидата той же командой, поэтому -c здесь один.
+	procd_open_instance sing-box
+	procd_set_param command "$singbox" run -c "$config" -D "$config_dir"
+	procd_set_param limits nofile="1000000 1000000"
+	procd_set_param stdout 1
+	# FATAL, с которым выходит sing-box, идёт в stderr: из logread демон берёт
+	# причину падения.
+	procd_set_param stderr 1
+	procd_set_param respawn
+	procd_close_instance
+}
+
+service_triggers() {
+	procd_add_reload_trigger metabox
+}
+
+# Новый конфиг и новые пути sing-box применяет только при старте.
+reload_service() {
+	stop
+	start
+}

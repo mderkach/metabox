@@ -100,8 +100,8 @@ func main() {
 	flag.StringVar(&s.serviceDir, "state-dir", "/etc/metabox",
 		"служебный каталог демона под бэкап и состояние транзакции; вне каталога конфига")
 	flag.StringVar(&s.binary, "singbox", "/usr/bin/sing-box", "путь к бинарю sing-box")
-	flag.StringVar(&s.initScript, "init-script", "/etc/init.d/sing-box", "путь к init-скрипту сервиса")
-	flag.StringVar(&s.instance, "service-instance", "",
+	flag.StringVar(&s.initScript, "init-script", "/etc/init.d/metabox-singbox", "путь к init-скрипту сервиса")
+	flag.StringVar(&s.instance, "service-instance", "sing-box",
 		"инстанс procd, в котором служба init-скрипта держит sing-box; пустой — единственный инстанс службы")
 	flag.StringVar(&s.ubus, "ubus", "/bin/ubus", "путь к ubus: через него читается состояние службы у procd")
 	flag.StringVar(&s.logread, "logread", "/sbin/logread",

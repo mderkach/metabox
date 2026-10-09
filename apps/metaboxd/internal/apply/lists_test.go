@@ -265,6 +265,29 @@ func TestStartIgnoresWorkdirWithoutLists(t *testing.T) {
 	h.waitWindow(t)
 }
 
+// Служба пакета панели поднимает sing-box одним -c на конфиг демона с -D на его
+// каталоге: файлы списков применяются без отказа, а кандидат проверяется
+// файлом от собственного каталога.
+func TestStartAcceptsPackageService(t *testing.T) {
+	h := newHarness(t)
+	h.service.launch = procd.Launch{Configs: []string{configDir + "/" + configName}, Workdir: configDir}
+	lists := apply.Lists{Put: map[string][]byte{"my.json": []byte(`{"rules":[]}`)}}
+
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig), lists, "", ""); err != nil {
+		t.Fatalf("применение: %v", err)
+	}
+
+	h.waitWindow(t)
+
+	h.service.mu.Lock()
+	dir, file, workdir := h.service.checked[0], h.service.checked[1], h.service.checked[2]
+	h.service.mu.Unlock()
+
+	if file != dir+"/"+configName || workdir != dir {
+		t.Errorf("проверка -c %q -D %q, ожидали -c %q -D %q", file, workdir, dir+"/"+configName, dir)
+	}
+}
+
 // Восстановление версии приводит каталог списков к снимку: файлы снимка
 // пишутся, лишние удаляются, а имён, которых применение не примет, конверт не
 // несёт — иначе чужой файл в подкаталоге валил бы восстановление.

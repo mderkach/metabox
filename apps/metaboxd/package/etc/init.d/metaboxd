@@ -45,8 +45,8 @@ start_service() {
 	config_get config_name main config_name config.json
 	config_get state_dir main state_dir /etc/metabox
 	config_get singbox main singbox /usr/bin/sing-box
-	config_get init_script main init_script /etc/init.d/sing-box
-	config_get service_instance main service_instance ""
+	config_get init_script main init_script /etc/init.d/metabox-singbox
+	config_get service_instance main service_instance sing-box
 	config_get ubus main ubus /bin/ubus
 	config_get clash_port main clash_port 9090
 	config_get log_level main log_level info
