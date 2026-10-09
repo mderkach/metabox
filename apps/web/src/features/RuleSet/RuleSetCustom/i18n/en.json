@@ -8,12 +8,12 @@
       "label": "Where to store",
       "inline": "In the config",
       "file": "As a file",
-      "hint": "A small list is handy right in the config. A large one goes to a rule-sets/<name>.json file: the config stays compact, and the file is applied, checked and rolled back together with it."
+      "hint": "Keep a short list in the config, a long one as a separate rule-sets/<name>.json file."
     },
     "entries": {
       "label": "Domains and addresses",
       "placeholder": "example.com\n203.0.113.0/24",
-      "hint": "One entry per line: a domain goes to domain_suffix — the domain and its subdomains — an address or subnet to ip_cidr. Empty lines and lines with # are skipped."
+      "hint": "One domain, IP or subnet per line. Lines starting with # are skipped."
     }
   },
   "submit": "Save to draft",

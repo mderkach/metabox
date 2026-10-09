@@ -89,7 +89,7 @@ describe('ConfigApplyHistory', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /История версий/ }));
 
-    expect(await screen.findByText(/История пуста/)).toBeInTheDocument();
+    expect(await screen.findByText(/Пока ничего не применялось/)).toBeInTheDocument();
   });
 
   it('откат уходит на ручку восстановления версии', async () => {

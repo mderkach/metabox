@@ -4,14 +4,14 @@ import { describe, expect, it } from 'vitest';
 import { ConnectionsStreamStatus } from '../ui/ConnectionsStreamStatus';
 
 describe('ConnectionsStreamStatus', () => {
-  it('называет выбранный интервал с согласованным числительным', () => {
-    render(<ConnectionsStreamStatus paused={false} interval={5000} />);
+  it('живой поток не подписывает', () => {
+    const { container } = render(<ConnectionsStreamStatus paused={false} />);
 
-    expect(screen.getByText('обновляется каждые 5 секунд')).toBeInTheDocument();
+    expect(container).toBeEmptyDOMElement();
   });
 
-  it('на паузе говорит о паузе, а не об интервале', () => {
-    render(<ConnectionsStreamStatus paused interval={15_000} />);
+  it('на паузе говорит, что строки стоят', () => {
+    render(<ConnectionsStreamStatus paused />);
 
     expect(screen.getByText('на паузе: строки не обновляются')).toBeInTheDocument();
   });

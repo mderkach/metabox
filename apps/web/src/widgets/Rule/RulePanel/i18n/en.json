@@ -2,7 +2,7 @@
   "title": "Rule {{index}}",
   "unknown": {
     "title": "The schema does not know this node",
-    "description": "A form cannot be built from it, but it is kept byte for byte and goes to the device as is. That happens when sing-box on the device is newer than the form schema: the schema is not entitled to forbid what sing-box accepts."
+    "description": "There is no form for this node, but it is kept byte for byte and goes to the device as is."
   },
   "tab": {
     "form": "Form"

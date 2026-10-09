@@ -100,8 +100,6 @@ export function ProxyGroupCard({
             <ProxyNodeTile key={node.name} node={node} selectable={group.selectable} onSelect={onSelect} />
           ))}
         </ul>
-
-        {!group.selectable && <p className='text-xs text-muted-foreground'>{t('card.hint')}</p>}
       </CardContent>
     </Card>
   );

@@ -125,7 +125,7 @@ describe('экран сетов', () => {
     const table = await screen.findByRole('table', { name: 'Подключённые сеты' });
 
     expect(within(table).getAllByRole('row')).toHaveLength(HEADER_ROWS + 2);
-    expect(screen.getByText('Не удалось получить каталог наборов')).toBeInTheDocument();
+    expect(screen.getByText('Не удалось получить каталог сетов')).toBeInTheDocument();
   });
 
   // Сырое `24h` из конфига владелец роутера читать не обязан.

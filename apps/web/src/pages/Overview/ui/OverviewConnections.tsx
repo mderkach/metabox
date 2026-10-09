@@ -19,7 +19,7 @@ export function OverviewConnections({
   const { t } = useTranslation('pages/Overview');
 
   return (
-    <OverviewSection title={t('section.connections', { ns: 'shared' })} note={t('connections.note')}>
+    <OverviewSection title={t('section.connections', { ns: 'shared' })}>
       <div className='grid items-start gap-4 sm:grid-cols-2 xl:grid-cols-3'>
         <Card className={CARD_FLUSH}>
           <ul aria-label={t('connections.label')} className='grid grid-cols-2 gap-px bg-border'>

@@ -251,7 +251,7 @@ describe('ConfigApplyBar', () => {
     renderWithQuery(<ConfigApplyBar />);
 
     expect(await screen.findByText('metabox дописал в конфиг experimental.clash_api')).toBeInTheDocument();
-    expect(screen.getByText(/служба перезапущена тем же циклом применения/)).toBeInTheDocument();
+    expect(screen.getByText(/Служба перезапущена тем же применением/)).toBeInTheDocument();
   });
 
   it('показывает автооткат и без черновика: откат версии своего черновика не заводит', async () => {

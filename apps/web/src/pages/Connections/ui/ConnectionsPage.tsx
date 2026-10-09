@@ -100,7 +100,7 @@ export function ConnectionsPage() {
   return (
     <>
       <PageHeader title={t('section.connections', { ns: 'shared' })}>
-        <ConnectionsStreamStatus paused={paused} interval={view.interval} />
+        <ConnectionsStreamStatus paused={paused} />
         {dropped > 0 && (
           <p role='status' className='text-xs text-destructive'>
             {t('dropped', { count: dropped })}

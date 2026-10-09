@@ -101,14 +101,14 @@ describe('экран соединений', () => {
     expect(screen.getByRole('button', { name: 'Продолжить' })).toBeInTheDocument();
   });
 
-  it('шапка называет состояние потока: частоту обновления, а на паузе — паузу', async () => {
+  it('шапка называет паузу, а живой поток не подписывает', async () => {
     const user = userEvent.setup();
 
     renderScreen();
 
     const header = await screen.findByRole('banner');
 
-    expect(within(header).getByText('обновляется каждую секунду')).toBeInTheDocument();
+    expect(within(header).queryByText('на паузе: строки не обновляются')).not.toBeInTheDocument();
 
     await user.click(await screen.findByRole('button', { name: 'Пауза' }));
 
@@ -188,7 +188,7 @@ describe('экран соединений', () => {
     expect(within(kinds).getByRole('button', { name: /через прокси/ })).toHaveTextContent('8');
   });
 
-  it('закрытые собирает панель, потому что рантайм отдаёт только живые', async () => {
+  it('на вкладке закрытых говорит, сколько они хранятся', async () => {
     const user = userEvent.setup();
 
     renderScreen();
@@ -198,11 +198,11 @@ describe('экран соединений', () => {
     const closedTab = await screen.findByRole('tab', { name: /Закрытые/ });
 
     // Пояснение стоит над карточкой списка и только на вкладке закрытых.
-    expect(screen.queryByText(/sing-box отдаёт только живые/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/хранятся, пока открыта вкладка/)).not.toBeInTheDocument();
 
     await user.click(closedTab);
 
-    expect(await screen.findByText(/sing-box отдаёт только живые/)).toBeInTheDocument();
+    expect(await screen.findByText(/хранятся, пока открыта вкладка/)).toBeInTheDocument();
   });
 
   it('в подвале закрытых называет вытесненные по лимиту', async () => {

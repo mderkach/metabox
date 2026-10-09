@@ -8,7 +8,7 @@
   },
   "discard": {
     "title": "Discard every draft edit?",
-    "description": "The draft returns to the config currently on the device. There is no way back: the document has no step-by-step undo.",
+    "description": "The draft resets to the config on the device. This cannot be undone.",
     "confirm": "Reset the draft",
     "cancel": "Keep the draft"
   },
@@ -20,7 +20,7 @@
   },
   "clashApi": {
     "title": "metabox added experimental.clash_api to the config",
-    "description": "Without that section the status screens have nothing to read. The section is already in the applied file — the change was made by metabox, not by you. So that sing-box reads it, the service was restarted by the same apply cycle."
+    "description": "Status screens are empty without it. The service was restarted by the same apply."
   },
   "failure": {
     "rolledBack": "No confirmation arrived — the previous config was restored",
@@ -53,7 +53,7 @@
     "open": "Show diff",
     "title": "What goes to the device",
     "same": "The draft matches the file on the device.",
-    "changed": "Changed lines: {{count}}. The rest of the file goes byte for byte.",
+    "changed": "Changed lines: {{count}}.",
     "caption": "Line by line difference between the draft and the applied config",
     "column": {
       "before": "Line in the applied config",
@@ -76,8 +76,8 @@
   "history": {
     "open": "Version history",
     "title": "Version history",
-    "description": "The daemon keeps the ten most recent applied versions. A rollback runs the full cycle: a sing-box check, write, restart and the confirmation window.",
-    "empty": "The history is empty: the config has never been applied through metabox, so there is nothing to go back to.",
+    "description": "The last 10 applies. A rollback runs the same cycle: check, write, restart and confirmation.",
+    "empty": "Nothing has been applied yet.",
     "version": "No. {{id}}",
     "unknownTime": "save time unknown",
     "restore": "Restore",

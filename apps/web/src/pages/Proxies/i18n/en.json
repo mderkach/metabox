@@ -1,14 +1,12 @@
 {
   "groups": {
-    "title": "Node groups",
-    "note": "picking a node changes how sing-box runs, not the config"
+    "title": "Node groups"
   },
   "testAll": {
     "action": "Test all"
   },
   "providers": {
-    "title": "Subscriptions",
-    "note": "nodes come from them, not from the config"
+    "title": "Subscriptions"
   },
   "announce": {
     "selected": "Group {{group}}: node {{node}} selected",

@@ -1,8 +1,5 @@
 {
   "stream": {
-    "everySecond": "updates every second",
-    "live_one": "updates every {{count}} second",
-    "live_other": "updates every {{count}} seconds",
     "paused": "paused: rows are not updating"
   },
   "dropped": "updates not parsed: {{count}}",
@@ -29,7 +26,7 @@
   },
   "shown": "{{shown}} of {{total}}",
   "closedOverflow": "showing {{shown}} of {{total}} closed, the rest were evicted",
-  "closedNote": "Closed connections are collected by the panel: sing-box reports only live ones, so a connection that disappears between updates would otherwise vanish without a trace. The history lives while the tab is open.",
+  "closedNote": "Closed connections are kept while this tab is open.",
   "empty": {
     "title": "No connections",
     "description": "The stream is running: rows appear as soon as traffic goes through sing-box."

@@ -4,14 +4,14 @@
   "close": "Close the explanation",
   "drift": {
     "title": "sing-box runs a different config",
-    "description": "The running sing-box has {{running}} rules, while the applied file has {{document}}. The rule number is not shown: it would point into a file sing-box never read.",
-    "notCompared": "The applied config was not read, so there is nothing to compare the sing-box rule list with — there is no jump to the node."
+    "description": "The running sing-box has {{running}} rules, the applied file has {{document}}, so the rule number is not shown.",
+    "notCompared": "The applied config was not read, so there is no link to the rule."
   },
   "origin": {
     "observed": "from sing-box",
     "computed": "computed",
     "unknown": "unknown",
-    "note": "«From sing-box» means the value came from sing-box itself, not from the panel. The panel does not compute why the rules above did not match: it does not reimplement rule logic — sing-box picks the route."
+    "note": "“From sing-box” means sing-box reported the value; the panel did not compute it."
   },
   "final": {
     "title": "No rule matched",

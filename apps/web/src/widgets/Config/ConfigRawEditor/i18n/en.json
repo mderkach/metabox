@@ -8,11 +8,13 @@
     "previous": "Previous match",
     "next": "Next match"
   },
-  "editor": { "label": "sing-box config as text" },
+  "editor": {
+    "label": "sing-box config as text"
+  },
   "lines_one": "{{count}} line",
   "lines_other": "{{count}} lines",
   "parsed": "JSON parsed",
-  "issues": "schema issues: {{count}} — they do not block saving the draft, only <code>sing-box check</code> can reject it",
+  "issues": "schema notes: {{count}} — they do not block saving, <code>sing-box check</code> decides",
   "issuesMore_one": "and {{count}} more issue",
   "issuesMore_other": "and {{count}} more issues",
   "wrap": "Wrap lines",

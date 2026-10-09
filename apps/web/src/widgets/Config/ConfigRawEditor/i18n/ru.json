@@ -8,12 +8,14 @@
     "previous": "Предыдущее совпадение",
     "next": "Следующее совпадение"
   },
-  "editor": { "label": "Конфиг sing-box текстом" },
+  "editor": {
+    "label": "Конфиг sing-box текстом"
+  },
   "lines_one": "{{count}} строка",
   "lines_few": "{{count}} строки",
   "lines_many": "{{count}} строк",
   "parsed": "JSON разобран",
-  "issues": "замечаний схемы: {{count}} — сохранить черновик они не мешают, отказать может только <code>sing-box check</code>",
+  "issues": "замечаний схемы: {{count}} — сохранить они не мешают, решает <code>sing-box check</code>",
   "issuesMore_one": "и ещё {{count}} замечание",
   "issuesMore_few": "и ещё {{count}} замечания",
   "issuesMore_many": "и ещё {{count}} замечаний",

@@ -115,14 +115,6 @@ describe('экран обзора', () => {
 
   // Признак стоит один раз на секцию, а не на каждой карточке — иначе он
   // перестаёт различать наблюдённое и вычисленное.
-  it('помечает сводку как счёт панели один раз на секцию', async () => {
-    ConnectionStore.getState().apply(CONNECTIONS_FIXTURE);
-
-    renderWithRouter(OverviewPage);
-
-    expect(await screen.findAllByText('счётчики живут, пока открыта вкладка')).toHaveLength(1);
-  });
-
   it('без живых соединений и выбранных узлов карточки сводки говорят, что данных нет', async () => {
     renderWithRouter(OverviewPage);
 

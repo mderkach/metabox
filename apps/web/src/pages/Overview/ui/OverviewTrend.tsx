@@ -50,7 +50,6 @@ export function OverviewTrend({
           window: formatAge(samples.length * stepSeconds),
           from: format(Math.min(...samples)),
           to: format(Math.max(...samples)),
-          ceiling: format(ceiling),
         })}
       </p>
     </div>

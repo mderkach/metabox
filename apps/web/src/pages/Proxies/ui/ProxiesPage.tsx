@@ -57,10 +57,7 @@ export function ProxiesPage() {
         {proxies.isLoadingError && <QueryFailure messageKey='source.proxies' query={proxies} />}
 
         {proxies.isSuccess && (
-          <ProxiesSection
-            title={t('groups.title')}
-            note={groups.some((group) => group.selectable) ? t('groups.note') : undefined}
-          >
+          <ProxiesSection title={t('groups.title')}>
             <ProxyGroups groups={groups} nodes={nodes} onSelected={onSelected} onTested={onTested} />
           </ProxiesSection>
         )}
@@ -69,7 +66,7 @@ export function ProxiesPage() {
             со своим заголовком, а не карточка в общей стопке. Своей шапки у
             карточки нет: заголовок уже у секции, а повторять его незачем. */}
         {subscriptions.length > 0 && (
-          <ProxiesSection title={t('providers.title')} note={t('providers.note')}>
+          <ProxiesSection title={t('providers.title')}>
             <Card className={CARD_FLUSH}>
               <ul className='divide-y divide-border'>
                 {subscriptions.map((provider) => (

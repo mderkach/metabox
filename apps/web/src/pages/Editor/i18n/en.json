@@ -1,8 +1,6 @@
 {
   "order": {
-    "short": "Rules are checked <accent>top to bottom, the first match wins</accent>.",
-    "details": "The first matching rule wins, not the most specific one. A rule below one that already matched never runs, so the order here is the logic.",
-    "more": "How rule order works"
+    "short": "Rules are checked <accent>top to bottom, the first match wins</accent>."
   },
   "search": {
     "placeholder": "Domain, IP or outbound tag",
@@ -23,6 +21,6 @@
   },
   "empty": {
     "title": "No rules",
-    "description": "All traffic takes the default route: route.final or the first outbound. A new rule becomes the first in the list and initially sends traffic to the same place."
+    "description": "All traffic takes the default route. A new rule goes first."
   }
 }

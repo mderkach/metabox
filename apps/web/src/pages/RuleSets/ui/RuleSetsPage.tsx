@@ -1,4 +1,4 @@
-import { Info, Plus, Search } from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
 import { useCallback, ViewTransition } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -83,11 +83,6 @@ export function RuleSetsPage() {
 
   return (
     <div className='flex min-h-0 grow flex-col gap-4 overflow-y-auto px-4 py-5 sm:px-6'>
-      <p className='flex items-start gap-2 text-sm text-pretty text-muted-foreground'>
-        <Info className='mt-0.5 size-4 shrink-0 text-primary' aria-hidden='true' />
-        <span>{t('lead')}</span>
-      </p>
-
       {pending && <SkeletonRows className={SURFACE} />}
 
       {editor.source.isLoadingError && <QueryFailure messageKey='source.config' query={editor.source} />}

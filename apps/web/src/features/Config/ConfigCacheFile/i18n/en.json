@@ -1,5 +1,5 @@
 {
   "title": "The rule set cache is off",
-  "description": "sing-box refetches every set on each start. If the router reboots while the source is unreachable, sing-box will not start at all — no routing until the link is back. With the cache it comes up on the last copy it downloaded.",
+  "description": "Without a cache sing-box does not start after a reboot if the rule set source is unreachable. With one it starts from the last downloaded copy.",
   "enable": "Turn the cache on"
 }

@@ -23,7 +23,6 @@
     "noPeak": "no peak yet"
   },
   "connections": {
-    "note": "counters live while the tab is open",
     "label": "Connection counters",
     "open": "Open",
     "peak": "peak this minute {{count}}",
@@ -48,7 +47,7 @@
     "ofTotal": "of {{total}}",
     "sinceBoot": "since the last boot",
     "waiting": "waiting for a snapshot",
-    "trend": "over {{window}} · {{from}} to {{to}} · scale up to {{ceiling}}"
+    "trend": "over {{window}} · {{from}} to {{to}}"
   },
   "process": {
     "title": "Processes",

@@ -1,5 +1,5 @@
 import { useSearch } from '@tanstack/react-router';
-import { CircleAlert, CircleQuestionMark, Search, X } from 'lucide-react';
+import { CircleAlert, Search, X } from 'lucide-react';
 import { useCallback, useState, ViewTransition, type ReactNode } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
@@ -25,9 +25,6 @@ import {
   FACET_IDLE,
   FACET_MORE,
   Input,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
   QueryFailure,
   SEARCH_FIELD,
   Separator,
@@ -159,10 +156,6 @@ export function EditorPage() {
   );
 }
 
-/**
- * Суть порядка стоит строкой, объяснение — по запросу: читают его один раз, а
- * место над списком оно занимало бы на каждом заходе.
- */
 function RuleOrderHint() {
   const { t } = useTranslation('pages/Editor');
 
@@ -171,14 +164,6 @@ function RuleOrderHint() {
       <p className='text-pretty'>
         <Trans t={t} i18nKey='order.short' components={{ accent: <span className='font-medium text-foreground' /> }} />
       </p>
-      <Popover>
-        <PopoverTrigger render={<Button variant='ghost' size='icon-xs' aria-label={t('order.more')} />}>
-          <CircleQuestionMark />
-        </PopoverTrigger>
-        <PopoverContent align='start' className='w-80'>
-          <p className='text-pretty'>{t('order.details')}</p>
-        </PopoverContent>
-      </Popover>
     </div>
   );
 }

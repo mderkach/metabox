@@ -3,7 +3,7 @@
     "category": {
       "label": "Category",
       "placeholder": "ru-blocked, for example",
-      "hint": "No matching suggestion — type the category name and the address builds itself.",
+      "hint": "Not in the suggestions? Type the name and the URL is built for you.",
       "offCatalog": "This category is not in the provider's list. If the provider has no such file, sing-box will not start when the config is applied.",
       "checked": "The list was checked against the provider on {{date}}.",
       "snapshot": "The list comes from the panel build of {{date}} and has not been checked against the provider yet.",
@@ -23,7 +23,7 @@
     "format": {
       "label": "File format",
       "placeholder": "pick a format",
-      "hint": "The address ends in neither .srs nor .json, so the format has to be named: otherwise sing-box cannot tell what it downloaded."
+      "hint": "The URL has no .srs or .json extension, so pick the format."
     },
     "interval": {
       "label": "Refresh every",
@@ -47,7 +47,7 @@
     "toggle": "More settings"
   },
   "submit": "Connect",
-  "added": "Set {{tag}} is in the draft. It reaches the device once you apply the config.",
+  "added": "Rule set {{tag}} added to the draft.",
   "error": {
     "urlRequired": "nothing to download without an address",
     "urlScheme": "the address starts with http:// or https://",
