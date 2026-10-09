@@ -21,8 +21,9 @@
   },
   "unread": "The service state was not read",
   "crashed": "The service did not start",
-  "drift": {
-    "title": "The sing-box version diverged from the form schema",
-    "description": "The forms are built for {{schema}}, the device runs {{binary}}. A field missing from that version will be rejected by sing-box on check — the panel cannot forbid it: sing-box decides what counts as valid, not the form schema."
+  "stop": {
+    "title": "Stop sing-box?",
+    "description": "Routing will stop: devices on the network lose internet access until sing-box is started again.",
+    "confirm": "Stop sing-box"
   }
 }

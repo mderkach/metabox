@@ -1,16 +1,9 @@
 import type { ParseKeys, TFunction } from 'i18next';
-import { CircleAlert, TriangleAlert } from 'lucide-react';
+import { CircleAlert } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import {
-  matchesSchemaVersion,
-  SCHEMA_VERSION,
-  SERVICE_ACTION,
-  useServiceState,
-  type ServiceState,
-  type SystemProcess,
-} from '@entities/Daemon';
+import { SERVICE_ACTION, useServiceState, type ServiceState, type SystemProcess } from '@entities/Daemon';
 import { useServiceAction } from '@features/Daemon/DaemonControl';
 import { failureText } from '@shared/api';
 import { formatBytes } from '@shared/lib/format';
@@ -24,10 +17,11 @@ import {
   Card,
   CardContent,
   CardHeader,
-  DESTRUCTIVE_OUTLINE,
   SECTION_LABEL,
   Separator,
 } from '@shared/ui';
+
+import { DaemonServiceStop } from './DaemonServiceStop';
 
 const STATUS_LABEL = {
   running: 'status.running',
@@ -103,7 +97,6 @@ export function DaemonService({
 
   const state = service.data;
   const running = state.status === 'running';
-  const drifted = !matchesSchemaVersion(state.binary);
 
   return (
     <Card>
@@ -132,17 +125,12 @@ export function DaemonService({
             {/* Остановка обрывает маршрутизацию на роутере целиком, перезапуск
                 нет. Одинаковыми кнопками подряд эти два действия не различить. */}
             <Separator orientation='vertical' className='mx-0.5 h-5' />
-            <Button
-              variant='outline'
-              size='sm'
+            <DaemonServiceStop
               disabled={action.isPending}
-              className={DESTRUCTIVE_OUTLINE}
-              onClick={() => {
+              onConfirm={() => {
                 action.mutate(SERVICE_ACTION.Stop);
               }}
-            >
-              {t('action.stop')}
-            </Button>
+            />
           </>
         )}
         {!running && (
@@ -177,16 +165,6 @@ export function DaemonService({
             <AlertTitle>{t('crashed')}</AlertTitle>
             <AlertDescription>
               <pre className='font-mono text-xs whitespace-pre-wrap'>{state.lastError}</pre>
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {drifted && (
-          <Alert>
-            <TriangleAlert />
-            <AlertTitle>{t('drift.title')}</AlertTitle>
-            <AlertDescription>
-              {t('drift.description', { schema: SCHEMA_VERSION, binary: state.binary })}
             </AlertDescription>
           </Alert>
         )}

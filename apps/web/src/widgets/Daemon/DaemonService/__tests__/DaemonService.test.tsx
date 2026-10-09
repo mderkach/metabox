@@ -7,7 +7,6 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { DAEMON_ENDPOINT } from '@entities/Daemon';
 import {
-  SERVICE_DRIFT_FIXTURE,
   SERVICE_FAILED_FIXTURE,
   SERVICE_RUNNING_FIXTURE,
   SERVICE_UNMANAGED_FIXTURE,
@@ -83,22 +82,30 @@ describe('состояние сервиса', () => {
     expect(await screen.findByText('работает')).toBeInTheDocument();
   });
 
-  it('расхождение версии бинаря со схемой предупреждает, но ничего не запрещает', async () => {
-    serveService(SERVICE_DRIFT_FIXTURE);
+  it('останавливает сервис только после подтверждения', async () => {
+    const called = vi.fn<(action: string) => void>();
+    const user = userEvent.setup();
 
-    renderWithQuery(<DaemonService heap={0} />);
-
-    expect(await screen.findByText('Версия sing-box разошлась со схемой форм')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Перезапустить' })).toBeEnabled();
-  });
-
-  it('на совпадающих версиях предупреждения нет', async () => {
     serveService(SERVICE_RUNNING_FIXTURE);
+    server.use(
+      http.post(DAEMON_ENDPOINT.serviceAction(':action'), ({ params }) => {
+        called(String(params.action));
+        return HttpResponse.json(SERVICE_RUNNING_FIXTURE);
+      })
+    );
 
     renderWithQuery(<DaemonService heap={0} />);
 
-    await screen.findByText('работает');
+    await user.click(await screen.findByRole('button', { name: 'Остановить' }));
+    await user.click(screen.getByRole('button', { name: 'Отмена' }));
 
-    expect(screen.queryByText('Версия sing-box разошлась со схемой форм')).not.toBeInTheDocument();
+    expect(called).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'Остановить' }));
+    await user.click(screen.getByRole('button', { name: 'Остановить sing-box' }));
+
+    await waitFor(() => {
+      expect(called).toHaveBeenCalledWith('stop');
+    });
   });
 });

@@ -1,7 +1,8 @@
 {
   "banner": {
     "unreachable": "metabox is not responding. The panel shows the last loaded data; changes cannot be applied.",
-    "schema": "The panel could not parse the metabox response: the daemon is newer than the panel. Screens may show incomplete data."
+    "schema": "The panel could not parse the metabox response: the daemon is newer than the panel. Screens may show incomplete data.",
+    "drift": "The panel forms are built for sing-box {{schema}}, the router runs {{binary}}. Fields this version does not know will be rejected by sing-box on apply."
   },
   "notFound": {
     "title": "Page not found",

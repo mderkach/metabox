@@ -8,6 +8,7 @@ import { AppSidebar, AppSidebarBottomNav } from '@widgets/AppSidebar';
 
 import { useRuntimeStreams } from '../lib/useRuntimeStreams';
 import { DaemonBanner } from './DaemonBanner';
+import { SchemaDriftBanner } from './SchemaDriftBanner';
 
 /** Тон primary и позиция поверх макета: ссылка не должна теряться под сайдбаром. */
 const SKIP_LINK_CLASS =
@@ -39,6 +40,7 @@ export function AppLayout() {
       {!narrow && <AppSidebar />}
       <div className='flex min-h-0 min-w-0 grow flex-col'>
         <DaemonBanner />
+        <SchemaDriftBanner />
         <ConfigApplyBar />
         {/* Экран — своя группа View Transitions для перехода роутера; граница
             `<ViewTransition>` вокруг `Outlet` не сработает. */}
