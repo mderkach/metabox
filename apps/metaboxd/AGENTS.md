@@ -6,14 +6,15 @@
 
 Гайд читается по условию из таблицы, **полностью** и до внесения правки. О чём каждый документ — [`docs/guides/README.md`](./docs/guides/README.md).
 
-| Читать полностью перед тем, как                                  | Документ                                                                                           |
-| ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| создавать или менять Go-код демона                               | [Architecture&Style.md](./docs/guides/Architecture&Style.md) — пакеты, границы, зависимости, стиль |
-| писать обработку ошибок или логи                                 | [ErrorsAndLogging.md](./docs/guides/ErrorsAndLogging.md)                                           |
-| писать хендлер, middleware, роут или раздачу SPA                 | [HTTPAPI.md](./docs/guides/HTTPAPI.md)                                                             |
-| писать код, который трогает файлы, вызывает `sing-box` или procd | [DeviceIO.md](./docs/guides/DeviceIO.md)                                                           |
-| писать или править Go-тесты                                      | [Testing.md](./docs/guides/Testing.md)                                                             |
-| сдавать правку в демоне                                          | [ReviewChecklist.md](./docs/guides/ReviewChecklist.md) — пройти по чеклисту                        |
+| Читать полностью перед тем, как                                              | Документ                                                                                           |
+| ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| создавать или менять Go-код демона                                           | [Architecture&Style.md](./docs/guides/Architecture&Style.md) — пакеты, границы, зависимости, стиль |
+| писать обработку ошибок или логи                                             | [ErrorsAndLogging.md](./docs/guides/ErrorsAndLogging.md)                                           |
+| писать хендлер, middleware, роут или раздачу SPA                             | [HTTPAPI.md](./docs/guides/HTTPAPI.md)                                                             |
+| писать код, который трогает файлы, вызывает `sing-box` или procd             | [DeviceIO.md](./docs/guides/DeviceIO.md)                                                           |
+| ставить пакет на устройство или переключать роутер между homeproxy и metabox | [Migration.md](./docs/guides/Migration.md) — runbook перехода и отката                             |
+| писать или править Go-тесты                                                  | [Testing.md](./docs/guides/Testing.md)                                                             |
+| сдавать правку в демоне                                                      | [ReviewChecklist.md](./docs/guides/ReviewChecklist.md) — пройти по чеклисту                        |
 
 Гайды написаны для демона. Генератору схемы из них обязательны только разделы «Стиль» и «Инструменты» — см. [`tools/schemagen/AGENTS.md`](../../tools/schemagen/AGENTS.md).
 
