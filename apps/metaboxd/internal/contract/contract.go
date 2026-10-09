@@ -41,6 +41,13 @@ type Status struct {
 	// страницы теряет транзакцию: её идентификатор жил только в ответе на
 	// POST.
 	TransactionHref string `json:"transaction_href,omitempty"`
+	// DataplaneTransaction — последняя смена модели обвязки в этой жизни
+	// демона. Идёт тем же протоколом и с теми же фазами, что применение
+	// конфига, и одновременно с ним не бывает.
+	DataplaneTransaction *apply.Transaction `json:"dataplane_transaction,omitempty"`
+	// DataplaneTransactionHref — адрес смены обвязки, по тому же правилу, что
+	// TransactionHref.
+	DataplaneTransactionHref string `json:"dataplane_transaction_href,omitempty"`
 }
 
 // SingboxBuild — то, с чем собран бинарь sing-box на устройстве.
@@ -189,8 +196,9 @@ const (
 	// длиннее допустимого или с управляющими символами, тело не разобрано
 	// либо своих имён больше, чем демон хранит.
 	ErrDeviceInvalid ErrorCode = "device_invalid"
-	// ErrDataplaneInvalid — модель сетевой обвязки в UCI не принята; поля с
-	// ошибкой лежат в Details.
+	// ErrDataplaneInvalid — модель сетевой обвязки не принята: в UCI или в
+	// теле `PUT /api/dataplane`. Поля с ошибкой лежат в Details; у тела,
+	// которое не разобралось как JSON, их нет.
 	ErrDataplaneInvalid ErrorCode = "dataplane_invalid"
 	// ErrLogUnavailable — лог sing-box не читается: logread не задан или
 	// отказал, файл log.output не открылся.
@@ -257,6 +265,13 @@ type Dataplane struct {
 	Applied bool `json:"applied"`
 	// AppliedReason — почему Applied не наблюдён, а подставлен ложью.
 	AppliedReason dataplane.AppliedReason `json:"applied_reason,omitempty"`
+}
+
+// DataplaneChange — тело `PUT /api/dataplane`: модель в той же форме, что поле
+// model ответа `GET /api/dataplane`. Пишется целиком: отсутствующее поле — это
+// нулевое значение, а не «оставить как есть».
+type DataplaneChange struct {
+	Model dataplane.Model `json:"model"`
 }
 
 // DataplaneDetails — поля отказа `dataplane_invalid`.

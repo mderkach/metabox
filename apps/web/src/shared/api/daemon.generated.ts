@@ -214,6 +214,10 @@ export const StatusSchema = z.object({
   transaction: TransactionSchema.optional(),
   /** TransactionHref — адрес идущего применения. Без него перезагрузка страницы теряет транзакцию: её идентификатор жил только в ответе на POST. */
   transaction_href: z.string().optional(),
+  /** DataplaneTransaction — последняя смена модели обвязки в этой жизни демона. Идёт тем же протоколом и с теми же фазами, что применение конфига, и одновременно с ним не бывает. */
+  dataplane_transaction: TransactionSchema.optional(),
+  /** DataplaneTransactionHref — адрес смены обвязки, по тому же правилу, что TransactionHref. */
+  dataplane_transaction_href: z.string().optional(),
 })
 
 /** Version — запись истории. Содержимое конфига демон не разбирает, поэтому наружу идут только номер, размер, отпечаток и отметка времени. */
@@ -396,6 +400,11 @@ export const DataplaneSchema = z.object({
   applied: z.boolean(),
   /** AppliedReason — почему Applied не наблюдён, а подставлен ложью. */
   applied_reason: z.string().optional(),
+})
+
+/** DataplaneChange — тело `PUT /api/dataplane`: модель в той же форме, что поле model ответа `GET /api/dataplane`. Пишется целиком: отсутствующее поле — это нулевое значение, а не «оставить как есть». */
+export const DataplaneChangeSchema = z.object({
+  model: ModelSchema,
 })
 
 /** FieldError — одно непринятое значение. */
@@ -663,6 +672,7 @@ export type CheckWire = z.infer<typeof CheckSchema>
 export type ConnectionWire = z.infer<typeof ConnectionSchema>
 export type ConnectionsSnapshotWire = z.infer<typeof ConnectionsSnapshotSchema>
 export type DaemonWire = z.infer<typeof DaemonSchema>
+export type DataplaneChangeWire = z.infer<typeof DataplaneChangeSchema>
 export type DataplaneDetailsWire = z.infer<typeof DataplaneDetailsSchema>
 export type DataplaneWire = z.infer<typeof DataplaneSchema>
 export type DeviceNameWire = z.infer<typeof DeviceNameSchema>

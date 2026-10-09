@@ -29,6 +29,8 @@ func (s *Server) routes() http.Handler {
 
 Набор ручек Apply не переизобретается по ходу: `POST /api/apply`, `GET /api/apply/{id}`, `POST /api/apply/{id}/confirm`, ссылка на активную транзакцию в `GET /api/status`.
 
+Модель сетевой обвязки меняется тем же протоколом и ручками того же вида: `PUT /api/dataplane` с телом `{model}` — форма поля `model` из `GET /api/dataplane`, модель целиком — отдаёт 202 и транзакцию `apply.Transaction`; `GET /api/dataplane/apply/{id}` — её состояние; `POST /api/dataplane/apply/{id}/confirm` — подтверждение. Ссылка на неё — `dataplane_transaction_href` в `GET /api/status`. Невалидная модель — 422 `dataplane_invalid` с полями, тело не JSON — 400 с тем же кодом, идущее применение конфига — 409 `apply_in_progress`, и наоборот. Адрес клиента для предупреждения о выводе администратора из перехвата хендлер берёт из `RemoteAddr`: за прокси дев-сервера там адрес прокси. Протокол — [DeviceIO](./DeviceIO.md), «Смена модели».
+
 Записи конфига отдельной ручкой нет и не будет: `GET /api/config` отдаёт применённый конфиг, а пишет его только протокол Apply. `PUT` в обход `sing-box check`, бэкапа и окна подтверждения обошёл бы и гарантию отката.
 
 Правки извне ловятся оптимистичной блокировкой: `GET /api/config` отдаёт `ETag` — `sha256` отданных байт, — а `POST /api/apply` принимает его в `If-Match` и отклоняет применение поверх изменившегося файла кодом `config_modified` (409). Сверку с базой клиента выполняет `apply.Manager`, а не хендлер.

@@ -703,6 +703,20 @@ func (m *Manager) reserve(ctx context.Context, base, listsBase string) (uint64, 
 	return m.hold(), nil
 }
 
+// reserveExclusive занимает применение без сверки конфига: так смена модели
+// обвязки не идёт одновременно с применением конфига — обе рестартуют одну
+// службу, и откат одной вернул бы службу на середину другой.
+func (m *Manager) reserveExclusive() (uint64, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.busy || m.current.Active() {
+		return 0, ErrBusy
+	}
+
+	return m.hold(), nil
+}
+
 // verifyConfigBase сверяет конфиг на диске с базой клиента, а без неё — с тем,
 // что записал сам демон. Вызывается под mu.
 func (m *Manager) verifyConfigBase(ctx context.Context, base string) error {

@@ -40,6 +40,7 @@ var (
 const (
 	backupName   = "config.backup"
 	stateName    = "apply.json"
+	planeName    = "dataplane.json"
 	ruleSetsName = "rule-sets.json"
 	devicesName  = "devices.json"
 )
@@ -575,6 +576,16 @@ func copyFile(src, dst *os.Root, name string) error {
 // ReadState отдаёт сохранённое состояние транзакции. Отсутствие файла —
 // штатный случай: демон стартовал с чистого листа.
 func (s *Store) ReadState(ctx context.Context) ([]byte, error) {
+	return s.readState(ctx, stateName)
+}
+
+// ReadPlaneState — то же для транзакции смены модели обвязки: у неё свой файл,
+// потому что доигрывается она своим владельцем.
+func (s *Store) ReadPlaneState(ctx context.Context) ([]byte, error) {
+	return s.readState(ctx, planeName)
+}
+
+func (s *Store) readState(ctx context.Context, name string) ([]byte, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -588,12 +599,12 @@ func (s *Store) ReadState(ctx context.Context) ([]byte, error) {
 	}
 	defer func() { _ = root.Close() }()
 
-	data, err := root.ReadFile(stateName)
+	data, err := root.ReadFile(name)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, ErrNoState
 	}
 	if err != nil {
-		return nil, fmt.Errorf("чтение состояния %s: %w", s.StatePath(), err)
+		return nil, fmt.Errorf("чтение состояния %s: %w", filepath.Join(s.serviceDir, name), err)
 	}
 
 	return data, nil
@@ -604,6 +615,16 @@ func (s *Store) ReadState(ctx context.Context) ([]byte, error) {
 // устройство на новом конфиге без автоотката. Служебный каталог создаётся,
 // если его нет: демон, запущенный не init-скриптом, иначе валил бы первый Apply.
 func (s *Store) WriteState(ctx context.Context, data []byte) error {
+	return s.writeState(ctx, stateName, data)
+}
+
+// WritePlaneState сохраняет состояние транзакции смены модели обвязки
+// атомарно, до записи модели в UCI.
+func (s *Store) WritePlaneState(ctx context.Context, data []byte) error {
+	return s.writeState(ctx, planeName, data)
+}
+
+func (s *Store) writeState(ctx context.Context, name string, data []byte) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -621,12 +642,21 @@ func (s *Store) WriteState(ctx context.Context, data []byte) error {
 	}
 	defer func() { _ = root.Close() }()
 
-	return writeAtomic(root, stateName, data, securePerm)
+	return writeAtomic(root, name, data, securePerm)
 }
 
 // ClearState убирает состояние завершённой транзакции. Отсутствие файла
 // ошибкой не считается: доигрывать нечего.
 func (s *Store) ClearState(ctx context.Context) error {
+	return s.clearState(ctx, stateName)
+}
+
+// ClearPlaneState убирает состояние завершённой смены модели обвязки.
+func (s *Store) ClearPlaneState(ctx context.Context) error {
+	return s.clearState(ctx, planeName)
+}
+
+func (s *Store) clearState(ctx context.Context, name string) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -640,8 +670,8 @@ func (s *Store) ClearState(ctx context.Context) error {
 	}
 	defer func() { _ = root.Close() }()
 
-	if err := root.Remove(stateName); err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return fmt.Errorf("удаление состояния %s: %w", s.StatePath(), err)
+	if err := root.Remove(name); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return fmt.Errorf("удаление состояния %s: %w", filepath.Join(s.serviceDir, name), err)
 	}
 
 	return syncDir(root)

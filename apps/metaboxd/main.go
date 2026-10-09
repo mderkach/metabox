@@ -131,7 +131,7 @@ func main() {
 		"путь к logread: из него берутся лог и причина падения sing-box; пустой отключает чтение")
 	flag.StringVar(&s.dhcpLeases, "dhcp-leases", "/tmp/dhcp.leases", "файл аренд dnsmasq: из него берутся устройства LAN")
 	flag.StringVar(&s.uci, "uci", "/sbin/uci",
-		"путь к uci: через него читаются статические аренды из UCI dhcp и модель обвязки из UCI metabox")
+		"путь к uci: через него читаются статические аренды из UCI dhcp, читается и пишется модель обвязки в UCI metabox")
 	flag.StringVar(&s.nft, "nft", "/usr/sbin/nft",
 		"путь к nft: через него демон видит, стоят ли правила обвязки; пустой отключает проверку")
 	flag.StringVar(&s.healthDNSName, "health-dns-name", "cloudflare.com",
@@ -159,16 +159,19 @@ func main() {
 }
 
 func run(log *slog.Logger, s settings) error {
-	plane := dataplane.New(dataplane.Runner(runCommand(singbox.NewExec(binaryTimeout))), dataplane.Options{
-		UCI: s.uci,
-		NFT: s.nft,
+	planeExec := singbox.NewExec(binaryTimeout)
+	plane := dataplane.New(dataplane.Runner(runCommand(planeExec)), dataplane.Options{
+		UCI:   s.uci,
+		NFT:   s.nft,
+		Batch: batchCommand(planeExec),
 	})
 
-	manager, store, service, err := build(log, s, plane)
+	manager, planeTx, store, service, err := build(log, s, plane)
 	if err != nil {
 		return err
 	}
 	defer manager.Close()
+	defer planeTx.Close()
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -178,6 +181,10 @@ func run(log *slog.Logger, s settings) error {
 	// бы устройство на неподтверждённом конфиге навсегда.
 	if err := manager.Replay(ctx); err != nil {
 		log.Error("незавершённая транзакция не доиграна", "err", err)
+	}
+
+	if err := planeTx.Replay(ctx); err != nil {
+		log.Error("незавершённая смена обвязки не доиграна", "err", err)
 	}
 
 	spa, err := webui.Handler()
@@ -298,6 +305,7 @@ func run(log *slog.Logger, s settings) error {
 		Runtime:        sysinfo.Alive,
 		Devices:        lan,
 		Dataplane:      plane,
+		Plane:          planeTx,
 		Logs: logs.New(logs.Exec, store, logs.Options{
 			Logread:      s.logread,
 			Process:      filepath.Base(s.binary),
@@ -373,6 +381,15 @@ func run(log *slog.Logger, s settings) error {
 func runCommand(exec *singbox.Exec) procd.Runner {
 	return func(ctx context.Context, name string, args ...string) (string, int, error) {
 		res, err := exec.Run(ctx, name, args...)
+
+		return res.Stdout, res.ExitCode, err
+	}
+}
+
+// batchCommand — то же для запуска со stdin: им модель обвязки пишется в UCI.
+func batchCommand(exec *singbox.Exec) dataplane.BatchRunner {
+	return func(ctx context.Context, input, name string, args ...string) (string, int, error) {
+		res, err := exec.RunInput(ctx, input, name, args...)
 
 		return res.Stdout, res.ExitCode, err
 	}
@@ -477,17 +494,21 @@ func configSettings(store *config.Store) clashapi.Resolver {
 
 // build собирает граф зависимостей. Отдельной функцией, чтобы run занимался
 // только запуском и остановкой.
-func build(log *slog.Logger, s settings, plane *dataplane.Reader) (*apply.Manager, *config.Store, *singbox.Client, error) {
+func build(
+	log *slog.Logger,
+	s settings,
+	plane *dataplane.Reader,
+) (*apply.Manager, *apply.Plane, *config.Store, *singbox.Client, error) {
 	store, err := config.NewStore(s.configDir, s.configName, s.serviceDir)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	exec := singbox.NewExec(binaryTimeout)
 
 	service, err := singbox.New(exec, s.binary, s.initScript, s.instance, s.logread, procd.New(runCommand(exec), s.ubus))
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	health := clashapi.NewChecker(healthRequestTimeout, healthPollInterval)
@@ -508,5 +529,11 @@ func build(log *slog.Logger, s settings, plane *dataplane.Reader) (*apply.Manage
 		DNS:             dns,
 	})
 
-	return manager, store, service, nil
+	planeTx := apply.NewPlane(manager, plane, service, store, health, nil, log, apply.PlaneOptions{
+		Window:       s.confirmWindow,
+		CycleTimeout: s.cycleTimeout,
+		DNS:          dns,
+	})
+
+	return manager, planeTx, store, service, nil
 }

@@ -31,6 +31,8 @@ var (
 	errBadApplyEnvelope = errors.New("конверт применения не разобран")
 	// errBadDeviceBody — тело правки имени устройства не разобрано.
 	errBadDeviceBody = errors.New("тело правки имени устройства не разобрано")
+	// errBadDataplaneBody — тело смены модели обвязки не разобрано как JSON.
+	errBadDataplaneBody = errors.New("тело смены модели обвязки не разобрано")
 	// errBadLogQuery — уровень или число строк запроса лога не разобраны.
 	errBadLogQuery = errors.New("параметры запроса лога не разобраны")
 )
@@ -84,7 +86,7 @@ func fail(log *slog.Logger, w http.ResponseWriter, r *http.Request, err error) {
 	if invalid, ok := errors.AsType[*dataplane.InvalidError](err); ok {
 		writeJSON(log, w, http.StatusUnprocessableEntity, contract.Error{
 			Code:    contract.ErrDataplaneInvalid,
-			Message: "модель сетевой обвязки в UCI не принята",
+			Message: "модель сетевой обвязки не принята",
 			Details: contract.DataplaneDetails{Fields: invalid.Fields},
 		})
 
@@ -160,6 +162,8 @@ func statusFor(err error) (status int, code contract.ErrorCode) {
 	case errors.Is(err, devices.ErrInvalidMAC), errors.Is(err, devices.ErrInvalidName),
 		errors.Is(err, devices.ErrTooManyNames), errors.Is(err, errBadDeviceBody):
 		return http.StatusBadRequest, contract.ErrDeviceInvalid
+	case errors.Is(err, errBadDataplaneBody):
+		return http.StatusBadRequest, contract.ErrDataplaneInvalid
 	case errors.Is(err, logs.ErrUnavailable):
 		return http.StatusServiceUnavailable, contract.ErrLogUnavailable
 	case errors.Is(err, logs.ErrTooManyStreams):

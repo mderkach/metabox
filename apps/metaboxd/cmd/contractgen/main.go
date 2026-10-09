@@ -30,6 +30,7 @@ var roots = []rootType{
 	{pkg: "internal/contract", name: "Devices"},
 	{pkg: "internal/contract", name: "DeviceName"},
 	{pkg: "internal/contract", name: "Dataplane"},
+	{pkg: "internal/contract", name: "DataplaneChange"},
 	{pkg: "internal/contract", name: "DataplaneDetails"},
 	{pkg: "internal/contract", name: "Logs"},
 	{pkg: "internal/contract", name: "LogEvent"},

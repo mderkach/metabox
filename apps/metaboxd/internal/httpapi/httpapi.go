@@ -131,6 +131,9 @@ type Options struct {
 	// Dataplane читает модель сетевой обвязки. nil означает, что читать её
 	// нечем: ручки обвязки нет.
 	Dataplane DataplaneReader
+	// Plane меняет модель обвязки протоколом применения. nil означает, что
+	// модель только читается: ручки записи нет.
+	Plane PlaneApplier
 	// Logs читает лог sing-box. nil означает, что читать его нечем: ручек лога
 	// нет.
 	Logs LogReader
@@ -204,6 +207,7 @@ type Server struct {
 	runtime        RuntimeObserver
 	devices        DeviceRegistry
 	dataplane      DataplaneReader
+	plane          PlaneApplier
 	logs           LogReader
 	diag           Diagnoser
 	configPath     string
@@ -232,6 +236,7 @@ func NewServer(applier Applier, reader ConfigReader, log *slog.Logger, opts Opti
 		runtime:        opts.Runtime,
 		devices:        opts.Devices,
 		dataplane:      opts.Dataplane,
+		plane:          opts.Plane,
 		logs:           opts.Logs,
 		diag:           opts.Diag,
 		configPath:     opts.ConfigPath,
@@ -285,6 +290,12 @@ func (s *Server) routes() http.Handler {
 		mux.HandleFunc("GET /api/dataplane", s.handleDataplane)
 	}
 
+	if s.plane != nil {
+		mux.HandleFunc("PUT /api/dataplane", s.handleDataplaneChange)
+		mux.HandleFunc("GET /api/dataplane/apply/{id}", s.handleDataplaneState)
+		mux.HandleFunc("POST /api/dataplane/apply/{id}/confirm", s.handleDataplaneConfirm)
+	}
+
 	if s.logs != nil {
 		mux.HandleFunc("GET /api/logs", s.handleLogs)
 		mux.HandleFunc("GET /api/logs/stream", s.handleLogStream)
@@ -333,6 +344,13 @@ func (s *Server) handleStatus(w http.ResponseWriter, _ *http.Request) {
 	if tx := s.applier.Current(); tx.ID != "" {
 		body.Transaction = &tx
 		body.TransactionHref = "/api/apply/" + tx.ID
+	}
+
+	if s.plane != nil {
+		if tx := s.plane.Current(); tx.ID != "" {
+			body.DataplaneTransaction = &tx
+			body.DataplaneTransactionHref = "/api/dataplane/apply/" + tx.ID
+		}
 	}
 
 	writeJSON(s.log, w, http.StatusOK, body)

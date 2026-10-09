@@ -175,6 +175,13 @@ func (c *Client) Restart(ctx context.Context) error {
 	return c.service(ctx, "restart")
 }
 
+// Reload перечитывает модель обвязки из UCI. У службы панели reload
+// перезапускает инстанс sing-box и доводит обвязку до модели: fw4 и dnsmasq
+// трогаются, только если изменилось то, что их касается.
+func (c *Client) Reload(ctx context.Context) error {
+	return c.service(ctx, "reload")
+}
+
 // Start поднимает сервис. Уже запущенный сервис — штатный путь: init-скрипт
 // procd на повторный start не ругается.
 func (c *Client) Start(ctx context.Context) error {

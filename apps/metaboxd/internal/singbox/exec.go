@@ -5,7 +5,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os/exec"
+	"strings"
 	"time"
 )
 
@@ -35,11 +37,22 @@ func NewExec(timeout time.Duration) *Exec {
 // Run запускает команду аргументами списком — никогда строкой для шелла:
 // `sh -c` с подстановкой пути превращает имя файла в исполняемый код.
 func (e *Exec) Run(ctx context.Context, name string, args ...string) (Result, error) {
+	return e.run(ctx, nil, name, args...)
+}
+
+// RunInput — то же, что Run, с input на stdin: так `uci batch` получает
+// команды одним вызовом.
+func (e *Exec) RunInput(ctx context.Context, input, name string, args ...string) (Result, error) {
+	return e.run(ctx, strings.NewReader(input), name, args...)
+}
+
+func (e *Exec) run(ctx context.Context, stdin io.Reader, name string, args ...string) (Result, error) {
 	ctx, cancel := context.WithTimeout(ctx, e.timeout)
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.WaitDelay = waitDelay
+	cmd.Stdin = stdin
 
 	stdout := &limitWriter{limit: maxOutput}
 	stderr := &limitWriter{limit: maxOutput}

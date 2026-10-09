@@ -2,7 +2,8 @@
 // sing-box — из UCI `metabox` и проверяет, стоят ли её цепочки в nft.
 //
 // Правила ставит и снимает init-скрипт службы sing-box по той же модели, поэтому
-// имена секции и опций — контракт с ним. Демон модель только читает.
+// имена секции и опций — контракт с ним. Демон модель читает и пишет, а до
+// правил её доводит reload службы.
 package dataplane
 
 import (
@@ -121,6 +122,8 @@ type Runner func(ctx context.Context, name string, args ...string) (stdout strin
 // PATH не тот, что в шелле.
 type Options struct {
 	UCI string
+	// Batch — запуск uci со скриптом на stdin; nil — модель только читается.
+	Batch BatchRunner
 	// NFT — пустой путь отключает проверку: признак применения тогда всегда
 	// ложь с причиной NFTUnavailable.
 	NFT string
@@ -129,14 +132,15 @@ type Options struct {
 // Reader читает модель и признак её применения. Ничего не кэширует: модель
 // правит владелец по SSH, правила ставит и снимает служба.
 type Reader struct {
-	run Runner
-	uci string
-	nft string
+	run   Runner
+	batch BatchRunner
+	uci   string
+	nft   string
 }
 
 // New собирает читателя.
 func New(run Runner, opts Options) *Reader {
-	return &Reader{run: run, uci: opts.UCI, nft: opts.NFT}
+	return &Reader{run: run, batch: opts.Batch, uci: opts.UCI, nft: opts.NFT}
 }
 
 // Model читает секцию `metabox.dataplane`. Нет конфига `metabox` или секции
@@ -244,7 +248,7 @@ func decode(s uci.Section) (Model, error) {
 	d.aclMode(&m.AccessMode)
 	d.list("source_ip", &m.SourceIP, validIPv4)
 	d.list("source_mac", &m.SourceMAC, validMAC)
-	d.list("lan_interface", &m.LANInterface, nil)
+	d.list("lan_interface", &m.LANInterface, validIface)
 	d.list("wan_proxy_cidr", &m.WANProxyCIDR, validIPv4)
 	d.list("wan_direct_cidr", &m.WANDirectCIDR, validIPv4)
 	d.flag("ipv6", &m.IPv6)
@@ -401,6 +405,12 @@ func validIPv4(s string) bool {
 	prefix, err := netip.ParsePrefix(s)
 
 	return err == nil && prefix.Addr().Is4() && prefix == prefix.Masked()
+}
+
+// validIface принимает те же символы, что init-скрипт службы: имя уходит в
+// правило nft и в команду uci batch, и всё прочее он отвергает целиком.
+func validIface(s string) bool {
+	return strings.Trim(s, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._@-") == ""
 }
 
 // validMAC принимает только MAC Ethernet: net.ParseMAC пропускает и 8-, и
