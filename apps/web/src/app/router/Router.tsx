@@ -12,6 +12,7 @@ import { getConfigOptions, isGenericSection } from '@entities/Config';
 import { parseConnectionSearch } from '@entities/Connection';
 import { getTrafficHistoryOptions } from '@entities/Daemon';
 import { getDevicesOptions } from '@entities/Device';
+import { DEFAULT_LOG_LEVEL, getLogTailOptions } from '@entities/Log';
 import { getProxiesOptions, getProxyProvidersOptions } from '@entities/Proxy';
 import { parseRuleSearch } from '@entities/Rule';
 import { getRuleSetCatalogOptions } from '@entities/RuleSet';
@@ -169,6 +170,29 @@ const devicesRoute = createRoute({
   component: lazyRouteComponent(async () => import('@pages/Devices'), 'DevicesPage'),
 });
 
+const logsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  loader: async () =>
+    Promise.all([
+      preloadNamespaces(['pages/Logs', 'features/Log/LogClear']),
+      QueryClientInstance.query(getLogTailOptions(DEFAULT_LOG_LEVEL)).catch(keepFailureForScreen),
+    ]),
+  path: '/logs',
+  component: lazyRouteComponent(async () => import('@pages/Logs'), 'LogsPage'),
+});
+
+/** Отчёт не грузится заранее: прогон шлёт пакеты и идёт только по кнопке. Узлы для выбора — из прокси. */
+const diagnosticsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  loader: async () =>
+    Promise.all([
+      preloadNamespaces(['pages/Diagnostics']),
+      QueryClientInstance.query(getProxiesOptions()).catch(keepFailureForScreen),
+    ]),
+  path: '/diagnostics',
+  component: lazyRouteComponent(async () => import('@pages/Diagnostics'), 'DiagnosticsPage'),
+});
+
 const overviewRoute = createRoute({
   getParentRoute: () => rootRoute,
   loader: async () =>
@@ -194,6 +218,8 @@ const routeTree = rootRoute.addChildren([
   proxiesRoute,
   connectionsRoute,
   devicesRoute,
+  logsRoute,
+  diagnosticsRoute,
   overviewRoute,
 ]);
 

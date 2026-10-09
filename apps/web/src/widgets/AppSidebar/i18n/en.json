@@ -18,7 +18,8 @@
   "more": {
     "label": "More",
     "title": "Status and settings",
-    "close": "Close"
+    "close": "Close",
+    "sections": "Sections"
   },
   "short": {
     "config": "Config"

@@ -1,6 +1,6 @@
 import type { LinkProps } from '@tanstack/react-router';
 import type { ParseKeys } from 'i18next';
-import { Activity, Gauge, MonitorSmartphone, Share2, SlidersHorizontal } from 'lucide-react';
+import { Activity, Gauge, MonitorSmartphone, ScrollText, Share2, SlidersHorizontal, Stethoscope } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 interface NavItem {
@@ -10,6 +10,12 @@ interface NavItem {
   to?: LinkProps['to'];
   /** Подпись в нижней панели, если полное название не помещается в её колонку на телефоне. */
   short?: ParseKeys<'widgets/AppSidebar'>;
+  /**
+   * На телефоне пункт уходит в лист «Ещё»: колонок нижней панели хватает на
+   * пять разделов и сам пункт «Ещё», а служебные экраны с телефона открывают
+   * редко.
+   */
+  more?: true;
 }
 
 export const NAV_ITEMS: readonly NavItem[] = [
@@ -18,6 +24,8 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { key: 'section.proxies', icon: Share2, to: '/proxies' },
   { key: 'section.connections', icon: Activity, to: '/connections' },
   { key: 'section.devices', icon: MonitorSmartphone, to: '/devices' },
+  { key: 'section.logs', icon: ScrollText, to: '/logs', more: true },
+  { key: 'section.diagnostics', icon: Stethoscope, to: '/diagnostics', more: true },
 ];
 
 /** Адреса разделов в порядке меню: по нему роутер выбирает направление перехода. */

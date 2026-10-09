@@ -1,0 +1,43 @@
+{
+  "title": "sing-box log",
+  "column": {
+    "time": "Time",
+    "level": "Level",
+    "message": "Message"
+  },
+  "level": {
+    "label": "Minimum log level",
+    "option": "{{level}} and above"
+  },
+  "follow": "Follow new lines",
+  "stream": {
+    "open": "streaming",
+    "connecting": "connecting to the stream",
+    "closed": "stream closed"
+  },
+  "source": {
+    "logread": "source: logread",
+    "file": "source: log.output file",
+    "other": "source: {{source}}"
+  },
+  "closed": {
+    "title": "The log stream is closed",
+    "description": "The daemon refused the stream or the connection dropped. There are at most four log streams across all tabs: close the extra ones and reconnect.",
+    "reconnect": "Reconnect"
+  },
+  "lost": {
+    "title_one": "{{count}} line skipped",
+    "title_other": "{{count}} lines skipped",
+    "description": "The tab could not keep up with the stream, and the daemon dropped lines. You can reload the log tail.",
+    "reload": "Reload the tail"
+  },
+  "empty": {
+    "title": "No lines",
+    "description": "sing-box has not written anything at level {{level}} or above yet, or the log was cleared. New lines appear here on their own."
+  },
+  "footer": {
+    "rows_one": "{{count}} line",
+    "rows_other": "{{count}} lines",
+    "since": "cleared {{time}}"
+  }
+}

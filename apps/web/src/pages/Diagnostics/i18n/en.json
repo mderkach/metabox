@@ -1,0 +1,55 @@
+{
+  "title": "Interception checks",
+  "column": {
+    "check": "Check",
+    "status": "Result",
+    "result": "Details"
+  },
+  "target": {
+    "label": "Node to test the exit through",
+    "none": "do not test the exit through a node"
+  },
+  "run": {
+    "action": "Check",
+    "pending": "Checking",
+    "hint": "The check sends packets from the router and leaves lines in the sing-box log."
+  },
+  "idle": {
+    "title": "No check has run yet",
+    "description": "Press “Check”: the panel tests the interception ports, DNS through dns-in, the nft chains, the exit through the chosen node and the direct exit."
+  },
+  "check": {
+    "redirect_port": "Redirect port (TCP)",
+    "tproxy_port": "Tproxy port (UDP)",
+    "dns_port": "DNS port",
+    "dns_probe": "DNS probe through dns-in",
+    "nft_chains": "nft chains",
+    "proxy": "Exit through the node",
+    "direct": "Direct exit"
+  },
+  "status": {
+    "ok": "fine",
+    "fail": "failed",
+    "skipped": "skipped"
+  },
+  "reason": {
+    "model_unavailable": "the metabox.dataplane interception settings in UCI could not be read",
+    "interception_disabled": "interception is off — there is no need for ports and chains",
+    "not_listening": "nothing listens on the port: sing-box is stopped or the config has no such inbound",
+    "proc_unavailable": "could not read the socket list in /proc/net",
+    "config_missing": "there is no sing-box config on the device",
+    "no_dns_inbound": "the config has no dns-in on the interception DNS port: dnsmasq sends queries to an empty port",
+    "dns_name_unset": "no name is set for the DNS probe",
+    "no_answer": "the DNS probe got no answer",
+    "nft_unavailable": "nft is unavailable",
+    "nft_unparsed": "the nft output could not be parsed",
+    "chains_missing": "nft has no interception chains:",
+    "proxy_unset": "no node is chosen",
+    "proxy_missing": "the running sing-box has no such node",
+    "runtime_unavailable": "sing-box does not respond",
+    "request_failed": "the request failed",
+    "unsupported": "the check is not supported on this system"
+  },
+  "delay": "{{value}} ms",
+  "missing": "Missing chains"
+}

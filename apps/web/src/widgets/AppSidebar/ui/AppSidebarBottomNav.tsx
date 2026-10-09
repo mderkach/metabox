@@ -13,6 +13,11 @@ const ITEM_CLASS =
 
 const IDLE_CLASS = 'text-muted-foreground hover:text-foreground';
 
+/** Разделы листа «Ещё»: когда открыт один из них, текущим помечен сам пункт «Ещё». */
+const MORE_TARGETS: readonly string[] = NAV_ITEMS.flatMap((item) =>
+  item.more === true && item.to !== undefined ? [item.to] : []
+);
+
 /** Кромка сверху отличает текущий раздел не только цветом. */
 const ACTIVE_CLASS =
   'font-medium text-foreground before:absolute before:inset-x-3 before:top-0 before:h-0.5 before:rounded-full before:bg-primary';
@@ -35,8 +40,9 @@ export function AppSidebarBottomNav() {
     >
       <ul className='flex'>
         {NAV_ITEMS.map((item) =>
-          // Несделанному разделу колонку не отдаём: ширины телефона хватает на пять.
-          item.to === undefined ? null : (
+          // Несделанному разделу и пункту листа «Ещё» колонку не отдаём:
+          // ширины телефона хватает на пять.
+          item.to === undefined || item.more === true ? null : (
             <li key={item.key} className='min-w-0 flex-1'>
               <Link
                 to={item.to}
@@ -54,7 +60,10 @@ export function AppSidebarBottomNav() {
           )
         )}
         <li className='min-w-0 flex-1'>
-          <AppSidebarMore className={cn(ITEM_CLASS, IDLE_CLASS)} />
+          <AppSidebarMore
+            active={active}
+            className={cn(ITEM_CLASS, MORE_TARGETS.includes(active ?? '') ? ACTIVE_CLASS : IDLE_CLASS)}
+          />
         </li>
       </ul>
     </nav>

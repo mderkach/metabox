@@ -30,6 +30,11 @@
         "failed": "Could not rename the device"
       }
     },
+    "log": {
+      "clear": {
+        "failed": "Could not clear the log"
+      }
+    },
     "service": {
       "action": {
         "failed": "The service did not accept the command"
@@ -150,7 +155,9 @@
     "route": "Could not explain the route",
     "ruleSetCatalog": "Could not get the rule-set catalog",
     "ruleSetFiles": "Could not get the list files",
-    "devices": "Could not get the device list"
+    "devices": "Could not get the device list",
+    "logs": "Could not get the sing-box log",
+    "diag": "Could not run the diagnostics"
   },
   "list": {
     "notFound": "Nothing matches this query.",
@@ -194,7 +201,9 @@
     "config": "Configuration",
     "proxies": "Proxies",
     "connections": "Connections",
-    "devices": "Devices"
+    "devices": "Devices",
+    "logs": "Logs",
+    "diagnostics": "Diagnostics"
   },
   "stat": {
     "uptime": "Uptime"

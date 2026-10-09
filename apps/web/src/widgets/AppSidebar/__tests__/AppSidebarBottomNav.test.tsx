@@ -12,7 +12,7 @@ import {
   SERVICE_RUNNING_FIXTURE,
 } from '@entities/Daemon/__tests__/Daemon.fixture';
 
-import { NAV_TARGETS } from '../model';
+import { NAV_ITEMS } from '../model';
 import { AppSidebarBottomNav } from '../ui/AppSidebarBottomNav';
 
 describe('AppSidebarBottomNav', () => {
@@ -24,13 +24,15 @@ describe('AppSidebarBottomNav', () => {
     );
   });
 
-  it('ведёт на все разделы меню ссылками с подписями', async () => {
+  it('ведёт на разделы меню ссылками с подписями, служебные — в листе «Ещё»', async () => {
     renderWithRouter(AppSidebarBottomNav);
 
     const nav = await screen.findByRole('navigation', { name: 'Разделы панели' });
     const links = within(nav).getAllByRole('link');
 
-    expect(links.map((link) => link.getAttribute('href'))).toEqual(NAV_TARGETS);
+    expect(links.map((link) => link.getAttribute('href'))).toEqual(
+      NAV_ITEMS.filter((item) => item.more !== true).map((item) => item.to)
+    );
     expect(within(nav).getByRole('link', { name: 'Обзор' })).toBeInTheDocument();
     // Полное «Конфигурация» не помещается в колонку телефона.
     expect(within(nav).getByRole('link', { name: 'Конфиг' })).toHaveAttribute('href', '/config');
@@ -44,6 +46,27 @@ describe('AppSidebarBottomNav', () => {
 
     expect(current).toHaveLength(1);
     expect(current[0]).toHaveAttribute('href', '/config');
+  });
+
+  // Шестая и седьмая колонки на ширине телефона не помещаются: логи и
+  // диагностика открываются из «Ещё», и пункт «Ещё» помечен, пока открыт один из них.
+  it('«Ещё» ведёт на логи и диагностику и закрывается переходом', async () => {
+    const user = userEvent.setup();
+
+    renderWithRouter(AppSidebarBottomNav, { path: '/logs' });
+
+    await user.click(await screen.findByRole('button', { name: 'Ещё' }));
+
+    const sheet = await screen.findByRole('dialog', { name: 'Состояние и настройки' });
+    const sections = within(sheet).getByRole('navigation', { name: 'Разделы' });
+
+    expect(within(sections).getByRole('link', { name: 'Логи' })).toHaveAttribute('aria-current', 'page');
+
+    await user.click(within(sections).getByRole('link', { name: 'Диагностика' }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Состояние и настройки' })).not.toBeInTheDocument();
+    });
   });
 
   // На телефоне боковой панели нет, и её подвал не должен пропасть вместе с ней.

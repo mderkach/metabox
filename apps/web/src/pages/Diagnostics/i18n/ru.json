@@ -1,0 +1,55 @@
+{
+  "title": "Проверки обвязки",
+  "column": {
+    "check": "Проверка",
+    "status": "Итог",
+    "result": "Подробности"
+  },
+  "target": {
+    "label": "Узел для проверки выхода",
+    "none": "не проверять выход через узел"
+  },
+  "run": {
+    "action": "Проверить",
+    "pending": "Проверяю",
+    "hint": "Проверка шлёт пакеты с роутера и оставляет строки в логе sing-box."
+  },
+  "idle": {
+    "title": "Проверка не запускалась",
+    "description": "Нажмите «Проверить»: панель проверит порты перехвата, DNS через dns-in, цепочки nft, выход через выбранный узел и прямой выход."
+  },
+  "check": {
+    "redirect_port": "Порт redirect (TCP)",
+    "tproxy_port": "Порт tproxy (UDP)",
+    "dns_port": "Порт DNS",
+    "dns_probe": "DNS-проба через dns-in",
+    "nft_chains": "Цепочки nft",
+    "proxy": "Выход через узел",
+    "direct": "Прямой выход"
+  },
+  "status": {
+    "ok": "в порядке",
+    "fail": "отказ",
+    "skipped": "пропущено"
+  },
+  "reason": {
+    "model_unavailable": "настройки перехвата metabox.dataplane в UCI не прочитались",
+    "interception_disabled": "перехват выключен — портам и цепочкам стоять незачем",
+    "not_listening": "порт никто не слушает: sing-box остановлен или в конфиге нет такого inbound",
+    "proc_unavailable": "не удалось прочитать список сокетов в /proc/net",
+    "config_missing": "конфига sing-box на устройстве нет",
+    "no_dns_inbound": "в конфиге нет dns-in на порту DNS перехвата: dnsmasq отдаёт запросы в пустой порт",
+    "dns_name_unset": "не задано имя для DNS-пробы",
+    "no_answer": "DNS-проба не получила ответа",
+    "nft_unavailable": "nft недоступен",
+    "nft_unparsed": "вывод nft не разобран",
+    "chains_missing": "в nft нет цепочек перехвата:",
+    "proxy_unset": "узел не выбран",
+    "proxy_missing": "такого узла нет в работающем sing-box",
+    "runtime_unavailable": "sing-box не отвечает",
+    "request_failed": "запрос не прошёл",
+    "unsupported": "на этой системе проверка не поддерживается"
+  },
+  "delay": "{{value}} мс",
+  "missing": "Отсутствующие цепочки"
+}

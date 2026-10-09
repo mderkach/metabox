@@ -1,0 +1,8 @@
+{
+  "action": "Clear",
+  "pending": "Clearing",
+  "hint": {
+    "logread": "The log is read from logread, and the logd ring cannot be cleared. The panel hides lines up to the moment of clearing; they come back after the metabox daemon restarts.",
+    "file": "The sing-box log file will be truncated — lines before clearing cannot be restored."
+  }
+}
