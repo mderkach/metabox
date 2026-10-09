@@ -105,8 +105,8 @@ describe('оверрайд формы VLESS/Reality', () => {
       screen.getByRole('textbox', { name: 'tls.reality.short_id' }),
     ];
 
-    expect(inDocumentOrder([...primary, screen.getByRole('button', { name: 'Дополнительно' })])).toBe(true);
-    expect(screen.getByRole('button', { name: 'Дополнительно' })).toHaveAttribute('aria-expanded', 'false');
+    expect(inDocumentOrder([...primary, screen.getByRole('button', { name: /^Ещё параметры/ })])).toBe(true);
+    expect(screen.getByRole('button', { name: /^Ещё параметры/ })).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByRole('combobox', { name: 'domain_strategy' })).not.toBeInTheDocument();
   });
 
@@ -115,7 +115,7 @@ describe('оверрайд формы VLESS/Reality', () => {
 
     render(<NodeFromStore path={VLESS} />);
 
-    await user.click(screen.getByRole('button', { name: 'Дополнительно' }));
+    await user.click(screen.getByRole('button', { name: /^Ещё параметры/ }));
 
     expect(screen.getByRole('combobox', { name: 'domain_strategy' })).toBeInTheDocument();
     expect(screen.getAllByRole('textbox', { name: /server_name$/ })).toHaveLength(1);
@@ -191,7 +191,7 @@ describe('оверрайд формы VLESS/Reality', () => {
   it('uTLS помечен, когда бинарь собран без with_utls, и не помечен со сборкой', () => {
     const { unmount } = render(<NodeFromStore path={VLESS} builtTags={['with_quic']} />);
 
-    expect(screen.getByText('нет в сборке: with_utls')).toBeInTheDocument();
+    expect(screen.getAllByText('нет в сборке: with_utls')).not.toHaveLength(0);
 
     unmount();
     render(<NodeFromStore path={VLESS} builtTags={['with_utls']} />);

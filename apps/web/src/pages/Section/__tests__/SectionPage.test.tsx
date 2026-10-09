@@ -66,6 +66,19 @@ describe('экран секции', () => {
     ConfigDocumentState.getState().reset();
   });
 
+  it('узлы секции свёрнуты до шапки с типом и адресом', async () => {
+    serveConfig(CONFIG_TEXT);
+
+    renderWithRouter(OutboundsSection);
+
+    const node = within(await screen.findByRole('region', { name: 'hk-01' }));
+
+    expect(node.getByRole('button', { name: 'hk-01' })).toHaveAttribute('aria-expanded', 'false');
+    expect(node.getByText('vless')).toBeInTheDocument();
+    expect(node.getByText('a.example:443')).toBeInTheDocument();
+    expect(node.queryByRole('tab', { name: 'Форма' })).not.toBeInTheDocument();
+  });
+
   it('открывает узел аутбаунда формой, а тот же узел текстом — на вкладке JSON', async () => {
     serveConfig(CONFIG_TEXT);
 
@@ -74,6 +87,8 @@ describe('экран секции', () => {
     renderWithRouter(OutboundsSection);
 
     const node = within(await screen.findByRole('region', { name: 'hk-01' }));
+
+    await user.click(node.getByRole('button', { name: 'hk-01' }));
 
     expect(node.getByRole('tab', { name: 'Форма' })).toHaveAttribute('aria-selected', 'true');
     expect(node.getByRole('textbox', { name: 'server' })).toHaveValue('a.example');
@@ -92,6 +107,9 @@ describe('экран секции', () => {
     renderWithRouter(OutboundsSection);
 
     const node = within(await screen.findByRole('region', { name: 'hk-01' }));
+
+    await user.click(node.getByRole('button', { name: 'hk-01' }));
+
     const server = node.getByRole('textbox', { name: 'server' });
 
     await user.clear(server);
@@ -118,6 +136,8 @@ describe('экран секции', () => {
     renderWithRouter(OutboundsSection);
 
     const node = within(await screen.findByRole('region', { name: 'direct' }));
+
+    await user.click(node.getByRole('button', { name: 'direct' }));
 
     await user.click(node.getByRole('tab', { name: 'JSON' }));
 
@@ -152,14 +172,16 @@ describe('экран секции', () => {
 
     renderWithRouter(DnsRulesSection);
 
-    const editor = await screen.findByRole('textbox', { name: 'Узел dns.rules[1] текстом' });
+    const node = within(await screen.findByRole('region', { name: 'dns.rules[1]' }));
+
+    await user.click(node.getByRole('button', { name: 'dns.rules[1]' }));
+
+    const editor = node.getByRole('textbox', { name: 'Узел dns.rules[1] текстом' });
 
     await user.clear(editor);
     await user.paste('{ "query_type": ["HTTPS"], "action": "reject" }');
 
-    const [, saveSecond] = screen.getAllByRole('button', { name: 'Сохранить в черновик' });
-
-    await user.click(saveSecond);
+    await user.click(node.getByRole('button', { name: 'Сохранить в черновик' }));
 
     await waitFor(() => {
       expect(ConfigDocumentState.getState().draft).toContain('"HTTPS"');

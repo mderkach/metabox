@@ -14,6 +14,7 @@ import {
   arrangePlan,
   isSameValue,
   nodeOverrideOf,
+  splitByPresence,
   toFieldName,
   toNodeFormResolver,
   type ConfigNodeFormModel,
@@ -32,10 +33,10 @@ const NS = 'features/Config/ConfigNodeForm';
  * были. Узел, которого схема его типа не знает, формы не получает — его
  * открывает текстовый режим (ADR-0018).
  *
- * Тип с оверрайдом (`NODE_OVERRIDE`) открывается его основными полями, а
- * остальные уходят под свёртку «Дополнительно»; проверки оверрайда идут
- * поверх схемы. Опция, которой нет в сборке бинаря, помечена у своего поля
- * (`builtTags` — `null`, пока состав сборки не прочитан).
+ * Тип с оверрайдом (`NODE_OVERRIDE`) открывается его основными полями;
+ * проверки оверрайда идут поверх схемы. Остальные поля, заданные в узле, идут
+ * следом, а пустые уходят под свёртку. Опция, которой нет в сборке бинаря,
+ * помечена у своего поля (`builtTags` — `null`, пока состав сборки не прочитан).
  */
 export function ConfigNodeForm({
   registry,
@@ -75,6 +76,7 @@ function ConfigNodeFormBody({
   const { t } = useTranslation('shared');
   const editMany = ConfigDocumentState.use.editMany();
   const layout = useMemo(() => arrangePlan(toFieldPlan(schema), override), [schema, override]);
+  const rest = useMemo(() => splitByPresence(layout.rest, node), [layout.rest, node]);
   const resolver = useMemo(() => toNodeFormResolver(schema, override), [schema, override]);
   const [failures] = useState(() => new Map<string, unknown>());
   // Узел из разбора текста — объекты без прототипа: RHF такие не копирует, и
@@ -129,11 +131,13 @@ function ConfigNodeFormBody({
             <NodeField key={field.key} field={field} builtTags={builtTags} />
           ))}
 
-          {override === null ? (
-            layout.rest.map((field) => <NodeField key={field.key} field={field} builtTags={builtTags} />)
-          ) : (
-            <AdvancedFields>
-              {layout.rest.map((field) => (
+          {rest.filled.map((field) => (
+            <NodeField key={field.key} field={field} builtTags={builtTags} />
+          ))}
+
+          {rest.empty.length > 0 && (
+            <AdvancedFields count={rest.empty.length}>
+              {rest.empty.map((field) => (
                 <NodeField key={field.key} field={field} builtTags={builtTags} />
               ))}
             </AdvancedFields>
@@ -192,13 +196,8 @@ function NodeField({
   );
 }
 
-/**
- * Поля типа с оверрайдом, кроме основных. Свёрнуты всегда: основные поля
- * покрывают сценарий типа, а остальные — тонкая настройка, которая иначе
- * отодвигала бы их стеной полей dial. Свёрнутые поля не монтируются, значения
- * формы при этом не теряются.
- */
-function AdvancedFields({ children }: { children: ReactNode }) {
+/** Свёртка пустых полей. Свёрнутые поля не монтируются, значения формы при этом не теряются. */
+function AdvancedFields({ count, children }: { count: number; children: ReactNode }) {
   const { t } = useTranslation(NS);
   const [open, setOpen] = useState(false);
   const contentId = useId();
@@ -218,7 +217,7 @@ function AdvancedFields({ children }: { children: ReactNode }) {
           }}
         >
           <ChevronRight className={cn('transition-transform motion-reduce:transition-none', open && 'rotate-90')} />
-          {t('advanced')}
+          {t('advanced', { count })}
         </Button>
       </FieldLegend>
       <div id={contentId} hidden={!open} className='flex flex-col gap-3'>

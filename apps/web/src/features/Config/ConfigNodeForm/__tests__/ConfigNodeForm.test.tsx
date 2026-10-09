@@ -65,6 +65,11 @@ function changedLines(before: string, after: string): string[] {
   return after.split('\n').filter((line, index) => line !== lines[index]);
 }
 
+/** Незаданные поля узла свёрнуты под «Ещё параметры». */
+async function showEmptyFields() {
+  await userEvent.click(screen.getByRole('button', { name: /^Ещё параметры/ }));
+}
+
 function save() {
   return screen.getByRole('button', { name: 'Сохранить в черновик' });
 }
@@ -75,11 +80,15 @@ describe('форма узла по схеме', () => {
     ConfigDocumentState.getState().load(TEXT);
   });
 
-  it('рисует поле по его виду и не рисует тип узла', () => {
+  it('рисует поле по его виду и не рисует тип узла', async () => {
     renderVmess();
 
     expect(screen.getByRole('textbox', { name: 'server' })).toHaveValue('a.example');
     expect(screen.getByRole('spinbutton', { name: 'server_port' })).toHaveValue(443);
+    expect(screen.queryByRole('switch', { name: 'tcp_fast_open' })).not.toBeInTheDocument();
+
+    await showEmptyFields();
+
     expect(screen.getByRole('switch', { name: 'tcp_fast_open' })).not.toBeChecked();
     expect(screen.getByRole('combobox', { name: 'domain_strategy' })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'connect_timeout' })).toHaveAttribute('placeholder', '10s, 1m30s');
@@ -174,6 +183,7 @@ describe('форма узла по схеме', () => {
     const user = userEvent.setup();
 
     renderVmess();
+    await showEmptyFields();
 
     await selectOption(user, screen.getByRole('combobox', { name: 'domain_strategy' }), 'prefer_ipv4');
     await user.click(save());
@@ -194,6 +204,7 @@ describe('форма узла по схеме', () => {
     const user = userEvent.setup();
 
     renderVmess();
+    await showEmptyFields();
 
     expect(screen.getByRole('button', { name: 'Поля tls' })).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByRole('textbox', { name: 'server_name' })).toHaveValue('a.example');
@@ -212,6 +223,7 @@ describe('форма узла по схеме', () => {
     const user = userEvent.setup();
 
     renderVmess();
+    await showEmptyFields();
 
     await user.type(screen.getByRole('textbox', { name: 'connect_timeout' }), '10 секунд');
 
@@ -226,6 +238,7 @@ describe('форма узла по схеме', () => {
     const user = userEvent.setup();
 
     renderVmess();
+    await showEmptyFields();
 
     await user.type(screen.getByRole('textbox', { name: 'routing_mark' }), '255');
     await user.click(save());
@@ -239,6 +252,7 @@ describe('форма узла по схеме', () => {
     const user = userEvent.setup();
 
     renderVmess();
+    await showEmptyFields();
 
     const resolver = screen.getByRole('textbox', { name: 'domain_resolver' });
 
@@ -263,6 +277,7 @@ describe('форма узла по схеме', () => {
     const user = userEvent.setup();
 
     renderVmess();
+    await showEmptyFields();
 
     const resolver = screen.getByRole('textbox', { name: 'domain_resolver' });
 
@@ -271,8 +286,9 @@ describe('форма узла по схеме', () => {
 
     ConfigDocumentState.getState().edit([...VMESS, 'domain_resolver'], 'local');
 
+    // Заданное поле выходит из свёртки к заданным: элемент монтируется заново.
     await waitFor(() => {
-      expect(resolver).toHaveValue('"local"');
+      expect(screen.getByRole('textbox', { name: 'domain_resolver' })).toHaveValue('"local"');
     });
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 

@@ -7,6 +7,7 @@ export {
   packList,
   parseNumber,
   parseScalar,
+  splitByPresence,
   textToList,
   toFieldName,
   toInputText,

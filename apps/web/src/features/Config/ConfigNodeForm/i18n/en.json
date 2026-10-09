@@ -3,11 +3,21 @@
     "unset": "not set",
     "reset": "Reset {{name}}"
   },
-  "enum": { "unset": "not set" },
-  "duration": { "placeholder": "10s, 1m30s" },
-  "list": { "hint": "One value per line" },
-  "raw": { "hint": "Field value as JSON" },
-  "group": { "toggle": "{{name}} fields" },
+  "enum": {
+    "unset": "not set"
+  },
+  "duration": {
+    "placeholder": "10s, 1m30s"
+  },
+  "list": {
+    "hint": "One value per line"
+  },
+  "raw": {
+    "hint": "Field value as JSON"
+  },
+  "group": {
+    "toggle": "{{name}} fields"
+  },
   "error": {
     "duration": "Duration like 10s, 1m30s, 500ms",
     "tooSmall": "Must be 0 or more",
@@ -19,5 +29,5 @@
     "realityShortId": "Short ID: hex, up to 16 characters, even length"
   },
   "unbuilt": "not in build: {{tag}}",
-  "advanced": "Advanced"
+  "advanced": "More options ({{count}})"
 }

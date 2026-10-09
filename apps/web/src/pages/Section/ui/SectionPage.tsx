@@ -60,6 +60,8 @@ export function SectionNodes({ section }: { section: GenericSection }) {
   const status = useDaemonStatus();
   const asSheet = usePanelAsSheet();
   const [adding, setAdding] = useState(false);
+  // Узел перемонтируется на каждой ревизии документа: раскрытые держит экран.
+  const [expanded, setExpanded] = useState<ReadonlySet<number>>(() => new Set());
   const text = document.text;
   const nodes = useMemo(() => (text === null ? [] : readSectionNodes(text, section)), [text, section]);
   const takenTags = useMemo(() => (text === null ? [] : readNodeTags(text)), [text]);
@@ -67,6 +69,20 @@ export function SectionNodes({ section }: { section: GenericSection }) {
   const shape = GENERIC_SECTIONS[section];
   const addable = shape.kind === 'list' && registryOfSection(section) !== null;
   const loaded = document.query.isSuccess;
+
+  function setNodeOpen(index: number, open: boolean) {
+    setExpanded((current) => {
+      const next = new Set(current);
+
+      if (open) {
+        next.add(index);
+      } else {
+        next.delete(index);
+      }
+
+      return next;
+    });
+  }
 
   function toggleAdding() {
     startTransition(() => {
@@ -133,6 +149,12 @@ export function SectionNodes({ section }: { section: GenericSection }) {
                 node={node}
                 name={nodeName(shape.path, node, index)}
                 builtTags={builtTags}
+                {...(nodes.length > 1 && {
+                  open: expanded.has(index),
+                  onOpenChange: (open: boolean) => {
+                    setNodeOpen(index, open);
+                  },
+                })}
               />
             ))}
         </div>

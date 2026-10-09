@@ -235,3 +235,22 @@ export function arrangePlan(plan: readonly FieldPlan[], override: NodeOverride |
 
   return { primary, rest: withoutFields(fields, new Set(override.primary)) };
 }
+
+/**
+ * Делит поля на заданные в узле и пустые. Заданное поле видно сразу: свёрнутым
+ * оно прятало бы то, что в узле уже настроено. Пустые уходят под свёртку —
+ * у типа их десятки, и стеной они отодвигали бы заданные.
+ */
+export function splitByPresence(
+  fields: readonly FieldPlan[],
+  node: ConfigNodeFormModel
+): { filled: FieldPlan[]; empty: FieldPlan[] } {
+  const filled: FieldPlan[] = [];
+  const empty: FieldPlan[] = [];
+
+  for (const field of fields) {
+    (isUnset(get(node, toFieldName(field.path))) ? empty : filled).push(field);
+  }
+
+  return { filled, empty };
+}

@@ -1,8 +1,8 @@
 {
   "empty": {
     "title": "No nodes",
-    "description": "The section is empty or missing from the config file. Add the first node with the form: a type and a tag, the rest in the node form.",
-    "descriptionText": "The section is empty or missing from the config file. Add a node in the text mode."
+    "description": "No nodes yet. Add the first one: type and tag.",
+    "descriptionText": "No nodes yet. Add one in Text mode."
   },
   "add": {
     "open": "Add node",
