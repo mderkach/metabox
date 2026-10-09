@@ -66,9 +66,7 @@ COPY .devcontainer/target/files/ /
 # как .apk-new — на этом держится стендовый адрес, поэтому после установки он
 # проверяется.
 #
-# Снимаются с автозапуска службы, которым в контейнере не на чем работать, и
-# fw4: правила он ставит, но с ним панель перестаёт отвечать на проброшенный
-# порт, а причина не найдена. Внешнюю сеть вместо него изолирует Docker.
+# Снимаются с автозапуска службы, которым в контейнере не на чем работать.
 # `init.d disable` на сборке не срабатывает — procd и ubus ещё не подняты, —
 # поэтому снимаются симлинки.
 #
@@ -78,7 +76,7 @@ RUN set -eu; \
     apk add --allow-untrusted /tmp/sing-box.apk /tmp/metaboxd.apk; \
     rm -f /tmp/sing-box.apk /tmp/metaboxd.apk; \
     grep -q "option listen_port '8080'" /etc/config/metabox; \
-    rm -f /etc/rc.d/S*dnsmasq /etc/rc.d/S*firewall /etc/rc.d/S*odhcpd /etc/rc.d/S*uhttpd; \
+    rm -f /etc/rc.d/S*dnsmasq /etc/rc.d/S*odhcpd /etc/rc.d/S*uhttpd; \
     rm -f /etc/rc.d/S99sing-box; \
     ln -sf ../init.d/metabox-singbox /etc/rc.d/S97metabox-singbox; \
     ln -sf ../init.d/metaboxd /etc/rc.d/S98metaboxd; \

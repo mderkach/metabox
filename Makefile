@@ -157,6 +157,8 @@ apply-check:
 
 # Панель обязана быть доступна со всех локальных сетей владельца и ни с одной
 # внешней. Проверяется снаружи: клиент поднимается в каждой сети стенда.
+# Clash API слушает все адреса, и с внешней сети его закрывает только зона wan
+# fw4 — так проверяются сами правила, а не только адрес, который слушает панель.
 reach-check:
 	@set -eu; \
 	docker inspect metabox-target-1 >/dev/null 2>&1 || { echo "стенд не поднят: сначала make up" >&2; exit 1; }; \
@@ -165,11 +167,13 @@ reach-check:
 		case "$$net" in lan) expect=ответ ;; guest) expect=ответ ;; wan) expect=отказ ;; esac; \
 		addr=$$(docker inspect metabox-target-1 \
 			--format "{{ (index .NetworkSettings.Networks (printf \"metabox_%s\" \"$$net\")).IPAddress }}"); \
-		if docker run --rm --network "metabox_$$net" alpine:3 \
-			wget -q -T 3 -O /dev/null "http://$$addr:8080/healthz" >/dev/null 2>&1; \
-		then got=ответ; else got=отказ; fi; \
-		printf "%-6s %-16s ожидалось %s, получено %s\n" "$$net" "$$addr" "$$expect" "$$got"; \
-		[ "$$got" = "$$expect" ] || fail=1; \
+		for target in 8080/healthz 9090/version; do \
+			if docker run --rm --network "metabox_$$net" alpine:3 \
+				wget -q -T 3 -O /dev/null "http://$$addr:$$target" >/dev/null 2>&1; \
+			then got=ответ; else got=отказ; fi; \
+			printf "%-6s %-16s %-13s ожидалось %s, получено %s\n" "$$net" "$$addr" "$${target%%/*}" "$$expect" "$$got"; \
+			[ "$$got" = "$$expect" ] || fail=1; \
+		done; \
 	done; \
 	if [ "$$fail" = 1 ]; then echo "ПРОВАЛ: доступность сетей не та, что требуется" >&2; exit 1; fi; \
 	echo; echo "Панель доступна с локальных сетей и недоступна с внешней." 

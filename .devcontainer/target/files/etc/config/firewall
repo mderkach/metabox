@@ -1,0 +1,43 @@
+# Зоны стенда — те же роли, что на роутере: проводная и гостевая сети локальные,
+# внешняя закрыта на вход. Имена сетей — интерфейсы UCI, которые stand-init
+# собирает по адресам.
+
+config defaults
+	option syn_flood '1'
+	option input 'REJECT'
+	option output 'ACCEPT'
+	option forward 'REJECT'
+
+config zone
+	option name 'lan'
+	list network 'lan'
+	option input 'ACCEPT'
+	option output 'ACCEPT'
+	option forward 'ACCEPT'
+
+# Вход открыт: панель слушает и гостевую сеть (listen_interface), а
+# проброшенный на хост порт Docker Desktop доставляет на её адрес — без зоны
+# он попадал под input REJECT по умолчанию.
+config zone
+	option name 'guest'
+	list network 'guest'
+	option input 'ACCEPT'
+	option output 'ACCEPT'
+	option forward 'REJECT'
+
+config zone
+	option name 'wan'
+	list network 'wan'
+	option input 'REJECT'
+	option output 'ACCEPT'
+	option forward 'REJECT'
+	option masq '1'
+	option mtu_fix '1'
+
+config forwarding
+	option src 'lan'
+	option dest 'wan'
+
+config forwarding
+	option src 'guest'
+	option dest 'wan'
