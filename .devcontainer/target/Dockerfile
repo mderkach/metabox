@@ -34,8 +34,8 @@ COPY --from=base /etc/apk/arch /tmp/arch
 COPY apps/metaboxd/package /src/package
 COPY ${DAEMON_BINARY} /src/metaboxd
 RUN set -eu; \
-    mkdir -p /pkgroot/usr/bin /pkgroot/etc /out; \
-    cp -R /src/package/etc/. /pkgroot/etc/; \
+    mkdir -p /pkgroot/usr/bin /out; \
+    cp -R /src/package/. /pkgroot/; \
     install -m 0755 /src/metaboxd /pkgroot/usr/bin/metaboxd; \
     chmod 0755 /pkgroot/etc/init.d/metaboxd /pkgroot/etc/init.d/metabox-singbox; \
     chown -R root:root /pkgroot; \
@@ -44,6 +44,7 @@ RUN set -eu; \
       --info "version:${PKG_VERSION}" \
       --info "arch:$(cat /tmp/arch)" \
       --info description:"Панель настройки sing-box" \
+      --info depends:sing-box-extended \
       --files /pkgroot \
       --output /out/metaboxd.apk
 
