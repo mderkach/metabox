@@ -1,4 +1,4 @@
-// Сгенерировано tools/schemagen из sing-box-extended v1.14.0-extended-2.7.1. Не редактировать:
+// Сгенерировано tools/schemagen из sing-box-extended v1.14.1-extended-2.7.2. Не редактировать:
 // правится генератор, файл пересобирается `make schema`.
 //
 // Схемы держатся представимыми для z.toJSONSchema(): по ним строится
@@ -10,7 +10,7 @@ import * as z from "zod"
  * Версия форка, из которой собраны эти схемы. Панель сверяет её с версией
  * бинаря на устройстве: формы знают ровно те типы, что были в этой версии.
  */
-export const SCHEMA_FORK_VERSION = "v1.14.0-extended-2.7.1"
+export const SCHEMA_FORK_VERSION = "v1.14.1-extended-2.7.2"
 
 /**
  * Build-тег, без которого бинарь форка не запустит тип узла: реестр → тип → тег.
@@ -5711,6 +5711,7 @@ export const OutboundRealityOptionsSchema = z.strictObject({
   enabled: z.boolean().optional(),
   public_key: z.string().optional(),
   short_id: z.string().optional(),
+  support_x25519mlkem768: z.boolean().optional(),
 })
 
 export const OutboundSelectorSchema = z.strictObject({

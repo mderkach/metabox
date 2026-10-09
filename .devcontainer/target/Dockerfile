@@ -4,7 +4,7 @@
 # stand-base`), в CI прошивки нет, и берётся публичный rootfs OpenWrt той же
 # ветки с apk.
 ARG BASE_IMAGE=openwrt/rootfs:aarch64_generic-25.12.4
-ARG SINGBOX_VERSION=1.14.0-extended-2.7.1
+ARG SINGBOX_VERSION=1.14.1-extended-2.7.2
 # Собранный бинарь демона: арка задаётся снаружи, потому что образ целевого
 # окружения бывает и aarch64, и x86_64.
 ARG DAEMON_BINARY=dist/metaboxd-linux-arm64

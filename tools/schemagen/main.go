@@ -17,7 +17,7 @@ import (
 
 // forkVersion попадает в шапку сгенерированного файла: по нему видно, на
 // какой схеме собран фронт.
-const forkVersion = "v1.14.0-extended-2.7.1"
+const forkVersion = "v1.14.1-extended-2.7.2"
 
 func main() {
 	out := flag.String("out", "", "path of the generated schema file")
