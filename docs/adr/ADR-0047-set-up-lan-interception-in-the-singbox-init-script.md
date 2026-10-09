@@ -35,7 +35,7 @@
 
 ## Принятое решение
 
-Сетевую обвязку ставит и снимает init-скрипт [`metabox-singbox`](../../apps/metaboxd/package/etc/init.d/metabox-singbox) по модели из секции `metabox.dataplane`. Демон модель только читает.
+Сетевую обвязку ставит и снимает init-скрипт [`metabox-singbox`](../../apps/metaboxd/package/etc/init.d/metabox-singbox) по модели из секции `metabox.dataplane`. Демон модель читает, а меняет её только транзакцией с окном подтверждения: снимок прежней секции, запись `uci batch` со сверкой, `reload` службы, проверка цепочек и dns-in, окно, откат к снимку без подтверждения; состояние транзакции лежит в `dataplane.json` служебного каталога, и Replay на старте доигрывает откат ([`internal/apply/plane.go`](../../apps/metaboxd/internal/apply/plane.go), [`internal/dataplane/write.go`](../../apps/metaboxd/internal/dataplane/write.go)).
 
 **Модель.** Секция типа `dataplane` с именем `dataplane` в `/etc/config/metabox`: `enabled`, порты `redirect_port`/`tproxy_port`/`dns_port`, `dns_hijack`, метки `self_mark`/`tproxy_mark`, `route_table`, `acl_mode` (`all` | `listed`), списки `source_ip`, `source_mac`, `lan_interface`, `wan_proxy_cidr`, `wan_direct_cidr`, `ipv6`. Без секции и без опции действуют умолчания homeproxy (5331/5332/5333, метки 100 и 101, таблица 100, `listed`, `br-lan`, обвязка включена) — одни и те же в скрипте и в `dataplane.Defaults()`. Невалидная модель не меняет уже поставленную обвязку.
 
@@ -55,7 +55,7 @@
 
 **Демон.** Пакет `apps/metaboxd/internal/dataplane` читает модель `uci -q show metabox` и признак применения — цепочки `metabox_*` в `inet fw4` из `nft -j list chains`. Имена секции, опций и цепочек — контракт со скриптом (`ExpectedChains`). Healthcheck после рестарта ([`cycle.go`](../../apps/metaboxd/internal/apply/cycle.go)) по модели, снятой до рестарта, проверяет, что цепочки, стоявшие до рестарта, не пропали (`interception_missing`), и шлёт DNS-пробу в dns-in на `dns_port` (`dns_probe_failed`).
 
-Non-goal: IPv6-цепочки, режим fail-open на время рестарта (пункт 8 roadmap PRD), запись модели демоном (AC-53).
+Non-goal: IPv6-цепочки, режим fail-open на время рестарта (пункт 8 roadmap PRD).
 
 ### Область действия и границы
 
@@ -82,7 +82,7 @@ Non-goal: IPv6-цепочки, режим fail-open на время рестар
 ### Нейтральные или отложенные
 
 - Режим «пропускать напрямую, пока ядро поднимается» отложен как второй путь в init-скрипте (пункт 8 roadmap PRD).
-- Демон пока не пишет модель и не зовёт `reload` — это AC-53.
+- Смена ACL через демон рестартует sing-box и рвёт соединения; откат рвёт их второй раз. Смена `dns_port` рестартует dnsmasq при смене и при откате.
 
 ## Риски и меры снижения
 
@@ -96,7 +96,7 @@ Non-goal: IPv6-цепочки, режим fail-open на время рестар
 
 ## Совместимость, миграция и откат
 
-Пакет ставится при работающем homeproxy: секция `dataplane` в пакетном файле выключена, служба `metabox-singbox` правил не ставит. Переход с homeproxy и откат на него описывает runbook `apps/metaboxd/docs/guides/Migration.md` (AC-67).
+Пакет ставится при работающем homeproxy: секция `dataplane` в пакетном файле выключена, служба `metabox-singbox` правил не ставит. Переход с homeproxy и откат на него описывает runbook [Migration.md](../../apps/metaboxd/docs/guides/Migration.md) (AC-67).
 
 Откат обвязки — `/etc/init.d/metabox-singbox stop` или `enabled '0'` с `reload`: обвязка снимается без следов, после чего можно поднять homeproxy.
 
