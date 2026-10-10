@@ -375,15 +375,21 @@ dp_state_read() {
 }
 
 # Снимает обвязку целиком. Без файла состояния (перезагрузка стёрла /var/run,
-# а инклюд в UCI остался) метки и путь берутся из текущей модели.
+# а инклюд в UCI остался) метки и путь берутся из текущей модели — но только
+# когда она включена: ip rule и таблицу с теми же номерами держит homeproxy,
+# и выключенная модель не даёт права их снимать.
 dp_down() {
 	dp_state_read
-	[ -n "$st_mark" ] || st_mark="$dp_tproxy_mark"
-	[ -n "$st_table" ] || st_table="$dp_route_table"
+	if [ -z "$st_mark" ] && [ "$dp_enabled" = 1 ]; then
+		st_mark="$dp_tproxy_mark"
+		st_table="$dp_route_table"
+	fi
 	[ -n "$st_dnsmasq" ] || st_dnsmasq=$(dp_dnsmasq_file)
 
 	dp_nft_down
-	dp_number "$st_mark" && dp_number "$st_table" && dp_route_down "$st_mark" "$st_table"
+	if [ -n "$st_mark" ] && dp_number "$st_mark" && dp_number "$st_table"; then
+		dp_route_down "$st_mark" "$st_table"
+	fi
 	dp_dnsmasq_down "$st_dnsmasq"
 	rm -f "$STATE_FILE"
 }
