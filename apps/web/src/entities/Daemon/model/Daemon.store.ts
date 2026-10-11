@@ -82,6 +82,12 @@ interface RuntimeState {
    * От неё считается время точек графика; живость потока по ней не судится.
    */
   trafficAt: number | null;
+  /**
+   * Когда пришёл последний снимок устройства. Его снимает демон, а не
+   * sing-box: свежий снимок при замершем трафике значит, что поток жив и молчит
+   * sing-box, а замерли оба — оборвалась связь панели с демоном.
+   */
+  systemAt: number | null;
   /** Сколько экранов смотрит поток рантайма. */
   readers: number;
   pushTraffic: (sample: TrafficSample) => void;
@@ -95,6 +101,12 @@ interface RuntimeState {
   pushSystem: (stat: SystemStat) => void;
   addReader: () => void;
   removeReader: () => void;
+  /**
+   * Поток закрыт: отметка последнего кадра снимается, буферы остаются. Иначе
+   * экран, открытый заново, судил бы о живости по кадру из прошлого
+   * подключения и показывал замерший поток, пока не придёт первый новый.
+   */
+  closeStream: () => void;
   reset: () => void;
 }
 
@@ -112,6 +124,7 @@ const RuntimeStateProto = stateCreator<RuntimeState>((set) => {
     uplink: NO_UPLINK_RATE,
     sampledAt: null,
     trafficAt: null,
+    systemAt: null,
     readers: 0,
     pushTraffic: (sample) => {
       const receivedAt = Date.now();
@@ -165,6 +178,7 @@ const RuntimeStateProto = stateCreator<RuntimeState>((set) => {
             ? { rx: toRate(link.rx, previous.rx, seconds), tx: toRate(link.tx, previous.tx, seconds) }
             : NO_UPLINK_RATE,
           system: stat,
+          systemAt: receivedAt,
         };
       });
     },
@@ -173,6 +187,9 @@ const RuntimeStateProto = stateCreator<RuntimeState>((set) => {
     },
     removeReader: () => {
       set((state) => ({ readers: Math.max(0, state.readers - 1) }));
+    },
+    closeStream: () => {
+      set({ sampledAt: null, systemAt: null });
     },
     reset: () => {
       memoryTick = 0;
@@ -186,6 +203,7 @@ const RuntimeStateProto = stateCreator<RuntimeState>((set) => {
         uplink: NO_UPLINK_RATE,
         sampledAt: null,
         trafficAt: null,
+        systemAt: null,
       });
     },
   };

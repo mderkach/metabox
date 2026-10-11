@@ -1,5 +1,5 @@
 {
   "title": "Node delay",
-  "scale": "scale 0–{{ceiling}} ms",
+  "scale": "scale 0–{{ceiling}} ms, fast up to {{fast}} ms",
   "empty": "No groups with a selected node"
 }

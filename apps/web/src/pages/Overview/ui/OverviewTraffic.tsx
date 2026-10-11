@@ -28,7 +28,6 @@ function toPeak(t: TFunction<'pages/Overview'>, peak: number): string {
 export function OverviewTraffic({ runtime }: { runtime: OverviewRuntime }) {
   const { t } = useTranslation('pages/Overview');
   const uplink = runtime.system?.uplink;
-  const linkRate = runtime.uplink.rx + runtime.uplink.tx;
   // Инкапсуляция прокси добавляет байт поверх исходного трафика, поэтому доля
   // упирается в сотню.
   const proxyShare = Math.min(1, runtime.share.link > 0 ? runtime.share.proxy / runtime.share.link : 0);
@@ -45,7 +44,18 @@ export function OverviewTraffic({ runtime }: { runtime: OverviewRuntime }) {
   return (
     <OverviewSection
       title={t('traffic.title')}
-      note={uplink === undefined ? undefined : t('traffic.note', { link: uplink.name, rate: formatRate(linkRate) })}
+      // Канал — счётчики интерфейса между снимками устройства раз в две
+      // секунды, плитки ниже — трафик самого sing-box за секунду. Это разные
+      // величины: часть канала идёт мимо sing-box.
+      note={
+        uplink === undefined
+          ? undefined
+          : t('traffic.note', {
+              link: uplink.name,
+              down: formatRate(runtime.uplink.rx),
+              up: formatRate(runtime.uplink.tx),
+            })
+      }
     >
       <div className='grid items-start gap-4 xl:grid-cols-[minmax(0,2.6fr)_minmax(0,1fr)]'>
         <Card className={CARD_FLUSH}>

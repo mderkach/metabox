@@ -1,24 +1,37 @@
 {
   "verdict": {
-    "waiting": "waiting for the first data from sing-box",
-    "silent": "sing-box is silent, the numbers are frozen",
+    "waiting": "Waiting for the first data from sing-box",
+    "waitingHint": "The daemon stream has just opened: the numbers will appear in a couple of seconds.",
+    "offline": "No connection to the daemon",
+    "offlineHint": "The numbers below are not updating. The panel reconnects on its own; if it does not, check that the router is reachable over the network.",
+    "silent": "sing-box is silent",
+    "silentHint": "The daemon responds, but no data comes from sing-box: the numbers below are frozen. Look for the cause in the log.",
     "stopped": "sing-box is not running",
-    "nodeDown": "the selected node does not respond",
-    "hot": "the router is hot: {{celsius}} °C",
-    "warm": "the router is warm: {{celsius}} °C",
-    "ok": "everything works"
+    "stoppedHint": "No traffic goes through sing-box. Start it from the sing-box card below; the reason it stopped is in the log.",
+    "nodeDown": "The selected node does not respond",
+    "nodeDownHint": "Traffic through this node does not get through. Pick another node or test the latency again.",
+    "hot": "The router is overheating: {{celsius}} °C",
+    "hotHint": "From {{limit}} °C the board lowers its clock. Check the cooling and the load in the Router section below.",
+    "warm": "The router is warm: {{celsius}} °C",
+    "warmHint": "There is headroom before {{limit}} °C, where the board lowers its clock. The temperature is in the Router section below.",
+    "ok": "Everything works",
+    "okHint": "sing-box is running, data is flowing, the selected nodes are not failing.",
+    "action": {
+      "logs": "Open logs",
+      "proxies": "Open proxies"
+    }
   },
   "traffic": {
     "title": "Traffic",
-    "note": "{{link}} · {{rate}} now",
+    "note": "link {{link}} now: inbound {{down}}, outbound {{up}}",
     "label": "Rate",
     "proxy": "Through sing-box",
     "proxyShare": "{{percent}}% of the link",
     "proxyUnknown": "the link has not been measured yet",
     "uplink": "Uplink",
     "uplinkSince": "over {{age}} since daemon start",
-    "down": "Inbound",
-    "up": "Outbound",
+    "down": "sing-box inbound",
+    "up": "sing-box outbound",
     "peak": "peak this minute {{value}}",
     "noPeak": "no peak yet"
   },
@@ -28,7 +41,6 @@
     "peak": "peak this minute {{count}}",
     "closed": "Closed",
     "keptByPanel": "since the tab opened",
-    "none": "none so far",
     "topNodes": "Top proxy nodes",
     "topNodesEmpty": "Nothing goes through the proxy right now",
     "topSources": "Top devices"
@@ -57,7 +69,6 @@
     "streamDown": "the stream is silent",
     "schema": "Form schema",
     "config": "Config",
-    "clashMode": "Clash API mode",
     "memory": "Daemon memory",
     "singboxHistory": "sing-box process memory over the daemon uptime",
     "daemonHistory": "Daemon memory over its uptime"

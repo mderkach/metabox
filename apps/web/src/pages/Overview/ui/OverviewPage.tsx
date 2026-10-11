@@ -4,21 +4,15 @@ import { useTranslation } from 'react-i18next';
 import { useConnectionStream } from '@entities/Connection';
 import { useRuntimeStream } from '@entities/Daemon';
 import { useLiveRegion } from '@shared/lib/useLiveRegion';
-import { cn } from '@shared/lib/utils';
 import { LiveRegion } from '@shared/ui';
 import { PageHeader } from '@widgets/PageHeader';
 
-import { useOverviewRuntime, useOverviewVerdict, VERDICT_TONE, type VerdictTone } from '../lib';
+import { useOverviewRuntime, useOverviewVerdict } from '../lib';
 import { OverviewConnections } from './OverviewConnections';
 import { OverviewDevice } from './OverviewDevice';
 import { OverviewProcess } from './OverviewProcess';
 import { OverviewTraffic } from './OverviewTraffic';
-
-const VERDICT_DOT: Readonly<Record<VerdictTone, string>> = {
-  [VERDICT_TONE.Ok]: 'bg-signal-ok',
-  [VERDICT_TONE.Warn]: 'bg-signal-warn',
-  [VERDICT_TONE.Bad]: 'bg-signal-bad',
-};
+import { OverviewVerdict } from './OverviewVerdict';
 
 export function OverviewPage() {
   const { t } = useTranslation('pages/Overview');
@@ -26,7 +20,7 @@ export function OverviewPage() {
   useRuntimeStream();
 
   const runtime = useOverviewRuntime();
-  const verdict = useOverviewVerdict(runtime.system, runtime.live, runtime.awaiting);
+  const verdict = useOverviewVerdict(runtime);
 
   // Замер меняет числа на месте: глазами это видно, а скринридеру результат
   // объявляет одна область на экран.
@@ -39,10 +33,7 @@ export function OverviewPage() {
   return (
     <>
       <PageHeader title={t('section.overview', { ns: 'shared' })}>
-        <p className='flex items-center gap-2 text-sm text-muted-foreground'>
-          <span className={cn('size-2 shrink-0 rounded-full', VERDICT_DOT[verdict.tone])} aria-hidden='true' />
-          {verdict.text}
-        </p>
+        <OverviewVerdict verdict={verdict} />
       </PageHeader>
 
       <LiveRegion message={message} />

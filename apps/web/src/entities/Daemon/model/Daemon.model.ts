@@ -81,6 +81,16 @@ export interface ServiceState {
   lastErrorCode?: ServiceErrorCode;
 }
 
+/**
+ * Состояние службы, которое демон прочитал, а не подставил. `null` — состояние
+ * неизвестно: при отказе чтения демон отдаёт `stopped` с кодом причины, и
+ * выдавать такой ответ за остановку нельзя — одно неудачное чтение procd
+ * показало бы работающий sing-box лежащим.
+ */
+export function toConfirmedStatus(state: ServiceState): ServiceStatus | null {
+  return state.lastErrorCode === undefined ? state.status : null;
+}
+
 /** Действия над сервисом: `POST /api/service/{action}`. */
 export const SERVICE_ACTION = {
   Start: 'start',

@@ -19,6 +19,20 @@ describe('ConnectionSummaryBars', () => {
     expect(screen.getByText('4.0 кБ')).toBeInTheDocument();
   });
 
+  // Длина столбца и ось — объём, поэтому подпись строки начинается с него, а
+  // скорость или число соединений идут после.
+  it('начинает подпись строки с величины шкалы и её доли', () => {
+    render(
+      <ConnectionSummaryBars
+        bars={[{ key: 'proxy', label: 'через прокси', value: 3072, caption: '2 соединения', tone: 'bg-primary' }]}
+        empty='пусто'
+        format={formatBytes}
+      />
+    );
+
+    expect(screen.getByText('3.0 кБ · 100% · 2 соединения')).toBeInTheDocument();
+  });
+
   it('без строк показывает подпись пустого ряда вместо шкалы', () => {
     render(<ConnectionSummaryBars bars={[]} empty='пусто' format={formatBytes} />);
 

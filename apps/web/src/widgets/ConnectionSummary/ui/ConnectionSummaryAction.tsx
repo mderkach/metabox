@@ -2,7 +2,7 @@ import type { ParseKeys } from 'i18next';
 import { useTranslation } from 'react-i18next';
 
 import { ROUTE_KIND, type ConnectionShare, type RouteKind } from '@entities/Connection';
-import { formatBytes, formatRate } from '@shared/lib/format';
+import { formatBytes } from '@shared/lib/format';
 
 import { ConnectionSummaryBars, type SummaryBar } from './ConnectionSummaryBars';
 import { ConnectionSummaryPanel } from './ConnectionSummaryPanel';
@@ -31,7 +31,7 @@ export function ConnectionSummaryAction({ shares }: { shares: ConnectionShare<Ro
         key: view.kind,
         label: t(view.label, { ns: 'shared' }),
         value: share.volume,
-        caption: `${t('count.connection', { ns: 'shared', count: share.count })} · ${formatRate(share.rate)} · ${formatBytes(share.volume)}`,
+        caption: t('count.connection', { ns: 'shared', count: share.count }),
         tone: view.tone,
       },
     ];

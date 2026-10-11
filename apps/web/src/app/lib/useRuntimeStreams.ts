@@ -11,6 +11,7 @@ import {
   listenSystem,
   listenTraffic,
   RuntimeState,
+  RuntimeStore,
 } from '@entities/Daemon';
 import { watchSequence } from '@shared/api';
 
@@ -78,6 +79,7 @@ export function useRuntimeStreams(): void {
 
         source.removeEventListener('open', onStreamOpen);
         source.close();
+        RuntimeStore.getState().closeStream();
       };
     },
     [active, queryClient]

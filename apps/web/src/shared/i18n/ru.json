@@ -236,13 +236,11 @@
     "unknown": "Что-то пошло не так"
   },
   "clashMode": {
-    "label": "Режим маршрутизации",
+    "label": "Режим Clash API",
     "rule": "по правилам",
     "global": "глобально",
     "direct": "напрямую",
-    "unavailable": "sing-box не отвечает — режим не прочитан",
-    "short": "Режим",
-    "pending": "режим читается"
+    "unavailable": "режим не прочитан: {{reason}}"
   },
   "liveRegion": {
     "label": "Результат действия"

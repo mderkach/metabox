@@ -1,4 +1,5 @@
 import { renderWithRouter } from '@test/renderWithRouter';
+import { selectOption } from '@test/selectOption';
 import { server } from '@test/server';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -12,7 +13,9 @@ import { DAEMON_ENDPOINT, RuntimeStore, SCHEMA_VERSION } from '@entities/Daemon'
 import {
   CLASH_CONFIGS_FIXTURE,
   DAEMON_STATUS_FIXTURE,
+  SERVICE_FAILED_FIXTURE,
   SERVICE_RUNNING_FIXTURE,
+  SERVICE_UNREAD_FIXTURE,
   SYSTEM_FIXTURE,
   TRAFFIC_HISTORY_FIXTURE,
 } from '@entities/Daemon/__tests__/Daemon.fixture';
@@ -41,6 +44,9 @@ function serveStatus(configPath?: string, singboxVersion = SCHEMA_VERSION) {
     http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(MINIMAL_CONFIG))
   );
 }
+
+/** Дальше порога обрыва потока на экране обзора. */
+const STALE_MS = 9000;
 
 const MINIMAL_CONFIG = JSON.stringify({ outbounds: [{ type: 'direct', tag: 'direct' }] }, null, 2);
 
@@ -184,7 +190,101 @@ describe('экран обзора', () => {
   it('до первых данных рантайма говорит, что ждёт их', async () => {
     renderWithRouter(OverviewPage);
 
-    expect(await screen.findByText('ждём первые данные от sing-box')).toBeInTheDocument();
+    expect(await screen.findByText('Ждём первые данные от sing-box')).toBeInTheDocument();
+  });
+
+  // Демон отдаёт `stopped` и тогда, когда procd просто не ответил: такой ответ
+  // помечен кодом причины, и остановкой его считать нельзя.
+  it('непрочитанное состояние службы не выдаёт за «не работает»', async () => {
+    server.use(http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_UNREAD_FIXTURE)));
+    RuntimeStore.getState().pushTraffic({ up: 8500, down: 43_400 });
+
+    renderWithRouter(OverviewPage);
+
+    expect(await screen.findByText('Всё работает')).toBeInTheDocument();
+    expect(screen.queryByText('sing-box не работает')).not.toBeInTheDocument();
+  });
+
+  it('подтверждённое падение службы называет вердиктом', async () => {
+    server.use(http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_FAILED_FIXTURE)));
+    RuntimeStore.getState().pushTraffic({ up: 8500, down: 43_400 });
+
+    renderWithRouter(OverviewPage);
+
+    expect(await screen.findByText('sing-box не работает')).toBeInTheDocument();
+  });
+
+  // Поток закрывается, пока экраны рантайма не открыты. Кадр из прошлого
+  // подключения о живости нового ничего не говорит.
+  it('после возврата на экран ждёт первые данные, а не объявляет поток замершим', async () => {
+    RuntimeStore.getState().pushTraffic({ up: 8500, down: 43_400 });
+    RuntimeStore.getState().closeStream();
+
+    renderWithRouter(OverviewPage);
+
+    expect(await screen.findByText('Ждём первые данные от sing-box')).toBeInTheDocument();
+    expect(screen.queryByText('sing-box молчит')).not.toBeInTheDocument();
+  });
+
+  // Замер трафика при живых снимках устройства — молчит sing-box, а не связь:
+  // снимки шлёт сам демон.
+  it('трафик замер, а снимки устройства идут — тревога о sing-box и ссылка на логи', async () => {
+    RuntimeStore.getState().pushTraffic({ up: 8500, down: 43_400 });
+    RuntimeStore.getState().pushSystem({ ...SYSTEM_FIXTURE, thermal: [{ name: 'cpu-thermal', celsius: 42.5 }] });
+    RuntimeStore.setState({ sampledAt: Date.now() - STALE_MS });
+
+    renderWithRouter(OverviewPage);
+
+    expect(await screen.findByText('sing-box молчит')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Открыть логи' })).toHaveAttribute('href', '/logs');
+  });
+
+  // Замерли и трафик, и снимки устройства: оборвалась связь панели с демоном,
+  // о самом роутере это ничего не говорит.
+  it('замерли оба потока — нейтрально говорит, что связи с демоном нет', async () => {
+    RuntimeStore.getState().pushTraffic({ up: 8500, down: 43_400 });
+    RuntimeStore.setState({ sampledAt: Date.now() - STALE_MS });
+
+    renderWithRouter(OverviewPage);
+
+    expect(await screen.findByText('Нет связи с демоном')).toBeInTheDocument();
+    expect(screen.queryByText('sing-box молчит')).not.toBeInTheDocument();
+  });
+
+  it('при остановленной службе советует, где искать причину', async () => {
+    server.use(http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_FAILED_FIXTURE)));
+    RuntimeStore.getState().pushTraffic({ up: 8500, down: 43_400 });
+
+    renderWithRouter(OverviewPage);
+
+    expect(await screen.findByRole('link', { name: 'Открыть логи' })).toHaveAttribute('href', '/logs');
+  });
+
+  // Закрытые копит вкладка, а не демон: ноль сразу после открытия — начало
+  // счёта, и подпись говорит об этом так же, как при ненулевом счётчике.
+  it('подписывает закрытые соединения счётом с открытия вкладки и при нуле', async () => {
+    ConnectionStore.getState().apply(CONNECTIONS_FIXTURE);
+
+    renderWithRouter(OverviewPage);
+
+    const counters = within(await screen.findByRole('list', { name: 'Счётчики соединений' }));
+
+    expect(counters.getByText('с открытия вкладки')).toBeInTheDocument();
+  });
+
+  // Канал — весь интерфейс наружу, плитки — только sing-box: числа законно
+  // расходятся, и подпись канала не должна читаться их суммой или копией.
+  it('подписывает скорость канала по направлениям и отдельно от плиток sing-box', async () => {
+    RuntimeStore.getState().pushTraffic({ up: 8500, down: 43_400 });
+    RuntimeStore.getState().pushSystem({ ...SYSTEM_FIXTURE, thermal: [{ name: 'cpu-thermal', celsius: 42.5 }] });
+    RuntimeStore.setState({ uplink: { rx: 2048, tx: 1024 } });
+
+    renderWithRouter(OverviewPage);
+
+    expect(
+      await screen.findByText('канал pppoe-wan сейчас: входящий 2.0 кБ/с, исходящий 1.0 кБ/с', { exact: false })
+    ).toBeInTheDocument();
+    expect(screen.getByText('sing-box: входящий')).toBeInTheDocument();
   });
 
   it('показывает доступность демона и живость потока', async () => {
@@ -199,6 +299,26 @@ describe('экран обзора', () => {
 
     expect(await screen.findByText('по правилам')).toBeInTheDocument();
     expect(screen.queryByText('Rule')).not.toBeInTheDocument();
+  });
+
+  it('переключает режим Clash API запросом в рантайм', async () => {
+    const patches: unknown[] = [];
+    server.use(
+      http.patch(DAEMON_ENDPOINT.clashConfigs(), async ({ request }) => {
+        patches.push(await request.json());
+
+        return new HttpResponse(null, { status: 204 });
+      })
+    );
+    const user = userEvent.setup();
+
+    renderWithRouter(OverviewPage);
+
+    await selectOption(user, await screen.findByRole('combobox', { name: 'Режим Clash API: по правилам' }), 'напрямую');
+
+    await waitFor(() => {
+      expect(patches).toEqual([{ mode: 'Direct' }]);
+    });
   });
 
   it('переводит и другие значения режима, не только Rule', async () => {

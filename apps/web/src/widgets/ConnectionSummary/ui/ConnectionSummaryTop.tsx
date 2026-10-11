@@ -7,10 +7,10 @@ import { ConnectionSummaryBars, type SummaryBar } from './ConnectionSummaryBars'
 import { ConnectionSummaryPanel } from './ConnectionSummaryPanel';
 
 /**
- * Топ по накопленному объёму, а не по мгновенной скорости: скорость гуляет
- * каждую секунду, и строки менялись бы местами под взглядом. Длина полосы и
- * порядок — объём, живая скорость — в подписи. Скорость считает панель:
- * рантайм отдаёт только накопленные счётчики.
+ * Топ по накопленному объёму живых соединений, а не по мгновенной скорости:
+ * скорость гуляет каждую секунду, и строки менялись бы местами под взглядом.
+ * Длина полосы, порядок и первое число подписи — объём, живая скорость — после
+ * него. Скорость считает панель: рантайм отдаёт только накопленные счётчики.
  */
 export function ConnectionSummaryTop({
   title,
@@ -32,10 +32,7 @@ export function ConnectionSummaryTop({
     key: share.key,
     label: label === undefined ? share.key : label(share.key),
     value: share.volume,
-    caption: `${share.rate > 0 ? formatRate(share.rate) : t('idle')} · ${t('count.connection', {
-      ns: 'shared',
-      count: share.count,
-    })}`,
+    caption: share.rate > 0 ? formatRate(share.rate) : t('idle'),
     tone: 'bg-primary',
   }));
 

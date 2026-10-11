@@ -41,7 +41,9 @@ export function OverviewConnections({
             <OverviewTile
               label={t('connections.closed')}
               value={runtime.connectionsAwaiting ? null : String(runtime.counts.closed)}
-              context={runtime.counts.closed > 0 ? t('connections.keptByPanel') : t('connections.none')}
+              // Закрытые копит вкладка: источник отдаёт только живые, поэтому
+              // ноль сразу после открытия — не поломка, а начало счёта.
+              context={runtime.connectionsAwaiting ? null : t('connections.keptByPanel')}
             />
           </ul>
         </Card>

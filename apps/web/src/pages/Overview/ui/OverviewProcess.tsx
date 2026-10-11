@@ -1,8 +1,7 @@
-import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 
-import { SCHEMA_VERSION, useClashConfigs, useConfigPath, useDaemonStatus, useTrafficHistory } from '@entities/Daemon';
-import { toClashModeLabel } from '@features/Daemon/DaemonMode';
+import { SCHEMA_VERSION, useConfigPath, useDaemonStatus, useTrafficHistory } from '@entities/Daemon';
+import { DaemonModeSwitch } from '@features/Daemon/DaemonMode';
 import { formatBytes } from '@shared/lib/format';
 import { cn } from '@shared/lib/utils';
 import { Card, CardContent, CardHeader, PENDING_REVEAL, SECTION_LABEL, Skeleton } from '@shared/ui';
@@ -23,8 +22,6 @@ export function OverviewProcess({ runtime }: { runtime: OverviewRuntime }) {
   const { t } = useTranslation('pages/Overview');
   const status = useDaemonStatus();
   const configPath = useConfigPath();
-  const clash = useClashConfigs();
-  const { t: tShared } = useTranslation('shared');
   const system = runtime.system;
   const history = useTrafficHistory();
   const points = history.data?.device ?? [];
@@ -74,7 +71,12 @@ export function OverviewProcess({ runtime }: { runtime: OverviewRuntime }) {
               />
               <ProcessRow label={t('process.schema')} value={SCHEMA_VERSION} mono />
               <ProcessRow label={t('process.config')} value={configPath} mono />
-              <ProcessRow label={t('process.clashMode')} value={toClashMode(tShared, clash)} />
+              <div className='flex items-center justify-between gap-4 border-t border-border py-1 text-sm'>
+                <dt className='text-muted-foreground'>{t('clashMode.label', { ns: 'shared' })}</dt>
+                <dd className='min-w-0'>
+                  <DaemonModeSwitch />
+                </dd>
+              </div>
               {system !== null && (
                 <ProcessRow
                   label={t('process.memory')}
@@ -96,15 +98,6 @@ export function OverviewProcess({ runtime }: { runtime: OverviewRuntime }) {
       </div>
     </OverviewSection>
   );
-}
-
-/** `null` — ответа ещё нет; прочерк — режим не прочитан. */
-function toClashMode(t: TFunction<'shared'>, clash: ReturnType<typeof useClashConfigs>): string | null {
-  if (clash.isPending) {
-    return null;
-  }
-
-  return clash.data === undefined ? '—' : toClashModeLabel(t, clash.data.mode);
 }
 
 /** `null` вместо значения — ответа ещё нет: скелетон, а не прочерк. */

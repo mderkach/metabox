@@ -3,9 +3,12 @@
     "running": "running",
     "stopped": "stopped",
     "failed": "crashed",
-    "foreign": "started by another service"
+    "foreign": "started by another service",
+    "unknown": "state unknown"
   },
   "uptime": {
+    "underMinute": "under a minute",
+    "minutes": "{{minutes}} min",
     "hours": "{{hours}} h",
     "days": "{{days}} d {{hours}} h"
   },

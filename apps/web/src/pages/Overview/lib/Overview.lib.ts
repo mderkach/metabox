@@ -1,3 +1,4 @@
+import type { LinkProps } from '@tanstack/react-router';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -14,6 +15,8 @@ import {
   TRAFFIC_WINDOW_POINTS,
   RuntimeStore,
   SERVICE_STATUS,
+  toConfirmedStatus,
+  useDaemonReachable,
   useServiceState,
   useTrafficHistory,
   useTrafficNow,
@@ -63,12 +66,20 @@ export interface OverviewRuntime {
   live: boolean;
   /** Ни одного кадра ещё не было: экран показывает ожидание, а не нули. */
   awaiting: boolean;
+  /** Снимки устройства приходят прямо сейчас: их шлёт демон и без sing-box. */
+  daemonLive: boolean;
+  /** Экран открыт дольше порога обрыва, а первого кадра трафика так и нет. */
+  overdue: boolean;
   /** Когда пришёл последний кадр трафика, миллисекунды эпохи. */
   sampledAt: number | null;
   /** Когда получена последняя точка трафика: от неё считается время графика. */
   trafficAt: number | null;
   /** Снимка соединений ещё не было: счётчики показывают загрузку, а не ноль. */
   connectionsAwaiting: boolean;
+}
+
+function isFresh(at: number | null, checkedAt: number): boolean {
+  return at !== null && Math.max(checkedAt, at) - at < STALE_AFTER;
 }
 
 /**
@@ -83,6 +94,7 @@ export function useOverviewRuntime(): OverviewRuntime {
   const sampledAt = RuntimeState.use.sampledAt();
   const trafficAt = RuntimeState.use.trafficAt();
   const system = RuntimeState.use.system();
+  const systemAt = RuntimeState.use.systemAt();
   const uplink = RuntimeState.use.uplink();
   const totals = ConnectionState.use.totals();
   const summary = ConnectionState.use.summary();
@@ -112,6 +124,7 @@ export function useOverviewRuntime(): OverviewRuntime {
   // Обрыв потока сам о себе не сообщает: кадры просто перестают приходить, и
   // без своего тика экран навсегда остался бы с последним «живым» состоянием.
   const [checkedAt, setCheckedAt] = useState(() => Date.now());
+  const [openedAt] = useState(() => Date.now());
 
   useEffect(function watchFreshness() {
     const timer = setInterval(function checkFreshness() {
@@ -149,8 +162,10 @@ export function useOverviewRuntime(): OverviewRuntime {
     historyAt,
     historyPeak,
     counts,
-    live: sampledAt !== null && Math.max(checkedAt, sampledAt) - sampledAt < STALE_AFTER,
+    live: isFresh(sampledAt, checkedAt),
     awaiting: sampledAt === null,
+    daemonLive: isFresh(systemAt, checkedAt),
+    overdue: sampledAt === null && checkedAt - openedAt >= STALE_AFTER,
     sampledAt,
     trafficAt,
     connectionsAwaiting: connectionsAt === null,
@@ -163,6 +178,8 @@ const WARM_CELSIUS = 70;
 
 export const VERDICT_TONE = {
   Ok: 'ok',
+  /** Панель ждёт данные или переподключается: о самом роутере это ничего не говорит. */
+  Idle: 'idle',
   Warn: 'warn',
   Bad: 'bad',
 } as const;
@@ -171,30 +188,49 @@ export type VerdictTone = (typeof VERDICT_TONE)[keyof typeof VERDICT_TONE];
 
 export interface Verdict {
   tone: VerdictTone;
-  text: string;
+  title: string;
+  /** Что это значит и что делать. */
+  hint: string;
+  /** Куда идти разбираться; `null` — разбираться негде или незачем. */
+  action: { to: LinkProps['to']; label: string } | null;
 }
 
 /**
- * Одна строка ответа на вопрос, ради которого экран открывают: всё ли в
- * порядке. Собирается из сигналов, которые экран и так показывает, — своего
- * источника у неё нет. Порядок значим: сначала то, что делает остальные числа
- * недостоверными.
+ * Ответ на вопрос, ради которого экран открывают: всё ли в порядке. Собирается
+ * из сигналов, которые экран и так показывает, — своего источника у него нет.
+ *
+ * Порядок значим: сначала то, что делает остальные числа недостоверными. Обрыв
+ * связи панели с демоном — нейтральный тон: роутер при этом может работать
+ * исправно. Тревога — только то, что подтвердил демон: служба остановлена или
+ * демон шлёт снимки устройства, а трафика от sing-box нет.
  */
-export function useOverviewVerdict(system: SystemStat | null, live: boolean, awaiting: boolean): Verdict {
+export function useOverviewVerdict(
+  runtime: Pick<OverviewRuntime, 'system' | 'live' | 'awaiting' | 'daemonLive' | 'overdue'>
+): Verdict {
   const { t } = useTranslation('pages/Overview');
+  const reachable = useDaemonReachable();
   const service = useServiceState();
   const proxies = useProxies();
+  const logs = { to: '/logs', label: t('verdict.action.logs') } as const;
 
-  if (awaiting) {
-    return { tone: VERDICT_TONE.Warn, text: t('verdict.waiting') };
+  if (!reachable) {
+    return { tone: VERDICT_TONE.Idle, title: t('verdict.offline'), hint: t('verdict.offlineHint'), action: null };
   }
 
-  if (!live) {
-    return { tone: VERDICT_TONE.Bad, text: t('verdict.silent') };
+  const status = service.data === undefined ? null : toConfirmedStatus(service.data);
+
+  if (status !== null && status !== SERVICE_STATUS.Running) {
+    return { tone: VERDICT_TONE.Bad, title: t('verdict.stopped'), hint: t('verdict.stoppedHint'), action: logs };
   }
 
-  if (service.data !== undefined && service.data.status !== SERVICE_STATUS.Running) {
-    return { tone: VERDICT_TONE.Bad, text: t('verdict.stopped') };
+  if (!runtime.live) {
+    if (runtime.awaiting && !runtime.overdue) {
+      return { tone: VERDICT_TONE.Idle, title: t('verdict.waiting'), hint: t('verdict.waitingHint'), action: null };
+    }
+
+    return runtime.daemonLive
+      ? { tone: VERDICT_TONE.Bad, title: t('verdict.silent'), hint: t('verdict.silentHint'), action: logs }
+      : { tone: VERDICT_TONE.Idle, title: t('verdict.offline'), hint: t('verdict.offlineHint'), action: null };
   }
 
   const failed = (proxies.data?.groups ?? []).some((group) =>
@@ -202,18 +238,35 @@ export function useOverviewVerdict(system: SystemStat | null, live: boolean, awa
   );
 
   if (failed) {
-    return { tone: VERDICT_TONE.Warn, text: t('verdict.nodeDown') };
+    return {
+      tone: VERDICT_TONE.Warn,
+      title: t('verdict.nodeDown'),
+      hint: t('verdict.nodeDownHint'),
+      action: { to: '/proxies', label: t('verdict.action.proxies') },
+    };
   }
 
+  const system = runtime.system;
   const hottest = system === null ? 0 : system.thermal.reduce((max, zone) => Math.max(max, zone.celsius), 0);
+  const celsius = Math.round(hottest);
 
   if (hottest >= HOT_CELSIUS) {
-    return { tone: VERDICT_TONE.Bad, text: t('verdict.hot', { celsius: Math.round(hottest) }) };
+    return {
+      tone: VERDICT_TONE.Bad,
+      title: t('verdict.hot', { celsius }),
+      hint: t('verdict.hotHint', { limit: HOT_CELSIUS }),
+      action: null,
+    };
   }
 
   if (hottest >= WARM_CELSIUS) {
-    return { tone: VERDICT_TONE.Warn, text: t('verdict.warm', { celsius: Math.round(hottest) }) };
+    return {
+      tone: VERDICT_TONE.Warn,
+      title: t('verdict.warm', { celsius }),
+      hint: t('verdict.warmHint', { limit: HOT_CELSIUS }),
+      action: null,
+    };
   }
 
-  return { tone: VERDICT_TONE.Ok, text: t('verdict.ok') };
+  return { tone: VERDICT_TONE.Ok, title: t('verdict.ok'), hint: t('verdict.okHint'), action: null };
 }

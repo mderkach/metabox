@@ -1,10 +1,11 @@
 import type { ParseKeys, TFunction } from 'i18next';
-import { CircleAlert } from 'lucide-react';
+import { CircleAlert, Info } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {
   SERVICE_ACTION,
+  toConfirmedStatus,
   useServiceState,
   type ServiceErrorCode,
   type ServiceState,
@@ -13,7 +14,7 @@ import {
 import { useServiceAction } from '@features/Daemon/DaemonControl';
 import { failureText } from '@shared/api';
 import { formatBytes } from '@shared/lib/format';
-import { HOURS_IN_DAY, SECONDS_IN_HOUR } from '@shared/lib/time';
+import { HOURS_IN_DAY, SECONDS_IN_HOUR, SECONDS_IN_MINUTE } from '@shared/lib/time';
 import { cn } from '@shared/lib/utils';
 import {
   Alert,
@@ -27,6 +28,7 @@ import {
   Separator,
 } from '@shared/ui';
 
+import { useLastConfirmedService } from '../lib';
 import { DaemonServiceStop } from './DaemonServiceStop';
 
 const STATUS_LABEL = {
@@ -48,7 +50,16 @@ const REASON_KEY: Readonly<Record<ServiceErrorCode, ParseKeys<'widgets/Daemon/Da
   service_instance_ambiguous: 'reason.service_instance_ambiguous',
 };
 
+/** Первый час — минутами: «0 ч» у только что запущенного процесса читается как поломка. */
 function formatUptime(t: TFunction<'widgets/Daemon/DaemonService'>, seconds: number): string {
+  if (seconds < SECONDS_IN_MINUTE) {
+    return t('uptime.underMinute');
+  }
+
+  if (seconds < SECONDS_IN_HOUR) {
+    return t('uptime.minutes', { minutes: Math.floor(seconds / SECONDS_IN_MINUTE) });
+  }
+
   const hours = Math.floor(seconds / SECONDS_IN_HOUR);
 
   return hours >= HOURS_IN_DAY
@@ -66,6 +77,14 @@ function formatUptime(t: TFunction<'widgets/Daemon/DaemonService'>, seconds: num
  * (`managed`). Чужой процесс ими не управляется: на устройстве маршрутизацию
  * может вести другой пакет, и «Запустить» подняло бы вторую копию sing-box
  * рядом с работающей.
+ *
+ * Непрочитанное состояние — не остановка. Карточка показывает последнее
+ * подтверждённое состояние, а причину — нейтральной пометкой. «Перезапустить»
+ * и «Остановить» остаются, если подтверждено, что процессом владеет служба
+ * демона: рестарт через procd поднимает и остановленную службу. «Запустить»
+ * при неизвестном состоянии не предлагается — оно говорило бы, что sing-box
+ * лежит. Без подтверждённого состояния команд нет: чья служба ведёт процесс,
+ * неизвестно, а рестарт своей при чужом процессе поднял бы вторую копию.
  */
 export function DaemonService({
   process,
@@ -85,6 +104,7 @@ export function DaemonService({
   const { t } = useTranslation('widgets/Daemon/DaemonService');
   const service = useServiceState();
   const action = useServiceAction();
+  const shown = useLastConfirmedService(service.data);
 
   if (service.isError) {
     return (
@@ -108,19 +128,25 @@ export function DaemonService({
   }
 
   const state = service.data;
-  const running = state.status === 'running';
+  const known = toConfirmedStatus(state) !== null;
+  const status = shown?.status ?? null;
+  const managed = shown?.managed ?? false;
+  const running = status === 'running';
 
   return (
     <Card>
       <CardHeader className='flex flex-row flex-wrap items-center gap-2.5'>
         <h3 className={SECTION_LABEL}>sing-box</h3>
         <p className='flex items-center gap-1.5 text-xs'>
-          <span aria-hidden='true' className={cn('size-2 shrink-0 rounded-full', STATUS_TONE[state.status])} />
-          {t(STATUS_LABEL[state.status])}
+          <span
+            aria-hidden='true'
+            className={cn('size-2 shrink-0 rounded-full', status === null ? 'bg-signal-idle' : STATUS_TONE[status])}
+          />
+          {t(status === null ? 'status.unknown' : STATUS_LABEL[status])}
         </p>
-        {running && !state.managed && <span className='text-xs text-muted-foreground'>{t('status.foreign')}</span>}
+        {running && !managed && <span className='text-xs text-muted-foreground'>{t('status.foreign')}</span>}
         <span className='grow' />
-        {state.managed && (
+        {managed && (
           <Button
             variant='outline'
             size='sm'
@@ -132,7 +158,7 @@ export function DaemonService({
             {t('action.restart')}
           </Button>
         )}
-        {state.managed && (
+        {managed && (
           <>
             {/* Остановка обрывает маршрутизацию на роутере целиком, перезапуск
                 нет. Одинаковыми кнопками подряд эти два действия не различить. */}
@@ -145,7 +171,7 @@ export function DaemonService({
             />
           </>
         )}
-        {!running && (
+        {known && !running && (
           <Button
             variant='outline'
             size='sm'
@@ -161,7 +187,10 @@ export function DaemonService({
 
       <CardContent className='flex flex-col gap-3'>
         <dl className='text-sm'>
-          {state.managed && <Row label={t('stat.uptime', { ns: 'shared' })} value={formatUptime(t, state.uptime)} />}
+          {/* Ноль демон отдаёт, когда возраст процесса узнать не удалось. */}
+          {known && state.managed && state.uptime > 0 && (
+            <Row label={t('stat.uptime', { ns: 'shared' })} value={formatUptime(t, state.uptime)} />
+          )}
           <Row label={t('row.binary')} value={state.binary} mono />
           {process !== undefined && (
             <Row label={t('row.processMemory')} value={`${formatBytes(process.rss)} · pid ${String(process.pid)}`} />
@@ -171,12 +200,22 @@ export function DaemonService({
 
         {memoryTrend}
 
-        {state.status !== 'running' && state.lastError !== undefined && (
+        {state.lastErrorCode !== undefined && (
+          <Alert>
+            <Info />
+            <AlertTitle>{t(REASON_KEY[state.lastErrorCode])}</AlertTitle>
+            {state.lastError !== undefined && (
+              <AlertDescription>
+                <pre className='font-mono text-xs whitespace-pre-wrap'>{state.lastError}</pre>
+              </AlertDescription>
+            )}
+          </Alert>
+        )}
+
+        {known && !running && state.lastError !== undefined && (
           <Alert variant='destructive'>
             <CircleAlert />
-            <AlertTitle>
-              {state.lastErrorCode === undefined ? t('crashed') : t(REASON_KEY[state.lastErrorCode])}
-            </AlertTitle>
+            <AlertTitle>{t('crashed')}</AlertTitle>
             <AlertDescription>
               <pre className='font-mono text-xs whitespace-pre-wrap'>{state.lastError}</pre>
             </AlertDescription>

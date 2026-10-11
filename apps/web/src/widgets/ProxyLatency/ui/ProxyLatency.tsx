@@ -1,7 +1,7 @@
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 
-import { DELAY_STATE, DELAY_TIMEOUT, useProxies, type ProxyGroup, type ProxyNode } from '@entities/Proxy';
+import { DELAY_FAST, DELAY_STATE, DELAY_TIMEOUT, useProxies, type ProxyGroup, type ProxyNode } from '@entities/Proxy';
 import { useTestProxyDelay } from '@features/Proxy/ProxyDelay';
 import { toShare, toValueScale } from '@shared/lib/chart';
 import { cn } from '@shared/lib/utils';
@@ -29,12 +29,12 @@ const DELAY_TONE: Readonly<Record<string, string>> = {
 
 const PERCENT = 100;
 
-/** Потолок абсолютной шкалы, миллисекунды: втрое выше порога «быстрый». */
-const SCALE_CEILING = 900;
-
 /** Деления по трети потолка: первое из них — порог «быстрый». */
 const SCALE_INTERVALS = 3;
-const SCALE = toValueScale(SCALE_CEILING, [SCALE_CEILING / SCALE_INTERVALS]);
+
+/** Потолок абсолютной шкалы, миллисекунды: втрое выше порога «быстрый». */
+const SCALE_CEILING = DELAY_FAST * SCALE_INTERVALS;
+const SCALE = toValueScale(SCALE_CEILING, [DELAY_FAST]);
 
 interface GroupDelay {
   group: string;
@@ -94,7 +94,7 @@ export function ProxyLatency({
         <h3 className={SECTION_LABEL}>{t('title')}</h3>
         {/* Потолок здесь постоянный, а у соседних панелей сводки идёт за
             лидером ряда: без названной шкалы длины читались бы одинаково. */}
-        <p className='text-xs text-muted-foreground'>{t('scale', { ceiling: SCALE_CEILING })}</p>
+        <p className='text-xs text-muted-foreground'>{t('scale', { ceiling: SCALE_CEILING, fast: DELAY_FAST })}</p>
         <span className='grow' />
         <Button
           variant='outline'

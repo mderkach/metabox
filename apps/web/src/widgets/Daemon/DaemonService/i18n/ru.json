@@ -3,9 +3,12 @@
     "running": "работает",
     "stopped": "остановлен",
     "failed": "упал",
-    "foreign": "поднят другой службой"
+    "foreign": "поднят другой службой",
+    "unknown": "состояние неизвестно"
   },
   "uptime": {
+    "underMinute": "меньше минуты",
+    "minutes": "{{minutes}} мин",
     "hours": "{{hours}} ч",
     "days": "{{days}} д {{hours}} ч"
   },

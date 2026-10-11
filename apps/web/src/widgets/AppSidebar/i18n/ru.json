@@ -22,7 +22,9 @@
     "sections": "Разделы"
   },
   "short": {
-    "config": "Конфиг"
+    "config": "Конфиг",
+    "connections": "Связи",
+    "devices": "Клиенты"
   },
   "drift": {
     "newer": "формы отстают от sing-box",

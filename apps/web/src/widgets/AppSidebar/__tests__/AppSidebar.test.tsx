@@ -6,10 +6,10 @@ import { describe, expect, it } from 'vitest';
 
 import { DAEMON_ENDPOINT } from '@entities/Daemon';
 import {
-  CLASH_CONFIGS_FIXTURE,
   DAEMON_STATUS_FIXTURE,
   SERVICE_DRIFT_FIXTURE,
   SERVICE_RUNNING_FIXTURE,
+  SERVICE_UNREAD_FIXTURE,
 } from '@entities/Daemon/__tests__/Daemon.fixture';
 
 import { AppSidebar } from '../ui/AppSidebar';
@@ -21,8 +21,7 @@ describe('AppSidebar', () => {
   it('демон не отвечает — точка сервиса показывает «неизвестно», а не последнее удачное значение', async () => {
     server.use(
       http.get(DAEMON_ENDPOINT.status(), () => new HttpResponse(null, { status: 503 })),
-      http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE)),
-      http.get(DAEMON_ENDPOINT.clashConfigs(), () => HttpResponse.json(CLASH_CONFIGS_FIXTURE))
+      http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE))
     );
 
     renderWithRouter(AppSidebar);
@@ -35,8 +34,7 @@ describe('AppSidebar', () => {
   it('расхождение sing-box со схемой форм помечено в подвале', async () => {
     server.use(
       http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE)),
-      http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_DRIFT_FIXTURE)),
-      http.get(DAEMON_ENDPOINT.clashConfigs(), () => HttpResponse.json(CLASH_CONFIGS_FIXTURE))
+      http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_DRIFT_FIXTURE))
     );
 
     renderWithRouter(AppSidebar);
@@ -47,8 +45,7 @@ describe('AppSidebar', () => {
   it('демон отвечает — точка сервиса показывает состояние службы', async () => {
     server.use(
       http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE)),
-      http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE)),
-      http.get(DAEMON_ENDPOINT.clashConfigs(), () => HttpResponse.json(CLASH_CONFIGS_FIXTURE))
+      http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE))
     );
 
     renderWithRouter(AppSidebar);
@@ -56,15 +53,29 @@ describe('AppSidebar', () => {
     expect(await screen.findByText('sing-box работает')).toBeInTheDocument();
   });
 
-  it('показывает режим маршрутизации в оболочке, а не только на обзоре', async () => {
+  // Демон, не прочитавший procd, отдаёт `stopped` с кодом причины: это не остановка.
+  it('непрочитанное состояние службы показывает «неизвестно», а не «остановлен»', async () => {
     server.use(
       http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE)),
-      http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE)),
-      http.get(DAEMON_ENDPOINT.clashConfigs(), () => HttpResponse.json(CLASH_CONFIGS_FIXTURE))
+      http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_UNREAD_FIXTURE))
     );
 
     renderWithRouter(AppSidebar);
 
-    expect(await screen.findByRole('combobox', { name: 'Режим маршрутизации: по правилам' })).toBeEnabled();
+    expect(await screen.findByText('состояние sing-box неизвестно')).toBeInTheDocument();
+    expect(screen.queryByText('sing-box остановлен')).not.toBeInTheDocument();
+  });
+
+  // Режим Clash API переключается на «Обзоре», оболочка его не показывает.
+  it('режима Clash API в подвале нет', async () => {
+    server.use(
+      http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE)),
+      http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE))
+    );
+
+    renderWithRouter(AppSidebar);
+
+    expect(await screen.findByText('sing-box работает')).toBeInTheDocument();
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   });
 });

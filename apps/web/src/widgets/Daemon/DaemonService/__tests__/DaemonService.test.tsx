@@ -1,12 +1,13 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderWithQuery } from '@test/renderWithQuery';
 import { server } from '@test/server';
-import { screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import i18next from 'i18next';
 import { http, HttpResponse } from 'msw';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { DAEMON_ENDPOINT } from '@entities/Daemon';
+import { DAEMON_ENDPOINT, getServiceStateOptions } from '@entities/Daemon';
 import {
   SERVICE_FAILED_FIXTURE,
   SERVICE_RUNNING_FIXTURE,
@@ -25,6 +26,28 @@ afterEach(async () => {
 });
 
 describe('состояние сервиса', () => {
+  // «0 ч» у процесса, поднятого полчаса назад, читается как поломка.
+  it.each([
+    [2443, '40 мин'],
+    [30, 'меньше минуты'],
+    [7300, '2 ч'],
+  ])('время работы %i с подписывает как «%s»', async (uptime, text) => {
+    serveService({ ...SERVICE_RUNNING_FIXTURE, uptime });
+
+    renderWithQuery(<DaemonService heap={0} />);
+
+    expect(await screen.findByText(text)).toBeInTheDocument();
+  });
+
+  it('нулевое время работы — возраст неизвестен — не показывает', async () => {
+    serveService({ ...SERVICE_RUNNING_FIXTURE, uptime: 0 });
+
+    renderWithQuery(<DaemonService heap={0} />);
+
+    expect(await screen.findByText('работает')).toBeInTheDocument();
+    expect(screen.queryByText('Время работы')).not.toBeInTheDocument();
+  });
+
   it('показывает работающий сервис и предлагает перезапуск', async () => {
     serveService(SERVICE_RUNNING_FIXTURE);
 
@@ -87,6 +110,44 @@ describe('состояние сервиса', () => {
 
     expect(await screen.findByText(title)).toBeInTheDocument();
     expect(screen.getByText(/имя инстанса не задано/)).toBeInTheDocument();
+  });
+
+  // Демон отдаёт `stopped` и тогда, когда procd просто не ответил: это не остановка.
+  it('непрочитанное состояние без известного прежнего показывает нейтрально и без команд', async () => {
+    serveService(SERVICE_UNREAD_FIXTURE);
+
+    renderWithQuery(<DaemonService heap={0} />);
+
+    expect(await screen.findByText('состояние неизвестно')).toBeInTheDocument();
+    expect(screen.queryByText('остановлен')).not.toBeInTheDocument();
+    expect(screen.queryByText('Служба не запустилась')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Запустить' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Перезапустить' })).not.toBeInTheDocument();
+  });
+
+  // Состояние обновляет поток: он кладёт кадр в кэш запроса, как здесь тест.
+  it('кадр с непрочитанным состоянием оставляет последнее подтверждённое и перезапуск', async () => {
+    serveService(SERVICE_RUNNING_FIXTURE);
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <DaemonService heap={0} />
+      </QueryClientProvider>
+    );
+
+    expect(await screen.findByText('работает')).toBeInTheDocument();
+
+    act(() => {
+      queryClient.setQueryData(getServiceStateOptions().queryKey, SERVICE_UNREAD_FIXTURE);
+    });
+
+    expect(await screen.findByText('procd не ответил демону: состояние службы неизвестно')).toBeInTheDocument();
+    expect(screen.getByText('работает')).toBeInTheDocument();
+    expect(screen.queryByText('остановлен')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Перезапустить' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Остановить' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Запустить' })).not.toBeInTheDocument();
   });
 
   it('шлёт команду сервису и показывает новое состояние из ответа', async () => {

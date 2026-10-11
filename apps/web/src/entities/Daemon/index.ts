@@ -14,7 +14,7 @@ export {
   useServiceState,
   useTrafficHistory,
 } from './api/Daemon.query';
-export { APPLY_PHASE, SERVICE_ACTION, SERVICE_STATUS } from './model/Daemon.model';
+export { APPLY_PHASE, SERVICE_ACTION, SERVICE_STATUS, toConfirmedStatus } from './model/Daemon.model';
 export type {
   ApplyPhase,
   ApplyReasonCode,

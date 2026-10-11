@@ -227,13 +227,11 @@
     "unknown": "Something went wrong"
   },
   "clashMode": {
-    "label": "Routing mode",
+    "label": "Clash API mode",
     "rule": "by rules",
     "global": "globally",
     "direct": "direct",
-    "unavailable": "sing-box is not responding — mode unknown",
-    "short": "Mode",
-    "pending": "reading the mode"
+    "unavailable": "mode unknown: {{reason}}"
   },
   "liveRegion": {
     "label": "Action result"

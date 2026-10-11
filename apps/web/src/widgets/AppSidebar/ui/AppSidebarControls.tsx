@@ -3,12 +3,12 @@ import { useTranslation } from 'react-i18next';
 
 import {
   SERVICE_STATUS,
+  toConfirmedStatus,
   useDaemonReachable,
   useDaemonStatus,
   useServiceState,
   type ServiceStatus,
 } from '@entities/Daemon';
-import { DaemonModeSwitch } from '@features/Daemon/DaemonMode';
 import { LanguageSwitch } from '@features/Language/LanguageSwitch';
 import { ThemeSwitch } from '@features/Theme/ThemeSwitch';
 import { cn } from '@shared/lib/utils';
@@ -40,9 +40,10 @@ export function AppSidebarControls({ collapsed }: { collapsed: boolean }) {
 
   return (
     <>
-      <ServiceDot status={reachable ? (service.data?.status ?? null) : null} collapsed={collapsed} />
-
-      <DaemonModeSwitch compact={collapsed} />
+      <ServiceDot
+        status={reachable && service.data !== undefined ? toConfirmedStatus(service.data) : null}
+        collapsed={collapsed}
+      />
 
       <AppSidebarDrift collapsed={collapsed} />
 

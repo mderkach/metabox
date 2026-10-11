@@ -1,2 +1,2 @@
 export { useSetClashMode } from './api';
-export { DaemonModeSwitch, toClashModeLabel } from './ui';
+export { DaemonModeSwitch } from './ui';

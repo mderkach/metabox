@@ -22,7 +22,9 @@
     "sections": "Sections"
   },
   "short": {
-    "config": "Config"
+    "config": "Config",
+    "connections": "Conns",
+    "devices": "Devices"
   },
   "drift": {
     "newer": "forms lag behind sing-box",

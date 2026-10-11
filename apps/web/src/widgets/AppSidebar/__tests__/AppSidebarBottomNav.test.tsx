@@ -6,11 +6,7 @@ import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { DAEMON_ENDPOINT } from '@entities/Daemon';
-import {
-  CLASH_CONFIGS_FIXTURE,
-  DAEMON_STATUS_FIXTURE,
-  SERVICE_RUNNING_FIXTURE,
-} from '@entities/Daemon/__tests__/Daemon.fixture';
+import { DAEMON_STATUS_FIXTURE, SERVICE_RUNNING_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture';
 
 import { NAV_ITEMS } from '../model';
 import { AppSidebarBottomNav } from '../ui/AppSidebarBottomNav';
@@ -19,8 +15,7 @@ describe('AppSidebarBottomNav', () => {
   beforeEach(() => {
     server.use(
       http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE)),
-      http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE)),
-      http.get(DAEMON_ENDPOINT.clashConfigs(), () => HttpResponse.json(CLASH_CONFIGS_FIXTURE))
+      http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE))
     );
   });
 
@@ -36,6 +31,9 @@ describe('AppSidebarBottomNav', () => {
     expect(within(nav).getByRole('link', { name: 'Обзор' })).toBeInTheDocument();
     // Полное «Конфигурация» не помещается в колонку телефона.
     expect(within(nav).getByRole('link', { name: 'Конфиг' })).toHaveAttribute('href', '/config');
+    // «Соединения» и «Устройства» шире колонки на 375px и обрезались бы.
+    expect(within(nav).getByRole('link', { name: 'Связи' })).toHaveAttribute('href', '/connections');
+    expect(within(nav).getByRole('link', { name: 'Клиенты' })).toHaveAttribute('href', '/devices');
   });
 
   it('помечает текущим один раздел, даже когда адрес вложен в него', async () => {
@@ -70,7 +68,7 @@ describe('AppSidebarBottomNav', () => {
   });
 
   // На телефоне боковой панели нет, и её подвал не должен пропасть вместе с ней.
-  it('«Ещё» открывает лист с состоянием службы, режимом маршрутизации, темой и языком', async () => {
+  it('«Ещё» открывает лист с состоянием службы, темой и языком', async () => {
     const user = userEvent.setup();
 
     renderWithRouter(AppSidebarBottomNav);
@@ -80,7 +78,7 @@ describe('AppSidebarBottomNav', () => {
     const sheet = await screen.findByRole('dialog', { name: 'Состояние и настройки' });
 
     expect(await within(sheet).findByText('sing-box работает')).toBeInTheDocument();
-    expect(await within(sheet).findByRole('combobox', { name: 'Режим маршрутизации: по правилам' })).toBeEnabled();
+    expect(within(sheet).queryByRole('combobox')).not.toBeInTheDocument();
     expect(within(sheet).getByRole('group', { name: 'Оформление' })).toBeInTheDocument();
     expect(within(sheet).getByRole('group', { name: 'Язык интерфейса' })).toBeInTheDocument();
 

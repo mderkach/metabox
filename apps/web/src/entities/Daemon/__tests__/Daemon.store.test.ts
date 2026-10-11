@@ -47,6 +47,38 @@ describe('поток трафика', () => {
   });
 });
 
+describe('закрытие потока', () => {
+  beforeEach(() => {
+    RuntimeStore.getState().reset();
+  });
+
+  it('снимает отметку последнего кадра, а буфер графика оставляет', () => {
+    RuntimeStore.getState().pushTraffic({ up: 1, down: 2 });
+    RuntimeStore.getState().closeStream();
+
+    expect(RuntimeStore.getState().sampledAt).toBeNull();
+    expect(RuntimeStore.getState().traffic).toEqual([{ up: 1, down: 2 }]);
+  });
+
+  // По отметке снимка экран отличает молчание sing-box от обрыва связи с
+  // демоном; отметка из прошлого подключения выдала бы обрыв за живой поток.
+  it('снимает и отметку снимка устройства, который шлёт демон', () => {
+    const { source, send } = fakeEventSource();
+    const unsubscribe = listenSystem(source);
+
+    send(RUNTIME_TOPIC.System, SYSTEM_FIXTURE);
+
+    expect(RuntimeStore.getState().systemAt).not.toBeNull();
+
+    RuntimeStore.getState().closeStream();
+
+    expect(RuntimeStore.getState().systemAt).toBeNull();
+    expect(RuntimeStore.getState().system).not.toBeNull();
+
+    unsubscribe();
+  });
+});
+
 describe('поток памяти', () => {
   beforeEach(() => {
     RuntimeStore.getState().reset();
