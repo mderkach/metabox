@@ -51,14 +51,56 @@ export interface LogEvent {
 }
 
 /**
- * Состояние потока. `Closed` — демон отказал в потоке (лимит потоков, лог
- * недоступен) или соединение оборвалось без переподключения: `EventSource`
- * кода ответа не отдаёт, поэтому причину экран не различает.
+ * Состояние потока. `Reconnecting` — демон отказал в потоке (лимит потоков,
+ * лог недоступен) или соединение оборвалось без переподключения, и экран ждёт
+ * следующей попытки. `Closed` — попытки кончились, дальше только вручную.
+ * `EventSource` кода ответа не отдаёт, поэтому причину экран не различает.
  */
 export const LOG_STREAM_STATUS = {
   Connecting: 'connecting',
   Open: 'open',
+  Reconnecting: 'reconnecting',
   Closed: 'closed',
 } as const;
 
 export type LogStreamStatus = (typeof LOG_STREAM_STATUS)[keyof typeof LOG_STREAM_STATUS];
+
+function isSameEntry(left: LogEntry, right: LogEntry): boolean {
+  return (
+    left.message === right.message &&
+    left.level === right.level &&
+    (left.time?.getTime() ?? null) === (right.time?.getTime() ?? null)
+  );
+}
+
+function isSeam(tail: readonly LogEntry[], streamed: readonly LogEntry[], overlap: number): boolean {
+  const start = tail.length - overlap;
+
+  for (let index = 0; index < overlap; index += 1) {
+    if (!isSameEntry(tail[start + index], streamed[index])) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Хвост и строки потока одним списком, без дублей на стыке.
+ *
+ * Хвост запрашивается после открытия потока, поэтому его конец может
+ * повторять начало потока: строки, пришедшие потоком, пока шёл запрос. Номеров
+ * у строк хвоста нет, и стык — самое длинное совпадение конца хвоста с началом
+ * потока. Строка, которую sing-box повторил в ту же секунду, на стыке от дубля
+ * не отличается и снимается вместе с ним. Если потоком до ответа хвоста
+ * пришло больше строк, чем в хвосте, стыка нет, и хвост повторится целиком.
+ */
+export function mergeLogEntries(tail: readonly LogEntry[], streamed: readonly LogEntry[]): LogEntry[] {
+  for (let overlap = Math.min(tail.length, streamed.length); overlap > 0; overlap -= 1) {
+    if (isSeam(tail, streamed, overlap)) {
+      return [...tail, ...streamed.slice(overlap)].slice(-LOG_LIMIT);
+    }
+  }
+
+  return [...tail, ...streamed].slice(-LOG_LIMIT);
+}

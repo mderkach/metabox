@@ -13,6 +13,7 @@
   "stream": {
     "open": "streaming",
     "connecting": "connecting to the stream",
+    "reconnecting": "reconnecting to the stream",
     "closed": "stream closed"
   },
   "source": {
@@ -22,7 +23,7 @@
   },
   "closed": {
     "title": "The log stream is closed",
-    "description": "The daemon refused the stream or the connection dropped. There are at most four log streams across all tabs: close the extra ones and reconnect.",
+    "description": "The daemon refused the stream or the connection dropped, and retries did not help. There are at most four log streams across all tabs: close the extra ones and reconnect.",
     "reconnect": "Reconnect"
   },
   "lost": {

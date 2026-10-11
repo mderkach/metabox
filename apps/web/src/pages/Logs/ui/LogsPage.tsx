@@ -5,10 +5,10 @@ import { useTranslation } from 'react-i18next';
 
 import {
   DEFAULT_LOG_LEVEL,
-  LOG_LIMIT,
   LOG_SOURCE,
   LOG_STREAM_STATUS,
   LogState,
+  mergeLogEntries,
   useLogStream,
   useLogTail,
   type LogLevel,
@@ -41,6 +41,7 @@ import { LogsList } from './LogsList';
 const STATUS_VIEW: Readonly<Record<LogStreamStatus, { tone: string; label: ParseKeys<'pages/Logs'> }>> = {
   [LOG_STREAM_STATUS.Open]: { tone: 'text-signal-ok', label: 'stream.open' },
   [LOG_STREAM_STATUS.Connecting]: { tone: 'text-signal-warn', label: 'stream.connecting' },
+  [LOG_STREAM_STATUS.Reconnecting]: { tone: 'text-signal-warn', label: 'stream.reconnecting' },
   [LOG_STREAM_STATUS.Closed]: { tone: 'text-signal-bad', label: 'stream.closed' },
 };
 
@@ -64,7 +65,7 @@ export function LogsPage() {
   const streamed = LogState.use.entries();
   const lost = LogState.use.lost();
   const status = LogState.use.status();
-  const entries = useMemo(() => [...(tail.data?.entries ?? []), ...streamed].slice(-LOG_LIMIT), [tail.data, streamed]);
+  const entries = useMemo(() => mergeLogEntries(tail.data?.entries ?? [], streamed), [tail.data, streamed]);
   const source = tail.data?.source ?? null;
   const since = tail.data?.since ?? null;
   const sourceKey = source === null ? undefined : SOURCE_LABEL[source];
@@ -111,7 +112,9 @@ export function LogsPage() {
         <section className={cn('flex min-h-0 min-w-0 grow flex-col overflow-hidden', SURFACE)}>
           <div className='flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-b border-border px-3.5 py-2.5'>
             <LogsLevelSelect level={level} onLevelChange={setLevel} />
-            <div className='flex items-center gap-2'>
+            {/* Строка переключателя под пальцем высотой в его хит-область: иначе
+                она наезжает на выбор уровня, когда тулбар переносится. */}
+            <div className='flex items-center gap-2 pointer-coarse:min-h-11'>
               <Switch id={followId} checked={follow} onCheckedChange={setFollow} />
               <Label htmlFor={followId} className='text-sm'>
                 {t('follow')}

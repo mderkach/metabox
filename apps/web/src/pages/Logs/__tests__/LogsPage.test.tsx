@@ -5,67 +5,17 @@ import { mockVirtualSizes } from '@test/virtualSizes';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { LOG_ENDPOINT, LogStore } from '@entities/Log';
+import { LOG_ENTRIES_FIXTURE } from '@entities/Log/__tests__/Log.fixture';
 import { createLogHandlers } from '@entities/Log/__tests__/Log.handlers';
+import { FakeLogSource } from '@entities/Log/__tests__/Log.source';
 
 import { LogsPage } from '../ui/LogsPage';
 
-/**
- * Поток лога в jsdom: `EventSource` там нет. Подмена помнит открытые потоки,
- * чтобы тест слал строки в последний и видел, с каким уровнем его открыли.
- */
-class FakeLogSource {
-  static readonly CLOSED = 2;
-  static opened: FakeLogSource[] = [];
-
-  readonly url: string;
-  readyState = 0;
-  closed = false;
-  private readonly listeners = new Map<string, Set<(event: MessageEvent<string>) => void>>();
-
-  constructor(url: string) {
-    this.url = url;
-    FakeLogSource.opened.push(this);
-  }
-
-  addEventListener(type: string, handler: (event: MessageEvent<string>) => void): void {
-    const set = this.listeners.get(type) ?? new Set();
-
-    set.add(handler);
-    this.listeners.set(type, set);
-  }
-
-  removeEventListener(type: string, handler: (event: MessageEvent<string>) => void): void {
-    this.listeners.get(type)?.delete(handler);
-  }
-
-  close(): void {
-    this.closed = true;
-  }
-
-  emit(type: string, data = ''): void {
-    for (const handler of this.listeners.get(type) ?? []) {
-      handler(new MessageEvent(type, { data }));
-    }
-  }
-
-  /** Строка лога в конверте демона. */
-  line(seq: number, message: string, level = 'info'): void {
-    this.emit('log', JSON.stringify({ seq, entry: { level, message } }));
-  }
-
-  static last(): FakeLogSource {
-    const source = FakeLogSource.opened.at(-1);
-
-    if (source === undefined) {
-      throw new Error('Поток лога не открыт');
-    }
-
-    return source;
-  }
-}
+/** Потолок цикла отказов: попыток у экрана меньше, тест не должен крутиться вечно. */
+const MAX_REFUSALS = 20;
 
 function renderScreen() {
   return renderWithRouter(LogsPage, { path: '/logs' });
@@ -82,6 +32,7 @@ describe('экран логов', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
@@ -133,7 +84,7 @@ describe('экран логов', () => {
     await screen.findByText('outbound/vless[proxy]: dial tcp: i/o timeout');
 
     act(() => {
-      FakeLogSource.last().emit('open');
+      FakeLogSource.last().open();
       FakeLogSource.last().line(1, 'router: новая строка из потока');
     });
 
@@ -158,7 +109,74 @@ describe('экран логов', () => {
     expect(screen.getByText('после разрыва')).toBeInTheDocument();
   });
 
-  it('поток, которому демон отказал, предлагает переподключиться', async () => {
+  it('открытие потока перечитывает хвост и не задваивает строки на стыке', async () => {
+    let requests = 0;
+    const last = LOG_ENTRIES_FIXTURE[LOG_ENTRIES_FIXTURE.length - 1];
+    // Testing Library сравнивает текст без ведущих пробелов.
+    const shown = last.message.trim();
+
+    function countTail({ request }: { request: Request }) {
+      if (new URL(request.url).pathname === LOG_ENDPOINT.logs()) {
+        requests += 1;
+      }
+    }
+
+    server.use(...createLogHandlers());
+    server.events.on('request:start', countTail);
+    onTestFinished(() => {
+      server.events.removeListener('request:start', countTail);
+    });
+
+    renderScreen();
+
+    await screen.findByText(shown);
+
+    const before = requests;
+
+    act(() => {
+      const source = FakeLogSource.last();
+
+      source.open();
+      // Строка успела прийти потоком и попала в хвост, перечитанный после открытия.
+      source.send(1, last);
+      source.line(2, 'router: строка после хвоста');
+    });
+
+    expect(await screen.findByText('router: строка после хвоста')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(requests).toBe(before + 1);
+    });
+    expect(screen.getAllByText(shown)).toHaveLength(1);
+  });
+
+  it('поток, которому демон отказал, переподключается сам', async () => {
+    server.use(...createLogHandlers());
+
+    renderScreen();
+
+    await screen.findByText('outbound/vless[proxy]: dial tcp: i/o timeout');
+    vi.useFakeTimers();
+
+    act(() => {
+      FakeLogSource.last().refuse();
+    });
+
+    expect(screen.getByText('переподключаюсь к потоку')).toBeInTheDocument();
+    expect(screen.queryByText('Поток лога закрыт')).not.toBeInTheDocument();
+
+    act(() => {
+      vi.runOnlyPendingTimers();
+    });
+    act(() => {
+      FakeLogSource.last().open();
+    });
+
+    expect(FakeLogSource.opened).toHaveLength(2);
+    expect(FakeLogSource.opened[0].closed).toBe(true);
+    expect(screen.getByText('поток идёт')).toBeInTheDocument();
+  });
+
+  it('исчерпав попытки, предлагает переподключиться вручную', async () => {
     const user = userEvent.setup();
 
     server.use(...createLogHandlers());
@@ -166,13 +184,19 @@ describe('экран логов', () => {
     renderScreen();
 
     await screen.findByText('outbound/vless[proxy]: dial tcp: i/o timeout');
+    vi.useFakeTimers();
 
-    act(() => {
-      const source = FakeLogSource.last();
+    // Попыток конечное число: отказ за отказом экран доходит до ручного переподключения.
+    for (let refused = 0; refused < MAX_REFUSALS && screen.queryByText('Поток лога закрыт') === null; refused += 1) {
+      act(() => {
+        FakeLogSource.last().refuse();
+        vi.runOnlyPendingTimers();
+      });
+    }
 
-      source.readyState = FakeLogSource.CLOSED;
-      source.emit('error');
-    });
+    const opened = FakeLogSource.opened.length;
+
+    vi.useRealTimers();
 
     const alert = await screen.findByRole('alert');
 
@@ -180,7 +204,7 @@ describe('экран логов', () => {
 
     await user.click(within(alert).getByRole('button', { name: 'Переподключить' }));
 
-    expect(FakeLogSource.opened).toHaveLength(2);
+    expect(FakeLogSource.opened).toHaveLength(opened + 1);
     await waitFor(() => {
       expect(screen.queryByText('Поток лога закрыт')).not.toBeInTheDocument();
     });

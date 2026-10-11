@@ -6,16 +6,16 @@ import { cn } from '@shared/lib/utils';
 
 import { LOGS_COLUMN } from './LogsColumns';
 
-/** Уровень цветом сигнала: от служебного серого до аварийного. Новый уровень — ошибка компиляции здесь. */
+/** Уровень своим тоном шкалы `--log-*`: соседние уровни различимы. Новый уровень — ошибка компиляции здесь. */
 const LEVEL_TONE: Readonly<Record<LogLevel, string>> = {
-  trace: 'text-signal-idle',
-  debug: 'text-signal-idle',
-  info: 'text-signal-ok',
-  notice: 'text-signal-ok',
-  warn: 'text-signal-warn',
-  error: 'text-signal-bad',
-  fatal: 'text-signal-bad',
-  panic: 'text-signal-bad',
+  trace: 'text-log-trace',
+  debug: 'text-log-debug',
+  info: 'text-log-info',
+  notice: 'text-log-notice',
+  warn: 'text-log-warn',
+  error: 'text-log-error',
+  fatal: 'font-bold text-log-error',
+  panic: 'font-bold text-log-error',
 };
 
 const TIME_PARTS = {
