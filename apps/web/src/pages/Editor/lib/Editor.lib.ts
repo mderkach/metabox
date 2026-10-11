@@ -1,5 +1,5 @@
 import { useNavigate, useSearch } from '@tanstack/react-router';
-import { startTransition, useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import {
   readRules,
@@ -186,25 +186,16 @@ export interface RuleSelection extends RuleSelectionState {
 export function useRuleSelection(initialId: string | null): RuleSelection {
   const [selection, setSelection] = useState<RuleSelectionState>({ id: initialId, key: 0 });
 
-  // Без Transition обновление срочное, и граница вокруг панели не анимируется.
   const select = useCallback((id: string) => {
-    startTransition(() => {
-      setSelection((current) => (current.id === id ? { ...current, id: null } : { id, key: current.key + 1 }));
-    });
+    setSelection((current) => (current.id === id ? { ...current, id: null } : { id, key: current.key + 1 }));
   }, []);
 
   const close = useCallback(() => {
-    startTransition(() => {
-      setSelection((current) => ({ ...current, id: null }));
-    });
+    setSelection((current) => ({ ...current, id: null }));
   }, []);
 
-  // Новое правило встаёт в конец и номера остальных не сдвигает: прежний выбор
-  // остаётся верным, пока Transition не закончится.
   const onAdded = useCallback((index: number) => {
-    startTransition(() => {
-      setSelection((current) => ({ id: toRuleId(index), key: current.key + 1 }));
-    });
+    setSelection((current) => ({ id: toRuleId(index), key: current.key + 1 }));
   }, []);
 
   const onMoved = useCallback((index: number) => {

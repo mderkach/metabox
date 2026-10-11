@@ -2,6 +2,7 @@ import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import { renderWithQuery } from '@test/renderWithQuery';
 import { server } from '@test/server';
 import { act, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import i18next from 'i18next';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -134,19 +135,51 @@ describe('маршруты панели', () => {
     expect(targets).toContain('/config/rule-set');
   });
 
-  // Секции без экрана не занимают полосу вкладками, но и не пропадают: их
-  // список вместе с размером секции — по кнопке рядом с полосой.
-  it('каждая секция — вкладка, а без своих форм она открывается экраном узлов', async () => {
+  // Редкие секции не занимают полосу, но и не пропадают: они в меню «Ещё»
+  // рядом с ней, а выбранная редкая встаёт в полосу вкладкой, пока выбрана.
+  it('каждая секция доступна: частые и выбранная — вкладками, остальные — в меню «Ещё»', async () => {
     serveDaemon();
+    const user = userEvent.setup();
 
     renderRouter('/config/log');
 
     const sections = await screen.findByRole('tablist', { name: 'Секции конфига' });
+    const tabs = within(sections).getAllByRole('tab');
 
-    expect(within(sections).getAllByRole('tab')).toHaveLength(Object.values(CONFIG_SECTION).length);
+    expect(within(sections).getByRole('tab', { selected: true })).toHaveAttribute('href', '/config/log');
+
+    await user.click(screen.getByRole('button', { name: 'Ещё' }));
+
+    const items = await screen.findAllByRole('menuitem');
+
+    const targets = [...tabs, ...items].map((link) => link.getAttribute('href'));
+
+    expect(new Set(targets).size).toBe(Object.values(CONFIG_SECTION).length);
+    expect(targets).toHaveLength(Object.values(CONFIG_SECTION).length);
 
     // Секции в файле нет — редактор предлагает пустой узел, сохранение создаст её.
     expect(await screen.findByRole('textbox', { name: 'Узел log текстом' })).toHaveValue('{}');
+  });
+
+  it('пункт меню «Ещё» открывает секцию, и она становится выбранной вкладкой', async () => {
+    serveDaemon();
+    const user = userEvent.setup();
+
+    const router = renderRouter('/config');
+
+    const frequent = within(await screen.findByRole('tablist', { name: 'Секции конфига' })).getAllByRole('tab').length;
+
+    await user.click(screen.getByRole('button', { name: 'Ещё' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'NTP' }));
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/config/ntp');
+    });
+
+    const sections = screen.getByRole('tablist', { name: 'Секции конфига' });
+
+    expect(within(sections).getByRole('tab', { selected: true })).toHaveTextContent('NTP');
+    expect(within(sections).getAllByRole('tab')).toHaveLength(frequent + 1);
   });
 
   // Текстовый режим — вторая ось раздела, а не выход из него: секции отвечают

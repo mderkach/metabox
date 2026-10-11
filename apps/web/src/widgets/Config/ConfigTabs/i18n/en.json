@@ -1,5 +1,6 @@
 {
   "label": "Config sections",
+  "more": "More",
   "section": {
     "route": "Routing",
     "ruleSet": "Rule sets",

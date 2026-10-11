@@ -1,6 +1,6 @@
 import { getRouteApi } from '@tanstack/react-router';
 import { Plus } from 'lucide-react';
-import { startTransition, useMemo, useState, ViewTransition } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -24,6 +24,7 @@ import {
   EmptyHeader,
   EmptyTitle,
   QueryFailure,
+  SidePanelLayout,
   SURFACE,
   SkeletonRows,
 } from '@shared/ui';
@@ -88,15 +89,11 @@ export function SectionNodes({ section }: { section: GenericSection }) {
   }
 
   function toggleAdding() {
-    startTransition(() => {
-      setAdding((open) => !open);
-    });
+    setAdding((open) => !open);
   }
 
   function closeAdding() {
-    startTransition(() => {
-      setAdding(false);
-    });
+    setAdding(false);
   }
 
   const addButton = (
@@ -120,8 +117,8 @@ export function SectionNodes({ section }: { section: GenericSection }) {
 
       {loaded && addable && nodes.length > 0 && <div className='flex justify-end'>{addButton}</div>}
 
-      <div className='flex flex-col gap-4 lg:flex-row lg:items-start'>
-        <div className='flex min-w-0 grow flex-col gap-4'>
+      <SidePanelLayout.Root open={addable && adding && !asSheet}>
+        <SidePanelLayout.Main className='gap-4'>
           {loaded && shape.kind === 'list' && nodes.length === 0 && (
             <Empty className='border'>
               <EmptyHeader>
@@ -162,16 +159,18 @@ export function SectionNodes({ section }: { section: GenericSection }) {
                 })}
               />
             ))}
-        </div>
+        </SidePanelLayout.Main>
 
-        {addable && adding && !asSheet && (
-          <ViewTransition enter='panel-in' exit='panel-out'>
+        {/* Обёртка во всю высоту списка, а панель по своему содержимому:
+            иначе ей негде залипать при прокрутке. */}
+        <SidePanelLayout.Panel className='items-start'>
+          {adding && (
             <ConfigNodePanel title={t('add.title')} onClose={closeAdding}>
               {addForm}
             </ConfigNodePanel>
-          </ViewTransition>
-        )}
-      </div>
+          )}
+        </SidePanelLayout.Panel>
+      </SidePanelLayout.Root>
 
       {/* Ниже lg панели рядом со списком нет места: там она открывается листом. */}
       {addable && asSheet && (

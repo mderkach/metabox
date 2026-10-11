@@ -1,3 +1,4 @@
+import { finishApplyBarTransition } from '@test/applyBar';
 import { renderWithQuery } from '@test/renderWithQuery';
 import { server } from '@test/server';
 import { act, screen, waitFor, within } from '@testing-library/react';
@@ -59,18 +60,40 @@ describe('ConfigApplyBar', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it('молчит, пока правок нет и применение не идёт', () => {
     loadDocument(false);
-    renderWithQuery(<ConfigApplyBar />);
+    renderWithQuery(<ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />);
 
     expect(screen.queryByRole('region', { name: 'Применение конфига' })).not.toBeInTheDocument();
   });
 
+  it('сообщает место, которое закрывает, пока виден или уезжает, и ноль после выезда', () => {
+    const barHeight = 64;
+    const onSpaceChange = vi.fn<(space: number) => void>();
+
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(barHeight);
+    loadDocument();
+    renderWithQuery(<ConfigApplyBar onSpaceChange={onSpaceChange} />);
+
+    expect(onSpaceChange).toHaveBeenLastCalledWith(barHeight);
+
+    act(() => {
+      ConfigDocumentState.getState().discard();
+    });
+
+    expect(onSpaceChange).toHaveBeenLastCalledWith(barHeight);
+
+    finishApplyBarTransition();
+
+    expect(onSpaceChange).toHaveBeenLastCalledWith(0);
+  });
+
   it('на черновике предлагает применить и посмотреть диф', () => {
     loadDocument();
-    renderWithQuery(<ConfigApplyBar />);
+    renderWithQuery(<ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />);
 
     expect(screen.getByRole('region', { name: 'Применение конфига' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Применить' })).toBeEnabled();
@@ -79,7 +102,7 @@ describe('ConfigApplyBar', () => {
 
   it('держит сброс черновика с краю, отдельно от «Применить»', () => {
     loadDocument();
-    renderWithQuery(<ConfigApplyBar />);
+    renderWithQuery(<ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />);
 
     const bar = screen.getByRole('region', { name: 'Применение конфига' });
     const names = within(bar)
@@ -91,7 +114,7 @@ describe('ConfigApplyBar', () => {
 
   it('отменяет правки только после подтверждения: черновик снят, файл с устройства на месте', async () => {
     loadDocument();
-    renderWithQuery(<ConfigApplyBar />);
+    renderWithQuery(<ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />);
 
     await userEvent.click(screen.getByRole('button', { name: 'Отменить правки' }));
     expect(ConfigDocumentState.getState().draft).not.toBeNull();
@@ -105,7 +128,7 @@ describe('ConfigApplyBar', () => {
   it('предупреждает, что конфиг на устройстве сменился с момента черновика, и даёт его отбросить', async () => {
     loadDocument();
     ConfigDocumentState.getState().load(APPLIED.replace('info', 'warn'), APPLIED_ETAG);
-    renderWithQuery(<ConfigApplyBar />);
+    renderWithQuery(<ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />);
 
     expect(screen.getByText('Конфиг на устройстве изменился с момента черновика')).toBeInTheDocument();
 
@@ -129,7 +152,7 @@ describe('ConfigApplyBar', () => {
     );
 
     loadDocument();
-    renderWithQuery(<ConfigApplyBar />);
+    renderWithQuery(<ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />);
 
     await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
 
@@ -152,7 +175,7 @@ describe('ConfigApplyBar', () => {
 
     serveStatus(TRANSACTION);
     loadDocument();
-    renderWithQuery(<ConfigApplyBar />);
+    renderWithQuery(<ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />);
 
     const confirm = await screen.findByRole('button', { name: 'Связь есть, оставить' });
 
@@ -173,7 +196,7 @@ describe('ConfigApplyBar', () => {
     loadDocument();
 
     vi.useFakeTimers();
-    renderWithQuery(<ConfigApplyBar />);
+    renderWithQuery(<ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />);
 
     // Окно подтверждения приходит отложенным рендером: `act` доводит его вместе
     // с эффектом отсчёта до DOM, пока фейковые часы стоят на месте.
@@ -211,7 +234,7 @@ describe('ConfigApplyBar', () => {
     );
 
     loadDocument();
-    renderWithQuery(<ConfigApplyBar />);
+    renderWithQuery(<ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />);
 
     await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
 
@@ -236,7 +259,7 @@ describe('ConfigApplyBar', () => {
     );
 
     loadDocument();
-    renderWithQuery(<ConfigApplyBar />);
+    renderWithQuery(<ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />);
 
     await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
 
@@ -262,7 +285,7 @@ describe('ConfigApplyBar', () => {
     );
 
     loadDocument();
-    renderWithQuery(<ConfigApplyBar />);
+    renderWithQuery(<ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />);
 
     expect(await screen.findByText('metabox дописал в конфиг experimental.clash_api')).toBeInTheDocument();
     expect(screen.getByText(/Служба перезапущена тем же применением/)).toBeInTheDocument();
@@ -278,7 +301,7 @@ describe('ConfigApplyBar', () => {
     );
 
     loadDocument(false);
-    renderWithQuery(<ConfigApplyBar />);
+    renderWithQuery(<ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />);
 
     expect(await screen.findByText('Подтверждения не было — предыдущий конфиг возвращён')).toBeInTheDocument();
 
@@ -304,7 +327,7 @@ describe('ConfigApplyBar', () => {
     );
 
     loadDocument(false);
-    renderWithQuery(<ConfigApplyBar />);
+    renderWithQuery(<ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />);
 
     expect(await screen.findByText('Применение не прошло')).toBeInTheDocument();
     expect(screen.getByText(/откатывать было не на что/)).toBeInTheDocument();

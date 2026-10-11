@@ -184,6 +184,15 @@
   --color-row-hover: var(--row-hover);
   --color-table-head: var(--table-head);
 
+  /* Уровни лога: своя шкала, а не тона состояния — строка info не «хорошая»,
+   * а соседние уровни различимы между собой. */
+  --color-log-trace: var(--log-trace);
+  --color-log-debug: var(--log-debug);
+  --color-log-info: var(--log-info);
+  --color-log-notice: var(--log-notice);
+  --color-log-warn: var(--log-warn);
+  --color-log-error: var(--log-error);
+
   /* Подсветка JSON: своя группа, чтобы правка тона действия её не задевала. */
   --color-code-string: var(--code-string);
   --color-code-number: var(--code-number);
@@ -243,6 +252,13 @@
   --row-hover: color-mix(in oklch, var(--muted) 40%, var(--card));
   --table-head: color-mix(in oklch, var(--muted) 30%, var(--card));
 
+  --log-trace: oklch(0.55 0.01 265);
+  --log-debug: oklch(0.48 0.07 290);
+  --log-info: oklch(0.51 0.16 240);
+  --log-notice: oklch(0.48 0.1 178);
+  --log-warn: oklch(0.51 0.13 70);
+  --log-error: oklch(0.53 0.2 24);
+
   --code-string: oklch(0.46 0.11 155);
   --code-number: oklch(0.52 0.14 35);
   --code-literal: oklch(0.5 0.15 300);
@@ -298,6 +314,13 @@
   --series-up: oklch(0.81 0.135 78);
 
   --meter-track: oklch(0.285 0.01 265);
+
+  --log-trace: oklch(0.62 0.012 265);
+  --log-debug: oklch(0.74 0.08 290);
+  --log-info: oklch(0.74 0.15 235);
+  --log-notice: oklch(0.75 0.125 178);
+  --log-warn: oklch(0.81 0.135 78);
+  --log-error: oklch(0.68 0.19 22);
 
   --code-string: oklch(0.78 0.12 155);
   --code-number: oklch(0.79 0.12 40);
@@ -375,6 +398,52 @@
   --view-transition-panel: 140ms;
   --view-transition-ease: cubic-bezier(0.2, 0, 0, 1);
   --view-transition-ease-in: cubic-bezier(0.4, 0, 1, 1);
+
+  /* CSS-переходы раскладки: колонка боковой панели, бар применения, лист
+   * снизу. Уход быстрее прихода: исчезающее больше не нужно глазу. */
+  --motion-enter: 240ms;
+  --motion-exit: 180ms;
+  --motion-sheet-enter: 280ms;
+  --motion-sheet-exit: 200ms;
+  --motion-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Размытие под листом пересчитывается на каждом кадре его выезда и на слабом
+ * телефоне роняет кадры. Примитив оверлея закрыт для `className` снаружи,
+ * поэтому правило здесь. */
+[data-slot='sheet-overlay'] {
+  backdrop-filter: none;
+}
+
+/* Под пальцем цель касания не меньше 44px, плотность под мышью не меняется.
+ * Кнопки, вкладки и выпадающие списки растут сами, а не хит-областью
+ * псевдоэлемента: она обрезается прокручиваемым контейнером — полоса вкладок,
+ * карточка таблицы — и на зазоре меньше 8px наезжает на соседа. Кнопку узнаём
+ * по `group/button` базы `buttonVariants`: триггеры диалогов и поповеров
+ * перекрывают её `data-slot` своим. Правила вне слоя: высоты примитивов
+ * заданы утилитами, а слой утилит перебивает `@layer base`. */
+@media (pointer: coarse) {
+  .group\/button,
+  [data-slot='toggle'],
+  [data-slot='toggle-group-item'],
+  [data-slot='select-trigger'],
+  [data-slot='tabs-trigger'],
+  [data-slot='input'],
+  [data-slot='input-group'] {
+    min-height: 2.75rem;
+    min-width: 2.75rem;
+  }
+
+  [data-slot='tabs-list'] {
+    height: auto;
+  }
+
+  /* Переключатель и флажок остаются маленькими: рядом с ними подпись, и
+   * растущий контрол сдвигал бы её. Хит-область — их же `::after`. */
+  [data-slot='switch']::after,
+  [data-slot='checkbox']::after {
+    inset: min(-0.5rem, calc(50% - 1.375rem)) min(-0.75rem, calc(50% - 1.375rem));
+  }
 }
 
 /* Смену экрана запускает роутер (`defaultViewTransition`), тип перехода
@@ -398,23 +467,28 @@
 }
 
 /* Экран, его шапка и полоса вкладок конфига — именованные группы. Вне
- * перехода роутера — при анимациях панели, бара и вкладок — они показываются
- * живыми, без снимка и растворения. */
+ * перехода роутера — при анимациях вкладок — они показываются живыми, без
+ * снимка и растворения. Бар применения плавает над экраном и именуется ради
+ * порядка слоёв: в снимке корня группа экрана накрыла бы его на весь переход
+ * роутера. Анимации у него нет ни в одной ветке. */
 ::view-transition-group(page),
 ::view-transition-group(page-header),
-::view-transition-group(config-tabs) {
+::view-transition-group(config-tabs),
+::view-transition-group(apply-bar) {
   animation-duration: 0s;
 }
 
 ::view-transition-old(page),
 ::view-transition-old(page-header),
-::view-transition-old(config-tabs) {
+::view-transition-old(config-tabs),
+::view-transition-old(apply-bar) {
   display: none;
 }
 
 ::view-transition-new(page),
 ::view-transition-new(page-header),
-::view-transition-new(config-tabs) {
+::view-transition-new(config-tabs),
+::view-transition-new(apply-bar) {
   animation: none;
 }
 
@@ -494,36 +568,6 @@
 
 ::view-transition-old(.fade-out) {
   animation: fade-out var(--view-transition-panel) var(--view-transition-ease);
-}
-
-::view-transition-new(.panel-in) {
-  animation: panel-in var(--view-transition-panel) var(--view-transition-ease);
-}
-
-::view-transition-old(.panel-out) {
-  animation: panel-out var(--view-transition-panel) var(--view-transition-ease);
-}
-
-@keyframes panel-in {
-  from {
-    opacity: 0;
-    translate: 0.5rem 0;
-  }
-  to {
-    opacity: 1;
-    translate: 0 0;
-  }
-}
-
-@keyframes panel-out {
-  from {
-    opacity: 1;
-    translate: 0 0;
-  }
-  to {
-    opacity: 0;
-    translate: 0.5rem 0;
-  }
 }
 
 /* `--page-offset` задаёт тип перехода на корне; без него — чистое растворение. */

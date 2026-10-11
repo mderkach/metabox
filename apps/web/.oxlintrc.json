@@ -228,6 +228,7 @@
         "src/shared/ui/shadcn/card.tsx",
         "src/shared/ui/shadcn/checkbox.tsx",
         "src/shared/ui/shadcn/dialog.tsx",
+        "src/shared/ui/shadcn/dropdown-menu.tsx",
         "src/shared/ui/shadcn/empty.tsx",
         "src/shared/ui/shadcn/field.tsx",
         "src/shared/ui/shadcn/input-group.tsx",

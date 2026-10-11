@@ -1,6 +1,7 @@
 import { renderWithRouter } from '@test/renderWithRouter';
 import { selectOption } from '@test/selectOption';
 import { server } from '@test/server';
+import { finishSidePanelTransition } from '@test/sidePanel';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
@@ -291,6 +292,9 @@ describe('экран секции', () => {
     await waitFor(() => {
       expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
     });
+
+    finishSidePanelTransition();
+
     expect(open).toHaveFocus();
   });
 

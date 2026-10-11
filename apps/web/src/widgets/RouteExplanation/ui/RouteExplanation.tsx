@@ -22,6 +22,7 @@ import {
   QueryFailure,
   SECTION_HEADING,
   SURFACE,
+  SHEET_BOTTOM,
   SURFACE_HEAD,
   Sheet,
   SheetContent,
@@ -129,6 +130,8 @@ export function RouteExplanationSheet({
     setShown({ connectionId, host, source });
   }
 
+  // Высота листа задана, а не берётся по содержимому: тело приходит запросом,
+  // и лист, выросший со скелетона до объяснения, дёрнулся бы посреди выезда.
   return (
     <Sheet
       open={connectionId !== null}
@@ -138,7 +141,12 @@ export function RouteExplanationSheet({
         }
       }}
     >
-      <SheetContent id={id} side='bottom' showCloseButton={false} className='max-h-[85svh] gap-0'>
+      <SheetContent
+        id={id}
+        side='bottom'
+        showCloseButton={false}
+        className={cn(SHEET_BOTTOM, 'max-h-[85svh] min-h-[85svh] gap-0')}
+      >
         <Header
           heading={
             // Имя листа Base UI берёт из заголовка, а видимый текст склеил бы

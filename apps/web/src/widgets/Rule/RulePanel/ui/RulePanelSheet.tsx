@@ -1,7 +1,8 @@
 import { useState, type ReactNode } from 'react';
 
 import type { RuleRow } from '@entities/Rule';
-import { Sheet, SheetContent } from '@shared/ui';
+import { cn } from '@shared/lib/utils';
+import { SHEET_BOTTOM, Sheet, SheetContent } from '@shared/ui';
 
 import { RulePanel } from './RulePanel';
 
@@ -60,7 +61,7 @@ export function RulePanelSheet({
         }
       }}
     >
-      <SheetContent side='bottom' showCloseButton={false} className='max-h-[85svh] gap-0 p-0'>
+      <SheetContent side='bottom' showCloseButton={false} className={cn(SHEET_BOTTOM, 'max-h-[85svh] gap-0 p-0')}>
         {shown !== null && (
           <RulePanel
             key={shown.panelKey}

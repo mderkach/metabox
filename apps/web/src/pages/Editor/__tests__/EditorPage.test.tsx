@@ -1,6 +1,7 @@
 import { renderWithRouter } from '@test/renderWithRouter';
 import { selectOption } from '@test/selectOption';
 import { server } from '@test/server';
+import { finishSidePanelTransition } from '@test/sidePanel';
 import { mockVirtualSizes } from '@test/virtualSizes';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -200,6 +201,9 @@ describe('экран правил', () => {
     await user.keyboard('{Escape}');
 
     expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+
+    finishSidePanelTransition();
+
     expect(ruleButton).toHaveFocus();
   });
 

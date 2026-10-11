@@ -44,6 +44,23 @@ export const CONFIG_TABS = [
   link: TabLink;
 }>;
 
+/**
+ * Секции, которые правят чаще остальных: маршрутизация, то, на что она
+ * ссылается, и DNS. Они стоят в полосе всегда, остальные — в меню «Ещё»:
+ * шестнадцать вкладок в строку не помещаются даже на десктопе, а хвост за краем
+ * полосы не находится. Шесть — сколько встаёт в строку без прокрутки на
+ * ширине 1280. Выбранная редкая секция встаёт в полосу на своё место по
+ * порядку файла, пока выбрана.
+ */
+export const CONFIG_TABS_FREQUENT: ReadonlySet<ConfigSection> = new Set([
+  CONFIG_SECTION.Route,
+  CONFIG_SECTION.RuleSet,
+  CONFIG_SECTION.Inbounds,
+  CONFIG_SECTION.Outbounds,
+  CONFIG_SECTION.Providers,
+  CONFIG_SECTION.Dns,
+]);
+
 /** Адрес вкладки для сверки с текущим: у общего экрана он собран из параметра. */
 export function tabPath(tab: (typeof CONFIG_TABS)[number]): string {
   return 'params' in tab.link ? `/config/${tab.link.params.section}` : tab.link.to;

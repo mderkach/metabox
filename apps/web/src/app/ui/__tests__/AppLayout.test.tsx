@@ -6,12 +6,14 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router';
+import { finishApplyBarTransition } from '@test/applyBar';
 import { server } from '@test/server';
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { ConfigDocumentState } from '@entities/Config';
 import { DAEMON_ENDPOINT } from '@entities/Daemon';
 import {
   CLASH_CONFIGS_FIXTURE,
@@ -69,6 +71,8 @@ function mockNarrowScreen() {
 describe('AppLayout', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    ConfigDocumentState.getState().reset();
   });
 
   it('ссылка «к содержимому» первая в порядке табуляции и ведёт на #content', async () => {
@@ -105,6 +109,33 @@ describe('AppLayout', () => {
 
     expect(await screen.findByText(/metabox не отвечает/)).toBeInTheDocument();
     expect(screen.getByRole('main')).toHaveTextContent('Экран содержимого');
+  });
+
+  it('бар применения плавает под экраном и освобождает под собой место, а не сдвигает экран', async () => {
+    const barHeight = 64;
+
+    serveDaemon();
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(barHeight);
+    ConfigDocumentState.getState().load('{}', `"${'e'.repeat(64)}"`);
+    ConfigDocumentState.getState().replace('{ "log": {} }');
+
+    renderAppLayout();
+
+    const bar = await screen.findByRole('region', { name: 'Применение конфига' });
+    const main = screen.getByRole('main');
+
+    expect(main.compareDocumentPosition(bar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(main).toHaveStyle({ paddingBottom: `${String(barHeight)}px` });
+
+    act(() => {
+      ConfigDocumentState.getState().discard();
+    });
+
+    expect(main).toHaveStyle({ paddingBottom: `${String(barHeight)}px` });
+
+    finishApplyBarTransition();
+
+    expect(main).toHaveStyle({ paddingBottom: '0px' });
   });
 
   it('на широком экране разделы в боковой панели, нижней панели нет', async () => {

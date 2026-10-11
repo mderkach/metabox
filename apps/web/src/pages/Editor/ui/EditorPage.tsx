@@ -1,6 +1,6 @@
 import { useSearch } from '@tanstack/react-router';
 import { CircleAlert, Search, X } from 'lucide-react';
-import { useCallback, useState, ViewTransition, type ReactNode } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
 import { CONFIG_SECTION, type ConfigIssue } from '@entities/Config';
@@ -28,6 +28,7 @@ import {
   QueryFailure,
   SEARCH_FIELD,
   Separator,
+  SidePanelLayout,
   SURFACE,
   SkeletonRows,
 } from '@shared/ui';
@@ -87,8 +88,10 @@ export function EditorPage() {
       </>
     );
 
+  // Ниже lg список держит минимальную высоту и на низком экране не помещается:
+  // там прокручивается экран целиком, а не обрезается под баром применения.
   return (
-    <div className='flex min-h-0 grow flex-col gap-4 px-4 py-5 sm:px-6'>
+    <div className='flex min-h-0 grow flex-col gap-4 px-4 py-5 max-lg:overflow-y-auto sm:px-6'>
       <RuleOrderHint />
 
       {editor.source.isPending && <SkeletonRows className={SURFACE} />}
@@ -102,30 +105,30 @@ export function EditorPage() {
       {editor.source.isSuccess && editor.rules.length === 0 && editor.issues.length === 0 && <NoRules add={add} />}
 
       {editor.rules.length > 0 && (
-        <div className='flex min-h-0 grow flex-col gap-4 lg:flex-row'>
-          <RuleTable
-            rules={filter.rules}
-            total={editor.rules.length}
-            selectedId={selection.id}
-            edited={marks.edited}
-            hits={marks.hits}
-            outboundTypes={editor.outboundTypes}
-            onSelect={selection.select}
-            search={
-              <>
-                <RuleSearch filter={filter} />
-                <RuleSetChip filter={filter} />
-              </>
-            }
-            actions={add}
-            facets={<RuleTargetFacets filter={filter} />}
-            empty={<EmptyState filter={filter} />}
-          />
+        <SidePanelLayout.Root open={selected !== null && !asSheet} className='min-h-0 grow max-lg:min-h-96'>
+          <SidePanelLayout.Main>
+            <RuleTable
+              rules={filter.rules}
+              total={editor.rules.length}
+              selectedId={selection.id}
+              edited={marks.edited}
+              hits={marks.hits}
+              outboundTypes={editor.outboundTypes}
+              onSelect={selection.select}
+              search={
+                <>
+                  <RuleSearch filter={filter} />
+                  <RuleSetChip filter={filter} />
+                </>
+              }
+              actions={add}
+              facets={<RuleTargetFacets filter={filter} />}
+              empty={<EmptyState filter={filter} />}
+            />
+          </SidePanelLayout.Main>
 
-          {selected !== null && !asSheet && (
-            // Граница снаружи `key`: смена строки идёт как `update`, а не
-            // как exit и enter одновременно, иначе панель мигает.
-            <ViewTransition enter='panel-in' exit='panel-out'>
+          <SidePanelLayout.Panel>
+            {selected !== null && (
               <RulePanel
                 key={selection.key}
                 rule={selected}
@@ -136,9 +139,9 @@ export function EditorPage() {
                 actions={actions}
                 onClose={selection.close}
               />
-            </ViewTransition>
-          )}
-        </div>
+            )}
+          </SidePanelLayout.Panel>
+        </SidePanelLayout.Root>
       )}
 
       {/* Ниже lg панели рядом со списком нет места, а под ним она уходит ниже

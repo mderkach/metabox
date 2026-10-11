@@ -1,4 +1,5 @@
 import { Outlet } from '@tanstack/react-router';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useConfigLeaveGuard } from '@entities/Config';
@@ -25,6 +26,7 @@ export function AppLayout() {
   useConfigLeaveGuard();
   const { t } = useTranslation('app');
   const narrow = useNarrowScreen();
+  const [applySpace, setApplySpace] = useState(0);
 
   return (
     // `viewport-fit=cover` отдаёт панели весь экран, вместе с вырезами по бокам
@@ -41,12 +43,20 @@ export function AppLayout() {
       {!narrow && <AppSidebar />}
       <div className='flex min-h-0 min-w-0 grow flex-col'>
         <DaemonBanner />
-        <ConfigApplyBar />
-        {/* Экран — своя группа View Transitions для перехода роутера; граница
-            `<ViewTransition>` вокруг `Outlet` не сработает. */}
-        <main id='content' tabIndex={-1} className='flex min-h-0 grow flex-col [view-transition-name:page]'>
-          <Outlet />
-        </main>
+        <div className='relative flex min-h-0 grow flex-col'>
+          {/* Экран — своя группа View Transitions для перехода роутера; граница
+              `<ViewTransition>` вокруг `Outlet` не сработает. Отступ снизу — место
+              под плавающим баром применения: без него бар закрыл бы низ экрана. */}
+          <main
+            id='content'
+            tabIndex={-1}
+            style={{ paddingBottom: applySpace }}
+            className='flex min-h-0 grow flex-col [view-transition-name:page]'
+          >
+            <Outlet />
+          </main>
+          <ConfigApplyBar onSpaceChange={setApplySpace} />
+        </div>
       </div>
       {narrow && <AppSidebarBottomNav />}
     </div>

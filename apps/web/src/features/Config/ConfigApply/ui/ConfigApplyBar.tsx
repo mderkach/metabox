@@ -1,6 +1,6 @@
 import type { ParseKeys } from 'i18next';
 import { CircleAlert, FilePen, Info, LoaderCircle, Timer } from 'lucide-react';
-import { useMemo, useState, type TransitionEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type TransitionEvent } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
 import { APPLY_PHASE, type ApplyReasonCode, type ApplyTransaction } from '@entities/Daemon';
@@ -20,8 +20,12 @@ import { ConfigApplyWorkdir } from './ConfigApplyWorkdir';
 /**
  * Бар живёт в оболочке, а не на экране редактора: неприменённые правки и окно
  * подтверждения видны с любого экрана и переживают переход между ними.
+ *
+ * Бар плавает над нижним краем экрана и раскладку не двигает. Место под ним
+ * экран освобождает сам: `onSpaceChange` сообщает высоту, которую бар
+ * закрывает, пока виден, и ноль, когда его нет.
  */
-export function ConfigApplyBar() {
+export function ConfigApplyBar({ onSpaceChange }: { onSpaceChange: (space: number) => void }) {
   const { t } = useTranslation('features/Config/ConfigApply');
   const apply = useConfigApply();
   const [dismissed, setDismissed] = useState<string | null>(null);
@@ -65,82 +69,120 @@ export function ConfigApplyBar() {
   }
 
   const shown = visible ? current : held;
+  const layerRef = useBarSpace(visible || held !== null, onSpaceChange);
 
   function dropHeld(event: TransitionEvent<HTMLDivElement>) {
-    if (!visible && event.target === event.currentTarget) {
+    if (!visible && event.target === event.currentTarget && event.propertyName === 'translate') {
       setHeld(null);
     }
   }
 
-  // Высоту анимирует CSS, а не граница `<ViewTransition>`: экран под баром —
-  // именованная группа `page`, вне перехода роутера она стоит без анимации,
-  // и содержимое прыгало бы на высоту бара.
+  // Ниже `md` под баром стоит нижняя панель навигации, и безопасный отступ
+  // снизу уже за ней; на широком экране бар сам стоит у нижнего края. Имя
+  // группы перехода держит бар над экраном, пока роутер меняет экран.
   return (
     <div
+      ref={layerRef}
+      data-slot='apply-bar'
       inert={!visible}
       aria-hidden={!visible}
       onTransitionEnd={dropHeld}
       className={cn(
-        'grid shrink-0 transition-[grid-template-rows] duration-(--view-transition-panel) ease-(--view-transition-ease) motion-reduce:transition-none',
-        visible ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+        'absolute inset-x-0 bottom-0 z-10 flex justify-center px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] transition-[opacity,translate] ease-(--motion-ease-out) [view-transition-name:apply-bar] motion-reduce:transition-none max-md:pb-3',
+        visible
+          ? 'translate-y-0 opacity-100 duration-(--motion-enter)'
+          : 'translate-y-3 opacity-0 duration-(--motion-exit)'
       )}
     >
-      <div className='min-h-0 overflow-hidden'>
-        {shown !== null && (
-          <section
-            aria-label={t('bar.label')}
-            className='flex flex-col gap-2 border-b border-border bg-card px-4 py-2.5 sm:px-6'
-          >
-            {shown.awaiting && shown.transaction !== null ? (
-              <ConfirmWindow
-                key={shown.transaction.id}
-                transaction={shown.transaction}
-                isConfirming={apply.isConfirming}
-                onConfirm={apply.confirm}
-              />
-            ) : (
-              <div className='flex min-h-7 flex-wrap items-center gap-x-2.5 gap-y-1'>
-                {shown.isApplying ? (
-                  <LoaderCircle className='size-4 shrink-0 animate-spin text-muted-foreground motion-reduce:animate-none' />
-                ) : (
-                  <FilePen className='size-4 shrink-0 text-muted-foreground' />
-                )}
-                <p className='text-sm'>{shown.isApplying ? t('bar.applying') : t('bar.dirty')}</p>
-                <span className='grow' />
-                {/* Сброс держится с краю группы, подальше от «Применить»:
+      {shown !== null && (
+        <section
+          aria-label={t('bar.label')}
+          className='flex max-h-[60svh] w-full max-w-4xl flex-col gap-2 overflow-y-auto rounded-xl bg-popover px-4 py-2.5 text-popover-foreground shadow-lg ring-1 ring-foreground/10'
+        >
+          {shown.awaiting && shown.transaction !== null ? (
+            <ConfirmWindow
+              key={shown.transaction.id}
+              transaction={shown.transaction}
+              isConfirming={apply.isConfirming}
+              onConfirm={apply.confirm}
+            />
+          ) : (
+            <div className='flex min-h-7 flex-wrap items-center gap-x-2.5 gap-y-1'>
+              {shown.isApplying ? (
+                <LoaderCircle className='size-4 shrink-0 animate-spin text-muted-foreground motion-reduce:animate-none' />
+              ) : (
+                <FilePen className='size-4 shrink-0 text-muted-foreground' />
+              )}
+              <p className='text-sm'>{shown.isApplying ? t('bar.applying') : t('bar.dirty')}</p>
+              <span className='grow' />
+              {/* Сброс держится с краю группы, подальше от «Применить»:
                     промах по соседней кнопке открывал бы сброс вместо применения. */}
-                {!shown.isApplying && (
-                  <>
-                    <ConfigApplyDiscard onDiscard={apply.discard} />
-                    <Separator orientation='vertical' className='mx-1.5 h-5' />
-                    <ConfigApplyDiff canApply={apply.canApply} onApply={apply.apply} />
-                    <Button size='sm' disabled={!apply.canApply} onClick={apply.apply}>
-                      {t('bar.apply')}
-                    </Button>
-                  </>
-                )}
-              </div>
-            )}
+              {!shown.isApplying && (
+                <>
+                  <ConfigApplyDiscard onDiscard={apply.discard} />
+                  <Separator orientation='vertical' className='mx-1.5 h-5' />
+                  <ConfigApplyDiff canApply={apply.canApply} onApply={apply.apply} />
+                  <Button size='sm' disabled={!apply.canApply} onClick={apply.apply}>
+                    {t('bar.apply')}
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
 
-            {shown.isStale && !shown.isApplying && !shown.awaiting && <ConfigApplyStale onDiscard={apply.discard} />}
+          {shown.isStale && !shown.isApplying && !shown.awaiting && <ConfigApplyStale onDiscard={apply.discard} />}
 
-            {shown.check !== null && <ConfigApplyCheck check={shown.check} />}
+          {shown.check !== null && <ConfigApplyCheck check={shown.check} />}
 
-            {shown.workdir !== null && <ConfigApplyWorkdir mismatch={shown.workdir} />}
+          {shown.workdir !== null && <ConfigApplyWorkdir mismatch={shown.workdir} />}
 
-            {shown.failure && shown.transaction !== null && (
-              <ApplyFailure
-                transaction={shown.transaction}
-                onDismiss={() => {
-                  setDismissed(shown.transaction?.id ?? null);
-                }}
-              />
-            )}
-          </section>
-        )}
-      </div>
+          {shown.failure && shown.transaction !== null && (
+            <ApplyFailure
+              transaction={shown.transaction}
+              onDismiss={() => {
+                setDismissed(shown.transaction?.id ?? null);
+              }}
+            />
+          )}
+        </section>
+      )}
     </div>
   );
+}
+
+/**
+ * Высота слоя бара, пока он занимает место — виден или ещё уезжает. Место под
+ * уезжающим баром держится до конца выезда, иначе низ экрана прыгнул бы под
+ * ним. Меряется наблюдателем, а не однажды: вывод `sing-box check`, отказ и
+ * окно подтверждения меняют высоту бара на месте.
+ */
+function useBarSpace(visible: boolean, onSpaceChange: (space: number) => void) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(
+    function reportBarSpace() {
+      const layer = ref.current;
+
+      if (!visible || layer === null) {
+        onSpaceChange(0);
+
+        return;
+      }
+
+      const observer = new ResizeObserver(function measureBar() {
+        onSpaceChange(layer.offsetHeight);
+      });
+
+      observer.observe(layer);
+
+      return function stopMeasuringBar() {
+        observer.disconnect();
+      };
+    },
+    [visible, onSpaceChange]
+  );
+
+  return ref;
 }
 
 /**

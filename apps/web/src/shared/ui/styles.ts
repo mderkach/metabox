@@ -29,7 +29,7 @@ export const TABLE_HEADER = 'text-xs font-medium tracking-[0.06em] text-muted-fo
 /** Поле поиска в тулбаре списка: одна ширина на всех списках панели. */
 export const SEARCH_FIELD = 'relative w-full max-w-80';
 
-/** Чип отбора: фасет по устройству на соединениях и по выходу на правилах. */
+/** Чип отбора: фасет по выходу на правилах. */
 export const FACET_CLASS =
   'flex h-6 shrink-0 items-center gap-1.5 rounded-md border px-2 text-xs transition-colors focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none';
 
@@ -77,3 +77,11 @@ export const EMPTY_INLINE = 'p-4';
  * анимация пульса, и вторая её перебила бы.
  */
 export const PENDING_REVEAL = 'animate-in fade-in fill-mode-backwards delay-200 duration-300';
+
+/**
+ * Лист снизу въезжает целиком, от нижнего края: вендорный сдвиг на 2.5rem при
+ * листе высотой в экран читается вспышкой, а не движением. Уходит быстрее, чем
+ * приходит. Без анимации лист появляется сразу.
+ */
+export const SHEET_BOTTOM =
+  'duration-(--motion-sheet-enter) ease-(--motion-ease-out) data-ending-style:duration-(--motion-sheet-exit) data-ending-style:opacity-100 data-starting-style:opacity-100 data-[side=bottom]:data-ending-style:translate-y-full data-[side=bottom]:data-starting-style:translate-y-full motion-reduce:transition-none';

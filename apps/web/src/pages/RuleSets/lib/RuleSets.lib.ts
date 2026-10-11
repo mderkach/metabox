@@ -1,4 +1,4 @@
-import { startTransition, useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import {
   hasRuleSetCache,
@@ -129,10 +129,7 @@ export interface RuleSetPanelState {
   close: () => void;
 }
 
-/**
- * Форма в панели сета. Открытие и закрытие идут в `startTransition`: без
- * Transition обновление срочное, и граница вокруг панели не анимируется.
- */
+/** Форма в панели сета. */
 export function useRuleSetPanel(): RuleSetPanelState {
   const [form, setForm] = useState<RuleSetForm | null>(null);
   const [shown, setShown] = useState<RuleSetForm>(RULE_SET_FORM.Catalog);
@@ -143,22 +140,16 @@ export function useRuleSetPanel(): RuleSetPanelState {
   }
 
   const toggle = useCallback((next: RuleSetForm) => {
-    startTransition(() => {
-      setForm((current) => (current === next ? null : next));
-    });
+    setForm((current) => (current === next ? null : next));
   }, []);
 
   const edit = useCallback((index: number) => {
-    startTransition(() => {
-      setEditing(index);
-      setForm(RULE_SET_FORM.Edit);
-    });
+    setEditing(index);
+    setForm(RULE_SET_FORM.Edit);
   }, []);
 
   const close = useCallback(() => {
-    startTransition(() => {
-      setForm(null);
-    });
+    setForm(null);
   }, []);
 
   return { form, shown, editing, toggle, edit, close };

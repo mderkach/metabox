@@ -1,5 +1,5 @@
 import { Plus, Search } from 'lucide-react';
-import { useCallback, ViewTransition } from 'react';
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ConfigDocumentState, readRuleSets, ruleSetNodePath } from '@entities/Config';
@@ -19,6 +19,7 @@ import {
   Input,
   QueryFailure,
   SEARCH_FIELD,
+  SidePanelLayout,
   SURFACE,
   SkeletonRows,
 } from '@shared/ui';
@@ -135,57 +136,57 @@ export function RuleSetsPage() {
       )}
 
       {listed && (
-        <div className='flex flex-col gap-4 lg:flex-row lg:items-start'>
-          <RuleSetTable
-            sets={filter.sets}
-            total={editor.sets.length}
-            onEdit={panel.edit}
-            onRemove={onRemove}
-            search={<RuleSetSearch filter={filter} />}
-            empty={<EmptyState onReset={filter.reset} />}
-            actions={
-              <>
-                <Button
-                  variant='outline'
-                  size='sm'
-                  aria-expanded={panel.form === RULE_SET_FORM.Catalog}
-                  onClick={() => {
-                    panel.toggle(RULE_SET_FORM.Catalog);
-                  }}
-                >
-                  <Plus data-icon='inline-start' />
-                  {t('add.open')}
-                </Button>
-                <Button
-                  variant='outline'
-                  size='sm'
-                  aria-expanded={panel.form === RULE_SET_FORM.Custom}
-                  onClick={() => {
-                    panel.toggle(RULE_SET_FORM.Custom);
-                  }}
-                >
-                  <Plus data-icon='inline-start' />
-                  {t('custom.open')}
-                </Button>
-              </>
-            }
-          />
+        <SidePanelLayout.Root open={panel.form !== null && !asSheet} className='items-start'>
+          <SidePanelLayout.Main>
+            <RuleSetTable
+              sets={filter.sets}
+              total={editor.sets.length}
+              onEdit={panel.edit}
+              onRemove={onRemove}
+              search={<RuleSetSearch filter={filter} />}
+              empty={<EmptyState onReset={filter.reset} />}
+              actions={
+                <>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    aria-expanded={panel.form === RULE_SET_FORM.Catalog}
+                    onClick={() => {
+                      panel.toggle(RULE_SET_FORM.Catalog);
+                    }}
+                  >
+                    <Plus data-icon='inline-start' />
+                    {t('add.open')}
+                  </Button>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    aria-expanded={panel.form === RULE_SET_FORM.Custom}
+                    onClick={() => {
+                      panel.toggle(RULE_SET_FORM.Custom);
+                    }}
+                  >
+                    <Plus data-icon='inline-start' />
+                    {t('custom.open')}
+                  </Button>
+                </>
+              }
+            />
+          </SidePanelLayout.Main>
 
-          {panel.form !== null && !asSheet && (
-            // Граница снаружи `key`: смена формы идёт как `update`, а не как
-            // exit и enter одновременно, иначе панель мигает.
-            <ViewTransition enter='panel-in' exit='panel-out'>
+          <SidePanelLayout.Panel>
+            {panel.form !== null && (
               <RuleSetPanel key={`${panel.form}:${String(panel.editing)}`} title={panelTitle} onClose={panel.close}>
                 {panelForm}
               </RuleSetPanel>
-            </ViewTransition>
-          )}
-        </div>
+            )}
+          </SidePanelLayout.Panel>
+        </SidePanelLayout.Root>
       )}
 
       {/* Ниже lg панели рядом со списком нет места: там она открывается листом. */}
-      {listed && asSheet && (
-        <RuleSetPanelSheet open={panel.form !== null} title={panelTitle} onClose={panel.close}>
+      {asSheet && (
+        <RuleSetPanelSheet open={listed && panel.form !== null} title={panelTitle} onClose={panel.close}>
           {panelForm}
         </RuleSetPanelSheet>
       )}
