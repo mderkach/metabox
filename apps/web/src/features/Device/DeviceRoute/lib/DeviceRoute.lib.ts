@@ -43,6 +43,7 @@ export interface DeviceRouteState {
   model: DataplaneModel | null;
   /** Смена недоступна: модель не прочитана или идёт применение — смена модели или конфига. */
   locked: boolean;
+  foreignService: boolean;
   /** `null` — смен модели в этой жизни демона не было. */
   transaction: ApplyTransaction | null;
   isConfirming: boolean;
@@ -94,6 +95,7 @@ export function useDeviceRoute(): DeviceRouteState {
       change.isPending ||
       isApplyActive(transaction?.phase) ||
       isApplyActive(status.data?.transaction?.phase),
+    foreignService: dataplane.data?.foreignService ?? false,
     transaction,
     isConfirming: confirm.isPending,
     route: onRoute,

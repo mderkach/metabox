@@ -322,6 +322,21 @@ describe('экран устройств', () => {
       expect(toggle).toBeChecked();
     });
 
+    it('у демона на чужой службе тумблер недоступен, показывает положение и объясняет почему', async () => {
+      server.use(...createDeviceHandlers());
+      serveDataplane({ ...DATAPLANE_FIXTURE, foreign_service: true });
+      renderScreen();
+
+      await screen.findByText('Ноутбук');
+      await waitFor(() => {
+        expect(within(rowOf('Ноутбук')).getByText('панель управляет не metabox-singbox')).toBeInTheDocument();
+      });
+
+      expect(isLocked(screen.getByRole('switch', { name: 'Через sing-box: Ноутбук' }))).toBe(true);
+      expect(screen.getByRole('switch', { name: 'Через sing-box: Ноутбук' })).not.toBeChecked();
+      expect(screen.getByRole('switch', { name: 'Через sing-box: iphone-guest' })).toBeChecked();
+    });
+
     it('смена, отклонённая демоном, окна не открывает и тумблер не запирает', async () => {
       const rejected = vi.fn<() => void>();
       const user = userEvent.setup();

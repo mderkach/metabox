@@ -1,7 +1,8 @@
 {
   "switch": {
     "label": "Через sing-box: {{device}}",
-    "forAll": "перехват для всех"
+    "forAll": "перехват для всех",
+    "foreignService": "панель управляет не metabox-singbox"
   },
   "dialog": {
     "on": "Пустить {{device}} через sing-box?",

@@ -62,6 +62,25 @@ func TestDataplaneModel(t *testing.T) {
 	if body.Model.RedirectPort != 5331 || body.Applied || body.AppliedReason != dataplane.NFTUnavailable {
 		t.Errorf("ответ %+v", body)
 	}
+	if body.ForeignService {
+		t.Error("без Plane служба названа чужой")
+	}
+}
+
+func TestDataplaneModelForeignService(t *testing.T) {
+	srv := newPlaneServer(t, &fakePlaneApplier{foreign: true})
+
+	got := request(t, srv, http.MethodGet, "/api/dataplane", "", nil)
+	if got.status != http.StatusOK {
+		t.Fatalf("код %d, тело %s", got.status, got.body)
+	}
+
+	var body contract.Dataplane
+	got.decode(t, &body)
+
+	if !body.ForeignService {
+		t.Error("foreign_service не отдан, панель предложит смену, которую демон отклонит")
+	}
 }
 
 func TestDataplaneInvalid(t *testing.T) {
@@ -101,7 +120,10 @@ type fakePlaneApplier struct {
 	model    dataplane.Model
 	base     string
 	client   netip.Addr
+	foreign  bool
 }
+
+func (f *fakePlaneApplier) ForeignService() bool { return f.foreign }
 
 func (f *fakePlaneApplier) Start(_ context.Context, m dataplane.Model, base string, client netip.Addr) (apply.Transaction, error) {
 	f.mu.Lock()

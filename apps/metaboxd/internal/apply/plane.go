@@ -122,6 +122,13 @@ func NewPlane(
 	}
 }
 
+// ForeignService — демон управляет не той службой, чей init-скрипт читает
+// модель: Start откажет, и панель узнаёт об этом из GET /api/dataplane до
+// смены.
+func (p *Plane) ForeignService() bool {
+	return p.opts.Service != dataplane.Service
+}
+
 // Current отдаёт снимок транзакции обвязки; Window — остаток окна.
 func (p *Plane) Current() Transaction {
 	p.mu.Lock()
@@ -145,7 +152,7 @@ func (p *Plane) Start(ctx context.Context, model dataplane.Model, base string, c
 		return Transaction{}, err
 	}
 
-	if p.opts.Service != dataplane.Service {
+	if p.ForeignService() {
 		return Transaction{}, ErrDataplaneForeignService
 	}
 

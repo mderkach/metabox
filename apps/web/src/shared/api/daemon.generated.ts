@@ -403,6 +403,8 @@ export const DataplaneSchema = z.object({
   applied: z.boolean(),
   /** AppliedReason — почему Applied не наблюдён, а подставлен ложью. */
   applied_reason: z.string().optional(),
+  /** ForeignService — демон управляет не службой `metabox-singbox`, и `PUT /api/dataplane` получит `dataplane_foreign_service`: панель не предлагает смену, которую демон отклонит. */
+  foreign_service: z.boolean().optional(),
 })
 
 /** DataplaneChange — тело `PUT /api/dataplane`: модель в той же форме, что поле model ответа `GET /api/dataplane`. Пишется целиком: отсутствующее поле — это нулевое значение, а не «оставить как есть». */

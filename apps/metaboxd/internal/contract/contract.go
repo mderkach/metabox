@@ -274,6 +274,10 @@ type Dataplane struct {
 	Applied bool `json:"applied"`
 	// AppliedReason — почему Applied не наблюдён, а подставлен ложью.
 	AppliedReason dataplane.AppliedReason `json:"applied_reason,omitempty"`
+	// ForeignService — демон управляет не службой `metabox-singbox`, и
+	// `PUT /api/dataplane` получит `dataplane_foreign_service`: панель не
+	// предлагает смену, которую демон отклонит.
+	ForeignService bool `json:"foreign_service,omitempty"`
 }
 
 // DataplaneChange — тело `PUT /api/dataplane`: модель в той же форме, что поле

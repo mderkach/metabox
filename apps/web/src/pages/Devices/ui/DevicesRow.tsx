@@ -34,6 +34,7 @@ function DevicesRowProto({
   onDone,
   routeModel,
   routeLocked,
+  routeForeign,
   onRoute,
 }: {
   device: Device;
@@ -45,6 +46,7 @@ function DevicesRowProto({
   /** Модель обвязки; `null` — не прочитана, и тумблер недоступен. */
   routeModel: DataplaneModel | null;
   routeLocked: boolean;
+  routeForeign: boolean;
   onRoute: (source: RouteSource, routed: boolean) => void;
 }) {
   const { t } = useTranslation('pages/Devices');
@@ -104,6 +106,7 @@ function DevicesRowProto({
           label={device.label}
           model={routeModel}
           locked={routeLocked}
+          foreignService={routeForeign}
           onRoute={onRoute}
         />
       </span>

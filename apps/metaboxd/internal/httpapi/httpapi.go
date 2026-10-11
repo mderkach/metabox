@@ -738,7 +738,10 @@ func (s *Server) handleDataplane(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("ETag", `"`+snap.Sum()+`"`)
-	writeJSON(s.log, w, http.StatusOK, contract.Dataplane{Model: model, Applied: applied, AppliedReason: reason})
+	writeJSON(s.log, w, http.StatusOK, contract.Dataplane{
+		Model: model, Applied: applied, AppliedReason: reason,
+		ForeignService: s.plane != nil && s.plane.ForeignService(),
+	})
 }
 
 // ServiceState приводит состояние службы к форме ответа. Экспортируется,

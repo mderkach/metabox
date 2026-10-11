@@ -1,7 +1,8 @@
 {
   "switch": {
     "label": "Through sing-box: {{device}}",
-    "forAll": "interception for everyone"
+    "forAll": "interception for everyone",
+    "foreignService": "the panel manages a service other than metabox-singbox"
   },
   "dialog": {
     "on": "Route {{device}} through sing-box?",

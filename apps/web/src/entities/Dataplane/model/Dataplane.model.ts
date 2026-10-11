@@ -32,6 +32,8 @@ export interface Dataplane {
   model: DataplaneModel;
   /** Отпечаток секции из `ETag`: с ним смена уходит в `If-Match`. */
   etag: string | null;
+  /** Демон управляет не службой `metabox-singbox`: смену модели он отклонит, и тумблеры её не предлагают. */
+  foreignService: boolean;
 }
 
 /** Источник трафика LAN, который можно пустить через sing-box. */

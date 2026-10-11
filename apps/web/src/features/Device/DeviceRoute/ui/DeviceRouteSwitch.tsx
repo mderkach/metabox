@@ -24,6 +24,7 @@ export function DeviceRouteSwitch({
   label,
   model,
   locked,
+  foreignService,
   onRoute,
 }: {
   source: RouteSource;
@@ -31,10 +32,25 @@ export function DeviceRouteSwitch({
   label: string;
   model: DataplaneModel | null;
   locked: boolean;
+  /** Демон управляет чужой службой: положение показывается, смена не предлагается. */
+  foreignService: boolean;
   onRoute: (source: RouteSource, routed: boolean) => void;
 }) {
   const { t } = useTranslation('features/Device/DeviceRoute');
   const [target, setTarget] = useState<boolean | null>(null);
+
+  if (foreignService) {
+    return (
+      <span className='flex items-center gap-2'>
+        <Switch
+          checked={model !== null && isDeviceRouted(model, source)}
+          disabled
+          aria-label={t('switch.label', { device: label })}
+        />
+        <span className='text-xs text-muted-foreground'>{t('switch.foreignService')}</span>
+      </span>
+    );
+  }
 
   if (model?.aclMode === ACL_MODE.All) {
     return (
