@@ -254,7 +254,7 @@ func (c *Client) PID(ctx context.Context) (int, error) {
 		return 0, ErrNoSupervisor
 	}
 
-	state, err := c.supervisor.Service(ctx, c.serviceName(), c.instance)
+	state, err := c.supervisor.Service(ctx, c.ServiceName(), c.instance)
 	if err != nil {
 		return 0, fmt.Errorf("pid службы: %w", err)
 	}
@@ -281,7 +281,7 @@ func (c *Client) State(ctx context.Context) (State, error) {
 		return state, nil
 	}
 
-	supervised, err := c.supervisor.Service(ctx, c.serviceName(), c.instance)
+	supervised, err := c.supervisor.Service(ctx, c.ServiceName(), c.instance)
 	if errors.Is(err, procd.ErrAmbiguousInstance) {
 		// Остальные отказы procd состояние только обедняют, а этот означает,
 		// что демон не знает, какой процесс его: угадывать нельзя.
@@ -315,7 +315,7 @@ func (c *Client) Launch(ctx context.Context) (procd.Launch, error) {
 		return procd.Launch{}, nil
 	}
 
-	state, err := c.supervisor.Service(ctx, c.serviceName(), c.instance)
+	state, err := c.supervisor.Service(ctx, c.ServiceName(), c.instance)
 	if err != nil {
 		return procd.Launch{}, err
 	}
@@ -334,9 +334,9 @@ func (c *Client) running(ctx context.Context) (Result, error) {
 	return c.runner.Run(ctx, c.initScript, args...)
 }
 
-// serviceName выводит имя службы в procd из пути init-скрипта: procd
+// ServiceName выводит имя службы в procd из пути init-скрипта: procd
 // регистрирует службу под именем скрипта.
-func (c *Client) serviceName() string {
+func (c *Client) ServiceName() string {
 	return filepath.Base(c.initScript)
 }
 

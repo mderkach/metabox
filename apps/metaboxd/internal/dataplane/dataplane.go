@@ -34,6 +34,12 @@ const (
 	chainPrefix = "metabox_"
 )
 
+// Service — имя службы, init-скрипт которой читает модель и доводит до неё
+// обвязку. Другая служба на том же sing-box — homeproxy или пакет форка —
+// секцию не читает: записанная модель ничего бы не поставила, а её reload
+// перезапустил бы чужую маршрутизацию.
+const Service = "metabox-singbox"
+
 // AccessMode — какие источники с интерфейсов LAN идут через sing-box.
 type AccessMode string
 

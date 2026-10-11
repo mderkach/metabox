@@ -21,6 +21,10 @@ import (
 // модель: правка по SSH иначе затёрлась бы молча.
 var ErrDataplaneModified = errors.New("модель обвязки изменена вне metabox")
 
+// ErrDataplaneForeignService — демон управляет не той службой, чей init-скрипт
+// читает модель: смена отклонена до записи.
+var ErrDataplaneForeignService = errors.New("модель обвязки читает только служба " + dataplane.Service)
+
 // PlaneEditor — модель обвязки в UCI: снимок секции, запись модели, возврат
 // снимка и цепочки в nft.
 type PlaneEditor interface {
@@ -52,6 +56,9 @@ type PlaneOptions struct {
 	CycleTimeout time.Duration
 	// DNS — проба dns-in; nil — выключена.
 	DNS DNSProber
+	// Service — имя службы, которой управляет демон: имя её init-скрипта.
+	// Смена модели идёт только при dataplane.Service.
+	Service string
 }
 
 // planeRecord — файл состояния транзакции обвязки: транзакция и снимок секции,
@@ -136,6 +143,10 @@ func (p *Plane) Start(ctx context.Context, model dataplane.Model, base string, c
 	next, err := dataplane.Normalize(model)
 	if err != nil {
 		return Transaction{}, err
+	}
+
+	if p.opts.Service != dataplane.Service {
+		return Transaction{}, ErrDataplaneForeignService
 	}
 
 	token, err := p.gate.reserveExclusive()

@@ -169,6 +169,8 @@ func statusFor(err error) (status int, code contract.ErrorCode) {
 		return http.StatusBadRequest, contract.ErrDataplaneInvalid
 	case errors.Is(err, apply.ErrDataplaneModified):
 		return http.StatusPreconditionFailed, contract.ErrDataplaneModified
+	case errors.Is(err, apply.ErrDataplaneForeignService):
+		return http.StatusConflict, contract.ErrDataplaneForeignService
 	case errors.Is(err, errDataplaneBaseMissing):
 		return http.StatusPreconditionRequired, contract.ErrDataplaneModified
 	case errors.Is(err, logs.ErrUnavailable):

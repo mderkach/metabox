@@ -534,6 +534,7 @@ func build(
 		Window:       s.confirmWindow,
 		CycleTimeout: s.cycleTimeout,
 		DNS:          dns,
+		Service:      service.ServiceName(),
 	})
 
 	return manager, planeTx, store, service, nil

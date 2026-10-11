@@ -178,10 +178,15 @@ func newPlaneHarness(t *testing.T, dns apply.DNSProber, cfg string, log *slog.Lo
 }
 
 func (h *planeHarness) newPlane(dns apply.DNSProber, log *slog.Logger) *apply.Plane {
+	return h.newPlaneFor(dataplane.Service, dns, log)
+}
+
+func (h *planeHarness) newPlaneFor(service string, dns apply.DNSProber, log *slog.Logger) *apply.Plane {
 	return apply.NewPlane(h.manager, h.editor, h.reloader, h.pstore, h.health, h.clock, log, apply.PlaneOptions{
 		Window:       window,
 		CycleTimeout: cycleTimeout,
 		DNS:          dns,
+		Service:      service,
 	})
 }
 
@@ -395,6 +400,32 @@ func TestPlaneStaleBase(t *testing.T) {
 
 	if written, _ := h.editor.counts(); written != 1 {
 		t.Errorf("записей в UCI %d, ожидали одну", written)
+	}
+}
+
+func TestPlaneForeignServiceReservesNothing(t *testing.T) {
+	h := newPlaneHarness(t, nil, validConfig, slog.New(slog.DiscardHandler))
+	t.Cleanup(h.plane.Close)
+
+	plane := h.newPlaneFor("homeproxy", nil, slog.New(slog.DiscardHandler))
+	t.Cleanup(plane.Close)
+
+	if _, err := plane.Start(t.Context(), aclChange(), "", admin); !errors.Is(err, apply.ErrDataplaneForeignService) {
+		t.Fatalf("получили %v, ожидали ErrDataplaneForeignService", err)
+	}
+
+	if written, _ := h.editor.counts(); written != 0 {
+		t.Errorf("записей в UCI %d после отказа, ожидали ни одной", written)
+	}
+	if h.pstore.saved() != nil {
+		t.Error("отклонённая смена оставила состояние на диске")
+	}
+	if h.reloader.count() != 0 {
+		t.Error("отклонённая смена дёрнула reload службы")
+	}
+
+	if _, err := h.plane.Start(t.Context(), aclChange(), "", admin); err != nil {
+		t.Fatalf("смена у службы metabox-singbox: %v", err)
 	}
 }
 

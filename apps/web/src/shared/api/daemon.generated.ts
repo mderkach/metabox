@@ -53,6 +53,7 @@ export const ERROR_CODE = [
   'device_invalid',
   'dataplane_invalid',
   'dataplane_modified',
+  'dataplane_foreign_service',
   'log_unavailable',
   'log_query_invalid',
   'log_stream_limit',

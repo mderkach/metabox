@@ -140,6 +140,7 @@
     "device_invalid": "the daemon rejected the device name",
     "dataplane_invalid": "the traffic interception settings in UCI contain errors",
     "dataplane_modified": "the traffic interception settings changed on the device, the list was reloaded",
+    "dataplane_foreign_service": "traffic interception is configured only for the metabox-singbox service, and the panel manages a different one",
     "log_unavailable": "the sing-box log is unavailable: logread did not respond or the log file could not be opened",
     "log_query_invalid": "the daemon rejected the log level or line count",
     "log_stream_limit": "too many log streams are open — close extra tabs",

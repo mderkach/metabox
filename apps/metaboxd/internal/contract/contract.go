@@ -204,6 +204,11 @@ const (
 	// чтения модели клиентом (412), либо `PUT /api/dataplane` пришёл без
 	// If-Match (428).
 	ErrDataplaneModified ErrorCode = "dataplane_modified"
+	// ErrDataplaneForeignService — смена модели отклонена до записи: демон
+	// управляет не службой `metabox-singbox`, а модель читает только её
+	// init-скрипт. Запись ничего бы не поставила, а reload перезапустил бы
+	// чужую маршрутизацию.
+	ErrDataplaneForeignService ErrorCode = "dataplane_foreign_service"
 	// ErrLogUnavailable — лог sing-box не читается: logread не задан или
 	// отказал, файл log.output не открылся.
 	ErrLogUnavailable ErrorCode = "log_unavailable"

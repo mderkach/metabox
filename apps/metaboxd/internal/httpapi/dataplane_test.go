@@ -229,6 +229,10 @@ func TestDataplaneChangeRejected(t *testing.T) {
 			"секция изменилась после чтения", apply.ErrDataplaneModified, `{"model":{}}`,
 			http.StatusPreconditionFailed, contract.ErrDataplaneModified,
 		},
+		{
+			"демон управляет чужой службой", apply.ErrDataplaneForeignService, `{"model":{}}`,
+			http.StatusConflict, contract.ErrDataplaneForeignService,
+		},
 	}
 
 	for _, tt := range tests {

@@ -27,6 +27,7 @@ const FAILURE_KEY: Readonly<Record<ApiFailureCode, ParseKeys<'shared'>>> = {
   device_invalid: 'failure.device_invalid',
   dataplane_invalid: 'failure.dataplane_invalid',
   dataplane_modified: 'failure.dataplane_modified',
+  dataplane_foreign_service: 'failure.dataplane_foreign_service',
   log_unavailable: 'failure.log_unavailable',
   log_query_invalid: 'failure.log_query_invalid',
   log_stream_limit: 'failure.log_stream_limit',
