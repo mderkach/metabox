@@ -25,6 +25,13 @@ function serveConfig(config: unknown = CONFIG_FIXTURE) {
   server.use(http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(JSON.stringify(config))));
 }
 
+/** Открывает фасет и отдаёт его список значений. Сортировка в шапке подписана так же, поэтому ищем в тулбаре. */
+async function openFacet(user: ReturnType<typeof userEvent.setup>, name: RegExp) {
+  await user.click(within(await screen.findByRole('group', { name: 'Фильтры' })).getByRole('button', { name }));
+
+  return screen.findByRole('listbox');
+}
+
 /** Отбор экрана живёт в адресе, поэтому монтируем его на своём маршруте. */
 function renderScreen(search = '') {
   return renderWithRouter(ConnectionsPage, {
@@ -156,37 +163,58 @@ describe('экран соединений', () => {
     });
   });
 
-  it('фасет по действию отбирает строки', async () => {
+  it('фасет по действию отбирает строки и называет выбор на кнопке', async () => {
     const user = userEvent.setup();
 
     ConnectionStore.getState().apply(makeConnectionsSnapshot(8));
     renderScreen();
 
-    const kinds = await screen.findByRole('list', { name: 'Действие' });
-    const direct = within(kinds).getByRole('button', { name: /напрямую/ });
+    const kinds = await openFacet(user, /^Действие$/);
+    const direct = within(kinds).getByRole('option', { name: /напрямую/ });
 
     await user.click(direct);
 
-    expect(direct).toHaveAttribute('aria-pressed', 'true');
+    expect(direct).toHaveAttribute('aria-selected', 'true');
     await waitFor(() => {
       expect(screen.getByText('Показано 4 из 8')).toHaveAttribute('role', 'status');
+    });
+    expect(screen.getByRole('button', { name: 'Действие: напрямую' })).toBeInTheDocument();
+  });
+
+  it('несколько значений одного фасета складывает, а не сужает', async () => {
+    const user = userEvent.setup();
+
+    const { router } = renderScreen();
+    ConnectionStore.getState().apply(makeConnectionsSnapshot(8));
+
+    const kinds = await openFacet(user, /^Действие$/);
+
+    await user.click(within(kinds).getByRole('option', { name: /напрямую/ }));
+    await user.click(within(kinds).getByRole('option', { name: /через прокси/ }));
+
+    await waitFor(() => {
+      expect(router.state.location.search).toEqual({ kind: ['direct', 'proxy'] });
+    });
+    expect(screen.getByRole('button', { name: 'Действие: выбрано 2' })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('8 соединений')).toHaveAttribute('role', 'status');
     });
   });
 
   it('действие строки берёт из типа аутбаунда конфига, а не из его тега', async () => {
+    const user = userEvent.setup();
+
     serveConfig(PROXY_NAMED_DIRECT);
     ConnectionStore.getState().apply(makeConnectionsSnapshot(8));
     renderScreen();
 
-    const kinds = await screen.findByRole('list', { name: 'Действие' });
+    const kinds = await openFacet(user, /^Действие$/);
 
-    // Пока конфиг не прочитан, четыре строки `route(direct)` читаются по тегу.
-    expect(within(kinds).getByRole('button', { name: /напрямую/ })).toHaveTextContent('4');
-
+    // Четыре строки `route(direct)` по тегу читались бы прямыми.
     await waitFor(() => {
-      expect(within(kinds).queryByRole('button', { name: /напрямую/ })).not.toBeInTheDocument();
+      expect(within(kinds).queryByRole('option', { name: /напрямую/ })).not.toBeInTheDocument();
     });
-    expect(within(kinds).getByRole('button', { name: /через прокси/ })).toHaveTextContent('8');
+    expect(within(kinds).getByRole('option', { name: /через прокси/ })).toHaveTextContent('8');
   });
 
   it('на вкладке закрытых говорит, сколько они хранятся', async () => {
@@ -243,10 +271,90 @@ describe('экран соединений', () => {
     renderScreen('?kind=direct');
     ConnectionStore.getState().apply(makeConnectionsSnapshot(4));
 
-    const kinds = await screen.findByRole('list', { name: 'Действие' });
-    const direct = within(kinds).getByRole('button', { name: /напрямую/ });
+    expect(await screen.findByRole('button', { name: 'Действие: напрямую' })).toBeInTheDocument();
+  });
 
-    expect(direct).toHaveAttribute('aria-pressed', 'true');
+  // На эту ссылку ведёт экран устройств: «соединения этого устройства».
+  it('старая ссылка на одно устройство отбирает его строки', async () => {
+    renderScreen('?source=192.168.1.60');
+    ConnectionStore.getState().apply(CONNECTIONS_FIXTURE);
+
+    expect(await screen.findByText('api.git.example:443')).toBeInTheDocument();
+    expect(screen.queryByText('video.example:443')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Устройство: / })).toBeInTheDocument();
+  });
+
+  it('правило без условий выбирается и переживает дорогу через адрес', async () => {
+    const user = userEvent.setup();
+
+    const { router } = renderScreen();
+    ConnectionStore.getState().apply(CONNECTIONS_FIXTURE);
+
+    await user.click(within(await openFacet(user, /^Правило$/)).getByRole('option', { name: /без условий/ }));
+
+    await waitFor(() => {
+      expect(router.state.location.search).toEqual({ match: '' });
+    });
+
+    const { searchStr } = router.state.location;
+
+    expect(parseConnectionSearch(router.options.parseSearch(searchStr))).toEqual({ match: '' });
+    expect(screen.getByRole('button', { name: 'Правило: без условий' })).toBeInTheDocument();
+  });
+
+  it('выбранное устройство, которого нет в снимке, остаётся в фасете с нулём и снимается руками', async () => {
+    const user = userEvent.setup();
+
+    const { router } = renderScreen('?source=192.168.1.200');
+    ConnectionStore.getState().apply(makeConnectionsSnapshot(4));
+
+    const sources = await openFacet(user, /^Устройство: /);
+    const gone = within(sources).getByRole('option', { name: /192\.168\.1\.200/ });
+
+    expect(gone).toHaveAttribute('aria-selected', 'true');
+    expect(gone).toHaveTextContent(/0$/);
+
+    await user.click(gone);
+
+    await waitFor(() => {
+      expect(router.state.location.search).toEqual({});
+    });
+  });
+
+  it('шапка колонки, по полю которой стоит фасет, несёт признак отбора', async () => {
+    renderScreen('?kind=direct');
+    ConnectionStore.getState().apply(makeConnectionsSnapshot(4));
+
+    expect(await screen.findByRole('columnheader', { name: /Действие/ })).toHaveTextContent('есть отбор');
+    expect(screen.getByRole('columnheader', { name: /Куда/ })).not.toHaveTextContent('есть отбор');
+  });
+
+  it('пустой экран из-за отбора снимает и поиск, и фасеты', async () => {
+    const user = userEvent.setup();
+
+    const { router } = renderScreen('?q=claude&kind=block');
+    ConnectionStore.getState().apply(makeConnectionsSnapshot(4));
+
+    await user.click(await screen.findByRole('button', { name: 'Сбросить отбор' }));
+
+    await waitFor(() => {
+      expect(router.state.location.search).toEqual({});
+    });
+    expect(await screen.findByText('4 соединения')).toHaveAttribute('role', 'status');
+  });
+
+  it('«Сбросить всё» снимает фасеты и оставляет набранный поиск', async () => {
+    const user = userEvent.setup();
+
+    const { router } = renderScreen('?q=example&kind=direct&source=192.168.1.60');
+    ConnectionStore.getState().apply(makeConnectionsSnapshot(4));
+
+    await user.click(await screen.findByRole('button', { name: 'Сбросить всё' }));
+
+    await waitFor(() => {
+      expect(router.state.location.search).toEqual({ q: 'example' });
+    });
+    expect(screen.queryByRole('button', { name: 'Сбросить всё' })).not.toBeInTheDocument();
   });
 
   it('находит соединение по имени устройства, хотя в строке лежит адрес', async () => {
@@ -256,10 +364,11 @@ describe('экран соединений', () => {
     renderScreen();
     ConnectionStore.getState().apply(CONNECTIONS_FIXTURE);
 
-    const sources = await screen.findByRole('list', { name: 'Устройства' });
+    const sources = await openFacet(user, /^Устройство$/);
 
     // Подпись приходит запросом: дождаться её, прежде чем искать по ней.
-    await within(sources).findByRole('button', { name: /Ноутбук/ });
+    await within(sources).findByRole('option', { name: /Ноутбук/ });
+    await user.keyboard('{Escape}');
     await user.type(screen.getByRole('textbox', { name: 'Поиск по соединениям' }), 'ноутбук');
 
     await waitFor(() => {
@@ -275,9 +384,13 @@ describe('экран соединений', () => {
     const { router } = renderScreen();
     ConnectionStore.getState().apply(CONNECTIONS_FIXTURE);
 
-    const sources = await screen.findByRole('list', { name: 'Устройства' });
+    const sources = await openFacet(user, /^Устройство$/);
+    const laptop = await within(sources).findByRole('option', { name: /Ноутбук/ });
 
-    await user.click(await within(sources).findByRole('button', { name: /Ноутбук/ }));
+    // Адрес стоит рядом с именем: по нему сверяют с журналами роутера.
+    expect(laptop).toHaveTextContent('192.168.1.60');
+
+    await user.click(laptop);
 
     await waitFor(() => {
       expect(router.state.location.search).toEqual({ source: '192.168.1.60' });
@@ -290,9 +403,9 @@ describe('экран соединений', () => {
     const { router } = renderScreen();
     ConnectionStore.getState().apply(makeConnectionsSnapshot(4));
 
-    const kinds = await screen.findByRole('list', { name: 'Действие' });
+    const kinds = await openFacet(user, /^Действие$/);
 
-    await user.click(within(kinds).getByRole('button', { name: /напрямую/ }));
+    await user.click(within(kinds).getByRole('option', { name: /напрямую/ }));
 
     await waitFor(() => {
       expect(router.state.location.search).toEqual({ kind: 'direct' });
@@ -358,7 +471,7 @@ describe('экран соединений', () => {
 
     // Скрытая вкладка тоже в DOM, поэтому считаются и скрытые узлы.
     expect(screen.getAllByRole('textbox', { name: 'Поиск по соединениям', hidden: true })).toHaveLength(1);
-    expect(screen.getAllByRole('list', { name: 'Устройства', hidden: true })).toHaveLength(1);
+    expect(screen.getAllByRole('group', { name: 'Фильтры', hidden: true })).toHaveLength(1);
     expect(screen.getAllByRole('button', { name: 'Пауза', hidden: true })).toHaveLength(1);
   });
 
@@ -385,26 +498,21 @@ describe('экран соединений', () => {
     expect(within(closedPanel).getByRole('status')).toHaveTextContent('3 соединения');
   });
 
-  it('переключение вкладок сохраняет фильтр колонки активной таблицы', async () => {
+  it('переключение вкладок сохраняет фасеты', async () => {
     const user = userEvent.setup();
 
     ConnectionStore.getState().apply(makeConnectionsSnapshot(8));
     renderScreen();
 
-    await user.click(await screen.findByRole('button', { name: 'Фильтр по колонке Куда' }));
-    await user.type(await screen.findByRole('textbox', { name: 'Подстрока в колонке Куда' }), 'google');
-
-    await waitFor(() => {
-      expect(screen.getByText('Показано 1 из 8')).toHaveAttribute('role', 'status');
-    });
-
+    await user.click(within(await openFacet(user, /^Действие$/)).getByRole('option', { name: /напрямую/ }));
     await user.keyboard('{Escape}');
+
     await user.click(screen.getByRole('tab', { name: /Закрытые/ }));
     await user.click(screen.getByRole('tab', { name: /Активные/ }));
 
-    expect(screen.getByRole('button', { name: 'Фильтр по колонке Куда: активен' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Действие: напрямую' })).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByText('Показано 1 из 8')).toHaveAttribute('role', 'status');
+      expect(screen.getByText('Показано 4 из 8')).toHaveAttribute('role', 'status');
     });
   });
 });
@@ -424,25 +532,64 @@ describe('экран соединений на телефоне', () => {
     vi.restoreAllMocks();
   });
 
-  it('прячет срезы под кнопку тулбара и считает выбранные', async () => {
+  it('держит фасеты теми же кнопками, что и на широком экране, без облака значений', async () => {
     const user = userEvent.setup();
 
     ConnectionStore.getState().apply(makeConnectionsSnapshot(8));
     renderScreen();
 
-    const toggle = await screen.findByRole('button', { name: 'Отбор' });
+    const group = await screen.findByRole('group', { name: 'Фильтры' });
 
-    expect(toggle).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.queryByRole('list', { name: 'Действие' })).not.toBeInTheDocument();
+    expect(within(group).getAllByRole('button')).toHaveLength(5);
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
 
-    await user.click(toggle);
+    await user.click(within(group).getByRole('button', { name: 'Действие' }));
+    await user.click(within(await screen.findByRole('listbox')).getByRole('option', { name: /напрямую/ }));
 
-    const kinds = await screen.findByRole('list', { name: 'Действие' });
+    expect(await screen.findByRole('button', { name: 'Действие: напрямую' })).toBeInTheDocument();
+  });
 
-    await user.click(within(kinds).getByRole('button', { name: /напрямую/ }));
+  // На телефоне тулбар переносится, и отдельная кнопка встала бы под поиском,
+  // в зоне большого пальца: разрыв уходит в меню списка за подтверждение.
+  it('закрывает все соединения только через меню списка и подтверждение', async () => {
+    const closedAll = vi.fn<() => void>();
+
+    server.use(
+      http.delete(CONNECTION_ENDPOINT.connections(), () => {
+        closedAll();
+
+        return new HttpResponse(null, { status: 204 });
+      })
+    );
+
+    const user = userEvent.setup();
+
+    ConnectionStore.getState().apply(makeConnectionsSnapshot(3));
+    renderScreen();
+
+    const menu = await screen.findByRole('button', { name: 'Действия со списком' });
+
+    expect(screen.queryByRole('button', { name: 'Закрыть все' })).not.toBeInTheDocument();
+
+    await user.click(menu);
+    await user.click(await screen.findByRole('menuitem', { name: 'Закрыть все…' }));
+
+    expect(await screen.findByRole('alertdialog')).toHaveTextContent('Оборвать все живые соединения?');
+    expect(closedAll).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'Отмена' }));
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Отбор: 1 срез' })).toBeInTheDocument();
+      expect(menu).toHaveFocus();
+    });
+    expect(closedAll).not.toHaveBeenCalled();
+
+    await user.click(menu);
+    await user.click(await screen.findByRole('menuitem', { name: 'Закрыть все…' }));
+    await user.click(await screen.findByRole('button', { name: 'Оборвать' }));
+
+    await waitFor(() => {
+      expect(closedAll).toHaveBeenCalledTimes(1);
     });
   });
 

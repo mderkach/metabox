@@ -5,7 +5,16 @@ import { CONNECTION_TAB, ConnectionState, useConnectionStream, type ConnectionRo
 import { useCloseAllConnections } from '@features/Connection/ConnectionClose';
 import { usePanelAsSheet } from '@shared/lib/media';
 import { useLiveRegion } from '@shared/lib/useLiveRegion';
-import { Alert, AlertDescription, LiveRegion, Tabs, TabsContent, TabsList, TabsTrigger } from '@shared/ui';
+import {
+  Alert,
+  AlertDescription,
+  LiveRegion,
+  SidePanelLayout,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@shared/ui';
 import { ConnectionTable, useConnectionView, type ConnectionTableEmpty } from '@widgets/ConnectionTable';
 import { PageHeader } from '@widgets/PageHeader';
 import { RouteExplanation, RouteExplanationSheet } from '@widgets/RouteExplanation';
@@ -44,17 +53,12 @@ export function ConnectionsPage() {
   // объявляет одна область на экран.
   const { message, announce } = useLiveRegion();
 
-  // Без Transition обновление срочное, и граница вокруг панели не анимируется.
   const onExplain = useCallback((id: string) => {
-    startTransition(() => {
-      setExplainedId((current) => (current === id ? null : id));
-    });
+    setExplainedId((current) => (current === id ? null : id));
   }, []);
 
   const onCloseExplanation = useCallback(() => {
-    startTransition(() => {
-      setExplainedId(null);
-    });
+    setExplainedId(null);
   }, []);
 
   const onTogglePause = useCallback(() => {
@@ -145,82 +149,88 @@ export function ConnectionsPage() {
         {/* Ниже lg объяснение открывается листом, и в колонке остаётся один
             список. Колонка прокручивается на низком экране, где списку не
             хватает его минимальной высоты. */}
-        <div className='flex min-h-0 grow flex-col gap-4 max-lg:overflow-y-auto lg:flex-row'>
-          {/* Поиск, срезы, вид и действия — один тулбар на обе вкладки: под
+        <SidePanelLayout.Root
+          open={!sheet && activeShown && explainedId !== null}
+          className='min-h-0 grow max-lg:overflow-y-auto'
+        >
+          {/* Поиск, фасеты, вид и действия — один тулбар на обе вкладки: под
               `Activity` остаётся только то, что у вкладки своё. */}
-          <ConnectionTable.Root>
-            <ConnectionTable.Toolbar
-              view={view}
-              search={<ConnectionSearch query={screen.query} onQueryChange={screen.setQuery} />}
-              facets={<ConnectionFacets screen={screen} />}
-              actions={
-                <ConnectionActions
-                  paused={paused}
-                  onTogglePause={onTogglePause}
-                  closableCount={activeShown ? screen.counts.active : null}
-                  onCloseAll={onCloseAll}
-                />
-              }
-            />
-
-            {/* `default='none'`: обновления строк внутри вкладки — не её анимация. */}
-            <TabsContent value={CONNECTION_TAB.Active} keepMounted className='flex min-h-0 grow flex-col'>
-              <Activity mode={activeShown ? 'visible' : 'hidden'}>
-                <ViewTransition enter='fade-in' exit='fade-out' default='none'>
-                  <ConnectionTable.Body
-                    rows={screen.active.rows}
-                    total={screen.active.total}
-                    closable
-                    selectedId={explainedId}
-                    explainPanelId={explainPanelId}
-                    onExplain={onExplain}
-                    onClosed={onClosed}
-                    footer={renderFooter}
-                    empty={renderEmpty}
-                    filtered={screen.filtered}
-                    onReset={screen.reset}
-                    view={view}
+          <SidePanelLayout.Main>
+            <ConnectionTable.Root>
+              <ConnectionTable.Toolbar
+                view={view}
+                search={<ConnectionSearch query={screen.query} onQueryChange={screen.setQuery} />}
+                facets={<ConnectionFacets screen={screen} />}
+                actions={
+                  <ConnectionActions
+                    paused={paused}
+                    onTogglePause={onTogglePause}
+                    closableCount={activeShown ? screen.counts.active : null}
+                    onCloseAll={onCloseAll}
                   />
-                </ViewTransition>
-              </Activity>
-            </TabsContent>
+                }
+              />
 
-            <TabsContent value={CONNECTION_TAB.Closed} keepMounted className='flex min-h-0 grow flex-col'>
-              <Activity mode={closedShown ? 'visible' : 'hidden'}>
-                <ViewTransition enter='fade-in' exit='fade-out' default='none'>
-                  <ConnectionTable.Body
-                    rows={screen.closed.rows}
-                    total={screen.closed.total}
-                    closable={false}
-                    footer={renderFooter}
-                    overflow={closedOverflow}
-                    empty={renderEmpty}
-                    filtered={screen.filtered}
-                    onReset={screen.reset}
-                    view={view}
-                  />
-                </ViewTransition>
-              </Activity>
-            </TabsContent>
-          </ConnectionTable.Root>
+              {/* `default='none'`: обновления строк внутри вкладки — не её анимация. */}
+              <TabsContent value={CONNECTION_TAB.Active} keepMounted className='flex min-h-0 grow flex-col'>
+                <Activity mode={activeShown ? 'visible' : 'hidden'}>
+                  <ViewTransition enter='fade-in' exit='fade-out' default='none'>
+                    <ConnectionTable.Body
+                      rows={screen.active.rows}
+                      total={screen.active.total}
+                      closable
+                      selectedId={explainedId}
+                      explainPanelId={explainPanelId}
+                      onExplain={onExplain}
+                      onClosed={onClosed}
+                      footer={renderFooter}
+                      empty={renderEmpty}
+                      filtered={screen.filtered}
+                      onReset={screen.reset}
+                      filteredColumns={screen.filteredColumns}
+                      view={view}
+                    />
+                  </ViewTransition>
+                </Activity>
+              </TabsContent>
 
-          {/* Объяснение принадлежит строке активной вкладки и прячется вместе с
-              ней, сохраняя своё состояние. */}
-          <Activity mode={activeShown ? 'visible' : 'hidden'}>
-            {!sheet && explainedId !== null && (
-              <ViewTransition enter='panel-in' exit='panel-out'>
-                <RouteExplanation
-                  key={explainedId}
-                  id={explainPanelId}
-                  connectionId={explainedId}
-                  host={explainedHost}
-                  source={explainedSource}
-                  onClose={onCloseExplanation}
-                />
-              </ViewTransition>
+              <TabsContent value={CONNECTION_TAB.Closed} keepMounted className='flex min-h-0 grow flex-col'>
+                <Activity mode={closedShown ? 'visible' : 'hidden'}>
+                  <ViewTransition enter='fade-in' exit='fade-out' default='none'>
+                    <ConnectionTable.Body
+                      rows={screen.closed.rows}
+                      total={screen.closed.total}
+                      closable={false}
+                      footer={renderFooter}
+                      overflow={closedOverflow}
+                      empty={renderEmpty}
+                      filtered={screen.filtered}
+                      onReset={screen.reset}
+                      filteredColumns={screen.filteredColumns}
+                      view={view}
+                    />
+                  </ViewTransition>
+                </Activity>
+              </TabsContent>
+            </ConnectionTable.Root>
+          </SidePanelLayout.Main>
+
+          {/* Объяснение принадлежит строке активной вкладки и уходит вместе с
+              ней; выбранная строка остаётся, и на возврате панель открывается
+              снова. */}
+          <SidePanelLayout.Panel>
+            {explainedId !== null && (
+              <RouteExplanation
+                key={explainedId}
+                id={explainPanelId}
+                connectionId={explainedId}
+                host={explainedHost}
+                source={explainedSource}
+                onClose={onCloseExplanation}
+              />
             )}
-          </Activity>
-        </div>
+          </SidePanelLayout.Panel>
+        </SidePanelLayout.Root>
 
         {sheet && (
           <RouteExplanationSheet

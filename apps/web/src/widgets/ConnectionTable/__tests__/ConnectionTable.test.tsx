@@ -10,7 +10,7 @@ import { makeConnectionsSnapshot } from '@entities/Connection/__tests__/Connecti
 
 import { useConnectionView } from '../lib';
 import { ConnectionTable, type ConnectionTableEmpty } from '../ui';
-import { CONNECTION_COLUMNS_HIDDEN } from '../ui/ConnectionColumns';
+import { CONNECTION_COLUMNS_HIDDEN, CONNECTION_FIELD, type ConnectionField } from '../ui/ConnectionColumns';
 
 const STORAGE_KEY = 'metabox.connections.view';
 
@@ -35,7 +35,17 @@ function renderEmpty({ filtered, reset }: ConnectionTableEmpty) {
  * экран, и отдаёт его тулбару и телу — выбор полей работает с видом, а не с
  * моделью таблицы.
  */
-function TableHarness({ rows, onReset }: { rows: ConnectionRow[]; onReset: () => void }) {
+function TableHarness({
+  rows,
+  onReset,
+  filtered = false,
+  filteredColumns,
+}: {
+  rows: ConnectionRow[];
+  onReset: () => void;
+  filtered?: boolean;
+  filteredColumns?: ReadonlySet<ConnectionField>;
+}) {
   const view = useConnectionView();
 
   return (
@@ -45,8 +55,9 @@ function TableHarness({ rows, onReset }: { rows: ConnectionRow[]; onReset: () =>
         rows={rows}
         total={rows.length}
         closable
-        filtered={false}
+        filtered={filtered}
         onReset={onReset}
+        filteredColumns={filteredColumns}
         view={view}
         empty={renderEmpty}
       />
@@ -63,64 +74,6 @@ function headerLabels() {
   });
 }
 
-async function openHostFilter(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole('button', { name: 'Фильтр по колонке Куда' }));
-
-  return screen.findByRole('textbox', { name: 'Подстрока в колонке Куда' });
-}
-
-describe('фильтр по колонке', () => {
-  beforeEach(() => {
-    localStorage.clear();
-    mockVirtualSizes();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it('отбирает строки по подстроке', async () => {
-    const user = userEvent.setup();
-
-    renderWithQuery(<TableHarness rows={makeRows(8)} onReset={vi.fn<() => void>()} />);
-
-    expect(screen.getByRole('status')).toHaveTextContent('8 соединений');
-
-    await user.type(await openHostFilter(user), 'google');
-
-    await waitFor(() => {
-      expect(screen.getByRole('status')).toHaveTextContent('Показано 1 из 8');
-    });
-  });
-
-  it('показывает признак поставленного фильтра на кнопке колонки', async () => {
-    const user = userEvent.setup();
-
-    renderWithQuery(<TableHarness rows={makeRows(8)} onReset={vi.fn<() => void>()} />);
-
-    await user.type(await openHostFilter(user), 'google');
-
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Фильтр по колонке Куда: активен' })).toBeInTheDocument();
-    });
-  });
-
-  it('сброс на пустом экране снимает и фильтр колонки, и отбор экрана', async () => {
-    const onReset = vi.fn<() => void>();
-    const user = userEvent.setup();
-
-    renderWithQuery(<TableHarness rows={makeRows(8)} onReset={onReset} />);
-
-    await user.type(await openHostFilter(user), 'такого хоста нет');
-    await user.click(await screen.findByRole('button', { name: 'Сбросить отбор' }));
-
-    expect(onReset).toHaveBeenCalledTimes(1);
-    await waitFor(() => {
-      expect(screen.getByRole('status')).toHaveTextContent('8 соединений');
-    });
-  });
-});
-
 describe('шапка таблицы', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -131,6 +84,38 @@ describe('шапка таблицы', () => {
     renderWithQuery(<TableHarness rows={makeRows(4)} onReset={vi.fn<() => void>()} />);
 
     expect(screen.getByRole('button', { name: 'Куда' })).toHaveClass('[text-transform:inherit]');
+  });
+
+  it('несёт признак отбора у колонки, по полю которой стоит фасет, и только у неё', () => {
+    renderWithQuery(
+      <TableHarness
+        rows={makeRows(4)}
+        onReset={vi.fn<() => void>()}
+        filtered
+        filteredColumns={new Set([CONNECTION_FIELD.Action])}
+      />
+    );
+
+    expect(screen.getByRole('columnheader', { name: /Действие/ })).toHaveTextContent('есть отбор');
+    expect(screen.getByRole('columnheader', { name: /Куда/ })).not.toHaveTextContent('есть отбор');
+  });
+
+  it('фильтра в шапке нет: отбор ставится фасетами экрана', () => {
+    renderWithQuery(<TableHarness rows={makeRows(4)} onReset={vi.fn<() => void>()} />);
+
+    for (const header of screen.getAllByRole('columnheader')) {
+      expect(within(header).queryAllByRole('button').length).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('пустой экран из-за отбора снимает отбор экрана', async () => {
+    const onReset = vi.fn<() => void>();
+    const user = userEvent.setup();
+
+    renderWithQuery(<TableHarness rows={[]} onReset={onReset} filtered />);
+    await user.click(screen.getByRole('button', { name: 'Сбросить отбор' }));
+
+    expect(onReset).toHaveBeenCalledTimes(1);
   });
 });
 

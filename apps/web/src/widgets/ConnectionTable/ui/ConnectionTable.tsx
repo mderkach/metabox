@@ -1,6 +1,6 @@
-import { useTable, type ColumnFiltersState } from '@tanstack/react-table';
+import { useTable } from '@tanstack/react-table';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { memo, useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
+import { memo, useCallback, useMemo, useRef, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { ConnectionRow as ConnectionRowModel } from '@entities/Connection';
@@ -19,6 +19,7 @@ import {
   toOrderedColumns,
   toTableColumns,
   toTableMinWidth,
+  type ConnectionField,
 } from './ConnectionColumns';
 import { ConnectionDensityToggle } from './ConnectionDensityToggle';
 import { ConnectionRefreshSelect } from './ConnectionRefreshSelect';
@@ -32,19 +33,21 @@ const OVERSCAN = 10;
 /** Строка заголовка тоже строка таблицы: нумерация строк начинается с неё. */
 const HEADER_ROWS = 1;
 
-/** Что показать вместо таблицы, когда после всех отборов не осталось строк. */
+/** Что показать вместо таблицы, когда после отбора не осталось строк. */
 export interface ConnectionTableEmpty {
-  /** Отбор действует: поиск и фасеты экрана или фильтры колонок самой таблицы. */
+  /** Отбор действует: поиск или фасеты экрана. */
   filtered: boolean;
-  /** Снимает и то, и другое: кнопка на пустом экране обязана вернуть список. */
+  /** Снимает отбор: кнопка на пустом экране обязана вернуть список. */
   reset: () => void;
 }
+
+const NO_FILTERED_COLUMNS: ReadonlySet<ConnectionField> = new Set();
 
 /**
  * Карточка списка соединений: тулбар над вкладками и тело каждой вкладки.
  *
- * Тулбар один на экран, а тело своё у каждой вкладки: поиск, срезы и вид общие,
- * а фильтры колонок, прокрутка и строки — нет. Поэтому таблица собрана из
+ * Тулбар один на экран, а тело своё у каждой вкладки: поиск, фасеты и вид
+ * общие, а прокрутка и строки — нет. Поэтому таблица собрана из
  * частей, а не одним компонентом: экран ставит один `Toolbar` над вкладками и
  * по `Body` в каждую.
  *
@@ -58,8 +61,9 @@ function ConnectionTableRoot({ children }: { children: ReactNode }) {
 }
 
 /**
- * Тулбар карточки: поиск, срезы, вид списка и действия над ним. Вид меняет
- * картинку, а не систему, поэтому стоит слева от действий и в их ряд не входит.
+ * Тулбар карточки: поиск и фасеты слева, вид списка и действия над ним справа.
+ * Вид меняет картинку, а не систему, поэтому стоит слева от действий и в их ряд
+ * не входит.
  */
 function ConnectionTableToolbar({
   view,
@@ -73,23 +77,21 @@ function ConnectionTableToolbar({
   search?: ReactNode;
   /** Действия над списком: живут в карточке таблицы, а не в шапке страницы. */
   actions?: ReactNode;
-  /** Срезы по вопросу экрана: вторая строка тулбара, на телефоне — первая. */
+  /**
+   * Фасеты: в строку с поиском. На узкой ширине уходят отдельной строкой под
+   * тулбар и прокручиваются по горизонтали, а не переносятся облаком.
+   */
   facets?: ReactNode;
 }) {
-  const narrow = useNarrowScreen();
-
   return (
-    <div className='flex shrink-0 flex-col gap-2 border-b border-border px-3.5 py-2.5'>
-      <div className='flex flex-wrap items-center gap-2'>
-        {search}
-        <span className='grow' />
-        {narrow && facets}
-        <ConnectionColumnPicker view={view} />
-        <ConnectionDensityToggle density={view.density} onDensityChange={view.setDensity} />
-        <ConnectionRefreshSelect interval={view.interval} onIntervalChange={view.setInterval} />
-        {actions}
-      </div>
-      {!narrow && facets}
+    <div className='flex shrink-0 flex-wrap items-center gap-2 border-b border-border px-3.5 py-2.5'>
+      {search}
+      {facets}
+      <span className='grow' />
+      <ConnectionColumnPicker view={view} />
+      <ConnectionDensityToggle density={view.density} onDensityChange={view.setDensity} />
+      <ConnectionRefreshSelect interval={view.interval} onIntervalChange={view.setInterval} />
+      {actions}
     </div>
   );
 }
@@ -114,6 +116,7 @@ function ConnectionTableBodyProto({
   filtered,
   onReset,
   view,
+  filteredColumns = NO_FILTERED_COLUMNS,
   footer = null,
   overflow = null,
   selectedId = null,
@@ -125,20 +128,17 @@ function ConnectionTableBodyProto({
   /** Сколько строк во вкладке до отбора: подвал сообщает обе величины. */
   total: number;
   closable: boolean;
-  /**
-   * Что показать вместо таблицы, когда строк нет. Признак отбора и его сброс
-   * считает таблица: фильтры колонок живут в ней и экрану не видны.
-   */
+  /** Что показать вместо таблицы, когда строк нет. */
   empty: (state: ConnectionTableEmpty) => ReactNode;
-  /** Отбор экрана: поиск и фасеты. Свои фильтры таблица добавляет к нему сама. */
+  /** Отбор экрана: поиск и фасеты. */
   filtered: boolean;
-  /** Снять отбор экрана; фильтры колонок таблица снимает сама. */
   onReset: () => void;
   view: ConnectionView;
+  /** Колонки, по полю которых стоит фасет. Ссылка стабильная: тело мемоизировано. */
+  filteredColumns?: ReadonlySet<ConnectionField>;
   /**
-   * Выгрузка: подвал, рядом со счётчиком. Получает строки после всех отборов,
-   * включая фильтры колонок, которых экран не видит, — уходит ровно то, что
-   * счётчик называет.
+   * Выгрузка: подвал, рядом со счётчиком. Получает строки в показанном
+   * порядке — уходит ровно то, что счётчик называет.
    */
   footer?: ((rows: ConnectionRowModel[]) => ReactNode) | null;
   /** Переполнение источника: строки, которых в списке уже нет. Стоит рядом со счётчиком. */
@@ -156,7 +156,6 @@ function ConnectionTableBodyProto({
   const close = useCloseConnection();
   const now = useNow();
   const narrow = useNarrowScreen();
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 
   const onClose = useCallback(
     (id: string) => {
@@ -171,11 +170,6 @@ function ConnectionTableBodyProto({
     [close, onClosed]
   );
 
-  const onResetAll = useCallback(() => {
-    setColumnFilters([]);
-    onReset();
-  }, [onReset]);
-
   const devices = useDeviceIndex();
   // Новые описания колонок пересортировывают таблицу, поэтому они меняются
   // вместе со списком устройств, а не на каждый снапшот.
@@ -186,17 +180,15 @@ function ConnectionTableBodyProto({
       features: CONNECTION_TABLE_FEATURES,
       columns: columnDefs,
       data: rows,
-      state: { sorting: view.sorting, columnVisibility: view.columns, columnOrder: view.order, columnFilters },
+      state: { sorting: view.sorting, columnVisibility: view.columns, columnOrder: view.order },
       onSortingChange: view.setSorting,
       onColumnVisibilityChange: view.setColumns,
       onColumnOrderChange: view.setOrder,
-      onColumnFiltersChange: setColumnFilters,
     },
     (state) => state
   );
 
-  // Модель уже прошла и фильтры колонок, и сортировку: подвал считает по ней, и
-  // «пусто из-за отбора» показывается в том числе от одного фильтра колонки.
+  // Строки уже отобраны экраном, модель таблицы их только сортирует.
   const visible = table.getRowModel().rows;
   const shownRows = useMemo(() => visible.map((row) => row.original), [visible]);
   const columns = toTableColumns(table, view.order).filter(({ column }) => column.getIsVisible());
@@ -225,7 +217,7 @@ function ConnectionTableBodyProto({
     <div className='flex min-h-0 grow flex-col'>
       {visible.length === 0 ? (
         <div className='flex grow items-center justify-center px-4 py-10 text-center'>
-          {empty({ filtered: filtered || columnFilters.length > 0, reset: onResetAll })}
+          {empty({ filtered, reset: onReset })}
         </div>
       ) : (
         <div
@@ -237,7 +229,9 @@ function ConnectionTableBodyProto({
           className='min-h-0 grow overflow-auto'
         >
           <div style={narrow ? undefined : { minWidth: toTableMinWidth(columns) }}>
-            {!narrow && <ConnectionTableHeader columns={columns} density={view.density} />}
+            {!narrow && (
+              <ConnectionTableHeader columns={columns} density={view.density} filteredColumns={filteredColumns} />
+            )}
 
             <div
               role={narrow ? undefined : 'rowgroup'}

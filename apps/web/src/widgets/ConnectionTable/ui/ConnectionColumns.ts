@@ -1,10 +1,7 @@
 import {
-  columnFilteringFeature,
   columnOrderingFeature,
   columnVisibilityFeature,
-  createFilteredRowModel,
   createSortedRowModel,
-  filterFn_includesString,
   rowSortingFeature,
   sortFn_alphanumeric,
   sortFn_basic,
@@ -72,12 +69,9 @@ export interface ConnectionCell {
 export const CONNECTION_TABLE_FEATURES = tableFeatures({
   rowSortingFeature,
   columnVisibilityFeature,
-  columnFilteringFeature,
   columnOrderingFeature,
-  filteredRowModel: createFilteredRowModel(),
   sortedRowModel: createSortedRowModel(),
   sortFns: { text: sortFn_text, basic: sortFn_basic, alphanumeric: sortFn_alphanumeric },
-  filterFns: { includesString: filterFn_includesString },
 });
 
 export type ConnectionTableFeatures = typeof CONNECTION_TABLE_FEATURES;
@@ -138,8 +132,9 @@ export type ConnectionColumnDef = AccessorFnColumnDef<ConnectionTableFeatures, C
 /**
  * Колонки таблицы соединений.
  *
- * Одна колонка — одно поле, один ключ сортировки, один отбор. Источник и хост
- * разведены, потому что это разные оси — кто начал и куда шло; правило, выход и
+ * Одна колонка — одно поле, один ключ сортировки, один отбор; отбор по полю —
+ * фасет в тулбаре экрана, а не фильтр в шапке. Источник и хост разведены,
+ * потому что это разные оси — кто начал и куда шло; правило, выход и
  * цепочка разведены, потому что это три звена причинной связи: почему совпало,
  * что решено, через что прошло. Составная ячейка осталась только там, где два
  * значения читаются как один факт и порознь не запрашиваются: входящее и
@@ -157,42 +152,36 @@ export const CONNECTION_COLUMNS: readonly ConnectionColumnDef[] = [
     // Посимвольное сравнение ставит 192.168.1.120 перед 192.168.1.36: в адресе
     // числовые куски сравниваются как числа, а не как текст.
     sortFn: 'alphanumeric',
-    filterFn: 'includesString',
     meta: { label: 'column.source', className: CONNECTION_COLUMN.Source, width: 7, required: false },
   },
   {
     id: CONNECTION_FIELD.Host,
     accessorFn: (row) => row.host,
     sortFn: 'alphanumeric',
-    filterFn: 'includesString',
     meta: { label: 'column.host', className: CONNECTION_COLUMN.Host, width: 13, required: true },
   },
   {
     id: CONNECTION_FIELD.Network,
     accessorFn: (row) => row.network,
     sortFn: 'text',
-    filterFn: 'includesString',
     meta: { label: 'column.network', className: CONNECTION_COLUMN.Network, width: 4, required: false },
   },
   {
     id: CONNECTION_FIELD.Rule,
     accessorFn: (row) => row.rule,
     sortFn: 'text',
-    filterFn: 'includesString',
     meta: { label: 'column.rule', className: CONNECTION_COLUMN.Rule, width: RULE_MIN_WIDTH, required: false },
   },
   {
     id: CONNECTION_FIELD.Action,
     accessorFn: (row) => row.action,
     sortFn: 'text',
-    filterFn: 'includesString',
     meta: { label: 'column.action', className: CONNECTION_COLUMN.Action, width: 10, required: true },
   },
   {
     id: CONNECTION_FIELD.Chain,
     accessorFn: (row) => row.chain.join(' '),
     sortFn: 'text',
-    filterFn: 'includesString',
     meta: { label: 'column.chain', className: CONNECTION_COLUMN.Chain, width: 9, required: false },
   },
   {
@@ -200,7 +189,6 @@ export const CONNECTION_COLUMNS: readonly ConnectionColumnDef[] = [
     accessorFn: (row) => row.downRate + row.upRate,
     sortFn: 'basic',
     sortDescFirst: true,
-    enableColumnFilter: false,
     meta: { label: 'column.rate', className: CONNECTION_COLUMN.Rate, width: 7, required: false },
   },
   {
@@ -208,7 +196,6 @@ export const CONNECTION_COLUMNS: readonly ConnectionColumnDef[] = [
     accessorFn: (row) => row.download + row.upload,
     sortFn: 'basic',
     sortDescFirst: true,
-    enableColumnFilter: false,
     meta: { label: 'column.volume', className: CONNECTION_COLUMN.Volume, width: 6, required: false },
   },
   {
@@ -217,15 +204,14 @@ export const CONNECTION_COLUMNS: readonly ConnectionColumnDef[] = [
     accessorFn: (row) => row.startedAt,
     sortFn: 'basic',
     sortDescFirst: true,
-    enableColumnFilter: false,
     meta: { label: 'column.age', className: CONNECTION_COLUMN.Age, width: 5, required: false },
   },
 ];
 
 /**
- * Колонки таблицы с подписью источника: сортировка и фильтр колонки идут по
- * имени устройства, которое видно в ячейке, а не по адресу под ним. Безымянное
- * устройство подписано адресом, и порядок адресов остаётся числовым.
+ * Колонки таблицы с подписью источника: сортировка идёт по имени устройства,
+ * которое видно в ячейке, а не по адресу под ним. Безымянное устройство
+ * подписано адресом, и порядок адресов остаётся числовым.
  */
 export function toLabeledColumns(sourceLabel: ConnectionSourceLabel): readonly ConnectionColumnDef[] {
   return CONNECTION_COLUMNS.map((def) =>

@@ -2,12 +2,22 @@ export { CONNECTION_ENDPOINT } from './api/Connection.endpoints';
 export { closeAllConnections, closeConnection, listenConnections } from './api/Connection.api';
 export { useConnectionStream } from './api/Connection.query';
 export { toConnectionRow } from './model/Connection.adapter';
-export { filterConnections, toKindGroups, toSourceGroups } from './model/Connection.filter';
+export {
+  CONNECTION_FACET,
+  CONNECTION_FACETS,
+  EMPTY_FACET_SELECTION,
+  filterConnections,
+  hasFacetSelection,
+  toFacetSearch,
+  toFacetSelection,
+} from './model/Connection.filter';
 export type {
-  ConnectionKind,
-  ConnectionKindGroup,
-  ConnectionSource,
-  ConnectionSourceGroup,
+  ConnectionFacet,
+  ConnectionFacetSearch,
+  ConnectionFacetSelection,
+  ConnectionFacetValue,
+  ConnectionFacetValues,
+  ConnectionFilterResult,
   ConnectionSourceLabel,
 } from './model/Connection.filter';
 export { CONNECTION_TAB, parseConnectionSearch } from './model/Connection.filter';

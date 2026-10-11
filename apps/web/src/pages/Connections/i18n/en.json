@@ -5,12 +5,14 @@
   "dropped": "updates not parsed: {{count}}",
   "resume": "Resume",
   "pause": "Pause",
+  "listActions": "List actions",
   "closeAll": {
     "action": "Close all",
     "title": "Cut every live connection?",
     "description_one": "{{count}} live connection will be cut. Devices reconnect on their own, but downloads and calls in progress will break.",
     "description_other": "{{count}} live connections will be cut. Devices reconnect on their own, but downloads and calls in progress will break.",
-    "confirm": "Cut"
+    "confirm": "Cut",
+    "menuItem": "Close all…"
   },
   "tab": {
     "active": "Active",
@@ -19,10 +21,6 @@
   "search": {
     "placeholder": "Host, device, rule or node",
     "label": "Search the connections"
-  },
-  "sources": {
-    "label": "Devices",
-    "all": "All"
   },
   "shown": "{{shown}} of {{total}}",
   "closedOverflow": "showing {{shown}} of {{total}} closed, the rest were evicted",
@@ -35,15 +33,20 @@
     "csv": "Export CSV",
     "json": "Export JSON"
   },
-  "kinds": {
-    "label": "Action",
-    "all": "Any"
-  },
-  "facets": {
-    "label": "Filters",
-    "title": "Slices of the list",
-    "active_one": "Filters: {{count}} slice",
-    "active_other": "Filters: {{count}} slices"
+  "facet": {
+    "group": "Filters",
+    "source": "Device",
+    "kind": "Action",
+    "rule": "Rule",
+    "chain": "Chain",
+    "network": "Network",
+    "one": "{{facet}}: {{value}}",
+    "several": "{{facet}}: {{count}} selected",
+    "search": "Find",
+    "searchLabel": "Find a value: {{facet}}",
+    "nothing": "Nothing found",
+    "reset": "Reset",
+    "resetAll": "Reset all"
   },
   "announce": {
     "closed": "Connection closed",

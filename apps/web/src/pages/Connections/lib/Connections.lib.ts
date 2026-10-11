@@ -2,21 +2,26 @@ import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useCallback, useMemo, useState } from 'react';
 
 import {
+  CONNECTION_FACET,
+  CONNECTION_FACETS,
   CONNECTION_TAB,
   ConnectionState,
+  EMPTY_FACET_SELECTION,
   filterConnections,
-  toKindGroups,
-  toSourceGroups,
-  type ConnectionKind,
-  type ConnectionKindGroup,
+  hasFacetSelection,
+  toFacetSearch,
+  toFacetSelection,
+  type ConnectionFacet,
+  type ConnectionFacetSelection,
+  type ConnectionFacetValues,
+  type ConnectionFilterResult,
   type ConnectionRow,
-  type ConnectionSource,
-  type ConnectionSourceGroup,
   type ConnectionSourceLabel,
   type ConnectionSearch,
   type ConnectionTab,
 } from '@entities/Connection';
 import { deviceLabel, useDeviceIndex } from '@entities/Device';
+import { CONNECTION_FIELD, type ConnectionField } from '@widgets/ConnectionTable';
 
 import { useThrottledRows } from './Connections.throttle';
 
@@ -66,43 +71,44 @@ export interface ConnectionsScreen {
   setTab: (tab: ConnectionTab) => void;
   query: string;
   setQuery: (query: string) => void;
-  source: ConnectionSource;
-  setSource: (source: ConnectionSource) => void;
-  kind: ConnectionKind;
-  setKind: (kind: ConnectionKind) => void;
-  /** Снимает поиск и оба фасета: кнопка на пустом экране обязана вернуть список. */
+  selection: ConnectionFacetSelection;
+  setFacet: (facet: ConnectionFacet, values: readonly string[]) => void;
+  /** Снимает все фасеты, а поиск оставляет: его набирали руками и видят в поле. */
+  resetFacets: () => void;
+  /** Снимает поиск и фасеты: кнопка на пустом экране обязана вернуть список. */
   reset: () => void;
-  /** Устройства считаются по вкладке целиком, иначе фасет исчезал бы от своего же выбора. */
-  sources: ConnectionSourceGroup[];
+  /** Значения и счётчики фасетов показанной вкладки — правила подсчёта у `filterConnections`. */
+  facets: ConnectionFacetValues;
   /** Подпись устройства по адресу: фасет хранит адрес, а показывает её. */
   sourceLabel: ConnectionSourceLabel;
-  /** Судьбы пакета считаются по вкладке целиком — по той же причине, что и устройства. */
-  kinds: ConnectionKindGroup[];
+  /** Колонки, по полю которых стоит фасет: шапка таблицы несёт признак отбора. */
+  filteredColumns: ReadonlySet<ConnectionField>;
   active: ConnectionTabRows;
   closed: ConnectionTabRows;
   counts: ConnectionTabCounts;
-  /** Сколько строк в показанной вкладке до отбора: число на чипе «Любое» в срезе устройств. */
-  total: number;
   filtered: boolean;
 }
 
-function useTabRows(
+/** Колонка таблицы, которая показывает поле фасета. Действие красится по судьбе пакета. */
+const FACET_COLUMN: Readonly<Record<ConnectionFacet, ConnectionField>> = {
+  [CONNECTION_FACET.Source]: CONNECTION_FIELD.Source,
+  [CONNECTION_FACET.Kind]: CONNECTION_FIELD.Action,
+  [CONNECTION_FACET.Rule]: CONNECTION_FIELD.Rule,
+  [CONNECTION_FACET.Chain]: CONNECTION_FIELD.Chain,
+  [CONNECTION_FACET.Network]: CONNECTION_FIELD.Network,
+};
+
+function useTabFilter(
   all: ConnectionRow[],
   query: string,
-  source: ConnectionSource,
-  kind: ConnectionKind,
+  selection: ConnectionFacetSelection,
   sourceLabel: ConnectionSourceLabel
-): ConnectionTabRows {
-  const rows = useMemo(
-    () => filterConnections(all, query, source, kind, sourceLabel),
-    [all, query, source, kind, sourceLabel]
-  );
-
-  return { rows, total: all.length };
+): ConnectionFilterResult {
+  return useMemo(() => filterConnections(all, query, selection, sourceLabel), [all, query, selection, sourceLabel]);
 }
 
 /**
- * Состояние экрана соединений: вкладка, поиск и срезы по устройству и действию. Отбор
+ * Состояние экрана соединений: вкладка, поиск и фасеты. Отбор
  * клиентский — снапшот уже целиком в панели, и ходить за отфильтрованным
  * списком на устройство значило бы показывать не то, что в сторе.
  *
@@ -115,8 +121,13 @@ export function useConnectionsScreen(interval: number): ConnectionsScreen {
 
   const tab = search.tab ?? CONNECTION_TAB.Active;
   const query = search.q ?? '';
-  const source = search.source ?? null;
-  const kind = search.kind ?? null;
+  // Адрес отдаёт значения со структурным разделением: ссылки стоят, пока
+  // значение не изменилось, и выбор не пересчитывает отбор на каждый рендер.
+  const { source, kind, match, chain, network } = search;
+  const selection = useMemo(
+    () => toFacetSelection({ source, kind, match, chain, network }),
+    [source, kind, match, chain, network]
+  );
 
   // Экран соединений — единственный, кто опрашивает список устройств, пока
   // открыт: ячейки и объяснение маршрута читают тот же кэш без своего таймера.
@@ -150,19 +161,16 @@ export function useConnectionsScreen(interval: number): ConnectionsScreen {
     [patchSearch]
   );
 
-  const setSource = useCallback(
-    (next: ConnectionSource) => {
-      patchSearch({ source: next ?? undefined });
+  const setFacet = useCallback(
+    (facet: ConnectionFacet, values: readonly string[]) => {
+      patchSearch(toFacetSearch({ ...selection, [facet]: values }));
     },
-    [patchSearch]
+    [patchSearch, selection]
   );
 
-  const setKind = useCallback(
-    (next: ConnectionKind) => {
-      patchSearch({ kind: next ?? undefined });
-    },
-    [patchSearch]
-  );
+  const resetFacets = useCallback(() => {
+    patchSearch(toFacetSearch(EMPTY_FACET_SELECTION));
+  }, [patchSearch]);
 
   // Дроссель стоит до отбора и свой у каждой вкладки: нажатие на фасет обязано
   // отозваться сразу, а переключение вкладки — показать её собственный набор, а
@@ -173,44 +181,38 @@ export function useConnectionsScreen(interval: number): ConnectionsScreen {
   // отбор по нему не пересчитывается на каждый снапшот, а тело таблицы не
   // перерисовывается. Показанная получает текущий набор в тот же кадр, в
   // котором становится видимой.
-  const active = useTabRows(useWhileVisible(liveRows, tab === CONNECTION_TAB.Active), query, source, kind, sourceLabel);
-  const closed = useTabRows(
-    useWhileVisible(closedRows, tab === CONNECTION_TAB.Closed),
-    query,
-    source,
-    kind,
-    sourceLabel
-  );
+  const liveShown = useWhileVisible(liveRows, tab === CONNECTION_TAB.Active);
+  const closedShown = useWhileVisible(closedRows, tab === CONNECTION_TAB.Closed);
+  const activeFilter = useTabFilter(liveShown, query, selection, sourceLabel);
+  const closedFilter = useTabFilter(closedShown, query, selection, sourceLabel);
   const counts = { [CONNECTION_TAB.Active]: liveRows.length, [CONNECTION_TAB.Closed]: closedRows.length };
 
-  // Фасеты и поиск общие, но считаются по показанной вкладке: иначе срез по
-  // устройству называл бы числа соседней.
-  const all = tab === CONNECTION_TAB.Closed ? closedRows : liveRows;
-
-  const sources = useMemo(() => toSourceGroups(all), [all]);
-  const kinds = useMemo(() => toKindGroups(all), [all]);
-
   const reset = useCallback(() => {
-    patchSearch({ q: undefined, source: undefined, kind: undefined });
+    patchSearch({ q: undefined, ...toFacetSearch(EMPTY_FACET_SELECTION) });
   }, [patchSearch]);
+
+  const filteredColumns = useMemo(
+    () => new Set(CONNECTION_FACETS.filter((facet) => selection[facet].length > 0).map((facet) => FACET_COLUMN[facet])),
+    [selection]
+  );
 
   return {
     tab,
     setTab,
     query,
     setQuery,
-    source,
-    setSource,
-    kind,
-    setKind,
+    selection,
+    setFacet,
+    resetFacets,
     reset,
-    sources,
+    // Фасеты и поиск общие, но считаются по показанной вкладке: иначе срез по
+    // устройству называл бы числа соседней.
+    facets: tab === CONNECTION_TAB.Closed ? closedFilter.facets : activeFilter.facets,
     sourceLabel,
-    kinds,
-    active,
-    closed,
+    filteredColumns,
+    active: { rows: activeFilter.rows, total: liveShown.length },
+    closed: { rows: closedFilter.rows, total: closedShown.length },
     counts,
-    total: all.length,
-    filtered: query.length > 0 || source !== null || kind !== null,
+    filtered: query.length > 0 || hasFacetSelection(selection),
   };
 }

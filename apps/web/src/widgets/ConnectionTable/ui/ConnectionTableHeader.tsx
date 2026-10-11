@@ -1,12 +1,11 @@
-import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronsUpDown, ListFilter } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { cn } from '@shared/lib/utils';
 import { TABLE_HEADER } from '@shared/ui';
 
 import { DENSITY_PADDING, type TableDensity } from '../lib';
-import { ConnectionColumnFilter } from './ConnectionColumnFilter';
-import { CONNECTION_COLUMN, type ConnectionTableColumn } from './ConnectionColumns';
+import { CONNECTION_COLUMN, type ConnectionField, type ConnectionTableColumn } from './ConnectionColumns';
 
 const SORT_ICON = {
   asc: ArrowUp,
@@ -28,13 +27,18 @@ const ARIA_SORT = {
  *
  * Стрелка сортировки показывается у отсортированной колонки и под курсором: у
  * всех сразу она превращается в шум и ничего не сообщает.
+ *
+ * Отбор по полю ставится фасетом в тулбаре, а шапка колонки несёт его признак:
+ * без него пустая таблица выглядит поломкой, а не результатом отбора.
  */
 export function ConnectionTableHeader({
   columns,
   density,
+  filteredColumns,
 }: {
   columns: readonly ConnectionTableColumn[];
   density: TableDensity;
+  filteredColumns: ReadonlySet<ConnectionField>;
 }) {
   const { t } = useTranslation('widgets/ConnectionTable');
 
@@ -48,14 +52,14 @@ export function ConnectionTableHeader({
         {columns.map(({ def, column }) => {
           const direction = column.getIsSorted();
           const Icon = direction === false ? ChevronsUpDown : SORT_ICON[direction];
-          const filterable = column.getCanFilter();
+          const filtered = filteredColumns.has(def.id);
 
           return (
             <span
               key={def.id}
               role='columnheader'
               aria-sort={direction === false ? 'none' : ARIA_SORT[direction]}
-              className={cn(def.meta.className, filterable && 'flex min-w-0 items-center gap-0.5')}
+              className={cn(def.meta.className, filtered && 'flex min-w-0 items-center gap-0.5')}
             >
               {/* Preflight Tailwind ставит кнопкам `text-transform: none`: без
                   наследования подпись теряет капитель шапки. */}
@@ -76,7 +80,12 @@ export function ConnectionTableHeader({
                 />
               </button>
 
-              {filterable && <ConnectionColumnFilter def={def} column={column} />}
+              {filtered && (
+                <span className='inline-flex shrink-0 items-center text-foreground'>
+                  <ListFilter aria-hidden className='size-3' />
+                  <span className='sr-only'>{t('filter.marked')}</span>
+                </span>
+              )}
             </span>
           );
         })}

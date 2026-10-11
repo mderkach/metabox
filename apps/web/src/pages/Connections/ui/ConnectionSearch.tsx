@@ -1,14 +1,19 @@
 import { Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { cn } from '@shared/lib/utils';
 import { Input, SEARCH_FIELD } from '@shared/ui';
 
-/** Поиск: левый край тулбара таблицы. */
+/**
+ * Поиск: левый край тулбара таблицы. В ряду с фасетами и действиями поле
+ * сжимается первым, иначе на ширине ноутбука крайнее действие уезжает
+ * отдельной строкой.
+ */
 export function ConnectionSearch({ query, onQueryChange }: { query: string; onQueryChange: (query: string) => void }) {
   const { t } = useTranslation('pages/Connections');
 
   return (
-    <div className={SEARCH_FIELD}>
+    <div className={cn(SEARCH_FIELD, 'md:w-auto md:min-w-48 md:flex-1 md:basis-60')}>
       <Search className='pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground' />
       <Input
         value={query}

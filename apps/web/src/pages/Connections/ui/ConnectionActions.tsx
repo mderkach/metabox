@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
+import { useNarrowScreen } from '@shared/lib/media';
 import { Button, Separator } from '@shared/ui';
 
 import { ConnectionCloseAll } from './ConnectionCloseAll';
@@ -12,6 +13,9 @@ import { ConnectionCloseAll } from './ConnectionCloseAll';
  * это рвёт живые соединения. Когда рвать нечего, кнопка гаснет, но остаётся на
  * месте: после подтверждения диалог возвращает фокус на неё, и исчезни она
  * вместе с последним соединением — фокус упал бы на `body`.
+ *
+ * На узкой ширине «Закрыть все» уходит в меню списка: разделитель там не
+ * отделяет его от соседей, тулбар переносится строками.
  */
 export function ConnectionActions({
   paused,
@@ -26,6 +30,7 @@ export function ConnectionActions({
   onCloseAll: () => void;
 }) {
   const { t } = useTranslation('pages/Connections');
+  const narrow = useNarrowScreen();
 
   return (
     <>
@@ -35,8 +40,13 @@ export function ConnectionActions({
 
       {closableCount !== null && (
         <>
-          <Separator orientation='vertical' className='mx-0.5 h-5' />
-          <ConnectionCloseAll count={closableCount} disabled={closableCount === 0} onConfirm={onCloseAll} />
+          {!narrow && <Separator orientation='vertical' className='mx-0.5 h-5' />}
+          <ConnectionCloseAll
+            count={closableCount}
+            disabled={closableCount === 0}
+            compact={narrow}
+            onConfirm={onCloseAll}
+          />
         </>
       )}
     </>

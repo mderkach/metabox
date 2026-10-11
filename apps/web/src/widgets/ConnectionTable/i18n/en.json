@@ -26,11 +26,7 @@
     "close": "Close connection {{host}}"
   },
   "filter": {
-    "title": "Filter by {{column}}",
-    "active": "Filter by column {{column}}: active",
-    "input": "Substring in column {{column}}",
-    "placeholder": "Substring",
-    "clear": "Clear"
+    "marked": "filtered"
   },
   "density": {
     "label": "Compact rows"
