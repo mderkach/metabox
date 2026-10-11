@@ -86,14 +86,9 @@ export function ProxyGroupCard({
       </CardHeader>
 
       <CardContent className='flex flex-col gap-3'>
-        <p className='text-xs text-muted-foreground'>
-          {t('card.current')}{' '}
-          {active === null ? (
-            <span className='text-muted-foreground'>{t('card.none')}</span>
-          ) : (
-            <span className='font-mono text-foreground'>{active.name}</span>
-          )}
-        </p>
+        {/* Выбранный узел и так несёт кромку и галочку: строка нужна, только
+            когда выбранного нет и отметить нечего. */}
+        {active === null && <p className='text-xs text-muted-foreground'>{t('card.none')}</p>}
 
         <ul className='grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3'>
           {group.nodes.map((node) => (

@@ -1,18 +1,25 @@
-import type { ClashProvidersWire, ClashProxiesWire, ClashProxyWire } from '../api/Proxy.schema';
+import { MS_IN_SECOND } from '@shared/lib/time';
+
+import type {
+  ClashProvidersWire,
+  ClashProxiesWire,
+  ClashProxyWire,
+  ClashSubscriptionInfoWire,
+} from '../api/Proxy.schema';
 import {
+  DELAY_FAST,
   DELAY_STATE,
   DELAY_TIMEOUT,
   GROUP_TYPES,
   SERVICE_GROUPS,
   type DelayState,
+  type ProviderUpdate,
+  type ProviderUsage,
   type ProxyGroup,
   type ProxyNode,
   type ProxyProvider,
   type ProxyRuntime,
 } from './Proxy.model';
-
-/** Граница «быстро» — порог, при котором переключение узла ещё не заметно. */
-const FAST_DELAY = 300;
 
 /** Тип селектора: единственная группа, где узел выбирает пользователь. */
 const SELECTOR_TYPE = 'Selector';
@@ -32,7 +39,7 @@ function toDelayState(delay: number | null): DelayState {
     return DELAY_STATE.Failed;
   }
 
-  return delay <= FAST_DELAY ? DELAY_STATE.Fast : DELAY_STATE.Slow;
+  return delay <= DELAY_FAST ? DELAY_STATE.Fast : DELAY_STATE.Slow;
 }
 
 function toNode(proxy: ClashProxyWire, selected: boolean): ProxyNode {
@@ -111,10 +118,36 @@ export function toProxyRuntime(wire: ClashProxiesWire): ProxyRuntime {
   return { groups: toGroups(wire), standalone: toStandalone(wire) };
 }
 
+function toProviderUpdate(raw: string): ProviderUpdate {
+  const at = new Date(raw);
+
+  if (Number.isNaN(at.getTime())) {
+    return { kind: 'unknown', raw };
+  }
+
+  return at.getTime() <= 0 ? { kind: 'never' } : { kind: 'at', at, raw };
+}
+
+function toProviderUsage(info: ClashSubscriptionInfoWire | undefined): ProviderUsage | null {
+  if (info === undefined) {
+    return null;
+  }
+
+  const used = info.Upload + info.Download;
+
+  return used === 0 && info.Total === 0 ? null : { used, total: info.Total };
+}
+
 export function toProxyProviders(wire: ClashProvidersWire): ProxyProvider[] {
-  return Object.values(wire.providers).map((provider) => ({
-    name: provider.name,
-    nodes: provider.proxies.length,
-    updatedAt: provider.updatedAt,
-  }));
+  return Object.values(wire.providers).map((provider) => {
+    const expire = provider.subscriptionInfo?.Expire ?? 0;
+
+    return {
+      name: provider.name,
+      nodes: provider.proxies.length,
+      update: toProviderUpdate(provider.updatedAt),
+      usage: toProviderUsage(provider.subscriptionInfo),
+      expiresAt: expire > 0 ? new Date(expire * MS_IN_SECOND) : null,
+    };
+  });
 }

@@ -106,7 +106,7 @@ export const CLASH_PROVIDERS_FIXTURE: ClashProvidersWire = {
       vehicleType: 'Remote',
       name: 'sub-nl',
       updatedAt: '2026-09-10T12:27:04Z',
-      subscriptionInfo: { Upload: 12043221, Download: 904113355, Total: 0, Expire: 0 },
+      subscriptionInfo: { Upload: 12043221, Download: 904113355, Total: 107374182400, Expire: 1796126400 },
       proxies: [
         { type: 'VLESS', name: 'sub-nl/nl-reality', udp: true, history: [{ time: CHECKED_AT, delay: 854 }] },
         { type: 'VLESS', name: 'sub-nl/nl-xhttp', udp: true, history: [{ time: CHECKED_AT, delay: 186 }] },

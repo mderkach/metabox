@@ -9,7 +9,14 @@
     "title": "Подписки",
     "update": "Обновить",
     "updating": "Обновляю…",
-    "updateLabel": "Обновить подписку {{name}}"
+    "updateLabel": "Обновить подписку {{name}}",
+    "neverUpdated": "ещё не обновлялась",
+    "updatedUnknown": "дата обновления неизвестна",
+    "updatedNow": "обновлена только что",
+    "updatedAgo": "обновлена {{age}} назад",
+    "usage": "{{used}} из {{total}}",
+    "usageUnlimited": "использовано {{used}}",
+    "expires": "до {{date}}"
   },
   "announce": {
     "selected": "Группа {{group}}: выбран узел {{node}}",

@@ -3,17 +3,11 @@ import { Check } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { DELAY_STATE, DELAY_TIMEOUT, type ProxyNode } from '@entities/Proxy';
+import { DELAY_TIMEOUT, type ProxyNode } from '@entities/Proxy';
 import { cn } from '@shared/lib/utils';
 
+import { DELAY_TONE } from './ProxyDelayTone';
 import { toGroupLabel } from './ProxyGroupLabel';
-
-const DELAY_TONE: Readonly<Record<string, string>> = {
-  [DELAY_STATE.Fast]: 'text-signal-ok',
-  [DELAY_STATE.Slow]: 'text-signal-warn',
-  [DELAY_STATE.Failed]: 'text-signal-bad',
-  [DELAY_STATE.Unknown]: 'text-muted-foreground',
-};
 
 /** Задержка словами: та же подпись идёт в имя плитки и в её видимый угол. */
 function toDelayText(t: TFunction<'widgets/ProxyGroups'>, node: ProxyNode): string {

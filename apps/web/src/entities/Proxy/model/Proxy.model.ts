@@ -1,6 +1,13 @@
 /** Задержка, при которой узел считается недоступным: sing-box отдаёт 65535. */
 export const DELAY_TIMEOUT = 65_535;
 
+/**
+ * Граница «быстро», миллисекунды: порог, при котором переключение узла ещё не
+ * заметно. Экраны называют её в легенде тона — иначе 290 и 310 мс разного
+ * цвета выглядят случайностью.
+ */
+export const DELAY_FAST = 300;
+
 export const DELAY_STATE = {
   Fast: 'fast',
   Slow: 'slow',
@@ -44,9 +51,29 @@ export interface ProxyRuntime {
   standalone: ProxyNode[];
 }
 
+/**
+ * Когда подписка обновлялась. `never` — рантайм отдал нулевую дату Go
+ * (`0001-01-01…`) или эпоху: подписку ещё не загружали. `unknown` — строка не
+ * разобралась как дата; схема формат не проверяет.
+ */
+export type ProviderUpdate =
+  | { kind: 'never' }
+  | { kind: 'unknown'; raw: string }
+  | { kind: 'at'; at: Date; raw: string };
+
+export interface ProviderUsage {
+  /** Upload + Download. */
+  used: number;
+  /** `0` — подписка лимит не сообщила. */
+  total: number;
+}
+
 export interface ProxyProvider {
   name: string;
   nodes: number;
-  /** Время обновления подписки в том виде, в каком его отдал рантайм. */
-  updatedAt: string;
+  update: ProviderUpdate;
+  /** `null`, когда подписка не прислала `subscription-userinfo` или в нём одни нули. */
+  usage: ProviderUsage | null;
+  /** `null`, когда срок не сообщён. */
+  expiresAt: Date | null;
 }

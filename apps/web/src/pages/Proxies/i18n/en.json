@@ -9,7 +9,14 @@
     "title": "Subscriptions",
     "update": "Update",
     "updating": "Updating…",
-    "updateLabel": "Update subscription {{name}}"
+    "updateLabel": "Update subscription {{name}}",
+    "neverUpdated": "never updated",
+    "updatedUnknown": "update date unknown",
+    "updatedNow": "updated just now",
+    "updatedAgo": "updated {{age}} ago",
+    "usage": "{{used}} of {{total}}",
+    "usageUnlimited": "{{used}} used",
+    "expires": "until {{date}}"
   },
   "announce": {
     "selected": "Group {{group}}: node {{node}} selected",

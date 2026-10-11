@@ -15,6 +15,7 @@ import {
 } from '@shared/ui';
 
 import { ProxyGroupCard } from './ProxyGroupCard';
+import { ProxyGroupsLegend } from './ProxyGroupsLegend';
 import { ProxyNodeTile } from './ProxyNodeTile';
 
 const NO_OP = () => undefined;
@@ -41,13 +42,16 @@ export function ProxyGroups({
   const { t } = useTranslation('widgets/ProxyGroups');
   if (groups.length > 0) {
     return (
-      <ul className='flex flex-col gap-3'>
-        {groups.map((group) => (
-          <li key={group.name}>
-            <ProxyGroupCard group={group} onSelected={onSelected} onTested={onTested} />
-          </li>
-        ))}
-      </ul>
+      <div className='flex flex-col gap-3'>
+        <ProxyGroupsLegend />
+        <ul className='flex flex-col gap-3'>
+          {groups.map((group) => (
+            <li key={group.name}>
+              <ProxyGroupCard group={group} onSelected={onSelected} onTested={onTested} />
+            </li>
+          ))}
+        </ul>
+      </div>
     );
   }
 
@@ -66,7 +70,8 @@ export function ProxyGroups({
           </CardTitle>
           <CardDescription>{nodes.length}</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className='flex flex-col gap-3'>
+          <ProxyGroupsLegend />
           <ul className='grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3'>
             {nodes.map((node) => (
               <ProxyNodeTile key={node.name} node={node} selectable={false} onSelect={NO_OP} />

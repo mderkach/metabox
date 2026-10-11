@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { ClashProxiesSchema, type ClashProxiesWire } from '../api/Proxy.schema';
-import { toProxyRuntime, withSelectedNode } from '../model/Proxy.adapter';
+import { ClashProxiesSchema, type ClashProvidersWire, type ClashProxiesWire } from '../api/Proxy.schema';
+import { toProxyProviders, toProxyRuntime, withSelectedNode } from '../model/Proxy.adapter';
 import { DELAY_STATE } from '../model/Proxy.model';
-import { CLASH_PROXIES_FIXTURE } from './Proxy.fixture';
+import { CLASH_PROVIDERS_FIXTURE, CLASH_PROXIES_FIXTURE } from './Proxy.fixture';
 
 describe('toProxyRuntime', () => {
   it('не показывает служебные группы Clash API', () => {
@@ -92,5 +92,62 @@ describe('withSelectedNode', () => {
 
   it('возвращает снимок как есть, когда группы в нём нет: это гонка, а не ошибка', () => {
     expect(withSelectedNode(CLASH_PROXIES_FIXTURE, 'нет такой', 'direct')).toBe(CLASH_PROXIES_FIXTURE);
+  });
+});
+
+describe('toProxyProviders', () => {
+  function providerWith(patch: Partial<ClashProvidersWire['providers'][string]>): ClashProvidersWire {
+    return { providers: { sub: { ...CLASH_PROVIDERS_FIXTURE.providers['sub-eu'], name: 'sub', ...patch } } };
+  }
+
+  it('разбирает дату обновления и оставляет исходную строку для разметки', () => {
+    const [eu] = toProxyProviders(CLASH_PROVIDERS_FIXTURE);
+
+    expect(eu.update).toEqual({ kind: 'at', at: new Date('2026-09-10T12:27:02Z'), raw: '2026-09-10T12:27:02Z' });
+  });
+
+  it.each(['0001-01-01T00:00:00Z', '1970-01-01T00:00:00Z'])(
+    'нулевую дату %s считает «ни разу не обновлялась»',
+    (raw) => {
+      const [provider] = toProxyProviders(providerWith({ updatedAt: raw }));
+
+      expect(provider.update).toEqual({ kind: 'never' });
+    }
+  );
+
+  it('не разобранную как дату строку помечает неизвестной, а не «Invalid Date»', () => {
+    const [provider] = toProxyProviders(providerWith({ updatedAt: 'вчера' }));
+
+    expect(provider.update).toEqual({ kind: 'unknown', raw: 'вчера' });
+  });
+
+  it('складывает Upload и Download в использованный трафик и отдаёт лимит и срок', () => {
+    const nl = toProxyProviders(CLASH_PROVIDERS_FIXTURE).find((provider) => provider.name === 'sub-nl');
+
+    expect(nl?.usage).toEqual({ used: 12043221 + 904113355, total: 107374182400 });
+    expect(nl?.expiresAt).toEqual(new Date(1796126400 * 1000));
+  });
+
+  it('без лимита отдаёт использованное с нулевым total, а нулевой Expire — как «не сообщён»', () => {
+    const [eu] = toProxyProviders(CLASH_PROVIDERS_FIXTURE);
+
+    expect(eu.usage).toEqual({ used: 748287807 + 36519368345, total: 0 });
+    expect(eu.expiresAt).toBeNull();
+  });
+
+  it('без subscriptionInfo трафика и срока нет', () => {
+    const [provider] = toProxyProviders(providerWith({ subscriptionInfo: undefined }));
+
+    expect(provider.usage).toBeNull();
+    expect(provider.expiresAt).toBeNull();
+  });
+
+  it('одни нули в subscriptionInfo не превращает в «0 из 0»', () => {
+    const [provider] = toProxyProviders(
+      providerWith({ subscriptionInfo: { Upload: 0, Download: 0, Total: 0, Expire: 0 } })
+    );
+
+    expect(provider.usage).toBeNull();
+    expect(provider.expiresAt).toBeNull();
   });
 });

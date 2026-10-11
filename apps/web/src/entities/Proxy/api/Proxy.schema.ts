@@ -51,4 +51,5 @@ export const ClashProvidersSchema = z.object({
 export type ClashDelayWire = z.infer<typeof ClashDelaySchema>;
 export type ClashProxyWire = z.infer<typeof ClashProxySchema>;
 export type ClashProxiesWire = z.infer<typeof ClashProxiesSchema>;
+export type ClashSubscriptionInfoWire = z.infer<typeof ClashSubscriptionInfoSchema>;
 export type ClashProvidersWire = z.infer<typeof ClashProvidersSchema>;

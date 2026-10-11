@@ -2,14 +2,14 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useProxies, useProxyProviders } from '@entities/Proxy';
-import { formatDate } from '@shared/lib/format';
 import { useLiveRegion } from '@shared/lib/useLiveRegion';
 import { CARD_FLUSH, Card, LiveRegion, QueryFailure, SURFACE, SkeletonRows } from '@shared/ui';
 import { PageHeader } from '@widgets/PageHeader';
 import { ProxyGroups } from '@widgets/ProxyGroups';
 
+import { useMinuteClock } from '../lib/Proxies.lib';
 import { ProxiesSection } from './ProxiesSection';
-import { ProxyProviderUpdate } from './ProxyProviderUpdate';
+import { ProxyProviderRow } from './ProxyProviderRow';
 import { ProxyTestAll } from './ProxyTestAll';
 
 export function ProxiesPage() {
@@ -20,6 +20,7 @@ export function ProxiesPage() {
   const groups = proxies.data?.groups ?? [];
   const nodes = proxies.data?.standalone ?? [];
   const subscriptions = providers.data ?? [];
+  const now = useMinuteClock();
 
   // Результат действия видно глазами — отметка узла, число задержки, — а
   // скринридеру его объявляет одна область на экран.
@@ -71,16 +72,7 @@ export function ProxiesPage() {
             <Card className={CARD_FLUSH}>
               <ul className='divide-y divide-border'>
                 {subscriptions.map((provider) => (
-                  <li key={provider.name} className='flex items-center gap-3 px-(--card-spacing) py-2.5'>
-                    <span className='min-w-0 grow truncate text-sm'>{provider.name}</span>
-                    <span className='text-xs text-muted-foreground'>
-                      {t('count.node', { ns: 'shared', count: provider.nodes })}
-                    </span>
-                    <time dateTime={provider.updatedAt} className='text-xs text-muted-foreground tabular-nums'>
-                      {toProviderDate(provider.updatedAt)}
-                    </time>
-                    <ProxyProviderUpdate name={provider.name} />
-                  </li>
+                  <ProxyProviderRow key={provider.name} provider={provider} now={now} />
                 ))}
               </ul>
             </Card>
@@ -89,11 +81,4 @@ export function ProxiesPage() {
       </div>
     </>
   );
-}
-
-/** Схема формат строки не проверяет: неразобранную дату показываем как пришла, а не «Invalid Date». */
-function toProviderDate(updatedAt: string): string {
-  const at = new Date(updatedAt);
-
-  return Number.isNaN(at.getTime()) ? updatedAt : formatDate(at);
 }

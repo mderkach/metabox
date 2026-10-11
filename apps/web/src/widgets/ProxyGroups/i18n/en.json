@@ -14,11 +14,15 @@
     "manual": "you pick the node",
     "automatic": "the node is picked automatically, by delay",
     "testGroup": "Test the nodes of group {{group}}",
-    "current": "now:",
-    "none": "not selected"
+    "none": "no node selected"
   },
   "node": {
     "selected": "selected now",
     "label": "{{name}}, {{type}}, {{delay}}"
+  },
+  "legend": {
+    "label": "Delay colour",
+    "fast": "up to {{value}} ms",
+    "slow": "over {{value}} ms"
   }
 }
