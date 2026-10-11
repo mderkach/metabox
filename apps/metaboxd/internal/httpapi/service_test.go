@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"metabox/internal/contract"
 	"metabox/internal/httpapi"
 	"metabox/internal/procd"
 	"metabox/internal/singbox"
@@ -270,6 +271,46 @@ func TestServiceStateObservedRuntime(t *testing.T) {
 
 			if body.Managed != tt.wantManaged {
 				t.Errorf("владение процессом: получили %v, ожидали %v", body.Managed, tt.wantManaged)
+			}
+		})
+	}
+}
+
+// Отказ чтения procd — не остановка: статус в таком ответе подставлен, и
+// панель отличает его от наблюдённого только по коду причины. Код обязан
+// приехать при любой ошибке, в том числе когда живой процесс виден, а опрос
+// службы просто не уложился в таймаут.
+func TestServiceStateUnreadCarriesCode(t *testing.T) {
+	tests := []struct {
+		name     string
+		err      error
+		observed bool
+		wantCode contract.ServiceErrorCode
+	}{
+		{"init-скрипт не ответил", errors.New("init-скрипт не найден"), false, contract.ServiceStateUnread},
+		{"опрос не уложился в таймаут", context.DeadlineExceeded, true, contract.ServiceStateUnread},
+		{"опрос отменён", context.Canceled, true, contract.ServiceStateUnread},
+		{
+			"инстанс не выбран",
+			fmt.Errorf("служба sing-box: %w", procd.ErrAmbiguousInstance),
+			true,
+			contract.ServiceInstanceAmbiguous,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			body, ok := httpapi.ServiceState(singbox.State{}, testSingboxVersion, tt.err, tt.observed).(contract.Service)
+			if !ok {
+				t.Fatal("тело ответа не contract.Service")
+			}
+
+			if body.LastErrorCode != tt.wantCode {
+				t.Errorf("код причины: получили %q, ожидали %q", body.LastErrorCode, tt.wantCode)
+			}
+
+			if body.LastError == "" {
+				t.Error("подробности отказа нет")
 			}
 		})
 	}

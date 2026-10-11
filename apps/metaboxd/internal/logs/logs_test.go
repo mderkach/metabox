@@ -82,6 +82,12 @@ func TestParse(t *testing.T) {
 			ok:   true,
 		},
 		{
+			name: "строка logread с меткой времени sing-box",
+			line: "Fri Oct  9 05:38:01 2026 daemon.err sing-box[4233]: +0000 2026-10-09 05:38:01 ERROR [123 5.0s] connection: i/o timeout",
+			want: Entry{Time: localRFC3339(t, 2026, 10, 9, 5, 38, 1), Level: LevelError, Message: "[123 5.0s] connection: i/o timeout"},
+			ok:   true,
+		},
+		{
 			name: "чужой процесс, упомянувший sing-box",
 			line: "Fri Oct  9 05:38:02 2026 daemon.info dnsmasq[1]: query sing-box[1] example.com",
 		},
@@ -316,6 +322,67 @@ func TestFollowLimit(t *testing.T) {
 
 	stop()
 	<-done
+}
+
+func TestFollowFreesSlotBeforeDone(t *testing.T) {
+	for _, file := range []bool{false, true} {
+		name := "logread"
+		if file {
+			name = "файл"
+		}
+
+		t.Run(name, func(t *testing.T) {
+			cfg := noConfig()
+			if file {
+				dir := t.TempDir()
+				path := filepath.Join(dir, "sing-box.log")
+
+				if err := os.WriteFile(path, nil, 0o600); err != nil {
+					t.Fatal(err)
+				}
+
+				cfg = fileConfig(path)
+			}
+
+			p := &pipeStart{writer: make(chan *io.PipeWriter, MaxStreams+1)}
+			r := New(p.start, cfg, Options{Logread: "/sbin/logread", Process: "sing-box", PollInterval: time.Hour})
+
+			stops := make([]context.CancelFunc, 0, MaxStreams)
+			streams := make([]<-chan error, 0, MaxStreams)
+
+			for range MaxStreams {
+				ctx, cancel := context.WithCancel(t.Context())
+
+				done, err := r.Follow(ctx, LevelTrace, func(Entry) {})
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				stops = append(stops, cancel)
+				streams = append(streams, done)
+			}
+
+			// Клиент закрыл поток и сразу открыл новый: хендлер вернулся по
+			// done, и место к этому моменту обязано быть свободным.
+			stops[0]()
+			<-streams[0]
+
+			ctx, cancel := context.WithCancel(t.Context())
+
+			done, err := r.Follow(ctx, LevelTrace, func(Entry) {})
+			if err != nil {
+				t.Fatalf("после закрытия потока новый не открылся: %v", err)
+			}
+
+			cancel()
+			<-done
+
+			for i, stop := range stops[1:] {
+				stop()
+				<-streams[i+1]
+			}
+		})
+	}
 }
 
 func fileConfig(output string) fakeConfig {

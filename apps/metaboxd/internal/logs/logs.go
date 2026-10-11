@@ -477,6 +477,12 @@ func parseLogread(line, process string) (Entry, bool) {
 		return Entry{}, false
 	}
 
+	// При log.timestamp sing-box ставит свою метку и в stderr; время строки
+	// остаётся за logd.
+	if m := fileTimestamp.FindString(message); m != "" {
+		message = message[len(m):]
+	}
+
 	entry := parseMessage(message)
 
 	if len(head) >= logreadPrefix {

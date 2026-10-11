@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -40,7 +41,7 @@ func Listen(addrs []string) ([]net.Listener, []error, error) {
 	)
 
 	for _, addr := range addrs {
-		listener, err := net.Listen("tcp", addr)
+		listener, err := (&net.ListenConfig{Control: control}).Listen(context.Background(), "tcp", addr)
 		if err != nil {
 			failures = append(failures, fmt.Errorf("%s: %w", addr, err))
 

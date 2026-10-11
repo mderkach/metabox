@@ -15,7 +15,9 @@ import (
 // блокироваться надолго.
 //
 // Горутину останавливает отмена ctx; её итог приходит в канал done ровно
-// одним значением, и вызывающий обязан его дождаться. Ошибка до запуска —
+// одним значением, и вызывающий обязан его дождаться. К этому значению место
+// в лимите потоков уже свободно: клиент, переоткрывший поток сразу после
+// закрытия прежнего, лимитом не упрётся. Ошибка до запуска —
 // лимит потоков или недоступный источник — возвращается сразу. Обрыв
 // источника поток не переподключает: панель открывает его заново.
 func (r *Reader) Follow(ctx context.Context, minLevel Level, emit func(Entry)) (<-chan error, error) {
@@ -48,8 +50,8 @@ func (r *Reader) Follow(ctx context.Context, minLevel Level, emit func(Entry)) (
 		}
 
 		go func() {
-			defer release()
 			r.followFile(ctx, src.file, offset, f, emit)
+			release()
 			done <- nil
 		}()
 
@@ -64,8 +66,6 @@ func (r *Reader) Follow(ctx context.Context, minLevel Level, emit func(Entry)) (
 	}
 
 	go func() {
-		defer release()
-
 		readErr := eachLine(out, func(line string) {
 			if entry, ok := parseLogread(line, r.opts.Process); ok && f.pass(entry) {
 				emit(entry)
@@ -78,6 +78,7 @@ func (r *Reader) Follow(ctx context.Context, minLevel Level, emit func(Entry)) (
 			err = nil
 		}
 
+		release()
 		done <- err
 	}()
 

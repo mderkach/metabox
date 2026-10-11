@@ -26,6 +26,10 @@ const (
 
 	logKeepAlive    = 20 * time.Second
 	logWriteTimeout = 10 * time.Second
+
+	// logRetryAfter — через сколько секунд повторить поток, упёршийся в
+	// лимит: место освобождается, когда закрывается чужой поток.
+	logRetryAfter = "5"
 )
 
 // LogReader читает лог sing-box. Интерфейс объявлен здесь, у потребителя.
@@ -126,6 +130,10 @@ func (s *Server) handleLogStream(w http.ResponseWriter, r *http.Request) {
 
 	done, err := s.logs.Follow(ctx, level, emit)
 	if err != nil {
+		if errors.Is(err, logs.ErrTooManyStreams) {
+			w.Header().Set("Retry-After", logRetryAfter)
+		}
+
 		fail(s.log, w, r, err)
 
 		return

@@ -23,6 +23,8 @@ type fakeLogs struct {
 	lines    int
 	stream   []logs.Entry
 	cleared  time.Time
+	// stopped закрывается, когда поток увидел отмену; nil — не следить.
+	stopped chan struct{}
 }
 
 func (f *fakeLogs) Tail(_ context.Context, n int, level logs.Level) (logs.Snapshot, error) {
@@ -45,6 +47,11 @@ func (f *fakeLogs) Follow(ctx context.Context, _ logs.Level, emit func(logs.Entr
 		}
 
 		<-ctx.Done()
+
+		if f.stopped != nil {
+			close(f.stopped)
+		}
+
 		done <- nil
 	}()
 
@@ -143,6 +150,11 @@ func TestLogsErrors(t *testing.T) {
 			if got.status != tt.status || body.Code != tt.code {
 				t.Errorf("код %d, отказ %+v", got.status, body)
 			}
+
+			retry := got.header.Get("Retry-After")
+			if want := tt.status == http.StatusTooManyRequests; (retry != "") != want {
+				t.Errorf("Retry-After %q при коде %d", retry, got.status)
+			}
 		})
 	}
 }
@@ -208,6 +220,34 @@ func TestLogsStream(t *testing.T) {
 
 	if len(events) != 2 || events[0].Seq != 1 || events[1].Seq != 2 || events[1].Entry.Message != "вторая" {
 		t.Errorf("события %+v", events)
+	}
+}
+
+func TestLogsStreamStopsWhenClientLeaves(t *testing.T) {
+	reader := &fakeLogs{stopped: make(chan struct{})}
+	srv := newLogsServer(t, reader, nil)
+
+	ctx, cancel := context.WithCancel(t.Context())
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, srv.URL+"/api/logs/stream", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := srv.Client().Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Клиент уходит молча: записей в поток нет, keep-alive далеко, и источник
+	// обязан остановиться по закрытию соединения, а не по следующей записи.
+	cancel()
+	_ = resp.Body.Close()
+
+	select {
+	case <-reader.stopped:
+	case <-time.After(5 * time.Second):
+		t.Fatal("источник потока не остановлен после ухода клиента")
 	}
 }
 
