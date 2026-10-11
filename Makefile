@@ -1,6 +1,7 @@
 BIN        := dist/metaboxd
 DEVICE_BIN := dist/metaboxd-linux-arm64
-VERSION    ?= dev
+# Версия по semver, один источник для бинаря и пакета.
+VERSION    ?= $(shell cat VERSION)
 LDFLAGS    := -s -w -X metabox/internal/version.Version=$(VERSION)
 
 # Прижимает версию вниз: директива `go` в go.mod поднимает, но не опускает.
@@ -90,9 +91,15 @@ hooks:
 OPENWRT_PLATFORM ?= linux/aarch64_generic
 METABOX_BASE_IMAGE ?= openwrt/rootfs:aarch64_generic-25.12.4
 DAEMON_BINARY ?= $(DEVICE_BIN)
-# apk не принимает версией строку вроде `dev`, которой по умолчанию помечается
-# бинарь, поэтому у пакета своя нумерация.
-PKG_VERSION ?= 0.0.0-r0
+# Версия пакета выводится из semver по правилам apk: пре-релиз пишется
+# суффиксом через подчёркивание и без точки, иначе apk отвергнет строку или
+# поставит пре-релиз выше релиза. 0.1.0-rc.2 становится 0.1.0_rc2, 0.1.0 —
+# 0.1.0. Другие пре-релизы и метаданные сборки apk не выражает, и версия
+# такого вида пакетом не собирается.
+APK_VERSION := $(shell echo '$(VERSION)' | sed -nE \
+	-e 's/^([0-9]+\.[0-9]+\.[0-9]+)$$/\1/p' \
+	-e 's/^([0-9]+\.[0-9]+\.[0-9]+)-(alpha|beta|rc)\.([0-9]+)$$/\1_\2\3/p')
+PKG_VERSION ?= $(APK_VERSION)-r0
 
 # Значения уезжают в docker compose: он берёт их из окружения, а не из Makefile.
 export METABOX_BASE_IMAGE OPENWRT_PLATFORM DAEMON_BINARY PKG_VERSION
@@ -110,6 +117,7 @@ daemon-target:
 # стенд, и под ту же арку, что объявляет база стенда: разойтись поставке и
 # проверке негде. OpenWrt SDK не нужен — apk-tools берётся из alpine (ADR-0011).
 package: daemon-device
+	$(if $(APK_VERSION),,$(error версия $(VERSION) не выражается версией apk: нужна X.Y.Z или X.Y.Z-(alpha|beta|rc).N))
 	docker build --platform $(OPENWRT_PLATFORM) \
 		--build-arg BASE_IMAGE=$(METABOX_BASE_IMAGE) \
 		--build-arg PKG_VERSION=$(PKG_VERSION) \
