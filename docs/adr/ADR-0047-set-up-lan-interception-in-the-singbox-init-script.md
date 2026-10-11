@@ -1,6 +1,6 @@
 # ADR-0047. Ставить перехват трафика LAN init-скриптом службы sing-box по модели из UCI
 
-- Статус: Proposed
+- Статус: Accepted
 - Дата: 2026-10-09
 - Ответственные: владелец репозитория
 
@@ -102,7 +102,7 @@ Non-goal: IPv6-цепочки, режим fail-open на время рестар
 
 ## Проверка решения
 
-- `make dataplane-check` на стенде: обвязка ставится стартом службы; TCP клиентов из `source_ip` и `source_mac` уходит в redirect, неперечисленного — мимо; UDP — в tproxy; udp/53 — через dnsmasq в dns-in; трафик роутера и пакет с чужой меткой; Apply не меняет правила fw4 и pid dnsmasq; убитый sing-box оставляет перехват; режим `all`; `stop` снимает всё, `start` возвращает.
+- `make dataplane-check` на стенде: обвязка ставится стартом службы; TCP клиентов из `source_ip` и `source_mac` уходит в redirect, неперечисленного — мимо; UDP — в tproxy; udp/53 — через dnsmasq в dns-in; трафик роутера и пакет с чужой меткой; Apply не меняет правила fw4 и pid dnsmasq; убитый sing-box оставляет перехват; режим `all`; `stop` снимает всё, `start` возвращает; чужие `ip rule` и таблицу с номерами обвязки выключенная модель не снимает.
 - `make apply-check`: служба поднята инстансом `sing-box` с одним `-c`, цикл Apply проходит; шаг 10 `dataplane-check` прогоняет его при стоящей обвязке.
 - `cd apps/metaboxd && go test ./internal/dataplane/ ./internal/apply/`: разбор модели и умолчаний, цепочки из `nft -j list chains`, отказы `interception_missing` и `dns_probe_failed`.
 - На устройстве после `stop`: `nft list ruleset | grep metabox_` и `ip rule | grep 'lookup <route_table>'` пусты, `uci -q get firewall.metabox_post` ничего не отдаёт.

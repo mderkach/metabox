@@ -62,6 +62,15 @@ check() {
 	fi
 }
 
+# foreign_check <что>: чужие ip rule и таблица с номерами обвязки на месте.
+foreign_check() {
+	if in_target foreign-present 2>/dev/null; then
+		check "$1" 1 = 1
+	else
+		check "$1" 0 = 1
+	fi
+}
+
 tcp_to_outside() {
 	client_sh "$1" "$2" "nc -w 3 $OUTSIDE 80 </dev/null >/dev/null 2>&1 && echo connected || echo refused"
 }
@@ -188,9 +197,34 @@ in_target expect-up || failed=1
 got=$(tcp_to_outside "$LISTED_IP" -)
 check "после start соединение принято ($got)" "$got" = connected
 
+echo "14. Выключенная модель рядом с homeproxy: чужие ip rule и таблица остаются"
+# Служба остановлена, файла состояния нет — как после перезагрузки. Правило и
+# таблицу с номерами обвязки держит чужая служба.
+in_target stop
+in_target foreign-up
+in_target dataplane 0
+in_target start
+in_target wait
+foreign_check "start выключенной службы оставил чужое правило и таблицу"
+check "цепочек metabox_ при enabled=0 нет" "$(in_target state | sed -n 's/^nft: \([0-9]*\) .*/\1/p')" = 0
+in_target stop
+foreign_check "stop выключенной службы оставил чужое правило и таблицу"
+in_target foreign-down
+# Те же номера при enabled=1 и без файла состояния — свои: stop их снимает.
+in_target dataplane 1
+in_target start
+in_target wait
+in_target expect-up || failed=1
+in_target forget-state
+in_target stop
+in_target expect-down || failed=1
+in_target start
+in_target wait
+in_target expect-up || failed=1
+
 echo
 if [ "$failed" = 1 ]; then
 	echo "ПРОВАЛ: обвязка ведёт себя не так, как требуется" >&2
 	exit 1
 fi
-echo "Обвязка перехватывает перечисленных клиентов, держит fail-closed и снимается stop."
+echo "Обвязка перехватывает перечисленных клиентов, держит fail-closed, снимается stop и не трогает чужие правила."

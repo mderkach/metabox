@@ -142,10 +142,30 @@ acl)
 	sleep 2
 	wait_singbox
 	;;
+foreign-up)
+	# Не homeproxy, а его след в ядре: та же метка 101 и таблица 100, что у
+	# обвязки, — по ним выключенная служба не отличит чужое от своего.
+	ip rule add fwmark 101 table 100
+	ip route replace local 0.0.0.0/0 dev lo table 100
+	;;
+foreign-down)
+	ip rule del fwmark 101 table 100
+	ip route flush table 100
+	;;
+foreign-present)
+	ip rule list | grep -q 'fwmark 0x65 lookup 100' || fail "чужого ip rule fwmark 0x65 нет"
+	ip route show table 100 | grep -q 'local default dev lo' || fail "чужой таблицы 100 нет"
+	;;
+dataplane)
+	# Только модель: reload не зовётся, start и stop идут отдельными шагами.
+	uci set metabox.dataplane.enabled="$2"
+	uci commit metabox
+	;;
+forget-state) rm -f /var/run/metabox/dataplane.state ;;
 stop) /etc/init.d/$SERVICE stop ;;
 start) /etc/init.d/$SERVICE start ;;
 *)
-	echo "использование: $0 state|expect-up|expect-down|counter <цепочка> <образец>|singbox-pid|wait|log-has <a> <b>|acl all|listed|router-tcp|router-udp|b4-sim-up|b4-sim-counter <метка>|b4-sim-down|snapshot|apply|kill|stop|start" >&2
+	echo "использование: $0 state|expect-up|expect-down|counter <цепочка> <образец>|singbox-pid|wait|log-has <a> <b>|acl all|listed|router-tcp|router-udp|b4-sim-up|b4-sim-counter <метка>|b4-sim-down|snapshot|apply|kill|foreign-up|foreign-down|foreign-present|dataplane 0|1|forget-state|stop|start" >&2
 	exit 2
 	;;
 esac
