@@ -4,20 +4,21 @@
     "label": "Device",
     "ip": "Address",
     "mac": "MAC",
-    "nameSource": "Name from",
     "lease": "Lease",
     "online": "Online",
     "route": "Through sing-box"
   },
   "nameSource": {
-    "custom": "custom",
-    "static": "static lease",
-    "dhcp": "DHCP",
-    "none": "no name"
+    "custom": "name set in the panel",
+    "static": "name from the static lease",
+    "dhcp": "name reported by the device"
   },
   "lease": {
     "static": "static",
-    "dynamic": "dynamic"
+    "dynamic": "dynamic",
+    "staticHint": "The address is reserved for the device in /etc/config/dhcp",
+    "dynamicHint": "DHCP leased the address for a limited time, it may change after the lease ends",
+    "left": "<time>{{left}}</time> left"
   },
   "online": {
     "yes": "online",

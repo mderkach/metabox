@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import type { ParseKeys } from 'i18next';
 import { Pencil } from 'lucide-react';
-import { memo } from 'react';
+import { memo, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { DataplaneModel, RouteSource } from '@entities/Dataplane';
@@ -9,16 +9,20 @@ import { isNameSource, type Device, type NameSource } from '@entities/Device';
 import { DeviceRenameForm } from '@features/Device/DeviceRename';
 import { DeviceRouteSwitch } from '@features/Device/DeviceRoute';
 import { cn } from '@shared/lib/utils';
-import { Badge, Button, buttonVariants } from '@shared/ui';
+import { Button, buttonVariants } from '@shared/ui';
 
 import { DEVICES_COLUMN } from './DevicesColumns';
+import { DevicesLease } from './DevicesLease';
 
-/** Таблица обязана покрывать набор демона: новый источник — ошибка компиляции здесь. */
-const NAME_SOURCE_KEY: Readonly<Record<NameSource, ParseKeys<'pages/Devices'>>> = {
+/**
+ * Таблица обязана покрывать набор демона: новый источник — ошибка компиляции
+ * здесь. У `none` пояснять нечего: имени нет, и строка подписана адресом.
+ */
+const NAME_SOURCE_KEY: Readonly<Record<NameSource, ParseKeys<'pages/Devices'> | null>> = {
   custom: 'nameSource.custom',
   static: 'nameSource.static',
   dhcp: 'nameSource.dhcp',
-  none: 'nameSource.none',
+  none: null,
 };
 
 /**
@@ -36,6 +40,7 @@ function DevicesRowProto({
   routeLocked,
   routeForeign,
   onRoute,
+  now,
 }: {
   device: Device;
   rowIndex: number;
@@ -48,8 +53,13 @@ function DevicesRowProto({
   routeLocked: boolean;
   routeForeign: boolean;
   onRoute: (source: RouteSource, routed: boolean) => void;
+  /** Момент снимка списка в миллисекундах: от него считается остаток аренды. */
+  now: number;
 }) {
   const { t } = useTranslation('pages/Devices');
+  const sourceId = useId();
+  const sourceKey = isNameSource(device.nameSource) ? NAME_SOURCE_KEY[device.nameSource] : null;
+  const sourceText = sourceKey === null ? undefined : t(sourceKey);
 
   return (
     <div role='row' aria-rowindex={rowIndex} className={DEVICES_COLUMN.Row}>
@@ -58,13 +68,26 @@ function DevicesRowProto({
           <DeviceRenameForm device={device} onDone={onDone} />
         ) : (
           <>
-            <span className={cn('min-w-0 truncate text-sm', device.label === device.ip && 'font-mono')}>
-              {device.label}
+            {/* На широком экране источник имени — во всплывающей подсказке, на
+                телефоне подсказок нет, и он идёт второй строкой. */}
+            <span className='flex min-w-0 flex-col'>
+              <span
+                title={sourceText}
+                className={cn('min-w-0 truncate text-sm', device.label === device.ip && 'font-mono')}
+              >
+                {device.label}
+              </span>
+              {sourceText !== undefined && (
+                <span id={sourceId} className='truncate text-xs text-muted-foreground md:sr-only'>
+                  {sourceText}
+                </span>
+              )}
             </span>
             <Button
               variant='ghost'
               size='icon-sm'
               aria-label={t('row.rename', { device: device.label })}
+              aria-describedby={sourceText === undefined ? undefined : sourceId}
               onClick={() => {
                 onEdit(device.mac);
               }}
@@ -83,14 +106,11 @@ function DevicesRowProto({
         {device.mac}
       </span>
 
-      <span role='cell' className={DEVICES_COLUMN.NameSource}>
-        {isNameSource(device.nameSource) ? t(NAME_SOURCE_KEY[device.nameSource]) : device.nameSource}
-      </span>
-
       <span role='cell' className={DEVICES_COLUMN.Lease}>
-        <Badge variant={device.static ? 'secondary' : 'outline'}>
-          {device.static ? t('lease.static') : t('lease.dynamic')}
-        </Badge>
+        <span aria-hidden='true' className={DEVICES_COLUMN.CardLabel}>
+          {t('column.lease')}
+        </span>
+        <DevicesLease device={device} now={now} />
       </span>
 
       <span role='cell' className={DEVICES_COLUMN.Online}>
@@ -101,6 +121,9 @@ function DevicesRowProto({
       </span>
 
       <span role='cell' className={DEVICES_COLUMN.Route}>
+        <span aria-hidden='true' className={DEVICES_COLUMN.CardLabel}>
+          {t('column.route')}
+        </span>
         <DeviceRouteSwitch
           source={device}
           label={device.label}

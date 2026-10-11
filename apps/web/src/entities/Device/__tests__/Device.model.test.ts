@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
+import { MS_IN_MINUTE, MS_IN_SECOND, SECONDS_IN_HOUR, SECONDS_IN_MINUTE } from '@shared/lib/time';
+
 import { DevicesSchema } from '../api/Device.schema';
 import { toDeviceIndex, toDevices } from '../model/Device.adapter';
-import { deviceLabel, EMPTY_DEVICE_INDEX } from '../model/Device.model';
+import { deviceLabel, EMPTY_DEVICE_INDEX, leaseLeft } from '../model/Device.model';
 import { DEVICES_FIXTURE } from './Device.fixture';
 
 describe('подпись устройства', () => {
@@ -53,5 +55,28 @@ describe('адаптер устройств', () => {
     const { mac: _mac, ...withoutMac } = DEVICES_FIXTURE.devices[0];
 
     expect(DevicesSchema.safeParse({ devices: [withoutMac] }).success).toBe(false);
+  });
+});
+
+describe('остаток аренды', () => {
+  const expires = new Date(1_791_000_000 * MS_IN_SECOND);
+  const dynamic = { static: false, leaseExpires: expires };
+
+  it('считает остаток динамической аренды с округлением вверх до минуты', () => {
+    const now = expires.getTime() - (3 * SECONDS_IN_HOUR + 1) * MS_IN_SECOND;
+
+    expect(leaseLeft(dynamic, now)).toBe(3 * SECONDS_IN_HOUR + SECONDS_IN_MINUTE);
+    expect(leaseLeft(dynamic, expires.getTime() - MS_IN_SECOND)).toBe(SECONDS_IN_MINUTE);
+    expect(leaseLeft(dynamic, expires.getTime() - MS_IN_MINUTE)).toBe(SECONDS_IN_MINUTE);
+  });
+
+  it('у статической аренды остатка нет: адрес закреплён', () => {
+    expect(leaseLeft({ ...dynamic, static: true }, 0)).toBeNull();
+  });
+
+  it('без аренды и после её конца остатка нет', () => {
+    expect(leaseLeft({ static: false, leaseExpires: null }, 0)).toBeNull();
+    expect(leaseLeft(dynamic, expires.getTime())).toBeNull();
+    expect(leaseLeft(dynamic, expires.getTime() + MS_IN_MINUTE)).toBeNull();
   });
 });

@@ -25,9 +25,6 @@ export function DevicesTableHeader() {
         <span role='columnheader' className={DEVICES_COLUMN.Mac}>
           {t('column.mac')}
         </span>
-        <span role='columnheader' className={DEVICES_COLUMN.NameSource}>
-          {t('column.nameSource')}
-        </span>
         <span role='columnheader' className={DEVICES_COLUMN.Lease}>
           {t('column.lease')}
         </span>

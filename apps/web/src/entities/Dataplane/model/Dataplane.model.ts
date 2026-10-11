@@ -46,6 +46,44 @@ export interface RouteSource {
 }
 
 const HOST_PREFIX = '/32';
+const IPV4_BITS = 32;
+const IPV4_OCTET_MAX = 255;
+const IPV4_CIDR = /^(\d{1,3}(?:\.\d{1,3}){3})(?:\/(\d{1,2}))?$/;
+
+/** IPv4-адрес или подсеть из `source_ip`; адрес — беззнаковое 32-битное число. */
+export interface Ipv4Cidr {
+  address: number;
+  prefix: number;
+}
+
+/**
+ * Запись `source_ip` в адрес и длину префикса; голый адрес — подсеть `/32`.
+ * IPv6 и всё, что не разбирается как IPv4, — `null`: демон собирает устройства
+ * из аренд DHCPv4, и сопоставлять с ними IPv6 нечего.
+ */
+export function parseIpv4Cidr(entry: string): Ipv4Cidr | null {
+  const match = IPV4_CIDR.exec(entry);
+
+  if (match === null) return null;
+
+  // Необязательная группа без совпадения — `undefined`, хотя тип RegExp обещает строку.
+  const [, address = '', length = ''] = match;
+  const octets = address.split('.').map(Number);
+  const prefix = length === '' ? IPV4_BITS : Number(length);
+
+  if (octets.some((octet) => octet > IPV4_OCTET_MAX) || prefix > IPV4_BITS) return null;
+
+  return { address: octets.reduce((value, octet) => value * (IPV4_OCTET_MAX + 1) + octet, 0), prefix };
+}
+
+/** Адрес попадает в подсеть. Биты хоста маска отбрасывает: `192.168.1.65/29` читается как `192.168.1.64/29`. */
+export function cidrContains(cidr: Ipv4Cidr, address: number): boolean {
+  if (cidr.prefix === 0) return true;
+
+  const mask = (~0 << (IPV4_BITS - cidr.prefix)) >>> 0;
+
+  return (cidr.address & mask) >>> 0 === (address & mask) >>> 0;
+}
 
 function sameMac(left: string, right: string): boolean {
   return left.toLowerCase() === right.toLowerCase();
@@ -56,15 +94,48 @@ function isHostOf(entry: string, ip: string): boolean {
   return ip !== '' && (entry === ip || entry === `${ip}${HOST_PREFIX}`);
 }
 
-/**
- * Устройство идёт через sing-box по своей записи: MAC в `source_mac` или его
- * адрес в `source_ip`. Подсеть шире одного хоста записью устройства не
- * считается — тумблер её не пишет и снять не может.
- */
-export function isDeviceRouted(model: DataplaneModel, source: RouteSource): boolean {
+/** Подсеть шире одного хоста, в которую входит адрес. */
+function subnetOf(entries: readonly string[], ip: string): string | null {
+  const address = parseIpv4Cidr(ip);
+
+  if (address === null || address.prefix !== IPV4_BITS) return null;
+
   return (
-    model.sourceMac.some((mac) => sameMac(mac, source.mac)) || model.sourceIp.some((ip) => isHostOf(ip, source.ip))
+    entries.find((entry) => {
+      const cidr = parseIpv4Cidr(entry);
+
+      return cidr !== null && cidr.prefix < IPV4_BITS && cidrContains(cidr, address.address);
+    }) ?? null
   );
+}
+
+export const ROUTE_REASON = {
+  Mac: 'mac',
+  Host: 'host',
+  Subnet: 'subnet',
+} as const;
+
+/** Почему устройство идёт через sing-box в режиме `listed`. */
+export type RouteReason =
+  | { kind: typeof ROUTE_REASON.Mac }
+  | { kind: typeof ROUTE_REASON.Host }
+  | { kind: typeof ROUTE_REASON.Subnet; subnet: string };
+
+/**
+ * Подсеть проверяется первой: устройство в ней остаётся в перехвате, даже если
+ * снять его MAC и адрес, поэтому только она честно отвечает, можно ли
+ * выключить устройство отдельно.
+ */
+export function routeReason(model: DataplaneModel, source: RouteSource): RouteReason | null {
+  const subnet = subnetOf(model.sourceIp, source.ip);
+
+  if (subnet !== null) return { kind: ROUTE_REASON.Subnet, subnet };
+
+  if (model.sourceMac.some((mac) => sameMac(mac, source.mac))) return { kind: ROUTE_REASON.Mac };
+
+  if (model.sourceIp.some((ip) => isHostOf(ip, source.ip))) return { kind: ROUTE_REASON.Host };
+
+  return null;
 }
 
 /**

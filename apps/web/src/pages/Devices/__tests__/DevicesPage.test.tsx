@@ -3,7 +3,7 @@ import { server } from '@test/server';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DAEMON_ENDPOINT } from '@entities/Daemon';
 import { DAEMON_STATUS_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture';
@@ -12,7 +12,9 @@ import { DATAPLANE_ENDPOINT } from '@entities/Dataplane';
 import { DATAPLANE_FIXTURE } from '@entities/Dataplane/__tests__/Dataplane.fixture';
 import { createDataplaneMock } from '@entities/Dataplane/__tests__/Dataplane.handlers';
 import { DEVICE_ENDPOINT } from '@entities/Device';
+import { DEVICES_FIXTURE } from '@entities/Device/__tests__/Device.fixture';
 import { createDeviceHandlers } from '@entities/Device/__tests__/Device.handlers';
+import { MS_IN_SECOND, SECONDS_IN_HOUR, SECONDS_IN_MINUTE } from '@shared/lib/time';
 
 import { DevicesPage } from '../ui/DevicesPage';
 
@@ -39,6 +41,17 @@ async function readySwitch(device: string): Promise<HTMLElement> {
   return toggle;
 }
 
+/** Тумблер устройства, когда модель прочитана и он показывает перехват. */
+async function readySwitchChecked(device: string): Promise<HTMLElement> {
+  const toggle = await screen.findByRole('switch', { name: `Через sing-box: ${device}` });
+
+  await waitFor(() => {
+    expect(toggle).toBeChecked();
+  });
+
+  return toggle;
+}
+
 function renderScreen() {
   return renderWithRouter(DevicesPage, { path: '/devices' });
 }
@@ -53,12 +66,19 @@ function rowOf(label: string): HTMLElement {
   return row;
 }
 
+/** Конец динамической аренды из фикстуры, в миллисекундах. */
+const LEASE_END = DEVICES_FIXTURE.devices[0].lease_expires * MS_IN_SECOND;
+
 describe('экран устройств', () => {
   beforeEach(() => {
     serveDataplane();
   });
 
-  it('показывает устройства подписью, адресом, MAC, источником имени, арендой и сетью', async () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('показывает устройства подписью, адресом, MAC, арендой и сетью', async () => {
     server.use(...createDeviceHandlers());
 
     renderScreen();
@@ -69,14 +89,58 @@ describe('экран устройств', () => {
 
     expect(within(laptop).getByText('192.168.1.60')).toBeInTheDocument();
     expect(within(laptop).getByText('aa:bb:cc:00:00:70')).toBeInTheDocument();
-    expect(within(laptop).getByText('своё')).toBeInTheDocument();
     expect(within(laptop).getByText('статическая')).toBeInTheDocument();
     expect(within(laptop).getByText('в сети')).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'Откуда имя' })).not.toBeInTheDocument();
 
     // Без имени устройство подписано адресом, без адреса — названо так словами.
     expect(within(rowOf('aa:bb:cc:00:00:40')).getAllByText('192.168.1.36')).toHaveLength(2);
     expect(within(rowOf('Принтер')).getByText('без адреса')).toBeInTheDocument();
     expect(screen.getByText('5 устройств')).toBeInTheDocument();
+  });
+
+  it('источник имени называет у самого имени, а не отдельной колонкой', async () => {
+    server.use(...createDeviceHandlers());
+
+    renderScreen();
+
+    expect(await screen.findByRole('button', { name: 'Переименовать Ноутбук' })).toHaveAccessibleDescription(
+      'имя задано в панели'
+    );
+    expect(screen.getByRole('button', { name: 'Переименовать tv-living' })).toHaveAccessibleDescription(
+      'имя из статической аренды'
+    );
+    expect(screen.getByRole('button', { name: 'Переименовать iphone-guest' })).toHaveAccessibleDescription(
+      'имя сообщило устройство'
+    );
+    expect(within(rowOf('iphone-guest')).getByText('iphone-guest')).toHaveAttribute('title', 'имя сообщило устройство');
+    // Без имени пояснять нечего: строка подписана адресом.
+    expect(screen.getByRole('button', { name: 'Переименовать 192.168.1.36' })).not.toHaveAccessibleDescription();
+  });
+
+  it('у динамической аренды показывает остаток срока, у статической и без аренды — нет', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(LEASE_END - (3 * SECONDS_IN_HOUR + 10 * SECONDS_IN_MINUTE) * MS_IN_SECOND);
+    server.use(...createDeviceHandlers());
+
+    renderScreen();
+
+    await screen.findByText('Ноутбук');
+
+    const dynamic = rowOf('iphone-guest');
+
+    expect(within(dynamic).getByText('динамическая')).toHaveAttribute(
+      'title',
+      'Адрес выдан DHCP на срок аренды и после неё может смениться'
+    );
+    expect(within(dynamic).getByText('3 ч')).toHaveAttribute('datetime', new Date(LEASE_END).toISOString());
+    expect(within(rowOf('Ноутбук')).getByText('статическая')).toHaveAttribute(
+      'title',
+      'Адрес закреплён за устройством в /etc/config/dhcp'
+    );
+    expect(within(rowOf('Ноутбук')).queryByText(/^ещё/)).not.toBeInTheDocument();
+    expect(within(rowOf('Принтер')).getByText('динамическая')).toBeInTheDocument();
+    expect(within(rowOf('Принтер')).queryByText(/^ещё/)).not.toBeInTheDocument();
   });
 
   it('ведёт к соединениям устройства с отбором по его адресу', async () => {
@@ -119,7 +183,9 @@ describe('экран устройств', () => {
 
     expect(await screen.findByText('Телефон гостя')).toBeInTheDocument();
     expect(renamed).toHaveBeenCalledWith('/api/devices/aa%3Abb%3Acc%3A00%3A01%3A04', { name: 'Телефон гостя' });
-    expect(within(rowOf('Телефон гостя')).getByText('своё')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Переименовать Телефон гостя' })).toHaveAccessibleDescription(
+      'имя задано в панели'
+    );
     expect(reads).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('status', { name: 'Результат действия' })).toHaveTextContent(
       'Устройство теперь подписано «Телефон гостя»'
@@ -139,7 +205,9 @@ describe('экран устройств', () => {
     await waitFor(() => {
       expect(screen.queryByText('Ноутбук')).not.toBeInTheDocument();
     });
-    expect(within(rowOf('aa:bb:cc:00:00:70')).getByText('имени нет')).toBeInTheDocument();
+    expect(
+      within(rowOf('aa:bb:cc:00:00:70')).getByRole('button', { name: 'Переименовать 192.168.1.60' })
+    ).not.toHaveAccessibleDescription();
   });
 
   it('не отправляет имя длиннее потолка демона и называет причину', async () => {
@@ -208,6 +276,50 @@ describe('экран устройств', () => {
       expect(await screen.findByRole('switch', { name: 'Через sing-box: iphone-guest' })).toBeChecked();
       expect(await screen.findByRole('switch', { name: 'Через sing-box: tv-living' })).toBeChecked();
       expect(screen.getByRole('switch', { name: 'Через sing-box: Ноутбук' })).not.toBeChecked();
+
+      expect(within(rowOf('iphone-guest')).getByText('по MAC')).toBeInTheDocument();
+      expect(screen.getByRole('switch', { name: 'Через sing-box: iphone-guest' })).toHaveAccessibleDescription(
+        'MAC устройства записан в список перехвата'
+      );
+      expect(within(rowOf('tv-living')).getByText('по адресу')).toBeInTheDocument();
+      expect(screen.getByRole('switch', { name: 'Через sing-box: Ноутбук' })).not.toHaveAccessibleDescription();
+    });
+
+    it('устройство из подсети source_ip показывает включённым, недоступным и называет подсеть', async () => {
+      server.use(...createDeviceHandlers());
+      serveDataplane({
+        ...DATAPLANE_FIXTURE,
+        model: {
+          ...DATAPLANE_FIXTURE.model,
+          source_ip: [
+            '192.168.1.36/32',
+            '192.168.1.60/31',
+            '192.168.1.64/29',
+            '192.168.1.112/28',
+            '192.168.1.128/26',
+            '192.168.1.192/27',
+          ],
+          source_mac: [],
+        },
+      });
+      renderScreen();
+
+      const laptop = await readySwitchChecked('Ноутбук');
+
+      expect(isLocked(laptop)).toBe(true);
+      expect(within(rowOf('Ноутбук')).getByText('по подсети 192.168.1.60/31')).toBeInTheDocument();
+      expect(laptop).toHaveAccessibleDescription(
+        'Устройство входит в подсеть 192.168.1.60/31 из списка перехвата. Выключить его отдельно нельзя: для этого подсеть нужно убрать из списка или сузить'
+      );
+      expect(screen.getByRole('switch', { name: 'Через sing-box: iphone-guest' })).toBeChecked();
+      expect(screen.getByRole('switch', { name: 'Через sing-box: tv-living' })).toBeChecked();
+
+      // Хост /32 подсетью не считается: его тумблер снимает.
+      const host = await readySwitch('192.168.1.36');
+
+      expect(host).toBeChecked();
+      expect(within(rowOf('aa:bb:cc:00:00:40')).getByText('по адресу')).toBeInTheDocument();
+      expect(screen.getByRole('switch', { name: 'Через sing-box: Принтер' })).not.toBeChecked();
     });
 
     it('после предупреждения шлёт модель с MAC в source_mac и открывает окно подтверждения', async () => {

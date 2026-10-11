@@ -1,3 +1,5 @@
+import { MS_IN_MINUTE, SECONDS_IN_MINUTE } from '@shared/lib/time';
+
 import { NAME_SOURCE } from '../api/Device.schema';
 
 export { NAME_SOURCE };
@@ -13,6 +15,7 @@ export interface Device {
   name: string;
   /** Откуда взята подпись. Строка, а не `NameSource`: значение, которого панель не знает, показывается как пришло. */
   nameSource: string;
+  /** Адрес закреплён за устройством статической записью в `/etc/config/dhcp`. */
   static: boolean;
   online: boolean;
   /** Конец аренды; `null` — аренды нет или она бессрочная. */
@@ -50,4 +53,19 @@ export function toDeviceLabel(device: Pick<Device, 'ip' | 'mac' | 'name'>): stri
  */
 export function deviceLabel(ip: string, devices: DeviceIndex): string {
   return devices.get(ip)?.label ?? ip;
+}
+
+/**
+ * Остаток динамической аренды в секундах, округлённый вверх до минуты: точнее
+ * список не обновляется. `null` — остатка нет: адрес закреплён, аренды сейчас
+ * нет или она уже истекла.
+ */
+export function leaseLeft(device: Pick<Device, 'static' | 'leaseExpires'>, now: number): number | null {
+  if (device.static || device.leaseExpires === null) {
+    return null;
+  }
+
+  const left = device.leaseExpires.getTime() - now;
+
+  return left > 0 ? Math.ceil(left / MS_IN_MINUTE) * SECONDS_IN_MINUTE : null;
 }

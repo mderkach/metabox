@@ -4,6 +4,14 @@
     "forAll": "interception for everyone",
     "foreignService": "the panel manages a service other than metabox-singbox"
   },
+  "reason": {
+    "mac": "by MAC",
+    "macFull": "The device MAC is in the interception list",
+    "host": "by address",
+    "hostFull": "The device address is in the interception list",
+    "subnet": "by subnet {{subnet}}",
+    "subnetFull": "The device is inside subnet {{subnet}} from the interception list. It cannot be turned off on its own: remove or narrow the subnet in the list instead"
+  },
   "dialog": {
     "on": "Route {{device}} through sing-box?",
     "off": "Route {{device}} around sing-box?",

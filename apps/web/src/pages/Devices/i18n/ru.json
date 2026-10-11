@@ -4,20 +4,21 @@
     "label": "Устройство",
     "ip": "Адрес",
     "mac": "MAC",
-    "nameSource": "Откуда имя",
     "lease": "Аренда",
     "online": "В сети",
     "route": "Через sing-box"
   },
   "nameSource": {
-    "custom": "своё",
-    "static": "статическая аренда",
-    "dhcp": "DHCP",
-    "none": "имени нет"
+    "custom": "имя задано в панели",
+    "static": "имя из статической аренды",
+    "dhcp": "имя сообщило устройство"
   },
   "lease": {
     "static": "статическая",
-    "dynamic": "динамическая"
+    "dynamic": "динамическая",
+    "staticHint": "Адрес закреплён за устройством в /etc/config/dhcp",
+    "dynamicHint": "Адрес выдан DHCP на срок аренды и после неё может смениться",
+    "left": "ещё <time>{{left}}</time>"
   },
   "online": {
     "yes": "в сети",
