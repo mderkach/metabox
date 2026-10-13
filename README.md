@@ -69,18 +69,10 @@ The package also ships its own sing-box service and LAN interception (nftables, 
 
 </details>
 
-## Status
-
-- Pre-release `0.1.0-rc.2`.
-- Tested on one device: Banana Pi BPI-R4 Pro, aarch64, OpenWrt SNAPSHOT.
-- No prebuilt packages yet: the package is built from source.
-- No login yet, see [Security](#security).
-- Automatic rollback of a config that breaks connectivity is not yet confirmed on a real router.
-
 ## Requirements
 
 - OpenWrt with the apk package manager: 25.12 or SNAPSHOT. 24.10 and older use opkg and are not supported.
-- aarch64. The package architecture must match `/etc/apk/arch` on the router; for mediatek/filogic firmware, BPI-R4 Pro included, it is `aarch64_cortex-a53`.
+- aarch64, tested on Banana Pi BPI-R4 Pro. The package architecture must match `/etc/apk/arch` on the router; for mediatek/filogic firmware it is `aarch64_cortex-a53`.
 - The `sing-box-extended` package, a dependency of `metaboxd`. Tested version: `1.14.1-extended-2.7.2`. OpenWrt packages are in the [fork's releases](https://github.com/shtorm-7/sing-box-extended/releases).
 
 | Port             | Listener                                                                    |
