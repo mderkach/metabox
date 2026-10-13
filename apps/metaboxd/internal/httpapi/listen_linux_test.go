@@ -36,7 +36,7 @@ func TestListenSetsUnackedTimeout(t *testing.T) {
 	)
 
 	if err := raw.Control(func(fd uintptr) {
-		got, optErr = syscall.GetsockoptInt(int(fd), syscall.IPPROTO_TCP, syscall.TCP_USER_TIMEOUT)
+		got, optErr = syscall.GetsockoptInt(int(fd), syscall.IPPROTO_TCP, tcpUserTimeout)
 	}); err != nil {
 		t.Fatal(err)
 	}
