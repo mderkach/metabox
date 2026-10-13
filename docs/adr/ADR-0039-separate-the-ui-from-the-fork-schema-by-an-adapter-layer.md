@@ -100,5 +100,4 @@
 ## Ссылки
 
 - [`../PRD.md`](../PRD.md): AC-1…AC-5, UX-3, риск R-3, раздел 8, раздел A.2 (замещается этим ADR);
-- [`../Interviews.md`](../Interviews.md): интервью `metabox-di-001`, Round 1, 4 и 5;
 - [ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md), [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md), [ADR-0004](./ADR-0004-edit-config-text-in-place-on-the-client.md), [ADR-0005](./ADR-0005-keep-foreign-api-adapters-in-the-api-segment.md), [ADR-0018](./ADR-0018-generate-strict-schemas-and-mark-what-the-panel-does-not-know.md), [ADR-0035](./ADR-0035-render-node-forms-from-the-generated-schema.md).

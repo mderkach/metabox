@@ -7,7 +7,7 @@
 
 ## Контекст и постановка проблемы
 
-Раздел `docs/TechDebt.md` «Одинаковые ситуации решены разными идиомами» после прохода по UX 2026-09-23 оставил открытым один пункт: правка сущности конфига решена тремя приёмами.
+Разбор «Одинаковые ситуации решены разными идиомами» после прохода по UX 2026-09-23 оставил открытым один пункт: правка сущности конфига решена тремя приёмами.
 
 - **Правило маршрутизации** правится в панели `aside` рядом со списком (`widgets/Rule/RulePanel`). Ниже `lg` та же панель открывается листом снизу (`RulePanelSheet`, `usePanelAsSheet` из `shared/lib/media.ts`, запрос `PANEL_AS_SHEET`). Тем же приёмом открывается объяснение маршрута на экране соединений (`widgets/RouteExplanation`).
 - **Сет** добавляется формой, которая встаёт в карточку таблицы под тулбаром, над строками (слот `form` у `widgets/RuleSet/RuleSetTable`, `pages/RuleSets/ui/RuleSetsPage.tsx`). Правки существующего сета нет вовсе: строка только удаляет.
@@ -106,7 +106,6 @@ Non-goals: общий компонент панели в `shared/ui` — пок�
 
 ## Ссылки
 
-- `docs/TechDebt.md`, «Одинаковые ситуации решены разными идиомами»;
 - [ADR-0026](./ADR-0026-animate-screen-changes-with-the-router-and-in-page-changes-with-react.md) — граница `ViewTransition` вокруг панели;
 - [ADR-0028](./ADR-0028-show-loading-as-a-delayed-skeleton-and-read-states-from-the-query.md) — разбор 2026-09-22, из которого вырос раздел;
 - [ADR-0035](./ADR-0035-render-node-forms-from-the-generated-schema.md) — формы узлов секций;

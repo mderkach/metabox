@@ -57,7 +57,7 @@ describe('ConnectionFacetFilter', () => {
     expect(list).toHaveAttribute('aria-multiselectable', 'true');
     expect(screen.getByRole('textbox', { name: 'Найти значение: Устройство' })).toHaveFocus();
     expect(within(list).getAllByRole('option')).toHaveLength(3);
-    expect(within(list).getByRole('option', { name: /Ноутбук гостя/ })).toHaveTextContent('192.168.1.7012');
+    expect(within(list).getByRole('option', { name: /Ноутбук гостя/ })).toHaveTextContent('192.168.1.6012');
     expect(within(list).getByRole('option', { name: /Ноутбук гостя/ })).toHaveAttribute('aria-selected', 'false');
   });
 
@@ -71,7 +71,7 @@ describe('ConnectionFacetFilter', () => {
     expect(screen.getAllByRole('option')).toHaveLength(1);
 
     await user.clear(screen.getByRole('textbox', { name: 'Найти значение: Устройство' }));
-    await user.type(screen.getByRole('textbox', { name: 'Найти значение: Устройство' }), '.104');
+    await user.type(screen.getByRole('textbox', { name: 'Найти значение: Устройство' }), '.120');
 
     expect(screen.getByRole('option')).toHaveTextContent('192.168.1.120');
 
@@ -93,7 +93,7 @@ describe('ConnectionFacetFilter', () => {
     expect(screen.getByRole('option', { name: /Ноутбук гостя/ })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('button', { name: 'Устройство: Ноутбук гостя' })).toBeInTheDocument();
 
-    await user.click(screen.getByRole('option', { name: /192\.168\.1\.40/ }));
+    await user.click(screen.getByRole('option', { name: /192\.168\.1\.36/ }));
 
     expect(onChange).toHaveBeenLastCalledWith(['192.168.1.60', '192.168.1.36']);
     expect(screen.getByRole('button', { name: 'Устройство: выбрано 2' })).toBeInTheDocument();

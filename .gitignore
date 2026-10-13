@@ -30,3 +30,11 @@ apps/metaboxd/internal/webui/static/*
 /apps/metaboxd/contractgen
 .playwright-mcp
 .impeccable
+
+# Рабочие документы владельца: состояние реализации, долг, интервью и runbook
+# его роутера. Лежат рядом с остальной документацией, в репозиторий не входят.
+/docs/Status.md
+/docs/TechDebt.md
+/docs/Interviews.md
+/apps/metaboxd/docs/guides/Migration.md
+/apps/metaboxd/docs/guides/migration/

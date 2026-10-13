@@ -71,7 +71,7 @@
 
 ### Нейтральные или отложенные
 
-- Межсетевой экран в стенде выключен, и его правила проверяются только на устройстве — записано в [`TechDebt`](../TechDebt.md).
+- Межсетевой экран в стенде выключен, и его правила проверяются только на устройстве.
 - AC-29 по-прежнему требует прогона на устройстве.
 
 ## Риски и меры снижения
@@ -101,5 +101,4 @@
 - [`docs/PRD.md`](../PRD.md), критерии AC-14, AC-17, AC-18, AC-21, AC-22;
 - [ADR-0011](./ADR-0011-ship-the-daemon-as-an-apk-package.md) — поставка панели пакетом apk;
 - [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md) — владение конфигом и протокол Apply;
-- [`.devcontainer/target/Dockerfile`](../../.devcontainer/target/Dockerfile), [`.devcontainer/target/device-base/Dockerfile`](../../.devcontainer/target/device-base/Dockerfile), [`.devcontainer/docker-compose.yml`](../../.devcontainer/docker-compose.yml);
-- [`docs/TechDebt.md`](../TechDebt.md) — остаточные расхождения стенда с устройством.
+- [`.devcontainer/target/Dockerfile`](../../.devcontainer/target/Dockerfile), [`.devcontainer/target/device-base/Dockerfile`](../../.devcontainer/target/device-base/Dockerfile), [`.devcontainer/docker-compose.yml`](../../.devcontainer/docker-compose.yml).

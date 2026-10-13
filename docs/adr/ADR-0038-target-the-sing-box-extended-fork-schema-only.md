@@ -9,7 +9,7 @@
 
 Панель правит конфиг sing-box и строит формы по его схеме, поэтому до генератора и форм нужно решить, чей конфиг она описывает. Кроме upstream sing-box есть форки с дополнительными протоколами. На роутере владельца работает форк [shtorm-7/sing-box-extended](https://github.com/shtorm-7/sing-box-extended): сверх upstream он даёт WARP, MASQUE, MTProxy, Mieru, TrustTunnel и SSH; OpenVPN и Snell в 1.14 переехали в upstream, и форк перешёл на его реализации.
 
-Ответ владельца в интервью `metabox-di-001`, Round 2 ([`../Interviews.md`](../Interviews.md)): «Только sing-box-extended».
+Ответ владельца в интервью `metabox-di-001`, Round 2: «Только sing-box-extended».
 
 В scope: какой диалект конфига описывает схема панели. Вне scope: как схема извлекается из форка ([ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md)), как панель обходится с типами, которых нет в сборке бинаря ([ADR-0030](./ADR-0030-read-the-build-composition-from-the-binary-and-the-fork-sources.md)), и второй core — он вынесен в roadmap PRD.
 
@@ -68,7 +68,6 @@ Non-goal: второй core в v1 (раздел 8 PRD). Ограничение �
 ## Ссылки
 
 - [`../PRD.md`](../PRD.md): разделы 8, 9, roadmap после v1, риск R-4, раздел A.1 (замещается этим ADR);
-- [`../Interviews.md`](../Interviews.md): интервью `metabox-di-001`, Round 2;
 - [ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md) — извлечение схемы из форка;
 - [ADR-0030](./ADR-0030-read-the-build-composition-from-the-binary-and-the-fork-sources.md) — типы вне сборки бинаря;
 - [shtorm-7/sing-box-extended](https://github.com/shtorm-7/sing-box-extended), [EikeiDev/OpenWRT-sing-box-extended](https://github.com/EikeiDev/OpenWRT-sing-box-extended).

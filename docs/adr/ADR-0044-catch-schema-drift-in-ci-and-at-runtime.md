@@ -9,7 +9,7 @@
 
 Схема панели генерируется из одной закреплённой версии форка ([ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md), [ADR-0038](./ADR-0038-target-the-sing-box-extended-fork-schema-only.md)). Форк выпускает релизы, и схема расходится с ними двумя путями: в репозитории остаётся старая версия, а на роутере владелец ставит другой бинарь, чем тот, на котором собрана панель. На версии новее панель не знает новых полей, на версии старше предлагает поле, которого бинарь не понимает, и `sing-box check` отклонит конфиг на Apply. Это риск R-2.
 
-Ответ владельца в интервью `metabox-di-002`, Round 7 ([`../Interviews.md`](../Interviews.md)): «CI следит + рантайм предупреждает».
+Ответ владельца в интервью `metabox-di-002`, Round 7: «CI следит + рантайм предупреждает».
 
 В scope: как расхождение схемы с релизами форка и с бинарём на устройстве становится видимым. Вне scope: как схема извлекается ([ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md)) и какие теги вошли в сборку бинаря ([ADR-0030](./ADR-0030-read-the-build-composition-from-the-binary-and-the-fork-sources.md)).
 
@@ -38,7 +38,7 @@
 
 Рантайм работает так: демон читает `sing-box version` и отдаёт её в `GET /api/status`; схема несёт версию форка константой `SCHEMA_FORK_VERSION`; сравнивает их панель (`schemaDrift` в `apps/web/src/entities/Daemon/model/Daemon.version.ts`) и показывает пометку в подвале сайдбара — она видна с любого экрана — и блок с подробностями в разделе конфигурации под вкладками: расхождение касается только форм. Бинарь новее схемы — справка, что новых полей в формах нет и их правят в режиме «Текст»; бинарь старше — предупреждение, что поле из формы не пройдёт проверку. Неизвестная версия бинаря расхождением не считается.
 
-CI-механизм не реализован: в `.github/workflows/` только `ci.yml` на push и pull request, релизы форка он не отслеживает. Версия форка поднимается вручную правкой `replace`-блока `tools/schemagen/go.mod` и `make schema` ([ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md)). Автоматизация отслеживания схемы — веха M4 PRD; остаток записан в [`../TechDebt.md`](../TechDebt.md).
+CI-механизм не реализован: в `.github/workflows/` только `ci.yml` на push и pull request, релизы форка он не отслеживает. Версия форка поднимается вручную правкой `replace`-блока `tools/schemagen/go.mod` и `make schema` ([ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md)). Автоматизация отслеживания схемы — веха M4 PRD.
 
 ## Последствия
 
@@ -61,12 +61,10 @@ CI-механизм не реализован: в `.github/workflows/` толь�
 
 ## Проверка решения
 
-- AC-28: тесты `internal/httpapi`, тест `Daemon.version`, экран Обзора и прогон демона с бинарём 1.14 ([`../Status.md`](../Status.md)).
+- AC-28: тесты `internal/httpapi`, тест `Daemon.version`, экран Обзора и прогон демона с бинарём 1.14.
 - CI-механизм проверяется появлением автоматического PR с диффом схемы на релиз форка — когда он будет реализован.
 
 ## Ссылки
 
 - [`../PRD.md`](../PRD.md): AC-28, риск R-2, веха M4, раздел A.9 (замещается этим ADR);
-- [`../Interviews.md`](../Interviews.md): интервью `metabox-di-002`, Round 7;
-- [ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md), [ADR-0030](./ADR-0030-read-the-build-composition-from-the-binary-and-the-fork-sources.md), [ADR-0038](./ADR-0038-target-the-sing-box-extended-fork-schema-only.md);
-- [`../TechDebt.md`](../TechDebt.md) — CI не отслеживает релизы форка.
+- [ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md), [ADR-0030](./ADR-0030-read-the-build-composition-from-the-binary-and-the-fork-sources.md), [ADR-0038](./ADR-0038-target-the-sing-box-extended-fork-schema-only.md).

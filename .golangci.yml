@@ -20,7 +20,7 @@ linters:
       # учитывает build-теги. Сейчас безвредно: под тегами в этом пакете лежат
       # только булевы константы, а constantStrings берёт строковые. Станет
       # ошибкой, когда форк заведёт второй вариант файла со строками, — тогда
-      # переходить на golang.org/x/tools/go/packages (docs/TechDebt.md).
+      # переходить на golang.org/x/tools/go/packages.
       - path: types\.go
         text: 'SA1019: go/parser.ParseDir'
         linters: [staticcheck]

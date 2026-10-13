@@ -9,7 +9,7 @@
 
 Панели на роутере нужна серверная часть: браузер не может сам записать `config.json`, вызвать `sing-box check`, перезапустить службу через procd и откатить конфиг. Нужно решить, чем эта часть является и как вместе с ней на устройство попадает интерфейс.
 
-Ответ владельца в интервью `metabox-di-001`, Round 3 ([`../Interviews.md`](../Interviews.md)): «Свой Go-демон со встроенным UI». Архитектурный образец — [daniellavrushin/b4](https://github.com/daniellavrushin/b4): Go-демон со встроенным UI и единым JSON-конфигом (приложение B PRD). Интеграция с LuCI в Round 0 отложена.
+Ответ владельца в интервью `metabox-di-001`, Round 3: «Свой Go-демон со встроенным UI». Архитектурный образец — [daniellavrushin/b4](https://github.com/daniellavrushin/b4): Go-демон со встроенным UI и единым JSON-конфигом (приложение B PRD). Интеграция с LuCI в Round 0 отложена.
 
 В scope: из чего состоит рантайм панели на устройстве и что он делает. Вне scope: способ встраивания статики ([ADR-0003](./ADR-0003-embed-the-spa-from-a-staging-directory.md)), протокол применения ([ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md)), формат пакета ([ADR-0011](./ADR-0011-ship-the-daemon-as-an-apk-package.md)).
 
@@ -73,7 +73,6 @@
 ## Ссылки
 
 - [`../PRD.md`](../PRD.md): AC-17, NFR-1, SM-3, разделы 9 и 11, приложение B, раздел A.3 (замещается этим ADR);
-- [`../Interviews.md`](../Interviews.md): интервью `metabox-di-001`, Round 0 и 3;
 - [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md), [ADR-0003](./ADR-0003-embed-the-spa-from-a-staging-directory.md), [ADR-0006](./ADR-0006-read-runtime-from-clash-api-and-optional-grpc.md), [ADR-0008](./ADR-0008-store-config-versions-as-numbered-copies.md), [ADR-0009](./ADR-0009-read-service-state-from-procd.md), [ADR-0011](./ADR-0011-ship-the-daemon-as-an-apk-package.md), [ADR-0033](./ADR-0033-keep-custom-rule-lists-in-the-singbox-config.md);
 - [`../../apps/metaboxd`](../../apps/metaboxd) — реализация;
 - [daniellavrushin/b4](https://github.com/daniellavrushin/b4) — архитектурный образец.

@@ -76,7 +76,7 @@ export function parseIpv4Cidr(entry: string): Ipv4Cidr | null {
   return { address: octets.reduce((value, octet) => value * (IPV4_OCTET_MAX + 1) + octet, 0), prefix };
 }
 
-/** Адрес попадает в подсеть. Биты хоста маска отбрасывает: `192.168.1.65/29` читается как `192.168.1.64/29`. */
+/** Адрес попадает в подсеть. Биты хоста маска отбрасывает: `192.168.1.67/29` читается как `192.168.1.64/29`. */
 export function cidrContains(cidr: Ipv4Cidr, address: number): boolean {
   if (cidr.prefix === 0) return true;
 
