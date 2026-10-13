@@ -38,3 +38,6 @@ apps/metaboxd/internal/webui/static/*
 /docs/Interviews.md
 /apps/metaboxd/docs/guides/Migration.md
 /apps/metaboxd/docs/guides/migration/
+
+# apk signing key: lives only in the repository secret
+*.key

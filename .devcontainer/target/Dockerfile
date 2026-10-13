@@ -30,19 +30,27 @@ RUN set -eu; \
 FROM --platform=$BUILDPLATFORM alpine:3.23 AS package
 ARG PKG_VERSION=0.0.0-r0
 ARG DAEMON_BINARY
+# The release sets the arch explicitly: there is no public rootfs for the router's
+# aarch64_cortex-a53, and apk installs only a package of the device's own arch.
+ARG PKG_ARCH
 COPY --from=base /etc/apk/arch /tmp/arch
 COPY apps/metaboxd/package /src/package
 COPY ${DAEMON_BINARY} /src/metaboxd
-RUN set -eu; \
+# The signing key comes as a BuildKit secret, so it stays out of build args and layers.
+# Without it the package is unsigned, as in the test bench.
+RUN --mount=type=secret,id=apk_sign_key \
+    set -eu; \
     mkdir -p /pkgroot/usr/bin /out; \
     cp -R /src/package/. /pkgroot/; \
     install -m 0755 /src/metaboxd /pkgroot/usr/bin/metaboxd; \
     chmod 0755 /pkgroot/etc/init.d/metaboxd /pkgroot/etc/init.d/metabox-singbox; \
     chown -R root:root /pkgroot; \
-    apk mkpkg \
+    sign=; \
+    if [ -s /run/secrets/apk_sign_key ]; then sign="--sign-key /run/secrets/apk_sign_key"; fi; \
+    apk mkpkg $sign \
       --info name:metaboxd \
       --info "version:${PKG_VERSION}" \
-      --info "arch:$(cat /tmp/arch)" \
+      --info "arch:${PKG_ARCH:-$(cat /tmp/arch)}" \
       --info description:"Панель настройки sing-box" \
       --info license:GPL-3.0-or-later \
       --info depends:sing-box-extended \
