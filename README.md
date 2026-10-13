@@ -133,16 +133,6 @@ uci commit metabox
 
 With `acl_mode 'listed'` (default) only devices enabled on the Devices screen or listed in `source_ip` and `source_mac` go through sing-box. With `all`, every device on `br-lan` does.
 
-## Security
-
-> [!IMPORTANT]
-> **There is no login yet.** Anyone who can open the panel controls routing for the whole network.
-
-- The daemon listens only on the networks from `listen_interface` in `/etc/config/metabox`, `lan` by default, never on `0.0.0.0`. Add a guest network there only if you trust every device on it.
-- Never expose port 8088 to WAN.
-- A web page opened in your browser can send requests to LAN addresses. The daemon accepts a state-changing request only when its `Origin` header matches the panel's own address and rejects requests without `Origin`. The `Host` check on every request blocks DNS rebinding. No CORS headers are sent.
-- The services don't start on package install, so the port stays closed until you start them.
-
 ## Update and removal
 
 Install the new package the same way as the first one, then restart the services:
