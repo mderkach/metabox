@@ -1,37 +1,100 @@
+<div align="center">
+
+<img src="docs/logo.svg" alt="metabox" width="72" />
+
 # metabox
 
-Веб-панель для sing-box на роутере с OpenWrt: редактирует конфиг, применяет его с автоматическим откатом и показывает, куда идёт трафик.
+**Web panel for sing-box on OpenWrt routers**
 
-## Что это
+Edit the config in forms, apply it with automatic rollback, see where every connection goes.
 
-metabox — демон на Go (`metaboxd`), который ставится на роутер пакетом apk и раздаёт встроенный веб-интерфейс. Панель работает с конфигом [sing-box-extended](https://github.com/shtorm-7/sing-box-extended) — форка sing-box: формы для узлов, правил маршрутизации и наборов правил (rule-set), ручная правка JSON, проверка значений по схеме форка до применения. Применение (Apply) проверяет конфиг бинарём sing-box, перезапускает службу, ждёт ответа Clash API и DNS и возвращает предыдущую версию, если проверка не прошла или вы не подтвердили в панели за минуту, что связь жива. Экраны рантайма: обзор с графиком трафика, соединения с объяснением, какое правило сработало, прокси с задержками, устройства сети из DHCP, логи sing-box. В пакете есть своя служба sing-box и перехват трафика LAN (nftables, tproxy, upstream для dnsmasq), поэтому metabox может работать вместо re:HomeProxy.
+[![license](https://img.shields.io/badge/license-GPL--3.0--or--later-blue?style=flat-square)](./LICENSE)
+![version](https://img.shields.io/badge/version-0.1.0--rc.2-orange?style=flat-square)
+![OpenWrt](https://img.shields.io/badge/OpenWrt-25.12%20%7C%20SNAPSHOT-00B5E2?style=flat-square)
+![arch](https://img.shields.io/badge/arch-aarch64-lightgrey?style=flat-square)
 
-Проект не связан с SagerNet, авторами sing-box и sing-box-extended и не одобрен ими.
+**English** · [Русский](./README.ru.md)
 
-## Статус
+</div>
 
-- Пре-релиз `0.1.0-rc.2` (файл [`VERSION`](./VERSION)).
-- Проверен на одном устройстве: Banana Pi BPI-R4 Pro, aarch64, OpenWrt SNAPSHOT с apk.
-- Готовых пакетов и релизов нет, пакет собирается из исходников.
-- Входа по паролю нет — см. [«Безопасность»](#безопасность).
-- Автоматический откат конфига, который рвёт связь, на роутере ещё не подтверждён.
+---
 
-## Требования
+metabox is a Go daemon (`metaboxd`) that installs on the router as an apk package and serves a built-in web UI. It works with the config of [sing-box-extended](https://github.com/shtorm-7/sing-box-extended), a fork of sing-box: forms for nodes, routing rules and rule sets, raw JSON editing, and validation against the fork's schema before anything reaches the router.
 
-- OpenWrt с пакетным менеджером apk: 25.12 или SNAPSHOT. Ветки 24.10 и старше используют opkg и ipk, их пакет не поддерживает.
-- Архитектура aarch64. Архитектура пакета должна совпадать с содержимым `/etc/apk/arch` на роутере: у прошивок mediatek/filogic, к которым относится BPI-R4 Pro, это `aarch64_cortex-a53`.
-- Пакет `sing-box-extended`: `metaboxd` объявляет его зависимостью. Проверенная версия — `1.14.1-extended-2.7.2`. Пакеты для OpenWrt лежат в [релизах форка](https://github.com/shtorm-7/sing-box-extended/releases).
-- Порты на роутере:
+Apply checks the config with the sing-box binary, restarts the service, waits for Clash API and DNS to answer, and rolls back to the previous version if a check fails or you don't confirm in the panel within a minute that the connection is still alive.
 
-  | Порт             | Кто слушает                                                                        |
-  | ---------------- | ---------------------------------------------------------------------------------- |
-  | 8088             | панель, на адресах сетей из `listen_interface`                                     |
-  | 9090             | Clash API sing-box на `127.0.0.1`, если секцию `clash_api` в конфиг добавил демон  |
-  | 5331, 5332, 5333 | входы sing-box для перехвата: TCP через redirect, UDP через tproxy, DNS от dnsmasq |
+The package also ships its own sing-box service and LAN interception (nftables, tproxy, upstream for dnsmasq), so metabox can replace re:HomeProxy.
 
-## Установка
+<img src="docs/screenshots/desktop/overview.png" alt="Overview" />
 
-Пакет собирается на компьютере с Docker, Go, Node.js и pnpm — версии и подготовка в [`docs/Development.md`](./docs/Development.md). Архитектура пакета берётся из базового образа OpenWrt; для BPI-R4 Pro и других роутеров mediatek/filogic база собирается из образа прошивки:
+> [!NOTE]
+> metabox is not affiliated with or endorsed by SagerNet or the authors of sing-box and sing-box-extended.
+
+## Features
+
+- Routing rules: search, add, delete, reorder; a form per rule for action, rule sets and common conditions, or the raw node as JSON
+- Rule sets: attach remote and local sets, see which rules use each one
+- Every config section in a form generated from the fork's schema; unknown fields are kept as is and marked in the UI
+- The whole config as text, with a line-by-line diff before applying
+- Apply with health checks and automatic rollback; version history with restore
+- Connections: live list with filters, CSV and JSON export, and an explanation of which rule routed each connection
+- Proxies: node groups with latency tests, subscription updates
+- Devices from DHCP leases, with a per-device switch to route it through sing-box
+- Overview: traffic, connections, top devices and nodes, router load, temperature and memory
+- sing-box log and interception diagnostics
+- Light and dark theme, English and Russian, desktop and phone layouts
+
+## Preview
+
+<details>
+<summary><b>Desktop</b></summary>
+
+|                                  Rules                                   |                                   Proxies                                    |
+| :----------------------------------------------------------------------: | :--------------------------------------------------------------------------: |
+| <img src="docs/screenshots/desktop/rules.png" alt="Rules" width="420" /> | <img src="docs/screenshots/desktop/proxies.png" alt="Proxies" width="420" /> |
+
+|                                     Connections                                      |                                   Devices                                    |
+| :----------------------------------------------------------------------------------: | :--------------------------------------------------------------------------: |
+| <img src="docs/screenshots/desktop/connections.png" alt="Connections" width="420" /> | <img src="docs/screenshots/desktop/devices.png" alt="Devices" width="420" /> |
+
+</details>
+
+<details>
+<summary><b>Mobile</b></summary>
+
+|                                   Overview                                    |                                  Rules                                  |                                     Connections                                     |
+| :---------------------------------------------------------------------------: | :---------------------------------------------------------------------: | :---------------------------------------------------------------------------------: |
+| <img src="docs/screenshots/mobile/overview.png" alt="Overview" width="220" /> | <img src="docs/screenshots/mobile/rules.png" alt="Rules" width="220" /> | <img src="docs/screenshots/mobile/connections.png" alt="Connections" width="220" /> |
+
+|                                   Proxies                                   |                                   Devices                                   |                                 Logs                                  |
+| :-------------------------------------------------------------------------: | :-------------------------------------------------------------------------: | :-------------------------------------------------------------------: |
+| <img src="docs/screenshots/mobile/proxies.png" alt="Proxies" width="220" /> | <img src="docs/screenshots/mobile/devices.png" alt="Devices" width="220" /> | <img src="docs/screenshots/mobile/logs.png" alt="Logs" width="220" /> |
+
+</details>
+
+## Status
+
+- Pre-release `0.1.0-rc.2`.
+- Tested on one device: Banana Pi BPI-R4 Pro, aarch64, OpenWrt SNAPSHOT.
+- No prebuilt packages yet: the package is built from source.
+- No login yet, see [Security](#security).
+- Automatic rollback of a config that breaks connectivity is not yet confirmed on a real router.
+
+## Requirements
+
+- OpenWrt with the apk package manager: 25.12 or SNAPSHOT. 24.10 and older use opkg and are not supported.
+- aarch64. The package architecture must match `/etc/apk/arch` on the router; for mediatek/filogic firmware, BPI-R4 Pro included, it is `aarch64_cortex-a53`.
+- The `sing-box-extended` package, a dependency of `metaboxd`. Tested version: `1.14.1-extended-2.7.2`. OpenWrt packages are in the [fork's releases](https://github.com/shtorm-7/sing-box-extended/releases).
+
+| Port             | Listener                                                                    |
+| ---------------- | --------------------------------------------------------------------------- |
+| 8088             | the panel, on the addresses of networks from `listen_interface`             |
+| 9090             | sing-box Clash API on `127.0.0.1`, when the daemon added `clash_api` itself |
+| 5331, 5332, 5333 | sing-box inbounds for interception: TCP redirect, UDP tproxy, DNS           |
+
+## Installation
+
+Build the package on a computer with Docker, Go, Node.js and pnpm; versions and setup are in [`docs/Development.md`](./docs/Development.md) (Russian). The package architecture comes from the OpenWrt base image, so for mediatek/filogic routers build the base from the device firmware:
 
 ```sh
 pnpm install
@@ -39,32 +102,27 @@ make stand-base
 make package METABOX_BASE_IMAGE=metabox/openwrt-device:latest
 ```
 
-Без `METABOX_BASE_IMAGE` пакет соберётся под `aarch64_generic`. Результат — `dist/metaboxd.apk`.
+Without `METABOX_BASE_IMAGE` the package is built for `aarch64_generic`, which the router refuses. The result is `dist/metaboxd.apk`.
 
-На роутер копируются пакет панели и пакет форка с той же архитектурой:
+Copy the panel package and the fork package of the same architecture to the router:
 
 ```sh
 scp -O dist/metaboxd.apk sing-box-extended_1.14.1-extended-2.7.2_openwrt_aarch64_cortex-a53.apk root@192.168.1.1:/tmp/
 ```
 
-На роутере:
+On the router:
 
 ```sh
 apk add --allow-untrusted /tmp/sing-box-extended_*.apk /tmp/metaboxd.apk
-```
-
-`--allow-untrusted` нужен, потому что пакет пока не подписан ключом, которому доверяет роутер.
-
-Пакет форка приносит свою службу `sing-box`. sing-box должна поднимать служба metabox, поэтому службу форка выключите:
-
-```sh
 /etc/init.d/sing-box stop
 /etc/init.d/sing-box disable
 ```
 
-Если сейчас sing-box поднимает homeproxy, оставьте его как есть: перехват metabox по умолчанию выключен и с ним не конфликтует. Пошагового описания перехода с homeproxy в репозитории пока нет.
+`--allow-untrusted` is needed because the package is not yet signed with a key the router trusts. The fork's own `sing-box` service is disabled because the metabox service starts sing-box.
 
-Службы пакета сами не запускаются. Перед запуском положите конфиг sing-box в `/etc/sing-box/config.json`: без него `metabox-singbox` не стартует.
+If homeproxy runs sing-box now, leave it as is: metabox interception is off by default and does not conflict with it.
+
+Put a sing-box config at `/etc/sing-box/config.json`, then start the services. The package does not start them on install.
 
 ```sh
 /etc/init.d/metabox-singbox enable
@@ -73,21 +131,27 @@ apk add --allow-untrusted /tmp/sing-box-extended_*.apk /tmp/metaboxd.apk
 /etc/init.d/metaboxd start
 ```
 
-## Первый запуск
+## First run
 
-Откройте `http://<адрес роутера в LAN>:8088`, например `http://192.168.1.1:8088`. Адрес нужен IP, а не имя: демон отвечает только на запросы, где в заголовке `Host` стоит IP-адрес или `localhost`, поэтому `http://openwrt.lan:8088` не откроется.
+Open `http://<router LAN address>:8088`, for example `http://192.168.1.1:8088`. Use an IP address: the daemon only answers when the `Host` header is an IP or `localhost`, so `http://openwrt.lan:8088` will not open.
 
-На компьютере панель открывается на редакторе конфига, на узком экране — на обзоре.
+The daemon reads `/etc/sing-box/config.json` as is, there is no import step. A handwritten config opens in forms; whatever the forms don't know is kept unchanged and marked in the UI. If the config has no `experimental.clash_api`, the daemon adds it on the first apply (`127.0.0.1:9090`, random secret): the panel reads connections and proxies through it.
 
-Демон читает конфиг из `/etc/sing-box/config.json` как есть, отдельного импорта нет: рукописный конфиг открывается в формах, а то, что формы не знают, сохраняется без изменений и помечается в интерфейсе. Каталог и имя файла задаются опциями `config_dir` и `config_name` в `/etc/config/metabox`. Прошлые версии конфига демон хранит в `/etc/metabox/versions/`, откат на любую из них есть в интерфейсе.
+| What                   | Where                                                              |
+| ---------------------- | ------------------------------------------------------------------ |
+| Panel settings         | `/etc/config/metabox`                                              |
+| sing-box config        | `/etc/sing-box/config.json`, set by `config_dir` and `config_name` |
+| Config versions, state | `/etc/metabox/`                                                    |
+| Logs                   | `logread`, or the Logs screen                                      |
 
-Если в конфиге нет секции `experimental.clash_api`, демон добавит её при первом применении: адрес `127.0.0.1:9090`, случайный секрет. Через Clash API панель читает соединения и прокси и проверяет, что sing-box поднялся.
+### LAN interception
 
-### Перехват трафика LAN
+Interception is off by default: `option enabled '0'` in the `dataplane` section of `/etc/config/metabox`. Stop homeproxy first if you have it, otherwise two setups capture the same traffic.
 
-По умолчанию перехват выключен: `option enabled '0'` в секции `dataplane` файла `/etc/config/metabox`. Две системы перехвата сразу заворачивали бы один и тот же трафик, поэтому сначала остановите homeproxy, если он есть.
+The sing-box config needs inbounds on the ports from the `dataplane` section: `direct` on 5333 for DNS, `redirect` on 5331, `tproxy` on 5332 for UDP, and `route.default_mark` equal to `self_mark` (100).
 
-В конфиге sing-box должны быть входы на портах из секции `dataplane`: `direct` на 5333 для DNS, `redirect` на 5331, `tproxy` на 5332 для UDP, а `route.default_mark` должен быть равен `self_mark` (100). Без входа на 5333 у всей сети пропадёт DNS: dnsmasq отправляет запросы туда.
+> [!WARNING]
+> Without an inbound on 5333 the whole network loses DNS: dnsmasq forwards queries there.
 
 ```sh
 uci set metabox.dataplane.enabled='1'
@@ -95,22 +159,19 @@ uci commit metabox
 /etc/init.d/metabox-singbox restart
 ```
 
-В режиме `acl_mode 'listed'` (по умолчанию) через sing-box идут только устройства, которым проход включён на экране «Устройства» или которые перечислены в `source_ip` и `source_mac`. В режиме `all` — все устройства с интерфейса `br-lan`. Что именно ставит служба — раздел «Сетевая обвязка» в [гайде демона по работе с устройством](./apps/metaboxd/docs/guides/DeviceIO.md).
+With `acl_mode 'listed'` (default) only devices enabled on the Devices screen or listed in `source_ip` and `source_mac` go through sing-box. With `all`, every device on `br-lan` does.
 
-## Безопасность
+## Security
 
-**Входа по паролю нет.** Любое устройство, которое открыло панель, управляет маршрутизацией всей сети и может незаметно пустить чужой трафик через свой сервер.
+> [!IMPORTANT]
+> **There is no login yet.** Anyone who can open the panel controls routing for the whole network.
 
-- Демон слушает только адреса сетей из `listen_interface` в `/etc/config/metabox`, по умолчанию только `lan`. На `0.0.0.0` он не слушает. Гостевую сеть добавляйте туда, только если доверяете всем её устройствам.
-- Никогда не открывайте порт 8088 из WAN: не пробрасывайте его и не разрешайте в межсетевом экране.
-- Защита от чужих сайтов. Страница из интернета, открытая в вашем браузере, может слать запросы на адреса LAN. Поэтому запрос, который что-то меняет, демон выполняет, только если заголовок `Origin` — адрес страницы, с которой пришёл запрос, — совпадает с адресом самой панели. Запрос без `Origin` отклоняется. Заголовок `Host` проверяется на всех запросах: так закрыт DNS rebinding — приём, при котором домен злоумышленника на время указывает на адрес роутера. Заголовков CORS демон не отдаёт.
-- Службы не стартуют сами при установке пакета: панель не откроет порт, пока вы не запустили её явно.
+- The daemon listens only on the networks from `listen_interface` in `/etc/config/metabox`, `lan` by default, never on `0.0.0.0`. Add a guest network there only if you trust every device on it.
+- Never expose port 8088 to WAN.
+- A web page opened in your browser can send requests to LAN addresses. The daemon accepts a state-changing request only when its `Origin` header matches the panel's own address and rejects requests without `Origin`. The `Host` check on every request blocks DNS rebinding. No CORS headers are sent.
+- The services don't start on package install, so the port stays closed until you start them.
 
-Вход по паролю и сессии запланированы, см. раздел 11 [PRD](./docs/PRD.md).
-
-## Обновление и удаление
-
-Обновление — установка нового файла поверх старого и перезапуск служб:
+## Update and removal
 
 ```sh
 apk add --allow-untrusted /tmp/metaboxd.apk
@@ -118,9 +179,7 @@ apk add --allow-untrusted /tmp/metaboxd.apk
 /etc/init.d/metaboxd restart
 ```
 
-Правки в `/etc/config/metabox` при обновлении не затираются: новая версия файла из пакета ложится рядом как `/etc/config/metabox.apk-new`. При sysupgrade сохраняются `/etc/config/metabox` и `/etc/metabox/`.
-
-Удаление:
+Your `/etc/config/metabox` is not overwritten on update: the packaged version lands next to it as `/etc/config/metabox.apk-new`. sysupgrade keeps `/etc/config/metabox` and `/etc/metabox/`.
 
 ```sh
 /etc/init.d/metaboxd stop
@@ -130,22 +189,19 @@ apk add --allow-untrusted /tmp/metaboxd.apk
 apk del metaboxd
 ```
 
-`stop` службы `metabox-singbox` снимает перехват: правила nftables, `ip rule` и фрагмент dnsmasq. После удаления sing-box не запущен — если он нужен, включите службу форка или homeproxy. `/etc/sing-box/config.json` и `/etc/config/metabox` остаются на месте, история версий и состояние демона — в `/etc/metabox/`.
+Stopping `metabox-singbox` removes interception: nftables rules, `ip rule` and the dnsmasq fragment. After removal sing-box is not running; enable the fork's service or homeproxy if you need it.
 
-## Документация
+## Documentation
 
-- [`docs/PRD.md`](./docs/PRD.md) — требования, критерии приёмки, этапы.
-- [`docs/adr/`](./docs/adr/README.md) — архитектурные решения и почему выбраны именно они.
-- [`apps/metaboxd/docs/guides/`](./apps/metaboxd/docs/guides/README.md) — гайды демона: HTTP API, работа с устройством, ошибки и логи.
-- [`apps/web/docs/`](./apps/web/docs/README.md) — гайды фронтенда.
-- [`CONTRIBUTING.md`](./CONTRIBUTING.md) — ветки, коммиты, проверки перед PR.
+Project documentation is in Russian.
 
-## Разработка
+- [`docs/PRD.md`](./docs/PRD.md): requirements, acceptance criteria, milestones
+- [`docs/adr/`](./docs/adr/README.md): architecture decisions
+- [`apps/metaboxd/docs/guides/`](./apps/metaboxd/docs/guides/README.md): daemon guides (HTTP API, device I/O, errors and logs)
+- [`apps/web/docs/`](./apps/web/docs/README.md): frontend guides
+- [`docs/Development.md`](./docs/Development.md): build, test bench, commands
+- [`CONTRIBUTING.md`](./CONTRIBUTING.md): branches, commits, checks
 
-Монорепозиторий: демон на Go в `apps/metaboxd/`, фронтенд на React и Vite в `apps/web/`, генератор схемы конфига из исходников форка в `tools/schemagen/`. Стенд в Docker повторяет роутер: OpenWrt с procd, sing-box и панелью из пакета.
+## License
 
-Сборка, стенд и команды — [`docs/Development.md`](./docs/Development.md).
-
-## Лицензия
-
-[GPL-3.0-or-later](./LICENSE). Код можно использовать, менять и распространять, в том числе за деньги. Тот, кто распространяет программу или изменённую версию, передаёт её под той же лицензией вместе с исходным кодом.
+[GPL-3.0-or-later](./LICENSE). You may use, modify and distribute the code, including for money. Whoever distributes the program or a modified version passes it on under the same license, together with the source code.
