@@ -164,7 +164,3 @@ Project documentation is in Russian.
 - [`apps/web/docs/`](./apps/web/docs/README.md): frontend guides
 - [`docs/Development.md`](./docs/Development.md): build, test bench, commands
 - [`CONTRIBUTING.md`](./CONTRIBUTING.md): branches, commits, checks
-
-## License
-
-[GPL-3.0-or-later](./LICENSE). You may use, modify and distribute the code, including for money. Whoever distributes the program or a modified version passes it on under the same license, together with the source code.
