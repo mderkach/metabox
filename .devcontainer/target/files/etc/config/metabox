@@ -1,6 +1,6 @@
-# Настройки панели на стенде. Пакет ставит свои значения, рассчитанные на
-# роутер; здесь заданы стендовые: другой порт и гостевая сеть рядом с проводной.
-# Адрес пустой — его, как и на устройстве, берут у сетей из listen_interface.
+# Panel settings on the test bench. The package installs its own values meant for
+# the router; here the test bench ones are set: another port and the guest network next to the wired one.
+# The address is empty: as on the device, it is taken from the networks in listen_interface.
 
 config metabox 'main'
 	option enabled '1'
@@ -17,13 +17,13 @@ config metabox 'main'
 	option ubus '/bin/ubus'
 	option clash_port '9090'
 	option log_level 'info'
-	# Внешнего DNS у стенда может не быть: имя отвечает сам sing-box стенда
-	# сервером hosts, без выхода наружу.
+	# The test bench may have no external DNS: the name is answered by the test bench sing-box itself
+	# with a hosts server, without going outside.
 	option health_dns_name 'dataplane-check.metabox.example'
 
-# Обвязка перехвата: из проводной сети через sing-box идут только клиенты
-# dataplane-check — один по адресу, другой по MAC. Интерфейс подставляет
-# stand-init: имя eth* Docker раздаёт при каждом запуске заново.
+# Interception dataplane: from the wired network only the dataplane-check clients go through
+# sing-box, one by address, the other by MAC. stand-init substitutes the interface:
+# Docker hands out eth* names anew on every start.
 config dataplane 'dataplane'
 	option enabled '1'
 	option redirect_port '5331'

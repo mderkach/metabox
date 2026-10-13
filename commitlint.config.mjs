@@ -1,5 +1,5 @@
-// Конвенция описана в CONTRIBUTING.md; здесь её исполняемая часть.
-// Проверку запускает хук commit-msg (lefthook.yml) и шаг CI на PR.
+// The convention is described in CONTRIBUTING.md; this is its executable part.
+// The commit-msg hook (lefthook.yml) and the CI step on PRs run the check.
 export default {
   extends: ['@commitlint/config-conventional'],
   rules: {

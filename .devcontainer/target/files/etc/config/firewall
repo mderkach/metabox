@@ -1,6 +1,6 @@
-# Зоны стенда — те же роли, что на роутере: проводная и гостевая сети локальные,
-# внешняя закрыта на вход. Имена сетей — интерфейсы UCI, которые stand-init
-# собирает по адресам.
+# Test bench zones have the same roles as on the router: the wired and guest networks are local,
+# the external one is closed for input. Network names are UCI interfaces that stand-init
+# builds by address.
 
 config defaults
 	option syn_flood '1'
@@ -15,9 +15,9 @@ config zone
 	option output 'ACCEPT'
 	option forward 'ACCEPT'
 
-# Вход открыт: панель слушает и гостевую сеть (listen_interface), а
-# проброшенный на хост порт Docker Desktop доставляет на её адрес — без зоны
-# он попадал под input REJECT по умолчанию.
+# Input is open: the panel also listens on the guest network (listen_interface), and
+# Docker Desktop delivers the port published to the host to its address; without the zone
+# it fell under the default input REJECT.
 config zone
 	option name 'guest'
 	list network 'guest'

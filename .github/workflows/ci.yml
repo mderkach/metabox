@@ -5,21 +5,21 @@ on:
   pull_request:
 
 jobs:
-  # Быстрые проверки: типы, линтеры, юнит-тесты. Не требуют целевого окружения.
+  # Fast checks: types, linters, unit tests. They need no target environment.
   checks:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
         with:
-          # commitlint проверяет весь диапазон коммитов PR — нужна история
+          # commitlint checks the whole commit range of the PR, so history is needed
           fetch-depth: 0
 
       - uses: actions/setup-go@v6
         with:
           go-version-file: .go-version
-          # У демона зависимостей нет и go.sum тоже, поэтому кэш считается по
-          # манифесту генератора: без пути setup-go ищет go.mod в корне, не
-          # находит и каждый прогон тянет модули заново.
+          # The daemon has no dependencies and no go.sum, so the cache key is computed from
+          # the generator manifest: without a path setup-go looks for go.mod in the root, does not
+          # find it and every run downloads the modules again.
           cache-dependency-path: tools/schemagen/go.sum
 
       - uses: pnpm/action-setup@v6
@@ -32,14 +32,14 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # govet входит в набор golangci-lint, отдельный шаг не нужен. Генератор
-      # проверяется с тегами форка, чего `go vet` здесь не делал.
+      # govet is part of the golangci-lint set, a separate step is not needed. The generator
+      # is checked with the fork's tags, which `go vet` did not do here.
       - name: Go lint
         run: make lint
 
-      # -race ловит гонки, которые на одном ядре разработчика не видны.
+      # -race catches races that are not visible on a single developer core.
       - run: cd apps/metaboxd && go test -race ./...
-      # Генератор — отдельный модуль, шаг выше его не видит.
+      # The generator is a separate module, the step above does not see it.
       - name: Schemagen tests
         run: make test-schemagen
       - name: Commitlint
@@ -54,27 +54,27 @@ jobs:
       - run: pnpm --filter web test
       - run: pnpm --filter web build
 
-      # Совет, а не проверка: набор правил живёт у поставщика и меняется между
-      # минорными версиями, поэтому падение шага сборку не валит. Что репозиторий
-      # уже принял как норму, отключено в `apps/web/doctor.config.jsonc`.
+      # Advice, not a check: the rule set belongs to the vendor and changes between
+      # minor versions, so a failing step does not fail the build. What the repository
+      # has already accepted as the norm is disabled in `apps/web/doctor.config.jsonc`.
       - name: React doctor
         continue-on-error: true
         run: pnpm --filter web run lint:react
 
-      # Сборка целиком: только здесь проверяется, что собранная SPA доезжает
-      # до go:embed и попадает в бинарь (AC-17).
+      # Full build: only here it is checked that the built SPA reaches
+      # go:embed and ends up in the binary (AC-17).
       - run: make daemon
 
-  # AC-22: интеграционный прогон на образе целевого окружения той же ветки
-  # OpenWrt, что на устройстве. Прошивки устройства в CI нет, поэтому база —
-  # публичный rootfs; отличаются от стенда владельца только архитектура и то,
-  # что ветка релизная, а не SNAPSHOT.
+  # AC-22: integration run on the target environment image of the same OpenWrt
+  # branch as on the device. CI has no device firmware, so the base is
+  # the public rootfs; it differs from the owner's test bench only in architecture and in
+  # the branch being a release, not SNAPSHOT.
   integration:
     runs-on: ubuntu-latest
     env:
       METABOX_BASE_IMAGE: openwrt/rootfs:x86-64-25.12.4
-      # У тега x86-64 архитектура в манифесте обычная (amd64), в отличие от
-      # aarch64_generic — поэтому здесь платформа нормальная.
+      # For the x86-64 tag the architecture in the manifest is the usual one (amd64), unlike
+      # aarch64_generic, so the platform here is normal.
       OPENWRT_PLATFORM: linux/amd64
       DAEMON_BINARY: dist/metaboxd-linux-amd64
     steps:
@@ -86,7 +86,7 @@ jobs:
           cache-dependency-path: tools/schemagen/go.sum
 
       - name: Daemon build
-        # OpenWrt на musl: бинарь с glibc там не запускается
+        # OpenWrt uses musl: a glibc binary does not start there
         env:
           CGO_ENABLED: '0'
         run: |
@@ -100,11 +100,11 @@ jobs:
         run: |
           for i in $(seq 1 30); do
             if curl -fsS http://localhost:8080/healthz >/dev/null 2>&1; then
-              echo "демон отвечает"; exit 0
+              echo "daemon is responding"; exit 0
             fi
             sleep 2
           done
-          echo "демон не поднялся" >&2
+          echo "daemon did not start" >&2
           docker compose -f .devcontainer/docker-compose.yml logs target
           exit 1
 

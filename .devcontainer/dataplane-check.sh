@@ -1,11 +1,11 @@
 #!/bin/sh
-# Проверка обвязки перехвата на стенде (`make dataplane-check`). Клиенты
-# проводной сети поднимаются здесь, на хосте, отдельными контейнерами с
-# маршрутом по умолчанию через стенд — как устройства LAN через роутер. Что
-# видно только изнутри роутера, читает /usr/bin/dataplane-check стенда.
+# Check of the interception dataplane on the test bench (`make dataplane-check`). The wired
+# network clients start here, on the host, as separate containers with
+# the default route through the test bench, like LAN devices through the router. What is
+# visible only from inside the router is read by /usr/bin/dataplane-check of the test bench.
 #
-# Адреса клиентов совпадают со списками ACL в /etc/config/metabox стенда:
-# .40 перечислен по IP, .42 — по MAC, .41 не перечислен.
+# Client addresses match the ACL lists in /etc/config/metabox of the test bench:
+# .40 is listed by IP, .42 by MAC, .41 is not listed.
 set -eu
 
 TARGET=metabox-target-1
@@ -15,11 +15,11 @@ LISTED_IP=192.168.210.40
 UNLISTED_IP=192.168.210.41
 MAC_IP=192.168.210.42
 LISTED_MAC=02:00:00:00:d2:2a
-# Внешний адрес вне приватных сетей: их обвязка не перехватывает никогда.
+# An external address outside private networks: the dataplane never intercepts them.
 OUTSIDE=1.1.1.1
 
 docker inspect "$TARGET" >/dev/null 2>&1 || {
-	echo "стенд не поднят: сначала make up" >&2
+	echo "test bench is not up: run make up first" >&2
 	exit 1
 }
 
@@ -33,8 +33,8 @@ counter() {
 	in_target counter "$1" "$2"
 }
 
-# client <ip> <mac или -> <команда>: клиент проводной сети, весь трафик
-# которого идёт через стенд.
+# client <ip> <mac or -> <command>: a wired network client, all traffic
+# of which goes through the test bench.
 client() {
 	ip="$1" mac="$2"
 	shift 2
@@ -50,19 +50,19 @@ client_sh() {
 	client "$ip" "$mac" alpine:3 sh -c "ip route replace default via $ROUTER && $script"
 }
 
-# check <что> <условие>: условие — выражение test.
+# check <what> <condition>: the condition is a test expression.
 check() {
 	what="$1"
 	shift
 	if [ "$@" ]; then
-		echo "  ок      $what"
+		echo "  ok      $what"
 	else
-		echo "  ПРОВАЛ  $what" >&2
+		echo "  FAILED  $what" >&2
 		failed=1
 	fi
 }
 
-# foreign_check <что>: чужие ip rule и таблица с номерами обвязки на месте.
+# foreign_check <what>: the foreign ip rule and the table with the dataplane numbers are in place.
 foreign_check() {
 	if in_target foreign-present 2>/dev/null; then
 		check "$1" 1 = 1
@@ -75,142 +75,142 @@ tcp_to_outside() {
 	client_sh "$1" "$2" "nc -w 3 $OUTSIDE 80 </dev/null >/dev/null 2>&1 && echo connected || echo refused"
 }
 
-echo "1. Обвязка поставлена стартом службы"
-# После пересоздания контейнера служба ещё поднимается: без ожидания первый
-# снимок застаёт пустые цепочки и счётчики.
+echo "1. Dataplane installed by service start"
+# After the container is recreated the service is still coming up: without waiting the first
+# snapshot catches empty chains and counters.
 in_target wait || failed=1
 in_target state
 in_target expect-up || failed=1
 
-echo "2. TCP перечисленного по IP клиента уходит в redirect sing-box"
+echo "2. TCP of a client listed by IP goes to the sing-box redirect"
 lanac_ip=$(counter metabox_redirect_lanac 'ip saddr @metabox_src_ip')
 redir=$(counter metabox_redirect 'redirect to')
 got=$(tcp_to_outside "$LISTED_IP" -)
-check "соединение принято ($got)" "$got" = connected
-check "счётчик ip saddr вырос" "$(counter metabox_redirect_lanac 'ip saddr @metabox_src_ip')" -gt "$lanac_ip"
-check "счётчик redirect вырос" "$(counter metabox_redirect 'redirect to')" -gt "$redir"
+check "connection accepted ($got)" "$got" = connected
+check "ip saddr counter grew" "$(counter metabox_redirect_lanac 'ip saddr @metabox_src_ip')" -gt "$lanac_ip"
+check "redirect counter grew" "$(counter metabox_redirect 'redirect to')" -gt "$redir"
 if in_target log-has "redirect-in" "$LISTED_IP" 2>/dev/null; then
-	check "sing-box записал входящее соединение от $LISTED_IP" 1 = 1
+	check "sing-box logged an incoming connection from $LISTED_IP" 1 = 1
 else
-	check "sing-box записал входящее соединение от $LISTED_IP" 0 = 1
+	check "sing-box logged an incoming connection from $LISTED_IP" 0 = 1
 fi
 
 redir=$(counter metabox_redirect 'redirect to')
 client_sh "$LISTED_IP" - "nc -w 2 172.16.0.1 80 </dev/null >/dev/null 2>&1 || true"
-check "TCP в приватную сеть не перехвачен" "$(counter metabox_redirect 'redirect to')" = "$redir"
+check "TCP to a private network is not intercepted" "$(counter metabox_redirect 'redirect to')" = "$redir"
 
-echo "3. TCP перечисленного по MAC клиента уходит в redirect"
+echo "3. TCP of a client listed by MAC goes to redirect"
 lanac_mac=$(counter metabox_redirect_lanac 'ether saddr @metabox_src_mac')
 got=$(tcp_to_outside "$MAC_IP" "$LISTED_MAC")
-check "соединение принято ($got)" "$got" = connected
-check "счётчик ether saddr вырос" "$(counter metabox_redirect_lanac 'ether saddr @metabox_src_mac')" -gt "$lanac_mac"
+check "connection accepted ($got)" "$got" = connected
+check "ether saddr counter grew" "$(counter metabox_redirect_lanac 'ether saddr @metabox_src_mac')" -gt "$lanac_mac"
 
-echo "4. TCP неперечисленного клиента идёт мимо sing-box"
+echo "4. TCP of an unlisted client bypasses sing-box"
 redir=$(counter metabox_redirect 'redirect to')
 tcp_to_outside "$UNLISTED_IP" - >/dev/null
-check "счётчик redirect не изменился" "$(counter metabox_redirect 'redirect to')" = "$redir"
+check "redirect counter did not change" "$(counter metabox_redirect 'redirect to')" = "$redir"
 
-echo "5. UDP перечисленного клиента уходит в tproxy"
+echo "5. UDP of a listed client goes to tproxy"
 tproxy=$(counter metabox_mangle_prerouting 'tproxy ip to')
 client_sh "$LISTED_IP" - "echo metabox | nc -u -w 1 $OUTSIDE 9999 >/dev/null 2>&1 || true"
-check "счётчик tproxy вырос" "$(counter metabox_mangle_prerouting 'tproxy ip to')" -gt "$tproxy"
+check "tproxy counter grew" "$(counter metabox_mangle_prerouting 'tproxy ip to')" -gt "$tproxy"
 if in_target log-has "tproxy-in" "$LISTED_IP" 2>/dev/null; then
-	check "sing-box записал UDP от $LISTED_IP" 1 = 1
+	check "sing-box logged UDP from $LISTED_IP" 1 = 1
 else
-	check "sing-box записал UDP от $LISTED_IP" 0 = 1
+	check "sing-box logged UDP from $LISTED_IP" 0 = 1
 fi
 
-echo "6. udp/53 клиента перехватывается на dnsmasq, ответ приходит через sing-box"
+echo "6. client udp/53 is intercepted to dnsmasq, the answer comes through sing-box"
 hijack=$(counter dstnat 'udp dport 53')
 answer=$(client_sh "$UNLISTED_IP" - "nslookup dataplane-check.metabox.example $OUTSIDE 2>&1 || true")
-check "ответ 1.2.3.4 из dns-in sing-box" -n "$(echo "$answer" | grep -F 1.2.3.4)"
-check "счётчик перехвата udp/53 вырос" "$(counter dstnat 'udp dport 53')" -gt "$hijack"
+check "answer 1.2.3.4 from the sing-box dns-in" -n "$(echo "$answer" | grep -F 1.2.3.4)"
+check "udp/53 interception counter grew" "$(counter dstnat 'udp dport 53')" -gt "$hijack"
 
-echo "7. TCP самого роутера уходит в redirect, исходящее sing-box с меткой 100 — мимо"
+echo "7. router's own TCP goes to redirect, outgoing sing-box traffic with mark 100 bypasses it"
 out_jump=$(counter metabox_output_redir 'jump metabox_redirect')
 out_self=$(counter metabox_output_redir 'meta mark 0x00000064')
 redir=$(counter metabox_redirect 'redirect to')
 in_target router-tcp
-check "nat output отправил TCP роутера в redirect" "$(counter metabox_output_redir 'jump metabox_redirect')" -gt "$out_jump"
-check "счётчик redirect вырос" "$(counter metabox_redirect 'redirect to')" -gt "$redir"
-check "исходящее sing-box с меткой 100 вернулось из перехвата" "$(counter metabox_output_redir 'meta mark 0x00000064')" -gt "$out_self"
+check "nat output sent router TCP to redirect" "$(counter metabox_output_redir 'jump metabox_redirect')" -gt "$out_jump"
+check "redirect counter grew" "$(counter metabox_redirect 'redirect to')" -gt "$redir"
+check "outgoing sing-box traffic with mark 100 came back from interception" "$(counter metabox_output_redir 'meta mark 0x00000064')" -gt "$out_self"
 
-echo "8. UDP самого роутера метится и через lo уходит в tproxy"
+echo "8. router's own UDP is marked and goes to tproxy through lo"
 mark_out=$(counter metabox_mangle_output 'meta mark set 0x00000065')
 lo=$(counter metabox_mangle_lanac 'iifname "lo"')
 in_target router-udp
-check "mangle output пометил UDP роутера" "$(counter metabox_mangle_output 'meta mark set 0x00000065')" -gt "$mark_out"
-check "помеченный пакет вернулся через lo в tproxy" "$(counter metabox_mangle_lanac 'iifname "lo"')" -gt "$lo"
+check "mangle output marked router UDP" "$(counter metabox_mangle_output 'meta mark set 0x00000065')" -gt "$mark_out"
+check "the marked packet came back through lo to tproxy" "$(counter metabox_mangle_lanac 'iifname "lo"')" -gt "$lo"
 
-echo "9. Пакет с чужой меткой (след b4) не уходит в tproxy"
+echo "9. A packet with a foreign mark (b4 trace) does not go to tproxy"
 foreign=$(counter metabox_mangle_output 'meta mark != 0x00000000')
 in_target b4-sim-up
-check "пакет с меткой 0x8000 пропущен мимо перехвата" "$(counter metabox_mangle_output 'meta mark != 0x00000000')" -gt "$foreign"
-check "метка tproxy пробе не ставилась" "$(in_target b4-sim-counter 0x00000065)" = 0
-check "метка 0x8000 дошла до postrouting" "$(in_target b4-sim-counter 0x00008000)" -gt 0
+check "packet with mark 0x8000 passed by interception" "$(counter metabox_mangle_output 'meta mark != 0x00000000')" -gt "$foreign"
+check "the tproxy mark was not set on the probe" "$(in_target b4-sim-counter 0x00000065)" = 0
+check "mark 0x8000 reached postrouting" "$(in_target b4-sim-counter 0x00008000)" -gt 0
 in_target b4-sim-down
 
-echo "10. Apply конфига не трогает fw4 и dnsmasq"
+echo "10. Config Apply does not touch fw4 and dnsmasq"
 before=$(in_target snapshot)
 pid_before=$(in_target singbox-pid)
 in_target apply
 in_target wait
 after=$(in_target snapshot)
 pid_after=$(in_target singbox-pid)
-echo "  до:    $before"
-echo "  после: $after"
-check "nft -s list ruleset и pid dnsmasq совпадают" "$before" = "$after"
-check "sing-box рестартовал (pid $pid_before -> $pid_after)" "$pid_before" != "$pid_after"
+echo "  before: $before"
+echo "  after:  $after"
+check "nft -s list ruleset and dnsmasq pid match" "$before" = "$after"
+check "sing-box restarted (pid $pid_before -> $pid_after)" "$pid_before" != "$pid_after"
 
-echo "11. Fail-closed: sing-box убит, перехват остаётся"
+echo "11. Fail-closed: sing-box is killed, interception stays"
 killed=$(in_target kill)
 got=$(tcp_to_outside "$LISTED_IP" -)
-check "клиент без доступа наружу, пока sing-box лежит ($got)" "$got" = refused
-# Имя, которое раньше не спрашивали: кэш dnsmasq ответил бы и без sing-box.
+check "client has no outside access while sing-box is down ($got)" "$got" = refused
+# A name nobody asked for before: the dnsmasq cache would answer even without sing-box.
 answer=$(client_sh "$UNLISTED_IP" - "nslookup -timeout=2 failclosed.metabox.example $OUTSIDE 2>&1 || true")
-check "DNS клиента без ответа, пока sing-box лежит" -z "$(echo "$answer" | grep -F 1.2.3.5)"
-rules=$(in_target expect-up 2>&1 | grep -c 'обвязка на месте' || true)
-check "правила на месте после kill -9 $killed" "$rules" = 1
+check "client DNS gets no answer while sing-box is down" -z "$(echo "$answer" | grep -F 1.2.3.5)"
+rules=$(in_target expect-up 2>&1 | grep -c 'dataplane in place' || true)
+check "rules in place after kill -9 $killed" "$rules" = 1
 in_target wait
 got=$(tcp_to_outside "$LISTED_IP" -)
-check "после respawn соединение снова принято ($got)" "$got" = connected
+check "after respawn the connection is accepted again ($got)" "$got" = connected
 answer=$(client_sh "$UNLISTED_IP" - "nslookup failclosed.metabox.example $OUTSIDE 2>&1 || true")
-check "после respawn DNS снова отвечает" -n "$(echo "$answer" | grep -F 1.2.3.5)"
+check "after respawn DNS answers again" -n "$(echo "$answer" | grep -F 1.2.3.5)"
 
-echo "12. Режим all: через sing-box идёт и неперечисленный клиент"
+echo "12. Mode all: an unlisted client also goes through sing-box"
 in_target acl all
 redir=$(counter metabox_redirect 'redirect to')
 got=$(tcp_to_outside "$UNLISTED_IP" -)
-check "соединение принято ($got)" "$got" = connected
-check "счётчик redirect вырос" "$(counter metabox_redirect 'redirect to')" -gt "$redir"
+check "connection accepted ($got)" "$got" = connected
+check "redirect counter grew" "$(counter metabox_redirect 'redirect to')" -gt "$redir"
 in_target acl listed
 
-echo "13. stop снимает обвязку, start возвращает"
+echo "13. stop removes the dataplane, start brings it back"
 dnsmasq_before=$(in_target snapshot | sed 's/.*dnsmasq=//')
 in_target stop
 in_target state
 in_target expect-down || failed=1
-check "dnsmasq рестартован при снятии фрагмента" "$(in_target snapshot | sed 's/.*dnsmasq=//')" != "$dnsmasq_before"
+check "dnsmasq restarted when the fragment was removed" "$(in_target snapshot | sed 's/.*dnsmasq=//')" != "$dnsmasq_before"
 in_target start
 in_target wait
 in_target expect-up || failed=1
 got=$(tcp_to_outside "$LISTED_IP" -)
-check "после start соединение принято ($got)" "$got" = connected
+check "after start the connection is accepted ($got)" "$got" = connected
 
-echo "14. Выключенная модель рядом с homeproxy: чужие ip rule и таблица остаются"
-# Служба остановлена, файла состояния нет — как после перезагрузки. Правило и
-# таблицу с номерами обвязки держит чужая служба.
+echo "14. Disabled model next to homeproxy: foreign ip rule and table stay"
+# The service is stopped, there is no state file, as after a reboot. The rule and
+# the table with the dataplane numbers are held by a foreign service.
 in_target stop
 in_target foreign-up
 in_target dataplane 0
 in_target start
 in_target wait
-foreign_check "start выключенной службы оставил чужое правило и таблицу"
-check "цепочек metabox_ при enabled=0 нет" "$(in_target state | sed -n 's/^nft: \([0-9]*\) .*/\1/p')" = 0
+foreign_check "start of a disabled service left the foreign rule and table"
+check "no metabox_ chains with enabled=0" "$(in_target state | sed -n 's/^nft: \([0-9]*\) .*/\1/p')" = 0
 in_target stop
-foreign_check "stop выключенной службы оставил чужое правило и таблицу"
+foreign_check "stop of a disabled service left the foreign rule and table"
 in_target foreign-down
-# Те же номера при enabled=1 и без файла состояния — свои: stop их снимает.
+# The same numbers with enabled=1 and no state file are our own: stop removes them.
 in_target dataplane 1
 in_target start
 in_target wait
@@ -224,7 +224,7 @@ in_target expect-up || failed=1
 
 echo
 if [ "$failed" = 1 ]; then
-	echo "ПРОВАЛ: обвязка ведёт себя не так, как требуется" >&2
+	echo "FAILED: the dataplane does not behave as required" >&2
 	exit 1
 fi
-echo "Обвязка перехватывает перечисленных клиентов, держит fail-closed, снимается stop и не трогает чужие правила."
+echo "The dataplane intercepts the listed clients, holds fail-closed, is removed by stop and does not touch foreign rules."

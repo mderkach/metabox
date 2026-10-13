@@ -1,19 +1,19 @@
-# Ветка, а не патч: точную версию задаёт GOTOOLCHAIN из целей Makefile.
+# A branch, not a patch version: the exact version comes from GOTOOLCHAIN in the Makefile targets.
 FROM golang:1.26-trixie
 
-# jq и curl нужны скриптам проверки цикла Apply, остальное — go mod.
+# jq and curl are needed by the Apply cycle check scripts; the rest is go mod.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       ca-certificates curl git jq make xz-utils \
  && rm -rf /var/lib/apt/lists/*
 
-# Из манифеста, а не из apt: пакетный репозиторий дал бы свежий мажор.
+# From the manifest, not apt: the package repository would give a fresh major version.
 COPY package.json /tmp/pin/
 RUN NODE_VERSION="$(jq -r .engines.node /tmp/pin/package.json)" \
  && case "$(dpkg --print-architecture)" in \
       amd64) NODE_ARCH=x64 ;; \
       arm64) NODE_ARCH=arm64 ;; \
-      *) echo "нет сборки Node под $(dpkg --print-architecture)" >&2; exit 1 ;; \
+            *) echo "no Node build for $(dpkg --print-architecture)" >&2; exit 1 ;; \
     esac \
  && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz" \
       -o /tmp/node.tar.xz \
@@ -25,15 +25,15 @@ RUN corepack enable \
  && corepack prepare "$(node -p "require('/tmp/pin/package.json').packageManager")" --activate \
  && rm -rf /tmp/pin
 
-# OpenWrt на musl: бинарь с glibc там не запускается («not found» при
-# существующем файле), поэтому cgo выключен.
-# PNPM_STORE_DIR pnpm не читает и молча кладёт store в корень workspace
-# (278 МБ в репозиторий) — задаём через npm_config_*.
+# OpenWrt uses musl: a glibc binary does not start there ("not found" although
+# the file exists), so cgo is disabled.
+# pnpm does not read PNPM_STORE_DIR and silently puts the store in the workspace
+# root (278 MB in the repository), so it is set through npm_config_*.
 ENV CGO_ENABLED=0 \
     GOMODCACHE=/cache/go/mod \
     GOCACHE=/cache/go/build \
     npm_config_store_dir=/cache/pnpm \
-    # Без TTY pnpm не подчистит node_modules при смене store: подтверждать некому.
+    # Without a TTY pnpm does not clean node_modules when the store changes: nobody can confirm.
     npm_config_confirm_modules_purge=false
 RUN mkdir -p /cache/go/mod /cache/go/build /cache/pnpm
 

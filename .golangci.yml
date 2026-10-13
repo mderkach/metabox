@@ -10,68 +10,68 @@ linters:
     - revive
   settings:
     exhaustive:
-      # Switch по reflect.Kind перечисляет то, что схема умеет представить, а
-      # остальное отдаёт в default. Требовать ветку под каждую константу
-      # reflect.Kind — значит писать мёртвый код.
+      # A switch on reflect.Kind lists what the schema can represent and
+      # passes the rest to default. Requiring a branch for each reflect.Kind
+      # constant means writing dead code.
       default-signifies-exhaustive: true
   exclusions:
     rules:
-      # Генератор читает пакет constant форка через parser.ParseDir, а тот не
-      # учитывает build-теги. Сейчас безвредно: под тегами в этом пакете лежат
-      # только булевы константы, а constantStrings берёт строковые. Станет
-      # ошибкой, когда форк заведёт второй вариант файла со строками, — тогда
-      # переходить на golang.org/x/tools/go/packages.
+      # The generator reads the fork's constant package through parser.ParseDir, which does not
+      # take build tags into account. Harmless for now: under tags this package holds
+      # only boolean constants, and constantStrings takes the string ones. It becomes
+      # an error when the fork adds a second variant of a file with strings, then
+      # switch to golang.org/x/tools/go/packages.
       - path: types\.go
         text: 'SA1019: go/parser.ParseDir'
         linters: [staticcheck]
 
-      # G204 и G702: имя команды — это путь к бинарю sing-box или к
-      # init-скрипту, он приходит демону флагом, а не из запроса, и singbox.New
-      # отвергает относительный путь. Аргументы уезжают списком, шелла в цепочке
-      # нет, так что подставить через них команду невозможно (DeviceIO.md).
+      # G204 and G702: the command name is the path to the sing-box binary or to the
+      # init script, it comes to the daemon as a flag, not from a request, and singbox.New
+      # rejects a relative path. Arguments go as a list, there is no shell in the chain,
+      # so a command cannot be injected through them (DeviceIO.md).
       - path: internal/singbox/exec\.go
         text: 'G204|G702'
         linters: [gosec]
 
-      # Схему из форка иначе не достать: опции реестров лежат в неэкспортируемом
-      # поле, и тест читает его через unsafe осознанно (ADR-0001).
+      # The schema cannot be obtained from the fork otherwise: registry options live in an unexported
+      # field, and the test reads it through unsafe deliberately (ADR-0001).
       - path: _test\.go
         linters: [gosec]
 
-      # G304: путь собирается из вывода `go list`, а не из пользовательского
-      # ввода. G306: generated.ts — исходник в репозитории, у него права
-      # обычного файла, а не секрета.
+      # G304: the path is built from `go list` output, not from user
+      # input. G306: generated.ts is a source file in the repository, it has the permissions
+      # of a regular file, not of a secret.
       - path: tools/schemagen/
         text: 'G304|G306'
         linters: [gosec]
 
-      # G304: путь собирается из корней procfs и sysfs, заданных полями Options,
-      # и имени процесса, прочитанного в самом /proc. Пользовательского ввода в
-      # нём нет, а чтение идёт только по этим двум деревьям.
-      # G115: HeapInuse — размер кучи процесса; переполнить int64 он может
-      # только вместе с адресным пространством.
+      # G304: the path is built from the procfs and sysfs roots set by Options fields
+      # and the process name read from /proc itself. There is no user input
+      # in it, and reading goes only through these two trees.
+      # G115: HeapInuse is the process heap size; it can overflow int64
+      # only together with the address space.
       - path: internal/device/
         text: 'G304|G115'
         linters: [gosec]
 
-      # G304, G703: файл лога назван в log.output конфига, и лежать он может где
-      # угодно — /var/run, /tmp, — поэтому os.Root его не удержит. Пишет туда
-      # сам sing-box от root, а в причину падения из файла идут только строки
-      # уровней FATAL, ERROR и PANIC с потолком по длине.
+      # G304, G703: the log file is named in log.output of the config and may lie anywhere
+      # at all (/var/run, /tmp), so os.Root cannot hold it. sing-box itself writes there
+      # as root, and only FATAL, ERROR and PANIC level lines with a length cap
+      # go from the file into the failure reason.
       - path: internal/singbox/failure\.go
         text: 'G304|G703'
         linters: [gosec]
 
-      # G304: файл лога назван в log.output конфига — по той же причине, что
-      # выше, os.Root его не удержит; читается только хвост с потолком строки,
-      # а усечение идёт через os.Root разрешённых каталогов. G204: имя команды —
-      # путь к logread из флага, аргументы — списком, шелла в цепочке нет.
+      # G304: the log file is named in log.output of the config, for the same reason as
+      # above, os.Root cannot hold it; only the tail with a line cap is read,
+      # and truncation goes through os.Root of the allowed directories. G204: the command name is
+      # the path to logread from a flag, arguments are a list, there is no shell in the chain.
       - path: internal/logs/
         text: 'G304|G204'
         linters: [gosec]
 
-      # G304: путь собирается из корня /proc/net, заданного полем Options, и
-      # имени таблицы из константного списка.
+      # G304: the path is built from the /proc/net root set by the Options field and
+      # a table name from a constant list.
       - path: internal/diag/
         text: 'G304'
         linters: [gosec]

@@ -1,34 +1,34 @@
-// Markdown в репозитории форматирует oxfmt (`pnpm format`, он же в хуке
-// pre-commit). markdownlint — только линтер содержимого: правила, которыми
-// владеет форматтер, выключены, иначе редактор требует одного, а хук другого.
+// Markdown in the repository is formatted by oxfmt (`pnpm format`, also in the
+// pre-commit hook). markdownlint is a content linter only: the rules the
+// formatter owns are disabled, otherwise the editor demands one thing and the hook another.
 {
   "default": true,
 
-  // Абзацы и таблицы пишутся одной строкой, переносы расставляет oxfmt.
-  // Иначе линтер ругается почти на каждую таблицу.
+  // Paragraphs and tables are written on one line, oxfmt places the line breaks.
+  // Otherwise the linter complains about almost every table.
   "MD013": false,
 
-  // Выравнивание столбцов таблиц: oxfmt их не выравнивает и ошибкой не
-  // считает. Правило спорит с форматтером на каждой таблице.
+  // Table column alignment: oxfmt does not align them and does not
+  // treat it as an error. The rule conflicts with the formatter on every table.
   "MD060": false,
 
-  // Жирный текст как подзаголовок — принятый стиль: «История изменений» в
-  // PRD, «SOLID» и «GRASP» в гайдах фронта.
+  // Bold text as a subheading is the accepted style: "Change history" in the
+  // PRD, "SOLID" and "GRASP" in the frontend guides.
   "MD036": false,
 
-  // Транскрипты интервью сворачиваются в <details>, иначе документ нечитаем.
+  // Interview transcripts are collapsed into <details>, otherwise the document is unreadable.
   "MD033": { "allowed_elements": ["details", "summary"] },
 
-  // Примеры на Go отформатированы gofmt, отступы там табами.
+  // Go examples are formatted by gofmt, indented with tabs.
   "MD010": { "ignore_code_languages": ["go"] },
 
-  // Одинаковые заголовки в разных разделах допустимы, внутри одного — ошибка.
+  // Identical headings in different sections are allowed, within one section they are an error.
   "MD024": { "siblings_only": true },
 
-  // Корневой CLAUDE.md, CLAUDE.local.md и CLAUDE.md проектов — точки входа для
-  // AI-инструментов из одной строки `@AGENTS.md`, заголовка у них быть не
-  // может. Исключить их нечем: расширение не читает .markdownlintignore и
-  // своей настройки путей не имеет, а все настоящие документы репозитория
-  // начинаются с заголовка и так.
+  // Root CLAUDE.md, CLAUDE.local.md and project CLAUDE.md files are entry points for
+  // AI tools consisting of a single `@AGENTS.md` line, they cannot have a heading.
+  // They cannot be excluded: the extension does not read .markdownlintignore and
+  // has no path setting of its own, and all real repository documents
+  // start with a heading anyway.
   "MD041": false
 }

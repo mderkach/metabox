@@ -1,20 +1,20 @@
-# Настоящий procd, а не заглушка: цикл Apply должен отрабатывать как на роутере.
+# A real procd, not a stub: the Apply cycle must work as on the router.
 
-# База приходит снаружи: у владельца — образ из прошивки устройства (`make
-# stand-base`), в CI прошивки нет, и берётся публичный rootfs OpenWrt той же
-# ветки с apk.
+# The base comes from outside: the owner uses an image from the device firmware (`make
+# stand-base`), CI has no firmware and takes the public OpenWrt rootfs of the same
+# branch with apk.
 ARG BASE_IMAGE=openwrt/rootfs:aarch64_generic-25.12.4
 ARG SINGBOX_VERSION=1.14.1-extended-2.7.2
-# Собранный бинарь демона: арка задаётся снаружи, потому что образ целевого
-# окружения бывает и aarch64, и x86_64.
+# The built daemon binary: the arch is set from outside because the target environment
+# image comes in both aarch64 and x86_64.
 ARG DAEMON_BINARY=dist/metaboxd-linux-arm64
 
 FROM ${BASE_IMAGE} AS base
 
-# Пакет качается под арку, которую объявляет сама база: у образа из прошивки это
-# aarch64_cortex-a53, у публичного rootfs — aarch64_generic. Отдельная стадия:
-# в rootfs OpenWrt нет ни curl, ни доверенных корней для GitHub.
-# $BUILDPLATFORM: иначе BuildKit искал бы alpine под платформой OpenWrt.
+# The package is downloaded for the arch the base itself declares: for an image from the firmware it is
+# aarch64_cortex-a53, for the public rootfs aarch64_generic. A separate stage:
+# the OpenWrt rootfs has neither curl nor trusted roots for GitHub.
+# $BUILDPLATFORM: otherwise BuildKit would look for alpine under the OpenWrt platform.
 FROM --platform=$BUILDPLATFORM alpine:3.23 AS fetch
 ARG SINGBOX_VERSION
 COPY --from=base /etc/apk/arch /tmp/arch
@@ -24,9 +24,9 @@ RUN set -eu; \
     curl -fsSL -o /sing-box.apk \
       "https://github.com/shtorm-7/sing-box-extended/releases/download/v${SINGBOX_VERSION}/sing-box-extended_${SINGBOX_VERSION}_openwrt_${arch}.apk"
 
-# Панель собирается тем же пакетом, что уезжает на роутер (ADR-0011): стенд
-# проверяет поставку, а не разложенные по местам файлы. Версия числовая —
-# строку вроде `dev` apk как версию не принимает.
+# The panel is built as the same package that goes to the router (ADR-0011): the test bench
+# checks the delivery, not files laid out in place. The version is numeric:
+# apk does not accept a string like `dev` as a version.
 FROM --platform=$BUILDPLATFORM alpine:3.23 AS package
 ARG PKG_VERSION=0.0.0-r0
 ARG DAEMON_BINARY
@@ -49,8 +49,8 @@ RUN set -eu; \
       --files /pkgroot \
       --output /out/metaboxd.apk
 
-# Та же стадия, выгруженная наружу: пакет для устройства и пакет в стенде
-# собираются одним кодом, разойтись им негде (`make package`).
+# The same stage exported outside: the device package and the package in the test bench
+# are built by the same code, so they cannot diverge (`make package`).
 FROM scratch AS package-out
 COPY --from=package /out/metaboxd.apk /
 
@@ -60,22 +60,22 @@ COPY --from=fetch /sing-box.apk /tmp/sing-box.apk
 COPY --from=package /out/metaboxd.apk /tmp/metaboxd.apk
 COPY .devcontainer/target/files/ /
 
-# sing-box и панель ставятся пакетами: вместе с ними приезжают их собственные
-# init-скрипты, и запускаются службы в стенде так же, как на роутере. sing-box
-# поднимает служба пакета панели, служба пакета форка в автозапуск не встаёт —
-# на роутере она тоже выключена. Пакеты не подписаны. Настройки панели положены
-# до установки: файл в /etc apk не затирает, пакетное значение кладётся рядом
-# как .apk-new — на этом держится стендовый адрес, поэтому после установки он
-# проверяется.
+# sing-box and the panel are installed as packages: their own init scripts
+# come with them, and services start in the test bench the same way as on the router. sing-box
+# is started by the service of the panel package, the service of the fork package does not enter autostart,
+# on the router it is also disabled. The packages are not signed. The panel settings are put
+# before the install: apk does not overwrite a file in /etc, the package value is put next to it
+# as .apk-new; the test bench address relies on this, so after the install it
+# is checked.
 #
-# Снимаются с автозапуска службы, которым в контейнере не на чем работать.
-# `init.d disable` на сборке не срабатывает — procd и ubus ещё не подняты, —
-# поэтому снимаются симлинки. dnsmasq, наоборот, в автозапуск ставится явно —
-# обвязка шлёт в него DNS клиентов, и от того, включила ли его база, это не
-# должно зависеть.
+# Services that have nothing to run on in the container are removed from autostart.
+# `init.d disable` does not work at build time because procd and ubus are not up yet,
+# so the symlinks are removed. dnsmasq, on the contrary, is put into autostart explicitly:
+# the dataplane sends client DNS to it, and this must not
+# depend on whether the base enabled it.
 #
-# /var в rootfs — симлинк на пустой /tmp: без /var/lock и /var/run ubusd не
-# создаст сокет, и procd поднимется, не запустив ни одного сервиса.
+# /var in the rootfs is a symlink to an empty /tmp: without /var/lock and /var/run ubusd
+# will not create the socket, and procd comes up without starting a single service.
 RUN set -eu; \
     apk add --allow-untrusted /tmp/sing-box.apk /tmp/metaboxd.apk; \
     rm -f /tmp/sing-box.apk /tmp/metaboxd.apk; \
@@ -91,6 +91,6 @@ RUN set -eu; \
 
 EXPOSE 8080 9090
 
-# Не /sbin/init: цепочка preinit гасит сетевые устройства, и контейнер теряет
-# адрес от Docker. procd поднимает stand-init, разложив перед этим сети.
+# Not /sbin/init: the preinit chain shuts down network devices, and the container loses
+# the address from Docker. procd starts stand-init, laying out the networks first.
 CMD ["/usr/bin/stand-init"]

@@ -1,11 +1,11 @@
-# Контекст сборки — корень репозитория: образу нужны .nvmrc и package.json,
-# а они лежат выше .devcontainer. Всё тяжёлое и машинозависимое сюда не едет.
+# The build context is the repository root: the image needs .nvmrc and package.json,
+# which sit above .devcontainer. Everything heavy and machine-specific stays out.
 .git
 node_modules
 **/node_modules
 .pnpm-store
 dist
-# Бинарь под целевую систему: из него собирается пакет панели для стенда.
+# Binary for the target system: the panel package for the test bench is built from it.
 !dist/metaboxd-linux-arm64
 !dist/metaboxd-linux-amd64
 apps/web/dist

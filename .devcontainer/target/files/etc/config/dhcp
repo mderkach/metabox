@@ -1,6 +1,6 @@
-# dnsmasq стенда — только DNS: адреса клиентам раздаёт Docker, и второй
-# DHCP-сервер в той же сети спорил бы с ним. Upstream кладёт служба
-# metabox-singbox фрагментом в conf-dir.
+# dnsmasq of the test bench is DNS only: Docker hands out client addresses, and a second
+# DHCP server in the same network would fight it. The service metabox-singbox puts
+# upstream into conf-dir as a fragment.
 
 config dnsmasq
 	option domainneeded '1'

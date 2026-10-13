@@ -1,15 +1,15 @@
 #!/bin/sh
-# Раскладывает сети стенда по ролям и отдаёт управление procd.
+# Assigns roles to the test bench networks and hands control to procd.
 #
-# На роутере интерфейсы описаны прошивкой, здесь их создаёт Docker — и имена
-# eth* он раздаёт в произвольном порядке: между двумя запусками одна и та же
-# сеть получает разные имена. Опознать сеть можно только по адресу, поэтому
-# /etc/config/network собирается при старте, а не лежит в образе готовым. По той
-# же причине сюда же подставляется интерфейс перехвата в модели обвязки.
+# On the router the interfaces are described by the firmware, here Docker creates them, and the eth*
+# names it hands out come in arbitrary order: between two starts the same
+# network gets different names. A network can be identified only by its address, so
+# /etc/config/network is built at start and is not baked into the image. For the same
+# reason the interception interface in the dataplane model is substituted here too.
 #
-# Маршрут по умолчанию восстанавливается тем же интерфейсом, которым его выдал
-# Docker: netifd переписывает таблицу маршрутов целиком, а без маршрута ответы
-# на проброшенный порт не уходят на хост.
+# The default route is restored through the same interface Docker gave it on:
+# netifd rewrites the whole routing table, and without a route replies
+# to the published port do not reach the host.
 set -eu
 
 CONF=/etc/config/network

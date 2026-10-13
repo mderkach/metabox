@@ -4,7 +4,7 @@ pre-commit:
     - name: go-fmt
       glob: '*.go'
       run: gofmt -l {staged_files}
-      fail_text: Не отформатировано, прогони gofmt -w
+      fail_text: Not formatted, run gofmt -w
 
     - name: go-vet
       glob: '*.go'
@@ -13,14 +13,14 @@ pre-commit:
     - name: generated-schema
       glob: 'apps/web/src/shared/api/generated.ts'
       run: git diff --cached --name-only | grep -q '^tools/schemagen/'
-      fail_text: Файл собирает `make schema`; коммить его вместе с правкой tools/schemagen
+      fail_text: The file is built by `make schema`; commit it together with the change in tools/schemagen
 
     - name: generated-contract
       glob: 'apps/web/src/shared/api/daemon.generated.ts'
       run: git diff --cached --name-only | grep -qE '^apps/metaboxd/'
-      fail_text: Файл собирает `make schema-daemon`; коммить его вместе с правкой apps/metaboxd
+      fail_text: The file is built by `make schema-daemon`; commit it together with the change in apps/metaboxd
 
-    # oxlint и oxfmt падают, когда после игнора не осталось ни одного файла.
+    # oxlint and oxfmt fail when no files are left after the ignore.
     - name: lint
       glob: '*.{ts,tsx,js,mjs}'
       exclude:

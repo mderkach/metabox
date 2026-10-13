@@ -1,9 +1,9 @@
 #!/bin/sh
-# Шаги проверки обвязки перехвата внутри стенда. Клиентов в проводной сети
-# поднимает хост (`make dataplane-check`), а этот скрипт читает и меняет то,
-# что видно только изнутри роутера: счётчики nft, ip rule, фрагмент dnsmasq,
-# pid процессов. Каждый шаг — отдельная команда, чтобы хост мог чередовать их
-# с запросами клиентов.
+# Steps of the interception dataplane check inside the test bench. The host starts the clients in the wired network
+# (`make dataplane-check`), and this script reads and changes what
+# is visible only from inside the router: nft counters, ip rule, the dnsmasq fragment,
+# process pids. Each step is a separate command so the host can interleave them
+# with client requests.
 set -eu
 
 SERVICE=metabox-singbox
@@ -12,7 +12,7 @@ API=http://127.0.0.1:9090
 NFT_FILE=/var/run/metabox/fw4_post.nft
 
 fail() {
-	echo "ПРОВАЛ: $1" >&2
+	echo "FAILED: $1" >&2
 	exit 1
 }
 
@@ -25,8 +25,8 @@ dnsmasq_pid() {
 	pidof dnsmasq || true
 }
 
-# Счётчик последнего правила цепочки inet fw4, в тексте которого есть образец:
-# в цепочках обвязки последним идёт общее правило, а выше — частные случаи.
+# Counter of the last rule of the inet fw4 chain whose text contains the pattern:
+# in the dataplane chains the general rule comes last, with special cases above it.
 counter() {
 	nft list chain inet fw4 "$1" 2>/dev/null | grep -F -- "$2" | tail -1 |
 		sed -n 's/.*counter packets \([0-9]*\) .*/\1/p'
@@ -37,30 +37,30 @@ dnsmasq_fragment() {
 }
 
 state() {
-	echo "nft: $(nft list ruleset | grep -c metabox_) строк с metabox_"
-	echo "ip rule: $(ip rule list | grep -c 'fwmark 0x65 lookup 100') правил fwmark 0x65"
+	echo "nft: $(nft list ruleset | grep -c metabox_) lines with metabox_"
+	echo "ip rule: $(ip rule list | grep -c 'fwmark 0x65 lookup 100') fwmark 0x65 rules"
 	echo "route table 100: $(ip route show table 100 2>/dev/null | grep -c 'local default dev lo')"
-	echo "dnsmasq: фрагмент '$(dnsmasq_fragment)', pid $(dnsmasq_pid)"
-	echo "uci firewall.metabox_post: $(uci -q get firewall.metabox_post || echo нет)"
+	echo "dnsmasq: fragment '$(dnsmasq_fragment)', pid $(dnsmasq_pid)"
+	echo "uci firewall.metabox_post: $(uci -q get firewall.metabox_post || echo none)"
 	echo "sing-box: pid $(singbox_pid)"
 }
 
 expect_up() {
-	[ "$(nft list ruleset | grep -c metabox_)" -gt 0 ] || fail "цепочек metabox_ в nft нет"
-	ip rule list | grep -q 'fwmark 0x65 lookup 100' || fail "ip rule fwmark 0x65 нет"
-	ip route show table 100 | grep -q 'local default dev lo' || fail "local-маршрута в таблице 100 нет"
-	grep -q '^server=127.0.0.1#5333$' "$(dnsmasq_fragment)" 2>/dev/null || fail "фрагмента dnsmasq нет"
-	[ -n "$(dnsmasq_pid)" ] || fail "dnsmasq не запущен"
+	[ "$(nft list ruleset | grep -c metabox_)" -gt 0 ] || fail "no metabox_ chains in nft"
+	ip rule list | grep -q 'fwmark 0x65 lookup 100' || fail "no ip rule fwmark 0x65"
+	ip route show table 100 | grep -q 'local default dev lo' || fail "no local route in table 100"
+	grep -q '^server=127.0.0.1#5333$' "$(dnsmasq_fragment)" 2>/dev/null || fail "no dnsmasq fragment"
+	[ -n "$(dnsmasq_pid)" ] || fail "dnsmasq is not running"
 }
 
 expect_down() {
 	n=$(nft list ruleset | grep -c metabox_ || true)
-	[ "$n" = 0 ] || fail "после stop в nft осталось $n строк с metabox_"
-	! ip rule list | grep -q 'fwmark 0x65' || fail "после stop осталось ip rule fwmark 0x65"
-	[ -z "$(ip route show table 100 2>/dev/null)" ] || fail "после stop таблица 100 не пуста"
-	[ -z "$(dnsmasq_fragment)" ] || fail "после stop остался фрагмент dnsmasq"
-	! uci -q get firewall.metabox_post >/dev/null || fail "после stop остался инклюд firewall.metabox_post"
-	[ ! -e "$NFT_FILE" ] || fail "после stop остался $NFT_FILE"
+	[ "$n" = 0 ] || fail "after stop nft still has $n lines with metabox_"
+	! ip rule list | grep -q 'fwmark 0x65' || fail "after stop ip rule fwmark 0x65 remains"
+	[ -z "$(ip route show table 100 2>/dev/null)" ] || fail "after stop table 100 is not empty"
+	[ -z "$(dnsmasq_fragment)" ] || fail "after stop the dnsmasq fragment remains"
+	! uci -q get firewall.metabox_post >/dev/null || fail "after stop the include firewall.metabox_post remains"
+	[ ! -e "$NFT_FILE" ] || fail "after stop $NFT_FILE remains"
 }
 
 wait_singbox() {
@@ -72,38 +72,38 @@ wait_singbox() {
 		i=$((i + 1))
 		sleep 1
 	done
-	fail "sing-box не поднялся за 30 секунд"
+	fail "sing-box did not start within 30 seconds"
 }
 
-# Снимок того, что Apply трогать не должен: правила без счётчиков (их двигает
-# любой пакет) и pid dnsmasq.
+# Snapshot of what Apply must not touch: rules without counters (any packet
+# moves them) and the dnsmasq pid.
 snapshot() {
 	echo "$(nft -s list ruleset | sha256sum | cut -d' ' -f1) dnsmasq=$(dnsmasq_pid)"
 }
 
 case "${1:-}" in
 state) state ;;
-expect-up) expect_up && echo "обвязка на месте" ;;
-expect-down) expect_down && echo "следов обвязки нет" ;;
+expect-up) expect_up && echo "dataplane in place" ;;
+expect-down) expect_down && echo "no dataplane traces" ;;
 counter) counter "$2" "$3" ;;
 singbox-pid) singbox_pid ;;
 wait) wait_singbox ;;
 log-has)
-	logread | grep -F -- "$2" | grep -q -F -- "$3" || fail "в логе sing-box нет строки с '$2' и '$3'"
+	logread | grep -F -- "$2" | grep -q -F -- "$3" || fail "no line with '$2' and '$3' in the sing-box log"
 	;;
 router-tcp)
-	# Исходящий TCP самого роутера: первый пакет проходит nat output и уходит
-	# в redirect, а исходящее sing-box с меткой 100 идёт мимо.
+	# Outgoing TCP of the router itself: the first packet passes nat output and goes
+	# to redirect, while outgoing sing-box traffic with mark 100 bypasses it.
 	wget -q -T 3 -O /dev/null http://1.1.1.1/ >/dev/null 2>&1 || true
 	;;
 router-udp)
 	nslookup example.com 1.1.1.1 >/dev/null 2>&1 || true
 	;;
 b4-sim-up)
-	# Не b4, а его след в nft: отдельная таблица метит UDP роутера до 1.0.0.1
-	# меткой 0x8000, как b4 метит свои пакеты. В postrouting проба считается
-	# по метке, с которой дошла: общий счётчик метки tproxy в mangle_output
-	# двигает и фоновый UDP роутера.
+	# Not b4 but its trace in nft: a separate table marks router UDP to 1.0.0.1
+	# with mark 0x8000, the way b4 marks its packets. In postrouting the probe is counted
+	# by the mark it arrived with: the general tproxy mark counter in mangle_output
+	# is also moved by background router UDP.
 	nft -f - <<-EOF
 		table inet metabox_check_b4 {
 			chain output {
@@ -120,7 +120,7 @@ b4-sim-up)
 	nslookup example.com 1.0.0.1 >/dev/null 2>&1 || true
 	;;
 b4-sim-counter)
-	# $2 — метка в записи nft: 0x00008000 или 0x00000065.
+	# $2 is the mark in the nft entry: 0x00008000 or 0x00000065.
 	nft list chain inet metabox_check_b4 postrouting | grep -F -- "meta mark $2 " |
 		sed -n 's/.*counter packets \([0-9]*\) .*/\1/p'
 	;;
@@ -129,12 +129,12 @@ snapshot) snapshot ;;
 apply) /usr/bin/apply-cycle-check >/dev/null ;;
 kill)
 	pid=$(singbox_pid)
-	[ -n "$pid" ] || fail "sing-box не запущен"
+	[ -n "$pid" ] || fail "sing-box is not running"
 	kill -9 "$pid"
 	echo "$pid"
 	;;
 acl)
-	# Смена модели идёт тем же путём, что у демона: UCI и reload через триггер
+	# The model change goes the same way as in the daemon: UCI and reload through a trigger
 	# procd.
 	uci set metabox.dataplane.acl_mode="$2"
 	uci commit metabox
@@ -143,8 +143,8 @@ acl)
 	wait_singbox
 	;;
 foreign-up)
-	# Не homeproxy, а его след в ядре: та же метка 101 и таблица 100, что у
-	# обвязки, — по ним выключенная служба не отличит чужое от своего.
+	# Not homeproxy but its trace in the kernel: the same mark 101 and table 100 as the
+	# dataplane has, so a disabled service cannot tell a foreign one from its own.
 	ip rule add fwmark 101 table 100
 	ip route replace local 0.0.0.0/0 dev lo table 100
 	;;
@@ -153,11 +153,11 @@ foreign-down)
 	ip route flush table 100
 	;;
 foreign-present)
-	ip rule list | grep -q 'fwmark 0x65 lookup 100' || fail "чужого ip rule fwmark 0x65 нет"
-	ip route show table 100 | grep -q 'local default dev lo' || fail "чужой таблицы 100 нет"
+	ip rule list | grep -q 'fwmark 0x65 lookup 100' || fail "no foreign ip rule fwmark 0x65"
+	ip route show table 100 | grep -q 'local default dev lo' || fail "no foreign table 100"
 	;;
 dataplane)
-	# Только модель: reload не зовётся, start и stop идут отдельными шагами.
+	# Model only: reload is not called, start and stop are separate steps.
 	uci set metabox.dataplane.enabled="$2"
 	uci commit metabox
 	;;
@@ -165,7 +165,7 @@ forget-state) rm -f /var/run/metabox/dataplane.state ;;
 stop) /etc/init.d/$SERVICE stop ;;
 start) /etc/init.d/$SERVICE start ;;
 *)
-	echo "использование: $0 state|expect-up|expect-down|counter <цепочка> <образец>|singbox-pid|wait|log-has <a> <b>|acl all|listed|router-tcp|router-udp|b4-sim-up|b4-sim-counter <метка>|b4-sim-down|snapshot|apply|kill|foreign-up|foreign-down|foreign-present|dataplane 0|1|forget-state|stop|start" >&2
+	echo "usage: $0 state|expect-up|expect-down|counter <chain> <pattern>|singbox-pid|wait|log-has <a> <b>|acl all|listed|router-tcp|router-udp|b4-sim-up|b4-sim-counter <mark>|b4-sim-down|snapshot|apply|kill|foreign-up|foreign-down|foreign-present|dataplane 0|1|forget-state|stop|start" >&2
 	exit 2
 	;;
 esac

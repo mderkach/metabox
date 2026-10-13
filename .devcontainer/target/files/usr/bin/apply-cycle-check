@@ -1,9 +1,9 @@
 #!/bin/sh
-# Проверка цикла Apply на целевом окружении (AC-21): sing-box check → запись →
-# рестарт через procd → healthcheck. Следом — то, на чём держатся списки
-# файлом (AC-8): рабочий каталог службы равен каталогу конфига, и local
-# rule-set из rule-sets/ резолвится от него. Запускается внутри контейнера
-# target, используется и локально (make apply-check), и в CI (AC-22).
+# Apply cycle check on the target environment (AC-21): sing-box check → write →
+# restart through procd → healthcheck. Then what the file-based lists (AC-8) rely on:
+# the service working directory equals the config directory, and a local
+# rule-set from rule-sets/ is resolved relative to it. Runs inside the
+# target container, used both locally (make apply-check) and in CI (AC-22).
 set -eu
 
 CONF_DIR=/etc/sing-box
@@ -13,10 +13,10 @@ API=http://127.0.0.1:9090
 SERVICE=metabox-singbox
 INSTANCE=sing-box
 
-fail() { echo "ПРОВАЛ: $1" >&2; exit 1; }
+fail() { echo "FAILED: $1" >&2; exit 1; }
 
-# wait_api ждёт, пока Clash API ответит после рестарта: init-скрипт
-# возвращается раньше, чем служба поднимется.
+# wait_api waits until the Clash API answers after a restart: the init script
+# returns before the service is up.
 wait_api() {
 	i=0
 	while [ $i -lt 30 ]; do
@@ -29,70 +29,70 @@ wait_api() {
 	return 1
 }
 
-echo "1. Исходное состояние"
-/etc/init.d/$SERVICE running $INSTANCE || fail "sing-box не запущен до начала цикла"
-before=$(wget -qO- "$API/version") || fail "Clash API не отвечает до начала цикла"
+echo "1. Initial state"
+/etc/init.d/$SERVICE running $INSTANCE || fail "sing-box is not running before the cycle"
+before=$(wget -qO- "$API/version") || fail "Clash API does not answer before the cycle"
 echo "   $before"
 
-echo "2. Кандидат конфига: добавляем правило маршрутизации"
-# Правило дописывается разбором JSON, а не заменой текста: в конфиге стенда
-# правила маршрута уже есть, и пустого списка, за который можно зацепиться, нет.
+echo "2. Config candidate: add a routing rule"
+# The rule is appended by parsing JSON, not by text replacement: the test bench config
+# already has route rules and no empty list to hook onto.
 ucode -e "import { readfile } from 'fs';
 let c = json(readfile('$CONF'));
 push(c.route.rules, { domain_suffix: ['example.com'], outbound: 'direct' });
 printf('%.J\\n', c);" > "$TMP"
-grep -q example.com "$TMP" || fail "правило не подставилось, шаблон конфига изменился"
+grep -q example.com "$TMP" || fail "the rule was not substituted, the config template changed"
 
-echo "3. sing-box check на кандидате"
-sing-box check -c "$TMP" || fail "check отверг валидный конфиг"
+echo "3. sing-box check on the candidate"
+sing-box check -c "$TMP" || fail "check rejected a valid config"
 
-echo "4. Заведомо битый конфиг обязан быть отвергнут"
+echo "4. A knowingly broken config must be rejected"
 echo '{"route": {"rules": [{"outbound": 42}]}}' > /tmp/config.broken.json
 if sing-box check -c /tmp/config.broken.json 2>/dev/null; then
-	fail "check пропустил заведомо битый конфиг"
+	fail "check accepted a knowingly broken config"
 fi
-echo "   отвергнут, как и должен"
+echo "   rejected, as it should be"
 
-echo "5. Запись и рестарт через procd"
+echo "5. Write and restart through procd"
 cp "$TMP" "$CONF"
 /etc/init.d/$SERVICE restart
 
 echo "6. Healthcheck"
-wait_api || fail "сервис не поднялся за 30 секунд после рестарта"
-echo "   Clash API поднялся после рестарта"
+wait_api || fail "the service did not come up within 30 seconds after the restart"
+echo "   Clash API came up after the restart"
 
-echo "7. Применённое правило действительно в рантайме"
-wget -qO- "$API/configs" >/dev/null || fail "Clash API не отдаёт конфигурацию"
-grep -q example.com "$CONF" || fail "правило не сохранилось в конфиге"
+echo "7. The applied rule is really in the runtime"
+wget -qO- "$API/configs" >/dev/null || fail "Clash API does not return the configuration"
+grep -q example.com "$CONF" || fail "the rule was not saved in the config"
 
-echo "8. Рабочий каталог службы — каталог конфига"
-# Относительный path узла local sing-box резолвит от каталога -D, а не от
-# каталога конфига: с другим рабочим каталогом служба не найдёт файлы списков.
+echo "8. The service working directory is the config directory"
+# sing-box resolves a relative path of a local node from the -D directory, not from
+# the config directory: with another working directory the service will not find the list files.
 service=$(ubus call service list "{\"name\": \"$SERVICE\"}" | jsonfilter -e "@['$SERVICE'].instances['$INSTANCE']") ||
-	fail "procd не знает инстанс $INSTANCE службы $SERVICE"
+	fail "procd does not know instance $INSTANCE of service $SERVICE"
 workdir=$(echo "$service" | jsonfilter -e '@.command[*]' | awk '
 	take { dir = $0; take = 0; next }
 	$0 == "-D" || $0 == "--directory" { take = 1; next }
 	/^--directory=/ { dir = substr($0, 13) }
 	END { print dir }')
-[ "$workdir" = "$CONF_DIR" ] || fail "служба поднята с -D '$workdir', ожидали $CONF_DIR"
-# Демон проверяет кандидата тем режимом, каким поднимается служба: она читает
-# один файл -c, и он обязан быть тем конфигом, которым владеет демон.
+[ "$workdir" = "$CONF_DIR" ] || fail "the service started with -D '$workdir', expected $CONF_DIR"
+# The daemon checks the candidate in the same mode the service starts in: the service reads
+# one -c file, and it must be the config the daemon owns.
 configs=$(echo "$service" | jsonfilter -e '@.command[*]' | awk '
 	take { print; take = 0; next }
 	$0 == "-c" || $0 == "--config" { take = 1; next }
 	/^--config=/ { print substr($0, 10) }')
-[ "$configs" = "$CONF" ] || fail "служба поднята с -c '$configs', ожидали один файл $CONF"
+[ "$configs" = "$CONF" ] || fail "the service started with -c '$configs', expected a single file $CONF"
 if echo "$service" | jsonfilter -e '@.command[*]' | grep -qx -e '-C' -e '--config-directory' -e '--config-directory=.*'; then
-	fail "служба поднята в режиме каталога, а её init-скрипт запускает один файл"
+	fail "the service started in directory mode, but its init script starts a single file"
 fi
 pid=$(echo "$service" | jsonfilter -e '@.pid' | head -1)
-[ -n "$pid" ] || fail "procd не отдал pid службы"
-cwd=$(readlink "/proc/$pid/cwd") || fail "рабочий каталог процесса $pid не прочитан"
-[ "$cwd" = "$CONF_DIR" ] || fail "процесс $pid работает в '$cwd', ожидали $CONF_DIR"
-echo "   -c $CONF, -D и cwd процесса — $CONF_DIR"
+[ -n "$pid" ] || fail "procd did not return the service pid"
+cwd=$(readlink "/proc/$pid/cwd") || fail "the working directory of process $pid was not read"
+[ "$cwd" = "$CONF_DIR" ] || fail "process $pid works in '$cwd', expected $CONF_DIR"
+echo "   -c $CONF, -D and the process cwd are $CONF_DIR"
 
-echo "9. Список файлом: local rule-set из rule-sets/"
+echo "9. List as a file: local rule-set from rule-sets/"
 LISTS_DIR=$CONF_DIR/rule-sets
 LIST_NAME=metabox-check.json
 LIST_BODY='{"version": 1, "rules": [{"domain_suffix": ["metabox-check.example"]}]}'
@@ -107,26 +107,26 @@ let c = json(readfile('$CONF'));
 unshift(c.route.rules, { rule_set: 'metabox-check', outbound: 'direct' });
 c.route.rule_set = [{ type: 'local', tag: 'metabox-check', format: 'source', path: 'rule-sets/$LIST_NAME' }];
 printf('%.J\\n', c);" > "$CANDIDATE/config.json"
-grep -q '"rule_set": "metabox-check"' "$CANDIDATE/config.json" || fail "правило с набором не подставилось, шаблон конфига изменился"
-grep -q "rule-sets/$LIST_NAME" "$CANDIDATE/config.json" || fail "набор не подставился, шаблон конфига изменился"
+grep -q '"rule_set": "metabox-check"' "$CANDIDATE/config.json" || fail "the rule with the rule set was not substituted, the config template changed"
+grep -q "rule-sets/$LIST_NAME" "$CANDIDATE/config.json" || fail "the rule set was not substituted, the config template changed"
 printf '%s\n' "$LIST_BODY" > "$CANDIDATE/rule-sets/$LIST_NAME"
 
-# Кандидат проверяется так же, как его проверяет демон: тем же режимом, что у
-# службы на шаге 8, и с -D на нём самом, иначе относительный путь резолвился бы
-# от чужого каталога.
-sing-box check -D "$CANDIDATE" -c "$CANDIDATE/config.json" || fail "check отверг кандидата с файлом списка"
+# The candidate is checked the way the daemon checks it: in the same mode as the
+# service at step 8, and with -D on itself, otherwise a relative path would be resolved
+# from a foreign directory.
+sing-box check -D "$CANDIDATE" -c "$CANDIDATE/config.json" || fail "check rejected a candidate with the list file"
 rm "$CANDIDATE/rule-sets/$LIST_NAME"
 if sing-box check -D "$CANDIDATE" -c "$CANDIDATE/config.json" 2>/dev/null; then
-	fail "check пропустил кандидата, у которого нет файла списка"
+	fail "check accepted a candidate without the list file"
 fi
-echo "   check: с файлом проходит, без файла отвергнут"
+echo "   check: passes with the file, rejected without it"
 
-# restore_lists возвращает стенд в исходное при любом выходе: конфиг до шага 9,
-# без файла списка, на поднятой службе. Код выхода проверки сохраняется.
+# restore_lists returns the test bench to the initial state on any exit: the config before step 9,
+# without the list file, on a running service. The check exit code is preserved.
 restore_lists() {
 	code=$?
 	trap - EXIT
-	echo "   возвращаем стенд в исходное"
+	echo "   returning the test bench to the initial state"
 	cp "$ORIGINAL" "$CONF" || code=1
 	rm -f "$LISTS_DIR/$LIST_NAME"
 	if [ "$lists_dir_created" = 1 ]; then
@@ -134,7 +134,7 @@ restore_lists() {
 	fi
 	/etc/init.d/$SERVICE restart || code=1
 	if ! wait_api; then
-		echo "ПРОВАЛ: стенд не вернулся в исходное: Clash API молчит после рестарта" >&2
+		echo "FAILED: the test bench did not return to the initial state: Clash API is silent after the restart" >&2
 		code=1
 	fi
 	rm -rf "$CANDIDATE" "$ORIGINAL"
@@ -145,7 +145,7 @@ cp "$CONF" "$ORIGINAL"
 trap restore_lists EXIT
 trap 'exit 1' INT TERM
 
-# Файл списка ложится до конфига — тем же порядком пишет демон.
+# The list file is written before the config: the daemon writes in the same order.
 if [ ! -d "$LISTS_DIR" ]; then
 	mkdir "$LISTS_DIR"
 	lists_dir_created=1
@@ -153,9 +153,9 @@ fi
 printf '%s\n' "$LIST_BODY" > "$LISTS_DIR/$LIST_NAME"
 cp "$CANDIDATE/config.json" "$CONF"
 /etc/init.d/$SERVICE restart
-wait_api || fail "сервис не поднялся за 30 секунд с конфигом, ссылающимся на файл списка"
-wget -qO- "$API/rules" | grep -q metabox-check || fail "правило с набором metabox-check не видно в рантайме"
-echo "   служба поднялась, набор metabox-check в рантайме"
+wait_api || fail "the service did not come up within 30 seconds with a config referencing the list file"
+wget -qO- "$API/rules" | grep -q metabox-check || fail "the rule with the rule set metabox-check is not visible in the runtime"
+echo "   the service came up, the rule set metabox-check is in the runtime"
 
 echo
-echo "Цикл Apply пройден полностью (AC-21)."
+echo "The Apply cycle passed completely (AC-21)."

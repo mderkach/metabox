@@ -1,21 +1,21 @@
-# Воркспейс монорепо: приложения лежат в apps/, инструменты репозитория — в корне.
+# Monorepo workspace: applications live in apps/, repository tools in the root.
 packages:
   - apps/web
 
-# С 11-й версии pnpm читает .npmrc только для registry и auth, остальное здесь.
+# Since version 11 pnpm reads .npmrc only for registry and auth, everything else is here.
 
-# Версии зависимостей фиксируются точно — диапазон даёт разный lock при переустановке.
+# Dependency versions are pinned exactly: a range gives a different lock on reinstall.
 saveExact: true
 
-# lefthook скачивает свой бинарь в postinstall, поэтому сборка разрешена явно.
-# msw запрещён намеренно: его postinstall кладёт mockServiceWorker.js в public/,
-# оттуда файл уехал бы в dist и через go:embed — в бинарь демона. Дев-сервер
-# отдаёт этот скрипт прямо из node_modules (плагин metabox-mocks).
+# lefthook downloads its binary in postinstall, so the build is allowed explicitly.
+# msw is forbidden on purpose: its postinstall puts mockServiceWorker.js into public/,
+# from where the file would end up in dist and, through go:embed, in the daemon binary. The dev server
+# serves this script straight from node_modules (the metabox-mocks plugin).
 allowBuilds:
   lefthook: true
   msw: false
 
-# Общие для воркспейса версии — чтобы линтер не разъехался между пакетами.
+# Versions shared across the workspace, so the linter does not drift between packages.
 catalog:
   oxfmt: 0.68.0
   oxlint: 1.81.0
