@@ -11,13 +11,18 @@ import (
 // on Linux about a quarter of an hour, and there are only four streams in all.
 const unackedTimeout = 30 * time.Second
 
+// tcpUserTimeout is the TCP_USER_TIMEOUT option number from linux/tcp.h, the same on
+// every architecture. The frozen syscall package declares it only for some GOARCH
+// values: amd64 and arm lack the constant, and x/sys/unix is a dependency the daemon does not have.
+const tcpUserTimeout = 0x12
+
 // control sets TCP_USER_TIMEOUT on the listening socket: accepted connections
 // inherit it from the listener.
 func control(_, _ string, conn syscall.RawConn) error {
 	var sockErr error
 
 	err := conn.Control(func(fd uintptr) {
-		sockErr = syscall.SetsockoptInt(int(fd), syscall.IPPROTO_TCP, syscall.TCP_USER_TIMEOUT, int(unackedTimeout.Milliseconds()))
+		sockErr = syscall.SetsockoptInt(int(fd), syscall.IPPROTO_TCP, tcpUserTimeout, int(unackedTimeout.Milliseconds()))
 	})
 	if err != nil {
 		return err
