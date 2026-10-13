@@ -1,105 +1,105 @@
-# Правила проекта metabox
+# metabox project rules
 
-## Что это
+## What this is
 
-GUI-редактор конфигов sing-box для OpenWrt: Go-демон (`apps/metaboxd`) раздаёт встроенный SPA (`apps/web`) и владеет файлами конфига. Схема конфига генерируется из форка sing-box рефлексией (`tools/schemagen`).
+A GUI editor for sing-box configs on OpenWrt: a Go daemon (`apps/metaboxd`) serves an embedded SPA (`apps/web`) and owns the config files. The config schema is generated from the sing-box fork by reflection (`tools/schemagen`).
 
-Требования — [`docs/PRD.md`](./docs/PRD.md). Расхождение кода с PRD трактуется как ошибка кода, пока PRD не изменён явно.
+Requirements: [`docs/PRD.md`](./docs/PRD.md). A mismatch between code and the PRD is treated as a code bug until the PRD is changed explicitly.
 
-## Проекты
+## Projects
 
-Каждый проект владеет своей папкой: кодом, манифестом, `AGENTS.md` и гайдами. Правила проекта читаются, когда работаешь в его папке, и не раньше. В корне остаётся общерепозиторное: требования, решения, процесс, тулинг воркспейса.
+Each project owns its folder: code, manifest, `AGENTS.md` and guides. A project's rules are read when you work in its folder, not earlier. The root keeps what is shared across the repository: requirements, decisions, process, workspace tooling.
 
-| Проект           | Папка              | Правила                                  | Гайды                                                 |
-| ---------------- | ------------------ | ---------------------------------------- | ----------------------------------------------------- |
-| Демон `metaboxd` | `apps/metaboxd/`   | [AGENTS.md](./apps/metaboxd/AGENTS.md)   | [docs/guides/](./apps/metaboxd/docs/guides/README.md) |
-| Фронтенд         | `apps/web/`        | [AGENTS.md](./apps/web/AGENTS.md)        | [docs/](./apps/web/docs/README.md)                    |
-| Генератор схемы  | `tools/schemagen/` | [AGENTS.md](./tools/schemagen/AGENTS.md) | гайды демона, разделы «Стиль» и «Инструменты»         |
+| Project           | Folder             | Rules                                    | Guides                                                |
+| ----------------- | ------------------ | ---------------------------------------- | ----------------------------------------------------- |
+| Daemon `metaboxd` | `apps/metaboxd/`   | [AGENTS.md](./apps/metaboxd/AGENTS.md)   | [docs/guides/](./apps/metaboxd/docs/guides/README.md) |
+| Frontend          | `apps/web/`        | [AGENTS.md](./apps/web/AGENTS.md)        | [docs/](./apps/web/docs/README.md)                    |
+| Schema generator  | `tools/schemagen/` | [AGENTS.md](./tools/schemagen/AGENTS.md) | the daemon guides, sections "Style" and "Tools"       |
 
-## Источники правил и их приоритет
+## Rule sources and their priority
 
-Каноническими источниками считаются этот файл и `AGENTS.md` проектов, `docs/PRD.md`, гайды проектов. Файлы `CLAUDE.md`, `.claude/*`, `.cursor/*` и прочих AI-продуктов — **только адаптеры**: настройки инструмента, права доступа, точки входа. Отдельных правил разработки в них не заводить и текст канонических источников не дублировать.
+The canonical sources are this file, the projects' `AGENTS.md`, `docs/PRD.md` and the project guides. `CLAUDE.md`, `.claude/*`, `.cursor/*` and files of other AI products are **adapters only**: tool settings, access permissions, entry points. Do not put separate development rules in them and do not duplicate the text of the canonical sources.
 
-При конфликте применять в таком порядке:
+On conflict, apply in this order:
 
-1. Явные инструкции текущей задачи и ограничения среды.
-2. Код, конфиги и фактические соглашения затронутой части репозитория.
-3. `docs/PRD.md`, затем `AGENTS.md` — проектный перед корневым, — затем гайды проекта.
-4. Личные настройки агента и внешние плагины — только в части, которая не ослабляет правила репозитория.
+1. Explicit instructions of the current task and environment constraints.
+2. Code, configs and actual conventions of the affected part of the repository.
+3. `docs/PRD.md`, then `AGENTS.md` (the project one before the root one), then the project guides.
+4. Personal agent settings and external plugins, only where they do not weaken the repository rules.
 
-Плагин oh-my-claudecode из `.claude/CLAUDE.md` (субагенты, память, свой формат коммитов, скиллы) применяется, только если не расходится с каноническими источниками и его runtime развёрнут в текущей сессии. Требования PRD он не отменяет, а субагенты не заменяют прямое решение задачи.
+The oh-my-claudecode plugin from `.claude/CLAUDE.md` (subagents, memory, its own commit format, skills) applies only if it does not contradict the canonical sources and its runtime is deployed in the current session. It does not override PRD requirements, and subagents do not replace solving the task directly.
 
-## Порядок изучения проекта
+## Order of studying the project
 
-1. Этот файл и `docs/PRD.md` в части, относящейся к задаче.
-2. `AGENTS.md` проекта, в котором идёт работа, и гайды, которых требует его таблица условий. Гайд читается **полностью** и до внесения правки.
-3. Сверить выводы с исходным кодом, манифестами, конфигами сборки, правилами линтера и фактической структурой каталогов.
+1. This file and the parts of `docs/PRD.md` relevant to the task.
+2. The `AGENTS.md` of the project you work in, and the guides its condition table requires. A guide is read **in full** and before making a change.
+3. Check the conclusions against the source code, manifests, build configs, linter rules and the actual directory structure.
 
-Выводы об архитектуре, командах и правилах делаются по файлам репозитория, а не по знаниям о стеке. Не уверен — открыть файл.
+Conclusions about architecture, commands and rules come from the repository files, not from knowledge of the stack. Not sure: open the file.
 
-При расхождении документа с фактическим кодом, конфигом или правилом линтера — сообщить о противоречии и согласовать решение, а не мигрировать код молча.
+If a document disagrees with the actual code, config or linter rule, report the contradiction and agree on a decision; do not migrate the code silently.
 
-## Размещение технических знаний
+## Where technical knowledge lives
 
-Один факт — один дом, в остальных местах ссылка. Слой выбирается по цене знания в контексте:
+One fact, one home; everywhere else, a link. The layer is chosen by the cost of the knowledge in context:
 
-| Слой      | Где живёт                                                       | Цена                             | Что туда идёт                                                           |
-| --------- | --------------------------------------------------------------- | -------------------------------- | ----------------------------------------------------------------------- |
-| Контракт  | типы, сигнатуры, схемы, тесты; TSDoc/godoc                      | всегда под рукой, вместе с кодом | поведение и ограничения, которые нельзя однозначно вывести из сигнатуры |
-| Правило   | этот файл и `AGENTS.md` проектов                                | всегда в контексте               | постоянно действующее требование к репозиторию или его части            |
-| Документ  | гайды в `docs/` каждого проекта                                 | по условию из таблицы            | объёмные тематические правила                                           |
-| Решение   | `docs/adr/*`; требования и уже принятые решения — `docs/PRD.md` | по ссылке                        | почему система устроена именно так, какие варианты отвергнуты           |
-| Процедура | `.claude/skills/*`                                              | по триггеру                      | повторяемый сценарий, нужный не всегда                                  |
+| Layer     | Where it lives                                                       | Cost                             | What goes there                                                     |
+| --------- | -------------------------------------------------------------------- | -------------------------------- | ------------------------------------------------------------------- |
+| Contract  | types, signatures, schemas, tests; TSDoc/godoc                       | always at hand, next to the code | behaviour and constraints that cannot be derived from the signature |
+| Rule      | this file and the projects' `AGENTS.md`                              | always in context                | a standing requirement for the repository or a part of it           |
+| Document  | guides in each project's `docs/`                                     | by condition from the table      | large topical rules                                                 |
+| Decision  | `docs/adr/*`; requirements and decisions already made: `docs/PRD.md` | by link                          | why the system is built this way, which options were rejected       |
+| Procedure | `.claude/skills/*`                                                   | by trigger                       | a repeatable scenario that is not always needed                     |
 
-TSDoc и godoc не пересказывают реализацию построчно — только то, чего не видно из сигнатуры.
+TSDoc and godoc do not retell the implementation line by line, only what the signature does not show.
 
-Технические решения — устройство стенда, обход ограничения платформы, выбор инструмента, архитектура части системы — оформляются как ADR в `docs/adr/` скиллом `create-adr`. Статус `Accepted` ставит владелец репозитория, агент создаёт черновик `Proposed`. Решение, которое меняет требование, правит разделы 1–11 PRD.
+Technical decisions (test bench setup, a workaround for a platform limitation, a tool choice, the architecture of a part of the system) are recorded as ADRs in `docs/adr/` with the `create-adr` skill. The repository owner sets the `Accepted` status; the agent creates a `Proposed` draft. A decision that changes a requirement edits sections 1–11 of the PRD.
 
-Приложение A PRD закрыто для новых записей: решения, принятые до введения ADR, переехали в `docs/adr/`, в приложении остались заголовки со ссылками на них. Решение ищется в ADR, дописывать в приложение A нельзя.
+PRD appendix A is closed to new entries: decisions made before ADRs were introduced moved to `docs/adr/`, and the appendix keeps only headings with links to them. Look for decisions in ADRs; do not add to appendix A.
 
-Рабочие заметки по ходу задач лежат в `.omc/plans/*`, эти файлы **не в git** — ссылаться на них в коммитах, документации и коде нельзя.
+Working notes made during tasks live in `.omc/plans/*`. These files are **not in git**: do not link to them from commits, documentation or code.
 
-## Принципы изменений
+## Change principles
 
-- Следовать архитектуре, нейминг-конвенциям и стилю затронутой части репозитория, а не привносить свои.
-- Ограничивать правки требованиями задачи, держать diff минимальным и понятным.
-- Не делать unrelated refactor, массовых переименований, лишнего форматирования и обновления зависимостей без явной просьбы.
-- Не вводить новые абстракции и зависимости, если задача решается существующими средствами проекта.
-- Сохранять изменения пользователя и не откатывать их без разрешения. Если файл изменился на диске — это обычно намеренно; сообщить, а не возвращать своё.
-- Прямо говорить о рисках, компромиссах и техническом долге. Не приукрашивать состояние кода.
-- `docs/PRD.md` — первоисточник требований и решений. Он правится тем же коммитом, что и изменение, — какое изменение что правит, описано в [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+- Follow the architecture, naming conventions and style of the affected part of the repository; do not bring your own.
+- Limit changes to the task requirements; keep the diff minimal and clear.
+- No unrelated refactoring, mass renames, extra formatting or dependency updates without an explicit request.
+- Do not introduce new abstractions or dependencies if the task can be solved with what the project already has.
+- Keep the user's changes and do not revert them without permission. If a file changed on disk, it is usually intentional; report it instead of restoring your version.
+- Speak plainly about risks, trade-offs and tech debt. Do not embellish the state of the code.
+- `docs/PRD.md` is the primary source of requirements and decisions. It is edited in the same commit as the change; which change edits what is described in [`CONTRIBUTING.md`](./CONTRIBUTING.md).
 
-## Коммиты
+## Commits
 
-Формат сообщений, скоупы, ветки, PR и дополнительные требования к агентам — [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+Message format, scopes, branches, PRs and additional requirements for agents: [`CONTRIBUTING.md`](./CONTRIBUTING.md).
 
-## Общее
+## General
 
-- При работе с библиотеками, фреймворками и их API используй MCP Context7. Сервер объявлен в `.mcp.json`, ключ подставляется из переменной `CONTEXT7_API_KEY` — заведи свой на context7.com и положи его в `.claude/settings.local.json` (файл в `.gitignore`):
+- When working with libraries, frameworks and their APIs, use the Context7 MCP. The server is declared in `.mcp.json`; the key comes from the `CONTEXT7_API_KEY` variable. Get your own at context7.com and put it in `.claude/settings.local.json` (the file is in `.gitignore`):
 
   ```json
-  { "env": { "CONTEXT7_API_KEY": "твой-ключ" } }
+  { "env": { "CONTEXT7_API_KEY": "your-key" } }
   ```
 
-  В сам `.mcp.json` ключ не вписывать — файл коммитится.
+  Do not write the key into `.mcp.json` itself: that file is committed.
 
-- Остальные MCP-серверы из `.mcp.json`:
+- Other MCP servers from `.mcp.json`:
 
-  | Сервер            | Для чего                                                           |
-  | ----------------- | ------------------------------------------------------------------ |
-  | `playwright`      | e2e: проверка интерфейса и пользовательских сценариев работы с ним |
-  | `chrome-devtools` | производительность интерфейса, консоль, сеть, замеры, скриншот     |
+  | Server            | Purpose                                                           |
+  | ----------------- | ----------------------------------------------------------------- |
+  | `playwright`      | e2e: checking the interface and user scenarios                    |
+  | `chrome-devtools` | interface performance, console, network, measurements, screenshot |
 
-- Линтеры и тесты запускай сам, результат приводи как есть — не пересказывай.
-- Новая зависимость — только когда без неё нельзя; аргументируй.
-- Версии зависимостей фиксируются точно, без `^` и `~`: диапазон даёт разные деревья у разработчика и в CI. Держит это `saveExact: true` в корневом `pnpm-workspace.yaml`; диапазон, вписанный руками, ловит `pnpm install --frozen-lockfile` в CI — лок хранит специфаер и разъезжается с манифестом. Обновление версии — отдельное осознанное изменение.
-- `apps/web/src/shared/api/generated.ts` руками не правится — правится генератор. Запись в него закрыта в `.claude/settings.json`.
-- Репозиторную документацию писать на русском.
-- Личные настройки, которыми не делятся через git, класть в `AGENTS.local.md` (форматы ответа, свои триггеры, алиасы). Файл закрыт в `.gitignore` шаблоном `*.local.*`.
+- Run linters and tests yourself and quote the result as is; do not paraphrase it.
+- A new dependency only when there is no way around it; justify it.
+- Dependency versions are pinned exactly, without `^` and `~`: a range gives different trees on a developer machine and in CI. `saveExact: true` in the root `pnpm-workspace.yaml` enforces this; a range typed by hand is caught by `pnpm install --frozen-lockfile` in CI, because the lockfile stores the specifier and diverges from the manifest. A version update is a separate, deliberate change.
+- `apps/web/src/shared/api/generated.ts` is not edited by hand; the generator is. Writing to it is blocked in `.claude/settings.json`.
+- The repository language is English: code, comments, commit messages, documentation, ADRs, the PRD. README, CONTRIBUTING and docs/Development have Russian copies (`README.ru.md`, `CONTRIBUTING.ru.md`, `docs/Development.ru.md`), updated in the same commit as the English file. Text shown to users lives in the i18n dictionaries, in English and Russian. Known exception: daemon error texts shown in the panel stay in Russian until they move to i18n.
+- Personal settings that are not shared through git go into `AGENTS.local.md` (response formats, your own triggers, aliases). The file is ignored in `.gitignore` by the `*.local.*` pattern.
 
-## Гигиена контекста
+## Context hygiene
 
-- Правила разработки живут только в `AGENTS.md`. В `.claude/*`, `.cursor/*`, `.vscode/*` — исключительно настройки инструмента: права, MCP, форматирование, точки входа.
-- Не копировать правила репозитория в глобальные пользовательские инструкции агента и обратно.
-- Не дублировать один и тот же список путей в нескольких конфигах без необходимости: сейчас права заданы в одном месте — `.claude/settings.json`.
-- Внешние плагины подключать только когда их возможности реально нужны; их поведение в канонических источниках не описывать.
+- Development rules live only in `AGENTS.md`. `.claude/*`, `.cursor/*`, `.vscode/*` hold tool settings only: permissions, MCP, formatting, entry points.
+- Do not copy repository rules into the agent's global user instructions, or the other way round.
+- Do not duplicate the same list of paths in several configs without need: permissions are currently set in one place, `.claude/settings.json`.
+- Connect external plugins only when their features are actually needed; do not describe their behaviour in the canonical sources.

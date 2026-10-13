@@ -1,78 +1,78 @@
-# ADR-0050. Версионировать выпуски по semver из файла VERSION и выводить из неё версию пакета apk
+# ADR-0050. Version releases by semver from the VERSION file and derive the apk package version from it
 
-- Статус: Accepted
-- Дата: 2026-10-11
-- Ответственные: владелец репозитория
+- Status: Accepted
+- Date: 2026-10-11
+- Deciders: repository owner
 
-## Контекст и постановка проблемы
+## Context and problem statement
 
-До этого решения у проекта не было версии. Бинарь демона собирался с `VERSION ?= dev` (`Makefile`), пакет панели — с `PKG_VERSION ?= 0.0.0-r0`, фронт объявлял `"version": "0.0.0"`, тегов в git не было. Первый пакет для роутера собран с разовым параметром командной строки `PKG_VERSION=0.1.0-r0`. Поэтому на роутере стоит пакет `metaboxd 0.1.0-r0`, а демон отвечает `"version":"dev"` в `GET /api/status`, и по панели нельзя понять, какая сборка стоит.
+Before this decision the project had no version. The daemon binary was built with `VERSION ?= dev` (`Makefile`), the panel package with `PKG_VERSION ?= 0.0.0-r0`, the frontend declared `"version": "0.0.0"`, and there were no git tags. The first package for the router was built with a one-off command line parameter `PKG_VERSION=0.1.0-r0`. So the router has the package `metaboxd 0.1.0-r0`, while the daemon answers `"version":"dev"` in `GET /api/status`, and the panel gives no way to tell which build is installed.
 
-Владелец объявил следующую сборку релиз-кандидатом и попросил вести версию по semver с учётом особенностей apk. Пакет ставится apk-tools (ADR-0011), а его формат версии с semver не совпадает:
+The owner declared the next build a release candidate and asked to version it by semver, taking apk specifics into account. The package is installed by apk-tools (ADR-0011), and its version format does not match semver:
 
-- дефис внутри версии apk не принимает — он отделяет номер ревизии пакета (`-r0`);
-- пре-релиз apk пишет суффиксом через подчёркивание, без точки: `_alpha`, `_beta`, `_rc` с числом, и ставит его ниже релиза — `0.1.0_rc2 < 0.1.0`;
-- метаданных сборки (`+…`) в apk нет.
+- apk does not accept a hyphen inside a version: it separates the package revision number (`-r0`);
+- apk writes a pre-release as an underscore suffix without a dot, `_alpha`, `_beta`, `_rc` with a number, and orders it below the release: `0.1.0_rc2 < 0.1.0`;
+- apk has no build metadata (`+…`).
 
-В scope: источник версии, версия бинаря, версия пакета, проверка формата. Вне scope: теги git и публикация релизов, подпись пакета, номер ревизии `-rN` при пересборке той же версии.
+In scope: the version source, the binary version, the package version, the format check. Out of scope: git tags and release publishing, package signing, the `-rN` revision number when the same version is rebuilt.
 
-## Критерии выбора
+## Decision drivers
 
-1. **Один источник версии** для бинаря, пакета и фронта.
-2. **Порядок версий в apk совпадает с semver**: пре-релиз ниже релиза, `rc.10` выше `rc.2`, `apk upgrade` с кандидата на релиз проходит.
-3. **Ошибка формата ловится при сборке пакета**, а не на роутере.
-4. **Без новых зависимостей и инструментов.**
-5. **Сборка для разработки не требует настройки.**
+1. **One version source** for the binary, the package and the frontend.
+2. **Version order in apk matches semver**: a pre-release is below the release, `rc.10` is above `rc.2`, and `apk upgrade` from a candidate to the release works.
+3. **A format error is caught when the package is built**, not on the router.
+4. **No new dependencies or tools.**
+5. **A development build requires no setup.**
 
-## Рассмотренные варианты
+## Considered options
 
-1. **Файл `VERSION` в корне с semver, apk-версия выводится в `Makefile`.** `VERSION` содержит строку вида `0.1.0-rc.2`. `make` берёт из неё `-X metabox/internal/version.Version` для бинаря и выводит `PKG_VERSION`: `X.Y.Z` → `X.Y.Z-r0`, `X.Y.Z-(alpha|beta|rc).N` → `X.Y.Z_(alpha|beta|rc)N-r0`. Цель `package` падает с понятной ошибкой, если версия не выражается версией apk. Недостатки: версию фронта в `apps/web/package.json` приходится держать равной вручную; набор пре-релизов ограничен тем, что умеет apk. **Принят.**
-2. **Версия из тегов git (`git describe`).** Источник — тег `v0.1.0-rc.2`. Преимущества: тег и сборка не расходятся. Недостатки: сборка в контейнере стенда и в CI без истории тегов получает пустую версию; между тегами получается строка `0.1.0-rc.2-5-gabc`, которую apk не примет; тегов в репозитории пока нет. **Отклонён** — можно добавить поверх варианта 1, сверяя тег с `VERSION`.
-3. **Писать версию сразу в формате apk (`0.1.0_rc2`).** Без преобразования. Недостатки: строка не semver, её же показывает демон и читает человек; `0.1.0_rc10` против `0.1.0_rc2` в semver-инструментах сравнивается неверно. **Отклонён.**
-4. **Писать semver без точки в пре-релизе (`0.1.0-rc2`) и менять дефис на подчёркивание.** Самое короткое преобразование. Недостаток: по semver идентификатор `rc2` сравнивается как строка, и `rc10` оказывается ниже `rc2`. **Отклонён.**
-5. **Сохранить текущий подход.** Версию задавать параметром командной строки при сборке пакета. Недостатки: бинарь остаётся `dev`; версия пакета живёт в памяти того, кто собирал; ошибка формата обнаруживается только при установке. **Отклонён.**
+1. **A `VERSION` file at the root with semver, the apk version derived in the `Makefile`.** `VERSION` contains a string like `0.1.0-rc.2`. `make` takes `-X metabox/internal/version.Version` for the binary from it and derives `PKG_VERSION`: `X.Y.Z` → `X.Y.Z-r0`, `X.Y.Z-(alpha|beta|rc).N` → `X.Y.Z_(alpha|beta|rc)N-r0`. The `package` target fails with a clear error if the version cannot be expressed as an apk version. Drawbacks: the frontend version in `apps/web/package.json` has to be kept equal by hand; the set of pre-releases is limited to what apk supports. **Chosen.**
+2. **The version from git tags (`git describe`).** The source is the tag `v0.1.0-rc.2`. Advantages: the tag and the build do not diverge. Drawbacks: a build in the test bench container and in CI without tag history gets an empty version; between tags the result is a string `0.1.0-rc.2-5-gabc` that apk does not accept; there are no tags in the repository yet. **Rejected**; it can be added on top of option 1, checking the tag against `VERSION`.
+3. **Write the version directly in apk format (`0.1.0_rc2`).** No conversion. Drawbacks: the string is not semver, yet the daemon shows it and a person reads it; `0.1.0_rc10` against `0.1.0_rc2` compares incorrectly in semver tools. **Rejected.**
+4. **Write semver without a dot in the pre-release (`0.1.0-rc2`) and replace the hyphen with an underscore.** The shortest conversion. Drawback: by semver the identifier `rc2` is compared as a string, and `rc10` ends up below `rc2`. **Rejected.**
+5. **Keep the current approach.** Set the version with a command line parameter when building the package. Drawbacks: the binary stays `dev`; the package version lives in the memory of whoever built it; a format error is discovered only on installation. **Rejected.**
 
-## Принятое решение
+## Decision outcome
 
-- Версия выпуска — файл `VERSION` в корне репозитория, одна строка semver: `X.Y.Z` или `X.Y.Z-(alpha|beta|rc).N`. Сейчас `0.1.0-rc.2`.
-- `Makefile` читает `VERSION` в переменную `VERSION` и собирает бинарь с `-X metabox/internal/version.Version=$(VERSION)`. Переопределение `make VERSION=…` остаётся.
-- `Makefile` выводит `APK_VERSION` по правилам apk и `PKG_VERSION ?= $(APK_VERSION)-r0`. Цель `package` падает, если `APK_VERSION` пуст.
-- `apps/web/package.json` объявляет ту же версию.
-- Подъём версии — правка `VERSION` и `package.json` тем же коммитом, что и выпуск.
+- The release version is the `VERSION` file at the repository root, one semver line: `X.Y.Z` or `X.Y.Z-(alpha|beta|rc).N`. Currently `0.1.0-rc.2`.
+- The `Makefile` reads `VERSION` into the `VERSION` variable and builds the binary with `-X metabox/internal/version.Version=$(VERSION)`. The `make VERSION=…` override remains.
+- The `Makefile` derives `APK_VERSION` by apk rules and `PKG_VERSION ?= $(APK_VERSION)-r0`. The `package` target fails if `APK_VERSION` is empty.
+- `apps/web/package.json` declares the same version.
+- A version bump is an edit of `VERSION` and `package.json` in the same commit as the release.
 
-## Последствия
+## Consequences
 
-### Положительные
+### Positive
 
-- Демон отвечает реальной версией в `GET /api/status`, панель и пакет называют одну и ту же сборку.
-- Порядок версий в apk совпадает с semver: `0.1.0_rc2 < 0.1.0_rc10 < 0.1.0`.
-- Опечатка в версии ловится на `make package`, а не на роутере.
+- The daemon answers with the real version in `GET /api/status`; the panel and the package name the same build.
+- Version order in apk matches semver: `0.1.0_rc2 < 0.1.0_rc10 < 0.1.0`.
+- A typo in the version is caught on `make package`, not on the router.
 
-### Отрицательные
+### Negative
 
-- Пакет `0.1.0-r0`, уже стоящий на роутере, для apk выше любого `0.1.0_rcN`. Первая установка кандидата — явная установка из файла, а `apk upgrade` до выпуска `0.1.0` будет считать стоящий пакет новее. Разовое следствие сборки до этого решения.
-- Версия фронта дублируется в `apps/web/package.json` и сверяется вручную.
-- Пре-релизы вне `alpha`, `beta`, `rc` и метаданные сборки недоступны.
+- The package `0.1.0-r0` already installed on the router is, for apk, above any `0.1.0_rcN`. The first installation of a candidate is an explicit installation from a file, and until the `0.1.0` release `apk upgrade` will consider the installed package newer. A one-off consequence of the build made before this decision.
+- The frontend version is duplicated in `apps/web/package.json` and checked by hand.
+- Pre-releases other than `alpha`, `beta`, `rc` and build metadata are not available.
 
-### Нейтральные или отложенные
+### Neutral or deferred
 
-- Теги git и сверка тега с `VERSION` в CI — отдельное решение, когда появится публикация релизов.
-- Номер ревизии `-rN` при пересборке той же версии пока всегда `r0`.
+- Git tags and checking the tag against `VERSION` in CI are a separate decision, once release publishing appears.
+- The `-rN` revision number when the same version is rebuilt is always `r0` for now.
 
-## Совместимость, миграция и откат
+## Compatibility, migration and rollback
 
-Контрактов и данных решение не касается. На роутере пакет `0.1.0-r0` заменяется установкой файла `0.1.0_rc2-r0` явно. Откат — вернуть в `Makefile` `VERSION ?= dev` и `PKG_VERSION ?= 0.0.0-r0`, удалить `VERSION`.
+The decision does not touch contracts or data. On the router the package `0.1.0-r0` is replaced by explicitly installing the file `0.1.0_rc2-r0`. Rollback: return `VERSION ?= dev` and `PKG_VERSION ?= 0.0.0-r0` to the `Makefile`, delete `VERSION`.
 
-## Проверка решения
+## Validation
 
-- `make -n daemon` печатает `-X metabox/internal/version.Version=0.1.0-rc.2`.
-- `make -n package` печатает `PKG_VERSION=0.1.0_rc2-r0`.
-- `make -n package VERSION=dev` падает с сообщением о формате версии.
-- `make -n package VERSION=1.2.3-beta.10` печатает `PKG_VERSION=1.2.3_beta10-r0`.
+- `make -n daemon` prints `-X metabox/internal/version.Version=0.1.0-rc.2`.
+- `make -n package` prints `PKG_VERSION=0.1.0_rc2-r0`.
+- `make -n package VERSION=dev` fails with a message about the version format.
+- `make -n package VERSION=1.2.3-beta.10` prints `PKG_VERSION=1.2.3_beta10-r0`.
 
-## Ссылки
+## Links
 
-- [ADR-0011](./ADR-0011-ship-the-daemon-as-an-apk-package.md) — поставка пакетом apk;
-- `Makefile`, `VERSION`, `apps/web/package.json`, `CONTRIBUTING.md` (таблица переменных);
-- [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html) — порядок пре-релизов;
-- [apk-tools, формат версии](https://wiki.alpinelinux.org/wiki/APKBUILD_Reference#pkgver) — суффиксы `_alpha`, `_beta`, `_rc`.
+- [ADR-0011](./ADR-0011-ship-the-daemon-as-an-apk-package.md): delivery as an apk package;
+- `Makefile`, `VERSION`, `apps/web/package.json`, `CONTRIBUTING.md` (the variables table);
+- [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html): pre-release order;
+- [apk-tools, version format](https://wiki.alpinelinux.org/wiki/APKBUILD_Reference#pkgver): the `_alpha`, `_beta`, `_rc` suffixes.

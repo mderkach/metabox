@@ -1,88 +1,88 @@
-# ADR-0003. Встраивать SPA из промежуточного каталога в пакете демона
+# ADR-0003. Embed the SPA from a staging directory in the daemon package
 
-- Статус: Accepted
-- Дата: 2026-09-09
-- Ответственные: владелец репозитория
+- Status: Accepted
+- Date: 2026-09-09
+- Deciders: repository owner
 
-## Контекст и постановка проблемы
+## Context and problem statement
 
-AC-17 требует, чтобы демон раздавал встроенный UI, а [ADR-0040](./ADR-0040-ship-the-panel-as-one-go-daemon-with-an-embedded-spa.md) обещает единый артефакт поставки: на устройство едет один бинарь. Значит собранная SPA обязана попасть внутрь `metaboxd` через `go:embed`.
+AC-17 requires the daemon to serve the embedded UI, and [ADR-0040](./ADR-0040-ship-the-panel-as-one-go-daemon-with-an-embedded-spa.md) promises a single delivery artifact: one binary goes to the device. So the built SPA must get inside `metaboxd` through `go:embed`.
 
-Директива `go:embed` не поднимается выше каталога своего пакета, а фронт лежит в другом дереве — `apps/web/dist`. Достать его из `apps/metaboxd` напрямую нельзя. Гайд [HTTPAPI](../../apps/metaboxd/docs/guides/HTTPAPI.md) фиксирует это ограничение и оставляет выбор способа доставки на момент реализации; формулировка «`go:embed` смотрит в `apps/web/dist`» из A.10 PRD (теперь — [ADR-0045](./ADR-0045-split-document-and-server-state-and-keep-a-folder-per-project.md)) описывает источник, а не путь в директиве.
+The `go:embed` directive cannot reach above its package directory, and the frontend lives in another tree, `apps/web/dist`. It cannot be reached from `apps/metaboxd` directly. The [HTTPAPI](../../apps/metaboxd/docs/guides/HTTPAPI.md) guide records this constraint and leaves the choice of delivery method to implementation time; the wording "`go:embed` looks into `apps/web/dist`" from A.10 of the PRD (now [ADR-0045](./ADR-0045-split-document-and-server-state-and-keep-a-folder-per-project.md)) describes the source, not the path in the directive.
 
-Ограничение, которое определяет решение: **встраивание проверяется компилятором**. Если каталог, указанный в директиве, отсутствует или в нём нет ни одного подходящего файла, сборка падает с `no matching files found`. Падает не только `go build`, но и `go vet`, `go test` и `golangci-lint` — то есть хук pre-commit, шаги CI и любая правка Go-кода без предварительной сборки фронта.
+The constraint that drives the decision: **embedding is checked by the compiler**. If the directory named in the directive is missing or contains no matching file, the build fails with `no matching files found`. Not only `go build` fails, but also `go vet`, `go test` and `golangci-lint`, that is, the pre-commit hook, CI steps and any edit of Go code without building the frontend first.
 
-В scope: где лежит каталог, из которого идёт встраивание, как он наполняется и что из него живёт в git. Вне scope: содержимое самой SPA, правила кэширования и клиентский роутинг — они заданы гайдом HTTPAPI и реализованы в `internal/webui`.
+In scope: where the directory used for embedding lives, how it is filled and what of it lives in git. Out of scope: the contents of the SPA itself, caching rules and client-side routing: they are set by the HTTPAPI guide and implemented in `internal/webui`.
 
-## Критерии выбора
+## Decision drivers
 
-- Go-часть собирается, линтуется и тестируется на чистом клоне без установленного Node и без сборки фронта.
-- Рабочее дерево остаётся чистым после сборки: `make daemon` не порождает изменений, которые git показывает как правку отслеживаемых файлов.
-- Артефакт фронта не попадает в git: он воспроизводим из исходников.
-- Конфигурация сборки фронта не знает о раскладке Go-части.
-- Способ проверяется командой, а не соглашением.
+- The Go part builds, lints and tests on a clean clone without Node installed and without building the frontend.
+- The working tree stays clean after a build: `make daemon` produces no changes that git shows as edits to tracked files.
+- The frontend artifact does not go into git: it is reproducible from sources.
+- The frontend build configuration does not know about the layout of the Go part.
+- The method is enforced by a command, not by a convention.
 
-## Рассмотренные варианты
+## Considered options
 
-1. **Embed-пакет в корне модуля, каталог целиком вне git** — отклонён. Каталог отсутствует на чистом клоне, поэтому `go build ./...` и `go test ./...` падают до того, как кто-либо соберёт фронт. Цена — Node и `pnpm install` как условие любой правки Go-кода, включая правку, которая фронта не касается.
+1. **An embed package at the module root, the whole directory outside git**: rejected. The directory is missing on a clean clone, so `go build ./...` and `go test ./...` fail before anyone builds the frontend. The cost is Node and `pnpm install` as a precondition for any edit of Go code, including an edit that does not touch the frontend.
 
-2. **Vite пишет сборку прямо в дерево демона (`build.outDir`)** — отклонён. Убирает шаг копирования, но заводит обратную зависимость: конфигурация фронта начинает знать про каталоги Go-части, и переезд любого из них ломает сборку другого. Проблему пустого каталога на чистом клоне не решает вовсе.
+2. **Vite writes the build straight into the daemon tree (`build.outDir`)**: rejected. It removes the copy step but creates a reverse dependency: the frontend configuration starts to know about the Go part's directories, and moving any of them breaks the other's build. It does not solve the empty directory problem on a clean clone at all.
 
-3. **Каталог в пакете демона, в git — только файл-заглушка, содержимое кладёт `make daemon`** — **принят**. Заглушка держит каталог непустым, поэтому встраивание собирается всегда; реальная сборка фронта её не затрагивает и потому не пачкает рабочее дерево.
+3. **A directory in the daemon package, with only a placeholder file in git, contents put there by `make daemon`**: **chosen**. The placeholder keeps the directory non-empty, so embedding always builds; the real frontend build does not touch it and therefore does not dirty the working tree.
 
-4. **Артефакт фронта в git** — отклонён. Снимает проблему целиком, но кладёт в историю пересобираемый бинарный вывод: каждая сборка даёт диф в сотни килобайт, а ревью такого дифа бессмысленно.
+4. **The frontend artifact in git**: rejected. It removes the problem entirely but puts rebuildable binary output into history: every build gives a diff of hundreds of kilobytes, and reviewing such a diff is pointless.
 
-## Принятое решение
+## Decision outcome
 
-Демон встраивает статику из `apps/metaboxd/internal/webui/static`.
+The daemon embeds static files from `apps/metaboxd/internal/webui/static`.
 
-Обязательные правила:
+Mandatory rules:
 
-- Директива объявлена с префиксом `all:`. Без него встраивание пропускает файлы, начинающиеся с точки, и каталог с одной лишь заглушкой снова перестаёт собираться.
-- В git из этого каталога живёт ровно один файл — `.gitkeep`. Остальное закрыто `.gitignore`; правило записано там же с причиной.
-- Наполняет каталог `make daemon`: сначала удаляет всё, кроме заглушки, затем копирует `apps/web/dist`. Удаление обязательно — иначе ассеты прошлых сборок накапливаются в бинаре, потому что их имена содержат отпечаток содержимого и не совпадают между сборками.
-- Имя каталога — `static`, а не `dist`: это вход демона, а не выход его сборки. Заодно имя не попадает под правило `.gitignore` на `dist` и под запрет правки `dist` в `.claude/settings.json`.
-- Демон, собранный без фронта, поднимается и обслуживает API: `webui.Handler` возвращает `ErrNotBuilt`, HTTP-слой отдаёт на корне объяснение, что интерфейс не собран. Панель обязана работать при неполной сборке так же, как при лежащем sing-box (NFR-1).
+- The directive is declared with the `all:` prefix. Without it, embedding skips files starting with a dot, and a directory with only the placeholder stops building again.
+- Exactly one file of this directory lives in git: `.gitkeep`. The rest is covered by `.gitignore`; the rule is written there together with its reason.
+- `make daemon` fills the directory: first it removes everything except the placeholder, then it copies `apps/web/dist`. Removal is mandatory: otherwise assets of previous builds pile up in the binary, because their names contain a content hash and differ between builds.
+- The directory is named `static`, not `dist`: it is the daemon's input, not the output of its build. The name also avoids the `.gitignore` rule for `dist` and the ban on editing `dist` in `.claude/settings.json`.
+- A daemon built without the frontend starts and serves the API: `webui.Handler` returns `ErrNotBuilt`, and the HTTP layer serves an explanation at the root that the interface is not built. The panel must work with an incomplete build just as it does with sing-box down (NFR-1).
 
-Non-goal: раскладывать сборку фронта по каталогу демона средствами Vite и хранить артефакт в git.
+Non-goal: laying out the frontend build into the daemon directory by means of Vite, and keeping the artifact in git.
 
-## Последствия
+## Consequences
 
-### Положительные
+### Positive
 
-- Правка Go-кода не требует Node: `make test`, `make lint` и хук pre-commit работают на чистом клоне.
-- `make daemon` не пачкает рабочее дерево: заглушка не перезаписывается, остальное игнорируется git.
-- Сборка фронта ничего не знает о Go-части, и каталоги можно двигать независимо.
+- Editing Go code does not require Node: `make test`, `make lint` and the pre-commit hook work on a clean clone.
+- `make daemon` does not dirty the working tree: the placeholder is not overwritten, and the rest is ignored by git.
+- The frontend build knows nothing about the Go part, and the directories can be moved independently.
 
-### Отрицательные
+### Negative
 
-- В сборке появился шаг копирования: `make daemon` перестал быть просто `go build`, и собранный руками бинарь может содержать статику прошлой сборки.
-- Заглушка попадает в бинарь. Сотня байт погоды не делает, но файл в артефакте лишний.
-- Один и тот же артефакт лежит в двух местах — `apps/web/dist` и каталоге встраивания.
+- The build gained a copy step: `make daemon` is no longer just `go build`, and a binary built by hand may contain static files from a previous build.
+- The placeholder ends up in the binary. A hundred bytes do not matter, but the file in the artifact is extra.
+- The same artifact lives in two places: `apps/web/dist` and the embedding directory.
 
-### Нейтральные или отложенные
+### Neutral or deferred
 
-- Стенд раздаёт фронт через Vite с HMR (AC-20), поэтому `make daemon-target` статику не копирует: демон в стенде отвечает только API.
-- Правила кэширования и отдача оболочки на клиентских маршрутах живут в `internal/webui` и этим решением не задаются.
+- The test bench serves the frontend through Vite with HMR (AC-20), so `make daemon-target` does not copy static files: the daemon on the test bench serves only the API.
+- Caching rules and serving the shell on client routes live in `internal/webui` and are not set by this decision.
 
-## Совместимость, миграция и откат
+## Compatibility, migration and rollback
 
-Ломать нечего: до этого решения демон статику не раздавал. Существующие команды не меняют смысла — `make daemon` собирает тот же бинарь, только теперь с интерфейсом внутри.
+Nothing to break: before this decision the daemon did not serve static files. Existing commands keep their meaning: `make daemon` builds the same binary, only with the interface inside.
 
-Откат означает возврат к бинарю без UI и стоит удаления пакета `internal/webui` вместе с шагом копирования; ни данные на устройстве, ни формат конфига это не затрагивает.
+Rollback means going back to a binary without a UI and costs removing the `internal/webui` package together with the copy step; neither the data on the device nor the config format is affected.
 
-## Проверка решения
+## Validation
 
-- `go build ./...` и `go test ./...` в `apps/metaboxd` проходят на каталоге, где лежит только `.gitkeep`.
-- `make daemon` собирает бинарь, после чего `git status` показывает чистое дерево.
-- `make lint` и `make test` зелёные без предварительной сборки фронта.
-- Тесты `internal/webui` проверяют раздачу поверх подставной файловой системы: оболочка на неизвестных путях, `immutable` на именах с отпечатком, `no-cache` на именах без него, `ErrNotBuilt` на каталоге без `index.html`.
-- Ручная проверка на собранном бинаре: корень и клиентский маршрут отдают `index.html`, ассет с отпечатком приходит с `immutable`, неизвестная ручка под `/api/` по-прежнему отвечает JSON-ошибкой.
+- `go build ./...` and `go test ./...` in `apps/metaboxd` pass on a directory that contains only `.gitkeep`.
+- `make daemon` builds the binary, after which `git status` shows a clean tree.
+- `make lint` and `make test` are green without building the frontend first.
+- The `internal/webui` tests check serving on top of a fake file system: the shell on unknown paths, `immutable` on hashed names, `no-cache` on names without a hash, `ErrNotBuilt` on a directory without `index.html`.
+- Manual check on a built binary: the root and a client route serve `index.html`, a hashed asset comes with `immutable`, an unknown endpoint under `/api/` still answers with a JSON error.
 
-## Ссылки
+## Links
 
-- [`../PRD.md`](../PRD.md) — AC-17;
-- [ADR-0040](./ADR-0040-ship-the-panel-as-one-go-daemon-with-an-embedded-spa.md) — единый артефакт поставки, [ADR-0045](./ADR-0045-split-document-and-server-state-and-keep-a-folder-per-project.md) — структура репозитория;
-- [HTTPAPI](../../apps/metaboxd/docs/guides/HTTPAPI.md) — раздел «Раздача SPA»: правила кэширования и поведение на неизвестных путях;
-- [`../../Makefile`](../../Makefile) — цели `web`, `daemon`, `daemon-target` и `clean`;
-- [`../../.gitignore`](../../.gitignore) — правило для каталога встраивания.
+- [`../PRD.md`](../PRD.md): AC-17;
+- [ADR-0040](./ADR-0040-ship-the-panel-as-one-go-daemon-with-an-embedded-spa.md): single delivery artifact, [ADR-0045](./ADR-0045-split-document-and-server-state-and-keep-a-folder-per-project.md): repository structure;
+- [HTTPAPI](../../apps/metaboxd/docs/guides/HTTPAPI.md): the "Serving the SPA" section: caching rules and behaviour on unknown paths;
+- [`../../Makefile`](../../Makefile): the `web`, `daemon`, `daemon-target` and `clean` targets;
+- [`../../.gitignore`](../../.gitignore): the rule for the embedding directory.

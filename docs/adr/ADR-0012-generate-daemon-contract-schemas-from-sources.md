@@ -1,97 +1,97 @@
-# ADR-0012. Генерировать схемы контракта демона из его исходников
+# ADR-0012. Generate the daemon contract schemas from its sources
 
-- Статус: Accepted
-- Дата: 2026-09-12
-- Ответственные: владелец репозитория
+- Status: Accepted
+- Date: 2026-09-12
+- Deciders: repository owner
 
-## Контекст и постановка проблемы
+## Context and problem statement
 
-Контракт между демоном и панелью описан дважды: структурами Go в `apps/metaboxd/internal/*` и схемами TypeScript в `apps/web/src/entities/*/api`. Обе стороны пишутся руками, и ничто не связывает их между собой: переименованное поле, ставшее необязательным, или новый обязательный ключ доходят до панели молча и проявляются в рантайме — пустым экраном или отсутствующим значением.
+The contract between the daemon and the panel is described twice: by Go structs in `apps/metaboxd/internal/*` and by TypeScript schemas in `apps/web/src/entities/*/api`. Both sides are written by hand, and nothing links them: a renamed field, a field that became optional or a new required key reach the panel silently and show up at runtime as an empty screen or a missing value.
 
-Схема конфига sing-box такой проблемы не имеет: её генерирует `tools/schemagen` из форка ([ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md)). Контракт самого демона генератором не покрыт, хотя это наш собственный код и единственный источник истины для него — структуры с тегами `json`.
+The sing-box config schema does not have this problem: `tools/schemagen` generates it from the fork ([ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md)). The daemon's own contract is not covered by a generator, even though it is our own code and its single source of truth is the structs with `json` tags.
 
-Важно и направление зависимости: панель не должна зависеть от внутренних типов демона. Приватная структура хендлера контрактом не является — её переименование молча дошло бы до панели, а никакого объявленного обещания за ним не стоит.
+The direction of the dependency matters too: the panel must not depend on the daemon's internal types. A handler's private struct is not a contract: renaming it would reach the panel silently, and no declared promise stands behind it.
 
-Дополнительный повод: [ADR-0005](./ADR-0005-keep-foreign-api-adapters-in-the-api-segment.md) требует, чтобы форма ответа описывалась схемой в `api`-сегменте слайса. Рукописная схема воспроизводит структуру Go по памяти исполнителя, а `omitempty` и указатели в ней легко теряются — необязательное поле становится обязательным, и панель отвергает исправный ответ.
+An additional reason: [ADR-0005](./ADR-0005-keep-foreign-api-adapters-in-the-api-segment.md) requires the response shape to be described by a schema in the slice's `api` segment. A handwritten schema reproduces the Go struct from the contributor's memory, and `omitempty` and pointers get lost easily: an optional field becomes required, and the panel rejects a valid response.
 
-В scope: откуда панель берёт формы ответов демона. Вне scope: формы проксированных ручек Clash API — своих типов для них у демона нет (ADR-0006), они остаются рукописными.
+In scope: where the panel gets the shapes of the daemon's responses. Out of scope: the shapes of the proxied Clash API endpoints: the daemon has no types of its own for them (ADR-0006), and they stay handwritten.
 
-## Критерии выбора
+## Decision drivers
 
-1. **Расхождение видно до рантайма**: изменение структуры Go обязано ломать сборку или тест, а не экран у пользователя.
-2. **Покрытие контракта**: в генерацию попадают все тела, которые демон отдаёт наружу, включая неэкспортируемые.
-3. **Стоимость для демона**: `go.mod` демона остаётся без `require` — это требование гайда, а не предпочтение.
-4. **Сохранение знания**: godoc полей контракта доходит до панели, а не теряется по дороге.
-5. **Понятность отказа**: тип, который генератор не умеет печатать, останавливает генерацию, а не печатается заглушкой.
+1. **A mismatch is visible before runtime**: a change of a Go struct must break the build or a test, not the user's screen.
+2. **Contract coverage**: generation includes all bodies the daemon returns, including unexported ones.
+3. **Cost for the daemon**: the daemon's `go.mod` stays without `require`; this is a guide requirement, not a preference.
+4. **Knowledge preservation**: godoc of contract fields reaches the panel instead of getting lost on the way.
+5. **Clear failure**: a type the generator cannot print stops generation instead of being printed as a placeholder.
 
-## Рассмотренные варианты
+## Considered options
 
-1. **Явный пакет контракта плюс разбор его исходников через `go/ast`.** Демон объявляет формы ответов в `internal/contract` экспортированными типами; генератор читает этот пакет и те доменные типы, на которые контракт ссылается. Преимущества: у контракта появляется граница внутри демона, и панель зависит от объявленного обещания, а не от приватной структуры хендлера; godoc переносится в JSDoc (критерий 4); генератор живёт в модуле `metabox` на стандартной библиотеке (критерий 3). Недостатки: формы ответов переезжают из хендлеров в отдельный пакет — это правка демона, а не только генератора; разбор синтаксиса не знает типов, поэтому псевдоним из чужого пакета описывается правилом в таблице. **Принят.**
+1. **An explicit contract package plus parsing its sources with `go/ast`.** The daemon declares response shapes in `internal/contract` as exported types; the generator reads this package and the domain types the contract refers to. Pros: the contract gets a boundary inside the daemon, and the panel depends on a declared promise, not on a handler's private struct; godoc is carried over to JSDoc (driver 4); the generator lives in the `metabox` module on the standard library (driver 3). Cons: response shapes move from handlers into a separate package, which is an edit of the daemon, not only of the generator; syntax parsing does not know types, so an alias from another package is described by a rule in a table. **Chosen.**
 
-2. **Читать приватные структуры хендлеров напрямую.** Генератор берёт `statusResponse`, `serviceResponse`, `checkDetails` из `internal/httpapi` как есть. Преимущества: демон не правится вовсе. Недостатки: панель привязывается к внутренним типам, у которых нет обязательства перед клиентом (критерий 2 выполняется формально, а направление зависимости неверное); переименование приватного поля — ломающее изменение контракта, о котором ничто не предупреждает.
+2. **Read the handlers' private structs directly.** The generator takes `statusResponse`, `serviceResponse`, `checkDetails` from `internal/httpapi` as is. Pros: the daemon is not edited at all. Cons: the panel gets tied to internal types that have no obligation to the client (driver 2 is met formally, but the dependency direction is wrong); renaming a private field is a breaking contract change that nothing warns about.
 
-3. **Рефлексия, как в `tools/schemagen`.** Генератор импортирует пакеты демона и обходит типы. Преимущества: тип известен точно, таблица правил не нужна. Недостатки: godoc в рантайме не существует (критерий 4); генератор всё равно живёт в модуле демона отдельной командой.
+3. **Reflection, as in `tools/schemagen`.** The generator imports the daemon's packages and walks the types. Pros: the type is known exactly, no rule table needed. Cons: godoc does not exist at runtime (driver 4); the generator lives in the daemon module as a separate command anyway.
 
-4. **Описывать контракт в OpenAPI и генерировать обе стороны.** Преимущества: одна спецификация, инструменты готовые. Недостатки: появляется третье описание контракта, которое тоже пишется руками и тоже расходится с кодом; в демон приезжает генератор и его зависимости (критерий 3); объём работы несопоставим с шестью ручками.
+4. **Describe the contract in OpenAPI and generate both sides.** Pros: one specification, ready-made tools. Cons: a third description of the contract appears, which is also written by hand and also drifts from the code; the generator and its dependencies come into the daemon (driver 3); the amount of work is out of proportion to six endpoints.
 
-5. **Оставить рукописные схемы, сверять контрактным тестом по golden-JSON.** Преимущества: ничего не генерируется, диффы маленькие. Недостатки: тест ловит расхождение только на тех полях, что попали в фикстуру, и молчит про новые (критерий 1); знание из godoc не переносится (критерий 4).
+5. **Keep handwritten schemas and check them with a golden-JSON contract test.** Pros: nothing is generated, diffs are small. Cons: the test catches a mismatch only on the fields that made it into the fixture and is silent about new ones (driver 1); knowledge from godoc is not carried over (driver 4).
 
-## Принятое решение
+## Decision outcome
 
-Схемы контракта демона генерируются командой `apps/metaboxd/cmd/contractgen` разбором исходников:
+The daemon contract schemas are generated by the `apps/metaboxd/cmd/contractgen` command by parsing sources:
 
-- **Граница контракта** — пакет `internal/contract`: формы ответов HTTP объявлены там экспортированными типами, а хендлеры их используют. Приватная структура хендлера контрактом не является и в генерацию не попадает.
-- **Вход** — `internal/contract`, плюс формы потока (`internal/events`) и объяснение маршрута (`internal/route`), которые демон отдаёт целиком. Доменные типы, на которые ссылается контракт (`apply.Transaction`, `config.Version`), генератор подгружает сам.
-- **Выход** — `apps/web/src/shared/api/daemon.generated.ts`: схемы `z.object`, типы через `z.infer` и godoc полей в JSDoc. Схемы описывают форму и не переводят её — перевод остаётся в адаптерах слайсов (ADR-0005).
-- **Сборка** — `make schema-daemon`. Артефакт коммитится вместе с правкой демона, это проверяет хук `generated-contract`; свежесть проверяет и тест генератора.
-- **Незнакомый тип** останавливает генерацию: правило для типа стандартной библиотеки добавляется в таблицу `types.go`, молчаливой заглушки нет.
-- **Границы**: контракт лежит в `shared`, поэтому виден всем слоям по построению; импортировать его разрешено только `api`-сегментам слайсов — это проверяет правило `fsd/boundaries`.
+- **Contract boundary**: the `internal/contract` package: HTTP response shapes are declared there as exported types, and the handlers use them. A handler's private struct is not a contract and does not get into generation.
+- **Input**: `internal/contract`, plus the stream shapes (`internal/events`) and the route explanation (`internal/route`), which the daemon returns whole. The generator loads the domain types the contract refers to (`apply.Transaction`, `config.Version`) itself.
+- **Output**: `apps/web/src/shared/api/daemon.generated.ts`: `z.object` schemas, types through `z.infer` and field godoc in JSDoc. The schemas describe the shape and do not translate it: translation stays in the slices' adapters (ADR-0005).
+- **Build**: `make schema-daemon`. The artifact is committed together with the daemon edit, which the `generated-contract` hook checks; the generator's test also checks freshness.
+- **An unfamiliar type** stops generation: a rule for a standard library type is added to the `types.go` table, and there is no silent placeholder.
+- **Boundaries**: the contract lives in `shared`, so it is visible to all layers by construction; only the slices' `api` segments are allowed to import it, which the `fsd/boundaries` rule checks.
 
-Формы ручек Clash API, которые демон проксирует дословно, остаются рукописными: Go-типов для них у демона нет.
+The shapes of the Clash API endpoints that the daemon proxies verbatim stay handwritten: the daemon has no Go types for them.
 
-## Последствия
+## Consequences
 
-### Положительные
+### Positive
 
-- У контракта есть явная граница в демоне: что именно обещано панели, видно по одному пакету, а не по приватным структурам шести хендлеров.
-- Изменение контракта доходит до панели пересборкой артефакта, а расхождение проявляется ошибкой типов на сборке фронта.
-- В панель приезжает godoc контракта: у полей появились описания, которых в рукописных схемах не было.
-- Необязательность полей больше не воспроизводится по памяти: `omitempty` и указатель дают `.optional()` автоматически. При переезде это уже исправило две ошибки — `chain.nodes` и `rules` были объявлены необязательными, хотя демон отдаёт их всегда.
+- The contract has an explicit boundary in the daemon: what exactly is promised to the panel is visible from one package, not from the private structs of six handlers.
+- A contract change reaches the panel by rebuilding the artifact, and a mismatch shows up as a type error in the frontend build.
+- The contract's godoc comes into the panel: fields got descriptions the handwritten schemas did not have.
+- Field optionality is no longer reproduced from memory: `omitempty` and a pointer give `.optional()` automatically. During the move this already fixed two errors: `chain.nodes` and `rules` were declared optional, although the daemon always returns them.
 
-### Отрицательные
+### Negative
 
-- Сборка фронта получает зависимость от Go-тулчейна: разработчик, который правит только панель, не может пересобрать контракт.
-- Разбор синтаксиса не знает типов, поэтому псевдонимы из чужих пакетов описываются таблицей вручную.
-- Формы ответов больше не объявлены рядом с хендлером, который их отдаёт: чтобы увидеть ответ ручки целиком, нужно открыть второй файл.
-- Артефакт шумит в diff целиком, как и схема конфига.
+- The frontend build gets a dependency on the Go toolchain: a developer who edits only the panel cannot rebuild the contract.
+- Syntax parsing does not know types, so aliases from other packages are described in a table by hand.
+- Response shapes are no longer declared next to the handler that returns them: to see an endpoint's response in full, a second file has to be opened.
+- The artifact is noisy in diffs as a whole, like the config schema.
 
-### Нейтральные или отложенные
+### Neutral or deferred
 
-- Перенос godoc в JSDoc сделан для контракта демона, но не для схемы конфига: `generated.ts` по-прежнему без описаний полей, и авторендерер строит формы без подписей. Это отдельная работа в `tools/schemagen`.
+- Carrying godoc over to JSDoc is done for the daemon contract but not for the config schema: `generated.ts` still has no field descriptions, and the autorenderer builds forms without labels. This is separate work in `tools/schemagen`.
 
-## Риски и меры снижения
+## Risks and mitigations
 
-| Риск                                    | Вероятность и влияние    | Митигация                                                                                                           |
-| --------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------- |
-| Артефакт закоммичен несвежим            | Средняя, среднее влияние | Хук `generated-contract` требует правку демона в том же коммите, тест `TestGeneratedFileIsFresh` сверяет содержимое |
-| Новый тип поля печатается неверно       | Низкая, высокое влияние  | Незнакомый тип останавливает генерацию; таблица правил покрыта тестом на смешанном нейминге и `omitempty`           |
-| Контракт утечёт в экраны мимо адаптеров | Средняя, среднее влияние | Правило `fsd/boundaries` разрешает импорт только `api`-сегментам; нарушение валит линт                              |
+| Risk                                               | Likelihood and impact | Mitigation                                                                                                                              |
+| -------------------------------------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| The artifact is committed stale                    | Medium, medium impact | The `generated-contract` hook requires the daemon edit in the same commit, and the `TestGeneratedFileIsFresh` test compares the content |
+| A new field type is printed wrongly                | Low, high impact      | An unfamiliar type stops generation; the rule table is covered by a test on mixed naming and `omitempty`                                |
+| The contract leaks into screens bypassing adapters | Medium, medium impact | The `fsd/boundaries` rule allows imports only from `api` segments; a violation fails the lint                                           |
 
-## Совместимость, миграция и откат
+## Compatibility, migration and rollback
 
-Форма ответов по проводу не меняется — меняется, где она объявлена в демоне и откуда панель берёт её описание. Рукописные схемы `entities/{Route,Config,Daemon,Connection}` заменены реэкспортом генерируемых, адаптеры и тесты остались на месте.
+The wire shape of the responses does not change: what changes is where it is declared in the daemon and where the panel gets its description. The handwritten schemas of `entities/{Route,Config,Daemon,Connection}` are replaced with a re-export of the generated ones; adapters and tests stay in place.
 
-Откат: вернуть объявления форм в хендлеры, рукописные схемы — в `api`-сегменты, и удалить команду вместе с целью `make schema-daemon`.
+Rollback: move the shape declarations back into the handlers and the handwritten schemas back into the `api` segments, and remove the command together with the `make schema-daemon` target.
 
-## Проверка решения
+## Validation
 
-- `make schema-daemon` печатает артефакт; повторный прогон даёт тот же файл (`TestGenerateIsStable`).
-- `go test ./cmd/contractgen` проверяет перевод типов на пакете из `testdata`: уже-camel тег, аббревиатура, `omitempty`, указатель, вложенная структура, словарь, `time.Duration`, `json.RawMessage`.
-- `TestGenerateContract` снимает контракт самого демона и проверяет, что в нём есть формы, на которых стоит панель.
-- `pnpm --filter web build` ловит расхождение схем с кодом панели типами.
+- `make schema-daemon` prints the artifact; a repeated run gives the same file (`TestGenerateIsStable`).
+- `go test ./cmd/contractgen` checks type translation on a package from `testdata`: an already camelCase tag, an abbreviation, `omitempty`, a pointer, a nested struct, a map, `time.Duration`, `json.RawMessage`.
+- `TestGenerateContract` takes the daemon's own contract and checks that it has the shapes the panel relies on.
+- `pnpm --filter web build` catches schema mismatches with the panel code through types.
 
-## Ссылки
+## Links
 
-- [ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md) — генерация схемы конфига из форка;
-- [ADR-0005](./ADR-0005-keep-foreign-api-adapters-in-the-api-segment.md) — где живут схема и адаптер;
-- [ADR-0006](./ADR-0006-read-runtime-from-clash-api-and-optional-grpc.md) — почему формы Clash API остаются рукописными.
+- [ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md): generating the config schema from the fork;
+- [ADR-0005](./ADR-0005-keep-foreign-api-adapters-in-the-api-segment.md): where the schema and the adapter live;
+- [ADR-0006](./ADR-0006-read-runtime-from-clash-api-and-optional-grpc.md): why the Clash API shapes stay handwritten.

@@ -1,106 +1,106 @@
-# Чеклист код-ревью
+# Code review checklist
 
-Правила [Архитектуры и стайлгайда](./Architecture&Style.md), сведённые в проверяемый список. Исключение фиксируется комментарием в коде.
+The rules of the [Architecture and style guide](./Architecture&Style.md), collected into a checklist. An exception is recorded with a comment in the code.
 
-Только то, что проверяет человек. Границы слоёв, нейминг файлов и папок, `any`, небезопасные касты, висящие промисы, запрещённые типы, классы Tailwind, корректность ролей и подписей ARIA, деструктуризацию возврата запроса и обращение к DOM в тестах закрывает `pnpm lint`, источник правил — `apps/web/.oxlintrc.json`.
+Only what a human checks. Layer boundaries, file and folder naming, `any`, unsafe casts, floating promises, forbidden types, Tailwind classes, correctness of ARIA roles and labels, destructuring of a query result and DOM access in tests are covered by `pnpm lint`; the source of the rules is `apps/web/.oxlintrc.json`.
 
-## Архитектура
+## Architecture
 
-- [ ] В `index.ts` только реэкспорты
-- [ ] Код разложен по сегментам `ui` / `api` / `model` / `lib`
-- [ ] Родственные слайсы сгруппированы в папку
-- [ ] UI-компоненты в `shared` не имеют доменного состояния
-- [ ] Сложная логика компонента вынесена в хук: с правилом домена — в `model`, экранная композиция без доменного знания — в `lib`
-- [ ] Сценарий пользователя обрабатывает `features/*`, страница только компонует
-- [ ] Модель создаёт слайс-владелец, а не форма или компонент
-- [ ] Ветвление по типу узла сделано таблицей «тип → компонент», а не цепочкой `if`
-- [ ] Модуль без прообраза в домене лежит в `shared`, а не в `entities`
+- [ ] `index.ts` contains only re-exports
+- [ ] Code is split into the `ui` / `api` / `model` / `lib` segments
+- [ ] Related slices are grouped into a folder
+- [ ] UI components in `shared` have no domain state
+- [ ] Complex component logic is moved into a hook: with a domain rule, into `model`; screen composition without domain knowledge, into `lib`
+- [ ] A user scenario is handled by `features/*`, the page only composes
+- [ ] The model is created by the owning slice, not by a form or a component
+- [ ] Branching by node type is a "type → component" table, not an `if` chain
+- [ ] A module with no counterpart in the domain lives in `shared`, not in `entities`
 
-## Стиль
+## Style
 
-- [ ] Мемоизированный компонент имеет суффикс `Proto`, наружу уходит `memo(Proto)`
-- [ ] Константы в `SCREAMING_SNAKE_CASE`, групповые — объектом с ключами в `PascalCase`
-- [ ] Магических строк нет; повторяющееся больше двух раз вынесено в константу
-- [ ] Пользовательские логи в верхнем регистре и в скобках: `[APPLY] ...`
+- [ ] A memoized component has the `Proto` suffix, `memo(Proto)` is what is exported
+- [ ] Constants are in `SCREAMING_SNAKE_CASE`, grouped ones are an object with keys in `PascalCase`
+- [ ] No magic strings; anything repeated more than twice is moved into a constant
+- [ ] Custom logs are in upper case and in brackets: `[APPLY] ...`
 
-## Поддерживаемость
+## Maintainability
 
-- [ ] `TODO` / `FIXME` снабжены пояснением и ссылкой на задачу
-- [ ] Отключения правил линтера точечные и с причиной; каст в адаптерах закрыт `oxlint-disable-next-line` с пояснением
-- [ ] Нет заглушек, выдаваемых за реализацию: пустых веток, «пока вернём mock»
+- [ ] `TODO` / `FIXME` come with an explanation and a link to the task
+- [ ] Linter rule suppressions are targeted and have a reason; a cast in adapters is covered by `oxlint-disable-next-line` with an explanation
+- [ ] No stubs passed off as an implementation: empty branches, "return a mock for now"
 
-## Производительность
+## Performance
 
-- [ ] Вызовы функций вынесены из тела рендера
-- [ ] `memo` стоит там, где он что-то экономит (списки, узлы дерева), а не везде
-- [ ] Функции в `props` мемоизированного компонента обёрнуты в `useCallback`
-- [ ] Спред `props` осмыслен
-- [ ] Отписки выполняются в cleanup `useEffect`
+- [ ] Function calls are moved out of the render body
+- [ ] `memo` is used where it saves something (lists, tree nodes), not everywhere
+- [ ] Functions in `props` of a memoized component are wrapped in `useCallback`
+- [ ] A `props` spread is deliberate
+- [ ] Unsubscribing happens in the `useEffect` cleanup
 
-## Состояние
+## State
 
-- [ ] Стор не ходит в сеть
-- [ ] Нет подписки на весь стор целиком
-- [ ] Вычисляемое значение берётся селектором, а не вызовом экшена после подписки
-- [ ] Число выбираемых полей в компоненте разумно
-- [ ] Стор с селекторами объявлен как `*Proto`, наружу уходит результат `createReactSelectors`
-- [ ] Черновик не пополняется значениями по умолчанию
-- [ ] Нераспознанный узел сохранён без нормализации
-- [ ] Диф считается селектором, а не хранится полем
-- [ ] Снапшоты потока применяются пачкой, а не по каждому сообщению
+- [ ] The store does not go to the network
+- [ ] No subscription to the whole store
+- [ ] A computed value is taken by a selector, not by calling an action after subscribing
+- [ ] The number of selected fields in a component is reasonable
+- [ ] A store with selectors is declared as `*Proto`, the result of `createReactSelectors` is what is exported
+- [ ] The draft is not filled with default values
+- [ ] An unrecognized node is kept without normalization
+- [ ] The diff is computed by a selector, not stored in a field
+- [ ] Stream snapshots are applied in a batch, not on every message
 
-## Запросы
+## Requests
 
-- [ ] GET через `useQuery`, остальное через `useMutation`
-- [ ] fetch-функция отделена от хука и принимает `AxiosRequestConfig` с `signal`
-- [ ] `queryKey` построен фабрикой, а не литералом
-- [ ] Адрес endpoint вынесен в константу
-- [ ] Заданы `gcTime` и `staleTime`, и `gcTime` не ниже `staleTime`
-- [ ] Тип ответа передан дженериком
-- [ ] Преобразования делаются в `select`, кэш не мутируется
-- [ ] После мутации выполняется инвалидация точным ключом
-- [ ] Тексты ошибок и успеха заданы ключами неймспейса `shared` в `meta`, а не строками
-- [ ] Топик потока рантайма не обёрнут в Query; обработчик принимает `StreamSource` и возвращает функцию отписки
-- [ ] Мутации не ретраятся, Apply не повторяется автоматически
-- [ ] Опрос остановлен на скрытой вкладке
-- [ ] Недоступность демона и ошибка sing-box разведены в разные состояния экрана
+- [ ] GET goes through `useQuery`, everything else through `useMutation`
+- [ ] The fetch function is separate from the hook and takes an `AxiosRequestConfig` with `signal`
+- [ ] `queryKey` is built by a factory, not a literal
+- [ ] The endpoint address is moved into a constant
+- [ ] `gcTime` and `staleTime` are set, and `gcTime` is not lower than `staleTime`
+- [ ] The response type is passed as a generic
+- [ ] Transformations happen in `select`, the cache is not mutated
+- [ ] After a mutation, invalidation runs with an exact key
+- [ ] Error and success texts are set in `meta` as keys of the `shared` namespace, not as strings
+- [ ] A runtime stream topic is not wrapped in Query; the handler takes a `StreamSource` and returns an unsubscribe function
+- [ ] Mutations are not retried, Apply is not repeated automatically
+- [ ] Polling is stopped on a hidden tab
+- [ ] Daemon unavailability and a sing-box error are separate screen states
 
-## Формы
+## Forms
 
-- [ ] У формы есть модель, выведенная из Zod-схемы
-- [ ] `useFormContext` вызывается с дженериком модели
-- [ ] Поля зарегистрированы через `Controller`
-- [ ] Пути полей записаны точечной нотацией
-- [ ] Форма типизирована против типа узла, а не всего конфига
-- [ ] Расхождение UI и DTO разведено схемой-адаптером, а не мапингом при сабмите
-- [ ] `.transform()` не попал в генерируемую схему
-- [ ] Когда список получит форму: он собран `useFieldArray`, ключ строки — `field.id`. Сейчас списки правятся патчами документа в сторе
-- [ ] Submit не отдаёт пустые значения и дефолты
-- [ ] Raw-режим пишет изменения одним патчем, ошибка разбора не стирает текст
-- [ ] Когда появится разбор вывода `sing-box check`: разобранная ошибка поставлена на поле своего узла. Сейчас вывод показывается целиком в баре применения
+- [ ] The form has a model derived from a Zod schema
+- [ ] `useFormContext` is called with the model generic
+- [ ] Fields are registered through `Controller`
+- [ ] Field paths are written in dot notation
+- [ ] The form is typed against the node type, not the whole config
+- [ ] A mismatch between UI and DTO is resolved by an adapter schema, not by mapping on submit
+- [ ] `.transform()` did not get into a generated schema
+- [ ] When a list gets a form: it is built with `useFieldArray`, the row key is `field.id`. For now lists are edited by document patches in the store
+- [ ] Submit does not send empty values and defaults
+- [ ] Raw mode writes changes as one patch, a parse error does not erase the text
+- [ ] When parsing of `sing-box check` output appears: a parsed error is attached to the field of its node. For now the output is shown in full in the apply bar
 
-## Тексты
+## Texts
 
-- [ ] Новый текст лежит в `i18n` своего слайса, а не строкой в коде
-- [ ] Компонент зовёт `useTranslation` со своим неймспейсом
-- [ ] Текст тоста лежит в неймспейсе `shared`, а не в словаре слайса
-- [ ] Новый неймспейс догружается лоадером маршрута или входом приложения
-- [ ] Числительное собрано плюрализацией i18next, а не выбором формы в коде
-- [ ] Фраза с разметкой собрана `<Trans>`, а не склейкой нескольких `t()`
-- [ ] Новый текст добавлен во все языки: расхождение ключей валит сборку
+- [ ] New text lives in the `i18n` of its slice, not as a string in code
+- [ ] The component calls `useTranslation` with its own namespace
+- [ ] Toast text lives in the `shared` namespace, not in the slice dictionary
+- [ ] A new namespace is loaded by the route loader or the app entry
+- [ ] A numeral is built with i18next pluralization, not by choosing the form in code
+- [ ] A phrase with markup is built with `<Trans>`, not by gluing several `t()` together
+- [ ] New text is added to all languages: a key mismatch fails the build
 
-## Стили
+## Styles
 
-- [ ] Условные классы собираются через `cn()`
-- [ ] Варианты компонента заданы через `cva`
-- [ ] Изображения responsive
-- [ ] Новых `.css` файлов не появилось
+- [ ] Conditional classes are built with `cn()`
+- [ ] Component variants are defined with `cva`
+- [ ] Images are responsive
+- [ ] No new `.css` files appeared
 
-## Тесты
+## Tests
 
-- [ ] Тест проверяет поведение, а не реализацию
-- [ ] Тест изолирован: свой `QueryClient`, сброшенный стор, очищенные моки
-- [ ] Для новой Zod-схемы есть позитивные и негативные кейсы
-- [ ] Изменение в адаптерах сопровождается golden round-trip фикстурой
-- [ ] Таймеры в тестах фейковые, реальных задержек нет
-- [ ] Виртуализованный список тестируется с моком размеров
+- [ ] The test checks behaviour, not implementation
+- [ ] The test is isolated: its own `QueryClient`, a reset store, cleared mocks
+- [ ] A new Zod schema has positive and negative cases
+- [ ] A change in adapters comes with a golden round-trip fixture
+- [ ] Timers in tests are fake, there are no real delays
+- [ ] A virtualized list is tested with a size mock

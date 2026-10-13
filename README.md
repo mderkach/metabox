@@ -83,7 +83,7 @@ The package also ships its own sing-box service and LAN interception (nftables, 
 
 ## Installation
 
-Prebuilt packages are not published yet. To build the package from source and install it on the router, see [`docs/Development.md`](./docs/Development.md) (Russian).
+Prebuilt packages are not published yet. To build the package from source and install it on the router, see [`docs/Development.md`](./docs/Development.md).
 
 The package depends on `sing-box-extended`, which brings its own `sing-box` service. Disable it: sing-box is started by the metabox service.
 
@@ -155,8 +155,6 @@ apk del metaboxd
 Stopping `metabox-singbox` removes interception: nftables rules, `ip rule` and the dnsmasq fragment. After removal sing-box is not running; enable the fork's service or homeproxy if you need it.
 
 ## Documentation
-
-Project documentation is in Russian.
 
 - [`docs/PRD.md`](./docs/PRD.md): requirements, acceptance criteria, milestones
 - [`docs/adr/`](./docs/adr/README.md): architecture decisions

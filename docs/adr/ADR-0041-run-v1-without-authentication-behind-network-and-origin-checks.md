@@ -1,84 +1,84 @@
-# ADR-0041. Обходиться в v1 без аутентификации и закрывать панель сетью и проверкой `Origin`/`Host`
+# ADR-0041. Do without authentication in v1 and protect the panel by the network and the `Origin`/`Host` check
 
-- Статус: Accepted — решение принято 2026-08-30 в разделе A.6 [`../PRD.md`](../PRD.md) и перенесено сюда без изменения существа
-- Дата: 2026-08-30
-- Ответственные: владелец репозитория
-- Заменяет: раздел A.6 [`../PRD.md`](../PRD.md)
+- Status: Accepted. The decision was made on 2026-08-30 in section A.6 of [`../PRD.md`](../PRD.md) and moved here without changes in substance
+- Date: 2026-08-30
+- Deciders: repository owner
+- Supersedes: section A.6 of [`../PRD.md`](../PRD.md)
 
-## Контекст и постановка проблемы
+## Context and problem statement
 
-Панель управляет маршрутизацией всей сети роутера. Нужно решить, кто к ней допускается в v1.
+The panel controls routing for the router's whole network. It has to be decided who is allowed into it in v1.
 
-Ответ владельца в интервью `metabox-di-001`, Round 8: «Без аутентификации в v1». Это осознанный риск R-1: любое устройство в LAN — гостевой Wi-Fi, IoT, скомпрометированный клиент — получает полный контроль над маршрутизацией и может незаметно завернуть трафик через свой outbound. Отдельно — CSRF: злонамеренная веб-страница в браузере владельца способна слать запросы на адрес панели без всякого пароля.
+The owner's answer in interview `metabox-di-001`, Round 8: "No authentication in v1." This is the accepted risk R-1: any device in the LAN (guest Wi-Fi, IoT, a compromised client) gets full control over routing and can silently send traffic through its own outbound. Separately there is CSRF: a malicious web page in the owner's browser can send requests to the panel address without any password.
 
-В scope: модель доступа v1 и обязательные митигации. Вне scope: HTTPS и внешний доступ — пункт roadmap после v1.
+In scope: the v1 access model and mandatory mitigations. Out of scope: HTTPS and external access, a roadmap item after v1.
 
-## Критерии выбора
+## Decision drivers
 
-- Объём ядра v1: аутентификация не входит в сценарии M1.
-- Панель недоступна снаружи (AC-18).
-- Сторонняя страница в браузере владельца не может изменить конфиг (AC-19).
-- Риск назван владельцу явно, а не скрыт.
+- The size of the v1 core: authentication is not part of the M1 scenarios.
+- The panel is not reachable from outside (AC-18).
+- A third-party page in the owner's browser cannot change the config (AC-19).
+- The risk is named to the owner explicitly rather than hidden.
 
-## Рассмотренные варианты
+## Considered options
 
-1. **Логин, пароль и сессии в v1.** Закрывает R-1, но добавляет в ядро хранение учётных данных, сессии и их восстановление при потере пароля. Отложено владельцем: аутентификация — первый пункт roadmap после v1. **Отклонён для v1.**
-2. **Без аутентификации и без митигаций.** Панель открыта CSRF со сторонних страниц и любому, кто дотянулся до адреса. **Отклонён.**
-3. **Без аутентификации, с обязательными митигациями.** **Принят.**
+1. **Login, password and sessions in v1.** Closes R-1, but adds credential storage, sessions and their recovery on password loss to the core. Deferred by the owner: authentication is the first roadmap item after v1. **Rejected for v1.**
+2. **No authentication and no mitigations.** The panel is open to CSRF from third-party pages and to anyone who reaches the address. **Rejected.**
+3. **No authentication, with mandatory mitigations.** **Chosen.**
 
-## Принятое решение
+## Decision outcome
 
-**Аутентификации в v1 нет.** Обязательные митигации:
+**There is no authentication in v1.** Mandatory mitigations:
 
-- bind строго на LAN-интерфейс, **не** на `0.0.0.0`;
-- проверка заголовков `Origin`/`Host` на всех мутирующих запросах;
-- явное предупреждение в README;
-- аутентификация — первый пункт roadmap после v1.
+- bind strictly to the LAN interface, **not** to `0.0.0.0`;
+- check the `Origin`/`Host` headers on all mutating requests;
+- an explicit warning in the README;
+- authentication is the first roadmap item after v1.
 
-### Область действия и границы
+### Scope and boundaries
 
-Как митигации выполнены сейчас:
+How the mitigations are implemented today:
 
-- Демон слушает адреса сетей из `listen_interface` в `/etc/config/metabox`, по умолчанию только `lan`; `0.0.0.0` в значении по умолчанию не появляется. AC-18 расширил «LAN-интерфейс» до всех локальных сетей, включая гостевые, — какие из них открыты, решает владелец на устройстве ([HTTPAPI](../../apps/metaboxd/docs/guides/HTTPAPI.md), раздел «Сервер и таймауты»).
-- На мутирующих запросах хост из `Origin` обязан совпадать с `Host`, запрос без `Origin` отклоняется. Проверка `Host` стоит на всех запросах — защита от DNS rebinding. Послабление — только флагом `-allowed-origin` ([HTTPAPI](../../apps/metaboxd/docs/guides/HTTPAPI.md), раздел «Проверка источника»).
-- Предупреждение — во втором абзаце [`README.md`](../../README.md).
-- Служба не стартует сама при установке пакета ([ADR-0011](./ADR-0011-ship-the-daemon-as-an-apk-package.md)).
+- The daemon listens on the addresses of the networks from `listen_interface` in `/etc/config/metabox`, by default only `lan`; `0.0.0.0` does not appear in the default value. AC-18 extended "LAN interface" to all local networks, including guest ones; which of them are open is decided by the owner on the device ([HTTPAPI](../../apps/metaboxd/docs/guides/HTTPAPI.md), section "Server and timeouts").
+- On mutating requests the host from `Origin` has to match `Host`; a request without `Origin` is rejected. The `Host` check is on all requests, as protection against DNS rebinding. Relaxation is possible only with the `-allowed-origin` flag ([HTTPAPI](../../apps/metaboxd/docs/guides/HTTPAPI.md), section "Origin check").
+- The warning is in the second paragraph of [`README.md`](../../README.md).
+- The service does not start by itself when the package is installed ([ADR-0011](./ADR-0011-ship-the-daemon-as-an-apk-package.md)).
 
-## Последствия
+## Consequences
 
-### Положительные
+### Positive
 
-- Ядро v1 не тратится на учётные записи; CSRF и DNS rebinding закрыты без них.
+- The v1 core is not spent on user accounts; CSRF and DNS rebinding are closed without them.
 
-### Отрицательные
+### Negative
 
-- Любое устройство в открытых панели сетях управляет маршрутизацией всей сети. Гостевая сеть в `listen_interface` расширяет этот круг на гостей.
-- По DNS-имени роутера панель не отвечает, пока имя не разрешено флагом `-allowed-origin`.
+- Any device in the networks open to the panel controls routing for the whole network. A guest network in `listen_interface` extends this circle to guests.
+- The panel does not answer on the router's DNS name until the name is allowed with the `-allowed-origin` flag.
 
-### Нейтральные или отложенные
+### Neutral or deferred
 
-- Аутентификация, HTTPS и безопасный внешний доступ — roadmap после v1.
+- Authentication, HTTPS and secure external access are on the roadmap after v1.
 
-## Риски и меры снижения
+## Risks and mitigations
 
-| Риск                                                    | Вероятность и влияние | Митигация                                                                      |
-| ------------------------------------------------------- | --------------------- | ------------------------------------------------------------------------------ |
-| Устройство в LAN меняет маршрутизацию (R-1)             | влияние высокое (R-1) | доступ только из сетей `listen_interface`, предупреждение в README             |
-| Сторонняя страница шлёт мутирующий запрос (CSRF)        | влияние высокое       | проверка `Origin`/`Host`, запрос без `Origin` отклоняется, CORS-заголовков нет |
-| Домен атакующего перекинут на адрес роутера (rebinding) | влияние высокое       | проверка `Host` на всех запросах                                               |
+| Risk                                                               | Probability and impact | Mitigation                                                                     |
+| ------------------------------------------------------------------ | ---------------------- | ------------------------------------------------------------------------------ |
+| A device in the LAN changes routing (R-1)                          | high impact (R-1)      | access only from `listen_interface` networks, a warning in the README          |
+| A third-party page sends a mutating request (CSRF)                 | high impact            | `Origin`/`Host` check, a request without `Origin` is rejected, no CORS headers |
+| The attacker's domain is pointed at the router address (rebinding) | high impact            | `Host` check on all requests                                                   |
 
-## Совместимость, миграция и откат
+## Compatibility, migration and rollback
 
-Не применимо: решение действует с начала проекта и переносится из PRD без изменения существа. Появление аутентификации — отдельный ADR.
+Not applicable: the decision has been in effect since the start of the project and is moved from the PRD without changes in substance. Introducing authentication is a separate ADR.
 
-## Проверка решения
+## Validation
 
-- AC-19: тесты `internal/httpapi` отклоняют мутирующий запрос с чужим `Origin`/`Host`.
-- AC-18: `make reach-check` — панель отвечает из локальных сетей стенда и не отвечает из внешней.
+- AC-19: the `internal/httpapi` tests reject a mutating request with a foreign `Origin`/`Host`.
+- AC-18: `make reach-check`: the panel answers from the test bench's local networks and does not answer from the external one.
 
-## Ссылки
+## Links
 
-- [`../PRD.md`](../PRD.md): AC-18, AC-19, риск R-1, раздел 9, roadmap после v1, раздел A.6 (замещается этим ADR);
-- [HTTPAPI](../../apps/metaboxd/docs/guides/HTTPAPI.md) — проверка источника и адреса прослушивания;
-- [ADR-0011](./ADR-0011-ship-the-daemon-as-an-apk-package.md), [ADR-0023](./ADR-0023-build-the-bench-from-the-device-firmware.md) — пакет и стенд с проводной, гостевой и внешней сетью;
-- [`../../apps/metaboxd/internal/httpapi`](../../apps/metaboxd/internal/httpapi) — реализация.
+- [`../PRD.md`](../PRD.md): AC-18, AC-19, risk R-1, section 9, the roadmap after v1, section A.6 (superseded by this ADR);
+- [HTTPAPI](../../apps/metaboxd/docs/guides/HTTPAPI.md): the origin check and listen addresses;
+- [ADR-0011](./ADR-0011-ship-the-daemon-as-an-apk-package.md), [ADR-0023](./ADR-0023-build-the-bench-from-the-device-firmware.md): the package and the test bench with wired, guest and external networks;
+- [`../../apps/metaboxd/internal/httpapi`](../../apps/metaboxd/internal/httpapi): the implementation.

@@ -1,8 +1,8 @@
-# HTTP-слой демона
+# Daemon HTTP layer
 
-Только `net/http`. Роутер стандартной библиотеки с Go 1.22 умеет методы и wildcards, а middleware — обычная функция `func(http.Handler) http.Handler`; chi, gorilla и фреймворки не дают ничего, чего здесь не хватает, и стоят зависимости в артефакте.
+Only `net/http`. Since Go 1.22 the standard library router supports methods and wildcards, and middleware is a plain `func(http.Handler) http.Handler` function; chi, gorilla and frameworks give nothing that is missing here, and they cost a dependency in the artifact.
 
-## Роутинг
+## Routing
 
 ```go
 func (s *Server) routes() http.Handler {
@@ -21,33 +21,33 @@ func (s *Server) routes() http.Handler {
 }
 ```
 
-Ручки рантайма — поток, состояние службы, история, прокси Clash API — регистрируются условно, по собранным зависимостям, а не заводятся заглушками.
+Runtime endpoints (the stream, service state, history, the Clash API proxy) are registered conditionally, depending on the wired dependencies, not added as stubs.
 
-Метод в шаблоне обязателен: без него на `POST` ответит хендлер, написанный под `GET`. Параметр берётся `r.PathValue("id")`. Ручки API — под `/api/`, всё остальное отдаёт SPA.
+The method in the pattern is mandatory: without it a handler written for `GET` answers `POST`. The parameter is read with `r.PathValue("id")`. API endpoints are under `/api/`, everything else serves the SPA.
 
-Отказ цикла несёт код шага: `Transaction.ReasonCode` говорит, на чём встало применение, `Reason` — исходную ошибку шага. Текст пользователю выбирает панель по коду ([ADR-0022](../../../../docs/adr/ADR-0022-report-the-apply-failure-step-as-a-code.md)).
+A failed cycle carries the step code: `Transaction.ReasonCode` says where the apply stopped, `Reason` holds the step's original error. The panel picks the text for the user by the code ([ADR-0022](../../../../docs/adr/ADR-0022-report-the-apply-failure-step-as-a-code.md)).
 
-Набор ручек Apply не переизобретается по ходу: `POST /api/apply`, `GET /api/apply/{id}`, `POST /api/apply/{id}/confirm`, ссылка на активную транзакцию в `GET /api/status`.
+The set of Apply endpoints is not reinvented along the way: `POST /api/apply`, `GET /api/apply/{id}`, `POST /api/apply/{id}/confirm`, a link to the active transaction in `GET /api/status`.
 
-Модель сетевой обвязки меняется тем же протоколом и ручками того же вида: `PUT /api/dataplane` с телом `{model}` — форма поля `model` из `GET /api/dataplane`, модель целиком — отдаёт 202 и транзакцию `apply.Transaction`; `GET /api/dataplane/apply/{id}` — её состояние; `POST /api/dataplane/apply/{id}/confirm` — подтверждение. Ссылка на неё — `dataplane_transaction_href` в `GET /api/status`. Невалидная модель — 422 `dataplane_invalid` с полями, тело не JSON — 400 с тем же кодом, идущее применение конфига — 409 `apply_in_progress`, и наоборот; демон на чужом init-скрипте — 409 `dataplane_foreign_service`, и `GET /api/dataplane` предупреждает об этом заранее полем `foreign_service`, по которому панель не предлагает смену. `GET /api/dataplane` отдаёт `ETag` — `sha256` снимка секции UCI, — и `PUT` обязан вернуть его в `If-Match`: без заголовка — 428, секция изменилась после чтения — 412, оба с кодом `dataplane_modified`; `*` — смена без сверки. В отличие от `POST /api/apply`, заголовок обязателен: у конфига без него остаётся сверка с тем, что записал сам демон, у секции UCI такой базы нет. Адрес клиента для предупреждения о выводе администратора из перехвата хендлер берёт из `RemoteAddr`: за прокси дев-сервера там адрес прокси. Протокол — [DeviceIO](./DeviceIO.md), «Смена модели».
+The dataplane model is changed by the same protocol and endpoints of the same shape: `PUT /api/dataplane` with the body `{model}` (the shape of the `model` field from `GET /api/dataplane`, the whole model) returns 202 and an `apply.Transaction`; `GET /api/dataplane/apply/{id}` returns its state; `POST /api/dataplane/apply/{id}/confirm` confirms it. The link to it is `dataplane_transaction_href` in `GET /api/status`. An invalid model is 422 `dataplane_invalid` with fields, a non-JSON body is 400 with the same code, a config apply in progress is 409 `apply_in_progress`, and vice versa; a daemon on a foreign init script is 409 `dataplane_foreign_service`, and `GET /api/dataplane` warns about it in advance with the `foreign_service` field, by which the panel does not offer a change. `GET /api/dataplane` returns an `ETag`, the `sha256` of the UCI section snapshot, and `PUT` must return it in `If-Match`: without the header 428, section changed after reading 412, both with the code `dataplane_modified`; `*` means a change without comparison. Unlike `POST /api/apply`, the header is mandatory: for the config, without it there is still the comparison with what the daemon itself wrote, while the UCI section has no such base. The handler takes the client address for the warning about removing the administrator from interception from `RemoteAddr`: behind the dev server proxy it holds the proxy address. Protocol: [DeviceIO](./DeviceIO.md), "Model change".
 
-Записи конфига отдельной ручкой нет и не будет: `GET /api/config` отдаёт применённый конфиг, а пишет его только протокол Apply. `PUT` в обход `sing-box check`, бэкапа и окна подтверждения обошёл бы и гарантию отката.
+There is no separate endpoint for writing the config, and there will not be one: `GET /api/config` returns the applied config, and only the Apply protocol writes it. A `PUT` bypassing `sing-box check`, the backup and the confirmation window would also bypass the rollback guarantee.
 
-Правки извне ловятся оптимистичной блокировкой: `GET /api/config` отдаёт `ETag` — `sha256` отданных байт, — а `POST /api/apply` принимает его в `If-Match` и отклоняет применение поверх изменившегося файла кодом `config_modified` (409). Сверку с базой клиента выполняет `apply.Manager`, а не хендлер.
+External edits are caught by optimistic locking: `GET /api/config` returns an `ETag`, the `sha256` of the returned bytes, and `POST /api/apply` takes it in `If-Match` and rejects an apply on top of a changed file with the code `config_modified` (409). The comparison with the client's base is done by `apply.Manager`, not by the handler.
 
-## Формы ответов
+## Response shapes
 
-Тело, которое ручка отдаёт наружу, объявляется в `internal/contract` экспортированным типом, а не приватной структурой рядом с хендлером. По этим типам панель строит схемы, и контракт обязан быть объявлен явно: приватное поле переименовывается без обязательств, а обещание клиенту — нет.
+A body that an endpoint returns is declared in `internal/contract` as an exported type, not as a private struct next to the handler. The panel builds its schemas from these types, and the contract must be declared explicitly: a private field gets renamed with no obligations, a promise to the client does not.
 
-Доменный тип, который уходит в ответ целиком — `apply.Transaction`, `config.Version`, `route.Explanation`, — остаётся в своём пакете: `contract` на него ссылается, а не копирует.
+A domain type that goes into a response as a whole (`apply.Transaction`, `config.Version`, `route.Explanation`) stays in its package: `contract` references it, it does not copy it.
 
-## Хендлеры
+## Handlers
 
-Хендлер — метод структуры с зависимостями, тонкий: разобрать запрос, вызвать предметный код, отдать ответ. Дисковых операций, `exec` и таймеров в нём нет.
+A handler is a method of the struct with dependencies, and it is thin: parse the request, call the domain code, write the response. It has no disk operations, `exec` or timers.
 
 ```go
 func (s *Server) handleApply(w http.ResponseWriter, r *http.Request) {
-	// Тело читается под http.MaxBytesReader: конфиг и, в конверте, файлы списков.
+	// The body is read under http.MaxBytesReader: the config and, in the envelope, the list files.
 	cfg, lists, listsBase, err := readApplyBody(w, r)
 	if err != nil {
 		fail(s.log, w, r, err)
@@ -64,15 +64,15 @@ func (s *Server) handleApply(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-`r.Context()` уходит в предметный код — при обрыве соединения отменяются и его шаги. Исключение — цикл применения: он переживает запрос, поэтому получает собственный контекст, а не контекст запроса.
+`r.Context()` goes into the domain code: when the connection drops, its steps are cancelled too. The exception is the apply cycle: it outlives the request, so it gets its own context, not the request context.
 
-Тело запроса всегда ограничено `http.MaxBytesReader`: конфиг приходит байтами, и без лимита один запрос забирает столько памяти, сколько прислали.
+The request body is always limited by `http.MaxBytesReader`: the config arrives as bytes, and without a limit one request takes as much memory as was sent.
 
-Ответы пишет один хелпер: код, `Content-Type`, кодирование. Формат ошибки — единый, из [ErrorsAndLogging](./ErrorsAndLogging.md).
+Responses are written by one helper: status, `Content-Type`, encoding. The error format is single, from [ErrorsAndLogging](./ErrorsAndLogging.md).
 
 ## Middleware
 
-Цепочка собирается один раз, порядок — снаружи внутрь:
+The chain is assembled once, the order is outside in:
 
 ```go
 func (s *Server) middleware(next http.Handler) http.Handler {
@@ -83,17 +83,17 @@ func (s *Server) middleware(next http.Handler) http.Handler {
 }
 ```
 
-`recoverPanic` снаружи — иначе паника в логировании уронит процесс. Каждая обёртка делает одно и тестируется отдельно. Аутентификации в демоне нет, поэтому проверка источника — единственная защита мутирующих запросов.
+`recoverPanic` is outermost, otherwise a panic in logging brings the process down. Each wrapper does one thing and is tested separately. The daemon has no authentication, so the origin check is the only protection of mutating requests.
 
-## Проверка источника
+## Origin check
 
-Правило обсуждению в коде не подлежит: на мутирующих запросах хост из `Origin` обязан совпадать с `Host`, запрос без `Origin` отклоняется. Флаг `-allowed-origin` добавляет разрешённое значение; стенд его не использует — дев-сервер подставляет демону его собственный `Origin` ([`apps/web/vite.config.ts`](../../../../apps/web/vite.config.ts)).
+The rule is not open for discussion in code: on mutating requests the host from `Origin` must match `Host`, a request without `Origin` is rejected. The `-allowed-origin` flag adds an allowed value; the test bench does not use it: the dev server passes the daemon its own `Origin` ([`apps/web/vite.config.ts`](../../../../apps/web/vite.config.ts)).
 
-Вторая проверка — `Host`, и она стоит на всех запросах, не только мутирующих: демон отвечает, только когда там IP-литерал, `localhost` или хост из `-allowed-origin`. Это защита от DNS rebinding: домен атакующего, перекинутый на адрес роутера, для его страницы same-origin — проверка `Origin` такой запрос пропускает, а читать ответы браузер разрешает. Обратная сторона: по DNS-имени роутера панель не отвечает, пока имя не разрешено флагом.
+The second check is `Host`, and it applies to all requests, not only mutating ones: the daemon answers only when it holds an IP literal, `localhost` or the host from `-allowed-origin`. This protects against DNS rebinding: an attacker's domain re-pointed to the router address is same-origin for the attacker's page, the `Origin` check lets such a request through, and the browser allows reading the responses. The downside: the panel does not answer on the router's DNS name until the name is allowed by the flag.
 
-CORS-заголовки демон не отдаёт: UI живёт на том же origin, а разрешать чужие — значит открыть панель стороннему сайту. Это касается и прокси Clash API: заголовки `Access-Control-*` контроллера срезаются из ответа — форк при незаданном `access_control_allow_origin` отвечает `*`, и пропустить это наружу значит отдать ветку, авторизованную секретом, любому сайту.
+The daemon sends no CORS headers: the UI lives on the same origin, and allowing others means opening the panel to a third-party site. This also applies to the Clash API proxy: the controller's `Access-Control-*` headers are stripped from the response, because with `access_control_allow_origin` unset the fork answers `*`, and passing that on would hand the secret-authorized branch to any site.
 
-## Сервер и таймауты
+## Server and timeouts
 
 ```go
 srv := &http.Server{
@@ -106,13 +106,13 @@ srv := &http.Server{
 }
 ```
 
-`WriteTimeout` глобально не ставим: он режет долгие ответы — прокси Clash API и поток `GET /api/events`. Дедлайн задаётся точечно на конкретном ответе через `http.NewResponseController(w).SetWriteDeadline(...)`.
+We do not set `WriteTimeout` globally: it cuts long responses, the Clash API proxy and the `GET /api/events` stream. A deadline is set selectively on a specific response with `http.NewResponseController(w).SetWriteDeadline(...)`.
 
-Слушаем сети владельца и только их. Адреса приходят флагом `-listen` списком через запятую, на каждый открывается свой слушатель одного `http.Server`; `0.0.0.0` в значении по умолчанию не появляется. Какие это сети, решает устройство: init-скрипт пакета берёт адрес у каждой сети из `listen_interface` в `/etc/config/metabox` и перезапускает демона по триггеру любой из них.
+We listen on the owner's networks and only on them. Addresses come from the `-listen` flag as a comma-separated list, and each one gets its own listener of one `http.Server`; `0.0.0.0` does not appear in the default value. Which networks these are is decided by the device: the package's init script takes the address of each network from `listen_interface` in `/etc/config/metabox` and restarts the daemon on a trigger from any of them.
 
-Адрес, который не открылся, демона не останавливает — у роутера интерфейсы поднимаются вразнобой, и гостевая сеть может появиться позже панели. Такой отказ уходит в лог предупреждением, а демон работает на остальных адресах. Отказ на всех адресах — ошибка запуска: слушать нечего.
+An address that failed to open does not stop the daemon: router interfaces come up in random order, and the guest network may appear later than the panel. Such a failure goes to the log as a warning, and the daemon works on the remaining addresses. A failure on all addresses is a startup error: there is nothing to listen on.
 
-## Остановка
+## Shutdown
 
 ```go
 ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -133,51 +133,51 @@ if err := srv.Shutdown(shutdownCtx); err != nil {
 }
 ```
 
-`ErrServerClosed` — штатное завершение, ошибкой не считается. После `Shutdown` останавливаются и фоновые владельцы: таймер окна подтверждения дописывает состояние на диск, чтобы после старта его доиграли. Процесс, убитый procd по таймауту, обязан оставить на диске состояние, по которому автооткат наступит.
+`ErrServerClosed` is a normal termination and is not counted as an error. After `Shutdown` the background owners stop too: the confirmation window timer writes its state to disk so that it is replayed after start. A process killed by procd on timeout must leave a state on disk from which the automatic rollback will happen.
 
-## Раздача SPA
+## Serving the SPA
 
-Статика встраивается `go:embed`. Директива не поднимается выше каталога своего пакета: `apps/web/dist` из `apps/metaboxd` или `internal/` так не достать. `make daemon` копирует сборку в `internal/webui/static`, а в git этот каталог держится непустым заглушкой — иначе Go-часть перестаёт собираться без установленного Node.
+Static files are embedded with `go:embed`. The directive cannot reach above its package directory: `apps/web/dist` cannot be reached this way from `apps/metaboxd` or `internal/`. `make daemon` copies the build into `internal/webui/static`, and in git this directory is kept non-empty with a placeholder; otherwise the Go part stops building without Node installed.
 
-Правила раздачи:
+Serving rules:
 
-- неизвестный путь под `/api/` — 404 с телом ошибки, а не `index.html`: иначе фронт получит HTML вместо JSON и покажет ерунду;
-- остальные неизвестные пути — `index.html` с `Cache-Control: no-cache`, роутинг клиентский;
-- файлы с хэшем в имени — `Cache-Control: public, max-age=31536000, immutable`;
-- сжатие не считается на лету: сборка панели кладёт рядом с файлом `.br` и `.gz`, демон выбирает вариант по `Accept-Encoding` и ставит `Vary: Accept-Encoding`. Жать один и тот же файл на каждый запрос — это процессорное время роутера, и тратится оно тем чаще, чем слабее железо. Оба формата, а не только brotli: панель живёт по обычному http, и браузер объявляет `br` не на всяком соединении;
-- тип содержимого у сжатого варианта берётся у исходного имени: по `.br` он определился бы как поток байт;
-- сам `.br` или `.gz` адресом не является — прямой запрос получает оболочку, иначе клиент увидел бы нераспакованные байты.
+- an unknown path under `/api/` is a 404 with an error body, not `index.html`: otherwise the frontend gets HTML instead of JSON and shows nonsense;
+- other unknown paths get `index.html` with `Cache-Control: no-cache`, routing is client-side;
+- files with a hash in the name get `Cache-Control: public, max-age=31536000, immutable`;
+- compression is not computed on the fly: the panel build puts `.br` and `.gz` next to each file, the daemon picks the variant by `Accept-Encoding` and sets `Vary: Accept-Encoding`. Compressing the same file on every request costs router CPU time, and the weaker the hardware, the more often it is spent. Both formats, not only brotli: the panel is served over plain http, and the browser does not announce `br` on every connection;
+- the content type of a compressed variant comes from the original name: by `.br` it would be detected as a byte stream;
+- a `.br` or `.gz` itself is not an address: a direct request gets the shell, otherwise the client would see uncompressed bytes.
 
-HTTP/2 демон не поднимает. В браузере он работает только поверх TLS — открытого текста (h2c, `Protocols.SetUnencryptedHTTP2`) не поддерживает ни один браузер, — а панель раздаётся по http в локальной сети. Пока у панели нет TLS, включать его незачем.
+The daemon does not run HTTP/2. In browsers it works only over TLS (no browser supports cleartext h2c, `Protocols.SetUnencryptedHTTP2`), and the panel is served over http in the local network. Until the panel has TLS, there is no reason to enable it.
 
-## Прокси Clash API
+## Clash API proxy
 
-Демон проксирует Clash API sing-box — `httputil.ReverseProxy`. Ответ не буферизуется: дашборд читает поток. Секрет подставляет демон, наружу он не уходит (см. запреты в [ErrorsAndLogging](./ErrorsAndLogging.md)). Недоступность sing-box — штатный ответ с состоянием, а не 500: панель обязана работать при лежащем сервисе.
+The daemon proxies the sing-box Clash API with `httputil.ReverseProxy`. The response is not buffered: the dashboard reads a stream. The daemon inserts the secret, and it does not go out (see the prohibitions in [ErrorsAndLogging](./ErrorsAndLogging.md)). sing-box being unavailable is a normal response with a state, not a 500: the panel must work while the service is down.
 
-Исключение — соединения и состояние рантайма. Их форма не пробрасывается наружу как есть: у форка два источника этих данных, и фронт не должен знать, какой сработал. Демон сводит оба к собственному контракту и сообщает активный источник в `GET /api/status`. Остальные ручки Clash API — правила, группы, DNS-запрос — остаются сквозным прокси: данные core уходят как есть. Происхождение утверждения показывают ручки объяснения маршрута, прокси этого не делает.
+The exception is connections and runtime state. Their shape is not passed through as is: the fork has two sources of this data, and the frontend must not know which one worked. The daemon maps both to its own contract and reports the active source in `GET /api/status`. Other Clash API endpoints (rules, groups, DNS query) stay a pass-through proxy: core data goes out as is. Where a claim comes from is shown by the route explanation endpoints; the proxy does not do that.
 
-Апгрейд до WebSocket на ветке прокси отклоняется: рантайм идёт потоком `/api/events`, и второго пути к тем же данным не заводится. Потоки `/traffic` и `/memory` форк отдаёт и без апгрейда — построчным chunked-ответом, — поэтому клиента WebSocket в демоне нет вовсе.
+An upgrade to WebSocket on the proxy branch is rejected: runtime data goes through the `/api/events` stream, and no second path to the same data is added. The fork returns the `/traffic` and `/memory` streams without an upgrade too, as a line-by-line chunked response, so the daemon has no WebSocket client at all.
 
-## Поток рантайма
+## Runtime stream
 
-`GET /api/events` отдаёт `text/event-stream` с конвертом `{topic, seq, data}`; топики — `traffic`, `memory`, `connections`, `service`, `system`. Правила, которые обязан соблюдать хендлер потока:
+`GET /api/events` returns `text/event-stream` with the envelope `{topic, seq, data}`; the topics are `traffic`, `memory`, `connections`, `service`, `system`. Rules the stream handler must follow:
 
-- `seq` сквозной по всем топикам и растёт без пропусков для каждого читателя: по разрыву панель понимает, что событие потеряно, и перезапрашивает состояние. Времени конверт не несёт — у роутера нет часов реального времени.
-- Апстримы держатся одним комплектом на всех читателей, а не по комплекту на подписку. Уход последнего читателя останавливает опрос.
-- Подключившийся получает последнее событие каждого топика сразу, иначе экран стоит пустым до ближайшего периода опроса.
-- Очередь подписчика ограничена: переполнение отбрасывает событие, а не копит его. Демон работает месяцами, и неограниченная очередь опаснее пропущенного сэмпла.
-- Сброс буфера — через `http.NewResponseController`, а не приведением к `http.Flusher`: middleware оборачивает `ResponseWriter` своим типом, у которого метода нет.
+- `seq` is shared across all topics and grows without gaps for each reader: by a gap the panel knows an event was lost and requests the state again. The envelope carries no time: the router has no real-time clock.
+- Upstreams are held as one set for all readers, not one set per subscription. When the last reader leaves, polling stops.
+- A new subscriber gets the last event of each topic immediately, otherwise the screen stays empty until the next poll period.
+- The subscriber queue is bounded: overflow drops an event instead of accumulating it. The daemon runs for months, and an unbounded queue is more dangerous than a missed sample.
+- The buffer is flushed through `http.NewResponseController`, not by a cast to `http.Flusher`: middleware wraps `ResponseWriter` in its own type, which lacks the method.
 
-## Лог и диагностика
+## Log and diagnostics
 
-`GET /api/logs?lines=200&level=info` — хвост лога sing-box: `{source, since?, entries: [{time?, level?, message}]}`, старые строки первыми. `lines` — от 1 до 1000, `level` — минимальный уровень `trace`…`panic` без учёта регистра; неразобранное — 400 `log_query_invalid`. Источник не читается — 503 `log_unavailable`, причина остаётся в логе демона.
+`GET /api/logs?lines=200&level=info` is the tail of the sing-box log: `{source, since?, entries: [{time?, level?, message}]}`, oldest lines first. `lines` is from 1 to 1000, `level` is the minimum level `trace`…`panic`, case-insensitive; anything unparsed is 400 `log_query_invalid`. The source cannot be read: 503 `log_unavailable`, the reason stays in the daemon log.
 
-`GET /api/logs/stream?level=` — SSE, событие `log` с `{seq, entry}`. Устроен как `/api/events` — сброс через контроллер, дедлайн на каждую запись, комментарий раз в 20 секунд, ограниченная очередь с потерей строки и разрывом `seq`, — но источник у каждого читателя свой: процесс `logread -f` или опрос файла. Поэтому потоков не больше четырёх, пятый — 429 `log_stream_limit` с `Retry-After: 5`. Место освобождается, когда клиент закрыл соединение; клиент, пропавший без закрытия, отваливается по `TCP_USER_TIMEOUT` 30 секунд, который слушатель ставит на Linux, — иначе поток с процессом `logread` жил бы до исчерпания повторов TCP.
+`GET /api/logs/stream?level=` is SSE, the `log` event with `{seq, entry}`. It works like `/api/events` (flush through the controller, a deadline on each write, a comment every 20 seconds, a bounded queue that drops a line and breaks `seq`), but each reader has its own source: a `logread -f` process or file polling. So there are at most four streams, the fifth gets 429 `log_stream_limit` with `Retry-After: 5`. A slot is freed when the client closes the connection; a client that vanished without closing is dropped by the 30-second `TCP_USER_TIMEOUT` that the listener sets on Linux; otherwise a stream with a `logread` process would live until TCP retries are exhausted.
 
-`POST /api/logs/clear` — `{since}`: отметка, раньше которой строки не показываются, а при файле `log.output` ещё и усечение. Файл вне разрешённых каталогов — 409 `log_clear_forbidden`. Что именно чистится — [DeviceIO](./DeviceIO.md), «Лог sing-box».
+`POST /api/logs/clear` takes `{since}`: a mark before which lines are not shown, and with a `log.output` file also truncation. A file outside the allowed directories is 409 `log_clear_forbidden`. What exactly is cleared: [DeviceIO](./DeviceIO.md), "sing-box log".
 
-`GET /api/diag?proxy=<узел>` — отчёт `{checks: [{name, status, reason?, detail?, missing?, delay_ms?}]}` в фиксированном порядке. `status` — `ok`, `fail` или `skipped`; отказ проверки — строка отчёта, а не код HTTP. Текст строки панель выбирает по `name` и `reason`, `detail` — подробность на языке демона. Что проверяется — [DeviceIO](./DeviceIO.md), «Диагностика обвязки».
+`GET /api/diag?proxy=<node>` is a report `{checks: [{name, status, reason?, detail?, missing?, delay_ms?}]}` in a fixed order. `status` is `ok`, `fail` or `skipped`; a failed check is a report row, not an HTTP code. The panel picks the row text by `name` and `reason`, `detail` is a detail in the daemon's language. What is checked: [DeviceIO](./DeviceIO.md), "Dataplane diagnostics".
 
-## Тесты
+## Tests
 
-Правила — [Testing](./Testing.md): `httptest` для сервера и для отдельного обработчика, фейки вместо предметных зависимостей.
+Rules: [Testing](./Testing.md): `httptest` for the server and for a single handler, fakes instead of domain dependencies.

@@ -1,101 +1,101 @@
-# ADR-0024. Снять черновик immer со сторов панели и писать состояние присваиванием
+# ADR-0024. Drop the immer draft from the panel stores and write state by assignment
 
-- Статус: Accepted
-- Дата: 2026-09-18
-- Ответственные: владелец репозитория
+- Status: Accepted
+- Date: 2026-09-18
+- Deciders: repository owner
 
-## Контекст и постановка проблемы
+## Context and problem statement
 
-Фабрика `apps/web/src/shared/lib/state/stateCreator.ts` собирала каждый стор панели из двух middleware — `devtools` и `immer`. Черновик immer брали ради правки вложенного узла конфига присваиванием: так записано в PRD (раздел 9 и таблица A.10, теперь — [ADR-0045](./ADR-0045-split-document-and-server-state-and-keep-a-folder-per-project.md)) и в [гайде по состоянию](../../apps/web/docs/guides/StateManagement.md).
+The factory `apps/web/src/shared/lib/state/stateCreator.ts` built every panel store from two middlewares — `devtools` and `immer`. The immer draft was adopted to edit a nested config node by assignment: this is written in the PRD (section 9 and table A.10, now [ADR-0045](./ADR-0045-split-document-and-server-state-and-keep-a-folder-per-project.md)) and in the [state guide](../../apps/web/docs/guides/StateManagement.md).
 
-К моменту решения ни один из трёх сторов вложенных узлов не правит:
+By the time of the decision none of the three stores edits nested nodes:
 
-- документ конфига хранится **текстом** и патчится `jsonc-parser` ([ADR-0004](./ADR-0004-edit-config-text-in-place-on-the-client.md)); стор присваивает `applied`, `draft` и `revision` целиком. Тот же гайд это и фиксирует: «Патчи immer сюда не годятся: они описывают правку дерева, а дерева в сторе нет»;
-- сторы потока рантайма присваивают поля верхнего уровня и держат два кольцевых буфера, к которым обращаются `push` и `shift`.
+- the config document is stored **as text** and patched with `jsonc-parser` ([ADR-0004](./ADR-0004-edit-config-text-in-place-on-the-client.md)); the store assigns `applied`, `draft` and `revision` as a whole. The same guide records this: "Immer patches do not fit here: they describe an edit of a tree, and there is no tree in the store";
+- the runtime stream stores assign top-level fields and keep two ring buffers accessed with `push` and `shift`.
 
-Цену черновика видно на потоке соединений. Обработчик снапшота пересобирает `active` на пять тысяч строк и индекс `Map` того же размера каждую секунду (NFR-2). Immer оборачивает состояние в прокси на каждый `set` и на финализации обходит новый массив, проверяя каждый элемент на пригодность к черновику.
+The cost of the draft shows on the connections stream. The snapshot handler rebuilds `active` of five thousand rows and a `Map` index of the same size every second (NFR-2). Immer wraps the state in a proxy on every `set` and on finalization walks the new array, checking each element for draftability.
 
-Замер 2026-09-18, снапшот на 5000 соединений с растущими счётчиками и оборотом соединений:
+Measurement on 2026-09-18, a snapshot of 5000 connections with growing counters and connection churn:
 
-| Что меряли                                      | С черновиком immer | Без него |
-| ----------------------------------------------- | ------------------ | -------- |
-| `apply`, медиана, обычный процессор             | 14.9 мс            | 3.0 мс   |
-| `apply`, медиана, процессор вчетверо медленнее  | 61.3 мс            | 8.6 мс   |
-| `apply`, максимум, процессор вчетверо медленнее | 67 мс              | 13.1 мс  |
+| What was measured                       | With the immer draft | Without it |
+| --------------------------------------- | -------------------- | ---------- |
+| `apply`, median, normal CPU             | 14.9 ms              | 3.0 ms     |
+| `apply`, median, CPU four times slower  | 61.3 ms              | 8.6 ms     |
+| `apply`, maximum, CPU four times slower | 67 ms                | 13.1 ms    |
 
-Полезной работы в обработчике около 1.1 мс: разбор снапшота схемой — 0.7 мс, обход пяти тысяч строк с индексом — 0.2 мс, сводка — 0.2 мс. В трейсе Chrome верх списка по собственному времени занимали `isDraftable`, `get`, `has`, `isPlainObject`, `arrayTraps`, `createProxy` и `revokeDraft` из immer.
+The useful work in the handler is about 1.1 ms: parsing the snapshot with the schema — 0.7 ms, walking five thousand rows with the index — 0.2 ms, the summary — 0.2 ms. In the Chrome trace the top of the self-time list was taken by `isDraftable`, `get`, `has`, `isPlainObject`, `arrayTraps`, `createProxy` and `revokeDraft` from immer.
 
-Бюджет NFR-2 — «нет блокировок главного потока дольше 100 мс». На замедленном вчетверо процессоре один только разбор снапшота занимал две трети бюджета, не считая рендера.
+The NFR-2 budget is "no main-thread blocks longer than 100 ms". On a CPU slowed four times, parsing the snapshot alone took two thirds of the budget, not counting the render.
 
-В scope: набор middleware фабрики сторов и форма записи состояния в трёх сторах панели. Вне scope: состав подписок компонентов и мемоизация рендера — это отдельная работа, решения по ней здесь не принимаются.
+In scope: the middleware set of the store factory and the form of state writes in the three panel stores. Out of scope: the set of component subscriptions and render memoization — that is separate work, and no decisions about it are made here.
 
-## Критерии выбора
+## Decision drivers
 
-1. **Бюджет NFR-2.** Разбор снапшота на 5000 соединений не съедает основную часть окна в 100 мс на медленном процессоре.
-2. **Требование PRD к документу конфига остаётся выполненным.** Черновик, диф и отмена правок работают как прежде.
-3. **Правка читается.** Форма записи состояния не становится заметно многословнее той, что описана в гайде.
-4. **Обратная совместимость.** Публичный API сторов — селекторы и экшены — не меняется, вызывающий код не правится.
-5. **Цена зависимостей.** Зависимость, которая ничего не даёт, в дереве не остаётся.
+1. **The NFR-2 budget.** Parsing a snapshot of 5000 connections does not eat most of the 100 ms window on a slow CPU.
+2. **The PRD requirement for the config document stays met.** Draft, diff and undo work as before.
+3. **An edit stays readable.** The form of state writes does not become noticeably more verbose than the one described in the guide.
+4. **Backward compatibility.** The public store API — selectors and actions — does not change, calling code is not edited.
+5. **Dependency cost.** A dependency that gives nothing does not stay in the tree.
 
-## Рассмотренные варианты
+## Considered options
 
-1. **Снять immer со всех сторов, писать состояние присваиванием.** `set` возвращает частичное состояние явно, `devtools` остаётся. Преимущества: разбор снапшота ускоряется в пять-семь раз (критерий 1); зависимость и плагин `enableMapSet` уходят (критерий 5); публичный API сторов не меняется (критерий 4). Недостатки: обработчики, которые раньше мутировали черновик, переписываются на возврат объекта, а кольцевые буферы — на `[...buffer, next].slice(-N)` (критерий 3 — форма записи меняется, но остаётся в одну строку). **Принят.**
+1. **Drop immer from all stores, write state by assignment.** `set` returns a partial state explicitly, `devtools` stays. Advantages: snapshot parsing gets five to seven times faster (driver 1); the dependency and the `enableMapSet` plugin go away (driver 5); the public store API does not change (driver 4). Disadvantages: handlers that used to mutate the draft are rewritten to return an object, and ring buffers to `[...buffer, next].slice(-N)` (driver 3 — the write form changes but stays one line). **Chosen.**
 
-2. **Снять immer только со стора соединений, остальным оставить.** Преимущества: минимальный диф, горячий путь чинится. Недостатки: фабрика сторов начинает собирать их по-разному, и правило «набор middleware не разъезжается между сторами», ради которого фабрика и заведена, перестаёт действовать; два оставшихся стора продолжают платить за черновик, которым не пользуются (критерий 5). **Отклонён.**
+2. **Drop immer only from the connections store, keep it for the others.** Advantages: minimal diff, the hot path is fixed. Disadvantages: the store factory starts building stores differently, and the rule "the middleware set does not diverge between stores", for which the factory exists, stops holding; the two remaining stores keep paying for a draft they do not use (driver 5). **Rejected.**
 
-3. **Оставить immer и ускорить обработчик иначе** — хранить индекс вне состояния стора, обновлять поля порознь. Преимущества: PRD и гайд не правятся. Недостатки: прокси остаётся на каждом `set`, и обход нового массива при финализации никуда не девается — основную статью расхода это не убирает (критерий 1); состояние размазывается между стором и модулем. **Отклонён.**
+3. **Keep immer and speed up the handler another way** — keep the index outside the store state, update fields separately. Advantages: the PRD and the guide are not edited. Disadvantages: the proxy stays on every `set`, and the walk over the new array on finalization does not go away — this does not remove the main cost item (driver 1); state gets smeared between the store and a module. **Rejected.**
 
-4. **Сохранить текущий подход.** Преимущества: изменений нет. Недостатки: на медленном процессоре одна только обработка снапшота занимает больше половины бюджета NFR-2 при полезной работе в 1.1 мс. **Отклонён.**
+4. **Keep the current approach.** Advantages: no changes. Disadvantages: on a slow CPU snapshot handling alone takes more than half of the NFR-2 budget with 1.1 ms of useful work. **Rejected.**
 
-## Принятое решение
+## Decision outcome
 
-Фабрика `stateCreator` собирает стор из одного middleware — `devtools`, включённого только в разработке. Черновик immer из набора убран, пакет `immer` удалён из зависимостей `apps/web`, вызов `enableMapSet` убран из входа приложения и из оснастки тестов.
+The `stateCreator` factory builds a store from one middleware — `devtools`, enabled only in development. The immer draft is removed from the set, the `immer` package is removed from the `apps/web` dependencies, the `enableMapSet` call is removed from the app entry and from the test setup.
 
-Правила реализации:
+Implementation rules:
 
-- обработчик отдаёт частичное состояние: `set((state) => ({ … }))` или `set({ … })`. Молчаливый `return` без значения недопустим: zustand примет его за новое состояние. Ветка «ничего не менять» возвращает сам `state` — тогда сравнение по ссылке проходит и подписчиков не трогают вовсе, тогда как `{}` дал бы новый объект состояния и обход всего списка;
-- кольцевой буфер обновляется новым массивом: `[...buffer, next].slice(-LIMIT)`, а не парой `push` и `shift`;
-- `Map` в состоянии остаётся: без черновика он не требует плагинов и заменяется целиком.
+- a handler returns a partial state: `set((state) => ({ … }))` or `set({ … })`. A silent `return` without a value is not allowed: zustand takes it as the new state. The "change nothing" branch returns `state` itself — then the reference comparison passes and subscribers are not touched at all, whereas `{}` would give a new state object and a walk over the whole list;
+- a ring buffer is updated with a new array: `[...buffer, next].slice(-LIMIT)`, not a `push` and `shift` pair;
+- `Map` in the state stays: without the draft it needs no plugins and is replaced as a whole.
 
-Non-goal: возвращать immer точечно в отдельный стор. Если вложенное дерево в сторе появится, это отдельное решение с собственным замером.
+Non-goal: bringing immer back selectively into a separate store. If a nested tree appears in a store, that is a separate decision with its own measurement.
 
-### Область действия и границы
+### Scope and boundaries
 
-`apps/web/src/shared/lib/state/stateCreator.ts` и сторы `entities/Config`, `entities/Connection`, `entities/Daemon`.
+`apps/web/src/shared/lib/state/stateCreator.ts` and the stores `entities/Config`, `entities/Connection`, `entities/Daemon`.
 
-## Последствия
+## Consequences
 
-### Положительные
+### Positive
 
-- Разбор снапшота на 5000 соединений укладывается в 8.6 мс на замедленном вчетверо процессоре против 61.3 мс — бюджет NFR-2 перестаёт зависеть от обёрток.
-- Из дерева зависимостей уходит пакет, который не давал ничего, кроме накладных расходов.
-- Вход приложения и оснастка тестов больше не связаны порядком импортов через `enableMapSet`.
+- Parsing a snapshot of 5000 connections fits in 8.6 ms on a CPU slowed four times against 61.3 ms — the NFR-2 budget stops depending on wrappers.
+- A package that gave nothing but overhead leaves the dependency tree.
+- The app entry and the test setup are no longer tied by import order through `enableMapSet`.
 
-### Отрицательные
+### Negative
 
-- Обработчик, меняющий несколько полей, теперь перечисляет их в возвращаемом объекте; правка «в одну строку по месту» больше не работает.
-- Ветка «ничего не менять» требует явного `return state`. Пустой `return` тихо перезапишет состояние неопределённым значением, и линтер этого не ловит: от ошибки страхует только вывод типов.
-- Состав стека записан в PRD (раздел 9), в [ADR-0045](./ADR-0045-split-document-and-server-state-and-keep-a-folder-per-project.md) и в гайде по состоянию, поэтому решение правит и их: код и документы расходиться не должны.
+- A handler that changes several fields now lists them in the returned object; the "one-line in-place edit" no longer works.
+- The "change nothing" branch requires an explicit `return state`. An empty `return` silently overwrites the state with an undefined value, and the linter does not catch it: only type inference protects against the mistake.
+- The stack composition is written in the PRD (section 9), in [ADR-0045](./ADR-0045-split-document-and-server-state-and-keep-a-folder-per-project.md) and in the state guide, so the decision edits them too: code and documents must not diverge.
 
-### Нейтральные или отложенные
+### Neutral or deferred
 
-- Состав подписок на главной и мемоизация строк таблицы соединений остаются как есть: это следующая по величине статья расхода, и она решается отдельно.
+- The set of subscriptions on the home screen and memoization of connection table rows stay as is: this is the next largest cost item, and it is solved separately.
 
-## Совместимость, миграция и откат
+## Compatibility, migration and rollback
 
-Публичный API сторов не меняется: селекторы, экшены и их сигнатуры прежние, вызывающий код не правится. Переходного периода нет — набор middleware меняется разом для всех сторов.
+The public store API does not change: selectors, actions and their signatures are the same, calling code is not edited. There is no transition period — the middleware set changes at once for all stores.
 
-Откат: вернуть `immer` в зависимости и в набор middleware, вернуть `enableMapSet` на вход приложения и в оснастку тестов, переписать обработчики обратно на мутацию черновика. Данные и контракты при этом не затрагиваются.
+Rollback: return `immer` to the dependencies and to the middleware set, return `enableMapSet` to the app entry and to the test setup, rewrite handlers back to draft mutation. Data and contracts are not affected.
 
-## Проверка решения
+## Validation
 
-- `pnpm --filter web test` — в наборе есть бюджет разбора снапшота: `apps/web/src/widgets/ConnectionTable/__tests__/ConnectionTable.budget.test.ts` разбирает 5000 соединений с оборотом и падает, если лучший из прогонов выйдет за 12 мс — вдвое ниже того, во что обошёлся бы возврат обёртки;
-- `grep -rn immer apps/web/src apps/web/docs apps/web/package.json docs` — в коде, манифесте и документах остаются только объяснения, почему обёртки нет;
-- ручной сценарий: `METABOX_MOCK=all METABOX_MOCK_CONNECTIONS=5000 pnpm --filter web dev`, экран соединений, замер `apply` в консоли при замедлении процессора вчетверо — медиана в единицах миллисекунд, не в десятках.
+- `pnpm --filter web test` — the suite has a snapshot parsing budget: `apps/web/src/widgets/ConnectionTable/__tests__/ConnectionTable.budget.test.ts` parses 5000 connections with churn and fails if the best of the runs goes over 12 ms — half of what bringing the wrapper back would cost;
+- `grep -rn immer apps/web/src apps/web/docs apps/web/package.json docs` — code, manifest and documents keep only explanations of why there is no wrapper;
+- manual scenario: `METABOX_MOCK=all METABOX_MOCK_CONNECTIONS=5000 pnpm --filter web dev`, the connections screen, measuring `apply` in the console with the CPU slowed four times — the median is in single milliseconds, not tens.
 
-## Ссылки
+## Links
 
-- [PRD](../PRD.md), раздел 9, и [ADR-0045](./ADR-0045-split-document-and-server-state-and-keep-a-folder-per-project.md) — стек фронтенда; NFR-2 — бюджет отзывчивости;
-- [ADR-0004](./ADR-0004-edit-config-text-in-place-on-the-client.md) — документ конфига правится текстом, а не деревом;
-- [Управление состоянием](../../apps/web/docs/guides/StateManagement.md);
+- [PRD](../PRD.md), section 9, and [ADR-0045](./ADR-0045-split-document-and-server-state-and-keep-a-folder-per-project.md) — the frontend stack; NFR-2 — the responsiveness budget;
+- [ADR-0004](./ADR-0004-edit-config-text-in-place-on-the-client.md) — the config document is edited as text, not as a tree;
+- [State management](../../apps/web/docs/guides/StateManagement.md);
 - `apps/web/src/shared/lib/state/stateCreator.ts`, `apps/web/src/entities/Connection/model/Connection.store.ts`.

@@ -1,116 +1,116 @@
-# ADR-0047. Ставить перехват трафика LAN init-скриптом службы sing-box по модели из UCI
+# ADR-0047. Set up LAN traffic interception in the sing-box service init script from the UCI model
 
-- Статус: Accepted
-- Дата: 2026-10-09
-- Ответственные: владелец репозитория
+- Status: Accepted
+- Date: 2026-10-09
+- Deciders: repository owner
 
-## Контекст и постановка проблемы
+## Context and problem statement
 
-На роутере маршрутизацией владеет re:HomeProxy: его служба поднимает sing-box, ставит правила nft, `ip rule` и upstream dnsmasq. US-11 [PRD](../PRD.md) требует, чтобы metabox встал на его место и сам владел перехватом, DNS и службой sing-box, а не держал рядом второй пакет, который спорит за те же правила nft и dnsmasq. Требования к обвязке — AC-48…AC-57 раздела «Сетевая обвязка»: режим `redirect_tproxy` как у homeproxy, ACL `all`/`listed` по IP и MAC, upstream dnsmasq фрагментом conf-dir без правки UCI `dhcp` (OQ-19), fail-closed (OQ-16), сосуществование с b4.
+On the router, routing is owned by re:HomeProxy: its service runs sing-box and sets up nft rules, `ip rule` and the dnsmasq upstream. US-11 of the [PRD](../PRD.md) requires metabox to take its place and own interception, DNS and the sing-box service itself, rather than keep a second package next to it that competes for the same nft and dnsmasq rules. The dataplane requirements are AC-48…AC-57 of the "Dataplane" section: the `redirect_tproxy` mode as in homeproxy, the `all`/`listed` ACL by IP and MAC, the dnsmasq upstream as a conf-dir fragment without editing the `dhcp` UCI (OQ-19), fail-closed (OQ-16), coexistence with b4.
 
-Открытый вопрос этого решения — кто и как ставит обвязку на устройстве. Ограничения, уже заданные кодом и другими решениями:
+The open question of this decision is who sets up the dataplane on the device and how. Constraints already set by the code and other decisions:
 
-- Службой sing-box управляет только init-скрипт через procd ([ADR-0009](./ADR-0009-read-service-state-from-procd.md), [DeviceIO](../../apps/metaboxd/docs/guides/DeviceIO.md)), служба входит в пакет панели ([ADR-0011](./ADR-0011-ship-the-daemon-as-an-apk-package.md)), и демон проверяет кандидата той командой, которой procd поднимает службу ([ADR-0046](./ADR-0046-check-the-candidate-the-way-the-service-runs.md)).
-- Межсетевым экраном владеет fw4: его `reload` пересобирает таблицу `inet fw4` целиком, чужие правила в ней живут только через инклюд.
-- Протокол Apply ([ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md)) рестартует службу и не должен перезагружать fw4 и рестартовать dnsmasq (AC-50).
-- Демон запускается после службы sing-box и может лежать, пока служба работает (AC-48, AC-51).
+- The sing-box service is managed only by the init script through procd ([ADR-0009](./ADR-0009-read-service-state-from-procd.md), [DeviceIO](../../apps/metaboxd/docs/guides/DeviceIO.md)), the service is part of the panel package ([ADR-0011](./ADR-0011-ship-the-daemon-as-an-apk-package.md)), and the daemon checks the candidate with the command procd uses to run the service ([ADR-0046](./ADR-0046-check-the-candidate-the-way-the-service-runs.md)).
+- The firewall is owned by fw4: its `reload` rebuilds the `inet fw4` table entirely, and foreign rules live in it only through an include.
+- The Apply protocol ([ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md)) restarts the service and must not reload fw4 or restart dnsmasq (AC-50).
+- The daemon starts after the sing-box service and may be down while the service runs (AC-48, AC-51).
 
-В scope: где лежит модель обвязки, какой процесс ставит и снимает правила, как демон узнаёт, что они стоят, и что происходит с перехватом на рестарте и падении sing-box. Вне scope: запись модели из панели и окно подтверждения для неё (AC-53), экран «Устройства» (AC-61), порядок переключения роутера с homeproxy (AC-67), IPv6.
+In scope: where the dataplane model lives, which process sets up and removes the rules, how the daemon learns that they are in place, and what happens to interception when sing-box restarts or crashes. Out of scope: writing the model from the panel and the confirmation window for it (AC-53), the "Devices" screen (AC-61), the order of switching the router over from homeproxy (AC-67), IPv6.
 
-## Критерии выбора
+## Decision drivers
 
-1. **Замена, а не соседство** — один владелец правил nft, `ip rule` и dnsmasq на роутере (US-11).
-2. **Независимость от демона** — обвязка ставится на загрузке и снимается `stop` без живого metaboxd (AC-51).
-3. **Fail-closed** — пока sing-box поднимается или лежит, трафик перечисленных устройств и DNS сети не уходят мимо прокси (AC-52).
-4. **Apply не трогает сеть** — рестарт sing-box не перезагружает fw4 и не рестартует dnsmasq (AC-50).
-5. **Совместимость с b4** — трафик с чужой меткой идёт мимо перехвата (AC-57).
-6. **Проверяемость** — на стенде и в healthcheck видно, стоит ли обвязка.
+1. **Replacement, not coexistence**: one owner of the nft rules, `ip rule` and dnsmasq on the router (US-11).
+2. **Independence from the daemon**: the dataplane is set up on boot and removed by `stop` without a live metaboxd (AC-51).
+3. **Fail-closed**: while sing-box is starting or down, the traffic of listed devices and the network's DNS do not bypass the proxy (AC-52).
+4. **Apply does not touch the network**: a sing-box restart does not reload fw4 and does not restart dnsmasq (AC-50).
+5. **Compatibility with b4**: traffic with a foreign mark bypasses interception (AC-57).
+6. **Verifiability**: the test bench and the healthcheck show whether the dataplane is in place.
 
-## Рассмотренные варианты
+## Considered options
 
-1. **Оставить homeproxy data plane, metabox — только редактор конфига.** Ничего не переписывать: перехват, DNS и служба остаются за homeproxy, демон работает с его путями, как в переходном режиме из комментария к [`metabox`](../../apps/metaboxd/package/etc/config/metabox). Но правилами, командой службы и процессом владеет другой пакет: его обвязка не знает о модели metabox, а команду службы задаёт он, а не UCI `metabox`. Это ровно та ситуация двух пакетов, от которой уходит US-11 (критерий 1); сосуществование отклонил владелец. **Отклонён.**
-2. **Inbound `tun` с `auto_redirect` sing-box.** Правила ставит сам sing-box, отдельной обвязки нет. Но tun sing-box отбирает трафик по назначению, интерфейсу и uid, а не по адресу источника, поэтому ACL `listed` по IP и MAC из AC-49 на нём не выражается; `auto_redirect` метит пакеты сам и конфликтует с `route.default_mark`, на котором держится обход петли; неперечисленные устройства шли бы через userspace (критерии 1 и 5). **Отклонён.**
-3. **Обвязку ставит демон.** Демон и так читает модель, ему проще сверять её с ядром и отдавать ошибки панели. Но обвязка тогда живёт, только пока жив демон: на загрузке до его старта перехвата нет, а снять её при мёртвом демоне некому (критерий 2). Падение демона либо оставляет правила без хозяина, либо, если демон снимает их при выходе, открывает трафик напрямую (критерий 3). **Отклонён.**
-4. **Обвязку ставит init-скрипт службы sing-box по модели из UCI, демон её читает.** Правила живут столько же, сколько служба: procd поднимает их на загрузке, `stop` снимает. Модель — UCI, который читают и скрипт, и демон. Цена — около 350 строк шелла с рендером nft и сверкой состояния, которые юнит-тестами не покрыты и проверяются только на стенде. **Принят.**
+1. **Keep the homeproxy data plane, metabox is only a config editor.** Nothing to rewrite: interception, DNS and the service stay with homeproxy, and the daemon works with its paths, as in the transitional mode from the comment in [`metabox`](../../apps/metaboxd/package/etc/config/metabox). But the rules, the service command and the process are owned by another package: its dataplane does not know about the metabox model, and it sets the service command, not the `metabox` UCI. This is exactly the two-package situation US-11 moves away from (driver 1); the owner rejected coexistence. **Rejected.**
+2. **A `tun` inbound with sing-box `auto_redirect`.** sing-box sets up the rules itself, there is no separate dataplane. But sing-box tun selects traffic by destination, interface and uid, not by source address, so the `listed` ACL by IP and MAC from AC-49 cannot be expressed on it; `auto_redirect` marks packets itself and conflicts with `route.default_mark`, on which loop avoidance relies; unlisted devices would go through userspace (drivers 1 and 5). **Rejected.**
+3. **The daemon sets up the dataplane.** The daemon reads the model anyway, so it is easier for it to reconcile it with the kernel and report errors to the panel. But then the dataplane lives only while the daemon is alive: on boot there is no interception before it starts, and nobody can remove it while the daemon is dead (driver 2). A daemon crash either leaves the rules without an owner or, if the daemon removes them on exit, opens traffic directly (driver 3). **Rejected.**
+4. **The sing-box service init script sets up the dataplane from the UCI model, the daemon reads it.** The rules live as long as the service: procd brings them up on boot, `stop` removes them. The model is UCI, which both the script and the daemon read. The cost is about 350 lines of shell with nft rendering and state reconciliation, not covered by unit tests and checked only on the test bench. **Chosen.**
 
-## Принятое решение
+## Decision outcome
 
-Сетевую обвязку ставит и снимает init-скрипт [`metabox-singbox`](../../apps/metaboxd/package/etc/init.d/metabox-singbox) по модели из секции `metabox.dataplane`. Демон модель читает, а меняет её только транзакцией с окном подтверждения: снимок прежней секции, запись `uci batch` со сверкой, `reload` службы, проверка цепочек и dns-in, окно, откат к снимку без подтверждения; состояние транзакции лежит в `dataplane.json` служебного каталога, и Replay на старте доигрывает откат ([`internal/apply/plane.go`](../../apps/metaboxd/internal/apply/plane.go), [`internal/dataplane/write.go`](../../apps/metaboxd/internal/dataplane/write.go)).
+The dataplane is set up and removed by the init script [`metabox-singbox`](../../apps/metaboxd/package/etc/init.d/metabox-singbox) from the model in the `metabox.dataplane` section. The daemon reads the model and changes it only through a transaction with a confirmation window: a snapshot of the previous section, a `uci batch` write with reconciliation, a service `reload`, a check of the chains and dns-in, the window, rollback to the snapshot without confirmation; the transaction state lives in `dataplane.json` of the service directory, and Replay on start completes the rollback ([`internal/apply/plane.go`](../../apps/metaboxd/internal/apply/plane.go), [`internal/dataplane/write.go`](../../apps/metaboxd/internal/dataplane/write.go)).
 
-**Модель.** Секция типа `dataplane` с именем `dataplane` в `/etc/config/metabox`: `enabled`, порты `redirect_port`/`tproxy_port`/`dns_port`, `dns_hijack`, метки `self_mark`/`tproxy_mark`, `route_table`, `acl_mode` (`all` | `listed`), списки `source_ip`, `source_mac`, `lan_interface`, `wan_proxy_cidr`, `wan_direct_cidr`, `ipv6`. Без секции и без опции действуют умолчания homeproxy (5331/5332/5333, метки 100 и 101, таблица 100, `listed`, `br-lan`, обвязка включена) — одни и те же в скрипте и в `dataplane.Defaults()`. Невалидная модель не меняет уже поставленную обвязку.
+**Model.** A section of type `dataplane` named `dataplane` in `/etc/config/metabox`: `enabled`, ports `redirect_port`/`tproxy_port`/`dns_port`, `dns_hijack`, marks `self_mark`/`tproxy_mark`, `route_table`, `acl_mode` (`all` | `listed`), lists `source_ip`, `source_mac`, `lan_interface`, `wan_proxy_cidr`, `wan_direct_cidr`, `ipv6`. Without the section or an option the homeproxy defaults apply (5331/5332/5333, marks 100 and 101, table 100, `listed`, `br-lan`, the dataplane enabled), the same in the script and in `dataplane.Defaults()`. An invalid model does not change the dataplane already in place.
 
-**Что ставит `start` при `enabled=1`:**
+**What `start` sets up with `enabled=1`:**
 
-- фрагмент `/var/run/metabox/fw4_post.nft` и инклюд `firewall.metabox_post` (`type nftables`, `position table-append`): наборы и цепочки с префиксом `metabox_` внутри `table inet fw4` и переходы в конец `dstnat`, `mangle_prerouting`, `mangle_output`. TCP — redirect на `redirect_port`, UDP — tproxy на `tproxy_port` с меткой `tproxy_mark`, udp/53 с `lan_interface` — redirect на dnsmasq при `dns_hijack=1`. Перед `fw4 reload` фрагмент проходит `fw4 check`, при отказе остаётся прежний;
-- `ip rule fwmark <tproxy_mark> table <route_table>` и `local 0.0.0.0/0 dev lo` в этой таблице;
-- фрагмент `metabox.conf` (`no-resolv`, `no-poll`, `server=127.0.0.1#<dns_port>`) в conf-dir первого инстанса dnsmasq; UCI `dhcp` не правится.
+- the fragment `/var/run/metabox/fw4_post.nft` and the include `firewall.metabox_post` (`type nftables`, `position table-append`): sets and chains prefixed with `metabox_` inside `table inet fw4`, and jumps at the end of `dstnat`, `mangle_prerouting`, `mangle_output`. TCP is redirected to `redirect_port`, UDP goes to tproxy on `tproxy_port` with the `tproxy_mark` mark, udp/53 from `lan_interface` is redirected to dnsmasq with `dns_hijack=1`. Before `fw4 reload` the fragment goes through `fw4 check`; on failure the previous one stays;
+- `ip rule fwmark <tproxy_mark> table <route_table>` and `local 0.0.0.0/0 dev lo` in that table;
+- the fragment `metabox.conf` (`no-resolv`, `no-poll`, `server=127.0.0.1#<dns_port>`) in the conf-dir of the first dnsmasq instance; the `dhcp` UCI is not edited.
 
-Каждый шаг сверяется с тем, что уже стоит, и при совпадении ничего не трогает. Пакет с `self_mark` и пакет роутера с любой другой ненулевой меткой идут мимо перехвата.
+Each step is reconciled with what is already in place and touches nothing on a match. A packet with `self_mark` and a router packet with any other non-zero mark bypass interception.
 
-**Жизненный цикл.**
+**Lifecycle.**
 
-- `restart` и `reload` переопределены: удаляют у procd только инстанс `sing-box` и зовут `start`. Обвязка остаётся на месте, пока sing-box поднимается (fail-closed). Смена модели в UCI доходит до правил через `reload` по триггеру procd на конфиг `metabox`.
-- `stop` снимает обвязку по значениям из `/var/run/metabox/dataplane.state` (метка, таблица, путь фрагмента dnsmasq), а не из UCI, которую к этому моменту могли поменять. Цепочки и наборы `metabox_*`, оставшиеся пустыми после `fw4 reload`, удаляются отдельно. После `stop` в `nft list ruleset` и `ip rule` следов metabox нет.
-- `enabled=0` на `start` снимает обвязку так же, как `stop`.
+- `restart` and `reload` are overridden: they remove only the `sing-box` instance from procd and call `start`. The dataplane stays in place while sing-box is starting (fail-closed). A model change in UCI reaches the rules through `reload` by the procd trigger on the `metabox` config.
+- `stop` removes the dataplane using the values from `/var/run/metabox/dataplane.state` (mark, table, dnsmasq fragment path), not from UCI, which may have been changed by that time. `metabox_*` chains and sets left empty after `fw4 reload` are deleted separately. After `stop`, `nft list ruleset` and `ip rule` show no traces of metabox.
+- `enabled=0` on `start` removes the dataplane the same way as `stop`.
 
-**Демон.** Пакет `apps/metaboxd/internal/dataplane` читает модель `uci -q show metabox` и признак применения — цепочки `metabox_*` в `inet fw4` из `nft -j list chains`. Имена секции, опций и цепочек — контракт со скриптом (`ExpectedChains`). Healthcheck после рестарта ([`cycle.go`](../../apps/metaboxd/internal/apply/cycle.go)) по модели, снятой до рестарта, проверяет, что цепочки, стоявшие до рестарта, не пропали (`interception_missing`), и шлёт DNS-пробу в dns-in на `dns_port` (`dns_probe_failed`).
+**Daemon.** The `apps/metaboxd/internal/dataplane` package reads the model with `uci -q show metabox` and the applied state, the `metabox_*` chains in `inet fw4`, from `nft -j list chains`. The names of the section, options and chains are a contract with the script (`ExpectedChains`). The post-restart healthcheck ([`cycle.go`](../../apps/metaboxd/internal/apply/cycle.go)), using the model taken before the restart, checks that the chains present before the restart have not disappeared (`interception_missing`), and sends a DNS probe to dns-in on `dns_port` (`dns_probe_failed`).
 
-Non-goal: IPv6-цепочки, режим fail-open на время рестарта (пункт 8 roadmap PRD).
+Non-goal: IPv6 chains, a fail-open mode for the duration of a restart (item 8 of the PRD roadmap).
 
-### Область действия и границы
+### Scope and boundaries
 
-`apps/metaboxd/package/etc/init.d/metabox-singbox`, секция `dataplane` в `apps/metaboxd/package/etc/config/metabox`, `apps/metaboxd/internal/dataplane`, проверки обвязки в `internal/apply/cycle.go`, `GET /api/dataplane`, стенд — `make dataplane-check`.
+`apps/metaboxd/package/etc/init.d/metabox-singbox`, the `dataplane` section in `apps/metaboxd/package/etc/config/metabox`, `apps/metaboxd/internal/dataplane`, the dataplane checks in `internal/apply/cycle.go`, `GET /api/dataplane`, the test bench: `make dataplane-check`.
 
-## Последствия
+## Consequences
 
-### Положительные
+### Positive
 
-- Обвязка переживает перезагрузку и падение демона: ей нужен только procd.
-- Apply конфига рестартует один процесс sing-box: fw4 и dnsmasq не трогаются, пока модель не менялась.
-- Между sing-box и правилами нет окна, в которое трафик или DNS ушли бы напрямую.
-- Модель видна и правится в одном месте — UCI; панель и SSH видят одно и то же.
-- Healthcheck ловит конфиг, после которого пропал перехват или не отвечает dns-in, а не только живой Clash API.
+- The dataplane survives a reboot and a daemon crash: it needs only procd.
+- A config Apply restarts one sing-box process: fw4 and dnsmasq are not touched as long as the model has not changed.
+- There is no window between sing-box and the rules in which traffic or DNS would go directly.
+- The model is visible and edited in one place, UCI; the panel and SSH see the same thing.
+- The healthcheck catches a config after which interception disappeared or dns-in does not answer, not only a live Clash API.
 
-### Отрицательные
+### Negative
 
-- Логика обвязки — шелл в init-скрипте без юнит-тестов; ошибки рендера nft ловит только стенд.
-- Контракт имён (секция, опции, цепочки `metabox_*`, умолчания) продублирован в шелле и в Go; расхождение тестами одной стороны не ловится.
-- Fail-closed: пока sing-box лежит, соединения перечисленных устройств получают отказ, а DNS всей сети остаётся без ответа.
-- Смена правил модели — `fw4 reload`; dnsmasq рестартует только при смене фрагмента (`dns_port`), смена ACL его не трогает; на загрузке dnsmasq стартует дважды.
-- `restart` и `reload` скрипта ведут себя не как в `rc.common`, и это надо помнить при ручной работе со службой.
+- The dataplane logic is shell in an init script without unit tests; nft rendering errors are caught only by the test bench.
+- The naming contract (section, options, `metabox_*` chains, defaults) is duplicated in shell and in Go; a mismatch is not caught by the tests of one side.
+- Fail-closed: while sing-box is down, connections of listed devices are refused, and the whole network's DNS gets no answer.
+- A change of model rules means `fw4 reload`; dnsmasq restarts only when the fragment changes (`dns_port`), an ACL change does not touch it; on boot dnsmasq starts twice.
+- The script's `restart` and `reload` do not behave as in `rc.common`, and this has to be remembered when working with the service by hand.
 
-### Нейтральные или отложенные
+### Neutral or deferred
 
-- Режим «пропускать напрямую, пока ядро поднимается» отложен как второй путь в init-скрипте (пункт 8 roadmap PRD).
-- Смена ACL через демон рестартует sing-box и рвёт соединения; откат рвёт их второй раз. Смена `dns_port` рестартует dnsmasq при смене и при откате.
+- The "let traffic through directly while the core is starting" mode is deferred as a second path in the init script (item 8 of the PRD roadmap).
+- An ACL change through the daemon restarts sing-box and drops connections; rollback drops them a second time. A `dns_port` change restarts dnsmasq on the change and on rollback.
 
-## Риски и меры снижения
+## Risks and mitigations
 
-| Риск                                                                                                                                                          | Вероятность и влияние                                                  | Митигация                                                                                                              |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Двойной перехват рядом с homeproxy: на уже стоящем пакете `/etc/config/metabox` не перезаписывается, без секции `dataplane` действуют умолчания с `enabled`   | Средняя при обновлении пакета на роутере, высокое — сеть без интернета | Пакетная секция выключена; перед установкой секцию добавляют руками или выключают службу                               |
-| Окно без DNS на рестарт sing-box: dnsmasq отдаёт запросы в dns-in, которого ещё нет                                                                           | Высокая на каждом Apply, низкое — секунды без ответа                   | Принято как цена fail-closed (AC-52); healthcheck не засчитывает рестарт без ответа dns-in                             |
-| Устаревшие элементы наборов: `flush table` в `fw4 reload` не трогает элементы, удалённый источник остался бы в `metabox_src_*`                                | Низкая, среднее — снятое из ACL устройство идёт через sing-box         | После своего `fw4 reload` скрипт перезаливает наборы одной транзакцией nft; отказ перезаливки пишется в лог            |
-| Нет секции `dnsmasq` в `/etc/config/dhcp`: скрипт ставит nft и ip rule, но фрагмент upstream не кладёт, и перехваченный DNS уходит в обычный upstream dnsmasq | Низкая на OpenWrt с dnsmasq, высокое — DNS мимо sing-box               | Отказ пишется в `logread` тегом `metabox-singbox`; DNS-проба healthcheck идёт в dns-in напрямую и этот случай не ловит |
-| Хуки настоящего b4 на том же приоритете `mangle` ведут себя не так, как его эмуляция на стенде                                                                | Неизвестна, высокое — поток b4 уходит в tproxy                         | AC-57 открыт до проверки на роутере в первые сутки после переключения                                                  |
+| Risk                                                                                                                                                                                   | Probability and impact                                                     | Mitigation                                                                                                                                         |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Double interception next to homeproxy: on an already installed package `/etc/config/metabox` is not overwritten, and without the `dataplane` section the defaults with `enabled` apply | Medium on a package update on the router, high: a network without internet | The package section is disabled; before installation the section is added by hand or the service is disabled                                       |
+| A window without DNS during a sing-box restart: dnsmasq forwards queries to dns-in, which does not exist yet                                                                           | High on every Apply, low: seconds without an answer                        | Accepted as the price of fail-closed (AC-52); the healthcheck does not count a restart without a dns-in answer                                     |
+| Stale set elements: `flush table` in `fw4 reload` does not touch elements, so a removed source would stay in `metabox_src_*`                                                           | Low, medium: a device removed from the ACL goes through sing-box           | After its own `fw4 reload` the script reloads the sets in one nft transaction; a reload failure is written to the log                              |
+| No `dnsmasq` section in `/etc/config/dhcp`: the script sets up nft and ip rule but does not put the upstream fragment, and intercepted DNS goes to the regular dnsmasq upstream        | Low on OpenWrt with dnsmasq, high: DNS bypasses sing-box                   | The failure is written to `logread` with the `metabox-singbox` tag; the healthcheck DNS probe goes to dns-in directly and does not catch this case |
+| Hooks of the real b4 at the same `mangle` priority behave differently from its emulation on the test bench                                                                             | Unknown, high: the b4 flow goes to tproxy                                  | AC-57 stays open until it is checked on the router in the first day after the switch                                                               |
 
-## Совместимость, миграция и откат
+## Compatibility, migration and rollback
 
-Пакет ставится при работающем homeproxy: секция `dataplane` в пакетном файле выключена, служба `metabox-singbox` правил не ставит.
+The package is installed while homeproxy is running: the `dataplane` section in the package file is disabled, and the `metabox-singbox` service does not set up rules.
 
-Откат обвязки — `/etc/init.d/metabox-singbox stop` или `enabled '0'` с `reload`: обвязка снимается без следов, после чего можно поднять homeproxy.
+Dataplane rollback: `/etc/init.d/metabox-singbox stop` or `enabled '0'` with `reload`: the dataplane is removed without traces, after which homeproxy can be brought up.
 
-## Проверка решения
+## Validation
 
-- `make dataplane-check` на стенде: обвязка ставится стартом службы; TCP клиентов из `source_ip` и `source_mac` уходит в redirect, неперечисленного — мимо; UDP — в tproxy; udp/53 — через dnsmasq в dns-in; трафик роутера и пакет с чужой меткой; Apply не меняет правила fw4 и pid dnsmasq; убитый sing-box оставляет перехват; режим `all`; `stop` снимает всё, `start` возвращает; чужие `ip rule` и таблицу с номерами обвязки выключенная модель не снимает.
-- `make apply-check`: служба поднята инстансом `sing-box` с одним `-c`, цикл Apply проходит; шаг 10 `dataplane-check` прогоняет его при стоящей обвязке.
-- `cd apps/metaboxd && go test ./internal/dataplane/ ./internal/apply/`: разбор модели и умолчаний, цепочки из `nft -j list chains`, отказы `interception_missing` и `dns_probe_failed`.
-- На устройстве после `stop`: `nft list ruleset | grep metabox_` и `ip rule | grep 'lookup <route_table>'` пусты, `uci -q get firewall.metabox_post` ничего не отдаёт.
+- `make dataplane-check` on the test bench: the dataplane is set up by the service start; TCP of clients from `source_ip` and `source_mac` goes to redirect, of an unlisted one it bypasses; UDP goes to tproxy; udp/53 goes through dnsmasq to dns-in; router traffic and a packet with a foreign mark; Apply does not change the fw4 rules or the dnsmasq pid; a killed sing-box leaves interception in place; the `all` mode; `stop` removes everything, `start` returns it; a disabled model does not remove foreign `ip rule` entries or a table with the dataplane numbers.
+- `make apply-check`: the service is run by the `sing-box` instance with a single `-c`, the Apply cycle passes; step 10 of `dataplane-check` runs it with the dataplane in place.
+- `cd apps/metaboxd && go test ./internal/dataplane/ ./internal/apply/`: parsing the model and defaults, chains from `nft -j list chains`, the `interception_missing` and `dns_probe_failed` refusals.
+- On the device after `stop`: `nft list ruleset | grep metabox_` and `ip rule | grep 'lookup <route_table>'` are empty, `uci -q get firewall.metabox_post` returns nothing.
 
-## Ссылки
+## Links
 
-- [PRD](../PRD.md): US-11, AC-48…AC-57, AC-67, OQ-16, OQ-19, пункт 8 roadmap после v1;
+- [PRD](../PRD.md): US-11, AC-48…AC-57, AC-67, OQ-16, OQ-19, item 8 of the roadmap after v1;
 - [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md), [ADR-0009](./ADR-0009-read-service-state-from-procd.md), [ADR-0011](./ADR-0011-ship-the-daemon-as-an-apk-package.md), [ADR-0023](./ADR-0023-build-the-bench-from-the-device-firmware.md), [ADR-0046](./ADR-0046-check-the-candidate-the-way-the-service-runs.md);
-- [DeviceIO](../../apps/metaboxd/docs/guides/DeviceIO.md), разделы «Сервис через procd» и «Сетевая обвязка»;
+- [DeviceIO](../../apps/metaboxd/docs/guides/DeviceIO.md), sections "Service through procd" and "Dataplane";
 - [`metabox-singbox`](../../apps/metaboxd/package/etc/init.d/metabox-singbox), [`metabox`](../../apps/metaboxd/package/etc/config/metabox), [`dataplane.go`](../../apps/metaboxd/internal/dataplane/dataplane.go), [`cycle.go`](../../apps/metaboxd/internal/apply/cycle.go);
 - [`dataplane-check.sh`](../../.devcontainer/dataplane-check.sh), [`dataplane-check`](../../.devcontainer/target/files/usr/bin/dataplane-check).

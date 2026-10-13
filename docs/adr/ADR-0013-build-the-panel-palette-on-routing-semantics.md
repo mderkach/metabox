@@ -1,77 +1,77 @@
-# ADR-0013. Строить палитру панели на семантике маршрута, а не на нейтральном пресете
+# ADR-0013. Build the panel palette on routing semantics, not on a neutral preset
 
-- Статус: Accepted
-- Дата: 2026-09-13
-- Ответственные: владелец репозитория
+- Status: Accepted
+- Date: 2026-09-13
+- Deciders: repository owner
 
-## Контекст и постановка проблемы
+## Context and problem statement
 
-Токены темы в `apps/web/src/app/styles/index.css` до этого решения были дословным нейтральным пресетом shadcn: все цвета вида `oklch(x 0 0)`, то есть с нулевой хроматичностью, а `--chart-1…5` — пять оттенков серого. Предмет панели при этом категориальный по природе: пакет уходит `direct`, `proxy` или в блок; узел отвечает быстро, медленно или не отвечает; конфиг применён, лежит черновиком или откачен.
+Before this decision, the theme tokens in `apps/web/src/app/styles/index.css` were the neutral shadcn preset verbatim: all colors of the form `oklch(x 0 0)`, that is, with zero chroma, and `--chart-1…5` were five shades of grey. Yet the panel's subject is categorical by nature: a packet goes `direct`, `proxy` or to a block; a node answers fast, slowly or not at all; a config is applied, sits as a draft or is rolled back.
 
-Что это стоило на живом роутере (снято 2026-09-13 на рабочем конфиге homeproxy):
+What this cost on a live router (captured 2026-09-13 on a working homeproxy config):
 
-- Выбранный узел прокси не отличался от соседних. Данные приходили и код их считал (`Proxy.adapter.ts` переносит `now` в `selected`), но признаком выбора была заливка `bg-muted/60` поверх `bg-card` — в тёмной теме это oklch 0.243 против 0.196, разница светлоты 0.038. Главный факт экрана не доносился вовсе.
-- Выделенная строка правила отличалась от строки под курсором на десять процентов альфы: `bg-muted/60` против `bg-muted/50`.
-- Ряды графика трафика разводились только светлотой, потому что цветных токенов в палитре не было. На живых данных серый ряд исходящего сливался с серой сеткой — это записано прямо в комментарии `DaemonTraffic.tsx`.
-- Цвет в проекте всё же появлялся, но мимо токенов: `bg-emerald-400` и `bg-amber-400` вписаны литералами в строку узла прокси, потому что токенов под задержку не существовало.
+- The selected proxy node did not stand out from its neighbours. The data arrived and the code computed it (`Proxy.adapter.ts` moves `now` into `selected`), but the selection mark was a `bg-muted/60` fill over `bg-card`: in the dark theme this is oklch 0.243 against 0.196, a lightness difference of 0.038. The screen's main fact did not come across at all.
+- A selected rule row differed from the row under the cursor by ten percent alpha: `bg-muted/60` against `bg-muted/50`.
+- The traffic chart series were separated only by lightness, because the palette had no colored tokens. On live data the grey upload series merged with the grey grid; this is written right in a comment in `DaemonTraffic.tsx`.
+- Color did appear in the project, but bypassing the tokens: `bg-emerald-400` and `bg-amber-400` are written as literals into the proxy node row, because there were no tokens for latency.
 
-Ограничения заданы раньше. Примитивы берутся из вендорной зоны shadcn (`apps/web/AGENTS.md`), а она читает цвета из CSS-переменных — значит палитра меняется в одном файле и доезжает до всех компонентов без правки самих компонентов. Кегли и радиусы обязаны быть кратны двум, а размеры — в `rem` ([Архитектура и стайлгайд](../../apps/web/docs/guides/Architecture&Style.md)).
+The constraints were set earlier. Primitives come from the shadcn vendor zone (`apps/web/AGENTS.md`), and it reads colors from CSS variables, so the palette changes in one file and reaches all components without editing the components themselves. Font sizes and radii must be multiples of two, and sizes must be in `rem` ([Architecture and style guide](../../apps/web/docs/guides/Architecture&Style.md)).
 
-В scope: набор токенов темы, состав семантических ролей и то, где они объявлены. Вне scope: компоновка экранов и состав их данных.
+In scope: the set of theme tokens, the set of semantic roles and where they are declared. Out of scope: the layout of screens and the composition of their data.
 
-## Критерии выбора
+## Decision drivers
 
-1. **Действие правила различимо до чтения текста.** `direct`, `proxy`, `block` и DNS-перехват — четыре разные судьбы пакета.
-2. **Выделение отличимо от наведения** без вглядывания.
-3. **Цвет живёт в токенах.** Литерал палитры Tailwind в компоненте — признак недостающего токена, а не решение.
-4. **Одна система на обе темы.** Оттенки светлой и тёмной совпадают по смыслу, различаются светлотой.
-5. **Нулевая стоимость для вендорной зоны.** Примитивы shadcn не правятся.
+1. **A rule's action is distinguishable before reading the text.** `direct`, `proxy`, `block` and DNS hijacking are four different fates of a packet.
+2. **Selection is distinguishable from hover** without peering.
+3. **Color lives in tokens.** A Tailwind palette literal in a component is a sign of a missing token, not a solution.
+4. **One system for both themes.** The hues of the light and dark themes match in meaning and differ in lightness.
+5. **Zero cost for the vendor zone.** shadcn primitives are not edited.
 
-## Рассмотренные варианты
+## Considered options
 
-1. **Оставить нейтральный пресет, различать состояния только светлотой.** Преимущества: править нечего. Недостатки: на тёмной теме шаг светлоты между поверхностями физически мал, что и наблюдалось (критерии 1, 2); цвет всё равно просачивается литералами (критерий 3). **Отклонён.**
+1. **Keep the neutral preset and distinguish states only by lightness.** Pros: nothing to edit. Cons: in the dark theme the lightness step between surfaces is physically small, which is what was observed (drivers 1, 2); color leaks in as literals anyway (driver 3). **Rejected.**
 
-2. **Взять цветной пресет shadcn целиком.** Преимущества: готовые токены обеих тем. Недостатки: пресет даёт акцент и графики, но не даёт ролей предметной области — действие правила и состояние узла всё равно пришлось бы заводить сверх него (критерии 1, 3); чужая палитра приносит оттенки, которых предмет не требует. **Отклонён.**
+2. **Take a colored shadcn preset as a whole.** Pros: ready-made tokens for both themes. Cons: the preset gives an accent and charts but no domain roles: the rule action and the node state would still have to be added on top of it (drivers 1, 3); someone else's palette brings hues the subject does not need. **Rejected.**
 
-3. **Семантические токены поверх собственной базы.** Преимущества: роли названы предметом (`--route-direct`, `--signal-warn`, `--series-down`), их видно в разметке и они проверяемы; базовые роли shadcn остаются на месте, поэтому вендорная зона не трогается (критерий 5). Недостатки: набор токенов расширяется и его нужно держать в двух темах. **Принят.**
+3. **Semantic tokens on top of our own base.** Pros: roles are named after the subject (`--route-direct`, `--signal-warn`, `--series-down`), they are visible in the markup and checkable; the base shadcn roles stay in place, so the vendor zone is not touched (driver 5). Cons: the token set grows and has to be kept in two themes. **Chosen.**
 
-## Принятое решение
+## Decision outcome
 
-**База — почти чёрная с холодным подтоном**, hue 265 при хроматичности 0.006–0.012. Сцена задана: панель открывают в терминале рядом с ssh-сессией на роутер, чаще вечером. Тёмная тема основная, светлая собрана полностью.
+**The base is near-black with a cold undertone**, hue 265 at chroma 0.006–0.012. The scene is given: the panel is opened in a terminal next to an ssh session to the router, more often in the evening. The dark theme is the main one, and the light theme is fully built.
 
-**Три роли действия и одна нейтральная.** `--route-direct` — бирюзовый, `--route-proxy` — азур, `--route-block` — розовый, `--route-dns` — фиолетовый, `--route-neutral` — приглушённый серый под действия вроде `sniff`, которые не являются выходом трафика. Соответствие «строка действия → тон» задано таблицей подстрок в `ConnectionAction.ts` и `RuleTargetTone.ts`, а не цепочкой условий: новый вид узла добавляется записью.
+**Three action roles and one neutral.** `--route-direct` is teal, `--route-proxy` is azure, `--route-block` is pink, `--route-dns` is violet, `--route-neutral` is a muted grey for actions like `sniff` that are not a traffic exit. The mapping "action string → tone" is set by a substring table in `ConnectionAction.ts` and `RuleTargetTone.ts`, not by a chain of conditions: a new kind of node is added with an entry.
 
-**Состояние переиспользует те же оттенки.** `--signal-ok` совпадает с `direct`, `--signal-bad` — с `block`, `--signal-warn` — янтарный. Палитра остаётся одной системой, а не двумя параллельными.
+**State reuses the same hues.** `--signal-ok` matches `direct`, `--signal-bad` matches `block`, `--signal-warn` is amber. The palette stays one system, not two parallel ones.
 
-**Выделение — отдельная поверхность, а не альфа.** `--selected` на шаг светлее карточки (oklch 0.295 против 0.196), `--selected-edge` — акцентная кромка. Строка правила и строка соединения несут оба признака сразу, плитка узла прокси — кромку и галочку, то есть один из признаков не цветовой.
+**Selection is a separate surface, not alpha.** `--selected` is one step lighter than the card (oklch 0.295 against 0.196), `--selected-edge` is an accent edge. A rule row and a connection row carry both marks at once, a proxy node tile carries the edge and a check mark, so one of the marks is not color-based.
 
-**Ряды графика разведены тоном.** `--series-down` — азур, `--series-up` — янтарный.
+**Chart series are separated by hue.** `--series-down` is azure, `--series-up` is amber.
 
-**Акцент один — азур.** Он же `--primary` и `--ring`. Против конкурентов на том же роутере это различимая позиция: b4 занял янтарь с магентой, официальный дашборд sing-box — нейтральную серо-зелёную, metacubexd — оранжевый с бирюзой.
+**There is one accent: azure.** It is also `--primary` and `--ring`. Against competitors on the same router this is a distinguishable position: b4 took amber with magenta, the official sing-box dashboard a neutral grey-green, metacubexd orange with teal.
 
-**Схема объявлена явно.** `color-scheme: light` и `color-scheme: dark` в блоках тем. Без объявления браузер с авто-тёмным режимом перекрашивает светлую тему сам, а нативные элементы — полосу прокрутки, каретку, чекбокс — рисует от системной настройки, а не от темы панели.
+**The color scheme is declared explicitly.** `color-scheme: light` and `color-scheme: dark` in the theme blocks. Without the declaration, a browser with automatic dark mode recolors the light theme itself, and draws native elements (the scrollbar, the caret, a checkbox) from the system setting, not from the panel theme.
 
-**Шкала кегля и радиусы заданы явно.** Ступени 10/12/14/16/18/22/28/36 и радиусы 8/10/14/16/20/24/32 объявлены в `@theme inline` списком, а не множителем от базы: множитель shadcn давал 6/8/10/14/18/22 и расходился с требованием кратности двум.
+**The font size scale and radii are set explicitly.** The steps 10/12/14/16/18/22/28/36 and the radii 8/10/14/16/20/24/32 are declared in `@theme inline` as a list, not as a multiplier from a base: the shadcn multiplier gave 6/8/10/14/18/22 and contradicted the multiple-of-two requirement.
 
-### Область действия и границы
+### Scope and boundaries
 
-Решение распространяется на `apps/web/src/app/styles/index.css` и таблицы соответствия тонов в виджетах. Вендорная зона `shared/ui` не правится: примитивы читают те же переменные, что и раньше.
+The decision covers `apps/web/src/app/styles/index.css` and the tone mapping tables in widgets. The `shared/ui` vendor zone is not edited: the primitives read the same variables as before.
 
-## Последствия
+## Consequences
 
-### Положительные
+### Positive
 
-- Выбранный узел, выбранное правило и действие правила различимы одним взглядом на всех трёх экранах рантайма.
-- Цвет перестал утекать литералами палитры Tailwind в компоненты.
-- Светлая тема стала рабочей, а не мёртвым блоком CSS: к ней есть переключатель, и она объявлена браузеру.
-- Шкала кегля и радиусов пришла в соответствие со стайлгайдом.
+- The selected node, the selected rule and the rule action are distinguishable at a glance on all three runtime screens.
+- Color stopped leaking into components as Tailwind palette literals.
+- The light theme became usable rather than a dead block of CSS: it has a switch and is declared to the browser.
+- The font size and radius scale now matches the style guide.
 
-### Отрицательные
+### Negative
 
-- Токенов стало заметно больше, и каждый объявляется дважды — в светлой теме и в тёмной. Расхождение между темами ловится только глазами.
-- Соответствие «строка действия → тон» работает по подстрокам тега, который пишет пользователь. Аутбаунд с именем `directional` получит тон `direct`. Точного источника у панели нет: тип узла есть только у аутбаундов конфига, а в соединениях приходит строка рантайма.
-- Светлая тема собиралась расчётом по светлоте, и шаг, зеркальный тёмной теме, оказался мал для белого фона: замер в браузере 2026-09-13 дал 3,53–4,40 при пороге 4,5 у янтарных `--signal-warn` и `--series-up`. Оба затемнены до `oklch(0.51 0.13 70)`, замер повторён. Расчёт по светлоте не заменяет замер на том фоне, поверх которого цвет стоит.
+- There are noticeably more tokens, and each is declared twice, in the light theme and in the dark one. A mismatch between the themes is caught only by eye.
+- The mapping "action string → tone" works on substrings of a tag the user writes. An outbound named `directional` gets the `direct` tone. The panel has no exact source: the node type exists only for config outbounds, while connections bring a runtime string.
+- The light theme was built by computing lightness, and the step mirroring the dark theme turned out too small for a white background: a browser measurement on 2026-09-13 gave 3.53–4.40 against a 4.5 threshold for the amber `--signal-warn` and `--series-up`. Both were darkened to `oklch(0.51 0.13 70)`, and the measurement was repeated. Computing lightness does not replace a measurement against the background the color sits on.
 
-### Нейтральные или отложенные
+### Neutral or deferred
 
-- Токены графиков `--chart-1…5` удалены: ими никто не пользовался, а графики теперь берут `--series-*`.
+- The chart tokens `--chart-1…5` are removed: nobody used them, and charts now take `--series-*`.

@@ -1,100 +1,100 @@
-# ADR-0048. Собирать устройства LAN из DHCP на каждый запрос, а свои имена хранить в состоянии демона
+# ADR-0048. Build the LAN device list from DHCP on every request, and keep custom names in the daemon state
 
-- Статус: Accepted
-- Дата: 2026-10-09
-- Ответственные: владелец репозитория
+- Status: Accepted
+- Date: 2026-10-09
+- Deciders: repository owner
 
-## Контекст и постановка проблемы
+## Context and problem statement
 
-US-12 [PRD](../PRD.md) — видеть устройства сети по именам из DHCP или заданным владельцем и выбирать их в правилах вместо IP. Требования — раздел «Устройства»: AC-58 (список из аренд и статических записей dnsmasq), AC-59 (своё имя по MAC переживает рестарт демона, приоритет подписи), AC-60 (одна подпись по всей панели), AC-62 (условие правила по устройству записывается как `source_ip_cidr`).
+US-12 of the [PRD](../PRD.md): see network devices by names from DHCP or set by the owner, and pick them in rules instead of IPs. The requirements are in the "Devices" section: AC-58 (a list from dnsmasq leases and static entries), AC-59 (a custom name by MAC survives a daemon restart, label priority), AC-60 (one label across the whole panel), AC-62 (a rule condition by device is written as `source_ip_cidr`).
 
-Что дано устройством и кодом:
+What the device and the code provide:
 
-- Аренды dnsmasq лежат в файле `/tmp/dhcp.leases` строками `<срок> <mac> <ip> <имя|*> <client-id|*>`; файл меняет dnsmasq при каждой выдаче аренды.
-- Статические аренды — секции `host` в UCI `dhcp` (`name`, `ip`, `mac` списком или через пробел); их правит владелец через LuCI или SSH.
-- Ни один из этих источников не хранит имя, которое владелец дал устройству в панели, а sing-box имён устройств не знает вовсе: правило маршрута сравнивает адрес источника.
-- Служебный каталог демона (`state_dir`, по умолчанию `/etc/metabox`) уже держит состояние транзакции Apply, историю версий и каталог наборов, запись в него атомарная через `config.Store`.
+- dnsmasq leases are in the file `/tmp/dhcp.leases` as lines `<expiry> <mac> <ip> <name|*> <client-id|*>`; dnsmasq changes the file on every lease it hands out.
+- Static leases are `host` sections in the `dhcp` UCI (`name`, `ip`, `mac` as a list or space-separated); the owner edits them through LuCI or SSH.
+- Neither of these sources stores the name the owner gave a device in the panel, and sing-box does not know device names at all: a routing rule compares the source address.
+- The daemon's service directory (`state_dir`, `/etc/metabox` by default) already holds the Apply transaction state, the version history and the rule set catalog; writes to it are atomic through `config.Store`.
 
-Открытые вопросы решения: откуда и как часто демон берёт список, где живут свои имена, кто считает подпись. В scope — источники, хранение имён, контракт `GET /api/devices` и `PUT /api/devices/{mac}`, подпись в панели. Вне scope — тумблер «через sing-box» на экране «Устройства» (AC-61, ждёт AC-53) и ACL обвязки ([ADR-0047](./ADR-0047-set-up-lan-interception-in-the-singbox-init-script.md)).
+Open questions of the decision: where and how often the daemon gets the list, where custom names live, who computes the label. In scope: the sources, name storage, the `GET /api/devices` and `PUT /api/devices/{mac}` contract, the label in the panel. Out of scope: the "through sing-box" toggle on the "Devices" screen (AC-61, waits for AC-53) and the dataplane ACL ([ADR-0047](./ADR-0047-set-up-lan-interception-in-the-singbox-init-script.md)).
 
-## Критерии выбора
+## Decision drivers
 
-1. **Не трогать чужие конфиги**: DHCP роутера и конфиг sing-box не меняются от того, что владелец подписал устройство.
-2. **Свежесть**: аренда, выданная минуту назад, и статическая запись, добавленная по SSH, видны без рестарта демона.
-3. **Сохранность**: своё имя переживает рестарт демона и перезагрузку роутера и одинаково в любом браузере (AC-59).
-4. **Одна подпись**: приоритет считается в одном месте, все экраны показывают одно и то же (AC-60).
-5. **Цена на роутере**: без фонового опроса без потребителя, без новой зависимости.
+1. **Do not touch other configs**: the router's DHCP and the sing-box config do not change because the owner labelled a device.
+2. **Freshness**: a lease handed out a minute ago and a static entry added over SSH are visible without a daemon restart.
+3. **Persistence**: a custom name survives a daemon restart and a router reboot and is the same in any browser (AC-59).
+4. **One label**: the priority is computed in one place, all screens show the same thing (AC-60).
+5. **Cost on the router**: no background polling without a consumer, no new dependency.
 
-## Рассмотренные варианты
+## Considered options
 
-1. **Свои имена — секциями `host` в UCI `dhcp`.** Имя видно и LuCI, и dnsmasq, отдельного хранилища нет. Но секция `host` — это настройка DHCP-сервера, а не подпись: переименование меняло бы конфиг DHCP роутера, которым панель не владеет (критерий 1), — по той же причине upstream dnsmasq в AC-50 и OQ-19 кладётся фрагментом conf-dir, а UCI `dhcp` не правится. **Отклонён.**
-2. **Свои имена — в конфиге sing-box.** Конфиг — единственный источник правды о маршрутизации, и [ADR-0033](./ADR-0033-keep-custom-rule-lists-in-the-singbox-config.md) держит в нём свои списки как раз потому, что они меняют маршрут. Имя устройства маршрут не меняет: правило по устройству пишется адресом (AC-62), а имя — данные панели, а не ядра. Переименование шло бы протоколом Apply — проверка, рестарт sing-box, окно подтверждения — ради подписи в таблице (критерии 1 и 5). **Отклонён.**
-3. **Свои имена — в браузере.** Не нужен ни демон, ни файл. Но имена живут в одном браузере и пропадают с его данными, а AC-59 требует хранения в демоне (критерий 3). **Отклонён.**
-4. **Список — из аренд и `uci show dhcp` на каждый запрос, свои имена — файлом `devices.json` в служебном каталоге демона по MAC.** Принят.
+1. **Custom names as `host` sections in the `dhcp` UCI.** The name is visible to both LuCI and dnsmasq, no separate storage. But a `host` section is a DHCP server setting, not a label: renaming would change the router's DHCP config, which the panel does not own (driver 1); for the same reason the dnsmasq upstream in AC-50 and OQ-19 is put as a conf-dir fragment, and the `dhcp` UCI is not edited. **Rejected.**
+2. **Custom names in the sing-box config.** The config is the only source of truth about routing, and [ADR-0033](./ADR-0033-keep-custom-rule-lists-in-the-singbox-config.md) keeps custom lists in it exactly because they change routing. A device name does not change routing: a rule by device is written as an address (AC-62), and the name is panel data, not core data. Renaming would go through the Apply protocol (check, sing-box restart, confirmation window) for the sake of a label in a table (drivers 1 and 5). **Rejected.**
+3. **Custom names in the browser.** Neither the daemon nor a file is needed. But the names live in one browser and disappear with its data, while AC-59 requires storage in the daemon (driver 3). **Rejected.**
+4. **The list from leases and `uci show dhcp` on every request, custom names in a `devices.json` file in the daemon's service directory, keyed by MAC.** **Chosen.**
 
-## Принятое решение
+## Decision outcome
 
-**Список.** `GET /api/devices` на каждый запрос читает файл аренд (флаг `-dhcp-leases`, не больше 1 МиБ) и `uci -q show dhcp`, сводит их по MAC в нижнем регистре и добавляет свои имена. Демон список не кэширует. Устройство со своим именем и без аренды остаётся в списке — офлайн и, если нет статической записи, без адреса: правило по нему не должно пропадать, пока устройство не в сети. Адрес берётся из аренды, без неё — из статической записи. `Online` — аренда не истекла по часам роутера или бессрочная.
+**List.** On every request `GET /api/devices` reads the lease file (the `-dhcp-leases` flag, at most 1 MiB) and `uci -q show dhcp`, merges them by lowercase MAC and adds the custom names. The daemon does not cache the list. A device with a custom name and no lease stays in the list, offline and, if there is no static entry, without an address: a rule for it must not disappear while the device is not on the network. The address is taken from the lease, without one from the static entry. `Online` means the lease has not expired by the router clock or has no expiry.
 
-**Подпись.** Демон отдаёт победителя в `name` и его источник в `name_source`: своё имя (`custom`), затем имя статической аренды (`static`), затем имя, которое устройство назвало в DHCP (`dhcp`), иначе `none`. Панель добавляет только запасные ступени — IP, а у устройства без адреса MAC — в `toDeviceLabel`, и переводит адрес источника соединения в подпись одной функцией `deviceLabel` в [`Device.model.ts`](../../apps/web/src/entities/Device/model/Device.model.ts). Места, где она стоит, перечисляет тест `Device.places`.
+**Label.** The daemon returns the winner in `name` and its source in `name_source`: the custom name (`custom`), then the static lease name (`static`), then the name the device reported in DHCP (`dhcp`), otherwise `none`. The panel adds only the fallback levels (the IP, and the MAC for a device without an address) in `toDeviceLabel`, and turns a connection's source address into a label with one function, `deviceLabel`, in [`Device.model.ts`](../../apps/web/src/entities/Device/model/Device.model.ts). The places where it is used are listed by the `Device.places` test.
 
-**Хранение.** Свои имена — объект «MAC → имя» в `<state_dir>/devices.json`. Демон читает его один раз на старте и держит в памяти; `PUT /api/devices/{mac}` пишет файл атомарно через `config.Store` до того, как обновить память, и отвечает списком целиком. Пустое имя снимает своё. Потолки: 64 символа на имя без управляющих символов, 1024 имени, 4 КиБ на тело запроса. Битый файл на старте — ручки устройств не регистрируются, панель подписывает источники адресами, файл не затирается следующей правкой.
+**Storage.** Custom names are a "MAC → name" object in `<state_dir>/devices.json`. The daemon reads it once on start and keeps it in memory; `PUT /api/devices/{mac}` writes the file atomically through `config.Store` before updating memory and responds with the whole list. An empty name removes the custom one. Limits: 64 characters per name without control characters, 1024 names, 4 KiB per request body. A broken file on start: the device endpoints are not registered, the panel labels sources with addresses, and the file is not overwritten by the next edit.
 
-**Цена запроса в панели.** Каждый `GET` запускает `uci` на роутере, поэтому панель держит список свежим минуту (`staleTime`), опрашивает его раз в минуту одним потребителем на экран и гасит опрос на отказе ([`Device.query.ts`](../../apps/web/src/entities/Device/api/Device.query.ts)).
+**Request cost in the panel.** Each `GET` runs `uci` on the router, so the panel keeps the list fresh for a minute (`staleTime`), polls it once a minute with one consumer per screen, and stops polling on a failure ([`Device.query.ts`](../../apps/web/src/entities/Device/api/Device.query.ts)).
 
-Non-goal: имена не входят в черновик конфига и протокол Apply — у них нет `ETag`, `If-Match` и окна подтверждения; правки разных MAC из двух вкладок не теряют друг друга, правка одного MAC — последняя побеждает. IPv6-аренды (строки с DUID) пропускаются.
+Non-goal: names are not part of the config draft or the Apply protocol: they have no `ETag`, `If-Match` or confirmation window; edits of different MACs from two tabs do not lose each other, for edits of one MAC the last one wins. IPv6 leases (lines with a DUID) are skipped.
 
-### Область действия и границы
+### Scope and boundaries
 
-`apps/metaboxd/internal/devices`, `ReadDevices`/`WriteDevices` в `internal/config`, ручки устройств в `internal/httpapi`, `contract.Devices`; панель — `apps/web/src/entities/Device`.
+`apps/metaboxd/internal/devices`, `ReadDevices`/`WriteDevices` in `internal/config`, the device endpoints in `internal/httpapi`, `contract.Devices`; the panel: `apps/web/src/entities/Device`.
 
-## Последствия
+## Consequences
 
-### Положительные
+### Positive
 
-- DHCP роутера и конфиг sing-box от переименования не меняются; после удаления панели остаётся один лишний файл в служебном каталоге.
-- Новая аренда и статическая запись по SSH видны на следующем опросе, без рестарта демона и без файлового наблюдателя.
-- Подпись одна на всю панель: приоритет у демона, запасные ступени — в одной функции.
-- Переименование мгновенное: без рестарта sing-box и окна подтверждения.
+- The router's DHCP and the sing-box config do not change on renaming; after the panel is removed one extra file remains in the service directory.
+- A new lease and a static entry added over SSH are visible on the next poll, without a daemon restart and without a file watcher.
+- One label for the whole panel: the priority is in the daemon, the fallback levels are in one function.
+- Renaming is instant: no sing-box restart and no confirmation window.
 
-### Отрицательные
+### Negative
 
-- `uci show dhcp` запускается на каждый `GET /api/devices`: цена держится на дисциплине панели, а не на кэше демона.
-- Имена привязаны к MAC: устройство со случайным MAC (приватный адрес Wi-Fi) получает новое имя-сироту при смене адреса, а старые записи копятся до потолка 1024.
-- Имена не попадают в историю версий и не откатываются вместе с конфигом.
-- Правило по устройству хранит адрес: при динамической аренде оно может перестать совпадать с устройством, панель только предупреждает (AC-62).
+- `uci show dhcp` runs on every `GET /api/devices`: the cost relies on the panel's discipline, not on a daemon cache.
+- Names are bound to the MAC: a device with a random MAC (a private Wi-Fi address) gets a new orphan name when the address changes, and old entries accumulate up to the 1024 limit.
+- Names do not get into the version history and are not rolled back together with the config.
+- A rule by device stores the address: with a dynamic lease it may stop matching the device, and the panel only warns (AC-62).
 
-### Нейтральные или отложенные
+### Neutral or deferred
 
-- Кэш списка в демоне и наблюдение за файлом аренд не делаются, пока замер не покажет цену опроса.
-- Чистка имён устройств, давно не появлявшихся в сети, не делается.
+- A list cache in the daemon and watching the lease file are not done until a measurement shows the cost of polling.
+- Names of devices that have not appeared on the network for a long time are not cleaned up.
 
-## Риски и меры снижения
+## Risks and mitigations
 
-| Риск                                                                                                           | Вероятность и влияние                                                   | Митигация                                                                                         |
-| -------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| Нагрузка от `uci` на каждый запрос: несколько вкладок или сторонний клиент опрашивают ручку часто              | Низкая, низкое — лишние процессы на роутере                             | Панель — один опрос в минуту на экран; стороннего клиента не ограничивает ничто                   |
-| Вывод `uci show dhcp` больше 64 КиБ — потолка вывода команды: статические записи из хвоста теряются без ошибки | Низкая на домашней сети, среднее — часть устройств без статических имён | Не обнаруживается; при росте `dhcp` читать файл UCI напрямую или поднять потолок для этого вызова |
-| Часы роутера до синхронизации NTP стоят в прошлом: истёкшая аренда считается живой                             | Средняя после перезагрузки, низкое — неверный признак «онлайн»          | Признак описан в контракте `Device.Online`; на подпись и адрес не влияет                          |
-| Битый `devices.json` после сбоя питания                                                                        | Низкая — запись атомарная, среднее — экран устройств недоступен         | Демон стартует без ручек устройств и пишет ошибку в лог; файл не затирается                       |
+| Risk                                                                                                                        | Probability and impact                                              | Mitigation                                                                                         |
+| --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Load from `uci` on every request: several tabs or a third-party client poll the endpoint often                              | Low, low: extra processes on the router                             | The panel polls once a minute per screen; nothing limits a third-party client                      |
+| `uci show dhcp` output larger than 64 KiB, the command output limit: static entries from the tail are lost without an error | Low on a home network, medium: some devices without static names    | Not detected; if `dhcp` grows, read the UCI file directly or raise the limit for this call         |
+| The router clock is in the past before NTP sync: an expired lease counts as live                                            | Medium after a reboot, low: a wrong "online" flag                   | The flag is described in the `Device.Online` contract; it does not affect the label or the address |
+| A broken `devices.json` after power loss                                                                                    | Low, the write is atomic; medium: the devices screen is unavailable | The daemon starts without the device endpoints and logs an error; the file is not overwritten      |
 
-## Совместимость, миграция и откат
+## Compatibility, migration and rollback
 
-Миграция не нужна: файла нет — своих имён нет, список собирается из DHCP. Контракт расширяется ручками `GET /api/devices` и `PUT /api/devices/{mac}`; демон без этих ручек отвечает на них отказом, панель показывает ошибку загрузки списка и подписывает источники адресами.
+No migration is needed: no file means no custom names, and the list is built from DHCP. The contract is extended with the `GET /api/devices` and `PUT /api/devices/{mac}` endpoints; a daemon without these endpoints refuses them, and the panel shows a list loading error and labels sources with addresses.
 
-Откат — удалить `<state_dir>/devices.json`: подписи возвращаются к статическим арендам и DHCP.
+Rollback: delete `<state_dir>/devices.json`; labels return to static leases and DHCP.
 
-## Проверка решения
+## Validation
 
-- `cd apps/metaboxd && go test ./internal/devices/ ./internal/httpapi/`: разбор аренд и `uci show dhcp` на фикстурах роутера, сведение по MAC, приоритет подписи, офлайн по истёкшей аренде, устройство только со своим именем, отказ длинного имени и управляющих символов, отказ записи не меняет память, битый файл — ошибка старта. Потолок в 1024 имени тестом не закрыт.
-- `pnpm -C apps/web exec vitest run Device`: `toDeviceLabel`, `deviceLabel`, места подписи в `Device.places`, экран «Устройства».
-- На стенде или роутере: `curl http://<панель>/api/devices`, затем `PUT` своего имени, рестарт `metaboxd` — имя на месте, `cat <state_dir>/devices.json` содержит MAC в нижнем регистре.
+- `cd apps/metaboxd && go test ./internal/devices/ ./internal/httpapi/`: parsing leases and `uci show dhcp` on router fixtures, merging by MAC, label priority, offline by an expired lease, a device with only a custom name, refusing a long name and control characters, a write failure does not change memory, a broken file is a start error. The 1024-name limit is not covered by a test.
+- `pnpm -C apps/web exec vitest run Device`: `toDeviceLabel`, `deviceLabel`, the label places in `Device.places`, the "Devices" screen.
+- On the test bench or the router: `curl http://<panel>/api/devices`, then `PUT` a custom name, restart `metaboxd`: the name is in place, and `cat <state_dir>/devices.json` contains the MAC in lowercase.
 
-## Ссылки
+## Links
 
-- [PRD](../PRD.md): US-12, AC-58…AC-62, AC-50 и OQ-19 (UCI `dhcp` не правится);
-- [ADR-0033](./ADR-0033-keep-custom-rule-lists-in-the-singbox-config.md) — свои списки в конфиге sing-box, а не в состоянии демона;
-- [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md) — протокол Apply, мимо которого идут имена;
-- [ADR-0047](./ADR-0047-set-up-lan-interception-in-the-singbox-init-script.md) — ACL обвязки, куда пишет тумблер AC-61;
+- [PRD](../PRD.md): US-12, AC-58…AC-62, AC-50 and OQ-19 (the `dhcp` UCI is not edited);
+- [ADR-0033](./ADR-0033-keep-custom-rule-lists-in-the-singbox-config.md): custom lists in the sing-box config, not in the daemon state;
+- [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md): the Apply protocol, which names bypass;
+- [ADR-0047](./ADR-0047-set-up-lan-interception-in-the-singbox-init-script.md): the dataplane ACL, where the AC-61 toggle writes;
 - [`devices.go`](../../apps/metaboxd/internal/devices/devices.go), [`dhcp.go`](../../apps/metaboxd/internal/devices/dhcp.go), [`config.go`](../../apps/metaboxd/internal/config/config.go), [`httpapi.go`](../../apps/metaboxd/internal/httpapi/httpapi.go);
 - [`Device.model.ts`](../../apps/web/src/entities/Device/model/Device.model.ts), [`Device.query.ts`](../../apps/web/src/entities/Device/api/Device.query.ts).

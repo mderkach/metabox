@@ -1,8 +1,10 @@
-# Ошибки и логи
+# Errors and logging
 
-## Ошибку возвращают, а не логируют
+Error and log texts of the daemon are in Russian: they reach the panel and the system log as they are. The string literals in the examples below are kept in Russian for that reason.
 
-Один отказ — одна запись в логе, на верхнем уровне. Нижние уровни добавляют контекст обёрткой и отдают ошибку выше:
+## Return an error, do not log it
+
+One failure is one log record, at the top level. Lower levels add context by wrapping and pass the error up:
 
 ```go
 func (s *Store) Write(cfg []byte) error {
@@ -14,15 +16,15 @@ func (s *Store) Write(cfg []byte) error {
 }
 ```
 
-Контекст — что делали и над чем, без слов «ошибка», «не удалось» и без заглавной буквы: строка собирается в цепочку и читается целиком. Пунктуация в конце не ставится. Язык сообщений — один на весь демон, вперемешку не пишем.
+Context says what was being done and to what, without the words "ошибка" (error) or "не удалось" (failed) and without a capital letter: the string is assembled into a chain and read as a whole. No punctuation at the end. The message language is one for the whole daemon; do not mix languages.
 
-`%w` — когда вызывающий может отреагировать на исходную ошибку или когда она несёт данные (`*exec.ExitError`, `fs.ErrNotExist`). `%v` — когда ошибка чужого пакета становится деталью реализации и её тип не должен утекать в контракт.
+`%w` is used when the caller can react to the original error or when it carries data (`*exec.ExitError`, `fs.ErrNotExist`). `%v` is used when an error of a foreign package becomes an implementation detail and its type must not leak into the contract.
 
-Не обёртывать и не логировать одновременно, не возвращать `nil` вместе с невалидным значением, не терять ошибки `Close` на записи — там теряется факт неполной записи.
+Do not wrap and log at the same time, do not return `nil` together with an invalid value, do not lose `Close` errors on writes: that is where the fact of an incomplete write gets lost.
 
-## Sentinel и типы
+## Sentinels and types
 
-Sentinel — когда факт отказа сам по себе информативен:
+A sentinel is used when the fact of failure is informative by itself:
 
 ```go
 var (
@@ -31,7 +33,7 @@ var (
 )
 ```
 
-Тип — когда с ошибкой едут данные, нужные вызывающему или пользователю. Для `sing-box check` это обязательный случай: `stdout`, `stderr` и код возврата отдаются дословно.
+A type is used when the error carries data that the caller or the user needs. For `sing-box check` this is mandatory: `stdout`, `stderr` and the exit code are passed on verbatim.
 
 ```go
 type CheckError struct {
@@ -45,7 +47,7 @@ func (e *CheckError) Error() string {
 }
 ```
 
-Проверка — `errors.Is` для sentinel, `errors.AsType` для типов (Go 1.26, типобезопасная замена `errors.As`):
+Checking: `errors.Is` for sentinels, `errors.AsType` for types (Go 1.26, a type-safe replacement for `errors.As`):
 
 ```go
 if checkErr, ok := errors.AsType[*CheckError](err); ok {
@@ -54,13 +56,13 @@ if checkErr, ok := errors.AsType[*CheckError](err); ok {
 }
 ```
 
-Сравнение ошибок по тексту (`strings.Contains(err.Error(), ...)`) запрещено: текст — часть сообщения пользователю, а не контракт.
+Comparing errors by text (`strings.Contains(err.Error(), ...)`) is forbidden: the text is part of the message to the user, not a contract.
 
-`errors.Join` — когда шагов несколько и все результаты нужны разом: откат, который не смог ни восстановить бэкап, ни рестартовать сервис, обязан рассказать обе половины.
+`errors.Join` is used when there are several steps and all results are needed at once: a rollback that could neither restore the backup nor restart the service must report both halves.
 
-## Ошибки на границе HTTP
+## Errors at the HTTP boundary
 
-Внутренняя ошибка не уезжает в тело ответа как есть: пути на диске, аргументы команд и содержимое конфига — лишнее для клиента и подарок тому, кто добрался до панели. Наружу идёт код — стабильный машинный идентификатор — и текст, пригодный для показа.
+An internal error does not go into the response body as is: paths on disk, command arguments and config contents are unnecessary for the client and a gift to whoever got to the panel. What goes out is a code, a stable machine identifier, and a text fit for display.
 
 ```go
 type Error struct {
@@ -70,51 +72,51 @@ type Error struct {
 }
 ```
 
-Набор кодов закрытый и объявлен перечислением в `internal/contract` рядом с самим типом, а не строками по хендлерам. Причина не в порядке: по коду панель выбирает текст на языке пользователя, поэтому новый код — изменение контракта, и место ему там же, где остальные обещания клиенту. Каждый код снабжён godoc: он же объясняет отказ тому, кто будет писать для него текст.
+The set of codes is closed and declared as an enumeration in `internal/contract` next to the type itself, not as strings scattered across handlers. The reason is not tidiness: the panel picks the text in the user's language by the code, so a new code is a contract change, and it belongs in the same place as the other promises to the client. Every code has godoc: it also explains the failure to whoever will write the text for it.
 
-Набор значений именованного типа уезжает в схему контракта списком, и панель типизирует им свои таблицы: пропущенный код — ошибка её компиляции ([ADR-0021](../../../../docs/adr/ADR-0021-print-contract-enumerations-as-value-lists.md)). Разбор ответа при этом остаётся терпимым — значение вне набора не должно гасить экран.
+The value set of the named type goes into the contract schema as a list, and the panel types its tables with it: a missing code is a compile error in the panel ([ADR-0021](../../../../docs/adr/ADR-0021-print-contract-enumerations-as-value-lists.md)). Parsing the response stays tolerant: a value outside the set must not take the screen down.
 
-Отсюда же правило про `Message`: он остаётся на языке демона и служит запасным текстом. Панель показывает его, только когда код ей незнаком, — например, панель старше демона. Локализованных строк демон не отдаёт и языка клиента не знает ([ADR-0019](../../../../docs/adr/ADR-0019-keep-interface-texts-in-the-slice-and-load-them-over-the-network.md)).
+The same reasoning gives the rule for `Message`: it stays in the daemon's language and serves as fallback text. The panel shows it only when it does not know the code, for example when the panel is older than the daemon. The daemon returns no localized strings and does not know the client's language ([ADR-0019](../../../../docs/adr/ADR-0019-keep-interface-texts-in-the-slice-and-load-them-over-the-network.md)).
 
-Исключение ровно одно: вывод `sing-box check` возвращается дословно — на нём пользователь чинит конфиг.
+There is exactly one exception: the output of `sing-box check` is returned verbatim, the user fixes the config from it.
 
-Соответствие ошибок кодам HTTP держится в одном месте — в пакете API, а не в каждом хендлере. Паника в хендлере ловится middleware, пишется в лог со стеком и превращается в 500 с кодом `internal` и запасным текстом — без подробностей паники.
+The mapping of errors to HTTP codes is kept in one place, the API package, not in every handler. A panic in a handler is caught by middleware, logged with the stack and turned into a 500 with the `internal` code and the fallback text, without panic details.
 
-## Логи
+## Logs
 
-`log/slog`, один логгер, передаётся явно через конструктор. `slog.Default()` и глобальные функции пакета в коде демона не используем — они прячут зависимость.
+`log/slog`, one logger, passed explicitly through the constructor. `slog.Default()` and the package-level functions are not used in daemon code: they hide a dependency.
 
-Вывод — в stdout: procd поднимает демон с `procd_set_param stdout 1` ([`package/etc/init.d/metaboxd`](../../package/etc/init.d/metaboxd)) и сам уводит поток в syslog. Своих файлов логов демон не заводит — ротацией владеет система.
+Output goes to stdout: procd starts the daemon with `procd_set_param stdout 1` ([`package/etc/init.d/metaboxd`](../../package/etc/init.d/metaboxd)) and routes the stream to syslog itself. The daemon creates no log files of its own: the system owns rotation.
 
-Формат по умолчанию — `slog.NewTextHandler`: читаемо в `logread` и дешевле по объёму. JSON — под флагом, если понадобится внешний сбор. `slog.NewMultiHandler` (Go 1.26) позволяет вести оба вывода сразу, но заводить его без реального потребителя не нужно.
+The default format is `slog.NewTextHandler`: readable in `logread` and smaller in volume. JSON is behind a flag, in case external collection is needed. `slog.NewMultiHandler` (Go 1.26) allows both outputs at once, but do not add it without a real consumer.
 
-Уровень задаётся флагом через `slog.HandlerOptions.Level` и по умолчанию `Info`.
+The level is set by a flag through `slog.HandlerOptions.Level` and defaults to `Info`.
 
-| Уровень | Когда                                                                                                      |
-| ------- | ---------------------------------------------------------------------------------------------------------- |
-| Error   | Отказ, который виден пользователю или требует вмешательства: откат не прошёл, сервис не поднялся           |
-| Warn    | Отработала защита: конфиг изменён извне, запрос отклонён по `Origin`, транзакция доигрывается после старта |
-| Info    | События жизненного цикла: старт, применение, подтверждение, рестарт сервиса                                |
-| Debug   | Подробности шагов, выключены по умолчанию                                                                  |
+| Level | When                                                                                                                            |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Error | A failure visible to the user or needing intervention: the rollback failed, the service did not come up                         |
+| Warn  | A safeguard fired: the config was changed externally, a request was rejected by `Origin`, a transaction is replayed after start |
+| Info  | Lifecycle events: start, apply, confirmation, service restart                                                                   |
+| Debug | Step details, off by default                                                                                                    |
 
-## Атрибуты
+## Attributes
 
-Пишем парами ключ-значение, а не форматированной строкой:
+Write key-value pairs, not a formatted string:
 
 ```go
 s.log.Info("применение начато", "transaction_id", tx.ID, "sha256", sum[:12], "size", len(cfg))
 s.log.Error("рестарт сервиса", "err", err)
 ```
 
-Ошибка кладётся значением под ключ `err`, а не вклеивается в сообщение. Ключи стабильные и в змеином регистре, если из двух слов: `transaction_id`, `exit_code`. Сообщение описывает событие, а не перечисляет заполненные поля.
+An error goes as a value under the `err` key, it is not glued into the message. Keys are stable and in snake case when they have two words: `transaction_id`, `exit_code`. The message describes the event, it does not list the filled fields.
 
-Логгер с общими полями создаётся один раз через `With`: `log := s.log.With("transaction_id", tx.ID)` — дальше все записи шага несут идентификатор.
+A logger with shared fields is created once through `With`: `log := s.log.With("transaction_id", tx.ID)`, then every record of the step carries the identifier.
 
-`slog.LogAttrs` с типизированными атрибутами нужен только в горячем пути (прокси Clash API, поток соединений), где иначе каждая запись даёт аллокации. В цикле применения читаемость важнее.
+`slog.LogAttrs` with typed attributes is needed only on the hot path (the Clash API proxy, the connection stream), where otherwise every record allocates. In the apply loop readability matters more.
 
-## Чего в логах не бывает
+## What never goes into logs
 
-- `secret` из `experimental.clash_api` и любые токены — ни в сообщении, ни в атрибуте, ни в дампе конфига;
-- содержимое `config.json` целиком: там адреса серверов и ключи пользователя. Пишем `sha256` и размер;
-- тела запросов и ответов; заголовок `Authorization`;
-- то, что уже записано выше по стеку. Двойная запись об одном отказе ломает чтение лога.
+- `secret` from `experimental.clash_api` and any tokens: not in the message, not in an attribute, not in a config dump;
+- the whole content of `config.json`: it holds server addresses and user keys. Write `sha256` and the size;
+- request and response bodies; the `Authorization` header;
+- what is already logged higher up the stack. A double record of one failure breaks log reading.

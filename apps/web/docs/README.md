@@ -1,13 +1,13 @@
-# Документация фронтенда metabox
+# metabox frontend documentation
 
-| Документ                                                  | О чём                                                                                                |
-| --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| [Архитектура и стайлгайд](./guides/Architecture&Style.md) | FSD-структура `apps/web/src`, Public API, нейминг, компоненты, стили, инструменты                    |
-| [Управление состоянием](./guides/StateManagement.md)      | Zustand: зона ответственности, `stateCreator`, селекторы, запреты                                    |
-| [Работа с запросами](./guides/Query.md)                   | TanStack Query: fetch-функции, фабрики ключей и опций, `meta`, инвалидация, поток рантайма мимо кэша |
-| [Формы и валидация](./guides/Form&Validation.md)          | React Hook Form + Zod, ограничения путей полей, схемы-адаптеры, генерируемые схемы                   |
-| [Списки и таблицы](./guides/Tables.md)                    | Движок таблиц, анатомия списка, виртуализация, сортировка, фильтры, плотность, состояния             |
-| [Тестирование](./guides/UnitTesting.md)                   | Vitest + Testing Library, моки, golden round-trip, покрытие                                          |
-| [Чеклист код-ревью](./guides/ReviewChecklist.md)          | Сводный проверяемый список правил                                                                    |
+| Document                                                       | Topic                                                                                                          |
+| -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| [Architecture and style guide](./guides/Architecture&Style.md) | FSD structure of `apps/web/src`, Public API, naming, components, styles, tools                                 |
+| [State management](./guides/StateManagement.md)                | Zustand: area of responsibility, `stateCreator`, selectors, prohibitions                                       |
+| [Working with requests](./guides/Query.md)                     | TanStack Query: fetch functions, key and option factories, `meta`, invalidation, runtime stream past the cache |
+| [Forms and validation](./guides/Form&Validation.md)            | React Hook Form + Zod, field path constraints, adapter schemas, generated schemas                              |
+| [Lists and tables](./guides/Tables.md)                         | Table engine, list anatomy, virtualization, sorting, filters, density, states                                  |
+| [Testing](./guides/UnitTesting.md)                             | Vitest + Testing Library, mocks, golden round trip, coverage                                                   |
+| [Code review checklist](./guides/ReviewChecklist.md)           | Consolidated checklist of the rules                                                                            |
 
-Когда какой документ читается — таблица «Когда читать гайды» в [`apps/web/AGENTS.md`](../AGENTS.md). Порядок приоритетов при расхождениях — один на репозиторий, см. «Источники правил и их приоритет» в корневом [`AGENTS.md`](../../../AGENTS.md).
+Which document to read when: the "When to read the guides" table in [`apps/web/AGENTS.md`](../AGENTS.md). The priority order for conflicts is one for the whole repository, see "Rule sources and their priority" in the root [`AGENTS.md`](../../../AGENTS.md).

@@ -1,73 +1,73 @@
-# ADR-0038. Целиться в схему форка sing-box-extended, а не upstream sing-box
+# ADR-0038. Target the sing-box-extended fork schema, not upstream sing-box
 
-- Статус: Accepted — решение принято 2026-08-30 в разделе A.1 [`../PRD.md`](../PRD.md) и перенесено сюда без изменения существа, кроме способа установки форка
-- Дата: 2026-08-30
-- Ответственные: владелец репозитория
-- Заменяет: раздел A.1 [`../PRD.md`](../PRD.md)
+- Status: Accepted. The decision was made on 2026-08-30 in section A.1 of [`../PRD.md`](../PRD.md) and moved here without changes in substance, except for the way the fork is installed
+- Date: 2026-08-30
+- Deciders: repository owner
+- Supersedes: section A.1 of [`../PRD.md`](../PRD.md)
 
-## Контекст и постановка проблемы
+## Context and problem statement
 
-Панель правит конфиг sing-box и строит формы по его схеме, поэтому до генератора и форм нужно решить, чей конфиг она описывает. Кроме upstream sing-box есть форки с дополнительными протоколами. На роутере владельца работает форк [shtorm-7/sing-box-extended](https://github.com/shtorm-7/sing-box-extended): сверх upstream он даёт WARP, MASQUE, MTProxy, Mieru, TrustTunnel и SSH; OpenVPN и Snell в 1.14 переехали в upstream, и форк перешёл на его реализации.
+The panel edits a sing-box config and builds forms from its schema, so before the generator and the forms it has to be decided whose config it describes. Besides upstream sing-box there are forks with additional protocols. The owner's router runs the fork [shtorm-7/sing-box-extended](https://github.com/shtorm-7/sing-box-extended): on top of upstream it provides WARP, MASQUE, MTProxy, Mieru, TrustTunnel and SSH; OpenVPN and Snell moved to upstream in 1.14, and the fork switched to the upstream implementations.
 
-Ответ владельца в интервью `metabox-di-001`, Round 2: «Только sing-box-extended».
+The owner's answer in interview `metabox-di-001`, Round 2: "Only sing-box-extended."
 
-В scope: какой диалект конфига описывает схема панели. Вне scope: как схема извлекается из форка ([ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md)), как панель обходится с типами, которых нет в сборке бинаря ([ADR-0030](./ADR-0030-read-the-build-composition-from-the-binary-and-the-fork-sources.md)), и второй core — он вынесен в roadmap PRD.
+In scope: which config dialect the panel schema describes. Out of scope: how the schema is extracted from the fork ([ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md)), how the panel handles types missing from the binary build ([ADR-0030](./ADR-0030-read-the-build-composition-from-the-binary-and-the-fork-sources.md)), and a second core, which is moved to the PRD roadmap.
 
-## Критерии выбора
+## Decision drivers
 
-- Панель понимает конфиг, который реально исполняет бинарь на устройстве владельца.
-- Обычные конфиги upstream sing-box остаются валидными.
-- Одна схема на один core: усреднённой схемы нескольких ядер нет (раздел 9 и roadmap PRD).
-- Стоимость сопровождения при релизах.
+- The panel understands the config that the binary on the owner's device actually runs.
+- Ordinary upstream sing-box configs stay valid.
+- One schema per core: there is no averaged schema of several cores (section 9 and the PRD roadmap).
+- Maintenance cost across releases.
 
-## Рассмотренные варианты
+## Considered options
 
-Транскрипт сохранил только ответ владельца; варианты и доводы ниже восстановлены по тексту A.1 и разделов 9 и 11 PRD.
+The transcript kept only the owner's answer; the options and arguments below are reconstructed from the text of A.1 and sections 9 and 11 of the PRD.
 
-1. **Только sing-box-extended.** Форк — надмножество upstream, поэтому upstream-конфиги валидны автоматически, а протоколы форка получают формы наравне с остальными. Недостаток: панель привязана к темпу релизов одного форка (риск R-4 в PRD). **Принят.**
-2. **Только upstream sing-box.** Узлы WARP, MASQUE, MTProxy, Mieru, TrustTunnel и SSH стали бы для панели незнакомыми, а бинарь на устройстве владельца — форк. **Отклонён.**
-3. **Общая схема нескольких ядер.** Совместимость с upstream и форком одной схемой. Такая схема описывала бы ни одно из ядер точно; roadmap PRD прямо требует для каждого core собственных схемы, validator и адаптера. **Отклонён.**
+1. **Only sing-box-extended.** The fork is a superset of upstream, so upstream configs are valid automatically, and the fork's protocols get forms on a par with the rest. Drawback: the panel is tied to the release pace of one fork (risk R-4 in the PRD). **Chosen.**
+2. **Only upstream sing-box.** WARP, MASQUE, MTProxy, Mieru, TrustTunnel and SSH nodes would be unknown to the panel, while the binary on the owner's device is the fork. **Rejected.**
+3. **A common schema for several cores.** Compatibility with upstream and the fork through one schema. Such a schema would describe none of the cores exactly; the PRD roadmap directly requires a separate schema, validator and adapter for each core. **Rejected.**
 
-## Принятое решение
+## Decision outcome
 
-Цель совместимости — форк sing-box-extended. Схема генерируется только из него; upstream-конфиги поддерживаются как подмножество форка, отдельной схемы для upstream нет.
+The compatibility target is the sing-box-extended fork. The schema is generated only from it; upstream configs are supported as a subset of the fork, there is no separate schema for upstream.
 
-- Версия форка закреплена в `replace`-блоке [`tools/schemagen/go.mod`](../../tools/schemagen/go.mod) и в константе `forkVersion` генератора, а в сгенерированную схему уходит константой `SCHEMA_FORK_VERSION`.
-- Стенд ставит пакет sing-box того же форка (`SINGBOX_VERSION` в [`CONTRIBUTING.md`](../../CONTRIBUTING.md)).
-- Форк ставится на OpenWrt пакетом apk из релизов форка (`sing-box-extended_<версия>_openwrt_<арка>.apk`) — тем же, что ставит стенд ([`.devcontainer/target/Dockerfile`](../../.devcontainer/target/Dockerfile)). Демон опирается на init-скрипт `/etc/init.d/sing-box` и UCI `sing-box.main` этого пакета: ими он рестартует службу и по команде её инстанса выбирает режим проверки ([ADR-0046](./ADR-0046-check-the-candidate-the-way-the-service-runs.md)). Установщик [EikeiDev/OpenWRT-sing-box-extended](https://github.com/EikeiDev/OpenWRT-sing-box-extended), который A.1 называл целевым, допустим в пакетном режиме — он ставит тот же пакет; его бинарный режим кладёт один бинарь без init-скрипта, и рестартовать службу демону нечем, поэтому он не поддерживается.
+- The fork version is pinned in the `replace` block of [`tools/schemagen/go.mod`](../../tools/schemagen/go.mod) and in the generator's `forkVersion` constant, and it goes into the generated schema as the `SCHEMA_FORK_VERSION` constant.
+- The test bench installs a sing-box package of the same fork (`SINGBOX_VERSION` in [`CONTRIBUTING.md`](../../CONTRIBUTING.md)).
+- On OpenWrt the fork is installed as an apk package from the fork's releases (`sing-box-extended_<version>_openwrt_<arch>.apk`), the same one the test bench installs ([`.devcontainer/target/Dockerfile`](../../.devcontainer/target/Dockerfile)). The daemon relies on this package's init script `/etc/init.d/sing-box` and UCI `sing-box.main`: it uses them to restart the service and, from the command of its instance, to choose the check mode ([ADR-0046](./ADR-0046-check-the-candidate-the-way-the-service-runs.md)). The installer [EikeiDev/OpenWRT-sing-box-extended](https://github.com/EikeiDev/OpenWRT-sing-box-extended), which A.1 named as the target, is acceptable in package mode, since it installs the same package; its binary mode drops a single binary without an init script, leaving the daemon nothing to restart the service with, so it is not supported.
 
-Non-goal: второй core в v1 (раздел 8 PRD). Ограничение раздела 9 на форму контрактов — тип, вариант и версия core приходят данными — этим решением не ослабляется.
+Non-goal: a second core in v1 (section 8 of the PRD). The section 9 constraint on the shape of contracts (the core type, variant and version arrive as data) is not weakened by this decision.
 
-## Последствия
+## Consequences
 
-### Положительные
+### Positive
 
-- Конфиги upstream sing-box открываются без отдельного режима совместимости.
-- Протоколы форка правятся формами, а не только текстом.
+- Upstream sing-box configs open without a separate compatibility mode.
+- The fork's protocols are edited with forms, not only as text.
 
-### Отрицательные
+### Negative
 
-- Панель зависит от развития одного форка (R-4). Цена перехода на другой core — собственные схема, validator и адаптер сервиса.
-- Схема описывает все типы форка, а бинарь может быть собран не со всеми тегами — это закрывает [ADR-0030](./ADR-0030-read-the-build-composition-from-the-binary-and-the-fork-sources.md).
+- The panel depends on the development of one fork (R-4). The cost of moving to another core is its own schema, validator and service adapter.
+- The schema describes all fork types, while the binary may be built without some tags; this is covered by [ADR-0030](./ADR-0030-read-the-build-composition-from-the-binary-and-the-fork-sources.md).
 
-### Нейтральные или отложенные
+### Neutral or deferred
 
-- Второй core — пункт roadmap PRD, начинается с отдельного ADR о границе адаптера.
+- A second core is a PRD roadmap item and starts with a separate ADR about the adapter boundary.
 
-## Совместимость, миграция и откат
+## Compatibility, migration and rollback
 
-Не применимо: решение действует с начала проекта и переносится из PRD без изменения существа.
+Not applicable: the decision has been in effect since the start of the project and is moved from the PRD without changes in substance.
 
-Чем поставлен бинарь на устройстве владельца, в репозитории не записано; установка без init-скрипта пакета получит отказ применения, а не поддержку.
+How the binary on the owner's device was installed is not recorded in the repository; an installation without the package's init script gets an apply refusal, not support.
 
-## Проверка решения
+## Validation
 
-- `make schema` собирает схему из запиненной версии форка; версия видна в шапке `apps/web/src/shared/api/generated.ts`.
-- Golden round-trip по корпусу `apps/web/src/entities/Config/__tests__/corpus/` (AC-1…AC-3) разбирает обычные конфиги sing-box.
+- `make schema` builds the schema from the pinned fork version; the version is visible in the header of `apps/web/src/shared/api/generated.ts`.
+- The golden round-trip over the corpus `apps/web/src/entities/Config/__tests__/corpus/` (AC-1…AC-3) parses ordinary sing-box configs.
 
-## Ссылки
+## Links
 
-- [`../PRD.md`](../PRD.md): разделы 8, 9, roadmap после v1, риск R-4, раздел A.1 (замещается этим ADR);
-- [ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md) — извлечение схемы из форка;
-- [ADR-0030](./ADR-0030-read-the-build-composition-from-the-binary-and-the-fork-sources.md) — типы вне сборки бинаря;
+- [`../PRD.md`](../PRD.md): sections 8, 9, the roadmap after v1, risk R-4, section A.1 (superseded by this ADR);
+- [ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md): extracting the schema from the fork;
+- [ADR-0030](./ADR-0030-read-the-build-composition-from-the-binary-and-the-fork-sources.md): types outside the binary build;
 - [shtorm-7/sing-box-extended](https://github.com/shtorm-7/sing-box-extended), [EikeiDev/OpenWRT-sing-box-extended](https://github.com/EikeiDev/OpenWRT-sing-box-extended).

@@ -1,104 +1,104 @@
-# ADR-0023. Собирать стенд из образа целевого устройства и ставить панель пакетом
+# ADR-0023. Build the test bench from the target device image and install the panel as a package
 
-- Статус: Accepted
-- Дата: 2026-09-17
-- Ответственные: владелец репозитория
+- Status: Accepted
+- Date: 2026-09-17
+- Deciders: repository owner
 
-## Контекст и постановка проблемы
+## Context and problem statement
 
-Стенд `.devcontainer/` служит заменой роутера: на нём проверяются цикл Apply, поведение службы и доступность панели. До этого решения он собирался на публичном `openwrt/rootfs:aarch64_generic-24.10.8` — ветка 24.10 с opkg, тогда как устройство ([ADR-0042](./ADR-0042-target-the-bpi-r4-pro-and-build-for-aarch64-only.md)) работает на собственной сборке OpenWrt SNAPSHOT r35944+4, таргет `mediatek/filogic`, арка `aarch64_cortex-a53`, пакетный менеджер apk 3.0.5.
+The `.devcontainer/` test bench stands in for the router: it is where the Apply cycle, service behaviour and panel reachability are checked. Before this decision it was built on the public `openwrt/rootfs:aarch64_generic-24.10.8` — the 24.10 branch with opkg, whereas the device ([ADR-0042](./ADR-0042-target-the-bpi-r4-pro-and-build-for-aarch64-only.md)) runs its own OpenWrt SNAPSHOT r35944+4 build, target `mediatek/filogic`, arch `aarch64_cortex-a53`, package manager apk 3.0.5.
 
-Расхождение было не только в базе. Панель в стенде не ставилась, а монтировалась бинарём из `dist/` и запускалась стендовым init-скриптом с зашитым адресом; пакетный init-скрипт из [`apps/metaboxd/package/`](../../apps/metaboxd/package/), который читает UCI и берёт адреса у сетей, не исполнялся ни разу. sing-box распаковывался из tar.gz, поэтому его init-скрипт тоже был стендовой копией — с командой `check`, которой в пакете форка нет. Сетевая подсистема была выключена целиком: в `/etc/config/network` оставался только loopback.
+The mismatch was not only in the base. The panel was not installed on the test bench but mounted as a binary from `dist/` and started by a bench init script with a hard-coded address; the package init script from [`apps/metaboxd/package/`](../../apps/metaboxd/package/), which reads UCI and takes addresses from networks, had never run. sing-box was unpacked from a tar.gz, so its init script was a bench copy too — with a `check` command that the fork package does not have. The network subsystem was disabled entirely: `/etc/config/network` held only loopback.
 
-Из-за этого три критерия приёмки упирались в стенд: AC-14, AC-18 и AC-29. Поставка панели пакетом ([ADR-0011](./ADR-0011-ship-the-daemon-as-an-apk-package.md)) была принята, но не реализована — собирать пакет было нечем и негде проверять.
+Because of this three acceptance criteria were blocked by the test bench: AC-14, AC-18 and AC-29. Shipping the panel as a package ([ADR-0011](./ADR-0011-ship-the-daemon-as-an-apk-package.md)) was accepted but not implemented — there was nothing to build the package with and nowhere to check it.
 
-В scope: из чего собирается образ целевого окружения, как в него попадают sing-box и панель, какие сети поднимаются. Вне scope: сборка sing-box (берётся готовый пакет форка), аутентификация панели, содержимое самих правил fw4 на устройстве.
+In scope: what the target environment image is built from, how sing-box and the panel get into it, which networks come up. Out of scope: building sing-box (the ready fork package is used), panel authentication, the content of the fw4 rules themselves on the device.
 
-## Критерии выбора
+## Decision drivers
 
-1. **Совпадение с устройством** в ветке OpenWrt, арке, пакетном менеджере и способе запуска служб.
-2. **Проверяемость поставки**: то, что уезжает на роутер, должно проверяться стендом, а не собираться отдельным кодом.
-3. **Работа в CI**, где своя архитектура и нет времени на эмуляцию: интеграционный прогон обязан оставаться воспроизводимым.
-4. **Воспроизводимость сборки**: образ собирается командой из репозитория, без ручных шагов и без OpenWrt SDK.
-5. **Пригодность для разработки**: панель должна открываться с машины владельца, правка кода не должна требовать пересборки образа целиком.
+1. **Match with the device** in OpenWrt branch, arch, package manager and the way services start.
+2. **Testable delivery**: what ships to the router must be checked by the test bench, not built by separate code.
+3. **Works in CI**, which has its own architecture and no time for emulation: the integration run must stay reproducible.
+4. **Reproducible build**: the image is built by a command from the repository, without manual steps and without the OpenWrt SDK.
+5. **Fit for development**: the panel must open from the owner's machine, and a code change must not require rebuilding the whole image.
 
-## Рассмотренные варианты
+## Considered options
 
-1. **Сохранить публичный rootfs и доращивать его настройками.** Преимущества: ничего не нужно менять, образ тянется из сети, CI и стенд одинаковы (критерии 3, 4). Недостатки: ветка и пакетный менеджер остаются чужими (критерий 1), пакетную установку проверить негде — в 24.10 нет apk (критерий 2), а поведение целевой файловой системы не воспроизводится вовсе. **Отклонён.**
+1. **Keep the public rootfs and grow it with settings.** Advantages: nothing needs to change, the image is pulled from the network, CI and the test bench are the same (drivers 3, 4). Disadvantages: the branch and package manager stay foreign (driver 1), package installation cannot be checked anywhere — 24.10 has no apk (driver 2), and the behaviour of the target file system is not reproduced at all. **Rejected.**
 
-2. **Собирать базу из образа устройства с downloads.openwrt.org, sing-box и панель ставить пакетами apk, для CI оставить публичный rootfs своей арки.** Преимущества: стенд совпадает с устройством по таргету, арке и apk (критерий 1); панель ставится тем же пакетом, что уезжает на роутер, и его собирает та же стадия сборки (критерий 2); CI продолжает работать на публичном образе своей архитектуры (критерий 3); образ собирается `make stand-base`, пакет — `make package`, внешних файлов и SDK не нужно (критерий 4). Недостатки: у стенда две базы, которые надо держать рабочими, а версия образа устройства становится ещё одним закреплённым значением. **Принят.**
+2. **Build the base from the device image from downloads.openwrt.org, install sing-box and the panel as apk packages, keep the public rootfs of its own arch for CI.** Advantages: the test bench matches the device in target, arch and apk (driver 1); the panel is installed from the same package that ships to the router, and the same build stage builds it (driver 2); CI keeps working on the public image of its architecture (driver 3); the image is built by `make stand-base`, the package by `make package`, no external files or SDK are needed (driver 4). Disadvantages: the test bench has two bases that must be kept working, and the device image version becomes one more pinned value. **Chosen.**
 
-3. **Собирать базу из прошивки, которая лежит у владельца локально.** Преимущества: совпадение с устройством вплоть до его собственной сборки SNAPSHOT. Недостатки: сборка зависит от файла вне репозитория и от переменной с путём к нему, в CI этот путь не существует, а у нового человека стенд не собирается вовсе (критерии 3, 4). **Отклонён:** отдельная сборка владельца отличается от официального образа ревизией, а не тем, что проверяет стенд, — набором служб, apk и раскладкой корня.
+3. **Build the base from firmware the owner keeps locally.** Advantages: a match with the device down to its own SNAPSHOT build. Disadvantages: the build depends on a file outside the repository and on a variable with its path, this path does not exist in CI, and for a new person the test bench does not build at all (drivers 3, 4). **Rejected:** the owner's separate build differs from the official image by revision, not by what the test bench checks — the set of services, apk and the root layout.
 
-## Принятое решение
+## Decision outcome
 
-Целевое окружение стенда собирается из образа целевого устройства, а панель и sing-box попадают в него пакетами.
+The target environment of the test bench is built from the target device image, and the panel and sing-box get into it as packages.
 
-Обязательные правила:
+Mandatory rules:
 
-- **База собирается отдельной целью.** `make stand-base` качает sysupgrade-образ устройства с downloads.openwrt.org, извлекает из него корень и делает образ; готовый образ подставляется стенду через `METABOX_BASE_IMAGE`. Адрес образа закреплён в `DEVICE_IMAGE_URL`.
-- **Корень ищется по магии, а не по смещению.** В образе sysupgrade данные ядра и dtb вынесены за дерево FIT, отдельной записи о корне в дереве нет, и squashfs приклеен следом. Отдельным архивом корень для этого таргета OpenWrt не публикует.
-- **Плата в образе значения не имеет.** Ядро и dtb из образа не используются — контейнер работает на ядре хоста, — поэтому подходит образ любой платы того же таргета, а берётся тот, у которого есть закреплённая версия релиза.
-- **Запасная база — публичный rootfs OpenWrt той же ветки.** Без заданных переменных стенд собирается на нём; CI пользуется только этим путём.
-- **sing-box ставится пакетом форка** под арку, которую объявляет сама база (`/etc/apk/arch`). Стендовых копий его init-скрипта и настроек не остаётся.
-- **Панель ставится пакетом apk**, собранным из [`apps/metaboxd/package/`](../../apps/metaboxd/package/) и бинаря `make daemon-device`. Пакет для устройства и пакет для стенда собирает одна и та же стадия сборки; `make package` выгружает её результат наружу.
-- **Сетевая подсистема работает.** netifd поднимает проводную, гостевую и внешнюю сети; панель берёт адреса у сетей из `listen_interface`, как на устройстве. Роли сетей определяются по адресам, а не по именам интерфейсов: Docker раздаёт имена `eth*` в произвольном порядке.
-- **Внешнюю сеть изолирует Docker, а не fw4.** Сеть объявлена `internal`, маршрута в остальные сети стенда у неё нет. Проводная сеть объявлена первой по приоритету: с ней контейнер создаётся, и на её адрес приходит проброшенный на хост порт.
-- **По умолчанию панель отдаётся из бинаря демона.** Дев-сервер с HMR поднимается отдельным режимом и представляется демону им самим, поэтому послаблений по Origin в стенде нет.
+- **The base is built by a separate target.** `make stand-base` downloads the device sysupgrade image from downloads.openwrt.org, extracts the root from it and makes an image; the ready image is passed to the test bench via `METABOX_BASE_IMAGE`. The image URL is pinned in `DEVICE_IMAGE_URL`.
+- **The root is found by magic, not by offset.** In a sysupgrade image the kernel data and dtb are placed outside the FIT tree, the tree has no separate root entry, and squashfs is appended right after. OpenWrt does not publish the root for this target as a separate archive.
+- **The board in the image does not matter.** The kernel and dtb from the image are not used — the container runs on the host kernel — so an image of any board of the same target fits, and the one with a pinned release version is taken.
+- **The fallback base is the public OpenWrt rootfs of the same branch.** Without the variables set, the test bench is built on it; CI uses only this path.
+- **sing-box is installed as the fork package** for the arch the base itself declares (`/etc/apk/arch`). No bench copies of its init script and settings remain.
+- **The panel is installed as an apk package** built from [`apps/metaboxd/package/`](../../apps/metaboxd/package/) and the `make daemon-device` binary. The package for the device and the package for the test bench are built by the same build stage; `make package` exports its result.
+- **The network subsystem works.** netifd brings up the wired, guest and external networks; the panel takes addresses from the networks in `listen_interface`, as on the device. Network roles are determined by addresses, not by interface names: Docker hands out `eth*` names in arbitrary order.
+- **Docker isolates the external network, not fw4.** The network is declared `internal`, it has no route to the other test bench networks. The wired network is declared first by priority: the container is created with it, and the port forwarded to the host arrives at its address.
+- **By default the panel is served from the daemon binary.** The dev server with HMR comes up as a separate mode and presents itself to the daemon as the daemon, so there is no Origin leniency on the test bench.
 
-Отложено осознанно: правила fw4 в стенде, поведение целевой файловой системы при обрыве питания, образ SNAPSHOT под `aarch64_cortex-a53` для CI — такого docker-образа OpenWrt не публикует.
+Deliberately deferred: fw4 rules on the test bench, target file system behaviour on power loss, a SNAPSHOT image for `aarch64_cortex-a53` for CI — OpenWrt does not publish such a docker image.
 
-### Область действия и границы
+### Scope and boundaries
 
-Решение распространяется на [`.devcontainer/`](../../.devcontainer/), цели стенда и поставки в [`Makefile`](../../Makefile) и интеграционный прогон в [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml). Кода демона и панели оно не касается, кроме прокси дев-сервера, который теперь подставляет демону его собственный Origin.
+The decision covers [`.devcontainer/`](../../.devcontainer/), the test bench and delivery targets in [`Makefile`](../../Makefile) and the integration run in [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml). It does not touch the daemon and panel code, except the dev server proxy, which now passes the daemon its own Origin.
 
-## Последствия
+## Consequences
 
-### Положительные
+### Positive
 
-- Стенд владельца совпадает с устройством по ветке, арке, пакетному менеджеру и способу запуска служб.
-- Поставка панели перестала быть непроверенной: пакет собирается и ставится при каждом подъёме стенда.
-- Пакетные init-скрипты и UCI-настройки исполняются, а не лежат мёртвым грузом; расхождение стендовой и настоящей команды запуска sing-box исчезло.
-- Доступность панели по сетям проверяется прогоном `make reach-check`.
-- Дев-режим больше не требует ослаблять проверку Origin в демоне.
+- The owner's test bench matches the device in branch, arch, package manager and the way services start.
+- Panel delivery is no longer unchecked: the package is built and installed on every test bench start.
+- Package init scripts and UCI settings run instead of lying as dead weight; the mismatch between the bench and the real sing-box start command is gone.
+- Panel reachability across networks is checked by the `make reach-check` run.
+- Dev mode no longer requires relaxing the Origin check in the daemon.
 
-### Отрицательные
+### Negative
 
-- У стенда две базы, и обе надо держать рабочими; расхождение CI с устройством осталось, только переехало на арку и ветку.
-- Версия образа устройства становится ещё одним значением, которое надо поднимать вручную вслед за роутером.
-- Появился стендовый скрипт раскладки сетей, которому на устройстве соответствия нет.
-- Пересборка образа при правке демона стала обязательной: бинарь больше не монтируется томом.
+- The test bench has two bases, and both must be kept working; the mismatch between CI and the device remains, it only moved to arch and branch.
+- The device image version becomes one more value to bump by hand after the router.
+- A bench script for network layout appeared, with no counterpart on the device.
+- Rebuilding the image on a daemon change became mandatory: the binary is no longer mounted as a volume.
 
-### Нейтральные или отложенные
+### Neutral or deferred
 
-- Межсетевой экран в стенде выключен, и его правила проверяются только на устройстве.
-- AC-29 по-прежнему требует прогона на устройстве.
+- The firewall is disabled on the test bench, and its rules are checked only on the device.
+- AC-29 still requires a run on the device.
 
-## Риски и меры снижения
+## Risks and mitigations
 
-| Риск                                                               | Вероятность и влияние                           | Митигация                                                                                           |
-| ------------------------------------------------------------------ | ----------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| Формат образа sysupgrade изменится, и корень перестанет находиться | низкая, база не соберётся                       | сборка падает явной ошибкой с адресом образа, запасной путь на публичном rootfs продолжает работать |
-| В релизе форка не окажется пакета под арку базы                    | низкая, стенд не соберётся                      | арка берётся из самой базы, ошибка видна на шаге загрузки; пакет можно подставить локально          |
-| Docker изменит способ доставки проброшенного порта                 | средняя, панель не откроется с машины владельца | сеть-получатель закреплена приоритетом, а список адресов правится одним файлом UCI стенда           |
+| Risk                                                                 | Likelihood and impact                                    | Mitigation                                                                                                        |
+| -------------------------------------------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| The sysupgrade image format changes, and the root is no longer found | low, the base does not build                             | the build fails with an explicit error naming the image URL, the fallback path on the public rootfs keeps working |
+| A fork release has no package for the base arch                      | low, the test bench does not build                       | the arch is taken from the base itself, the error shows at the download step; the package can be supplied locally |
+| Docker changes how the forwarded port is delivered                   | medium, the panel does not open from the owner's machine | the receiving network is pinned by priority, and the address list is edited in one UCI file of the test bench     |
 
-## Совместимость, миграция и откат
+## Compatibility, migration and rollback
 
-Миграция разовая: `make stand-base` собирает базу, `make up` пересобирает стенд. Внешних файлов не нужно — образ качается из сети. Старые стендовые копии init-скрипта панели и конфигурации сети удалены, том с конфигом sing-box переживает переход. Откат — вернуть `METABOX_BASE_IMAGE` на публичный образ: стенд соберётся запасным путём без прошивки.
+The migration is one-off: `make stand-base` builds the base, `make up` rebuilds the test bench. No external files are needed — the image is downloaded from the network. The old bench copies of the panel init script and the network configuration are removed, the volume with the sing-box config survives the transition. Rollback: point `METABOX_BASE_IMAGE` back at the public image: the test bench builds via the fallback path without firmware.
 
-## Проверка решения
+## Validation
 
-- `make stand-base` и `make up` — стенд поднимается на базе из образа устройства;
-- `make apply-check` — цикл Apply проходит целиком;
-- `make reach-check` — панель отвечает из проводной и гостевой сети и не отвечает из внешней;
-- `make package` — пакет панели собирается и содержит `/usr/bin/metaboxd`, пакетный init-скрипт и UCI-настройки;
-- `make up-dev` — дев-сервер поднимается, мутирующий запрос через него проходит без послабления Origin;
-- интеграционный прогон CI — те же проверки на публичном образе.
+- `make stand-base` and `make up` — the test bench comes up on the base from the device image;
+- `make apply-check` — the Apply cycle passes entirely;
+- `make reach-check` — the panel answers from the wired and guest networks and does not answer from the external one;
+- `make package` — the panel package builds and contains `/usr/bin/metaboxd`, the package init script and UCI settings;
+- `make up-dev` — the dev server comes up, a mutating request through it passes without Origin leniency;
+- the CI integration run — the same checks on the public image.
 
-## Ссылки
+## Links
 
-- [ADR-0042](./ADR-0042-target-the-bpi-r4-pro-and-build-for-aarch64-only.md) — целевое устройство;
-- [`docs/PRD.md`](../PRD.md), критерии AC-14, AC-17, AC-18, AC-21, AC-22;
-- [ADR-0011](./ADR-0011-ship-the-daemon-as-an-apk-package.md) — поставка панели пакетом apk;
-- [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md) — владение конфигом и протокол Apply;
+- [ADR-0042](./ADR-0042-target-the-bpi-r4-pro-and-build-for-aarch64-only.md) — the target device;
+- [`docs/PRD.md`](../PRD.md), criteria AC-14, AC-17, AC-18, AC-21, AC-22;
+- [ADR-0011](./ADR-0011-ship-the-daemon-as-an-apk-package.md) — shipping the panel as an apk package;
+- [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md) — config ownership and the Apply protocol;
 - [`.devcontainer/target/Dockerfile`](../../.devcontainer/target/Dockerfile), [`.devcontainer/target/device-base/Dockerfile`](../../.devcontainer/target/device-base/Dockerfile), [`.devcontainer/docker-compose.yml`](../../.devcontainer/docker-compose.yml).

@@ -1,208 +1,213 @@
-# Списки и таблицы
+# Lists and tables
 
-Правила для экранов, которые показывают много однородных строк: соединения,
-маршрутизация, сеты правил, логи. Основание — [конкурентное ревью и практики
-работы с большими данными](#источники).
+Rules for screens that show many uniform rows: connections, routing, rule sets,
+logs. The basis is a [competitor review and practices for working with large
+data](#sources).
 
-## Когда это применяется
+## When this applies
 
-Список считается таблицей, когда у строки больше двух полей и их читают
-столбцами, а не абзацем. Три строки с парой полей — это `dl` или `ul`, и
-ничего отсюда к ним не относится.
+A list counts as a table when a row has more than two fields and they are read
+in columns, not as a paragraph. Three rows with a couple of fields are a `dl` or
+a `ul`, and nothing here applies to them.
 
-## Движок
+## Engine
 
-Модель таблицы — `@tanstack/react-table`. Он ничего не рисует: разметка, темы и
-виртуализация остаются нашими, а он держит сортировку, фильтры, видимость и
-порядок колонок.
+The table model is `@tanstack/react-table`. It draws nothing: markup, themes and
+virtualization stay ours, while it holds sorting, filters, column visibility and
+column order.
 
-- Возможности подключаются поимённо через `tableFeatures`: в сборку попадает
-  только перечисленное. Лишнюю возможность не включаем «на вырост».
-- Рендер ячеек — таблица «поле → компонент» в своём модуле, а не `cell` в
-  описании колонки: описание остаётся данными и читается целиком, а новая
-  колонка добавляется записью в раскладку, в набор полей, в описание колонок и в таблицу ячеек.
-- Описание колонки сужается собственным типом: библиотека держит `id` строкой,
-  а `meta` необязательной, у нас обе гарантированы. Шапка и строка читают
-  описание из своего массива, а не через состояние таблицы, — иначе появляются
-  приведения типов, которых не должно быть.
+- Features are plugged in by name through `tableFeatures`: only what is listed
+  gets into the build. We do not enable an extra feature "for later".
+- Cell rendering is a "field → component" table in its own module, not `cell` in
+  the column definition: the definition stays data and is read as a whole, and a
+  new column is added by an entry in the layout, in the field set, in the column
+  definitions and in the cell table.
+- The column definition is narrowed by our own type: the library keeps `id` as a
+  string and `meta` as optional, for us both are guaranteed. The header and the
+  row read the definition from their own array, not through the table state;
+  otherwise type casts appear that must not exist.
 
-## Колонки
+## Columns
 
-**Одна колонка — одно поле, один ключ сортировки, один отбор.** Колонка, в
-которую упаковано два поля, честно не сортируется и не фильтруется: ключ
-приходится склеивать, и получается порядок, которого в данных нет. Ширину
-экономят скрытием колонок, а не склейкой полей.
+**One column is one field, one sort key, one filter.** A column that packs two
+fields cannot be honestly sorted or filtered: the key has to be glued together,
+and the result is an order that does not exist in the data. Width is saved by
+hiding columns, not by gluing fields.
 
-Разводятся в первую очередь разные оси и разные звенья причинной связи:
-источник и назначение — это «кто начал» и «куда шло»; правило, действие и цепочка —
-«почему совпало», «что решено», «через что прошло». Каждый из этих вопросов
-задают отдельно, значит и отбирать по ним нужно отдельно.
+First of all, different axes and different links of the causal chain are split:
+source and destination are "who started" and "where it went"; rule, action and
+chain are "why it matched", "what was decided", "what it went through". Each of
+these questions is asked separately, so filtering by them must be separate too.
 
-Составная ячейка остаётся законной там, где два значения читаются как один факт
-и порознь не запрашиваются: входящее и исходящее направление одной величины.
-Две разные величины — скорость и накопленный объём — это уже два вопроса и две
-колонки.
+A composite cell stays legitimate where two values read as one fact and are not
+queried separately: the inbound and outbound direction of one quantity. Two
+different quantities, rate and accumulated volume, are already two questions
+and two columns.
 
-Действие строки живёт в своей колонке, а не внутри ячейки данных: спрятанное в
-ячейку, оно исчезает вместе со скрытой колонкой.
+A row action lives in its own column, not inside a data cell: hidden in a cell,
+it disappears together with a hidden column.
 
-Колонка, без которой строка перестаёт отвечать на вопрос экрана, помечается
-обязательной: в списке колонок она видна, но выключить её нельзя.
+A column without which a row stops answering the screen's question is marked
+mandatory: it is visible in the column list, but it cannot be turned off.
 
-## Анатомия
+## Anatomy
 
-Один порядок частей на все списки:
+One order of parts for all lists:
 
 ```
-карточка списка
-├ тулбар    поиск [фасет] [фасет] … [сбросить всё] ···· [вид] [действия списка]
-├ шапка     подпись ⇅ • | подпись ⇅ | …
-├ строки    виртуализованы
-└ подвал    «показано N из M» ····· [экспорт]
+list card
+├ toolbar   search [facet] [facet] … [reset all] ···· [view] [list actions]
+├ header    label ⇅ • | label ⇅ | …
+├ rows      virtualized
+└ footer    "showing N of M" ····· [export]
 ```
 
-`•` — признак отбора у колонки, по полю которой стоит фасет.
+`•` is the filter marker on a column whose field has a facet set.
 
-- **Действия списка живут в его карточке.** Кнопка, которая работает со
-  строками, не стоит в шапке страницы: на расстоянии связь не читается. Шапка
-  страницы — заголовок и состояние экрана, не панель инструментов.
-- **Экспорт — в подвале, рядом со счётчиком.** Выгружается ровно то, что
-  счётчик называет, и это видно в одном месте.
-- **Управление видом отделено от действий.** Выбор колонок, плотность и режим
-  показа меняют картинку, а не систему; они стоят слева от действий и в их ряд
-  не входят.
-- **Разрушительное — одно, с краю, за разделителем, контуром в тоне
-  опасности.** Заливка тоном опасности среди обычных кнопок читается как
-  сообщение об ошибке, а не как доступное действие. Действие гаснет, когда
-  применять его не к чему. На узкой ширине тулбар переносится, и отдельная
-  кнопка встаёт под поиском, в зоне большого пальца: там разрушительное уходит
-  в меню действий списка «⋯», подтверждение остаётся тем же.
+- **List actions live in its card.** A button that works on rows does not sit
+  in the page header: at a distance the connection is not readable. The page
+  header is the title and the screen state, not a toolbar.
+- **Export is in the footer, next to the counter.** Exactly what the counter
+  names is exported, and this is visible in one place.
+- **View controls are separate from actions.** Column choice, density and
+  display mode change the picture, not the system; they sit to the left of the
+  actions and are not part of their row.
+- **The destructive action is single, at the edge, behind a separator, outlined
+  in the danger tone.** A fill in the danger tone among regular buttons reads as
+  an error message, not as an available action. The action is disabled when
+  there is nothing to apply it to. On a narrow width the toolbar wraps, and a
+  separate button lands under the search, in the thumb zone: there the
+  destructive action moves into the list actions menu "⋯", the confirmation
+  stays the same.
 
-## Виртуализация вместо пагинации
+## Virtualization instead of pagination
 
-Строки виртуализуются `@tanstack/react-virtual`. Пагинацию не заводим: при
-пяти тысячах живых соединений (NFR-2) это сотня страниц, и ответ на вопрос
-«кто сейчас ест канал» рассыпается по ним.
+Rows are virtualized with `@tanstack/react-virtual`. We do not add pagination:
+with five thousand live connections (NFR-2) that is a hundred pages, and the
+answer to "who is eating the bandwidth right now" is scattered across them.
 
-Из-за виртуализации таблица собирается ролями ARIA, а не тегом `table`:
-строки позиционируются абсолютно, и `display` поверх табличных тегов ломает
-их разбор вспомогательными технологиями. `aria-rowcount` описывает полный
-список, а не отрисованное окно. Подробности — [Architecture&Style.md](./Architecture&Style.md),
-раздел «Разметка».
+Because of virtualization the table is built with ARIA roles, not the `table`
+tag: rows are positioned absolutely, and `display` on top of table tags breaks
+their parsing by assistive technologies. `aria-rowcount` describes the full
+list, not the rendered window. Details: [Architecture&Style.md](./Architecture&Style.md),
+the "Markup" section.
 
-## Сортировка
+## Sorting
 
-- **Сортировка выключается по колонке, а не по таблице целиком.** В движке она
-  опт-аут: `enableSorting ?? true`, поэтому колонка, по которой сортировать
-  бессмысленно, обязана получить `enableSorting: false`. Молчание включает
-  сортировку, а не выключает.
-- **Там, где порядок строк сам несёт смысл, сортировки нет.** В маршрутизации
-  правила проверяются сверху вниз, и отсортированный список показал бы
-  порядок, которого не существует. Отказ записывается в коде причиной.
-- **Живой список по умолчанию идёт в порядке потока.** Снапшот приходит раз в
-  секунду, и любой другой порядок переставляет строки под курсором. Стрелка в
-  шапке — признак, что список больше не в порядке потока.
-- **Колонка сортируется по устойчивому ключу, а не по тому, что нарисовано.**
-  Скорость и объём разведены на две колонки: объём копится и по нему список
-  читается, скорость пересчитывается каждую секунду. Сортировка по скорости
-  доступна, но переставляет строки под курсором — по умолчанию список идёт в
-  порядке потока.
+- **Sorting is disabled per column, not for the whole table.** In the engine it
+  is opt-out: `enableSorting ?? true`, so a column for which sorting makes no
+  sense must get `enableSorting: false`. Silence enables sorting, it does not
+  disable it.
+- **Where the row order carries meaning itself, there is no sorting.** In
+  routing, rules are checked top to bottom, and a sorted list would show an
+  order that does not exist. The refusal is recorded in the code with a reason.
+- **A live list goes in stream order by default.** A snapshot arrives once a
+  second, and any other order rearranges rows under the cursor. The arrow in the
+  header is a sign that the list is no longer in stream order.
+- **A column is sorted by a stable key, not by what is drawn.** Rate and volume
+  are split into two columns: volume accumulates and the list is read by it,
+  rate is recomputed every second. Sorting by rate is available, but it
+  rearranges rows under the cursor, so by default the list goes in stream order.
 
-## Фильтры
+## Filters
 
-- **Общий поиск** — по заранее собранной строке (`searchText` в модели), а не
-  проходом по полям на каждый ввод.
-- **Отбор по полю — фасет в тулбаре, а не поле в шапке.** Фасет — кнопка в
-  строке с поиском; она открывает список значений с поиском по ним, выбором
-  нескольких сразу и сбросом. Значения внутри фасета складываются через «или»,
-  фасеты между собой — через «и». Выбор виден на самой кнопке: одно значение —
-  подписью, несколько — числом. Когда выбрано хоть что-то, справа появляется
-  «Сбросить всё». Подстрока в шапке колонки этого не даёт: не видно, какие
-  значения вообще есть, и выбрать два сразу нельзя.
-- **Шапка колонки несёт признак отбора** по своему полю: без него пустая
-  таблица выглядит поломкой, а не результатом отбора.
-- **Фасеты — срезы по вопросу экрана, а не по всем полям подряд.** На
-  соединениях это устройство, действие, правило, цепочка и сеть: «чьё оно»,
-  «куда ушло» и через что.
-- **Значения фасета — все, что есть во вкладке, а счётчик — с остальными
-  фасетами и поиском, но без своего.** Значение не исчезает от собственного
-  выбора и от соседнего, а число рядом с ним говорит, сколько строк добавит его
-  выбор. Порядок значений от счётчиков не зависит: они меняются каждую секунду
-  и переставляли бы значения под курсором.
-- **Отбор и счётчики считаются одним проходом по строкам**, а не проходом на
-  каждый фасет: на пяти тысячах строк и снапшоте раз в секунду иначе не уложиться.
-- **Отбор живёт в адресе.** Ссылкой на отфильтрованный список делятся; одно
-  значение пишется строкой, несколько — списком, и старые ссылки на одно
-  значение продолжают работать.
-- **Отбор клиентский, пока снапшот целиком в панели.** Ходить за
-  отфильтрованным списком на устройство значило бы показывать не то, что в
-  сторе.
+- **Global search** goes over a prebuilt string (`searchText` in the model), not
+  over the fields on every keystroke.
+- **Filtering by field is a facet in the toolbar, not a field in the header.** A
+  facet is a button in the row with the search; it opens a list of values with
+  search over them, multiple selection and reset. Values inside a facet are
+  combined with "or", facets with each other with "and". The selection is
+  visible on the button itself: one value as a label, several as a number. When
+  anything is selected, "Reset all" appears on the right. A substring in the
+  column header does not give this: you cannot see which values exist at all,
+  and you cannot select two at once.
+- **The column header carries the filter marker** for its field: without it an
+  empty table looks like a breakage, not like a filter result.
+- **Facets are slices by the screen's question, not by all fields in a row.** On
+  connections these are device, action, rule, chain and network: "whose it is",
+  "where it went" and through what.
+- **Facet values are all that exist in the tab, and the counter is computed with
+  the other facets and the search, but without its own.** A value does not
+  disappear because of its own selection or a neighbour's, and the number next
+  to it says how many rows selecting it adds. The order of values does not
+  depend on counters: they change every second and would rearrange values under
+  the cursor.
+- **Filtering and counters are computed in one pass over the rows**, not one
+  pass per facet: with five thousand rows and a snapshot every second it would
+  not fit otherwise.
+- **The filter lives in the URL.** A link to a filtered list can be shared; one
+  value is written as a string, several as a list, and old links with one value
+  keep working.
+- **Filtering is client-side while the whole snapshot is in the panel.** Going
+  to the device for a filtered list would mean showing something other than
+  what is in the store.
 
-## Вид переживает перезагрузку
+## The view survives a reload
 
-Видимые колонки и их порядок, плотность, сортировка и интервал обновления —
-личная настройка, как тема и язык, и хранятся там же, в `localStorage`. Панель
-роутера открывают несколько человек, и общая настройка на всех была бы
-ограничением.
+Visible columns and their order, density, sorting and the refresh interval are a
+personal setting, like theme and language, and are stored in the same place, in
+`localStorage`. Several people open the router panel, and one shared setting for
+everyone would be a restriction.
 
-Порядок меняется кнопками «выше» и «ниже» в выборе полей, а не перетаскиванием
-заголовка: кнопки доступны с клавиатуры и скринридеру без отдельного протокола.
-Хранится он списком идентификаторов: незнакомый пропускается, недостающий —
-новая колонка или вид, сохранённый до перестановки, — встаёт в конец в порядке
-описаний.
+The order is changed with "up" and "down" buttons in the field picker, not by
+dragging the header: the buttons are available from the keyboard and to a
+screen reader without a separate protocol. It is stored as a list of
+identifiers: an unknown one is skipped, a missing one (a new column, or a view
+saved before reordering) goes to the end in the order of the definitions.
 
-## Плотность и узкий экран
+## Density and narrow screens
 
-- Плотность — именованные режимы, а не произвольное число.
-- **Колонки не сжимаются.** Адрес, правило и цепочка обрезаются до
-  неразличимости раньше, чем экран станет узким. Пока таблица остаётся
-  таблицей, она прокручивается по горизонтали целиком — вместе с шапкой.
-- **Строка не бывает анонимной.** Колонка, по которой строку узнают, при
-  горизонтальной прокрутке остаётся на месте: иначе на экране видно середину
-  строк, и к какому объекту они относятся, определить нечем.
-- **Ниже ширины, на которой таблица перестаёт читаться, строка разворачивается
-  в список «подпись — значение».** Горизонтальная прокрутка на телефоне не
-  ответ: пользователь видит обрывки колонок без якоря. В списке не теряется ни
-  одно поле — скрытые колонки остаются скрытыми, видимые показываются все.
-- **Скроллер один и на обе оси, шапка липкая.** Вертикальный вьюпорт внутри
-  горизонтального контейнера расходится с шапкой: при `overflow-y-auto`
-  браузер вычисляет `visible` по второй оси в `auto`, вьюпорт заводит
-  собственную горизонтальную прокрутку и уезжает из-под шапки. Закрыть её
-  через `overflow-x-clip` нельзя — тогда строки обрезаются по ширине вьюпорта,
-  а не прокручиваются. Прокручивается один элемент, шапка внутри него —
-  `sticky`, и обе оси остаются согласованными.
-- **Минимальная ширина считается по видимым колонкам, а не берётся
-  константой.** Константа на полный набор означала бы, что скрытие колонок
-  таблицу не сужает, — ради чего его и заводили. Ширина задаётся один раз на
-  обёртке, внутри которой лежат и шапка, и строки: когда у них разные значения,
-  фон шапки обрывается на середине прокрутки, а строки считают ширину по
-  видимой части.
+- Density is a set of named modes, not an arbitrary number.
+- **Columns do not shrink.** Address, rule and chain get truncated beyond
+  recognition before the screen becomes narrow. While the table stays a table,
+  it scrolls horizontally as a whole, together with the header.
+- **A row is never anonymous.** The column by which a row is recognized stays in
+  place during horizontal scrolling: otherwise the screen shows the middle of
+  the rows, and there is nothing to tell which object they belong to.
+- **Below the width at which the table stops being readable, a row unfolds into
+  a "label — value" list.** Horizontal scrolling on a phone is not an answer:
+  the user sees fragments of columns without an anchor. The list loses no field:
+  hidden columns stay hidden, all visible ones are shown.
+- **One scroller for both axes, a sticky header.** A vertical viewport inside a
+  horizontal container drifts away from the header: with `overflow-y-auto` the
+  browser computes `visible` on the other axis as `auto`, the viewport gets its
+  own horizontal scroll and slides out from under the header. Closing it with
+  `overflow-x-clip` is not possible: then rows are clipped to the viewport width
+  instead of scrolling. One element scrolls, the header inside it is `sticky`,
+  and both axes stay consistent.
+- **The minimum width is computed from the visible columns, not taken as a
+  constant.** A constant for the full set would mean that hiding columns does
+  not make the table narrower, which is the reason hiding exists. The width is
+  set once on the wrapper that contains both the header and the rows: when they
+  have different values, the header background breaks off in the middle of the
+  scroll, and the rows compute their width from the visible part.
 
-## Состояния
+## States
 
-Список обязан отвечать на каждое своё состояние, и все они пишутся до того, как
-он попадёт на экран: загрузка, пусто, «пусто из-за отбора», отказ источника,
-переполнение. «Пусто» и «пусто из-за отбора» — разные экраны: во втором есть
-кнопка, снимающая отбор.
+A list must respond to each of its states, and all of them are written before it
+gets on screen: loading, empty, "empty because of a filter", source failure,
+overflow. "Empty" and "empty because of a filter" are different screens: the
+second has a button that clears the filter.
 
-Загрузка — ряды скелетона до первого снимка, пусто и «пусто из-за отбора» —
-`Empty`, отказ источника — `QueryFailure` ([Query.md](./Query.md), «Состояния
-блока»). Переполнение — строка в подвале рядом со счётчиком: закрытые соединения
-обрезаются по лимиту, и подвал называет, сколько строк вытеснено.
+Loading is skeleton rows until the first snapshot, empty and "empty because of
+a filter" are `Empty`, source failure is `QueryFailure` ([Query.md](./Query.md),
+"Block states"). Overflow is a line in the footer next to the counter: closed
+connections are trimmed by a limit, and the footer says how many rows were
+evicted.
 
-## Чего не делаем
+## What we do not do
 
-- Пагинации — см. выше.
-- Режима показа как пользовательской настройки (`Авто / Таблица / Карточки`,
-  как у metacubexd): ширину выбирает экран, а не человек. Настройка появится,
-  только если найдётся сценарий, где автоматический выбор мешает.
-- Сортировки и фильтра по полю, которого нет в модели строки: колонка не
-  придумывает данные, которых не отдал источник.
+- Pagination: see above.
+- A display mode as a user setting (`Auto / Table / Cards`, as in metacubexd):
+  the screen chooses the width, not the person. The setting will appear only if
+  a scenario turns up where the automatic choice gets in the way.
+- Sorting and filtering by a field that is not in the row model: a column does
+  not invent data that the source did not provide.
 
-## Источники
+## Sources
 
-Конкурентный разбор b4, Re:HomeProxy и metacubexd и практики работы с
-большими таблицами:
+A competitor review of b4, Re:HomeProxy and metacubexd and practices for working
+with large tables:
 
 - [Data table UI design reference guide](https://www.setproduct.com/blog/data-table-ui-design)
 - [Best practices for creating user-friendly data grids](https://www.telerik.com/blogs/best-practices-creating-user-friendly-data-grids)

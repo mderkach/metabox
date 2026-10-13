@@ -1,13 +1,15 @@
-# Формы и валидация
+# Forms and validation
 
-React Hook Form + Zod через `@hookform/resolvers`. Неконтролируемые поля выбраны ради числа рендеров: конфиг на 500 правил контролируемым состоянием не тянется.
+React Hook Form + Zod through `@hookform/resolvers`. Uncontrolled fields are chosen for the render count: a config with 500 rules cannot be handled with controlled state.
 
-## Требования
+Russian strings in quotes below, such as «Форма», are interface labels as the panel shows them.
 
-1. У каждой формы есть **модель** — тип, выведенный из Zod-схемы.
-2. Составная форма оборачивается в `FormProvider`; дочерние компоненты берут методы из `useFormContext<FormModel>()` — **с дженериком**, иначе типизация теряется.
-3. Поля регистрируются через `<Controller />` — примитивы shadcn/Base UI не пробрасывают `ref` в нативный input единообразно.
-4. Форма разбивается на подкомпоненты, но с оглядкой на раздел «Производительность» ниже.
+## Requirements
+
+1. Every form has a **model**: a type derived from a Zod schema.
+2. A composite form is wrapped in `FormProvider`; child components take methods from `useFormContext<FormModel>()`, **with the generic**, otherwise typing is lost.
+3. Fields are registered through `<Controller />`: shadcn/Base UI primitives do not forward `ref` to the native input uniformly.
+4. A form is split into subcomponents, but with an eye on the "Performance" section below.
 
 ```tsx
 interface FormModel extends z.infer<typeof RuleFormSchema> {}
@@ -33,27 +35,27 @@ function RuleDomainField() {
 }
 ```
 
-## Ограничения RHF, важные для проекта
+## RHF constraints that matter for the project
 
-- **Имена полей — только точечная нотация**: `outbounds.2.uuid`. Скобочный синтаксис не поддерживается; авторендерер печатает пути точками.
-- **Форма типизируется против типа узла**, а не всего конфига. `Path<T>` по union из 57 веток разложит компилятор. Именно поэтому документ живёт в Zustand, а форма открывается на одном узле — `VLESSOutboundOptions`, не `ConfigModel`.
-- Для авторендерера типобезопасности путей нет: там строка и приведение типа. Каст сопровождается комментарием, это единственное разрешённое место.
+- **Field names use dot notation only**: `outbounds.2.uuid`. Bracket syntax is not supported; the autorenderer prints paths with dots.
+- **A form is typed against the node type**, not the whole config. `Path<T>` over a union of 57 branches would take the compiler down. This is exactly why the document lives in Zustand, and a form opens on one node: `VLESSOutboundOptions`, not `ConfigModel`.
+- The autorenderer has no path type safety: there it is a string and a type cast. The cast comes with a comment; this is the only place where it is allowed.
 
-## Производительность
+## Performance
 
-RHF работает через React Context — отсюда [известные грабли](https://react-hook-form.com/faqs#Howtoworkwithmodalortabforms).
+RHF works through React Context, hence the [known pitfalls](https://react-hook-form.com/faqs#Howtoworkwithmodalortabforms).
 
-### Условный рендеринг
+### Conditional rendering
 
-Монтирование поля вызывает `register`, то есть изменение формы — ререндер и валидацию. Варианты:
+Mounting a field calls `register`, that is, a form change: a rerender and validation. Options:
 
-- прятать блок средствами CSS вместо размонтирования;
-- давать каждому шагу собственную форму, сохраняя данные в стор при анмаунте;
-- осознанно принять просадку, если форма маленькая.
+- hide the block with CSS instead of unmounting it;
+- give each step its own form, saving the data to the store on unmount;
+- consciously accept the slowdown if the form is small.
 
-### Внешний контекст поверх формы
+### External context above the form
 
-Изменение внешнего React-контекста над `FormProvider` вызывает рендер контролируемых полей и может дать неожиданные сайд-эффекты. Если данные нужны глубоко внутри — пробрасываем их через `context` самой формы:
+A change of an external React context above `FormProvider` renders the controlled fields and can cause unexpected side effects. If the data is needed deep inside, pass it through the form's own `context`:
 
 ```tsx
 const form = useForm<FormModel, StepContext>({
@@ -61,7 +63,7 @@ const form = useForm<FormModel, StepContext>({
   context: stepContext,
 });
 
-// внутри
+// inside
 const {
   control,
   control: {
@@ -70,22 +72,22 @@ const {
 } = useFormContext<FormModel, StepContext>();
 ```
 
-Это обращение к внутреннему полю RHF — компромисс, применять точечно и с комментарием.
+This accesses an internal RHF field: a compromise, use it selectively and with a comment.
 
 ## Zod
 
-### Общие правила
+### General rules
 
-- Схема — `z.object({ ... })`, поля аннотируются JSDoc: аннотации видны в подсказках IDE. Авторендереру они не видны — в рантайм-схему JSDoc не попадает.
-- Тип извлекается через `z.infer`, руками не дублируется.
-- Расширение схемы — `.extend()`, а не копипаста полей.
-- Внешний тип, который дорого переводить на `z.infer` — `z.custom<T>()`.
+- A schema is `z.object({ ... })`, fields are annotated with JSDoc: the annotations are visible in IDE hints. The autorenderer does not see them: JSDoc does not get into the runtime schema.
+- The type is extracted with `z.infer`, not duplicated by hand.
+- A schema is extended with `.extend()`, not by copy-pasting fields.
+- An external type that is expensive to move to `z.infer`: `z.custom<T>()`.
 
-Сообщением схема отдаёт **код отказа**, а не ключ локализации: текст подставляет
-`ui` своего слайса по таблице кодов. Ключ в схеме выглядит рабочим, но `ui`
-переводит по коду, и незнакомое сообщение не находит перевода — поле остаётся
-вовсе без блока `role='alert'`, то есть форма молчит вместо того, чтобы назвать
-ошибку.
+As the message, a schema returns a **failure code**, not a localization key: the
+`ui` of its slice inserts the text by a code table. A key in the schema looks
+working, but `ui` translates by code, and an unknown message finds no
+translation: the field ends up with no `role='alert'` block at all, so the form
+stays silent instead of naming the error.
 
 ```ts
 export const RULE_FORM_ERROR = {
@@ -94,38 +96,38 @@ export const RULE_FORM_ERROR = {
 } as const;
 
 export const RuleFormSchema = z.object({
-  /** Домен или суффикс домена, на который срабатывает правило */
+  /** Domain or domain suffix the rule matches */
   domain: z.string().min(1, RULE_FORM_ERROR.DomainRequired),
-  /** Тег outbound'а, в который уходит трафик */
+  /** Tag of the outbound the traffic goes to */
   outbound: z.string().min(1, RULE_FORM_ERROR.OutboundRequired),
 });
 
 export type RuleFormModel = z.infer<typeof RuleFormSchema>;
 ```
 
-Образец связки кода с текстом — `features/Rule/RuleEdit`: коды в
-`model/RuleEdit.schema.ts`, таблица перевода в `ui/RuleEditForm.tsx`.
+A reference for linking codes to texts: `features/Rule/RuleEdit`, codes in
+`model/RuleEdit.schema.ts`, the translation table in `ui/RuleEditForm.tsx`.
 
-### Генерируемые схемы неприкосновенны
+### Generated schemas are untouchable
 
-`src/shared/api/generated.ts` пишет `tools/schemagen`. Правила:
+`src/shared/api/generated.ts` is written by `tools/schemagen`. Rules:
 
-- **никаких `.transform()` внутри них**: авторендерер читает определение схемы узла, а `transform` превращает объект в `ZodPipe` — поля узла за ним не видны, и узел целиком ушёл бы в запасной raw-виджет;
-- всё, что нужно преобразовать, преобразуется в `model`-сегменте своего слайса или в отдельной схеме-адаптере формы, но не в генерируемом файле.
+- **no `.transform()` inside them**: the autorenderer reads the node schema definition, and `transform` turns the object into a `ZodPipe`: the node fields are not visible behind it, and the whole node would fall back to the raw widget;
+- everything that needs transformation is transformed in the `model` segment of its slice or in a separate form adapter schema, but not in the generated file.
 
-### Адаптер: когда UI не совпадает с DTO
+### Adapter: when the UI does not match the DTO
 
-Форма нередко удобнее пользователю в одном виде, а серверу нужна другая структура. Разводим их на две схемы и склеиваем `.transform()` — в **рукописной** схеме, не в генерируемой.
+A form is often more convenient for the user in one shape, while the server needs a different structure. Split them into two schemas and join them with `.transform()`, in a **handwritten** schema, not in a generated one.
 
 ```ts
-// то, чем удобно управлять в UI
+// what is convenient to control in the UI
 const RuleFormSchema = z.object({
   matchKind: z.enum(['domain', 'domainSuffix', 'ipCidr']),
   value: z.string(),
   outbound: z.string(),
 });
 
-// то, что уходит в конфиг
+// what goes into the config
 const RuleAdapterSchema = RuleFormSchema.transform((data) => ({
   ...(data.matchKind === 'domain' && { domain: [data.value] }),
   ...(data.matchKind === 'domainSuffix' && { domain_suffix: [data.value] }),
@@ -134,71 +136,71 @@ const RuleAdapterSchema = RuleFormSchema.transform((data) => ({
 }));
 ```
 
-Форма принимает данные по `RuleFormSchema`, валидируется по `RuleAdapterSchema`, а на выходе `handleSubmit` отдаёт уже готовую к записи структуру — мапить снаружи не нужно.
+The form takes data by `RuleFormSchema`, validates by `RuleAdapterSchema`, and `handleSubmit` outputs a structure ready to be written: no mapping outside is needed.
 
-### Валидация вне формы
+### Validation outside the form
 
-Не всякая проверка живёт в схеме. Если валидность определяет сервер — например, `sing-box check` для целого конфига, — ответственность за это несёт вызывающий код, а из схемы проверка убирается. Смешивать синхронную схему и серверный вердикт в одном резолвере не нужно.
+Not every check lives in the schema. If validity is determined by the server (for example, `sing-box check` for the whole config), the calling code is responsible for it, and the check is removed from the schema. Do not mix a synchronous schema and a server verdict in one resolver.
 
-## Авторендерер
+## Autorenderer
 
-Узел секции с реестром типов форка — `inbounds`, `outbounds`, `endpoints`, `providers`, `services`, `certificate_providers`, `dns.servers` — открывается формой, которую рисует `features/Config/ConfigNodeForm` по сгенерированной схеме своего типа ([ADR-0035](../../../../docs/adr/ADR-0035-render-node-forms-from-the-generated-schema.md)). Рукописной таблицы полей на тип нет: новый тип форка получает форму пересборкой схемы.
+A node of a section with a fork type registry (`inbounds`, `outbounds`, `endpoints`, `providers`, `services`, `certificate_providers`, `dns.servers`) opens in a form drawn by `features/Config/ConfigNodeForm` from the generated schema of its type ([ADR-0035](../../../../docs/adr/ADR-0035-render-node-forms-from-the-generated-schema.md)). There is no handwritten field table per type: a new fork type gets a form by rebuilding the schema.
 
-### Интроспекция определения, а не JSON Schema
+### Definition introspection, not JSON Schema
 
-Схема читается обходом `_zod.def`, а не через `z.toJSONSchema()`. Конвертер тянет в чанк около 64 kB исходников Zod и тратит около 17 мс на узел, а виду поля хватает одного прохода по определению — его же видит и резолвер формы.
+The schema is read by walking `_zod.def`, not through `z.toJSONSchema()`. The converter pulls about 64 kB of Zod sources into the chunk and spends about 17 ms per node, while the field kind needs only one pass over the definition, which is also what the form resolver sees.
 
-Вся работа с внутренностями Zod закрыта модулем `shared/lib/schemaShape.ts`: модуль без доменного знания, поэтому живёт в `shared`, а не в слайсе рендерера. Он переводит схему узла в план полей `FieldPlan` — ключ, путь от корня узла, вид поля, значения перечисления, дочерние поля группы — и отдаёт варианты дискриминированного union реестра (`toVariants`). Вид распознаётся проверкой конструктора ядра (`instanceof z.core.$ZodString`), а не приведением типа. Подъём мажора Zod правит только этот модуль; тест-обход всех типов реестров падает на первом расхождении.
+All work with Zod internals is closed behind the `shared/lib/schemaShape.ts` module: the module has no domain knowledge, so it lives in `shared`, not in the renderer slice. It turns a node schema into a field plan `FieldPlan` (key, path from the node root, field kind, enum values, child fields of a group) and returns the variants of a registry's discriminated union (`toVariants`). The kind is recognized by checking the core constructor (`instanceof z.core.$ZodString`), not by a type cast. A Zod major upgrade changes only this module; a test walking all registry types fails on the first mismatch.
 
-Реестры знает сущность: `entities/Config` читает сгенерированные union и отдаёт схему типа (`nodeSchemaOf`), признак «узел распознан» (`isNodeRecognized`) и build-тег типа (`buildTagOfType`). Фича `@shared/api/generated` не читает — это закрыто линтером.
+The entity knows the registries: `entities/Config` reads the generated unions and returns the type schema (`nodeSchemaOf`), the "node recognized" flag (`isNodeRecognized`) and the type's build tag (`buildTagOfType`). The feature does not read `@shared/api/generated`: the linter enforces this.
 
-### Вид поля → виджет
+### Field kind → widget
 
-| Вид        | Схема                                                                 | Виджет                                            |
-| ---------- | --------------------------------------------------------------------- | ------------------------------------------------- |
-| `string`   | `z.string()`                                                          | поле ввода                                        |
-| `duration` | `z.string().regex(…)` с шаблоном длительности Go из генератора        | поле ввода с примером формата `10s`, `1m30s`      |
-| `int`      | `z.int()`                                                             | числовое поле; пустое — ключа нет                 |
-| `number`   | `z.number()`                                                          | числовое поле; пустое — ключа нет                 |
-| `boolean`  | `z.boolean()`                                                         | переключатель и кнопка «сбросить», удаляющая ключ |
-| `enum`     | `z.enum()`                                                            | селект; пустой пункт — ключа нет                  |
-| `literal`  | `z.literal()` — дискриминатор `type`                                  | не рисуется: тип меняется только новым узлом      |
-| `list`     | `z.array(z.string())` или listable `z.union([X, z.array(X)])`         | многострочное поле, значение на строку            |
-| `enumList` | то же над `z.enum()`                                                  | группа переключателей с множественным выбором     |
-| `scalar`   | union строки и целого (`FwMark`, `UDPTimeoutCompat`)                  | поле ввода; запись из одних цифр уходит числом    |
-| `group`    | `z.strictObject()` не глубже `MAX_DEPTH`                              | `FieldSet` с `FieldLegend`, свёрнутый, пока пуст  |
-| `raw`      | всё прочее: union строки и объекта, массив объектов, вложенный реестр | JSON-текст подузла                                |
+| Kind       | Schema                                                                         | Widget                                                        |
+| ---------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------- |
+| `string`   | `z.string()`                                                                   | input field                                                   |
+| `duration` | `z.string().regex(…)` with the Go duration pattern from the generator          | input field with a format example `10s`, `1m30s`              |
+| `int`      | `z.int()`                                                                      | number field; empty means no key                              |
+| `number`   | `z.number()`                                                                   | number field; empty means no key                              |
+| `boolean`  | `z.boolean()`                                                                  | switch and a "reset" button («сбросить») that removes the key |
+| `enum`     | `z.enum()`                                                                     | select; the empty item means no key                           |
+| `literal`  | `z.literal()`: the `type` discriminator                                        | not drawn: the type changes only with a new node              |
+| `list`     | `z.array(z.string())` or listable `z.union([X, z.array(X)])`                   | multiline field, one value per line                           |
+| `enumList` | the same over `z.enum()`                                                       | group of switches with multiple selection                     |
+| `scalar`   | union of string and integer (`FwMark`, `UDPTimeoutCompat`)                     | input field; an entry of digits only is written as a number   |
+| `group`    | `z.strictObject()` no deeper than `MAX_DEPTH`                                  | `FieldSet` with `FieldLegend`, collapsed while empty          |
+| `raw`      | everything else: union of string and object, array of objects, nested registry | JSON text of the subnode                                      |
 
-- Таблица «вид → виджет» — `Record<FieldKind, Widget>` в `ui` слайса рендерера; новый вид добавляется записью, а не веткой `if`. Вид, которого распознавание не знает, уходит в `raw`: поле не теряется и форму не валит.
-- Поля, ушедшие в `raw`, по всем типам реестров перечислены снапшотом тест-обхода (`ConfigNodeForm.coverage.test.tsx`): рост списка виден в диффе.
-- Listable-поле с одной строкой записывается строкой, а не массивом из одного элемента: так его пишет и форк.
-- Путь поля — строка с точками (`tls.reality.public_key`), типобезопасности у неё нет. Форма типизирована как `Record<string, unknown>`, поэтому каст к `Path<…>` не нужен; если он понадобится, закрывается комментарием с причиной — это единственное разрешённое для него место.
-- Виджет получает путь и план поля и ничего не знает о конкретном узле. Подписи — имена ключей: описаний godoc в рантайм-схеме нет — генератор переносит их JSDoc-комментариями, а не `.describe()`/`.meta()`, — поэтому подсказок у полей пока нет.
-- Нераспознанный узел ([ADR-0018](../../../../docs/adr/ADR-0018-generate-strict-schemas-and-mark-what-the-panel-does-not-know.md)) формы не получает: вкладка «Форма» выключена, узел открыт текстом. Секции-объекты (`log`, `experimental`, `ntp`, `certificate`) правятся только текстом. Скаляры секций `route` и `dns` (`final`, `strategy` и соседние) открывает `ConfigSectionForm` тем же рендерером: схема — сгенерированная схема секции без её списков (`entities/Config`, `Config.settings.ts`), списки правят свои экраны.
-- Форму узла на экране секций ставит виджет `widgets/Config/ConfigNode`: вкладки «Форма» и «JSON». Какой реестр получает автоформу, решает его таблица `NODE_FORM_POLICY`: у служб автоформы нет — форма положена только `api` (PRD, раздел 8): реестр с политикой «только оверрайды» открывает формой тип, у которого есть запись в `NODE_OVERRIDE`, остальные службы правятся текстом.
+- The "kind → widget" table is a `Record<FieldKind, Widget>` in the `ui` of the renderer slice; a new kind is added by an entry, not by an `if` branch. A kind unknown to recognition goes to `raw`: the field is not lost and does not break the form.
+- Fields that went to `raw` across all registry types are listed in a snapshot of the walk test (`ConfigNodeForm.coverage.test.tsx`): growth of the list is visible in the diff.
+- A listable field with one line is written as a string, not as an array of one element: the fork writes it this way too.
+- A field path is a dotted string (`tls.reality.public_key`) without type safety. The form is typed as `Record<string, unknown>`, so a cast to `Path<…>` is not needed; if it becomes needed, it is covered by a comment with the reason, and this is the only place where it is allowed.
+- A widget gets the path and the field plan and knows nothing about the specific node. Labels are key names: there are no godoc descriptions in the runtime schema (the generator carries them as JSDoc comments, not as `.describe()`/`.meta()`), so fields have no hints yet.
+- An unrecognized node ([ADR-0018](../../../../docs/adr/ADR-0018-generate-strict-schemas-and-mark-what-the-panel-does-not-know.md)) gets no form: the "Form" tab («Форма») is disabled, the node opens as text. Object sections (`log`, `experimental`, `ntp`, `certificate`) are edited only as text. Scalars of the `route` and `dns` sections (`final`, `strategy` and neighbours) are opened by `ConfigSectionForm` with the same renderer: the schema is the generated section schema without its lists (`entities/Config`, `Config.settings.ts`), the lists are edited on their own screens.
+- The node form on the sections screen is placed by the `widgets/Config/ConfigNode` widget: tabs "Form" («Форма») and "JSON". Which registry gets an autoform is decided by its `NODE_FORM_POLICY` table: services have no autoform, a form is required only for `api` (PRD, section 8): a registry with the "overrides only" policy opens in a form a type that has an entry in `NODE_OVERRIDE`, other services are edited as text.
 
-### Оверрайды типа
+### Type overrides
 
-Тип, которому автоформы мало, получает запись в таблице `NODE_OVERRIDE` (`features/Config/ConfigNodeForm/model/ConfigNodeForm.overrides.ts`), а не свою форму рядом: поля, запись листьями и резолвер остаются общими.
+A type for which the autoform is not enough gets an entry in the `NODE_OVERRIDE` table (`features/Config/ConfigNodeForm/model/ConfigNodeForm.overrides.ts`), not its own form next to it: fields, leaf writes and the resolver stay shared.
 
-- `primary` — основные поля сверху, по порядку; вложенное поднимается из своей группы и подписывается путём целиком (`tls.reality.public_key`). Остальные поля типа идут следом: заданные в узле видны, пустые — под свёрткой «Ещё параметры (N)», закрытой по умолчанию. Та же свёртка пустых полей есть у типов без оверрайда.
-- `widgets` — вид поля вместо вида из схемы: строка `flow` у VLESS рисуется селектом значений форка.
-- `required` и `refine` — проверки поверх схемы, с кодом отказа, как у рукописных схем. Узел до правки резолвер получает контекстом формы (`context`): `refine` не перепроверяет формат значения, которого пользователь не трогал, — арбитр ему `sing-box check`, а форма не мешает править соседнее поле.
-- `preset` — новый узел типа в форме добавления (`features/Config/ConfigNodeAdd`, через `@x`): только то, без чего тип не соберётся.
+- `primary`: main fields on top, in order; a nested one is lifted out of its group and labelled with the full path (`tls.reality.public_key`). The other fields of the type follow: those set in the node are visible, empty ones are under the "More parameters (N)" collapsible («Ещё параметры (N)»), closed by default. Types without an override have the same collapsible for empty fields.
+- `widgets`: a field kind instead of the kind from the schema: the VLESS `flow` string is drawn as a select of the fork's values.
+- `required` and `refine`: checks on top of the schema, with a failure code, as in handwritten schemas. The resolver gets the node before the edit through the form context (`context`): `refine` does not recheck the format of a value the user did not touch (`sing-box check` is its arbiter), and the form does not prevent editing a neighbouring field.
+- `preset`: a new node of the type in the add form (`features/Config/ConfigNodeAdd`, through `@x`): only what the type cannot be built without.
 
-Опция из `BUILD_TAG_OF_OPTION`, которой нет в сборке бинаря (`tls.utls` — `with_utls`), помечена у самого верхнего поля, к которому относится, — у группы или у поля, поднятого из неё.
+An option from `BUILD_TAG_OF_OPTION` that is not in the binary build (`tls.utls`: `with_utls`) is marked on the topmost field it belongs to: on the group or on a field lifted out of it.
 
-### Запись листьями
+### Leaf writes
 
-Форма собирает значение узла целиком, но в документ уходят только изменённые листья: `diffNode(path, before, after)` из `entities/Config` сравнивает узел до и после правки и отдаёт правки `{ path, value }`, стор применяет их одним `editMany` — одним обновлением черновика, а не серией.
+The form assembles the whole node value, but only changed leaves go into the document: `diffNode(path, before, after)` from `entities/Config` compares the node before and after the edit and returns edits `{ path, value }`, the store applies them with one `editMany`: one draft update, not a series.
 
-- Лист — скаляр или массив целиком; объекты сравниваются по ключам.
-- `null`, `''`, `[]` и `undefined` значат «ключа нет» (`compactNode`): очищенное поле удаляется из узла, а не пишется пустым. Очищенное поле форма держит `null`, а не `undefined`: `undefined` React Hook Form читает как «взять значение по умолчанию» и возвращает в поле исходное.
-- Нетронутое поле правки не даёт, даже если форма держит его в другом виде.
+- A leaf is a scalar or a whole array; objects are compared by keys.
+- `null`, `''`, `[]` and `undefined` mean "no key" (`compactNode`): a cleared field is removed from the node, not written empty. The form holds a cleared field as `null`, not `undefined`: React Hook Form reads `undefined` as "take the default value" and puts the original back into the field.
+- An untouched field produces no edit, even if the form holds it in a different shape.
 
-Так диф после правки одного поля — одна строка, комментарии внутри узла целы ([ADR-0004](../../../../docs/adr/ADR-0004-edit-config-text-in-place-on-the-client.md), AC-2). Запись узла целиком `edit(path, node)` переписала бы его вместе с комментариями — так работает только текстовый режим узла.
+So the diff after editing one field is one line, and comments inside the node are intact ([ADR-0004](../../../../docs/adr/ADR-0004-edit-config-text-in-place-on-the-client.md), AC-2). Writing the whole node with `edit(path, node)` would rewrite it together with the comments: only the node's text mode works this way.
 
-### Форма и черновик
+### Form and draft
 
 ```ts
 useForm<ConfigNodeFormModel>({
@@ -210,32 +212,32 @@ useForm<ConfigNodeFormModel>({
 });
 ```
 
-`values` подтягивает в форму правку того же узла извне — текстом на соседней вкладке, — а `keepDirtyValues` не даёт ей стереть то, что пользователь уже набрал. После записи `form.reset(data)` делает сохранённое новой точкой отсчёта.
+`values` pulls into the form an external edit of the same node (as text in the neighbouring tab), and `keepDirtyValues` keeps it from erasing what the user has already typed. After a write, `form.reset(data)` makes the saved value the new baseline.
 
-Узел приходит из разбора текста объектами без прототипа: RHF такие не копирует, и правка поля переписала бы заодно исходные значения — форма не узнала бы, что её тронули. Поэтому `values` — копия узла (`structuredClone`).
+The node comes from text parsing as objects without a prototype: RHF does not copy those, and editing a field would also rewrite the original values, so the form would not know it was touched. That is why `values` is a copy of the node (`structuredClone`).
 
-Резолвер — схема типа узла, и проверяет он то, что ляжет в документ: очищенные поля выпадают до проверки, иначе пустая длительность не прошла бы шаблон. Сгенерированная схема кодов отказа не несёт, поэтому `ui` рендерера переводит ошибку по коду замечания Zod: `invalid_format` — длительность не в формате Go, `too_small` — отрицательное число, `invalid_type` — значение не того типа. Арбитром валидности остаётся `sing-box check` при применении: валидный по схеме узел бинарь всё равно может отвергнуть.
+The resolver is the node type schema, and it checks what will go into the document: cleared fields drop out before the check, otherwise an empty duration would fail the pattern. The generated schema carries no failure codes, so the renderer's `ui` translates the error by the Zod issue code: `invalid_format` is a duration not in Go format, `too_small` is a negative number, `invalid_type` is a value of the wrong type. `sing-box check` on apply stays the arbiter of validity: the binary can still reject a node that is valid by the schema.
 
-## Массивы и порядок
+## Arrays and order
 
-Тоже решение наперёд: `useFieldArray` в панели пока не используется — списки правятся патчами документа в сторе, а не формой. Правила ниже действуют с того момента, как список получит форму.
+This is also a decision made in advance: `useFieldArray` is not used in the panel yet; lists are edited by document patches in the store, not by a form. The rules below apply from the moment a list gets a form.
 
-- Списки (`route.rules`, `outbounds`) — `useFieldArray`.
-- Ключ строки — `field.id`, а не индекс: при переупорядочивании индексы съезжают и React переиспользует не те узлы.
-- Перестановка — `move`, вставка — `insert`; пересобирать массив целиком нельзя, это теряет состояние полей.
+- Lists (`route.rules`, `outbounds`) use `useFieldArray`.
+- The row key is `field.id`, not the index: on reordering, indexes shift and React reuses the wrong nodes.
+- Reordering is `move`, insertion is `insert`; rebuilding the whole array is forbidden, it loses field state.
 
-## Значения по умолчанию
+## Default values
 
-`defaultValues` заполняются из узла конфига как есть. Отсутствующее в конфиге поле остаётся отсутствующим — пустая строка вместо него в модель не пишется, и `handleSubmit` её не отдаёт.
+`defaultValues` are filled from the config node as is. A field absent in the config stays absent: an empty string is not written into the model in its place, and `handleSubmit` does not output it.
 
-Причина: после правки одного поля диф с исходным файлом обязан содержать только эту правку. Форма, добросовестно расставляющая дефолты, ломает это требование молча.
+The reason: after editing one field, the diff with the original file must contain only that edit. A form that diligently fills in defaults breaks this requirement silently.
 
-## Сырой JSON
+## Raw JSON
 
-- Raw-режим доступен на любом узле: текст → `JSON.parse` → валидация схемой этого узла → запись в стор одним патчем.
-- Ошибка разбора показывается на месте и не стирает введённый текст.
-- Нераспознанный узел формы не получает вовсе: он показывается сырым блоком с пометкой «UI не покрывает» и сохраняется без изменений.
+- Raw mode is available on any node: text → `JSON.parse` → validation with this node's schema → write to the store as one patch.
+- A parse error is shown in place and does not erase the entered text.
+- An unrecognized node gets no form at all: it is shown as a raw block marked "not covered by the UI" («UI не покрывает») and saved without changes.
 
-## Ошибки с устройства
+## Errors from the device
 
-Вывод `sing-box check` — вердикт по конфигу целиком. Сейчас он показывается целиком в баре применения: разбора до конкретного узла нет. Когда появится, разобранная ошибка ставится на поле своего узла, неразобранная по-прежнему показывается целиком, без попыток угадать поле.
+The `sing-box check` output is a verdict on the whole config. For now it is shown in full in the apply bar: there is no parsing down to a specific node. When it appears, a parsed error is attached to the field of its node, and an unparsed one is still shown in full, without attempts to guess the field.

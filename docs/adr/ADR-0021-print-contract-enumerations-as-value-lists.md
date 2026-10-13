@@ -1,49 +1,49 @@
-# ADR-0021. Печатать перечисления контракта списком значений, а разбор оставлять терпимым
+# ADR-0021. Print contract enumerations as value lists and keep parsing lenient
 
-- Статус: Accepted
-- Дата: 2026-09-16
-- Ответственные: владелец репозитория
+- Status: Accepted
+- Date: 2026-09-16
+- Deciders: repository owner
 
-## Контекст и постановка проблемы
+## Context and problem statement
 
-Демон отдаёт панели не только структуры, но и словари: стадии применения (`apply.Phase`), коды отказа (`contract.ErrorCode`), происхождение утверждения и вид совпадения в объяснении маршрута. В Go это именованные строковые типы с набором констант.
+The daemon gives the panel not only structures but also vocabularies: apply stages (`apply.Phase`), rejection codes (`contract.ErrorCode`), the origin of a claim and the match kind in route explanation. In Go these are named string types with a set of constants.
 
-`contractgen` печатал такой тип по базовому типу — `z.string()`, — и набор значений до панели не доезжал. Панель повторяла его руками: `SERVICE_STATUS`, `APPLY_PHASE`, таблица текстов отказа в `failureText`. Пока набор один и тот же, это работает; когда демон заводит новое значение, панель об этом не узнаёт. Для кодов отказа цена конкретна: пользователь видит не перевод, а сообщение демона на его языке ([ADR-0019](./ADR-0019-keep-interface-texts-in-the-slice-and-load-them-over-the-network.md)).
+`contractgen` printed such a type by its base type — `z.string()` — and the value set did not reach the panel. The panel repeated it by hand: `SERVICE_STATUS`, `APPLY_PHASE`, the rejection text table in `failureText`. While the set stays the same, this works; when the daemon adds a new value, the panel does not learn about it. For rejection codes the cost is concrete: the user sees not a translation but the daemon's message in its language ([ADR-0019](./ADR-0019-keep-interface-texts-in-the-slice-and-load-them-over-the-network.md)).
 
-При этом у панели есть обратное, уже принятое свойство: адаптеры терпимы к незнакомым значениям и переводят их в безопасные — незнакомая стадия читается как отказ, незнакомое происхождение как «вычислить нечем» ([ADR-0007](./ADR-0007-explain-route-without-own-rule-evaluator.md)). Это поведение закрыто тестами: догадка, поданная как факт, для панели дороже пробела.
+At the same time the panel has the opposite property, already accepted: adapters are lenient to unknown values and map them to safe ones — an unknown stage reads as a failure, an unknown origin as "nothing to compute with" ([ADR-0007](./ADR-0007-explain-route-without-own-rule-evaluator.md)). This behaviour is covered by tests: for the panel a guess presented as a fact costs more than a gap.
 
-В scope — как набор значений доезжает до панели. Вне scope — структуры и поля: их генератор печатает как печатал.
+In scope: how the value set reaches the panel. Out of scope: structures and fields: the generator prints them as before.
 
-## Критерии выбора
+## Decision drivers
 
-- Новое значение у демона обнаруживается до устройства, а не на экране пользователя.
-- Разбор ответа остаётся терпимым: одно незнакомое значение не гасит экран целиком.
-- Артефакт генератора детерминирован: два прогона дают один файл.
-- Панель не обязана повторять словарь руками там, где он уже объявлен демоном.
+- A new value in the daemon is detected before the device, not on the user's screen.
+- Response parsing stays lenient: one unknown value does not blank out the whole screen.
+- The generator artifact is deterministic: two runs give one file.
+- The panel does not have to repeat a vocabulary by hand where the daemon already declares it.
 
-## Рассмотренные варианты
+## Considered options
 
-1. **Печатать значения отдельной константой, поле оставлять строкой** — рядом со схемами появляется `export const ERROR_CODE = ['not_found', …] as const`, а `code` в схеме остаётся `z.string()`. Плюсы: панель типизирует свои таблицы набором демона, и пропущенное значение — ошибка компиляции; разбор при этом не меняется, терпимость адаптеров сохраняется. Минусы: строгость и разбор разъехались — тип поля на проводе шире, чем набор значений. **Принят.**
+1. **Print the values as a separate constant, keep the field a string** — next to the schemas appears `export const ERROR_CODE = ['not_found', …] as const`, and `code` in the schema stays `z.string()`. Pros: the panel types its tables with the daemon's set, and a missing value is a compile error; parsing does not change, adapter leniency is kept. Cons: strictness and parsing diverge — the wire type of the field is wider than the value set. **Chosen.**
 
-2. **Печатать поле перечислением `z.enum([...])`** — набор попадает и в разбор. Плюсы: одна сущность вместо двух, значение вне набора не пройдёт дальше границы. Минусы: незнакомое значение отбраковывает весь ответ, и вместо «стадия неизвестна» пользователь получает «панель не разобрала ответ». Проверено на существующих тестах адаптеров: два из них перестают компилироваться, потому что намеренно подают незнакомые значения. Для кода отказа хуже всего: вместе с телом теряется и сообщение, которым демон объясняет отказ. **Отклонён.**
+2. **Print the field as an enumeration `z.enum([...])`** — the set enters parsing too. Pros: one entity instead of two, a value outside the set does not pass the boundary. Cons: an unknown value rejects the whole response, and instead of "stage unknown" the user gets "the panel could not parse the response". Checked on existing adapter tests: two of them stop compiling because they deliberately feed unknown values. Worst for the rejection code: together with the body the message in which the daemon explains the rejection is lost too. **Rejected.**
 
-3. **Оставить как есть, словарь держать в панели руками** — то, что было. Минусы: расхождение обнаруживается пользователем. **Отклонён.**
+3. **Leave as is, keep the vocabulary in the panel by hand** — what there was. Cons: the user discovers the mismatch. **Rejected.**
 
-## Принятое решение
+## Decision outcome
 
-`contractgen` собирает строковые константы именованных типов и печатает их списком для каждого типа, который встретился в контракте:
+`contractgen` collects the string constants of named types and prints them as a list for each type that appears in the contract:
 
 ```ts
 export const ERROR_CODE = ['not_found', 'origin_mismatch', …] as const
 ```
 
-Имя константы получается из имени типа: `ErrorCode` → `ERROR_CODE`. Один и тот же тип печатается один раз, сколько бы полей на него ни ссылалось, а тёзки из разных пакетов разводятся пакетом: `ROUTE_KIND` и `EVENTS_KIND`. Склеивать их по имени нельзя — это разные перечисления, и одно молча вытеснило бы другое.
+The constant name is derived from the type name: `ErrorCode` → `ERROR_CODE`. One type is printed once, however many fields refer to it, and namesakes from different packages are told apart by package: `ROUTE_KIND` and `EVENTS_KIND`. Merging them by name is not allowed — they are different enumerations, and one would silently displace the other.
 
-Константа без типа рядом с перечислением его членом не считается: в Go она своя, и приписывать её соседу значит выдумать значение, которого у типа нет.
+An untyped constant next to an enumeration is not counted as its member: in Go it is separate, and attributing it to a neighbour means inventing a value the type does not have.
 
-Поля схем при этом не меняются — на проводе остаётся `z.string()`.
+Schema fields do not change — the wire keeps `z.string()`.
 
-Панель типизирует свои таблицы этим набором:
+The panel types its tables with this set:
 
 ```ts
 type ApiFailureCode = (typeof ERROR_CODE)[number];
@@ -51,47 +51,47 @@ type ApiFailureCode = (typeof ERROR_CODE)[number];
 const FAILURE_KEY: Readonly<Record<ApiFailureCode, ParseKeys<'shared'>>> = { … };
 ```
 
-`Record` по закрытому набору обязан быть полным, поэтому новый код у демона валит компиляцию панели с именем недостающего значения.
+A `Record` over a closed set must be complete, so a new code in the daemon fails the panel compilation with the name of the missing value.
 
-Терпимость разбора не меняется: адаптер по-прежнему сводит незнакомое значение к безопасному, а не роняет ответ.
+Parsing leniency does not change: the adapter still maps an unknown value to a safe one instead of dropping the response.
 
-### Область действия и границы
+### Scope and boundaries
 
-`apps/metaboxd/cmd/contractgen` и артефакт `apps/web/src/shared/api/daemon.generated.ts`. Константы доступны панели через api-сегмент своего слайса, как и схемы.
+`apps/metaboxd/cmd/contractgen` and the artifact `apps/web/src/shared/api/daemon.generated.ts`. The constants reach the panel through the api segment of its slice, like the schemas.
 
-## Последствия
+## Consequences
 
-### Положительные
+### Positive
 
-- Расхождение панели с демоном ловится компилятором. Проверено пробой: добавленный в демон код отказа даёт `Property 'probe_drift' is missing in type …` в `failureText.ts`.
-- Панель перестала переписывать словарь демона руками там, где он нужен полным.
-- Godoc типа и его констант остаётся единственным домом описания значений.
+- A mismatch between the panel and the daemon is caught by the compiler. Checked with a probe: a rejection code added to the daemon gives `Property 'probe_drift' is missing in type …` in `failureText.ts`.
+- The panel stopped rewriting the daemon's vocabulary by hand where it needs it complete.
+- The godoc of the type and its constants stays the single home for describing the values.
 
-### Отрицательные
+### Negative
 
-- В артефакте появляются константы, которые панель может не использовать: генератор печатает все перечисления, встреченные в контракте.
-- Строгость и разбор живут врозь: тип поля на проводе шире набора значений. Это осознанная асимметрия, и её причина записана здесь.
-- Тёзки из разных пакетов получают имя с пакетом впереди: `route.Kind` и `events.Kind` дадут `ROUTE_KIND` и `EVENTS_KIND`. Имя константы, таким образом, зависит не только от типа, но и от того, есть ли у него тёзка в контракте: заведённый где-то ещё `Kind` переименует и этот.
+- The artifact gets constants the panel may not use: the generator prints all enumerations found in the contract.
+- Strictness and parsing live apart: the wire type of the field is wider than the value set. This is a deliberate asymmetry, and its reason is recorded here.
+- Namesakes from different packages get a name prefixed with the package: `route.Kind` and `events.Kind` give `ROUTE_KIND` and `EVENTS_KIND`. So the constant name depends not only on the type but also on whether it has a namesake in the contract: a `Kind` added somewhere else renames this one too.
 
-### Нейтральные или отложенные
+### Neutral or deferred
 
-- Схемы полей не меняются: разбор ответов остаётся ровно таким, каким был.
+- Field schemas do not change: response parsing stays exactly as it was.
 
-## Совместимость, миграция и откат
+## Compatibility, migration and rollback
 
-Формат ответов демона не менялся — изменился только вывод генератора. Старая панель с новым демоном и наоборот работают как раньше: на проводе строка.
+The daemon response format did not change — only the generator output changed. An old panel with a new daemon and vice versa work as before: the wire carries a string.
 
-Откат — вернуть печать базового типа: панель тогда снова держит словари руками.
+Rollback: return printing of the base type: the panel then keeps vocabularies by hand again.
 
-## Проверка решения
+## Validation
 
-- `make schema-daemon` и `cd apps/metaboxd && go test ./cmd/...` — артефакт собран из текущего контракта и детерминирован; тесты генератора закрывают разведение тёзок и пропуск константы без типа;
-- проба: добавить константу в `contract.ErrorCode`, пересобрать контракт, `pnpm --filter web build` обязан упасть с именем недостающего кода;
-- `pnpm --filter web test` — адаптеры по-прежнему читают незнакомые значения как безопасные.
+- `make schema-daemon` and `cd apps/metaboxd && go test ./cmd/...` — the artifact is built from the current contract and is deterministic; generator tests cover separating namesakes and skipping an untyped constant;
+- probe: add a constant to `contract.ErrorCode`, rebuild the contract, `pnpm --filter web build` must fail with the name of the missing code;
+- `pnpm --filter web test` — adapters still read unknown values as safe.
 
-## Ссылки
+## Links
 
-- [ADR-0012](./ADR-0012-generate-daemon-contract-schemas-from-sources.md) — контракт панели печатается из исходников демона;
-- [ADR-0019](./ADR-0019-keep-interface-texts-in-the-slice-and-load-them-over-the-network.md) — текст выбирает панель, демон отдаёт код;
-- [ADR-0007](./ADR-0007-explain-route-without-own-rule-evaluator.md) — незнакомое значение читается как «неизвестно», а не как догадка;
+- [ADR-0012](./ADR-0012-generate-daemon-contract-schemas-from-sources.md) — the panel contract is printed from the daemon sources;
+- [ADR-0019](./ADR-0019-keep-interface-texts-in-the-slice-and-load-them-over-the-network.md) — the panel chooses the text, the daemon gives the code;
+- [ADR-0007](./ADR-0007-explain-route-without-own-rule-evaluator.md) — an unknown value reads as "unknown", not as a guess;
 - [`apps/metaboxd/cmd/contractgen/emit.go`](../../apps/metaboxd/cmd/contractgen/emit.go), [`apps/web/src/shared/api/failureText.ts`](../../apps/web/src/shared/api/failureText.ts).

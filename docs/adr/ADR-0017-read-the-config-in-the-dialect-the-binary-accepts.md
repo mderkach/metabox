@@ -1,96 +1,96 @@
-# ADR-0017. Читать конфиг тем же диалектом, что принимает бинарь, а не строгим JSON
+# ADR-0017. Read the config in the same dialect the binary accepts, not as strict JSON
 
-- Статус: Accepted
-- Дата: 2026-09-15
-- Ответственные: владелец репозитория
+- Status: Accepted
+- Date: 2026-09-15
+- Deciders: repository owner
 
-## Контекст и постановка проблемы
+## Context and problem statement
 
-`config.json` на роутере пишут руками. Проверено на стенде 2026-09-14 (`sing-box 1.14.0-extended-2.7.1`): бинарь принимает строчные комментарии `//`, блочные `/* */` и запятую перед закрывающей скобкой — все пять вариантов прошли `sing-box check`.
+`config.json` on the router is written by hand. Checked on the test bench on 2026-09-14 (`sing-box 1.14.0-extended-2.7.1`): the binary accepts `//` line comments, `/* */` block comments and a comma before a closing bracket; all five variants passed `sing-box check`.
 
-Демон и панель читали такой файл строгим JSON и расходились с бинарём в обе стороны:
+The daemon and the panel read such a file as strict JSON and diverged from the binary in both directions:
 
-- `clashapi.Ensure` начинается с `json.Valid`, поэтому `POST /api/apply` отвечал `internal`, а в логе оставалось «гарантия clash_api: конфиг не является корректным JSON». Владелец видел «внутреннюю ошибку» на файле, который его роутер исполняет прямо сейчас;
-- `clashapi.Read` тем же `encoding/json` доставал адрес и секрет Clash API — на конфиге с комментариями healthcheck остался бы без адреса;
-- экран правки текстом проверял ввод через `JSON.parse` и показывал ошибку разбора на рабочем конфиге, хотя список правил рядом читался и отображался: он идёт через `jsonc-parser` ([ADR-0004](./ADR-0004-edit-config-text-in-place-on-the-client.md)).
+- `clashapi.Ensure` starts with `json.Valid`, so `POST /api/apply` answered `internal`, and the log was left with "clash_api guarantee: the config is not valid JSON". The owner saw an "internal error" on a file their router is running right now;
+- `clashapi.Read` used the same `encoding/json` to get the Clash API address and secret: on a config with comments the healthcheck would be left without an address;
+- the text editing screen checked the input with `JSON.parse` and showed a parse error on a working config, even though the rule list next to it was read and displayed: it goes through `jsonc-parser` ([ADR-0004](./ADR-0004-edit-config-text-in-place-on-the-client.md)).
 
-В scope — чтение и точечная правка конфига демоном и проверка текста в панели. Вне scope — валидация значений: арбитром остаётся `sing-box check` на устройстве, а не разбор на стороне панели.
+In scope: reading and targeted editing of the config by the daemon and checking the text in the panel. Out of scope: validation of values: `sing-box check` on the device stays the arbiter, not parsing on the panel side.
 
-Ограничение задано заранее: у корневого модуля демона нет зависимостей (`apps/metaboxd/AGENTS.md`), и новая — это отдельное решение. Второе ограничение из [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md) и [ADR-0004](./ADR-0004-edit-config-text-in-place-on-the-client.md): конфиг правится по байтам, потому что разбор в структуру и обратная сериализация переупорядочили бы ключи и потеряли форматирование владельца.
+A constraint is set in advance: the daemon's root module has no dependencies (`apps/metaboxd/AGENTS.md`), and a new one is a separate decision. The second constraint comes from [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md) and [ADR-0004](./ADR-0004-edit-config-text-in-place-on-the-client.md): the config is edited by bytes, because parsing into a structure and serializing back would reorder keys and lose the owner's formatting.
 
-## Критерии выбора
+## Decision drivers
 
-- Демон принимает ровно то, что принимает бинарь: расхождение оборачивается отказом применить рабочий конфиг.
-- Точечная правка сохраняется: байты вне правки остаются прежними, включая комментарии.
-- Зависимостей у демона не прибавляется.
-- Поведение закрывается тестами без устройства.
-- Панель и демон говорят об одном и том же файле одинаково.
+- The daemon accepts exactly what the binary accepts: a mismatch turns into a refusal to apply a working config.
+- The targeted edit is preserved: bytes outside the edit stay the same, including comments.
+- The daemon gains no dependencies.
+- The behaviour is covered by tests without a device.
+- The panel and the daemon speak about the same file in the same way.
 
-## Рассмотренные варианты
+## Considered options
 
-1. **Маскировать лишнее пробелами перед разбором** — комментарии и висячие запятые заменяются пробелами в копии, длина сохраняется, поэтому смещения, найденные разбором копии, указывают на те же байты оригинала; правка идёт по оригиналу. Плюсы: стандартная библиотека остаётся, точечная правка работает без изменений, поведение проверяется юнит-тестами. Минусы: свой сканер строк и комментариев, который надо держать в согласии с диалектом бинаря. **Принят.**
+1. **Mask the extras with spaces before parsing**: comments and trailing commas are replaced with spaces in a copy, the length is kept, so offsets found by parsing the copy point to the same bytes of the original; the edit goes on the original. Pros: the standard library stays, the targeted edit works unchanged, the behaviour is checked by unit tests. Cons: our own scanner of strings and comments, which has to be kept consistent with the binary's dialect. **Chosen.**
 
-2. **Взять готовый парсер JSONC в демон** — например `tailscale/hujson` или аналог. Плюсы: чужой разбор вместо своего. Минусы: первая зависимость корневого модуля ради одной функции; сохранение смещений всё равно пришлось бы проверять самостоятельно, а без него ломается точечная правка. **Отклонён.**
+2. **Take a ready-made JSONC parser into the daemon**, for example `tailscale/hujson` or similar. Pros: someone else's parsing instead of our own. Cons: the first dependency of the root module for one function; preserving offsets would still have to be checked on our own, and without it the targeted edit breaks. **Rejected.**
 
-3. **Перестать разбирать конфиг в демоне** — искать `experimental.clash_api` по тексту без разбора. Плюсы: диалект перестаёт иметь значение. Минусы: поиск скобок регулярками на чужом файле ненадёжен ровно там, где цена ошибки высока — демон дописывает секцию в рабочий конфиг. **Отклонён.**
+3. **Stop parsing the config in the daemon**: search for `experimental.clash_api` in the text without parsing. Pros: the dialect stops mattering. Cons: finding brackets with regular expressions in someone else's file is unreliable exactly where the cost of an error is high: the daemon adds a section to a working config. **Rejected.**
 
-4. **Сохранить текущий подход** — считать комментарии в конфиге неподдерживаемыми. Минусы: рукописный конфиг с роутера не применяется, а сообщение об отказе не объясняет причину. Прямо противоречит AC-1. **Отклонён.**
+4. **Keep the current approach**: treat comments in the config as unsupported. Cons: a handwritten config from the router is not applied, and the failure message does not explain the reason. Directly contradicts AC-1. **Rejected.**
 
-## Принятое решение
+## Decision outcome
 
-Демон и панель читают конфиг диалектом бинаря: комментарии обоих видов и запятая перед `}` или `]` — не ошибка.
+The daemon and the panel read the config in the binary's dialect: comments of both kinds and a comma before `}` or `]` are not an error.
 
-В демоне (`apps/metaboxd/internal/clashapi/jsonc.go`) разбор идёт по маскированной копии, а правка — по исходным байтам:
+In the daemon (`apps/metaboxd/internal/clashapi/jsonc.go`) parsing goes over a masked copy, and editing over the original bytes:
 
-- `mask` отдаёт копию той же длины, где комментарии и висячие запятые заменены пробелами; переводы строк сохраняются, чтобы номера строк в ошибках разбора оставались верными;
-- содержимое строковых литералов не трогается: `//` и запятая внутри строки — обычные символы;
-- проходов два, потому что запятая перед комментарием становится висячей только после того, как комментарий погашен;
-- `json.Valid`, `objectStart` и `findMember` работают по копии, `insertMember` и `replaceSpan` — по оригиналу.
+- `mask` returns a copy of the same length where comments and trailing commas are replaced with spaces; newlines are kept so that line numbers in parse errors stay correct;
+- the content of string literals is not touched: `//` and a comma inside a string are ordinary characters;
+- there are two passes, because a comma before a comment becomes trailing only after the comment has been blanked;
+- `json.Valid`, `objectStart` and `findMember` work on the copy, `insertMember` and `replaceSpan` on the original.
 
-В панели (`apps/web/src/widgets/Config/ConfigRawEditor`) проверка текста идёт через `parse` из `jsonc-parser` с `allowTrailingComma`, а не через `JSON.parse`. Коды ошибок переводятся в русские фразы: английское `CloseBraceExpected` владельцу роутера ничего не чинит.
+In the panel (`apps/web/src/widgets/Config/ConfigRawEditor`) the text is checked with `parse` from `jsonc-parser` with `allowTrailingComma`, not with `JSON.parse`. Error codes are translated into Russian phrases: the English `CloseBraceExpected` fixes nothing for a router owner.
 
-Новых зависимостей ни у демона, ни у панели не появляется: `jsonc-parser` уже стоит ради разбора конфига.
+Neither the daemon nor the panel gets new dependencies: `jsonc-parser` is already installed for parsing the config.
 
-## Последствия
+## Consequences
 
-### Положительные
+### Positive
 
-- Рукописный конфиг с комментариями применяется через панель, и комментарии остаются в файле на устройстве.
-- Демон перестал отвечать «внутренней ошибкой» на валидный для бинаря файл.
-- Панель и демон одинаково отвечают на вопрос «это разбирается или нет».
+- A handwritten config with comments is applied through the panel, and the comments stay in the file on the device.
+- The daemon stopped answering with an "internal error" on a file the binary considers valid.
+- The panel and the daemon give the same answer to the question "does this parse or not".
 
-### Отрицательные
+### Negative
 
-- В демоне появился свой сканер диалекта. Он проще полного парсера, но расходится с бинарём молча: если форк начнёт принимать что-то ещё — одинарные кавычки, незакавыченные ключи, — демон снова начнёт отвергать рабочий конфиг.
-- Маска удваивает конфиг в памяти на время разбора. На потолке в 1 МБ это незаметно, но это цена сохранения смещений.
+- The daemon got its own dialect scanner. It is simpler than a full parser, but it diverges from the binary silently: if the fork starts accepting something else (single quotes, unquoted keys), the daemon starts rejecting a working config again.
+- The mask doubles the config in memory for the duration of parsing. At the 1 MB ceiling this is unnoticeable, but it is the price of preserving offsets.
 
-### Нейтральные или отложенные
+### Neutral or deferred
 
-- Автоматической сверки диалекта с бинарём нет: набор проверенных конструкций зафиксирован тестами и прогоном на стенде, а не выведен из исходников форка.
+- There is no automatic check of the dialect against the binary: the set of checked constructs is fixed by tests and a run on the test bench, not derived from the fork's sources.
 
-## Риски и меры снижения
+## Risks and mitigations
 
-| Риск                                                 | Вероятность и влияние                                   | Митигация                                                                                                         |
-| ---------------------------------------------------- | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Форк расширит диалект, демон начнёт отвергать конфиг | средняя при подъёме версии, высокое — Apply не проходит | при подъёме форка прогонять `sing-box check` на наборе конструкций из тестов `jsonc_test.go` и дополнять маску    |
-| Маска съест значащий байт и испортит правку          | низкая, высокое — в конфиг уедет битый файл             | длина и содержимое строк закрыты тестами; арбитром остаётся `sing-box check`, а при отказе конфиг не записывается |
+| Risk                                                                     | Likelihood and impact                               | Mitigation                                                                                                                   |
+| ------------------------------------------------------------------------ | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| The fork extends the dialect, and the daemon starts rejecting the config | medium on a version bump, high: Apply does not pass | on a fork bump, run `sing-box check` on the set of constructs from the `jsonc_test.go` tests and extend the mask             |
+| The mask eats a significant byte and corrupts the edit                   | low, high: a broken file goes into the config       | string length and content are covered by tests; `sing-box check` stays the arbiter, and on failure the config is not written |
 
-## Совместимость, миграция и откат
+## Compatibility, migration and rollback
 
-Миграция не нужна: формат файла не меняется, читается строго больше, чем раньше. Конфиги без комментариев ведут себя как прежде — тесты `internal/clashapi` на них не менялись.
+No migration is needed: the file format does not change, and strictly more is read than before. Configs without comments behave as before: the `internal/clashapi` tests for them did not change.
 
-Откат — вернуть `json.Valid(data)` и навигацию по `data` в `Ensure`, `json.Unmarshal(data)` в `Read` и `JSON.parse` в редакторе. Файлы на устройствах при откате не пострадают, но конфиги с комментариями снова перестанут применяться.
+Rollback is to restore `json.Valid(data)` and navigation over `data` in `Ensure`, `json.Unmarshal(data)` in `Read` and `JSON.parse` in the editor. Files on devices are not harmed by the rollback, but configs with comments stop being applied again.
 
-## Проверка решения
+## Validation
 
-- `cd apps/metaboxd && go test ./internal/clashapi/...` — маска сохраняет длину, строки и переводы строк; `Ensure` находит секцию за комментариями и дописывает недостающую; `Read` достаёт адрес и секрет из конфига с комментариями и висячей запятой.
-- `pnpm --filter web test -- ConfigRawEditor` — редактор принимает комментарии и висячую запятую, а на незакрытой скобке называет строку и причину по-русски.
-- Прогон на стенде 2026-09-15: конфиг на 509 строк с комментариями и 300 правилами применён через `POST /api/apply`, подтверждён, комментарии в `GET /api/config` на месте; тот же конфиг без `experimental` — секция дописана, комментарии целы.
+- `cd apps/metaboxd && go test ./internal/clashapi/...`: the mask keeps length, strings and newlines; `Ensure` finds the section behind comments and adds a missing one; `Read` gets the address and secret from a config with comments and a trailing comma.
+- `pnpm --filter web test -- ConfigRawEditor`: the editor accepts comments and a trailing comma, and on an unclosed bracket names the line and the reason in Russian.
+- Run on the test bench on 2026-09-15: a 509-line config with comments and 300 rules was applied through `POST /api/apply` and confirmed, and the comments are in place in `GET /api/config`; the same config without `experimental`: the section was added, the comments are intact.
 
-## Ссылки
+## Links
 
-- [PRD, AC-1 и AC-2](../PRD.md);
-- [ADR-0002. Протокол Apply и владение конфигом](./ADR-0002-apply-protocol-and-config-ownership.md);
-- [ADR-0004. Править текст конфига точечно на клиенте](./ADR-0004-edit-config-text-in-place-on-the-client.md);
+- [PRD, AC-1 and AC-2](../PRD.md);
+- [ADR-0002. Apply protocol and config ownership](./ADR-0002-apply-protocol-and-config-ownership.md);
+- [ADR-0004. Edit the config text in place on the client](./ADR-0004-edit-config-text-in-place-on-the-client.md);
 - `apps/metaboxd/internal/clashapi/jsonc.go`, `apps/metaboxd/internal/clashapi/clashapi.go`;
 - `apps/web/src/widgets/Config/ConfigRawEditor/lib/ConfigRawEditor.lib.ts`.

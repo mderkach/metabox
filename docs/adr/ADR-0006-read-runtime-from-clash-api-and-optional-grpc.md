@@ -1,120 +1,120 @@
-# ADR-0006. Держать Clash API базовым источником рантайма, gRPC-сервис форка подключать опционально и только из демона
+# ADR-0006. Keep the Clash API as the base runtime source, connect the fork's gRPC service optionally and only from the daemon
 
-- Статус: Accepted
-- Дата: 2026-09-11
-- Ответственные: владелец репозитория
+- Status: Accepted
+- Date: 2026-09-11
+- Deciders: repository owner
 
-## Контекст и постановка проблемы
+## Context and problem statement
 
-Дашборду нужны трафик, память, состояние сервиса, группы, ноды и поток соединений (AC-10…AC-12), причём экран Connections обязан выдерживать тысячи соединений (AC-30) и не блокировать интерфейс (NFR-2). Сейчас единственный источник — Clash API: демон гарантирует секцию `experimental.clash_api` в применяемом конфиге (AC-31) и явно показывает это вмешательство пользователю (AC-32). Проверка OQ-5 подтвердила, что форк отдаёт всё, что требуют AC-10…AC-12.
+The dashboard needs traffic, memory, service state, groups, nodes and the connection stream (AC-10…AC-12), and the Connections screen must handle thousands of connections (AC-30) without blocking the interface (NFR-2). At the moment the only source is the Clash API: the daemon guarantees the `experimental.clash_api` section in the applied config (AC-31) and shows this intervention to the user explicitly (AC-32). The OQ-5 check confirmed that the fork returns everything AC-10…AC-12 require.
 
-В 1.14 форк принёс второй источник — service-тип `api` (`service/api/server.go`, регистрируется как `C.TypeAPI`). Это gRPC-сервер поверх HTTP/2 с h2c, с собственным `secret`, опциональным TLS и встроенным веб-дашбордом. Он поднимает сервис `StartedService` из `daemon/started_service.proto`. OQ-9 зафиксировал вопрос: нужна ли форма для этого типа и берём ли мы его вместо Clash API или в дополнение.
+In 1.14 the fork brought a second source: the `api` service type (`service/api/server.go`, registered as `C.TypeAPI`). It is a gRPC server over HTTP/2 with h2c, with its own `secret`, optional TLS and a built-in web dashboard. It brings up the `StartedService` service from `daemon/started_service.proto`. OQ-9 recorded the question: do we need a form for this type, and do we take it instead of the Clash API or in addition to it.
 
-Проверка исходников форка `v1.14.0-extended-2.7.1` даёт факты, от которых зависит ответ.
+Checking the sources of the fork `v1.14.0-extended-2.7.1` gives the facts the answer depends on.
 
-**Что есть только в gRPC.** `SubscribeConnections` отдаёт событийный поток: `ConnectionEvent` с типом `NEW` / `UPDATE` / `CLOSED` и полями `uplinkDelta`, `downlinkDelta`, а конверт `ConnectionEvents` несёт флаг `reset` на переподключении. Сообщение `Connection` даёт `fromOutbound`, `inboundType`, `ipVersion` и структурированный `processInfo`. Цепочку прокси отдают оба источника одинаково: и `"chains"` в Clash API, и `chainList` в gRPC читают одно поле `TrackerMetadata.Chain`.
+**What only gRPC has.** `SubscribeConnections` returns an event stream: `ConnectionEvent` with type `NEW` / `UPDATE` / `CLOSED` and the fields `uplinkDelta`, `downlinkDelta`, and the `ConnectionEvents` envelope carries a `reset` flag on reconnect. The `Connection` message provides `fromOutbound`, `inboundType`, `ipVersion` and a structured `processInfo`. Both sources return the proxy chain the same way: both `"chains"` in the Clash API and `chainList` in gRPC read the same field `TrackerMetadata.Chain`.
 
-**Что есть только в Clash API.** Упорядоченный список правил — `GET /rules` (`experimental/clashapi/rules.go`), смонтирован в `experimental/clashapi/server.go`. В `daemon/started_service.proto` нет ни одного RPC и ни одного сообщения для правил. Там же нет аналога `GET /dns/query` (`experimental/clashapi/dns.go`), который резолвит имя через сам sing-box.
+**What only the Clash API has.** The ordered list of rules, `GET /rules` (`experimental/clashapi/rules.go`), mounted in `experimental/clashapi/server.go`. `daemon/started_service.proto` has no RPC and no message for rules. Nor does it have an equivalent of `GET /dns/query` (`experimental/clashapi/dns.go`), which resolves a name through sing-box itself.
 
-**Как Clash API отдаёт соединения.** `experimental/clashapi/connections.go` шлёт по WebSocket **полный снапшот** всех соединений с периодом `interval`, по умолчанию 1000 мс. Дельт нет.
+**How the Clash API returns connections.** `experimental/clashapi/connections.go` sends over WebSocket a **full snapshot** of all connections every `interval`, 1000 ms by default. There are no deltas.
 
-Отсюда следует, что «gRPC вместо Clash API» невозможен: без `/rules` нечем связать соединение с узлом конфига, а это ядро US-2. Вопрос сводится к тому, подключать ли gRPC дополнительно, кто выступает его клиентом и вправе ли демон сам дописывать в конфиг ещё одну секцию.
+It follows that "gRPC instead of the Clash API" is impossible: without `/rules` there is nothing to link a connection to a config node, and that is the core of US-2. The question comes down to whether to connect gRPC in addition, who acts as its client, and whether the daemon may add one more section to the config on its own.
 
-В scope: состав источников рантайм-данных, место gRPC-клиента, порядок деградации, отношение к пользовательскому конфигу. Вне scope: объяснение маршрута по этим данным — [ADR-0007](./ADR-0007-explain-route-without-own-rule-evaluator.md); протокол Apply — [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md); судьба встроенного в форк веб-дашборда.
+In scope: the set of runtime data sources, the place of the gRPC client, the degradation order, the attitude to the user's config. Out of scope: explaining the route from this data, [ADR-0007](./ADR-0007-explain-route-without-own-rule-evaluator.md); the Apply protocol, [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md); the fate of the web dashboard built into the fork.
 
-## Критерии выбора
+## Decision drivers
 
-1. **Покрытие требований**: источник обязан закрывать AC-10…AC-12 и US-2 целиком, а не частично.
-2. **Поведение под нагрузкой**: AC-30 и NFR-2 задают до 5000 активных соединений; объём трафика между sing-box и демоном на этом пределе — часть архитектуры, а не деталь.
-3. **Минимальное вмешательство в конфиг пользователя**: UX-3 и AC-2 требуют, чтобы metabox не менял чужой файл без нужды; AC-31 и AC-32 задают планку, ниже которой вмешательство недопустимо — оно обязано быть вынужденным и видимым.
-4. **Независимость панели от sing-box** (NFR-1): отсутствие источника даёт деградацию экрана, а не отказ панели.
-5. **Отсутствие браузерных ограничений**: когда к API ходит браузер, подключение упирается в secret, CORS, выбор HTTP или HTTPS и адрес loopback. `external_controller` по умолчанию слушает `127.0.0.1` (AC-31), то есть из браузера он в принципе недостижим, а gRPC-сервис форка вдобавок умеет TLS со своим сертификатом. Демон от всего этого свободен: он ходит к обоим API с той же машины.
-6. **Стоимость сопровождения**: сколько поверхностей приходится держать в актуальном состоянии при подъёме версии форка.
-7. **Цена зависимостей и вес артефакта**: `apps/metaboxd/go.mod` не имеет ни одного `require` — правило демона гласит, что всё нужное есть в стандартной библиотеке, а новая зависимость требует отдельного решения. Демон поставляется единым бинарём на aarch64 и живёт в бюджете NFR-4 (RSS ≤ 64 МБ), поэтому нарушение правила должно быть оправдано измеримой выгодой, а не удобством.
+1. **Requirement coverage**: the source must cover AC-10…AC-12 and US-2 in full, not partially.
+2. **Behaviour under load**: AC-30 and NFR-2 set up to 5000 active connections; the traffic volume between sing-box and the daemon at this limit is part of the architecture, not a detail.
+3. **Minimal intervention in the user's config**: UX-3 and AC-2 require metabox not to change someone else's file without need; AC-31 and AC-32 set the bar below which intervention is unacceptable: it must be forced and visible.
+4. **Panel independence from sing-box** (NFR-1): a missing source leads to a degraded screen, not a failed panel.
+5. **No browser constraints**: when a browser talks to the API, connecting runs into the secret, CORS, the HTTP or HTTPS choice and the loopback address. `external_controller` listens on `127.0.0.1` by default (AC-31), so it is in principle unreachable from a browser, and the fork's gRPC service can also do TLS with its own certificate. The daemon is free of all this: it calls both APIs from the same machine.
+6. **Maintenance cost**: how many surfaces have to be kept up to date when bumping the fork version.
+7. **Cost of dependencies and artifact weight**: `apps/metaboxd/go.mod` has no `require` at all: the daemon rule says everything needed is in the standard library, and a new dependency needs a separate decision. The daemon ships as a single aarch64 binary and lives within the NFR-4 budget (RSS ≤ 64 MB), so breaking the rule must be justified by a measurable gain, not convenience.
 
-## Рассмотренные варианты
+## Considered options
 
-1. **Только Clash API — сохранить текущий подход.** Преимущества: одна поверхность, решение уже проверено на устройстве (OQ-5), конфиг правится ровно одной секцией. Недостатки: полный снапшот раз в секунду на пределе NFR-2 превращается в постоянную перекачку всего списка соединений между sing-box и демоном, и это невозможно смягчить на стороне клиента — период можно только увеличить, потеряв живость экрана; сведения о процессе приходят одной плоской строкой `processPath`, без идентификатора, пользователя и пакетов. **Отклонён как единственный источник, но сохранён как базовый.**
+1. **Clash API only: keep the current approach.** Pros: one surface, the decision is already verified on the device (OQ-5), the config is edited by exactly one section. Cons: a full snapshot every second at the NFR-2 limit turns into constant pumping of the whole connection list between sing-box and the daemon, and this cannot be softened on the client side: the period can only be increased, losing screen liveness; process information arrives as one flat `processPath` string, without an identifier, user and packages. **Rejected as the only source, but kept as the base one.**
 
-2. **Только gRPC.** Преимущества: событийный поток и дельты, богаче метаданные соединения, один транспорт. Недостатки: нет списка правил и нет DNS-запроса — US-2 не закрывается в принципе (критерий 1); требует обязательной секции `service` типа `api` в конфиге каждого пользователя, то есть второго вынужденного вмешательства (критерий 3); Clash API в 1.14 не объявлен устаревшим, отказываться от работающего источника не за что. **Отклонён.**
+2. **gRPC only.** Pros: an event stream and deltas, richer connection metadata, one transport. Cons: no rule list and no DNS query, so US-2 cannot be covered in principle (driver 1); it requires a mandatory `service` section of type `api` in every user's config, that is, a second forced intervention (driver 3); the Clash API is not deprecated in 1.14, and there is no reason to give up a working source. **Rejected.**
 
-3. **Оба источника, gRPC обязателен, демон дописывает `service` типа `api` сам.** Преимущества: лучший поток соединений всегда доступен, поведение одинаково у всех пользователей. Недостатки: вторая секция, добавляемая в чужой конфиг автоматически. Обоснование AC-31 держится на том, что **без** Clash API дашборда нет вовсе (раздел 8 PRD прямо отвергает режим работы без него); для gRPC такого обоснования нет — рабочая деградация существует. Вынужденность исчезает, остаётся только удобство, и вмешательство перестаёт соответствовать критерию 3. **Отклонён.**
+3. **Both sources, gRPC mandatory, the daemon adds the `service` of type `api` itself.** Pros: the better connection stream is always available, behaviour is the same for all users. Cons: a second section added to someone else's config automatically. The justification of AC-31 rests on the fact that **without** the Clash API there is no dashboard at all (section 8 of the PRD explicitly rejects a mode without it); gRPC has no such justification: a working degradation exists. The forced nature disappears, only convenience remains, and the intervention no longer meets driver 3. **Rejected.**
 
-4. **Оба источника, gRPC опционален, клиентом выступает демон.** Преимущества: US-2 закрыт через Clash API, нагрузочный сценарий закрывается через gRPC там, где пользователь его включил; конфиг пользователя не получает второй автоматической правки; браузер не ходит ни в один из двух API, поэтому secret, CORS и выбор протокола остаются внутри демона (критерий 5); при подъёме версии форка меняется только Go-сторона. Недостатки: две поверхности вместо одной, два пути в коде для соединений и, как следствие, два набора состояний экрана; gRPC-клиент приносит в демон первые внешние зависимости — `google.golang.org/grpc` и `google.golang.org/protobuf` с их деревом — и генерируемые из `.proto` форка стабы (критерий 7). **Принят с отсрочкой реализации: см. условие ниже.**
+4. **Both sources, gRPC optional, the daemon acts as the client.** Pros: US-2 is covered through the Clash API, the load scenario is covered through gRPC where the user enabled it; the user's config gets no second automatic edit; the browser calls neither of the two APIs, so the secret, CORS and protocol choice stay inside the daemon (driver 5); bumping the fork version changes only the Go side. Cons: two surfaces instead of one, two code paths for connections and, as a consequence, two sets of screen states; the gRPC client brings the daemon its first external dependencies, `google.golang.org/grpc` and `google.golang.org/protobuf` with their tree, and stubs generated from the fork's `.proto` (driver 7). **Chosen with deferred implementation: see the condition below.**
 
-## Принятое решение
+## Decision outcome
 
-Демон читает рантайм из двух источников и сам решает, какой использовать.
+The daemon reads the runtime from two sources and decides itself which one to use.
 
-**Clash API — базовый источник, обязателен.** AC-31 и AC-32 не меняются. На нём остаются: упорядоченный список правил (`GET /rules`), группы и ноды (`/proxies`, `/providers/proxies`), трафик и память (`/traffic`, `/memory`), версия и конфиг (`/version`, `/configs`), DNS-запрос (`/dns/query`), а также соединения, когда второй источник недоступен.
+**The Clash API is the base source and is mandatory.** AC-31 and AC-32 do not change. It keeps: the ordered rule list (`GET /rules`), groups and nodes (`/proxies`, `/providers/proxies`), traffic and memory (`/traffic`, `/memory`), version and config (`/version`, `/configs`), the DNS query (`/dns/query`), and connections when the second source is unavailable.
 
-**gRPC-сервис форка — дополнительный источник, опционален.** Когда в применённом конфиге есть работающий `service` типа `api`, демон подписывается на `SubscribeConnections` и ведёт список соединений событиями, а не снапшотами. `SubscribeStatus` не используется: трафик, память и состояние сервиса остаются на Clash API, чтобы их форма не зависела от источника. Когда сервиса нет, демон берёт соединения из Clash API снапшотами. Отсутствие gRPC не является ошибкой и не блокирует ни один экран.
+**The fork's gRPC service is an additional source and is optional.** When the applied config has a working `service` of type `api`, the daemon subscribes to `SubscribeConnections` and keeps the connection list by events, not snapshots. `SubscribeStatus` is not used: traffic, memory and service state stay on the Clash API so that their shape does not depend on the source. When the service is missing, the daemon takes connections from the Clash API as snapshots. A missing gRPC is not an error and blocks no screen.
 
-**Демон не добавляет `service` типа `api` молча.** Секция появляется только по явному действию пользователя. metabox вправе предложить её добавить и подготовить черновик, но само изменение проходит обычный протокол Apply из ADR-0002 и подтверждается пользователем. Форма для типа `api` нужна: раздел 8 PRD выводит из форм перечисленные там service-типы, и этот тип — единственное исключение, потому что относится к сценарию самой панели.
+**The daemon does not add a `service` of type `api` silently.** The section appears only on an explicit user action. metabox may offer to add it and prepare a draft, but the change itself goes through the regular Apply protocol from ADR-0002 and is confirmed by the user. A form for the `api` type is needed: section 8 of the PRD excludes the service types listed there from forms, and this type is the only exception because it belongs to the panel's own scenario.
 
-**Клиентом gRPC является только демон.** Браузер к gRPC не обращается: gRPC-Web не включается, secret наружу не отдаётся. Фронт получает соединения и статус по REST и SSE, в форме, не зависящей от того, какой источник сработал. Единой эта форма не приходит сама: источники расходятся и в наборе соединений, и в формате поля `rule` — сведение к одной модели делает демон (ADR-0007).
+**Only the daemon is a gRPC client.** The browser does not call gRPC: gRPC-Web is not enabled, and the secret is not exposed. The frontend gets connections and status over REST and SSE, in a shape that does not depend on which source worked. This shape does not become uniform by itself: the sources differ both in the set of connections and in the format of the `rule` field, and the daemon reduces them to one model (ADR-0007).
 
-**Активный источник виден фронту.** Контракт `GET /api/status` сообщает, какие источники доступны и какой используется для соединений. Экран обязан различать «источник другой» и «данных нет»; молчаливая подмена одного источника другим запрещена — это тот же класс ошибок, что и выдача прогноза за факт в ADR-0007.
+**The active source is visible to the frontend.** The `GET /api/status` contract reports which sources are available and which one is used for connections. The screen must distinguish "a different source" from "no data"; silently swapping one source for another is forbidden: it is the same class of error as passing a prediction off as a fact in ADR-0007.
 
-**Реализация gRPC-ветки отложена до замера.** Она приносит в демон первые внешние зависимости и потому не начинается, пока не выполнены оба условия: путь через Clash API работает на устройстве, и замер на целевом железе показал, что снапшоты действительно не держат предел NFR-2. До этого момента решение фиксирует только границу — контракт демона и фронта строится так, чтобы источник соединений можно было заменить, не трогая фронт. Правило `apps/metaboxd/go.mod` без `require` до этого замера остаётся в силе.
+**Implementation of the gRPC branch is deferred until a measurement.** It brings the daemon its first external dependencies and therefore does not start until both conditions are met: the path through the Clash API works on the device, and a measurement on the target hardware has shown that snapshots really do not hold the NFR-2 limit. Until then the decision only fixes the boundary: the daemon–frontend contract is built so that the connection source can be replaced without touching the frontend. The rule of `apps/metaboxd/go.mod` without `require` stays in force until this measurement.
 
-### Область действия и границы
+### Scope and boundaries
 
-Решение распространяется на `apps/metaboxd` и на контракт между демоном и фронтом. Схемы конфига (ADR-0001) и протокола Apply (ADR-0002) не меняет. Вопрос о том, показывать ли встроенный в форк веб-дашборд и как именно, остаётся открытым и решается отдельно.
+The decision covers `apps/metaboxd` and the contract between the daemon and the frontend. It does not change the config schema (ADR-0001) or the Apply protocol (ADR-0002). Whether and how to show the web dashboard built into the fork stays open and is decided separately.
 
-## Последствия
+## Consequences
 
-### Положительные
+### Positive
 
-- US-2 не зависит от наличия gRPC: список правил берётся из источника, который демон и так гарантирует.
-- Когда gRPC-ветка будет реализована, предел NFR-2 станет достижим без увеличения периода снапшота: там, где пользователь включил `service` типа `api`, поток пойдёт дельтами.
-- Конфиг пользователя не получает второй автоматической правки; планка AC-31 остаётся исключением, а не прецедентом.
-- Secret, CORS и выбор HTTP/HTTPS остаются внутри демона и не превращаются в проблему подключения на стороне браузера.
-- Подъём версии форка затрагивает только Go-сторону: контракт фронта не зависит от того, какой API сработал.
+- US-2 does not depend on gRPC being present: the rule list comes from the source the daemon guarantees anyway.
+- When the gRPC branch is implemented, the NFR-2 limit becomes reachable without increasing the snapshot period: where the user enabled a `service` of type `api`, the stream goes as deltas.
+- The user's config gets no second automatic edit; the AC-31 bar stays an exception, not a precedent.
+- The secret, CORS and the HTTP/HTTPS choice stay inside the daemon and do not turn into a connection problem on the browser side.
+- Bumping the fork version touches only the Go side: the frontend contract does not depend on which API worked.
 
-### Отрицательные
+### Negative
 
-- Два пути получения соединений — два набора состояний и два места, где может разойтись поведение. Требует общей модели соединения в демоне и тестов на обе ветки.
-- Пользователь без `service` типа `api` получает худшую живость экрана на больших объёмах. Это осознанный компромисс в пользу неприкосновенности его конфига.
-- Поле `rulePayload` Clash API форк отдаёт пустым (`experimental/clashapi/connections.go`), поэтому разбор условий правила ложится на metabox — см. ADR-0007.
-- Источники отдают разные наборы соединений: Clash API отбрасывает соединения с `outbound_type = dns` (`experimental/clashapi/connections.go`), gRPC отдаёт их все. Демон обязан привести наборы к одному правилу фильтрации, иначе смена источника выглядит для пользователя как скачок числа соединений.
-- Когда gRPC-ветка будет реализована, демон перестанет быть модулем без зависимостей: появятся `google.golang.org/grpc`, `google.golang.org/protobuf` и генерируемые стабы, а с ними — вес бинаря, память под NFR-4 и обязанность следить за их версиями. Правило `apps/metaboxd/AGENTS.md` о новой зависимости этим ADR выполняется, но не отменяется: отступление точечное и только ради gRPC-клиента. Генерируемый клиент тянет весь `started_service.proto` целиком — 42 RPC и 102 сообщения, включая Tailscale, USB/IP, OpenVPN и Taildrop, которые панели не нужны. Прирост размера бинаря и RSS замеряется до реализации; если он выходит за NFR-4, генерация ограничивается используемыми сообщениями.
+- Two ways of getting connections mean two sets of states and two places where behaviour can diverge. This needs a common connection model in the daemon and tests on both branches.
+- A user without a `service` of type `api` gets worse screen liveness at large volumes. This is a deliberate trade-off in favour of keeping their config untouched.
+- The fork returns the Clash API `rulePayload` field empty (`experimental/clashapi/connections.go`), so parsing the rule conditions falls on metabox; see ADR-0007.
+- The sources return different sets of connections: the Clash API drops connections with `outbound_type = dns` (`experimental/clashapi/connections.go`), gRPC returns all of them. The daemon must bring the sets to one filtering rule, otherwise switching the source looks to the user like a jump in the number of connections.
+- When the gRPC branch is implemented, the daemon stops being a module without dependencies: `google.golang.org/grpc`, `google.golang.org/protobuf` and generated stubs appear, and with them binary weight, memory under NFR-4 and the duty of tracking their versions. This ADR satisfies the `apps/metaboxd/AGENTS.md` rule on new dependencies but does not revoke it: the deviation is targeted and only for the gRPC client. The generated client pulls in the whole `started_service.proto`: 42 RPCs and 102 messages, including Tailscale, USB/IP, OpenVPN and Taildrop, which the panel does not need. The growth of binary size and RSS is measured before implementation; if it exceeds NFR-4, generation is limited to the messages in use.
 
-### Нейтральные или отложенные
+### Neutral or deferred
 
-- Судьба встроенного в форк дашборда (внешняя ссылка, встраивание или отказ) не решается здесь.
-- Порог, при котором стоит предлагать включение gRPC, не задан: он выводится из замера, а не назначается.
-- Замер, открывающий реализацию gRPC-ветки, не проведён: на устройстве нет ни одного экрана рантайма, работающего не на моках. До него решение действует только как ограничение на форму контракта.
+- The fate of the dashboard built into the fork (external link, embedding or dropping it) is not decided here.
+- The threshold at which enabling gRPC should be suggested is not set: it comes from a measurement, not by assignment.
+- The measurement that unlocks the gRPC branch implementation has not been done: the device has no runtime screen working on real data rather than mocks. Until then the decision acts only as a constraint on the shape of the contract.
 
-## Риски и меры снижения
+## Risks and mitigations
 
-| Риск                                                                    | Вероятность и влияние    | Митигация                                                                                                                                                                                                                                   |
-| ----------------------------------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Две ветки получения соединений разойдутся по поведению                  | Средняя, среднее влияние | Обе ветки сводятся к одной модели соединения в демоне; контрактные тесты гоняются на обеих                                                                                                                                                  |
-| gRPC-подписка отваливается после рестарта sing-box                      | Высокая, среднее влияние | Флаг `reset` в `ConnectionEvents` предусмотрен форком; демон переподписывается и пересобирает список, фронт видит состояние источника                                                                                                       |
-| `service` типа `api` слушает не loopback или отдаёт самоподписанный TLS | Средняя, среднее влияние | Параметры читаются из применённого конфига, а не угадываются. Адрес вне loopback демон не считает ошибкой конфига, но и не чинит; недоверенный сертификат — причина остаться на Clash API с явным сообщением, а не молча ослаблять проверку |
-| Форк изменит протокол между версиями                                    | Низкая, среднее влияние  | Генерируемый Go-клиент ломается на сборке, а не в рантайме; версия бинаря уже сверяется по AC-28                                                                                                                                            |
+| Risk                                                                                    | Likelihood and impact | Mitigation                                                                                                                                                                                                                                                                         |
+| --------------------------------------------------------------------------------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The two ways of getting connections diverge in behaviour                                | Medium, medium impact | Both branches are reduced to one connection model in the daemon; contract tests run on both                                                                                                                                                                                        |
+| The gRPC subscription drops after a sing-box restart                                    | High, medium impact   | The fork provides the `reset` flag in `ConnectionEvents`; the daemon resubscribes and rebuilds the list, and the frontend sees the source state                                                                                                                                    |
+| The `service` of type `api` listens on a non-loopback address or serves self-signed TLS | Medium, medium impact | Parameters are read from the applied config, not guessed. The daemon does not treat a non-loopback address as a config error, but does not fix it either; an untrusted certificate is a reason to stay on the Clash API with an explicit message, not to silently weaken the check |
+| The fork changes the protocol between versions                                          | Low, medium impact    | The generated Go client breaks at build time, not at runtime; the binary version is already checked per AC-28                                                                                                                                                                      |
 
-## Совместимость, миграция и откат
+## Compatibility, migration and rollback
 
-Миграция не требуется: Clash API остаётся тем же источником, что и сейчас, поведение без `service` типа `api` не меняется. Существующие конфиги продолжают работать без правок.
+No migration is needed: the Clash API stays the same source as now, and behaviour without a `service` of type `api` does not change. Existing configs keep working without edits.
 
-Откат: убрать gRPC-ветку из демона. Контракт с фронтом при этом не меняется — он не зависит от источника; экраны теряют только дельты и метаданные, доступные лишь в gRPC.
+Rollback: remove the gRPC branch from the daemon. The contract with the frontend does not change: it does not depend on the source; screens lose only the deltas and metadata available only in gRPC.
 
-## Проверка решения
+## Validation
 
-- Конфиг без `service` типа `api`: панель открывается, экран Connections живой, `GET /api/status` сообщает, что соединения идут из Clash API.
-- Конфиг с `service` типа `api`: `GET /api/status` сообщает gRPC как активный источник; остановка и запуск sing-box приводят к переподписке и пересборке списка без перезагрузки страницы.
-- Демон запущен, `service` типа `api` в конфиге есть, но порт закрыт: панель работает, источник соединений — Clash API, причина неудачного подключения видна.
-- `make apply-check` проходит без изменений: протокол Apply решением не затронут.
-- Число соединений на экране не меняется скачком при смене источника: наборы приведены к одному правилу фильтрации, DNS-соединения либо есть в обоих, либо нет в обоих.
-- Замер на целевом железе зафиксирован до того, как в `apps/metaboxd/go.mod` появился первый `require`.
-- Секция `service` типа `api` не появляется в конфиге ни при одном сценарии, кроме явного действия пользователя.
+- A config without a `service` of type `api`: the panel opens, the Connections screen is live, `GET /api/status` reports that connections come from the Clash API.
+- A config with a `service` of type `api`: `GET /api/status` reports gRPC as the active source; stopping and starting sing-box leads to resubscription and a rebuild of the list without a page reload.
+- The daemon is running, the config has a `service` of type `api`, but the port is closed: the panel works, the connection source is the Clash API, and the reason for the failed connection is visible.
+- `make apply-check` passes unchanged: the Apply protocol is not affected by the decision.
+- The number of connections on the screen does not jump when the source changes: the sets are brought to one filtering rule, and DNS connections are either in both or in neither.
+- A measurement on the target hardware is recorded before the first `require` appears in `apps/metaboxd/go.mod`.
+- The `service` section of type `api` does not appear in the config in any scenario except an explicit user action.
 
-## Ссылки
+## Links
 
-- [PRD](../PRD.md) — US-2, AC-10…AC-12, AC-30…AC-32, NFR-1, NFR-2, раздел 8, закрытые вопросы OQ-5 и OQ-9;
-- [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md) — протокол Apply и владение конфигом;
-- [ADR-0007](./ADR-0007-explain-route-without-own-rule-evaluator.md) — объяснение маршрута по этим данным;
-- [sing-box-extended](https://github.com/shtorm-7/sing-box-extended) — форк, версия `v1.14.0-extended-2.7.1`: `service/api/server.go`, `daemon/started_service.proto`, `experimental/clashapi/server.go`, `experimental/clashapi/rules.go`, `experimental/clashapi/connections.go`, `experimental/clashapi/dns.go`;
-- [sing-box Service API](https://sing-box.sagernet.org/configuration/service/api/) — документация service-типа `api`.
+- [PRD](../PRD.md): US-2, AC-10…AC-12, AC-30…AC-32, NFR-1, NFR-2, section 8, closed questions OQ-5 and OQ-9;
+- [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md): the Apply protocol and config ownership;
+- [ADR-0007](./ADR-0007-explain-route-without-own-rule-evaluator.md): explaining the route from this data;
+- [sing-box-extended](https://github.com/shtorm-7/sing-box-extended): the fork, version `v1.14.0-extended-2.7.1`: `service/api/server.go`, `daemon/started_service.proto`, `experimental/clashapi/server.go`, `experimental/clashapi/rules.go`, `experimental/clashapi/connections.go`, `experimental/clashapi/dns.go`;
+- [sing-box Service API](https://sing-box.sagernet.org/configuration/service/api/): documentation of the `api` service type.

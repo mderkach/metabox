@@ -1,145 +1,145 @@
-# ADR-0002. Владеть конфигом как байтами и применять его асинхронной транзакцией
+# ADR-0002. Own the config as bytes and apply it with an asynchronous transaction
 
-- Статус: Accepted
-- Дата: 2026-09-08
-- Ответственные: владелец репозитория
-- Заменяет: раздел A.4 [`../PRD.md`](../PRD.md)
-- Заменён решением (в части предмета валидации): [ADR-0046](./ADR-0046-check-the-candidate-the-way-the-service-runs.md)
+- Status: Accepted
+- Date: 2026-09-08
+- Deciders: repository owner
+- Supersedes: section A.4 of [`../PRD.md`](../PRD.md)
+- Superseded by (as to the subject of validation): [ADR-0046](./ADR-0046-check-the-candidate-the-way-the-service-runs.md)
 
-## Контекст и постановка проблемы
+## Context and problem statement
 
-Демон обязан стать владельцем `config.json` на устройстве: записать конфиг, проверить его бинарём, рестартовать сервис, убедиться, что тот поднялся, и вернуть предыдущую версию, если связь не подтвердили (AC-13…AC-16, AC-29). Сейчас в `apps/metaboxd/main.go` есть только `GET /healthz`, и ни одно из этих решений ещё не принято кодом.
+The daemon must become the owner of `config.json` on the device: write the config, check it with the binary, restart the service, make sure it came up, and restore the previous version if the connection was not confirmed (AC-13…AC-16, AC-29). At the moment `apps/metaboxd/main.go` has only `GET /healthz`, and none of these decisions has been made in code yet.
 
-Раздел A.4 PRD задаёт последовательность из девяти шагов, но оставляет открытым то, от чего зависит корректность: в каком виде демон держит конфиг, что именно валидируется перед записью, где живёт состояние незавершённого применения и как оно переживает перезагрузку. Эти решения определяют контракт API, на который затем ляжет фронт, поэтому принимаются до кода.
+Section A.4 of the PRD sets a sequence of nine steps but leaves open what correctness depends on: in what form the daemon holds the config, what exactly is validated before writing, where the state of an unfinished apply lives and how it survives a reboot. These decisions define the API contract the frontend will then build on, so they are made before the code.
 
-Ограничения заданы средой и уже проверены:
+Constraints come from the environment and have already been checked:
 
-- Сервис запускается в режиме каталога: `sing-box -D /etc/sing-box -C /etc/sing-box run` (стендовый `init.d/sing-box` на момент решения; снят коммитом `22088194`, стенд ставит пакет форка, который запускает службу одним файлом `run -c … -D …` — предмет валидации уточняет [ADR-0046](./ADR-0046-check-the-candidate-the-way-the-service-runs.md)). В этом режиме бинарь сливает все файлы каталога с суффиксом `.json`.
-- `/var` в rootfs OpenWrt — симлинк на `/tmp` ([`../../.devcontainer/target/Dockerfile:44`](../../.devcontainer/target/Dockerfile)).
-- Команды `check` у init-скрипта реального пакета нет; на момент решения она была только у стендового скрипта ([DeviceIO](../../apps/metaboxd/docs/guides/DeviceIO.md), «Сервис через procd»).
-- Clash API форка отключает авторизацию целиком, когда `secret` пуст (`experimental/clashapi/server.go:259` версии `v1.13.18-extended-2.6.5`); на роутере панель отвечает без токена.
-- Дев-сервер проксирует API с `changeOrigin: true` ([`../../apps/web/vite.config.ts:39`](../../apps/web/vite.config.ts)): до демона доходит переписанный `Host` и исходный `Origin`.
+- The service starts in directory mode: `sing-box -D /etc/sing-box -C /etc/sing-box run` (the test bench's `init.d/sing-box` at the time of the decision; removed by commit `22088194`, the test bench installs the fork's package, which runs the service from a single file with `run -c … -D …`; [ADR-0046](./ADR-0046-check-the-candidate-the-way-the-service-runs.md) refines the subject of validation). In this mode the binary merges all files in the directory with the `.json` suffix.
+- `/var` in the OpenWrt rootfs is a symlink to `/tmp` ([`../../.devcontainer/target/Dockerfile:44`](../../.devcontainer/target/Dockerfile)).
+- The init script of the real package has no `check` command; at the time of the decision only the test bench script had it ([DeviceIO](../../apps/metaboxd/docs/guides/DeviceIO.md), "Service via procd").
+- The fork's Clash API disables authorization entirely when `secret` is empty (`experimental/clashapi/server.go:259` of version `v1.13.18-extended-2.6.5`); on the router the panel answers without a token.
+- The dev server proxies the API with `changeOrigin: true` ([`../../apps/web/vite.config.ts:39`](../../apps/web/vite.config.ts)): the daemon receives a rewritten `Host` and the original `Origin`.
 
-В scope: представление конфига в демоне, форма контракта Apply, предмет валидации, хранение состояния транзакции, политика проверки источника запроса. Вне scope: история версий и откат на произвольную версию (AC-15), показ изменений пользователю (AC-32), внутренняя модель конфига и адаптерный слой — они живут на фронте, шаги 1 и 2 протокола.
+In scope: the config representation in the daemon, the shape of the Apply contract, the subject of validation, storage of the transaction state, the request origin check policy. Out of scope: version history and rollback to an arbitrary version (AC-15), showing changes to the user (AC-32), the internal config model and the adapter layer: they live on the frontend, steps 1 and 2 of the protocol.
 
-## Критерии выбора
+## Decision drivers
 
-- Сохранность чужого конфига: round-trip не теряет и не переупорядочивает данные (AC-2, AC-3).
-- Восстановление доступа без SSH после неудачного применения (AC-14) — включая случай, когда владелец выключил питание.
-- Валидируется ровно то, что будет запущено, а не похожий на него файл.
-- Устойчивость контракта: добавление отложенной функциональности не ломает уже написанного клиента.
-- Проверяемость на существующем стенде.
-- Стоимость сопровождения: чем меньше кода дублирует то, что уже делает фронт или бинарь, тем лучше.
+- Preserving someone else's config: a round-trip neither loses nor reorders data (AC-2, AC-3).
+- Restoring access without SSH after a failed apply (AC-14), including the case when the owner cut the power.
+- Validating exactly what will be run, not a file that resembles it.
+- Contract stability: adding deferred functionality does not break an already written client.
+- Testability on the existing test bench.
+- Maintenance cost: the less code duplicates what the frontend or the binary already does, the better.
 
-## Рассмотренные варианты
+## Considered options
 
-### Представление конфига в демоне
+### Config representation in the daemon
 
-1. **Разбор в `map[string]any` с обратной сериализацией** — **отклонён**. `encoding/json` сериализует map в алфавитном порядке ключей, поэтому любое применение переписывает порядок в файле пользователя. Это прямо нарушает AC-2, где допустимым отличием названа только добавленная секция `experimental.clash_api`.
-2. **Собственная модель конфига на Go** — **отклонён**. Модель уже существует на фронте поверх сгенерированной схемы; вторая реализация означает постоянный рассинхрон с `apps/web/src/shared/api/generated.ts` и дублирование работы адаптерного слоя.
-3. **Байты плюс точечный патч** — **принят**. Демон принимает тело запроса как есть и пишет его дословно. Единственная структурная операция — вставка `experimental.clash_api`, когда её нет.
+1. **Parse into `map[string]any` and serialize back**: **rejected**. `encoding/json` serializes a map in alphabetical key order, so every apply rewrites the order in the user's file. This directly violates AC-2, where the only allowed difference is the added `experimental.clash_api` section.
+2. **A dedicated Go config model**: **rejected**. A model already exists on the frontend on top of the generated schema; a second implementation means a permanent drift from `apps/web/src/shared/api/generated.ts` and duplication of the adapter layer's work.
+3. **Bytes plus a targeted patch**: **chosen**. The daemon takes the request body as is and writes it verbatim. The only structural operation is inserting `experimental.clash_api` when it is missing.
 
-### Форма контракта Apply
+### Shape of the Apply contract
 
-1. **Синхронный `POST`, отвечающий по завершении цикла** — **отклонён**. Шаги 8 и 9 протокола (окно подтверждения, автооткат) делают применение процессом, который живёт дольше запроса. Синхронный ответ пришлось бы менять при их появлении — вместе с уже написанным клиентом.
-2. **Асинхронная транзакция** — **принят**. Соответствует сущности `ApplyTransaction` из приложения C PRD ([`../PRD.md`](../PRD.md)), где уже объявлены `state` и `confirmDeadline`.
+1. **A synchronous `POST` that answers when the cycle finishes**: **rejected**. Steps 8 and 9 of the protocol (confirmation window, automatic rollback) make the apply a process that lives longer than the request. A synchronous answer would have to change when they appear, together with the already written client.
+2. **An asynchronous transaction**: **chosen**. Matches the `ApplyTransaction` entity from appendix C of the PRD ([`../PRD.md`](../PRD.md)), where `state` and `confirmDeadline` are already declared.
 
-### Предмет валидации перед записью
+### Subject of validation before writing
 
-1. **`/etc/init.d/sing-box check`** — **отклонён**. В реальном пакете команды нет, а в стенде она проверяет установленный конфиг, а не кандидата.
-2. **`sing-box check -c <файл-кандидат>`** — **отклонён**. Проверяет один файл, тогда как сервис поднимается на слиянии каталога. Пока в каталоге один `config.json`, разницы нет; как только пользователь положит второй `.json` — штатная возможность sing-box, — демон начнёт валидировать не то, что запустится, и отказ проявится молча: `check` зелёный, сервис не встал, автооткат крутится.
-3. **`sing-box check -C <каталог-кандидат>`** — **принят**. Кандидат кладётся во временный каталог вместе с прочими `.json` из рабочего, проверяется бинарём напрямую.
+1. **`/etc/init.d/sing-box check`**: **rejected**. The real package has no such command, and on the test bench it checks the installed config, not the candidate.
+2. **`sing-box check -c <candidate file>`**: **rejected**. It checks one file, while the service comes up on the merged directory. As long as the directory holds a single `config.json` there is no difference; as soon as the user drops a second `.json` there (a regular sing-box feature), the daemon starts validating something other than what will run, and the failure shows up silently: `check` is green, the service did not come up, the automatic rollback spins.
+3. **`sing-box check -C <candidate directory>`**: **chosen**. The candidate is put into a temporary directory together with the other `.json` files from the working one and is checked by the binary directly.
 
-### Хранение состояния транзакции
+### Storage of the transaction state
 
-1. **`/var/lib/metabox` и абсолютный `confirmDeadline`** — **отклонён по двум причинам**. `/var` — симлинк на `/tmp`: состояние не переживёт перезагрузку, а типичная реакция владельца на оборванную связь — снять питание, после чего автооткат не наступит вовсе и роутер останется на сломанном конфиге. Абсолютная метка времени тоже не годится: роутер без RTC после включения стартует с эпохи и прыгает при синхронизации NTP, так что сравнение «срок истёк?» даст мусор в обе стороны.
-2. **Персистентный каталог и дедлайн длительностью** — **принят**. Состояние по умолчанию в `/etc/metabox`, срок хранится длительностью вместе с признаком «применено, но не подтверждено».
+1. **`/var/lib/metabox` and an absolute `confirmDeadline`**: **rejected for two reasons**. `/var` is a symlink to `/tmp`: the state does not survive a reboot, and the owner's typical reaction to a lost connection is to cut the power, after which the automatic rollback never happens and the router stays on the broken config. An absolute timestamp does not fit either: a router without an RTC starts from the epoch after power-on and jumps on NTP sync, so the comparison "has the deadline passed?" gives garbage both ways.
+2. **A persistent directory and a deadline stored as a duration**: **chosen**. The state lives in `/etc/metabox` by default, and the deadline is stored as a duration together with an "applied but not confirmed" flag.
 
-### Проверка источника мутирующего запроса
+### Origin check of a mutating request
 
-1. **Пропускать запрос без `Origin`** — **отклонён**. Ослабляет защиту ровно там, где она нужна: [ADR-0041](./ADR-0041-run-v1-without-authentication-behind-network-and-origin-checks.md) вводит проверку против CSRF, а браузер отправляет `Origin` на всех мутирующих запросах.
-2. **Строгая сверка по умолчанию, послабление явным флагом** — **принят**. Дев-стенд обслуживается флагом, а не дырой в правиле.
+1. **Let a request without `Origin` through**: **rejected**. It weakens protection exactly where it is needed: [ADR-0041](./ADR-0041-run-v1-without-authentication-behind-network-and-origin-checks.md) introduces a CSRF check, and the browser sends `Origin` on all mutating requests.
+2. **Strict matching by default, relaxation by an explicit flag**: **chosen**. The dev test bench is served by a flag, not by a hole in the rule.
 
-## Принятое решение
+## Decision outcome
 
-Последовательность применения, перенесённая из A.4 PRD без изменений:
+The apply sequence, carried over from A.4 of the PRD unchanged:
 
-1. Валидация внутренней моделью — на фронте.
-2. Сериализация в `config.json` — на фронте.
-3. `sing-box check` на конфиге-кандидате.
-4. Бэкап текущего конфига.
-5. Запись нового конфига.
-6. Рестарт сервиса через procd.
-7. Healthcheck: сервис поднялся, Clash API отвечает.
-8. Окно подтверждения: пользователь подтверждает, что связь жива.
-9. Нет подтверждения в срок — демон возвращает предыдущий конфиг и рестартует сервис.
+1. Validation by the internal model, on the frontend.
+2. Serialization to `config.json`, on the frontend.
+3. `sing-box check` on the candidate config.
+4. Backup of the current config.
+5. Writing the new config.
+6. Restarting the service through procd.
+7. Healthcheck: the service came up, the Clash API answers.
+8. Confirmation window: the user confirms that the connection is alive.
+9. No confirmation in time: the daemon restores the previous config and restarts the service.
 
-Демон отвечает за шаги 3–9. Шаги 1 и 2 остаются на фронте.
+The daemon is responsible for steps 3–9. Steps 1 and 2 stay on the frontend.
 
-**Владение конфигом.** Конфиг для демона — последовательность байт. Тело запроса записывается дословно; разбор в структуры или map запрещён. Единственная разрешённая структурная правка — вставка `experimental.clash_api`, сохраняющая остальные байты.
+**Config ownership.** For the daemon the config is a byte sequence. The request body is written verbatim; parsing into structs or a map is forbidden. The only allowed structural edit is inserting `experimental.clash_api` while keeping the other bytes.
 
-**Гарантия `clash_api`.** Секция добавляется только если её нет либо `external_controller` пуст (дословно по AC-31). Существующие пользовательские значения не изменяются, в том числе отсутствующий `secret` не дописывается. Healthcheck берёт адрес и секрет из конфига-кандидата и приводит wildcard-адрес к loopback; отсутствие секрета — штатный случай, а не ошибка.
+**`clash_api` guarantee.** The section is added only if it is missing or `external_controller` is empty (verbatim per AC-31). Existing user values are not changed; in particular, a missing `secret` is not added. The healthcheck takes the address and the secret from the candidate config and turns a wildcard address into loopback; a missing secret is a normal case, not an error.
 
-**Запись.** Временный файл в целевом каталоге, `fsync` файла, `rename`, `fsync` каталога. Имя временного файла не оканчивается на `.json`. Служебные файлы демона — бэкап и состояние транзакции — располагаются вне каталога конфига.
+**Writing.** A temporary file in the target directory, `fsync` of the file, `rename`, `fsync` of the directory. The temporary file name does not end with `.json`. The daemon's service files (the backup and the transaction state) are placed outside the config directory.
 
-**Транзакция.** `POST /api/apply` возвращает идентификатор и состояние, `GET /api/apply/{id}` отдаёт состояние, `POST /api/apply/{id}/confirm` подтверждает применение. `GET /api/status` содержит ссылку на активную транзакцию: без неё перезагрузка страницы теряет идущее применение. Состояние транзакции пишется на диск до записи конфига. При старте демон доигрывает незавершённую транзакцию: применение без завершения — откат к бэкапу; ожидание подтверждения с истёкшим сроком — немедленный откат; с неистёкшим — восстановление таймера.
+**Transaction.** `POST /api/apply` returns an identifier and a state, `GET /api/apply/{id}` returns the state, `POST /api/apply/{id}/confirm` confirms the apply. `GET /api/status` holds a reference to the active transaction: without it, reloading the page loses an ongoing apply. The transaction state is written to disk before the config is written. On start the daemon replays an unfinished transaction: an apply without completion means rollback to the backup; waiting for confirmation with the deadline passed means immediate rollback; with the deadline not passed, the timer is restored.
 
-**Внешние правки.** Перед применением демон сверяет `sha256` файла с последним записанным им самим. Расхождение возвращается отдельным состоянием и не затирается молча.
+**External edits.** Before applying, the daemon compares the file's `sha256` with the last one it wrote itself. A mismatch is returned as a separate state and is not silently overwritten.
 
-**Ошибки бинаря.** Вывод `check` отдаётся вызывающему дословно: `stdout`, `stderr` и код возврата, без переформулирования.
+**Binary errors.** The output of `check` is passed to the caller verbatim: `stdout`, `stderr` and the exit code, without rewording.
 
-**Источник запроса.** На мутирующих запросах хост из `Origin` обязан совпадать с `Host`; запрос без `Origin` отклоняется. Флаг `-allowed-origin` добавляет разрешённое значение и предназначен для дев-стенда.
+**Request origin.** On mutating requests the host from `Origin` must match `Host`; a request without `Origin` is rejected. The `-allowed-origin` flag adds an allowed value and is meant for the dev test bench.
 
-Сознательно отложено: история версий и откат на произвольную версию (AC-15) — для автоотката достаточно одного бэкапа, история надстраивается поверх. Non-goal: разбор и валидация конфига внутренней моделью на стороне демона.
+Deliberately deferred: version history and rollback to an arbitrary version (AC-15); one backup is enough for the automatic rollback, and history is built on top. Non-goal: parsing and validating the config with an internal model on the daemon side.
 
-## Последствия
+## Consequences
 
-### Положительные
+### Positive
 
-- Чужой конфиг переживает применение побайтово, кроме секции, которую разрешает AC-2.
-- Контракт не меняется при появлении окна подтверждения, автоотката и истории версий — добавляются состояния и ручки.
-- Валидируется тот же набор файлов, который поднимет сервис.
-- Автооткат переживает перезагрузку устройства, а не только перезапуск процесса.
+- Someone else's config survives an apply byte for byte, except for the section AC-2 allows.
+- The contract does not change when the confirmation window, the automatic rollback and version history appear: states and endpoints are added.
+- The same set of files that the service will bring up is validated.
+- The automatic rollback survives a device reboot, not only a process restart.
 
-### Отрицательные
+### Negative
 
-- Демон не понимает содержимого конфига и не может проверить его сам: единственная содержательная проверка — вызов бинаря.
-- Точечная вставка `clash_api` в байты сложнее, чем правка разобранной структуры, и требует собственных тестов на сохранность.
-- Асинхронная транзакция дороже синхронного запроса: нужны состояние на диске, восстановление при старте и опрос со стороны UI.
-- Запись состояния в `/etc` увеличивает число операций на flash устройства.
+- The daemon does not understand the config's contents and cannot check it on its own: the only meaningful check is calling the binary.
+- A targeted insert of `clash_api` into bytes is harder than editing a parsed structure and needs its own preservation tests.
+- An asynchronous transaction costs more than a synchronous request: it needs on-disk state, recovery on start and polling from the UI.
+- Writing the state to `/etc` increases the number of operations on the device's flash.
 
-### Нейтральные или отложенные
+### Neutral or deferred
 
-- История версий (AC-15) и показ изменений пользователю (AC-32) — отдельные задачи поверх этого решения.
-- Формат бэкапа выбран так, чтобы история версий надстраивалась аддитивно, но самой историей это решение не занимается.
+- Version history (AC-15) and showing changes to the user (AC-32) are separate tasks on top of this decision.
+- The backup format is chosen so that version history can be added on top additively, but this decision does not deal with the history itself.
 
-## Риски и меры снижения
+## Risks and mitigations
 
-| Риск                                                                  | Вероятность и влияние                        | Митигация                                                                                                 |
-| --------------------------------------------------------------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `fsync` каталога на overlayfs OpenWrt ведёт себя иначе, чем ожидается | Низкая вероятность, высокое влияние (AC-29)  | Прогон записи на стенде, пока целевая ФС не проверена                                                     |
-| Автооткат не срабатывает из-за потерянного состояния                  | Средняя вероятность, высокое влияние (AC-14) | Состояние на персистентной ФС, доигрывание при старте, проверка перезагрузкой стенда                      |
-| Сгенерированный `secret` ломает уже настроенные клиенты Clash API     | Низкая после решения, высокое влияние        | Секция не трогается, когда `external_controller` непуст; проверено на конфиге устройства, где секрета нет |
-| Строгая проверка `Origin` отклоняет легитимные запросы дев-фронта     | Высокая вероятность, среднее влияние         | Флаг `-allowed-origin` и приёмочная проверка запроса через vite-прокси                                    |
+| Risk                                                                        | Likelihood and impact                  | Mitigation                                                                                                            |
+| --------------------------------------------------------------------------- | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Directory `fsync` on OpenWrt overlayfs behaves differently than expected    | Low likelihood, high impact (AC-29)    | Run the write on the test bench while the target FS is unverified                                                     |
+| The automatic rollback does not fire because of lost state                  | Medium likelihood, high impact (AC-14) | State on a persistent FS, replay on start, check by rebooting the test bench                                          |
+| A generated `secret` breaks already configured Clash API clients            | Low after the decision, high impact    | The section is not touched when `external_controller` is not empty; checked on the device config, which has no secret |
+| The strict `Origin` check rejects legitimate requests from the dev frontend | High likelihood, medium impact         | The `-allowed-origin` flag and an acceptance check of a request through the vite proxy                                |
 
-## Совместимость, миграция и откат
+## Compatibility, migration and rollback
 
-Ломать нечего: демон пока не владеет конфигом и не имеет API. Существующий `config.json` на устройстве принимается как есть — это и есть требование AC-1.
+Nothing to break: the daemon does not own the config yet and has no API. The existing `config.json` on the device is accepted as is; this is exactly the AC-1 requirement.
 
-Откат решения означает отказ от асинхронного контракта в пользу синхронного и стоит переписывания клиента; обратное — добавление состояний — совместимо. Прогон `apply-cycle-check` остаётся независимой проверкой самого окружения и продолжает работать: он ходит в Clash API без токена, а демон секрет не дописывает.
+Rolling back the decision means giving up the asynchronous contract for a synchronous one and costs a client rewrite; the reverse (adding states) is compatible. The `apply-cycle-check` run stays an independent check of the environment itself and keeps working: it calls the Clash API without a token, and the daemon does not add a secret.
 
-## Проверка решения
+## Validation
 
-- `make test` — модульные проверки записи и транзакции: временный файл не оканчивается на `.json`; ошибка на любом шаге до `rename` оставляет `config.json` побайтово прежним; применение конфига с уже имеющейся секцией `clash_api` даёт тот же `sha256`; конфиг без секции получает только её; незавершённая транзакция на старте доигрывается по каждому из состояний.
-- `make apply-check` и прогон через демон на стенде: полный цикл до healthcheck; отсутствие подтверждения в срок возвращает предыдущий конфиг; битый конфиг не меняет `sha256` файла; применение при остановленном сервисе поднимает его (AC-16).
-- Перезагрузка контейнера `target` с незавершённой транзакцией: автооткат наступает.
-- Запрос через vite-прокси с `-allowed-origin` проходит, он же без флага и с чужим `Origin` — отклоняется.
+- `make test`: unit checks of writing and of the transaction: the temporary file does not end with `.json`; an error at any step before `rename` leaves `config.json` unchanged byte for byte; applying a config that already has a `clash_api` section gives the same `sha256`; a config without the section gets only that section; an unfinished transaction is replayed on start for each of the states.
+- `make apply-check` and a run through the daemon on the test bench: the full cycle up to the healthcheck; no confirmation in time restores the previous config; a broken config does not change the file's `sha256`; an apply with the service stopped brings it up (AC-16).
+- Rebooting the `target` container with an unfinished transaction: the automatic rollback happens.
+- A request through the vite proxy with `-allowed-origin` passes; the same request without the flag and with a foreign `Origin` is rejected.
 
-Чекбоксы AC-13, AC-14 и AC-27 остаются неотмеченными до появления UI: их формулировки требуют, чтобы пользователь увидел результат. AC-29 не отмечается, пока запись не проверена на целевой файловой системе.
+The AC-13, AC-14 and AC-27 checkboxes stay unchecked until the UI appears: their wording requires the user to see the result. AC-29 is not checked until writing is verified on the target file system.
 
-## Ссылки
+## Links
 
-- [`../PRD.md`](../PRD.md) — раздел 5 (AC-2, AC-3, AC-13…AC-16, AC-19, AC-29, AC-31, AC-32), раздел A.4, приложение C (`ApplyTransaction`, `ConfigVersion`);
-- [`ADR-0001`](./ADR-0001-generate-schema-from-fork-registries.md) — схема, поверх которой работает модель конфига на фронте;
-- [`../../.devcontainer/target/files/usr/bin/apply-cycle-check`](../../.devcontainer/target/files/usr/bin/apply-cycle-check) — существующая проверка цикла на стенде;
-- `experimental/clashapi/server.go` форка `v1.13.18-extended-2.6.5` — поведение авторизации при пустом секрете.
+- [`../PRD.md`](../PRD.md): section 5 (AC-2, AC-3, AC-13…AC-16, AC-19, AC-29, AC-31, AC-32), section A.4, appendix C (`ApplyTransaction`, `ConfigVersion`);
+- [`ADR-0001`](./ADR-0001-generate-schema-from-fork-registries.md): the schema the frontend config model works on;
+- [`../../.devcontainer/target/files/usr/bin/apply-cycle-check`](../../.devcontainer/target/files/usr/bin/apply-cycle-check): the existing cycle check on the test bench;
+- `experimental/clashapi/server.go` of the fork `v1.13.18-extended-2.6.5`: authorization behaviour with an empty secret.

@@ -1,94 +1,94 @@
-# ADR-0049. Выдвигать панели переходом CSS со сменой ширины списка один раз, а бар применения держать плавающим слоем
+# ADR-0049. Slide panels in with a CSS transition and change the list width once, and keep the apply bar as a floating layer
 
-- Статус: Accepted
-- Дата: 2026-10-11
-- Ответственные: владелец репозитория
-- Заменяет: [ADR-0026](./ADR-0026-animate-screen-changes-with-the-router-and-in-page-changes-with-react.md) в части панелей деталей и бара применения; правило «Появление панели» в [ADR-0037](./ADR-0037-edit-nodes-in-a-panel-beside-the-list.md)
+- Status: Accepted
+- Date: 2026-10-11
+- Deciders: repository owner
+- Supersedes: [ADR-0026](./ADR-0026-animate-screen-changes-with-the-router-and-in-page-changes-with-react.md) in the part about detail panels and the apply bar; the "Panel appearance" rule in [ADR-0037](./ADR-0037-edit-nodes-in-a-panel-beside-the-list.md)
 
-## Контекст и постановка проблемы
+## Context and problem statement
 
-После выкладки на роутер владелец назвал три дефекта, которые по ADR-0026 работают как задумано:
+After deployment to the router the owner named three defects that, per ADR-0026, work as designed:
 
-- Правая панель деталей на ширине `lg` и шире (правило, сет, узел секции, объяснение маршрута) появляется дёргано, а при закрытии оставляет артефакт. Причина в устройстве решения: панель стоит во flex-ряду рядом с таблицей, и таблица сужается на ширину панели за один кадр, без перехода. Граница `<ViewTransition enter='panel-in'>` анимирует только снимок самой панели, 140 мс прозрачности и сдвига на `0.5rem`. При закрытии старый снимок растворяется поверх уже расширившейся таблицы — это и есть артефакт. Пути `onMoved` и `onDeleted` в `Editor.lib.ts` шли мимо `startTransition`, поэтому и такой анимации не получали.
-- Лист снизу на узкой ширине (`Sheet`, `side='bottom'`) «появляется без анимации». Вендорный `sheet.tsx` сдвигает лист на `2.5rem` при высоте до `85svh`, и глаз читает это как вспышку. Размытие оверлея (`backdrop-blur-xs`) добавляет тяжёлую перерисовку на весь экран.
-- Бар применения сдвигает страницу. По ADR-0026 он стоит в потоке над `<main>`, и при первой правке весь экран, вместе со строкой, которую правят, уезжает вниз на его высоту.
+- The right detail panel at `lg` width and wider (rule, rule set, section node, route explanation) appears jerkily and leaves an artifact on close. The cause is in how the decision works: the panel sits in a flex row next to the table, and the table narrows by the panel width in a single frame, without a transition. The `<ViewTransition enter='panel-in'>` boundary animates only the snapshot of the panel itself: 140 ms of opacity and a `0.5rem` shift. On close the old snapshot fades on top of the already widened table, and that is the artifact. The `onMoved` and `onDeleted` paths in `Editor.lib.ts` bypassed `startTransition`, so they did not get even this animation.
+- The bottom sheet at narrow width (`Sheet`, `side='bottom'`) "appears without animation". The vendor `sheet.tsx` shifts the sheet by `2.5rem` with a height of up to `85svh`, and the eye reads it as a flash. The overlay blur (`backdrop-blur-xs`) adds a heavy full-screen repaint.
+- The apply bar shifts the page. Per ADR-0026 it sits in the flow above `<main>`, and on the first edit the whole screen, together with the row being edited, moves down by its height.
 
-В scope: панели деталей на четырёх экранах (`pages/Editor`, `pages/RuleSets`, `pages/Section`, `pages/Connections`), листы снизу, бар применения. Вне scope: переходы между экранами — они остаются за роутером по ADR-0026; вкладки с состоянием под `<Activity>`.
+In scope: detail panels on four screens (`pages/Editor`, `pages/RuleSets`, `pages/Section`, `pages/Connections`), bottom sheets, the apply bar. Out of scope: transitions between screens, which stay with the router per ADR-0026; stateful tabs under `<Activity>`.
 
-Ограничения: вендорная зона `shared/ui/shadcn` руками не правится; сырой CSS живёт только в `src/app/styles/index.css`; новых зависимостей без нужды не заводим; таблицы виртуализованы (`@tanstack/react-virtual`) и при смене ширины переносят строки.
+Constraints: the vendor zone `shared/ui/shadcn` is not edited by hand; raw CSS lives only in `src/app/styles/index.css`; no new dependencies without need; tables are virtualized (`@tanstack/react-virtual`) and wrap rows when the width changes.
 
-## Критерии выбора
+## Decision drivers
 
-1. **Таблица не дёргается.** Во время перехода высоты строк и ширины колонок списка не меняются, строки ниже не скачут.
-2. **Закрытие без артефакта.** Содержимое панели видно до конца выезда, снимков поверх живой разметки нет.
-3. **Выбранная строка видна целиком.** Панель не закрывает колонки «Выход» и «Сработало», ради которых её открывают.
-4. **Экран не сдвигается** при появлении бара применения.
-5. **Один механизм на все экраны с панелью**, без обязательного `startTransition` на каждом пути открытия и закрытия.
-6. **Уважается `prefers-reduced-motion`** и есть деградация до мгновенной смены.
-7. **Без новых зависимостей.**
+1. **The table does not jerk.** During the transition the row heights and column widths of the list do not change, and the rows below do not jump.
+2. **Close without an artifact.** The panel content is visible until the end of the slide-out, there are no snapshots on top of live markup.
+3. **The selected row is fully visible.** The panel does not cover the "Outbound" and "Hits" columns for which it is opened.
+4. **The screen does not shift** when the apply bar appears.
+5. **One mechanism for all screens with a panel**, without a mandatory `startTransition` on every open and close path.
+6. **`prefers-reduced-motion` is respected** and there is a fallback to an instant change.
+7. **No new dependencies.**
 
-## Рассмотренные варианты
+## Considered options
 
-1. **Колонка панели в сетке со сменой ширины один раз, движется только панель.** Сетка `minmax(0,1fr) | ширина панели`: при открытии колонка встаёт сразу, при закрытии сворачивается по `transitionend` панели. Сама панель въезжает переходом `translate` и `opacity` внутри колонки с `overflow-clip`. Замер на 1440 px: ширины колонок и высоты строк во время выезда не меняются, `translate` идёт 83%→0 на открытии и 0→100% на закрытии. Недостатки: таблица переносит строки один раз, в начале или в конце перехода, а не плавно; фокус возвращается к открывателю после выезда, до 180 мс. **Принят.**
-2. **Переход `grid-template-columns` от нуля до ширины панели.** Плавно меняет ширину и списка, и панели. Замер на 1440 px: кадры около 7 мс, но строки таблицы переносятся посреди анимации — 4 строки из примерно 20 видимых выросли с 45 до 67 и с 49 до 75 px, строки ниже скачут на 22–26 px. Та же дёрганость, только растянутая во времени (критерий 1). **Отклонён.**
-3. **Панель-оверлей поверх таблицы.** Таблица ширину не меняет вовсе, панель выезжает слоем справа. Недостаток: закрывает колонки «Выход» и «Сработало» у выбранной строки (критерий 3). **Отклонён.**
-4. **Сохранить границу `<ViewTransition>` (ADR-0026).** Без кода. Недостатки: снимок поверх расширившейся таблицы и есть артефакт закрытия (критерий 2); каждый путь открытия и закрытия обязан идти через `startTransition`, и пропущенный путь молча теряет анимацию (критерий 5). **Отклонён.**
-5. **Библиотека `motion`.** Готовые `AnimatePresence` и layout-анимации. Недостатки: новая зависимость (критерий 7); layout-анимация списка упирается в тот же перенос строк, что и вариант 2. **Отклонён.**
-6. **Бар применения в потоке над `<main>`, переход `grid-template-rows` (ADR-0026).** Без кода. Недостаток: экран уезжает на высоту бара (критерий 4). **Отклонён.**
-7. **Бар применения в потоке под `<main>`.** Верх экрана стоит. Недостатки: прыгает нижний край области прокрутки, бар перестаёт быть слоем поверх содержимого. **Отклонён.**
-8. **Бар применения плавающим слоем внизу `<main>`.** `absolute` по центру с ограниченной шириной, появление сдвигом снизу и прозрачностью. Место под ним — `padding-bottom` у `<main>` на измеренную высоту, пока бар виден, чтобы последние строки не уходили под бар. Недостаток: бар накрывает нижнюю часть содержимого, пока его не прокрутили. **Принят.**
+1. **A panel column in a grid with the width changing once; only the panel moves.** A `minmax(0,1fr) | panel width` grid: on open the column appears at once, on close it collapses on the panel's `transitionend`. The panel itself slides in with a `translate` and `opacity` transition inside a column with `overflow-clip`. Measurement at 1440 px: column widths and row heights do not change during the slide-out, `translate` goes 83%→0 on open and 0→100% on close. Drawbacks: the table wraps rows once, at the start or at the end of the transition, not smoothly; focus returns to the opener after the slide-out, up to 180 ms. **Chosen.**
+2. **A `grid-template-columns` transition from zero to the panel width.** Smoothly changes the width of both the list and the panel. Measurement at 1440 px: frames of about 7 ms, but the table rows wrap in the middle of the animation: 4 rows out of about 20 visible grew from 45 to 67 and from 49 to 75 px, the rows below jump by 22–26 px. The same jerkiness, only stretched in time (driver 1). **Rejected.**
+3. **An overlay panel on top of the table.** The table does not change width at all, the panel slides in as a layer from the right. Drawback: it covers the "Outbound" and "Hits" columns of the selected row (driver 3). **Rejected.**
+4. **Keep the `<ViewTransition>` boundary (ADR-0026).** No code. Drawbacks: the snapshot on top of the widened table is the close artifact (driver 2); every open and close path has to go through `startTransition`, and a missed path silently loses the animation (driver 5). **Rejected.**
+5. **The `motion` library.** Ready-made `AnimatePresence` and layout animations. Drawbacks: a new dependency (driver 7); a layout animation of the list runs into the same row wrapping as option 2. **Rejected.**
+6. **The apply bar in the flow above `<main>`, a `grid-template-rows` transition (ADR-0026).** No code. Drawback: the screen moves by the bar height (driver 4). **Rejected.**
+7. **The apply bar in the flow below `<main>`.** The top of the screen stays. Drawbacks: the bottom edge of the scroll area jumps, and the bar stops being a layer on top of the content. **Rejected.**
+8. **The apply bar as a floating layer at the bottom of `<main>`.** `absolute`, centered, with a limited width, appearing with an upward shift and opacity. Space under it is a `padding-bottom` on `<main>` equal to the measured height while the bar is visible, so that the last rows do not go under the bar. Drawback: the bar covers the bottom part of the content until it is scrolled. **Chosen.**
 
-## Принятое решение
+## Decision outcome
 
-- **Панель деталей — `SidePanelLayout`** в `apps/web/src/shared/ui/SidePanelLayout.tsx`, составной компонент `Root`/`Main`/`Panel` без доменного состояния. Страницы только компонуют его. Ширина списка меняется ровно один раз: при открытии колонка панели встаёт сразу, при закрытии сворачивается по `transitionend`. Движется только панель: `translate` и `opacity`. Закрытая панель сразу получает `inert` и `aria-hidden`, а содержимое держит до конца выезда. Смена выбранного объекта при открытой панели колонку не трогает. Граница `<ViewTransition>` вокруг панели не ставится, и открытие не требует `startTransition`.
-- **Лист снизу** получает `SHEET_BOTTOM` из `apps/web/src/shared/ui/styles.ts`: выезд из-за нижнего края целиком (`translate-y-full`), без растворения. Классы передаются в `SheetContent` снаружи, вендорные классы снимает `twMerge`. Размытие оверлея снимает правило `[data-slot='sheet-overlay']` в `index.css` для всех листов. Лист с телом из запроса (`RouteExplanation`) держит постоянную высоту, чтобы она не скакала, пока приходят данные. Лист монтируется всегда и управляется `open`, а не условным монтажом.
-- **Бар применения** — плавающий слой внизу `<main>` (`AppLayout.tsx`, `ConfigApplyBar.tsx`). Высоту, которую он занимает, бар сообщает через `onSpaceChange`, а `<main>` получает такой же `padding-bottom`. Бар носит `view-transition-name: apply-bar` и стоит живым во всех ветках правил: иначе при смене экрана группа `page` накрыла бы его снимком.
-- **Движение** задают переменные `--motion-enter` (240 мс), `--motion-exit` (180 мс), `--motion-sheet-enter` (280 мс), `--motion-sheet-exit` (200 мс) и `--motion-ease-out` (`cubic-bezier(0.16, 1, 0.3, 1)`) в `index.css`. Уход быстрее прихода. При `prefers-reduced-motion: reduce` переходы сняты, а код, который ждёт `transitionend`, проверяет настройку сам: события при снятом переходе не будет.
-- Смена экрана роутером, именованные группы `page`, `page-header`, `config-tabs` и вкладки под `<Activity>` остаются по ADR-0026.
+- **The detail panel is `SidePanelLayout`** in `apps/web/src/shared/ui/SidePanelLayout.tsx`, a compound `Root`/`Main`/`Panel` component without domain state. Pages only compose it. The list width changes exactly once: on open the panel column appears at once, on close it collapses on `transitionend`. Only the panel moves: `translate` and `opacity`. A closed panel immediately gets `inert` and `aria-hidden`, and keeps its content until the end of the slide-out. Changing the selected object while the panel is open does not touch the column. No `<ViewTransition>` boundary is placed around the panel, and opening does not require `startTransition`.
+- **The bottom sheet** gets `SHEET_BOTTOM` from `apps/web/src/shared/ui/styles.ts`: it slides in from fully below the bottom edge (`translate-y-full`), without fading. The classes are passed to `SheetContent` from outside, and `twMerge` removes the vendor classes. The overlay blur is removed by the `[data-slot='sheet-overlay']` rule in `index.css` for all sheets. A sheet with a body from a query (`RouteExplanation`) keeps a constant height so that it does not jump while the data arrives. The sheet is always mounted and controlled by `open`, not by conditional mounting.
+- **The apply bar** is a floating layer at the bottom of `<main>` (`AppLayout.tsx`, `ConfigApplyBar.tsx`). The bar reports the height it takes through `onSpaceChange`, and `<main>` gets the same `padding-bottom`. The bar has `view-transition-name: apply-bar` and stays live in all rule branches: otherwise on a screen change the `page` group would cover it with a snapshot.
+- **Motion** is set by the variables `--motion-enter` (240 ms), `--motion-exit` (180 ms), `--motion-sheet-enter` (280 ms), `--motion-sheet-exit` (200 ms) and `--motion-ease-out` (`cubic-bezier(0.16, 1, 0.3, 1)`) in `index.css`. Leaving is faster than arriving. With `prefers-reduced-motion: reduce` the transitions are removed, and code that waits for `transitionend` checks the setting itself: with the transition removed there will be no event.
+- Screen changes by the router, the named groups `page`, `page-header`, `config-tabs` and the tabs under `<Activity>` stay per ADR-0026.
 
-### Область действия и границы
+### Scope and boundaries
 
-`apps/web/src/shared/ui/SidePanelLayout.tsx`, `apps/web/src/shared/ui/styles.ts`, `apps/web/src/app/styles/index.css`, `apps/web/src/app/ui/AppLayout.tsx`, `apps/web/src/features/Config/ConfigApply/ui/ConfigApplyBar.tsx`, страницы `Editor`, `RuleSets`, `Section`, `Connections` и листы виджетов `RulePanel`, `RuleSetPanel`, `ConfigNodePanel`, `RouteExplanation`.
+`apps/web/src/shared/ui/SidePanelLayout.tsx`, `apps/web/src/shared/ui/styles.ts`, `apps/web/src/app/styles/index.css`, `apps/web/src/app/ui/AppLayout.tsx`, `apps/web/src/features/Config/ConfigApply/ui/ConfigApplyBar.tsx`, the `Editor`, `RuleSets`, `Section`, `Connections` pages and the sheets of the `RulePanel`, `RuleSetPanel`, `ConfigNodePanel`, `RouteExplanation` widgets.
 
-## Последствия
+## Consequences
 
-### Положительные
+### Positive
 
-- Таблица во время выезда панели стоит: колонки и строки не перекладываются, глаз следит за одним движущимся объектом.
-- Закрытие не оставляет снимка: панель уезжает со своим содержимым.
-- Анимация не зависит от того, обёрнут ли путь открытия в `startTransition`: пропущенный путь её больше не теряет.
-- Экран не двигается при первой правке, строка, которую правят, остаётся под курсором.
-- Лист снизу читается как выезд, а не вспышка; оверлей без размытия дешевле на слабых устройствах.
+- The table stays still while the panel slides out: columns and rows are not re-laid out, and the eye follows one moving object.
+- Closing leaves no snapshot: the panel leaves with its content.
+- The animation does not depend on whether the open path is wrapped in `startTransition`: a missed path no longer loses it.
+- The screen does not move on the first edit, the row being edited stays under the cursor.
+- The bottom sheet reads as a slide-in, not a flash; an overlay without blur is cheaper on weak devices.
 
-### Отрицательные
+### Negative
 
-- Таблица всё равно переносит строки один раз, в начале открытия или в конце закрытия. Перенос мгновенный и совпадает с началом или концом движения панели.
-- Фокус возвращается к открывателю после выезда панели, до 180 мс; Tab в это окно начнёт обход с начала документа.
-- Бар применения накрывает нижнюю часть содержимого, пока её не прокрутили; длинный вывод `sing-box check` прокручивается внутри бара, высота которого ограничена `60svh`.
-- Без размытия оверлей листа затемняет фон слабее, это вопрос вкуса.
-- На экране соединений панель объяснения маршрута больше не стоит под `<Activity>`: при переключении вкладок она размонтируется, данные берутся из кэша Query, а локальное состояние панели теряется.
+- The table still wraps rows once, at the start of opening or at the end of closing. The wrap is instant and coincides with the start or end of the panel movement.
+- Focus returns to the opener after the panel slides out, up to 180 ms; Tab in this window starts traversal from the beginning of the document.
+- The apply bar covers the bottom part of the content until it is scrolled; long `sing-box check` output scrolls inside the bar, whose height is limited to `60svh`.
+- Without blur the sheet overlay darkens the background less; this is a matter of taste.
+- On the connections screen the route explanation panel no longer sits under `<Activity>`: when tabs are switched it unmounts, the data comes from the Query cache, and the panel's local state is lost.
 
-### Нейтральные или отложенные
+### Neutral or deferred
 
-- Переходы между экранами не меняются и остаются в ADR-0026.
-- Морфы общих элементов между списком и панелью по-прежнему вне решения.
+- Transitions between screens do not change and stay in ADR-0026.
+- Shared element morphs between the list and the panel are still outside the decision.
 
-## Совместимость, миграция и откат
+## Compatibility, migration and rollback
 
-Данных и контрактов решение не касается. Миграция выполнена одним изменением на всех четырёх экранах. Откат — вернуть границы `<ViewTransition enter='panel-in' exit='panel-out'>` с keyframes в `index.css` и `startTransition` в путях открытия, вернуть бар в поток над `<main>` с переходом `grid-template-rows`, убрать `SHEET_BOTTOM` и правило оверлея. ADR-0026 и ADR-0037 в части панелей и бара ссылаются сюда полем «Заменён решением»; переходы экранов роутером ADR-0026 по-прежнему определяет.
+The decision does not touch data or contracts. The migration was done in one change on all four screens. Rollback: return the `<ViewTransition enter='panel-in' exit='panel-out'>` boundaries with keyframes in `index.css` and `startTransition` in the open paths, return the bar to the flow above `<main>` with a `grid-template-rows` transition, remove `SHEET_BOTTOM` and the overlay rule. ADR-0026 and ADR-0037, in the part about panels and the bar, link here with the "Superseded by" field; ADR-0026 still defines screen transitions by the router.
 
-## Проверка решения
+## Validation
 
-- `pnpm --filter web exec vitest run src/shared/ui` — `SidePanelLayout`: открытие с фокусом, удержание содержимого до `transitionend` и возврат фокуса, смена содержимого без закрытия, мгновенное снятие при reduced motion.
-- `pnpm --filter web exec vitest run AppLayout ConfigApplyBar` — бар стоит после `<main>`, `<main>` получает `padding-bottom` на высоту бара и ноль после сброса черновика.
-- Браузер на 1440 px, дев-стенд с моками: при открытии и закрытии панели правила ширины колонок и высоты строк таблицы между кадрами перехода постоянны, меняется только `translate` панели; `main.top` до и после появления бара одинаков.
-- Браузер на 375 px: лист правила выезжает от нижнего края с постоянной высотой; бар стоит над нижней навигацией.
-- `grep -rn "panel-in\|panel-out" apps/web/src` ничего не находит.
+- `pnpm --filter web exec vitest run src/shared/ui`: `SidePanelLayout`: opening with focus, keeping the content until `transitionend` and returning focus, changing content without closing, instant removal with reduced motion.
+- `pnpm --filter web exec vitest run AppLayout ConfigApplyBar`: the bar stands after `<main>`, `<main>` gets a `padding-bottom` equal to the bar height and zero after the draft is reset.
+- A browser at 1440 px, the dev test bench with mocks: when the rule panel opens and closes, the table's column widths and row heights are constant between transition frames, only the panel's `translate` changes; `main.top` is the same before and after the bar appears.
+- A browser at 375 px: the rule sheet slides in from the bottom edge with a constant height; the bar stands above the bottom navigation.
+- `grep -rn "panel-in\|panel-out" apps/web/src` finds nothing.
 
-## Ссылки
+## Links
 
-- PRD, UX-7 — состояние системы всегда на виду;
-- [ADR-0026](./ADR-0026-animate-screen-changes-with-the-router-and-in-page-changes-with-react.md) — переходы экранов роутером и границы React;
-- [ADR-0037](./ADR-0037-edit-nodes-in-a-panel-beside-the-list.md) — правка узлов в панели рядом со списком;
-- `apps/web/docs/guides/Architecture&Style.md`, раздел «Анимация переходов»;
+- PRD, UX-7: the system state is always in view;
+- [ADR-0026](./ADR-0026-animate-screen-changes-with-the-router-and-in-page-changes-with-react.md): screen transitions by the router and React boundaries;
+- [ADR-0037](./ADR-0037-edit-nodes-in-a-panel-beside-the-list.md): editing nodes in a panel next to the list;
+- `apps/web/docs/guides/Architecture&Style.md`, section "Transition animation";
 - `apps/web/src/shared/ui/SidePanelLayout.tsx`, `apps/web/src/shared/ui/styles.ts`, `apps/web/src/app/styles/index.css`, `apps/web/src/app/ui/AppLayout.tsx`, `apps/web/src/features/Config/ConfigApply/ui/ConfigApplyBar.tsx`.

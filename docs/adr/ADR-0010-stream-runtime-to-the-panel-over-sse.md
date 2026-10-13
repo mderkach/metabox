@@ -1,114 +1,114 @@
-# ADR-0010. Сводить рантайм в один SSE-поток демона, а не проксировать три источника в браузер
+# ADR-0010. Merge the runtime into one SSE stream from the daemon instead of proxying three sources to the browser
 
-- Статус: Accepted
-- Дата: 2026-09-11
-- Ответственные: владелец репозитория
+- Status: Accepted
+- Date: 2026-09-11
+- Deciders: repository owner
 
-## Контекст и постановка проблемы
+## Context and problem statement
 
-[ADR-0006](./ADR-0006-read-runtime-from-clash-api-and-optional-grpc.md) требует, чтобы соединения и состояние рантайма приходили на фронт в форме, не зависящей от источника: демон сводит источники к одной модели и сообщает активный в `GET /api/status`. Реализовано было иначе — сквозной прокси `/api/clash/*` вместе с апгрейдом до WebSocket. Панель заработала в тот же день, но разговаривает формами Clash API напрямую.
+[ADR-0006](./ADR-0006-read-runtime-from-clash-api-and-optional-grpc.md) requires connections and the runtime state to reach the frontend in a shape that does not depend on the source: the daemon reduces the sources to one model and reports the active one in `GET /api/status`. The implementation went differently: a pass-through proxy `/api/clash/*` together with an upgrade to WebSocket. The panel started working the same day, but it talks in Clash API shapes directly.
 
-Что это стоит на практике:
+What this costs in practice:
 
-- панель держит три WebSocket — `/traffic`, `/memory`, `/connections` — и переподключение реализовано в трёх местах;
-- форма данных на фронте завязана на Clash API, поэтому второй источник её сломает;
-- каждая открытая вкладка заводит свой комплект подписок к sing-box.
+- the panel holds three WebSockets, `/traffic`, `/memory`, `/connections`, and reconnection is implemented in three places;
+- the data shape on the frontend is tied to the Clash API, so a second source would break it;
+- every open tab sets up its own set of subscriptions to sing-box.
 
-Ограничения заданы раньше. `go.mod` демона держится без единого `require`, а сервера WebSocket в стандартной библиотеке нет — зависимость ради него была бы отдельным решением. Фоновых опросов по таймеру без потребителя на устройстве быть не должно ([DeviceIO](../../apps/metaboxd/docs/guides/DeviceIO.md)): роутер большую часть времени простаивает.
+The constraints were set earlier. The daemon's `go.mod` stays without a single `require`, and the standard library has no WebSocket server, so a dependency for it would be a separate decision. There must be no background timer polling without a consumer on the device ([DeviceIO](../../apps/metaboxd/docs/guides/DeviceIO.md)): the router is idle most of the time.
 
-Полезное свойство форка выяснилось при проверке исходников: `/traffic` и `/memory` отдают данные и без WebSocket. При обычном GET обработчик пишет по строке JSON раз в секунду в chunked-ответ — апгрейд ему не нужен. `/connections` без апгрейда отдаёт разовый снапшот.
+A useful property of the fork came up when checking the sources: `/traffic` and `/memory` return data without WebSocket too. On a regular GET the handler writes one line of JSON per second into a chunked response; it does not need an upgrade. `/connections` without an upgrade returns a one-time snapshot.
 
-В scope: транспорт рантайма от демона к панели и то, кто держит подписки на источники. Вне scope: выбор между Clash API и gRPC — он остаётся за ADR-0006; перевод экранов панели на новый поток.
+In scope: the runtime transport from the daemon to the panel and who holds the subscriptions to the sources. Out of scope: the choice between the Clash API and gRPC, which stays with ADR-0006; moving the panel screens to the new stream.
 
-## Критерии выбора
+## Decision drivers
 
-1. **Независимость формы от источника**: требование ADR-0006, ради которого всё и делается.
-2. **Ноль новых зависимостей**: `go.mod` демона без `require`.
-3. **Одно место переподключения и пересборки состояния** вместо трёх.
-4. **Нагрузка на sing-box не растёт с числом вкладок.**
-5. **Нет опроса без потребителя** (DeviceIO).
+1. **Shape independent of the source**: the ADR-0006 requirement, which is the whole point.
+2. **Zero new dependencies**: the daemon's `go.mod` without `require`.
+3. **One place for reconnection and state rebuild** instead of three.
+4. **The load on sing-box does not grow with the number of tabs.**
+5. **No polling without a consumer** (DeviceIO).
 
-## Рассмотренные варианты
+## Considered options
 
-1. **Оставить сквозной прокси.** Преимущества: работает, кода ноль. Недостатки: не выполняет ADR-0006 (критерий 1); три точки переподключения (критерий 3); каждая вкладка — свой комплект подписок (критерий 4). **Отклонён.**
+1. **Keep the pass-through proxy.** Pros: it works, zero code. Cons: it does not satisfy ADR-0006 (driver 1); three reconnection points (driver 3); every tab has its own set of subscriptions (driver 4). **Rejected.**
 
-2. **WebSocket от демона к панели.** Преимущества: двусторонний канал, панель уже умеет с ним работать. Недостатки: сервера WebSocket в стандартной библиотеке нет, значит зависимость в модуле, который её не имеет (критерий 2), и отдельное решение под неё. Двусторонность при этом не нужна: всё, что панель отправляет, — это обычные запросы, а подписка одна на все топики. **Отклонён.**
+2. **WebSocket from the daemon to the panel.** Pros: a two-way channel, the panel already knows how to work with it. Cons: the standard library has no WebSocket server, so it means a dependency in a module that has none (driver 2) and a separate decision for it. Two-way communication is not needed anyway: everything the panel sends is regular requests, and there is one subscription for all topics. **Rejected.**
 
-3. **Опрос панелью по таймеру.** Преимущества: проще некуда, никаких потоков. Недостатки: секундный опрос четырёх ручек из каждой вкладки — это ровно та нагрузка, от которой уходим (критерий 4); живость экрана падает. **Отклонён.**
+3. **Timer polling by the panel.** Pros: as simple as it gets, no streams. Cons: polling four endpoints every second from every tab is exactly the load we are moving away from (driver 4); screen liveness drops. **Rejected.**
 
-4. **Один SSE-поток от демона.** Преимущества: обычный HTTP-ответ из стандартной библиотеки (критерий 2); одна точка подписки и переподключения (критерий 3); демон держит один комплект апстримов на всех читателей (критерий 4); форма конверта принадлежит демону (критерий 1). Недостатки: поток односторонний, и отдельный топик отписать нельзя — панель получает все. **Принят.**
+4. **One SSE stream from the daemon.** Pros: a regular HTTP response from the standard library (driver 2); one point of subscription and reconnection (driver 3); the daemon holds one set of upstreams for all readers (driver 4); the envelope shape belongs to the daemon (driver 1). Cons: the stream is one-way, and a single topic cannot be unsubscribed: the panel gets all of them. **Chosen.**
 
-## Принятое решение
+## Decision outcome
 
-**Ручка.** `GET /api/events` отдаёт `text/event-stream`. Конверт — `{topic, seq, data}`, топики: `traffic`, `memory`, `connections`, `service`. Двусторонний канал не нужен: всё, что панель меняет, она меняет обычными запросами.
+**Endpoint.** `GET /api/events` returns `text/event-stream`. The envelope is `{topic, seq, data}`, the topics are `traffic`, `memory`, `connections`, `service`. A two-way channel is not needed: everything the panel changes, it changes with regular requests.
 
-**Счётчик.** `seq` сквозной по всем топикам и растёт монотонно. По разрыву в номерах панель видит, что пропустила события, и перезапрашивает состояние. Время в конверт не кладётся: у роутера нет часов реального времени.
+**Counter.** `seq` runs across all topics and grows monotonically. From a gap in the numbers the panel sees that it missed events and re-requests the state. Time is not put into the envelope: the router has no real-time clock.
 
-**Один комплект апстримов на всех.** Демон держит подписки на источники, пока есть хоть один читатель, и раздаёт события всем сразу. Второй читатель не удваивает нагрузку на sing-box. Уход последнего читателя останавливает опрос: фоновой работы без потребителя не остаётся.
+**One set of upstreams for everyone.** The daemon holds subscriptions to the sources while there is at least one reader, and delivers events to all of them at once. A second reader does not double the load on sing-box. When the last reader leaves, polling stops: no background work without a consumer remains.
 
-**Апстримы без WebSocket.** `/traffic` и `/memory` читаются обычным GET как построчный chunked-ответ, `/connections` — снапшотом по таймеру, состояние службы — опросом реже, потому что это запуск внешних процессов. Клиента WebSocket в демоне нет.
+**Upstreams without WebSocket.** `/traffic` and `/memory` are read with a regular GET as a line-by-line chunked response, `/connections` as a snapshot by timer, and the service state by less frequent polling, because it means launching external processes. The daemon has no WebSocket client.
 
-**Подключившийся получает состояние сразу.** Демон помнит последнее событие каждого топика и повторяет их новому читателю. Иначе экран после перезагрузки страницы стоял бы пустым до ближайшего периода опроса.
+**A newly connected reader gets the state immediately.** The daemon remembers the last event of each topic and replays them to a new reader. Otherwise the screen after a page reload would stay empty until the next polling period.
 
-**Медленный читатель теряет события, а не копит их.** Очередь подписчика ограничена; когда она полна, событие для него отбрасывается. Неограниченная очередь в демоне, который работает месяцами, опаснее пропущенного сэмпла, а пропуск панель увидит по разрыву `seq`.
+**A slow reader loses events instead of accumulating them.** A subscriber's queue is bounded; when it is full, the event for that subscriber is dropped. An unbounded queue in a daemon that runs for months is more dangerous than a missed sample, and the panel sees the miss from the `seq` gap.
 
-**Состояние службы в потоке и в ручке — одно и то же тело.** Форма ответа собирается одной функцией, поэтому панель получает одинаковые данные независимо от того, пришли они потоком или запросом.
+**The service state in the stream and in the endpoint is the same body.** The response shape is built by one function, so the panel gets the same data whether it came from the stream or from a request.
 
-**Сброс буфера идёт через `http.NewResponseController`.** Приведение к `http.Flusher` не годится: middleware оборачивает `ResponseWriter` собственным типом, у которого метода нет, — обёртка отдаёт исходный writer через `Unwrap`, по которому контроллер и ходит. Поддержка проверяется обходом `Unwrap` до первой записи: сама попытка сброса отправила бы заголовок, и отказать после этого было бы уже нечем.
+**The buffer is flushed through `http.NewResponseController`.** A cast to `http.Flusher` does not work: middleware wraps `ResponseWriter` in its own type that lacks the method; the wrapper exposes the original writer through `Unwrap`, which the controller follows. Support is checked by walking `Unwrap` before the first write: an attempt to flush would itself send the header, and after that there would be no way to refuse.
 
-**Сквозной прокси остаётся.** Ручки запрос-ответ — правила, группы, DNS-запрос — как ходили через `/api/clash/*`, так и ходят: заворачивать их в поток незачем. Прокси потоков остаётся, пока панель не переведена на `/api/events`; это переходное состояние, а не второй постоянный путь.
+**The pass-through proxy stays.** Request-response endpoints (rules, groups, the DNS query) keep going through `/api/clash/*`: there is no reason to wrap them into the stream. The stream proxy stays until the panel moves to `/api/events`; this is a transitional state, not a second permanent path.
 
-### Область действия и границы
+### Scope and boundaries
 
-Решение распространяется на `internal/events` и контракт демона с панелью. Выбор источника (Clash API или gRPC) остаётся за ADR-0006: поток скрывает его от панели, а не заменяет.
+The decision covers `internal/events` and the contract between the daemon and the panel. The choice of source (Clash API or gRPC) stays with ADR-0006: the stream hides it from the panel, it does not replace it.
 
-## Последствия
+## Consequences
 
-### Положительные
+### Positive
 
-- Требование ADR-0006 о независимости формы от источника выполняется: панель видит конверт демона, а не форму Clash API.
-- Переподключение и пересборка состояния живут в одном месте вместо трёх.
-- Число вкладок не увеличивает нагрузку на sing-box.
-- Зависимостей не добавилось: SSE — обычный HTTP-ответ.
+- The ADR-0006 requirement of a shape independent of the source holds: the panel sees the daemon's envelope, not the Clash API shape.
+- Reconnection and state rebuild live in one place instead of three.
+- The number of tabs does not increase the load on sing-box.
+- No dependencies were added: SSE is a regular HTTP response.
 
-### Отрицательные
+### Negative
 
-- Поток односторонний, и подписка идёт сразу на все топики. Панель, которой нужен только трафик, всё равно получит соединения. При текущем наборе топиков это дешевле, чем протокол подписок поверх потока.
-- Пока панель не переведена, в демоне живут два пути к рантайму — поток и прокси потоков. Это переходный долг, и он должен закрыться вместе с переводом экранов.
-- Соединения по-прежнему идут снапшотами: дельты есть только у gRPC, а его реализация отложена замером (ADR-0006).
+- The stream is one-way, and the subscription covers all topics at once. A panel that needs only traffic still gets connections. With the current set of topics this is cheaper than a subscription protocol on top of the stream.
+- Until the panel is moved over, the daemon has two paths to the runtime: the stream and the stream proxy. This is transitional debt, and it must be closed together with moving the screens.
+- Connections still go as snapshots: only gRPC has deltas, and its implementation is deferred until a measurement (ADR-0006).
 
-### Нейтральные или отложенные
+### Neutral or deferred
 
-- Перевод экранов панели на `/api/events` и удаление прокси потоков — отдельная задача.
-- Отписка от отдельных топиков не сделана: понадобится — добавится параметром запроса, конверт менять не придётся.
+- Moving the panel screens to `/api/events` and removing the stream proxy is a separate task.
+- Unsubscribing from individual topics is not done: if needed, it is added as a request parameter, and the envelope does not have to change.
 
-## Риски и меры снижения
+## Risks and mitigations
 
-| Риск                                           | Вероятность и влияние    | Митигация                                                                                                     |
-| ---------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------- |
-| Промежуточный прокси буферизует поток          | Низкая, среднее влияние  | `Cache-Control: no-store` и `X-Accel-Buffering: no`; демон отдаёт панель сам, посредников в штатной схеме нет |
-| Горутины опроса переживут уход читателей       | Низкая, высокое влияние  | Останов ждёт завершения всех горутин; покрыто тестом на остановку после последнего читателя                   |
-| Медленный читатель тормозит рассылку остальным | Средняя, среднее влияние | Отправка неблокирующая, переполненная очередь теряет событие; разрыв `seq` виден панели                       |
-| Обрыв апстрима оставит поток молчащим          | Средняя, среднее влияние | Чтение источника перезапускается с паузой; обрыв штатен, sing-box перезапускают                               |
+| Risk                                            | Likelihood and impact | Mitigation                                                                                                                              |
+| ----------------------------------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| An intermediate proxy buffers the stream        | Low, medium impact    | `Cache-Control: no-store` and `X-Accel-Buffering: no`; the daemon serves the panel itself, and the standard setup has no intermediaries |
+| Polling goroutines outlive the readers          | Low, high impact      | Stopping waits for all goroutines to finish; covered by a test on stopping after the last reader                                        |
+| A slow reader slows down delivery to the others | Medium, medium impact | Sending is non-blocking, a full queue loses the event; the `seq` gap is visible to the panel                                            |
+| An upstream drop leaves the stream silent       | Medium, medium impact | Reading the source restarts after a pause; a drop is normal, sing-box gets restarted                                                    |
 
-## Совместимость, миграция и откат
+## Compatibility, migration and rollback
 
-Существующие экраны продолжают работать через прокси: ручка добавлена, ничего не убрано. Перевод панели идёт отдельно и постепенно.
+Existing screens keep working through the proxy: the endpoint is added and nothing is removed. Moving the panel over happens separately and gradually.
 
-Откат: убрать `/api/events` и пакет потока. Панель останется на сквозном прокси `/api/clash/*`.
+Rollback: remove `/api/events` and the stream package. The panel stays on the pass-through proxy `/api/clash/*`.
 
-## Проверка решения
+## Validation
 
-- `GET /api/events` на устройстве отдаёт `text/event-stream`, и в первые секунды приходят события всех четырёх топиков с растущим `seq`.
-- Вторая открытая вкладка не увеличивает число подписок демона к sing-box.
-- Закрытие последнего читателя останавливает опрос источников: новых запросов к Clash API не идёт.
-- Демон, поднятый без единого читателя, источники потока не опрашивает: обращения к Clash API идут только по запросам панели.
-- Состояние службы в потоке совпадает с ответом `GET /api/service`.
+- `GET /api/events` on the device returns `text/event-stream`, and in the first seconds events of all four topics arrive with a growing `seq`.
+- A second open tab does not increase the number of the daemon's subscriptions to sing-box.
+- Closing the last reader stops polling the sources: no new requests go to the Clash API.
+- A daemon started without a single reader does not poll the stream sources: calls to the Clash API happen only on panel requests.
+- The service state in the stream matches the `GET /api/service` response.
 
-## Ссылки
+## Links
 
-- [ADR-0006](./ADR-0006-read-runtime-from-clash-api-and-optional-grpc.md) — источники рантайма и требование к форме;
-- [ADR-0009](./ADR-0009-read-service-state-from-procd.md) — состояние службы, которое уходит в топик `service`;
-- [PRD](../PRD.md) — AC-10…AC-12, AC-30, NFR-1, NFR-2;
-- [DeviceIO](../../apps/metaboxd/docs/guides/DeviceIO.md) — запрет фоновых опросов без потребителя;
-- [HTTPAPI](../../apps/metaboxd/docs/guides/HTTPAPI.md) — почему `WriteTimeout` не задан глобально.
+- [ADR-0006](./ADR-0006-read-runtime-from-clash-api-and-optional-grpc.md): runtime sources and the shape requirement;
+- [ADR-0009](./ADR-0009-read-service-state-from-procd.md): the service state that goes into the `service` topic;
+- [PRD](../PRD.md): AC-10…AC-12, AC-30, NFR-1, NFR-2;
+- [DeviceIO](../../apps/metaboxd/docs/guides/DeviceIO.md): the ban on background polling without a consumer;
+- [HTTPAPI](../../apps/metaboxd/docs/guides/HTTPAPI.md): why `WriteTimeout` is not set globally.

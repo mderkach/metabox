@@ -1,78 +1,78 @@
-# ADR-0040. Поставлять панель одним Go-демоном со встроенной SPA
+# ADR-0040. Ship the panel as one Go daemon with an embedded SPA
 
-- Статус: Accepted — решение принято 2026-08-30 в разделе A.3 [`../PRD.md`](../PRD.md) и перенесено сюда без изменения существа
-- Дата: 2026-08-30
-- Ответственные: владелец репозитория
-- Заменяет: раздел A.3 [`../PRD.md`](../PRD.md)
+- Status: Accepted. The decision was made on 2026-08-30 in section A.3 of [`../PRD.md`](../PRD.md) and moved here without changes in substance
+- Date: 2026-08-30
+- Deciders: repository owner
+- Supersedes: section A.3 of [`../PRD.md`](../PRD.md)
 
-## Контекст и постановка проблемы
+## Context and problem statement
 
-Панели на роутере нужна серверная часть: браузер не может сам записать `config.json`, вызвать `sing-box check`, перезапустить службу через procd и откатить конфиг. Нужно решить, чем эта часть является и как вместе с ней на устройство попадает интерфейс.
+The panel on the router needs a server side: the browser cannot write `config.json` by itself, call `sing-box check`, restart the service through procd or roll the config back. It has to be decided what this part is and how the interface reaches the device together with it.
 
-Ответ владельца в интервью `metabox-di-001`, Round 3: «Свой Go-демон со встроенным UI». Архитектурный образец — [daniellavrushin/b4](https://github.com/daniellavrushin/b4): Go-демон со встроенным UI и единым JSON-конфигом (приложение B PRD). Интеграция с LuCI в Round 0 отложена.
+The owner's answer in interview `metabox-di-001`, Round 3: "Own Go daemon with an embedded UI." The architectural model is [daniellavrushin/b4](https://github.com/daniellavrushin/b4): a Go daemon with an embedded UI and a single JSON config (appendix B of the PRD). LuCI integration was deferred in Round 0.
 
-В scope: из чего состоит рантайм панели на устройстве и что он делает. Вне scope: способ встраивания статики ([ADR-0003](./ADR-0003-embed-the-spa-from-a-staging-directory.md)), протокол применения ([ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md)), формат пакета ([ADR-0011](./ADR-0011-ship-the-daemon-as-an-apk-package.md)).
+In scope: what the panel runtime on the device consists of and what it does. Out of scope: the way static files are embedded ([ADR-0003](./ADR-0003-embed-the-spa-from-a-staging-directory.md)), the apply protocol ([ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md)), the package format ([ADR-0011](./ADR-0011-ship-the-daemon-as-an-apk-package.md)).
 
-## Критерии выбора
+## Decision drivers
 
-- Единый артефакт поставки (раздел 9 PRD): на устройство едет один файл.
-- Панель жива при остановленном или сломанном sing-box (NFR-1).
-- Полный набор операций с конфигом и службой на устройстве, без SSH (SM-3).
-- Стоимость разработки и сборки.
+- A single delivery artifact (section 9 of the PRD): one file goes to the device.
+- The panel stays alive when sing-box is stopped or broken (NFR-1).
+- The full set of config and service operations on the device, without SSH (SM-3).
+- Development and build cost.
 
-## Рассмотренные варианты
+## Considered options
 
-Транскрипт сохранил только ответ владельца; альтернативы ниже восстановлены по тексту PRD.
+The transcript kept only the owner's answer; the alternatives below are reconstructed from the PRD text.
 
-1. **Приложение LuCI.** Встраивается в штатный веб-интерфейс OpenWrt. Отложено владельцем в Round 0 и стоит в roadmap пунктом «LuCI-интеграция»; работа с конфигом, `check`, рестартом и откатом всё равно требовала бы своей серверной части на устройстве. **Отклонён для v1.**
-2. **Статика отдельно от серверной части** — SPA раздаёт штатный веб-сервер роутера, API — отдельный процесс. Два артефакта поставки вместо одного, версии которых могут разойтись. **Отклонён.**
-3. **Один Go-бинарь, который раздаёт встроенную SPA и держит API.** **Принят.**
+1. **A LuCI application.** Integrates into the stock OpenWrt web interface. Deferred by the owner in Round 0 and listed in the roadmap as "LuCI integration"; work with the config, `check`, restart and rollback would still require its own server side on the device. **Rejected for v1.**
+2. **Static files separate from the server side**: the SPA is served by the router's stock web server, the API is a separate process. Two delivery artifacts instead of one, whose versions can diverge. **Rejected.**
+3. **One Go binary that serves the embedded SPA and holds the API.** **Chosen.**
 
-## Принятое решение
+## Decision outcome
 
-На устройстве работает один бинарь `metaboxd`, который:
+One binary, `metaboxd`, runs on the device. It:
 
-- раздаёт собранную SPA, встроенную в бинарь (`go:embed`);
-- отдаёт REST API для конфига, наборов правил и применения;
-- владеет `config.json`, историей версий и бэкапами;
-- вызывает `sing-box check`;
-- управляет сервисом через procd (`/etc/init.d/sing-box`);
-- проксирует Clash API sing-box для дашборда.
+- serves the built SPA embedded in the binary (`go:embed`);
+- provides a REST API for the config, rule sets and apply;
+- owns `config.json`, the version history and backups;
+- calls `sing-box check`;
+- manages the service through procd (`/etc/init.d/sing-box`);
+- proxies the sing-box Clash API for the dashboard.
 
-Из исходного списка A.3 снят вызов `sing-box rule-set compile`: компиляция своего списка в `.srs` на устройстве отменена — `local` rule-set форка читает исходник в JSON напрямую ([ADR-0033](./ADR-0033-keep-custom-rule-lists-in-the-singbox-config.md)).
+The call to `sing-box rule-set compile` is removed from the original A.3 list: compiling a custom list into `.srs` on the device is cancelled, since the fork's `local` rule set reads the JSON source directly ([ADR-0033](./ADR-0033-keep-custom-rule-lists-in-the-singbox-config.md)).
 
-### Область действия и границы
+### Scope and boundaries
 
-Подробности отдельных обязанностей — в своих ADR: встраивание SPA — [ADR-0003](./ADR-0003-embed-the-spa-from-a-staging-directory.md), применение и владение конфигом — [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md), источник рантайма — [ADR-0006](./ADR-0006-read-runtime-from-clash-api-and-optional-grpc.md), состояние службы — [ADR-0009](./ADR-0009-read-service-state-from-procd.md), история версий — [ADR-0008](./ADR-0008-store-config-versions-as-numbered-copies.md), пакет — [ADR-0011](./ADR-0011-ship-the-daemon-as-an-apk-package.md).
+Details of individual responsibilities are in their own ADRs: SPA embedding in [ADR-0003](./ADR-0003-embed-the-spa-from-a-staging-directory.md), apply and config ownership in [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md), the runtime source in [ADR-0006](./ADR-0006-read-runtime-from-clash-api-and-optional-grpc.md), the service state in [ADR-0009](./ADR-0009-read-service-state-from-procd.md), the version history in [ADR-0008](./ADR-0008-store-config-versions-as-numbered-copies.md), the package in [ADR-0011](./ADR-0011-ship-the-daemon-as-an-apk-package.md).
 
-## Последствия
+## Consequences
 
-### Положительные
+### Positive
 
-- Интерфейс и API всегда одной версии: они приезжают одним файлом.
-- Панель не зависит от штатного веб-сервера роутера и от состояния sing-box.
+- The interface and the API are always of the same version: they arrive in one file.
+- The panel does not depend on the router's stock web server or on the state of sing-box.
 
-### Отрицательные
+### Negative
 
-- Проект двуязычный: Go и TypeScript.
-- Нужна кросс-компиляция под aarch64 (`make daemon-device`) и CI, который собирает фронт до `go build`, потому что фронт попадает в бинарь через `go:embed`.
+- The project is bilingual: Go and TypeScript.
+- Cross-compilation for aarch64 (`make daemon-device`) is needed, and CI has to build the frontend before `go build`, because the frontend gets into the binary through `go:embed`.
 
-### Нейтральные или отложенные
+### Neutral or deferred
 
-- Интеграция с LuCI — пункт roadmap после v1.
+- LuCI integration is a roadmap item after v1.
 
-## Совместимость, миграция и откат
+## Compatibility, migration and rollback
 
-Не применимо: решение действует с начала проекта и переносится из PRD без изменения существа.
+Not applicable: the decision has been in effect since the start of the project and is moved from the PRD without changes in substance.
 
-## Проверка решения
+## Validation
 
-- AC-17: `make daemon` собирает бинарь, который стартует одной командой, раздаёт встроенный UI и отвечает на REST API.
-- `make package` собирает пакет с одним бинарём в `/usr/bin/metaboxd`.
+- AC-17: `make daemon` builds a binary that starts with one command, serves the embedded UI and answers the REST API.
+- `make package` builds a package with one binary at `/usr/bin/metaboxd`.
 
-## Ссылки
+## Links
 
-- [`../PRD.md`](../PRD.md): AC-17, NFR-1, SM-3, разделы 9 и 11, приложение B, раздел A.3 (замещается этим ADR);
+- [`../PRD.md`](../PRD.md): AC-17, NFR-1, SM-3, sections 9 and 11, appendix B, section A.3 (superseded by this ADR);
 - [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md), [ADR-0003](./ADR-0003-embed-the-spa-from-a-staging-directory.md), [ADR-0006](./ADR-0006-read-runtime-from-clash-api-and-optional-grpc.md), [ADR-0008](./ADR-0008-store-config-versions-as-numbered-copies.md), [ADR-0009](./ADR-0009-read-service-state-from-procd.md), [ADR-0011](./ADR-0011-ship-the-daemon-as-an-apk-package.md), [ADR-0033](./ADR-0033-keep-custom-rule-lists-in-the-singbox-config.md);
-- [`../../apps/metaboxd`](../../apps/metaboxd) — реализация;
-- [daniellavrushin/b4](https://github.com/daniellavrushin/b4) — архитектурный образец.
+- [`../../apps/metaboxd`](../../apps/metaboxd): the implementation;
+- [daniellavrushin/b4](https://github.com/daniellavrushin/b4): the architectural model.

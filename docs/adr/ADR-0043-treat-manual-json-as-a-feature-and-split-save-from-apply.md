@@ -1,79 +1,79 @@
-# ADR-0043. Держать ручной JSON полноправным режимом: не терять данные, судить валидность бинарём, разделять Save и Apply
+# ADR-0043. Keep manual JSON a first-class mode: do not lose data, let the binary judge validity, separate Save from Apply
 
-- Статус: Accepted — решение принято 2026-08-30 в разделе A.8 [`../PRD.md`](../PRD.md) и перенесено сюда без изменения существа; варианты восстановлены по ответам интервью, в A.8 их списка не было
-- Дата: 2026-08-30
-- Ответственные: владелец репозитория
-- Заменяет: раздел A.8 [`../PRD.md`](../PRD.md)
+- Status: Accepted. The decision was made on 2026-08-30 in section A.8 of [`../PRD.md`](../PRD.md) and moved here without changes in substance; the options are reconstructed from the interview answers, A.8 had no list of them
+- Date: 2026-08-30
+- Deciders: repository owner
+- Supersedes: section A.8 of [`../PRD.md`](../PRD.md)
 
-## Контекст и постановка проблемы
+## Context and problem statement
 
-Первая редакция PRD держала ручное редактирование JSON в Non-Goals. В интервью `metabox-di-002` владелец перевёл его в функцию продукта: в правилах и диагностике текст часто быстрее формы (Round 4), а вручную отредактированный JSON должен со временем раскладываться в формы — не обязательно сразу.
+The first edition of the PRD kept manual JSON editing in Non-Goals. In interview `metabox-di-002` the owner turned it into a product feature: for rules and diagnostics text is often faster than a form (Round 4), and manually edited JSON should over time be laid out into forms, not necessarily right away.
 
-У конфига появляются два источника истины — текст и модель с формами. Нужно решить, кто из них главный, когда введена конструкция, которую модель не понимает (Round 5), и нужны ли черновики (Round 6).
+The config gets two sources of truth: the text and the model with forms. It has to be decided which of them is primary when a construct the model does not understand is entered (Round 5), and whether drafts are needed (Round 6).
 
-В scope: правила, разрешающие конфликт текста и модели, и разделение сохранения и применения. Вне scope: как текст правится на клиенте ([ADR-0004](./ADR-0004-edit-config-text-in-place-on-the-client.md)), какой диалект JSON читается ([ADR-0017](./ADR-0017-read-the-config-in-the-dialect-the-binary-accepts.md)), последовательность применения ([ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md)).
+In scope: the rules that resolve the conflict between text and model, and the separation of saving from applying. Out of scope: how the text is edited on the client ([ADR-0004](./ADR-0004-edit-config-text-in-place-on-the-client.md)), which JSON dialect is read ([ADR-0017](./ADR-0017-read-the-config-in-the-dialect-the-binary-accepts.md)), the apply sequence ([ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md)).
 
-## Критерии выбора
+## Decision drivers
 
-- Данные пользователя не теряются никогда (UX-3).
-- Панель не запрещает то, что принимает бинарь (UX-4), иначе она станет тормозом при каждом релизе форка.
-- На роутер не уходит конфиг, который отверг бинарь (SM-4).
-- Незавершённую правку можно сохранить и вернуться к ней (UX-2).
+- User data is never lost (UX-3).
+- The panel does not forbid what the binary accepts (UX-4); otherwise it becomes a brake on every fork release.
+- A config the binary rejected does not go to the router (SM-4).
+- An unfinished edit can be saved and returned to (UX-2).
 
-## Рассмотренные варианты
+## Considered options
 
-Варианты 1–3 названы в ответе владельца в Round 5 — в самом вопросе вариантов не было. Вариант 4 восстановлен по формулировке правила 2 раздела A.8 («а не схема metabox») и в интервью не звучал, вариант 5 — из Round 6. Транскрипт сохранил только ответы, доводы восстановлены по A.8.
+Options 1–3 were named in the owner's answer in Round 5; the question itself listed no options. Option 4 is reconstructed from the wording of rule 2 in section A.8 ("not the metabox schema") and was not voiced in the interview; option 5 comes from Round 6. The transcript kept only the answers; the arguments are reconstructed from A.8.
 
-1. **JSON главнее, UI деградирует.** Текст всегда прав, формы показывают что могут. Сам по себе не говорит, что делать с невалидным конфигом при применении. **Отклонён как единственное правило**, вошёл в синтез правилом 1.
-2. **Решает `sing-box check`.** Валидность судит бинарь, схема панели не запрещает то, что он принимает. Сам по себе не говорит, куда девать незавершённую правку, которую бинарь пока не примет. **Отклонён как единственное правило**, вошёл в синтез правилом 2.
-3. **Предупреждаем, но пускаем.** Предупреждения не блокируют работу с конфигом. Распространённый на применение — вплоть до Apply в обход `sing-box check` — открывает дорогу конфигу, который бинарь не примет, и потере доступа к роутеру. **Отклонён как единственное правило**, вошёл в синтез правилом 3: Save с предупреждениями пускает всегда, Apply — нет.
-4. **Решает схема metabox** — то, чего схема не знает, не принимается. Противоречит UX-4: схема отстаёт от бинаря и запрещала бы валидный конфиг. **Отклонён.**
-5. **«Сохранил = применил», без черновиков.** Незавершённая правка либо теряется, либо уходит на роутер. **Отклонён** в Round 6.
-6. **Синтез вариантов 1–3 с разведением Save и Apply** — ответ владельца: «что-то среднее между „JSON главнее, UI деградирует“, „решает sing-box check“ и „предупреждаем, но пускаем“». **Принят.**
+1. **JSON is primary, the UI degrades.** The text is always right, the forms show what they can. By itself it does not say what to do with an invalid config on apply. **Rejected as the only rule**, became rule 1 of the synthesis.
+2. **`sing-box check` decides.** The binary judges validity, the panel schema does not forbid what it accepts. By itself it does not say where to put an unfinished edit the binary does not accept yet. **Rejected as the only rule**, became rule 2 of the synthesis.
+3. **Warn, but let through.** Warnings do not block work with the config. Extended to apply, up to Apply that bypasses `sing-box check`, it opens the way to a config the binary will not accept and to losing access to the router. **Rejected as the only rule**, became rule 3 of the synthesis: Save with warnings always lets through, Apply does not.
+4. **The metabox schema decides**: what the schema does not know is not accepted. Contradicts UX-4: the schema lags behind the binary and would forbid a valid config. **Rejected.**
+5. **"Saved = applied", no drafts.** An unfinished edit is either lost or goes to the router. **Rejected** in Round 6.
+6. **A synthesis of options 1–3 with Save and Apply separated**: the owner's answer, "something in between 'JSON is primary, the UI degrades', 'sing-box check decides' and 'warn, but let through'". **Chosen.**
 
-## Принятое решение
+## Decision outcome
 
-Ручное редактирование JSON — заявленная функция, а не аварийный люк: raw-режим доступен на любом узле, плюс есть режим правки всего конфига текстом. Три правила разрешают конфликт двух источников истины:
+Manual JSON editing is a declared feature, not an escape hatch: raw mode is available on any node, plus there is a mode for editing the whole config as text. Three rules resolve the conflict between the two sources of truth:
 
-1. **Данные не теряются.** Нераспознанный узел сохраняется как есть и показывается сырым блоком с пометкой «UI не покрывает».
-2. **Валидность определяет `sing-box check`,** а не схема metabox. Схема обслуживает формы и подсказки, но не запрещает то, что принимает бинарь.
-3. **Save ≠ Apply.** Save сохраняет черновик всегда, с предупреждениями; Apply требует успешного `check`. Обойти вердикт бинаря нельзя — force-apply отсутствует намеренно.
+1. **Data is not lost.** An unrecognized node is preserved as is and shown as a raw block marked "not covered by the UI".
+2. **Validity is determined by `sing-box check`,** not by the metabox schema. The schema serves forms and hints but does not forbid what the binary accepts.
+3. **Save ≠ Apply.** Save always saves the draft, with warnings; Apply requires a successful `check`. The binary's verdict cannot be bypassed: force-apply is absent on purpose.
 
-Требование «вручную введённый JSON полностью раскладывается в формы» — итеративное: v1 раскладывает распознанное, полнота набирается со временем.
+The requirement "manually entered JSON is fully laid out into forms" is iterative: v1 lays out what it recognizes, completeness is built up over time.
 
-### Область действия и границы
+### Scope and boundaries
 
-- Режим всего конфига текстом — AC-24, правка текста на месте — [ADR-0004](./ADR-0004-edit-config-text-in-place-on-the-client.md), диалект с комментариями и висячими запятыми — [ADR-0017](./ADR-0017-read-the-config-in-the-dialect-the-binary-accepts.md).
-- Сырой блок «UI не покрывает» — AC-25, [ADR-0018](./ADR-0018-generate-strict-schemas-and-mark-what-the-panel-does-not-know.md).
-- Save и Apply — AC-26; `check` перед записью — шаг протокола [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md).
+- The whole-config text mode is AC-24, in-place text editing is [ADR-0004](./ADR-0004-edit-config-text-in-place-on-the-client.md), the dialect with comments and trailing commas is [ADR-0017](./ADR-0017-read-the-config-in-the-dialect-the-binary-accepts.md).
+- The "not covered by the UI" raw block is AC-25, [ADR-0018](./ADR-0018-generate-strict-schemas-and-mark-what-the-panel-does-not-know.md).
+- Save and Apply are AC-26; `check` before the write is a step of the [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md) protocol.
 
-## Последствия
+## Consequences
 
-### Положительные
+### Positive
 
-- Конфиг, которого схема не знает, всё равно правится и применяется, если его принимает бинарь.
-- Ошибка в незавершённой правке не уходит на роутер, а сама правка не теряется.
+- A config the schema does not know can still be edited and applied if the binary accepts it.
+- An error in an unfinished edit does not go to the router, and the edit itself is not lost.
 
-### Отрицательные
+### Negative
 
-- У конфига два представления, и панель обязана держать их согласованными без потерь — отсюда точечная правка текста вместо пересборки из модели.
-- Владелец может применить конфиг, который схема считает подозрительным: последнее слово за бинарём.
+- The config has two representations, and the panel has to keep them consistent without losses; hence in-place text editing instead of rebuilding from the model.
+- The owner can apply a config the schema considers suspicious: the binary has the last word.
 
-### Нейтральные или отложенные
+### Neutral or deferred
 
-- Raw-режим на любом узле (AC-23) пока не выполнен: часть узлов правится только текстом всего файла.
-- Полный обратный разбор ручного JSON в формы — не цель v1 (раздел 8 PRD).
+- Raw mode on any node (AC-23) is not done yet: some nodes can only be edited through the text of the whole file.
+- Full reverse parsing of manual JSON into forms is not a v1 goal (section 8 of the PRD).
 
-## Совместимость, миграция и откат
+## Compatibility, migration and rollback
 
-Не применимо: решение действует с начала проекта и переносится из PRD без изменения существа.
+Not applicable: the decision has been in effect since the start of the project and is moved from the PRD without changes in substance.
 
-## Проверка решения
+## Validation
 
-- AC-24 и AC-25 — корпус `apps/web/src/entities/Config/__tests__/corpus/` в `make test` и прогон на стенде.
-- AC-26 — панель против стенда `make up`: черновик сохраняется с предупреждением, Apply конфига, который отверг `sing-box check`, отклоняется с выводом бинаря.
+- AC-24 and AC-25: the corpus `apps/web/src/entities/Config/__tests__/corpus/` in `make test` and a run on the test bench.
+- AC-26: the panel against the `make up` test bench: a draft is saved with a warning, Apply of a config that `sing-box check` rejected is refused with the binary's output.
 
-## Ссылки
+## Links
 
-- [`../PRD.md`](../PRD.md): US-8, AC-23…AC-26, UX-2…UX-4, SM-4, раздел 8, раздел A.8 (замещается этим ADR);
+- [`../PRD.md`](../PRD.md): US-8, AC-23…AC-26, UX-2…UX-4, SM-4, section 8, section A.8 (superseded by this ADR);
 - [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md), [ADR-0004](./ADR-0004-edit-config-text-in-place-on-the-client.md), [ADR-0017](./ADR-0017-read-the-config-in-the-dialect-the-binary-accepts.md), [ADR-0018](./ADR-0018-generate-strict-schemas-and-mark-what-the-panel-does-not-know.md), [ADR-0039](./ADR-0039-separate-the-ui-from-the-fork-schema-by-an-adapter-layer.md).
