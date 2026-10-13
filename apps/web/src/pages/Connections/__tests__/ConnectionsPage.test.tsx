@@ -17,22 +17,22 @@ import { createRouteHandlers } from '@entities/Route/__tests__/Route.handlers';
 
 import { ConnectionsPage } from '../ui/ConnectionsPage';
 
-/** Тег `direct` у узла типа `selector`: по имени такая строка читалась бы как прямая. */
+/** Tag `direct` on a node of type `selector`: by name such a row would be read as direct. */
 const PROXY_NAMED_DIRECT = { outbounds: [{ type: 'selector', tag: 'direct', outbounds: ['proxy'] }] };
 
-/** Конфиг с устройства: действие строки красится по типу её аутбаунда, а не по тегу. */
+/** Config from the device: the row action is colored by its outbound type, not by the tag. */
 function serveConfig(config: unknown = CONFIG_FIXTURE) {
   server.use(http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(JSON.stringify(config))));
 }
 
-/** Открывает фасет и отдаёт его список значений. Сортировка в шапке подписана так же, поэтому ищем в тулбаре. */
+/** Opens a facet and returns its value list. The sort in the header is labeled the same, so we look in the toolbar. */
 async function openFacet(user: ReturnType<typeof userEvent.setup>, name: RegExp) {
   await user.click(within(await screen.findByRole('group', { name: 'Фильтры' })).getByRole('button', { name }));
 
   return screen.findByRole('listbox');
 }
 
-/** Отбор экрана живёт в адресе, поэтому монтируем его на своём маршруте. */
+/** The screen filter lives in the address, so it is mounted on its own route. */
 function renderScreen(search = '') {
   return renderWithRouter(ConnectionsPage, {
     path: '/connections',
@@ -41,7 +41,7 @@ function renderScreen(search = '') {
   });
 }
 
-describe('экран соединений', () => {
+describe('connections screen', () => {
   beforeEach(() => {
     ConnectionStore.getState().reset();
     mockVirtualSizes();
@@ -49,12 +49,12 @@ describe('экран соединений', () => {
   });
 
   afterEach(() => {
-    // Карту типов `reset` не трогает, а следующий тест ждёт разбор по тегу.
+    // `reset` does not touch the type map, and the next test waits for parsing by tag.
     ConnectionStore.getState().setOutboundTypes(new Map());
     vi.restoreAllMocks();
   });
 
-  it('на тысячах соединений держит в DOM окно, а не весь список', async () => {
+  it('on thousands of connections keeps a window in the DOM, not the whole list', async () => {
     ConnectionStore.getState().apply(makeConnectionsSnapshot(5000));
     renderScreen();
 
@@ -67,7 +67,7 @@ describe('экран соединений', () => {
     expect(rendered.length).toBeLessThan(100);
   });
 
-  it('закрывает соединение по адресу из общей константы', async () => {
+  it('closes a connection at the address from the shared constant', async () => {
     const closed = vi.fn<(id: string) => void>();
 
     server.use(
@@ -90,13 +90,13 @@ describe('экран соединений', () => {
     await waitFor(() => {
       expect(closed).toHaveBeenCalledTimes(1);
     });
-    // Строка уходит из списка молча: о закрытии говорит живая область экрана.
+    // The row leaves the list silently: the screen live region announces the close.
     await waitFor(() => {
       expect(screen.getByRole('status', { name: 'Результат действия' })).toHaveTextContent('Соединение закрыто');
     });
   });
 
-  it('на паузе новые снапшоты не меняют экран', async () => {
+  it('on pause new snapshots do not change the screen', async () => {
     const user = userEvent.setup();
 
     renderScreen();
@@ -109,7 +109,7 @@ describe('экран соединений', () => {
     expect(screen.getByRole('button', { name: 'Продолжить' })).toBeInTheDocument();
   });
 
-  it('шапка называет паузу, а живой поток не подписывает', async () => {
+  it('the header names the pause, and a live stream is not labeled', async () => {
     const user = userEvent.setup();
 
     renderScreen();
@@ -123,7 +123,7 @@ describe('экран соединений', () => {
     expect(within(header).getByText('на паузе: строки не обновляются')).toBeInTheDocument();
   });
 
-  it('рвёт все соединения только после подтверждения', async () => {
+  it('drops all connections only after confirmation', async () => {
     const closedAll = vi.fn<() => void>();
 
     server.use(
@@ -163,7 +163,7 @@ describe('экран соединений', () => {
     });
   });
 
-  it('фасет по действию отбирает строки и называет выбор на кнопке', async () => {
+  it('the action facet filters rows and names the selection on the button', async () => {
     const user = userEvent.setup();
 
     ConnectionStore.getState().apply(makeConnectionsSnapshot(8));
@@ -181,7 +181,7 @@ describe('экран соединений', () => {
     expect(screen.getByRole('button', { name: 'Действие: напрямую' })).toBeInTheDocument();
   });
 
-  it('несколько значений одного фасета складывает, а не сужает', async () => {
+  it('several values of one facet are added, not narrowed', async () => {
     const user = userEvent.setup();
 
     const { router } = renderScreen();
@@ -201,7 +201,7 @@ describe('экран соединений', () => {
     });
   });
 
-  it('действие строки берёт из типа аутбаунда конфига, а не из его тега', async () => {
+  it('takes the row action from the config outbound type, not from its tag', async () => {
     const user = userEvent.setup();
 
     serveConfig(PROXY_NAMED_DIRECT);
@@ -210,14 +210,14 @@ describe('экран соединений', () => {
 
     const kinds = await openFacet(user, /^Действие$/);
 
-    // Четыре строки `route(direct)` по тегу читались бы прямыми.
+    // Four `route(direct)` rows by tag would be read as direct.
     await waitFor(() => {
       expect(within(kinds).queryByRole('option', { name: /напрямую/ })).not.toBeInTheDocument();
     });
     expect(within(kinds).getByRole('option', { name: /через прокси/ })).toHaveTextContent('8');
   });
 
-  it('на вкладке закрытых говорит, сколько они хранятся', async () => {
+  it('on the closed tab says how long they are kept', async () => {
     const user = userEvent.setup();
 
     renderScreen();
@@ -226,7 +226,7 @@ describe('экран соединений', () => {
 
     const closedTab = await screen.findByRole('tab', { name: /Закрытые/ });
 
-    // Пояснение стоит над карточкой списка и только на вкладке закрытых.
+    // The explanation stands above the list card and only on the closed tab.
     expect(screen.queryByText(/хранятся, пока открыта вкладка/)).not.toBeInTheDocument();
 
     await user.click(closedTab);
@@ -234,7 +234,7 @@ describe('экран соединений', () => {
     expect(await screen.findByText(/хранятся, пока открыта вкладка/)).toBeInTheDocument();
   });
 
-  it('в подвале закрытых называет вытесненные по лимиту', async () => {
+  it('in the closed footer names those evicted by the limit', async () => {
     const user = userEvent.setup();
 
     renderScreen();
@@ -250,7 +250,7 @@ describe('экран соединений', () => {
     });
   });
 
-  it('пока лимит не достигнут, о вытеснении молчит', async () => {
+  it('until the limit is reached stays silent about eviction', async () => {
     const user = userEvent.setup();
 
     renderScreen();
@@ -265,17 +265,17 @@ describe('экран соединений', () => {
     expect(screen.queryByText(/вытеснены/)).not.toBeInTheDocument();
   });
 
-  // Отбор в адресе: ссылкой на отфильтрованный список делятся, когда
-  // спрашивают, почему трафик идёт не туда.
-  it('поднимает срез из адреса', async () => {
+  // Filter in the address: a link to a filtered list is shared when
+  // asking why traffic goes the wrong way.
+  it('restores the slice from the address', async () => {
     renderScreen('?kind=direct');
     ConnectionStore.getState().apply(makeConnectionsSnapshot(4));
 
     expect(await screen.findByRole('button', { name: 'Действие: напрямую' })).toBeInTheDocument();
   });
 
-  // На эту ссылку ведёт экран устройств: «соединения этого устройства».
-  it('старая ссылка на одно устройство отбирает его строки', async () => {
+  // The devices screen links here: "connections of this device".
+  it('an old link with one device filters its rows', async () => {
     renderScreen('?source=192.168.1.60');
     ConnectionStore.getState().apply(CONNECTIONS_FIXTURE);
 
@@ -284,7 +284,7 @@ describe('экран соединений', () => {
     expect(screen.getByRole('button', { name: /^Устройство: / })).toBeInTheDocument();
   });
 
-  it('правило без условий выбирается и переживает дорогу через адрес', async () => {
+  it('a rule without conditions is selectable and survives the trip through the address', async () => {
     const user = userEvent.setup();
 
     const { router } = renderScreen();
@@ -302,7 +302,7 @@ describe('экран соединений', () => {
     expect(screen.getByRole('button', { name: 'Правило: без условий' })).toBeInTheDocument();
   });
 
-  it('выбранное устройство, которого нет в снимке, остаётся в фасете с нулём и снимается руками', async () => {
+  it('a selected device that is not in the snapshot stays in the facet with zero and is cleared by hand', async () => {
     const user = userEvent.setup();
 
     const { router } = renderScreen('?source=192.168.1.200');
@@ -321,7 +321,7 @@ describe('экран соединений', () => {
     });
   });
 
-  it('шапка колонки, по полю которой стоит фасет, несёт признак отбора', async () => {
+  it('the header of a column by whose field a facet is set carries a filter mark', async () => {
     renderScreen('?kind=direct');
     ConnectionStore.getState().apply(makeConnectionsSnapshot(4));
 
@@ -329,7 +329,7 @@ describe('экран соединений', () => {
     expect(screen.getByRole('columnheader', { name: /Куда/ })).not.toHaveTextContent('есть отбор');
   });
 
-  it('пустой экран из-за отбора снимает и поиск, и фасеты', async () => {
+  it('an empty screen caused by a filter clears both search and facets', async () => {
     const user = userEvent.setup();
 
     const { router } = renderScreen('?q=claude&kind=block');
@@ -343,7 +343,7 @@ describe('экран соединений', () => {
     expect(await screen.findByText('4 соединения')).toHaveAttribute('role', 'status');
   });
 
-  it('«Сбросить всё» снимает фасеты и оставляет набранный поиск', async () => {
+  it('"Reset all" clears facets and keeps the typed search', async () => {
     const user = userEvent.setup();
 
     const { router } = renderScreen('?q=example&kind=direct&source=192.168.1.60');
@@ -357,7 +357,7 @@ describe('экран соединений', () => {
     expect(screen.queryByRole('button', { name: 'Сбросить всё' })).not.toBeInTheDocument();
   });
 
-  it('находит соединение по имени устройства, хотя в строке лежит адрес', async () => {
+  it('finds a connection by device name although the row holds an address', async () => {
     server.use(...createDeviceHandlers());
     const user = userEvent.setup();
 
@@ -366,7 +366,7 @@ describe('экран соединений', () => {
 
     const sources = await openFacet(user, /^Устройство$/);
 
-    // Подпись приходит запросом: дождаться её, прежде чем искать по ней.
+    // The label arrives by request: wait for it before searching by it.
     await within(sources).findByRole('option', { name: /Ноутбук/ });
     await user.keyboard('{Escape}');
     await user.type(screen.getByRole('textbox', { name: 'Поиск по соединениям' }), 'ноутбук');
@@ -377,7 +377,7 @@ describe('экран соединений', () => {
     expect(screen.getByText('api.git.example:443')).toBeInTheDocument();
   });
 
-  it('фасет подписывает устройство именем, а в адрес пишет IP', async () => {
+  it('the facet labels a device with the name, and writes the IP into the address', async () => {
     server.use(...createDeviceHandlers());
     const user = userEvent.setup();
 
@@ -387,7 +387,7 @@ describe('экран соединений', () => {
     const sources = await openFacet(user, /^Устройство$/);
     const laptop = await within(sources).findByRole('option', { name: /Ноутбук/ });
 
-    // Адрес стоит рядом с именем: по нему сверяют с журналами роутера.
+    // The address stands next to the name: it is used to cross-check with the router logs.
     expect(laptop).toHaveTextContent('192.168.1.60');
 
     await user.click(laptop);
@@ -397,7 +397,7 @@ describe('экран соединений', () => {
     });
   });
 
-  it('записывает срез в адрес, а не в историю переходов', async () => {
+  it('writes the slice into the address, not into the navigation history', async () => {
     const user = userEvent.setup();
 
     const { router } = renderScreen();
@@ -413,7 +413,7 @@ describe('экран соединений', () => {
     expect(router.history.length).toBe(1);
   });
 
-  it('объясняет маршрут панелью рядом со списком', async () => {
+  it('explains the route with a panel next to the list', async () => {
     server.use(...createRouteHandlers(CONNECTIONS_FIXTURE.connections));
     const user = userEvent.setup();
 
@@ -428,7 +428,7 @@ describe('экран соединений', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('у каждой строки своё объяснение с цепочкой этой строки', async () => {
+  it('each row has its own explanation with the chain of that row', async () => {
     server.use(...createRouteHandlers(CONNECTIONS_FIXTURE.connections));
     const user = userEvent.setup();
 
@@ -444,10 +444,10 @@ describe('экран соединений', () => {
     );
   });
 
-  // Цепочку строки принёс снимок потока, цепочку панели — отдельная ручка
-  // позже: они расходятся штатно (ADR-0007), и панель показывает свою, не
-  // подменяя её цепочкой строки.
-  it('показывает цепочку объяснения, когда она разошлась с цепочкой строки', async () => {
+  // The row chain came with the stream snapshot, the panel chain with a separate handler
+  // later: they diverge in the regular case (ADR-0007), and the panel shows its own, without
+  // replacing it with the row chain.
+  it('shows the explanation chain when it diverged from the row chain', async () => {
     server.use(...createRouteHandlers(CONNECTIONS_FIXTURE.connections));
     const user = userEvent.setup();
 
@@ -463,19 +463,19 @@ describe('экран соединений', () => {
     expect(screen.queryByTitle(/us-hysteria/)).not.toBeInTheDocument();
   });
 
-  it('поиск и срезы стоят на экране один раз, а не в каждой вкладке', async () => {
+  it('search and slices stand on the screen once, not in every tab', async () => {
     ConnectionStore.getState().apply(makeConnectionsSnapshot(8));
     renderScreen();
 
     await screen.findAllByRole('button', { name: /Закрыть соединение/ });
 
-    // Скрытая вкладка тоже в DOM, поэтому считаются и скрытые узлы.
+    // The hidden tab is in the DOM too, so hidden nodes are counted as well.
     expect(screen.getAllByRole('textbox', { name: 'Поиск по соединениям', hidden: true })).toHaveLength(1);
     expect(screen.getAllByRole('group', { name: 'Фильтры', hidden: true })).toHaveLength(1);
     expect(screen.getAllByRole('button', { name: 'Пауза', hidden: true })).toHaveLength(1);
   });
 
-  it('скрытая вкладка стоит на снимке, а число на её ярлыке живое', async () => {
+  it('the hidden tab stands on a snapshot, and the number on its label is live', async () => {
     const user = userEvent.setup();
 
     renderScreen();
@@ -489,16 +489,16 @@ describe('экран соединений', () => {
     });
 
     expect(closedTab).toHaveTextContent('3');
-    // Строки скрытой вкладки не отбираются и не рисуются на каждый снапшот.
+    // Hidden tab rows are not filtered and not drawn for every snapshot.
     expect(within(closedPanel).getByRole('status', { hidden: true })).toHaveTextContent('0 соединений');
 
     await user.click(closedTab);
 
-    // Открытая вкладка показывает текущий набор сразу, а не снимок.
+    // The open tab shows the current set at once, not a snapshot.
     expect(within(closedPanel).getByRole('status')).toHaveTextContent('3 соединения');
   });
 
-  it('переключение вкладок сохраняет фасеты', async () => {
+  it('switching tabs keeps the facets', async () => {
     const user = userEvent.setup();
 
     ConnectionStore.getState().apply(makeConnectionsSnapshot(8));
@@ -517,7 +517,7 @@ describe('экран соединений', () => {
   });
 });
 
-describe('экран соединений на телефоне', () => {
+describe('connections screen on a phone', () => {
   beforeEach(() => {
     ConnectionStore.getState().reset();
     mockVirtualSizes();
@@ -532,7 +532,7 @@ describe('экран соединений на телефоне', () => {
     vi.restoreAllMocks();
   });
 
-  it('держит фасеты теми же кнопками, что и на широком экране, без облака значений', async () => {
+  it('holds the facets with the same buttons as on a wide screen, without a value cloud', async () => {
     const user = userEvent.setup();
 
     ConnectionStore.getState().apply(makeConnectionsSnapshot(8));
@@ -549,9 +549,9 @@ describe('экран соединений на телефоне', () => {
     expect(await screen.findByRole('button', { name: 'Действие: напрямую' })).toBeInTheDocument();
   });
 
-  // На телефоне тулбар переносится, и отдельная кнопка встала бы под поиском,
-  // в зоне большого пальца: разрыв уходит в меню списка за подтверждение.
-  it('закрывает все соединения только через меню списка и подтверждение', async () => {
+  // On a phone the toolbar wraps, and a separate button would sit under the search,
+  // in the thumb zone: the drop goes into the list menu behind a confirmation.
+  it('closes all connections only through the list menu and confirmation', async () => {
     const closedAll = vi.fn<() => void>();
 
     server.use(
@@ -593,7 +593,7 @@ describe('экран соединений на телефоне', () => {
     });
   });
 
-  it('объясняет маршрут листом поверх списка и снимает выбор по Escape', async () => {
+  it('explains the route with a sheet over the list and clears the selection on Escape', async () => {
     server.use(...createRouteHandlers(CONNECTIONS_FIXTURE.connections));
     const user = userEvent.setup();
 

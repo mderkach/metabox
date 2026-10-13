@@ -9,7 +9,7 @@ import { cn } from '@shared/lib/utils';
 import { DELAY_TONE } from './ProxyDelayTone';
 import { toGroupLabel } from './ProxyGroupLabel';
 
-/** Задержка словами: та же подпись идёт в имя плитки и в её видимый угол. */
+/** Latency in words: the same label goes into the tile name and its visible corner. */
 function toDelayText(t: TFunction<'widgets/ProxyGroups'>, node: ProxyNode): string {
   if (node.delay === null) {
     return t('delay.untested', { ns: 'shared' });
@@ -28,7 +28,7 @@ function DelayValue({ node }: { node: ProxyNode }) {
     return <span className='text-xs text-muted-foreground'>{text}</span>;
   }
 
-  // Отдельная подпись, а не «65535 мс»: это отказ соединиться, а не задержка.
+  // A separate label, not "65535 ms": this is a connection failure, not a latency.
   if (node.delay >= DELAY_TIMEOUT) {
     return <span className='text-xs font-medium text-signal-bad'>{text}</span>;
   }
@@ -40,7 +40,7 @@ function DelayValue({ node }: { node: ProxyNode }) {
   );
 }
 
-/** Выбранный узел несёт кромку и галочку: два признака, один не цветовой. */
+/** The selected node carries an edge and a checkmark: two signs, one of them not color-based. */
 function ProxyNodeTileProto({
   node,
   selectable,
@@ -64,17 +64,17 @@ function ProxyNodeTileProto({
     </>
   );
 
-  // Имя собирается явно: части плитки лежат в отдельных блоках без пробелов
-  // между ними, и доступное имя склеилось бы в «usURL-тест609 мс».
+  // The name is assembled explicitly: tile parts lie in separate blocks without spaces
+  // between them, and the accessible name would glue into "usURL-test609 ms".
   const label = t('node.label', {
     name: node.name,
     type: toGroupLabel(t, node.type),
     delay: toDelayText(t, node),
   });
 
-  // `relative` держит внутри плитки скрытую подпись: `sr-only` позиционирован
-  // абсолютно, и без позиционированного предка он уходит за прокрутку экрана и
-  // удлиняет документ — нижняя навигация уезжает вверх.
+  // `relative` keeps the hidden label inside the tile: `sr-only` is positioned
+  // absolutely, and without a positioned ancestor it goes off the screen scroll and
+  // lengthens the document — the bottom navigation slides up.
   const className = cn(
     'relative flex w-full flex-col gap-1.5 rounded-md border px-2.5 py-2 text-left transition-colors',
     node.selected ? 'border-selected-edge bg-selected' : 'border-border bg-card'

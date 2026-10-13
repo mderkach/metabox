@@ -9,19 +9,19 @@ function issues(data: { type: string; tag: string }, taken: readonly string[] = 
 }
 
 describe('makeNodeAddSchema', () => {
-  it('принимает тип и свободный тег', () => {
+  it('accepts a type and a free tag', () => {
     expect(issues({ type: 'direct', tag: 'direct-out' }, ['proxy'])).toEqual([]);
   });
 
-  it('требует выбрать тип', () => {
+  it('requires choosing a type', () => {
     expect(issues({ type: '', tag: 'direct-out' })).toEqual([['type', NODE_ADD_ERROR.TypeRequired]]);
   });
 
-  it('отклоняет пустой тег и тег из одних пробелов', () => {
+  it('rejects an empty tag and a tag of only spaces', () => {
     expect(issues({ type: 'direct', tag: '   ' })).toEqual([['tag', NODE_ADD_ERROR.TagRequired]]);
   });
 
-  it('отклоняет тег, занятый другим узлом, и после обрезки пробелов', () => {
+  it('rejects a tag taken by another node, also after trimming spaces', () => {
     expect(issues({ type: 'direct', tag: ' proxy ' }, ['proxy'])).toEqual([['tag', NODE_ADD_ERROR.TagTaken]]);
   });
 });

@@ -8,13 +8,13 @@ import { ConfigNode } from '../ui/ConfigNode';
 
 const VLESS = { type: 'vless', tag: 'hk-01', server: 'a.example' };
 
-describe('узел секции', () => {
+describe('section node', () => {
   beforeEach(() => {
     ConfigDocumentState.getState().reset();
     ConfigDocumentState.getState().load(JSON.stringify({ outbounds: [VLESS] }, null, 2));
   });
 
-  it('распознанный узел открывается формой по схеме', () => {
+  it('a recognized node opens with a schema form', () => {
     render(<ConfigNode section={CONFIG_SECTION.Outbounds} index={0} node={VLESS} name='hk-01' />);
 
     expect(screen.getByRole('tab', { name: 'Форма' })).toHaveAttribute('aria-selected', 'true');
@@ -22,7 +22,7 @@ describe('узел секции', () => {
     expect(screen.queryByText('UI не покрывает')).not.toBeInTheDocument();
   });
 
-  it('набранное в форме переживает переход на JSON и обратно', async () => {
+  it('what was typed in the form survives a switch to JSON and back', async () => {
     const user = userEvent.setup();
 
     render(<ConfigNode section={CONFIG_SECTION.Outbounds} index={0} node={VLESS} name='hk-01' />);
@@ -43,7 +43,7 @@ describe('узел секции', () => {
     expect(screen.getByRole('textbox', { name: 'server' })).toHaveValue('b.example');
   });
 
-  it('узел с полем, которого схема не знает, помечен и открыт текстом, форма выключена', () => {
+  it('a node with a field the schema does not know is marked and opened as text, the form is disabled', () => {
     const node = { ...VLESS, vendor_option: true };
 
     render(<ConfigNode section={CONFIG_SECTION.Outbounds} index={0} node={node} name='hk-01' />);
@@ -54,7 +54,7 @@ describe('узел секции', () => {
     expect(screen.getByRole('textbox', { name: 'Узел hk-01 текстом' })).toHaveValue(JSON.stringify(node, null, 2));
   });
 
-  it('служба api открывается формой своего оверрайда', () => {
+  it('the api service opens with the form of its override', () => {
     const node = { type: 'api', tag: 'api', listen: '127.0.0.1', listen_port: 9091 };
 
     render(<ConfigNode section={CONFIG_SECTION.Services} index={0} node={node} name='api' />);
@@ -63,7 +63,7 @@ describe('узел секции', () => {
     expect(screen.getByRole('spinbutton', { name: 'listen_port' })).toHaveValue(9091);
   });
 
-  it('прочая служба правится только текстом: автоформ у служб нет', () => {
+  it('any other service is edited only as text: services have no auto forms', () => {
     render(
       <ConfigNode
         section={CONFIG_SECTION.Services}
@@ -80,7 +80,7 @@ describe('узел секции', () => {
   it.each([
     [CONFIG_SECTION.Log, { level: 'info' }],
     [CONFIG_SECTION.DnsRules, { domain: ['a.example'], server: 'local' }],
-  ])('секция %s без реестра правится только текстом', (section, node) => {
+  ])('section %s without a registry is edited only as text', (section, node) => {
     render(<ConfigNode section={section} index={0} node={node} name={section} />);
 
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument();

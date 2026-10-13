@@ -6,25 +6,25 @@ import { checkRuleNode } from '@entities/Rule';
 import { parseJsonc } from '@shared/lib/jsonc';
 import { Alert, AlertDescription, AlertTitle, Button, Textarea } from '@shared/ui';
 
-/** Отступ узла: тот же, что у файла конфига на устройстве. */
+/** Node indent: the same as in the config file on the device. */
 const JSON_INDENT = 2;
 
 /**
- * Правка узла правила текстом.
+ * Editing a rule node as text.
  *
- * Записи мешает только неразобранный JSON. Замечание схемы записи не мешает и
- * показывается предупреждением: арбитр валидности — `sing-box check` на
- * устройстве, а не схема панели, иначе узел, которого схема не знает, нельзя
- * было бы ни поправить, ни сохранить.
+ * Only unparsed JSON blocks the write. A schema remark does not block the write
+ * and is shown as a warning: the validity arbiter is `sing-box check` on the
+ * device, not the panel schema, otherwise a node the schema does not know could
+ * be neither fixed nor saved.
  *
- * Ошибка разбора не стирает введённое: иначе исправить опечатку было бы нечем.
+ * A parse error does not erase the input: otherwise there would be nothing to fix a typo with.
  */
 export function RuleRawEditor({ index, node }: { index: number; node: unknown }) {
   const { t } = useTranslation('features/Rule/RuleRaw');
   const edit = ConfigDocumentState.use.edit();
   const [text, setText] = useState(() => JSON.stringify(node, null, JSON_INDENT));
-  // Сравнивается разобранный узел, а не текст: сохранённый в другом
-  // форматировании узел иначе оставлял бы кнопку активной.
+  // The parsed node is compared, not the text: a node saved in another
+  // formatting would otherwise leave the button active.
   const unchanged = JSON.stringify(parseJsonc(text).value) === JSON.stringify(node);
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);

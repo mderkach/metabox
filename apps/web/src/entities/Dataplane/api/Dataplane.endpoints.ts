@@ -1,4 +1,4 @@
-/** Адреса модели сетевой обвязки и её цикла применения. */
+/** Addresses of the dataplane model and its apply cycle. */
 export const DATAPLANE_ENDPOINT = {
   dataplane: () => '/api/dataplane',
   applyState: (id: string) => `/api/dataplane/apply/${id}`,

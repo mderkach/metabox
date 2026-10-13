@@ -10,32 +10,32 @@ const PERCENT = 100;
 const ROW = 'grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 gap-y-1';
 const LANE = 'col-span-2 block h-1.5 overflow-hidden rounded-full';
 
-/** Два деления: карточка сводки узкая, и больше подписей в строку не встаёт. */
+/** Two ticks: the summary card is narrow, and more labels do not fit in a row. */
 const AXIS_INTERVALS = 2;
 
 export interface SummaryBar {
   key: string;
   label: string;
-  /** Величина в байтах или байтах в секунду: от неё и длина столбца на шкале, и доля от суммы. */
+  /** Quantity in bytes or bytes per second: both the bar length on the scale and the share of the total come from it. */
   value: number;
-  /** Вторая величина строки — после самой величины и её доли: скорость или число соединений. */
+  /** The row's second quantity — after the quantity itself and its share: speed or connection count. */
   caption: string;
-  /** Класс заливки столбца. */
+  /** Bar fill class. */
   tone: string;
 }
 
 /**
- * Ряд величин столбцами на шкале с осью. Длина отвечает на «сколько», процент
- * от суммы ряда рядом с величиной — на «какая часть». Подпись строки
- * начинается с той же величины, что и шкала: иначе длина столбца и первое
- * число строки говорили бы о разном. Строка без величины
- * дорожки не получает: на простаивающем роутере ряд пустых дорожек выглядит
- * как сломанный график.
+ * A series of quantities as bars on a scale with an axis. Length answers "how much", the percent
+ * of the series total next to the quantity answers "what part". The row caption
+ * starts with the same quantity as the scale: otherwise the bar length and the first
+ * number of the row would say different things. A row without a quantity
+ * gets no track: on an idle router a series of empty tracks looks
+ * like a broken chart.
  *
- * Ряд обновляется раз в секунду, поэтому высота у него не пляшет: строка не
- * переносится, место под дорожку держится и у строки без величины, а под
- * пропавшие строки остаётся место — столько, сколько их уже бывало. Резерв
- * наперёд под весь топ оставлял бы пустую карточку там, где узлов два.
+ * The series updates once a second, so its height does not dance: a row does not
+ * wrap, space for a track is held for a row without a quantity too, and space
+ * stays for vanished rows — as many as there have been. Reserving
+ * ahead for the whole top would leave an empty card where there are two nodes.
  */
 export function ConnectionSummaryBars({
   bars,
@@ -44,7 +44,7 @@ export function ConnectionSummaryBars({
 }: {
   bars: SummaryBar[];
   empty: string;
-  /** Подпись деления оси в единицах величины. */
+  /** Axis tick label in the quantity's units. */
   format: (value: number) => string;
 }) {
   const values = bars.map((bar) => bar.value);
@@ -98,7 +98,7 @@ export function ConnectionSummaryBars({
           </li>
         ))}
       </ul>
-      {/* Без величин ось подписала бы шкалу в один байт: делить нечего. */}
+      {/* Without quantities the axis would label the scale at one byte: nothing to divide. */}
       {peak > 0 && <ValueAxis scale={scale} format={format} />}
     </div>
   );

@@ -11,7 +11,7 @@ const EXPORT_FORMATS = [
   { format: EXPORT_FORMAT.Json, label: 'export.json' },
 ] as const satisfies readonly { format: ExportFormat; label: ParseKeys<'pages/Connections'> }[];
 
-/** Выгрузка: подвал таблицы, рядом со счётчиком — уходит ровно то, что он называет. */
+/** Export: the table footer, next to the counter; exactly what it names is exported. */
 export function ConnectionExport({ rows, sourceLabel }: { rows: ConnectionRow[]; sourceLabel: ConnectionSourceLabel }) {
   const { t } = useTranslation('pages/Connections');
 

@@ -7,16 +7,16 @@ import { cn } from '../lib/utils';
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from './shadcn/input-group';
 
 /**
- * Поле со свободным вводом и подсказками. Значение — сам текст поля: подсказка
- * его только подставляет, и имя, которого в списке нет, остаётся допустимым
- * вводом. У shadcn такого примитива нет — его комбобокс выбирает только из
- * списка.
+ * A free-input field with suggestions. The value is the field text itself: a suggestion
+ * only fills it in, and a name that is not in the list remains a valid
+ * input. shadcn has no such primitive — its combobox only selects from
+ * the list.
  *
- * Отбор делает вызывающий: `items` показываются как есть и в том же порядке.
+ * Filtering is done by the caller: `items` are shown as they are and in the same order.
  *
- * Без подсказок список не открывается. Открытый список Base UI прячет от
- * скринридера остальную страницу (`aria-hidden`), и пустой невидимый попап
- * заглушил бы предупреждение, которое форма показывает под полем.
+ * Without suggestions the list does not open. An open Base UI list hides the rest of the page
+ * from the screen reader (`aria-hidden`), and an empty invisible popup
+ * would mute the warning the form shows under the field.
  */
 export function Autocomplete({
   items,

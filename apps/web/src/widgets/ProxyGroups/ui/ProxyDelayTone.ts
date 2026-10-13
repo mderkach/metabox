@@ -1,6 +1,6 @@
 import { DELAY_STATE, type DelayState } from '@entities/Proxy';
 
-/** Тон задержки: один на плитку узла и на легенду, иначе легенда разойдётся с плитками. */
+/** Latency tone: one for the node tile and the legend, otherwise the legend diverges from the tiles. */
 export const DELAY_TONE: Readonly<Record<DelayState, string>> = {
   [DELAY_STATE.Fast]: 'text-signal-ok',
   [DELAY_STATE.Slow]: 'text-signal-warn',

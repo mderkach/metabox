@@ -11,25 +11,25 @@ import { Badge, Button, Input, SEARCH_FIELD, SURFACE } from '@shared/ui';
 import { findMatches, lineIndexOf, toJsonTokens, tokenIndexAt, useRawEditorWrap } from '../lib';
 import { ConfigRawOutline } from './ConfigRawOutline';
 
-/** Один класс на все три слоя: при наложении метрики обязаны совпадать до пикселя. */
+/** One class for all three layers: when overlaid, metrics must match to the pixel. */
 const CODE_CLASS = 'font-mono text-xs/5';
 
 /**
- * Раскладка текста у поля и слоя подсветки — одна на оба, иначе перенос
- * разойдётся. Место под полосу прокрутки держат оба слоя: у поля она есть, у
- * подсветки нет, и без запаса ширина строки у них различалась бы на её толщину.
+ * Text layout of the field and the highlight layer is one for both, otherwise wrapping
+ * would diverge. Both layers reserve space for the scrollbar: the field has one, the
+ * highlight does not, and without the reserve their line widths would differ by its thickness.
  */
 const LAYER_CLASS = 'absolute inset-0 px-3 py-3 [scrollbar-gutter:stable]';
 const LAYOUT_WRAP = 'whitespace-pre-wrap wrap-break-word';
 const LAYOUT_NO_WRAP = 'whitespace-pre';
 
-/** Совпадение ставится в середину видимой области, а не к её краю. */
+/** A match is placed in the middle of the visible area, not at its edge. */
 const HALVES = 2;
 
-/** Замечания сверх этого числа названы счётчиком: подвал — не журнал. */
+/** Remarks beyond this number are named by a counter: the footer is not a journal. */
 const VISIBLE_ISSUES = 3;
 
-/** Разбор сообщает позицию в символах — экрану нужна строка. */
+/** Parsing reports the position in characters — the screen needs a line. */
 function lineOfPosition(text: string, position: number): number {
   return lineIndexOf(text, position) + 1;
 }
@@ -45,23 +45,23 @@ function parseError(t: TFunction<'widgets/Config/ConfigRawEditor'>, text: string
 }
 
 /**
- * Правка всего конфига текстом.
+ * Editing the whole config as text.
  *
- * Ошибка разбора не стирает введённое и не откатывает поле: текст остаётся в
- * том виде, в каком его печатает пользователь, а сообщение показывается рядом.
- * Без этого исправить опечатку было бы нечем — поле сбрасывалось бы на каждый
- * незакрытый тег.
+ * A parse error does not erase the input or roll back the field: the text stays in
+ * the form the user is typing it, and the message is shown beside it.
+ * Without this there would be no way to fix a typo — the field would reset on every
+ * unclosed tag.
  *
- * Подсветка нарисована слоем под прозрачным `textarea`, а не редактором кода:
- * готовый редактор весит больше всей панели, а токены даёт сканер
- * `jsonc-parser`, который уже стоит в зависимостях ради разбора конфига.
- * Из-за наложения метрики шрифта у слоёв обязаны совпадать до пикселя, поэтому
- * кегль и интерлиньяж заданы одной константой на оба.
+ * Highlighting is drawn as a layer under a transparent `textarea`, not by a code editor:
+ * a ready-made editor weighs more than the whole panel, and tokens come from the
+ * `jsonc-parser` scanner, which is already a dependency for config parsing.
+ * Because of the overlay, font metrics of the layers must match to the pixel, so
+ * font size and line height are set by one constant for both.
  *
- * Нумерации строк в режиме переноса нет: колонка номеров рисует по строке на
- * номер, а перенесённая строка занимает несколько. Согласовать их можно только
- * замером высоты каждой строки, и ради этого слой подсветки пришлось бы
- * разбивать по строкам.
+ * There is no line numbering in wrap mode: the number column draws one row per
+ * number, while a wrapped line takes several. They can be reconciled only by
+ * measuring each line's height, and for that the highlight layer would have to be
+ * split by lines.
  */
 export function ConfigRawEditor({
   text,
@@ -85,9 +85,9 @@ export function ConfigRawEditor({
   const tokens = useMemo(() => toJsonTokens(draft), [draft]);
   const matches = useMemo(() => findMatches(draft, query), [draft, query]);
   const lines = useMemo(() => draft.split('\n').length, [draft]);
-  // Ошибку разбора ищет проход по всему тексту, и ей кадр отставания не
-  // страшен — она откладывается за вводом. Подсветку откладывать нельзя: поле
-  // прозрачное поверх неё, и отставший слой разошёлся бы с текстом под кареткой.
+  // The parse error is found by a pass over the whole text, and a frame of lag does not
+  // matter for it — it is deferred behind the input. Highlighting cannot be deferred: the field is
+  // transparent over it, and a lagging layer would diverge from the text under the caret.
   const checkedDraft = useDeferredValue(draft);
   const error = useMemo(() => parseError(t, checkedDraft), [t, checkedDraft]);
 
@@ -98,8 +98,8 @@ export function ConfigRawEditor({
       return;
     }
 
-    // Прокрутка двигает слои напрямую, минуя состояние: на семистах строках
-    // рендер на каждый кадр прокрутки заметно дёргает подсветку.
+    // Scrolling moves the layers directly, bypassing state: on seven hundred lines
+    // a render on every scroll frame noticeably jerks the highlight.
     if (highlightRef.current !== null) {
       highlightRef.current.scrollTop = input.scrollTop;
       highlightRef.current.scrollLeft = input.scrollLeft;
@@ -111,8 +111,8 @@ export function ConfigRawEditor({
   }
 
   /**
-   * Высота позиции в тексте. Без переноса строка — это строка файла. С
-   * переносом высоту даёт кусок слоя подсветки: перенос у него тот же.
+   * Height of a text position. Without wrapping a line is a file line. With
+   * wrapping the height comes from a highlight layer chunk: its wrapping is the same.
    */
   function offsetTop(input: HTMLTextAreaElement, at: number): number {
     if (wrap) {
@@ -123,9 +123,9 @@ export function ConfigRawEditor({
       }
     }
 
-    // Шаг строки берётся из DOM, а не константой: кегль задан в `rem` и растёт
-    // вместе с настройкой шрифта браузера, а константа в пикселях давала промах
-    // тем больше, чем дальше строка.
+    // The line step is taken from the DOM, not a constant: the font size is set in `rem` and grows
+    // with the browser font setting, while a pixel constant would miss
+    // more the farther the line.
     return lineIndexOf(draft, at) * parseFloat(globalThis.getComputedStyle(input).lineHeight);
   }
 
@@ -138,7 +138,7 @@ export function ConfigRawEditor({
 
     input.focus();
     input.setSelectionRange(at, at + length);
-    // Выделение само не прокручивает поле.
+    // Selection does not scroll the field by itself.
     input.scrollTop = Math.max(0, offsetTop(input, at) - input.clientHeight / HALVES);
     syncScroll();
   }
@@ -221,9 +221,9 @@ export function ConfigRawEditor({
       <div className={cn('flex min-h-0 grow overflow-hidden', SURFACE)}>
         {!wrap && (
           <div
-            // Колонка возвращается при выключении переноса с нулевой прокруткой,
-            // а поле своей не теряет и события scroll не шлёт: без сверки при
-            // монтировании номера начинались бы с единицы над серединой файла.
+            // The column returns when wrapping is turned off with zero scroll,
+            // while the field does not lose its own and sends no scroll event: without a check on
+            // mount the numbers would start from one above the middle of the file.
             ref={(node) => {
               gutterRef.current = node;
               syncScroll();

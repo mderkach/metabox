@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-/** Действия правила, у которых есть смысл в списке маршрутизации. */
+/** Rule actions that make sense in the routing list. */
 export const RULE_ACTION = {
   Route: 'route',
   Reject: 'reject',
@@ -9,8 +9,8 @@ export const RULE_ACTION = {
 } as const;
 
 /**
- * Отказы формы кодами: текст подставляет `ui`, потому что словарь слайса —
- * его забота, а схема о языке ничего не знает.
+ * Form failures as codes: the `ui` substitutes the text, because the slice
+ * dictionary is its concern, and the schema knows nothing about language.
  */
 export const RULE_EDIT_ERROR = {
   OutboundRequired: 'outboundRequired',
@@ -18,9 +18,10 @@ export const RULE_EDIT_ERROR = {
 } as const;
 
 /**
- * Условия, которые форма правит списком по строке на значение: ими задаются
- * сценарии «домен или адрес — через выход» и «устройство — через выход».
- * Остальных видов сорок с лишним, они правятся текстом узла.
+ * Conditions that the form edits as a list, one value per line: they set the
+ * scenarios "domain or address through an outbound" and "device through an
+ * outbound". There are more than forty other kinds, and they are edited as node
+ * text.
  */
 export const RULE_CONDITION = {
   Domain: 'domain',
@@ -66,15 +67,16 @@ const ConditionsSchema = z.object({
 });
 
 /**
- * Что правит форма правила: выход, сеты и ходовые условия. Условия держатся
- * текстом — по значению на строку, — а в узел уходят списком.
+ * What the rule form edits: the outbound, sets and common conditions.
+ * Conditions are held as text, one value per line, and go into the node as a
+ * list.
  */
 export const RuleEditSchema = z.object({
-  /** Что делать с трафиком, подошедшим под условия правила */
+  /** What to do with traffic that matched the rule conditions */
   action: z.enum([RULE_ACTION.Route, RULE_ACTION.Reject, RULE_ACTION.HijackDns, RULE_ACTION.Sniff]),
-  /** Тег outbound'а; обязателен только у `route` */
+  /** Outbound tag; required only for `route` */
   outbound: z.string(),
-  /** Теги наборов из `route.rule_set`; пустой список — поля в узле нет */
+  /** Set tags from `route.rule_set`; an empty list means no field in the node */
   ruleSet: z.array(z.string()),
   conditions: ConditionsSchema,
 });
@@ -82,15 +84,17 @@ export const RuleEditSchema = z.object({
 export type RuleEditModel = z.infer<typeof RuleEditSchema>;
 
 /**
- * Правка, которая ляжет в узел конфига.
+ * The edit that will go into the config node.
  *
- * `outbound` уходит только у `route`: у остальных действий поля в схеме нет, и
- * записанный пустой тег добавил бы в диф правку, которой пользователь не делал.
- * Пустой тег у `route` — ошибка формы, а не повод писать пустую строку.
+ * `outbound` goes only for `route`: other actions have no such field in the
+ * schema, and a written empty tag would add an edit to the diff that the user
+ * did not make. An empty tag for `route` is a form error, not a reason to write
+ * an empty string.
  *
- * `rule_set` и условия уходят только непустыми: пустой список остался бы в
- * узле полем, которое ничего не проверяет, — снятое условие убирает поле.
- * Порт пишется числом: так его ждёт схема sing-box.
+ * `rule_set` and conditions go only when non-empty: an empty list would stay in
+ * the node as a field that checks nothing, and a removed condition removes the
+ * field. The port is written as a number: that is how the sing-box schema
+ * expects it.
  */
 export const RuleEditAdapterSchema = RuleEditSchema.refine(
   (data) => data.action !== RULE_ACTION.Route || data.outbound.length > 0,

@@ -19,7 +19,7 @@ describe('AppSidebarBottomNav', () => {
     );
   });
 
-  it('ведёт на разделы меню ссылками с подписями, служебные — в листе «Ещё»', async () => {
+  it('leads to menu sections with labeled links, service ones in the "More" sheet', async () => {
     renderWithRouter(AppSidebarBottomNav);
 
     const nav = await screen.findByRole('navigation', { name: 'Разделы панели' });
@@ -29,14 +29,14 @@ describe('AppSidebarBottomNav', () => {
       NAV_ITEMS.filter((item) => item.more !== true).map((item) => item.to)
     );
     expect(within(nav).getByRole('link', { name: 'Обзор' })).toBeInTheDocument();
-    // Полное «Конфигурация» не помещается в колонку телефона.
+    // The full "Конфигурация" does not fit in a phone column.
     expect(within(nav).getByRole('link', { name: 'Конфиг' })).toHaveAttribute('href', '/config');
-    // «Соединения» и «Устройства» шире колонки на 375px и обрезались бы.
+    // "Соединения" and "Устройства" are wider than the column at 375px and would be truncated.
     expect(within(nav).getByRole('link', { name: 'Связи' })).toHaveAttribute('href', '/connections');
     expect(within(nav).getByRole('link', { name: 'Клиенты' })).toHaveAttribute('href', '/devices');
   });
 
-  it('помечает текущим один раздел, даже когда адрес вложен в него', async () => {
+  it('marks one section as current, even when the address is nested in it', async () => {
     renderWithRouter(AppSidebarBottomNav, { path: '/config/rule-set' });
 
     const nav = await screen.findByRole('navigation', { name: 'Разделы панели' });
@@ -46,9 +46,9 @@ describe('AppSidebarBottomNav', () => {
     expect(current[0]).toHaveAttribute('href', '/config');
   });
 
-  // Шестая и седьмая колонки на ширине телефона не помещаются: логи и
-  // диагностика открываются из «Ещё», и пункт «Ещё» помечен, пока открыт один из них.
-  it('«Ещё» ведёт на логи и диагностику и закрывается переходом', async () => {
+  // The sixth and seventh columns do not fit at phone width: logs and
+  // diagnostics open from "More", and the "More" item is marked while one of them is open.
+  it('"More" leads to logs and diagnostics and closes on navigation', async () => {
     const user = userEvent.setup();
 
     renderWithRouter(AppSidebarBottomNav, { path: '/logs' });
@@ -67,8 +67,8 @@ describe('AppSidebarBottomNav', () => {
     });
   });
 
-  // На телефоне боковой панели нет, и её подвал не должен пропасть вместе с ней.
-  it('«Ещё» открывает лист с состоянием службы, темой и языком', async () => {
+  // A phone has no sidebar, and its footer must not vanish along with it.
+  it('"More" opens a sheet with the service state, theme and language', async () => {
     const user = userEvent.setup();
 
     renderWithRouter(AppSidebarBottomNav);

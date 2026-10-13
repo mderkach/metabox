@@ -6,9 +6,9 @@ import { SHEET_BOTTOM, Sheet, SheetContent } from '@shared/ui';
 import { RuleSetPanel } from './RuleSetPanel';
 
 /**
- * Панель сета листом поверх списка — на узком экране, где рядом с ним ей нет
- * места. Лист уезжает анимацией уже после закрытия, поэтому заголовок и форму
- * страница отдаёт и закрытому листу: иначе он уезжал бы пустым.
+ * Rule set panel as a sheet on top of the list — on a narrow screen, where there is no room
+ * for it beside the list. The sheet slides away with an animation after closing, so the page
+ * gives the title and form to the closed sheet too: otherwise it would slide away empty.
  */
 export function RuleSetPanelSheet({
   open,

@@ -2,21 +2,21 @@ import { create, type StateCreator } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
 /**
- * Набор middleware, общий для всех сторов приложения: `devtools` — чтобы шаги
- * применения было видно в расширении.
+ * Middleware set shared by all application stores: `devtools` — so that the apply
+ * steps are visible in the extension.
  *
- * Черновик immer из набора убран: правка узла конфига идёт по тексту, а не по
- * дереву, и ни один стор вложенных узлов не мутирует. Взамен каждый снапшот
- * потока оборачивался в прокси — на пяти тысячах соединений это
- * съедало почти всё время обработчика ([ADR-0024](../../../../../../docs/adr/ADR-0024-drop-the-immer-draft-from-frontend-stores.md)).
+ * The immer draft is removed from the set: editing a config node goes by text, not by
+ * tree, and no store mutates nested nodes. Instead, each stream snapshot
+ * was wrapped in a proxy — on five thousand connections this
+ * ate almost all of the handler time ([ADR-0024](../../../../../../docs/adr/ADR-0024-drop-the-immer-draft-from-frontend-stores.md)).
  */
 type Middlewares = [['zustand/devtools', never]];
 
 /**
- * Фабрика стора. Собирается здесь, а не на месте, чтобы набор middleware не
- * разъезжался между сторами: `devtools` без имени сливает их в один поток.
+ * Store factory. Assembled here, not on the spot, so the middleware set does not
+ * drift between stores: `devtools` without a name merges them into one stream.
  *
- * `name` виден в Redux DevTools и должен совпадать с ролью стора
+ * `name` is visible in Redux DevTools and must match the store's role
  * (`ConfigDocument`, `ConnectionStream`).
  */
 export function stateCreator<T extends object>(initializer: StateCreator<T, Middlewares>, name: string) {

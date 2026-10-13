@@ -16,25 +16,25 @@ const TEXT = `{
   "route": { "rules": [], "rule_set": [], "final": "direct", "default_mark": 1 }
 }`;
 
-describe('скаляры секции', () => {
-  it('узнаёт секции со скалярами', () => {
+describe('section scalars', () => {
+  it('recognizes sections with scalars', () => {
     expect(isSettingsSection(CONFIG_SECTION.Route)).toBe(true);
     expect(isSettingsSection(CONFIG_SECTION.Dns)).toBe(true);
     expect(isSettingsSection(CONFIG_SECTION.Log)).toBe(false);
     expect(sectionSettingsPath(CONFIG_SECTION.Route)).toEqual(['route']);
   });
 
-  it('читает скаляры без списков', () => {
+  it('reads scalars without lists', () => {
     expect(readSectionSettings(TEXT, CONFIG_SECTION.Route)).toEqual({ final: 'direct', default_mark: 1 });
     expect(readSectionSettings(TEXT, CONFIG_SECTION.Dns)).toEqual({ final: 'local' });
   });
 
-  it('отдаёт пустой объект для отсутствующей секции и null для не-объекта', () => {
+  it('returns an empty object for a missing section and null for a non-object', () => {
     expect(readSectionSettings('{}', CONFIG_SECTION.Dns)).toEqual({});
     expect(readSectionSettings('{ "dns": [] }', CONFIG_SECTION.Dns)).toBeNull();
   });
 
-  it('в схеме формы нет списков секции', () => {
+  it('the form schema has no section lists', () => {
     const route = toFieldPlan(sectionSettingsSchema(CONFIG_SECTION.Route)).map((field) => field.key);
     const dns = toFieldPlan(sectionSettingsSchema(CONFIG_SECTION.Dns)).map((field) => field.key);
 
@@ -46,7 +46,7 @@ describe('скаляры секции', () => {
     expect(dns).not.toContain('rules');
   });
 
-  it('незнакомый ключ делает скаляры нераспознанными', () => {
+  it('an unknown key makes the scalars unrecognized', () => {
     expect(isSectionSettingsRecognized(CONFIG_SECTION.Route, { final: 'direct' })).toBe(true);
     expect(isSectionSettingsRecognized(CONFIG_SECTION.Route, { final: 'direct', unknown_key: 1 })).toBe(false);
   });

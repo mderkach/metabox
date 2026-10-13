@@ -11,11 +11,11 @@ import { formatUpdateInterval } from './RuleSetInterval';
 import { RuleSetRemove } from './RuleSetRemove';
 
 /**
- * Строка набора.
+ * Rule set row.
  *
- * Имя набора — первое, что читается: именно на него ссылаются правила. Ниже
- * идёт происхождение — чьему списку доверяет маршрут, — а справа то, ради чего
- * набор вообще подключали: сколько правил им пользуется.
+ * The rule set name is the first thing read: rules reference it. Below
+ * comes the origin — whose list the route trusts — and on the right what the
+ * rule set was attached for in the first place: how many rules use it.
  */
 function RuleSetRowProto({
   set,
@@ -25,7 +25,7 @@ function RuleSetRowProto({
 }: {
   set: RuleSetRowModel;
   rowIndex: number;
-  /** Без него строка правку не предлагает. */
+  /** Without it the row does not offer editing. */
   onEdit?: (index: number) => void;
   onRemove: (index: number) => void;
 }) {
@@ -112,22 +112,22 @@ function RuleSetRowProto({
 }
 
 /**
- * Формой правится только `remote`, принятый схемой и с тегом-строкой: у
- * остальных видов другие поля, а незнакомое поле форма потеряла бы.
+ * Only `remote` that the schema accepted and with a string tag is edited by the form: the
+ * other kinds have different fields, and the form would lose an unfamiliar field.
  */
 function isEditable(set: RuleSetRowModel): boolean {
   return set.type === RULE_SET_TYPE.Remote && set.recognized && set.tag !== '';
 }
 
 /**
- * Сколько правил пользуется набором. Ноль — не ошибка и не тревога: набор
- * исправен, просто ни на что не влияет, — поэтому он помечен контуром, а не
- * тоном отказа, и цвет тут вообще не работает признаком.
+ * How many rules use the rule set. Zero is not an error or an alarm: the rule set
+ * is fine, it just affects nothing — so it is marked with an outline, not
+ * the failure tone, and color is not a sign here at all.
  *
- * Отметка ведёт на экран правил, отобранных по этому сету: подключить набор и
- * сослаться на него из правила — два разных экрана, и следующий шаг после
- * подключения начинается отсюда. У набора без имени ссылки нет — правило на
- * него сослаться не может.
+ * The mark leads to the screen of rules filtered by this rule set: attaching a rule set and
+ * referencing it from a rule are two different screens, and the next step after
+ * attaching starts here. A rule set without a name has no link — a rule cannot
+ * reference it.
  */
 function UsageMark({ tag, usedBy }: { tag: string; usedBy: number }) {
   const { t } = useTranslation('widgets/RuleSet/RuleSetTable');

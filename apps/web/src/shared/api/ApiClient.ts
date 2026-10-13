@@ -10,22 +10,22 @@ const BAD_GATEWAY = 502;
 const SERVICE_UNAVAILABLE = 503;
 const GATEWAY_TIMEOUT = 504;
 
-/** Без тела демона они значат то же, что оборванный запрос: ответил посредник. */
+/** Without a daemon body they mean the same as a broken request: an intermediary answered. */
 const GATEWAY_STATUS = new Set([BAD_GATEWAY, SERVICE_UNAVAILABLE, GATEWAY_TIMEOUT]);
 
-/** Тело отказа демона приходит из его контракта. */
+/** The daemon's refusal body comes from its contract. */
 const ApiErrorBodySchema = ErrorSchema;
 
 /**
- * Отказ Clash API, который демон проксирует дословно: кода у него нет. Ядро
- * ставит ему и 503 — подписка не обновилась, — и без разбора тела такой ответ
- * читался бы молчанием демона, а тост о нём гасился бы.
+ * A Clash API refusal that the daemon proxies verbatim: it has no code. The core
+ * also returns 503 for it — a subscription did not update — and without parsing the body such a response
+ * would read as the daemon being silent, and the toast about it would be suppressed.
  */
 const ClashErrorBodySchema = z.object({ message: z.string() });
 
 /**
- * Тело отказа приходит строкой, когда запрос просил сырой текст: без разбора
- * код и сообщение демона потерялись бы, и `config_missing` стал бы «Not Found».
+ * The refusal body arrives as a string when the request asked for raw text: without parsing,
+ * the daemon's code and message would be lost, and `config_missing` would become "Not Found".
  */
 function asErrorBody(data: unknown): unknown {
   if (typeof data !== 'string') {
@@ -42,9 +42,9 @@ function asErrorBody(data: unknown): unknown {
 function fromResponse(response: AxiosResponse<unknown>): ApiError {
   const body = ApiErrorBodySchema.safeParse(asErrorBody(response.data));
 
-  // Тело в формате демона разбирается раньше статуса: шлюзовой код демон
-  // ставит и сам — так он сообщает, что недоступен рантайм sing-box, а не он.
-  // Без этой проверки лежащий sing-box читался бы как молчащий демон.
+  // A body in the daemon format is parsed before the status: the daemon sets
+  // the gateway code itself too — that is how it reports the sing-box runtime is unavailable, not itself.
+  // Without this check a down sing-box would read as a silent daemon.
   if (body.success) {
     return new ApiError(API_FAILURE.Response, body.data.message, {
       status: response.status,
@@ -70,7 +70,7 @@ function fromResponse(response: AxiosResponse<unknown>): ApiError {
   });
 }
 
-/** Отмену пропускает как есть: её порождает Query при размонтировании. */
+/** Cancellation passes through as is: Query produces it on unmount. */
 function toApiError(error: unknown): unknown {
   if (axios.isCancel(error)) {
     return error;
@@ -91,7 +91,7 @@ function toApiError(error: unknown): unknown {
 
 export interface TaggedResponse<T> {
   body: T;
-  /** `ETag` как прислал сервер, с кавычками: он возвращается в `If-Match` без разбора. */
+  /** `ETag` as the server sent it, with quotes: it goes back into `If-Match` unparsed. */
   etag: string | null;
 }
 
@@ -102,8 +102,8 @@ function readEtag(response: AxiosResponse<unknown>): string | null {
 }
 
 /**
- * Отдаёт тело ответа, а не конверт транспорта. Ретраев нет: ими заведует Query,
- * а второй слой повторов запустил бы на устройстве второй цикл применения.
+ * Returns the response body, not the transport envelope. No retries: Query owns them,
+ * and a second retry layer would start a second apply cycle on the device.
  */
 export class ApiClient {
   private readonly http: AxiosInstance;
@@ -122,7 +122,7 @@ export class ApiClient {
     return response.data;
   }
 
-  /** Тот же `get`, но с `ETag` ответа: он нужен ручкам с оптимистичной блокировкой. */
+  /** The same `get`, but with the response `ETag`: needed by endpoints with optimistic locking. */
   async getTagged<T>(url: string, config?: AxiosRequestConfig): Promise<TaggedResponse<T>> {
     const response = await this.http.get<T>(url, config);
 

@@ -10,18 +10,18 @@ import { render } from '@testing-library/react';
 import type { FunctionComponent } from 'react';
 
 interface ScreenRoute {
-  /** Путь экрана: нужен тем, кто читает свой адрес через `useSearch({ from })`. */
+  /** Screen path: needed by those who read their address via `useSearch({ from })`. */
   path?: string;
-  /** Разбор параметров адреса — тот же, что у настоящего маршрута. */
+  /** Address parameter parsing — the same as in the real route. */
   validateSearch?: (search: Record<string, unknown>) => Record<string, unknown>;
-  /** Адрес, с которого начинается тест: сюда кладётся готовый отбор. */
+  /** Address the test starts from: a ready filter goes here. */
   initialEntry?: string;
 }
 
 /**
- * Рендер экрана внутри роутера: ссылки на другие разделы — часть экрана, и без
- * роутера они падают. Маршрут один и в памяти — переходы здесь не проверяются,
- * для них есть тест самого роутера.
+ * Render of a screen inside the router: links to other sections are part of the screen, and without
+ * a router they fail. There is one in-memory route — transitions are not tested here,
+ * there is a test of the router itself for that.
  */
 export function renderWithRouter(Component: FunctionComponent, route: ScreenRoute = {}) {
   const queryClient = new QueryClient({
@@ -47,7 +47,7 @@ export function renderWithRouter(Component: FunctionComponent, route: ScreenRout
         <RouterProvider router={router} />
       </QueryClientProvider>
     ),
-    /** Роутер теста: по нему проверяют, что экран записал состояние в адрес. */
+    /** Test router: used to check that the screen wrote state into the address. */
     router,
   };
 }

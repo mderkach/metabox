@@ -29,23 +29,24 @@ import { PendingPage } from '../ui/PendingPage';
 import { toPageTransitionTypes } from './Router.transition';
 
 /**
- * Загрузчик ждёт данные экрана, но отказ не бросает: экран панели обязан
- * открыться и при лежащем источнике. Запрос остаётся в кэше с ошибкой, и её
- * показывает блок экрана.
+ * The loader waits for the screen data but does not throw on failure: a panel
+ * screen must open even when the source is down. The query stays in the cache
+ * with the error, and the screen block shows it.
  */
 function keepFailureForScreen(): undefined {
   return undefined;
 }
 
-/** Порог скелетона экрана: быстрее этого ответ читается как мгновенный, и скелетон только мигнул бы. */
+/** Screen skeleton threshold: a response faster than this reads as instant, and the skeleton would only flash. */
 const PENDING_MS = 300;
 
 const rootRoute = createRootRoute({ component: AppLayout, notFoundComponent: NotFoundPage });
 
 /**
- * Стартовый экран зависит от ширины: с телефона на роутер заходят проверить,
- * что всё работает, — это обзор; за столом правят конфигурацию. Ширина
- * замеряется в момент перехода, подписка здесь не нужна.
+ * The start screen depends on width: from a phone people open the router to
+ * check that everything works, which is the overview; at a desk they edit the
+ * configuration. Width is measured at the moment of the transition, no
+ * subscription is needed here.
  */
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -56,9 +57,9 @@ const indexRoute = createRoute({
 });
 
 /**
- * Раздел конфигурации: оболочка с шапкой и полосой вкладок, под ней вкладка.
- * Вкладки — дочерние маршруты, поэтому переход между ними меняет один узел
- * дерева, а не пересобирает раздел целиком.
+ * Configuration section: a shell with a header and a tab strip, with the tab
+ * under it. Tabs are child routes, so switching between them changes one tree
+ * node instead of rebuilding the whole section.
  */
 const configLayoutRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -117,9 +118,9 @@ const rawConfigRoute = createRoute({
 });
 
 /**
- * Секции без собственного экрана — один экран с параметром: их узлы
- * открываются формой по схеме и текстом. Статические `rule-set` и `raw`
- * матчатся раньше параметра, а чужое имя секции — обычный 404.
+ * Sections without their own screen share one screen with a parameter: their
+ * nodes open as a schema form and as text. The static `rule-set` and `raw`
+ * match before the parameter, and a foreign section name is a plain 404.
  */
 const configSectionRoute = createRoute({
   getParentRoute: () => configLayoutRoute,
@@ -183,7 +184,7 @@ const logsRoute = createRoute({
   component: lazyRouteComponent(async () => import('@pages/Logs'), 'LogsPage'),
 });
 
-/** Отчёт не грузится заранее: прогон шлёт пакеты и идёт только по кнопке. Узлы для выбора — из прокси. */
+/** The report is not loaded in advance: a run sends packets and starts only on the button. Nodes for selection come from the proxy. */
 const diagnosticsRoute = createRoute({
   getParentRoute: () => rootRoute,
   loader: async () =>
@@ -226,8 +227,8 @@ const routeTree = rootRoute.addChildren([
 ]);
 
 /**
- * `history` подменяют тесты: каждому нужен свой роутер со своим адресом —
- * общий экземпляр хранит адрес, на котором остановился предыдущий тест.
+ * Tests replace `history`: each needs its own router with its own address,
+ * while a shared instance keeps the address where the previous test stopped.
  */
 export function createPanelRouter(history?: RouterHistory) {
   return createRouter({

@@ -1,31 +1,31 @@
 /**
- * Счёт графиков панели: доли, шкалы, деления и геометрия. Разметку и цвета
- * держат сами графики.
+ * Chart math for the panel: shares, scales, ticks and geometry. Markup and colors
+ * are kept by the charts themselves.
  */
 
-/** По одной точке линию не проведёшь. */
+/** A line cannot be drawn through a single point. */
 const MIN_POINTS = 2;
 
-/** Сотые доли области: площадь всё равно растягивается по месту. */
+/** Hundredths of the area: the area stretches to fit in place anyway. */
 const COORD_PRECISION = 2;
 
 const FULL_TURN = 360;
 
 export interface AreaGeometry {
-  /** Точки для `polyline`. */
+  /** Points for `polyline`. */
   line: string;
-  /** Замкнутый контур под линией для заливки. */
+  /** Closed outline under the line for the fill. */
   area: string;
 }
 
-/** Доля от суммы; нулевая сумма даёт ноль, а не `NaN`. */
+/** Share of the total; a zero total gives zero, not `NaN`. */
 export function toShare(value: number, total: number): number {
   return total > 0 ? value / total : 0;
 }
 
 /**
- * Ряд от нулевой линии вверх. Пик задаётся снаружи: у соседних графиков он
- * общий, и посчитанный внутри развёл бы им шкалы.
+ * A series from the zero line upward. The peak is set from outside: neighboring charts
+ * share it, and one computed inside would spread their scales apart.
  */
 export function toAreaGeometry(values: number[], peak: number, width: number, height: number): AreaGeometry | null {
   if (values.length < MIN_POINTS) {
@@ -48,14 +48,14 @@ export function toAreaGeometry(values: number[], peak: number, width: number, he
 const PERCENT = 100;
 
 /**
- * Доли целыми процентами, в сумме ровно сто. Округление каждой доли по
- * отдельности даёт 88 и 13 на сводке из двух групп — метод наибольшего
- * остатка отдаёт разницу тем, у кого она крупнее.
+ * Shares as whole percentages, summing to exactly one hundred. Rounding each share
+ * separately gives 88 and 13 on a summary of two groups — the largest remainder
+ * method gives the difference to the one where it is larger.
  */
 export function toPercents(values: number[]): number[] {
   const total = values.reduce((sum, value) => sum + value, 0);
 
-  // Без этой ветки пустая сводка раздала бы все сто процентов нулевым долям.
+  // Without this branch an empty summary would hand all hundred percent to zero shares.
   if (total === 0) {
     return values.map(() => 0);
   }
@@ -73,16 +73,16 @@ export function toPercents(values: number[]): number[] {
 }
 
 export interface DonutSegment {
-  /** Значение `stroke-dasharray`: длина дуги и остаток окружности. */
+  /** `stroke-dasharray` value: the arc length and the rest of the circumference. */
   dash: string;
-  /** Поворот начала дуги в градусах — им сегменты встают друг за другом. */
+  /** Rotation of the arc start in degrees — it lines segments up one after another. */
   turn: number;
 }
 
 /**
- * Кольцо из долей одной окружностью на сегмент. Дуги рисуются штрихом, а не
- * путями через `arc`: у штриха доля — это длина, и её не приходится считать
- * тригонометрией на каждый сегмент.
+ * A ring from shares, one circle per segment. Arcs are drawn with a dash, not
+ * with `arc` paths: with a dash a share is a length, and it does not have to be computed
+ * by trigonometry for each segment.
  */
 export function toDonutSegments(values: number[], circumference: number): DonutSegment[] {
   const total = values.reduce((sum, value) => sum + value, 0);
@@ -101,10 +101,10 @@ export function toDonutSegments(values: number[], circumference: number): DonutS
   });
 }
 
-/** Делений на шкале не больше четырёх: подписи в узкой карточке иначе наезжают друг на друга. */
+/** No more than four ticks on the scale: otherwise labels in a narrow card overlap each other. */
 const TICK_INTERVALS = 4;
 
-/** Круглые множители шкалы: 1, 2 и 5 на каждом десятичном разряде. */
+/** Round scale multipliers: 1, 2 and 5 at each decimal order. */
 const NICE = { One: 1, Two: 2, Five: 5 } as const;
 const DECADE = 10;
 const DECADES_IN_STAGE = 3;
@@ -117,9 +117,9 @@ const NICE_MULTIPLIERS = Array.from({ length: DECADES_IN_STAGE }, (_, decade) =>
 ).flat();
 
 /**
- * Шаги 1–2–5 внутри каждой ступени килобайта. Десятичные шаги дали бы
- * подписи «97.7 kB» — шкала читается по круглым значениям в тех единицах,
- * которые печатает `formatBytes`.
+ * Steps 1–2–5 within each kilobyte tier. Decimal steps would give
+ * labels like "97.7 kB" — the scale reads in round values in the units
+ * that `formatBytes` prints.
  */
 export const BYTE_STEPS: readonly number[] = Array.from({ length: BYTE_STAGES }, (_, stage) =>
   NICE_MULTIPLIERS.map((multiplier) => multiplier * BYTE_BASE ** stage)
@@ -127,22 +127,22 @@ export const BYTE_STEPS: readonly number[] = Array.from({ length: BYTE_STAGES },
 
 const DECIMAL_DECADES = 6;
 
-/** Шаги 1–2–5 для счётных величин: соединений, запросов. */
+/** Steps 1–2–5 for countable quantities: connections, requests. */
 export const COUNT_STEPS: readonly number[] = Array.from({ length: DECIMAL_DECADES }, (_, decade) =>
   Object.values(NICE).map((multiplier) => multiplier * DECADE ** decade)
 ).flat();
 
 export interface ValueScale {
-  /** Правая или верхняя кромка шкалы: кратна шагу и не ниже максимума. */
+  /** Right or top edge of the scale: a multiple of the step and not below the maximum. */
   ceiling: number;
-  /** Деления от нуля до кромки включительно. */
+  /** Ticks from zero to the edge inclusive. */
   ticks: number[];
 }
 
 /**
- * Шкала от нуля: первый шаг, при котором максимум укладывается в заданное
- * число делений. Нулевой максимум даёт шкалу в один наименьший шаг, а не
- * вырожденную.
+ * A scale from zero: the first step at which the maximum fits into the given
+ * number of ticks. A zero maximum gives a scale of one smallest step, not a
+ * degenerate one.
  */
 export function toValueScale(max: number, steps: readonly number[], intervals = TICK_INTERVALS): ValueScale {
   const step = steps.find((candidate) => candidate * intervals >= max) ?? steps[steps.length - 1];
@@ -151,27 +151,27 @@ export function toValueScale(max: number, steps: readonly number[], intervals = 
   return { ceiling: step * count, ticks: Array.from({ length: count + 1 }, (_, index) => index * step) };
 }
 
-/** Запас над пиком ряда без ёмкости: иначе ровный ряд прижимается к верхней кромке. */
+/** Headroom above the peak of a series without capacity: otherwise a flat series is pressed against the top edge. */
 const HEADROOM = 1.15;
 
 /**
- * Верх шкалы ряда без осей. С ёмкостью — число ядер, объём памяти — высота
- * говорит, какая часть её занята; ряд, переросший ёмкость, растягивает шкалу
- * до своего пика. Без ёмкости верх — пик с запасом, и график показывает только
- * форму ряда.
+ * Top of the scale of a series without axes. With capacity — core count, memory size — the height
+ * tells what part of it is used; a series that outgrew the capacity stretches the scale
+ * to its own peak. Without capacity the top is the peak with headroom, and the chart shows only
+ * the shape of the series.
  */
 export function toSparkCeiling(peak: number, capacity?: number): number {
   return capacity === undefined ? peak * HEADROOM : Math.max(capacity, peak);
 }
 
-/** Во сколько раз величина должна упасть, чтобы шкала сжалась. */
+/** How many times a quantity must fall for the scale to shrink. */
 const SHRINK_RATIO = 4;
 
 /**
- * Кромка шкалы с запасом на колебания: растёт сразу, как только величина её
- * переросла, а сжимается, лишь когда величина упала вчетверо. Иначе живой
- * ряд, который гуляет вокруг ступени, перерисовывал бы деления каждую секунду
- * и сравнивать кадры между собой было бы нельзя.
+ * Scale edge with headroom for fluctuations: grows at once when the quantity
+ * outgrows it, and shrinks only when the quantity fell fourfold. Otherwise a live
+ * series wandering around a step would redraw ticks every second
+ * and frames could not be compared with each other.
  */
 export function toStickyCeiling(current: number, needed: number): number {
   if (needed > current || needed * SHRINK_RATIO <= current) {
@@ -186,14 +186,14 @@ export interface TimeWindow {
   max: number;
 }
 
-/** Отсечки назад от правой кромки с шагом `step`, пока они внутри окна. */
+/** Cutoffs back from the right edge with step `step` while they are inside the window. */
 export function toTimeTicks({ min, max }: TimeWindow, step: number): number[] {
   const count = Math.floor((max - min) / step);
 
   return Array.from({ length: count + 1 }, (_, index) => max - (count - index) * step);
 }
 
-/** Деления шкалы от нуля, отражённые вниз: для двух рядов по разные стороны оси. */
+/** Scale ticks from zero, mirrored downward: for two series on opposite sides of the axis. */
 export function toMirroredTicks(ticks: number[]): number[] {
   return [
     ...ticks

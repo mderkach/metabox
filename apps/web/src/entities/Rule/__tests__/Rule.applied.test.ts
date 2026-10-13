@@ -7,19 +7,19 @@ const GOOGLE = { rule_set: 'google-ip', outbound: 'proxy' };
 const LOCAL = { ip_is_private: true, outbound: 'direct' };
 
 describe('toAppliedIndices', () => {
-  it('без правок отдаёт те же индексы', () => {
+  it('without edits returns the same indexes', () => {
     expect(toAppliedIndices([DNS, GOOGLE], [DNS, GOOGLE])).toEqual([0, 1]);
   });
 
-  it('переставленное правило находит свой индекс в применённом конфиге', () => {
+  it('a moved rule finds its index in the applied config', () => {
     expect(toAppliedIndices([GOOGLE, DNS], [DNS, GOOGLE])).toEqual([1, 0]);
   });
 
-  it('изменённое и новое правило не находят пары', () => {
+  it('a changed and a new rule find no pair', () => {
     expect(toAppliedIndices([{ ...GOOGLE, outbound: 'direct' }, LOCAL, DNS], [DNS, GOOGLE])).toEqual([null, null, 0]);
   });
 
-  it('раздаёт дубли по порядку, а не отдаёт первый дважды', () => {
+  it('hands out duplicates in order instead of returning the first twice', () => {
     expect(toAppliedIndices([DNS, DNS, DNS], [DNS, GOOGLE, DNS])).toEqual([0, 2, null]);
   });
 });

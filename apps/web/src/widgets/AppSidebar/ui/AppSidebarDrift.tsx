@@ -5,9 +5,9 @@ import { SCHEMA_DRIFT, schemaDrift, useServiceState } from '@entities/Daemon';
 import { cn } from '@shared/lib/utils';
 
 /**
- * Пометка о расхождении sing-box со схемой форм. Стоит в подвале, а не только в
- * разделе конфигурации: о расхождении должно быть видно с любого экрана, а
- * подробности — там, где правят формы.
+ * A mark about sing-box diverging from the form schema. Sits in the footer, not only in the
+ * config section: the divergence must be visible from any screen, and
+ * the details are where the forms are edited.
  */
 export function AppSidebarDrift({ collapsed }: { collapsed: boolean }) {
   const { t } = useTranslation('widgets/AppSidebar');

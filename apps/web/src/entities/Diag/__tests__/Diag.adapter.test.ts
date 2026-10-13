@@ -5,7 +5,7 @@ import { toDiagChecks } from '../model/Diag.adapter';
 import { DIAG_REPORT_FIXTURE } from './Diag.fixture';
 
 describe('toDiagChecks', () => {
-  it('сохраняет порядок демона и переносит причину, цепочки и задержку', () => {
+  it('keeps the daemon order and carries the reason, chains and latency', () => {
     const checks = toDiagChecks(ReportSchema.parse(DIAG_REPORT_FIXTURE));
 
     expect(checks.map((check) => check.name)).toEqual([
@@ -25,14 +25,14 @@ describe('toDiagChecks', () => {
     expect(checks[5]).toMatchObject({ status: 'ok', reason: null, delayMs: 182 });
   });
 
-  // Проверку, исход которой панель не поняла, нельзя показать пройденной.
-  it('незнакомый статус читает отказом', () => {
+  // A check whose outcome the panel did not understand cannot be shown as passed.
+  it('reads an unknown status as a failure', () => {
     const [check] = toDiagChecks({ checks: [{ name: 'redirect_port', status: 'degraded' }] });
 
     expect(check.status).toBe('fail');
   });
 
-  it('схема отклоняет отчёт без списка проверок', () => {
+  it('the schema rejects a report without a check list', () => {
     expect(ReportSchema.safeParse({}).success).toBe(false);
   });
 });

@@ -4,7 +4,7 @@ export const LANGUAGES = ['ru', 'en'] as const;
 
 export type Language = (typeof LANGUAGES)[number];
 
-/** Язык, на котором написаны словари-источники: на него же уходит откат. */
+/** Language the source dictionaries are written in: the fallback goes to it too. */
 export const FALLBACK_LANGUAGE: Language = 'ru';
 
 const STORAGE_KEY = 'metabox.language';
@@ -14,9 +14,9 @@ function isLanguage(value: string | null | undefined): value is Language {
 }
 
 /**
- * Выбор языка живёт в браузере, а не в демоне: язык интерфейса личный, как и
- * тема, а одна настройка на всех, кто открывает панель роутера, — ограничение,
- * а не удобство. Обращение к хранилищу закрыто: в приватном окне оно бросает.
+ * The language choice lives in the browser, not in the daemon: the interface language is personal, like
+ * the theme, and one setting for everyone who opens the router panel is a limitation,
+ * not a convenience. Storage access is guarded: in a private window it throws.
  */
 function readStoredLanguage(): Language | null {
   try {
@@ -32,11 +32,11 @@ function storeLanguage(language: Language): void {
   try {
     localStorage.setItem(STORAGE_KEY, language);
   } catch {
-    // Выбор не переживёт перезагрузку — это лучше, чем уронить переключатель.
+    // The choice will not survive a reload — that is better than crashing the switcher.
   }
 }
 
-/** Сохранённый выбор, иначе первый подходящий язык браузера, иначе откат. */
+/** The saved choice, otherwise the first suitable browser language, otherwise the fallback. */
 export function detectLanguage(): Language {
   const stored = readStoredLanguage();
 
@@ -55,7 +55,7 @@ export function detectLanguage(): Language {
   return FALLBACK_LANGUAGE;
 }
 
-/** Атрибут `lang` идёт за выбором: по нему скринридер выбирает правила чтения. */
+/** The `lang` attribute follows the choice: a screen reader picks reading rules by it. */
 export function applyDocumentLanguage(language: Language): void {
   document.documentElement.lang = language;
 }

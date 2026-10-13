@@ -4,12 +4,13 @@ import type { ConfigNodeFormModel } from '../model';
 import { ConfigNodeFormBody } from './ConfigNodeForm';
 
 /**
- * Скаляры секции `route` или `dns` формой по схеме секции без её списков:
- * та же запись листьями, что у формы узла, поэтому правка одного поля — одна
- * строка дифа, а правила, сеты и серверы рядом не трогаются.
+ * Section scalars of `route` or `dns` as a form by the section schema without
+ * its lists: the same leaf write as in the node form, so editing one field is
+ * one diff line, while rules, sets and servers nearby are not touched.
  *
- * `settings` — скаляры, принятые схемой (`isSectionSettingsRecognized`):
- * незнакомый ключ резолвер не пропустил бы, и форма не сохранилась бы вовсе.
+ * `settings` are scalars accepted by the schema
+ * (`isSectionSettingsRecognized`): the resolver would not pass an unfamiliar
+ * key, and the form would not save at all.
  */
 export function ConfigSectionForm({ section, settings }: { section: SettingsSection; settings: ConfigNodeFormModel }) {
   return (

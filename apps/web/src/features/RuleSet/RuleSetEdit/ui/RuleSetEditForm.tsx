@@ -18,12 +18,13 @@ import {
 const URL_FIELD: FieldPlan = { key: 'url', path: ['url'], kind: FIELD_KIND.String };
 
 /**
- * Правка существующего `remote` сета: тег, адрес, формат, интервал и узел
- * скачивания — теми же полями и проверками, что при подключении.
+ * Editing an existing `remote` set: tag, address, format, interval and download
+ * node, with the same fields and checks as when adding.
  *
- * В черновик уходят только изменённые поля узла (`diffNode`): правка одного
- * поля — одна строка дифа. Адрес показан полем форм узлов: всё после хоста
- * скрыто до раскрытия кнопкой, в черновик уходит полный адрес.
+ * Only changed node fields go into the draft (`diffNode`): editing one field is
+ * one diff line. The address is shown by the node form field: everything after
+ * the host is hidden until revealed with a button, and the full address goes
+ * into the draft.
  */
 export function RuleSetEditForm({
   index,
@@ -32,11 +33,11 @@ export function RuleSetEditForm({
   outbounds,
   onDone,
 }: {
-  /** Позиция узла в `route.rule_set`. */
+  /** Node position in `route.rule_set`. */
   index: number;
   node: Readonly<Record<string, unknown>>;
   takenTags: readonly string[];
-  /** Теги аутбаундов документа; пустой список — конфиг не разобран. */
+  /** Document outbound tags; an empty list means the config is not parsed. */
   outbounds: readonly string[];
   onDone: () => void;
 }) {
@@ -83,8 +84,9 @@ export function RuleSetEditForm({
 }
 
 /**
- * Поле формата формы подключения читает адрес строкой; очищенный адрес здесь
- * `null`, а формат без адреса не нужен и там.
+ * The format field of the add form reads the address as a string; a cleared
+ * address is `null` here, and a format without an address is not needed there
+ * either.
  */
 function EditFormatField() {
   const { control } = useFormContext<RuleSetEditModel>();

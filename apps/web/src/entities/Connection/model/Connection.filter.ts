@@ -4,7 +4,7 @@ import { matchesWords, toQueryWords } from '@shared/lib/search';
 
 import { ROUTE_KIND, type ConnectionRow, type RouteKind } from './Connection.model';
 
-/** Какой набор соединений показан: живые или уже закрытые. */
+/** Which set of connections is shown: live or already closed. */
 export const CONNECTION_TAB = {
   Active: 'active',
   Closed: 'closed',
@@ -13,8 +13,9 @@ export const CONNECTION_TAB = {
 export type ConnectionTab = (typeof CONNECTION_TAB)[keyof typeof CONNECTION_TAB];
 
 /**
- * Фасет — срез списка по одному полю строки. Порядок записи — порядок кнопок в
- * тулбаре: от «чьё оно» и «куда ушло» к деталям маршрута.
+ * A facet is a slice of the list by one row field. The order of entries is the
+ * order of toolbar buttons: from "whose is it" and "where did it go" to route
+ * details.
  */
 export const CONNECTION_FACET = {
   Source: 'source',
@@ -28,7 +29,7 @@ export type ConnectionFacet = (typeof CONNECTION_FACET)[keyof typeof CONNECTION_
 
 export const CONNECTION_FACETS: readonly ConnectionFacet[] = Object.values(CONNECTION_FACET);
 
-/** Выбранные значения каждого фасета; пустой список — фасет не отбирает. */
+/** Selected values of each facet; an empty list means the facet selects nothing. */
 export type ConnectionFacetSelection = Readonly<Record<ConnectionFacet, readonly string[]>>;
 
 function toFacetRecord<T>(make: (facet: ConnectionFacet) => T): Record<ConnectionFacet, T> {
@@ -46,24 +47,24 @@ export const EMPTY_FACET_SELECTION: ConnectionFacetSelection = toFacetRecord(() 
 const ROUTE_KINDS = Object.values(ROUTE_KIND);
 
 /**
- * Значение фасета в адресе: одно — строкой, несколько — списком. Строкой
- * остаются и старые ссылки `?source=<ip>&kind=proxy`: на них ведёт экран
- * устройств.
+ * A facet value in the URL: one as a string, several as a list. Old links
+ * `?source=<ip>&kind=proxy` also stay as a string: the devices screen leads to
+ * them.
  */
 const FacetParamSchema = z.union([z.string().min(1), z.array(z.string().min(1)).min(1)]);
 const KindParamSchema = z.union([z.enum(ROUTE_KINDS), z.array(z.enum(ROUTE_KINDS)).min(1)]);
 /**
- * Пустая строка — правило без условий, это настоящее значение фасета. В адресе
- * фасет правила называется `match`: `rule` занят номером правила экрана
- * маршрутизации, и общий для маршрутов `useSearch({ strict: false })` получил
- * бы у одного ключа два типа.
+ * An empty string is a rule without conditions, and it is a real facet value.
+ * In the URL the rule facet is called `match`: `rule` is taken by the rule
+ * number of the routing screen, and `useSearch({ strict: false })` shared by
+ * routes would get two types for one key.
  */
 const RuleParamSchema = z.union([z.string(), z.array(z.string()).min(1)]);
 
 /**
- * Отбор в адресе: ссылка на отфильтрованный список — то, чем делятся, когда
- * спрашивают «почему сюда идёт трафик». Значения по умолчанию в адрес не
- * пишутся, поэтому чистый список открывается чистым адресом.
+ * Selection in the URL: a link to a filtered list is what people share when
+ * asking "why does traffic go here". Default values are not written to the URL,
+ * so a clean list opens with a clean address.
  */
 export const ConnectionSearchSchema = z.object({
   tab: z.enum([CONNECTION_TAB.Active, CONNECTION_TAB.Closed]).optional(),
@@ -79,7 +80,7 @@ export type ConnectionSearch = z.infer<typeof ConnectionSearchSchema>;
 
 export type ConnectionFacetSearch = Pick<ConnectionSearch, 'source' | 'kind' | 'match' | 'chain' | 'network'>;
 
-/** Непонятое значение отбрасывается целиком: половина отбора хуже, чем его отсутствие. */
+/** A value that is not understood is dropped entirely: half a selection is worse than none. */
 export function parseConnectionSearch(search: Record<string, unknown>): ConnectionSearch {
   const parsed = ConnectionSearchSchema.safeParse(search);
 
@@ -94,7 +95,7 @@ function toValues(param: string | readonly string[] | undefined): readonly strin
   return typeof param === 'string' ? [param] : param;
 }
 
-/** Выбор фасетов из адреса. */
+/** Facet selection from the URL. */
 export function toFacetSelection(search: ConnectionFacetSearch): ConnectionFacetSelection {
   return {
     [CONNECTION_FACET.Source]: toValues(search.source),
@@ -120,8 +121,8 @@ function isRouteKind(value: string): value is RouteKind {
 }
 
 /**
- * Выбор фасетов для адреса. Одно значение пишется строкой: ссылка на одно
- * устройство остаётся короткой — `?source=<ip>`, — и её можно набрать руками.
+ * Facet selection for the URL. One value is written as a string: a link to one
+ * device stays short, `?source=<ip>`, and can be typed by hand.
  */
 export function toFacetSearch(selection: ConnectionFacetSelection): ConnectionFacetSearch {
   return {
@@ -137,7 +138,7 @@ export function hasFacetSelection(selection: ConnectionFacetSelection): boolean 
   return CONNECTION_FACETS.some((facet) => selection[facet].length > 0);
 }
 
-/** Значение фасета и число строк под ним. */
+/** Facet value and the number of rows under it. */
 export interface ConnectionFacetValue {
   value: string;
   count: number;
@@ -152,7 +153,7 @@ const KIND_RANK = new Map<string, number>(
   ])
 );
 
-/** Значения поля строки, по которым её отбирает фасет. Узел цепочки — каждый: группа и узел за ней. */
+/** Row field values by which a facet selects it. Every chain node counts: the group and the node behind it. */
 const FACET_FIELD: Readonly<Record<ConnectionFacet, (row: ConnectionRow) => string | readonly string[]>> = {
   [CONNECTION_FACET.Source]: (row) => row.source,
   [CONNECTION_FACET.Kind]: (row) => row.kind,
@@ -161,7 +162,7 @@ const FACET_FIELD: Readonly<Record<ConnectionFacet, (row: ConnectionRow) => stri
   [CONNECTION_FACET.Network]: (row) => row.network,
 };
 
-/** Подпись источника для поиска. Устройства знает их слайс, а не соединение, поэтому подпись приходит снаружи. */
+/** Source label for search. Devices are known to their slice, not to the connection, so the label comes from outside. */
 export type ConnectionSourceLabel = (source: string) => string;
 
 export interface ConnectionFilterResult {
@@ -169,13 +170,13 @@ export interface ConnectionFilterResult {
   facets: ConnectionFacetValues;
 }
 
-/** Числовые куски сравниваются как числа: 192.168.1.36 стоит перед 192.168.1.120. */
+/** Numeric chunks are compared as numbers: 192.168.1.36 goes before 192.168.1.120. */
 const NATURAL_ORDER = new Intl.Collator(undefined, { numeric: true });
 
 /**
- * Значения фасета в порядке, который не зависит от счётчиков: они меняются
- * каждую секунду, и значения переставлялись бы под курсором. Действия идут
- * заданным списком, устройства — по подписи, остальное — по значению.
+ * Facet values in an order that does not depend on counters: they change every
+ * second, and values would shuffle under the cursor. Actions follow a fixed
+ * list, devices go by label, the rest by value.
  */
 function toFacetValues(
   counts: Map<string, number>,
@@ -204,9 +205,9 @@ const PRIVATE_IPV4 = /^(?:10\.|192\.168\.|172\.(?:1[6-9]|2\d|3[01])\.)/;
 const SOURCE_TIER = { Named: 0, Local: 1, Foreign: 2 } as const;
 
 /**
- * Устройства с именем идут первыми, за ними безымянные адреса локальной сети,
- * в конце чужие адреса: их соединения пришли снаружи, и искать их в списке
- * устройств приходится реже всего.
+ * Named devices go first, then unnamed local network addresses, and foreign
+ * addresses are last: their connections came from outside, and they have to be
+ * looked up in the device list least often.
  */
 function sourceTier(source: string, sourceLabel: ConnectionSourceLabel): number {
   if (sourceLabel(source) !== source) {
@@ -217,22 +218,22 @@ function sourceTier(source: string, sourceLabel: ConnectionSourceLabel): number 
 }
 
 /**
- * Отбор соединений и счётчики фасетов одним проходом.
+ * Connection selection and facet counters in one pass.
  *
- * Значения фасета — все, что есть во вкладке, и выбранные, даже если строк под
- * ними сейчас нет: фасет не теряет значение от собственного выбора и от
- * соседнего. Счётчик значения считается с поиском и остальными фасетами, но
- * без своего: он отвечает, сколько строк добавит выбор значения, а не сколько
- * их во вкладке вообще. Строка, которая не проходит ровно один фасет, поэтому
- * считается только в нём.
+ * Facet values are everything present in the tab plus the selected ones, even
+ * if there are no rows under them now: a facet does not lose a value because of
+ * its own selection or a neighbor's. A value counter is computed with search
+ * and the other facets but without its own: it answers how many rows selecting
+ * the value will add, not how many are in the tab at all. A row that fails
+ * exactly one facet is therefore counted only in it.
  *
- * Внутри фасета значения складываются через «или», фасеты между собой — через
- * «и».
+ * Within a facet values combine with "or", and facets with each other with
+ * "and".
  *
- * `sourceLabel` дополняет индекс поиска подписью устройства: соединение
- * находится по имени, хотя в строке поиска лежит адрес. Подпись считается раз
- * на источник, а не на строку: устройств единицы, строк — тысячи. Ею же
- * упорядочены устройства в фасете.
+ * `sourceLabel` extends the search index with the device label: a connection is
+ * found by name although the search string holds an address. The label is
+ * computed once per source, not per row: devices are a handful, rows are
+ * thousands. It also orders the devices in the facet.
  */
 export function filterConnections(
   rows: ConnectionRow[],

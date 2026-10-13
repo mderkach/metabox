@@ -22,14 +22,15 @@ import { makeNodeAddSchema, NODE_ADD_DEFAULTS, NODE_ADD_ERROR, type NodeAddModel
 const NS = 'features/Config/ConfigNodeAdd';
 
 /**
- * Новый узел секции с реестром типов: тип и тег. Остальные поля необязательны
- * по схеме и правятся уже формой узла — форма добавления их не дописывает,
- * иначе в дифе оказались бы значения, которых пользователь не задавал.
- * Исключение — заготовка оверрайда типа: она заполняет то, без чего тип не
- * соберётся (VLESS с Reality без uTLS клиент форка не создаёт).
+ * A new node of a section with a type registry: type and tag. Other fields are
+ * optional by the schema and are edited by the node form; the add form does not
+ * append them, otherwise the diff would contain values the user did not set.
+ * The exception is a type override template: it fills in what the type cannot
+ * be built without (VLESS with Reality without uTLS is not created by the fork
+ * client).
  *
- * `takenTags` — теги, которые новый узел не вправе повторить; `builtTags` —
- * состав сборки бинаря, `null` — не прочитан.
+ * `takenTags` are tags the new node may not repeat; `builtTags` is the binary
+ * build contents, `null` means not read.
  */
 export function ConfigNodeAddForm({
   section,
@@ -40,7 +41,7 @@ export function ConfigNodeAddForm({
   section: GenericSection;
   takenTags: readonly string[];
   builtTags: readonly string[] | null;
-  /** Узел лёг в черновик: его тег. */
+  /** The node went into the draft: its tag. */
   onAdded?: (tag: string) => void;
 }) {
   const registry = registryOfSection(section);
@@ -85,8 +86,9 @@ function NodeAddForm({
 
   const onSubmit = form.handleSubmit((data) => {
     const tag = data.tag.trim();
-    // Позиция берётся из текста на момент записи: вставка в конец секции, а
-    // отсутствующий в файле массив вставка создаёт.
+    // The position is taken from the text at the moment of writing: an insert
+    // at the end of the section, and an array missing from the file is created
+    // by the insert.
     const count = readSectionNodes(ConfigDocumentState.getState().current() ?? '{}', section).length;
 
     insert(sectionNodePath(section, count), nodePreset(registry, data.type, tag, newSectionNode));
@@ -199,7 +201,7 @@ function NodeAddForm({
   );
 }
 
-/** Код отказа схемы в текст; непонятой строке называется она сама. */
+/** Schema failure code into text; an unrecognized string is named as itself. */
 function errorText(t: TFunction<typeof NS>, error: string | undefined): string | null {
   switch (error) {
     case undefined:

@@ -14,9 +14,9 @@ import {
 import { useChangeDeviceRoute, useConfirmDeviceRoute } from '../api';
 
 /**
- * Перечитывает модель, когда смена вышла из записи: в окне подтверждения в UCI
- * уже новая модель, после отката — снова прежняя, и тумблеры обязаны показывать
- * то, что стоит на устройстве.
+ * Rereads the model when the change left the write: in the confirmation window
+ * UCI already holds the new model, after a rollback the previous one again, and
+ * the toggles must show what is on the device.
  */
 function useModelRefresh(transaction: ApplyTransaction | null) {
   const queryClient = useQueryClient();
@@ -39,12 +39,12 @@ function useModelRefresh(transaction: ApplyTransaction | null) {
 }
 
 export interface DeviceRouteState {
-  /** `null` — модель не прочитана, и писать её не из чего. */
+  /** `null` means the model was not read, and there is nothing to write it from. */
   model: DataplaneModel | null;
-  /** Смена недоступна: модель не прочитана или идёт применение — смена модели или конфига. */
+  /** Change is unavailable: the model was not read or an apply is running, a model change or a config one. */
   locked: boolean;
   foreignService: boolean;
-  /** `null` — смен модели в этой жизни демона не было. */
+  /** `null` means there were no model changes in this daemon lifetime. */
   transaction: ApplyTransaction | null;
   isConfirming: boolean;
   route: (source: RouteSource, routed: boolean) => void;
@@ -52,10 +52,10 @@ export interface DeviceRouteState {
 }
 
 /**
- * Идентификатор смены берётся из статуса демона, а не из ответа на `PUT`: так
- * окно подтверждения переживает перезагрузку страницы. Применение конфига
- * блокирует тумблеры тоже — демон держит обе транзакции одним циклом и вторую
- * отклонил бы 409.
+ * The change id is taken from the daemon status, not from the `PUT` response,
+ * so the confirmation window survives a page reload. Config apply blocks the
+ * toggles too: the daemon holds both transactions in one cycle and would reject
+ * the second with 409.
  */
 export function useDeviceRoute(): DeviceRouteState {
   const status = useDaemonStatus();

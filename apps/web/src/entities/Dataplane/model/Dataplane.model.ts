@@ -7,7 +7,7 @@ export const ACL_MODE = {
   Listed: 'listed',
 } as const satisfies Record<string, AccessMode>;
 
-/** Секция `metabox.dataplane`. Пишется целиком: поле, которого нет, демон читает нулём. */
+/** The `metabox.dataplane` section. Written entirely: the daemon reads a missing field as zero. */
 export interface DataplaneModel {
   enabled: boolean;
   redirectPort: number;
@@ -17,9 +17,9 @@ export interface DataplaneModel {
   selfMark: number;
   tproxyMark: number;
   routeTable: number;
-  /** Строка, а не `AccessMode`: режим, которого панель не знает, обратно уходит как пришёл. */
+  /** A string, not `AccessMode`: a mode the panel does not know goes back as it came. */
   aclMode: string;
-  /** IPv4-адрес или подсеть. */
+  /** IPv4 address or subnet. */
   sourceIp: readonly string[];
   sourceMac: readonly string[];
   lanInterface: readonly string[];
@@ -30,18 +30,18 @@ export interface DataplaneModel {
 
 export interface Dataplane {
   model: DataplaneModel;
-  /** Отпечаток секции из `ETag`: с ним смена уходит в `If-Match`. */
+  /** Section fingerprint from `ETag`: with it the change goes into `If-Match`. */
   etag: string | null;
-  /** Демон управляет не службой `metabox-singbox`: смену модели он отклонит, и тумблеры её не предлагают. */
+  /** The daemon does not manage the `metabox-singbox` service: it will reject a model change, and the toggles do not offer it. */
   foreignService: boolean;
 }
 
-/** Источник трафика LAN, который можно пустить через sing-box. */
+/** LAN traffic source that can be sent through sing-box. */
 export interface RouteSource {
   mac: string;
-  /** Пусто, когда адреса нет. */
+  /** Empty when there is no address. */
   ip: string;
-  /** Аренда статическая: адрес за устройством закреплён. */
+  /** The lease is static: the address is pinned to the device. */
   static: boolean;
 }
 
@@ -50,23 +50,24 @@ const IPV4_BITS = 32;
 const IPV4_OCTET_MAX = 255;
 const IPV4_CIDR = /^(\d{1,3}(?:\.\d{1,3}){3})(?:\/(\d{1,2}))?$/;
 
-/** IPv4-адрес или подсеть из `source_ip`; адрес — беззнаковое 32-битное число. */
+/** IPv4 address or subnet from `source_ip`; the address is an unsigned 32-bit number. */
 export interface Ipv4Cidr {
   address: number;
   prefix: number;
 }
 
 /**
- * Запись `source_ip` в адрес и длину префикса; голый адрес — подсеть `/32`.
- * IPv6 и всё, что не разбирается как IPv4, — `null`: демон собирает устройства
- * из аренд DHCPv4, и сопоставлять с ними IPv6 нечего.
+ * A `source_ip` entry as an address and a prefix length; a bare address is a
+ * `/32` subnet. IPv6 and anything that does not parse as IPv4 give `null`: the
+ * daemon builds devices from DHCPv4 leases, and there is nothing to match IPv6
+ * against.
  */
 export function parseIpv4Cidr(entry: string): Ipv4Cidr | null {
   const match = IPV4_CIDR.exec(entry);
 
   if (match === null) return null;
 
-  // Необязательная группа без совпадения — `undefined`, хотя тип RegExp обещает строку.
+  // An optional group without a match is `undefined`, although the RegExp type promises a string.
   const [, address = '', length = ''] = match;
   const octets = address.split('.').map(Number);
   const prefix = length === '' ? IPV4_BITS : Number(length);
@@ -76,7 +77,7 @@ export function parseIpv4Cidr(entry: string): Ipv4Cidr | null {
   return { address: octets.reduce((value, octet) => value * (IPV4_OCTET_MAX + 1) + octet, 0), prefix };
 }
 
-/** Адрес попадает в подсеть. Биты хоста маска отбрасывает: `192.168.1.67/29` читается как `192.168.1.64/29`. */
+/** The address falls into the subnet. The mask drops host bits: `192.168.1.67/29` reads as `192.168.1.64/29`. */
 export function cidrContains(cidr: Ipv4Cidr, address: number): boolean {
   if (cidr.prefix === 0) return true;
 
@@ -89,12 +90,12 @@ function sameMac(left: string, right: string): boolean {
   return left.toLowerCase() === right.toLowerCase();
 }
 
-/** Адрес записан в `source_ip` сам по себе или подсетью из одного хоста — демон принимает оба вида. */
+/** The address is written in `source_ip` by itself or as a one-host subnet; the daemon accepts both forms. */
 function isHostOf(entry: string, ip: string): boolean {
   return ip !== '' && (entry === ip || entry === `${ip}${HOST_PREFIX}`);
 }
 
-/** Подсеть шире одного хоста, в которую входит адрес. */
+/** A subnet wider than one host that contains the address. */
 function subnetOf(entries: readonly string[], ip: string): string | null {
   const address = parseIpv4Cidr(ip);
 
@@ -115,16 +116,16 @@ export const ROUTE_REASON = {
   Subnet: 'subnet',
 } as const;
 
-/** Почему устройство идёт через sing-box в режиме `listed`. */
+/** Why a device goes through sing-box in `listed` mode. */
 export type RouteReason =
   | { kind: typeof ROUTE_REASON.Mac }
   | { kind: typeof ROUTE_REASON.Host }
   | { kind: typeof ROUTE_REASON.Subnet; subnet: string };
 
 /**
- * Подсеть проверяется первой: устройство в ней остаётся в перехвате, даже если
- * снять его MAC и адрес, поэтому только она честно отвечает, можно ли
- * выключить устройство отдельно.
+ * The subnet is checked first: a device in it stays intercepted even if its MAC
+ * and address are removed, so only it honestly answers whether the device can
+ * be turned off separately.
  */
 export function routeReason(model: DataplaneModel, source: RouteSource): RouteReason | null {
   const subnet = subnetOf(model.sourceIp, source.ip);
@@ -139,18 +140,19 @@ export function routeReason(model: DataplaneModel, source: RouteSource): RouteRe
 }
 
 /**
- * Модель с устройством в списке перехвата или без него.
+ * Model with the device in the interception list or without it.
  *
- * Включение пишет MAC: он переживает смену аренды DHCP, а адрес динамической
- * аренды через час может достаться другому устройству, и тот пошёл бы через
- * sing-box вместо этого. Адрес статической аренды закреплён за устройством,
- * поэтому пишется ещё и он: по MAC nft узнаёт только кадры, пришедшие в LAN
- * напрямую, а через повторитель или маршрутизируемый сегмент у пакета чужой
- * MAC и прежний IP. Запись, которая уже есть, не дублируется: в наборе nft
- * адрес рядом с той же подсетью `/32` даёт пересечение интервалов.
+ * Turning on writes the MAC: it survives a DHCP lease change, while a dynamic
+ * lease address may go to another device after an hour, and that one would go
+ * through sing-box instead. A static lease address is pinned to the device, so
+ * it is written too: by MAC nft recognizes only frames that came into the LAN
+ * directly, while through a repeater or a routed segment the packet has a
+ * foreign MAC and the original IP. An entry that already exists is not
+ * duplicated: in an nft set an address next to the same `/32` subnet gives an
+ * interval overlap.
  *
- * Выключение снимает и MAC, и адрес в обоих видах — иначе устройство осталось
- * бы в перехвате по второй записи.
+ * Turning off removes both the MAC and the address in both forms, otherwise the
+ * device would stay intercepted by the second entry.
  */
 export function withDeviceRoute(model: DataplaneModel, source: RouteSource, routed: boolean): DataplaneModel {
   const sourceMac = model.sourceMac.filter((mac) => !sameMac(mac, source.mac));

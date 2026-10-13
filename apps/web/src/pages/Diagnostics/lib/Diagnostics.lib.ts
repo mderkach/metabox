@@ -1,9 +1,9 @@
 import { SERVICE_GROUPS, type ProxyRuntime } from '@entities/Proxy';
 
 /**
- * Куда можно проверить выход: группы, затем узлы без повторов. Служебные
- * группы Clash API в конфиге не существуют, и выход через них ничего не
- * говорит о настроенной маршрутизации.
+ * Where an outbound can be checked: groups, then nodes without repeats. Service
+ * Clash API groups do not exist in the config, and an outbound through them says
+ * nothing about the configured routing.
  */
 export function toDiagTargets(runtime: ProxyRuntime | undefined): string[] {
   if (runtime === undefined) {

@@ -12,17 +12,17 @@ export const RULE_CHANGE = {
 } as const;
 
 /**
- * Изменение правила маршрутизации. `index` — номер с единицы, как в списке
- * правил: у удалённого — в применённом конфиге, у остальных — в черновике.
+ * Routing rule change. `index` is the number from one, as in the rule list: for
+ * a deleted one in the applied config, for the others in the draft.
  */
 export type RuleChange =
   | { kind: typeof RULE_CHANGE.Added | typeof RULE_CHANGE.Removed | typeof RULE_CHANGE.Changed; index: number }
-  /** Условия те же, сменилось, куда правило отправляет трафик: аутбаунд или действие. */
+  /** Conditions are the same, where the rule sends traffic changed: the outbound or the action. */
   | { kind: typeof RULE_CHANGE.Target; index: number; from: string; to: string }
-  /** Узел не менялся, но стоит на другом месте — а порядок в sing-box и есть логика. */
+  /** The node did not change, but stands in another place, and order in sing-box is the logic. */
   | { kind: typeof RULE_CHANGE.Moved; index: number; previous: number };
 
-/** Поля аутбаунда и действия: без них от узла остаются условия. */
+/** Outbound and action fields: without them only the conditions remain of the node. */
 const TARGET_FIELDS = new Set([
   'outbound',
   'action',
@@ -60,9 +60,9 @@ function toPair(before: Side, after: Side): RuleChange {
 }
 
 /**
- * Разбивает сравнение списков на куски подряд идущих отличий. Узел
- * сравнивается целиком, поэтому переставленное правило выглядит удалённым в
- * одном месте и добавленным в другом — это разбирает `toRuleChanges`.
+ * Splits a list comparison into chunks of consecutive differences. A node is
+ * compared whole, so a moved rule looks deleted in one place and added in
+ * another, and `toRuleChanges` sorts that out.
  */
 function toBlocks(applied: readonly unknown[], draft: readonly unknown[]): Block[] {
   const lines = diffLines(
@@ -97,17 +97,17 @@ function toBlocks(applied: readonly unknown[], draft: readonly unknown[]): Block
 }
 
 /**
- * Что черновик меняет в `route.rules` по сравнению с применённым конфигом.
- * Изменения идут по порядку черновика, удалённые — в конце своего куска.
+ * What the draft changes in `route.rules` compared with the applied config.
+ * Changes go in draft order, deleted ones at the end of their chunk.
  *
- * Узел, который целиком нашёлся в другом месте списка, — перестановка. Пара
- * «удалено — добавлено» читается как правка одного правила: сначала сводятся
- * узлы с одинаковыми условиями — внутри куска отличий, затем по всему списку,
- * чтобы переставленное и поправленное правило не распалось на удаление и
- * добавление, — и только потом оставшиеся по порядку внутри куска.
+ * A node found whole in another place of the list is a move. A "deleted —
+ * added" pair reads as an edit of one rule: first nodes with identical
+ * conditions are matched within a chunk of differences, then across the whole
+ * list, so that a moved and edited rule does not fall apart into a deletion and
+ * an addition, and only then the remaining ones in order within the chunk.
  */
 export function toRuleChanges(applied: readonly unknown[], draft: readonly unknown[]): RuleChange[] {
-  // На пустом списке построчный диф увидел бы одну пустую строку.
+  // On an empty list a line-by-line diff would see one empty line.
   if (applied.length === 0) return draft.map((_, index) => ({ kind: RULE_CHANGE.Added, index: index + 1 }));
 
   if (draft.length === 0) return applied.map((_, index) => ({ kind: RULE_CHANGE.Removed, index: index + 1 }));

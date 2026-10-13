@@ -11,12 +11,13 @@ import { LOG_ENDPOINT } from './Log.endpoints';
 import { LOG_QUERY } from './Log.query';
 import { LogEventSchema } from './Log.schema';
 
-/** Имя события SSE у потока лога. */
+/** SSE event name of the log stream. */
 const LOG_EVENT = 'log';
 
 /**
- * Строки копятся и уходят в стор пачкой: на уровне `debug` sing-box пишет
- * сотни строк в секунду, и рендер на каждую занял бы главный поток целиком.
+ * Lines accumulate and go to the store in a batch: at the `debug` level
+ * sing-box writes hundreds of lines per second, and a render for each would
+ * take the main thread entirely.
  */
 const LOG_FLUSH_MS = 100;
 
@@ -29,8 +30,9 @@ function parseFrame(text: string): unknown {
 }
 
 /**
- * Подписка на строки потока лога. Возвращает функцию отписки; строки, не
- * успевшие уйти пачкой, при отписке выбрасываются — экран уже закрыт.
+ * Subscription to log stream lines. Returns an unsubscribe function; lines that
+ * did not manage to go out in a batch are dropped on unsubscribe, since the
+ * screen is already closed.
  */
 export function listenLog(source: StreamSource): () => void {
   let pending: LogEvent[] = [];
@@ -68,11 +70,11 @@ const RECONNECT_MAX_SECONDS = 30;
 const RECONNECT_GROWTH = 2;
 
 /**
- * Повтор потока, которому демон отказал или который оборвался насовсем:
- * задержка растёт вдвое от `FirstDelay` до `MaxDelay`, после `Attempts`
- * неудач подряд экран ждёт ручного переподключения. Отказ лимита потоков
- * снимается, когда закрывается чужой поток, а лог, недоступный минуту, без
- * владельца роутера уже не поднимется.
+ * Retry of a stream that the daemon refused or that broke for good: the delay
+ * doubles from `FirstDelay` to `MaxDelay`, and after `Attempts` failures in a
+ * row the screen waits for a manual reconnect. A stream limit refusal clears
+ * when someone else's stream closes, while a log unavailable for a minute will
+ * not come back without the router owner.
  */
 export const LOG_RECONNECT = {
   FirstDelay: MS_IN_SECOND,
@@ -85,23 +87,24 @@ function reconnectDelay(failures: number): number {
 }
 
 /**
- * Поток лога открыт, пока смонтирован экран, который его зовёт. В отличие от
- * `/api/events` поток у демона свой на каждого читателя — процесс `logread -f`
- * или опрос файла — и их не больше четырёх, поэтому держать его в оболочке
- * на всех экранах нельзя.
+ * The log stream is open while the screen that calls it is mounted. Unlike
+ * `/api/events`, the daemon has its own stream for every reader, a `logread -f`
+ * process or file polling, and there are no more than four of them, so it
+ * cannot be held in the shell for all screens.
  *
- * Уровень уходит в адрес потока: смена уровня закрывает поток и открывает
- * новый. Обрыв `EventSource` переподключает сам; поток, которому демон
- * отказал, хук открывает заново по `LOG_RECONNECT`, а исчерпав попытки, ждёт
+ * The level goes into the stream address: a level change closes the stream and
+ * opens a new one. `EventSource` reconnects on a break by itself; a stream the
+ * daemon refused is reopened by the hook per `LOG_RECONNECT`, and after
+ * exhausting the attempts it waits for
  * `reconnect`.
  *
- * На скрытой вкладке поток закрыт: фоновые вкладки иначе разбирают все четыре
- * места у демона, и экран логов на видимой получает отказ. Вкладка, снова
- * ставшая видимой, открывает поток заново.
+ * On a hidden tab the stream is closed: background tabs would otherwise take
+ * all four daemon slots, and the log screen on the visible one would be
+ * refused. A tab that becomes visible again opens the stream anew.
  *
- * Хвост перечитывается на каждом открытии потока, включая первое: хвост,
- * взятый раньше потока, теряет строки между ними. Начало потока, которое
- * хвост успел захватить, снимает `mergeLogEntries`.
+ * The tail is reread on every stream open, including the first: a tail taken
+ * before the stream loses lines between them. The beginning of the stream that
+ * the tail managed to capture is removed by `mergeLogEntries`.
  */
 export function useLogStream(level: LogLevel): { reconnect: () => void } {
   const queryClient = useQueryClient();
@@ -191,7 +194,7 @@ export function useLogStream(level: LogLevel): { reconnect: () => void } {
         document.removeEventListener('visibilitychange', onVisibilityChange);
         cancelRetry();
         disconnect();
-        // Строки закрытого потока не должны мелькнуть на следующем открытии экрана.
+        // Lines of a closed stream must not flash on the next screen open.
         store.reset();
       };
     },

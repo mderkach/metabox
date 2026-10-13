@@ -3,40 +3,40 @@ import { useMemo } from 'react';
 import { readRules, useConfig } from '@entities/Config';
 import { ROUTE_MATCH, useRouteExplanation, type RouteExplanation } from '@entities/Route';
 
-/** Сколько правил показывать перед сработавшим. */
+/** How many rules to show before the one that hit. */
 const VISIBLE_BEFORE = 5;
 
 export interface RouteExplanationState {
   isPending: boolean;
-  /** Запрос объяснения: отказ — своё состояние панели, а не пустое место под заголовком. */
+  /** Explanation request: a failure is a panel state of its own, not blank space under the title. */
   query: ReturnType<typeof useRouteExplanation>;
   explanation: RouteExplanation | null;
   /**
-   * Список правил процесса сходится с применённым документом по длине.
-   * `false` — вести пользователя на узел нельзя: core исполняет другой конфиг,
-   * и индекс указал бы в чужой документ.
+   * The process rule list matches the applied document in length.
+   * `false` means the user cannot be led to the node: the core runs a different config,
+   * and the index would point into a foreign document.
    */
   trusted: boolean;
-  /** Правил в `route.rules` применённого документа; `null` — документ не разобран. */
+  /** Rules in `route.rules` of the applied document; `null` means the document is not parsed. */
   inDocument: number | null;
-  /** Списки удалось сверить: конфиг прочитан и разобран. */
+  /** The lists could be reconciled: the config is read and parsed. */
   compared: boolean;
-  /** Правила до сработавшего: они проверялись и не совпали. */
+  /** Rules before the one that hit: they were checked and did not match. */
   before: RouteExplanation['rules'];
 }
 
 /**
- * Сверка списка правил живёт на фронте, а не в демоне: демону запрещено
- * разбирать конфиг, а модель документа принадлежит панели. Сверяются
- * длины — поэлементное сравнение условий потребовало бы воспроизвести рендер
- * правил форка, то есть ровно тот дрейф, от которого объяснение маршрута
- * и уходит.
+ * Reconciliation of the rule list lives in the frontend, not in the daemon: the daemon is forbidden to
+ * parse the config, and the document model belongs to the panel. Lengths are
+ * compared — an element-wise comparison of conditions would require reproducing the fork's
+ * rule rendering, which is exactly the drift that route explanation
+ * is meant to avoid.
  */
 export function useRouteExplanationState(connectionId: string | null): RouteExplanationState {
   const query = useRouteExplanation(connectionId);
   const config = useConfig();
   const explanation = query.data ?? null;
-  // `null` — конфиг ещё не прочитан: это не то же самое, что «правил нет».
+  // `null` means the config is not read yet: this is not the same as "no rules".
   const text = config.data?.text;
   const inDocument = useMemo(() => (text === undefined ? null : readRules(text).length), [text]);
 

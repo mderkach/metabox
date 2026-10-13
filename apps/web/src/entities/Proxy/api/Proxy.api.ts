@@ -6,9 +6,9 @@ import { PROXY_ENDPOINT } from './Proxy.endpoints';
 import type { ClashDelayWire, ClashProvidersWire, ClashProxiesWire } from './Proxy.schema';
 
 /**
- * Цель и потолок ожидания для замера. Clash API считает их обязательными и
- * отвечает `400 Body invalid`, если их нет; адрес тот же, которым sing-box
- * меряет узлы в `urltest`.
+ * Target and wait ceiling for a probe. The Clash API considers them required
+ * and answers `400 Body invalid` without them; the address is the same one
+ * sing-box uses to probe nodes in `urltest`.
  */
 const DELAY_PROBE = {
   url: 'https://www.gstatic.com/generate_204',
@@ -24,22 +24,23 @@ export async function getProxyProviders(config?: AxiosRequestConfig): Promise<Cl
 }
 
 /**
- * Перечитать подписку сейчас, не дожидаясь её интервала. Подписка без
- * источника для обновления (файл, inline) отвечает успехом и не меняется.
+ * Reread a subscription now, without waiting for its interval. A subscription
+ * without an update source (file, inline) answers with success and does not
+ * change.
  */
 export async function updateProxyProvider(name: string, config?: AxiosRequestConfig): Promise<void> {
   await ApiClientInstance.put<void>(PROXY_ENDPOINT.provider(name), undefined, config);
 }
 
 /**
- * Выбор узла в группе-селекторе. Конфиг при этом не меняется: выбор живёт в
- * рантайме sing-box и переживает только до перезапуска сервиса.
+ * Node selection in a selector group. The config does not change: the selection
+ * lives in the sing-box runtime and survives only until the service restarts.
  */
 export async function selectProxy(group: string, node: string, config?: AxiosRequestConfig): Promise<void> {
   await ApiClientInstance.put<void>(PROXY_ENDPOINT.proxy(group), { name: node }, config);
 }
 
-/** Проверка задержки узла; `65535` в ответе значит «не ответил». */
+/** Node latency check; `65535` in the response means "did not answer". */
 export async function testProxyDelay(name: string, config?: AxiosRequestConfig): Promise<ClashDelayWire> {
   return ApiClientInstance.get<ClashDelayWire>(PROXY_ENDPOINT.proxyDelay(name), {
     ...config,

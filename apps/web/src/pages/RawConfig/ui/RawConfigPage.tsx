@@ -5,10 +5,10 @@ import { Alert, AlertDescription, AlertTitle, QueryFailure, SURFACE, SkeletonRow
 import { ConfigRawEditor } from '@widgets/Config/ConfigRawEditor';
 
 /**
- * Весь конфиг текстом.
+ * The whole config as text.
  *
- * Отката правок у экрана своего нет: документом владеет бар применения, и
- * «Отменить правки» там же, где диф и применение.
+ * The screen has no edit rollback of its own: the document is owned by the apply bar, and
+ * "Discard changes" is there, next to the diff and apply.
  */
 export function RawConfigPage() {
   const { t } = useTranslation('pages/RawConfig');

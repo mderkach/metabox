@@ -50,25 +50,25 @@ import { RAW_PARSE_ERROR, RawFailuresContext } from './ConfigNodeForm.context';
 
 const NS = 'features/Config/ConfigNodeForm';
 
-/** Отступ JSON подузла: тот же, что у файла конфига. */
+/** Indent of a sub-node JSON: the same as the config file's. */
 const JSON_INDENT = 2;
 
-/** Пустой пункт селекта: значение `""` перечисления и «ключа нет» значат одно и то же. */
+/** Empty select item: the enum value `""` and "no key" mean the same thing. */
 const ENUM_UNSET = '';
 
-/** Пропсы виджета поля: план поля из схемы и имя поля формы. */
+/** Field widget props: the field plan from the schema and the form field name. */
 export interface NodeFieldProps {
   field: FieldPlan;
-  /** Путь поля от корня узла через точку. */
+  /** Field path from the node root, dotted. */
   name: string;
-  /** Поля группы, уже собранные рендерером. */
+  /** Group fields already assembled by the renderer. */
   children?: ReactNode;
 }
 
 /**
- * Код замечания в текст. Сгенерированная схема кодов отказа не несёт,
- * переводить приходится по коду замечания Zod, который резолвер кладёт в
- * `type`; проверки оверрайда кладут туда свой код.
+ * Remark code into text. The generated schema carries no failure codes, so the
+ * translation goes by the Zod remark code that the resolver puts into `type`;
+ * override checks put their own code there.
  */
 const ERROR_KEY: Readonly<Record<string, ParseKeys<typeof NS> | undefined>> = {
   invalid_format: 'error.duration',
@@ -91,7 +91,7 @@ function errorText(t: TFunction<typeof NS>, error: FormFieldError | undefined): 
   return t(ERROR_KEY[error.type] ?? 'error.invalid');
 }
 
-/** Подпись, поле и ошибка поля: каркас, общий для виджетов-значений. */
+/** Label, field and field error: a frame shared by value widgets. */
 function FieldRow({
   id,
   label,
@@ -126,10 +126,10 @@ function FieldRow({
 }
 
 /**
- * Текст поля поверх значения формы. Набранное держится своим состоянием: из
- * значения его не восстановить — недописанная строка списка или JSON ещё не
- * значение. Значение, сменившееся снаружи (правка узла текстом, сброс формы),
- * переписывает текст.
+ * Field text on top of the form value. What was typed is held in its own state:
+ * it cannot be restored from the value, since an unfinished list line or JSON
+ * is not a value yet. A value that changed from outside (a node text edit, a
+ * form reset) rewrites the text.
  */
 function useFieldText(value: unknown, format: (value: unknown) => string) {
   const [draft, setDraft] = useState(() => ({ text: format(value), value }));
@@ -183,12 +183,12 @@ export function StringField(props: NodeFieldProps) {
   return mask === null ? <TextField {...props} /> : <SecretField {...props} mask={mask} />;
 }
 
-/** Знаки, которыми замаскирована часть URL после хоста. */
+/** Characters that mask the part of a URL after the host. */
 const URL_MASK = '••••••';
 
 /**
- * URL с замаскированным всем, что после хоста: учётка, путь, query, якорь.
- * `null` — прятать нечего, URL из одного хоста.
+ * URL with everything after the host masked: credentials, path, query, anchor.
+ * `null` means there is nothing to hide, the URL is just a host.
  */
 function maskUrl(text: string): string | null {
   if (!URL.canParse(text)) {
@@ -202,10 +202,10 @@ function maskUrl(text: string): string | null {
 }
 
 /**
- * Секрет: скрыт, пока его не раскрыли кнопкой. Скрытие только на экране —
- * значение формы, а с ним черновик и диф, остаются полными. Целиком скрытый
- * секрет правится вслепую, как пароль; у URL видна часть до пути, а правка
- * открывается раскрытием: замаскированный текст не значение.
+ * Secret: hidden until revealed with a button. The hiding is on screen only:
+ * the form value, and with it the draft and the diff, stay full. A fully hidden
+ * secret is edited blind, like a password; for a URL the part before the path
+ * is visible, and editing opens by revealing: masked text is not a value.
  */
 function SecretField({ field, name, mask }: NodeFieldProps & { mask: SecretMask }) {
   const { t } = useTranslation(NS);
@@ -237,7 +237,7 @@ function SecretField({ field, name, mask }: NodeFieldProps & { mask: SecretMask 
                 aria-describedby={fieldState.invalid ? errorId : undefined}
                 onBlur={input.onBlur}
                 onChange={(event) => {
-                  // Набираемый в пустое поле URL не прячется на первом же знаке.
+                  // A URL typed into an empty field is not hidden at the first character.
                   if (mask === SECRET_MASK.AfterHost) {
                     setRevealed(true);
                   }
@@ -301,7 +301,7 @@ export function NumberField({ field, name }: NodeFieldProps) {
   );
 }
 
-/** Строка или число одним полем: `routing_mark` бывает и `255`, и `"0xff"`. */
+/** String or number in one field: `routing_mark` can be both `255` and `"0xff"`. */
 export function ScalarField({ field, name }: NodeFieldProps) {
   const { t } = useTranslation(NS);
   const { control } = useFormContext<ConfigNodeFormModel>();
@@ -334,9 +334,9 @@ export function ScalarField({ field, name }: NodeFieldProps) {
 }
 
 /**
- * Флаг. Выключенный и незаданный — разные состояния: `false` пишется в файл,
- * а незаданный оставляет бинарю его значение по умолчанию. Поэтому у флага
- * есть сброс, удаляющий ключ.
+ * Flag. Off and unset are different states: `false` is written to the file,
+ * while unset leaves the binary its default value. So the flag has a reset that
+ * deletes the key.
  */
 export function BooleanField({ field, name }: NodeFieldProps) {
   const { t } = useTranslation(NS);
@@ -433,7 +433,7 @@ export function EnumField({ field, name }: NodeFieldProps) {
   );
 }
 
-/** Список строк: значение на строку. */
+/** List of strings: one value per line. */
 export function ListField({ field, name }: NodeFieldProps) {
   const { t } = useTranslation(NS);
   const { control } = useFormContext<ConfigNodeFormModel>();
@@ -479,7 +479,7 @@ function ListInput({
   invalid: boolean;
   describedBy: string;
   onBlur: () => void;
-  /** Текст поля в значение формы. */
+  /** Field text into a form value. */
   onChange: (text: string) => unknown;
   onValue: (value: unknown) => void;
 }) {
@@ -504,7 +504,7 @@ function ListInput({
   );
 }
 
-/** Набор значений перечисления: каждое включается своей кнопкой. */
+/** Set of enum values: each is turned on by its own button. */
 export function EnumListField({ field, name }: NodeFieldProps) {
   const { t } = useTranslation(NS);
   const { control } = useFormContext<ConfigNodeFormModel>();
@@ -528,8 +528,8 @@ export function EnumListField({ field, name }: NodeFieldProps) {
             aria-describedby={fieldState.invalid ? errorId : undefined}
             value={unpackList(input.value)}
             onValueChange={(next) => {
-              // Порядок — порядок схемы, а не нажатий: иначе тот же набор
-              // давал бы разный текст файла.
+              // The order is the schema order, not the press order: otherwise
+              // the same set would give different file text.
               input.onChange(
                 packList(
                   options.filter((option) => next.includes(option)),
@@ -560,8 +560,9 @@ function toJsonText(value: unknown): string {
 }
 
 /**
- * Поле, вид которого форма не знает: JSON-значение текстом. Поле не теряется и
- * форму не валит; неразобранный текст не стирается, а останавливает запись.
+ * Field whose kind the form does not know: a JSON value as text. The field is
+ * not lost and does not break the form; unparsed text is not erased but stops
+ * the write.
  */
 export function RawField({ field, name }: NodeFieldProps) {
   const { t } = useTranslation(NS);
@@ -572,8 +573,8 @@ export function RawField({ field, name }: NodeFieldProps) {
   const hintId = useId();
   const [failure, setFailure] = useState<{ reason: string; value: unknown } | null>(null);
 
-  // Свёрнутая группа снимает поле вместе с набранным текстом: его отказ
-  // запись больше не останавливает.
+  // A collapsed group removes the field together with the typed text: its
+  // failure no longer stops the write.
   useEffect(
     function trackRawFailure() {
       return function forgetRawFailure() {
@@ -588,8 +589,8 @@ export function RawField({ field, name }: NodeFieldProps) {
       control={control}
       name={name}
       render={({ field: input, fieldState }) => {
-        // Отказ относится к значению, при котором текст не разобрался: значение,
-        // сменившееся снаружи, переписало и текст поля.
+        // The failure belongs to the value at which the text did not parse: a
+        // value that changed from outside rewrote the field text too.
         const reason = failure !== null && isSameValue(failure.value, input.value) ? failure.reason : null;
 
         return (
@@ -666,7 +667,7 @@ function RawInput({
         const { value: parsed, failure } = parseJsonc(next);
 
         if (failure !== null) {
-          // Значение формы прежнее: в черновик уйдёт только разобранное.
+          // The form value is the previous one: only the parsed one goes into the draft.
           setDraft({ text: next, value });
           onFailure(failure.text);
 
@@ -681,9 +682,9 @@ function RawInput({
 }
 
 /**
- * Вложенный объект: свои поля под общей подписью. Свёрнут, пока в нём ничего
- * не задано, — длинный тип иначе открывался бы стеной полей TLS и мультиплекса.
- * Свёрнутые поля не монтируются: значения формы при этом не теряются.
+ * Nested object: its own fields under a common label. Collapsed while nothing
+ * in it is set: a long type would otherwise open as a wall of TLS and multiplex
+ * fields. Collapsed fields are not mounted, and form values are not lost.
  */
 export function GroupField({ field, name, children }: NodeFieldProps) {
   const { t } = useTranslation(NS);

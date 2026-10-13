@@ -1,8 +1,8 @@
 import { setupServer } from 'msw/node';
 
 /**
- * Стартует пустым: хендлеры подключает сам тест через `server.use(...)`.
- * `onUnhandledRequest: 'error'` в `setup.ts` превращает забытый мок в падение,
- * а не в молчаливый запрос в сеть.
+ * Starts empty: the test itself attaches handlers via `server.use(...)`.
+ * `onUnhandledRequest: 'error'` in `setup.ts` turns a forgotten mock into a failure,
+ * not into a silent network request.
  */
 export const server = setupServer();

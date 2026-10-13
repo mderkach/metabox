@@ -6,8 +6,8 @@ import { TABLE_HEADER } from '@shared/ui';
 import { RULE_SET_COLUMN } from './RuleSetColumns';
 
 /**
- * Ниже md строка складывается карточкой, и колонки шапки над ней разъезжались
- * бы на три строки: там шапка остаётся только для скринридера.
+ * Below md the row folds into a card, and the header columns above it would spread
+ * across three lines: there the header remains for the screen reader only.
  */
 export function RuleSetTableHeader() {
   const { t } = useTranslation('widgets/RuleSet/RuleSetTable');

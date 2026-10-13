@@ -6,7 +6,7 @@ import { DATAPLANE_ENDPOINT } from '../api/Dataplane.endpoints';
 import type { DataplaneChangeWire, DataplaneWire } from '../api/Dataplane.schema';
 import { DATAPLANE_FIXTURE } from './Dataplane.fixture';
 
-/** Окно подтверждения демона — минута, в наносекундах `time.Duration`. */
+/** The daemon confirmation window is a minute, in nanoseconds of `time.Duration`. */
 const CONFIRM_WINDOW_NS = 60_000_000_000;
 
 function isChange(body: unknown): body is DataplaneChangeWire {
@@ -14,11 +14,11 @@ function isChange(body: unknown): body is DataplaneChangeWire {
 }
 
 /**
- * Модель обвязки вместе с циклом её смены. Транзакция уходит в статус демона
- * через `status()`: панель ищет идущую смену там, а ручку статуса держит мок
- * демона — вторая ручка с тем же адресом закрыла бы его транзакцию конфига.
- * `edit` меняет секцию мимо панели, как правка UCI по SSH: `ETag` сменится, и
- * смена со старым `If-Match` получит 412.
+ * Dataplane model together with its change cycle. The transaction goes into the daemon status
+ * through `status()`: the panel looks for the running change there, and the status handler is held by the daemon
+ * mock: a second handler with the same address would close its config transaction.
+ * `edit` changes the section behind the panel, like a UCI edit over SSH: `ETag` changes, and
+ * a change with the old `If-Match` gets 412.
  */
 export function createDataplaneMock(initial: DataplaneWire = DATAPLANE_FIXTURE) {
   let dataplane = initial;

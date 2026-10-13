@@ -19,12 +19,12 @@ const { toast } = await import('sonner');
 
 const SERVICE_UNAVAILABLE = 503;
 
-/** Клиент приложения: тосты показывает его кэш мутаций, у тестового клиента его нет. */
+/** App client: toasts are shown by its mutation cache, the test client has none. */
 function AppQuery({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={QueryClientInstance}>{children}</QueryClientProvider>;
 }
 
-/** Мутация рядом с подпиской на список: без наблюдателя инвалидация не перезапросит его. */
+/** A mutation next to a list subscription: without an observer the invalidation will not refetch it. */
 function useUpdateWithProviders() {
   return { providers: useQuery(getProxyProvidersOptions()), update: useUpdateProxyProvider() };
 }
@@ -36,7 +36,7 @@ describe('useUpdateProxyProvider', () => {
     server.use(...proxyHandlers);
   });
 
-  it('шлёт PUT на подписку и перечитывает список подписок', async () => {
+  it('sends PUT for the subscription and rereads the subscription list', async () => {
     const updated = vi.fn<(path: string) => void>();
     const listed = vi.fn<() => void>();
 
@@ -69,7 +69,7 @@ describe('useUpdateProxyProvider', () => {
     expect(toast.success).toHaveBeenCalledWith('Подписка обновлена');
   });
 
-  it('показывает отказ ядра его сообщением', async () => {
+  it('shows the core failure by its message', async () => {
     server.use(
       http.put(PROXY_ENDPOINT.provider('sub-eu'), () =>
         HttpResponse.json({ message: 'fetch subscription: 403' }, { status: SERVICE_UNAVAILABLE })

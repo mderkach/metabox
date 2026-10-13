@@ -11,19 +11,19 @@ export const RULE_SET_FORMAT = {
   Source: 'source',
 } as const;
 
-/** Расширения, по которым ядро само выводит формат набора. */
+/** Extensions from which core derives the set format itself. */
 export const SET_EXTENSION = {
   Binary: '.srs',
   Source: '.json',
 } as const;
 
-/** Виды списков у поставщика: домены и адреса. Значения сверяются с контрактом демона. */
+/** Provider list kinds: domains and addresses. Values are checked against the daemon contract. */
 export const RULE_SET_LIST_KIND = {
   Geosite: 'geosite',
   Geoip: 'geoip',
 } as const satisfies Record<string, (typeof LIST_KIND)[number]>;
 
-/** Откуда перечень категорий. Значения сверяются с контрактом демона. */
+/** Where the category listing comes from. Values are checked against the daemon contract. */
 export const RULE_SET_LIST_SOURCE = {
   Snapshot: 'snapshot',
   Provider: 'provider',

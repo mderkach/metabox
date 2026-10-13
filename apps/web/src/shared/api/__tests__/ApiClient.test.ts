@@ -14,18 +14,18 @@ const SUCCESS_MIN = 200;
 const SUCCESS_MAX = 300;
 
 /**
- * Клиент поверх подставного транспорта. Адаптер — штатная точка подмены в
- * axios, поэтому интерцептор и разбор ответа в тесте настоящие.
+ * A client over a substitute transport. The adapter is the regular replacement point in
+ * axios, so the interceptor and response parsing in the test are real.
  */
 function clientAnswering(status: number, data: unknown, statusText = ''): ApiClient {
-  // Контракт AxiosAdapter обязывает вернуть промис, но ждать здесь нечего.
-  // oxlint-disable-next-line typescript/require-await -- см. выше
+  // The AxiosAdapter contract requires returning a promise, but there is nothing to wait for here.
+  // oxlint-disable-next-line typescript/require-await -- see above
   const adapter: AxiosAdapter = async (config) => {
     const response = { data, status, statusText, headers: {}, config };
 
-    // Отбраковку неуспешного статуса встроенные адаптеры делают сами, до
-    // возврата в axios; кастомный обязан повторить это, иначе 404 доедет до
-    // вызывающего как успешный ответ.
+    // Built-in adapters reject an unsuccessful status themselves, before
+    // returning to axios; a custom one must repeat this, otherwise a 404 reaches
+    // the caller as a successful response.
     if (status >= SUCCESS_MIN && status < SUCCESS_MAX) {
       return response;
     }
@@ -37,7 +37,7 @@ function clientAnswering(status: number, data: unknown, statusText = ''): ApiCli
 }
 
 function clientFailing(error: Error): ApiClient {
-  // oxlint-disable-next-line typescript/require-await -- контракт AxiosAdapter
+  // oxlint-disable-next-line typescript/require-await -- AxiosAdapter contract
   const adapter: AxiosAdapter = async () => {
     throw error;
   };
@@ -45,7 +45,7 @@ function clientFailing(error: Error): ApiClient {
   return new ApiClient({ adapter });
 }
 
-/** Сужает пойманное значение до отказа API, не прибегая к утверждению типа. */
+/** Narrows a caught value to an API failure without resorting to a type assertion. */
 function asApiError(error: unknown): ApiError {
   if (!(error instanceof ApiError)) {
     throw new TypeError('ожидался ApiError');
@@ -55,7 +55,7 @@ function asApiError(error: unknown): ApiError {
 }
 
 describe('ApiClient', () => {
-  it('отдаёт тело ответа, а не конверт транспорта', async () => {
+  it('returns the response body, not the transport envelope', async () => {
     const client = clientAnswering(OK, { version: '1.13.18' });
 
     await expect(client.get('/api/status')).resolves.toEqual({
@@ -63,7 +63,7 @@ describe('ApiClient', () => {
     });
   });
 
-  it('отмечает недоступность демона отдельным видом отказа', async () => {
+  it('marks daemon unavailability with a separate failure kind', async () => {
     const client = clientFailing(new AxiosError('Network Error', AxiosError.ERR_NETWORK));
 
     const error = await client.get('/api/status').catch((cause: unknown) => cause);
@@ -71,7 +71,7 @@ describe('ApiClient', () => {
     expect(asApiError(error).kind).toBe(API_FAILURE.Unreachable);
   });
 
-  it('считает истёкший таймаут недоступностью, а не ответом', async () => {
+  it('treats an expired timeout as unavailability, not as a response', async () => {
     const client = clientFailing(new AxiosError('timeout exceeded', AxiosError.ECONNABORTED));
 
     const error = await client.get('/api/status').catch((cause: unknown) => cause);
@@ -79,7 +79,7 @@ describe('ApiClient', () => {
     expect(asApiError(error).kind).toBe(API_FAILURE.Unreachable);
   });
 
-  it('разбирает отказ демона и сохраняет его код', async () => {
+  it('parses a daemon failure and keeps its code', async () => {
     const client = clientAnswering(NOT_FOUND, {
       code: 'unknown_transaction',
       message: 'транзакции с таким идентификатором нет',
@@ -93,7 +93,7 @@ describe('ApiClient', () => {
     expect(error.message).toBe('транзакции с таким идентификатором нет');
   });
 
-  it('сохраняет подробности отказа sing-box без разбора', async () => {
+  it('keeps sing-box failure details without parsing', async () => {
     const client = clientAnswering(UNPROCESSABLE, {
       code: 'check_failed',
       message: 'sing-box отверг конфиг',
@@ -105,7 +105,7 @@ describe('ApiClient', () => {
     expect(error.details).toEqual({ stdout: '', stderr: 'FATAL', exit_code: 1 });
   });
 
-  it('считает шлюзовой статус недоступностью, а не ответом демона', async () => {
+  it('treats a gateway status as unavailability, not as a daemon response', async () => {
     const client = clientAnswering(BAD_GATEWAY, '<html>502</html>');
 
     const error = asApiError(await client.get('/api/status').catch((cause: unknown) => cause));
@@ -113,9 +113,9 @@ describe('ApiClient', () => {
     expect(error.kind).toBe(API_FAILURE.Unreachable);
   });
 
-  // Тот же статус демон ставит сам, когда недоступен рантайм sing-box: это
-  // ответ демона, и путать его с молчанием панели нельзя.
-  it('шлюзовой статус с телом демона считает ответом', async () => {
+  // The daemon sets the same status itself when the sing-box runtime is unavailable: this is a
+  // daemon response, and it must not be confused with panel silence.
+  it('a gateway status with a daemon body counts as a response', async () => {
     const client = clientAnswering(BAD_GATEWAY, {
       code: 'runtime_unavailable',
       message: 'рантайм sing-box недоступен',
@@ -127,7 +127,7 @@ describe('ApiClient', () => {
     expect(error.code).toBe('runtime_unavailable');
   });
 
-  it('отказ ядра без кода считает ответом и сохраняет его сообщение', async () => {
+  it('a core failure without a code counts as a response and keeps its message', async () => {
     const client = clientAnswering(SERVICE_UNAVAILABLE, { message: 'fetch subscription: 403' });
 
     const error = asApiError(await client.put('/api/clash/providers/proxies/sub').catch((cause: unknown) => cause));
@@ -137,7 +137,7 @@ describe('ApiClient', () => {
     expect(error.message).toBe('fetch subscription: 403');
   });
 
-  it('не падает на теле, которое не разбирается как отказ демона', async () => {
+  it('does not crash on a body that does not parse as a daemon failure', async () => {
     const client = clientAnswering(NOT_FOUND, '<html>404</html>', 'Not Found');
 
     const error = asApiError(await client.get('/api/status').catch((cause: unknown) => cause));
@@ -147,7 +147,7 @@ describe('ApiClient', () => {
     expect(error.message).toBe('Not Found');
   });
 
-  it('пропускает отмену запроса, чтобы она не читалась как отказ демона', async () => {
+  it('passes a request cancellation through so it is not read as a daemon failure', async () => {
     const controller = new AbortController();
     const client = clientFailing(new AxiosError('canceled', AxiosError.ERR_CANCELED));
 

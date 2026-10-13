@@ -29,10 +29,10 @@ function serveDaemon() {
   );
 }
 
-/** Экрану достаточно разбираемого конфига: список правил здесь не проверяется. */
+/** The screen only needs a parsable config: the rule list is not checked here. */
 const MINIMAL_CONFIG = JSON.stringify({ route: { rules: [{ outbound: 'direct' }] } }, null, 2);
 
-/** `matchMedia` в jsdom нет — подставляем ответ только на запрос узкой ширины. */
+/** jsdom has no `matchMedia`: answer only the narrow-width query. */
 function mockNarrowScreen() {
   vi.stubGlobal('matchMedia', function matchNarrowQuery(media: string) {
     return {
@@ -45,25 +45,25 @@ function mockNarrowScreen() {
 }
 
 /**
- * Обзор читает поток рантайма, и оболочка открывает `EventSource`, которого в
- * jsdom нет: без заглушки маршрут падал бы в экран ошибки. Кадры здесь не
- * нужны — тест проверяет, какой экран открылся.
+ * Overview reads the runtime stream, and the shell opens an `EventSource` that
+ * jsdom lacks: without a stub the route would fall into the error screen. Frames
+ * are not needed here: the test checks which screen opened.
  */
 class SilentEventSource {
   addEventListener(): void {
-    // Кадров не будет: слушать нечего.
+    // No frames will come: nothing to listen to.
   }
 
   removeEventListener(): void {
-    // Подписок нет: снимать нечего.
+    // No subscriptions: nothing to remove.
   }
 
   close(): void {
-    // Соединения нет: закрывать нечего.
+    // No connection: nothing to close.
   }
 }
 
-/** Свой роутер на тест: открывается сразу на нужном адресе и не делит его с соседями. */
+/** A router per test: opens straight at the needed address and does not share it with neighbors. */
 function renderRouter(path = '/') {
   const router = createPanelRouter(createMemoryHistory({ initialEntries: [path] }));
 
@@ -72,7 +72,7 @@ function renderRouter(path = '/') {
   return router;
 }
 
-describe('маршруты панели', () => {
+describe('panel routes', () => {
   beforeEach(() => {
     ConfigDocumentState.getState().reset();
   });
@@ -82,21 +82,21 @@ describe('маршруты панели', () => {
     vi.unstubAllGlobals();
   });
 
-  it('открывает конфигурацию с корня: пустого экрана на / нет', async () => {
+  it('opens the configuration from the root: there is no empty screen at /', async () => {
     serveDaemon();
 
     const router = renderRouter();
 
-    // Заголовок экрана повторяет название пункта меню, поэтому опознаём экран
-    // по пути к файлу — он есть только на самой странице.
+    // The screen heading repeats the menu item name, so the screen is identified
+    // by the file path, which exists only on the page itself.
     await waitFor(() => {
       expect(screen.getByText('/etc/sing-box/config.json')).toBeInTheDocument();
     });
     expect(router.state.location.pathname).toBe('/config');
   });
 
-  // С телефона на роутер заходят проверить, что всё работает, а не править конфиг.
-  it('на телефоне открывает с корня обзор', async () => {
+  // People open the router from a phone to check that everything works, not to edit the config.
+  it('on a phone opens Overview from the root', async () => {
     serveDaemon();
     server.use(
       http.get(DAEMON_ENDPOINT.clashConfigs(), () => HttpResponse.json(CLASH_CONFIGS_FIXTURE)),
@@ -116,17 +116,17 @@ describe('маршруты панели', () => {
     expect(within(nav).getByRole('link', { current: 'page' })).toHaveAttribute('href', '/overview');
   });
 
-  // Раздел наборов правил сделан, и пункт меню обязан вести на него: пункт без
-  // маршрута выглядит так же, как рабочий, и врёт о состоянии панели.
-  it('в навигации сделанные разделы ведут на свои маршруты', async () => {
+  // The rule sets section is done, and its menu item must lead to it: an item without
+  // a route looks the same as a working one and lies about the panel state.
+  it('in the navigation, finished sections lead to their routes', async () => {
     serveDaemon();
 
     renderRouter();
 
     await screen.findByRole('navigation', { name: 'Разделы панели' });
 
-    // Пункт проверяется адресом, а не подписью: подпись — предмет правок текста,
-    // а обещание меню в том, куда он ведёт.
+    // The item is checked by address, not by label: the label is subject to text edits,
+    // while the menu promises where it leads.
     const targets = [...screen.getAllByRole('link'), ...screen.getAllByRole('tab')].map((link) =>
       link.getAttribute('href')
     );
@@ -135,9 +135,9 @@ describe('маршруты панели', () => {
     expect(targets).toContain('/config/rule-set');
   });
 
-  // Редкие секции не занимают полосу, но и не пропадают: они в меню «Ещё»
-  // рядом с ней, а выбранная редкая встаёт в полосу вкладкой, пока выбрана.
-  it('каждая секция доступна: частые и выбранная — вкладками, остальные — в меню «Ещё»', async () => {
+  // Rare sections do not take up the strip, but do not vanish either: they are in the "More" menu
+  // next to it, and a selected rare one appears in the strip as a tab while selected.
+  it('every section is reachable: frequent and selected ones as tabs, the rest in the "More" menu', async () => {
     serveDaemon();
     const user = userEvent.setup();
 
@@ -157,11 +157,11 @@ describe('маршруты панели', () => {
     expect(new Set(targets).size).toBe(Object.values(CONFIG_SECTION).length);
     expect(targets).toHaveLength(Object.values(CONFIG_SECTION).length);
 
-    // Секции в файле нет — редактор предлагает пустой узел, сохранение создаст её.
+    // The section is not in the file: the editor offers an empty node, saving will create it.
     expect(await screen.findByRole('textbox', { name: 'Узел log текстом' })).toHaveValue('{}');
   });
 
-  it('пункт меню «Ещё» открывает секцию, и она становится выбранной вкладкой', async () => {
+  it('the "More" menu item opens a section, and it becomes the selected tab', async () => {
     serveDaemon();
     const user = userEvent.setup();
 
@@ -182,9 +182,9 @@ describe('маршруты панели', () => {
     expect(within(sections).getAllByRole('tab')).toHaveLength(frequent + 1);
   });
 
-  // Текстовый режим — вторая ось раздела, а не выход из него: секции отвечают
-  // на «какую часть смотрю», режим — на «формами или текстом».
-  it('текстовый режим остаётся внутри раздела: вкладки и переключатель на месте', async () => {
+  // Text mode is the second axis of the section, not a way out of it: sections answer
+  // "which part am I looking at", the mode answers "forms or text".
+  it('text mode stays inside the section: tabs and switch are in place', async () => {
     serveDaemon();
 
     renderRouter('/config/raw');
@@ -205,9 +205,9 @@ describe('маршруты панели', () => {
     expect(current[0]).toHaveAttribute('href', '/config/raw');
   });
 
-  // Шапка раздела принадлежит раскладке, а не вкладке: копия на каждой вкладке
-  // расходится кеглем и составом правой части.
-  it('шапка и история версий существуют в разделе в одном экземпляре', async () => {
+  // The section header belongs to the layout, not to a tab: a copy on each tab
+  // drifts in font size and in the contents of the right part.
+  it('the header and version history exist in the section as a single instance', async () => {
     serveDaemon();
 
     renderRouter('/config/rule-set');
@@ -216,9 +216,9 @@ describe('маршруты панели', () => {
     expect(screen.getAllByRole('button', { name: 'История версий' })).toHaveLength(1);
   });
 
-  // Вне /config/raw «Формы» выбирает полоса по адресу раздела, а текущей
-  // страницей `Link` её не помечает: `/config` активна лишь при точном совпадении.
-  it('на вкладке сетов текущим режимом остаются «Формы»', async () => {
+  // Outside /config/raw the strip picks "Forms" by the section address, and `Link`
+  // does not mark it as the current page: `/config` is active only on an exact match.
+  it('on the rule sets tab the current mode stays "Forms"', async () => {
     serveDaemon();
 
     renderRouter('/config/rule-set');
@@ -229,10 +229,10 @@ describe('маршруты панели', () => {
     expect(within(mode).queryAllByRole('tab', { current: 'page' })).toHaveLength(0);
   });
 
-  // Словарь, не догруженный лоадером, уводит часть экрана в `Suspense`: форма
-  // «Свой набор» открывается через заглушку вместо текста. В тесте словари лежат
-  // в памяти, поэтому проверяется то, что лоадер о них просит.
-  it('лоадер сетов догружает словари каждого слайса, который показывает экран', async () => {
+  // A dictionary not preloaded by the loader pushes part of the screen into `Suspense`: the
+  // "Custom rule set" form opens through a fallback instead of text. In the test the dictionaries are
+  // in memory, so what is checked is what the loader asks for.
+  it('the rule sets loader preloads dictionaries of every slice the screen shows', async () => {
     serveDaemon();
     const loadNamespaces = vi.spyOn(i18next, 'loadNamespaces');
 
@@ -253,8 +253,8 @@ describe('маршруты панели', () => {
     );
   });
 
-  // Бейдж черновика принадлежит шапке раздела и виден с любой его вкладки.
-  it('бейдж черновика показывает шапка раздела, и он один', async () => {
+  // The draft badge belongs to the section header and is visible from any of its tabs.
+  it('the draft badge is shown by the section header, and there is one', async () => {
     serveDaemon();
 
     renderRouter();
@@ -272,9 +272,9 @@ describe('маршруты панели', () => {
     expect(screen.getAllByText('черновик')).toHaveLength(1);
   });
 
-  // Неизвестный путь не должен ронять оболочку: без своей заглушки TanStack
-  // Router отдаёт голое «Not Found» без сайдбара и без перевода.
-  it('на неизвестном пути показывает переведённую заглушку вместе с навигацией панели', async () => {
+  // An unknown path must not crash the shell: without its own fallback TanStack
+  // Router renders a bare "Not Found" with no sidebar and no translation.
+  it('on an unknown path shows a translated fallback together with the panel navigation', async () => {
     serveDaemon();
 
     renderRouter('/nope');
@@ -283,14 +283,14 @@ describe('маршруты панели', () => {
     expect(screen.getByRole('navigation', { name: 'Разделы панели' })).toBeInTheDocument();
   });
 
-  // Вкладки раздела живут на своих адресах, и точное совпадение ссылки гасило
-  // бы «Конфигурацию» на всех, кроме первой.
-  it('в навигации текущим помечен один пункт, даже когда адрес вложен в другой', async () => {
+  // Section tabs live at their own addresses, and an exact link match would deactivate
+  // "Configuration" on all but the first.
+  it('in the navigation exactly one item is marked current, even when the address is nested in another', async () => {
     serveDaemon();
 
     renderRouter('/config/rule-set');
 
-    // Вкладки конфигурации — отдельная навигация со своим текущим пунктом.
+    // Configuration tabs are a separate navigation with its own current item.
     const sidebar = await screen.findByRole('navigation', { name: 'Разделы панели' });
     const current = within(sidebar).getAllByRole('link', { current: 'page' });
 

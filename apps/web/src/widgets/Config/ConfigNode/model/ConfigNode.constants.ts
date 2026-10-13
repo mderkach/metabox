@@ -1,18 +1,18 @@
 import { NODE_REGISTRY, type NodeRegistry } from '@entities/Config';
 
-/** Откуда у узла реестра форма. */
+/** Where a registry node gets its form from. */
 export const FORM_POLICY = {
-  /** Любой тип реестра открывается автоформой по схеме. */
+  /** Any registry type opens as an auto-form from the schema. */
   Auto: 'auto',
-  /** Форма только у типов с рукописной формой; остальные правятся текстом. */
+  /** A form only for types with a handwritten form; the rest are edited as text. */
   OverridesOnly: 'overridesOnly',
 } as const;
 
 export type FormPolicy = (typeof FORM_POLICY)[keyof typeof FORM_POLICY];
 
 /**
- * Политика форм по реестрам. У служб форма положена только `api` (PRD, раздел
- * 8): она открывается своим оверрайдом, остальные службы правятся текстом.
+ * Form policy per registry. Among services only `api` is entitled to a form (PRD, section
+ * 8): it opens with its own override, the other services are edited as text.
  */
 export const NODE_FORM_POLICY: Readonly<Record<NodeRegistry, FormPolicy>> = {
   [NODE_REGISTRY.Inbound]: FORM_POLICY.Auto,

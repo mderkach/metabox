@@ -1,13 +1,13 @@
 {
-  // Выключено то, что репозиторный oxlint уже проверяет — но со своими
-  // исключениями, которых react-doctor не видит: вендорная зона shadcn
-  // (`src/shared/ui/**`) и плагины линтера (`tools/**`) выведены из-под части
-  // правил в `.oxlintrc.json`. Без этого списка каждый прогон отдаёт около
-  // двухсот замечаний, которые репозиторий уже принял как норму.
+  // Disabled: what the repository oxlint already checks, with its own
+  // exceptions that react-doctor does not see: the vendored shadcn zone
+  // (`src/shared/ui/**`) and the linter plugins (`tools/**`) are excluded from
+  // some rules in `.oxlintrc.json`. Without this list every run reports about
+  // two hundred findings that the repository already accepted as the norm.
   //
-  // Область сканирования конфигом не задаётся: ключи `exclude`, `ignore` и
-  // `ignorePatterns` в 0.9.14 не действуют, а несколько каталогов в аргументах
-  // CLI не принимает.
+  // The config does not set the scan scope: the `exclude`, `ignore` and
+  // `ignorePatterns` keys do not work in 0.9.14, and the CLI does not accept
+  // several directories in its arguments.
   "rules": {
     "eslint/no-magic-numbers": "off",
     "no-magic-numbers": "off",
@@ -19,24 +19,25 @@
     "tailwind/no-unknown-classes": "off",
     "import/no-default-export": "off",
     "jsx-a11y/label-has-associated-control": "off",
-    // Виртуализованная таблица собрана ролями вынужденно: абсолютное
-    // позиционирование строк внутри `table` ломает разбор вспомогательными
-    // технологиями. То же исключение стоит и в `.oxlintrc.json`.
+    // The virtualized table is built from roles out of necessity: absolute
+    // positioning of rows inside `table` breaks parsing by assistive
+    // technologies. The same exception is in `.oxlintrc.json`.
     "react-doctor/prefer-tag-over-role": "off",
     "jsx-a11y/prefer-tag-over-role": "off",
 
-    // Ниже — правила, ложные не в отдельном месте, а по устройству панели.
+    // Below are rules that are false not in one place but by the design of the panel.
     //
-    // Кэш после применения конфига сбрасывает не обработчик мутации, а переход
-    // транзакции в конечную фазу: устройство меняет файл не в момент ответа на
-    // запрос. Список соединений идёт потоком мимо Query, и сбрасывать там
-    // нечего вовсе.
+    // The cache is reset after a config is applied not by the mutation handler
+    // but by the transaction moving to a terminal phase: the device changes the
+    // file not at the moment of the response to the request. The connection
+    // list arrives as a stream bypassing Query, so there is nothing to reset
+    // there at all.
     "react-doctor/query-mutation-missing-invalidation": "off",
-    // Текстовый редактор конфига пересоздаётся по `key` со счётчиком обновлений
-    // документа — так внешняя правка доходит до неконтролируемого поля.
+    // The config text editor is recreated by `key` with the document refresh
+    // counter, so an external edit reaches the uncontrolled field.
     "react-doctor/no-derived-useState": "off",
-    // Срабатывает только в вендорной зоне shadcn, а исключить её конфигом
-    // нельзя: ключи области действия в 0.9.14 не работают.
+    // Triggers only in the vendored shadcn zone, and it cannot be excluded by
+    // config: the scope keys do not work in 0.9.14.
     "react-doctor/no-array-index-as-key": "off",
   },
 }

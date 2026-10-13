@@ -17,7 +17,7 @@ import {
 } from './Daemon.fixture';
 
 describe('toDaemonStatus', () => {
-  it('переводит ответ демона в модель', () => {
+  it('converts the daemon response to the model', () => {
     const status = toDaemonStatus(DAEMON_STATUS_FIXTURE);
 
     expect(status.version).toBe(DAEMON_STATUS_FIXTURE.version);
@@ -25,7 +25,7 @@ describe('toDaemonStatus', () => {
     expect(status.configPath).toBe(DAEMON_STATUS_FIXTURE.config_path);
   });
 
-  it('читает незнакомую стадию применения как отказ, а не как подтверждение', () => {
+  it('reads an unknown apply stage as a failure, not as a confirmation', () => {
     const status = toDaemonStatus({
       ...DAEMON_STATUS_FIXTURE,
       transaction: { id: 'a', phase: 'teleporting', window: 0 },
@@ -34,33 +34,33 @@ describe('toDaemonStatus', () => {
     expect(status.transaction?.phase).toBe(APPLY_PHASE.Failed);
   });
 
-  it('не принимает ответ без версии демона', () => {
+  it('does not accept a response without the daemon version', () => {
     expect(DaemonStatusSchema.safeParse({ singbox_version: '1.14.0' }).success).toBe(false);
   });
 });
 
 describe('toServiceState', () => {
-  it('переводит состояние службы в модель', () => {
+  it('converts the service state to the model', () => {
     const state = toServiceState(SERVICE_RUNNING_FIXTURE);
 
     expect(state.status).toBe(SERVICE_STATUS.Running);
     expect(state.binary).toBe(SERVICE_RUNNING_FIXTURE.binary);
   });
 
-  it('читает незнакомое состояние как падение, а не как работу', () => {
+  it('reads an unknown state as a crash, not as running', () => {
     const state = toServiceState({ ...SERVICE_RUNNING_FIXTURE, status: 'zombie' });
 
     expect(state.status).toBe(SERVICE_STATUS.Failed);
   });
 
-  it('переносит код отказа чтения вместе с текстом демона', () => {
+  it('carries the read failure code together with the daemon text', () => {
     const state = toServiceState(SERVICE_UNREAD_FIXTURE);
 
     expect(state.lastErrorCode).toBe('service_state_unread');
     expect(state.lastError).toBe(SERVICE_UNREAD_FIXTURE.lastError);
   });
 
-  it('незнакомый код отбрасывает, текст демона оставляет', () => {
+  it('drops an unknown code, keeps the daemon text', () => {
     const state = toServiceState({ ...SERVICE_UNREAD_FIXTURE, lastErrorCode: 'procd_gone' });
 
     expect(state.lastErrorCode).toBeUndefined();
@@ -69,7 +69,7 @@ describe('toServiceState', () => {
 });
 
 describe('toClashConfigs', () => {
-  it('переводит ключи Clash API в модель', () => {
+  it('converts Clash API keys to the model', () => {
     const configs = toClashConfigs(CLASH_CONFIGS_FIXTURE);
 
     expect(configs.mode).toBe(CLASH_CONFIGS_FIXTURE.mode);
@@ -78,7 +78,7 @@ describe('toClashConfigs', () => {
     expect(configs.bindAddress).toBe(CLASH_CONFIGS_FIXTURE['bind-address']);
   });
 
-  it('оставляет режим из правил конфига как есть, а не подменяет режимом по умолчанию', () => {
+  it('keeps the mode from the config rules as is, instead of replacing it with the default mode', () => {
     const configs = toClashConfigs({ ...CLASH_CONFIGS_FIXTURE, mode: 'Proxy', 'mode-list': ['Rule', 'Proxy'] });
 
     expect(configs.mode).toBe('Proxy');
@@ -86,8 +86,8 @@ describe('toClashConfigs', () => {
   });
 });
 
-describe('кадры потока', () => {
-  it('отбраковывает непонятый кадр, а не роняет подписку', () => {
+describe('stream frames', () => {
+  it('rejects an unrecognized frame instead of crashing the subscription', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
     expect(toTrafficFrame({ up: 'много' })).toBeNull();
@@ -97,7 +97,7 @@ describe('кадры потока', () => {
     warn.mockRestore();
   });
 
-  it('переводит исправный кадр в модель', () => {
+  it('converts a valid frame to the model', () => {
     expect(toTrafficFrame({ up: 10, down: 20 })).toEqual({ up: 10, down: 20 });
     expect(toServiceFrame(SERVICE_RUNNING_FIXTURE)?.status).toBe(SERVICE_STATUS.Running);
   });

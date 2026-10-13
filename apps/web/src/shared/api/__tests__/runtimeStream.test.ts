@@ -5,7 +5,7 @@ import { RUNTIME_TOPIC } from '../runtimeStream';
 import { watchSequence } from '../runtimeStream';
 
 describe('watchSequence', () => {
-  it('молчит, пока номера идут подряд', () => {
+  it('stays silent while the numbers go in sequence', () => {
     const stream = fakeEventSource();
     const onGap = vi.fn<() => void>();
 
@@ -17,7 +17,7 @@ describe('watchSequence', () => {
     expect(onGap).not.toHaveBeenCalled();
   });
 
-  it('сообщает о пропуске: демон считает номера без разрывов, пока события доходят', () => {
+  it('reports a gap: the daemon counts numbers without gaps while events arrive', () => {
     const stream = fakeEventSource();
     const onGap = vi.fn<() => void>();
 
@@ -28,7 +28,7 @@ describe('watchSequence', () => {
     expect(onGap).toHaveBeenCalledTimes(1);
   });
 
-  it('не считает первый кадр пропуском: номера начинаются с любого', () => {
+  it('does not count the first frame as a gap: numbers start from any', () => {
     const stream = fakeEventSource();
     const onGap = vi.fn<() => void>();
 
@@ -38,7 +38,7 @@ describe('watchSequence', () => {
     expect(onGap).not.toHaveBeenCalled();
   });
 
-  it('пропускает битый кадр, не роняя счёт', () => {
+  it('skips a broken frame without breaking the count', () => {
     const stream = fakeEventSource();
     const onGap = vi.fn<() => void>();
 
@@ -50,7 +50,7 @@ describe('watchSequence', () => {
     expect(onGap).not.toHaveBeenCalled();
   });
 
-  it('отписка снимает обработчики со всех топиков', () => {
+  it('unsubscribing removes handlers from all topics', () => {
     const stream = fakeEventSource();
     const stop = watchSequence(stream.source, vi.fn<() => void>());
 

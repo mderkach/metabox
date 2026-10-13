@@ -3,7 +3,7 @@ import { cn } from '../lib/utils';
 
 const PERCENT = 100;
 
-/** Крайние подписи прижаты внутрь: по центру деления они вылезли бы за край карточки. */
+/** Edge labels are pressed inward: centered on the tick they would stick out past the card edge. */
 function edgeClass(index: number, last: number): string {
   if (index === 0) {
     return 'translate-x-0';
@@ -13,8 +13,8 @@ function edgeClass(index: number, last: number): string {
 }
 
 /**
- * Ось значений под полосами. Подписи — оформление: каждая строка над осью
- * печатает свою величину словами, и скринридеру ось ничего не добавляет.
+ * Value axis under the bars. Labels are decoration: each row above the axis
+ * prints its own quantity in words, and the axis adds nothing for a screen reader.
  */
 export function ValueAxis({ scale, format }: { scale: ValueScale; format: (value: number) => string }) {
   const last = scale.ticks.length - 1;

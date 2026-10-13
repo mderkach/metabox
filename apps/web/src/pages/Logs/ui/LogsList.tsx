@@ -9,17 +9,17 @@ import { TABLE_HEADER } from '@shared/ui';
 import { LOGS_COLUMN } from './LogsColumns';
 import { LogsRow } from './LogsRow';
 
-/** Строка заголовка тоже строка таблицы: нумерация строк начинается с неё. */
+/** The header row is also a table row: row numbering starts with it. */
 const HEADER_ROWS = 1;
 
-/** Высота строки в одну линию; перенесённое сообщение меряется по факту. */
+/** Single-line row height; a wrapped message is measured as it is. */
 const ROW_ESTIMATE = 24;
 
 const OVERSCAN = 20;
 
 /**
- * Виртуализованный хвост лога. `follow` держит последнюю строку в окне: новые
- * строки потока прокручивают список к себе, пока пользователь не снял слежение.
+ * Virtualized log tail. `follow` keeps the last row in the window: new
+ * stream rows scroll the list to themselves until the user turns following off.
  */
 export function LogsList({ entries, follow }: { entries: readonly LogEntry[]; follow: boolean }) {
   const { t } = useTranslation('pages/Logs');

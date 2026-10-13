@@ -1,8 +1,8 @@
 import type { DevicesWire } from '../api/Device.schema';
 
 /**
- * Устройства на адресах фикстуры соединений: каждый источник приоритета подписи
- * и устройство без имени, которое подписывается адресом.
+ * Devices on the connection fixture addresses: each source of the label priority
+ * and a device without a name, which is labeled by its address.
  */
 export const DEVICES_FIXTURE: DevicesWire = {
   devices: [

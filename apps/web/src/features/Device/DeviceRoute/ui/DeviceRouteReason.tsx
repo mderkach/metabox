@@ -5,7 +5,7 @@ import { ROUTE_REASON, type RouteReason } from '@entities/Dataplane';
 
 type Namespace = 'features/Device/DeviceRoute';
 
-/** Причина коротко — в строке, полностью — в подсказке и описании тумблера. */
+/** Reason briefly in the row, in full in the hint and the toggle description. */
 const REASON_KEY: Readonly<Record<RouteReason['kind'], { short: ParseKeys<Namespace>; full: ParseKeys<Namespace> }>> = {
   [ROUTE_REASON.Mac]: { short: 'reason.mac', full: 'reason.macFull' },
   [ROUTE_REASON.Host]: { short: 'reason.host', full: 'reason.hostFull' },

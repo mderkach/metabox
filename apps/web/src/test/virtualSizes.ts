@@ -1,19 +1,19 @@
 import { vi } from 'vitest';
 
-/** Контейнер прокрутки виртуализованного списка помечает себя сам. */
+/** The scroll container of a virtualized list marks itself. */
 const VIEWPORT_ATTRIBUTE = 'data-virtual-viewport';
 
 /**
- * Размеры для виртуализованных списков.
+ * Sizes for virtualized lists.
  *
- * jsdom не раскладывает элементы, поэтому `offsetHeight` у него всегда ноль, а
- * `@tanstack/react-virtual` меряет окно прокрутки именно им и без высоты
- * отрисовывает ноль строк. Подмена задаёт высоту окна и строки, чтобы тест
- * проверял поведение списка, а не пустой DOM.
+ * jsdom does not lay out elements, so its `offsetHeight` is always zero, while
+ * `@tanstack/react-virtual` measures the scroll window by exactly that and without a height
+ * renders zero rows. The stand-in sets the window and row height so the test
+ * checks list behavior, not an empty DOM.
  *
- * Размеры получают только окно прокрутки и строки: подмена высоты у всех
- * элементов подряд ломает позиционирование попапов Base UI — они считают
- * себя не помещающимися и не рендерят содержимое.
+ * Sizes go only to the scroll window and rows: stubbing the height of all
+ * elements indiscriminately breaks Base UI popup positioning — they consider
+ * themselves not fitting and do not render content.
  */
 export function mockVirtualSizes({ viewport = 600, row = 52 }: { viewport?: number; row?: number } = {}): void {
   vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {

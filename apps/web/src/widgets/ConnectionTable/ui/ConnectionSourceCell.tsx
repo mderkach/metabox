@@ -3,7 +3,7 @@ import { cn } from '@shared/lib/utils';
 
 import type { ConnectionCellProps } from './ConnectionColumns';
 
-/** Подпись устройства вместо адреса; адрес остаётся в подсказке — по нему сверяют с журналами роутера. */
+/** Device label instead of an address; the address stays in the tooltip — it is used to cross-check router logs. */
 export function ConnectionSourceCell({ connection }: ConnectionCellProps) {
   const devices = useDeviceIndex();
   const label = deviceLabel(connection.source, devices);

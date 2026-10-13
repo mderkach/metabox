@@ -28,9 +28,9 @@ const STATUS_LABEL = {
 } as const satisfies Readonly<Record<ServiceStatus, ParseKeys<'widgets/AppSidebar'>>>;
 
 /**
- * Состояние службы и настройки оболочки: подвал сайдбара на широком экране и
- * лист «Ещё» нижней панели на телефоне. Отдаёт фрагмент — раскладку задаёт
- * контейнер.
+ * Service state and shell settings: the sidebar footer on a wide screen and
+ * the "More" sheet of the bottom bar on a phone. Returns a fragment — the layout is set by the
+ * container.
  */
 export function AppSidebarControls({ collapsed }: { collapsed: boolean }) {
   const { t } = useTranslation('widgets/AppSidebar');
@@ -65,8 +65,8 @@ export function AppSidebarControls({ collapsed }: { collapsed: boolean }) {
 }
 
 /**
- * Состояние сервиса в оболочке, а не только на «Обзоре»: его видно без перехода
- * на отдельный экран.
+ * Service state in the shell, not only on the Overview: it is visible without going
+ * to a separate screen.
  */
 function ServiceDot({ status, collapsed }: { status: ServiceStatus | null; collapsed: boolean }) {
   const { t } = useTranslation('widgets/AppSidebar');

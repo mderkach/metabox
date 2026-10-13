@@ -1,5 +1,5 @@
-/** Режим моков, подставляемый плагином `metabox-mocks` при сборке дев-сервера. */
+/** Mock mode, substituted by the `metabox-mocks` plugin when building the dev server. */
 declare const __METABOX_MOCK__: 'missing' | 'all';
 
-/** Размер снапшота соединений для ручной проверки под нагрузкой; 0 — снимок с устройства как есть. */
+/** Size of the connection snapshot for manual load testing; 0 means the snapshot from the device as is. */
 declare const __METABOX_MOCK_CONNECTIONS__: number;

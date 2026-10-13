@@ -3,17 +3,17 @@ import { useTranslation } from 'react-i18next';
 import type { LiveMessage } from '../lib/useLiveRegion';
 
 /**
- * Живая область: результат действия, который скринридер прочтёт сам, не
- * уводя фокус. Состояние держит `useLiveRegion` из `shared/lib` на экране. Тост её не заменяет — тост показ, а не объявление, и `sonner`
- * объявляет только себя.
+ * Live region: the result of an action that a screen reader reads on its own without
+ * moving focus. State is held by `useLiveRegion` from `shared/lib` on the screen. A toast does not replace it — a toast is shown, not announced, and `sonner`
+ * announces only itself.
  *
- * Область стоит в разметке заранее и пустой: скринридер следит за изменениями
- * уже существующей области, а появившуюся вместе с текстом пропускает. Текст
- * лежит в узле с ключом объявления — повтор того же текста меняет узел, и
- * объявление звучит снова.
+ * The region stands in the markup in advance and empty: a screen reader watches changes of an
+ * already existing region and skips one that appeared together with text. The text
+ * lies in a node with the announcement key — repeating the same text changes the node, and
+ * the announcement sounds again.
  *
- * Имя у области своё: на экране рядом стоят другие статусы — состояние потока,
- * загрузка, — и по имени её находит и тест, и скринридер в списке областей.
+ * The region has its own name: other statuses stand next to it on screen — stream state,
+ * loading — and both a test and a screen reader find it in the region list by name.
  */
 export function LiveRegion({ message }: { message: LiveMessage | null }) {
   const { t } = useTranslation('shared');

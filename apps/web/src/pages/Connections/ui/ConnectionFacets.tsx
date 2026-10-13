@@ -23,7 +23,7 @@ const FACET_LABEL: Readonly<Record<ConnectionFacet, ParseKeys<'pages/Connections
   [CONNECTION_FACET.Network]: 'facet.network',
 };
 
-/** Подпись судьбы пакета: её же показывает сводка на обзоре, поэтому словарь общий. */
+/** Packet fate label: the overview summary shows it too, so the dictionary is shared. */
 const KIND_LABEL: ReadonlyMap<string, ParseKeys<'shared'>> = new Map([
   [ROUTE_KIND.Proxy, 'route.proxy'],
   [ROUTE_KIND.Direct, 'route.direct'],
@@ -33,12 +33,12 @@ const KIND_LABEL: ReadonlyMap<string, ParseKeys<'shared'>> = new Map([
 ]);
 
 /**
- * Фасеты тулбара и сброс всех разом. На узкой ширине — отдельная строка под
- * поиском, которая прокручивается по горизонтали: облако кнопок заняло бы
- * половину экрана телефона.
+ * Toolbar facets and reset of all at once. On a narrow width, a separate row
+ * under the search that scrolls horizontally: a cloud of buttons would take
+ * half of a phone screen.
  *
- * Устройство подписано именем, а в адрес уходит IP: имя можно сменить, и
- * ссылка на отбор от этого не должна сломаться.
+ * A device is labeled with a name, while the IP goes into the URL: the name can
+ * be changed, and a selection link must not break because of it.
  */
 export function ConnectionFacets({ screen }: { screen: ConnectionsScreen }) {
   const { t } = useTranslation('pages/Connections');

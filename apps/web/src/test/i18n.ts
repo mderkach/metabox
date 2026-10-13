@@ -2,9 +2,9 @@ import i18next, { type Resource } from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
 /**
- * Словарь тестов собирается разом и синхронно: рендер в тесте не ждёт, и
- * загрузка по сети подставила бы заглушку вместо текста, который проверяет
- * ассерт. Саму загрузку проверяет браузер, а не jsdom.
+ * The test dictionary is assembled at once and synchronously: a render in a test does not wait, and
+ * a network load would substitute a placeholder for the text the
+ * assertion checks. The loading itself is checked by the browser, not by jsdom.
  */
 const LOCALES = import.meta.glob<Record<string, unknown>>('/src/**/i18n/*.json', {
   eager: true,

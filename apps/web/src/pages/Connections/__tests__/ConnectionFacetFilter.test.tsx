@@ -21,7 +21,7 @@ function describeSource(value: string): ConnectionFacetText {
   return { label, detail: label === value ? null : value };
 }
 
-/** Выбор живёт снаружи — в адресе экрана; обёртка держит его состоянием. */
+/** The selection lives outside, in the screen address; the wrapper holds it as state. */
 function Harness({
   initial = [],
   onChange = vi.fn<(values: readonly string[]) => void>(),
@@ -46,7 +46,7 @@ function Harness({
 }
 
 describe('ConnectionFacetFilter', () => {
-  it('открывает список значений со счётчиками, поиском в фокусе и множественным выбором', async () => {
+  it('opens the value list with counters, search in focus and multiple selection', async () => {
     const user = userEvent.setup();
 
     render(<Harness />);
@@ -61,7 +61,7 @@ describe('ConnectionFacetFilter', () => {
     expect(within(list).getByRole('option', { name: /Ноутбук гостя/ })).toHaveAttribute('aria-selected', 'false');
   });
 
-  it('сужает список поиском по подписи и по адресу', async () => {
+  it('narrows the list by search on the label and on the address', async () => {
     const user = userEvent.setup();
 
     render(<Harness />);
@@ -81,7 +81,7 @@ describe('ConnectionFacetFilter', () => {
     expect(screen.getByText('Ничего не нашлось')).toBeInTheDocument();
   });
 
-  it('выбирает несколько значений и называет выбор на кнопке', async () => {
+  it('selects several values and names the selection on the button', async () => {
     const onChange = vi.fn<(values: readonly string[]) => void>();
     const user = userEvent.setup();
 
@@ -103,7 +103,7 @@ describe('ConnectionFacetFilter', () => {
     expect(onChange).toHaveBeenLastCalledWith(['192.168.1.36']);
   });
 
-  it('ходит по списку с клавиатуры: стрелки, пробел, Enter и возврат в поиск', async () => {
+  it('walks the list with the keyboard: arrows, space, Enter and return to search', async () => {
     const onChange = vi.fn<(values: readonly string[]) => void>();
     const user = userEvent.setup();
 
@@ -134,7 +134,7 @@ describe('ConnectionFacetFilter', () => {
     expect(input).toHaveFocus();
   });
 
-  it('сброс снимает выбор фасета, а Esc закрывает список', async () => {
+  it('reset clears the facet selection, and Esc closes the list', async () => {
     const onChange = vi.fn<(values: readonly string[]) => void>();
     const user = userEvent.setup();
 

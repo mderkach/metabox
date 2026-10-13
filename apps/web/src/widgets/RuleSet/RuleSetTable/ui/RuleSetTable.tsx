@@ -8,18 +8,18 @@ import { SURFACE } from '@shared/ui';
 import { RuleSetRow } from './RuleSetRow';
 import { RuleSetTableHeader } from './RuleSetTableHeader';
 
-/** Строка заголовка тоже строка таблицы: нумерация строк начинается с неё. */
+/** The header row is also a table row: row numbering starts with it. */
 const HEADER_ROWS = 1;
 
 /**
- * Подключённые наборы в порядке файла: тулбар с поиском, шапка колонок, строки
- * и подвал со счётчиком. Форм список не держит: кнопка тулбара открывает
- * форму в панели рядом с ним (ADR-0037).
+ * Attached rule sets in file order: toolbar with search, column header, rows
+ * and a footer with a counter. The list holds no forms: a toolbar button opens
+ * the form in the panel beside it (ADR-0037).
  *
- * Список не виртуализован намеренно: наборов в конфиге десятки, а не сотни —
- * виртуализатор здесь стоил бы абсолютного позиционирования ради экономии,
- * которой не видно. Ролями таблица собрана всё равно: шапка обязана называть
- * колонки, а не только размечать их стилями.
+ * The list is deliberately not virtualized: there are tens of rule sets in a config, not hundreds —
+ * a virtualizer here would cost absolute positioning for savings
+ * nobody can see. The table is built with roles anyway: the header must name
+ * the columns, not only mark them up with styles.
  */
 export function RuleSetTable({
   sets,
@@ -31,15 +31,15 @@ export function RuleSetTable({
   onRemove,
 }: {
   sets: RuleSetRowModel[];
-  /** Сколько наборов в конфиге до отбора: подвал сообщает обе величины. */
+  /** How many rule sets are in the config before filtering: the footer reports both values. */
   total: number;
-  /** Что показать вместо списка, когда отбор не нашёл ничего. */
+  /** What to show instead of the list when filtering found nothing. */
   empty: ReactNode;
-  /** Поиск: левый край тулбара. */
+  /** Search: left edge of the toolbar. */
   search?: ReactNode;
-  /** Действия над списком: правый край тулбара. */
+  /** List actions: right edge of the toolbar. */
   actions?: ReactNode;
-  /** Открывает правку сета; без него строки правку не предлагают. */
+  /** Opens editing of a rule set; without it rows do not offer editing. */
   onEdit?: (index: number) => void;
   onRemove: (index: number) => void;
 }) {

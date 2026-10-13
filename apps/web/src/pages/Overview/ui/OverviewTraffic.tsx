@@ -12,7 +12,7 @@ import { OverviewTile } from './OverviewTile';
 
 const PERCENT = 100;
 
-/** `null` — снимка устройства ещё не было; прочерк — объём за окно наблюдения нулевой. */
+/** `null` means there was no device snapshot yet; a dash means the volume over the observation window is zero. */
 function toVolume(pending: boolean, bytes: number): string | null {
   if (pending) {
     return null;
@@ -28,8 +28,8 @@ function toPeak(t: TFunction<'pages/Overview'>, peak: number): string {
 export function OverviewTraffic({ runtime }: { runtime: OverviewRuntime }) {
   const { t } = useTranslation('pages/Overview');
   const uplink = runtime.system?.uplink;
-  // Инкапсуляция прокси добавляет байт поверх исходного трафика, поэтому доля
-  // упирается в сотню.
+  // Proxy encapsulation adds bytes on top of the original traffic, so the share
+  // hits a hundred.
   const proxyShare = Math.min(1, runtime.share.link > 0 ? runtime.share.proxy / runtime.share.link : 0);
   const noSnapshot = runtime.system === null;
   const proxyContext =
@@ -44,9 +44,9 @@ export function OverviewTraffic({ runtime }: { runtime: OverviewRuntime }) {
   return (
     <OverviewSection
       title={t('traffic.title')}
-      // Канал — счётчики интерфейса между снимками устройства раз в две
-      // секунды, плитки ниже — трафик самого sing-box за секунду. Это разные
-      // величины: часть канала идёт мимо sing-box.
+      // The channel is the interface counters between device snapshots once every two
+      // seconds, the tiles below are sing-box's own traffic per second. These are different
+      // quantities: part of the channel bypasses sing-box.
       note={
         uplink === undefined
           ? undefined

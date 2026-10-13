@@ -4,10 +4,10 @@ import { ApiError } from './ApiError';
 import { ERROR_CODE } from './daemon.generated';
 
 /**
- * Код отказа демона. Набор объявлен у него в `internal/contract` и приезжает
- * сюда списком в схеме контракта, поэтому таблица ниже обязана покрывать его
- * целиком: новый код у демона — ошибка компиляции у панели, а не
- * непереведённый текст на экране.
+ * Daemon failure code. The set is declared in its `internal/contract` and arrives
+ * here as a list in the contract schema, so the table below must cover it
+ * entirely: a new code in the daemon is a compile error in the panel, not
+ * untranslated text on screen.
  */
 export type ApiFailureCode = (typeof ERROR_CODE)[number];
 
@@ -44,9 +44,9 @@ function isKnownCode(code: string | null): code is ApiFailureCode {
 }
 
 /**
- * Причина отказа словами пользователя или `null`, когда код демону известен не
- * был. Незнакомый код — это новый вид отказа: перевода у панели для него нет,
- * и врать общей фразой она не должна.
+ * Failure reason in the user's words or `null` when the code was not known to the
+ * daemon. An unfamiliar code is a new kind of failure: the panel has no translation for it,
+ * and it must not lie with a generic phrase.
  */
 export function failureText(error: unknown): string | null {
   if (!(error instanceof ApiError) || !isKnownCode(error.code)) {

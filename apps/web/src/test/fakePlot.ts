@@ -4,9 +4,9 @@ import { vi } from 'vitest';
 type Range = { min?: number; max?: number };
 
 /**
- * Подмена uPlot. Канваса в jsdom нет — `getContext` отдаёт `null`, и настоящий
- * график падает в конструкторе. Подмена запоминает вызовы и умеет посчитать
- * подписи оси теми же функциями, что отдал график.
+ * uPlot stand-in. jsdom has no canvas — `getContext` returns `null`, and the real
+ * chart fails in the constructor. The stand-in remembers calls and can compute
+ * axis labels with the same functions the chart passed.
  */
 export class FakePlot {
   static readonly instances: FakePlot[] = [];
@@ -40,11 +40,11 @@ export class FakePlot {
     FakePlot.instances.push(this);
   }
 
-  /** Подписи делений оси `index` при текущих шкалах. */
+  /** Tick labels of axis `index` at the current scales. */
   axisLabels(index: number): string[] {
     const axis = this.options.axes?.[index];
-    // Подмена изображает только ту часть uPlot, которую читают функции осей: шкалы.
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- функции осей типизированы полным uPlot
+    // The stand-in imitates only the part of uPlot that axis functions read: the scales.
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- axis functions are typed with the full uPlot
     const self = this as unknown as uPlot;
     const splits = typeof axis?.splits === 'function' ? axis.splits(self, index, 0, 0, 0, 0) : [];
 
@@ -55,7 +55,7 @@ export class FakePlot {
     const plot = FakePlot.instances.at(-1);
 
     if (plot === undefined) {
-      throw new Error('график не создан');
+      throw new Error('chart was not created');
     }
 
     return plot;

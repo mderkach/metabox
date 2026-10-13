@@ -3,8 +3,8 @@ import { useEffect, useState } from 'react';
 import { MS_IN_MINUTE } from '@shared/lib/time';
 
 /**
- * Текущее время с шагом в минуту: подпись «обновлена N назад» не показывает
- * секунд, поэтому чаще перерисовывать список подписок незачем.
+ * Current time in one-minute steps: the "updated N ago" label does not show
+ * seconds, so there is no reason to redraw the subscription list more often.
  */
 export function useMinuteClock(): number {
   const [now, setNow] = useState(() => Date.now());

@@ -8,7 +8,7 @@ import { server } from './server';
 
 await initTestI18n();
 
-// Глобалы vitest выключены, поэтому Testing Library не регистрирует свою очистку.
+// Vitest globals are off, so Testing Library does not register its own cleanup.
 afterEach(cleanup);
 
 vi.mock('uplot', async () => ({ default: (await import('./fakePlot')).FakePlot }));
@@ -18,9 +18,9 @@ afterEach(() => {
 });
 
 /**
- * ResizeObserver в jsdom нет вовсе, а виртуализатор списков без него не
- * подписывается на изменение окна прокрутки. Заглушка сообщает об изменении
- * сразу, а размеры тест подставляет через `mockVirtualSizes`.
+ * jsdom has no ResizeObserver at all, and the list virtualizer without it does not
+ * subscribe to scroll window changes. The stub reports a change
+ * at once, and the test supplies sizes via `mockVirtualSizes`.
  */
 class TestResizeObserver implements ResizeObserver {
   private readonly callback: ResizeObserverCallback;
@@ -30,27 +30,27 @@ class TestResizeObserver implements ResizeObserver {
   }
 
   observe(): void {
-    // Пустой список записей: библиотека тогда меряет элемент сама, а тест
-    // подменяет размеры через `mockVirtualSizes`.
+    // An empty entry list: the library then measures the element itself, and the test
+    // substitutes sizes via `mockVirtualSizes`.
     this.callback([], this);
   }
 
   unobserve(): void {
-    // Наблюдение одноразовое: отписывать нечего.
+    // Observation is one-shot: nothing to unsubscribe.
   }
 
   disconnect(): void {
-    // Наблюдение одноразовое: отключать нечего.
+    // Observation is one-shot: nothing to disconnect.
   }
 }
 
 globalThis.ResizeObserver = TestResizeObserver;
 
 /**
- * Web Animations API в jsdom нет, а область прокрутки Base UI спрашивает у
- * вьюпорта текущие анимации по таймеру — уже после того, как тест закончился,
- * поэтому падение прилетает необработанным исключением мимо теста. Анимаций в
- * jsdom не бывает вовсе, поэтому пустой список здесь не упрощение.
+ * jsdom has no Web Animations API, and the Base UI scroll area asks the
+ * viewport for current animations on a timer — after the test has ended,
+ * so the failure arrives as an unhandled exception outside the test. Animations in
+ * jsdom never exist, so the empty list here is not a simplification.
  */
 Element.prototype.getAnimations = function getAnimations(): Animation[] {
   return [];

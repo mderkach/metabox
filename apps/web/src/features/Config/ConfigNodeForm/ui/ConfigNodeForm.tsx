@@ -26,17 +26,18 @@ import { CONFIG_NODE_FORM_WIDGET } from './ConfigNodeForm.widgets';
 const NS = 'features/Config/ConfigNodeForm';
 
 /**
- * Форма узла секции, нарисованная по схеме его типа (ADR-0035).
+ * Section node form drawn from the schema of its type (ADR-0035).
  *
- * В черновик уходят только изменённые листья узла: правка одного поля даёт
- * одну строку дифа, а комментарии и порядок ключей внутри узла остаются как
- * были. Узел, которого схема его типа не знает, формы не получает — его
- * открывает текстовый режим (ADR-0018).
+ * Only the changed node leaves go into the draft: editing one field gives one
+ * diff line, while comments and key order inside the node stay as they were. A
+ * node that the schema of its type does not know gets no form: text mode opens
+ * it (ADR-0018).
  *
- * Тип с оверрайдом (`NODE_OVERRIDE`) открывается его основными полями;
- * проверки оверрайда идут поверх схемы. Остальные поля, заданные в узле, идут
- * следом, а пустые уходят под свёртку. Опция, которой нет в сборке бинаря,
- * помечена у своего поля (`builtTags` — `null`, пока состав сборки не прочитан).
+ * A type with an override (`NODE_OVERRIDE`) opens with its main fields;
+ * override checks go on top of the schema. The other fields set in the node
+ * follow, and empty ones go under a disclosure. An option that is not in the
+ * binary build is marked at its field (`builtTags` is `null` until the build
+ * contents are read).
  */
 export function ConfigNodeForm({
   registry,
@@ -79,26 +80,28 @@ export function ConfigNodeFormBody({
   const rest = useMemo(() => splitByPresence(layout.rest, node), [layout.rest, node]);
   const resolver = useMemo(() => toNodeFormResolver(schema, override), [schema, override]);
   const [failures] = useState(() => new Map<string, unknown>());
-  // Узел из разбора текста — объекты без прототипа: RHF такие не копирует, и
-  // правка поля переписала бы заодно и исходные значения — форма не узнала бы,
-  // что её тронули. Копия даёт обычные объекты с теми же значениями.
+  // A node from text parsing consists of objects without a prototype: RHF does
+  // not copy those, and editing a field would rewrite the original values too,
+  // so the form would not know it was touched. The copy gives ordinary objects
+  // with the same values.
   const values = useMemo(() => structuredClone(node), [node]);
 
   const form = useForm<ConfigNodeFormModel, ConfigNodeFormModel>({
-    // Значения — узел как есть: дефолт, дописанный формой, попал бы в диф
-    // правкой, которой пользователь не делал. `values` подтягивает правку того
-    // же узла текстом, `keepDirtyValues` не стирает набранное.
+    // Values are the node as is: a default appended by the form would get into
+    // the diff as an edit the user did not make. `values` pulls in an edit of
+    // the same node made as text, `keepDirtyValues` does not erase what was
+    // typed.
     defaultValues: values,
     values,
     resetOptions: { keepDirtyValues: true },
     mode: 'onChange',
-    // Узел до правки: проверки оверрайда не перепроверяют нетронутое.
+    // Node before the edit: override checks do not recheck the untouched.
     context: node,
     resolver,
   });
 
   const onSubmit = form.handleSubmit(() => {
-    // Неразобранный JSON raw-поля резолвер не видит: значение у поля прежнее.
+    // The resolver does not see unparsed raw field JSON: the field value is the previous one.
     const unparsed = [...failures].filter(([name, value]) => isSameValue(form.getValues(name), value));
 
     if (unparsed.length > 0) {
@@ -112,8 +115,8 @@ export function ConfigNodeFormBody({
     const data = form.getValues();
 
     editMany(diffNode(path, node, data));
-    // Сохранённое становится новой точкой отсчёта: кнопка гаснет, пока форма
-    // снова не разойдётся с черновиком.
+    // Saved becomes the new reference point: the button goes dim until the form
+    // diverges from the draft again.
     form.reset(data);
   });
 
@@ -153,9 +156,9 @@ export function ConfigNodeFormBody({
 }
 
 /**
- * Поле по его виду: виджет из таблицы, группа — со своими полями внутри.
- * Опция вне сборки бинаря помечается один раз — у самого верхнего поля, к
- * которому она относится; поля внутри помеченной группы пометку не повторяют.
+ * Field by its kind: a widget from the table, a group with its own fields
+ * inside. An option outside the binary build is marked once, at the topmost
+ * field it belongs to; fields inside a marked group do not repeat the mark.
  */
 function NodeField({
   field,
@@ -164,7 +167,7 @@ function NodeField({
 }: {
   field: FieldPlan;
   builtTags: readonly string[] | null;
-  /** Предок поля уже помечен. */
+  /** The field ancestor is already marked. */
   marked?: boolean;
 }) {
   const { t } = useTranslation(NS);
@@ -196,7 +199,7 @@ function NodeField({
   );
 }
 
-/** Свёртка пустых полей. Свёрнутые поля не монтируются, значения формы при этом не теряются. */
+/** Disclosure of empty fields. Collapsed fields are not mounted, and form values are not lost. */
 function AdvancedFields({ count, children }: { count: number; children: ReactNode }) {
   const { t } = useTranslation(NS);
   const [open, setOpen] = useState(false);

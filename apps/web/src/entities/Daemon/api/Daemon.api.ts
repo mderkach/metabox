@@ -19,23 +19,24 @@ export async function getServiceState(config?: AxiosRequestConfig): Promise<Serv
 }
 
 /**
- * Действие над сервисом. Ответ — новое состояние: перечитывать его отдельным
- * запросом незачем, а гадать по коду ответа нельзя.
+ * Action on the service. The response is the new state: there is no need to
+ * reread it with a separate query, and one must not guess from the response
+ * code.
  */
 export async function runServiceAction(action: ServiceAction): Promise<ServiceStateWire> {
   return ApiClientInstance.post<ServiceStateWire>(DAEMON_ENDPOINT.serviceAction(action));
 }
 
-/** Режим маршрутизации рантайма: `Rule`, `Global` или `Direct`. */
+/** Runtime routing mode: `Rule`, `Global` or `Direct`. */
 export async function getClashConfigs(config?: AxiosRequestConfig): Promise<ClashConfigsWire> {
   return ApiClientInstance.get<ClashConfigsWire>(DAEMON_ENDPOINT.clashConfigs(), config);
 }
 
 /**
- * Смена режима идёт в рантайм, а не в конфиг: файл не меняется, и после
- * рестарта режим вернётся к `default_mode`, если `cache_file` не включён.
- * Незнакомый режим sing-box молча пропускает и всё равно отвечает 204,
- * поэтому принятый режим видно только по следующему чтению.
+ * A mode change goes to the runtime, not to the config: the file does not
+ * change, and after a restart the mode returns to `default_mode` unless
+ * `cache_file` is enabled. sing-box silently skips an unknown mode and still
+ * answers 204, so the accepted mode is visible only on the next read.
  */
 export async function setClashMode(mode: string): Promise<void> {
   return ApiClientInstance.patch<void>(DAEMON_ENDPOINT.clashConfigs(), { mode });

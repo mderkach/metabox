@@ -7,12 +7,12 @@ const WIDTH = 120;
 const HEIGHT = 26;
 
 /**
- * Ряд без осей. Шкала идёт от нуля, а не от минимума ряда: у загрузки и
- * температуры разброс мал относительно самой величины, и от минимума спокойный
- * ряд выглядел бы пилой.
+ * A series without axes. The scale starts from zero, not from the series minimum: for load and
+ * temperature the spread is small relative to the value itself, and from the minimum a calm
+ * series would look like a saw.
  *
- * `capacity` — верх шкалы (`toSparkCeiling`): без него 5% памяти рисовались
- * бы у верхней кромки, потому что верхом был бы пик самого ряда.
+ * `capacity` is the top of the scale (`toSparkCeiling`): without it 5% of memory would be drawn
+ * at the top edge, because the top would be the peak of the series itself.
  */
 export function DaemonSparkline({
   samples,
@@ -25,7 +25,7 @@ export function DaemonSparkline({
   label: string;
   tone?: string;
   capacity?: number;
-  /** Размер на месте: рисунок растягивается под него, толщина линии — нет. */
+  /** Size in place: the drawing stretches to it, the line thickness does not. */
   className?: string;
 }) {
   const peak = Math.max(...samples, 0);

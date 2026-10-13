@@ -5,33 +5,34 @@ import { MS_IN_SECOND, SECONDS_IN_MINUTE } from '@shared/lib/time';
 
 import type { MemorySample, SystemStat, TrafficSample, UplinkRate } from './Daemon.model';
 
-/** Демон шлёт кадр трафика раз в секунду; своего времени у кадра нет. */
+/** The daemon sends a traffic frame once a second; the frame has no time of its own. */
 export const TRAFFIC_STEP_SECONDS = 1;
 
 /**
- * Окно графика трафика в секундах — ровно минута, как у графика соединений:
- * подписи оси у обоих заканчиваются на «−60 с».
+ * Traffic chart window in seconds, exactly a minute, as for the connections
+ * chart: the axis labels of both end at "-60 s".
  */
 export const TRAFFIC_WINDOW_SECONDS = SECONDS_IN_MINUTE;
 
-/** Точек в окне графика: по ним считается пик минуты. */
+/** Points in the chart window: the minute peak is computed from them. */
 export const TRAFFIC_WINDOW_POINTS = TRAFFIC_WINDOW_SECONDS / TRAFFIC_STEP_SECONDS;
 
 /**
- * Точек за левой кромкой окна. Правая кромка отстаёт от «сейчас» на шаг, и
- * буфер ровно в окно начинался бы внутри графика: область отходила от левой
- * кромки и раз в секунду прыгала за выпавшей точкой. Одна точка покрывает
- * отставание, вторая даёт отрезку, который кромка режет, начало.
+ * Points beyond the left edge of the window. The right edge lags "now" by a
+ * step, and a buffer of exactly the window size would start inside the chart:
+ * the area would move away from the left edge and jump once a second after the
+ * dropped point. One point covers the lag, the second gives the segment cut by
+ * the edge a start.
  */
 const TRAFFIC_OFFSCREEN_POINTS = 2;
 
 export const TRAFFIC_POINTS = TRAFFIC_WINDOW_POINTS + TRAFFIC_OFFSCREEN_POINTS;
 
 /**
- * Время точек буфера в секундах эпохи. Считается от прихода последней точки
- * назад с шагом потока, а не от прихода каждой: свёрнутая вкладка отдаёт
- * накопленные кадры пачкой, и по времени прихода они слиплись бы в одну
- * секунду.
+ * Buffer point time in epoch seconds. Counted back from the arrival of the last
+ * point with the stream step, not from the arrival of each: a collapsed tab
+ * delivers accumulated frames in a batch, and by arrival time they would stick
+ * into one second.
  */
 export function toTrafficTimes(count: number, lastAt: number): number[] {
   const last = lastAt / MS_IN_SECOND;
@@ -39,62 +40,65 @@ export function toTrafficTimes(count: number, lastAt: number): number[] {
   return Array.from({ length: count }, (_, index) => last - (count - 1 - index) * TRAFFIC_STEP_SECONDS);
 }
 
-/** Память показывается за десять минут: берём каждый десятый сэмпл. */
+/** Memory is shown over ten minutes: we take every tenth sample. */
 export const MEMORY_EVERY = 10;
 export const MEMORY_POINTS = SECONDS_IN_MINUTE;
 
 /**
- * Границы правдоподобного интервала между снимками устройства. Свёрнутая
- * вкладка копит кадры и отдаёт их пачкой: интервал между ними околонулевой при
- * большой дельте байт, и скорость канала вышла бы фантастической.
+ * Bounds of a plausible interval between device snapshots. A collapsed tab
+ * accumulates frames and delivers them in a batch: the interval between them is
+ * near zero with a large byte delta, and the channel speed would come out
+ * fantastic.
  */
 const MIN_INTERVAL = 0.5;
 const MAX_INTERVAL = 30;
 
 const NO_UPLINK_RATE: UplinkRate = { rx: 0, tx: 0 };
 
-/** Счётчик интерфейса только растёт; после подъёма линка он начинается с нуля. */
+/** The interface counter only grows; after link up it starts from zero. */
 function toRate(current: number, previous: number, seconds: number): number {
   return Math.max(0, (current - previous) / seconds);
 }
 
 interface RuntimeState {
-  /** Кольцевой буфер: история потока не копится, экрану нужен хвост. */
+  /** Ring buffer: the stream history is not accumulated, the screen needs the tail. */
   traffic: TrafficSample[];
   memory: number[];
-  /** Последний сэмпл памяти, даже если в буфер он ещё не попал. */
+  /** Last memory sample, even if it has not yet got into the buffer. */
   memoryNow: number;
-  /** Последние показания устройства; `null` — снимок ещё не приходил. */
+  /** Latest device readings; `null` means no snapshot has arrived yet. */
   system: SystemStat | null;
   /**
-   * Скорость интерфейса наружу за интервал между снимками. Считает панель:
-   * демон отдаёт счётчики с подъёма линка, а доля канала через sing-box
-   * сравнивается только по приращениям одного окна.
+   * Outward interface speed over the interval between snapshots. Computed by
+   * the panel: the daemon serves counters since link up, and the channel share
+   * through sing-box is compared only by increments of one window.
    */
   uplink: UplinkRate;
   /**
-   * Когда пришёл последний кадр рантайма. По нему видно, что поток оборвался:
-   * без этой отметки замершие числа неотличимы от затихшего трафика.
+   * When the last runtime frame arrived. It shows that the stream broke:
+   * without this mark frozen numbers are indistinguishable from quiet traffic.
    */
   sampledAt: number | null;
   /**
-   * Когда получена последняя точка трафика — из потока или минутой от демона.
-   * От неё считается время точек графика; живость потока по ней не судится.
+   * When the last traffic point was received, from the stream or as a minute
+   * from the daemon. The chart point time is computed from it; stream liveness
+   * is not judged by it.
    */
   trafficAt: number | null;
   /**
-   * Когда пришёл последний снимок устройства. Его снимает демон, а не
-   * sing-box: свежий снимок при замершем трафике значит, что поток жив и молчит
-   * sing-box, а замерли оба — оборвалась связь панели с демоном.
+   * When the last device snapshot arrived. It is taken by the daemon, not by
+   * sing-box: a fresh snapshot with frozen traffic means the stream is alive
+   * and sing-box is silent, while if both froze, the panel connection to the
+   * daemon broke.
    */
   systemAt: number | null;
-  /** Сколько экранов смотрит поток рантайма. */
+  /** How many screens watch the runtime stream. */
   readers: number;
   pushTraffic: (sample: TrafficSample) => void;
   /**
-   * Заполняет пустой буфер последней минутой, которую копил демон: график
-   * открывается полным, а не начинается с того момента, как открыта вкладка.
-   * Буфер, в который поток уже писал, не трогается.
+   * Fills an empty buffer with the last minute the daemon accumulated: the
+   * chart opens full instead of starting from the moment the tab was opened. A
+   * buffer the stream has already written to is not touched.
    */
   seedTraffic: (samples: TrafficSample[]) => void;
   pushMemory: (sample: MemorySample) => void;
@@ -102,9 +106,10 @@ interface RuntimeState {
   addReader: () => void;
   removeReader: () => void;
   /**
-   * Поток закрыт: отметка последнего кадра снимается, буферы остаются. Иначе
-   * экран, открытый заново, судил бы о живости по кадру из прошлого
-   * подключения и показывал замерший поток, пока не придёт первый новый.
+   * The stream is closed: the last frame mark is cleared, the buffers stay.
+   * Otherwise a screen opened again would judge liveness by a frame from a
+   * previous connection and show a frozen stream until the first new one
+   * arrives.
    */
   closeStream: () => void;
   reset: () => void;
@@ -112,8 +117,8 @@ interface RuntimeState {
 
 const RuntimeStateProto = stateCreator<RuntimeState>((set) => {
   let memoryTick = 0;
-  // Прошлый снимок интерфейса живёт вне состояния: он нужен только для счёта
-  // скорости, и подписки на него никто не делает.
+  // The previous interface snapshot lives outside the state: it is needed only
+  // for the speed calculation, and nobody subscribes to it.
   let sampledAt: number | null = null;
 
   return {
@@ -143,8 +148,8 @@ const RuntimeStateProto = stateCreator<RuntimeState>((set) => {
       );
     },
     pushMemory: (sample) => {
-      // Первый сэмпл потока всегда нулевой: показать его значило
-      // бы соврать, что sing-box не занимает памяти.
+      // The first stream sample is always zero: showing it would be lying that
+      // sing-box takes no memory.
       if (sample.inuse === 0) {
         return;
       }
@@ -168,7 +173,7 @@ const RuntimeStateProto = stateCreator<RuntimeState>((set) => {
         const previous = state.system?.uplink;
         const seconds = sampledAt === null ? 0 : (receivedAt - sampledAt) / MS_IN_SECOND;
         const measurable = seconds >= MIN_INTERVAL && seconds <= MAX_INTERVAL;
-        // Смена интерфейса сбрасывает сравнение: счётчики у нового свои.
+        // An interface change resets the comparison: the new one has its own counters.
         const comparable = previous !== undefined && link !== undefined && measurable && link.name === previous.name;
 
         sampledAt = receivedAt;
@@ -211,7 +216,7 @@ const RuntimeStateProto = stateCreator<RuntimeState>((set) => {
 
 export const RuntimeState = createReactSelectors(RuntimeStateProto);
 
-/** Стор снаружи React: обработчики потоков живут вне дерева компонентов. */
+/** Store outside React: the stream handlers live outside the component tree. */
 export const RuntimeStore = RuntimeStateProto;
 
 export function useTrafficNow(): TrafficSample {
@@ -219,8 +224,9 @@ export function useTrafficNow(): TrafficSample {
 }
 
 /**
- * Экран объявляет, что смотрит рантайм. Поток открывает оболочка: держать его
- * открытым на всех экранах незачем — сэмплы идут каждую секунду.
+ * A screen declares that it watches the runtime. The shell opens the stream:
+ * there is no need to keep it open on all screens, since samples arrive every
+ * second.
  */
 export function useRuntimeStream(): void {
   useEffect(function countRuntimeReader() {

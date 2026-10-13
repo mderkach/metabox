@@ -5,9 +5,9 @@ import { RuntimeStore } from '../model/Daemon.store';
 import type { ServiceStateWire } from './Daemon.schema';
 
 /**
- * Трафик и память приходят топиками единого потока. Копить их
- * пачкой незачем: сэмпл — два числа раз в секунду, пачка нужна там, где
- * сообщение весит десятки килобайт.
+ * Traffic and memory arrive as topics of the single stream. There is no need to
+ * accumulate them in a batch: a sample is two numbers once a second, and a
+ * batch is needed where a message weighs tens of kilobytes.
  */
 export function listenTraffic(source: StreamSource): () => void {
   return listenTopic(source, RUNTIME_TOPIC.Traffic, (frame) => {
@@ -29,7 +29,7 @@ export function listenMemory(source: StreamSource): () => void {
   });
 }
 
-/** Показания устройства идут тем же потоком, что и трафик. */
+/** Device readings go through the same stream as traffic. */
 export function listenSystem(source: StreamSource): () => void {
   return listenTopic(source, RUNTIME_TOPIC.System, (frame) => {
     const stat = toSystemFrame(frame);
@@ -41,9 +41,10 @@ export function listenSystem(source: StreamSource): () => void {
 }
 
 /**
- * Состояние службы в потоке и в ручке `/api/service` — одно и то же тело,
- * поэтому событие кладётся в кэш запроса: экран продолжает читать
- * состояние своим хуком и не знает, пришло оно потоком или запросом.
+ * The service state in the stream and in the `/api/service` endpoint is the
+ * same body, so the event is put into the query cache: the screen keeps reading
+ * the state with its own hook and does not know whether it came from the stream
+ * or from a request.
  */
 export function listenService(source: StreamSource, apply: (state: ServiceStateWire) => void): () => void {
   return listenTopic(source, RUNTIME_TOPIC.Service, (frame) => {

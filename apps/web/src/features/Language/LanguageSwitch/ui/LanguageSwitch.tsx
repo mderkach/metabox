@@ -5,9 +5,9 @@ import { cn } from '@shared/lib/utils';
 import { ToggleGroup, ToggleGroupItem } from '@shared/ui';
 
 /**
- * Выбор языка интерфейса. Активный язык берётся у i18next напрямую: он же
- * источник правды для `t`, и своё состояние здесь разошлось бы с ним при смене
- * языка из другого места.
+ * Interface language choice. The active language is taken from i18next
+ * directly: it is also the source of truth for `t`, and a state of its own here
+ * would diverge from it when the language is changed from another place.
  */
 export function LanguageSwitch({ vertical = false }: { vertical?: boolean }) {
   const { t } = useTranslation('features/Language/LanguageSwitch');
@@ -20,7 +20,7 @@ export function LanguageSwitch({ vertical = false }: { vertical?: boolean }) {
       orientation={vertical ? 'vertical' : 'horizontal'}
       value={[currentLanguage()]}
       onValueChange={(value) => {
-        // Повторное нажатие на отмеченный язык снимает его, а без языка интерфейса нет.
+        // Pressing the selected language again deselects it, and without a language there is no interface.
         const next = LANGUAGES.find((language) => language === value[0]);
         if (next !== undefined) void changeLanguage(next);
       }}

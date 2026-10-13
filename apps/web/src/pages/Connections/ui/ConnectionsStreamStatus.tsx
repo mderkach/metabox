@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-/** Пауза меняет смысл экрана: строки стоят, хотя трафик идёт. Живой поток в подписи не нуждается. */
+/** Pause changes the meaning of the screen: rows stand although traffic flows. A live stream needs no label. */
 export function ConnectionsStreamStatus({ paused }: { paused: boolean }) {
   const { t } = useTranslation('pages/Connections');
 

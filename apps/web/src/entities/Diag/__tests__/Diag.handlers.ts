@@ -4,7 +4,7 @@ import { DIAG_ENDPOINT } from '../api/Diag.endpoints';
 import type { ReportWire } from '../api/Diag.schema';
 import { DIAG_REPORT_FIXTURE } from './Diag.fixture';
 
-/** Без узла строка выхода через узел — пропуск, как у демона. */
+/** Without a node the outbound-through-node row is a skip, as in the daemon. */
 function withoutProxy(report: ReportWire): ReportWire {
   return {
     checks: report.checks.map((check) =>

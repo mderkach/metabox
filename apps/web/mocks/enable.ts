@@ -1,14 +1,14 @@
 import { worker } from './browser';
 
 /**
- * Вход дев-режима с моками. Приложение сюда не импортируется статически, и в
- * `src` про этот каталог нет ни одной ссылки: плагин `metabox-mocks` подменяет
- * вход в `index.html` только на дев-сервере, поэтому в сборку ничего из моков
- * попасть не может по построению.
+ * Entry point of dev mode with mocks. The app does not import it statically,
+ * and `src` has no references to this directory: the `metabox-mocks` plugin
+ * replaces the entry point in `index.html` on the dev server only, so nothing
+ * from the mocks can end up in the build by construction.
  *
- * Режим `missing` пропускает существующие ручки демона на него самого, `all`
- * отвечает на всё сам — иначе панель без демона показывала бы баннер отказа
- * поверх мока.
+ * The `missing` mode passes existing daemon endpoints through to the daemon
+ * itself, `all` answers everything on its own; otherwise the panel without a
+ * daemon would show the failure banner over the mock.
  */
 const MOCK_MODE = __METABOX_MOCK__;
 const APP_ENTRY = '/src/app/main.tsx';
@@ -19,6 +19,7 @@ await worker.start({
   quiet: true,
 });
 
-// Путь строкой: статический импорт втянул бы приложение в проект моков, а с ним
-// и типы Node — ровно та связь, которой этот файл и существует, чтобы не было.
+// The path is a string: a static import would pull the app into the mocks
+// project, and with it the Node types, which is exactly the coupling this file
+// exists to avoid.
 await import(/* @vite-ignore */ APP_ENTRY);

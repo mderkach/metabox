@@ -1,6 +1,6 @@
 import type { ParseKeys, TFunction } from 'i18next';
 
-/** Имена режимов по умолчанию; режим из правил конфига показывается как есть. */
+/** Default mode names; a mode from config rules is shown as is. */
 const CLASH_MODE_LABEL: Readonly<Record<string, ParseKeys<'shared'> | undefined>> = {
   rule: 'clashMode.rule',
   global: 'clashMode.global',

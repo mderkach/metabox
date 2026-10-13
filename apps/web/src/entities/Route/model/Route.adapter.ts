@@ -21,11 +21,12 @@ function isKind(value: string): value is RouteMatchKind {
 }
 
 /**
- * Незнакомое происхождение читается как «вычислить нечем».
+ * An unfamiliar origin is read as "nothing to compute with".
  *
- * Демон отдаёт ровно три значения, но бинарь и демон обновляются порознь:
- * ослаблять пометку до `observed` на неизвестном значении нельзя — это ровно
- * тот случай, когда прогноз выдают за факт.
+ * The daemon serves exactly three values, but the binary and the daemon are
+ * updated separately: downgrading the mark to `observed` on an unknown value is
+ * not allowed, because that is exactly the case of passing a forecast off as a
+ * fact.
  */
 function toOrigin(value: string): RouteOrigin {
   return isOrigin(value) ? value : ROUTE_ORIGIN.Unknown;
@@ -35,7 +36,7 @@ function toKind(value: string): RouteMatchKind {
   return isKind(value) ? value : ROUTE_MATCH.Unknown;
 }
 
-/** Незнакомый код читается как «причина не названа»: текст берётся из `reason`. */
+/** An unfamiliar code is read as "reason not named": the text is taken from `reason`. */
 function toReasonCode(value: string | undefined): RouteReasonCode | null {
   return ROUTE_REASON_CODE.find((code) => code === value) ?? null;
 }
@@ -69,9 +70,10 @@ function toRule(dto: RouteExplanationWire['rules'][number]) {
 }
 
 /**
- * Объяснение маршрута из ответа демона. Форма проверяется схемой, и непонятый
- * ответ становится отказом, а не пустым экраном: «правило не найдено» и «ответ
- * не разобран» — разные вещи, и вторую пользователь обязан видеть.
+ * Route explanation from the daemon response. The shape is checked by the
+ * schema, and a response that is not understood becomes a failure, not an empty
+ * screen: "rule not found" and "response not parsed" are different things, and
+ * the user must see the second.
  */
 export function toRouteExplanation(dto: RouteExplanationWire): RouteExplanation {
   return {

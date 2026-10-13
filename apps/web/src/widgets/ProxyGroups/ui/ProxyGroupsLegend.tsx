@@ -5,7 +5,7 @@ import { cn } from '@shared/lib/utils';
 
 import { DELAY_TONE } from './ProxyDelayTone';
 
-/** Пороги тона задержки словами: по одному цвету граница между 290 и 310 мс не видна. */
+/** Latency tone thresholds in words: with one color the boundary between 290 and 310 ms is invisible. */
 export function ProxyGroupsLegend() {
   const { t } = useTranslation('widgets/ProxyGroups');
   const entries = [

@@ -13,7 +13,7 @@ import { configHandlers } from './Config.handlers';
 
 const EDITED = JSON.stringify({ ...CONFIG_FIXTURE, log: { ...CONFIG_FIXTURE.log, level: 'debug' } }, null, 2);
 
-/** Схема не примет: `inbounds` обязан быть списком. */
+/** The schema will not accept it: `inbounds` must be a list. */
 const REJECTED = JSON.stringify({ ...CONFIG_FIXTURE, inbounds: 'не список' }, null, 2);
 
 function renderDocument() {
@@ -35,8 +35,8 @@ describe('useConfigDocument', () => {
     );
   });
 
-  // Разбор отложен за вводом: текст и признак правок обязаны не ждать его.
-  it('после правки текст и признак правок обновляются сразу, а разобранный документ догоняет их', async () => {
+  // Parsing is deferred behind the input: the text and the edits flag must not wait for it.
+  it('after an edit the text and the edits flag update at once, and the parsed document catches up', async () => {
     const { result } = renderDocument();
 
     await waitFor(() => {
@@ -56,7 +56,7 @@ describe('useConfigDocument', () => {
     expect(result.current.issues).toEqual([]);
   });
 
-  it('черновик, который схема не приняла, даёт замечания и пустой документ, а текст оставляет', async () => {
+  it('a draft the schema did not accept yields issues and an empty document, and keeps the text', async () => {
     const { result } = renderDocument();
 
     await waitFor(() => {

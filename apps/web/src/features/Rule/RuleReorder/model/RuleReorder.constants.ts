@@ -1,4 +1,4 @@
-/** Куда сдвигается правило: на одну позицию вверх или вниз по списку. */
+/** Where a rule moves: one position up or down the list. */
 export const MOVE = {
   Up: -1,
   Down: 1,

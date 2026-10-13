@@ -4,16 +4,16 @@ import { MS_IN_SECOND } from '../lib/time';
 import type { PlotInstance } from './Plot';
 
 /**
- * Сдвиг оси времени по кадрам: данные приходят раз в секунду, а окно едет
- * непрерывно. Линия не догоняет новую точку — точка появляется сразу,
- * двигается только ось. Окно всегда полной длины: подписи оси стоят на
- * месте, а неполный буфер оставляет левую часть пустой. Выключенный сдвиг оставляет ось тому, кто ставит её
- * вместе с данными.
+ * Time axis shift per frame: data arrives once a second, while the window moves
+ * continuously. The line does not catch up with a new point — the point appears at once,
+ * only the axis moves. The window is always full length: axis labels stay in
+ * place, and an incomplete buffer leaves the left part empty. A disabled shift leaves the axis to whoever sets it
+ * together with the data.
  *
- * Правая кромка отстаёт от «сейчас» на `lag` — шаг потока. Иначе между
- * кадрами хвост области отставал бы от кромки почти на секунду и прыгал к ней
- * с каждой новой точкой; с отставанием новая точка приходит за кромкой и
- * въезжает в окно плавно.
+ * The right edge lags "now" by `lag` — the stream step. Otherwise between
+ * frames the area tail would lag the edge by almost a second and jump to it
+ * with each new point; with the lag a new point arrives beyond the edge and
+ * slides into the window smoothly.
  */
 export function useFollowNow(chart: PlotInstance | null, span: number, lag: number, enabled: boolean) {
   useEffect(

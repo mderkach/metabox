@@ -6,13 +6,13 @@ export interface DonutSlice {
   key: string;
   label: string;
   value: number;
-  /** Подпись под названием доли: байты, скорость, число соединений. */
+  /** Caption under the share name: bytes, speed, connection count. */
   caption: string;
-  /** Класс обводки сегмента. */
+  /** Segment stroke class. */
   tone: string;
 }
 
-/** Кольцо в долях области; радиус меньше половины на толщину обводки. */
+/** Ring in area shares; the radius is less than half by the stroke thickness. */
 const PLOT = 100;
 const HALVES = 2;
 const CENTER = PLOT / HALVES;
@@ -20,7 +20,7 @@ const RADIUS = 40;
 const STROKE = 14;
 const DIAMETER = RADIUS * HALVES;
 const CIRCUMFERENCE = Math.PI * DIAMETER;
-/** Дуга стартует справа, как на часах в три часа: доли читаются сверху. */
+/** The arc starts on the right, like a clock at three: shares read from the top. */
 const START_TURN = -90;
 
 export function ConnectionSummaryDonut({ slices, empty }: { slices: DonutSlice[]; empty: string }) {

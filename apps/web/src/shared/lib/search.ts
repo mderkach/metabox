@@ -1,9 +1,9 @@
 /**
- * Слова запроса в нижнем регистре. Совпасть должны все: `telegram direct` ищет
- * соединения до телеграма, ушедшие напрямую, а не объединение двух списков.
+ * Query words in lower case. All must match: `telegram direct` finds
+ * connections to telegram that went direct, not a union of two lists.
  *
- * Разбор вынесен из колбэка отбора намеренно: на пяти тысячах строк он
- * повторялся бы на каждую строку каждого снапшота.
+ * Parsing is deliberately moved out of the filter callback: on five thousand rows it
+ * would repeat for every row of every snapshot.
  */
 export function toQueryWords(query: string): string[] {
   return query.toLowerCase().split(/\s+/u).filter(Boolean);

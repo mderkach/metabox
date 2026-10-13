@@ -14,23 +14,23 @@ import { RawConfigPage } from '../ui/RawConfigPage';
 
 const VALID_CONFIG = JSON.stringify({ route: { rules: [{ outbound: 'direct' }] } }, null, 2);
 
-/** Схема такое не примет: `rules` обязан быть списком. */
+/** The schema will not accept this: `rules` must be a list. */
 const UNPARSED_CONFIG = JSON.stringify({ route: { rules: 'всё направо' } }, null, 2);
 
 function serveConfig(text: string) {
   server.use(
     http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(text)),
-    // Бар применения живёт в оболочке и опрашивает демона на каждом экране.
+    // The apply bar lives in the shell and polls the daemon on every screen.
     http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE))
   );
 }
 
-describe('конфиг текстом', () => {
+describe('config as text', () => {
   beforeEach(() => {
     ConfigDocumentState.getState().reset();
   });
 
-  it('показывает файл с устройства как есть', async () => {
+  it('shows the file from the device as is', async () => {
     serveConfig(VALID_CONFIG);
 
     renderWithRouter(RawConfigPage);
@@ -40,7 +40,7 @@ describe('конфиг текстом', () => {
     expect(editor).toHaveValue(VALID_CONFIG);
   });
 
-  it('открывается, когда схема конфиг не приняла: формы нельзя, текст можно', async () => {
+  it('opens when the schema did not accept the config: forms are impossible, text is possible', async () => {
     serveConfig(UNPARSED_CONFIG);
 
     renderWithRouter(RawConfigPage);
@@ -49,7 +49,7 @@ describe('конфиг текстом', () => {
     expect(screen.getByRole('textbox', { name: 'Конфиг sing-box текстом' })).toHaveValue(UNPARSED_CONFIG);
   });
 
-  it('ошибка разбора не стирает введённый текст', async () => {
+  it('a parse error does not erase the typed text', async () => {
     serveConfig(VALID_CONFIG);
 
     const user = userEvent.setup();
@@ -65,7 +65,7 @@ describe('конфиг текстом', () => {
     expect(editor).toHaveValue('{ "route": ');
   });
 
-  it('правка уходит в черновик, а файл на устройстве не трогается', async () => {
+  it('an edit goes to the draft, and the file on the device is not touched', async () => {
     serveConfig(VALID_CONFIG);
 
     const user = userEvent.setup();
@@ -82,8 +82,8 @@ describe('конфиг текстом', () => {
     expect(ConfigDocumentState.getState().applied).toBe(VALID_CONFIG);
   });
 
-  // Одно действие не существует под двумя именами: откатом владеет бар применения.
-  it('своей кнопки отката у экрана нет: документом владеет бар применения', async () => {
+  // One action does not exist under two names: the apply bar owns the rollback.
+  it('the screen has no rollback button of its own: the apply bar owns the document', async () => {
     serveConfig(VALID_CONFIG);
 
     renderWithRouter(RawConfigPage);
@@ -93,7 +93,7 @@ describe('конфиг текстом', () => {
     expect(screen.queryByRole('button', { name: 'Вернуть версию с устройства' })).not.toBeInTheDocument();
   });
 
-  it('отменённый черновик возвращает текст в поле, а не только в стор', async () => {
+  it('a cancelled draft returns the text to the field, not only to the store', async () => {
     serveConfig(VALID_CONFIG);
 
     const user = userEvent.setup();
@@ -108,12 +108,12 @@ describe('конфиг текстом', () => {
       expect(ConfigDocumentState.getState().draft).not.toBeNull();
     });
 
-    // Отмену делает бар применения; экран обязан подхватить её полем ввода.
+    // The cancel is done by the apply bar; the screen must pick it up with the input field.
     act(() => {
       ConfigDocumentState.getState().discard();
     });
 
-    // Редактор пересоздан вместе с документом, поэтому поле ищется заново.
+    // The editor is recreated together with the document, so the field is looked up again.
     await waitFor(async () => {
       expect(await screen.findByRole('textbox', { name: 'Конфиг sing-box текстом' })).toHaveValue(VALID_CONFIG);
     });

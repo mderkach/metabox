@@ -31,7 +31,7 @@ describe('ConfigApplyDiff', () => {
     ConfigDocumentState.getState().reset();
   });
 
-  it('над дифом сводит правки правил словами, с нумерацией как в списке правил', async () => {
+  it('above the diff summarizes rule edits in words, numbered as in the rule list', async () => {
     const draft = RULES.slice(0, 7).map((rule, index) => (index === 1 ? { ...rule, outbound: 'direct' } : rule));
 
     await openDiff(RULES.slice(0, 7), [
@@ -48,7 +48,7 @@ describe('ConfigApplyDiff', () => {
     ).toEqual(['Правило 2: proxy → direct', 'Правило 5 удалено', 'Правило 7 добавлено']);
   });
 
-  it('переставленное правило называет перемещением, а не удалением и добавлением', async () => {
+  it('names a moved rule a move, not a deletion and an addition', async () => {
     const [first, second, ...rest] = RULES;
 
     await openDiff(RULES, [second, first, ...rest]);
@@ -62,7 +62,7 @@ describe('ConfigApplyDiff', () => {
     ).toEqual(['Правило 1 перемещено на место 2']);
   });
 
-  it('длинную сводку обрезает и говорит, сколько осталось', async () => {
+  it('truncates a long summary and says how many remain', async () => {
     await openDiff([], RULES);
 
     const summary = await screen.findByRole('list', { name: 'Изменения правил маршрутизации' });
@@ -72,7 +72,7 @@ describe('ConfigApplyDiff', () => {
     expect(items.at(-1)).toHaveTextContent('И ещё 3 изменения');
   });
 
-  it('без правок правил сводку не показывает', async () => {
+  it('without rule edits does not show the summary', async () => {
     ConfigDocumentState.getState().load('{\n  "log": { "level": "info" }\n}');
     ConfigDocumentState.getState().replace('{\n  "log": { "level": "debug" }\n}');
     renderWithQuery(<ConfigApplyDiff canApply onApply={() => undefined} />);
@@ -83,7 +83,7 @@ describe('ConfigApplyDiff', () => {
     expect(screen.queryByRole('list', { name: 'Изменения правил маршрутизации' })).not.toBeInTheDocument();
   });
 
-  it('добавленную строку красит тоном успеха, удалённую — тоном опасности, и знак оставляет', async () => {
+  it('colors an added line with the success tone, a removed one with the danger tone, and keeps the sign', async () => {
     ConfigDocumentState.getState().load('{\n  "log": { "level": "info" }\n}');
     ConfigDocumentState.getState().replace('{\n  "log": { "level": "debug" }\n}');
     renderWithQuery(<ConfigApplyDiff canApply onApply={() => undefined} />);

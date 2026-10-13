@@ -74,7 +74,7 @@ describe('SidePanelLayout', () => {
     vi.unstubAllGlobals();
   });
 
-  it('открывает панель рядом со списком и отдаёт ей фокус', async () => {
+  it('opens the panel next to the list and gives it focus', async () => {
     const user = userEvent.setup();
 
     render(<Screen />);
@@ -84,7 +84,7 @@ describe('SidePanelLayout', () => {
     expect(screen.getByRole('complementary', { name: 'Правило 1' })).toBeInTheDocument();
   });
 
-  it('закрытая панель уходит из дерева доступности сразу, а содержимое держит до конца сворачивания', async () => {
+  it('a closed panel leaves the accessibility tree at once, and the content stays until the collapse ends', async () => {
     const user = userEvent.setup();
 
     render(<Screen />);
@@ -100,7 +100,7 @@ describe('SidePanelLayout', () => {
     expect(screen.getByRole('button', { name: 'Открыть первое' })).toHaveFocus();
   });
 
-  it('смена содержимого открытой панели не закрывает её', async () => {
+  it('changing the content of an open panel does not close it', async () => {
     const user = userEvent.setup();
 
     render(<Screen />);
@@ -111,7 +111,7 @@ describe('SidePanelLayout', () => {
     expect(screen.queryByRole('complementary', { name: 'Правило 1', hidden: true })).not.toBeInTheDocument();
   });
 
-  it('сворачивает колонку и без конца перехода: прерванный выезд её не держит', () => {
+  it('collapses the column even without the transition end: an interrupted slide-out does not hold it', () => {
     vi.useFakeTimers();
 
     function Layout({ open }: { open: boolean }) {
@@ -135,7 +135,7 @@ describe('SidePanelLayout', () => {
     expect(screen.queryByRole('complementary', { hidden: true })).not.toBeInTheDocument();
   });
 
-  it('без анимации снимает содержимое сразу: конца перехода не будет', async () => {
+  it('without animation removes the content at once: there will be no transition end', async () => {
     stubReducedMotion();
     const user = userEvent.setup();
 

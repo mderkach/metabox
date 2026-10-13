@@ -34,15 +34,15 @@ import {
 import { useRouteExplanationState } from '../lib/RouteExplanation.lib';
 import { RouteOriginBadge } from './RouteOriginBadge';
 
-/** Таблица обязана покрывать набор демона: новый код — ошибка компиляции здесь. */
+/** The table must cover the daemon's set: a new code is a compile error here. */
 const REASON_KEY: Readonly<Record<RouteReasonCode, ParseKeys<'widgets/RouteExplanation'>>> = {
   not_in_process_list: 'unknown.reason.not_in_process_list',
 };
 
 /**
- * Заголовок получает фокус при открытии панели. Кольцу нужен зазор, как у
- * кнопки: внутренний отступ отодвигает его от текста, а отрицательное поле
- * оставляет текст на месте.
+ * The title gets focus when the panel opens. The ring needs a gap, like on a
+ * button: inner padding moves it away from the text, and a negative margin
+ * keeps the text in place.
  */
 const HEADING = cn(
   '-mx-1.5 -my-0.5 flex min-w-0 grow flex-col rounded-md px-1.5 py-0.5 outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
@@ -50,10 +50,10 @@ const HEADING = cn(
 );
 
 /**
- * Объяснение строится на наблюдаемых данных core: список правил и сработавшее
- * правило приходят от sing-box, а не выводятся панелью. Причина,
- * по которой не подошли предыдущие правила, не вычисляется: у каждого
- * утверждения на экране видно происхождение, и догадка не подаётся как факт.
+ * The explanation is built on observable core data: the rule list and the rule
+ * that hit come from sing-box, not derived by the panel. The reason
+ * the previous rules did not match is not computed: every
+ * statement on the screen shows its origin, and a guess is not presented as fact.
  */
 export function RouteExplanation({
   id,
@@ -64,9 +64,9 @@ export function RouteExplanation({
 }: {
   id?: string;
   connectionId: string;
-  /** Узел назначения: панель обязана называть соединение, о котором рассказывает. */
+  /** Destination node: the panel must name the connection it describes. */
   host: string;
-  /** Адрес источника; панель называет его подписью устройства. */
+  /** Source address; the panel names it by the device label. */
   source: string;
   onClose: () => void;
 }) {
@@ -80,9 +80,9 @@ export function RouteExplanation({
   }
 
   return (
-    // Escape закрывает панель: обработчик на контейнере — обычный паттерн для
-    // панелей и диалогов, интерактивная роль aside для этого не нужна.
-    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- см. выше
+    // Escape closes the panel: a handler on the container is a common pattern for
+    // panels and dialogs, an interactive role on aside is not needed for it.
+    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- see above
     <aside
       id={id}
       aria-label={t('titleFor', { host })}
@@ -103,9 +103,9 @@ export function RouteExplanation({
 }
 
 /**
- * То же объяснение листом поверх списка — для экрана, где панели рядом со
- * списком нет места. Escape, щелчок мимо и кнопка закрытия зовут `onClose`, как
- * у панели.
+ * The same explanation as a sheet on top of the list — for a screen where there is no room for a panel
+ * beside the list. Escape, a click outside and the close button call `onClose`, as
+ * for the panel.
  */
 export function RouteExplanationSheet({
   id,
@@ -115,23 +115,23 @@ export function RouteExplanationSheet({
   onClose,
 }: {
   id?: string;
-  /** `null` — соединение не выбрано, лист закрыт. */
+  /** `null` means no connection is selected, the sheet is closed. */
   connectionId: string | null;
   host: string;
   source: string;
   onClose: () => void;
 }) {
   const { t } = useTranslation('widgets/RouteExplanation');
-  // Лист уезжает анимацией уже после сброса выбора и всё это время
-  // показывает последнее соединение, а не пустоту.
+  // The sheet slides away with an animation after the selection is reset and all that time
+  // shows the last connection, not emptiness.
   const [shown, setShown] = useState({ connectionId, host, source });
 
   if (connectionId !== null && (connectionId !== shown.connectionId || host !== shown.host)) {
     setShown({ connectionId, host, source });
   }
 
-  // Высота листа задана, а не берётся по содержимому: тело приходит запросом,
-  // и лист, выросший со скелетона до объяснения, дёрнулся бы посреди выезда.
+  // The sheet height is set, not taken from content: the body arrives by request,
+  // and a sheet that grew from a skeleton to the explanation would jerk mid-slide.
   return (
     <Sheet
       open={connectionId !== null}
@@ -149,8 +149,8 @@ export function RouteExplanationSheet({
       >
         <Header
           heading={
-            // Имя листа Base UI берёт из заголовка, а видимый текст склеил бы
-            // подпись с узлом без пробела.
+            // Base UI takes the sheet name from the title, while the visible text would glue
+            // the label to the node without a space.
             <SheetTitle aria-label={t('titleFor', { host: shown.host })} className={HEADING}>
               <Title host={shown.host} source={shown.source} />
             </SheetTitle>
@@ -262,8 +262,8 @@ function Matched({
     return <Unknown reason={unknownReason(t, match)} />;
   }
 
-  // Номер узла показывается только при сошедшихся списках: в чужом документе
-  // он указал бы на другое правило, а догадку подавать как факт нельзя.
+  // The node number is shown only when the lists match: in a foreign document
+  // it would point to a different rule, and a guess must not be presented as fact.
   if (compared && !trusted) {
     return <Unknown reason={t('unknown.drifted')} />;
   }
@@ -287,8 +287,8 @@ function Matched({
         <Link
           to='/config'
           search={{ rule: match.index + 1 }}
-          // Покрашена кнопкой, но остаётся ссылкой: `Button` с `render` ставит
-          // `role="button"` поверх `<a href>` даже при `nativeButton={false}`.
+          // Styled as a button but stays a link: `Button` with `render` puts
+          // `role="button"` on top of `<a href>` even with `nativeButton={false}`.
           className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}
         >
           {t('matched.open')}
@@ -299,8 +299,8 @@ function Matched({
 }
 
 /**
- * Причина — перевод по коду демона. Текст из ответа идёт в ход, только когда
- * код незнаком: он на языке демона, но объясняет больше, чем общая фраза.
+ * The reason is a translation by the daemon code. Text from the response is used only when the
+ * code is unfamiliar: it is in the daemon's language, but explains more than a generic phrase.
  */
 function unknownReason(t: TFunction<'widgets/RouteExplanation'>, match: RouteMatch): string {
   if (match.reasonCode !== null) {

@@ -10,9 +10,10 @@ export function useCloseConnection() {
 }
 
 /**
- * Обрыв всех живых соединений. Тоста об успехе нет, как и у обрыва одного:
- * результат видно по строкам, ушедшим из списка, а скринридеру его объявляет
- * живая область экрана. Тост `sonner` объявил бы его второй раз.
+ * Closing all live connections. There is no success toast, as for closing one:
+ * the result is visible in the rows that left the list, and a live region of
+ * the screen announces it to a screen reader. A `sonner` toast would announce
+ * it a second time.
  */
 export function useCloseAllConnections() {
   return useMutation({

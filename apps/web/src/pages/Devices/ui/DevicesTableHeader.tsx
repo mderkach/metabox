@@ -5,7 +5,7 @@ import { TABLE_HEADER } from '@shared/ui';
 
 import { DEVICES_COLUMN } from './DevicesColumns';
 
-/** Ниже md строка складывается карточкой: шапка остаётся только для скринридера. */
+/** Below md the row folds into a card: the header remains for the screen reader only. */
 export function DevicesTableHeader() {
   const { t } = useTranslation('pages/Devices');
 

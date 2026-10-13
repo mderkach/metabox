@@ -1,7 +1,7 @@
 import type { NodeRegistry } from '@entities/Config';
 import { FIELD_KIND } from '@shared/lib/schemaShape';
 
-/** Коды отказа проверок оверрайда поверх схемы: текст по ним подставляет `ui`. */
+/** Failure codes of override checks on top of the schema: the `ui` substitutes the text by them. */
 export const NODE_OVERRIDE_ERROR = {
   Required: 'required',
   RealityPublicKey: 'realityPublicKey',
@@ -10,61 +10,63 @@ export const NODE_OVERRIDE_ERROR = {
 
 export type NodeOverrideError = (typeof NODE_OVERRIDE_ERROR)[keyof typeof NODE_OVERRIDE_ERROR];
 
-/** Отказ проверки оверрайда: путь поля через точку и код. */
+/** Override check failure: dotted field path and code. */
 export interface NodeOverrideIssue {
   name: string;
   code: NodeOverrideError;
 }
 
-/** Вид поля, которым оверрайд подменяет вид из схемы. */
+/** Field kind with which an override replaces the schema kind. */
 export interface NodeOverrideWidget {
   kind: typeof FIELD_KIND.Enum;
-  /** Значения селекта; `''` — пустой пункт, «ключа нет». */
+  /** Select values; `''` is the empty item, "no key". */
   options: string[];
 }
 
 /**
- * Рукописная настройка формы типа поверх автоформы (ADR-0035): поля и запись
- * те же, меняются порядок, вид отдельных полей и обязательность.
+ * Handwritten type form setup on top of the autoform (ADR-0035): the fields and
+ * the write are the same, while the order, the kind of individual fields and
+ * requiredness change.
  */
 export interface NodeOverride {
   /**
-   * Поля сверху формы, по порядку; путь через точку. Остальные поля типа
-   * уходят в свёрнутую группу «Дополнительно».
+   * Fields at the top of the form, in order; a dotted path. The other type
+   * fields go into the collapsed "Advanced" group.
    */
   primary: string[];
-  /** Поле → вид, которым оно рисуется вместо вида из схемы. */
+  /** Field to the kind it is drawn with instead of the schema kind. */
   widgets?: Readonly<Partial<Record<string, NodeOverrideWidget>>>;
-  /** Поля, без которых узел типа не работает, хотя схема их не требует. */
+  /** Fields without which a node of the type does not work although the schema does not require them. */
   required?: string[];
-  /** Новый узел типа: то, без чего он не соберётся, уже заполнено. */
+  /** New node of the type: what it cannot be built without is already filled in. */
   preset?: (tag: string) => Record<string, unknown>;
   /**
-   * Проверки, которых схема не знает: сверены с исходниками форка. `before` —
-   * узел до правки: значение, которого пользователь не трогал, формат не
-   * перепроверяет — арбитр ему `sing-box check` (ADR-0035), а форма не мешает
-   * править соседнее поле узла, сохранённого другим инструментом.
+   * Checks the schema does not know, verified against the fork sources.
+   * `before` is the node before the edit: a value the user did not touch is not
+   * rechecked for format, since its arbiter is `sing-box check` (ADR-0035), and
+   * the form does not stop editing a neighboring field of a node saved by
+   * another tool.
    */
   refine?: (node: NodeValue, before: NodeValue) => NodeOverrideIssue[];
 }
 
-/** Значение узла, как его видит проверка: поля как есть, пустые выпали. */
+/** Node value as the check sees it: fields as is, empty ones dropped. */
 type NodeValue = Readonly<Record<string, unknown>>;
 
-/** Ключ таблицы оверрайдов: реестр и тип узла. */
+/** Override table key: the registry and the node type. */
 export type NodeOverrideKey = `${NodeRegistry}/${string}`;
 
 /**
- * Публичный ключ Reality: base64url без паддинга, 32 байта — 43 символа
- * (`base64.RawURLEncoding` и проверка длины в `common/tls/reality_client.go`
- * форка).
+ * Reality public key: base64url without padding, 32 bytes, 43 characters
+ * (`base64.RawURLEncoding` and the length check in
+ * `common/tls/reality_client.go` of the fork).
  */
 const REALITY_PUBLIC_KEY = /^[\w-]{43}$/;
 
-/** Short ID Reality: hex, не больше 8 байт; пусто — допустимо (`hex.Decode` в `[8]byte`). */
+/** Reality short ID: hex, at most 8 bytes; empty is allowed (`hex.Decode` into `[8]byte`). */
 const REALITY_SHORT_ID = /^(?:[\da-f]{2}){0,8}$/i;
 
-/** Отпечатки uTLS, которые знает форк (`uTLSClientHelloID` в `common/tls/utls_client.go`). */
+/** uTLS fingerprints known to the fork (`uTLSClientHelloID` in `common/tls/utls_client.go`). */
 const UTLS_FINGERPRINTS = [
   'chrome',
   'chrome_psk',
@@ -83,7 +85,7 @@ const UTLS_FINGERPRINTS = [
   'randomized',
 ];
 
-/** Значение поля узла по пути через точку; `undefined` — поля нет. */
+/** Node field value by a dotted path; `undefined` means no field. */
 export function readField(node: NodeValue, name: string): unknown {
   let value: unknown = node;
 
@@ -94,7 +96,7 @@ export function readField(node: NodeValue, name: string): unknown {
   return value;
 }
 
-/** Пустое поле: его значение «ключа нет» (`compactNode`). */
+/** Empty field: its value is "no key" (`compactNode`). */
 function isEmpty(value: unknown): boolean {
   return value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0);
 }
@@ -105,7 +107,7 @@ function requireFields(node: NodeValue, names: readonly string[]): NodeOverrideI
     .map((name) => ({ name, code: NODE_OVERRIDE_ERROR.Required }));
 }
 
-/** Строка поля не по шаблону; значение, равное прежнему, не перепроверяется. */
+/** Field string does not match the pattern; a value equal to the previous one is not rechecked. */
 function checkPattern(
   node: NodeValue,
   before: NodeValue,
@@ -119,9 +121,10 @@ function checkPattern(
 }
 
 /**
- * VLESS с Reality — сценарий AC-6. Без порядка полей форма открывалась бы
- * двадцатью полями dial; ключи Reality проверяются так же, как их разбирает
- * клиент форка, иначе ошибка всплыла бы только на `sing-box check`.
+ * VLESS with Reality is the AC-6 scenario. Without the field order the form
+ * would open with twenty dial fields; Reality keys are checked the same way the
+ * fork client parses them, otherwise the error would surface only on `sing-box
+ * check`.
  */
 const VLESS_OVERRIDE: NodeOverride = {
   primary: [
@@ -136,14 +139,15 @@ const VLESS_OVERRIDE: NodeOverride = {
     'tls.reality.short_id',
   ],
   widgets: {
-    // Форк включает Vision по префиксу `xtls-rprx-vision` (`protocol/vless/outbound.go`).
+    // The fork enables Vision by the `xtls-rprx-vision` prefix (`protocol/vless/outbound.go`).
     flow: { kind: FIELD_KIND.Enum, options: ['', 'xtls-rprx-vision'] },
     'tls.utls.fingerprint': { kind: FIELD_KIND.Enum, options: UTLS_FINGERPRINTS },
   },
-  // Без сервера, порта и UUID узел не собирается. Имя сервера и ключ Reality
-  // нужны только Reality: VLESS с обычным TLS открывается той же формой.
+  // Without a server, port and UUID the node cannot be built. Server name and
+  // the Reality key are needed only for Reality: VLESS with ordinary TLS opens
+  // with the same form.
   required: ['server', 'server_port', 'uuid'],
-  // Reality без uTLS клиент форка не создаёт: `uTLS is required by reality client`.
+  // Reality without uTLS is not created by the fork client: `uTLS is required by reality client`.
   preset: (tag) => ({
     type: 'vless',
     tag,
@@ -158,13 +162,13 @@ const VLESS_OVERRIDE: NodeOverride = {
   ],
 };
 
-/** Длина секрета службы `api` в байтах: 24 байта — 32 символа base64url. */
+/** Length of the `api` service secret in bytes: 24 bytes is 32 base64url characters. */
 const API_SECRET_BYTES = 24;
 
 /**
- * Случайный секрет: base64url без паддинга из криптографического генератора.
- * Пустой `secret` оставил бы gRPC-сервис форка открытым всем, кто достучится
- * до порта.
+ * Random secret: base64url without padding from a cryptographic generator. An
+ * empty `secret` would leave the fork gRPC service open to anyone who reaches
+ * the port.
  */
 function randomSecret(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(API_SECRET_BYTES));
@@ -176,11 +180,12 @@ function randomSecret(): string {
 }
 
 /**
- * Служба `api` — gRPC-сервис форка, единственная служба с формой (PRD, раздел
- * 8; ADR-0006). Слушает loopback: наружу демон его не открывает и сам к нему
- * ходит с той же машины. Порт не подставляется: 9090 по умолчанию занят Clash
- * API (флаг `-clash-port` демона), а свободный порт на устройстве форма не
- * знает, поэтому он обязателен. `dashboard` остаётся в «Дополнительно» JSON-текстом.
+ * The `api` service is the fork gRPC service, the only service with a form
+ * (PRD, section 8; ADR-0006). It listens on loopback: the daemon does not open
+ * it outward and itself goes to it from the same machine. The port is not
+ * substituted: 9090 is taken by the Clash API by default (the daemon
+ * `-clash-port` flag), and the form does not know a free port on the device, so
+ * it is required. `dashboard` stays in "Advanced" as JSON text.
  */
 const API_OVERRIDE: NodeOverride = {
   primary: ['tag', 'listen', 'listen_port', 'secret', 'access_control_allow_origin', 'tls'],
@@ -189,15 +194,16 @@ const API_OVERRIDE: NodeOverride = {
 };
 
 /**
- * Оверрайды форм по типам. Тип без записи открывается автоформой, если её
- * разрешает политика реестра; запись добавляется сюда, а не веткой в рендерере.
+ * Form overrides by type. A type without an entry opens with the autoform if
+ * the registry policy allows it; an entry is added here, not as a branch in the
+ * renderer.
  */
 export const NODE_OVERRIDE: Readonly<Partial<Record<NodeOverrideKey, NodeOverride>>> = {
   'outbound/vless': VLESS_OVERRIDE,
   'service/api': API_OVERRIDE,
 };
 
-/** Как поле-секрет прячет значение: целиком или всё после хоста URL. */
+/** How a secret field hides its value: entirely or everything after the URL host. */
 export const SECRET_MASK = {
   Whole: 'whole',
   AfterHost: 'afterHost',
@@ -206,10 +212,11 @@ export const SECRET_MASK = {
 export type SecretMask = (typeof SECRET_MASK)[keyof typeof SECRET_MASK];
 
 /**
- * Поля-секреты по имени ключа, в узле любого типа и на любой глубине: форма
- * показывает их маской и раскрывает по кнопке. У URL видна схема и хост — по
- * ним понятно, чья подписка, а токен лежит в пути или в query. `uuid` не
- * прячется: это идентификатор пользователя, а не пароль.
+ * Secret fields by key name, in a node of any type and at any depth: the form
+ * shows them masked and reveals them on a button. For a URL the scheme and host
+ * are visible, they show whose subscription it is, while the token lies in the
+ * path or in the query. `uuid` is not hidden: it is a user identifier, not a
+ * password.
  */
 const SECRET_FIELD: Readonly<Partial<Record<string, SecretMask>>> = {
   secret: SECRET_MASK.Whole,
@@ -224,26 +231,27 @@ const SECRET_FIELD: Readonly<Partial<Record<string, SecretMask>>> = {
   download_url: SECRET_MASK.AfterHost,
 };
 
-/** Маска поля по последнему ключу его пути; `null` — поле не секрет. */
+/** Field mask by the last key of its path; `null` means the field is not a secret. */
 export function secretMaskOf(path: readonly string[]): SecretMask | null {
   const key = path.at(-1);
 
   return key === undefined ? null : (SECRET_FIELD[key] ?? null);
 }
 
-/** Оверрайд типа; `null` — тип открывается автоформой как есть. */
+/** Type override; `null` means the type opens with the autoform as is. */
 export function nodeOverrideOf(registry: NodeRegistry, type: string): NodeOverride | null {
   return NODE_OVERRIDE[`${registry}/${type}`] ?? null;
 }
 
-/** Есть ли у типа рукописный оверрайд: по нему открывают форму реестры без автоформы. */
+/** Whether a type has a handwritten override: registries without an autoform open the form by it. */
 export function hasNodeOverride(registry: NodeRegistry, type: string): boolean {
   return nodeOverrideOf(registry, type) !== null;
 }
 
 /**
- * Новый узел типа: заготовка оверрайда, а без неё — `fallback`, узел из типа и
- * тега. Заготовка заполняет только то, без чего тип не соберётся.
+ * New node of a type: the override template, and without it `fallback`, a node
+ * of the type and tag. The template fills in only what the type cannot be built
+ * without.
  */
 export function nodePreset(
   registry: NodeRegistry,
@@ -255,9 +263,9 @@ export function nodePreset(
 }
 
 /**
- * Отказы проверок оверрайда на значении узла: обязательные поля и `refine`.
- * `node` — то, что ляжет в документ, с выпавшими пустыми полями; `before` —
- * узел до правки.
+ * Override check failures on a node value: required fields and `refine`. `node`
+ * is what will go into the document, with empty fields dropped; `before` is the
+ * node before the edit.
  */
 export function overrideIssues(override: NodeOverride | null, node: NodeValue, before: NodeValue): NodeOverrideIssue[] {
   if (override === null) {

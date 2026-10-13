@@ -54,13 +54,13 @@ function renderForm(onDone = vi.fn<() => void>()) {
   return onDone;
 }
 
-describe('форма правки сета', () => {
+describe('rule set edit form', () => {
   beforeEach(() => {
     ConfigDocumentState.getState().reset();
     ConfigDocumentState.getState().load(TEXT);
   });
 
-  it('прячет адрес после хоста и раскрывает его кнопкой', async () => {
+  it('hides the address after the host and reveals it with a button', async () => {
     const user = userEvent.setup();
 
     renderForm();
@@ -74,7 +74,7 @@ describe('форма правки сета', () => {
     expect(url).toHaveValue(URL_WITH_TOKEN);
   });
 
-  it('правка тега меняет одну строку, полный адрес и чужие поля остаются', async () => {
+  it('a tag edit changes one line, the full address and foreign fields remain', async () => {
     const user = userEvent.setup();
     const onDone = renderForm();
 
@@ -89,7 +89,7 @@ describe('форма правки сета', () => {
     expect(onDone).toHaveBeenCalledOnce();
   });
 
-  it('пишет новый адрес целиком', async () => {
+  it('writes the new address in full', async () => {
     const user = userEvent.setup();
 
     renderForm();
@@ -102,7 +102,7 @@ describe('форма правки сета', () => {
     expect(findValue(draft(), ['route', 'rule_set', INDEX, 'url'])).toBe('https://cdn.example.com/a/ads.srs?key=k');
   });
 
-  it('не даёт занять тег другого сета и не пишет черновик', async () => {
+  it('does not allow taking another rule set tag and does not write the draft', async () => {
     const user = userEvent.setup();
     const onDone = renderForm();
 
@@ -115,7 +115,7 @@ describe('форма правки сета', () => {
     expect(onDone).not.toHaveBeenCalled();
   });
 
-  it('очищенный адрес не сохраняется', async () => {
+  it('a cleared address is not saved', async () => {
     const user = userEvent.setup();
     const onDone = renderForm();
 

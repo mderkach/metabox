@@ -29,10 +29,10 @@ const DELAY_TONE: Readonly<Record<string, string>> = {
 
 const PERCENT = 100;
 
-/** Деления по трети потолка: первое из них — порог «быстрый». */
+/** Ticks at thirds of the ceiling: the first of them is the "fast" threshold. */
 const SCALE_INTERVALS = 3;
 
-/** Потолок абсолютной шкалы, миллисекунды: втрое выше порога «быстрый». */
+/** Absolute scale ceiling, milliseconds: three times the "fast" threshold. */
 const SCALE_CEILING = DELAY_FAST * SCALE_INTERVALS;
 const SCALE = toValueScale(SCALE_CEILING, [DELAY_FAST]);
 
@@ -41,7 +41,7 @@ interface GroupDelay {
   node: ProxyNode;
 }
 
-/** Группа, выбравшая другую группу, пропускается: замер у них один. */
+/** A group that selected another group is skipped: there is one measurement for them. */
 function toSelected(groups: ProxyGroup[]): GroupDelay[] {
   const names = new Set(groups.map((group) => group.name));
 
@@ -61,13 +61,13 @@ function toDelayLabel(t: TFunction<'widgets/ProxyLatency'>, node: ProxyNode): st
     return t('delay.untested', { ns: 'shared' });
   }
 
-  // Отказ соединиться, а не задержка: рантайм отдаёт его числом 65535.
+  // A connection failure, not a latency: the runtime returns it as the number 65535.
   return node.delay >= DELAY_TIMEOUT
     ? t('delay.timedOut', { ns: 'shared' })
     : t('delay.value', { ns: 'shared', value: node.delay });
 }
 
-/** Длина столбца — доля от потолка шкалы; непроверенный узел столбца не получает вовсе. */
+/** Bar length is the share of the scale ceiling; an unchecked node gets no bar at all. */
 function toMeter(node: ProxyNode): number | null {
   if (node.delay === null) {
     return null;
@@ -76,11 +76,11 @@ function toMeter(node: ProxyNode): number | null {
   return node.delay >= DELAY_TIMEOUT ? 1 : toShare(Math.min(node.delay, SCALE_CEILING), SCALE_CEILING);
 }
 
-/** Замер делает sing-box: из браузера мерялся бы канал до панели. */
+/** The measurement is made by sing-box: from the browser the channel to the panel would be measured. */
 export function ProxyLatency({
   onTested,
 }: {
-  /** Замер прошёл у всех выбранных узлов: отказ хотя бы одного показывает тост ошибки. */
+  /** The measurement passed for all selected nodes: a failure in at least one shows an error toast. */
   onTested: () => void;
 }) {
   const { t } = useTranslation('widgets/ProxyLatency');
@@ -92,8 +92,8 @@ export function ProxyLatency({
     <Card className='gap-3'>
       <CardHeader className='flex flex-row flex-wrap items-baseline gap-x-2.5 gap-y-1'>
         <h3 className={SECTION_LABEL}>{t('title')}</h3>
-        {/* Потолок здесь постоянный, а у соседних панелей сводки идёт за
-            лидером ряда: без названной шкалы длины читались бы одинаково. */}
+        {/* The ceiling here is constant, while in neighboring summary panels it follows
+            the series leader: without a named scale the lengths would read the same. */}
         <p className='text-xs text-muted-foreground'>{t('scale', { ceiling: SCALE_CEILING, fast: DELAY_FAST })}</p>
         <span className='grow' />
         <Button
@@ -101,8 +101,8 @@ export function ProxyLatency({
           size='sm'
           disabled={selected.length === 0 || delay.isPending}
           onClick={() => {
-            // Колбэк `mutate` срабатывает только у последнего вызова, поэтому
-            // объявление ждёт все замеры сразу, а не последний начатый.
+            // The `mutate` callback fires only for the last call, so
+            // the announcement waits for all measurements at once, not for the last one started.
             void Promise.allSettled(selected.map(async (entry) => delay.mutateAsync(entry.node.name))).then(
               function announceTested(results) {
                 if (results.every((result) => result.status === 'fulfilled')) {
@@ -150,9 +150,9 @@ export function ProxyLatency({
 }
 
 /**
- * Столбец задержки. Непроверенный узел получает пустую дорожку пунктиром:
- * сплошная дорожка с нулевой заливкой читается как «ноль миллисекунд», то есть
- * как самый быстрый узел списка.
+ * Latency bar. An unchecked node gets an empty dashed track:
+ * a solid track with zero fill reads as "zero milliseconds", that is,
+ * as the fastest node in the list.
  */
 function Meter({ node }: { node: ProxyNode }) {
   const share = toMeter(node);

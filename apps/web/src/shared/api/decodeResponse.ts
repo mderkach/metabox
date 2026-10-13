@@ -4,8 +4,8 @@ import { z } from 'zod';
 import { API_FAILURE, ApiError } from './ApiError';
 
 /**
- * Провал разбора — отказ вида `Schema`, а не пустая модель: «данных нет» и
- * «ответ не разобран» — разные вещи. Разбор ошибки уходит в `details`.
+ * A parse failure is a `Schema` refusal, not an empty model: "no data" and
+ * "response not parsed" are different things. The error breakdown goes to `details`.
  */
 export function decodeResponse<Schema extends z.ZodType>(
   schema: Schema,
@@ -25,8 +25,8 @@ export function decodeResponse<Schema extends z.ZodType>(
 }
 
 /**
- * `null` — кадр отбракован: следующий придёт через секунду, ронять подписку
- * незачем. Отбраковка пишется в лог: иначе экран замирает без признака поломки.
+ * `null` means the frame is discarded: the next one comes in a second, there is no
+ * reason to drop the subscription. Discarding is logged: otherwise the screen freezes with no sign of breakage.
  */
 export function decodeFrame<Schema extends z.ZodType>(
   schema: Schema,
@@ -39,7 +39,7 @@ export function decodeFrame<Schema extends z.ZodType>(
     return parsed.data;
   }
 
-  console.warn(`[STREAM] кадр топика ${topic} отбракован`, z.prettifyError(parsed.error));
+  console.warn(`[STREAM] frame of topic ${topic} discarded`, z.prettifyError(parsed.error));
 
   return null;
 }

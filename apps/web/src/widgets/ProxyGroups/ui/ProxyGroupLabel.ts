@@ -1,8 +1,8 @@
 import type { ParseKeys, TFunction } from 'i18next';
 
 /**
- * Только типы групп Clash API имеют перевод; протоколы узлов (`vless`,
- * `shadowsocks`) под тем же полем `type` остаются как есть.
+ * Only Clash API group types have a translation; node protocols (`vless`,
+ * `shadowsocks`) under the same `type` field stay as they are.
  */
 const GROUP_LABEL: Readonly<Record<string, ParseKeys<'widgets/ProxyGroups'> | undefined>> = {
   Selector: 'type.selector',

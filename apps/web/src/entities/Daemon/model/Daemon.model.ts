@@ -1,6 +1,6 @@
 import { APPLY_REASON_CODE, SERVICE_ERROR_CODE } from '../api/Daemon.schema';
 
-/** Стадия применения. Значения приходят с демона (`apply.Phase`). */
+/** Apply stage. Values come from the daemon (`apply.Phase`). */
 export const APPLY_PHASE = {
   Applying: 'applying',
   AwaitingConfirm: 'awaiting_confirm',
@@ -11,44 +11,45 @@ export const APPLY_PHASE = {
 
 export type ApplyPhase = (typeof APPLY_PHASE)[keyof typeof APPLY_PHASE];
 
-/** Коды шагов цикла применения — набор объявлен демоном и приезжает контрактом. */
+/** Apply cycle step codes: the set is declared by the daemon and arrives as a contract. */
 export type ApplyReasonCode = (typeof APPLY_REASON_CODE)[number];
 
-/** Снимок применения — `apply.Transaction`. */
+/** Apply snapshot, `apply.Transaction`. */
 export interface ApplyTransaction {
   id: string;
   phase: ApplyPhase;
-  /** Остаток окна подтверждения в наносекундах: Go отдаёт `time.Duration`. */
+  /** Remaining confirmation window in nanoseconds: Go serves `time.Duration`. */
   window: number;
   sum?: string;
-  /** На каком шаге встал цикл; по коду панель берёт текст отказа. */
+  /** The step the cycle stopped at; the panel takes the failure text by the code. */
   reasonCode?: ApplyReasonCode;
-  /** Исходная ошибка шага словами демона: запасной текст и подробность для того, кто чинит. */
+  /** Original step error in the daemon's words: fallback text and detail for whoever fixes it. */
   reason?: string;
-  /** Демон дописал в конфиг секцию Clash API, чтобы читать рантайм. */
+  /** The daemon appended a Clash API section to the config to read the runtime. */
   clashApiAdded?: boolean;
 }
 
-/** Состояние демона: `GET /api/status`. */
+/** Daemon state: `GET /api/status`. */
 export interface DaemonStatus {
-  /** Версия демона, а не sing-box: бинарь отдаётся отдельным полем. */
+  /** Daemon version, not sing-box: the binary is served in a separate field. */
   version: string;
-  /** Версия sing-box на устройстве; пусто, если демон её не прочитал. */
+  /** sing-box version on the device; empty if the daemon did not read it. */
   singboxVersion?: string;
   /**
-   * Build-теги бинаря. `null` — бинарь не прочитан, и судить о составе
-   * сборки не по чему; пустой список — сборка без тегов.
+   * Binary build tags. `null` means the binary was not read, and there is
+   * nothing to judge the build contents by; an empty list is a build without
+   * tags.
    */
   singboxTags: readonly string[] | null;
-  /** Файл, которым владеет демон: путь задаётся флагами его запуска. */
+  /** A file owned by the daemon: the path is set by its launch flags. */
   configPath?: string;
   transaction?: ApplyTransaction;
   transactionHref?: string;
-  /** Последняя смена модели обвязки: тот же протокол, что у применения конфига, и одновременно с ним не идёт. */
+  /** Last dataplane model change: the same protocol as config apply, and not run at the same time as it. */
   dataplaneTransaction?: ApplyTransaction;
 }
 
-/** Состояние службы sing-box: `procd` знает только эти три состояния. */
+/** sing-box service state: `procd` knows only these three states. */
 export const SERVICE_STATUS = {
   Running: 'running',
   Stopped: 'stopped',
@@ -57,41 +58,41 @@ export const SERVICE_STATUS = {
 
 export type ServiceStatus = (typeof SERVICE_STATUS)[keyof typeof SERVICE_STATUS];
 
-/** Коды отказа чтения состояния службы — набор объявлен демоном и приезжает контрактом. */
+/** Service state read failure codes: the set is declared by the daemon and arrives as a contract. */
 export type ServiceErrorCode = (typeof SERVICE_ERROR_CODE)[number];
 
 export interface ServiceState {
   status: ServiceStatus;
-  /** Секунды с момента старта; `0`, когда сервис не запущен. */
+  /** Seconds since start; `0` when the service is not running. */
   uptime: number;
   /**
-   * Процессом владеет служба, которой управляет демон. Ложь при статусе
-   * «работает» означает, что sing-box поднят чужой службой: команды панели к
-   * этому процессу не относятся, а возраст его procd не знает.
+   * The process is owned by the service the daemon manages. False with the
+   * "running" status means sing-box was started by a foreign service: panel
+   * commands do not apply to that process, and procd does not know its age.
    */
   managed: boolean;
-  /** Версия установленного на устройстве бинаря sing-box. */
+  /** Version of the sing-box binary installed on the device. */
   binary: string;
   /**
-   * Вывод последнего падения либо, при `lastErrorCode`, ошибка демона словами
-   * демона. Показывается дословно, разбирать его нельзя.
+   * Output of the last crash or, with `lastErrorCode`, the daemon error in the
+   * daemon's words. Shown verbatim, it must not be parsed.
    */
   lastError?: string;
-  /** Состояние подставлено демоном, а не прочитано; по коду панель берёт текст. */
+  /** The state is substituted by the daemon, not read; the panel takes the text by the code. */
   lastErrorCode?: ServiceErrorCode;
 }
 
 /**
- * Состояние службы, которое демон прочитал, а не подставил. `null` — состояние
- * неизвестно: при отказе чтения демон отдаёт `stopped` с кодом причины, и
- * выдавать такой ответ за остановку нельзя — одно неудачное чтение procd
- * показало бы работающий sing-box лежащим.
+ * Service state that the daemon read, not substituted. `null` means the state
+ * is unknown: on a read failure the daemon serves `stopped` with a reason code,
+ * and such a response must not be passed off as a stop, since one failed procd
+ * read would show a running sing-box as down.
  */
 export function toConfirmedStatus(state: ServiceState): ServiceStatus | null {
   return state.lastErrorCode === undefined ? state.status : null;
 }
 
-/** Действия над сервисом: `POST /api/service/{action}`. */
+/** Service actions: `POST /api/service/{action}`. */
 export const SERVICE_ACTION = {
   Start: 'start',
   Stop: 'stop',
@@ -100,11 +101,11 @@ export const SERVICE_ACTION = {
 
 export type ServiceAction = (typeof SERVICE_ACTION)[keyof typeof SERVICE_ACTION];
 
-/** Режим маршрутизации Clash API; правило `clash_mode` в конфиге сверяется с ним. */
+/** Clash API routing mode; the `clash_mode` rule in the config is matched against it. */
 export interface ClashConfigs {
   /**
-   * Режимы не закрытый набор: sing-box собирает список из значений
-   * `clash_mode` в правилах конфига и добавляет к ним режим по умолчанию.
+   * Modes are not a closed set: sing-box builds the list from `clash_mode`
+   * values in the config rules and adds the default mode to them.
    */
   mode: string;
   modeList: string[];
@@ -114,27 +115,27 @@ export interface ClashConfigs {
   ipv6: boolean;
 }
 
-/** Мгновенная скорость за последнюю секунду, а не накопительный счётчик. */
+/** Instantaneous speed over the last second, not an accumulating counter. */
 export interface TrafficSample {
   up: number;
   down: number;
 }
 
 /**
- * Первый сэмпл потока всегда нулевой, а `oslimit` форк не заполняет. Экран
- * обязан пережить нулевой первый кадр, а не показать «памяти 0».
+ * The first stream sample is always zero, and the fork does not fill `oslimit`.
+ * The screen must survive a zero first frame, not show "memory 0".
  */
 export interface MemorySample {
   inuse: number;
   oslimit: number;
 }
 
-/** Средняя загрузка: очередь на выполнение, а не проценты. */
+/** Load average: a run queue, not percent. */
 export interface SystemLoad {
   one: number;
   five: number;
   fifteen: number;
-  /** Сколько ядер видит система: без этого числа загрузка не читается. */
+  /** How many cores the system sees: without this number the load is unreadable. */
   cores: number;
 }
 
@@ -143,13 +144,13 @@ export interface SystemMemory {
   available: number;
 }
 
-/** Термозона платы; градусы уже переведены из тысячных долей ядра. */
+/** Board thermal zone; degrees are already converted from thousandths of the kernel's. */
 export interface ThermalZone {
   name: string;
   celsius: number;
 }
 
-/** Счётчики интерфейса, которым устройство ходит наружу, в байтах с подъёма линка. */
+/** Counters of the interface the device uses to go outward, in bytes since link up. */
 export interface SystemUplink {
   name: string;
   rx: number;
@@ -159,9 +160,9 @@ export interface SystemUplink {
 export interface SystemProcess {
   pid: number;
   /**
-   * Резидентная память процесса. У sing-box она больше того, что отдаёт Clash
-   * API: тот считает только память рантайма Go, а сюда входит и резидентный
-   * код бинаря — у статического sing-box это десятки мегабайт.
+   * Resident memory of the process. For sing-box it is larger than what the
+   * Clash API serves: that counts only Go runtime memory, while this includes
+   * the resident binary code, which for a static sing-box is tens of megabytes.
    */
   rss: number;
 }
@@ -172,65 +173,67 @@ export interface DaemonProcess {
   goroutines: number;
 }
 
-/** Показания устройства: топик `system` единого потока. */
+/** Device readings: the `system` topic of the single stream. */
 export interface SystemStat {
   load: SystemLoad;
   memory: SystemMemory;
   thermal: ThermalZone[];
   uplink?: SystemUplink;
-  /** Объёмы канала и sing-box за время наблюдения демона. */
+  /** Channel and sing-box volumes over the daemon observation time. */
   share: TrafficShare;
-  /** Пусто, когда процесс маршрутизации на устройстве не найден. */
+  /** Empty when the routing process is not found on the device. */
   singbox?: SystemProcess;
   daemon: DaemonProcess;
-  /** Секунды с загрузки устройства. */
+  /** Seconds since the device booted. */
   uptime: number;
 }
 
 /**
- * История трафика с демона: точки идут подряд с шагом `stepSeconds`, последняя
- * самая свежая. Абсолютного времени у точки нет — часов у роутера до
- * синхронизации NTP не существует, и подписи оси панель считает по своим.
+ * Traffic history from the daemon: points go in sequence with step
+ * `stepSeconds`, the last one is the newest. A point has no absolute time: the
+ * router has no clock before NTP sync, and the panel computes axis labels on
+ * its own.
  */
 export interface TrafficHistory {
   stepSeconds: number;
   points: TrafficSample[];
-  /** Показания платы тем же шагом: загрузка, температура, занятая память. */
+  /** Board readings with the same step: load, temperature, used memory. */
   device: DeviceHistoryPoint[];
-  /** Последняя минута трафика по секунде: ею график заполняется при открытии. */
+  /** Last minute of traffic by the second: the chart is filled with it on open. */
   recent: TrafficSample[];
-  /** Число живых соединений за последнюю минуту, по снимку в секунду. */
+  /** Number of live connections over the last minute, one snapshot per second. */
   connections: number[];
 }
 
-/** Загрузка и температура — пик шага, память — среднее за шаг. */
+/** Load and temperature are the step peak, memory is the step average. */
 export interface DeviceHistoryPoint {
   load: number;
-  /** Самая горячая зона платы; ноль означает, что зон нет. */
+  /** Hottest board zone; zero means there are no zones. */
   celsius: number;
   memory: number;
-  /** Резидентная память sing-box; ноль — процесс не найден. */
+  /** Resident memory of sing-box; zero means the process is not found. */
   singbox: number;
-  /** Резидентная память демона. */
+  /** Resident memory of the daemon. */
   daemon: number;
 }
 
-/** Скорость интерфейса за интервал между снимками, байт в секунду. */
+/** Interface speed over the interval between snapshots, bytes per second. */
 export interface UplinkRate {
   rx: number;
   tx: number;
 }
 
 /**
- * Сколько байт прошло через канал и через sing-box за время наблюдения.
+ * How many bytes passed through the channel and through sing-box over the observation time.
  *
- * Приращения копит демон: счётчик интерфейса идёт с подъёма линка, счётчик
- * Clash API — с запуска процесса, и сравнивать их можно только за общее окно.
- * Секундное отношение для этого не годится — оно прыгает от каждого всплеска.
+ * Increments are accumulated by the daemon: the interface counter runs since
+ * link up, the Clash API counter since process start, and they can be compared
+ * only over a common window. A per-second ratio does not fit: it jumps on every
+ * burst.
  */
 export interface TrafficShare {
   link: number;
   proxy: number;
-  /** Секунды наблюдения: по ним видно, за какое окно посчитана доля. */
+  /** Observation seconds: they show what window the share is computed over. */
   seconds: number;
 }

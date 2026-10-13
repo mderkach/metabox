@@ -1,4 +1,5 @@
-// Что форма узла разрешает правке сета: поле строки с той же маской секрета,
-// что у узлов, — у адреса сета скрыто всё после хоста.
+// What the node form allows the set edit: a string field with the same secret
+// mask as for nodes, where everything after the host is hidden in the set
+// address.
 export { StringField } from '../../ui/ConfigNodeFormFields';
 export type { NodeFieldProps } from '../../ui/ConfigNodeFormFields';

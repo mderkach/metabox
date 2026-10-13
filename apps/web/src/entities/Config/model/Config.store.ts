@@ -8,83 +8,83 @@ import { findValue, insertValue, removeValue, setValue } from './Config.model';
 import type { NodeEdit } from './Config.patch';
 import { readStoredDraft, writeStoredDraft } from './Config.storage';
 
-/** Изменения файлов списков, готовые уехать конвертом применения. */
+/** List file changes ready to go in the apply envelope. */
 export interface ListChanges {
   put: Record<string, string>;
   remove: string[];
 }
 
 export interface ConfigDocumentState {
-  /** Текст с устройства. `null` — конфиг ещё не прочитан. */
+  /** Text from the device. `null` means the config has not been read yet. */
   applied: string | null;
   /**
-   * Отпечаток `applied` из `ETag` ответа демона; с ним черновик уходит в
-   * `If-Match` применения. `null` — отпечатка не было, применение идёт без
-   * сверки базы.
+   * Fingerprint of `applied` from the daemon response `ETag`; with it the draft
+   * goes into the apply `If-Match`. `null` means there was no fingerprint, and
+   * the apply goes without a base check.
    */
   appliedEtag: string | null;
-  /** Правки пользователя поверх `applied`. `null` — правок не было. */
+  /** User edits on top of `applied`. `null` means there were no edits. */
   draft: string | null;
   /**
-   * Текст с устройства, от которого начат черновик. Черновик переживает
-   * перезагрузку страницы, а конфиг на устройстве за это время могут
-   * переписать: применение черновика поверх новой базы молча стёрло бы чужие
-   * правки, поэтому расхождение показывается. `null` — черновик начат до
-   * чтения конфига или его нет.
+   * Text from the device the draft was started from. The draft survives a page
+   * reload, and the config on the device may be rewritten meanwhile: applying
+   * the draft on top of a new base would silently erase someone else's edits,
+   * so the mismatch is shown. `null` means the draft was started before the
+   * config was read, or there is none.
    */
   draftBase: string | null;
-  /** Файлы своих списков с устройства: имя → содержимое. `null` — не читались. */
+  /** Files of its own lists from the device: name to content. `null` means not read. */
   appliedLists: Record<string, string> | null;
-  /** Отпечаток набора файлов с устройства; уходит в `lists_base` применения. */
+  /** Fingerprint of the file set from the device; goes into the apply `lists_base`. */
   listsEtag: string | null;
-  /** Правки файлов поверх `appliedLists`: имя → содержимое, `null` — удалить. */
+  /** File edits on top of `appliedLists`: name to content, `null` means delete. */
   listsDraft: Record<string, string | null>;
   /**
-   * Счётчик обновлений, пришедших не от пользователя: загрузка с устройства и
-   * отмена правок. По нему текстовый редактор понимает, что его содержимое
-   * устарело; собственные правки счётчик не двигают, иначе поле пересоздавалось
-   * бы на каждый набранный символ.
+   * Counter of updates that did not come from the user: loading from the device
+   * and discarding edits. The text editor uses it to understand that its
+   * content is stale; the user's own edits do not move the counter, otherwise
+   * the field would be recreated on every typed character.
    */
   revision: number;
   load: (text: string, etag?: string | null) => void;
   loadLists: (files: Record<string, string>, etag: string | null) => void;
-  /** Замена текста целиком: режим правки всего конфига руками. */
+  /** Replaces the whole text: the mode of editing the entire config by hand. */
   replace: (text: string) => void;
   edit: (path: JSONPath, value: unknown) => void;
   /**
-   * Несколько правок одним обновлением: форма узла отдаёт изменённые листья
-   * пачкой, и подписчики видят один новый текст, а не промежуточные.
+   * Several edits in one update: the node form hands over the changed leaves as
+   * a batch, and subscribers see one new text, not the intermediate ones.
    */
   editMany: (edits: readonly NodeEdit[]) => void;
   remove: (path: JSONPath) => void;
   insert: (path: JSONPath, value: unknown) => void;
   move: (path: JSONPath, from: number, to: number) => void;
-  /** Записать файл списка в черновик; применение довезёт его конвертом. */
+  /** Write a list file into the draft; apply will deliver it in the envelope. */
   editList: (name: string, content: string) => void;
-  /** Убрать файл списка при применении. */
+  /** Remove a list file on apply. */
   removeList: (name: string) => void;
   discard: () => void;
-  /** Забыть и файл, и черновик: панель перечитывает конфиг с устройства. */
+  /** Forget both the file and the draft: the panel rereads the config from the device. */
   reset: () => void;
-  /** Текст, который увидит пользователь и который уйдёт в Apply. */
+  /** Text the user will see and that goes into Apply. */
   current: () => string | null;
   isDirty: () => boolean;
-  /** Конфиг на устройстве сменился с тех пор, как начат черновик. */
+  /** The config on the device changed since the draft was started. */
   isStale: () => boolean;
   /**
-   * Изменения файлов, сведённые к реальным: запись того же содержимого и
-   * удаление несуществующего файла выбрасываются, как и у сверки демона.
+   * File changes reduced to real ones: writing the same content and deleting a
+   * nonexistent file are dropped, as in the daemon check.
    */
   listChanges: () => ListChanges;
 }
 
 /**
- * Документ конфига — текст, а не разобранное дерево: правка применяется к
- * исходным байтам, иначе порядок ключей пользователя переписывается целиком
- *. Разбор схемой живёт в `api` и нужен только для показа.
+ * The config document is text, not a parsed tree: an edit is applied to the
+ * original bytes, otherwise the user's key order is rewritten entirely. Schema
+ * parsing lives in `api` and is needed only for display.
  */
 const ConfigDocumentStateProto = stateCreator<ConfigDocumentState>((set, get) => {
-  /** Правка ложится на черновик, а до первой правки — на текст с устройства. */
+  /** An edit goes onto the draft, and before the first edit onto the text from the device. */
   const patch = (edit: (text: string) => string) => {
     set((state) => {
       const text = state.draft ?? state.applied;
@@ -108,8 +108,9 @@ const ConfigDocumentStateProto = stateCreator<ConfigDocumentState>((set, get) =>
       set((state) => {
         if (state.applied === text && state.appliedEtag === etag) return state;
 
-        // Ревизию двигает только новый текст: одинаковые байты дают одинаковый
-        // отпечаток, и сменившийся etag сам по себе содержимое редактора не старит.
+        // Only new text moves the revision: identical bytes give an identical
+        // fingerprint, and a changed etag by itself does not make the editor
+        // content stale.
         return state.applied === text
           ? { appliedEtag: etag }
           : { applied: text, appliedEtag: etag, revision: state.revision + 1 };
@@ -134,8 +135,8 @@ const ConfigDocumentStateProto = stateCreator<ConfigDocumentState>((set, get) =>
 
     replace: (text) => {
       set((state) => {
-        // Черновик равен применённому тексту — правок нет, и держать его
-        // отдельно значило бы показывать бейдж «черновик» без причины.
+        // The draft equals the applied text, so there are no edits, and keeping
+        // it separately would mean showing the "draft" badge for no reason.
         const draft = text === state.applied ? null : text;
 
         return draft === state.draft ? state : { draft, draftBase: draft === null ? null : baseOf(state) };
@@ -217,7 +218,7 @@ const ConfigDocumentStateProto = stateCreator<ConfigDocumentState>((set, get) =>
   };
 }, 'ConfigDocument');
 
-/** Начатый черновик хранит свою базу, новый берёт её у текста с устройства. */
+/** A started draft keeps its own base, a new one takes it from the device text. */
 function baseOf(state: ConfigDocumentState): string | null {
   return state.draft === null ? state.applied : state.draftBase;
 }
@@ -257,11 +258,12 @@ function toListChanges(
 export const ConfigDocumentState = createReactSelectors(ConfigDocumentStateProto);
 
 /**
- * Подписка на наличие несохранённых правок.
+ * Subscription to the presence of unsaved edits.
  *
- * Хук живёт здесь, а не на экране: «черновик отличается от применённого» —
- * правило документа, и второй его копии быть не должно. Сгенерированный
- * селектор тут не годится — он вернул бы саму функцию, а не результат.
+ * The hook lives here, not on a screen: "the draft differs from the applied
+ * one" is a document rule, and there must be no second copy of it. The
+ * generated selector does not fit here: it would return the function itself,
+ * not the result.
  */
 export function useConfigText(): string | null {
   return useStore(ConfigDocumentStateProto, (state) => state.current());
@@ -276,9 +278,9 @@ export function useConfigStale(): boolean {
 }
 
 /**
- * Подтверждение браузера при уходе со страницы, пока в черновике есть
- * неприменённые правки. Обработчик висит только при грязном черновике:
- * постоянный `beforeunload` выключает в браузере кэш страницы для «назад».
+ * Browser confirmation when leaving the page while the draft has unapplied
+ * edits. The handler is attached only while the draft is dirty: a permanent
+ * `beforeunload` disables the browser's page cache for "back".
  */
 export function useConfigLeaveGuard(): void {
   const isDirty = useConfigDirty();
@@ -289,7 +291,7 @@ export function useConfigLeaveGuard(): void {
 
       function confirmLeave(event: BeforeUnloadEvent) {
         event.preventDefault();
-        // Браузеры до Chrome 119 спрашивают только при выставленном `returnValue`.
+        // Browsers before Chrome 119 ask only when `returnValue` is set.
         event.returnValue = true;
       }
 
@@ -304,14 +306,14 @@ export function useConfigLeaveGuard(): void {
 }
 
 /**
- * Построчный диф файла с устройства и черновика.
+ * Line-by-line diff of the file from the device and the draft.
  *
- * Диф считается, а не хранится полем стора: иначе он отставал бы от текста на
- * одну правку. Мемоизация нужна здесь, а не в селекторе: селектор сверяет
- * результат поверхностно и на новом массиве перерисовывал бы экран на каждое
- * изменение стора.
+ * The diff is computed, not stored as a store field: otherwise it would lag the
+ * text by one edit. Memoization is needed here, not in the selector: a selector
+ * compares the result shallowly and on a new array would redraw the screen on
+ * every store change.
  */
-/** Изменения файлов списков, которые принесёт применение; без правок — пусто. */
+/** List file changes the apply will bring; without edits, empty. */
 export function useListChanges(): ListChanges {
   const { listsDraft, appliedLists } = useStore(ConfigDocumentStateProto, (state) => ({
     listsDraft: state.listsDraft,

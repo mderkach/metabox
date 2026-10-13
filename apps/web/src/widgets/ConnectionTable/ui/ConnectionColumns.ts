@@ -17,8 +17,8 @@ import type { ParseKeys } from 'i18next';
 import type { ConnectionRow, ConnectionSourceLabel } from '@entities/Connection';
 
 /**
- * Раскладка колонок. Ширины распределены по длине содержимого: правило
- * растягивается по остатку, остальное держит фиксированную ширину.
+ * Column layout. Widths are distributed by content length: the rule
+ * stretches over the remainder, the rest keep a fixed width.
  */
 export const CONNECTION_COLUMN = {
   Row: 'flex w-full items-center gap-3 border-b border-border px-3.5 text-sm',
@@ -50,21 +50,21 @@ export type ConnectionField = (typeof CONNECTION_FIELD)[keyof typeof CONNECTION_
 
 export interface ConnectionCellProps {
   connection: ConnectionRow;
-  /** Момент отсчёта давности. Снаружи, иначе строка врала бы про свежесть. */
+  /** Time reference moment for age. Passed in from outside, otherwise the row would lie about freshness. */
   now: number;
 }
 
-/** Видимая колонка в том виде, в каком её рисует строка. */
+/** A visible column in the form the row draws it. */
 export interface ConnectionCell {
   id: ConnectionField;
   className: string;
-  /** Подпись нужна списку «подпись — значение»: в таблице её несёт шапка. */
+  /** The label is needed by the "label — value" list: in a table the header carries it. */
   label: ParseKeys<'widgets/ConnectionTable'>;
 }
 
 /**
- * Возможности таблицы объявляются поимённо: они опциональны, и в сборку
- * попадает только перечисленное здесь.
+ * Table capabilities are declared by name: they are optional, and only what is listed here
+ * makes it into the build.
  */
 export const CONNECTION_TABLE_FEATURES = tableFeatures({
   rowSortingFeature,
@@ -76,36 +76,36 @@ export const CONNECTION_TABLE_FEATURES = tableFeatures({
 
 export type ConnectionTableFeatures = typeof CONNECTION_TABLE_FEATURES;
 
-/** Подпись, класс раскладки и запрет на скрытие. */
+/** Label, layout class and a ban on hiding. */
 export interface ConnectionColumnMeta {
   label: ParseKeys<'widgets/ConnectionTable'>;
   className: string;
   /**
-   * Ширина колонки в `rem`, та же, что задаёт `className`. Класс читает
-   * браузер, число — мы: по нему считается минимальная ширина таблицы, и без
-   * него она была бы константой на полный набор колонок. Тогда скрытие колонок
-   * не сужало бы таблицу, ради чего его и заводили.
+   * Column width in `rem`, the same as `className` sets. The browser reads
+   * the class, we read the number: the minimum table width is computed from it, and without
+   * it that would be a constant for the full column set. Then hiding columns
+   * would not narrow the table, which is what it was introduced for.
    */
   width: number;
-  /** Колонку нельзя скрыть: без неё строка перестаёт быть узнаваемой. */
+  /** The column cannot be hidden: without it a row stops being recognizable. */
   required: boolean;
 }
 
-/** Зазор между ячейками и боковые поля строки в `rem`: те же, что в `CONNECTION_COLUMN.Row`. */
+/** Gap between cells and row side margins in `rem`: the same as in `CONNECTION_COLUMN.Row`. */
 const CELL_GAP = 0.75;
 const ROW_PADDING = 1.75;
 
-/** Ширина колонки действий строки и её минимум для растягивающейся колонки правила. */
+/** Row action column width and its minimum for the stretching rule column. */
 const ROW_ACTIONS_WIDTH = 3.5;
 const RULE_MIN_WIDTH = 10;
 
 /**
- * Минимальная ширина таблицы под видимый набор колонок.
+ * Minimum table width for the visible column set.
  *
- * Считается, а не берётся константой: одна ширина на все наборы означала бы,
- * что скрытие колонок не сужает таблицу. Значение одно на строку, липкую шапку
- * и контейнер строк — когда они расходятся, фон шапки обрывается на середине
- * прокрутки.
+ * Computed rather than taken as a constant: one width for all sets would mean
+ * that hiding columns does not narrow the table. One value for the row, the sticky header
+ * and the row container — when they diverge, the header background breaks off in the middle
+ * of scrolling.
  */
 export function toTableMinWidth(columns: readonly Pick<ConnectionTableColumn, 'def'>[]): string {
   const cells = columns.reduce((sum, { def }) => sum + def.meta.width, ROW_ACTIONS_WIDTH);
@@ -115,14 +115,14 @@ export function toTableMinWidth(columns: readonly Pick<ConnectionTableColumn, 'd
 }
 
 /**
- * Описание с сужённым идентификатором и обязательной `meta`. Библиотека держит
- * `id` строкой, а `meta` необязательной; у наших колонок гарантированы обе, и
- * шапка со строкой читают описание отсюда, а не через состояние таблицы, —
- * иначе появляются приведения типов.
+ * Definition with a narrowed identifier and a required `meta`. The library holds
+ * `id` as a string and `meta` as optional; for our columns both are guaranteed, and
+ * the header and row read the definition from here, not via the table state —
+ * otherwise type casts appear.
  *
- * Тип акцессорной колонки, а не общий `ColumnDef`: тот union, и `accessorFn` в
- * нём необязателен. Все колонки этой таблицы считают значение функцией, и
- * колонка без неё должна быть ошибкой компиляции, а не тихо несортируемой.
+ * The type of an accessor column, not the general `ColumnDef`: that one is a union, and `accessorFn` is
+ * optional in it. All columns of this table compute the value by a function, and
+ * a column without one must be a compile error, not silently unsortable.
  */
 export type ConnectionColumnDef = AccessorFnColumnDef<ConnectionTableFeatures, ConnectionRow> & {
   id: ConnectionField;
@@ -130,27 +130,27 @@ export type ConnectionColumnDef = AccessorFnColumnDef<ConnectionTableFeatures, C
 };
 
 /**
- * Колонки таблицы соединений.
+ * Connection table columns.
  *
- * Одна колонка — одно поле, один ключ сортировки, один отбор; отбор по полю —
- * фасет в тулбаре экрана, а не фильтр в шапке. Источник и хост разведены,
- * потому что это разные оси — кто начал и куда шло; правило, выход и
- * цепочка разведены, потому что это три звена причинной связи: почему совпало,
- * что решено, через что прошло. Составная ячейка осталась только там, где два
- * значения читаются как один факт и порознь не запрашиваются: входящее и
- * исходящее направление одной величины.
+ * One column is one field, one sort key, one filter; filtering by a field is
+ * a facet in the screen toolbar, not a header filter. Source and host are separated
+ * because they are different axes — who started and where it was going; rule, outbound and
+ * chain are separated because they are three links of a causal chain: why it matched,
+ * what was decided, what it went through. A composite cell remains only where two
+ * values read as one fact and are not requested separately: the incoming and
+ * outgoing direction of one quantity.
  *
- * Скорость и объём — тоже разные вопросы: «кто сейчас ест канал» и «кто больше
- * всего скачал», поэтому у них отдельные колонки и отдельные ключи сортировки.
+ * Speed and volume are also different questions: "who is eating the channel now" and "who has
+ * downloaded the most overall", so they have separate columns and separate sort keys.
  */
 export const CONNECTION_COLUMNS: readonly ConnectionColumnDef[] = [
   {
     id: CONNECTION_FIELD.Source,
-    // Подпись устройства подставляет `toLabeledColumns`: описание остаётся
-    // данными, а список устройств приходит запросом.
+    // The device label is substituted by `toLabeledColumns`: the definition stays
+    // data, while the device list arrives by request.
     accessorFn: (row) => row.source,
-    // Посимвольное сравнение ставит 192.168.1.120 перед 192.168.1.36: в адресе
-    // числовые куски сравниваются как числа, а не как текст.
+    // Character-by-character comparison puts 192.168.1.120 before 192.168.1.36: in an address
+    // numeric chunks are compared as numbers, not as text.
     sortFn: 'alphanumeric',
     meta: { label: 'column.source', className: CONNECTION_COLUMN.Source, width: 7, required: false },
   },
@@ -200,7 +200,7 @@ export const CONNECTION_COLUMNS: readonly ConnectionColumnDef[] = [
   },
   {
     id: CONNECTION_FIELD.Age,
-    // Давность растёт, поэтому сравнивается момент начала: младшие — те, у кого он больше.
+    // Age grows, so the start moment is compared: the younger ones are those where it is larger.
     accessorFn: (row) => row.startedAt,
     sortFn: 'basic',
     sortDescFirst: true,
@@ -209,9 +209,9 @@ export const CONNECTION_COLUMNS: readonly ConnectionColumnDef[] = [
 ];
 
 /**
- * Колонки таблицы с подписью источника: сортировка идёт по имени устройства,
- * которое видно в ячейке, а не по адресу под ним. Безымянное устройство
- * подписано адресом, и порядок адресов остаётся числовым.
+ * Table columns with a source label: sorting goes by the device name
+ * visible in the cell, not by the address under it. An unnamed device
+ * is labelled by address, and the address order stays numeric.
  */
 export function toLabeledColumns(sourceLabel: ConnectionSourceLabel): readonly ConnectionColumnDef[] {
   return CONNECTION_COLUMNS.map((def) =>
@@ -220,31 +220,31 @@ export function toLabeledColumns(sourceLabel: ConnectionSourceLabel): readonly C
 }
 
 /**
- * Колонки, скрытые при первом открытии.
+ * Columns hidden on first open.
  *
- * Сеть почти всегда `tcp` и вопрос решает редко; скорость перекрывается
- * объёмом, пока не ищут, кто прямо сейчас занимает канал. Обе включаются в один
- * клик, а ширина строки без них укладывается в ноутбучный экран без
- * горизонтальной прокрутки.
+ * The network is almost always `tcp` and rarely decides the question; speed is overridden
+ * by volume until one looks for who is occupying the channel right now. Both are turned on in one
+ * click, and the row width without them fits a laptop screen without
+ * horizontal scrolling.
  */
 export const CONNECTION_COLUMNS_HIDDEN: Readonly<Partial<Record<ConnectionField, boolean>>> = {
   [CONNECTION_FIELD.Network]: false,
   [CONNECTION_FIELD.Rate]: false,
 };
 
-/** Описание колонки вместе с её живым состоянием в таблице. */
+/** Column description together with its live state in the table. */
 export interface ConnectionTableColumn {
   def: ConnectionColumnDef;
   column: Column<ConnectionTableFeatures, ConnectionRow>;
 }
 
 /**
- * Описания колонок в порядке, который выбрал пользователь.
+ * Column descriptions in the order the user chose.
  *
- * Порядок хранится списком идентификаторов и переживает версии панели:
- * незнакомый идентификатор пропускается, а колонка, которой в списке нет, —
- * новая или из вида до перестановки — встаёт после упорядоченных в порядке
- * описаний. Пустой список — порядок описаний.
+ * Order is stored as a list of identifiers and survives panel versions:
+ * an unfamiliar identifier is skipped, and a column absent from the list —
+ * new or from a view saved before reordering — goes after the ordered ones in
+ * definition order. An empty list means definition order.
  */
 export function toOrderedColumns(order: ColumnOrderState): ConnectionColumnDef[] {
   const position = new Map(order.map((id, index) => [id, index]));
@@ -255,13 +255,13 @@ export function toOrderedColumns(order: ColumnOrderState): ConnectionColumnDef[]
 }
 
 /**
- * Колонки таблицы в выбранном порядке.
+ * Table columns in the chosen order.
  *
- * Обход идёт по собственным описаниям, а не по `getVisibleLeafColumns`: там
- * `id` — строка, а `meta` необязательна, здесь гарантированы обе. Отбор по
- * видимости вызывающий делает сам. Выбор полей обходится без модели таблицы и
- * читает вид напрямую через `toOrderedColumns`: тулбар у вкладок соединений
- * один, а модель у каждой своя.
+ * The walk goes over our own definitions, not `getVisibleLeafColumns`: there
+ * `id` is a string and `meta` is optional, while here both are guaranteed. Filtering by
+ * visibility is done by the caller. The field picker works without the table model and
+ * reads the view directly via `toOrderedColumns`: the connection tabs have
+ * one toolbar, and each has its own model.
  */
 export function toTableColumns(
   table: Table<ConnectionTableFeatures, ConnectionRow>,

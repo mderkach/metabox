@@ -23,13 +23,13 @@ import { DIAGNOSTICS_COLUMN } from './DiagnosticsColumns';
 import { DiagnosticsRow } from './DiagnosticsRow';
 import { DiagnosticsTargetSelect } from './DiagnosticsTargetSelect';
 
-/** Строка заголовка тоже строка таблицы: нумерация строк начинается с неё. */
+/** The header row is also a table row: row numbering starts with it. */
 const HEADER_ROWS = 1;
 
 /**
- * Диагностика обвязки: порты, DNS, цепочки nft и выход в интернет. Прогон
- * только по кнопке и без опроса: он шлёт пакеты с роутера и оставляет строки
- * в логе sing-box.
+ * Dataplane diagnostics: ports, DNS, nft chains and internet access. The run happens
+ * only on the button and without polling: it sends packets from the router and leaves lines
+ * in the sing-box log.
  */
 export function DiagnosticsPage() {
   const { t } = useTranslation('pages/Diagnostics');
@@ -38,8 +38,8 @@ export function DiagnosticsPage() {
   const [chosen, setChosen] = useState<string | null>(null);
   const [run, setRun] = useState<DiagRun | null>(null);
   const report = useDiagReport(run);
-  // Пока пользователь не выбрал узел сам, проверяется первая группа: обычно
-  // это селектор, через который и идёт трафик.
+  // Until the user picks a node, the first group is checked: usually
+  // it is the selector that the traffic goes through.
   const target = chosen ?? targets.at(0) ?? '';
   const checks = report.data ?? [];
 

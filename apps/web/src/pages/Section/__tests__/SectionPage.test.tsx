@@ -13,7 +13,7 @@ import { DAEMON_STATUS_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture
 
 import { SectionNodes } from '../ui/SectionPage';
 
-/** Узел VLESS из текста ниже: сервер, порт и UUID — то, без чего форма его не сохранит. */
+/** A VLESS node from the text below: server, port and UUID are what the form will not save it without. */
 const HK_01 = { type: 'vless', tag: 'hk-01', server: 'a.example', server_port: 443, uuid: 'REDACTED' };
 
 const CONFIG_TEXT = `{
@@ -66,12 +66,12 @@ const DNS_TEXT = `{
   },
 }`;
 
-describe('экран секции', () => {
+describe('section screen', () => {
   beforeEach(() => {
     ConfigDocumentState.getState().reset();
   });
 
-  it('узлы секции свёрнуты до шапки с типом и адресом', async () => {
+  it('section nodes are collapsed to a header with type and address', async () => {
     serveConfig(CONFIG_TEXT);
 
     renderWithRouter(OutboundsSection);
@@ -84,7 +84,7 @@ describe('экран секции', () => {
     expect(node.queryByRole('tab', { name: 'Форма' })).not.toBeInTheDocument();
   });
 
-  it('открывает узел аутбаунда формой, а тот же узел текстом — на вкладке JSON', async () => {
+  it('opens an outbound node with a form, and the same node as text on the JSON tab', async () => {
     serveConfig(CONFIG_TEXT);
 
     const user = userEvent.setup();
@@ -104,7 +104,7 @@ describe('экран секции', () => {
     expect(screen.getByRole('heading', { name: 'direct' })).toBeInTheDocument();
   });
 
-  it('правка поля формой ложится одной строкой: комментарий и соседний узел целы', async () => {
+  it('a field edit by the form lands as one line: the comment and the neighboring node are intact', async () => {
     serveConfig(CONFIG_TEXT);
 
     const user = userEvent.setup();
@@ -133,7 +133,7 @@ describe('экран секции', () => {
     expect(findValue(draft, ['outbounds', 0])).toEqual({ type: 'direct', tag: 'direct' });
   });
 
-  it('правка узла текстом уходит в черновик точечно: комментарий и соседний узел целы', async () => {
+  it('a node edit by text goes into the draft precisely: the comment and the neighboring node are intact', async () => {
     serveConfig(CONFIG_TEXT);
 
     const user = userEvent.setup();
@@ -162,7 +162,7 @@ describe('экран секции', () => {
     expect(draft).toContain('"hk-01"');
   });
 
-  it('пустая секция-список названа пустой, а не сломанной', async () => {
+  it('an empty list section is called empty, not broken', async () => {
     serveConfig(CONFIG_TEXT);
 
     renderWithRouter(ProvidersSection);
@@ -170,7 +170,7 @@ describe('экран секции', () => {
     expect(await screen.findByText('Узлов нет')).toBeInTheDocument();
   });
 
-  it('правка DNS-правила ложится в dns.rules: серверы и комментарий целы', async () => {
+  it('a DNS rule edit lands in dns.rules: servers and the comment are intact', async () => {
     serveConfig(DNS_TEXT);
 
     const user = userEvent.setup();
@@ -200,7 +200,7 @@ describe('экран секции', () => {
     expect(draft).toContain('// серверы');
   });
 
-  it('скаляры dns правятся формой над серверами: одна строка, серверы и комментарий целы', async () => {
+  it('dns scalars are edited by the form above the servers: one line, servers and the comment are intact', async () => {
     const text = `{
   "dns": {
     // серверы
@@ -234,7 +234,7 @@ describe('экран секции', () => {
     expect(findValue(draft(), ['dns', 'servers', 0, 'tag'])).toBe('local');
   });
 
-  it('узел без тега и типа назван путём в файле, а не именем вкладки', async () => {
+  it('a node without a tag and type is named by the path in the file, not by the tab name', async () => {
     serveConfig(DNS_TEXT);
 
     renderWithRouter(DnsRulesSection);
@@ -243,7 +243,7 @@ describe('экран секции', () => {
     expect(screen.queryByRole('heading', { name: 'dnsRules[0]' })).not.toBeInTheDocument();
   });
 
-  it('отсутствующая ntp открывается пустым узлом, сохранение создаёт секцию', async () => {
+  it('a missing ntp opens as an empty node, saving creates the section', async () => {
     serveConfig(CONFIG_TEXT);
 
     const user = userEvent.setup();
@@ -271,7 +271,7 @@ describe('экран секции', () => {
     expect(findValue(draft, ['outbounds', 1])).toEqual(HK_01);
   });
 
-  it('кнопка тулбара открывает панель с фокусом на заголовке, Escape закрывает и возвращает фокус', async () => {
+  it('the toolbar button opens a panel with focus on the heading, Escape closes and returns focus', async () => {
     serveConfig(CONFIG_TEXT);
 
     const user = userEvent.setup();
@@ -298,7 +298,7 @@ describe('экран секции', () => {
     expect(open).toHaveFocus();
   });
 
-  it('добавляет аутбаунд direct с тегом: узел ложится в конец секции, комментарий цел', async () => {
+  it('adds a direct outbound with a tag: the node goes to the end of the section, the comment is intact', async () => {
     serveConfig(CONFIG_TEXT);
 
     const user = userEvent.setup();
@@ -324,7 +324,7 @@ describe('экран секции', () => {
     });
   });
 
-  it('VLESS добавляется заготовкой оверрайда: TLS с uTLS и Reality уже включены', async () => {
+  it('VLESS is added from the override preset: TLS with uTLS and Reality are already on', async () => {
     serveConfig(CONFIG_TEXT);
 
     const user = userEvent.setup();
@@ -348,7 +348,7 @@ describe('экран секции', () => {
     });
   });
 
-  it('отвергает тег, занятый другим узлом, и ничего не пишет', async () => {
+  it('rejects a tag taken by another node and writes nothing', async () => {
     serveConfig(CONFIG_TEXT);
 
     const user = userEvent.setup();
@@ -367,7 +367,7 @@ describe('экран секции', () => {
     expect(ConfigDocumentState.getState().draft).toBeNull();
   });
 
-  it('тип вне сборки бинаря помечен в выборе, но выбирается и добавляется', async () => {
+  it('a type outside the binary build is marked in the choice, but is chosen and added', async () => {
     let statusServed = false;
 
     server.use(
@@ -402,7 +402,7 @@ describe('экран секции', () => {
     });
   });
 
-  it('пустая секция с реестром добавляет первый узел и создаёт массив', async () => {
+  it('an empty section with a registry adds the first node and creates the array', async () => {
     serveConfig(CONFIG_TEXT);
 
     const user = userEvent.setup();
@@ -423,7 +423,7 @@ describe('экран секции', () => {
     expect(draft()).toContain('// выходы');
   });
 
-  it('у секции-объекта и списка без реестра кнопки добавления нет', async () => {
+  it('an object section and a list without a registry have no add button', async () => {
     serveConfig(DNS_TEXT);
 
     renderWithRouter(DnsRulesSection);

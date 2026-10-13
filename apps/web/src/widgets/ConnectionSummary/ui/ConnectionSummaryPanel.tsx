@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 
 import { Card, CardContent, CardHeader, SECTION_LABEL } from '@shared/ui';
 
-/** Пометку «считает панель» несёт заголовок секции, а не карточка. */
+/** The "panel computes" mark is carried by the section title, not the card. */
 export function ConnectionSummaryPanel({
   title,
   href,

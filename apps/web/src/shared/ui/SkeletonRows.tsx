@@ -7,9 +7,9 @@ import { PENDING_REVEAL } from './styles';
 const DEFAULT_ROWS = 6;
 
 /**
- * Загрузка списка рядами скелетона. Появляется с задержкой (`PENDING_REVEAL`):
- * быстрый ответ заменяет её раньше, чем она станет видимой. Скринридеру
- * загрузка объявляется словом — ряды полос ему ничего не говорят.
+ * List loading with skeleton rows. Appears with a delay (`PENDING_REVEAL`):
+ * a fast response replaces it before it becomes visible. For a screen reader
+ * loading is announced in words — rows of bars say nothing to it.
  */
 export function SkeletonRows({
   rows = DEFAULT_ROWS,
@@ -18,7 +18,7 @@ export function SkeletonRows({
 }: {
   rows?: number;
   className?: string;
-  /** Высота ряда: у списка — строка, у графика — вся область. */
+  /** Row height: a line for a list, the whole area for a chart. */
   rowClassName?: string;
 }) {
   const { t } = useTranslation('shared');

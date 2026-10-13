@@ -1,6 +1,6 @@
 import type { ReportWire } from '../api/Diag.schema';
 
-/** Перехват снят: цепочек нет, порт redirect закрыт, DNS и выходы в порядке. */
+/** Interception taken: no chains, the redirect port is closed, DNS and outbounds are fine. */
 export const DIAG_REPORT_FIXTURE: ReportWire = {
   checks: [
     {

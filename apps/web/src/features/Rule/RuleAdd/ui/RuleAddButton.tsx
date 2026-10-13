@@ -6,20 +6,22 @@ import { newRuleNode } from '@entities/Rule';
 import { Button } from '@shared/ui';
 
 /**
- * Новое правило в конец `route.rules`: без условий, с выходом в маршрут по
- * умолчанию. Массива в файле может не быть — вставка его создаёт.
+ * A new rule at the end of `route.rules`: without conditions, with an outbound
+ * to the default route. The array may be absent from the file, and the insert
+ * creates it.
  *
- * Без выхода кнопка гаснет и говорит почему: правило без `outbound` sing-box
- * отвергает, а выдумывать тег, которого в конфиге нет, панель не вправе.
+ * Without an outbound the button goes dim and says why: sing-box rejects a rule
+ * without `outbound`, and the panel may not invent a tag that is not in the
+ * config.
  */
 export function RuleAddButton({
   index,
   outbound,
   onAdded,
 }: {
-  /** Номер нового правила, с единицы: длина `route.rules` плюс один. */
+  /** New rule number, from one: the `route.rules` length plus one. */
   index: number;
-  /** Выход нового правила; `null` — выхода нет, добавить нельзя. */
+  /** New rule outbound; `null` means there is no outbound, adding is impossible. */
   outbound: string | null;
   onAdded: (index: number) => void;
 }) {

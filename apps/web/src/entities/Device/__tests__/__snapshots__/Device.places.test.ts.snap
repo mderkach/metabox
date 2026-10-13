@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`места подписи устройства > новое место подписи видно в диффе снапшота 1`] = `
+exports[`device label places > a new label place is visible in the snapshot diff 1`] = `
 [
   "/src/features/Rule/RuleEdit/ui/RuleSourceDevices.tsx",
   "/src/pages/Connections/lib/Connections.lib.ts",

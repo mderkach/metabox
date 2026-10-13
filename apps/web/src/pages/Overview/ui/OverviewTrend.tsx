@@ -3,20 +3,20 @@ import { useTranslation } from 'react-i18next';
 import { formatAge } from '@shared/lib/format';
 import { DaemonSparkline } from '@widgets/Daemon/DaemonTraffic';
 
-/** По одной точке ряд не нарисуешь. */
+/** A series cannot be drawn from a single point. */
 const MIN_POINTS = 2;
 
 /**
- * Во сколько раз от первого значения поднят верх шкалы без явной ёмкости.
- * Удвоение от старта читается сразу: ряд, дошедший до верха, вырос вдвое.
+ * How many times the top of the scale is raised from the first value when there is no explicit capacity.
+ * Doubling from the start reads at once: a series that reached the top has doubled.
  */
 const START_HEADROOM = 2;
 
 /**
- * История показания во всю ширину плитки и подпись под ней: за какое окно, в
- * каком размахе и где верх шкалы. Верх задан заранее — ёмкостью величины или
- * удвоенным первым значением, — а не пиком ряда: иначе любой ряд доставал бы
- * до верхней кромки, и ровная линия там читалась бы как «на пределе».
+ * A reading's history across the full tile width and a caption under it: which window, in
+ * what range and where the top of the scale is. The top is set in advance — by the quantity's capacity or
+ * by the doubled first value — not by the series peak: otherwise any series would reach
+ * the top edge, and a flat line there would read as "at the limit".
  */
 export function OverviewTrend({
   samples,
@@ -28,7 +28,7 @@ export function OverviewTrend({
 }: {
   samples: number[];
   stepSeconds: number;
-  /** Верх шкалы — ёмкость величины; без неё — удвоенное первое значение. */
+  /** Top of the scale is the quantity's capacity; without it, the doubled first value. */
   capacity?: number;
   format: (value: number) => string;
   label: string;

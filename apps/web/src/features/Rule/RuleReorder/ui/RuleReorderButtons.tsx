@@ -8,27 +8,28 @@ import { Button } from '@shared/ui';
 import { MOVE, type Move } from '../model/RuleReorder.constants';
 
 /**
- * Перестановка правила на одну позицию: в sing-box порядок правил и есть
- * логика, поэтому переезд — правка, а не вид. Перестановка одна операция стора
- * (ADR-0004): узел вынимается и вставляется одним шагом, и номера соседей под
- * вызывающим кодом не сдвигаются.
+ * Moving a rule by one position: in sing-box rule order is the logic, so a move
+ * is an edit, not a view. A move is one store operation (ADR-0004): the node is
+ * taken out and inserted in one step, and neighbor numbers do not shift under
+ * the calling code.
  *
- * Правило переставляется по всему `route.rules`, а не по отобранным строкам:
- * отбор показывает часть списка, а порядок у файла один.
+ * A rule is moved across the whole `route.rules`, not across the selected rows:
+ * a filter shows part of the list, while the file has one order.
  *
- * Фокус остаётся на нажатой кнопке. На краю списка она гаснет, и фокус уходит
- * на соседнюю — иначе он упал бы на `body` вместе с выключенной кнопкой.
+ * Focus stays on the pressed button. At the list edge it goes dim and focus
+ * moves to the neighbor, otherwise it would fall to `body` together with the
+ * disabled button.
  */
 export function RuleReorderButtons({
   index,
   total,
   onMoved,
 }: {
-  /** Номер правила, с единицы. */
+  /** Rule number, from one. */
   index: number;
-  /** Длина `route.rules`, а не отобранного списка. */
+  /** `route.rules` length, not the selected list's. */
   total: number;
-  /** Номер, на который правило переехало. */
+  /** The number the rule moved to. */
   onMoved: (index: number) => void;
 }) {
   const { t } = useTranslation('features/Rule/RuleReorder');

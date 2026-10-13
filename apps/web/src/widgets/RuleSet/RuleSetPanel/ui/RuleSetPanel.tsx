@@ -7,14 +7,14 @@ import { cn } from '@shared/lib/utils';
 import { Button, SECTION_HEADING, SURFACE, SURFACE_HEAD, SheetTitle } from '@shared/ui';
 
 /**
- * Панель сета рядом со списком: в ней открывается форма, а список остаётся на
- * месте и не сдвигается вниз (ADR-0037).
+ * Rule set panel beside the list: the form opens in it, and the list stays in
+ * place and does not shift down (ADR-0037).
  *
- * Своего словаря у панели нет: заголовок называет страница, которая знает,
- * какая форма открыта, а подпись закрытия общая с панелью правила.
+ * The panel has no dictionary of its own: the title is named by the page, which knows
+ * which form is open, and the close label is shared with the rule panel.
  *
- * `sheet` — панель стоит внутри листа поверх списка: рамку и фокус держит лист,
- * а заголовок панели становится его заголовком.
+ * `sheet` — the panel stands inside a sheet on top of the list: the sheet holds the frame and focus,
+ * and the panel title becomes its title.
  */
 export function RuleSetPanel({
   title,
@@ -25,7 +25,7 @@ export function RuleSetPanel({
   title: string;
   sheet?: boolean;
   onClose: () => void;
-  /** Форма, открытая из тулбара списка. */
+  /** The form opened from the list toolbar. */
   children: ReactNode;
 }) {
   const { t } = useTranslation('shared');
@@ -38,9 +38,9 @@ export function RuleSetPanel({
   }
 
   return (
-    // Escape закрывает панель: обработчик на контейнере — обычный паттерн для
-    // панелей и диалогов, интерактивная роль aside для этого не нужна.
-    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- см. выше
+    // Escape closes the panel: a handler on the container is a common pattern for
+    // panels and dialogs, an interactive role on aside is not needed for it.
+    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- see above
     <aside
       aria-label={title}
       onKeyDown={onKeyDown}

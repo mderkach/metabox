@@ -10,10 +10,10 @@ import {
 } from './Connection.model';
 
 /**
- * Скорости приходят извне: считать их можно только рядом с прошлым снапшотом.
+ * Speeds come from outside: they can be computed only next to the previous snapshot.
  *
- * `outboundTypes` — типы аутбаундов применённого конфига; без неё тон действия
- * читается по строке рантайма.
+ * `outboundTypes` are the outbound types of the applied config; without it the
+ * action tone is read from the runtime string.
  */
 export function toConnectionRow(
   connection: ConnectionWire,
@@ -29,11 +29,11 @@ export function toConnectionRow(
     network: connection.network,
     source: connection.source,
     rule: connection.rule,
-    // Выход по умолчанию показывается узлом конфига, а не пустой строкой:
-    // «ни одно правило не совпало» — наблюдаемый факт.
+    // The default outbound is shown as a config node, not an empty string: "no
+    // rule matched" is an observable fact.
     action,
     kind: toRouteKind(action, chain, outboundTypes),
-    // Цепочка приходит от узла к группе — человек читает её в обратную сторону.
+    // The chain arrives from node to group, and a person reads it in the opposite direction.
     chain,
     upload: connection.upload,
     download: connection.download,
@@ -46,7 +46,7 @@ export function toConnectionRow(
   };
 }
 
-/** `null` — снапшот отбракован; счёт отбракованных ведёт стор. */
+/** `null` means the snapshot was rejected; the store counts the rejected ones. */
 export function toConnectionsSnapshot(raw: unknown) {
   return decodeFrame(ConnectionsSnapshotSchema, raw, 'connections');
 }

@@ -12,24 +12,24 @@ const SORT_ICON = {
   desc: ArrowDown,
 } as const;
 
-/** Значения `aria-sort` фиксированы спецификацией. */
+/** `aria-sort` values are fixed by the specification. */
 const ARIA_SORT = {
   asc: 'ascending',
   desc: 'descending',
 } as const;
 
 /**
- * Шапка таблицы.
+ * Table header.
  *
- * Липкая: скроллер один и на обе оси, поэтому шапка удерживается `sticky`, а не
- * живёт в отдельном контейнере — тот завёл бы собственную горизонтальную
- * прокрутку и уехал бы из-под строк.
+ * Sticky: there is one scroller for both axes, so the header is held by `sticky` and does not
+ * live in a separate container — that would create its own horizontal
+ * scrolling and slide out from under the rows.
  *
- * Стрелка сортировки показывается у отсортированной колонки и под курсором: у
- * всех сразу она превращается в шум и ничего не сообщает.
+ * The sort arrow is shown on the sorted column and under the cursor: on
+ * all at once it becomes noise and conveys nothing.
  *
- * Отбор по полю ставится фасетом в тулбаре, а шапка колонки несёт его признак:
- * без него пустая таблица выглядит поломкой, а не результатом отбора.
+ * Filtering by a field is set by a facet in the toolbar, and the column header carries its mark:
+ * without it an empty table looks broken, not like a filter result.
  */
 export function ConnectionTableHeader({
   columns,
@@ -61,8 +61,8 @@ export function ConnectionTableHeader({
               aria-sort={direction === false ? 'none' : ARIA_SORT[direction]}
               className={cn(def.meta.className, filtered && 'flex min-w-0 items-center gap-0.5')}
             >
-              {/* Preflight Tailwind ставит кнопкам `text-transform: none`: без
-                  наследования подпись теряет капитель шапки. */}
+              {/* Tailwind Preflight sets `text-transform: none` on buttons: without
+                  inheritance the label loses the header small caps. */}
               <button
                 type='button'
                 onClick={column.getToggleSortingHandler()}

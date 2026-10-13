@@ -1,15 +1,15 @@
 import type { ReactNode } from 'react';
 
 /**
- * Шапка экрана. `children` — состояние экрана: вердикт обзора, ход потока
- * соединений, документ конфигурации и его черновик; пояснения к содержимому
- * стоят у своей секции, а не здесь. `actions` — действия над документом
- * экрана, например история версий, а не действия над списком: те живут в
- * карточке списка, см. Tables.md.
+ * Screen header. `children` is the screen state: the overview verdict, the connection stream
+ * progress, the config document and its draft; explanations of the content
+ * stand at their own section, not here. `actions` are actions on the screen
+ * document, for example version history, not actions on a list: those live in
+ * the list card, see Tables.md.
  *
- * Именована для View Transitions: при смене раздела шапка растворяется на
- * месте, а не уезжает вместе с содержимым; между вкладками одного раздела она
- * стоит живой.
+ * Named for View Transitions: on a section change the header dissolves in
+ * place instead of sliding away with the content; between tabs of one section it
+ * stays live.
  */
 export function PageHeader({ title, children, actions }: { title: string; children?: ReactNode; actions?: ReactNode }) {
   return (

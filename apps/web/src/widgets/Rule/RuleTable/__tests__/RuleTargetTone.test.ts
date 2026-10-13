@@ -13,23 +13,23 @@ const OUTBOUND_TYPES: ReadonlyMap<string, string> = new Map([
 
 const NO_TYPES: ReadonlyMap<string, string> = new Map();
 
-describe('тон выхода правила', () => {
-  it('аутбаунд из конфига красится по типу, а не по имени тега', () => {
+describe('rule outbound tone', () => {
+  it('an outbound from the config is colored by type, not by tag name', () => {
     expect(toTargetTone(RULE_TARGET.Outbound, 'directional', OUTBOUND_TYPES)).toBe('text-route-proxy');
     expect(toTargetTone(RULE_TARGET.Outbound, 'eu', OUTBOUND_TYPES)).toBe('text-route-direct');
     expect(toTargetTone(RULE_TARGET.Outbound, 'sink', OUTBOUND_TYPES)).toBe('text-route-block');
   });
 
-  it('незнакомый тип выводит трафик через узел — тон прокси', () => {
+  it('an unknown type routes traffic through a node: the proxy tone', () => {
     expect(toTargetTone(RULE_TARGET.Outbound, 'auto', OUTBOUND_TYPES)).toBe('text-route-proxy');
   });
 
-  it('тег, которого в конфиге нет, красится по имени', () => {
+  it('a tag that is not in the config is colored by name', () => {
     expect(toTargetTone(RULE_TARGET.Outbound, 'direct-ru', NO_TYPES)).toBe('text-route-direct');
     expect(toTargetTone(RULE_TARGET.Outbound, 'hk-01', NO_TYPES)).toBe('text-route-proxy');
   });
 
-  it('действие красится по имени, даже когда аутбаунд с таким тегом есть', () => {
+  it('an action is colored by name, even when an outbound with such a tag exists', () => {
     const types = new Map([['reject', 'vless']]);
 
     expect(toTargetTone(RULE_TARGET.Action, 'reject', types)).toBe('text-route-block');

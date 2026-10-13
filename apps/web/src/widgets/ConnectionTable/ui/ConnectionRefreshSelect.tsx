@@ -18,11 +18,11 @@ function toInterval(value: string | null): RefreshInterval {
 }
 
 /**
- * Частота обновления показанных строк. Управление видом, поэтому стоит рядом с
- * плотностью, а не в ряду действий: пауза останавливает экран совсем и остаётся
- * отдельной кнопкой.
+ * Refresh rate of the shown rows. View control, so it stands next to
+ * density, not in the action row: pause stops the screen entirely and stays
+ * a separate button.
  *
- * Значения — строки: `Select` работает со строковым значением, а не с числом.
+ * Values are strings: `Select` works with a string value, not a number.
  */
 export function ConnectionRefreshSelect({
   interval,
@@ -32,7 +32,7 @@ export function ConnectionRefreshSelect({
   onIntervalChange: (interval: RefreshInterval) => void;
 }) {
   const { t } = useTranslation('widgets/ConnectionTable');
-  // Без `items` триггер печатает само значение — миллисекунды вместо подписи.
+  // Without `items` the trigger prints the value itself — milliseconds instead of a label.
   const items = REFRESH_OPTIONS.map((option) => ({ value: String(option.interval), label: t(option.label) }));
 
   return (

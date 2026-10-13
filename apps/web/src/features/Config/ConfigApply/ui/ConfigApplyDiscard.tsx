@@ -16,11 +16,12 @@ import {
 } from '@shared/ui';
 
 /**
- * Сброс черновика целиком.
+ * Discard of the whole draft.
  *
- * Спрашивает подтверждение: пошаговой отмены у документа нет, и случайное
- * нажатие уносит всю работу без возврата. Контур в тоне опасности отличает его
- * от кнопок бара, которые правки сохраняют, а не стирают.
+ * Asks for confirmation: the document has no step-by-step undo, and an
+ * accidental press takes all the work away irreversibly. The outline in the
+ * danger tone tells it from the bar buttons, which keep edits rather than erase
+ * them.
  */
 export function ConfigApplyDiscard({ label, onDiscard }: { label?: string; onDiscard: () => void }) {
   const { t } = useTranslation('features/Config/ConfigApply');

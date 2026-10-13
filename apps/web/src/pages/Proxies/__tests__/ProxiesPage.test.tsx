@@ -16,10 +16,10 @@ function serveProxies() {
   server.use(...proxyHandlers);
 }
 
-// Экран поднимается целиком вместе с запросами, поэтому тест лежит в `src/test`:
-// из слоя `pages` до общей оснастки не дотянуться, не выйдя за границы слоёв.
-describe('экран прокси', () => {
-  it('показывает группы конфига и не показывает служебные', async () => {
+// The screen is brought up whole together with requests, so the test lives in `src/test`:
+// from the `pages` layer the shared tooling cannot be reached without crossing layer boundaries.
+describe('proxies screen', () => {
+  it('shows config groups and does not show service ones', async () => {
     serveProxies();
 
     renderWithQuery(<ProxiesPage />);
@@ -30,7 +30,7 @@ describe('экран прокси', () => {
     expect(screen.queryByRole('heading', { name: 'GLOBAL' })).not.toBeInTheDocument();
   });
 
-  it('заголовок группы вложен в секцию групп, а не стоит с ней на одном уровне', async () => {
+  it('the group heading is nested in the groups section, not at the same level as it', async () => {
     serveProxies();
 
     renderWithQuery(<ProxiesPage />);
@@ -39,8 +39,8 @@ describe('экран прокси', () => {
     expect(screen.getByRole('heading', { level: 2, name: 'Группы узлов' })).toBeInTheDocument();
   });
 
-  // Без названного порога 290 и 310 мс разного цвета выглядят случайностью.
-  it('называет пороги тона задержки легендой над группами', async () => {
+  // Without a named threshold, 290 and 310 ms in different colors look like chance.
+  it('names the latency tone thresholds with a legend above the groups', async () => {
     serveProxies();
 
     renderWithQuery(<ProxiesPage />);
@@ -52,9 +52,9 @@ describe('экран прокси', () => {
     expect(legend.getByText('не ответил')).toBeInTheDocument();
   });
 
-  // Выбранный узел несёт кромку и галочку; отдельная строка «сейчас: X»
-  // повторяла бы их третьим признаком.
-  it('не дублирует выбранный узел строкой над плитками', async () => {
+  // The selected node carries an edge and a checkmark; a separate "now: X" line
+  // would repeat them as a third sign.
+  it('does not duplicate the selected node with a line above the tiles', async () => {
     serveProxies();
 
     renderWithQuery(<ProxiesPage />);
@@ -63,7 +63,7 @@ describe('экран прокси', () => {
     expect(screen.queryByText('сейчас:')).not.toBeInTheDocument();
   });
 
-  it('переключает узел только в селекторе и шлёт выбор в рантайм', async () => {
+  it('switches a node only in a selector and sends the choice to the runtime', async () => {
     const selected = vi.fn<(body: unknown) => void>();
 
     serveProxies();
@@ -88,7 +88,7 @@ describe('экран прокси', () => {
     });
   });
 
-  it('объявляет выбор узла живой областью экрана', async () => {
+  it('announces the node choice with the screen live region', async () => {
     serveProxies();
 
     const user = userEvent.setup();
@@ -104,7 +104,7 @@ describe('экран прокси', () => {
     });
   });
 
-  it('объявляет обновление задержки группы и всех групп', async () => {
+  it('announces the latency refresh of a group and of all groups', async () => {
     serveProxies();
 
     const user = userEvent.setup();
@@ -128,7 +128,7 @@ describe('экран прокси', () => {
     });
   });
 
-  it('узел URL-теста не кликается: выбор там делает sing-box', async () => {
+  it('a URL-test node is not clickable: sing-box makes the choice there', async () => {
     serveProxies();
 
     renderWithQuery(<ProxiesPage />);
@@ -140,7 +140,7 @@ describe('экран прокси', () => {
     expect(screen.queryByRole('button', { name: /sub-eu\/eu-xhttp/ })).not.toBeInTheDocument();
   });
 
-  it('показывает подписки, из которых приезжают узлы', async () => {
+  it('shows the subscriptions the nodes come from', async () => {
     serveProxies();
 
     renderWithQuery(<ProxiesPage />);
@@ -149,12 +149,12 @@ describe('экран прокси', () => {
     expect(screen.getAllByRole('heading', { name: 'Подписки' })).toHaveLength(1);
   });
 
-  describe('время обновления подписки', () => {
+  describe('subscription update time', () => {
     afterEach(() => {
       vi.useRealTimers();
     });
 
-    it('подписывает «обновлена N назад», полную дату кладёт в title, а машинную — в dateTime', async () => {
+    it('labels "updated N ago", puts the full date in title, and the machine one in dateTime', async () => {
       vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-09-10T15:30:00Z') });
       serveProxies();
 
@@ -166,7 +166,7 @@ describe('экран прокси', () => {
       expect(label[0]).toHaveAttribute('title', formatDateTime(new Date('2026-09-10T12:27:02Z')));
     });
 
-    it('до минуты после обновления пишет «только что», а не секунды', async () => {
+    it('within a minute after the update writes "just now", not seconds', async () => {
       vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-09-10T12:27:30Z') });
       serveProxies();
 
@@ -175,7 +175,7 @@ describe('экран прокси', () => {
       expect(await screen.findAllByText('обновлена только что')).not.toHaveLength(0);
     });
 
-    it('нулевую дату рантайма показывает как «ещё не обновлялась»', async () => {
+    it('shows the runtime zero date as "not updated yet"', async () => {
       serveProxies();
       server.use(
         http.get(PROXY_ENDPOINT.providers(), () =>
@@ -197,7 +197,7 @@ describe('экран прокси', () => {
       expect(screen.queryByText(/назад/)).not.toBeInTheDocument();
     });
 
-    it('показывает трафик и срок подписки, когда подписка их сообщила', async () => {
+    it('shows traffic and expiry of a subscription when the subscription reported them', async () => {
       serveProxies();
 
       renderWithQuery(<ProxiesPage />);
@@ -206,7 +206,7 @@ describe('экран прокси', () => {
       expect(screen.getByText('до 01.12.2026')).toBeInTheDocument();
     });
 
-    it('перечитывает время после успешного обновления подписки', async () => {
+    it('rereads the time after a successful subscription update', async () => {
       let updatedAt = '2026-09-10T12:27:02Z';
 
       vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-09-10T15:30:00Z') });
@@ -236,7 +236,7 @@ describe('экран прокси', () => {
     });
   });
 
-  it('обновляет подписку по кнопке и держит кнопку занятой, пока идёт запрос', async () => {
+  it('updates a subscription by the button and keeps the button busy while the request runs', async () => {
     const updated = vi.fn<() => void>();
     let release = () => {};
     const answered = new Promise<void>((resolve) => {
@@ -272,8 +272,8 @@ describe('экран прокси', () => {
     });
   });
 
-  // В фикстуре группа us вложена в us-fallback: проверяется её плитка.
-  it('плитка вложенной группы переводит тип, а не показывает его строкой Clash API', async () => {
+  // In the fixture the us group is nested in us-fallback: its tile is checked.
+  it('the tile of a nested group translates the type instead of showing it as a Clash API string', async () => {
     serveProxies();
 
     renderWithQuery(<ProxiesPage />);

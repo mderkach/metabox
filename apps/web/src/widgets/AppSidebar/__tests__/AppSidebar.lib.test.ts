@@ -3,40 +3,40 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { pickActiveNav, useSidebarCollapsed } from '../lib/AppSidebar.lib';
 
-describe('текущий пункт меню', () => {
+describe('current menu item', () => {
   const TARGETS = ['/overview', '/config', '/config/rule-set', '/connections'];
 
-  it('вложенный раздел подсвечивает только себя, а не родителя вместе с ним', () => {
+  it('a nested section highlights only itself, not the parent together with it', () => {
     expect(pickActiveNav('/config/rule-set', TARGETS)).toBe('/config/rule-set');
   });
 
-  it('вкладка без своего пункта подсвечивает ближайший раздел', () => {
+  it('a tab without its own item highlights the nearest section', () => {
     expect(pickActiveNav('/config/raw', TARGETS)).toBe('/config');
   });
 
-  it('точное совпадение подсвечивает раздел', () => {
+  it('an exact match highlights the section', () => {
     expect(pickActiveNav('/config', TARGETS)).toBe('/config');
   });
 
-  it('неизвестный адрес не подсвечивает ничего', () => {
+  it('an unknown address highlights nothing', () => {
     expect(pickActiveNav('/nope', TARGETS)).toBeNull();
     expect(pickActiveNav('/configuration', TARGETS)).toBeNull();
   });
 });
 
-describe('свёрнутость сайдбара', () => {
+describe('sidebar collapsed state', () => {
   afterEach(() => {
     globalThis.localStorage.clear();
     vi.restoreAllMocks();
   });
 
-  it('без прежнего выбора открывается развёрнутым', () => {
+  it('without a previous choice opens expanded', () => {
     const { result } = renderHook(() => useSidebarCollapsed());
 
     expect(result.current.collapsed).toBe(false);
   });
 
-  it('открывается так, как пользователь оставил её в прошлый раз', () => {
+  it('opens as the user left it last time', () => {
     globalThis.localStorage.setItem('metabox.sidebar.collapsed', 'true');
 
     const { result } = renderHook(() => useSidebarCollapsed());
@@ -44,7 +44,7 @@ describe('свёрнутость сайдбара', () => {
     expect(result.current.collapsed).toBe(true);
   });
 
-  it('переключение сохраняется и переживает перемонтирование', () => {
+  it('the toggle is saved and survives remounting', () => {
     const first = renderHook(() => useSidebarCollapsed());
 
     act(() => {
@@ -58,7 +58,7 @@ describe('свёрнутость сайдбара', () => {
     expect(second.result.current.collapsed).toBe(true);
   });
 
-  it('недоступное хранилище не роняет панель', () => {
+  it('unavailable storage does not crash the panel', () => {
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(function denyRead() {
       throw new Error('доступ к хранилищу закрыт');
     });

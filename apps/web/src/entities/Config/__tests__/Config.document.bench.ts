@@ -9,12 +9,12 @@ import ROUTER_LIKE from './corpus/router-like.json?raw';
 const VALUE = parseJsonc(ROUTER_LIKE).value;
 
 /**
- * Цена одного разбора черновика — того, что `useConfigDocument` делает на каждый
- * введённый в текстовом режиме символ, — на файле корпуса со структурой рабочего
- * роутера, и обе её части порознь. Прогон: `pnpm --filter web exec vitest bench`.
+ * The cost of one draft parse, which `useConfigDocument` does on every
+ * character typed in text mode, on a corpus file with the structure of a working
+ * router, and both of its parts separately. Run: `pnpm --filter web exec vitest bench`.
  */
-test('разбор черновика router-like.json', async ({ bench }) => {
-  // Замер имеет смысл, только если схема файл принимает: отказ короче разбора.
+test('draft parse of router-like.json', async ({ bench }) => {
+  // The measurement makes sense only if the schema accepts the file: a rejection is shorter than a parse.
   expect(parseConfig(ROUTER_LIKE).issues).toEqual([]);
 
   await bench.compare(

@@ -25,7 +25,7 @@ function makeRows(count: number): ConnectionRow[] {
   }));
 }
 
-describe('частота обновления показанных строк', () => {
+describe('shown rows refresh rate', () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -34,7 +34,7 @@ describe('частота обновления показанных строк', 
     vi.useRealTimers();
   });
 
-  it('при обновлении раз в секунду отдаёт свежий набор без задержки', () => {
+  it('with a refresh once a second returns the fresh set without delay', () => {
     const { result, rerender } = renderHook(({ rows }) => useThrottledRows(rows, REFRESH_INTERVAL.Live), {
       initialProps: { rows: makeRows(2) },
     });
@@ -46,7 +46,7 @@ describe('частота обновления показанных строк', 
     expect(result.current).toHaveLength(3);
   });
 
-  it('при пяти секундах держит прежний набор до конца периода', async () => {
+  it('at five seconds holds the previous set until the end of the period', async () => {
     const { result, rerender } = renderHook(({ rows }) => useThrottledRows(rows, REFRESH_INTERVAL.Slow), {
       initialProps: { rows: makeRows(2) },
     });
@@ -64,7 +64,7 @@ describe('частота обновления показанных строк', 
     expect(result.current).toHaveLength(3);
   });
 
-  it('смена интервала показывает накопленный набор сразу, а не в конце нового периода', () => {
+  it('an interval change shows the accumulated set at once, not at the end of the new period', () => {
     const { result, rerender } = renderHook<ConnectionRow[], { rows: ConnectionRow[]; interval: RefreshInterval }>(
       ({ rows, interval }) => useThrottledRows(rows, interval),
       { initialProps: { rows: makeRows(2), interval: REFRESH_INTERVAL.Slow } }
@@ -79,7 +79,7 @@ describe('частота обновления показанных строк', 
     expect(result.current).toHaveLength(3);
   });
 
-  it('переход на обновление раз в секунду отдаёт накопленный набор без задержки', () => {
+  it('a switch to a refresh once a second returns the accumulated set without delay', () => {
     const { result, rerender } = renderHook<ConnectionRow[], { rows: ConnectionRow[]; interval: RefreshInterval }>(
       ({ rows, interval }) => useThrottledRows(rows, interval),
       { initialProps: { rows: makeRows(2), interval: REFRESH_INTERVAL.Slow } }
@@ -94,7 +94,7 @@ describe('частота обновления показанных строк', 
     expect(result.current).toHaveLength(3);
   });
 
-  it('снимает таймер при размонтировании', async () => {
+  it('clears the timer on unmount', async () => {
     const { rerender, unmount } = renderHook(({ rows }) => useThrottledRows(rows, REFRESH_INTERVAL.Slow), {
       initialProps: { rows: makeRows(2) },
     });

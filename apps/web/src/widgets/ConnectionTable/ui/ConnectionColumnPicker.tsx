@@ -8,7 +8,7 @@ import { Button, Checkbox, Label, Popover, PopoverContent, PopoverTitle, Popover
 import type { ConnectionView } from '../lib';
 import { CONNECTION_COLUMNS, CONNECTION_COLUMNS_HIDDEN, toOrderedColumns } from './ConnectionColumns';
 
-/** Куда сдвигается колонка: на одну позицию назад или вперёд. */
+/** Where a column moves: one position back or forward. */
 const MOVE = {
   Up: -1,
   Down: 1,
@@ -21,26 +21,26 @@ function toMoveButtonId(field: string, move: Move): string {
 }
 
 /**
- * Выбор показываемых полей — управление видом, а не действие над данными,
- * поэтому стоит отдельно от действий списка.
+ * Choosing the shown fields is view control, not an action on data,
+ * so it stands apart from the list actions.
  *
- * Кнопка несёт активное состояние, когда набор или порядок отличается от
- * исходного: иначе пропавшее поле выглядит как потеря данных, а не как
- * собственный выбор. Счётчик словом её не заменяет — на узком экране на слово
- * нет места.
+ * The button carries an active state when the set or order differs from
+ * the original: otherwise a vanished field looks like data loss rather than
+ * the user's own choice. A counter does not replace a word — there is no room for a word
+ * on a narrow screen.
  *
- * Поле с пометкой `required` в списке есть, но выключить его нельзя: без хоста
- * и действия строка перестаёт отвечать на вопрос, ради которого экран
- * открывают. Скрытый флажок вместо запрещённого оставил бы гадать, почему
- * полей в списке меньше, чем в строке.
+ * A field marked `required` is in the list but cannot be turned off: without the host
+ * and action a row stops answering the question the screen
+ * is opened for. A hidden checkbox instead of a disabled one would leave one guessing why
+ * there are fewer fields in the list than in the row.
  *
- * Порядок меняется кнопками «выше» и «ниже», а не перетаскиванием: кнопки
- * доступны с клавиатуры и скринридеру без отдельного протокола. Фокус после
- * перестановки остаётся на кнопке переставленного поля — иначе он теряется
- * вместе с переехавшим узлом списка.
+ * Order is changed with "up" and "down" buttons, not by dragging: buttons
+ * are available from the keyboard and to a screen reader without a separate protocol. Focus after
+ * a move stays on the button of the moved field — otherwise it is lost
+ * together with the list node that moved.
  *
- * Выбор работает с видом, а не с моделью таблицы: тулбар один на обе вкладки
- * соединений, а модель у каждой своя.
+ * The picker works with the view, not with the table model: the toolbar is one for both connection
+ * tabs, and each has its own model.
  */
 export function ConnectionColumnPicker({
   view,
@@ -72,7 +72,7 @@ export function ConnectionColumnPicker({
     const [field] = ids.splice(index, 1);
 
     ids.splice(target, 0, field);
-    // На краю списка кнопка того же направления гаснет, и фокус уходит на соседнюю.
+    // At the list edge the button of the same direction fades out, and focus moves to the adjacent one.
     const atEdge = target === 0 || target === ids.length - 1;
     const back = step === MOVE.Up ? MOVE.Down : MOVE.Up;
 

@@ -27,7 +27,7 @@ import { ConnectionSearch } from './ConnectionSearch';
 import { ConnectionsEmpty } from './ConnectionsEmpty';
 import { ConnectionsStreamStatus } from './ConnectionsStreamStatus';
 
-/** Счётчик вкладки: тот же вид, что у вкладок разделов конфигурации. */
+/** Tab counter: the same look as for the configuration section tabs. */
 const TAB_COUNT = 'text-xs text-muted-foreground tabular-nums';
 
 export function ConnectionsPage() {
@@ -37,20 +37,20 @@ export function ConnectionsPage() {
   const view = useConnectionView();
   const screen = useConnectionsScreen(view.interval);
   const [explainedId, setExplainedId] = useState<string | null>(null);
-  // Тот же идентификатор уходит в `aria-controls` раскрывшей панель строки.
+  // The same identifier goes into `aria-controls` of the row that expanded the panel.
   const explainPanelId = useId();
   const paused = ConnectionState.use.paused();
   const dropped = ConnectionState.use.dropped();
   const evicted = ConnectionState.use.evicted();
-  // Оба числа переполнения — из стора одного момента: прореженная выдача
-  // таблицы на медленном интервале отстаёт от счётчика вытесненных.
+  // Both overflow numbers are from the store of one moment: a thinned table
+  // output at a slow interval lags the evicted counter.
   const kept = ConnectionState.use.closed().length;
   const sampledAt = ConnectionState.use.sampledAt();
   const setPaused = ConnectionState.use.setPaused();
   const closeAll = useCloseAllConnections();
   const sheet = usePanelAsSheet();
-  // Строка уходит из списка молча: что соединение закрыто, скринридеру
-  // объявляет одна область на экран.
+  // A row leaves the list silently: one area per screen announces to a screen
+  // reader that the connection is closed.
   const { message, announce } = useLiveRegion();
 
   const onExplain = useCallback((id: string) => {
@@ -84,8 +84,8 @@ export function ConnectionsPage() {
   const closedShown = screen.tab === CONNECTION_TAB.Closed;
   const pending = sampledAt === null;
 
-  // Тела вкладок мемоизированы, и колбэки им отдаются стабильными: иначе скрытая
-  // вкладка перерисовывалась бы на каждый тик ради новой ссылки на функцию.
+  // Tab bodies are memoized and callbacks are passed to them stable: otherwise
+  // a hidden tab would be redrawn on every tick for a new function reference.
   const renderEmpty = useCallback(
     ({ filtered, reset }: ConnectionTableEmpty) => (
       <ConnectionsEmpty filtered={filtered} pending={pending} onReset={reset} />
@@ -99,7 +99,7 @@ export function ConnectionsPage() {
     [sourceLabel]
   );
 
-  // Подвал закрытых называет вытесненные; пока вкладка спрятана, числа стоят.
+  // The closed footer names the evicted ones; while the tab is hidden the numbers stand.
   const keptShown = useWhileVisible(kept, closedShown);
   const evictedShown = useWhileVisible(evicted, closedShown);
   const closedOverflow = useMemo(
@@ -146,15 +146,15 @@ export function ConnectionsPage() {
           </Alert>
         )}
 
-        {/* Ниже lg объяснение открывается листом, и в колонке остаётся один
-            список. Колонка прокручивается на низком экране, где списку не
-            хватает его минимальной высоты. */}
+        {/* Below lg the explanation opens as a sheet, and one list remains
+            in the column. The column scrolls on a short screen, where the list
+            lacks its minimum height. */}
         <SidePanelLayout.Root
           open={!sheet && activeShown && explainedId !== null}
           className='min-h-0 grow max-lg:overflow-y-auto'
         >
-          {/* Поиск, фасеты, вид и действия — один тулбар на обе вкладки: под
-              `Activity` остаётся только то, что у вкладки своё. */}
+          {/* Search, facets, view and actions are one toolbar for both
+              tabs: only what a tab has of its own remains under `Activity`. */}
           <SidePanelLayout.Main>
             <ConnectionTable.Root>
               <ConnectionTable.Toolbar
@@ -171,7 +171,7 @@ export function ConnectionsPage() {
                 }
               />
 
-              {/* `default='none'`: обновления строк внутри вкладки — не её анимация. */}
+              {/* `default='none'`: row updates inside a tab are not its animation. */}
               <TabsContent value={CONNECTION_TAB.Active} keepMounted className='flex min-h-0 grow flex-col'>
                 <Activity mode={activeShown ? 'visible' : 'hidden'}>
                   <ViewTransition enter='fade-in' exit='fade-out' default='none'>
@@ -215,9 +215,9 @@ export function ConnectionsPage() {
             </ConnectionTable.Root>
           </SidePanelLayout.Main>
 
-          {/* Объяснение принадлежит строке активной вкладки и уходит вместе с
-              ней; выбранная строка остаётся, и на возврате панель открывается
-              снова. */}
+          {/* The explanation belongs to the row of the active tab and
+              leaves with it; the selected row stays, and on return the panel
+              opens again. */}
           <SidePanelLayout.Panel>
             {explainedId !== null && (
               <RouteExplanation

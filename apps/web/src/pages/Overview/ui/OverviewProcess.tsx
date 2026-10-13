@@ -12,11 +12,11 @@ import { OverviewSection } from './OverviewSection';
 import { OverviewTrend } from './OverviewTrend';
 
 /**
- * Процессы и их показания.
+ * Processes and their readings.
  *
- * Память демона, число горутин и куча Go остаются на экране намеренно: роутер
- * маломощный, и сколько съедает сама панель — вопрос владельца устройства, а не
- * только отладки.
+ * Daemon memory, goroutine count and Go heap stay on screen on purpose: the router
+ * is low-powered, and how much the panel itself consumes is a question for the device owner, not
+ * only for debugging.
  */
 export function OverviewProcess({ runtime }: { runtime: OverviewRuntime }) {
   const { t } = useTranslation('pages/Overview');
@@ -100,7 +100,7 @@ export function OverviewProcess({ runtime }: { runtime: OverviewRuntime }) {
   );
 }
 
-/** `null` вместо значения — ответа ещё нет: скелетон, а не прочерк. */
+/** `null` instead of a value means no answer yet: a skeleton, not a dash. */
 function ProcessRow({ label, value, mono = false }: { label: string; value: string | null; mono?: boolean }) {
   return (
     <div className='flex justify-between gap-4 border-t border-border py-2 text-sm first:border-t-0'>

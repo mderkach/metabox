@@ -14,19 +14,19 @@ import { FakeLogSource } from '@entities/Log/__tests__/Log.source';
 
 import { LogsPage } from '../ui/LogsPage';
 
-/** Потолок цикла отказов: попыток у экрана меньше, тест не должен крутиться вечно. */
+/** Failure loop ceiling: the screen has fewer attempts, the test must not spin forever. */
 const MAX_REFUSALS = 20;
 
 function renderScreen() {
   return renderWithRouter(LogsPage, { path: '/logs' });
 }
 
-describe('экран логов', () => {
+describe('logs screen', () => {
   beforeEach(() => {
     FakeLogSource.opened = [];
     vi.stubGlobal('EventSource', FakeLogSource);
     mockVirtualSizes({ row: 24 });
-    // Слежение прокручивает список к последней строке, а прокрутки в jsdom нет.
+    // Following scrolls the list to the last line, and jsdom has no scrolling.
     vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
     LogStore.getState().reset();
   });
@@ -37,19 +37,19 @@ describe('экран логов', () => {
     vi.restoreAllMocks();
   });
 
-  it('показывает хвост лога с уровнем и источником', async () => {
+  it('shows the log tail with level and source', async () => {
     server.use(...createLogHandlers());
 
     renderScreen();
 
     expect(await screen.findByText('outbound/vless[proxy]: dial tcp: i/o timeout')).toBeInTheDocument();
-    // По умолчанию уровень info: строки debug демон не отдаёт вовсе.
+    // The default level is info: the daemon does not serve debug lines at all.
     expect(screen.queryByText('dns: exchanged example.com A 93.184.215.14')).not.toBeInTheDocument();
     expect(screen.getByText('источник: logread')).toBeInTheDocument();
     expect(screen.getByRole('table', { name: 'Лог sing-box' })).toHaveAttribute('aria-rowcount', '5');
   });
 
-  it('уровень уходит и в запрос хвоста, и в поток', async () => {
+  it('the level goes into both the tail request and the stream', async () => {
     const user = userEvent.setup();
     const levels: (string | null)[] = [];
 
@@ -76,7 +76,7 @@ describe('экран логов', () => {
     expect(FakeLogSource.opened[0].closed).toBe(true);
   });
 
-  it('строки потока дописываются под хвост', async () => {
+  it('stream lines are appended under the tail', async () => {
     server.use(...createLogHandlers());
 
     renderScreen();
@@ -93,7 +93,7 @@ describe('экран логов', () => {
     expect(screen.queryByText(/Пропущен/)).not.toBeInTheDocument();
   });
 
-  it('разрыв seq показывает, сколько строк потеряно', async () => {
+  it('a seq gap shows how many lines were lost', async () => {
     server.use(...createLogHandlers());
 
     renderScreen();
@@ -109,10 +109,10 @@ describe('экран логов', () => {
     expect(screen.getByText('после разрыва')).toBeInTheDocument();
   });
 
-  it('открытие потока перечитывает хвост и не задваивает строки на стыке', async () => {
+  it('opening the stream rereads the tail and does not duplicate lines at the join', async () => {
     let requests = 0;
     const last = LOG_ENTRIES_FIXTURE[LOG_ENTRIES_FIXTURE.length - 1];
-    // Testing Library сравнивает текст без ведущих пробелов.
+    // Testing Library compares text without leading spaces.
     const shown = last.message.trim();
 
     function countTail({ request }: { request: Request }) {
@@ -137,7 +137,7 @@ describe('экран логов', () => {
       const source = FakeLogSource.last();
 
       source.open();
-      // Строка успела прийти потоком и попала в хвост, перечитанный после открытия.
+      // The line managed to arrive by stream and got into the tail reread after the open.
       source.send(1, last);
       source.line(2, 'router: строка после хвоста');
     });
@@ -149,7 +149,7 @@ describe('экран логов', () => {
     expect(screen.getAllByText(shown)).toHaveLength(1);
   });
 
-  it('поток, которому демон отказал, переподключается сам', async () => {
+  it('a stream the daemon refused reconnects by itself', async () => {
     server.use(...createLogHandlers());
 
     renderScreen();
@@ -176,7 +176,7 @@ describe('экран логов', () => {
     expect(screen.getByText('поток идёт')).toBeInTheDocument();
   });
 
-  it('исчерпав попытки, предлагает переподключиться вручную', async () => {
+  it('after exhausting attempts offers a manual reconnect', async () => {
     const user = userEvent.setup();
 
     server.use(...createLogHandlers());
@@ -186,7 +186,7 @@ describe('экран логов', () => {
     await screen.findByText('outbound/vless[proxy]: dial tcp: i/o timeout');
     vi.useFakeTimers();
 
-    // Попыток конечное число: отказ за отказом экран доходит до ручного переподключения.
+    // The attempts are finite: failure after failure the screen reaches a manual reconnect.
     for (let refused = 0; refused < MAX_REFUSALS && screen.queryByText('Поток лога закрыт') === null; refused += 1) {
       act(() => {
         FakeLogSource.last().refuse();
@@ -210,7 +210,7 @@ describe('экран логов', () => {
     });
   });
 
-  it('очистка зовёт демон, снимает строки и объясняет, что кольцо logd не чистится', async () => {
+  it('the clear calls the daemon, removes lines and explains that the logd ring is not cleared', async () => {
     const user = userEvent.setup();
     const cleared = vi.fn<() => void>();
 
@@ -246,7 +246,7 @@ describe('экран логов', () => {
     });
   });
 
-  it('недоступный лог показывает причину отказа, а не пустой список', async () => {
+  it('an unavailable log shows the failure reason, not an empty list', async () => {
     server.use(
       http.get(LOG_ENDPOINT.logs(), () =>
         HttpResponse.json({ code: 'log_unavailable', message: 'logread: exit 1' }, { status: 503 })

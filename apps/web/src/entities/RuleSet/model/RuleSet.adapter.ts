@@ -14,14 +14,14 @@ import type {
   RuleSetType,
 } from './RuleSet.model';
 
-/** Набор без `type` ядро читает как удалённый. */
+/** A set without `type` is read by core as remote. */
 const DEFAULT_TYPE: RuleSetType = RULE_SET_TYPE.Remote;
 
 const TYPES = new Set<string>(Object.values(RULE_SET_TYPE));
 
 function toType(raw: unknown): RuleSetType {
   if (typeof raw === 'string' && TYPES.has(raw)) {
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- значение сверено с набором строкой выше
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the value was checked against the set by the line above
     return raw as RuleSetType;
   }
 
@@ -37,8 +37,8 @@ function toOptionalText(raw: unknown): string | null {
 }
 
 /**
- * Где у набора лежит его источник: у удалённого это адрес, у локального —
- * путь на устройстве, у встроенного правила лежат в самом конфиге.
+ * Where a set keeps its source: for a remote one it is a URL, for a local one a
+ * path on the device, and for an inline one the rules are in the config itself.
  */
 function toLocation(node: object, type: RuleSetType): string {
   if (type === RULE_SET_TYPE.Local) {
@@ -49,9 +49,9 @@ function toLocation(node: object, type: RuleSetType): string {
 }
 
 /**
- * Узел, через который ядро качает набор. Поле объявлено дважды: устаревшее
- * `download_detour` и `detour` внутри `http_client`, — панель читает оба,
- * потому что в чужом конфиге встречается любое.
+ * The node core downloads the set through. The field is declared twice: the
+ * deprecated `download_detour` and `detour` inside `http_client`; the panel
+ * reads both because either occurs in a foreign config.
  */
 function toDetour(node: object): string | null {
   const own = toOptionalText(Reflect.get(node, 'download_detour'));
@@ -97,8 +97,9 @@ function toList(wire: RuleSetListWire): RuleSetList | null {
 }
 
 /**
- * Каталог демона в модель экрана. Список незнакомого вида пропускается, а не
- * гасит каталог: демон может оказаться новее панели.
+ * The daemon catalog into the screen model. A list of an unfamiliar kind is
+ * skipped and does not drop the catalog: the daemon may be newer than the
+ * panel.
  */
 export function toRuleSetCatalog(wire: RuleSetCatalogWire): RuleSetCatalog {
   return {
@@ -112,16 +113,17 @@ export function toRuleSetCatalog(wire: RuleSetCatalogWire): RuleSetCatalog {
 
 const NO_SOURCE: RuleSetSource = { providerId: null, providerName: null, kind: null, category: null };
 
-/** Узел принят схемой форка: для него есть форма, а не только текстовый режим. */
+/** The node is accepted by the fork schema: it has a form, not only the text mode. */
 export function isRuleSetRecognized(node: unknown): boolean {
   return RuleSetSchema.safeParse(node).success;
 }
 
 /**
- * Разворачивает `route.rule_set` в строки списка.
+ * Expands `route.rule_set` into list rows.
  *
- * Сколько правил ссылается на набор, считается снаружи и приходит картой: сам
- * слайс наборов о правилах не знает, а экрану это нужно одним проходом.
+ * How many rules refer to a set is counted outside and arrives as a map: the
+ * sets slice itself knows nothing about rules, and the screen needs this in one
+ * pass.
  */
 export function toRuleSetRowsFromNodes(
   nodes: readonly unknown[],
@@ -131,8 +133,9 @@ export function toRuleSetRowsFromNodes(
   const rows: RuleSetRow[] = [];
 
   for (const [position, node] of nodes.entries()) {
-    // Позиция берётся в исходном массиве: по ней правка адресует узел в файле,
-    // и пропущенный не-объект сдвинул бы следующие правки на чужие узлы.
+    // The position is taken in the source array: an edit addresses the node in
+    // the file by it, and a skipped non-object would shift the following edits
+    // onto other nodes.
     if (typeof node !== 'object' || node === null) {
       continue;
     }
@@ -160,11 +163,11 @@ export function toRuleSetRowsFromNodes(
 }
 
 /**
- * Сколько правил ссылается на каждый тег набора.
+ * How many rules refer to each set tag.
  *
- * Условие `rule_set` у правила — строка или список строк, и у логического
- * правила оно лежит во вложенных ветках: правило, сославшееся на набор изнутри
- * группы, ссылается на него не меньше прямого.
+ * A rule's `rule_set` condition is a string or a list of strings, and in a
+ * logical rule it lies in nested branches: a rule that refers to a set from
+ * inside a group refers to it no less than a direct one.
  */
 export function countRuleSetUsage(rules: readonly unknown[]): Map<string, number> {
   const usage = new Map<string, number>();
@@ -178,7 +181,7 @@ export function countRuleSetUsage(rules: readonly unknown[]): Map<string, number
   return usage;
 }
 
-/** Теги наборов, на которые ссылается правило, без повторов внутри одного. */
+/** Set tags a rule refers to, without repeats within one. */
 function collectTags(rule: unknown): Set<string> {
   const tags = new Set<string>();
 

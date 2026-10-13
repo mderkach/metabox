@@ -24,16 +24,16 @@ const RULE: RuleRowModel = {
 
 const NO_TYPES: ReadonlyMap<string, string> = new Map();
 
-/** Ширина текста в jsdom — ноль, поэтому обрезку изображает текст шире ячейки. */
+/** Text width in jsdom is zero, so truncation is imitated by text wider than the cell. */
 const CUT_WIDTH = 400;
 
-/** Дольше задержки, с которой подсказка открывается при наведении. */
+/** Longer than the delay with which the tooltip opens on hover. */
 const HINT_WAIT_MS = 1000;
 
 /**
- * Наведение мышью с ожиданием задержки подсказки. Часы фейковые, но идут и
- * сами: Testing Library после каждого действия ждёт настоящего `setTimeout(0)`,
- * и на остановленных часах `user-event` зависает.
+ * Mouse hover waiting out the tooltip delay. The clock is fake, but also runs
+ * by itself: Testing Library waits for a real `setTimeout(0)` after every action,
+ * and on a stopped clock `user-event` hangs.
  */
 async function hover(element: HTMLElement) {
   const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
@@ -70,14 +70,14 @@ describe('RuleRow', () => {
     vi.restoreAllMocks();
   });
 
-  it('кнопка выбора называет строку номером и выходом', () => {
+  it('the select button names the row by number and outbound', () => {
     renderRow();
 
     expect(screen.getByRole('button', { name: `Правило 4, выход ${TARGET}` })).toBeInTheDocument();
   });
 
-  // Кнопка перекрывает строку, и `title` выхода под ней не показывался.
-  it('показывает обрезанный выход целиком подсказкой при наведении на строку', async () => {
+  // The button covers the row, and the outbound `title` under it was not shown.
+  it('shows a truncated outbound in full as a tooltip on hovering the row', async () => {
     vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockReturnValue(CUT_WIDTH);
 
     renderRow();
@@ -86,7 +86,7 @@ describe('RuleRow', () => {
     expect(screen.getAllByText(TARGET)).toHaveLength(2);
   });
 
-  it('без обрезки подсказку не показывает', async () => {
+  it('without truncation does not show the tooltip', async () => {
     renderRow();
     await hover(screen.getByRole('button', { name: `Правило 4, выход ${TARGET}` }));
 

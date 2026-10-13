@@ -43,20 +43,20 @@ const RULE: RuleRow = {
   searchText: 'rule_set github proxy',
 };
 
-describe('форма выхода правила', () => {
+describe('rule outbound form', () => {
   beforeEach(() => {
     ConfigDocumentState.getState().reset();
     ConfigDocumentState.getState().load(CONFIG);
   });
 
-  it('открывается на значении из конфига и не даёт применить пустую правку', () => {
+  it('opens on the value from the config and does not let apply an empty edit', () => {
     render(<RuleEditForm rule={RULE} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
 
     expect(screen.getByRole('combobox', { name: 'Куда отправить' })).toHaveTextContent('proxy');
     expect(screen.getByRole('button', { name: 'Сохранить в черновик' })).toBeDisabled();
   });
 
-  it('смена выхода правит одну строку файла, остальное правило не трогает', async () => {
+  it('an outbound change edits one line of the file, does not touch the rest of the rule', async () => {
     const user = userEvent.setup();
 
     render(<RuleEditForm rule={RULE} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
@@ -75,7 +75,7 @@ describe('форма выхода правила', () => {
     });
   });
 
-  it('смена действия на не-маршрутизацию убирает выход из узла, а не обнуляет его', async () => {
+  it('changing the action to non-routing removes the outbound from the node instead of zeroing it', async () => {
     const user = userEvent.setup();
 
     render(<RuleEditForm rule={RULE} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
@@ -93,7 +93,7 @@ describe('форма выхода правила', () => {
   });
 });
 
-/** Документ с одним правилом: строка правила собирается тем же адаптером, что и в экране. */
+/** A document with one rule: the rule row is built by the same adapter as on the screen. */
 function loadRule(rule: object): RuleRow {
   const text = JSON.stringify({ ...DOCUMENT, route: { ...DOCUMENT.route, rules: [rule] } }, null, 2);
 
@@ -113,19 +113,19 @@ function draftRule(): unknown {
   return findValue(ConfigDocumentState.getState().draft ?? '', ['route', 'rules', 0]);
 }
 
-describe('сеты правила в форме', () => {
+describe('rule sets of a rule in the form', () => {
   beforeEach(() => {
     ConfigDocumentState.getState().reset();
     ConfigDocumentState.getState().load(CONFIG);
   });
 
-  it('открывается на сетах правила', () => {
+  it('opens on the rule sets of the rule', () => {
     render(<RuleEditForm rule={RULE} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
 
     expect(screen.getByRole('combobox', { name: 'Сеты правил' })).toHaveTextContent('github');
   });
 
-  it('добавленный сет ложится в rule_set, остальное правило не тронуто', async () => {
+  it('an added rule set lands in rule_set, the rest of the rule is untouched', async () => {
     const user = userEvent.setup();
 
     render(<RuleEditForm rule={RULE} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
@@ -142,7 +142,7 @@ describe('сеты правила в форме', () => {
     expect(draftRule()).toEqual({ rule_set: ['github', 'geoip-cn'], outbound: 'proxy' });
   });
 
-  it('снятие всех сетов удаляет поле из узла, а не пишет пустой список', async () => {
+  it('removing all rule sets deletes the field from the node instead of writing an empty list', async () => {
     const user = userEvent.setup();
 
     render(<RuleEditForm rule={RULE} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
@@ -154,7 +154,7 @@ describe('сеты правила в форме', () => {
     expect(draftRule()).toEqual({ outbound: 'proxy' });
   });
 
-  it('правка выхода не переписывает rule_set, записанный строкой', async () => {
+  it('an outbound edit does not rewrite rule_set written as a string', async () => {
     const user = userEvent.setup();
     const rule = loadRule({ rule_set: 'github', outbound: 'proxy' });
 
@@ -168,7 +168,7 @@ describe('сеты правила в форме', () => {
     expect(draftRule()).toEqual({ rule_set: 'github', outbound: 'direct' });
   });
 
-  it('у логического правила поля сетов нет: его сеты живут во вложенных правилах', () => {
+  it('a logical rule has no rule set field: its rule sets live in nested rules', () => {
     const rule = loadRule({
       type: 'logical',
       mode: 'and',
@@ -182,7 +182,7 @@ describe('сеты правила в форме', () => {
     expect(screen.queryByRole('combobox', { name: 'Сеты правил' })).not.toBeInTheDocument();
   });
 
-  it('сет, которого нет в документе, остаётся выбранным и помечен', async () => {
+  it('a rule set that is not in the document stays selected and is marked', async () => {
     const user = userEvent.setup();
     const rule = loadRule({ rule_set: ['old-set'], outbound: 'proxy' });
 
@@ -198,7 +198,7 @@ describe('сеты правила в форме', () => {
     expect(screen.getByRole('option', { name: 'github' })).not.toHaveTextContent('нет в документе');
   });
 
-  it('предупреждает, что правило без сетов и других условий заберёт весь трафик, но сохранять не мешает', async () => {
+  it('warns that a rule without rule sets and other conditions takes all traffic, but does not block saving', async () => {
     const user = userEvent.setup();
 
     render(<RuleEditForm rule={RULE} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
@@ -212,7 +212,7 @@ describe('сеты правила в форме', () => {
     expect(screen.getByRole('button', { name: 'Сохранить в черновик' })).toBeEnabled();
   });
 
-  it('у правила с другими условиями снятие сетов не предупреждает', async () => {
+  it('for a rule with other conditions removing rule sets gives no warning', async () => {
     const user = userEvent.setup();
     const rule = loadRule({ rule_set: ['github'], port: 443, outbound: 'proxy' });
 
@@ -225,8 +225,8 @@ describe('сеты правила в форме', () => {
   });
 });
 
-describe('условия правила в форме', () => {
-  it('добавленное условие ложится в узел списком, остальное правило не трогает', async () => {
+describe('rule conditions in the form', () => {
+  it('an added condition lands in the node as a list, does not touch the rest of the rule', async () => {
     const user = userEvent.setup();
     const rule = loadRule({ rule_set: ['github'], outbound: 'proxy' });
 
@@ -243,7 +243,7 @@ describe('условия правила в форме', () => {
     });
   });
 
-  it('открывается на условиях правила, а очищенное условие убирает поле', async () => {
+  it('opens on the rule conditions, and a cleared condition removes the field', async () => {
     const user = userEvent.setup();
     const rule = loadRule({ domain: ['a.example'], port: [443], outbound: 'proxy' });
 
@@ -257,7 +257,7 @@ describe('условия правила в форме', () => {
     expect(draftRule()).toEqual({ port: [443], outbound: 'proxy' });
   });
 
-  it('порт не числом называет ошибку и не пишет правку', async () => {
+  it('a port that is not a number gives an error and writes no edit', async () => {
     const user = userEvent.setup();
     const rule = loadRule({ port: [443], outbound: 'proxy' });
 
@@ -275,7 +275,7 @@ describe('условия правила в форме', () => {
     expect(ConfigDocumentState.getState().draft).toBeNull();
   });
 
-  it('сняв все условия, предупреждает, что правило заберёт весь трафик', async () => {
+  it('after removing all conditions, warns that the rule will take all traffic', async () => {
     const user = userEvent.setup();
     const rule = loadRule({ domain: ['a.example'], outbound: 'proxy' });
 
@@ -286,7 +286,7 @@ describe('условия правила в форме', () => {
     expect(screen.getByRole('status')).toHaveTextContent('заберёт весь трафик');
   });
 
-  it('устройство из списка ложится в условие адресом источника и предупреждает о динамической аренде', async () => {
+  it('a device from the list lands in the condition as a source address and warns about a dynamic lease', async () => {
     ConfigDocumentState.getState().reset();
     ConfigDocumentState.getState().load(CONFIG);
     server.use(...createDeviceHandlers());
@@ -317,7 +317,7 @@ describe('условия правила в форме', () => {
     expect(draftRule()).toEqual({ rule_set: ['github'], outbound: 'proxy', source_ip_cidr: ['192.168.1.120/32'] });
   });
 
-  it('у устройства со статической арендой о смене адреса не предупреждает', async () => {
+  it('for a device with a static lease does not warn about an address change', async () => {
     server.use(...createDeviceHandlers());
     const user = userEvent.setup();
 

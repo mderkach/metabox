@@ -29,13 +29,13 @@ import { DELAY_STATE, useProxies } from '@entities/Proxy';
 import { MS_IN_SECOND } from '@shared/lib/time';
 
 /**
- * Сколько секунд без кадра считаем обрывом. Поток идёт раз в секунду, но
- * свёрнутая вкладка отдаёт кадры пачками — порог взят с запасом.
+ * How many seconds without a frame count as a drop. The stream runs once a second, but
+ * a collapsed tab delivers frames in bursts — the threshold has a margin.
  */
 const STALE_SECONDS = 8;
 const STALE_AFTER = STALE_SECONDS * MS_IN_SECOND;
 
-/** Как часто перепроверяется свежесть: без тика замерший поток некому заметить. */
+/** How often freshness is rechecked: without a tick nobody would notice a frozen stream. */
 const TICK_SECONDS = 3;
 const FRESHNESS_TICK = TICK_SECONDS * MS_IN_SECOND;
 
@@ -48,33 +48,33 @@ export interface OverviewRuntime {
   peakUp: number;
   memory: number;
   totals: ConnectionTotals;
-  /** Показания устройства; `null` — снимок ещё не приходил. */
+  /** Device readings; `null` means no snapshot has arrived yet. */
   system: SystemStat | null;
-  /** Скорость интерфейса наружу прямо сейчас. */
+  /** Uplink interface speed right now. */
   uplink: UplinkRate;
-  /** Объёмы канала и sing-box за окно наблюдения демона. */
+  /** Channel and sing-box volumes over the daemon's observation window. */
   share: TrafficShare;
   summary: ConnectionSummary;
-  /** Число открытых соединений за минуту. */
+  /** Number of open connections over a minute. */
   history: number[];
-  /** Когда получена последняя точка `history`: от неё считается время графика. */
+  /** When the last `history` point was received: the chart time is counted from it. */
   historyAt: number | null;
-  /** Пик открытых соединений за видимую минуту. */
+  /** Peak of open connections over the visible minute. */
   historyPeak: number;
   counts: { active: number; closed: number };
-  /** Кадры рантайма приходят прямо сейчас. */
+  /** Runtime frames are arriving right now. */
   live: boolean;
-  /** Ни одного кадра ещё не было: экран показывает ожидание, а не нули. */
+  /** No frame has arrived yet: the screen shows waiting, not zeros. */
   awaiting: boolean;
-  /** Снимки устройства приходят прямо сейчас: их шлёт демон и без sing-box. */
+  /** Device snapshots are arriving right now: the daemon sends them even without sing-box. */
   daemonLive: boolean;
-  /** Экран открыт дольше порога обрыва, а первого кадра трафика так и нет. */
+  /** The screen has been open longer than the drop threshold and there is still no first traffic frame. */
   overdue: boolean;
-  /** Когда пришёл последний кадр трафика, миллисекунды эпохи. */
+  /** When the last traffic frame arrived, epoch milliseconds. */
   sampledAt: number | null;
-  /** Когда получена последняя точка трафика: от неё считается время графика. */
+  /** When the last traffic point was received: the chart time is counted from it. */
   trafficAt: number | null;
-  /** Снимка соединений ещё не было: счётчики показывают загрузку, а не ноль. */
+  /** No connection snapshot yet: counters show loading, not zero. */
   connectionsAwaiting: boolean;
 }
 
@@ -83,9 +83,9 @@ function isFresh(at: number | null, checkedAt: number): boolean {
 }
 
 /**
- * Данные экрана обзора из двух потоков рантайма. Собраны хуком, а не
- * селекторами по месту: панелей на экране десяток, и подписка у каждой своя
- * развела бы их рендеры по разным кадрам одного и того же снапшота.
+ * Overview screen data from two runtime streams. Built by a hook rather than
+ * per-site selectors: there are about ten panels on the screen, and each one's own subscription
+ * would spread their renders across different frames of the same snapshot.
  */
 export function useOverviewRuntime(): OverviewRuntime {
   const traffic = RuntimeState.use.traffic();
@@ -106,8 +106,8 @@ export function useOverviewRuntime(): OverviewRuntime {
   const recent = trafficHistory.data?.recent;
   const connectionCounts = trafficHistory.data?.connections;
 
-  // Графики минуты открываются тем, что копил демон, а не пустыми: панель
-  // открывают не всегда, а поток знает только то, что было при открытой вкладке.
+  // The minute charts open with what the daemon accumulated, not empty: the panel
+  // is not always open, and the stream knows only what happened while the tab was open.
   useEffect(
     function seedMinuteCharts() {
       if (recent !== undefined) {
@@ -121,8 +121,8 @@ export function useOverviewRuntime(): OverviewRuntime {
     [recent, connectionCounts]
   );
 
-  // Обрыв потока сам о себе не сообщает: кадры просто перестают приходить, и
-  // без своего тика экран навсегда остался бы с последним «живым» состоянием.
+  // A stream drop does not report itself: frames just stop arriving, and
+  // without its own tick the screen would stay forever in the last "live" state.
   const [checkedAt, setCheckedAt] = useState(() => Date.now());
   const [openedAt] = useState(() => Date.now());
 
@@ -136,7 +136,7 @@ export function useOverviewRuntime(): OverviewRuntime {
     };
   }, []);
 
-  // Буфер длиннее окна на точки за левой кромкой: пик минуты считается только по видимым.
+  // The buffer is longer than the window by the points past the left edge: the minute peak counts only the visible ones.
   const peaks = useMemo(() => {
     const visible = traffic.slice(-TRAFFIC_WINDOW_POINTS);
 
@@ -172,13 +172,13 @@ export function useOverviewRuntime(): OverviewRuntime {
   };
 }
 
-/** Выше этого плата уже уходит в троттлинг. */
+/** Above this the board already throttles. */
 export const HOT_CELSIUS = 85;
 const WARM_CELSIUS = 70;
 
 export const VERDICT_TONE = {
   Ok: 'ok',
-  /** Панель ждёт данные или переподключается: о самом роутере это ничего не говорит. */
+  /** The panel is waiting for data or reconnecting: this says nothing about the router itself. */
   Idle: 'idle',
   Warn: 'warn',
   Bad: 'bad',
@@ -189,20 +189,20 @@ export type VerdictTone = (typeof VERDICT_TONE)[keyof typeof VERDICT_TONE];
 export interface Verdict {
   tone: VerdictTone;
   title: string;
-  /** Что это значит и что делать. */
+  /** What it means and what to do. */
   hint: string;
-  /** Куда идти разбираться; `null` — разбираться негде или незачем. */
+  /** Where to go to investigate; `null` means nowhere to investigate or no need to. */
   action: { to: LinkProps['to']; label: string } | null;
 }
 
 /**
- * Ответ на вопрос, ради которого экран открывают: всё ли в порядке. Собирается
- * из сигналов, которые экран и так показывает, — своего источника у него нет.
+ * The answer to the question the screen is opened for: is everything fine. Assembled
+ * from signals the screen already shows — it has no source of its own.
  *
- * Порядок значим: сначала то, что делает остальные числа недостоверными. Обрыв
- * связи панели с демоном — нейтральный тон: роутер при этом может работать
- * исправно. Тревога — только то, что подтвердил демон: служба остановлена или
- * демон шлёт снимки устройства, а трафика от sing-box нет.
+ * Order matters: first what makes the other numbers unreliable. A lost
+ * panel-to-daemon link gets a neutral tone: the router may be working
+ * fine meanwhile. Alarm only for what the daemon confirmed: the service is stopped or
+ * the daemon sends device snapshots but there is no traffic from sing-box.
  */
 export function useOverviewVerdict(
   runtime: Pick<OverviewRuntime, 'system' | 'live' | 'awaiting' | 'daemonLive' | 'overdue'>

@@ -1,13 +1,13 @@
 import type { Config } from '@shared/api/generated';
 
 /**
- * Структура конфига с рабочего роутера: 32 правила, 18 remote rule-set,
- * 11 DNS-серверов и секция `providers`, которой в upstream sing-box нет.
+ * Config structure from a working router: 32 rules, 18 remote rule sets,
+ * 11 DNS servers and a `providers` section that upstream sing-box lacks.
  *
- * Данные владельца из неё вычищены: ключи и адреса подписок — `REDACTED`, ноды
- * и домены — зоны `.example` и `.invalid` (RFC 2606), адреса — `198.51.100.0/24`
- * (RFC 5737). Реальный домен или адрес здесь появиться не должен: файл лежит
- * в git.
+ * The owner's data is scrubbed: subscription keys and addresses are `REDACTED`, nodes
+ * and domains are in the `.example` and `.invalid` zones (RFC 2606), addresses are `198.51.100.0/24`
+ * (RFC 5737). A real domain or address must not appear here: the file lives
+ * in git.
  */
 export const CONFIG_FIXTURE: Config = {
   log: {

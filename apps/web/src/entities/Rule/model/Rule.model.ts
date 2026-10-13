@@ -6,8 +6,8 @@ export interface RuleMatcher {
 }
 
 /**
- * Ветка логического правила: либо собственные условия, либо снова группа —
- * вложенность в sing-box не ограничена.
+ * Logical rule branch: either its own conditions or a group again; nesting is
+ * not limited in sing-box.
  */
 export interface RuleBranch {
   matchers: RuleMatcher[];
@@ -15,9 +15,9 @@ export interface RuleBranch {
 }
 
 export interface RuleGroup {
-  /** `and` — должны сработать все ветки, `or` — достаточно одной. */
+  /** `and` means all branches must fire, `or` means one is enough. */
   mode: string;
-  /** `invert` переворачивает результат всей группы, а не отдельной ветки. */
+  /** `invert` flips the result of the whole group, not of a single branch. */
   invert: boolean;
   children: RuleBranch[];
 }
@@ -30,46 +30,48 @@ export const RULE_TARGET = {
 export type RuleTargetKind = (typeof RULE_TARGET)[keyof typeof RULE_TARGET];
 
 /**
- * Узел нового правила: без условий, с одним выходом. Пустой узел форк
- * отвергает (`missing conditions`), `action: route` без выхода — тоже
- * (`missing outbound field`), а безусловное правило с выходом `sing-box check`
- * принимает. С выходом в маршрут по умолчанию в конце списка такое правило
- * маршрутизацию не меняет, пока ему не зададут условия.
+ * New rule node: without conditions, with one outbound. The fork rejects an
+ * empty node (`missing conditions`), and `action: route` without an outbound
+ * too (`missing outbound field`), while `sing-box check` accepts an
+ * unconditional rule with an outbound. With an outbound that matches the
+ * default route at the end of the list, such a rule does not change routing
+ * until conditions are set for it.
  */
 export function newRuleNode(outbound: string): { outbound: string } {
   return { outbound };
 }
 
 export interface RuleRow {
-  /** Позиция в списке: собственного идентификатора у правил sing-box нет. */
+  /** Position in the list: sing-box rules have no identifier of their own. */
   id: string;
-  /** Номер в `route.rules`, считая с единицы. */
+  /** Number in `route.rules`, counting from one. */
   index: number;
   matchers: RuleMatcher[];
-  /** `null` — обычное правило; иначе условия склеены `and` или `or`. */
+  /** `null` means an ordinary rule; otherwise the conditions are joined by `and` or `or`. */
   group: RuleGroup | null;
   invert: boolean;
   target: string;
   targetKind: RuleTargetKind;
-  /** Параметры действия (`method`, `sniffer`, `server`), если они заданы. */
+  /** Action parameters (`method`, `sniffer`, `server`) if they are set. */
   targetDetail: string | null;
   /**
-   * Правило без условий: совпадает со всем и обрывает список. Логическое
-   * правило таким не бывает — у него условия во вложенных ветках.
+   * A rule without conditions: matches everything and ends the list. A logical
+   * rule is never like this: its conditions are in nested branches.
    */
   isCatchAll: boolean;
   /**
-   * Узел принят схемой. Ложь означает, что в нём есть поле, которого схема не
-   * знает: условия такого узла показаны не полностью, и правится он текстом.
+   * The node is accepted by the schema. False means it has a field the schema
+   * does not know: the conditions of such a node are shown incompletely, and it
+   * is edited as text.
    */
   recognized: boolean;
-  /** Условия и цель одной строкой — по ней ищет поиск таблицы. */
+  /** Conditions and target in one string: the table search looks through it. */
   searchText: string;
 }
 
 /**
- * Теги наборов, на которые правило ссылается само, без вложенных веток.
- * Строка `"rule_set": "x"` приходит списком из одного тега.
+ * Set tags the rule refers to itself, without nested branches. The string
+ * `"rule_set": "x"` arrives as a list of one tag.
  */
 export function ruleSetsOf(rule: RuleRow): string[] {
   return rule.matchers.find((matcher) => matcher.key === RULE_SET_MATCHER)?.values ?? [];

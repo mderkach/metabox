@@ -18,7 +18,7 @@ export const DENSITY_PADDING: Readonly<Record<TableDensity, string>> = {
   [TABLE_DENSITY.Comfortable]: 'py-2',
 };
 
-/** Оценка высоты строки под каждый режим: точную виртуализатор измеряет сам. */
+/** Row height estimate for each mode: the virtualizer measures the exact one itself. */
 export const DENSITY_ROW_ESTIMATE: Readonly<Record<TableDensity, number>> = {
   [TABLE_DENSITY.Compact]: 40,
   [TABLE_DENSITY.Comfortable]: 48,
@@ -29,8 +29,8 @@ const SLOW_SECONDS = 5;
 const SLOWER_SECONDS = 15;
 
 /**
- * Как часто обновляется показанный набор строк. Поток идёт раз в секунду, и на
- * живом роутере список переставляется под курсором быстрее, чем его читают.
+ * How often the shown row set updates. The stream runs once a second, and on a
+ * live router the list rearranges under the cursor faster than it can be read.
  */
 export const REFRESH_INTERVAL = {
   Live: LIVE_SECONDS * MS_IN_SECOND,
@@ -43,25 +43,25 @@ export type RefreshInterval = (typeof REFRESH_INTERVAL)[keyof typeof REFRESH_INT
 const STORAGE_KEY = 'metabox.connections.view';
 
 /**
- * Хранилище отдаёт строку, и она может быть чем угодно: ключ переживает версии
- * панели. Недостающее поле берётся из вида по умолчанию, незнакомое значение
- * сбрасывает к нему весь вид; экран не падает ни в том, ни в другом случае.
+ * Storage returns a string, and it can be anything: the key outlives
+ * panel versions. A missing field is taken from the default view, an unfamiliar value
+ * resets the whole view to it; the screen does not crash in either case.
  */
 const StoredViewSchema = z.object({
   sorting: z.array(z.object({ id: z.string(), desc: z.boolean() })).optional(),
   columns: z.record(z.string(), z.boolean()).optional(),
-  // Поле появилось позже остальных: вид, сохранённый до него, читается с
-  // порядком описаний, а не сбрасывается целиком.
+  // The field appeared later than the others: a view saved before it is read with
+  // the definition order, rather than being reset entirely.
   order: z.array(z.string()).optional(),
   density: z.enum(TABLE_DENSITY).optional(),
   interval: z.literal([REFRESH_INTERVAL.Live, REFRESH_INTERVAL.Slow, REFRESH_INTERVAL.Slower]).optional(),
 });
 
-/** Вид списка: то, что переживает перезагрузку страницы. */
+/** List view: what survives a page reload. */
 interface StoredView {
   sorting: SortingState;
   columns: ColumnVisibilityState;
-  /** Порядок колонок идентификаторами; пустой — порядок описаний. */
+  /** Column order by identifiers; empty means definition order. */
   order: ColumnOrderState;
   density: TableDensity;
   interval: RefreshInterval;
@@ -75,7 +75,7 @@ const DEFAULT_VIEW: StoredView = {
   interval: REFRESH_INTERVAL.Live,
 };
 
-/** В приватном окне обращение к хранилищу бросает. */
+/** In a private window, storage access throws. */
 function readView(): StoredView {
   try {
     const raw = globalThis.localStorage.getItem(STORAGE_KEY);
@@ -98,7 +98,7 @@ function readView(): StoredView {
       interval: stored.data.interval ?? DEFAULT_VIEW.interval,
     };
   } catch {
-    // Хранилище недоступно или в ключе не JSON — вид собирается заново.
+    // Storage is unavailable or the key is not JSON — the view is built anew.
     return DEFAULT_VIEW;
   }
 }
@@ -107,7 +107,7 @@ function writeView(view: StoredView): void {
   try {
     globalThis.localStorage.setItem(STORAGE_KEY, JSON.stringify(view));
   } catch {
-    // Не сохранилось — вид вернётся к исходному при следующем открытии.
+    // Not saved — the view returns to the default on the next open.
   }
 }
 
@@ -115,29 +115,29 @@ export interface ConnectionView extends StoredView {
   setSorting: OnChangeFn<SortingState>;
   setColumns: OnChangeFn<ColumnVisibilityState>;
   setOrder: OnChangeFn<ColumnOrderState>;
-  /** Возвращает видимость колонок и их порядок одним изменением вида; остальное в виде не трогает. */
+  /** Returns column visibility and order in one view change; leaves the rest of the view untouched. */
   resetColumns: () => void;
   setDensity: (density: TableDensity) => void;
   setInterval: (interval: RefreshInterval) => void;
 }
 
 /**
- * Вид списка соединений: сортировка, видимые колонки и их порядок, плотность
- * и частота обновления. Настройка личная, как тема и язык: панель роутера открывают
- * несколько человек, и общая на всех была бы ограничением.
+ * Connection list view: sorting, visible columns and their order, density
+ * and refresh rate. The setting is personal, like theme and language: several people open
+ * the router panel, and one shared for all would be a limitation.
  *
- * Объект вида стабилен между снапшотами: он уходит в мемоизированное тело
- * таблицы, и новая ссылка на каждый тик перерисовывала бы скрытую вкладку.
+ * The view object is stable between snapshots: it goes into the memoized table
+ * body, and a new reference on every tick would rerender the hidden tab.
  */
 export function useConnectionView(): ConnectionView {
   const [view, setView] = useState(readView);
-  // Последний вид лежит в ref, а не берётся из замыкания: сброс зовёт два
-  // сеттера одним обработчиком, и второй, закрытый над видом того же рендера,
-  // затёр бы правку первого — и в состоянии, и в хранилище.
+  // The latest view lives in a ref rather than being taken from the closure: a reset calls two
+  // setters from one handler, and the second, closed over the view of the same render,
+  // would overwrite the first's edit — both in state and in storage.
   const latest = useRef(view);
 
-  // Хранилище пишется снаружи обновления состояния: React зовёт обновляющую
-  // функцию дважды в строгом режиме, и запись ушла бы в неё вместе с остальным.
+  // Storage is written outside the state update: React calls the updater
+  // function twice in strict mode, and the write would go into it along with the rest.
   const update = useCallback((patch: Partial<StoredView>) => {
     const next = { ...latest.current, ...patch };
 

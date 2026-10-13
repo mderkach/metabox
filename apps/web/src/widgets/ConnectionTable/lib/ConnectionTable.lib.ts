@@ -3,13 +3,13 @@ import { useEffect, useState } from 'react';
 import { MS_IN_SECOND } from '@shared/lib/time';
 
 /**
- * Часы для колонки времени. Отдельный отсчёт, а не `Date.now()` в теле строки:
- * строка мемоизирована и при неизменившихся байтах не перерисовывалась бы, то
- * есть показывала бы время на момент последней смены счётчика.
+ * Clock for the time column. A separate tick, not `Date.now()` in the row body:
+ * the row is memoized and with unchanged bytes would not rerender, that
+ * is, it would show the time as of the last counter change.
  *
- * Цена — рендер видимых строк раз в секунду: `memo` на них экономит сравнение
- * поддерева, но не сам вызов. Список виртуализован, поэтому речь про десятки
- * строк, а не про все пять тысяч.
+ * The price is a render of visible rows once a second: `memo` on them saves a subtree
+ * comparison, but not the call itself. The list is virtualized, so this is tens of
+ * rows, not all five thousand.
  */
 export function useNow(): number {
   const [now, setNow] = useState(() => Date.now());

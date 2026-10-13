@@ -14,39 +14,40 @@ import {
 import { CUSTOM_PROVIDER, HTTP_SCHEME, RULE_SET_ADD_ERROR } from './RuleSetAdd.constants';
 
 /**
- * Что правит форма подключения.
+ * What the add form edits.
  *
- * Источник, зеркало и категория — это способ собрать адрес, а в конфиг уходит
- * сам адрес: узнать по нему поставщика панель умеет и обратно (`describeURL`),
- * поэтому хранить выбор рядом с адресом незачем.
+ * Source, mirror and category are a way to build the address, while the address
+ * itself goes into the config: the panel can recognize the provider from it and
+ * back (`describeURL`), so there is no need to store the choice next to the
+ * address.
  */
 export const RuleSetAddSchema = z.object({
-  /** Поставщик из каталога; `custom` — адрес вписан руками */
+  /** Provider from the catalog; `custom` means the address is typed by hand */
   providerId: z.string(),
-  /** Вид списка у поставщика: домены или адреса */
+  /** List kind at the provider: domains or addresses */
   kind: z.string(),
-  /** Зеркало поставщика: до основного адреса дотягиваются не всегда */
+  /** Provider mirror: the main address is not always reachable */
   mirrorId: z.string(),
-  /** Имя категории у поставщика */
+  /** Category name at the provider */
   category: z.string(),
-  /** Адрес, по которому ядро скачивает набор */
+  /** Address core downloads the set from */
   url: z.string(),
-  /** Имя набора: по нему на него ссылаются правила */
+  /** Set name: rules refer to it by it */
   tag: z.string(),
-  /** Формат файла; пусто — ядро выведет его из расширения адреса */
+  /** File format; empty means core derives it from the address extension */
   format: z.string(),
-  /** Как часто перекачивать; пусто — ядро берёт сутки */
+  /** How often to redownload; empty means core takes a day */
   updateInterval: z.string(),
-  /** Через какой узел качать; пусто — напрямую */
+  /** Which node to download through; empty means directly */
   detour: z.string(),
 });
 
 export type RuleSetAddModel = z.infer<typeof RuleSetAddSchema>;
 
 /**
- * Форма открывается на первом поставщике каталога и его списке доменов, а не
- * на пустом бланке: «свой адрес» — запасной путь, и предлагать его первым
- * значит начинать с самого трудного. Пустой каталог оставляет только его.
+ * The form opens on the first catalog provider and its domain list, not on an
+ * empty blank: "own address" is the fallback path, and offering it first means
+ * starting with the hardest. An empty catalog leaves only it.
  */
 export function ruleSetAddDefaults(catalog: RuleSetCatalog): RuleSetAddModel {
   const provider = catalog.providers.at(0);
@@ -65,7 +66,7 @@ export function ruleSetAddDefaults(catalog: RuleSetCatalog): RuleSetAddModel {
   };
 }
 
-/** Адрес набора для выбранной категории; без списка или категории — пусто. */
+/** Set address for the selected category; without a list or category, empty. */
 export function composeRuleSetURL(list: RuleSetList | null, mirrorId: string, category: string): string {
   if (list === null || category.trim() === '') {
     return '';
@@ -74,12 +75,12 @@ export function composeRuleSetURL(list: RuleSetList | null, mirrorId: string, ca
   return buildRuleSetURL(list, mirrorId, category.trim());
 }
 
-/** Тег, который форма предлагает для категории. */
+/** Tag the form suggests for a category. */
 export function composeRuleSetTag(list: RuleSetList | null, category: string): string {
   return list === null ? '' : suggestTag(list, category.trim());
 }
 
-/** Узел, который ляжет в `route.rule_set`. */
+/** The node that will go into `route.rule_set`. */
 export interface RuleSetAddPatch {
   type: string;
   tag: string;
@@ -90,18 +91,18 @@ export interface RuleSetAddPatch {
 }
 
 /**
- * Схема с проверками, зависящими от документа: занятые теги и теги аутбаундов
- * приходят снаружи. Тег — ссылка, по которой правило находит набор, и второй
- * набор с тем же именем сделал бы её двусмысленной; узел, через который набор
- * качается, обязан существовать — иначе опечатка доезжает до устройства и
- * обрывает старт sing-box.
+ * Schema with checks that depend on the document: taken tags and outbound tags
+ * come from outside. A tag is the reference by which a rule finds a set, and a
+ * second set with the same name would make it ambiguous; the node the set is
+ * downloaded through must exist, otherwise a typo reaches the device and aborts
+ * the sing-box start.
  *
- * Пустой список аутбаундов ничего не запрещает: он означает, что конфиг не
- * разобран, а не что узлов в нём нет.
+ * An empty outbound list forbids nothing: it means the config is not parsed,
+ * not that it has no nodes.
  *
- * `format` требуется только тогда, когда адрес не даёт вывести его сам: поле,
- * равное выведенному значению, ядро при сохранении всё равно отбрасывает, а в
- * дифе оно выглядело бы правкой пользователя.
+ * `format` is required only when the address does not let it be derived: a
+ * field equal to the derived value is dropped by core on save anyway, and in
+ * the diff it would look like a user edit.
  */
 export function makeRuleSetAddSchema(takenTags: readonly string[], outbounds: readonly string[] = []) {
   const taken = new Set(takenTags);
@@ -142,13 +143,13 @@ export function makeRuleSetAddSchema(takenTags: readonly string[], outbounds: re
   });
 }
 
-/** Собирает узел набора из заполненной формы. */
+/** Builds a set node from the filled form. */
 export function toRuleSetPatch(data: RuleSetAddModel): RuleSetAddPatch {
   const url = data.url.trim();
   const interval = data.updateInterval.trim();
   const detour = data.detour.trim();
-  // Формат пишется, только когда из адреса он не выводится: иначе это значение
-  // по умолчанию, которое ядро отбрасывает само.
+  // The format is written only when it cannot be derived from the address:
+  // otherwise it is the default value that core drops itself.
   const format = defaultFormatOf(url) === '' ? data.format : '';
 
   return {

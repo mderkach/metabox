@@ -1,11 +1,11 @@
 /**
- * Индекс того же правила в применённом конфиге для каждого правила черновика;
- * `null` — правило новое или изменено. Сравнивается узел целиком: правило,
- * которое пользователь переставил, не тронув, остаётся тем же правилом, а
- * правка любого поля делает его другим.
+ * Index of the same rule in the applied config for each draft rule; `null`
+ * means the rule is new or changed. The whole node is compared: a rule the user
+ * moved without touching stays the same rule, and an edit of any field makes it
+ * a different one.
  *
- * Одинаковые узлы разбираются по порядку: второй дубль черновика получает
- * второй дубль применённого конфига, а не первый повторно.
+ * Identical nodes are matched in order: the second draft duplicate gets the
+ * second applied config duplicate, not the first again.
  */
 export function toAppliedIndices(draft: readonly unknown[], applied: readonly unknown[]): (number | null)[] {
   const free = new Map<string, number[]>();

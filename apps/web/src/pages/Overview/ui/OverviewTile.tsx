@@ -5,7 +5,7 @@ import { PENDING_REVEAL, Skeleton } from '@shared/ui';
 
 const PERCENT = 100;
 
-/** Полоса рисуется только у величины с потолком: без него шкала не задана. */
+/** The bar is drawn only for a quantity with a ceiling: without one the scale is undefined. */
 export function OverviewTile({
   label,
   value,
@@ -15,12 +15,12 @@ export function OverviewTile({
   chart,
 }: {
   label: string;
-  /** `null` — снимок ещё не пришёл: скелетон, а не прочерк или ноль. Прочерк — величины нет вовсе. */
+  /** `null` means the snapshot has not arrived yet: a skeleton, not a dash or zero. A dash means there is no quantity at all. */
   value: string | null;
   context: string | null;
   tone?: string;
   meter?: number;
-  /** Ряд под числом во всю ширину плитки. */
+  /** A row under the number across the full tile width. */
   chart?: ReactNode;
 }) {
   return (

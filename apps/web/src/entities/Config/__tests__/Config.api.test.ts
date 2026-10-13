@@ -33,7 +33,7 @@ function captureApply(): { current: () => CapturedApply | null } {
 }
 
 describe('applyConfig', () => {
-  it('без файлов тело — голые байты конфига, как и раньше', async () => {
+  it('without files the body is the bare config bytes, as before', async () => {
     const captured = captureApply();
 
     await applyConfig({ text: '{"log":{}}', base: 'abc' });
@@ -43,7 +43,7 @@ describe('applyConfig', () => {
     expect(captured.current()?.ifMatch).toBe('abc');
   });
 
-  it('с файлами уезжает конверт со своим типом', async () => {
+  it('with files an envelope with its own type goes out', async () => {
     const captured = captureApply();
 
     await applyConfig({
@@ -61,7 +61,7 @@ describe('applyConfig', () => {
     });
   });
 
-  it('пустые изменения файлов не переключают тело на конверт', async () => {
+  it('empty file changes do not switch the body to an envelope', async () => {
     const captured = captureApply();
 
     await applyConfig({ text: '{}', base: null, lists: { put: {}, remove: [], base: 'set-etag' } });

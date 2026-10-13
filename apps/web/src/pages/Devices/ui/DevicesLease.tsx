@@ -4,7 +4,7 @@ import { leaseLeft, type Device } from '@entities/Device';
 import { formatAge, formatDateTime } from '@shared/lib/format';
 import { Badge } from '@shared/ui';
 
-/** Вид аренды словами LuCI и остаток динамической, отсчитанный от `now`. */
+/** Lease kind in LuCI wording and the remaining time of a dynamic one, counted from `now`. */
 export function DevicesLease({ device, now }: { device: Device; now: number }) {
   const { t } = useTranslation('pages/Devices');
   const left = leaseLeft(device, now);

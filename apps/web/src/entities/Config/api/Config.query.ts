@@ -39,33 +39,34 @@ export function getConfigOptions() {
   });
 }
 
-/** Замечание к показанному документу: что не так и где это в тексте. */
+/** A remark on the shown document: what is wrong and where it is in the text. */
 export interface ConfigIssue {
-  /** Готовый текст: узел, причина и строка, когда узел найден в тексте. */
+  /** Ready text: the node, the reason and the line when the node is found in the text. */
   text: string;
-  /** Смещение узла в исходном тексте; `null` — узел в тексте не найден. */
+  /** Node offset in the source text; `null` means the node is not found in the text. */
   offset: number | null;
 }
 
 export interface ParsedConfig {
-  /** Текст файла как есть: правки применяются к нему, а не к модели. */
+  /** File text as is: edits are applied to it, not to the model. */
   text: string;
-  /** `null` — схема конфиг не приняла; что именно, сказано в `issues`. */
+  /** `null` means the schema did not accept the config; what exactly is stated in `issues`. */
   config: Config | null;
   issues: ConfigIssue[];
-  /** Узлы с полями, которых схема не знает: путь узла → имена полей. */
+  /** Nodes with fields the schema does not know: node path to field names. */
   unknown: UnknownField[];
 }
 
 /**
- * Схемы строгие: поле, которого в схеме нет, разбор отмечает, а не пропускает
- * молча. Узел с таким полем панель показывает нераспознанным и правит текстом.
+ * Schemas are strict: a field that is not in the schema is flagged by parsing,
+ * not skipped silently. The panel shows a node with such a field as
+ * unrecognized and edits it as text.
  *
- * Модель при этом строится всё равно: схема собрана из релизной сборки форка и
- * заведомо знает меньше бинаря, а один незнакомый ключ не должен гасить экраны
- * с формами. Провал не бросает — панель обязана открываться и на непонятом
- * конфиге. Диалект тот же, что у бинаря: комментарии и запятая перед
- * закрывающей скобкой.
+ * The model is still built: the schema is assembled from a release build of the
+ * fork and knowingly knows less than the binary, and one unfamiliar key must
+ * not turn off the screens with forms. A failure does not throw: the panel must
+ * open even on a config it does not understand. The dialect is the same as the
+ * binary's: comments and a comma before the closing bracket.
  */
 export function parseConfig(text: string): ParsedConfig {
   const { value, failure } = parseJsonc(text);
@@ -93,9 +94,10 @@ export function parseConfig(text: string): ParsedConfig {
   const unknown = toUnknownFields(parsed.error.issues);
 
   if (unknown !== null) {
-    // Известные поля схема проверила, остались только лишние — значение уже
-    // имеет нужную форму, и второй проход дал бы ровно его.
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- см. выше
+    // Known fields were checked by the schema and only extra ones remain: the
+    // value already has the right shape, and a second pass would give exactly
+    // it.
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see above
     return { text, config: value as Config, issues: [], unknown };
   }
 
@@ -126,7 +128,7 @@ export function parseConfig(text: string): ParsedConfig {
 }
 
 export interface ParsedConfigFile extends ParsedConfig {
-  /** Отпечаток файла из `ETag`: с ним черновик уходит в `If-Match` применения. */
+  /** File fingerprint from `ETag`: with it the draft goes into the apply `If-Match`. */
   etag: string | null;
 }
 
@@ -148,12 +150,12 @@ export function getConfigListsOptions() {
   });
 }
 
-/** Файлы своих списков с отпечатком набора: он уходит в `lists_base` применения. */
+/** Files of its own lists with the set fingerprint: it goes into the apply `lists_base`. */
 export function useConfigLists() {
   return useQuery(getConfigListsOptions());
 }
 
-/** Тип каждого аутбаунда применённого конфига по его тегу. */
+/** Type of each outbound of the applied config by its tag. */
 export function useOutboundTypes(): ReadonlyMap<string, string> {
   const config = useConfig();
   const document = config.data?.config ?? null;
@@ -172,7 +174,7 @@ export function getConfigVersionsOptions() {
   });
 }
 
-/** История версий, от свежей к старой: откатываются обычно на предыдущую. */
+/** Version history, newest to oldest: rollbacks usually go to the previous one. */
 export function useConfigVersions() {
   return useQuery({ ...getConfigVersionsOptions(), select: toConfigVersions });
 }
@@ -185,32 +187,32 @@ export function getApplyStateOptions(id: string) {
     },
     staleTime: 0,
     gcTime: CACHE_TIME.Minute,
-    // Идущее применение опрашивается секундно: окно подтверждения — минута.
+    // A running apply is polled every second: the confirmation window is a minute.
     refetchInterval: (query) => (isApplyActive(query.state.data?.phase) ? POLL_INTERVAL.Apply : false),
-    // Опрос идёт до конца цикла, и каждый промах завалил бы экран тостами:
-    // ход применения показывает сам бар.
+    // Polling runs until the end of the cycle, and every miss would flood the
+    // screen with toasts: the apply bar shows the progress itself.
     meta: { showError: false },
   });
 }
 
 /**
- * Ход применения. `null` — применений нет; тогда запрос не заводится.
+ * Apply progress. `null` means there are no applies; then the query is not created.
  *
- * Состояние читается ручкой демона, а не выводится из ответа на запуск: цикл
- * живёт дольше запроса и переживает перезагрузку страницы.
+ * The state is read from a daemon endpoint, not derived from the start
+ * response: the cycle outlives the request and survives a page reload.
  */
 export function useApplyTransaction(id: string | null) {
   return useQuery({ ...getApplyStateOptions(id ?? ''), enabled: id !== null, select: toApplyTransaction });
 }
 
 /**
- * Кладёт ответ применения в кэш.
+ * Puts the apply response into the cache.
  *
- * Идущая транзакция живёт в статусе демона: он отдаёт её в `GET /api/status`, и
- * панель находит её после перезагрузки страницы. Ответ на запуск
- * пишется туда же, иначе окно подтверждения появлялось бы только со следующим
- * опросом, а запуск из другого экрана — откат на версию — бар бы и вовсе не
- * заметил.
+ * A running transaction lives in the daemon status: it serves it in `GET
+ * /api/status`, and the panel finds it after a page reload. The start response
+ * is written there too, otherwise the confirmation window would appear only
+ * with the next poll, and a start from another screen, a rollback to a version,
+ * would not be noticed by the bar at all.
  */
 export function useSaveApplyTransaction() {
   const queryClient = useQueryClient();

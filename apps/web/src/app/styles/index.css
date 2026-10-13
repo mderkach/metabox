@@ -2,11 +2,11 @@
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
 @import 'uplot/dist/uPlot.min.css';
-/* Шрифты лежат файлами в репозитории, а не приезжают пакетом: панель обязана
- * открываться при неработающем sing-box, а сборка — идти без сети.
- * Подмножества оставлены только те, что нужны русскому интерфейсу и латинице
- * доменов; греческое, вьетнамское и символьное отброшены.
- * Начертания вариативные: Geist 100-900, Fira Code 300-700. */
+/* Fonts are files in the repository, not delivered as a package: the panel must
+ * open with sing-box not running, and the build must work without a network.
+ * Only the subsets needed by the Russian interface and the Latin of domains are
+ * kept; Greek, Vietnamese and symbols are dropped. The faces are variable:
+ * Geist 100-900, Fira Code 300-700. */
 @font-face {
   font-family: 'Geist Variable';
   font-style: normal;
@@ -93,11 +93,11 @@
   --font-heading: var(--font-sans);
   --font-sans: 'Geist Variable', sans-serif;
   --font-mono: 'Fira Code Variable', ui-monospace, SFMono-Regular, Menlo, monospace;
-  /* Лигатуры Fira Code склеивают -> и != — в доменах, regex правил и выводе
-   * sing-box строка перестаёт совпадать с тем, что лежит в конфиге. */
+  /* Fira Code ligatures join -> and !=: in domains, rule regexes and sing-box
+   * output the string stops matching what is in the config. */
   --font-mono--font-feature-settings: 'calt' 0;
 
-  /* Ступени кратны двум (стайлгайд, «Стили»). */
+  /* Steps are multiples of two (style guide, "Styles"). */
   --text-2xs: 0.625rem;
   --text-2xs--line-height: 0.875rem;
   --text-xs: 0.75rem;
@@ -117,7 +117,7 @@
   --text-3xl--line-height: 2.5rem;
   --text-3xl--letter-spacing: -0.025em;
 
-  /* Радиусы перечислены явно: множитель от базы давал 6/8/10/14/18/22. */
+  /* Radii are listed explicitly: a multiplier from the base gave 6/8/10/14/18/22. */
   --radius-sm: 0.5rem;
   --radius-md: 0.625rem;
   --radius-lg: 0.875rem;
@@ -154,38 +154,38 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  /* Выделение — отдельная поверхность, а не альфа поверх фона (ADR-0013). */
+  /* Selection is a separate surface, not alpha over the background (ADR-0013). */
   --color-selected: var(--selected);
   --color-selected-edge: var(--selected-edge);
 
-  /* Действие правила: разные судьбы пакета (ADR-0013). */
+  /* Rule action: different fates of a packet (ADR-0013). */
   --color-route-direct: var(--route-direct);
   --color-route-proxy: var(--route-proxy);
   --color-route-block: var(--route-block);
   --color-route-dns: var(--route-dns);
   --color-route-neutral: var(--route-neutral);
 
-  /* Состояние: задержка узла, статус сервиса, результат применения. */
+  /* State: node delay, service status, apply result. */
   --color-signal-ok: var(--signal-ok);
   --color-signal-warn: var(--signal-warn);
   --color-signal-bad: var(--signal-bad);
   --color-signal-idle: var(--signal-idle);
 
-  /* Ряды графика трафика: разведены тоном, а не светлотой. */
+  /* Traffic chart series: separated by hue, not by lightness. */
   --color-series-down: var(--series-down);
   --color-series-up: var(--series-up);
 
-  /* Дорожка шкалы: поверхность, а не альфа поверх фона (ADR-0013). */
+  /* Scale track: a surface, not alpha over the background (ADR-0013). */
   --color-meter-track: var(--meter-track);
 
-  /* Состояния строки таблицы. Непрозрачные: колонка-якорь закреплена при
-   * горизонтальной прокрутке, и сквозь альфу под ней просвечивали бы
-   * уезжающие ячейки. */
+  /* Table row states. Opaque: the anchor column is pinned during horizontal
+   * scrolling, and through alpha the cells sliding under it would show through.
+   * */
   --color-row-hover: var(--row-hover);
   --color-table-head: var(--table-head);
 
-  /* Уровни лога: своя шкала, а не тона состояния — строка info не «хорошая»,
-   * а соседние уровни различимы между собой. */
+  /* Log levels: their own scale, not the state hues, so an info row is not
+   * "good" and neighboring levels are distinguishable from each other. */
   --color-log-trace: var(--log-trace);
   --color-log-debug: var(--log-debug);
   --color-log-info: var(--log-info);
@@ -193,20 +193,21 @@
   --color-log-warn: var(--log-warn);
   --color-log-error: var(--log-error);
 
-  /* Подсветка JSON: своя группа, чтобы правка тона действия её не задевала. */
+  /* JSON highlighting: its own group, so tuning the action hue does not affect it. */
   --color-code-string: var(--code-string);
   --color-code-number: var(--code-number);
   --color-code-literal: var(--code-literal);
   --color-code-comment: var(--code-comment);
 }
 
-/* Светлая палитра в `:root`, тёмная в `.dark`: вариант `dark:` примитивов
- * shadcn привязан к этому классу. Тема по умолчанию задаётся `ThemeProvider`,
- * а не порядком блоков. Состав и оттенки — ADR-0013. */
+/* The light palette is in `:root`, the dark one in `.dark`: the `dark:` variant
+ * of the shadcn primitives is bound to this class. The default theme is set by
+ * `ThemeProvider`, not by block order. Composition and shades are in ADR-0013.
+ * */
 :root {
-  /* Без объявления схемы браузер с авто-тёмным режимом перекрашивает светлую
-   * тему сам, а нативные элементы — полосу прокрутки, каретку, чекбокс — рисует
-   * от системной настройки, а не от темы панели. */
+  /* Without a scheme declaration a browser with auto-dark mode recolors the
+   * light theme itself, and draws native elements (scrollbar, caret, checkbox)
+   * by the system setting rather than the panel theme. */
   color-scheme: light;
   --background: oklch(0.982 0.003 265);
   --foreground: oklch(0.205 0.012 265);
@@ -247,8 +248,9 @@
 
   --meter-track: oklch(0.905 0.008 265);
 
-  /* Считаются от темы: объявление одно, а `--muted` и `--card` под `.dark`
-   * свои, и подстановка идёт уже в контексте элемента. */
+  /* Computed from the theme: the declaration is one, while `--muted` and
+   * `--card` are their own under `.dark`, and substitution happens in the
+   * element context. */
   --row-hover: color-mix(in oklch, var(--muted) 40%, var(--card));
   --table-head: color-mix(in oklch, var(--muted) 30%, var(--card));
 
@@ -348,10 +350,10 @@
     @apply font-sans;
   }
 
-  /* Курсор по умолчанию — стрелка. Каретка над нередактируемым текстом мигает
-   * на каждом движении мыши и читается как приглашение печатать, которого
-   * панель не даёт. Выделение текста это не запрещает: меняется только вид
-   * указателя. */
+  /* The default cursor is an arrow. A caret over non-editable text blinks on
+   * every mouse move and reads as an invitation to type, which the panel does
+   * not offer. Text selection is not prevented: only the pointer appearance
+   * changes. */
   body {
     cursor: default;
   }
@@ -359,9 +361,10 @@
     cursor: text;
   }
 
-  /* Tailwind v4 убрал `cursor: pointer` у кнопок из preflight, и нажимаемое
-   * перестало отличаться от текста под курсором. Селектор без `:where`:
-   * нулевая специфичность проиграла бы правилу браузера. */
+  /* Tailwind v4 removed `cursor: pointer` from buttons in preflight, and
+   * clickable elements stopped differing from the text under the cursor. The
+   * selector has no `:where`: zero specificity would lose to the browser rule.
+   * */
   button:not(:disabled),
   [role='button']:not(:disabled),
   a[href],
@@ -375,8 +378,8 @@
     cursor: not-allowed;
   }
 
-  /* Поверхности, которые рисует браузер, а не панель: без них выделение,
-   * каретка и полоса прокрутки приезжают с чужой темой поверх своей. */
+  /* Surfaces drawn by the browser, not the panel: without them selection, caret
+   * and scrollbar arrive with a foreign theme over our own. */
   ::selection {
     background-color: color-mix(in oklab, var(--primary) 30%, transparent);
     color: var(--foreground);
@@ -399,8 +402,9 @@
   --view-transition-ease: cubic-bezier(0.2, 0, 0, 1);
   --view-transition-ease-in: cubic-bezier(0.4, 0, 1, 1);
 
-  /* CSS-переходы раскладки: колонка боковой панели, бар применения, лист
-   * снизу. Уход быстрее прихода: исчезающее больше не нужно глазу. */
+  /* CSS transitions of the layout: the sidebar column, the apply bar, the
+   * bottom sheet. Leaving is faster than arriving: the eye no longer needs what
+   * disappears. */
   --motion-enter: 240ms;
   --motion-exit: 180ms;
   --motion-sheet-enter: 280ms;
@@ -408,20 +412,21 @@
   --motion-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Размытие под листом пересчитывается на каждом кадре его выезда и на слабом
- * телефоне роняет кадры. Примитив оверлея закрыт для `className` снаружи,
- * поэтому правило здесь. */
+/* The blur under the sheet is recomputed on every frame of its slide-in and
+ * drops frames on a weak phone. The overlay primitive is closed to an outside
+ * `className`, hence the rule here. */
 [data-slot='sheet-overlay'] {
   backdrop-filter: none;
 }
 
-/* Под пальцем цель касания не меньше 44px, плотность под мышью не меняется.
- * Кнопки, вкладки и выпадающие списки растут сами, а не хит-областью
- * псевдоэлемента: она обрезается прокручиваемым контейнером — полоса вкладок,
- * карточка таблицы — и на зазоре меньше 8px наезжает на соседа. Кнопку узнаём
- * по `group/button` базы `buttonVariants`: триггеры диалогов и поповеров
- * перекрывают её `data-slot` своим. Правила вне слоя: высоты примитивов
- * заданы утилитами, а слой утилит перебивает `@layer base`. */
+/* Under a finger the touch target is at least 44px, density under a mouse does
+ * not change. Buttons, tabs and dropdowns grow themselves, not through a
+ * pseudo-element hit area: it is clipped by a scrollable container (tab strip,
+ * table card) and overlaps the neighbor when the gap is under 8px. A button is
+ * recognized by `group/button` of the `buttonVariants` base: dialog and popover
+ * triggers override its `data-slot` with their own. The rules are outside a
+ * layer: primitive heights are set by utilities, and the utilities layer beats
+ * `@layer base`. */
 @media (pointer: coarse) {
   .group\/button,
   [data-slot='toggle'],
@@ -438,18 +443,19 @@
     height: auto;
   }
 
-  /* Переключатель и флажок остаются маленькими: рядом с ними подпись, и
-   * растущий контрол сдвигал бы её. Хит-область — их же `::after`. */
+  /* The switch and the checkbox stay small: there is a label next to them, and
+   * a growing control would shift it. The hit area is their own `::after`. */
   [data-slot='switch']::after,
   [data-slot='checkbox']::after {
     inset: min(-0.5rem, calc(50% - 1.375rem)) min(-0.75rem, calc(50% - 1.375rem));
   }
 }
 
-/* Смену экрана запускает роутер (`defaultViewTransition`), тип перехода
- * считает `toPageTransitionTypes`. Корень при этом живой: сайдбар и бар
- * применения не растворяются, а обновления, пришедшие во время перехода,
- * видны сразу. Слой перехода не ловит указатель — панель остаётся кликабельной. */
+/* The router starts the screen change (`defaultViewTransition`), the transition
+ * type is computed by `toPageTransitionTypes`. The root stays live: the sidebar
+ * and the apply bar do not dissolve, and updates arriving during the transition
+ * are visible immediately. The transition layer does not catch the pointer, so
+ * the panel stays clickable. */
 ::view-transition {
   pointer-events: none;
 }
@@ -466,11 +472,11 @@
   animation: none;
 }
 
-/* Экран, его шапка и полоса вкладок конфига — именованные группы. Вне
- * перехода роутера — при анимациях вкладок — они показываются живыми, без
- * снимка и растворения. Бар применения плавает над экраном и именуется ради
- * порядка слоёв: в снимке корня группа экрана накрыла бы его на весь переход
- * роутера. Анимации у него нет ни в одной ветке. */
+/* The screen, its header and the config tab strip are named groups. Outside a
+ * router transition (during tab animations) they are shown live, without a
+ * snapshot and dissolve. The apply bar floats over the screen and is named for
+ * the sake of layer order: in the root snapshot the screen group would cover it
+ * for the whole router transition. It has no animation in any branch. */
 ::view-transition-group(page),
 ::view-transition-group(page-header),
 ::view-transition-group(config-tabs),
@@ -500,9 +506,9 @@
   --page-offset: -0.75rem;
 }
 
-/* Содержимое уходит и приходит при любом переходе роутера: со сдвигом по
- * направлению, когда меняется раздел, и растворением внутри раздела. Полоса
- * вкладок без пары уходит вместе с содержимым, а с парой стоит. */
+/* The content leaves and arrives on any router transition: with a shift in the
+ * direction when the section changes, and by dissolving within a section. A tab
+ * strip without a pair leaves with the content, and with a pair it stays. */
 :is(
   :active-view-transition-type(page-forward),
   :active-view-transition-type(page-backward),
@@ -521,11 +527,12 @@
   }
 }
 
-/* Внутри раздела шапка стоит, но у неизвестного адреса под `/config` раскладки
- * нет вовсе — заглушка подменяет корневой `Outlet`. Шапка остаётся без пары и
- * должна уйти вместе с содержимым, как уходит полоса вкладок, а не пропасть
- * срезом. Отдельным блоком, а не веткой в правиле выше: там `:only-child`
- * специфичнее и перебил бы растворение шапки при смене раздела. */
+/* Within a section the header stays, but an unknown address under `/config` has
+ * no layout at all: a fallback replaces the root `Outlet`. The header remains
+ * without a pair and must leave with the content, as the tab strip does,
+ * instead of vanishing by a cut. It is a separate block, not a branch in the
+ * rule above: `:only-child` there is more specific and would override the
+ * header dissolve on a section change. */
 :active-view-transition-type(page-hold) {
   &::view-transition-old(page-header):only-child {
     display: block;
@@ -537,11 +544,12 @@
   }
 }
 
-/* Шапка растворяется, только когда меняется раздел. Внутри раздела она стоит
- * живой: заголовок, путь файла и история версий на всех его вкладках те же, и
- * растворение читалось бы миганием на ровном месте. Пара снимков у шапки есть
- * всегда — она стоит на каждом экране, — поэтому отличить эти случаи веткой
- * `:only-child`, как у полосы вкладок, нельзя: их различает тип перехода. */
+/* The header dissolves only when the section changes. Within a section it stays
+ * live: the title, the file path and the version history are the same on all
+ * its tabs, and a dissolve would read as a flicker for no reason. The header
+ * always has a pair of snapshots, since it is on every screen, so these cases
+ * cannot be told apart by the `:only-child` branch as with the tab strip: the
+ * transition type tells them apart. */
 :is(
   :active-view-transition-type(page-forward),
   :active-view-transition-type(page-backward),
@@ -570,7 +578,7 @@
   animation: fade-out var(--view-transition-panel) var(--view-transition-ease);
 }
 
-/* `--page-offset` задаёт тип перехода на корне; без него — чистое растворение. */
+/* `--page-offset` is set by the transition type on the root; without it, a pure dissolve. */
 @keyframes page-out {
   from {
     opacity: 1;
@@ -611,8 +619,9 @@
   }
 }
 
-/* Браузер не снимает анимации View Transitions по системной настройке сам:
- * без этого правила они идут и при выключенной анимации интерфейса. */
+/* The browser does not disable View Transitions animations by the system
+ * setting on its own: without this rule they run even when interface animation
+ * is turned off. */
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(*),
   ::view-transition-old(*),

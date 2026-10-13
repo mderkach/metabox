@@ -34,9 +34,10 @@ import {
 } from '../model/RuleSetCustom.schema';
 
 /**
- * Свой список доменов и адресов. Небольшой уходит в черновик узлом `inline` —
- * правила лежат в самом конфиге; большой — файлом `rule-sets/<имя>.json` под
- * узлом `local`: конфиг остаётся компактным, а файл едет тем же применением.
+ * Own list of domains and addresses. A small one goes into the draft as an
+ * `inline` node, the rules are in the config itself; a large one as a
+ * `rule-sets/<name>.json` file under a `local` node: the config stays compact,
+ * and the file travels with the same apply.
  */
 export function RuleSetCustomForm({ takenTags, onDone }: { takenTags: readonly string[]; onDone?: () => void }) {
   const { t } = useTranslation('features/RuleSet/RuleSetCustom');
@@ -114,8 +115,8 @@ export function RuleSetCustomForm({ takenTags, onDone }: { takenTags: readonly s
               spacing={1.5}
               value={[field.value]}
               onValueChange={(value) => {
-                // Повторное нажатие снимает отметку, а без места хранения
-                // список не собрать.
+                // Pressing again deselects it, and without a storage place the
+                // list cannot be built.
                 if (value[0] === LIST_STORAGE.Inline || value[0] === LIST_STORAGE.File) {
                   field.onChange(value[0] satisfies ListStorage);
                 }
@@ -205,7 +206,7 @@ function FieldError({
   );
 }
 
-/** Код отказа схемы в текст; непонятой строке называется она сама. */
+/** Schema failure code into text; an unrecognized string is named as itself. */
 function errorText(
   t: TFunction<'features/RuleSet/RuleSetCustom'>,
   error: string | undefined,

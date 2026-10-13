@@ -1,21 +1,21 @@
 import { useEffect, useState, type RefObject } from 'react';
 
-/** Пиксель запаса на краю: при дробном масштабе браузера `scrollLeft` не доходит до конца ровно. */
+/** One pixel of reserve at the edge: at a fractional browser zoom `scrollLeft` does not reach the end exactly. */
 const EDGE_SLACK = 1;
 
 export interface ScrollEdges {
-  /** Слева есть скрытое прокруткой. */
+  /** There is content hidden by scrolling on the left. */
   start: boolean;
-  /** Справа есть скрытое прокруткой. */
+  /** There is content hidden by scrolling on the right. */
   end: boolean;
 }
 
 /**
- * Следит, с какой стороны горизонтального скроллера осталось скрытое
- * содержимое: по нему край гаснет градиентом и полоса не выглядит обрезанной.
- * Пересчитывается на прокрутке и на смене размера скроллера и его детей.
- * `content` меняется вместе с составом детей: новый ребёнок сам под
- * наблюдение не встаёт.
+ * Tracks on which side of a horizontal scroller hidden content
+ * remains: the edge fades out with a gradient by it, and the strip does not look cut off.
+ * Recomputed on scroll and on resize of the scroller and its children.
+ * `content` changes together with the set of children: a new child does not
+ * get under observation by itself.
  */
 export function useScrollEdges(ref: RefObject<HTMLElement | null>, content: unknown): ScrollEdges {
   const [edges, setEdges] = useState<ScrollEdges>({ start: false, end: false });
@@ -28,7 +28,7 @@ export function useScrollEdges(ref: RefObject<HTMLElement | null>, content: unkn
         return;
       }
 
-      // Функциям ниже сужение типа не доходит: объявление поднимается.
+      // Narrowing of the type does not reach the functions below: the declaration is hoisted.
       const scroller = element;
 
       function syncEdges() {

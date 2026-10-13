@@ -4,7 +4,7 @@ const SECOND = MS_IN_SECOND;
 const MINUTE = SECONDS_IN_MINUTE * SECOND;
 const HOUR = MINUTES_IN_HOUR * MINUTE;
 
-/** Ступени кэша. Клиент по умолчанию не кэширует — время задаётся осознанно. */
+/** Cache tiers. The client does not cache by default — time is set deliberately. */
 export const CACHE_TIME = {
   Second: SECOND,
   Minute: MINUTE,
@@ -13,25 +13,25 @@ export const CACHE_TIME = {
 } as const;
 
 const REQUEST_TIMEOUT_SECONDS = 15;
-/** Замер задержки идёт внутри запроса к демону и обязан уложиться в его потолок. */
+/** A latency measurement runs inside the daemon request and must fit under its ceiling. */
 const PROBE_TIMEOUT_SECONDS = 5;
 
-/** Потолки ожидания. Свой таймаут у запроса нужен всегда: у `fetch` его нет, и зависший демон держал бы запрос до закрытия вкладки. */
+/** Wait ceilings. A request always needs its own timeout: `fetch` has none, and a hung daemon would hold the request until the tab closes. */
 export const TIMEOUT = {
-  /** Полный цикл Apply укладывается в 15 секунд — дольше уже отказ. */
+  /** A full Apply cycle fits in 15 seconds — longer is already a failure. */
   Request: REQUEST_TIMEOUT_SECONDS * SECOND,
-  /** Сколько Clash API ждёт ответа узла при замере задержки. */
+  /** How long Clash API waits for a node's response when measuring latency. */
   Probe: PROBE_TIMEOUT_SECONDS * SECOND,
 } as const;
 
 const STATUS_POLL_SECONDS = 5;
-/** Шаг истории на демоне — десять секунд; чаще спрашивать нечего. */
+/** The history step on the daemon is ten seconds; there is nothing to ask more often. */
 const HISTORY_POLL_SECONDS = 10;
 
-/** Периоды опроса. Интервал живёт рядом с фабрикой ключа, а не в хуке. */
+/** Polling periods. The interval lives next to the key factory, not in a hook. */
 export const POLL_INTERVAL = {
   Status: STATUS_POLL_SECONDS * SECOND,
-  /** Окно подтверждения — минута, и отсчёт обязан идти заметно чаще. */
+  /** The confirmation window is a minute, and the countdown must tick noticeably more often. */
   Apply: SECOND,
   History: HISTORY_POLL_SECONDS * SECOND,
 } as const;

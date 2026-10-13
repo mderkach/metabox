@@ -1,6 +1,6 @@
 /**
- * Раскладка строки устройства. Один набор ширин на шапку и на строку: разойдясь,
- * подписи встанут не над своими колонками. Ниже md строка переносится карточкой.
+ * Device row layout. One set of widths for the header and the row: if they diverge,
+ * the labels end up above the wrong columns. Below md the row wraps into a card.
  */
 export const DEVICES_COLUMN = {
   Row: 'flex w-full flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-border px-4 py-3 last:border-b-0',
@@ -10,7 +10,7 @@ export const DEVICES_COLUMN = {
   Lease: 'flex w-44 shrink-0 items-center gap-2 max-md:w-auto',
   Online: 'w-20 shrink-0 text-xs max-md:w-auto',
   Route: 'flex w-56 shrink-0 items-center gap-2 max-md:w-auto',
-  /** Подпись значения в карточке: на узком экране шапки не видно. */
+  /** Value label on the card: the header is not visible on a narrow screen. */
   CardLabel: 'text-xs text-muted-foreground md:hidden',
   RowActions: 'flex w-28 shrink-0 items-center justify-end max-md:w-auto max-md:grow',
 } as const;

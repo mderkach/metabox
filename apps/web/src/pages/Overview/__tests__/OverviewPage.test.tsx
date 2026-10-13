@@ -34,30 +34,30 @@ function serveStatus(configPath?: string, singboxVersion = SCHEMA_VERSION) {
       })
     ),
     http.get(DAEMON_ENDPOINT.clashConfigs(), () => HttpResponse.json(CLASH_CONFIGS_FIXTURE)),
-    // Карточка службы и вердикт в шапке читают одно и то же состояние: без
-    // мока экран показал бы «состояние не прочитано» вместо данных.
+    // The service card and the verdict in the header read the same state: without
+    // the mock the screen would show "state not read" instead of data.
     http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE)),
     http.get(PROXY_ENDPOINT.proxies(), () => HttpResponse.json({ proxies: {} })),
     http.get(DAEMON_ENDPOINT.history(), () => HttpResponse.json(TRAFFIC_HISTORY_FIXTURE)),
-    // Поток соединений читает конфиг ради типов аутбаундов: без мока сводка
-    // считалась бы по таблице подстрок, а не по документу.
+    // The connection stream reads the config for outbound types: without the mock the summary
+    // would be computed by the substring table, not by the document.
     http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(MINIMAL_CONFIG))
   );
 }
 
-/** Дальше порога обрыва потока на экране обзора. */
+/** Beyond the stream drop threshold on the overview screen. */
 const STALE_MS = 9000;
 
 const MINIMAL_CONFIG = JSON.stringify({ outbounds: [{ type: 'direct', tag: 'direct' }] }, null, 2);
 
-describe('экран обзора', () => {
+describe('overview screen', () => {
   beforeEach(() => {
     ConnectionStore.getState().reset();
     RuntimeStore.getState().reset();
     serveStatus();
   });
 
-  it('показывает скорость из потока, а не накопительный счётчик', async () => {
+  it('shows speed from the stream, not the cumulative counter', async () => {
     RuntimeStore.getState().pushTraffic({ up: 8500, down: 43_400 });
 
     renderWithRouter(OverviewPage);
@@ -68,9 +68,9 @@ describe('экран обзора', () => {
     expect(tiles.getByText('8.3 кБ/с')).toBeInTheDocument();
   });
 
-  // Первый сэмпл потока нулевой: показывать «0 Б» значило бы
-  // соврать, что процессу не нужно памяти.
-  it('нулевой сэмпл памяти строкой не показывает', async () => {
+  // The first stream sample is zero: showing "0 B" would
+  // lie that the process needs no memory.
+  it('does not show a line for a zero memory sample', async () => {
     RuntimeStore.getState().pushMemory({ inuse: 0, oslimit: 0 });
 
     renderWithRouter(OverviewPage);
@@ -79,7 +79,7 @@ describe('экран обзора', () => {
     expect(screen.queryByText('Память Go')).not.toBeInTheDocument();
   });
 
-  it('показывает память Go, когда пришёл непустой сэмпл', async () => {
+  it('shows Go memory when a non-empty sample arrived', async () => {
     RuntimeStore.getState().pushMemory({ inuse: 51_380_224, oslimit: 0 });
 
     renderWithRouter(OverviewPage);
@@ -87,7 +87,7 @@ describe('экран обзора', () => {
     expect(await screen.findByText('49.0 МБ')).toBeInTheDocument();
   });
 
-  it('считает соединения по снапшоту потока', async () => {
+  it('counts connections by the stream snapshot', async () => {
     ConnectionStore.getState().apply(makeConnectionsSnapshot(7));
 
     renderWithRouter(OverviewPage);
@@ -97,7 +97,7 @@ describe('экран обзора', () => {
     expect(counters.getByText('7')).toBeInTheDocument();
   });
 
-  it('называет в имени графика трафика пик каждого направления', async () => {
+  it('names the peak of each direction in the traffic chart name', async () => {
     RuntimeStore.getState().pushTraffic({ up: 500, down: 20_000 });
     RuntimeStore.getState().pushTraffic({ up: 1000, down: 100_000 });
 
@@ -108,7 +108,7 @@ describe('экран обзора', () => {
     ).toBeInTheDocument();
   });
 
-  it('показывает сводку живого снапшота: выход маршрута, типы сети и топ устройств', async () => {
+  it('shows a live snapshot summary: route outbound, network types and top devices', async () => {
     ConnectionStore.getState().apply(CONNECTIONS_FIXTURE);
 
     renderWithRouter(OverviewPage);
@@ -119,18 +119,18 @@ describe('экран обзора', () => {
     expect(screen.getByText('192.168.1.60')).toBeInTheDocument();
   });
 
-  // Признак стоит один раз на секцию, а не на каждой карточке — иначе он
-  // перестаёт различать наблюдённое и вычисленное.
-  it('без живых соединений и выбранных узлов карточки сводки говорят, что данных нет', async () => {
+  // The mark stands once per section, not on every card: otherwise it
+  // stops telling the observed from the computed.
+  it('without live connections and selected nodes the summary cards say there is no data', async () => {
     renderWithRouter(OverviewPage);
 
     expect(await screen.findAllByText('Живых соединений нет')).not.toHaveLength(0);
     expect(await screen.findByText('Групп с выбранным узлом нет')).toBeInTheDocument();
   });
 
-  // Замер меняет числа на месте: глазами это видно, а скринридеру результат
-  // объявляет живая область экрана.
-  it('объявляет живой областью, что задержка выбранных узлов обновлена', async () => {
+  // A measurement changes the numbers in place: visible to the eye, and for a screen reader the result
+  // is announced by the screen live region.
+  it('announces with a live region that the latency of the selected nodes is updated', async () => {
     server.use(...proxyHandlers);
 
     const user = userEvent.setup();
@@ -148,7 +148,7 @@ describe('экран обзора', () => {
     });
   });
 
-  it('показывает показания устройства отдельной секцией', async () => {
+  it('shows device readings as a separate section', async () => {
     RuntimeStore.getState().pushSystem({
       ...SYSTEM_FIXTURE,
       thermal: [{ name: 'cpu-thermal', celsius: 42.5 }],
@@ -162,9 +162,9 @@ describe('экран обзора', () => {
     expect(cells.getByText('0.49')).toBeInTheDocument();
   });
 
-  // Утечку и перегрев видно за часы работы, а не за минуту вкладки: ряды
-  // берутся из истории демона и называют своё окно и размах.
-  it('показывает память sing-box и показания платы рядом за всё окно истории демона', async () => {
+  // A leak and overheating show over hours of work, not over a minute of the tab: the series
+  // come from the daemon history and name their window and range.
+  it('shows sing-box memory and board readings together for the whole daemon history window', async () => {
     RuntimeStore.getState().pushSystem({ ...SYSTEM_FIXTURE, thermal: [{ name: 'cpu-thermal', celsius: 42.5 }] });
 
     renderWithRouter(OverviewPage);
@@ -175,9 +175,9 @@ describe('экран обзора', () => {
     expect(screen.getAllByText(/^за 6 мин · от /)).toHaveLength(5);
   });
 
-  // Панель открывают не всегда: минута трафика копится у демона, и график
-  // открывается полным, а не с того момента, как открыта вкладка.
-  it('рисует графики трафика и соединений минутой от демона ещё до первого кадра потока', async () => {
+  // The panel is not always open: a minute of traffic accumulates at the daemon, and the chart
+  // opens full, not from the moment the tab was opened.
+  it('draws traffic and connection charts with the daemon minute before the first stream frame', async () => {
     renderWithRouter(OverviewPage);
 
     expect(await screen.findByRole('figure', { name: /Трафик за минуту/ })).toBeInTheDocument();
@@ -186,16 +186,16 @@ describe('экран обзора', () => {
     expect(ConnectionStore.getState().history).toHaveLength(60);
   });
 
-  // Вердикт отвечает на вопрос, ради которого экран открывают, и стоит в шапке.
-  it('до первых данных рантайма говорит, что ждёт их', async () => {
+  // The verdict answers the question the screen is opened for, and stands in the header.
+  it('before the first runtime data says it is waiting for it', async () => {
     renderWithRouter(OverviewPage);
 
     expect(await screen.findByText('Ждём первые данные от sing-box')).toBeInTheDocument();
   });
 
-  // Демон отдаёт `stopped` и тогда, когда procd просто не ответил: такой ответ
-  // помечен кодом причины, и остановкой его считать нельзя.
-  it('непрочитанное состояние службы не выдаёт за «не работает»', async () => {
+  // The daemon serves `stopped` also when procd simply did not answer: such a response
+  // is marked with a reason code, and it cannot be taken for a stop.
+  it('does not pass an unread service state off as "not running"', async () => {
     server.use(http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_UNREAD_FIXTURE)));
     RuntimeStore.getState().pushTraffic({ up: 8500, down: 43_400 });
 
@@ -205,7 +205,7 @@ describe('экран обзора', () => {
     expect(screen.queryByText('sing-box не работает')).not.toBeInTheDocument();
   });
 
-  it('подтверждённое падение службы называет вердиктом', async () => {
+  it('names a confirmed service crash as the verdict', async () => {
     server.use(http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_FAILED_FIXTURE)));
     RuntimeStore.getState().pushTraffic({ up: 8500, down: 43_400 });
 
@@ -214,9 +214,9 @@ describe('экран обзора', () => {
     expect(await screen.findByText('sing-box не работает')).toBeInTheDocument();
   });
 
-  // Поток закрывается, пока экраны рантайма не открыты. Кадр из прошлого
-  // подключения о живости нового ничего не говорит.
-  it('после возврата на экран ждёт первые данные, а не объявляет поток замершим', async () => {
+  // The stream is closed while the runtime screens are not open. A frame from a previous
+  // connection says nothing about the liveness of the new one.
+  it('after returning to the screen waits for the first data, not declares the stream stalled', async () => {
     RuntimeStore.getState().pushTraffic({ up: 8500, down: 43_400 });
     RuntimeStore.getState().closeStream();
 
@@ -226,9 +226,9 @@ describe('экран обзора', () => {
     expect(screen.queryByText('sing-box молчит')).not.toBeInTheDocument();
   });
 
-  // Замер трафика при живых снимках устройства — молчит sing-box, а не связь:
-  // снимки шлёт сам демон.
-  it('трафик замер, а снимки устройства идут — тревога о sing-box и ссылка на логи', async () => {
+  // Traffic stalling while device snapshots are live means sing-box is silent, not the link:
+  // the snapshots are sent by the daemon itself.
+  it('traffic stalled while device snapshots go: an alarm about sing-box and a link to the logs', async () => {
     RuntimeStore.getState().pushTraffic({ up: 8500, down: 43_400 });
     RuntimeStore.getState().pushSystem({ ...SYSTEM_FIXTURE, thermal: [{ name: 'cpu-thermal', celsius: 42.5 }] });
     RuntimeStore.setState({ sampledAt: Date.now() - STALE_MS });
@@ -239,9 +239,9 @@ describe('экран обзора', () => {
     expect(screen.getByRole('link', { name: 'Открыть логи' })).toHaveAttribute('href', '/logs');
   });
 
-  // Замерли и трафик, и снимки устройства: оборвалась связь панели с демоном,
-  // о самом роутере это ничего не говорит.
-  it('замерли оба потока — нейтрально говорит, что связи с демоном нет', async () => {
+  // Both traffic and device snapshots stalled: the panel link to the daemon broke,
+  // that says nothing about the router itself.
+  it('both streams stalled: neutrally says there is no link to the daemon', async () => {
     RuntimeStore.getState().pushTraffic({ up: 8500, down: 43_400 });
     RuntimeStore.setState({ sampledAt: Date.now() - STALE_MS });
 
@@ -251,7 +251,7 @@ describe('экран обзора', () => {
     expect(screen.queryByText('sing-box молчит')).not.toBeInTheDocument();
   });
 
-  it('при остановленной службе советует, где искать причину', async () => {
+  it('with the service stopped advises where to look for the cause', async () => {
     server.use(http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_FAILED_FIXTURE)));
     RuntimeStore.getState().pushTraffic({ up: 8500, down: 43_400 });
 
@@ -260,9 +260,9 @@ describe('экран обзора', () => {
     expect(await screen.findByRole('link', { name: 'Открыть логи' })).toHaveAttribute('href', '/logs');
   });
 
-  // Закрытые копит вкладка, а не демон: ноль сразу после открытия — начало
-  // счёта, и подпись говорит об этом так же, как при ненулевом счётчике.
-  it('подписывает закрытые соединения счётом с открытия вкладки и при нуле', async () => {
+  // The closed ones are accumulated by the tab, not the daemon: zero right after opening is the start
+  // of the count, and the label says so the same way as with a non-zero counter.
+  it('labels closed connections with the count since the tab was opened, also at zero', async () => {
     ConnectionStore.getState().apply(CONNECTIONS_FIXTURE);
 
     renderWithRouter(OverviewPage);
@@ -272,9 +272,9 @@ describe('экран обзора', () => {
     expect(counters.getByText('с открытия вкладки')).toBeInTheDocument();
   });
 
-  // Канал — весь интерфейс наружу, плитки — только sing-box: числа законно
-  // расходятся, и подпись канала не должна читаться их суммой или копией.
-  it('подписывает скорость канала по направлениям и отдельно от плиток sing-box', async () => {
+  // Channel is the whole outside interface, tiles are only sing-box: the numbers legitimately
+  // differ, and the channel label must not read as their sum or a copy.
+  it('labels channel speed by direction and separately from the sing-box tiles', async () => {
     RuntimeStore.getState().pushTraffic({ up: 8500, down: 43_400 });
     RuntimeStore.getState().pushSystem({ ...SYSTEM_FIXTURE, thermal: [{ name: 'cpu-thermal', celsius: 42.5 }] });
     RuntimeStore.setState({ uplink: { rx: 2048, tx: 1024 } });
@@ -287,21 +287,21 @@ describe('экран обзора', () => {
     expect(screen.getByText('sing-box: входящий')).toBeInTheDocument();
   });
 
-  it('показывает доступность демона и живость потока', async () => {
+  it('shows daemon availability and stream liveness', async () => {
     renderWithRouter(OverviewPage);
 
     expect(await screen.findByText('демон отвечает')).toBeInTheDocument();
     expect(screen.getByText('поток молчит')).toBeInTheDocument();
   });
 
-  it('показывает режим Clash API словами, а не полем ответа: с ним сверяется правило clash_mode в конфиге', async () => {
+  it('shows the Clash API mode in words, not as a response field: the clash_mode rule in the config is checked against it', async () => {
     renderWithRouter(OverviewPage);
 
     expect(await screen.findByText('по правилам')).toBeInTheDocument();
     expect(screen.queryByText('Rule')).not.toBeInTheDocument();
   });
 
-  it('переключает режим Clash API запросом в рантайм', async () => {
+  it('switches the Clash API mode with a runtime request', async () => {
     const patches: unknown[] = [];
     server.use(
       http.patch(DAEMON_ENDPOINT.clashConfigs(), async ({ request }) => {
@@ -321,7 +321,7 @@ describe('экран обзора', () => {
     });
   });
 
-  it('переводит и другие значения режима, не только Rule', async () => {
+  it('translates other mode values too, not only Rule', async () => {
     server.use(
       http.get(DAEMON_ENDPOINT.clashConfigs(), () => HttpResponse.json({ ...CLASH_CONFIGS_FIXTURE, mode: 'Global' }))
     );
@@ -331,7 +331,7 @@ describe('экран обзора', () => {
     expect(await screen.findByText('глобально')).toBeInTheDocument();
   });
 
-  it('путь конфига берётся у демона: он задаётся флагами запуска, а не панелью', async () => {
+  it('the config path is taken from the daemon: it is set by launch flags, not by the panel', async () => {
     serveStatus('/srv/sing-box/router.json');
 
     renderWithRouter(OverviewPage);
@@ -339,13 +339,13 @@ describe('экран обзора', () => {
     expect(await screen.findByText('/srv/sing-box/router.json')).toBeInTheDocument();
   });
 
-  it('демон без этого поля не оставляет экран без пути', async () => {
+  it('a daemon without this field does not leave the screen without a path', async () => {
     renderWithRouter(OverviewPage);
 
     expect(await screen.findByText('/etc/sing-box/config.json')).toBeInTheDocument();
   });
 
-  it('на совпадающей версии предупреждения нет', async () => {
+  it('on a matching version there is no warning', async () => {
     renderWithRouter(OverviewPage);
 
     expect(await screen.findByText('демон отвечает')).toBeInTheDocument();

@@ -16,7 +16,7 @@ vi.mock('sonner', () => ({
 
 const { toast } = await import('sonner');
 
-/** Клиент приложения: тосты показывает его кэш мутаций, у тестового клиента его нет. */
+/** App client: toasts are shown by its mutation cache, the test client has none. */
 function AppQuery({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={QueryClientInstance}>{children}</QueryClientProvider>;
 }
@@ -28,8 +28,8 @@ describe('useCloseAllConnections', () => {
     server.use(http.delete(CONNECTION_ENDPOINT.connections(), () => new HttpResponse(null, { status: 204 })));
   });
 
-  // Обрыв объявляет живая область экрана; тост `sonner` объявил бы его второй раз.
-  it('после обрыва всех соединений тоста об успехе не показывает', async () => {
+  // The drop is announced by the screen live region; a `sonner` toast would announce it a second time.
+  it('after dropping all connections shows no success toast', async () => {
     const { result } = renderHook(useCloseAllConnections, { wrapper: AppQuery });
 
     result.current.mutate();

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import type { CheckFailure } from '@entities/Config';
 import { Alert, AlertDescription, AlertTitle } from '@shared/ui';
 
-/** Вывод бинаря показывается дословно: арбитр валидности — он, а не панель. */
+/** Binary output is shown verbatim: the validity arbiter is it, not the panel. */
 export function ConfigApplyCheck({ check }: { check: CheckFailure }) {
   const { t } = useTranslation('features/Config/ConfigApply');
   const output = [check.stderr, check.stdout].filter((part) => part.length > 0).join('\n');

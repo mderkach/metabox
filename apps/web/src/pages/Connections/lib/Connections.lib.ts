@@ -26,16 +26,16 @@ import { CONNECTION_FIELD, type ConnectionField } from '@widgets/ConnectionTable
 import { useThrottledRows } from './Connections.throttle';
 
 /**
- * Набор одной вкладки: обе живут одновременно, поэтому у каждой он свой. У
- * скрытой вкладки он заморожен — см. `useWhileVisible`.
+ * Set of one tab: both live at the same time, so each has its own. For a hidden
+ * tab it is frozen; see `useWhileVisible`.
  */
 export interface ConnectionTabRows {
   rows: ConnectionRow[];
-  /** Сколько строк во вкладке до отбора: подвал сообщает обе величины. */
+  /** How many rows are in the tab before selection: the footer reports both values. */
   total: number;
 }
 
-/** Живые счётчики вкладок: число на ярлыке не ждёт, пока вкладку откроют. */
+/** Live tab counters: the number on the label does not wait for the tab to be opened. */
 export type ConnectionTabCounts = Readonly<Record<ConnectionTab, number>>;
 
 interface VisibleValue<T> {
@@ -44,17 +44,16 @@ interface VisibleValue<T> {
 }
 
 /**
- * Значение, которое скрытая вкладка видит замороженным: пока она спрятана, хук
- * отдаёт то, что было в момент, когда её спрятали, а показанная получает
- * текущее в тот же кадр, в котором становится видимой.
+ * The value a hidden tab sees frozen: while it is hidden, the hook serves what
+ * was there at the moment it was hidden, and a shown one gets the current value
+ * in the same frame it becomes visible.
  *
- * Скрытая вкладка стоит под `Activity` и перерисовывается пониженным
- * приоритетом на каждый новый пропс. Новый снапшот раз в секунду — новый
- * пропс, и вкладку, которую никто не видит, отбирали бы и рисовали заново на
- * каждый тик.
+ * A hidden tab sits under `Activity` and is rerendered at lowered priority on
+ * every new prop. A new snapshot once a second is a new prop, and a tab nobody
+ * sees would be filtered and redrawn on every tick.
  *
- * Состояние меняется только на смене видимости, а не на каждом значении: иначе
- * каждый тик стоил бы лишнего прохода по экрану.
+ * The state changes only on a visibility change, not on every value: otherwise
+ * every tick would cost an extra pass over the screen.
  */
 export function useWhileVisible<T>(value: T, visible: boolean): T {
   const [frozen, setFrozen] = useState<VisibleValue<T>>({ visible, value });
@@ -73,15 +72,15 @@ export interface ConnectionsScreen {
   setQuery: (query: string) => void;
   selection: ConnectionFacetSelection;
   setFacet: (facet: ConnectionFacet, values: readonly string[]) => void;
-  /** Снимает все фасеты, а поиск оставляет: его набирали руками и видят в поле. */
+  /** Clears all facets and keeps the search: it was typed by hand and is visible in the field. */
   resetFacets: () => void;
-  /** Снимает поиск и фасеты: кнопка на пустом экране обязана вернуть список. */
+  /** Clears the search and facets: the button on an empty screen must bring the list back. */
   reset: () => void;
-  /** Значения и счётчики фасетов показанной вкладки — правила подсчёта у `filterConnections`. */
+  /** Facet values and counters of the shown tab; counting rules are in `filterConnections`. */
   facets: ConnectionFacetValues;
-  /** Подпись устройства по адресу: фасет хранит адрес, а показывает её. */
+  /** Device label by address: the facet stores the address but shows the label. */
   sourceLabel: ConnectionSourceLabel;
-  /** Колонки, по полю которых стоит фасет: шапка таблицы несёт признак отбора. */
+  /** Columns by whose field a facet is set: the table header carries the selection mark. */
   filteredColumns: ReadonlySet<ConnectionField>;
   active: ConnectionTabRows;
   closed: ConnectionTabRows;
@@ -89,7 +88,7 @@ export interface ConnectionsScreen {
   filtered: boolean;
 }
 
-/** Колонка таблицы, которая показывает поле фасета. Действие красится по судьбе пакета. */
+/** Table column that shows the facet field. The action is colored by packet fate. */
 const FACET_COLUMN: Readonly<Record<ConnectionFacet, ConnectionField>> = {
   [CONNECTION_FACET.Source]: CONNECTION_FIELD.Source,
   [CONNECTION_FACET.Kind]: CONNECTION_FIELD.Action,
@@ -108,12 +107,12 @@ function useTabFilter(
 }
 
 /**
- * Состояние экрана соединений: вкладка, поиск и фасеты. Отбор
- * клиентский — снапшот уже целиком в панели, и ходить за отфильтрованным
- * списком на устройство значило бы показывать не то, что в сторе.
+ * Connections screen state: tab, search and facets. Selection is client-side:
+ * the snapshot is already entirely in the panel, and going to the device for a
+ * filtered list would show not what is in the store.
  *
- * `interval` задаёт частоту обновления показанного набора: счётчики, фасеты и
- * подвал говорят про него же, а не про последний пришедший снапшот.
+ * `interval` sets the refresh rate of the shown set: counters, facets and the
+ * footer speak about it, not about the last snapshot that arrived.
  */
 export function useConnectionsScreen(interval: number): ConnectionsScreen {
   const search = useSearch({ from: '/connections' });
@@ -121,22 +120,24 @@ export function useConnectionsScreen(interval: number): ConnectionsScreen {
 
   const tab = search.tab ?? CONNECTION_TAB.Active;
   const query = search.q ?? '';
-  // Адрес отдаёт значения со структурным разделением: ссылки стоят, пока
-  // значение не изменилось, и выбор не пересчитывает отбор на каждый рендер.
+  // The URL serves values with structural sharing: references stand while the
+  // value does not change, and selection does not recompute the filter on every
+  // render.
   const { source, kind, match, chain, network } = search;
   const selection = useMemo(
     () => toFacetSelection({ source, kind, match, chain, network }),
     [source, kind, match, chain, network]
   );
 
-  // Экран соединений — единственный, кто опрашивает список устройств, пока
-  // открыт: ячейки и объяснение маршрута читают тот же кэш без своего таймера.
+  // The connections screen is the only one polling the device list while open:
+  // cells and the route explanation read the same cache without a timer of
+  // their own.
   const devices = useDeviceIndex({ poll: true });
   const sourceLabel = useCallback((ip: string) => deviceLabel(ip, devices), [devices]);
 
-  // Отбор заменяет адрес, а не добавляет запись в историю: иначе «назад» после
-  // набранного запроса откручивало бы его по букве. Пустое значение из адреса
-  // убирается, а не остаётся хвостом `?q=`.
+  // Selection replaces the URL rather than adding a history entry: otherwise
+  // "back" after a typed query would unwind it letter by letter. An empty value
+  // from the URL is removed, not left as a `?q=` tail.
   const patchSearch = useCallback(
     (patch: Partial<ConnectionSearch>) => {
       void navigate({
@@ -172,15 +173,15 @@ export function useConnectionsScreen(interval: number): ConnectionsScreen {
     patchSearch(toFacetSearch(EMPTY_FACET_SELECTION));
   }, [patchSearch]);
 
-  // Дроссель стоит до отбора и свой у каждой вкладки: нажатие на фасет обязано
-  // отозваться сразу, а переключение вкладки — показать её собственный набор, а
-  // не набор соседней до конца периода.
+  // The throttle sits before selection and is separate for each tab: a facet
+  // press must respond at once, and a tab switch must show its own set, not the
+  // neighbor's until the end of the period.
   const liveRows = useThrottledRows(ConnectionState.use.active(), interval);
   const closedRows = useThrottledRows(ConnectionState.use.closed(), interval);
-  // Скрытая вкладка получает набор, замороженный на момент, когда её спрятали:
-  // отбор по нему не пересчитывается на каждый снапшот, а тело таблицы не
-  // перерисовывается. Показанная получает текущий набор в тот же кадр, в
-  // котором становится видимой.
+  // A hidden tab gets the set frozen at the moment it was hidden: selection
+  // over it is not recomputed on every snapshot, and the table body is not
+  // redrawn. The shown one gets the current set in the same frame it becomes
+  // visible.
   const liveShown = useWhileVisible(liveRows, tab === CONNECTION_TAB.Active);
   const closedShown = useWhileVisible(closedRows, tab === CONNECTION_TAB.Closed);
   const activeFilter = useTabFilter(liveShown, query, selection, sourceLabel);
@@ -205,8 +206,8 @@ export function useConnectionsScreen(interval: number): ConnectionsScreen {
     setFacet,
     resetFacets,
     reset,
-    // Фасеты и поиск общие, но считаются по показанной вкладке: иначе срез по
-    // устройству называл бы числа соседней.
+    // Facets and search are shared but computed over the shown tab: otherwise a
+    // slice by device would name the neighbor's numbers.
     facets: tab === CONNECTION_TAB.Closed ? closedFilter.facets : activeFilter.facets,
     sourceLabel,
     filteredColumns,

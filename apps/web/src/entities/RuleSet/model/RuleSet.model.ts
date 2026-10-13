@@ -4,32 +4,32 @@ import { RULE_SET_FORMAT, RULE_SET_TYPE, SET_EXTENSION } from './RuleSet.constan
 export type RuleSetType = (typeof RULE_SET_TYPE)[keyof typeof RULE_SET_TYPE];
 export type RuleSetFormat = (typeof RULE_SET_FORMAT)[keyof typeof RULE_SET_FORMAT];
 
-/** Вид списка: домены (`geosite`) или адреса (`geoip`); набор объявлен демоном. */
+/** List kind: domains (`geosite`) or addresses (`geoip`); the set is declared by the daemon. */
 export type RuleSetListKind = (typeof LIST_KIND)[number];
 
-/** Откуда перечень категорий: снимок сборки или сверка с поставщиком. */
+/** Where the category listing comes from: a build snapshot or a check against the provider. */
 export type RuleSetListSource = (typeof LIST_SOURCE)[number];
 
-/** Зеркало поставщика: до основного адреса из России дотягиваются не всегда. */
+/** Provider mirror: the main address is not always reachable from Russia. */
 export interface RuleSetMirror {
   id: string;
   name: string;
-  /** Начало адреса до имени файла, со слэшем на конце. */
+  /** Start of the URL up to the file name, with a trailing slash. */
   base: string;
 }
 
-/** Один вид списков у поставщика. */
+/** One list kind of a provider. */
 export interface RuleSetList {
   kind: RuleSetListKind;
-  /** Приставка имени файла: `geosite-` + категория + `.srs`. */
+  /** File name prefix: `geosite-` + category + `.srs`. */
   prefix: string;
   mirrors: RuleSetMirror[];
-  /** Что показать, пока поле категории пустое, — от общего к частному. */
+  /** What to show while the category field is empty, from general to specific. */
   featured: string[];
-  /** Все категории, для которых у поставщика есть файл, по алфавиту. */
+  /** All categories for which the provider has a file, alphabetically. */
   categories: string[];
   source: RuleSetListSource;
-  /** Когда перечень сверен с поставщиком, у снимка — когда он собран; `null` — неизвестно. */
+  /** When the listing was checked against the provider, for a snapshot when it was built; `null` means unknown. */
   updatedAt: Date | null;
 }
 
@@ -39,64 +39,65 @@ export interface RuleSetProvider {
   lists: RuleSetList[];
 }
 
-/** Каталог готовых наборов. Им владеет демон: он же сверяет его с поставщиками. */
+/** Catalog of ready-made sets. Owned by the daemon: it also checks it against providers. */
 export interface RuleSetCatalog {
   providers: RuleSetProvider[];
 }
 
-/** Откуда приехал адрес набора: узнанный поставщик или чужой адрес. */
+/** Where a set address came from: a recognized provider or a foreign address. */
 export interface RuleSetSource {
-  /** Идентификатор поставщика из каталога; `null` — адрес собран не по шаблону. */
+  /** Provider identifier from the catalog; `null` means the address was not built from a template. */
   providerId: string | null;
-  /** Имя поставщика для показа; `null` — поставщик не узнан. */
+  /** Provider name for display; `null` means the provider is not recognized. */
   providerName: string | null;
-  /** Вид списка; `null` — поставщик не узнан. */
+  /** List kind; `null` means the provider is not recognized. */
   kind: RuleSetListKind | null;
-  /** Имя категории у поставщика; `null` — из адреса его не вынуть. */
+  /** Category name at the provider; `null` means it cannot be extracted from the address. */
   category: string | null;
 }
 
 export interface RuleSetRow {
-  /** Позиция в `route.rule_set`: собственного идентификатора у наборов нет. */
+  /** Position in `route.rule_set`: sets have no identifier of their own. */
   id: string;
   index: number;
-  /** Имя набора: по нему на него ссылаются правила. Пустое — тега в узле нет. */
+  /** Set name: rules refer to it by it. Empty means the node has no tag. */
   tag: string;
   type: RuleSetType;
-  /** `binary` или `source`; пустое — поле не задано, ядро решает само. */
+  /** `binary` or `source`; empty means the field is not set and core decides. */
   format: string;
-  /** Адрес у `remote`, путь у `local`, пустая строка у `inline`. */
+  /** Address for `remote`, path for `local`, empty string for `inline`. */
   location: string;
   source: RuleSetSource;
-  /** Как часто ядро перекачивает набор; `null` — интервал не задан. */
+  /** How often core redownloads the set; `null` means the interval is not set. */
   updateInterval: string | null;
-  /** Через какой узел качать; `null` — напрямую. */
+  /** Which node to download through; `null` means directly. */
   detour: string | null;
   /**
-   * Сколько правил маршрутизации ссылается на этот тег. Ноль означает, что
-   * набор качается и занимает память, ни на что не влияя.
+   * How many routing rules refer to this tag. Zero means the set is downloaded
+   * and takes memory without affecting anything.
    */
   usedBy: number;
   /**
-   * Узел принят схемой. Ложь — в нём есть поле, которого схема не знает:
-   * показан он не полностью и правится текстом.
+   * The node is accepted by the schema. False means it has a field the schema
+   * does not know: it is shown incompletely and edited as text.
    */
   recognized: boolean;
 }
 
 /**
- * Формат, который ядро выведет из адреса само: `.srs` — бинарный, `.json` —
- * исходный. Пустая строка означает, что вывести не из чего и формат придётся
- * задать явно, иначе набор не прочитается.
+ * Format that core derives from the address itself: `.srs` is binary, `.json`
+ * is source. An empty string means there is nothing to derive from and the
+ * format has to be set explicitly, otherwise the set will not be read.
  *
- * Правило повторяет `ruleSetDefaultFormat` форка. Повтор осознанный: панель
- * обязана знать, когда поле можно не писать, — записанное значение, равное
- * выведенному, добавило бы в диф правку, которой пользователь не делал.
+ * The rule repeats the fork's `ruleSetDefaultFormat`. The repeat is deliberate:
+ * the panel must know when the field can be omitted, since a written value
+ * equal to the derived one would add an edit to the diff that the user did not
+ * make.
  */
 /**
- * Имя файла своего списка, когда узел — `local` из подкаталога `rule-sets/`;
- * иначе `null`. Удаление такого узла обязано увезти и файл: осиротевший файл
- * не виден в конфиге, но остаётся на устройстве.
+ * Own list file name when the node is `local` from the `rule-sets/`
+ * subdirectory; otherwise `null`. Deleting such a node must take the file
+ * along: an orphaned file is not visible in the config but stays on the device.
  */
 export function localListFile(node: unknown): string | null {
   if (typeof node !== 'object' || node === null || Reflect.get(node, 'type') !== RULE_SET_TYPE.Local) {

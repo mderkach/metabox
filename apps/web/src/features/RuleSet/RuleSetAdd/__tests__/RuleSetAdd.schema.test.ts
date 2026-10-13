@@ -21,34 +21,34 @@ function filled(overrides: Partial<ReturnType<typeof ruleSetAddDefaults>> = {}) 
 }
 
 describe('makeRuleSetAddSchema', () => {
-  it('принимает заполненную форму', () => {
+  it('accepts a filled form', () => {
     expect(makeRuleSetAddSchema([]).safeParse(filled()).success).toBe(true);
   });
 
-  // Тег — ссылка, по которой правило находит набор: второй набор с тем же
-  // именем сделал бы её двусмысленной.
-  it('не принимает занятое имя', () => {
+  // The tag is the reference by which a rule finds the rule set: a second rule set with the same
+  // name would make it ambiguous.
+  it('does not accept a taken name', () => {
     const parsed = makeRuleSetAddSchema(['geosite-google']).safeParse(filled());
 
     expect(parsed.success).toBe(false);
     expect(parsed.error?.issues[0].message).toBe(RULE_SET_ADD_ERROR.TagTaken);
   });
 
-  it('не принимает адрес без схемы', () => {
+  it('does not accept an address without a scheme', () => {
     const parsed = makeRuleSetAddSchema([]).safeParse(filled({ url: 'example.com/list.srs' }));
 
     expect(parsed.error?.issues[0].message).toBe(RULE_SET_ADD_ERROR.UrlScheme);
   });
 
-  // У адреса без расширения формат вывести нечем, и без него ядро не поймёт,
-  // что скачало.
-  it('требует формат, когда адрес его не подсказывает', () => {
+  // For an address without an extension there is nothing to derive the format from, and without it the core will not understand
+  // what it downloaded.
+  it('requires a format when the address does not suggest it', () => {
     const parsed = makeRuleSetAddSchema([]).safeParse(filled({ url: 'https://example.com/list?id=5' }));
 
     expect(parsed.error?.issues[0].message).toBe(RULE_SET_ADD_ERROR.FormatRequired);
   });
 
-  it('принимает длительность в формате бинаря и отвергает остальное', () => {
+  it('accepts a duration in the binary format and rejects the rest', () => {
     expect(makeRuleSetAddSchema([]).safeParse(filled({ updateInterval: '12h' })).success).toBe(true);
     expect(makeRuleSetAddSchema([]).safeParse(filled({ updateInterval: '1h30m' })).success).toBe(true);
     expect(makeRuleSetAddSchema([]).safeParse(filled({ updateInterval: '' })).success).toBe(true);
@@ -60,7 +60,7 @@ describe('makeRuleSetAddSchema', () => {
     }
   });
 
-  it('требует, чтобы узел скачивания был среди аутбаундов', () => {
+  it('requires the download node to be among the outbounds', () => {
     expect(makeRuleSetAddSchema([], OUTBOUNDS).safeParse(filled({ detour: 'proxy' })).success).toBe(true);
     expect(makeRuleSetAddSchema([], OUTBOUNDS).safeParse(filled({ detour: '' })).success).toBe(true);
 
@@ -69,15 +69,15 @@ describe('makeRuleSetAddSchema', () => {
     expect(parsed.error?.issues[0].message).toBe(RULE_SET_ADD_ERROR.DetourUnknown);
   });
 
-  it('без списка аутбаундов узел скачивания не проверяет', () => {
+  it('without the outbound list does not check the download node', () => {
     expect(makeRuleSetAddSchema([], []).safeParse(filled({ detour: 'proxi' })).success).toBe(true);
   });
 });
 
 describe('toRuleSetPatch', () => {
-  // Значение, равное выведенному, ядро при сохранении отбрасывает само, а в
-  // дифе оно выглядело бы правкой, которой пользователь не делал.
-  it('не пишет формат, когда его видно по расширению', () => {
+  // A value equal to the derived one is dropped by the core on save, and in
+  // the diff it would look like an edit the user did not make.
+  it('does not write the format when it is visible from the extension', () => {
     expect(toRuleSetPatch(filled({ format: 'binary' }))).toEqual({
       type: 'remote',
       tag: 'geosite-google',
@@ -85,20 +85,20 @@ describe('toRuleSetPatch', () => {
     });
   });
 
-  it('пишет формат, когда расширение его не подсказывает', () => {
+  it('writes the format when the extension does not suggest it', () => {
     const patch = toRuleSetPatch(filled({ url: 'https://example.com/list?id=5', format: 'source' }));
 
     expect(patch.format).toBe('source');
   });
 
-  it('не пишет пустые необязательные поля', () => {
+  it('does not write empty optional fields', () => {
     const patch = toRuleSetPatch(filled({ updateInterval: '', detour: '' }));
 
     expect(patch).not.toHaveProperty('update_interval');
     expect(patch).not.toHaveProperty('download_detour');
   });
 
-  it('пишет интервал и узел, когда они заданы', () => {
+  it('writes the interval and node when they are set', () => {
     const patch = toRuleSetPatch(filled({ updateInterval: '3d', detour: 'proxy' }));
 
     expect(patch.update_interval).toBe('3d');

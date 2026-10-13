@@ -1,9 +1,9 @@
 import type { RuleSetCatalogWire, RuleSetListWire } from '../api/RuleSet.schema';
 
-/** 2026-09-25 00:00 UTC: сверка, после которой перечень не менялся. */
+/** 2026-09-25 00:00 UTC: a check after which the catalog did not change. */
 const CHECKED_AT = 1_790_294_400;
 
-/** 2026-09-01 00:00 UTC: сборка, в которую вошёл снимок. */
+/** 2026-09-01 00:00 UTC: the build that the snapshot came from. */
 const SNAPSHOT_AT = 1_788_220_800;
 
 function mirrors(raw: string, cdn: string): RuleSetListWire['mirrors'] {
@@ -17,9 +17,9 @@ const RUNET_RAW = 'https://raw.githubusercontent.com/runetfreedom/russia-v2ray-r
 const RUNET_CDN = 'https://cdn.jsdelivr.net/gh/runetfreedom/russia-v2ray-rules-dat@release/sing-box/';
 
 /**
- * Каталог демона в миниатюре: оба поставщика, у каждого сайты и адреса. У
- * Runet Freedom перечень сверен, у v2fly — ещё снимок сборки, чтобы на стенде
- * были видны обе подписи.
+ * A miniature daemon catalog: both providers, each with sites and addresses. For
+ * Runet Freedom the catalog is checked, for v2fly it is still the build snapshot, so the test bench
+ * shows both labels.
  */
 export const RULE_SET_CATALOG_FIXTURE: RuleSetCatalogWire = {
   providers: [

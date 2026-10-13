@@ -5,12 +5,14 @@ import { SCHEMA_DRIFT, SCHEMA_VERSION, schemaDrift, useServiceState } from '@ent
 import { Alert, AlertDescription } from '@shared/ui';
 
 /**
- * Расхождение версии sing-box на устройстве со схемой форм. Стоит в разделе
- * конфигурации, а не над всеми экранами: расхождение касается только форм, и
- * на Обзоре или Соединениях оно перекрикивало бы то, ради чего туда пришли.
+ * Mismatch between the sing-box version on the device and the form schema. It
+ * sits in the configuration section, not above all screens: the mismatch
+ * concerns only forms, and on Overview or Connections it would drown out what
+ * the user came there for.
  *
- * Бинарь новее схемы — справка: формы не покажут новых полей, но ничего не
- * сломают. Бинарь старше — предупреждение: поле из формы он может отклонить.
+ * A binary newer than the schema is a note: forms will not show new fields but
+ * will not break anything. A binary older than the schema is a warning: it may
+ * reject a field from the form.
  */
 export function SchemaDriftNotice() {
   const { t } = useTranslation('app');

@@ -10,9 +10,9 @@ import {
 import type { CheckFailure, ConfigVersion, WorkdirMismatch } from './Config.model';
 
 /**
- * Версия совпадает с устройством, когда совпадают конфиг и набор файлов
- * списков. Версия без `lists_sum` сохранена до снимков списков: её
- * восстановление списков не трогает, и сравнивать их не с чем.
+ * A version matches the device when both the config and the list file set
+ * match. A version without `lists_sum` was saved before list snapshots:
+ * restoring it does not touch lists, and there is nothing to compare them with.
  */
 function isCurrent(wire: ConfigVersionWire, versions: ConfigVersionsWire): boolean {
   return (
@@ -31,19 +31,21 @@ function toConfigVersion(wire: ConfigVersionWire, versions: ConfigVersionsWire):
 }
 
 /**
- * История от свежей версии к старой: демон отдаёт её по возрастанию номера, а
- * откатываются обычно на предыдущий конфиг, а не на самый старый.
+ * History from the newest version to the oldest: the daemon serves it by
+ * ascending number, while rollbacks usually go to the previous config, not the
+ * oldest one.
  */
 export function toConfigVersions(wire: ConfigVersionsWire): ConfigVersion[] {
   return [...wire.versions].sort((left, right) => right.id - left.id).map((version) => toConfigVersion(version, wire));
 }
 
-/** Код отказа демона, у которого в `details` лежит вывод бинаря. */
+/** Daemon failure code whose `details` holds the binary output. */
 const CHECK_FAILED = 'check_failed';
 
 /**
- * Достаёт вывод `sing-box check` из отказа применения. `null` — отказ другой:
- * конфиг мог не дойти до бинаря вовсе, и показывать тогда нечего.
+ * Extracts the `sing-box check` output from an apply failure. `null` means a
+ * different failure: the config may not have reached the binary at all, and
+ * there is nothing to show then.
  */
 export function toCheckFailure(error: unknown): CheckFailure | null {
   if (!(error instanceof ApiError) || error.code !== CHECK_FAILED) {
@@ -59,13 +61,13 @@ export function toCheckFailure(error: unknown): CheckFailure | null {
   return { stdout: details.data.stdout, stderr: details.data.stderr, exitCode: details.data.exit_code };
 }
 
-/** Код отказа демона, у которого в `details` лежат рабочий каталог службы и каталог конфига. */
+/** Daemon failure code whose `details` holds the service working directory and the config directory. */
 const WORKDIR_MISMATCH = 'workdir_mismatch';
 
 /**
- * Достаёт каталоги из отказа применения по рабочему каталогу службы. `null` —
- * отказ другой либо подробности не разобрались: подсказку тогда собрать не из
- * чего, и остаётся текст отказа.
+ * Extracts the directories from an apply failure by the service working
+ * directory. `null` means a different failure or the details were not parsed:
+ * there is nothing to build a hint from then, and the failure text remains.
  */
 export function toWorkdirMismatch(error: unknown): WorkdirMismatch | null {
   if (!(error instanceof ApiError) || error.code !== WORKDIR_MISMATCH) {

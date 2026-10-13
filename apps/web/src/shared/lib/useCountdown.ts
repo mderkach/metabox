@@ -3,9 +3,9 @@ import { useEffect, useState } from 'react';
 import { MS_IN_SECOND } from './time';
 
 /**
- * Секунды до нуля, тикающие раз в секунду. Новое значение `seconds` — ответ
- * источника истины — сбрасывает отсчёт к нему: дросселированный в фоновой
- * вкладке `setInterval` так не копит расхождение.
+ * Seconds down to zero, ticking once a second. A new `seconds` value — the answer of
+ * the source of truth — resets the countdown to it: a `setInterval` throttled in a background
+ * tab does not accumulate drift this way.
  */
 export function useCountdown(seconds: number): number {
   const [left, setLeft] = useState(seconds);

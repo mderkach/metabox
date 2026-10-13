@@ -8,7 +8,7 @@ import {
   US_IN_SECOND,
 } from '@shared/lib/time';
 
-/** Ключи — суффиксы самого формата, поэтому они и записаны как в нём. */
+/** Keys are the suffixes of the format itself, so they are written as in it. */
 const MS_IN_UNIT: Readonly<Record<string, number>> = {
   ns: MS_IN_SECOND / NS_IN_SECOND,
   us: MS_IN_SECOND / US_IN_SECOND,
@@ -22,15 +22,15 @@ const MS_IN_UNIT: Readonly<Record<string, number>> = {
 };
 
 /**
- * Набор единиц повторяет ограничение поля `update_interval` в генерируемой
- * схеме. Повтор осознанный: панель обязана отвергать ровно то, что отвергнет
- * бинарь, — пропущенная строка обрывает старт sing-box, а лишний отказ закрывает
- * запись, которую он принял бы.
+ * The unit set repeats the `update_interval` field constraint in the generated
+ * schema. The repeat is deliberate: the panel must reject exactly what the
+ * binary will reject, since a passed string aborts sing-box start, while an
+ * extra refusal blocks an entry it would have accepted.
  */
 const DURATION = /^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/u;
 const DURATION_PART = /(\d+(?:\.\d+)?)(ns|us|µs|ms|s|m|h|d|w)/gu;
 
-/** Длительность sing-box в миллисекундах; `null` — запись не в том формате. */
+/** sing-box duration in milliseconds; `null` means the entry is not in that format. */
 export function parseDuration(text: string): number | null {
   const value = text.trim();
 

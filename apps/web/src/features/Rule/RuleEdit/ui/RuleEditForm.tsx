@@ -25,14 +25,14 @@ const ERROR_KEY: Readonly<Record<string, ParseKeys<'features/Rule/RuleEdit'> | u
 };
 
 /**
- * Выход правила — что делать с трафиком и куда его отправить, — сеты, на
- * которые оно ссылается, и ходовые условия.
+ * The rule outbound, what to do with traffic and where to send it, the sets it
+ * refers to, and common conditions.
  *
- * Правка ложится на текст файла по пути узла: меняется одна строка,
- * порядок ключей и незнакомые узлы остаются как были.
+ * The edit goes onto the file text by the node path: one line changes, key
+ * order and unfamiliar nodes stay as they were.
  *
- * `ruleSets` — теги наборов документа. Логическое правило не получает ни
- * сетов, ни условий: у его ветки схемы их нет, они живут во вложенных правилах.
+ * `ruleSets` are document set tags. A logical rule gets neither sets nor
+ * conditions: its schema branch has none, they live in nested rules.
  */
 export function RuleEditForm({
   rule,
@@ -50,13 +50,13 @@ export function RuleEditForm({
   const onlyEditable = hasOnlyEditableConditions(rule);
 
   const form = useForm<RuleEditModel, unknown, RuleEditPatch>({
-    // Значения берутся из узла как есть: дефолт, дописанный формой, попал бы
-    // в диф правкой, которой пользователь не делал.
+    // Values are taken from the node as is: a default appended by the form
+    // would get into the diff as an edit the user did not make.
     defaultValues: {
       action: isKnownAction(rule.target, rule.targetKind) ? rule.target : RULE_ACTION.Route,
       outbound: rule.targetKind === 'outbound' ? rule.target : '',
-      // Строка `"rule_set": "x"` приходит списком; пока поле не тронуто,
-      // узел не переписывается и строка остаётся строкой.
+      // The `"rule_set": "x"` string arrives as a list; while the field is
+      // untouched, the node is not rewritten and the string stays a string.
       ruleSet: initialSets,
       conditions: initialConditions,
     },
@@ -68,9 +68,9 @@ export function RuleEditForm({
     const path = ruleNodePath(rule.index);
     const touched = form.formState.dirtyFields;
 
-    // Пишутся только тронутые поля. Правило без ключа `action` — обычное дело
-    // (`route` подразумевается), и дописанный ключ попал бы в диф правкой,
-    // которой пользователь не делал.
+    // Only touched fields are written. A rule without an `action` key is normal
+    // (`route` is implied), and an appended key would get into the diff as an
+    // edit the user did not make.
     if (touched.action === true) {
       edit([...path, 'action'], patch.action);
     }
@@ -79,14 +79,15 @@ export function RuleEditForm({
       edit([...path, 'outbound'], 'outbound' in patch ? patch.outbound : undefined);
     }
 
-    // Сеты сравниваются множествами, а не `dirtyFields`: у массива RHF отдаёт
-    // флаги по элементам, а снятый и снова выбранный сет меняет только порядок.
+    // Sets are compared as sets, not by `dirtyFields`: for an array RHF gives
+    // per-element flags, and a set that was removed and chosen again changes
+    // only the order.
     if (!sameTags(form.getValues('ruleSet'), form.formState.defaultValues?.ruleSet ?? [])) {
       edit([...path, RULE_SET_MATCHER], 'rule_set' in patch ? patch.rule_set : undefined);
     }
 
-    // Условие сравнивается по строкам: лишний пробел или пустая строка правкой
-    // не считаются и в диф не попадают.
+    // A condition is compared by lines: an extra space or an empty line does
+    // not count as an edit and does not get into the diff.
     for (const key of RULE_CONDITIONS) {
       const before = conditionLines(form.formState.defaultValues?.conditions?.[key] ?? '');
 
@@ -95,8 +96,8 @@ export function RuleEditForm({
       }
     }
 
-    // Сохранённое становится новой точкой отсчёта: кнопка гаснет, пока форма
-    // снова не разойдётся с черновиком.
+    // Saved becomes the new reference point: the button goes dim until the form
+    // diverges from the draft again.
     form.reset(form.getValues());
   });
 
@@ -197,9 +198,9 @@ function OutboundField({ outbounds }: { outbounds: string[] }) {
 }
 
 /**
- * Сеты правила. Опции — наборы документа и сеты самого правила: тег, которого
- * в документе нет, остаётся выбранным и помечается, а не пропадает молча, —
- * запрещать запись может только `sing-box check`.
+ * Rule sets. Options are the document sets and the rule's own sets: a tag that
+ * is not in the document stays selected and is marked rather than silently
+ * disappearing, since only `sing-box check` may forbid the write.
  */
 function RuleSetField({ ruleSets, initial }: { ruleSets: string[]; initial: string[] }) {
   const { t } = useTranslation('features/Rule/RuleEdit');
@@ -217,8 +218,8 @@ function RuleSetField({ ruleSets, initial }: { ruleSets: string[]; initial: stri
           <Label htmlFor='rule-rule-set'>{t('field.ruleSet.label')}</Label>
           <Select multiple value={field.value} onValueChange={field.onChange}>
             <SelectTrigger id='rule-rule-set' className='w-full'>
-              {/* В режиме `multiple` значение — список: подпись собирается
-                  функцией, `placeholder` её не заменит. */}
+              {/* In `multiple` mode the value is a list: the label is built
+                  by a function, `placeholder` will not replace it. */}
               <SelectValue className='min-w-0'>
                 {(tags: readonly string[]) => (
                   <span className='truncate'>{tags.length > 0 ? tags.join(', ') : t('field.ruleSet.empty')}</span>
@@ -241,8 +242,9 @@ function RuleSetField({ ruleSets, initial }: { ruleSets: string[]; initial: stri
 }
 
 /**
- * Правило без условий заберёт весь трафик, и правила ниже не сработают.
- * Предупреждение не блокирует запись: такое правило бывает и намеренно.
+ * A rule without conditions takes all traffic, and the rules below will not
+ * fire. The warning does not block the write: such a rule is sometimes
+ * intentional.
  */
 function CatchAllWarning() {
   const { t } = useTranslation('features/Rule/RuleEdit');
@@ -264,10 +266,10 @@ function CatchAllWarning() {
 }
 
 /**
- * Все условия правила правятся формой, и хотя бы одно задано: сняв их,
- * пользователь получит правило без условий. Флаги `rule_set_ip_cidr_*`
- * начинаются с имени сетов и условием не считаются: без сетов им нечего
- * уточнять.
+ * All rule conditions are edited by the form and at least one is set: after
+ * removing them the user gets a rule without conditions. The
+ * `rule_set_ip_cidr_*` flags start with the set name and do not count as a
+ * condition: without sets there is nothing for them to refine.
  */
 function hasOnlyEditableConditions(rule: RuleRow): boolean {
   return (
@@ -296,14 +298,14 @@ function sameLines(left: readonly string[], right: readonly string[]): boolean {
   return left.length === right.length && left.every((line, index) => line === right[index]);
 }
 
-/** Одинаковы ли наборы тегов без учёта порядка. */
+/** Whether tag sets are equal regardless of order. */
 function sameTags(left: readonly (string | undefined)[], right: readonly (string | undefined)[]): boolean {
   const tags = new Set(left);
 
   return tags.size === new Set(right).size && right.every((tag) => tags.has(tag));
 }
 
-/** Код отказа из схемы в текст: сообщение приходит строкой, ключи — свои. */
+/** Schema failure code into text: the message arrives as a string, the keys are our own. */
 function errorText(t: TFunction<'features/Rule/RuleEdit'>, message: string | undefined): string | null {
   const key = message === undefined ? undefined : ERROR_KEY[message];
 

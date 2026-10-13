@@ -28,9 +28,9 @@ export function toDataplane({ body, etag }: TaggedResponse<DataplaneWire>): Data
 }
 
 /**
- * Тело `PUT /api/dataplane`. Тип ответа демона заставляет перечислить каждое
- * поле: новое поле контракта без строки здесь — ошибка компиляции, а не ноль,
- * молча записанный в UCI.
+ * Body of `PUT /api/dataplane`. The daemon response type forces listing every
+ * field: a new contract field without a line here is a compile error, not a
+ * zero silently written to UCI.
  */
 export function toDataplaneChange(model: DataplaneModel): DataplaneChangeWire {
   return {

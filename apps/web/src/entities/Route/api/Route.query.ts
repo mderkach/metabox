@@ -12,7 +12,7 @@ export const ROUTE_QUERY = {
   hits: () => [...ROUTE_QUERY.all, 'hits'] as const,
 } as const;
 
-/** Счёт растёт на глазах, но не посекундно: правило срабатывает на новое соединение. */
+/** The count grows in front of the eyes but not per second: a rule fires on a new connection. */
 const HITS_REFETCH_SECONDS = 5;
 const HITS_REFETCH = HITS_REFETCH_SECONDS * CACHE_TIME.Second;
 
@@ -29,8 +29,9 @@ export function getRouteExplanationOptions(id: string) {
 }
 
 /**
- * Объяснение маршрута выбранного соединения. `null` — не выбрано ничего, и
- * запрос не заводится: ручка ходит к рантайму за списком правил.
+ * Route explanation of the selected connection. `null` means nothing is
+ * selected and the query is not created: the endpoint goes to the runtime for
+ * the rule list.
  */
 export function useRouteExplanation(id: string | null) {
   return useQuery({
@@ -48,13 +49,14 @@ export function getRuleHitsOptions() {
     gcTime: CACHE_TIME.Minute,
     refetchInterval: HITS_REFETCH,
     refetchIntervalInBackground: false,
-    // Счёт — дополнение к списку правил: его отказ объясняет подвал списка, а
-    // тост на каждый опрос при лежащем sing-box был бы шумом.
+    // The count is an addition to the rule list: its failure is explained by
+    // the list footer, and a toast on every poll with sing-box down would be
+    // noise.
     meta: { showError: false },
   });
 }
 
-/** Счёт срабатываний правил работающего процесса, который ведёт демон. */
+/** Rule hit count of the running process, kept by the daemon. */
 export function useRuleHits() {
   return useQuery({ ...getRuleHitsOptions(), select: toRuleHits });
 }

@@ -22,8 +22,8 @@ export function ProxiesPage() {
   const subscriptions = providers.data ?? [];
   const now = useMinuteClock();
 
-  // Результат действия видно глазами — отметка узла, число задержки, — а
-  // скринридеру его объявляет одна область на экран.
+  // The result of an action is visible to the eye — a node mark, a latency number — and
+  // for a screen reader one region per screen announces it.
   const { message, announce } = useLiveRegion();
 
   const onSelected = useCallback(
@@ -64,9 +64,9 @@ export function ProxiesPage() {
           </ProxiesSection>
         )}
 
-        {/* Подписки — источник узлов, а не ещё одна их группа: отдельная секция
-            со своим заголовком, а не карточка в общей стопке. Своей шапки у
-            карточки нет: заголовок уже у секции, а повторять его незачем. */}
+        {/* Subscriptions are a source of nodes, not one more group of them: a separate section
+            with its own title, not a card in the shared stack. The card has no
+            header of its own: the section already has the title, and repeating it is pointless. */}
         {subscriptions.length > 0 && (
           <ProxiesSection title={t('providers.title')}>
             <Card className={CARD_FLUSH}>

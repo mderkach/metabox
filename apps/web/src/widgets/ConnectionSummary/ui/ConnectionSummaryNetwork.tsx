@@ -5,7 +5,7 @@ import type { ConnectionShare } from '@entities/Connection';
 import { ConnectionSummaryDonut, type DonutSlice } from './ConnectionSummaryDonut';
 import { ConnectionSummaryPanel } from './ConnectionSummaryPanel';
 
-/** Тон закреплён за именем: порядок приходит по нагрузке и не устойчив. */
+/** The tone is tied to the name: order comes by load and is not stable. */
 const PROTOCOL_TONES: Readonly<Record<string, string>> = {
   tcp: 'text-primary',
   udp: 'text-signal-warn',

@@ -1,7 +1,7 @@
 import type { EntryWire, LogsWire } from '../api/Log.schema';
 import { isLogLevel, type LogEntry, type LogTail } from './Log.model';
 
-/** Метка, которую не разобрал `Date`, считается отсутствующей, а не ломает строку. */
+/** A timestamp that `Date` could not parse is treated as absent, and does not break the line. */
 function toTime(value: string | undefined): Date | null {
   if (value === undefined || value === '') {
     return null;

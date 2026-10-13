@@ -16,7 +16,7 @@ const CONFIG = {
 } satisfies ConfigDocument;
 
 describe('ConfigBuildNotice', () => {
-  it('называет узел, которого нет в сборке, и последствие', async () => {
+  it('names a node that is not in the build, and the consequence', async () => {
     server.use(http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE)));
     renderWithQuery(<ConfigBuildNotice config={CONFIG} />);
 
@@ -25,7 +25,7 @@ describe('ConfigBuildNotice', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('применить не выйдет');
   });
 
-  it('называет опцию, тег которой не вошёл в сборку', async () => {
+  it('names an option whose tag is not in the build', async () => {
     server.use(http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE)));
     renderWithQuery(<ConfigBuildNotice config={{ experimental: { v2ray_api: {} } }} />);
 
@@ -33,7 +33,7 @@ describe('ConfigBuildNotice', () => {
     expect(screen.getByText('experimental.v2ray_api — нужна сборка с with_v2ray_api')).toBeInTheDocument();
   });
 
-  it('молчит, когда демон не прочитал бинарь', async () => {
+  it('stays silent when the daemon did not read the binary', async () => {
     const { singbox_build: _build, ...status } = DAEMON_STATUS_FIXTURE;
     let answered = false;
     server.use(

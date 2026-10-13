@@ -13,10 +13,10 @@ export const LOG_QUERY = {
 } as const;
 
 /**
- * Хвост на момент открытия экрана; дальше строки идут потоком. Кэш живёт
- * секунду — ровно чтобы хвост из загрузчика маршрута дошёл до экрана без
- * второго запроса: хвост, взятый из кэша при возврате на экран, разошёлся бы с
- * потоком.
+ * Tail at the moment the screen opens; after that lines come as a stream. The
+ * cache lives a second, exactly so that the tail from the route loader reaches
+ * the screen without a second request: a tail taken from the cache on returning
+ * to the screen would diverge from the stream.
  */
 export function getLogTailOptions(level: LogLevel) {
   return queryOptions({

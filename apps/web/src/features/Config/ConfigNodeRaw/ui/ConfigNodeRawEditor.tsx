@@ -6,19 +6,19 @@ import { ConfigDocumentState } from '@entities/Config';
 import { parseJsonc } from '@shared/lib/jsonc';
 import { Alert, AlertDescription, AlertTitle, Button, Textarea } from '@shared/ui';
 
-/** Отступ узла: тот же, что у файла конфига на устройстве. */
+/** Node indent: the same as in the config file on the device. */
 const JSON_INDENT = 2;
 
 /**
- * Правка любого узла конфига текстом.
+ * Editing any config node as text.
  *
- * Записи мешает только неразобранный JSON: арбитр валидности — `sing-box
- * check` на устройстве, а не схема панели, иначе узел, которого схема не
- * знает, нельзя было бы ни поправить, ни сохранить. Замечания схемы к
- * черновику показывает раздел, со строкой в тексте.
+ * Only unparsed JSON blocks the write: the validity arbiter is `sing-box check`
+ * on the device, not the panel schema, otherwise a node the schema does not
+ * know could be neither fixed nor saved. Schema remarks on the draft are shown
+ * by the section, with the line in the text.
  *
- * Ошибка разбора не стирает введённое: иначе исправить опечатку было бы нечем.
- * Узла по пути может не быть — сохранение его создаст.
+ * A parse error does not erase the input: otherwise there would be nothing to
+ * fix a typo with. The node at the path may be absent: saving will create it.
  */
 export function ConfigNodeRawEditor({
   path,
@@ -28,16 +28,16 @@ export function ConfigNodeRawEditor({
 }: {
   path: JSONPath;
   node: unknown;
-  /** Идентификатор поля: узлов на экране несколько, id обязан быть уникальным. */
+  /** Field identifier: there are several nodes on the screen, so the id must be unique. */
   editorId: string;
-  /** Доступное имя поля: узел называет его владелец-экран. */
+  /** Accessible field name: the owner screen names the node. */
   label: string;
 }) {
   const { t } = useTranslation('shared');
   const edit = ConfigDocumentState.use.edit();
   const [text, setText] = useState(() => (node === undefined ? '{}' : JSON.stringify(node, null, JSON_INDENT)));
-  // Сравнивается разобранный узел, а не текст: сохранённый в другом
-  // форматировании узел иначе оставлял бы кнопку активной.
+  // The parsed node is compared, not the text: a node saved in another
+  // formatting would otherwise leave the button active.
   const unchanged = node !== undefined && JSON.stringify(parseJsonc(text).value) === JSON.stringify(node);
   const [error, setError] = useState<string | null>(null);
 

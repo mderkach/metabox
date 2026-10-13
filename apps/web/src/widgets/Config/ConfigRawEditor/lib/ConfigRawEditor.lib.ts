@@ -6,13 +6,13 @@ export interface JsonToken {
 }
 
 /**
- * Виды токенов сканера.
+ * Scanner token kinds.
  *
- * Значения продублированы, а не взяты из `SyntaxKind`: в `jsonc-parser` это
- * `declare const enum`, то есть чисто типовая сущность без рантайма, и при
- * `verbatimModuleSyntax` импортировать её как значение нельзя. Числа те же, что
- * в `jsonc-parser/lib/umd/main.d.ts`, и меняются только вместе с мажорной
- * версией пакета — она в манифесте зафиксирована точно.
+ * The values are duplicated rather than taken from `SyntaxKind`: in `jsonc-parser` it is
+ * a `declare const enum`, i.e. a purely type-level entity without a runtime, and under
+ * `verbatimModuleSyntax` it cannot be imported as a value. The numbers are the same as
+ * in `jsonc-parser/lib/umd/main.d.ts` and change only together with the package's major
+ * version — it is pinned exactly in the manifest.
  */
 const TOKEN = {
   OpenBrace: 1,
@@ -44,9 +44,9 @@ const PUNCTUATION = new Set<number>([
 ]);
 
 /**
- * Тон по виду токена. Ключ и строковое значение разводятся отдельно: в конфиге
- * sing-box ключей больше, чем значений, и одинаковый цвет превращал бы файл в
- * сплошную стену.
+ * Tone by token kind. A key and a string value are separated: in a sing-box
+ * config there are more keys than values, and the same color would turn the file into
+ * a solid wall.
  */
 const TOKEN_TONES: Readonly<Record<number, string>> = {
   [TOKEN.String]: 'text-code-string',
@@ -64,22 +64,22 @@ const DEFAULT_TONE = 'text-foreground';
 const PUNCTUATION_TONE = 'text-muted-foreground';
 
 /**
- * Разбор текста на цветные куски.
+ * Parsing text into colored chunks.
  *
- * Сканер `jsonc-parser` — тот же, которым панель уже читает конфиг, поэтому
- * подсветка не тянет в бандл редактор кода. Куски берутся срезами исходной
- * строки, а не значениями токенов: значение строки приходит без кавычек и без
- * экранирования, и текст перестал бы совпадать с файлом.
+ * The `jsonc-parser` scanner is the same one the panel already reads the config with, so
+ * highlighting does not pull a code editor into the bundle. Chunks are taken as slices of the source
+ * string, not as token values: a string value arrives without quotes and without
+ * escaping, and the text would stop matching the file.
  *
- * Битый JSON не ломает разбор: сканер доходит до конца и отдаёт непонятое
- * токеном `Unknown`, то есть подсветка работает и там, где `JSON.parse` уже
- * отказал, — а это ровно тот случай, ради которого текстовый режим и нужен.
+ * Broken JSON does not break parsing: the scanner reaches the end and returns what it did not understand
+ * as an `Unknown` token, so highlighting works even where `JSON.parse` has already
+ * refused — and that is exactly the case the text mode exists for.
  */
 export function toJsonTokens(text: string): JsonToken[] {
   const scanner = createScanner(text, false);
   const tokens: JsonToken[] = [];
-  // Ключ отличается от строки только тем, что за ним идёт двоеточие, а узнаётся
-  // это уже после него — поэтому последняя строка помечается задним числом.
+  // A key differs from a string only in that a colon follows it, and that is recognized
+  // only after it — so the last string is marked retroactively.
   let lastString = -1;
 
   for (let kind: number = scanner.scan(); kind !== TOKEN.Eof; kind = scanner.scan()) {
@@ -103,9 +103,9 @@ export function toJsonTokens(text: string): JsonToken[] {
 }
 
 /**
- * Номер куска подсветки, в который попадает позиция текста. При переносе строк
- * номер строки уже не даёт высоты — её даёт кусок слоя подсветки, где перенос
- * тот же, что у поля ввода.
+ * Index of the highlight chunk that a text position falls into. With line wrapping
+ * the line number no longer gives the height — the highlight layer chunk does, where the wrapping is
+ * the same as in the input field.
  */
 export function tokenIndexAt(tokens: readonly JsonToken[], position: number): number {
   let end = 0;
@@ -121,7 +121,7 @@ export function tokenIndexAt(tokens: readonly JsonToken[], position: number): nu
   return tokens.length - 1;
 }
 
-/** Позиции всех вхождений строки поиска; регистр не учитывается. */
+/** Positions of all occurrences of the search string; case is ignored. */
 export function findMatches(text: string, query: string): number[] {
   if (query.length === 0) {
     return [];
@@ -138,10 +138,10 @@ export function findMatches(text: string, query: string): number[] {
   return found;
 }
 
-/** Код перевода строки: по нему считается номер строки. */
+/** Line feed code: the line number is counted by it. */
 const LINE_FEED = 10;
 
-/** Номер строки, считая с нуля: по нему редактор прокручивается к совпадению. */
+/** Line number counted from zero: the editor scrolls to a match by it. */
 export function lineIndexOf(text: string, position: number): number {
   let line = 0;
 

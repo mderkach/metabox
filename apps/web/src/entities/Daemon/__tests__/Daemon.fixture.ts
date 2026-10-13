@@ -6,12 +6,12 @@ import type {
   TrafficHistoryWire,
 } from '../api/Daemon.schema';
 
-/** Демон отвечает и применений в работе нет: поле `transaction` пустое. */
+/** The daemon responds and no applies are in progress: the `transaction` field is empty. */
 export const DAEMON_STATUS_FIXTURE: DaemonStatusWire = {
   version: 'dev',
   singbox_version: '1.14.1-extended-2.7.2',
-  // Теги бинаря на устройстве, `sing-box version` 2026-09-23: ccm, ocm,
-  // cloudflared, naive, usbip, openvpn и openconnect в сборку не вошли.
+  // Binary tags on the device, `sing-box version` 2026-09-23: ccm, ocm,
+  // cloudflared, naive, usbip, openvpn and openconnect are not in the build.
   singbox_build: {
     tags: [
       'with_gvisor',
@@ -38,7 +38,7 @@ export const DAEMON_STATUS_FIXTURE: DaemonStatusWire = {
   runtime: { sources: ['clash_api'], connections: 'clash_api' },
 };
 
-/** Версия и режим, снятые с устройства 2026-09-10. */
+/** Version and mode taken from the device on 2026-09-10. */
 
 export const CLASH_CONFIGS_FIXTURE: ClashConfigsWire = {
   mode: 'Rule',
@@ -49,13 +49,13 @@ export const CLASH_CONFIGS_FIXTURE: ClashConfigsWire = {
   ipv6: false,
 };
 
-/** Первый сэмпл памяти на устройстве нулевой — мок это повторяет. */
+/** The first memory sample on the device is zero: the mock repeats this. */
 export const MEMORY_SAMPLES = [0, 47_923_200, 51_380_224];
 
-/** Сэмпл трафика: замер на устройстве 2026-09-10, байты в секунду. */
+/** Traffic sample: measured on the device on 2026-09-10, bytes per second. */
 export const TRAFFIC_SAMPLE = { up: 8500, down: 43_400 };
 
-/** Сервис поднят: аптайм снят с устройства 2026-09-10. */
+/** Service is up: uptime taken from the device on 2026-09-10. */
 export const SERVICE_RUNNING_FIXTURE: ServiceStateWire = {
   status: 'running',
   uptime: 253_091,
@@ -64,8 +64,8 @@ export const SERVICE_RUNNING_FIXTURE: ServiceStateWire = {
 };
 
 /**
- * Процесс жив, но поднят не службой демона: на устройстве маршрутизацией
- * владеет чужой пакет, и возраст процесса procd не знает.
+ * The process is alive but was not started by the daemon service: on the device routing
+ * is owned by a foreign package, and procd does not know the process age.
  */
 export const SERVICE_UNMANAGED_FIXTURE: ServiceStateWire = {
   status: 'running',
@@ -74,7 +74,7 @@ export const SERVICE_UNMANAGED_FIXTURE: ServiceStateWire = {
   managed: false,
 };
 
-/** Сервис упал: вывод procd показывается дословно, разбирать его нельзя. */
+/** Service crashed: the procd output is shown verbatim, it must not be parsed. */
 export const SERVICE_FAILED_FIXTURE: ServiceStateWire = {
   status: 'failed',
   uptime: 0,
@@ -84,7 +84,7 @@ export const SERVICE_FAILED_FIXTURE: ServiceStateWire = {
     'FATAL[0000] start service: initialize outbound/urltest[proxy]: provider sub-nl not found\nprocd: instance sing-box::instance1 exit code 1, restart in 5s',
 };
 
-/** procd не ответил демону: статус подставлен, текст демона идёт подробностью к коду. */
+/** procd did not answer the daemon: the status is substituted, the daemon text goes as detail to the code. */
 export const SERVICE_UNREAD_FIXTURE: ServiceStateWire = {
   status: 'stopped',
   uptime: 0,
@@ -94,7 +94,7 @@ export const SERVICE_UNREAD_FIXTURE: ServiceStateWire = {
   lastErrorCode: 'service_state_unread',
 };
 
-/** Бинарь новее схемы: панель обязана продолжать работать. */
+/** Binary newer than the schema: the panel must keep working. */
 export const SERVICE_DRIFT_FIXTURE: ServiceStateWire = {
   status: 'running',
   uptime: 120,
@@ -102,7 +102,7 @@ export const SERVICE_DRIFT_FIXTURE: ServiceStateWire = {
   managed: true,
 };
 
-/** История трафика: шаг десять секунд, сорок точек — как отдаёт демон. */
+/** Traffic history: ten-second step, forty points, as the daemon serves it. */
 export const TRAFFIC_HISTORY_FIXTURE: TrafficHistoryWire = {
   step_seconds: 10,
   points: Array.from({ length: 40 }, (_, index) => ({
@@ -123,7 +123,7 @@ export const TRAFFIC_HISTORY_FIXTURE: TrafficHistoryWire = {
   })),
 };
 
-/** Показания устройства: снято на BPI-R4 Pro 2026-09-13. */
+/** Device readings: taken on a BPI-R4 Pro on 2026-09-13. */
 export const SYSTEM_FIXTURE: SystemStatWire = {
   load: { one: 0.49, five: 0.33, fifteen: 0.18, cores: 4 },
   memory: { total: 8_332_603_392, available: 7_962_783_744 },

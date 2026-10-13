@@ -3,10 +3,10 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { getClashConfigsOptions, setClashMode } from '@entities/Daemon';
 
 /**
- * Смена режима маршрутизации. Обновление оптимистичное, как у переключения
- * узла: конфиг не пишется, а ожидание ответа читалось бы как зависший
- * переключатель. Перечитывание после ответа обязательно — режим, которого
- * sing-box не знает, он пропускает молча.
+ * Routing mode change. The update is optimistic, as for node switching: the
+ * config is not written, and waiting for the response would read as a hung
+ * switch. Rereading after the response is required: sing-box silently skips a
+ * mode it does not know.
  */
 export function useSetClashMode() {
   const queryClient = useQueryClient();

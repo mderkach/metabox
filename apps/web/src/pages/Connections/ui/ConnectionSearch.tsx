@@ -5,9 +5,9 @@ import { cn } from '@shared/lib/utils';
 import { Input, SEARCH_FIELD } from '@shared/ui';
 
 /**
- * Поиск: левый край тулбара таблицы. В ряду с фасетами и действиями поле
- * сжимается первым, иначе на ширине ноутбука крайнее действие уезжает
- * отдельной строкой.
+ * Search: the left edge of the table toolbar. In a row with facets and actions
+ * the field shrinks first, otherwise at laptop width the outermost action moves
+ * to a separate row.
  */
 export function ConnectionSearch({ query, onQueryChange }: { query: string; onQueryChange: (query: string) => void }) {
   const { t } = useTranslation('pages/Connections');

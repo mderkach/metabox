@@ -20,19 +20,19 @@ import { PageHeader } from '@widgets/PageHeader';
 import { DevicesRow } from './DevicesRow';
 import { DevicesTableHeader } from './DevicesTableHeader';
 
-/** Строка заголовка тоже строка таблицы: нумерация строк начинается с неё. */
+/** The header row is also a table row: row numbering starts with it. */
 const HEADER_ROWS = 1;
 
 /**
- * Устройства LAN из аренд DHCP и статических записей dnsmasq. Порядок — как у
- * демона, по адресу: устройств на роутере десятки, и сортировка с отбором
- * здесь ничего не дают.
+ * LAN devices from DHCP leases and static dnsmasq entries. The order is the
+ * daemon's, by address: a router has tens of devices, and sorting with filtering
+ * would add nothing here.
  *
- * Остаток аренды считается от момента последнего снимка списка, а не от
- * текущей секунды: список опрашивается раз в минуту, и точнее остаток не нужен.
+ * The remaining lease time is counted from the moment of the last list snapshot, not from
+ * the current second: the list is polled once a minute, and a more exact value is not needed.
  *
- * Список не виртуализован по той же причине, а ролями собран всё равно: шапка
- * обязана называть колонки, а не только размечать их стилями.
+ * The list is not virtualized for the same reason, but it is built with roles anyway: the header
+ * must name the columns, not only mark them up with styles.
  */
 export function DevicesPage() {
   const { t } = useTranslation('pages/Devices');

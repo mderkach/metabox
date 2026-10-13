@@ -16,12 +16,12 @@ function toDevice(wire: DeviceWire): Device {
   };
 }
 
-/** Порядок демона сохраняется: по адресу, без адреса — в конце. */
+/** The daemon order is kept: by address, those without an address at the end. */
 export function toDevices(wire: DevicesWire): Device[] {
   return wire.devices.map(toDevice);
 }
 
-/** Устройство без адреса в индекс не попадает: источника соединения у него быть не может. */
+/** A device without an address does not get into the index: it cannot be a connection source. */
 export function toDeviceIndex(wire: DevicesWire): DeviceIndex {
   const index = new Map<string, Device>();
 

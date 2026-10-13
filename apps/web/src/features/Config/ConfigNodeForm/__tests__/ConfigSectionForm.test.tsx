@@ -52,13 +52,13 @@ function save() {
   return screen.getByRole('button', { name: 'Сохранить в черновик' });
 }
 
-describe('форма скаляров секции', () => {
+describe('section scalars form', () => {
   beforeEach(() => {
     ConfigDocumentState.getState().reset();
     ConfigDocumentState.getState().load(TEXT);
   });
 
-  it('показывает скаляры route и не показывает его списки', () => {
+  it('shows route scalars and does not show its lists', () => {
     render(<SettingsFromStore section={CONFIG_SECTION.Route} />);
 
     expect(screen.getByRole('textbox', { name: 'final' })).toHaveValue('direct');
@@ -68,7 +68,7 @@ describe('форма скаляров секции', () => {
     expect(screen.queryByText('rule_set')).not.toBeInTheDocument();
   });
 
-  it('правка route.final меняет одну строку и не трогает правила и сеты', async () => {
+  it('a route.final edit changes one line and does not touch rules and rule sets', async () => {
     const user = userEvent.setup();
 
     render(<SettingsFromStore section={CONFIG_SECTION.Route} />);
@@ -81,7 +81,7 @@ describe('форма скаляров секции', () => {
     expect(findValue(draft(), ['route', 'rule_set', 0, 'tag'])).toBe('ads');
   });
 
-  it('правка dns.strategy меняет одну строку и сохраняет комментарий и серверы', async () => {
+  it('a dns.strategy edit changes one line and keeps the comment and servers', async () => {
     const user = userEvent.setup();
 
     render(<SettingsFromStore section={CONFIG_SECTION.Dns} />);
@@ -93,7 +93,7 @@ describe('форма скаляров секции', () => {
     expect(findValue(draft(), ['dns', 'servers', 0, 'tag'])).toBe('local');
   });
 
-  it('создаёт секцию dns, если её в файле нет', async () => {
+  it('creates the dns section if it is not in the file', async () => {
     ConfigDocumentState.getState().reset();
     ConfigDocumentState.getState().load('{\n  "route": {}\n}');
     const user = userEvent.setup();

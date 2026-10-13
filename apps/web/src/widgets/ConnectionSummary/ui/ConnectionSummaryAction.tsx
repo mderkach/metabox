@@ -7,7 +7,7 @@ import { formatBytes } from '@shared/lib/format';
 import { ConnectionSummaryBars, type SummaryBar } from './ConnectionSummaryBars';
 import { ConnectionSummaryPanel } from './ConnectionSummaryPanel';
 
-/** Порядок строк фиксирован: по нагрузке он не устойчив. */
+/** Row order is fixed: by load it is not stable. */
 const KIND_VIEW = [
   { kind: ROUTE_KIND.Proxy, label: 'route.proxy', tone: 'bg-route-proxy' },
   { kind: ROUTE_KIND.Direct, label: 'route.direct', tone: 'bg-route-direct' },
@@ -16,7 +16,7 @@ const KIND_VIEW = [
   { kind: ROUTE_KIND.Other, label: 'route.other', tone: 'bg-route-neutral' },
 ] as const satisfies readonly { kind: RouteKind; label: ParseKeys<'shared'>; tone: string }[];
 
-/** Столбец длиной в объём трафика, а не в число соединений: молчащее соединение остаётся в списке, но веса не добавляет. */
+/** A bar as long as the traffic volume, not the connection count: a silent connection stays in the list but adds no weight. */
 export function ConnectionSummaryAction({ shares }: { shares: ConnectionShare<RouteKind>[] }) {
   const { t } = useTranslation('widgets/ConnectionSummary');
   const bars: SummaryBar[] = KIND_VIEW.flatMap((view) => {

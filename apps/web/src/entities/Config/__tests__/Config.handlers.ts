@@ -3,10 +3,10 @@ import { http, HttpResponse } from 'msw';
 import { CONFIG_ENDPOINT } from '../api/Config.endpoints';
 import { CONFIG_FIXTURE } from './Config.fixture';
 
-/** Отступ файла на устройстве: конфиг отдаётся текстом, а не объектом. */
+/** Indent of the file on the device: the config is served as text, not as an object. */
 const JSON_INDENT = 2;
 
-/** Длина sha256 в шестнадцатеричной записи: демон отдаёт её такой же. */
+/** Length of sha256 in hexadecimal form: the daemon serves it the same way. */
 const SUM_LENGTH = 64;
 
 const VERSIONS_FIXTURE = [
@@ -16,19 +16,19 @@ const VERSIONS_FIXTURE = [
 
 const CONFIG_TEXT = JSON.stringify(CONFIG_FIXTURE, null, JSON_INDENT);
 
-/** Демон отдаёт отпечаток файла в `ETag`, в кавычках; панель возвращает его в `If-Match`. */
+/** The daemon serves the file fingerprint in `ETag`, in quotes; the panel returns it in `If-Match`. */
 const CONFIG_ETAG = `"${'c'.repeat(SUM_LENGTH)}"`;
 
 /**
- * Моки документа и его истории. Сам откат на версию запускает транзакцию и
- * живёт в моках демона, вместе с остальным циклом применения.
+ * Mocks of the document and its history. The rollback to a version itself starts a transaction and
+ * lives in the daemon mocks, together with the rest of the apply cycle.
  */
 export const configHandlers = [
   http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(CONFIG_TEXT, { headers: { ETag: CONFIG_ETAG } })),
   http.get(CONFIG_ENDPOINT.versions(), () =>
     HttpResponse.json({ versions: VERSIONS_FIXTURE, current_sum: VERSIONS_FIXTURE[1].sum })
   ),
-  // Номер версии в адресе — шаблон msw, поэтому адрес собирается от базовой
-  // ручки: сам номер в константу демона не подставить.
+  // The version number in the address is an msw template, so the address is built from the base
+  // handler: the number itself cannot be substituted into the daemon constant.
   http.get(`${CONFIG_ENDPOINT.versions()}/:id`, () => HttpResponse.text(CONFIG_TEXT)),
 ];

@@ -5,19 +5,19 @@ import { firstJsoncError } from '@shared/lib/jsonc';
 
 import { findMatches, toJsonTokens } from '../lib';
 
-/** Запрос поиска, у которого в файле корпуса много совпадений. */
+/** A search query with many matches in the corpus file. */
 const QUERY = 'outbound';
 
 /**
- * Цена того, что текстовый редактор делает сам на каждый введённый символ, —
- * помимо разбора черновика, который меряет `Config.document.bench.ts`. Токены
- * подсветки и поиск идут в срочном рендере: слой подсветки лежит под прозрачным
- * полем и отставать от него не может. Ошибка разбора отложена за вводом.
- * Перерисовку слоя — несколько тысяч `span` — бенч не видит: её цену даёт
- * только профиль в браузере. Прогон: `pnpm --filter web exec vitest bench`.
+ * The cost of what the text editor does itself for every typed character,
+ * beyond draft parsing, which `Config.document.bench.ts` measures. Highlight
+ * tokens and search run in an urgent render: the highlight layer sits under a transparent
+ * field and cannot lag behind it. The parse error is deferred behind the input.
+ * The layer redraw, several thousand `span`s, the bench does not see: its cost is given
+ * only by a browser profile. Run: `pnpm --filter web exec vitest bench`.
  */
-test('проход редактора по router-like.json', async ({ bench }) => {
-  // Замер имеет смысл, только если текст разобран: ошибка обрывает проход раньше.
+test('editor pass over router-like.json', async ({ bench }) => {
+  // The measurement makes sense only if the text is parsed: an error breaks the pass earlier.
   expect(firstJsoncError(ROUTER_LIKE)).toBeNull();
   expect(findMatches(ROUTER_LIKE, QUERY).length).toBeGreaterThan(0);
 

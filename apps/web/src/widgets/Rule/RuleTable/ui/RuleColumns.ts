@@ -1,20 +1,20 @@
 /**
- * Раскладка строки правила. Ширины держит один набор на шапку и на строку:
- * разойдясь, подписи встанут не над своими колонками.
+ * Rule row layout. One set of widths serves the header and the row:
+ * if they diverge, labels end up above the wrong columns.
  */
 export const RULE_COLUMN = {
   Index: 'w-6 shrink-0 text-right',
   /**
-   * Условия не тянутся на всю строку: на широком экране выход иначе уезжал к
-   * правому краю, и между ними оставалось больше 700px, на которых глаз теряет строку.
+   * Conditions do not stretch across the whole row: on a wide screen the outbound would otherwise slide to
+   * the right edge, leaving over 700px between them, where the eye loses the row.
    */
   Conditions: 'flex min-w-0 grow flex-wrap items-center gap-1.5 lg:max-w-xl',
   TargetGroup: 'flex shrink-0 items-center gap-3',
-  /** Счёт срабатываний: у правого края, отдельно от пары «условия → выход». */
+  /** Hit count: at the right edge, separate from the "conditions → outbound" pair. */
   Hits: 'ml-auto w-20 shrink-0 text-right',
-  /** На широком экране выход шире: место есть, и длинный тег узла не обрезается зря. */
+  /** On a wide screen the outbound is wider: there is room, and a long node tag is not cut off needlessly. */
   Target: 'w-auto shrink-0 sm:w-44 xl:w-64',
-  /** Ширина стрелки «условия → выход». В шапке её занимает пустое место. */
+  /** Width of the "conditions → outbound" arrow. In the header an empty space takes its place. */
   Arrow: 'size-4 shrink-0',
   Row: 'relative flex flex-wrap items-center gap-x-3 gap-y-1.5 px-3.5 py-3',
 } as const;

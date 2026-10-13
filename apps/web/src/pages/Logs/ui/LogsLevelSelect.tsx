@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { isLogLevel, LOG_LEVELS, type LogLevel } from '@entities/Log';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/ui';
 
-/** Минимальный уровень: демон отдаёт его и всё, что серьёзнее. */
+/** Minimum level: the daemon returns it and everything more severe. */
 export function LogsLevelSelect({
   level,
   onLevelChange,

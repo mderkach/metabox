@@ -2,7 +2,7 @@ import type { ParseKeys } from 'i18next';
 
 import { CONFIG_SECTION, type ConfigSection, type GenericSection } from '@entities/Config';
 
-/** Цель ссылки вкладки в терминах роутера: секции без своего экрана идут параметром общего. */
+/** Tab link target in router terms: sections without a screen of their own go as a parameter of a shared one. */
 type TabLink = { to: '/config' | '/config/rule-set' } | { to: '/config/$section'; params: { section: GenericSection } };
 
 function sectionLink(section: GenericSection): TabLink {
@@ -10,8 +10,8 @@ function sectionLink(section: GenericSection): TabLink {
 }
 
 /**
- * Секции конфига в том же порядке, в каком они лежат в файле, — так вкладка
- * находится по памяти о `config.json`, а не по алфавиту.
+ * Config sections in the same order as they lie in the file — so a tab
+ * is found by memory of `config.json`, not alphabetically.
  */
 export const CONFIG_TABS = [
   { key: CONFIG_SECTION.Route, label: 'section.route', link: { to: '/config' } },
@@ -45,12 +45,12 @@ export const CONFIG_TABS = [
 }>;
 
 /**
- * Секции, которые правят чаще остальных: маршрутизация, то, на что она
- * ссылается, и DNS. Они стоят в полосе всегда, остальные — в меню «Ещё»:
- * шестнадцать вкладок в строку не помещаются даже на десктопе, а хвост за краем
- * полосы не находится. Шесть — сколько встаёт в строку без прокрутки на
- * ширине 1280. Выбранная редкая секция встаёт в полосу на своё место по
- * порядку файла, пока выбрана.
+ * Sections edited more often than the rest: routing, what it
+ * references, and DNS. They are always in the strip, the rest are in the "More" menu:
+ * sixteen tabs do not fit in a row even on a desktop, and a tail past the edge of
+ * the strip is not discoverable. Six is how many fit in a row without scrolling at
+ * width 1280. A selected rare section takes its place in the strip by
+ * file order while it is selected.
  */
 export const CONFIG_TABS_FREQUENT: ReadonlySet<ConfigSection> = new Set([
   CONFIG_SECTION.Route,
@@ -61,7 +61,7 @@ export const CONFIG_TABS_FREQUENT: ReadonlySet<ConfigSection> = new Set([
   CONFIG_SECTION.Dns,
 ]);
 
-/** Адрес вкладки для сверки с текущим: у общего экрана он собран из параметра. */
+/** Tab address for comparison with the current one: for the shared screen it is built from the parameter. */
 export function tabPath(tab: (typeof CONFIG_TABS)[number]): string {
   return 'params' in tab.link ? `/config/${tab.link.params.section}` : tab.link.to;
 }
@@ -74,9 +74,9 @@ export const CONFIG_MODE_ROUTE = {
 export type ConfigModeRoute = (typeof CONFIG_MODE_ROUTE)[keyof typeof CONFIG_MODE_ROUTE];
 
 /**
- * Вторая ось полосы: чем документ показан. Секции отвечают на «какую часть
- * смотрю», режим — на «формами или текстом». Текст показывает файл целиком,
- * поэтому в нём ни одна секция не выбрана, а возврат к формам ведёт на первую.
+ * The second axis of the strip: how the document is shown. Sections answer "which part
+ * am I looking at", the mode answers "forms or text". Text shows the whole file,
+ * so no section is selected in it, and returning to forms leads to the first one.
  */
 export const CONFIG_MODES = [
   { key: 'forms', label: 'mode.forms', route: CONFIG_MODE_ROUTE.Forms },

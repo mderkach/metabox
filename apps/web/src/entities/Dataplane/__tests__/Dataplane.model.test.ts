@@ -18,7 +18,7 @@ const STATIC: RouteSource = { mac: 'aa:bb:cc:00:00:70', ip: '192.168.1.60', stat
 const BY_MAC: RouteSource = { mac: 'aa:bb:cc:00:01:04', ip: '192.168.1.120', static: false };
 const BY_IP: RouteSource = { mac: 'aa:bb:cc:00:01:60', ip: '192.168.1.180', static: true };
 
-/** Список перехвата: подсети разной длины и один хост. */
+/** Interception list: subnets of different length and one host. */
 const ROUTER_SOURCE_IP = [
   '192.168.1.36/32',
   '192.168.1.60/31',
@@ -45,13 +45,13 @@ function contains(cidr: string, ip: string): boolean {
 }
 
 describe('parseIpv4Cidr', () => {
-  it('читает подсеть, а голый адрес — подсетью из одного хоста', () => {
+  it('reads a subnet, and a bare address as a one-host subnet', () => {
     expect(parseIpv4Cidr('192.168.1.64/29')).toEqual({ address: 0xc0_a8_01_40, prefix: 29 });
     expect(parseIpv4Cidr('192.168.1.36')).toEqual({ address: 0xc0_a8_01_24, prefix: 32 });
     expect(parseIpv4Cidr('255.255.255.255/0')).toEqual({ address: 0xff_ff_ff_ff, prefix: 0 });
   });
 
-  it('отклоняет мусор, октет больше 255 и префикс длиннее 32', () => {
+  it('rejects garbage, an octet above 255 and a prefix longer than 32', () => {
     expect(parseIpv4Cidr('')).toBeNull();
     expect(parseIpv4Cidr('router')).toBeNull();
     expect(parseIpv4Cidr('192.168.1')).toBeNull();
@@ -61,21 +61,21 @@ describe('parseIpv4Cidr', () => {
     expect(parseIpv4Cidr(' 192.168.1.0/24')).toBeNull();
   });
 
-  it('IPv6 не разбирает', () => {
+  it('does not parse IPv6', () => {
     expect(parseIpv4Cidr('fd00::/8')).toBeNull();
     expect(parseIpv4Cidr('::ffff:192.168.1.36')).toBeNull();
   });
 });
 
 describe('cidrContains', () => {
-  it('узнаёт адрес внутри подсети и не узнаёт снаружи', () => {
+  it('recognizes an address inside a subnet and does not recognize one outside', () => {
     expect(contains('192.168.1.64/29', '192.168.1.64')).toBe(true);
     expect(contains('192.168.1.64/29', '192.168.1.71')).toBe(true);
     expect(contains('192.168.1.64/29', '192.168.1.72')).toBe(false);
     expect(contains('192.168.1.64/29', '192.168.1.63')).toBe(false);
   });
 
-  it('/0 покрывает всё, /32 — ровно один адрес, /31 — два', () => {
+  it('/0 covers everything, /32 exactly one address, /31 two', () => {
     expect(contains('0.0.0.0/0', '10.1.2.3')).toBe(true);
     expect(contains('192.168.1.36/32', '192.168.1.36')).toBe(true);
     expect(contains('192.168.1.36/32', '192.168.1.37')).toBe(false);
@@ -83,23 +83,23 @@ describe('cidrContains', () => {
     expect(contains('192.168.1.60/31', '192.168.1.62')).toBe(false);
   });
 
-  it('биты хоста в адресе подсети не мешают', () => {
+  it('host bits in the subnet address do not interfere', () => {
     expect(contains('192.168.1.67/29', '192.168.1.64')).toBe(true);
   });
 
-  it('старший бит адреса не уводит сравнение в отрицательные числа', () => {
+  it('the high address bit does not push the comparison into negative numbers', () => {
     expect(contains('224.0.0.0/4', '239.255.255.250')).toBe(true);
   });
 });
 
 describe('routeReason', () => {
-  it('узнаёт устройство по MAC без учёта регистра и по адресу без префикса', () => {
+  it('recognizes a device by MAC case-insensitively and by an address without a prefix', () => {
     expect(routeReason(MODEL, BY_MAC)).toEqual({ kind: ROUTE_REASON.Mac });
     expect(routeReason(MODEL, BY_IP)).toEqual({ kind: ROUTE_REASON.Host });
     expect(routeReason(MODEL, DYNAMIC)).toBeNull();
   });
 
-  it('адрес подсетью из одного хоста — запись устройства, подсеть шире — причина «подсеть»', () => {
+  it('a one-host subnet address is a device entry, a wider subnet is the reason "subnet"', () => {
     expect(routeReason({ ...MODEL, sourceIp: ['192.168.1.36/32'] }, DYNAMIC)).toEqual({ kind: ROUTE_REASON.Host });
     expect(routeReason({ ...MODEL, sourceIp: ['192.168.1.0/24'] }, DYNAMIC)).toEqual({
       kind: ROUTE_REASON.Subnet,
@@ -107,7 +107,7 @@ describe('routeReason', () => {
     });
   });
 
-  it('на списке подсетей ведёт через sing-box по подсети, а не только хост /32', () => {
+  it('on a subnet list routes through sing-box by subnet, not only by the /32 host', () => {
     const model = { ...MODEL, sourceIp: ROUTER_SOURCE_IP, sourceMac: [] };
 
     expect(routeReason(model, DYNAMIC)).toEqual({ kind: ROUTE_REASON.Host });
@@ -117,7 +117,7 @@ describe('routeReason', () => {
     expect(routeReason(model, { ...DYNAMIC, ip: '192.168.1.37' })).toBeNull();
   });
 
-  it('подсеть перекрывает MAC и адрес: выключить устройство отдельно нельзя', () => {
+  it('a subnet overrides MAC and address: the device cannot be disabled separately', () => {
     const model = { ...MODEL, sourceIp: ['192.168.1.120/32', '192.168.1.112/28'] };
 
     expect(routeReason(model, BY_MAC)).toEqual({ kind: ROUTE_REASON.Subnet, subnet: '192.168.1.112/28' });
@@ -127,13 +127,13 @@ describe('routeReason', () => {
     });
   });
 
-  it('мусор и IPv6 в списке пропускает', () => {
+  it('skips garbage and IPv6 in the list', () => {
     const model = { ...MODEL, sourceIp: ['garbage', 'fd00::/8', '192.168.1.0/24'], sourceMac: [] };
 
     expect(routeReason(model, DYNAMIC)).toEqual({ kind: ROUTE_REASON.Subnet, subnet: '192.168.1.0/24' });
   });
 
-  it('устройство без адреса не совпадает ни с пустой записью, ни с подсетью', () => {
+  it('a device without an address matches neither an empty entry nor a subnet', () => {
     const model = { ...MODEL, sourceIp: ['', '0.0.0.0/0'], sourceMac: [] };
 
     expect(routeReason(model, { ...DYNAMIC, ip: '' })).toBeNull();
@@ -141,27 +141,27 @@ describe('routeReason', () => {
 });
 
 describe('withDeviceRoute', () => {
-  it('у динамической аренды пишет только MAC', () => {
+  it('for a dynamic lease writes only the MAC', () => {
     const next = withDeviceRoute(MODEL, DYNAMIC, true);
 
     expect(next.sourceMac).toEqual(['AA:BB:CC:00:01:04', 'aa:bb:cc:00:00:40']);
     expect(next.sourceIp).toEqual(['192.168.1.180']);
   });
 
-  it('у статической аренды пишет MAC и адрес подсетью /32', () => {
+  it('for a static lease writes the MAC and the address as a /32 subnet', () => {
     const next = withDeviceRoute(MODEL, STATIC, true);
 
     expect(next.sourceMac).toContain('aa:bb:cc:00:00:70');
     expect(next.sourceIp).toEqual(['192.168.1.180', '192.168.1.60/32']);
   });
 
-  it('не дублирует адрес, уже записанный без префикса', () => {
+  it('does not duplicate an address already written without a prefix', () => {
     const next = withDeviceRoute(MODEL, BY_IP, true);
 
     expect(next.sourceIp).toEqual(['192.168.1.180/32']);
   });
 
-  it('выключение снимает MAC в любом регистре и адрес в обоих видах, подсети не трогает', () => {
+  it('disabling removes the MAC in any case and the address in both forms, does not touch subnets', () => {
     const model = { ...MODEL, sourceIp: ['192.168.1.120', '192.168.1.120/32', '10.0.0.0/8'] };
     const next = withDeviceRoute(model, BY_MAC, false);
 
@@ -170,7 +170,7 @@ describe('withDeviceRoute', () => {
     expect(routeReason(next, BY_MAC)).toBeNull();
   });
 
-  it('остальные поля модели уходят демону без изменений', () => {
+  it('other model fields go to the daemon unchanged', () => {
     expect(toDataplaneChange(withDeviceRoute(MODEL, DYNAMIC, false))).toEqual({ model: DATAPLANE_FIXTURE.model });
   });
 });

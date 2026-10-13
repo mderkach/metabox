@@ -4,8 +4,8 @@ export interface CountedGroup {
 }
 
 /**
- * Значения с числом вхождений, частые первыми; при равенстве — по алфавиту.
- * Порядок задан целиком, потому что на нём стоит порядок фасетов на экране.
+ * Values with occurrence counts, frequent first; ties broken alphabetically.
+ * The order is fully defined because the facet order on screen rests on it.
  */
 export function countGroups<T>(items: T[], toValue: (item: T) => string): CountedGroup[] {
   const counts = new Map<string, number>();

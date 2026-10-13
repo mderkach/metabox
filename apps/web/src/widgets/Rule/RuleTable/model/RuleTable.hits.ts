@@ -1,35 +1,35 @@
 export const RULE_HITS_STATE = {
   Pending: 'pending',
   Counted: 'counted',
-  /** Демон счёт не отдал: sing-box лежит или ручки нет. */
+  /** The daemon did not return the count: sing-box is down or the endpoint is missing. */
   Failed: 'failed',
-  /** Процесс работает не на применённом конфиге: номера его правил — чужие. */
+  /** The process does not run on the applied config: its rule numbers are foreign. */
   Mismatch: 'mismatch',
 } as const;
 
 /**
- * Колонка срабатываний. Счёт привязан к строке, а не к номеру: правило,
- * изменённое в черновике, счёта не получает, а переставленное несёт свой.
+ * Hits column. The count is bound to the row, not to the number: a rule
+ * changed in the draft gets no count, and a reordered one carries its own.
  */
 export type RuleHitsColumn =
   | { state: typeof RULE_HITS_STATE.Pending | typeof RULE_HITS_STATE.Failed | typeof RULE_HITS_STATE.Mismatch }
   | {
       state: typeof RULE_HITS_STATE.Counted;
-      /** Сколько идёт счёт: с запуска демона. */
+      /** How long the count runs: since the daemon started. */
       seconds: number;
       /**
-       * Срабатывания по идентификатору строки. Строки без записи счёта не
-       * имеют — правило изменено в черновике; `null` — правило в списке
-       * соединений core не видно, и ноль про него был бы неправдой.
+       * Hits by row identifier. Rows have no count entry
+       * when the rule is changed in the draft; `null` means the rule is not visible in the core
+       * connection list, and a zero for it would be untrue.
        */
       counts: ReadonlyMap<string, number | null>;
     };
 
-/** Что стоит в ячейке срабатываний, кроме числа. */
+/** What stands in the hits cell besides the number. */
 export const RULE_HIT = {
-  /** Правило изменено в черновике: счёт есть только у применённого. */
+  /** The rule is changed in the draft: only the applied one has a count. */
   Edited: 'edited',
-  /** Правило в списке соединений core не видно. */
+  /** The rule is not visible in the core connection list. */
   Unobserved: 'unobserved',
 } as const;
 

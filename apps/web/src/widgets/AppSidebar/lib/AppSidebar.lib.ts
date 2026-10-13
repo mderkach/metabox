@@ -3,10 +3,10 @@ import { z } from 'zod';
 
 const STORAGE_KEY = 'metabox.sidebar.collapsed';
 
-/** Хранилище отдаёт строку, и она может быть чем угодно: ключ переживает версии панели. */
+/** Storage returns a string, and it can be anything: the key outlives panel versions. */
 const StoredCollapsedSchema = z.enum(['true', 'false']);
 
-/** В приватном окне обращение к хранилищу бросает. */
+/** In a private window, storage access throws. */
 function readCollapsed(): boolean {
   try {
     const stored = StoredCollapsedSchema.safeParse(globalThis.localStorage.getItem(STORAGE_KEY));
@@ -15,7 +15,7 @@ function readCollapsed(): boolean {
       return stored.data === 'true';
     }
   } catch {
-    // Хранилище недоступно — панель открывается развёрнутой.
+    // Storage is unavailable — the panel opens expanded.
   }
 
   return false;
@@ -25,14 +25,14 @@ function writeCollapsed(collapsed: boolean) {
   try {
     globalThis.localStorage.setItem(STORAGE_KEY, String(collapsed));
   } catch {
-    // Не сохранилось — панель вернётся к развёрнутому виду.
+    // Not saved — the panel returns to the expanded view.
   }
 }
 
 /**
- * Текущий пункт меню по адресу: точное совпадение, иначе самый длинный
- * префикс. Вкладки раздела конфигурации живут на своих адресах, и без
- * префикса пункт «Конфигурация» гас бы на каждой из них, кроме первой.
+ * Current menu item by address: an exact match, otherwise the longest
+ * prefix. Config section tabs live at their own addresses, and without
+ * the prefix the Config item would go dark on each of them except the first.
  */
 export function pickActiveNav(pathname: string, targets: readonly string[]): string | null {
   let active: string | null = null;
@@ -49,15 +49,15 @@ export function pickActiveNav(pathname: string, targets: readonly string[]): str
 }
 
 /**
- * Состояние боковой панели. Выбор переживает перезагрузку страницы. На узком
- * экране боковой панели нет вовсе — там навигация в нижней панели, — поэтому
- * ширина здесь не учитывается.
+ * Sidebar state. The choice survives a page reload. On a narrow
+ * screen there is no sidebar at all — navigation is in the bottom bar there — so
+ * width is not considered here.
  */
 export function useSidebarCollapsed() {
   const [collapsed, setCollapsed] = useState(readCollapsed);
 
-  // Хранилище пишется снаружи обновления состояния: React зовёт обновляющую
-  // функцию дважды в строгом режиме, и запись ушла бы в неё вместе с остальным.
+  // Storage is written outside the state update: React calls the updater
+  // function twice in strict mode, and the write would go into it along with the rest.
   const toggle = useCallback(() => {
     const next = !collapsed;
 

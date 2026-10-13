@@ -8,13 +8,13 @@ import { RuleSetCustomForm } from '../ui/RuleSetCustomForm';
 
 const CONFIG_TEXT = '{\n  "route": { "rule_set": [] }\n}';
 
-describe('свой список', () => {
+describe('custom list', () => {
   beforeEach(() => {
     ConfigDocumentState.getState().reset();
     ConfigDocumentState.getState().load(CONFIG_TEXT, null);
   });
 
-  it('уходит в черновик узлом inline', async () => {
+  it('goes into the draft as an inline node', async () => {
     const user = userEvent.setup();
 
     render(<RuleSetCustomForm takenTags={[]} />);
@@ -36,7 +36,7 @@ describe('свой список', () => {
     expect(screen.getByRole('status')).toHaveTextContent('my-list');
   });
 
-  it('файлом: узел local и файл уезжают в черновик вместе', async () => {
+  it('as a file: the local node and the file go into the draft together', async () => {
     const user = userEvent.setup();
 
     render(<RuleSetCustomForm takenTags={[]} />);
@@ -57,7 +57,7 @@ describe('свой список', () => {
     expect(draft).toContain('"path": "rule-sets/big-list.json"');
   });
 
-  it('называет непонятую строку и в черновик не пишет', async () => {
+  it('names the unrecognized line and does not write the draft', async () => {
     const user = userEvent.setup();
 
     render(<RuleSetCustomForm takenTags={[]} />);

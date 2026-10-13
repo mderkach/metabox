@@ -3,22 +3,23 @@ import { createReactSelectors, stateCreator } from '@shared/lib/state';
 import { LOG_LIMIT, LOG_STREAM_STATUS, type LogEntry, type LogEvent, type LogStreamStatus } from './Log.model';
 
 interface LogState {
-  /** Строки, пришедшие потоком после хвоста: кольцо на `LOG_LIMIT`, старые первыми. */
+  /** Lines that came through the stream after the tail: a ring of `LOG_LIMIT`, old ones first. */
   entries: LogEntry[];
-  /** Сколько строк демон отбросил медленному читателю — по разрыву `seq`. */
+  /** How many lines the daemon dropped for a slow reader, by a `seq` gap. */
   lost: number;
-  /** Каким должен быть следующий `seq`; `null` — соединение новое, номера начинаются заново. */
+  /** What the next `seq` should be; `null` means the connection is new, numbers start over. */
   expected: number | null;
   status: LogStreamStatus;
   append: (events: readonly LogEvent[]) => void;
   /**
-   * Соединение открылось. Номера у демона считаются на соединение, а строки,
-   * пришедшие до него, потоком уже не доедут: экран перечитывает хвост, а
-   * строки прежнего соединения снимаются, чтобы не задвоиться.
+   * The connection opened. Numbers in the daemon are per connection, and lines
+   * that came before it will no longer arrive through the stream: the screen
+   * rereads the tail, and lines of the previous connection are removed so as
+   * not to double.
    */
   restart: () => void;
   setStatus: (status: LogStreamStatus) => void;
-  /** Новый уровень или очистка: экран начинает с чистого хвоста. */
+  /** New level or clear: the screen starts from a clean tail. */
   reset: () => void;
 }
 

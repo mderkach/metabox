@@ -6,15 +6,16 @@ import { ApiClientInstance, type TaggedResponse } from '@shared/api';
 import { DATAPLANE_ENDPOINT } from './Dataplane.endpoints';
 import type { DataplaneChangeWire, DataplaneWire } from './Dataplane.schema';
 
-/** `ETag` ответа — отпечаток секции UCI; уходит в `If-Match` смены. */
+/** `ETag` of the response is the UCI section fingerprint; it goes into the change `If-Match`. */
 export async function getDataplane(config?: AxiosRequestConfig): Promise<TaggedResponse<DataplaneWire>> {
   return ApiClientInstance.getTagged<DataplaneWire>(DATAPLANE_ENDPOINT.dataplane(), config);
 }
 
 /**
- * Запускает смену модели. Ответ 202 приходит до конца цикла, как у Apply
- * конфига: запись, `reload` службы и окно подтверждения идут дальше. Без
- * `If-Match` демон отвечает 428, секция, изменившаяся после чтения, — 412.
+ * Starts a model change. The 202 response arrives before the end of the cycle,
+ * as for config Apply: the write, the service `reload` and the confirmation
+ * window continue. Without `If-Match` the daemon answers 428, and for a section
+ * changed after reading, 412.
  */
 export async function putDataplane(change: DataplaneChangeWire, base: string | null): Promise<ApplyTransactionWire> {
   return ApiClientInstance.put<ApplyTransactionWire, DataplaneChangeWire>(DATAPLANE_ENDPOINT.dataplane(), change, {
@@ -26,7 +27,7 @@ export async function getDataplaneApplyState(id: string, config?: AxiosRequestCo
   return ApiClientInstance.get<ApplyTransactionWire>(DATAPLANE_ENDPOINT.applyState(id), config);
 }
 
-/** Без подтверждения демон по окну вернёт прежнюю модель. */
+/** Without confirmation the daemon returns the previous model when the window expires. */
 export async function confirmDataplane(id: string): Promise<ApplyTransactionWire> {
   return ApiClientInstance.post<ApplyTransactionWire>(DATAPLANE_ENDPOINT.applyConfirm(id));
 }

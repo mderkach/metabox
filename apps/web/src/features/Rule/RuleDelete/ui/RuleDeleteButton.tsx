@@ -17,14 +17,15 @@ import {
 } from '@shared/ui';
 
 /**
- * Удаление правила из черновика. Спрашивает подтверждение: пошаговой отмены у
- * черновика нет, и вернуть одно правило можно только сбросом всех правок.
+ * Deleting a rule from the draft. Asks for confirmation: the draft has no
+ * step-by-step undo, and a single rule can be brought back only by discarding
+ * all edits.
  */
 export function RuleDeleteButton({
   index,
   onDeleted,
 }: {
-  /** Номер правила, с единицы. */
+  /** Rule number, from one. */
   index: number;
   onDeleted: () => void;
 }) {

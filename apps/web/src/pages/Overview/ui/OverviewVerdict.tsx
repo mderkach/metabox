@@ -13,10 +13,10 @@ const VERDICT_VIEW: Readonly<Record<VerdictTone, { icon: LucideIcon; tone: strin
 };
 
 /**
- * Вердикт строкой во всю ширину шапки: в шапке он виден с любого места
- * прокрутки. Тон несут значок и, при проблеме, заголовок; форма значка
- * различает состояния и без цвета. Живая область — только заголовок:
- * пояснение меняется с каждым снимком, и скринридер зачитывал бы его без конца.
+ * The verdict as a line across the full header width: in the header it is visible from any
+ * scroll position. Tone is carried by the icon and, on a problem, the title; the icon shape
+ * tells states apart without color. The live region is the title only:
+ * the explanation changes with every snapshot, and a screen reader would read it out endlessly.
  */
 export function OverviewVerdict({ verdict }: { verdict: Verdict }) {
   const view = VERDICT_VIEW[verdict.tone];

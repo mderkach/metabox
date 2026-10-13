@@ -14,7 +14,7 @@ import { CONNECTION_COLUMNS_HIDDEN, CONNECTION_FIELD, type ConnectionField } fro
 
 const STORAGE_KEY = 'metabox.connections.view';
 
-/** Строки собираются настоящим разбором снапшота: отбор работает по его полям. */
+/** Rows are built by the real snapshot parse: the filter works by its fields. */
 function makeRows(count: number): ConnectionRow[] {
   ConnectionStore.getState().reset();
   ConnectionStore.getState().apply(makeConnectionsSnapshot(count));
@@ -31,9 +31,9 @@ function renderEmpty({ filtered, reset }: ConnectionTableEmpty) {
 }
 
 /**
- * Вид живёт снаружи таблицы, поэтому обёртка берёт его тем же хуком, что и
- * экран, и отдаёт его тулбару и телу — выбор полей работает с видом, а не с
- * моделью таблицы.
+ * The view lives outside the table, so the wrapper takes it with the same hook as
+ * the screen and passes it to the toolbar and body: field choice works with the view, not with
+ * the table model.
  */
 function TableHarness({
   rows,
@@ -65,7 +65,7 @@ function TableHarness({
   );
 }
 
-/** Подписи колонок в порядке шапки: первая кнопка заголовка — сортировка с подписью колонки. */
+/** Column labels in header order: the first header button is the sort with the column label. */
 function headerLabels() {
   return screen.getAllByRole('columnheader').flatMap((header) => {
     const sort = within(header).queryAllByRole('button').at(0);
@@ -74,19 +74,19 @@ function headerLabels() {
   });
 }
 
-describe('шапка таблицы', () => {
+describe('table header', () => {
   beforeEach(() => {
     localStorage.clear();
     mockVirtualSizes();
   });
 
-  it('подпись в кнопке сортировки наследует капитель шапки', () => {
+  it('the label in the sort button inherits the header small caps', () => {
     renderWithQuery(<TableHarness rows={makeRows(4)} onReset={vi.fn<() => void>()} />);
 
     expect(screen.getByRole('button', { name: 'Куда' })).toHaveClass('[text-transform:inherit]');
   });
 
-  it('несёт признак отбора у колонки, по полю которой стоит фасет, и только у неё', () => {
+  it('carries the filter mark on the column whose field has a facet, and only on it', () => {
     renderWithQuery(
       <TableHarness
         rows={makeRows(4)}
@@ -100,7 +100,7 @@ describe('шапка таблицы', () => {
     expect(screen.getByRole('columnheader', { name: /Куда/ })).not.toHaveTextContent('есть отбор');
   });
 
-  it('фильтра в шапке нет: отбор ставится фасетами экрана', () => {
+  it('there is no filter in the header: filtering is set by the screen facets', () => {
     renderWithQuery(<TableHarness rows={makeRows(4)} onReset={vi.fn<() => void>()} />);
 
     for (const header of screen.getAllByRole('columnheader')) {
@@ -108,7 +108,7 @@ describe('шапка таблицы', () => {
     }
   });
 
-  it('пустой экран из-за отбора снимает отбор экрана', async () => {
+  it('an empty screen caused by a filter clears the screen filter', async () => {
     const onReset = vi.fn<() => void>();
     const user = userEvent.setup();
 
@@ -119,7 +119,7 @@ describe('шапка таблицы', () => {
   });
 });
 
-describe('вид списка', () => {
+describe('list view', () => {
   beforeEach(() => {
     localStorage.clear();
     mockVirtualSizes();
@@ -129,7 +129,7 @@ describe('вид списка', () => {
     vi.restoreAllMocks();
   });
 
-  it('переживает перезагрузку страницы', async () => {
+  it('survives a page reload', async () => {
     const user = userEvent.setup();
     const rows = makeRows(4);
     const first = renderWithQuery(<TableHarness rows={rows} onReset={vi.fn<() => void>()} />);
@@ -148,7 +148,7 @@ describe('вид списка', () => {
     expect(screen.getByRole('button', { name: 'Плотные строки' })).toHaveAttribute('aria-pressed', 'true');
   });
 
-  it('частота обновления переживает перезагрузку страницы', async () => {
+  it('the refresh rate survives a page reload', async () => {
     const user = userEvent.setup();
     const rows = makeRows(4);
     const first = renderWithQuery(<TableHarness rows={rows} onReset={vi.fn<() => void>()} />);
@@ -165,7 +165,7 @@ describe('вид списка', () => {
     expect(screen.getByRole('combobox', { name: 'Частота обновления списка' })).toHaveTextContent('5 с');
   });
 
-  it('переставляет колонку из выбора полей, и порядок переживает перезагрузку', async () => {
+  it('moves a column from the field choice, and the order survives a reload', async () => {
     const user = userEvent.setup();
     const rows = makeRows(4);
     const first = renderWithQuery(<TableHarness rows={rows} onReset={vi.fn<() => void>()} />);
@@ -176,8 +176,8 @@ describe('вид списка', () => {
     await user.click(await screen.findByRole('button', { name: 'Поднять поле Куда выше' }));
 
     expect(headerLabels()).toEqual(['Куда', 'Откуда', 'Правило', 'Действие', 'Цепочка', 'Объём', 'Время']);
-    // Поле встало первым, «выше» погасла — фокус переходит на соседнюю кнопку
-    // того же поля, а не теряется.
+    // The field stood first, "up" went out: focus moves to the neighboring button
+    // of the same field instead of being lost.
     expect(screen.getByRole('button', { name: 'Поднять поле Куда выше' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Опустить поле Куда ниже' })).toHaveFocus();
 
@@ -187,7 +187,7 @@ describe('вид списка', () => {
     expect(headerLabels()).toEqual(['Куда', 'Откуда', 'Правило', 'Действие', 'Цепочка', 'Объём', 'Время']);
   });
 
-  it('переставляет колонку с клавиатуры, не теряя фокус', async () => {
+  it('moves a column from the keyboard without losing focus', async () => {
     const user = userEvent.setup();
 
     renderWithQuery(<TableHarness rows={makeRows(4)} onReset={vi.fn<() => void>()} />);
@@ -197,8 +197,8 @@ describe('вид списка', () => {
     await user.keyboard('{Enter}');
     await user.keyboard('{Enter}');
 
-    // Скрытая колонка в выборе полей тоже стоит на своём месте: второй шаг
-    // проводит поле мимо неё, и шапка его не замечает.
+    // A hidden column in the field choice also stands in its place: the second step
+    // moves the field past it, and the header does not notice it.
     expect(
       screen.getAllByRole('button', { name: /^Опустить поле/ }).map((button) => button.getAttribute('aria-label'))
     ).toEqual(
@@ -210,7 +210,7 @@ describe('вид списка', () => {
     expect(screen.getByRole('button', { name: 'Опустить поле Откуда ниже' })).toHaveFocus();
   });
 
-  it('сброс вида возвращает набор и порядок колонок разом, и хранилище получает вид по умолчанию', async () => {
+  it('reset view returns the column set and order at once, and storage gets the default view', async () => {
     const user = userEvent.setup();
     const rows = makeRows(4);
     const first = renderWithQuery(<TableHarness rows={rows} onReset={vi.fn<() => void>()} />);
@@ -222,8 +222,8 @@ describe('вид списка', () => {
     expect(screen.getByRole('columnheader', { name: /Сеть/ })).toBeInTheDocument();
     expect(headerLabels()[0]).toBe('Куда');
 
-    // Сброс пишет колонки и порядок двумя сеттерами подряд: второй не должен
-    // затирать первый видом, снятым до него.
+    // Reset writes columns and order with two setters in a row: the second must not
+    // overwrite the first with a view taken before it.
     await user.click(screen.getByRole('button', { name: 'По умолчанию' }));
 
     expect(headerLabels()).toEqual(['Откуда', 'Куда', 'Правило', 'Действие', 'Цепочка', 'Объём', 'Время']);
@@ -240,7 +240,7 @@ describe('вид списка', () => {
     });
   });
 
-  it('сброс вида возвращает и порядок колонок', async () => {
+  it('reset view returns the column order too', async () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ order: ['age', 'host'] }));
     const user = userEvent.setup();
 
@@ -252,9 +252,9 @@ describe('вид списка', () => {
     expect(headerLabels()).toEqual(['Откуда', 'Куда', 'Правило', 'Действие', 'Цепочка', 'Объём', 'Время']);
   });
 
-  // Сброс — одно изменение вида: два сеттера подряд брали бы вид из одного и
-  // того же замыкания, и второй затирал бы результат первого.
-  it('сброс вида возвращает и скрытые колонки, когда порядок тоже менялся', async () => {
+  // Reset is one view change: two setters in a row would take the view from the same
+  // closure, and the second would overwrite the result of the first.
+  it('reset view returns hidden columns too, when the order was also changed', async () => {
     const user = userEvent.setup();
 
     renderWithQuery(<TableHarness rows={makeRows(4)} onReset={vi.fn<() => void>()} />);
@@ -271,7 +271,7 @@ describe('вид списка', () => {
     expect(screen.getByRole('checkbox', { name: 'Цепочка' })).toBeChecked();
   });
 
-  it('сохранённый порядок другой версии панели: незнакомое пропускает, недостающее ставит в конец', () => {
+  it('a saved order from another panel version: skips the unknown, puts the missing at the end', () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ order: ['age', 'telepathy', 'host'], density: 'compact' }));
 
     renderWithQuery(<TableHarness rows={makeRows(4)} onReset={vi.fn<() => void>()} />);
@@ -280,7 +280,7 @@ describe('вид списка', () => {
     expect(screen.getByRole('button', { name: 'Плотные строки' })).toHaveAttribute('aria-pressed', 'true');
   });
 
-  it('на мусоре в хранилище показывает вид по умолчанию, а не падает', () => {
+  it('on garbage in storage shows the default view instead of crashing', () => {
     localStorage.setItem(STORAGE_KEY, '{ это не json');
 
     renderWithQuery(<TableHarness rows={makeRows(4)} onReset={vi.fn<() => void>()} />);
@@ -289,7 +289,7 @@ describe('вид списка', () => {
     expect(screen.queryByRole('columnheader', { name: /Сеть/ })).not.toBeInTheDocument();
   });
 
-  it('вид с незнакомыми значениями другой версии панели заменяется видом по умолчанию', () => {
+  it('a view with unknown values from another panel version is replaced with the default view', () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ density: 'cozy', interval: 3000, columns: { network: true } }));
 
     renderWithQuery(<TableHarness rows={makeRows(4)} onReset={vi.fn<() => void>()} />);
@@ -298,7 +298,7 @@ describe('вид списка', () => {
     expect(screen.queryByRole('columnheader', { name: /Сеть/ })).not.toBeInTheDocument();
   });
 
-  it('недостающее поле сохранённого вида берётся из вида по умолчанию, остальные — из хранилища', () => {
+  it('a missing field of a saved view is taken from the default view, the rest from storage', () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ density: 'compact' }));
 
     renderWithQuery(<TableHarness rows={makeRows(4)} onReset={vi.fn<() => void>()} />);
@@ -309,7 +309,7 @@ describe('вид списка', () => {
   });
 });
 
-describe('карточка узкого экрана', () => {
+describe('narrow screen card', () => {
   beforeEach(() => {
     localStorage.clear();
     mockVirtualSizes();
@@ -335,7 +335,7 @@ describe('карточка узкого экрана', () => {
       .map((term) => term.textContent);
   }
 
-  it('начинается с хоста назначения и действий строки, а не заканчивается ими', () => {
+  it('starts with the destination host and row actions, not ends with them', () => {
     renderWithQuery(<TableHarness rows={makeRows(3)} onReset={vi.fn<() => void>()} />);
 
     const card = firstCard();
@@ -348,13 +348,13 @@ describe('карточка узкого экрана', () => {
     expect(close.compareDocumentPosition(firstField) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it('подписывает для скринридера каждое видимое поле и не показывает скрытые', () => {
+  it('labels every visible field for the screen reader and does not show hidden ones', () => {
     renderWithQuery(<TableHarness rows={makeRows(3)} onReset={vi.fn<() => void>()} />);
 
     expect(fieldLabels(firstCard())).toEqual(['Куда', 'Правило', 'Действие', 'Цепочка', 'Откуда', 'Время', 'Объём']);
   });
 
-  it('показывает включённую колонку и прячет выключенную', () => {
+  it('shows an enabled column and hides a disabled one', () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ columns: { network: true, rate: false, chain: false } }));
 
     renderWithQuery(<TableHarness rows={makeRows(3)} onReset={vi.fn<() => void>()} />);

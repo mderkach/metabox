@@ -2,9 +2,10 @@ import { Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 
 /**
- * Заглушка неизвестного пути. Заменяет `Outlet` оболочки (`notFoundComponent`
- * на корневом маршруте), поэтому рендерится внутри `AppLayout` вместе с
- * сайдбаром — переход по неверному адресу не теряет навигацию панели.
+ * Fallback for an unknown path. It replaces the shell `Outlet`
+ * (`notFoundComponent` on the root route), so it renders inside `AppLayout`
+ * together with the sidebar: going to a wrong address does not lose the panel
+ * navigation.
  */
 export function NotFoundPage() {
   const { t } = useTranslation('app');

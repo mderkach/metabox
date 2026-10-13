@@ -13,7 +13,7 @@ const CONFIG = {
 } satisfies ConfigDocument;
 
 describe('findUnbuiltNodes', () => {
-  it('находит узлы, чей тип закрыт тегом, которого нет в сборке', () => {
+  it('finds nodes whose type is gated by a tag absent from the build', () => {
     expect(findUnbuiltNodes(CONFIG, ['with_quic'])).toEqual([
       {
         section: 'services',
@@ -25,7 +25,7 @@ describe('findUnbuiltNodes', () => {
     ]);
   });
 
-  it('проверяет и вложенную секцию DNS', () => {
+  it('also checks the nested DNS section', () => {
     const found = findUnbuiltNodes(CONFIG, ['with_ccm']);
 
     expect(found.map((node) => `${node.section}[${String(node.index)}] ${node.type}`)).toEqual([
@@ -34,11 +34,11 @@ describe('findUnbuiltNodes', () => {
     ]);
   });
 
-  it('молчит, когда состав сборки не прочитан', () => {
+  it('stays silent when the build composition has not been read', () => {
     expect(findUnbuiltNodes(CONFIG, null)).toEqual([]);
   });
 
-  it('считает сборку без тегов сборкой без закрытых типов', () => {
+  it('treats a build without tags as a build without gated types', () => {
     expect(findUnbuiltNodes(CONFIG, [])).toHaveLength(3);
   });
 });
@@ -59,7 +59,7 @@ const OPTION_CONFIG = {
 } satisfies ConfigDocument;
 
 describe('findUnbuiltOptions', () => {
-  it('находит включённые опции, теги которых не вошли в сборку', () => {
+  it('finds enabled options whose tags are not in the build', () => {
     const found = findUnbuiltOptions(OPTION_CONFIG, []);
 
     expect(found.map((option) => `${option.path} ${option.buildTag}`)).toEqual([
@@ -72,17 +72,17 @@ describe('findUnbuiltOptions', () => {
     ]);
   });
 
-  it('молчит при полном наборе тегов', () => {
+  it('stays silent with a full tag set', () => {
     const tags = ['with_clash_api', 'with_v2ray_api', 'with_utls', 'with_gvisor'];
 
     expect(findUnbuiltOptions(OPTION_CONFIG, tags)).toEqual([]);
   });
 
-  it('молчит, когда состав сборки не прочитан', () => {
+  it('stays silent when the build composition has not been read', () => {
     expect(findUnbuiltOptions(OPTION_CONFIG, null)).toEqual([]);
   });
 
-  it('выключенный uTLS и системный стек tun опциями не считаются', () => {
+  it('disabled uTLS and the system tun stack do not count as options', () => {
     const found = findUnbuiltOptions(OPTION_CONFIG, ['with_clash_api', 'with_v2ray_api']);
 
     expect(found.map((option) => option.path)).toEqual([
@@ -95,12 +95,12 @@ describe('findUnbuiltOptions', () => {
 });
 
 describe('unbuiltOptionOf', () => {
-  it('называет тег опции узла и всего, что под ней, когда его нет в сборке', () => {
+  it('names the node option tag and everything under it when it is missing from the build', () => {
     expect(unbuiltOptionOf('tls.utls', ['with_quic'])).toBe('with_utls');
     expect(unbuiltOptionOf('tls.utls.fingerprint', ['with_quic'])).toBe('with_utls');
   });
 
-  it('молчит об опции из сборки, о поле не из таблицы и о непрочитанном бинаре', () => {
+  it('stays silent about an option from the build, about a field not in the table and about an unread binary', () => {
     expect(unbuiltOptionOf('tls.utls', ['with_utls'])).toBeNull();
     expect(unbuiltOptionOf('tls.server_name', [])).toBeNull();
     expect(unbuiltOptionOf('tls.utls', null)).toBeNull();

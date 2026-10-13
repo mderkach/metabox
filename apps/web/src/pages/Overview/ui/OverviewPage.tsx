@@ -22,8 +22,8 @@ export function OverviewPage() {
   const runtime = useOverviewRuntime();
   const verdict = useOverviewVerdict(runtime);
 
-  // Замер меняет числа на месте: глазами это видно, а скринридеру результат
-  // объявляет одна область на экран.
+  // A measurement changes numbers in place: visible to the eye, but for a screen reader
+  // the result is announced by one region per screen.
   const { message, announce } = useLiveRegion();
 
   const onLatencyTested = useCallback(() => {

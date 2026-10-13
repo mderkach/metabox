@@ -3,8 +3,8 @@ import { useMutation } from '@tanstack/react-query';
 import { applyConfig, confirmApply, restoreConfigVersion, useSaveApplyTransaction } from '@entities/Config';
 
 /**
- * Применение черновика. Без ретраев: повтор запустил бы на устройстве второй
- * цикл (Query.md). Тело — текст черновика, а не пересобранный JSON.
+ * Applying a draft. No retries: a repeat would start a second cycle on the
+ * device (Query.md). The body is the draft text, not reassembled JSON.
  */
 export function useApplyConfig() {
   const onTransaction = useSaveApplyTransaction();
@@ -26,7 +26,7 @@ export function useConfirmApply() {
   });
 }
 
-/** Откат на версию идёт тем же протоколом Apply, что и обычное применение. */
+/** Rollback to a version goes through the same Apply protocol as a regular apply. */
 export function useRestoreConfigVersion() {
   const onTransaction = useSaveApplyTransaction();
 

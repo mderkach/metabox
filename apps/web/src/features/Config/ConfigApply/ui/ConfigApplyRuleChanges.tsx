@@ -4,7 +4,7 @@ import { RULE_CHANGE, type RuleChange } from '@entities/Rule';
 
 import { useRuleChanges } from '../lib/ConfigApply.lib';
 
-/** Строк сводки до «и ещё N»: дальше подробности читаются в самом дифе. */
+/** Summary lines before "and N more": further details are read in the diff itself. */
 const SHOWN_CHANGES = 5;
 
 const CHANGE_TEXT = {

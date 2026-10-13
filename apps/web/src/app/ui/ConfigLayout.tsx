@@ -12,11 +12,11 @@ import { PageHeader } from '@widgets/PageHeader';
 import { SchemaDriftNotice } from './SchemaDriftNotice';
 
 /**
- * Оболочка раздела конфигурации: шапка, полоса вкладок и содержимое вкладки.
+ * Shell of the configuration section: header, tab strip and tab content.
  *
- * Шапка и полоса живут здесь, а не на каждом экране раздела: при переходе
- * между вкладками меняется только содержимое, поэтому заголовок, путь файла,
- * бейдж черновика и диалог истории версий переход переживают.
+ * The header and the strip live here, not on every section screen: on a switch
+ * between tabs only the content changes, so the title, the file path, the draft
+ * badge and the version history dialog survive the transition.
  */
 export function ConfigLayout() {
   const { t } = useTranslation('app');

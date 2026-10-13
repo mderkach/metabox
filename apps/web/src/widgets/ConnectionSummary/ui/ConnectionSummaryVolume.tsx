@@ -7,8 +7,8 @@ import { ConnectionSummaryDonut, type DonutSlice } from './ConnectionSummaryDonu
 import { ConnectionSummaryPanel } from './ConnectionSummaryPanel';
 
 /**
- * Сколько прошло через sing-box с его запуска. Счётчики накопительные и
- * обнуляются перезапуском сервиса, а не открытием панели.
+ * How much has passed through sing-box since its start. Counters are cumulative and
+ * reset by a service restart, not by opening the panel.
  */
 export function ConnectionSummaryVolume({ totals }: { totals: ConnectionTotals }) {
   const { t } = useTranslation('widgets/ConnectionSummary');

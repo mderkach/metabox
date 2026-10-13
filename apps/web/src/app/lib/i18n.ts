@@ -6,24 +6,26 @@ import { LOCALE_URLS } from 'virtual:metabox-locales';
 import { FALLBACK_LANGUAGE, LANGUAGES, applyDocumentLanguage, detectLanguage } from '@shared/lib/i18n';
 
 /**
- * Словари лежат файлами рядом с бандлом и приезжают по сети: так текст панели
- * не попадает ни в один модуль сборки — ни первым чанком, ни ленивым. В бандл
- * едет только карта адресов: в сборке в имени файла стоит отпечаток, и знать
- * его наперёд рантайм не может.
+ * Dictionaries are files next to the bundle and arrive over the network: this
+ * way the panel text does not end up in any build module, neither the first
+ * chunk nor a lazy one. Only the address map goes into the bundle: the build
+ * puts a fingerprint in the file name, and the runtime cannot know it in
+ * advance.
  */
 const backend = resourcesToBackend(async (language: string, namespace: string) => {
   const url = LOCALE_URLS[`${language}:${namespace}`];
 
   if (url === undefined) {
-    throw new Error(`[I18N] неизвестный словарь ${language}:${namespace}`);
+    throw new Error(`[I18N] unknown dictionary ${language}:${namespace}`);
   }
 
   const response = await fetch(url);
 
-  // Неизвестный адрес демон и дев-сервер отдают оболочкой SPA, а не отказом:
-  // без проверки типа словарь молча стал бы куском HTML.
+  // The daemon and the dev server answer an unknown address with the SPA shell,
+  // not an error: without a type check the dictionary would silently become a
+  // piece of HTML.
   if (!response.ok || response.headers.get('content-type')?.includes('application/json') !== true) {
-    throw new Error(`[I18N] словарь ${url} не отдан`);
+    throw new Error(`[I18N] dictionary ${url} was not served`);
   }
 
   const dictionary: unknown = await response.json();
@@ -43,19 +45,19 @@ export async function initI18n(): Promise<void> {
       lng: language,
       fallbackLng: FALLBACK_LANGUAGE,
       supportedLngs: LANGUAGES,
-      // Неймспейс всегда называется явно: общего словаря в проекте нет.
+      // The namespace is always named explicitly: the project has no shared dictionary.
       ns: [],
       defaultNS: false,
-      // React экранирует сам, второй проход ломает кавычки и угловые скобки.
+      // React escapes on its own, a second pass breaks quotes and angle brackets.
       interpolation: { escapeValue: false },
       react: { useSuspense: true },
     });
 }
 
 /**
- * Догружает неймспейсы заранее — маршрут делает это в `loader`, чтобы экран
- * открывался сразу с текстом, а не через заглушку `Suspense`. Уже загруженные
- * i18next пропускает сам.
+ * Preloads namespaces: the route does it in `loader` so the screen opens right
+ * away with text instead of a `Suspense` fallback. i18next skips the already
+ * loaded ones on its own.
  */
 export async function preloadNamespaces(namespaces: Namespace): Promise<void> {
   await i18next.loadNamespaces(namespaces);

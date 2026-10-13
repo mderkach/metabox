@@ -1,4 +1,4 @@
-/** Адреса прокси: демон проксирует их в Clash API дословно. */
+/** Proxy addresses: the daemon proxies them to the Clash API verbatim. */
 export const PROXY_ENDPOINT = {
   proxies: () => '/api/clash/proxies',
   proxy: (name: string) => `/api/clash/proxies/${encodeURIComponent(name)}`,

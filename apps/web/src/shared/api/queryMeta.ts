@@ -5,18 +5,18 @@ import { API_FAILURE, ApiError } from './ApiError';
 import { failureText } from './failureText';
 
 /**
- * Тексты тостов живут в неймспейсе `shared`, а не в слайсе запроса: показывает
- * их одно место на всё приложение, и словарь слайса к этому моменту может быть
- * ещё не загружен.
+ * Toast texts live in the `shared` namespace, not in the request's slice: one place
+ * for the whole application shows them, and the slice dictionary may not be
+ * loaded yet by then.
  */
 export type MessageKey = ParseKeys<'shared'>;
 
 /**
- * Показ ошибки. Union, а не набор необязательных полей: иначе компилируется
- * `showSuccess: true` без текста и запрос молча ничего не показывает.
+ * Error display. A union, not a set of optional fields: otherwise
+ * `showSuccess: true` compiles without text and the request silently shows nothing.
  *
- * Ключ при `showError` необязателен — тогда берётся сообщение самой ошибки:
- * демон присылает его уже готовым к показу.
+ * The key is optional with `showError` — then the error's own message is used:
+ * the daemon sends it already ready to show.
  */
 type ErrorMeta =
   | { readonly showError: true; readonly errorMessageKey?: MessageKey }
@@ -27,8 +27,8 @@ type SuccessMeta =
   | { readonly showSuccess?: false; readonly successMessageKey?: never };
 
 /**
- * Уведомления задаются на запросе, а показываются централизованно в кэше
- * клиента — иначе тосты расползаются по хукам (Query.md).
+ * Notifications are set on the request and shown centrally in the client
+ * cache — otherwise toasts spread across hooks (Query.md).
  */
 export type QueryMeta = ErrorMeta & SuccessMeta;
 
@@ -40,18 +40,18 @@ declare module '@tanstack/react-query' {
 }
 
 /**
- * Недоступность демона тостом не показывается: о ней говорит баннер в `app`,
- * и дублировать его на каждый отвалившийся запрос значит завалить экран
- * одинаковыми сообщениями.
+ * Daemon unavailability is not shown as a toast: the banner in `app` reports it,
+ * and duplicating it for every failed request would flood the screen
+ * with identical messages.
  */
 function isDaemonUnreachable(error: unknown): boolean {
   return error instanceof ApiError && error.kind === API_FAILURE.Unreachable;
 }
 
 /**
- * Текст отказа: что не вышло и почему. Причину демон присылает кодом, и
- * перевод её — забота панели; сообщение демона идёт в ход, только когда код
- * незнаком, — оно на его языке, а не на языке пользователя.
+ * Failure text: what failed and why. The daemon sends the reason as a code, and
+ * its translation is the panel's job; the daemon's message is used only when the code
+ * is unfamiliar — it is in its language, not the user's.
  */
 function errorText(meta: ErrorMeta, error: unknown): string {
   const action = meta.errorMessageKey === undefined ? null : i18next.t(meta.errorMessageKey, { ns: 'shared' });
