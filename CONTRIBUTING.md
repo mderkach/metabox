@@ -142,7 +142,7 @@ New technical decisions are recorded as ADRs in [`docs/adr/`](./docs/adr/README.
 
 - Describes what and why; links to the PRD or an ADR if the decision goes there.
 - CI is mandatory and runs the same as `pre-push`, plus commitlint over all PR commits, `make daemon`, an integration run on the target environment image, and react-doctor advice (`pnpm --filter web lint:react`) as a step that does not fail the build.
-- Direct push to `main` is for the repository owner only.
+- Changes reach `main` only through a PR. A repository rule blocks the merge until the `checks` and `integration` jobs pass. Updating the branch to the latest `main` before the merge is not required. The job names are written into the rule: renaming them in `ci.yml` goes together with editing the rule, otherwise the merge waits for a check that no longer exists.
 
 ## Project specifics
 

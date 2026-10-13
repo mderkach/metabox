@@ -2,7 +2,7 @@
 
 |                      |                                                                           |
 | -------------------- | ------------------------------------------------------------------------- |
-| **Document version** | 1.40                                                                      |
+| **Document version** | 1.41                                                                      |
 | **Status**           | **approved** 2026-08-30, except the open questions in section 10.1        |
 | **Owner**            | project author                                                            |
 | **Last revision**    | 2026-10-13                                                                |
@@ -63,6 +63,7 @@
 | 1.38    | 2026-10-10 | M5 implementation without the router: checked AC-23, AC-48…AC-56, AC-58…AC-65, AC-67, AC-68, AC-70; AC-66 — partially (the remainder in the text); AC-57 — by emulation on the test bench. ADR-0047 and ADR-0048 (Proposed).                                                                                                                                                                                                                                                                                                                                                                                                           |
 | 1.39    | 2026-10-11 | AC-45: the Clash API mode is shown and switched on the overview, not from the sidebar — the "Mode" label in the footer did not explain what mode it was. Owner's decision. AC-38: connections have five multi-select facets instead of two rows of chips — per the owner's remark after deployment to the router                                                                                                                                                                                                                                                                                                                       |
 | 1.40    | 2026-10-13 | AC-57 checked as done: on the router, two days after the switch, both nft tables are in place, `inet b4_mangle` and `inet fw4` with metabox chains; the `meta mark != 0 return` rule in `metabox_mangle_output` let 78 708 packets bypass tproxy, 64 live connections have the b4 mark 0x8000 without metabox marks                                                                                                                                                                                                                                                                                                                    |
+| 1.41    | 2026-10-13 | Sections 1.1 and 1.3 checked against the analogs' READMEs as of this date: panels and LuCI apps with a config editor already exist, MetaCubeXD edits profiles; the metabox row no longer promises full form coverage of the schema (AC-23, OQ-21). Requirements did not change                                                                                                                                                                                                                                                                                                                                                         |
 
 > The document is living. Any decision in [`adr/`](./adr/README.md), including those moved from Appendix A, may be revised — they are decisions, not requirements; requirements are in sections 5 and 6.
 
@@ -72,7 +73,7 @@
 
 ### 1.1. Problem
 
-The only way to manage sing-box on OpenWrt is SSH: editing `config.json` in an editor, `sing-box check`, restarting the service, manual rollback if the connection drops.
+Without a dedicated panel, sing-box on OpenWrt is managed over SSH: editing `config.json` in an editor, `sing-box check`, restarting the service, manual rollback if the connection drops.
 
 Two tasks come up most often, and the cycle serves them poorly:
 
@@ -94,14 +95,16 @@ Product formula: **one place where you can see what the router does with traffic
 
 ### 1.3. Difference from analogs
 
-| Project                    | What it does                                                                                                             | What it does not do                          |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------- |
-| MetaCubeXD                 | Clash API dashboard for mihomo                                                                                           | does not edit the config, not about sing-box |
-| b4 (daniellavrushin)       | DPI bypass GUI, own sets, geodat                                                                                         | own model, not sing-box                      |
-| LuCI packages for sing-box | basic setup via uci                                                                                                      | no full schema editor, no dashboard          |
-| **metabox**                | **full GUI coverage of the sing-box-extended schema + dashboard + rule sets + route explanation from a live connection** | —                                            |
+Checked against the projects' READMEs as of 2026-10-13, not verified on a device.
 
-A form editor is reproducible and is not an advantage by itself. The difference rests on what neither editors nor dashboards have: the "live connection → matched rule → config node" chain and safe application of an edit. How this is built on observable core data — [ADR-0007](./adr/ADR-0007-explain-route-without-own-rule-evaluator.md).
+| Project                                | What is claimed                                                                                                                                             | How it differs from metabox                                |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| MetaCubeXD                             | Clash API dashboard, profile editor with a check before activation                                                                                          | mihomo core, not sing-box                                  |
+| b4 (daniellavrushin)                   | DPI bypass GUI, own sets, geodat                                                                                                                            | own model, not sing-box                                    |
+| luci-app-singbox-ui, luci-app-sing-box | LuCI apps: JSON editing, templates, forms for part of the settings, dashboard; one of them checks and rolls back on profile activation                      | the "connection → rule → config node" chain is not claimed |
+| **metabox**                            | **forms built from the sing-box-extended schema for supported nodes, raw JSON on any node, dashboard, rule sets, route explanation from a live connection** | —                                                          |
+
+A form editor is reproducible and is not an advantage by itself. The difference rests on what none of the projects above claims: the "live connection → matched rule → config node" chain and safe application of an edit. How this is built on observable core data — [ADR-0007](./adr/ADR-0007-explain-route-without-own-rule-evaluator.md).
 
 ---
 

@@ -150,7 +150,7 @@ The model is changed by `apply.Plane` with the same protocol as config apply, an
 
 Every change has a window. An ACL change that removes the request's source address from interception is applied the same way (the daemon only logs a warning about it) and without confirmation is rolled back by the window: it does not cut off the administrator for longer than the window. The address comes from `RemoteAddr`, the MAC is not checked.
 
-Replay on start comes after the config replay: `applying` with the section equal to the snapshot means the write did not happen, the state is removed; otherwise rollback. `awaiting_confirm` with an expired deadline: rollback; with an unexpired one: the window starts again. A rollback failure leaves the state file, and the next start tries again. On router boot the service manages to bring up the dataplane with the unconfirmed model, and the daemon rolls it back in the next step.
+Replay on start comes after the config replay: `applying` with the section equal to the snapshot means the write did not happen, the state is removed; otherwise rollback. `awaiting_confirm`: the window starts again for its full duration, as for the config; immediate rollback only with a window of 0. A rollback failure leaves the state file, and the next start tries again. On router boot the service manages to bring up the dataplane with the unconfirmed model, and the daemon rolls it back in the next step.
 
 ## Service crash reason
 
@@ -196,7 +196,7 @@ The state is written to disk **before** the config is written; otherwise power c
 
 The deadline is stored as a **duration** plus an "applied but not confirmed" flag, not as absolute time: the router has no real-time clock, after power-on it starts at the epoch and jumps during NTP sync.
 
-On start the daemon replays an unfinished transaction: an apply without completion means rollback to the backup, but only if the config was written (the file sha matches the sum in the state); otherwise the config on disk is of the previous generation, and the backup may be left from an earlier transaction, so a rollback from it would lose the confirmed version. Awaiting confirmation with an expired deadline: immediate rollback; with an unexpired one: the timer is restored. All branches are covered by tests.
+On start the daemon replays an unfinished transaction: an apply without completion means rollback to the backup, but only if the config was written (the file sha matches the sum in the state); otherwise the config on disk is of the previous generation, and the backup may be left from an earlier transaction, so a rollback from it would lose the confirmed version. Awaiting confirmation: the timer starts again for the full duration from the state, the remainder of the window is not stored (OQ-22 in the PRD); immediate rollback only with a window of 0. All branches are covered by tests.
 
 A finished transaction removes the state file. If the removal failed, a terminal phase is written in its place: a leftover `awaiting_confirm` would roll back an already confirmed config after a reboot, while replay only removes a terminal phase.
 

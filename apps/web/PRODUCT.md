@@ -57,7 +57,7 @@ Open questions that change the interface and are decided by the owner, not in pa
 - Live device: BPI-R4 Pro on OpenWrt SNAPSHOT, aarch64; sing-box-extended was checked on `1.13.18-extended-2.6.5` and `1.14.0-extended-2.7.1`.
 - Development test bench: `.devcontainer` brings up the frontend, the backend and an OpenWrt target environment built from the device firmware.
 - Config corpus for the golden round-trip: `src/entities/Config/__tests__/corpus/`, six notation forms, including a config with the structure of the working router. Collected from one device: a construct it lacks will surface at the owner's, not in tests.
-- What does not exist and must not be invented: users other than the author; reviews, case studies, press mentions; performance measurements (NFR thresholds are targets, not confirmed by measurement); prices, a license (the repository has no LICENSE file) and a public release.
+- What does not exist and must not be invented: users other than the author; reviews, case studies, press mentions; performance measurements (NFR thresholds are targets, not confirmed by measurement); prices and a public release. The license is in [`LICENSE`](../../LICENSE).
 
 ## Product Principles
 

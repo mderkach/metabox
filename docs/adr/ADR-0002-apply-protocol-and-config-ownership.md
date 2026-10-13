@@ -112,6 +112,7 @@ Deliberately deferred: version history and rollback to an arbitrary version (AC-
 
 - Version history (AC-15) and showing changes to the user (AC-32) are separate tasks on top of this decision.
 - The backup format is chosen so that version history can be added on top additively, but this decision does not deal with the history itself.
+- "Waiting for confirmation with the deadline passed" in "Decision outcome" in practice happens only with a window of 0: the deadline is stored as a duration, the remainder of the window is not written, and after a reboot the window is granted in full — OQ-22 in [`../PRD.md`](../PRD.md).
 
 ## Risks and mitigations
 
