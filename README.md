@@ -27,9 +27,6 @@ The package also ships its own sing-box service and LAN interception (nftables, 
 
 <img src="docs/screenshots/desktop/overview.png" alt="Overview" />
 
-> [!NOTE]
-> metabox is not affiliated with or endorsed by SagerNet or the authors of sing-box and sing-box-extended.
-
 ## Features
 
 - Routing rules: search, add, delete, reorder; a form per rule for action, rule sets and common conditions, or the raw node as JSON
