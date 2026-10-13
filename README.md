@@ -83,31 +83,14 @@ The package also ships its own sing-box service and LAN interception (nftables, 
 
 ## Installation
 
-Build the package on a computer with Docker, Go, Node.js and pnpm; versions and setup are in [`docs/Development.md`](./docs/Development.md) (Russian). The package architecture comes from the OpenWrt base image, so for mediatek/filogic routers build the base from the device firmware:
+Prebuilt packages are not published yet. To build the package from source and install it on the router, see [`docs/Development.md`](./docs/Development.md) (Russian).
+
+The package depends on `sing-box-extended`, which brings its own `sing-box` service. Disable it: sing-box is started by the metabox service.
 
 ```sh
-pnpm install
-make stand-base
-make package METABOX_BASE_IMAGE=metabox/openwrt-device:latest
-```
-
-Without `METABOX_BASE_IMAGE` the package is built for `aarch64_generic`, which the router refuses. The result is `dist/metaboxd.apk`.
-
-Copy the panel package and the fork package of the same architecture to the router:
-
-```sh
-scp -O dist/metaboxd.apk sing-box-extended_1.14.1-extended-2.7.2_openwrt_aarch64_cortex-a53.apk root@192.168.1.1:/tmp/
-```
-
-On the router:
-
-```sh
-apk add --allow-untrusted /tmp/sing-box-extended_*.apk /tmp/metaboxd.apk
 /etc/init.d/sing-box stop
 /etc/init.d/sing-box disable
 ```
-
-`--allow-untrusted` is needed because the package is not yet signed with a key the router trusts. The fork's own `sing-box` service is disabled because the metabox service starts sing-box.
 
 If homeproxy runs sing-box now, leave it as is: metabox interception is off by default and does not conflict with it.
 
@@ -162,8 +145,9 @@ With `acl_mode 'listed'` (default) only devices enabled on the Devices screen or
 
 ## Update and removal
 
+Install the new package the same way as the first one, then restart the services:
+
 ```sh
-apk add --allow-untrusted /tmp/metaboxd.apk
 /etc/init.d/metabox-singbox restart
 /etc/init.d/metaboxd restart
 ```

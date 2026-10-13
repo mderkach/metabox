@@ -73,6 +73,30 @@ Go-команды выполняются из каталога модуля, м�
 
 `pnpm lint` запускается только из корня: плагин Tailwind ищет конфиг фронта от каталога запуска. Полный список проверок перед коммитом и что гоняет CI — в [`CONTRIBUTING.md`](../CONTRIBUTING.md).
 
+## Пакет на роутер
+
+Архитектура пакета берётся из базового образа OpenWrt и должна совпадать с `/etc/apk/arch` на роутере, иначе apk пакет не поставит. Для роутеров mediatek/filogic (`aarch64_cortex-a53`) база собирается из образа прошивки; без `METABOX_BASE_IMAGE` пакет соберётся под `aarch64_generic`.
+
+```sh
+pnpm install
+make stand-base
+make package METABOX_BASE_IMAGE=metabox/openwrt-device:latest
+```
+
+На роутер копируются `dist/metaboxd.apk` и пакет [sing-box-extended](https://github.com/shtorm-7/sing-box-extended/releases) той же архитектуры. У dropbear на OpenWrt нет sftp-сервера, поэтому `scp` нужен с `-O`:
+
+```sh
+scp -O dist/metaboxd.apk sing-box-extended_1.14.1-extended-2.7.2_openwrt_aarch64_cortex-a53.apk root@192.168.1.1:/tmp/
+```
+
+На роутере, тем же способом и при обновлении:
+
+```sh
+apk add --allow-untrusted /tmp/sing-box-extended_*.apk /tmp/metaboxd.apk
+```
+
+`--allow-untrusted` нужен, потому что пакет из `make package` не подписан.
+
 ## Переменные сборки
 
 Версия выпуска — файл [`VERSION`](../VERSION) в semver. Из неё `make` выводит версию бинаря и версию пакета apk: `0.1.0-rc.2` становится `0.1.0_rc2-r0` ([ADR-0050](./adr/ADR-0050-version-releases-by-semver-and-derive-the-apk-version.md)).

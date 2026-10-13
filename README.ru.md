@@ -83,31 +83,14 @@ metabox — демон на Go (`metaboxd`), который ставится н�
 
 ## Установка
 
-Пакет собирается на компьютере с Docker, Go, Node.js и pnpm — версии и подготовка в [`docs/Development.md`](./docs/Development.md). Архитектура пакета берётся из базового образа OpenWrt, поэтому для роутеров mediatek/filogic база собирается из образа прошивки:
+Готовые пакеты пока не публикуются. Как собрать пакет из исходников и поставить на роутер — в [`docs/Development.md`](./docs/Development.md).
+
+Пакет зависит от `sing-box-extended`, а тот приносит свою службу `sing-box`. Её нужно выключить: sing-box поднимает служба metabox.
 
 ```sh
-pnpm install
-make stand-base
-make package METABOX_BASE_IMAGE=metabox/openwrt-device:latest
-```
-
-Без `METABOX_BASE_IMAGE` пакет соберётся под `aarch64_generic`, и роутер его не поставит. Результат — `dist/metaboxd.apk`.
-
-На роутер копируются пакет панели и пакет форка той же архитектуры:
-
-```sh
-scp -O dist/metaboxd.apk sing-box-extended_1.14.1-extended-2.7.2_openwrt_aarch64_cortex-a53.apk root@192.168.1.1:/tmp/
-```
-
-На роутере:
-
-```sh
-apk add --allow-untrusted /tmp/sing-box-extended_*.apk /tmp/metaboxd.apk
 /etc/init.d/sing-box stop
 /etc/init.d/sing-box disable
 ```
-
-`--allow-untrusted` нужен, потому что пакет пока не подписан ключом, которому доверяет роутер. Служба форка `sing-box` выключается, потому что sing-box поднимает служба metabox.
 
 Если сейчас sing-box поднимает homeproxy, оставьте его как есть: перехват metabox по умолчанию выключен и с ним не конфликтует.
 
@@ -162,8 +145,9 @@ uci commit metabox
 
 ## Обновление и удаление
 
+Новый пакет ставится так же, как первый, после чего службы перезапускаются:
+
 ```sh
-apk add --allow-untrusted /tmp/metaboxd.apk
 /etc/init.d/metabox-singbox restart
 /etc/init.d/metaboxd restart
 ```
