@@ -13,46 +13,46 @@ import (
 	"time"
 )
 
-// GitHubAPI — адрес GitHub REST API. Отдельной константой, потому что тесты
-// подставляют свой сервер.
+// GitHubAPI is the GitHub REST API address. A separate constant because tests
+// substitute their own server.
 const GitHubAPI = "https://api.github.com"
 
-// maxTreeBytes — потолок на ответ дерева. Самое большое дерево каталога —
-// около 600 КБ; восемь мегабайт с запасом перекрывают рост и не дают чужому
-// ответу забрать память роутера.
+// maxTreeBytes is the ceiling for the tree response. The largest catalog tree is
+// about 600 KB; eight megabytes cover growth with a margin and do not let a foreign
+// response take the router memory.
 const maxTreeBytes = 8 << 20
 
 const srsSuffix = ".srs"
 
-// errTruncated — GitHub отдал дерево не целиком. Урезанное дерево дало бы
-// каталог без части категорий, и по ответу это не было бы видно.
+// errTruncated: GitHub returned the tree not whole. A truncated tree would give a
+// catalog without some categories, and this would not be visible from the response.
 var errTruncated = errors.New("дерево отдано не целиком")
 
-// errEmpty — в дереве не нашлось ни одного файла набора. Так выглядит сменившаяся
-// раскладка поставщика, а не пустой каталог: прежний перечень остаётся.
+// errEmpty: no rule set file found in the tree. This is what a changed provider
+// layout looks like, not an empty catalog: the previous listing stays.
 var errEmpty = errors.New("в дереве нет файлов наборов")
 
-// Listing — результат сверки одного дерева.
+// Listing is the result of checking one tree.
 type Listing struct {
-	// Names — имена файлов дерева; при NotModified пустой.
+	// Names are the tree file names; empty with NotModified.
 	Names []string
 	ETag  string
-	// NotModified — дерево не менялось с прошлой сверки.
+	// NotModified: the tree has not changed since the last check.
 	NotModified bool
 }
 
-// GitHub читает деревья веток через REST API.
+// GitHub reads branch trees through the REST API.
 //
-// Без токена лимит — 60 запросов в час на адрес, и условный запрос по ETag в
-// него тоже засчитывается. Каталогу хватает четырёх запросов в сутки, поэтому
-// токен не заводится.
+// Without a token the limit is 60 requests per hour per address, and a conditional ETag request
+// counts against it too. Four requests a day are enough for the catalog, so
+// no token is created.
 type GitHub struct {
 	client    *http.Client
 	baseURL   string
 	userAgent string
 }
 
-// NewGitHub собирает клиент. userAgent обязателен: без него GitHub отвечает 403.
+// NewGitHub assembles the client. userAgent is required: without it GitHub answers 403.
 func NewGitHub(baseURL, userAgent string, timeout time.Duration) *GitHub {
 	return &GitHub{
 		client:    &http.Client{Timeout: timeout},
@@ -69,7 +69,7 @@ type treeResponse struct {
 	} `json:"tree"`
 }
 
-// List читает имена файлов дерева. Непустой etag делает запрос условным.
+// List reads the tree file names. A non-empty etag makes the request conditional.
 func (g *GitHub) List(ctx context.Context, tree Tree, etag string) (Listing, error) {
 	target := tree.Ref
 	if tree.Dir != "" {
@@ -124,9 +124,9 @@ func (g *GitHub) List(ctx context.Context, tree Tree, etag string) (Listing, err
 	return Listing{Names: names, ETag: resp.Header.Get("ETag")}, nil
 }
 
-// categories оставляет файлы наборов с нужной приставкой и отдаёт имена
-// категорий по алфавиту. Берутся готовые `.srs`, а не разбор `geosite.dat`:
-// категория без файла дала бы адрес, по которому sing-box ничего не скачает.
+// categories keeps the rule set files with the needed prefix and returns the category
+// names in alphabetical order. Ready `.srs` files are taken, not a parse of `geosite.dat`:
+// a category without a file would give an address from which sing-box downloads nothing.
 func categories(names []string, prefix string) []string {
 	found := make([]string, 0, len(names))
 

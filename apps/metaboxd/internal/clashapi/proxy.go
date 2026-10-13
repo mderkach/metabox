@@ -9,22 +9,22 @@ import (
 	"strings"
 )
 
-// Prefix — ветка, под которой демон отдаёт Clash API наружу. Панель ходит
-// сюда, а не на порт контроллера: адрес и секрет остаются внутри демона.
+// Prefix is the branch under which the daemon serves the Clash API outside. The panel goes
+// here, not to the controller port: the address and secret stay inside the daemon.
 const Prefix = "/api/clash"
 
-// Resolver отдаёт адрес и секрет контроллера. Значения читаются из
-// применённого конфига на каждый запрос: пользователь вправе сменить порт,
-// и прокси обязан ходить туда, где контроллер слушает сейчас.
+// Resolver returns the controller address and secret. The values are read from
+// the applied config on every request: the user may change the port,
+// and the proxy must go where the controller listens now.
 type Resolver func(ctx context.Context) (Settings, error)
 
-// ErrorHandler отдаёт отказ в формате HTTP-слоя. Внедряется снаружи, чтобы
-// пакет не знал про формат ответа демона.
+// ErrorHandler returns a failure in the HTTP layer format. Injected from outside so that
+// the package does not know the daemon response format.
 type ErrorHandler func(w http.ResponseWriter, r *http.Request, err error)
 
-// Proxy пробрасывает запросы панели в Clash API sing-box, сохраняя формы
-// ответов дословно. Ответ не буферизуется: под этой же веткой ходят потоки
-// трафика, памяти и соединений.
+// Proxy forwards panel requests to the sing-box Clash API, keeping the response
+// shapes verbatim. The response is not buffered: the traffic, memory and connection
+// streams go under the same branch.
 type Proxy struct {
 	resolve Resolver
 	onError ErrorHandler
@@ -38,8 +38,8 @@ type target struct {
 	secret string
 }
 
-// NewProxy собирает прокси. onError обязателен: без него отказ ушёл бы
-// клиенту в формате net/http, а не в формате демона.
+// NewProxy assembles the proxy. onError is required: without it a failure would go
+// to the client in the net/http format, not in the daemon format.
 func NewProxy(resolve Resolver, onError ErrorHandler) (*Proxy, error) {
 	if resolve == nil {
 		return nil, errors.New("резолвер настроек не задан")
@@ -52,8 +52,8 @@ func NewProxy(resolve Resolver, onError ErrorHandler) (*Proxy, error) {
 	p := &Proxy{resolve: resolve, onError: onError}
 	p.proxy = &httputil.ReverseProxy{
 		Rewrite: rewrite,
-		// -1 отключает буферизацию: `/traffic` и `/memory` отдают по строке
-		// раз в секунду, и с буфером панель увидела бы их пачкой.
+		// -1 disables buffering: `/traffic` and `/memory` give a line
+		// once a second, and with a buffer the panel would see them in a batch.
 		FlushInterval:  -1,
 		ModifyResponse: stripCORS,
 		ErrorHandler:   onError,
@@ -88,10 +88,10 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	p.proxy.ServeHTTP(w, r.WithContext(ctx))
 }
 
-// stripCORS снимает CORS-заголовки контроллера: при пустом
-// access_control_allow_origin форк отвечает Access-Control-Allow-Origin: * на
-// всё, и пропустить это наружу — отдать ветку прокси, авторизованную
-// секретом, любому сайту в браузере пользователя.
+// stripCORS removes the controller CORS headers: with an empty
+// access_control_allow_origin the fork answers Access-Control-Allow-Origin: * to
+// everything, and letting that outside would hand the proxy branch, authorized
+// by the secret, to any site in the user's browser.
 func stripCORS(resp *http.Response) error {
 	for name := range resp.Header {
 		if strings.HasPrefix(name, "Access-Control-") {
@@ -109,14 +109,14 @@ func rewrite(pr *httputil.ProxyRequest) {
 	}
 
 	pr.SetURL(t.base)
-	// SetURL склеивает путь цели с входящим, поэтому префикс снимается после
-	// него: контроллер знает `/rules`, а не `/api/clash/rules`.
+	// SetURL joins the target path with the incoming one, so the prefix is stripped after
+	// it: the controller knows `/rules`, not `/api/clash/rules`.
 	pr.Out.URL.Path = strings.TrimPrefix(pr.In.URL.Path, Prefix)
 	pr.Out.URL.RawPath = strings.TrimPrefix(pr.In.URL.EscapedPath(), Prefix)
 	pr.Out.Host = t.base.Host
 
-	// Куки панели контроллеру не принадлежат, а секрет ставит демон: браузер
-	// его не видит и подделать заголовок не может.
+	// The panel cookies do not belong to the controller, and the secret is set by the daemon: the browser
+	// does not see it and cannot forge the header.
 	pr.Out.Header.Del("Cookie")
 	pr.Out.Header.Del("Authorization")
 

@@ -23,7 +23,7 @@ func testLogger(t *testing.T) *slog.Logger {
 	return slog.New(slog.NewTextHandler(io.Discard, nil))
 }
 
-// fakeSource считает подписки и отдаёт заранее заданные данные.
+// fakeSource counts subscriptions and returns preset data.
 type fakeSource struct {
 	mu sync.Mutex
 
@@ -31,7 +31,7 @@ type fakeSource struct {
 	service json.RawMessage
 	system  json.RawMessage
 
-	// lines шлются в поток по одной на подписку.
+	// lines are sent into the stream one per subscription.
 	lines []json.RawMessage
 }
 
@@ -75,7 +75,7 @@ func fastOptions() Options {
 	}
 }
 
-// pushConnections кормит Hub снапшотами с частотой счётчика, пока тест идёт.
+// pushConnections feeds the Hub snapshots at the counter frequency while the test runs.
 func pushConnections(t *testing.T, hub *Hub, raw string) {
 	t.Helper()
 
@@ -109,7 +109,7 @@ func readEvents(t *testing.T, body io.Reader, want int) []Event {
 	for len(events) < want {
 		event, err := reader.next()
 		if err != nil {
-			t.Fatalf("чтение события %d из %d: %v", len(events)+1, want, err)
+			t.Fatalf("reading event %d of %d: %v", len(events)+1, want, err)
 		}
 
 		events = append(events, event)
@@ -118,8 +118,8 @@ func readEvents(t *testing.T, body io.Reader, want int) []Event {
 	return events
 }
 
-// Поток не поднимается, пока нет читателя: устройство большую часть времени
-// простаивает, и фоновый опрос без потребителя там не нужен.
+// The stream does not come up while there is no reader: the device idles most of the time,
+// and background polling without a consumer is not needed there.
 func TestHubIdleWithoutSubscribers(t *testing.T) {
 	source := &fakeSource{service: json.RawMessage(`{}`)}
 	New(source, testLogger(t), fastOptions())
@@ -127,12 +127,12 @@ func TestHubIdleWithoutSubscribers(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 
 	if got := source.streams.Load(); got != 0 {
-		t.Errorf("источник опрошен без читателей: %d подписок", got)
+		t.Errorf("source polled without readers: %d subscriptions", got)
 	}
 }
 
-// Снапшот в форме Clash API: демон переводит его в свой контракт, и мок обязан
-// приходить в той же форме, что и настоящий источник.
+// A snapshot in the Clash API shape: the daemon translates it into its own contract, and the mock must
+// arrive in the same shape as the real source.
 const clashSnapshotBody = `{"connections":[{"id":"a","rule":"domain=example.com => route(proxy)",` +
 	`"chains":["hk-01","proxy"],"metadata":{"host":"example.com","destinationPort":"443"}}],"memory":1024}`
 
@@ -148,30 +148,30 @@ func TestHubStreamsToSubscriber(t *testing.T) {
 	srv := httptest.NewServer(hub)
 	defer srv.Close()
 
-	response, err := srv.Client().Get(srv.URL) //nolint:noctx // соединение закрывается ниже
+	response, err := srv.Client().Get(srv.URL) //nolint:noctx // the connection is closed below
 	if err != nil {
-		t.Fatalf("подключение к потоку: %v", err)
+		t.Fatalf("connecting to the stream: %v", err)
 	}
 	defer func() { _ = response.Body.Close() }()
 
 	if got := response.Header.Get("Content-Type"); got != "text/event-stream" {
-		t.Fatalf("тип ответа %q, ожидали text/event-stream", got)
+		t.Fatalf("response type %q, expected text/event-stream", got)
 	}
 
 	want := []string{TopicTraffic, TopicMemory, TopicConnections, TopicService}
 	seen := make(map[string]bool)
 	reader := newSSEReader(response.Body)
 
-	// Порядок топиков не определён: читается до полного набора, а не ровно
-	// столько событий, сколько топиков.
+	// The topic order is undefined: reading goes until the full set, not exactly
+	// as many events as there are topics.
 	for range 100 {
 		event, err := reader.next()
 		if err != nil {
-			t.Fatalf("чтение события: %v", err)
+			t.Fatalf("reading an event: %v", err)
 		}
 
 		if event.Seq == 0 {
-			t.Errorf("событие без номера: %+v", event)
+			t.Errorf("event without a number: %+v", event)
 		}
 
 		seen[event.Topic] = true
@@ -183,12 +183,12 @@ func TestHubStreamsToSubscriber(t *testing.T) {
 
 	for _, topic := range want {
 		if !seen[topic] {
-			t.Errorf("топик %q в потоке не появился, пришли %v", topic, seen)
+			t.Errorf("topic %q did not appear in the stream, got %v", topic, seen)
 		}
 	}
 }
 
-// Второй читатель не удваивает нагрузку на sing-box: апстрим остаётся один.
+// A second reader does not double the load on sing-box: the upstream stays single.
 func TestHubSharesUpstream(t *testing.T) {
 	source := &fakeSource{service: json.RawMessage(`{}`)}
 	hub := New(source, testLogger(t), fastOptions())
@@ -196,33 +196,33 @@ func TestHubSharesUpstream(t *testing.T) {
 	srv := httptest.NewServer(hub)
 	defer srv.Close()
 
-	first, err := srv.Client().Get(srv.URL) //nolint:noctx // соединение закрывается ниже
+	first, err := srv.Client().Get(srv.URL) //nolint:noctx // the connection is closed below
 	if err != nil {
-		t.Fatalf("первый читатель: %v", err)
+		t.Fatalf("first reader: %v", err)
 	}
 	defer func() { _ = first.Body.Close() }()
 
-	// Ждём, пока поднимутся обе построчные подписки: снимок счётчика сразу
-	// после первого события ловил бы момент, когда часть горутин ещё не
-	// стартовала, и тест мигал бы.
+	// We wait until both line-by-line subscriptions are up: a counter snapshot right
+	// after the first event would catch the moment when some goroutines had not
+	// started yet, and the test would flake.
 	const wantStreams = 2
 	waitStreams(t, source, wantStreams)
 
-	second, err := srv.Client().Get(srv.URL) //nolint:noctx // соединение закрывается ниже
+	second, err := srv.Client().Get(srv.URL) //nolint:noctx // the connection is closed below
 	if err != nil {
-		t.Fatalf("второй читатель: %v", err)
+		t.Fatalf("second reader: %v", err)
 	}
 	defer func() { _ = second.Body.Close() }()
 
 	readEvents(t, second.Body, 1)
 
 	if got := source.streams.Load(); got != wantStreams {
-		t.Errorf("подписок на источник %d, ожидали %d: апстрим не разделён", got, wantStreams)
+		t.Errorf("subscriptions to the source %d, expected %d: upstream is not shared", got, wantStreams)
 	}
 }
 
-// Подключившийся читатель получает текущее состояние сразу, а не через период
-// опроса: иначе экран после перезагрузки страницы был бы пустым до секунды.
+// A reader that connects gets the current state at once and not after the polling
+// period: otherwise the screen after a page reload would be empty for up to a second.
 func TestHubReplaysLastState(t *testing.T) {
 	source := &fakeSource{service: json.RawMessage(`{"status":"running"}`)}
 	hub := New(source, testLogger(t), fastOptions())
@@ -230,20 +230,20 @@ func TestHubReplaysLastState(t *testing.T) {
 	srv := httptest.NewServer(hub)
 	defer srv.Close()
 
-	warmup, err := srv.Client().Get(srv.URL) //nolint:noctx // соединение закрывается ниже
+	warmup, err := srv.Client().Get(srv.URL) //nolint:noctx // the connection is closed below
 	if err != nil {
-		t.Fatalf("прогрев: %v", err)
+		t.Fatalf("warm-up: %v", err)
 	}
 
 	readEvents(t, warmup.Body, 2)
 
-	late, err := srv.Client().Get(srv.URL) //nolint:noctx // соединение закрывается ниже
+	late, err := srv.Client().Get(srv.URL) //nolint:noctx // the connection is closed below
 	if err != nil {
-		t.Fatalf("поздний читатель: %v", err)
+		t.Fatalf("late reader: %v", err)
 	}
 	defer func() { _ = late.Body.Close() }()
 
-	// Первое же событие приходит без ожидания периода опроса.
+	// The very first event arrives without waiting for the polling period.
 	done := make(chan Event, 1)
 
 	go func() {
@@ -260,20 +260,20 @@ func TestHubReplaysLastState(t *testing.T) {
 	select {
 	case event, ok := <-done:
 		if !ok {
-			t.Fatal("позднему читателю ничего не пришло")
+			t.Fatal("nothing reached the late reader")
 		}
 
 		if event.Seq == 0 {
-			t.Errorf("повтор состояния без номера: %+v", event)
+			t.Errorf("state repeat without a number: %+v", event)
 		}
 	case <-time.After(time.Second):
-		t.Fatal("состояние не повторено подключившемуся читателю")
+		t.Fatal("state not repeated to the reader that connected")
 	}
 
 	_ = warmup.Body.Close()
 }
 
-// Уход последнего читателя останавливает опрос: горутины не остаются висеть.
+// The last reader leaving stops the polling: goroutines are not left hanging.
 func TestHubStopsWithLastSubscriber(t *testing.T) {
 	source := &fakeSource{service: json.RawMessage(`{}`)}
 	hub := New(source, testLogger(t), fastOptions())
@@ -283,7 +283,7 @@ func TestHubStopsWithLastSubscriber(t *testing.T) {
 	select {
 	case <-sub.ch:
 	case <-time.After(time.Second):
-		t.Fatal("события не пошли")
+		t.Fatal("events did not flow")
 	}
 
 	cancel()
@@ -293,12 +293,12 @@ func TestHubStopsWithLastSubscriber(t *testing.T) {
 	hub.mu.Unlock()
 
 	if running {
-		t.Error("опрос источников продолжается без читателей")
+		t.Error("source polling continues without readers")
 	}
 }
 
-// Без возможности сбросить буфер поток отдавать нечем: событие осталось бы
-// у сервера до конца ответа, которого у потока нет.
+// Without the ability to flush the buffer there is nothing to serve the stream with: the event would stay
+// at the server until the end of the response, which a stream does not have.
 func TestHubRequiresFlusher(t *testing.T) {
 	hub := New(&fakeSource{}, testLogger(t), fastOptions())
 
@@ -306,13 +306,13 @@ func TestHubRequiresFlusher(t *testing.T) {
 	hub.ServeHTTP(writer, httptest.NewRequest(http.MethodGet, "/api/events", nil))
 
 	if writer.code != http.StatusInternalServerError {
-		t.Errorf("код ответа %d, ожидали %d", writer.code, http.StatusInternalServerError)
+		t.Errorf("response code %d, expected %d", writer.code, http.StatusInternalServerError)
 	}
 }
 
-// noFlushWriter реализует только http.ResponseWriter. Встраивать
-// httptest.ResponseRecorder нельзя: он промотировал бы свой Flush, и writer
-// снова оказался бы http.Flusher.
+// noFlushWriter implements only http.ResponseWriter. Embedding
+// httptest.ResponseRecorder is not allowed: it would promote its Flush, and the writer
+// would again be an http.Flusher.
 type noFlushWriter struct {
 	header http.Header
 	code   int
@@ -334,11 +334,11 @@ func waitStreams(t *testing.T, source *fakeSource, want int64) {
 		time.Sleep(5 * time.Millisecond)
 	}
 
-	t.Fatalf("подписок на источник %d, ожидали %d", source.streams.Load(), want)
+	t.Fatalf("subscriptions to the source %d, expected %d", source.streams.Load(), want)
 }
 
-// Номера у читателя идут подряд с единицы, включая повтор состояния при
-// подключении: иначе панель приняла бы начало потока за пропуск.
+// Numbers for a reader go in sequence from one, including the state repeat on
+// connect: otherwise the panel would take the start of the stream for a gap.
 func TestHubNumbersPerSubscriber(t *testing.T) {
 	source := &fakeSource{
 		service: json.RawMessage(`{}`),
@@ -348,31 +348,31 @@ func TestHubNumbersPerSubscriber(t *testing.T) {
 	srv := httptest.NewServer(New(source, testLogger(t), fastOptions()))
 	defer srv.Close()
 
-	first, err := srv.Client().Get(srv.URL) //nolint:noctx // соединение закрывается ниже
+	first, err := srv.Client().Get(srv.URL) //nolint:noctx // the connection is closed below
 	if err != nil {
-		t.Fatalf("первый читатель: %v", err)
+		t.Fatalf("first reader: %v", err)
 	}
 	defer func() { _ = first.Body.Close() }()
 
 	for i, event := range readEvents(t, first.Body, 5) {
 		if want := uint64(i + 1); event.Seq != want {
-			t.Fatalf("номер события %d: получили %d, ожидали %d", i, event.Seq, want)
+			t.Fatalf("event number %d: got %d, expected %d", i, event.Seq, want)
 		}
 	}
 
-	// Подключившийся позже начинает с единицы, а не с номера общего счётчика.
-	late, err := srv.Client().Get(srv.URL) //nolint:noctx // соединение закрывается ниже
+	// One that connected later starts from one, not from the shared counter number.
+	late, err := srv.Client().Get(srv.URL) //nolint:noctx // the connection is closed below
 	if err != nil {
-		t.Fatalf("поздний читатель: %v", err)
+		t.Fatalf("late reader: %v", err)
 	}
 	defer func() { _ = late.Body.Close() }()
 
 	if got := readEvents(t, late.Body, 1)[0]; got.Seq != 1 {
-		t.Errorf("первый номер у позднего читателя %d, ожидали 1", got.Seq)
+		t.Errorf("first number of the late reader %d, expected 1", got.Seq)
 	}
 }
 
-// Битая строка источника не должна оседать в состоянии топика.
+// A broken source line must not settle in the topic state.
 func TestHubSkipsInvalidLines(t *testing.T) {
 	source := &fakeSource{
 		service: json.RawMessage(`{}`),
@@ -382,20 +382,20 @@ func TestHubSkipsInvalidLines(t *testing.T) {
 	srv := httptest.NewServer(New(source, testLogger(t), fastOptions()))
 	defer srv.Close()
 
-	response, err := srv.Client().Get(srv.URL) //nolint:noctx // соединение закрывается ниже
+	response, err := srv.Client().Get(srv.URL) //nolint:noctx // the connection is closed below
 	if err != nil {
-		t.Fatalf("подключение: %v", err)
+		t.Fatalf("connection: %v", err)
 	}
 	defer func() { _ = response.Body.Close() }()
 
 	for _, event := range readEvents(t, response.Body, 6) {
 		if event.Topic == TopicTraffic && string(event.Data) != `{"up":7}` {
-			t.Errorf("в топик трафика попало %q", event.Data)
+			t.Errorf("%q got into the traffic topic", event.Data)
 		}
 	}
 }
 
-// Уход апстрима не должен оставлять новому читателю данные мёртвого потока.
+// The upstream leaving must not leave a new reader with the data of a dead stream.
 func TestHubForgetsStateAfterStop(t *testing.T) {
 	source := &fakeSource{service: json.RawMessage(`{}`)}
 	hub := New(source, testLogger(t), fastOptions())
@@ -405,7 +405,7 @@ func TestHubForgetsStateAfterStop(t *testing.T) {
 	select {
 	case <-sub.ch:
 	case <-time.After(time.Second):
-		t.Fatal("события не пошли")
+		t.Fatal("events did not flow")
 	}
 
 	cancel()
@@ -415,18 +415,18 @@ func TestHubForgetsStateAfterStop(t *testing.T) {
 	hub.mu.Unlock()
 
 	if remembered != 0 {
-		t.Errorf("после остановки помнится %d топиков, ожидали 0", remembered)
+		t.Errorf("after stop %d topics are remembered, expected 0", remembered)
 	}
 }
 
-// Close закрывает читателей: без этого остановка демона ждала бы их ухода.
+// Close closes the readers: without it the daemon stop would wait for them to leave.
 func TestHubCloseReleasesSubscribers(t *testing.T) {
 	hub := New(&fakeSource{service: json.RawMessage(`{}`)}, testLogger(t), fastOptions())
 
 	sub, _, _ := hub.subscribe()
 	hub.Close()
 
-	for range sub.ch { //nolint:revive // вычитываем остаток очереди до закрытия
+	for range sub.ch { //nolint:revive // drain the rest of the queue until it closes
 	}
 
 	hub.mu.Lock()
@@ -434,11 +434,11 @@ func TestHubCloseReleasesSubscribers(t *testing.T) {
 	hub.mu.Unlock()
 
 	if left != 0 {
-		t.Errorf("после Close осталось читателей: %d", left)
+		t.Errorf("readers left after Close: %d", left)
 	}
 }
 
-// Снапшот счётчика переводится в контракт демона и доходит до читателя.
+// A counter snapshot is translated into the daemon contract and reaches the reader.
 func TestHubPublishesCounterSnapshot(t *testing.T) {
 	hub := New(&fakeSource{service: json.RawMessage(`{}`)}, testLogger(t), fastOptions())
 
@@ -457,18 +457,18 @@ func TestHubPublishesCounterSnapshot(t *testing.T) {
 			}
 
 			if !strings.Contains(string(event.Data), `"host":"example.com:443"`) {
-				t.Errorf("снапшот не переведён в контракт: %s", event.Data)
+				t.Errorf("snapshot not translated into the contract: %s", event.Data)
 			}
 
 			return
 		case <-deadline:
-			t.Fatal("снапшот счётчика до читателя не дошёл")
+			t.Fatal("counter snapshot did not reach the reader")
 		}
 	}
 }
 
-// Без читателей снапшот отбрасывается и не оседает в состоянии топика: данные
-// умершего к моменту подписки апстрима не должны выглядеть текущими.
+// Without readers the snapshot is dropped and does not settle in the topic state: the data
+// of an upstream that died by the time of subscription must not look current.
 func TestHubDropsConnectionsWithoutReaders(t *testing.T) {
 	hub := New(&fakeSource{service: json.RawMessage(`{}`)}, testLogger(t), fastOptions())
 
@@ -479,11 +479,11 @@ func TestHubDropsConnectionsWithoutReaders(t *testing.T) {
 	hub.mu.Unlock()
 
 	if remembered != 0 {
-		t.Errorf("без читателей в состоянии осело %d топиков", remembered)
+		t.Errorf("without readers %d topics settled in the state", remembered)
 	}
 }
 
-// fakeSink считает, что накопил учёт.
+// fakeSink counts what the accounting accumulated.
 type fakeSink struct {
 	proxy   atomic.Int64
 	samples atomic.Int64
@@ -492,15 +492,15 @@ type fakeSink struct {
 func (f *fakeSink) AddProxy(bytes int64)         { f.proxy.Add(bytes) }
 func (f *fakeSink) SampleDevice(context.Context) { f.samples.Add(1) }
 
-// fakeRecorder считает сэмплы, ушедшие в историю.
+// fakeRecorder counts the samples that went into the history.
 type fakeRecorder struct {
 	records atomic.Int64
 }
 
 func (f *fakeRecorder) Record(int64, int64) { f.records.Add(1) }
 
-// Доля канала считается за всё время работы демона, поэтому учёт идёт и без
-// единого читателя потока.
+// The channel share is counted over the whole daemon runtime, so the accounting runs even without
+// a single stream reader.
 func TestAccountingCountsWithoutReaders(t *testing.T) {
 	source := &fakeSource{lines: []json.RawMessage{
 		json.RawMessage(`{"up":100,"down":900}`),
@@ -524,14 +524,14 @@ func TestAccountingCountsWithoutReaders(t *testing.T) {
 	}
 
 	t.Errorf(
-		"учёт накопил %d байт за %d снятий, в историю ушло %d сэмплов",
+		"accounting accumulated %d bytes over %d readings, %d samples went into the history",
 		sink.proxy.Load(), sink.samples.Load(), recorder.records.Load(),
 	)
 }
 
-// stallSource держит горутины первого комплекта после отмены, пока тест не
-// закроет release: окно, в котором остановка ждёт их без мьютекса, остаётся
-// открытым сколько нужно.
+// stallSource holds the goroutines of the first set after cancellation until the test
+// closes release: the window in which the stop waits for them without the mutex stays
+// open as long as needed.
 type stallSource struct {
 	fakeSource
 
@@ -540,7 +540,7 @@ type stallSource struct {
 }
 
 func (s *stallSource) Stream(ctx context.Context, path string, sink func(json.RawMessage)) error {
-	// Первый комплект поднимает два потока — /traffic и /memory.
+	// The first set brings up two streams, /traffic and /memory.
 	first := s.calls.Add(1) <= 2
 
 	err := s.fakeSource.Stream(ctx, path, sink)
@@ -561,8 +561,8 @@ func newStallSource() *stallSource {
 	}
 }
 
-// slowOptions публикует каждый топик один раз за комплект: состояние, которое
-// осталось после стыка, не перезапишется следующим периодом опроса.
+// slowOptions publishes each topic once per set: the state that
+// remained after the join is not overwritten by the next polling period.
 func slowOptions() Options {
 	return Options{
 		ServiceInterval: time.Hour,
@@ -571,7 +571,7 @@ func slowOptions() Options {
 	}
 }
 
-// waitStopping ждёт, пока остановка отпустит мьютекс и уйдёт ждать горутины.
+// waitStopping waits until the stop releases the mutex and goes to wait for the goroutines.
 func waitStopping(t *testing.T, hub *Hub) {
 	t.Helper()
 
@@ -588,7 +588,7 @@ func waitStopping(t *testing.T, hub *Hub) {
 		time.Sleep(time.Millisecond)
 	}
 
-	t.Fatal("остановка источников не началась")
+	t.Fatal("stopping the sources did not start")
 }
 
 func readTopics(t *testing.T, ch <-chan Event, want int) {
@@ -598,13 +598,13 @@ func readTopics(t *testing.T, ch <-chan Event, want int) {
 		select {
 		case <-ch:
 		case <-time.After(2 * time.Second):
-			t.Fatal("комплект источников не прислал состояние")
+			t.Fatal("the source set did not send state")
 		}
 	}
 }
 
-// Последний читатель ушёл, первый пришёл, пока остановка ждёт горутины:
-// вернувшаяся остановка не стирает состояние уже нового комплекта.
+// The last reader left, the first came while the stop waits for the goroutines:
+// the returned stop does not erase the state of the already new set.
 func TestHubStopKeepsNextGeneration(t *testing.T) {
 	source := newStallSource()
 	hub := New(source, testLogger(t), slowOptions())
@@ -624,7 +624,7 @@ func TestHubStopKeepsNextGeneration(t *testing.T) {
 	next, _, cancel := hub.subscribe()
 	defer cancel()
 
-	// traffic, memory и service нового комплекта.
+	// traffic, memory and service of the new set.
 	readTopics(t, next.ch, 3)
 
 	close(source.release)
@@ -635,15 +635,15 @@ func TestHubStopKeepsNextGeneration(t *testing.T) {
 	hub.mu.Unlock()
 
 	if !running {
-		t.Error("вернувшаяся остановка погасила новый комплект")
+		t.Error("a returned stop shut down the new set")
 	}
 	if remembered != 3 {
-		t.Errorf("после стыка помнится %d топиков, ожидали 3 нового комплекта", remembered)
+		t.Errorf("after the join %d topics are remembered, expected 3 of the new set", remembered)
 	}
 }
 
-// Читатель, пришедший, пока Close ждёт горутины, получает закрытый канал:
-// иначе его хендлер держал бы остановку демона до таймаута.
+// A reader that came while Close waits for the goroutines gets a closed channel:
+// otherwise its handler would hold the daemon stop until the timeout.
 func TestHubCloseRejectsLateSubscriber(t *testing.T) {
 	source := newStallSource()
 	hub := New(source, testLogger(t), slowOptions())
@@ -664,16 +664,16 @@ func TestHubCloseRejectsLateSubscriber(t *testing.T) {
 	defer cancel()
 
 	if len(recent) != 0 {
-		t.Errorf("после Close повторено %d событий", len(recent))
+		t.Errorf("after Close %d events repeated", len(recent))
 	}
 
 	select {
 	case _, ok := <-late.ch:
 		if ok {
-			t.Error("читатель после Close получает события")
+			t.Error("a reader after Close receives events")
 		}
 	case <-time.After(time.Second):
-		t.Error("канал читателя после Close не закрыт")
+		t.Error("reader channel after Close is not closed")
 	}
 
 	close(source.release)
@@ -684,11 +684,11 @@ func TestHubCloseRejectsLateSubscriber(t *testing.T) {
 	hub.mu.Unlock()
 
 	if running {
-		t.Error("после Close источники подняты заново")
+		t.Error("after Close the sources were started again")
 	}
 }
 
-// floodSource шлёт строки без пауз, пока подписка жива.
+// floodSource sends lines without pauses while the subscription is alive.
 type floodSource struct {
 	fakeSource
 }
@@ -703,8 +703,8 @@ func (s *floodSource) Stream(ctx context.Context, _ string, sink func(json.RawMe
 	return ctx.Err()
 }
 
-// Клиент, который держит сокет и не читает, отпускает хендлер по дедлайну
-// записи, а не по TCP-таймауту ретрансмиссий.
+// A client that holds the socket and does not read releases the handler by the write
+// deadline, not by the TCP retransmission timeout.
 func TestHubWriteDeadline(t *testing.T) {
 	opts := fastOptions()
 	opts.WriteTimeout = 50 * time.Millisecond
@@ -720,24 +720,24 @@ func TestHubWriteDeadline(t *testing.T) {
 
 	conn, err := net.Dial("tcp", srv.Listener.Addr().String())
 	if err != nil {
-		t.Fatalf("подключение: %v", err)
+		t.Fatalf("connection: %v", err)
 	}
 	defer func() { _ = conn.Close() }()
 
-	// Запрос уходит, ответ не читается: буферы сокета заполняются, и запись
-	// хендлера встаёт.
+	// The request goes out, the response is not read: the socket buffers fill, and the handler
+	// write stalls.
 	if _, err := io.WriteString(conn, "GET / HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n"); err != nil {
-		t.Fatalf("запрос: %v", err)
+		t.Fatalf("request: %v", err)
 	}
 
 	select {
 	case <-returned:
 	case <-time.After(10 * time.Second):
-		t.Fatal("хендлер держит нечитающего клиента: дедлайн записи не сработал")
+		t.Fatal("the handler holds a non-reading client: the write deadline did not fire")
 	}
 }
 
-// Строка длиннее потолка обрывает поток, а не копится в памяти.
+// A line longer than the ceiling breaks the stream and does not pile up in memory.
 func TestLinesLimit(t *testing.T) {
 	long := `{"pad":"` + strings.Repeat("x", maxLineBytes) + `"}`
 
@@ -748,14 +748,14 @@ func TestLinesLimit(t *testing.T) {
 	})
 
 	if !errors.Is(err, bufio.ErrTooLong) {
-		t.Errorf("ошибка %v, ожидали bufio.ErrTooLong", err)
+		t.Errorf("error %v, expected bufio.ErrTooLong", err)
 	}
 	if len(got) != 1 || got[0] != `{"up":1}` {
-		t.Errorf("до обрыва отданы строки %q, ожидали только первую", got)
+		t.Errorf("before the break lines %q were returned, expected only the first", got)
 	}
 }
 
-// Конец ответа — обрыв потока: источник переподключается после паузы.
+// The end of a response is a stream break: the source reconnects after a pause.
 func TestLinesEOF(t *testing.T) {
 	var got []string
 
@@ -764,9 +764,9 @@ func TestLinesEOF(t *testing.T) {
 	})
 
 	if !errors.Is(err, io.EOF) {
-		t.Errorf("ошибка %v, ожидали io.EOF", err)
+		t.Errorf("error %v, expected io.EOF", err)
 	}
 	if len(got) != 2 || got[0] != `{"up":1}` || got[1] != `{"up":2}` {
-		t.Errorf("отданы строки %q, ожидали две строки без пробелов по краям", got)
+		t.Errorf("lines %q returned, expected two lines without edge spaces", got)
 	}
 }

@@ -1,9 +1,9 @@
-// Package devices собирает устройства LAN из аренд DHCP и статических записей
-// dnsmasq и хранит имена, которые им дал владелец.
+// Package devices assembles LAN devices from DHCP leases and dnsmasq static entries
+// and stores the names the owner gave them.
 //
-// Аренды и статические записи не кэшируются: их меняют dnsmasq и владелец по
-// SSH, поэтому каждый запрос читает их заново. Свои имена живут в служебном
-// каталоге демона и читаются один раз на старте.
+// Leases and static entries are not cached: they are changed by dnsmasq and the owner over
+// SSH, so each request reads them anew. Own names live in the service
+// directory of the daemon and are read once at start.
 package devices
 
 import (
@@ -25,88 +25,88 @@ import (
 )
 
 const (
-	// maxNameRunes — потолок на своё имя: подпись стоит в ячейке таблицы
-	// соединений вместо IP.
+	// maxNameRunes is the ceiling on an own name: the label stands in a cell of the connections
+	// table instead of the IP.
 	maxNameRunes = 64
 
-	// maxNames — потолок на число своих имён. Файл переписывается целиком на
-	// каждое изменение, и без потолка его размер задавал бы клиент.
+	// maxNames is the ceiling on the number of own names. The file is rewritten whole on
+	// every change, and without a ceiling its size would be set by the client.
 	maxNames = 1024
 )
 
 var (
-	// ErrInvalidMAC — адрес не похож на MAC Ethernet из шести байт.
+	// ErrInvalidMAC means the address does not look like a six-byte Ethernet MAC.
 	ErrInvalidMAC = errors.New("MAC-адрес не разобран")
-	// ErrInvalidName — имя длиннее допустимого или с управляющими символами.
+	// ErrInvalidName means the name is longer than allowed or has control characters.
 	ErrInvalidName = errors.New("имя устройства не принято")
-	// ErrTooManyNames — своих имён больше, чем демон согласен хранить.
+	// ErrTooManyNames means there are more own names than the daemon agrees to store.
 	ErrTooManyNames = errors.New("своих имён устройств слишком много")
 )
 
-// NameSource — откуда взята подпись устройства. Набор закрытый: по нему
-// панель объясняет, почему устройство подписано так.
+// NameSource is where the device label comes from. The set is closed: the panel
+// explains by it why the device is labelled this way.
 type NameSource string
 
 const (
-	// SourceCustom — имя задал владелец в панели.
+	// SourceCustom means the owner set the name in the panel.
 	SourceCustom NameSource = "custom"
-	// SourceStatic — имя статической аренды dnsmasq.
+	// SourceStatic means the name of a dnsmasq static lease.
 	SourceStatic NameSource = "static"
-	// SourceDHCP — имя, которое устройство назвало само при получении аренды.
+	// SourceDHCP means the name the device gave itself when getting a lease.
 	SourceDHCP NameSource = "dhcp"
-	// SourceNone — имени нет: панель подписывает устройство адресом.
+	// SourceNone means no name, the panel labels the device with its address.
 	SourceNone NameSource = "none"
 )
 
-// Device — устройство LAN, сведённое по MAC.
+// Device is a LAN device reduced by MAC.
 type Device struct {
-	// IP — адрес из аренды, а без неё — из статической записи. Пусто, когда
-	// адреса нет ни там, ни там: у устройства есть только своё имя.
+	// IP is the address from the lease, and without it from the static entry. Empty when
+	// there is no address in either: the device has only its own name.
 	IP string `json:"ip"`
-	// MAC — в нижнем регистре через двоеточие; по нему хранится своё имя.
+	// MAC is lowercase with colons; the own name is stored by it.
 	MAC string `json:"mac"`
-	// Name — подпись по приоритету: своё имя, статическая аренда, DHCP. Пусто
-	// при NameSource `none`.
+	// Name is the label by priority: own name, static lease, DHCP. Empty
+	// with NameSource `none`.
 	Name string `json:"name"`
-	// NameSource — откуда взята подпись; при `none` панель подписывает
-	// устройство адресом.
+	// NameSource is where the label comes from; with `none` the panel labels
+	// the device with its address.
 	NameSource NameSource `json:"name_source"`
-	// Static — у MAC есть статическая аренда в UCI `dhcp`.
+	// Static means the MAC has a static lease in UCI `dhcp`.
 	Static bool `json:"static"`
-	// Online — аренда не истекла по часам роутера. До синхронизации NTP часы
-	// стоят в прошлом, и истёкшая аренда может считаться живой.
+	// Online means the lease has not expired by the router clock. Before NTP synchronization the clock
+	// stands in the past, and an expired lease may count as alive.
 	Online bool `json:"online"`
-	// LeaseExpires — конец аренды в секундах unix. Ноль — аренды нет или она
-	// бессрочная; второе отличается признаком Online.
+	// LeaseExpires is the lease end in unix seconds. Zero means no lease or it is
+	// permanent; the second differs by the Online flag.
 	LeaseExpires int64 `json:"lease_expires"`
 }
 
-// Runner запускает внешнюю команду и отдаёт её вывод с кодом возврата.
-// Объявлен функцией по той же причине, что procd.Runner: тип результата
-// владельца запуска сюда не импортировать.
+// Runner runs an external command and returns its output with the exit code.
+// Declared as a function for the same reason as procd.Runner: the result type of
+// the launch owner must not be imported here.
 type Runner func(ctx context.Context, name string, args ...string) (stdout string, exitCode int, err error)
 
-// Store хранит свои имена между перезапусками. Служебным каталогом владеет
-// config.Store, поэтому запись идёт через него. Отсутствие файла — ошибка, для
-// которой errors.Is(err, fs.ErrNotExist).
+// Store keeps own names between restarts. The service directory is owned by
+// config.Store, so the write goes through it. A missing file is an error for
+// which errors.Is(err, fs.ErrNotExist).
 type Store interface {
 	ReadDevices(ctx context.Context) ([]byte, error)
 	WriteDevices(ctx context.Context, data []byte) error
 }
 
-// Options — пути, которые демон получает флагами.
+// Options are the paths the daemon receives by flags.
 type Options struct {
-	// Leases — файл аренд dnsmasq.
+	// Leases is the dnsmasq leases file.
 	Leases string
-	// UCI — абсолютный путь к uci: под procd PATH не тот, что в шелле.
+	// UCI is the absolute path to uci: under procd PATH is not the one in the shell.
 	UCI string
-	// Now подменяется в тестах; nil — time.Now.
+	// Now is replaced in tests; nil means time.Now.
 	Now func() time.Time
 }
 
-// Registry — владелец своих имён устройств: запись файла и состояние в памяти
-// меняются под одним мьютексом, поэтому параллельные правки не теряют друг
-// друга.
+// Registry is the owner of the own device names: the file write and the in-memory state
+// change under one mutex, so concurrent edits do not lose each
+// other.
 type Registry struct {
 	run    Runner
 	store  Store
@@ -118,8 +118,8 @@ type Registry struct {
 	names map[string]string
 }
 
-// New читает свои имена из служебного каталога. Битый файл — ошибка, а не
-// пустой список: следующая правка затёрла бы им все имена.
+// New reads the own names from the service directory. A broken file is an error, not
+// an empty list: the next edit would overwrite all names with it.
 func New(ctx context.Context, run Runner, store Store, opts Options) (*Registry, error) {
 	r := &Registry{
 		run:    run,
@@ -156,9 +156,9 @@ func New(ctx context.Context, run Runner, store Store, opts Options) (*Registry,
 	return r, nil
 }
 
-// List сводит аренды, статические записи и свои имена по MAC. Устройство со
-// своим именем попадает в список и без аренды — офлайн и без адреса: правило
-// по нему в панели не должно пропадать, пока устройство не в сети.
+// List reduces leases, static entries and own names by MAC. A device with
+// an own name gets into the list without a lease too, offline and without an address: a rule
+// on it in the panel must not disappear while the device is off the network.
 func (r *Registry) List(ctx context.Context) ([]Device, error) {
 	leases, err := readLeases(r.leases)
 	if err != nil {
@@ -238,8 +238,8 @@ func (r *Registry) List(ctx context.Context) ([]Device, error) {
 	return out, nil
 }
 
-// compareDevices упорядочивает по адресу, устройства без адреса — в конце.
-// Порядок стабилен между запросами: map в Go его не держит.
+// compareDevices orders by address, devices without an address go last.
+// The order is stable between requests: Go maps do not keep one.
 func compareDevices(a, b Device) int {
 	ipA, errA := netip.ParseAddr(a.IP)
 	ipB, errB := netip.ParseAddr(b.IP)
@@ -258,10 +258,10 @@ func compareDevices(a, b Device) int {
 	return cmp.Compare(a.MAC, b.MAC)
 }
 
-// Rename задаёт своё имя устройства; пустое имя убирает его, и подпись
-// возвращается к статической аренде или DHCP. Имя пишется на диск до того, как
-// попадёт в память: отказ записи не оставляет имени, которое пропадёт с
-// рестартом.
+// Rename sets the own device name; an empty name removes it, and the label
+// returns to the static lease or DHCP. The name is written to disk before it
+// gets into memory: a write failure leaves no name that would vanish with
+// a restart.
 func (r *Registry) Rename(ctx context.Context, rawMAC, name string) error {
 	mac, err := normalizeMAC(rawMAC)
 	if err != nil {
@@ -313,8 +313,8 @@ func validName(name string) error {
 	return nil
 }
 
-// normalizeMAC принимает только MAC Ethernet: net.ParseMAC пропускает и
-// 8-, и 20-байтные адреса, которых в арендах dnsmasq не бывает.
+// normalizeMAC accepts only an Ethernet MAC: net.ParseMAC lets through both
+// 8- and 20-byte addresses, which dnsmasq leases never have.
 func normalizeMAC(raw string) (string, error) {
 	hw, err := net.ParseMAC(raw)
 	if err != nil || len(hw) != 6 {

@@ -2,17 +2,17 @@ package clashapi
 
 import "bytes"
 
-// Конфиг sing-box — не строгий JSON: бинарь принимает комментарии обоих видов
-// и запятую перед закрывающей скобкой, а владельцы роутеров ими пользуются.
-// Стандартная библиотека такой файл читать отказывается.
+// The sing-box config is not strict JSON: the binary accepts comments of both kinds
+// and a comma before the closing bracket, and router owners use them.
+// The standard library refuses to read such a file.
 //
-// mask отдаёт копию, в которой всё лишнее заменено пробелами. Длина
-// сохраняется, поэтому смещения, найденные разбором копии, указывают на те же
-// байты оригинала: точечная правка конфига продолжает работать по исходным
-// байтам и не переписывает файл целиком.
+// mask returns a copy in which everything extra is replaced with spaces. The length
+// is preserved, so offsets found by parsing the copy point to the same
+// bytes of the original: a surgical config edit keeps working on the original
+// bytes and does not rewrite the whole file.
 //
-// Проходов два: запятая может стоять перед комментарием, и «висячей» она
-// становится видна только после того, как комментарий погашен.
+// There are two passes: a comma may stand before a comment, and it becomes visible as
+// "dangling" only after the comment is blanked.
 func mask(data []byte) []byte {
 	masked := make([]byte, len(data))
 	copy(masked, data)
@@ -59,8 +59,8 @@ func hasPrefixAt(data []byte, index int, prefix string) bool {
 	return bytes.HasPrefix(data[index:], []byte(prefix))
 }
 
-// skipString проходит строковый литерал не трогая его: «//» и запятая внутри
-// строки — обычные символы, а не разметка.
+// skipString passes a string literal without touching it: "//" and a comma inside
+// a string are ordinary characters, not markup.
 func skipString(data []byte, start int) int {
 	for i := start + 1; i < len(data); i++ {
 		switch data[i] {
@@ -90,8 +90,8 @@ func blockCommentEnd(data []byte, start int) int {
 	return len(data)
 }
 
-// blankTo гасит байты до end, оставляя переводы строк: по ним считаются номера
-// строк в сообщениях об ошибках разбора.
+// blankTo blanks the bytes up to end, leaving line breaks: line numbers in
+// parse error messages are counted by them.
 func blankTo(data []byte, start, end int) int {
 	for i := start; i < end; i++ {
 		if data[i] != '\n' {
@@ -102,7 +102,7 @@ func blankTo(data []byte, start, end int) int {
 	return end
 }
 
-// closesValue отвечает, стоит ли за этой позицией только закрывающая скобка.
+// closesValue reports whether only a closing bracket stands after this position.
 func closesValue(data []byte, from int) bool {
 	for i := from; i < len(data); i++ {
 		if isSpace(data[i]) {

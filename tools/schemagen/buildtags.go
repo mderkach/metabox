@@ -9,17 +9,17 @@ import (
 	"strings"
 )
 
-// Без тега with_wireguard из реестра endpoint'ов пропадает тип warp:
-// include/wireguard.go регистрирует и wireguard, и warp, а
-// include/wireguard_stub.go — только wireguard. Прочие заглушки форка
-// регистрируют те же типы опций, что и основные файлы, поэтому на состав
-// схемы теги влияют ровно в этом одном месте (измерено A/B-прогоном).
-// Собранный без тегов генератор напечатал бы схему без warp и ничем себя не
-// выдал, поэтому набор сверяется с эталоном форка.
+// Without the with_wireguard tag the warp type disappears from the endpoint registry:
+// include/wireguard.go registers both wireguard and warp, while
+// include/wireguard_stub.go registers only wireguard. The other stubs of the fork
+// register the same option types as the main files, so tags affect the composition of
+// the schema in exactly this one place (measured by an A/B run).
+// A generator built without tags would print a schema without warp and give no sign of
+// it, so the set is checked against the fork's reference.
 //
-// Эталон — release/DEFAULT_BUILD_TAGS: этим набором собран Makefile
-// форка, и с ним же едут релизные сборки под Linux, включая ту, что стоит на
-// целевом устройстве.
+// The reference is release/DEFAULT_BUILD_TAGS: the fork's Makefile is built with this set,
+// and the Linux release builds, including the one on the
+// target device, ship with it.
 const forkTagsFile = "release/DEFAULT_BUILD_TAGS"
 
 func checkBuildTags() error {
@@ -30,7 +30,7 @@ func checkBuildTags() error {
 
 	raw, err := os.ReadFile(filepath.Join(dir, forkTagsFile))
 	if err != nil {
-		return fmt.Errorf("чтение %s: %w", forkTagsFile, err)
+		return fmt.Errorf("reading %s: %w", forkTagsFile, err)
 	}
 
 	want := tagSet(string(raw))
@@ -47,14 +47,14 @@ func checkBuildTags() error {
 	}
 	sort.Strings(missing)
 
-	return fmt.Errorf("генератор собран без тегов форка: %s\n"+
-		"без них часть протоколов не попадёт в реестры и схема выйдет урезанной;\n"+
-		"собирай через `make schema` — она берёт набор из %s",
+	return fmt.Errorf("generator built without the fork tags: %s\n"+
+		"without them some protocols will not get into the registries and the schema will come out truncated;\n"+
+		"build through `make schema`, it takes the set from %s",
 		strings.Join(missing, ","), forkTagsFile)
 }
 
-// currentBuildTags достаёт -tags из информации о сборке: go записывает их и
-// для go run, и для go build.
+// currentBuildTags extracts -tags from the build info: go records them for
+// both go run and go build.
 func currentBuildTags() string {
 	info, ok := debug.ReadBuildInfo()
 	if !ok {

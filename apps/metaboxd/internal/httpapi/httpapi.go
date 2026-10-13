@@ -1,6 +1,6 @@
-// Package httpapi — HTTP-слой демона: маршруты, цепочка middleware и единый
-// формат ответа. Предметные зависимости приходят конструктором, сам пакет их
-// не собирает.
+// Package httpapi is the HTTP layer of the daemon: routes, the middleware chain and the single
+// response format. Domain dependencies come through the constructor, the package does not
+// assemble them itself.
 package httpapi
 
 import (
@@ -29,34 +29,34 @@ import (
 	"metabox/internal/singbox"
 )
 
-// maxConfigBytes — потолок на тело запроса. Конфиг приходит байтами, и без
-// лимита один запрос забирает столько памяти, сколько прислали. Четыре
-// мегабайта с запасом перекрывают конфиг на 500 правил.
+// maxConfigBytes is the ceiling on a request body. The config comes as bytes, and without
+// a limit one request takes as much memory as it sent. Four
+// megabytes cover a 500-rule config with a margin.
 const maxConfigBytes = 4 << 20
 
-// maxApplyBytes — потолок конверта применения: сверх конфига в нём едут файлы
-// списков, а большой список — это мегабайты доменов.
+// maxApplyBytes is the ceiling of the apply envelope: besides the config it carries list
+// files, and a large list is megabytes of domains.
 const maxApplyBytes = 16 << 20
 
-// applyJSONType — тип тела конверта применения. Свой, а не application/json:
-// сам конфиг — тоже JSON, и по общему типу конверт не отличить от голых байт
-// конфига.
+// applyJSONType is the apply envelope body type. Its own, not application/json:
+// the config itself is JSON too, and by the common type the envelope cannot be told from the bare
+// config bytes.
 const applyJSONType = "application/vnd.metabox.apply+json"
 
-// maxDeviceNameBytes — потолок тела правки имени: в нём одна строка до
-// шестидесяти четырёх символов.
+// maxDeviceNameBytes is the ceiling of the name edit body: it holds one line of up to
+// sixty-four characters.
 const maxDeviceNameBytes = 4 << 10
 
-// Applier — цикл применения. Интерфейс объявлен здесь, у потребителя, и
-// содержит только те методы, которыми пользуются хендлеры.
+// Applier is the apply cycle. The interface is declared here, at the consumer, and
+// contains only the methods the handlers use.
 type Applier interface {
 	Start(ctx context.Context, cfg []byte, lists apply.Lists, base, listsBase string) (apply.Transaction, error)
 	Confirm(ctx context.Context, id string) (apply.Transaction, error)
 	Current() apply.Transaction
 }
 
-// Service — управление сервисом sing-box через init-скрипт. Интерфейс
-// объявлен здесь, у потребителя.
+// Service is control of the sing-box service through the init script. The interface
+// is declared here, at the consumer.
 type Service interface {
 	State(ctx context.Context) (singbox.State, error)
 	Start(ctx context.Context) error
@@ -64,9 +64,9 @@ type Service interface {
 	Restart(ctx context.Context) error
 }
 
-// ConfigReader отдаёт применённый конфиг и его историю. Интерфейс объявлен
-// здесь, у потребителя, и содержит только чтение: файлами владеет
-// config.Store, а запись идёт протоколом Apply.
+// ConfigReader returns the applied config and its history. The interface is declared
+// here, at the consumer, and contains only reading: the files are owned by
+// config.Store, and the write goes by the Apply protocol.
 type ConfigReader interface {
 	Read(ctx context.Context) ([]byte, error)
 	ReadLists(ctx context.Context) (map[string][]byte, error)
@@ -76,85 +76,85 @@ type ConfigReader interface {
 	ReadVersionLists(ctx context.Context, id int) (map[string][]byte, error)
 }
 
-// Explainer объясняет маршрут соединения. Интерфейс объявлен здесь, у
-// потребителя: сам слой не знает, откуда берутся данные core.
+// Explainer explains the route of a connection. The interface is declared here, at the
+// consumer: the layer does not know where the core data comes from.
 type Explainer interface {
 	Explain(ctx context.Context, id string) (route.Explanation, error)
 }
 
-// Options — настройки слоя, приходящие в демон флагами.
+// Options are the layer settings that come into the daemon as flags.
 type Options struct {
 	Version string
-	// SingboxVersion — версия бинаря на устройстве: формы панели собраны под
-	// одну версию форка, и расхождение с бинарём видно только отсюда. Пустая
-	// строка означает, что версию прочитать не удалось.
+	// SingboxVersion is the binary version on the device: the panel forms are built for
+	// one fork version, and a mismatch with the binary is visible only from here. An empty
+	// string means the version could not be read.
 	SingboxVersion string
-	// SingboxTags — build-теги бинаря. nil означает, что состав сборки не
-	// прочитан, пустой список — что бинарь собран без тегов.
+	// SingboxTags are the binary build tags. nil means the build composition was not
+	// read, an empty list means the binary is built without tags.
 	SingboxTags []string
-	// AllowedOrigin — разрешённый Origin сверх совпадения с Host. Пустая
-	// строка означает, что послаблений нет: правило проверки источника действует
-	// в чистом виде.
+	// AllowedOrigin is an allowed Origin beyond the match with Host. An empty
+	// string means no relaxations: the origin check rule applies
+	// in pure form.
 	AllowedOrigin string
-	// SPA раздаёт встроенный интерфейс. nil означает, что бинарь собран без
-	// фронта: API продолжает работать, а панель объясняет, чего не хватает.
+	// SPA serves the embedded interface. nil means the binary is built without
+	// the frontend: the API keeps working, and the panel explains what is missing.
 	SPA http.Handler
-	// Service управляет сервисом sing-box. nil означает, что управление
-	// недоступно: панель откроется, а карточка сервиса не покажется.
+	// Service controls the sing-box service. nil means control
+	// is unavailable: the panel opens, but the service card does not show.
 	Service Service
-	// Events — единый поток рантайма к панели. nil означает, что
-	// поток не собран: экраны остаются на прокси Clash API.
+	// Events is the single runtime stream to the panel. nil means the
+	// stream is not assembled: the screens stay on the Clash API proxy.
 	Events http.Handler
-	// Clash проксирует рантайм sing-box под веткой clashapi.Prefix. nil
-	// означает, что прокси не собран: панель откроется, а экраны рантайма
-	// деградируют.
+	// Clash proxies the sing-box runtime under the clashapi.Prefix branch. nil
+	// means the proxy is not assembled: the panel opens, but the runtime screens
+	// degrade.
 	Clash http.Handler
-	// Explain объясняет маршрут соединения. nil означает, что
-	// источника рантайма нет: экран соединений остаётся без объяснения.
+	// Explain explains the route of a connection. nil means
+	// there is no runtime source: the connections screen stays without an explanation.
 	Explain Explainer
-	// Hits отдаёт счёт срабатываний правил. nil означает, что его никто не
-	// ведёт: список правил остаётся без колонки срабатываний.
+	// Hits returns the rule hit count. nil means nobody
+	// keeps it: the rule list stays without a hits column.
 	Hits HitsReader
-	// History отдаёт историю трафика, накопленную демоном. nil означает, что
-	// её никто не копит: график глубже минуты не показывается.
+	// History returns the traffic history accumulated by the daemon. nil means
+	// nobody accumulates it: a chart deeper than a minute is not shown.
 	History HistoryReader
-	// RuleSets отдаёт каталог готовых наборов. nil означает, что каталога нет:
-	// форма подключения набора остаётся со своим адресом.
+	// RuleSets returns the catalog of ready rule sets. nil means there is no catalog:
+	// the rule set connection form stays with its own address.
 	RuleSets RuleSetsReader
-	// Runtime сообщает, работает ли на устройстве процесс sing-box. nil
-	// означает, что наблюдать нечем: состояние службы тогда читается только у
-	// procd, и чужой процесс панель не увидит.
+	// Runtime reports whether a sing-box process is running on the device. nil
+	// means there is nothing to observe with: the service state is then read only from
+	// procd, and the panel will not see a foreign process.
 	Runtime RuntimeObserver
-	// Devices отдаёт устройства LAN и хранит их свои имена. nil означает, что
-	// список не собран: панель подписывает источники соединений адресами.
+	// Devices returns the LAN devices and stores their own names. nil means the
+	// list is not assembled: the panel labels connection sources with addresses.
 	Devices DeviceRegistry
-	// Dataplane читает модель сетевой обвязки. nil означает, что читать её
-	// нечем: ручки обвязки нет.
+	// Dataplane reads the dataplane model. nil means there is nothing to read it
+	// with: there is no dataplane handler.
 	Dataplane DataplaneReader
-	// Plane меняет модель обвязки протоколом применения. nil означает, что
-	// модель только читается: ручки записи нет.
+	// Plane changes the dataplane model by the apply protocol. nil means the
+	// model is only read: there is no write handler.
 	Plane PlaneApplier
-	// Logs читает лог sing-box. nil означает, что читать его нечем: ручек лога
-	// нет.
+	// Logs reads the sing-box log. nil means there is nothing to read it with: there are no
+	// log handlers.
 	Logs LogReader
-	// Diag проверяет сетевую обвязку. nil означает, что проверять нечем: ручки
-	// диагностики нет.
+	// Diag checks the dataplane. nil means there is nothing to check with: there is no
+	// diagnostics handler.
 	Diag Diagnoser
-	// ConfigPath — путь файла, которым владеет демон. Панель показывает его
-	// как факт об устройстве, а задаётся он флагами `-config-dir` и
-	// `-config-name`: без этого поля интерфейс показывал бы значение по
-	// умолчанию независимо от того, с чем демон запущен.
+	// ConfigPath is the path of the file the daemon owns. The panel shows it
+	// as a fact about the device, and it is set by the flags `-config-dir` and
+	// `-config-name`: without this field the interface would show the default
+	// value regardless of how the daemon is started.
 	ConfigPath string
 }
 
-// HitsReader отдаёт счёт срабатываний правил. Интерфейс объявлен здесь, у
-// потребителя.
+// HitsReader returns the rule hit count. The interface is declared here, at the
+// consumer.
 type HitsReader interface {
 	Hits(ctx context.Context) (route.Hits, error)
 }
 
-// HistoryReader отдаёт накопленную историю трафика. Интерфейс объявлен здесь,
-// у потребителя.
+// HistoryReader returns the accumulated traffic history. The interface is declared here,
+// at the consumer.
 type HistoryReader interface {
 	Points() []history.Point
 	Recent() []history.Point
@@ -163,31 +163,31 @@ type HistoryReader interface {
 	Step() int
 }
 
-// RuleSetsReader отдаёт каталог готовых наборов. Интерфейс объявлен здесь, у
-// потребителя.
+// RuleSetsReader returns the catalog of ready rule sets. The interface is declared here, at the
+// consumer.
 type RuleSetsReader interface {
 	Catalog() ruleset.Catalog
 }
 
-// DeviceRegistry отдаёт устройства LAN и меняет их свои имена. Интерфейс
-// объявлен здесь, у потребителя.
+// DeviceRegistry returns the LAN devices and changes their own names. The interface
+// is declared here, at the consumer.
 type DeviceRegistry interface {
 	List(ctx context.Context) ([]devices.Device, error)
 	Rename(ctx context.Context, mac, name string) error
 }
 
-// DataplaneReader читает секцию сетевой обвязки и признак её применения.
-// Интерфейс объявлен здесь, у потребителя.
+// DataplaneReader reads the dataplane section and the flag that it is applied.
+// The interface is declared here, at the consumer.
 type DataplaneReader interface {
 	Snapshot(ctx context.Context) (dataplane.Snapshot, error)
 	Applied(ctx context.Context) (bool, dataplane.AppliedReason, error)
 }
 
-// RuntimeObserver сообщает, работает ли на устройстве процесс sing-box.
-// Интерфейс объявлен здесь, у потребителя.
+// RuntimeObserver reports whether a sing-box process is running on the device.
+// The interface is declared here, at the consumer.
 type RuntimeObserver func(ctx context.Context) bool
 
-// Server держит зависимости обработчиков и собранную цепочку middleware.
+// Server holds the handler dependencies and the assembled middleware chain.
 type Server struct {
 	applier        Applier
 	reader         ConfigReader
@@ -214,8 +214,8 @@ type Server struct {
 	handler        http.Handler
 }
 
-// NewServer собирает слой вместе с цепочкой middleware. Логгер обязателен:
-// своего пакет не заводит.
+// NewServer assembles the layer together with the middleware chain. The logger is required:
+// the package creates none of its own.
 func NewServer(applier Applier, reader ConfigReader, log *slog.Logger, opts Options) *Server {
 	s := &Server{
 		applier:        applier,
@@ -246,7 +246,7 @@ func NewServer(applier Applier, reader ConfigReader, log *slog.Logger, opts Opti
 	return s
 }
 
-// ServeHTTP отдаёт запрос цепочке, собранной в NewServer.
+// ServeHTTP passes the request to the chain assembled in NewServer.
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.handler.ServeHTTP(w, r)
 }
@@ -356,12 +356,12 @@ func (s *Server) handleStatus(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(s.log, w, http.StatusOK, body)
 }
 
-// runtimeSources собирает состав источников по тому, что демону передали:
-// поток читает рантайм у Clash API, прокси отдаёт его ручки как есть. Выбирать
-// источник соединений пока не из чего — gRPC-ветка не реализована.
+// runtimeSources assembles the source composition by what was passed to the daemon:
+// the stream reads the runtime from the Clash API, the proxy returns its handlers as is. There is
+// nothing yet to choose the connections source from: the gRPC branch is not implemented.
 func (s *Server) runtimeSources() contract.Runtime {
-	// Пустой срез, а не nil: nil уезжает в JSON как null, и панель разбирала бы
-	// список источников не массивом.
+	// An empty slice, not nil: nil goes to JSON as null, and the panel would parse the
+	// source list as not an array.
 	out := contract.Runtime{Sources: []contract.RuntimeSource{}}
 
 	if s.events != nil || s.clash != nil {
@@ -375,9 +375,9 @@ func (s *Server) runtimeSources() contract.Runtime {
 	return out
 }
 
-// handleConfig отдаёт конфиг ровно теми байтами, какими он лежит на диске:
-// демон его не разбирает и не переформатирует, иначе round-trip
-// рукописного конфига терял бы форматирование.
+// handleConfig returns the config with exactly the bytes it lies on disk with:
+// the daemon neither parses nor reformats it, otherwise a round trip
+// of a handwritten config would lose formatting.
 func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 	data, err := s.reader.Read(r.Context())
 	if err != nil {
@@ -387,24 +387,24 @@ func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	// Конфиг меняется вне запросов клиента — применением, откатом, правкой по
-	// SSH, — поэтому ответ не кэшируется.
+	// The config changes outside client requests (apply, rollback, an edit over
+	// SSH), so the response is not cached.
 	w.Header().Set("Cache-Control", "no-store")
-	// Отпечаток отданных байт: панель возвращает его в If-Match применения,
-	// и правка файла между чтением и Apply не затирается молча.
+	// The fingerprint of the returned bytes: the panel returns it in the If-Match of the apply,
+	// and an edit of the file between the read and Apply is not silently overwritten.
 	digest := sha256.Sum256(data)
 	w.Header().Set("ETag", `"`+hex.EncodeToString(digest[:])+`"`)
 	w.WriteHeader(http.StatusOK)
 
 	if _, err := w.Write(data); err != nil {
-		// Статус уже ушёл клиенту, вернуть ошибку некуда.
+		// The status has already gone to the client, there is nowhere to return the error.
 		s.log.Error("конфиг не дописан в ответ", "err", err)
 	}
 }
 
-// handleConfigLists отдаёт файлы своих списков из подкаталога rule-sets вместе
-// с отпечатком набора: панель возвращает его в lists_base применения, и правка
-// файла между чтением и Apply не затирается молча.
+// handleConfigLists returns the own list files from the rule-sets subdirectory together
+// with the set fingerprint: the panel returns it in lists_base of the apply, and an edit
+// of a file between the read and Apply is not silently overwritten.
 func (s *Server) handleConfigLists(w http.ResponseWriter, r *http.Request) {
 	files, err := s.reader.ReadLists(r.Context())
 	if err != nil {
@@ -460,8 +460,8 @@ func (s *Server) handleVersions(w http.ResponseWriter, r *http.Request) {
 	writeJSON(s.log, w, http.StatusOK, out)
 }
 
-// handleVersion отдаёт версию теми же байтами, какими она была применена:
-// история хранит документ целиком, а не разбор.
+// handleVersion returns a version with the same bytes it was applied with:
+// the history stores the document whole, not a parse.
 func (s *Server) handleVersion(w http.ResponseWriter, r *http.Request) {
 	data, err := s.readVersion(r)
 	if err != nil {
@@ -474,18 +474,18 @@ func (s *Server) handleVersion(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(http.StatusOK)
 
-	// gosec ведёт поток от номера версии в URL до записи в ответ и считает его
-	// XSS. Из запроса приходит только целое число: содержимое читается из
-	// служебного каталога демона, тип ответа задан JSON, HTML тут не бывает.
-	if _, err := w.Write(data); err != nil { //nolint:gosec // G705: тело из файла демона, а не из запроса
-		// Статус уже ушёл клиенту, вернуть ошибку некуда.
+	// gosec tracks the flow from the version number in the URL to the write into the response and counts it as
+	// XSS. Only an integer comes from the request: the content is read from the
+	// daemon service directory, the response type is JSON, there is no HTML here.
+	if _, err := w.Write(data); err != nil { //nolint:gosec // G705: the body is from a daemon file, not from the request
+		// The status has already gone to the client, there is nowhere to return the error.
 		s.log.Error("версия не дописана в ответ", "err", err)
 	}
 }
 
-// handleVersionRestore возвращает версию обычным применением: отдельной записи
-// в обход протокола нет, иначе откат на битую версию отрезал бы доступ без
-// проверки бинарём, рестарта и окна подтверждения.
+// handleVersionRestore returns a version by an ordinary apply: there is no separate write
+// bypassing the protocol, otherwise a rollback to a broken version would cut off access without
+// the binary check, restart and confirmation window.
 func (s *Server) handleVersionRestore(w http.ResponseWriter, r *http.Request) {
 	data, err := s.readVersion(r)
 	if err != nil {
@@ -501,8 +501,8 @@ func (s *Server) handleVersionRestore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Восстановление версии — осознанный откат на её байты, а не правка
-	// поверх текущего файла: базы для сверки у него нет.
+	// Restoring a version is a deliberate rollback to its bytes, not an edit
+	// over the current file: it has no base to check against.
 	tx, err := s.applier.Start(r.Context(), data, lists, "", "")
 	if err != nil {
 		fail(s.log, w, r, err)
@@ -513,9 +513,9 @@ func (s *Server) handleVersionRestore(w http.ResponseWriter, r *http.Request) {
 	writeJSON(s.log, w, http.StatusAccepted, tx)
 }
 
-// versionLists собирает изменения файлов списков, возвращающие их к снимку
-// версии. Версия без снимка сохранена демоном, который списков не снимал, —
-// её восстановление списков не трогает, как и раньше.
+// versionLists builds the list file changes that return them to the version
+// snapshot. A version without a snapshot was saved by a daemon that did not take lists,
+// and its restore does not touch the lists, as before.
 func (s *Server) versionLists(r *http.Request) (apply.Lists, error) {
 	id, err := pathVersionID(r)
 	if err != nil {
@@ -556,10 +556,10 @@ func pathVersionID(r *http.Request) (int, error) {
 	return id, nil
 }
 
-// handleApply принимает конфиг и запускает применение. Тело — либо голые
-// байты конфига, либо конверт с файлами списков под своим Content-Type. Ответ
-// приходит после проверки бинарём, но до конца цикла: применение асинхронно и
-// живёт дольше запроса.
+// handleApply accepts the config and starts the apply. The body is either bare
+// config bytes or an envelope with list files under its own Content-Type. The response
+// comes after the binary check but before the end of the cycle: the apply is asynchronous and
+// lives longer than the request.
 func (s *Server) handleApply(w http.ResponseWriter, r *http.Request) {
 	cfg, lists, listsBase, err := readApplyBody(w, r)
 	if err != nil {
@@ -609,9 +609,9 @@ func readApplyBody(w http.ResponseWriter, r *http.Request) ([]byte, apply.Lists,
 	return []byte(envelope.Config), lists, envelope.ListsBase, nil
 }
 
-// baseSum достаёт sha256 базы из If-Match: значение приходит тем же ETag, что
-// отдал GET /api/config. Пустое значение и «*» означают применение без
-// сверки — так же работает запрос совсем без заголовка.
+// baseSum extracts the sha256 base from If-Match: the value comes as the same ETag that
+// GET /api/config returned. An empty value and "*" mean an apply without
+// a check, the same as a request without the header.
 func baseSum(header string) string {
 	value := strings.TrimSpace(header)
 	value = strings.TrimPrefix(value, "W/")
@@ -646,9 +646,9 @@ func (s *Server) handleApplyConfirm(w http.ResponseWriter, r *http.Request) {
 	writeJSON(s.log, w, http.StatusOK, tx)
 }
 
-// handleExplain объясняет маршрут соединения: сработавшее правило, его индекс
-// в route.rules и цепочку. Каждое утверждение несёт происхождение, и ответов
-// без него у ручки не бывает.
+// handleExplain explains the route of a connection: the matched rule, its index
+// in route.rules and the chain. Each statement carries an origin, and the handler never has
+// answers without it.
 func (s *Server) handleExplain(w http.ResponseWriter, r *http.Request) {
 	explanation, err := s.explain.Explain(r.Context(), r.PathValue("id"))
 	if err != nil {
@@ -686,8 +686,8 @@ func (s *Server) handleDevices(w http.ResponseWriter, r *http.Request) {
 	writeJSON(s.log, w, http.StatusOK, contract.Devices{Devices: list})
 }
 
-// handleDeviceName задаёт своё имя и отдаёт список целиком: подпись
-// устройства зависит от всех источников сразу, и считать её панели не по чему.
+// handleDeviceName sets the own name and returns the whole list: the device label
+// depends on all sources at once, and the panel has nothing to compute it from.
 func (s *Server) handleDeviceName(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxDeviceNameBytes))
 	if err != nil {
@@ -712,9 +712,9 @@ func (s *Server) handleDeviceName(w http.ResponseWriter, r *http.Request) {
 	s.handleDevices(w, r)
 }
 
-// handleDataplane отдаёт модель и отпечаток секции в ETag: модель разбирается
-// из того же снимка, иначе правка между двумя чтениями UCI дала бы отпечаток
-// не той модели, что ушла клиенту.
+// handleDataplane returns the model and the section fingerprint in ETag: the model is parsed
+// from the same snapshot, otherwise an edit between two UCI reads would give the fingerprint
+// of a model other than the one that went to the client.
 func (s *Server) handleDataplane(w http.ResponseWriter, r *http.Request) {
 	snap, err := s.dataplane.Snapshot(r.Context())
 	if err != nil {
@@ -744,13 +744,13 @@ func (s *Server) handleDataplane(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// ServiceState приводит состояние службы к форме ответа. Экспортируется,
-// потому что то же тело уходит в поток событий: панель обязана получать один
-// формат независимо от того, ручкой оно пришло или потоком.
+// ServiceState brings the service state to the response form. Exported
+// because the same body goes to the event stream: the panel must get one
+// format regardless of whether it came from a handler or a stream.
 //
-// Аргумент observed — найден ли на устройстве живой процесс sing-box. Он важен,
-// когда служба демона остановлена: маршрутизацией может владеть чужой пакет,
-// и без этого признака панель показывала бы «остановлен» при идущем трафике.
+// The observed argument says whether a live sing-box process was found on the device. It matters
+// when the daemon service is stopped: routing may be owned by a foreign package,
+// and without this flag the panel would show "stopped" while traffic flows.
 func ServiceState(state singbox.State, binary string, err error, observed bool) any {
 	body := contract.Service{Status: "stopped", Binary: binary}
 
@@ -772,8 +772,8 @@ func ServiceState(state singbox.State, binary string, err error, observed bool) 
 		body.Uptime = int(state.Uptime.Seconds())
 		body.Managed = true
 	case observed:
-		// Процесс есть, но поднят не службой демона: возраст его procd не
-		// знает, и панель показывает возраст прочерком.
+		// The process exists but was started not by the daemon service: procd does not
+		// know its age, and the panel shows the age as a dash.
 		body.Status = "running"
 	case state.Failed:
 		body.Status = "failed"
@@ -783,13 +783,13 @@ func ServiceState(state singbox.State, binary string, err error, observed bool) 
 	return body
 }
 
-// observeRuntime отвечает на вопрос «процесс sing-box вообще жив». Без
-// наблюдателя ответ отрицательный: это то же, что было до его появления.
+// observeRuntime answers the question "is a sing-box process alive at all". Without
+// an observer the answer is negative: the same as before it appeared.
 func (s *Server) observeRuntime(ctx context.Context) bool {
 	return s.runtime != nil && s.runtime(ctx)
 }
 
-// handleHistory отдаёт историю трафика: точки идут подряд с шагом ответа.
+// handleHistory returns the traffic history: points go in sequence with the response step.
 func (s *Server) handleHistory(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(s.log, w, http.StatusOK, contract.History{
 		StepSeconds: s.history.Step(),
@@ -800,8 +800,8 @@ func (s *Server) handleHistory(w http.ResponseWriter, _ *http.Request) {
 	})
 }
 
-// handleServiceState отдаёт состояние сервиса. Ошибка опроса — не отказ
-// панели: экран обязан открыться и при недоступном сервисе.
+// handleServiceState returns the service state. A poll error is not a panel
+// failure: the screen must open with an unavailable service too.
 func (s *Server) handleServiceState(w http.ResponseWriter, r *http.Request) {
 	state, err := s.service.State(r.Context())
 	if err != nil {
@@ -811,8 +811,8 @@ func (s *Server) handleServiceState(w http.ResponseWriter, r *http.Request) {
 	writeJSON(s.log, w, http.StatusOK, ServiceState(state, s.singboxVersion, err, s.observeRuntime(r.Context())))
 }
 
-// handleServiceAction выполняет действие и отдаёт новое состояние: гадать по
-// коду ответа панель не должна.
+// handleServiceAction performs the action and returns the new state: the panel must not
+// guess by the response code.
 func (s *Server) handleServiceAction(w http.ResponseWriter, r *http.Request) {
 	var run func(context.Context) error
 
@@ -838,12 +838,12 @@ func (s *Server) handleServiceAction(w http.ResponseWriter, r *http.Request) {
 	s.handleServiceState(w, r)
 }
 
-// noUpgrade закрывает апгрейд до WebSocket на ветке прокси.
+// noUpgrade closes the upgrade to WebSocket on the proxy branch.
 //
-// Рантайм идёт панели одним потоком `GET /api/events`, и второго
-// пути к тем же данным быть не должно: прокси остаётся для ручек
-// запрос-ответ. Отказ явный, потому что молча снятый заголовок превратил бы
-// апгрейд в другой ответ того же адреса.
+// The runtime goes to the panel as a single `GET /api/events` stream, and there must be no second
+// path to the same data: the proxy stays for request-response
+// handlers. The refusal is explicit, because a silently removed header would turn
+// the upgrade into another response of the same address.
 func (s *Server) noUpgrade(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Upgrade") != "" {
@@ -856,14 +856,14 @@ func (s *Server) noUpgrade(next http.Handler) http.Handler {
 	})
 }
 
-// handleAPINotFound закрывает всё неизвестное под /api/ JSON-ошибкой: отдать
-// сюда index.html значит вернуть фронту HTML вместо разбираемого ответа.
+// handleAPINotFound closes everything unknown under /api/ with a JSON error: returning
+// index.html here would return HTML to the frontend instead of a parseable response.
 func (s *Server) handleAPINotFound(w http.ResponseWriter, r *http.Request) {
 	fail(s.log, w, r, errNotFound)
 }
 
-// spaHandler отдаёт встроенный интерфейс, а без него — объяснение. Демон
-// обязан подниматься и обслуживать API, даже когда фронт в бинарь не попал.
+// spaHandler serves the embedded interface, and without it an explanation. The daemon
+// must come up and serve the API even when the frontend did not get into the binary.
 func (s *Server) spaHandler() http.Handler {
 	if s.spa != nil {
 		return s.spa

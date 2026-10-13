@@ -12,44 +12,44 @@ import (
 )
 
 const (
-	// listsDirName — подкаталог каталога конфига под файлы своих списков.
-	// В корень такой файл класть нельзя: служба в режиме каталога слила бы его
-	// с конфигом как ещё один .json.
+	// listsDirName is the subdirectory of the config directory for the daemon's own list files.
+	// Such a file cannot be put in the root: the service in directory mode would merge it
+	// with the config as one more .json.
 	listsDirName = "rule-sets"
 
-	// listsBackupName — снимок подкаталога списков в служебном каталоге;
-	// восстанавливается вместе с config.backup.
+	// listsBackupName is the snapshot of the lists subdirectory in the service directory;
+	// restored together with config.backup.
 	listsBackupName = "rule-sets.backup"
 
-	// listsBackupStaging — имя, под которым очередной снимок собирается
-	// целиком до подмены: обрыв на середине не должен портить прежний.
+	// listsBackupStaging is the name under which the next snapshot is assembled
+	// whole before the swap: a break in the middle must not spoil the previous one.
 	listsBackupStaging = "rule-sets.backup.next"
 )
 
-// listNamePattern — имя, которое панель строит из тега: простое имя с
-// расширением .json, без выхода из подкаталога.
+// listNamePattern is the name the panel builds from a tag: a simple name with
+// the .json extension, with no escape from the subdirectory.
 var listNamePattern = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._-]*\.json$`)
 
-// maxListName ограничивает имя: длиннее не принимают файловые системы устройств.
+// maxListName limits the name: device file systems do not accept longer ones.
 const maxListName = 128
 
-// ValidListName отвечает, управляет ли демон файлом с таким именем в
-// подкаталоге списков. Остальное — попытка выйти из подкаталога, чужой файл
-// владельца (`.srs`, заметки) или остаток оборванной записи `.metabox-*`: их
-// демон не пишет и не удаляет. Чтение, суммы, снимок версии, бэкап и откат
-// видят только такие имена — иначе отпечаток восстановленной версии не сошёлся
-// бы с текущим набором, а откат снимал бы чужие файлы.
+// ValidListName reports whether the daemon manages a file with such a name in the
+// lists subdirectory. The rest is an attempt to escape the subdirectory, a foreign file
+// of the owner (`.srs`, notes) or a leftover of a broken write `.metabox-*`: the
+// daemon neither writes nor deletes them. Reading, sums, version snapshot, backup and rollback
+// see only such names, otherwise the fingerprint of a restored version would not match
+// the current set, and a rollback would remove foreign files.
 func ValidListName(name string) bool {
 	return len(name) <= maxListName && listNamePattern.MatchString(name) && !strings.Contains(name, "..")
 }
 
-// ListsPath отдаёт каталог файлов списков.
+// ListsPath returns the list files directory.
 func (s *Store) ListsPath() string {
 	return filepath.Join(s.dir, listsDirName)
 }
 
-// ReadLists отдаёт файлы списков: имя → содержимое. Отсутствие подкаталога —
-// пустой набор, а не ошибка: до первого списка его и не бывает.
+// ReadLists returns the list files: name → content. A missing subdirectory is
+// an empty set, not an error: before the first list it does not exist.
 func (s *Store) ReadLists(ctx context.Context) (map[string][]byte, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -94,8 +94,8 @@ func (s *Store) readLists() (map[string][]byte, error) {
 	return files, nil
 }
 
-// ListSums отдаёт sha256 каждого файла списков: по ним ловится правка файлов
-// вне metabox и доигрывание оборванной записи.
+// ListSums returns the sha256 of each list file: they catch an edit of files
+// outside metabox and the replay of a broken write.
 func (s *Store) ListSums(ctx context.Context) (map[string]string, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -107,9 +107,9 @@ func (s *Store) ListSums(ctx context.Context) (map[string]string, error) {
 	return s.listSums()
 }
 
-// listSums считает суммы потоком: их спрашивают сверка перед каждым
-// применением и каждый заход в историю, и поднимать ради них все списки в
-// память незачем.
+// listSums counts the sums as a stream: they are asked for by the check before every
+// apply and every visit to the history, and there is no need to raise all lists into
+// memory for them.
 func (s *Store) listSums() (map[string]string, error) {
 	root, err := s.listsRoot(false)
 	if errors.Is(err, errNoLists) {
@@ -143,10 +143,10 @@ func (s *Store) listSums() (map[string]string, error) {
 	return sums, nil
 }
 
-// WriteLists применяет изменения файлов списков: put пишется атомарно с
-// правами конфига, remove удаляет. Пишет только протокол Apply — форк следит
-// за файлами и перечитывает их на лету, поэтому запись мимо транзакции обошла
-// бы проверку и автооткат.
+// WriteLists applies list file changes: put is written atomically with
+// the config permissions, remove deletes. Only the Apply protocol writes: the fork watches
+// the files and rereads them on the fly, so a write bypassing the transaction would skip
+// the check and the automatic rollback.
 func (s *Store) WriteLists(ctx context.Context, put map[string][]byte, remove []string) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -157,7 +157,7 @@ func (s *Store) WriteLists(ctx context.Context, put map[string][]byte, remove []
 
 	root, err := s.listsRoot(len(put) > 0)
 	if errors.Is(err, errNoLists) {
-		// Писать нечего, удалять не из чего.
+		// Nothing to write, nothing to delete from.
 		return nil
 	}
 	if err != nil {
@@ -180,13 +180,13 @@ func (s *Store) WriteLists(ctx context.Context, put map[string][]byte, remove []
 	return syncDir(root)
 }
 
-// errNoLists — подкаталога списков нет. Для чтения это пустой набор.
+// errNoLists: there is no lists subdirectory. For reading this is an empty set.
 var errNoLists = errors.New("каталога списков нет")
 
-// listsRoot открывает подкаталог списков из открытого корня каталога конфига:
-// симлинк на его месте увёл бы запись наружу. При create подкаталог создаётся,
-// и создание закрепляется fsync родителя — иначе сбой питания может унести
-// каталог вместе со свежими списками.
+// listsRoot opens the lists subdirectory from the open config directory root:
+// a symlink in its place would take the write outside. With create the subdirectory is created,
+// and the creation is fixed by an fsync of the parent, otherwise a power failure may take the
+// directory away together with fresh lists.
 func (s *Store) listsRoot(create bool) (*os.Root, error) {
 	cfgRoot, err := openRoot(s.dir)
 	if err != nil {

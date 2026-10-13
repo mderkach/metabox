@@ -41,8 +41,8 @@ func (w testWriter) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-// fakeApplier подменяет цикл применения: сам цикл проверяется в internal/apply,
-// здесь важны только коды ответов и формат тела.
+// fakeApplier replaces the apply cycle: the cycle itself is checked in internal/apply,
+// here only the response codes and the body format matter.
 type fakeApplier struct {
 	mu         sync.Mutex
 	current    apply.Transaction
@@ -113,25 +113,25 @@ func (a *fakeApplier) sentBase() string {
 	return a.base
 }
 
-// fakeReader подменяет владельца файла конфига: чтение с диска проверяется в
-// internal/config, здесь важно, что байты доходят до ответа неизменными.
+// fakeReader replaces the config file owner: reading from disk is checked in
+// internal/config, here what matters is that the bytes reach the response unchanged.
 type fakeReader struct {
 	data  []byte
 	lists map[string][]byte
 	err   error
-	// readErr ломает только чтение конфига, оставляя историю доступной.
+	// readErr breaks only the config read, leaving the history available.
 	readErr  error
 	versions []config.Version
-	// byID подменяет содержимое версий; пустая карта означает, что версии нет.
+	// byID replaces the version content; an empty map means there are no versions.
 	byID map[int][]byte
-	// versionLists — снимки списков версий; версии без записи сохранены без
-	// снимка.
+	// versionLists are the version list snapshots; versions without an entry were saved without
+	// a snapshot.
 	versionLists map[int]map[string][]byte
-	// listSums — суммы текущих файлов списков.
+	// listSums are the sums of the current list files.
 	listSums map[string]string
-	// listSumsErr ломает только чтение сумм текущих списков.
+	// listSumsErr breaks only reading the current list sums.
 	listSumsErr error
-	// versionListsErr ломает только чтение снимков списков версий.
+	// versionListsErr breaks only reading the version list snapshots.
 	versionListsErr error
 }
 
@@ -251,7 +251,7 @@ func (r response) decode(t *testing.T, into any) {
 	t.Helper()
 
 	if err := json.Unmarshal([]byte(r.body), into); err != nil {
-		t.Fatalf("разбор ответа %q: %v", r.body, err)
+		t.Fatalf("parsing the response %q: %v", r.body, err)
 	}
 }
 
@@ -265,7 +265,7 @@ func request(t *testing.T, srv *httptest.Server, method, path, origin string, bo
 
 	req, err := http.NewRequestWithContext(t.Context(), method, srv.URL+path, reader)
 	if err != nil {
-		t.Fatalf("сборка запроса %s %s: %v", method, path, err)
+		t.Fatalf("building the request %s %s: %v", method, path, err)
 	}
 	if origin != "" {
 		req.Header.Set("Origin", origin)
@@ -273,17 +273,17 @@ func request(t *testing.T, srv *httptest.Server, method, path, origin string, bo
 
 	resp, err := srv.Client().Do(req)
 	if err != nil {
-		t.Fatalf("запрос %s %s: %v", method, path, err)
+		t.Fatalf("request %s %s: %v", method, path, err)
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			t.Errorf("закрытие тела ответа: %v", err)
+			t.Errorf("closing the response body: %v", err)
 		}
 	}()
 
 	raw, err := io.ReadAll(resp.Body)
 	if err != nil {
-		t.Fatalf("чтение ответа %s %s: %v", method, path, err)
+		t.Fatalf("reading the response %s %s: %v", method, path, err)
 	}
 
 	return response{
@@ -298,10 +298,10 @@ func TestHealth(t *testing.T) {
 	got := request(t, newTestServer(t, &fakeApplier{}, ""), http.MethodGet, "/healthz", "", nil)
 
 	if got.status != http.StatusOK {
-		t.Fatalf("код %d, ожидали %d", got.status, http.StatusOK)
+		t.Fatalf("code %d, expected %d", got.status, http.StatusOK)
 	}
 	if !strings.HasPrefix(got.contentType, "application/json") {
-		t.Errorf("Content-Type %q, ожидали application/json", got.contentType)
+		t.Errorf("Content-Type %q, expected application/json", got.contentType)
 	}
 
 	var health struct {
@@ -311,7 +311,7 @@ func TestHealth(t *testing.T) {
 	got.decode(t, &health)
 
 	if health.Status != "ok" || health.Version != "test" {
-		t.Errorf("получили %+v, ожидали status ok и version test", health)
+		t.Errorf("got %+v, expected status ok and version test", health)
 	}
 }
 
@@ -321,16 +321,16 @@ func TestConfigServedVerbatim(t *testing.T) {
 	got := request(t, newTestServerWithReader(t, fakeReader{data: raw}), http.MethodGet, "/api/config", "", nil)
 
 	if got.status != http.StatusOK {
-		t.Fatalf("код %d, ожидали %d", got.status, http.StatusOK)
+		t.Fatalf("code %d, expected %d", got.status, http.StatusOK)
 	}
 	if !strings.HasPrefix(got.contentType, "application/json") {
-		t.Errorf("Content-Type %q, ожидали application/json", got.contentType)
+		t.Errorf("Content-Type %q, expected application/json", got.contentType)
 	}
 	if got.body != string(raw) {
-		t.Errorf("тело %q, ожидали %q", got.body, raw)
+		t.Errorf("body %q, expected %q", got.body, raw)
 	}
 	if cache := got.header.Get("Cache-Control"); cache != "no-store" {
-		t.Errorf("Cache-Control %q, ожидали no-store", cache)
+		t.Errorf("Cache-Control %q, expected no-store", cache)
 	}
 }
 
@@ -342,10 +342,10 @@ func TestConfigCarriesEtag(t *testing.T) {
 	got := request(t, newTestServerWithReader(t, fakeReader{data: raw}), http.MethodGet, "/api/config", "", nil)
 
 	if got.status != http.StatusOK {
-		t.Fatalf("код %d, ожидали %d", got.status, http.StatusOK)
+		t.Fatalf("code %d, expected %d", got.status, http.StatusOK)
 	}
 	if etag := got.header.Get("ETag"); etag != want {
-		t.Errorf("ETag %q, ожидали %q: панели нечего вернуть в If-Match", etag, want)
+		t.Errorf("ETag %q, expected %q: the panel has nothing to return in If-Match", etag, want)
 	}
 }
 
@@ -354,17 +354,17 @@ func TestConfigMissingIsNotFound(t *testing.T) {
 		http.MethodGet, "/api/config", "", nil)
 
 	if got.status != http.StatusNotFound {
-		t.Fatalf("код %d, ожидали %d", got.status, http.StatusNotFound)
+		t.Fatalf("code %d, expected %d", got.status, http.StatusNotFound)
 	}
 
 	var apiErr contract.Error
 	got.decode(t, &apiErr)
 
 	if apiErr.Code != "config_missing" {
-		t.Errorf("код ошибки %q, ожидали config_missing", apiErr.Code)
+		t.Errorf("error code %q, expected config_missing", apiErr.Code)
 	}
 	if strings.Contains(got.body, "config.json") {
-		t.Errorf("тело %q: путь к конфигу наружу не идёт", got.body)
+		t.Errorf("body %q: the config path does not go outside", got.body)
 	}
 }
 
@@ -374,10 +374,10 @@ func TestConfigReadFailureHidesDetails(t *testing.T) {
 	got := request(t, newTestServerWithReader(t, reader), http.MethodGet, "/api/config", "", nil)
 
 	if got.status != http.StatusInternalServerError {
-		t.Fatalf("код %d, ожидали %d", got.status, http.StatusInternalServerError)
+		t.Fatalf("code %d, expected %d", got.status, http.StatusInternalServerError)
 	}
 	if strings.Contains(got.body, "/etc/sing-box") {
-		t.Errorf("тело %q: путь на диске наружу не идёт", got.body)
+		t.Errorf("body %q: the path on disk does not go outside", got.body)
 	}
 }
 
@@ -385,14 +385,14 @@ func TestAPINotFound(t *testing.T) {
 	got := request(t, newTestServer(t, &fakeApplier{}, ""), http.MethodGet, "/api/nope", "", nil)
 
 	if got.status != http.StatusNotFound {
-		t.Fatalf("код %d, ожидали %d", got.status, http.StatusNotFound)
+		t.Fatalf("code %d, expected %d", got.status, http.StatusNotFound)
 	}
 
 	var apiErr contract.Error
 	got.decode(t, &apiErr)
 
 	if apiErr.Code != "not_found" {
-		t.Errorf("код ошибки %q, ожидали not_found", apiErr.Code)
+		t.Errorf("error code %q, expected not_found", apiErr.Code)
 	}
 }
 
@@ -401,19 +401,19 @@ func TestMutatingRequestChecksOrigin(t *testing.T) {
 
 	tests := []struct {
 		name string
-		// ownOrigin подставляет адрес самого тестового сервера.
+		// ownOrigin substitutes the address of the test server itself.
 		ownOrigin     bool
 		origin        string
 		allowedOrigin string
-		// 404 означает, что запрос прошёл проверку и дошёл до маршрутизации.
+		// 404 means the request passed the check and reached routing.
 		want int
 	}{
-		{name: "свой origin проходит", ownOrigin: true, want: http.StatusNotFound},
-		{name: "дев-стенд по флагу проходит", origin: devOrigin, allowedOrigin: devOrigin, want: http.StatusNotFound},
-		{name: "чужой origin отклонён", origin: "http://evil.example", want: http.StatusForbidden},
-		{name: "без origin отклонён", want: http.StatusForbidden},
-		{name: "флаг не открывает чужой origin", origin: "http://evil.example", allowedOrigin: devOrigin, want: http.StatusForbidden},
-		{name: "дев-origin без флага отклонён", origin: devOrigin, want: http.StatusForbidden},
+		{name: "own origin passes", ownOrigin: true, want: http.StatusNotFound},
+		{name: "dev test bench passes by the flag", origin: devOrigin, allowedOrigin: devOrigin, want: http.StatusNotFound},
+		{name: "foreign origin rejected", origin: "http://evil.example", want: http.StatusForbidden},
+		{name: "no origin rejected", want: http.StatusForbidden},
+		{name: "the flag does not open a foreign origin", origin: "http://evil.example", allowedOrigin: devOrigin, want: http.StatusForbidden},
+		{name: "dev origin without the flag rejected", origin: devOrigin, want: http.StatusForbidden},
 	}
 
 	for _, tt := range tests {
@@ -427,7 +427,7 @@ func TestMutatingRequestChecksOrigin(t *testing.T) {
 
 			got := request(t, srv, http.MethodPost, "/api/nope", origin, nil)
 			if got.status != tt.want {
-				t.Errorf("origin %q: код %d, ожидали %d", origin, got.status, tt.want)
+				t.Errorf("origin %q: code %d, expected %d", origin, got.status, tt.want)
 			}
 		})
 	}
@@ -438,7 +438,7 @@ func TestMutatingMethodsAllChecked(t *testing.T) {
 		t.Run(method, func(t *testing.T) {
 			got := request(t, newTestServer(t, &fakeApplier{}, ""), method, "/api/nope", "http://evil.example", nil)
 			if got.status != http.StatusForbidden {
-				t.Errorf("код %d, ожидали %d", got.status, http.StatusForbidden)
+				t.Errorf("code %d, expected %d", got.status, http.StatusForbidden)
 			}
 		})
 	}
@@ -448,20 +448,20 @@ func TestReadRequestSkipsOriginCheck(t *testing.T) {
 	got := request(t, newTestServer(t, &fakeApplier{}, ""), http.MethodGet, "/healthz", "http://evil.example", nil)
 
 	if got.status != http.StatusOK {
-		t.Errorf("код %d, ожидали %d: проверка источника не касается чтения", got.status, http.StatusOK)
+		t.Errorf("code %d, expected %d: the origin check does not apply to reads", got.status, http.StatusOK)
 	}
 }
 
 const rawConfig = `{"log":{"level":"info"}}`
 
-// Путь стенда: демон отдаёт его как есть, значение здесь роли не играет.
+// The test bench path: the daemon returns it as is, the value plays no role here.
 const (
 	testConfigPath     = "/tmp/metabox-test/config.json"
 	testSingboxVersion = "1.14.0-extended-2.7.1"
 )
 
-// apply отправляет конфиг со своим Origin: проверка источника здесь не предмет
-// теста, её закрывает TestMutatingRequestChecksOrigin.
+// apply sends a config with its own Origin: the origin check is not the subject
+// of the test here, it is covered by TestMutatingRequestChecksOrigin.
 func applyRequest(t *testing.T, srv *httptest.Server, body []byte) response {
 	t.Helper()
 
@@ -475,17 +475,17 @@ func TestApplyStartsTransaction(t *testing.T) {
 	got := applyRequest(t, srv, []byte(rawConfig))
 
 	if got.status != http.StatusAccepted {
-		t.Fatalf("код %d, ожидали %d: применение асинхронно", got.status, http.StatusAccepted)
+		t.Fatalf("code %d, expected %d: apply is asynchronous", got.status, http.StatusAccepted)
 	}
 
 	var tx apply.Transaction
 	got.decode(t, &tx)
 
 	if tx.ID == "" {
-		t.Error("ответ без идентификатора транзакции: клиенту нечего опрашивать")
+		t.Error("response without a transaction identifier: the client has nothing to poll")
 	}
 	if !bytes.Equal(applier.body(), []byte(rawConfig)) {
-		t.Errorf("до применения доехало %q, отправляли %q", applier.body(), rawConfig)
+		t.Errorf("%q reached the apply, sent %q", applier.body(), rawConfig)
 	}
 }
 
@@ -495,10 +495,10 @@ func TestApplyPassesClientBase(t *testing.T) {
 		ifMatch string
 		want    string
 	}{
-		{"без заголовка применение идёт без сверки", "", ""},
-		{"ETag передаётся без кавычек", `"abc123"`, "abc123"},
-		{"слабый валидатор принимается", `W/"abc123"`, "abc123"},
-		{"звёздочка означает «любая база»", "*", ""},
+		{"without the header the apply goes without a check", "", ""},
+		{"ETag is passed without quotes", `"abc123"`, "abc123"},
+		{"weak validator accepted", `W/"abc123"`, "abc123"},
+		{"an asterisk means \"any base\"", "*", ""},
 	}
 
 	for _, tt := range tests {
@@ -509,7 +509,7 @@ func TestApplyPassesClientBase(t *testing.T) {
 			req, err := http.NewRequestWithContext(t.Context(), http.MethodPost,
 				srv.URL+"/api/apply", strings.NewReader(rawConfig))
 			if err != nil {
-				t.Fatalf("сборка запроса: %v", err)
+				t.Fatalf("building the request: %v", err)
 			}
 			req.Header.Set("Origin", srv.URL)
 			if tt.ifMatch != "" {
@@ -518,24 +518,24 @@ func TestApplyPassesClientBase(t *testing.T) {
 
 			resp, err := srv.Client().Do(req)
 			if err != nil {
-				t.Fatalf("запрос применения: %v", err)
+				t.Fatalf("apply request: %v", err)
 			}
 			if err := resp.Body.Close(); err != nil {
-				t.Errorf("закрытие тела ответа: %v", err)
+				t.Errorf("closing the response body: %v", err)
 			}
 
 			if resp.StatusCode != http.StatusAccepted {
-				t.Fatalf("код %d, ожидали %d", resp.StatusCode, http.StatusAccepted)
+				t.Fatalf("code %d, expected %d", resp.StatusCode, http.StatusAccepted)
 			}
 			if got := applier.sentBase(); got != tt.want {
-				t.Errorf("база %q, ожидали %q", got, tt.want)
+				t.Errorf("base %q, expected %q", got, tt.want)
 			}
 		})
 	}
 }
 
-// Вывод бинаря — единственное исключение из правила «внутренние подробности
-// наружу не идут»: на нём пользователь чинит конфиг.
+// The binary output is the only exception to the rule "internal details do not
+// go outside": the user fixes the config by it.
 func TestApplyReturnsCheckOutputVerbatim(t *testing.T) {
 	applier := &fakeApplier{startErr: &singbox.CheckError{
 		Stdout:   "разбор конфига",
@@ -546,7 +546,7 @@ func TestApplyReturnsCheckOutputVerbatim(t *testing.T) {
 	got := applyRequest(t, newTestServer(t, applier, ""), []byte(rawConfig))
 
 	if got.status != http.StatusUnprocessableEntity {
-		t.Fatalf("код %d, ожидали %d", got.status, http.StatusUnprocessableEntity)
+		t.Fatalf("code %d, expected %d", got.status, http.StatusUnprocessableEntity)
 	}
 
 	var apiErr struct {
@@ -560,18 +560,18 @@ func TestApplyReturnsCheckOutputVerbatim(t *testing.T) {
 	got.decode(t, &apiErr)
 
 	if apiErr.Code != "check_failed" {
-		t.Errorf("код ошибки %q, ожидали check_failed", apiErr.Code)
+		t.Errorf("error code %q, expected check_failed", apiErr.Code)
 	}
 	if apiErr.Details.Stderr != "FATAL[0000] decode config at 12: unknown outbound type" {
-		t.Errorf("stderr изменён: %q", apiErr.Details.Stderr)
+		t.Errorf("stderr changed: %q", apiErr.Details.Stderr)
 	}
 	if apiErr.Details.ExitCode != 1 {
-		t.Errorf("код возврата %d, ожидали 1", apiErr.Details.ExitCode)
+		t.Errorf("exit code %d, expected 1", apiErr.Details.ExitCode)
 	}
 }
 
-// Расхождение рабочего каталога службы с каталогом конфига уходит кодом с
-// обоими каталогами: по ним панель собирает команду настройки службы.
+// A mismatch of the service working directory with the config directory goes as a code with
+// both directories: the panel builds the service setup command from them.
 func TestApplyReturnsWorkdirMismatch(t *testing.T) {
 	applier := &fakeApplier{startErr: fmt.Errorf("сверка: %w", &apply.WorkdirError{
 		Workdir:   "/usr/share/sing-box",
@@ -581,7 +581,7 @@ func TestApplyReturnsWorkdirMismatch(t *testing.T) {
 	got := applyRequest(t, newTestServer(t, applier, ""), []byte(rawConfig))
 
 	if got.status != http.StatusConflict {
-		t.Fatalf("код %d, ожидали %d", got.status, http.StatusConflict)
+		t.Fatalf("code %d, expected %d", got.status, http.StatusConflict)
 	}
 
 	var apiErr struct {
@@ -591,12 +591,12 @@ func TestApplyReturnsWorkdirMismatch(t *testing.T) {
 	got.decode(t, &apiErr)
 
 	if apiErr.Code != string(contract.ErrWorkdirMismatch) {
-		t.Errorf("код ошибки %q, ожидали %q", apiErr.Code, contract.ErrWorkdirMismatch)
+		t.Errorf("error code %q, expected %q", apiErr.Code, contract.ErrWorkdirMismatch)
 	}
 
 	want := contract.WorkdirDetails{Workdir: "/usr/share/sing-box", ConfigDir: "/etc/sing-box"}
 	if apiErr.Details != want {
-		t.Errorf("подробности %+v, ожидали %+v", apiErr.Details, want)
+		t.Errorf("details %+v, expected %+v", apiErr.Details, want)
 	}
 }
 
@@ -607,8 +607,8 @@ func TestApplyMapsDomainErrors(t *testing.T) {
 		want     int
 		wantCode contract.ErrorCode
 	}{
-		{"применение уже идёт", apply.ErrBusy, http.StatusConflict, contract.ErrApplyInProgress},
-		{"конфиг правили извне", apply.ErrConfigModified, http.StatusConflict, contract.ErrConfigModified},
+		{"apply already running", apply.ErrBusy, http.StatusConflict, contract.ErrApplyInProgress},
+		{"config edited from outside", apply.ErrConfigModified, http.StatusConflict, contract.ErrConfigModified},
 	}
 
 	for _, tt := range tests {
@@ -616,32 +616,32 @@ func TestApplyMapsDomainErrors(t *testing.T) {
 			got := applyRequest(t, newTestServer(t, &fakeApplier{startErr: tt.err}, ""), []byte(rawConfig))
 
 			if got.status != tt.want {
-				t.Fatalf("код %d, ожидали %d", got.status, tt.want)
+				t.Fatalf("code %d, expected %d", got.status, tt.want)
 			}
 
 			var apiErr contract.Error
 			got.decode(t, &apiErr)
 
 			if apiErr.Code != tt.wantCode {
-				t.Errorf("код ошибки %q, ожидали %q", apiErr.Code, tt.wantCode)
+				t.Errorf("error code %q, expected %q", apiErr.Code, tt.wantCode)
 			}
 		})
 	}
 }
 
-// Без лимита один запрос забирает столько памяти, сколько прислали.
+// Without a limit one request takes as much memory as it sent.
 func TestApplyRejectsOversizedBody(t *testing.T) {
 	got := applyRequest(t, newTestServer(t, &fakeApplier{}, ""), bytes.Repeat([]byte("щ"), 8<<20))
 
 	if got.status != http.StatusRequestEntityTooLarge {
-		t.Fatalf("код %d, ожидали %d", got.status, http.StatusRequestEntityTooLarge)
+		t.Fatalf("code %d, expected %d", got.status, http.StatusRequestEntityTooLarge)
 	}
 
 	var apiErr contract.Error
 	got.decode(t, &apiErr)
 
 	if apiErr.Code != "config_too_large" {
-		t.Errorf("код ошибки %q, ожидали config_too_large", apiErr.Code)
+		t.Errorf("error code %q, expected config_too_large", apiErr.Code)
 	}
 }
 
@@ -654,24 +654,24 @@ func TestApplyStateAndConfirm(t *testing.T) {
 
 	state := request(t, srv, http.MethodGet, "/api/apply/"+started.ID, "", nil)
 	if state.status != http.StatusOK {
-		t.Fatalf("состояние транзакции: код %d", state.status)
+		t.Fatalf("transaction state: code %d", state.status)
 	}
 
 	unknown := request(t, srv, http.MethodGet, "/api/apply/чужая", "", nil)
 	if unknown.status != http.StatusNotFound {
-		t.Errorf("чужой идентификатор: код %d, ожидали %d", unknown.status, http.StatusNotFound)
+		t.Errorf("foreign identifier: code %d, expected %d", unknown.status, http.StatusNotFound)
 	}
 
 	confirm := request(t, srv, http.MethodPost, "/api/apply/"+started.ID+"/confirm", srv.URL, nil)
 	if confirm.status != http.StatusOK {
-		t.Fatalf("подтверждение: код %d", confirm.status)
+		t.Fatalf("confirm: code %d", confirm.status)
 	}
 
 	var confirmed apply.Transaction
 	confirm.decode(t, &confirmed)
 
 	if confirmed.Phase != apply.PhaseConfirmed {
-		t.Errorf("фаза %q, ожидали подтверждение", confirmed.Phase)
+		t.Errorf("phase %q, expected confirmation", confirmed.Phase)
 	}
 }
 
@@ -681,19 +681,19 @@ func TestConfirmNothingToConfirm(t *testing.T) {
 
 	got := request(t, srv, http.MethodPost, "/api/apply/tx-1/confirm", srv.URL, nil)
 	if got.status != http.StatusConflict {
-		t.Fatalf("код %d, ожидали %d", got.status, http.StatusConflict)
+		t.Fatalf("code %d, expected %d", got.status, http.StatusConflict)
 	}
 
 	var apiErr contract.Error
 	got.decode(t, &apiErr)
 
 	if apiErr.Code != "nothing_to_confirm" {
-		t.Errorf("код ошибки %q, ожидали nothing_to_confirm", apiErr.Code)
+		t.Errorf("error code %q, expected nothing_to_confirm", apiErr.Code)
 	}
 }
 
-// Формы панели построены по схеме одной версии форка: без версии устройства
-// расхождение со схемой ничем не видно.
+// The panel forms are built by the schema of one fork version: without the device version
+// a mismatch with the schema is not visible at all.
 func TestStatusReportsSingboxVersion(t *testing.T) {
 	srv := newTestServer(t, &fakeApplier{}, "")
 
@@ -703,21 +703,21 @@ func TestStatusReportsSingboxVersion(t *testing.T) {
 	request(t, srv, http.MethodGet, "/api/status", "", nil).decode(t, &status)
 
 	if status.SingboxVersion != testSingboxVersion {
-		t.Errorf("версия %q, ожидали %q", status.SingboxVersion, testSingboxVersion)
+		t.Errorf("version %q, expected %q", status.SingboxVersion, testSingboxVersion)
 	}
 }
 
-// Без состава сборки панель не отличит «типа нет в бинаре» от «бинарь не
-// прочитан», поэтому второе выражается отсутствием поля, а не пустым списком.
+// Without the build composition the panel cannot tell "no such type in the binary" from "the binary was not
+// read", so the second is expressed by a missing field and not an empty list.
 func TestStatusReportsSingboxBuild(t *testing.T) {
 	tests := []struct {
 		name string
 		tags []string
 		want *[]string
 	}{
-		{"теги прочитаны", []string{"with_quic"}, &[]string{"with_quic"}},
-		{"сборка без тегов", []string{}, &[]string{}},
-		{"бинарь не прочитан", nil, nil},
+		{"tags read", []string{"with_quic"}, &[]string{"with_quic"}},
+		{"build without tags", []string{}, &[]string{}},
+		{"binary not read", nil, nil},
 	}
 
 	for _, tt := range tests {
@@ -737,22 +737,22 @@ func TestStatusReportsSingboxBuild(t *testing.T) {
 
 			if tt.want == nil {
 				if status.SingboxBuild != nil {
-					t.Errorf("состав сборки %v, ожидали отсутствие поля", status.SingboxBuild)
+					t.Errorf("build composition %v, expected the field to be absent", status.SingboxBuild)
 				}
 				return
 			}
 			if status.SingboxBuild == nil || !slices.Equal(status.SingboxBuild.Tags, *tt.want) {
-				t.Errorf("состав сборки %v, ожидали теги %v", status.SingboxBuild, *tt.want)
+				t.Errorf("build composition %v, expected tags %v", status.SingboxBuild, *tt.want)
 			}
 			if status.SingboxBuild.Tags == nil {
-				t.Error("пустой список тегов ушёл как null")
+				t.Error("an empty tag list went out as null")
 			}
 		})
 	}
 }
 
-// Путь конфига задаётся флагами запуска, поэтому панель обязана получать его
-// с демона, а не держать у себя константу.
+// The config path is set by start flags, so the panel must get it
+// from the daemon and not keep a constant of its own.
 func TestStatusReportsConfigPath(t *testing.T) {
 	srv := newTestServer(t, &fakeApplier{}, "")
 
@@ -762,12 +762,12 @@ func TestStatusReportsConfigPath(t *testing.T) {
 	request(t, srv, http.MethodGet, "/api/status", "", nil).decode(t, &status)
 
 	if status.ConfigPath != testConfigPath {
-		t.Errorf("путь %q, ожидали %q", status.ConfigPath, testConfigPath)
+		t.Errorf("path %q, expected %q", status.ConfigPath, testConfigPath)
 	}
 }
 
-// Перезагрузка страницы не должна терять идущее применение: его идентификатор
-// жил только в ответе на POST.
+// A page reload must not lose a running apply: its identifier
+// lived only in the response to POST.
 func TestStatusLinksActiveTransaction(t *testing.T) {
 	applier := &fakeApplier{}
 	srv := newTestServer(t, applier, "")
@@ -782,10 +782,10 @@ func TestStatusLinksActiveTransaction(t *testing.T) {
 	empty.decode(t, &before)
 
 	if before.Transaction != nil {
-		t.Errorf("до применения статус несёт транзакцию %+v", before.Transaction)
+		t.Errorf("before the apply the status carries the transaction %+v", before.Transaction)
 	}
 	if before.Version != "test" {
-		t.Errorf("версия %q, ожидали test", before.Version)
+		t.Errorf("version %q, expected test", before.Version)
 	}
 
 	var started apply.Transaction
@@ -800,20 +800,20 @@ func TestStatusLinksActiveTransaction(t *testing.T) {
 	after.decode(t, &status)
 
 	if status.Transaction == nil || status.Transaction.ID != started.ID {
-		t.Fatalf("статус не отдал идущую транзакцию: %+v", status.Transaction)
+		t.Fatalf("the status did not return the running transaction: %+v", status.Transaction)
 	}
 	if status.TransactionHref != "/api/apply/"+started.ID {
-		t.Errorf("ссылка %q, ожидали /api/apply/%s", status.TransactionHref, started.ID)
+		t.Errorf("link %q, expected /api/apply/%s", status.TransactionHref, started.ID)
 	}
 
-	// Ссылка обязана вести на живую ручку, а не быть строкой на вид.
+	// The link must lead to a live handler and not be a string for show.
 	followed := request(t, srv, http.MethodGet, status.TransactionHref, "", nil)
 	if followed.status != http.StatusOK {
-		t.Errorf("переход по ссылке дал %d", followed.status)
+		t.Errorf("following the link gave %d", followed.status)
 	}
 }
 
-// Роутинг у SPA клиентский: всё, что не под /api/, уходит интерфейсу.
+// SPA routing is client-side: everything not under /api/ goes to the interface.
 func TestUnknownPathGoesToSPA(t *testing.T) {
 	spa := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -826,14 +826,14 @@ func TestUnknownPathGoesToSPA(t *testing.T) {
 			got := request(t, srv, http.MethodGet, path, "", nil)
 
 			if got.status != http.StatusOK || got.body != "оболочка" {
-				t.Errorf("код %d, тело %q: ожидали оболочку SPA", got.status, got.body)
+				t.Errorf("code %d, body %q: expected the SPA shell", got.status, got.body)
 			}
 		})
 	}
 }
 
-// Под /api/ по-прежнему JSON, а не index.html: иначе фронт получит HTML вместо
-// разбираемого ответа.
+// Under /api/ it is still JSON and not index.html: otherwise the frontend would get HTML instead of
+// a parseable response.
 func TestAPIPathNeverReachesSPA(t *testing.T) {
 	spa := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("оболочка"))
@@ -842,31 +842,31 @@ func TestAPIPathNeverReachesSPA(t *testing.T) {
 	got := request(t, newTestServerWithSPA(t, &fakeApplier{}, "", spa), http.MethodGet, "/api/нет", "", nil)
 
 	if got.status != http.StatusNotFound {
-		t.Fatalf("код %d, ожидали %d", got.status, http.StatusNotFound)
+		t.Fatalf("code %d, expected %d", got.status, http.StatusNotFound)
 	}
 
 	var apiErr contract.Error
 	got.decode(t, &apiErr)
 
 	if apiErr.Code != "not_found" {
-		t.Errorf("код ошибки %q, ожидали not_found", apiErr.Code)
+		t.Errorf("error code %q, expected not_found", apiErr.Code)
 	}
 }
 
-// Демон, собранный без фронта, обязан подниматься и обслуживать API: панель
-// объясняет, чего не хватает, а не молчит 404.
+// A daemon built without the frontend must come up and serve the API: the panel
+// explains what is missing and does not stay silent with a 404.
 func TestDaemonWithoutSPAStillServesAPI(t *testing.T) {
 	srv := newTestServer(t, &fakeApplier{}, "")
 
 	root := request(t, srv, http.MethodGet, "/", "", nil)
 	if root.status != http.StatusServiceUnavailable {
-		t.Errorf("код %d, ожидали %d", root.status, http.StatusServiceUnavailable)
+		t.Errorf("code %d, expected %d", root.status, http.StatusServiceUnavailable)
 	}
 	if !strings.Contains(root.body, "make daemon") {
-		t.Errorf("тело %q не объясняет, как собрать интерфейс", root.body)
+		t.Errorf("body %q does not explain how to build the interface", root.body)
 	}
 
 	if got := request(t, srv, http.MethodGet, "/healthz", "", nil); got.status != http.StatusOK {
-		t.Errorf("API не работает без фронта: код %d", got.status)
+		t.Errorf("API does not work without the frontend: code %d", got.status)
 	}
 }

@@ -9,41 +9,41 @@ import (
 type kind int
 
 const (
-	kindScalar kind = iota // готовое zod-выражение
+	kindScalar kind = iota // ready zod expression
 	kindObject
 	kindArray
-	kindRecord // объект с произвольными ключами
+	kindRecord // object with arbitrary keys
 	kindUnion
-	kindTagged // z.discriminatedUnion по строковому полю
-	kindRef    // ссылка на именованную схему
+	kindTagged // z.discriminatedUnion by a string field
+	kindRef    // reference to a named schema
 )
 
-// schema — узел промежуточного дерева. Печатается в Zod-выражение; ничего,
-// что нельзя выразить в z.toJSONSchema, тут появиться не должно.
+// schema is a node of the intermediate tree. It is printed into a Zod expression; nothing
+// that cannot be expressed in z.toJSONSchema should appear here.
 type schema struct {
 	kind kind
 
 	expr string // kindScalar
 	ref  string // kindRef
 
-	base     string    // kindObject: имя схемы с общими полями, к которой добавляются fields
+	base     string    // kindObject: name of the schema with common fields that fields are added to
 	fields   []field   // kindObject
 	elem     *schema   // kindArray, kindRecord
 	variants []variant // kindUnion, kindTagged
-	discr    string    // kindTagged: имя поля-дискриминатора
+	discr    string    // kindTagged: name of the discriminator field
 }
 
 type field struct {
 	name     string
 	schema   *schema
 	optional bool
-	depth    int    // глубина встраивания: по ней разрешается затенение имён
-	doc      string // godoc поля форка: панель показывает его в подсказках и в авторендерере
+	depth    int    // embedding depth: name shadowing is resolved by it
+	doc      string // godoc of the fork field: the panel shows it in hints and in the auto-renderer
 }
 
-// dedupe повторяет правила encoding/json для встроенных структур: при
-// совпадении имён побеждает поле с меньшей глубиной встраивания, а поля
-// одинаковой глубины конфликтуют и в JSON не попадают вовсе.
+// dedupe repeats the encoding/json rules for embedded structs: on
+// a name clash the field with the smaller embedding depth wins, and fields
+// of the same depth conflict and do not get into JSON at all.
 func dedupe(fields []field) []field {
 	depth := map[string]int{}
 	conflict := map[string]bool{}
@@ -83,7 +83,7 @@ func array(elem *schema) *schema { return &schema{kind: kindArray, elem: elem} }
 
 func record(elem *schema) *schema { return &schema{kind: kindRecord, elem: elem} }
 
-// listable повторяет badoption.Listable[T]: одиночное значение или массив.
+// listable repeats badoption.Listable[T]: a single value or an array.
 func listable(elem *schema) *schema {
 	return &schema{kind: kindUnion, variants: []variant{{elem}, {array(elem)}}}
 }
@@ -96,13 +96,13 @@ func union(items ...*schema) *schema {
 	return &schema{kind: kindUnion, variants: variants}
 }
 
-// collectRefs собирает имена схем, на которые ссылается узел. Поля объекта
-// обходятся по withFields: ссылки из них вычисляются позже остальных, и
-// порядок объявлений от них не зависит.
+// collectRefs collects the names of the schemas a node refers to. The fields of an object
+// are walked by withFields: references from them are computed later than the rest, and
+// the declaration order does not depend on them.
 func (s *schema) collectRefs(into map[string]bool, withFields bool) {
 	switch s.kind {
 	case kindScalar:
-		// Скаляр — готовое zod-выражение, ссылаться ему не на что.
+		// A scalar is a ready zod expression, it has nothing to refer to.
 	case kindRef:
 		into[s.ref] = true
 	case kindArray, kindRecord:
@@ -123,23 +123,23 @@ func (s *schema) collectRefs(into map[string]bool, withFields bool) {
 	}
 }
 
-// hasRef: внутри узла есть ссылка на другую схему, значит в объекте его
-// нужно отдавать геттером — иначе объявление придётся ставить строго после
-// того, на что оно ссылается, а при взаимной рекурсии такого порядка нет.
+// hasRef: inside the node there is a reference to another schema, so in an object it
+// must be given as a getter, otherwise the declaration would have to be placed strictly after
+// what it refers to, and with mutual recursion there is no such order.
 func (s *schema) hasRef() bool {
 	found := map[string]bool{}
 	s.collectRefs(found, true)
 	return len(found) > 0
 }
 
-// hardRefs — ссылки, которые вычисляются сразу при объявлении схемы: всё,
-// что вне полей объекта (поля уходят в геттеры). Они и задают порядок
-// объявлений в файле.
+// hardRefs are the references computed right at the schema declaration: everything
+// outside the object fields (fields go into getters). They set the order
+// of declarations in the file.
 func (s *schema) hardRefs(into map[string]bool) {
 	s.collectRefs(into, false)
 }
 
-// write печатает Zod-выражение с отступом indent.
+// write prints a Zod expression with the indent.
 func (s *schema) write(b *strings.Builder, indent string) {
 	switch s.kind {
 	case kindScalar:
@@ -183,10 +183,10 @@ func (s *schema) write(b *strings.Builder, indent string) {
 	}
 }
 
-// writeObject печатает z.strictObject: поле, которого нет в схеме, — это то,
-// чего панель не знает, и молчать об этом нельзя. Узел с таким полем она
-// показывает как нераспознанный и правит текстом; сохранность его байтов от
-// схемы не зависит — конфиг правится по тексту файла.
+// writeObject prints z.strictObject: a field absent from the schema is something
+// the panel does not know, and silence about it is not acceptable. The panel shows
+// a node with such a field as unrecognized and edits it as text; the safety of its bytes does not
+// depend on the schema, the config is edited by the file text.
 func (s *schema) writeObject(b *strings.Builder, indent string) {
 	if s.base != "" && len(s.fields) == 0 {
 		b.WriteString(s.base)
@@ -196,8 +196,8 @@ func (s *schema) writeObject(b *strings.Builder, indent string) {
 		b.WriteString("z.strictObject({})")
 		return
 	}
-	// Вариант, у которого есть общая часть, печатается её расширением:
-	// повторять полсотни общих полей в каждом варианте незачем.
+	// A variant that has a common part is printed as its extension:
+	// there is no point in repeating fifty common fields in each variant.
 	if s.base != "" {
 		fmt.Fprintf(b, "%s.extend({\n", s.base)
 	} else {
@@ -209,8 +209,8 @@ func (s *schema) writeObject(b *strings.Builder, indent string) {
 			fmt.Fprintf(b, "%s/** %s */\n", inner, f.doc)
 		}
 
-		// Поле со ссылкой печатается геттером: он ленивый, поэтому взаимная
-		// рекурсия работает без оглядки на порядок объявлений в файле.
+		// A field with a reference is printed as a getter: it is lazy, so mutual
+		// recursion works regardless of the declaration order in the file.
 		if f.schema.hasRef() {
 			fmt.Fprintf(b, "%sget %s() {\n%s  return ", inner, quoteKey(f.name), inner)
 			f.schema.write(b, inner+"  ")
@@ -232,7 +232,7 @@ func optionalSuffix(optional bool) string {
 	return ""
 }
 
-// quoteKey оставляет ключ голым, пока он валидный идентификатор JS.
+// quoteKey leaves the key bare while it is a valid JS identifier.
 func quoteKey(name string) string {
 	if name == "" {
 		return `""`
@@ -248,7 +248,7 @@ func quoteKey(name string) string {
 	return name
 }
 
-// named — именованная схема на выходе генератора.
+// named is a named schema in the generator output.
 type named struct {
 	name   string
 	schema *schema
@@ -262,9 +262,9 @@ func newSchemaSet() *schemaSet { return &schemaSet{byName: map[string]*named{}} 
 
 func (s *schemaSet) put(name string, node *schema) { s.byName[name] = &named{name, node} }
 
-// sorted возвращает схемы в порядке объявления: сначала то, на что ссылаются
-// вне геттеров. Внутри одного слоя — по алфавиту, чтобы файл не переставлялся
-// от прогона к прогону.
+// sorted returns the schemas in declaration order: first what is referenced
+// outside getters. Within one layer, alphabetically, so the file is not reordered
+// from run to run.
 func (s *schemaSet) sorted() []*named {
 	names := make([]string, 0, len(s.byName))
 	for name := range s.byName {

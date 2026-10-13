@@ -9,37 +9,37 @@ import (
 	"strings"
 )
 
-// Счётчики интерфейса в `/proc/net/dev` идут после двоеточия: первым принятые
-// байты, девятым — отправленные.
+// Interface counters in `/proc/net/dev` follow the colon: first the received
+// bytes, ninth the sent ones.
 const (
 	receivedField    = 0
 	transmittedField = 8
 )
 
-// Строка `/proc/net/route`: «Iface Destination Gateway Flags RefCnt Use Metric Mask».
+// A `/proc/net/route` row: "Iface Destination Gateway Flags RefCnt Use Metric Mask".
 const (
 	routeIfaceField  = 0
 	routeTargetField = 1
 	routeMetricField = 6
 	routeMaskField   = 7
 
-	// Маршрут по умолчанию — нулевые адрес назначения и маска.
+	// The default route is a zero destination address and mask.
 	routeDefault = "00000000"
 )
 
-// Link — счётчики интерфейса с момента его подъёма, в байтах.
+// Link is the interface counters since it came up, in bytes.
 type Link struct {
 	Name string `json:"name"`
 	RX   int64  `json:"rx"`
 	TX   int64  `json:"tx"`
 }
 
-// uplink отдаёт счётчики интерфейса, которым устройство ходит наружу.
+// uplink returns the counters of the interface the device goes outside through.
 //
-// Нужен он для сравнения: сколько канала прошло через sing-box, видно только
-// рядом с тем, сколько прошло всего. Сравнивать можно лишь приращения за одно
-// окно — счётчик интерфейса считается с подъёма линка, а счётчик Clash API с
-// запуска процесса.
+// It is needed for comparison: how much of the channel went through sing-box is visible only
+// next to how much went in total. Only increments over one window can be compared:
+// the interface counter counts from the link coming up, and the Clash API counter from
+// the process start.
 func (r *Reader) uplink() (*Link, error) {
 	name, err := r.defaultRoute()
 	if err != nil {
@@ -49,9 +49,9 @@ func (r *Reader) uplink() (*Link, error) {
 	return r.counters(name)
 }
 
-// defaultRoute выбирает интерфейс маршрута по умолчанию с наименьшей метрикой.
-// Туннели пропускаются: в режиме TUN маршрут по умолчанию принадлежит самому
-// sing-box, и его трафик оказался бы и делимым, и делителем.
+// defaultRoute selects the default route interface with the lowest metric.
+// Tunnels are skipped: in TUN mode the default route belongs to sing-box itself,
+// and its traffic would be both the dividend and the divisor.
 func (r *Reader) defaultRoute() (string, error) {
 	path := filepath.Join(r.proc, "net", "route")
 
@@ -97,8 +97,8 @@ func (r *Reader) defaultRoute() (string, error) {
 		return best, nil
 	}
 
-	// Все маршруты по умолчанию туннельные: лучше показать этот интерфейс,
-	// чем ничего, — доля тогда просто выйдет около сотни процентов.
+	// All default routes are tunnel ones: better to show this interface
+	// than nothing, the share then comes out around a hundred percent.
 	if fallback != "" {
 		return fallback, nil
 	}
@@ -106,7 +106,7 @@ func (r *Reader) defaultRoute() (string, error) {
 	return "", errors.New("маршрута по умолчанию нет")
 }
 
-// isTunnel отличает TUN/TAP по файлу, который ядро заводит только им.
+// isTunnel tells TUN/TAP by a file the kernel creates only for them.
 func (r *Reader) isTunnel(name string) bool {
 	_, err := os.Stat(filepath.Join(r.sys, "class", "net", name, "tun_flags"))
 

@@ -11,9 +11,9 @@ import (
 	"time"
 )
 
-// Переменные окружения подставного процесса. Настоящих бинарей вроде /bin/false
-// на разных системах может не оказаться, поэтому Exec проверяется на самом
-// тестовом бинаре, перезапущенном в режиме помощника.
+// Environment variables of the stub process. Real binaries like /bin/false
+// may be absent on different systems, so Exec is checked on the test
+// binary itself, restarted in helper mode.
 const (
 	helperEnv    = "METABOX_HELPER"
 	helperStdout = "METABOX_HELPER_STDOUT"
@@ -23,11 +23,11 @@ const (
 	helperRepeat = "METABOX_HELPER_REPEAT"
 )
 
-// TestHelperProcess — не проверка, а подставной процесс: тест перезапускает
-// собственный бинарь с этим фильтром и управляет им через окружение.
+// TestHelperProcess is not a check but a stub process: the test restarts its
+// own binary with this filter and controls it through the environment.
 func TestHelperProcess(t *testing.T) {
 	if os.Getenv(helperEnv) != "1" {
-		t.Skip("запускается только как подставной процесс")
+		t.Skip("starts only as a stub process")
 	}
 
 	if d, err := time.ParseDuration(os.Getenv(helperSleep)); err == nil {
@@ -61,7 +61,7 @@ func TestExecCollectsStreamsSeparately(t *testing.T) {
 
 	res, err := runHelper(t, time.Minute)
 	if err != nil {
-		t.Fatalf("запуск: %v", err)
+		t.Fatalf("start: %v", err)
 	}
 
 	if res.Stdout != "это stdout" {
@@ -71,22 +71,22 @@ func TestExecCollectsStreamsSeparately(t *testing.T) {
 		t.Errorf("stderr %q", res.Stderr)
 	}
 	if res.ExitCode != 0 {
-		t.Errorf("код %d, ожидали 0", res.ExitCode)
+		t.Errorf("code %d, expected 0", res.ExitCode)
 	}
 }
 
-// Ненулевой код возврата — вердикт команды, а не отказ запуска: ошибки быть не
-// должно, код обязан приехать в Result.
+// A non-zero exit code is the command verdict, not a launch failure: there must be no error,
+// the code must arrive in Result.
 func TestExecReportsExitCode(t *testing.T) {
 	t.Setenv(helperStderr, "конфиг не разобран")
 	t.Setenv(helperCode, "7")
 
 	res, err := runHelper(t, time.Minute)
 	if err != nil {
-		t.Fatalf("ненулевой код выдан за отказ запуска: %v", err)
+		t.Fatalf("a non-zero code was passed off as a start failure: %v", err)
 	}
 	if res.ExitCode != 7 {
-		t.Errorf("код %d, ожидали 7", res.ExitCode)
+		t.Errorf("code %d, expected 7", res.ExitCode)
 	}
 	if res.Stderr != "конфиг не разобран" {
 		t.Errorf("stderr %q", res.Stderr)
@@ -100,19 +100,19 @@ func TestExecTruncatesLongOutput(t *testing.T) {
 
 	res, err := runHelper(t, time.Minute)
 	if err != nil {
-		t.Fatalf("запуск: %v", err)
+		t.Fatalf("start: %v", err)
 	}
 
 	if len(res.Stdout) > maxOutput+len(cutMark) {
-		t.Errorf("вывод %d байт, потолок %d", len(res.Stdout), maxOutput+len(cutMark))
+		t.Errorf("output %d bytes, ceiling %d", len(res.Stdout), maxOutput+len(cutMark))
 	}
 	if !strings.HasSuffix(res.Stdout, cutMark) {
-		t.Error("обрезка не отмечена в выводе")
+		t.Error("truncation is not marked in the output")
 	}
 }
 
-// Убитый по таймауту процесс тоже отдаёт *exec.ExitError; вердиктом бинаря это
-// быть не должно.
+// A process killed by timeout also returns *exec.ExitError; it must not
+// be taken for a binary verdict.
 func TestExecTimesOut(t *testing.T) {
 	t.Setenv(helperSleep, "30s")
 	t.Setenv(helperCode, "0")
@@ -120,10 +120,10 @@ func TestExecTimesOut(t *testing.T) {
 	res, err := runHelper(t, 100*time.Millisecond)
 
 	if !errors.Is(err, context.DeadlineExceeded) {
-		t.Fatalf("получили %v, ожидали context.DeadlineExceeded", err)
+		t.Fatalf("got %v, expected context.DeadlineExceeded", err)
 	}
 	if res.ExitCode != 0 {
-		t.Errorf("код %d: у отвалившегося по таймауту вердикта быть не может", res.ExitCode)
+		t.Errorf("code %d: a process that timed out cannot have a verdict", res.ExitCode)
 	}
 }
 
@@ -139,7 +139,7 @@ func TestExecRespectsCancel(t *testing.T) {
 
 	_, err := NewExec(time.Minute).Run(ctx, os.Args[0], "-test.run=^TestHelperProcess$")
 	if !errors.Is(err, context.Canceled) {
-		t.Errorf("получили %v, ожидали context.Canceled", err)
+		t.Errorf("got %v, expected context.Canceled", err)
 	}
 }
 
@@ -147,10 +147,10 @@ func TestExecReportsMissingBinary(t *testing.T) {
 	res, err := NewExec(time.Minute).Run(t.Context(), "/нет/такого/бинаря", "check")
 
 	if err == nil {
-		t.Fatal("отсутствующий бинарь не дал ошибки")
+		t.Fatal("a missing binary gave no error")
 	}
 	if res.ExitCode != 0 {
-		t.Errorf("код %d: команда не запускалась", res.ExitCode)
+		t.Errorf("code %d: the command did not start", res.ExitCode)
 	}
 }
 
@@ -159,12 +159,12 @@ func TestLimitWriterReportsFullWrite(t *testing.T) {
 
 	n, err := w.Write([]byte("длиннее лимита"))
 	if err != nil {
-		t.Fatalf("запись: %v", err)
+		t.Fatalf("write: %v", err)
 	}
 	if n != len("длиннее лимита") {
-		t.Errorf("отчитались о %d байтах из %d: процесс получит EPIPE", n, len("длиннее лимита"))
+		t.Errorf("reported %d bytes of %d: the process will get EPIPE", n, len("longer than the limit"))
 	}
 	if !strings.HasSuffix(w.String(), cutMark) {
-		t.Error("обрезка не отмечена")
+		t.Error("truncation not marked")
 	}
 }

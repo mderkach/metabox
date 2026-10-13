@@ -1,8 +1,8 @@
-// Package diag проверяет сетевую обвязку sing-box по модели из UCI: слушает ли
-// кто-то порты inbound, отвечает ли dns-in, стоят ли цепочки nft и выходит ли
-// роутер в интернет через выбранный узел и напрямую.
+// Package diag checks the sing-box dataplane by the model from UCI: whether
+// anyone listens on the inbound ports, whether dns-in answers, whether the nft chains stand and whether the
+// router reaches the internet through the chosen node and directly.
 //
-// Проверки только читают: правил, конфига и службы диагностика не трогает.
+// The checks only read: diagnostics touch no rules, config or service.
 package diag
 
 import (
@@ -27,132 +27,132 @@ import (
 	"metabox/internal/dataplane"
 )
 
-// detailLimit — потолок подробности: в неё попадает ответ Clash API.
+// detailLimit is the ceiling of a detail: the Clash API answer goes into it.
 const detailLimit = 300
 
-// CheckName — что проверялось. Набор закрытый: по нему панель подписывает строку
-// отчёта.
+// CheckName is what was checked. The set is closed: the panel labels the report
+// row by it.
 type CheckName string
 
 const (
-	// NameRedirectPort — слушатель TCP на redirect_port: сюда nft уводит TCP
-	// из LAN.
+	// NameRedirectPort is a TCP listener on redirect_port: nft sends TCP
+	// from the LAN here.
 	NameRedirectPort CheckName = "redirect_port"
-	// NameTproxyPort — слушатель UDP на tproxy_port.
+	// NameTproxyPort is a UDP listener on tproxy_port.
 	NameTproxyPort CheckName = "tproxy_port"
-	// NameDNSPort — слушатель UDP на dns_port: сюда dnsmasq отдаёт запросы.
+	// NameDNSPort is a UDP listener on dns_port: dnsmasq sends queries here.
 	NameDNSPort CheckName = "dns_port"
-	// NameDNSProbe — dns-in применённого конфига разрешает имя.
+	// NameDNSProbe means dns-in of the applied config resolves a name.
 	NameDNSProbe CheckName = "dns_probe"
-	// NameChains — цепочки обвязки стоят в таблице fw4.
+	// NameChains means the dataplane chains stand in the fw4 table.
 	NameChains CheckName = "nft_chains"
-	// NameProxy — задержка узла через Clash API.
+	// NameProxy is the node delay through the Clash API.
 	NameProxy CheckName = "proxy"
-	// NameDirect — выход в интернет мимо перехвата, с меткой self_mark.
+	// NameDirect is internet access bypassing interception, with the self_mark mark.
 	NameDirect CheckName = "direct"
 )
 
-// CheckStatus — итог проверки.
+// CheckStatus is the result of a check.
 type CheckStatus string
 
-// Итоги проверки: skipped — проверять не к чему или нечем, это не отказ.
+// Check results: skipped means there is nothing or nothing to check with, it is not a failure.
 const (
 	StatusOK      CheckStatus = "ok"
 	StatusFail    CheckStatus = "fail"
 	StatusSkipped CheckStatus = "skipped"
 )
 
-// CheckReason — почему проверка не прошла или пропущена. Набор закрытый: по нему
-// панель выбирает текст на языке пользователя.
+// CheckReason is why a check failed or was skipped. The set is closed: the panel
+// picks the text in the user's language by it.
 type CheckReason string
 
 const (
-	// ReasonModelUnavailable — модель обвязки не прочитана или не принята.
+	// ReasonModelUnavailable means the dataplane model was not read or not accepted.
 	ReasonModelUnavailable CheckReason = "model_unavailable"
-	// ReasonInterceptionDisabled — перехват в модели выключен: порты, dns-in
-	// и цепочки не нужны.
+	// ReasonInterceptionDisabled means interception is off in the model: ports, dns-in
+	// and chains are not needed.
 	ReasonInterceptionDisabled CheckReason = "interception_disabled"
-	// ReasonNotListening — порт никто не слушает: sing-box не поднят или в
-	// конфиге нет такого inbound.
+	// ReasonNotListening means nobody listens on the port: sing-box is not up or the
+	// config has no such inbound.
 	ReasonNotListening CheckReason = "not_listening"
-	// ReasonProcUnavailable — таблица сокетов /proc/net не прочитана.
+	// ReasonProcUnavailable means the /proc/net socket table was not read.
 	ReasonProcUnavailable CheckReason = "proc_unavailable"
-	// ReasonConfigMissing — применённого конфига нет.
+	// ReasonConfigMissing means there is no applied config.
 	ReasonConfigMissing CheckReason = "config_missing"
-	// ReasonNoDNSInbound — в конфиге нет inbound direct на dns_port.
+	// ReasonNoDNSInbound means the config has no direct inbound on dns_port.
 	ReasonNoDNSInbound CheckReason = "no_dns_inbound"
-	// ReasonDNSNameUnset — имя пробы не задано флагом.
+	// ReasonDNSNameUnset means the probe name is not set by a flag.
 	ReasonDNSNameUnset CheckReason = "dns_name_unset"
-	// ReasonNoAnswer — dns-in не ответил адресом.
+	// ReasonNoAnswer means dns-in did not answer with an address.
 	ReasonNoAnswer CheckReason = "no_answer"
-	// ReasonNFTUnavailable — nft не запустился или путь к нему не задан.
+	// ReasonNFTUnavailable means nft did not start or the path to it is not set.
 	ReasonNFTUnavailable CheckReason = "nft_unavailable"
-	// ReasonNFTUnparsed — вывод nft не разобран.
+	// ReasonNFTUnparsed means the nft output was not parsed.
 	ReasonNFTUnparsed CheckReason = "nft_unparsed"
-	// ReasonChainsMissing — части цепочек нет; их имена — в Missing.
+	// ReasonChainsMissing means some chains are absent; their names are in Missing.
 	ReasonChainsMissing CheckReason = "chains_missing"
-	// ReasonProxyUnset — узел не выбран.
+	// ReasonProxyUnset means the node is not selected.
 	ReasonProxyUnset CheckReason = "proxy_unset"
-	// ReasonProxyMissing — Clash API такого узла не знает.
+	// ReasonProxyMissing means the Clash API does not know such a node.
 	ReasonProxyMissing CheckReason = "proxy_missing"
-	// ReasonRuntimeUnavailable — Clash API не отвечает.
+	// ReasonRuntimeUnavailable means the Clash API does not answer.
 	ReasonRuntimeUnavailable CheckReason = "runtime_unavailable"
-	// ReasonRequestFailed — запрос к проверочному адресу не прошёл.
+	// ReasonRequestFailed means the request to the check address failed.
 	ReasonRequestFailed CheckReason = "request_failed"
-	// ReasonUnsupported — проверка невозможна на этой платформе: метка
-	// сокета есть только в Linux.
+	// ReasonUnsupported means the check is impossible on this platform: the socket
+	// mark exists only on Linux.
 	ReasonUnsupported CheckReason = "unsupported"
 )
 
-// Check — одна проверка.
+// Check is one check.
 type Check struct {
 	Name   CheckName   `json:"name"`
 	Status CheckStatus `json:"status"`
-	// Reason — пусто при ok.
+	// Reason is empty when ok.
 	Reason CheckReason `json:"reason,omitempty"`
-	// Detail — подробность на языке демона: порт, исходная ошибка, ответ
-	// Clash API. Панель показывает её под своим текстом, а не вместо него.
+	// Detail is a detail in the daemon's language: port, original error, Clash API
+	// answer. The panel shows it under its own text, not instead of it.
 	Detail string `json:"detail,omitempty"`
-	// Missing — отсутствующие цепочки при chains_missing.
+	// Missing are the absent chains with chains_missing.
 	Missing []string `json:"missing,omitempty"`
-	// DelayMS — задержка при ok у proxy и direct.
+	// DelayMS is the delay with ok for proxy and direct.
 	DelayMS int `json:"delay_ms,omitempty"`
 }
 
-// Report — отчёт в фиксированном порядке проверок.
+// Report is a report with the checks in a fixed order.
 type Report struct {
 	Checks []Check `json:"checks"`
 }
 
-// Plane читает модель обвязки и цепочки nft.
+// Plane reads the dataplane model and the nft chains.
 type Plane interface {
 	Model(ctx context.Context) (dataplane.Model, error)
 	Chains(ctx context.Context) ([]string, dataplane.AppliedReason, error)
 }
 
-// DNSProber шлёт запрос в dns-in.
+// DNSProber sends a query to dns-in.
 type DNSProber interface {
 	Probe(ctx context.Context, in clashapi.DNSInbound) error
 }
 
-// ConfigReader отдаёт применённый конфиг; отсутствие файла —
+// ConfigReader returns the applied config; a missing file is
 // config.ErrNoConfig.
 type ConfigReader interface {
 	Read(ctx context.Context) ([]byte, error)
 }
 
-// Options — то, что демон получает флагами.
+// Options is what the daemon receives by flags.
 type Options struct {
-	// ProcNet — каталог таблиц сокетов, `/proc/net` на устройстве.
+	// ProcNet is the socket table directory, `/proc/net` on the device.
 	ProcNet string
-	// URL — адрес проверки выхода в интернет; ответ ниже 400 — успех.
+	// URL is the address of the internet access check; an answer below 400 is a success.
 	URL string
-	// Timeout — потолок одной сетевой проверки.
+	// Timeout is the ceiling of one network check.
 	Timeout time.Duration
 }
 
-// Checker прогоняет проверки. Ничего не кэширует: модель, конфиг и правила
-// меняются мимо демона.
+// Checker runs the checks. It caches nothing: the model, config and rules
+// change bypassing the daemon.
 type Checker struct {
 	plane  Plane
 	config ConfigReader
@@ -161,19 +161,19 @@ type Checker struct {
 	client *http.Client
 }
 
-// New собирает проверки. dns nil — имя пробы не задано, проба пропускается.
+// New assembles the checks. dns nil means the probe name is not set, the probe is skipped.
 func New(plane Plane, cfg ConfigReader, dns DNSProber, opts Options) *Checker {
-	// Диагностика редкая: держать соединение к контроллеру между прогонами
-	// незачем.
+	// Diagnostics are rare: keeping a connection to the controller between runs
+	// is pointless.
 	client := &http.Client{Transport: &http.Transport{DisableKeepAlives: true}}
 
 	return &Checker{plane: plane, config: cfg, dns: dns, opts: opts, client: client}
 }
 
-// Run прогоняет все проверки; proxy — узел, через который проверяется выход.
-// Сетевые проверки идут параллельно: последовательно отчёт ждал бы сумму их
-// таймаутов. Отказ проверки — строка отчёта, а не ошибка; ошибка — только
-// отмена ctx.
+// Run runs all the checks; proxy is the node the access is checked through.
+// Network checks run in parallel: sequentially the report would wait the sum of their
+// timeouts. A check failure is a report row, not an error; an error is only
+// ctx cancellation.
 func (c *Checker) Run(ctx context.Context, proxy string) (Report, error) {
 	model, modelErr := c.plane.Model(ctx)
 	cfg, cfgErr := c.config.Read(ctx)
@@ -220,7 +220,7 @@ func (c *Checker) Run(ctx context.Context, proxy string) (Report, error) {
 	return Report{Checks: out}, nil
 }
 
-// interception отдаёт пропуск, когда проверки обвязки не к чему применять.
+// interception returns a skip when the dataplane checks have nothing to apply to.
 func interception(name CheckName, modelErr error, model dataplane.Model) (Check, bool) {
 	switch {
 	case modelErr != nil:
@@ -232,11 +232,11 @@ func interception(name CheckName, modelErr error, model dataplane.Model) (Check,
 	}
 }
 
-// port проверяет слушателя. TCP — подключением к loopback: туда же nft
-// уводит перехваченный трафик, и слушатель на wildcard на нём отвечает. UDP —
-// по таблицам /proc/net: подключение к UDP ничего не доказывает. Подключение
-// к redirect-inbound оставляет в логе sing-box строку об отказе: исходного
-// адреса назначения у такого соединения нет.
+// port checks a listener. TCP by connecting to loopback: nft sends the intercepted
+// traffic there too, and a wildcard listener answers on it. UDP by
+// the /proc/net tables: connecting over UDP proves nothing. A connection
+// to the redirect inbound leaves a failure line in the sing-box log: such a connection
+// has no original destination address.
 func (c *Checker) port(ctx context.Context, name CheckName, model dataplane.Model, modelErr error, network string, port int) Check {
 	if skip, ok := interception(name, modelErr, model); ok {
 		return skip
@@ -269,8 +269,8 @@ func (c *Checker) port(ctx context.Context, name CheckName, model dataplane.Mode
 	return Check{Name: name, Status: StatusOK, Detail: detail}
 }
 
-// udpListening ищет несвязанный сокет UDP на порту в udp и udp6. Ошибка —
-// когда не прочиталась ни одна таблица.
+// udpListening looks for an unbound UDP socket on the port in udp and udp6. An error is
+// when no table was read.
 func (c *Checker) udpListening(port int) (bool, error) {
 	var read bool
 
@@ -294,8 +294,8 @@ func (c *Checker) udpListening(port int) (bool, error) {
 	return false, nil
 }
 
-// udpBound разбирает таблицу /proc/net/udp: локальный адрес — `адрес:порт` в
-// шестнадцатеричном виде, состояние 07 — сокет без пары, то есть слушатель.
+// udpBound parses the /proc/net/udp table: the local address is `address:port` in
+// hexadecimal form, state 07 is a socket without a peer, that is, a listener.
 func udpBound(table string, port int) bool {
 	want := fmt.Sprintf(":%04X", port)
 
@@ -386,8 +386,8 @@ func configSkip(name CheckName, cfgErr error) (Check, bool) {
 	}
 }
 
-// proxy меряет задержку узла ручкой Clash API `/proxies/{name}/delay`:
-// запрос к адресу проверки делает сам sing-box через этот узел.
+// proxy measures the node delay with the Clash API handle `/proxies/{name}/delay`:
+// the request to the check address is made by sing-box itself through this node.
 func (c *Checker) proxy(ctx context.Context, proxy string, cfg []byte, cfgErr error) Check {
 	if proxy == "" {
 		return Check{Name: NameProxy, Status: StatusSkipped, Reason: ReasonProxyUnset}
@@ -409,8 +409,8 @@ func (c *Checker) proxy(ctx context.Context, proxy string, cfg []byte, cfgErr er
 
 	query := url.Values{
 		"url": {c.opts.URL},
-		// Замер обязан закончиться раньше потолка проверки, иначе вместо
-		// ответа Clash API придёт отмена.
+		// The measurement must end before the check ceiling, otherwise cancellation will come
+		// instead of the Clash API answer.
 		"timeout": {strconv.Itoa(int(c.opts.Timeout * 4 / 5 / time.Millisecond))},
 	}
 
@@ -447,10 +447,10 @@ func (c *Checker) proxy(ctx context.Context, proxy string, cfg []byte, cfgErr er
 	}
 }
 
-// direct идёт к адресу проверки сокетом с меткой self_mark: такой пакет nft
-// пропускает мимо перехвата. Имя адреса разрешает системный резолвер, то есть
-// dnsmasq, — при включённом перехвате это тот же dns-in, и проверка говорит
-// о прямом пути TCP, а не DNS.
+// direct goes to the check address with a socket marked self_mark: nft lets such a packet
+// bypass interception. The address name is resolved by the system resolver, that is
+// dnsmasq; with interception enabled this is the same dns-in, and the check speaks
+// of the direct TCP path, not DNS.
 func (c *Checker) direct(ctx context.Context, model dataplane.Model, modelErr error) Check {
 	if modelErr != nil {
 		return Check{Name: NameDirect, Status: StatusSkipped, Reason: ReasonModelUnavailable, Detail: modelErr.Error()}
@@ -464,7 +464,7 @@ func (c *Checker) direct(ctx context.Context, model dataplane.Model, modelErr er
 	dialer := &net.Dialer{Control: control}
 	client := &http.Client{
 		Transport: &http.Transport{DialContext: dialer.DialContext, DisableKeepAlives: true},
-		// Редирект проверочного адреса — уже ответ: сеть есть.
+		// A redirect of the check address is already an answer: the network is there.
 		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
 	}
 

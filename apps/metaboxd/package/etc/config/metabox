@@ -1,35 +1,35 @@
-# Настройки демона панели и службы sing-box из того же пакета. Умолчания
-# указывают на службу metabox-singbox. Переходный режим, в котором sing-box
-# поднимает re:HomeProxy, а пути здесь указывают на него, допустим для
-# перехода с homeproxy.
+# Settings of the panel daemon and of the sing-box service from the same package. The defaults
+# point to the metabox-singbox service. The transitional mode, in which sing-box
+# is started by re:HomeProxy and the paths here point to it, is allowed for
+# the move from homeproxy.
 
 config metabox 'main'
 	option enabled '1'
-	# Пустой адрес означает «взять у интерфейсов из listen_interface».
+	# An empty address means "take it from the interfaces in listen_interface".
 	option listen_addr ''
 	option listen_port '8088'
-	# Сети, с которых доступна панель. Гостевую или отдельную беспроводную
-	# добавляют сюда же: демон слушает адрес каждой из них и ни одной больше.
+	# Networks the panel is reachable from. A guest or a separate wireless network
+	# is added here too: the daemon listens on the address of each of them and no others.
 	list listen_interface 'lan'
 	option config_dir '/etc/sing-box'
 	option config_name 'config.json'
 	option state_dir '/etc/metabox'
 	option singbox '/usr/bin/sing-box'
 	option init_script '/etc/init.d/metabox-singbox'
-	# Инстанс procd с sing-box. Пустой подходит службе с одним инстансом; у
-	# службы с несколькими состояние без него не читается.
+	# The procd instance with sing-box. Empty fits a service with one instance; for
+	# a service with several, the state cannot be read without it.
 	option service_instance 'sing-box'
 	option ubus '/bin/ubus'
 	option clash_port '9090'
 	option log_level 'info'
-	# Имя, которое dns-in sing-box обязан разрешить после рестарта, иначе Apply
-	# откатывается. Пустое значение выключает эту проверку.
+	# The name that the sing-box dns-in must resolve after a restart, otherwise Apply
+	# is rolled back. An empty value disables this check.
 	option health_dns_name 'cloudflare.com'
 
-# Сетевая обвязка службы metabox-singbox: перехват LAN в nft, ip rule для
-# tproxy и upstream dnsmasq. Выключена, пока перехватом владеет homeproxy: две
-# обвязки разом перехватывали бы один и тот же трафик. Без этой секции служба
-# берёт умолчания, а в них обвязка включена.
+# Dataplane of the metabox-singbox service: LAN interception in nft, ip rule for
+# tproxy and the dnsmasq upstream. Disabled while homeproxy owns interception: two
+# dataplanes would intercept the same traffic at once. Without this section the service
+# takes the defaults, and in them the dataplane is enabled.
 config dataplane 'dataplane'
 	option enabled '0'
 	option redirect_port '5331'
@@ -39,8 +39,8 @@ config dataplane 'dataplane'
 	option self_mark '100'
 	option tproxy_mark '101'
 	option route_table '100'
-	# all — через sing-box все источники с lan_interface, listed — только
-	# перечисленные в source_ip и source_mac.
+	# all: all sources with lan_interface go through sing-box, listed: only
+	# those listed in source_ip and source_mac.
 	option acl_mode 'listed'
 	list lan_interface 'br-lan'
 	option ipv6 '0'

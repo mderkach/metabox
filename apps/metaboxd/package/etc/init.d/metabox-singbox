@@ -1,18 +1,18 @@
 #!/bin/sh /etc/rc.common
-# Служба sing-box панели metabox и сетевая обвязка вокруг неё: перехват LAN в
-# nft через инклюд fw4, ip rule для tproxy и upstream dnsmasq. Каталог и имя
-# конфига берутся из /etc/config/metabox — те же, что у демона, модель
-# обвязки — оттуда же, секция dataplane.
+# The sing-box service of the metabox panel and the dataplane around it: LAN interception in
+# nft through the fw4 include, ip rule for tproxy and the dnsmasq upstream. The directory and name
+# of the config are taken from /etc/config/metabox, the same as the daemon's; the dataplane
+# model comes from there too, the dataplane section.
 
-# После dnsmasq и fw4, но до metaboxd: демон на старте доигрывает транзакцию
-# Apply и рестартует службу, и сеть к этому моменту уже должна быть поднята.
+# After dnsmasq and fw4 but before metaboxd: on start the daemon replays the Apply
+# transaction and restarts the service, and the network must already be up by then.
 START=97
 USE_PROCD=1
 
 RUN_DIR=/var/run/metabox
 NFT_FILE=$RUN_DIR/fw4_post.nft
-# С какими метками, таблицей и фрагментом dnsmasq обвязка поставлена: снимать
-# нужно именно их, даже если UCI к моменту stop уже поменяли.
+# The marks, table and dnsmasq fragment the dataplane was installed with: exactly these
+# must be removed, even if UCI has already changed by the time of stop.
 STATE_FILE=$RUN_DIR/dataplane.state
 FW_INCLUDE=metabox_post
 
@@ -105,8 +105,8 @@ dp_set() {
 	printf '}\n\n'
 }
 
-# Источники ACL: в режиме all проверки источника нет вовсе, в listed — только
-# перечисленные адреса и MAC.
+# ACL sources: in mode all there is no source check at all, in listed only
+# the listed addresses and MACs.
 dp_sources() {
 	local target="$1"
 
@@ -119,13 +119,13 @@ dp_sources() {
 	printf '\tether saddr @metabox_src_mac counter goto %s\n' "$target"
 }
 
-# Фрагмент читается внутри table inet fw4 (инклюд table-append), поэтому
-# объявленные здесь dstnat, mangle_prerouting и mangle_output дописывают
-# правила в конец цепочек fw4, а не создают новые.
+# The fragment is read inside table inet fw4 (the table-append include), so
+# the dstnat, mangle_prerouting and mangle_output declared here append
+# rules to the end of the fw4 chains and do not create new ones.
 #
-# Трафик самого роутера с чужой меткой (b4 метит свои пакеты через SO_MARK)
-# пропускается мимо перехвата: его уже ведёт другая служба, а tproxy затёр бы
-# её метку.
+# Traffic of the router itself with a foreign mark (b4 marks its packets via SO_MARK)
+# bypasses interception: another service already handles it, and tproxy would overwrite
+# its mark.
 dp_render() {
 	dp_set metabox_local_addr_v4 ipv4_addr "$LOCAL_ADDR_V4"
 	dp_set metabox_wan_proxy_addr_v4 ipv4_addr "$dp_wan_proxy"
@@ -227,10 +227,10 @@ dp_fw_loaded() {
 	nft list chain inet fw4 metabox_redirect_lanac >/dev/null 2>&1
 }
 
-# fw4 reload пересобирает весь набор правил, поэтому зовётся только когда
-# фрагмент действительно изменился или его нет в ядре. Сломанный фрагмент
-# уронил бы весь межсетевой экран: он сначала проверяется fw4 check, и при
-# отказе возвращается прежний.
+# fw4 reload rebuilds the whole rule set, so it is called only when
+# the fragment really changed or is missing from the kernel. A broken fragment
+# would take down the whole firewall: fw4 check runs first, and on
+# failure the previous one is restored.
 dp_nft_up() {
 	dp_render >"$NFT_FILE.new" || return 1
 
@@ -268,9 +268,9 @@ dp_set_sync() {
 	[ -z "$2" ] || printf 'add element inet fw4 %s { %s }\n' "$1" "$2"
 }
 
-# flush table в fw4 reload не трогает элементы наборов: удалённый из модели
-# источник остался бы в наборе. Наборы перезаливаются одной транзакцией nft,
-# поэтому пустыми они не бывают ни на миг.
+# flush table in fw4 reload does not touch set elements: a source removed from
+# the model would remain in the set. The sets are refilled in one nft transaction,
+# so they are never empty even for a moment.
 dp_sets_sync() {
 	{
 		dp_set_sync metabox_local_addr_v4 "$LOCAL_ADDR_V4"
@@ -281,8 +281,8 @@ dp_sets_sync() {
 	} | nft -f - || dp_fail "наборы metabox_ не перезалиты"
 }
 
-# fw4 reload делает flush table: правила уходят, а объявленные инклюдом цепочки
-# и наборы остаются пустыми, и их приходится удалять отдельно.
+# fw4 reload does flush table: the rules go away, while the chains and sets
+# declared by the include stay empty and must be deleted separately.
 dp_nft_down() {
 	local loaded=0 objects
 
@@ -321,9 +321,9 @@ dp_route_down() {
 	ip route flush table "$table" 2>/dev/null
 }
 
-# conf-dir dnsmasq — у каждого инстанса свой (/tmp/dnsmasq.<секция>.d или
-# опция confdir), общего /tmp/dnsmasq.d init dnsmasq не читает. Берётся первый
-# инстанс, как у homeproxy.
+# The dnsmasq conf-dir is different for each instance (/tmp/dnsmasq.<section>.d or
+# the confdir option), the common /tmp/dnsmasq.d is not read by the dnsmasq init. The first
+# instance is taken, as in homeproxy.
 dp_dnsmasq_file() {
 	local section dir
 
@@ -360,8 +360,8 @@ dp_dnsmasq_down() {
 	dp_dnsmasq_restart
 }
 
-# Путь из опции confdir dnsmasq приходит из UCI как есть, а файл состояния
-# исполняется через `.`.
+# The path from the dnsmasq confdir option comes from UCI as is, and the state file
+# is executed through `.`.
 dp_quote() {
 	printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"
 }
@@ -374,10 +374,10 @@ dp_state_read() {
 	[ -f "$STATE_FILE" ] && . "$STATE_FILE"
 }
 
-# Снимает обвязку целиком. Без файла состояния (перезагрузка стёрла /var/run,
-# а инклюд в UCI остался) метки и путь берутся из текущей модели — но только
-# когда она включена: ip rule и таблицу с теми же номерами держит homeproxy,
-# и выключенная модель не даёт права их снимать.
+# Removes the whole dataplane. Without a state file (a reboot wiped /var/run,
+# while the include in UCI stayed) the marks and path are taken from the current model, but only
+# when it is enabled: ip rule and the table with the same numbers are held by homeproxy,
+# and a disabled model gives no right to remove them.
 dp_down() {
 	dp_state_read
 	if [ -z "$st_mark" ] && [ "$dp_enabled" = 1 ]; then
@@ -394,9 +394,9 @@ dp_down() {
 	rm -f "$STATE_FILE"
 }
 
-# Ставит обвязку или доводит её до модели. Каждый шаг сверяет текущее состояние
-# и ничего не трогает, если оно уже совпадает: этот путь проходит каждый
-# рестарт sing-box, а Apply конфига не должен перезагружать fw4 и dnsmasq.
+# Installs the dataplane or brings it to the model. Each step compares the current state
+# and touches nothing if it already matches: this path runs on every
+# sing-box restart, and a config Apply must not reload fw4 and dnsmasq.
 dp_up() {
 	local dnsmasq_file
 
@@ -437,8 +437,8 @@ start_service() {
 		return 1
 	}
 
-	# Ошибка в модели не снимает уже поставленную обвязку: снять её значило бы
-	# пустить трафик мимо прокси, а это решает только явный stop.
+	# An error in the model does not remove an already installed dataplane: removing it would mean
+	# letting traffic bypass the proxy, and only an explicit stop decides that.
 	if dp_load; then
 		if [ "$dp_enabled" = 1 ]; then
 			dp_up
@@ -447,15 +447,15 @@ start_service() {
 		fi
 	fi
 
-	# Рабочий каталог — каталог конфига: относительный path узла local
-	# sing-box резолвит от -D, а файлы списков демон пишет рядом с конфигом.
-	# Демон проверяет кандидата той же командой, поэтому -c здесь один.
+	# The working directory is the config directory: a relative path of a local node
+	# sing-box resolves from -D, and the daemon writes list files next to the config.
+	# The daemon checks the candidate with the same command, so there is a single -c here.
 	procd_open_instance sing-box
 	procd_set_param command "$singbox" run -c "$config" -D "$config_dir"
 	procd_set_param limits nofile="1000000 1000000"
 	procd_set_param stdout 1
-	# FATAL, с которым выходит sing-box, идёт в stderr: из logread демон берёт
-	# причину падения.
+	# The FATAL that sing-box exits with goes to stderr: the daemon takes the failure
+	# reason from logread.
 	procd_set_param stderr 1
 	procd_set_param respawn
 	procd_close_instance
@@ -467,9 +467,9 @@ stop_service() {
 	dp_down
 }
 
-# Рестарт и reload меняют только процесс sing-box: обвязка остаётся на месте,
-# пока он поднимается, и трафик перечисленных устройств не уходит напрямую.
-# Модель обвязки start перечитывает и доводит до неё правила сам.
+# Restart and reload change only the sing-box process: the dataplane stays in place
+# while it comes up, and traffic of listed devices does not go out directly.
+# The start command rereads the dataplane model and brings the rules to it itself.
 restart() {
 	procd_kill "$(basename "${basescript:-$initscript}")" sing-box >/dev/null 2>&1
 	start "$@"

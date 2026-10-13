@@ -15,8 +15,8 @@ import (
 	"metabox/internal/dataplane"
 )
 
-// fakePlane — модель обвязки и признак перехвата. applied — ответы Applied по
-// порядку вызовов: до рестарта и после; последний повторяется.
+// fakePlane is the dataplane model and the interception flag. applied holds the Applied answers in
+// call order: before the restart and after; the last one repeats.
 type fakePlane struct {
 	model  dataplane.Model
 	reason dataplane.AppliedReason
@@ -77,7 +77,7 @@ func newProbeHarness(t *testing.T, plane apply.Dataplane, dns apply.DNSProber) *
 	return h
 }
 
-// planeWith — модель по умолчанию с заданными перехватом и портом dns-in.
+// planeWith is the default model with the given interception and dns-in port.
 func planeWith(enabled bool, dnsPort int) dataplane.Model {
 	model := dataplane.Defaults()
 	model.Enabled = enabled
@@ -90,9 +90,9 @@ func configWithDNSIn(port int) string {
 	return fmt.Sprintf(`{"inbounds":[{"type":"direct","tag":"dns-in","listen":"127.0.0.1","listen_port":%d}]}`, port)
 }
 
-// waitOutcome ждёт конца цикла: окна подтверждения или отката. failed сюда не
-// входит — откат проходит через неё. DNS-проба ходит в сеть, поэтому срок
-// длиннее, чем у waitPhase.
+// waitOutcome waits for the end of the cycle: the confirmation window or the rollback. failed is not
+// included here, since the rollback goes through it. The DNS probe goes to the network, so the timeout is
+// longer than that of waitPhase.
 func waitOutcome(t *testing.T, h *harness) apply.Transaction {
 	t.Helper()
 
@@ -106,13 +106,13 @@ func waitOutcome(t *testing.T, h *harness) apply.Transaction {
 		time.Sleep(time.Millisecond)
 	}
 
-	t.Fatalf("цикл не закончился: фаза %q", h.manager.Current().Phase)
+	t.Fatalf("cycle did not finish: phase %q", h.manager.Current().Phase)
 
 	return apply.Transaction{}
 }
 
-// Сломанный раздел dns не роняет ни процесс, ни Clash API: его ловит только
-// запрос в dns-in. Конфиг откатывается обычным путём.
+// A broken dns section crashes neither the process nor the Clash API: only a query to dns-in
+// catches it. The config is rolled back the usual way.
 func TestBrokenDNSRollsBack(t *testing.T) {
 	silent, err := net.ListenPacket("udp", "127.0.0.1:0")
 	if err != nil {
@@ -133,19 +133,19 @@ func TestBrokenDNSRollsBack(t *testing.T) {
 	h := newProbeHarness(t, &fakePlane{model: planeWith(false, port)}, probe)
 
 	if _, err := h.manager.Start(t.Context(), []byte(configWithDNSIn(port)), apply.Lists{}, "", ""); err != nil {
-		t.Fatalf("применение: %v", err)
+		t.Fatalf("apply: %v", err)
 	}
 
 	tx := waitOutcome(t, h)
 
 	if tx.Phase != apply.PhaseRolledBack {
-		t.Fatalf("фаза %q, ожидали откат", tx.Phase)
+		t.Fatalf("phase %q, expected rollback", tx.Phase)
 	}
 	if tx.ReasonCode != apply.ReasonDNSProbeFailed {
-		t.Errorf("код причины %q, ожидали %q", tx.ReasonCode, apply.ReasonDNSProbeFailed)
+		t.Errorf("reason code %q, expected %q", tx.ReasonCode, apply.ReasonDNSProbeFailed)
 	}
 	if h.rec.index("Restore") < 0 {
-		t.Error("предыдущий конфиг не восстановлен")
+		t.Error("previous config not restored")
 	}
 }
 
@@ -155,8 +155,8 @@ func TestDNSProbeTargetsDNSIn(t *testing.T) {
 		config string
 		want   []clashapi.DNSInbound
 	}{
-		{"dns-in есть — проба идёт в него", configWithDNSIn(5333), []clashapi.DNSInbound{{Address: "127.0.0.1:5333"}}},
-		{"dns-in нет — проба не вызывается", validConfig, nil},
+		{"dns-in present: the probe goes to it", configWithDNSIn(5333), []clashapi.DNSInbound{{Address: "127.0.0.1:5333"}}},
+		{"no dns-in: the probe is not called", validConfig, nil},
 	}
 
 	for _, tt := range tests {
@@ -165,18 +165,18 @@ func TestDNSProbeTargetsDNSIn(t *testing.T) {
 			h := newProbeHarness(t, &fakePlane{model: planeWith(false, 5333)}, prober)
 
 			if _, err := h.manager.Start(t.Context(), []byte(tt.config), apply.Lists{}, "", ""); err != nil {
-				t.Fatalf("применение: %v", err)
+				t.Fatalf("apply: %v", err)
 			}
 
 			if tx := waitOutcome(t, h); tx.Phase != apply.PhaseAwaitingConfirm {
-				t.Fatalf("фаза %q, ожидали ожидание подтверждения: %s", tx.Phase, tx.Reason)
+				t.Fatalf("phase %q, expected awaiting confirmation: %s", tx.Phase, tx.Reason)
 			}
 
 			prober.mu.Lock()
 			defer prober.mu.Unlock()
 
 			if fmt.Sprint(prober.calls) != fmt.Sprint(tt.want) {
-				t.Errorf("пробы %+v, ожидали %+v", prober.calls, tt.want)
+				t.Errorf("probes %+v, expected %+v", prober.calls, tt.want)
 			}
 		})
 	}
@@ -190,28 +190,28 @@ func TestInterceptionCheck(t *testing.T) {
 		wantCode  apply.ReasonCode
 	}{
 		{
-			name:      "перехват пропал после рестарта — откат",
+			name:      "interception vanished after the restart: rollback",
 			plane:     &fakePlane{model: planeWith(true, 5333), applied: []bool{true, false}},
 			wantPhase: apply.PhaseRolledBack,
 			wantCode:  apply.ReasonInterceptionMissing,
 		},
 		{
-			name:      "перехват на месте",
+			name:      "interception in place",
 			plane:     &fakePlane{model: planeWith(true, 5333), applied: []bool{true}},
 			wantPhase: apply.PhaseAwaitingConfirm,
 		},
 		{
-			name:      "nft недоступен — пропуск",
+			name:      "nft unavailable: skip",
 			plane:     &fakePlane{model: planeWith(true, 5333), reason: dataplane.NFTUnavailable},
 			wantPhase: apply.PhaseAwaitingConfirm,
 		},
 		{
-			name:      "перехвата не было и до рестарта — пропуск",
+			name:      "interception was absent before the restart too: skip",
 			plane:     &fakePlane{model: planeWith(true, 5333), applied: []bool{false}},
 			wantPhase: apply.PhaseAwaitingConfirm,
 		},
 		{
-			name:      "обвязка выключена — пропуск",
+			name:      "dataplane disabled: skip",
 			plane:     &fakePlane{model: planeWith(false, 5333), applied: []bool{false}},
 			wantPhase: apply.PhaseAwaitingConfirm,
 		},
@@ -222,16 +222,16 @@ func TestInterceptionCheck(t *testing.T) {
 			h := newProbeHarness(t, tt.plane, nil)
 
 			if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
-				t.Fatalf("применение: %v", err)
+				t.Fatalf("apply: %v", err)
 			}
 
 			tx := waitOutcome(t, h)
 
 			if tx.Phase != tt.wantPhase {
-				t.Errorf("фаза %q, ожидали %q", tx.Phase, tt.wantPhase)
+				t.Errorf("phase %q, expected %q", tx.Phase, tt.wantPhase)
 			}
 			if tx.ReasonCode != tt.wantCode {
-				t.Errorf("код причины %q, ожидали %q", tx.ReasonCode, tt.wantCode)
+				t.Errorf("reason code %q, expected %q", tx.ReasonCode, tt.wantCode)
 			}
 		})
 	}

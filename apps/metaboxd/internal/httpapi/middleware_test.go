@@ -18,19 +18,19 @@ func TestOriginAllowed(t *testing.T) {
 		host   string
 		want   bool
 	}{
-		{"свой origin", "http://192.168.1.1", "192.168.1.1", true},
-		{"свой origin с портом", "http://192.168.1.1:8080", "192.168.1.1:8080", true},
-		{"чужой origin", "http://evil.example", "192.168.1.1", false},
-		{"origin отсутствует", "", "192.168.1.1", false},
-		{"порт не совпадает", "http://192.168.1.1:5173", "192.168.1.1:8080", false},
+		{"own origin", "http://192.168.1.1", "192.168.1.1", true},
+		{"own origin with a port", "http://192.168.1.1:8080", "192.168.1.1:8080", true},
+		{"foreign origin", "http://evil.example", "192.168.1.1", false},
+		{"origin absent", "", "192.168.1.1", false},
+		{"port mismatch", "http://192.168.1.1:5173", "192.168.1.1:8080", false},
 		{"origin null", "null", "192.168.1.1", false},
-		{"origin без хоста", "http://", "192.168.1.1", false},
+		{"origin without a host", "http://", "192.168.1.1", false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := originAllowed(tt.origin, tt.host); got != tt.want {
-				t.Errorf("origin %q при host %q: получили %v, ожидали %v", tt.origin, tt.host, got, tt.want)
+				t.Errorf("origin %q with host %q: got %v, expected %v", tt.origin, tt.host, got, tt.want)
 			}
 		})
 	}
@@ -43,30 +43,30 @@ func TestHostAllowed(t *testing.T) {
 		allowedOrigin string
 		want          bool
 	}{
-		{"IP с портом", "192.168.1.1:8080", "", true},
-		{"IP без порта", "192.168.1.1", "", true},
-		{"IPv6 с портом", "[fe80::1]:8080", "", true},
-		{"IPv6 без порта", "[fe80::1]", "", true},
+		{"IP with a port", "192.168.1.1:8080", "", true},
+		{"IP without a port", "192.168.1.1", "", true},
+		{"IPv6 with a port", "[fe80::1]:8080", "", true},
+		{"IPv6 without a port", "[fe80::1]", "", true},
 		{"localhost", "localhost:5173", "", true},
-		{"localhost без порта", "localhost", "", true},
-		{"чужое имя", "evil.test:8080", "", false},
-		{"имя роутера без флага", "router.lan:8080", "", false},
-		{"имя из -allowed-origin", "panel.lan:8080", "http://panel.lan:5173", true},
-		{"другое имя при заданном флаге", "evil.test:8080", "http://panel.lan:5173", false},
-		{"пустой Host", "", "", false},
+		{"localhost without a port", "localhost", "", true},
+		{"foreign name", "evil.test:8080", "", false},
+		{"router name without the flag", "router.lan:8080", "", false},
+		{"name from -allowed-origin", "panel.lan:8080", "http://panel.lan:5173", true},
+		{"another name with the flag set", "evil.test:8080", "http://panel.lan:5173", false},
+		{"empty Host", "", "", false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := hostAllowed(tt.host, tt.allowedOrigin); got != tt.want {
-				t.Errorf("host %q при -allowed-origin %q: получили %v, ожидали %v", tt.host, tt.allowedOrigin, got, tt.want)
+				t.Errorf("host %q with -allowed-origin %q: got %v, expected %v", tt.host, tt.allowedOrigin, got, tt.want)
 			}
 		})
 	}
 }
 
-// Пара Origin↔Host, согласованная атакующим через DNS rebinding, не должна
-// проходить: Host с чужим именем отклоняется независимо от Origin и метода.
+// An Origin↔Host pair agreed by the attacker through DNS rebinding must not
+// pass: a Host with a foreign name is rejected regardless of Origin and the method.
 func TestCheckHostRejectsForeignName(t *testing.T) {
 	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -82,7 +82,7 @@ func TestCheckHostRejectsForeignName(t *testing.T) {
 			checkHost(testLogger(t), "", next).ServeHTTP(rec, req)
 
 			if rec.Code != http.StatusForbidden {
-				t.Errorf("код %d, ожидали %d", rec.Code, http.StatusForbidden)
+				t.Errorf("code %d, expected %d", rec.Code, http.StatusForbidden)
 			}
 		})
 	}
@@ -100,7 +100,7 @@ func TestCheckHostPassesPanelAddress(t *testing.T) {
 	checkHost(testLogger(t), "", next).ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusOK {
-		t.Errorf("код %d, ожидали %d", rec.Code, http.StatusOK)
+		t.Errorf("code %d, expected %d", rec.Code, http.StatusOK)
 	}
 }
 
@@ -121,7 +121,7 @@ func TestMutating(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.method, func(t *testing.T) {
 			if got := mutating(tt.method); got != tt.want {
-				t.Errorf("%s: получили %v, ожидали %v", tt.method, got, tt.want)
+				t.Errorf("%s: got %v, expected %v", tt.method, got, tt.want)
 			}
 		})
 	}
@@ -136,21 +136,21 @@ func TestRecoverPanic(t *testing.T) {
 	recoverPanic(testLogger(t), panicking).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/status", nil))
 
 	if rec.Code != http.StatusInternalServerError {
-		t.Errorf("код %d, ожидали %d", rec.Code, http.StatusInternalServerError)
+		t.Errorf("code %d, expected %d", rec.Code, http.StatusInternalServerError)
 	}
 	if got := rec.Header().Get("Content-Type"); !strings.HasPrefix(got, "application/json") {
-		t.Errorf("тип ответа %q, ожидали application/json", got)
+		t.Errorf("response type %q, expected application/json", got)
 	}
 
 	var body contract.Error
 	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
-		t.Fatalf("тело %q не в формате контракта: %v", rec.Body.String(), err)
+		t.Fatalf("body %q is not in the contract format: %v", rec.Body.String(), err)
 	}
 	if body.Code != contract.ErrInternal {
-		t.Errorf("код отказа %q, ожидали %q", body.Code, contract.ErrInternal)
+		t.Errorf("rejection code %q, expected %q", body.Code, contract.ErrInternal)
 	}
 	if strings.Contains(body.Message, "обработчик упал") {
-		t.Errorf("сообщение %q: внутренние подробности наружу не идут", body.Message)
+		t.Errorf("message %q: internal details do not go outside", body.Message)
 	}
 }
 
@@ -162,7 +162,7 @@ func TestRecoverPanicPassesAbortHandler(t *testing.T) {
 	defer func() {
 		rec := recover()
 		if err, ok := rec.(error); !ok || !errors.Is(err, http.ErrAbortHandler) {
-			t.Errorf("восстановлено %v, ожидали проброс http.ErrAbortHandler", rec)
+			t.Errorf("recovered %v, expected http.ErrAbortHandler to be passed through", rec)
 		}
 	}()
 
@@ -181,7 +181,7 @@ func TestLogRequestsKeepsStatus(t *testing.T) {
 	logRequests(testLogger(t), teapot).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/healthz", nil))
 
 	if rec.Code != http.StatusTeapot {
-		t.Errorf("код %d, ожидали %d", rec.Code, http.StatusTeapot)
+		t.Errorf("code %d, expected %d", rec.Code, http.StatusTeapot)
 	}
 }
 
@@ -190,9 +190,9 @@ func TestStatusRecorderUnwraps(t *testing.T) {
 	rec := &statusRecorder{ResponseWriter: inner, status: http.StatusOK}
 
 	if err := http.NewResponseController(rec).Flush(); err != nil {
-		t.Fatalf("Flush через контроллер: %v", err)
+		t.Fatalf("Flush through the controller: %v", err)
 	}
 	if !inner.Flushed {
-		t.Error("Flush не дошёл до нижележащего writer'а: потоковые ответы потеряют буферизацию")
+		t.Error("Flush did not reach the underlying writer: streaming responses would lose buffering")
 	}
 }

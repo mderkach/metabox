@@ -1,10 +1,10 @@
-// Package route объясняет маршрут соединения по наблюдаемым данным core.
+// Package route explains the route of a connection by the observed core data.
 //
-// Своего evaluator'а правил sing-box здесь нет и не будет: повторение
-// семантики матчинга сделало бы арбитром маршрута metabox, а не бинарь.
-// Список правил и сработавшее правило берутся у Clash API,
-// индекс определяется сравнением условий, а всё, что вычислить нечем,
-// помечается unknown, а не заменяется догадкой.
+// There is no sing-box rule evaluator of its own here and never will be: repeating
+// the matching semantics would make metabox the arbiter of the route, not the binary.
+// The rule list and the matched rule are taken from the Clash API,
+// the index is determined by comparing conditions, and everything that cannot be computed
+// is marked unknown and not replaced by a guess.
 package route
 
 import (
@@ -17,56 +17,56 @@ import (
 	"metabox/internal/clashapi"
 )
 
-// Origin — происхождение утверждения. Значений ровно три, смешивать их нельзя,
-// и утверждения без происхождения наружу не уходят.
+// Origin is the origin of a statement. There are exactly three values, they must not be mixed,
+// and statements without an origin do not go outside.
 type Origin string
 
 const (
-	// OriginObserved — пришло от core: список правил, сработавшее правило, цепочка.
+	// OriginObserved means the statement came from core: the rule list, the matched rule, the chain.
 	OriginObserved Origin = "observed"
-	// OriginComputed — вычислено metabox или получено вопросом к бинарю.
+	// OriginComputed means it was computed by metabox or obtained by asking the binary.
 	OriginComputed Origin = "computed"
-	// OriginUnknown — вычислить нечем.
+	// OriginUnknown means nothing to compute with.
 	OriginUnknown Origin = "unknown"
 )
 
-// ReasonCode — почему правило определить не вышло. Набор закрытый: текст
-// пользователю выбирает панель по коду, а Reason остаётся подробностью на
-// языке демона.
+// ReasonCode is why the rule could not be determined. The set is closed: the text
+// is chosen for the user by the panel by the code, and Reason stays as a detail in
+// the daemon's language.
 type ReasonCode string
 
 const (
-	// ReasonNotInProcessList — условия у соединения есть, а правила с ними в
-	// списке работающего процесса нет.
+	// ReasonNotInProcessList means the connection has conditions, but there is no rule with them in
+	// the running process list.
 	ReasonNotInProcessList ReasonCode = "not_in_process_list"
 )
 
-// Kind — чем закончился подбор сработавшего правила.
+// Kind is how the matched rule selection ended.
 type Kind string
 
 const (
-	// KindRule — правило найдено в списке работающего процесса.
+	// KindRule means the rule is found in the running process list.
 	KindRule Kind = "rule"
-	// KindFinal — ни одно правило не совпало, использован route.final. Это
-	// наблюдаемый факт, а не неизвестность: core говорит о нём прямо.
+	// KindFinal means no rule matched, route.final was used. This is an
+	// observed fact, not an unknown: core says it directly.
 	KindFinal Kind = "final"
-	// KindUnknown — условия у соединения есть, а в списке правил не нашлись.
+	// KindUnknown means the connection has conditions, and they were not found in the rule list.
 	KindUnknown Kind = "unknown"
 )
 
 var (
-	// ErrNoConnection — соединения с таким идентификатором у core нет. Оно
-	// могло закрыться между снапшотом, который видит панель, и этим запросом.
+	// ErrNoConnection means core has no connection with such an identifier. It
+	// could have closed between the snapshot the panel sees and this request.
 	ErrNoConnection = errors.New("соединения с таким идентификатором нет")
 
-	// ErrRuntimeUnavailable — рантайм не ответил. Это отказ источника, а не
-	// панели: экран обязан отличать «данных нет» от «демон сломался».
+	// ErrRuntimeUnavailable means the runtime did not answer. This is a source failure, not the
+	// panel's: the screen must tell "no data" from "the daemon is broken".
 	ErrRuntimeUnavailable = errors.New("рантайм sing-box недоступен")
 )
 
-// Rule — правило работающего процесса. Индекс равен индексу узла в
-// route.rules применённого документа: роутер строит список циклом по конфигу
-// один к одному.
+// Rule is a rule of the running process. The index equals the node index in
+// route.rules of the applied document: the router builds the list by a loop over the config
+// one to one.
 type Rule struct {
 	Origin     Origin `json:"origin"`
 	Index      int    `json:"index"`
@@ -75,53 +75,53 @@ type Rule struct {
 	Action     string `json:"action"`
 }
 
-// Match — сработавшее правило. Index отдаётся указателем: ноль — валидный
-// индекс, и отличить его от «индекса нет» иначе нельзя.
+// Match is the matched rule. Index is returned by pointer: zero is a valid
+// index, and it cannot otherwise be told from "no index".
 type Match struct {
 	Origin     Origin `json:"origin"`
 	Kind       Kind   `json:"kind"`
 	Index      *int   `json:"index,omitempty"`
 	Conditions string `json:"conditions,omitempty"`
 	Action     string `json:"action,omitempty"`
-	// ReasonCode заполняется только у Kind == KindUnknown: по нему панель берёт
-	// текст на языке пользователя.
+	// ReasonCode is filled only for Kind == KindUnknown: the panel takes
+	// the text in the user's language by it.
 	ReasonCode ReasonCode `json:"reason_code,omitempty"`
-	// Reason — та же причина словами демона. Запасной текст для кода, которого
-	// панель не знает.
+	// Reason is the same reason in the daemon's words. A fallback text for a code the
+	// panel does not know.
 	Reason string `json:"reason,omitempty"`
 }
 
-// Chain — цепочка прокси соединения в том порядке, в каком её отдаёт core:
-// от конечного узла к группе.
+// Chain is the proxy chain of a connection in the order core returns it:
+// from the final node to the group.
 type Chain struct {
 	Origin Origin   `json:"origin"`
 	Nodes  []string `json:"nodes"`
 }
 
-// Explanation — ответ ручки объяснения маршрута.
+// Explanation is the response of the route explanation handler.
 type Explanation struct {
 	ConnectionID string `json:"connection_id"`
 	Match        Match  `json:"match"`
 	Chain        Chain  `json:"chain"`
-	// Rules — весь список работающего процесса. Панель сверяет его длину с
-	// длиной route.rules применённого документа: процесс мог загрузить другой
-	// конфиг, и вести пользователя на узел чужого файла нельзя.
+	// Rules is the whole list of the running process. The panel compares its length with
+	// the length of route.rules of the applied document: the process could have loaded another
+	// config, and leading the user to a node of a foreign file is not allowed.
 	Rules []Rule `json:"rules"`
 }
 
-// Source отдаёт разовые ответы Clash API. Интерфейс объявлен здесь, у
-// потребителя, и содержит только чтение снапшота.
+// Source returns one-off Clash API responses. The interface is declared here, at the
+// consumer, and contains only the snapshot read.
 type Source interface {
 	Snapshot(ctx context.Context, path string) (json.RawMessage, error)
 }
 
-// Explainer собирает объяснение по данным core.
+// Explainer assembles the explanation from core data.
 type Explainer struct {
 	source Source
 }
 
-// NewExplainer собирает объяснение поверх того же источника, что и поток
-// рантайма: второго комплекта запросов к Clash API демон не заводит.
+// NewExplainer assembles the explanation on top of the same source as the runtime
+// stream: the daemon does not create a second set of Clash API requests.
 func NewExplainer(source Source) *Explainer {
 	return &Explainer{source: source}
 }
@@ -146,8 +146,8 @@ type clashConnections struct {
 	Connections []clashConnection `json:"connections"`
 }
 
-// Explain объясняет маршрут соединения: какое правило сработало, каким узлом
-// конфига оно является и какой цепочкой ушёл трафик.
+// Explain explains the route of a connection: which rule fired, which config
+// node it is and which chain the traffic went through.
 func (e *Explainer) Explain(ctx context.Context, id string) (Explanation, error) {
 	connection, err := e.connection(ctx, id)
 	if err != nil {
@@ -187,7 +187,7 @@ func (e *Explainer) connection(ctx context.Context, id string) (clashConnection,
 	return clashConnection{}, ErrNoConnection
 }
 
-// readRules читает список правил работающего процесса.
+// readRules reads the rule list of the running process.
 func readRules(ctx context.Context, source Source) ([]Rule, error) {
 	body, err := source.Snapshot(ctx, "/rules")
 	if err != nil {
@@ -213,17 +213,17 @@ func readRules(ctx context.Context, source Source) ([]Rule, error) {
 	return rules, nil
 }
 
-// matchRule находит правило соединения в списке работающего процесса.
+// matchRule finds the connection rule in the running process list.
 //
-// Сопоставление идёт по условиям: их оба источника рендерят одинаково. Из
-// совпавших отбрасываются те, чьё действие перебор правил не прерывает, —
-// записанным может оказаться только узел с route, reject, hijack-dns или
-// bypass с непустым outbound. Из оставшихся берётся первый: роутер
-// останавливается на первом совпадении.
+// Matching goes by conditions: both sources render them identically. Of the
+// matched ones those whose action does not interrupt the rule iteration are dropped;
+// only a node with route, reject, hijack-dns or
+// bypass with a non-empty outbound can turn out recorded. Of the rest the first is taken: the router
+// stops at the first match.
 func matchRule(rule string, rules []Rule) Match {
-	// Пустая строка значит то же, что `final`: gRPC форка оставляет поле
-	// пустым, а Clash API подставляет слово. Без этой проверки
-	// пустые условия совпали бы с первым правилом без условий.
+	// An empty string means the same as `final`: the fork gRPC leaves the field
+	// empty, while the Clash API substitutes a word. Without this check
+	// empty conditions would match the first rule without conditions.
 	if rule == "" || rule == clashapi.FinalRule {
 		return Match{Origin: OriginObserved, Kind: KindFinal}
 	}
@@ -258,11 +258,11 @@ func matchRule(rule string, rules []Rule) Match {
 	}
 }
 
-// terminates отвечает, прерывает ли действие перебор правил.
+// terminates reports whether an action interrupts the rule iteration.
 //
-// Определяется по строке действия, потому что другого признака у Clash API
-// нет. `bypass()` без outbound перебор не прерывает и записанным сработавшим
-// правилом не становится — у остальных bypass в скобках стоит имя outbound.
+// Determined by the action string, because the Clash API has no other flag.
+// `bypass()` without an outbound does not interrupt the iteration and does not become the recorded matched
+// rule: in the other bypass the name of the outbound stands in brackets.
 func terminates(action string) bool {
 	name, arguments, _ := strings.Cut(action, "(")
 	arguments = strings.TrimSuffix(arguments, ")")

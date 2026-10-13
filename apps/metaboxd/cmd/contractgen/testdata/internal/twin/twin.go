@@ -1,24 +1,24 @@
-// Package twin держит тип с тем же именем, что и в sample: два перечисления с
-// одинаковым именем обязаны разъехаться по константам, а не вытеснить друг
-// друга.
+// Package twin holds a type with the same name as in sample: two enums with
+// the same name must be split into separate constants, not displace each
+// other.
 package twin
 
 import "metabox/internal/sample"
 
-// Kind — тёзка `sample.Kind` с другими значениями.
+// Kind is a namesake of `sample.Kind` with other values.
 type Kind string
 
 const (
-	// KindOther — значение, которого у тёзки нет.
+	// KindOther is a value the namesake does not have.
 	KindOther Kind = "other"
 )
 
-// Holder — владелец перечисления.
+// Holder is the owner of an enum.
 type Holder struct {
 	Kind Kind `json:"kind"`
 }
 
-// Borrower ссылается на перечисление чужого пакета.
+// Borrower refers to an enum of a foreign package.
 type Borrower struct {
 	Kind sample.Kind `json:"kind"`
 }

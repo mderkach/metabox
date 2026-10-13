@@ -2,9 +2,9 @@ package main
 
 import "testing"
 
-// Таблица тегов читается из исходников форка, а не из реестра: заглушка без
-// тега регистрирует тот же тип. Здесь сверены случаи, на которых разбор легко
-// ошибиться.
+// The tag table is read from the fork sources, not from the registry: a stub without
+// the tag registers the same type. Here the cases where parsing is easy to
+// get wrong are checked.
 func TestBuildGates(t *testing.T) {
 	dir, err := forkDir()
 	if err != nil {
@@ -22,18 +22,18 @@ func TestBuildGates(t *testing.T) {
 		key      string
 		want     string
 	}{
-		{"прямая регистрация в заглушке", "outbound", "hysteria2", "with_quic"},
-		{"тип только в файле с тегом, через пакет протокола", "endpoint", "warp", "with_wireguard"},
-		{"условие с платформенной частью", "service", "usbip-server", "with_usbip"},
-		{"DNS-транспорт", "dns", "dhcp", "with_dhcp"},
-		{"соседняя функция пакета регистрирует тип без тега", "inbound", "naive", ""},
-		{"тип без тега вовсе", "outbound", "vless", ""},
+		{"direct registration in a stub", "outbound", "hysteria2", "with_quic"},
+		{"type only in a file with the tag, through the protocol package", "endpoint", "warp", "with_wireguard"},
+		{"condition with a platform part", "service", "usbip-server", "with_usbip"},
+		{"DNS transport", "dns", "dhcp", "with_dhcp"},
+		{"a neighbouring package function registers a type without a tag", "inbound", "naive", ""},
+		{"type with no tag at all", "outbound", "vless", ""},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := gates[tt.registry][tt.key]; got != tt.want {
-				t.Errorf("%s/%s: тег %q, ожидали %q", tt.registry, tt.key, got, tt.want)
+				t.Errorf("%s/%s: tag %q, expected %q", tt.registry, tt.key, got, tt.want)
 			}
 		})
 	}

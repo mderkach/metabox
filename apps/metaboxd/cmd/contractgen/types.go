@@ -1,6 +1,6 @@
 package main
 
-// builtins — типы Go, которые уходят на провод как есть.
+// builtins are the Go types that go on the wire as is.
 var builtins = map[string]string{
 	"string":  "z.string()",
 	"bool":    "z.boolean()",
@@ -20,9 +20,9 @@ var builtins = map[string]string{
 	"byte":    "z.int()",
 }
 
-// externals — типы стандартной библиотеки в том виде, в каком их сериализует
-// `encoding/json`. Тип без правила останавливает генерацию: молча напечатанный
-// `z.unknown()` спрятал бы потерю контракта.
+// externals are the standard library types in the form `encoding/json`
+// serializes them. A type without a rule stops generation: a silently printed
+// `z.unknown()` would hide a lost contract.
 var externals = map[string]string{
 	"time.Duration":   "z.int()",
 	"time.Time":       "z.string()",

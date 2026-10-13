@@ -11,11 +11,11 @@ func TestAddrs(t *testing.T) {
 		spec string
 		want []string
 	}{
-		{"один адрес", "192.168.1.1:8088", []string{"192.168.1.1:8088"}},
-		{"несколько адресов", "192.168.1.1:8088,192.168.2.1:8088", []string{"192.168.1.1:8088", "192.168.2.1:8088"}},
-		{"пробелы вокруг запятой", "192.168.1.1:8088, 10.0.0.1:8088", []string{"192.168.1.1:8088", "10.0.0.1:8088"}},
-		{"хвостовая запятая", "192.168.1.1:8088,", []string{"192.168.1.1:8088"}},
-		{"пусто", "", nil},
+		{"one address", "192.168.1.1:8088", []string{"192.168.1.1:8088"}},
+		{"several addresses", "192.168.1.1:8088,192.168.2.1:8088", []string{"192.168.1.1:8088", "192.168.2.1:8088"}},
+		{"spaces around a comma", "192.168.1.1:8088, 10.0.0.1:8088", []string{"192.168.1.1:8088", "10.0.0.1:8088"}},
+		{"trailing comma", "192.168.1.1:8088,", []string{"192.168.1.1:8088"}},
+		{"empty", "", nil},
 	}
 
 	for _, tt := range tests {
@@ -23,26 +23,26 @@ func TestAddrs(t *testing.T) {
 			got := Addrs(tt.spec)
 
 			if len(got) != len(tt.want) {
-				t.Fatalf("получили %v, ожидали %v", got, tt.want)
+				t.Fatalf("got %v, expected %v", got, tt.want)
 			}
 
 			for i := range got {
 				if got[i] != tt.want[i] {
-					t.Errorf("адрес %d: получили %q, ожидали %q", i, got[i], tt.want[i])
+					t.Errorf("address %d: got %q, expected %q", i, got[i], tt.want[i])
 				}
 			}
 		})
 	}
 }
 
-// Панель обязана подняться на тех интерфейсах, что уже есть: у роутера сети
-// поднимаются вразнобой, и адрес гостевой сети может появиться позже демона.
+// The panel must come up on the interfaces that already exist: on a router networks
+// come up out of order, and the guest network address may appear later than the daemon.
 func TestListenSurvivesUnavailableAddress(t *testing.T) {
 	free := freePort(t)
 
 	listeners, failures, err := Listen([]string{"127.0.0.1:" + free, "203.0.113.1:" + free})
 	if err != nil {
-		t.Fatalf("демон не поднялся из-за одного недоступного адреса: %v", err)
+		t.Fatalf("the daemon did not start because of one unavailable address: %v", err)
 	}
 
 	t.Cleanup(func() {
@@ -54,22 +54,22 @@ func TestListenSurvivesUnavailableAddress(t *testing.T) {
 	})
 
 	if len(listeners) != 1 {
-		t.Errorf("открыто слушателей %d, ожидали 1", len(listeners))
+		t.Errorf("listeners open %d, expected 1", len(listeners))
 	}
 	if len(failures) != 1 {
-		t.Errorf("недоступный адрес не попал в отказы: %v", failures)
+		t.Errorf("the unavailable address did not get into the failures: %v", failures)
 	}
 }
 
 func TestListenFailsWhenNothingOpened(t *testing.T) {
 	if _, _, err := Listen([]string{"203.0.113.1:8088"}); err == nil {
-		t.Error("демон поднялся, не открыв ни одного адреса")
+		t.Error("the daemon started without opening a single address")
 	}
 }
 
 func TestListenRejectsEmptyList(t *testing.T) {
 	if _, _, err := Listen(nil); err == nil {
-		t.Error("пустой список адресов принят")
+		t.Error("an empty address list accepted")
 	}
 }
 

@@ -7,11 +7,11 @@ import (
 	"unicode"
 )
 
-// registryUnion собирает union по полю type для одного реестра форка.
+// registryUnion builds a union by the type field for one fork registry.
 //
-// В Go полезная нагрузка объявлена полем `Options any` с тегом json:"-" и
-// подставляется из реестра в рантайме, а badjson кладёт её в JSON плоско
-// рядом с type и tag. Здесь эта плоская форма и восстанавливается.
+// In Go the payload is declared by the field `Options any` with the tag json:"-" and
+// is substituted from the registry at runtime, while badjson puts it into JSON flat
+// next to type and tag. This flat form is restored here.
 func (w *walker) registryUnion(group registryGroup, shadow reflect.Type) *schema {
 	out := &schema{kind: kindTagged, discr: "type"}
 
@@ -38,7 +38,7 @@ func (w *walker) registryUnion(group registryGroup, shadow reflect.Type) *schema
 	return out
 }
 
-// variantName даёт имя схемы варианта: inbound + "bandwidth-limiter" ->
+// variantName gives the name of the variant schema: inbound + "bandwidth-limiter" ->
 // InboundBandwidthLimiterSchema.
 func variantName(registry, key string) string {
 	var b strings.Builder

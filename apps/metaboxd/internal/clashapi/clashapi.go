@@ -1,12 +1,12 @@
-// Package clashapi отвечает за секцию experimental.clash_api: гарантирует её
-// наличие в применяемом конфиге и достаёт из конфига адрес и секрет для
-// healthcheck, адрес dns-in для DNS-пробы и файл лога для причины падения
-// службы.
+// Package clashapi handles the experimental.clash_api section: it guarantees its
+// presence in the applied config and extracts from the config the address and secret for
+// the healthcheck, the dns-in address for the DNS probe and the log file for the failure reason
+// of the service.
 //
-// Это единственное место, где демон трогает содержимое конфига, и трогает
-// точечно: секция вставляется правкой байт, остальной файл остаётся прежним.
-// Разбор в структуру идёт только на чтение (Read) — обратной сериализации нет,
-// иначе порядок ключей пользователя переписался бы.
+// This is the only place where the daemon touches the config content, and it does so
+// surgically: the section is inserted by a byte edit, the rest of the file stays as it was.
+// Parsing into a struct is only for reading (Read), there is no reverse serialization,
+// otherwise the order of the user's keys would be rewritten.
 package clashapi
 
 import (
@@ -20,16 +20,16 @@ import (
 
 var errNotJSON = errors.New("конфиг не является корректным JSON")
 
-// Settings — то, что демону нужно от секции, чтобы достучаться до Clash API.
+// Settings is what the daemon needs from the section to reach the Clash API.
 type Settings struct {
 	Address string
-	// Secret пуст, когда авторизация отключена. Форк отключает её целиком при
-	// пустом секрете, и это штатный случай, а не ошибка конфигурации.
+	// Secret is empty when authorization is disabled. The fork disables it entirely with
+	// an empty secret, and this is a regular case, not a configuration error.
 	Secret string
 }
 
-// Read достаёт адрес и секрет. Конфиг при этом не меняется: структура нужна
-// только для чтения двух полей.
+// Read extracts the address and secret. The config is not changed: the struct is needed
+// only to read two fields.
 func Read(data []byte) (Settings, error) {
 	var cfg struct {
 		Experimental struct {
@@ -50,8 +50,8 @@ func Read(data []byte) (Settings, error) {
 	}, nil
 }
 
-// LogOutput достаёт файл, куда sing-box пишет лог. Пустая строка — лог идёт в
-// поток процесса (stderr, stdout) или выключен.
+// LogOutput extracts the file sing-box writes its log to. An empty string means the log goes to
+// the process stream (stderr, stdout) or is disabled.
 func LogOutput(data []byte) (string, error) {
 	var cfg struct {
 		Log struct {
@@ -72,9 +72,9 @@ func LogOutput(data []byte) (string, error) {
 	return cfg.Log.Output, nil
 }
 
-// BaseURL приводит адрес контроллера к тому, по которому достучится сам демон.
-// Контроллер, слушающий wildcard, отвечает и на loopback, а «0.0.0.0» как
-// адрес назначения не маршрутизируется.
+// BaseURL turns the controller address into the one the daemon itself can reach.
+// A controller listening on a wildcard also answers on loopback, while "0.0.0.0" is not
+// routable as a destination address.
 func (s Settings) BaseURL() (string, error) {
 	if s.Address == "" {
 		return "", errors.New("адрес контроллера пуст")
@@ -93,17 +93,17 @@ func (s Settings) BaseURL() (string, error) {
 	return "http://" + net.JoinHostPort(host, port), nil
 }
 
-// Ensure гарантирует, что применяемый конфиг содержит работоспособный
-// experimental.clash_api, и сообщает, потребовалась ли правка.
+// Ensure guarantees that the applied config contains a working
+// experimental.clash_api, and reports whether an edit was needed.
 //
-// Секция создаётся целиком — вместе со сгенерированным секретом, — только
-// когда её нет. Если пользователь секцию уже завёл, дописывается ровно
-// недостающий external_controller: пустой secret у существующей секции значит
-// «авторизация не нужна», и дописать его означало бы сломать уже настроенных
-// клиентов Clash API.
+// The section is created whole, with a generated secret, only
+// when it is absent. If the user already created the section, exactly the missing
+// external_controller is appended: an empty secret in an existing section means
+// "no authorization needed", and appending one would break already configured
+// Clash API clients.
 func Ensure(data []byte, port int) ([]byte, bool, error) {
-	// Разбор идёт по копии без комментариев, а правка — по исходным байтам:
-	// длины совпадают, поэтому найденные смещения годятся для обеих.
+	// Parsing goes over a copy without comments, and the edit over the original bytes:
+	// the lengths match, so the found offsets fit both.
 	parsed := mask(data)
 
 	if !json.Valid(parsed) {
@@ -159,9 +159,9 @@ func Ensure(data []byte, port int) ([]byte, bool, error) {
 	return replaceSpan(data, controller, strconv.Quote(address)), true, nil
 }
 
-// isEmptyString отвечает, пуста ли строка в этих байтах. Не строка — тоже
-// «пусто»: контроллер, заданный числом, работать не будет, и секцию надо
-// чинить.
+// isEmptyString reports whether the string in these bytes is empty. A non-string is also
+// "empty": a controller set as a number will not work, and the section must be
+// fixed.
 func isEmptyString(raw []byte) bool {
 	var value string
 	if err := json.Unmarshal(raw, &value); err != nil {

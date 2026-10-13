@@ -32,9 +32,9 @@ func TestServiceReadsState(t *testing.T) {
 		wantRunning bool
 		wantPID     int
 	}{
-		{"служба поднята", "homeproxy", true, true, 5810},
-		{"служба известна, но не работает", "sing-box", true, false, 0},
-		{"служба procd незнакома", "b4", false, false, 0},
+		{"service up", "homeproxy", true, true, 5810},
+		{"service known but not running", "sing-box", true, false, 0},
+		{"service unknown to procd", "b4", false, false, 0},
 	}
 
 	for _, tt := range tests {
@@ -43,26 +43,26 @@ func TestServiceReadsState(t *testing.T) {
 
 			got, err := client.Service(t.Context(), tt.service, "")
 			if err != nil {
-				t.Fatalf("опрос службы: %v", err)
+				t.Fatalf("service poll: %v", err)
 			}
 
 			if got.Known != tt.wantKnown {
-				t.Errorf("известность: получили %v, ожидали %v", got.Known, tt.wantKnown)
+				t.Errorf("known: got %v, expected %v", got.Known, tt.wantKnown)
 			}
 
 			if got.Running != tt.wantRunning {
-				t.Errorf("работает: получили %v, ожидали %v", got.Running, tt.wantRunning)
+				t.Errorf("running: got %v, expected %v", got.Running, tt.wantRunning)
 			}
 
 			if got.PID != tt.wantPID {
-				t.Errorf("pid: получили %d, ожидали %d", got.PID, tt.wantPID)
+				t.Errorf("pid: got %d, expected %d", got.PID, tt.wantPID)
 			}
 		})
 	}
 }
 
-// У homeproxy рядом с sing-box живёт скрипт чистки логов: состояние и pid
-// берутся только у инстанса с заданным именем.
+// homeproxy has a log cleanup script next to sing-box: the state and pid
+// are taken only from the instance with the given name.
 func TestServiceSelectsInstance(t *testing.T) {
 	const twoInstances = `{"homeproxy": {"instances": {
 		"proxy": {"running": %s, "pid": %d, "command": ["/usr/bin/sing-box", "run", "-c", "/var/run/homeproxy/proxy.json"]},
@@ -80,22 +80,22 @@ func TestServiceSelectsInstance(t *testing.T) {
 		wantConfigs []string
 	}{
 		{
-			"инстанс sing-box упал, соседний жив",
+			"sing-box instance crashed, the neighbour is alive",
 			fmt.Sprintf(twoInstances, "false", 0), "homeproxy", "proxy",
 			true, false, 0, []string{"/var/run/homeproxy/proxy.json"},
 		},
 		{
-			"инстанс sing-box поднят",
+			"sing-box instance up",
 			fmt.Sprintf(twoInstances, "true", 5810), "homeproxy", "proxy",
 			true, true, 5810, []string{"/var/run/homeproxy/proxy.json"},
 		},
 		{
-			"инстанса с таким именем нет",
+			"no instance with such a name",
 			fmt.Sprintf(twoInstances, "true", 5810), "homeproxy", "sing-box",
 			false, false, 0, nil,
 		},
 		{
-			"имя не задано, инстанс один",
+			"name not set, single instance",
 			`{"sing-box": {"instances": {"instance1": {"running": true, "pid": 4242, "command": ["/usr/bin/sing-box", "run", "-c", "/etc/sing-box/config.json"]}}}}`, "sing-box", "",
 			true, true, 4242, []string{"/etc/sing-box/config.json"},
 		},
@@ -108,23 +108,23 @@ func TestServiceSelectsInstance(t *testing.T) {
 
 			got, err := client.Service(t.Context(), tt.service, tt.instance)
 			if err != nil {
-				t.Fatalf("опрос службы: %v", err)
+				t.Fatalf("service poll: %v", err)
 			}
 
 			if got.Known != tt.wantKnown || got.Running != tt.wantRunning || got.PID != tt.wantPID {
-				t.Errorf("известна %v, работает %v, pid %d; ожидали %v, %v, %d",
+				t.Errorf("known %v, running %v, pid %d; expected %v, %v, %d",
 					got.Known, got.Running, got.PID, tt.wantKnown, tt.wantRunning, tt.wantPID)
 			}
 
 			if !slices.Equal(got.Configs, tt.wantConfigs) {
-				t.Errorf("конфиги %q, ожидали %q", got.Configs, tt.wantConfigs)
+				t.Errorf("configs %q, expected %q", got.Configs, tt.wantConfigs)
 			}
 		})
 	}
 }
 
-// Без имени инстанса у службы с несколькими инстансами выбирать не из чего:
-// первый живой мог бы оказаться соседним скриптом.
+// Without an instance name a service with several instances has nothing to choose from:
+// the first live one could turn out to be a neighbouring script.
 func TestServiceRejectsAmbiguousInstance(t *testing.T) {
 	list := `{"homeproxy": {"instances": {
 		"proxy": {"running": false, "pid": 0},
@@ -135,11 +135,11 @@ func TestServiceRejectsAmbiguousInstance(t *testing.T) {
 
 	got, err := client.Service(t.Context(), "homeproxy", "")
 	if !errors.Is(err, ErrAmbiguousInstance) {
-		t.Fatalf("получили %v, ожидали ErrAmbiguousInstance", err)
+		t.Fatalf("got %v, expected ErrAmbiguousInstance", err)
 	}
 
 	if got.PID != 0 || got.Running {
-		t.Errorf("при отказе отдано состояние %+v", got)
+		t.Errorf("on failure the state %+v was returned", got)
 	}
 }
 
@@ -149,8 +149,8 @@ func TestServiceReportsFailures(t *testing.T) {
 		runner Runner
 	}{
 		{"ubus не запустился", runnerWith("", 0, errors.New("нет такой команды"))},
-		{"ubus вернул ошибку", runnerWith("", 1, nil)},
-		{"ответ не разбирается", runnerWith("не json", 0, nil)},
+		{"ubus returned an error", runnerWith("", 1, nil)},
+		{"response does not parse", runnerWith("не json", 0, nil)},
 	}
 
 	for _, tt := range tests {
@@ -158,14 +158,14 @@ func TestServiceReportsFailures(t *testing.T) {
 			client := New(tt.runner, "/bin/ubus")
 
 			if _, err := client.Service(t.Context(), "homeproxy", ""); err == nil {
-				t.Error("отказ не сообщён")
+				t.Error("failure not reported")
 			}
 		})
 	}
 }
 
-// Возраст считается от загрузки системы: часов реального времени у роутера
-// нет, и абсолютное время прыгает при синхронизации NTP.
+// The age is counted from system boot: the router has no real-time clock,
+// and absolute time jumps on NTP synchronization.
 func TestUptimeFromProc(t *testing.T) {
 	const (
 		pid         = 4242
@@ -176,7 +176,7 @@ func TestUptimeFromProc(t *testing.T) {
 
 	dir := t.TempDir()
 	writeProcFile(t, dir, "uptime", strconv.FormatFloat(bootSeconds, 'f', 2, 64)+" 9000.00\n")
-	// Имя процесса в скобках содержит пробел: поля считаются от скобки.
+	// The process name in brackets contains a space: fields are counted from the bracket.
 	writeProcFile(t, filepath.Join(dir, strconv.Itoa(pid)), "stat", procStat(startTicks))
 
 	client := New(runnerWith(procList(pid), 0, nil), "/bin/ubus")
@@ -184,32 +184,32 @@ func TestUptimeFromProc(t *testing.T) {
 
 	got, err := client.Service(t.Context(), "homeproxy", "")
 	if err != nil {
-		t.Fatalf("опрос службы: %v", err)
+		t.Fatalf("service poll: %v", err)
 	}
 
 	want := time.Duration(bootSeconds)*time.Second - startTicks*time.Second/userHZ
 	if got.Uptime != want {
-		t.Errorf("возраст: получили %v, ожидали %v", got.Uptime, want)
+		t.Errorf("age: got %v, expected %v", got.Uptime, want)
 	}
 }
 
-// Недоступный /proc возраст обнуляет, но состояние службы остаётся верным:
-// панель обязана открыться и без него.
+// An unavailable /proc zeroes the age, but the service state stays correct:
+// the panel must open without it.
 func TestUptimeUnavailable(t *testing.T) {
 	client := New(runnerWith(procList(4242), 0, nil), "/bin/ubus")
 	client.procDir = filepath.Join(t.TempDir(), "нет-такого")
 
 	got, err := client.Service(t.Context(), "homeproxy", "")
 	if err != nil {
-		t.Fatalf("опрос службы: %v", err)
+		t.Fatalf("service poll: %v", err)
 	}
 
 	if !got.Running {
-		t.Error("служба должна считаться поднятой")
+		t.Error("the service must count as up")
 	}
 
 	if got.Uptime != 0 {
-		t.Errorf("возраст: получили %v, ожидали 0", got.Uptime)
+		t.Errorf("age: got %v, expected 0", got.Uptime)
 	}
 }
 
@@ -218,7 +218,7 @@ func procList(pid int) string {
 }
 
 func procStat(startTicks int) string {
-	// Поля 1-9 записаны явно, дальше нули до 21-го: starttime идёт 22-м.
+	// Fields 1-9 are written explicitly, then zeros up to the 21st: starttime is the 22nd.
 	stat := "4242 (sing box) S 1 4242 4242 0 -1 4194560"
 	for range 12 {
 		stat += " 0"
@@ -231,16 +231,16 @@ func writeProcFile(t *testing.T, dir, name, content string) {
 	t.Helper()
 
 	if err := os.MkdirAll(dir, 0o700); err != nil {
-		t.Fatalf("создание %s: %v", dir, err)
+		t.Fatalf("creating %s: %v", dir, err)
 	}
 
 	if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o600); err != nil {
-		t.Fatalf("запись %s: %v", name, err)
+		t.Fatalf("writing %s: %v", name, err)
 	}
 }
 
-// Рабочий каталог берётся из -D команды инстанса: procd помнит её и у
-// упавшего инстанса, а именно с ней служба поднимется на рестарте Apply.
+// The working directory is taken from -D of the instance command: procd remembers it even for a
+// crashed instance, and it is the command the service will start with on an Apply restart.
 func TestServiceReadsWorkdir(t *testing.T) {
 	tests := []struct {
 		name string
@@ -248,37 +248,37 @@ func TestServiceReadsWorkdir(t *testing.T) {
 		want string
 	}{
 		{
-			"флаг отдельным аргументом",
+			"flag as a separate argument",
 			`{"sing-box": {"instances": {"sing-box.main": {"running": true, "pid": 0,
 				"command": ["/usr/bin/sing-box", "run", "-c", "/etc/sing-box/config.json", "-D", "/usr/share/sing-box"]}}}}`,
 			"/usr/share/sing-box",
 		},
 		{
-			"длинная форма через равно",
+			"long form with an equals sign",
 			`{"sing-box": {"instances": {"main": {"running": true, "pid": 0,
 				"command": ["/usr/bin/sing-box", "--directory=/etc/sing-box", "run"]}}}}`,
 			"/etc/sing-box",
 		},
 		{
-			"упавший инстанс",
+			"crashed instance",
 			`{"sing-box": {"instances": {"main": {"running": false,
 				"command": ["/usr/bin/sing-box", "-D", "/etc/sing-box", "-C", "/etc/sing-box", "run"]}}}}`,
 			"/etc/sing-box",
 		},
 		{
-			"повтор флага — побеждает последний",
+			"repeated flag: the last wins",
 			`{"sing-box": {"instances": {"main": {"running": true, "pid": 0,
 				"command": ["/usr/bin/sing-box", "-D", "/a", "-D/b", "run"]}}}}`,
 			"/b",
 		},
 		{
-			"относительный путь не отдаётся",
+			"relative path is not returned",
 			`{"sing-box": {"instances": {"main": {"running": true, "pid": 0,
 				"command": ["/usr/bin/sing-box", "-D", "etc", "run"]}}}}`,
 			"",
 		},
 		{
-			"без флага и без процесса — неизвестно",
+			"no flag and no process: unknown",
 			`{"sing-box": {"instances": {"main": {"running": false, "command": ["/usr/bin/sing-box", "run"]}}}}`,
 			"",
 		},
@@ -291,18 +291,18 @@ func TestServiceReadsWorkdir(t *testing.T) {
 
 			got, err := client.Service(t.Context(), "sing-box", "")
 			if err != nil {
-				t.Fatalf("опрос службы: %v", err)
+				t.Fatalf("service poll: %v", err)
 			}
 
 			if got.Workdir != tt.want {
-				t.Errorf("рабочий каталог: получили %q, ожидали %q", got.Workdir, tt.want)
+				t.Errorf("working directory: got %q, expected %q", got.Workdir, tt.want)
 			}
 		})
 	}
 }
 
-// Файлы и каталоги конфига берутся из той же команды: по ним применение
-// проверяет кандидата тем режимом, в каком служба поднимется.
+// Config files and directories are taken from the same command: the apply
+// checks the candidate by them in the mode the service will start in.
 func TestServiceReadsConfigFlags(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -311,52 +311,52 @@ func TestServiceReadsConfigFlags(t *testing.T) {
 		wantDir  []string
 	}{
 		{
-			"пакет форка: один файл",
+			"fork package: one file",
 			`["/usr/bin/sing-box", "run", "-c", "/etc/sing-box/config.json", "-D", "/usr/share/sing-box"]`,
 			[]string{"/etc/sing-box/config.json"}, nil,
 		},
 		{
-			"режим каталога",
+			"directory mode",
 			`["/usr/bin/sing-box", "-D", "/etc/sing-box", "-C", "/etc/sing-box", "run"]`,
 			nil, []string{"/etc/sing-box"},
 		},
 		{
-			"длинные формы и повтор",
+			"long forms and repeat",
 			`["/usr/bin/sing-box", "run", "--config=/a.json", "--config", "/b.json", "--config-directory=/c"]`,
 			[]string{"/a.json", "/b.json"}, []string{"/c"},
 		},
 		{
-			"относительный путь — от рабочего каталога",
+			"relative path from the working directory",
 			`["/usr/bin/sing-box", "run", "-D", "/etc/sing-box", "-cconfig.json"]`,
 			[]string{"/etc/sing-box/config.json"}, nil,
 		},
 		{
-			"относительный путь без рабочего каталога остаётся как есть",
+			"relative path without a working directory stays as is",
 			`["/usr/bin/sing-box", "run", "-c", "config.json"]`,
 			[]string{"config.json"}, nil,
 		},
 		{
-			"без -c и -C sing-box читает config.json рабочего каталога",
+			"without -c and -C sing-box reads config.json of the working directory",
 			`["/usr/bin/sing-box", "-D", "/usr/share/sing-box", "--disable-color", "run"]`,
 			[]string{"/usr/share/sing-box/config.json"}, nil,
 		},
 		{
-			"повтор -C",
+			"repeated -C",
 			`["/usr/bin/sing-box", "run", "-C", "/a", "-C/b"]`,
 			nil, []string{"/a", "/b"},
 		},
 		{
-			"значение флага флагом не считается",
+			"a flag value is not counted as a flag",
 			`["/usr/bin/sing-box", "run", "-c", "-Cx.json"]`,
 			[]string{"-Cx.json"}, nil,
 		},
 		{
-			"после -- флагов нет",
+			"no flags after --",
 			`["/usr/bin/sing-box", "run", "-c", "/a.json", "--", "-C", "/b"]`,
 			[]string{"/a.json"}, nil,
 		},
 		{
-			"флаг последним, без значения",
+			"flag last, without a value",
 			`["/usr/bin/sing-box", "run", "-c"]`,
 			[]string{"config.json"}, nil,
 		},
@@ -370,18 +370,18 @@ func TestServiceReadsConfigFlags(t *testing.T) {
 
 			got, err := client.Service(t.Context(), "sing-box", "")
 			if err != nil {
-				t.Fatalf("опрос службы: %v", err)
+				t.Fatalf("service poll: %v", err)
 			}
 
 			if !slices.Equal(got.Configs, tt.wantFile) || !slices.Equal(got.ConfigDirs, tt.wantDir) {
-				t.Errorf("файлы %q и каталоги %q, ожидали %q и %q", got.Configs, got.ConfigDirs, tt.wantFile, tt.wantDir)
+				t.Errorf("files %q and directories %q, expected %q and %q", got.Configs, got.ConfigDirs, tt.wantFile, tt.wantDir)
 			}
 		})
 	}
 }
 
-// Без -D sing-box резолвит пути от каталога, в котором его запустили: его
-// отдаёт /proc/<pid>/cwd живого процесса.
+// Without -D sing-box resolves paths from the directory it was started in: it
+// is returned by /proc/<pid>/cwd of the live process.
 func TestServiceReadsWorkdirFromProc(t *testing.T) {
 	const pid = 4242
 
@@ -404,10 +404,10 @@ func TestServiceReadsWorkdirFromProc(t *testing.T) {
 
 	got, err := client.Service(t.Context(), "sing-box", "")
 	if err != nil {
-		t.Fatalf("опрос службы: %v", err)
+		t.Fatalf("service poll: %v", err)
 	}
 
 	if got.Workdir != cwd {
-		t.Errorf("рабочий каталог: получили %q, ожидали %q", got.Workdir, cwd)
+		t.Errorf("working directory: got %q, expected %q", got.Workdir, cwd)
 	}
 }

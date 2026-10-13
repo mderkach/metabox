@@ -8,35 +8,35 @@ import (
 	"metabox/internal/clashapi"
 )
 
-// Connection — соединение в контракте демона.
+// Connection is a connection in the daemon contract.
 //
-// Форма панели не зависит от того, каким источником соединение прочитано:
-// Clash API и gRPC форка расходятся и в наборе полей, и в формате
-// правила, поэтому сведение к одной модели делает демон, а не фронт.
+// The panel shape does not depend on which source the connection was read from:
+// the Clash API and the fork gRPC differ both in the field set and in the rule
+// format, so the reduction to one model is done by the daemon, not the frontend.
 type Connection struct {
 	ID string `json:"id"`
-	// Host — адрес назначения с портом: имя, если его разобрал sniff, иначе
-	// адрес. Собирается здесь, потому что источники держат его по-разному.
+	// Host is the destination address with a port: the name if sniff parsed it, otherwise
+	// the address. Built here because the sources keep it differently.
 	Host    string `json:"host"`
 	Network string `json:"network"`
 	Source  string `json:"source"`
-	// Rule — условия сработавшего правила. Пусто у правила без условий и у
-	// соединения, не совпавшего ни с одним.
+	// Rule is the conditions of the matched rule. Empty for a rule without conditions and for
+	// a connection that matched none.
 	Rule string `json:"rule"`
-	// Action — выход правила: аутбаунд или действие. gRPC его не отдаёт вовсе, и там поле пустое.
+	// Action is the rule outbound: an outbound or an action. gRPC does not return it at all, and the field is empty there.
 	Action string `json:"action"`
-	// Final отмечает, что ни одно правило не совпало и сработал route.final.
-	// Без отдельного признака этот выход не отличить от правила без условий:
-	// у обоих условия пусты, а это разные вещи.
+	// Final marks that no rule matched and route.final fired.
+	// Without a separate flag this outbound cannot be told from a rule without conditions:
+	// both have empty conditions, but these are different things.
 	Final bool `json:"final"`
-	// Chain — цепочка в порядке core: от конечного узла к группе.
+	// Chain is the chain in core order: from the final node to the group.
 	Chain     []string `json:"chain"`
 	Upload    int64    `json:"upload"`
 	Download  int64    `json:"download"`
 	StartedAt string   `json:"started_at"`
 }
 
-// ConnectionsSnapshot — полный список живых соединений с итогами.
+// ConnectionsSnapshot is the full list of live connections with totals.
 type ConnectionsSnapshot struct {
 	Connections   []Connection `json:"connections"`
 	UploadTotal   int64        `json:"upload_total"`
@@ -69,9 +69,9 @@ type clashSnapshot struct {
 	Memory        int64             `json:"memory"`
 }
 
-// connectionsSnapshot переводит снапшот Clash API в контракт демона и отдаёт
-// накопленный счётчик байт: по нему считается доля канала через sing-box, а
-// виден он только здесь.
+// connectionsSnapshot translates the Clash API snapshot into the daemon contract and returns
+// the accumulated byte counter: the channel share through sing-box is counted by it, and
+// it is visible only here.
 func connectionsSnapshot(raw json.RawMessage) (json.RawMessage, int64, error) {
 	var source clashSnapshot
 	if err := json.Unmarshal(raw, &source); err != nil {
@@ -111,11 +111,11 @@ func connectionsSnapshot(raw json.RawMessage) (json.RawMessage, int64, error) {
 	return body, snapshot.UploadTotal + snapshot.DownloadTotal, nil
 }
 
-// splitRule разводит условия и выход правила и отмечает выход по умолчанию.
+// splitRule separates the conditions and the outbound of a rule and marks the default outbound.
 //
-// Пустая строка значит то же, что `final`: gRPC форка поле не заполняет, а
-// Clash API подставляет слово. Правилом этот выход не является,
-// поэтому ни условий, ни действия от него не остаётся.
+// An empty string means the same as `final`: the fork gRPC does not fill the field, and
+// the Clash API substitutes a word. This outbound is not a rule,
+// so neither conditions nor an action remain of it.
 func splitRule(rule string) (conditions, action string, final bool) {
 	if rule == "" || rule == clashapi.FinalRule {
 		return "", "", true
@@ -126,8 +126,8 @@ func splitRule(rule string) (conditions, action string, final bool) {
 	return conditions, action, false
 }
 
-// chain приводит пустую цепочку к списку: nil ушёл бы в JSON как null, и
-// панель сломалась бы на первом же таком соединении.
+// chain turns an empty chain into a list: nil would go into JSON as null, and
+// the panel would break on the very first such connection.
 func chain(nodes []string) []string {
 	if nodes == nil {
 		return []string{}
@@ -136,8 +136,8 @@ func chain(nodes []string) []string {
 	return nodes
 }
 
-// host собирает адрес назначения. Имя берётся, когда его разобрал sniff, —
-// иначе остаётся адрес, и панели не приходится выбирать за демона.
+// host builds the destination address. The name is taken when sniff parsed it,
+// otherwise the address stays, and the panel does not have to choose for the daemon.
 func host(metadata clashMetadata) string {
 	name := metadata.Host
 	if name == "" {

@@ -4,8 +4,8 @@ package diag
 
 import "syscall"
 
-// markControl ставит сокету метку SO_MARK. Нужны права CAP_NET_ADMIN: демон на
-// роутере работает от root.
+// markControl sets the SO_MARK mark on a socket. Needs CAP_NET_ADMIN: the daemon on the
+// router runs as root.
 func markControl(mark uint32) (func(network, address string, c syscall.RawConn) error, bool) {
 	return func(_, _ string, c syscall.RawConn) error {
 		var markErr error

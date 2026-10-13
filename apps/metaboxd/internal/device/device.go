@@ -1,12 +1,12 @@
-// Package device читает показания устройства и процессов на нём.
+// Package device reads the readings of the device and of the processes on it.
 //
-// Источник — procfs и sysfs: своего агента на роутере нет, а панели нужны
-// загрузка, температура и память там же, где трафик. Корни файловых систем
-// задаются полями Options, иначе тест шёл бы по живой системе.
+// The source is procfs and sysfs: the router has no agent of its own, and the panel needs
+// load, temperature and memory in the same place as traffic. The file system roots
+// are set by Options fields, otherwise a test would go through the live system.
 //
-// Отказ одного источника не отменяет остальные: термозоны есть не на каждой
-// плате, а процесс sing-box может быть не запущен. Read отдаёт то, что
-// прочиталось, и ошибку с перечнем того, что не далось.
+// A failure of one source does not cancel the others: not every board has thermal zones,
+// and the sing-box process may not be running. Read returns what
+// was read and an error listing what failed.
 package device
 
 import (
@@ -28,94 +28,94 @@ const (
 	defaultProc = "/proc"
 	defaultSys  = "/sys"
 
-	// Ядро отдаёт память в килобайтах, а температуру в тысячных долях градуса.
+	// The kernel gives memory in kilobytes and temperature in thousandths of a degree.
 	bytesInKB    = 1024
 	milliDegrees = 1000
 )
 
-// Load — средняя загрузка. Приводить её к процентам нельзя: это длина очереди
-// на выполнение, и на четырёх ядрах значение 4.0 означает полную занятость.
+// Load is the average load. It cannot be converted to percent: it is the run queue
+// length, and on four cores a value of 4.0 means full occupancy.
 type Load struct {
 	One     float64 `json:"one"`
 	Five    float64 `json:"five"`
 	Fifteen float64 `json:"fifteen"`
-	// Cores — сколько ядер видит система: без него значение не читается.
+	// Cores is how many cores the system sees: without it the value cannot be read.
 	Cores int `json:"cores"`
 }
 
-// Memory — память устройства в байтах.
+// Memory is the device memory in bytes.
 type Memory struct {
 	Total int64 `json:"total"`
-	// Available — то, что система готова отдать без свопа, а не `MemFree`:
-	// свободного на роутере мало всегда, кэш занимает остальное.
+	// Available is what the system is ready to give without swap, not `MemFree`:
+	// free memory on a router is always small, the cache takes the rest.
 	Available int64 `json:"available"`
 }
 
-// Zone — одна термозона ядра.
+// Zone is one kernel thermal zone.
 type Zone struct {
-	// Name — `type` зоны: на плате их бывает несколько, и различаются они им.
+	// Name is the `type` of the zone: a board may have several, and they differ by it.
 	Name string `json:"name"`
-	// Milli — тысячные доли градуса Цельсия, ровно как отдаёт ядро.
+	// Milli is thousandths of a degree Celsius, exactly as the kernel gives it.
 	Milli int `json:"milli"`
 }
 
-// Process — показания чужого процесса.
+// Process is the readings of a foreign process.
 type Process struct {
 	PID int `json:"pid"`
-	// RSS — резидентная память процесса в байтах. У sing-box она больше, чем
-	// `memory` из Clash API: тот отдаёт только память рантайма Go, а здесь
-	// весь процесс вместе с резидентным кодом бинаря.
+	// RSS is the resident memory of the process in bytes. For sing-box it is larger than
+	// `memory` from the Clash API: that one gives only the Go runtime memory, while here it is
+	// the whole process together with the resident code of the binary.
 	RSS int64 `json:"rss"`
 }
 
-// Daemon — показания самого metaboxd.
+// Daemon is the readings of metaboxd itself.
 type Daemon struct {
 	RSS        int64 `json:"rss"`
 	Heap       int64 `json:"heap"`
 	Goroutines int   `json:"goroutines"`
 }
 
-// Stat — показания устройства на момент опроса.
+// Stat is the device readings at the time of the poll.
 type Stat struct {
 	Load   Load   `json:"load"`
 	Memory Memory `json:"memory"`
-	// Thermal пуст, когда термозон у платы нет.
+	// Thermal is empty when the board has no thermal zones.
 	Thermal []Zone `json:"thermal"`
-	// Uplink пуст, когда маршрута по умолчанию нет.
+	// Uplink is empty when there is no default route.
 	Uplink *Link `json:"uplink,omitempty"`
-	// Share — объёмы канала и sing-box за время наблюдения демона.
+	// Share is the volumes of the channel and of sing-box during the daemon observation.
 	Share Share `json:"share"`
-	// Singbox пуст, когда процесс не найден: маршрутизации на устройстве
-	// может не быть вовсе.
+	// Singbox is empty when the process is not found: there may be no routing on the device
+	// at all.
 	Singbox *Process `json:"singbox,omitempty"`
 	Daemon  Daemon   `json:"daemon"`
-	// Uptime — секунды с загрузки устройства.
+	// Uptime is seconds since the device booted.
 	Uptime int `json:"uptime"`
 }
 
-// PortResolver отдаёт порт Clash API. Читается на каждый поиск процесса: порт
-// меняется вместе с конфигом.
+// PortResolver returns the Clash API port. Read on every process lookup: the port
+// changes together with the config.
 type PortResolver func(ctx context.Context) (int, error)
 
-// Recorder принимает снятые показания. Интерфейс объявлен здесь, у
-// потребителя: читателю всё равно, кто и как хранит историю.
+// Recorder accepts the taken readings. The interface is declared here, at the
+// consumer: the reader does not care who stores the history and how.
 type Recorder interface {
 	Record(sample history.DevicePoint)
 }
 
-// Options задаёт корни файловых систем и способ найти порт Clash API.
+// Options sets the file system roots and the way to find the Clash API port.
 type Options struct {
 	Proc string
 	Sys  string
 	Port PortResolver
-	// History копит показания. nil означает, что историю никто не ведёт.
+	// History accumulates the readings. nil means nobody keeps a history.
 	History Recorder
-	// Now подменяется в тестах: окно наблюдения считается от первого снятия
-	// показаний, и ждать его реальными секундами тест не должен.
+	// Now is replaced in tests: the observation window is counted from the first taking
+	// of readings, and a test must not wait for it in real seconds.
 	Now func() time.Time
 }
 
-// Reader читает показания и помнит найденный процесс sing-box.
+// Reader reads the readings and remembers the found sing-box process.
 type Reader struct {
 	proc    string
 	sys     string
@@ -123,27 +123,27 @@ type Reader struct {
 	history Recorder
 	now     func() time.Time
 
-	// link и proxy копят приращения счётчиков: канал считает сам читатель,
-	// объём sing-box приходит снаружи — его знает только поток соединений.
+	// link and proxy accumulate counter increments: the reader counts the channel itself,
+	// the sing-box volume comes from outside, since only the connection stream knows it.
 	link  Meter
 	proxy Meter
-	// since — начало окна наблюдения; нулевое время означает, что показаний
-	// ещё не снимали.
+	// since is the start of the observation window; a zero time means readings
+	// have not been taken yet.
 	since time.Time
-	// linkName — интерфейс, по которому копится канал: смена интерфейса
-	// начинает счёт заново, иначе чужой счётчик приехал бы одним скачком.
+	// linkName is the interface the channel is accumulated by: an interface change
+	// restarts the count, otherwise a foreign counter would arrive in one jump.
 	linkName string
 
-	// mu закрывает найденный процесс: показания снимает поток, а состояние
-	// службы спрашивает ещё и хендлер ручки.
+	// mu protects the found process: readings are taken by a stream, and the service state
+	// is also requested by the handler.
 	mu sync.Mutex
-	// pid — последний найденный процесс. Поиск обходит дескрипторы всех
-	// процессов, и повторять его каждые несколько секунд на устройстве,
-	// которое месяцами простаивает, незачем.
+	// pid is the last found process. The lookup walks the descriptors of all
+	// processes, and repeating it every few seconds on a device
+	// that idles for months is pointless.
 	pid int
 }
 
-// New собирает читателя. Пустые корни берут устройственные значения.
+// New assembles the reader. Empty roots take device values.
 func New(opts Options) *Reader {
 	reader := &Reader{proc: opts.Proc, sys: opts.Sys, port: opts.Port, history: opts.History, now: opts.Now}
 
@@ -162,18 +162,18 @@ func New(opts Options) *Reader {
 	return reader
 }
 
-// AddProxy прибавляет байты, прошедшие через sing-box за интервал. Зовёт его
-// учёт: сам процесс отдаёт скорость за секунду, а не накопленный счётчик.
+// AddProxy adds the bytes that passed through sing-box over an interval. Called by
+// the accounting: the process itself gives the speed per second, not an accumulated counter.
 func (r *Reader) AddProxy(bytes int64) {
 	r.proxy.Add(bytes)
 }
 
-// SampleDevice снимает показания в историю и в счётчики канала.
+// SampleDevice takes readings into the history and the channel counters.
 //
-// Зовёт его учёт, а не панель: график и доля обязаны копиться и при закрытой
-// вкладке. Счётчик канала монотонный, поэтому лишнее чтение прибавляет нулевое
-// приращение, а окно наблюдения начинается с первого вызова — у демона это его
-// собственный запуск.
+// Called by the accounting, not by the panel: the chart and the share must accumulate with a closed
+// tab too. The channel counter is monotonic, so an extra read adds a zero
+// increment, and the observation window starts at the first call, which for the daemon is its
+// own start.
 func (r *Reader) SampleDevice(ctx context.Context) {
 	stat, _ := r.Read(ctx)
 
@@ -199,8 +199,8 @@ func (r *Reader) SampleDevice(ctx context.Context) {
 	r.history.Record(sample)
 }
 
-// Read снимает показания. Ошибка перечисляет то, что прочитать не удалось;
-// остальные поля при этом заполнены.
+// Read takes the readings. The error lists what could not be read;
+// the other fields are filled in.
 func (r *Reader) Read(ctx context.Context) (Stat, error) {
 	var failures []error
 
@@ -252,8 +252,8 @@ func (r *Reader) Read(ctx context.Context) (Stat, error) {
 	return stat, errors.Join(failures...)
 }
 
-// observeUplink прибавляет приращение канала. Смена интерфейса начинает счёт
-// заново: счётчик нового приехал бы в итог одним скачком.
+// observeUplink adds the channel increment. An interface change restarts the count:
+// the counter of the new one would arrive in the total as one jump.
 func (r *Reader) observeUplink(link *Link) {
 	if link == nil {
 		return
@@ -273,9 +273,9 @@ func (r *Reader) observeUplink(link *Link) {
 	r.link.Observe(link.RX + link.TX)
 }
 
-// share отдаёт накопленное и окно наблюдения. Копит демон, а не панель: доля
-// считается за всё время его работы и не обнуляется ни перезагрузкой страницы,
-// ни закрытием вкладки.
+// share returns the accumulated amount and the observation window. Accumulated by the daemon, not by the panel: the share
+// is counted over its whole working time and is not zeroed by a page reload
+// or a tab close.
 func (r *Reader) share(uplink *Link) Share {
 	r.observeUplink(uplink)
 
@@ -315,8 +315,8 @@ func (r *Reader) load() (Load, error) {
 		values[index] = value
 	}
 
-	// Ядра берём у рантайма: демон работает на том же устройстве, и разбирать
-	// ради этого `cpuinfo` с его платформенными различиями незачем.
+	// Cores are taken from the runtime: the daemon runs on the same device, and parsing
+	// `cpuinfo` with its platform differences for this is pointless.
 	return Load{One: values[0], Five: values[1], Fifteen: values[2], Cores: runtime.NumCPU()}, nil
 }
 
@@ -347,9 +347,9 @@ func (r *Reader) uptime() (int, error) {
 	return int(seconds), nil
 }
 
-// thermal читает термозоны платы. Список никогда не nil: nil уходит в JSON
-// как `null`, схема панели ждёт массив и на непонятом поле теряет весь топик
-// показаний целиком — вместе с памятью и аптаймом.
+// thermal reads the board thermal zones. The list is never nil: nil goes into JSON
+// as `null`, the panel schema expects an array and on an unrecognized field loses the whole readings
+// topic, together with memory and uptime.
 func (r *Reader) thermal() ([]Zone, error) {
 	root := filepath.Join(r.sys, "class", "thermal")
 
@@ -357,7 +357,7 @@ func (r *Reader) thermal() ([]Zone, error) {
 
 	entries, err := os.ReadDir(root)
 	if err != nil {
-		// Платы без термозон — штатный случай, а не отказ.
+		// Boards without thermal zones are a regular case, not a failure.
 		if errors.Is(err, os.ErrNotExist) {
 			return zones, nil
 		}
@@ -404,17 +404,17 @@ func readZone(dir string) (Zone, error) {
 	return Zone{Name: name, Milli: milli}, nil
 }
 
-// daemonStat читает показания самого демона. RSS берётся из procfs, а не из
-// MemStats: там память, которую рантайм Go вернул системе, всё ещё числится
-// занятой, и сравнивать её с памятью sing-box было бы нечем.
+// daemonStat reads the daemon's own readings. RSS is taken from procfs, not from
+// MemStats: there the memory the Go runtime returned to the system is still counted
+// as occupied, and it would have nothing to be compared with sing-box memory by.
 func daemonStat(proc string) Daemon {
 	var stats runtime.MemStats
 
 	runtime.ReadMemStats(&stats)
 
 	daemon := Daemon{
-		// HeapInuse, а не HeapAlloc: занятые спаны показывают, сколько рантайм
-		// держит под кучу, а не сколько в ней живых объектов.
+		// HeapInuse, not HeapAlloc: occupied spans show how much the runtime
+		// holds for the heap, not how many live objects are in it.
 		Heap:       int64(stats.HeapInuse),
 		Goroutines: runtime.NumGoroutine(),
 	}
@@ -453,9 +453,9 @@ func readTrimmed(path string) (string, error) {
 	return strings.TrimSpace(string(data)), nil
 }
 
-// readKeyedKB разбирает строки вида «MemTotal: 8137308 kB» и переводит их в
-// байты. Ключи, которых в файле нет, остаются нулями: состав `meminfo` и
-// `status` отличается от ядра к ядру.
+// readKeyedKB parses rows like "MemTotal: 8137308 kB" and converts them to
+// bytes. Keys absent from the file stay zeros: the composition of `meminfo` and
+// `status` differs from kernel to kernel.
 func readKeyedKB(path string, keys ...string) (map[string]int64, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {

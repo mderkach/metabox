@@ -15,7 +15,7 @@ import (
 )
 
 func (s *Server) middleware(next http.Handler) http.Handler {
-	// recoverPanic снаружи: паника в логировании иначе уронит процесс.
+	// recoverPanic is outermost: a panic in logging would otherwise crash the process.
 	return recoverPanic(s.log,
 		logRequests(s.log,
 			checkHost(s.log, s.allowedOrigin,
@@ -30,8 +30,8 @@ func recoverPanic(log *slog.Logger, next http.Handler) http.Handler {
 				return
 			}
 
-			// http.ErrAbortHandler — штатный способ оборвать ответ, его
-			// пропускают дальше по стеку нетронутым.
+			// http.ErrAbortHandler is the regular way to abort a response, it is
+			// passed further up the stack untouched.
 			if err, ok := rec.(error); ok && errors.Is(err, http.ErrAbortHandler) {
 				panic(rec)
 			}
@@ -42,10 +42,10 @@ func recoverPanic(log *slog.Logger, next http.Handler) http.Handler {
 				"path", r.URL.Path,
 				"stack", string(debug.Stack()),
 			)
-			// Ответ в формате контракта: панель разбирает тело любой ошибки
-			// и без него показала бы сбой разбора вместо отказа. Паника
-			// посреди уже начатого ответа допишет тело в его хвост — заголовок
-			// к тому времени ушёл, и отказать иначе уже нечем.
+			// The response is in the contract format: the panel parses the body of any error
+			// and without it would show a parse failure instead of the failure. A panic
+			// in the middle of an already started response appends the body to its tail: the header
+			// has gone by then, and there is no other way to refuse.
 			writeJSON(log, w, http.StatusInternalServerError, contract.Error{
 				Code:    contract.ErrInternal,
 				Message: "внутренняя ошибка",
@@ -72,11 +72,11 @@ func logRequests(log *slog.Logger, next http.Handler) http.Handler {
 	})
 }
 
-// checkHost отсекает DNS rebinding: домен атакующего, перекинутый на адрес
-// панели, приходит со своим именем в Host, и для его страницы панель —
-// same-origin, так что проверка Origin такой запрос не ловит. Проверяются все
-// методы: у чтения через rebinding утекают конфиг с секретами и соединения
-// сети.
+// checkHost cuts off DNS rebinding: the attacker's domain pointed at the panel
+// address comes with its own name in Host, and for its page the panel is
+// same-origin, so the Origin check does not catch such a request. All
+// methods are checked: a read through rebinding leaks the config with secrets and the
+// network connections.
 func checkHost(log *slog.Logger, allowedOrigin string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !hostAllowed(r.Host, allowedOrigin) {
@@ -94,16 +94,16 @@ func checkHost(log *slog.Logger, allowedOrigin string, next http.Handler) http.H
 	})
 }
 
-// hostAllowed принимает IP-литерал, localhost и хост из -allowed-origin.
-// Список закрытый: отличить DNS-имя владельца от домена атакующего с
-// перекинутой записью демону не по чему, а легитимный доступ к роутеру идёт
-// по адресу.
+// hostAllowed accepts an IP literal, localhost and the host from -allowed-origin.
+// The list is closed: the daemon has nothing to tell the owner's DNS name from the attacker's domain
+// with a repointed record, and legitimate access to the router goes
+// by address.
 func hostAllowed(hostport, allowedOrigin string) bool {
 	host := hostport
 	if h, _, err := net.SplitHostPort(hostport); err == nil {
 		host = h
 	}
-	// IPv6-литерал без порта приходит в скобках, SplitHostPort его не берёт.
+	// An IPv6 literal without a port comes in brackets, SplitHostPort does not take it.
 	host = strings.TrimSuffix(strings.TrimPrefix(host, "["), "]")
 
 	if host == "" {
@@ -124,9 +124,9 @@ func hostAllowed(hostport, allowedOrigin string) bool {
 	return err == nil && u.Host != "" && strings.EqualFold(host, u.Hostname())
 }
 
-// checkOrigin — единственная защита мутирующих запросов: аутентификации у
-// демона нет, и чужая страница в браузере владельца иначе могла бы применить
-// конфиг его же запросом.
+// checkOrigin is the only protection of mutating requests: the daemon has no
+// authentication, and a foreign page in the owner's browser could otherwise apply
+// a config with the owner's own request.
 func checkOrigin(log *slog.Logger, allowedOrigin string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !mutating(r.Method) {
@@ -136,8 +136,8 @@ func checkOrigin(log *slog.Logger, allowedOrigin string, next http.Handler) http
 
 		origin := r.Header.Get("Origin")
 
-		// Послабление для источника, который задан флагом: сравнивается целиком,
-		// со схемой и портом.
+		// A relaxation for the origin set by a flag: compared whole,
+		// with scheme and port.
 		exempt := allowedOrigin != "" && origin == allowedOrigin
 
 		if !originAllowed(origin, r.Host) && !exempt {
@@ -156,8 +156,8 @@ func checkOrigin(log *slog.Logger, allowedOrigin string, next http.Handler) http
 	})
 }
 
-// originAllowed — правило проверки источника в чистом виде: запрос без Origin
-// отклоняется, иначе хост из Origin обязан совпасть с Host запроса.
+// originAllowed is the origin check rule in pure form: a request without Origin is
+// rejected, otherwise the host from Origin must match the request Host.
 func originAllowed(origin, host string) bool {
 	if origin == "" {
 		return false
@@ -190,8 +190,8 @@ func (r *statusRecorder) WriteHeader(status int) {
 	r.ResponseWriter.WriteHeader(status)
 }
 
-// Unwrap открывает http.ResponseController путь к нижележащему writer'у: без
-// него потоковые ответы теряют Flush и дедлайны записи.
+// Unwrap opens http.ResponseController a path to the underlying writer: without
+// it streaming responses lose Flush and write deadlines.
 func (r *statusRecorder) Unwrap() http.ResponseWriter {
 	return r.ResponseWriter
 }

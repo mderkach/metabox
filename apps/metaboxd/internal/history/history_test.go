@@ -14,16 +14,16 @@ func TestTrafficAveragesStep(t *testing.T) {
 
 	points := traffic.Points()
 	if len(points) != 1 {
-		t.Fatalf("точек: получили %d, ожидали 1", len(points))
+		t.Fatalf("points: got %d, expected 1", len(points))
 	}
 
 	if points[0].Up != 20 || points[0].Down != 200 {
-		t.Errorf("среднее за шаг: получили %+v", points[0])
+		t.Errorf("average per step: got %+v", points[0])
 	}
 }
 
-// Неполный шаг в историю не попадает: иначе последняя точка была бы посчитана
-// по одному сэмплу и провалилась бы вниз на каждом запросе.
+// An incomplete step does not get into the history: otherwise the last point would be counted
+// from one sample and would dip down on every request.
 func TestTrafficKeepsPartialStepOut(t *testing.T) {
 	traffic := history.New(3, 10, 4)
 
@@ -31,12 +31,12 @@ func TestTrafficKeepsPartialStepOut(t *testing.T) {
 	traffic.Record(10, 100)
 
 	if got := len(traffic.Points()); got != 0 {
-		t.Errorf("точек: получили %d, ожидали 0", got)
+		t.Errorf("points: got %d, expected 0", got)
 	}
 }
 
-// Заполненное кольцо не выбрасывает старое, а сливает соседние точки и
-// удваивает шаг: график обязан покрывать всё время работы демона.
+// A filled ring does not drop the old but merges neighbouring points and
+// doubles the step: the chart must cover the whole daemon runtime.
 func TestTrafficWidensStep(t *testing.T) {
 	traffic := history.New(1, 10, 4)
 
@@ -45,23 +45,23 @@ func TestTrafficWidensStep(t *testing.T) {
 	}
 
 	if got := traffic.Step(); got != 10 {
-		t.Fatalf("шаг до заполнения: получили %d, ожидали 10", got)
+		t.Fatalf("step before filling: got %d, expected 10", got)
 	}
 
 	traffic.Record(4, 0)
 
 	if got := traffic.Step(); got != 20 {
-		t.Errorf("шаг после укрупнения: получили %d, ожидали 20", got)
+		t.Errorf("step after coarsening: got %d, expected 20", got)
 	}
 
 	points := traffic.Points()
 	if len(points) != 3 {
-		t.Fatalf("точек: получили %d, ожидали 3", len(points))
+		t.Fatalf("points: got %d, expected 3", len(points))
 	}
 
-	// Пары 0+1 и 2+3 слились в средние, пятая точка легла следом.
+	// Pairs 0+1 and 2+3 merged into averages, the fifth point lay after them.
 	if points[0].Up != 0 || points[1].Up != 2 || points[2].Up != 4 {
-		t.Errorf("слияние точек: получили %+v", points)
+		t.Errorf("point merge: got %+v", points)
 	}
 }
 
@@ -73,12 +73,12 @@ func TestDeviceKeepsOrder(t *testing.T) {
 
 	points := device.Points()
 	if len(points) != 2 || points[0].Load != 0.5 || points[1].Memory != 300 || points[1].Singbox != 30 {
-		t.Errorf("показания платы: получили %+v", points)
+		t.Errorf("board readings: got %+v", points)
 	}
 }
 
-// Перегрев на одно снятие из шага не должен раствориться в соседних: история
-// нужна, чтобы его заметить.
+// An overheating of one reading from a step must not dissolve among the neighbours: the history
+// is needed to notice it.
 func TestDeviceKeepsPeaksAndAveragesMemory(t *testing.T) {
 	device := history.NewDevice(2, 2)
 
@@ -86,24 +86,24 @@ func TestDeviceKeepsPeaksAndAveragesMemory(t *testing.T) {
 	device.Record(history.DevicePoint{Load: 3.5, Celsius: 90, Memory: 300, Singbox: 30})
 	device.Record(history.DevicePoint{Load: 0.1, Celsius: 41, Memory: 100, Singbox: 10})
 	device.Record(history.DevicePoint{Load: 0.1, Celsius: 41, Memory: 100, Singbox: 10})
-	// Кольцо на две точки заполнено: следующая сливает их в одну.
+	// The two-point ring is full: the next one merges them into one.
 	device.Record(history.DevicePoint{Load: 0.1, Celsius: 41, Memory: 100, Singbox: 10})
 	device.Record(history.DevicePoint{Load: 0.1, Celsius: 41, Memory: 100, Singbox: 10})
 
 	points := device.Points()
 	if len(points) != 2 {
-		t.Fatalf("точек %d, ожидали 2: %+v", len(points), points)
+		t.Fatalf("points %d, expected 2: %+v", len(points), points)
 	}
 	if points[0].Load != 3.5 || points[0].Celsius != 90 {
-		t.Errorf("пик шага растворился при слиянии: %+v", points[0])
+		t.Errorf("the step peak dissolved on merge: %+v", points[0])
 	}
 	if points[0].Memory != 150 || points[0].Singbox != 15 {
-		t.Errorf("память шага и слияния — среднее: %+v", points[0])
+		t.Errorf("memory of the step and of the merge is the average: %+v", points[0])
 	}
 }
 
-// График минуты берёт последние сэмплы как есть: демон держит их, пока панель
-// закрыта, и отдаёт ровно минуту.
+// The minute chart takes the last samples as is: the daemon holds them while the panel is
+// closed, and returns exactly a minute.
 func TestTrafficKeepsLastMinuteRaw(t *testing.T) {
 	traffic := history.New(10, 10, 4)
 
@@ -113,7 +113,7 @@ func TestTrafficKeepsLastMinuteRaw(t *testing.T) {
 
 	recent := traffic.Recent()
 	if len(recent) != history.RecentPoints || recent[0].Up != 5 || recent[len(recent)-1].Down != 640 {
-		t.Errorf("последняя минута: получили %d точек, первая %+v, последняя %+v", len(recent), recent[0], recent[len(recent)-1])
+		t.Errorf("last minute: got %d points, first %+v, last %+v", len(recent), recent[0], recent[len(recent)-1])
 	}
 }
 
@@ -126,6 +126,6 @@ func TestConnectionsKeepLastMinute(t *testing.T) {
 
 	recent := connections.Recent()
 	if len(recent) != history.RecentPoints || recent[0] != 3 {
-		t.Errorf("последняя минута соединений: получили %d точек, первая %d", len(recent), recent[0])
+		t.Errorf("last minute of connections: got %d points, first %d", len(recent), recent[0])
 	}
 }

@@ -10,25 +10,25 @@ import (
 )
 
 const (
-	// Временный файл лежит в каталоге назначения — rename атомарен только
-	// внутри одной файловой системы, — но не оканчивается на .json: служба
-	// может подниматься в режиме каталога и слила бы его в конфиг между шагами.
+	// The temporary file lies in the destination directory (rename is atomic only
+	// within one file system) but does not end with .json: the service
+	// may start in directory mode and would merge it into the config between steps.
 	tempPrefix = ".metabox-"
 
-	// Права нового файла конфига и служебных файлов демона: внутри ключи
-	// пользователя. У существующего файла права сохраняются.
+	// Permissions of a new config file and of the daemon service files: they hold
+	// user keys. An existing file keeps its permissions.
 	securePerm fs.FileMode = 0o600
 
-	// Сколько раз пробовать новое случайное имя, прежде чем признать, что
-	// дело не в совпадении.
+	// How many times to try a new random name before concluding that
+	// the cause is not a collision.
 	tempAttempts = 10
 )
 
-// writeAtomic пишет файл так, чтобы сбой питания не оставил полузаписанного
-// результата: временный файл рядом, fsync данных, rename,
-// fsync каталога. Порядок сокращению не подлежит — без fsync данных rename
-// после сбоя даёт файл нулевой длины, без fsync каталога сама запись о новом
-// имени может не пережить сбой.
+// writeAtomic writes a file so that a power failure does not leave a half-written
+// result: a temporary file next to it, fsync of the data, rename,
+// fsync of the directory. The order cannot be shortened: without fsync of the data rename
+// after a crash gives a zero-length file, without fsync of the directory the record of the new
+// name itself may not survive the crash.
 func writeAtomic(root *os.Root, name string, data []byte, perm fs.FileMode) (err error) {
 	tmp, tmpName, err := createTemp(root)
 	if err != nil {
@@ -40,9 +40,9 @@ func writeAtomic(root *os.Root, name string, data []byte, perm fs.FileMode) (err
 		}
 	}()
 
-	// На путях отказа ошибка Close не проверяется намеренно: запись уже
-	// провалилась, файл всё равно удаляется, а подмена причины отказа мешает
-	// разбирать инцидент.
+	// On failure paths the Close error is deliberately not checked: the write has already
+	// failed, the file is deleted anyway, and replacing the failure cause makes
+	// incident analysis harder.
 	if _, err = tmp.Write(data); err != nil {
 		_ = tmp.Close()
 
@@ -70,8 +70,8 @@ func writeAtomic(root *os.Root, name string, data []byte, perm fs.FileMode) (err
 	return syncDir(root)
 }
 
-// createTemp заменяет os.CreateTemp, которого у os.Root нет: имя генерируется
-// сами́м демоном и открывается с O_EXCL, чтобы не подхватить чужой файл.
+// createTemp replaces os.CreateTemp, which os.Root lacks: the name is generated
+// by the daemon itself and opened with O_EXCL so as not to pick up a foreign file.
 func createTemp(root *os.Root) (*os.File, string, error) {
 	for range tempAttempts {
 		name := tempPrefix + rand.Text()
@@ -109,10 +109,10 @@ func syncDir(root *os.Root) error {
 	return nil
 }
 
-// ensureDir создаёт каталог вместе с недостающими родителями и закрепляет
-// каждое созданное звено fsync родителя: без него сбой питания может унести
-// свежий каталог вместе с файлами, которые в нём уже успели синкнуть.
-// Путь приходит флагом, а не снаружи, поэтому идёт мимо os.Root.
+// ensureDir creates a directory together with missing parents and fixes
+// each created link with an fsync of the parent: without it a power failure may take away
+// a fresh directory together with the files already synced in it.
+// The path comes by a flag, not from outside, so it goes around os.Root.
 func ensureDir(dir string) error {
 	info, err := os.Stat(dir)
 	if err == nil {
@@ -150,9 +150,9 @@ func ensureDir(dir string) error {
 	return syncDir(root)
 }
 
-// permOf отдаёт права существующего файла, а для нового — securePerm. Права
-// берутся у файла, а не назначаются константой: владелец мог сузить их
-// осознанно.
+// permOf returns the permissions of an existing file, and securePerm for a new one. The permissions
+// are taken from the file and not assigned by a constant: the owner could have narrowed them
+// deliberately.
 func permOf(root *os.Root, name string) fs.FileMode {
 	info, err := root.Stat(name)
 	if err != nil {

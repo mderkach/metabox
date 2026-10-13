@@ -1,11 +1,11 @@
-// Package config владеет файлом конфига sing-box на устройстве: читает его,
-// пишет атомарно, держит бэкап для отката и раскладывает каталог-кандидат под
-// проверку бинарём. Содержимое пакет не разбирает: конфиг для демона — это
-// последовательность байт.
+// Package config owns the sing-box config file on the device: reads it,
+// writes it atomically, keeps a backup for the rollback and lays out a candidate directory for
+// the binary check. The package does not parse the content: for the daemon the config is
+// a sequence of bytes.
 //
-// Все файловые операции идут через os.Root: демон работает с правами root, а в
-// рабочем каталоге может оказаться симлинк, оставленный владельцем или чужим
-// софтом, — за пределы своего каталога пакет не выходит.
+// All file operations go through os.Root: the daemon runs as root, and the
+// working directory may contain a symlink left by the owner or foreign
+// software, so the package never leaves its directory.
 package config
 
 import (
@@ -23,20 +23,20 @@ import (
 )
 
 var (
-	// ErrNoConfig — конфига на месте нет: ни файла, ни каталога под него.
-	// Штатный случай, на устройстве sing-box могли ещё не настраивать.
+	// ErrNoConfig means there is no config in place, neither a file nor a directory for it.
+	// A regular case, sing-box may not have been configured on the device yet.
 	ErrNoConfig = errors.New("файла конфига нет")
 
-	// ErrNoBackup — откатываться не на что: до применения конфига на
-	// устройстве не было.
+	// ErrNoBackup means nothing to roll back to, the device had no config
+	// before the apply.
 	ErrNoBackup = errors.New("бэкапа нет")
 
-	// ErrNoState — незавершённой транзакции нет, доигрывать нечего.
+	// ErrNoState means there is no unfinished transaction, nothing to replay.
 	ErrNoState = errors.New("состояния транзакции нет")
 )
 
-// Имена служебных файлов в каталоге демона. Они не настраиваются: каталог
-// задаётся флагом, а раскладка внутри него — забота самого демона.
+// Names of service files in the daemon directory. They are not configurable: the directory
+// is set by a flag, and the layout inside it is the daemon's own concern.
 const (
 	backupName   = "config.backup"
 	stateName    = "apply.json"
@@ -45,10 +45,10 @@ const (
 	devicesName  = "devices.json"
 )
 
-// Store — единственный владелец файла конфига и служебного каталога демона:
-// бэкапа, состояния транзакции, истории версий, кэша каталога наборов и своих
-// имён устройств. Один владелец требует Architecture&Style: параллельный
-// доступ закрыт методами, снаружи мьютекса быть не должно.
+// Store is the only owner of the config file and the daemon service directory:
+// backup, transaction state, version history, rule set catalog cache and the
+// device names. A single owner requires Architecture&Style: concurrent
+// access is closed by methods, there must be no mutex outside.
 type Store struct {
 	mu         sync.Mutex
 	dir        string
@@ -56,12 +56,12 @@ type Store struct {
 	serviceDir string
 }
 
-// NewStore принимает каталог конфига, имя файла в нём и служебный каталог
-// демона под бэкап и состояние. Пути приходят флагами, пакет их не выдумывает.
+// NewStore takes the config directory, the file name in it and the daemon service
+// directory for the backup and state. The paths come by flags, the package does not invent them.
 //
-// Служебный каталог внутри каталога конфига служба в режиме каталога слила бы
-// в рабочую конфигурацию, поэтому такая раскладка отвергается на старте, а не
-// выясняется на устройстве.
+// A service directory inside the config directory would be merged by the service in directory mode
+// into the working configuration, so such a layout is rejected at start and not
+// discovered on the device.
 func NewStore(dir, name, serviceDir string) (*Store, error) {
 	if name == "" {
 		return nil, errors.New("имя файла конфига пусто")
@@ -77,8 +77,8 @@ func NewStore(dir, name, serviceDir string) (*Store, error) {
 	return &Store{dir: dir, name: name, serviceDir: serviceDir}, nil
 }
 
-// within отвечает, лежит ли path внутри dir. filepath.Rel даёт путь, ведущий
-// наружу через "..", — по нему и различаем.
+// within reports whether path lies inside dir. filepath.Rel gives a path leading
+// outside through "..", which is how we tell.
 func within(dir, path string) bool {
 	rel, err := filepath.Rel(dir, path)
 	if err != nil {
@@ -88,22 +88,22 @@ func within(dir, path string) bool {
 	return rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
 
-// Path отдаёт полный путь к файлу конфига.
+// Path returns the full path to the config file.
 func (s *Store) Path() string {
 	return filepath.Join(s.dir, s.name)
 }
 
-// BackupPath отдаёт полный путь к бэкапу.
+// BackupPath returns the full path to the backup.
 func (s *Store) BackupPath() string {
 	return filepath.Join(s.serviceDir, backupName)
 }
 
-// StatePath отдаёт полный путь к файлу состояния транзакции.
+// StatePath returns the full path to the transaction state file.
 func (s *Store) StatePath() string {
 	return filepath.Join(s.serviceDir, stateName)
 }
 
-// Read возвращает текущий конфиг. Отсутствие файла или каталога — ErrNoConfig.
+// Read returns the current config. A missing file or directory is ErrNoConfig.
 func (s *Store) Read(ctx context.Context) ([]byte, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -132,8 +132,8 @@ func (s *Store) Read(ctx context.Context) ([]byte, error) {
 	return data, nil
 }
 
-// Sum считает sha256 текущего конфига потоком, не поднимая файл в память:
-// демон работает месяцами, и лишняя копия конфига здесь ни к чему.
+// Sum counts the sha256 of the current config as a stream without raising the file into memory:
+// the daemon runs for months, and an extra copy of the config is pointless here.
 func (s *Store) Sum(ctx context.Context) (string, error) {
 	if err := ctx.Err(); err != nil {
 		return "", err
@@ -162,12 +162,12 @@ func (s *Store) Sum(ctx context.Context) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-// Write кладёт новый конфиг на место старого атомарно. Отказ на любом шаге до
-// rename оставляет прежний файл побайтово нетронутым.
+// Write puts the new config in place of the old one atomically. A failure at any step before
+// rename leaves the previous file untouched byte for byte.
 //
-// Контекст проверяется до начала записи и не прерывает её середину: отмена
-// между fsync и rename дала бы ровно то состояние, от которого защищает
-// атомарная запись.
+// The context is checked before the write starts and does not interrupt its middle: a cancel
+// between fsync and rename would give exactly the state that atomic
+// writing protects against.
 func (s *Store) Write(ctx context.Context, data []byte) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -179,13 +179,13 @@ func (s *Store) Write(ctx context.Context, data []byte) error {
 	return s.write(data)
 }
 
-// Backup сохраняет для отката текущий конфиг и снимок каталога списков.
-// Вызывается до записи нового (шаг 4 протокола применения). Служебный каталог
-// создаётся, если его нет, — как и в WriteState.
+// Backup saves the current config and a snapshot of the lists directory for the rollback.
+// Called before writing the new one (step 4 of the apply protocol). The service directory
+// is created if absent, as in WriteState.
 //
-// Конфига на месте нет — ErrNoConfig, и бэкап прошлой транзакции снимается:
-// владелец мог удалить конфиг по SSH, и откат этого применения обязан вернуть
-// «ничего» (Restore даст ErrNoBackup), а не удалённый конфиг.
+// No config in place is ErrNoConfig, and the backup of the previous transaction is removed:
+// the owner could have deleted the config over SSH, and the rollback of this apply must return
+// "nothing" (Restore gives ErrNoBackup), not the deleted config.
 func (s *Store) Backup(ctx context.Context) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -228,10 +228,10 @@ func (s *Store) Backup(ctx context.Context) error {
 	return s.backupLists(serviceRoot)
 }
 
-// dropBackup снимает бэкап прошлой транзакции вместе со снимком списков и
-// отдаёт ErrNoConfig. Бэкап конфига снимается первым: обрыв на середине
-// оставит снимок списков без бэкапа, а такой Restore не читает. Служебного
-// каталога нет — снимать нечего. Вызывается под mu.
+// dropBackup removes the backup of the previous transaction together with the lists snapshot and
+// returns ErrNoConfig. The config backup is removed first: a break in the middle
+// leaves a lists snapshot without a backup, and Restore does not read such. No service
+// directory means nothing to remove. Called under mu.
 func (s *Store) dropBackup() error {
 	serviceRoot, err := openRoot(s.serviceDir)
 	if errors.Is(err, fs.ErrNotExist) {
@@ -259,9 +259,9 @@ func (s *Store) dropBackup() error {
 	return ErrNoConfig
 }
 
-// backupLists кладёт снимок каталога списков рядом с бэкапом конфига. Снимок
-// сначала собирается целиком под временным именем и только потом подменяет
-// прежний: обрыв на середине не должен оставлять откат без файлов списков.
+// backupLists puts a snapshot of the lists directory next to the config backup. The snapshot
+// is first assembled whole under a temporary name and only then replaces the
+// previous one: a break in the middle must not leave a rollback without list files.
 func (s *Store) backupLists(serviceRoot *os.Root) error {
 	files, err := s.readLists()
 	if err != nil {
@@ -299,8 +299,8 @@ func (s *Store) backupLists(serviceRoot *os.Root) error {
 	return syncDir(serviceRoot)
 }
 
-// Restore возвращает из бэкапа конфиг и каталог списков. Права целевого файла
-// сохраняются: откат не должен менять то, что владелец сузил осознанно.
+// Restore returns the config and the lists directory from the backup. The permissions of the target file
+// are kept: the rollback must not change what the owner narrowed deliberately.
 func (s *Store) Restore(ctx context.Context) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -330,10 +330,10 @@ func (s *Store) Restore(ctx context.Context) error {
 	return s.write(data)
 }
 
-// restoreLists приводит каталог списков к снимку бэкапа: файлы возвращаются
-// побайтово, появившиеся после снимка — удаляются. Чужие имена откат не
-// трогает ни в бэкапе, ни в каталоге. Бэкап без снимка означает, что он снят
-// до появления списков, и каталог не трогается.
+// restoreLists brings the lists directory to the backup snapshot: files are returned
+// byte for byte, those that appeared after the snapshot are deleted. Foreign names the rollback does not
+// touch, neither in the backup nor in the directory. A backup without a snapshot means it was taken
+// before lists appeared, and the directory is not touched.
 func (s *Store) restoreLists(serviceRoot *os.Root) error {
 	backup, err := serviceRoot.OpenRoot(listsBackupName)
 	if errors.Is(err, fs.ErrNotExist) {
@@ -401,15 +401,15 @@ func (s *Store) restoreLists(serviceRoot *os.Root) error {
 	return syncDir(root)
 }
 
-// StageCandidate раскладывает каталог-кандидат: конфиг с новым содержимым,
-// остальные .json рабочего каталога и его подкаталоги целиком. Каталог списков
-// собирается с изменениями транзакции — putLists ложатся поверх текущих
-// файлов, removeLists в кандидата не попадают: проверять надо ровно то, что
-// ляжет на диск после записи. Раскладка повторяет каталог конфига целиком:
-// служба в режиме каталога сливает все его .json, а check идёт с -D на
-// кандидате, и файлы, на которые конфиг ссылается относительным путём,
-// обязаны лежать в нём той же раскладкой.
-// Каталог создаёт и удаляет вызывающий.
+// StageCandidate lays out a candidate directory: the config with the new content,
+// the other .json files of the working directory and its subdirectories whole. The lists directory
+// is assembled with the transaction changes: putLists lie over the current
+// files, removeLists do not get into the candidate: exactly what will land on disk after the write
+// must be checked. The layout repeats the whole config directory:
+// the service in directory mode merges all its .json, and check runs with -D on
+// the candidate, and files the config refers to by a relative path
+// must lie in it in the same layout.
+// The directory is created and removed by the caller.
 func (s *Store) StageCandidate(
 	ctx context.Context,
 	dst string,
@@ -453,10 +453,10 @@ func (s *Store) StageCandidate(
 			continue
 		}
 
-		// Симлинки не отсеиваются: тот, что ведёт внутрь каталога, сервис
-		// прочитает и сольёт, значит кандидат обязан его содержать. Тот, что
-		// ведёт наружу, os.Root не откроет — и Apply остановится с ошибкой,
-		// потому что сервис на таком каталоге всё равно не поднимется.
+		// Symlinks are not filtered out: one leading inside the directory is
+		// read and merged by the service, so the candidate must contain it. One
+		// leading outside is not opened by os.Root, and Apply stops with an error,
+		// since the service on such a directory will not start anyway.
 		if err := copyFile(srcRoot, dstRoot, entry.Name()); err != nil {
 			return err
 		}
@@ -473,10 +473,10 @@ func (s *Store) StageCandidate(
 	return nil
 }
 
-// stageLists ложит изменения транзакции поверх скопированного каталога
-// списков: removeLists из кандидата убираются, putLists записываются. Всё
-// остальное содержимое подкаталога — вложенные каталоги, чужие файлы — уже
-// скопировано как есть: проверяется ровно то, что ляжет на диск.
+// stageLists lays the transaction changes over the copied lists
+// directory: removeLists are removed from the candidate, putLists are written. All
+// other subdirectory content, nested directories and foreign files, is already
+// copied as is: exactly what will land on disk is checked.
 func (s *Store) stageLists(dstRoot *os.Root, put map[string][]byte, remove []string) error {
 	if len(put) == 0 && len(remove) == 0 {
 		return nil
@@ -507,7 +507,7 @@ func (s *Store) stageLists(dstRoot *os.Root, put map[string][]byte, remove []str
 	return nil
 }
 
-// write выполняет запись под уже взятым мьютексом.
+// write performs the write under an already taken mutex.
 func (s *Store) write(data []byte) error {
 	root, err := openRoot(s.dir)
 	if err != nil {
@@ -527,9 +527,9 @@ func openRoot(dir string) (*os.Root, error) {
 	return root, nil
 }
 
-// copyTree копирует подкаталог рекурсивно. Симлинк на файл разрешается как и
-// на верхнем уровне: внутрь каталога — копируется содержимое цели, наружу —
-// os.Root его не откроет и раскладка остановится с ошибкой.
+// copyTree copies a subdirectory recursively. A symlink to a file is resolved as at
+// the top level: inside the directory, the target content is copied; outside,
+// os.Root will not open it and the layout stops with an error.
 func copyTree(src, dst *os.Root, dir string) error {
 	return fs.WalkDir(src.FS(), dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -573,14 +573,14 @@ func copyFile(src, dst *os.Root, name string) error {
 	return nil
 }
 
-// ReadState отдаёт сохранённое состояние транзакции. Отсутствие файла —
-// штатный случай: демон стартовал с чистого листа.
+// ReadState returns the saved transaction state. A missing file is a
+// regular case: the daemon started from a clean slate.
 func (s *Store) ReadState(ctx context.Context) ([]byte, error) {
 	return s.readState(ctx, stateName)
 }
 
-// ReadPlaneState — то же для транзакции смены модели обвязки: у неё свой файл,
-// потому что доигрывается она своим владельцем.
+// ReadPlaneState is the same for the dataplane model change transaction: it has its own file
+// because it is replayed by its own owner.
 func (s *Store) ReadPlaneState(ctx context.Context) ([]byte, error) {
 	return s.readState(ctx, planeName)
 }
@@ -610,16 +610,16 @@ func (s *Store) readState(ctx context.Context, name string) ([]byte, error) {
 	return data, nil
 }
 
-// WriteState сохраняет состояние транзакции атомарно. Вызывается до записи
-// конфига: питание, снятое между записью и стартом таймера, иначе оставило бы
-// устройство на новом конфиге без автоотката. Служебный каталог создаётся,
-// если его нет: демон, запущенный не init-скриптом, иначе валил бы первый Apply.
+// WriteState saves the transaction state atomically. Called before writing the
+// config: a power loss between the write and the timer start would otherwise leave
+// the device on the new config without an automatic rollback. The service directory is created
+// if absent: a daemon started not by the init script would otherwise fail the first Apply.
 func (s *Store) WriteState(ctx context.Context, data []byte) error {
 	return s.writeState(ctx, stateName, data)
 }
 
-// WritePlaneState сохраняет состояние транзакции смены модели обвязки
-// атомарно, до записи модели в UCI.
+// WritePlaneState saves the dataplane model change transaction state
+// atomically, before the model is written to UCI.
 func (s *Store) WritePlaneState(ctx context.Context, data []byte) error {
 	return s.writeState(ctx, planeName, data)
 }
@@ -645,13 +645,13 @@ func (s *Store) writeState(ctx context.Context, name string, data []byte) error 
 	return writeAtomic(root, name, data, securePerm)
 }
 
-// ClearState убирает состояние завершённой транзакции. Отсутствие файла
-// ошибкой не считается: доигрывать нечего.
+// ClearState removes the state of a finished transaction. A missing file
+// is not an error: nothing to replay.
 func (s *Store) ClearState(ctx context.Context) error {
 	return s.clearState(ctx, stateName)
 }
 
-// ClearPlaneState убирает состояние завершённой смены модели обвязки.
+// ClearPlaneState removes the state of a finished dataplane model change.
 func (s *Store) ClearPlaneState(ctx context.Context) error {
 	return s.clearState(ctx, planeName)
 }
@@ -677,9 +677,9 @@ func (s *Store) clearState(ctx context.Context, name string) error {
 	return syncDir(root)
 }
 
-// ReadRuleSets отдаёт сохранённый каталог наборов. Отсутствие файла или
-// служебного каталога — ошибка, для которой errors.Is(err, fs.ErrNotExist):
-// демон ещё не сверялся с поставщиками.
+// ReadRuleSets returns the saved rule set catalog. A missing file or
+// service directory is an error for which errors.Is(err, fs.ErrNotExist) holds:
+// the daemon has not yet checked with the providers.
 func (s *Store) ReadRuleSets(ctx context.Context) ([]byte, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -702,9 +702,9 @@ func (s *Store) ReadRuleSets(ctx context.Context) ([]byte, error) {
 	return data, nil
 }
 
-// WriteRuleSets сохраняет каталог наборов атомарно. Служебный каталог
-// создаётся, если его ещё нет: сверка может случиться раньше первого
-// применения.
+// WriteRuleSets saves the rule set catalog atomically. The service directory
+// is created if it does not exist yet: the check may happen before the first
+// apply.
 func (s *Store) WriteRuleSets(ctx context.Context, data []byte) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -726,9 +726,9 @@ func (s *Store) WriteRuleSets(ctx context.Context, data []byte) error {
 	return writeAtomic(root, ruleSetsName, data, securePerm)
 }
 
-// ReadDevices отдаёт сохранённые имена устройств. Отсутствие файла или
-// служебного каталога — ошибка, для которой errors.Is(err, fs.ErrNotExist):
-// имён ещё не задавали.
+// ReadDevices returns the saved device names. A missing file or
+// service directory is an error for which errors.Is(err, fs.ErrNotExist) holds:
+// names have not been set yet.
 func (s *Store) ReadDevices(ctx context.Context) ([]byte, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -751,8 +751,8 @@ func (s *Store) ReadDevices(ctx context.Context) ([]byte, error) {
 	return data, nil
 }
 
-// WriteDevices сохраняет имена устройств атомарно. Служебный каталог
-// создаётся, если его ещё нет: имя могут задать раньше первого применения.
+// WriteDevices saves the device names atomically. The service directory
+// is created if it does not exist yet: a name may be set before the first apply.
 func (s *Store) WriteDevices(ctx context.Context, data []byte) error {
 	if err := ctx.Err(); err != nil {
 		return err

@@ -7,16 +7,16 @@ import (
 	"fmt"
 )
 
-// errNotObject — значение оказалось не объектом, вставлять в него член нечего.
+// errNotObject: the value turned out not to be an object, there is no member to insert into it.
 var errNotObject = errors.New("значение не объект")
 
-// span — границы значения в исходных байтах: [start, end).
+// span is the boundaries of a value in the original bytes: [start, end).
 type span struct {
 	start int
 	end   int
 }
 
-// objectStart находит начало объекта верхнего уровня: индекс его '{'.
+// objectStart finds the start of the top-level object: the index of its '{'.
 func objectStart(data []byte) (int, error) {
 	for i, b := range data {
 		if isSpace(b) {
@@ -32,10 +32,10 @@ func objectStart(data []byte) (int, error) {
 	return 0, errors.New("конфиг пуст")
 }
 
-// findMember ищет член объекта, начинающегося на data[start], и отдаёт границы
-// его значения в координатах data. Границы нужны, чтобы править байты точечно:
-// разбор в структуру и обратная сериализация переписали бы порядок ключей
-// пользователя.
+// findMember looks for a member of the object starting at data[start] and returns the boundaries of
+// its value in data coordinates. The boundaries are needed to edit bytes surgically:
+// parsing into a struct and reverse serialization would rewrite the order of the
+// user's keys.
 func findMember(data []byte, start int, key string) (span, bool, error) {
 	dec := json.NewDecoder(bytes.NewReader(data[start:]))
 
@@ -67,9 +67,9 @@ func findMember(data []byte, start int, key string) (span, bool, error) {
 	return span{}, false, nil
 }
 
-// insertMember дописывает член в начало объекта. В начало, а не в конец: так
-// не приходится искать закрывающую скобку и разбирать хвостовые пробелы, а
-// порядок остальных ключей остаётся прежним.
+// insertMember appends a member at the start of the object. At the start, not the end: this way
+// there is no need to look for the closing bracket and parse trailing whitespace, and
+// the order of the other keys stays as it was.
 func insertMember(data []byte, objStart int, text string) []byte {
 	at := objStart + 1
 	indent := indentAfterBrace(data, objStart)
@@ -85,7 +85,7 @@ func insertMember(data []byte, objStart int, text string) []byte {
 	return append(out, data[at:]...)
 }
 
-// replaceSpan меняет значение на месте, не трогая ничего вокруг.
+// replaceSpan replaces a value in place, touching nothing around it.
 func replaceSpan(data []byte, at span, text string) []byte {
 	out := make([]byte, 0, len(data)-(at.end-at.start)+len(text))
 	out = append(out, data[:at.start]...)
@@ -94,9 +94,9 @@ func replaceSpan(data []byte, at span, text string) []byte {
 	return append(out, data[at.end:]...)
 }
 
-// indentAfterBrace отдаёт пробелы сразу за '{'. Вставка повторяет их, и в
-// человекочитаемом конфиге новая секция встаёт на своё место, а не слипается
-// с предыдущей строкой.
+// indentAfterBrace returns the whitespace right after '{'. The insertion repeats it, and in
+// a human-readable config the new section lands in its place and does not stick
+// to the previous line.
 func indentAfterBrace(data []byte, objStart int) string {
 	i := objStart + 1
 	for i < len(data) && isSpace(data[i]) {

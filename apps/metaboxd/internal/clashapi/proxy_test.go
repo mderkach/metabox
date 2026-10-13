@@ -26,9 +26,9 @@ func TestProxyForwardsToController(t *testing.T) {
 		wantPath string
 		wantAuth string
 	}{
-		{"префикс снимается", clashapi.Prefix + "/rules", "", "/rules", ""},
-		{"вложенный путь", clashapi.Prefix + "/providers/proxies", "", "/providers/proxies", ""},
-		{"секрет подставляет демон", clashapi.Prefix + "/version", "s3cret", "/version", "Bearer s3cret"},
+		{"prefix is stripped", clashapi.Prefix + "/rules", "", "/rules", ""},
+		{"nested path", clashapi.Prefix + "/providers/proxies", "", "/providers/proxies", ""},
+		{"the daemon sets the secret", clashapi.Prefix + "/version", "s3cret", "/version", "Bearer s3cret"},
 	}
 
 	for _, tt := range tests {
@@ -47,29 +47,29 @@ func TestProxyForwardsToController(t *testing.T) {
 				func(w http.ResponseWriter, _ *http.Request, _ error) { w.WriteHeader(http.StatusBadGateway) },
 			)
 			if err != nil {
-				t.Fatalf("сборка прокси: %v", err)
+				t.Fatalf("proxy build: %v", err)
 			}
 
 			rec := httptest.NewRecorder()
 			proxy.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, tt.request, nil))
 
 			if rec.Code != http.StatusOK {
-				t.Fatalf("код ответа: получили %d, ожидали %d", rec.Code, http.StatusOK)
+				t.Fatalf("response code: got %d, expected %d", rec.Code, http.StatusOK)
 			}
 
 			if gotPath != tt.wantPath {
-				t.Errorf("путь у контроллера: получили %q, ожидали %q", gotPath, tt.wantPath)
+				t.Errorf("controller path: got %q, expected %q", gotPath, tt.wantPath)
 			}
 
 			if gotAuth != tt.wantAuth {
-				t.Errorf("заголовок авторизации: получили %q, ожидали %q", gotAuth, tt.wantAuth)
+				t.Errorf("authorization header: got %q, expected %q", gotAuth, tt.wantAuth)
 			}
 		})
 	}
 }
 
-// Заголовок, пришедший от браузера, до контроллера доходить не должен: секрет
-// ставит демон, и подделать его со страницы нельзя.
+// A header that came from the browser must not reach the controller: the secret
+// is set by the daemon and cannot be forged from a page.
 func TestProxyDropsClientCredentials(t *testing.T) {
 	var gotAuth, gotCookie string
 
@@ -85,7 +85,7 @@ func TestProxyDropsClientCredentials(t *testing.T) {
 		func(w http.ResponseWriter, _ *http.Request, _ error) { w.WriteHeader(http.StatusBadGateway) },
 	)
 	if err != nil {
-		t.Fatalf("сборка прокси: %v", err)
+		t.Fatalf("proxy build: %v", err)
 	}
 
 	request := httptest.NewRequest(http.MethodGet, clashapi.Prefix+"/version", nil)
@@ -95,18 +95,18 @@ func TestProxyDropsClientCredentials(t *testing.T) {
 	proxy.ServeHTTP(httptest.NewRecorder(), request)
 
 	if gotAuth != "" {
-		t.Errorf("авторизация клиента дошла до контроллера: %q", gotAuth)
+		t.Errorf("client authorization reached the controller: %q", gotAuth)
 	}
 
 	if gotCookie != "" {
-		t.Errorf("кука клиента дошла до контроллера: %q", gotCookie)
+		t.Errorf("client cookie reached the controller: %q", gotCookie)
 	}
 }
 
-// Контроллер с незаданным access_control_allow_origin отвечает
-// Access-Control-Allow-Origin: * на всё. Наружу эти заголовки уходить не
-// должны: прокси авторизует запросы секретом, и с ними ветку /api/clash/*
-// читал бы любой сайт в браузере пользователя.
+// A controller with an unset access_control_allow_origin answers
+// Access-Control-Allow-Origin: * to everything. These headers must not go outside:
+// the proxy authorizes requests with the secret, and with them the /api/clash/* branch
+// would be readable by any site in the user's browser.
 func TestProxyStripsUpstreamCORS(t *testing.T) {
 	controller := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -121,19 +121,19 @@ func TestProxyStripsUpstreamCORS(t *testing.T) {
 		func(w http.ResponseWriter, _ *http.Request, _ error) { w.WriteHeader(http.StatusBadGateway) },
 	)
 	if err != nil {
-		t.Fatalf("сборка прокси: %v", err)
+		t.Fatalf("proxy build: %v", err)
 	}
 
 	rec := httptest.NewRecorder()
 	proxy.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, clashapi.Prefix+"/connections", nil))
 
 	if rec.Code != http.StatusOK {
-		t.Fatalf("код ответа: получили %d, ожидали %d", rec.Code, http.StatusOK)
+		t.Fatalf("response code: got %d, expected %d", rec.Code, http.StatusOK)
 	}
 
 	for name := range rec.Header() {
 		if strings.HasPrefix(name, "Access-Control-") {
-			t.Errorf("%s дошёл до клиента: %q", name, rec.Header().Get(name))
+			t.Errorf("%s reached the client: %q", name, rec.Header().Get(name))
 		}
 	}
 }
@@ -144,18 +144,18 @@ func TestProxyReportsUnreachableController(t *testing.T) {
 		resolve clashapi.Resolver
 	}{
 		{
-			"настройки не прочитаны",
+			"settings not read",
 			func(context.Context) (clashapi.Settings, error) {
 				return clashapi.Settings{}, errors.New("нет конфига")
 			},
 		},
 		{
-			"адрес контроллера пуст",
+			"controller address empty",
 			resolver("", ""),
 		},
 		{
-			"контроллер не отвечает",
-			// Порт 0 не слушает никто: соединение отвергается сразу.
+			"controller does not answer",
+			// Nobody listens on port 0: the connection is refused at once.
 			resolver("127.0.0.1:0", ""),
 		},
 	}
@@ -166,21 +166,21 @@ func TestProxyReportsUnreachableController(t *testing.T) {
 				w.WriteHeader(http.StatusBadGateway)
 			})
 			if err != nil {
-				t.Fatalf("сборка прокси: %v", err)
+				t.Fatalf("proxy build: %v", err)
 			}
 
 			rec := httptest.NewRecorder()
 			proxy.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, clashapi.Prefix+"/version", nil))
 
 			if rec.Code != http.StatusBadGateway {
-				t.Errorf("код ответа: получили %d, ожидали %d", rec.Code, http.StatusBadGateway)
+				t.Errorf("response code: got %d, expected %d", rec.Code, http.StatusBadGateway)
 			}
 		})
 	}
 }
 
-// Поток отдаётся по мере поступления: буферизация превратила бы посекундные
-// сэмплы трафика в одну пачку.
+// The stream is passed on as it arrives: buffering would turn per-second
+// traffic samples into one batch.
 func TestProxyStreamsWithoutBuffering(t *testing.T) {
 	released := make(chan struct{})
 
@@ -197,26 +197,26 @@ func TestProxyStreamsWithoutBuffering(t *testing.T) {
 		func(w http.ResponseWriter, _ *http.Request, _ error) { w.WriteHeader(http.StatusBadGateway) },
 	)
 	if err != nil {
-		t.Fatalf("сборка прокси: %v", err)
+		t.Fatalf("proxy build: %v", err)
 	}
 
 	front := httptest.NewServer(proxy)
 	defer front.Close()
 
-	response, err := http.Get(front.URL + clashapi.Prefix + "/traffic") //nolint:noctx // дедлайн задаёт t.Deadline теста
+	response, err := http.Get(front.URL + clashapi.Prefix + "/traffic") //nolint:noctx // the deadline is set by the test t.Deadline
 	if err != nil {
-		t.Fatalf("запрос потока: %v", err)
+		t.Fatalf("stream request: %v", err)
 	}
 	defer func() { _ = response.Body.Close() }()
 
 	buf := make([]byte, len("{\"up\":1}\n"))
 	if _, err := io.ReadFull(response.Body, buf); err != nil {
-		t.Fatalf("первый сэмпл не пришёл до конца ответа: %v", err)
+		t.Fatalf("first sample did not arrive before the end of the response: %v", err)
 	}
 
 	close(released)
 
 	if got := string(buf); got != "{\"up\":1}\n" {
-		t.Errorf("первый сэмпл: получили %q", got)
+		t.Errorf("first sample: got %q", got)
 	}
 }

@@ -1,10 +1,10 @@
-// Package contract объявляет формы, которые демон отдаёт наружу.
+// Package contract declares the shapes the daemon returns outside.
 //
-// Пакет существует, чтобы у контракта была явная граница: панель строит схемы
-// по этим типам, и приватная структура хендлера контрактом быть не
-// может — её переименование молча доходило бы до панели. Доменные типы,
-// попадающие в ответ целиком, остаются в своих пакетах: contract ссылается на
-// них, а не копирует.
+// The package exists so the contract has an explicit boundary: the panel builds schemas
+// from these types, and a private handler struct cannot be a contract,
+// since its rename would silently reach the panel. Domain types
+// that go into a response whole stay in their own packages: contract refers to
+// them and does not copy them.
 package contract
 
 import (
@@ -16,332 +16,331 @@ import (
 	"metabox/internal/logs"
 )
 
-// Health — ответ `GET /healthz`.
+// Health is the response of `GET /healthz`.
 type Health struct {
 	Status  string `json:"status"`
 	Version string `json:"version"`
 }
 
-// Status — ответ `GET /api/status`.
+// Status is the response of `GET /api/status`.
 type Status struct {
-	// Version — версия демона; версия бинаря sing-box идёт отдельным полем.
+	// Version is the daemon version; the sing-box binary version is a separate field.
 	Version        string `json:"version"`
 	SingboxVersion string `json:"singbox_version,omitempty"`
-	// SingboxBuild — состав сборки бинаря. Нет поля — бинарь не прочитан, и
-	// судить, каких типов узлов в нём нет, панели не по чему.
+	// SingboxBuild is the binary build composition. No field means the binary was not read, and
+	// the panel has nothing to judge which node types are missing in it by.
 	SingboxBuild *SingboxBuild `json:"singbox_build,omitempty"`
-	// ConfigPath — файл, которым демон владеет: путь задаётся флагами запуска,
-	// и вычислить его на стороне панели нельзя.
+	// ConfigPath is the file the daemon owns: the path is set by start flags,
+	// and the panel side cannot compute it.
 	ConfigPath string `json:"config_path,omitempty"`
-	// Runtime — откуда демон читает рантайм. Молчаливая подмена одного источника
-	// другим запрещена, поэтому состав объявлен контрактом.
+	// Runtime is where the daemon reads the runtime from. A silent swap of one source for
+	// another is forbidden, so the composition is declared by the contract.
 	Runtime     Runtime            `json:"runtime"`
 	Transaction *apply.Transaction `json:"transaction,omitempty"`
-	// TransactionHref — адрес идущего применения. Без него перезагрузка
-	// страницы теряет транзакцию: её идентификатор жил только в ответе на
+	// TransactionHref is the address of the running apply. Without it a page reload
+	// loses the transaction: its identifier lived only in the response to
 	// POST.
 	TransactionHref string `json:"transaction_href,omitempty"`
-	// DataplaneTransaction — последняя смена модели обвязки в этой жизни
-	// демона. Идёт тем же протоколом и с теми же фазами, что применение
-	// конфига, и одновременно с ним не бывает.
+	// DataplaneTransaction is the last dataplane model change in this daemon
+	// lifetime. It goes by the same protocol and with the same phases as a config
+	// apply, and never runs at the same time as it.
 	DataplaneTransaction *apply.Transaction `json:"dataplane_transaction,omitempty"`
-	// DataplaneTransactionHref — адрес смены обвязки, по тому же правилу, что
+	// DataplaneTransactionHref is the address of the dataplane change, by the same rule as
 	// TransactionHref.
 	DataplaneTransactionHref string `json:"dataplane_transaction_href,omitempty"`
 }
 
-// SingboxBuild — то, с чем собран бинарь sing-box на устройстве.
+// SingboxBuild is what the sing-box binary on the device is built with.
 type SingboxBuild struct {
-	// Tags — build-теги из `sing-box version`. Пустой список значит сборку без
-	// тегов: типы узлов, закрытые тегом, такой бинарь откажется запускать.
+	// Tags are the build tags from `sing-box version`. An empty list means a build without
+	// tags: node types gated by a tag will be refused by such a binary.
 	Tags []string `json:"tags"`
 }
 
-// RuntimeSource — источник рантайм-данных.
+// RuntimeSource is a runtime data source.
 type RuntimeSource string
 
-// SourceClashAPI — Clash API sing-box: базовый источник и пока единственный.
-// gRPC-ветка ждёт замера на целевом железе.
+// SourceClashAPI is the sing-box Clash API: the base source and so far the only one.
+// The gRPC branch waits for a measurement on the target hardware.
 const SourceClashAPI RuntimeSource = "clash_api"
 
-// Runtime — источники рантайма в `GET /api/status`.
+// Runtime is the runtime sources in `GET /api/status`.
 //
-// Поля отвечают, что демон умеет читать, а не отвечает ли sing-box сейчас:
-// живость процесса идёт `GET /api/service` и топиком `service` потока, и второй
-// правды о ней здесь не заводится.
+// The fields answer what the daemon can read, not whether sing-box answers now:
+// process liveness goes through `GET /api/service` and the `service` stream topic, and no second
+// truth about it is introduced here.
 type Runtime struct {
-	// Sources — источники, которые демон собрал.
+	// Sources are the sources the daemon assembled.
 	Sources []RuntimeSource `json:"sources"`
-	// Connections — источник, из которого панель получает соединения. Пустая
-	// строка означает, что читать их нечем: экран деградирует, а панель
-	// остаётся доступной.
+	// Connections is the source the panel gets connections from. An empty
+	// string means there is nothing to read them with: the screen degrades, and the panel
+	// stays available.
 	Connections RuntimeSource `json:"connections,omitempty"`
 }
 
-// Versions — ответ `GET /api/config/versions`.
+// Versions is the response of `GET /api/config/versions`.
 type Versions struct {
 	Versions []config.Version `json:"versions"`
-	// CurrentSum — sha256 применённого конфига в той же записи, что у
-	// `Version.Sum`: по нему панель отмечает версию, совпадающую с файлом на
-	// устройстве. Считает демон, потому что `crypto.subtle` браузер даёт только
-	// в защищённом контексте, а панель открывают по http. Поля нет — конфига на
-	// устройстве нет.
+	// CurrentSum is the sha256 of the applied config in the same notation as
+	// `Version.Sum`: the panel marks the version matching the file on the
+	// device by it. Computed by the daemon because the browser gives `crypto.subtle` only
+	// in a secure context, and the panel is opened over http. No field means there is no config on the
+	// device.
 	CurrentSum string `json:"current_sum,omitempty"`
-	// CurrentListsSum — отпечаток текущего набора файлов списков в той же
-	// записи, что у `Version.ListsSum`: версия совпадает с устройством, только
-	// когда совпадают и конфиг, и списки. Поля нет у демона, который снимков
-	// списков не хранит.
+	// CurrentListsSum is the fingerprint of the current list file set in the same
+	// notation as `Version.ListsSum`: a version matches the device only
+	// when both the config and the lists match. The field is absent from a daemon that does not
+	// store list snapshots.
 	CurrentListsSum string `json:"current_lists_sum,omitempty"`
 }
 
-// Service — ответ `GET /api/service` и того же вида событие потока: панель
-// получает один формат независимо от источника.
+// Service is the response of `GET /api/service` and an event of the same form in the stream: the panel
+// gets one format regardless of the source.
 type Service struct {
 	Status string `json:"status"`
-	// Uptime — секунды с момента старта. Ноль означает, что возраст узнать не
-	// удалось: панель показывает такое значение прочерком.
+	// Uptime is seconds since the start. Zero means the age could not be
+	// learned: the panel shows such a value as a dash.
 	Uptime int `json:"uptime"`
-	// Binary — версия бинаря на устройстве. Схему панель знает свою и сверяет
-	// расхождение сама.
+	// Binary is the binary version on the device. The panel knows its own schema and checks
+	// the mismatch itself.
 	Binary string `json:"binary"`
-	// Managed означает, что процессом владеет служба, которой управляет демон.
-	// Ложь при статусе `running` читается так: sing-box на устройстве работает,
-	// но поднят не ею — маршрутизацией владеет чужой пакет, и кнопки службы к
-	// этому процессу не относятся.
+	// Managed means the process is owned by the service the daemon manages.
+	// False with the status `running` reads as: sing-box on the device works,
+	// but was started not by it: routing is owned by a foreign package, and the service buttons do not
+	// apply to this process.
 	Managed   bool   `json:"managed"`
 	LastError string `json:"lastError,omitempty"`
-	// LastErrorCode — почему LastError написал демон, а не служба. Пусто,
-	// когда в LastError вывод упавшей службы: его панель показывает дословно.
+	// LastErrorCode is why LastError was written by the daemon and not by the service. Empty
+	// when LastError holds the output of a failed service: the panel shows it verbatim.
 	LastErrorCode ServiceErrorCode `json:"lastErrorCode,omitempty"`
 }
 
-// ServiceErrorCode — отказ, из-за которого состояние службы подставлено, а не
-// прочитано. Набор закрытый: по коду панель выбирает текст на языке
-// пользователя, а LastError остаётся подробностью.
+// ServiceErrorCode is a failure because of which the service state is substituted and not
+// read. The set is closed: the panel picks the text in the user's language by the code, and
+// LastError stays as a detail.
 type ServiceErrorCode string
 
-// ServiceStateUnread — procd не ответил о службе sing-box. Статус `stopped` в
-// таком ответе не наблюдён, а подставлен.
+// ServiceStateUnread means procd did not answer about the sing-box service. The `stopped` status in
+// such a response is not observed but substituted.
 const ServiceStateUnread ServiceErrorCode = "service_state_unread"
 
-// ServiceInstanceAmbiguous — у службы несколько инстансов procd, а имя
-// инстанса демону не задано: какой из них sing-box, он не угадывает.
+// ServiceInstanceAmbiguous means the service has several procd instances, and the instance
+// name is not set for the daemon: it does not guess which one is sing-box.
 const ServiceInstanceAmbiguous ServiceErrorCode = "service_instance_ambiguous"
 
-// History — ответ `GET /api/history`: трафик за всё время, что копил демон.
+// History is the response of `GET /api/history`: traffic over the whole time the daemon accumulated.
 //
-// Время точки не передаётся: часов у роутера до синхронизации NTP нет, и
-// абсолютная метка соврала бы. Точки идут подряд с шагом StepSeconds, последняя
-// — самая свежая, а подписи оси панель считает по своим часам.
+// The point time is not transmitted: the router has no clock before NTP synchronization, and
+// an absolute stamp would lie. The points go in sequence with the step StepSeconds, the last
+// is the freshest, and the axis labels are computed by the panel from its own clock.
 type History struct {
 	StepSeconds int             `json:"step_seconds"`
 	Points      []history.Point `json:"points"`
-	// Device — показания платы тем же шагом: загрузка, температура, память.
+	// Device is the board readings with the same step: load, temperature, memory.
 	Device []history.DevicePoint `json:"device"`
-	// Recent — последняя минута трафика по секунде, без усреднения. Пуста,
-	// пока демон не получил ни одного сэмпла.
+	// Recent is the last minute of traffic per second, without averaging. Empty
+	// until the daemon has received a single sample.
 	Recent []history.Point `json:"recent"`
-	// Connections — число живых соединений за последнюю минуту, по снимку в
-	// секунду.
+	// Connections is the number of live connections over the last minute, one snapshot
+	// per second.
 	Connections []int `json:"connections"`
 }
 
-// ErrorCode — машинный идентификатор отказа. Набор закрытый и объявлен здесь,
-// а не строками по хендлерам: по коду панель выбирает текст на языке
-// пользователя, поэтому новый код — это изменение контракта, а не детали
-// реализации.
+// ErrorCode is a machine identifier of a failure. The set is closed and declared here,
+// not as strings in handlers: the panel picks the text in the user's language by the code,
+// so a new code is a contract change, not an implementation
+// detail.
 type ErrorCode string
 
 const (
-	// ErrNotFound — ручки под таким адресом нет.
+	// ErrNotFound means there is no handler at this address.
 	ErrNotFound ErrorCode = "not_found"
-	// ErrOriginMismatch — источник мутирующего запроса не совпал с адресом панели.
+	// ErrOriginMismatch means the origin of a mutating request did not match the panel address.
 	ErrOriginMismatch ErrorCode = "origin_mismatch"
-	// ErrUpgradeUnsupported — попытка поднять WebSocket: рантайм идёт потоком
+	// ErrUpgradeUnsupported means an attempt to raise a WebSocket: the runtime goes as a stream
 	// `/api/events`.
 	ErrUpgradeUnsupported ErrorCode = "upgrade_unsupported"
-	// ErrConfigMissing — файла конфига на устройстве нет.
+	// ErrConfigMissing means there is no config file on the device.
 	ErrConfigMissing ErrorCode = "config_missing"
-	// ErrVersionMissing — такой версии в истории нет.
+	// ErrVersionMissing means there is no such version in the history.
 	ErrVersionMissing ErrorCode = "version_missing"
-	// ErrConnectionMissing — соединение закрылось, пока панель спрашивала о нём.
+	// ErrConnectionMissing means the connection closed while the panel was asking about it.
 	ErrConnectionMissing ErrorCode = "connection_missing"
-	// ErrRuntimeUnavailable — рантайм sing-box не отвечает; сам демон при этом жив.
+	// ErrRuntimeUnavailable means the sing-box runtime does not answer; the daemon itself is alive.
 	ErrRuntimeUnavailable ErrorCode = "runtime_unavailable"
-	// ErrUnknownTransaction — транзакции применения с таким идентификатором нет.
+	// ErrUnknownTransaction means there is no apply transaction with such an identifier.
 	ErrUnknownTransaction ErrorCode = "unknown_transaction"
-	// ErrApplyInProgress — применение уже идёт, второе не начинается.
+	// ErrApplyInProgress means an apply is already running, a second does not start.
 	ErrApplyInProgress ErrorCode = "apply_in_progress"
-	// ErrNothingToConfirm — подтверждать нечего: окна подтверждения нет.
+	// ErrNothingToConfirm means nothing to confirm, there is no confirmation window.
 	ErrNothingToConfirm ErrorCode = "nothing_to_confirm"
-	// ErrConfigModified — файл конфига изменён мимо metabox, и правка легла бы
-	// на чужой текст.
+	// ErrConfigModified means the config file was changed bypassing metabox, and the edit would lie
+	// over foreign text.
 	ErrConfigModified ErrorCode = "config_modified"
-	// ErrConfigTooLarge — тело запроса длиннее допустимого.
+	// ErrConfigTooLarge means the request body is longer than allowed.
 	ErrConfigTooLarge ErrorCode = "config_too_large"
-	// ErrListInvalid — файл списка не принят: имя вне правил подкаталога
-	// rule-sets либо конверт применения не разобран.
+	// ErrListInvalid means the list file was not accepted: the name is outside the rules of the
+	// rule-sets subdirectory or the apply envelope was not parsed.
 	ErrListInvalid ErrorCode = "list_invalid"
-	// ErrWorkdirMismatch — применение с файлами списков отклонено до записи:
-	// рабочий каталог службы sing-box не совпадает с каталогом конфига, и
-	// относительный path узла local служба не нашла бы. Каталоги лежат в
+	// ErrWorkdirMismatch means an apply with list files is rejected before the write:
+	// the sing-box service working directory does not match the config directory, and
+	// the service would not find the relative path of a local node. The directories lie in
 	// Details.
 	ErrWorkdirMismatch ErrorCode = "workdir_mismatch"
-	// ErrLaunchMismatch — применение отклонено до записи: procd поднимает
-	// службу sing-box не на том конфиге, которым владеет демон, — на чужом
-	// файле, на нескольких или файлом и каталогом разом. Запись ничего бы
-	// службе не поменяла, а проверка проверяла бы не то, что запустится.
+	// ErrLaunchMismatch means the apply is rejected before the write: procd starts
+	// the sing-box service not on the config the daemon owns, but on a foreign
+	// file, on several, or on a file and a directory at once. A write would change nothing
+	// for the service, and the check would verify not what will run.
 	ErrLaunchMismatch ErrorCode = "launch_mismatch"
-	// ErrDeviceInvalid — своё имя устройства не принято: MAC не разобран, имя
-	// длиннее допустимого или с управляющими символами, тело не разобрано
-	// либо своих имён больше, чем демон хранит.
+	// ErrDeviceInvalid means the own device name was not accepted: the MAC is not parsed, the name
+	// is longer than allowed or has control characters, the body is not parsed,
+	// or there are more own names than the daemon stores.
 	ErrDeviceInvalid ErrorCode = "device_invalid"
-	// ErrDataplaneInvalid — модель сетевой обвязки не принята: в UCI или в
-	// теле `PUT /api/dataplane`. Поля с ошибкой лежат в Details; у тела,
-	// которое не разобралось как JSON, их нет.
+	// ErrDataplaneInvalid means the dataplane model was not accepted: in UCI or in
+	// the `PUT /api/dataplane` body. The fields with errors lie in Details; a body
+	// that did not parse as JSON has none.
 	ErrDataplaneInvalid ErrorCode = "dataplane_invalid"
-	// ErrDataplaneModified — секция `metabox.dataplane` изменилась после
-	// чтения модели клиентом (412), либо `PUT /api/dataplane` пришёл без
+	// ErrDataplaneModified means the `metabox.dataplane` section changed after
+	// the client read the model (412), or `PUT /api/dataplane` came without
 	// If-Match (428).
 	ErrDataplaneModified ErrorCode = "dataplane_modified"
-	// ErrDataplaneForeignService — смена модели отклонена до записи: демон
-	// управляет не службой `metabox-singbox`, а модель читает только её
-	// init-скрипт. Запись ничего бы не поставила, а reload перезапустил бы
-	// чужую маршрутизацию.
+	// ErrDataplaneForeignService means the model change is rejected before the write: the daemon
+	// manages not the `metabox-singbox` service, while the model is read only by its
+	// init script. A write would install nothing, and a reload would restart
+	// foreign routing.
 	ErrDataplaneForeignService ErrorCode = "dataplane_foreign_service"
-	// ErrLogUnavailable — лог sing-box не читается: logread не задан или
-	// отказал, файл log.output не открылся.
+	// ErrLogUnavailable means the sing-box log cannot be read: logread is not set or
+	// failed, the log.output file did not open.
 	ErrLogUnavailable ErrorCode = "log_unavailable"
-	// ErrLogQueryInvalid — уровень или число строк в запросе лога не разобраны.
+	// ErrLogQueryInvalid means the level or the line count in the log query is not parsed.
 	ErrLogQueryInvalid ErrorCode = "log_query_invalid"
-	// ErrLogStreamLimit — открыто предельное число потоков лога; новый
-	// откроется, когда закроется один из них.
+	// ErrLogStreamLimit means the maximum number of log streams is open; a new one
+	// opens when one of them closes.
 	ErrLogStreamLimit ErrorCode = "log_stream_limit"
-	// ErrLogClearForbidden — файл log.output лежит вне каталога конфига, /var/run
-	// и /tmp: такой файл демон не усекает.
+	// ErrLogClearForbidden means the log.output file lies outside the config directory, /var/run
+	// and /tmp: the daemon does not truncate such a file.
 	ErrLogClearForbidden ErrorCode = "log_clear_forbidden"
-	// ErrCheckFailed — `sing-box check` отверг конфиг; вывод бинаря лежит в Details.
+	// ErrCheckFailed means `sing-box check` rejected the config; the binary output is in Details.
 	ErrCheckFailed ErrorCode = "check_failed"
-	// ErrInternal — отказ, о котором наружу говорить нечего: подробности в логе.
+	// ErrInternal is a failure there is nothing to say outside about: details are in the log.
 	ErrInternal ErrorCode = "internal"
 )
 
-// ApplyEnvelope — применение конфига вместе с файлами списков подкаталога
-// rule-sets. Идёт в POST /api/apply с Content-Type
-// application/vnd.metabox.apply+json; тело без этого типа демон читает как
-// голые байты конфига.
+// ApplyEnvelope is a config apply together with the list files of the rule-sets
+// subdirectory. Goes in POST /api/apply with Content-Type
+// application/vnd.metabox.apply+json; a body without this type the daemon reads as
+// bare config bytes.
 type ApplyEnvelope struct {
-	// Config — текст конфига как есть, с комментариями и висячими запятыми.
+	// Config is the config text as is, with comments and dangling commas.
 	Config string `json:"config"`
-	// Lists — имя файла в подкаталоге rule-sets → его содержимое.
+	// Lists is the file name in the rule-sets subdirectory → its content.
 	Lists map[string]string `json:"lists,omitempty"`
-	// RemoveLists — файлы подкаталога rule-sets, которые применение удаляет.
+	// RemoveLists are the rule-sets subdirectory files the apply deletes.
 	RemoveLists []string `json:"remove_lists,omitempty"`
-	// ListsBase — отпечаток набора файлов, от которого редактировал клиент:
-	// значение etag из GET /api/config/rule-sets. Пустой — применить без
-	// сверки.
+	// ListsBase is the fingerprint of the file set the client edited from:
+	// the etag value from GET /api/config/rule-sets. Empty means apply without
+	// a check.
 	ListsBase string `json:"lists_base,omitempty"`
 }
 
-// RuleSetFiles — файлы своих списков из подкаталога rule-sets каталога
-// конфига, как их отдаёт GET /api/config/rule-sets.
+// RuleSetFiles are the own list files from the rule-sets subdirectory of the config
+// directory, as GET /api/config/rule-sets returns them.
 type RuleSetFiles struct {
-	// Files — имя файла → содержимое байт в байт.
+	// Files is the file name → content byte for byte.
 	Files map[string]string `json:"files"`
-	// Etag — отпечаток набора; клиент возвращает его в lists_base применения.
+	// Etag is the set fingerprint; the client returns it in lists_base of the apply.
 	Etag string `json:"etag"`
 }
 
-// Devices — ответ `GET /api/devices` и `PUT /api/devices/{mac}`: устройства
-// LAN по адресу, без адреса — в конце.
+// Devices is the response of `GET /api/devices` and `PUT /api/devices/{mac}`: LAN
+// devices by address, those without an address at the end.
 type Devices struct {
 	Devices []devices.Device `json:"devices"`
 }
 
-// DeviceName — тело `PUT /api/devices/{mac}`.
+// DeviceName is the body of `PUT /api/devices/{mac}`.
 type DeviceName struct {
-	// Name — своё имя устройства. Пустое убирает его, и подпись возвращается к
-	// статической аренде или DHCP.
+	// Name is the own device name. Empty removes it, and the label returns to
+	// the static lease or DHCP.
 	Name string `json:"name"`
 }
 
-// Dataplane — ответ `GET /api/dataplane`: модель сетевой обвязки из UCI и
-// то, стоят ли её правила на устройстве.
+// Dataplane is the response of `GET /api/dataplane`: the dataplane model from UCI and
+// whether its rules stand on the device.
 type Dataplane struct {
 	Model dataplane.Model `json:"model"`
-	// Applied — в таблице fw4 есть цепочки обвязки. Ложь без AppliedReason —
-	// nft прочитан, цепочек нет.
+	// Applied means the dataplane chains are in the fw4 table. False without AppliedReason means
+	// nft was read and there are no chains.
 	Applied bool `json:"applied"`
-	// AppliedReason — почему Applied не наблюдён, а подставлен ложью.
+	// AppliedReason is why Applied was not observed but substituted with false.
 	AppliedReason dataplane.AppliedReason `json:"applied_reason,omitempty"`
-	// ForeignService — демон управляет не службой `metabox-singbox`, и
-	// `PUT /api/dataplane` получит `dataplane_foreign_service`: панель не
-	// предлагает смену, которую демон отклонит.
+	// ForeignService means the daemon manages not the `metabox-singbox` service, and
+	// `PUT /api/dataplane` will get `dataplane_foreign_service`: the panel does not
+	// offer a change the daemon will reject.
 	ForeignService bool `json:"foreign_service,omitempty"`
 }
 
-// DataplaneChange — тело `PUT /api/dataplane`: модель в той же форме, что поле
-// model ответа `GET /api/dataplane`. Пишется целиком: отсутствующее поле — это
-// нулевое значение, а не «оставить как есть».
+// DataplaneChange is the body of `PUT /api/dataplane`: the model in the same form as the
+// model field of the `GET /api/dataplane` response. Written whole: a missing field is a
+// zero value, not "leave as is".
 type DataplaneChange struct {
 	Model dataplane.Model `json:"model"`
 }
 
-// DataplaneDetails — поля отказа `dataplane_invalid`.
+// DataplaneDetails are the fields of the `dataplane_invalid` failure.
 type DataplaneDetails struct {
 	Fields []dataplane.FieldError `json:"fields"`
 }
 
-// Logs — ответ `GET /api/logs`: последние строки лога sing-box, старые первыми.
+// Logs is the response of `GET /api/logs`: the last sing-box log lines, old first.
 type Logs struct {
 	Source logs.Source `json:"source"`
-	// Since — отметка последней очистки в RFC 3339: строки раньше неё не
-	// отдаются. Нет поля — очистки не было с запуска демона.
+	// Since is the last cleanup mark in RFC 3339: lines earlier than it are not
+	// returned. No field means there was no cleanup since the daemon start.
 	Since   string       `json:"since,omitempty"`
 	Entries []logs.Entry `json:"entries"`
 }
 
-// LogEvent — событие `log` потока `GET /api/logs/stream`.
+// LogEvent is the `log` event of the `GET /api/logs/stream` stream.
 type LogEvent struct {
-	// Seq растёт на единицу с каждой строкой, в том числе отброшенной из-за
-	// медленного читателя: разрыв означает потерю строк.
+	// Seq grows by one with each line, including one dropped because of
+	// a slow reader: a gap means lost lines.
 	Seq   uint64     `json:"seq"`
 	Entry logs.Entry `json:"entry"`
 }
 
-// LogsCleared — ответ `POST /api/logs/clear`.
+// LogsCleared is the response of `POST /api/logs/clear`.
 type LogsCleared struct {
-	// Since — отметка очистки в RFC 3339.
+	// Since is the cleanup mark in RFC 3339.
 	Since string `json:"since"`
 }
 
-// Error — единый формат отказа на границе HTTP. Внутренние подробности — пути
-// на диске, аргументы команд, содержимое конфига — в него не попадают; Details
-// несёт только то, что показывают пользователю.
+// Error is the single failure format at the HTTP boundary. Internal details (paths
+// on disk, command arguments, config content) do not get into it; Details
+// carries only what is shown to the user.
 //
-// Code — контракт, Message — запасной текст: панель показывает свой перевод по
-// коду, а сообщение берёт, только когда код ей незнаком.
+// Code is the contract, Message is a fallback text: the panel shows its own translation by
+// the code, and takes the message only when the code is unfamiliar to it.
 type Error struct {
 	Code    ErrorCode `json:"code"`
 	Message string    `json:"message"`
 	Details any       `json:"details,omitempty"`
 }
 
-// CheckDetails — вывод sing-box дословно. Единственное исключение из правила
-// «внутренние подробности наружу не идут»: на этих строках пользователь
-// чинит конфиг.
+// CheckDetails is the sing-box output verbatim. The only exception to the rule
+// "internal details do not go outside": the user fixes the config by these lines.
 type CheckDetails struct {
 	Stdout   string `json:"stdout"`
 	Stderr   string `json:"stderr"`
 	ExitCode int    `json:"exit_code"`
 }
 
-// WorkdirDetails — каталоги отказа `workdir_mismatch`. Пути наружу идут
-// намеренно: путь конфига панель и так знает из `GET /api/status`, а по этим
-// двум она собирает команду, которая настраивает службу.
+// WorkdirDetails are the directories of the `workdir_mismatch` failure. Paths go outside
+// deliberately: the panel knows the config path from `GET /api/status` anyway, and by these
+// two it builds the command that configures the service.
 type WorkdirDetails struct {
-	// Workdir — рабочий каталог, с которым procd поднимает службу.
+	// Workdir is the working directory procd starts the service with.
 	Workdir string `json:"workdir"`
-	// ConfigDir — каталог конфига, которым владеет демон.
+	// ConfigDir is the config directory the daemon owns.
 	ConfigDir string `json:"config_dir"`
 }

@@ -46,36 +46,36 @@ func TestRuleHits(t *testing.T) {
 	got := request(t, srv, http.MethodGet, "/api/rules/hits", "", nil)
 
 	if got.status != http.StatusOK {
-		t.Fatalf("код ответа: получили %d, ожидали %d", got.status, http.StatusOK)
+		t.Fatalf("response code: got %d, expected %d", got.status, http.StatusOK)
 	}
 
 	var body route.Hits
 	if err := json.Unmarshal([]byte(got.body), &body); err != nil {
-		t.Fatalf("разбор ответа: %v", err)
+		t.Fatalf("parsing the response: %v", err)
 	}
 	if body.Seconds != 120 || len(body.Rules) != 2 || body.Rules[1].Hits != 7 || body.Final != 3 {
-		t.Errorf("тело %+v, ожидали счёт за 120 с с 7 срабатываниями второго правила", body)
+		t.Errorf("body %+v, expected a count for 120 s with 7 hits of the second rule", body)
 	}
 }
 
-// Лежащий sing-box — отказ источника, а не панели: код тот же, что у
-// объяснения маршрута.
+// A down sing-box is a source failure, not the panel's: the code is the same as for
+// the route explanation.
 func TestRuleHitsRuntimeUnavailable(t *testing.T) {
 	srv := newHitsServer(t, fakeHits{err: fmt.Errorf("%w: список правил: %w", route.ErrRuntimeUnavailable, errors.New("connection refused"))})
 
 	got := request(t, srv, http.MethodGet, "/api/rules/hits", "", nil)
 
 	if got.status != http.StatusBadGateway {
-		t.Fatalf("код ответа: получили %d, ожидали %d", got.status, http.StatusBadGateway)
+		t.Fatalf("response code: got %d, expected %d", got.status, http.StatusBadGateway)
 	}
 
 	var body struct {
 		Code string `json:"code"`
 	}
 	if err := json.Unmarshal([]byte(got.body), &body); err != nil {
-		t.Fatalf("разбор ответа: %v", err)
+		t.Fatalf("parsing the response: %v", err)
 	}
 	if body.Code != "runtime_unavailable" {
-		t.Errorf("код отказа: получили %q, ожидали runtime_unavailable", body.Code)
+		t.Errorf("rejection code: got %q, expected runtime_unavailable", body.Code)
 	}
 }

@@ -1,9 +1,9 @@
-// Package dataplane читает модель сетевой обвязки — перехват трафика LAN на
-// sing-box — из UCI `metabox` и проверяет, стоят ли её цепочки в nft.
+// Package dataplane reads the dataplane model (LAN traffic interception to
+// sing-box) from UCI `metabox` and checks whether its chains stand in nft.
 //
-// Правила ставит и снимает init-скрипт службы sing-box по той же модели, поэтому
-// имена секции и опций — контракт с ним. Демон модель читает и пишет, а до
-// правил её доводит reload службы.
+// The rules are installed and removed by the sing-box service init script by the same model, so
+// the section and option names are a contract with it. The daemon reads and writes the model, and
+// the service reload brings the rules to it.
 package dataplane
 
 import (
@@ -20,75 +20,75 @@ import (
 )
 
 const (
-	// config и section — где init-скрипт ищет модель: `metabox.dataplane`.
-	// Имя `main` занято секцией типа `metabox`, а одно имя на две секции разных
-	// типов uci не держит.
+	// config and section are where the init script looks for the model: `metabox.dataplane`.
+	// The name `main` is taken by the section of type `metabox`, and uci does not hold one name for two sections of different
+	// types.
 	config      = "metabox"
 	section     = "dataplane"
 	sectionType = "dataplane"
 
-	// fw4Family и fw4Table — таблица fw4, в которую инклюд обвязки кладёт свои
-	// цепочки; chainPrefix — общий префикс их имён.
+	// fw4Family and fw4Table are the fw4 table the dataplane include puts its
+	// chains into; chainPrefix is the common prefix of their names.
 	fw4Family   = "inet"
 	fw4Table    = "fw4"
 	chainPrefix = "metabox_"
 )
 
-// Service — имя службы, init-скрипт которой читает модель и доводит до неё
-// обвязку. Другая служба на том же sing-box — homeproxy или пакет форка —
-// секцию не читает: записанная модель ничего бы не поставила, а её reload
-// перезапустил бы чужую маршрутизацию.
+// Service is the name of the service whose init script reads the model and brings the
+// dataplane to it. Another service on the same sing-box, homeproxy or the fork package,
+// does not read the section: the written model would install nothing, and its reload
+// would restart foreign routing.
 const Service = "metabox-singbox"
 
-// AccessMode — какие источники с интерфейсов LAN идут через sing-box.
+// AccessMode is which sources from the LAN interfaces go through sing-box.
 type AccessMode string
 
 const (
-	// AccessAll — все источники; списки источников хранятся, но не действуют.
+	// AccessAll means all sources; the source lists are stored but have no effect.
 	AccessAll AccessMode = "all"
-	// AccessListed — только перечисленные в source_ip и source_mac.
+	// AccessListed means only those listed in source_ip and source_mac.
 	AccessListed AccessMode = "listed"
 )
 
-// Model — секция `metabox.dataplane`. Отсутствующая опция получает значение
-// по умолчанию из Defaults; список, заданный пустыми значениями, — пустой.
+// Model is the `metabox.dataplane` section. A missing option gets the default value
+// from Defaults; a list set with empty values is empty.
 type Model struct {
-	// Enabled — ставить ли перехват. Ложь: служба поднимает только sing-box,
-	// без nft, ip rule и upstream dnsmasq.
+	// Enabled is whether to install interception. False: the service starts only sing-box,
+	// without nft, ip rule and the dnsmasq upstream.
 	Enabled bool `json:"enabled"`
-	// RedirectPort — порт inbound redirect: сюда уходит TCP из LAN.
+	// RedirectPort is the redirect inbound port: LAN TCP goes here.
 	RedirectPort int `json:"redirect_port"`
-	// TproxyPort — порт inbound tproxy: сюда уходит UDP из LAN.
+	// TproxyPort is the tproxy inbound port: LAN UDP goes here.
 	TproxyPort int `json:"tproxy_port"`
-	// DNSPort — порт dns-in sing-box, на который dnsmasq отдаёт запросы.
+	// DNSPort is the sing-box dns-in port that dnsmasq sends queries to.
 	DNSPort int `json:"dns_port"`
-	// DNSHijack — перехватывать udp/53 из LAN на dnsmasq роутера.
+	// DNSHijack is whether to intercept udp/53 from the LAN to the router dnsmasq.
 	DNSHijack bool `json:"dns_hijack"`
-	// SelfMark — метка обхода: пакет с ней идёт мимо перехвата. Совпадает с
-	// route.default_mark конфига sing-box, иначе его трафик зациклится.
+	// SelfMark is the bypass mark: a packet with it goes around interception. Matches
+	// route.default_mark of the sing-box config, otherwise its traffic would loop.
 	SelfMark uint32 `json:"self_mark"`
-	// TproxyMark — метка потоков tproxy, по ней ip rule уводит их в RouteTable.
+	// TproxyMark is the mark of tproxy flows, ip rule sends them to RouteTable by it.
 	TproxyMark uint32 `json:"tproxy_mark"`
-	// RouteTable — таблица маршрутов с local-маршрутом для tproxy.
+	// RouteTable is the routing table with a local route for tproxy.
 	RouteTable uint32     `json:"route_table"`
 	AccessMode AccessMode `json:"acl_mode"`
-	// SourceIP — источники режима listed: IPv4-адрес или подсеть.
+	// SourceIP are the sources of listed mode: an IPv4 address or a subnet.
 	SourceIP []string `json:"source_ip"`
-	// SourceMAC — источники режима listed по MAC: не зависят от смены аренды.
+	// SourceMAC are the sources of listed mode by MAC: they do not depend on a lease change.
 	SourceMAC []string `json:"source_mac"`
-	// LANInterface — интерфейсы, с которых перехватывается трафик.
+	// LANInterface are the interfaces traffic is intercepted from.
 	LANInterface []string `json:"lan_interface"`
-	// WANProxyCIDR — назначения, которые всегда идут через sing-box.
+	// WANProxyCIDR are the destinations that always go through sing-box.
 	WANProxyCIDR []string `json:"wan_proxy_cidr"`
-	// WANDirectCIDR — назначения, которые всегда идут мимо sing-box.
+	// WANDirectCIDR are the destinations that always bypass sing-box.
 	WANDirectCIDR []string `json:"wan_direct_cidr"`
-	// IPv6 — рендерить ли цепочки IPv6; пока ложь, их нет.
+	// IPv6 is whether to render the IPv6 chains; while false, there are none.
 	IPv6 bool `json:"ipv6"`
 }
 
-// Defaults — модель без единой опции: порты, метки и таблица homeproxy, режим
-// listed без источников, то есть перехват стоит, но через sing-box не идёт
-// никто.
+// Defaults is the model with no options: the ports, marks and table of homeproxy, listed
+// mode without sources, that is, interception stands but nobody goes
+// through sing-box.
 func Defaults() Model {
 	return Model{
 		Enabled:       true,
@@ -108,35 +108,35 @@ func Defaults() Model {
 	}
 }
 
-// AppliedReason — почему признак применения не наблюдён, а подставлен ложью.
+// AppliedReason is why the applied flag was not observed but substituted with false.
 type AppliedReason string
 
 const (
-	// NFTUnavailable — nft не запустился, вернул ненулевой код или путь к нему
-	// не задан.
+	// NFTUnavailable means nft did not start, returned a non-zero code or the path to it
+	// is not set.
 	NFTUnavailable AppliedReason = "nft_unavailable"
-	// NFTUnparsed — вывод nft не разобран: обрезан или не JSON.
+	// NFTUnparsed means the nft output was not parsed: truncated or not JSON.
 	NFTUnparsed AppliedReason = "nft_unparsed"
 )
 
-// Runner запускает внешнюю команду и отдаёт её вывод с кодом возврата.
-// Объявлен функцией по той же причине, что procd.Runner: тип результата
-// владельца запуска сюда не импортировать.
+// Runner runs an external command and returns its output with the exit code.
+// Declared as a function for the same reason as procd.Runner: the result type of
+// the launch owner must not be imported here.
 type Runner func(ctx context.Context, name string, args ...string) (stdout string, exitCode int, err error)
 
-// Options — пути, которые демон получает флагами. Оба абсолютные: под procd
-// PATH не тот, что в шелле.
+// Options are the paths the daemon receives by flags. Both are absolute: under procd
+// PATH is not the one in the shell.
 type Options struct {
 	UCI string
-	// Batch — запуск uci со скриптом на stdin; nil — модель только читается.
+	// Batch runs uci with a script on stdin; nil means the model is only read.
 	Batch BatchRunner
-	// NFT — пустой путь отключает проверку: признак применения тогда всегда
-	// ложь с причиной NFTUnavailable.
+	// NFT: an empty path disables the check, and the applied flag is then always
+	// false with the reason NFTUnavailable.
 	NFT string
 }
 
-// Reader читает модель и признак её применения. Ничего не кэширует: модель
-// правит владелец по SSH, правила ставит и снимает служба.
+// Reader reads the model and the flag that it is applied. It caches nothing: the model
+// is edited by the owner over SSH, and the rules are installed and removed by the service.
 type Reader struct {
 	run   Runner
 	batch BatchRunner
@@ -144,14 +144,14 @@ type Reader struct {
 	nft   string
 }
 
-// New собирает читателя.
+// New assembles the reader.
 func New(run Runner, opts Options) *Reader {
 	return &Reader{run: run, batch: opts.Batch, uci: opts.UCI, nft: opts.NFT}
 }
 
-// Model читает секцию `metabox.dataplane`. Нет конфига `metabox` или секции
-// этого типа — модель по умолчанию: так же её читает init-скрипт. Невалидные
-// значения — *InvalidError со всеми полями сразу.
+// Model reads the `metabox.dataplane` section. No `metabox` config or section
+// of this type means the default model: the init script reads it the same way. Invalid
+// values are an *InvalidError with all fields at once.
 func (r *Reader) Model(ctx context.Context) (Model, error) {
 	out, code, err := r.run(ctx, r.uci, "-q", "show", config)
 	if err != nil {
@@ -171,8 +171,8 @@ func (r *Reader) Model(ctx context.Context) (Model, error) {
 	return Defaults(), nil
 }
 
-// ExpectedChains — цепочки, которые init-скрипт службы кладёт в таблицу fw4
-// при включённой модели. Имена — контракт с его рендером правил.
+// ExpectedChains are the chains the service init script puts into the fw4 table
+// when the model is enabled. The names are a contract with its rule renderer.
 func ExpectedChains() []string {
 	return []string{
 		"metabox_redirect_lanac",
@@ -184,21 +184,21 @@ func ExpectedChains() []string {
 	}
 }
 
-// Applied сообщает, стоят ли цепочки обвязки в таблице fw4. Отказ nft отказом
-// не считается: панель обязана показать модель и без него. Ошибка — только
-// отмена контекста.
+// Applied reports whether the dataplane chains stand in the fw4 table. An nft failure is not
+// counted as a failure: the panel must show the model without it. An error is only
+// context cancellation.
 func (r *Reader) Applied(ctx context.Context) (bool, AppliedReason, error) {
 	chains, reason, err := r.Chains(ctx)
 
 	return len(chains) > 0, reason, err
 }
 
-// Chains отдаёт имена цепочек обвязки, которые стоят в таблице fw4. Причина
-// непуста, когда nft не прочитан, — список тогда пуст и ни о чём не говорит.
-// Ошибка — только отмена контекста.
+// Chains returns the names of the dataplane chains that stand in the fw4 table. The reason
+// is non-empty when nft was not read, and the list is then empty and says nothing.
+// An error is only context cancellation.
 //
-// Читается `list chains`, а не `list ruleset`: правила не нужны, а вывод
-// ruleset с fw4 больше потолка вывода команды и пришёл бы обрезанным.
+// `list chains` is read, not `list ruleset`: the rules are not needed, and the ruleset
+// output with fw4 is larger than the command output ceiling and would come truncated.
 func (r *Reader) Chains(ctx context.Context) ([]string, AppliedReason, error) {
 	if r.nft == "" {
 		return nil, NFTUnavailable, nil
@@ -291,7 +291,7 @@ func (d *decoder) option(name string) (string, bool) {
 	return values[0], true
 }
 
-// flag принимает те же значения, что config_get_bool init-скриптов OpenWrt.
+// flag accepts the same values as config_get_bool of the OpenWrt init scripts.
 func (d *decoder) flag(name string, dst *bool) {
 	raw, ok := d.option(name)
 	if !ok {
@@ -325,8 +325,8 @@ func (d *decoder) port(name string, dst *int) {
 	}
 }
 
-// number — метка или номер таблицы: десятичное число в 32 бита, как их
-// принимают nft и ip rule.
+// number is a mark or a table number: a decimal number in 32 bits, as nft and ip rule
+// accept them.
 func (d *decoder) number(name string, dst *uint32) {
 	raw, ok := d.option(name)
 	if !ok {
@@ -357,7 +357,7 @@ func (d *decoder) aclMode(dst *AccessMode) {
 	}
 }
 
-// list пропускает пустые значения: `list x ”` в UCI означает пустой список.
+// list skips empty values: `list x ”` in UCI means an empty list.
 func (d *decoder) list(name string, dst *[]string, valid func(string) bool) {
 	values, ok := d.section.Options[name]
 	if !ok {
@@ -402,8 +402,8 @@ func (d *decoder) distinctPorts(m Model) {
 	}
 }
 
-// validIPv4 принимает IPv4-адрес или подсеть без бит хоста: подсеть вида
-// 192.168.1.5/24 в набор nft не ляжет.
+// validIPv4 accepts an IPv4 address or a subnet without host bits: a subnet like
+// 192.168.1.5/24 does not fit into an nft set.
 func validIPv4(s string) bool {
 	if addr, err := netip.ParseAddr(s); err == nil {
 		return addr.Is4()
@@ -414,23 +414,23 @@ func validIPv4(s string) bool {
 	return err == nil && prefix.Addr().Is4() && prefix == prefix.Masked()
 }
 
-// validIface принимает те же символы, что init-скрипт службы: имя уходит в
-// правило nft и в команду uci batch, и всё прочее он отвергает целиком.
+// validIface accepts the same characters as the service init script: the name goes into
+// an nft rule and into a uci batch command, and it rejects everything else as a whole.
 func validIface(s string) bool {
 	return strings.Trim(s, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._@-") == ""
 }
 
-// validMAC принимает только MAC Ethernet: net.ParseMAC пропускает и 8-, и
-// 20-байтные адреса, а `ether saddr` сравнивает шесть байт.
+// validMAC accepts only an Ethernet MAC: net.ParseMAC lets through both 8- and
+// 20-byte addresses, while `ether saddr` compares six bytes.
 func validMAC(s string) bool {
 	hw, err := net.ParseMAC(s)
 
 	return err == nil && len(hw) == 6
 }
 
-// canonicalMACs приводит прошедшие validMAC адреса к виду aa:bb:cc:dd:ee:ff:
-// init-скрипт службы принимает MAC только с двоеточиями, а на записи через
-// дефис или точку отвергает модель и оставляет прежние правила.
+// canonicalMACs brings the addresses that passed validMAC to the form aa:bb:cc:dd:ee:ff:
+// the service init script accepts a MAC only with colons, and on a dash or dot
+// notation it rejects the model and leaves the previous rules.
 func canonicalMACs(macs []string) []string {
 	out := make([]string, 0, len(macs))
 

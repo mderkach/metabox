@@ -5,8 +5,8 @@ import (
 	"testing"
 )
 
-// testLogger уводит записи слоя в вывод теста: при падении видно, что демон
-// успел залогировать.
+// testLogger sends the layer records to the test output: on a failure it is visible what the daemon
+// managed to log.
 func testLogger(t *testing.T) *slog.Logger {
 	t.Helper()
 

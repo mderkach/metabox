@@ -23,7 +23,7 @@ type fakeLogs struct {
 	lines    int
 	stream   []logs.Entry
 	cleared  time.Time
-	// stopped закрывается, когда поток увидел отмену; nil — не следить.
+	// stopped closes when the stream saw the cancellation; nil means do not track.
 	stopped chan struct{}
 }
 
@@ -33,7 +33,7 @@ func (f *fakeLogs) Tail(_ context.Context, n int, level logs.Level) (logs.Snapsh
 	return f.snapshot, f.err
 }
 
-// Follow отдаёт заготовленные строки и держит поток до отмены, как logread -f.
+// Follow returns the prepared lines and holds the stream until cancellation, like logread -f.
 func (f *fakeLogs) Follow(ctx context.Context, _ logs.Level, emit func(logs.Entry)) (<-chan error, error) {
 	if f.err != nil {
 		return nil, f.err
@@ -94,18 +94,18 @@ func TestLogsTail(t *testing.T) {
 
 	got := request(t, srv, http.MethodGet, "/api/logs?lines=50&level=WARN", "", nil)
 	if got.status != http.StatusOK {
-		t.Fatalf("код %d, тело %s", got.status, got.body)
+		t.Fatalf("code %d, body %s", got.status, got.body)
 	}
 
 	var body contract.Logs
 	got.decode(t, &body)
 
 	if body.Source != logs.SourceLogread || body.Since != "2026-10-09T20:00:00Z" || len(body.Entries) != 1 {
-		t.Errorf("ответ %+v", body)
+		t.Errorf("response %+v", body)
 	}
 
 	if reader.lines != 50 || reader.level != logs.LevelWarn {
-		t.Errorf("запрошено %d строк уровня %q", reader.lines, reader.level)
+		t.Errorf("%d lines of level %q requested", reader.lines, reader.level)
 	}
 }
 
@@ -119,7 +119,7 @@ func TestLogsQueryInvalid(t *testing.T) {
 		got.decode(t, &body)
 
 		if got.status != http.StatusBadRequest || body.Code != contract.ErrLogQueryInvalid {
-			t.Errorf("%s: код %d, отказ %+v", path, got.status, body)
+			t.Errorf("%s: code %d, failure %+v", path, got.status, body)
 		}
 	}
 }
@@ -133,9 +133,9 @@ func TestLogsErrors(t *testing.T) {
 		status int
 		code   contract.ErrorCode
 	}{
-		{"лог недоступен", logs.ErrUnavailable, http.MethodGet, "/api/logs", http.StatusServiceUnavailable, contract.ErrLogUnavailable},
-		{"потоков слишком много", logs.ErrTooManyStreams, http.MethodGet, "/api/logs/stream", http.StatusTooManyRequests, contract.ErrLogStreamLimit},
-		{"файл вне разрешённых каталогов", logs.ErrClearForbidden, http.MethodPost, "/api/logs/clear", http.StatusConflict, contract.ErrLogClearForbidden},
+		{"log unavailable", logs.ErrUnavailable, http.MethodGet, "/api/logs", http.StatusServiceUnavailable, contract.ErrLogUnavailable},
+		{"too many streams", logs.ErrTooManyStreams, http.MethodGet, "/api/logs/stream", http.StatusTooManyRequests, contract.ErrLogStreamLimit},
+		{"file outside the allowed directories", logs.ErrClearForbidden, http.MethodPost, "/api/logs/clear", http.StatusConflict, contract.ErrLogClearForbidden},
 	}
 
 	for _, tt := range tests {
@@ -148,12 +148,12 @@ func TestLogsErrors(t *testing.T) {
 			got.decode(t, &body)
 
 			if got.status != tt.status || body.Code != tt.code {
-				t.Errorf("код %d, отказ %+v", got.status, body)
+				t.Errorf("code %d, failure %+v", got.status, body)
 			}
 
 			retry := got.header.Get("Retry-After")
 			if want := tt.status == http.StatusTooManyRequests; (retry != "") != want {
-				t.Errorf("Retry-After %q при коде %d", retry, got.status)
+				t.Errorf("Retry-After %q with code %d", retry, got.status)
 			}
 		})
 	}
@@ -164,14 +164,14 @@ func TestLogsClear(t *testing.T) {
 
 	got := request(t, srv, http.MethodPost, "/api/logs/clear", srv.URL, nil)
 	if got.status != http.StatusOK {
-		t.Fatalf("код %d, тело %s", got.status, got.body)
+		t.Fatalf("code %d, body %s", got.status, got.body)
 	}
 
 	var body contract.LogsCleared
 	got.decode(t, &body)
 
 	if body.Since != "2026-10-09T20:00:00Z" {
-		t.Errorf("отметка %q", body.Since)
+		t.Errorf("mark %q", body.Since)
 	}
 }
 
@@ -197,7 +197,7 @@ func TestLogsStream(t *testing.T) {
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.Header.Get("Content-Type") != "text/event-stream" {
-		t.Fatalf("тип ответа %q", resp.Header.Get("Content-Type"))
+		t.Fatalf("response type %q", resp.Header.Get("Content-Type"))
 	}
 
 	scanner := bufio.NewScanner(resp.Body)
@@ -219,7 +219,7 @@ func TestLogsStream(t *testing.T) {
 	}
 
 	if len(events) != 2 || events[0].Seq != 1 || events[1].Seq != 2 || events[1].Entry.Message != "вторая" {
-		t.Errorf("события %+v", events)
+		t.Errorf("events %+v", events)
 	}
 }
 
@@ -239,15 +239,15 @@ func TestLogsStreamStopsWhenClientLeaves(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Клиент уходит молча: записей в поток нет, keep-alive далеко, и источник
-	// обязан остановиться по закрытию соединения, а не по следующей записи.
+	// The client leaves silently: no records in the stream, keep-alive is far, and the source
+	// must stop on the connection close and not on the next record.
 	cancel()
 	_ = resp.Body.Close()
 
 	select {
 	case <-reader.stopped:
 	case <-time.After(5 * time.Second):
-		t.Fatal("источник потока не остановлен после ухода клиента")
+		t.Fatal("the stream source was not stopped after the client left")
 	}
 }
 
@@ -257,17 +257,17 @@ func TestDiag(t *testing.T) {
 
 	got := request(t, srv, http.MethodGet, "/api/diag?proxy=node%20A", "", nil)
 	if got.status != http.StatusOK {
-		t.Fatalf("код %d, тело %s", got.status, got.body)
+		t.Fatalf("code %d, body %s", got.status, got.body)
 	}
 
 	var body diag.Report
 	got.decode(t, &body)
 
 	if d.proxy != "node A" || len(body.Checks) != 1 || body.Checks[0].Missing[0] != "metabox_redirect" {
-		t.Errorf("узел %q, отчёт %+v", d.proxy, body)
+		t.Errorf("node %q, report %+v", d.proxy, body)
 	}
 
 	if got := request(t, srv, http.MethodGet, "/api/logs", "", nil); got.status != http.StatusNotFound {
-		t.Errorf("без читателя лога ручка ответила %d", got.status)
+		t.Errorf("without a log reader the handler answered %d", got.status)
 	}
 }

@@ -32,16 +32,16 @@ func TestRuleSetsCatalog(t *testing.T) {
 	got := request(t, srv, http.MethodGet, "/api/rule-sets/catalog", "", nil)
 
 	if got.status != http.StatusOK {
-		t.Fatalf("код ответа: получили %d, ожидали %d", got.status, http.StatusOK)
+		t.Fatalf("response code: got %d, expected %d", got.status, http.StatusOK)
 	}
 
 	var body ruleset.Catalog
 	if err := json.Unmarshal([]byte(got.body), &body); err != nil {
-		t.Fatalf("разбор ответа: %v", err)
+		t.Fatalf("parsing the response: %v", err)
 	}
 
 	if len(body.Providers) != 1 || body.Providers[0].Lists[0].UpdatedAt != 42 {
-		t.Errorf("тело %+v", body)
+		t.Errorf("body %+v", body)
 	}
 }
 
@@ -49,6 +49,6 @@ func TestRuleSetsCatalogAbsent(t *testing.T) {
 	srv := newTestServer(t, &fakeApplier{}, "")
 
 	if got := request(t, srv, http.MethodGet, "/api/rule-sets/catalog", "", nil); got.status != http.StatusNotFound {
-		t.Errorf("без каталога ручка ответила %d, ожидали 404", got.status)
+		t.Errorf("without a directory the handler answered %d, expected 404", got.status)
 	}
 }

@@ -1,6 +1,6 @@
-// Package singbox вызывает бинарь sing-box и управляет его сервисом через
-// procd. Содержимое конфига пакет не разбирает: единственный арбитр
-// валидности — сам бинарь.
+// Package singbox calls the sing-box binary and manages its service through
+// procd. The package does not parse the config content: the only arbiter of
+// validity is the binary itself.
 package singbox
 
 import (
@@ -14,22 +14,22 @@ import (
 	"metabox/internal/procd"
 )
 
-// Result — итог запуска команды. Ненулевой ExitCode это результат, а не отказ
-// запуска: решает вызывающий.
+// Result is the outcome of running a command. A non-zero ExitCode is a result, not a launch
+// failure: the caller decides.
 type Result struct {
 	Stdout   string
 	Stderr   string
 	ExitCode int
 }
 
-// Runner запускает внешнюю команду. Подменяется в тестах — настоящий sing-box
-// и procd проверяются интеграционными тестами на стенде.
+// Runner runs an external command. Replaced in tests; the real sing-box
+// and procd are checked by integration tests on the test bench.
 type Runner interface {
 	Run(ctx context.Context, name string, args ...string) (Result, error)
 }
 
-// CheckError несёт вывод бинаря дословно: на нём пользователь чинит конфиг,
-// переформулировать эти строки нельзя.
+// CheckError carries the binary output verbatim: the user fixes the config by it,
+// and these lines must not be reworded.
 type CheckError struct {
 	Stdout   string
 	Stderr   string
@@ -40,25 +40,25 @@ func (e *CheckError) Error() string {
 	return fmt.Sprintf("sing-box check: код %d", e.ExitCode)
 }
 
-// Client — доступ демона к sing-box: проверка конфига и управление сервисом.
+// Client is the daemon access to sing-box: config check and service control.
 type Client struct {
 	supervisor Supervisor
 	runner     Runner
 	binary     string
 	initScript string
-	// instance — инстанс procd, в котором служба держит sing-box. Пустой —
-	// единственный инстанс службы.
+	// instance is the procd instance in which the service holds sing-box. Empty means the
+	// single service instance.
 	instance string
-	// logread — утилита логгера устройства; пустая означает «причину падения
-	// брать неоткуда», и состояние службы сводится к факту отказа.
+	// logread is the device logger utility; empty means "nowhere to take the crash reason
+	// from", and the service state is reduced to the fact of a failure.
 	logread string
 }
 
-// New собирает клиента. Пути обязаны быть абсолютными: под procd переменная
-// PATH не та, что в интерактивном шелле, и относительное имя разрешится не в
-// тот файл или не разрешится вовсе.
-// New собирает клиента. supervisor необязателен: без него состояние сводится
-// к коду возврата init-скрипта, панель продолжает работать.
+// New assembles the client. Paths must be absolute: under procd the PATH variable
+// is not the one in the interactive shell, and a relative name will resolve to the wrong
+// file or not resolve at all.
+// New assembles the client. supervisor is optional: without it the state is reduced
+// to the init script exit code, and the panel keeps working.
 func New(runner Runner, binary, initScript, instance, logread string, supervisor Supervisor) (*Client, error) {
 	for _, path := range []string{binary, initScript} {
 		if !filepath.IsAbs(path) {
@@ -80,10 +80,10 @@ func New(runner Runner, binary, initScript, instance, logread string, supervisor
 	}, nil
 }
 
-// Check валидирует кандидата тем режимом, в каком поднимется служба: config —
-// файл конфига (-c), пустая строка — каталог dir целиком (-C), который служба
-// сливает из всех .json. workdir — база относительных путей конфига (-D), та
-// же, что у службы: иначе вердикты check и рантайма расходятся.
+// Check validates a candidate in the mode the service will start in: config is
+// the config file (-c), an empty string is the dir directory as a whole (-C), which the service
+// merges from all .json. workdir is the base of relative config paths (-D), the same
+// as the service's: otherwise the check and runtime verdicts diverge.
 func (c *Client) Check(ctx context.Context, dir, config, workdir string) error {
 	args := []string{"check", "-D", workdir, "-C", dir}
 	if config != "" {
@@ -102,21 +102,21 @@ func (c *Client) Check(ctx context.Context, dir, config, workdir string) error {
 	return nil
 }
 
-// Build — версия бинаря и build-теги, с которыми он собран.
+// Build is the binary version and the build tags it is built with.
 type Build struct {
 	Version string
-	// Tags — теги из строки `Tags:` вывода `sing-box version`. Пустой список
-	// значит сборку без тегов, а не незнание: тип узла, закрытый тегом, такой
-	// бинарь не запустит.
+	// Tags are the tags from the `Tags:` line of the `sing-box version` output. An empty list
+	// means a build without tags, not ignorance: a node type gated by a tag will not be started
+	// by such a binary.
 	Tags []string
 }
 
-// Build читает версию и состав сборки бинаря.
+// Build reads the version and the build composition of the binary.
 //
-// Значение предназначено для однократного чтения при старте демона: запуск
-// процесса на каждый опрос /api/status слишком дорог для роутера, поэтому
-// бинарь, подменённый под работающим демоном, попадёт в панель только после
-// его перезапуска.
+// The value is meant for a single read at daemon start: launching a process
+// on every /api/status poll is too expensive for a router, so a binary
+// replaced under a running daemon gets into the panel only after
+// its restart.
 func (c *Client) Build(ctx context.Context) (Build, error) {
 	res, err := c.runner.Run(ctx, c.binary, "version")
 	if err != nil {
@@ -135,9 +135,9 @@ func (c *Client) Build(ctx context.Context) (Build, error) {
 	return Build{Version: version, Tags: parseTags(res.Stdout)}, nil
 }
 
-// parseVersion берёт номер из первой строки вида
-// `sing-box version 1.14.0-extended-2.7.1`: дальше идут строки про окружение
-// сборки и теги.
+// parseVersion takes the number from the first line of the form
+// `sing-box version 1.14.0-extended-2.7.1`: lines about the build environment
+// and tags follow.
 func parseVersion(stdout string) string {
 	fields := strings.Fields(firstLine(stdout))
 	if len(fields) < 3 || fields[0] != "sing-box" || fields[1] != "version" {
@@ -147,9 +147,9 @@ func parseVersion(stdout string) string {
 	return fields[2]
 }
 
-// parseTags берёт теги из строки `Tags: with_quic,with_utls`. Строки нет,
-// когда бинарь собран без тегов: sing-box печатает её, только если список
-// не пуст.
+// parseTags takes the tags from the `Tags: with_quic,with_utls` line. There is no line
+// when the binary is built without tags: sing-box prints it only if the list
+// is not empty.
 func parseTags(stdout string) []string {
 	tags := []string{}
 
@@ -169,27 +169,27 @@ func parseTags(stdout string) []string {
 	return tags
 }
 
-// Restart перезапускает сервис через init-скрипт. Остановленный сервис —
-// штатный путь: скрипт его поднимет.
+// Restart restarts the service through the init script. A stopped service is
+// a regular path: the script will bring it up.
 func (c *Client) Restart(ctx context.Context) error {
 	return c.service(ctx, "restart")
 }
 
-// Reload перечитывает модель обвязки из UCI. У службы панели reload
-// перезапускает инстанс sing-box и доводит обвязку до модели: fw4 и dnsmasq
-// трогаются, только если изменилось то, что их касается.
+// Reload rereads the dataplane model from UCI. For the panel service reload
+// restarts the sing-box instance and brings the dataplane to the model: fw4 and dnsmasq
+// are touched only if what concerns them changed.
 func (c *Client) Reload(ctx context.Context) error {
 	return c.service(ctx, "reload")
 }
 
-// Start поднимает сервис. Уже запущенный сервис — штатный путь: init-скрипт
-// procd на повторный start не ругается.
+// Start brings the service up. An already running service is a regular path: the procd
+// init script does not complain about a repeated start.
 func (c *Client) Start(ctx context.Context) error {
 	return c.service(ctx, "start")
 }
 
-// Stop останавливает сервис. Остановленный сервис ошибкой не считается по той
-// же причине, что и в Start.
+// Stop stops the service. A stopped service is not counted as an error for the same
+// reason as in Start.
 func (c *Client) Stop(ctx context.Context) error {
 	return c.service(ctx, "stop")
 }
@@ -207,28 +207,28 @@ func (c *Client) service(ctx context.Context, action string) error {
 	return nil
 }
 
-// State — состояние сервиса для панели.
+// State is the service state for the panel.
 type State struct {
 	Running bool
-	// LastError — чем процесс объяснил своё падение в логе устройства, а без
-	// него — в файле log.output. Пусто, когда объяснения нет ни там, ни там.
+	// LastError is how the process explained its crash in the device log, and without
+	// it in the log.output file. Empty when there is an explanation in neither.
 	LastError string
-	// Failed означает, что procd службу знает, но ни один инстанс не поднят:
-	// её запускали и она отвалилась. Просто остановленную службу procd не
-	// помнит вовсе, поэтому различить их иначе нечем.
+	// Failed means procd knows the service but no instance is up:
+	// it was started and it fell off. A merely stopped service procd does not
+	// remember at all, so there is no other way to tell them apart.
 	Failed bool
-	// Uptime — возраст процесса; ноль, когда источник недоступен.
+	// Uptime is the process age; zero when the source is unavailable.
 	Uptime time.Duration
 }
 
-// Supervisor отдаёт то, что знает о службе менеджер процессов. Интерфейс
-// объявлен здесь, у потребителя.
+// Supervisor returns what the process manager knows about the service. The interface is
+// declared here, at the consumer.
 type Supervisor interface {
 	Service(ctx context.Context, name, instance string) (procd.State, error)
 }
 
-// Running отвечает, поднят ли сервис. Ненулевой код возврата означает «не
-// запущен», а не отказ: панель обязана работать при лежащем сервисе.
+// Running reports whether the service is up. A non-zero exit code means "not
+// running", not a failure: the panel must work with the service down.
 func (c *Client) Running(ctx context.Context) (bool, error) {
 	res, err := c.running(ctx)
 	if err != nil {
@@ -238,17 +238,17 @@ func (c *Client) Running(ctx context.Context) (bool, error) {
 	return res.ExitCode == 0, nil
 }
 
-// ErrNoSupervisor — менеджер процессов не подключён, и pid службы узнать не у
-// кого.
+// ErrNoSupervisor means the process manager is not attached, and there is nobody to learn the service pid
+// from.
 var ErrNoSupervisor = errors.New("менеджер процессов не подключён")
 
-// ErrUnknownService — procd службы не знает: init-скрипт не под procd или
-// служба зарегистрирована под другим именем, и pid процесса узнать неоткуда.
+// ErrUnknownService means procd does not know the service: the init script is not under procd or
+// the service is registered under another name, and there is nowhere to learn the process pid.
 var ErrUnknownService = errors.New("служба не зарегистрирована в procd")
 
-// PID отдаёт pid поднятого процесса службы у procd; ноль — ни один инстанс не
-// поднят. По смене pid применение отличает процесс после рестарта от прежнего:
-// init-скрипт возвращается раньше, чем procd заменит процесс.
+// PID returns the pid of the running service process from procd; zero means no instance is
+// up. By the pid change the apply tells the process after a restart from the previous one:
+// the init script returns before procd replaces the process.
 func (c *Client) PID(ctx context.Context) (int, error) {
 	if c.supervisor == nil {
 		return 0, ErrNoSupervisor
@@ -266,9 +266,9 @@ func (c *Client) PID(ctx context.Context) (int, error) {
 	return state.PID, nil
 }
 
-// State дополняет ответ init-скрипта данными procd. Init-скрипт отдаёт только
-// код возврата, поэтому возраст и признак падения берутся у менеджера
-// процессов; его отсутствие ответ не ломает.
+// State complements the init script response with procd data. The init script returns only
+// the exit code, so the age and the failure flag are taken from the process
+// manager; its absence does not break the response.
 func (c *Client) State(ctx context.Context) (State, error) {
 	running, err := c.running(ctx)
 	if err != nil {
@@ -283,8 +283,8 @@ func (c *Client) State(ctx context.Context) (State, error) {
 
 	supervised, err := c.supervisor.Service(ctx, c.ServiceName(), c.instance)
 	if errors.Is(err, procd.ErrAmbiguousInstance) {
-		// Остальные отказы procd состояние только обедняют, а этот означает,
-		// что демон не знает, какой процесс его: угадывать нельзя.
+		// Other procd failures only impoverish the state, and this one means
+		// the daemon does not know which process is its own: guessing is not allowed.
 		return State{}, fmt.Errorf("состояние сервиса: %w", err)
 	}
 
@@ -307,9 +307,9 @@ func (c *Client) State(ctx context.Context) (State, error) {
 	return state, nil
 }
 
-// Launch отдаёт, с чем procd поднимает службу: рабочий каталог и конфиг.
-// Пустые поля без ошибки — узнать неоткуда: менеджера процессов нет, служба
-// ему незнакома или запущена без флагов и не поднята.
+// Launch returns what procd starts the service with: the working directory and the config.
+// Empty fields without an error mean nowhere to learn it: there is no process manager, the service
+// is unfamiliar to it or started without flags and not running.
 func (c *Client) Launch(ctx context.Context) (procd.Launch, error) {
 	if c.supervisor == nil {
 		return procd.Launch{}, nil
@@ -323,8 +323,8 @@ func (c *Client) Launch(ctx context.Context) (procd.Launch, error) {
 	return state.Launch, nil
 }
 
-// running спрашивает init-скрипт, поднят ли инстанс sing-box. Без имени
-// инстанса rc.common отвечает за службу, а у неё могут быть и другие инстансы.
+// running asks the init script whether the sing-box instance is up. Without an instance
+// name rc.common answers for the service, and it may have other instances.
 func (c *Client) running(ctx context.Context) (Result, error) {
 	args := []string{"running"}
 	if c.instance != "" {
@@ -334,14 +334,14 @@ func (c *Client) running(ctx context.Context) (Result, error) {
 	return c.runner.Run(ctx, c.initScript, args...)
 }
 
-// ServiceName выводит имя службы в procd из пути init-скрипта: procd
-// регистрирует службу под именем скрипта.
+// ServiceName derives the procd service name from the init script path: procd
+// registers the service under the script name.
 func (c *Client) ServiceName() string {
 	return filepath.Base(c.initScript)
 }
 
-// firstLine оставляет от вывода одну строку: в текст ошибки идёт причина, а не
-// весь диагностический поток — он уходит вызывающему в Result.
+// firstLine leaves one line of the output: the error text gets the reason, not
+// the whole diagnostic stream, which goes to the caller in Result.
 func firstLine(s string) string {
 	for i, r := range s {
 		if r == '\n' {

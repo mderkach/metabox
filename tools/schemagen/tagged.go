@@ -6,32 +6,32 @@ import (
 	"strings"
 )
 
-// Статические union'ы форка объявлены одинаково: поле-дискриминатор и по полю
-// с json:"-" на каждый вариант. Реестр им не нужен — варианты известны на
-// этапе компиляции, а badjson кладёт выбранный вариант плоско рядом с
-// дискриминатором.
+// The static unions of the fork are declared uniformly: a discriminator field and
+// a json:"-" field per variant. They need no registry: the variants are known at
+// compile time, and badjson puts the chosen variant flat next to
+// the discriminator.
 type taggedSpec struct {
-	discr    string      // имя поля в JSON: type, action, provider, version
-	variants []tagOption // порядок задаёт порядок вариантов в схеме
-	// numeric: дискриминатор — число, и литерал печатается без кавычек.
-	// Такой union у http_clients, где вариант выбирает версия протокола.
+	discr    string      // field name in JSON: type, action, provider, version
+	variants []tagOption // the order sets the order of variants in the schema
+	// numeric: the discriminator is a number, and the literal is printed without quotes.
+	// http_clients has such a union, where the protocol version selects the variant.
 	numeric bool
 }
 
 type tagOption struct {
-	tag   string // значение дискриминатора
-	field string // поле Go-структуры с опциями варианта; пустое — вариант без опций
+	tag   string // discriminator value
+	field string // Go struct field with the variant options; empty means a variant without options
 }
 
-// taggedUnion собирает union: общие поля структуры плюс поля выбранного
-// варианта, уплощённые в тот же объект.
+// taggedUnion builds a union: the common struct fields plus the fields of the chosen
+// variant, flattened into the same object.
 func (w *walker) taggedUnion(t reflect.Type, spec taggedSpec, path string) *schema {
 	discrOptional := w.discrOptional(t, spec.discr)
 
 	out := &schema{kind: kindTagged, discr: spec.discr}
 	if discrOptional {
-		// Дискриминатор можно опустить (форк подставляет значение по
-		// умолчанию), а z.discriminatedUnion требует его присутствия.
+		// The discriminator may be omitted (the fork substitutes the default
+		// value), while z.discriminatedUnion requires it to be present.
 		out = &schema{kind: kindUnion}
 	}
 
@@ -51,7 +51,7 @@ func (w *walker) taggedUnion(t reflect.Type, spec taggedSpec, path string) *sche
 
 		variantField, ok := t.FieldByName(option.field)
 		if !ok {
-			panic(fmt.Sprintf("schemagen: %s: нет поля %s", goTypeName(t), option.field))
+			panic(fmt.Sprintf("schemagen: %s: no field %s", goTypeName(t), option.field))
 		}
 		for _, expanded := range w.expand(body, deref(variantField.Type), path+"."+option.tag) {
 			out.variants = append(out.variants, variant{expanded})
@@ -60,8 +60,8 @@ func (w *walker) taggedUnion(t reflect.Type, spec taggedSpec, path string) *sche
 	return out
 }
 
-// literalOf печатает значение дискриминатора: число литералом, всё остальное
-// строкой.
+// literalOf prints the discriminator value: a number as a literal, everything else
+// as a string.
 func literalOf(tag string, numeric bool) string {
 	if numeric {
 		return fmt.Sprintf("z.literal(%s)", tag)
@@ -70,17 +70,17 @@ func literalOf(tag string, numeric bool) string {
 	return fmt.Sprintf("z.literal(%q)", tag)
 }
 
-// appendCommonFields переносит поля, общие для всех вариантов union'а: сам
-// дискриминатор и поля вариантов (json:"-") пропускаются.
+// appendCommonFields moves the fields common to all variants of a union: the
+// discriminator itself and the variant fields (json:"-") are skipped.
 //
-// Обход тот же, что у обычной структуры: встроенные поля форк кладёт в JSON
-// плоско, и своя укороченная копия обхода теряла бы их целиком — у встроенного
-// поля нет тега json, и по имени оно не отбирается.
+// The walk is the same as for an ordinary struct: the fork puts embedded fields into JSON
+// flat, and a shortened copy of the walk would lose them entirely: an embedded
+// field has no json tag and is not selected by name.
 func (w *walker) appendCommonFields(out *schema, t reflect.Type, discr, path string) {
 	common := &schema{kind: kindObject}
 
 	if unions := w.appendFields(common, t, path); len(unions) > 0 {
-		panic(fmt.Sprintf("schemagen: %s: встроенный union внутри union'а по %q", goTypeName(t), discr))
+		panic(fmt.Sprintf("schemagen: %s: embedded union inside a union by %q", goTypeName(t), discr))
 	}
 
 	for _, f := range dedupe(common.fields) {
@@ -91,8 +91,8 @@ func (w *walker) appendCommonFields(out *schema, t reflect.Type, discr, path str
 	}
 }
 
-// discrOptional: у дискриминатора стоит omitempty, значит в конфиге его
-// может не быть.
+// discrOptional: the discriminator has omitempty, so it
+// may be absent from the config.
 func (w *walker) discrOptional(t reflect.Type, discr string) bool {
 	for i := range t.NumField() {
 		name, opts, _ := strings.Cut(t.Field(i).Tag.Get("json"), ",")

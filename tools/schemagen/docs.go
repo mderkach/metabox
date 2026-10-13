@@ -9,20 +9,20 @@ import (
 	"strings"
 )
 
-// docPackages — пакеты форка, типы которых попадают в схему. Ключи описаний
-// строятся по имени пакета, как их видит рефлексия.
+// docPackages are the fork packages whose types get into the schema. Description keys
+// are built from the package name as reflection sees it.
 var docPackages = []string{"option"}
 
-// docSet держит godoc форка: ключ поля — `option.Тип.Поле`, ключ типа —
-// `option.Тип`. Рефлексия комментариев не видит, поэтому они читаются из
-// исходников того же модуля, из которого собрана схема.
+// docSet holds the godoc of the fork: a field key is `option.Type.Field`, a type key is
+// `option.Type`. Reflection does not see comments, so they are read from
+// the sources of the same module the schema is built from.
 type docSet struct {
 	text map[string]string
 }
 
-// readDocs разбирает пакеты форка, из которых собирается схема. Пустой набор —
-// не ошибка: схема соберётся без описаний, а генератор не должен падать там,
-// где исходников рядом нет.
+// readDocs parses the fork packages the schema is built from. An empty set is
+// not an error: the schema is built without descriptions, and the generator must not fail where
+// there are no sources nearby.
 func readDocs(root string, pkgs []string) *docSet {
 	out := &docSet{text: map[string]string{}}
 
@@ -99,13 +99,13 @@ func (d *docSet) put(key, text string) {
 	}
 }
 
-// field отдаёт описание поля структуры; пустая строка — описания нет.
+// field returns the description of a struct field; an empty string means no description.
 func (d *docSet) field(goType, name string) string {
 	return d.text[goType+"."+name]
 }
 
-// docText склеивает комментарий в одну строку: в схеме он печатается JSDoc, а
-// перенос строки внутри `/** */` ломал бы отступы сгенерированного файла.
+// docText glues a comment into one line: in the schema it is printed as JSDoc, and
+// a line break inside `/** */` would break the indentation of the generated file.
 func docText(groups ...*ast.CommentGroup) string {
 	for _, group := range groups {
 		if group == nil {

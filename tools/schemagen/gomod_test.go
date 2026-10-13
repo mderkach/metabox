@@ -7,53 +7,53 @@ import (
 	"testing"
 )
 
-// Go не наследует replace из зависимостей, поэтому go.mod генератора повторяет
-// блок форка целиком. Рассинхрон проявляется ошибкой компиляции вида
-// `undefined: badoption.Range` — понятной, но не связываемой с причиной, а
-// расхождение версии внутри одной мажорной ветки может и вовсе собраться и
-// дать схему от чужой сборки. Здесь блоки сверяются построчно.
+// Go does not inherit replace from dependencies, so the generator go.mod repeats
+// the fork block as a whole. A desync shows as a compile error like
+// `undefined: badoption.Range`, clear but not tied to the cause, while
+// a version mismatch within one major branch may even build and
+// give a schema from someone else's build. Here the blocks are compared line by line.
 func TestReplaceBlockMatchesFork(t *testing.T) {
 	dir, err := forkDir()
 	if err != nil {
-		t.Fatalf("каталог форка: %v", err)
+		t.Fatalf("fork directory: %v", err)
 	}
 
 	ours := replaceDirectives(t, "go.mod")
 	theirs := replaceDirectives(t, filepath.Join(dir, "go.mod"))
 
-	// Замена самого форка — наша: в его go.mod такой строки нет.
+	// The replacement of the fork itself is ours: its go.mod has no such line.
 	if _, ok := ours[forkModule]; !ok {
-		t.Errorf("нет замены %s: без неё собирается upstream, а не форк", forkModule)
+		t.Errorf("no replacement of %s: without it upstream is built, not the fork", forkModule)
 	}
 	delete(ours, forkModule)
 
 	for module, want := range theirs {
 		got, ok := ours[module]
 		if !ok {
-			t.Errorf("форк заменяет %s на %s, а генератор — нет", module, want)
+			t.Errorf("the fork replaces %s with %s, the generator does not", module, want)
 			continue
 		}
 		if got != want {
-			t.Errorf("%s: у генератора %s, у форка %s", module, got, want)
+			t.Errorf("%s: generator has %s, fork has %s", module, got, want)
 		}
 	}
 
 	for module, got := range ours {
 		if _, ok := theirs[module]; !ok {
-			t.Errorf("генератор заменяет %s на %s, а форк такой замены не держит", module, got)
+			t.Errorf("the generator replaces %s with %s, the fork has no such replacement", module, got)
 		}
 	}
 }
 
-// replaceDirectives читает go.mod и возвращает замены: заменяемый модуль ->
-// то, на что он заменён. Разбираются обе формы записи — отдельной строкой и
-// блоком в скобках.
+// replaceDirectives reads go.mod and returns the replacements: the replaced module ->
+// what it is replaced with. Both forms of entry are parsed: a separate line and
+// a block in parentheses.
 func replaceDirectives(t *testing.T, path string) map[string]string {
 	t.Helper()
 
 	content, err := os.ReadFile(path)
 	if err != nil {
-		t.Fatalf("чтение %s: %v", path, err)
+		t.Fatalf("reading %s: %v", path, err)
 	}
 
 	out := map[string]string{}
@@ -86,7 +86,7 @@ func replaceDirectives(t *testing.T, path string) map[string]string {
 	}
 
 	if len(out) == 0 {
-		t.Fatalf("в %s нет ни одной замены: разбор сломан", path)
+		t.Fatalf("no replacement in %s: parsing is broken", path)
 	}
 
 	return out

@@ -5,14 +5,14 @@ import (
 	"time"
 )
 
-// unackedTimeout — сколько соединение живёт с неподтверждёнными данными.
-// Клиент, пропавший без закрытия (уснул ноутбук, отвалился Wi-Fi), иначе
-// держит поток лога вместе с процессом logread до исчерпания повторов TCP —
-// на Linux около четверти часа, а потоков всего четыре.
+// unackedTimeout is how long a connection lives with unacknowledged data.
+// A client that vanished without closing (a laptop fell asleep, Wi-Fi dropped) would otherwise
+// hold the log stream together with the logread process until TCP retries run out,
+// on Linux about a quarter of an hour, and there are only four streams in all.
 const unackedTimeout = 30 * time.Second
 
-// control ставит TCP_USER_TIMEOUT на слушающий сокет: принятые соединения
-// наследуют его от слушателя.
+// control sets TCP_USER_TIMEOUT on the listening socket: accepted connections
+// inherit it from the listener.
 func control(_, _ string, conn syscall.RawConn) error {
 	var sockErr error
 

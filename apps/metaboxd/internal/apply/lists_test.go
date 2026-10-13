@@ -11,16 +11,16 @@ import (
 	"metabox/internal/procd"
 )
 
-// Плохое имя файла списка отклоняется до того, как транзакция что-то тронула.
+// A bad list file name is rejected before the transaction touched anything.
 func TestStartRejectsBadListName(t *testing.T) {
 	tests := []struct {
 		name string
 		list string
 	}{
-		{"выход из подкаталога", "../evil.json"},
-		{"вложенный путь", "dir/evil.json"},
-		{"без расширения", "evil"},
-		{"скрытый файл", ".evil.json"},
+		{"escape from the subdirectory", "../evil.json"},
+		{"nested path", "dir/evil.json"},
+		{"no extension", "evil"},
+		{"hidden file", ".evil.json"},
 	}
 
 	for _, tt := range tests {
@@ -29,19 +29,19 @@ func TestStartRejectsBadListName(t *testing.T) {
 			lists := apply.Lists{Put: map[string][]byte{tt.list: []byte("{}")}}
 
 			if _, err := h.manager.Start(t.Context(), []byte(validConfig), lists, "", ""); !errors.Is(err, apply.ErrListName) {
-				t.Fatalf("ошибка %v, ожидали ErrListName", err)
+				t.Fatalf("error %v, expected ErrListName", err)
 			}
 
 			if got := h.rec.snapshot(); len(got) != 0 {
-				t.Errorf("до транзакции дошло: %v", got)
+				t.Errorf("reached the transaction: %v", got)
 			}
 		})
 	}
 }
 
-// Файл с тем же содержимым и удаление несуществующего — пустые действия: в
-// транзакцию попадают только реальные изменения, иначе доигрывание прочитало
-// бы совпадение неизменённого файла как начатую запись.
+// A file with the same content and deletion of a nonexistent one are empty actions: only
+// real changes get into the transaction, otherwise the replay would read
+// a match of an unchanged file as a started write.
 func TestStartNarrowsListsToChanges(t *testing.T) {
 	h := newHarness(t)
 	same := []byte(`{"rules":[]}`)
@@ -57,21 +57,21 @@ func TestStartNarrowsListsToChanges(t *testing.T) {
 
 	tx, err := h.manager.Start(t.Context(), []byte(validConfig), lists, "", "")
 	if err != nil {
-		t.Fatalf("применение: %v", err)
+		t.Fatalf("apply: %v", err)
 	}
 
 	if _, ok := tx.Lists["same.json"]; ok {
-		t.Error("неизменённый файл попал в транзакцию")
+		t.Error("unchanged file got into the transaction")
 	}
 	if _, ok := tx.Lists["new.json"]; !ok {
-		t.Error("нового файла в транзакции нет")
+		t.Error("the new file is not in the transaction")
 	}
 	if len(tx.RemovedLists) != 0 {
-		t.Errorf("удаление несуществующего попало в транзакцию: %v", tx.RemovedLists)
+		t.Errorf("deletion of a nonexistent file got into the transaction: %v", tx.RemovedLists)
 	}
 }
 
-// Правка файлов списков мимо демона ловится базой клиента, как у конфига.
+// An edit of list files bypassing the daemon is caught by the client base, as with the config.
 func TestStartChecksListsBase(t *testing.T) {
 	h := newHarness(t)
 
@@ -82,18 +82,18 @@ func TestStartChecksListsBase(t *testing.T) {
 	stale := config.ListsEtag(map[string]string{})
 
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", stale); !errors.Is(err, apply.ErrListsModified) {
-		t.Fatalf("ошибка %v, ожидали ErrListsModified", err)
+		t.Fatalf("error %v, expected ErrListsModified", err)
 	}
 
 	fresh := config.ListsEtag(map[string]string{"my.json": config.Sum([]byte("{}"))})
 
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", fresh); err != nil {
-		t.Fatalf("применение с верной базой: %v", err)
+		t.Fatalf("apply with the correct base: %v", err)
 	}
 }
 
-// Обрыв после записи файла списка, но до конфига: запись началась, и без
-// отката устройство осталось бы с новым списком при старом конфиге.
+// A break after writing the list file but before the config: the write started, and without
+// a rollback the device would stay with the new list and the old config.
 func TestReplayRollsBackWhenListWritten(t *testing.T) {
 	h := newHarness(t)
 
@@ -111,16 +111,16 @@ func TestReplayRollsBackWhenListWritten(t *testing.T) {
 	})
 
 	if err := h.manager.Replay(t.Context()); err != nil {
-		t.Fatalf("доигрывание: %v", err)
+		t.Fatalf("replay: %v", err)
 	}
 
 	if !slices.Contains(h.rec.snapshot(), "Restore") {
-		t.Errorf("отката не было: %v", h.rec.snapshot())
+		t.Errorf("there was no rollback: %v", h.rec.snapshot())
 	}
 }
 
-// Обрыв до любой записи: ни конфиг, ни файлы не совпали с целями транзакции —
-// откат по бэкапу прошлой транзакции только навредил бы.
+// A break before any write: neither the config nor the files matched the transaction targets,
+// a rollback from the backup of a previous transaction would only do harm.
 func TestReplaySkipsWhenListsUntouched(t *testing.T) {
 	h := newHarness(t)
 
@@ -142,15 +142,15 @@ func TestReplaySkipsWhenListsUntouched(t *testing.T) {
 	})
 
 	if err := h.manager.Replay(t.Context()); err != nil {
-		t.Fatalf("доигрывание: %v", err)
+		t.Fatalf("replay: %v", err)
 	}
 
 	if slices.Contains(h.rec.snapshot(), "Restore") {
-		t.Errorf("откат без записи: %v", h.rec.snapshot())
+		t.Errorf("rollback without a write: %v", h.rec.snapshot())
 	}
 }
 
-// Тот же обрыв, но файл уже удалён: запись началась — откат обязан вернуть его.
+// The same break, but the file is already deleted: the write started, the rollback must bring it back.
 func TestReplayRollsBackWhenListRemoved(t *testing.T) {
 	h := newHarness(t)
 
@@ -168,28 +168,28 @@ func TestReplayRollsBackWhenListRemoved(t *testing.T) {
 	})
 
 	if err := h.manager.Replay(t.Context()); err != nil {
-		t.Fatalf("доигрывание: %v", err)
+		t.Fatalf("replay: %v", err)
 	}
 
 	if !slices.Contains(h.rec.snapshot(), "Restore") {
-		t.Errorf("отката не было: %v", h.rec.snapshot())
+		t.Errorf("there was no rollback: %v", h.rec.snapshot())
 	}
 }
 
-// Записанные файлы уезжают на диск и доступны следующему применению как база.
+// The written files go to disk and are available to the next apply as a base.
 func TestApplyWritesLists(t *testing.T) {
 	h := newHarness(t)
 	lists := apply.Lists{Put: map[string][]byte{"my.json": []byte(`{"rules":[]}`)}}
 
 	tx, err := h.manager.Start(t.Context(), []byte(validConfig), lists, "", "")
 	if err != nil {
-		t.Fatalf("применение: %v", err)
+		t.Fatalf("apply: %v", err)
 	}
 
 	h.waitWindow(t)
 
 	if _, err := h.manager.Confirm(t.Context(), tx.ID); err != nil {
-		t.Fatalf("подтверждение: %v", err)
+		t.Fatalf("confirm: %v", err)
 	}
 
 	h.store.mu.Lock()
@@ -197,13 +197,13 @@ func TestApplyWritesLists(t *testing.T) {
 	h.store.mu.Unlock()
 
 	if string(written) != `{"rules":[]}` {
-		t.Errorf("на диск уехало %q", written)
+		t.Errorf("%q went to disk", written)
 	}
 }
 
-// Относительный path списка служба резолвит от своего рабочего каталога:
-// расхождение с каталогом конфига отказывает в применении до записи, а не
-// откатом по healthcheck. Неизвестный каталог применение не останавливает.
+// The service resolves a relative list path from its working directory:
+// a mismatch with the config directory refuses the apply before the write, instead of
+// a rollback by the healthcheck. An unknown directory does not stop the apply.
 func TestStartVerifiesWorkdir(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -211,11 +211,11 @@ func TestStartVerifiesWorkdir(t *testing.T) {
 		workdirErr error
 		wantRefuse bool
 	}{
-		{"каталоги совпадают", configDir, nil, false},
-		{"совпадают с точностью до записи пути", configDir + "/", nil, false},
-		{"рабочий каталог пакета по умолчанию", "/usr/share/sing-box", nil, true},
-		{"каталог неизвестен", "", nil, false},
-		{"procd не ответил", "", errors.New("ubus не отвечает"), false},
+		{"directories match", configDir, nil, false},
+		{"match up to the path notation", configDir + "/", nil, false},
+		{"default package working directory", "/usr/share/sing-box", nil, true},
+		{"directory unknown", "", nil, false},
+		{"procd did not answer", "", errors.New("ubus не отвечает"), false},
 	}
 
 	for _, tt := range tests {
@@ -229,7 +229,7 @@ func TestStartVerifiesWorkdir(t *testing.T) {
 
 			if !tt.wantRefuse {
 				if err != nil {
-					t.Fatalf("применение: %v", err)
+					t.Fatalf("apply: %v", err)
 				}
 
 				h.waitWindow(t)
@@ -239,42 +239,42 @@ func TestStartVerifiesWorkdir(t *testing.T) {
 
 			workdirErr, ok := errors.AsType[*apply.WorkdirError](err)
 			if !ok {
-				t.Fatalf("ошибка %v, ожидали WorkdirError", err)
+				t.Fatalf("error %v, expected WorkdirError", err)
 			}
 			if workdirErr.Workdir != tt.workdir || workdirErr.ConfigDir != configDir {
-				t.Errorf("каталоги в отказе %q и %q, ожидали %q и %q",
+				t.Errorf("directories in the failure %q and %q, expected %q and %q",
 					workdirErr.Workdir, workdirErr.ConfigDir, tt.workdir, configDir)
 			}
 			if got := h.rec.snapshot(); len(got) != 0 {
-				t.Errorf("до транзакции дошло: %v", got)
+				t.Errorf("reached the transaction: %v", got)
 			}
 		})
 	}
 }
 
-// Без файлов списков рабочий каталог не важен: конфиг без local применяется
-// как раньше, даже когда служба запущена из каталога пакета.
+// Without list files the working directory does not matter: a config without local is applied
+// as before, even when the service is started from the package directory.
 func TestStartIgnoresWorkdirWithoutLists(t *testing.T) {
 	h := newHarness(t)
 	h.service.launch = procd.Launch{Workdir: "/usr/share/sing-box"}
 
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
-		t.Fatalf("применение: %v", err)
+		t.Fatalf("apply: %v", err)
 	}
 
 	h.waitWindow(t)
 }
 
-// Служба пакета панели поднимает sing-box одним -c на конфиг демона с -D на его
-// каталоге: файлы списков применяются без отказа, а кандидат проверяется
-// файлом от собственного каталога.
+// The panel package service starts sing-box with a single -c on the daemon config with -D on its
+// directory: list files are applied without refusal, and the candidate is checked
+// as a file from its own directory.
 func TestStartAcceptsPackageService(t *testing.T) {
 	h := newHarness(t)
 	h.service.launch = procd.Launch{Configs: []string{configDir + "/" + configName}, Workdir: configDir}
 	lists := apply.Lists{Put: map[string][]byte{"my.json": []byte(`{"rules":[]}`)}}
 
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), lists, "", ""); err != nil {
-		t.Fatalf("применение: %v", err)
+		t.Fatalf("apply: %v", err)
 	}
 
 	h.waitWindow(t)
@@ -284,13 +284,13 @@ func TestStartAcceptsPackageService(t *testing.T) {
 	h.service.mu.Unlock()
 
 	if file != dir+"/"+configName || workdir != dir {
-		t.Errorf("проверка -c %q -D %q, ожидали -c %q -D %q", file, workdir, dir+"/"+configName, dir)
+		t.Errorf("check -c %q -D %q, expected -c %q -D %q", file, workdir, dir+"/"+configName, dir)
 	}
 }
 
-// Восстановление версии приводит каталог списков к снимку: файлы снимка
-// пишутся, лишние удаляются, а имён, которых применение не примет, конверт не
-// несёт — иначе чужой файл в подкаталоге валил бы восстановление.
+// Restoring a version brings the lists directory to the snapshot: snapshot files
+// are written, extra ones are deleted, and names the apply would not accept are not carried by
+// the envelope, otherwise a foreign file in the subdirectory would fail the restore.
 func TestSnapshotLists(t *testing.T) {
 	data := []byte(`{"rules":[]}`)
 
@@ -302,30 +302,30 @@ func TestSnapshotLists(t *testing.T) {
 		wantRemove []string
 	}{
 		{
-			name:     "снимок поверх пустого каталога",
+			name:     "snapshot over an empty directory",
 			snapshot: map[string][]byte{"a.json": data},
 			wantPut:  []string{"a.json"},
 		},
 		{
-			name:       "пустой снимок снимает текущие",
+			name:       "an empty snapshot removes the current ones",
 			snapshot:   map[string][]byte{},
 			current:    map[string]string{"a.json": "x", "b.json": "y"},
 			wantRemove: []string{"a.json", "b.json"},
 		},
 		{
-			name:       "общие пишутся, лишние снимаются",
+			name:       "common ones are written, extra ones are removed",
 			snapshot:   map[string][]byte{"a.json": data},
 			current:    map[string]string{"a.json": "x", "b.json": "y"},
 			wantPut:    []string{"a.json"},
 			wantRemove: []string{"b.json"},
 		},
 		{
-			name:     "недопустимое имя в снимке пропускается",
+			name:     "an invalid name in the snapshot is skipped",
 			snapshot: map[string][]byte{"a.json": data, "README": data},
 			wantPut:  []string{"a.json"},
 		},
 		{
-			name:     "недопустимое имя в каталоге не удаляется",
+			name:     "an invalid name in the directory is not deleted",
 			snapshot: map[string][]byte{},
 			current:  map[string]string{"notes.txt": "x"},
 		},
@@ -337,29 +337,29 @@ func TestSnapshotLists(t *testing.T) {
 
 			put := slices.Sorted(maps.Keys(got.Put))
 			if !slices.Equal(put, tt.wantPut) {
-				t.Errorf("пишутся %v, ожидали %v", put, tt.wantPut)
+				t.Errorf("written %v, expected %v", put, tt.wantPut)
 			}
 
 			if !slices.Equal(got.Remove, tt.wantRemove) {
-				t.Errorf("удаляются %v, ожидали %v", got.Remove, tt.wantRemove)
+				t.Errorf("deleted %v, expected %v", got.Remove, tt.wantRemove)
 			}
 
 			for name, content := range got.Put {
 				if string(content) != string(tt.snapshot[name]) {
-					t.Errorf("файл %s: пишется %q, ожидали %q", name, content, tt.snapshot[name])
+					t.Errorf("file %s: written %q, expected %q", name, content, tt.snapshot[name])
 				}
 			}
 		})
 	}
 }
 
-// Кандидат проверяется тем режимом и от той базы путей, с какими procd поднимет
-// службу; служба на чужом конфиге отказывает до записи.
+// The candidate is checked in the mode and from the path base with which procd will start
+// the service; a service on a foreign config refuses before the write.
 func TestStartChecksLikeTheService(t *testing.T) {
 	ours := configDir + "/" + configName
 
-	// packageWorkdir подменяется существующим каталогом: проверка берёт
-	// рабочий каталог базой путей, только если он есть на диске.
+	// packageWorkdir is replaced with an existing directory: the check takes
+	// the working directory as the path base only if it exists on disk.
 	const packageWorkdir = "<рабочий каталог пакета>"
 
 	tests := []struct {
@@ -369,33 +369,33 @@ func TestStartChecksLikeTheService(t *testing.T) {
 		wantWorkdir string
 		wantRefuse  bool
 	}{
-		{name: "команда неизвестна — как у пакета форка", wantFile: true},
+		{name: "command unknown: as with the fork package", wantFile: true},
 		{
-			name:        "пакет форка: файл и рабочий каталог пакета",
+			name:        "fork package: file and package working directory",
 			launch:      procd.Launch{Configs: []string{ours}, Workdir: packageWorkdir},
 			wantFile:    true,
 			wantWorkdir: packageWorkdir,
 		},
 		{
-			name:     "рабочего каталога нет на диске — база путей кандидат",
+			name:     "no working directory on disk: the path base is the candidate",
 			launch:   procd.Launch{Configs: []string{ours}, Workdir: "/nonexistent/sing-box"},
 			wantFile: true,
 		},
 		{
-			name:       "команда без -c и -C на чужом рабочем каталоге",
+			name:       "command without -c and -C on a foreign working directory",
 			launch:     procd.Launch{Configs: []string{"/usr/share/sing-box/config.json"}, Workdir: "/usr/share/sing-box"},
 			wantRefuse: true,
 		},
-		{name: "относительный файл при неизвестном рабочем каталоге", launch: procd.Launch{Configs: []string{"config.json"}}, wantRefuse: true},
+		{name: "relative file with an unknown working directory", launch: procd.Launch{Configs: []string{"config.json"}}, wantRefuse: true},
 		{
-			name:     "файл при рабочем каталоге конфига",
+			name:     "file with the config working directory",
 			launch:   procd.Launch{Configs: []string{ours}, Workdir: configDir},
 			wantFile: true,
 		},
-		{name: "режим каталога", launch: procd.Launch{ConfigDirs: []string{configDir}, Workdir: configDir}},
-		{name: "чужой файл конфига", launch: procd.Launch{Configs: []string{"/var/run/homeproxy/sing-box-c.json"}}, wantRefuse: true},
-		{name: "несколько файлов", launch: procd.Launch{Configs: []string{ours, configDir + "/extra.json"}}, wantRefuse: true},
-		{name: "файл и каталог разом", launch: procd.Launch{Configs: []string{ours}, ConfigDirs: []string{configDir}}, wantRefuse: true},
+		{name: "directory mode", launch: procd.Launch{ConfigDirs: []string{configDir}, Workdir: configDir}},
+		{name: "foreign config file", launch: procd.Launch{Configs: []string{"/var/run/homeproxy/sing-box-c.json"}}, wantRefuse: true},
+		{name: "several files", launch: procd.Launch{Configs: []string{ours, configDir + "/extra.json"}}, wantRefuse: true},
+		{name: "file and directory together", launch: procd.Launch{Configs: []string{ours}, ConfigDirs: []string{configDir}}, wantRefuse: true},
 	}
 
 	for _, tt := range tests {
@@ -413,20 +413,20 @@ func TestStartChecksLikeTheService(t *testing.T) {
 			if tt.wantRefuse {
 				launchErr, ok := errors.AsType[*apply.LaunchError](err)
 				if !ok {
-					t.Fatalf("ошибка %v, ожидали LaunchError", err)
+					t.Fatalf("error %v, expected LaunchError", err)
 				}
 				if launchErr.Config != ours {
-					t.Errorf("конфиг демона в отказе %q, ожидали %q", launchErr.Config, ours)
+					t.Errorf("daemon config in the failure %q, expected %q", launchErr.Config, ours)
 				}
 				if got := h.rec.snapshot(); len(got) != 0 {
-					t.Errorf("до транзакции дошло: %v", got)
+					t.Errorf("reached the transaction: %v", got)
 				}
 
 				return
 			}
 
 			if err != nil {
-				t.Fatalf("применение: %v", err)
+				t.Fatalf("apply: %v", err)
 			}
 			h.waitWindow(t)
 
@@ -435,7 +435,7 @@ func TestStartChecksLikeTheService(t *testing.T) {
 			h.service.mu.Unlock()
 
 			if wantFile := dir + "/" + configName; tt.wantFile != (file == wantFile) || (!tt.wantFile && file != "") {
-				t.Errorf("файл проверки %q при каталоге %q, ожидали файл: %v", file, dir, tt.wantFile)
+				t.Errorf("check file %q with directory %q, expected a file: %v", file, dir, tt.wantFile)
 			}
 
 			wantWorkdir := tt.wantWorkdir
@@ -443,7 +443,7 @@ func TestStartChecksLikeTheService(t *testing.T) {
 				wantWorkdir = dir
 			}
 			if workdir != wantWorkdir {
-				t.Errorf("база путей проверки %q, ожидали %q", workdir, wantWorkdir)
+				t.Errorf("check path base %q, expected %q", workdir, wantWorkdir)
 			}
 		})
 	}

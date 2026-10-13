@@ -9,18 +9,18 @@ import (
 	"time"
 )
 
-// DNSInbound — адрес, по которому демон достучится до dns-in кандидата.
+// DNSInbound is the address the daemon reaches the candidate dns-in at.
 type DNSInbound struct {
 	Address string
-	// Network — "tcp" или "udp", когда inbound принимает только один из них;
-	// пусто — оба.
+	// Network is "tcp" or "udp" when the inbound accepts only one of them;
+	// empty means both.
 	Network string
 }
 
-// ReadDNSInbound ищет dns-in: первый inbound типа direct с listen_port, равным
-// port — порту, на который init-скрипт отдаёт запросы dnsmasq. Тег не
-// учитывается: у homeproxy он `dns-in`, у владельца может быть любым, а порт
-// задаёт модель обвязки. Ложь без ошибки — такого inbound в конфиге нет.
+// ReadDNSInbound looks for dns-in: the first inbound of type direct whose listen_port equals
+// port, the port the init script sends dnsmasq queries to. The tag is not
+// considered: in homeproxy it is `dns-in`, the owner's may be anything, and the port
+// is set by the dataplane model. False without an error means there is no such inbound in the config.
 func ReadDNSInbound(data []byte, port int) (DNSInbound, bool, error) {
 	var cfg struct {
 		Inbounds []struct {
@@ -52,8 +52,8 @@ func ReadDNSInbound(data []byte, port int) (DNSInbound, bool, error) {
 	return DNSInbound{}, false, nil
 }
 
-// DNSProbe проверяет, что dns-in поднятого sing-box разрешает имя: ответ
-// Clash API этого не доказывает, сломанный раздел dns его не роняет.
+// DNSProbe checks that the dns-in of the running sing-box resolves a name: a Clash API
+// answer does not prove this, a broken dns section does not crash it.
 type DNSProbe struct {
 	name     string
 	timeout  time.Duration
@@ -61,20 +61,20 @@ type DNSProbe struct {
 	attempts int
 }
 
-// NewDNSProbe задаёт имя, которое обязано разрешаться, потолок одной попытки,
-// паузу между попытками и их число. NXDOMAIN и ответ без адреса — тоже
-// отказ: имя выбрано как заведомо существующее.
+// NewDNSProbe sets the name that must resolve, the ceiling of one attempt,
+// the pause between attempts and their number. NXDOMAIN and an answer without an address are also
+// a failure: the name is chosen as one that certainly exists.
 func NewDNSProbe(name string, timeout, interval time.Duration, attempts int) *DNSProbe {
 	return &DNSProbe{name: name, timeout: timeout, interval: interval, attempts: max(1, attempts)}
 }
 
-// Probe шлёт A-запрос на inbound до первого ответа с адресом.
+// Probe sends an A query to the inbound until the first answer with an address.
 func (p *DNSProbe) Probe(ctx context.Context, in DNSInbound) error {
 	resolver := &net.Resolver{
 		PreferGo: true,
-		// Адрес из resolv.conf подменяется: запрос обязан уйти в dns-in, а не
-		// в системный резолвер. Сеть подменяется, только когда inbound
-		// принимает одну, — разбор ответа Go выбирает по типу соединения.
+		// The address from resolv.conf is replaced: the query must go to dns-in, not
+		// to the system resolver. The network is replaced only when the inbound
+		// accepts one, since Go picks the response parsing by connection type.
 		Dial: func(ctx context.Context, network, _ string) (net.Conn, error) {
 			if in.Network != "" {
 				network = in.Network

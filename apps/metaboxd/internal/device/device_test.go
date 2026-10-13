@@ -14,13 +14,13 @@ import (
 
 const (
 	clashPort = 9090
-	// Порт в таблице ядра шестнадцатеричный: 9090 — это 0x2382.
+	// The port in the kernel table is hexadecimal: 9090 is 0x2382.
 	clashPortHex = "2382"
 	socketInode  = "48120"
 )
 
-// tree собирает фейковые procfs и sysfs. Все тесты идут по ним, а не по живой
-// системе: иначе прогон зависел бы от машины, на которой он идёт.
+// tree builds a fake procfs and sysfs. All tests go through them, not through the live
+// system: otherwise a run would depend on the machine it runs on.
 type tree struct {
 	proc string
 	sys  string
@@ -63,7 +63,7 @@ func (fs tree) write(t *testing.T, path, content string) {
 	}
 }
 
-// process кладёт в дерево процесс с открытым сокетом.
+// process puts a process with an open socket into the tree.
 func (fs tree) process(t *testing.T, pid int, comm, inode string, rssKB int) {
 	t.Helper()
 
@@ -80,13 +80,13 @@ func (fs tree) process(t *testing.T, pid int, comm, inode string, rssKB int) {
 		t.Fatal(err)
 	}
 
-	// Цель ссылки не существует — ядро отдаёт ровно такую же.
+	// The link target does not exist: the kernel gives exactly the same.
 	if err := os.Symlink("socket:["+inode+"]", filepath.Join(dir, "fd", "7")); err != nil {
 		t.Fatal(err)
 	}
 }
 
-// listener добавляет слушающий сокет в таблицу ядра.
+// listener adds a listening socket to the kernel table.
 func (fs tree) listener(t *testing.T, portHex, inode string) {
 	t.Helper()
 
@@ -110,40 +110,40 @@ func TestReadDevice(t *testing.T) {
 
 	stat, err := fs.reader(clashPort).Read(t.Context())
 	if err != nil {
-		t.Fatalf("показания не прочитаны: %v", err)
+		t.Fatalf("readings not read: %v", err)
 	}
 
 	if stat.Load.One != 0.49 || stat.Load.Cores == 0 {
-		t.Errorf("загрузка: получили %+v", stat.Load)
+		t.Errorf("load: got %+v", stat.Load)
 	}
 
 	if stat.Memory.Total != 8137308*1024 || stat.Memory.Available != 7776156*1024 {
-		t.Errorf("память: получили %+v", stat.Memory)
+		t.Errorf("memory: got %+v", stat.Memory)
 	}
 
 	if stat.Uptime != 68239 {
-		t.Errorf("аптайм: получили %d, ожидали 68239", stat.Uptime)
+		t.Errorf("uptime: got %d, expected 68239", stat.Uptime)
 	}
 
 	if len(stat.Thermal) != 1 || stat.Thermal[0].Name != "cpu-thermal" || stat.Thermal[0].Milli != 42_578 {
-		t.Errorf("термозоны: получили %+v", stat.Thermal)
+		t.Errorf("thermal zones: got %+v", stat.Thermal)
 	}
 
 	if stat.Uplink == nil || stat.Uplink.Name != "pppoe-wan" || stat.Uplink.RX != 9394995569 {
-		t.Errorf("интерфейс наружу: получили %+v", stat.Uplink)
+		t.Errorf("outward interface: got %+v", stat.Uplink)
 	}
 
 	if stat.Singbox == nil || stat.Singbox.PID != 5872 || stat.Singbox.RSS != 83900*1024 {
-		t.Errorf("процесс sing-box: получили %+v", stat.Singbox)
+		t.Errorf("sing-box process: got %+v", stat.Singbox)
 	}
 
 	if stat.Daemon.RSS != 12000*1024 || stat.Daemon.Goroutines == 0 {
-		t.Errorf("показания демона: получили %+v", stat.Daemon)
+		t.Errorf("daemon readings: got %+v", stat.Daemon)
 	}
 }
 
-// Отсутствие термозон и процесса — штатное состояние устройства, а не отказ
-// чтения: остальные показания обязаны дойти до панели.
+// The absence of thermal zones and of the process is a regular device state, not a read
+// failure: the other readings must reach the panel.
 func TestReadWithoutOptionalSources(t *testing.T) {
 	fs := newTree(t)
 	fs.listener(t, clashPortHex, socketInode)
@@ -154,25 +154,25 @@ func TestReadWithoutOptionalSources(t *testing.T) {
 
 	stat, err := fs.reader(clashPort).Read(t.Context())
 	if err == nil {
-		t.Error("отсутствие процесса не попало в ошибку")
+		t.Error("the absence of the process did not get into the error")
 	}
 
 	if stat.Memory.Total == 0 || stat.Uplink == nil {
-		t.Errorf("остальные показания потеряны: %+v", stat)
+		t.Errorf("other readings lost: %+v", stat)
 	}
 
 	if stat.Singbox != nil || len(stat.Thermal) != 0 {
-		t.Errorf("недостающие источники выдуманы: %+v", stat)
+		t.Errorf("missing sources invented: %+v", stat)
 	}
 
-	// nil уходит в JSON как `null`, и панель теряет на нём весь топик показаний.
+	// nil goes into JSON as `null`, and the panel loses the whole readings topic on it.
 	if stat.Thermal == nil {
-		t.Error("пустые термозоны отданы как nil, панель потеряет весь топик")
+		t.Error("empty thermal zones returned as nil, the panel would lose the whole topic")
 	}
 }
 
-// В режиме TUN маршрут по умолчанию принадлежит самому sing-box: считать его
-// каналом устройства нельзя — он оказался бы и делимым, и делителем.
+// In TUN mode the default route belongs to sing-box itself: counting it as the device
+// channel is wrong, it would be both the dividend and the divisor.
 func TestUplinkSkipsTunnel(t *testing.T) {
 	fs := newTree(t)
 	fs.write(t, filepath.Join(fs.proc, "net", "route"),
@@ -184,12 +184,12 @@ func TestUplinkSkipsTunnel(t *testing.T) {
 	stat, _ := fs.reader(clashPort).Read(t.Context())
 
 	if stat.Uplink == nil || stat.Uplink.Name != "pppoe-wan" {
-		t.Errorf("интерфейс наружу: получили %+v", stat.Uplink)
+		t.Errorf("outward interface: got %+v", stat.Uplink)
 	}
 }
 
-// Процесс ищется по слушателю порта, а не по имени службы: маршрутизацией на
-// устройстве может владеть чужой пакет.
+// The process is looked up by the port listener, not by the service name: routing on the
+// device may be owned by a foreign package.
 func TestSingboxFoundByListener(t *testing.T) {
 	fs := newTree(t)
 	fs.listener(t, clashPortHex, socketInode)
@@ -200,16 +200,16 @@ func TestSingboxFoundByListener(t *testing.T) {
 
 	stat, _ := reader.Read(t.Context())
 	if stat.Singbox == nil || stat.Singbox.PID != 222 {
-		t.Fatalf("процесс sing-box: получили %+v, ожидали 222", stat.Singbox)
+		t.Fatalf("sing-box process: got %+v, expected 222", stat.Singbox)
 	}
 
 	if !reader.Alive(t.Context()) {
-		t.Error("живой процесс не распознан")
+		t.Error("live process not recognized")
 	}
 }
 
-// Освободившийся pid система выдаёт заново: запомненный процесс проверяется
-// перед тем, как отдать его показания.
+// The system hands out a freed pid again: the remembered process is checked
+// before its readings are returned.
 func TestSingboxPIDReused(t *testing.T) {
 	fs := newTree(t)
 	fs.listener(t, clashPortHex, socketInode)
@@ -218,17 +218,17 @@ func TestSingboxPIDReused(t *testing.T) {
 	reader := fs.reader(clashPort)
 
 	if stat, _ := reader.Read(t.Context()); stat.Singbox == nil {
-		t.Fatal("процесс не найден с первого раза")
+		t.Fatal("process not found on the first try")
 	}
 
 	fs.write(t, filepath.Join(fs.proc, "222", "comm"), "dnsmasq\n")
 
 	if reader.Alive(t.Context()) {
-		t.Error("чужой процесс под тем же pid принят за sing-box")
+		t.Error("a foreign process under the same pid taken for sing-box")
 	}
 }
 
-// clock отдаёт время шагами: окно наблюдения не должно ждать реальных секунд.
+// clock gives time in steps: the observation window must not wait for real seconds.
 type clock struct {
 	now time.Time
 }
@@ -244,8 +244,8 @@ func (fs tree) readerAt(port int, now func() time.Time) *device.Reader {
 	})
 }
 
-// Счётчики канала и sing-box стартуют от разных событий, поэтому демон копит
-// их приращения сам — панель делит одно на другое уже за общее окно.
+// The channel and sing-box counters start from different events, so the daemon accumulates
+// their increments itself, and the panel divides one by the other over the common window.
 func TestShareAccumulates(t *testing.T) {
 	fs := newTree(t)
 	fs.listener(t, clashPortHex, socketInode)
@@ -256,7 +256,7 @@ func TestShareAccumulates(t *testing.T) {
 
 	stat, _ := reader.Read(t.Context())
 	if stat.Share.Link != 0 || stat.Share.Proxy != 0 {
-		t.Fatalf("первый снимок копить нечего: %+v", stat.Share)
+		t.Fatalf("nothing to accumulate on the first snapshot: %+v", stat.Share)
 	}
 
 	fs.write(t, filepath.Join(fs.proc, "net", "dev"),
@@ -268,18 +268,18 @@ func TestShareAccumulates(t *testing.T) {
 
 	stat, _ = reader.Read(t.Context())
 
-	// Канал: +4000 принято и +2000 отдано; sing-box отдал 2500 за интервал.
+	// Channel: +4000 received and +2000 sent; sing-box gave 2500 per interval.
 	if stat.Share.Link != 6000 || stat.Share.Proxy != 2500 {
-		t.Errorf("приращения: получили %+v", stat.Share)
+		t.Errorf("increments: got %+v", stat.Share)
 	}
 
 	if stat.Share.Seconds != 4 {
-		t.Errorf("окно наблюдения: получили %d с, ожидали 4", stat.Share.Seconds)
+		t.Errorf("observation window: got %d s, expected 4", stat.Share.Seconds)
 	}
 }
 
-// Учёт идёт независимо от снятия показаний: панель может не быть открыта ни
-// разу, а объёмы за это время всё равно накопятся.
+// Accounting goes independently of taking readings: the panel may never be
+// opened, and the volumes will accumulate in that time anyway.
 func TestShareCountsWithoutReads(t *testing.T) {
 	fs := newTree(t)
 	fs.listener(t, clashPortHex, socketInode)
@@ -299,12 +299,12 @@ func TestShareCountsWithoutReads(t *testing.T) {
 	stat, _ := reader.Read(t.Context())
 
 	if stat.Share.Proxy != 2000 || stat.Share.Link != 1500 {
-		t.Errorf("накопленное без единого снимка: получили %+v", stat.Share)
+		t.Errorf("accumulated without a single snapshot: got %+v", stat.Share)
 	}
 }
 
-// Утечку ищут по памяти процесса sing-box за дни работы, а не по памяти платы:
-// история обязана копить её вместе с остальными показаниями.
+// A leak is looked for in the sing-box process memory over days of work, not in the board memory:
+// the history must accumulate it together with the other readings.
 func TestSampleDeviceRecordsProcessMemory(t *testing.T) {
 	fs := newTree(t)
 	fs.listener(t, clashPortHex, socketInode)
@@ -322,6 +322,6 @@ func TestSampleDeviceRecordsProcessMemory(t *testing.T) {
 
 	points := recorded.Points()
 	if len(points) != 1 || points[0].Singbox != 83900*1024 || points[0].Daemon != 12000*1024 {
-		t.Errorf("история процессов: получили %+v", points)
+		t.Errorf("process history: got %+v", points)
 	}
 }

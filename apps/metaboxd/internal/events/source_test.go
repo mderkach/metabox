@@ -25,12 +25,12 @@ func newSnapshotSource(t *testing.T, body string) *ClashSource {
 	return NewClashSource(resolve, nil, nil, 5*time.Second)
 }
 
-// Ответ больше потолка отклоняется, а не читается в память целиком.
+// A response larger than the ceiling is rejected and not read into memory whole.
 func TestSnapshotLimit(t *testing.T) {
 	source := newSnapshotSource(t, `"`+strings.Repeat("x", maxSnapshotBytes)+`"`)
 
 	if _, err := source.Snapshot(t.Context(), "/connections"); !errors.Is(err, errSnapshotTooLarge) {
-		t.Errorf("ошибка %v, ожидали errSnapshotTooLarge", err)
+		t.Errorf("error %v, expected errSnapshotTooLarge", err)
 	}
 }
 
@@ -39,9 +39,9 @@ func TestSnapshot(t *testing.T) {
 
 	body, err := source.Snapshot(t.Context(), "/connections")
 	if err != nil {
-		t.Fatalf("снапшот: %v", err)
+		t.Fatalf("snapshot: %v", err)
 	}
 	if string(body) != `{"connections":[]}` {
-		t.Errorf("тело %q, ожидали ответ источника без изменений", body)
+		t.Errorf("body %q, expected the source response unchanged", body)
 	}
 }

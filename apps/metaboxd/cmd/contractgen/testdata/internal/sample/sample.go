@@ -1,6 +1,6 @@
-// Package sample держит формы, на которых проверяется генератор: смешанный
-// нейминг тегов, необязательные поля, вложенные структуры и типы стандартной
-// библиотеки. Пакет не собирается вместе с демоном — он лежит в testdata.
+// Package sample holds the shapes the generator is tested on: mixed
+// tag naming, optional fields, nested structs and standard
+// library types. The package is not built with the daemon, it lies in testdata.
 package sample
 
 import (
@@ -8,16 +8,16 @@ import (
 	"time"
 )
 
-// Phase — тип поверх строки: на проводе он остаётся строкой.
+// Phase is a type over a string: it stays a string on the wire.
 type Phase string
 
-// Nested — вложенная структура: на неё ссылается схема владельца.
+// Nested is a nested struct: the owner schema refers to it.
 type Nested struct {
-	// Value — поле с комментарием: он уходит в JSDoc.
+	// Value is a field with a comment: it goes into JSDoc.
 	Value string `json:"value"`
 }
 
-// Sample собирает случаи, на которых ломается механический перевод.
+// Sample gathers the cases where a mechanical translation breaks.
 type Sample struct {
 	SnakeField  string            `json:"snake_field"`
 	CamelField  string            `json:"lastError,omitempty"`
@@ -37,21 +37,21 @@ type Sample struct {
 	Untagged    string
 }
 
-// Kind — перечисление: значения уезжают в схему списком.
+// Kind is an enum: the values go into the schema as a list.
 type Kind string
 
 const (
-	// KindFirst — первое значение.
+	// KindFirst is the first value.
 	KindFirst Kind = "first"
-	// KindSecond — второе значение.
+	// KindSecond is the second value.
 	KindSecond Kind = "second"
 )
 
-// Loose — константа без типа рядом с перечислением: она не член Kind, и в его
-// список попасть не должна.
+// Loose is a constant without a type next to an enum: it is not a member of Kind, and it
+// must not get into its list.
 const Loose = "loose"
 
-// Tagged — владелец перечисления: по нему генератор до Kind и добирается.
+// Tagged is the owner of an enum: the generator reaches Kind through it.
 type Tagged struct {
 	Kind Kind `json:"kind"`
 }

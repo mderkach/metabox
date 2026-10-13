@@ -1,14 +1,14 @@
 #!/bin/sh /etc/rc.common
-# Демон панели metabox. Настройки берутся из /etc/config/metabox.
+# The metabox panel daemon. Settings are taken from /etc/config/metabox.
 
 START=98
 USE_PROCD=1
 
 PROG=/usr/bin/metaboxd
 
-# Адреса берутся у сетей из listen_interface: панель обязана быть доступна со
-# всех локальных сетей владельца и ни с одной чужой, а зашитый в скрипт адрес
-# разъехался бы с его сетью. Список адресов уходит демону через запятую.
+# Addresses are taken from the networks in listen_interface: the panel must be reachable from
+# all local networks of the owner and from no foreign one, and an address hardcoded in the script
+# would diverge from their network. The address list goes to the daemon comma-separated.
 local_addresses() {
 	. /lib/functions/network.sh
 	local iface addr list=""
@@ -90,8 +90,8 @@ service_triggers() {
 
 	procd_add_reload_trigger metabox
 
-	# Адреса берутся у сетей: поднятая позже гостевая сеть должна получить
-	# панель без ручного рестарта.
+	# Addresses are taken from the networks: a guest network that comes up later must get
+	# the panel without a manual restart.
 	config_load metabox
 	config_get iface main listen_interface "lan"
 
@@ -100,9 +100,9 @@ service_triggers() {
 	done
 }
 
-# Без своей reload_service триггеры выше только перечитали бы конфигурацию, не
-# перезапуская процесс, — а адрес задаётся аргументом команды и применяется
-# только при старте.
+# Without its own reload_service the triggers above would only reread the configuration without
+# restarting the process, while the address is set by a command argument and applies
+# only at start.
 reload_service() {
 	stop
 	start

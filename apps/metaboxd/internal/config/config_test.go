@@ -18,8 +18,8 @@ import (
 
 const configName = "config.json"
 
-// newStore разводит рабочий каталог и служебный: бэкап обязан лежать вне
-// каталога, который sing-box сливает целиком.
+// newStore separates the working and service directories: the backup must lie outside
+// the directory that sing-box merges whole.
 func newStore(t *testing.T) (*config.Store, string) {
 	t.Helper()
 
@@ -29,13 +29,13 @@ func newStore(t *testing.T) (*config.Store, string) {
 
 	for _, dir := range []string{cfgDir, stateDir} {
 		if err := os.Mkdir(dir, 0o755); err != nil {
-			t.Fatalf("каталог %s: %v", dir, err)
+			t.Fatalf("directory %s: %v", dir, err)
 		}
 	}
 
 	store, err := config.NewStore(cfgDir, configName, stateDir)
 	if err != nil {
-		t.Fatalf("сборка хранилища: %v", err)
+		t.Fatalf("store build: %v", err)
 	}
 
 	return store, cfgDir
@@ -48,15 +48,15 @@ func TestNewStoreRejectsServiceDirInsideConfigDir(t *testing.T) {
 		name       string
 		serviceDir string
 	}{
-		{"тот же каталог", dir},
-		{"подкаталог", filepath.Join(dir, "metabox")},
-		{"подкаталог глубже", filepath.Join(dir, "state", "metabox")},
+		{"same directory", dir},
+		{"subdirectory", filepath.Join(dir, "metabox")},
+		{"deeper subdirectory", filepath.Join(dir, "state", "metabox")},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if _, err := config.NewStore(dir, configName, tt.serviceDir); err == nil {
-				t.Error("раскладка принята: сервис сливает каталог конфига целиком")
+				t.Error("layout accepted: the service merges the whole config directory")
 			}
 		})
 	}
@@ -70,7 +70,7 @@ func TestNewStoreAcceptsServiceDirOutside(t *testing.T) {
 		configName,
 		filepath.Join(root, "metabox"),
 	); err != nil {
-		t.Errorf("соседний каталог отвергнут: %v", err)
+		t.Errorf("neighbouring directory rejected: %v", err)
 	}
 }
 
@@ -78,38 +78,38 @@ func TestStateRoundTrip(t *testing.T) {
 	store, _ := newStore(t)
 
 	if _, err := store.ReadState(t.Context()); !errors.Is(err, config.ErrNoState) {
-		t.Errorf("получили %v, ожидали ErrNoState на чистом старте", err)
+		t.Errorf("got %v, expected ErrNoState on a clean start", err)
 	}
 
 	want := []byte(`{"phase":"awaiting_confirm"}`)
 	if err := store.WriteState(t.Context(), want); err != nil {
-		t.Fatalf("запись состояния: %v", err)
+		t.Fatalf("writing state: %v", err)
 	}
 
 	got, err := store.ReadState(t.Context())
 	if err != nil {
-		t.Fatalf("чтение состояния: %v", err)
+		t.Fatalf("reading state: %v", err)
 	}
 	if !bytes.Equal(got, want) {
-		t.Errorf("прочитали %q, записали %q", got, want)
+		t.Errorf("read %q, wrote %q", got, want)
 	}
 
 	info, err := os.Stat(store.StatePath())
 	if err != nil {
-		t.Fatalf("stat состояния: %v", err)
+		t.Fatalf("stat of the state: %v", err)
 	}
 	if perm := info.Mode().Perm(); perm != 0o600 {
-		t.Errorf("права %o, ожидали 600: в состоянии тот же конфиг", perm)
+		t.Errorf("permissions %o, expected 600: the state holds the same config", perm)
 	}
 
 	if err := store.ClearState(t.Context()); err != nil {
-		t.Fatalf("очистка состояния: %v", err)
+		t.Fatalf("state cleanup: %v", err)
 	}
 	if _, err := store.ReadState(t.Context()); !errors.Is(err, config.ErrNoState) {
-		t.Errorf("получили %v, ожидали ErrNoState после очистки", err)
+		t.Errorf("got %v, expected ErrNoState after cleanup", err)
 	}
 	if err := store.ClearState(t.Context()); err != nil {
-		t.Errorf("повторная очистка дала ошибку: %v", err)
+		t.Errorf("repeated cleanup gave an error: %v", err)
 	}
 }
 
@@ -117,15 +117,15 @@ func TestStateLandsOutsideConfigDir(t *testing.T) {
 	store, cfgDir := newStore(t)
 
 	if err := store.WriteState(t.Context(), []byte("{}")); err != nil {
-		t.Fatalf("запись состояния: %v", err)
+		t.Fatalf("writing state: %v", err)
 	}
 
 	entries, err := os.ReadDir(cfgDir)
 	if err != nil {
-		t.Fatalf("чтение каталога конфига: %v", err)
+		t.Fatalf("reading the config directory: %v", err)
 	}
 	if len(entries) != 0 {
-		t.Errorf("в каталоге конфига появилось %d файлов: сервис сливает его целиком", len(entries))
+		t.Errorf("the config directory got %d files: the service merges it whole", len(entries))
 	}
 }
 
@@ -133,7 +133,7 @@ func writeConfig(t *testing.T, dir, name string, data []byte, perm fs.FileMode) 
 	t.Helper()
 
 	if err := os.WriteFile(filepath.Join(dir, name), data, perm); err != nil {
-		t.Fatalf("подготовка %s: %v", name, err)
+		t.Fatalf("preparing %s: %v", name, err)
 	}
 }
 
@@ -142,7 +142,7 @@ func readConfig(t *testing.T, dir string) []byte {
 
 	data, err := os.ReadFile(filepath.Join(dir, configName))
 	if err != nil {
-		t.Fatalf("чтение конфига: %v", err)
+		t.Fatalf("reading the config: %v", err)
 	}
 
 	return data
@@ -153,15 +153,15 @@ func TestWriteThenRead(t *testing.T) {
 	want := []byte(`{"log":{"level":"info"}}`)
 
 	if err := store.Write(t.Context(), want); err != nil {
-		t.Fatalf("запись: %v", err)
+		t.Fatalf("write: %v", err)
 	}
 
 	got, err := store.Read(t.Context())
 	if err != nil {
-		t.Fatalf("чтение: %v", err)
+		t.Fatalf("reading: %v", err)
 	}
 	if !bytes.Equal(got, want) {
-		t.Errorf("прочитали %q, записали %q", got, want)
+		t.Errorf("read %q, wrote %q", got, want)
 	}
 }
 
@@ -169,18 +169,18 @@ func TestReadMissingConfig(t *testing.T) {
 	store, _ := newStore(t)
 
 	if _, err := store.Read(t.Context()); !errors.Is(err, config.ErrNoConfig) {
-		t.Errorf("получили %v, ожидали ErrNoConfig: отсутствие конфига — штатный случай", err)
+		t.Errorf("got %v, expected ErrNoConfig: a missing config is a normal case", err)
 	}
 }
 
 func TestReadMissingConfigDir(t *testing.T) {
 	store, err := config.NewStore(filepath.Join(t.TempDir(), "нет-такого"), configName, t.TempDir())
 	if err != nil {
-		t.Fatalf("создание хранилища: %v", err)
+		t.Fatalf("store creation: %v", err)
 	}
 
 	if _, err := store.Read(t.Context()); !errors.Is(err, config.ErrNoConfig) {
-		t.Errorf("получили %v, ожидали ErrNoConfig", err)
+		t.Errorf("got %v, expected ErrNoConfig", err)
 	}
 }
 
@@ -189,7 +189,7 @@ func TestWriteKeepsExistingPerm(t *testing.T) {
 	writeConfig(t, cfgDir, configName, []byte("{}"), 0o640)
 
 	if err := store.Write(t.Context(), []byte(`{"dns":{}}`)); err != nil {
-		t.Fatalf("запись: %v", err)
+		t.Fatalf("write: %v", err)
 	}
 
 	info, err := os.Stat(store.Path())
@@ -197,7 +197,7 @@ func TestWriteKeepsExistingPerm(t *testing.T) {
 		t.Fatalf("stat: %v", err)
 	}
 	if got := info.Mode().Perm(); got != 0o640 {
-		t.Errorf("права %o, ожидали 640: владелец мог сузить их осознанно", got)
+		t.Errorf("permissions %o, expected 640: the owner could have narrowed them deliberately", got)
 	}
 }
 
@@ -205,7 +205,7 @@ func TestWriteNewConfigIsPrivate(t *testing.T) {
 	store, _ := newStore(t)
 
 	if err := store.Write(t.Context(), []byte("{}")); err != nil {
-		t.Fatalf("запись: %v", err)
+		t.Fatalf("write: %v", err)
 	}
 
 	info, err := os.Stat(store.Path())
@@ -213,14 +213,14 @@ func TestWriteNewConfigIsPrivate(t *testing.T) {
 		t.Fatalf("stat: %v", err)
 	}
 	if got := info.Mode().Perm(); got != 0o600 {
-		t.Errorf("права %o, ожидали 600: в конфиге ключи пользователя", got)
+		t.Errorf("permissions %o, expected 600: the config holds user keys", got)
 	}
 }
 
-// Отказ до rename обязан оставить прежний конфиг побайтово нетронутым.
+// A failure before rename must leave the previous config untouched byte for byte.
 func TestFailedWriteKeepsFileIntact(t *testing.T) {
 	if os.Geteuid() == 0 {
-		t.Skip("под root права каталога не мешают записи")
+		t.Skip("under root directory permissions do not block the write")
 	}
 
 	store, cfgDir := newStore(t)
@@ -228,19 +228,19 @@ func TestFailedWriteKeepsFileIntact(t *testing.T) {
 	writeConfig(t, cfgDir, configName, before, 0o600)
 
 	if err := os.Chmod(cfgDir, 0o500); err != nil {
-		t.Fatalf("снятие прав на запись: %v", err)
+		t.Fatalf("removing write permission: %v", err)
 	}
 	t.Cleanup(func() { _ = os.Chmod(cfgDir, 0o700) })
 
 	if err := store.Write(t.Context(), []byte(`{"сломано":`)); err == nil {
-		t.Fatal("запись в закрытый на запись каталог прошла")
+		t.Fatal("write into a write-protected directory succeeded")
 	}
 
 	if err := os.Chmod(cfgDir, 0o700); err != nil {
-		t.Fatalf("возврат прав: %v", err)
+		t.Fatalf("restoring permissions: %v", err)
 	}
 	if after := readConfig(t, cfgDir); !bytes.Equal(after, before) {
-		t.Errorf("конфиг стал %q, был %q", after, before)
+		t.Errorf("config became %q, was %q", after, before)
 	}
 }
 
@@ -256,7 +256,7 @@ func TestSum(t *testing.T) {
 		t.Fatalf("sha256: %v", err)
 	}
 	if got != hex.EncodeToString(want[:]) {
-		t.Errorf("получили %s, ожидали %s", got, hex.EncodeToString(want[:]))
+		t.Errorf("got %s, expected %s", got, hex.EncodeToString(want[:]))
 	}
 }
 
@@ -266,19 +266,19 @@ func TestSumChangesAfterWrite(t *testing.T) {
 
 	before, err := store.Sum(t.Context())
 	if err != nil {
-		t.Fatalf("sha256 до: %v", err)
+		t.Fatalf("sha256 before: %v", err)
 	}
 
 	if err := store.Write(t.Context(), []byte(`{"dns":{}}`)); err != nil {
-		t.Fatalf("запись: %v", err)
+		t.Fatalf("write: %v", err)
 	}
 
 	after, err := store.Sum(t.Context())
 	if err != nil {
-		t.Fatalf("sha256 после: %v", err)
+		t.Fatalf("sha256 after: %v", err)
 	}
 	if before == after {
-		t.Error("sha256 не изменился после записи другого содержимого")
+		t.Error("sha256 did not change after writing other content")
 	}
 }
 
@@ -288,17 +288,17 @@ func TestBackupAndRestore(t *testing.T) {
 	writeConfig(t, cfgDir, configName, original, 0o640)
 
 	if err := store.Backup(t.Context()); err != nil {
-		t.Fatalf("бэкап: %v", err)
+		t.Fatalf("backup: %v", err)
 	}
 	if err := store.Write(t.Context(), []byte(`{"route":{"final":"proxy"}}`)); err != nil {
-		t.Fatalf("запись: %v", err)
+		t.Fatalf("write: %v", err)
 	}
 	if err := store.Restore(t.Context()); err != nil {
-		t.Fatalf("откат: %v", err)
+		t.Fatalf("rollback: %v", err)
 	}
 
 	if got := readConfig(t, cfgDir); !bytes.Equal(got, original) {
-		t.Errorf("после отката %q, ожидали %q", got, original)
+		t.Errorf("after rollback %q, expected %q", got, original)
 	}
 
 	info, err := os.Stat(store.Path())
@@ -306,7 +306,7 @@ func TestBackupAndRestore(t *testing.T) {
 		t.Fatalf("stat: %v", err)
 	}
 	if got := info.Mode().Perm(); got != 0o640 {
-		t.Errorf("права после отката %o, ожидали 640", got)
+		t.Errorf("permissions after rollback %o, expected 640", got)
 	}
 }
 
@@ -315,16 +315,16 @@ func TestBackupLandsOutsideConfigDir(t *testing.T) {
 	writeConfig(t, cfgDir, configName, []byte("{}"), 0o600)
 
 	if err := store.Backup(t.Context()); err != nil {
-		t.Fatalf("бэкап: %v", err)
+		t.Fatalf("backup: %v", err)
 	}
 
 	entries, err := os.ReadDir(cfgDir)
 	if err != nil {
-		t.Fatalf("чтение каталога конфига: %v", err)
+		t.Fatalf("reading the config directory: %v", err)
 	}
 	for _, entry := range entries {
 		if entry.Name() != configName {
-			t.Errorf("в каталоге конфига появился %q: сервис сливает его целиком", entry.Name())
+			t.Errorf("%q appeared in the config directory: the service merges it whole", entry.Name())
 		}
 	}
 }
@@ -334,15 +334,15 @@ func TestBackupIsPrivate(t *testing.T) {
 	writeConfig(t, cfgDir, configName, []byte("{}"), 0o644)
 
 	if err := store.Backup(t.Context()); err != nil {
-		t.Fatalf("бэкап: %v", err)
+		t.Fatalf("backup: %v", err)
 	}
 
 	info, err := os.Stat(store.BackupPath())
 	if err != nil {
-		t.Fatalf("stat бэкапа: %v", err)
+		t.Fatalf("stat of the backup: %v", err)
 	}
 	if got := info.Mode().Perm(); got != 0o600 {
-		t.Errorf("права бэкапа %o, ожидали 600: в нём те же ключи, что в конфиге", got)
+		t.Errorf("backup permissions %o, expected 600: it holds the same keys as the config", got)
 	}
 }
 
@@ -350,27 +350,27 @@ func TestRestoreWithoutBackup(t *testing.T) {
 	store, _ := newStore(t)
 
 	if err := store.Restore(t.Context()); !errors.Is(err, config.ErrNoBackup) {
-		t.Errorf("получили %v, ожидали ErrNoBackup", err)
+		t.Errorf("got %v, expected ErrNoBackup", err)
 	}
 }
 
-// Владелец удалил конфиг по SSH и применил новый: откат этого применения
-// обязан вернуть «ничего», а не удалённый конфиг из бэкапа прошлой транзакции.
+// The owner deleted the config over SSH and applied a new one: the rollback of this apply
+// must return "nothing", not the deleted config from the backup of a previous transaction.
 func TestBackupWithoutConfigDropsStaleBackup(t *testing.T) {
 	tests := []struct {
 		name string
 		drop func(cfgDir string) error
-		// listsKept — файлы списков лежат в каталоге конфига и переживают
-		// удаление одного файла конфига.
+		// listsKept: list files lie in the config directory and survive
+		// the deletion of a single config file.
 		listsKept bool
 	}{
 		{
-			name:      "конфиг удалён",
+			name:      "config deleted",
 			drop:      func(cfgDir string) error { return os.Remove(filepath.Join(cfgDir, configName)) },
 			listsKept: true,
 		},
 		{
-			name: "каталога конфига нет вовсе",
+			name: "no config directory at all",
 			drop: os.RemoveAll,
 		},
 	}
@@ -382,10 +382,10 @@ func TestBackupWithoutConfigDropsStaleBackup(t *testing.T) {
 
 			list := []byte(`{"rules":[]}`)
 			if err := store.WriteLists(t.Context(), map[string][]byte{"my.json": list}, nil); err != nil {
-				t.Fatalf("подготовка списка: %v", err)
+				t.Fatalf("preparing the list: %v", err)
 			}
 			if err := store.Backup(t.Context()); err != nil {
-				t.Fatalf("бэкап прошлой транзакции: %v", err)
+				t.Fatalf("backup of the previous transaction: %v", err)
 			}
 
 			if err := tt.drop(cfgDir); err != nil {
@@ -393,17 +393,17 @@ func TestBackupWithoutConfigDropsStaleBackup(t *testing.T) {
 			}
 
 			if err := store.Backup(t.Context()); !errors.Is(err, config.ErrNoConfig) {
-				t.Fatalf("бэкап без конфига: получили %v, ожидали ErrNoConfig", err)
+				t.Fatalf("backup without a config: got %v, expected ErrNoConfig", err)
 			}
 
 			for _, path := range []string{store.BackupPath(), backupListsPath(store)} {
 				if _, err := os.Stat(path); !errors.Is(err, fs.ErrNotExist) {
-					t.Errorf("%s пережил удаление конфига: %v", path, err)
+					t.Errorf("%s survived the config removal: %v", path, err)
 				}
 			}
 
 			if err := store.Restore(t.Context()); !errors.Is(err, config.ErrNoBackup) {
-				t.Errorf("откат: получили %v, ожидали ErrNoBackup", err)
+				t.Errorf("rollback: got %v, expected ErrNoBackup", err)
 			}
 
 			if !tt.listsKept {
@@ -412,23 +412,23 @@ func TestBackupWithoutConfigDropsStaleBackup(t *testing.T) {
 
 			files, err := store.ReadLists(t.Context())
 			if err != nil {
-				t.Fatalf("чтение списков: %v", err)
+				t.Fatalf("reading lists: %v", err)
 			}
 			if !bytes.Equal(files["my.json"], list) {
-				t.Errorf("список после снятия бэкапа: %q, ожидали нетронутый", files["my.json"])
+				t.Errorf("list after taking the backup: %q, expected untouched", files["my.json"])
 			}
 		})
 	}
 }
 
-// Первый запуск: ни конфига, ни бэкапа. Backup отвечает ErrNoConfig и ничего
-// не создаёт — снимать нечего.
+// The first start: neither a config nor a backup. Backup answers ErrNoConfig and creates
+// nothing: nothing to take.
 func TestBackupWithoutConfigOrBackup(t *testing.T) {
-	t.Run("служебный каталог есть", func(t *testing.T) {
+	t.Run("service directory exists", func(t *testing.T) {
 		store, _ := newStore(t)
 
 		if err := store.Backup(t.Context()); !errors.Is(err, config.ErrNoConfig) {
-			t.Fatalf("получили %v, ожидали ErrNoConfig", err)
+			t.Fatalf("got %v, expected ErrNoConfig", err)
 		}
 
 		entries, err := os.ReadDir(filepath.Dir(store.BackupPath()))
@@ -436,11 +436,11 @@ func TestBackupWithoutConfigOrBackup(t *testing.T) {
 			t.Fatal(err)
 		}
 		if len(entries) != 0 {
-			t.Errorf("в служебном каталоге появилось: %v", entries)
+			t.Errorf("something appeared in the service directory: %v", entries)
 		}
 	})
 
-	t.Run("служебного каталога нет", func(t *testing.T) {
+	t.Run("service directory is absent", func(t *testing.T) {
 		root := t.TempDir()
 		cfgDir := filepath.Join(root, "sing-box")
 		stateDir := filepath.Join(root, "metabox")
@@ -455,10 +455,10 @@ func TestBackupWithoutConfigOrBackup(t *testing.T) {
 		}
 
 		if err := store.Backup(t.Context()); !errors.Is(err, config.ErrNoConfig) {
-			t.Fatalf("получили %v, ожидали ErrNoConfig", err)
+			t.Fatalf("got %v, expected ErrNoConfig", err)
 		}
 		if _, err := os.Stat(stateDir); !errors.Is(err, fs.ErrNotExist) {
-			t.Errorf("служебный каталог создан без бэкапа: %v", err)
+			t.Errorf("service directory created without a backup: %v", err)
 		}
 	})
 }
@@ -473,52 +473,52 @@ func TestStageCandidate(t *testing.T) {
 	candidate := []byte(`{"новое":true}`)
 
 	if err := store.StageCandidate(t.Context(), dst, candidate, nil, nil); err != nil {
-		t.Fatalf("раскладка кандидата: %v", err)
+		t.Fatalf("candidate layout: %v", err)
 	}
 
 	got, err := os.ReadFile(filepath.Join(dst, configName))
 	if err != nil {
-		t.Fatalf("чтение кандидата: %v", err)
+		t.Fatalf("reading the candidate: %v", err)
 	}
 	if !bytes.Equal(got, candidate) {
-		t.Errorf("кандидат %q, ожидали %q", got, candidate)
+		t.Errorf("candidate %q, expected %q", got, candidate)
 	}
 
 	if _, err := os.Stat(filepath.Join(dst, "10-dns.json")); err != nil {
-		t.Errorf("соседний .json не переехал: %v", err)
+		t.Errorf("neighbouring .json did not move: %v", err)
 	}
 	if _, err := os.Stat(filepath.Join(dst, "notes.txt")); !errors.Is(err, fs.ErrNotExist) {
-		t.Error("не-.json переехал в кандидат: сервис его не читает")
+		t.Error("non-.json moved into the candidate: the service does not read it")
 	}
 }
 
-// Подкаталоги едут в кандидата целиком: check идёт с -D на нём, и файл, на
-// который конфиг ссылается относительным путём, обязан найтись там же, где
-// его найдёт служба.
+// Subdirectories go into the candidate whole: check runs with -D on it, and a file the
+// config refers to by a relative path must be found where
+// the service will find it.
 func TestStageCandidateCopiesSubdirectories(t *testing.T) {
 	store, cfgDir := newStore(t)
 	writeConfig(t, cfgDir, configName, []byte(`{"старое":true}`), 0o600)
 
 	nested := filepath.Join(cfgDir, "rule-sets", "local")
 	if err := os.MkdirAll(nested, 0o700); err != nil {
-		t.Fatalf("подготовка подкаталога: %v", err)
+		t.Fatalf("preparing the subdirectory: %v", err)
 	}
 	ruleSet := []byte("domain:example.org")
 	if err := os.WriteFile(filepath.Join(nested, "my.txt"), ruleSet, 0o600); err != nil {
-		t.Fatalf("подготовка файла набора: %v", err)
+		t.Fatalf("preparing the rule set file: %v", err)
 	}
 
 	dst := t.TempDir()
 	if err := store.StageCandidate(t.Context(), dst, []byte(`{"новое":true}`), nil, nil); err != nil {
-		t.Fatalf("раскладка кандидата: %v", err)
+		t.Fatalf("candidate layout: %v", err)
 	}
 
 	got, err := os.ReadFile(filepath.Join(dst, "rule-sets", "local", "my.txt"))
 	if err != nil {
-		t.Fatalf("файл подкаталога не переехал: %v", err)
+		t.Fatalf("subdirectory file did not move: %v", err)
 	}
 	if !bytes.Equal(got, ruleSet) {
-		t.Errorf("получили %q, ожидали %q", got, ruleSet)
+		t.Errorf("got %q, expected %q", got, ruleSet)
 	}
 }
 
@@ -528,44 +528,44 @@ func TestStageCandidateSkipsSymlinkOutside(t *testing.T) {
 
 	secret := filepath.Join(t.TempDir(), "secret.json")
 	if err := os.WriteFile(secret, []byte(`{"ключ":"чужой"}`), 0o600); err != nil {
-		t.Fatalf("подготовка чужого файла: %v", err)
+		t.Fatalf("preparing a foreign file: %v", err)
 	}
 	if err := os.Symlink(secret, filepath.Join(cfgDir, "link.json")); err != nil {
-		t.Fatalf("симлинк: %v", err)
+		t.Fatalf("symlink: %v", err)
 	}
 
 	dst := t.TempDir()
 	if err := store.StageCandidate(t.Context(), dst, []byte(`{"новое":true}`), nil, nil); err == nil {
-		t.Fatal("симлинк наружу разложился молча: демон работает под root")
+		t.Fatal("symlink outward was laid out silently: the daemon runs as root")
 	}
 
 	if _, err := os.Stat(filepath.Join(dst, "link.json")); !errors.Is(err, fs.ErrNotExist) {
-		t.Error("содержимое чужого файла уехало в кандидат")
+		t.Error("content of a foreign file went into the candidate")
 	}
 }
 
-// Симлинк внутрь каталога сервис прочитает и сольёт, значит кандидат обязан
-// его содержать — иначе проверяется не то, что запустится.
+// A symlink inside the directory is read and merged by the service, so the candidate must
+// contain it, otherwise what is checked is not what will run.
 func TestStageCandidateFollowsSymlinkInside(t *testing.T) {
 	store, cfgDir := newStore(t)
 	writeConfig(t, cfgDir, configName, []byte("{}"), 0o600)
 	writeConfig(t, cfgDir, "10-dns.conf", []byte(`{"dns":{}}`), 0o600)
 
 	if err := os.Symlink("10-dns.conf", filepath.Join(cfgDir, "10-dns.json")); err != nil {
-		t.Fatalf("симлинк: %v", err)
+		t.Fatalf("symlink: %v", err)
 	}
 
 	dst := t.TempDir()
 	if err := store.StageCandidate(t.Context(), dst, []byte(`{"новое":true}`), nil, nil); err != nil {
-		t.Fatalf("раскладка кандидата: %v", err)
+		t.Fatalf("candidate layout: %v", err)
 	}
 
 	got, err := os.ReadFile(filepath.Join(dst, "10-dns.json"))
 	if err != nil {
-		t.Fatalf("чтение соседа по симлинку: %v", err)
+		t.Fatalf("reading the symlink neighbour: %v", err)
 	}
 	if !bytes.Equal(got, []byte(`{"dns":{}}`)) {
-		t.Errorf("получили %q, ожидали содержимое цели симлинка", got)
+		t.Errorf("got %q, expected the symlink target content", got)
 	}
 }
 
@@ -575,16 +575,16 @@ func TestStageCandidateLeavesWorkingDirIntact(t *testing.T) {
 	writeConfig(t, cfgDir, configName, original, 0o600)
 
 	if err := store.StageCandidate(t.Context(), t.TempDir(), []byte(`{"новое":true}`), nil, nil); err != nil {
-		t.Fatalf("раскладка кандидата: %v", err)
+		t.Fatalf("candidate layout: %v", err)
 	}
 
 	if got := readConfig(t, cfgDir); !bytes.Equal(got, original) {
-		t.Errorf("рабочий конфиг стал %q, был %q", got, original)
+		t.Errorf("working config became %q, was %q", got, original)
 	}
 }
 
-// Store — единственный владелец файла, и параллельный доступ закрыт его
-// методами. Тест ловит гонку под -race, а не проверяет результат.
+// Store is the only owner of the file, and concurrent access is closed by its
+// methods. The test catches a race under -race and does not check the result.
 func TestConcurrentAccess(t *testing.T) {
 	store, cfgDir := newStore(t)
 	writeConfig(t, cfgDir, configName, []byte("{}"), 0o600)
@@ -596,13 +596,13 @@ func TestConcurrentAccess(t *testing.T) {
 			defer wg.Done()
 
 			if err := store.Write(t.Context(), fmt.Appendf(nil, `{"n":%d}`, i)); err != nil {
-				t.Errorf("запись: %v", err)
+				t.Errorf("write: %v", err)
 			}
 			if _, err := store.Sum(t.Context()); err != nil {
 				t.Errorf("sha256: %v", err)
 			}
 			if _, err := store.Read(t.Context()); err != nil {
-				t.Errorf("чтение: %v", err)
+				t.Errorf("reading: %v", err)
 			}
 		}()
 	}
@@ -617,15 +617,15 @@ func TestCancelledContext(t *testing.T) {
 	cancel()
 
 	if err := store.Write(ctx, []byte(`{"новое":true}`)); !errors.Is(err, context.Canceled) {
-		t.Errorf("получили %v, ожидали context.Canceled", err)
+		t.Errorf("got %v, expected context.Canceled", err)
 	}
 	if got := readConfig(t, cfgDir); !bytes.Equal(got, []byte("{}")) {
-		t.Errorf("конфиг стал %q при отменённом контексте", got)
+		t.Errorf("config became %q with a cancelled context", got)
 	}
 }
 
-// Демон, запущенный не init-скриптом, не находит служебного каталога: первый
-// Apply обязан его создать, а не упасть на записи состояния или бэкапа.
+// A daemon started not by the init script does not find the service directory: the first
+// Apply must create it and not fail on writing the state or the backup.
 func TestServiceDirIsCreatedOnDemand(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -633,12 +633,12 @@ func TestServiceDirIsCreatedOnDemand(t *testing.T) {
 		file  string
 	}{
 		{
-			name:  "состояние",
+			name:  "state",
 			write: func(t *testing.T, store *config.Store) error { return store.WriteState(t.Context(), []byte("{}")) },
 			file:  "apply.json",
 		},
 		{
-			name:  "бэкап",
+			name:  "backup",
 			write: func(t *testing.T, store *config.Store) error { return store.Backup(t.Context()) },
 			file:  "config.backup",
 		},
@@ -661,21 +661,21 @@ func TestServiceDirIsCreatedOnDemand(t *testing.T) {
 			}
 
 			if err := tt.write(t, store); err != nil {
-				t.Fatalf("запись без служебного каталога: %v", err)
+				t.Fatalf("write without a service directory: %v", err)
 			}
 
 			for _, dir := range []string{filepath.Dir(stateDir), stateDir} {
 				info, err := os.Stat(dir)
 				if err != nil {
-					t.Fatalf("каталог %s не создан: %v", dir, err)
+					t.Fatalf("directory %s not created: %v", dir, err)
 				}
 				if perm := info.Mode().Perm(); perm != 0o700 {
-					t.Errorf("права %s — %o, ожидали 700: внутри ключи пользователя", dir, perm)
+					t.Errorf("permissions of %s are %o, expected 700: it holds user keys", dir, perm)
 				}
 			}
 
 			if _, err := os.Stat(filepath.Join(stateDir, tt.file)); err != nil {
-				t.Errorf("файл %s не записан: %v", tt.file, err)
+				t.Errorf("file %s not written: %v", tt.file, err)
 			}
 		})
 	}
@@ -691,12 +691,12 @@ func TestRuleSetsRoundTrip(t *testing.T) {
 	}
 
 	if _, err := store.ReadRuleSets(t.Context()); !errors.Is(err, fs.ErrNotExist) {
-		t.Fatalf("каталога ещё нет, а чтение дало %v", err)
+		t.Fatalf("no directory yet, but reading gave %v", err)
 	}
 
 	want := []byte(`{"lists":{}}`)
 	if err := store.WriteRuleSets(t.Context(), want); err != nil {
-		t.Fatalf("запись без служебного каталога: %v", err)
+		t.Fatalf("write without a service directory: %v", err)
 	}
 
 	got, err := store.ReadRuleSets(t.Context())
@@ -705,7 +705,7 @@ func TestRuleSetsRoundTrip(t *testing.T) {
 	}
 
 	if !bytes.Equal(got, want) {
-		t.Errorf("прочитали %s, записали %s", got, want)
+		t.Errorf("read %s, wrote %s", got, want)
 	}
 
 	info, err := os.Stat(filepath.Join(stateDir, "rule-sets.json"))
@@ -714,6 +714,6 @@ func TestRuleSetsRoundTrip(t *testing.T) {
 	}
 
 	if info.Mode().Perm() != 0o600 {
-		t.Errorf("права %v, ожидали 0600", info.Mode().Perm())
+		t.Errorf("permissions %v, expected 0600", info.Mode().Perm())
 	}
 }

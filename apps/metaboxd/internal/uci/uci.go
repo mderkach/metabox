@@ -1,20 +1,20 @@
-// Package uci разбирает вывод `uci show <config>`. Запуск самой утилиты остаётся
-// у потребителя: путь к ней и обработку кода возврата каждый задаёт сам.
+// Package uci parses the output of `uci show <config>`. Running the utility itself is left
+// to the consumer: each sets the path to it and the return code handling.
 package uci
 
 import "strings"
 
-// Section — секция конфига UCI в порядке файла.
+// Section is a UCI config section in file order.
 type Section struct {
-	// Name — имя секции; у анонимной — `@<тип>[N]`, как её печатает uci.
+	// Name is the section name; for an anonymous one `@<type>[N]`, as uci prints it.
 	Name string
 	Type string
-	// Options — значения опций. Список uci печатает несколькими значениями в
-	// кавычках, опцию — одним; оба вида приходят срезом.
+	// Options are the option values. uci prints a list as several quoted values in
+	// one line, an option as one; both kinds arrive as a slice.
 	Options map[string][]string
 }
 
-// Option отдаёт первое значение опции; пусто, когда опции нет.
+// Option returns the first option value; empty when there is no option.
 func (s Section) Option(name string) string {
 	if values := s.Options[name]; len(values) > 0 {
 		return values[0]
@@ -23,8 +23,8 @@ func (s Section) Option(name string) string {
 	return ""
 }
 
-// Parse разбирает вывод `uci show <config>`. Строки чужого конфига и строки
-// без `=` пропускаются.
+// Parse parses the output of `uci show <config>`. Lines of another config and lines
+// without `=` are skipped.
 func Parse(out, config string) []Section {
 	var sections []Section
 
@@ -58,9 +58,9 @@ func Parse(out, config string) []Section {
 	return sections
 }
 
-// unquote разбирает значение в записи uci: слова в одинарных кавычках через
-// пробел. Кавычку внутри значения uci печатает так же, как шелл: закрывает
-// кавычки, ставит экранированную кавычку и открывает их снова.
+// unquote parses a value in uci notation: words in single quotes separated by
+// a space. A quote inside a value uci prints the same way as the shell: closes the
+// quotes, puts an escaped quote and opens them again.
 func unquote(s string) []string {
 	var (
 		out     []string

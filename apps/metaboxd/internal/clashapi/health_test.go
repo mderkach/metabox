@@ -12,8 +12,8 @@ import (
 	"metabox/internal/clashapi"
 )
 
-// settingsFor превращает адрес тестового сервера в то, что демон прочитал бы
-// из конфига.
+// settingsFor turns the test server address into what the daemon would read
+// from the config.
 func settingsFor(t *testing.T, srv *httptest.Server, secret string) clashapi.Settings {
 	t.Helper()
 
@@ -32,16 +32,16 @@ func TestWaitSucceeds(t *testing.T) {
 	}
 }
 
-// Пустой секрет — штатный случай: форк отключает авторизацию целиком, и
-// заголовок в этом случае не нужен.
+// An empty secret is a regular case: the fork disables authorization entirely, and
+// the header is not needed then.
 func TestWaitSendsSecretOnlyWhenSet(t *testing.T) {
 	tests := []struct {
 		name   string
 		secret string
 		want   string
 	}{
-		{"секрет задан", "токен", "Bearer токен"},
-		{"секрета нет", "", ""},
+		{"secret set", "токен", "Bearer токен"},
+		{"no secret", "", ""},
 	}
 
 	for _, tt := range tests {
@@ -60,13 +60,13 @@ func TestWaitSendsSecretOnlyWhenSet(t *testing.T) {
 			}
 
 			if header := got.Load(); header == nil || *header != tt.want {
-				t.Errorf("заголовок %v, ожидали %q", header, tt.want)
+				t.Errorf("header %v, expected %q", header, tt.want)
 			}
 		})
 	}
 }
 
-// Сервис поднимается не мгновенно: опрос обязан пережить первые отказы.
+// The service does not come up instantly: the polling must survive the first failures.
 func TestWaitRetriesUntilServiceIsUp(t *testing.T) {
 	var attempts atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -84,7 +84,7 @@ func TestWaitRetriesUntilServiceIsUp(t *testing.T) {
 		t.Fatalf("healthcheck: %v", err)
 	}
 	if got := attempts.Load(); got < 3 {
-		t.Errorf("попыток %d, ожидали не меньше трёх", got)
+		t.Errorf("attempts %d, expected at least three", got)
 	}
 }
 
@@ -99,7 +99,7 @@ func TestWaitGivesUpOnDeadline(t *testing.T) {
 
 	checker := clashapi.NewChecker(time.Second, 10*time.Millisecond)
 	if err := checker.Wait(ctx, settingsFor(t, srv, "")); err == nil {
-		t.Error("сервис не поднялся, а healthcheck отчитался успехом")
+		t.Error("service did not come up, but healthcheck reported success")
 	}
 }
 
@@ -107,6 +107,6 @@ func TestWaitRejectsEmptyAddress(t *testing.T) {
 	checker := clashapi.NewChecker(time.Second, 10*time.Millisecond)
 
 	if err := checker.Wait(t.Context(), clashapi.Settings{}); err == nil {
-		t.Error("пустой адрес принят")
+		t.Error("empty address accepted")
 	}
 }

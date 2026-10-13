@@ -26,8 +26,8 @@ const (
 	configName   = "config.json"
 )
 
-// recorder хранит порядок вызовов: протокол применения задаёт не только набор
-// шагов, но и их очерёдность — состояние обязано лечь на диск до конфига.
+// recorder stores the call order: the apply protocol sets not only the set
+// of steps but also their order: the state must reach the disk before the config.
 type recorder struct {
 	mu    sync.Mutex
 	calls []string
@@ -67,8 +67,8 @@ type fakeStore struct {
 	readErr    error
 	clearErr   error
 
-	// Ворота для тестов гонок: started закрывается на входе в шаг, release
-	// держит шаг, пока тест не отпустит.
+	// Gates for race tests: started closes on entering the step, release
+	// holds the step until the test lets it go.
 	restoreStarted chan struct{}
 	restoreRelease chan struct{}
 	clearStarted   chan struct{}
@@ -231,22 +231,22 @@ func (s *fakeStore) config() []byte {
 type fakeService struct {
 	rec      *recorder
 	checkErr error
-	// checked — аргументы последнего Check: каталог, файл конфига, рабочий
-	// каталог.
+	// checked holds the arguments of the last Check: directory, config file, working
+	// directory.
 	checked [3]string
-	// launch — с чем procd поднимает службу; пусто — неизвестно.
+	// launch is what procd starts the service with; empty means unknown.
 	launch    procd.Launch
 	launchErr error
 
 	mu         sync.Mutex
 	restartErr error
-	// pid — процесс службы, как его видит procd: каждый рестарт поднимает
-	// новый.
+	// pid is the service process as procd sees it: each restart brings up
+	// a new one.
 	pid    int
 	pidErr error
-	// lag — сколько опросов после рестарта procd ещё отдаёт прежний pid;
-	// отрицательный — прежний отдаётся всегда. stale — остаток текущего
-	// рестарта.
+	// lag is how many polls after a restart procd still returns the old pid;
+	// negative means the old one is always returned. stale is the remainder of the current
+	// restart.
 	lag   int
 	stale int
 }
@@ -320,8 +320,8 @@ func (h *fakeHealth) Wait(context.Context, clashapi.Settings) error {
 	return h.err
 }
 
-// fakeClock отдаёт окно подтверждения под управлением теста: ждать минуту
-// по-настоящему тест не должен.
+// fakeClock gives the confirmation window under test control: the test must not
+// wait a real minute.
 type fakeClock struct {
 	fired  chan time.Time
 	called chan time.Duration
@@ -337,10 +337,10 @@ func (c *fakeClock) After(d time.Duration) <-chan time.Time {
 	return c.fired
 }
 
-// fire отдаёт срок и возвращается только после того, как его приняли: канал
-// без буфера делает отправку точкой синхронизации. С буфером тест успевал
-// закрыть менеджер до того, как горутина войдёт в select, — в нём оказывались
-// готовы сразу две ветви, и Go выбирал между откатом и остановкой случайно.
+// fire gives the deadline and returns only after it was accepted: an unbuffered
+// channel makes the send a synchronization point. With a buffer the test managed to
+// close the manager before the goroutine entered the select, where
+// two branches were ready at once, and Go chose between the rollback and the stop randomly.
 func (c *fakeClock) fire() {
 	c.fired <- time.Time{}
 }
@@ -360,8 +360,8 @@ func newHarness(t *testing.T) *harness {
 	return newHarnessWith(t, cycleTimeout, slog.New(slog.DiscardHandler))
 }
 
-// newHarnessWith — тот же стенд с заданным потолком цикла и логгером: тесты
-// отказа по таймауту не ждут полминуты, а тесты логов читают записи.
+// newHarnessWith is the same test bench with a given cycle ceiling and logger: the timeout
+// failure tests do not wait half a minute, and the log tests read the records.
 func newHarnessWith(t *testing.T, timeout time.Duration, log *slog.Logger) *harness {
 	t.Helper()
 
@@ -387,7 +387,7 @@ func newHarnessWith(t *testing.T, timeout time.Duration, log *slog.Logger) *harn
 	return h
 }
 
-// waitWindow дожидается, пока применение дойдёт до окна подтверждения.
+// waitWindow waits until the apply reaches the confirmation window.
 func (h *harness) waitWindow(t *testing.T) time.Duration {
 	t.Helper()
 
@@ -395,7 +395,7 @@ func (h *harness) waitWindow(t *testing.T) time.Duration {
 	case d := <-h.clock.called:
 		return d
 	case <-time.After(5 * time.Second):
-		t.Fatal("применение не дошло до окна подтверждения")
+		t.Fatal("apply did not reach the confirmation window")
 
 		return 0
 	}
@@ -408,92 +408,92 @@ func TestApplyFollowsProtocolOrder(t *testing.T) {
 
 	tx, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", "")
 	if err != nil {
-		t.Fatalf("применение: %v", err)
+		t.Fatalf("apply: %v", err)
 	}
 	if tx.ID == "" {
-		t.Error("транзакция без идентификатора")
+		t.Error("transaction without an identifier")
 	}
 
 	if got := h.waitWindow(t); got != window {
-		t.Errorf("окно %v, ожидали %v", got, window)
+		t.Errorf("window %v, expected %v", got, window)
 	}
 
-	// SaveVersion стоит между бэкапом и записью: история хранит то, что было
-	// применено до этого цикла. pid службы снимается до рестарта и сверяется
-	// после него, до опроса API.
+	// SaveVersion stands between the backup and the write: the history holds what was
+	// applied before this cycle. The service pid is taken before the restart and compared
+	// after it, before the API poll.
 	want := []string{
 		"StageCandidate", "Check", "WriteState", "Backup", "SaveVersion", "WriteLists", "Write",
 		"PID", "Restart", "PID", "Wait", "WriteState",
 	}
 	if got := h.rec.snapshot(); !slices.Equal(got, want) {
-		t.Errorf("порядок шагов %v, ожидали %v", got, want)
+		t.Errorf("step order %v, expected %v", got, want)
 	}
 
 	if h.manager.Current().Phase != apply.PhaseAwaitingConfirm {
-		t.Errorf("фаза %q, ожидали ожидание подтверждения", h.manager.Current().Phase)
+		t.Errorf("phase %q, expected awaiting confirmation", h.manager.Current().Phase)
 	}
 }
 
-// Панель показывает остаток окна пользователю: полная длительность после
-// перезагрузки страницы была бы обещанием, которого демон не даёт.
+// The panel shows the window remainder to the user: the full duration after
+// a page reload would be a promise the daemon does not make.
 func TestCurrentReportsRemainingWindow(t *testing.T) {
 	h := newHarness(t)
 
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
-		t.Fatalf("применение: %v", err)
+		t.Fatalf("apply: %v", err)
 	}
 	h.waitWindow(t)
 
 	left := h.manager.Current().Window
 
 	if left <= 0 || left > window {
-		t.Fatalf("остаток окна %v, ожидали значение в пределах %v", left, window)
+		t.Fatalf("window remainder %v, expected a value within %v", left, window)
 	}
 	if later := h.manager.Current().Window; later > left {
-		t.Errorf("остаток вырос: было %v, стало %v", left, later)
+		t.Errorf("remainder grew: was %v, now %v", left, later)
 	}
 }
 
-// Состояние обязано лечь на диск раньше конфига: питание, снятое между
-// записью и стартом таймера, иначе оставило бы устройство без автоотката.
+// The state must reach the disk before the config: a power loss between
+// the write and the timer start would otherwise leave the device without an automatic rollback.
 func TestStateIsWrittenBeforeConfig(t *testing.T) {
 	h := newHarness(t)
 
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
-		t.Fatalf("применение: %v", err)
+		t.Fatalf("apply: %v", err)
 	}
 	h.waitWindow(t)
 
 	if state, write := h.rec.index("WriteState"), h.rec.index("Write"); state > write || state < 0 {
-		t.Errorf("состояние записано %d-м, конфиг %d-м", state, write)
+		t.Errorf("state written %dth, config %dth", state, write)
 	}
 }
 
-// Отказ check обязан остановить применение до того, как что-либо записано.
+// A check failure must stop the apply before anything is written.
 func TestCheckFailureWritesNothing(t *testing.T) {
 	h := newHarness(t)
 	h.service.checkErr = &singboxCheckError{}
 
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err == nil {
-		t.Fatal("битый конфиг принят")
+		t.Fatal("broken config accepted")
 	}
 
 	if got := h.rec.snapshot(); slices.Contains(got, "Write") || slices.Contains(got, "WriteState") {
-		t.Errorf("после отказа check что-то записано: %v", got)
+		t.Errorf("something written after check refused: %v", got)
 	}
 	if got := h.manager.Current(); got.Phase != "" {
-		t.Errorf("заведена транзакция %+v: применения не было", got)
+		t.Errorf("transaction %+v created: there was no apply", got)
 	}
 
-	// Отказ обязан освободить применение, иначе первый же битый конфиг
-	// заклинивает демон до перезапуска.
+	// A failure must release the apply, otherwise the very first broken config
+	// wedges the daemon until a restart.
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); errors.Is(err, apply.ErrBusy) {
-		t.Error("после отказа check применение осталось занятым")
+		t.Error("apply stayed busy after check refused")
 	}
 }
 
-// Между резервированием и появлением транзакции второй Start не должен
-// проскакивать: у конфига один владелец.
+// Between the reservation and the transaction appearing a second Start must not
+// slip through: the config has one owner.
 func TestConcurrentStartsAreSerialised(t *testing.T) {
 	h := newHarness(t)
 
@@ -521,7 +521,7 @@ func TestConcurrentStartsAreSerialised(t *testing.T) {
 	wg.Wait()
 
 	if accepted != 1 {
-		t.Errorf("принято применений: %d, ожидали одно", accepted)
+		t.Errorf("applies accepted: %d, expected one", accepted)
 	}
 }
 
@@ -534,34 +534,34 @@ func TestConfirmClosesWindow(t *testing.T) {
 
 	tx, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", "")
 	if err != nil {
-		t.Fatalf("применение: %v", err)
+		t.Fatalf("apply: %v", err)
 	}
 	h.waitWindow(t)
 
 	confirmed, err := h.manager.Confirm(t.Context(), tx.ID)
 	if err != nil {
-		t.Fatalf("подтверждение: %v", err)
+		t.Fatalf("confirm: %v", err)
 	}
 	if confirmed.Phase != apply.PhaseConfirmed {
-		t.Errorf("фаза %q, ожидали подтверждение", confirmed.Phase)
+		t.Errorf("phase %q, expected confirmation", confirmed.Phase)
 	}
 
 	h.manager.Close()
 
 	if slices.Contains(h.rec.snapshot(), "Restore") {
-		t.Error("подтверждённое применение всё равно откатилось")
+		t.Error("confirmed apply was rolled back anyway")
 	}
 	if state, _ := h.store.ReadState(t.Context()); state != nil {
-		t.Error("состояние подтверждённой транзакции осталось на диске")
+		t.Error("state of the confirmed transaction stayed on disk")
 	}
 }
 
-// Без подтверждения в срок конфиг обязан вернуться.
+// Without confirmation in time the config must return.
 func TestRollbackWithoutConfirmation(t *testing.T) {
 	h := newHarness(t)
 
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
-		t.Fatalf("применение: %v", err)
+		t.Fatalf("apply: %v", err)
 	}
 	h.waitWindow(t)
 
@@ -569,13 +569,13 @@ func TestRollbackWithoutConfirmation(t *testing.T) {
 	h.manager.Close()
 
 	if !slices.Contains(h.rec.snapshot(), "Restore") {
-		t.Fatalf("отката не было: %v", h.rec.snapshot())
+		t.Fatalf("there was no rollback: %v", h.rec.snapshot())
 	}
 	if got := h.manager.Current().Phase; got != apply.PhaseRolledBack {
-		t.Errorf("фаза %q, ожидали откат", got)
+		t.Errorf("phase %q, expected rollback", got)
 	}
 	if state, _ := h.store.ReadState(t.Context()); state != nil {
-		t.Error("состояние откаченной транзакции осталось на диске")
+		t.Error("state of the rolled back transaction stayed on disk")
 	}
 }
 
@@ -584,64 +584,64 @@ func TestConfirmRejectsForeignTransaction(t *testing.T) {
 
 	tx, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", "")
 	if err != nil {
-		t.Fatalf("применение: %v", err)
+		t.Fatalf("apply: %v", err)
 	}
 	h.waitWindow(t)
 
 	if _, err := h.manager.Confirm(t.Context(), "чужой"); !errors.Is(err, apply.ErrUnknownTransaction) {
-		t.Errorf("получили %v, ожидали ErrUnknownTransaction", err)
+		t.Errorf("got %v, expected ErrUnknownTransaction", err)
 	}
 
 	if _, err := h.manager.Confirm(t.Context(), tx.ID); err != nil {
-		t.Fatalf("подтверждение: %v", err)
+		t.Fatalf("confirm: %v", err)
 	}
 	if _, err := h.manager.Confirm(t.Context(), tx.ID); !errors.Is(err, apply.ErrNothingToConfirm) {
-		t.Errorf("повторное подтверждение: получили %v, ожидали ErrNothingToConfirm", err)
+		t.Errorf("repeated confirm: got %v, expected ErrNothingToConfirm", err)
 	}
 }
 
-// Второе применение при активной транзакции — ошибка контракта, а не гонка за
-// файл: у конфига один владелец.
+// A second apply with an active transaction is a contract error, not a race for the
+// file: the config has one owner.
 func TestSecondApplyIsRejected(t *testing.T) {
 	h := newHarness(t)
 
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
-		t.Fatalf("первое применение: %v", err)
+		t.Fatalf("first apply: %v", err)
 	}
 	h.waitWindow(t)
 
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); !errors.Is(err, apply.ErrBusy) {
-		t.Errorf("получили %v, ожидали ErrBusy", err)
+		t.Errorf("got %v, expected ErrBusy", err)
 	}
 }
 
-// Подтверждение освобождает применение сразу: клиент, подтвердивший и тут же
-// применивший снова, не должен получать отказ из-за ещё живой горутины.
+// Confirm releases the apply immediately: a client that confirmed and immediately
+// applied again must not get a refusal because of a still living goroutine.
 func TestApplyIsFreeRightAfterConfirm(t *testing.T) {
 	h := newHarness(t)
 
 	tx, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", "")
 	if err != nil {
-		t.Fatalf("первое применение: %v", err)
+		t.Fatalf("first apply: %v", err)
 	}
 	h.waitWindow(t)
 
 	if _, err := h.manager.Confirm(t.Context(), tx.ID); err != nil {
-		t.Fatalf("подтверждение: %v", err)
+		t.Fatalf("confirm: %v", err)
 	}
 
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); errors.Is(err, apply.ErrBusy) {
-		t.Error("после подтверждения применение осталось занятым")
+		t.Error("apply stayed busy after confirm")
 	}
 }
 
-// Откат тоже освобождает применение сразу: иначе после автоотката владелец не
-// может применить исправленный конфиг, пока не выйдет горутина.
+// A rollback also releases the apply immediately: otherwise after an automatic rollback the owner cannot
+// apply a fixed config until the goroutine exits.
 func TestApplyIsFreeRightAfterRollback(t *testing.T) {
 	h := newHarness(t)
 
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
-		t.Fatalf("первое применение: %v", err)
+		t.Fatalf("first apply: %v", err)
 	}
 	h.waitWindow(t)
 
@@ -649,21 +649,21 @@ func TestApplyIsFreeRightAfterRollback(t *testing.T) {
 	h.manager.Close()
 
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); errors.Is(err, apply.ErrBusy) {
-		t.Error("после отката применение осталось занятым")
+		t.Error("apply stayed busy after rollback")
 	}
 }
 
-// Конфиг мог поправить владелец по SSH — затирать это молча нельзя.
+// The owner could have changed the config over SSH: overwriting it silently is not allowed.
 func TestExternalEditIsDetected(t *testing.T) {
 	h := newHarness(t)
 
 	tx, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", "")
 	if err != nil {
-		t.Fatalf("применение: %v", err)
+		t.Fatalf("apply: %v", err)
 	}
 	h.waitWindow(t)
 	if _, err := h.manager.Confirm(t.Context(), tx.ID); err != nil {
-		t.Fatalf("подтверждение: %v", err)
+		t.Fatalf("confirm: %v", err)
 	}
 
 	h.store.mu.Lock()
@@ -671,7 +671,7 @@ func TestExternalEditIsDetected(t *testing.T) {
 	h.store.mu.Unlock()
 
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); !errors.Is(err, apply.ErrConfigModified) {
-		t.Errorf("получили %v, ожидали ErrConfigModified", err)
+		t.Errorf("got %v, expected ErrConfigModified", err)
 	}
 }
 
@@ -680,25 +680,25 @@ func TestClashAPIIsGuaranteed(t *testing.T) {
 
 	tx, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", "")
 	if err != nil {
-		t.Fatalf("применение: %v", err)
+		t.Fatalf("apply: %v", err)
 	}
 	h.waitWindow(t)
 
 	if !tx.ClashAPIAdded {
-		t.Error("добавление секции не отмечено в транзакции: пользователь его не увидит")
+		t.Error("section addition is not marked in the transaction: the user would not see it")
 	}
 
 	settings, err := clashapi.Read(h.store.config())
 	if err != nil {
-		t.Fatalf("чтение секции: %v", err)
+		t.Fatalf("reading the section: %v", err)
 	}
 	if settings.Address == "" {
-		t.Error("записан конфиг без работающего clash_api")
+		t.Error("config written without a working clash_api")
 	}
 }
 
-// Причина отказа уходит панели кодом шага: по нему она берёт текст на языке
-// пользователя, а не показывает ошибку демона как есть.
+// The failure reason goes to the panel as a step code: the panel takes the text in the user's
+// language by it and does not show the daemon error as is.
 func TestFailureCarriesStepCode(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -706,12 +706,12 @@ func TestFailureCarriesStepCode(t *testing.T) {
 		want  apply.ReasonCode
 	}{
 		{
-			name:  "конфиг не записался",
+			name:  "config was not written",
 			setup: func(h *harness) { h.store.writeErr = errors.New("диск переполнен") },
 			want:  apply.ReasonWriteFailed,
 		},
 		{
-			name:  "рантайм не ответил",
+			name:  "runtime did not answer",
 			setup: func(h *harness) { h.health.err = errors.New("порт молчит") },
 			want:  apply.ReasonHealthcheckFailed,
 		},
@@ -723,24 +723,24 @@ func TestFailureCarriesStepCode(t *testing.T) {
 			tt.setup(h)
 
 			if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
-				t.Fatalf("применение: %v", err)
+				t.Fatalf("apply: %v", err)
 			}
 
 			tx := waitPhase(t, h, apply.PhaseRolledBack)
 
 			if tx.ReasonCode != tt.want {
-				t.Errorf("код причины %q, ожидали %q", tx.ReasonCode, tt.want)
+				t.Errorf("reason code %q, expected %q", tx.ReasonCode, tt.want)
 			}
 			if tx.Reason == "" {
-				t.Error("подробность шага потеряна: чинить отказ будет не по чему")
+				t.Error("step detail lost: nothing to fix the failure by")
 			}
 		})
 	}
 }
 
-// Подтверждение на последних секундах окна: таймер успел первым, откат уже
-// трогает диск. Confirm обязан получить отказ, а не вернуть успех на фоне
-// отката, и новый Start в этот момент тоже не пускается.
+// A confirmation in the last seconds of the window: the timer was first, the rollback already
+// touches the disk. Confirm must get a refusal and not return success against the background
+// of the rollback, and a new Start is not let in at that moment either.
 func TestConfirmDuringRollbackIsRejected(t *testing.T) {
 	h := newHarness(t)
 	h.store.restoreStarted = make(chan struct{})
@@ -748,7 +748,7 @@ func TestConfirmDuringRollbackIsRejected(t *testing.T) {
 
 	tx, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", "")
 	if err != nil {
-		t.Fatalf("применение: %v", err)
+		t.Fatalf("apply: %v", err)
 	}
 	h.waitWindow(t)
 
@@ -756,23 +756,23 @@ func TestConfirmDuringRollbackIsRejected(t *testing.T) {
 	<-h.store.restoreStarted
 
 	if _, err := h.manager.Confirm(t.Context(), tx.ID); !errors.Is(err, apply.ErrNothingToConfirm) {
-		t.Errorf("подтверждение во время отката: получили %v, ожидали ErrNothingToConfirm", err)
+		t.Errorf("confirm during rollback: got %v, expected ErrNothingToConfirm", err)
 	}
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); !errors.Is(err, apply.ErrBusy) {
-		t.Errorf("применение во время отката: получили %v, ожидали ErrBusy", err)
+		t.Errorf("apply during rollback: got %v, expected ErrBusy", err)
 	}
 
 	close(h.store.restoreRelease)
 	h.manager.Close()
 
 	if got := h.manager.Current().Phase; got != apply.PhaseRolledBack {
-		t.Errorf("фаза %q, ожидали откат", got)
+		t.Errorf("phase %q, expected rollback", got)
 	}
 }
 
-// Пока Confirm не убрал состояние с диска, новый Start не пускается: иначе
-// ClearState стёр бы файл состояния уже следующей транзакции, и питание в её
-// окне не доиграется.
+// While Confirm has not removed the state from disk, a new Start is not let in: otherwise
+// ClearState would erase the state file of the next transaction, and a power loss in its
+// window would not be replayed.
 func TestConfirmHoldsApplyUntilStateCleared(t *testing.T) {
 	h := newHarness(t)
 	h.store.clearStarted = make(chan struct{})
@@ -780,7 +780,7 @@ func TestConfirmHoldsApplyUntilStateCleared(t *testing.T) {
 
 	tx, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", "")
 	if err != nil {
-		t.Fatalf("применение: %v", err)
+		t.Fatalf("apply: %v", err)
 	}
 	h.waitWindow(t)
 
@@ -790,96 +790,96 @@ func TestConfirmHoldsApplyUntilStateCleared(t *testing.T) {
 		defer close(done)
 
 		if _, err := h.manager.Confirm(t.Context(), tx.ID); err != nil {
-			t.Errorf("подтверждение: %v", err)
+			t.Errorf("confirm: %v", err)
 		}
 	}()
 
 	<-h.store.clearStarted
 
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); !errors.Is(err, apply.ErrBusy) {
-		t.Errorf("применение во время очистки состояния: получили %v, ожидали ErrBusy", err)
+		t.Errorf("apply during state cleanup: got %v, expected ErrBusy", err)
 	}
 
 	close(h.store.clearRelease)
 	<-done
 
-	// После подтверждения сверка внешних правок живая: фейку отдаётся sha
-	// записанного конфига, как его посчитал бы настоящий Store.
+	// After the confirmation the outside edit check is live: the fake is given the sha
+	// of the written config as the real Store would compute it.
 	digest := sha256.Sum256(h.store.config())
 	h.store.mu.Lock()
 	h.store.sum = hex.EncodeToString(digest[:])
 	h.store.mu.Unlock()
 
-	// Владение занято вторым применением; выход фоновой горутины первого не
-	// должен его снимать.
+	// Ownership is held by the second apply; the exit of the first background goroutine must not
+	// release it.
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
-		t.Fatalf("применение после подтверждения: %v", err)
+		t.Fatalf("apply after confirm: %v", err)
 	}
 	h.waitWindow(t)
 
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); !errors.Is(err, apply.ErrBusy) {
-		t.Errorf("третье применение при активной транзакции: получили %v, ожидали ErrBusy", err)
+		t.Errorf("third apply with an active transaction: got %v, expected ErrBusy", err)
 	}
 }
 
-// База клиента сверяется с файлом на диске и главнее внутренней сверки: она
-// переживает перезапуск демона и разблокирует применение, когда клиент
-// перечитал файл, правленный по SSH.
+// The client base is compared with the file on disk and outranks the internal check: it
+// survives a daemon restart and unblocks the apply when the client
+// reread the file edited over SSH.
 func TestStartChecksClientBase(t *testing.T) {
-	t.Run("совпавшая база пускает применение поверх чужой правки", func(t *testing.T) {
+	t.Run("a matching base lets the apply over a foreign edit", func(t *testing.T) {
 		h := newHarness(t)
 
 		tx, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", "")
 		if err != nil {
-			t.Fatalf("применение: %v", err)
+			t.Fatalf("apply: %v", err)
 		}
 		h.waitWindow(t)
 		if _, err := h.manager.Confirm(t.Context(), tx.ID); err != nil {
-			t.Fatalf("подтверждение: %v", err)
+			t.Fatalf("confirm: %v", err)
 		}
 
-		// Правка по SSH: на диске сумма, которой демон не писал, но клиент
-		// файл перечитал и назвал её базой.
+		// An SSH edit: the disk has a sum the daemon did not write, but the client
+		// reread the file and named it the base.
 		h.store.mu.Lock()
 		h.store.sum = "правка мимо демона"
 		h.store.mu.Unlock()
 
 		if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "правка мимо демона", ""); err != nil {
-			t.Errorf("применение с совпавшей базой: %v", err)
+			t.Errorf("apply with a matching base: %v", err)
 		}
 	})
 
-	t.Run("разошедшаяся база отклоняется", func(t *testing.T) {
+	t.Run("a diverged base is rejected", func(t *testing.T) {
 		h := newHarness(t)
 		h.store.mu.Lock()
 		h.store.sum = "на диске"
 		h.store.mu.Unlock()
 
 		if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "у клиента", ""); !errors.Is(err, apply.ErrConfigModified) {
-			t.Errorf("получили %v, ожидали ErrConfigModified", err)
+			t.Errorf("got %v, expected ErrConfigModified", err)
 		}
 	})
 
-	t.Run("база без файла на диске отклоняется", func(t *testing.T) {
+	t.Run("a base without a file on disk is rejected", func(t *testing.T) {
 		h := newHarness(t)
 		h.store.mu.Lock()
 		h.store.sumErr = fs.ErrNotExist
 		h.store.mu.Unlock()
 
 		if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "у клиента", ""); !errors.Is(err, apply.ErrConfigModified) {
-			t.Errorf("получили %v, ожидали ErrConfigModified", err)
+			t.Errorf("got %v, expected ErrConfigModified", err)
 		}
 	})
 }
 
-// Проваленный откат не должен заклинивать применение: на диске неизвестно
-// что, и сверка со старой суммой давала бы ложное «конфиг изменён вне
-// metabox» на каждый следующий Start.
+// A failed rollback must not wedge the apply: the disk has an unknown
+// something, and a check against the old sum would give a false "config modified outside
+// metabox" on every next Start.
 func TestFailedRollbackDoesNotJamApply(t *testing.T) {
 	h := newHarness(t)
 
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
-		t.Fatalf("применение: %v", err)
+		t.Fatalf("apply: %v", err)
 	}
 	h.waitWindow(t)
 
@@ -889,17 +889,17 @@ func TestFailedRollbackDoesNotJamApply(t *testing.T) {
 
 	tx := h.manager.Current()
 	if tx.Phase != apply.PhaseFailed || tx.ReasonCode != apply.ReasonRollbackFailed {
-		t.Fatalf("фаза %q с кодом %q, ожидали отказ отката", tx.Phase, tx.ReasonCode)
+		t.Fatalf("phase %q with code %q, expected rollback failure", tx.Phase, tx.ReasonCode)
 	}
 
 	h.service.setRestartErr(nil)
 
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); errors.Is(err, apply.ErrConfigModified) {
-		t.Error("после проваленного отката применение заклинило ложной внешней правкой")
+		t.Error("after a failed rollback the apply got stuck on a false outside edit")
 	}
 }
 
-// waitPhase ждёт, пока цикл дойдёт до фазы: шаги идут в своей горутине.
+// waitPhase waits until the cycle reaches the phase: the steps run in their own goroutine.
 func waitPhase(t *testing.T, h *harness, phase apply.Phase) apply.Transaction {
 	t.Helper()
 
@@ -911,7 +911,7 @@ func waitPhase(t *testing.T, h *harness, phase apply.Phase) apply.Transaction {
 		time.Sleep(time.Millisecond)
 	}
 
-	t.Fatalf("фаза %q не наступила: текущая %q", phase, h.manager.Current().Phase)
+	t.Fatalf("phase %q did not occur: current %q", phase, h.manager.Current().Phase)
 
 	return apply.Transaction{}
 }

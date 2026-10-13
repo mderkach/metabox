@@ -8,8 +8,8 @@ import (
 	"testing/fstest"
 )
 
-// spa повторяет то, что кладёт vite: оболочка, ассеты с отпечатком в имени и
-// файл без отпечатка.
+// spa repeats what vite puts: the shell, assets with a fingerprint in the name and
+// a file without a fingerprint.
 func spa() fstest.MapFS {
 	return fstest.MapFS{
 		"index.html":                {Data: []byte("<!doctype html><title>metabox</title>")},
@@ -24,7 +24,7 @@ func serve(t *testing.T, files fstest.MapFS, path string) *httptest.ResponseReco
 
 	h, err := newHandler(files)
 	if err != nil {
-		t.Fatalf("сборка раздачи: %v", err)
+		t.Fatalf("serve build: %v", err)
 	}
 
 	rec := httptest.NewRecorder()
@@ -33,21 +33,21 @@ func serve(t *testing.T, files fstest.MapFS, path string) *httptest.ResponseReco
 	return rec
 }
 
-// Роутинг у SPA клиентский: адрес вроде /connections существует только в
-// браузере, и на него обязана приехать оболочка, а не 404.
+// SPA routing is client-side: an address like /connections exists only in the
+// browser, and the shell must arrive for it, not a 404.
 func TestUnknownPathServesIndex(t *testing.T) {
 	for _, path := range []string{"/", "/connections", "/config/outbounds/2", "/нет-такого"} {
 		t.Run(path, func(t *testing.T) {
 			rec := serve(t, spa(), path)
 
 			if rec.Code != http.StatusOK {
-				t.Fatalf("код %d, ожидали %d", rec.Code, http.StatusOK)
+				t.Fatalf("code %d, expected %d", rec.Code, http.StatusOK)
 			}
 			if body := rec.Body.String(); body != "<!doctype html><title>metabox</title>" {
-				t.Errorf("отдали %q, ожидали index.html", body)
+				t.Errorf("served %q, expected index.html", body)
 			}
 			if got := rec.Header().Get("Cache-Control"); got != indexCache {
-				t.Errorf("Cache-Control %q, ожидали %q", got, indexCache)
+				t.Errorf("Cache-Control %q, expected %q", got, indexCache)
 			}
 		})
 	}
@@ -59,10 +59,10 @@ func TestCacheHeaders(t *testing.T) {
 		path string
 		want string
 	}{
-		{"ассет с отпечатком", "/assets/index-D4f8Ka1x.js", assetCache},
-		{"стиль с отпечатком", "/assets/index-B7cQ2m0p.css", assetCache},
-		{"файл без отпечатка", "/favicon.svg", indexCache},
-		{"оболочка", "/index.html", indexCache},
+		{"asset with a fingerprint", "/assets/index-D4f8Ka1x.js", assetCache},
+		{"style with a fingerprint", "/assets/index-B7cQ2m0p.css", assetCache},
+		{"file without a fingerprint", "/favicon.svg", indexCache},
+		{"shell", "/index.html", indexCache},
 	}
 
 	for _, tt := range tests {
@@ -70,17 +70,17 @@ func TestCacheHeaders(t *testing.T) {
 			rec := serve(t, spa(), tt.path)
 
 			if rec.Code != http.StatusOK {
-				t.Fatalf("код %d", rec.Code)
+				t.Fatalf("code %d", rec.Code)
 			}
 			if got := rec.Header().Get("Cache-Control"); got != tt.want {
-				t.Errorf("Cache-Control %q, ожидали %q", got, tt.want)
+				t.Errorf("Cache-Control %q, expected %q", got, tt.want)
 			}
 		})
 	}
 }
 
-// Вечный кэш на файле без отпечатка отдал бы старую версию навсегда, поэтому
-// отпечаток распознаётся строго.
+// An eternal cache on a file without a fingerprint would serve an old version forever, so
+// the fingerprint is recognized strictly.
 func TestHashed(t *testing.T) {
 	tests := []struct {
 		name string
@@ -100,32 +100,32 @@ func TestHashed(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := hashed(tt.name); got != tt.want {
-				t.Errorf("получили %v, ожидали %v", got, tt.want)
+				t.Errorf("got %v, expected %v", got, tt.want)
 			}
 		})
 	}
 }
 
-// Демон обязан подниматься и без интерфейса: API работает, панель объясняет,
-// чего не хватает.
+// The daemon must come up without the interface too: the API works, the panel explains
+// what is missing.
 func TestNotBuilt(t *testing.T) {
 	_, err := newHandler(fstest.MapFS{".gitkeep": {Data: []byte("пусто")}})
 
 	if !errors.Is(err, ErrNotBuilt) {
-		t.Errorf("получили %v, ожидали ErrNotBuilt", err)
+		t.Errorf("got %v, expected ErrNotBuilt", err)
 	}
 }
 
-// В репозитории каталог статики держится с одним .gitkeep — Handler обязан
-// сказать об этом, а не упасть.
+// In the repository the static directory is kept with a single .gitkeep, and Handler must
+// say so and not crash.
 func TestEmbeddedDirectoryCompiles(t *testing.T) {
 	if _, err := Handler(); err != nil && !errors.Is(err, ErrNotBuilt) {
-		t.Errorf("встроенный каталог не читается: %v", err)
+		t.Errorf("the embedded directory cannot be read: %v", err)
 	}
 }
 
-// compressed повторяет то, что кладёт сборка панели: рядом с файлом лежат
-// заранее сжатые варианты.
+// compressed repeats what the panel build puts: precompressed variants
+// lie next to the file.
 func compressed() fstest.MapFS {
 	files := spa()
 	files["assets/index-D4f8Ka1x.js.br"] = &fstest.MapFile{Data: []byte("сжато brotli")}
@@ -141,7 +141,7 @@ func serveWith(t *testing.T, files fstest.MapFS, path, accept string) *httptest.
 
 	h, err := newHandler(files)
 	if err != nil {
-		t.Fatalf("сборка раздачи: %v", err)
+		t.Fatalf("serve build: %v", err)
 	}
 
 	req := httptest.NewRequest(http.MethodGet, path, nil)
@@ -155,8 +155,8 @@ func serveWith(t *testing.T, files fstest.MapFS, path, accept string) *httptest.
 	return rec
 }
 
-// Сжимает сборка панели, а не демон: процессорное время роутера на повторное
-// сжатие одного и того же файла не тратится.
+// Compression is done by the panel build, not by the daemon: router processor time is not spent
+// recompressing the same file.
 func TestPrecompressedVariants(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -167,7 +167,7 @@ func TestPrecompressedVariants(t *testing.T) {
 		wantType     string
 	}{
 		{
-			name:         "brotli когда клиент его принимает",
+			name:         "brotli when the client accepts it",
 			path:         "/assets/index-D4f8Ka1x.js",
 			accept:       "gzip, deflate, br, zstd",
 			wantEncoding: "br",
@@ -175,7 +175,7 @@ func TestPrecompressedVariants(t *testing.T) {
 			wantType:     "text/javascript; charset=utf-8",
 		},
 		{
-			name:         "gzip когда brotli не предложен",
+			name:         "gzip when brotli is not offered",
 			path:         "/assets/index-D4f8Ka1x.js",
 			accept:       "gzip, deflate",
 			wantEncoding: "gzip",
@@ -183,7 +183,7 @@ func TestPrecompressedVariants(t *testing.T) {
 			wantType:     "text/javascript; charset=utf-8",
 		},
 		{
-			name:         "исходный файл, когда сжатое не принимают",
+			name:         "the original file when compressed is not accepted",
 			path:         "/assets/index-D4f8Ka1x.js",
 			accept:       "identity",
 			wantEncoding: "",
@@ -191,7 +191,7 @@ func TestPrecompressedVariants(t *testing.T) {
 			wantType:     "text/javascript; charset=utf-8",
 		},
 		{
-			name:         "исходный файл, когда варианта нет",
+			name:         "the original file when there is no variant",
 			path:         "/assets/index-B7cQ2m0p.css",
 			accept:       "br, gzip",
 			wantEncoding: "",
@@ -199,7 +199,7 @@ func TestPrecompressedVariants(t *testing.T) {
 			wantType:     "text/css; charset=utf-8",
 		},
 		{
-			name:         "словарь отдаётся сжатым",
+			name:         "the dictionary is served compressed",
 			path:         "/locales/shared/ru-Z1k8dm97.json",
 			accept:       "br",
 			wantEncoding: "br",
@@ -207,7 +207,7 @@ func TestPrecompressedVariants(t *testing.T) {
 			wantType:     "application/json",
 		},
 		{
-			name:         "нулевой вес считается отказом",
+			name:         "zero weight counts as a refusal",
 			path:         "/assets/index-D4f8Ka1x.js",
 			accept:       "br;q=0, gzip",
 			wantEncoding: "gzip",
@@ -221,40 +221,40 @@ func TestPrecompressedVariants(t *testing.T) {
 			rec := serveWith(t, compressed(), tt.path, tt.accept)
 
 			if rec.Code != http.StatusOK {
-				t.Fatalf("код %d, ожидали %d", rec.Code, http.StatusOK)
+				t.Fatalf("code %d, expected %d", rec.Code, http.StatusOK)
 			}
 			if got := rec.Header().Get("Content-Encoding"); got != tt.wantEncoding {
-				t.Errorf("Content-Encoding %q, ожидали %q", got, tt.wantEncoding)
+				t.Errorf("Content-Encoding %q, expected %q", got, tt.wantEncoding)
 			}
 			if got := rec.Body.String(); got != tt.wantBody {
-				t.Errorf("тело %q, ожидали %q", got, tt.wantBody)
+				t.Errorf("body %q, expected %q", got, tt.wantBody)
 			}
 			if got := rec.Header().Get("Content-Type"); got != tt.wantType {
-				t.Errorf("Content-Type %q, ожидали %q", got, tt.wantType)
+				t.Errorf("Content-Type %q, expected %q", got, tt.wantType)
 			}
 			if got := rec.Header().Get("Vary"); got != "Accept-Encoding" {
-				t.Errorf("Vary %q, ожидали Accept-Encoding", got)
+				t.Errorf("Vary %q, expected Accept-Encoding", got)
 			}
 		})
 	}
 }
 
-// Словарь несёт отпечаток в имени, как и остальные ассеты: он обязан попадать
-// под вечный кэш, иначе каждый заход перепрашивает все словари экрана.
+// The dictionary carries a fingerprint in the name like the other assets: it must fall
+// under the eternal cache, otherwise every visit re-requests all the screen dictionaries.
 func TestHashedLocaleIsImmutable(t *testing.T) {
 	rec := serveWith(t, compressed(), "/locales/shared/ru-Z1k8dm97.json", "")
 
 	if got := rec.Header().Get("Cache-Control"); got != assetCache {
-		t.Errorf("Cache-Control %q, ожидали %q", got, assetCache)
+		t.Errorf("Cache-Control %q, expected %q", got, assetCache)
 	}
 }
 
-// Прямой запрос сжатого варианта отдал бы клиенту нераспакованные байты без
-// Content-Encoding, поэтому такой адрес раздаче неизвестен.
+// A direct request for a compressed variant would give the client unpacked bytes without
+// Content-Encoding, so such an address is unknown to the serving.
 func TestEncodedVariantIsNotAnAddress(t *testing.T) {
 	rec := serveWith(t, compressed(), "/assets/index-D4f8Ka1x.js.br", "br")
 
 	if got := rec.Header().Get("Content-Type"); got != "text/html; charset=utf-8" {
-		t.Errorf("Content-Type %q, ожидали оболочку", got)
+		t.Errorf("Content-Type %q, expected the shell", got)
 	}
 }

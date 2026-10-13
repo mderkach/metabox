@@ -8,31 +8,31 @@ import (
 	"time"
 )
 
-// Sink принимает объёмы, которые копит учёт. Интерфейс объявлен здесь, у
-// потребителя: сам учёт не знает, кто и как хранит накопленное.
+// Sink accepts the volumes accumulated by the accounting. The interface is declared here, at
+// the consumer: the accounting does not know who stores the accumulated amount and how.
 type Sink interface {
-	// AddProxy прибавляет байты, прошедшие через sing-box за интервал.
+	// AddProxy adds the bytes that passed through sing-box over an interval.
 	AddProxy(bytes int64)
-	// SampleDevice снимает показания устройства и счётчики канала.
+	// SampleDevice takes the device readings and the channel counters.
 	SampleDevice(ctx context.Context)
 }
 
-// Recorder принимает сэмпл потока для истории. nil означает, что историю никто
-// не копит.
+// Recorder accepts a stream sample for the history. nil means nobody keeps
+// a history.
 type Recorder interface {
 	Record(up, down int64)
 }
 
-// Accounting копит объём канала и объём через sing-box с запуска демона.
+// Accounting accumulates the channel volume and the volume through sing-box since the daemon start.
 //
-// Работает независимо от того, открыта ли панель. Это исключение из правила
-// «фоновых опросов без потребителя нет»: потребитель здесь — сама величина.
-// Доля за всё время не восстанавливается задним числом — счётчик интерфейса
-// идёт с подъёма линка, счётчик sing-box с запуска процесса, и приращения,
-// не снятые вовремя, теряются навсегда.
+// Works independently of whether the panel is open. This is an exception to the rule
+// "no background polling without a consumer": the consumer here is the value itself.
+// The share over all time cannot be restored retroactively: the interface counter
+// counts from the link coming up, the sing-box counter from the process start, and increments
+// not taken in time are lost forever.
 //
-// Цена в простое: одно постоянное соединение к Clash API, по которому форк шлёт
-// две цифры в секунду, и чтение `/proc/net/dev` раз в интервал.
+// The price at idle: one persistent connection to the Clash API, over which the fork sends
+// two numbers per second, and a read of `/proc/net/dev` once per interval.
 type Accounting struct {
 	source   Source
 	sink     Sink
@@ -45,12 +45,12 @@ type Accounting struct {
 	done chan struct{}
 }
 
-// NewAccounting собирает учёт. Опросов он не начинает: их поднимает Start.
+// NewAccounting assembles the accounting. It starts no polling: Start brings it up.
 func NewAccounting(source Source, sink Sink, recorder Recorder, log *slog.Logger, opts Options) *Accounting {
 	return &Accounting{source: source, sink: sink, recorder: recorder, log: log, opts: opts}
 }
 
-// Start поднимает учёт на всё время работы демона.
+// Start brings the accounting up for the whole daemon runtime.
 func (a *Accounting) Start() {
 	a.mu.Lock()
 	defer a.mu.Unlock()
@@ -85,7 +85,7 @@ func (a *Accounting) Start() {
 	}()
 }
 
-// Close останавливает учёт и дожидается горутин.
+// Close stops the accounting and waits for the goroutines.
 func (a *Accounting) Close() {
 	a.mu.Lock()
 	stop, done := a.stop, a.done
@@ -100,8 +100,8 @@ func (a *Accounting) Close() {
 	<-done
 }
 
-// countProxy держит поток `/traffic`, переподключаясь после обрыва: sing-box
-// перезапускают, и поток на этом заканчивается.
+// countProxy holds the `/traffic` stream, reconnecting after a break: sing-box
+// is restarted, and the stream ends with it.
 func (a *Accounting) countProxy(ctx context.Context) {
 	for ctx.Err() == nil {
 		err := a.source.Stream(ctx, "/traffic", func(line json.RawMessage) {

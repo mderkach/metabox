@@ -2,12 +2,12 @@ package device
 
 import "sync"
 
-// Meter копит приращение чужого счётчика.
+// Meter accumulates the increment of a foreign counter.
 //
-// Счётчики устройства и Clash API накопительные, но стартуют от разных
-// событий: один с подъёма линка, другой с запуска процесса. Сравнивать их
-// можно только приращениями за одно окно, поэтому приращения копит демон, а
-// не потребитель.
+// The device and Clash API counters are cumulative but start from different
+// events: one from the link coming up, the other from the process start. They can be
+// compared only by increments over one window, so the increments are accumulated by the daemon and
+// not by the consumer.
 type Meter struct {
 	mu    sync.Mutex
 	seen  bool
@@ -15,8 +15,8 @@ type Meter struct {
 	total int64
 }
 
-// Add прибавляет приращение, посчитанное снаружи. Так копится то, что источник
-// отдаёт не счётчиком, а порцией за интервал.
+// Add adds an increment counted outside. This is how what the source
+// returns not as a counter but as a portion per interval is accumulated.
 func (m *Meter) Add(delta int64) {
 	if delta <= 0 {
 		return
@@ -28,9 +28,9 @@ func (m *Meter) Add(delta int64) {
 	m.total += delta
 }
 
-// Observe принимает текущее значение счётчика источника. Значение меньше
-// прошлого означает, что источник перезапустился: тогда отсчёт начинается
-// заново, а накопленное остаётся.
+// Observe takes the current value of the source counter. A value smaller than
+// the previous one means the source restarted: counting then starts
+// anew, and what is accumulated stays.
 func (m *Meter) Observe(value int64) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -43,8 +43,8 @@ func (m *Meter) Observe(value int64) {
 	m.last = value
 }
 
-// Rebase забывает прошлое значение, сохраняя накопленное: так счётчик нового
-// источника не приедет в итог одним скачком.
+// Rebase forgets the previous value, keeping what is accumulated: this way the counter of a new
+// source does not arrive in the total as one jump.
 func (m *Meter) Rebase() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -53,7 +53,7 @@ func (m *Meter) Rebase() {
 	m.last = 0
 }
 
-// Total отдаёт накопленное приращение.
+// Total returns the accumulated increment.
 func (m *Meter) Total() int64 {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -61,9 +61,9 @@ func (m *Meter) Total() int64 {
 	return m.total
 }
 
-// Share — сколько прошло через канал и через sing-box за время наблюдения.
-// Доля считается делением одного на другое и осмысленна только вместе с
-// Seconds: окно начинается, когда демон впервые снял показания.
+// Share is how much passed through the channel and through sing-box during the observation.
+// The share is computed by dividing one by the other and is meaningful only together with
+// Seconds: the window starts when the daemon first took readings.
 type Share struct {
 	Link    int64 `json:"link"`
 	Proxy   int64 `json:"proxy"`

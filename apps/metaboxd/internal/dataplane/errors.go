@@ -2,34 +2,34 @@ package dataplane
 
 import "fmt"
 
-// FieldReason — почему значение опции не принято. Набор закрытый: по нему
-// панель выбирает текст на языке пользователя.
+// FieldReason is why an option value was not accepted. The set is closed: the panel
+// picks the text in the user's language by it.
 type FieldReason string
 
 const (
-	// ReasonInvalid — значение не разобрано: не число, не IP, не MAC, не из
-	// набора.
+	// ReasonInvalid means the value is not parsed: not a number, not an IP, not a MAC, not from
+	// the set.
 	ReasonInvalid FieldReason = "invalid"
-	// ReasonOutOfRange — порт вне 1–65535.
+	// ReasonOutOfRange means the port is outside 1–65535.
 	ReasonOutOfRange FieldReason = "out_of_range"
-	// ReasonDuplicate — порт совпал с портом другого inbound.
+	// ReasonDuplicate means the port matched the port of another inbound.
 	ReasonDuplicate FieldReason = "duplicate"
-	// ReasonRequired — при включённой обвязке список пуст.
+	// ReasonRequired means the list is empty while the dataplane is enabled.
 	ReasonRequired FieldReason = "required"
 )
 
-// FieldError — одно непринятое значение.
+// FieldError is one value that was not accepted.
 type FieldError struct {
-	// Field — имя опции UCI.
+	// Field is the UCI option name.
 	Field string `json:"field"`
-	// Value — значение как в UCI; у элемента списка — сам элемент. Пусто у
+	// Value is the value as in UCI; for a list element, the element itself. Empty for
 	// ReasonRequired.
 	Value  string      `json:"value"`
 	Reason FieldReason `json:"reason"`
 }
 
-// InvalidError — модель в UCI не принята; Fields перечисляет все отказы сразу,
-// чтобы владелец не чинил их по одному.
+// InvalidError means the model in UCI was not accepted; Fields lists all failures at once
+// so that the owner does not fix them one by one.
 type InvalidError struct {
 	Fields []FieldError
 }

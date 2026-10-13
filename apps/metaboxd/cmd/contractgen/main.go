@@ -1,9 +1,9 @@
-// Command contractgen печатает Zod-схемы контракта демона: он читает исходники
-// пакетов, которые отдают тела наружу, и переводит их структуры в схемы для
-// панели.
+// Command contractgen prints the Zod schemas of the daemon contract: it reads the sources
+// of the packages that return bodies outside and translates their structs into schemas for
+// the panel.
 //
-// Разбор идёт по исходникам, а не рефлексией: так в схему попадают
-// godoc-комментарии полей — панель показывает их в формах.
+// Parsing works on sources, not by reflection: this way the godoc comments of the fields
+// get into the schema, and the panel shows them in forms.
 package main
 
 import (
@@ -12,10 +12,10 @@ import (
 	"os"
 )
 
-// roots — то, что демон отдаёт наружу. Формы ответов объявлены в
-// `internal/contract`, формы потока и объяснение маршрута — в своих пакетах;
-// зависимости генератор находит сам. Приватные структуры хендлеров контрактом
-// не считаются и сюда не попадают.
+// roots are what the daemon returns outside. Response shapes are declared in
+// `internal/contract`, the shapes of the stream and the route explanation in their own packages;
+// the generator finds the dependencies itself. Private handler structs are not
+// considered a contract and do not get here.
 var roots = []rootType{
 	{pkg: "internal/contract", name: "Health"},
 	{pkg: "internal/contract", name: "Status"},

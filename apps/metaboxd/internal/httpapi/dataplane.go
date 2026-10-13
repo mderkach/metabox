@@ -13,11 +13,11 @@ import (
 	"metabox/internal/dataplane"
 )
 
-// maxDataplaneBytes — потолок тела смены модели: в нём списки адресов и MAC.
+// maxDataplaneBytes is the ceiling of the model change body: it holds address and MAC lists.
 const maxDataplaneBytes = 256 << 10
 
-// PlaneApplier — смена модели обвязки протоколом применения. Интерфейс
-// объявлен здесь, у потребителя.
+// PlaneApplier is a dataplane model change by the apply protocol. The interface
+// is declared here, at the consumer.
 type PlaneApplier interface {
 	Start(ctx context.Context, model dataplane.Model, base string, client netip.Addr) (apply.Transaction, error)
 	Confirm(ctx context.Context, id string) (apply.Transaction, error)
@@ -25,14 +25,14 @@ type PlaneApplier interface {
 	ForeignService() bool
 }
 
-// handleDataplaneChange запускает смену модели. Ответ уходит после проверки
-// модели, до записи: смена, как и применение конфига, живёт дольше запроса.
+// handleDataplaneChange starts a model change. The response goes after the model
+// check, before the write: the change, like a config apply, lives longer than the request.
 //
-// Адрес клиента берётся из RemoteAddr: за прокси дев-стенда это адрес прокси, и
-// предупреждение о выводе администратора из перехвата там не срабатывает.
+// The client address is taken from RemoteAddr: behind the dev test bench proxy it is the proxy address, and
+// the warning about taking the administrator out of interception does not fire there.
 //
-// If-Match обязателен, в отличие от Apply конфига: у конфига без заголовка
-// остаётся сверка с тем, что записал сам демон, а у секции UCI такой базы нет.
+// If-Match is required, unlike the config Apply: a config without the header
+// keeps the check against what the daemon wrote itself, while a UCI section has no such base.
 func (s *Server) handleDataplaneChange(w http.ResponseWriter, r *http.Request) {
 	match := r.Header.Get("If-Match")
 	if match == "" {

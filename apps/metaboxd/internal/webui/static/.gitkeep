@@ -1,3 +1,3 @@
-Каталог держится в git непустым: сюда `make daemon` кладёт собранную SPA.
-Без единого файла go:embed не находит ничего, и Go-часть перестаёт собираться
-на чистом клоне — см. docs/adr/ADR-0003.
+The directory is kept non-empty in git: `make daemon` puts the built SPA here.
+Without a single file go:embed finds nothing, and the Go part stops building
+on a clean clone, see docs/adr/ADR-0003.

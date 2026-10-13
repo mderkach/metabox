@@ -26,7 +26,7 @@ func hitsOf(t *testing.T, counter *Counter) []uint64 {
 
 	hits, err := counter.Hits(t.Context())
 	if err != nil {
-		t.Fatalf("счёт: %v", err)
+		t.Fatalf("count: %v", err)
 	}
 
 	out := make([]uint64, 0, len(hits.Rules))
@@ -63,7 +63,7 @@ func TestCounterCountsEachConnectionOnce(t *testing.T) {
 	}
 
 	if got, want := hitsOf(t, counter), []uint64{0, 1, 0, 2, 0}; !slices.Equal(got, want) {
-		t.Errorf("счёт %v, ожидали %v", got, want)
+		t.Errorf("count %v, expected %v", got, want)
 	}
 
 	hits, err := counter.Hits(t.Context())
@@ -71,12 +71,12 @@ func TestCounterCountsEachConnectionOnce(t *testing.T) {
 		t.Fatal(err)
 	}
 	if hits.Final != 1 {
-		t.Errorf("в final %d, ожидали 1", hits.Final)
+		t.Errorf("in final %d, expected 1", hits.Final)
 	}
 }
 
-// После применения, которое переставило правила, счёт остаётся за своим
-// правилом, а не за номером.
+// After an apply that reordered the rules the count stays with its own
+// rule and not with the number.
 func TestCounterFollowsRuleAfterReorder(t *testing.T) {
 	source := &fakeSource{bodies: map[string]string{
 		"/rules":       rulesBody,
@@ -94,12 +94,12 @@ func TestCounterFollowsRuleAfterReorder(t *testing.T) {
 	]}`
 
 	if got, want := hitsOf(t, counter), []uint64{0, 1}; !slices.Equal(got, want) {
-		t.Errorf("счёт %v, ожидали %v", got, want)
+		t.Errorf("count %v, expected %v", got, want)
 	}
 }
 
-// Правило, которого нет в запомненном списке, значит новый конфиг процесса:
-// список перечитывается, и соединение засчитывается его правилу.
+// A rule absent from the remembered list means a new process config:
+// the list is reread, and the connection is counted for its rule.
 func TestCounterRereadsRulesForUnknownRule(t *testing.T) {
 	source := &fakeSource{bodies: map[string]string{
 		"/rules":       `{"rules":[{"type":"default","payload":"inbound=dns-in","proxy":"hijack-dns"}]}`,
@@ -122,12 +122,12 @@ func TestCounterRereadsRulesForUnknownRule(t *testing.T) {
 	}
 
 	if got, want := hitsOf(t, counter), []uint64{1, 1}; !slices.Equal(got, want) {
-		t.Errorf("счёт %v, ожидали %v", got, want)
+		t.Errorf("count %v, expected %v", got, want)
 	}
 }
 
-// Дубль правила ниже по списку не срабатывает никогда: роутер
-// останавливается на первом совпадении.
+// A duplicate of a rule lower in the list never fires: the router
+// stops at the first match.
 func TestCounterGivesDuplicateNoHits(t *testing.T) {
 	source := &fakeSource{bodies: map[string]string{
 		"/rules": `{"rules":[
@@ -143,7 +143,7 @@ func TestCounterGivesDuplicateNoHits(t *testing.T) {
 	}
 
 	if got, want := hitsOf(t, counter), []uint64{1, 0}; !slices.Equal(got, want) {
-		t.Errorf("счёт %v, ожидали %v", got, want)
+		t.Errorf("count %v, expected %v", got, want)
 	}
 }
 
@@ -165,14 +165,14 @@ func TestCounterReportsCountingWindow(t *testing.T) {
 			t.Fatal(err)
 		}
 		if hits.Seconds != 90 {
-			t.Errorf("счёт идёт %d с, ожидали 90", hits.Seconds)
+			t.Errorf("count runs %d s, expected 90", hits.Seconds)
 		}
 	})
 }
 
-// Clash API не показывает соединения по правилам, которые не завершают перебор
-// или не уводят трафик в outbound: ноль у них значил бы «не видно», а не «не
-// срабатывало».
+// The Clash API does not show connections for rules that do not end the iteration
+// or do not send traffic to an outbound: zero for them would mean "not visible", not "did not
+// fire".
 func TestCounterMarksUnobservableRules(t *testing.T) {
 	source := &fakeSource{bodies: map[string]string{
 		"/rules": `{"rules":[
@@ -196,7 +196,7 @@ func TestCounterMarksUnobservableRules(t *testing.T) {
 	}
 
 	if want := []bool{false, false, false, true, true}; !slices.Equal(got, want) {
-		t.Errorf("видимость правил %v, ожидали %v", got, want)
+		t.Errorf("rule visibility %v, expected %v", got, want)
 	}
 }
 
@@ -217,12 +217,12 @@ func TestCounterRecordsSnapshotSize(t *testing.T) {
 	}
 
 	if !slices.Equal(*recorded, []int{2}) {
-		t.Errorf("число соединений снимков %v, ожидали [2]", *recorded)
+		t.Errorf("number of snapshot connections %v, expected [2]", *recorded)
 	}
 }
 
-// Поток рантайма читает соединения из снапшота счётчика: сырое тело уходит в
-// Snapshots на каждый удачный опрос и не уходит на неудачный.
+// The runtime stream reads connections from the counter snapshot: the raw body goes to
+// Snapshots on every successful poll and does not go on a failed one.
 func TestCounterFeedsSnapshotSink(t *testing.T) {
 	const body = `{"connections":[{"id":"a","rule":"final"}]}`
 
@@ -242,16 +242,16 @@ func TestCounterFeedsSnapshotSink(t *testing.T) {
 	source.setErr(errors.New("sing-box лежит"))
 
 	if err := counter.observe(t.Context()); err == nil {
-		t.Fatal("опрос лежащего источника прошёл")
+		t.Fatal("polling a down source passed")
 	}
 
 	if len(got) != 1 || got[0] != body {
-		t.Errorf("в поток ушло %d снапшотов (%v), ожидали один исходный", len(got), got)
+		t.Errorf("%d snapshots (%v) went into the stream, expected one initial", len(got), got)
 	}
 }
 
-// При лежащем sing-box счётчик ждёт паузу ретрая, а не стучится каждый
-// интервал: постоянные опросы демона ведут себя одинаково.
+// With sing-box down the counter waits the retry pause and does not knock every
+// interval: the constant daemon polls behave the same.
 func TestCounterWaitsRetryAfterFailure(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		source := &fakeSource{}
@@ -263,18 +263,18 @@ func TestCounterWaitsRetryAfterFailure(t *testing.T) {
 		counter.Start()
 		defer counter.Close()
 
-		// Опросы на 0, 3, 6 и 9 секундах: следующего в 9.5 ещё нет.
+		// Polls at 0, 3, 6 and 9 seconds: the next one at 9.5 is not there yet.
 		time.Sleep(9*time.Second + 500*time.Millisecond)
 		synctest.Wait()
 
 		if got := source.callCount(); got != 4 {
-			t.Errorf("опросов %d, ожидали 4", got)
+			t.Errorf("polls %d, expected 4", got)
 		}
 	})
 }
 
-// Бенчмарк держит потолок NFR-2: пять тысяч живых соединений, цена одного
-// опроса счётчика в установившемся режиме — все соединения уже засчитаны.
+// The benchmark holds the NFR-2 ceiling: five thousand live connections, the price of one
+// counter poll in the steady state, with all connections already counted.
 func BenchmarkCounterObserve5000(b *testing.B) {
 	source := &fakeSource{bodies: map[string]string{
 		"/rules":       rulesBody,

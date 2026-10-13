@@ -1,8 +1,8 @@
-// Package procd читает состояние службы у procd — менеджера процессов OpenWrt.
+// Package procd reads the service state from procd, the OpenWrt process manager.
 //
-// Управление службой остаётся за init-скриптом (DeviceIO): здесь только
-// чтение. Процесс по pid отсюда не останавливается и не запускается: pid нужен,
-// чтобы узнать возраст процесса и отличить процесс после рестарта от прежнего.
+// Service control stays with the init script (DeviceIO): here only
+// reading. A process is neither stopped nor started by pid from here: the pid is needed
+// to learn the process age and to tell the process after a restart from the previous one.
 package procd
 
 import (
@@ -17,77 +17,77 @@ import (
 	"time"
 )
 
-// Runner запускает внешнюю команду и отдаёт её вывод с кодом возврата.
+// Runner runs an external command and returns its output with the exit code.
 //
-// Зависимость объявлена функцией, а не интерфейсом, намеренно: у пакета,
-// который владеет запуском команд, свой тип результата, а импортировать его
-// сюда нельзя — он сам зависит от этого пакета.
+// The dependency is declared as a function, not an interface, on purpose: the package
+// that owns command launching has its own result type, and importing it
+// here is impossible, since it depends on this package itself.
 type Runner func(ctx context.Context, name string, args ...string) (stdout string, exitCode int, err error)
 
-// State — то, что procd знает о службе.
+// State is what procd knows about the service.
 type State struct {
-	// Known отвечает, объявлены ли служба и её инстанс вообще. Незнакомая
-	// procd служба и остановленная — разные случаи: первое означает, что её не
-	// поднимали ни разу с момента загрузки.
+	// Known reports whether the service and its instance are declared at all. A service procd
+	// does not know and a stopped one are different cases: the first means it was not
+	// started once since boot.
 	Known bool
-	// Running — поднят ли инстанс службы.
+	// Running is whether the service instance is up.
 	Running bool
-	// PID поднятого инстанса; ноль, когда он не поднят. Только для
-	// чтения: службой управляет init-скрипт, а по pid применение узнаёт, что
-	// после рестарта отвечает уже новый процесс.
+	// PID of the running instance; zero when it is not up. Read-only:
+	// the service is controlled by the init script, and the apply learns by pid that
+	// after a restart a new process is answering.
 	PID int
-	// Uptime — возраст процесса. Ноль, когда узнать не удалось: procd
-	// возраста не отдаёт, он считается по /proc и на чужой системе может
-	// быть недоступен.
+	// Uptime is the process age. Zero when it could not be learned: procd
+	// does not return the age, it is computed from /proc and may be
+	// unavailable on a foreign system.
 	Uptime time.Duration
 	Launch
 }
 
-// Launch — то, с чем procd поднимает службу: рабочий каталог и конфиг.
+// Launch is what procd starts the service with: the working directory and the config.
 type Launch struct {
-	// Workdir — рабочий каталог службы: от него sing-box резолвит относительные
-	// пути конфига. Берётся из флага -D команды, с которой procd поднимает
-	// инстанс, — упавший инстанс procd помнит вместе с командой, и каталог
-	// виден без процесса. Без флага — каталог живого процесса из
-	// /proc/<pid>/cwd. Пусто, когда узнать не удалось.
+	// Workdir is the service working directory: sing-box resolves relative
+	// config paths from it. Taken from the -D flag of the command procd starts the
+	// instance with: procd remembers a crashed instance together with the command, and the directory
+	// is visible without a process. Without the flag it is the directory of the live process from
+	// /proc/<pid>/cwd. Empty when it could not be learned.
 	Workdir string
-	// Configs — файлы конфига из флагов -c (--config) той же команды, в
-	// порядке команды; команда без -c и -C — config.json, который sing-box
-	// тогда читает. Относительный путь sing-box читает от рабочего каталога —
-	// он переходит туда до чтения конфига, — и здесь он уже приведён к нему;
-	// при неизвестном рабочем каталоге остаётся как есть. Пусто — команды не
-	// видно.
+	// Configs are the config files from the -c (--config) flags of the same command, in
+	// command order; a command without -c and -C gives config.json, which sing-box
+	// then reads. A relative path sing-box reads from the working directory,
+	// it moves there before reading the config, and here it is already brought to it;
+	// with an unknown working directory it stays as is. Empty means the command is not
+	// visible.
 	Configs []string
-	// ConfigDirs — каталоги конфига из флагов -C (--config-directory), по тем
-	// же правилам.
+	// ConfigDirs are the config directories from the -C (--config-directory) flags, by the
+	// same rules.
 	ConfigDirs []string
 }
 
-// Client спрашивает procd через ubus.
+// Client asks procd through ubus.
 type Client struct {
 	runner Runner
 	ubus   string
-	// procDir вынесен, чтобы тест не зависел от /proc живой машины.
+	// procDir is extracted so the test does not depend on /proc of the live machine.
 	procDir string
 }
 
-// New собирает клиента. ubus — абсолютный путь к утилите, как и остальные
-// пути в демоне: PATH под procd не тот, что в интерактивном шелле.
+// New assembles the client. ubus is the absolute path to the utility, like the other
+// paths in the daemon: PATH under procd is not the one in the interactive shell.
 func New(runner Runner, ubus string) *Client {
 	return &Client{runner: runner, ubus: ubus, procDir: "/proc"}
 }
 
-// ErrAmbiguousInstance — имя инстанса не задано, а у службы их несколько: какой
-// из них sing-box, procd не говорит, а первый попавшийся может оказаться
-// соседним скриптом той же службы.
+// ErrAmbiguousInstance means the instance name is not set and the service has several: which
+// of them is sing-box procd does not say, and the first one found may turn out to be
+// a neighbouring script of the same service.
 var ErrAmbiguousInstance = errors.New("у службы несколько инстансов, а имя инстанса не задано")
 
-// Service отдаёт состояние службы по её имени в procd. Имя — то же, что у
-// init-скрипта: procd регистрирует службу под именем скрипта.
+// Service returns the service state by its name in procd. The name is the same as the
+// init script's: procd registers the service under the script name.
 //
-// Состояние, pid и команда берутся только у инстанса instance. Пустое имя
-// означает единственный инстанс службы; при нескольких — ErrAmbiguousInstance.
-// Инстанса с таким именем нет — служба считается незнакомой, Known ложно.
+// State, pid and command are taken only from the instance instance. An empty name
+// means the single service instance; with several, ErrAmbiguousInstance.
+// If there is no instance with such a name, the service is considered unknown, Known is false.
 func (c *Client) Service(ctx context.Context, name, instance string) (State, error) {
 	stdout, code, err := c.runner(ctx, c.ubus, "call", "service", "list")
 	if err != nil {
@@ -152,9 +152,9 @@ func (c *Client) Service(ctx context.Context, name, instance string) (State, err
 	return state, nil
 }
 
-// workdir берёт рабочий каталог из команды инстанса, а без флага -D — у
-// живого процесса: sing-box без флага резолвит пути от каталога, в котором
-// его запустили.
+// workdir takes the working directory from the instance command, and without the -D flag from
+// the live process: sing-box without the flag resolves paths from the directory it
+// was started in.
 func (c *Client) workdir(pid int, command []string) string {
 	if dir := directoryFlag(command); dir != "" {
 		return dir
@@ -172,9 +172,9 @@ func (c *Client) workdir(pid int, command []string) string {
 	return dir
 }
 
-// directoryFlag достаёт значение -D (--directory) из команды sing-box; повтор
-// флага — побеждает последний. Относительный путь не отдаётся: от какого
-// каталога его считать, знает только procd.
+// directoryFlag extracts the value of -D (--directory) from the sing-box command; if the
+// flag repeats, the last one wins. A relative path is not returned: which
+// directory to count it from only procd knows.
 func directoryFlag(command []string) string {
 	values := flagValues(command, "-D", "--directory")
 	if len(values) == 0 || !filepath.IsAbs(values[len(values)-1]) {
@@ -184,15 +184,15 @@ func directoryFlag(command []string) string {
 	return values[len(values)-1]
 }
 
-// defaultConfig — файл, который sing-box читает от рабочего каталога, когда в
-// команде нет ни -c, ни -C.
+// defaultConfig is the file sing-box reads from the working directory when the
+// command has neither -c nor -C.
 const defaultConfig = "config.json"
 
-// configFlags достаёт файлы (-c) и каталоги (-C) конфига: их sing-box
-// принимает сколько угодно и сливает все. Команда без обоих флагов читает
-// config.json рабочего каталога — так её и отдаём, иначе она не отличалась бы
-// от команды, которой не видно. Относительный путь приводится к рабочему
-// каталогу, если тот известен.
+// configFlags extracts the config files (-c) and directories (-C): sing-box
+// accepts any number of them and merges all. A command with neither flag reads
+// config.json of the working directory, and that is what we return, otherwise it would not differ
+// from a command that is not visible. A relative path is brought to the working
+// directory if it is known.
 func configFlags(command []string, workdir string) (configs, dirs []string) {
 	if len(command) == 0 {
 		return nil, nil
@@ -218,9 +218,9 @@ func configFlags(command []string, workdir string) (configs, dirs []string) {
 	return resolve(configs), resolve(dirs)
 }
 
-// flagValues собирает значения флага во всех формах, которые принимает разбор
-// флагов sing-box: `-x v`, `-xv`, `-x=v`, `--long v`, `--long=v`. Значение,
-// забранное флагом, само флагом не считается, а после `--` флагов нет.
+// flagValues collects the flag values in all forms accepted by the sing-box flag
+// parsing: `-x v`, `-xv`, `-x=v`, `--long v`, `--long=v`. A value
+// taken by a flag is not itself counted as a flag, and after `--` there are no flags.
 func flagValues(command []string, short, long string) []string {
 	var values []string
 
@@ -247,8 +247,8 @@ func flagValues(command []string, short, long string) []string {
 	return values
 }
 
-// isValueFlag отвечает, забирает ли флаг sing-box следующий аргумент
-// значением: тогда тот не разбирается как флаг.
+// isValueFlag reports whether a sing-box flag takes the next argument
+// as a value: that one is then not parsed as a flag.
 func isValueFlag(arg string) bool {
 	switch arg {
 	case "-c", "--config", "-C", "--config-directory", "-D", "--directory":
@@ -258,9 +258,9 @@ func isValueFlag(arg string) bool {
 	return false
 }
 
-// uptime считает возраст процесса как разницу между аптаймом системы и
-// моментом старта процесса. Абсолютное время не годится: у роутера нет часов
-// реального времени, и после включения оно прыгает при синхронизации NTP.
+// uptime counts the process age as the difference between the system uptime and
+// the process start moment. Absolute time does not fit: the router has no real-time
+// clock, and after power-on it jumps on NTP synchronization.
 func (c *Client) uptime(pid int) time.Duration {
 	if pid <= 0 {
 		return 0
@@ -295,17 +295,17 @@ func (c *Client) systemUptime() (time.Duration, error) {
 	return time.Duration(value * float64(time.Second)), nil
 }
 
-// processStart достаёт поле starttime из /proc/<pid>/stat — момент старта
-// процесса в тиках от загрузки системы.
+// processStart extracts the starttime field from /proc/<pid>/stat, the process start
+// moment in ticks since system boot.
 func (c *Client) processStart(pid int) (time.Duration, error) {
 	raw, err := os.ReadFile(c.procDir + "/" + strconv.Itoa(pid) + "/stat")
 	if err != nil {
 		return 0, err
 	}
 
-	// Имя процесса лежит в скобках и может содержать и пробелы, и сами скобки,
-	// поэтому поля считаются от последней закрывающей скобки, а не от первой
-	// и не от начала строки.
+	// The process name is in brackets and may contain both spaces and brackets themselves,
+	// so fields are counted from the last closing bracket, not from the first
+	// and not from the start of the line.
 	end := strings.LastIndex(string(raw), ")")
 	if end < 0 {
 		return 0, fmt.Errorf("неожиданный формат stat для pid %d", pid)
@@ -313,7 +313,7 @@ func (c *Client) processStart(pid int) (time.Duration, error) {
 
 	fields := strings.Fields(string(raw)[end+1:])
 
-	// starttime — 22-е поле всей строки, то есть 20-е после состояния.
+	// starttime is the 22nd field of the whole line, that is the 20th after the state.
 	const startTimeField = 19
 	if len(fields) <= startTimeField {
 		return 0, fmt.Errorf("в stat для pid %d нет поля starttime", pid)
@@ -324,9 +324,9 @@ func (c *Client) processStart(pid int) (time.Duration, error) {
 		return 0, fmt.Errorf("разбор starttime для pid %d: %w", pid, err)
 	}
 
-	// USER_HZ на aarch64 и прочих распространённых архитектурах равен 100;
-	// узнать значение из Go без cgo нельзя, а sysconf тянул бы зависимость.
-	// На системе с другим USER_HZ возраст выйдет кратно смещённым.
+	// USER_HZ on aarch64 and other common architectures equals 100;
+	// the value cannot be learned from Go without cgo, and sysconf would pull in a dependency.
+	// On a system with another USER_HZ the age comes out shifted by a factor.
 	const userHZ = 100
 
 	return time.Duration(ticks) * time.Second / userHZ, nil

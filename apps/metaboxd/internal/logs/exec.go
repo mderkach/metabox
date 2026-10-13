@@ -8,13 +8,13 @@ import (
 	"time"
 )
 
-// waitDelay — сколько ждать logread, который не вышел после сигнала или
-// оставил открытыми трубы: без этого зависший процесс держит горутину потока.
+// waitDelay is how long to wait for logread that did not exit after a signal or
+// left the pipes open: without it a hung process holds the stream goroutine.
 const waitDelay = 2 * time.Second
 
-// Exec — боевой Start поверх os/exec. Вывод не копится в буфер, как у
-// singbox.Exec: тот оставляет начало вывода, а хвосту лога нужен конец, и
-// поток logread -f не кончается вовсе.
+// Exec is the production Start on top of os/exec. The output is not accumulated in a buffer, unlike
+// singbox.Exec: that one keeps the start of the output, while the log tail needs the end, and
+// the logread -f stream does not end at all.
 func Exec(ctx context.Context, name string, args ...string) (io.ReadCloser, error) {
 	ctx, cancel := context.WithCancel(ctx)
 
@@ -43,9 +43,9 @@ type process struct {
 	cancel context.CancelFunc
 }
 
-// Close ждёт процесс; остановить живой — дело контекста запуска. Отмена до
-// ожидания не годится: процесс, вышедший сам, но ещё не прибранный, получил
-// бы сигнал, и Wait отдал бы отмену вместо его кода возврата.
+// Close waits for the process; stopping a live one is the job of the launch context. A cancel before
+// the wait does not fit: a process that exited on its own but is not yet reaped would get
+// a signal, and Wait would return the cancellation instead of its exit code.
 func (p *process) Close() error {
 	defer p.cancel()
 
