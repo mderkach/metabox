@@ -2,6 +2,7 @@
   "name": "web",
   "version": "0.1.0-rc.2",
   "private": true,
+  "license": "GPL-3.0-or-later",
   "type": "module",
   "sideEffects": [
     "**/*.css"

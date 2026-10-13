@@ -44,6 +44,7 @@ RUN set -eu; \
       --info "version:${PKG_VERSION}" \
       --info "arch:$(cat /tmp/arch)" \
       --info description:"Панель настройки sing-box" \
+      --info license:GPL-3.0-or-later \
       --info depends:sing-box-extended \
       --files /pkgroot \
       --output /out/metaboxd.apk
