@@ -175,8 +175,10 @@ Test bench variables are set in `.devcontainer/.env`, which docker compose reads
 | `OPENWRT_PLATFORM`   | `linux/aarch64_generic`                       | image platform: the public rootfs has a non-standard one, so it is set explicitly |
 | `PKG_VERSION`        | from `VERSION`: `0.1.0-rc.2` → `0.1.0_rc2-r0` | panel package version: apk writes a semver pre-release as an `_rcN` suffix        |
 | `SINGBOX_VERSION`    | `1.14.1-extended-2.7.2`                       | the fork release the sing-box package is taken from                               |
+| `PKG_ARCH`           | empty: the arch of the base image             | package arch; the release sets the router's `aarch64_cortex-a53`                  |
+| `APK_SIGN_KEY`       | empty: the package is unsigned                | path to the private key the package is signed with                                |
 
-The file is read by both docker compose and `make`, so `make package` builds the package for the same architecture the test bench runs on.
+The file is read by both docker compose and `make`, so `make package` builds the package for the same architecture the test bench runs on. `PKG_ARCH` and `APK_SIGN_KEY` are read only by `make`: the release sets them, the test bench builds without them.
 
 Without `.env`, the test bench is built on the public OpenWrt image, the same path CI takes.
 

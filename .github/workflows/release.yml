@@ -1,0 +1,85 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ github.ref_name }}
+      # The router's arch. There is no public rootfs for it, so the package is built on
+      # aarch64_generic of the same branch and gets the arch explicitly.
+      PKG_ARCH: aarch64_cortex-a53
+      PUBLIC_KEY: keys/metabox-release.pem
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # The tagged commit is checked against main, so history is needed
+          fetch-depth: 0
+
+      - name: Tag matches the version
+        run: |
+          version=$(cat VERSION)
+          web=$(jq -r .version apps/web/package.json)
+          [ "$TAG" = "v$version" ] || { echo "::error::tag $TAG, VERSION $version"; exit 1; }
+          [ "$web" = "$version" ] || { echo "::error::apps/web/package.json $web, VERSION $version"; exit 1; }
+          git merge-base --is-ancestor HEAD origin/main || { echo "::error::$TAG is not on main"; exit 1; }
+          [ -s "$PUBLIC_KEY" ] || { echo "::error::$PUBLIC_KEY is missing"; exit 1; }
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: .go-version
+          cache-dependency-path: tools/schemagen/go.sum
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: package.json
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+
+      # The key is on disk only for this step: the actions and installs above do not see it.
+      - name: Signed package
+        env:
+          APK_SIGN_KEY_PEM: ${{ secrets.APK_SIGN_KEY }}
+        run: |
+          [ -n "$APK_SIGN_KEY_PEM" ] || { echo "::error::secret APK_SIGN_KEY is not set"; exit 1; }
+          key="$RUNNER_TEMP/apk-sign-key.pem"
+          trap 'rm -f "$key"' EXIT
+          (umask 077 && printf '%s\n' "$APK_SIGN_KEY_PEM" > "$key")
+          make package APK_SIGN_KEY="$key"
+
+      # The signature is checked against the key from the repository: a secret that does
+      # not match the published key would give a package the router rejects.
+      - name: Verify and name the package
+        run: |
+          docker run --rm -v "$PWD:/w" -w /w alpine:3.23 sh -euc '
+            mkdir /keys && cp "$1" /keys/
+            apk verify --keys-dir /keys dist/metaboxd.apk
+            apk adbdump dist/metaboxd.apk > dist/info
+          ' sh "$PUBLIC_KEY"
+          version=$(sed -n 's/^  version: //p' dist/info | head -1)
+          arch=$(sed -n 's/^  arch: //p' dist/info | head -1)
+          rm dist/info
+          [ -n "$version" ] || { echo "::error::no version in the package"; exit 1; }
+          [ "$arch" = "$PKG_ARCH" ] || { echo "::error::package arch $arch, expected $PKG_ARCH"; exit 1; }
+          file="metaboxd-$version.apk"
+          mv dist/metaboxd.apk "dist/$file"
+          (cd dist && sha256sum "$file" > "$file.sha256")
+          echo "PACKAGE=$file" >> "$GITHUB_ENV"
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          prerelease=
+          case "$TAG" in *-*) prerelease=--prerelease ;; esac
+          gh release create "$TAG" --verify-tag --generate-notes $prerelease \
+            "dist/$PACKAGE" "dist/$PACKAGE.sha256" "$PUBLIC_KEY"

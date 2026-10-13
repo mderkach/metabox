@@ -100,6 +100,12 @@ APK_VERSION := $(shell echo '$(VERSION)' | sed -nE \
 	-e 's/^([0-9]+\.[0-9]+\.[0-9]+)$$/\1/p' \
 	-e 's/^([0-9]+\.[0-9]+\.[0-9]+)-(alpha|beta|rc)\.([0-9]+)$$/\1_\2\3/p')
 PKG_VERSION ?= $(APK_VERSION)-r0
+# Empty: the arch of the base image and an unsigned package. The release sets both.
+# A signed build passes --no-cache-filter package: the build cache does not see the secret
+# and would return an unsigned package cached from an earlier build.
+PKG_ARCH ?=
+APK_SIGN_KEY ?=
+comma := ,
 
 # Values go to docker compose: it takes them from the environment, not from the Makefile.
 export METABOX_BASE_IMAGE OPENWRT_PLATFORM DAEMON_BINARY PKG_VERSION
@@ -122,6 +128,8 @@ package: daemon-device
 		--build-arg BASE_IMAGE=$(METABOX_BASE_IMAGE) \
 		--build-arg PKG_VERSION=$(PKG_VERSION) \
 		--build-arg DAEMON_BINARY=$(DAEMON_BINARY) \
+		--build-arg PKG_ARCH=$(PKG_ARCH) \
+		$(if $(APK_SIGN_KEY),--secret id=apk_sign_key$(comma)src=$(APK_SIGN_KEY) --no-cache-filter package,) \
 		--target package-out --output type=local,dest=dist \
 		-f .devcontainer/target/Dockerfile .
 

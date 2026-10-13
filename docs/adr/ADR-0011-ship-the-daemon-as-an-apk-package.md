@@ -3,6 +3,7 @@
 - Status: Accepted
 - Date: 2026-09-12
 - Deciders: repository owner
+- Superseded by: the "package is not signed" rule only, by [ADR-0051](./ADR-0051-publish-releases-from-a-tag-workflow-and-sign-the-apk.md) (Proposed)
 
 ## Context and problem statement
 

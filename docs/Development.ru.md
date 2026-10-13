@@ -99,6 +99,45 @@ apk add --allow-untrusted /tmp/sing-box-extended_*.apk /tmp/metaboxd.apk
 
 `--allow-untrusted` нужен, потому что пакет из `make package` не подписан.
 
+## Релиз
+
+Релиз — тег `v*` на коммите из `main`. Workflow [`release`](../.github/workflows/release.yml) проверяет, что тег равен `v` плюс [`VERSION`](../VERSION) и что `apps/web/package.json` объявляет ту же версию, собирает пакет под `aarch64_cortex-a53` с подписью ключом из секрета `APK_SIGN_KEY`, сверяет подпись с `keys/metabox-release.pem` и публикует GitHub Release с пакетом, его sha256 и публичным ключом. Версия с суффиксом пре-релиза публикуется как prerelease.
+
+Шаги: PR с правкой `VERSION` и `apps/web/package.json`; после мержа — тег на коммит мержа:
+
+```sh
+git switch main && git pull --ff-only
+git tag v$(cat VERSION)
+git push origin v$(cat VERSION)
+```
+
+### Ключ подписи
+
+Создаёт владелец один раз, на своей машине и вне репозитория. Приватный ключ попадает только в секрет репозитория: в git его не коммитят и на роутер не кладут.
+
+```sh
+mkdir -p ~/.config/metabox keys
+(umask 077 && openssl ecparam -name prime256v1 -genkey -noout -out ~/.config/metabox/release.key)
+openssl ec -in ~/.config/metabox/release.key -pubout -out keys/metabox-release.pem
+gh secret set APK_SIGN_KEY < ~/.config/metabox/release.key
+```
+
+`keys/metabox-release.pem` попадает в `main` через PR до первого тега, иначе релиз упадёт. Потеря приватного ключа — новая пара и замена публичного на каждом роутере; утёкший ключ меняется так же.
+
+### Установка релиза на роутер
+
+Публичный ключ кладётся на роутер один раз:
+
+```sh
+wget -O /etc/apk/keys/metabox-release.pem https://raw.githubusercontent.com/mderkach/metabox/main/keys/metabox-release.pem
+```
+
+После этого пакет релиза ставится и обновляется без `--allow-untrusted`, а пакет, изменённый по дороге или подписанный другим ключом, apk отвергает. `sing-box-extended` должен уже стоять: он этим ключом не подписан.
+
+```sh
+apk add /tmp/metaboxd-<версия>.apk
+```
+
 ## Переменные сборки
 
 Версия выпуска — файл [`VERSION`](../VERSION) в semver. Из неё `make` выводит версию бинаря и версию пакета apk: `0.1.0-rc.2` становится `0.1.0_rc2-r0` ([ADR-0050](./adr/ADR-0050-version-releases-by-semver-and-derive-the-apk-version.md)).
