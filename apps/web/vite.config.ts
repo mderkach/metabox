@@ -6,9 +6,11 @@ import { brotliCompressSync, constants, gzipSync } from 'node:zlib';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import type { ProxyOptions } from 'vite';
-import { defineConfig, type Plugin } from 'vitest/config';
+import { configDefaults, defineConfig, type Plugin } from 'vitest/config';
 
 import { LOCALE_ROOT, checkLocales, collectLocales, hashedLocaleUrl, localeKey, writeI18nTypes } from './tools/i18n.ts';
+
+const BUDGET_TESTS = 'src/**/*.budget.test.{ts,tsx}';
 
 // Слои FSD; тот же список — в `paths` обоих tsconfig.
 const LAYERS = ['app', 'pages', 'widgets', 'features', 'entities', 'shared'];
@@ -307,6 +309,25 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
-    include: ['src/**/*.test.{ts,tsx}'],
+    // Замеры бюджета идут отдельной группой после остальных и по одному файлу:
+    // параллельные соседи отбирают процессор, и замер на раннере CI выходит за порог.
+    projects: [
+      {
+        test: {
+          name: 'unit',
+          include: ['src/**/*.test.{ts,tsx}'],
+          exclude: [...configDefaults.exclude, BUDGET_TESTS],
+          sequence: { groupOrder: 0 },
+        },
+      },
+      {
+        test: {
+          name: 'budget',
+          include: [BUDGET_TESTS],
+          fileParallelism: false,
+          sequence: { groupOrder: 1 },
+        },
+      },
+    ],
   },
 });
