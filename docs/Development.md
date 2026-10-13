@@ -99,6 +99,45 @@ apk add --allow-untrusted /tmp/sing-box-extended_*.apk /tmp/metaboxd.apk
 
 `--allow-untrusted` is needed because the package from `make package` is not signed.
 
+## Release
+
+A release is a `v*` tag on a commit in `main`. The [`release`](../.github/workflows/release.yml) workflow checks that the tag equals `v` plus [`VERSION`](../VERSION) and that `apps/web/package.json` declares the same version, builds the package for `aarch64_cortex-a53` signed with the `APK_SIGN_KEY` secret, checks the signature against `keys/metabox-release.pem` and publishes a GitHub Release with the package, its sha256 and the public key. A version with a pre-release suffix becomes a prerelease.
+
+Steps: a PR that changes `VERSION` and `apps/web/package.json`; after the merge, a tag on the merge commit:
+
+```sh
+git switch main && git pull --ff-only
+git tag v$(cat VERSION)
+git push origin v$(cat VERSION)
+```
+
+### Signing key
+
+Generated once by the owner, on their own machine and outside the repository. The private key goes only to the repository secret; it is not committed and not put on the router.
+
+```sh
+mkdir -p ~/.config/metabox keys
+(umask 077 && openssl ecparam -name prime256v1 -genkey -noout -out ~/.config/metabox/release.key)
+openssl ec -in ~/.config/metabox/release.key -pubout -out keys/metabox-release.pem
+gh secret set APK_SIGN_KEY < ~/.config/metabox/release.key
+```
+
+`keys/metabox-release.pem` reaches `main` through a PR before the first tag, otherwise the release fails. Losing the private key means a new pair and the public key replaced on every router; a leaked key is replaced the same way.
+
+### Installing a release on the router
+
+The public key is put on the router once:
+
+```sh
+wget -O /etc/apk/keys/metabox-release.pem https://raw.githubusercontent.com/mderkach/metabox/main/keys/metabox-release.pem
+```
+
+After that a release package installs and updates without `--allow-untrusted`, and a package changed on the way or signed with another key is rejected. `sing-box-extended` must already be installed: it is not signed with this key.
+
+```sh
+apk add /tmp/metaboxd-<version>.apk
+```
+
 ## Build variables
 
 The release version is the [`VERSION`](../VERSION) file in semver. From it `make` derives the binary version and the apk package version: `0.1.0-rc.2` becomes `0.1.0_rc2-r0` ([ADR-0050](./adr/ADR-0050-version-releases-by-semver-and-derive-the-apk-version.md)).
