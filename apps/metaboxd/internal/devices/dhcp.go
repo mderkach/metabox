@@ -15,8 +15,8 @@ import (
 	"metabox/internal/uci"
 )
 
-// maxLeasesBytes — потолок чтения файла аренд. Строка аренды — около ста
-// байт, мегабайт перекрывает пул любой домашней сети.
+// maxLeasesBytes is the ceiling for reading the leases file. A lease line is about a hundred
+// bytes, a megabyte covers the pool of any home network.
 const maxLeasesBytes = 1 << 20
 
 type lease struct {
@@ -32,11 +32,11 @@ type host struct {
 	macs []string
 }
 
-// readLeases разбирает файл аренд dnsmasq: `<срок> <mac> <ip> <имя|*>
-// <client-id|*>`. Отсутствие файла — штатный случай: DHCP на роутере
-// выключен. Строки другого вида (DUID аренд IPv6) пропускаются.
+// readLeases parses the dnsmasq leases file: `<expiry> <mac> <ip> <name|*>
+// <client-id|*>`. A missing file is a regular case: DHCP on the router
+// is off. Lines of another kind (DUID of IPv6 leases) are skipped.
 func readLeases(path string) ([]lease, error) {
-	f, err := os.Open(path) //nolint:gosec // G304: путь приходит флагом, а не из запроса
+	f, err := os.Open(path) //nolint:gosec // G304: the path comes by a flag, not from a request
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, nil
 	}
@@ -55,8 +55,8 @@ func readLeases(path string) ([]lease, error) {
 			continue
 		}
 
-		// Двух аренд на один MAC dnsmasq не держит, но файл пишется не
-		// атомарно; из двух берётся более поздняя.
+		// dnsmasq does not keep two leases for one MAC, but the file is not written
+		// atomically; of the two the later one is taken.
 		prev, seen := byMAC[l.mac]
 		if !seen {
 			order = append(order, l.mac)
@@ -78,7 +78,7 @@ func readLeases(path string) ([]lease, error) {
 	return out, nil
 }
 
-// later сравнивает сроки аренд; ноль у dnsmasq — бессрочная аренда.
+// later compares lease expiries; zero in dnsmasq is a permanent lease.
 func later(a, b int64) bool {
 	return b != 0 && (a == 0 || a > b)
 }
@@ -112,8 +112,8 @@ func parseLease(line string) (lease, bool) {
 	return lease{expires: expires, mac: mac, ip: ip.String(), name: name}, true
 }
 
-// staticHosts читает секции `host` из UCI `dhcp`. Ненулевой код uci — пакета
-// `dhcp` нет, и статических записей тоже нет; отказ запуска — ошибка.
+// staticHosts reads the `host` sections from UCI `dhcp`. A non-zero uci code means the
+// `dhcp` package is absent, and there are no static entries either; a launch failure is an error.
 func (r *Registry) staticHosts(ctx context.Context) ([]host, error) {
 	out, code, err := r.run(ctx, r.uci, "-q", "show", "dhcp")
 	if err != nil {
@@ -127,9 +127,9 @@ func (r *Registry) staticHosts(ctx context.Context) ([]host, error) {
 	return parseHosts(out), nil
 }
 
-// parseHosts отбирает секции `host` из вывода `uci show dhcp`. MAC в опции
-// бывают и списком, и одним значением через пробел — оба вида сводятся к
-// одному списку.
+// parseHosts selects the `host` sections from the `uci show dhcp` output. A MAC in an option
+// comes both as a list and as one value separated by spaces: both forms reduce to
+// one list.
 func parseHosts(out string) []host {
 	var hosts []host
 

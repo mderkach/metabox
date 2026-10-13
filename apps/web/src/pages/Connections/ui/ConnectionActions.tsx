@@ -6,16 +6,17 @@ import { Button, Separator } from '@shared/ui';
 import { ConnectionCloseAll } from './ConnectionCloseAll';
 
 /**
- * Действия над списком. Стоят в тулбаре таблицы, а не в шапке страницы: они
- * работают с её строками, и на расстоянии связь не читается.
+ * List actions. They sit in the table toolbar, not in the page header: they
+ * work with its rows, and at a distance the link is not read.
  *
- * «Закрыть все» отделено разделителем: пауза ничего не меняет на устройстве, а
- * это рвёт живые соединения. Когда рвать нечего, кнопка гаснет, но остаётся на
- * месте: после подтверждения диалог возвращает фокус на неё, и исчезни она
- * вместе с последним соединением — фокус упал бы на `body`.
+ * "Close all" is set apart by a divider: pause changes nothing on the device,
+ * while this tears live connections. When there is nothing to tear, the button
+ * goes dim but stays in place: after confirmation the dialog returns focus to
+ * it, and if it vanished together with the last connection, focus would fall to
+ * `body`.
  *
- * На узкой ширине «Закрыть все» уходит в меню списка: разделитель там не
- * отделяет его от соседей, тулбар переносится строками.
+ * On a narrow width "Close all" moves into the list menu: the divider does not
+ * separate it from neighbors there, as the toolbar wraps into lines.
  */
 export function ConnectionActions({
   paused,
@@ -25,7 +26,7 @@ export function ConnectionActions({
 }: {
   paused: boolean;
   onTogglePause: () => void;
-  /** Сколько живых соединений оборвёт «Закрыть все»; `0` гасит кнопку, `null` — вкладка без живых соединений, действия нет. */
+  /** How many live connections "Close all" will tear; `0` dims the button, `null` means a tab without live connections, no action. */
   closableCount: number | null;
   onCloseAll: () => void;
 }) {

@@ -12,33 +12,33 @@ import (
 	"metabox/internal/procd"
 )
 
-// Сообщения sing-box раскрашены: уровень приходит в escape-последовательностях
-// терминала, и в панели они показались бы мусором вида `[31mFATAL[0m`.
+// sing-box messages are colored: the level comes in terminal escape
+// sequences, and in the panel they would look like garbage such as `[31mFATAL[0m`.
 var ansi = regexp.MustCompile(`\x1b\[[0-9;]*m`)
 
-// fileTimestamp — метка времени, которой sing-box открывает строку файла лога
-// при log.timestamp; без неё строка начинается с уровня.
+// fileTimestamp is the timestamp sing-box opens a log file line with
+// under log.timestamp; without it the line starts with the level.
 var fileTimestamp = regexp.MustCompile(`^[+-]\d{4} \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} `)
 
 const (
-	// Сколько хвоста файла log.output читать, в байтах: около двухсот строк sing-box.
+	// How much of the log.output file tail to read, in bytes: about two hundred sing-box lines.
 	failureTail = 64 << 10
 
-	// Причина — последние строки, а не весь лог: сервис под procd падает в
-	// цикле, и один и тот же отказ повторяется десятки раз.
+	// The reason is the last lines, not the whole log: a service under procd crashes in
+	// a loop, and the same failure repeats dozens of times.
 	failureLines = 3
-	// Потолок на случай длинной диагностики: причина уходит в ответ ручки,
-	// а не в файл.
+	// A ceiling for a long diagnostic: the reason goes into the handler response,
+	// not into a file.
 	failureLimit = 2000
 )
 
-// failure отдаёт причину последнего падения службы. Пустая строка означает,
-// что причины нет: лог недоступен или сервис в нём не отметился — это не
-// отказ, панель обязана открываться и без причины.
+// failure returns the reason of the last service crash. An empty string means
+// there is no reason: the log is unavailable or the service did not mark itself in it, this is not a
+// failure, the panel must open without a reason too.
 //
-// Логгер устройства спрашивается первым: FATAL, с которым выходит
-// `sing-box run`, пишется в stderr, а не в log.output, и в файле его нет.
-// Файл — запасной источник, когда процесс в логгере не отметился.
+// The device logger is asked first: the FATAL that `sing-box run` exits with
+// is written to stderr, not to log.output, and it is not in the file.
+// The file is a fallback source when the process did not mark itself in the logger.
 func (c *Client) failure(ctx context.Context, launch procd.Launch) string {
 	if reason := c.logreadFailure(ctx); reason != "" {
 		return reason
@@ -52,10 +52,10 @@ func (c *Client) logreadFailure(ctx context.Context) string {
 		return ""
 	}
 
-	// Лимит -l логгеру не передаётся: logd отрезает последние N строк всего
-	// журнала до фильтра -e, и на роутере, где dnsmasq пишет тысячи строк,
-	// строки sing-box в хвост не попадают. Кольцо logd ограничено размером
-	// (по умолчанию 64 КиБ), так что весь отфильтрованный вывод невелик.
+	// The -l limit is not passed to the logger: logd cuts the last N lines of the whole
+	// journal before the -e filter, and on a router where dnsmasq writes thousands of lines
+	// the sing-box lines do not get into the tail. The logd ring is limited by size
+	// (64 KiB by default), so all the filtered output is small.
 	res, err := c.runner.Run(ctx, c.logread, "-e", c.processName())
 	if err != nil || res.ExitCode != 0 {
 		return ""
@@ -64,15 +64,15 @@ func (c *Client) logreadFailure(ctx context.Context) string {
 	return lastFailure(res.Stdout, c.processName())
 }
 
-// fileFailure читает причину из хвоста файла log.output конфига, с которым
-// procd поднимает службу. Конфиг берётся, только когда он один файл (-c):
-// слияние нескольких файлов и каталога -C демон не повторяет.
+// fileFailure reads the reason from the tail of the log.output file of the config the
+// service is started with by procd. The config is taken only when it is a single file (-c):
+// the daemon does not repeat the merge of several files and the -C directory.
 //
-// Относительный log.output sing-box открывает от рабочего каталога — в каталог
-// -D он переходит до чтения конфига, — поэтому путь разрешается от
-// Launch.Workdir. Рабочий каталог неизвестен — файл не читается: cwd упавшего
-// процесса демону не виден, а каталог конфига базой путей для sing-box не
-// служит.
+// A relative log.output sing-box opens from the working directory (it moves into
+// the -D directory before reading the config), so the path is resolved from
+// Launch.Workdir. An unknown working directory means the file is not read: the cwd of the crashed
+// process is not visible to the daemon, and the config directory is not a path base for sing-box
+// anyway.
 func fileFailure(launch procd.Launch) string {
 	if len(launch.Configs) != 1 || len(launch.ConfigDirs) != 0 || !filepath.IsAbs(launch.Configs[0]) {
 		return ""
@@ -104,7 +104,7 @@ func fileFailure(launch procd.Launch) string {
 	return fileLastFailure(tail)
 }
 
-// readTail отдаёт последние limit байт файла без первой, оборванной строки.
+// readTail returns the last limit bytes of the file without the first, broken line.
 func readTail(path string, limit int64) (string, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -132,9 +132,9 @@ func readTail(path string, limit int64) (string, error) {
 	return tail, nil
 }
 
-// lastFailure выбирает из лога устройства строки, которыми процесс сообщил об
-// отказе. Отбор по имени процесса, а не по всему логу: рядом пишут все службы
-// роутера, и чужая ошибка в причине падения sing-box только путает.
+// lastFailure selects from the device log the lines by which the process reported
+// a failure. Selection by process name, not over the whole log: all the router services
+// write nearby, and a foreign error in the sing-box crash reason only confuses.
 func lastFailure(log, process string) string {
 	prefix := process + "["
 
@@ -151,10 +151,10 @@ func lastFailure(log, process string) string {
 	return failureOf(messages)
 }
 
-// fileLastFailure выбирает отказ из файла log.output. Файл пишет один sing-box,
-// но вперемешку с ошибками отдельных соединений — их sing-box помечает
-// идентификатором соединения в скобках после уровня. Службу такая ошибка не
-// роняет, а хвост файла ими забит, поэтому в причину они не идут.
+// fileLastFailure selects a failure from the log.output file. The file is written by sing-box alone,
+// but mixed with errors of individual connections, which sing-box marks with
+// a connection identifier in brackets after the level. Such an error does not
+// crash the service, and the file tail is stuffed with them, so they do not go into the reason.
 func fileLastFailure(log string) string {
 	var messages []string
 
@@ -179,8 +179,8 @@ func failureOf(messages []string) string {
 			continue
 		}
 
-		// Повтор того же отказа ничего не добавляет: procd перезапускает
-		// упавший сервис по кругу, и лог состоит из одной строки в копиях.
+		// A repeat of the same failure adds nothing: procd restarts
+		// the crashed service in a circle, and the log is one line in copies.
 		if len(found) > 0 && found[len(found)-1] == message {
 			continue
 		}
@@ -195,8 +195,8 @@ func failureOf(messages []string) string {
 	return clamp(strings.Join(found, "\n"), failureLimit)
 }
 
-// messageOf отбрасывает служебную часть строки лога — время, facility и имя
-// процесса, — оставляя то, что написал сам процесс.
+// messageOf drops the service part of a log line (time, facility and process
+// name), leaving what the process wrote itself.
 func messageOf(line string) string {
 	if _, message, found := strings.Cut(line, "]: "); found {
 		return strings.TrimSpace(message)
@@ -219,8 +219,8 @@ func clamp(s string, limit int) string {
 	return s[:limit] + "…"
 }
 
-// processName выводит имя процесса в логе из пути к бинарю: логгер пишет его
-// так же, как procd назвал команду.
+// processName derives the process name in the log from the binary path: the logger writes it
+// the same way procd named the command.
 func (c *Client) processName() string {
 	return filepath.Base(c.binary)
 }

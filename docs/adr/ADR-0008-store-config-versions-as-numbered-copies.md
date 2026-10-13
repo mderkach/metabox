@@ -1,116 +1,116 @@
-# ADR-0008. Хранить историю конфига нумерованными копиями в служебном каталоге, а откат вести обычным Apply
+# ADR-0008. Keep config history as numbered copies in a service directory, and roll back with a regular Apply
 
-- Статус: Accepted
-- Дата: 2026-09-11
-- Ответственные: владелец репозитория
+- Status: Accepted
+- Date: 2026-09-11
+- Deciders: repository owner
 
-## Контекст и постановка проблемы
+## Context and problem statement
 
-AC-15 требует историю версий конфига в интерфейсе и откат на любую из них. [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md) отложил её сознательно: «для автоотката достаточно одного бэкапа, история надстраивается поверх», и формат бэкапа выбирался так, чтобы надстройка была аддитивной. До этого решения в `config.Store` жил ровно один `config.backup` — страховка цикла применения, а не история.
+AC-15 requires config version history in the interface and rollback to any of the versions. [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md) deferred it deliberately: "one backup is enough for the automatic rollback, and history is built on top", and the backup format was chosen so that the extension would be additive. Before this decision `config.Store` held exactly one `config.backup`, a safeguard for the apply cycle, not a history.
 
-Ограничения заданы раньше и здесь не пересматриваются:
+The constraints were set earlier and are not revisited here:
 
-- **Демон не разбирает содержимое конфига** (ADR-0002). Значит история хранит документ целиком и знает о нём только размер и отпечаток.
-- **Служебные файлы лежат вне каталога конфига** (ADR-0002). Сервис поднимается в режиме каталога и сливает все `.json`: версия рядом с рабочим файлом уехала бы в исполняемую конфигурацию.
-- **У роутера нет часов реального времени.** После включения он стартует с эпохи и прыгает при синхронизации NTP — это записано в ADR-0002 как причина хранить окно подтверждения длительностью, а не абсолютным временем.
-- **Место ограничено.** На целевом устройстве overlay — сотни мегабайт, из них свободны десятки; конфиг занимает 18 КБ.
+- **The daemon does not parse the config contents** (ADR-0002). So the history stores the whole document and knows only its size and hash.
+- **Service files live outside the config directory** (ADR-0002). The service starts in directory mode and merges all `.json` files: a version next to the working file would end up in the running configuration.
+- **The router has no real-time clock.** After power-on it starts from the epoch and jumps on NTP sync; ADR-0002 records this as the reason to store the confirmation window as a duration rather than an absolute time.
+- **Space is limited.** On the target device the overlay is hundreds of megabytes, of which tens are free; the config takes 18 KB.
 
-В scope: где лежат версии, как называются, сколько их хранится, что происходит при откате и какие метаданные уходят в панель. Вне scope: показ различий между версиями и сам протокол применения — он не меняется.
+In scope: where versions live, how they are named, how many are kept, what happens on rollback and which metadata goes to the panel. Out of scope: showing differences between versions and the apply protocol itself, which does not change.
 
-## Критерии выбора
+## Decision drivers
 
-1. **Совместимость с границами ADR-0002**: демон не разбирает конфиг, служебные файлы вне каталога конфига.
-2. **Порядок не зависит от часов**: история обязана оставаться упорядоченной на устройстве, которое стартует с эпохи.
-3. **Откат не опаснее обычного применения**: возврат на старую версию проходит те же проверку бинарём, бэкап, рестарт и окно подтверждения.
-4. **Предсказуемый расход места** на устройстве с overlay в сотни мегабайт.
-5. **Стоимость реализации**: история — надстройка над уже работающим бэкапом, а не второй механизм рядом с ним.
+1. **Compatibility with the ADR-0002 boundaries**: the daemon does not parse the config, service files are outside the config directory.
+2. **Order does not depend on the clock**: the history must stay ordered on a device that starts from the epoch.
+3. **Rollback is no more dangerous than a regular apply**: returning to an old version goes through the same binary check, backup, restart and confirmation window.
+4. **Predictable space usage** on a device with an overlay of hundreds of megabytes.
+5. **Implementation cost**: the history is an extension of the already working backup, not a second mechanism beside it.
 
-## Рассмотренные варианты
+## Considered options
 
-1. **Оставить один бэкап.** Преимущества: ноль работы, текущее состояние. Недостатки: AC-15 не закрывается вовсе — откатиться можно только на предыдущий шаг, и то лишь автоматически, внутри цикла. **Отклонён.**
+1. **Keep a single backup.** Pros: zero work, the current state. Cons: AC-15 is not covered at all: it is only possible to roll back one step, and only automatically, within the cycle. **Rejected.**
 
-2. **Версии в каталоге конфига.** Преимущества: всё рядом, не нужен второй путь. Недостатки: прямое нарушение ADR-0002 и поломка устройства — `sing-box` сливает все `.json` каталога, поэтому каждая сохранённая версия попала бы в исполняемую конфигурацию и, скорее всего, отменила бы применённую правку. **Отклонён.**
+2. **Versions in the config directory.** Pros: everything in one place, no second path needed. Cons: a direct violation of ADR-0002 and a broken device: `sing-box` merges all `.json` files in the directory, so every saved version would end up in the running configuration and would most likely cancel the applied edit. **Rejected.**
 
-3. **Версии, именованные временем сохранения.** Преимущества: имя читаемо, сортировка по имени совпадает с хронологией. Недостатки: на роутере без часов реального времени две версии подряд после загрузки получают одинаковые или убывающие имена (критерий 2); коллизии имён приходится разрешать суффиксом, и порядок всё равно теряется. **Отклонён.**
+3. **Versions named by save time.** Pros: the name is readable, sorting by name matches the chronology. Cons: on a router without a real-time clock, two consecutive versions after boot get identical or decreasing names (driver 2); name collisions have to be resolved with a suffix, and order is lost anyway. **Rejected.**
 
-4. **Полноценный журнал с дельтами или встроенный git.** Преимущества: экономия места, видимая история изменений. Недостатки: либо зависимость в модуле без единого `require`, либо собственная реализация дельт; при 18 КБ на версию экономия не окупает ни того, ни другого (критерии 4 и 5). **Отклонён.**
+4. **A full log with deltas or an embedded git.** Pros: space saving, visible change history. Cons: either a dependency in a module without a single `require`, or our own delta implementation; at 18 KB per version the saving pays for neither (drivers 4 and 5). **Rejected.**
 
-5. **Нумерованные копии в служебном каталоге демона.** Преимущества: порядок задаёт монотонный счётчик и от часов не зависит (критерий 2); каталог вне конфига (критерий 1); копия целиком сохраняет форматирование и порядок ключей владельца, что требует AC-2; надстраивается над существующим бэкапом без второго механизма (критерий 5). Недостатки: место расходуется линейно, нужна политика удержания. **Принят.**
+5. **Numbered copies in the daemon's service directory.** Pros: order is set by a monotonic counter and does not depend on the clock (driver 2); the directory is outside the config (driver 1); a full copy keeps the owner's formatting and key order, which AC-2 requires; it is built on top of the existing backup without a second mechanism (driver 5). Cons: space is used linearly, a retention policy is needed. **Chosen.**
 
-## Принятое решение
+## Decision outcome
 
-**Раскладка.** Версии лежат в `<state-dir>/versions/`. Каталог создаётся при первом обращении к истории — в том числе на чтение пустого списка — с правами `0700`, файлы `0600`: в них то же, что в конфиге, включая ключи.
+**Layout.** Versions live in `<state-dir>/versions/`. The directory is created on the first access to the history (including reading an empty list) with mode `0700`, files with `0600`: they contain the same as the config, including keys.
 
-**Имена.** Шестизначный десятичный номер без расширения, с ведущими нулями: `000001`, `000002`. Ширина фиксирована, потому что имена сортируются как строки, и без выравнивания десятая версия встала бы перед второй. Номера не переиспользуются: удаление старых версий счётчик не сдвигает.
+**Names.** A six-digit decimal number without an extension, with leading zeros: `000001`, `000002`. The width is fixed because names are sorted as strings, and without padding the tenth version would come before the second. Numbers are not reused: removing old versions does not shift the counter.
 
-**Что сохраняется и когда.** Перед записью нового конфига демон кладёт в историю то, что было применено до этого цикла, — рядом с шагом бэкапа протокола ADR-0002. История хранит прошлые состояния, а не кандидатов: конфиг, который не прошёл `sing-box check`, в неё не попадает.
+**What is saved and when.** Before writing a new config, the daemon puts into the history what was applied before this cycle, next to the backup step of the ADR-0002 protocol. The history stores past states, not candidates: a config that did not pass `sing-box check` does not get into it.
 
-**Отказ истории не останавливает применение.** Она надстройка над бэкапом и к автооткату отношения не имеет: несохранённая версия пишется в лог предупреждением, цикл идёт дальше. Обратное поведение поставило бы работоспособность устройства в зависимость от журнала.
+**A history failure does not stop the apply.** The history is an extension of the backup and has nothing to do with the automatic rollback: a version that was not saved is logged as a warning, and the cycle goes on. The opposite behaviour would make the device's operability depend on the log.
 
-**Удержание.** Хранится десять последних версий, лишние удаляются в том же вызове. Повторное применение того же содержимого в историю не пишется: иначе десять одинаковых применений вытеснили бы всё, что в ней было. Десять версий конфига целевого устройства — около 180 КБ, что на порядки меньше свободного места на overlay и при этом покрывает практический горизонт правок.
+**Retention.** The last ten versions are kept, extra ones are removed in the same call. Re-applying the same content is not written to the history: otherwise ten identical applies would push out everything it held. Ten versions of the target device's config are about 180 KB, orders of magnitude less than the free space on the overlay, while covering the practical horizon of edits.
 
-**Метаданные.** Наружу уходят номер, размер, `sha256` содержимого и отметка времени файла. Отпечаток позволяет сравнить версию с активным конфигом, не вычитывая обе. Отметка времени объявлена справочной: она показывает часы устройства на момент сохранения и врёт, если они не синхронизованы. Содержимое версии демон не разбирает — ни здесь, ни где-либо ещё.
+**Metadata.** The number, size, `sha256` of the content and the file timestamp go out. The hash allows comparing a version with the active config without reading both. The timestamp is declared informational: it shows the device clock at the moment of saving and is wrong if the clock is not synchronized. The daemon does not parse the version content, here or anywhere else.
 
-**Контракт.**
+**Contract.**
 
-| Ручка                                    | Что делает                               |
-| ---------------------------------------- | ---------------------------------------- |
-| `GET /api/config/versions`               | список от свежей к старой                |
-| `GET /api/config/versions/{id}`          | содержимое версии теми же байтами        |
-| `POST /api/config/versions/{id}/restore` | запускает обычное применение этой версии |
+| Endpoint                                 | What it does                           |
+| ---------------------------------------- | -------------------------------------- |
+| `GET /api/config/versions`               | list from newest to oldest             |
+| `GET /api/config/versions/{id}`          | the version content, the same bytes    |
+| `POST /api/config/versions/{id}/restore` | starts a regular apply of this version |
 
-**Откат — это применение.** `restore` отдаёт содержимое версии в тот же `Apply`, что и правка из редактора: `sing-box check`, бэкап, запись, рестарт, healthcheck, окно подтверждения и автооткат. Отдельной записи конфига в обход протокола нет. Иначе возврат на версию, которая ломает связь, отрезал бы доступ к роутеру без страховки — ровно того, ради чего протокол существует.
+**Rollback is an apply.** `restore` passes the version content to the same `Apply` as an edit from the editor: `sing-box check`, backup, write, restart, healthcheck, confirmation window and automatic rollback. There is no separate config write bypassing the protocol. Otherwise, returning to a version that breaks connectivity would cut off access to the router without a safeguard, exactly what the protocol exists for.
 
-### Область действия и границы
+### Scope and boundaries
 
-Решение распространяется на `internal/config` и на контракт демона с панелью. Протокол применения (ADR-0002) не меняется: добавлен шаг сохранения версии между бэкапом и записью.
+The decision covers `internal/config` and the contract between the daemon and the panel. The apply protocol (ADR-0002) does not change: a version save step is added between the backup and the write.
 
-## Последствия
+## Consequences
 
-### Положительные
+### Positive
 
-- Серверная часть AC-15 закрывается без второго механизма записи: откат идёт по проверенному пути. Сам критерий требует ещё и истории в интерфейсе, поэтому остаётся неотмеченным.
-- Порядок истории не зависит от часов устройства.
-- Копия целиком сохраняет форматирование и порядок ключей владельца — это то же требование, что у round-trip (AC-2).
-- Расход места ограничен сверху и предсказуем.
+- The server side of AC-15 is covered without a second write mechanism: rollback goes along the tested path. The criterion itself also requires history in the interface, so it stays unchecked.
+- The history order does not depend on the device clock.
+- A full copy keeps the owner's formatting and key order: the same requirement as for the round-trip (AC-2).
+- Space usage is bounded and predictable.
 
-### Отрицательные
+### Negative
 
-- История хранит полные копии: десять версий занимают в десять раз больше одной. При 18 КБ это приемлемо, при конфиге в мегабайты — нет, и тогда удержание придётся пересматривать.
-- Номер версии ничего не говорит о её содержимом. Что именно менялось, панель показывает сравнением, а демон об этом не знает по построению.
-- Отметка времени может врать. Это принято осознанно: альтернатива — не показывать время вовсе.
+- The history stores full copies: ten versions take ten times more than one. At 18 KB this is acceptable, with a config of megabytes it is not, and then retention will have to be revisited.
+- The version number says nothing about its content. What exactly changed is shown by the panel through comparison, and the daemon does not know it by design.
+- The timestamp may be wrong. This is accepted deliberately: the alternative is not to show the time at all.
 
-### Нейтральные или отложенные
+### Neutral or deferred
 
-- Сравнение версий между собой и с активным конфигом — задача панели, здесь не решается.
-- Удаление версии вручную не предусмотрено: история подрезается сама.
+- Comparing versions with each other and with the active config is the panel's task and is not solved here.
+- Deleting a version by hand is not provided: the history trims itself.
 
-## Риски и меры снижения
+## Risks and mitigations
 
-| Риск                                                  | Вероятность и влияние    | Митигация                                                                                                                         |
-| ----------------------------------------------------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
-| Каталог истории переполнит overlay                    | Низкая, среднее влияние  | Жёсткое удержание в десять версий, подрезка в том же вызове, что и сохранение                                                     |
-| Откат на битую версию отрежет доступ                  | Средняя, высокое влияние | Восстановление идёт обычным Apply: проверка бинарём до записи, healthcheck и автооткат по окну подтверждения                      |
-| Чужие файлы в служебном каталоге сломают перечисление | Низкая, низкое влияние   | Имена не по формату пропускаются, история от этого не отказывает                                                                  |
-| Номера разъедутся при параллельных применениях        | Низкая, среднее влияние  | Файлами владеет один `config.Store`, доступ закрыт его методами; второе применение при активной транзакции отвергается протоколом |
+| Risk                                                     | Likelihood and impact | Mitigation                                                                                                                                                |
+| -------------------------------------------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The history directory fills up the overlay               | Low, medium impact    | Strict retention of ten versions, trimming in the same call as saving                                                                                     |
+| Rolling back to a broken version cuts off access         | Medium, high impact   | Restore goes through a regular Apply: the binary check before writing, healthcheck and automatic rollback by the confirmation window                      |
+| Foreign files in the service directory break the listing | Low, low impact       | Names not matching the format are skipped, and the history does not fail because of them                                                                  |
+| Numbers diverge with parallel applies                    | Low, medium impact    | A single `config.Store` owns the files, and access goes only through its methods; a second apply during an active transaction is rejected by the protocol |
 
-## Совместимость, миграция и откат
+## Compatibility, migration and rollback
 
-Миграция не требуется: до этого решения истории не было, каталог создаётся при первом применении. Существующий бэкап и состояние транзакции не затрагиваются, их формат прежний.
+No migration is needed: there was no history before this decision, and the directory is created on the first apply. The existing backup and transaction state are not affected; their format stays the same.
 
-Откат решения: убрать шаг сохранения из цикла и три ручки. Каталог `versions/` остаётся на устройстве и удаляется вручную — данными пользователя он не является, но и мешать не может.
+Rolling back the decision: remove the save step from the cycle and the three endpoints. The `versions/` directory stays on the device and is removed by hand: it is not user data, but it cannot get in the way either.
 
-## Проверка решения
+## Validation
 
-- После применения правки в истории появляется версия с предыдущим содержимым, а активный конфиг ей не равен.
-- Одиннадцатое применение оставляет в каталоге десять файлов, и самый старый номер сдвигается на единицу.
-- `GET /api/config/versions/{id}` отдаёт байты, совпадающие с тем, что было применено: форматирование и порядок ключей сохранены.
-- `POST /api/config/versions/{id}/restore` отвечает транзакцией, а не «готово», и цикл виден в `GET /api/status`.
-- Неизвестный или нечисловой номер версии даёт 404, применение при этом не запускается.
-- В каталоге конфига после сохранения версий не появляется ни одного нового файла.
+- After an edit is applied, a version with the previous content appears in the history, and the active config is not equal to it.
+- The eleventh apply leaves ten files in the directory, and the oldest number shifts by one.
+- `GET /api/config/versions/{id}` returns bytes that match what was applied: formatting and key order are kept.
+- `POST /api/config/versions/{id}/restore` answers with a transaction, not "done", and the cycle is visible in `GET /api/status`.
+- An unknown or non-numeric version number gives 404, and no apply starts.
+- Not a single new file appears in the config directory after versions are saved.
 
-## Ссылки
+## Links
 
-- [PRD](../PRD.md) — AC-15, AC-2, веха M1;
-- [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md) — протокол Apply, владение файлами и отложенная история;
-- [DeviceIO](../../apps/metaboxd/docs/guides/DeviceIO.md) — атомарная запись и раскладка служебных файлов.
+- [PRD](../PRD.md): AC-15, AC-2, milestone M1;
+- [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md): the Apply protocol, file ownership and the deferred history;
+- [DeviceIO](../../apps/metaboxd/docs/guides/DeviceIO.md): atomic write and the layout of service files.

@@ -13,16 +13,16 @@ export const DIAG_STATUS = {
 } as const satisfies Record<string, CheckStatus>;
 
 export interface DiagCheck {
-  /** Строка, а не `CheckName`: проверка, которой панель не знает, показывается как пришла. */
+  /** A string, not `CheckName`: a check the panel does not know is shown as it came. */
   name: string;
   status: CheckStatus;
-  /** `null` при `ok`. Строка, а не `CheckReason`: незнакомый код показывается как есть. */
+  /** `null` when `ok`. A string, not `CheckReason`: an unfamiliar code is shown as is. */
   reason: string | null;
-  /** Подробность на языке демона — порт, исходная ошибка; идёт под текстом панели, а не вместо него. */
+  /** Detail in the daemon's language: a port, the original error; goes under the panel text, not instead of it. */
   detail: string | null;
-  /** Отсутствующие цепочки nft при `chains_missing`. */
+  /** Missing nft chains for `chains_missing`. */
   missing: string[];
-  /** Задержка в миллисекундах при `ok` у выхода через узел и прямого выхода. */
+  /** Latency in milliseconds for `ok` on the exit through a node and the direct exit. */
   delayMs: number | null;
 }
 

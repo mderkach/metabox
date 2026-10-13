@@ -3,25 +3,25 @@ import type { StoreApi, UseBoundStore } from 'zustand';
 type Selectors<T> = { [K in keyof T]: () => T[K] };
 
 /**
- * Состояние берётся из `getState`, а не выводится из `UseBoundStore<StoreApi<T>>`:
- * middleware меняют тип `setState`, и вывод по всему стору давал `void` вместо
- * состояния.
+ * State is taken from `getState`, not inferred from `UseBoundStore<StoreApi<T>>`:
+ * middleware changes the `setState` type, and inference over the whole store gave `void` instead of
+ * the state.
  */
 type ExtractState<S> = S extends { getState: () => infer T } ? T : never;
 
 type WithSelectors<S> = S & { use: Selectors<ExtractState<S>> };
 
 /**
- * Достраивает стору `use.<поле>()` — подписку на одно поле.
+ * Adds `use.<field>()` to a store — a subscription to a single field.
  *
- * Ради неё стор и оборачивается: подписка на весь стор перерисовывает
- * компонент на любое изменение, а писать селектор руками на каждое поле —
- * шум, который со временем перестают писать.
+ * This is what the store is wrapped for: a subscription to the whole store rerenders
+ * the component on any change, and writing a selector by hand for every field is
+ * noise that people eventually stop writing.
  */
 export function createReactSelectors<S extends UseBoundStore<StoreApi<object>>>(store: S): WithSelectors<S> {
-  // Ключи и их типы связаны только через дженерик стора: `Object.keys` отдаёт
-  // `string[]`, и сузить его до `keyof T` может лишь утверждение.
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- см. выше
+  // Keys and their types are linked only through the store generic: `Object.keys` returns
+  // `string[]`, and only an assertion can narrow it to `keyof T`.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see above
   const withSelectors = store as WithSelectors<S>;
   const selectors: Record<string, () => unknown> = {};
 
@@ -29,7 +29,7 @@ export function createReactSelectors<S extends UseBoundStore<StoreApi<object>>>(
     selectors[key] = (): unknown => store((state): unknown => Reflect.get(state, key));
   }
 
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- та же причина
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- same reason
   withSelectors.use = selectors as Selectors<ExtractState<S>>;
 
   return withSelectors;

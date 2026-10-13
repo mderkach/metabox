@@ -23,7 +23,7 @@ function serveService(state: typeof SERVICE_RUNNING_FIXTURE) {
 }
 
 describe('SchemaDriftNotice', () => {
-  it('бинарь старше схемы: предупреждает, что поле из формы не пройдёт проверку', async () => {
+  it('binary older than the schema: warns that a field from the form will not pass validation', async () => {
     serveService(SERVICE_DRIFT_FIXTURE);
 
     renderWithQuery(<SchemaDriftNotice />);
@@ -34,7 +34,7 @@ describe('SchemaDriftNotice', () => {
     expect(notice).toHaveTextContent(SERVICE_DRIFT_FIXTURE.binary);
   });
 
-  it('бинарь новее схемы: отправляет новые поля в текстовый режим', async () => {
+  it('binary newer than the schema: sends new fields to text mode', async () => {
     serveService({ ...SERVICE_RUNNING_FIXTURE, binary: '99.0.0-extended-0.0.1' });
 
     renderWithQuery(<SchemaDriftNotice />);
@@ -42,7 +42,7 @@ describe('SchemaDriftNotice', () => {
     expect(await screen.findByText(/их правят в режиме «Текст»/)).toHaveTextContent('99.0.0-extended-0.0.1');
   });
 
-  it('на совпадающих версиях молчит', async () => {
+  it('stays silent on matching versions', async () => {
     const served = serveService(SERVICE_RUNNING_FIXTURE);
 
     renderWithQuery(<SchemaDriftNotice />);

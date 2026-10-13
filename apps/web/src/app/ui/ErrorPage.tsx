@@ -6,11 +6,11 @@ import { failureText } from '@shared/api';
 import { Button, Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@shared/ui';
 
 /**
- * Ошибка, которую раздел не обработал сам. Отказы источников разделы
- * показывают своими блоками, сюда доходит сбой самой панели. Пользователю
- * важно, что с роутером ничего не случилось и что делать дальше; текст
- * исключения нужен только для отчёта и лежит под раскрытием. Сайдбар
- * остаётся: граница стоит внутри оболочки.
+ * An error the section did not handle itself. Sections show source failures in
+ * their own blocks; what arrives here is a failure of the panel itself. The
+ * user needs to know that nothing happened to the router and what to do next;
+ * the exception text is needed only for a report and sits under a disclosure.
+ * The sidebar stays: the boundary is inside the shell.
  */
 export function ErrorPage({ error }: ErrorComponentProps) {
   const { t } = useTranslation('app');

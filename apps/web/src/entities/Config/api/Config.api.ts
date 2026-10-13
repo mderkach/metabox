@@ -7,28 +7,28 @@ import type { ApplyEnvelopeWire, RuleSetFilesWire } from '@shared/api/daemon.gen
 import { CONFIG_ENDPOINT } from './Config.endpoints';
 import type { ConfigVersionsWire } from './Config.schema';
 
-/** Axios разобрал бы тело в объект, а нам нужны исходные байты файла. */
+/** Axios would parse the body into an object, but we need the original bytes of the file. */
 const KEEP_RAW = [(data: string) => data];
 
-/** Ответ читается текстом: форматирование файла сохраняется. */
+/** The response is read as text: the file formatting is preserved. */
 const AS_TEXT: AxiosRequestConfig = { responseType: 'text', transformResponse: KEEP_RAW };
 
 /**
- * Тело уходит строкой, и тип ставится руками: для строки axios заголовок сам
- * не выставляет, а демон принимает конфиг как JSON.
+ * The body goes as a string and the type is set by hand: for a string axios
+ * does not set the header itself, and the daemon accepts the config as JSON.
  */
 const SEND_TEXT = { 'Content-Type': 'application/json' } as const;
 
 export interface ConfigFile {
-  /** Байты файла как есть. */
+  /** File bytes as is. */
   text: string;
-  /** `ETag` ответа — отпечаток файла; уходит в `If-Match` применения. */
+  /** `ETag` of the response is the file fingerprint; it goes into the apply `If-Match`. */
   etag: string | null;
 }
 
 /**
- * Конфиг забирается текстом: правки применяются к исходным байтам, иначе
- * порядок ключей пользователя переписывается целиком.
+ * The config is fetched as text: edits are applied to the original bytes,
+ * otherwise the user's key order is rewritten entirely.
  */
 export async function getConfig(config?: AxiosRequestConfig): Promise<ConfigFile> {
   const { body, etag } = await ApiClientInstance.getTagged<string>(CONFIG_ENDPOINT.config(), {
@@ -39,7 +39,7 @@ export async function getConfig(config?: AxiosRequestConfig): Promise<ConfigFile
   return { text: body, etag };
 }
 
-/** Файлы своих списков из подкаталога `rule-sets/` вместе с отпечатком набора. */
+/** Files of its own lists from the `rule-sets/` subdirectory together with the set fingerprint. */
 export async function getConfigLists(config?: AxiosRequestConfig): Promise<RuleSetFilesWire> {
   return ApiClientInstance.get<RuleSetFilesWire>(CONFIG_ENDPOINT.ruleSetFiles(), config);
 }
@@ -52,39 +52,40 @@ export async function getConfigVersions(config?: AxiosRequestConfig): Promise<Co
   return ApiClientInstance.get<ConfigVersionsWire>(CONFIG_ENDPOINT.versions(), config);
 }
 
-/** Версия отдаётся теми же байтами, какими была применена. */
+/** A version is served with the same bytes it was applied with. */
 export async function getConfigVersion(id: number, config?: AxiosRequestConfig): Promise<string> {
   return ApiClientInstance.get<string>(CONFIG_ENDPOINT.version(id), { ...AS_TEXT, ...config });
 }
 
-/** Тип конверта применения: по нему демон отличает конверт от голых байт конфига. */
+/** Apply envelope type: the daemon uses it to tell an envelope from bare config bytes. */
 const SEND_ENVELOPE = { 'Content-Type': 'application/vnd.metabox.apply+json' } as const;
 
 export interface ApplyDraft {
-  /** Текст черновика как есть, без пересборки. */
+  /** Draft text as is, without reassembly. */
   text: string;
   /**
-   * `ConfigFile.etag` конфига, поверх которого писался черновик. Демон сверяет
-   * его с файлом и отклоняет применение поверх правки мимо панели. `null` —
-   * применить без сверки.
+   * `ConfigFile.etag` of the config the draft was written on top of. The daemon
+   * compares it with the file and rejects an apply on top of an edit made
+   * behind the panel's back. `null` means apply without the check.
    */
   base: string | null;
-  /** Изменения файлов списков; без них тело остаётся голыми байтами конфига. */
+  /** Changes to list files; without them the body stays bare config bytes. */
   lists?: {
     put: Record<string, string>;
     remove: string[];
-    /** Отпечаток набора файлов, от которого редактировал клиент; `null` — без сверки. */
+    /** Fingerprint of the file set the client edited from; `null` means no check. */
     base: string | null;
   };
 }
 
 /**
- * Запускает применение. Ответ приходит после `sing-box check`, но до конца
- * цикла: применение живёт дольше запроса. Отказ проверки возвращает
- * 422 с выводом бинаря в `details` — его показывает вызывающий.
+ * Starts the apply. The response arrives after `sing-box check` but before the
+ * end of the cycle: the apply outlives the request. A failed check returns 422
+ * with the binary output in `details`, which the caller shows.
  *
- * С изменениями файлов списков тело уезжает конвертом со своим Content-Type:
- * сам конфиг — тоже JSON, и по общему типу конверт было бы не отличить.
+ * With list file changes the body goes as an envelope with its own
+ * Content-Type: the config itself is JSON too, and by the shared type the
+ * envelope could not be told apart.
  */
 export async function applyConfig({ text, base, lists }: ApplyDraft): Promise<ApplyTransactionWire> {
   const match = base === null ? {} : { 'If-Match': base };
@@ -107,14 +108,14 @@ export async function applyConfig({ text, base, lists }: ApplyDraft): Promise<Ap
   });
 }
 
-/** Подтверждает, что связь жива: без этого демон вернёт предыдущий конфиг. */
+/** Confirms that the connection is alive: without it the daemon returns the previous config. */
 export async function confirmApply(id: string): Promise<ApplyTransactionWire> {
   return ApiClientInstance.post<ApplyTransactionWire>(DAEMON_ENDPOINT.applyConfirm(id));
 }
 
 /**
- * Откат на версию. Демон проводит её обычным протоколом Apply, поэтому ответ —
- * такая же транзакция с окном подтверждения.
+ * Rollback to a version. The daemon runs it through the usual Apply protocol,
+ * so the response is the same transaction with a confirmation window.
  */
 export async function restoreConfigVersion(id: number): Promise<ApplyTransactionWire> {
   return ApiClientInstance.post<ApplyTransactionWire>(CONFIG_ENDPOINT.versionRestore(id));

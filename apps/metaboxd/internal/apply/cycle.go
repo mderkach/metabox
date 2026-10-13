@@ -18,10 +18,10 @@ import (
 	"metabox/internal/dataplane"
 )
 
-// check раскладывает кандидата во временный каталог и отдаёт его бинарю тем
-// режимом, каким поднимется служба. Кандидат несёт раскладку каталога
-// конфига целиком: в режиме -C служба сливает его .json, а изменения списков
-// ложатся в кандидата теми же путями, какими лягут на диск.
+// check lays the candidate out in a temporary directory and gives it to the binary in the same
+// mode the service will start in. The candidate carries the whole layout of the config
+// directory: in -C mode the service merges its .json, and list changes
+// land in the candidate by the same paths they will take on disk.
 func (m *Manager) check(
 	ctx context.Context,
 	data []byte,
@@ -56,9 +56,9 @@ func (m *Manager) check(
 	return m.service.Check(ctx, dir, config, workdir)
 }
 
-// run уводит применение в фоновую горутину: цикл переживает запрос, а окно
-// подтверждения тянется до минуты. Останавливает горутину
-// Close, ошибки уходят в лог и в состояние транзакции, дожидается — wg.
+// run moves the apply into a background goroutine: the cycle outlives the request, and the confirmation
+// window lasts up to a minute. The goroutine is stopped by
+// Close, errors go to the log and to the transaction state, and wg waits for it.
 func (m *Manager) run(data []byte, putLists map[string][]byte, removeLists []string, settings clashapi.Settings, token uint64) {
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -111,9 +111,9 @@ func (m *Manager) cycle(
 	m.await(ctx, log, confirmed)
 }
 
-// apply выполняет шаги 4–7 протокола: бэкап, запись, рестарт, healthcheck.
-// Файлы списков пишутся до конфига: конфиг — точка фиксации транзакции, и
-// доигрывание судит о начатой записи по нему и по изменяемым файлам.
+// apply performs steps 4–7 of the protocol: backup, write, restart, healthcheck.
+// List files are written before the config: the config is the commit point of the transaction, and
+// the replay judges a started write by it and by the changing files.
 func (m *Manager) apply(
 	ctx context.Context,
 	data []byte,
@@ -125,17 +125,17 @@ func (m *Manager) apply(
 	defer cancel()
 
 	if err := m.store.Backup(ctx); err != nil {
-		// Конфига может не быть — до первого применения или после удаления
-		// владельцем. Откатываться тогда не на что, но и применение это не
-		// останавливает.
+		// The config may be absent: before the first apply or after the owner
+		// removed it. There is then nothing to roll back to, but the apply is not
+		// stopped either.
 		if !errors.Is(err, config.ErrNoConfig) {
 			return stepFailed(ReasonBackupFailed, fmt.Errorf("бэкап: %w", err))
 		}
 		m.log.Warn("конфига на устройстве нет, бэкапа нет")
 	}
 
-	// История надстроена над бэкапом и к откату отношения не имеет: её отказ
-	// применение не останавливает.
+	// The history is built on top of the backup and has nothing to do with the rollback: its failure does not
+	// stop the apply.
 	previous, err := m.store.Read(ctx)
 	switch {
 	case err == nil:
@@ -143,7 +143,7 @@ func (m *Manager) apply(
 			m.log.Warn("история версий не обновлена", "err", err)
 		}
 	case errors.Is(err, config.ErrNoConfig):
-		// Первое применение: сохранять в историю нечего.
+		// The first apply: nothing to save into the history.
 	default:
 		m.log.Warn("конфиг не прочитан, версия в историю не сохранена", "err", err)
 	}
@@ -158,7 +158,7 @@ func (m *Manager) apply(
 
 	lastLists, err := m.store.ListSums(ctx)
 	if err != nil {
-		// Сверять следующее применение будет не с чем — как после перезапуска.
+		// There will be nothing to compare the next apply with, as after a restart.
 		m.log.Warn("отпечаток списков после записи не снят", "err", err)
 	}
 
@@ -170,10 +170,10 @@ func (m *Manager) apply(
 	}
 	m.mu.Unlock()
 
-	// pid до рестарта — граница, по которой ответ API засчитывается только
-	// новому процессу. Без procd или когда procd службы не знает, сверять не с
-	// чем: healthcheck остаётся на одном опросе API, а итог по-прежнему
-	// страхует окно подтверждения.
+	// The pid before the restart is the boundary by which an API answer is counted only for
+	// the new process. Without procd or when procd does not know the service there is nothing to compare
+	// with: the healthcheck stays on a single API poll, and the result is still
+	// insured by the confirmation window.
 	before, pidErr := m.service.PID(ctx)
 	if pidErr != nil {
 		m.log.Warn("pid службы до рестарта не прочитан, healthcheck без сверки процесса", "err", pidErr)
@@ -210,19 +210,19 @@ func (m *Manager) apply(
 	return nil
 }
 
-// planeState — модель обвязки и признак перехвата до рестарта.
+// planeState is the dataplane model and the interception flag before the restart.
 type planeState struct {
 	model dataplane.Model
-	// intercepted — цепочки обвязки стояли; reason — почему признак не
-	// наблюдён. Оба читаются только при включённой модели.
+	// intercepted: the dataplane chains were in place; reason is why the flag was not
+	// observed. Both are read only when the model is enabled.
 	intercepted bool
 	reason      dataplane.AppliedReason
 }
 
-// planeBefore снимает модель обвязки до рестарта. Ложь — модели нет, и проверки
-// после рестарта пропускаются: порт dns-in берётся из неё, а перехват без неё
-// сверять не с чем. Ошибка модели применение не останавливает — init-скрипт
-// при ней тоже оставляет обвязку как есть.
+// planeBefore takes the dataplane model before the restart. False means there is no model, and the checks
+// after the restart are skipped: the dns-in port is taken from it, and interception has nothing to
+// compare with without it. A model error does not stop the apply, because the init script
+// also leaves the dataplane as is on it.
 func (m *Manager) planeBefore(ctx context.Context) (planeState, bool) {
 	if m.opts.Dataplane == nil {
 		return planeState{}, false
@@ -248,11 +248,11 @@ func (m *Manager) planeBefore(ctx context.Context) (planeState, bool) {
 	return state, true
 }
 
-// checkInterception сверяет перехват после рестарта с тем, что стоял до него.
-// Отказ — только когда цепочки были и пропали: перехват, которого не было и до
-// рестарта, применение конфига не снимало и откат его не вернёт. Так же
-// пропускается служба, которая ставит перехват чужими цепочками, — homeproxy в
-// переходном режиме.
+// checkInterception compares interception after the restart with what stood before it.
+// A failure only when the chains were there and vanished: interception that was absent even before
+// the restart was not removed by the config apply and the rollback will not bring it back. Likewise
+// skipped is a service that installs interception with foreign chains, homeproxy in
+// the transitional mode.
 func (m *Manager) checkInterception(ctx context.Context, before planeState) error {
 	switch {
 	case !before.model.Enabled:
@@ -283,9 +283,9 @@ func (m *Manager) checkInterception(ctx context.Context, before planeState) erro
 	return nil
 }
 
-// probeDNS шлёт контрольный запрос в dns-in кандидата. Нет пробы или dns-in в
-// конфиге — пропуск: без dns-in DNS сети через sing-box не идёт, и проверять
-// нечего.
+// probeDNS sends a probe query to the candidate dns-in. No probe or no dns-in in
+// the config is a skip: without dns-in the network DNS does not go through sing-box, and there is
+// nothing to check.
 func (m *Manager) probeDNS(ctx context.Context, data []byte, port int) error {
 	if m.opts.DNS == nil {
 		return nil
@@ -305,11 +305,11 @@ func (m *Manager) probeDNS(ctx context.Context, data []byte, port int) error {
 	return m.opts.DNS.Probe(ctx, inbound)
 }
 
-// awaitProcess ждёт, пока procd отчитается о новом процессе службы. Init-скрипт
-// возвращается раньше, чем procd заменит процесс, и первые запросы к API мог
-// бы обслужить прежний — healthcheck засчитал бы новому конфигу чужой ответ.
-// Новым считается поднятый процесс с pid, отличным от прежнего: before = 0
-// означает, что до рестарта служба лежала, и годится любой поднятый.
+// awaitProcess waits until procd reports a new service process. The init script
+// returns before procd replaces the process, and the first API requests could
+// be served by the old one: the healthcheck would credit the new config with a foreign answer.
+// A new process is an up process with a pid different from the previous one: before = 0
+// means the service was down before the restart, and any up one will do.
 func (m *Manager) awaitProcess(ctx context.Context, before int) error {
 	ticker := time.NewTicker(m.opts.ProcessInterval)
 	defer ticker.Stop()
@@ -337,8 +337,8 @@ func (m *Manager) awaitProcess(ctx context.Context, before int) error {
 	}
 }
 
-// await держит окно подтверждения. Без подтверждения в срок конфиг
-// возвращается на предыдущий.
+// await holds the confirmation window. Without confirmation in time the config
+// is returned to the previous one.
 func (m *Manager) await(ctx context.Context, log *slog.Logger, confirmed <-chan struct{}) {
 	m.mu.Lock()
 	m.current.Phase = PhaseAwaitingConfirm
@@ -356,8 +356,8 @@ func (m *Manager) await(ctx context.Context, log *slog.Logger, confirmed <-chan 
 	case <-confirmed:
 		return
 	case <-ctx.Done():
-		// Демон останавливают. Состояние остаётся на диске, окно доиграется
-		// при следующем старте.
+		// The daemon is being stopped. The state stays on disk, the window is replayed
+		// at the next start.
 		log.Warn("окно подтверждения прервано остановкой демона")
 
 		return
@@ -371,9 +371,9 @@ func (m *Manager) await(ctx context.Context, log *slog.Logger, confirmed <-chan 
 	}
 }
 
-// beginRollback закрывает окно перед тем, как откат тронет диск: с этого
-// момента Confirm получает отказ. Ложь означает, что подтверждение успело
-// раньше таймера и откатывать нечего.
+// beginRollback closes the window before the rollback touches the disk: from this
+// moment Confirm gets a refusal. False means the confirmation got in
+// before the timer and there is nothing to roll back.
 func (m *Manager) beginRollback() bool {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -387,18 +387,18 @@ func (m *Manager) beginRollback() bool {
 	return true
 }
 
-// rollback возвращает предыдущий конфиг и поднимает на нём сервис. Обе
-// половины отката отчитываются вместе: откат, не сделавший ни того ни другого,
-// обязан рассказать про оба отказа.
+// rollback returns the previous config and brings the service up on it. Both
+// halves of the rollback report together: a rollback that did neither
+// must tell about both failures.
 func (m *Manager) rollback(ctx context.Context, log *slog.Logger) {
 	ctx, cancel := context.WithTimeout(ctx, m.opts.CycleTimeout)
 	defer cancel()
 
 	restoreErr := m.store.Restore(ctx)
 
-	// Бэкапа нет — до применения конфига на устройстве не было. Рестарт ничего
-	// бы не вернул, а rolled_back соврал бы, что прежний конфиг на месте:
-	// транзакция закрывается отказом со своей причиной.
+	// There is no backup: the device had no config before the apply. A restart would return
+	// nothing, and rolled_back would lie that the previous config is in place:
+	// the transaction is closed with a failure with its own reason.
 	noBackup := errors.Is(restoreErr, config.ErrNoBackup)
 	if noBackup {
 		log.Warn("откатываться не на что: бэкапа нет, служба остаётся на записанном")
@@ -414,10 +414,10 @@ func (m *Manager) rollback(ctx context.Context, log *slog.Logger) {
 		log.Error("откат не прошёл", "err", err)
 		m.release(PhaseFailed, stepFailed(ReasonRollbackFailed, err))
 
-		// Что легло на диск, неизвестно: Restore мог и успеть, и упасть на
-		// середине. Сверка со старым lastSum давала бы ложное «конфиг изменён
-		// вне metabox» на каждый следующий Start — панель нельзя лишать
-		// возможности применить исправленный конфиг.
+		// What landed on disk is unknown: Restore could have both finished and failed in
+		// the middle. A check against the old lastSum would give a false "config modified
+		// outside metabox" on every next Start, and the panel must not be deprived of
+		// the ability to apply a fixed config.
 		m.mu.Lock()
 		m.lastSum = ""
 		m.lastListsSum = ""
@@ -432,9 +432,9 @@ func (m *Manager) rollback(ctx context.Context, log *slog.Logger) {
 	m.rollingBack = false
 
 	if noBackup {
-		// Отказ шага, если он был, остаётся подробностью: по нему видно, почему
-		// понадобился откат. lastSum не трогается: отката не было, и на диске
-		// ровно то, что оставил цикл.
+		// A step failure, if there was one, stays a detail: it shows why
+		// the rollback was needed. lastSum is not touched: there was no rollback, and the disk has
+		// exactly what the cycle left.
 		m.current.Phase = PhaseFailed
 		m.current.ReasonCode = ReasonNoBackup
 		if m.current.Reason == "" {
@@ -447,8 +447,8 @@ func (m *Manager) rollback(ctx context.Context, log *slog.Logger) {
 	}
 	m.mu.Unlock()
 
-	// Состояние убирается до освобождения busy: снятый раньше busy впускает
-	// следующий Start, и ClearState стирал бы уже его файл состояния.
+	// The state is removed before busy is released: busy released earlier lets in
+	// the next Start, and ClearState would erase its state file.
 	if err := m.store.ClearState(ctx); err != nil {
 		log.Error("состояние откаченной транзакции не убрано", "err", err)
 	}
@@ -462,11 +462,11 @@ func (m *Manager) rollback(ctx context.Context, log *slog.Logger) {
 	}
 }
 
-// closeUnwritten закрывает транзакцию, вставшую на бэкапе. Записи ещё не было,
-// на диске прежний конфиг, а бэкап остался от прошлой транзакции или
-// недописан: откат по нему потерял бы то, что сейчас работает. Поэтому ни
-// Restore, ни рестарта; lastSum не трогается — на диске ровно то, что было до
-// применения.
+// closeUnwritten closes a transaction that stopped at the backup. There was no write yet,
+// the disk has the previous config, and the backup is left from a previous transaction or
+// is incomplete: a rollback from it would lose what works now. So neither
+// Restore nor a restart; lastSum is not touched: the disk has exactly what it had before
+// the apply.
 func (m *Manager) closeUnwritten(ctx context.Context, log *slog.Logger) {
 	ctx, cancel := context.WithTimeout(ctx, m.opts.CycleTimeout)
 	defer cancel()
@@ -476,9 +476,9 @@ func (m *Manager) closeUnwritten(ctx context.Context, log *slog.Logger) {
 	m.windowEndsAt = time.Time{}
 	m.mu.Unlock()
 
-	// Состояние убирается до освобождения busy — по той же причине, что в
-	// rollback. Оставшееся на диске applying доигрывание закроет без отката:
-	// writeHappened записи не найдёт.
+	// The state is removed before busy is released, for the same reason as in
+	// rollback. An applying left on disk will be closed by the replay without a rollback:
+	// writeHappened finds no write.
 	if err := m.store.ClearState(ctx); err != nil {
 		log.Error("состояние транзакции без записи не убрано", "err", err)
 	}
@@ -488,9 +488,9 @@ func (m *Manager) closeUnwritten(ctx context.Context, log *slog.Logger) {
 	m.mu.Unlock()
 }
 
-// Replay доигрывает транзакцию, оставшуюся от прошлой жизни демона. Вызывается
-// на старте: без него питание, снятое в окне подтверждения, оставило бы
-// устройство на неподтверждённом конфиге навсегда.
+// Replay replays a transaction left from the previous daemon lifetime. Called
+// at start: without it, a power loss within the confirmation window would leave
+// the device on the unconfirmed config forever.
 func (m *Manager) Replay(ctx context.Context) error {
 	data, err := m.store.ReadState(ctx)
 	if errors.Is(err, config.ErrNoState) {
@@ -509,10 +509,10 @@ func (m *Manager) Replay(ctx context.Context) error {
 
 	switch {
 	case tx.Phase == PhaseApplying:
-		// Цикл оборвался, не дойдя до окна подтверждения. Откат нужен, только
-		// если конфиг успел записаться: иначе на диске лежит прежний конфиг,
-		// а бэкап может остаться от прошлой транзакции — восстановление по
-		// нему молча потеряло бы уже подтверждённую версию.
+		// The cycle broke off before reaching the confirmation window. A rollback is needed only
+		// if the config managed to be written: otherwise the disk has the previous config,
+		// and the backup may be left from a previous transaction, and restoring from
+		// it would silently lose an already confirmed version.
 		if !m.writeHappened(ctx, tx) {
 			log.Warn("применение оборвано до записи конфига, откат не нужен")
 
@@ -545,15 +545,15 @@ func (m *Manager) Replay(ctx context.Context) error {
 	return nil
 }
 
-// writeHappened отвечает, успел ли оборванный цикл тронуть диск: sha конфига
-// сверяется с суммой из состояния, а следом — изменяемые файлы списков.
-// Транзакция несёт только реально меняемые, поэтому совпадение любого из них
-// означает начатую запись, а не файл, который и не менялся.
+// writeHappened reports whether a broken cycle managed to touch the disk: the config sha
+// is compared with the sum from the state, and then the changing list files.
+// The transaction carries only the really changing ones, so a match of any of them
+// means a started write, not a file that did not change.
 func (m *Manager) writeHappened(ctx context.Context, tx Transaction) bool {
 	current, err := m.store.Sum(ctx)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		// Сверить не вышло — считаем, что запись случилась: лишний откат
-		// вернёт бэкап, а пропущенный оставил бы устройство без автоотката.
+		// The comparison failed: we assume the write happened, since an extra rollback
+		// returns the backup, while a skipped one would leave the device without an automatic rollback.
 		m.log.Warn("сверка конфига при доигрывании не прошла", "err", err)
 
 		return true
@@ -588,16 +588,16 @@ func (m *Manager) writeHappened(ctx context.Context, tx Transaction) bool {
 	return false
 }
 
-// restoreWindow поднимает таймер заново на срок из состояния. Сколько его
-// прошло до перезагрузки, узнать неоткуда: часов реального времени у роутера
-// нет. Свойство «нет подтверждения — откат» это сохраняет, а пользователю
-// достаётся ещё одно окно, чтобы подтвердить связь.
+// restoreWindow raises the timer again for the period from the state. How much of it
+// passed before the reboot cannot be learned: the router has no real-time clock.
+// The property "no confirmation, rollback" is preserved, and the user
+// gets one more window to confirm the connection.
 func (m *Manager) restoreWindow(tx Transaction, token uint64) {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	// Транзакция и её отмена выставляются под одним замком: между двумя
-	// участками остановка демона увидела бы новое окно со старой отменой и
-	// прервала бы не то.
+	// The transaction and its cancel are set under one lock: between two
+	// sections a daemon stop would see the new window with the old cancel and
+	// interrupt the wrong thing.
 	m.mu.Lock()
 	m.current = tx
 	m.windowEndsAt = time.Now().Add(tx.Window)
@@ -637,7 +637,7 @@ func sum(data []byte) string {
 	return hex.EncodeToString(digest[:])
 }
 
-// short укорачивает хэш для лога: полный там не нужен, а строка длиннее.
+// short shortens a hash for the log: the full one is not needed there, and the line is longer.
 func short(s string) string {
 	const n = 12
 	if len(s) <= n {
@@ -647,9 +647,9 @@ func short(s string) string {
 	return s[:n]
 }
 
-// reserveRestored закрывает применение на время восстановленного окна: пока
-// оно идёт, новый Start обязан получить отказ так же, как при своём.
-// Возвращает номер владения для unreserve.
+// reserveRestored closes the apply for the duration of the restored window: while
+// it runs, a new Start must get a refusal just as it does for its own.
+// Returns the ownership number for unreserve.
 func (m *Manager) reserveRestored() uint64 {
 	m.mu.Lock()
 	defer m.mu.Unlock()

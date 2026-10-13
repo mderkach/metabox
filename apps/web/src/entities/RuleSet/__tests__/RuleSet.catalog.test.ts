@@ -25,24 +25,24 @@ function runetGeosite(): RuleSetList {
 }
 
 describe('findList', () => {
-  it('находит список поставщика по виду', () => {
+  it('finds a provider list by kind', () => {
     expect(findList(CATALOG, 'v2fly', 'geoip')?.categories).toContain('ru');
   });
 
-  it('свой адрес и незнакомый вид — списка нет', () => {
+  it('own address and unknown kind: no list', () => {
     expect(findList(CATALOG, null, 'geosite')).toBeNull();
     expect(findList(CATALOG, 'v2fly', 'geoasn')).toBeNull();
   });
 });
 
 describe('filterCategories', () => {
-  it('на пустом запросе отдаёт подборку, а не алфавит перечня', () => {
+  it('on an empty query returns a selection, not the catalog alphabet', () => {
     const list = runetGeosite();
 
     expect(filterCategories(list, '  ')).toEqual(list.featured);
   });
 
-  it('ищет по всему перечню и ставит совпавшие с начала первыми', () => {
+  it('searches the whole catalog and puts matches from the start first', () => {
     const found = filterCategories(runetGeosite(), 'ru-blocked');
 
     expect(found).toEqual(['ru-blocked', 'ru-blocked-all', 'category-media-ru-blocked']);
@@ -50,7 +50,7 @@ describe('filterCategories', () => {
 });
 
 describe('isCatalogCategory', () => {
-  it('отличает категорию из перечня от вписанной руками', () => {
+  it('tells a catalog category from a hand-typed one', () => {
     const list = runetGeosite();
 
     expect(isCatalogCategory(list, 'yandex@ads')).toBe(true);
@@ -58,8 +58,8 @@ describe('isCatalogCategory', () => {
   });
 });
 
-describe('адрес и имя набора', () => {
-  it('собирает адрес по зеркалу списка и предлагает имя файла', () => {
+describe('rule set address and name', () => {
+  it('builds an address from the list mirror and suggests a file name', () => {
     const list = runetGeosite();
 
     expect(buildRuleSetURL(list, 'jsdelivr', 'ru-blocked')).toBe(
@@ -68,7 +68,7 @@ describe('адрес и имя набора', () => {
     expect(suggestTag(list, 'ru-blocked')).toBe('geosite-ru-blocked');
   });
 
-  it('узнаёт собранный адрес обратно', () => {
+  it('recognizes a built address back', () => {
     const url = buildRuleSetURL(runetGeosite(), 'github', 'youtube');
 
     expect(describeURL(CATALOG, url)).toEqual({

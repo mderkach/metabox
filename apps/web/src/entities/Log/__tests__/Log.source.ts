@@ -1,8 +1,8 @@
 import type { EntryWire } from '../api/Log.schema';
 
 /**
- * Поток лога в jsdom: `EventSource` там нет. Подмена помнит открытые потоки,
- * чтобы тест слал строки в последний и видел, с каким уровнем его открыли.
+ * The log stream in jsdom: there is no `EventSource` there. The stand-in remembers open streams
+ * so that the test sends lines to the last one and sees what level it was opened with.
  */
 const READY_STATE = { Connecting: 0, Open: 1, Closed: 2 } as const;
 
@@ -49,18 +49,18 @@ export class FakeLogSource {
     this.emit('open');
   }
 
-  /** Отказ, после которого браузер сам не переподключается: ответ не 200. */
+  /** A failure after which the browser does not reconnect by itself: the response is not 200. */
   refuse(): void {
     this.readyState = FakeLogSource.CLOSED;
     this.emit('error');
   }
 
-  /** Строка лога в конверте демона. */
+  /** A log line in the daemon envelope. */
   line(seq: number, message: string, level = 'info'): void {
     this.send(seq, { level, message });
   }
 
-  /** Строка в форме демона как есть: без уровня, с меткой времени. */
+  /** A line in the daemon shape as is: no level, with a timestamp. */
   send(seq: number, entry: EntryWire): void {
     this.emit('log', JSON.stringify({ seq, entry }));
   }

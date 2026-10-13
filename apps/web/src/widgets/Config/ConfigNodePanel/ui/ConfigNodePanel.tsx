@@ -7,16 +7,16 @@ import { cn } from '@shared/lib/utils';
 import { Button, SECTION_HEADING, SURFACE, SURFACE_HEAD, SheetTitle } from '@shared/ui';
 
 /**
- * Панель узла секции рядом со списком: в ней открывается форма добавления, а
- * узлы остаются на месте и не сдвигаются вниз (ADR-0037). Устройство то же,
- * что у панелей правила и сета; общего каркаса у них нет намеренно — ADR
- * откладывает его, пока шапки панелей расходятся.
+ * Section node panel beside the list: the add form opens in it, and
+ * nodes stay in place and do not shift down (ADR-0037). The structure is the same
+ * as in the rule and rule set panels; they deliberately have no shared frame — the ADR
+ * defers it while the panel headers diverge.
  *
- * Своего словаря у панели нет: заголовок называет страница, которая знает,
- * какая форма открыта, а подпись закрытия общая с остальными панелями.
+ * The panel has no dictionary of its own: the title is named by the page, which knows
+ * which form is open, and the close label is shared with the other panels.
  *
- * `sheet` — панель стоит внутри листа поверх списка: рамку и фокус держит лист,
- * а заголовок панели становится его заголовком.
+ * `sheet` — the panel stands inside a sheet on top of the list: the sheet holds the frame and focus,
+ * and the panel title becomes its title.
  */
 export function ConfigNodePanel({
   title,
@@ -27,7 +27,7 @@ export function ConfigNodePanel({
   title: string;
   sheet?: boolean;
   onClose: () => void;
-  /** Форма, открытая из тулбара секции. */
+  /** The form opened from the section toolbar. */
   children: ReactNode;
 }) {
   const { t } = useTranslation('shared');
@@ -40,9 +40,9 @@ export function ConfigNodePanel({
   }
 
   return (
-    // Escape закрывает панель: обработчик на контейнере — обычный паттерн для
-    // панелей и диалогов, интерактивная роль aside для этого не нужна.
-    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- см. выше
+    // Escape closes the panel: a handler on the container is a common pattern for
+    // panels and dialogs, an interactive role on aside is not needed for it.
+    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- see above
     <aside
       aria-label={title}
       onKeyDown={onKeyDown}

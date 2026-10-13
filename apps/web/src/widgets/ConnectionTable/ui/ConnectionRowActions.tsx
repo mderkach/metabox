@@ -7,7 +7,7 @@ import { cn } from '@shared/lib/utils';
 const ROW_ACTION =
   'flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors pointer-coarse:size-11 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none';
 
-/** Закрыть и объяснить: одни и те же действия в таблице и в списке. */
+/** Close and explain: the same actions in the table and in the list. */
 export function ConnectionRowActions({
   connection,
   onClose,
@@ -29,8 +29,8 @@ export function ConnectionRowActions({
         <button
           type='button'
           aria-expanded={selected}
-          // Ссылка ставится только на открытую этой строкой панель: у остальных
-          // строк такого элемента в документе нет.
+          // The link is set only on the panel opened by this row: other
+          // rows have no such element in the document.
           aria-controls={selected ? panelId : undefined}
           aria-label={t('row.explain', { host: connection.host })}
           className={cn(ROW_ACTION, 'hover:bg-muted hover:text-foreground', selected && 'text-foreground')}

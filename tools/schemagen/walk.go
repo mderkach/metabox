@@ -7,14 +7,14 @@ import (
 	"strings"
 )
 
-// walker переводит Go-типы форка в промежуточное дерево. Именованные
-// структуры выносятся в отдельные схемы, остальное печатается по месту.
+// walker translates the fork Go types into the intermediate tree. Named
+// structs are moved into separate schemas, the rest is printed in place.
 type walker struct {
 	set      *schemaSet
-	building map[reflect.Type]string // тип -> имя схемы, включая недостроенные
-	unknown  map[string][]string     // нераспознанный тип -> пути, где встретился
-	byGoType map[string]*schema      // готовые схемы: union'ы реестров и правила по типам
-	docs     *docSet                 // godoc форка: описания типов и полей
+	building map[reflect.Type]string // type -> schema name, including unfinished ones
+	unknown  map[string][]string     // unrecognized type -> paths where it was met
+	byGoType map[string]*schema      // ready schemas: registry unions and rules by type
+	docs     *docSet                 // fork godoc: type and field descriptions
 }
 
 func newWalker(docs *docSet) *walker {
@@ -34,7 +34,7 @@ func (w *walker) note(t reflect.Type, path string) {
 	}
 }
 
-// unknownReport возвращает отсортированный список нераспознанных типов.
+// unknownReport returns a sorted list of unrecognized types.
 func (w *walker) unknownReport() []string {
 	if len(w.unknown) == 0 {
 		return nil
@@ -47,12 +47,12 @@ func (w *walker) unknownReport() []string {
 	return out
 }
 
-// build возвращает схему типа. Указатели разыменовываются вызывающим кодом:
-// на форме JSON они не сказываются, а на обязательности поля — да.
+// build returns the schema of a type. Pointers are dereferenced by the caller:
+// they do not affect the JSON shape but do affect field required-ness.
 //
-// Именованные типы пакета option выносятся в отдельные схемы, и имя
-// резервируется до построения тела: правила маршрутизации ссылаются сами на
-// себя, и без такой отсечки обход зациклился бы.
+// Named types of the option package are moved into separate schemas, and the name
+// is reserved before the body is built: routing rules refer to
+// themselves, and without such a cut-off the walk would loop.
 func (w *walker) build(t reflect.Type, path string) *schema {
 	for t.Kind() == reflect.Pointer {
 		t = t.Elem()
@@ -74,7 +74,7 @@ func (w *walker) build(t reflect.Type, path string) *schema {
 	return w.body(t, path)
 }
 
-// body строит схему типа без оглядки на именование.
+// body builds the schema of a type regardless of naming.
 func (w *walker) body(t reflect.Type, path string) *schema {
 	if s, ok := w.override(t, path); ok {
 		return s
@@ -95,7 +95,7 @@ func (w *walker) body(t reflect.Type, path string) *schema {
 		return scalar("z.number()")
 
 	case reflect.Slice, reflect.Array:
-		// []byte сериализуется стандартной библиотекой в base64-строку.
+		// []byte is serialized by the standard library into a base64 string.
 		if t.Elem().Kind() == reflect.Uint8 && t.Elem().PkgPath() == "" {
 			return scalar("z.string()")
 		}
@@ -105,9 +105,9 @@ func (w *walker) body(t reflect.Type, path string) *schema {
 		return record(w.build(t.Elem(), path+"{}"))
 
 	case reflect.Struct:
-		// Структура со своей сериализацией без правила в таблице: обойти её
-		// поля значит напечатать схему, не совпадающую с конфигом. Такой тип
-		// накапливается и обрывает генерацию.
+		// A struct with its own serialization and no rule in the table: walking its
+		// fields would print a schema that does not match the config. Such a type
+		// is accumulated and aborts generation.
 		if hasCustomJSON(t) {
 			w.note(t, path)
 			return scalar("z.unknown()")
@@ -115,8 +115,8 @@ func (w *walker) body(t reflect.Type, path string) *schema {
 		return w.plainStruct(t, path)
 
 	case reflect.Interface:
-		// Полезная нагрузка узлов реестра: подставляется вариантами union'а
-		// в родителе, самостоятельной схемы у неё нет.
+		// The payload of registry nodes: substituted by union variants
+		// in the parent, it has no schema of its own.
 		return scalar("z.unknown()")
 
 	default:
@@ -125,8 +125,8 @@ func (w *walker) body(t reflect.Type, path string) *schema {
 	}
 }
 
-// intSchema: JSON-число, ограниченное диапазоном Go-типа настолько, насколько
-// это выразимо без transform.
+// intSchema: a JSON number limited by the range of the Go type as far as
+// it is expressible without transform.
 func intSchema(t reflect.Type) string {
 	switch t.Kind() {
 	case reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int, reflect.Int64:
@@ -136,25 +136,25 @@ func intSchema(t reflect.Type) string {
 	}
 }
 
-// plainStruct собирает поля структуры, уплощая встроенные: badjson кладёт их
-// в JSON плоско, вложенного объекта в конфиге не появляется. Вызывается из
-// правил, которые уже установили, что форма JSON совпадает с полями.
+// plainStruct collects the struct fields, flattening embedded ones: badjson puts them
+// into JSON flat, and no nested object appears in the config. Called from
+// the rules that have already established that the JSON shape matches the fields.
 //
-// Встроенный union (правило маршрутизации встраивает действие) раскрывается
-// в union объектов: полей действия в JSON столько же уровней, сколько у
-// самого правила.
+// An embedded union (a routing rule embeds an action) is expanded
+// into a union of objects: there are as many levels of action fields in JSON as in
+// the rule itself.
 func (w *walker) plainStruct(t reflect.Type, path string) *schema {
 	return oneOf(w.expand(&schema{kind: kindObject}, t, path))
 }
 
-// embeddedUnion — встроенная структура, у которой своя форма union'а.
+// embeddedUnion is an embedded struct that has its own union shape.
 type embeddedUnion struct {
 	typ  reflect.Type
 	spec taggedSpec
 }
 
-// appendFields добавляет поля структуры в объект и возвращает встроенные
-// union'ы, которые вызывающий код обязан раскрыть.
+// appendFields adds the struct fields to an object and returns the embedded
+// unions that the calling code must expand.
 func (w *walker) appendFields(out *schema, t reflect.Type, path string) []embeddedUnion {
 	return w.appendFieldsAt(out, t, path, 0)
 }
@@ -190,9 +190,9 @@ func (w *walker) appendFieldsAt(out *schema, t reflect.Type, path string, depth 
 			name = f.Name
 		}
 
-		// Все поля опциональны: encoding/json не знает обязательных полей,
-		// отсутствие ключа даёт нулевое значение, а не ошибку. Обязателен
-		// только дискриминатор union'а — без него форк не выберет вариант.
+		// All fields are optional: encoding/json knows no required fields,
+		// a missing key gives a zero value, not an error. Only the discriminator
+		// of a union is required: without it the fork cannot select a variant.
 		out.fields = append(out.fields, field{
 			name:     name,
 			schema:   w.build(f.Type, path+"."+name),
@@ -205,9 +205,9 @@ func (w *walker) appendFieldsAt(out *schema, t reflect.Type, path string, depth 
 	return unions
 }
 
-// schemaName даёт имя схемы для именованной структуры пакета option форка.
-// Остальные структуры печатаются по месту: имена вроде linkedhashmap.Map
-// в схеме не нужны.
+// schemaName gives the schema name for a named struct of the fork option package.
+// Other structs are printed in place: names like linkedhashmap.Map
+// are not needed in the schema.
 func schemaName(t reflect.Type) (string, bool) {
 	if t.Name() == "" || t.PkgPath() == "" {
 		return "", false
@@ -229,8 +229,8 @@ func goTypeName(t reflect.Type) string {
 	return t.String()
 }
 
-// hasCustomJSON: тип сам решает, как выглядеть в JSON, поэтому его форму
-// нельзя вывести из полей структуры.
+// hasCustomJSON: the type decides itself how it looks in JSON, so its shape
+// cannot be derived from the struct fields.
 func hasCustomJSON(t reflect.Type) bool {
 	pointer := reflect.PointerTo(t)
 	for _, method := range []string{"MarshalJSON", "MarshalJSONContext", "UnmarshalJSON", "UnmarshalJSONContext"} {
@@ -242,7 +242,7 @@ func hasCustomJSON(t reflect.Type) bool {
 	return ok
 }
 
-// genericBase отрезает у дженерика список параметров:
+// genericBase cuts the parameter list off a generic:
 // badoption.Listable[string] -> badoption.Listable.
 func genericBase(t reflect.Type) string {
 	name := goTypeName(t)

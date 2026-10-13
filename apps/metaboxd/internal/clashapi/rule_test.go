@@ -14,10 +14,10 @@ func TestSplitRule(t *testing.T) {
 		wantAction     string
 		wantHasAction  bool
 	}{
-		{"условия и действие", "rule_set=github => route(proxy)", "rule_set=github", "route(proxy)", true},
-		{"правило без условий", " => route(direct)", "", "route(direct)", true},
-		{"только условия: действие отдаёт не всякий источник", "domain=example.com", "domain=example.com", "", false},
-		{"пустая строка", "", "", "", false},
+		{"conditions and action", "rule_set=github => route(proxy)", "rule_set=github", "route(proxy)", true},
+		{"rule without conditions", " => route(direct)", "", "route(direct)", true},
+		{"conditions only: not every source returns the action", "domain=example.com", "domain=example.com", "", false},
+		{"empty string", "", "", "", false},
 	}
 
 	for _, tt := range tests {
@@ -25,13 +25,13 @@ func TestSplitRule(t *testing.T) {
 			conditions, action, hasAction := clashapi.SplitRule(tt.rule)
 
 			if conditions != tt.wantConditions {
-				t.Errorf("условия: получили %q, ожидали %q", conditions, tt.wantConditions)
+				t.Errorf("conditions: got %q, expected %q", conditions, tt.wantConditions)
 			}
 			if action != tt.wantAction {
-				t.Errorf("действие: получили %q, ожидали %q", action, tt.wantAction)
+				t.Errorf("action: got %q, expected %q", action, tt.wantAction)
 			}
 			if hasAction != tt.wantHasAction {
-				t.Errorf("наличие действия: получили %v, ожидали %v", hasAction, tt.wantHasAction)
+				t.Errorf("action presence: got %v, expected %v", hasAction, tt.wantHasAction)
 			}
 		})
 	}

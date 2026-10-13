@@ -19,8 +19,8 @@ const CARD_PLACE = {
 type CardPlace = (typeof CARD_PLACE)[keyof typeof CARD_PLACE];
 
 /**
- * Место поля в карточке. Запись обязательна для каждого поля: колонка без
- * места в карточке не соберётся, а не пропадёт с узкого экрана молча.
+ * Field place in the card. An entry is required for every field: a column without
+ * a card place fails to build instead of silently vanishing on a narrow screen.
  */
 const FIELD_PLACE: Readonly<Record<ConnectionField, CardPlace>> = {
   [CONNECTION_FIELD.Source]: CARD_PLACE.Origin,
@@ -34,7 +34,7 @@ const FIELD_PLACE: Readonly<Record<ConnectionField, CardPlace>> = {
   [CONNECTION_FIELD.Age]: CARD_PLACE.Origin,
 };
 
-/** Строки под заголовком сверху вниз и знак между значениями одной строки. */
+/** Rows under the header top to bottom and the sign between values of one row. */
 const CARD_LINES: readonly { place: CardPlace; separator: string }[] = [
   { place: CARD_PLACE.Route, separator: '→' },
   { place: CARD_PLACE.Chain, separator: '' },
@@ -60,18 +60,18 @@ function toCardLines(cells: readonly ConnectionCell[]): { lines: CardLine[]; tra
 }
 
 /**
- * Соединение карточкой узкого экрана.
+ * A connection as a narrow-screen card.
  *
- * В таблице на телефоне видно середину строк, и к какому соединению они
- * относятся, определить нечем. Карточка называется хостом назначения — по нему
- * соединение узнают, — и хост рисуется заголовком, а не строкой списка: колонка
- * обязательна и скрыта быть не может. Объём и скорость стоят столбцом справа от
- * строк, а не строкой под ними: их ячейки двухэтажные (↓ над ↑), и отдельной
- * строкой они добавили бы карточке две. Подписи полей видит только скринридер:
- * на узком экране высота дороже, а значения узнаются по виду.
+ * In a phone table the middle of the rows is visible, and there is no way to tell which connection they
+ * belong to. The card is named by the destination host — a connection is
+ * recognized by it — and the host is drawn as a header, not a list row: the column
+ * is required and cannot be hidden. Volume and speed stand in a column to the right of the
+ * rows, not in a row under them: their cells are two-story (↓ above ↑), and as a separate
+ * row they would add two to the card. Field labels are seen only by a screen reader:
+ * on a narrow screen height is dearer, and values are recognized by look.
  *
- * Значения рисуют те же ячейки, что и таблица: расхождение форматирования между
- * раскладками читалось бы как расхождение данных.
+ * Values are drawn by the same cells as the table: a formatting mismatch between
+ * layouts would read as a data mismatch.
  */
 function ConnectionCardProto({
   connection,
@@ -84,7 +84,7 @@ function ConnectionCardProto({
 }: {
   connection: ConnectionRowModel;
   cells: readonly ConnectionCell[];
-  /** Момент отсчёта времени. Снаружи, иначе карточка врала бы про свежесть. */
+  /** Time reference moment. Passed in from outside, otherwise the card would lie about freshness. */
   now: number;
   onClose: ((id: string) => void) | null;
   onExplain: ((id: string) => void) | null;

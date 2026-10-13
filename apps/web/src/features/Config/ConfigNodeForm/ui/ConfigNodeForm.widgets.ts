@@ -17,8 +17,9 @@ import {
 } from './ConfigNodeFormFields';
 
 /**
- * Вид поля → виджет. Новый вид добавляется записью, а не веткой `if`;
- * `null` — поле не рисуется: `type` узла меняется только новым узлом.
+ * Field kind to widget. A new kind is added by an entry, not an `if` branch;
+ * `null` means the field is not drawn: the node `type` changes only by a new
+ * node.
  */
 export const CONFIG_NODE_FORM_WIDGET: Readonly<Record<FieldKind, ComponentType<NodeFieldProps> | null>> = {
   [FIELD_KIND.String]: StringField,

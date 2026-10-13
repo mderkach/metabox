@@ -2,9 +2,9 @@ import i18next, { type ParseKeys } from 'i18next';
 import { type JSONPath, type Node, type ParseError, findNodeAtLocation, parse, parseTree } from 'jsonc-parser';
 
 /**
- * Коды разбора `jsonc-parser` человеческим текстом. Сам он печатает их
- * английскими именами вроде `CloseBraceExpected`, а починить по ним опечатку
- * владельцу роутера нечем.
+ * `jsonc-parser` error codes as human-readable text. It prints them itself
+ * as English names like `CloseBraceExpected`, and a router owner has nothing
+ * to fix a typo by.
  */
 const PARSE_ERROR_KEY: Record<number, ParseKeys<'shared'> | undefined> = {
   1: 'jsonc.invalidSymbol',
@@ -30,19 +30,19 @@ function parseErrorText(code: number): string {
 }
 
 /**
- * Диалект конфига sing-box: комментарии обоих видов и запятая перед
- * закрывающей скобкой. Бинарь такой файл принимает, и `JSON.parse` показал бы
- * владельцу выдуманную ошибку в его рабочем конфиге.
+ * The sing-box config dialect: comments of both kinds and a comma before
+ * the closing bracket. The binary accepts such a file, and `JSON.parse` would show
+ * the owner an invented error in a working config.
  */
 const DIALECT = { allowTrailingComma: true, allowEmptyContent: false } as const;
 
 export interface JsoncFailure {
-  /** Смещение в символах: экран переводит его в номер строки. */
+  /** Offset in characters: the screen converts it to a line number. */
   offset: number;
   text: string;
 }
 
-/** Первая ошибка разбора или `null`, когда текст разобран. */
+/** The first parse error or `null` when the text is parsed. */
 export function firstJsoncError(text: string): JsoncFailure | null {
   const errors: ParseError[] = [];
 
@@ -58,9 +58,9 @@ export function firstJsoncError(text: string): JsoncFailure | null {
 }
 
 /**
- * Разбирает текст в значение. Второе значение — та же первая ошибка, что
- * отдаёт `firstJsoncError`: разбор не бросает, потому что панель обязана
- * открываться и на непонятом конфиге.
+ * Parses text into a value. The second value is the same first error that
+ * `firstJsoncError` returns: parsing does not throw, because the panel must
+ * open even on an incomprehensible config.
  */
 export function parseJsonc(text: string): { value: unknown; failure: JsoncFailure | null } {
   const errors: ParseError[] = [];
@@ -76,9 +76,9 @@ export function parseJsonc(text: string): { value: unknown; failure: JsoncFailur
 }
 
 /**
- * Локатор узлов по пути документа. Дерево строится один раз на текст — по нему
- * ищутся все замечания разбора, — и по исходным байтам, поэтому смещения верны
- * и в файле с комментариями и висячими запятыми.
+ * Node locator by document path. The tree is built once per text — all parse
+ * remarks are looked up in it — and over the source bytes, so the offsets are correct
+ * in a file with comments and trailing commas too.
  */
 export function jsonPathLocator(text: string): (path: JSONPath) => number | null {
   const tree = parseTree(text, undefined, DIALECT);
@@ -92,16 +92,16 @@ export function jsonPathLocator(text: string): (path: JSONPath) => number | null
   };
 }
 
-/** Свойство объекта в оглавлении текста. */
+/** An object property in the text outline. */
 export interface JsoncOutlineEntry {
   key: string;
-  /** Смещение ключа вместе с открывающей кавычкой: сюда ставится курсор. */
+  /** Offset of the key together with the opening quote: the cursor is placed here. */
   offset: number;
-  /** Длина ключа в тексте вместе с кавычками. */
+  /** Length of the key in the text together with the quotes. */
   length: number;
-  /** Число элементов, когда значение — массив, иначе `null`. */
+  /** Number of elements when the value is an array, otherwise `null`. */
   size: number | null;
-  /** Вложенные свойства, чьё значение — объект или массив. */
+  /** Nested properties whose value is an object or an array. */
   children: JsoncOutlineEntry[];
 }
 
@@ -110,7 +110,7 @@ function isSection(node: Node | undefined): node is Node {
 }
 
 function toOutlineEntry(property: Node, children: JsoncOutlineEntry[]): JsoncOutlineEntry | null {
-  // `at`, а не индекс: у свойства без значения второго ребёнка нет.
+  // `at`, not an index: a property without a value has no second child.
   const key = property.children?.at(0);
   const value = property.children?.at(1);
 
@@ -127,7 +127,7 @@ function toOutlineEntry(property: Node, children: JsoncOutlineEntry[]): JsoncOut
   };
 }
 
-/** Свойства объекта, чьё значение — объект или массив; скаляр секцией не считается. */
+/** Object properties whose value is an object or an array; a scalar does not count as a section. */
 function sectionsOf(node: Node | undefined): JsoncOutlineEntry[] {
   if (node?.type !== 'object') {
     return [];
@@ -142,11 +142,11 @@ function sectionsOf(node: Node | undefined): JsoncOutlineEntry[] {
 }
 
 /**
- * Оглавление текста конфига: свойства корня и, под ними, их свойства-объекты и
- * массивы — второй уровень нужен, потому что `route.rules` и `dns.servers`
- * лежат на нём. Смещения считаются по исходным байтам, поэтому верны и в
- * файле с комментариями. Разбор терпит ошибки: на битом тексте оглавление
- * отдаёт то, что успел собрать разбор, — обычно всё до места ошибки.
+ * Outline of the config text: root properties and, under them, their object and
+ * array properties — the second level is needed because `route.rules` and `dns.servers`
+ * lie on it. Offsets are counted over the source bytes, so they are correct in a
+ * file with comments too. Parsing tolerates errors: on broken text the outline
+ * returns what the parser managed to collect — usually everything up to the error.
  */
 export function jsoncOutline(text: string): JsoncOutlineEntry[] {
   const tree = parseTree(text, undefined, DIALECT);
@@ -162,7 +162,7 @@ export function jsoncOutline(text: string): JsoncOutlineEntry[] {
   });
 }
 
-/** Строка смещения в тексте, с единицы: так замечание показывается человеку. */
+/** Line of an offset in the text, counted from one: this is how a remark is shown to a human. */
 export function lineOfOffset(text: string, offset: number): number {
   let line = 1;
 

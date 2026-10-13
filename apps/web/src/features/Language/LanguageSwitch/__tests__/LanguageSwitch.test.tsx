@@ -11,14 +11,14 @@ afterEach(async () => {
 });
 
 describe('LanguageSwitch', () => {
-  it('отмечает текущий язык', () => {
+  it('marks the current language', () => {
     render(<LanguageSwitch />);
 
     expect(screen.getByRole('button', { name: 'Русский' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: 'Английский' })).toHaveAttribute('aria-pressed', 'false');
   });
 
-  it('переключает язык интерфейса и запоминает выбор', async () => {
+  it('switches the interface language and remembers the choice', async () => {
     render(<LanguageSwitch />);
 
     await userEvent.click(screen.getByRole('button', { name: 'Английский' }));
@@ -29,7 +29,7 @@ describe('LanguageSwitch', () => {
     expect(screen.getByRole('button', { name: 'English' })).toHaveAttribute('aria-pressed', 'true');
   });
 
-  it('повторное нажатие не снимает выбор: без языка интерфейса нет', async () => {
+  it('a repeated press does not clear the choice: there is no interface without a language', async () => {
     render(<LanguageSwitch />);
 
     const russian = screen.getByRole('button', { name: 'Русский' });
@@ -40,7 +40,7 @@ describe('LanguageSwitch', () => {
     expect(russian).toHaveAttribute('aria-pressed', 'true');
   });
 
-  it('в вертикальном виде остаётся той же именованной группой', () => {
+  it('in vertical layout stays the same named group', () => {
     render(<LanguageSwitch vertical />);
 
     expect(screen.getByRole('group', { name: 'Язык интерфейса' })).toBeInTheDocument();

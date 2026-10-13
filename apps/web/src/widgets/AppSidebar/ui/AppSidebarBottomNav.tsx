@@ -7,26 +7,26 @@ import { pickActiveNav } from '../lib/AppSidebar.lib';
 import { NAV_ITEMS, NAV_TARGETS } from '../model';
 import { AppSidebarMore } from './AppSidebarMore';
 
-/** Высота 56px: цель касания не меньше 44px и по высоте, и по ширине колонки. */
+/** Height 56px: the touch target is at least 44px both in height and in column width. */
 const ITEM_CLASS =
   'relative flex h-14 w-full flex-col items-center justify-center gap-1 px-1 text-xs transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none focus-visible:ring-inset';
 
 const IDLE_CLASS = 'text-muted-foreground hover:text-foreground';
 
-/** Разделы листа «Ещё»: когда открыт один из них, текущим помечен сам пункт «Ещё». */
+/** Sections of the "More" sheet: when one of them is open, the "More" item itself is marked current. */
 const MORE_TARGETS: readonly string[] = NAV_ITEMS.flatMap((item) =>
   item.more === true && item.to !== undefined ? [item.to] : []
 );
 
-/** Кромка сверху отличает текущий раздел не только цветом. */
+/** The top edge distinguishes the current section by more than color. */
 const ACTIVE_CLASS =
   'font-medium text-foreground before:absolute before:inset-x-3 before:top-0 before:h-0.5 before:rounded-full before:bg-primary';
 
 /**
- * Навигация телефона: разделы внизу экрана, под большим пальцем. Боковой
- * панели на этой ширине нет, поэтому её подвал уезжает в лист «Ещё».
- * Стоит в потоке раскладки, а не `fixed`: экран над ней получает остаток
- * высоты и под панелью не прячется.
+ * Phone navigation: sections at the bottom of the screen, under the thumb. The sidebar
+ * does not exist at this width, so its footer moves into the "More" sheet.
+ * Sits in the layout flow, not `fixed`: the screen above it gets the remaining
+ * height and does not hide under the bar.
  */
 export function AppSidebarBottomNav() {
   const { t } = useTranslation('widgets/AppSidebar');
@@ -40,13 +40,13 @@ export function AppSidebarBottomNav() {
     >
       <ul className='flex'>
         {NAV_ITEMS.map((item) =>
-          // Несделанному разделу и пункту листа «Ещё» колонку не отдаём:
-          // ширины телефона хватает на пять.
+          // An unfinished section and the "More" sheet item do not get a column:
+          // the phone width is enough for five.
           item.to === undefined || item.more === true ? null : (
             <li key={item.key} className='min-w-0 flex-1'>
               <Link
                 to={item.to}
-                // Как в сайдбаре: вложенные пути решает `active`, а не ссылка.
+                // As in the sidebar: nested paths are decided by `active`, not the link.
                 activeOptions={{ exact: true }}
                 aria-current={item.to === active ? 'page' : undefined}
                 className={cn(ITEM_CLASS, item.to === active ? ACTIVE_CLASS : IDLE_CLASS)}

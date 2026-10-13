@@ -15,10 +15,10 @@ import {
 import { AppSidebar } from '../ui/AppSidebar';
 
 describe('AppSidebar', () => {
-  // Регрессия: react-query держит последнее удачное значение сервиса, и без
-  // проверки доступности демона точка осталась бы зелёной поверх баннера
-  // «metabox не отвечает».
-  it('демон не отвечает — точка сервиса показывает «неизвестно», а не последнее удачное значение', async () => {
+  // Regression: react-query keeps the last successful service value, and without
+  // the daemon availability check the dot would stay green on top of the
+  // "metabox is not responding" banner.
+  it('the daemon does not respond: the service dot shows "unknown", not the last successful value', async () => {
     server.use(
       http.get(DAEMON_ENDPOINT.status(), () => new HttpResponse(null, { status: 503 })),
       http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE))
@@ -30,8 +30,8 @@ describe('AppSidebar', () => {
     expect(screen.queryByText('sing-box работает')).not.toBeInTheDocument();
   });
 
-  // Подробности расхождения — в разделе конфигурации, а сам факт виден с любого экрана.
-  it('расхождение sing-box со схемой форм помечено в подвале', async () => {
+  // Details of the mismatch are in the configuration section, and the fact itself is visible from any screen.
+  it('a sing-box mismatch with the form schema is marked in the footer', async () => {
     server.use(
       http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE)),
       http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_DRIFT_FIXTURE))
@@ -42,7 +42,7 @@ describe('AppSidebar', () => {
     expect(await screen.findByText('sing-box старше форм')).toBeInTheDocument();
   });
 
-  it('демон отвечает — точка сервиса показывает состояние службы', async () => {
+  it('the daemon responds: the service dot shows the service state', async () => {
     server.use(
       http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE)),
       http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE))
@@ -53,8 +53,8 @@ describe('AppSidebar', () => {
     expect(await screen.findByText('sing-box работает')).toBeInTheDocument();
   });
 
-  // Демон, не прочитавший procd, отдаёт `stopped` с кодом причины: это не остановка.
-  it('непрочитанное состояние службы показывает «неизвестно», а не «остановлен»', async () => {
+  // A daemon that did not read procd serves `stopped` with a reason code: that is not a stop.
+  it('an unread service state shows "unknown", not "stopped"', async () => {
     server.use(
       http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE)),
       http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_UNREAD_FIXTURE))
@@ -66,8 +66,8 @@ describe('AppSidebar', () => {
     expect(screen.queryByText('sing-box остановлен')).not.toBeInTheDocument();
   });
 
-  // Режим Clash API переключается на «Обзоре», оболочка его не показывает.
-  it('режима Clash API в подвале нет', async () => {
+  // The Clash API mode is switched on "Overview", the shell does not show it.
+  it('there is no Clash API mode in the footer', async () => {
     server.use(
       http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE)),
       http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE))

@@ -1,12 +1,12 @@
 import { fireEvent } from '@testing-library/react';
 
 /**
- * Конец выезда боковой панели. jsdom переходов не играет, и закрытая панель
- * держала бы уходящее содержимое и колонку до конца теста. Скрытая панель
- * роли в дереве доступности не имеет, поэтому ищется по `data-slot`.
+ * End of the side panel slide-out. jsdom does not play transitions, and a closed panel
+ * would hold the departing content and the column until the end of the test. A hidden panel
+ * has no role in the accessibility tree, so it is found by `data-slot`.
  */
 export function finishSidePanelTransition(): void {
-  // oxlint-disable-next-line testing-library/no-node-access -- скрытая панель без роли, искать её по-другому нечем
+  // oxlint-disable-next-line testing-library/no-node-access -- hidden panel without a role, there is no other way to find it
   const panel = document.querySelector('[data-slot="side-panel"]');
 
   if (panel === null) {

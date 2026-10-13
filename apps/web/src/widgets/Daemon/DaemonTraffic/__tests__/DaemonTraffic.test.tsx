@@ -26,7 +26,7 @@ describe('DaemonTraffic', () => {
     vi.useRealTimers();
   });
 
-  it('рисует обе половины от одной кромки, даже когда пики различаются в сотню раз', () => {
+  it('draws both halves from one edge, even when peaks differ a hundredfold', () => {
     render(<DaemonTraffic samples={samplesOf(2)} sampledAt={NOW} peakDown={5 * MIB} peakUp={50 * 1024} />);
 
     const { y } = FakePlot.latest().scales;
@@ -34,13 +34,13 @@ describe('DaemonTraffic', () => {
     expect(y).toEqual({ min: -5 * MIB, max: 5 * MIB });
   });
 
-  it('берёт шкалу от пика минуты на экране', () => {
+  it('takes the scale from the minute peak on the screen', () => {
     render(<DaemonTraffic samples={samplesOf(2)} sampledAt={NOW} peakDown={3 * MIB} peakUp={1000} />);
 
     expect(FakePlot.latest().scales.y.max).toBe(4 * MIB);
   });
 
-  it('сжимает шкалу, только когда пик минуты упал вчетверо', () => {
+  it('shrinks the scale only when the minute peak dropped fourfold', () => {
     const { rerender } = render(
       <DaemonTraffic samples={samplesOf(2)} sampledAt={NOW} peakDown={3 * MIB} peakUp={1000} />
     );
@@ -54,13 +54,13 @@ describe('DaemonTraffic', () => {
     expect(FakePlot.latest().scales.y.max).toBe(1000 * 1024);
   });
 
-  it('на простаивающем канале не сжимает шкалу ниже мегабита в секунду', () => {
+  it('on an idle channel does not shrink the scale below a megabit per second', () => {
     render(<DaemonTraffic samples={samplesOf(2)} sampledAt={NOW} peakDown={300} peakUp={100} />);
 
     expect(FakePlot.latest().scales.y.max).toBe(200 * 1024);
   });
 
-  it('при неполном буфере держит окно в полную минуту: подписи оси стоят на месте', () => {
+  it('with an incomplete buffer holds a full-minute window: axis labels stay in place', () => {
     render(<DaemonTraffic samples={samplesOf(PARTIAL_BUFFER)} sampledAt={NOW} peakDown={10} peakUp={10} />);
     vi.advanceTimersToNextFrame();
 
@@ -70,7 +70,7 @@ describe('DaemonTraffic', () => {
     expect(plot.axisLabels(0)).toEqual(['−45 с', '−30 с', '−15 с', 'сейчас']);
   });
 
-  it('сдвигает ось времени по кадрам, не пересоздавая график', () => {
+  it('shifts the time axis by frames without recreating the chart', () => {
     render(<DaemonTraffic samples={samplesOf(2)} sampledAt={NOW} peakDown={2} peakUp={2} />);
     vi.advanceTimersToNextFrame();
 
@@ -83,14 +83,14 @@ describe('DaemonTraffic', () => {
     expect(FakePlot.instances).toHaveLength(1);
   });
 
-  it('держит правую кромку на шаг позади «сейчас», чтобы новая точка въезжала плавно', () => {
+  it('holds the right edge one step behind "now" so a new point slides in smoothly', () => {
     render(<DaemonTraffic samples={samplesOf(2)} sampledAt={NOW} peakDown={2} peakUp={2} />);
     vi.advanceTimersToNextFrame();
 
     expect(FakePlot.latest().scales.x.max).toBeCloseTo(Date.now() / MS_IN_SECOND - TRAFFIC_STEP_SECONDS, 1);
   });
 
-  it('не сжимает шкалу, когда пик окна немного спал', () => {
+  it('does not shrink the scale when the window peak dipped a little', () => {
     const { rerender } = render(<DaemonTraffic samples={samplesOf(2)} sampledAt={NOW} peakDown={3000} peakUp={0} />);
     const before = FakePlot.latest().scales.y.max;
 
@@ -99,7 +99,7 @@ describe('DaemonTraffic', () => {
     expect(FakePlot.latest().scales.y.max).toBe(before);
   });
 
-  it('при просьбе системы не двигать интерфейс ставит ось вместе с данными, а не по кадрам', () => {
+  it('when the system asks not to move the interface puts the axis together with the data, not by frames', () => {
     vi.stubGlobal('matchMedia', (query: string) => ({
       matches: query.includes('reduce'),
       addEventListener: vi.fn<() => void>(),
@@ -118,7 +118,7 @@ describe('DaemonTraffic', () => {
     vi.unstubAllGlobals();
   });
 
-  it('до второй точки показывает загрузку, а не пустую ось', () => {
+  it('before the second point shows loading, not an empty axis', () => {
     render(<DaemonTraffic samples={samplesOf(1)} sampledAt={NOW} peakDown={10} peakUp={10} />);
 
     expect(screen.getByRole('status')).toHaveTextContent('Загружаю');

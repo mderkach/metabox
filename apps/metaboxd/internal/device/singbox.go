@@ -10,28 +10,28 @@ import (
 	"strings"
 )
 
-// errNoPort означает, что порт Clash API неизвестен: без него процесс искать
-// не по чему.
+// errNoPort means the Clash API port is unknown: without it there is nothing
+// to look for the process by.
 var errNoPort = errors.New("порт Clash API не задан")
 
-// Имя процесса в `comm` обрезано до пятнадцати символов, «sing-box» проходит
-// целиком.
+// The process name in `comm` is cut to fifteen characters, "sing-box" fits
+// whole.
 const singboxComm = "sing-box"
 
-// Состояние сокета LISTEN в `/proc/net/tcp`.
+// The LISTEN socket state in `/proc/net/tcp`.
 const stateListen = "0A"
 
-// Таблицы слушателей: IPv6-сокет с адресом `::` принимает и IPv4, поэтому
-// смотреть приходится обе.
+// Listener tables: an IPv6 socket with the address `::` accepts IPv4 too, so
+// both have to be looked at.
 var listenerTables = []string{"net/tcp", "net/tcp6"}
 
-// singbox отдаёт показания процесса, который ведёт маршрутизацию.
+// singbox returns the readings of the process that does the routing.
 //
-// Процесс ищется по слушателю порта Clash API, а не по службе демона: на
-// устройстве маршрутизацией может владеть чужой пакет (re:HomeProxy поднимает
-// тот же бинарь своей службой), и procd о нём ничего не знает. Найденный pid
-// запоминается — обход дескрипторов всех процессов каждые несколько секунд
-// устройству не нужен.
+// The process is looked up by the listener of the Clash API port, not by the daemon service: on
+// the device routing may be owned by a foreign package (re:HomeProxy starts
+// the same binary with its own service), and procd knows nothing about it. The found pid
+// is remembered: walking the descriptors of all processes every few seconds
+// is not needed by the device.
 func (r *Reader) singbox(ctx context.Context) (*Process, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -59,17 +59,17 @@ func (r *Reader) singbox(ctx context.Context) (*Process, error) {
 	return &Process{PID: pid, RSS: rss}, nil
 }
 
-// Alive сообщает, работает ли на устройстве процесс, который ведёт
-// маршрутизацию. Служба демона такого ответа не даёт: поднять sing-box мог
-// чужой пакет, и procd о нём не знает.
+// Alive reports whether the process doing the routing is running on the device.
+// The daemon service gives no such answer: sing-box could have been started by a foreign
+// package, and procd does not know about it.
 func (r *Reader) Alive(ctx context.Context) bool {
 	process, err := r.singbox(ctx)
 
 	return err == nil && process != nil
 }
 
-// rssOfSingbox читает память процесса, убедившись, что это всё ещё sing-box:
-// освободившийся pid система выдаёт заново.
+// rssOfSingbox reads the process memory after making sure it is still sing-box:
+// the system hands out a freed pid again.
 func (r *Reader) rssOfSingbox(pid int) (int64, error) {
 	id := strconv.Itoa(pid)
 
@@ -107,8 +107,8 @@ func (r *Reader) findSingbox(ctx context.Context) (int, error) {
 	return r.ownerOf(ctx, inodes)
 }
 
-// listenerInodes собирает inode сокетов, слушающих порт. Строка таблицы —
-// «sl local_address rem_address st ... inode», адреса в ней шестнадцатеричные.
+// listenerInodes collects the inodes of sockets listening on a port. A table row is
+// "sl local_address rem_address st ... inode", the addresses in it are hexadecimal.
 func (r *Reader) listenerInodes(port int) (map[string]struct{}, error) {
 	const (
 		localField = 1
@@ -126,7 +126,7 @@ func (r *Reader) listenerInodes(port int) (map[string]struct{}, error) {
 
 		data, err := os.ReadFile(path)
 		if err != nil {
-			// Ядро без IPv6 таблицы не заводит — это не отказ.
+			// A kernel without IPv6 creates no such table: this is not a failure.
 			if !errors.Is(err, os.ErrNotExist) {
 				failures = append(failures, fmt.Errorf("чтение %s: %w", path, err))
 			}
@@ -151,8 +151,8 @@ func (r *Reader) listenerInodes(port int) (map[string]struct{}, error) {
 	return inodes, errors.Join(failures...)
 }
 
-// ownerOf ищет процесс, у которого открыт один из сокетов. Дешевле обхода
-// нет: связь «сокет — процесс» в procfs выражена только ссылками в `fd`.
+// ownerOf looks for the process that has one of the sockets open. There is nothing cheaper than
+// a walk: the "socket to process" link in procfs is expressed only by references in `fd`.
 func (r *Reader) ownerOf(ctx context.Context, inodes map[string]struct{}) (int, error) {
 	entries, err := os.ReadDir(r.proc)
 	if err != nil {
@@ -182,8 +182,8 @@ func (r *Reader) holdsSocket(pid string, inodes map[string]struct{}) bool {
 
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		// Чужие процессы под другим пользователем и процессы, завершившиеся
-		// между чтением каталога и дескрипторов, — штатный случай обхода.
+		// Foreign processes under another user and processes that finished
+		// between reading the directory and the descriptors are a regular case of the walk.
 		return false
 	}
 

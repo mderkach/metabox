@@ -23,7 +23,7 @@ import { parseJsonc } from '@shared/lib/jsonc';
 import { NODE_OVERRIDE_ERROR, nodeOverrideOf, nodePreset, overrideIssues } from '../model';
 import { ConfigNodeForm } from '../ui/ConfigNodeForm';
 
-/** Ключ Reality в формате клиента форка: base64url без паддинга, 32 байта. Не настоящий. */
+/** A Reality key in the fork client format: base64url without padding, 32 bytes. Not a real one. */
 const PUBLIC_KEY = 'jNXHt1yRo0vDuchQlIP6Z0ZvjT3KtzVI-T4E7RoLJS0';
 
 const UUID = '6f1c1b2e-3d4a-4b5c-8d6e-7f8091a2b3c4';
@@ -61,7 +61,7 @@ function save() {
   return screen.getByRole('button', { name: 'Сохранить в черновик' });
 }
 
-/** Узел читается из стора, как на экране: форма видит каждую правку текста. */
+/** The node is read from the store as on the screen: the form sees every text edit. */
 function NodeFromStore({
   path,
   registry = NODE_REGISTRY.Outbound,
@@ -77,7 +77,7 @@ function NodeFromStore({
   return isRecord(node) ? <ConfigNodeForm registry={registry} path={path} node={node} builtTags={builtTags} /> : null;
 }
 
-/** Идут ли элементы в документе в том порядке, в каком перечислены. */
+/** Whether the elements go in the document in the order they are listed. */
 function inDocumentOrder(elements: readonly HTMLElement[]): boolean {
   return elements.every(
     (element, index) =>
@@ -85,13 +85,13 @@ function inDocumentOrder(elements: readonly HTMLElement[]): boolean {
   );
 }
 
-describe('оверрайд формы VLESS/Reality', () => {
+describe('VLESS/Reality form override', () => {
   beforeEach(() => {
     ConfigDocumentState.getState().reset();
     ConfigDocumentState.getState().load(TEXT);
   });
 
-  it('открывается основными полями по порядку, остальное — под свёрнутой группой', () => {
+  it('opens with the main fields in order, the rest under a collapsed group', () => {
     render(<NodeFromStore path={VLESS} />);
 
     const primary = [
@@ -111,7 +111,7 @@ describe('оверрайд формы VLESS/Reality', () => {
     expect(screen.queryByRole('combobox', { name: 'domain_strategy' })).not.toBeInTheDocument();
   });
 
-  it('свёрнутая группа открывает остальные поля без повторов основных', async () => {
+  it('the collapsed group opens the remaining fields without repeating the main ones', async () => {
     const user = userEvent.setup();
 
     render(<NodeFromStore path={VLESS} />);
@@ -122,7 +122,7 @@ describe('оверрайд формы VLESS/Reality', () => {
     expect(screen.getAllByRole('textbox', { name: /server_name$/ })).toHaveLength(1);
   });
 
-  it('flow и отпечаток uTLS выбираются из значений форка', async () => {
+  it('flow and the uTLS fingerprint are chosen from the fork values', async () => {
     const user = userEvent.setup();
 
     render(<NodeFromStore path={VLESS} />);
@@ -137,7 +137,7 @@ describe('оверрайд формы VLESS/Reality', () => {
     expect(findValue(draft(), [...VLESS, 'tls', 'utls', 'fingerprint'])).toBe('firefox');
   });
 
-  it('пустой server — обязательное поле, запись не идёт', async () => {
+  it('an empty server is a required field, nothing is written', async () => {
     const user = userEvent.setup();
 
     render(<NodeFromStore path={VLESS} />);
@@ -149,7 +149,7 @@ describe('оверрайд формы VLESS/Reality', () => {
     expect(ConfigDocumentState.getState().draft).toBeNull();
   });
 
-  it('ключ Reality не в формате клиента форка называется ошибкой, верный — пишется', async () => {
+  it('a Reality key not in the fork client format is called an error, a valid one is written', async () => {
     const user = userEvent.setup();
 
     render(<NodeFromStore path={VLESS} />);
@@ -176,7 +176,7 @@ describe('оверрайд формы VLESS/Reality', () => {
     });
   });
 
-  it('нетронутые ключи не мешают править соседнее поле', async () => {
+  it('untouched keys do not prevent editing a neighboring field', async () => {
     const user = userEvent.setup();
 
     render(<NodeFromStore path={VLESS} />);
@@ -189,7 +189,7 @@ describe('оверрайд формы VLESS/Reality', () => {
     });
   });
 
-  it('uTLS помечен, когда бинарь собран без with_utls, и не помечен со сборкой', () => {
+  it('uTLS is marked when the binary is built without with_utls, and not marked with the build', () => {
     const { unmount } = render(<NodeFromStore path={VLESS} builtTags={['with_quic']} />);
 
     expect(screen.getAllByText('нет в сборке: with_utls')).not.toHaveLength(0);
@@ -201,11 +201,11 @@ describe('оверрайд формы VLESS/Reality', () => {
   });
 });
 
-describe('проверки оверрайда VLESS', () => {
+describe('VLESS override checks', () => {
   const override = nodeOverrideOf(NODE_REGISTRY.Outbound, 'vless');
   const reality = { type: 'vless', server: 'a.example', server_port: 443, uuid: UUID };
 
-  it('ключ и short_id сверяются с форматом клиента форка', () => {
+  it('the key and short_id are checked against the fork client format', () => {
     const node = {
       ...reality,
       tls: { server_name: 'a.example', reality: { enabled: true, public_key: 'abc', short_id: 'xyz' } },
@@ -217,7 +217,7 @@ describe('проверки оверрайда VLESS', () => {
     ]);
   });
 
-  it('short_id — hex чётной длины до 8 байт, пустой допустим', () => {
+  it('short_id is hex of even length up to 8 bytes, empty is allowed', () => {
     const issues = (shortId: string) =>
       overrideIssues(
         override,
@@ -236,7 +236,7 @@ describe('проверки оверрайда VLESS', () => {
     ]);
   });
 
-  it('имя сервера и ключ обязательны только с Reality', () => {
+  it('the server name and key are required only with Reality', () => {
     expect(overrideIssues(override, { ...reality, tls: { reality: { enabled: true } } }, {})).toEqual([
       { name: 'tls.server_name', code: NODE_OVERRIDE_ERROR.Required },
       { name: 'tls.reality.public_key', code: NODE_OVERRIDE_ERROR.Required },
@@ -246,17 +246,17 @@ describe('проверки оверрайда VLESS', () => {
 });
 
 /**
- * Сценарий AC-6 на уровне схемы: в пустом документе формами собирается VLESS
- * с Reality и правило на него, и документ принимает схема конфига целиком.
- * `sing-box check` здесь не выполняется — это проверка стенда.
+ * The AC-6 scenario at the schema level: in an empty document, forms assemble a VLESS
+ * with Reality and a rule for it, and the schema accepts the whole config document.
+ * `sing-box check` does not run here: that is a test bench check.
  */
-describe('VLESS/Reality с нуля', () => {
+describe('VLESS/Reality from scratch', () => {
   beforeEach(() => {
     ConfigDocumentState.getState().reset();
     ConfigDocumentState.getState().load('{}');
   });
 
-  it('узел из формы добавления и формы узла с правилом проходит схему конфига', async () => {
+  it('a node from the add form and the node form with a rule passes the config schema', async () => {
     const user = userEvent.setup();
     const add = renderWithQuery(<ConfigNodeAddForm section='outbounds' takenTags={[]} builtTags={['with_utls']} />);
 
@@ -271,8 +271,8 @@ describe('VLESS/Reality с нуля', () => {
     add.unmount();
     render(<NodeFromStore path={VLESS} builtTags={['with_utls']} />);
 
-    // Длинные значения вставляются, а не печатаются: посимвольный ввод с
-    // проверкой на каждый символ под нагрузкой упирается в таймаут теста.
+    // Long values are pasted, not typed: per-character input with
+    // a check on every character hits the test timeout under load.
     const fill = async (role: 'textbox' | 'spinbutton', name: string, value: string) => {
       await user.click(screen.getByRole(role, { name }));
       await user.paste(value);
@@ -317,10 +317,10 @@ describe('VLESS/Reality с нуля', () => {
   });
 });
 
-describe('оверрайд службы api', () => {
+describe('api service override', () => {
   const API: JSONPath = ['services', 0];
 
-  it('новая служба слушает loopback и получает случайный секрет, порт не подставлен', () => {
+  it('a new service listens on loopback and gets a random secret, the port is not filled in', () => {
     const first = nodePreset(NODE_REGISTRY.Service, 'api', 'api', newSectionNode);
     const second = nodePreset(NODE_REGISTRY.Service, 'api', 'api', newSectionNode);
 
@@ -331,7 +331,7 @@ describe('оверрайд службы api', () => {
     expect(first).not.toEqual(second);
   });
 
-  it('без порта не сохраняется, с портом — пишется в узел', async () => {
+  it('is not saved without a port, with a port it is written to the node', async () => {
     const user = userEvent.setup();
 
     ConfigDocumentState.getState().reset();
@@ -358,8 +358,8 @@ describe('оверрайд службы api', () => {
   });
 });
 
-describe('поля-секреты', () => {
-  /** Подписка и пароль — выдуманные. */
+describe('secret fields', () => {
+  /** The subscription and password are made up. */
   const SECRET_TEXT = `{
   "outbounds": [
     { "type": "shadowsocks", "tag": "ss", "server": "a.example", "server_port": 8388, "password": "hunter2" },
@@ -377,7 +377,7 @@ describe('поля-секреты', () => {
     ConfigDocumentState.getState().load(SECRET_TEXT);
   });
 
-  it('пароль скрыт маской и раскрывается кнопкой, черновик не трогается', async () => {
+  it('the password is hidden by a mask and revealed by a button, the draft is untouched', async () => {
     const user = userEvent.setup();
 
     render(<NodeFromStore path={SHADOWSOCKS} />);
@@ -398,7 +398,7 @@ describe('поля-секреты', () => {
     expect(ConfigDocumentState.getState().draft).toBeNull();
   });
 
-  it('пароль, набранный под маской, ложится в черновик и диф целиком', async () => {
+  it('a password typed under the mask goes into the draft and the diff in full', async () => {
     const user = userEvent.setup();
 
     render(<NodeFromStore path={SHADOWSOCKS} />);
@@ -418,7 +418,7 @@ describe('поля-секреты', () => {
     expect(result.current.map((line) => line.text).join('\n')).toContain('"password": "correct-horse"');
   });
 
-  it('у URL подписки виден хост, остальное раскрывается кнопкой и правится', async () => {
+  it('the subscription URL shows the host, the rest is revealed by a button and editable', async () => {
     const user = userEvent.setup();
     const full = 'https://sub.example/api/v1/client/subscribe?token=abc123';
 
@@ -446,7 +446,7 @@ describe('поля-секреты', () => {
     expect(result.current.map((line) => line.text).join('\n')).toContain(`${full}2`);
   });
 
-  it('URL из одного хоста прятать нечего: поле правится сразу', () => {
+  it('a URL of only a host has nothing to hide: the field is editable at once', () => {
     render(<NodeFromStore path={['providers', 1]} registry={NODE_REGISTRY.Provider} />);
 
     const url = screen.getByRole('textbox', { name: 'url' });
@@ -455,7 +455,7 @@ describe('поля-секреты', () => {
     expect(url).not.toHaveAttribute('readonly');
   });
 
-  it('uuid не прячется: это идентификатор, а не пароль', () => {
+  it('uuid is not hidden: it is an identifier, not a password', () => {
     ConfigDocumentState.getState().reset();
     ConfigDocumentState.getState().load(TEXT);
     render(<NodeFromStore path={VLESS} />);

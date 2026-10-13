@@ -23,13 +23,13 @@ import { ConfigModeSwitch } from './ConfigModeSwitch';
 const HALF = 0.5;
 
 /**
- * Секции конфигурации — вкладки-ссылки: у каждой свой адрес, поэтому вкладка
- * открывается и в новой вкладке браузера, а выбранную задаёт адрес, а не
- * состояние полосы.
+ * Config sections are link tabs: each has its own address, so a tab
+ * also opens in a new browser tab, and the selected one is set by the address, not by
+ * the strip state.
  *
- * В полосе частые секции и выбранная, остальные — в меню «Ещё» рядом с ней.
- * На узкой ширине полоса прокручивается, край со скрытыми вкладками гаснет
- * градиентом, а выбранная вкладка прокручивается в середину видимой части.
+ * The strip has frequent sections and the selected one, the rest are in the "More" menu beside it.
+ * At a narrow width the strip scrolls, the edge with hidden tabs fades out
+ * with a gradient, and the selected tab scrolls to the middle of the visible part.
  */
 export function ConfigTabs({ config }: { config: ConfigDocument | null }) {
   const { t } = useTranslation('widgets/Config/ConfigTabs');
@@ -49,13 +49,13 @@ export function ConfigTabs({ config }: { config: ConfigDocument | null }) {
         return;
       }
 
-      // Функциям ниже сужение типа не доходит: объявление поднимается.
+      // Narrowing of the type does not reach the functions below: the declaration is hoisted.
       const strip = scroller;
       const activeTab = tab;
 
-      // Сдвиг считается руками, а не `scrollIntoView`: тот прокручивает и
-      // предков, и экран уехал бы по вертикали к полосе. Вкладка встаёт в
-      // середину, а не к краю: края полосы гаснут градиентом.
+      // The shift is computed by hand, not by `scrollIntoView`: that one scrolls
+      // ancestors too, and the screen would move vertically to the strip. The tab is placed in
+      // the middle, not at the edge: the strip edges fade out with a gradient.
       function center() {
         const box = strip.getBoundingClientRect();
         const rect = activeTab.getBoundingClientRect();
@@ -63,9 +63,9 @@ export function ConfigTabs({ config }: { config: ConfigDocument | null }) {
         strip.scrollLeft += rect.left - box.left - (box.width - rect.width) * HALF;
       }
 
-      // Ширина вкладок меняется после первого кадра: подгружается шрифт,
-      // приходит документ со счётчиками, и выбранную сдвигают соседи слева.
-      // Наблюдатель на вкладках, а не на полосе: её ширина при этом стоит.
+      // Tab widths change after the first frame: the font loads,
+      // the document with counters arrives, and the selected one is shifted by neighbors on the left.
+      // The observer is on the tabs, not on the strip: its width stays put.
       const observer = new ResizeObserver(center);
 
       for (const each of strip.children) {

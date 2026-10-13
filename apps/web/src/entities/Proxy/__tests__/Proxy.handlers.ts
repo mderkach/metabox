@@ -5,20 +5,20 @@ import type { ClashProxiesWire } from '../api/Proxy.schema';
 import { CLASH_DELAY_FIXTURE, CLASH_PROVIDERS_FIXTURE, CLASH_PROXIES_FIXTURE } from './Proxy.fixture';
 
 /**
- * Любой узел в пути. Именно звёздочка, а не `:name`: адреса узлов проходят
- * через `encodeURIComponent`, и двоеточие в нём превратилось бы в `%3A` —
- * хендлер молча не совпал бы.
+ * Any node in the path. A wildcard exactly, not `:name`: node addresses pass
+ * through `encodeURIComponent`, and a colon in it would become `%3A`:
+ * the handler would silently not match.
  */
 const NODE_PATTERN = '*';
 
-/** Имя группы из адреса: в пути оно закодировано, а ключом состояния должно быть исходное. */
+/** Group name from the address: in the path it is encoded, and the state key must be the original. */
 function toGroupName(url: string): string {
   const path = new URL(url).pathname;
 
   return decodeURIComponent(path.slice(path.lastIndexOf('/') + 1));
 }
 
-/** Узел из тела запроса рантайма: `{ "name": "sub-eu/eu-reality" }`. */
+/** Node from the runtime request body: `{ "name": "sub-eu/eu-reality" }`. */
 function toChosenNode(body: unknown): string | null {
   if (typeof body !== 'object' || body === null || !('name' in body)) {
     return null;
@@ -27,7 +27,7 @@ function toChosenNode(body: unknown): string | null {
   return typeof body.name === 'string' ? body.name : null;
 }
 
-/** Ручки, которые от состояния не зависят: обе сборки моков берут их как есть. */
+/** Handlers that do not depend on state: both mock builds take them as is. */
 function readOnlyHandlers() {
   return [
     http.get(PROXY_ENDPOINT.providers(), () => HttpResponse.json(CLASH_PROVIDERS_FIXTURE)),
@@ -36,29 +36,29 @@ function readOnlyHandlers() {
   ];
 }
 
-/** Ручки прокси, которых у демона ещё нет: формы сняты с устройства. */
+/** Proxy handlers the daemon does not have yet: shapes taken from the device. */
 export const proxyHandlers = [
   http.get(PROXY_ENDPOINT.proxies(), () => HttpResponse.json(CLASH_PROXIES_FIXTURE)),
   ...readOnlyHandlers(),
 
-  // Рантайм на выбор узла отвечает пустым телом: панель берёт новое состояние
-  // из перезапроса списка, а не из ответа.
+  // The runtime answers a node selection with an empty body: the panel takes the new state
+  // from the list refetch, not from the response.
   http.put(PROXY_ENDPOINT.proxy(NODE_PATTERN), () => new HttpResponse(null, { status: 204 })),
 ];
 
 /**
- * То же, но выбор узла запоминается до перезагрузки страницы: без этого
- * переключение в группе-селекторе видно секунду, а потом перезапрос списка
- * возвращает узел из фикстуры, и дев-режим выглядит сломанным.
+ * The same, but the node selection is remembered until the page reloads: without this
+ * a switch in a selector group is visible for a second, and then the list refetch
+ * returns the node from the fixture, and dev mode looks broken.
  *
- * Состояние живёт в замыкании фабрики, поэтому в тесты попасть не может:
- * там подключается `proxyHandlers`, у которого своего состояния нет.
+ * State lives in the factory closure, so it cannot get into tests:
+ * they use `proxyHandlers`, which has no state of its own.
  */
 export function createStatefulProxyHandlers() {
   const chosen = new Map<string, string>();
 
-  // Мок отвечает формой провода, поэтому выбор проставляется прямо в ней:
-  // модельный `withSelectedNode` работает с группами, которых здесь ещё нет.
+  // The mock answers in the wire shape, so the selection is set right in it:
+  // the model `withSelectedNode` works with groups that do not exist here yet.
   function snapshot(): ClashProxiesWire {
     const proxies = { ...CLASH_PROXIES_FIXTURE.proxies };
 

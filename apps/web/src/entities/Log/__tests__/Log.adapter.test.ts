@@ -5,7 +5,7 @@ import { toLogTail } from '../model/Log.adapter';
 import { LOGS_FIXTURE } from './Log.fixture';
 
 describe('toLogTail', () => {
-  it('переводит метку времени в дату, а строку без уровня оставляет без уровня', () => {
+  it('converts the timestamp to a date, and leaves a line without a level without a level', () => {
     const tail = toLogTail(LogsSchema.parse(LOGS_FIXTURE));
 
     expect(tail.source).toBe('logread');
@@ -15,7 +15,7 @@ describe('toLogTail', () => {
     expect(tail.entries.at(-1)).toEqual({ time: null, level: null, message: '  goroutine 1 [running]:' });
   });
 
-  it('незнакомый уровень и неразборчивую метку считает отсутствующими', () => {
+  it('treats an unknown level and an illegible timestamp as absent', () => {
     const tail = toLogTail({
       source: 'file',
       since: 'вчера',
@@ -26,7 +26,7 @@ describe('toLogTail', () => {
     expect(tail.entries[0]).toEqual({ time: null, level: null, message: 'строка' });
   });
 
-  it('схема отклоняет строку без сообщения', () => {
+  it('the schema rejects a line without a message', () => {
     expect(LogsSchema.safeParse({ source: 'logread', entries: [{ level: 'info' }] }).success).toBe(false);
   });
 });

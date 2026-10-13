@@ -2,7 +2,7 @@ import i18next from 'i18next';
 import type { z } from 'zod';
 
 export interface UnknownField {
-  /** Путь узла, как его адресует правка: `route.rules.0`. Пусто — корень. */
+  /** Node path as an edit addresses it: `route.rules.0`. Empty means the root. */
   path: string;
   fields: string[];
 }
@@ -12,17 +12,17 @@ function joinPath(prefix: string, path: PropertyKey[]): string {
 }
 
 /**
- * Узлы, которым не хватило только полей, которых схема не знает. `null` —
- * среди замечаний есть настоящая ошибка: неверный тип, пропущенное поле.
+ * Nodes that lacked only fields the schema does not know. `null` means
+ * there is a real error among the remarks: a wrong type, a missing field.
  *
- * Схемы строгие, поэтому лишнее поле — это замечание, а не тишина. Но схема
- * собрана из релизной сборки форка и заведомо знает меньше бинаря: узел с
- * незнакомым полем панель помечает и правит текстом, а не объявляет ошибкой.
+ * Schemas are strict, so an extra field is a remark, not silence. But the schema
+ * is built from a release build of the fork and knows less than the binary: a node with an
+ * unfamiliar field is marked by the panel and edited as text, not declared an error.
  *
- * Union разворачивается: правило описано вариантами, и лишний ключ приходит не
- * отказом по ключу, а `invalid_union` с замечаниями каждой ветки. Узел
- * считается всего лишь незнакомым, если хоть одной ветке помешали только
- * лишние поля, — значит по остальным полям он схеме подходит.
+ * A union is unfolded: a rule is described by variants, and an extra key comes not as
+ * a refusal on the key but as `invalid_union` with the remarks of each branch. A node
+ * counts as merely unfamiliar if in at least one branch only
+ * extra fields got in the way — so by its other fields it fits the schema.
  */
 export function toUnknownFields(issues: readonly z.core.$ZodIssue[], prefix = ''): UnknownField[] | null {
   const fields: UnknownField[] = [];
@@ -52,7 +52,7 @@ export function toUnknownFields(issues: readonly z.core.$ZodIssue[], prefix = ''
   return fields;
 }
 
-/** Замечания схемы человеческим текстом: путь узла и что с ним не так. */
+/** Schema remarks as human-readable text: the node path and what is wrong with it. */
 export function describeIssues(issues: readonly z.core.$ZodIssue[]): string[] {
   const unknown = toUnknownFields(issues);
 

@@ -15,21 +15,21 @@ function failure(code: string, message: string): ApiError {
 }
 
 describe('failureText', () => {
-  it('переводит отказ по коду, а не берёт сообщение демона', () => {
+  it('translates a failure by code instead of taking the daemon message', () => {
     expect(failureText(failure('runtime_unavailable', 'рантайм sing-box недоступен'))).toBe('sing-box не отвечает');
   });
 
-  it('молчит о незнакомом коде: перевода у панели для него нет', () => {
+  it('stays silent about an unknown code: the panel has no translation for it', () => {
     expect(failureText(failure('quantum_flux', 'что-то новое'))).toBeNull();
   });
 
-  it('молчит об ошибке не от демона', () => {
+  it('stays silent about an error not from the daemon', () => {
     expect(failureText(new Error('оборвалась сеть'))).toBeNull();
   });
 });
 
 describe('showQueryError', () => {
-  it('показывает, что не вышло и почему', () => {
+  it('shows what failed and why', () => {
     showQueryError(
       { showError: true, errorMessageKey: 'toast.proxy.delay.failed' },
       failure('runtime_unavailable', 'рантайм sing-box недоступен')
@@ -38,7 +38,7 @@ describe('showQueryError', () => {
     expect(toast.error).toHaveBeenCalledWith('Проверить задержку не удалось: sing-box не отвечает');
   });
 
-  it('незнакомый код оставляет сообщение демона запасным текстом', () => {
+  it('an unknown code leaves the daemon message as fallback text', () => {
     showQueryError({ showError: true }, failure('quantum_flux', 'что-то новое'));
 
     expect(toast.error).toHaveBeenCalledWith('что-то новое');

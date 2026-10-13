@@ -1,4 +1,4 @@
-/** Значение уходит в разметку ключом стиля, поэтому строка, а не число. */
+/** The value goes into the markup as a style key, so it is a string, not a number. */
 export const DIFF_KIND = {
   Same: 'same',
   Added: 'added',
@@ -10,24 +10,24 @@ export type DiffKind = (typeof DIFF_KIND)[keyof typeof DIFF_KIND];
 export interface DiffLine {
   kind: DiffKind;
   text: string;
-  /** Номер строки в применённом конфиге; `null` — строки там не было. */
+  /** Line number in the applied config; `null` means the line was not there. */
   before: number | null;
-  /** Номер строки в черновике; `null` — строка удалена. */
+  /** Line number in the draft; `null` means the line was removed. */
   after: number | null;
 }
 
-/** Кусок дифа: изменения вместе с контекстом вокруг них. */
+/** A diff chunk: changes together with context around them. */
 export interface DiffHunk {
-  /** Сколько совпадающих строк скрыто перед куском. */
+  /** How many matching lines are hidden before the chunk. */
   skipped: number;
   lines: DiffLine[];
 }
 
 /**
- * Потолок на таблицу сравнения. Конфиг на 500 правил — около двух
- * тысяч строк, а совпадающие края из сравнения выпадают; упереться в потолок
- * может только замена файла целиком, и там построчный диф всё равно ничего не
- * объясняет.
+ * Ceiling on the comparison table. A config of 500 rules is about two
+ * thousand lines, and matching edges drop out of the comparison; only replacing the whole file
+ * can hit the ceiling, and there a line-by-line diff explains
+ * nothing anyway.
  */
 const MAX_CELLS = 4_000_000;
 
@@ -36,8 +36,8 @@ function line(kind: DiffKind, text: string, before: number | null, after: number
 }
 
 /**
- * Таблица длин наибольшей общей подпоследовательности строк: из неё
- * восстанавливается минимальный набор правок, а не только их количество.
+ * Table of lengths of the longest common subsequence of lines: from it
+ * the minimal set of edits is restored, not only their count.
  */
 function lcsTable(before: string[], after: string[]): Uint32Array[] {
   const table: Uint32Array[] = Array.from({ length: before.length + 1 }, () => new Uint32Array(after.length + 1));
@@ -68,8 +68,8 @@ function walk(before: string[], after: string[], offset: Offset): DiffLine[] {
       i += 1;
       j += 1;
     } else if (table[i + 1][j] >= table[i][j + 1]) {
-      // Равенство отдаётся удалению: тогда пара «удалено, добавлено» стоит в
-      // дифе в том же порядке, в каком строки лежат в файлах.
+      // Equality goes to deletion: then the "removed, added" pair sits in the
+      // diff in the same order as the lines lie in the files.
       lines.push(line(DIFF_KIND.Removed, before[i], offset.before + i + 1, null));
       i += 1;
     } else {
@@ -97,12 +97,12 @@ function replaced(before: string[], after: string[], offset: Offset): DiffLine[]
 }
 
 /**
- * Построчный диф применённого конфига и черновика.
+ * Line-by-line diff of the applied config and the draft.
  *
- * Считается по тексту, а не по разобранным моделям: черновик — байты файла,
- * и пользователю показывается ровно то, что уйдёт в Apply.
- * Совпадающие начало и конец отрезаются до сравнения: правка одного поля иначе
- * гоняла бы таблицу по всему файлу.
+ * Computed over text, not over parsed models: the draft is the file bytes,
+ * and the user is shown exactly what goes into Apply.
+ * Matching start and end are trimmed before comparison: editing one field would otherwise
+ * run the table over the whole file.
  */
 export function diffLines(before: string, after: string): DiffLine[] {
   const left = before.split('\n');
@@ -144,8 +144,8 @@ export function diffLines(before: string, after: string): DiffLine[] {
 }
 
 /**
- * Оставляет изменённые строки с контекстом вокруг. В дифе конфига на полторы
- * тысячи строк правка одной строки иначе ищется прокруткой.
+ * Keeps changed lines with context around them. In a config diff of one and a half
+ * thousand lines, an edit of one line would otherwise be found by scrolling.
  */
 export function toDiffHunks(lines: DiffLine[], context: number): DiffHunk[] {
   const keep = Array.from<boolean>({ length: lines.length }).fill(false);

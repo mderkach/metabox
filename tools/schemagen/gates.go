@@ -13,8 +13,8 @@ import (
 	"strings"
 )
 
-// Реестр определяется пакетом, чья функция регистрирует тип: у форка это
-// пакеты adapter/* и dns.
+// A registry is determined by the package whose function registers a type: in the fork these are
+// the adapter/* packages and dns.
 var registryPackages = map[string]string{
 	forkModule + "/adapter/inbound":     "inbound",
 	forkModule + "/adapter/outbound":    "outbound",
@@ -27,20 +27,20 @@ var registryPackages = map[string]string{
 
 const constantPackage = forkModule + "/constant"
 
-// buildGates читает, какой build-тег нужен бинарю, чтобы запустить тип узла:
-// реестр → тип → тег.
+// buildGates reads which build tag the binary needs to run a node type:
+// registry → type → tag.
 //
-// Рефлексией этого не узнать: заглушка без тега регистрирует тот же тип с теми
-// же опциями, что и настоящий файл, и отличается только ошибкой при запуске
-// («QUIC is not included in this build»). Поэтому источник — исходники
-// include/ форка: файл под `//go:build with_x` или `!with_x` регистрирует типы,
-// которые без тега не работают. Регистрация бывает прямой —
-// `inbound.Register[...](registry, C.TypeHysteria, ...)` — и через функцию
-// пакета протокола, `warp.RegisterEndpoint(registry)`; вторая читается на
-// один уровень вглубь.
+// Reflection cannot tell this: a stub without the tag registers the same type with the same
+// options as the real file and differs only in the error at start
+// ("QUIC is not included in this build"). So the source is the
+// fork's include/ sources: a file under `//go:build with_x` or `!with_x` registers types
+// that do not work without the tag. Registration is either direct,
+// `inbound.Register[...](registry, C.TypeHysteria, ...)`, or through a function
+// of the protocol package, `warp.RegisterEndpoint(registry)`; the second is read
+// one level deep.
 //
-// Платформенная часть условия (`linux || windows` у usbip) не учитывается:
-// панель управляет роутером на Linux.
+// The platform part of the condition (`linux || windows` in usbip) is not taken into account:
+// the panel manages a router on Linux.
 func buildGates(dir string) (map[string]map[string]string, error) {
 	consts, err := constantValues(dir)
 	if err != nil {
@@ -49,7 +49,7 @@ func buildGates(dir string) (map[string]map[string]string, error) {
 
 	files, err := filepath.Glob(filepath.Join(dir, "include", "*.go"))
 	if err != nil {
-		return nil, fmt.Errorf("список include: %w", err)
+		return nil, fmt.Errorf("include list: %w", err)
 	}
 
 	gates := map[string]map[string]string{}
@@ -72,25 +72,25 @@ func buildGates(dir string) (map[string]map[string]string, error) {
 				gates[entry.registry] = map[string]string{}
 			}
 			if prev, ok := gates[entry.registry][entry.key]; ok && prev != tag {
-				return nil, fmt.Errorf("тип %s/%s закрыт двумя тегами: %s и %s", entry.registry, entry.key, prev, tag)
+				return nil, fmt.Errorf("type %s/%s is gated by two tags: %s and %s", entry.registry, entry.key, prev, tag)
 			}
 			gates[entry.registry][entry.key] = tag
 		}
 	}
 
 	if len(gates) == 0 {
-		return nil, fmt.Errorf("в %s не нашлось типов под build-тегами: разбор include/ разошёлся с форком", dir)
+		return nil, fmt.Errorf("no types under build tags found in %s: the include/ parsing diverged from the fork", dir)
 	}
 
 	return gates, nil
 }
 
-// fileGateTag отдаёт тег `with_*` из условия сборки файла. Пустая строка —
-// файл собирается всегда.
+// fileGateTag returns the `with_*` tag from the build condition of a file. An empty string means
+// the file is always built.
 func fileGateTag(path string) (string, error) {
 	raw, err := os.ReadFile(path)
 	if err != nil {
-		return "", fmt.Errorf("чтение %s: %w", path, err)
+		return "", fmt.Errorf("reading %s: %w", path, err)
 	}
 
 	for line := range strings.Lines(string(raw)) {
@@ -104,13 +104,13 @@ func fileGateTag(path string) (string, error) {
 
 		expr, err := constraint.Parse(line)
 		if err != nil {
-			return "", fmt.Errorf("условие сборки %s: %w", path, err)
+			return "", fmt.Errorf("build condition %s: %w", path, err)
 		}
 
 		tags := map[string]bool{}
 		collectGateTags(expr, tags)
 		if len(tags) > 1 {
-			return "", fmt.Errorf("%s закрыт несколькими тегами: %v", path, tags)
+			return "", fmt.Errorf("%s is gated by several tags: %v", path, tags)
 		}
 		for tag := range tags {
 			return tag, nil
@@ -142,15 +142,15 @@ type gatedType struct {
 	key      string
 }
 
-// registeredTypes находит в файле регистрации типов. Пустой only — файл
-// include/: из него разрешён шаг в пакет протокола, чья функция принимает
-// реестр. Непустой — файл такого пакета, и читается только названная функция:
-// соседние в том же пакете могут регистрировать типы без всякого тега.
+// registeredTypes finds type registrations in a file. An empty only means the file is
+// from include/: a step into the protocol package whose function takes
+// the registry is allowed from it. A non-empty one means a file of such a package, and only the named function is read:
+// the neighbours in the same package may register types without any tag.
 func registeredTypes(dir, path string, consts map[string]string, only string) ([]gatedType, error) {
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
 	if err != nil {
-		return nil, fmt.Errorf("разбор %s: %w", path, err)
+		return nil, fmt.Errorf("parsing %s: %w", path, err)
 	}
 
 	imports := map[string]string{}
@@ -212,7 +212,7 @@ func registeredTypes(dir, path string, consts map[string]string, only string) ([
 func packageTypes(dir, importPath, fn string, consts map[string]string) ([]gatedType, error) {
 	files, err := filepath.Glob(filepath.Join(dir, strings.TrimPrefix(importPath, forkModule+"/"), "*.go"))
 	if err != nil {
-		return nil, fmt.Errorf("список %s: %w", importPath, err)
+		return nil, fmt.Errorf("list %s: %w", importPath, err)
 	}
 
 	var found []gatedType
@@ -230,7 +230,7 @@ func packageTypes(dir, importPath, fn string, consts map[string]string) ([]gated
 	return found, nil
 }
 
-// calleeOf разбирает `pkg.Fn`, `pkg.Fn[T]` и `pkg.Fn[T, U]`.
+// calleeOf parses `pkg.Fn`, `pkg.Fn[T]` and `pkg.Fn[T, U]`.
 func calleeOf(fun ast.Expr) (pkg, fn string) {
 	switch expr := fun.(type) {
 	case *ast.IndexExpr:
@@ -261,8 +261,8 @@ func constantOf(arg ast.Expr, imports map[string]string, consts map[string]strin
 	return consts[selector.Sel.Name]
 }
 
-// emitGates печатает таблицу тегов. Типы, которых нет в схеме, в неё не
-// попадают: формы для них нет, и помечать нечего.
+// emitGates prints the tag table. Types absent from the schema do not get into
+// it: there is no form for them, and nothing to mark.
 func emitGates(b *strings.Builder, gates map[string]map[string]string, groups []registryGroup) {
 	known := map[string]map[string]bool{}
 	for _, group := range groups {
@@ -273,9 +273,9 @@ func emitGates(b *strings.Builder, gates map[string]map[string]string, groups []
 	}
 
 	b.WriteString(`/**
- * Build-тег, без которого бинарь форка не запустит тип узла: реестр → тип → тег.
- * Прочитано из include/ форка. С какими тегами собран бинарь на устройстве,
- * сообщает демон; тип без записи здесь есть в любой сборке.
+ * The build tag without which the fork binary will not run a node type: registry → type → tag.
+ * Read from the fork include/. Which tags the binary on the device was built with
+ * is reported by the daemon; a type without an entry here is present in any build.
  */
 export const BUILD_TAG_OF_TYPE: Readonly<Record<string, Readonly<Record<string, string>>>> = {
 `)

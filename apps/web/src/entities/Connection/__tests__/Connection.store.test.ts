@@ -17,7 +17,7 @@ import {
 } from '../model/Connection.store';
 import { CONNECTIONS_FIXTURE, makeConnectionsSnapshot } from './Connection.fixture';
 
-describe('поток соединений', () => {
+describe('connections stream', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     ConnectionStore.getState().reset();
@@ -27,7 +27,7 @@ describe('поток соединений', () => {
     vi.useRealTimers();
   });
 
-  it('применяет снапшот пачкой по таймеру, а не на каждое сообщение', async () => {
+  it('applies a snapshot in a batch on a timer, not on every message', async () => {
     const { source, send } = fakeEventSource();
     const unsubscribe = listenConnections(source);
     const applied = vi.fn<() => void>();
@@ -48,7 +48,7 @@ describe('поток соединений', () => {
     unsubscribe();
   });
 
-  it('снимает обработчик и таймер при отписке', async () => {
+  it('removes the handler and timer on unsubscribe', async () => {
     const fake = fakeEventSource();
     const unsubscribe = listenConnections(fake.source);
 
@@ -64,7 +64,7 @@ describe('поток соединений', () => {
     expect(ConnectionStore.getState().active).toHaveLength(0);
   });
 
-  it('переносит пропавшие между снапшотами соединения в закрытые', async () => {
+  it('moves connections that vanished between snapshots to closed', async () => {
     const { source, send } = fakeEventSource();
     const unsubscribe = listenConnections(source);
 
@@ -79,7 +79,7 @@ describe('поток соединений', () => {
     unsubscribe();
   });
 
-  it('не копит закрытые бесконечно', () => {
+  it('does not accumulate closed ones indefinitely', () => {
     const store = ConnectionStore.getState();
 
     store.apply(makeConnectionsSnapshot(CLOSED_LIMIT + 50));
@@ -88,7 +88,7 @@ describe('поток соединений', () => {
     expect(ConnectionStore.getState().closed).toHaveLength(CLOSED_LIMIT);
   });
 
-  it('считает закрытые, вытесненные по лимиту', () => {
+  it('counts closed ones evicted by the limit', () => {
     const store = ConnectionStore.getState();
 
     store.apply(makeConnectionsSnapshot(CLOSED_LIMIT - 10));
@@ -99,7 +99,7 @@ describe('поток соединений', () => {
     store.apply(makeConnectionsSnapshot(30));
     store.apply(makeConnectionsSnapshot(0));
 
-    // Закрылось 220: в списке остаются 200, ещё 20 вытеснено.
+    // 220 closed: 200 stay in the list, another 20 are evicted.
     expect(ConnectionStore.getState().closed).toHaveLength(CLOSED_LIMIT);
     expect(ConnectionStore.getState().evicted).toBe(20);
 
@@ -108,7 +108,7 @@ describe('поток соединений', () => {
     expect(ConnectionStore.getState().evicted).toBe(0);
   });
 
-  it('на паузе снапшот не применяется', async () => {
+  it('on pause the snapshot is not applied', async () => {
     const { source, send } = fakeEventSource();
     const unsubscribe = listenConnections(source);
 
@@ -121,7 +121,7 @@ describe('поток соединений', () => {
     unsubscribe();
   });
 
-  it('оборванный кадр пропускается, следующий снапшот применяется', async () => {
+  it('a torn frame is skipped, the next snapshot is applied', async () => {
     const { source, send, sendRaw } = fakeEventSource();
     const unsubscribe = listenConnections(source);
 
@@ -138,7 +138,7 @@ describe('поток соединений', () => {
     unsubscribe();
   });
 
-  it('держит снапшот на 5000 соединений одним применением', async () => {
+  it('holds a 5000-connection snapshot in one apply', async () => {
     const { source, send } = fakeEventSource();
     const unsubscribe = listenConnections(source);
     const applied = vi.fn<() => void>();
@@ -155,8 +155,8 @@ describe('поток соединений', () => {
   });
 });
 
-describe('идентичность строк между снапшотами', () => {
-  it('неизменившееся соединение остаётся тем же объектом: иначе memo на строке бесполезен', () => {
+describe('row identity between snapshots', () => {
+  it('an unchanged connection stays the same object: otherwise memo on the row is useless', () => {
     const store = ConnectionStore.getState();
     const snapshot = makeConnectionsSnapshot(3);
 
@@ -169,7 +169,7 @@ describe('идентичность строк между снапшотами', 
     expect(ConnectionStore.getState().active[0]).toBe(before);
   });
 
-  it('изменившийся трафик даёт новый объект', () => {
+  it('changed traffic yields a new object', () => {
     const store = ConnectionStore.getState();
     const snapshot = makeConnectionsSnapshot(2);
 
@@ -188,32 +188,32 @@ describe('идентичность строк между снапшотами', 
   });
 });
 
-describe('строка соединения', () => {
+describe('connection row', () => {
   const base = makeConnectionsSnapshot(1).connections[0];
   const NO_RATE = { down: 0, up: 0 };
 
-  it('выход по умолчанию показывает узлом конфига, а не пустой строкой', () => {
+  it('shows the default outbound as a config node, not an empty string', () => {
     const row = toConnectionRow({ ...base, rule: '', action: '', final: true }, NO_RATE);
 
     expect(row.rule).toBe('');
     expect(row.action).toBe(FINAL_ACTION);
   });
 
-  it('правило без условий выходом по умолчанию не считает', () => {
+  it('a rule without conditions is not counted as the default outbound', () => {
     const row = toConnectionRow({ ...base, rule: '', action: 'route(direct)', final: false }, NO_RATE);
 
     expect(row.action).toBe('route(direct)');
   });
 
-  it('цепочку переворачивает в порядок чтения человеком', () => {
+  it('reverses the chain into human reading order', () => {
     const row = toConnectionRow({ ...base, chain: ['hk-01', 'proxy'] }, NO_RATE);
 
     expect(row.chain).toEqual(['proxy', 'hk-01']);
   });
 });
 
-describe('отбраковка снапшота', () => {
-  it('считает снапшоты, которые схема не приняла, и не трогает список', () => {
+describe('snapshot rejection', () => {
+  it('counts snapshots the schema did not accept and does not touch the list', () => {
     const store = ConnectionStore.getState();
 
     store.reset();
@@ -225,7 +225,7 @@ describe('отбраковка снапшота', () => {
   });
 });
 
-describe('сводка и история снапшота', () => {
+describe('summary and snapshot history', () => {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['Date'] });
   });
@@ -234,7 +234,7 @@ describe('сводка и история снапшота', () => {
     vi.useRealTimers();
   });
 
-  it('пишет число открытых соединений в буфер, который дальше минуты не копит', () => {
+  it('writes the open connection count into a buffer that does not keep more than a minute', () => {
     const store = ConnectionStore.getState();
 
     store.reset();
@@ -250,7 +250,7 @@ describe('сводка и история снапшота', () => {
     expect(history.at(-1)).toBe(2);
   });
 
-  it('запоминает, когда пришла последняя точка истории: от неё считается время графика', () => {
+  it('remembers when the last history point arrived: the chart time is counted from it', () => {
     const store = ConnectionStore.getState();
 
     store.reset();
@@ -260,7 +260,7 @@ describe('сводка и история снапшота', () => {
     expect(ConnectionStore.getState().historyAt).toBe(1_000 * MS_IN_SECOND);
   });
 
-  it('засевает пустую историю минутой от демона со временем засева, а заполненную не трогает', () => {
+  it('seeds an empty history with the daemon minute at the seed time, and does not touch a filled one', () => {
     const store = ConnectionStore.getState();
 
     store.reset();
@@ -274,7 +274,7 @@ describe('сводка и история снапшота', () => {
     expect(ConnectionStore.getState().history).toEqual([1, 2, 3]);
   });
 
-  it('считает время точек истории от последней назад с шагом снапшота', () => {
+  it('counts history point times from the last one backward with the snapshot step', () => {
     expect(toHistoryTimes(3, 10 * MS_IN_SECOND)).toEqual([
       10 - 2 * HISTORY_STEP_SECONDS,
       10 - HISTORY_STEP_SECONDS,
@@ -282,7 +282,7 @@ describe('сводка и история снапшота', () => {
     ]);
   });
 
-  it('полный буфер истории начинается не правее левой кромки окна, даже когда точка только что пришла', () => {
+  it('a full history buffer starts no further right than the left edge of the window, even when a point has just arrived', () => {
     const store = ConnectionStore.getState();
 
     store.reset();
@@ -298,7 +298,7 @@ describe('сводка и история снапшота', () => {
     expect(oldest).toBeLessThanOrEqual(leftEdge);
   });
 
-  it('считает сводку тем же снапшотом, что и список', () => {
+  it('computes the summary from the same snapshot as the list', () => {
     const store = ConnectionStore.getState();
 
     store.reset();
@@ -311,7 +311,7 @@ describe('сводка и история снапшота', () => {
     expect(summary.sources.length).toBeGreaterThan(0);
   });
 
-  it('в узлы сводки берёт конец цепочки и только у маршрута через прокси', () => {
+  it('takes the chain end as the summary nodes, and only for a route through a proxy', () => {
     const store = ConnectionStore.getState();
 
     store.reset();
@@ -326,7 +326,7 @@ describe('сводка и история снапшота', () => {
     expect(summary.nodes.every((share) => share.key !== 'direct')).toBe(true);
   });
 
-  it('ставит топы узлов и устройств по объёму, а не по скорости: иначе строки менялись бы местами каждую секунду', () => {
+  it('puts node and device tops by volume, not by speed: otherwise rows would swap places every second', () => {
     const store = ConnectionStore.getState();
 
     store.reset();
@@ -341,7 +341,7 @@ describe('сводка и история снапшота', () => {
     }
   });
 
-  it('считает объём группы суммой байт входящих в неё соединений', () => {
+  it('counts group volume as the sum of bytes of its connections', () => {
     const store = ConnectionStore.getState();
 
     store.reset();
@@ -385,7 +385,7 @@ describe('сводка и история снапшота', () => {
     }
   });
 
-  it('в столбчатой сводке держит только первые группы', () => {
+  it('keeps only the first groups in the bar summary', () => {
     const store = ConnectionStore.getState();
     const sample = CONNECTIONS_FIXTURE.connections[0];
     const many = Array.from({ length: TOP_LIMIT + 3 }, (_, index) => ({
@@ -400,7 +400,7 @@ describe('сводка и история снапшота', () => {
     expect(ConnectionStore.getState().summary.sources).toHaveLength(TOP_LIMIT);
   });
 
-  it('сбрасывает сводку и историю вместе со списком', () => {
+  it('resets the summary and history together with the list', () => {
     const store = ConnectionStore.getState();
 
     store.apply(CONNECTIONS_FIXTURE);
@@ -412,7 +412,7 @@ describe('сводка и история снапшота', () => {
   });
 });
 
-describe('тон действия по типам аутбаундов', () => {
+describe('action tone by outbound types', () => {
   const OUTBOUND_TYPES = new Map([
     ['direct', 'shadowsocks'],
     ['proxy', 'urltest'],
@@ -424,7 +424,7 @@ describe('тон действия по типам аутбаундов', () => {
     ConnectionStore.getState().reset();
   });
 
-  it('разбирает снапшот по карте: тег `direct` типа `shadowsocks` — прокси', () => {
+  it('parses a snapshot by the map: tag `direct` of type `shadowsocks` is a proxy', () => {
     const store = ConnectionStore.getState();
 
     store.reset();
@@ -437,7 +437,7 @@ describe('тон действия по типам аутбаундов', () => {
     expect(active.every((row) => row.kind === ROUTE_KIND.Proxy)).toBe(true);
   });
 
-  it('без карты тот же снапшот читает по строке действия', () => {
+  it('without a map the same snapshot is read by the action string', () => {
     const store = ConnectionStore.getState();
 
     store.reset();
@@ -449,7 +449,7 @@ describe('тон действия по типам аутбаундов', () => {
     expect(direct.every((row) => row.kind === ROUTE_KIND.Direct)).toBe(true);
   });
 
-  it('карта, пришедшая после снапшота, перекрашивает уже разобранные строки', () => {
+  it('a map that arrives after the snapshot recolors the rows already parsed', () => {
     const store = ConnectionStore.getState();
 
     store.reset();
@@ -471,7 +471,7 @@ describe('тон действия по типам аутбаундов', () => {
     expect(after.summary.actions.find((share) => share.key === ROUTE_KIND.Direct)).toBeUndefined();
   });
 
-  it('сброс списка карту не теряет: конфиг перечитывать незачем', () => {
+  it('a list reset does not lose the map: no need to reread the config', () => {
     const store = ConnectionStore.getState();
 
     store.setOutboundTypes(OUTBOUND_TYPES);

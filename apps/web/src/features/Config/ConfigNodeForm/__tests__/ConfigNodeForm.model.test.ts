@@ -2,34 +2,34 @@ import { describe, expect, it } from 'vitest';
 
 import { listToText, packList, parseNumber, parseScalar, textToList, UNSET } from '../model';
 
-describe('значения полей формы узла', () => {
-  it('многострочное поле отдаёт значения без пустых строк и пробелов по краям', () => {
+describe('node form field values', () => {
+  it('a multiline field returns values without empty lines and edge spaces', () => {
     expect(textToList(' a.example \n\n b.example ', false)).toEqual(['a.example', 'b.example']);
   });
 
-  it('одно значение listable-поля остаётся строкой, обычного списка — списком', () => {
+  it('a single value of a listable field stays a string, an ordinary list stays a list', () => {
     expect(textToList('h2', true)).toBe('h2');
     expect(textToList('h2', false)).toEqual(['h2']);
     expect(packList(['tcp', 'udp'], true)).toEqual(['tcp', 'udp']);
   });
 
-  it('пустой список значит «ключа нет»', () => {
+  it('an empty list means "no key"', () => {
     expect(textToList('\n  \n', true)).toBe(UNSET);
     expect(packList([], false)).toBe(UNSET);
   });
 
-  it('listable-строка показывается одной строкой, список — по значению на строку', () => {
+  it('a listable string is shown as one line, a list as one value per line', () => {
     expect(listToText('h2')).toBe('h2');
     expect(listToText(['h2', 'http/1.1'])).toBe('h2\nhttp/1.1');
   });
 
-  it('поле «строка или число» отдаёт цифры числом, прочее — строкой', () => {
+  it('a "string or number" field returns digits as a number, anything else as a string', () => {
     expect(parseScalar('255')).toBe(255);
     expect(parseScalar('0xff')).toBe('0xff');
     expect(parseScalar('  ')).toBe(UNSET);
   });
 
-  it('пустое числовое поле значит «ключа нет»', () => {
+  it('an empty numeric field means "no key"', () => {
     expect(parseNumber('')).toBe(UNSET);
     expect(parseNumber('443')).toBe(443);
   });

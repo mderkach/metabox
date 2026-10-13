@@ -1,18 +1,18 @@
-/** Недоступность демона гасит панель, его ответ ошибкой — только экран. */
+/** Daemon unavailability disables the panel, while its error response disables only the screen. */
 export const API_FAILURE = {
   Unreachable: 'unreachable',
   Response: 'response',
   /**
-   * Ответ пришёл, но схема его не приняла. Рождается не в транспорте, а в
-   * фабрике опций, поэтому `status`, `code` и `details` транспорта у него нет:
-   * в `details` лежит разбор ошибки схемы.
+   * The response arrived but the schema did not accept it. Born not in the transport but in the
+   * option factory, so it has none of the transport's `status`, `code` and `details`:
+   * `details` holds the schema error breakdown.
    */
   Schema: 'schema',
 } as const;
 
 export type ApiFailure = (typeof API_FAILURE)[keyof typeof API_FAILURE];
 
-/** `details` у `check_failed` несёт дословный вывод sing-box. */
+/** `details` of `check_failed` carries the verbatim sing-box output. */
 export class ApiError extends Error {
   readonly kind: ApiFailure;
   readonly status: number | null;

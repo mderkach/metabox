@@ -1,122 +1,122 @@
-# ADR-0001. Извлекать схему конфига из реестров форка рефлексией, с его же build-тегами
+# ADR-0001. Extract the config schema from the fork's registries by reflection, with the fork's own build tags
 
-- Статус: Accepted
-- Дата: 2026-09-07
-- Ответственные: владелец репозитория
-- Заменяет: раздел A.2.1 [`../PRD.md`](../PRD.md)
+- Status: Accepted
+- Date: 2026-09-07
+- Deciders: repository owner
+- Supersedes: section A.2.1 of [`../PRD.md`](../PRD.md)
 
-## Контекст и постановка проблемы
+## Context and problem statement
 
-UI обязан покрыть весь конфиг sing-box-extended: критерии AC-1…AC-6 требуют разобрать произвольный `config.json`, подсветить невалидные значения и дать рендерер каждому типу inbound и outbound. Рукописные типы под такую задачу не годятся — они протухают на каждом релизе форка.
+The UI must cover the whole sing-box-extended config: criteria AC-1…AC-6 require parsing an arbitrary `config.json`, highlighting invalid values and giving a renderer to every inbound and outbound type. Handwritten types do not fit this task: they go stale with every fork release.
 
-Форк не отдаёт схему ни в каком виде. Полезная нагрузка узлов `inbound`, `outbound`, `endpoint`, `provider`, `service` и DNS-транспортов объявлена в Go как `any` и подставляется в рантайме из реестра по строке типа. Статические генераторы Go→TypeScript такое не разбирают: пришлось бы воспроизвести резолвинг build-тегов и дженериков Go.
+The fork does not expose a schema in any form. The payload of `inbound`, `outbound`, `endpoint`, `provider`, `service` and DNS transport nodes is declared in Go as `any` and is substituted at runtime from a registry by the type string. Static Go→TypeScript generators cannot parse this: they would have to reproduce Go's resolution of build tags and generics.
 
-Общий подход — собственная Go-программа, импортирующая форк как библиотеку — задан разделом A.2.1 PRD. Описанный там алгоритм расходится с устройством форка в деталях, от которых зависит, будет схема полной или молча урезанной; здесь он задан заново.
+The general approach, a dedicated Go program that imports the fork as a library, is set by section A.2.1 of the PRD. The algorithm described there diverges from the fork's structure in details that decide whether the schema is complete or silently truncated; this ADR defines it anew.
 
-В scope: как получить список типов, как перевести Go-типы в Zod, чем сборка защищена от неполноты. Вне scope: формат хранения конфига демоном, адаптерный слой между схемой и моделью metabox, отслеживание релизов форка (R-2, AC-28).
+In scope: how to get the list of types, how to translate Go types into Zod, what protects the build from incompleteness. Out of scope: the daemon's config storage format, the adapter layer between the schema and the metabox model, tracking fork releases (R-2, AC-28).
 
-## Критерии выбора
+## Decision drivers
 
-- Полнота: в схему попадают все типы, которые понимает бинарь на устройстве.
-- Обнаружимость неполноты: неполная схема обязана ломать сборку, а не тихо терять узлы.
-- Соответствие ограничению A.2.1: результат представим для `z.toJSONSchema()`, иначе не работает авторендерер. Схема остаётся `ZodObject` и композируется через `.extend()`.
-- Стоимость сопровождения при подъёме версии форка.
-- Устойчивость к приватным деталям форка: чем меньше опоры на неэкспортированное, тем лучше.
+- Completeness: the schema includes every type the binary on the device understands.
+- Detectable incompleteness: an incomplete schema must break the build, not silently lose nodes.
+- Compliance with the A.2.1 constraint: the result is representable for `z.toJSONSchema()`, otherwise the autorenderer does not work. The schema stays a `ZodObject` and is composed with `.extend()`.
+- Maintenance cost when bumping the fork version.
+- Resilience to private details of the fork: the less reliance on unexported code, the better.
 
-## Рассмотренные варианты
+## Considered options
 
-### Источник списка типов
+### Source of the type list
 
-1. **Перебор строк из `constant/proxy.go`** (как записано в A.2.1) — **отклонён**. Покрывает три реестра из шести: типы DNS-транспортов объявлены в `constant/dns.go`, провайдеров — в `constant/provider.go`. Из 95 зарегистрированных типов остались бы 78.
-2. **Чтение приватной map реестра через `reflect` и `unsafe`** — **отклонён для сборки, принят для теста**. Даёт точный список того, что умеет реестр, но опирается на имя неэкспортированного поля `optionsType`: переименование в форке роняет генерацию в рантайме.
-3. **Перебор строковых констант всего пакета `constant` через `go/ast`** — **принят**. 118 констант прогоняются через `CreateOptions` каждого реестра, лишние отсеиваются. Без `unsafe`, новые типы форка подхватываются сами.
+1. **Iterate over the strings from `constant/proxy.go`** (as written in A.2.1): **rejected**. Covers three registries out of six: DNS transport types are declared in `constant/dns.go`, provider types in `constant/provider.go`. Of 95 registered types, 78 would remain.
+2. **Read the registry's private map through `reflect` and `unsafe`**: **rejected for the build, chosen for a test**. Gives the exact list of what the registry supports, but relies on the name of the unexported field `optionsType`: a rename in the fork breaks generation at runtime.
+3. **Iterate over the string constants of the whole `constant` package through `go/ast`**: **chosen**. 118 constants are run through `CreateOptions` of every registry, and the extra ones are filtered out. No `unsafe`, and new fork types are picked up automatically.
 
-Слабое место третьего варианта — тип, зарегистрированный под строкой, для которой константы нет: он выпал бы из схемы молча. Это закрывается вторым вариантом в роли теста.
+The weak spot of the third option is a type registered under a string that has no constant: it would silently drop out of the schema. The second option, in the role of a test, closes this gap.
 
-### Набор build-тегов
+### Build tag set
 
-1. **Собирать генератор без тегов** — **отклонён**. Без `with_wireguard` из реестра endpoint'ов пропадает тип `warp`, и схема молча выходит неполной.
+1. **Build the generator without tags**: **rejected**. Without `with_wireguard` the `warp` type disappears from the endpoint registry, and the schema silently ends up incomplete.
 
-   На состав схемы теги влияют только здесь: `include/wireguard.go` под тегом регистрирует и `wireguard`, и `warp`, а `include/wireguard_stub.go` — только `wireguard`. Прочие шестнадцать пар `include/*.go` и `include/*_stub.go` регистрируют одинаковые типы с одинаковыми типами опций — `quic_stub.go` объявляет те же `option.TUICInboundOptions` и `option.Hysteria2InboundOptions`, что и `quic.go`. Цена механизма (чтение `DEFAULT_BUILD_TAGS`, `-checklinkname=0`, сверка `checkBuildTags`) платится ради одного типа; соразмерность — открытый вопрос.
+   Tags affect the schema's contents only here: `include/wireguard.go` under the tag registers both `wireguard` and `warp`, while `include/wireguard_stub.go` registers only `wireguard`. The other sixteen pairs of `include/*.go` and `include/*_stub.go` register the same types with the same option types: `quic_stub.go` declares the same `option.TUICInboundOptions` and `option.Hysteria2InboundOptions` as `quic.go`. The cost of the mechanism (reading `DEFAULT_BUILD_TAGS`, `-checklinkname=0`, the `checkBuildTags` check) is paid for a single type; whether this is proportionate is an open question.
 
-2. **Зафиксировать список тегов в нашем Makefile** — **отклонён**. Список разъедется с форком при его обновлении, и разъезд снова проявится молча.
-3. **Читать набор из `release/DEFAULT_BUILD_TAGS` самого форка** — **принят**. Файл лежит в module cache, `make schema` берёт теги оттуда, а генератор сверяет с ним свои теги и отказывается печатать схему при расхождении.
+2. **Pin the tag list in our Makefile**: **rejected**. The list drifts from the fork when the fork is updated, and the drift again shows up silently.
+3. **Read the set from the fork's own `release/DEFAULT_BUILD_TAGS`**: **chosen**. The file lives in the module cache, `make schema` takes the tags from there, and the generator checks its own tags against it and refuses to print the schema on a mismatch.
 
-Набор `DEFAULT_BUILD_TAGS_OTHERS`, на который ссылается Makefile форка, не подошёл: тег `with_admin_panel` требует `//go:embed dist` с ассетами панели, которых в module cache нет.
+The `DEFAULT_BUILD_TAGS_OTHERS` set that the fork's Makefile refers to did not fit: the `with_admin_panel` tag requires `//go:embed dist` with panel assets, which the module cache does not have.
 
-## Принятое решение
+## Decision outcome
 
-Схема генерируется программой `tools/schemagen` — отдельным Go-модулем, чтобы дерево зависимостей sing-box не линковалось в демон.
+The schema is generated by the `tools/schemagen` program, a separate Go module, so that the sing-box dependency tree is not linked into the daemon.
 
-**Список типов.** Строковые константы пакета `constant` форка читаются разбором AST и прогоняются через `CreateOptions` шести реестров: inbound, outbound, endpoint, provider, DNS-транспорты, service. Тип, для которого конфигурировать нечего, в схему не идёт: `block` и `wireguard` в outbound-реестре объявлены с пустым `option.StubOptions`, `shadowsocksr` оставлен заглушкой удалённого протокола.
+**Type list.** The string constants of the fork's `constant` package are read by parsing the AST and are run through `CreateOptions` of six registries: inbound, outbound, endpoint, provider, DNS transports, service. A type with nothing to configure does not go into the schema: `block` and `wireguard` in the outbound registry are declared with an empty `option.StubOptions`, and `shadowsocksr` is left as a stub of a removed protocol.
 
-**Build-теги.** Цель `make schema` читает `release/DEFAULT_BUILD_TAGS` и `release/LDFLAGS` из каталога форка и передаёт их в `go run`. Флаг `-checklinkname=0` обязателен: форк подменяет внутренности `crypto/tls` через `go:linkname`. Генератор сверяет собственные теги (`debug.ReadBuildInfo`) с этим файлом и падает с перечислением недостающих.
+**Build tags.** The `make schema` target reads `release/DEFAULT_BUILD_TAGS` and `release/LDFLAGS` from the fork's directory and passes them to `go run`. The `-checklinkname=0` flag is required: the fork swaps internals of `crypto/tls` through `go:linkname`. The generator checks its own tags (`debug.ReadBuildInfo`) against this file and fails, listing the missing ones.
 
-**Перевод типов.** Дерево полей обходится рефлексией, встроенные структуры уплощаются — `badjson.MarshallObjects` кладёт их в JSON плоско. Затенение имён при встраивании повторяет правила `encoding/json`: побеждает поле с меньшей глубиной, поля одинаковой глубины конфликтуют и в JSON не попадают.
+**Type translation.** The field tree is walked by reflection, and embedded structs are flattened: `badjson.MarshallObjects` puts them into JSON flat. Name shadowing on embedding follows the `encoding/json` rules: the field with the smaller depth wins, fields of the same depth conflict and do not appear in JSON.
 
-**Таблица переопределений.** У 69 типов форка своя сериализация, и форма JSON не выводится из полей Go-структуры. Правила записаны по `UnmarshalJSON` форка, а не по документации. Дженерики покрываются шаблоном по базовому имени: `badoption.Listable[T]`, `badjson.TypedMap[K,V]`, `badoption.Range[T]`. Значения перечислений, которые форк держит в экспортированных мапах (`C.StringToNetworkStrategy`, `C.StringToInterfaceType`), берутся из форка, а не дублируются в генераторе.
+**Override table.** 69 fork types have their own serialization, and the JSON shape cannot be derived from the Go struct fields. The rules are written from the fork's `UnmarshalJSON`, not from the documentation. Generics are covered by a template keyed on the base name: `badoption.Listable[T]`, `badjson.TypedMap[K,V]`, `badoption.Range[T]`. Enum values that the fork keeps in exported maps (`C.StringToNetworkStrategy`, `C.StringToInterfaceType`) are taken from the fork, not duplicated in the generator.
 
-**Тип со своей сериализацией и без правила обрывает генерацию.** Обойти его поля значит напечатать схему, не совпадающую с конфигом, поэтому такие типы накапливаются и печатаются списком с путями, где встретились.
+**A type with its own serialization and no rule aborts generation.** Walking its fields would print a schema that does not match the config, so such types are collected and printed as a list with the paths where they occurred.
 
-**Обязательность полей.** Все поля схемы опциональны, кроме дискриминатора union'а: `encoding/json` не знает обязательных полей, отсутствие ключа даёт нулевое значение, а не ошибку. Обязательность — вопрос семантики sing-box, и её арбитр — `sing-box check` (AC-26).
+**Required fields.** All schema fields are optional except the union discriminator: `encoding/json` has no notion of required fields, and a missing key gives the zero value, not an error. Whether a field is required is a matter of sing-box semantics, and its arbiter is `sing-box check` (AC-26).
 
-**Форма вывода.** Объекты печатаются как `z.looseObject`: нераспознанные конструкции обязаны переживать round-trip (AC-3), а `strip` по умолчанию их бы выбросил. Ссылки между схемами внутри объектов идут геттерами — так рекурсию разрешает сам Zod. Union по обязательному дискриминатору печатается через `z.discriminatedUnion`, по опциональному — через `z.union`. Правило маршрутизации встраивает действие, и в JSON они лежат на одном уровне, поэтому объект размножается по вариантам действия, а общие поля выносятся в отдельную схему и подключаются через `.extend()`.
+**Output shape.** Objects are printed as `z.looseObject`: unrecognized constructs must survive a round-trip (AC-3), and the default `strip` would drop them. References between schemas inside objects go through getters, so Zod itself resolves recursion. A union on a required discriminator is printed with `z.discriminatedUnion`, on an optional one with `z.union`. A routing rule embeds the action, and in JSON they sit on the same level, so the object is multiplied by action variants, while the common fields move into a separate schema and are attached with `.extend()`.
 
-Ограничение A.2.1 сохраняется: `.transform()` в генерируемом файле запрещён, иначе ломается `z.toJSONSchema()`, на которой стоит авторендерер.
+The A.2.1 constraint stays: `.transform()` is forbidden in the generated file, otherwise `z.toJSONSchema()`, on which the autorenderer is built, breaks.
 
-### Область действия и границы
+### Scope and boundaries
 
-Решение распространяется на `tools/schemagen`, цели `schema` и `test-schemagen` в `Makefile` и на генерируемый `apps/web/src/shared/api/generated.ts`. Файл перезатирается целиком, рукописного кода в нём нет. Адаптеры — переименования и миграции полей — живут отдельным рукописным модулем и в авторендерер не попадают.
+The decision covers `tools/schemagen`, the `schema` and `test-schemagen` targets in the `Makefile`, and the generated `apps/web/src/shared/api/generated.ts`. The file is overwritten entirely and contains no handwritten code. Adapters (field renames and migrations) live in a separate handwritten module and do not reach the autorenderer.
 
-## Последствия
+## Consequences
 
-### Положительные
+### Positive
 
-- Схема покрывает все 95 типов, которые понимает бинарь с релизными тегами форка.
-- Неполнота обнаруживается тремя разными способами: недостающие теги ловит `checkBuildTags` до печати схемы (иначе схема потеряла бы `warp` молча), тип со своей сериализацией без правила обрывает генерацию, тип без константы ловит `TestRegistryKeysHaveConstants`.
-- Подъём версии форка не требует правок в списке типов и в значениях перечислений — они читаются из форка.
+- The schema covers all 95 types the binary with the fork's release tags understands.
+- Incompleteness is detected in three different ways: missing tags are caught by `checkBuildTags` before the schema is printed (otherwise the schema would lose `warp` silently), a type with its own serialization and no rule aborts generation, and a type without a constant is caught by `TestRegistryKeysHaveConstants`.
+- Bumping the fork version needs no edits to the type list or the enum values: they are read from the fork.
 
-### Отрицательные
+### Negative
 
-- Генератор собирается со всем деревом зависимостей sing-box: первая сборка занимает минуты и заметно нагружает машину.
-- Блок `replace` в `tools/schemagen/go.mod` дублирует десять строк из go.mod форка и синхронизируется вручную.
-- Схема строже бинаря в одном месте: `option.CurvePreference` форк принимает в любом регистре, а JSON Schema не умеет регистронезависимый `pattern`.
+- The generator is built with the whole sing-box dependency tree: the first build takes minutes and puts a noticeable load on the machine.
+- The `replace` block in `tools/schemagen/go.mod` duplicates ten lines from the fork's go.mod and is synchronized by hand.
+- The schema is stricter than the binary in one place: the fork accepts `option.CurvePreference` in any case, and JSON Schema has no case-insensitive `pattern`.
 
-### Нейтральные или отложенные
+### Neutral or deferred
 
-- Теги схемы и теги бинаря на целевом устройстве не совпадают: у бинаря есть `with_manager`, `with_admin_panel`, `with_profiler`, но нет `with_ccm` и `with_ocm`. На состав схемы это влияет только через `warp`, но типы `ccm` и `ocm` схема описывает, а устройство их не запускает; решение вынесено в PRD как OQ-7.
-- Конфиг sing-box допускает комментарии, и 13 примеров форка ими пользуются. Разбор JSONC с сохранением комментариев при round-trip — вопрос AC-2 и AC-23, решается в M3.
+- The schema's tags and the binary's tags on the target device differ: the binary has `with_manager`, `with_admin_panel`, `with_profiler`, but not `with_ccm` and `with_ocm`. This affects the schema's contents only through `warp`, but the schema describes the `ccm` and `ocm` types while the device does not run them; the decision is moved to the PRD as OQ-7.
+- The sing-box config allows comments, and 13 of the fork's examples use them. Parsing JSONC while keeping comments through a round-trip is a matter of AC-2 and AC-23 and is solved in M3.
 
-## Риски и меры снижения
+## Risks and mitigations
 
-| Риск                                              | Вероятность и влияние                     | Митигация                                                                                         |
-| ------------------------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| Форк регистрирует тип под строкой без константы   | низкая; тип молча выпадает из схемы       | `TestRegistryKeysHaveConstants` читает ключи реестров через `unsafe` и сверяет с константами      |
-| Форк переименовывает поле `optionsType` в реестре | низкая; падает только тест, не генерация  | Тест сообщает, что устройство реестров изменилось                                                 |
-| Схема собрана без части тегов                     | средняя при ручном запуске; схема урезана | `checkBuildTags` сверяет теги сборки с `release/DEFAULT_BUILD_TAGS` и отказывается печатать схему |
-| Новый тип форка со своей сериализацией            | высокая при обновлении; схема разойдётся  | Генерация обрывается со списком типов без правил                                                  |
+| Risk                                                      | Likelihood and impact                           | Mitigation                                                                                                     |
+| --------------------------------------------------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| The fork registers a type under a string with no constant | low; the type silently drops out of the schema  | `TestRegistryKeysHaveConstants` reads the registry keys through `unsafe` and checks them against the constants |
+| The fork renames the `optionsType` field in the registry  | low; only the test fails, not generation        | The test reports that the registry structure has changed                                                       |
+| The schema is built without some of the tags              | medium on a manual run; the schema is truncated | `checkBuildTags` checks the build tags against `release/DEFAULT_BUILD_TAGS` and refuses to print the schema    |
+| A new fork type with its own serialization                | high on an update; the schema drifts            | Generation aborts with a list of types that have no rules                                                      |
 
-## Совместимость, миграция и откат
+## Compatibility, migration and rollback
 
-Миграции нет: генератор и его артефакт появляются впервые, потребителей у схемы пока нет.
+No migration: the generator and its artifact appear for the first time, and the schema has no consumers yet.
 
-Откат — вернуть заглушку и снять `zod` с фронта; ничего, кроме самого генератора и `apps/web/src/shared/api/generated.ts`, решение не затрагивает.
+Rollback is to restore the stub and remove `zod` from the frontend; the decision touches nothing besides the generator itself and `apps/web/src/shared/api/generated.ts`.
 
-Подъём версии форка выполняется правкой тега в `replace`-блоке `tools/schemagen/go.mod` (весь блок синхронизируется с go.mod форка) и прогоном `make schema`; диф генерируемого файла показывает изменения схемы.
+The fork version is bumped by editing the tag in the `replace` block of `tools/schemagen/go.mod` (the whole block is synchronized with the fork's go.mod) and running `make schema`; the diff of the generated file shows the schema changes.
 
-## Проверка решения
+## Validation
 
-- `make schema` печатает схему без ошибок; `make test` включает `test-schemagen` и прогоняет тесты генератора с теми же тегами.
-- `TestGenerate` проверяет, что схема собирается целиком и не содержит `.transform()`; `TestGenerateIsStable` — что два прогона дают одинаковый файл.
-- `TestRegistryKeysHaveConstants` ловит тип без константы.
-- Схема разбирает примеры конфигов из `examples/` форка: на версии `v1.13.18-extended-2.6.5` это 70 файлов из 83, остальные 13 — JSON с комментариями, которые `JSON.parse` не берёт.
-- `z.toJSONSchema(ConfigSchema)` отрабатывает — иначе авторендерер по AC-5 не построить. Проверять нужно сторону по умолчанию: `z.toJSONSchema(schema, { io: 'input' })` переваривает и трансформ, поэтому запрет `.transform()` на нём одном не держится.
-- `TestGenerate` не пропускает `.transform()` в схеме. Запрет стоит на двух доводах сразу: `ZodPipe` теряет `.extend()`, `.omit()` и `.pick()`, на которых собрана схема правил, а `z.toJSONSchema()` на выходной стороне трансформа непредставим — авторендерер получил бы пустой узел вместо поля.
-- `pnpm --filter web build` проверяет, что схема компилируется TypeScript.
+- `make schema` prints the schema without errors; `make test` includes `test-schemagen` and runs the generator's tests with the same tags.
+- `TestGenerate` checks that the schema is built in full and contains no `.transform()`; `TestGenerateIsStable` checks that two runs give the same file.
+- `TestRegistryKeysHaveConstants` catches a type without a constant.
+- The schema parses the config examples from the fork's `examples/`: on version `v1.13.18-extended-2.6.5` this is 70 files of 83; the remaining 13 are JSON with comments, which `JSON.parse` does not accept.
+- `z.toJSONSchema(ConfigSchema)` succeeds; otherwise the autorenderer for AC-5 cannot be built. The default side must be checked: `z.toJSONSchema(schema, { io: 'input' })` also digests a transform, so the `.transform()` ban cannot rest on it alone.
+- `TestGenerate` does not let `.transform()` into the schema. The ban rests on two arguments at once: `ZodPipe` loses `.extend()`, `.omit()` and `.pick()`, on which the rule schema is built, and `z.toJSONSchema()` cannot represent the output side of a transform: the autorenderer would get an empty node instead of a field.
+- `pnpm --filter web build` checks that the schema compiles with TypeScript.
 
-## Ссылки
+## Links
 
-- [`../PRD.md`](../PRD.md) — раздел A.2.1 (замещается этим ADR), критерии AC-1…AC-6, AC-26, AC-28, риск R-2;
-- [`../../tools/schemagen`](../../tools/schemagen) — реализация;
-- [`../../web/docs/guides/Form&Validation.md`](../../apps/web/docs/guides/Form&Validation.md) — правила обращения с генерируемыми схемами на фронте;
-- [sing-box-extended](https://github.com/shtorm-7/sing-box-extended) — форк, версия `v1.13.18-extended-2.6.5`.
+- [`../PRD.md`](../PRD.md): section A.2.1 (superseded by this ADR), criteria AC-1…AC-6, AC-26, AC-28, risk R-2;
+- [`../../tools/schemagen`](../../tools/schemagen): implementation;
+- [`../../web/docs/guides/Form&Validation.md`](../../apps/web/docs/guides/Form&Validation.md): rules for handling generated schemas on the frontend;
+- [sing-box-extended](https://github.com/shtorm-7/sing-box-extended): the fork, version `v1.13.18-extended-2.6.5`.

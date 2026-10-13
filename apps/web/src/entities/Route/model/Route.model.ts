@@ -1,18 +1,18 @@
 import { ROUTE_REASON_CODE } from '../api/Route.schema';
 
-/** Коды причин, по которым правило определить не вышло: набор объявлен демоном. */
+/** Reason codes why the rule could not be determined: the set is declared by the daemon. */
 export type RouteReasonCode = (typeof ROUTE_REASON_CODE)[number];
 
 /**
- * Происхождение утверждения. Значений ровно три, и утверждение без
- * происхождения на экран не попадает.
+ * Origin of a claim. There are exactly three values, and a claim without an
+ * origin does not reach the screen.
  */
 export const ROUTE_ORIGIN = {
-  /** Пришло от core: список правил, сработавшее правило, цепочка. */
+  /** Came from core: the rule list, the matched rule, the chain. */
   Observed: 'observed',
-  /** Вычислено metabox или получено вопросом к бинарю. */
+  /** Computed by metabox or obtained by asking the binary. */
   Computed: 'computed',
-  /** Вычислить нечем. */
+  /** Nothing to compute with. */
   Unknown: 'unknown',
 } as const;
 
@@ -20,7 +20,7 @@ export type RouteOrigin = (typeof ROUTE_ORIGIN)[keyof typeof ROUTE_ORIGIN];
 
 export const ROUTE_MATCH = {
   Rule: 'rule',
-  /** Ни одно правило не совпало — использован `route.final`. */
+  /** No rule matched: `route.final` was used. */
   Final: 'final',
   Unknown: 'unknown',
 } as const;
@@ -29,7 +29,7 @@ export type RouteMatchKind = (typeof ROUTE_MATCH)[keyof typeof ROUTE_MATCH];
 
 export interface RouteRule {
   origin: RouteOrigin;
-  /** Индекс узла `route.rules`, считая с нуля. */
+  /** `route.rules` node index, counting from zero. */
   index: number;
   type: string;
   conditions: string;
@@ -39,13 +39,13 @@ export interface RouteRule {
 export interface RouteMatch {
   origin: RouteOrigin;
   kind: RouteMatchKind;
-  /** `null` — узла в `route.rules` нет: `final` или неизвестность. */
+  /** `null` means there is no node in `route.rules`: `final` or unknown. */
   index: number | null;
   conditions: string;
   action: string;
-  /** Почему вычислить не удалось; пусто у найденного правила. */
+  /** Why it could not be computed; empty for a found rule. */
   reasonCode: RouteReasonCode | null;
-  /** Та же причина словами демона: запасной текст для незнакомого кода. */
+  /** The same reason in the daemon's words: fallback text for an unfamiliar code. */
   reason: string;
 }
 
@@ -54,25 +54,25 @@ export interface RouteExplanation {
   match: RouteMatch;
   chain: {
     origin: RouteOrigin;
-    /** Порядок core: от конечного узла к группе. */
+    /** Core order: from the final node to the group. */
     nodes: string[];
   };
   rules: RouteRule[];
 }
 
 /**
- * Счёт срабатываний правил работающего процесса. Наблюдаемый: соединение,
- * закрывшееся между двумя снапшотами демона, в него не попадает.
+ * Rule hit count of the running process. Observable: a connection that closed
+ * between two daemon snapshots does not get into it.
  */
 export interface RuleHits {
-  /** Сколько идёт счёт: с запуска демона, перезапуск его обнуляет. */
+  /** How long the count has been running: since the daemon start, its restart resets it. */
   seconds: number;
   /**
-   * Срабатывания по индексу `route.rules` процесса, считая с нуля. `null` —
-   * правило в списке соединений core не видно: `sniff` не останавливает
-   * перебор, а перехваченный DNS и отклонённое соединение туда не попадают.
+   * Hits by process `route.rules` index, counting from zero. `null` means core
+   * does not see the rule in the connection list: `sniff` does not stop the
+   * search, and intercepted DNS and a rejected connection do not get there.
    */
   byIndex: readonly (number | null)[];
-  /** Соединения, ушедшие в `route.final`. */
+  /** Connections that went to `route.final`. */
   final: number;
 }

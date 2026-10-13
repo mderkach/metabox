@@ -1,17 +1,17 @@
-# Файлы, процессы, сервис
+# Files, processes, service
 
-Всё, чем демон трогает устройство: запись конфига, вызовы `sing-box`, управление сервисом через procd, состояние транзакции Apply.
+Everything through which the daemon touches the device: writing the config, calling `sing-box`, managing the service through procd, the Apply transaction state.
 
-## Атомарная запись
+## Atomic write
 
-Прерывание питания в момент записи не оставляет полузаписанный `config.json`. Последовательность ровно такая и сокращению не подлежит:
+A power loss during a write does not leave a half-written `config.json`. The sequence is exactly this and must not be shortened:
 
-1. временный файл в **том же каталоге** — `rename` атомарен только внутри файловой системы;
-2. запись данных;
-3. `f.Sync()` — без него `rename` может дать файл нулевой длины после сбоя питания;
-4. `f.Close()` с проверкой ошибки;
+1. a temporary file in **the same directory**: `rename` is atomic only within one file system;
+2. write the data;
+3. `f.Sync()`: without it `rename` can yield a zero-length file after a power failure;
+4. `f.Close()` with an error check;
 5. `os.Rename(tmp, dst)`;
-6. `Sync()` на **каталоге** — иначе после сбоя каталог может не содержать новой записи.
+6. `Sync()` on the **directory**: otherwise after a failure the directory may not contain the new entry.
 
 ```go
 func writeAtomic(dir, name string, data []byte, perm os.FileMode) (err error) {
@@ -47,25 +47,27 @@ func writeAtomic(dir, name string, data []byte, perm os.FileMode) (err error) {
 }
 ```
 
-Имя временного файла не оканчивается на `.json`: служба может подниматься в режиме каталога (`sing-box -D /etc/sing-box -C /etc/sing-box run`) и тогда сливает все `.json` каталога — временный файл иначе попадёт в конфиг между шагами. Пакет форка поднимает её одним файлом (`run -c <conffile> -D <workdir>`), но демон обязан выдерживать оба режима.
+The error texts in the examples are in Russian, like all daemon error texts: see [ErrorsAndLogging](./ErrorsAndLogging.md).
 
-`os.CreateTemp` создаёт файл с правами 0600. Права целевого файла берутся у существующего (`os.Stat` перед записью), а не назначаются константой: владелец мог их сузить осознанно. Служебные файлы демона — бэкап и состояние транзакции — лежат вне каталога конфига и создаются с 0600: в них то же содержимое, что в конфиге, включая ключи.
+The temporary file name does not end in `.json`: the service can run in directory mode (`sing-box -D /etc/sing-box -C /etc/sing-box run`) and then merges all `.json` files of the directory; otherwise the temporary file gets into the config between steps. The fork's package runs it with a single file (`run -c <conffile> -D <workdir>`), but the daemon must handle both modes.
 
-Ошибка на любом шаге до `rename` обязана оставить `config.json` побайтово прежним. Это проверяется тестом, а не рассуждением.
+`os.CreateTemp` creates the file with mode 0600. The target file mode is taken from the existing file (`os.Stat` before writing), not set by a constant: the owner may have narrowed it on purpose. The daemon's service files, the backup and the transaction state, live outside the config directory and are created with 0600: they hold the same content as the config, including keys.
 
-В примере ошибка `tmp.Close()` на путях отказа не проверяется намеренно: запись уже провалилась, временный файл всё равно удаляется, а подмена причины отказа мешает разбирать инцидент. На успешном пути ошибка `Close` обязательна к проверке — там она означает неполную запись.
+An error at any step before `rename` must leave `config.json` byte-for-byte unchanged. This is checked by a test, not by reasoning.
 
-**Не проверено:** поведение `fsync` каталога на overlayfs OpenWrt. Пока замера нет, атомарность записи на устройстве не подтверждена.
+In the example the `tmp.Close()` error on failure paths is deliberately not checked: the write has already failed, the temporary file is removed anyway, and replacing the failure reason hinders incident analysis. On the success path the `Close` error must be checked: there it means an incomplete write.
 
-## Пути
+**Not verified:** the behaviour of directory `fsync` on OpenWrt overlayfs. Until there is a measurement, write atomicity on the device is not confirmed.
 
-Пути к каталогу конфига, бэкапу и состоянию приходят флагами. Значения по умолчанию — устройственные (`/etc/sing-box`, `/etc/metabox`), но в коде они существуют только как значения флагов: тесты и стенд всегда передают свои, иначе прогон идёт по живой системе.
+## Paths
 
-Если путь собирается из значения, пришедшего снаружи (имя версии конфига, имя rule-set), доступ идёт через `os.Root` (Go 1.24): он держит операции внутри каталога и не даёт выйти по симлинку или `..`. У `os.Root` нет `CreateTemp` — временное имя генерируется самостоятельно и открывается `root.OpenFile(name, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)`, дальше та же последовательность.
+Paths to the config directory, the backup and the state come from flags. Defaults are device values (`/etc/sing-box`, `/etc/metabox`), but in code they exist only as flag values: tests and the test bench always pass their own, otherwise the run goes against the live system.
 
-`filepath.Join` сам по себе от обхода не защищает: `Join("/etc/metabox", "../../tmp/x")` — валидный путь наружу.
+If a path is built from an externally supplied value (a config version name, a rule set name), access goes through `os.Root` (Go 1.24): it keeps operations inside the directory and does not allow escaping through a symlink or `..`. `os.Root` has no `CreateTemp`: the temporary name is generated by our code and opened with `root.OpenFile(name, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)`, then the same sequence follows.
 
-## Вызов sing-box
+`filepath.Join` by itself does not protect against traversal: `Join("/etc/metabox", "../../tmp/x")` is a valid path outside.
+
+## Calling sing-box
 
 ```go
 ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
@@ -81,141 +83,141 @@ cmd.Stderr = &stderr
 err := cmd.Run()
 ```
 
-- аргументы — отдельными элементами, никогда не строкой для шелла: `sh -c` с подстановкой пути превращает имя файла в исполняемый код;
-- путь к бинарю — абсолютный, из флага. `exec.LookPath` зависит от `PATH` процесса, а под procd он не тот, что в интерактивном шелле; имя, найденное через относительный элемент `PATH`, Go с 1.19 не отдаёт — возвращает ошибку с `exec.ErrDot`;
-- `CommandContext` убивает процесс по отмене контекста, `WaitDelay` ограничивает ожидание процесса, который не вышел после сигнала или оставил открытыми трубы. Без `WaitDelay` зависший `sing-box` держит горутину бессрочно;
-- `stdout` и `stderr` собираются раздельно и отдаются вызывающему дословно. Вывод ограничивается по размеру: битый конфиг может дать мегабайты диагностики;
-- код возврата — из `*exec.ExitError` через `errors.AsType`, а не разбором текста.
+- arguments are separate elements, never a string for a shell: `sh -c` with a substituted path turns a file name into executable code;
+- the binary path is absolute, from a flag. `exec.LookPath` depends on the process `PATH`, and under procd it differs from the interactive shell; since Go 1.19 a name found through a relative `PATH` element is not returned, an error with `exec.ErrDot` is returned instead;
+- `CommandContext` kills the process on context cancellation, `WaitDelay` bounds the wait for a process that did not exit after the signal or left pipes open. Without `WaitDelay` a hung `sing-box` holds the goroutine forever;
+- `stdout` and `stderr` are collected separately and passed to the caller verbatim. The output is size-limited: a broken config can produce megabytes of diagnostics;
+- the exit code comes from `*exec.ExitError` through `errors.AsType`, not from parsing text.
 
-Кандидат проверяется тем режимом, каким procd поднимет службу ([ADR-0046](../../../../docs/adr/ADR-0046-check-the-candidate-the-way-the-service-runs.md)). Режим берётся из команды инстанса в `ubus call service list`: один файл `-c` на конфиг демона — `check -c <кандидат>/<имя>`, один каталог `-C` на каталог конфига — `check -C <кандидат>`. Видимая команда без обоих флагов — это `-c config.json` рабочего каталога: так её читает сам sing-box. Команды не видно — служба не поднималась или procd нет — проверка идёт так, как службу поднимает пакет форка, одним файлом. Любая другая команда — чужой файл, несколько файлов, файл и каталог разом, относительный путь при неизвестном рабочем каталоге — отказ до записи с кодом `launch_mismatch`: запись ничего бы службе не поменяла, а проверка проверяла бы не то, что запустится.
+The candidate is checked in the mode in which procd will run the service ([ADR-0046](../../../../docs/adr/ADR-0046-check-the-candidate-the-way-the-service-runs.md)). The mode is taken from the instance command in `ubus call service list`: one `-c` file pointing to the daemon's config gives `check -c <candidate>/<name>`, one `-C` directory pointing to the config directory gives `check -C <candidate>`. A visible command with neither flag means `-c config.json` of the working directory: that is how sing-box itself reads it. If the command is not visible (the service never started or there is no procd), the check runs the way the fork's package runs the service, with a single file. Any other command (a foreign file, several files, a file and a directory at once, a relative path with an unknown working directory) is a failure before writing with the code `launch_mismatch`: the write would change nothing for the service, and the check would check something other than what will run.
 
-`-D` у проверки — база относительных путей, та же, что у службы. Рабочий каталог совпадает с каталогом конфига или неизвестен — `-D` на кандидате, и кандидат несёт подкаталоги каталога конфига той же раскладкой. Рабочий каталог другой — `-D` на нём самом: транзакция его не меняет. Если его нет на диске — снова на кандидате: несуществующий `-D` sing-box создаёт, а проверка следов оставлять не должна. С файлами списков другой рабочий каталог — отказ `workdir_mismatch`: относительный `path` узла `local` служба резолвит от рабочего каталога и записанных файлов не нашла бы.
+`-D` of the check is the base for relative paths, the same as the service's. If the working directory matches the config directory or is unknown, `-D` points to the candidate, and the candidate carries the subdirectories of the config directory in the same layout. If the working directory is different, `-D` points to it: the transaction does not change it. If it does not exist on disk, `-D` points to the candidate again: sing-box creates a missing `-D`, and the check must leave no traces. With list files, a different working directory is a `workdir_mismatch` failure: the service resolves the relative `path` of a `local` node from the working directory and would not find the written files.
 
-## Сервис через procd
+## Service through procd
 
-Управление только через init-скрипт — `/etc/init.d/metabox-singbox restart`, `... running sing-box`, `... start`. Прямой запуск бинаря, `kill` по pid и правка `/etc/rc.d` запрещены: procd владеет процессом, перезапускает его по `respawn` и не знает о чужом вмешательстве.
+Management goes only through the init script: `/etc/init.d/metabox-singbox restart`, `... running sing-box`, `... start`. Running the binary directly, `kill` by pid and editing `/etc/rc.d` are forbidden: procd owns the process, restarts it by `respawn` and knows nothing about outside interference.
 
-Рестарт при остановленном сервисе — штатный путь, а не ошибка: демон обязан поднять сервис, а не сообщить, что рестартовать нечего.
+A restart of a stopped service is a normal path, not an error: the daemon must bring the service up, not report that there is nothing to restart.
 
-По умолчанию sing-box поднимает служба из пакета панели — [`metabox-singbox`](../../package/etc/init.d/metabox-singbox), инстанс procd `sing-box`: `run -c <каталог конфига>/<имя> -D <каталог конфига>`, каталог и имя берутся из того же UCI-раздела `metabox`, что у демона, поэтому кандидат проверяется одним файлом от своего каталога и файлы списков пишутся без `workdir_mismatch`. Лимит открытых файлов и `respawn` — как у homeproxy; stderr уходит в логгер устройства, оттуда демон берёт причину падения. Служба пакета форка `/etc/init.d/sing-box` остаётся выключенной: демон ею не управляет, а переходный режим с homeproxy задаётся его путями в UCI.
+By default sing-box is run by the service from the panel's package, [`metabox-singbox`](../../package/etc/init.d/metabox-singbox), procd instance `sing-box`: `run -c <config directory>/<name> -D <config directory>`. The directory and the name come from the same `metabox` UCI section as the daemon's, so the candidate is checked as a single file relative to its directory and list files are written without `workdir_mismatch`. The open-file limit and `respawn` are the same as in homeproxy; stderr goes to the device logger, where the daemon takes the crash reason from. The fork package's service `/etc/init.d/sing-box` stays disabled: the daemon does not manage it, and the transition mode with homeproxy is set by its paths in UCI.
 
-Команды `check` у init-скриптов нет — ни у службы панели, ни у пакета форка, ни у homeproxy: они знают только команды `rc.common`. Демон валидирует конфиг вызовом бинаря напрямую.
+The init scripts have no `check` command: neither the panel's service, nor the fork's package, nor homeproxy; they know only the `rc.common` commands. The daemon validates the config by calling the binary directly.
 
-Healthcheck после рестарта — опрос Clash API до успеха с ограничением по времени, адрес и секрет берутся из конфига-кандидата, wildcard-адрес приводится к loopback. Отсутствие секрета — штатный случай (форк отключает авторизацию при пустом `secret`).
+The healthcheck after a restart polls the Clash API until success, with a time limit; the address and the secret come from the candidate config, a wildcard address is mapped to loopback. A missing secret is a normal case (the fork disables authorization when `secret` is empty).
 
-Ответ Clash API не доказывает, что sing-box работает: сломанный раздел `dns` не роняет ни процесс, ни контроллер. Поэтому за опросом API идут две проверки по модели обвязки из UCI `metabox.dataplane`, снятой до рестарта:
+A Clash API response does not prove that sing-box works: a broken `dns` section brings down neither the process nor the controller. So the API poll is followed by two checks based on the dataplane model from UCI `metabox.dataplane`, taken before the restart:
 
-- перехват — при включённой модели цепочки обвязки в nft сверяются с тем, что стояло до рестарта. Были и пропали — отказ `interception_missing`. Не было и до рестарта — пропуск с предупреждением: применение конфига их не снимало, откат не вернёт, а служба homeproxy в переходном режиме ставит цепочки под своими именами. nft недоступен или его вывод не разобран — тоже пропуск с предупреждением, как на стенде без nft;
-- DNS-проба — A-запрос имени из флага `-health-dns-name` в dns-in кандидата: первый inbound `direct`, у которого `listen_port` равен `dns_port` модели, туда init-скрипт отдаёт запросы dnsmasq. Тег не учитывается, wildcard-адрес приводится к loopback. Попыток несколько, у каждой свой потолок ([`main.go`](../../main.go)): первый запрос после рестарта поднимает соединение к upstream. Ни одного ответа с адресом, включая NXDOMAIN, — отказ `dns_probe_failed`. Нет dns-in в конфиге или имя пустое — проба пропускается.
+- interception: with the model enabled, the dataplane chains in nft are compared with what was there before the restart. They were there and disappeared: `interception_missing` failure. They were not there before the restart either: skipped with a warning; applying the config did not remove them, a rollback will not bring them back, and the homeproxy service in transition mode installs chains under its own names. nft unavailable or its output not parsed: also skipped with a warning, as on a test bench without nft;
+- DNS probe: an A query for the name from the `-health-dns-name` flag to the candidate's dns-in, the first `direct` inbound whose `listen_port` equals the model's `dns_port`; the init script sends dnsmasq queries there. The tag is ignored, a wildcard address is mapped to loopback. There are several attempts, each with its own ceiling ([`main.go`](../../main.go)): the first query after a restart opens the connection to the upstream. Not a single response with an address, including NXDOMAIN: `dns_probe_failed` failure. No dns-in in the config or an empty name: the probe is skipped.
 
-Модель не прочиталась — обе проверки пропускаются с предупреждением: init-скрипт при битой модели тоже оставляет обвязку как есть.
+If the model could not be read, both checks are skipped with a warning: with a broken model the init script also leaves the dataplane as is.
 
-Состояние, pid и команда службы берутся у одного инстанса procd — названного флагом `-service-instance`: у службы их бывает несколько, и у homeproxy рядом с инстансом sing-box живёт скрипт чистки логов (`log-cleaner`). Тем же именем уточняется и `running` init-скрипта. Пустое имя подходит службе с одним инстансом; при нескольких состояние не читается — это отказ, а не выбор первого живого.
+State, pid and command of the service come from one procd instance, named by the `-service-instance` flag: a service can have several, and homeproxy has a log cleanup script (`log-cleaner`) next to the sing-box instance. The same name qualifies the init script's `running`. An empty name suits a service with one instance; with several, the state is not read: that is a failure, not a choice of the first live one.
 
-Init-скрипт возвращается раньше, чем procd заменит процесс, и первые запросы к API может обслужить прежний. Поэтому pid службы снимается у procd до рестарта, а опрос API начинается только после того, как procd отдал поднятый процесс с другим pid. Pid здесь — только метка «процесс сменился»: сигналов по нему не шлют. Без procd или когда procd службы не знает, сверять не с чем — healthcheck остаётся на одном опросе API, и в лог уходит предупреждение.
+The init script returns before procd replaces the process, and the first API requests may be served by the old one. So the service pid is taken from procd before the restart, and the API poll starts only after procd reports the started process with a different pid. Here the pid is only a "process changed" marker: no signals are sent to it. Without procd, or when procd does not know the service, there is nothing to compare with: the healthcheck stays on the API poll alone, and a warning goes to the log.
 
-## Сетевая обвязка
+## Dataplane
 
-Перехват трафика LAN ставит и снимает init-скрипт службы [`metabox-singbox`](../../package/etc/init.d/metabox-singbox), а не демон: обвязка живёт и без демона, переживает перезагрузку и снимается `stop` при мёртвом демоне. Демон редактирует модель в UCI, зовёт `reload` службы и проверяет, стоят ли цепочки.
+LAN traffic interception is installed and removed by the init script of the [`metabox-singbox`](../../package/etc/init.d/metabox-singbox) service, not by the daemon: the dataplane lives without the daemon, survives a reboot and is removed by `stop` when the daemon is dead. The daemon edits the model in UCI, calls the service's `reload` and checks that the chains are in place.
 
-Модель — секция `dataplane` с именем `dataplane` в `/etc/config/metabox`. Имя не `main`: секцию типа `metabox` с этим именем uci уже держит, а две секции разных типов под одним именем он не разбирает. Без секции и без опции действуют умолчания демона — порты 5331/5332/5333, метки 100 и 101, таблица 100, режим `listed`, интерфейс `br-lan`, обвязка включена. Пакетный файл кладёт секцию с `enabled '0'`: пока перехватом владеет homeproxy, вторая обвязка перехватывала бы тот же трафик. Числа — только десятичные; значение с посторонними символами отвергается целиком, и уже поставленная обвязка остаётся как есть.
+The model is the `dataplane` section named `dataplane` in `/etc/config/metabox`. The name is not `main`: uci already holds a section of type `metabox` with that name, and it cannot handle two sections of different types under one name. Without the section or an option, the daemon defaults apply: ports 5331/5332/5333, marks 100 and 101, table 100, mode `listed`, interface `br-lan`, dataplane enabled. The packaged file installs the section with `enabled '0'`: while homeproxy owns interception, a second dataplane would intercept the same traffic. Numbers are decimal only; a value with extra characters is rejected entirely, and an already installed dataplane stays as is.
 
-Что ставит `start` при `enabled=1`:
+What `start` installs with `enabled=1`:
 
-- файл `/var/run/metabox/fw4_post.nft` и инклюд fw4 `firewall.metabox_post` (`type nftables`, `position table-append`). Фрагмент читается внутри `table inet fw4`: наборы `metabox_*`, цепочки `metabox_redirect_lanac`/`metabox_redirect` (TCP, redirect), `metabox_mangle_lanac`/`metabox_mangle_prerouting` (UDP, tproxy с меткой `tproxy_mark`), `metabox_mangle_output` и свой хук `metabox_output_redir` (`nat output priority -105`) для трафика самого роутера, а объявленные в нём `dstnat`, `mangle_prerouting` и `mangle_output` дописывают переходы в конец цепочек fw4. Перехват DNS — `iifname <lan_interface> udp dport 53 redirect to :53` при `dns_hijack=1`;
-- `ip rule fwmark <tproxy_mark> table <route_table>` и `local 0.0.0.0/0 dev lo` в этой таблице;
-- фрагмент `metabox.conf` (`no-resolv`, `no-poll`, `server=127.0.0.1#<dns_port>`) в conf-dir первого инстанса dnsmasq. Общего `/tmp/dnsmasq.d` init dnsmasq не читает: conf-dir у инстанса свой — опция `confdir` или `/tmp/dnsmasq.<секция>.d`.
+- the file `/var/run/metabox/fw4_post.nft` and the fw4 include `firewall.metabox_post` (`type nftables`, `position table-append`). The fragment is read inside `table inet fw4`: sets `metabox_*`, chains `metabox_redirect_lanac`/`metabox_redirect` (TCP, redirect), `metabox_mangle_lanac`/`metabox_mangle_prerouting` (UDP, tproxy with the `tproxy_mark` mark), `metabox_mangle_output` and its own hook `metabox_output_redir` (`nat output priority -105`) for the router's own traffic, and the `dstnat`, `mangle_prerouting` and `mangle_output` declared in it append jumps to the end of the fw4 chains. DNS interception is `iifname <lan_interface> udp dport 53 redirect to :53` with `dns_hijack=1`;
+- `ip rule fwmark <tproxy_mark> table <route_table>` and `local 0.0.0.0/0 dev lo` in that table;
+- the `metabox.conf` fragment (`no-resolv`, `no-poll`, `server=127.0.0.1#<dns_port>`) in the conf-dir of the first dnsmasq instance. The dnsmasq init does not read a shared `/tmp/dnsmasq.d`: each instance has its own conf-dir, the `confdir` option or `/tmp/dnsmasq.<section>.d`.
 
-Метка `self_mark` (= `route.default_mark` sing-box) — возврат первым правилом, иначе исходящее sing-box ушло бы в петлю. Трафик роутера с любой другой ненулевой меткой тоже идёт мимо: так метит свои пакеты b4, и tproxy затёр бы его метку. Приватные и служебные назначения в наборе `metabox_local_addr_v4` не перехватываются никогда; режим `all` не проверяет источник, `listed` пропускает в sing-box только `metabox_src_ip` и `metabox_src_mac` (`ether saddr`). IPv6-цепочек нет при любом `ipv6`.
+The `self_mark` mark (= sing-box `route.default_mark`) returns by the first rule, otherwise sing-box outgoing traffic would loop. Router traffic with any other non-zero mark also bypasses interception: b4 marks its packets this way, and tproxy would overwrite its mark. Private and special-purpose destinations in the `metabox_local_addr_v4` set are never intercepted; mode `all` does not check the source, `listed` lets into sing-box only `metabox_src_ip` and `metabox_src_mac` (`ether saddr`). There are no IPv6 chains for any `ipv6` value.
 
-`start` сверяет каждый шаг с тем, что уже стоит, и ничего не трогает при совпадении: фрагмент nft и инклюд совпали и цепочки в ядре есть — без `fw4 reload`; фрагмент dnsmasq совпал — без рестарта dnsmasq; ip rule уже есть — не добавляется второй. Перед `fw4 reload` новый фрагмент проходит `fw4 check`: сломанный уронил бы весь межсетевой экран, при отказе возвращается прежний. После reload наборы перезаливаются одной транзакцией nft: `flush table` в fw4 не трогает элементы наборов, и удалённый из модели источник остался бы в наборе.
+`start` compares each step with what is already installed and touches nothing on a match: nft fragment and include match and the chains are in the kernel, no `fw4 reload`; the dnsmasq fragment matches, no dnsmasq restart; the ip rule already exists, a second one is not added. Before `fw4 reload` the new fragment goes through `fw4 check`: a broken one would bring down the whole firewall; on failure the previous one is restored. After reload the sets are refilled in one nft transaction: `flush table` in fw4 does not touch set elements, and a source removed from the model would stay in the set.
 
-`restart` и `reload` переопределены в скрипте и меняют только инстанс `sing-box`: удаляют его у procd и зовут `start`, который доводит обвязку до модели. Поэтому Apply конфига (`restart`) не перезагружает fw4 и не рестартует dnsmasq, а смена модели в UCI (`reload` по триггеру procd на `metabox`) меняет ровно то, что изменилось. Пока sing-box поднимается или лежит после падения, перехват стоит: соединение перечисленного клиента получает отказ, DNS — без ответа, напрямую трафик не уходит. Снимает обвязку только `stop` — по значениям из `/var/run/metabox/dataplane.state`, а не из UCI, которую к этому моменту могли поменять. `fw4 reload` оставляет объявленные инклюдом цепочки и наборы пустыми, поэтому `stop` удаляет их отдельно; после него в `nft list ruleset` и `ip rule` следов metabox нет. `enabled=0` при старте снимает обвязку так же. Без файла состояния (после перезагрузки его нет) `ip rule` и таблица снимаются по номерам из UCI только при `enabled=1`: у homeproxy те же метка 101 и таблица 100, и `stop` или `start` выключенной службы рядом с ним их не трогает.
+`restart` and `reload` are overridden in the script and change only the `sing-box` instance: they remove it from procd and call `start`, which brings the dataplane to the model. So an Apply of the config (`restart`) does not reload fw4 or restart dnsmasq, and a model change in UCI (`reload` on the procd trigger on `metabox`) changes exactly what changed. While sing-box is starting or is down after a crash, interception stays: a connection of a listed client is refused, DNS gets no answer, traffic does not go out directly. Only `stop` removes the dataplane, using values from `/var/run/metabox/dataplane.state`, not from UCI, which may have been changed by then. `fw4 reload` leaves the chains and sets declared by the include empty, so `stop` removes them separately; after it there are no metabox traces in `nft list ruleset` and `ip rule`. `enabled=0` at start removes the dataplane the same way. Without the state file (there is none after a reboot) `ip rule` and the table are removed by the numbers from UCI only with `enabled=1`: homeproxy uses the same mark 101 and table 100, and `stop` or `start` of the disabled service next to it does not touch them.
 
-Проверяется стендом: `make dataplane-check`.
+Checked on the test bench: `make dataplane-check`.
 
-### Смена модели
+### Model change
 
-Модель меняет `apply.Plane` тем же протоколом, что применение конфига, и одновременно с ним не бывает: обе транзакции занимают один `apply.Manager`, вторая получает `ErrBusy`.
+The model is changed by `apply.Plane` with the same protocol as config apply, and never at the same time as it: both transactions occupy one `apply.Manager`, the second gets `ErrBusy`.
 
-1. Модель проверяется теми же правилами, что чтение из UCI (`dataplane.Normalize`): запись, которую демон сам не прочитал бы, не начинается. Следом сверяется служба: модель читает только init-скрипт `metabox-singbox` (`dataplane.Service`), и демон на другом `-init-script` — homeproxy в переходном режиме, пакет форка — отказывает `ErrDataplaneForeignService` до снимка и записи. Иначе запись ничего бы не поставила, а `reload` чужой службы перезапустил бы её маршрутизацию.
-2. Секция `metabox.dataplane` снимается как есть, без разбора (`dataplane.Snapshot`): откат возвращает и опции, дописанные владельцем, и значения, которых демон не принял бы. Отпечаток снимка (`Snapshot.Sum`) сверяется с `If-Match` запроса под занятым применением: секцию правили по SSH после того, как панель её прочитала, — отказ `ErrDataplaneModified`, запись не начинается. Между снимком и записью окно остаётся: блокировки UCI нет.
-3. Состояние — транзакция и снимок — пишется в `dataplane.json` служебного каталога до записи модели.
-4. Запись — один `uci -q batch` с `commit metabox`. Опции вне модели остаются в секции, списки пишутся `delete` и `add_list`, пустой список — отсутствием опции. uci batch на отказе отдельной команды печатает ошибку и выходит с кодом 0, поэтому после записи модель перечитывается и сверяется; расхождение — `write_failed`.
-5. `/etc/init.d/metabox-singbox reload`. Он перезапускает инстанс sing-box и доводит обвязку до модели: fw4 перезагружается только при смене фрагмента nft, dnsmasq рестартует только при смене `dns_port`. Отказ — `restart_failed`.
-6. Проверка: при включённой модели в nft стоят все цепочки `ExpectedChains`, иначе `interception_missing`; при выключенной цепочек нет, иначе `restart_failed`. nft недоступен — пропуск с предупреждением. При смене `dns_port` или включении обвязки демон ждёт Clash API поднятого sing-box и шлёт DNS-пробу в dns-in на новом порту; dns-in на этом порту в конфиге нет или он не ответил — `dns_probe_failed`.
-7. Окно подтверждения той же длины, что у конфига. Без подтверждения, как и после отказа шага, снимок пишется обратно (`delete` секции и запись заново, затем сверка) и зовётся `reload`.
+1. The model is checked with the same rules as reading from UCI (`dataplane.Normalize`): a write that the daemon itself would not read does not start. Then the service is checked: only the `metabox-singbox` init script reads the model (`dataplane.Service`), and a daemon on another `-init-script` (homeproxy in transition mode, the fork's package) refuses with `ErrDataplaneForeignService` before the snapshot and the write. Otherwise the write would install nothing, and a `reload` of a foreign service would restart its routing.
+2. The `metabox.dataplane` section is snapshotted as is, without parsing (`dataplane.Snapshot`): a rollback restores both options added by the owner and values that the daemon would not accept. The snapshot fingerprint (`Snapshot.Sum`) is compared with the request's `If-Match` while the apply slot is held: if the section was edited over SSH after the panel read it, the result is an `ErrDataplaneModified` failure and the write does not start. A window between the snapshot and the write remains: UCI has no locking.
+3. The state, the transaction and the snapshot, is written to `dataplane.json` in the service directory before the model is written.
+4. The write is one `uci -q batch` with `commit metabox`. Options outside the model stay in the section, lists are written with `delete` and `add_list`, an empty list as an absent option. uci batch prints an error and exits with code 0 when a single command fails, so after the write the model is reread and compared; a mismatch is `write_failed`.
+5. `/etc/init.d/metabox-singbox reload`. It restarts the sing-box instance and brings the dataplane to the model: fw4 is reloaded only when the nft fragment changes, dnsmasq restarts only when `dns_port` changes. Failure: `restart_failed`.
+6. Check: with the model enabled, all `ExpectedChains` chains are in nft, otherwise `interception_missing`; with it disabled there are no chains, otherwise `restart_failed`. nft unavailable: skipped with a warning. When `dns_port` changes or the dataplane is enabled, the daemon waits for the Clash API of the started sing-box and sends a DNS probe to the dns-in on the new port; no dns-in on that port in the config, or it did not answer: `dns_probe_failed`.
+7. A confirmation window of the same length as for the config. Without confirmation, as after a failed step, the snapshot is written back (`delete` of the section and a fresh write, then a comparison) and `reload` is called.
 
-Окно есть у каждой смены. Смена ACL, которая выводит из перехвата адрес, с которого пришёл запрос, применяется так же — демон только пишет об этом предупреждение — и без подтверждения откатывается по окну: дольше окна администратора она не отрезает. Адрес берётся из `RemoteAddr`, MAC не сверяется.
+Every change has a window. An ACL change that removes the request's source address from interception is applied the same way (the daemon only logs a warning about it) and without confirmation is rolled back by the window: it does not cut off the administrator for longer than the window. The address comes from `RemoteAddr`, the MAC is not checked.
 
-Доигрывание на старте — после доигрывания конфига: `applying` при секции, совпавшей со снимком, — запись не случилась, состояние убирается; иначе откат. `awaiting_confirm` — окно заново на полную длительность, как у конфига; сразу откат только при окне 0. Отказ отката оставляет файл состояния, и следующий старт пробует снова. На загрузке роутера служба успевает поднять обвязку по неподтверждённой модели, демон откатывает её следующим шагом.
+Replay on start comes after the config replay: `applying` with the section equal to the snapshot means the write did not happen, the state is removed; otherwise rollback. `awaiting_confirm`: the window starts again for its full duration, as for the config; immediate rollback only with a window of 0. A rollback failure leaves the state file, and the next start tries again. On router boot the service manages to bring up the dataplane with the unconfirmed model, and the daemon rolls it back in the next step.
 
-## Причина падения сервиса
+## Service crash reason
 
-Упавший сервис procd объясняет только фактом: инстанс известен, но не поднят. Что именно сказал процесс, знает логгер устройства, поэтому при `failed` демон читает `logread` и отбирает строки своего процесса — по имени бинаря, как его назвал procd.
+procd explains a crashed service only by the fact: the instance is known but not running. What the process actually said is known to the device logger, so on `failed` the daemon reads `logread` and selects the lines of its process, by the binary name as procd named it.
 
-Правила отбора: чужие службы пишут в тот же лог, поэтому строка без имени процесса не берётся; берутся только `FATAL`, `ERROR` и `PANIC` — штатный запуск в причину падения не идёт; повтор подряд схлопывается, потому что procd перезапускает упавший сервис по кругу и лог состоит из копий одной строки; остаются последние три сообщения с потолком по длине.
+Selection rules: other services write to the same log, so a line without the process name is not taken; only `FATAL`, `ERROR` and `PANIC` are taken, a normal startup does not go into the crash reason; consecutive repeats are collapsed, because procd restarts a crashed service in a loop and the log consists of copies of one line; the last three messages remain, with a length ceiling.
 
-Цвет из сообщений вычищается: sing-box пишет уровень escape-последовательностями терминала, и в панели они выглядели бы мусором вида `[31mFATAL[0m`.
+Color is stripped from messages: sing-box writes the level with terminal escape sequences, and in the panel they would look like garbage such as `[31mFATAL[0m`.
 
-Путь к утилите приходит флагом `-logread`; пустое значение отключает чтение, и состояние сводится к факту отказа. Недоступный логгер отказом не считается — панель обязана открываться и без причины.
+The path to the utility comes from the `-logread` flag; an empty value disables reading, and the state is reduced to the fact of failure. An unavailable logger is not a failure: the panel must open even without a reason.
 
-Когда в логгере причины нет, она ищется в файле `log.output` конфига, с которым procd поднимает службу: последние 64 КБ, те же правила отбора, но без имени процесса — файл пишет один sing-box. Дополнительно отбрасываются ошибки отдельных соединений: sing-box помечает их идентификатором в скобках после уровня, службу они не роняют, а хвост файла ими забит. Порядок такой потому, что `FATAL`, с которым выходит `sing-box run`, идёт в stderr, а не в `log.output`. Файл читается, только если служба поднята с одним файлом `-c`; относительный `log.output` разрешается от рабочего каталога `-D` — туда sing-box переходит до чтения конфига, — а при неизвестном рабочем каталоге файл не читается. Нечитаемый файл, как и недоступный логгер, отказом не считается.
+When the logger has no reason, it is looked up in the `log.output` file of the config with which procd runs the service: the last 64 KB, the same selection rules but without the process name, since only sing-box writes the file. Errors of individual connections are dropped in addition: sing-box marks them with an identifier in brackets after the level, they do not bring the service down, and the tail of the file is full of them. The order is like this because the `FATAL` with which `sing-box run` exits goes to stderr, not to `log.output`. The file is read only if the service runs with a single `-c` file; a relative `log.output` is resolved from the `-D` working directory (sing-box changes into it before reading the config), and with an unknown working directory the file is not read. An unreadable file, like an unavailable logger, is not a failure.
 
-## Лог sing-box
+## sing-box log
 
-Лог читает `internal/logs`. Источник выбирается по применённому конфигу на каждый запрос: `log.output` с путём к файлу — этот файл, относительный путь — от каталога конфига, где служба поднимает sing-box с `-D`; иначе — логгер устройства, куда служба уводит stdout и stderr процесса (`daemon.err sing-box[pid]: …`).
+The log is read by `internal/logs`. The source is chosen from the applied config on each request: `log.output` with a file path means that file, a relative path is resolved from the config directory, where the service runs sing-box with `-D`; otherwise the device logger, where the service sends the process's stdout and stderr (`daemon.err sing-box[pid]: …`).
 
-Хвост — `logread -e <процесс>` без `-l`, по той же причине, что в причине падения: лимит logd режет журнал до фильтра. Вывод читается потоком и в памяти остаются только последние N строк: у `singbox.Exec` потолок вывода оставляет начало, а хвосту нужен конец. `-e` — регулярное выражение по всей строке, поэтому строки чужих процессов, где имя sing-box просто упомянуто, отбрасываются по метке `<процесс>[pid]:`. Из файла читаются последние 256 КБ. Строка длиннее 4 КБ обрезается.
+The tail is `logread -e <process>` without `-l`, for the same reason as in the crash reason: the logd limit cuts the journal before the filter. The output is read as a stream and only the last N lines are kept in memory: the output ceiling of `singbox.Exec` keeps the beginning, and the tail needs the end. `-e` is a regular expression over the whole line, so lines of other processes that merely mention the sing-box name are dropped by the `<process>[pid]:` marker. From a file, the last 256 KB are read. A line longer than 4 KB is truncated.
 
-Поток — `logread -f -e <процесс>`: он отдаёт только новые строки, без истории, процесс живёт, пока жив запрос, и убивается отменой контекста с `WaitDelay`. Обрыв не переподключается — панель откроет поток заново. Файл опрашивается раз в 500 мс по размеру: файл, ставший короче, читается с начала. Одновременно держится не больше четырёх потоков.
+The stream is `logread -f -e <process>`: it returns only new lines, without history; the process lives as long as the request and is killed by context cancellation with `WaitDelay`. A broken stream is not reconnected: the panel opens it again. A file is polled by size every 500 ms: a file that became shorter is read from the start. At most four streams are held at once.
 
-Разбор строки: цвет вычищается, уровень — первое слово заглавными (`TRACE`, `DEBUG`, `INFO`, `NOTICE`, `WARN`, `ERROR`, `FATAL`, `PANIC`), секунды от старта `[0004]` за уровнем отбрасываются, идентификатор соединения `[id 5.4s]` остаётся в тексте. Время — метка logd (`time.ANSIC`, местная зона) или метка `log.timestamp` в файле. Строка без уровня — стек паники, продолжение сообщения — фильтр по уровню пропускает.
+Line parsing: color is stripped, the level is the first word in capitals (`TRACE`, `DEBUG`, `INFO`, `NOTICE`, `WARN`, `ERROR`, `FATAL`, `PANIC`), the seconds since start `[0004]` after the level are dropped, the connection identifier `[id 5.4s]` stays in the text. The time is the logd timestamp (`time.ANSIC`, local zone) or the `log.timestamp` stamp in the file. A line without a level (a panic stack, a message continuation) passes the level filter.
 
-Очистка. Кольцо logd из `logread` не чистится, поэтому очистка — отметка времени в памяти демона: строки раньше неё в хвост не попадают. Перезапуск демона отметку сбрасывает, скачок часов при синхронизации NTP может скрыть новые строки или вернуть старые. Файл `log.output` очистка ещё и усекает — только внутри каталога конфига, `/var/run` и `/tmp`, через `os.Root`; вне их — отказ `log_clear_forbidden`, файл не трогается.
+Clearing. The logd ring is not cleared through `logread`, so clearing is a timestamp in the daemon's memory: lines before it do not get into the tail. A daemon restart resets the mark; a clock jump during NTP sync can hide new lines or bring back old ones. Clearing also truncates the `log.output` file, only inside the config directory, `/var/run` and `/tmp`, through `os.Root`; outside them it is a `log_clear_forbidden` failure and the file is not touched.
 
-Ротация — забота источника: кольцо logd ограничено размером (`system.@system[0].log_size`, по умолчанию 64 КиБ) и вытесняет старое само, своего ротатора у демона нет. Файл `log.output` растёт, пока его не очистят.
+Rotation is the source's concern: the logd ring is size-limited (`system.@system[0].log_size`, 64 KiB by default) and evicts old entries itself; the daemon has no rotator of its own. The `log.output` file grows until it is cleared.
 
-## Диагностика обвязки
+## Dataplane diagnostics
 
-`internal/diag` по запросу прогоняет проверки по модели `metabox.dataplane` и ничего не меняет. Модель не прочиталась — проверки обвязки пропускаются, перехват выключен — тоже: портам и цепочкам тогда стоять незачем.
+`internal/diag` runs checks against the `metabox.dataplane` model on request and changes nothing. If the model could not be read, the dataplane checks are skipped; if interception is disabled, they are skipped too: ports and chains have no reason to be there then.
 
-- Слушатели. `redirect_port` — подключение TCP к `127.0.0.1`: туда nft уводит перехваченный TCP, и слушатель на wildcard на нём отвечает. Подключение оставляет в логе sing-box строку об отказе — исходного адреса у такого соединения нет. `tproxy_port` и `dns_port` — UDP, подключение к нему ничего не доказывает, поэтому они ищутся в `/proc/net/udp` и `udp6` как несвязанный сокет (состояние `07`).
-- DNS-проба — тот же `clashapi.DNSProbe`, что в healthcheck, одной попыткой, на dns-in применённого конфига с именем из `-health-dns-name`. Нет dns-in на `dns_port` при включённом перехвате — отказ: dnsmasq отдаёт запросы в пустой порт.
-- Цепочки — `nft -j list chains` через `dataplane.Reader.Chains`, сверка с `dataplane.ExpectedChains`: отсутствующие названы в отчёте. nft недоступен или вывод не разобран — пропуск.
-- Выход через узел — `GET /proxies/<узел>/delay?url=<-diag-url>&timeout=` Clash API применённого конфига: запрос делает сам sing-box через этот узел.
-- Прямой выход — `GET <-diag-url>` сокетом с `SO_MARK = self_mark`: такой пакет nft пропускает мимо перехвата. Имя разрешает системный резолвер — dnsmasq, то есть при перехвате тот же dns-in, — так что проверка говорит о прямом пути TCP, а не о DNS. Метка нужна `CAP_NET_ADMIN`; вне Linux проверка пропускается.
+- Listeners. `redirect_port`: a TCP connection to `127.0.0.1`; nft sends intercepted TCP there, and a wildcard listener answers on it. The connection leaves a refusal line in the sing-box log: such a connection has no original address. `tproxy_port` and `dns_port` are UDP, connecting to them proves nothing, so they are looked up in `/proc/net/udp` and `udp6` as an unconnected socket (state `07`).
+- DNS probe: the same `clashapi.DNSProbe` as in the healthcheck, with one attempt, to the dns-in of the applied config with the name from `-health-dns-name`. No dns-in on `dns_port` with interception enabled is a failure: dnsmasq sends queries to an empty port.
+- Chains: `nft -j list chains` through `dataplane.Reader.Chains`, compared with `dataplane.ExpectedChains`: missing ones are named in the report. nft unavailable or the output not parsed: skipped.
+- Exit through a node: `GET /proxies/<node>/delay?url=<-diag-url>&timeout=` to the Clash API of the applied config: sing-box itself makes the request through that node.
+- Direct exit: `GET <-diag-url>` with a socket with `SO_MARK = self_mark`: nft lets such a packet bypass interception. The name is resolved by the system resolver, dnsmasq, which under interception is the same dns-in, so the check speaks about the direct TCP path, not about DNS. The mark needs `CAP_NET_ADMIN`; outside Linux the check is skipped.
 
-Сетевые проверки идут параллельно с потолком 5 секунд на каждую.
+Network checks run in parallel with a 5-second ceiling each.
 
-## Состояние транзакции
+## Transaction state
 
-Состояние пишется на диск **до** записи конфига — иначе питание, снятое между записью и стартом таймера, оставит устройство на новом конфиге без автоотката.
+The state is written to disk **before** the config is written; otherwise power cut between the write and the timer start leaves the device on the new config without automatic rollback.
 
-Срок хранится **длительностью** и признаком «применено, но не подтверждено», а не абсолютным временем: у роутера нет часов реального времени, после включения он стартует с эпохи и прыгает при синхронизации NTP.
+The deadline is stored as a **duration** plus an "applied but not confirmed" flag, not as absolute time: the router has no real-time clock, after power-on it starts at the epoch and jumps during NTP sync.
 
-При старте демон доигрывает незавершённую транзакцию: применение без завершения — откат к бэкапу, но только если конфиг успел записаться (sha файла совпал с суммой из состояния) — иначе на диске конфиг прежнего поколения, а бэкап может остаться от прошлой транзакции, и откат по нему потерял бы подтверждённую версию; ожидание подтверждения — таймер заново на полную длительность из состояния, остаток окна не хранится (OQ-22 в PRD); немедленный откат только при окне 0. Все ветки закрываются тестами.
+On start the daemon replays an unfinished transaction: an apply without completion means rollback to the backup, but only if the config was written (the file sha matches the sum in the state); otherwise the config on disk is of the previous generation, and the backup may be left from an earlier transaction, so a rollback from it would lose the confirmed version. Awaiting confirmation: the timer starts again for the full duration from the state, the remainder of the window is not stored (OQ-22 in the PRD); immediate rollback only with a window of 0. All branches are covered by tests.
 
-Завершённая транзакция убирает файл состояния. Если удаление не прошло, на его место пишется терминальная фаза: оставшийся `awaiting_confirm` после перезагрузки откатил бы уже подтверждённый конфиг, а терминальную фазу доигрывание только убирает.
+A finished transaction removes the state file. If the removal failed, a terminal phase is written in its place: a leftover `awaiting_confirm` would roll back an already confirmed config after a reboot, while replay only removes a terminal phase.
 
-Откат без бэкапа — первое применение, до которого конфига на устройстве не было, или конфиг удалён владельцем, — службу не перезапускает: возвращать нечего. Бэкап прошлой транзакции при отсутствующем конфиге снимается, иначе откат вернул бы удалённый конфиг. Транзакция закрывается отказом с причиной `no_backup`, а не `rolled_back`. Отказ самого бэкапа отката не вызывает: записи ещё не было, на диске прежний конфиг, и транзакция закрывается с причиной `backup_failed` без восстановления и рестарта.
+A rollback without a backup (the first apply, before which there was no config on the device, or a config deleted by the owner) does not restart the service: there is nothing to restore. A backup of an earlier transaction is removed when the config is missing, otherwise the rollback would bring back the deleted config. The transaction is closed as a failure with reason `no_backup`, not `rolled_back`. A failure of the backup itself does not trigger a rollback: nothing has been written yet, the old config is on disk, and the transaction is closed with reason `backup_failed` without restore and restart.
 
-Служебный каталог создают сами методы записи — состояния, бэкапа, истории, каталога наборов, — а не только `mkdir -p` init-скрипта. Каждый созданный каталог закрепляется `fsync` родителя: без него сбой питания может унести свежий каталог вместе с уже синкнутыми файлами.
+The service directory is created by the write methods themselves (state, backup, history, rule set catalog), not only by the init script's `mkdir -p`. Each created directory is pinned by an `fsync` of the parent: without it a power failure can take away a fresh directory together with files already synced.
 
-Версия истории — файл конфига `versions/NNNNNN` и соседний каталог `NNNNNN.rule-sets/` со снимком файлов списков. Снимок собирается в черновике и получает имя до записи файла версии: файл версии — точка фиксации, а каталог без него — сирота оборванной записи, которую снимает следующее сохранение ([ADR-0036](../../../../docs/adr/ADR-0036-keep-rule-set-snapshots-beside-config-versions.md)).
+A history version is a config file `versions/NNNNNN` and the neighbouring directory `NNNNNN.rule-sets/` with a snapshot of the list files. The snapshot is assembled as a draft and gets its name before the version file is written: the version file is the commit point, and a directory without it is an orphan of an interrupted write, which the next save removes ([ADR-0036](../../../../docs/adr/ADR-0036-keep-rule-set-snapshots-beside-config-versions.md)).
 
-Время в коде берётся не из `time.Now()` напрямую, а через зависимость, подменяемую в тестах, — иначе проверка окна подтверждения превращается в `sleep` на минуту. Как это тестируется — [Testing](./Testing.md).
+Code does not take time from `time.Now()` directly but through a dependency that tests replace; otherwise checking the confirmation window turns into a one-minute `sleep`. How this is tested: [Testing](./Testing.md).
 
-## Внешние правки
+## External edits
 
-Перед применением демон сверяет `sha256` файла с базой клиента из `If-Match` (тот же `ETag`, что отдал `GET /api/config`), а без неё — с последним записанным им самим. Расхождение — отдельное состояние в ответе, а не молчаливая перезапись: конфиг мог поправить владелец по SSH. База клиента главнее внутренней суммы: она переживает перезапуск демона, а рассинхрон снимается перечитыванием конфига панелью.
+Before applying, the daemon compares the file's `sha256` with the client's base from `If-Match` (the same `ETag` that `GET /api/config` returned), and without it, with the last one it wrote itself. A mismatch is a separate state in the response, not a silent overwrite: the owner may have edited the config over SSH. The client's base takes precedence over the internal sum: it survives a daemon restart, and a desync is resolved by the panel rereading the config.
 
-## Ресурсы
+## Resources
 
-Ориентиры — RSS ≤ 64 МБ и CPU в простое ≤ 1% ядра; на целевом BPI-R4 Pro с 8 ГБ RAM они достижимы с запасом и подлежат подтверждению замером. Смысл в другом: демон работает месяцами без перезапуска, поэтому лишнее удержание памяти становится утечкой. Отсюда:
+Targets: RSS ≤ 64 MB and idle CPU ≤ 1% of a core; on the target BPI-R4 Pro with 8 GB RAM they are reachable with a margin and must be confirmed by measurement. The point is different: the daemon runs for months without a restart, so any extra memory retention becomes a leak. Hence:
 
-- конфиг не держится в памяти между запросами, не копируется без нужды и не читается целиком там, где хватает `sha256`;
-- прокси Clash API и поток `/api/events` не буферизуются целиком;
-- фоновых опросов по таймеру без потребителя нет: устройство большую часть времени простаивает.
+- the config is not kept in memory between requests, not copied without need and not read in full where `sha256` is enough;
+- the Clash API proxy and the `/api/events` stream are not buffered in full;
+- there are no timer-based background polls without a consumer: the device is idle most of the time.
 
-Исключений три. Первое — учёт в `internal/events`: поток `/traffic` держится открытым и показания платы снимаются всё время работы демона, даже когда панель закрыта. Приращение счётчика, не снятое вовремя, задним числом не восстанавливается — потребитель здесь сама величина. Цена: одно соединение к localhost с двумя числами в секунду и чтение `/proc/net/dev` раз в интервал. Второе — счёт срабатываний правил `route.Counter`: снапшот `/connections` раз в секунду с запуска демона, потому что соединение, не замеченное вовремя, в счёт уже не попадёт; цена и её остаток — [ADR-0029](../../../../docs/adr/ADR-0029-count-rule-hits-in-the-daemon-from-connection-snapshots.md). Третье — сверка каталога наборов `ruleset.Updater` с поставщиками раз в сутки, чтобы перечень был свежим к любому заходу в панель: четыре запроса к GitHub и разбор ответов до 600 КБ, неудачная сверка повторяется через час ([ADR-0034](../../../../docs/adr/ADR-0034-keep-the-rule-set-catalog-in-the-daemon-and-refresh-it-daily.md)). Новое исключение заводится только с таким же разбором цены.
+There are three exceptions. The first is accounting in `internal/events`: the `/traffic` stream is kept open and the board readings are taken for the whole time the daemon runs, even when the panel is closed. A counter increment not taken in time cannot be recovered after the fact: here the consumer is the value itself. Cost: one connection to localhost with two numbers per second and reading `/proc/net/dev` once per interval. The second is counting rule hits in `route.Counter`: a `/connections` snapshot every second from daemon start, because a connection not noticed in time will not be counted; the cost and what remains of it: [ADR-0029](../../../../docs/adr/ADR-0029-count-rule-hits-in-the-daemon-from-connection-snapshots.md). The third is the daily sync of the rule set catalog by `ruleset.Updater` with the providers, so that the list is fresh whenever the panel is opened: four requests to GitHub and parsing responses up to 600 KB; a failed sync is retried in an hour ([ADR-0034](../../../../docs/adr/ADR-0034-keep-the-rule-set-catalog-in-the-daemon-and-refresh-it-daily.md)). A new exception is added only with the same cost analysis.

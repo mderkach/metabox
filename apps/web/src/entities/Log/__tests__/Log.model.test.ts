@@ -11,28 +11,28 @@ function messages(entries: readonly LogEntry[]): string[] {
 }
 
 describe('mergeLogEntries', () => {
-  it('снимает начало потока, которое хвост уже захватил', () => {
+  it('drops the start of the stream that the tail already captured', () => {
     const tail = [entry('a', 1), entry('b', 2), entry('c', 3)];
     const streamed = [entry('b', 2), entry('c', 3), entry('d', 4)];
 
     expect(messages(mergeLogEntries(tail, streamed))).toEqual(['a', 'b', 'c', 'd']);
   });
 
-  it('без общего стыка ставит поток за хвостом', () => {
+  it('without a common join puts the stream after the tail', () => {
     expect(messages(mergeLogEntries([entry('a', 1)], [entry('b', 2)]))).toEqual(['a', 'b']);
   });
 
-  it('строка с тем же текстом, но другой меткой времени стыком не считается', () => {
+  it('a line with the same text but a different timestamp does not count as a join', () => {
     expect(messages(mergeLogEntries([entry('a', 1)], [entry('a', 2)]))).toEqual(['a', 'a']);
   });
 
-  it('строки без метки и уровня сравнивает по тексту', () => {
+  it('lines without a timestamp and level are compared by text', () => {
     const bare: LogEntry = { time: null, level: null, message: 'goroutine 1 [running]:' };
 
     expect(mergeLogEntries([entry('a', 1), bare], [{ ...bare }, entry('b', 2)])).toHaveLength(3);
   });
 
-  it('держит не больше LOG_LIMIT строк, новые последними', () => {
+  it('keeps no more than LOG_LIMIT lines, the newest last', () => {
     const streamed = Array.from({ length: LOG_LIMIT }, (_, index) => entry(`s${String(index)}`));
     const merged = mergeLogEntries([entry('старая')], streamed);
 

@@ -12,15 +12,15 @@ import (
 	"metabox/internal/dataplane"
 )
 
-// fakeUCI держит секцию `metabox.dataplane` и исполняет над ней те команды
-// uci batch, которые пишет демон, а show печатает её так же, как uci.
+// fakeUCI holds the `metabox.dataplane` section and executes over it those uci batch
+// commands the daemon writes, and show prints it the same way uci does.
 type fakeUCI struct {
 	exists  bool
 	typ     string
 	options map[string][]string
 	scripts []string
-	// ignore — команды с этой подстрокой uci «не выполнил»: batch на отказе
-	// команды идёт дальше с кодом 0.
+	// ignore: commands with this substring uci "did not execute": batch on a command
+	// failure goes on with code 0.
 	ignore string
 }
 
@@ -105,29 +105,29 @@ func TestWriteRoundTrip(t *testing.T) {
 	m.DNSPort = 5444
 
 	if err := newWriter(u).Write(t.Context(), m); err != nil {
-		t.Fatalf("запись: %v", err)
+		t.Fatalf("write: %v", err)
 	}
 
 	got, err := newWriter(u).Model(t.Context())
 	if err != nil {
-		t.Fatalf("чтение после записи: %v", err)
+		t.Fatalf("reading after the write: %v", err)
 	}
 
 	if !reflect.DeepEqual(got, m) {
-		t.Errorf("после записи\nполучили %+v\nожидали  %+v", got, m)
+		t.Errorf("after the write\ngot      %+v\nexpected %+v", got, m)
 	}
 
 	if !slices.Equal(u.options["comment"], []string{"владелец"}) {
-		t.Error("запись модели сняла опцию, дописанную владельцем")
+		t.Error("writing the model removed an option added by the owner")
 	}
 
 	if script := u.scripts[0]; !strings.HasSuffix(script, "commit metabox\n") {
-		t.Errorf("скрипт не заканчивается commit:\n%s", script)
+		t.Errorf("script does not end with commit:\n%s", script)
 	}
 }
 
-// uci batch не выполнил команду, но вернул код 0: расхождение ловит только
-// сверка после записи.
+// uci batch did not execute a command but returned code 0: only the check
+// after the write catches the mismatch.
 func TestWriteDetectsSilentFailure(t *testing.T) {
 	u := &fakeUCI{exists: true, typ: "dataplane", options: map[string][]string{}, ignore: "dns_port"}
 
@@ -135,7 +135,7 @@ func TestWriteDetectsSilentFailure(t *testing.T) {
 	m.DNSPort = 5444
 
 	if err := newWriter(u).Write(t.Context(), m); err == nil {
-		t.Error("невыполненная команда batch прошла незамеченной")
+		t.Error("a batch command that did not run went unnoticed")
 	}
 }
 
@@ -145,11 +145,11 @@ func TestWriteRejectsInvalidModel(t *testing.T) {
 		edit  func(*dataplane.Model)
 		field string
 	}{
-		{"интерфейс со спецсимволом", func(m *dataplane.Model) { m.LANInterface = []string{"br-lan'\ncommit"} }, "lan_interface"},
-		{"режим вне набора", func(m *dataplane.Model) { m.AccessMode = "" }, "acl_mode"},
-		{"порт вне диапазона", func(m *dataplane.Model) { m.DNSPort = 0 }, "dns_port"},
-		{"MAC не Ethernet", func(m *dataplane.Model) { m.SourceMAC = []string{"aa:bb"} }, "source_mac"},
-		{"MAC из восьми байт", func(m *dataplane.Model) { m.SourceMAC = []string{"aa:bb:cc:dd:ee:ff:00:11"} }, "source_mac"},
+		{"interface with a special character", func(m *dataplane.Model) { m.LANInterface = []string{"br-lan'\ncommit"} }, "lan_interface"},
+		{"mode outside the set", func(m *dataplane.Model) { m.AccessMode = "" }, "acl_mode"},
+		{"port out of range", func(m *dataplane.Model) { m.DNSPort = 0 }, "dns_port"},
+		{"non-Ethernet MAC", func(m *dataplane.Model) { m.SourceMAC = []string{"aa:bb"} }, "source_mac"},
+		{"eight-byte MAC", func(m *dataplane.Model) { m.SourceMAC = []string{"aa:bb:cc:dd:ee:ff:00:11"} }, "source_mac"},
 	}
 
 	for _, tt := range tests {
@@ -162,22 +162,22 @@ func TestWriteRejectsInvalidModel(t *testing.T) {
 
 			invalid, ok := errors.AsType[*dataplane.InvalidError](err)
 			if !ok {
-				t.Fatalf("получили %v, ожидали InvalidError", err)
+				t.Fatalf("got %v, expected InvalidError", err)
 			}
 
 			if !slices.ContainsFunc(invalid.Fields, func(f dataplane.FieldError) bool { return f.Field == tt.field }) {
-				t.Errorf("поля отказа %+v, ожидали %s", invalid.Fields, tt.field)
+				t.Errorf("failure fields %+v, expected %s", invalid.Fields, tt.field)
 			}
 
 			if len(u.scripts) != 0 {
-				t.Error("невалидная модель ушла в uci")
+				t.Error("invalid model went into uci")
 			}
 		})
 	}
 }
 
-// init-скрипт службы принимает MAC только с двоеточиями: в UCI и наружу MAC
-// уходит в виде aa:bb:cc:dd:ee:ff, как бы его ни записали.
+// The service init script accepts a MAC only with colons: in UCI and outward the MAC
+// goes in the form aa:bb:cc:dd:ee:ff, however it was written.
 func TestWriteCanonicalizesMAC(t *testing.T) {
 	u := &fakeUCI{}
 
@@ -187,28 +187,28 @@ func TestWriteCanonicalizesMAC(t *testing.T) {
 
 	normalized, err := dataplane.Normalize(m)
 	if err != nil {
-		t.Fatalf("нормализация: %v", err)
+		t.Fatalf("normalization: %v", err)
 	}
 
 	if !slices.Equal(normalized.SourceMAC, want) {
-		t.Errorf("нормализованный source_mac %q, ожидали %q", normalized.SourceMAC, want)
+		t.Errorf("normalized source_mac %q, expected %q", normalized.SourceMAC, want)
 	}
 
 	if err := newWriter(u).Write(t.Context(), m); err != nil {
-		t.Fatalf("запись: %v", err)
+		t.Fatalf("write: %v", err)
 	}
 
 	if !slices.Equal(u.options["source_mac"], want) {
-		t.Errorf("source_mac в UCI %q, ожидали %q", u.options["source_mac"], want)
+		t.Errorf("source_mac in UCI %q, expected %q", u.options["source_mac"], want)
 	}
 
 	got, err := newWriter(u).Model(t.Context())
 	if err != nil {
-		t.Fatalf("чтение после записи: %v", err)
+		t.Fatalf("reading after the write: %v", err)
 	}
 
 	if !slices.Equal(got.SourceMAC, want) {
-		t.Errorf("прочитанный source_mac %q, ожидали %q", got.SourceMAC, want)
+		t.Errorf("read source_mac %q, expected %q", got.SourceMAC, want)
 	}
 }
 
@@ -220,11 +220,11 @@ func TestNormalizeFillsDefaults(t *testing.T) {
 
 	got, err := dataplane.Normalize(m)
 	if err != nil {
-		t.Fatalf("нормализация: %v", err)
+		t.Fatalf("normalization: %v", err)
 	}
 
 	if !slices.Equal(got.LANInterface, []string{"br-lan"}) || !slices.Equal(got.SourceIP, []string{"192.168.1.10"}) {
-		t.Errorf("нормализованная модель %+v", got)
+		t.Errorf("normalized model %+v", got)
 	}
 }
 
@@ -233,13 +233,13 @@ func TestRestoreReturnsSnapshot(t *testing.T) {
 		name string
 		snap dataplane.Snapshot
 	}{
-		{"секция с чужими и невалидными значениями", dataplane.Snapshot{Exists: true, Type: "dataplane", Options: map[string][]string{
+		{"section with foreign and invalid values", dataplane.Snapshot{Exists: true, Type: "dataplane", Options: map[string][]string{
 			"enabled":   {"1"},
 			"acl_mode":  {"some"},
 			"source_ip": {"192.168.1.10"},
 			"comment":   {"it's mine"},
 		}}},
-		{"секции не было", dataplane.Snapshot{}},
+		{"there was no section", dataplane.Snapshot{}},
 	}
 
 	for _, tt := range tests {
@@ -248,7 +248,7 @@ func TestRestoreReturnsSnapshot(t *testing.T) {
 			r := newWriter(u)
 
 			if err := r.Restore(t.Context(), tt.snap); err != nil {
-				t.Fatalf("восстановление: %v", err)
+				t.Fatalf("restore: %v", err)
 			}
 
 			got, err := r.Snapshot(t.Context())
@@ -257,11 +257,11 @@ func TestRestoreReturnsSnapshot(t *testing.T) {
 			}
 
 			if !got.Equal(tt.snap) {
-				t.Errorf("после восстановления %+v, ожидали %+v", got, tt.snap)
+				t.Errorf("after restore %+v, expected %+v", got, tt.snap)
 			}
 
 			if tt.snap.Exists && !strings.Contains(u.scripts[0], "add_list metabox.dataplane.source_ip='192.168.1.10'") {
-				t.Errorf("список из одного значения восстановлен не списком:\n%s", u.scripts[0])
+				t.Errorf("a single-value list was restored not as a list:\n%s", u.scripts[0])
 			}
 		})
 	}
@@ -272,6 +272,6 @@ func TestWriteWithoutBatch(t *testing.T) {
 	r := dataplane.New(u.run, dataplane.Options{UCI: testUCI})
 
 	if err := r.Write(t.Context(), dataplane.Defaults()); err == nil {
-		t.Error("запись без uci batch прошла")
+		t.Error("write without uci batch passed")
 	}
 }

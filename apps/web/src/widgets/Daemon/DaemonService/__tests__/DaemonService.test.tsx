@@ -25,13 +25,13 @@ afterEach(async () => {
   await i18next.changeLanguage('ru');
 });
 
-describe('состояние сервиса', () => {
-  // «0 ч» у процесса, поднятого полчаса назад, читается как поломка.
+describe('service state', () => {
+  // "0 h" for a process started half an hour ago reads as a malfunction.
   it.each([
     [2443, '40 мин'],
     [30, 'меньше минуты'],
     [7300, '2 ч'],
-  ])('время работы %i с подписывает как «%s»', async (uptime, text) => {
+  ])('uptime of %i s is labeled as "%s"', async (uptime, text) => {
     serveService({ ...SERVICE_RUNNING_FIXTURE, uptime });
 
     renderWithQuery(<DaemonService heap={0} />);
@@ -39,7 +39,7 @@ describe('состояние сервиса', () => {
     expect(await screen.findByText(text)).toBeInTheDocument();
   });
 
-  it('нулевое время работы — возраст неизвестен — не показывает', async () => {
+  it('zero uptime means unknown age: does not show it', async () => {
     serveService({ ...SERVICE_RUNNING_FIXTURE, uptime: 0 });
 
     renderWithQuery(<DaemonService heap={0} />);
@@ -48,7 +48,7 @@ describe('состояние сервиса', () => {
     expect(screen.queryByText('Время работы')).not.toBeInTheDocument();
   });
 
-  it('показывает работающий сервис и предлагает перезапуск', async () => {
+  it('shows a running service and offers a restart', async () => {
     serveService(SERVICE_RUNNING_FIXTURE);
 
     renderWithQuery(<DaemonService heap={0} />);
@@ -58,9 +58,9 @@ describe('состояние сервиса', () => {
     expect(screen.getByRole('button', { name: 'Остановить' })).toBeInTheDocument();
   });
 
-  // Маршрутизацию на устройстве может вести чужой пакет — «Запустить»
-  // подняло бы вторую копию sing-box рядом с работающей.
-  it('процесс мимо службы показывает работающим, но без команд', async () => {
+  // A foreign package can run routing on the device: "Start" would
+  // bring up a second copy of sing-box next to the running one.
+  it('a process outside the service is shown as running, but without commands', async () => {
     serveService(SERVICE_UNMANAGED_FIXTURE);
 
     renderWithQuery(<DaemonService heap={0} />);
@@ -71,7 +71,7 @@ describe('состояние сервиса', () => {
     expect(screen.queryByRole('button', { name: 'Перезапустить' })).not.toBeInTheDocument();
   });
 
-  it('на упавшем сервисе показывает вывод бинаря дословно', async () => {
+  it('on a crashed service shows the binary output verbatim', async () => {
     serveService(SERVICE_FAILED_FIXTURE);
 
     renderWithQuery(<DaemonService heap={0} />);
@@ -85,7 +85,7 @@ describe('состояние сервиса', () => {
   it.each([
     ['ru', 'procd не ответил демону: состояние службы неизвестно'],
     ['en', 'procd did not answer the daemon: the service state is unknown'],
-  ])('отказ чтения состояния переводит по коду (%s), текст демона — подробностью', async (language, title) => {
+  ])('a state read failure is translated by code (%s), the daemon text goes as detail', async (language, title) => {
     await i18next.changeLanguage(language);
     serveService(SERVICE_UNREAD_FIXTURE);
 
@@ -98,7 +98,7 @@ describe('состояние сервиса', () => {
   it.each([
     ['ru', 'У службы несколько инстансов procd: укажите инстанс sing-box в настройках демона'],
     ['en', 'The service has several procd instances: name the sing-box instance in the daemon settings'],
-  ])('неоднозначный инстанс переводит по коду (%s)', async (language, title) => {
+  ])('an ambiguous instance is translated by code (%s)', async (language, title) => {
     await i18next.changeLanguage(language);
     serveService({
       ...SERVICE_UNREAD_FIXTURE,
@@ -112,8 +112,8 @@ describe('состояние сервиса', () => {
     expect(screen.getByText(/имя инстанса не задано/)).toBeInTheDocument();
   });
 
-  // Демон отдаёт `stopped` и тогда, когда procd просто не ответил: это не остановка.
-  it('непрочитанное состояние без известного прежнего показывает нейтрально и без команд', async () => {
+  // The daemon serves `stopped` also when procd simply did not answer: this is not a stop.
+  it('an unread state without a known previous one is shown neutrally and without commands', async () => {
     serveService(SERVICE_UNREAD_FIXTURE);
 
     renderWithQuery(<DaemonService heap={0} />);
@@ -125,8 +125,8 @@ describe('состояние сервиса', () => {
     expect(screen.queryByRole('button', { name: 'Перезапустить' })).not.toBeInTheDocument();
   });
 
-  // Состояние обновляет поток: он кладёт кадр в кэш запроса, как здесь тест.
-  it('кадр с непрочитанным состоянием оставляет последнее подтверждённое и перезапуск', async () => {
+  // The state is updated by the stream: it puts a frame into the query cache, as the test does here.
+  it('a frame with an unread state keeps the last confirmed one and the restart', async () => {
     serveService(SERVICE_RUNNING_FIXTURE);
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
@@ -150,11 +150,11 @@ describe('состояние сервиса', () => {
     expect(screen.queryByRole('button', { name: 'Запустить' })).not.toBeInTheDocument();
   });
 
-  it('шлёт команду сервису и показывает новое состояние из ответа', async () => {
+  it('sends a command to the service and shows the new state from the response', async () => {
     const called = vi.fn<(action: string) => void>();
 
-    // Источник истины — демон: после команды экран перечитывает состояние,
-    // поэтому мок меняет ответ так же, как это сделал бы сервис.
+    // The source of truth is the daemon: after a command the screen rereads the state,
+    // so the mock changes the response the way the service would.
     let state: typeof SERVICE_RUNNING_FIXTURE = SERVICE_FAILED_FIXTURE;
 
     server.use(
@@ -179,7 +179,7 @@ describe('состояние сервиса', () => {
     expect(await screen.findByText('работает')).toBeInTheDocument();
   });
 
-  it('останавливает сервис только после подтверждения', async () => {
+  it('stops the service only after confirmation', async () => {
     const called = vi.fn<(action: string) => void>();
     const user = userEvent.setup();
 

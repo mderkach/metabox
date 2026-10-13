@@ -17,74 +17,74 @@ import (
 )
 
 var (
-	// ErrNoVersion — версии с таким номером в истории нет.
+	// ErrNoVersion means there is no version with such a number in the history.
 	ErrNoVersion = errors.New("версии конфига нет")
 
-	// ErrNoVersionLists — версия сохранена без снимка файлов списков: демоном,
-	// который их ещё не снимал. Восстановление такой версии списков не трогает.
+	// ErrNoVersionLists means the version was saved without a snapshot of list files, by a daemon
+	// that did not take them yet. Restoring such a version does not touch the lists.
 	ErrNoVersionLists = errors.New("у версии нет снимка списков")
 )
 
 const (
-	// versionsDir — подкаталог служебного каталога демона. В каталоге конфига
-	// истории не место: служба в режиме каталога слила бы каждую версию в
-	// рабочую конфигурацию.
+	// versionsDir is a subdirectory of the daemon service directory. The config directory
+	// is no place for history: the service in directory mode would merge every version into
+	// the working configuration.
 	versionsDir = "versions"
 
-	// maxVersions — сколько версий держим. Конфиг рукописного роутера — это
-	// десятки килобайт, а overlay OpenWrt измеряется десятками мегабайт:
-	// глубже история стоит места, которое нужнее пакетам.
+	// maxVersions is how many versions we keep. A hand-written router config is
+	// tens of kilobytes, while the OpenWrt overlay is measured in tens of megabytes:
+	// a deeper history costs space that packages need more.
 	maxVersions = 10
 
-	// secureDirPerm — права каталога истории. В нём лежит то же, что в
-	// конфиге, включая ключи, поэтому доступ только владельцу.
+	// secureDirPerm is the permissions of the history directory. It holds the same as the
+	// config, including keys, so access is for the owner only.
 	secureDirPerm fs.FileMode = 0o700
 
-	// versionDigits задаёт ширину номера: имена сортируются как строки, и без
-	// выравнивания десятая версия встала бы перед второй.
+	// versionDigits sets the number width: names sort as strings, and without
+	// alignment the tenth version would stand before the second.
 	versionDigits = 6
 
-	// versionListsSuffix — суффикс соседнего каталога со снимком списков:
-	// 000007 и 000007.rule-sets. Номером такое имя не разбирается, поэтому
-	// демон прежней версии каталог пропускает и счётчик у него тот же.
+	// versionListsSuffix is the suffix of the neighbouring directory with the lists snapshot:
+	// 000007 and 000007.rule-sets. Such a name does not parse as a number, so
+	// a daemon of the previous version skips the directory and its counter stays the same.
 	versionListsSuffix = "." + listsDirName
 
-	// versionListsStaging — черновик снимка. Начинается с точки, чтобы ни
-	// номером, ни снимком его не приняли.
+	// versionListsStaging is a draft of the snapshot. Starts with a dot so that it is taken
+	// neither for a number nor for a snapshot.
 	versionListsStaging = ".rule-sets.next"
 )
 
-// Version — запись истории. Содержимое конфига демон не разбирает,
-// поэтому наружу идут только номер, размер, отпечаток и отметка времени.
+// Version is a history entry. The daemon does not parse the config content,
+// so only the number, size, fingerprint and timestamp go outside.
 type Version struct {
-	// ID — монотонный номер. Время источником порядка быть не может: у
-	// роутера нет часов реального времени, он стартует с эпохи и прыгает при
-	// синхронизации NTP.
+	// ID is a monotonic number. Time cannot be the source of order: the
+	// router has no real-time clock, it starts from the epoch and jumps on
+	// NTP synchronization.
 	ID int `json:"id"`
-	// Size — размер в байтах.
+	// Size is the size in bytes.
 	Size int64 `json:"size"`
-	// Sum — sha256 содержимого. По нему видно, что версия совпадает с
-	// активным конфигом, без вычитывания обеих.
+	// Sum is the sha256 of the content. It shows that the version matches the
+	// active config without reading both.
 	Sum string `json:"sum"`
-	// SavedAt — отметка времени файла, секунды Unix. Справочная: показывает
-	// часы устройства на момент сохранения и врёт, если они не синхронизованы.
+	// SavedAt is the file timestamp, Unix seconds. Informational: shows the
+	// device clock at the time of saving and lies if it is not synchronized.
 	SavedAt int64 `json:"saved_at"`
-	// ListsSum — отпечаток снимка файлов списков в той же записи, что etag
-	// `GET /api/config/rule-sets`. Поля нет — версия сохранена без снимка, и её
-	// восстановление списков не трогает.
+	// ListsSum is the fingerprint of the list files snapshot in the same notation as the etag of
+	// `GET /api/config/rule-sets`. No field means the version was saved without a snapshot, and its
+	// restore does not touch the lists.
 	ListsSum string `json:"lists_sum,omitempty"`
 }
 
-// VersionsPath отдаёт каталог истории.
+// VersionsPath returns the history directory.
 func (s *Store) VersionsPath() string {
 	return filepath.Join(s.serviceDir, versionsDir)
 }
 
-// SaveVersion кладёт содержимое в историю новым номером вместе со снимком
-// файлов списков и подрезает её до maxVersions. Вызывается рядом с Backup — до
-// записи нового конфига, — поэтому история хранит то, что было применено
-// раньше. Точка фиксации — файл версии: снимок пишется до него, и обрыв между
-// ними оставляет каталог без номера, которого перечисление не видит.
+// SaveVersion puts the content into the history under a new number together with a snapshot of
+// list files and trims it to maxVersions. Called next to Backup, before
+// writing the new config, so the history holds what was applied
+// earlier. The commit point is the version file: the snapshot is written before it, and a break between
+// them leaves a directory without a number, which the listing does not see.
 func (s *Store) SaveVersion(ctx context.Context, data []byte) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -99,8 +99,8 @@ func (s *Store) SaveVersion(ctx context.Context, data []byte) error {
 	}
 	defer func() { _ = root.Close() }()
 
-	// Номера читаются без содержимого: хэшировать всю историю ради следующего
-	// номера значит держать её целиком в памяти, а памяти у демона немного.
+	// Numbers are read without content: hashing the whole history for the next
+	// number means keeping it all in memory, and the daemon has little memory.
 	saved, err := listIDs(root)
 	if err != nil {
 		return err
@@ -111,8 +111,8 @@ func (s *Store) SaveVersion(ctx context.Context, data []byte) error {
 		return fmt.Errorf("чтение списков под версию: %w", err)
 	}
 
-	// prev — суммы снимка самой свежей версии: по ним ловится повтор и
-	// выбираются файлы, которые можно связать ссылкой, а не копировать.
+	// prev is the sums of the newest version snapshot: they catch a repeat and
+	// select files that can be hard-linked instead of copied.
 	var prev map[string]string
 
 	if len(saved) > 0 {
@@ -126,9 +126,9 @@ func (s *Store) SaveVersion(ctx context.Context, data []byte) error {
 			return err
 		}
 
-		// Повторное применение того же конфига с теми же списками в историю
-		// не пишется: десять одинаковых применений вытеснили бы всё, что там
-		// было.
+		// A repeated apply of the same config with the same lists is not written
+		// to the history: ten identical applies would push out everything that was
+		// there.
 		if same && sameLists(prev, lists) {
 			return nil
 		}
@@ -154,16 +154,16 @@ func (s *Store) SaveVersion(ctx context.Context, data []byte) error {
 	return nil
 }
 
-// saveVersionLists кладёт снимок списков в соседний каталог версии next.
-// Снимок собирается целиком в черновике и только потом получает имя: обрыв на
-// середине не должен оставлять под номером неполный набор. Файл с тем же
-// содержимым, что в снимке prev предыдущей версии, связывается жёсткой ссылкой —
-// неизменённый список не должен стоить места в каждой версии. Ссылки
-// файловая система может не дать, и тогда файл копируется: экономия места не
-// повод отказать в версии.
+// saveVersionLists puts the lists snapshot into the neighbouring directory of version next.
+// The snapshot is assembled whole in a draft and only then gets its name: a break in the
+// middle must not leave an incomplete set under a number. A file with the same
+// content as in the snapshot prev of the previous version is joined by a hard link:
+// an unchanged list must not cost space in every version. The file system
+// may refuse the link, and then the file is copied: saving space is not
+// a reason to refuse a version.
 func saveVersionLists(root *os.Root, next int, prev map[string]string, lists map[string][]byte) error {
-	// Сирота того же номера — след обрыва до записи файла версии: номер
-	// тогда не занят, и снимок собирается заново.
+	// An orphan of the same number is a trace of a break before the version file was written: the number
+	// is then not taken, and the snapshot is assembled anew.
 	for _, name := range []string{versionListsName(next), versionListsStaging} {
 		if err := root.RemoveAll(name); err != nil {
 			return fmt.Errorf("очистка черновика снимка списков %s: %w", name, err)
@@ -193,8 +193,8 @@ func saveVersionLists(root *os.Root, next int, prev map[string]string, lists map
 		}
 	}
 
-	// Ссылки ложатся мимо writeAtomic, и их записи в каталоге закрепляются
-	// отдельно.
+	// Links bypass writeAtomic, and their entries in the directory are fixed
+	// separately.
 	if err := syncDir(staging); err != nil {
 		return err
 	}
@@ -206,9 +206,9 @@ func saveVersionLists(root *os.Root, next int, prev map[string]string, lists map
 	return syncDir(root)
 }
 
-// sameLists отвечает, совпадает ли набор файлов со снимком. Версия без снимка
-// (prev == nil) равна только пустому набору: иначе первое применение со
-// списками после обновления демона в историю бы не попало.
+// sameLists reports whether the file set matches the snapshot. A version without a snapshot
+// (prev == nil) equals only an empty set: otherwise the first apply with
+// lists after the daemon update would not get into the history.
 func sameLists(prev map[string]string, lists map[string][]byte) bool {
 	if prev == nil {
 		return len(lists) == 0
@@ -227,7 +227,7 @@ func sameLists(prev map[string]string, lists map[string][]byte) bool {
 	return true
 }
 
-// Versions отдаёт историю от свежей к старой.
+// Versions returns the history from newest to oldest.
 func (s *Store) Versions(ctx context.Context) ([]Version, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -238,8 +238,8 @@ func (s *Store) Versions(ctx context.Context) ([]Version, error) {
 
 	root, err := s.versionsRoot(false)
 	if errors.Is(err, errNoHistory) {
-		// Пустой срез, а не nil: в JSON разница между `[]` и `null` видна, и
-		// панель на `null` сломалась бы на первом же обходе списка.
+		// An empty slice, not nil: in JSON the difference between `[]` and `null` is visible, and
+		// the panel would break on `null` on the very first list walk.
 		return []Version{}, nil
 	}
 	if err != nil {
@@ -250,8 +250,8 @@ func (s *Store) Versions(ctx context.Context) ([]Version, error) {
 	return listVersions(root)
 }
 
-// ReadVersion отдаёт содержимое версии байтами, как отдаёт и активный конфиг:
-// разбирать его демон не вправе.
+// ReadVersion returns the version content as bytes, as the active config is also returned:
+// the daemon has no right to parse it.
 func (s *Store) ReadVersion(ctx context.Context, id int) ([]byte, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -280,9 +280,9 @@ func (s *Store) ReadVersion(ctx context.Context, id int) ([]byte, error) {
 	return data, nil
 }
 
-// ReadVersionLists отдаёт снимок файлов списков версии: имя → содержимое.
-// Пустая карта — на момент сохранения списков не было, ErrNoVersionLists —
-// версия сохранена без снимка.
+// ReadVersionLists returns the version list files snapshot: name → content.
+// An empty map means there were no lists at save time, ErrNoVersionLists means
+// the version was saved without a snapshot.
 func (s *Store) ReadVersionLists(ctx context.Context, id int) (map[string][]byte, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -300,7 +300,7 @@ func (s *Store) ReadVersionLists(ctx context.Context, id int) (map[string][]byte
 	}
 	defer func() { _ = root.Close() }()
 
-	// Снимок без файла версии — сирота оборванной записи, а не версия.
+	// A snapshot without a version file is an orphan of a broken write, not a version.
 	if _, err := root.Stat(versionName(id)); errors.Is(err, fs.ErrNotExist) {
 		return nil, ErrNoVersion
 	} else if err != nil {
@@ -339,13 +339,13 @@ func (s *Store) ReadVersionLists(ctx context.Context, id int) (map[string][]byte
 	return files, nil
 }
 
-// errNoHistory — каталога истории ещё нет. Для чтения это пустая история, а не
-// отказ: до первого применения сохранять было нечего.
+// errNoHistory: there is no history directory yet. For reading this is an empty history, not
+// a failure: there was nothing to save before the first apply.
 var errNoHistory = errors.New("каталога истории нет")
 
-// versionsRoot открывает каталог истории. При create он создаётся вместе со
-// служебным каталогом демона; без create отсутствие каталога означает пустую
-// историю, а не ошибку.
+// versionsRoot opens the history directory. With create it is created together with the
+// daemon service directory; without create a missing directory means an empty
+// history, not an error.
 func (s *Store) versionsRoot(create bool) (*os.Root, error) {
 	if create {
 		if err := ensureDir(s.serviceDir); err != nil {
@@ -353,9 +353,9 @@ func (s *Store) versionsRoot(create bool) (*os.Root, error) {
 		}
 	}
 
-	// Подкаталог открывается из уже открытого корня, а не по собранному пути:
-	// os.Root держит операции внутри каталога и не даёт уйти по симлинку.
-	// Симлинк на месте versions увёл бы каждую версию в рабочую конфигурацию.
+	// The subdirectory is opened from the already open root, not by an assembled path:
+	// os.Root keeps operations inside the directory and does not let go through a symlink.
+	// A symlink in place of versions would take every version into the working configuration.
 	serviceRoot, err := openRoot(s.serviceDir)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
@@ -372,7 +372,7 @@ func (s *Store) versionsRoot(create bool) (*os.Root, error) {
 			return nil, fmt.Errorf("создание каталога истории %s: %w", s.VersionsPath(), err)
 		}
 
-		// Свежий каталог закрепляется fsync родителя, как в ensureDir.
+		// A fresh directory is fixed by an fsync of the parent, as in ensureDir.
 		if err == nil {
 			if err := syncDir(serviceRoot); err != nil {
 				return nil, err
@@ -392,9 +392,9 @@ func (s *Store) versionsRoot(create bool) (*os.Root, error) {
 	return root, nil
 }
 
-// listVersions читает каталог и отдаёт записи от свежей к старой. Файлы с
-// именами не по формату пропускаются: каталог служебный, но чужое в нём не
-// повод отказать в истории.
+// listVersions reads the directory and returns entries from newest to oldest. Files with
+// names not in the format are skipped: the directory is a service one, but a foreign file in it is not
+// a reason to refuse the history.
 func listVersions(root *os.Root) ([]Version, error) {
 	entries, err := fs.ReadDir(root.FS(), ".")
 	if err != nil {
@@ -447,9 +447,9 @@ func listVersions(root *os.Root) ([]Version, error) {
 	return versions, nil
 }
 
-// streamSum считает sha256 версии потоком: список истории запрашивается на
-// каждый заход в панель, и поднимать ради отпечатка все версии в память
-// незачем.
+// streamSum counts the sha256 of a version as a stream: the history list is requested on
+// every visit to the panel, and there is no need to raise all versions into memory for a
+// fingerprint.
 func streamSum(root *os.Root, name string) (string, error) {
 	f, err := root.Open(name)
 	if err != nil {
@@ -465,11 +465,11 @@ func streamSum(root *os.Root, name string) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-// trimVersions удаляет всё, что не помещается в maxVersions, вместе с
-// соседними каталогами снимков, а заодно снимки без файла версии среди
-// оставленных номеров: сироты оборванной записи и каталоги, которые оставила
-// подрезка демона прежней версии. Отказ удаления не останавливает применение:
-// лишний файл истории безвреден, а прерванный цикл Apply — нет.
+// trimVersions deletes everything that does not fit in maxVersions, together with
+// neighbouring snapshot directories, and also snapshots without a version file among
+// the kept numbers: orphans of a broken write and directories left by
+// the trimming of a previous-version daemon. A deletion failure does not stop the apply:
+// an extra history file is harmless, while an interrupted Apply cycle is not.
 func trimVersions(root *os.Root, ids []int) error {
 	kept := ids[:min(len(ids), maxVersions)]
 
@@ -498,7 +498,7 @@ func trimVersions(root *os.Root, ids []int) error {
 	return nil
 }
 
-// listIDs отдаёт номера от свежего к старому, не читая содержимого.
+// listIDs returns the numbers from newest to oldest without reading content.
 func listIDs(root *os.Root) ([]int, error) {
 	entries, err := fs.ReadDir(root.FS(), ".")
 	if err != nil {
@@ -522,7 +522,7 @@ func listIDs(root *os.Root) ([]int, error) {
 	return ids, nil
 }
 
-// sameContent отвечает, совпадает ли версия с тем, что собираются сохранить.
+// sameContent reports whether the version matches what is about to be saved.
 func sameContent(root *os.Root, id int, data []byte) (bool, error) {
 	saved, err := root.ReadFile(versionName(id))
 	if errors.Is(err, fs.ErrNotExist) {
@@ -535,9 +535,9 @@ func sameContent(root *os.Root, id int, data []byte) (bool, error) {
 	return sha256.Sum256(saved) == sha256.Sum256(data), nil
 }
 
-// snapshotSums считает sha256 файлов снимка версии потоком, не поднимая
-// снимок в память: список истории запрашивается на каждый заход в панель.
-// ErrNoVersionLists — снимка у версии нет.
+// snapshotSums counts the sha256 of the version snapshot files as a stream without raising
+// the snapshot into memory: the history list is requested on every visit to the panel.
+// ErrNoVersionLists means the version has no snapshot.
 func snapshotSums(root *os.Root, id int) (map[string]string, error) {
 	dir := versionListsName(id)
 
@@ -585,9 +585,9 @@ func versionListsID(name string) (int, bool) {
 }
 
 func versionID(name string) (int, bool) {
-	// Меньше положенной ширины — чужое имя. Больше допускается: номер выше
-	// миллиона перестаёт помещаться в versionDigits, и отвергать такие имена
-	// значило бы сбросить счётчик и перетереть первую версию.
+	// Less than the due width is a foreign name. More is allowed: a number above
+	// a million no longer fits versionDigits, and rejecting such names
+	// would mean resetting the counter and overwriting the first version.
 	if len(name) < versionDigits {
 		return 0, false
 	}
@@ -600,17 +600,17 @@ func versionID(name string) (int, bool) {
 	return id, true
 }
 
-// Sum — отпечаток содержимого в той записи, в какой его видит панель: sha256
-// шестнадцатеричной строкой.
+// Sum is the content fingerprint in the notation the panel sees: sha256
+// as a hexadecimal string.
 func Sum(data []byte) string {
 	sum := sha256.Sum256(data)
 
 	return hex.EncodeToString(sum[:])
 }
 
-// ListsEtag — отпечаток набора файлов списков: имена с суммами в стабильном
-// порядке. Его отдаёт чтение списков, его же клиент возвращает базой
-// применения, и в той же записи история отдаёт отпечаток снимка версии.
+// ListsEtag is the fingerprint of the list file set: names with sums in a stable
+// order. The list read returns it, the client returns it as the apply base, and in the same
+// notation the history returns the version snapshot fingerprint.
 func ListsEtag(sums map[string]string) string {
 	names := make([]string, 0, len(sums))
 	for name := range sums {
@@ -621,7 +621,7 @@ func ListsEtag(sums map[string]string) string {
 
 	h := sha256.New()
 	for _, name := range names {
-		// Запись в hash.Hash не отказывает по контракту пакета hash.
+		// A write to hash.Hash does not fail by the contract of the hash package.
 		_, _ = fmt.Fprintf(h, "%s:%s\n", name, sums[name])
 	}
 

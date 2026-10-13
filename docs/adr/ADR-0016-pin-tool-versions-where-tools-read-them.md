@@ -1,44 +1,44 @@
-# ADR-0016. Держать версию инструмента там, откуда её читает сам инструмент, и прижимать Go явным GOTOOLCHAIN
+# ADR-0016. Keep a tool's version where the tool itself reads it, and pin Go with an explicit GOTOOLCHAIN
 
-- Статус: Accepted
-- Дата: 2026-09-14
-- Ответственные: владелец репозитория
+- Status: Accepted
+- Date: 2026-09-14
+- Deciders: repository owner
 
-## Контекст и постановка проблемы
+## Context and problem statement
 
-14 сентября 2026 `brew upgrade` поднял системный Go до 1.27.1, и `make test-schemagen` перестал линковаться:
+On 14 September 2026, `brew upgrade` bumped the system Go to 1.27.1, and `make test-schemagen` stopped linking:
 
 ```
 Undefined symbols for architecture arm64:
   "_golang.org/x/net/http2.(*Transport).connPool", referenced from: _runtime.text
 ```
 
-Причина в форке: `shtorm-7/sing-box-extended` тянет неэкспортированный метод чужого пакета директивой `//go:linkname transportConnPool golang.org/x/net/http2.(*Transport).connPool` (`transport/v2rayxhttp/dialer.go`, `transport/v2rayhttp/force_close_legacy.go`). Флаг `-checklinkname=0`, который `make schema` и `make test-schemagen` берут из `release/LDFLAGS` форка, снимает только проверку такой директивы — удерживать целевой символ он линкер не заставляет. Линкер Go 1.27 его отбрасывает.
+The cause is in the fork: `shtorm-7/sing-box-extended` pulls an unexported method of another package with the directive `//go:linkname transportConnPool golang.org/x/net/http2.(*Transport).connPool` (`transport/v2rayxhttp/dialer.go`, `transport/v2rayhttp/force_close_legacy.go`). The `-checklinkname=0` flag, which `make schema` and `make test-schemagen` take from the fork's `release/LDFLAGS`, only disables the check of such a directive; it does not make the linker keep the target symbol. The Go 1.27 linker drops it.
 
-CI это не поймал: там версия Go была прибита шагом `setup-go`. Сломался только хост, где версия Go не была задана ничем.
+CI did not catch this: the Go version there was pinned by the `setup-go` step. Only the host broke, where nothing set the Go version.
 
-Состояние на момент решения:
+State at the time of the decision:
 
-| Инструмент | Где лежала версия                                                                                                      | Кто определял версию на хосте   |
-| ---------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
-| Go         | `go 1.26.4` в двух `go.mod`; литерал `1.26.7` в двух шагах CI, в `ARG GO_VERSION` образа разработки и дважды в compose | что установлено в системе       |
-| Node       | `.nvmrc`, читают CI и образ разработки                                                                                 | `nvm use`, если про него помнят |
-| pnpm       | `packageManager` в корневом `package.json`                                                                             | corepack                        |
+| Tool | Where the version lived                                                                                                            | What determined the version on the host |
+| ---- | ---------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| Go   | `go 1.26.4` in two `go.mod` files; the literal `1.26.7` in two CI steps, in `ARG GO_VERSION` of the dev image and twice in compose | whatever is installed on the system     |
+| Node | `.nvmrc`, read by CI and the dev image                                                                                             | `nvm use`, if someone remembers it      |
+| pnpm | `packageManager` in the root `package.json`                                                                                        | corepack                                |
 
-Один и тот же литерал `1.26.7` был вписан в пяти местах, а версия Go на машине разработчика не была связана ни с одним из них.
+The same literal `1.26.7` was written in five places, and the Go version on the developer machine was tied to none of them.
 
-В scope: версии Go, Node и pnpm, которыми собирается и проверяется репозиторий. Вне scope: версии зависимостей (их держат `saveExact: true` и lock-файл), версия sing-box в целевом образе стенда, версия golangci-lint (прибита в `Makefile` строкой `go run …@v2.13.2`).
+In scope: the Go, Node and pnpm versions used to build and check the repository. Out of scope: dependency versions (held by `saveExact: true` and the lock file), the sing-box version in the test bench target image, the golangci-lint version (pinned in the `Makefile` by the line `go run …@v2.13.2`).
 
-## Критерии выбора
+## Decision drivers
 
-- Сколько мест содержат версию и могут разойтись между собой.
-- Совпадает ли версия на хосте, в образе разработки и в CI без ручной дисциплины.
-- Читает ли потребитель версию напрямую или повторяет её литералом.
-- Стоимость: новые инструменты и новая машинерия, которую придётся сопровождать.
+- How many places contain the version and can diverge from each other.
+- Whether the version on the host, in the dev image and in CI matches without manual discipline.
+- Whether the consumer reads the version directly or repeats it as a literal.
+- Cost: new tools and new machinery that will need maintenance.
 
-## Рассмотренные варианты
+## Considered options
 
-1. **Директива `toolchain` в обоих `go.mod`** — ход, встроенный в сам язык. **Отклонён: он не решает исходную проблему.** При `GOTOOLCHAIN=auto` go переключается только вверх — строка `toolchain` старее локального тулчейна молча игнорируется. Из тестов самого go (`src/cmd/go/testdata/script/gotoolchain_local.txt`):
+1. **A `toolchain` directive in both `go.mod` files**: the mechanism built into the language itself. **Rejected: it does not solve the original problem.** With `GOTOOLCHAIN=auto`, go switches only upwards: a `toolchain` line older than the local toolchain is silently ignored. From go's own tests (`src/cmd/go/testdata/script/gotoolchain_local.txt`):
 
    ```
    go mod edit -go=1.700 -toolchain=go1.300
@@ -46,94 +46,94 @@ CI это не поймал: там версия Go была прибита ша
    stdout go1.700 # toolchain too old, ignored
    ```
 
-   При системном 1.27.1 строка `toolchain go1.26.8` не изменила бы ничего. Вдобавок на патч-версии она полностью дублирует директиву `go`: обе прижимают только вверх, но кладут в один файл два разных числа.
+   With the system 1.27.1, the line `toolchain go1.26.8` would change nothing. Besides, on a patch version it fully duplicates the `go` directive: both pin only upwards, but put two different numbers into one file.
 
-2. **Версия в том файле, который потребитель читает сам** — `.go-version` для Go, `engines` и `packageManager` в `package.json` для Node и pnpm; `Makefile` экспортирует `GOTOOLCHAIN` из `.go-version`. **Принят.** Явный `GOTOOLCHAIN` без суффикса `+auto` форсит именно названный тулчейн и скачивает его, если в системе стоит другой, — это единственный способ прижать версию Go вниз.
+2. **The version in the file the consumer reads itself**: `.go-version` for Go, `engines` and `packageManager` in `package.json` for Node and pnpm; the `Makefile` exports `GOTOOLCHAIN` from `.go-version`. **Chosen.** An explicit `GOTOOLCHAIN` without the `+auto` suffix forces exactly the named toolchain and downloads it if the system has a different one; this is the only way to pin the Go version downwards.
 
-3. **Оставить версию в нескольких местах и сверять их скриптом на коммите** — дешевле, чем переписывать потребителей. **Отклонён:** сверка не задаёт версию, а сообщает о расхождении, которое сама же и допускает. Дешевле сделать так, чтобы дублировать было нечего: `docker-compose.yml` перестал передавать версию Go аргументом, а образ разработки берёт Node из `package.json` вместо второго файла.
+3. **Keep the version in several places and check them with a script on commit**: cheaper than rewriting the consumers. **Rejected:** the check does not set the version, it reports a mismatch that it itself allows. It is cheaper to leave nothing to duplicate: `docker-compose.yml` stopped passing the Go version as an argument, and the dev image takes Node from `package.json` instead of a second file.
 
-4. **Менеджер версий `mise` или `asdf` с `.tool-versions`** — один файл на все инструменты, версия подменяется при входе в каталог, то есть действует и на команды мимо `make`. **Отклонён:** требует поставить и настроить новый инструмент каждому, кто трогает репозиторий, тогда как Node уже живёт на `fnm`/`nvm`, а pnpm — на corepack. Вернуться стоит, если инструментов станет заметно больше.
+4. **The `mise` or `asdf` version manager with `.tool-versions`**: one file for all tools, the version switches on entering the directory, so it also applies to commands that bypass `make`. **Rejected:** it requires installing and configuring a new tool for everyone who touches the repository, while Node already lives on `fnm`/`nvm` and pnpm on corepack. It is worth coming back to if the number of tools grows noticeably.
 
-5. **Сохранить текущий подход, договориться словами** — **отклонён:** он уже отказал.
+5. **Keep the current approach and agree verbally**: **rejected:** it has already failed.
 
-## Принятое решение
+## Decision outcome
 
-Версия инструмента записана в том файле, который этот инструмент или его установщик читает сам. Мест, где версию надо повторять руками, не остаётся.
+A tool's version is written in the file that this tool or its installer reads itself. No places remain where the version has to be repeated by hand.
 
-| Инструмент | Где записана версия                        | Кто читает                                                                      |
-| ---------- | ------------------------------------------ | ------------------------------------------------------------------------------- |
-| Go         | `.go-version`                              | `Makefile` через `GOTOOLCHAIN`; CI через `go-version-file`                      |
-| Node       | `engines.node` в корневом `package.json`   | CI через `node-version-file: package.json`; образ разработки через `jq` в `RUN` |
-| pnpm       | `packageManager` в корневом `package.json` | corepack в образе разработки; `pnpm/action-setup` в CI; сам pnpm на хосте       |
+| Tool | Where the version is written                | Who reads it                                                                      |
+| ---- | ------------------------------------------- | --------------------------------------------------------------------------------- |
+| Go   | `.go-version`                               | the `Makefile` through `GOTOOLCHAIN`; CI through `go-version-file`                |
+| Node | `engines.node` in the root `package.json`   | CI through `node-version-file: package.json`; the dev image through `jq` in `RUN` |
+| pnpm | `packageManager` in the root `package.json` | corepack in the dev image; `pnpm/action-setup` in CI; pnpm itself on the host     |
 
-`Makefile` начинается строкой `export GOTOOLCHAIN := go$(shell cat .go-version)`. Отсюда версию получают все цели — `test`, `lint`, `daemon`, `schema` — и на хосте, и внутри контейнера разработки, куда репозиторий смонтирован.
+The `Makefile` starts with the line `export GOTOOLCHAIN := go$(shell cat .go-version)`. All targets get the version from here (`test`, `lint`, `daemon`, `schema`), both on the host and inside the dev container where the repository is mounted.
 
-Директива `go` в обоих `go.mod` совпадает по числу с `.go-version`: это объявление минимальной версии модуля, прижимающее только вверх. Директиву `toolchain` не заводим — на патч-версии она ничего не добавляет к `go`.
+The `go` directive in both `go.mod` files matches `.go-version` in number: it declares the module's minimum version and pins only upwards. We do not add a `toolchain` directive: on a patch version it adds nothing to `go`.
 
-Образ разработки собирается от `golang:1.26-trixie` — ветки, а не точной версии: точную задаёт `GOTOOLCHAIN` из `.go-version`, когда команда идёт через `make`.
+The dev image is built from `golang:1.26-trixie`, a branch, not an exact version: the exact one is set by `GOTOOLCHAIN` from `.go-version` when the command goes through `make`.
 
-`engines.node` и `engines.pnpm` — объявление версии, а не её проверка. Мерой принуждения они не являются: на pnpm 11.25.0 несовпадение давало `[WARN] Unsupported engine`, а `engineStrict: true` роняло установку; на pnpm 12.4.1 не делает ни того ни другого — установка на Node 24.16.0 при `engines.node: 24.21.0` проходит молча (замерено 2026-09-14). Поэтому `engineStrict` в `pnpm-workspace.yaml` не держим.
+`engines.node` and `engines.pnpm` declare the version, they do not check it. They are not an enforcement measure: on pnpm 11.25.0 a mismatch gave `[WARN] Unsupported engine`, and `engineStrict: true` failed the install; on pnpm 12.4.1 neither happens: an install on Node 24.16.0 with `engines.node: 24.21.0` passes silently (measured 2026-09-14). So we do not keep `engineStrict` in `pnpm-workspace.yaml`.
 
-`.nvmrc` остаётся, но источником версии больше не является: `nvm` и `fnm` не читают `package.json`, и без этого файла локально не переключить Node одной командой. Его значение держится равным `engines.node`.
+`.nvmrc` stays, but it is no longer the source of the version: `nvm` and `fnm` do not read `package.json`, and without this file Node cannot be switched locally with one command. Its value is kept equal to `engines.node`.
 
-Версии на момент решения: Go `1.26.8` (последний патч ветки 1.26; 1.27 закрыт форком), Node `24.21.0`, pnpm `12.4.1`.
+Versions at the time of the decision: Go `1.26.8` (the latest patch of the 1.26 branch; 1.27 is blocked by the fork), Node `24.21.0`, pnpm `12.4.1`.
 
-### Область действия и границы
+### Scope and boundaries
 
-Решение распространяется на корень репозитория, `.devcontainer/`, `.github/workflows/ci.yml` и `go.mod` обоих Go-модулей. На версию sing-box в целевом образе стенда и на версии зависимостей оно не распространяется.
+The decision covers the repository root, `.devcontainer/`, `.github/workflows/ci.yml` and the `go.mod` of both Go modules. It does not cover the sing-box version in the test bench target image or dependency versions.
 
-## Последствия
+## Consequences
 
-### Положительные
+### Positive
 
-- Версия Go на хосте перестаёт зависеть от того, что стоит в системе: `make test-schemagen` проходит и при системном Go 1.27.1 — go скачивает 1.26.8 сам.
-- Версия каждого инструмента записана в одном месте; повторять её руками больше негде, поэтому и расходиться нечему.
-- Подъём версии — правка одного файла: `.go-version` для Go, `package.json` для Node и pnpm.
+- The Go version on the host no longer depends on what is installed on the system: `make test-schemagen` passes with the system Go 1.27.1 too, because go downloads 1.26.8 itself.
+- Each tool's version is written in one place; there is nowhere left to repeat it by hand, so nothing can diverge.
+- Bumping a version is an edit of one file: `.go-version` for Go, `package.json` for Node and pnpm.
 
-### Отрицательные
+### Negative
 
-- `GOTOOLCHAIN` из `Makefile` действует только на команды через `make`. `go test ./...` руками и кнопка «Run test» в IDE пойдут на системный Go. Полностью закрыть это можно лишь пользовательской настройкой `go env -w GOTOOLCHAIN=go1.26.8`, которая задаётся на пользователя целиком, а не на репозиторий.
-- Первый прогон на машине, где стоит другой Go, тратит время и место на скачивание тулчейна в `GOMODCACHE` (около 100 МБ).
-- `.nvmrc` повторяет `engines.node`, и ничто не мешает им разойтись. Цена расхождения низкая: `nvm use` даст не ту версию Node, CI и образ разработки этого не заметят, потому что читают `package.json`.
-- Образ разработки больше не привязан к точной версии Go: `go build` внутри контейнера мимо `make` возьмёт ту, что оказалась в ветке `1.26`.
+- `GOTOOLCHAIN` from the `Makefile` applies only to commands through `make`. `go test ./...` by hand and the "Run test" button in an IDE use the system Go. This can be closed completely only by the user setting `go env -w GOTOOLCHAIN=go1.26.8`, which applies to the whole user, not to the repository.
+- The first run on a machine with a different Go spends time and space downloading the toolchain into `GOMODCACHE` (about 100 MB).
+- `.nvmrc` repeats `engines.node`, and nothing prevents them from diverging. The cost of a mismatch is low: `nvm use` gives the wrong Node version, and CI and the dev image do not notice because they read `package.json`.
+- The dev image is no longer tied to an exact Go version: `go build` inside the container bypassing `make` takes whatever ended up in the `1.26` branch.
 
-### Нейтральные или отложенные
+### Neutral or deferred
 
-- Хрупкость форка решением не устраняется: `//go:linkname` на неэкспортированный метод `x/net/http2` сломается на любом Go, где линкер перестанет удерживать этот символ. Пин фиксирует известную рабочую версию и держит Go на ветке 1.26.
-- Проверки версии Node у разработчика нет. `engines` в pnpm 12 её не даёт; если она понадобится, это отдельное решение.
+- The decision does not remove the fork's fragility: `//go:linkname` to an unexported method of `x/net/http2` breaks on any Go whose linker stops keeping this symbol. The pin fixes a known working version and keeps Go on the 1.26 branch.
+- There is no check of the Node version on a developer machine. `engines` in pnpm 12 does not provide it; if it is needed, that is a separate decision.
 
-## Риски и меры снижения
+## Risks and mitigations
 
-| Риск                                                     | Вероятность и влияние                   | Митигация                                                       |
-| -------------------------------------------------------- | --------------------------------------- | --------------------------------------------------------------- |
-| Разработчик собирает мимо `make` и получает системный Go | средняя; ошибка сборки, не порча данных | директива `go` называет ожидаемую версию; ошибка воспроизводима |
-| `.nvmrc` разошёлся с `engines.node`                      | средняя; локально не та версия Node     | оба значения лежат в корне рядом и правятся одной правкой       |
-| Ветка `golang:1.26` уедет на патч старше `.go-version`   | низкая; внутри контейнера мимо `make`   | цели `make` всё равно берут точную версию                       |
-| Форк потребует Go новее 1.26, а 1.27 останется сломанным | низкая; сборка схемы встанет            | версия Go поднимается после починки форка                       |
+| Risk                                                               | Likelihood and impact                      | Mitigation                                                                 |
+| ------------------------------------------------------------------ | ------------------------------------------ | -------------------------------------------------------------------------- |
+| A developer builds bypassing `make` and gets the system Go         | medium; a build error, not data corruption | the `go` directive names the expected version; the error is reproducible   |
+| `.nvmrc` diverges from `engines.node`                              | medium; the wrong Node version locally     | both values sit next to each other in the root and are changed in one edit |
+| The `golang:1.26` branch moves to a patch older than `.go-version` | low; inside the container bypassing `make` | `make` targets take the exact version anyway                               |
+| The fork requires Go newer than 1.26 while 1.27 stays broken       | low; the schema build stops                | the Go version is bumped after the fork is fixed                           |
 
-## Совместимость, миграция и откат
+## Compatibility, migration and rollback
 
-Миграция разовая и уже выполнена: заведён `.go-version`, директива `go` в обоих модулях приведена к той же версии, шаги CI переведены на `go-version-file` и `node-version-file: package.json`, `args: GO_VERSION` убран из обоих сервисов `docker-compose.yml`, образ разработки переведён на ветку `golang:1.26` и читает Node из `package.json`. Существующие конфиги, данные и контракты не затрагиваются.
+The migration is one-off and already done: `.go-version` is added, the `go` directive in both modules is set to the same version, the CI steps are switched to `go-version-file` and `node-version-file: package.json`, `args: GO_VERSION` is removed from both services in `docker-compose.yml`, and the dev image is switched to the `golang:1.26` branch and reads Node from `package.json`. Existing configs, data and contracts are not affected.
 
-Тем же изменением подняты версии: Node 24.20.0 → 24.21.0, pnpm 11.25.0 → 12.4.1. pnpm 12 — переписанный на Rust, совместимый с 11 по командам, настройкам и формату лока; `pnpm install` принял существующий лок без перерешения и дописал в него секцию `packageManagerDependencies` с бинарями самого pnpm.
+The same change bumped versions: Node 24.20.0 → 24.21.0, pnpm 11.25.0 → 12.4.1. pnpm 12 is rewritten in Rust and compatible with 11 in commands, settings and lock format; `pnpm install` accepted the existing lock without re-resolution and added a `packageManagerDependencies` section with pnpm's own binaries to it.
 
-Откат — снять `export GOTOOLCHAIN` из `Makefile`; версия на хосте снова станет той, что установлена в системе. Остальное (`.go-version`, `engines`, чтение версий из `package.json`) безвредно и может остаться.
+Rollback is to remove `export GOTOOLCHAIN` from the `Makefile`; the version on the host becomes whatever is installed on the system again. The rest (`.go-version`, `engines`, reading versions from `package.json`) is harmless and can stay.
 
-Образ разработки после изменения нужно пересобрать: `make up` поднимает стенд с `--build`.
+The dev image has to be rebuilt after the change: `make up` brings up the test bench with `--build`.
 
-## Проверка решения
+## Validation
 
-- `make test-schemagen` при системном Go 1.27.1 — проходит; без `GOTOOLCHAIN` на той же машине падал ошибкой линковки из раздела «Контекст».
-- `cd apps/metaboxd && go env GOTOOLCHAIN` из-под `make` печатает `go1.26.8`, вне `make` — `auto`.
-- `pnpm install --frozen-lockfile` на pnpm 12.4.1 проходит: лок совместим, перерешение не требуется.
-- Правка `.go-version` меняет версию во всех целях `make` и в обоих шагах CI без правки других файлов.
+- `make test-schemagen` with the system Go 1.27.1 passes; without `GOTOOLCHAIN` on the same machine it failed with the linking error from the "Context" section.
+- `cd apps/metaboxd && go env GOTOOLCHAIN` under `make` prints `go1.26.8`, outside `make` it prints `auto`.
+- `pnpm install --frozen-lockfile` on pnpm 12.4.1 passes: the lock is compatible, no re-resolution is needed.
+- Editing `.go-version` changes the version in all `make` targets and in both CI steps without editing other files.
 
-## Ссылки
+## Links
 
 - [`Makefile`](../../Makefile), [`package.json`](../../package.json), [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml), [`.devcontainer/Dockerfile.dev`](../../.devcontainer/Dockerfile.dev);
-- [ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md) — почему генератор схемы собирается с тегами и флагами форка, из-за которых он и упирается в версию Go;
-- [`AGENTS.md`](../../AGENTS.md), раздел «Общее» — правило о том, где лежат версии;
-- Go, управление тулчейнами: <https://go.dev/doc/toolchain>;
-- `actions/setup-go`, вход `go-version-file`: <https://github.com/actions/setup-go#usage>;
-- `actions/setup-node`, вход `node-version-file` и порядок чтения `package.json`: <https://github.com/actions/setup-node/blob/main/docs/advanced-usage.md>;
-- pnpm 12, совместимость с 11: <https://pnpm.io/blog/releases/12.0>.
+- [ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md): why the schema generator is built with the fork's tags and flags, which is why it runs into the Go version;
+- [`AGENTS.md`](../../AGENTS.md), the "General" section: the rule on where versions live;
+- Go, toolchain management: <https://go.dev/doc/toolchain>;
+- `actions/setup-go`, the `go-version-file` input: <https://github.com/actions/setup-go#usage>;
+- `actions/setup-node`, the `node-version-file` input and the order of reading `package.json`: <https://github.com/actions/setup-node/blob/main/docs/advanced-usage.md>;
+- pnpm 12, compatibility with 11: <https://pnpm.io/blog/releases/12.0>.

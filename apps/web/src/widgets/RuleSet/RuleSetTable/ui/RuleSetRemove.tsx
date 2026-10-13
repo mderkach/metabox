@@ -16,9 +16,9 @@ import {
 } from '@shared/ui';
 
 /**
- * Удаление набора из черновика. Спрашивает подтверждение: пошаговой отмены у
- * черновика нет, а ссылки правил на набор удаление не снимает — с ними
- * sing-box конфиг не примет.
+ * Removing a rule set from the draft. Asks for confirmation: the draft has no step-by-step
+ * undo, and removal does not clear rule references to the rule set — with them
+ * sing-box will not accept the config.
  */
 export function RuleSetRemove({ tag, usedBy, onConfirm }: { tag: string; usedBy: number; onConfirm: () => void }) {
   const { t } = useTranslation('widgets/RuleSet/RuleSetTable');

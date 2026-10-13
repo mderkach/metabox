@@ -26,8 +26,8 @@ function rowOf(name: string): HTMLElement {
   return row;
 }
 
-describe('экран диагностики', () => {
-  it('без нажатия «Проверить» к демону не ходит', async () => {
+describe('diagnostics screen', () => {
+  it('without pressing "Проверить" does not go to the daemon', async () => {
     const report = vi.fn<() => void>();
 
     server.use(
@@ -45,7 +45,7 @@ describe('экран диагностики', () => {
     expect(report).not.toHaveBeenCalled();
   });
 
-  it('показывает итог проверок цветом и значком, причину по коду, цепочки и задержку', async () => {
+  it('shows the check result by color and icon, the reason by code, chains and latency', async () => {
     const user = userEvent.setup();
 
     server.use(...proxyHandlers, ...createDiagHandlers());
@@ -84,7 +84,7 @@ describe('экран диагностики', () => {
     expect(within(direct).getByText('на этой системе проверка не поддерживается')).toBeInTheDocument();
   });
 
-  it('проверяет выход через выбранный узел, по умолчанию — через первую группу', async () => {
+  it('checks the outbound through the selected node, by default through the first group', async () => {
     const user = userEvent.setup();
     const targets: (string | null)[] = [];
 
@@ -116,7 +116,7 @@ describe('экран диагностики', () => {
     });
   });
 
-  it('отказ демона показывает причину, а не пустой отчёт', async () => {
+  it('a daemon failure shows the reason, not an empty report', async () => {
     const user = userEvent.setup();
 
     server.use(

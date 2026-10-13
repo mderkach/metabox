@@ -33,10 +33,10 @@ function serveStatus(transaction?: unknown) {
 const POLL_STEP = 50;
 const POLL_LIMIT = 6000;
 const REAL_YIELD = 1;
-/** Снято до подмены таймеров: ответы моков и отложенный рендер React идут вне фейковых часов. */
+/** Taken before timers are faked: mock responses and React deferred render run outside the fake clock. */
 const waitReal = globalThis.setTimeout;
 
-/** Двигает фейковые часы шагами, отдавая между ними такт настоящим. */
+/** Moves the fake clock in steps, giving the real one a tick between them. */
 async function advanceUntil(happened: () => boolean): Promise<void> {
   for (let waited = 0; waited < POLL_LIMIT && !happened(); waited += POLL_STEP) {
     await vi.advanceTimersByTimeAsync(POLL_STEP);
@@ -63,14 +63,14 @@ describe('ConfigApplyBar', () => {
     vi.restoreAllMocks();
   });
 
-  it('молчит, пока правок нет и применение не идёт', () => {
+  it('stays silent while there are no edits and no apply is running', () => {
     loadDocument(false);
     renderWithQuery(<ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />);
 
     expect(screen.queryByRole('region', { name: 'Применение конфига' })).not.toBeInTheDocument();
   });
 
-  it('сообщает место, которое закрывает, пока виден или уезжает, и ноль после выезда', () => {
+  it('reports the space it covers while visible or sliding away, and zero after it leaves', () => {
     const barHeight = 64;
     const onSpaceChange = vi.fn<(space: number) => void>();
 
@@ -91,7 +91,7 @@ describe('ConfigApplyBar', () => {
     expect(onSpaceChange).toHaveBeenLastCalledWith(0);
   });
 
-  it('на черновике предлагает применить и посмотреть диф', () => {
+  it('on a draft offers to apply and view the diff', () => {
     loadDocument();
     renderWithQuery(<ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />);
 
@@ -100,7 +100,7 @@ describe('ConfigApplyBar', () => {
     expect(screen.getByRole('button', { name: 'Посмотреть диф' })).toBeInTheDocument();
   });
 
-  it('держит сброс черновика с краю, отдельно от «Применить»', () => {
+  it('keeps the draft reset at the edge, apart from "Apply"', () => {
     loadDocument();
     renderWithQuery(<ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />);
 
@@ -112,7 +112,7 @@ describe('ConfigApplyBar', () => {
     expect(names).toEqual(['Отменить правки', 'Посмотреть диф', 'Применить']);
   });
 
-  it('отменяет правки только после подтверждения: черновик снят, файл с устройства на месте', async () => {
+  it('cancels edits only after confirmation: the draft is cleared, the file from the device is in place', async () => {
     loadDocument();
     renderWithQuery(<ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />);
 
@@ -125,7 +125,7 @@ describe('ConfigApplyBar', () => {
     expect(ConfigDocumentState.getState().applied).toBe(APPLIED);
   });
 
-  it('предупреждает, что конфиг на устройстве сменился с момента черновика, и даёт его отбросить', async () => {
+  it('warns that the config on the device changed since the draft, and lets it be discarded', async () => {
     loadDocument();
     ConfigDocumentState.getState().load(APPLIED.replace('info', 'warn'), APPLIED_ETAG);
     renderWithQuery(<ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />);
@@ -139,7 +139,7 @@ describe('ConfigApplyBar', () => {
     expect(screen.queryByRole('region', { name: 'Применение конфига' })).not.toBeInTheDocument();
   });
 
-  it('отправляет в Apply текст черновика и отпечаток базы, а не разобранный конфиг', async () => {
+  it('sends the draft text and the base fingerprint to Apply, not the parsed config', async () => {
     const sent: { text: string; base: string | null }[] = [];
 
     server.use(
@@ -161,7 +161,7 @@ describe('ConfigApplyBar', () => {
     });
   });
 
-  it('в окне подтверждения отсчитывает остаток и подтверждает по кнопке', async () => {
+  it('in the confirmation window counts down the remainder and confirms by the button', async () => {
     const confirmed: string[] = [];
 
     server.use(
@@ -188,7 +188,7 @@ describe('ConfigApplyBar', () => {
     });
   });
 
-  it('пересинхронизирует остаток с ответом опроса, а не досчитывает старое значение', async () => {
+  it('resynchronizes the remainder with the poll response instead of counting down the old value', async () => {
     let transaction: typeof TRANSACTION = TRANSACTION;
 
     server.use(http.get(DAEMON_ENDPOINT.applyState(TRANSACTION.id), () => HttpResponse.json(transaction)));
@@ -198,8 +198,8 @@ describe('ConfigApplyBar', () => {
     vi.useFakeTimers();
     renderWithQuery(<ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />);
 
-    // Окно подтверждения приходит отложенным рендером: `act` доводит его вместе
-    // с эффектом отсчёта до DOM, пока фейковые часы стоят на месте.
+    // The confirmation window arrives with a deferred render: `act` brings it along with
+    // the countdown effect to the DOM while the fake clock stands still.
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0);
     });
@@ -207,7 +207,7 @@ describe('ConfigApplyBar', () => {
 
     expect(screen.getByText('60 с')).toBeInTheDocument();
 
-    // Локальный тик без нового значения от опроса: остаток считается от 60 сам.
+    // A local tick without a new value from the poll: the remainder counts down from 60 on its own.
     await advanceUntil(() => screen.queryByText('55 с') !== null);
 
     expect(screen.getByText('55 с')).toBeInTheDocument();
@@ -219,7 +219,7 @@ describe('ConfigApplyBar', () => {
     expect(screen.getByText('20 с')).toBeInTheDocument();
   });
 
-  it('показывает вывод sing-box, когда бинарь отверг конфиг', async () => {
+  it('shows the sing-box output when the binary rejected the config', async () => {
     server.use(
       http.post(DAEMON_ENDPOINT.apply(), () =>
         HttpResponse.json(
@@ -240,11 +240,11 @@ describe('ConfigApplyBar', () => {
 
     expect(await screen.findByText('FATAL decode config: unknown field')).toBeInTheDocument();
     expect(screen.getByText(/Код выхода: 1/)).toBeInTheDocument();
-    // Черновик остаётся: на нём пользователь чинит конфиг.
+    // The draft stays: the user fixes the config on it.
     expect(ConfigDocumentState.getState().draft).toBe(DRAFT);
   });
 
-  it('подсказывает команду, когда рабочий каталог службы не совпал с каталогом конфига', async () => {
+  it('suggests a command when the service working directory did not match the config directory', async () => {
     server.use(
       http.post(DAEMON_ENDPOINT.apply(), () =>
         HttpResponse.json(
@@ -272,11 +272,11 @@ describe('ConfigApplyBar', () => {
         "uci set sing-box.main.workdir='/etc/sing-box' && uci commit sing-box && /etc/init.d/sing-box restart"
       )
     ).toBeInTheDocument();
-    // Черновик остаётся: после настройки службы его применяют снова.
+    // The draft stays: after the service is set up, it is applied again.
     expect(ConfigDocumentState.getState().draft).toBe(DRAFT);
   });
 
-  it('сообщает, что секцию clash_api дописал демон', async () => {
+  it('reports that the daemon appended the clash_api section', async () => {
     serveStatus({ ...TRANSACTION, clash_api_added: true });
     server.use(
       http.get(DAEMON_ENDPOINT.applyState(TRANSACTION.id), () =>
@@ -291,7 +291,7 @@ describe('ConfigApplyBar', () => {
     expect(screen.getByText(/Служба перезапущена тем же применением/)).toBeInTheDocument();
   });
 
-  it('показывает автооткат и без черновика: откат версии своего черновика не заводит', async () => {
+  it('shows the automatic rollback even without a draft: a version rollback does not create its own draft', async () => {
     const rolledBack = { ...TRANSACTION, phase: 'rolled_back', window: 0, reason: '' };
 
     serveStatus(rolledBack);
@@ -307,11 +307,11 @@ describe('ConfigApplyBar', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Скрыть' }));
 
-    // Бар сворачивается с прежним текстом, но из дерева доступности уходит сразу.
+    // The bar collapses with the same text, but leaves the accessibility tree at once.
     expect(screen.queryByRole('region', { name: 'Применение конфига' })).not.toBeInTheDocument();
   });
 
-  it('не выдаёт первое применение без бэкапа за откат', async () => {
+  it('does not pass the first apply without a backup off as a rollback', async () => {
     const noBackup = {
       ...TRANSACTION,
       phase: 'failed',

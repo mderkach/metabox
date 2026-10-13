@@ -1,38 +1,38 @@
-# Управление состоянием
+# State management
 
-Zustand. Черновика immer в наборе нет: дерева в сторе нет ни у одного из них, а на снапшоте потока обёртки съедали почти весь бюджет обработчика ([ADR-0024](../../../../docs/adr/ADR-0024-drop-the-immer-draft-from-frontend-stores.md)).
+Zustand. There is no immer draft in the middleware set: none of the stores holds a tree, and on a stream snapshot the wrappers ate almost the whole handler budget ([ADR-0024](../../../../docs/adr/ADR-0024-drop-the-immer-draft-from-frontend-stores.md)).
 
-## Зона ответственности
+## Area of responsibility
 
-Стор отвечает за:
+A store is responsible for:
 
-1. замену множественных `useState`;
-2. замену React Context там, где он используется как транспорт данных;
-3. передачу состояния между компонентами и экранами;
-4. вычисляемые свойства поверх уже полученных данных;
-5. состояние, которое было бы дорого держать в React Hook Form (см. [Формы](./Form&Validation.md)).
+1. replacing multiple `useState` calls;
+2. replacing React Context where it is used as a data transport;
+3. passing state between components and screens;
+4. computed properties on top of data already received;
+5. state that would be expensive to keep in React Hook Form (see [Forms](./Form&Validation.md)).
 
-**Стор не управляет HTTP-запросами.** Запрос-ответ — зона TanStack Query. Исключение: топики SSE-потока рантайма идут мимо Query в отдельный стор, потому что кэш поверх потока врёт.
+**A store does not manage HTTP requests.** Request-response is the area of TanStack Query. The exception: topics of the runtime SSE stream bypass Query and go into a separate store, because a cache on top of a stream lies.
 
-## Три стора приложения
+## The application's three stores
 
-| Роль стора    | Где живёт                             | Что держит                                              |
-| ------------- | ------------------------------------- | ------------------------------------------------------- |
-| документ      | `model` слайса редактируемой сущности | текст с устройства, черновик, счётчик обновлений        |
-| рантайм-поток | `model` слайса потоковой сущности     | кадры топиков `GET /api/events`                         |
-| локальный     | по месту                              | состояние отдельного виджета, которое незачем поднимать |
+| Store role     | Where it lives                       | What it holds                                                   |
+| -------------- | ------------------------------------ | --------------------------------------------------------------- |
+| document       | `model` of the edited entity's slice | the text from the device, the draft, the update counter         |
+| runtime stream | `model` of the stream entity's slice | topic frames of `GET /api/events`                               |
+| local          | in place                             | the state of a single widget that there is no reason to lift up |
 
-Больше глобальных сторов заводить не нужно. Если состояние нужно двум компонентам одного слайса — это локальный стор слайса, а не глобальный.
+Do not create more global stores. If two components of one slice need a state, it is a local store of the slice, not a global one.
 
-## Инструменты
+## Tools
 
-В `shared/lib/state` лежат три обёртки:
+`shared/lib/state` contains three wrappers:
 
-- `stateCreator` — фабрика стора: подключает `devtools`;
-- `useStore` — подписка с `useShallow`, чтобы множественная выборка не давала лишних рендеров;
-- `createReactSelectors` — генерирует `State.use.<prop>()` по ключам стора.
+- `stateCreator`: the store factory; it plugs in `devtools`;
+- `useStore`: a subscription with `useShallow`, so that a multiple selection does not cause extra renders;
+- `createReactSelectors`: generates `State.use.<prop>()` from the store keys.
 
-### Создание
+### Creation
 
 ```ts
 import { stateCreator, createReactSelectors } from '@shared/lib/state';
@@ -61,23 +61,23 @@ const DocumentStateProto = stateCreator<DocumentState>(
 export const DocumentState = createReactSelectors(DocumentStateProto);
 ```
 
-Нейминг — как у компонентов. Стор с суффиксом `Proto` модульно приватен; наружу уходит результат `createReactSelectors`, а под своим именем — тот же `Proto` алиасом `*Store` для доступа вне React.
+Naming is the same as for components. A store with the `Proto` suffix is module-private; the result of `createReactSelectors` is exported, and the same `Proto` is exported under its own name as the `*Store` alias for access outside React.
 
-Обработчик возвращает изменённые поля, а не мутирует состояние. Пустой `return` недопустим — zustand примет его за новое состояние. «Ничего не менять» — это `return state`: сравнение по ссылке проходит, и подписчиков не трогают; `{}` вместо него дал бы новый объект состояния и обход всего списка подписчиков. Кольцевой буфер обновляется новым массивом — `[...buffer, next].slice(-LIMIT)`, а не парой `push` и `shift`.
+A handler returns the changed fields, it does not mutate the state. An empty `return` is not allowed: zustand takes it for the new state. "Change nothing" is `return state`: the reference comparison passes and subscribers are not touched; `{}` instead would give a new state object and a pass over the whole subscriber list. A ring buffer is updated with a new array, `[...buffer, next].slice(-LIMIT)`, not with a `push` and `shift` pair.
 
-### Подписка
+### Subscription
 
-Единичное значение — через сгенерированный селектор, это предпочтительный вариант:
+A single value goes through the generated selector; this is the preferred option:
 
 ```tsx
 function DraftBadge() {
   const draft = DocumentState.use.draft();
 
-  return draft === null ? null : <Badge>черновик</Badge>;
+  return draft === null ? null : <Badge>draft</Badge>;
 }
 ```
 
-Вычисляемое значение отдаётся хуком рядом со стором: сгенерированный селектор вернул бы саму функцию, а не результат, и подписка бы не сработала.
+A computed value is returned by a hook next to the store: the generated selector would return the function itself, not the result, and the subscription would not work.
 
 ```ts
 export function useConfigDirty(): boolean {
@@ -85,7 +85,7 @@ export function useConfigDirty(): boolean {
 }
 ```
 
-Несколько значений — через `useStore`, он мемоизирует выборку по `shallow`:
+Several values go through `useStore`, which memoizes the selection with `shallow`:
 
 ```tsx
 function ApplyBar() {
@@ -98,44 +98,44 @@ function ApplyBar() {
 }
 ```
 
-### Вне React
+### Outside React
 
-Прямой доступ к состоянию — через `getState()` / `setState()` на алиасе `*Store` (`ConnectionStore`, `DaemonStore`): сам `*Proto` за пределы своего модуля не выходит. Так работают, например, обработчики топиков потока рантайма, живущие вне дерева компонентов.
+Direct access to the state goes through `getState()` / `setState()` on the `*Store` alias (`ConnectionStore`, `DaemonStore`): `*Proto` itself does not leave its module. This is how, for example, the runtime stream topic handlers that live outside the component tree work.
 
-## Документ конфига
+## Config document
 
-Документ хранится **текстом файла**, а не разобранным деревом: правка применяется к исходным байтам, иначе порядок ключей пользователя переписывается целиком. Разбор схемой живёт в сегменте `api` и нужен для показа и валидации, а не для сохранения.
+The document is stored as **the file text**, not as a parsed tree: an edit is applied to the original bytes, otherwise the user's key order is rewritten entirely. Parsing with the schema lives in the `api` segment and is needed for display and validation, not for saving.
 
-Стор держит текст с устройства, черновик и счётчик обновлений, пришедших не от пользователя. Правила:
+The store holds the text from the device, the draft and the counter of updates that did not come from the user. Rules:
 
-- Адресация узлов — `JSONPath` из `jsonc-parser`: массив сегментов (`['outbounds', 2, 'uuid']`). Запись — `setValue`, `removeValue` и `insertValue` из `model` слайса `Config`; они возвращают новый текст, который и уходит телом Apply.
-- **Черновик не добавляет полей.** Значения по умолчанию не пишутся, очищенное поле удаляется из узла. Иначе диф перед применением покажет правки, которых пользователь не делал.
-- Нераспознанные узлы через сериализацию не проходят вовсе: текст остаётся текстом, искажать нечего.
-- Наличие правок и диф между применённым текстом и черновиком считаются селекторами, а не хранятся отдельными полями.
-- История версий приходит с сервера через Query и в стор не попадает вовсе: диалог истории читает её запросом и откатывается протоколом Apply.
-- Пошаговой отмены нет: `discard` снимает черновик целиком. Стек предыдущих текстов завести можно, но его нет, и патчи дерева для него не годились бы — дерева в сторе нет, по этой же причине из набора middleware снят черновик immer.
+- Nodes are addressed with `JSONPath` from `jsonc-parser`: an array of segments (`['outbounds', 2, 'uuid']`). Writes go through `setValue`, `removeValue` and `insertValue` from the `model` of the `Config` slice; they return a new text, which becomes the Apply body.
+- **The draft does not add fields.** Default values are not written, a cleared field is removed from the node. Otherwise the diff before apply would show edits the user did not make.
+- Unrecognized nodes do not go through serialization at all: the text stays text, there is nothing to distort.
+- Whether there are edits and the diff between the applied text and the draft are computed by selectors, not stored in separate fields.
+- Version history comes from the server through Query and does not get into the store at all: the history dialog reads it with a query and rolls back through the Apply protocol.
+- There is no step-by-step undo: `discard` drops the whole draft. A stack of previous texts could be added, but there is none, and tree patches would not fit it: there is no tree in the store, and for the same reason the immer draft was removed from the middleware set.
 
-## Поток рантайма
+## Runtime stream
 
-Стор потока принимает кадры топиков `GET /api/events`. Бюджет — тысячи объектов в потоке, без блокировок главного потока дольше 100 мс:
+The stream store receives topic frames of `GET /api/events`. The budget is thousands of objects in the stream, without blocking the main thread for longer than 100 ms:
 
-- Крупные кадры — снапшот соединений — применяются пачкой по таймеру, а не по каждому сообщению. Сэмпл из двух чисел пачки не требует.
-- Хранится кольцевой буфер фиксированной длины; выбывшие объекты из него выпадают. Историю глубже буфера вкладки копит демон и отдаёт `GET /api/history` — стор её не накапливает.
-- Объекты потока индексируются `Map` по id, компонент получает срез для виртуализованного списка, а не весь буфер.
-- Агрегация — на стороне сервера; в сторе только то, что рисуется. Действующее исключение — сводка снапшота соединений: она считается тем же проходом, которым разбирается снапшот, и держится под замером бюджета. Новые исключения без такого же замера не заводятся.
+- Large frames (the connections snapshot) are applied in a batch on a timer, not on every message. A sample of two numbers needs no batch.
+- A fixed-length ring buffer is kept; objects that drop out leave it. History deeper than the tab's buffer is accumulated by the daemon and returned by `GET /api/history`: the store does not accumulate it.
+- Stream objects are indexed by id in a `Map`, a component gets a slice for a virtualized list, not the whole buffer.
+- Aggregation happens on the server; the store holds only what is drawn. The current exception is the connections snapshot summary: it is computed in the same pass that parses the snapshot and is kept under a budget measurement. New exceptions are not added without the same measurement.
 
-## Запрещено
+## Forbidden
 
-**Подписка на весь стор.** Любое изменение вызовет рендер:
+**Subscribing to the whole store.** Any change causes a render:
 
 ```tsx
 const state = useStore(DocumentStateProto, (s) => s); // ❌
 ```
 
-**Вызов вычисляющего экшена вместо селектора.** Подписка не сработает, ререндера не будет:
+**Calling a computing action instead of a selector.** The subscription does not work, there is no rerender:
 
 ```tsx
-// ❌ ререндера не будет
+// ❌ no rerender
 const calc = useStore(StateProto, (state) => state.calcTotal);
 const total = calc();
 
@@ -143,11 +143,11 @@ const total = calc();
 const total = useStore(StateProto, (state) => state.calcTotal());
 ```
 
-**Избыточные множественные селекторы.** Если компонент выбирает восемь полей — скорее всего, его надо разбить.
+**Excessive multiple selectors.** If a component selects eight fields, it most likely needs to be split.
 
-## Полезные рецепты zustand
+## Useful zustand recipes
 
-1. [No-action сторы](https://zustand.docs.pmnd.rs/guides/practice-with-no-store-actions) — под запись из обработчиков вне React, см. раздел «Вне React»
-2. [Слайсы стора](https://zustand.docs.pmnd.rs/guides/slices-pattern) — под документ конфига, чтобы черновик, история и dirty-tracking были разными файлами
-3. [Map и Set](https://zustand.docs.pmnd.rs/guides/maps-and-sets-usage) — под индекс соединений по id
-4. [Сброс состояния](https://zustand.docs.pmnd.rs/guides/how-to-reset-state) — при смене устройства или перезагрузке конфига
+1. [No-action stores](https://zustand.docs.pmnd.rs/guides/practice-with-no-store-actions): for writes from handlers outside React, see the "Outside React" section
+2. [Store slices](https://zustand.docs.pmnd.rs/guides/slices-pattern): for the config document, so that the draft, history and dirty tracking are separate files
+3. [Map and Set](https://zustand.docs.pmnd.rs/guides/maps-and-sets-usage): for the connection index by id
+4. [Resetting state](https://zustand.docs.pmnd.rs/guides/how-to-reset-state): on device change or config reload

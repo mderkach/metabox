@@ -10,49 +10,48 @@ import (
 	"time"
 )
 
-// RuleHits — срабатывания одного правила работающего процесса.
+// RuleHits are the hits of one rule of the running process.
 type RuleHits struct {
 	Index int    `json:"index"`
 	Hits  uint64 `json:"hits"`
-	// Counted — видно ли правило в списке соединений вообще. Clash API пишет у
-	// соединения только правило, на котором перебор остановился, и только
-	// соединения, ушедшие в outbound: `sniff` и `resolve` не останавливают
-	// перебор, перехваченный DNS и отклонённое соединение в список не попадают.
-	// У таких правил ноль значил бы не «не срабатывало», а «не видно».
+	// Counted is whether the rule is visible in the connection list at all. The Clash API writes for
+	// a connection only the rule on which the iteration stopped, and only for
+	// connections that went to an outbound: `sniff` and `resolve` do not stop
+	// the iteration, an intercepted DNS and a rejected connection do not get into the list.
+	// For such rules zero would mean not "did not fire" but "not visible".
 	Counted bool `json:"counted"`
 }
 
-// Hits — ответ ручки счётчика срабатываний.
+// Hits is the response of the rule hit counter handler.
 //
-// Счёт наблюдаемый, а не точный: соединение, которое открылось и закрылось
-// между двумя снапшотами, core уже не покажет, и в счёт оно не попадёт.
+// The count is observed, not exact: a connection that opened and closed
+// between two snapshots will no longer be shown by core and will not get into the count.
 type Hits struct {
-	// Seconds — сколько идёт счёт. Он живёт в памяти демона и начинается с его
-	// запуска: у роутера нет часов реального времени, поэтому отдаётся
-	// длительность, а не момент начала.
+	// Seconds is how long the count has been running. It lives in the daemon memory and starts with its
+	// start: the router has no real-time clock, so a duration is returned,
+	// not a start moment.
 	Seconds int64 `json:"seconds"`
-	// Rules — по записи на каждое правило работающего процесса, в его порядке.
-	// Длину панель сверяет с route.rules применённого документа, как и у
-	// объяснения маршрута.
+	// Rules is an entry for each rule of the running process, in its order.
+	// The panel compares the length with route.rules of the applied document, as with
+	// the route explanation.
 	Rules []RuleHits `json:"rules"`
-	// Final — соединения, которые не совпали ни с одним правилом и ушли в
+	// Final counts connections that matched no rule and went to
 	// route.final.
 	Final uint64 `json:"final"`
 }
 
-// Counter считает, сколько соединений пришлось на каждое правило, по снапшотам
+// Counter counts how many connections fell on each rule, by snapshots
 // `/connections`.
 //
-// Работает всё время жизни демона, открыта панель или нет, — второе исключение
-// из правила «фоновых опросов без потребителя нет» после учёта трафика:
-// соединение, не замеченное вовремя, задним числом не восстанавливается.
-// Цена в простое — один снапшот соединений в интервал и список правил, когда
-// встретилось правило, которого в запомненном списке нет. Этот же снапшот
-// через Snapshots читает поток рантайма: второго опроса `/connections` у
-// демона нет.
+// Works for the whole daemon lifetime, whether the panel is open or not: the second exception
+// to the rule "no background polling without a consumer", after traffic accounting:
+// a connection not noticed in time is not restored retroactively.
+// The price at idle is one connections snapshot per interval and the rule list, when
+// a rule is met that is not in the remembered list. The runtime stream reads this same snapshot
+// through Snapshots: the daemon has no second `/connections` poll.
 //
-// Счёт ведётся по условиям и действию правила, а не по номеру: после
-// применения, которое переставило правила, счёт остаётся за своим правилом.
+// The count is kept by the rule conditions and action, not by number: after an
+// apply that reordered the rules the count stays with its own rule.
 type Counter struct {
 	source Source
 	log    *slog.Logger
@@ -70,30 +69,30 @@ type Counter struct {
 	done chan struct{}
 }
 
-// SizeRecorder принимает число живых соединений снимка. Снимок счётчик и так
-// снимает раз в секунду, поэтому историю числа соединений ведёт он же, а не
-// второй опрос.
+// SizeRecorder accepts the number of live connections of a snapshot. The counter takes the snapshot
+// once a second anyway, so the connection count history is kept by it too, not by
+// a second poll.
 type SizeRecorder interface {
 	Record(count int)
 }
 
-// CounterOptions задаёт период опроса и потребителей снятого снапшота.
+// CounterOptions sets the polling period and the consumers of the taken snapshot.
 type CounterOptions struct {
-	// Interval — период снапшота `/connections`.
+	// Interval is the period of the `/connections` snapshot.
 	Interval time.Duration
-	// Retry — пауза после неудачного снапшота, тот же смысл, что RetryInterval
-	// у потока рантайма: при лежащем sing-box постоянные опросы демона ждут
-	// одинаково. Ноль — Interval.
+	// Retry is the pause after a failed snapshot, the same meaning as RetryInterval
+	// of the runtime stream: with sing-box down the constant daemon polls wait
+	// the same. Zero means Interval.
 	Retry time.Duration
-	// Sizes принимает число живых соединений каждого снимка; nil — не нужно.
+	// Sizes accepts the number of live connections of each snapshot; nil means not needed.
 	Sizes SizeRecorder
-	// Snapshots принимает сырой снапшот каждого удачного опроса — так поток
-	// рантайма получает соединения без собственного похода в Clash API.
-	// nil — не нужно.
+	// Snapshots accepts the raw snapshot of each successful poll, so the runtime
+	// stream gets connections without its own trip to the Clash API.
+	// nil means not needed.
 	Snapshots func(json.RawMessage)
 }
 
-// NewCounter собирает счётчик. Опроса он не начинает: его поднимает Start.
+// NewCounter assembles the counter. It starts no polling: Start brings it up.
 func NewCounter(source Source, log *slog.Logger, opts CounterOptions) *Counter {
 	return &Counter{
 		source: source,
@@ -104,7 +103,7 @@ func NewCounter(source Source, log *slog.Logger, opts CounterOptions) *Counter {
 	}
 }
 
-// Start поднимает опрос на всё время работы демона.
+// Start brings the polling up for the whole daemon runtime.
 func (c *Counter) Start() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -123,7 +122,7 @@ func (c *Counter) Start() {
 	}(c.done)
 }
 
-// Close останавливает опрос и дожидается его.
+// Close stops the polling and waits for it.
 func (c *Counter) Close() {
 	c.mu.Lock()
 	stop, done := c.stop, c.done
@@ -162,7 +161,7 @@ func (c *Counter) run(ctx context.Context) {
 	}
 }
 
-// observe засчитывает соединения, которых не было в прошлом снапшоте.
+// observe counts the connections that were not in the previous snapshot.
 func (c *Counter) observe(ctx context.Context) error {
 	body, err := c.source.Snapshot(ctx, "/connections")
 	if err != nil {
@@ -182,8 +181,8 @@ func (c *Counter) observe(ctx context.Context) error {
 		c.opts.Snapshots(body)
 	}
 
-	// seen и rules трогает только горутина опроса, под мьютексом лежит лишь
-	// то, что читает Hits.
+	// seen and rules are touched only by the polling goroutine, under the mutex lies only
+	// what Hits reads.
 	rules := c.rules
 	current := make(map[string]struct{}, len(snapshot.Connections))
 	var fresh []clashConnection
@@ -201,9 +200,9 @@ func (c *Counter) observe(ctx context.Context) error {
 	for i, connection := range fresh {
 		matches[i] = matchRule(connection.Rule, rules)
 
-		// Правило, которого нет в запомненном списке, значит, что процесс
-		// перезапустился на другом конфиге. Список перечитывается один раз за
-		// снапшот: соединение, не найденное и в свежем, так и останется неизвестным.
+		// A rule that is not in the remembered list means the process
+		// restarted on another config. The list is reread once per
+		// snapshot: a connection not found in the fresh one either stays unknown.
 		if matches[i].Kind == KindUnknown && !refreshed {
 			refreshed = true
 
@@ -233,8 +232,8 @@ func (c *Counter) observe(ctx context.Context) error {
 	return nil
 }
 
-// Hits отдаёт счёт по правилам работающего процесса. Список правил читается
-// заново: номер правила определяется тем, что загружено сейчас.
+// Hits returns the count by the rules of the running process. The rule list is read
+// anew: the rule number is determined by what is loaded now.
 func (c *Counter) Hits(ctx context.Context) (Hits, error) {
 	rules, err := readRules(ctx, c.source)
 	if err != nil {
@@ -255,8 +254,8 @@ func (c *Counter) Hits(ctx context.Context) (Hits, error) {
 		key := hitKey(rule.Conditions, rule.Action)
 		hits := uint64(0)
 
-		// Правило с теми же условиями и действием ниже по списку не
-		// срабатывает никогда: роутер останавливается на первом.
+		// A rule with the same conditions and action lower in the list
+		// never fires: the router stops at the first one.
 		if !counted[key] {
 			counted[key] = true
 			hits = c.hits[key]
@@ -268,9 +267,9 @@ func (c *Counter) Hits(ctx context.Context) (Hits, error) {
 	return out, nil
 }
 
-// countable отвечает, может ли соединение с этим действием оказаться в списке
-// соединений с этим правилом: только маршрут в outbound, `route(...)` или
-// `bypass(...)` с outbound.
+// countable reports whether a connection with this action can end up in the connection
+// list with this rule: only a route to an outbound, `route(...)` or
+// `bypass(...)` with an outbound.
 func countable(action string) bool {
 	name, arguments, _ := strings.Cut(action, "(")
 

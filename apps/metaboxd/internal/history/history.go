@@ -1,31 +1,31 @@
-// Package history копит историю рантайма на стороне демона.
+// Package history accumulates the runtime history on the daemon side.
 //
-// Панель держит в памяти вкладки только последнюю минуту, и после перезагрузки
-// страницы график начинается заново. История нужна за всё время работы демона,
-// а хранить её негде, кроме него самого: поток `/traffic` отдаёт скорость за
-// секунду и назад не мотает.
+// The panel keeps only the last minute in tab memory, and after a page reload
+// the chart starts over. The history is needed for the whole daemon runtime,
+// and there is nowhere to store it except the daemon itself: the `/traffic` stream gives the speed per
+// second and does not rewind.
 //
-// Окно не скользящее: заполненное кольцо не выбрасывает старые точки, а
-// укрупняет шаг вдвое, сливая соседние. График всегда покрывает всё время
-// работы демона, а память остаётся в границах — цена в том, что чем дольше
-// работает демон, тем грубее давние участки.
+// The window is not sliding: a filled ring does not drop old points but
+// doubles the step by merging neighbours. The chart always covers the whole daemon
+// runtime while memory stays within bounds; the price is that the longer the daemon
+// runs, the coarser the old sections.
 //
-// Буфер живёт в памяти: запись на флеш роутера ради графика не стоит его
-// ресурса, а перезапуск демона историю обнуляет — так же, как счётчики b4.
+// The buffer lives in memory: writing to the router flash for a chart is not worth its
+// wear, and a daemon restart zeroes the history, like the b4 counters.
 package history
 
 import "sync"
 
-// ring — кольцо точек с укрупнением шага.
+// ring is a ring of points with step coarsening.
 type ring[T any] struct {
 	points []T
 	first  int
 	filled int
 }
 
-// push кладёт точку. Заполненное кольцо сначала сливает соседние точки попарно
-// и освобождает половину места; в этом случае возвращается true — вызывающий
-// удваивает шаг.
+// push puts a point. A filled ring first merges neighbouring points in pairs
+// and frees half the space; in that case it returns true and the caller
+// doubles the step.
 func (r *ring[T]) push(point T, merge func(older, newer T) T) bool {
 	if len(r.points) == 0 {
 		return false
@@ -44,8 +44,8 @@ func (r *ring[T]) push(point T, merge func(older, newer T) T) bool {
 	return compacted
 }
 
-// compact сливает соседние точки попарно, оставляя половину. После него данные
-// лежат с начала буфера.
+// compact merges neighbouring points in pairs, leaving half. After it the data
+// lies from the start of the buffer.
 func (r *ring[T]) compact(merge func(older, newer T) T) {
 	merged := make([]T, 0, r.filled/2)
 
@@ -69,35 +69,35 @@ func (r *ring[T]) all() []T {
 	return points
 }
 
-// Point — средняя скорость за шаг, байт в секунду.
+// Point is the average speed per step, bytes per second.
 type Point struct {
 	Down int64 `json:"down"`
 	Up   int64 `json:"up"`
 }
 
-// DevicePoint — показания платы и процессов за шаг.
+// DevicePoint is the board and process readings per step.
 //
-// Загрузка и температура берутся пиком шага, память — средним. История нужна,
-// чтобы заметить перегрев и утечку за дни работы, а при укрупнении шага среднее
-// растворило бы короткий перегрев в соседних спокойных минутах.
+// Load and temperature are taken as the step peak, memory as the average. The history is needed
+// to notice overheating and a leak over days of work, and on step coarsening the average
+// would dissolve a short overheating among neighbouring calm minutes.
 type DevicePoint struct {
-	// Load — средняя загрузка за минуту, как её отдаёт ядро; пик шага.
+	// Load is the average load per minute as the kernel gives it; the step peak.
 	Load float64 `json:"load"`
-	// Celsius — самая горячая зона платы, пик шага; ноль означает, что зон нет.
+	// Celsius is the hottest board zone, the step peak; zero means there are no zones.
 	Celsius float64 `json:"celsius"`
-	// Memory — занятая память платы в байтах.
+	// Memory is the occupied board memory in bytes.
 	Memory int64 `json:"memory"`
-	// Singbox — резидентная память процесса sing-box в байтах; ноль — процесс
-	// не найден. По ней и видна утечка: память платы в целом её размывает.
+	// Singbox is the resident memory of the sing-box process in bytes; zero means the process
+	// was not found. A leak is visible by it: the board memory as a whole blurs it.
 	Singbox int64 `json:"singbox"`
-	// Daemon — резидентная память самого демона в байтах.
+	// Daemon is the resident memory of the daemon itself in bytes.
 	Daemon int64 `json:"daemon"`
 }
 
-// Traffic — история трафика.
+// Traffic is the traffic history.
 //
-// Шаг считается снятиями, а не часами: часов у роутера до синхронизации NTP
-// нет — они прыгают, и время точки по ним не восстановить.
+// The step is counted in readings, not hours: the router has no clock before NTP
+// synchronization, it jumps, and the point time cannot be restored by it.
 type Traffic struct {
 	mu sync.Mutex
 
@@ -109,22 +109,22 @@ type Traffic struct {
 	sumUp   int64
 	counted int
 
-	// recent — последние сэмплы как есть, по одному в секунду. График минуты
-	// в панели берёт их при открытии: иначе он начинался бы с пустого места и
-	// показывал только то, что пришло, пока вкладка открыта.
+	// recent is the last samples as is, one per second. The panel minute chart
+	// takes them on open: otherwise it would start from an empty place and
+	// show only what arrived while the tab was open.
 	recent []Point
 }
 
-// RecentPoints — сколько последних сэмплов держится без усреднения: минута.
+// RecentPoints is how many last samples are kept without averaging: a minute.
 const RecentPoints = 60
 
-// New собирает историю трафика: `perPoint` снятий на точку, `stepSeconds`
-// секунд между точками, `points` точек до первого укрупнения шага.
+// New assembles the traffic history: `perPoint` readings per point, `stepSeconds`
+// seconds between points, `points` points before the first step coarsening.
 func New(perPoint, stepSeconds, points int) *Traffic {
 	return &Traffic{perPoint: perPoint, stepSeconds: stepSeconds, ring: ring[Point]{points: make([]Point, points)}}
 }
 
-// Record принимает сэмпл потока: скорость за секунду.
+// Record accepts a stream sample: the speed per second.
 func (t *Traffic) Record(up, down int64) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -154,7 +154,7 @@ func mergePoints(older, newer Point) Point {
 	return Point{Down: (older.Down + newer.Down) / 2, Up: (older.Up + newer.Up) / 2}
 }
 
-// Points отдаёт историю от старой точки к новой.
+// Points returns the history from the old point to the new one.
 func (t *Traffic) Points() []Point {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -162,7 +162,7 @@ func (t *Traffic) Points() []Point {
 	return t.ring.all()
 }
 
-// Recent отдаёт последние сэмплы без усреднения, от старого к новому.
+// Recent returns the last samples without averaging, from old to new.
 func (t *Traffic) Recent() []Point {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -170,8 +170,8 @@ func (t *Traffic) Recent() []Point {
 	return append([]Point(nil), t.recent...)
 }
 
-// Step отдаёт текущий шаг между точками в секундах: он растёт вместе с
-// временем работы демона.
+// Step returns the current step between points in seconds: it grows with
+// the daemon uptime.
 func (t *Traffic) Step() int {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -179,7 +179,7 @@ func (t *Traffic) Step() int {
 	return t.stepSeconds
 }
 
-// Device — история показаний платы тем же шагом, что и трафик.
+// Device is the board readings history with the same step as the traffic.
 type Device struct {
 	mu sync.Mutex
 
@@ -190,13 +190,13 @@ type Device struct {
 	counted int64
 }
 
-// NewDevice собирает историю платы: `perPoint` снятий на точку, `points` точек
-// до первого укрупнения шага.
+// NewDevice assembles the board history: `perPoint` readings per point, `points` points
+// before the first step coarsening.
 func NewDevice(perPoint, points int) *Device {
 	return &Device{perPoint: perPoint, ring: ring[DevicePoint]{points: make([]DevicePoint, points)}}
 }
 
-// Record принимает снятие показаний.
+// Record accepts a readings take.
 func (d *Device) Record(sample DevicePoint) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -234,7 +234,7 @@ func mergeDevicePoints(older, newer DevicePoint) DevicePoint {
 	}
 }
 
-// Points отдаёт показания от старых к новым.
+// Points returns the readings from old to new.
 func (d *Device) Points() []DevicePoint {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -242,15 +242,15 @@ func (d *Device) Points() []DevicePoint {
 	return d.ring.all()
 }
 
-// Connections — число живых соединений за последнюю минуту, по снимку в
-// секунду. График соединений в панели берёт его при открытии: без этого он
-// начинался бы с пустого места и знал только то, что было при открытой вкладке.
+// Connections is the number of live connections over the last minute, one snapshot
+// per second. The panel connection chart takes it on open: without it the chart
+// would start from an empty place and know only what happened with the tab open.
 type Connections struct {
 	mu     sync.Mutex
 	recent []int
 }
 
-// Record кладёт число соединений из очередного снимка.
+// Record puts the number of connections from the next snapshot.
 func (c *Connections) Record(count int) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -261,7 +261,7 @@ func (c *Connections) Record(count int) {
 	}
 }
 
-// Recent отдаёт числа от старого снимка к новому.
+// Recent returns the numbers from the old snapshot to the new one.
 func (c *Connections) Recent() []int {
 	c.mu.Lock()
 	defer c.mu.Unlock()

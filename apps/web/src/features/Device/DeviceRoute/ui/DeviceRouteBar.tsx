@@ -9,10 +9,10 @@ import { useCountdown } from '@shared/lib/useCountdown';
 import { Alert, AlertAction, AlertDescription, AlertTitle, Button } from '@shared/ui';
 
 /**
- * Шаг, на котором встала смена, словами пользователя. Своя таблица, а не
- * таблица бара конфига: коды у циклов общие, а предмет разный — UCI и
- * настройки перехвата, а не файл конфига. Новый код демона — ошибка
- * компиляции здесь.
+ * The step the change stopped at, in the user's words. A table of its own, not
+ * the config bar table: the cycle codes are shared, but the subject differs,
+ * UCI and interception settings rather than the config file. A new daemon code
+ * is a compile error here.
  */
 const REASON_KEY: Readonly<Record<ApplyReasonCode, ParseKeys<'features/Device/DeviceRoute'>>> = {
   backup_failed: 'failure.reason.backup_failed',
@@ -26,9 +26,10 @@ const REASON_KEY: Readonly<Record<ApplyReasonCode, ParseKeys<'features/Device/De
 };
 
 /**
- * Ход смены списка перехвата на экране устройств: запись, окно подтверждения,
- * откат или отказ с причиной. Бар применения конфига сюда не годится — он
- * собран вокруг черновика документа и ведёт одну транзакцию конфига.
+ * Progress of an interception list change on the devices screen: the write, the
+ * confirmation window, rollback or a failure with a reason. The config apply
+ * bar does not fit here: it is built around the document draft and drives one
+ * config transaction.
  */
 export function DeviceRouteBar({
   transaction,
@@ -82,7 +83,7 @@ export function DeviceRouteBar({
   }
 }
 
-/** Остаток считает демон, браузер лишь тикает между ответами опроса: откат по нулю делает демон. */
+/** The remainder is counted by the daemon, the browser only ticks between poll responses: rollback at zero is done by the daemon. */
 function ConfirmWindow({
   transaction,
   isConfirming,
@@ -99,7 +100,7 @@ function ConfirmWindow({
     <div className='flex min-h-7 flex-wrap items-center gap-x-2.5 gap-y-1'>
       <Timer className='size-4 shrink-0 text-muted-foreground' />
       <p className='text-sm'>
-        {/* Живая область только у неизменной части: иначе остаток переобъявлялся бы каждую секунду. */}
+        {/* The live region is only on the unchanging part: otherwise the remainder would be reannounced every second. */}
         <span role='status'>{t('bar.prompt')}</span>{' '}
         {remaining > 0 ? (
           <Trans

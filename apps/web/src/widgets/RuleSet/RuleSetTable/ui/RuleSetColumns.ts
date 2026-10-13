@@ -1,6 +1,6 @@
 /**
- * Раскладка строки набора. Один набор ширин на шапку и на строку: разойдясь,
- * подписи встанут не над своими колонками.
+ * Rule set row layout. One set of widths serves the header and the row: if they diverge,
+ * labels end up above the wrong columns.
  */
 export const RULE_SET_COLUMN = {
   Row: 'flex w-full flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-border px-4 py-3 last:border-b-0',

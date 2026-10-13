@@ -37,20 +37,20 @@ const STATUS_LABEL = {
   failed: 'status.failed',
 } as const satisfies Readonly<Record<ServiceState['status'], ParseKeys<'widgets/Daemon/DaemonService'>>>;
 
-/** Состояние читается тоном, а не только словом. */
+/** State is read by tone, not only by word. */
 const STATUS_TONE: Readonly<Record<ServiceState['status'], string>> = {
   running: 'bg-signal-ok',
   stopped: 'bg-signal-idle',
   failed: 'bg-signal-bad',
 };
 
-/** Почему состояние подставлено, словами пользователя: новый код демона — ошибка компиляции здесь. */
+/** Why the state is substituted, in the user's words: a new daemon code is a compile error here. */
 const REASON_KEY: Readonly<Record<ServiceErrorCode, ParseKeys<'widgets/Daemon/DaemonService'>>> = {
   service_state_unread: 'reason.service_state_unread',
   service_instance_ambiguous: 'reason.service_instance_ambiguous',
 };
 
-/** Первый час — минутами: «0 ч» у только что запущенного процесса читается как поломка. */
+/** The first hour in minutes: "0 h" for a just-started process reads as breakage. */
 function formatUptime(t: TFunction<'widgets/Daemon/DaemonService'>, seconds: number): string {
   if (seconds < SECONDS_IN_MINUTE) {
     return t('uptime.underMinute');
@@ -68,36 +68,36 @@ function formatUptime(t: TFunction<'widgets/Daemon/DaemonService'>, seconds: num
 }
 
 /**
- * Процесс sing-box: состояние службы, память и управление.
+ * The sing-box process: service state, memory and control.
  *
- * Остановленный сервис — данные экрана, а не отказ панели: редактор конфига
- * остаётся доступным, иначе поднять упавший sing-box было бы нечем.
+ * A stopped service is screen data, not a panel failure: the config editor
+ * stays available, otherwise there would be no way to bring up a crashed sing-box.
  *
- * Команды показываются, только когда процессом владеет служба демона
- * (`managed`). Чужой процесс ими не управляется: на устройстве маршрутизацию
- * может вести другой пакет, и «Запустить» подняло бы вторую копию sing-box
- * рядом с работающей.
+ * Commands are shown only when the process is owned by the daemon's service
+ * (`managed`). A foreign process is not controlled by them: on the device routing
+ * may be run by another package, and "Start" would bring up a second copy of sing-box
+ * next to the running one.
  *
- * Непрочитанное состояние — не остановка. Карточка показывает последнее
- * подтверждённое состояние, а причину — нейтральной пометкой. «Перезапустить»
- * и «Остановить» остаются, если подтверждено, что процессом владеет служба
- * демона: рестарт через procd поднимает и остановленную службу. «Запустить»
- * при неизвестном состоянии не предлагается — оно говорило бы, что sing-box
- * лежит. Без подтверждённого состояния команд нет: чья служба ведёт процесс,
- * неизвестно, а рестарт своей при чужом процессе поднял бы вторую копию.
+ * An unread state is not a stop. The card shows the last confirmed
+ * state, and the reason as a neutral mark. "Restart"
+ * and "Stop" stay if it is confirmed that the process is owned by the daemon's
+ * service: a restart via procd also brings up a stopped service. "Start"
+ * is not offered when the state is unknown — it would say that sing-box
+ * is down. Without a confirmed state there are no commands: whose service runs the process
+ * is unknown, and restarting our own with a foreign process would bring up a second copy.
  */
 export function DaemonService({
   process,
   heap,
   memoryTrend,
 }: {
-  /** Показания процесса из топика `system`; пусто, когда процесс не найден. */
+  /** Process readings from the `system` topic; empty when the process is not found. */
   process?: SystemProcess;
-  /** Память рантайма Go из Clash API: она меньше RSS на резидентный код. */
+  /** Go runtime memory from Clash API: it is smaller than RSS by the resident code. */
   heap: number;
   /**
-   * История памяти процесса под строками — по ней видна утечка. Готовым узлом:
-   * слайсы одного слоя друг друга не импортируют.
+   * Process memory history under the rows — a leak is visible in it. As a ready node:
+   * slices of one layer do not import each other.
    */
   memoryTrend?: ReactNode;
 }) {
@@ -160,8 +160,8 @@ export function DaemonService({
         )}
         {managed && (
           <>
-            {/* Остановка обрывает маршрутизацию на роутере целиком, перезапуск
-                нет. Одинаковыми кнопками подряд эти два действия не различить. */}
+            {/* Stop cuts off routing on the whole router, restart
+                does not. Two identical buttons in a row do not tell these two actions apart. */}
             <Separator orientation='vertical' className='mx-0.5 h-5' />
             <DaemonServiceStop
               disabled={action.isPending}
@@ -187,7 +187,7 @@ export function DaemonService({
 
       <CardContent className='flex flex-col gap-3'>
         <dl className='text-sm'>
-          {/* Ноль демон отдаёт, когда возраст процесса узнать не удалось. */}
+          {/* The daemon returns zero when the process age could not be determined. */}
           {known && state.managed && state.uptime > 0 && (
             <Row label={t('stat.uptime', { ns: 'shared' })} value={formatUptime(t, state.uptime)} />
           )}

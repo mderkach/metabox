@@ -1,16 +1,16 @@
-# Правила генератора схемы
+# Schema generator rules
 
-Общие правила репозитория — в корневом [`AGENTS.md`](../../AGENTS.md). Здесь только то, что касается `tools/schemagen/`.
+Shared repository rules are in the root [`AGENTS.md`](../../AGENTS.md). This file covers only `tools/schemagen/`.
 
-Генератор — отдельный Go-модуль: он тянет форк sing-box со всем деревом зависимостей, и в артефакте поставки этому взяться неоткуда. Он не витрина стиля — собирает схему из чужих типов рефлексией и живёт по правилам форка.
+The generator is a separate Go module: it pulls the sing-box fork with its whole dependency tree, which has no place in the shipped artifact. It is not a showcase of style: it builds the schema from foreign types by reflection and lives by the fork's rules.
 
-## Когда читать гайды
+## When to read the guides
 
-Гайды лежат у демона. Здесь обязательны только два раздела [Architecture&Style.md](../../apps/metaboxd/docs/guides/Architecture&Style.md): «Стиль» и «Инструменты». Остальное относится к демону и на генератор не распространяется.
+The guides live with the daemon. Only two sections of [Architecture&Style.md](../../apps/metaboxd/docs/guides/Architecture&Style.md) are mandatory here: "Style" and "Tools". The rest applies to the daemon and does not extend to the generator.
 
-Перед правкой тестов — [Testing.md](../../apps/metaboxd/docs/guides/Testing.md).
+Before editing tests: [Testing.md](../../apps/metaboxd/docs/guides/Testing.md).
 
-## Правки в `tools/schemagen/`
+## Changes in `tools/schemagen/`
 
-- Артефакт генератора — `apps/web/src/shared/api/generated.ts`. Он коммитится вместе с правкой генератора, иначе фронт разъезжается со схемой; хук pre-commit это проверяет.
-- Сборка, запуск и тесты — только через `make schema` и `make test-schemagen`: без тегов и `-ldflags` форка модуль не соберётся.
+- The generator's artifact is `apps/web/src/shared/api/generated.ts`. It is committed together with the generator change, otherwise the frontend diverges from the schema; the pre-commit hook checks this.
+- Build, run and tests only through `make schema` and `make test-schemagen`: without the fork's tags and `-ldflags` the module does not build.

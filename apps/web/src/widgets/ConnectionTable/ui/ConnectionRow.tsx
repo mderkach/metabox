@@ -20,13 +20,13 @@ function ConnectionRowProto({
   panelId,
 }: {
   connection: ConnectionRowModel;
-  /** Видимые колонки в порядке таблицы: строка обязана совпасть с шапкой. */
+  /** Visible columns in table order: the row must match the header. */
   cells: readonly ConnectionCell[];
   density: TableDensity;
   rowIndex: number;
   now: number;
   onClose: ((id: string) => void) | null;
-  /** `null` — объяснение маршрута недоступно: демон не отдал ручку. */
+  /** `null` means route explanation is unavailable: the daemon did not provide the endpoint. */
   onExplain: ((id: string) => void) | null;
   selected: boolean;
   panelId?: string;

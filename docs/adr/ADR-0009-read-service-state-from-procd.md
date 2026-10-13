@@ -1,108 +1,108 @@
-# ADR-0009. Читать состояние службы у procd через ubus, оставив управление за init-скриптом
+# ADR-0009. Read the service state from procd over ubus, leaving control to the init script
 
-- Статус: Accepted
-- Дата: 2026-09-11
-- Ответственные: владелец репозитория
+- Status: Accepted
+- Date: 2026-09-11
+- Deciders: repository owner
 
-## Контекст и постановка проблемы
+## Context and problem statement
 
-Панель показывает карточку сервиса sing-box: состояние, возраст процесса и причину падения. Контракт `GET /api/service` требует три состояния — `running`, `stopped`, `failed` — и аптайм.
+The panel shows a sing-box service card: the state, the process age and the failure reason. The `GET /api/service` contract requires three states (`running`, `stopped`, `failed`) and the uptime.
 
-Init-скрипт даёт меньше. `/etc/init.d/<служба> running` возвращает только код возврата: ноль или не ноль. Команду приносит `/etc/rc.common` всем скриптам с `USE_PROCD`, объявлять её пакету не нужно — проверено на устройстве: `/etc/init.d/homeproxy running` отвечает нулём, хотя в самом скрипте её нет. Ни возраста, ни отличия «остановлен» от «упал», ни причины отказа в нём нет. До этого решения демон отдавал `uptime: 0` всегда и не отличал `failed` от `stopped`.
+The init script provides less. `/etc/init.d/<service> running` returns only an exit code: zero or non-zero. `/etc/rc.common` brings this command to every script with `USE_PROCD`, so the package does not need to declare it; checked on the device: `/etc/init.d/homeproxy running` answers with zero even though the script itself does not have it. It provides neither the age, nor the difference between "stopped" and "failed", nor the failure reason. Before this decision the daemon always returned `uptime: 0` and did not distinguish `failed` from `stopped`.
 
-Проверено на целевом устройстве, `ubus call service list`: у инстанса есть `running`, `pid`, `respawn`, `term_timeout`, `limits` и `command`. Возраста и кода выхода среди них нет.
+Checked on the target device with `ubus call service list`: an instance has `running`, `pid`, `respawn`, `term_timeout`, `limits` and `command`. Neither the age nor the exit code is among them.
 
-Отдельная сложность выяснилась на этом же роутере: `sing-box` был поднят дважды — службой `homeproxy` и службой пакета `sing-box`. Найти «тот самый» процесс по имени бинаря нельзя, `pidof sing-box` вернул два pid. Принадлежность процесса службе знает только procd.
+A separate difficulty showed up on the same router: `sing-box` was started twice, by the `homeproxy` service and by the `sing-box` package's service. The "right" process cannot be found by the binary name: `pidof sing-box` returned two pids. Only procd knows which service a process belongs to.
 
-Ограничение задано раньше: [DeviceIO](../../apps/metaboxd/docs/guides/DeviceIO.md) требует управлять службой только через init-скрипт — «прямой запуск бинаря, `kill` по pid и правка `/etc/rc.d` запрещены: procd владеет процессом, перезапускает его по `respawn` и не знает о чужом вмешательстве».
+The constraint was set earlier: [DeviceIO](../../apps/metaboxd/docs/guides/DeviceIO.md) requires controlling the service only through the init script: "starting the binary directly, `kill` by pid and editing `/etc/rc.d` are forbidden: procd owns the process, restarts it by `respawn` and does not know about outside interference".
 
-В scope: откуда демон берёт возраст процесса и признак падения. Вне scope: управление службой, показ логов и содержимое причины отказа.
+In scope: where the daemon gets the process age and the failure flag. Out of scope: service control, showing logs and the content of the failure reason.
 
-## Критерии выбора
+## Decision drivers
 
-1. **Управление остаётся за init-скриптом**: ограничение DeviceIO не ослабляется.
-2. **Процесс определяется однозначно** даже когда один бинарь поднят несколькими службами.
-3. **Независимость от часов устройства**: у роутера нет часов реального времени.
-4. **Отсутствие источника не ломает панель** (NFR-1): без данных экран деградирует, а не отказывает.
-5. **Ноль новых зависимостей в модуле**: `go.mod` демона держится без `require`.
+1. **Control stays with the init script**: the DeviceIO constraint is not weakened.
+2. **The process is identified unambiguously** even when one binary is started by several services.
+3. **Independence from the device clock**: the router has no real-time clock.
+4. **A missing source does not break the panel** (NFR-1): without data the screen degrades instead of failing.
+5. **Zero new dependencies in the module**: the daemon's `go.mod` stays without `require`.
 
-## Рассмотренные варианты
+## Considered options
 
-1. **Оставить как есть.** Преимущества: ноль работы. Недостатки: аптайм всегда ноль, упавший сервис неотличим от остановленного — а это ровно тот случай, ради которого пользователь открывает карточку. **Отклонён.**
+1. **Leave as is.** Pros: zero work. Cons: the uptime is always zero, and a failed service cannot be told apart from a stopped one, which is exactly the case for which the user opens the card. **Rejected.**
 
-2. **Искать процесс по имени бинаря.** `pidof` или обход `/proc` с фильтром по имени. Преимущества: не нужен ubus. Недостатки: на целевом роутере это уже даёт два pid от разных служб (критерий 2); выбор «первого попавшегося» показывал бы возраст чужого процесса. **Отклонён.**
+2. **Find the process by the binary name.** `pidof` or walking `/proc` with a name filter. Pros: no ubus needed. Cons: on the target router this already gives two pids from different services (driver 2); picking "the first one found" would show the age of someone else's process. **Rejected.**
 
-3. **Расширить init-скрипт своей командой `status`.** Преимущества: один источник, всё через init-скрипт. Недостатки: скрипт принадлежит пакету sing-box или re:HomeProxy, а не нам — своей команды туда не добавить; у реального пакета нет даже `check`. **Отклонён.**
+3. **Extend the init script with our own `status` command.** Pros: one source, everything through the init script. Cons: the script belongs to the sing-box or re:HomeProxy package, not to us, so our own command cannot be added there; the real package does not even have `check`. **Rejected.**
 
-4. **Спрашивать procd через `ubus`, возраст считать по `/proc`.** Преимущества: принадлежность процесса службе отвечает её владелец (критерий 2); возраст считается от загрузки системы и от часов не зависит (критерий 3); `ubus` — штатный интерфейс procd, а не обход его (критерий 1); разбор JSON и чтение файла есть в стандартной библиотеке (критерий 5). Недостатки: ещё один внешний вызов и разбор его вывода; на системе без procd источник отсутствует. **Принят.**
+4. **Ask procd over `ubus`, compute the age from `/proc`.** Pros: the owner answers which service a process belongs to (driver 2); the age is counted from system boot and does not depend on the clock (driver 3); `ubus` is procd's regular interface, not a way around it (driver 1); JSON parsing and reading a file are in the standard library (driver 5). Cons: one more external call and parsing of its output; on a system without procd the source is missing. **Chosen.**
 
-## Принятое решение
+## Decision outcome
 
-Демон спрашивает `ubus call service list` и находит службу по имени, выведенному из пути init-скрипта: procd регистрирует службу под именем скрипта. Путь к `ubus` приходит флагом `-ubus`, как и остальные пути: `PATH` под procd не тот, что в интерактивном шелле.
+The daemon calls `ubus call service list` and finds the service by the name derived from the init script path: procd registers the service under the script's name. The path to `ubus` comes from the `-ubus` flag, like the other paths: `PATH` under procd is not the same as in an interactive shell.
 
-**Чтение и управление разделены.** Управление службой — по-прежнему только `start`, `stop`, `restart` init-скриптом. Ограничение DeviceIO не ослаблено: `pid` из procd используется исключительно чтобы узнать возраст процесса, и никогда — чтобы его остановить или перезапустить.
+**Reading and control are separated.** Service control is still only `start`, `stop`, `restart` through the init script. The DeviceIO constraint is not weakened: the `pid` from procd is used only to find out the process age, and never to stop or restart it.
 
-**Возраст считается от загрузки системы.** Из `/proc/<pid>/stat` берётся `starttime` — момент старта в тиках от загрузки, — и вычитается из `/proc/uptime`. Абсолютное время не годится: устройство стартует с эпохи и прыгает при синхронизации NTP. Имя процесса в `stat` лежит в скобках и само может содержать пробелы, поэтому поля считаются от закрывающей скобки, а не от начала строки.
+**The age is counted from system boot.** `starttime` (the start moment in ticks since boot) is taken from `/proc/<pid>/stat` and subtracted from `/proc/uptime`. Absolute time does not fit: the device starts from the epoch and jumps on NTP sync. The process name in `stat` is in parentheses and may itself contain spaces, so the fields are counted from the closing parenthesis, not from the start of the line.
 
-**Три состояния выводятся так:**
+**The three states are derived as follows:**
 
-| Состояние | Как определяется                                                                      |
-| --------- | ------------------------------------------------------------------------------------- |
-| `running` | init-скрипт вернул ноль                                                               |
-| `failed`  | init-скрипт вернул не ноль, но procd службу знает — её запускали, и инстанс отвалился |
-| `stopped` | init-скрипт вернул не ноль, и procd о службе не помнит                                |
+| State     | How it is determined                                                                                    |
+| --------- | ------------------------------------------------------------------------------------------------------- |
+| `running` | the init script returned zero                                                                           |
+| `failed`  | the init script returned non-zero, but procd knows the service: it was started and the instance dropped |
+| `stopped` | the init script returned non-zero, and procd does not remember the service                              |
 
-**Недоступность источника ответ не ломает.** Нет `ubus`, нет procd, нет `/proc` — состояние сводится к коду возврата init-скрипта, возраст остаётся нулём, панель показывает его прочерком. Отказ опроса не превращается в отказ ручки: экран обязан открыться и при лежащем сервисе (NFR-1).
+**An unavailable source does not break the response.** No `ubus`, no procd, no `/proc`: the state comes down to the init script's exit code, the age stays zero, and the panel shows it as a dash. A failed poll does not turn into a failed endpoint: the screen must open even with the service down (NFR-1).
 
-**Причина падения не берётся отсюда.** Ни procd, ни init-скрипт кода выхода и текста отказа не отдают — это подтверждено составом ответа `ubus`. Поле `lastError` остаётся незаполненным, пока не появится источник логов; экран логов вынесен в roadmap после v1, и решение по нему отдельное.
+**The failure reason is not taken from here.** Neither procd nor the init script returns the exit code or the failure text; the contents of the `ubus` response confirm this. The `lastError` field stays empty until a log source appears; the log screen is moved to the roadmap after v1, and the decision on it is separate.
 
-### Область действия и границы
+### Scope and boundaries
 
-Решение распространяется на `internal/procd` и `internal/singbox`. Протокол применения, владение конфигом и раздача панели не затрагиваются.
+The decision covers `internal/procd` and `internal/singbox`. The apply protocol, config ownership and serving the panel are not affected.
 
-## Последствия
+## Consequences
 
-### Положительные
+### Positive
 
-- Возраст и признак падения появляются, не ослабляя ограничение на управление службой.
-- Процесс определяется однозначно на устройстве, где один бинарь поднят двумя службами.
-- Новых зависимостей нет: разбор JSON и чтение файлов взяты из стандартной библиотеки.
+- The age and the failure flag appear without weakening the constraint on service control.
+- The process is identified unambiguously on a device where one binary is started by two services.
+- No new dependencies: JSON parsing and file reading come from the standard library.
 
-### Отрицательные
+### Negative
 
-- Демон зависит от внешней утилиты `ubus` и от формата её вывода. На системе без procd источник просто отсутствует, но на OpenWrt смена формата сломала бы возраст молча — ловится тестом на разборе, а не в рантайме.
-- Имя службы выводится из имени init-скрипта. Это соглашение procd, а не гарантия: служба, зарегистрированная под другим именем, даст `stopped` вместо `failed`.
-- `USER_HZ` принят равным 100. На aarch64 это так, и на остальных распространённых архитектурах тоже, но узнать значение из Go без cgo нельзя, а `sysconf` тянул бы зависимость. На системе с другим `USER_HZ` возраст будет кратно смещён.
-- `lastError` остаётся пустым: контракт поле объявляет, а источника у него пока нет.
+- The daemon depends on the external `ubus` utility and its output format. On a system without procd the source is simply missing, but on OpenWrt a format change would break the age silently; this is caught by a parsing test, not at runtime.
+- The service name is derived from the init script name. This is a procd convention, not a guarantee: a service registered under a different name gives `stopped` instead of `failed`.
+- `USER_HZ` is assumed to be 100. This is true on aarch64 and on the other common architectures too, but the value cannot be obtained from Go without cgo, and `sysconf` would pull in a dependency. On a system with a different `USER_HZ` the age will be off by a factor.
+- `lastError` stays empty: the contract declares the field, but it has no source yet.
 
-### Нейтральные или отложенные
+### Neutral or deferred
 
-- Текст причины падения и экран логов — отдельная задача после v1.
-- Возраст самой панели в контракте не нужен: демон и так отдаёт свою версию в `GET /api/status`.
+- The failure reason text and the log screen are a separate task after v1.
+- The panel's own age is not needed in the contract: the daemon already returns its version in `GET /api/status`.
 
-## Риски и меры снижения
+## Risks and mitigations
 
-| Риск                                                  | Вероятность и влияние   | Митигация                                                                                                               |
-| ----------------------------------------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Формат вывода `ubus` изменится                        | Низкая, низкое влияние  | Разбор покрыт тестом на зафиксированном ответе; при несовпадении возраст обнуляется, состояние остаётся от init-скрипта |
-| `/proc` недоступен или урезан                         | Низкая, низкое влияние  | Возраст обнуляется, ответ продолжает приходить                                                                          |
-| Служба зарегистрирована в procd не под именем скрипта | Низкая, среднее влияние | Упавшая служба покажется остановленной; поведение хуже, но не ложное — управление и состояние `running` не затронуты    |
+| Risk                                                                    | Likelihood and impact | Mitigation                                                                                                                           |
+| ----------------------------------------------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| The `ubus` output format changes                                        | Low, low impact       | Parsing is covered by a test on a recorded response; on a mismatch the age is zeroed, and the state still comes from the init script |
+| `/proc` is unavailable or trimmed                                       | Low, low impact       | The age is zeroed, and the response keeps coming                                                                                     |
+| The service is registered in procd under a name other than the script's | Low, medium impact    | A failed service shows as stopped; the behaviour is worse but not false: control and the `running` state are not affected            |
 
-## Совместимость, миграция и откат
+## Compatibility, migration and rollback
 
-Миграция не требуется: флаг `-ubus` имеет устройственное значение по умолчанию, а без procd демон работает как раньше. Контракт `GET /api/service` дополнен значениями полей, состав полей прежний.
+No migration is needed: the `-ubus` flag has a device default, and without procd the daemon works as before. The `GET /api/service` contract gains field values; the set of fields stays the same.
 
-Откат: убрать зависимость от procd из клиента службы. Ответ вернётся к коду возврата init-скрипта, `uptime` снова станет нулём.
+Rollback: remove the procd dependency from the service client. The response goes back to the init script's exit code, and `uptime` becomes zero again.
 
-## Проверка решения
+## Validation
 
-- На устройстве с поднятым sing-box `GET /api/service` отдаёт ненулевой `uptime`, и он согласуется со временем последнего применения конфига.
-- На устройстве, где один бинарь поднят двумя службами, возраст соответствует процессу нужной службы, а не первому найденному.
-- Демон, запущенный с `-ubus` на несуществующий путь, продолжает отвечать: статус берётся от init-скрипта, `uptime` равен нулю.
-- Служба, известная procd, но не поднятая, даёт `failed`; неизвестная — `stopped`.
+- On a device with sing-box running, `GET /api/service` returns a non-zero `uptime`, and it is consistent with the time of the last config apply.
+- On a device where one binary is started by two services, the age matches the process of the right service, not the first one found.
+- A daemon started with `-ubus` pointing to a nonexistent path keeps answering: the status comes from the init script, `uptime` is zero.
+- A service known to procd but not running gives `failed`; an unknown one gives `stopped`.
 
-## Ссылки
+## Links
 
-- [PRD](../PRD.md) — AC-16, AC-27, NFR-1;
-- [DeviceIO](../../apps/metaboxd/docs/guides/DeviceIO.md) — управление службой через procd;
-- [ADR-0006](./ADR-0006-read-runtime-from-clash-api-and-optional-grpc.md) — источники рантайм-данных панели.
+- [PRD](../PRD.md): AC-16, AC-27, NFR-1;
+- [DeviceIO](../../apps/metaboxd/docs/guides/DeviceIO.md): service control through procd;
+- [ADR-0006](./ADR-0006-read-runtime-from-clash-api-and-optional-grpc.md): the panel's runtime data sources.

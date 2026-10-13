@@ -1,18 +1,19 @@
 import { z } from 'zod';
 
 /**
- * Ответы Clash API по прокси. Демон отдаёт их дословно, поэтому имена полей
- * здесь чужие: они приходят такими по проводу.
+ * Clash API proxy responses. The daemon serves them verbatim, so the field
+ * names here are foreign: they arrive like this over the wire.
  */
 export const ClashDelaySchema = z.object({
   time: z.string(),
-  /** `delay: 65535` — узел не ответил, а не «очень медленно». */
+  /** `delay: 65535` means the node did not answer, not "very slow". */
   delay: z.number(),
 });
 
 /**
- * Узел или группа: различаются только полями `now` и `all`, отдельного типа
- * у Clash API нет. Группы — `Selector`, `URLTest`, `Fallback`, `LoadBalance`.
+ * A node or a group: they differ only in the `now` and `all` fields, the Clash
+ * API has no separate type. Groups are `Selector`, `URLTest`, `Fallback`,
+ * `LoadBalance`.
  */
 export const ClashProxySchema = z.object({
   type: z.string(),
@@ -27,7 +28,7 @@ export const ClashProxiesSchema = z.object({
   proxies: z.record(z.string(), ClashProxySchema),
 });
 
-/** Нули в `Total` и `Expire` значат «подписка не сообщила лимит», а не «исчерпана». */
+/** Zeros in `Total` and `Expire` mean "the subscription did not report a limit", not "exhausted". */
 export const ClashSubscriptionInfoSchema = z.object({
   Upload: z.number(),
   Download: z.number(),

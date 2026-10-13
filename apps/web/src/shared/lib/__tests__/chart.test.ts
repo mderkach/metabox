@@ -15,58 +15,58 @@ import {
 } from '../chart';
 
 describe('COUNT_STEPS', () => {
-  it('даёт круглую кромку для числа соединений', () => {
+  it('gives a round edge for the connection count', () => {
     expect(toValueScale(207, COUNT_STEPS).ceiling).toBe(300);
   });
 });
 
 describe('toSparkCeiling', () => {
-  it('с ёмкостью ставит верх на неё, а не на пик ряда', () => {
+  it('with a capacity puts the top at it, not at the series peak', () => {
     expect(toSparkCeiling(386, 7800)).toBe(7800);
   });
 
-  it('ряд, переросший ёмкость, растягивает шкалу до пика', () => {
+  it('a series that outgrew the capacity stretches the scale to the peak', () => {
     expect(toSparkCeiling(6, 4)).toBe(6);
   });
 
-  it('без ёмкости берёт пик с запасом', () => {
+  it('without a capacity takes the peak with a margin', () => {
     expect(toSparkCeiling(100)).toBeCloseTo(115);
   });
 });
 
 describe('toStickyCeiling', () => {
-  it('растёт сразу, как только величина переросла кромку', () => {
+  it('grows at once as soon as the value outgrows the edge', () => {
     expect(toStickyCeiling(2048, 5120)).toBe(5120);
   });
 
-  it('держит кромку, пока величина не упала вчетверо', () => {
+  it('holds the edge until the value drops fourfold', () => {
     expect(toStickyCeiling(5120, 2048)).toBe(5120);
     expect(toStickyCeiling(5120, 1024)).toBe(1024);
   });
 });
 
 describe('toShare', () => {
-  it('на нулевой сумме отдаёт ноль, а не NaN', () => {
+  it('on a zero sum returns zero, not NaN', () => {
     expect(toShare(0, 0)).toBe(0);
   });
 
-  it('считает долю от суммы', () => {
+  it('computes the share of the sum', () => {
     expect(toShare(1, 4)).toBe(0.25);
   });
 });
 
 describe('toAreaGeometry', () => {
-  it('не строит линию по одной точке', () => {
+  it('does not build a line from one point', () => {
     expect(toAreaGeometry([5], 10, 100, 100)).toBeNull();
   });
 
-  it('кладёт значение в пик на верх области, а ноль — на низ', () => {
+  it('puts the value at the peak to the top of the area, and zero to the bottom', () => {
     const geometry = toAreaGeometry([0, 10], 10, 100, 50);
 
     expect(geometry?.line).toBe('0.00,50.00 100.00,0.00');
   });
 
-  it('замыкает контур по нижней кромке области', () => {
+  it('closes the contour along the lower edge of the area', () => {
     const geometry = toAreaGeometry([10, 10], 10, 100, 50);
 
     expect(geometry?.area).toBe('M0,50 L0.00,0.00 L100.00,0.00 L100,50 Z');
@@ -74,23 +74,23 @@ describe('toAreaGeometry', () => {
 });
 
 describe('toPercents', () => {
-  it('раздаёт остаток так, что доли складываются в сто', () => {
+  it('distributes the remainder so the shares add up to a hundred', () => {
     expect(toPercents([7, 1])).toEqual([88, 12]);
   });
 
-  it('держит сумму в ста и на трёх долях', () => {
+  it('keeps the sum at a hundred on three shares too', () => {
     const percents = toPercents([1, 1, 1]);
 
     expect(percents.reduce((sum, value) => sum + value, 0)).toBe(100);
   });
 
-  it('на пустых данных отдаёт нули, а не NaN', () => {
+  it('on empty data returns zeros, not NaN', () => {
     expect(toPercents([0, 0])).toEqual([0, 0]);
   });
 });
 
 describe('toDonutSegments', () => {
-  it('ставит каждый сегмент за предыдущим', () => {
+  it('puts each segment after the previous one', () => {
     const segments = toDonutSegments([1, 1], 100);
 
     expect(segments.map((segment) => segment.turn)).toEqual([0, 180]);
@@ -99,31 +99,31 @@ describe('toDonutSegments', () => {
 });
 
 describe('toValueScale', () => {
-  it('берёт наименьший шаг, при котором максимум укладывается в деления', () => {
+  it('takes the smallest step at which the maximum fits the divisions', () => {
     expect(toValueScale(700, [100, 200, 500])).toEqual({ ceiling: 800, ticks: [0, 200, 400, 600, 800] });
   });
 
-  it('на нулевом максимуме строит шкалу в один шаг, а не вырожденную', () => {
+  it('on a zero maximum builds a one-step scale, not a degenerate one', () => {
     expect(toValueScale(0, [100, 200])).toEqual({ ceiling: 100, ticks: [0, 100] });
   });
 
-  it('держит постоянный потолок при шаге в его треть', () => {
+  it('holds a constant ceiling at a step of a third of it', () => {
     expect(toValueScale(900, [300]).ticks).toEqual([0, 300, 600, 900]);
   });
 
-  it('делит байты по ступеням килобайта, а не по десяткам', () => {
+  it('divides bytes by kilobyte steps, not by tens', () => {
     expect(toValueScale(3000, BYTE_STEPS).ticks).toEqual([0, 1024, 2048, 3072]);
   });
 });
 
 describe('toTimeTicks', () => {
-  it('ставит отсечки назад от правой кромки и не выходит за окно', () => {
+  it('puts cutoffs back from the right edge and does not leave the window', () => {
     expect(toTimeTicks({ min: 81, max: 100 }, 15)).toEqual([85, 100]);
   });
 });
 
 describe('toMirroredTicks', () => {
-  it('отражает деления вниз и не повторяет ноль', () => {
+  it('mirrors the divisions downward and does not repeat zero', () => {
     expect(toMirroredTicks([0, 5, 10])).toEqual([-10, -5, 0, 5, 10]);
   });
 });

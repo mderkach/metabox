@@ -51,9 +51,9 @@ const SOURCE_LABEL: Readonly<Record<string, ParseKeys<'pages/Logs'> | undefined>
 };
 
 /**
- * Лог sing-box: хвост запросом, дальше строки потоком. Уровень уходит и в
- * хвост, и в поток — отбирает демон, а не экран: на `info` строк `debug` в
- * панель не приходит вовсе.
+ * sing-box log: the tail by request, then rows by stream. The level goes to both
+ * the tail and the stream — the daemon filters, not the screen: at `info` the `debug` rows
+ * never reach the panel.
  */
 export function LogsPage() {
   const { t } = useTranslation('pages/Logs');
@@ -112,8 +112,8 @@ export function LogsPage() {
         <section className={cn('flex min-h-0 min-w-0 grow flex-col overflow-hidden', SURFACE)}>
           <div className='flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-b border-border px-3.5 py-2.5'>
             <LogsLevelSelect level={level} onLevelChange={setLevel} />
-            {/* Строка переключателя под пальцем высотой в его хит-область: иначе
-                она наезжает на выбор уровня, когда тулбар переносится. */}
+            {/* The switch row under a finger is as tall as its hit area: otherwise
+                it overlaps the level select when the toolbar wraps. */}
             <div className='flex items-center gap-2 pointer-coarse:min-h-11'>
               <Switch id={followId} checked={follow} onCheckedChange={setFollow} />
               <Label htmlFor={followId} className='text-sm'>

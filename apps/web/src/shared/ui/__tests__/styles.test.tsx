@@ -4,10 +4,10 @@ import { describe, expect, it } from 'vitest';
 import { Card } from '../shadcn/card';
 import { SURFACE } from '../styles';
 
-// `SURFACE` повторяет край `Card` дословно, а файл вендора перезаписывает CLI:
-// обновление shadcn, сменившее край карточки, развело бы её с панелями молча.
+// `SURFACE` repeats the `Card` edge verbatim, and the vendor file is overwritten by the CLI:
+// a shadcn update that changed the card edge would silently diverge it from the panels.
 describe('SURFACE', () => {
-  it('повторяет край карточки вендора', () => {
+  it('repeats the vendor card edge', () => {
     render(<Card data-testid='card' />);
 
     const card = screen.getByTestId('card');

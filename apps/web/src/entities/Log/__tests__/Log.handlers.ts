@@ -6,10 +6,10 @@ import { LOG_ENDPOINT } from '../api/Log.endpoints';
 import { LEVEL, type EntryWire, type LogsWire } from '../api/Log.schema';
 import { LOG_STREAM_SAMPLES, LOGS_FIXTURE } from './Log.fixture';
 
-/** Шаг строк потока в дев-режиме: живой лог на `info` пишет примерно так. */
+/** Stream line step in dev mode: a live log at `info` writes about like this. */
 const STREAM_INTERVAL = MS_IN_SECOND;
 
-/** Как у демона: строка без уровня фильтр проходит — это продолжение сообщения. */
+/** As in the daemon: a line without a level passes the filter: it is a continuation of the message. */
 function passes(entry: EntryWire, level: string): boolean {
   const min = LEVEL.findIndex((value) => value === level);
 
@@ -21,8 +21,8 @@ function minLevel(request: Request): string {
 }
 
 /**
- * Ручки лога. Состояние — в замыкании фабрики: очистка снимает строки до
- * отметки, как отметка демона при `logread`.
+ * Log handlers. State is in the factory closure: clearing drops the lines up to
+ * the mark, like the daemon mark with `logread`.
  */
 export function createLogHandlers(initial: LogsWire = LOGS_FIXTURE) {
   let tail = initial;

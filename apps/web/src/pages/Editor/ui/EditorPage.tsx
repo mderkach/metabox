@@ -45,10 +45,10 @@ import {
   type RuleFilterState,
 } from '../lib/Editor.lib';
 
-/** Сколько замечаний схемы показывать, чтобы они не вытеснили экран. */
+/** How many schema remarks to show so they do not crowd out the screen. */
 const VISIBLE_ISSUES = 5;
 
-/** Сколько выходов показать сразу: в большом конфиге их полтора десятка. */
+/** How many outbounds to show at once: a big config has a dozen and a half. */
 const VISIBLE_TARGETS = 6;
 
 export function EditorPage() {
@@ -56,16 +56,16 @@ export function EditorPage() {
   const filter = useRuleFilter(editor.rules);
   const marks = useRuleMarks(editor);
   const asSheet = usePanelAsSheet();
-  // Номер правила из адреса — начальный выбор: экран соединений ведёт сюда на
-  // сработавший узел. Дальше выбором владеет сам экран, иначе закрытая панель
-  // открывалась бы заново на каждый рендер.
+  // The rule number from the address is the initial selection: the connections screen leads here to
+  // the node that hit. After that the screen owns the selection, otherwise a closed panel
+  // would reopen on every render.
   const { rule } = useSearch({ strict: false });
   const selection = useRuleSelection(toSelectedRuleId(rule));
   const { reset: resetFilter } = filter;
   const { onAdded: selectAdded } = selection;
 
-  // Новое правило под отбор почти никогда не попадает: без снятия отбора оно
-  // открылось бы в панели, но в списке его бы не было.
+  // A new rule almost never passes the filter: without clearing the filter it
+  // would open in the panel but not be in the list.
   const onAdded = useCallback(
     (index: number) => {
       resetFilter();
@@ -76,8 +76,8 @@ export function EditorPage() {
 
   const selected = editor.rules.find((row) => row.id === selection.id) ?? null;
   const selectedNode = selected === null ? null : editor.nodes[selected.index - 1];
-  // Номер нового правила — по узлам файла, а не по строкам: строку получает
-  // только узел-объект, а вставка адресуется позицией в массиве.
+  // The number of the new rule is by file nodes, not by rows: only an object node
+  // gets a row, while an insert is addressed by position in the array.
   const add = <RuleAddButton index={editor.nodes.length + 1} outbound={editor.finalOutbound} onAdded={onAdded} />;
   const actions =
     selected === null ? null : (
@@ -88,8 +88,8 @@ export function EditorPage() {
       </>
     );
 
-  // Ниже lg список держит минимальную высоту и на низком экране не помещается:
-  // там прокручивается экран целиком, а не обрезается под баром применения.
+  // Below lg the list keeps a minimum height and does not fit on a short screen:
+  // the whole screen scrolls there instead of being cut off under the apply bar.
   return (
     <div className='flex min-h-0 grow flex-col gap-4 px-4 py-5 max-lg:overflow-y-auto sm:px-6'>
       <RuleOrderHint />
@@ -144,8 +144,8 @@ export function EditorPage() {
         </SidePanelLayout.Root>
       )}
 
-      {/* Ниже lg панели рядом со списком нет места, а под ним она уходит ниже
-          сгиба и сжимает список до трёх строк: там она открывается листом. */}
+      {/* Below lg there is no room for the panel beside the list, and under it it goes below
+          the fold and squeezes the list to three rows: there it opens as a sheet. */}
       {asSheet && (
         <RulePanelSheet
           rule={selected}
@@ -174,7 +174,7 @@ function RuleOrderHint() {
   );
 }
 
-/** Поиск: левый край тулбара таблицы. */
+/** Search: left edge of the table toolbar. */
 function RuleSearch({ filter }: { filter: RuleFilterState }) {
   const { t } = useTranslation('pages/Editor');
 
@@ -195,8 +195,8 @@ function RuleSearch({ filter }: { filter: RuleFilterState }) {
 }
 
 /**
- * Отбор по сету из адреса. Снимается здесь же: без признака урезанный список
- * читался бы как весь.
+ * Filter by the rule set from the address. Cleared right here: without the indicator a trimmed list
+ * would read as the whole one.
  */
 function RuleSetChip({ filter }: { filter: RuleFilterState }) {
   const { t } = useTranslation('pages/Editor');
@@ -221,7 +221,7 @@ function RuleSetChip({ filter }: { filter: RuleFilterState }) {
   );
 }
 
-/** Срез по выходу: вторая строка тулбара, потому что выходов бывает полтора десятка. */
+/** Outbound facet: the second toolbar row, because there are a dozen and a half outbounds. */
 function RuleTargetFacets({ filter }: { filter: RuleFilterState }) {
   const { t } = useTranslation('pages/Editor');
   const [allTargets, setAllTargets] = useState(false);
@@ -281,7 +281,7 @@ function EmptyState({ filter }: { filter: RuleFilterState }) {
   );
 }
 
-/** Конфиг прочитан, а правил в нём нет: это состояние конфига, а не загрузки. */
+/** The config is read but has no rules: this is a config state, not a loading state. */
 function NoRules({ add }: { add: ReactNode }) {
   const { t } = useTranslation('pages/Editor');
 
@@ -297,11 +297,11 @@ function NoRules({ add }: { add: ReactNode }) {
 }
 
 /**
- * Конфиг пришёл, но схема его не приняла.
+ * The config arrived but the schema did not accept it.
  *
- * Пустой список правил вместо этого сообщения читался бы как «правил нет», и
- * пользователь начал бы чинить не то. Замечания схемы показываются дословно:
- * по ним видно, какой узел не разобран.
+ * An empty rule list instead of this message would read as "no rules", and the
+ * user would start fixing the wrong thing. Schema remarks are shown verbatim:
+ * they show which node is not parsed.
  */
 function ConfigNotParsed({ issues }: { issues: ConfigIssue[] }) {
   const { t } = useTranslation('pages/Editor');

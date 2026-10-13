@@ -1,71 +1,73 @@
-# Как вносить изменения
+**English** · [Русский](./CONTRIBUTING.ru.md)
 
-Правила разработки — [`AGENTS.md`](./AGENTS.md), требования — [`docs/PRD.md`](./docs/PRD.md), гайды Go-части — [`apps/metaboxd/docs/guides/`](./apps/metaboxd/docs/guides/README.md), гайды фронтенда — [`apps/web/docs/`](./apps/web/docs/README.md). Здесь только процесс: ветка, коммит, проверки, PR.
+# Contributing
 
-## Цикл работы
+Development rules: [`AGENTS.md`](./AGENTS.md); requirements: [`docs/PRD.md`](./docs/PRD.md); Go guides: [`apps/metaboxd/docs/guides/`](./apps/metaboxd/docs/guides/README.md); frontend guides: [`apps/web/docs/`](./apps/web/docs/README.md). This file covers only the process: branch, commit, checks, PR.
 
-1. Ветка от `main`: `<тип>/<кратко-через-дефис>`, например `feat/apply-rollback`.
-2. Изменения по правилам затронутой части репозитория.
-3. Локальные проверки — таблица ниже. Красное не коммитим.
-4. Атомарные коммиты в формате Conventional Commits.
-5. PR в `main`, CI зелёный.
+## Workflow
 
-## Формат коммита
+1. Branch from `main`: `<type>/<short-hyphenated-summary>`, for example `feat/apply-rollback`.
+2. Changes follow the rules of the affected part of the repository.
+3. Local checks: see the table below. Do not commit anything red.
+4. Atomic commits in the Conventional Commits format.
+5. PR to `main`, CI green.
 
-Спецификация — [Conventional Commits 1.0.0](https://www.conventionalcommits.org/ru/v1.0.0/). Проверяет commitlint, правила — `commitlint.config.mjs`.
+## Commit format
+
+Specification: [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/). Checked by commitlint; the rules are in `commitlint.config.mjs`.
 
 ```text
-<тип>(<скоуп>): <что сделано>
+<type>(<scope>): <what was done>
 
-<тело: зачем и что важно знать>
+<body: why, and what is important to know>
 
-<футеры>
+<footers>
 ```
 
-Заголовок — на английском, в повелительном наклонении («add», не «added» и не «adds»), без точки в конце, до 72 символов. Тело и футеры — на русском, отделяются пустой строкой. Тело объясняет причину и последствия, а не пересказывает diff: что изменилось, видно из самого diff.
+The whole commit message is in English. The header is in the imperative mood ("add", not "added" or "adds"), without a trailing period, up to 72 characters. The body and footers are separated by a blank line. The body explains the reason and consequences, not the diff: what changed is visible from the diff itself.
 
-### Типы
+### Types
 
-| Тип        | Когда                                     |
-| ---------- | ----------------------------------------- |
-| `feat`     | новое поведение, видимое пользователю     |
-| `fix`      | исправление дефекта                       |
-| `refactor` | поведение то же, меняется устройство кода |
-| `perf`     | оптимизация без смены поведения           |
-| `test`     | только тесты и фикстуры                   |
-| `docs`     | только документация                       |
-| `build`    | сборка, зависимости, тулчейн              |
-| `ci`       | пайплайны и их конфиги                    |
-| `chore`    | всё остальное, что не попало в типы выше  |
-| `revert`   | откат прежнего коммита                    |
+| Type       | When                                       |
+| ---------- | ------------------------------------------ |
+| `feat`     | new behaviour visible to the user          |
+| `fix`      | a defect fix                               |
+| `refactor` | same behaviour, the code structure changes |
+| `perf`     | optimisation without a behaviour change    |
+| `test`     | tests and fixtures only                    |
+| `docs`     | documentation only                         |
+| `build`    | build, dependencies, toolchain             |
+| `ci`       | pipelines and their configs                |
+| `chore`    | everything else not covered above          |
+| `revert`   | reverting an earlier commit                |
 
-### Скоупы
+### Scopes
 
-| Скоуп    | Что затрагивает                                           |
+| Scope    | What it covers                                            |
 | -------- | --------------------------------------------------------- |
 | `daemon` | `apps/metaboxd/`                                          |
 | `schema` | `tools/schemagen`, `apps/web/src/shared/api/generated.ts` |
-| `fe`     | `apps/web/` кроме генерируемой схемы                      |
-| `docs`   | `docs/` и корневые документы, когда тип не `docs`         |
+| `fe`     | `apps/web/` except the generated schema                   |
+| `docs`   | `docs/` and root documents, when the type is not `docs`   |
 | `ci`     | `.github/`                                                |
 | `infra`  | `.devcontainer/`, `Makefile`                              |
-| `deps`   | обновление зависимостей и версий тулчейна                 |
-| `ai`     | `.claude/`, инструкции и скиллы агентов                   |
+| `deps`   | dependency and toolchain version updates                  |
+| `ai`     | `.claude/`, agent instructions and skills                 |
 
-Тот же список — в `scope-enum` файла `commitlint.config.mjs`. Скоуп опускается, если изменение реально задевает весь репозиторий, и у коммита `docs`, который правит только `docs/` и корневые документы (`README.md`, `AGENTS.md`, `CONTRIBUTING.md`): `docs(docs)` повторял бы тип. Документация проекта — его гайды, `AGENTS.md`, `README.md` и комментарии в коде — идёт со скоупом проекта: `docs(daemon)`, `docs(fe)`.
+The same list is in `scope-enum` of `commitlint.config.mjs`. The scope is omitted when the change really touches the whole repository, and for a `docs` commit that edits only `docs/` and root documents (`README.md`, `AGENTS.md`, `CONTRIBUTING.md`): `docs(docs)` would repeat the type. A project's documentation (its guides, `AGENTS.md`, `README.md` and code comments) goes with the project scope: `docs(daemon)`, `docs(fe)`.
 
-### Ломающие изменения
+### Breaking changes
 
-`!` после скоупа и футер `BREAKING CHANGE:` с описанием миграции. Для API демона и формата конфига — обязательно.
+`!` after the scope and a `BREAKING CHANGE:` footer describing the migration. Mandatory for the daemon API and the config format.
 
 ```text
 refactor(schema)!: rename generated Outbound fields
 
-BREAKING CHANGE: поле `outbound.tag` переименовано в `outbound.name`,
-старые конфиги читаются, но при сохранении переписываются.
+BREAKING CHANGE: field `outbound.tag` is renamed to `outbound.name`;
+old configs are read but rewritten on save.
 ```
 
-### Примеры
+### Examples
 
 ```text
 feat(daemon): add config rollback on failed healthcheck
@@ -73,118 +75,118 @@ fix(fe): keep draft when websocket reconnects
 build(deps): bump oxlint to 1.80.0
 ```
 
-Плохо: `update code`, `fix bug`, `wip`, `правки после ревью`, `chore: разное`.
+Bad: `update code`, `fix bug`, `wip`, `review fixes`, `chore: misc`.
 
-## Атомарность
+## Atomicity
 
-Один коммит — одна тема. Признак нарушения: в теле приходится перечислять несвязанные пункты. Перенос файлов, переименование и содержательная правка — разные коммиты, иначе diff не читается.
+One commit, one topic. A sign of violation: the body has to list unrelated items. Moving files, renaming and a content change are separate commits, otherwise the diff is unreadable.
 
-В индекс попадает только то, что относится к теме коммита. `git add -A` вслепую и захват чужих незакоммиченных правок — источник мусорных коммитов: сверяйся с `git status`.
+Only what belongs to the commit's topic goes into the index. A blind `git add -A` and picking up someone else's uncommitted changes produce junk commits: check `git status`.
 
-## Что не коммитим
+## What we do not commit
 
-- `apps/web/src/shared/api/generated.ts` руками — правится генератор, файл пересобирается `make schema`.
-- `apps/web/src/shared/api/daemon.generated.ts` руками — правится демон, файл пересобирается `make schema-daemon`.
-- `*.local.*` (`AGENTS.local.md`, `.claude/settings.local.json`) — они в `.gitignore`.
-- `.omc/**` — рабочие заметки агентов; ссылаться на них в коммитах, коде и документации нельзя.
-- Секреты, ключи, дампы конфигов с реальных устройств.
+- `apps/web/src/shared/api/generated.ts` edited by hand: the generator is edited, and the file is rebuilt with `make schema`.
+- `apps/web/src/shared/api/daemon.generated.ts` edited by hand: the daemon is edited, and the file is rebuilt with `make schema-daemon`.
+- `*.local.*` (`AGENTS.local.md`, `.claude/settings.local.json`): they are in `.gitignore`.
+- `.omc/**`: agents' working notes; do not link to them from commits, code or documentation.
+- Secrets, keys, config dumps from real devices.
 - `dist/`, `apps/web/dist/`, `node_modules/`.
 
-## Проверки перед коммитом
+## Checks before committing
 
-| Что                  | Команда                             |
-| -------------------- | ----------------------------------- |
-| Go: тесты демона     | `cd apps/metaboxd && go test ./...` |
-| Go: тесты генератора | `make test-schemagen`               |
-| Go: линт             | `make lint`                         |
-| Линт (весь репо)     | `pnpm lint`                         |
-| Формат (весь репо)   | `pnpm format:check`                 |
-| Типы и сборка фронта | `pnpm --filter web build`           |
-| Всё вместе           | `make test`                         |
+| What                     | Command                             |
+| ------------------------ | ----------------------------------- |
+| Go: daemon tests         | `cd apps/metaboxd && go test ./...` |
+| Go: generator tests      | `make test-schemagen`               |
+| Go: lint                 | `make lint`                         |
+| Lint (whole repo)        | `pnpm lint`                         |
+| Format (whole repo)      | `pnpm format:check`                 |
+| Frontend types and build | `pnpm --filter web build`           |
+| Everything               | `make test`                         |
 
-Команды запускаются из корня, кроме тестов демона: модуля в корне нет, `go test ./...` работает только из каталога модуля. Фронт — пакет воркспейса, поэтому `pnpm --filter web <скрипт>`. Линтер каскадный — `apps/web/.oxlintrc.json` расширяет корневой — и запускается только из корня: плагин Tailwind резолвит конфиг фронта через настройку `cwd`, которая считается от каталога запуска.
+Commands run from the root, except the daemon tests: there is no module at the root, so `go test ./...` works only from the module directory. The frontend is a workspace package, hence `pnpm --filter web <script>`. The linter config cascades (`apps/web/.oxlintrc.json` extends the root one) and runs only from the root: the Tailwind plugin resolves the frontend config through the `cwd` setting, which is relative to the directory it is run from.
 
-Результат проверок приводится как есть; красный не коммитим.
+Check results are quoted as is; do not commit anything red.
 
-## Хуки
+## Hooks
 
-Проверки запускает lefthook, ставится один раз: `make hooks` (в devcontainer это делает `postCreateCommand`). Конфиг — `lefthook.yml` в корне.
+Checks are run by lefthook, installed once: `make hooks` (in the devcontainer, `postCreateCommand` does it). The config is `lefthook.yml` at the root.
 
-| Хук          | Что делает                                                                                                                                                                                                                         |
-| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pre-commit` | gofmt, линт и формат **только изменённых файлов**; `go vet ./...` по обоим Go-модулям целиком, если в коммите есть Go-файлы; генерируемые `generated.ts` и `daemon.generated.ts` требуют в том же коммите правку своего генератора |
-| `commit-msg` | commitlint по правилам этого документа                                                                                                                                                                                             |
-| `pre-push`   | весь репозиторий: `pnpm lint`, `make lint`, `pnpm format:check`, `make test`, сборка фронта с проверкой типов                                                                                                                      |
+| Hook         | What it does                                                                                                                                                                                                                            |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pre-commit` | gofmt, lint and format of **changed files only**; `go vet ./...` over both Go modules in full if the commit has Go files; the generated `generated.ts` and `daemon.generated.ts` require a change to their generator in the same commit |
+| `commit-msg` | commitlint by the rules of this document                                                                                                                                                                                                |
+| `pre-push`   | the whole repository: `pnpm lint`, `make lint`, `pnpm format:check`, `make test`, frontend build with type checking                                                                                                                     |
 
-Разделение по стоимости: коммит проверяет то, что в него попало, и укладывается меньше чем в секунду; push прогоняет всё. Так сделано потому, что type-aware правила видят проект целиком: правка одного файла ломает типы в другом, и по изменённым файлам это не ловится.
+The split is by cost: a commit checks what went into it and takes under a second; a push runs everything. The reason is that type-aware rules see the whole project: a change in one file breaks types in another, and checking only the changed files does not catch it.
 
-Джобы отбираются по staged-файлам: правка только в Go не запускает проверки фронта и наоборот. Сгенерированная схема исключена из списков линта и формата — она закрыта `ignorePatterns`, а oxlint и oxfmt выходят с ошибкой, когда после игнора не остаётся ни одного файла.
+Jobs are selected by staged files: a Go-only change does not run the frontend checks, and the other way round. The generated schema is excluded from the lint and format file lists: it is covered by `ignorePatterns`, and oxlint and oxfmt exit with an error when no file is left after ignoring.
 
-`git commit --no-verify` — только когда изменение объективно не может пройти проверку, и это объяснено в PR.
+`git commit --no-verify` only when the change objectively cannot pass a check, and this is explained in the PR.
 
-## Документация в коммите
+## Documentation in the commit
 
-PRD — первоисточник требований и решений. Документы правятся тем же коммитом, что и изменение, а не потом:
+The PRD is the primary source of requirements and decisions. Documents are edited in the same commit as the change, not later:
 
-| Что меняется в коммите                             | Что правится                                                     |
-| -------------------------------------------------- | ---------------------------------------------------------------- |
-| выполнен критерий приёмки                          | отмечается чекбокс AC в разделе 5                                |
-| принято новое техническое решение                  | ADR в `docs/adr/`; PRD правится, только если меняется требование |
-| переехал файл или каталог, упомянутый в документах | пути в документах                                                |
+| What changes in the commit                           | What is edited                                                         |
+| ---------------------------------------------------- | ---------------------------------------------------------------------- |
+| an acceptance criterion is met                       | the AC checkbox in section 5 is ticked                                 |
+| a new technical decision is made                     | an ADR in `docs/adr/`; the PRD is edited only if a requirement changes |
+| a file or directory mentioned in documents has moved | the paths in the documents                                             |
 
-Чекбокс AC отмечается только тогда, когда критерий подтверждён прогоном — тестом, CI или замером. «Написано, вероятно работает» — не основание.
+An AC checkbox is ticked only when the criterion is confirmed by a run: a test, CI or a measurement. "Written, probably works" is not a reason.
 
-Новые технические решения оформляются ADR в [`docs/adr/`](./docs/adr/README.md). Приложение A PRD закрыто для новых записей: его разделы переехали в ADR, в приложении остались ссылки на них.
+New technical decisions are recorded as ADRs in [`docs/adr/`](./docs/adr/README.md). PRD appendix A is closed to new entries: its sections moved to ADRs, and the appendix keeps links to them.
 
 ## PR
 
-- Описывает, что и зачем; ссылка на PRD или ADR, если решение туда попадает.
-- CI обязателен и гоняет то же, что `pre-push`, плюс commitlint по всем коммитам PR, `make daemon`, интеграционный прогон на образе целевого окружения и советы react-doctor (`pnpm --filter web lint:react`) шагом, который сборку не валит.
-- В `main` изменения попадают только через PR. Мерж закрыт правилом репозитория, пока не прошли джобы `checks` и `integration`. Обновлять ветку до свежего `main` перед мержем не требуется. Имена джоб записаны в правиле: переименование в `ci.yml` идёт вместе с его правкой, иначе мерж будет ждать проверку, которой больше нет.
+- Describes what and why; links to the PRD or an ADR if the decision goes there.
+- CI is mandatory and runs the same as `pre-push`, plus commitlint over all PR commits, `make daemon`, an integration run on the target environment image, and react-doctor advice (`pnpm --filter web lint:react`) as a step that does not fail the build.
+- Changes reach `main` only through a PR. A repository rule blocks the merge until the `checks` and `integration` jobs pass. Updating the branch to the latest `main` before the merge is not required. The job names are written into the rule: renaming them in `ci.yml` goes together with editing the rule, otherwise the merge waits for a check that no longer exists.
 
-## Специфика частей
+## Project specifics
 
-**Демон (`apps/metaboxd/`).** Владеет файлами конфига и циклом Apply. Изменения в API или формате хранения — ломающие, требуют футера и правки PRD. Перед правкой кода читается документ из таблицы в [`apps/metaboxd/AGENTS.md`](./apps/metaboxd/AGENTS.md); перед сдачей — [чеклист ревью](./apps/metaboxd/docs/guides/ReviewChecklist.md).
+**Daemon (`apps/metaboxd/`).** Owns the config files and the Apply cycle. Changes to the API or the storage format are breaking and require a footer and a PRD edit. Before editing code, read the document from the table in [`apps/metaboxd/AGENTS.md`](./apps/metaboxd/AGENTS.md); before handing in, the [review checklist](./apps/metaboxd/docs/guides/ReviewChecklist.md).
 
-**Схема (`tools/schemagen`).** Генератор — источник, `apps/web/src/shared/api/generated.ts` — артефакт. Коммит должен содержать и правку генератора, и перегенерированный файл, иначе фронт разъедется со схемой.
+**Schema (`tools/schemagen`).** The generator is the source, `apps/web/src/shared/api/generated.ts` is the artifact. A commit must contain both the generator change and the regenerated file, otherwise the frontend diverges from the schema.
 
-**Контракт демона.** Тот же порядок для `apps/web/src/shared/api/daemon.generated.ts`: его печатает `apps/metaboxd/cmd/contractgen`, источник — структуры демона, и артефакт едет в коммите вместе с их правкой.
+**Daemon contract.** The same order applies to `apps/web/src/shared/api/daemon.generated.ts`: it is printed by `apps/metaboxd/cmd/contractgen`, its source is the daemon structures, and the artifact goes in the same commit as their change.
 
-**Фронт (`apps/web/`).** Перед правкой кода читается документ из таблицы в [`apps/web/AGENTS.md`](./apps/web/AGENTS.md); перед сдачей — [чеклист ревью](./apps/web/docs/guides/ReviewChecklist.md). Часть правил проверяет `pnpm lint`, дублировать их в PR-описании не нужно.
+**Frontend (`apps/web/`).** Before editing code, read the document from the table in [`apps/web/AGENTS.md`](./apps/web/AGENTS.md); before handing in, the [review checklist](./apps/web/docs/guides/ReviewChecklist.md). Part of the rules is checked by `pnpm lint`; there is no need to repeat them in the PR description.
 
-**Стенд (`.devcontainer/`).** Эмулирует роутер: панель и sing-box ставятся пакетами apk, netifd поднимает проводную, гостевую и внешнюю сети, панель берёт адреса у сетей — так же, как на устройстве ([ADR-0023](./docs/adr/ADR-0023-build-the-bench-from-the-device-firmware.md)).
+**Test bench (`.devcontainer/`).** Emulates the router: the panel and sing-box are installed as apk packages, netifd brings up the wired, guest and external networks, and the panel takes addresses from the networks the same way as on the device ([ADR-0023](./docs/adr/ADR-0023-build-the-bench-from-the-device-firmware.md)).
 
-| Команда            | Что делает                                                                          |
-| ------------------ | ----------------------------------------------------------------------------------- |
-| `make stand-base`  | собирает базу стенда из образа устройства с downloads.openwrt.org                   |
-| `make up`          | поднимает стенд так, как работает роутер: панель отдаёт демон из встроенной статики |
-| `make up-dev`      | то же плюс дев-сервер с HMR на 5173                                                 |
-| `make apply-check` | прогоняет цикл Apply целиком                                                        |
-| `make reach-check` | проверяет, что панель отвечает из локальных сетей и не отвечает из внешней          |
-| `make package`     | собирает пакет панели для устройства — той же стадией, что ставит её в стенд        |
+| Command            | What it does                                                                                              |
+| ------------------ | --------------------------------------------------------------------------------------------------------- |
+| `make stand-base`  | builds the test bench base from the device image from downloads.openwrt.org                               |
+| `make up`          | brings up the test bench the way the router works: the daemon serves the panel from embedded static files |
+| `make up-dev`      | the same plus a dev server with HMR on 5173                                                               |
+| `make apply-check` | runs the whole Apply cycle                                                                                |
+| `make reach-check` | checks that the panel answers from the local networks and does not answer from the external one           |
+| `make package`     | builds the panel package for the device with the same stage that installs it in the test bench            |
 
-Переменные стенда задаются в `.devcontainer/.env`, его читает docker compose; файл не коммитится.
+Test bench variables are set in `.devcontainer/.env`, which docker compose reads; the file is not committed.
 
-| Переменная           | Значение по умолчанию                       | Зачем                                                                   |
-| -------------------- | ------------------------------------------- | ----------------------------------------------------------------------- |
-| `METABOX_BASE_IMAGE` | `openwrt/rootfs:aarch64_generic-25.12.4`    | база стенда; после `make stand-base` — `metabox/openwrt-device:latest`  |
-| `DEVICE_IMAGE_URL`   | релизный образ BPI-R4 с filogic             | образ устройства, из которого `make stand-base` берёт корень            |
-| `DAEMON_BINARY`      | `dist/metaboxd-linux-arm64`                 | бинарь, из которого собирается пакет панели                             |
-| `OPENWRT_PLATFORM`   | `linux/aarch64_generic`                     | платформа образа: у публичного rootfs она нестандартная и задаётся явно |
-| `PKG_VERSION`        | из `VERSION`: `0.1.0-rc.2` → `0.1.0_rc2-r0` | версия пакета панели: пре-релиз semver apk пишет суффиксом `_rcN`       |
-| `SINGBOX_VERSION`    | `1.14.1-extended-2.7.2`                     | релиз форка, из которого берётся пакет sing-box                         |
+| Variable             | Default                                       | Purpose                                                                           |
+| -------------------- | --------------------------------------------- | --------------------------------------------------------------------------------- |
+| `METABOX_BASE_IMAGE` | `openwrt/rootfs:aarch64_generic-25.12.4`      | test bench base; after `make stand-base`, `metabox/openwrt-device:latest`         |
+| `DEVICE_IMAGE_URL`   | BPI-R4 release image from filogic             | the device image from which `make stand-base` takes the root                      |
+| `DAEMON_BINARY`      | `dist/metaboxd-linux-arm64`                   | the binary the panel package is built from                                        |
+| `OPENWRT_PLATFORM`   | `linux/aarch64_generic`                       | image platform: the public rootfs has a non-standard one, so it is set explicitly |
+| `PKG_VERSION`        | from `VERSION`: `0.1.0-rc.2` → `0.1.0_rc2-r0` | panel package version: apk writes a semver pre-release as an `_rcN` suffix        |
+| `SINGBOX_VERSION`    | `1.14.1-extended-2.7.2`                       | the fork release the sing-box package is taken from                               |
 
-Файл читают и docker compose, и `make`, поэтому `make package` собирает пакет под ту же арку, на которой стоит стенд.
+The file is read by both docker compose and `make`, so `make package` builds the package for the same architecture the test bench runs on.
 
-Без `.env` стенд собирается на публичном образе OpenWrt — тем же путём, которым идёт CI.
+Without `.env`, the test bench is built on the public OpenWrt image, the same path CI takes.
 
-## Коммиты от ИИ-агентов
+## Commits by AI agents
 
-Формат сообщения тот же, что у людей. Дополнительно:
+The message format is the same as for people. In addition:
 
-- Коммит и push — только по явной просьбе. Без неё изменения остаются в рабочем дереве, а в ответе перечисляется, что изменено.
-- Ветка обязательна: если текущая — `main`, сначала завести ветку.
-- Перед коммитом прогнать проверки затронутой части и привести результат как есть.
-- Один коммит — одна тема. Если diff разнородный, предложить разбивку и дождаться решения.
-- Историю не переписывать: `amend`, `rebase`, force-push — только по прямой просьбе.
-- Сообщение — один заголовок, без тела и трейлеров: так выглядит вся история репозитория.
+- Commit and push only on explicit request. Without it, changes stay in the working tree, and the response lists what was changed.
+- A branch is mandatory: if the current one is `main`, create a branch first.
+- Before committing, run the checks of the affected part and quote the result as is.
+- One commit, one topic. If the diff is mixed, propose a split and wait for a decision.
+- Do not rewrite history: `amend`, `rebase`, force-push only on direct request.
+- The message is a single header, without a body or trailers: the whole repository history looks like this.

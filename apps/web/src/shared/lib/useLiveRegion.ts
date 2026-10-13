@@ -1,15 +1,15 @@
 import { useCallback, useState } from 'react';
 
-/** Объявление живой области. Номер нужен, чтобы тот же текст подряд прозвучал снова. */
+/** A live region announcement. The number is needed so the same text sounds again in a row. */
 export interface LiveMessage {
   id: number;
   text: string;
 }
 
 /**
- * Состояние живой области экрана (`LiveRegion` из `shared/ui`): последнее
- * объявление и запись нового. Живёт на экране, а не в сторе: область у экрана
- * одна, и с ним же она уходит.
+ * State of a screen's live region (`LiveRegion` from `shared/ui`): the last
+ * announcement and recording a new one. Lives on the screen, not in a store: a screen has
+ * one region, and it goes away with it.
  */
 export function useLiveRegion() {
   const [message, setMessage] = useState<LiveMessage | null>(null);

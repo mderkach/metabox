@@ -6,19 +6,19 @@ import { type JsoncOutlineEntry, jsoncOutline } from '@shared/lib/jsonc';
 import { Button, Popover, PopoverContent, PopoverTrigger } from '@shared/ui';
 
 /**
- * Оглавление текста конфига: секции корня и их вложенные списки, переход —
- * курсором в поле на ключ секции. Считается только при открытом окне: на
- * каждое нажатие клавиши разбирать текст ради закрытого оглавления незачем.
+ * Config text outline: root sections and their nested lists, navigation is
+ * by the cursor in the field to the section key. Computed only while the window is open: there is
+ * no reason to parse the text on every keystroke for a closed outline.
  *
- * Список — кнопки, а не `nav` со ссылками: переход ведёт внутри поля, адреса
- * у него нет.
+ * The list is buttons, not a `nav` with links: navigation goes inside the field, and it has
+ * no address.
  */
 export function ConfigRawOutline({
   text,
   onJump,
 }: {
   text: string;
-  /** Выделить ключ секции в поле и прокрутить к нему. */
+  /** Select the section key in the field and scroll to it. */
   onJump: (offset: number, length: number) => void;
 }) {
   const { t } = useTranslation('widgets/Config/ConfigRawEditor');

@@ -11,7 +11,7 @@ const BYTE_UNITS = [
 ] as const satisfies readonly ParseKeys<'shared'>[];
 const BYTE_STEP = 1024;
 
-/** Байты человеку: рантайм отдаёт их числом, а колонки узкие. */
+/** Bytes for a human: the runtime returns them as a number, and the columns are narrow. */
 export function formatBytes(bytes: number): string {
   let value = bytes;
   let unit = 0;
@@ -26,15 +26,15 @@ export function formatBytes(bytes: number): string {
   return `${amount} ${i18next.t(BYTE_UNITS[unit], { ns: 'shared' })}`;
 }
 
-/** Скорость за секунду: та же шкала, другая подпись. */
+/** Speed per second: the same scale, a different label. */
 export function formatRate(bytesPerSecond: number): string {
   return i18next.t('unit.rate', { ns: 'shared', value: formatBytes(bytesPerSecond) });
 }
 
 /**
- * Сколько прошло, коротко: колонка узкая, а точность до секунды нужна только на
- * первой минуте. Возраст считается от переданного момента, а не от `Date.now()`
- * внутри, — иначе значение менялось бы между рендерами одного снапшота.
+ * How long ago, short: the column is narrow, and second precision is needed only in
+ * the first minute. Age is counted from the passed moment, not from `Date.now()`
+ * inside — otherwise the value would change between renders of one snapshot.
  */
 export function formatAge(seconds: number): string {
   if (seconds < SECONDS_IN_MINUTE) {
@@ -58,15 +58,15 @@ const DATE_PARTS = { day: '2-digit', month: '2-digit', year: 'numeric' } as cons
 const TIME_PARTS = { hour: '2-digit', minute: '2-digit' } as const satisfies Intl.DateTimeFormatOptions;
 
 /**
- * Дата одним форматом на всю панель. Порядок частей задаёт язык интерфейса, а
- * не браузера: иначе английская панель в русской системе печатала бы даты
- * по-русски.
+ * A date in one format for the whole panel. The order of parts is set by the interface language, not
+ * by the browser: otherwise an English panel on a Russian system would print dates
+ * the Russian way.
  */
 export function formatDate(at: Date): string {
   return at.toLocaleDateString(i18next.language, DATE_PARTS);
 }
 
-/** Дата с временем до минуты, в том же формате даты, что `formatDate`. */
+/** Date with time down to the minute, in the same date format as `formatDate`. */
 export function formatDateTime(at: Date): string {
   return at.toLocaleString(i18next.language, { ...DATE_PARTS, ...TIME_PARTS });
 }

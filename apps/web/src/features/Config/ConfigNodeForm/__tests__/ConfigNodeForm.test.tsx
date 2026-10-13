@@ -42,7 +42,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-/** Узел читается из стора, как на экране: форма видит каждую правку текста. */
+/** The node is read from the store as on the screen: the form sees every text edit. */
 function NodeFromStore({ registry, path }: { registry: NodeRegistry; path: JSONPath }) {
   const text = useConfigText();
   const node = useMemo(() => (text === null ? undefined : findValue(text, path)), [text, path]);
@@ -58,14 +58,14 @@ function draft(): string {
   return ConfigDocumentState.getState().draft ?? '';
 }
 
-/** Строки, которыми черновик отличается от исходного текста. */
+/** Lines by which the draft differs from the source text. */
 function changedLines(before: string, after: string): string[] {
   const lines = before.split('\n');
 
   return after.split('\n').filter((line, index) => line !== lines[index]);
 }
 
-/** Незаданные поля узла свёрнуты под «Ещё параметры». */
+/** Unset node fields are collapsed under "More parameters". */
 async function showEmptyFields() {
   await userEvent.click(screen.getByRole('button', { name: /^Ещё параметры/ }));
 }
@@ -74,13 +74,13 @@ function save() {
   return screen.getByRole('button', { name: 'Сохранить в черновик' });
 }
 
-describe('форма узла по схеме', () => {
+describe('node form by schema', () => {
   beforeEach(() => {
     ConfigDocumentState.getState().reset();
     ConfigDocumentState.getState().load(TEXT);
   });
 
-  it('рисует поле по его виду и не рисует тип узла', async () => {
+  it('draws a field by its kind and does not draw the node type', async () => {
     renderVmess();
 
     expect(screen.getByRole('textbox', { name: 'server' })).toHaveValue('a.example');
@@ -96,7 +96,7 @@ describe('форма узла по схеме', () => {
     expect(save()).toBeDisabled();
   });
 
-  it('правка поля ложится одной строкой: комментарий внутри узла цел', async () => {
+  it('a field edit lands as one line: a comment inside the node is intact', async () => {
     const user = userEvent.setup();
 
     renderVmess();
@@ -114,7 +114,7 @@ describe('форма узла по схеме', () => {
     expect(save()).toBeDisabled();
   });
 
-  it('очищенное поле удаляется из узла, а не пишется пустым', async () => {
+  it('a cleared field is removed from the node, not written empty', async () => {
     const user = userEvent.setup();
 
     renderVmess();
@@ -127,12 +127,12 @@ describe('форма узла по схеме', () => {
     });
   });
 
-  it('флаг сбрасывается до незаданного: ключ уходит из файла', async () => {
+  it('a flag resets to unset: the key leaves the file', async () => {
     const user = userEvent.setup();
 
     renderVmess();
 
-    // Группа tls задана в узле и открыта сразу.
+    // The tls group is set in the node and open at once.
     await user.click(screen.getByRole('button', { name: 'Сбросить enabled' }));
     await user.click(save());
 
@@ -141,7 +141,7 @@ describe('форма узла по схеме', () => {
     });
   });
 
-  it('listable из одной строки остаётся строкой, из двух — становится списком', async () => {
+  it('a one-string listable stays a string, with two becomes a list', async () => {
     const user = userEvent.setup();
 
     renderVmess();
@@ -166,7 +166,7 @@ describe('форма узла по схеме', () => {
     });
   });
 
-  it('набор значений пишется в порядке схемы', async () => {
+  it('a value set is written in schema order', async () => {
     const user = userEvent.setup();
 
     renderVmess();
@@ -179,7 +179,7 @@ describe('форма узла по схеме', () => {
     });
   });
 
-  it('значение перечисления выбирается из схемы, пустой пункт снимает ключ', async () => {
+  it('an enum value is chosen from the schema, the empty item clears the key', async () => {
     const user = userEvent.setup();
 
     renderVmess();
@@ -200,7 +200,7 @@ describe('форма узла по схеме', () => {
     });
   });
 
-  it('группа без значений свёрнута, с значениями — открыта', async () => {
+  it('a group without values is collapsed, with values it is open', async () => {
     const user = userEvent.setup();
 
     renderVmess();
@@ -219,7 +219,7 @@ describe('форма узла по схеме', () => {
     expect(screen.getByRole('switch', { name: 'padding' })).toBeInTheDocument();
   });
 
-  it('называет длительность не в том формате и не пишет её', async () => {
+  it('names a duration in the wrong format and does not write it', async () => {
     const user = userEvent.setup();
 
     renderVmess();
@@ -234,7 +234,7 @@ describe('форма узла по схеме', () => {
     expect(ConfigDocumentState.getState().draft).toBeNull();
   });
 
-  it('поле «строка или число» пишет цифры числом', async () => {
+  it('a "string or number" field writes digits as a number', async () => {
     const user = userEvent.setup();
 
     renderVmess();
@@ -248,7 +248,7 @@ describe('форма узла по схеме', () => {
     });
   });
 
-  it('незнакомый вид правится JSON-текстом, неразобранный текст запись останавливает', async () => {
+  it('an unknown kind is edited as JSON text, unparsed text stops the write', async () => {
     const user = userEvent.setup();
 
     renderVmess();
@@ -273,7 +273,7 @@ describe('форма узла по схеме', () => {
     });
   });
 
-  it('неразобранный текст, переписанный правкой узла снаружи, запись не держит', async () => {
+  it('unparsed text rewritten by a node edit from outside does not hold the write', async () => {
     const user = userEvent.setup();
 
     renderVmess();
@@ -286,7 +286,7 @@ describe('форма узла по схеме', () => {
 
     ConfigDocumentState.getState().edit([...VMESS, 'domain_resolver'], 'local');
 
-    // Заданное поле выходит из свёртки к заданным: элемент монтируется заново.
+    // A set field leaves the collapse for the set ones: the element is mounted again.
     await waitFor(() => {
       expect(screen.getByRole('textbox', { name: 'domain_resolver' })).toHaveValue('"local"');
     });
@@ -304,7 +304,7 @@ describe('форма узла по схеме', () => {
     expect(findValue(draft(), [...VMESS, 'domain_resolver'])).toBe('local');
   });
 
-  it('правка того же узла текстом доходит до формы, набранное не стирается', async () => {
+  it('an edit of the same node by text reaches the form, what was typed is not erased', async () => {
     const user = userEvent.setup();
 
     renderVmess();
@@ -322,8 +322,8 @@ describe('форма узла по схеме', () => {
 });
 
 /**
- * Golden на корпусе: узел реального вида правится формой, и файл меняется
- * ровно на одну строку — остальные байты, комментарии и порядок ключей целы.
+ * Golden on the corpus: a node of a real kind is edited by the form, and the file changes
+ * by exactly one line: the other bytes, comments and key order are intact.
  */
 const CORPUS = import.meta.glob<string>('/src/entities/Config/__tests__/corpus/*.json*', {
   query: '?raw',
@@ -332,8 +332,8 @@ const CORPUS = import.meta.glob<string>('/src/entities/Config/__tests__/corpus/*
 });
 
 /**
- * Самый развёрнутый распознанный аутбаунд файла с тегом: правится его форма —
- * в нём больше всего соседних строк, которые правка обязана не тронуть.
+ * The most expanded recognized outbound of the file with a tag: its form is edited,
+ * it has the most neighboring lines, which the edit must not touch.
  */
 function richestOutbound(text: string): number | null {
   const outbounds = findValue(text, ['outbounds']);
@@ -361,21 +361,21 @@ const GOLDEN = Object.entries(CORPUS).flatMap(([path, text]) => {
   return index === null ? [] : [{ name: path.split('/').at(-1), text, index }];
 });
 
-/** Строки комментариев файла: правка формой не вправе их трогать. */
+/** Comment lines of the file: an edit by the form has no right to touch them. */
 function commentLines(text: string): string[] {
   return text.split(/\r?\n/).filter((line) => /^\s*(?:\/\/|\/\*)/.test(line));
 }
 
-describe('форма узла на корпусе конфигов', () => {
+describe('node form on the config corpus', () => {
   beforeEach(() => {
     ConfigDocumentState.getState().reset();
   });
 
-  it('в корпусе есть узлы для правки', () => {
+  it('the corpus has nodes to edit', () => {
     expect(GOLDEN.length).toBeGreaterThan(0);
   });
 
-  it.each(GOLDEN)('$name: правка тега формой меняет одну строку файла', async ({ text, index }) => {
+  it.each(GOLDEN)('$name: a tag edit by the form changes one line of the file', async ({ text, index }) => {
     const user = userEvent.setup();
     const path = ['outbounds', index];
 

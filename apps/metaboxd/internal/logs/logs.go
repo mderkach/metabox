@@ -1,9 +1,9 @@
-// Package logs читает лог sing-box: хвост и поток новых строк.
+// Package logs reads the sing-box log: the tail and the stream of new lines.
 //
-// Источник выбирается по применённому конфигу на каждый запрос: при файле в
-// log.output — этот файл, иначе логгер устройства (`logread`), куда служба
-// уводит stdout и stderr sing-box. Ротацией демон не занимается: кольцо logd
-// ограничено размером, а файл log.output растёт, пока его не очистят.
+// The source is selected by the applied config on every request: with a file in
+// log.output, that file; otherwise the device logger (`logread`), where the service
+// sends sing-box stdout and stderr. The daemon does not do rotation: the logd ring
+// is limited by size, and the log.output file grows until it is cleared.
 package logs
 
 import (
@@ -26,39 +26,39 @@ import (
 )
 
 const (
-	// lineLimit — потолок строки в байтах: остаток длинной строки
-	// отбрасывается, иначе одна строка забирала бы столько памяти, сколько
-	// напечатал процесс.
+	// lineLimit is the line ceiling in bytes: the rest of a long line
+	// is dropped, otherwise one line would take as much memory as the process
+	// printed.
 	lineLimit = 4 << 10
 
-	// fileTailBytes — сколько конца файла читать под хвост: около тысячи строк.
+	// fileTailBytes is how much of the file end to read for the tail: about a thousand lines.
 	fileTailBytes = 256 << 10
 
-	// tailTimeout — потолок на чтение хвоста у логгера.
+	// tailTimeout is the ceiling for reading the tail from the logger.
 	tailTimeout = 10 * time.Second
 
-	// MaxLines — потолок хвоста в строках.
+	// MaxLines is the tail ceiling in lines.
 	MaxLines = 1000
-	// MaxStreams — сколько потоков держится одновременно: каждый — живой
-	// процесс logread или опрос файла.
+	// MaxStreams is how many streams are held at once: each is a live
+	// logread process or a file poll.
 	MaxStreams = 4
 )
 
 var (
-	// ErrUnavailable — источник лога не читается: logread не задан или
-	// завершился с ошибкой, файл log.output не открылся.
+	// ErrUnavailable means the log source cannot be read: logread is not set or
+	// exited with an error, the log.output file did not open.
 	ErrUnavailable = errors.New("лог sing-box недоступен")
-	// ErrTooManyStreams — открыто MaxStreams потоков, новый не заводится.
+	// ErrTooManyStreams means MaxStreams streams are open, a new one is not started.
 	ErrTooManyStreams = errors.New("открыто слишком много потоков лога")
-	// ErrClearForbidden — файл log.output лежит вне каталогов, в которых демон
-	// согласен его усекать.
+	// ErrClearForbidden means the log.output file lies outside the directories in which the daemon
+	// agrees to truncate it.
 	ErrClearForbidden = errors.New("файл лога вне разрешённых каталогов")
 )
 
-// Level — уровень строки лога sing-box.
+// Level is a sing-box log line level.
 type Level string
 
-// Уровни sing-box от самого подробного.
+// The sing-box levels from the most detailed.
 const (
 	LevelTrace  Level = "trace"
 	LevelDebug  Level = "debug"
@@ -70,13 +70,13 @@ const (
 	LevelPanic  Level = "panic"
 )
 
-// rank отдаёт порядок уровня; -1 — уровень вне набора.
+// rank returns the level order; -1 means a level outside the set.
 func rank(level Level) int {
 	return slices.Index([]Level{LevelTrace, LevelDebug, LevelInfo, LevelNotice, LevelWarn, LevelError, LevelFatal, LevelPanic}, level)
 }
 
-// ParseLevel разбирает уровень без учёта регистра. Пустая строка — LevelTrace:
-// фильтра нет.
+// ParseLevel parses a level case-insensitively. An empty string is LevelTrace:
+// no filter.
 func ParseLevel(s string) (Level, bool) {
 	if s == "" {
 		return LevelTrace, true
@@ -87,63 +87,63 @@ func ParseLevel(s string) (Level, bool) {
 	return level, rank(level) >= 0
 }
 
-// Source — откуда прочитан лог.
+// Source is where the log was read from.
 type Source string
 
 const (
-	// SourceLogread — логгер устройства: sing-box пишет в stderr.
+	// SourceLogread is the device logger: sing-box writes to stderr.
 	SourceLogread Source = "logread"
-	// SourceFile — файл log.output применённого конфига.
+	// SourceFile is the log.output file of the applied config.
 	SourceFile Source = "file"
 )
 
-// Entry — строка лога sing-box.
+// Entry is a sing-box log line.
 type Entry struct {
-	// Time — метка времени строки в RFC 3339; пусто, когда метки нет. У строк
-	// логгера это время logd, у файла — метка log.timestamp sing-box. Часов
-	// реального времени у роутера нет: до синхронизации NTP метки в прошлом.
+	// Time is the line timestamp in RFC 3339; empty when there is no stamp. For logger
+	// lines this is the logd time, for the file the sing-box log.timestamp stamp. The router
+	// has no real-time clock: before NTP synchronization the stamps are in the past.
 	Time string `json:"time,omitempty"`
-	// Level — пусто, когда уровень не разобран: продолжение многострочного
-	// сообщения, стек паники. Такие строки фильтр по уровню пропускает.
+	// Level is empty when the level is not parsed: a continuation of a multi-line
+	// message, a panic stack. The level filter lets such lines through.
 	Level   Level  `json:"level,omitempty"`
 	Message string `json:"message"`
 }
 
-// Start запускает процесс и отдаёт его stdout. Close ждёт процесс, остановить
-// его — дело контекста запуска; ошибка Close — ненулевой код или отказ
-// ожидания.
+// Start starts a process and returns its stdout. Close waits for the process, stopping
+// it is the job of the launch context; a Close error is a non-zero code or a wait
+// failure.
 type Start func(ctx context.Context, name string, args ...string) (io.ReadCloser, error)
 
-// ConfigReader отдаёт применённый конфиг; отсутствие файла —
+// ConfigReader returns the applied config; a missing file is
 // config.ErrNoConfig.
 type ConfigReader interface {
 	Read(ctx context.Context) ([]byte, error)
 }
 
-// Options — пути, которые демон получает флагами.
+// Options are the paths the daemon receives by flags.
 type Options struct {
-	// Logread — абсолютный путь к logread; пустой отключает чтение логгера.
+	// Logread is the absolute path to logread; empty disables reading the logger.
 	Logread string
-	// Process — имя процесса sing-box в логгере.
+	// Process is the sing-box process name in the logger.
 	Process string
-	// ConfigDir — каталог конфига: от него разрешается относительный
-	// log.output — служба поднимает sing-box с рабочим каталогом в нём.
+	// ConfigDir is the config directory: a relative log.output is resolved from it,
+	// the service starts sing-box with the working directory in it.
 	ConfigDir string
-	// TruncateDirs — каталоги, внутри которых файл log.output разрешено
-	// усекать. Вне их очистка — ErrClearForbidden: путь задаёт конфиг, и без
-	// ограничения очистка лога обнуляла бы любой файл устройства.
+	// TruncateDirs are the directories inside which the log.output file may be
+	// truncated. Outside them cleanup is ErrClearForbidden: the path is set by the config, and without
+	// the restriction a log cleanup would zero any device file.
 	TruncateDirs []string
-	// Protected — файлы и каталоги внутри TruncateDirs, которые не усекаются:
-	// конфиг и его подкаталог списков. Сверка по пути, без разрешения
-	// симлинков.
+	// Protected are files and directories inside TruncateDirs that are not truncated:
+	// the config and its lists subdirectory. Compared by path, without symlink
+	// resolution.
 	Protected []string
-	// PollInterval — период опроса размера файла в потоке.
+	// PollInterval is the file size polling period in a stream.
 	PollInterval time.Duration
-	// Now подменяется в тестах; nil — time.Now.
+	// Now is replaced in tests; nil means time.Now.
 	Now func() time.Time
 }
 
-// Reader — владелец отметки очистки и счётчика потоков.
+// Reader is the owner of the cleanup mark and the stream counter.
 type Reader struct {
 	start  Start
 	config ConfigReader
@@ -154,7 +154,7 @@ type Reader struct {
 	since time.Time
 }
 
-// New собирает читателя.
+// New assembles the reader.
 func New(start Start, cfg ConfigReader, opts Options) *Reader {
 	if opts.Now == nil {
 		opts.Now = time.Now
@@ -167,19 +167,19 @@ func New(start Start, cfg ConfigReader, opts Options) *Reader {
 	return &Reader{start: start, config: cfg, opts: opts, slots: make(chan struct{}, MaxStreams)}
 }
 
-// Snapshot — хвост лога.
+// Snapshot is the log tail.
 type Snapshot struct {
 	Source  Source
 	Since   time.Time
 	Entries []Entry
 }
 
-// Since отдаёт отметку последней очистки; нулевое время — очистки не было.
+// Since returns the last cleanup mark; a zero time means there was no cleanup.
 //
-// Отметка живёт в памяти: logread не умеет чистить кольцо logd, поэтому
-// «очистка» — это время, раньше которого строки не показываются. Перезапуск
-// демона её сбрасывает, а скачок часов при синхронизации NTP может скрыть
-// новые строки или вернуть старые.
+// The mark lives in memory: logread cannot clean the logd ring, so
+// "cleanup" is the time before which lines are not shown. A daemon restart
+// resets it, and a clock jump on NTP synchronization may hide
+// new lines or bring back old ones.
 func (r *Reader) Since() time.Time {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -187,8 +187,8 @@ func (r *Reader) Since() time.Time {
 	return r.since
 }
 
-// Tail отдаёт последние n строк не ниже уровня min, записанных после отметки
-// очистки.
+// Tail returns the last n lines not below level min, written after the cleanup
+// mark.
 func (r *Reader) Tail(ctx context.Context, n int, minLevel Level) (Snapshot, error) {
 	src, err := r.source(ctx)
 	if err != nil {
@@ -238,8 +238,8 @@ func (r *Reader) Tail(ctx context.Context, n int, minLevel Level) (Snapshot, err
 	return Snapshot{Source: SourceLogread, Since: f.since, Entries: ring.entries()}, nil
 }
 
-// Clear ставит отметку очистки и отдаёт её. При файле log.output файл ещё и
-// усекается: его демон очистить может, кольцо logd — нет.
+// Clear sets the cleanup mark and returns it. With a log.output file the file is also
+// truncated: the daemon can clean it, the logd ring it cannot.
 func (r *Reader) Clear(ctx context.Context) (time.Time, error) {
 	src, err := r.source(ctx)
 	if err != nil {
@@ -260,8 +260,8 @@ func (r *Reader) Clear(ctx context.Context) (time.Time, error) {
 	return r.since, nil
 }
 
-// truncate усекает файл через os.Root разрешённого каталога: путь берётся из
-// конфига, и симлинк не должен вывести запись за пределы каталога.
+// truncate truncates a file through os.Root of the allowed directory: the path is taken from
+// the config, and a symlink must not take the write outside the directory.
 func (r *Reader) truncate(path string) error {
 	for _, p := range r.opts.Protected {
 		if rel, err := filepath.Rel(p, path); err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
@@ -302,7 +302,7 @@ func (r *Reader) truncate(path string) error {
 }
 
 type source struct {
-	// file — абсолютный путь log.output; пусто — логгер устройства.
+	// file is the absolute log.output path; empty means the device logger.
 	file string
 }
 
@@ -356,13 +356,13 @@ func (f filter) pass(e Entry) bool {
 
 	t, err := time.Parse(time.RFC3339, e.Time)
 
-	// Метки строк — с точностью до секунды, поэтому строки секунды очистки
-	// скрываются целиком.
+	// Line stamps are accurate to the second, so the lines of the cleanup second
+	// are hidden entirely.
 	return err != nil || t.After(f.since.Truncate(time.Second))
 }
 
-// ring держит последние n строк: хвост читается целиком, а в памяти остаётся
-// только то, что уйдёт в ответ.
+// ring holds the last n lines: the tail is read whole, and only what goes into
+// the response stays in memory.
 type ring struct {
 	buf  []Entry
 	next int
@@ -394,7 +394,7 @@ func (r *ring) entries() []Entry {
 	return append(append([]Entry{}, r.buf[r.next:]...), r.buf[:r.next]...)
 }
 
-// eachLine читает построчно; хвост строки длиннее lineLimit отбрасывается.
+// eachLine reads line by line; the tail of a line longer than lineLimit is dropped.
 func eachLine(rd io.Reader, fn func(string)) error {
 	br := bufio.NewReader(rd)
 
@@ -421,7 +421,7 @@ func eachLine(rd io.Reader, fn func(string)) error {
 	}
 }
 
-// readTail отдаёт последние limit байт файла без первой, оборванной строки.
+// readTail returns the last limit bytes of the file without the first, broken line.
 func readTail(path string, limit int64) (string, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -449,26 +449,26 @@ func readTail(path string, limit int64) (string, error) {
 	return tail, nil
 }
 
-// Сообщения sing-box раскрашены: уровень приходит в escape-последовательностях
-// терминала.
+// sing-box messages are colored: the level comes in terminal escape
+// sequences.
 var ansi = regexp.MustCompile(`\x1b\[[0-9;]*m`)
 
-// fileTimestamp — метка, которой sing-box открывает строку при log.timestamp.
+// fileTimestamp is the stamp sing-box opens a line with under log.timestamp.
 var fileTimestamp = regexp.MustCompile(`^([+-]\d{4} \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) `)
 
-// elapsed — секунды от старта, которые sing-box ставит сразу за уровнем в
-// выводе без метки времени: `WARN[0004] …`.
+// elapsed is the seconds from start that sing-box puts right after the level in
+// output without a timestamp: `WARN[0004] …`.
 var elapsed = regexp.MustCompile(`^\[\d+\]`)
 
 const (
 	fileTimeLayout = "-0700 2006-01-02 15:04:05"
-	// logreadPrefix — длина метки logd: `Fri Oct  9 05:38:00 2026`.
+	// logreadPrefix is the length of the logd stamp: `Fri Oct  9 05:38:00 2026`.
 	logreadPrefix = len(time.ANSIC)
 )
 
-// parseLogread разбирает строку logread. Строка чужого процесса — ложь:
-// фильтр -e logread — регулярное выражение по всей строке, и под него
-// попадают чужие сообщения, где имя sing-box просто упомянуто.
+// parseLogread parses a logread line. A line of a foreign process is false:
+// the -e logread filter is a regular expression over the whole line, and foreign
+// messages that merely mention the sing-box name fall under it.
 func parseLogread(line, process string) (Entry, bool) {
 	line = ansi.ReplaceAllString(line, "")
 
@@ -477,8 +477,8 @@ func parseLogread(line, process string) (Entry, bool) {
 		return Entry{}, false
 	}
 
-	// При log.timestamp sing-box ставит свою метку и в stderr; время строки
-	// остаётся за logd.
+	// With log.timestamp sing-box puts its own stamp into stderr too; the line time
+	// stays with logd.
 	if m := fileTimestamp.FindString(message); m != "" {
 		message = message[len(m):]
 	}
@@ -494,7 +494,7 @@ func parseLogread(line, process string) (Entry, bool) {
 	return entry, true
 }
 
-// parseFile разбирает строку файла log.output. Пустая строка — ложь.
+// parseFile parses a log.output file line. An empty line is false.
 func parseFile(line string) (Entry, bool) {
 	line = strings.TrimSpace(ansi.ReplaceAllString(line, ""))
 	if line == "" {

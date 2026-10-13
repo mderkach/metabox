@@ -1,81 +1,81 @@
-// Package ruleset — каталог готовых наборов правил: какие поставщики есть,
-// откуда качаются их файлы и какие категории они публикуют.
+// Package ruleset is the catalog of ready rule sets: which providers exist,
+// where their files are downloaded from and which categories they publish.
 //
-// Перечень категорий демон сверяет с поставщиками сам и отдаёт панели. Панель
-// каталога не хранит: иначе он жил бы вторым экземпляром и расходился с тем,
-// что поставщик публикует на самом деле.
+// The daemon checks the category listing with the providers itself and gives it to the panel. The panel
+// stores no catalog: otherwise it would live as a second copy and diverge from what
+// the provider actually publishes.
 package ruleset
 
 import "fmt"
 
-// ListKind — что за списки отдаёт набор: домены или адреса.
+// ListKind is what lists the set returns: domains or addresses.
 type ListKind string
 
-// Виды списков.
+// List kinds.
 const (
 	KindGeosite ListKind = "geosite"
 	KindGeoip   ListKind = "geoip"
 )
 
-// ListSource — откуда взят перечень категорий.
+// ListSource is where the category listing is taken from.
 type ListSource string
 
-// Источники перечня.
+// Listing sources.
 const (
-	// ListSourceSnapshot — снимок, встроенный в бинарь при сборке: с поставщиком
-	// демон ещё не сверялся.
+	// ListSourceSnapshot is a snapshot embedded into the binary at build time: the daemon
+	// has not yet checked with the provider.
 	ListSourceSnapshot ListSource = "snapshot"
-	// ListSourceProvider — перечень сверен с поставщиком.
+	// ListSourceProvider means the listing is checked with the provider.
 	ListSourceProvider ListSource = "provider"
 )
 
-// Mirror — адрес, по которому sing-box качает файлы набора. До основного
-// адреса из России дотягиваются не всегда, поэтому зеркал несколько.
+// Mirror is the address from which sing-box downloads the set files. The primary
+// address is not always reachable from Russia, so there are several mirrors.
 type Mirror struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
-	// Base — начало адреса до имени файла, со слэшем на конце.
+	// Base is the start of the address up to the file name, with a trailing slash.
 	Base string `json:"base"`
 }
 
-// List — один вид списков у поставщика.
+// List is one kind of lists at a provider.
 type List struct {
 	Kind ListKind `json:"kind"`
-	// Prefix — приставка имени файла: `geosite-` + категория + `.srs`.
+	// Prefix is the file name prefix: `geosite-` + category + `.srs`.
 	Prefix  string   `json:"prefix"`
 	Mirrors []Mirror `json:"mirrors"`
-	// Featured — что показать, пока поле категории пустое, в порядке от
-	// общего к частному.
+	// Featured is what to show while the category field is empty, in order from
+	// general to specific.
 	Featured []string `json:"featured"`
-	// Categories — все категории, для которых у поставщика есть файл `.srs`,
-	// по алфавиту.
+	// Categories are all categories for which the provider has an `.srs` file,
+	// alphabetically.
 	Categories []string   `json:"categories"`
 	Source     ListSource `json:"source"`
-	// UpdatedAt — когда перечень последний раз сверен с поставщиком, а у
-	// снимка — когда снимок собран; секунды Unix. Справочная величина: у
-	// роутера нет часов реального времени, но сверка идёт по TLS, а он без
-	// синхронизованных часов не пройдёт.
+	// UpdatedAt is when the listing was last checked with the provider, and for a
+	// snapshot when it was built; Unix seconds. An informational value: the
+	// router has no real-time clock, but the check goes over TLS, which does not pass without
+	// synchronized clocks.
 	UpdatedAt int64 `json:"updated_at"`
 }
 
-// Provider — поставщик готовых наборов.
+// Provider is a provider of ready sets.
 type Provider struct {
 	ID    string `json:"id"`
 	Name  string `json:"name"`
 	Lists []List `json:"lists"`
 }
 
-// Catalog — ответ ручки каталога.
+// Catalog is the catalog handler response.
 type Catalog struct {
 	Providers []Provider `json:"providers"`
 }
 
-// Tree — каталог ветки на GitHub, где поставщик публикует файлы `.srs`.
+// Tree is a branch catalog on GitHub where the provider publishes `.srs` files.
 type Tree struct {
 	Owner string
 	Repo  string
 	Ref   string
-	// Dir — путь внутри ветки без слэшей по краям; пустой — корень ветки.
+	// Dir is the path inside the branch without slashes at the edges; empty is the branch root.
 	Dir string
 }
 
@@ -115,15 +115,15 @@ type providerSpec struct {
 	lists []listSpec
 }
 
-// key — имя списка в кэше и снимке.
+// key is the list name in the cache and snapshot.
 func key(providerID string, kind ListKind) string {
 	return providerID + "/" + string(kind)
 }
 
-// providers — таблица поставщиков. В каталог попадает только тот, чей шаблон
-// адреса проверен: неверный адрес нельзя отличить от недоступного поставщика,
-// а цена ошибки — несостоявшийся старт sing-box. Источник, которого здесь нет,
-// панель подключает своим адресом.
+// providers is the provider table. Only one whose address template is checked gets into
+// the catalog: a wrong address cannot be told from an unavailable provider,
+// and the price of a mistake is a failed sing-box start. A source that is not here
+// is connected by the panel with its own address.
 func providers() []providerSpec {
 	runet := func(dir string) Tree {
 		return Tree{Owner: "runetfreedom", Repo: "russia-v2ray-rules-dat", Ref: "release", Dir: dir}

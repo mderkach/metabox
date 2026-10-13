@@ -21,29 +21,29 @@ import {
 const EMPTY_CATALOG: RuleSetCatalog = { providers: [] };
 
 export interface RuleSetEditorState {
-  /** Запрос конфига: отказ источника — своё состояние экрана, а не пустой список. */
+  /** Config request: a source failure is a screen state of its own, not an empty list. */
   source: ConfigDocumentView['query'];
-  /** Запрос каталога: без него строки не узнают поставщика, а форма — категорий. */
+  /** Catalog request: without it rows do not know the provider, and the form does not know the categories. */
   catalogQuery: ReturnType<typeof useRuleSetCatalog>;
   catalog: RuleSetCatalog;
   sets: RuleSetRow[];
-  /** Узлы `route.rule_set` как есть: правка сета сравнивает с ними набранное. */
+  /** `route.rule_set` nodes as they are: editing a rule set compares the typed input against them. */
   nodes: unknown[];
-  /** Имена уже подключённых наборов: второй набор с тем же именем не заводится. */
+  /** Names of rule sets already attached: a second rule set with the same name is not created. */
   takenTags: string[];
-  /** Теги аутбаундов: через один из них набор можно качать. */
+  /** Outbound tags: a rule set can be downloaded through one of them. */
   outbounds: string[];
-  /** Кэш наборов выключен, а удалённые наборы в конфиге есть. */
+  /** The rule set cache is off, and the config has remote rule sets. */
   needsCache: boolean;
 }
 
 /**
- * Список наборов для экрана. Документ раздела читает общий хук, здесь остаётся
- * только его разбор в строки.
+ * Rule set list for the screen. The section document is read by a shared hook, only its
+ * parsing into rows stays here.
  *
- * Узлы читаются из текста, а не из разобранной модели: набор, который схема не
- * приняла, обязан остаться видимым — иначе пользователь не найдёт как раз тот,
- * который надо чинить.
+ * Nodes are read from the text, not from the parsed model: a rule set that the schema did not
+ * accept must stay visible — otherwise the user would not find exactly the one
+ * that needs fixing.
  */
 export function useRuleSetEditor(): RuleSetEditorState {
   const document = useConfigDocument();
@@ -53,9 +53,9 @@ export function useRuleSetEditor(): RuleSetEditorState {
 
   const nodes = useMemo(() => (text === null ? [] : readRuleSets(text)), [text]);
 
-  // Ссылки считаются по тем же узлам правил, что показывает соседняя вкладка:
-  // правило, сославшееся на набор изнутри логической группы, ссылается на него
-  // не меньше прямого.
+  // References are counted over the same rule nodes that the neighboring tab shows:
+  // a rule that references a rule set from inside a logical group references it
+  // at least as much as a direct one.
   const usage = useMemo(() => countRuleSetUsage(text === null ? [] : readRules(text)), [text]);
 
   const sets = useMemo(() => toRuleSetRowsFromNodes(nodes, usage, catalog), [nodes, usage, catalog]);
@@ -88,8 +88,8 @@ export interface RuleSetFilterState {
 }
 
 /**
- * Поиск по подключённым наборам. Отбор клиентский: конфиг целиком уже в панели,
- * и наборов в нём десятки.
+ * Search over attached rule sets. Filtering is client-side: the whole config is already in the panel,
+ * and there are tens of rule sets in it.
  */
 export function useRuleSetFilter(sets: RuleSetRow[]): RuleSetFilterState {
   const [query, setQuery] = useState('');
@@ -103,7 +103,7 @@ export function useRuleSetFilter(sets: RuleSetRow[]): RuleSetFilterState {
   return { query, setQuery, reset, sets: shown };
 }
 
-/** Какая форма открыта в панели сета. */
+/** Which form is open in the rule set panel. */
 export const RULE_SET_FORM = {
   Catalog: 'catalog',
   Custom: 'custom',
@@ -113,23 +113,23 @@ export const RULE_SET_FORM = {
 export type RuleSetForm = (typeof RULE_SET_FORM)[keyof typeof RULE_SET_FORM];
 
 export interface RuleSetPanelState {
-  /** `null` — панель закрыта. */
+  /** `null` means the panel is closed. */
   form: RuleSetForm | null;
   /**
-   * Последняя открытая форма: лист уезжает анимацией уже после закрытия и всё
-   * это время показывает её, а не пустоту.
+   * Last open form: the sheet slides away with an animation after closing and shows it
+   * all that time, not emptiness.
    */
   shown: RuleSetForm;
-  /** Позиция сета, открытого на правку; держится и после закрытия, как `shown`. */
+  /** Position of the rule set open for editing; kept after closing, like `shown`. */
   editing: number | null;
-  /** Кнопка тулбара открывает свою форму, а повторное нажатие закрывает её. */
+  /** A toolbar button opens its own form, and a repeated press closes it. */
   toggle: (form: RuleSetForm) => void;
-  /** Открывает правку сета по его позиции в `route.rule_set`. */
+  /** Opens editing of a rule set by its position in `route.rule_set`. */
   edit: (index: number) => void;
   close: () => void;
 }
 
-/** Форма в панели сета. */
+/** Form in the rule set panel. */
 export function useRuleSetPanel(): RuleSetPanelState {
   const [form, setForm] = useState<RuleSetForm | null>(null);
   const [shown, setShown] = useState<RuleSetForm>(RULE_SET_FORM.Catalog);

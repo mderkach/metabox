@@ -19,28 +19,29 @@ import {
 
 const EMPTY_TOTALS: ConnectionTotals = { upload: 0, download: 0, memory: 0 };
 
-/** Снапшот соединений приходит раз в секунду; своего времени у него нет. */
+/** The connection snapshot arrives once a second; it has no time of its own. */
 export const HISTORY_STEP_SECONDS = 1;
 
-/** Окно графика числа соединений — минута, как у графика трафика. */
+/** Connection count chart window is a minute, as for the traffic chart. */
 export const HISTORY_WINDOW_SECONDS = SECONDS_IN_MINUTE;
 
-/** Точек в окне графика: по ним считается пик минуты. */
+/** Points in the chart window: the minute peak is computed from them. */
 export const HISTORY_WINDOW_POINTS = HISTORY_WINDOW_SECONDS / HISTORY_STEP_SECONDS;
 
 /**
- * Точек за левой кромкой окна — по той же причине, что у трафика
- * (`TRAFFIC_POINTS`): правая кромка отстаёт от «сейчас» на шаг, и буфер ровно
- * в окно начинался бы внутри графика и прыгал за выпавшей точкой.
+ * Points beyond the left edge of the window, for the same reason as for traffic
+ * (`TRAFFIC_POINTS`): the right edge lags "now" by a step, and a buffer of
+ * exactly the window size would start inside the chart and jump after the
+ * dropped point.
  */
 const HISTORY_OFFSCREEN_POINTS = 2;
 
 const HISTORY_POINTS = HISTORY_WINDOW_POINTS + HISTORY_OFFSCREEN_POINTS;
 
 /**
- * Время точек буфера числа соединений в секундах эпохи: от прихода последней
- * назад с шагом снапшота, а не от прихода каждой — свёрнутая вкладка отдаёт
- * снапшоты пачкой.
+ * Time of the connection count buffer points in epoch seconds: counted back
+ * from the arrival of the last one with the snapshot step, not from the arrival
+ * of each, since a collapsed tab delivers snapshots in a batch.
  */
 export function toHistoryTimes(count: number, lastAt: number): number[] {
   const last = lastAt / MS_IN_SECOND;
@@ -51,18 +52,19 @@ export function toHistoryTimes(count: number, lastAt: number): number[] {
 const NO_RATE: ConnectionRate = { down: 0, up: 0 };
 
 /**
- * Границы правдоподобного интервала между снапшотами. Поток идёт раз в секунду,
- * но свёрнутая вкладка копит кадры и отдаёт их пачкой: интервал между ними
- * околонулевой при большой дельте байт, и в колонке мелькнули бы гигабайты в
- * секунду. За пределами окна скорость не считается вовсе.
+ * Bounds of a plausible interval between snapshots. The stream runs once a
+ * second, but a collapsed tab accumulates frames and delivers them in a batch:
+ * the interval between them is near zero with a large byte delta, and gigabytes
+ * per second would flash in the column. Outside the window the speed is not
+ * computed at all.
  */
 const MIN_INTERVAL = 0.25;
 const MAX_INTERVAL = 10;
 
 /**
- * Скорость за интервал. Счётчик рантайма только растёт, но после переподключения
- * потока соединение приходит с нуля — отрицательная дельта отбрасывается, иначе
- * в колонке появлялась бы скорость со знаком минус.
+ * Speed over an interval. The runtime counter only grows, but after a stream
+ * reconnect a connection arrives from zero: a negative delta is dropped,
+ * otherwise a negative speed would appear in the column.
  */
 function toRate(current: number, previous: number, seconds: number): number {
   return seconds > 0 ? Math.max(0, (current - previous) / seconds) : 0;
@@ -82,23 +84,23 @@ function add<Key extends string>(groups: Map<Key, ConnectionShare<Key>>, key: Ke
   group.volume += volume;
 }
 
-/** Быстрые первыми, при равной скорости — многочисленные, затем по алфавиту. */
+/** Fast first, at equal speed the numerous, then alphabetically. */
 function byLoad(left: ConnectionShare, right: ConnectionShare): number {
   return right.rate - left.rate || right.count - left.count || left.key.localeCompare(right.key);
 }
 
-/** Топы идут по объёму: он копится и не переставляет строки каждую секунду. */
+/** Tops go by volume: it accumulates and does not reshuffle rows every second. */
 function byVolume(left: ConnectionShare, right: ConnectionShare): number {
   return right.volume - left.volume || left.key.localeCompare(right.key);
 }
 
 /**
- * Сводка живого снапшота. Считается здесь и одним проходом: панелей на экране
- * несколько, и селектор у каждой дал бы свой обход списка каждую секунду, а в
- * нём до пяти тысяч строк.
+ * Live snapshot summary. Computed here and in one pass: there are several
+ * panels on the screen, and a selector in each would walk the list every
+ * second, and it has up to five thousand rows.
  *
- * Сводка — вычисленное панелью, а не показания рантайма: источник
- * отдаёт только плоский список соединений.
+ * The summary is computed by the panel, not a runtime reading: the source
+ * serves only a flat list of connections.
  */
 function toSummary(rows: ConnectionRow[]): ConnectionSummary {
   const actions = new Map<RouteKind, ConnectionShare<RouteKind>>();
@@ -109,8 +111,8 @@ function toSummary(rows: ConnectionRow[]): ConnectionSummary {
   for (const row of rows) {
     const rate = row.downRate + row.upRate;
     const volume = row.download + row.upload;
-    // Конец цепочки — узел, через который соединение вышло наружу; начало —
-    // группа, которая его выбрала.
+    // The chain end is the node the connection exited through; the beginning is
+    // the group that selected it.
     const node = row.chain.at(-1);
 
     add(actions, row.kind, rate, volume);
@@ -131,53 +133,57 @@ function toSummary(rows: ConnectionRow[]): ConnectionSummary {
 }
 
 interface ConnectionState {
-  /** Открытые соединения в порядке снапшота. */
+  /** Open connections in snapshot order. */
   active: ConnectionRow[];
-  /** Индекс по id: по нему снапшот сверяется с прошлым, не пересобирая список. */
+  /** Index by id: the snapshot is compared with the previous one through it without rebuilding the list. */
   index: Map<string, ConnectionRow>;
   /**
-   * Закрытые собираются панелью: источник отдаёт только живые, и соединение,
-   * пропавшее между снапшотами, иначе исчезло бы без следа.
+   * Closed ones are assembled by the panel: the source serves only live ones,
+   * and a connection that vanished between snapshots would otherwise disappear
+   * without a trace.
    */
   closed: ConnectionRow[];
   /**
-   * Сколько закрытых вытеснено из списка по `CLOSED_LIMIT`: без него обрезка
-   * молчала бы, и подвал не мог бы назвать, из скольких показан список.
+   * How many closed ones were evicted from the list by `CLOSED_LIMIT`: without
+   * it the truncation would be silent, and the footer could not say how many
+   * the list is shown from.
    */
   evicted: number;
   totals: ConnectionTotals;
-  /** Сводка живого снапшота: считается здесь, чтобы панели не обходили список. */
+  /** Live snapshot summary: computed here so that panels do not walk the list. */
   summary: ConnectionSummary;
-  /** Кольцевой буфер числа открытых соединений — минута при шаге в секунду и точки за кромкой окна. */
+  /** Ring buffer of the open connection count: a minute at a one-second step plus points beyond the window edge. */
   history: number[];
-  /** Когда получена последняя точка `history`: от неё считается время графика. */
+  /** When the last `history` point was received: the chart time is computed from it. */
   historyAt: number | null;
-  /** Поток остановлен пользователем: экран замирает, подписка живёт. */
+  /** The stream is stopped by the user: the screen freezes, the subscription lives. */
   paused: boolean;
-  /** Сколько экранов сейчас смотрит поток: по нулю подписка закрывается. */
+  /** How many screens are watching the stream now: at zero the subscription closes. */
   readers: number;
   /**
-   * Тип аутбаунда применённого конфига по его тегу: по нему разбирается тон
-   * действия. Пустая карта — конфиг ещё не прочитан.
+   * Outbound type of the applied config by its tag: the action tone is parsed
+   * with it. An empty map means the config has not been read yet.
    */
   outboundTypes: ReadonlyMap<string, string>;
-  /** Снапшотов, которые схема не приняла: экран замер бы без этого признака. */
+  /** Snapshots the schema did not accept: without this flag the screen would just freeze. */
   dropped: number;
-  /** Когда пришёл прошлый разобранный снапшот: от него считается скорость. */
+  /** When the previous parsed snapshot arrived: the speed is computed from it. */
   sampledAt: number | null;
   apply: (snapshot: unknown) => void;
   /**
-   * Заполняет пустой буфер числа соединений минутой, которую копил демон:
-   * график открывается полным. Буфер, в который поток уже писал, не трогается.
+   * Fills an empty connection count buffer with the minute the daemon
+   * accumulated: the chart opens full. A buffer the stream has already written
+   * to is not touched.
    */
   seedHistory: (counts: number[]) => void;
   setPaused: (paused: boolean) => void;
   addReader: () => void;
   removeReader: () => void;
   /**
-   * Перекрашивает уже разобранные строки: конфиг приходит позже первого
-   * снапшота, а простаивающее соединение отдаётся прежним объектом и само
-   * тон не обновит. Строка, чей тон не изменился, остаётся тем же объектом.
+   * Recolors already parsed rows: the config arrives later than the first
+   * snapshot, and an idle connection is served as the same object and will not
+   * update its tone itself. A row whose tone did not change stays the same
+   * object.
    */
   setOutboundTypes: (outboundTypes: ReadonlyMap<string, string>) => void;
   reset: () => void;
@@ -224,11 +230,12 @@ const ConnectionStateProto = stateCreator<ConnectionState>(
                   down: toRate(connection.download, previous.download, seconds),
                   up: toRate(connection.upload, previous.upload, seconds),
                 };
-          // Неизменившаяся строка отдаётся прежним объектом: иначе `memo` на
-          // строке списка не спасает — пропс был бы новым каждый снапшот.
-          // Сверка идёт по снапшоту, до разбора: на пяти тысячах соединений
-          // собирать строку, чтобы тут же её выбросить, — основная работа
-          // обработчика, а меняются у большинства только счётчики байт.
+          // An unchanged row is served as the same object: otherwise `memo` on
+          // the list row does not help, since the prop would be new on every
+          // snapshot. The comparison goes by the snapshot, before parsing: on
+          // five thousand connections building a row only to throw it away is
+          // the main work of the handler, while most rows change only byte
+          // counters.
           const kept =
             previous !== undefined &&
             previous.upload === connection.upload &&
@@ -244,8 +251,9 @@ const ConnectionStateProto = stateCreator<ConnectionState>(
 
         const gone = state.active.filter((row) => !next.has(row.id));
         const history = [...state.history, rows.length].slice(-HISTORY_POINTS);
-        // Скорость снимается: колонка говорит про настоящее время, а закрытое
-        // соединение навсегда осталось бы со скоростью последнего живого кадра.
+        // The speed is cleared: the column speaks about the present, and a
+        // closed connection would forever keep the speed of its last live
+        // frame.
         const stopped = gone.map((row) => ({ ...row, downRate: 0, upRate: 0 }));
         const overflow = Math.max(0, stopped.length + state.closed.length - CLOSED_LIMIT);
 
@@ -327,7 +335,7 @@ const ConnectionStateProto = stateCreator<ConnectionState>(
 
 export const ConnectionState = createReactSelectors(ConnectionStateProto);
 
-/** Стор снаружи React: обработчик потока живёт вне дерева компонентов. */
+/** Store outside React: the stream handler lives outside the component tree. */
 export const ConnectionStore = ConnectionStateProto;
 
 export function useConnectionCounts(): { active: number; closed: number } {

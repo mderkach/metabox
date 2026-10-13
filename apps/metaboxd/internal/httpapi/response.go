@@ -11,7 +11,7 @@ func writeJSON(log *slog.Logger, w http.ResponseWriter, status int, body any) {
 	w.WriteHeader(status)
 
 	if err := json.NewEncoder(w).Encode(body); err != nil {
-		// Статус уже ушёл клиенту, вернуть ошибку некуда.
+		// The status has already gone to the client, there is nowhere to return the error.
 		log.Error("ответ не дописан", "err", err)
 	}
 }

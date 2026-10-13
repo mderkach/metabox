@@ -5,31 +5,32 @@ import { parseConfig, useConfig, useConfigLists, type ConfigIssue, type ParsedCo
 import type { ConfigDocument } from './Config.model';
 import { ConfigDocumentState, useConfigDirty, useConfigText } from './Config.store';
 
-/** Сколько последних текстов помнит разбор черновика. */
+/** How many recent texts the draft parse remembers. */
 const PARSED_DRAFTS = 2;
 
-/** Разобранные черновики по тексту; порядок вставки — порядок обращения. */
+/** Parsed drafts by text; insertion order is access order. */
 const parsedDrafts = new Map<string, ParsedConfig>();
 
 /**
- * Черновик читают и раскладка раздела, и экран под ней. Без общей памяти один
- * и тот же текст разбирался бы дважды на каждую правку.
+ * The draft is read by both the section layout and the screen under it. Without
+ * shared memory the same text would be parsed twice per edit.
  *
- * Память модульная, а не `useMemo`: она общая на всех потребителей и живёт до
- * конца сессии вкладки — ни `discard`, ни `reset` её не сбрасывают. Ключ — сам
- * текст, поэтому устаревший разбор вернуться не может.
+ * The memory is module-level, not `useMemo`: it is shared by all consumers and
+ * lives until the end of the tab session, and neither `discard` nor `reset`
+ * clears it. The key is the text itself, so a stale parse cannot come back.
  *
- * Записей две, а не одна, из-за `useDeferredValue`: пока на экране разбор
- * текста T1, фоновый рендер успевает разобрать T2, но новое нажатие прерывает
- * его до показа. Срочный рендер этого нажатия снова спрашивает T1, а
- * одноместная память держала бы уже T2 — разбор T1 повторился бы в срочном
- * рендере, ради ухода из которого его и откладывали.
+ * There are two entries, not one, because of `useDeferredValue`: while the
+ * screen shows the parse of text T1, a background render manages to parse T2,
+ * but a new keystroke interrupts it before display. The urgent render of that
+ * keystroke asks for T1 again, and a single-slot memory would already hold T2,
+ * so the T1 parse would repeat in the urgent render that deferring was meant to
+ * leave.
  */
 function parseDraft(text: string): ParsedConfig {
   const remembered = parsedDrafts.get(text);
   const parsed = remembered ?? parseConfig(text);
 
-  // Обращение переставляет запись в конец: вытесняется давно не нужный текст.
+  // Access moves the entry to the end: a text not needed for a long time is evicted.
   parsedDrafts.delete(text);
   parsedDrafts.set(text, parsed);
 
@@ -45,46 +46,49 @@ function parseDraft(text: string): ParsedConfig {
 export interface ConfigDocumentView {
   isPending: boolean;
   /**
-   * Запрос файла с устройства. Его флаги и есть состояния экрана: отказ здесь
-   * даёт пустой документ, и по пустоте его не отличить от конфига без правил.
+   * Request for the file from the device. Its flags are the screen states: a
+   * failure here yields an empty document, and by emptiness it cannot be told
+   * from a config without rules.
    */
   query: UseQueryResult<ParsedConfig>;
   /**
-   * Документ, который видит пользователь: черновик, а до правок — файл с
-   * устройства. Черновик, который схема не приняла, даёт `null` — вместе с ним
-   * пропадают счётчики секций в полосе вкладок и список аутбаундов в форме
-   * подключения сета. Откат на применённый конфиг здесь сознательно не
-   * делается: показывать разбор не того текста, который правят, хуже.
+   * The document the user sees: the draft, and before any edits the file from
+   * the device. A draft the schema did not accept yields `null`, and with it
+   * the section counters in the tab strip and the outbound list in the rule set
+   * connection form disappear. Rollback to the applied config is deliberately
+   * not done here: showing the parse of a text other than the one being edited
+   * is worse.
    *
-   * При наборе он отстаёт от `text` на кадр: разбор отложен за вводом.
+   * While typing it lags `text` by a frame: parsing is deferred behind input.
    */
   config: ConfigDocument | null;
-  /** Его же текст: узлы читаются отсюда, чтобы непринятые схемой остались видимыми. */
+  /** Its own text: nodes are read from here so those the schema did not accept stay visible. */
   text: string | null;
-  /** Текст файла с устройства, без правок: с ним сверяется черновик. */
+  /** File text from the device, without edits: the draft is compared against it. */
   appliedText: string | null;
-  /** Замечания схемы к показанному документу — отстают вместе с `config`. */
+  /** Schema remarks on the shown document; they lag together with `config`. */
   issues: ConfigIssue[];
-  /** Схема не приняла файл с устройства: формы по нему не строятся, текст правится. */
+  /** The schema did not accept the file from the device: forms are not built from it, the text is edited. */
   notParsed: boolean;
   /**
-   * Счётчик обновлений документа, пришедших не от пользователя. По нему
-   * текстовый редактор понимает, что его содержимое устарело.
+   * Counter of document updates that did not come from the user. The text
+   * editor uses it to understand that its content is stale.
    */
   revision: number;
   isDirty: boolean;
 }
 
 /**
- * Документ конфига для всего раздела: запрос, загрузка в стор и разбор
- * черновика в одном месте.
+ * The config document for the whole section: the query, loading into the store
+ * and draft parsing in one place.
  *
- * Разбор черновика — `parseJsonc` всего файла и строгая схема целиком — идёт
- * отложенным рендером (`useDeferredValue`): в текстовом режиме черновик меняется
- * на каждый символ, и разбор в срочном рендере вставал бы между нажатием и
- * буквой на экране. Текст, признак правок и счётчик обновлений читаются мимо
- * разбора и не отстают; разобранный документ нужен счётчикам вкладок и
- * спискам форм, им кадр отставания безразличен.
+ * Draft parsing, `parseJsonc` of the whole file and the whole strict schema,
+ * runs in a deferred render (`useDeferredValue`): in text mode the draft
+ * changes on every character, and parsing in the urgent render would stand
+ * between a keystroke and the letter on screen. The text, the edit flag and the
+ * update counter are read bypassing the parse and do not lag; the parsed
+ * document is needed by tab counters and form lists, for which a frame of lag
+ * does not matter.
  */
 export function useConfigDocument(): ConfigDocumentView {
   const config = useConfig();
@@ -107,8 +111,8 @@ export function useConfigDocument(): ConfigDocumentView {
     [applied, etag, load]
   );
 
-  // Файлы списков едут в стор тем же путём, что текст конфига: применение
-  // берёт из него и изменения файлов, и базу набора.
+  // List files go into the store the same way as the config text: apply takes
+  // both the file changes and the set base from it.
   useEffect(
     function loadListFiles() {
       if (listFiles !== undefined) loadLists(listFiles, listsEtag);

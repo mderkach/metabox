@@ -9,28 +9,28 @@ export type PlotData = uPlot.AlignedData;
 
 export type PlotInstance = uPlot;
 
-/** Цвет ряда: токен темы и прозрачность заливки под линией. */
+/** Series color: a theme token and the fill opacity under the line. */
 export interface PlotTone {
   token: string;
   fillAlpha: number;
 }
 
-/** Диапазоны шкал, которые ставятся поверх данных при каждом обновлении. */
+/** Scale ranges set over the data on every update. */
 export type PlotScales = Readonly<Partial<Record<string, { min: number; max: number }>>>;
 
 const TICK_SIZE = 4;
 const TICK_GAP = 2;
 const GAPS_AROUND_VALUE = 2;
 
-/** Высота горизонтальной оси в строках кегля: строка подписи и строка под засечку с отступом. */
+/** Height of the horizontal axis in font-size rows: a label row and a row under the tick with padding. */
 const HORIZONTAL_AXIS_LINES = 2;
 
-/** Чётные стороны uPlot — верх и низ, нечётные — правая и левая. */
+/** Even uPlot sides are top and bottom, odd are right and left. */
 const SIDES_IN_ORIENTATION = 2;
 
 /**
- * Ширина вертикальной оси по самой длинной подписи: подписи в разных единицах,
- * и заданная числом ширина либо резала бы длинную, либо съедала место у «0».
+ * Vertical axis width by the longest label: labels are in different units,
+ * and a width set by a number would either cut a long one or eat the space by "0".
  */
 function fitAxis(font: string, fontSize: number): uPlot.Axis.Size {
   return function measureAxis(chart, values, axisIdx) {
@@ -40,8 +40,8 @@ function fitAxis(font: string, fontSize: number): uPlot.Axis.Size {
 
     chart.ctx.save();
     chart.ctx.font = font;
-    // uPlot зовёт размер оси и до первого расчёта подписей — тогда `values` равен null вопреки типу.
-    // oxlint-disable-next-line typescript/no-unnecessary-condition -- тип uPlot не учитывает первый вызов
+    // uPlot calls the axis size before the first label computation too — then `values` is null despite the type.
+    // oxlint-disable-next-line typescript/no-unnecessary-condition -- the uPlot type does not account for the first call
     const widest = Math.max(0, ...(values ?? []).map((value) => chart.ctx.measureText(value).width));
     chart.ctx.restore();
 
@@ -60,8 +60,8 @@ function withAlpha(color: string, alpha: number): string {
 }
 
 /**
- * Цвета токенов темы, прочитанные у контейнера. Канвас CSS-переменных не
- * понимает, и значение токена существует только в стилях.
+ * Theme token colors read from the container. A canvas does not understand
+ * CSS variables, and the token value exists only in styles.
  */
 function readPalette(element: HTMLElement, tones: readonly PlotTone[]): Palette {
   const style = getComputedStyle(element);
@@ -75,14 +75,14 @@ function readPalette(element: HTMLElement, tones: readonly PlotTone[]): Palette 
 }
 
 /**
- * Шрифт и кегль осей берутся у контейнера, а не задаются пикселями: иначе
- * подписи не росли бы с настройкой размера шрифта в браузере. Цвета читаются
- * из палитры при отрисовке, поэтому смена палитры не пересоздаёт график.
+ * The axis font and size are taken from the container, not set in pixels: otherwise
+ * labels would not grow with the browser font size setting. Colors are read
+ * from the palette at draw time, so a palette change does not recreate the chart.
  */
 function withHouseStyle(options: PlotOptions, element: HTMLElement, palette: () => Palette): PlotOptions {
   const style = getComputedStyle(element);
-  // uPlot масштабирует кегль под плотность экрана регуляркой по целым пикселям:
-  // дробный кегль при нестандартном размере шрифта браузера она разбирает неверно.
+  // uPlot scales the font size to the screen density with a regex over whole pixels:
+  // it parses a fractional size wrongly at a non-standard browser font size.
   const fontSize = Math.round(Number.parseFloat(style.fontSize));
   const font = `${String(fontSize)}px ${style.fontFamily}`;
 
@@ -120,12 +120,12 @@ function applyScales(instance: PlotInstance, scales: PlotScales | undefined) {
 }
 
 /**
- * Канвас uPlot. Данные обновляются через `setData(data, false)` без
- * пересоздания и без анимации перехода.
+ * The uPlot canvas. Data is updated via `setData(data, false)` without
+ * recreation and without a transition animation.
  *
- * `options`, `tones` и `onChart` пересоздают график целиком и держатся
- * стабильной ссылкой; `data` и `scales` меняются свободно. Готовый график
- * отдаётся в `onChart`, при уничтожении туда приходит `null`.
+ * `options`, `tones` and `onChart` recreate the whole chart and are held
+ * by a stable reference; `data` and `scales` change freely. The ready chart
+ * is passed to `onChart`, and `null` arrives there on destruction.
  */
 export function Plot({
   options,
@@ -137,13 +137,13 @@ export function Plot({
   onChart,
 }: {
   options: PlotOptions;
-  /** Цвета рядов по порядку, без оси x. */
+  /** Series colors in order, without the x axis. */
   tones: readonly PlotTone[];
   data: PlotData;
   scales?: PlotScales;
   /**
-   * Доступное имя фигуры графика: канвас скринридер не читает, поэтому имя
-   * задаётся явно и называет то, что на графике видно глазами.
+   * Accessible name of the chart figure: a screen reader does not read the canvas, so the name
+   * is set explicitly and names what is visible on the chart to the eye.
    */
   label: string;
   className?: string;
@@ -160,7 +160,7 @@ export function Plot({
         return;
       }
 
-      // Данные ставит эффект обновления ниже: он идёт в том же коммите сразу за этим.
+      // Data is set by the update effect below: it runs in the same commit right after this one.
       const empty: PlotData = [[], ...options.series.slice(1).map((): number[] => [])];
       let palette = readPalette(element, tones);
       const instance = new uPlot(
@@ -180,8 +180,8 @@ export function Plot({
         instance.setSize({ width: element.clientWidth, height: element.clientHeight });
       });
 
-      // Класс темы next-themes ставит в своём эффекте, уже после эффектов
-      // потомков: эффект по смене темы из React прочитал бы прежние цвета.
+      // The next-themes class is set in its own effect, after the effects
+      // of descendants: a theme-change effect from React would read the old colors.
       const theme = new MutationObserver(function repaintForTheme() {
         palette = readPalette(element, tones);
         instance.redraw(false);

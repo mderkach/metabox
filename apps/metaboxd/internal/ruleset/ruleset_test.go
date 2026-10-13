@@ -100,7 +100,7 @@ func findList(t *testing.T, catalog Catalog, providerID string, kind ListKind) L
 		}
 	}
 
-	t.Fatalf("в каталоге нет списка %s/%s", providerID, kind)
+	t.Fatalf("no list %s/%s in the catalog", providerID, kind)
 
 	return List{}
 }
@@ -126,18 +126,18 @@ func TestGitHubList(t *testing.T) {
 	github := NewGitHub(srv.URL, "metabox-test", time.Second)
 	tree := Tree{Owner: "o", Repo: "r", Ref: "release", Dir: "sing-box/rule-set-geoip"}
 
-	t.Run("отдаёт файлы и ETag", func(t *testing.T) {
+	t.Run("returns files and ETag", func(t *testing.T) {
 		got, err := github.List(t.Context(), tree, "")
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		if !slices.Equal(got.Names, []string{"geoip-ru.srs"}) || got.ETag != etag {
-			t.Errorf("получили %+v", got)
+			t.Errorf("got %+v", got)
 		}
 
 		if gotPath != "/repos/o/r/git/trees/release:sing-box%2Frule-set-geoip" {
-			t.Errorf("путь запроса %q", gotPath)
+			t.Errorf("request path %q", gotPath)
 		}
 
 		if gotAgent != "metabox-test" {
@@ -145,14 +145,14 @@ func TestGitHubList(t *testing.T) {
 		}
 	})
 
-	t.Run("304 — дерево не менялось", func(t *testing.T) {
+	t.Run("304 means the tree did not change", func(t *testing.T) {
 		got, err := github.List(t.Context(), tree, etag)
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		if !got.NotModified || got.ETag != etag {
-			t.Errorf("получили %+v", got)
+			t.Errorf("got %+v", got)
 		}
 	})
 }
@@ -165,7 +165,7 @@ func TestGitHubListRejected(t *testing.T) {
 
 	_, err := NewGitHub(srv.URL, "metabox-test", time.Second).List(t.Context(), Tree{Owner: "o", Repo: "r", Ref: "x"}, "")
 	if err == nil {
-		t.Error("403 не стал ошибкой")
+		t.Error("403 did not become an error")
 	}
 }
 
@@ -177,7 +177,7 @@ func TestGitHubListTruncated(t *testing.T) {
 
 	_, err := NewGitHub(srv.URL, "metabox-test", time.Second).List(t.Context(), Tree{Owner: "o", Repo: "r", Ref: "x"}, "")
 	if !errors.Is(err, errTruncated) {
-		t.Errorf("урезанное дерево дало %v", err)
+		t.Errorf("a truncated tree gave %v", err)
 	}
 }
 
@@ -185,7 +185,7 @@ func TestCategories(t *testing.T) {
 	got := categories([]string{"geosite-b.srs", "geosite-a.srs", "geosite-.srs", "geoip-c.srs", "geosite-d.json"}, "geosite-")
 
 	if !slices.Equal(got, []string{"a", "b"}) {
-		t.Errorf("получили %v", got)
+		t.Errorf("got %v", got)
 	}
 }
 
@@ -199,14 +199,14 @@ func TestEmbeddedSnapshot(t *testing.T) {
 		for _, l := range p.lists {
 			e, ok := lists[key(p.id, l.kind)]
 			if !ok || len(e.Categories) == 0 {
-				t.Errorf("в снимке нет списка %s", key(p.id, l.kind))
+				t.Errorf("no list %s in the snapshot", key(p.id, l.kind))
 
 				continue
 			}
 
 			for _, featured := range l.featured {
 				if _, found := slices.BinarySearch(e.Categories, featured); !found {
-					t.Errorf("подборка %s ведёт на категорию %q, которой у поставщика нет", key(p.id, l.kind), featured)
+					t.Errorf("collection %s leads to category %q that the provider does not have", key(p.id, l.kind), featured)
 				}
 			}
 		}
@@ -214,18 +214,18 @@ func TestEmbeddedSnapshot(t *testing.T) {
 }
 
 func TestNewUpdater(t *testing.T) {
-	t.Run("без кэша каталог на снимке", func(t *testing.T) {
+	t.Run("without a cache the catalog is on the snapshot", func(t *testing.T) {
 		u, err := NewUpdater(t.Context(), &fakeLister{}, &fakeStore{}, discardLog(), testInterval, testRetry)
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		if got := findList(t, u.Catalog(), "runetfreedom", KindGeosite); got.Source != ListSourceSnapshot || len(got.Categories) == 0 {
-			t.Errorf("список %+v", got.Source)
+			t.Errorf("list %+v", got.Source)
 		}
 	})
 
-	t.Run("кэш перекрывает снимок", func(t *testing.T) {
+	t.Run("the cache overrides the snapshot", func(t *testing.T) {
 		store := &fakeStore{data: []byte(`{"lists":{"v2fly/geoip":{"categories":["xx"],"updated_at":7},"gone/geoip":{"categories":["y"]}}}`)}
 
 		u, err := NewUpdater(t.Context(), &fakeLister{}, store, discardLog(), testInterval, testRetry)
@@ -235,24 +235,24 @@ func TestNewUpdater(t *testing.T) {
 
 		got := findList(t, u.Catalog(), "v2fly", KindGeoip)
 		if got.Source != ListSourceProvider || !slices.Equal(got.Categories, []string{"xx"}) || got.UpdatedAt != 7 {
-			t.Errorf("список %+v", got)
+			t.Errorf("list %+v", got)
 		}
 	})
 
-	t.Run("испорченный кэш не мешает запуску", func(t *testing.T) {
+	t.Run("a corrupted cache does not prevent the start", func(t *testing.T) {
 		u, err := NewUpdater(t.Context(), &fakeLister{}, &fakeStore{data: []byte("{")}, discardLog(), testInterval, testRetry)
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		if got := findList(t, u.Catalog(), "v2fly", KindGeoip); got.Source != ListSourceSnapshot {
-			t.Errorf("источник %q", got.Source)
+			t.Errorf("source %q", got.Source)
 		}
 	})
 }
 
 func TestRefresh(t *testing.T) {
-	t.Run("сверенный перечень заменяет снимок и уходит в кэш", func(t *testing.T) {
+	t.Run("the verified listing replaces the snapshot and goes to the cache", func(t *testing.T) {
 		store := &fakeStore{}
 		lister := &fakeLister{list: listing("geosite-b.srs", "geosite-a.srs", "geoip-z.srs")}
 
@@ -267,7 +267,7 @@ func TestRefresh(t *testing.T) {
 
 		got := findList(t, u.Catalog(), "runetfreedom", KindGeosite)
 		if got.Source != ListSourceProvider || !slices.Equal(got.Categories, []string{"a", "b"}) {
-			t.Errorf("список %+v", got)
+			t.Errorf("list %+v", got)
 		}
 
 		var saved file
@@ -276,11 +276,11 @@ func TestRefresh(t *testing.T) {
 		}
 
 		if len(saved.Lists) != listsTotal || saved.Lists["runetfreedom/geosite"].ETag != `W/"new"` {
-			t.Errorf("в кэше %+v", saved.Lists)
+			t.Errorf("in the cache %+v", saved.Lists)
 		}
 	})
 
-	t.Run("304 сохраняет перечень и обновляет дату", func(t *testing.T) {
+	t.Run("304 keeps the listing and updates the date", func(t *testing.T) {
 		lister := &fakeLister{list: func(_ Tree, etag string) (Listing, error) {
 			return Listing{ETag: etag, NotModified: true}, nil
 		}}
@@ -298,15 +298,15 @@ func TestRefresh(t *testing.T) {
 
 		after := findList(t, u.Catalog(), "v2fly", KindGeosite)
 		if !slices.Equal(before.Categories, after.Categories) || after.Source != ListSourceProvider {
-			t.Errorf("перечень изменился или остался снимком: %q", after.Source)
+			t.Errorf("the listing changed or stayed the snapshot: %q", after.Source)
 		}
 
 		if after.UpdatedAt <= before.UpdatedAt {
-			t.Errorf("дата сверки не выросла: было %d, стало %d", before.UpdatedAt, after.UpdatedAt)
+			t.Errorf("the check date did not grow: was %d, now %d", before.UpdatedAt, after.UpdatedAt)
 		}
 	})
 
-	t.Run("отказ и пустое дерево оставляют прежний перечень", func(t *testing.T) {
+	t.Run("a failure and an empty tree keep the previous listing", func(t *testing.T) {
 		store := &fakeStore{}
 		lister := &fakeLister{list: func(tree Tree, _ string) (Listing, error) {
 			if tree.Repo == "sing-geoip" {
@@ -324,16 +324,16 @@ func TestRefresh(t *testing.T) {
 		before := findList(t, u.Catalog(), "v2fly", KindGeoip)
 
 		if err := u.refresh(t.Context()); err == nil {
-			t.Fatal("отказ сверки не вернул ошибку")
+			t.Fatal("a check failure did not return an error")
 		}
 
 		after := findList(t, u.Catalog(), "v2fly", KindGeoip)
 		if !slices.Equal(before.Categories, after.Categories) || after.Source != ListSourceSnapshot {
-			t.Error("прежний перечень потерян")
+			t.Error("the previous listing is lost")
 		}
 
 		if store.writes != 0 {
-			t.Error("несверенный снимок записан в кэш")
+			t.Error("an unverified snapshot was written to the cache")
 		}
 	})
 }
@@ -353,21 +353,21 @@ func TestUpdaterSchedule(t *testing.T) {
 		synctest.Wait()
 
 		if got := lister.count(); got != listsTotal {
-			t.Fatalf("снимок сверяется сразу: запросов %d", got)
+			t.Fatalf("the snapshot is checked immediately: requests %d", got)
 		}
 
 		time.Sleep(testInterval - time.Minute)
 		synctest.Wait()
 
 		if got := lister.count(); got != listsTotal {
-			t.Fatalf("сверка раньше интервала: запросов %d", got)
+			t.Fatalf("check earlier than the interval: requests %d", got)
 		}
 
 		time.Sleep(time.Minute)
 		synctest.Wait()
 
 		if got := lister.count(); got != 2*listsTotal {
-			t.Errorf("сверка по интервалу: запросов %d", got)
+			t.Errorf("check by interval: requests %d", got)
 		}
 	})
 }
@@ -390,7 +390,7 @@ func TestUpdaterRetry(t *testing.T) {
 		synctest.Wait()
 
 		if got := lister.count(); got != 2*listsTotal {
-			t.Errorf("неудачная сверка повторяется через retry: запросов %d", got)
+			t.Errorf("a failed check is repeated after retry: requests %d", got)
 		}
 	})
 }
@@ -407,11 +407,11 @@ func TestUpdaterDisabled(t *testing.T) {
 	u.Close()
 
 	if lister.count() != 0 {
-		t.Error("нулевой интервал сходил в сеть")
+		t.Error("a zero interval went to the network")
 	}
 }
 
-// cacheAt — кэш, в котором все списки сверены в указанный момент.
+// cacheAt is a cache in which all lists are checked at the given moment.
 func cacheAt(t *testing.T, at time.Time, skip string) []byte {
 	t.Helper()
 
@@ -441,10 +441,10 @@ func TestUntilStale(t *testing.T) {
 		cache []byte
 		want  time.Duration
 	}{
-		{"свежий кэш ждёт остаток интервала", cacheAt(t, now.Add(-23*time.Hour), ""), time.Hour},
-		{"устаревший кэш сверяется сразу", cacheAt(t, now.Add(-25*time.Hour), ""), 0},
-		{"дата из будущего — часы не синхронизованы, сверка сразу", cacheAt(t, now.Add(time.Hour), ""), 0},
-		{"список, оставшийся на снимке, сверяется сразу", cacheAt(t, now, "v2fly/geoip"), 0},
+		{"a fresh cache waits for the rest of the interval", cacheAt(t, now.Add(-23*time.Hour), ""), time.Hour},
+		{"a stale cache is checked at once", cacheAt(t, now.Add(-25*time.Hour), ""), 0},
+		{"a date from the future: the clock is not synchronized, check at once", cacheAt(t, now.Add(time.Hour), ""), 0},
+		{"a list left on the snapshot is checked at once", cacheAt(t, now, "v2fly/geoip"), 0},
 	}
 
 	for _, tt := range tests {
@@ -455,7 +455,7 @@ func TestUntilStale(t *testing.T) {
 			}
 
 			if got := u.untilStale(now); got != tt.want {
-				t.Errorf("ждать %s, ожидали %s", got, tt.want)
+				t.Errorf("wait %s, expected %s", got, tt.want)
 			}
 		})
 	}
@@ -463,7 +463,7 @@ func TestUntilStale(t *testing.T) {
 
 func TestNewUpdaterRejectsShortInterval(t *testing.T) {
 	if _, err := NewUpdater(t.Context(), &fakeLister{}, &fakeStore{}, discardLog(), time.Minute, testRetry); err == nil {
-		t.Error("интервал короче паузы повтора принят")
+		t.Error("an interval shorter than the retry pause accepted")
 	}
 }
 
@@ -490,11 +490,11 @@ func TestSaveSkipsUnchangedCache(t *testing.T) {
 	fail = true
 
 	if err := u.refresh(t.Context()); err == nil {
-		t.Fatal("отказ сверки не вернул ошибку")
+		t.Fatal("a check failure did not return an error")
 	}
 
 	if store.writes != 1 {
-		t.Errorf("неизменный кэш переписан: записей %d, ожидали 1", store.writes)
+		t.Errorf("an unchanged cache was rewritten: writes %d, expected 1", store.writes)
 	}
 
 	restarted, err := NewUpdater(t.Context(), lister, store, discardLog(), testInterval, testRetry)
@@ -503,10 +503,10 @@ func TestSaveSkipsUnchangedCache(t *testing.T) {
 	}
 
 	if err := restarted.refresh(t.Context()); err == nil {
-		t.Fatal("отказ сверки не вернул ошибку")
+		t.Fatal("a check failure did not return an error")
 	}
 
 	if store.writes != 1 {
-		t.Errorf("после перезапуска тот же кэш переписан: записей %d", store.writes)
+		t.Errorf("after a restart the same cache was rewritten: writes %d", store.writes)
 	}
 }

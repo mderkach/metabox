@@ -26,7 +26,7 @@ function Harness() {
 }
 
 describe('LiveRegion', () => {
-  it('стоит в разметке пустой до первого объявления и вежливо объявляет текст', async () => {
+  it('stands in the markup empty until the first announcement and politely announces text', async () => {
     const user = userEvent.setup();
 
     render(<Harness />);
@@ -41,7 +41,7 @@ describe('LiveRegion', () => {
     expect(region).toHaveTextContent(DONE);
   });
 
-  it('повтор того же текста заменяет узел, чтобы объявление прозвучало снова', async () => {
+  it('repeating the same text replaces the node so the announcement sounds again', async () => {
     const user = userEvent.setup();
 
     render(<Harness />);

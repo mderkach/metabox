@@ -8,17 +8,17 @@ import { useReducedMotion } from '@shared/lib/media';
 import { cn } from '@shared/lib/utils';
 
 /**
- * Полоса недоступности демона. Живёт в оболочке, потому что отказ касается всех
- * экранов, а не одного: дублировать её на каждом экране значит показать
- * пользователю несколько разных сообщений об одной беде (Query.md). Стоит она
- * в колонке содержимого над экраном, а не над всей панелью: сайдбар без демона
- * работает — навигация, тема и язык от него не зависят.
+ * Daemon unavailable strip. It lives in the shell because the failure concerns
+ * all screens, not one: duplicating it on every screen would show the user
+ * several different messages about one problem (Query.md). It sits in the
+ * content column above the screen, not above the whole panel: the sidebar works
+ * without the daemon, since navigation, theme and language do not depend on it.
  *
- * «Сервис лежит» сюда не попадает: об остановленном sing-box демон сообщает
- * ответом, и это состояние экрана, а не отказ панели.
+ * "Service is down" does not appear here: the daemon reports a stopped sing-box
+ * in a response, and that is a screen state, not a panel failure.
  *
- * Непонятый ответ показывается здесь же: пустая панель без сообщения выглядит
- * исправной.
+ * A response that is not understood is shown here too: an empty panel without a
+ * message looks healthy.
  */
 export function DaemonBanner() {
   const { t } = useTranslation('app');
@@ -27,17 +27,19 @@ export function DaemonBanner() {
   const reducedMotion = useReducedMotion();
   const unreachable = status.error instanceof ApiError && status.error.kind === API_FAILURE.Unreachable;
   const message = unreachable ? 'banner.unreachable' : 'banner.schema';
-  // Уходящая полоса сворачивается с тем текстом, с которым её видели: после
-  // ответа демона ошибки уже нет, и вместо «не отвечает» мелькнула бы схема.
+  // The leaving strip collapses with the text it was seen with: after the
+  // daemon responds there is no error, and the schema would flash instead of
+  // "not responding".
   const [held, setHeld] = useState<typeof message | null>(null);
 
   if (!reachable && held !== message) {
     setHeld(message);
   }
 
-  // Текст снимается, когда полоса свернулась: следующий отказ вставит его в
-  // живую область заново. Снятие `aria-hidden` с готового узла объявляют не
-  // все скринридеры, вставку — все. Без анимации `transitionend` не придёт.
+  // The text is cleared once the strip has collapsed: the next failure inserts
+  // it into the live region again. Not all screen readers announce removal of
+  // `aria-hidden` from a ready node, while all announce an insertion. Without
+  // animation `transitionend` will not arrive.
   if (reachable && reducedMotion && held !== null) {
     setHeld(null);
   }
@@ -48,10 +50,10 @@ export function DaemonBanner() {
     }
   }
 
-  // Высоту анимирует CSS: экран под полосой —
-  // именованная группа `page`, вне перехода роутера она не анимируется, и
-  // граница `<ViewTransition>` оставила бы его прыгать. Живая
-  // область стоит в DOM постоянно — иначе её первое сообщение не объявится.
+  // Height is animated by CSS: the screen under the strip is the named group
+  // `page`, outside a router transition it is not animated, and a
+  // `<ViewTransition>` boundary would leave it jumping. The live region stays
+  // in the DOM permanently, otherwise its first message would not be announced.
   return (
     <div
       role='status'

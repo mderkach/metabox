@@ -1,5 +1,5 @@
-// Плагин oxlint (jsPlugins, alpha) с правилами проекта, которых нет в готовых
-// наборах. Границы FSD живут отдельно — tools/fsdBoundaries.js.
+// oxlint plugin (jsPlugins, alpha) with project rules that are absent from the ready-made
+// sets. FSD boundaries live separately — tools/fsdBoundaries.js.
 const QUERY_HOOKS = new Set(['useQuery', 'useSuspenseQuery', 'useInfiniteQuery']);
 const EFFECT_HOOKS = new Set(['useEffect', 'useLayoutEffect', 'useInsertionEffect']);
 
@@ -21,8 +21,8 @@ function isNamedFunction(node) {
 }
 
 /**
- * `return` самой функции, без возвратов вложенных в неё функций: у cleanup своё
- * правило, а колбэк, переданный дальше внутрь, к эффекту отношения не имеет.
+ * The `return` of the function itself, without returns of functions nested in it: cleanup has its own
+ * rule, and a callback passed further inside has nothing to do with the effect.
  */
 function ownReturns(node, found = []) {
   if (Array.isArray(node)) {
@@ -31,8 +31,8 @@ function ownReturns(node, found = []) {
     return found;
   }
 
-  // Только узлы AST: у них есть `type`. Прочие поля — позиции, ссылка на
-  // родителя и служебные данные; идти по ним значит зациклиться на `parent`.
+  // Only AST nodes: they have a `type`. Other fields are positions, a reference to
+  // the parent and service data; walking them means looping on `parent`.
   if (!node || typeof node !== 'object' || typeof node.type !== 'string') return found;
   if (FUNCTION_TYPES.has(node.type)) return found;
   if (node.type === 'ReturnStatement') found.push(node);
@@ -47,9 +47,9 @@ function ownReturns(node, found = []) {
 export default {
   meta: { name: 'project', version: '1.0.0' },
   rules: {
-    // Эффект переживает вызов: он попадает в стек ошибки, в профайлер React и
-    // в отладчик. Анонимная стрелка называется там именем компонента, поэтому
-    // на экране с тремя эффектами непонятно, какой именно сработал.
+    // An effect outlives the call: it lands in the error stack, in the React profiler and
+    // in the debugger. An anonymous arrow is called there by the component name, so
+    // on a screen with three effects it is unclear which one fired.
     'named-effect': {
       meta: { type: 'problem', schema: [] },
       create(context) {
@@ -63,7 +63,8 @@ export default {
             if (!isNamedFunction(callback)) {
               context.report({
                 node: callback,
-                message: 'Колбэк эффекта именуется: `useEffect(function syncStreams() {…})` или ссылка на функцию.',
+                message:
+                  'The effect callback is named: `useEffect(function syncStreams() {…})` or a function reference.',
               });
 
               return;
@@ -74,7 +75,7 @@ export default {
 
               context.report({
                 node: statement.argument,
-                message: 'Отписка эффекта именуется: `return function closeStream() {…}` или ссылка на функцию.',
+                message: 'The effect cleanup is named: `return function closeStream() {…}` or a function reference.',
               });
             }
           },
@@ -82,8 +83,8 @@ export default {
       },
     },
 
-    // Query.md: возврат useQuery не деструктурируем — объект нужен дальше по коду
-    // целиком. Готовое query/no-rest-destructuring ловит только `...rest`.
+    // Query.md: the useQuery return is not destructured — the object is needed whole further
+    // down the code. The ready query/no-rest-destructuring catches only `...rest`.
     'no-query-destructuring': {
       meta: { type: 'problem', schema: [] },
       create(context) {
@@ -95,7 +96,7 @@ export default {
 
             context.report({
               node: node.id,
-              message: 'Возврат запроса не деструктурируем: объект query нужен дальше целиком.',
+              message: 'Do not destructure the query return: the query object is needed whole further on.',
             });
           },
         };

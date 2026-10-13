@@ -9,13 +9,13 @@ import { OverviewTile } from './OverviewTile';
 import { OverviewTrend } from './OverviewTrend';
 
 const DEGREE_PRECISION = 1;
-/** Загрузка печатается сотыми: десятых мало, чтобы отличить простой от работы. */
+/** Load is printed in hundredths: tenths are too coarse to tell idle from work. */
 const LOAD_PRECISION = 2;
 
 /**
- * Верх шкалы температуры. Точки троттлинга демон не отдаёт, а у SoC роутеров
- * она лежит в районе 85–105 °C: сотня показывает запас до перегрева, а не
- * колебание вокруг сорока градусов во всю высоту.
+ * Top of the temperature scale. The daemon does not give throttle points, and for router SoCs
+ * they lie around 85–105 °C: a hundred shows the headroom to overheating, not
+ * a fluctuation around forty degrees at full height.
  */
 const TEMPERATURE_CAPACITY = 100;
 
@@ -27,7 +27,7 @@ function formatCelsius(value: number): string {
   return `${value.toFixed(DEGREE_PRECISION)} °C`;
 }
 
-/** Прочерк — у платы нет термозон; `null` — снимка ещё не было. */
+/** Dash means the board has no thermal zones; `null` means there was no snapshot yet. */
 function toTemperature(system: SystemStat | null, hottest: SystemStat['thermal'][number] | undefined): string | null {
   if (system === null) {
     return null;
@@ -41,8 +41,8 @@ export function OverviewDevice({ system }: { system: SystemStat | null }) {
   const history = useTrafficHistory();
   const deviceHistory = history.data?.device ?? [];
   const stepSeconds = history.data?.stepSeconds ?? 0;
-  // Зон у платы может не быть вовсе, поэтому берётся первая из отсортированных
-  // только на непустом списке.
+  // A board may have no zones at all, so the first of the sorted ones is taken
+  // only on a non-empty list.
   const zones = system === null ? [] : system.thermal.toSorted((left, right) => right.celsius - left.celsius);
   const hottest = zones.length > 0 ? zones[0] : undefined;
   const usedMemory = system === null ? 0 : system.memory.total - system.memory.available;

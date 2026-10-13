@@ -21,12 +21,12 @@ describe('registryOfSection', () => {
     [CONFIG_SECTION.Dns, NODE_REGISTRY.Dns],
     [CONFIG_SECTION.Services, NODE_REGISTRY.Service],
     [CONFIG_SECTION.CertificateProviders, NODE_REGISTRY.CertificateProvider],
-  ])('секция %s берёт типы из реестра %s', (section, registry) => {
+  ])('section %s takes types from registry %s', (section, registry) => {
     expect(registryOfSection(section)).toBe(registry);
   });
 
   it.each([CONFIG_SECTION.DnsRules, CONFIG_SECTION.Log, CONFIG_SECTION.HttpClients])(
-    'у секции %s реестра нет',
+    'section %s has no registry',
     (section) => {
       expect(registryOfSection(section)).toBeNull();
     }
@@ -34,56 +34,56 @@ describe('registryOfSection', () => {
 });
 
 describe('nodeVariants', () => {
-  it.each(Object.values(NODE_REGISTRY))('реестр %s отдаёт типы без повторов', (registry) => {
+  it.each(Object.values(NODE_REGISTRY))('registry %s returns types without repeats', (registry) => {
     const types = nodeVariants(registry).map((variant) => variant.type);
 
     expect(types.length).toBeGreaterThan(0);
     expect(new Set(types).size).toBe(types.length);
   });
 
-  it('у аутбаундов есть vless и direct', () => {
+  it('outbounds include vless and direct', () => {
     const types = nodeVariants(NODE_REGISTRY.Outbound).map((variant) => variant.type);
 
     expect(types).toEqual(expect.arrayContaining(['vless', 'direct']));
   });
 
-  it('схема типа находится по имени, чужой тип — нет', () => {
+  it('a type schema is found by name, a foreign type is not', () => {
     expect(nodeSchemaOf(NODE_REGISTRY.Outbound, 'vless')).not.toBeNull();
     expect(nodeSchemaOf(NODE_REGISTRY.Outbound, 'no-such-type')).toBeNull();
   });
 });
 
 describe('isNodeRecognized', () => {
-  it('принимает узел, который схема типа знает целиком', () => {
+  it('accepts a node that the type schema knows entirely', () => {
     expect(isNodeRecognized(NODE_REGISTRY.Outbound, VLESS)).toBe(true);
   });
 
   it.each([
-    ['поле, которого схема не знает', { ...VLESS, vendor_option: true }],
-    ['неверное значение', { ...VLESS, server_port: -1 }],
-    ['тип, которого реестр не знает', { type: 'no-such-type', tag: 'x' }],
-    ['узел без типа', { tag: 'x' }],
-    ['не объект', 'vless'],
-  ])('не распознаёт %s', (_, node) => {
+    ['a field the schema does not know', { ...VLESS, vendor_option: true }],
+    ['a wrong value', { ...VLESS, server_port: -1 }],
+    ['a type the registry does not know', { type: 'no-such-type', tag: 'x' }],
+    ['a node without a type', { tag: 'x' }],
+    ['a non-object', 'vless'],
+  ])('does not recognize %s', (_, node) => {
     expect(isNodeRecognized(NODE_REGISTRY.Outbound, node)).toBe(false);
   });
 });
 
 describe('buildTagOfType', () => {
-  it('называет тег сборки типа и молчит о типе без затвора', () => {
+  it('names the build tag of a type and stays silent about a type without a gate', () => {
     expect(buildTagOfType(NODE_REGISTRY.Outbound, 'hysteria2')).toBe('with_quic');
     expect(buildTagOfType(NODE_REGISTRY.Outbound, 'direct')).toBeNull();
   });
 });
 
 describe('newSectionNode', () => {
-  it('создаёт узел только из типа и тега', () => {
+  it('creates a node from only a type and a tag', () => {
     expect(newSectionNode('vless', 'hk-01')).toEqual({ type: 'vless', tag: 'hk-01' });
   });
 });
 
 describe('readNodeTags', () => {
-  it('собирает теги всех секций с реестром и пропускает узлы без тега', () => {
+  it('collects tags of all sections with a registry and skips nodes without a tag', () => {
     const text = `{
       // входы
       "inbounds": [{ "type": "mixed", "tag": "mixed-in" }],

@@ -26,33 +26,33 @@ import { ConnectionRefreshSelect } from './ConnectionRefreshSelect';
 import { ConnectionRow } from './ConnectionRow';
 import { ConnectionTableHeader } from './ConnectionTableHeader';
 
-/** Оценка карточки узкого экрана для первого кадра: точную высоту виртуализатор измеряет сам. */
+/** Narrow-screen card estimate for the first frame: the virtualizer measures the exact height itself. */
 const CARD_ESTIMATE = 108;
 const OVERSCAN = 10;
 
-/** Строка заголовка тоже строка таблицы: нумерация строк начинается с неё. */
+/** The header row is also a table row: row numbering starts with it. */
 const HEADER_ROWS = 1;
 
-/** Что показать вместо таблицы, когда после отбора не осталось строк. */
+/** What to show instead of the table when no rows are left after filtering. */
 export interface ConnectionTableEmpty {
-  /** Отбор действует: поиск или фасеты экрана. */
+  /** A filter is active: search or screen facets. */
   filtered: boolean;
-  /** Снимает отбор: кнопка на пустом экране обязана вернуть список. */
+  /** Clears the filter: the button on the empty screen must bring the list back. */
   reset: () => void;
 }
 
 const NO_FILTERED_COLUMNS: ReadonlySet<ConnectionField> = new Set();
 
 /**
- * Карточка списка соединений: тулбар над вкладками и тело каждой вкладки.
+ * Connection list card: the toolbar above the tabs and the body of each tab.
  *
- * Тулбар один на экран, а тело своё у каждой вкладки: поиск, фасеты и вид
- * общие, а прокрутка и строки — нет. Поэтому таблица собрана из
- * частей, а не одним компонентом: экран ставит один `Toolbar` над вкладками и
- * по `Body` в каждую.
+ * There is one toolbar per screen, and each tab has its own body: search, facets and view
+ * are shared, while scrolling and rows are not. So the table is assembled from
+ * parts rather than as one component: the screen places one `Toolbar` above the tabs and
+ * a `Body` in each.
  *
- * Анатомия, виртуализация, политика сортировки и устройство прокрутки —
- * [гайд по таблицам](../../../../docs/guides/Tables.md).
+ * Anatomy, virtualization, sort policy and scroll structure —
+ * [tables guide](../../../../docs/guides/Tables.md).
  */
 function ConnectionTableRoot({ children }: { children: ReactNode }) {
   return (
@@ -61,9 +61,9 @@ function ConnectionTableRoot({ children }: { children: ReactNode }) {
 }
 
 /**
- * Тулбар карточки: поиск и фасеты слева, вид списка и действия над ним справа.
- * Вид меняет картинку, а не систему, поэтому стоит слева от действий и в их ряд
- * не входит.
+ * Card toolbar: search and facets on the left, list view and list actions on the right.
+ * The view changes the picture, not the system, so it stands to the left of the actions and is not part
+ * of their row.
  */
 function ConnectionTableToolbar({
   view,
@@ -71,15 +71,15 @@ function ConnectionTableToolbar({
   actions = null,
   facets = null,
 }: {
-  /** Вид списка: он переживает перезагрузку, поэтому живёт снаружи таблицы. */
+  /** List view: it survives a reload, so it lives outside the table. */
   view: ConnectionView;
-  /** Поиск: левый край тулбара. */
+  /** Search: left edge of the toolbar. */
   search?: ReactNode;
-  /** Действия над списком: живут в карточке таблицы, а не в шапке страницы. */
+  /** List actions: they live in the table card, not in the page header. */
   actions?: ReactNode;
   /**
-   * Фасеты: в строку с поиском. На узкой ширине уходят отдельной строкой под
-   * тулбар и прокручиваются по горизонтали, а не переносятся облаком.
+   * Facets: in the search row. At a narrow width they go on a separate row under
+   * the toolbar and scroll horizontally instead of wrapping as a cloud.
    */
   facets?: ReactNode;
 }) {
@@ -97,16 +97,16 @@ function ConnectionTableToolbar({
 }
 
 /**
- * Тело вкладки: шапка с сортировкой, виртуализованные строки и подвал со
- * счётчиком.
+ * Tab body: header with sorting, virtualized rows and a footer with
+ * the counter.
  *
- * Мемоизировано ради скрытой вкладки: под `Activity` она перерисовывается
- * пониженным приоритетом на каждый новый пропс, а экран отдаёт ей замороженный
- * набор строк и стабильные колбэки — и тело не перерисовывается вовсе.
+ * Memoized for the hidden tab: under `Activity` it rerenders
+ * at lowered priority on every new prop, and the screen gives it a frozen
+ * row set and stable callbacks — and the body does not rerender at all.
  *
- * Здесь важно одно, что легко сломать правкой: скроллер один и на обе оси, а
- * шапка внутри него липкая. Вертикальный вьюпорт внутри горизонтального
- * заводит собственную горизонтальную прокрутку и уезжает из-под шапки.
+ * One thing matters here and is easy to break by an edit: there is one scroller for both axes, and
+ * the header inside it is sticky. A vertical viewport inside a horizontal one
+ * creates its own horizontal scrolling and slides out from under the header.
  */
 function ConnectionTableBodyProto({
   rows,
@@ -125,30 +125,30 @@ function ConnectionTableBodyProto({
   onClosed = null,
 }: {
   rows: ConnectionRowModel[];
-  /** Сколько строк во вкладке до отбора: подвал сообщает обе величины. */
+  /** How many rows are in the tab before filtering: the footer reports both values. */
   total: number;
   closable: boolean;
-  /** Что показать вместо таблицы, когда строк нет. */
+  /** What to show instead of the table when there are no rows. */
   empty: (state: ConnectionTableEmpty) => ReactNode;
-  /** Отбор экрана: поиск и фасеты. */
+  /** Screen filter: search and facets. */
   filtered: boolean;
   onReset: () => void;
   view: ConnectionView;
-  /** Колонки, по полю которых стоит фасет. Ссылка стабильная: тело мемоизировано. */
+  /** Columns whose field has a facet. The reference is stable: the body is memoized. */
   filteredColumns?: ReadonlySet<ConnectionField>;
   /**
-   * Выгрузка: подвал, рядом со счётчиком. Получает строки в показанном
-   * порядке — уходит ровно то, что счётчик называет.
+   * Export: footer, next to the counter. Receives rows in the shown
+   * order — exactly what the counter names is exported.
    */
   footer?: ((rows: ConnectionRowModel[]) => ReactNode) | null;
-  /** Переполнение источника: строки, которых в списке уже нет. Стоит рядом со счётчиком. */
+  /** Source overflow: rows that are no longer in the list. Stands next to the counter. */
   overflow?: ReactNode;
   selectedId?: string | null;
-  /** Идентификатор панели объяснения: строка ссылается на неё `aria-controls`. */
+  /** Explanation panel identifier: the row references it via `aria-controls`. */
   explainPanelId?: string;
-  /** `null` — объяснение маршрута выключено: у демона нет источника рантайма. */
+  /** `null` means route explanation is off: the daemon has no runtime source. */
   onExplain?: ((id: string) => void) | null;
-  /** Рантайм закрыл соединение строки: экран объявляет это своей живой областью. */
+  /** The runtime closed the row's connection: the screen announces it with its live region. */
   onClosed?: (() => void) | null;
 }) {
   const { t } = useTranslation('widgets/ConnectionTable');
@@ -159,8 +159,8 @@ function ConnectionTableBodyProto({
 
   const onClose = useCallback(
     (id: string) => {
-      // Колбэк `mutate` срабатывает только у последнего вызова: две строки,
-      // закрытые подряд, дали бы одно объявление. Отказ показывает сама мутация.
+      // The `mutate` callback fires only for the last call: two rows
+      // closed in a row would give one announcement. The mutation itself shows a failure.
       void Promise.allSettled([close.mutateAsync(id)]).then(function announceClosed([result]) {
         if (result.status === 'fulfilled') {
           onClosed?.();
@@ -171,8 +171,8 @@ function ConnectionTableBodyProto({
   );
 
   const devices = useDeviceIndex();
-  // Новые описания колонок пересортировывают таблицу, поэтому они меняются
-  // вместе со списком устройств, а не на каждый снапшот.
+  // New column definitions re-sort the table, so they change
+  // together with the device list, not on every snapshot.
   const columnDefs = useMemo(() => toLabeledColumns((ip) => deviceLabel(ip, devices)), [devices]);
 
   const table = useTable(
@@ -188,12 +188,12 @@ function ConnectionTableBodyProto({
     (state) => state
   );
 
-  // Строки уже отобраны экраном, модель таблицы их только сортирует.
+  // Rows are already filtered by the screen, the table model only sorts them.
   const visible = table.getRowModel().rows;
   const shownRows = useMemo(() => visible.map((row) => row.original), [visible]);
   const columns = toTableColumns(table, view.order).filter(({ column }) => column.getIsVisible());
-  // Ссылка обязана быть стабильной: `ConnectionRow` мемоизирована, и новый
-  // массив на каждый снапшот обнулял бы мемоизацию всех отрисованных строк.
+  // The reference must be stable: `ConnectionRow` is memoized, and a new
+  // array on every snapshot would reset memoization of all rendered rows.
   const cells = useMemo(
     () =>
       toOrderedColumns(view.order)
@@ -296,7 +296,7 @@ function ConnectionTableBodyProto({
 
 const ConnectionTableBody = memo(ConnectionTableBodyProto);
 
-// Части собираются в `ConnectionTable.Root`, `.Toolbar` и `.Body` реэкспортом
-// модуля целиком (`ui/index.ts`): объект-обёртка в этом файле выключил бы Fast
-// Refresh для всех трёх.
+// The parts are assembled into `ConnectionTable.Root`, `.Toolbar` and `.Body` by re-exporting
+// the whole module (`ui/index.ts`): a wrapper object in this file would turn off Fast
+// Refresh for all three.
 export { ConnectionTableBody as Body, ConnectionTableRoot as Root, ConnectionTableToolbar as Toolbar };

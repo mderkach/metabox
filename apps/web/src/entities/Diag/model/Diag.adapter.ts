@@ -2,8 +2,8 @@ import type { CheckWire, ReportWire } from '../api/Diag.schema';
 import { DIAG_STATUS, isCheckStatus, type DiagCheck } from './Diag.model';
 
 /**
- * Незнакомый статус читается отказом: проверку, исход которой панель не
- * поняла, нельзя показать пройденной.
+ * An unfamiliar status is read as a failure: a check whose outcome the panel
+ * did not understand cannot be shown as passed.
  */
 function toDiagCheck(wire: CheckWire): DiagCheck {
   return {
@@ -16,7 +16,7 @@ function toDiagCheck(wire: CheckWire): DiagCheck {
   };
 }
 
-/** Порядок демона сохраняется: он фиксирован — от портов к выходу в интернет. */
+/** The daemon order is kept: it is fixed, from ports to the internet exit. */
 export function toDiagChecks(wire: ReportWire): DiagCheck[] {
   return wire.checks.map(toDiagCheck);
 }

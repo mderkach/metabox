@@ -6,12 +6,12 @@ import { Tabs, TabsList, TabsTrigger } from '@shared/ui';
 import { CONFIG_MODE_ROUTE, CONFIG_MODES } from '../model';
 
 /**
- * Формами документ показан или текстом. Переключатель стоит в полосе вкладок,
- * а не в углу шапки: обе оси видны сразу, и видно, что режима два, — в отличие
- * от односторонней ссылки, которая читается как «уйти отсюда».
+ * Whether the document is shown as forms or as text. The switch sits in the tab strip,
+ * not in a corner of the header: both axes are visible at once, and it is clear that there are two modes — unlike
+ * a one-way link, which reads as "leave here".
  *
- * Механизм тот же, что у секций, — вкладки-ссылки, — а вид сегментный: так
- * вторая ось не сливается с первой.
+ * The mechanism is the same as for sections — link tabs — but the look is segmented: this way
+ * the second axis does not merge with the first.
  */
 export function ConfigModeSwitch() {
   const { t } = useTranslation('widgets/Config/ConfigTabs');
@@ -26,8 +26,8 @@ export function ConfigModeSwitch() {
             key={mode.key}
             value={mode.route}
             nativeButton={false}
-            // По умолчанию `Link` сравнивает адрес по префиксу и на /config/raw
-            // помечал бы текущей страницей и «Формы» — два текущих режима разом.
+            // By default `Link` compares the address by prefix and on /config/raw
+            // would mark "Forms" as the current page too — two current modes at once.
             render={<Link to={mode.route} activeOptions={{ exact: true }} />}
           >
             {t(mode.label)}

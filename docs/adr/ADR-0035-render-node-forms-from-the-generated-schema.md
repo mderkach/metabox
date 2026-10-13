@@ -1,95 +1,95 @@
-# ADR-0035. Строить формы узлов интроспекцией сгенерированной Zod-схемы, а не кодогенерацией и не сторонним рендерером
+# ADR-0035. Build node forms by introspecting the generated Zod schema, not by code generation or a third-party renderer
 
-- Статус: Accepted
-- Дата: 2026-09-28
-- Ответственные: владелец репозитория
+- Status: Accepted
+- Date: 2026-09-28
+- Deciders: repository owner
 
-## Контекст и постановка проблемы
+## Context and problem statement
 
-AC-5 требует, чтобы каждый тип inbound/outbound из чеклиста форка имел либо ручную форму, либо автогенерируемый рендерер — узлов без рендерера нет. AC-6 требует, чтобы конфиг «VLESS/Reality + маршрутизация по правилам» собирался в UI с нуля и проходил `sing-box check` без правок руками. Сейчас формой правится только правило маршрутизации; узлы секций открываются как JSON (общий экран секций), и AC-5 этим не закрывается.
+AC-5 requires every inbound/outbound type from the fork checklist to have either a hand-written form or an auto-generated renderer; no node is left without a renderer. AC-6 requires the "VLESS/Reality + rule-based routing" config to be built in the UI from scratch and to pass `sing-box check` without manual edits. Today only the routing rule is edited through a form; section nodes open as JSON (the shared sections screen), and that does not close AC-5.
 
-Ограничения, заданные существующими решениями и кодом:
+Constraints set by existing decisions and code:
 
-- Схема всех типов форка уже есть и одна: `tools/schemagen` печатает строгие Zod-схемы со 106 типами из семи реестров (на `v1.14.0-extended-2.7.1`), реестры собраны в `z.discriminatedUnion("type", …)`, у полей сохранён godoc форка ([ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md), `apps/web/src/shared/api/generated.ts`). Вторая модель тех же типов — расхождение при первом же подъёме форка.
-- Узел с полем, которого схема не знает, помечается «UI не покрывает» и правится текстом ([ADR-0018](./ADR-0018-generate-strict-schemas-and-mark-what-the-panel-does-not-know.md)); форма не вправе терять такие поля и обязана уступать текстовому режиму.
-- Правка держится за текст файла: форма отдаёт значение узла, запись идёт `setValue` по пути, соседние байты не трогаются ([ADR-0004](./ADR-0004-edit-config-text-in-place-on-the-client.md)).
-- Тип узла, которого нет в сборке бинаря, панель называет предупреждением; при создании узла тип надо помечать в самом выборе (`BUILD_TAG_OF_TYPE`, `BUILD_TAG_OF_OPTION`, [ADR-0030](./ADR-0030-read-the-build-composition-from-the-binary-and-the-fork-sources.md)).
-- Ручные формы уже строятся на React Hook Form + Zod-резолвере (`features/Rule/RuleEdit`); новая зависимость во фронте — отдельное решение.
+- A schema for all fork types already exists, and there is one: `tools/schemagen` prints strict Zod schemas with 106 types from seven registries (on `v1.14.0-extended-2.7.1`), the registries are combined into `z.discriminatedUnion("type", …)`, and the fields keep the fork's godoc ([ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md), `apps/web/src/shared/api/generated.ts`). A second model of the same types diverges at the first fork bump.
+- A node with a field the schema does not know is marked "not covered by the UI" and is edited as text ([ADR-0018](./ADR-0018-generate-strict-schemas-and-mark-what-the-panel-does-not-know.md)); a form must not lose such fields and has to yield to the text mode.
+- Editing is anchored to the file text: the form returns the node value, the write goes through `setValue` by path, neighbouring bytes are not touched ([ADR-0004](./ADR-0004-edit-config-text-in-place-on-the-client.md)).
+- A node type missing from the binary build is shown by the panel as a warning; when a node is created, the type has to be marked in the picker itself (`BUILD_TAG_OF_TYPE`, `BUILD_TAG_OF_OPTION`, [ADR-0030](./ADR-0030-read-the-build-composition-from-the-binary-and-the-fork-sources.md)).
+- Hand-written forms are already built on React Hook Form + the Zod resolver (`features/Rule/RuleEdit`); a new frontend dependency is a separate decision.
 
-В scope — механизм, которым панель получает форму для произвольного типа узла, и место ручных форм рядом с ним. Вне scope — состав ручных форм за пределами сценария AC-6 и дизайн конкретных виджетов.
+In scope: the mechanism by which the panel gets a form for an arbitrary node type, and the place of hand-written forms next to it. Out of scope: the set of hand-written forms beyond the AC-6 scenario and the design of specific widgets.
 
-## Критерии выбора
+## Decision drivers
 
-- Один источник правды о полях: форма следует за схемой без ручной таблицы полей на каждый тип.
-- Подъём версии форка не требует править рендерер: новые типы и поля подхватываются пересборкой схемы.
-- Совместимость с ADR-0004/0018: значение узла возвращается в текст точечно, незнакомое не теряется.
-- Без новой значимой зависимости.
-- Ручная форма при необходимости замещает автогенерируемую для отдельного типа.
+- One source of truth about fields: the form follows the schema without a hand-written field table per type.
+- A fork version bump does not require changes to the renderer: new types and fields are picked up by rebuilding the schema.
+- Compatibility with ADR-0004/0018: the node value goes back into the text in place, unknown data is not lost.
+- No new significant dependency.
+- A hand-written form can replace the auto-generated one for an individual type when needed.
 
-## Рассмотренные варианты
+## Considered options
 
-1. **Рантайм-интроспекция Zod-схемы: таблица «вид схемы → виджет».** Рендерер обходит `def` схемы узла (Zod 4 отдаёт вид, вложенность, `optional`, `enum`-значения, описание из godoc) и подбирает виджет по таблице: строка → поле ввода, число → числовое, булево → переключатель, enum — селект, массив строк — редактор списка, вложенный объект — свёртка, непокрытый вид — raw JSON подузла. Тип узла выбирается из вариантов `z.discriminatedUnion("type")` реестра, недоступные в сборке бинаря помечаются по ADR-0030. Ручная форма регистрируется поверх — записью в таблице «тип → компонент», как того требует правило полиморфизма Architecture&Style. Новых зависимостей нет, схема остаётся единственным источником. Недостаток: рендерер зависит от внутреннего представления Zod (`def` — API библиотеки, но его стабильность слабее публичного `parse`), а качество автоформы ограничено тем, что видно из схемы. **Предлагается принять.**
-2. **Кодогенерация дескрипторов форм в schemagen.** Генератор печатает рядом со схемой таблицу полей каждого типа (имя, вид, подсказка), рендерер читает её, а не Zod. Устойчивее к смене внутренностей Zod, но появляется второе печатаемое представление тех же типов: любые расхождения между схемой и дескрипторами — новый класс ошибок генератора, а объём `generated.ts` растёт при 300 КБ уже сейчас. Отклонён: цена второго представления выше, чем риск завязки на `def`, который к тому же локализован в одном модуле рендерера.
-3. **Готовая form-библиотека по JSON Schema (react-jsonschema-form и родня).** Требует конвертации Zod → JSON Schema и тащит свой рендерер со своей системой виджетов и стилей — значимая зависимость, чужой UI поверх готовой дизайн-системы панели, и всё равно нужна таблица переопределений. Отклонён: против правила «без новой зависимости, когда задача решается существующими средствами», а RHF + Zod уже в стеке.
-4. **Оставить raw JSON как единственную правку узлов.** Ничего строить не надо, общий экран секций уже есть. Отклонён: AC-5 прямо требует форму или рендерер для каждого типа, а AC-6 сценарием «с нуля» предполагает подсказки полей, без которых VLESS/Reality руками в JSON собирает только тот, кто и так знает формат.
+1. **Runtime introspection of the Zod schema: a "schema kind → widget" table.** The renderer walks the `def` of the node schema (Zod 4 exposes the kind, nesting, `optional`, `enum` values, the description from godoc) and picks a widget from the table: string → text input, number → numeric input, boolean → switch, enum → select, string array → list editor, nested object → collapsible group, uncovered kind → raw JSON of the subnode. The node type is picked from the variants of the registry's `z.discriminatedUnion("type")`; types unavailable in the binary build are marked per ADR-0030. A hand-written form is registered on top, as an entry in a "type → component" table, as the polymorphism rule of Architecture&Style requires. No new dependencies; the schema stays the only source. Drawback: the renderer depends on Zod's internal representation (`def` is a library API, but its stability is weaker than that of the public `parse`), and the auto-form quality is limited by what is visible from the schema. **Proposed for acceptance.**
+2. **Code generation of form descriptors in schemagen.** The generator prints, next to the schema, a field table for each type (name, kind, hint), and the renderer reads it instead of Zod. More resilient to changes in Zod internals, but it adds a second printed representation of the same types: any mismatch between the schema and the descriptors is a new class of generator bugs, and `generated.ts` grows while already at 300 KB. Rejected: the cost of a second representation is higher than the risk of depending on `def`, which is also confined to one renderer module.
+3. **A ready-made JSON Schema form library (react-jsonschema-form and the like).** Requires a Zod → JSON Schema conversion and brings its own renderer with its own widget and style system: a significant dependency, foreign UI on top of the panel's existing design system, and an override table is still needed. Rejected: it goes against the rule "no new dependency when the task is solved by existing means", and RHF + Zod are already in the stack.
+4. **Keep raw JSON as the only way to edit nodes.** Nothing to build; the shared sections screen already exists. Rejected: AC-5 directly requires a form or a renderer for every type, and the "from scratch" scenario of AC-6 assumes field hints, without which only someone who already knows the format can assemble VLESS/Reality by hand in JSON.
 
-## Принятое решение
+## Decision outcome
 
-Автогенерируемый рендерер форм строится рантайм-интроспекцией сгенерированной Zod-схемы:
+The auto-generated form renderer is built by runtime introspection of the generated Zod schema:
 
-- рендерер живёт слайсом фронта (предположительно `features/Config/NodeForm`) и обходит схему узла через API определений Zod; вся работа с внутренностями Zod закрыта одним модулем-адаптером;
-- соответствие «вид схемы → виджет» — таблица, а не цепочка `if`; вид, которого таблица не знает, рендерится raw JSON-подузлом, а не теряется и не валит форму;
-- тип узла выбирается из вариантов дискриминированного union реестра; типы вне сборки бинаря помечаются предупреждением по ADR-0030 прямо в выборе типа;
-- форма отдаёт значение узла целиком, запись — существующими `setValue`/`insertValue` по пути узла (ADR-0004); узлы с незнакомыми полями остаются за текстовым режимом (ADR-0018);
-- ручная форма типа регистрируется в таблице «тип → компонент» и замещает автогенерируемую; сценарий AC-6 (VLESS/Reality) собирается ручной формой поверх того же механизма записи;
-- подсказки полей берутся из описаний схемы (godoc форка), отдельный словарь подсказок не заводится.
+- the renderer lives in a frontend slice (presumably `features/Config/NodeForm`) and walks the node schema through Zod's definitions API; all work with Zod internals is enclosed in one adapter module;
+- the "schema kind → widget" mapping is a table, not an `if` chain; a kind the table does not know is rendered as a raw JSON subnode, it is neither lost nor crashes the form;
+- the node type is picked from the variants of the registry's discriminated union; types outside the binary build are marked with a warning per ADR-0030 directly in the type picker;
+- the form returns the whole node value, the write uses the existing `setValue`/`insertValue` by node path (ADR-0004); nodes with unknown fields stay with the text mode (ADR-0018);
+- a hand-written form for a type is registered in the "type → component" table and replaces the auto-generated one; the AC-6 scenario (VLESS/Reality) is built with a hand-written form on top of the same write mechanism;
+- field hints come from schema descriptions (the fork's godoc); no separate hint dictionary is created.
 
-Non-goals: миграция формы правила на рендерер, редактор произвольного JSON внутри формы, генерация форм для секций-объектов (`log`, `experimental` правятся общим экраном секций).
+Non-goals: migrating the rule form to the renderer, an arbitrary JSON editor inside the form, generating forms for object sections (`log` and `experimental` are edited in the shared sections screen).
 
-### Область действия и границы
+### Scope and boundaries
 
-`apps/web/src` — слайс рендерера и ручные формы узлов; `apps/web/src/shared/api/generated.ts` читается, но не меняется. Демон и генератор схемы решением не затрагиваются.
+`apps/web/src`: the renderer slice and hand-written node forms; `apps/web/src/shared/api/generated.ts` is read but not changed. The daemon and the schema generator are not affected by the decision.
 
-## Последствия
+## Consequences
 
-### Положительные
+### Positive
 
-- Новый тип форка получает форму пересборкой схемы, без правок панели.
-- Одна модель типов: форма не может разойтись со схемой, потому что читает её же.
-- Ручные формы и автоформа живут в одной таблице — механизм расширения совпадает с правилом полиморфизма стайлгайда.
+- A new fork type gets a form by rebuilding the schema, without panel changes.
+- One type model: the form cannot diverge from the schema because it reads that same schema.
+- Hand-written forms and the auto-form live in one table; the extension mechanism matches the style guide's polymorphism rule.
 
-### Отрицательные
+### Negative
 
-- Завязка на представление определений Zod: подъём мажора Zod может потребовать править модуль-адаптер. Риск локализован, но не нулевой.
-- Автоформа по схеме беднее ручной: без группировки и порядка полей длинные типы читаются хуже, чем в справочнике форка. Дозревание — переопределениями по месту.
-- Zod-схема приезжает в чанк формы целиком; вопрос объёма бандла решается отдельно.
+- Dependency on the representation of Zod definitions: a Zod major bump may require changes to the adapter module. The risk is localized but not zero.
+- An auto-form from the schema is poorer than a hand-written one: without field grouping and ordering, long types read worse than in the fork reference. It matures through in-place overrides.
+- The Zod schema arrives in the form chunk in full; bundle size is handled separately.
 
-### Нейтральные или отложенные
+### Neutral or deferred
 
-- Порог, после которого тип заслуживает ручной формы, решается по факту использования; ADR его не фиксирует.
-- Валидация формы остаётся за той же схемой через существующий резолвер; подсветка ошибок до применения уже работает на уровне документа.
+- The threshold after which a type deserves a hand-written form is decided by actual usage; this ADR does not fix it.
+- Form validation stays with the same schema through the existing resolver; error highlighting before apply already works at the document level.
 
-## Риски и меры снижения
+## Risks and mitigations
 
-| Риск                                                         | Вероятность и влияние                                   | Митигация                                                                                                      |
-| ------------------------------------------------------------ | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| Внутреннее представление Zod меняется на обновлении          | Низкая при пине 4.x, среднее влияние — рендерер слепнет | Версии пинятся точно; адаптер один; тест «каждый тип реестров получает форму» падает при первом же расхождении |
-| Автоформа собирает узел, который `sing-box check` отвергает  | Средняя вероятность на редких типах, низкое влияние     | Арбитр — check при применении (ADR-0002); форма не подменяет его своей валидацией                              |
-| Вид схемы, не учтённый таблицей, делает поле нередактируемым | Средняя вероятность, низкое влияние                     | Запасной виджет — raw JSON подузла; тест-обход всех типов реестров считает поля, ушедшие в запасной виджет     |
+| Risk                                                              | Probability and impact                                      | Mitigation                                                                                                                           |
+| ----------------------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Zod's internal representation changes on an upgrade               | Low with 4.x pinned, medium impact: the renderer goes blind | Versions are pinned exactly; there is one adapter; the "every registry type gets a form" test fails at the first mismatch            |
+| The auto-form builds a node that `sing-box check` rejects         | Medium probability for rare types, low impact               | The arbiter is check on apply (ADR-0002); the form does not replace it with its own validation                                       |
+| A schema kind not covered by the table makes a field non-editable | Medium probability, low impact                              | The fallback widget is raw JSON of the subnode; a test walking all registry types counts the fields that went to the fallback widget |
 
-## Совместимость, миграция и откат
+## Compatibility, migration and rollback
 
-Не применимо к данным: решение не меняет ни формат конфига, ни контракт демона. Существующие ручные формы продолжают работать; общий экран секций остаётся запасным путём. Откат — убрать слайс рендерера, AC-5 при этом снова открывается.
+Not applicable to data: the decision changes neither the config format nor the daemon contract. Existing hand-written forms keep working; the shared sections screen remains the fallback path. Rollback: remove the renderer slice; AC-5 then becomes open again.
 
-## Проверка решения
+## Validation
 
-- Тест-обход: каждый вариант `InboundSchema`/`OutboundSchema` (и остальных реестров) отдаёт форму без исключений; поля, ушедшие в запасной raw-виджет, перечислены в снапшоте — рост списка виден в диффе.
-- Сценарий AC-6 на стенде: конфиг VLESS/Reality, собранный формами с нуля, проходит `make apply-check`.
-- `pnpm --filter web build` и `pnpm lint` зелёные; новых зависимостей в `apps/web/package.json` нет.
+- Walk test: every variant of `InboundSchema`/`OutboundSchema` (and the other registries) produces a form without exceptions; the fields that went to the fallback raw widget are listed in a snapshot, so growth of the list shows in the diff.
+- AC-6 scenario on the test bench: a VLESS/Reality config built with forms from scratch passes `make apply-check`.
+- `pnpm --filter web build` and `pnpm lint` are green; no new dependencies in `apps/web/package.json`.
 
-## Ссылки
+## Links
 
 - [PRD](../PRD.md): AC-5, AC-6;
-- [ADR-0039](./ADR-0039-separate-the-ui-from-the-fork-schema-by-an-adapter-layer.md) — трёхслойная модель конфига.
+- [ADR-0039](./ADR-0039-separate-the-ui-from-the-fork-schema-by-an-adapter-layer.md): the three-layer config model.
 - [ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md), [ADR-0004](./ADR-0004-edit-config-text-in-place-on-the-client.md), [ADR-0018](./ADR-0018-generate-strict-schemas-and-mark-what-the-panel-does-not-know.md), [ADR-0030](./ADR-0030-read-the-build-composition-from-the-binary-and-the-fork-sources.md).
-- `apps/web/src/shared/api/generated.ts` — дискриминированные union реестров; `apps/web/src/features/Rule/RuleEdit` — существующая ручная форма на RHF + Zod.
+- `apps/web/src/shared/api/generated.ts`: the registries' discriminated unions; `apps/web/src/features/Rule/RuleEdit`: the existing hand-written form on RHF + Zod.

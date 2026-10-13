@@ -1,9 +1,9 @@
 import { z } from 'zod';
 
 /**
- * Разобранный свой список: строки ввода, разложенные по условиям правила
- * sing-box. Домены уходят в `domain_suffix` — домен и его поддомены, — адреса
- * и подсети в `ip_cidr`.
+ * Parsed own list: input lines laid out by sing-box rule conditions. Domains go
+ * to `domain_suffix`, a domain and its subdomains, addresses and subnets to
+ * `ip_cidr`.
  */
 export interface CustomListRules {
   domainSuffixes: string[];
@@ -12,10 +12,10 @@ export interface CustomListRules {
 
 const IPV4_ENTRY = /^\d{1,3}(?:\.\d{1,3}){3}(?:\/\d{1,2})?$/;
 const IPV6_ENTRY = /^[0-9a-f:]+(?:\/\d{1,3})?$/i;
-/** Домен: ASCII-метки через точку, без ведущего дефиса; IDN вводится punycode. */
+/** Domain: ASCII labels separated by dots, no leading hyphen; IDN is entered as punycode. */
 const DOMAIN_ENTRY = /^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z][a-z0-9-]*$/i;
 
-/** Строки списка: пустые и комментарии `#` пропускаются. */
+/** List lines: empty ones and `#` comments are skipped. */
 export function listEntries(text: string): string[] {
   return text
     .split('\n')
@@ -36,8 +36,9 @@ function classifyEntry(entry: string): keyof CustomListRules | null {
 }
 
 /**
- * Раскладывает строки по условиям. Вторым значением — первая строка, которую
- * не удалось отнести ни к домену, ни к адресу; `null` — все строки разобраны.
+ * Lays lines out by conditions. The second value is the first line that could
+ * be assigned to neither a domain nor an address; `null` means all lines were
+ * parsed.
  */
 export function parseListEntries(text: string): { rules: CustomListRules; invalid: string | null } {
   const rules: CustomListRules = { domainSuffixes: [], cidrs: [] };
@@ -55,7 +56,7 @@ export function parseListEntries(text: string): { rules: CustomListRules; invali
   return { rules, invalid: null };
 }
 
-/** Коды отказов схемы; текст по ним подставляет форма. */
+/** Schema failure codes; the form substitutes the text by them. */
 export const RULE_SET_CUSTOM_ERROR = {
   TagRequired: 'tag_required',
   TagTaken: 'tag_taken',
@@ -64,7 +65,7 @@ export const RULE_SET_CUSTOM_ERROR = {
   EntryInvalid: 'entry_invalid',
 } as const;
 
-/** Где живёт список: узлом в самом конфиге или файлом рядом с ним. */
+/** Where the list lives: a node in the config itself or a file next to it. */
 export const LIST_STORAGE = {
   Inline: 'inline',
   File: 'file',
@@ -72,7 +73,7 @@ export const LIST_STORAGE = {
 
 export type ListStorage = (typeof LIST_STORAGE)[keyof typeof LIST_STORAGE];
 
-/** Имя файла строится из имени списка, поэтому в режиме файла оно ограничено. */
+/** The file name is built from the list name, so in file mode it is restricted. */
 const FILE_TAG = /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/;
 
 export interface RuleSetCustomModel {
@@ -108,23 +109,24 @@ export function makeRuleSetCustomSchema(takenTags: readonly string[]) {
     });
 }
 
-/** Имя файла списка в подкаталоге `rule-sets/`. */
+/** List file name in the `rule-sets/` subdirectory. */
 export function listFileName(tag: string): string {
   return `${tag.trim()}.json`;
 }
 
 /**
- * Узел `route.rule_set` с типом `inline`: правила лежат в самом конфиге, и
- * проверку, запись, историю и откат список получает протоколом Apply даром.
- * Пустое условие в узел не пишется.
+ * `route.rule_set` node of type `inline`: the rules are in the config itself,
+ * and the list gets check, write, history and rollback from the Apply protocol
+ * for free. An empty condition is not written to the node.
  */
 export function toInlineRuleSet(model: RuleSetCustomModel): object {
   return { type: 'inline', tag: model.tag.trim(), rules: [toHeadlessRule(model)] };
 }
 
 /**
- * Узел `local` со ссылкой на файл в подкаталоге `rule-sets/`: конфиг остаётся
- * компактным, а файл пишется, проверяется и откатывается тем же применением.
+ * `local` node referring to a file in the `rule-sets/` subdirectory: the config
+ * stays compact, and the file is written, checked and rolled back by the same
+ * apply.
  */
 export function toLocalRuleSet(model: RuleSetCustomModel): object {
   return {
@@ -135,12 +137,12 @@ export function toLocalRuleSet(model: RuleSetCustomModel): object {
   };
 }
 
-/** Отступ файла списка: тот же, что у файла конфига на устройстве. */
+/** List file indent: the same as in the config file on the device. */
 const FILE_INDENT = 2;
 
 /**
- * Содержимое файла списка в формате source. Версия 1 — самая старая из
- * читаемых бинарём: условиям списка новее не нужно, а совместимость шире.
+ * List file content in the source format. Version 1 is the oldest the binary
+ * reads: list conditions do not need newer ones, and compatibility is wider.
  */
 export function toListFileContent(model: RuleSetCustomModel): string {
   return `${JSON.stringify({ version: 1, rules: [toHeadlessRule(model)] }, null, FILE_INDENT)}\n`;

@@ -13,48 +13,48 @@ import { MS_IN_SECOND } from '@shared/lib/time';
 
 import { ConnectionsPage } from '../ui/ConnectionsPage';
 
-/** Потолок нагрузки: столько соединений панель обязана держать (NFR-2). */
+/** Load ceiling: this many connections the panel must hold (NFR-2). */
 const SNAPSHOT_SIZE = 5000;
-/** Первые тики дороже остальных: прогрев JIT и первый замер виртуализатора. */
+/** The first ticks cost more than the rest: JIT warm-up and the first virtualizer measurement. */
 const WARMUP = 3;
 const RUNS = 10;
 /**
- * Экран на пять тысяч строк и полтора десятка тиков: под нагрузкой соседних
- * файлов тест не укладывается в пять секунд Vitest по умолчанию.
+ * A screen of five thousand rows and a dozen and a half ticks: under the load of neighboring
+ * files the test does not fit in the Vitest default five seconds.
  */
 const TEST_TIMEOUT_MS = 30 * MS_IN_SECOND;
 
 /**
- * Тик снапшота на экране соединений: разбор кадра на 5000 соединений и рендер
- * экрана при открытой вкладке «Активные», а скрытая «Закрытые» держит полный
- * лимит строк.
+ * A snapshot tick on the connections screen: parsing a frame of 5000 connections and rendering
+ * the screen with the "Active" tab open, while the hidden "Closed" one holds the full
+ * row limit.
  *
- * Замер 2026-10-04, Node 24.21.0, jsdom, четыре vCPU под нагрузкой соседних
- * процессов, по 120 тиков на вариант, прогоны вперемешку:
+ * Measured 2026-10-04, Node 24.21.0, jsdom, four vCPUs under the load of neighboring
+ * processes, 120 ticks per variant, runs interleaved:
  *
- * - до перестройки экрана: 75.6 мс медиана, 48.6 мс лучший тик, когда скрытая
- *   вкладка рендерит свою таблицу, тулбар и подвал; 60.8 и 38.2 мс, когда её
- *   таблица не рендерится вовсе. Скрытая вкладка стоила около 15 мс — пятую
- *   часть тика;
- * - после: 71.6 и 40.6 мс, когда скрытая вкладка получает замороженный набор, против
- *   78.0 и 46.1 мс на той же разметке с живым набором и без `memo` у тела.
+ * - before the screen rework: 75.6 ms median, 48.6 ms best tick when the hidden
+ *   tab renders its table, toolbar and footer; 60.8 and 38.2 ms when its
+ *   table is not rendered at all. The hidden tab cost about 15 ms, a fifth
+ *   of the tick;
+ * - after: 71.6 and 40.6 ms when the hidden tab gets a frozen set, against
+ *   78.0 and 46.1 ms on the same markup with a live set and without `memo` on the body.
  *
- * jsdom медленнее браузера, и абсолютные числа переносить нельзя — доля
- * скрытой вкладки в тике переносится. Браузерного профиля этого замера нет.
+ * jsdom is slower than a browser, and the absolute numbers cannot be carried over: the share of
+ * the hidden tab in the tick does carry over. There is no browser profile of this measurement.
  *
- * Порог с запасом в разы, как у бюджета таблицы: файлы тестов идут
- * параллельно, и соседи отбирают процессор. Тест ловит подорожание в разы —
- * отрисовку всех строк мимо виртуализатора или перерисовку скрытой вкладки
- * целиком, — а не микрорегрессию.
+ * The threshold has a margin of several times, like the table budget: test files run
+ * in parallel, and neighbors take the CPU. The test catches a several-fold slowdown:
+ * rendering all rows bypassing the virtualizer or redrawing the hidden tab
+ * as a whole, not a micro-regression.
  */
 const TICK_BUDGET_MS = 250;
 
-/** Лучший из прогонов: шум замер только замедляет, нижняя граница — собственная цена. */
+/** Best of the runs: noise only slows a measurement down, the lower bound is the real cost. */
 function fastest(values: number[]): number {
   return Math.min(...values);
 }
 
-describe('бюджет экрана соединений', () => {
+describe('connections screen budget', () => {
   beforeEach(() => {
     localStorage.clear();
     ConnectionStore.getState().reset();
@@ -67,10 +67,10 @@ describe('бюджет экрана соединений', () => {
   });
 
   it(
-    'тик снапшота на 5000 соединений укладывается в бюджет, пока закрытые спрятаны',
+    'a snapshot tick of 5000 connections fits the budget while closed ones are hidden',
     async () => {
-      // Часы сдвигаются на шаг потока: подряд идущие кадры разбор считает
-      // неправдоподобно частыми и скорости не считает, а это его основная работа.
+      // The clock moves by the stream step: consecutive frames are considered by the parser
+      // implausibly frequent and it does not compute speeds, and that is its main job.
       let clock = Date.now();
 
       vi.spyOn(Date, 'now').mockImplementation(() => clock);
@@ -85,8 +85,8 @@ describe('бюджет экрана соединений', () => {
         return advanceConnectionsSnapshot(snapshot, seq);
       }
 
-      // Оборот кадра уводит соединения в закрытые: копим их до лимита, чтобы
-      // скрытая вкладка держала столько строк, сколько бывает на роутере.
+      // Frame turnover moves connections to closed: accumulate them to the limit so that the
+      // hidden tab holds as many rows as there are on a router.
       while (ConnectionStore.getState().closed.length < CLOSED_LIMIT) {
         ConnectionStore.getState().apply(nextFrame());
       }

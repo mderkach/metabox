@@ -1,9 +1,9 @@
-// Package apply проводит конфиг через протокол применения: проверка
-// кандидата бинарём, бэкап, запись, рестарт сервиса, healthcheck, окно
-// подтверждения и автооткат, если подтверждения не было.
+// Package apply runs a config through the apply protocol: candidate check
+// by the binary, backup, write, service restart, healthcheck, confirmation
+// window and automatic rollback if there was no confirmation.
 //
-// Содержимое конфига пакет не разбирает: он оркестратор, а решения о байтах
-// принимают config и clashapi.
+// The package does not parse the config content: it is an orchestrator, and decisions about bytes
+// are made by config and clashapi.
 package apply
 
 import (
@@ -26,57 +26,57 @@ import (
 	"metabox/internal/procd"
 )
 
-// Phase — стадия транзакции. Значения уезжают в API и на диск, поэтому
-// переименование любой из них ломает и клиента, и доигрывание после
-// перезагрузки.
+// Phase is the transaction stage. The values go to the API and to disk, so
+// renaming any of them breaks both the client and the replay after
+// a reboot.
 type Phase string
 
 const (
-	// PhaseApplying — состояние записано, конфиг применяется. Обрыв на этой
-	// стадии означает откат при следующем старте.
+	// PhaseApplying means the state is written, the config is being applied. An interruption at this
+	// stage means a rollback at the next start.
 	PhaseApplying Phase = "applying"
-	// PhaseAwaitingConfirm — сервис поднялся, идёт окно подтверждения.
+	// PhaseAwaitingConfirm means the service is up, the confirmation window is open.
 	PhaseAwaitingConfirm Phase = "awaiting_confirm"
-	// PhaseConfirmed — пользователь подтвердил, что связь жива.
+	// PhaseConfirmed means the user confirmed that the connection is alive.
 	PhaseConfirmed Phase = "confirmed"
-	// PhaseRolledBack — предыдущий конфиг возвращён.
+	// PhaseRolledBack means the previous config is restored.
 	PhaseRolledBack Phase = "rolled_back"
-	// PhaseFailed — применение не дошло до конца, причина в Reason.
+	// PhaseFailed means the apply did not finish, the cause is in Reason.
 	PhaseFailed Phase = "failed"
 )
 
-// ReasonCode — на каком шаге цикл встал. Набор закрытый: по коду панель
-// выбирает текст на языке пользователя, а Reason остаётся подробностью для
-// того, кто чинит — там исходная ошибка шага.
+// ReasonCode is the step at which the cycle stopped. The set is closed: the panel
+// picks the text in the user's language by the code, while Reason stays as a detail for
+// the one who fixes it: it holds the original step error.
 type ReasonCode string
 
 const (
-	// ReasonBackupFailed — предыдущий конфиг не сохранился, и откатываться было
-	// бы не на что; до записи цикл не дошёл.
+	// ReasonBackupFailed means the previous config was not saved, and there would be nothing
+	// to roll back to; the cycle did not reach the write.
 	ReasonBackupFailed ReasonCode = "backup_failed"
-	// ReasonWriteFailed — конфиг не записан на устройство.
+	// ReasonWriteFailed means the config was not written to the device.
 	ReasonWriteFailed ReasonCode = "write_failed"
-	// ReasonRestartFailed — служба не перезапустилась с новым конфигом.
+	// ReasonRestartFailed means the service did not restart with the new config.
 	ReasonRestartFailed ReasonCode = "restart_failed"
-	// ReasonHealthcheckFailed — служба поднялась, но рантайм не ответил.
+	// ReasonHealthcheckFailed means the service came up but the runtime did not answer.
 	ReasonHealthcheckFailed ReasonCode = "healthcheck_failed"
-	// ReasonDNSProbeFailed — Clash API ответил, но dns-in нового конфига не
-	// разрешил контрольное имя: DNS сети через sing-box не работает.
+	// ReasonDNSProbeFailed means the Clash API answered but the dns-in of the new config did not
+	// resolve the probe name: DNS of the network through sing-box does not work.
 	ReasonDNSProbeFailed ReasonCode = "dns_probe_failed"
-	// ReasonInterceptionMissing — перехват включён и стоял до рестарта, а после
-	// него цепочек обвязки в nft нет: трафик LAN идёт мимо sing-box.
+	// ReasonInterceptionMissing means interception was enabled and in place before the restart, and after
+	// it there are no dataplane chains in nft: LAN traffic bypasses sing-box.
 	ReasonInterceptionMissing ReasonCode = "interception_missing"
-	// ReasonRollbackFailed — вернуть предыдущий конфиг не вышло: это худший
-	// результат цикла, и устройство остаётся с чужим конфигом.
+	// ReasonRollbackFailed means restoring the previous config failed. This is the worst
+	// outcome of the cycle, and the device is left with a foreign config.
 	ReasonRollbackFailed ReasonCode = "rollback_failed"
-	// ReasonNoBackup — откат понадобился, но возвращать нечего: до применения
-	// конфига на устройстве не было. Служба остаётся на том, что успело
-	// записаться, и не перезапускается.
+	// ReasonNoBackup means a rollback was needed but there is nothing to restore: the device had no
+	// config before the apply. The service stays on what managed to
+	// be written and is not restarted.
 	ReasonNoBackup ReasonCode = "no_backup"
 )
 
-// StepError — отказ шага цикла: код уходит панели, исходная ошибка — в лог и
-// в подробности.
+// StepError is a cycle step failure: the code goes to the panel, the original error goes to the log and
+// to the details.
 type StepError struct {
 	Code ReasonCode
 	Err  error
@@ -86,14 +86,14 @@ func (e *StepError) Error() string { return e.Err.Error() }
 
 func (e *StepError) Unwrap() error { return e.Err }
 
-// stepFailed заворачивает ошибку шага в код. Отдельная функция, чтобы шаги
-// читались одинаково и код не терялся при обёртке.
+// stepFailed wraps a step error into a code. A separate function so that steps
+// read uniformly and the code is not lost on wrapping.
 func stepFailed(code ReasonCode, err error) error {
 	return &StepError{Code: code, Err: err}
 }
 
-// reasonOf достаёт код шага. Ошибка без кода — отказ, которого цикл не ждал:
-// он остаётся с пустым кодом, и панель покажет текст ошибки как есть.
+// reasonOf extracts the step code. An error without a code is a failure the cycle did not expect:
+// it stays with an empty code, and the panel shows the error text as is.
 func reasonOf(err error) ReasonCode {
 	if step, ok := errors.AsType[*StepError](err); ok {
 		return step.Code
@@ -102,70 +102,70 @@ func reasonOf(err error) ReasonCode {
 	return ""
 }
 
-// Transaction — снимок применения. Он же формат файла состояния: то, что
-// демон отдаёт клиенту, и то, по чему доигрывает себя после перезагрузки.
+// Transaction is a snapshot of an apply. It is also the state file format: what the
+// daemon gives to the client and what it replays itself from after a reboot.
 type Transaction struct {
 	ID    string `json:"id"`
 	Phase Phase  `json:"phase"`
-	// Window — сколько осталось на подтверждение. Хранится длительностью, а не
-	// меткой времени: у роутера нет часов реального времени, после включения он
-	// стартует с эпохи и прыгает при синхронизации NTP.
+	// Window is how much is left for confirmation. Stored as a duration, not as
+	// a timestamp: the router has no real-time clock, after power-on it
+	// starts from the epoch and jumps on NTP synchronization.
 	Window time.Duration `json:"window"`
-	// Sum — sha256 конфига, записанного демоном. По нему ловится правка файла
-	// извне.
+	// Sum is the sha256 of the config written by the daemon. It catches an edit of the file
+	// from outside.
 	Sum string `json:"sha256,omitempty"`
-	// Lists — sha256 файлов списков, которые транзакция записывает: имя →
-	// отпечаток нового содержимого. Только реально меняемые файлы: по
-	// совпадению отпечатка доигрывание судит, началась ли запись.
+	// Lists is the sha256 of the list files the transaction writes: name →
+	// fingerprint of the new content. Only the files that really change: by
+	// a fingerprint match the replay judges whether the write has started.
 	Lists map[string]string `json:"lists,omitempty"`
-	// RemovedLists — файлы списков, которые транзакция удаляет; на момент
-	// запуска они существовали.
+	// RemovedLists are the list files the transaction removes; at the moment
+	// of the start they existed.
 	RemovedLists []string `json:"removed_lists,omitempty"`
-	// ReasonCode — на каком шаге встал цикл. Пусто, если применение прошло или
-	// отказ не привязан к шагу.
+	// ReasonCode is the step at which the cycle stopped. Empty if the apply succeeded or
+	// the failure is not tied to a step.
 	ReasonCode ReasonCode `json:"reason_code,omitempty"`
-	// Reason заполняется, когда применение не дошло до конца: исходная ошибка
-	// шага, как её записал демон. Показывать её пользователю — запасной путь,
-	// текст отказа панель берёт по ReasonCode.
+	// Reason is filled when the apply did not finish: the original error
+	// of the step as the daemon recorded it. Showing it to the user is a fallback path,
+	// the panel takes the failure text by ReasonCode.
 	Reason string `json:"reason,omitempty"`
-	// ClashAPIAdded отмечает, что демон сам добавил секцию.
+	// ClashAPIAdded marks that the daemon added the section itself.
 	ClashAPIAdded bool `json:"clash_api_added,omitempty"`
 }
 
-// Active отвечает, идёт ли применение прямо сейчас.
+// Active reports whether an apply is in progress right now.
 func (t Transaction) Active() bool {
 	return t.Phase == PhaseApplying || t.Phase == PhaseAwaitingConfirm
 }
 
 var (
-	// ErrBusy — второе применение при активной транзакции. Это ошибка
-	// контракта, а не гонка за файл: у конфига один владелец.
+	// ErrBusy means a second apply while a transaction is active. This is a contract
+	// error, not a race for the file: the config has one owner.
 	ErrBusy = errors.New("применение уже идёт")
 
-	// ErrUnknownTransaction — идентификатор не совпадает с активной транзакцией.
+	// ErrUnknownTransaction means the identifier does not match the active transaction.
 	ErrUnknownTransaction = errors.New("транзакции с таким идентификатором нет")
 
-	// ErrNothingToConfirm — подтверждать нечего: окно уже закрыто.
+	// ErrNothingToConfirm means nothing to confirm, the window is already closed.
 	ErrNothingToConfirm = errors.New("подтверждать нечего")
 
-	// ErrConfigModified — конфиг правили в обход демона. Затирать такую правку
-	// молча нельзя: её мог сделать владелец по SSH.
+	// ErrConfigModified means the config was edited bypassing the daemon. Silently overwriting such an edit
+	// is not allowed: the owner could have made it over SSH.
 	ErrConfigModified = errors.New("файл конфига изменён вне metabox")
 
-	// ErrListsModified — файлы списков правили в обход демона; класс отказа
-	// тот же, что у ErrConfigModified.
+	// ErrListsModified means list files were edited bypassing the daemon; the failure class
+	// is the same as for ErrConfigModified.
 	ErrListsModified = errors.New("файлы списков изменены вне metabox")
 
-	// ErrListName — имя файла списка не подходит подкаталогу: путь строит
-	// панель, и всё остальное — попытка выйти из него или слиться с конфигом.
+	// ErrListName means the list file name does not fit the subdirectory: the path is built by
+	// the panel, and anything else is an attempt to escape it or to collide with the config.
 	ErrListName = errors.New("недопустимое имя файла списка")
 )
 
-// WorkdirError — рабочий каталог службы не совпадает с каталогом конфига.
-// Относительный path узла local служба резолвит от рабочего каталога, а не от
-// каталога конфига: записанные файлы списков она бы не нашла, упала бы после
-// рестарта, и цикл откатился бы по healthcheck. Каталоги едут в ошибке, потому
-// что из них собирается подсказка, как это исправить.
+// WorkdirError means the service working directory does not match the config directory.
+// The service resolves a relative path of a local node from the working directory, not from
+// the config directory: it would not find the written list files, would crash after
+// the restart, and the cycle would roll back on the healthcheck. The directories travel in the error because
+// the hint on how to fix it is built from them.
 type WorkdirError struct {
 	Workdir   string
 	ConfigDir string
@@ -175,10 +175,10 @@ func (e *WorkdirError) Error() string {
 	return fmt.Sprintf("рабочий каталог службы %s не совпадает с каталогом конфига %s", e.Workdir, e.ConfigDir)
 }
 
-// LaunchError — служба поднимается не на конфиге, которым владеет демон:
-// запись ничего бы ей не поменяла, а проверка проверяла бы не то, что
-// запустится. Configs и ConfigDirs — флаги -c и -C команды службы, Config —
-// путь конфига демона.
+// LaunchError means the service starts not on the config the daemon owns:
+// a write would change nothing for it, and the check would verify not what
+// will run. Configs and ConfigDirs are the -c and -C flags of the service command, Config is
+// the daemon config path.
 type LaunchError struct {
 	Configs    []string
 	ConfigDirs []string
@@ -189,21 +189,21 @@ func (e *LaunchError) Error() string {
 	return fmt.Sprintf("служба поднимается на %q и %q, а не на конфиге %s", e.Configs, e.ConfigDirs, e.Config)
 }
 
-// Lists — изменения файлов списков, едущие с применением: put пишется в
-// подкаталог списков, remove удаляется из него. Оба применяются той же
-// транзакцией, что и конфиг: проверка, запись, откат и доигрывание общие.
+// Lists are the list file changes that travel with an apply: put is written into the
+// lists subdirectory, remove is deleted from it. Both are applied by the same transaction
+// as the config: check, write, rollback and replay are shared.
 type Lists struct {
 	Put    map[string][]byte
 	Remove []string
 }
 
-// empty отвечает, есть ли в изменениях хоть что-то.
+// empty reports whether there is anything in the changes at all.
 func (l Lists) empty() bool {
 	return len(l.Put) == 0 && len(l.Remove) == 0
 }
 
-// Store — файлы, которыми владеет config.Store. Интерфейс объявлен здесь,
-// у потребителя, и содержит только то, что нужно применению.
+// Store is the files owned by config.Store. The interface is declared here,
+// at the consumer, and contains only what apply needs.
 type Store interface {
 	Sum(ctx context.Context) (string, error)
 	Read(ctx context.Context) ([]byte, error)
@@ -219,73 +219,73 @@ type Store interface {
 	ClearState(ctx context.Context) error
 }
 
-// Service — бинарь sing-box и его сервис.
+// Service is the sing-box binary and its service.
 type Service interface {
-	// Check проверяет кандидата: config — файл конфига (-c), пусто — каталог
-	// dir целиком (-C); workdir — база относительных путей (-D).
+	// Check checks a candidate: config is the config file (-c), empty means the whole
+	// dir directory (-C); workdir is the base of relative paths (-D).
 	Check(ctx context.Context, dir, config, workdir string) error
 	Restart(ctx context.Context) error
-	// Launch — с чем procd поднимает службу; пустые поля — узнать неоткуда.
+	// Launch is what procd starts the service with; empty fields mean nowhere to learn it from.
 	Launch(ctx context.Context) (procd.Launch, error)
-	// PID отдаёт pid поднятого процесса службы; ноль — не поднят ни один.
+	// PID returns the pid of the service process that is up; zero means none is up.
 	PID(ctx context.Context) (int, error)
 }
 
-// Health ждёт, пока Clash API поднимется после рестарта.
+// Health waits until the Clash API comes up after a restart.
 type Health interface {
 	Wait(ctx context.Context, settings clashapi.Settings) error
 }
 
-// Dataplane читает модель обвязки и признак её применения.
+// Dataplane reads the dataplane model and the flag that it is applied.
 type Dataplane interface {
 	Model(ctx context.Context) (dataplane.Model, error)
 	Applied(ctx context.Context) (bool, dataplane.AppliedReason, error)
 }
 
-// DNSProber шлёт DNS-запрос в dns-in поднятого sing-box.
+// DNSProber sends a DNS query to the dns-in of the running sing-box.
 type DNSProber interface {
 	Probe(ctx context.Context, inbound clashapi.DNSInbound) error
 }
 
-// Clock отдаёт срабатывание окна подтверждения. Отдельная зависимость, а не
-// прямой вызов time: иначе проверка автоотката превращается в минуту сна.
+// Clock returns the confirmation window firing. A separate dependency, not
+// a direct time call: otherwise the automatic rollback check turns into a minute of sleep.
 type Clock interface {
 	After(d time.Duration) <-chan time.Time
 }
 
-// SystemClock — часы поверх пакета time.
+// SystemClock is a clock on top of the time package.
 type SystemClock struct{}
 
-// After отдаёт канал, срабатывающий через d.
+// After returns a channel that fires after d.
 func (SystemClock) After(d time.Duration) <-chan time.Time {
 	return time.After(d)
 }
 
-// Options — настройки применения, приходящие в демон флагами.
+// Options are the apply settings that come into the daemon as flags.
 type Options struct {
-	// Window — окно подтверждения, по умолчанию минута.
+	// Window is the confirmation window, one minute by default.
 	Window time.Duration
-	// ClashPort — порт, который демон пропишет в external_controller, если
-	// секции нет.
+	// ClashPort is the port the daemon writes into external_controller if
+	// there is no section.
 	ClashPort int
-	// CycleTimeout ограничивает шаги от бэкапа до healthcheck.
+	// CycleTimeout limits the steps from the backup to the healthcheck.
 	CycleTimeout time.Duration
-	// ConfigDir — каталог конфига: с ним сверяются рабочий каталог и флаг -C
-	// команды службы.
+	// ConfigDir is the config directory: the working directory and the -C flag of the
+	// service command are compared with it.
 	ConfigDir string
-	// ConfigName — имя файла конфига в ConfigDir: с ним сверяется флаг -c.
+	// ConfigName is the config file name in ConfigDir: the -c flag is compared with it.
 	ConfigName string
-	// ProcessInterval — пауза между опросами procd, пока после рестарта ждём
-	// новый процесс службы.
+	// ProcessInterval is the pause between procd polls while after a restart we wait for
+	// the new service process.
 	ProcessInterval time.Duration
-	// Dataplane — откуда healthcheck берёт порт dns-in и признак перехвата.
-	// nil — DNS-проба и проверка перехвата пропускаются.
+	// Dataplane is where the healthcheck takes the dns-in port and the interception flag from.
+	// nil means the DNS probe and the interception check are skipped.
 	Dataplane Dataplane
-	// DNS — проба dns-in; nil — выключена.
+	// DNS is the dns-in probe; nil means disabled.
 	DNS DNSProber
 }
 
-// Manager — единственный владелец цикла применения.
+// Manager is the only owner of the apply cycle.
 type Manager struct {
 	store   Store
 	service Service
@@ -295,29 +295,29 @@ type Manager struct {
 	opts    Options
 
 	mu sync.Mutex
-	// busy закрывает применение с момента резервирования: транзакция
-	// появляется позже, и до неё второй Start проскакивал бы проверку.
+	// busy closes the apply from the moment of reservation: the transaction
+	// appears later, and before it a second Start would slip past the check.
 	busy bool
-	// epoch нумерует владения busy. Фоновая горутина освобождает применение
-	// по номеру своего владения: к её выходу busy может держать уже следующий
-	// Start, и безусловное снятие впускало бы два применения разом.
+	// epoch numbers the busy ownerships. The background goroutine releases the apply
+	// by the number of its ownership: by its exit busy may already be held by the next
+	// Start, and an unconditional release would let two applies in at once.
 	epoch uint64
-	// rollingBack закрывает Confirm на время отката: фаза остаётся
-	// awaiting_confirm до конца Restore и Restart, и без этого признака
-	// подтверждение вклинивалось бы в уже идущий откат.
+	// rollingBack closes Confirm for the duration of the rollback: the phase stays
+	// awaiting_confirm until the end of Restore and Restart, and without this flag
+	// a confirmation would wedge into a rollback already in progress.
 	rollingBack bool
 	current     Transaction
-	// lastSum — sha256 того, что записал сам демон. Переживает перезапуск через
-	// файл состояния.
+	// lastSum is the sha256 of what the daemon wrote itself. It survives a restart through
+	// the state file.
 	lastSum string
-	// lastListsSum — отпечаток набора файлов списков после записи демоном.
-	// Живёт только в памяти: после перезапуска сверку берёт на себя база
-	// клиента, как и у конфига.
+	// lastListsSum is the fingerprint of the list file set after the daemon write.
+	// It lives in memory only: after a restart the check is taken over by the client
+	// base, as with the config.
 	lastListsSum string
-	// windowEndsAt — когда закрывается окно подтверждения. Хранится монотонной
-	// меткой Go и только в памяти: на диск уходит длительность, потому что у
-	// роутера нет часов реального времени и между жизнями демона метку сравнить
-	// не с чем.
+	// windowEndsAt is when the confirmation window closes. Stored as a Go monotonic
+	// stamp and in memory only: the disk gets the duration, because the
+	// router has no real-time clock and between daemon lifetimes there is nothing to compare
+	// the stamp with.
 	windowEndsAt time.Time
 	confirmed    chan struct{}
 	cancel       context.CancelFunc
@@ -325,7 +325,7 @@ type Manager struct {
 	wg sync.WaitGroup
 }
 
-// New собирает применение. Часы можно не задавать — тогда берутся системные.
+// New assembles the apply. The clock may be omitted, then the system one is used.
 func New(store Store, service Service, health Health, clock Clock, log *slog.Logger, opts Options) *Manager {
 	if clock == nil {
 		clock = SystemClock{}
@@ -334,12 +334,12 @@ func New(store Store, service Service, health Health, clock Clock, log *slog.Log
 	return &Manager{store: store, service: service, health: health, clock: clock, log: log, opts: opts}
 }
 
-// Current отдаёт снимок текущей транзакции. Пустая фаза означает, что
-// применений в этой жизни демона не было.
+// Current returns a snapshot of the current transaction. An empty phase means that
+// there were no applies in this daemon lifetime.
 //
-// Window в снимке — остаток окна, а не его длительность: панель показывает эту
-// цифру пользователю, и после перезагрузки страницы полные шестьдесят секунд
-// означали бы обещание, которого демон не даёт.
+// Window in the snapshot is the remainder of the window, not its duration: the panel shows this
+// number to the user, and after a page reload a full sixty seconds
+// would be a promise the daemon does not make.
 func (m *Manager) Current() Transaction {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -352,15 +352,15 @@ func (m *Manager) Current() Transaction {
 	return tx
 }
 
-// Start запускает применение. Проверка бинарём идёт синхронно — на её выводе
-// пользователь чинит конфиг, и ответ на запрос обязан его содержать. Всё, что
-// после неё, живёт своим контекстом: применение переживает запрос.
+// Start starts an apply. The binary check runs synchronously: the user fixes the config by its output,
+// and the response to the request must contain it. Everything
+// after it lives in its own context: the apply outlives the request.
 //
-// base — sha256 конфига, от которого редактировал клиент; listsBase — тот же
-// смысл для набора файлов списков (config.ListsEtag). Пустая строка означает, что
-// клиент базу не назвал. Заданная база сверяется с диском вместо внутренней
-// сверки: клиент видел ровно эту версию, и его применение поверх неё правку
-// извне не затирает.
+// base is the sha256 of the config the client edited from; listsBase has the same
+// meaning for the list file set (config.ListsEtag). An empty string means the
+// client did not name a base. A named base is compared with the disk instead of the internal
+// check: the client saw exactly this version, and its apply on top of it does not overwrite
+// an outside edit.
 func (m *Manager) Start(ctx context.Context, cfg []byte, lists Lists, base, listsBase string) (Transaction, error) {
 	if err := validateLists(lists); err != nil {
 		return Transaction{}, err
@@ -386,9 +386,9 @@ func (m *Manager) Start(ctx context.Context, cfg []byte, lists Lists, base, list
 		return Transaction{}, err
 	}
 
-	// Изменения сводятся к реально меняемым файлам: неизменённый не пишется,
-	// а его совпадение с диском не должно читаться доигрыванием как
-	// свидетельство начатой записи.
+	// Changes are reduced to the files that really change: an unchanged one is not written,
+	// and its match with the disk must not be read by the replay as
+	// evidence of a started write.
 	changed, removed, err := m.narrowLists(ctx, lists)
 	if err != nil {
 		m.unreserve(token)
@@ -396,8 +396,8 @@ func (m *Manager) Start(ctx context.Context, cfg []byte, lists Lists, base, list
 		return Transaction{}, err
 	}
 
-	// Отказ check не заводит транзакции: ничего не применялось, а вердикт
-	// бинаря уезжает вызывающему этой же ошибкой.
+	// A check failure creates no transaction: nothing was applied, and the verdict
+	// of the binary goes to the caller with this same error.
 	if err := m.check(ctx, prepared, changed, removed, target); err != nil {
 		m.unreserve(token)
 
@@ -446,11 +446,11 @@ func validateLists(lists Lists) error {
 	return nil
 }
 
-// SnapshotLists — изменения, которые приводят каталог списков к снимку версии:
-// файлы снимка пишутся, текущие файлы сверх снимка удаляются. current — суммы
-// текущих файлов, важны только имена. Имена, которых применение не примет,
-// пропускаются: чужой файл в подкаталоге демон не пишет и не удаляет, и
-// восстановление версии из-за него отказывать не должно.
+// SnapshotLists are the changes that bring the lists directory to a version snapshot:
+// snapshot files are written, current files beyond the snapshot are deleted. current is the sums
+// of the current files, only the names matter. Names the apply would not accept
+// are skipped: the daemon neither writes nor deletes a foreign file in the subdirectory, and
+// restoring a version must not be refused because of it.
 func SnapshotLists(snapshot map[string][]byte, current map[string]string) Lists {
 	var lists Lists
 
@@ -479,26 +479,26 @@ func SnapshotLists(snapshot map[string][]byte, current map[string]string) Lists 
 	return lists
 }
 
-// checkTarget — как проверять кандидата: тем режимом и от той базы путей, с
-// какими procd поднимет службу, иначе вердикты check и рантайма расходятся.
+// checkTarget is how to check a candidate: in the mode and from the path base with
+// which procd will start the service, otherwise the check and runtime verdicts diverge.
 type checkTarget struct {
-	// directory — служба сливает каталог конфига (-C), а не читает один файл.
+	// directory: the service merges the config directory (-C), not reads a single file.
 	directory bool
-	// workdir — рабочий каталог службы вне каталога конфига; пусто — база
-	// путей сам кандидат.
+	// workdir is the service working directory outside the config directory; empty means the path
+	// base is the candidate itself.
 	workdir string
 }
 
-// resolveCheck сверяет команду службы с конфигом демона до записи: расхождение
-// иначе выяснилось бы только падением службы на новом конфиге или проверкой не
-// того, что запустится. Неизвестную команду применение не останавливает —
-// procd может не быть, а служба могла не подниматься ни разу, и отказ тогда был
-// бы ложным; проверка идёт так, как службу поднимает пакет форка, одним файлом.
+// resolveCheck compares the service command with the daemon config before the write: a mismatch
+// would otherwise be found only by the service crashing on the new config or by checking not
+// what will run. An unknown command does not stop the apply:
+// procd may be absent and the service may never have started, and a refusal would then
+// be false; the check runs the way the fork package starts the service, with one file.
 //
-// Рабочий каталог вне каталога конфига проверку не ломает: транзакция его не
-// меняет, и check берёт его базой путей. Отказ — только с файлами списков:
-// относительный path узла local служба резолвит от рабочего каталога и
-// записанных файлов не нашла бы.
+// A working directory outside the config directory does not break the check: the transaction does not
+// change it, and check takes it as the path base. A refusal only with list files:
+// the service resolves a relative path of a local node from the working directory and
+// would not find the written files.
 func (m *Manager) resolveCheck(ctx context.Context, withLists bool) (checkTarget, error) {
 	launch, err := m.service.Launch(ctx)
 	if err != nil {
@@ -528,9 +528,9 @@ func (m *Manager) resolveCheck(ctx context.Context, withLists bool) (checkTarget
 		return checkTarget{}, &WorkdirError{Workdir: launch.Workdir, ConfigDir: m.opts.ConfigDir}
 	}
 
-	// Несуществующий каталог -D sing-box создаёт сам, и проверка от него
-	// оставила бы на устройстве след до записи. Служба создаст его на рестарте,
-	// а относительных путей в нём всё равно нет.
+	// A nonexistent -D directory is created by sing-box itself, and a check from it
+	// would leave a trace on the device before the write. The service will create it on restart,
+	// and there are no relative paths in it anyway.
 	if info, err := os.Stat(launch.Workdir); err != nil || !info.IsDir() {
 		return target, nil
 	}
@@ -540,12 +540,12 @@ func (m *Manager) resolveCheck(ctx context.Context, withLists bool) (checkTarget
 	return target, nil
 }
 
-// samePath сравнивает пути по записи, а при расхождении — по самому файлу:
-// /proc/<pid>/cwd отдаёт путь с раскрытыми симлинками, и один каталог под двумя
-// именами отказом считаться не должен.
+// samePath compares paths by notation and, on mismatch, by the file itself:
+// /proc/<pid>/cwd gives a path with symlinks resolved, and one directory under two
+// names must not count as a refusal.
 func samePath(a, b string) bool {
-	// Относительный путь из команды службы считать не от чего: cwd демона
-	// не обязан совпадать с каталогом, где procd поднимает службу.
+	// A relative path from the service command has nothing to be counted from: the daemon cwd
+	// need not match the directory where procd starts the service.
 	if !filepath.IsAbs(a) || !filepath.IsAbs(b) {
 		return false
 	}
@@ -567,8 +567,8 @@ func samePath(a, b string) bool {
 	return os.SameFile(left, right)
 }
 
-// narrowLists сводит изменения к реально меняемым: запись файла с тем же
-// содержимым и удаление несуществующего — пустые действия.
+// narrowLists reduces the changes to the really changing ones: writing a file with the same
+// content and deleting a nonexistent one are empty actions.
 func (m *Manager) narrowLists(ctx context.Context, lists Lists) (map[string][]byte, []string, error) {
 	if lists.empty() {
 		return nil, nil, nil
@@ -611,7 +611,7 @@ func listSums(files map[string][]byte) map[string]string {
 	return sums
 }
 
-// Confirm закрывает окно подтверждения: связь жива, откат не нужен.
+// Confirm closes the confirmation window: the connection is alive, no rollback is needed.
 func (m *Manager) Confirm(ctx context.Context, id string) (Transaction, error) {
 	m.mu.Lock()
 
@@ -633,14 +633,14 @@ func (m *Manager) Confirm(ctx context.Context, id string) (Transaction, error) {
 	m.confirmed = nil
 	m.mu.Unlock()
 
-	// Состояние убирается до освобождения busy: снятый раньше busy впускает
-	// следующий Start, и ClearState стирал бы уже его файл состояния. Ответ
-	// уходит после очистки, так что «подтвердил и тут же применил» в
-	// занятость не упирается.
+	// The state is removed before busy is released: busy released earlier lets in
+	// the next Start, and ClearState would erase its state file. The response
+	// goes after the cleanup, so "confirmed and immediately applied" does not
+	// run into busy.
 	if err := m.store.ClearState(ctx); err != nil {
-		// На диске осталось awaiting_confirm, и после перезагрузки доигрывание
-		// откатило бы подтверждённый конфиг. Терминальную фазу Replay не
-		// откатывает, а только убирает.
+		// awaiting_confirm stayed on disk, and after a reboot the replay
+		// would roll back the confirmed config. The terminal phase is not rolled back by Replay,
+		// only removed.
 		if persistErr := m.persist(ctx, tx); persistErr != nil {
 			m.log.Error("состояние подтверждённой транзакции не убрано и не переписано",
 				"err", errors.Join(err, persistErr), "transaction_id", id)
@@ -663,8 +663,8 @@ func (m *Manager) Confirm(ctx context.Context, id string) (Transaction, error) {
 	return tx, nil
 }
 
-// Close останавливает ожидание подтверждения и дожидается фоновой горутины.
-// Состояние остаётся на диске: незакрытое окно доиграется при следующем старте.
+// Close stops waiting for the confirmation and waits for the background goroutine.
+// The state stays on disk: an unclosed window is replayed at the next start.
 func (m *Manager) Close() {
 	m.mu.Lock()
 	cancel := m.cancel
@@ -677,13 +677,13 @@ func (m *Manager) Close() {
 	m.wg.Wait()
 }
 
-// reserve занимает применение под одну транзакцию и заодно ловит правку
-// извне: конфиг и файлы списков мог поправить владелец по SSH, и затирать это
-// молча нельзя. Возвращает номер владения для unreserve.
+// reserve takes the apply for one transaction and at the same time catches an outside
+// edit: the owner could have changed the config and the list files over SSH, and overwriting this
+// silently is not allowed. Returns the ownership number for unreserve.
 //
-// Названная клиентом база главнее внутренней сверки: lastSum живёт в памяти
-// процесса и после перезапуска пуст, а база приходит с каждым применением и
-// разблокирует Apply, когда клиент перечитал правленный извне файл.
+// The base named by the client outranks the internal check: lastSum lives in the process memory
+// and is empty after a restart, while the base comes with every apply and
+// unblocks Apply when the client has reread a file edited from outside.
 func (m *Manager) reserve(ctx context.Context, base, listsBase string) (uint64, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -703,9 +703,9 @@ func (m *Manager) reserve(ctx context.Context, base, listsBase string) (uint64, 
 	return m.hold(), nil
 }
 
-// reserveExclusive занимает применение без сверки конфига: так смена модели
-// обвязки не идёт одновременно с применением конфига — обе рестартуют одну
-// службу, и откат одной вернул бы службу на середину другой.
+// reserveExclusive takes the apply without checking the config: this way a dataplane model
+// change does not run concurrently with a config apply: both restart the same
+// service, and a rollback of one would return the service to the middle of the other.
 func (m *Manager) reserveExclusive() (uint64, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -717,14 +717,14 @@ func (m *Manager) reserveExclusive() (uint64, error) {
 	return m.hold(), nil
 }
 
-// verifyConfigBase сверяет конфиг на диске с базой клиента, а без неё — с тем,
-// что записал сам демон. Вызывается под mu.
+// verifyConfigBase compares the config on disk with the client base, and without it with what
+// the daemon wrote itself. Called under mu.
 func (m *Manager) verifyConfigBase(ctx context.Context, base string) error {
 	if base != "" {
 		current, err := m.store.Sum(ctx)
 		if errors.Is(err, fs.ErrNotExist) {
-			// База есть, а файла нет: клиент редактировал конфиг, который
-			// из-под него унесли.
+			// There is a base but no file: the client edited a config that
+			// was taken away from under it.
 			return ErrConfigModified
 		}
 		if err != nil {
@@ -743,8 +743,8 @@ func (m *Manager) verifyConfigBase(ctx context.Context, base string) error {
 
 	current, err := m.store.Sum(ctx)
 	if errors.Is(err, fs.ErrNotExist) {
-		// Конфиг унесли из-под демона — сверять не с чем, применение это не
-		// останавливает.
+		// The config was taken away from under the daemon: nothing to compare with, the apply is not
+		// stopped by it.
 		return nil
 	}
 	if err != nil {
@@ -757,7 +757,7 @@ func (m *Manager) verifyConfigBase(ctx context.Context, base string) error {
 	return nil
 }
 
-// verifyListsBase — та же сверка для набора файлов списков. Вызывается под mu.
+// verifyListsBase is the same check for the list file set. Called under mu.
 func (m *Manager) verifyListsBase(ctx context.Context, listsBase string) error {
 	expected := listsBase
 	if expected == "" {
@@ -780,7 +780,7 @@ func (m *Manager) verifyListsBase(ctx context.Context, listsBase string) error {
 	return nil
 }
 
-// hold занимает применение и отдаёт номер владения. Вызывается под mu.
+// hold takes the apply and returns the ownership number. Called under mu.
 func (m *Manager) hold() uint64 {
 	m.busy = true
 	m.epoch++
@@ -788,9 +788,9 @@ func (m *Manager) hold() uint64 {
 	return m.epoch
 }
 
-// unreserve освобождает применение, если владение всё ещё за тем, кто его
-// брал: Confirm и откат отдают busy сами, и к выходу фоновой горутины оно
-// может принадлежать уже следующему Start.
+// unreserve releases the apply if the ownership still belongs to the one who
+// took it: Confirm and the rollback release busy themselves, and by the exit of the background goroutine it
+// may already belong to the next Start.
 func (m *Manager) unreserve(token uint64) {
 	m.mu.Lock()
 	defer m.mu.Unlock()

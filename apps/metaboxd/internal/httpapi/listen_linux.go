@@ -5,19 +5,19 @@ import (
 	"time"
 )
 
-// unackedTimeout — сколько соединение живёт с неподтверждёнными данными.
-// Клиент, пропавший без закрытия (уснул ноутбук, отвалился Wi-Fi), иначе
-// держит поток лога вместе с процессом logread до исчерпания повторов TCP —
-// на Linux около четверти часа, а потоков всего четыре.
+// unackedTimeout is how long a connection lives with unacknowledged data.
+// A client that vanished without closing (a laptop fell asleep, Wi-Fi dropped) would otherwise
+// hold the log stream together with the logread process until TCP retries run out,
+// on Linux about a quarter of an hour, and there are only four streams in all.
 const unackedTimeout = 30 * time.Second
 
-// tcpUserTimeout — номер опции TCP_USER_TIMEOUT из linux/tcp.h, один на всех
-// архитектурах. Замороженный syscall объявляет её только для части GOARCH:
-// на amd64 и arm константы нет, а x/sys/unix — зависимость, которой у демона нет.
+// tcpUserTimeout is the TCP_USER_TIMEOUT option number from linux/tcp.h, the same on
+// every architecture. The frozen syscall package declares it only for some GOARCH
+// values: amd64 and arm lack the constant, and x/sys/unix is a dependency the daemon does not have.
 const tcpUserTimeout = 0x12
 
-// control ставит TCP_USER_TIMEOUT на слушающий сокет: принятые соединения
-// наследуют его от слушателя.
+// control sets TCP_USER_TIMEOUT on the listening socket: accepted connections
+// inherit it from the listener.
 func control(_, _ string, conn syscall.RawConn) error {
 	var sockErr error
 

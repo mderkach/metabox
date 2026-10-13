@@ -244,10 +244,10 @@ require (
 	zombiezen.com/go/capnproto2 v2.18.2+incompatible // indirect
 )
 
-// Форк держит module path upstream, поэтому подключается через replace на
-// запиненный тег. Блок replace ниже повторяет go.mod форка: Go не наследует
-// replace из зависимостей, а форк заменяет ещё девять модулей своими сборками.
-// При подъёме версии форка блок синхронизируется целиком.
+// The fork keeps the upstream module path, so it is attached through replace to a
+// pinned tag. The replace block below repeats the fork's go.mod: Go does not inherit
+// replace from dependencies, and the fork replaces nine more modules with its own builds.
+// When the fork version is raised the block is synchronized as a whole.
 replace github.com/sagernet/sing-box => github.com/shtorm-7/sing-box-extended v1.14.1-extended-2.7.2
 
 replace github.com/sagernet/wireguard-go => github.com/shtorm-7/wireguard-go v0.0.6-extended-1.6.1

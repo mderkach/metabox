@@ -5,42 +5,42 @@ import { MS_IN_SECOND } from '../lib/time';
 import { cn } from '../lib/utils';
 
 /**
- * Колонка панели — её ширина плюс зазор до списка. Зазор живёт в колонке, а не
- * в `gap` сетки: у закрытой панели он остался бы полосой справа от списка.
+ * The panel column is its width plus the gap to the list. The gap lives in the column, not
+ * in the grid `gap`: for a closed panel it would remain a strip to the right of the list.
  */
 const COLUMNS_OPEN = 'grid-cols-[minmax(0,1fr)_calc(var(--container-md)+--spacing(4))]';
 const COLUMNS_CLOSED = 'grid-cols-[minmax(0,1fr)_0rem]';
 
-/** Конец выезда панели: по нему колонка сворачивается. */
+/** End of the panel slide-out: the column collapses by it. */
 const PANEL_PROPERTY = 'translate';
 
 /**
- * Запас на случай, когда `transitionend` не придёт: переход прерван или не
- * начался, потому что панель открыли и закрыли в одном кадре. Дольше самого
- * выезда, чтобы не обрезать его.
+ * A fallback for when `transitionend` does not arrive: the transition was interrupted or did not
+ * start because the panel was opened and closed in one frame. Longer than the slide-out
+ * itself, so as not to cut it off.
  */
 const SETTLE_FALLBACK_SECONDS = 0.5;
 const SETTLE_FALLBACK = SETTLE_FALLBACK_SECONDS * MS_IN_SECOND;
 
 interface SidePanelState {
   open: boolean;
-  /** Панель уехала, и держать её колонку и содержимое больше незачем. */
+  /** The panel has slid away, and there is no reason to keep its column and content anymore. */
   settled: boolean;
 }
 
 const SidePanelContext = createContext<SidePanelState>({ open: false, settled: true });
 
 /**
- * Список и панель рядом с ним.
+ * The list and the panel beside it.
  *
- * Ширина списка меняется один раз, а движется только панель: на открытии
- * колонка встаёт сразу и панель въезжает в неё, на закрытии панель уезжает и
- * колонка сворачивается после. Переход ширины сетки перекладывал бы таблицу на
- * каждом кадре, и строки, которым стало тесно, переносились бы на вторую строку
- * посреди движения.
+ * The list width changes once, and only the panel moves: on opening
+ * the column sets at once and the panel slides into it, on closing the panel slides away and
+ * the column collapses after. A grid width transition would relayout the table on
+ * every frame, and rows that became cramped would wrap onto a second line
+ * mid-motion.
  *
- * Без анимации (`prefers-reduced-motion`) `transitionend` не приходит —
- * колонка и уходящее содержимое снимаются тем же рендером.
+ * Without animation (`prefers-reduced-motion`) `transitionend` does not arrive —
+ * the column and the departing content are removed in the same render.
  */
 function SidePanelLayoutRoot({
   open,
@@ -111,11 +111,11 @@ function SidePanelLayoutMain({ className, children }: { className?: string; chil
 }
 
 /**
- * Панель въезжает справа в уже вставшую колонку; колонка её обрезает. Закрытая
- * панель, пока уезжает, показывает то, с чем её закрыли, а не пустоту.
+ * The panel slides in from the right into an already set column; the column clips it. A closed
+ * panel, while sliding away, shows what it was closed with, not emptiness.
  *
- * `className` — обёртке панели, например `items-start` для панели ниже
- * высоты списка или липкой панели.
+ * `className` goes to the panel wrapper, for example `items-start` for a panel shorter
+ * than the list or a sticky panel.
  */
 function SidePanelLayoutPanel({ className, children }: { className?: string; children: ReactNode }) {
   const { open, settled } = use(SidePanelContext);

@@ -21,23 +21,23 @@ func TestLastFailureTakesTheProcessMessage(t *testing.T) {
 	got := lastFailure(crashLog, "sing-box")
 
 	if got != "FATAL[0000] start service: default outbound not found: no-such-outbound" {
-		t.Errorf("получили %q", got)
+		t.Errorf("got %q", got)
 	}
 }
 
-// Логгер роутера пишет вперемешку: чужая ошибка в причине падения sing-box
-// отправила бы владельца чинить не то.
+// The router logger writes interleaved: a foreign error in the sing-box crash reason
+// would send the owner to fix the wrong thing.
 func TestLastFailureIgnoresOtherServices(t *testing.T) {
 	if strings.Contains(lastFailure(crashLog, "sing-box"), "dnsmasq") {
-		t.Error("в причину попала чужая служба")
+		t.Error("a foreign service got into the reason")
 	}
 }
 
-// Под procd упавший сервис перезапускается по кругу, и лог состоит из копий
-// одной строки: показывать их десятками незачем.
+// Under procd a crashed service restarts in a circle, and the log is made of copies
+// of one line: there is no point in showing dozens of them.
 func TestLastFailureCollapsesRepeats(t *testing.T) {
 	if lines := strings.Count(lastFailure(crashLog, "sing-box"), "\n"); lines != 0 {
-		t.Errorf("строк в причине %d, ожидали одну", lines+1)
+		t.Errorf("lines in the reason %d, expected one", lines+1)
 	}
 }
 
@@ -46,18 +46,18 @@ func TestLastFailureKeepsSeveralDistinctMessages(t *testing.T) {
 Mon Sep 14 20:08:33 2026 daemon.err sing-box[1]: FATAL вторая беда`
 
 	if got := lastFailure(log, "sing-box"); got != "ERROR первая беда\nFATAL вторая беда" {
-		t.Errorf("получили %q", got)
+		t.Errorf("got %q", got)
 	}
 }
 
-// В логе остаются и обычные сообщения запуска: причиной падения они не
-// являются и в панель идти не должны.
+// The log also holds regular start messages: they are not the crash reason
+// and must not go to the panel.
 func TestLastFailureSkipsHealthyLines(t *testing.T) {
 	log := `Mon Sep 14 20:08:32 2026 daemon.err sing-box[1]: NOTICE inbound/mixed[mixed-in]: tcp server started
 Mon Sep 14 20:08:33 2026 daemon.err sing-box[1]: INFO sing-box started`
 
 	if got := lastFailure(log, "sing-box"); got != "" {
-		t.Errorf("в причину попало штатное сообщение: %q", got)
+		t.Errorf("a regular message got into the reason: %q", got)
 	}
 }
 
@@ -73,10 +73,10 @@ func TestLastFailureKeepsOnlyLastMessages(t *testing.T) {
 	got := lastFailure(log.String(), "sing-box")
 
 	if lines := strings.Count(got, "\n") + 1; lines != failureLines {
-		t.Errorf("строк %d, ожидали %d", lines, failureLines)
+		t.Errorf("lines %d, expected %d", lines, failureLines)
 	}
 	if !strings.HasSuffix(got, "беда 9") {
-		t.Errorf("последнее сообщение потеряно: %q", got)
+		t.Errorf("the last message is lost: %q", got)
 	}
 }
 
@@ -84,13 +84,13 @@ func TestLastFailureClampsLongOutput(t *testing.T) {
 	log := "Mon Sep 14 20:08:32 2026 daemon.err sing-box[1]: FATAL " + strings.Repeat("я", failureLimit*2)
 
 	if got := lastFailure(log, "sing-box"); len([]byte(got)) > failureLimit+len("…") {
-		t.Errorf("длина причины %d, потолок %d", len(got), failureLimit)
+		t.Errorf("reason length %d, ceiling %d", len(got), failureLimit)
 	}
 }
 
 func TestLastFailureOnEmptyLog(t *testing.T) {
 	if got := lastFailure("", "sing-box"); got != "" {
-		t.Errorf("получили %q", got)
+		t.Errorf("got %q", got)
 	}
 }
 
@@ -111,8 +111,8 @@ const fileLog = `+0000 2026-10-09 17:15:30 INFO sing-box started (0.42s)
 +0000 2026-10-09 17:15:52 ERROR [1455477715 5.4s] connection: open connection to 203.0.113.10:443: i/o timeout
 `
 
-// writeLaunch кладёт в каталог конфиг с log.output и, если задано, сам файл
-// лога; отдаёт команду службы, как её видит procd.
+// writeLaunch puts into the directory a config with log.output and, if given, the log
+// file itself; returns the service command as procd sees it.
 func writeLaunch(t *testing.T, output, log string) procd.Launch {
 	t.Helper()
 
@@ -152,83 +152,83 @@ func newFailureClient(runner Runner) *Client {
 func TestFailureReadsLogOutputFile(t *testing.T) {
 	const want = "ERROR router: rule-set geoip-ru: open geoip-ru.srs: no such file or directory"
 
-	t.Run("абсолютный путь", func(t *testing.T) {
+	t.Run("absolute path", func(t *testing.T) {
 		launch := writeLaunch(t, filepath.Join(t.TempDir(), "sing-box.log"), fileLog)
 
 		if got := newFailureClient(&logreadRunner{}).failure(t.Context(), launch); got != want {
-			t.Errorf("получили %q, ожидали %q", got, want)
+			t.Errorf("got %q, expected %q", got, want)
 		}
 	})
 
-	t.Run("относительный путь — от рабочего каталога", func(t *testing.T) {
+	t.Run("a relative path is from the working directory", func(t *testing.T) {
 		launch := writeLaunch(t, "sing-box.log", fileLog)
 
 		if got := newFailureClient(&logreadRunner{}).failure(t.Context(), launch); got != want {
-			t.Errorf("получили %q, ожидали %q", got, want)
+			t.Errorf("got %q, expected %q", got, want)
 		}
 	})
 
-	// cwd упавшего процесса демону не виден: файл от каталога конфига мог бы
-	// оказаться чужим.
-	t.Run("относительный путь без рабочего каталога не читается", func(t *testing.T) {
+	// The cwd of the crashed process is not visible to the daemon: a file from the config directory could
+	// turn out to be foreign.
+	t.Run("a relative path without a working directory is not read", func(t *testing.T) {
 		launch := writeLaunch(t, "sing-box.log", fileLog)
 		launch.Workdir = ""
 
 		if got := newFailureClient(&logreadRunner{}).failure(t.Context(), launch); got != "" {
-			t.Errorf("получили %q, ожидали пустую причину", got)
+			t.Errorf("got %q, expected an empty reason", got)
 		}
 	})
 }
 
-// FATAL выхода `sing-box run` уходит в stderr, а не в log.output: причина из
-// логгера точнее хвоста файла.
+// The FATAL of the `sing-box run` exit goes to stderr, not to log.output: the reason from
+// the logger is more precise than the file tail.
 func TestFailurePrefersLogread(t *testing.T) {
 	launch := writeLaunch(t, filepath.Join(t.TempDir(), "sing-box.log"), fileLog)
 
 	got := newFailureClient(&logreadRunner{stdout: crashLog}).failure(t.Context(), launch)
 
 	if got != "FATAL[0000] start service: default outbound not found: no-such-outbound" {
-		t.Errorf("получили %q", got)
+		t.Errorf("got %q", got)
 	}
 }
 
 func TestFailureFallsBackToLogread(t *testing.T) {
 	const want = "FATAL[0000] start service: default outbound not found: no-such-outbound"
 
-	t.Run("log.output не задан", func(t *testing.T) {
+	t.Run("log.output not set", func(t *testing.T) {
 		runner := &logreadRunner{stdout: crashLog}
 
 		if got := newFailureClient(runner).failure(t.Context(), writeLaunch(t, "", "")); got != want {
-			t.Errorf("получили %q, ожидали %q", got, want)
+			t.Errorf("got %q, expected %q", got, want)
 		}
 		if runner.calls != 1 {
-			t.Errorf("logread вызван %d раз, ожидали один", runner.calls)
+			t.Errorf("logread called %d times, expected once", runner.calls)
 		}
 	})
 
-	t.Run("файла лога нет", func(t *testing.T) {
+	t.Run("no log file", func(t *testing.T) {
 		launch := writeLaunch(t, filepath.Join(t.TempDir(), "missing.log"), "")
 
 		if got := newFailureClient(&logreadRunner{stdout: crashLog}).failure(t.Context(), launch); got != want {
-			t.Errorf("получили %q, ожидали %q", got, want)
+			t.Errorf("got %q, expected %q", got, want)
 		}
 	})
 
-	t.Run("команды службы не видно", func(t *testing.T) {
+	t.Run("the service command is not visible", func(t *testing.T) {
 		if got := newFailureClient(&logreadRunner{stdout: crashLog}).failure(t.Context(), procd.Launch{}); got != want {
-			t.Errorf("получили %q, ожидали %q", got, want)
+			t.Errorf("got %q, expected %q", got, want)
 		}
 	})
 }
 
-// Ошибки отдельных соединений службу не роняют, а хвост файла ими забит.
+// Errors of individual connections do not crash the service, and the file tail is stuffed with them.
 func TestFileLastFailureSkipsConnectionErrors(t *testing.T) {
 	log := "+0000 2026-10-09 17:15:43 ERROR [1288842022 5.4s] connection: i/o timeout\n" +
 		"FATAL start service: default outbound not found\n" +
 		"ERROR [42 1.0s] connection: refused\n"
 
 	if got := fileLastFailure(log); got != "FATAL start service: default outbound not found" {
-		t.Errorf("получили %q", got)
+		t.Errorf("got %q", got)
 	}
 }
 
@@ -245,6 +245,6 @@ func TestReadTailDropsTornLine(t *testing.T) {
 	}
 
 	if got != "ERROR вторая беда\n" {
-		t.Errorf("получили %q", got)
+		t.Errorf("got %q", got)
 	}
 }

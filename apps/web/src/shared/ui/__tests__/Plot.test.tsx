@@ -8,7 +8,7 @@ const OPTIONS: PlotOptions = { series: [{}, {}], axes: [{}, {}] };
 const TONES: readonly PlotTone[] = [{ token: '--primary', fillAlpha: 0.2 }];
 
 describe('Plot', () => {
-  it('на новых данных обновляет график, а не пересоздаёт его', () => {
+  it('on new data updates the chart instead of recreating it', () => {
     const first: PlotData = [
       [1, 2],
       [3, 4],
@@ -25,7 +25,7 @@ describe('Plot', () => {
     expect(FakePlot.latest().setData).toHaveBeenLastCalledWith(next, false);
   });
 
-  it('ставит шкалы поверх данных при каждом обновлении', () => {
+  it('puts the scales over the data on every update', () => {
     const { rerender } = render(
       <Plot options={OPTIONS} tones={TONES} data={[[1], [1]]} scales={{ y: { min: -4, max: 4 } }} label='график' />
     );
@@ -37,7 +37,7 @@ describe('Plot', () => {
     expect(FakePlot.latest().scales.y).toEqual({ min: -8, max: 8 });
   });
 
-  it('уничтожает график при размонтировании', () => {
+  it('destroys the chart on unmount', () => {
     const { unmount } = render(<Plot options={OPTIONS} tones={TONES} data={[[1], [1]]} label='график' />);
     const plot = FakePlot.latest();
 
@@ -46,7 +46,7 @@ describe('Plot', () => {
     expect(plot.destroy).toHaveBeenCalledOnce();
   });
 
-  it('читается фигурой с явно заданным доступным именем', () => {
+  it('is read as a figure with an explicitly set accessible name', () => {
     render(<Plot options={OPTIONS} tones={TONES} data={[[1], [1]]} label='трафик' />);
 
     expect(screen.getByRole('figure', { name: 'трафик' })).toBeInTheDocument();

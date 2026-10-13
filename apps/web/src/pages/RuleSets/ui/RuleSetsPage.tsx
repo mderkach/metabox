@@ -37,12 +37,12 @@ import {
 } from '../lib/RuleSets.lib';
 
 /**
- * Наборы правил: что подключено и чем это пополнить.
+ * Rule sets: what is attached and what to add to it.
  *
- * Пустой раздел — не заглушка, а главный экран этого места: у нового
- * пользователя он пуст всегда, и объяснять, зачем нужны наборы, больше негде.
- * Поэтому на пустом месте сразу стоит форма, а не кнопка, открывающая форму.
- * Когда наборы есть, формы открываются в панели рядом со списком (ADR-0037).
+ * An empty section is not a placeholder but the main screen of this place: for a new
+ * user it is always empty, and there is nowhere else to explain why rule sets are needed.
+ * So an empty place shows the form at once, not a button that opens the form.
+ * When rule sets exist, forms open in the panel beside the list (ADR-0037).
  */
 export function RuleSetsPage() {
   const { t } = useTranslation('pages/RuleSets');
@@ -56,11 +56,11 @@ export function RuleSetsPage() {
   const { form: openForm, close: closePanel } = panel;
   const onRemove = useCallback(
     (index: number) => {
-      // Правка адресует сет позицией: после удаления она указала бы на соседа.
+      // Editing addresses a rule set by position: after deletion it would point to a neighbor.
       if (openForm === RULE_SET_FORM.Edit) closePanel();
 
-      // Файл своего списка уезжает вместе с узлом: осиротевший файл не виден
-      // в конфиге, но остаётся на устройстве.
+      // The file of its own list goes away with the node: an orphaned file is not visible
+      // in the config but stays on the device.
       const file = localListFile(readRuleSets(ConfigDocumentState.getState().current() ?? '')[index]);
 
       remove(ruleSetNodePath(index));
@@ -70,8 +70,8 @@ export function RuleSetsPage() {
     [remove, removeList, openForm, closePanel]
   );
 
-  // Каталог нужен подсказкам и подписям источника, но не самому списку: без
-  // него наборы видны и удаляются, а форма остаётся со своим адресом.
+  // The catalog is needed for hints and source labels, but not for the list itself: without
+  // it rule sets are visible and deletable, and the form stays with its own address.
   const catalogSettled = !editor.catalogQuery.isPending;
   const loaded = editor.source.isSuccess && catalogSettled;
   const pending = editor.source.isPending || (editor.source.isSuccess && !catalogSettled);
@@ -107,8 +107,8 @@ export function RuleSetsPage() {
             <EmptyDescription className='max-w-prose text-pretty'>{t('empty.description')}</EmptyDescription>
           </EmptyHeader>
           <EmptyContent className='max-w-none items-stretch'>
-            {/* Первый набор уводит экран со списком в панель: открытая здесь
-                форма не должна всплыть в ней следом. */}
+            {/* The first rule set moves the screen with the list into the panel: the form open here
+                must not pop up in it afterwards. */}
             <RuleSetAddForm
               catalog={editor.catalog}
               takenTags={editor.takenTags}
@@ -184,7 +184,7 @@ export function RuleSetsPage() {
         </SidePanelLayout.Root>
       )}
 
-      {/* Ниже lg панели рядом со списком нет места: там она открывается листом. */}
+      {/* Below lg there is no room for the panel beside the list: there it opens as a sheet. */}
       {asSheet && (
         <RuleSetPanelSheet open={listed && panel.form !== null} title={panelTitle} onClose={panel.close}>
           {panelForm}
@@ -194,7 +194,7 @@ export function RuleSetsPage() {
   );
 }
 
-/** Форма, открытая в панели сета. */
+/** Form open in the rule set panel. */
 function RuleSetPanelForm({
   editor,
   form,
@@ -239,7 +239,7 @@ function RuleSetPanelForm({
   );
 }
 
-/** Поиск: левый край тулбара таблицы. */
+/** Search: left edge of the table toolbar. */
 function RuleSetSearch({ filter }: { filter: RuleSetFilterState }) {
   const { t } = useTranslation('pages/RuleSets');
 

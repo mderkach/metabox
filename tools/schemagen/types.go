@@ -15,33 +15,33 @@ import (
 	"github.com/sagernet/sing-box/include"
 )
 
-// typeEntry — вариант union'а, который реестр форка отдаёт по строке типа.
+// typeEntry is a union variant that the fork registry returns by a type string.
 type typeEntry struct {
 	registry string
 	key      string
 	typ      reflect.Type
 }
 
-// registryGroup — реестр форка и типы, которые он умеет создавать.
+// registryGroup is a fork registry and the types it can create.
 type registryGroup struct {
 	name    string
 	entries []typeEntry
 }
 
-// skipTypes — ключи, которые реестр отдаёт, но конфигурировать нечего:
-// block и wireguard в outbound-реестре объявлены с пустым option.StubOptions,
-// shadowsocksr оставлен заглушкой удалённого протокола и при создании
-// возвращает ошибку.
+// skipTypes are the keys the registry returns but there is nothing to configure:
+// block and wireguard in the outbound registry are declared with an empty option.StubOptions,
+// shadowsocksr is left as a stub of a removed protocol and returns
+// an error on creation.
 var skipTypes = map[string]map[string]bool{
 	"outbound": {"block": true, "wireguard": true, "shadowsocksr": true},
 	"inbound":  {"shadowsocksr": true},
 }
 
-// collectRegistries прогоняет строковые константы форка через CreateOptions
-// каждого реестра. Реестр не умеет перечислять свои ключи, а сами строки
-// разбросаны по constant/proxy.go, constant/dns.go и constant/provider.go,
-// поэтому источником служит весь пакет constant. Расхождение между
-// зарегистрированными типами и константами ловит TestRegistryKeysHaveConstants.
+// collectRegistries runs the fork string constants through CreateOptions
+// of each registry. A registry cannot list its keys, and the strings themselves
+// are scattered over constant/proxy.go, constant/dns.go and constant/provider.go,
+// so the whole constant package is the source. A mismatch between
+// registered types and constants is caught by TestRegistryKeysHaveConstants.
 func collectRegistries() ([]registryGroup, error) {
 	names, err := constantStrings()
 	if err != nil {
@@ -87,15 +87,15 @@ func collectRegistries() ([]registryGroup, error) {
 			})
 		}
 		if len(group.entries) == 0 {
-			return nil, fmt.Errorf("реестр %s пуст: ни одна константа не дала CreateOptions", c.name)
+			return nil, fmt.Errorf("registry %s is empty: no constant gave CreateOptions", c.name)
 		}
 		groups = append(groups, group)
 	}
 	return groups, nil
 }
 
-// constantStrings возвращает отсортированные значения строковых констант
-// пакета constant форка.
+// constantStrings returns the sorted values of the string constants
+// of the fork constant package.
 func constantStrings() ([]string, error) {
 	dir, err := forkDir()
 	if err != nil {
@@ -114,7 +114,7 @@ func constantStrings() ([]string, error) {
 		}
 	}
 	if len(seen) == 0 {
-		return nil, fmt.Errorf("в пакете constant не нашлось строковых констант: %s", dir)
+		return nil, fmt.Errorf("no string constants found in the constant package: %s", dir)
 	}
 
 	names := make([]string, 0, len(seen))
@@ -125,12 +125,12 @@ func constantStrings() ([]string, error) {
 	return names, nil
 }
 
-// constantValues — имя строковой константы пакета constant форка → значение.
+// constantValues is the name of a string constant of the fork constant package → its value.
 func constantValues(dir string) (map[string]string, error) {
 	fset := token.NewFileSet()
 	pkgs, err := parser.ParseDir(fset, filepath.Join(dir, "constant"), nil, parser.SkipObjectResolution)
 	if err != nil {
-		return nil, fmt.Errorf("разбор пакета constant: %w", err)
+		return nil, fmt.Errorf("parsing the constant package: %w", err)
 	}
 
 	values := map[string]string{}
@@ -163,16 +163,16 @@ func constantValues(dir string) (map[string]string, error) {
 	return values, nil
 }
 
-// forkDir отдаёт каталог форка в module cache. Команда читает go.mod, поэтому
-// генератор запускается из каталога своего модуля — так его и зовёт
-// цель schema в Makefile.
+// forkDir returns the fork directory in the module cache. The command reads go.mod, so
+// the generator is run from its module directory, which is how the schema
+// target in the Makefile calls it.
 func forkDir() (string, error) {
 	return moduleDir(forkModule)
 }
 
-// moduleDir отдаёт каталог модуля из графа сборки в module cache.
+// moduleDir returns a module directory from the build graph in the module cache.
 func moduleDir(module string) (string, error) {
-	//nolint:gosec // имя модуля приходит из констант генератора, не от пользователя
+	//nolint:gosec // the module name comes from generator constants, not from the user
 	command := exec.Command("go", "list", "-m", "-f", "{{.Dir}}", module)
 	var stderr strings.Builder
 	command.Stderr = &stderr
@@ -184,7 +184,7 @@ func moduleDir(module string) (string, error) {
 	}
 	dir := strings.TrimSpace(string(out))
 	if dir == "" {
-		return "", fmt.Errorf("go list %s вернул пустой путь", module)
+		return "", fmt.Errorf("go list %s returned an empty path", module)
 	}
 	return dir, nil
 }

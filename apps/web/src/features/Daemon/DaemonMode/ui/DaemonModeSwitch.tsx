@@ -9,15 +9,15 @@ import { useSetClashMode } from '../api';
 import { toClashModeLabel } from './clashModeLabel';
 
 /**
- * Режим маршрутизации рантайма. Бара применения и подтверждения у него нет:
- * файл конфига не меняется.
+ * Runtime routing mode. It has no apply bar or confirmation: the config file
+ * does not change.
  *
- * Выпадающий список, а не сегменты: набор режимов открытый — sing-box добавляет
- * к трём встроенным значения `clash_mode` из правил конфига, — и сегменты под
- * такой набор не помещались бы в ширину телефона.
+ * A dropdown, not segments: the mode set is open, since sing-box adds the
+ * `clash_mode` values from config rules to the three built-in ones, and
+ * segments for such a set would not fit the phone width.
  *
- * Пока режим читается — скелетон; не прочитан — причина текстом вместо
- * контрола: выбирать не из чего.
+ * While the mode is being read, a skeleton; if it was not read, the reason as
+ * text instead of the control: there is nothing to choose from.
  */
 export function DaemonModeSwitch() {
   const { t } = useTranslation('shared');

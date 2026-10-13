@@ -15,7 +15,7 @@ vi.mock('sonner', () => ({
 
 const { toast } = await import('sonner');
 
-/** Клиент приложения: тосты показывает его кэш мутаций, у тестового клиента его нет. */
+/** App client: toasts are shown by its mutation cache, the test client has none. */
 function AppQuery({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={QueryClientInstance}>{children}</QueryClientProvider>;
 }
@@ -27,8 +27,8 @@ describe('useSelectProxy', () => {
     server.use(...proxyHandlers);
   });
 
-  // Выбор объявляет живая область экрана; тост `sonner` объявил бы его второй раз.
-  it('после выбора узла тоста об успехе не показывает', async () => {
+  // The selection is announced by the screen live region; a `sonner` toast would announce it a second time.
+  it('after a node selection shows no success toast', async () => {
     const { result } = renderHook(useSelectProxy, { wrapper: AppQuery });
 
     result.current.mutate({ group: 'us-fallback', node: 'proxy' });

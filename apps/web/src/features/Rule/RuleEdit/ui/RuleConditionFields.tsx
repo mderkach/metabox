@@ -18,14 +18,15 @@ const ERROR_KEY: Readonly<Record<string, ParseKeys<'features/Rule/RuleEdit'> | u
   [RULE_EDIT_ERROR.PortInvalid]: 'error.portInvalid',
 };
 
-/** Помощник под полем условия: значение по-прежнему правится текстом, помощник его дописывает. */
+/** Helper under a condition field: the value is still edited as text, the helper appends to it. */
 const CONDITION_HELPER: Readonly<Partial<Record<RuleCondition, ComponentType>>> = {
   [RULE_CONDITION.SourceIpCidr]: RuleSourceDevices,
 };
 
 /**
- * Ходовые условия правила. Видны заданные; остальные добавляются выбором, а
- * не стоят пустыми полями: у правила обычно одно-два условия.
+ * Common rule conditions. Set ones are visible; the others are added by choice
+ * rather than standing as empty fields: a rule usually has one or two
+ * conditions.
  */
 export function RuleConditionFields({ initial }: { initial: readonly RuleCondition[] }) {
   const { t } = useTranslation('features/Rule/RuleEdit');

@@ -1,8 +1,8 @@
 /// <reference types="vite/client" />
 
 /**
- * Карта адресов словарей: её печатает плагин `metabox-i18n` при сборке, потому
- * что в имени файла стоит отпечаток содержимого, а он известен только там.
+ * Dictionary URL map: printed by the `metabox-i18n` plugin at build time, because
+ * the file name carries a content fingerprint, which is known only there.
  */
 declare module 'virtual:metabox-locales' {
   export const LOCALE_URLS: Record<string, string | undefined>;

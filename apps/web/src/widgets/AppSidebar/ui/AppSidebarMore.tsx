@@ -13,13 +13,13 @@ const LINK_CLASS =
   'flex h-11 items-center gap-3 rounded-md px-2.5 text-sm transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none';
 
 /**
- * Пункт «Ещё» нижней панели: разделы, которым не хватило колонки, и подвал
- * сайдбара — состояние службы, тема и язык — листом
- * снизу. На телефоне им нет места рядом с разделами, а терять их нельзя.
+ * The "More" item of the bottom bar: sections that did not get a column, and the sidebar
+ * footer — service state, theme and language — as a sheet
+ * from the bottom. On a phone there is no room for them next to the sections, and they cannot be lost.
  */
 export function AppSidebarMore({ className, active }: { className: string; active: string | null }) {
   const { t } = useTranslation('widgets/AppSidebar');
-  // Лист управляемый: переход по разделу из него должен его закрыть.
+  // The sheet is controlled: navigating to a section from it must close it.
   const [open, setOpen] = useState(false);
 
   return (
@@ -31,7 +31,7 @@ export function AppSidebarMore({ className, active }: { className: string; activ
       <SheetContent side='bottom' showCloseButton={false} className='gap-0 pb-[env(safe-area-inset-bottom)]'>
         <header className='flex items-center justify-between gap-2 border-b border-border py-1.5 pr-1.5 pl-4'>
           <SheetTitle>{t('more.title')}</SheetTitle>
-          {/* Своя кнопка вместо встроенной: у той подпись зашита по-английски. */}
+          {/* A button of our own instead of the built-in one: its caption is hardcoded in English. */}
           <SheetClose render={<Button variant='ghost' size='icon' className='size-11' />} aria-label={t('more.close')}>
             <X aria-hidden='true' />
           </SheetClose>

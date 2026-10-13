@@ -13,13 +13,13 @@ import { cn } from '@shared/lib/utils';
 import { Badge, Button, SURFACE } from '@shared/ui';
 
 /**
- * Скаляры секции `route` или `dns` карточкой над её списком. Свёрнута по
- * умолчанию: правят их редко, а развёрнутая форма сдвигала бы список вниз, —
- * поэтому и развёрнутая она не выше части экрана.
- * Свёрнутое тело остаётся смонтированным, набранное не теряется.
+ * Scalars of the `route` or `dns` section as a card above its list. Collapsed by
+ * default: they are edited rarely, and an expanded form would push the list down —
+ * so even expanded it is no taller than part of the screen.
+ * The collapsed body stays mounted, and what was typed is not lost.
  *
- * Секцию с незнакомым полем форма не открывает: схема её не примет, и
- * сохранить не получится ни одного поля.
+ * The form does not open a section with an unfamiliar field: the schema will not accept it, and
+ * not a single field could be saved.
  */
 export function ConfigSectionSettings({ section }: { section: SettingsSection }) {
   const { t } = useTranslation('widgets/Config/ConfigSectionSettings');
@@ -61,8 +61,8 @@ export function ConfigSectionSettings({ section }: { section: SettingsSection })
 
       <div id={bodyId} hidden={!open} className='flex max-h-[60vh] flex-col gap-3 overflow-y-auto'>
         <p className='text-xs text-pretty text-muted-foreground'>{t(recognized ? 'hint' : 'uncovered', { section })}</p>
-        {/* Ревизия в ключе пересоздаёт форму на обновлении не от пользователя:
-            после отмены правок поле не должно держать отменённое. */}
+        {/* The revision in the key recreates the form on an update not from the user:
+            after discarding changes the field must not keep the discarded value. */}
         {recognized && <ConfigSectionForm key={document.revision} section={section} settings={settings} />}
       </div>
     </section>

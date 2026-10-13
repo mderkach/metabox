@@ -12,7 +12,7 @@ import { LOCALE_ROOT, checkLocales, collectLocales, hashedLocaleUrl, localeKey, 
 
 const BUDGET_TESTS = 'src/**/*.budget.test.{ts,tsx}';
 
-// Слои FSD; тот же список — в `paths` обоих tsconfig.
+// FSD layers; the same list is in `paths` of both tsconfigs.
 const LAYERS = ['app', 'pages', 'widgets', 'features', 'entities', 'shared'];
 
 const APP_ENTRY = '/src/app/main.tsx';
@@ -20,16 +20,16 @@ const MOCK_ENTRY = '/mocks/enable.ts';
 const WORKER_PATH = '/mockServiceWorker.js';
 
 /**
- * Моки недостающих ручек демона. Включаются `METABOX_MOCK=missing|all` и живут
- * только на дев-сервере: `apply: 'serve'` не даёт плагину участвовать в сборке,
- * поэтому подменённого входа в `dist` не бывает.
+ * Mocks of missing daemon endpoints. Enabled by `METABOX_MOCK=missing|all` and live
+ * only on the dev server: `apply: 'serve'` keeps the plugin out of the build,
+ * so a substituted entry never ends up in `dist`.
  *
- * `METABOX_MOCK_CONNECTIONS=<число>` раздувает снапшот соединений до указанного
- * размера: панель обязана держать пять тысяч живых соединений (NFR-2), и
- * проверить это руками больше нечем — на стенде столько трафика не бывает.
+ * `METABOX_MOCK_CONNECTIONS=<number>` inflates the connection snapshot to the given
+ * size: the panel must hold five thousand live connections (NFR-2), and
+ * there is no other way to check this by hand — the test bench never has that much traffic.
  *
- * Скрипт воркера отдаётся из `node_modules`, а не кладётся в `public/`: файл в
- * `public/` уехал бы в `dist`, а оттуда через `go:embed` — в бинарь демона.
+ * The worker script is served from `node_modules`, not put in `public/`: a file in
+ * `public/` would go into `dist`, and from there via `go:embed` into the daemon binary.
  */
 function metaboxMocks(): Plugin | false {
   const mode = process.env.METABOX_MOCK;
@@ -64,12 +64,12 @@ function metaboxMocks(): Plugin | false {
 const SCAN_ENTRY = '/dev/scan.ts';
 
 /**
- * Съём ререндеров react-scan. Включается `METABOX_SCAN=1` и живёт только на
- * дев-сервере: `apply: 'serve'` не даёт плагину участвовать в сборке, а
- * инструментирование рендеров стоит времени и в замер NFR-2 попадать не должно.
+ * Re-render capture by react-scan. Enabled by `METABOX_SCAN=1` and lives only on the
+ * dev server: `apply: 'serve'` keeps the plugin out of the build, and
+ * render instrumentation costs time and must not get into the NFR-2 measurement.
  *
- * Скрипт идёт в `head` — раньше входа приложения: bippy подменяет хук
- * девтулзов, и до первого рендера React это сделать уже нельзя.
+ * The script goes into `head` — before the app entry: bippy replaces the devtools
+ * hook, and before the first React render that is no longer possible.
  */
 function metaboxScan(): Plugin | false {
   if (process.env.METABOX_SCAN !== '1') {
@@ -87,24 +87,24 @@ function metaboxScan(): Plugin | false {
 const LOCALE_SEGMENT = 'i18n';
 const LOCALE_GLOB = `src/**/${LOCALE_SEGMENT}/*.json`;
 
-/** Карта адресов словарей приезжает в бандл модулем: лишнего запроса за ней нет. */
+/** The URL map of dictionaries arrives in the bundle as a module: there is no extra request for it. */
 const LOCALE_MODULE = 'virtual:metabox-locales';
 
 /**
- * Оснастка локалей: карта неймспейсов (артефакт `tools/i18n.ts`), сверка
- * словарей между языками и раздача самих словарей.
+ * Locale tooling: the namespace map (artifact of `tools/i18n.ts`), cross-language
+ * dictionary checking and serving of the dictionaries themselves.
  *
- * Словари уезжают в `dist/locales/<неймспейс>/<язык>-<отпечаток>.json` файлами,
- * а не чанками: рантайм берёт их `fetch`, поэтому текст не попадает ни в один
- * модуль сборки — ни ошибкой импорта, ни ленивым чанком. Отпечаток в имени тот
- * же, что у остальных ассетов: демон отдаёт такой файл вечным кэшем, а новая
- * версия панели приходит под новым адресом. Знать имя
- * наперёд рантайм не может, поэтому карту адресов печатает плагин.
+ * Dictionaries go to `dist/locales/<namespace>/<language>-<fingerprint>.json` as files,
+ * not as chunks: the runtime fetches them with `fetch`, so the text does not end up in any
+ * build module — neither as an import error nor as a lazy chunk. The fingerprint in the name is the same
+ * as for other assets: the daemon serves such a file with an eternal cache, and a new
+ * panel version arrives under a new address. The runtime cannot know the name
+ * in advance, so the plugin prints the URL map.
  *
- * Карту меняет только появление и исчезновение локали — ключи берутся из
- * самого JSON. Правка текста внутри файла карту не трогает, но перезагружает
- * страницу: загруженный словарь лежит в памяти i18next, и горячее обновление
- * модуля до него не доходит.
+ * The map changes only when a locale appears or disappears — keys are taken from
+ * the JSON itself. A text edit inside a file does not touch the map but reloads
+ * the page: the loaded dictionary sits in i18next memory, and a hot update
+ * of the module does not reach it.
  */
 function metaboxI18n(): Plugin {
   const root = import.meta.dirname;
@@ -113,7 +113,7 @@ function metaboxI18n(): Plugin {
 
   function report(problems: readonly string[]) {
     if (problems.length > 0) {
-      console.warn(`[I18N] словари разошлись:\n${problems.map((problem) => `  ${problem}`).join('\n')}`);
+      console.warn(`[I18N] dictionaries diverged:\n${problems.map((problem) => `  ${problem}`).join('\n')}`);
     }
   }
 
@@ -140,15 +140,15 @@ function metaboxI18n(): Plugin {
       report(problems);
 
       if (problems.length > 0) {
-        this.error('[I18N] словари языков не сошлись по ключам');
+        this.error('[I18N] language dictionaries do not match by keys');
       }
 
       urls.clear();
 
       for (const locale of collectLocales(path.join(root, 'src'))) {
         const source = readFileSync(locale.file, 'utf8');
-        // На дев-сервере словарь читает middleware ниже — там он берётся из
-        // исходника, и отпечаток в имени только мешал бы правке.
+        // On the dev server the dictionary is read by the middleware below — there it is taken from
+        // the source, and a fingerprint in the name would only get in the way of editing.
         const url = isBuild ? hashedLocaleUrl(locale, source) : locale.url;
 
         urls.set(localeKey(locale.language, locale.namespace), `/${url}`);
@@ -161,8 +161,8 @@ function metaboxI18n(): Plugin {
     configureServer(server) {
       server.watcher.add(path.join(root, LOCALE_GLOB));
 
-      // Дев-сервер отдаёт словари с тех же адресов, что и сборка: иначе
-      // рантайм пришлось бы учить двум способам их искать.
+      // The dev server serves dictionaries from the same addresses as the build: otherwise
+      // the runtime would have to be taught two ways to look for them.
       server.middlewares.use(`/${LOCALE_ROOT}/`, (request, response, next) => {
         const locale = collectLocales(path.join(root, 'src')).find(
           (candidate) => `/${candidate.url}` === `/${LOCALE_ROOT}${request.url ?? ''}`
@@ -193,19 +193,19 @@ function metaboxI18n(): Plugin {
   };
 }
 
-/** Что сжимать: остальное либо уже сжато (woff2), либо мельче заголовка ответа. */
+/** What to compress: the rest is either already compressed (woff2) or smaller than a response header. */
 const COMPRESSIBLE = new Set(['.js', '.css', '.html', '.json', '.svg']);
 const MIN_COMPRESS_BYTES = 256;
-/** Ниже этого выигрыша второй файл в бинаре не окупается. */
+/** Below this gain a second file in the binary does not pay off. */
 const MIN_COMPRESS_RATIO = 0.9;
 
 /**
- * Предсжатие статики. Демон компрессора не имеет и не должен: сжимать один и
- * тот же файл на каждый запрос — это процессорное время роутера на ровном
- * месте. Сборка кладёт рядом `.br` и `.gz`, демон выбирает по `Accept-Encoding`.
+ * Pre-compression of static files. The daemon has no compressor and should not: compressing the
+ * same file on every request is router CPU time wasted. The build puts `.br` and `.gz` next to it,
+ * and the daemon picks by `Accept-Encoding`.
  *
- * Оба формата, а не только brotli: браузеры объявляют `br` не на всяком
- * соединении, а панель живёт по обычному http в локальной сети.
+ * Both formats, not only brotli: browsers do not advertise `br` on every
+ * connection, and the panel lives on plain http in the local network.
  */
 function metaboxCompress(): Plugin {
   let outDir = 'dist';
@@ -264,9 +264,9 @@ function* walk(dir: string): Generator<string> {
 
 const daemonTarget = process.env.METABOX_API_TARGET ?? 'http://127.0.0.1:8080';
 
-// changeOrigin подменяет только Host, а демон сверяет Origin с адресом панели и
-// без совпадения отбивает любой мутирующий запрос. Дев-сервер представляется
-// самим демоном — иначе демону пришлось бы открывать чужой источник.
+// changeOrigin replaces only Host, while the daemon checks Origin against the panel address and
+// rejects any mutating request without a match. The dev server presents itself as
+// the daemon itself — otherwise the daemon would have to open a foreign origin.
 const sendDaemonOrigin: ProxyOptions['configure'] = (proxy) => {
   proxy.on('proxyReq', (request) => {
     request.setHeader('origin', daemonTarget);
@@ -279,24 +279,24 @@ export default defineConfig({
   resolve: {
     alias: {
       ...Object.fromEntries(LAYERS.map((layer) => [`@${layer}`, path.resolve(import.meta.dirname, `./src/${layer}`)])),
-      // Оснастка тестов: не слой, но тесты внутри слоёв ходят к ней по алиасу.
+      // Test harness: not a layer, but tests inside layers reach it by alias.
       '@test': path.resolve(import.meta.dirname, './src/test'),
     },
   },
   server: {
-    // В контейнере слушать loopback бесполезно — снаружи порт не виден.
+    // Listening on loopback in a container is useless — the port is not visible from outside.
     host: true,
-    // Полезная нагрузка HMR ходит по тому же порту, что и страница;
-    // без явного указания клиент в браузере пытается стучаться в контейнерный хост.
+    // The HMR payload goes over the same port as the page;
+    // without an explicit setting the browser client tries to reach the container host.
     watch: { usePolling: false },
     proxy: {
-      // Демон живёт в целевом окружении (контейнер target), а не рядом с dev-сервером.
+      // The daemon lives in the target environment (the target container), not next to the dev server.
       '/api': {
         target: daemonTarget,
         changeOrigin: true,
         configure: sendDaemonOrigin,
-        // Поток соединений и трафика ходит под тем же префиксом: без этого
-        // апгрейд до WebSocket упирается в дев-сервер, а не в демона.
+        // The connection and traffic stream goes under the same prefix: without this
+        // the WebSocket upgrade hits the dev server, not the daemon.
         ws: true,
       },
       '/healthz': {
@@ -309,8 +309,8 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
-    // Замеры бюджета идут отдельной группой после остальных и по одному файлу:
-    // параллельные соседи отбирают процессор, и замер на раннере CI выходит за порог.
+    // Budget measurements run as a separate group after the rest, one file at a time:
+    // parallel neighbours take the CPU, and the measurement on a CI runner goes over the threshold.
     projects: [
       {
         test: {

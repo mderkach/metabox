@@ -1,28 +1,28 @@
-# Правила демона metaboxd
+# metaboxd daemon rules
 
-Общие правила репозитория — в корневом [`AGENTS.md`](../../AGENTS.md). Здесь только то, что касается `apps/metaboxd/`.
+Shared repository rules are in the root [`AGENTS.md`](../../AGENTS.md). This file covers only `apps/metaboxd/`.
 
-## Когда читать гайды
+## When to read the guides
 
-Гайд читается по условию из таблицы, **полностью** и до внесения правки. О чём каждый документ — [`docs/guides/README.md`](./docs/guides/README.md).
+A guide is read by the condition from the table, **in full** and before making a change. What each document covers: [`docs/guides/README.md`](./docs/guides/README.md).
 
-| Читать полностью перед тем, как                                  | Документ                                                                                           |
-| ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| создавать или менять Go-код демона                               | [Architecture&Style.md](./docs/guides/Architecture&Style.md) — пакеты, границы, зависимости, стиль |
-| писать обработку ошибок или логи                                 | [ErrorsAndLogging.md](./docs/guides/ErrorsAndLogging.md)                                           |
-| писать хендлер, middleware, роут или раздачу SPA                 | [HTTPAPI.md](./docs/guides/HTTPAPI.md)                                                             |
-| писать код, который трогает файлы, вызывает `sing-box` или procd | [DeviceIO.md](./docs/guides/DeviceIO.md)                                                           |
-| писать или править Go-тесты                                      | [Testing.md](./docs/guides/Testing.md)                                                             |
-| сдавать правку в демоне                                          | [ReviewChecklist.md](./docs/guides/ReviewChecklist.md) — пройти по чеклисту                        |
+| Read in full before you                                  | Document                                                                                                |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| create or change daemon Go code                          | [Architecture&Style.md](./docs/guides/Architecture&Style.md): packages, boundaries, dependencies, style |
+| write error handling or logging                          | [ErrorsAndLogging.md](./docs/guides/ErrorsAndLogging.md)                                                |
+| write a handler, middleware, route or SPA serving        | [HTTPAPI.md](./docs/guides/HTTPAPI.md)                                                                  |
+| write code that touches files, calls `sing-box` or procd | [DeviceIO.md](./docs/guides/DeviceIO.md)                                                                |
+| write or edit Go tests                                   | [Testing.md](./docs/guides/Testing.md)                                                                  |
+| hand in a daemon change                                  | [ReviewChecklist.md](./docs/guides/ReviewChecklist.md): go through the checklist                        |
 
-Гайды написаны для демона. Генератору схемы из них обязательны только разделы «Стиль» и «Инструменты» — см. [`tools/schemagen/AGENTS.md`](../../tools/schemagen/AGENTS.md).
+The guides are written for the daemon. For the schema generator only the "Style" and "Tools" sections are mandatory; see [`tools/schemagen/AGENTS.md`](../../tools/schemagen/AGENTS.md).
 
-## Правки в `apps/metaboxd/`
+## Changes in `apps/metaboxd/`
 
-- Модуль называется `metabox`, поэтому импорты остаются вида `metabox/internal/...` независимо от расположения папки.
-- Точка входа — `main.go` в корне модуля: разбор флагов, сборка зависимостей, запуск, ожидание сигнала. Логики в нём нет.
-- `cmd/contractgen` — генератор схем контракта для панели: читает исходники `internal/*` и печатает `apps/web/src/shared/api/daemon.generated.ts`. Артефакт коммитится вместе с правкой демона, пересобирается `make schema-daemon`.
-- `cmd/rulesetsnap` — снимок каталога наборов, пересобирается `make rule-set-snapshot`. Обе команды — инструменты разработки, в бинарь поставки они не попадают.
-- Весь код демона — в `internal/`, режется по предмету, а не по техническому слою.
-- `go.mod` модуля демона держится без `require`: всё нужное есть в стандартной библиотеке. Новая зависимость — отдельное решение с ADR.
-- Сборка, генерация и линт — через `make` из корня репозитория: там `-ldflags` версии, `GOTOOLCHAIN` из `.go-version` и теги форка для генератора. Тесты демона допустимо гонять и напрямую — `go test ./...` из `apps/metaboxd/` ([`CONTRIBUTING.md`](../../CONTRIBUTING.md), «Проверки перед коммитом»).
+- The module is named `metabox`, so imports stay in the form `metabox/internal/...` regardless of the folder location.
+- The entry point is `main.go` at the module root: flag parsing, dependency wiring, start, waiting for a signal. It has no logic.
+- `cmd/contractgen` is the contract schema generator for the panel: it reads the `internal/*` sources and prints `apps/web/src/shared/api/daemon.generated.ts`. The artifact is committed together with the daemon change and rebuilt with `make schema-daemon`.
+- `cmd/rulesetsnap` is the rule set catalog snapshot, rebuilt with `make rule-set-snapshot`. Both commands are development tools and do not get into the shipped binary.
+- All daemon code is in `internal/`, split by subject, not by technical layer.
+- The daemon module's `go.mod` has no `require`: everything needed is in the standard library. A new dependency is a separate decision with an ADR.
+- Build, generation and lint go through `make` from the repository root: it holds the version `-ldflags`, `GOTOOLCHAIN` from `.go-version` and the fork tags for the generator. Daemon tests may also be run directly, `go test ./...` from `apps/metaboxd/` ([`CONTRIBUTING.md`](../../CONTRIBUTING.md), "Checks before committing").

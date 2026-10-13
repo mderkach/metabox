@@ -11,9 +11,9 @@ const ORIGIN_LABEL = {
 } as const satisfies Readonly<Record<RouteOrigin, ParseKeys<'widgets/RouteExplanation'>>>;
 
 /**
- * Наблюдение и вычисленное различаются на экране, а не только в ответе API:
- * прогноз, поданный как факт, — самый дорогой класс ошибок для панели, чья
- * ценность в доверии к объяснению.
+ * Observed and computed are told apart on screen, not only in the API response:
+ * a forecast presented as fact is the costliest class of errors for a panel whose
+ * value is trust in the explanation.
  */
 export function RouteOriginBadge({ origin }: { origin: RouteOrigin }) {
   const { t } = useTranslation('widgets/RouteExplanation');

@@ -3,9 +3,10 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { getDevicesOptions, saveDeviceName } from '@entities/Device';
 
 /**
- * Своё имя устройства. Ответ — список целиком, и кэш заменяется им, а не
- * инвалидацией: подпись зависит от всех источников сразу и уже посчитана
- * демоном, а перечитывание запустило бы `uci` на роутере ещё раз.
+ * Device's own name. The response is the whole list, and the cache is replaced
+ * by it rather than invalidated: the label depends on all sources at once and
+ * is already computed by the daemon, while a reread would run `uci` on the
+ * router once more.
  */
 export function useRenameDevice() {
   const queryClient = useQueryClient();

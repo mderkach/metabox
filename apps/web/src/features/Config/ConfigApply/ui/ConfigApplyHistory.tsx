@@ -25,13 +25,14 @@ import { useRestoreConfigVersion } from '../api/ConfigApply.api';
 import { ConfigApplyCheck } from './ConfigApplyCheck';
 
 /**
- * Откат идёт обычным протоколом Apply, поэтому после запуска появляется то же
- * окно подтверждения, что и у своей правки: вернуть битую версию в
- * обход проверки бинарём нельзя.
+ * Rollback goes through the regular Apply protocol, so after the start the same
+ * confirmation window appears as for one's own edit: a broken version cannot be
+ * restored bypassing the binary check.
  *
- * Диалог управляется состоянием, а не закрывается нажатием: отказ бинаря нужно
- * показать здесь, а успешный запуск — наоборот, освободить экран, потому что
- * подтверждения ждёт бар, а окно ограничено минутой.
+ * The dialog is driven by state and is not closed by a press: a binary failure
+ * has to be shown here, while a successful start, on the contrary, frees the
+ * screen, because the bar waits for confirmation and the window is limited to a
+ * minute.
  */
 export function ConfigApplyHistory() {
   const { t } = useTranslation('features/Config/ConfigApply');
@@ -89,7 +90,7 @@ export function ConfigApplyHistory() {
   );
 }
 
-/** Откат на текущую версию перезапустил бы службу ради того же конфига, поэтому кнопки у неё нет. */
+/** Rollback to the current version would restart the service for the same config, so it has no button. */
 function VersionRow({
   version,
   disabled,

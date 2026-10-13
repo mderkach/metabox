@@ -6,9 +6,9 @@ import { DNSOptionsSchema, RouteOptionsSchema } from '@shared/api/generated';
 import { CONFIG_SECTION, findValue } from './Config.model';
 
 /**
- * Секции, у которых, кроме списков, есть свои скалярные поля: `route.final`,
- * `dns.strategy` и соседние. Списки правят свои экраны — правила, сеты,
- * серверы, — поэтому из формы секции они исключены.
+ * Sections that have their own scalar fields besides lists: `route.final`,
+ * `dns.strategy` and the like. Lists are edited by their own screens (rules,
+ * sets, servers), so they are excluded from the section form.
  */
 const SETTINGS_SECTIONS = {
   [CONFIG_SECTION.Route]: {
@@ -33,18 +33,19 @@ export function sectionSettingsPath(section: SettingsSection): JSONPath {
   return SETTINGS_SECTIONS[section].path;
 }
 
-/** Схема скаляров секции: сгенерированная схема секции без её списков. */
+/** Section scalar schema: the generated section schema without its lists. */
 export function sectionSettingsSchema(section: SettingsSection): z.core.$ZodType {
   return SETTINGS_SECTIONS[section].schema;
 }
 
 /**
- * Скаляры секции как есть, из текста, без списков. Секции нет в файле —
- * пустой объект: форма её создаст первым же заполненным полем. `null` — на
- * месте секции не объект, править формой нечего.
+ * Section scalars as is, from the text, without lists. If the section is not in
+ * the file, an empty object: the form will create it with the first filled
+ * field. `null` means the section is not an object, and there is nothing to
+ * edit with a form.
  *
- * Незнакомый ключ не отбрасывается: по нему схема узнаёт, что секцию форма
- * не покрывает.
+ * An unfamiliar key is not dropped: the schema uses it to learn that the form
+ * does not cover the section.
  */
 export function readSectionSettings(text: string, section: SettingsSection): Record<string, unknown> | null {
   const value = findValue(text, SETTINGS_SECTIONS[section].path);
@@ -62,7 +63,7 @@ export function readSectionSettings(text: string, section: SettingsSection): Rec
   return Object.fromEntries(Object.entries(value).filter(([key]) => !lists.includes(key)));
 }
 
-/** Скаляры секции приняты схемой: форма их не потеряет. */
+/** Section scalars are accepted by the schema: the form will not lose them. */
 export function isSectionSettingsRecognized(section: SettingsSection, settings: unknown): boolean {
   return SETTINGS_SECTIONS[section].schema.safeParse(settings).success;
 }

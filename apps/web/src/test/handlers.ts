@@ -25,27 +25,27 @@ import { MS_IN_SECOND } from '@shared/lib/time';
 
 import { runtimeStreamHandler } from './runtimeStream';
 
-/** Шаг потока на устройстве — замер 2026-09-10: сэмпл раз в секунду. */
+/** Stream step on the device — measured 2026-09-10: one sample per second. */
 const STREAM_INTERVAL = MS_IN_SECOND;
 
 let memorySample = 0;
 let connectionsFrame = 0;
 
 /**
- * Сборка моков для дев-режима. Сами хендлеры и фикстуры лежат в `__tests__`
- * своих слайсов, рядом с кодом, который они подменяют. Берутся они прямым
- * путём, а не через Public API слайса: в барреле они тянули бы msw в прод.
+ * Mock assembly for dev mode. The handlers and fixtures themselves live in the `__tests__`
+ * of their slices, next to the code they replace. They are taken by a direct
+ * path, not through the slice Public API: in a barrel they would pull msw into prod.
  *
- * Единый поток рантайма собирается тут же: он один на все топики, и данные в
- * него складывают фикстуры разных слайсов. Демон и прокси подключаются
- * вариантами с состоянием — выбор узла и окно подтверждения должны держаться
- * до перезагрузки страницы, иначе ручная проверка выглядит поломкой.
+ * The single runtime stream is assembled right here: it is one for all topics, and fixtures of different
+ * slices put data into it. The daemon and proxy are connected
+ * as stateful variants — node selection and the confirmation window must persist
+ * until the page reloads, otherwise manual checking looks like breakage.
  */
 export function createMissingHandlers(connections = 0) {
-  // Снапшот собирается один раз и дальше меняется на месте: раздувать пять
-  // тысяч строк на каждый тик означало бы мерить генератор, а не панель. Копия
-  // обязательна: сам `CONNECTIONS_FIXTURE` делит массив соединений с образцами,
-  // из которых собираются кадры, и правка на месте испортила бы эталон.
+  // The snapshot is assembled once and then changes in place: inflating five
+  // thousand rows on every tick would measure the generator, not the panel. A copy
+  // is mandatory: `CONNECTIONS_FIXTURE` itself shares the connection array with the samples
+  // the frames are built from, and an in-place edit would spoil the reference.
   const snapshot =
     connections > 0
       ? makeConnectionsSnapshot(connections, { vary: true })

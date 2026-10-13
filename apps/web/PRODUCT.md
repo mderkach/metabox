@@ -2,7 +2,7 @@
 
 <!-- impeccable:product-schema 1 -->
 
-Адаптер [`docs/PRD.md`](../../docs/PRD.md) для Impeccable. Требований здесь нет: они живут в PRD и ADR, сюда попадает только то, что нужно дизайн-работе, и ссылка на первоисточник. Новое требование заводится в PRD, а не в этом файле; расхождение с PRD трактуется как ошибка этого файла.
+An adapter of [`docs/PRD.md`](../../docs/PRD.md) for Impeccable. There are no requirements here: they live in the PRD and ADRs. This file holds only what design work needs, plus a link to the primary source. A new requirement goes into the PRD, not into this file; a mismatch with the PRD is treated as an error in this file.
 
 ## Platform
 
@@ -10,67 +10,67 @@ web
 
 ## Users
 
-**P1, владелец роутера** — основная персона v1: знает схему sing-box, правит конфиг руками, страдает от цикла обслуживания через SSH. **P2, продвинутый пользователь OpenWrt** — вторичная, появляется при выходе в опенсорс, схему не знает, GUI для него условие использования.
+**P1, router owner**: the primary persona of v1. Knows the sing-box schema, edits the config by hand, suffers from the maintenance cycle over SSH. **P2, advanced OpenWrt user**: secondary, appears when the project goes open source. Does not know the schema; for them a GUI is a condition of use.
 
-Сцена работы: десктоп — правка правил, редактор, Apply; телефон — обзор, соединения, переключение ноды. Персоны, сцена и сценарии US-1…US-10 — раздел 2 PRD.
+Usage context: desktop for editing rules, the editor and Apply; phone for the overview, connections and switching the node. Personas, context and scenarios US-1…US-10: PRD section 2.
 
 ## Product Purpose
 
-Единое место, где видно, что роутер делает с трафиком, и это можно изменить без SSH. Две задачи, ради которых панель существует: правка маршрутизации и диагностика «почему трафик идёт не туда». Успех измеряется временем, а не полнотой функций — разделы 1.2, 3.1 и метрики SM-1…SM-5 в разделе 3.2 PRD.
+A single place that shows what the router does with traffic and lets you change it without SSH. The panel exists for two jobs: editing routing and diagnosing "why does traffic go the wrong way". Success is measured in time, not in feature completeness: PRD sections 1.2, 3.1 and metrics SM-1…SM-5 in section 3.2.
 
 ## Positioning
 
-Редактор форм воспроизводим и сам по себе преимуществом не является. Отличие держится на связке **живое соединение → сработавшее правило → узел конфига** и на безопасном применении правки с автооткатом. Раздел 1.3 PRD, механика — [ADR-0007](../../docs/adr/ADR-0007-explain-route-without-own-rule-evaluator.md).
+A form editor is reproducible and is not an advantage by itself. The difference rests on the chain **live connection → matched rule → config node** and on safely applying a change with automatic rollback. PRD section 1.3; the mechanics: [ADR-0007](../../docs/adr/ADR-0007-explain-route-without-own-rule-evaluator.md).
 
 ## Operating Context
 
-Выжимка из NFR-1…NFR-5 (раздел 6 PRD) — то, что дизайн обязан учитывать:
+A digest of NFR-1…NFR-5 (PRD section 6), what the design must account for:
 
-- Панель открывается из локальной сети, аутентификации в v1 нет (риск R-1).
-- Цена ошибки асимметрична: неудачная правка отрезает доступ и к интернету, и к роутеру. Отсюда разделение Save и Apply, диф перед применением и окно подтверждения до автоотката.
-- Панель работает при остановленном, упавшем или неверно сконфигурированном sing-box и различает «сервис лежит» и «панель недоступна». Это штатный режим экрана, а не редкий край.
-- Объёмы: до 500 правил в конфиге, до 5000 активных соединений, поток соединений идёт непрерывно.
-- Экраны: Overview, Proxies, Connections, Editor, RawConfig, RuleSets — `src/pages`. Каркас: сайдбар, бар применения, темы, язык.
+- The panel is opened from the local network; v1 has no authentication (risk R-1).
+- The cost of an error is asymmetric: a failed change cuts off access both to the internet and to the router. Hence separate Save and Apply, a diff before applying, and a confirmation window before automatic rollback.
+- The panel works when sing-box is stopped, crashed or misconfigured, and distinguishes "the service is down" from "the panel is unreachable". This is a normal screen state, not a rare edge case.
+- Volumes: up to 500 rules in the config, up to 5000 active connections, and the connection stream is continuous.
+- Screens: Overview, Proxies, Connections, Editor, RawConfig, RuleSets in `src/pages`. Shell: sidebar, apply bar, themes, language.
 
 ## Capabilities and Constraints
 
-Состав функциональности и её границы — разделы 4, 5 и 8 PRD. Технические ограничения, которые дизайн не отменяет:
+Scope of functionality and its boundaries: PRD sections 4, 5 and 8. Technical constraints the design does not override:
 
-- Примитивы берутся из вендорной зоны shadcn/ui (`src/shared/ui`), она генерируется CLI и руками не правится.
-- Единственное место для сырого CSS — `src/app/styles/index.css`: токены, `@custom-variant`, база. Цвет живёт в CSS-переменных; литерал палитры Tailwind в компоненте — признак недостающего токена.
-- Шрифты подключены локально и уезжают в бинарь: `Geist Variable` — текст, `Fira Code Variable` — моно.
-- Кегли и радиусы кратны двум, размеры — в `rem`. Обе темы объявляют `color-scheme`.
-- Тексты интерфейса лежат в слайсе рядом с экраном и приезжают вместе с ним — [ADR-0019](../../docs/adr/ADR-0019-keep-interface-texts-in-the-slice-and-load-them-over-the-network.md).
-- Остальное — гайды [`apps/web/docs/`](./docs/README.md), раздел 9 PRD и [ADR-0045](../../docs/adr/ADR-0045-split-document-and-server-state-and-keep-a-folder-per-project.md).
+- Primitives come from the shadcn/ui vendor zone (`src/shared/ui`); it is generated by the CLI and not edited by hand.
+- The only place for raw CSS is `src/app/styles/index.css`: tokens, `@custom-variant`, base. Color lives in CSS variables; a Tailwind palette literal in a component signals a missing token.
+- Fonts are bundled locally and go into the binary: `Geist Variable` for text, `Fira Code Variable` for monospace.
+- Font sizes and radii are multiples of two, sizes are in `rem`. Both themes declare `color-scheme`.
+- Interface texts live in the slice next to the screen and are loaded with it: [ADR-0019](../../docs/adr/ADR-0019-keep-interface-texts-in-the-slice-and-load-them-over-the-network.md).
+- The rest: guides in [`apps/web/docs/`](./docs/README.md), PRD section 9 and [ADR-0045](../../docs/adr/ADR-0045-split-document-and-server-state-and-keep-a-folder-per-project.md).
 
-Открытые вопросы, которые меняют интерфейс и решаются владельцем, а не по ходу дизайн-правки: текстовый DSL для правил (OQ-4), отключённое правило (OQ-11). Раздел 10.1 PRD.
+Open questions that change the interface and are decided by the owner, not in passing during a design change: a text DSL for rules (OQ-4), a disabled rule (OQ-11). PRD section 10.1.
 
 ## Brand Commitments
 
-- Имя продукта — `metabox`, строчными. Демон — `metaboxd`.
-- Управляемый рантайм называется `sing-box` — так, как его пишет upstream; в текстах интерфейса написание единое.
-- Языки интерфейса — русский и английский, оба равноправны (AC-43). Текст на любом экране существует в обоих.
-- Визуальный мир не заморожен. Действующая палитра описана [ADR-0013](../../docs/adr/ADR-0013-build-the-panel-palette-on-routing-semantics.md), но это принятое решение, а не брендовое обязательство: замена оформляется новым ADR, прежний переводится в `Superseded`. Технический контракт из ADR-0013 переживает замену — семантические токены в одном файле, вендорная зона не правится.
+- The product name is `metabox`, lowercase. The daemon is `metaboxd`.
+- The managed runtime is called `sing-box`, spelled as upstream spells it; the spelling is the same across interface texts.
+- Interface languages are Russian and English, both equal (AC-43). Text on any screen exists in both.
+- The visual world is not frozen. The current palette is described in [ADR-0013](../../docs/adr/ADR-0013-build-the-panel-palette-on-routing-semantics.md), but it is an accepted decision, not a brand commitment: a replacement is recorded in a new ADR, and the old one moves to `Superseded`. The technical contract from ADR-0013 survives a replacement: semantic tokens in one file, the vendor zone is not edited.
 
 ## Evidence on Hand
 
-- Живое устройство: BPI-R4 Pro на OpenWrt SNAPSHOT, aarch64, sing-box-extended проверялся на `1.13.18-extended-2.6.5` и `1.14.0-extended-2.7.1`.
-- Стенд разработки: `.devcontainer` поднимает фронт, бэк и целевое окружение OpenWrt, собранное из прошивки устройства.
-- Корпус конфигов под golden round-trip — `src/entities/Config/__tests__/corpus/`, шесть форм записи, включая конфиг со структурой рабочего роутера. Собран с одного устройства: конструкция, которой в нём нет, обнаружится у владельца, а не в тестах.
-- Чего нет и выдумывать нельзя: пользователей, кроме автора; отзывов, кейсов, упоминаний в прессе; замеров производительности (пороги NFR — ориентиры, замером не подтверждены); цен и публичного релиза. Лицензия — [`LICENSE`](../../LICENSE).
+- Live device: BPI-R4 Pro on OpenWrt SNAPSHOT, aarch64; sing-box-extended was checked on `1.13.18-extended-2.6.5` and `1.14.0-extended-2.7.1`.
+- Development test bench: `.devcontainer` brings up the frontend, the backend and an OpenWrt target environment built from the device firmware.
+- Config corpus for the golden round-trip: `src/entities/Config/__tests__/corpus/`, six notation forms, including a config with the structure of the working router. Collected from one device: a construct it lacks will surface at the owner's, not in tests.
+- What does not exist and must not be invented: users other than the author; reviews, case studies, press mentions; performance measurements (NFR thresholds are targets, not confirmed by measurement); prices and a public release. The license is in [`LICENSE`](../../LICENSE).
 
 ## Product Principles
 
-Формулировки и следствия — раздел 7 PRD, здесь только то, что дизайн держит в голове:
+Wording and consequences: PRD section 7. Here only what the design keeps in mind:
 
-1. **GUI — основной путь, JSON — равноправная альтернатива** (UX-1).
-2. **Сохранение и применение — разные действия** (UX-2). Перед применением видно, что именно применится.
-3. **Данные пользователя не теряются никогда** (UX-3). Нераспознанный узел показывается сырым блоком с пометкой.
-4. **Состояние системы всегда на виду** (UX-7) — без перехода на отдельный экран.
-5. **Наблюдение и вычисление различимы** (UX-8). Прогноз не подаётся как подтверждённый факт.
+1. **GUI is the main path, JSON is an equal alternative** (UX-1).
+2. **Saving and applying are different actions** (UX-2). Before applying, you see exactly what will be applied.
+3. **User data is never lost** (UX-3). An unrecognised node is shown as a raw block with a marker.
+4. **System state is always visible** (UX-7), without going to a separate screen.
+5. **Observation and computation are distinguishable** (UX-8). A prediction is not presented as a confirmed fact.
 
 ## Accessibility & Inclusion
 
-- Требование — NFR-6 раздела 6 PRD: цель WCAG 2.2 AA, состав проверки там же. Прогоном не подтверждено.
-- Что действует сейчас: набор `jsx-a11y` включён как ошибки линта; виртуализованные таблицы собираются ролями ARIA (`role="table"`, `role="row"`, `role="cell"`, `aria-rowcount` с полным числом строк) — обычная `table` там не работает, объяснение в [Architecture&Style.md](./docs/guides/Architecture&Style.md).
-- Каркас пригоден от ширины 400 px (AC-42), темы переключаются и переживают перезагрузку (AC-41), атрибут `lang` следует за выбранным языком (AC-43).
+- The requirement is NFR-6 in PRD section 6: target WCAG 2.2 AA; the scope of the check is there too. Not confirmed by a run.
+- What applies now: the `jsx-a11y` set is enabled as lint errors; virtualized tables are built with ARIA roles (`role="table"`, `role="row"`, `role="cell"`, `aria-rowcount` with the full row count). A regular `table` does not work there; the explanation is in [Architecture&Style.md](./docs/guides/Architecture&Style.md).
+- The shell works from a width of 400 px (AC-42), themes switch and survive a reload (AC-41), the `lang` attribute follows the selected language (AC-43).

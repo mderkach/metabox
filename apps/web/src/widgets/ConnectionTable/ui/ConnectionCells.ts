@@ -12,8 +12,8 @@ import { ConnectionSourceCell } from './ConnectionSourceCell';
 import { ConnectionVolumeCell } from './ConnectionVolumeCell';
 
 /**
- * Ячейка по имени колонки: новая колонка добавляется записью здесь и описанием
- * в `ConnectionColumns`, а состав и порядок приходят из состояния таблицы.
+ * Cell by column name: a new column is added by an entry here and a definition
+ * in `ConnectionColumns`, while the set and order come from the table state.
  */
 export const CELL: Readonly<Record<ConnectionField, (props: ConnectionCellProps) => ReactNode>> = {
   [CONNECTION_FIELD.Source]: ConnectionSourceCell,

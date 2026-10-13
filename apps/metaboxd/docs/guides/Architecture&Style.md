@@ -1,49 +1,49 @@
-# Архитектура и стайлгайд Go
+# Go architecture and style guide
 
-Демон `metaboxd` и генератор схемы.
+The `metaboxd` daemon and the schema generator.
 
-## Два модуля
+## Two modules
 
 ```text
-apps/metaboxd/go.mod     модуль metabox — демон, зависимостей нет
-  main.go                точка входа
-  cmd/contractgen/       генератор контракта для панели (make schema-daemon)
-  cmd/rulesetsnap/       снимок каталога наборов (make rule-set-snapshot)
-  internal/              весь код демона
-tools/schemagen/go.mod   модуль metabox/tools/schemagen — генератор схемы
+apps/metaboxd/go.mod     module metabox: the daemon, no dependencies
+  main.go                entry point
+  cmd/contractgen/       contract generator for the panel (make schema-daemon)
+  cmd/rulesetsnap/       snapshot of the rule set catalog (make rule-set-snapshot)
+  internal/              all daemon code
+tools/schemagen/go.mod   module metabox/tools/schemagen: the schema generator
 ```
 
-Модуль называется `metabox` независимо от расположения каталога, поэтому импорты остаются вида `metabox/internal/...`.
+The module is named `metabox` regardless of where the directory is, so imports stay in the form `metabox/internal/...`.
 
-Модули разделены намеренно: генератор тянет форк sing-box со всем деревом зависимостей ([`tools/schemagen/go.mod`](../../../../tools/schemagen/go.mod)), и в артефакте поставки этому взяться неоткуда. Тесты демона генератор не видят — его прогоняет `make test-schemagen` с тегами и `-ldflags` форка.
+The modules are split on purpose: the generator pulls in the sing-box fork with its whole dependency tree ([`tools/schemagen/go.mod`](../../../../tools/schemagen/go.mod)), and none of that belongs in the delivery artifact. Daemon tests do not see the generator; `make test-schemagen` runs it with the fork's tags and `-ldflags`.
 
-**`go.mod` демона остаётся без `require`.** Всё, что нужно демону, есть в стандартной библиотеке: роутинг с методами и wildcards, `log/slog`, `os/exec`, `crypto/sha256`, `embed`. Каждая зависимость — чужой код в единственном артефакте поставки, кросс-компиляция под aarch64 с `CGO_ENABLED=0` и обязанность следить за обновлениями. Новая зависимость в демоне — отдельное решение, а не побочный эффект задачи.
+**The daemon's `go.mod` stays without `require`.** Everything the daemon needs is in the standard library: routing with methods and wildcards, `log/slog`, `os/exec`, `crypto/sha256`, `embed`. Every dependency is third-party code in the single delivery artifact, cross-compilation for aarch64 with `CGO_ENABLED=0`, and a duty to track updates. A new dependency in the daemon is a separate decision, not a side effect of a task.
 
-Генератор — не витрина стиля: он собирает схему из чужих типов рефлексией и живёт по правилам форка. Правила ниже относятся к демону; для генератора обязательны только раздел «Стиль» и инструменты.
+The generator is not a style showcase: it builds the schema from third-party types by reflection and lives by the fork's rules. The rules below apply to the daemon; for the generator only the "Style" section and the tools are mandatory.
 
-## Пакеты
+## Packages
 
-`main.go` в корне модуля — тонкий: разбор флагов, сборка зависимостей, запуск, ожидание сигнала. Логики в нём нет, тестировать там нечего. Вспомогательные команды разработки живут в `cmd/<имя>/`: `cmd/contractgen` печатает контракт для панели, `cmd/rulesetsnap` — снимок каталога наборов, обе вызывает `Makefile`. В артефакт поставки они не попадают: бинарь демона собирается из корня модуля.
+`main.go` at the module root is thin: flag parsing, wiring dependencies, start, waiting for a signal. It has no logic and nothing to test. Development helper commands live in `cmd/<name>/`: `cmd/contractgen` prints the contract for the panel, `cmd/rulesetsnap` prints the rule set catalog snapshot; both are called by the `Makefile`. They do not get into the delivery artifact: the daemon binary is built from the module root.
 
-`internal/` режется по предмету, а не по техническому слою. `internal/apply`, `internal/config`, `internal/singbox` — да; `internal/handlers`, `internal/services`, `internal/models` — нет: такой распил размазывает одну задачу по трём пакетам и делает каждый из них зависимым от всех.
+`internal/` is split by subject, not by technical layer. `internal/apply`, `internal/config`, `internal/singbox`: yes; `internal/handlers`, `internal/services`, `internal/models`: no. Such a split smears one task across three packages and makes each of them depend on all the others.
 
-Имя пакета — существительное в единственном числе, без подчёркиваний и заглавных. Имя не повторяется в идентификаторах: `apply.Transaction`, а не `apply.ApplyTransaction`. Пакетов `util`, `common`, `helpers`, `base` не заводим — они собирают всё подряд и никогда не чистятся.
+A package name is a singular noun, without underscores or capitals. The name is not repeated in identifiers: `apply.Transaction`, not `apply.ApplyTransaction`. We do not create `util`, `common`, `helpers`, `base` packages: they collect everything and are never cleaned up.
 
-Каталог `pkg/` не заводим: публичной библиотеки проект не поставляет, а `internal/` даёт гарантию компилятора, что чужой код это не импортирует.
+We do not create a `pkg/` directory: the project ships no public library, and `internal/` gives a compiler guarantee that foreign code does not import it.
 
-## Границы
+## Boundaries
 
-Три границы менять в коде нельзя: расхождение правится решением, а не правкой на месте.
+These three boundaries must not be changed in code: a conflict is resolved by a decision, not by an in-place edit.
 
-| Граница                                             | Что это значит в коде                                                                                                             |
-| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| Демон не понимает содержимого конфига               | Тело запроса — `[]byte`. Разбор в структуры или `map[string]any` запрещён, единственная правка — вставка `experimental.clash_api` |
-| Валидация конфига — вызов `sing-box`, а не свой код | Собственных проверок содержимого нет; вывод бинаря отдаётся дословно                                                              |
-| Схема живёт на фронте                               | Модель конфига на Go не пишем — второй реализации схемы в проекте не будет                                                        |
+| Boundary                                                 | What it means in code                                                                                                                    |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| The daemon does not understand config contents           | The request body is `[]byte`. Parsing into structs or `map[string]any` is forbidden; the only edit is inserting `experimental.clash_api` |
+| Config validation is a `sing-box` call, not our own code | There are no own checks of the contents; the binary's output is passed on verbatim                                                       |
+| The schema lives on the frontend                         | We do not write a config model in Go: there will be no second schema implementation in the project                                       |
 
-## Зависимости внутри демона
+## Dependencies inside the daemon
 
-Зависимости передаются явно через конструктор, глобальных переменных и `init()` нет. Пакет `internal/httpapi` получает готовые интерфейсы, а не строит их сам:
+Dependencies are passed explicitly through the constructor; there are no global variables and no `init()`. The `internal/httpapi` package receives ready interfaces and does not build them itself:
 
 ```go
 type Applier interface {
@@ -59,49 +59,49 @@ type Server struct {
 func NewServer(applier Applier, log *slog.Logger) *Server { ... }
 ```
 
-Интерфейс объявляется на стороне потребителя и содержит только используемые методы. Возвращаются конкретные типы, а не интерфейсы, — вызывающий сам решит, чем ограничиться.
+An interface is declared on the consumer side and contains only the methods used. Functions return concrete types, not interfaces: the caller decides what to narrow to.
 
-DI-контейнеров и генераторов проводки не берём: граф зависимостей демона — десяток объектов, собираемых в `main` в тридцать строк.
+We do not use DI containers or wiring generators: the daemon's dependency graph is about ten objects, wired in `main` in thirty lines.
 
-## Стиль
+## Style
 
-`context.Context` — первым аргументом, в структурах не хранится. Функция, которая ходит на диск, в процесс или в сеть, принимает `ctx` и уважает отмену.
+`context.Context` goes first in the argument list and is not stored in structs. A function that touches the disk, a process or the network takes `ctx` and respects cancellation.
 
-Экспортируется минимум. Имена — по стандарту Go: `MixedCaps`, аббревиатуры целиком в одном регистре (`serveHTTP`, `apiURL`, `id`), геттеры без `Get`.
+Export the minimum. Names follow the Go standard: `MixedCaps`, abbreviations entirely in one case (`serveHTTP`, `apiURL`, `id`), getters without `Get`.
 
-Ошибки — возвращаемое значение, а не паника. `panic` допустим только на невозможном состоянии внутри процесса; в обработчике запроса и в цикле применения его быть не должно.
+Errors are a return value, not a panic. `panic` is allowed only for an impossible state inside the process; it must not appear in a request handler or in the apply loop.
 
-Комментарии — по правилу «Размещение технических знаний» из [AGENTS.md](../../../../AGENTS.md): godoc не пересказывает реализацию, а описывает то, чего не видно из сигнатуры. Пример существующего кода — [`apps/metaboxd/main.go:1`](../../main.go).
+Comments follow the "Placement of technical knowledge" rule in [AGENTS.md](../../../../AGENTS.md): godoc does not retell the implementation, it describes what is not visible from the signature. Example from existing code: [`apps/metaboxd/main.go:1`](../../main.go).
 
-Комментарий к пакету — один, в файле с именем пакета либо в `doc.go`, начинается с `Package <имя>`.
+There is one package comment, in the file named after the package or in `doc.go`, and it starts with `Package <name>`.
 
-## Конкурентность
+## Concurrency
 
-Один владелец на ресурс. Файлом конфига, бэкапом и состоянием транзакции владеет один объект; параллельный доступ снаружи закрыт его методами, а не мьютексом на стороне вызывающего. Второе применение при активной транзакции — ошибка контракта, а не гонка за файл.
+One owner per resource. The config file, the backup and the transaction state are owned by one object; outside parallel access is closed off by its methods, not by a mutex on the caller's side. A second apply during an active transaction is a contract error, not a race for the file.
 
-Горутина заводится только с ответом на три вопроса: кто её остановит, куда уйдёт её ошибка, кто дождётся завершения. `go func()` без владельца — утечка на устройстве, которое не перезагружают месяцами.
+A goroutine is started only with answers to three questions: who stops it, where its error goes, who waits for it to finish. `go func()` without an owner is a leak on a device that is not rebooted for months.
 
-Отмена — через `ctx`; таймер, переживающий перезапрос, живёт в состоянии транзакции на диске, а не только в памяти.
+Cancellation goes through `ctx`; a timer that must survive a restart lives in the transaction state on disk, not only in memory.
 
-## Флаги и конфигурация
+## Flags and configuration
 
-Конфигурация демона — флаги `flag`. Переменные окружения не заводим: procd-скрипт передаёт аргументы командой ([`package/etc/init.d/metaboxd`](../../package/etc/init.d/metaboxd)), и один способ настройки проще, чем два.
+The daemon is configured with `flag` flags. We do not add environment variables: the procd script passes arguments on the command line ([`package/etc/init.d/metaboxd`](../../package/etc/init.d/metaboxd)), and one way to configure is simpler than two.
 
-Значения по умолчанию — устройственные (`127.0.0.1:8080`, каталоги в `/etc`): демон, запущенный без аргументов на роутере, работает. Стенд и тесты передают свои значения явно.
+Defaults are device values (`127.0.0.1:8080`, directories in `/etc`): the daemon started on the router without arguments works. The test bench and tests pass their values explicitly.
 
-Флаги задают всё, что демон знает об устройстве: адрес, каталог и имя конфига, служебный каталог, пути к бинарю, init-скрипту и `ubus`, инстанс procd со sing-box, порт Clash API, окна применения и уровень логов ([`apps/metaboxd/main.go`](../../main.go)). Значения по умолчанию рассчитаны на службу sing-box из пакета панели — [`metabox-singbox`](../../package/etc/init.d/metabox-singbox) с инстансом `sing-box`; устройственные значения задаёт init-скрипт из [`apps/metaboxd/package/etc/init.d/metaboxd`](../../package/etc/init.d/metaboxd), а его настройки — UCI-раздел `metabox`.
+Flags set everything the daemon knows about the device: address, config directory and name, service directory, paths to the binary, the init script and `ubus`, the procd instance with sing-box, the Clash API port, apply windows and log level ([`apps/metaboxd/main.go`](../../main.go)). The defaults target the sing-box service from the panel's package, [`metabox-singbox`](../../package/etc/init.d/metabox-singbox) with the `sing-box` instance; device values are set by the init script [`apps/metaboxd/package/etc/init.d/metaboxd`](../../package/etc/init.d/metaboxd), and its settings by the `metabox` UCI section.
 
-## Инструменты
+## Tools
 
-| Что                | Команда                                        | Где ещё                                                                        |
-| ------------------ | ---------------------------------------------- | ------------------------------------------------------------------------------ |
-| Формат             | `gofmt -w`                                     | хук pre-commit проверяет `gofmt -l`                                            |
-| Статический анализ | `make lint` (golangci-lint v2, `govet` внутри) | CI, шаг `Go lint` (оба модуля); хук pre-commit гоняет `go vet` в обоих модулях |
-| Тесты              | `make test`                                    | хук pre-push. В CI те же прогоны идут отдельными шагами                        |
-| Схема              | `make schema`                                  | артефакт коммитится вместе с генератором                                       |
+| What            | Command                                        | Where else                                                                           |
+| --------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Format          | `gofmt -w`                                     | the pre-commit hook checks `gofmt -l`                                                |
+| Static analysis | `make lint` (golangci-lint v2, `govet` inside) | CI, step `Go lint` (both modules); the pre-commit hook runs `go vet` in both modules |
+| Tests           | `make test`                                    | pre-push hook. In CI the same runs are separate steps                                |
+| Schema          | `make schema`                                  | the artifact is committed together with the generator                                |
 
-Набор линтеров и все исключения — [`.golangci.yml`](../../../../.golangci.yml). Исключение добавляется с комментарием, объясняющим, почему правило неприменимо здесь, — иначе через полгода никто не восстановит причину.
+The linter set and all exclusions: [`.golangci.yml`](../../../../.golangci.yml). An exclusion is added with a comment explaining why the rule does not apply here; otherwise in half a year nobody will recover the reason.
 
-`go fix` в Go 1.26 получил набор модернизаторов и умеет переписывать код под новые API. Запускать его массово по репозиторию не нужно: это тот самый unrelated refactor. Точечно на своём диффе — можно.
+In Go 1.26 `go fix` got a set of modernizers and can rewrite code for new APIs. Do not run it over the whole repository: that is exactly an unrelated refactor. On your own diff, selectively, it is fine.
 
-Версия Go — в `.go-version`; `Makefile` экспортирует из неё `GOTOOLCHAIN`, CI читает тот же файл. Директива `go` в обоих `go.mod` объявляет ту же версию, но вниз не прижимает — поэтому сборка и линт идут через `make`, а прямой `go test ./...` работает на установленном Go, и его версия должна совпадать с `.go-version`. Сборка под устройство: `CGO_ENABLED=0`, `GOOS=linux`, `GOARCH=arm64`, `-ldflags "-s -w -X metabox/internal/version.Version=..."` ([`Makefile`](../../../../Makefile)).
+The Go version is in `.go-version`; the `Makefile` exports `GOTOOLCHAIN` from it, CI reads the same file. The `go` directive in both `go.mod` files declares the same version but does not pin it from below, so build and lint go through `make`, while a direct `go test ./...` runs on the installed Go, whose version must match `.go-version`. Device build: `CGO_ENABLED=0`, `GOOS=linux`, `GOARCH=arm64`, `-ldflags "-s -w -X metabox/internal/version.Version=..."` ([`Makefile`](../../../../Makefile)).

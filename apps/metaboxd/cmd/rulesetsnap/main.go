@@ -1,6 +1,6 @@
-// Command rulesetsnap собирает снимок каталога наборов, который встраивается в
-// бинарь демона. Снимок — то, с чем демон стартует, пока не сверился с
-// поставщиками сам: без него каталог на роутере без интернета был бы пуст.
+// Command rulesetsnap builds a snapshot of the rule set catalog that is embedded into
+// the daemon binary. The snapshot is what the daemon starts with before it has checked with
+// the providers itself: without it the catalog on a router without internet would be empty.
 package main
 
 import (

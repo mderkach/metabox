@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/ui';
 
-/** Пустое значение — выход через узел не проверяется: демон отдаёт эту строку пропуском. */
+/** Empty value: the outbound through a node is not checked; the daemon takes this string as a skip. */
 const NO_TARGET = '';
 
 export function DiagnosticsTargetSelect({

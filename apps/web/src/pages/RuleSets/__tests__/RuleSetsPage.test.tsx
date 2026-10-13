@@ -44,7 +44,7 @@ const CONFIG = JSON.stringify(
   2
 );
 
-/** Удалённый сет без кэша: недоступный поставщик обрывает старт sing-box. */
+/** A remote rule set without a cache: an unavailable provider aborts the sing-box start. */
 const CONFIG_WITHOUT_CACHE = JSON.stringify(
   {
     outbounds: [{ type: 'direct', tag: 'direct' }],
@@ -62,7 +62,7 @@ const CONFIG_WITHOUT_CACHE = JSON.stringify(
   2
 );
 
-/** Сеты без скачивания: кэш им не нужен, хотя его и нет. */
+/** Rule sets without a download: they do not need a cache, although there is none. */
 const CONFIG_WITHOUT_REMOTE = JSON.stringify(
   {
     outbounds: [{ type: 'direct', tag: 'direct' }],
@@ -79,22 +79,22 @@ const CONFIG_WITHOUT_REMOTE = JSON.stringify(
 
 const CACHE_NOTICE = 'Кэш сетов выключен';
 
-/** Шапка тоже строка таблицы, поэтому строк на единицу больше, чем наборов. */
+/** The header is also a table row, so there is one more row than rule sets. */
 const HEADER_ROWS = 1;
 
-describe('экран сетов', () => {
+describe('rule sets screen', () => {
   beforeEach(() => {
     ConfigDocumentState.getState().reset();
     server.use(
       http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(CONFIG)),
-      // Шапка экрана открывает историю версий, а бар применения опрашивает демона.
+      // The screen header opens the version history, and the apply bar polls the daemon.
       http.get(CONFIG_ENDPOINT.versions(), () => HttpResponse.json({ versions: [] })),
       http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE)),
       ...ruleSetHandlers
     );
   });
 
-  it('шапка называет колонки списка', async () => {
+  it('the header names the list columns', async () => {
     renderWithRouter(RuleSetsPage);
 
     const table = await screen.findByRole('table', { name: 'Подключённые сеты' });
@@ -106,7 +106,7 @@ describe('экран сетов', () => {
     ).toEqual(['Сет', 'Источник', 'Использование', 'Действия над строкой']);
   });
 
-  it('называет поставщика и вид списка по каталогу демона', async () => {
+  it('names the provider and list kind by the daemon catalog', async () => {
     renderWithRouter(RuleSetsPage);
 
     const table = await screen.findByRole('table', { name: 'Подключённые сеты' });
@@ -116,9 +116,9 @@ describe('экран сетов', () => {
     expect(rows[1]).toHaveTextContent('v2fly·geoip·ru');
   });
 
-  // Каталог нужен подсказкам и подписям, а не самому списку: без него наборы
-  // видны и удаляются.
-  it('при отказе каталога показывает список и говорит об отказе', async () => {
+  // The catalog is needed for hints and labels, not for the list itself: without it the rule sets
+  // are visible and removable.
+  it('on a catalog failure shows the list and reports the failure', async () => {
     server.use(http.get(RULE_SET_ENDPOINT.catalog(), () => HttpResponse.json({}, { status: 500 })));
 
     renderWithRouter(RuleSetsPage);
@@ -129,15 +129,15 @@ describe('экран сетов', () => {
     expect(screen.getByText('Не удалось получить каталог сетов')).toBeInTheDocument();
   });
 
-  // Сырое `24h` из конфига владелец роутера читать не обязан.
-  it('интервал обновления печатает словами', async () => {
+  // The router owner is not obliged to read the raw `24h` from the config.
+  it('prints the update interval in words', async () => {
     renderWithRouter(RuleSetsPage);
 
     expect(await screen.findByText('обновляется раз в сутки')).toBeInTheDocument();
     expect(screen.getByText('обновляется каждые 12 ч')).toBeInTheDocument();
   });
 
-  it('отметка использования ведёт на правила, отобранные по сету', async () => {
+  it('the usage mark leads to the rules filtered by the rule set', async () => {
     renderWithRouter(RuleSetsPage);
 
     const table = await screen.findByRole('table', { name: 'Подключённые сеты' });
@@ -146,15 +146,15 @@ describe('экран сетов', () => {
       'href',
       '/config?rule_set=geosite-google'
     );
-    // Неиспользуемый сет — тот, ради которого ссылка и заведена: следующий шаг
-    // после подключения — сослаться на него из правила.
+    // An unused rule set is the one the link exists for: the next step
+    // after connecting is to refer to it from a rule.
     expect(within(table).getByRole('link', { name: 'ни в одном правиле' })).toHaveAttribute(
       'href',
       '/config?rule_set=geoip-ru'
     );
   });
 
-  it('удаление сета требует подтверждения и называет правила, которые на него ссылаются', async () => {
+  it('removing a rule set requires confirmation and names the rules that refer to it', async () => {
     const user = userEvent.setup();
 
     renderWithRouter(RuleSetsPage);
@@ -175,7 +175,7 @@ describe('экран сетов', () => {
     ]);
   });
 
-  it('отмена подтверждения оставляет сет на месте', async () => {
+  it('cancelling the confirmation leaves the rule set in place', async () => {
     const user = userEvent.setup();
 
     renderWithRouter(RuleSetsPage);
@@ -194,7 +194,7 @@ describe('экран сетов', () => {
     );
   });
 
-  it('поиск отбирает строки и сбрасывается кнопкой пустого экрана', async () => {
+  it('search filters rows and is reset by the empty screen button', async () => {
     const user = userEvent.setup();
 
     renderWithRouter(RuleSetsPage);
@@ -221,7 +221,7 @@ describe('экран сетов', () => {
   });
 });
 
-describe('панель сета', () => {
+describe('rule set panel', () => {
   beforeEach(() => {
     ConfigDocumentState.getState().reset();
     server.use(
@@ -232,7 +232,7 @@ describe('панель сета', () => {
     );
   });
 
-  it('кнопка тулбара открывает форму в панели рядом со списком и переводит фокус на её заголовок', async () => {
+  it('the toolbar button opens the form in a panel next to the list and moves focus to its heading', async () => {
     const user = userEvent.setup();
 
     renderWithRouter(RuleSetsPage);
@@ -247,11 +247,11 @@ describe('панель сета', () => {
     expect(within(panel).getByRole('heading', { name: 'Новый сет' })).toHaveFocus();
     expect(within(panel).getByLabelText('Категория')).toBeInTheDocument();
     expect(open).toHaveAttribute('aria-expanded', 'true');
-    // Форма не встаёт в карточку списка: строки остаются на месте.
+    // The form does not go into the list card: the rows stay in place.
     expect(within(table).queryByLabelText('Категория')).not.toBeInTheDocument();
   });
 
-  it('Escape закрывает панель и возвращает фокус на кнопку, которая её открыла', async () => {
+  it('Escape closes the panel and returns focus to the button that opened it', async () => {
     const user = userEvent.setup();
 
     renderWithRouter(RuleSetsPage);
@@ -271,7 +271,7 @@ describe('панель сета', () => {
     expect(open).toHaveFocus();
   });
 
-  it('свой список из панели встаёт в список, а панель закрывается', async () => {
+  it('a custom list from the panel lands in the list, and the panel closes', async () => {
     const user = userEvent.setup();
 
     renderWithRouter(RuleSetsPage);
@@ -293,7 +293,7 @@ describe('панель сета', () => {
     expect(within(table).getAllByRole('row')).toHaveLength(3 + HEADER_ROWS);
     expect(within(table).getByText('my-list')).toBeInTheDocument();
   });
-  it('карандаш строки открывает правку сета в панели, сохранение пишет одно поле', async () => {
+  it('the row pencil opens a rule set edit in the panel, saving writes one field', async () => {
     const user = userEvent.setup();
 
     renderWithRouter(RuleSetsPage);
@@ -320,7 +320,7 @@ describe('панель сета', () => {
   });
 });
 
-describe('панель сета на узком экране', () => {
+describe('rule set panel on a narrow screen', () => {
   beforeEach(() => {
     ConfigDocumentState.getState().reset();
     server.use(
@@ -343,7 +343,7 @@ describe('панель сета на узком экране', () => {
     vi.unstubAllGlobals();
   });
 
-  it('открывает форму листом поверх списка, а не рядом с ним', async () => {
+  it('opens the form as a sheet over the list, not next to it', async () => {
     const user = userEvent.setup();
 
     renderWithRouter(RuleSetsPage);
@@ -363,7 +363,7 @@ describe('панель сета на узком экране', () => {
   });
 });
 
-describe('предупреждение о кэше сетов', () => {
+describe('rule set cache warning', () => {
   beforeEach(() => {
     ConfigDocumentState.getState().reset();
     server.use(
@@ -373,7 +373,7 @@ describe('предупреждение о кэше сетов', () => {
     );
   });
 
-  it('remote-сет без experimental.cache_file: кнопка включает кэш в черновике, и предупреждение гаснет', async () => {
+  it('a remote rule set without experimental.cache_file: the button enables the cache in the draft, and the warning disappears', async () => {
     server.use(http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(CONFIG_WITHOUT_CACHE)));
 
     const user = userEvent.setup();
@@ -387,13 +387,13 @@ describe('предупреждение о кэше сетов', () => {
     const draft = ConfigDocumentState.getState().draft ?? '';
 
     expect(findValue(draft, ['experimental'])).toEqual({ cache_file: { enabled: true } });
-    // Секция дописана к файлу, а не собрана заново: остальное не тронуто.
+    // The section is appended to the file, not built anew: the rest is untouched.
     expect(findValue(draft, ['route'])).toEqual(findValue(CONFIG_WITHOUT_CACHE, ['route']));
     expect(findValue(draft, ['outbounds'])).toEqual(findValue(CONFIG_WITHOUT_CACHE, ['outbounds']));
     expect(screen.queryByText(CACHE_NOTICE)).not.toBeInTheDocument();
   });
 
-  it('документ без remote-сетов предупреждения не показывает', async () => {
+  it('a document without remote rule sets shows no warning', async () => {
     server.use(http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(CONFIG_WITHOUT_REMOTE)));
 
     renderWithRouter(RuleSetsPage);

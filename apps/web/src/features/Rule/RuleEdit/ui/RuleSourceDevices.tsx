@@ -10,14 +10,14 @@ import { conditionLines, RULE_CONDITION, type RuleEditModel } from '../model/Rul
 
 const FIELD = `conditions.${RULE_CONDITION.SourceIpCidr}` as const;
 
-/** Маска одного адреса: правило по устройству — это правило по его адресу целиком. */
+/** Mask of one address: a rule by device is a rule by its whole address. */
 const HOST_PREFIX = { V4: '/32', V6: '/128' } as const;
 
 function toHostCidr(ip: string): string {
   return `${ip}${ip.includes(':') ? HOST_PREFIX.V6 : HOST_PREFIX.V4}`;
 }
 
-/** Адрес строки условия, если строка — ровно один хост; подсеть устройством не считается. */
+/** Address of a condition line if the line is exactly one host; a subnet does not count as a device. */
 function toHostIp(line: string): string {
   return line.endsWith(HOST_PREFIX.V4) || line.endsWith(HOST_PREFIX.V6) ? line.slice(0, line.lastIndexOf('/')) : line;
 }
@@ -25,7 +25,7 @@ function toHostIp(line: string): string {
 interface SourceLine {
   line: string;
   label: string;
-  /** Адрес выдан динамической арендой и может смениться. */
+  /** The address was issued by a dynamic lease and may change. */
   dynamic: boolean;
 }
 
@@ -39,10 +39,10 @@ function toSourceLines(text: string, devices: DeviceIndex): SourceLine[] {
 }
 
 /**
- * Выбор устройства для условия по источнику. sing-box сопоставляет источник по
- * адресу, поэтому в узел уходит `source_ip_cidr` с адресом устройства, а имя
- * остаётся подписью в форме. Устройство с динамической арендой может получить
- * другой адрес, и правило перестанет его узнавать — форма об этом предупреждает.
+ * Device choice for a source condition. sing-box matches the source by address,
+ * so `source_ip_cidr` with the device address goes into the node, while the
+ * name stays a label in the form. A device with a dynamic lease may get another
+ * address, and the rule will stop recognizing it: the form warns about this.
  */
 export function RuleSourceDevices() {
   const { t } = useTranslation('features/Rule/RuleEdit');

@@ -7,9 +7,9 @@ import (
 	"testing"
 )
 
-// Схема должна собираться целиком: любой тип со своей сериализацией без
-// правила обрывает генерацию, поэтому успешный прогон и есть проверка
-// полноты таблицы переопределений.
+// The schema must build whole: any type with its own serialization and no
+// rule aborts generation, so a successful run is itself the check
+// of override table completeness.
 func TestGenerate(t *testing.T) {
 	out, err := generate()
 	if err != nil {
@@ -24,36 +24,36 @@ func TestGenerate(t *testing.T) {
 		"export type Config",
 	} {
 		if !strings.Contains(out, want) {
-			t.Errorf("в схеме нет %q", want)
+			t.Errorf("schema lacks %q", want)
 		}
 	}
 
-	// Трансформ превращает ZodObject в ZodPipe: пропадают .extend, .omit и
-	// .pick, на которых собрана схема правил, а z.toJSONSchema перестаёт
-	// печатать выходную сторону — авторендерер получит пустой узел вместо поля
+	// A transform turns ZodObject into ZodPipe: .extend, .omit and
+	// .pick, on which the rule schema is built, disappear, and z.toJSONSchema stops
+	// printing the output side, so the auto-renderer would get an empty node instead of a field
 	//.
 	if strings.Contains(out, ".transform(") {
-		t.Error("в генерируемой схеме есть .transform(): ломаются .extend и z.toJSONSchema")
+		t.Error("the generated schema has .transform(): .extend and z.toJSONSchema break")
 	}
 }
 
-// Описания полей форка доходят до схемы: подсказки видит и разработчик, и
-// авторендерер непокрытых узлов (Form&Validation).
+// Fork field descriptions reach the schema: hints are seen by both the developer and
+// the auto-renderer of uncovered nodes (Form&Validation).
 func TestGenerateCarriesDocs(t *testing.T) {
 	out, err := generate()
 	if err != nil {
-		t.Fatalf("генерация: %v", err)
+		t.Fatalf("generation: %v", err)
 	}
 
 	if !strings.Contains(out, "/** Deprecated:") {
-		t.Error("в схеме нет ни одного описания поля: godoc форка не прочитан")
+		t.Error("the schema has no field description: the fork godoc was not read")
 	}
 }
 
-// Встроенные структуры уплощаются и внутри union'а по дискриминатору. У
-// клиента HTTP настройки набора соединения и TLS приходят встраиванием, и без
-// них строгая схема отвергала бы конфиг с `http_client.detour`, а панель
-// помечала бы такой узел как непокрытый.
+// Embedded structs are flattened inside a union by discriminator too. In
+// the HTTP client the connection set and TLS settings come by embedding, and without
+// them the strict schema would reject a config with `http_client.detour`, and the panel
+// would mark such a node as uncovered.
 func TestGenerateFlattensEmbeddedInTaggedUnion(t *testing.T) {
 	out, err := generate()
 	if err != nil {
@@ -64,13 +64,13 @@ func TestGenerateFlattensEmbeddedInTaggedUnion(t *testing.T) {
 
 	for _, want := range []string{"detour:", "bind_interface:", "get tls()"} {
 		if !strings.Contains(body, want) {
-			t.Errorf("в HTTPClientSchema нет %q: встроенные поля потеряны", want)
+			t.Errorf("HTTPClientSchema lacks %q: embedded fields are lost", want)
 		}
 	}
 }
 
-// schemaBody вырезает объявление схемы по имени: искать подстроку по всему
-// файлу бессмысленно — те же поля есть у десятков других типов.
+// schemaBody cuts out a schema declaration by name: searching a substring over the whole
+// file is pointless, the same fields exist in dozens of other types.
 func schemaBody(t *testing.T, out, name string) string {
 	t.Helper()
 
@@ -78,7 +78,7 @@ func schemaBody(t *testing.T, out, name string) string {
 
 	start := strings.Index(out, marker+name+" = ")
 	if start == -1 {
-		t.Fatalf("в схеме нет %s", name)
+		t.Fatalf("schema lacks %s", name)
 	}
 
 	rest := out[start+len(marker):]
@@ -91,8 +91,8 @@ func schemaBody(t *testing.T, out, name string) string {
 	return rest[:end]
 }
 
-// Генерация должна быть детерминированной: иначе make schema даёт разный
-// файл на одном и том же форке и diff перестаёт что-либо значить.
+// Generation must be deterministic: otherwise make schema gives a different
+// file on the same fork and the diff stops meaning anything.
 func TestGenerateIsStable(t *testing.T) {
 	first, err := generate()
 	if err != nil {
@@ -103,13 +103,13 @@ func TestGenerateIsStable(t *testing.T) {
 		t.Fatal(err)
 	}
 	if first != second {
-		t.Error("два прогона генератора дали разный результат")
+		t.Error("two generator runs gave different results")
 	}
 }
 
-// Примеры конфигов из форка — готовый корпус для проверки, что схема
-// принимает реальные конфиги. Тест только собирает список: разбор
-// идёт на стороне фронта, где схема исполняется.
+// Config examples from the fork are a ready corpus for checking that the schema
+// accepts real configs. The test only collects the list: parsing
+// happens on the frontend side, where the schema is executed.
 func TestForkExamplesArePresent(t *testing.T) {
 	dir, err := forkDir()
 	if err != nil {
@@ -131,7 +131,7 @@ func TestForkExamplesArePresent(t *testing.T) {
 	}
 
 	if len(configs) == 0 {
-		t.Fatal("в форке не нашлось примеров конфигов")
+		t.Fatal("no config examples found in the fork")
 	}
-	t.Logf("примеров конфигов в форке: %d", len(configs))
+	t.Logf("config examples in the fork: %d", len(configs))
 }

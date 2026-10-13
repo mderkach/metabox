@@ -5,21 +5,21 @@ import type { RouteExplanationWire, RuleHitsWire } from '../api/Route.schema';
 import { ROUTE_DRIFTED_CHAIN_FIXTURE, ROUTE_PROCESS_RULES_FIXTURE, ROUTE_UNKNOWN_FIXTURE } from './Route.fixture';
 
 /**
- * Адрес расшифровывается обратно: идентификатор соединения в константе демона
- * проходит через `encodeURIComponent`, и двоеточие шаблона msw превратилось бы
- * в `%3A`, мимо которого не совпал бы ни один запрос.
+ * The address is decoded back: the connection identifier in the daemon constant
+ * passes through `encodeURIComponent`, and the msw template colon would become
+ * `%3A`, which no request would match.
  */
 const ROUTE_PATTERN = decodeURIComponent(ROUTE_ENDPOINT.explanation(':id'));
 
-/** Три часа работы демона: окно счёта в подвале списка правил. */
+/** Three hours of daemon uptime: the count window in the rule list footer. */
 const HITS_SECONDS = 10_800;
 
-/** Каждое такое по счёту правило не срабатывало: на стенде виден и ноль. */
+/** Every rule with this ordinal did not fire: the test bench shows a zero too. */
 const SILENT_EVERY = 5;
 const HITS_STEP = 37;
 const FINAL_HITS = 12;
 
-/** Как у демона: в списке соединений core видны только маршруты в outbound. */
+/** As in the daemon: the core connection list shows only routes to an outbound. */
 function isCounted(rule: unknown): boolean {
   const action: unknown = typeof rule === 'object' && rule !== null ? Reflect.get(rule, 'action') : undefined;
 
@@ -27,9 +27,9 @@ function isCounted(rule: unknown): boolean {
 }
 
 /**
- * Счёт по правилу на каждый узел `route.rules`: число правил процесса
- * совпадает с файлом, как на устройстве после применения. Правила приходят
- * снаружи — конфиг стенда лежит в соседнем слайсе.
+ * Per-rule count for every `route.rules` node: the number of process rules
+ * matches the file, as on the device after apply. Rules come
+ * from outside: the test bench config lives in a neighboring slice.
  */
 function toRuleHitsFixture(rules: readonly unknown[]): RuleHitsWire {
   return {
@@ -47,7 +47,7 @@ export function createRuleHitsHandler(rules: readonly unknown[]) {
   return http.get(ROUTE_ENDPOINT.hits(), () => HttpResponse.json(toRuleHitsFixture(rules)));
 }
 
-/** Поля строки соединения, из которых демон собирает объяснение. */
+/** Connection row fields from which the daemon builds the explanation. */
 interface ExplainedConnection {
   id: string;
   rule: string;
@@ -57,9 +57,9 @@ interface ExplainedConnection {
 }
 
 /**
- * Объяснение, согласованное со строкой, как его собирает демон: правило
- * ищется в списке процесса по условиям и действию, цепочка — та же, что у
- * строки.
+ * An explanation consistent with the row, as the daemon builds it: the rule
+ * is looked up in the process list by conditions and action, the chain is the same as in
+ * the row.
  */
 function toRouteExplanationFixture(connection: ExplainedConnection): RouteExplanationWire {
   const chain = { origin: 'observed', nodes: [...connection.chain] };
@@ -88,14 +88,14 @@ function toRouteExplanationFixture(connection: ExplainedConnection): RouteExplan
 }
 
 /**
- * Объяснение по `connection_id` из карты, собранной по снимку соединений:
- * панель у каждой строки своя, а цепочка совпадает с цепочкой строки. Одно
- * соединение получает разошедшуюся цепочку — штатный случай ADR-0007.
+ * Explanation by `connection_id` from a map built from the connections snapshot:
+ * the panel has its own per row, and the chain matches the row chain. One
+ * connection gets a diverged chain: the regular case of ADR-0007.
  *
- * Соединения приходят снаружи — снимок лежит в соседнем слайсе. Размноженные
- * снимки дев-стенда и тестов дописывают к идентификатору образца суффикс,
- * поэтому образец ищется и по префиксу. Незнакомый идентификатор — 404, как у
- * демона, когда соединение уже закрылось.
+ * Connections come from outside: the snapshot lives in a neighboring slice. Multiplied
+ * snapshots of the dev bench and tests append a suffix to the sample identifier,
+ * so a sample is looked up by prefix too. An unknown identifier is 404, as in the
+ * daemon when the connection is already closed.
  */
 export function createRouteHandlers(connections: readonly ExplainedConnection[]) {
   const explanations = new Map(connections.map((connection) => [connection.id, toRouteExplanationFixture(connection)]));

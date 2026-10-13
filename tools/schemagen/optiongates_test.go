@@ -6,8 +6,8 @@ import (
 	"testing"
 )
 
-// Таблица опций записана руками, поэтому проверяется её растяжка: заглушка
-// каждого тега существует в исходниках и стоит под условием «сборка без тега».
+// The option table is written by hand, so its consistency is checked: the stub
+// of each tag exists in the sources and stands under the "build without the tag" condition.
 func TestBuildOptionGates(t *testing.T) {
 	gates, err := buildOptionGates()
 	if err != nil {
@@ -22,12 +22,12 @@ func TestBuildOptionGates(t *testing.T) {
 	}
 
 	if len(gates) != len(want) {
-		t.Fatalf("в таблице %d опций, ожидали %d", len(gates), len(want))
+		t.Fatalf("the table has %d options, expected %d", len(gates), len(want))
 	}
 
 	for _, gate := range gates {
 		if want[gate.option] != gate.tag {
-			t.Errorf("%s: тег %q, ожидали %q", gate.option, gate.tag, want[gate.option])
+			t.Errorf("%s: tag %q, expected %q", gate.option, gate.tag, want[gate.option])
 		}
 	}
 }
@@ -38,10 +38,10 @@ func TestCheckStub(t *testing.T) {
 		source string
 		wantOK bool
 	}{
-		{"заглушка под отрицанием тега", "//go:build !with_x\n\npackage stub\n", true},
-		{"файл под самим тегом — не заглушка", "//go:build with_x\n\npackage stub\n", false},
-		{"файл без условия сборки", "package stub\n", false},
-		{"условие про другой тег", "//go:build !with_y\n\npackage stub\n", false},
+		{"stub under the tag negation", "//go:build !with_x\n\npackage stub\n", true},
+		{"a file under the tag itself is not a stub", "//go:build with_x\n\npackage stub\n", false},
+		{"file without a build condition", "package stub\n", false},
+		{"condition about another tag", "//go:build !with_y\n\npackage stub\n", false},
 	}
 
 	for _, tt := range tests {
@@ -53,10 +53,10 @@ func TestCheckStub(t *testing.T) {
 
 			err := checkStub(path, "with_x")
 			if tt.wantOK && err != nil {
-				t.Errorf("заглушка отвергнута: %v", err)
+				t.Errorf("stub rejected: %v", err)
 			}
 			if !tt.wantOK && err == nil {
-				t.Error("файл принят заглушкой, ожидали отказ")
+				t.Error("file accepted as a stub, expected a rejection")
 			}
 		})
 	}

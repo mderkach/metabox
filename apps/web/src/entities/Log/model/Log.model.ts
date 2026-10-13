@@ -4,18 +4,18 @@ export type LogLevel = (typeof LEVEL)[number];
 
 export type LogSource = (typeof SOURCE)[number];
 
-/** Уровни от подробного к аварийному: в этом порядке их перечисляет фильтр. */
+/** Levels from verbose to critical: the filter lists them in this order. */
 export const LOG_LEVELS: readonly LogLevel[] = LEVEL;
 
-/** Уровень экрана при первом заходе: `trace` и `debug` на живом роутере заливают хвост соединениями. */
+/** Screen level on first visit: `trace` and `debug` on a live router flood the tail with connections. */
 export const DEFAULT_LOG_LEVEL: LogLevel = 'info';
 
-/** Сколько строк хвоста просит экран. Потолок демона — 1000. */
+/** How many tail lines the screen asks for. The daemon ceiling is 1000. */
 export const LOG_TAIL_LINES = 200;
 
 /**
- * Сколько строк держит экран — хвост и поток вместе. Старые выпадают: историю
- * глубже держит logd или файл лога, а не вкладка.
+ * How many lines the screen keeps, tail and stream together. Old ones drop out:
+ * deeper history is held by logd or the log file, not the tab.
  */
 export const LOG_LIMIT = 2000;
 
@@ -25,17 +25,17 @@ export const LOG_SOURCE = {
 } as const satisfies Record<string, LogSource>;
 
 export interface LogEntry {
-  /** `null` — метки у строки нет. До синхронизации NTP метки роутера в прошлом. */
+  /** `null` means the line has no timestamp. Before NTP sync router timestamps are in the past. */
   time: Date | null;
-  /** `null` — уровень не разобран: продолжение многострочного сообщения, стек паники. */
+  /** `null` means the level was not parsed: a continuation of a multi-line message, a panic stack. */
   level: LogLevel | null;
   message: string;
 }
 
 export interface LogTail {
-  /** Строка, а не `LogSource`: источник, которого панель не знает, показывается как пришёл. */
+  /** A string, not `LogSource`: a source the panel does not know is shown as it came. */
   source: string;
-  /** Отметка последней очистки; `null` — очистки не было с запуска демона. */
+  /** Last clear mark; `null` means there has been no clear since the daemon started. */
   since: Date | null;
   entries: LogEntry[];
 }
@@ -44,17 +44,18 @@ export function isLogLevel(value: string): value is LogLevel {
   return LEVEL.some((level) => level === value);
 }
 
-/** Строка потока с номером: по разрыву номеров видна потеря строк. */
+/** Stream line with a number: a gap in numbers shows lost lines. */
 export interface LogEvent {
   seq: number;
   entry: LogEntry;
 }
 
 /**
- * Состояние потока. `Reconnecting` — демон отказал в потоке (лимит потоков,
- * лог недоступен) или соединение оборвалось без переподключения, и экран ждёт
- * следующей попытки. `Closed` — попытки кончились, дальше только вручную.
- * `EventSource` кода ответа не отдаёт, поэтому причину экран не различает.
+ * Stream state. `Reconnecting` means the daemon refused the stream (stream
+ * limit, log unavailable) or the connection broke without reconnecting, and the
+ * screen waits for the next attempt. `Closed` means the attempts ran out, and
+ * only manual from here. `EventSource` does not serve the response code, so the
+ * screen cannot tell the cause.
  */
 export const LOG_STREAM_STATUS = {
   Connecting: 'connecting',
@@ -86,14 +87,15 @@ function isSeam(tail: readonly LogEntry[], streamed: readonly LogEntry[], overla
 }
 
 /**
- * Хвост и строки потока одним списком, без дублей на стыке.
+ * Tail and stream lines as one list, without duplicates at the seam.
  *
- * Хвост запрашивается после открытия потока, поэтому его конец может
- * повторять начало потока: строки, пришедшие потоком, пока шёл запрос. Номеров
- * у строк хвоста нет, и стык — самое длинное совпадение конца хвоста с началом
- * потока. Строка, которую sing-box повторил в ту же секунду, на стыке от дубля
- * не отличается и снимается вместе с ним. Если потоком до ответа хвоста
- * пришло больше строк, чем в хвосте, стыка нет, и хвост повторится целиком.
+ * The tail is requested after the stream opens, so its end may repeat the start
+ * of the stream: lines that came through the stream while the request was
+ * running. Tail lines have no numbers, and the seam is the longest match of the
+ * tail end with the stream start. A line that sing-box repeated in the same
+ * second cannot be told from a duplicate at the seam and is removed with it. If
+ * more lines came through the stream before the tail response than the tail
+ * holds, there is no seam, and the tail repeats entirely.
  */
 export function mergeLogEntries(tail: readonly LogEntry[], streamed: readonly LogEntry[]): LogEntry[] {
   for (let overlap = Math.min(tail.length, streamed.length); overlap > 0; overlap -= 1) {

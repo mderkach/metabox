@@ -1,62 +1,62 @@
-# Архитектура и стайлгайд фронтенда
+# Frontend architecture and style guide
 
-Структура `apps/web/src` и правила написания кода.
+The structure of `apps/web/src` and the rules for writing code.
 
-## Методологии
+## Methodologies
 
-Структура — [Feature-Sliced Design](https://feature-sliced.design/ru/docs/get-started/overview). Имена слайсов берутся из доменных понятий конфига sing-box (`Inbound`, `Outbound`, `Route`, `RuleSet`): единый язык кода и предметной области, как того требует DDD (domain-driven design — проектирование от предметной области).
+The structure is [Feature-Sliced Design](https://feature-sliced.design/ru/docs/get-started/overview). Slice names come from the domain concepts of the sing-box config (`Inbound`, `Outbound`, `Route`, `RuleSet`): one language for the code and the domain, as DDD (domain-driven design) requires.
 
-### Распределение обязанностей
+### Assignment of responsibilities
 
-SOLID (пять принципов объектного проектирования) и GRASP (general responsibility assignment software patterns — девять шаблонов назначения обязанностей) читаются здесь как правила размещения кода. Целевые формулировки: часть относится к модулям, которых ещё нет.
+SOLID (five principles of object design) and GRASP (general responsibility assignment software patterns, nine patterns for assigning responsibilities) are read here as rules for placing code. These are target statements: some of them apply to modules that do not exist yet.
 
 **SOLID**
 
-- **Единственная ответственность** (SRP — single responsibility principle). Слайс отвечает за одну предметную область, сегмент — за один вид кода. Компонент, который сам запрашивает данные, сам рисует и сам валидирует, разносится по `api`, `ui`, `model`.
-- **Открытость/закрытость** (OCP — open-closed principle). Новый тип узла схемы добавляется формой в своём слайсе; авторендерер и каркас экрана при этом не правятся.
-- **Подстановка Лисков** (LSP — liskov substitution principle). Реализация подставляется вместо контракта, не ослабляя его: любой вариант дискриминированного union схемы обрабатывается кодом, который принимает узел, а новый адаптер версии схемы встаёт на место старого без правок в вызывающем коде.
-- **Разделение интерфейсов** (ISP — interface segregation principle). Наружу через `index.ts` уходит только то, что нужно потребителю; остальная глубина слайса закрыта Public API, а соседний слайс получает свой узкий срез через `@x`.
-- **Инверсия зависимостей** (DIP — dependency inversion principle). Экраны зависят от внутренней модели, а не от схемы форка. Ломающее изменение схемы правит `api`-сегмент своего слайса и не доходит до экранов — на этом стоит трёхслойная модель приложения.
+- **Single responsibility** (SRP). A slice is responsible for one domain area, a segment for one kind of code. A component that fetches data itself, draws itself and validates itself is split across `api`, `ui`, `model`.
+- **Open/closed** (OCP). A new schema node type is added as a form in its own slice; the autorenderer and the screen frame are not edited for it.
+- **Liskov substitution** (LSP). An implementation is substituted for the contract without weakening it: any variant of a discriminated union of the schema is handled by code that accepts the node, and a new schema version adapter takes the place of the old one without edits in the calling code.
+- **Interface segregation** (ISP). Only what the consumer needs goes out through `index.ts`; the rest of the slice depth is closed by the Public API, and a neighbouring slice gets its own narrow cut through `@x`.
+- **Dependency inversion** (DIP). Screens depend on the internal model, not on the fork's schema. A breaking schema change edits the `api` segment of its slice and does not reach the screens: the application's three-layer model rests on this.
 
 **GRASP**
 
-- **Информационный эксперт.** Логика живёт там, где данные: разбор, валидация и инварианты конфига — в `entities/*/model`, а не в компоненте, который их показывает.
-- **Создатель.** Модель создаёт тот слайс, который ею владеет: `Rule` собирается в `entities/Rule`, а не в форме, которая его заполняет. Query-опции и ключи собираются фабриками в сегменте `api` своего слайса.
-- **Контроллер.** Сценарий пользователя обрабатывает слайс `features/*`, страница только компонует. Обработчик в `pages/*`, знающий про формат запроса, — ошибка размещения.
-- **Слабое зацепление.** Слайс не знает о соседях: связь только через нижние слои, `@x` или общий стор. Прямой импорт соседнего слайса ловит линтер.
-- **Высокая связность.** Сегмент держит один вид кода, слайс — одну область. Разросшийся `lib`, в котором лежит всё подряд, разбивается, а не пополняется.
-- **Полиморфизм.** Ветвление по типу узла — таблица «тип → компонент» в авторендерере, а не цепочка `if` по `type`. Новый тип добавляется записью в таблицу.
-- **Чистая выдумка.** Модуль без прообраза в домене заводится осознанно и живёт в `shared`: `shared/lib/state` (`stateCreator`, `createReactSelectors`), `ApiClient` в `shared/api`. В `entities` таких модулей нет.
-- **Посредник.** Между чужим форматом и моделью приложения стоит граница «схема — адаптер»: схема в `api` описывает DTO, адаптер в `model` переводит его в модель и переносит переименования и миграции полей, обе стороны друг о друге не знают.
-- **Устойчивость к изменениям.** Точки нестабильности изолируются: схема форка — сегментами `api` и `model` слайсов `Config` и `Rule`, Clash API — теми же сегментами слайсов `Connection`, `Proxy` и `Daemon`, зависимость от shadcn — вендорной зоной `shared/ui`.
+- **Information expert.** Logic lives where the data is: parsing, validation and config invariants are in `entities/*/model`, not in the component that shows them.
+- **Creator.** A model is created by the slice that owns it: `Rule` is assembled in `entities/Rule`, not in the form that fills it in. Query options and keys are assembled by factories in the `api` segment of their slice.
+- **Controller.** A user scenario is handled by a `features/*` slice, the page only composes. A handler in `pages/*` that knows the request format is a placement error.
+- **Low coupling.** A slice does not know its neighbours: the connection goes only through lower layers, `@x` or a shared store. The linter catches a direct import of a neighbouring slice.
+- **High cohesion.** A segment holds one kind of code, a slice one area. An overgrown `lib` that holds everything is split, not extended.
+- **Polymorphism.** Branching by node type is a "type → component" table in the autorenderer, not an `if` chain over `type`. A new type is added by an entry in the table.
+- **Pure fabrication.** A module with no counterpart in the domain is created deliberately and lives in `shared`: `shared/lib/state` (`stateCreator`, `createReactSelectors`), `ApiClient` in `shared/api`. There are no such modules in `entities`.
+- **Indirection.** Between a foreign format and the application model stands the "schema / adapter" boundary: the schema in `api` describes the DTO, the adapter in `model` converts it into the model and carries field renames and migrations; neither side knows about the other.
+- **Protected variations.** Points of instability are isolated: the fork schema by the `api` and `model` segments of the `Config` and `Rule` slices, the Clash API by the same segments of the `Connection`, `Proxy` and `Daemon` slices, the dependency on shadcn by the `shared/ui` vendor zone.
 
 ## FSD
 
-### Слои
+### Layers
 
-Набор слоёв урезан: экранов десять. Пустой слой авансом не заводится.
+The layer set is trimmed: there are ten screens. An empty layer is not created in advance.
 
-| Слой        | Назначение                                                                                                        | Заводим            |
-| ----------- | ----------------------------------------------------------------------------------------------------------------- | ------------------ |
-| `app/`      | запуск: роутер, провайдеры, глобальные стили, точка входа                                                         | сразу              |
-| `pages/`    | экраны роутера (Editor, RuleSets, RawConfig, Section, Overview, Proxies, Connections, Devices, Logs, Diagnostics) | сразу              |
-| `widgets/`  | самодостаточные куски экрана: дерево конфига, панель дифа, таблица соединений                                     | по мере надобности |
-| `features/` | действия пользователя: `Config/ConfigApply`, `Rule/RuleEdit`, `Connection/ConnectionClose`                        | по мере надобности |
-| `entities/` | доменные сущности: `Config`, `Rule`, `RuleSet`, `Route`, `Proxy`, `Connection`, `Daemon`, `Device`, `Log`, `Diag` | сразу              |
-| `shared/`   | переиспользуемый код без доменной специфики: примитивы UI, http-клиент, хелперы                                   | сразу              |
+| Layer       | Purpose                                                                                                           | Created        |
+| ----------- | ----------------------------------------------------------------------------------------------------------------- | -------------- |
+| `app/`      | startup: router, providers, global styles, entry point                                                            | from the start |
+| `pages/`    | router screens (Editor, RuleSets, RawConfig, Section, Overview, Proxies, Connections, Devices, Logs, Diagnostics) | from the start |
+| `widgets/`  | self-contained parts of a screen: the config tree, the diff panel, the connections table                          | as needed      |
+| `features/` | user actions: `Config/ConfigApply`, `Rule/RuleEdit`, `Connection/ConnectionClose`                                 | as needed      |
+| `entities/` | domain entities: `Config`, `Rule`, `RuleSet`, `Route`, `Proxy`, `Connection`, `Daemon`, `Device`, `Log`, `Diag`   | from the start |
+| `shared/`   | reusable code without domain specifics: UI primitives, the http client, helpers                                   | from the start |
 
-`app` и `shared` слайсов не имеют — они состоят из сегментов напрямую.
+`app` and `shared` have no slices: they consist of segments directly.
 
-### Слайсы
+### Slices
 
-Слайс — предметная область. Слайсы **не импортируют другие слайсы того же слоя**: `features/RuleAdd` не может импортировать `features/RuleReorder`.
+A slice is a domain area. Slices **do not import other slices of the same layer**: `features/RuleAdd` cannot import `features/RuleReorder`.
 
-Для родственных слайсов заводится группирующая папка: `features/Rule/{RuleAdd,RuleReorder,RuleDelete}`. Группа — не слайс, публичного API у неё нет.
+Related slices get a grouping folder: `features/Rule/{RuleAdd,RuleReorder,RuleDelete}`. A group is not a slice and has no public API.
 
-Кросс-импорт — только через сегмент `@x` (FSD 2.1):
+Cross-imports go only through the `@x` segment (FSD 2.1):
 
 ```text
-entities/Outbound/@x/rule/index.ts   // что Outbound разрешает импортировать слайсу Rule
+entities/Outbound/@x/rule/index.ts   // what Outbound allows the Rule slice to import
 ```
 
 ```ts
@@ -65,72 +65,72 @@ export { OUTBOUND_TYPE } from '../../model';
 export type { OutboundRef } from '../../model';
 ```
 
-Импортирующая сторона пишет `import { OUTBOUND_TYPE } from "@entities/Outbound/@x/rule"`. Всё, что не вынесено в `@x`, для соседнего слайса закрыто.
+The importing side writes `import { OUTBOUND_TYPE } from "@entities/Outbound/@x/rule"`. Everything not exposed in `@x` is closed to the neighbouring slice.
 
-### Сегменты
+### Segments
 
-| Сегмент  | Что внутри                                                                                            |
-| -------- | ----------------------------------------------------------------------------------------------------- |
-| `ui`     | компоненты, форматтеры для отображения                                                                |
-| `api`    | запросы к демону: fetch-функции, query-опции, подписки на топики потока, схемы DTO                    |
-| `model`  | доменное знание слайса: схемы, типы, сторы, константы, правила домена — в том числе упакованные в хук |
-| `lib`    | код без доменного знания: утилиты, хуки-инструменты, композиция готовых кусков для экрана             |
-| `config` | конфигурация и фиче-флаги (по надобности)                                                             |
+| Segment  | What is inside                                                                                                  |
+| -------- | --------------------------------------------------------------------------------------------------------------- |
+| `ui`     | components, formatters for display                                                                              |
+| `api`    | requests to the daemon: fetch functions, query options, stream topic subscriptions, DTO schemas                 |
+| `model`  | the slice's domain knowledge: schemas, types, stores, constants, domain rules, including those packed in a hook |
+| `lib`    | code without domain knowledge: utilities, tool hooks, composition of ready parts for a screen                   |
+| `config` | configuration and feature flags (as needed)                                                                     |
 
-Сегмент выбирается по знанию внутри файла, а не по форме кода. Хук, который знает правило домена — что считается неприменённым черновиком, где в конфиге лежит нужный узел, — живёт в `model`. Хук, который дёргает запрос, стор и маппер и раскладывает результат для одного экрана, доменного знания не несёт и живёт в `lib`.
+A segment is chosen by the knowledge inside the file, not by the shape of the code. A hook that knows a domain rule (what counts as an unapplied draft, where in the config the needed node lives) lives in `model`. A hook that calls a query, a store and a mapper and lays out the result for one screen carries no domain knowledge and lives in `lib`.
 
-**Слайс в группе начинается с имени группы.** Группа названа доменом, поэтому `Daemon/DaemonTraffic`, а не `Daemon/TrafficChart`: имя слайса читается и в импорте, и в списке файлов, где папки группы рядом нет. То же и внутри — компонент слайса `DaemonService` называется `DaemonService`, а не `ServiceStatus`. Проверяет `fsd/slice-name`.
+**A slice in a group starts with the group name.** The group is named after the domain, so `Daemon/DaemonTraffic`, not `Daemon/TrafficChart`: the slice name reads both in an import and in a file list where the group folder is not next to it. The same applies inside: a component of the `DaemonService` slice is called `DaemonService`, not `ServiceStatus`. Checked by `fsd/slice-name`.
 
-**Адаптеры чужих API — часть слайса, а не отдельный слой.** Форма ответа описывается схемой в `api/<Slice>.schema.ts`, перевод в модель экрана и решение об отказе — в `model/<Slice>.adapter.ts` того же слайса. Наружу через `index.ts` уходит модель: форма источника за границу слайса не выходит, поэтому смена формата останавливается на ней. Каталога `src/adapters/` в проекте нет, и заводить его нельзя.
+**Adapters of foreign APIs are part of the slice, not a separate layer.** The response shape is described by a schema in `api/<Slice>.schema.ts`, conversion into the screen model and the failure decision are in `model/<Slice>.adapter.ts` of the same slice. The model is what goes out through `index.ts`: the source shape does not cross the slice boundary, so a format change stops there. The project has no `src/adapters/` directory, and creating one is forbidden.
 
-Схема описывает форму и не переводит: `.transform()` внутри неё запрещён — `ZodObject` превращается в `ZodPipe` и теряет `.extend()`, `.omit()`, `.pick()`, а над чистой схемой можно держать сколько угодно адаптеров, в том числе обратный.
+A schema describes the shape and does not convert: `.transform()` inside it is forbidden; `ZodObject` turns into `ZodPipe` and loses `.extend()`, `.omit()`, `.pick()`, while over a clean schema you can keep any number of adapters, including a reverse one.
 
-**Роль файла определяет сегмент, а не суффикс.** `api/<Slice>.schema.ts` — форма источника, `model/<Slice>.model.ts` и схемы формы в `model` — модель приложения. Один и тот же суффикс `.schema.ts` встречается в обоих сегментах, и выводить роль из имени файла нельзя: `features/Rule/RuleEdit/model/RuleEdit.schema.ts` описывает форму пользователя, а не ответ демона.
+**The file's role determines the segment, not the suffix.** `api/<Slice>.schema.ts` is the source shape, `model/<Slice>.model.ts` and form schemas in `model` are the application model. The same `.schema.ts` suffix appears in both segments, and the role must not be inferred from the file name: `features/Rule/RuleEdit/model/RuleEdit.schema.ts` describes the user's form, not the daemon's response.
 
-### Локализация
+### Localization
 
-Текст интерфейса лежит в сегменте `i18n` того слайса, который его показывает: `features/Rule/RuleEdit/i18n/ru.json`. Неймспейс — путь слайса от `src`, поэтому компонент называет его целиком:
+Interface text lives in the `i18n` segment of the slice that shows it: `features/Rule/RuleEdit/i18n/ru.json`. The namespace is the slice path from `src`, so the component names it in full:
 
 ```tsx
 const { t } = useTranslation('features/Rule/RuleEdit');
 ```
 
-Так `t` знает ключи только своего слайса: чужой ключ не подставится и в автодополнении не появится.
+This way `t` knows only the keys of its own slice: a foreign key will not be substituted and will not appear in autocompletion.
 
-**Ключи типизируются из самого JSON.** `tools/i18n.ts` печатает `src/i18n.generated.d.ts` — карту вида `'features/Rule/RuleEdit': typeof import('./features/Rule/RuleEdit/i18n/ru.json')`. Ключи в неё не переписываются, поэтому файл меняется, только когда локаль появилась или исчезла. Импорт в карте существует только как тип и стирается при сборке. Артефакт руками не правится: на дев-сервере его обновляет плагин `metabox-i18n`, в сборке — шаг `gen:i18n`.
+**Keys are typed from the JSON itself.** `tools/i18n.ts` prints `src/i18n.generated.d.ts`, a map of the form `'features/Rule/RuleEdit': typeof import('./features/Rule/RuleEdit/i18n/ru.json')`. Keys are not copied into it, so the file changes only when a locale appears or disappears. The import in the map exists only as a type and is erased at build time. The artifact is not edited by hand: on the dev server it is updated by the `metabox-i18n` plugin, in the build by the `gen:i18n` step.
 
-**Словарь приезжает по сети файлом, а не чанком.** Сборка кладёт каждый `i18n/<язык>.json` в `dist/locales/<неймспейс>/<язык>-<отпечаток>.json`, рантайм берёт его `fetch` (`app/lib/i18n.ts`). Текста нет ни в одном модуле сборки, поэтому неудачный импорт не может втянуть его в бандл — импортировать нечего.
+**A dictionary arrives over the network as a file, not as a chunk.** The build puts each `i18n/<language>.json` into `dist/locales/<namespace>/<language>-<fingerprint>.json`, the runtime loads it with `fetch` (`app/lib/i18n.ts`). The text is in no build module, so a wrong import cannot pull it into the bundle: there is nothing to import.
 
-Отпечаток в имени тот же, что у остальных ассетов, и даёт то же самое: демон отдаёт такой файл вечным кэшем, а новая версия панели приходит под новым адресом. Знать имя наперёд рантайм не может, поэтому карту адресов печатает плагин сборки — модуль `virtual:metabox-locales`, объявленный в `src/viteEnv.d.ts`. На дев-сервере отпечатка нет: словарь читается из исходника.
+The fingerprint in the name is the same as for other assets and gives the same result: the daemon serves such a file with a permanent cache, and a new panel version arrives under a new address. The runtime cannot know the name in advance, so the address map is printed by the build plugin: the `virtual:metabox-locales` module, declared in `src/viteEnv.d.ts`. On the dev server there is no fingerprint: the dictionary is read from the source.
 
-Сжимает словари и остальную статику тоже сборка (`.br` и `.gz` рядом с файлом) — у демона компрессора нет намеренно, см. [HTTPAPI демона](../../../metaboxd/docs/guides/HTTPAPI.md).
+The build also compresses dictionaries and other static files (`.br` and `.gz` next to the file): the daemon deliberately has no compressor, see the [daemon HTTPAPI](../../../metaboxd/docs/guides/HTTPAPI.md).
 
-Экран догружает свои неймспейсы в `loader` маршрута, оболочка — на входе приложения. Компонент, чей словарь не догружен, уходит в `Suspense`, а не показывает ключ.
+A screen loads its namespaces in the route `loader`, the shell at the application entry. A component whose dictionary is not loaded goes into `Suspense` instead of showing the key.
 
-**Язык выбирает браузер, а не демон.** При первом заходе берётся первый подходящий язык из `navigator.languages`, дальше — сохранённый выбор из `localStorage` (`shared/lib/i18n`). Язык интерфейса личный, как и тема: одна настройка на всех, кто открывает панель роутера, была бы ограничением. Переключатель стоит рядом с переключателем темы в подвале сайдбара, а атрибут `lang` у документа идёт за выбором — по нему скринридер выбирает правила чтения (WCAG 3.1.1).
+**The browser chooses the language, not the daemon.** On the first visit the first suitable language from `navigator.languages` is taken, after that the saved choice from `localStorage` (`shared/lib/i18n`). The interface language is personal, like the theme: one setting for everyone who opens the router panel would be a restriction. The switcher sits next to the theme switcher in the sidebar footer, and the document's `lang` attribute follows the choice: a screen reader picks reading rules by it (WCAG 3.1.1).
 
-**Языки сверяются между собой.** `checkLocales` из `tools/i18n.ts` сравнивает набор ключей каждого языка с языком-источником, не считая суффиксы плюрализации: их наборы у языков разные. На дев-сервере расхождение печатается в терминал при правке локали, в сборке — валит её.
+**Languages are checked against each other.** `checkLocales` from `tools/i18n.ts` compares the key set of each language with the source language, ignoring plural suffixes: their sets differ between languages. On the dev server a mismatch is printed to the terminal when a locale is edited, in the build it fails the build.
 
-Правила размещения:
+Placement rules:
 
-- **Текст показывает тот, кто его показывает.** Тексты тостов лежат в неймспейсе `shared`, потому что показывает их одно место на всё приложение (`showQueryError`), а не слайс запроса — к моменту показа его словарь может быть не загружен.
-- **Один текст — один ключ.** Текст, который показывают несколько слайсов в одной роли, живёт в `shared`, а не копией в каждом словаре: состояния списка (`list.*`), подписи задержки (`delay.*`), выходы маршрута (`route.*`), названия разделов (`section.*`), отказы чтения (`source.*`). Словарь `shared` грузится на входе приложения, поэтому общий ключ не связывает загрузку экранов. Совпадение слов в разных ролях — подпись колонки таблицы и заголовок панели — дублем не считается.
-- **Схема, адаптер и стор текста не знают.** Zod-схема формы отдаёт код отказа, текст по нему подставляет `ui` своего слайса.
-- **Числительные — плюрализация i18next**, ключами `_one`, `_few`, `_many`, а не ручным выбором формы по остатку.
-- **Предложение не склеивается из кусков.** Разметка внутри фразы — `<Trans>` с `components`, а не два `t()` вокруг тега: порядок слов принадлежит языку, а не коду.
-- **Логи не переводятся.** `console.warn("[STREAM] …")` читает разработчик, а не владелец роутера.
+- **Text belongs to whoever shows it.** Toast texts live in the `shared` namespace, because one place in the whole application shows them (`showQueryError`), not the query's slice: by the time of showing, its dictionary may not be loaded.
+- **One text, one key.** Text that several slices show in the same role lives in `shared`, not as a copy in each dictionary: list states (`list.*`), delay labels (`delay.*`), route outbounds (`route.*`), section names (`section.*`), read failures (`source.*`). The `shared` dictionary is loaded at the application entry, so a shared key does not tie screen loading together. Matching words in different roles (a table column label and a panel title) do not count as a duplicate.
+- **Schemas, adapters and stores do not know texts.** A form's Zod schema returns a failure code, and the `ui` of its slice inserts the text by it.
+- **Numerals use i18next pluralization**, with the keys `_one`, `_few`, `_many`, not manual form selection by remainder.
+- **A sentence is not glued from pieces.** Markup inside a phrase is `<Trans>` with `components`, not two `t()` around a tag: word order belongs to the language, not to the code.
+- **Logs are not translated.** `console.warn("[STREAM] …")` is read by a developer, not by the router owner.
 
-Внутрь слайсов мимо Public API смотрят только оснастка сборки (`tools/i18n.ts`) и тестовый словарь (`src/test/i18n.ts`, глоб). Прикладной код словари не импортирует вовсе: он знает неймспейс, а файл ищет рантайм.
+Only the build tooling (`tools/i18n.ts`) and the test dictionary (`src/test/i18n.ts`, glob) look inside slices past the Public API. Application code does not import dictionaries at all: it knows the namespace, and the runtime finds the file.
 
 ### Public API
 
-`index.ts` слоя/слайса/сегмента — **единственный вход**. Обращение внутрь глубже публичного API запрещено.
+The `index.ts` of a layer/slice/segment is the **only entry**. Reaching deeper than the public API is forbidden.
 
-**Любой код в `index.ts`, кроме реэкспортов, запрещён.**
+**Any code in `index.ts` other than re-exports is forbidden.**
 
-Public API собирается **поимённо**, а не `export *` по сегментам: иначе наружу
-уходит содержимое `api` вместе со схемами DTO, и защита границы слайса, ради
-которой написан [ADR-0005](../../../../docs/adr/ADR-0005-keep-foreign-api-adapters-in-the-api-segment.md), снимается.
+The Public API is assembled **by name**, not with `export *` per segment: otherwise
+the contents of `api` go out together with the DTO schemas, and the slice boundary
+protection that [ADR-0005](../../../../docs/adr/ADR-0005-keep-foreign-api-adapters-in-the-api-segment.md) was written for is removed.
 
 ```ts
 // entities/Rule/index.ts
@@ -139,51 +139,51 @@ export { filterRules, toRuleRows } from './model/Rule.model';
 export type { RuleRow } from './model/Rule.model';
 ```
 
-Баррель работает только вместе с `"sideEffects": ["**/*.css"]` в `apps/web/package.json`: без флага Rollup считает модули side-effectful и тянет весь слайс целиком — на `shared/ui` это лишние 24 kB.
+A barrel works only together with `"sideEffects": ["**/*.css"]` in `apps/web/package.json`: without the flag Rollup considers modules side-effectful and pulls in the whole slice; for `shared/ui` that is an extra 24 kB.
 
-### Исключения из FSD
+### Exceptions to FSD
 
-Генерируемая схема лежит в слое: `src/shared/api/generated.ts`, пишет её `tools/schemagen`, руками не правится и в git-диффе шумит целиком.
+The generated schema lives in a layer: `src/shared/api/generated.ts` is written by `tools/schemagen`, is not edited by hand and is noisy in a git diff as a whole.
 
-`src/shared/ui/**` — сегмент `ui` слоя `shared`. Примитивы shadcn лежат в `src/shared/ui/shadcn/`: их генерирует CLI (`aliases.ui` в `components.json`), правила нейминга к ним **не применяются**, переименовывать нельзя. После переименования `shadcn add` кладёт рядом файл со старым именем и битыми ссылками; на macOS расхождение регистра маскирует файловая система, ломается в Linux-CI.
+`src/shared/ui/**` is the `ui` segment of the `shared` layer. shadcn primitives live in `src/shared/ui/shadcn/`: they are generated by the CLI (`aliases.ui` in `components.json`), the naming rules **do not apply** to them, and renaming them is forbidden. After a rename, `shadcn add` puts a file with the old name and broken links next to it; on macOS the file system masks the case mismatch, it breaks in Linux CI.
 
-Вендорный — подкаталог `shadcn`, а не весь сегмент. Свой код сегмента лежит уровнем выше и правилам проекта подчиняется целиком: классы оформления, общие для нескольких экранов, — `styles.ts`. CLI такие файлы не трогает, потому что не создаёт их. Критерий один: то, чем экран выглядит, — сегмент `ui`; `lib` остаётся для кода без доменного знания и без отношения к отображению.
+The vendor part is the `shadcn` subdirectory, not the whole segment. The segment's own code lives one level up and follows the project rules fully: styling classes shared by several screens go in `styles.ts`. The CLI does not touch such files because it does not create them. The criterion is one: what defines how a screen looks is the `ui` segment; `lib` stays for code without domain knowledge and unrelated to display.
 
-Наружу сегмент виден через `src/shared/ui/index.ts`, прикладной код импортирует `@shared/ui`. После каждого `shadcn add` правим руками три вещи: реэкспорт в барреле (CLI его не дописывает), импорт утилит на относительный `../../lib/utils` и имя нового файла в override примитивов в `apps/web/.oxlintrc.json`. Импорт ловит `pnpm lint`, баррель — нет. Правила проекта сняты с примитивов поимённо, а не глобом каталога: файл вне списка линт проверяет как свой код, поэтому свой модуль, положенный в `shadcn/`, из линта не выпадает, а примитив, забытый в списке, покажет замечания на том, в чём вендор расходится с правилами проекта.
+The segment is visible outside through `src/shared/ui/index.ts`, application code imports `@shared/ui`. After each `shadcn add` three things are fixed by hand: the re-export in the barrel (the CLI does not add it), the utilities import changed to the relative `../../lib/utils`, and the new file name in the primitives override in `apps/web/.oxlintrc.json`. `pnpm lint` catches the import, not the barrel. Project rules are removed from primitives by name, not by a directory glob: lint checks a file outside the list as our own code, so our own module placed in `shadcn/` does not drop out of lint, and a primitive forgotten in the list shows warnings where the vendor differs from the project rules.
 
-### Дополнительные требования
+### Additional requirements
 
-1. UI-компоненты в `shared` — [dumb components](https://habr.com/ru/companies/epam_systems/articles/519856/): никакого доменного состояния, только `props`.
-2. Если в сегменте `ui` несколько компонентов, которые используются вместе, применяется [compound components](https://habr.com/ru/companies/alfa/articles/647013/): `ConfigTree.Root`, `ConfigTree.Node`.
-3. Сложное состояние компонента выносится в хук: правило домена — в `model` своего слайса, состояние конкретного экрана — в `lib`.
+1. UI components in `shared` are [dumb components](https://habr.com/ru/companies/epam_systems/articles/519856/): no domain state, only `props`.
+2. If the `ui` segment has several components that are used together, [compound components](https://habr.com/ru/companies/alfa/articles/647013/) are applied: `ConfigTree.Root`, `ConfigTree.Node`.
+3. Complex component state is moved into a hook: a domain rule into the `model` of its slice, the state of a specific screen into `lib`.
 
-## Стайлгайд
+## Style guide
 
-### Экспорты
+### Exports
 
-- Все экспорты именованные.
-- `export default` — только для `lazy()`.
-- Экспорт наружу — из `index.ts`.
+- All exports are named.
+- `export default` only for `lazy()`.
+- Exports go out from `index.ts`.
 
-### Импорты
+### Imports
 
-Порядок: внешние библиотеки → внутренние модули → стили. Порядок групп и сортировка внутри них — на `oxfmt` (`sortImports` в корневом `.oxfmtrc.json`) — руками не выравнивать.
+Order: external libraries → internal modules → styles. The group order and sorting within groups are handled by `oxfmt` (`sortImports` in the root `.oxfmtrc.json`); do not align them by hand.
 
-Алиас слоя — это вход снаружи. Внутри своего слоя и слайса ходим относительными путями: так [требует FSD](https://feature-sliced.design/docs/reference/public-api) и так модуль не тянет сам себя через собственный баррель.
+A layer alias is an entry from outside. Inside your own layer and slice use relative paths: this is [what FSD requires](https://feature-sliced.design/docs/reference/public-api), and this way a module does not pull itself in through its own barrel.
 
-Алиас на каждый слой: `@app`, `@pages`, `@widgets`, `@features`, `@entities`, `@shared`. Отдельный алиас `@test` ведёт к оснастке тестов `src/test`: это не слой, но тесты внутри слоёв ходят к ней по нему. Общего `@/` нет: путь начинается со слоя, направление импорта видно в строке. Объявлены в `tsconfig.json`, `tsconfig.app.json`, `tsconfig.mocks.json` и `vite.config.ts`.
+There is an alias per layer: `@app`, `@pages`, `@widgets`, `@features`, `@entities`, `@shared`. A separate `@test` alias leads to the test tooling `src/test`: it is not a layer, but tests inside layers reach it through this alias. There is no common `@/`: a path starts with the layer, and the import direction is visible in the line. They are declared in `tsconfig.json`, `tsconfig.app.json`, `tsconfig.mocks.json` and `vite.config.ts`.
 
 ```ts
-import { useQuery } from '@tanstack/react-query'; // внешнее
-import { Button } from '@shared/ui'; // другой слой — алиас
-import { RULE_QUERY } from '../model'; // свой слайс — относительный путь
+import { useQuery } from '@tanstack/react-query'; // external
+import { Button } from '@shared/ui'; // another layer: alias
+import { RULE_QUERY } from '../model'; // own slice: relative path
 ```
 
-### Нейминг
+### Naming
 
-`kebab-case` и `snake_case` для сущностей и файлов запрещены. Исключения: примитивы shadcn в `shared/ui/shadcn` и конфиги в корне.
+`kebab-case` and `snake_case` for entities and files are forbidden. Exceptions: shadcn primitives in `shared/ui/shadcn` and configs at the root.
 
-**Файлы сущностей:** `<Имя>.<сущность>.<расширение>`
+**Entity files:** `<Name>.<entity>.<extension>`
 
 ```text
 Rule.api.ts
@@ -193,9 +193,9 @@ Rule.constants.ts
 Rule.schema.ts
 ```
 
-Файлы сегмента `ui` — просто имя компонента: `RuleRow.tsx`.
+Files of the `ui` segment are just the component name: `RuleRow.tsx`.
 
-**Константы** — `UPPER_CASE` / `SCREAMING_SNAKE_CASE`. Логически связанная группа заключается в объект: имя объекта в `SCREAMING_SNAKE_CASE`, ключи в `PascalCase`.
+**Constants** are `UPPER_CASE` / `SCREAMING_SNAKE_CASE`. A logically related group is wrapped in an object: the object name in `SCREAMING_SNAKE_CASE`, the keys in `PascalCase`.
 
 ```ts
 const DEFAULT_LISTEN = '127.0.0.1:9090';
@@ -208,30 +208,30 @@ const APPLY_STAGE = {
 } as const;
 ```
 
-Всё, что повторяется больше двух раз, выносится в константу. Магических чисел и строк в коде нет.
+Everything repeated more than twice is moved into a constant. There are no magic numbers or strings in the code.
 
-Коэффициенты пересчёта времени — `MS_IN_SECOND`, `SECONDS_IN_MINUTE`, `MINUTES_IN_HOUR`, `HOURS_IN_DAY`, `NS_IN_SECOND` — берутся из `shared/lib/time`, а не объявляются по месту. Пороги и периоды (интервал опроса, таймаут запроса, длина кольцевого буфера) остаются настройками своих модулей, но выражаются через эти единицы: `15 * MS_IN_SECOND` читается, `15_000` требует счёта в уме.
+Time conversion factors (`MS_IN_SECOND`, `SECONDS_IN_MINUTE`, `MINUTES_IN_HOUR`, `HOURS_IN_DAY`, `NS_IN_SECOND`) are taken from `shared/lib/time`, not declared locally. Thresholds and periods (poll interval, request timeout, ring buffer length) stay settings of their modules, but are expressed in these units: `15 * MS_IN_SECOND` reads, `15_000` needs mental arithmetic.
 
-Пользовательские логи — в верхнем регистре и в квадратных скобках: `console.warn("[APPLY] rollback triggered")`.
+Custom logs are in upper case and in square brackets: `console.warn("[APPLY] rollback triggered")`.
 
-### Разметка
+### Markup
 
-Разметка семантическая: тег выбирается по смыслу содержимого, а не по тому, что удобно стилизовать.
+Markup is semantic: the tag is chosen by the meaning of the content, not by what is convenient to style.
 
-- Перечисление однородного — `ul`/`ol` с `li`, даже когда маркеры выключены стилями.
-- Навигация — `nav` со списком и `a` внутри: переход по разделу должен открываться в новой вкладке и читаться скринридером как ссылка. `div` с обработчиком клика вместо ссылки — ошибка. Исключение — полоса вкладок раздела (секции конфигурации): это примитив `Tabs` со ссылками (`render={<Link />}`, `nativeButton={false}`), чтобы две полосы вкладок на соседних экранах были одним механизмом. Ссылка сохраняет адрес и открывается в новой вкладке, но скринридер читает её вкладкой. Секции, которые в полосу не встали, лежат в меню «Ещё» рядом с ней — пункты меню тоже ссылки (`DropdownMenuItem` с `render={<Link />}`), а выбранная из меню секция встаёт в полосу вкладкой.
-- Пары «подпись — значение» (аптайм, версия бинаря, путь конфига) — `dl` с `dt` и `dd`, а не две колонки из `div`.
-- Заголовок экрана — `h1`, заголовки карточек и панелей — `h2`; уровень определяется структурой, а не размером шрифта.
-- Машиночитаемые значения — `time` с `dateTime` и `data` с `value`.
-- Кнопка, которая никуда не ведёт, — `button`; ссылка, которая ведёт, — `a`. Ссылку через `render` примитиву `Button` не отдавать: Base UI ставит на неё `role="button"` поверх `<a href>` и при `nativeButton={false}` — проверено тестом `RouteExplanation`, скринридер объявляет её кнопкой, и средний клик перестаёт открывать вкладку. Ссылке, которую нужно покрасить кнопкой, классы отдаются как `cn(buttonVariants({ … }))`: без `cn` в разметке доживают и `border-transparent` базы, и `border-border` варианта, и ссылка остаётся без рамки.
+- A list of uniform items is `ul`/`ol` with `li`, even when the markers are turned off by styles.
+- Navigation is `nav` with a list and `a` inside: a section link must open in a new tab and be read by a screen reader as a link. A `div` with a click handler instead of a link is an error. The exception is the section tab strip (config sections): it is the `Tabs` primitive with links (`render={<Link />}`, `nativeButton={false}`), so that two tab strips on neighbouring screens are one mechanism. The link keeps the address and opens in a new tab, but a screen reader reads it as a tab. Sections that did not fit into the strip are in the "More" menu («Ещё», as the UI shows it) next to it; menu items are links too (`DropdownMenuItem` with `render={<Link />}`), and a section chosen from the menu takes its place in the strip as a tab.
+- "Label / value" pairs (uptime, binary version, config path) are `dl` with `dt` and `dd`, not two columns of `div`.
+- The screen title is `h1`, card and panel titles are `h2`; the level is determined by structure, not by font size.
+- Machine-readable values are `time` with `dateTime` and `data` with `value`.
+- A button that leads nowhere is a `button`; a link that leads somewhere is an `a`. Do not pass a link to the `Button` primitive through `render`: Base UI puts `role="button"` on it on top of `<a href>` even with `nativeButton={false}` (verified by the `RouteExplanation` test), a screen reader announces it as a button, and a middle click stops opening a tab. A link that needs to look like a button gets the classes as `cn(buttonVariants({ … }))`: without `cn` both the base's `border-transparent` and the variant's `border-border` survive in the markup, and the link stays without a border.
 
-Исключение — виртуализованные списки. Строки в них позиционируются абсолютно, а такая раскладка внутри `table` ломает разбор вспомогательными технологиями, поэтому таблица собирается ролями: `role="table"`, `role="row"`, `role="cell"` и `aria-rowcount` с полным числом строк, а не числом отрисованных.
+The exception is virtualized lists. Their rows are positioned absolutely, and such a layout inside `table` breaks parsing by assistive technologies, so the table is built with roles: `role="table"`, `role="row"`, `role="cell"` and `aria-rowcount` with the full number of rows, not the number rendered.
 
-Разметку проверяет плагин `jsx-a11y`: роль из набора ARIA, обязательные и допустимые для неё атрибуты, подпись у контрола, клик на неинтерактивном элементе без клавиатурного обработчика.
+Markup is checked by the `jsx-a11y` plugin: a role from the ARIA set, required and allowed attributes for it, a label on a control, a click on a non-interactive element without a keyboard handler.
 
-### Функции и колбэки
+### Functions and callbacks
 
-Колбэк, который переживает свой вызов, объявляется именованной функцией: имя видно в стеке ошибки, в профайлере React и в отладчике, а анонимная стрелка называется там именем компонента.
+A callback that outlives its call is declared as a named function: the name is visible in the error stack, in the React profiler and in the debugger, while an anonymous arrow is named there after the component.
 
 ```tsx
 useEffect(function openRuntimeStream() {
@@ -243,19 +243,19 @@ useEffect(function openRuntimeStream() {
 }, []);
 ```
 
-- Колбэк эффекта (`useEffect`, `useLayoutEffect`, `useInsertionEffect`) — только именованная функция или ссылка на неё.
-- Отписка, которую эффект возвращает, — тоже колбэк, и живёт она дольше самого эффекта: React зовёт её при размонтировании и на каждой смене зависимостей. Она именуется по тому же правилу.
+- An effect callback (`useEffect`, `useLayoutEffect`, `useInsertionEffect`) is only a named function or a reference to one.
+- The unsubscribe that an effect returns is a callback too, and it lives longer than the effect itself: React calls it on unmount and on every dependency change. It is named by the same rule.
 
-Оба случая проверяет `project/named-effect`.
+Both cases are checked by `project/named-effect`.
 
-- Функция в `setTimeout` / `setInterval`, подписка и обработчик длиннее одного выражения — тоже именованные: они срабатывают позже места объявления, и в стеке от них остаётся только имя. Линтер их не ловит, замечание делается на ревью.
-- Стрелка без имени остаётся там, где имя ничего не добавляет: `map`, `filter`, `sort`, однострочный колбэк, который просто возвращает выражение.
+- A function in `setTimeout` / `setInterval`, a subscription and a handler longer than one expression are named too: they fire later than where they are declared, and only the name remains of them in the stack. The linter does not catch them; this is a review comment.
+- An unnamed arrow stays where a name adds nothing: `map`, `filter`, `sort`, a one-line callback that just returns an expression.
 
-### Компоненты
+### Components
 
-Примитивы берутся из `shared/ui` — вендорной зоны shadcn/ui. `Card`, `Tabs`, `Alert`, `Badge`, `Button`, `Select`, `Textarea` там уже есть; собирать карточку, вкладки или бейдж руками из `div` со стилями нельзя. Нужного примитива нет — он добавляется через `shadcn add` в `shared/ui/shadcn`, а не пишется рядом.
+Primitives come from `shared/ui`, the shadcn/ui vendor zone. `Card`, `Tabs`, `Alert`, `Badge`, `Button`, `Select`, `Textarea` are already there; building a card, tabs or a badge by hand from a styled `div` is forbidden. If the needed primitive is missing, it is added with `shadcn add` into `shared/ui/shadcn`, not written next to it.
 
-Загрузка, пустота и отказ источника — три разных экрана, и у каждого один примитив: скелетон (`Skeleton`, для списков — `SkeletonRows`), `Empty` и `QueryFailure`. Строка «Загружаю…», прочерк вместо не пришедшего значения и самодельный пунктирный бокс не используются. Прочерк остаётся за величиной, которой нет вовсе — у платы нет термозон, — а не за той, что ещё не пришла. Правила выбора состояния — [Query.md](./Query.md), раздел «Состояния блока».
+Loading, emptiness and source failure are three different screens, and each has one primitive: a skeleton (`Skeleton`, for lists `SkeletonRows`), `Empty` and `QueryFailure`. A "Loading…" line, a dash instead of a value that has not arrived and a homemade dashed box are not used. A dash stays for a quantity that does not exist at all (the board has no thermal zones), not for one that has not arrived yet. Rules for choosing the state: [Query.md](./Query.md), the "Block states" section.
 
 ```tsx
 function RuleRow({ rule, onSelect }: { rule: RuleModel; onSelect: (id: string) => void }) {
@@ -263,10 +263,10 @@ function RuleRow({ rule, onSelect }: { rule: RuleModel; onSelect: (id: string) =
 }
 ```
 
-1. Объявляются как **Function Declaration** — иначе в отладчике `Anonymous`.
-2. `React.FC` / `React.VFC` не используются — [деприкейт](https://github.com/facebook/create-react-app/pull/8177) и ломаная типизация `children`.
-3. `props` деструктурируются прямо в аргументах, без промежуточного алиаса типа. Правило действует для компонентов поверх shadcn-примитивов; когда тип нужен снаружи — объявляем интерфейс и экспортируем.
-4. Мемоизированный компонент объявляется с суффиксом `Proto`, наружу уходит `memo`:
+1. Declared as a **Function Declaration**, otherwise the debugger shows `Anonymous`.
+2. `React.FC` / `React.VFC` are not used: [deprecation](https://github.com/facebook/create-react-app/pull/8177) and broken `children` typing.
+3. `props` are destructured right in the arguments, without an intermediate type alias. The rule applies to components on top of shadcn primitives; when the type is needed outside, declare an interface and export it.
+4. A memoized component is declared with the `Proto` suffix, and `memo` is what is exported:
 
 ```tsx
 function RuleRowProto({ rule }: { rule: RuleModel }) { ... }
@@ -274,110 +274,110 @@ function RuleRowProto({ rule }: { rule: RuleModel }) { ... }
 export const RuleRow = memo(RuleRowProto)
 ```
 
-**Мемоизируем не всё подряд.** `memo` оправдан в списках и узлах дерева, на единичной форме он только добавляет сравнение пропсов. Функции в `props` мемоизированного компонента оборачиваются в `useCallback` — иначе `memo` бесполезен.
+**Do not memoize everything.** `memo` is justified in lists and tree nodes; on a single form it only adds a props comparison. Functions in `props` of a memoized component are wrapped in `useCallback`, otherwise `memo` is useless.
 
-### Производительность
+### Performance
 
-- Вызовы функций вынесены из тела рендера.
-- Компоненты не объявляются внутри других компонентов.
-- Отписки — в `useEffect` через возвращаемый cleanup.
-- Спред `props` — только когда он осмыслен, не «на всякий случай».
+- Function calls are moved out of the render body.
+- Components are not declared inside other components.
+- Unsubscribing happens in `useEffect` through the returned cleanup.
+- A `props` spread only when it is deliberate, not "just in case".
 
-### Поддерживаемость
+### Maintainability
 
-- `any` запрещён. Не знаем тип — `unknown` плюс сужение.
-- `@ts-expect-error` / отключение правил линтера — только с комментарием, объясняющим причину. `@ts-ignore` не используется вовсе.
-- `TODO` / `FIXME` — только с пояснением и ссылкой на задачу.
-- Нет вложенных тернарников и длинных цепочек `if...else`.
-- Приведения типов — только уточняющие; расширяющий каст ловит `typescript/no-unsafe-type-assertion`. Исключение — адресация узла конфига строковым путём: типобезопасной она не бывает, и там каст закрывается `// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- причина`. Голый disable без причины запрещён отдельным правилом.
+- `any` is forbidden. If the type is unknown, use `unknown` plus narrowing.
+- `@ts-expect-error` / disabling linter rules only with a comment explaining the reason. `@ts-ignore` is not used at all.
+- `TODO` / `FIXME` only with an explanation and a link to the task.
+- No nested ternaries and long `if...else` chains.
+- Type casts only narrow; a widening cast is caught by `typescript/no-unsafe-type-assertion`. The exception is addressing a config node by a string path: it is never type-safe, and there the cast is covered by `// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- reason`. A bare disable without a reason is forbidden by a separate rule.
 
-## Стили
+## Styles
 
-Tailwind v4, вход — `src/app/styles/index.css`: глобальные стили живут в слое `app`. Токены темы объявляются в `@theme inline`.
+Tailwind v4, the entry is `src/app/styles/index.css`: global styles live in the `app` layer. Theme tokens are declared in `@theme inline`.
 
-- Классы пишутся в `className`; сортировку делает `oxfmt` (`sortTailwindcss`).
-- Условные классы — через `cn()` из `@shared/lib/utils`, никакой ручной конкатенации строк.
-- Варианты компонента — через `cva`, а не через набор булевых пропсов с ветвлением внутри.
-- Произвольные значения (`w-[137px]`) — по исключению; сначала ищем токен шкалы.
-- Единицы измерения:
+- Classes are written in `className`; sorting is done by `oxfmt` (`sortTailwindcss`).
+- Conditional classes go through `cn()` from `@shared/lib/utils`, no manual string concatenation.
+- Component variants go through `cva`, not through a set of boolean props with branching inside.
+- Arbitrary values (`w-[137px]`) by exception only; look for a scale token first.
+- Units:
 
-  | Единица | Где                                                                                  | Почему                                                                                                      |
-  | ------- | ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
-  | `rem`   | кегль, межстрочный интервал, отступы, высоты контролов, ширины и `max-width`         | масштабируются вместе с настройкой размера шрифта в браузере — иначе панель не проходит WCAG 1.4.4          |
-  | `em`    | то, что привязано к кеглю самого элемента: `letter-spacing`, отступы внутри варианта | вариант `sm` кнопки получает пропорциональные отступы без отдельного набора значений                        |
-  | `px`    | толщина границ, focus-ring, смещения и размытие теней                                | физические величины: волосяная линия, выросшая до 1.5px вместе с кеглем, читается как дефект, а не как тема |
+  | Unit  | Where                                                                                   | Why                                                                                                          |
+  | ----- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+  | `rem` | font size, line height, spacing, control heights, widths and `max-width`                | they scale with the browser font size setting; otherwise the panel fails WCAG 1.4.4                          |
+  | `em`  | what is tied to the element's own font size: `letter-spacing`, spacing inside a variant | the `sm` button variant gets proportional spacing without a separate set of values                           |
+  | `px`  | border width, focus ring, shadow offsets and blur                                       | physical quantities: a hairline grown to 1.5px together with the font size reads as a defect, not as a theme |
 
-  Шкала Tailwind уже в `rem` — специально ничего делать не нужно, правило касается произвольных значений. Нарушение ловит `tailwind/no-restricted-classes`.
+  The Tailwind scale is already in `rem`, nothing special is needed; the rule concerns arbitrary values. Violations are caught by `tailwind/no-restricted-classes`.
 
-- Ступень 10 — только для служебной пометки: «скоро», «всегда». Значение, которое читают, — от 12 и выше, потому что ниже одиннадцати функциональный текст не разбирается на рабочем расстоянии; тем же доводом объяснён выбор 12px в `shared/ui/styles.ts`.
-- Размеры кратны двум: кегли 10/12/14/16/18/22/28/36, высоты контролов 32/24/20, радиусы 8/10/14/16/20/24/32. Нечётная ступень между 12 и 14 неразличима, а нечётный размер контрола ломает вертикальное выравнивание соседей. Исключение — те же физические величины, что и выше: граница в 1px, полоса фокуса и вендорные размеры примитивов `shared/ui`, которые задаёт shadcn.
-- Ступени кегля и радиусов перечислены в `@theme inline` явными значениями, а не считаются множителем от базы: множитель shadcn давал 6/8/10/14/18/22 и расходился с кратностью двум. `--radius` при этом остаётся — его читает переменной `sonner.tsx`.
-- Шрифты лежат файлами в `src/app/styles/fonts/` и подключаются `@font-face` в `index.css`. Пакеты `@fontsource-*` не ставим: панель обязана открываться при неработающем sing-box, а сборка — идти без сети. Подмножества держим только нужные — латиница, расширенная латиница, кириллица и расширенная кириллица; греческое и вьетнамское начертания в панели не встречаются.
+- Step 10 is only for a service mark: "soon", "always". A value that is read is 12 and above, because below eleven functional text cannot be read at working distance; the same argument explains the choice of 12px in `shared/ui/styles.ts`.
+- Sizes are multiples of two: font sizes 10/12/14/16/18/22/28/36, control heights 32/24/20, radii 8/10/14/16/20/24/32. An odd step between 12 and 14 is indistinguishable, and an odd control size breaks the vertical alignment of neighbours. The exception is the same physical quantities as above: a 1px border, the focus ring and the vendor sizes of `shared/ui` primitives set by shadcn.
+- Font size and radius steps are listed in `@theme inline` as explicit values, not computed by a multiplier from a base: the shadcn multiplier gave 6/8/10/14/18/22 and broke the multiple-of-two rule. `--radius` stays though: `sonner.tsx` reads it as a variable.
+- Fonts are files in `src/app/styles/fonts/` and are connected with `@font-face` in `index.css`. We do not install `@fontsource-*` packages: the panel must open while sing-box is not working, and the build must run without a network. Only the needed subsets are kept: Latin, Latin Extended, Cyrillic and Cyrillic Extended; Greek and Vietnamese glyphs do not appear in the panel.
 
-### Палитра
+### Palette
 
-Поверх базовых ролей shadcn объявлены семантические токены предметной области. Литерал палитры Tailwind (`bg-emerald-400`) в компоненте — признак недостающего токена, а не решение:
+Semantic domain tokens are declared on top of the base shadcn roles. A Tailwind palette literal (`bg-emerald-400`) in a component is a sign of a missing token, not a solution:
 
-| Группа    | Токены                                                                                  | Что кодируют                                                         |
-| --------- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| действие  | `--route-direct`, `--route-proxy`, `--route-block`, `--route-dns`, `--route-neutral`    | судьба пакета: наружу напрямую, через прокси, в блок, в DNS-перехват |
-| состояние | `--signal-ok`, `--signal-warn`, `--signal-bad`, `--signal-idle`                         | задержка узла, состояние службы, результат применения                |
-| выделение | `--selected`, `--selected-edge`                                                         | выбранная строка и её кромка                                         |
-| ряды      | `--series-down`, `--series-up`                                                          | входящий и исходящий трафик на графиках                              |
-| шкалы     | `--meter-track`                                                                         | дорожка полосы: поверхность, а не альфа поверх фона                  |
-| строка    | `--row-hover`, `--table-head`                                                           | наведение и шапка таблицы; непрозрачные — под ними едет содержимое   |
-| код       | `--code-string`, `--code-number`, `--code-literal`, `--code-comment`                    | подсветка JSON в текстовом режиме                                    |
-| лог       | `--log-trace`, `--log-debug`, `--log-info`, `--log-notice`, `--log-warn`, `--log-error` | уровень строки лога; fatal и panic — тон error жирным                |
+| Group     | Tokens                                                                                  | What they encode                                                            |
+| --------- | --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| action    | `--route-direct`, `--route-proxy`, `--route-block`, `--route-dns`, `--route-neutral`    | the packet's fate: out directly, through a proxy, blocked, DNS interception |
+| state     | `--signal-ok`, `--signal-warn`, `--signal-bad`, `--signal-idle`                         | node delay, service state, apply result                                     |
+| selection | `--selected`, `--selected-edge`                                                         | the selected row and its edge                                               |
+| series    | `--series-down`, `--series-up`                                                          | inbound and outbound traffic on charts                                      |
+| meters    | `--meter-track`                                                                         | the bar track: a surface, not alpha over the background                     |
+| row       | `--row-hover`, `--table-head`                                                           | hover and the table header; opaque, content slides under them               |
+| code      | `--code-string`, `--code-number`, `--code-literal`, `--code-comment`                    | JSON highlighting in text mode                                              |
+| log       | `--log-trace`, `--log-debug`, `--log-info`, `--log-notice`, `--log-warn`, `--log-error` | log line level; fatal and panic use the error tone in bold                  |
 
-Правила:
+Rules:
 
-- **Выделение — отдельная поверхность, а не альфа поверх фона.** `bg-muted/60` поверх `bg-card` в тёмной теме даёт разницу светлоты 0.038 — это неразличимо.
-- **Выбранное состояние несёт два признака**, и один из них не цветовой: кромка плюс галочка, кромка плюс заливка.
-- **Соответствие «строка действия → тон» — таблица подстрок**, а не цепочка `if`: новый вид узла добавляется записью (`ConnectionAction.ts`, `RuleTargetTone.ts`).
-- **Обе темы объявляют `color-scheme`.** Без него браузер с авто-тёмным режимом перекрашивает светлую тему сам, а нативные элементы рисует от системной настройки.
-- Светлая палитра лежит в `:root`, тёмная в `.dark`: вариант `dark:` примитивов shadcn привязан к этому классу, и обратный порядок его сломает. Тема по умолчанию тёмная — её задаёт `ThemeProvider`, а не порядок блоков.
+- **Selection is a separate surface, not alpha over the background.** `bg-muted/60` over `bg-card` in the dark theme gives a lightness difference of 0.038, which is indistinguishable.
+- **A selected state carries two signs**, and one of them is not color: an edge plus a check mark, an edge plus a fill.
+- **The "action string → tone" mapping is a substring table**, not an `if` chain: a new node kind is added by an entry (`ConnectionAction.ts`, `RuleTargetTone.ts`).
+- **Both themes declare `color-scheme`.** Without it a browser with auto dark mode recolors the light theme itself and draws native elements according to the system setting.
+- The light palette is in `:root`, the dark one in `.dark`: the `dark:` variant of shadcn primitives is bound to this class, and the reverse order would break it. The default theme is dark: `ThemeProvider` sets it, not the block order.
 
-- Отдельные `.css` файлы не заводим. Единственное место для сырого CSS — `src/app/styles/index.css`: токены, `@custom-variant`, база.
-- Жёсткие `width`/`height` не проставляем — компонент занимает выделенное место по сетке.
+- We do not create separate `.css` files. The only place for raw CSS is `src/app/styles/index.css`: tokens, `@custom-variant`, base.
+- No hard `width`/`height`: a component takes the space allotted by the grid.
 
-### Адаптив
+### Responsive layout
 
-Отклик на ширину структурный, а не типографический: сворачивается сайдбар, перестраиваются колонки, переносятся панели. Кегль от ширины не зависит — панель смотрят на постоянном DPI, и плавающий заголовок в узкой колонке выглядит хуже фиксированного.
+The response to width is structural, not typographic: the sidebar collapses, columns rearrange, panels wrap. Font size does not depend on width: the panel is viewed at a constant DPI, and a floating title in a narrow column looks worse than a fixed one.
 
-- Ниже 48rem (`NARROW_SCREEN` в `shared/lib/media.ts`) боковой панели нет: разделы уходят в нижнюю панель с подписями под значками, а подвал сайдбара — состояние службы, тема и язык — в лист её пункта «Ещё». Полоса значков сбоку отняла бы ширину у содержимого и не дала бы подписей. Нижняя панель стоит в потоке раскладки, а не `fixed`: экран над ней получает остаток высоты и под неё не уходит. Снизу у неё отступ `env(safe-area-inset-bottom)`, цель касания — не меньше 44px. Страница объявляет `viewport-fit=cover`, иначе браузер отдаёт безопасные отступы нулём; боковые вырезы в альбомной ориентации закрывают отступы корня оболочки. Ширина следится подпиской на `matchMedia`, а не замеряется однажды при монтировании.
-- Цель касания под пальцем — не меньше 44px, и держит это `@media (pointer: coarse)` в `index.css`, а не классы экранов: кнопки, вкладки, выпадающие списки и поля там растут до 44px, переключатель и флажок расширяют хит-область своим `::after`. Отвечает указатель, а не ширина: узкое окно под мышью остаётся плотным, планшет под пальцем — нет. Свой интерактивный элемент вне примитивов получает тот же размер вариантом `pointer-coarse:`.
-- Стартовый экран на узкой ширине — обзор, на широкой — конфигурация: редирект с `/` проверяет ширину в `beforeLoad`.
-- Таблицы с фиксированными колонками прокручиваются по горизонтали целиком, вместе с шапкой. Сжимать колонки нельзя: адрес, правило и цепочка обрезаются до неразличимости. На ширине, где таблица перестаёт читаться, строка разворачивается в список «подпись — значение» — правила и границы в [Tables.md](./Tables.md).
+- Below 48rem (`NARROW_SCREEN` in `shared/lib/media.ts`) there is no side panel: sections move to a bottom bar with labels under the icons, and the sidebar footer (service state, theme and language) moves to the sheet of its "More" item («Ещё»). A strip of icons on the side would take width from the content and give no labels. The bottom bar sits in the layout flow, not `fixed`: the screen above it gets the remaining height and does not go under it. It has an `env(safe-area-inset-bottom)` bottom padding, the touch target is at least 44px. The page declares `viewport-fit=cover`, otherwise the browser reports safe-area insets as zero; side cutouts in landscape orientation are covered by the shell root padding. Width is tracked by a `matchMedia` subscription, not measured once on mount.
+- A touch target under a finger is at least 44px, and this is held by `@media (pointer: coarse)` in `index.css`, not by screen classes: buttons, tabs, dropdowns and fields grow to 44px there, the switch and the checkbox extend their hit area with their `::after`. The pointer decides, not the width: a narrow window under a mouse stays dense, a tablet under a finger does not. Our own interactive element outside the primitives gets the same size with the `pointer-coarse:` variant.
+- The start screen at a narrow width is the overview, at a wide width the configuration: the redirect from `/` checks the width in `beforeLoad`.
+- Tables with fixed columns scroll horizontally as a whole, together with the header. Shrinking columns is forbidden: address, rule and chain get truncated beyond recognition. At the width where the table stops being readable, a row unfolds into a "label — value" list; rules and limits are in [Tables.md](./Tables.md).
 
-### Анимация переходов
+### Transition animation
 
-У каждого вида изменения один механизм. Смена экрана и вкладки с состоянием идут через View Transitions браузера ([ADR-0026](../../../../docs/adr/ADR-0026-animate-screen-changes-with-the-router-and-in-page-changes-with-react.md)), боковые панели, листы и бары — CSS-переходами раскладки:
+Each kind of change has one mechanism. Screen changes and stateful tabs go through the browser's View Transitions ([ADR-0026](../../../../docs/adr/ADR-0026-animate-screen-changes-with-the-router-and-in-page-changes-with-react.md)), side panels, sheets and bars through CSS layout transitions:
 
-- **Смена экрана — роутер.** `defaultViewTransition` роутера передаёт в CSS тип перехода (`page-forward`, `page-backward`, `page-fade`, `page-hold` — `app/router/Router.transition.ts`), направление — по порядку пунктов меню. Переход внутри раздела — когда у адресов общий первый сегмент — получает `page-hold`: оболочку там держит маршрут-раскладка, и она стоит, меняется только содержимое. Границу `<ViewTransition>` вокруг `Outlet` не ставить: подписка на роутер идёт через `useSyncExternalStore`, и React рендерит смену маршрута синхронно, вне Transition, — граница не сработает.
-- **Вкладки с состоянием** — `<Activity>` поверх `keepMounted`, граница `<ViewTransition enter exit default='none'>` сразу под `Activity`, до первого DOM-узла, переключение — в `startTransition`. Обновление из стора Zustand или Query границу не запускает: такие обновления React рендерит синхронно. `document.startViewTransition` руками не вызывается.
-- **Боковая панель рядом со списком** — `SidePanelLayout` из `shared/ui`: `Root` с `open`, `Main` со списком, `Panel` с содержимым панели. Ширина списка меняется один раз — на открытии колонка панели встаёт сразу, на закрытии сворачивается после того, как панель уехала, — а движется только панель: въезжает справа сдвигом и прозрачностью. Переход ширины сетки перекладывал бы таблицу на каждом кадре, и строки, которым стало тесно, перескакивали бы на вторую строку посреди движения. Закрытая панель уходит из дерева доступности сразу, а содержимое держит до конца выезда; смена содержимого открытой панели — по `key` внутри `Panel` — колонку не трогает. Фокус в панель и обратно ведёт сама панель (`useFocusReturn`): он возвращается, когда содержимое снято, то есть после выезда. Экран своей разметки строки «список + панель» не собирает и `startTransition` для открытия панели не нужен.
-- **Лист снизу** (ниже `lg` панель открывается листом) — `SheetContent side='bottom'` с классами `SHEET_BOTTOM` из `shared/ui/styles.ts`: лист въезжает целиком, от нижнего края, поверх вендорного сдвига на 2.5rem; `cn` в примитиве отдаёт приоритет переданным классам. Лист с содержимым, которое приходит запросом, получает фиксированную высоту, а не `max-h`: иначе он вырастет посреди выезда. Лист монтируется постоянно и управляется `open`, а не условным рендером — иначе он исчезает без выхода. Размытие под оверлеем снято правилом в `index.css`: примитив оверлея закрыт для `className`.
-- **Бар применения** плавает над нижним краем экрана и раскладку не двигает: появляется сдвигом снизу и прозрачностью, держит уходящий текст до `transitionend`. Место под ним освобождает оболочка — нижний отступ `<main>` на высоту бара, которую бар сообщает через `onSpaceChange`, пока виден. Бар носит `view-transition-name: apply-bar` ради порядка слоёв: без имени при смене экрана группа `page` накрыла бы его на весь переход.
-- **Полоса недоступности демона** стоит над экраном и раскрывается переходом `grid-template-rows`: экран под ней — именованная группа `page`, вне перехода роутера она не анимируется, и граница `<ViewTransition>` вокруг полосы оставила бы экран прыгать.
-- **Закреплённые элементы.** `view-transition-name` носят `<main>` оболочки, `PageHeader`, полоса вкладок конфига и бар применения. Именованный элемент анимируется только в переходе роутера; вне его он показывается живым — без снимка и растворения. Новое имя добавляется в общую ветку правил `index.css`, где группа стоит с нулевой длительностью, и, если оно анимируется, в ту из веток `:active-view-transition-type()`, под которой анимируется: их три — содержимое под всеми четырьмя типами, шапка под всеми, кроме `page-hold`, и шапка без пары под `page-hold`. Носитель имени не должен рендериться дважды.
-- **Длительности и кривые** — переменные в `index.css`: `--view-transition-*` для View Transitions, `--motion-*` для CSS-переходов (приход 240 мс, уход 180 мс, лист 280 и 200 мс, кривая `--motion-ease-out`). Уход быстрее прихода. Keyframes лежат там же. Правило `prefers-reduced-motion: reduce` обнуляет View Transitions само; CSS-переходы снимаются `motion-reduce:transition-none` у каждого, а код, который ждёт `transitionend`, проверяет настройку сам — при снятом переходе события не будет.
+- **Screen change: the router.** The router's `defaultViewTransition` passes the transition type to CSS (`page-forward`, `page-backward`, `page-fade`, `page-hold`: `app/router/Router.transition.ts`), the direction follows the order of menu items. A transition inside a section (when the addresses share the first segment) gets `page-hold`: the shell there is held by a layout route, and it stays, only the content changes. Do not put a `<ViewTransition>` boundary around `Outlet`: the router subscription goes through `useSyncExternalStore`, and React renders a route change synchronously, outside a Transition, so the boundary would not fire.
+- **Stateful tabs**: `<Activity>` on top of `keepMounted`, a `<ViewTransition enter exit default='none'>` boundary right under `Activity`, before the first DOM node, switching in `startTransition`. An update from a Zustand store or Query does not trigger the boundary: React renders such updates synchronously. `document.startViewTransition` is not called by hand.
+- **Side panel next to a list**: `SidePanelLayout` from `shared/ui`: `Root` with `open`, `Main` with the list, `Panel` with the panel content. The list width changes once (on opening the panel column appears immediately, on closing it collapses after the panel has slid out), and only the panel moves: it slides in from the right with translation and opacity. A transition of the grid width would relayout the table on every frame, and rows that got cramped would jump to a second line in the middle of the movement. A closed panel leaves the accessibility tree immediately, but keeps its content until the end of the slide-out; a content change of an open panel (by `key` inside `Panel`) does not touch the column. Focus into the panel and back is handled by the panel itself (`useFocusReturn`): it returns when the content is removed, that is, after the slide-out. A screen does not build its own "list + panel" row markup, and `startTransition` is not needed to open the panel.
+- **Bottom sheet** (below `lg` the panel opens as a sheet): `SheetContent side='bottom'` with the `SHEET_BOTTOM` classes from `shared/ui/styles.ts`: the sheet slides in whole, from the bottom edge, overriding the vendor 2.5rem shift; `cn` in the primitive gives priority to the passed classes. A sheet whose content comes from a query gets a fixed height, not `max-h`: otherwise it grows in the middle of the slide-in. The sheet is mounted permanently and controlled by `open`, not by conditional rendering, otherwise it disappears without an exit. The blur under the overlay is removed by a rule in `index.css`: the overlay primitive is closed to `className`.
+- **The apply bar** floats above the bottom edge of the screen and does not move the layout: it appears with a shift from below and opacity, and keeps the outgoing text until `transitionend`. The space under it is freed by the shell: the bottom padding of `<main>` equal to the bar height, which the bar reports through `onSpaceChange` while visible. The bar carries `view-transition-name: apply-bar` for layer order: without a name, on a screen change the `page` group would cover it for the whole transition.
+- **The daemon unavailability strip** sits above the screen and expands with a `grid-template-rows` transition: the screen under it is the named `page` group, outside a router transition it is not animated, and a `<ViewTransition>` boundary around the strip would leave the screen jumping.
+- **Pinned elements.** `view-transition-name` is carried by the shell's `<main>`, `PageHeader`, the config tab strip and the apply bar. A named element is animated only in a router transition; outside it is shown live, without a snapshot and fade. A new name is added to the shared branch of rules in `index.css`, where the group has zero duration, and, if it is animated, to the `:active-view-transition-type()` branch under which it is animated: there are three: content under all four types, the header under all except `page-hold`, and the header without a pair under `page-hold`. The carrier of a name must not render twice.
+- **Durations and curves** are variables in `index.css`: `--view-transition-*` for View Transitions, `--motion-*` for CSS transitions (enter 240 ms, exit 180 ms, sheet 280 and 200 ms, curve `--motion-ease-out`). Exit is faster than enter. Keyframes live there too. The `prefers-reduced-motion: reduce` rule zeroes View Transitions by itself; CSS transitions are removed with `motion-reduce:transition-none` on each one, and code that waits for `transitionend` checks the setting itself: with the transition removed there will be no event.
 
-## Инструменты
+## Tools
 
-Линт — oxlint, формат — oxfmt, типы — tsc, тесты — Vitest. Команды и полный список проверок перед коммитом — в [`CONTRIBUTING.md`](../../../../CONTRIBUTING.md).
+Lint is oxlint, format is oxfmt, types are tsc, tests are Vitest. Commands and the full list of checks before committing are in [`CONTRIBUTING.md`](../../../../CONTRIBUTING.md).
 
-Формат руками не правится:
+Formatting is not fixed by hand:
 
-- конфиг один на репозиторий — `.oxfmtrc.json` в корне, настройки фронта (порядок импортов, сортировка классов Tailwind) лежат там в override для `apps/web/**`;
-- линт каскадный — `apps/web/.oxlintrc.json` расширяет корневой через `extends`, общие правила JS живут в корне;
-- `react/incompatible-library` выключено: правило предупреждает, что React Compiler не станет мемоизировать компонент, который зовёт `useVirtualizer`. Компилятор в сборке не подключён (`vite.config.ts` — `@vitejs/plugin-react` без `babel-plugin-react-compiler`), поэтому предупреждение висело на каждом виртуализованном списке без последствий. Вернуть вместе с компилятором;
-- `jsx-a11y/prefer-tag-over-role` выключено: правило требует заменить роль тегом, а виртуализованная таблица собрана ролями вынужденно — раздел «Разметка» объясняет, почему `table` там не работает. Остальные правила набора включены как ошибки;
-- линт запускается **только из корня** (`pnpm lint`): плагин `better-tailwindcss` ищет Tailwind и его CSS-вход через настройку `cwd` в `apps/web/.oxlintrc.json`, а она считается от каталога запуска. Из `apps/web` тот же конфиг объявил бы все классы неизвестными, поэтому своего скрипта `lint` у фронта нет;
-- `options.typeAware` объявлен **только** в корневом `.oxlintrc.json`: в конфиге фронта oxlint его не принимает и отбрасывает весь файл, а вместе с ним и все фронтовые исключения;
-- в VS Code формат и автофиксы работают на сохранении: `.vscode/settings.json` назначает `oxc.oxc-vscode` форматтером для TS/JS, JSON, CSS и Markdown, иначе встроенные форматтеры разойдутся с `format:check`.
+- there is one config for the repository, `.oxfmtrc.json` at the root; frontend settings (import order, Tailwind class sorting) live there in an override for `apps/web/**`;
+- lint is cascading: `apps/web/.oxlintrc.json` extends the root one through `extends`, shared JS rules live at the root;
+- `react/incompatible-library` is off: the rule warns that React Compiler will not memoize a component that calls `useVirtualizer`. The compiler is not connected in the build (`vite.config.ts` has `@vitejs/plugin-react` without `babel-plugin-react-compiler`), so the warning hung on every virtualized list with no consequences. Re-enable together with the compiler;
+- `jsx-a11y/prefer-tag-over-role` is off: the rule requires replacing a role with a tag, while the virtualized table is built with roles out of necessity; the "Markup" section explains why `table` does not work there. The other rules of the set are enabled as errors;
+- lint runs **only from the root** (`pnpm lint`): the `better-tailwindcss` plugin finds Tailwind and its CSS entry through the `cwd` setting in `apps/web/.oxlintrc.json`, and it is resolved from the launch directory. From `apps/web` the same config would declare all classes unknown, so the frontend has no `lint` script of its own;
+- `options.typeAware` is declared **only** in the root `.oxlintrc.json`: in the frontend config oxlint does not accept it and discards the whole file, and with it all frontend exceptions;
+- in VS Code formatting and autofixes run on save: `.vscode/settings.json` sets `oxc.oxc-vscode` as the formatter for TS/JS, JSON, CSS and Markdown, otherwise the built-in formatters diverge from `format:check`.
 
-Линт типозависимый: `strict` во всех четырёх проектах tsconfig (`app`, `node`, `mocks`, `dev`), `options.typeAware` в `.oxlintrc.json`, пакет `oxlint-tsgolint`. Через `jsPlugins` подключены плагины TanStack Query, Testing Library, jest-dom, Tailwind и `check-file`; `jsx-a11y` в oxlint встроенный и включается именем в `plugins`. Границы FSD проверяет локальный `fsd/boundaries` (`apps/web/tools/fsdBoundaries.js`): импорт вверх по слоям, соседний слайс мимо `@x`, обход Public API, путь без Public API (группа вместо слайса), относительный путь за пределами слайса, оба конца кросс-импорта — `@x` открыт одному соседу своего слоя, а не всем и не сверху, — и импорт сгенерированной схемы: `@shared/api/generated` и `daemon.generated` читают только `api` и `model` сущностей да тесты, экраны берут их модель. Слайс он ищет по Public API — папка без `index.ts` считается группой, поэтому `@features/Rule/RuleEdit` разрешён, а `@features/Rule/RuleEdit/ui/RuleEditForm` — нет. Правила проекта, которых нет в готовых наборах, лежат в `apps/web/tools/projectRules.js`: `project/named-effect` (колбэк эффекта и его отписка именуются), `project/no-query-destructuring`. Перечень остальных — в конфиге.
+Lint is type-aware: `strict` in all four tsconfig projects (`app`, `node`, `mocks`, `dev`), `options.typeAware` in `.oxlintrc.json`, the `oxlint-tsgolint` package. Through `jsPlugins` the plugins for TanStack Query, Testing Library, jest-dom, Tailwind and `check-file` are connected; `jsx-a11y` is built into oxlint and is enabled by name in `plugins`. FSD boundaries are checked by the local `fsd/boundaries` (`apps/web/tools/fsdBoundaries.js`): an import up the layers, a neighbouring slice past `@x`, bypassing the Public API, a path without a Public API (a group instead of a slice), a relative path outside the slice, both ends of a cross-import (`@x` is open to one neighbour of its layer, not to everyone and not from above), and an import of the generated schema: `@shared/api/generated` and `daemon.generated` are read only by `api` and `model` of entities and by tests, screens take their model. It finds a slice by its Public API: a folder without `index.ts` counts as a group, so `@features/Rule/RuleEdit` is allowed and `@features/Rule/RuleEdit/ui/RuleEditForm` is not. Project rules that are not in ready-made sets live in `apps/web/tools/projectRules.js`: `project/named-effect` (an effect callback and its unsubscribe are named), `project/no-query-destructuring`. The list of the rest is in the config.
 
-Оба плагина отдают объект через `export default` — иначе Node их не загрузит, — поэтому `import/no-default-export` для `tools/**` выключен в `apps/web/.oxlintrc.json`. Прогон из корня (`pnpm lint`) вложенный конфиг применяет, и файлы плагинов проходят; отдельный прогон корневым конфигом мимо него — нет. Там же с `tools/**` сняты группа `no-unsafe-*` и ещё несколько type-aware правил: плагины — JS без типов, контекст ESLint приходит в них как `any`. Перевод плагинов на TypeScript потянул бы `@types/eslint` ради двух файлов. Сам `.oxlintrc.json` — строгий JSON и комментариев не держит, поэтому причины записаны здесь.
+Both plugins export an object through `export default` (otherwise Node will not load them), so `import/no-default-export` for `tools/**` is off in `apps/web/.oxlintrc.json`. A run from the root (`pnpm lint`) applies the nested config, and the plugin files pass; a separate run with the root config bypassing it does not. There, the `no-unsafe-*` group and a few more type-aware rules are also removed for `tools/**`: the plugins are JS without types, and the ESLint context comes into them as `any`. Moving the plugins to TypeScript would pull in `@types/eslint` for two files. `.oxlintrc.json` itself is strict JSON and holds no comments, so the reasons are recorded here.
 
-Линтер не видит: состав `index.ts`, формат логов, оправданность `memo`, `useCallback` и спреда `props` — это [чеклист ревью](./ReviewChecklist.md). Слайс, используемый одной страницей, не видит и он: для этого [`steiger`](https://github.com/feature-sliced/steiger) отдельным шагом CI, когда слайсов станет много.
+What the linter does not see: the contents of `index.ts`, the log format, whether `memo`, `useCallback` and a `props` spread are justified; this is the [review checklist](./ReviewChecklist.md). It also does not see a slice used by a single page: for that, [`steiger`](https://github.com/feature-sliced/steiger) as a separate CI step, once there are many slices.

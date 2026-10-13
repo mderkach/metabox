@@ -4,8 +4,8 @@ package httpapi
 
 import "syscall"
 
-// control на других системах ничего не ставит: демон работает на роутере,
-// а здесь он запускается только для разработки.
+// control sets nothing on other systems: the daemon runs on the router,
+// and here it is started only for development.
 func control(_, _ string, _ syscall.RawConn) error {
 	return nil
 }

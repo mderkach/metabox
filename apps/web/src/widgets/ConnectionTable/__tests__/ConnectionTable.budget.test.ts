@@ -6,46 +6,46 @@ import { advanceConnectionsSnapshot, makeConnectionsSnapshot } from '@entities/C
 
 import { CONNECTION_COLUMNS, CONNECTION_FIELD } from '../ui/ConnectionColumns';
 
-/** Потолок нагрузки: столько соединений панель обязана держать. */
+/** Load ceiling: this many connections the panel must hold. */
 const SNAPSHOT_SIZE = 5000;
 const RUNS = 5;
 
 /**
- * Замер 2026-09-18 в браузере на живых моках: снапшот раз в секунду, нажатие на
- * колонку — 33–46 мс до перерисовки, длинных задач ноль.
+ * Measured 2026-09-18 in a browser on live mocks: a snapshot once a second, a click on a
+ * column is 33-46 ms until the redraw, zero long tasks.
  *
- * Тест меряет не модель строк библиотеки, а её основную стоимость: съём ключа
- * через `accessorFn` описания колонки и упорядочивание пяти тысяч значений.
- * Ключи снимаются те же, что в работе, поэтому дорогой `accessorFn` тест
- * поймает; накладные расходы самой библиотеки — нет.
+ * The test measures not the library row model but its main cost: taking the key
+ * through the column description `accessorFn` and ordering five thousand values.
+ * The keys are taken the same as in production, so an expensive `accessorFn` is caught
+ * by the test; the library overhead itself is not.
  *
- * Порог с запасом в разы: файлы тестов идут параллельно, и под нагрузкой
- * соседей замер плывёт. Тест ловит подорожание в разы, а не микрорегрессию.
+ * The threshold has a margin of several times: test files run in parallel, and under neighbor
+ * load the measurement floats. The test catches a several-fold slowdown, not a micro-regression.
  */
 const SORT_BUDGET_MS = 60;
 
 /**
- * Разбор снапшота с оборотом соединений: счётчики выросли, часть строк
- * пересобирается, часть ушла в закрытые.
+ * Parsing a snapshot with connection turnover: counters grew, some rows
+ * are rebuilt, some went to closed.
  *
- * Замер 2026-09-18 в браузере на живых кадрах: 3 мс без замедления, 8.6 мс при
- * замедлении процессора вчетверо. До снятия черновика immer со сторов было
- * 14.9 и 61.3 мс — почти весь бюджет тика уходил на обёртки прокси
+ * Measured 2026-09-18 in a browser on live frames: 3 ms without throttling, 8.6 ms with
+ * a fourfold CPU slowdown. Before the draft was taken out of immer from the stores it was
+ * 14.9 and 61.3 ms: almost the whole tick budget went to proxy wrappers.
  * ([ADR-0024](../../../../../../docs/adr/ADR-0024-drop-the-immer-draft-from-frontend-stores.md)).
  *
- * В этом окружении разбор идёт 3.8 мс. Порог держится ниже того, до чего довела
- * бы обёртка: пересчёт замеров из браузера даёт около 19 мс, и с порогом в
- * десятки миллисекунд её возврат прошёл бы незамеченным.
+ * In this environment the parse takes 3.8 ms. The threshold is held below what the
+ * wrapper would bring it to: converting browser measurements gives about 19 ms, and with a threshold of
+ * tens of milliseconds its return would go unnoticed.
  *
- * Прогонов больше, чем у сортировки: первый после сброса дороже остальных —
- * индекс пуст, и ни одна из пяти тысяч строк не отдаётся прежним объектом.
- * Короткая выборка из-за этого целиком уезжает вверх, когда соседние файлы
- * тестов отбирают процессор.
+ * More runs than for sorting: the first after a reset costs more than the rest:
+ * the index is empty, and none of the five thousand rows is returned as the previous object.
+ * A short sample therefore goes up entirely when neighboring test files
+ * take the CPU.
  */
 const APPLY_BUDGET_MS = 12;
 const APPLY_RUNS = 9;
 
-/** Шаг потока: с ним разбор считает скорости, без него — пропускает их вовсе. */
+/** Stream step: with it the parse computes speeds, without it it skips them entirely. */
 const STREAM_STEP_MS = 500;
 
 function median(values: number[]): number {
@@ -53,15 +53,15 @@ function median(values: number[]): number {
 }
 
 /**
- * Лучший из прогонов. Медиана здесь плывёт: файлы тестов идут параллельно, и
- * соседи отбирают процессор в произвольный момент, а шум замер только замедляет
- * — значит нижняя граница и есть собственная стоимость разбора.
+ * Best of the runs. The median floats here: test files run in parallel, and
+ * neighbors take the CPU at an arbitrary moment, and noise only slows a measurement down
+ * so the lower bound is the own cost of the parse.
  */
 function fastest(values: number[]): number {
   return Math.min(...values);
 }
 
-/** Ключи снимаются тем же `accessorFn`, что и в работе. */
+/** Keys are taken by the same `accessorFn` as in production. */
 function sortBy(field: string, rows: readonly ConnectionRow[]): number {
   const def = CONNECTION_COLUMNS.find((column) => column.id === field);
 
@@ -79,33 +79,33 @@ function sortBy(field: string, rows: readonly ConnectionRow[]): number {
   return performance.now() - start;
 }
 
-describe('бюджет таблицы соединений', () => {
+describe('connection table budget', () => {
   let rows: readonly ConnectionRow[] = [];
 
   beforeAll(() => {
     ConnectionStore.getState().reset();
     ConnectionStore.getState().apply(makeConnectionsSnapshot(SNAPSHOT_SIZE));
-    // Копия, а не ссылка: замер разбора ниже чистит стор, и сортировка осталась
-    // бы без строк.
+    // A copy, not a reference: the parse measurement below clears the store, and the sort would be left
+    // without rows.
     rows = [...ConnectionStore.getState().active];
   });
 
-  it('сортирует 5000 строк по числовой колонке в пределах бюджета', () => {
+  it('sorts 5000 rows by a numeric column within the budget', () => {
     const runs = Array.from({ length: RUNS }, () => sortBy(CONNECTION_FIELD.Volume, rows));
 
     expect(median(runs)).toBeLessThan(SORT_BUDGET_MS);
   });
 
-  it('сортирует 5000 строк по текстовой колонке в пределах бюджета', () => {
+  it('sorts 5000 rows by a text column within the budget', () => {
     const runs = Array.from({ length: RUNS }, () => sortBy(CONNECTION_FIELD.Host, rows));
 
     expect(median(runs)).toBeLessThan(SORT_BUDGET_MS);
   });
 
-  it('разбирает снапшот на 5000 соединений в пределах бюджета', () => {
+  it('parses a snapshot of 5000 connections within the budget', () => {
     const snapshot = makeConnectionsSnapshot(SNAPSHOT_SIZE, { vary: true });
-    // Часы сдвигаются на шаг потока: подряд идущие вызовы разбор считает
-    // неправдоподобно частыми и скорости не считает, а это основная работа.
+    // The clock moves by the stream step: consecutive calls are considered by the parser
+    // implausibly frequent and it does not compute speeds, and that is the main job.
     let clock = Date.now();
     const now = vi.spyOn(Date, 'now').mockImplementation(() => clock);
 
@@ -128,15 +128,15 @@ describe('бюджет таблицы соединений', () => {
     const state = ConnectionStore.getState();
 
     expect(state.active).toHaveLength(SNAPSHOT_SIZE);
-    // Оборот соединений в кадре обязан доходить до закрытых, а счётчики — до
-    // скоростей: без того и другого замер прошёл бы мимо основной работы
-    // разбора и мерил бы возврат прежних строк.
+    // Connection turnover in a frame must reach closed ones, and counters must reach
+    // speeds: without both the measurement would bypass the main job of the
+    // parse and measure the return of previous rows.
     expect(state.closed.length).toBeGreaterThan(0);
     expect(state.active.some((row) => row.downRate > 0)).toBe(true);
     expect(fastest(runs)).toBeLessThan(APPLY_BUDGET_MS);
   });
 
-  it('объявляет сравнение для каждой колонки: без него список молча идёт в порядке потока', () => {
+  it('declares a comparison for every column: without it the list silently goes in stream order', () => {
     const registered = { text: sortFn_text, basic: sortFn_basic, alphanumeric: sortFn_alphanumeric };
 
     for (const def of CONNECTION_COLUMNS) {

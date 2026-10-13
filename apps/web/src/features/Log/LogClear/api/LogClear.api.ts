@@ -3,8 +3,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { clearLogTail, LOG_QUERY, LogStore } from '@entities/Log';
 
 /**
- * Очистка лога. Строки потока снимаются сразу, хвост перечитывается: демон
- * отдаёт его уже без строк до отметки очистки.
+ * Log clear. Stream lines are removed at once, the tail is reread: the daemon
+ * serves it already without the lines before the clear mark.
  */
 export function useClearLog() {
   const queryClient = useQueryClient();

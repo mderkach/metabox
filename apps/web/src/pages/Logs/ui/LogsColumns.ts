@@ -1,6 +1,6 @@
 /**
- * Раскладка строки лога: одна на шапку и строки, иначе подписи встанут не над
- * своими колонками. Ниже md сообщение уходит под время и уровень во всю ширину.
+ * Log row layout: one for the header and the rows, otherwise the labels end up not above
+ * their columns. Below md the message goes under the time and level at full width.
  */
 export const LOGS_COLUMN = {
   Row: 'flex w-full flex-wrap items-baseline gap-x-3 px-4 py-1 font-mono text-xs',

@@ -37,26 +37,26 @@ const routeApi = getRouteApi('/config/$section');
 export function SectionPage() {
   const { section } = routeApi.useParams();
 
-  // Чужое имя секции отсёк ещё маршрут; здесь проверка только сужает тип.
+  // A foreign section name was already cut off by the route; the check here only narrows the type.
   if (!isGenericSection(section)) {
     return null;
   }
 
-  // Секция в ключе: панель и набранное в форме добавления относятся к своей
-  // секции и на соседнюю не переезжают.
+  // The section is in the key: the panel and what is typed in the add form belong to their own
+  // section and do not move to a neighboring one.
   return <SectionNodes key={section} section={section} />;
 }
 
 /**
- * Секция конфига без собственного экрана: каждый её узел открывается формой по
- * схеме типа, если она ему положена, и текстом. Узлы читаются из текста, а не
- * из разобранной модели — узел, который схема не приняла, обязан остаться на
- * экране и правиться.
+ * A config section without a screen of its own: each of its nodes opens as a form from the
+ * type schema, if it has one, and as text. Nodes are read from the text, not
+ * from the parsed model — a node that the schema did not accept must stay on
+ * screen and be editable.
  *
- * Узел секции с реестром типов добавляется формой в панели рядом со списком
- * (ADR-0037); ниже `lg` панель открывается листом. Секции-объекты и списки без
- * реестра пополняются только текстом. У `dns` над серверами стоят скаляры
- * самой секции.
+ * A node of a section with a type registry is added by a form in the panel beside the list
+ * (ADR-0037); below `lg` the panel opens as a sheet. Object sections and lists without
+ * a registry are extended only as text. In `dns` the section's own scalars
+ * sit above the servers.
  */
 export function SectionNodes({ section }: { section: GenericSection }) {
   const { t } = useTranslation('pages/Section');
@@ -64,7 +64,7 @@ export function SectionNodes({ section }: { section: GenericSection }) {
   const status = useDaemonStatus();
   const asSheet = usePanelAsSheet();
   const [adding, setAdding] = useState(false);
-  // Узел перемонтируется на каждой ревизии документа: раскрытые держит экран.
+  // The node remounts on every document revision: the screen keeps the expanded ones.
   const [expanded, setExpanded] = useState<ReadonlySet<number>>(() => new Set());
   const text = document.text;
   const nodes = useMemo(() => (text === null ? [] : readSectionNodes(text, section)), [text, section]);
@@ -141,9 +141,9 @@ export function SectionNodes({ section }: { section: GenericSection }) {
 
           {shape.kind === 'list' &&
             nodes.map((node, index) => (
-              // Ревизия в ключе пересоздаёт форму и редактор на обновлении не от
-              // пользователя: после отмены правок поле не должно держать
-              // отменённый текст.
+              // The revision in the key recreates the form and editor on an update not from
+              // the user: after discarding changes the field must not keep
+              // the discarded text.
               <ConfigNode
                 key={`${String(document.revision)}:${String(index)}`}
                 section={section}
@@ -161,8 +161,8 @@ export function SectionNodes({ section }: { section: GenericSection }) {
             ))}
         </SidePanelLayout.Main>
 
-        {/* Обёртка во всю высоту списка, а панель по своему содержимому:
-            иначе ей негде залипать при прокрутке. */}
+        {/* The wrapper spans the full list height, and the panel its own content height:
+            otherwise it has nowhere to stick when scrolling. */}
         <SidePanelLayout.Panel className='items-start'>
           {adding && (
             <ConfigNodePanel title={t('add.title')} onClose={closeAdding}>
@@ -172,7 +172,7 @@ export function SectionNodes({ section }: { section: GenericSection }) {
         </SidePanelLayout.Panel>
       </SidePanelLayout.Root>
 
-      {/* Ниже lg панели рядом со списком нет места: там она открывается листом. */}
+      {/* Below lg there is no room for the panel beside the list: there it opens as a sheet. */}
       {addable && asSheet && (
         <ConfigNodePanelSheet open={adding} title={t('add.title')} onClose={closeAdding}>
           {addForm}
@@ -183,8 +183,8 @@ export function SectionNodes({ section }: { section: GenericSection }) {
 }
 
 /**
- * Имя узла на экране: тег, без него — тип, без обоих — путь в файле
- * (`dns.rules[3]`), а не имя вкладки: по нему узел находится в тексте.
+ * Node name on screen: the tag, without it the type, without both the path in the file
+ * (`dns.rules[3]`), not the tab name: the node is located in the text by it.
  */
 function nodeName(path: readonly string[], node: unknown, index: number): string {
   if (typeof node === 'object' && node !== null) {

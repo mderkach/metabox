@@ -21,12 +21,12 @@ import { toRuleChanges, type RuleChange } from '@entities/Rule';
 import { useApplyConfig, useConfirmApply } from '../api/ConfigApply.api';
 
 /**
- * Перечитывает документ, когда цикл дошёл до конца.
+ * Rereads the document when the cycle reached its end.
  *
- * Подтверждённый черновик перестаёт быть черновиком: файл на устройстве теперь
- * его содержит, а демон мог дописать туда `experimental.clash_api`, и
- * держать поверх этого старые правки значило бы показывать диф с самим собой.
- * Откат и отказ черновик не трогают — на нём пользователь чинит конфиг.
+ * A confirmed draft stops being a draft: the file on the device now contains
+ * it, and the daemon may have appended `experimental.clash_api`, so keeping old
+ * edits on top would mean showing a diff with itself. Rollback and failure do
+ * not touch the draft: it is what the user repairs the config on.
  */
 function useDocumentRefresh(transaction: ApplyTransaction | null) {
   const queryClient = useQueryClient();
@@ -53,15 +53,15 @@ function useDocumentRefresh(transaction: ApplyTransaction | null) {
 
 export interface ConfigApplyState {
   isDirty: boolean;
-  /** Черновик начат от другого конфига, чем сейчас на устройстве. */
+  /** The draft was started from a different config than the one on the device now. */
   isStale: boolean;
-  /** Есть что применять и предыдущее применение закончилось. */
+  /** There is something to apply and the previous apply has finished. */
   canApply: boolean;
-  /** `null` — применений не было ни в этой сессии, ни до перезагрузки. */
+  /** `null` means there were no applies, neither in this session nor before the reload. */
   transaction: ApplyTransaction | null;
-  /** Ссылка меняется только со сменой ошибки запуска: бар сравнивает снимки состояния по ссылке. */
+  /** The reference changes only with a change of the start error: the bar compares state snapshots by reference. */
   check: CheckFailure | null;
-  /** Отказ по рабочему каталогу службы; ссылка меняется так же, как у `check`. */
+  /** Failure by the service working directory; the reference changes the same way as for `check`. */
   workdir: WorkdirMismatch | null;
   isApplying: boolean;
   isConfirming: boolean;
@@ -71,10 +71,10 @@ export interface ConfigApplyState {
 }
 
 /**
- * Идентификатор идущей транзакции берётся из состояния демона, а не из ответа
- * на запуск: так окно подтверждения переживает перезагрузку страницы и
- * показывается независимо от того, откуда применение запущено — из бара или из
- * истории версий.
+ * The id of a running transaction is taken from the daemon state, not from the
+ * start response: this way the confirmation window survives a page reload and
+ * is shown regardless of where the apply was started from, the bar or the
+ * version history.
  */
 export function useConfigApply(): ConfigApplyState {
   const status = useDaemonStatus();
@@ -124,7 +124,7 @@ export function useConfigApply(): ConfigApplyState {
   };
 }
 
-/** Изменения правил маршрутизации, которые принесёт Apply; без черновика — пусто. */
+/** Routing rule changes that Apply will bring; without a draft, empty. */
 export function useRuleChanges(): RuleChange[] {
   const applied = ConfigDocumentState.use.applied();
   const draft = ConfigDocumentState.use.draft();

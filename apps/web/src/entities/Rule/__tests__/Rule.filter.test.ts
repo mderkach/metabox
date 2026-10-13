@@ -21,25 +21,25 @@ function makeRule(overrides: Partial<RuleRow> = {}): RuleRow {
   };
 }
 
-describe('поиск по правилу', () => {
+describe('rule search', () => {
   const rules = [makeRule()];
 
-  it('пустой запрос пропускает всё', () => {
+  it('an empty query lets everything through', () => {
     expect(filterRules(rules, '', null)).toHaveLength(1);
   });
 
-  it('не различает регистр', () => {
+  it('is case-insensitive', () => {
     expect(filterRules(rules, 'GOOGLE', null)).toHaveLength(1);
   });
 
-  it('требует совпадения всех слов', () => {
+  it('requires all words to match', () => {
     expect(filterRules(rules, 'google fallback', null)).toHaveLength(1);
     expect(filterRules(rules, 'google direct', null)).toHaveLength(0);
   });
 });
 
-describe('выходы правил', () => {
-  it('считает правила и ставит частые первыми', () => {
+describe('rule outbounds', () => {
+  it('counts rules and puts frequent ones first', () => {
     const rules = [
       makeRule({ id: '0', target: 'direct' }),
       makeRule({ id: '1', target: 'proxy' }),
@@ -52,30 +52,30 @@ describe('выходы правил', () => {
     ]);
   });
 
-  it('действие считает наравне с аутбаундом: для отбора это такой же выход', () => {
+  it('counts an action on a par with an outbound: for filtering it is the same kind of outbound', () => {
     const rules = [makeRule({ id: '0', target: 'sniff', targetKind: RULE_TARGET.Action }), makeRule({ id: '1' })];
 
     expect(toTargetGroups(rules).map((group) => group.target)).toEqual(['sniff', 'us-west-fallback']);
   });
 });
 
-describe('отбор правил', () => {
+describe('rule filtering', () => {
   const rules = [
     makeRule({ id: '0', target: 'direct', searchText: 'clash_mode Direct direct' }),
     makeRule({ id: '1', target: 'proxy', searchText: 'rule_set github proxy' }),
   ];
 
-  it('сужает по выходу', () => {
+  it('narrows by outbound', () => {
     expect(filterRules(rules, '', 'proxy').map((rule) => rule.id)).toEqual(['1']);
   });
 
-  it('складывает выход и запрос', () => {
+  it('combines outbound and query', () => {
     expect(filterRules(rules, 'github', 'direct')).toEqual([]);
     expect(filterRules(rules, 'github', 'proxy').map((rule) => rule.id)).toEqual(['1']);
   });
 });
 
-describe('отбор по сету', () => {
+describe('filter by rule set', () => {
   const rules = [
     makeRule({ id: '0', matchers: [{ key: 'rule_set', values: ['geoip-ru', 'geosite-ru'] }] }),
     makeRule({
@@ -90,31 +90,31 @@ describe('отбор по сету', () => {
         ],
       },
     }),
-    // Тег сета в другом условии — не ссылка на сет.
+    // A rule set tag in another condition is not a reference to a rule set.
     makeRule({ id: '2', matchers: [{ key: 'domain_suffix', values: ['geosite-ru'] }] }),
   ];
 
-  it('берёт правила, которые ссылаются на сет, в том числе из вложенной ветки', () => {
+  it('takes rules that refer to the rule set, including from a nested branch', () => {
     expect(filterRules(rules, '', null, 'geosite-ru').map((rule) => rule.id)).toEqual(['0', '1']);
   });
 
-  it('не путает сет с совпадением по подстроке', () => {
+  it('does not confuse a rule set with a substring match', () => {
     expect(filterRules(rules, '', null, 'geosite')).toEqual([]);
   });
 });
 
-describe('отбор правил в адресе', () => {
-  it('принимает номер правила и сет', () => {
+describe('rule filter in the address', () => {
+  it('accepts a rule number and a rule set', () => {
     expect(parseRuleSearch({ rule: '3', rule_set: 'geoip-ru' })).toEqual({ rule: 3, rule_set: 'geoip-ru' });
   });
 
-  // Роутер разбирает `?rule_set=123`, набранный руками, как число: тег из цифр
-  // остаётся тегом, а не роняет вместе с собой номер правила.
-  it('тег из цифр читается строкой', () => {
+  // The router parses a hand-typed `?rule_set=123` as a number: a tag of digits
+  // stays a tag and does not drop the rule number along with it.
+  it('a tag of digits is read as a string', () => {
     expect(parseRuleSearch({ rule: 3, rule_set: 123 })).toEqual({ rule: 3, rule_set: '123' });
   });
 
-  it('пустой сет отбрасывает отбор целиком', () => {
+  it('an empty rule set discards the whole filter', () => {
     expect(parseRuleSearch({ rule: 3, rule_set: '' })).toEqual({});
   });
 });

@@ -16,9 +16,9 @@ import {
 } from '@shared/ui';
 
 /**
- * Остановка sing-box. Спрашивает подтверждение: остановка обрывает
- * маршрутизацию всей сети, и промах мимо соседнего «Перезапустить» стоит
- * доступа в интернет всем устройствам.
+ * Stopping sing-box. Asks for confirmation: stopping cuts off
+ * routing for the whole network, and a miss onto the neighboring "Restart" costs
+ * internet access for all devices.
  */
 export function DaemonServiceStop({ disabled, onConfirm }: { disabled: boolean; onConfirm: () => void }) {
   const { t } = useTranslation('widgets/Daemon/DaemonService');

@@ -63,10 +63,10 @@ export function ProxyGroupCard({
           {t('count.node', { ns: 'shared', count: group.nodes.length })}
         </CardDescription>
         <CardAction>
-          {/* Имя различает три одинаковые кнопки на экране: с клавиатуры подряд
-              идут «Проверить», «Проверить», «Проверить», и какая из них чья —
-              неизвестно. Подпись на время замера меняется только у своей
-              карточки: мутация одна на экран, а работает она с одной группой. */}
+          {/* The name distinguishes three identical buttons on the screen: from the keyboard in a row
+              come "Check", "Check", "Check", and which belongs to which is
+              unknown. The label during measurement changes only on its own
+              card: there is one mutation per screen, and it works with one group. */}
           <Button
             variant='outline'
             size='sm'
@@ -86,8 +86,8 @@ export function ProxyGroupCard({
       </CardHeader>
 
       <CardContent className='flex flex-col gap-3'>
-        {/* Выбранный узел и так несёт кромку и галочку: строка нужна, только
-            когда выбранного нет и отметить нечего. */}
+        {/* The selected node already carries an edge and a checkmark: the row is needed only
+            when there is no selected one and nothing to mark. */}
         {active === null && <p className='text-xs text-muted-foreground'>{t('card.none')}</p>}
 
         <ul className='grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3'>

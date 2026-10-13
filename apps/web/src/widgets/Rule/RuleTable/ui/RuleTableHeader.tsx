@@ -6,8 +6,8 @@ import { TABLE_HEADER } from '@shared/ui';
 import { RULE_COLUMN } from './RuleColumns';
 
 /**
- * Липкая: скроллер один, и вынесенная из него шапка уехала бы из-под строк.
- * `hits` — показывать ли колонку срабатываний: без счёта её нет и в строках.
+ * Sticky: there is one scroller, and a header taken out of it would slide out from under the rows.
+ * `hits` — whether to show the hits column: without a count it is absent in the rows too.
  */
 export function RuleTableHeader({ hits }: { hits: boolean }) {
   const { t } = useTranslation('widgets/Rule/RuleTable');

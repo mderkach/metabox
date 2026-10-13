@@ -21,7 +21,7 @@ import {
   type ProxyRuntime,
 } from './Proxy.model';
 
-/** Тип селектора: единственная группа, где узел выбирает пользователь. */
+/** Selector type: the only group where the user picks the node. */
 const SELECTOR_TYPE = 'Selector';
 
 function toDelay(proxy: ClashProxyWire): number | null {
@@ -49,12 +49,12 @@ function toNode(proxy: ClashProxyWire, selected: boolean): ProxyNode {
 }
 
 /**
- * Группы конфига. Служебные `GLOBAL` и `DIRECT` отброшены: в файле их нет, а
- * переключение `GLOBAL` увело бы весь трафик мимо правил маршрутизации.
+ * Config groups. The service `GLOBAL` and `DIRECT` are dropped: they are not in
+ * the file, and switching `GLOBAL` would take all traffic past the routing
+ * rules.
  *
- * Селекторы идут первыми: только в них узел переключают руками, а за
- * остальными группами экран лишь наблюдает. Внутри вида порядок рантайма
- * сохраняется.
+ * Selectors go first: only in them is a node switched by hand, while the screen
+ * merely observes the other groups. Within a kind the runtime order is kept.
  */
 function toGroups(source: ClashProxiesWire): ProxyGroup[] {
   const groups: ProxyGroup[] = [];
@@ -68,8 +68,9 @@ function toGroups(source: ClashProxiesWire): ProxyGroup[] {
     const nodes: ProxyNode[] = [];
 
     for (const name of proxy.all ?? []) {
-      // Группа перечисляет узел, которого в снапшоте нет: рантайм отдаёт `all`
-      // из конфига, а узел мог приехать из подписки и ещё не загрузиться.
+      // The group lists a node that is not in the snapshot: the runtime serves
+      // `all` from the config, and the node may have come from a subscription
+      // and not loaded yet.
       if (!Object.hasOwn(source.proxies, name)) {
         continue;
       }
@@ -92,8 +93,8 @@ function toGroups(source: ClashProxiesWire): ProxyGroup[] {
 }
 
 /**
- * Узлы вне групп — то, что показывает экран, когда групп в конфиге нет вовсе:
- * правила ссылаются прямо на аутбаунды, и переключать нечего.
+ * Nodes outside groups are what the screen shows when the config has no groups
+ * at all: rules refer directly to outbounds, and there is nothing to switch.
  */
 function toStandalone(source: ClashProxiesWire): ProxyNode[] {
   return Object.values(source.proxies)
@@ -102,9 +103,9 @@ function toStandalone(source: ClashProxiesWire): ProxyNode[] {
 }
 
 /**
- * Снимок рантайма с другим выбранным узлом в группе. Неизвестная группа
- * возвращает снимок как есть: выбор в несуществующей группе — не ошибка
- * данных, а гонка с перечитыванием списка.
+ * Runtime snapshot with another node selected in a group. An unknown group
+ * returns the snapshot as is: a selection in a nonexistent group is not a data
+ * error but a race with rereading the list.
  */
 export function withSelectedNode(proxies: ClashProxiesWire, group: string, node: string): ClashProxiesWire {
   if (!Object.hasOwn(proxies.proxies, group)) {

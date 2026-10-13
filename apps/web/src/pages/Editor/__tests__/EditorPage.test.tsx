@@ -29,9 +29,9 @@ const CONFIG = JSON.stringify(
       rules: [
         { rule_set: ['github'], outbound: 'proxy' },
         { port: 53, action: 'hijack-dns' },
-        // Схема правил — `looseObject`, лишние ключи она принимает.
-        // Нераспознанным узел делает значение, которого нет ни в одной ветке
-        // union: такое приходит от бинаря новее схемы панели.
+        // The rule schema is a `looseObject`, it accepts extra keys.
+        // A node becomes unrecognized by a value that is in no branch of the
+        // union: that comes from a binary newer than the panel schema.
         { action: 'quantum-teleport' },
       ],
     },
@@ -40,7 +40,7 @@ const CONFIG = JSON.stringify(
   2
 );
 
-/** То же, но все узлы схема принимает: тогда у правила есть список выходов. */
+/** The same, but the schema accepts all nodes: then the rule has an outbound list. */
 const RECOGNIZED_CONFIG = JSON.stringify(
   {
     outbounds: [
@@ -53,7 +53,7 @@ const RECOGNIZED_CONFIG = JSON.stringify(
   2
 );
 
-/** Правила для правки списка: все узлы схема принимает, маршрут по умолчанию задан. */
+/** Rules for list editing: the schema accepts all nodes, the default route is set. */
 const EDIT_RULES = [
   { rule_set: ['github'], outbound: 'proxy' },
   { port: 53, action: 'hijack-dns' },
@@ -78,7 +78,7 @@ function draftRules(): unknown {
   return findValue(ConfigDocumentState.getState().draft ?? '', ['route', 'rules']);
 }
 
-/** Счёт процесса, который работает на `CONFIG`: по правилу на узел. */
+/** Count of a process that runs `CONFIG`: one per node. */
 const HITS = {
   seconds: 2 * 60 * 60,
   rules: [
@@ -93,20 +93,20 @@ function serveConfig(text = CONFIG, hits: typeof HITS = HITS) {
   server.use(
     http.get(ROUTE_ENDPOINT.hits(), () => HttpResponse.json(hits)),
     http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(text)),
-    // Шапка экрана открывает историю версий, а бар применения опрашивает демона.
+    // The screen header opens the version history, and the apply bar polls the daemon.
     http.get(CONFIG_ENDPOINT.versions(), () => HttpResponse.json({ versions: [] })),
     http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE))
   );
 }
 
-describe('экран правил', () => {
+describe('rules screen', () => {
   beforeEach(() => {
     ConfigDocumentState.getState().reset();
     mockVirtualSizes();
     serveConfig();
   });
 
-  it('шапка называет колонки, подвал считает правила', async () => {
+  it('the header names the columns, the footer counts the rules', async () => {
     renderWithRouter(EditorPage);
 
     const table = await screen.findByRole('table', { name: 'Правила маршрутизации' });
@@ -119,13 +119,13 @@ describe('экран правил', () => {
     expect(screen.getByRole('status')).toHaveTextContent('3 правила');
   });
 
-  it('над списком называет порядок проверки правил', async () => {
+  it('above the list names the rule check order', async () => {
     renderWithRouter(EditorPage);
 
     expect(await screen.findByText('сверху вниз, срабатывает первое подходящее')).toBeInTheDocument();
   });
 
-  it('показывает счёт срабатываний в строке правила', async () => {
+  it('shows the hit count in the rule row', async () => {
     renderWithRouter(EditorPage);
 
     const table = await screen.findByRole('table', { name: 'Правила маршрутизации' });
@@ -136,7 +136,7 @@ describe('экран правил', () => {
     });
   });
 
-  it('правило, которого core в списке соединений не показывает, получает «не видно», а не ноль', async () => {
+  it('a rule the core does not show in the connection list gets "not visible", not zero', async () => {
     renderWithRouter(EditorPage);
 
     const table = await screen.findByRole('table', { name: 'Правила маршрутизации' });
@@ -148,7 +148,7 @@ describe('экран правил', () => {
     expect(within(dnsRow).getByTitle(/^sing-box не показывает такие соединения/)).toBeInTheDocument();
   });
 
-  it('процесс на другом конфиге не раздаёт свой счёт строкам этого', async () => {
+  it('a process on another config does not hand its count to the rows of this one', async () => {
     serveConfig(CONFIG, { ...HITS, rules: HITS.rules.slice(0, 2) });
 
     renderWithRouter(EditorPage);
@@ -159,7 +159,7 @@ describe('экран правил', () => {
     expect(screen.queryByRole('columnheader', { name: 'Сработало' })).not.toBeInTheDocument();
   });
 
-  it('поиск отбирает строки, подвал сообщает обе величины', async () => {
+  it('search filters rows, the footer reports both values', async () => {
     const user = userEvent.setup();
 
     renderWithRouter(EditorPage);
@@ -169,7 +169,7 @@ describe('экран правил', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Показано 1 из 3');
   });
 
-  it('открывает панель по строке правила и закрывает её', async () => {
+  it('opens the panel from a rule row and closes it', async () => {
     const user = userEvent.setup();
 
     renderWithRouter(EditorPage);
@@ -185,7 +185,7 @@ describe('экран правил', () => {
     expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
   });
 
-  it('фокус уходит в панель, а Escape закрывает её и возвращает фокус на строку', async () => {
+  it('focus moves into the panel, and Escape closes it and returns focus to the row', async () => {
     const user = userEvent.setup();
 
     renderWithRouter(EditorPage);
@@ -207,7 +207,7 @@ describe('экран правил', () => {
     expect(ruleButton).toHaveFocus();
   });
 
-  it('форма выхода открывается на значении из конфига и не даёт применить пустую правку', async () => {
+  it('the outbound form opens on the value from the config and does not let apply an empty edit', async () => {
     const user = userEvent.setup();
 
     renderWithRouter(EditorPage);
@@ -220,10 +220,10 @@ describe('экран правил', () => {
     expect(within(panel).getByRole('button', { name: 'Сохранить в черновик' })).toBeDisabled();
   });
 
-  it('смена выхода в панели меняет одну строку файла, остальное правило не трогает', async () => {
-    // Конфиг без нераспознанного узла: список выходов строится по разобранному
-    // конфигу, а узел, который схема не приняла, оставляет его пустым — тогда
-    // выбирать было бы не из чего.
+  it('an outbound change in the panel edits one line of the file, does not touch the rest of the rule', async () => {
+    // A config without an unrecognized node: the outbound list is built from the parsed
+    // config, and a node the schema did not accept leaves it empty: then
+    // there would be nothing to choose from.
     serveConfig(RECOGNIZED_CONFIG);
 
     const user = userEvent.setup();
@@ -255,7 +255,7 @@ describe('экран правил', () => {
     ).toBeInTheDocument();
   });
 
-  it('выбранный в форме выход переживает переход на JSON и обратно', async () => {
+  it('an outbound chosen in the form survives a switch to JSON and back', async () => {
     serveConfig(RECOGNIZED_CONFIG);
 
     const user = userEvent.setup();
@@ -276,7 +276,7 @@ describe('экран правил', () => {
     expect(within(panel).getByRole('combobox', { name: 'Куда отправить' })).toHaveTextContent('direct');
   });
 
-  it('нераспознанный узел не получает формы, но правится текстом', async () => {
+  it('an unrecognized node gets no form, but is edited as text', async () => {
     const user = userEvent.setup();
 
     renderWithRouter(EditorPage);
@@ -290,7 +290,7 @@ describe('экран правил', () => {
     expect(within(panel).getByRole('textbox', { name: 'Правило 3 текстом' })).toBeInTheDocument();
   });
 
-  it('битый JSON узла не стирает введённое и не уходит в черновик', async () => {
+  it('broken node JSON does not erase the input and does not go into the draft', async () => {
     const user = userEvent.setup();
 
     renderWithRouter(EditorPage);
@@ -312,7 +312,7 @@ describe('экран правил', () => {
     expect(ConfigDocumentState.getState().draft).toBeNull();
   });
 
-  it('переключение правила перезаряжает панель: текст узла берётся у нового правила', async () => {
+  it('switching the rule reloads the panel: the node text is taken from the new rule', async () => {
     const user = userEvent.setup();
 
     renderWithRouter(EditorPage);
@@ -329,7 +329,7 @@ describe('экран правил', () => {
 
     await user.click(screen.getByRole('button', { name: /^Правило 2, / }));
 
-    // Панель пересоздана и открылась на форме — вкладку выбираем заново.
+    // The panel is recreated and opened on the form: choose the tab again.
     await user.click(within(await screen.findByRole('complementary')).getByRole('tab', { name: 'JSON' }));
 
     expect(await screen.findByRole('textbox', { name: 'Правило 2 текстом' })).toHaveValue(
@@ -337,7 +337,7 @@ describe('экран правил', () => {
     );
   });
 
-  it('нераспознанный узел записывается в черновик: запрещать может только sing-box check', async () => {
+  it('an unrecognized node is written to the draft: only sing-box check may forbid it', async () => {
     const user = userEvent.setup();
 
     renderWithRouter(EditorPage);
@@ -364,7 +364,7 @@ describe('экран правил', () => {
     });
   });
 
-  it('отказ источника показывает причину и повтор, а не пустой список', async () => {
+  it('a source failure shows the reason and a retry, not an empty list', async () => {
     const user = userEvent.setup();
 
     server.use(
@@ -384,7 +384,7 @@ describe('экран правил', () => {
     expect(await screen.findByRole('table', { name: 'Правила маршрутизации' })).toBeInTheDocument();
   });
 
-  it('конфиг без правил называет это, а не показывает пустое место', async () => {
+  it('a config without rules says so instead of showing an empty space', async () => {
     serveConfig(JSON.stringify({ outbounds: [{ type: 'direct', tag: 'direct' }] }));
 
     renderWithRouter(EditorPage);
@@ -392,7 +392,7 @@ describe('экран правил', () => {
     expect(await screen.findByText('Правил нет')).toBeInTheDocument();
   });
 
-  it('скаляры route правятся формой над правилами: route.final меняется, правила целы', async () => {
+  it('route scalars are edited by the form above the rules: route.final changes, the rules are intact', async () => {
     const user = userEvent.setup();
 
     serveConfig(RECOGNIZED_CONFIG);
@@ -412,14 +412,14 @@ describe('экран правил', () => {
   });
 });
 
-describe('правка списка правил', () => {
+describe('rule list editing', () => {
   beforeEach(() => {
     ConfigDocumentState.getState().reset();
     mockVirtualSizes();
     serveConfig(editConfig(EDIT_RULES));
   });
 
-  it('добавляет правило в конец, ведёт его в route.final и открывает в панели', async () => {
+  it('adds a rule to the end, leads it to route.final and opens it in the panel', async () => {
     const user = userEvent.setup();
 
     renderWithRouter(EditorPage);
@@ -437,7 +437,7 @@ describe('правка списка правил', () => {
     );
   });
 
-  it('в конфиге без правил кнопка пустого состояния создаёт route.rules', async () => {
+  it('in a config without rules the empty state button creates route.rules', async () => {
     serveConfig(JSON.stringify({ outbounds: [{ type: 'direct', tag: 'direct' }] }, null, 2));
 
     const user = userEvent.setup();
@@ -453,7 +453,7 @@ describe('правка списка правил', () => {
     expect(screen.getByRole('complementary', { name: 'Правило 1' })).toBeInTheDocument();
   });
 
-  it('без аутбаундов и route.final новому правилу неоткуда взять выход — кнопка выключена и говорит почему', async () => {
+  it('without outbounds and route.final a new rule has nowhere to get an outbound: the button is disabled and says why', async () => {
     serveConfig('{}');
 
     renderWithRouter(EditorPage);
@@ -462,7 +462,7 @@ describe('правка списка правил', () => {
     expect(screen.getByText(/нет ни route\.final, ни аутбаунда/)).toBeInTheDocument();
   });
 
-  it('добавление при активном поиске снимает отбор: новое правило видно в списке', async () => {
+  it('adding with an active search clears the filter: the new rule is visible in the list', async () => {
     const user = userEvent.setup();
 
     renderWithRouter(EditorPage);
@@ -482,7 +482,7 @@ describe('правка списка правил', () => {
     ).toBeInTheDocument();
   });
 
-  it('удаление после подтверждения убирает узел и закрывает панель, а соседей не трогает', async () => {
+  it('deleting after confirmation removes the node and closes the panel, does not touch neighbors', async () => {
     const user = userEvent.setup();
 
     renderWithRouter(EditorPage);
@@ -496,12 +496,12 @@ describe('правка списка правил', () => {
     );
 
     expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
-    // Файл без правила 2 — тот же текст, что был, строка в строку.
+    // The file without rule 2 is the same text as it was, line for line.
     expect(ConfigDocumentState.getState().draft).toBe(editConfig([EDIT_RULES[0], EDIT_RULES[2]]));
     expect(screen.getByRole('status')).toHaveTextContent('2 правила');
   });
 
-  it('отмена подтверждения оставляет правило и панель', async () => {
+  it('cancelling the confirmation keeps the rule and the panel', async () => {
     const user = userEvent.setup();
 
     renderWithRouter(EditorPage);
@@ -522,7 +522,7 @@ describe('правка списка правил', () => {
     expect(screen.getByRole('status')).toHaveTextContent('3 правила');
   });
 
-  it('«Выше» переставляет правило, а панель остаётся на нём вместе с вкладкой и фокусом', async () => {
+  it('"Up" moves the rule, and the panel stays on it together with the tab and focus', async () => {
     const user = userEvent.setup();
 
     renderWithRouter(EditorPage);
@@ -537,7 +537,7 @@ describe('правка списка правил', () => {
     expect(draftRules()).toEqual([EDIT_RULES[0], EDIT_RULES[2], EDIT_RULES[1]]);
     expect(within(panel).getByRole('heading', { name: 'Правило 2' })).toBeInTheDocument();
     expect(within(panel).getByText('route.rules[1]')).toBeInTheDocument();
-    // Панель не пересоздана: открытая вкладка осталась, а текст узла — тот же.
+    // The panel is not recreated: the open tab stayed, and the node text is the same.
     expect(within(panel).getByRole('tab', { name: 'JSON' })).toHaveAttribute('aria-selected', 'true');
     expect(within(panel).getByRole('textbox', { name: 'Правило 2 текстом' })).toHaveValue(
       JSON.stringify(EDIT_RULES[2], null, 2)
@@ -545,7 +545,7 @@ describe('правка списка правил', () => {
     expect(within(panel).getByRole('button', { name: 'Поднять правило 2 выше' })).toHaveFocus();
   });
 
-  it('отмена черновика после перестановки открывает в форме узел, который теперь на месте выбора', async () => {
+  it('cancelling the draft after a move opens in the form the node that is now at the selected place', async () => {
     const user = userEvent.setup();
 
     renderWithRouter(EditorPage);
@@ -563,12 +563,12 @@ describe('правка списка правил', () => {
       ConfigDocumentState.getState().discard();
     });
 
-    // Выбор остался на первой позиции, а там снова правило 1 файла.
+    // The selection stayed at the first position, and there is rule 1 of the file again.
     expect(within(panel).getByRole('heading', { name: 'Правило 1' })).toBeInTheDocument();
     expect(within(panel).getByRole('combobox', { name: 'Куда отправить' })).toHaveTextContent('proxy');
   });
 
-  it('на первом месте «Выше» гаснет, и фокус уходит на «Ниже», а не теряется', async () => {
+  it('in the first place "Up" goes out and focus goes to "Down", it is not lost', async () => {
     const user = userEvent.setup();
 
     renderWithRouter(EditorPage);
@@ -583,7 +583,7 @@ describe('правка списка правил', () => {
     expect(within(panel).getByRole('button', { name: 'Опустить правило 1 ниже' })).toHaveFocus();
   });
 
-  it('переставленное правило сохраняет счёт срабатываний и не помечается изменённым', async () => {
+  it('a moved rule keeps its hit count and is not marked changed', async () => {
     const user = userEvent.setup();
 
     renderWithRouter(EditorPage);
@@ -602,7 +602,7 @@ describe('правка списка правил', () => {
   });
 });
 
-describe('экран правил на узком экране', () => {
+describe('rules screen on a narrow screen', () => {
   beforeEach(() => {
     ConfigDocumentState.getState().reset();
     mockVirtualSizes();
@@ -621,7 +621,7 @@ describe('экран правил на узком экране', () => {
     vi.unstubAllGlobals();
   });
 
-  it('открывает правило листом поверх списка, а не под ним', async () => {
+  it('opens a rule as a sheet over the list, not under it', async () => {
     const user = userEvent.setup();
 
     renderWithRouter(EditorPage);
@@ -640,7 +640,7 @@ describe('экран правил на узком экране', () => {
   });
 });
 
-describe('правка списка правил на узком экране', () => {
+describe('rule list editing on a narrow screen', () => {
   beforeEach(() => {
     ConfigDocumentState.getState().reset();
     mockVirtualSizes();
@@ -659,7 +659,7 @@ describe('правка списка правил на узком экране', 
     vi.unstubAllGlobals();
   });
 
-  it('лист остаётся на переставленном правиле и не пересоздаётся', async () => {
+  it('the sheet stays on the moved rule and is not recreated', async () => {
     const user = userEvent.setup();
 
     renderWithRouter(EditorPage);
@@ -677,13 +677,13 @@ describe('правка списка правил на узком экране', 
   });
 });
 
-describe('тон выхода правила', () => {
+describe('rule outbound tone', () => {
   beforeEach(() => {
     ConfigDocumentState.getState().reset();
     mockVirtualSizes();
   });
 
-  it('выход красится по типу аутбаунда, а не по имени тега', async () => {
+  it('the outbound is colored by outbound type, not by the tag name', async () => {
     serveConfig(
       JSON.stringify({
         outbounds: [
@@ -704,14 +704,14 @@ describe('тон выхода правила', () => {
     const table = await screen.findByRole('table', { name: 'Правила маршрутизации' });
     const [, proxyRow, directRow] = within(table).getAllByRole('row');
 
-    // Предмет теста — сам тон: по нему читается судьба трафика.
+    // The subject of the test is the tone itself: the fate of the traffic is read from it.
     expect(within(proxyRow).getByText('directional')).toHaveClass('text-route-proxy');
     expect(within(proxyRow).getByText('directional')).not.toHaveClass('text-route-direct');
     expect(within(directRow).getByText('direct')).toHaveClass('text-route-direct');
   });
 });
 
-describe('отбор по сету из адреса', () => {
+describe('filter by rule set from the address', () => {
   beforeEach(() => {
     ConfigDocumentState.getState().reset();
     mockVirtualSizes();
@@ -725,7 +725,7 @@ describe('отбор по сету из адреса', () => {
     });
   }
 
-  it('показывает только правила, которые ссылаются на сет', async () => {
+  it('shows only rules that refer to the rule set', async () => {
     renderWithRuleSet('github');
 
     const table = await screen.findByRole('table', { name: 'Правила маршрутизации' });
@@ -734,7 +734,7 @@ describe('отбор по сету из адреса', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Показано 1 из 3');
   });
 
-  it('снимается кнопкой отбора и уходит из адреса', async () => {
+  it('is cleared by the filter button and leaves the address', async () => {
     const user = userEvent.setup();
     const { router } = renderWithRuleSet('github');
 
@@ -744,7 +744,7 @@ describe('отбор по сету из адреса', () => {
     expect(router.state.location.search).toEqual({});
   });
 
-  it('сет без правил даёт пустой отбор, а его сброс возвращает список', async () => {
+  it('a rule set without rules gives an empty filter, and its reset returns the list', async () => {
     const user = userEvent.setup();
 
     renderWithRuleSet('geoip-ru');
@@ -757,8 +757,8 @@ describe('отбор по сету из адреса', () => {
   });
 });
 
-describe('сеты правила из панели', () => {
-  /** Правила для правки и два набора, на которые можно сослаться. */
+describe('rule sets of a rule from the panel', () => {
+  /** Rules for editing and two sets that can be referred to. */
   const WITH_RULE_SETS = JSON.stringify(
     {
       outbounds: [
@@ -784,7 +784,7 @@ describe('сеты правила из панели', () => {
     serveConfig(WITH_RULE_SETS);
   });
 
-  it('сет, выбранный в форме, виден в условиях правила и в отборе по сету', async () => {
+  it('a rule set chosen in the form is visible in the rule conditions and in the rule set filter', async () => {
     const user = userEvent.setup();
     const { router } = renderWithRouter(EditorPage, { validateSearch: parseRuleSearch });
 
@@ -795,7 +795,7 @@ describe('сеты правила из панели', () => {
     await selectOption(user, within(panel).getByRole('combobox', { name: 'Сеты правил' }), 'geoip-cn');
     await user.keyboard('{Escape}');
 
-    // Escape закрывает список, а не панель вокруг него.
+    // Escape closes the list, not the panel around it.
     expect(panel).toBeInTheDocument();
 
     await user.click(within(panel).getByRole('button', { name: 'Сохранить в черновик' }));
@@ -820,13 +820,13 @@ describe('сеты правила из панели', () => {
   });
 });
 
-describe('номер правила из адреса', () => {
-  it('переводит номер интерфейса в индекс узла', () => {
+describe('rule number from the address', () => {
+  it('converts the interface number to a node index', () => {
     expect(toSelectedRuleId(1)).toBe('0');
     expect(toSelectedRuleId(7)).toBe('6');
   });
 
-  it('без номера в адресе не выбирает ничего', () => {
+  it('without a number in the address selects nothing', () => {
     expect(toSelectedRuleId(undefined)).toBeNull();
   });
 });

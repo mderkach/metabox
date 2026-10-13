@@ -8,9 +8,9 @@ const CLIENT_ERROR_MIN = 400;
 const CLIENT_ERROR_MAX = 500;
 
 /**
- * Ответ 4xx — вердикт демона, а не сбой связи: повтор вернёт то же самое.
- * Недоступность демона повторять тоже незачем — панель показывает баннер и
- * ждёт, пока он поднимется.
+ * A 4xx response is the daemon's verdict, not a connection failure: a retry returns the same.
+ * Retrying daemon unavailability is pointless too — the panel shows a banner and
+ * waits for it to come up.
  */
 function shouldRetry(failureCount: number, error: unknown): boolean {
   if (failureCount >= GET_RETRY_COUNT) {
@@ -25,8 +25,8 @@ function shouldRetry(failureCount: number, error: unknown): boolean {
     return false;
   }
 
-  // Повтор вернёт тот же непонятый ответ: форма не меняется от того, что
-  // запрос отправлен второй раз.
+  // A retry returns the same unparseable response: the form does not change because
+  // the request was sent a second time.
   if (error.kind === API_FAILURE.Schema) {
     return false;
   }
@@ -37,11 +37,11 @@ function shouldRetry(failureCount: number, error: unknown): boolean {
 }
 
 /**
- * Клиент один на приложение. Кэш выключен по умолчанию: время жизни задаётся
- * там, где запрос объявлен, а не наследуется молча (Query.md).
+ * One client per application. The cache is off by default: lifetime is set
+ * where the request is declared, not inherited silently (Query.md).
  *
- * Мутации не повторяются вовсе — повтор Apply запустил бы на устройстве второй
- * цикл записи и рестарта.
+ * Mutations are not retried at all — a retry of Apply would start a second
+ * write and restart cycle on the device.
  */
 export const QueryClientInstance = new QueryClient({
   defaultOptions: {

@@ -13,15 +13,15 @@ import (
 	"metabox/internal/config"
 )
 
-// Init-скрипт возвращается раньше, чем procd заменит процесс: API опрашивается
-// только после того, как procd отчитался о новом pid.
+// The init script returns before procd replaces the process: the API is polled
+// only after procd reported the new pid.
 func TestHealthcheckWaitsForNewProcess(t *testing.T) {
 	h := newHarness(t)
 	h.service.pid = 100
 	h.service.lag = 2
 
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
-		t.Fatalf("применение: %v", err)
+		t.Fatalf("apply: %v", err)
 	}
 	h.waitWindow(t)
 
@@ -29,63 +29,63 @@ func TestHealthcheckWaitsForNewProcess(t *testing.T) {
 	restart, wait := slices.Index(calls, "Restart"), slices.Index(calls, "Wait")
 
 	if polls := countOf(calls[restart:wait], "PID"); polls != 3 {
-		t.Errorf("опросов procd между рестартом и healthcheck: %d, ожидали 3 — два с прежним pid и один с новым", polls)
+		t.Errorf("procd polls between restart and healthcheck: %d, expected 3: two with the old pid and one with the new", polls)
 	}
 	if got := h.manager.Current().Phase; got != apply.PhaseAwaitingConfirm {
-		t.Errorf("фаза %q, ожидали ожидание подтверждения", got)
+		t.Errorf("phase %q, expected awaiting confirmation", got)
 	}
 }
 
-// Отвечает прежний процесс — procd так и не отдал новый pid. Ответ API ему не
-// засчитывается: healthcheck не идёт, цикл встаёт с healthcheck_failed и
-// откатывается.
+// The old process answers: procd never returned the new pid. The API answer is not
+// credited to it: the healthcheck does not pass, the cycle stops with healthcheck_failed and
+// rolls back.
 func TestHealthcheckIgnoresOldProcess(t *testing.T) {
 	h := newHarnessWith(t, 20*time.Millisecond, slog.New(slog.DiscardHandler))
 	h.service.pid = 100
 	h.service.lag = -1
 
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
-		t.Fatalf("применение: %v", err)
+		t.Fatalf("apply: %v", err)
 	}
 
 	tx := waitPhase(t, h, apply.PhaseRolledBack)
 
 	if slices.Contains(h.rec.snapshot(), "Wait") {
-		t.Error("API опрошен, хотя procd отдаёт прежний pid: ответ засчитан старому процессу")
+		t.Error("API polled although procd returns the old pid: the answer was credited to the old process")
 	}
 	if tx.ReasonCode != apply.ReasonHealthcheckFailed {
-		t.Errorf("код причины %q, ожидали %q", tx.ReasonCode, apply.ReasonHealthcheckFailed)
+		t.Errorf("reason code %q, expected %q", tx.ReasonCode, apply.ReasonHealthcheckFailed)
 	}
 	if !strings.Contains(tx.Reason, "100") {
-		t.Errorf("подробность %q не называет прежний pid", tx.Reason)
+		t.Errorf("detail %q does not name the old pid", tx.Reason)
 	}
 }
 
-// Без procd сверять pid не с чем: применение не останавливается, healthcheck
-// идёт одним опросом API.
+// Without procd there is nothing to compare the pid with: the apply is not stopped, the healthcheck
+// goes with a single API poll.
 func TestHealthcheckWithoutProcd(t *testing.T) {
 	h := newHarness(t)
 	h.service.pidErr = errors.New("ubus не отвечает")
 
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
-		t.Fatalf("применение: %v", err)
+		t.Fatalf("apply: %v", err)
 	}
 	h.waitWindow(t)
 
 	if calls := h.rec.snapshot(); !slices.Contains(calls, "Wait") || countOf(calls, "PID") != 1 {
-		t.Errorf("шаги %v, ожидали один опрос procd и healthcheck", calls)
+		t.Errorf("steps %v, expected one procd poll and healthcheck", calls)
 	}
 }
 
-// Первое применение: бэкапа нет, и откат возвращать нечего. Фаза не врёт
-// откатом, служба лишний раз не перезапускается.
+// The first apply: there is no backup, and the rollback has nothing to restore. The phase does not lie
+// about a rollback, the service is not restarted an extra time.
 func TestRollbackWithoutBackup(t *testing.T) {
-	t.Run("окно истекло", func(t *testing.T) {
+	t.Run("window expired", func(t *testing.T) {
 		h := newHarness(t)
 		h.store.restoreErr = config.ErrNoBackup
 
 		if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
-			t.Fatalf("применение: %v", err)
+			t.Fatalf("apply: %v", err)
 		}
 		h.waitWindow(t)
 
@@ -94,111 +94,111 @@ func TestRollbackWithoutBackup(t *testing.T) {
 
 		tx := h.manager.Current()
 		if tx.Phase != apply.PhaseFailed || tx.ReasonCode != apply.ReasonNoBackup {
-			t.Errorf("фаза %q с кодом %q, ожидали отказ с причиной no_backup", tx.Phase, tx.ReasonCode)
+			t.Errorf("phase %q with code %q, expected failure with reason no_backup", tx.Phase, tx.ReasonCode)
 		}
 		if tx.Reason == "" {
-			t.Error("подробность пуста")
+			t.Error("detail is empty")
 		}
 		if got := countOf(h.rec.snapshot(), "Restart"); got != 1 {
-			t.Errorf("рестартов %d, ожидали один — от самого применения", got)
+			t.Errorf("restarts %d, expected one: from the apply itself", got)
 		}
 		if state, _ := h.store.ReadState(t.Context()); state != nil {
-			t.Error("состояние закрытой транзакции осталось на диске")
+			t.Error("state of the closed transaction stayed on disk")
 		}
 
-		// На диске конфиг, записанный самим демоном: следующее применение
-		// не упирается ни в занятость, ни в ложную внешнюю правку.
+		// The disk has the config written by the daemon itself: the next apply
+		// runs into neither busyness nor a false outside edit.
 		h.store.mu.Lock()
 		h.store.sum = config.Sum(h.store.written)
 		h.store.mu.Unlock()
 
 		if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
-			t.Errorf("применение после закрытия без бэкапа: %v", err)
+			t.Errorf("apply after closing without a backup: %v", err)
 		}
 	})
 
-	t.Run("шаг цикла не прошёл", func(t *testing.T) {
+	t.Run("cycle step failed", func(t *testing.T) {
 		h := newHarness(t)
 		h.store.restoreErr = config.ErrNoBackup
 		h.health.err = errors.New("порт молчит")
 
 		if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
-			t.Fatalf("применение: %v", err)
+			t.Fatalf("apply: %v", err)
 		}
 		h.manager.Close()
 
 		tx := h.manager.Current()
 		if tx.Phase != apply.PhaseFailed || tx.ReasonCode != apply.ReasonNoBackup {
-			t.Errorf("фаза %q с кодом %q, ожидали отказ с причиной no_backup", tx.Phase, tx.ReasonCode)
+			t.Errorf("phase %q with code %q, expected failure with reason no_backup", tx.Phase, tx.ReasonCode)
 		}
 		if !strings.Contains(tx.Reason, "порт молчит") {
-			t.Errorf("подробность %q потеряла отказ шага", tx.Reason)
+			t.Errorf("detail %q lost the step failure", tx.Reason)
 		}
 		if got := countOf(h.rec.snapshot(), "Restart"); got != 1 {
-			t.Errorf("рестартов %d, ожидали один — от самого применения", got)
+			t.Errorf("restarts %d, expected one: from the apply itself", got)
 		}
 	})
 }
 
-// Бэкап не прошёл — записи ещё не было, на диске прежний конфиг. Откат по
-// бэкапу прошлой транзакции потерял бы то, что работает: транзакция
-// закрывается отказом без Restore и рестарта.
+// The backup failed: there was no write yet, the disk has the previous config. A rollback from
+// the backup of a previous transaction would lose what works: the transaction
+// is closed with a failure without Restore and a restart.
 func TestBackupFailureSkipsRollback(t *testing.T) {
 	h := newHarness(t)
 	h.store.backupErr = errors.New("диск переполнен")
 
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
-		t.Fatalf("применение: %v", err)
+		t.Fatalf("apply: %v", err)
 	}
 	h.manager.Close()
 
 	tx := h.manager.Current()
 	if tx.Phase != apply.PhaseFailed || tx.ReasonCode != apply.ReasonBackupFailed {
-		t.Errorf("фаза %q с кодом %q, ожидали отказ с причиной backup_failed", tx.Phase, tx.ReasonCode)
+		t.Errorf("phase %q with code %q, expected failure with reason backup_failed", tx.Phase, tx.ReasonCode)
 	}
 	if !strings.Contains(tx.Reason, "диск переполнен") {
-		t.Errorf("подробность %q потеряла отказ бэкапа", tx.Reason)
+		t.Errorf("detail %q lost the backup failure", tx.Reason)
 	}
 
 	calls := h.rec.snapshot()
 	for _, step := range []string{"Restore", "WriteLists", "Write", "Restart"} {
 		if slices.Contains(calls, step) {
-			t.Errorf("после отказа бэкапа вызван %s: шаги %v", step, calls)
+			t.Errorf("%s called after backup failure: steps %v", step, calls)
 		}
 	}
 	if state, _ := h.store.ReadState(t.Context()); state != nil {
-		t.Error("состояние закрытой транзакции осталось на диске")
+		t.Error("state of the closed transaction stayed on disk")
 	}
 
 	h.store.backupErr = nil
 
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
-		t.Errorf("применение после отказа бэкапа: %v", err)
+		t.Errorf("apply after backup failure: %v", err)
 	}
 }
 
-// Отказ бэкапа и неубранное состояние: применение освобождается, а оставшаяся
-// на диске фаза applying при следующем старте закрывается без отката — записи
-// не было, и откат по бэкапу прошлой транзакции потерял бы рабочий конфиг.
+// A backup failure and an unremoved state: the apply is released, and the applying phase
+// left on disk is closed at the next start without a rollback: there was
+// no write, and a rollback from the backup of a previous transaction would lose the working config.
 func TestBackupFailureWithStateLeftReplaysWithoutRollback(t *testing.T) {
 	h := newHarness(t)
 	h.store.backupErr = errors.New("диск переполнен")
 	h.store.clearErr = errors.New("файловая система только для чтения")
 
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
-		t.Fatalf("применение: %v", err)
+		t.Fatalf("apply: %v", err)
 	}
 	h.manager.Close()
 
 	if tx := h.manager.Current(); tx.Phase != apply.PhaseFailed || tx.ReasonCode != apply.ReasonBackupFailed {
-		t.Fatalf("фаза %q с кодом %q, ожидали отказ с причиной backup_failed", tx.Phase, tx.ReasonCode)
+		t.Fatalf("phase %q with code %q, expected failure with reason backup_failed", tx.Phase, tx.ReasonCode)
 	}
 
 	if state, _ := h.store.ReadState(t.Context()); state == nil {
-		t.Fatal("состояние убрано, хотя ClearState отказал: проверять доигрывание нечем")
+		t.Fatal("state removed although ClearState refused: nothing to check the replay with")
 	}
 
-	// Следующая жизнь демона на том же диске.
+	// The next daemon lifetime on the same disk.
 	h.rec.mu.Lock()
 	h.rec.calls = nil
 	h.rec.mu.Unlock()
@@ -210,57 +210,57 @@ func TestBackupFailureWithStateLeftReplaysWithoutRollback(t *testing.T) {
 	t.Cleanup(restarted.Close)
 
 	if err := restarted.Replay(t.Context()); err != nil {
-		t.Fatalf("доигрывание: %v", err)
+		t.Fatalf("replay: %v", err)
 	}
 
 	calls := h.rec.snapshot()
 	for _, step := range []string{"Restore", "Restart"} {
 		if slices.Contains(calls, step) {
-			t.Errorf("доигрывание транзакции без записи вызвало %s: шаги %v", step, calls)
+			t.Errorf("replay of a transaction without a write called %s: steps %v", step, calls)
 		}
 	}
 
 	if state, _ := h.store.ReadState(t.Context()); state != nil {
-		t.Error("доигрывание оставило состояние на диске")
+		t.Error("replay left the state on disk")
 	}
 }
 
-// Конфига на устройстве нет — первый запуск или удалён владельцем. Применение
-// не останавливается, а откат этого применения возвращать нечего.
+// There is no config on the device: first start or removed by the owner. The apply
+// is not stopped, and this apply's rollback has nothing to restore.
 func TestBackupWithoutConfigContinues(t *testing.T) {
 	h := newHarness(t)
 	h.store.backupErr = config.ErrNoConfig
 
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
-		t.Fatalf("применение: %v", err)
+		t.Fatalf("apply: %v", err)
 	}
 	h.waitWindow(t)
 
 	if !slices.Contains(h.rec.snapshot(), "Write") {
-		t.Error("без конфига на устройстве применение не дошло до записи")
+		t.Error("without a config on the device the apply did not reach the write")
 	}
 
-	// Бэкап прошлой транзакции снят вместе с конфигом: откат возвращать нечего.
+	// The backup of the previous transaction is taken together with the config: the rollback has nothing to restore.
 	h.store.restoreErr = config.ErrNoBackup
 	h.clock.fire()
 	h.manager.Close()
 
 	tx := h.manager.Current()
 	if tx.Phase != apply.PhaseFailed || tx.ReasonCode != apply.ReasonNoBackup {
-		t.Errorf("фаза %q с кодом %q, ожидали отказ с причиной no_backup", tx.Phase, tx.ReasonCode)
+		t.Errorf("phase %q with code %q, expected failure with reason no_backup", tx.Phase, tx.ReasonCode)
 	}
 }
 
-// Отказ чтения конфига перед историей применение не останавливает, но и не
-// проходит молча; отсутствие конфига — штатный первый запуск без записи.
+// A failure to read the config before the history does not stop the apply, but it does not
+// pass silently either; a missing config is a regular first start without a write.
 func TestReadFailureBeforeSaveVersionIsLogged(t *testing.T) {
 	tests := []struct {
 		name     string
 		readErr  error
 		wantWarn bool
 	}{
-		{"чтение не прошло", errors.New("ошибка ввода-вывода"), true},
-		{"конфига ещё нет", config.ErrNoConfig, false},
+		{"reading failed", errors.New("ошибка ввода-вывода"), true},
+		{"no config yet", config.ErrNoConfig, false},
 	}
 
 	for _, tt := range tests {
@@ -271,17 +271,17 @@ func TestReadFailureBeforeSaveVersionIsLogged(t *testing.T) {
 			h.store.readErr = tt.readErr
 
 			if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
-				t.Fatalf("применение: %v", err)
+				t.Fatalf("apply: %v", err)
 			}
 			h.waitWindow(t)
 
 			if slices.Contains(h.rec.snapshot(), "SaveVersion") {
-				t.Error("в историю ушла версия, которую не прочитали")
+				t.Error("a version that was not read went into the history")
 			}
 
 			warned := strings.Contains(logs.String(), "level=WARN msg=\"конфиг не прочитан, версия в историю не сохранена\"")
 			if warned != tt.wantWarn {
-				t.Errorf("предупреждение в логе: %v, ожидали %v; лог:\n%s", warned, tt.wantWarn, logs.String())
+				t.Errorf("warning in the log: %v, expected %v; log:\n%s", warned, tt.wantWarn, logs.String())
 			}
 		})
 	}

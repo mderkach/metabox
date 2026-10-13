@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import { FIELD_KIND, toFieldPlan, toVariants, unwrap } from '../schemaShape';
 
-/** Шаблон длительности — тот же, что печатает генератор схемы. */
+/** The duration pattern is the same one the schema generator prints. */
 const DURATION = /^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$/;
 
 const NodeSchema = z.strictObject({
@@ -37,7 +37,7 @@ function fieldOf(key: string) {
 }
 
 describe('toFieldPlan', () => {
-  it('сохраняет порядок полей схемы', () => {
+  it('keeps the schema field order', () => {
     expect(toFieldPlan(NodeSchema).map((field) => field.key)).toEqual(Object.keys(NodeSchema.shape));
   });
 
@@ -55,33 +55,33 @@ describe('toFieldPlan', () => {
     ['network', FIELD_KIND.EnumList],
     ['outbounds', FIELD_KIND.List],
     ['tls', FIELD_KIND.Group],
-  ])('поле %s получает вид %s', (key, kind) => {
+  ])('field %s gets kind %s', (key, kind) => {
     expect(fieldOf(key)?.kind).toBe(kind);
   });
 
-  it.each(['ports', 'domain_resolver', 'headers'])('незнакомый вид %s уходит в raw, а не теряется', (key) => {
+  it.each(['ports', 'domain_resolver', 'headers'])('an unknown kind %s goes to raw instead of being lost', (key) => {
     expect(fieldOf(key)?.kind).toBe(FIELD_KIND.Raw);
   });
 
-  it('строку с чужим шаблоном считает строкой, а не длительностью', () => {
+  it('treats a string with a foreign pattern as a string, not a duration', () => {
     const plan = toFieldPlan(z.strictObject({ uuid: z.string().regex(/^[0-9a-f-]+$/) }));
 
     expect(plan[0]?.kind).toBe(FIELD_KIND.String);
   });
 
-  it('отдаёт значения перечисления и литерала', () => {
+  it('returns the enum and literal values', () => {
     expect(fieldOf('strategy')?.options).toEqual(['', 'prefer_ipv4', 'ipv4_only']);
     expect(fieldOf('network')?.options).toEqual(['tcp', 'udp']);
     expect(fieldOf('type')?.options).toEqual(['vless']);
   });
 
-  it('отличает listable от массива: одиночное значение принимает только первый', () => {
+  it('tells listable from an array: a single value is accepted only by the first', () => {
     expect(fieldOf('alpn')?.listable).toBe(true);
     expect(fieldOf('network')?.listable).toBe(true);
     expect(fieldOf('outbounds')?.listable).toBe(false);
   });
 
-  it('раскрывает вложенный объект группой с полными путями', () => {
+  it('expands a nested object into a group with full paths', () => {
     const tls = fieldOf('tls');
     const reality = tls?.children?.find((field) => field.key === 'reality');
 
@@ -95,7 +95,7 @@ describe('toFieldPlan', () => {
     ]);
   });
 
-  it('объект глубже четырёх уровней уходит в raw целиком', () => {
+  it('an object deeper than four levels goes to raw as a whole', () => {
     const deep = z.strictObject({
       a: z.strictObject({ b: z.strictObject({ c: z.strictObject({ d: z.strictObject({ e: z.string() }) }) }) }),
     });
@@ -107,13 +107,13 @@ describe('toFieldPlan', () => {
     expect(d?.children).toBeUndefined();
   });
 
-  it('у схемы-не-объекта полей нет', () => {
+  it('a non-object schema has no fields', () => {
     expect(toFieldPlan(z.string())).toEqual([]);
   });
 });
 
 describe('unwrap', () => {
-  it('снимает optional, nullable и default до самой схемы поля', () => {
+  it('strips optional, nullable and default down to the field schema itself', () => {
     const inner = z.string();
 
     expect(unwrap(inner.nullable().default('x').optional())).toBe(inner);
@@ -126,19 +126,19 @@ describe('toVariants', () => {
     z.strictObject({ type: z.literal('block'), tag: z.string().optional() }),
   ]);
 
-  it('перечисляет типы реестра со схемами вариантов', () => {
+  it('lists registry types with variant schemas', () => {
     const variants = toVariants(RegistrySchema);
 
     expect(variants.map((variant) => variant.type)).toEqual(['direct', 'block']);
     expect(toFieldPlan(variants[0]?.schema ?? z.never()).map((field) => field.key)).toEqual(['type', 'tag']);
   });
 
-  it('у обычного union и не-union вариантов нет', () => {
+  it('a plain union and non-union have no variants', () => {
     expect(toVariants(z.union([z.string(), z.int()]))).toEqual([]);
     expect(toVariants(z.string())).toEqual([]);
   });
 
-  it('union с другим дискриминатором реестром не считает', () => {
+  it('a union with a different discriminator is not counted as a registry', () => {
     const union = z.discriminatedUnion('kind', [z.strictObject({ kind: z.literal('a') })]);
 
     expect(toVariants(union)).toEqual([]);

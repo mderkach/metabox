@@ -1,9 +1,9 @@
 import type { DataplaneWire } from '../api/Dataplane.schema';
 
 /**
- * Модель режима `listed` на адресах фикстуры устройств: устройство 192.168.1.120
- * идёт через sing-box по MAC, записанному заглавными, как его мог вписать
- * владелец, 192.168.1.180 — по адресу без префикса.
+ * Model of the `listed` mode on the device fixture addresses: device 192.168.1.120
+ * goes through sing-box by MAC, written in uppercase as the owner could have entered it,
+ * 192.168.1.180 by an address without a prefix.
  */
 export const DATAPLANE_FIXTURE: DataplaneWire = {
   model: {

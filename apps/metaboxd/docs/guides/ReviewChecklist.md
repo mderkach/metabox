@@ -1,80 +1,80 @@
-# Чеклист код-ревью Go
+# Go code review checklist
 
-Проходится перед тем, как сдавать правку в Go-части. Пункты чеклиста — не предмет вкуса: расхождение с ними означает, что правку принимать нельзя, пока документ не изменён явно.
+Go through it before handing in a change to the Go part. The checklist items are not a matter of taste: a deviation from them means the change must not be accepted until the document is explicitly changed.
 
-## Архитектура
+## Architecture
 
-- [ ] Новая зависимость в `go.mod` демона не появилась.
-- [ ] `apps/metaboxd` остался тонким: разбор флагов, сборка зависимостей, запуск, остановка.
-- [ ] Пакет назван по предмету, а не по слою; `util`, `common`, `helpers` не заведены.
-- [ ] Зависимости переданы конструктором, глобальных переменных и `init()` нет.
-- [ ] Интерфейс объявлен у потребителя и содержит только используемые методы.
-- [ ] Демон не разбирает конфиг в структуры или map
-- [ ] Собственной валидации содержимого конфига не добавилось: проверяет бинарь.
+- [ ] No new dependency appeared in the daemon's `go.mod`.
+- [ ] `apps/metaboxd` stayed thin: flag parsing, wiring dependencies, start, shutdown.
+- [ ] The package is named by subject, not by layer; no `util`, `common`, `helpers` were created.
+- [ ] Dependencies are passed through the constructor, there are no global variables and no `init()`.
+- [ ] The interface is declared at the consumer and contains only the methods used.
+- [ ] The daemon does not parse the config into structs or a map
+- [ ] No own validation of config contents was added: the binary checks it.
 
-## Стиль
+## Style
 
-- [ ] `gofmt` прошёл, `make lint` зелёный.
-- [ ] Новое исключение в [`.golangci.yml`](../../../../.golangci.yml) снабжено причиной, а не просто отключает шумное правило.
-- [ ] `context.Context` — первым аргументом, в структурах не хранится.
-- [ ] Экспортируется только то, что используется снаружи пакета.
-- [ ] Комментарии — по правилу «Размещение технических знаний» из [AGENTS.md](../../../../AGENTS.md): godoc про то, чего не видно из сигнатуры, без пересказа кода.
-- [ ] Диффа, не относящегося к задаче, нет: переименований, переформатирования, попутного рефакторинга.
+- [ ] `gofmt` passed, `make lint` is green.
+- [ ] A new exclusion in [`.golangci.yml`](../../../../.golangci.yml) states a reason and does not just silence a noisy rule.
+- [ ] `context.Context` is the first argument and is not stored in structs.
+- [ ] Only what is used outside the package is exported.
+- [ ] Comments follow the "Placement of technical knowledge" rule in [AGENTS.md](../../../../AGENTS.md): godoc covers what is not visible from the signature, without retelling the code.
+- [ ] There is no diff unrelated to the task: renames, reformatting, refactoring along the way.
 
-## Ошибки
+## Errors
 
-- [ ] Ошибка либо возвращается, либо логируется — не оба сразу.
-- [ ] Обёртка `%w` там, где вызывающий реагирует на исходную ошибку; контекст в тексте говорит, что делали.
-- [ ] Проверка через `errors.Is` / `errors.AsType`, не по тексту ошибки.
-- [ ] Ошибки `Close` и `Sync` на успешном пути записи не проглочены.
-- [ ] Наружу в HTTP не утекают пути, аргументы команд и содержимое конфига. Исключение — дословный вывод `sing-box check`
-- [ ] `panic` в обработчике запроса и в цикле применения отсутствует; middleware восстановления на месте.
+- [ ] An error is either returned or logged, never both.
+- [ ] `%w` wrapping where the caller reacts to the original error; the context in the text says what was being done.
+- [ ] Checks go through `errors.Is` / `errors.AsType`, not through the error text.
+- [ ] `Close` and `Sync` errors on the success path of a write are not swallowed.
+- [ ] Paths, command arguments and config contents do not leak out over HTTP. The exception is the verbatim output of `sing-box check`
+- [ ] There is no `panic` in a request handler or in the apply loop; the recovery middleware is in place.
 
-## Логи
+## Logs
 
-- [ ] Логгер получен конструктором, `slog.Default()` и `log.Printf` не используются.
-- [ ] Атрибуты — парами ключ-значение, ошибка под ключом `err`.
-- [ ] Уровень соответствует событию: отказ пользователю — `Error`, сработавшая защита — `Warn`.
-- [ ] В логи не попали `secret` Clash API, токены, тела запросов, конфиг целиком.
-- [ ] Одно событие — одна запись; дублей по стеку нет.
+- [ ] The logger comes through the constructor; `slog.Default()` and `log.Printf` are not used.
+- [ ] Attributes are key-value pairs, the error is under the `err` key.
+- [ ] The level matches the event: a failure for the user is `Error`, a safeguard that fired is `Warn`.
+- [ ] The Clash API `secret`, tokens, request bodies and the whole config did not get into logs.
+- [ ] One event is one record; there are no duplicates up the stack.
 
 ## HTTP
 
-- [ ] Шаблон маршрута содержит метод; параметры берутся `r.PathValue`.
-- [ ] Тело запроса ограничено `http.MaxBytesReader`.
-- [ ] `r.Context()` уходит в вызываемый код. Цикл применения живёт на собственном контексте
-- [ ] Мутирующий запрос проверяется по `Origin` и `Host`; послабление — только через `-allowed-origin`.
-- [ ] Таймауты сервера заданы; `WriteTimeout` не задан глобально там, где есть долгие ответы.
-- [ ] Неизвестный путь под `/api/` отдаёт JSON-ошибку, а не `index.html`.
-- [ ] Остановка обрабатывает сигнал и вызывает `Shutdown`; `http.ErrServerClosed` не считается ошибкой.
-- [ ] Демон слушает адрес из флага; `0.0.0.0` по умолчанию не появился.
+- [ ] The route pattern contains the method; parameters are read with `r.PathValue`.
+- [ ] The request body is limited by `http.MaxBytesReader`.
+- [ ] `r.Context()` goes into the called code. The apply cycle lives on its own context
+- [ ] A mutating request is checked by `Origin` and `Host`; relaxing it is possible only through `-allowed-origin`.
+- [ ] Server timeouts are set; `WriteTimeout` is not set globally where there are long responses.
+- [ ] An unknown path under `/api/` returns a JSON error, not `index.html`.
+- [ ] Shutdown handles the signal and calls `Shutdown`; `http.ErrServerClosed` is not counted as an error.
+- [ ] The daemon listens on the address from the flag; `0.0.0.0` did not appear as a default.
 
-## Устройство
+## Device
 
-- [ ] Запись файла — временный файл в том же каталоге, `Sync`, `rename`, `Sync` каталога.
-- [ ] Имя временного файла не оканчивается на `.json`.
-- [ ] Отказ до `rename` оставляет целевой файл неизменным, и это покрыто тестом.
-- [ ] Права целевого файла сохранены, служебные файлы созданы с 0600 и лежат вне каталога конфига.
-- [ ] Путь, собранный из внешнего значения, идёт через `os.Root`; `filepath.Join` защитой не считается.
-- [ ] Команда запускается списком аргументов, с абсолютным путём к бинарю, без `sh -c`.
-- [ ] У `exec.CommandContext` задан `WaitDelay`; вывод ограничен по размеру; код возврата взят из `*exec.ExitError`.
-- [ ] Сервисом управляет init-скрипт, а не прямой запуск бинаря или `kill`.
-- [ ] Рестарт при остановленном сервисе — штатный путь.
-- [ ] Состояние транзакции пишется до записи конфига, срок хранится длительностью, а не абсолютным временем.
-- [ ] Незавершённая транзакция доигрывается при старте по всем трём веткам.
+- [ ] A file write is a temporary file in the same directory, `Sync`, `rename`, `Sync` of the directory.
+- [ ] The temporary file name does not end in `.json`.
+- [ ] A failure before `rename` leaves the target file unchanged, and this is covered by a test.
+- [ ] The target file mode is preserved, service files are created with 0600 and live outside the config directory.
+- [ ] A path built from an external value goes through `os.Root`; `filepath.Join` does not count as protection.
+- [ ] A command runs as a list of arguments, with an absolute path to the binary, without `sh -c`.
+- [ ] `exec.CommandContext` has `WaitDelay` set; the output is size-limited; the exit code is taken from `*exec.ExitError`.
+- [ ] The service is managed by the init script, not by running the binary directly or by `kill`.
+- [ ] A restart of a stopped service is a normal path.
+- [ ] The transaction state is written before the config, the deadline is stored as a duration, not as absolute time.
+- [ ] An unfinished transaction is replayed on start along all three branches.
 
-## Конкурентность
+## Concurrency
 
-- [ ] У каждой запущенной горутины понятно, кто её останавливает и куда уходит её ошибка.
-- [ ] У ресурса один владелец; параллельный доступ закрыт его методами.
-- [ ] Отмена доходит до всех шагов через `ctx`.
-- [ ] Прогон с `-race` чистый: `go test -race ./...` локально, тот же шаг есть в CI.
+- [ ] For every started goroutine it is clear who stops it and where its error goes.
+- [ ] A resource has one owner; parallel access is closed off by its methods.
+- [ ] Cancellation reaches all steps through `ctx`.
+- [ ] The `-race` run is clean: `go test -race ./...` locally, the same step exists in CI.
 
-## Тесты
+## Tests
 
-- [ ] Новое поведение покрыто тестом, отказ — тоже, а не только успешный путь.
-- [ ] Ассерт-библиотек не добавилось.
-- [ ] Файловые тесты работают в `t.TempDir()`.
-- [ ] Ожидание времени сделано через `testing/synctest` или подменяемые часы, не `time.Sleep`.
-- [ ] Go-тест, которому нужно живое окружение (procd, бинарь sing-box), помечен тегом `integration` и не ломает `make test` на хосте. Сейчас таких тестов нет: живое окружение проверяет `apply-cycle-check` стенда.
-- [ ] `make test` прогнан, результат приведён как есть.
+- [ ] New behaviour is covered by a test, and so is failure, not only the success path.
+- [ ] No assertion libraries were added.
+- [ ] File tests work in `t.TempDir()`.
+- [ ] Waiting for time is done through `testing/synctest` or a replaceable clock, not `time.Sleep`.
+- [ ] A Go test that needs a live environment (procd, the sing-box binary) is tagged `integration` and does not break `make test` on the host. There are no such tests yet: the live environment is checked by the test bench's `apply-cycle-check`.
+- [ ] `make test` was run, the result is quoted as is.

@@ -14,28 +14,28 @@ vi.mock('sonner', () => ({
 const { toast } = await import('sonner');
 
 /**
- * Ответ, который схема не примет: `proxies` обязан быть объектом.
+ * A response the schema will not accept: `proxies` must be an object.
  *
- * Разбор живёт в `queryFn`, а не в `select`: исключение из `select` query-core
- * держит у наблюдателя и в `QueryCache.onError` не проводит — тоста бы не было,
- * а отказ вида `Schema` не доходил бы и до правила повтора.
+ * Parsing lives in `queryFn`, not in `select`: an exception from `select` query-core
+ * keeps on the observer and does not pass to `QueryCache.onError`: there would be no toast,
+ * and a `Schema` failure would not reach the retry rule either.
  */
 const BROKEN = { proxies: 'всё сразу' };
 
-describe('схемный отказ', () => {
+describe('schema failure', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     QueryClientInstance.clear();
     server.use(http.get(PROXY_ENDPOINT.proxies(), () => HttpResponse.json(BROKEN)));
   });
 
-  it('доходит до тоста, а не гаснет внутри запроса', async () => {
+  it('reaches the toast instead of fading inside the query', async () => {
     await expect(QueryClientInstance.query(getProxiesOptions())).rejects.toThrow(ApiError);
 
     expect(toast.error).toHaveBeenCalledTimes(1);
   });
 
-  it('не повторяется: второй запрос вернёт тот же неразобранный ответ', async () => {
+  it('is not retried: the second request returns the same unparsed response', async () => {
     const attempts: string[] = [];
 
     server.use(

@@ -3,7 +3,7 @@ import type { RuleSetCatalog, RuleSetList, RuleSetProvider, RuleSetSource } from
 
 const UNKNOWN_SOURCE: RuleSetSource = { providerId: null, providerName: null, kind: null, category: null };
 
-/** Поставщик по идентификатору; `null` — такого в каталоге нет. */
+/** Provider by identifier; `null` means there is none in the catalog. */
 export function findProvider(catalog: RuleSetCatalog, id: string | null): RuleSetProvider | null {
   if (id === null) {
     return null;
@@ -13,29 +13,31 @@ export function findProvider(catalog: RuleSetCatalog, id: string | null): RuleSe
 }
 
 /**
- * Список поставщика нужного вида; `null` — такого у поставщика нет. Вид
- * принимается строкой: он приходит из поля формы, а не из каталога.
+ * Provider list of the needed kind; `null` means the provider has none. The
+ * kind is accepted as a string: it comes from a form field, not from the
+ * catalog.
  */
 export function findList(catalog: RuleSetCatalog, providerId: string | null, kind: string): RuleSetList | null {
   return findProvider(catalog, providerId)?.lists.find((list) => list.kind === kind) ?? null;
 }
 
-/** Собирает адрес набора по шаблону списка. */
+/** Builds a set URL from the list template. */
 export function buildRuleSetURL(list: RuleSetList, mirrorId: string, category: string): string {
   const mirror = list.mirrors.find((item) => item.id === mirrorId) ?? list.mirrors.at(0);
 
   return mirror === undefined ? '' : `${mirror.base}${list.prefix}${category}${SET_EXTENSION.Binary}`;
 }
 
-/** Тег, который панель предлагает для категории: имя файла без расширения. */
+/** Tag the panel suggests for a category: the file name without the extension. */
 export function suggestTag(list: RuleSetList, category: string): string {
   return category === '' ? '' : `${list.prefix}${category}`;
 }
 
 /**
- * Узнаёт в адресе поставщика, вид списка и категорию. Узнать удаётся не
- * всегда: адрес мог быть вписан руками, и выдавать его за известный источник
- * нельзя — по поставщику пользователь судит, чьему списку доверяет маршрут.
+ * Recognizes the provider, list kind and category in a URL. Recognition does
+ * not always succeed: the URL may have been typed by hand, and it cannot be
+ * passed off as a known source, since the user judges by the provider whose
+ * list the route trusts.
  */
 export function describeURL(catalog: RuleSetCatalog, url: string): RuleSetSource {
   for (const provider of catalog.providers) {
@@ -63,7 +65,7 @@ export function describeURL(catalog: RuleSetCatalog, url: string): RuleSetSource
 
 const categorySets = new WeakMap<RuleSetList, ReadonlySet<string>>();
 
-/** Есть ли у поставщика файл с таким именем — по перечню, который сверяет демон. */
+/** Whether the provider has a file with this name, by the listing the daemon checks. */
 export function isCatalogCategory(list: RuleSetList, category: string): boolean {
   let known = categorySets.get(list);
 
@@ -76,9 +78,10 @@ export function isCatalogCategory(list: RuleSetList, category: string): boolean 
 }
 
 /**
- * Отбор категорий по подстроке. Пустой запрос отдаёт подборку поставщика: у
- * полного перечня алфавитный порядок, и начинается он с `0x0` и `115`.
- * Совпавшие с начала идут первыми: набравший «goog» ищет `google`, а не
+ * Category filter by substring. An empty query returns the provider's
+ * selection: the full listing is alphabetical and starts with `0x0` and `115`.
+ * Those matching from the start go first: someone typing "goog" is looking for
+ * `google`, not
  * `category-google-cn`.
  */
 export function filterCategories(list: RuleSetList, query: string): string[] {

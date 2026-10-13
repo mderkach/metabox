@@ -8,12 +8,13 @@ interface SelectVariables {
 }
 
 /**
- * Переключение узла в группе. Обновление оптимистичное: ответ рантайма ничего
- * не добавляет к тому, что уже известно, а задержка ответа читалась бы как
- * зависший интерфейс. Цену Apply это не имеет — конфиг не пишется.
+ * Node switching in a group. The update is optimistic: the runtime response
+ * adds nothing to what is already known, and a response delay would read as a
+ * hung interface. Apply cost does not apply here: the config is not written.
  *
- * Тоста об успехе нет: отметка узла видна сразу, а скринридеру выбор объявляет
- * живая область экрана. Тост `sonner` объявил бы его второй раз.
+ * There is no success toast: the node mark is visible at once, and a live
+ * region of the screen announces the choice to a screen reader. A `sonner`
+ * toast would announce it a second time.
  */
 export function useSelectProxy() {
   const queryClient = useQueryClient();

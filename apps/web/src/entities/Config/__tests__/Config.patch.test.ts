@@ -14,47 +14,47 @@ const NODE = {
 };
 
 describe('diffNode', () => {
-  it('нетронутый узел правок не даёт', () => {
+  it('an untouched node yields no edits', () => {
     expect(diffNode(PATH, NODE, structuredClone(NODE))).toEqual([]);
   });
 
-  it('тронутое поле даёт одну правку по своему пути', () => {
+  it('a touched field yields one edit at its path', () => {
     expect(diffNode(PATH, NODE, { ...NODE, server: 'b.example' })).toEqual([
       { path: ['outbounds', 1, 'server'], value: 'b.example' },
     ]);
   });
 
-  it('поле во вложенном объекте адресуется листом, а не объектом целиком', () => {
+  it('a field in a nested object is addressed by the leaf, not the whole object', () => {
     const after = { ...NODE, tls: { ...NODE.tls, server_name: 'b.example' } };
 
     expect(diffNode(PATH, NODE, after)).toEqual([{ path: ['outbounds', 1, 'tls', 'server_name'], value: 'b.example' }]);
   });
 
   it.each([
-    ['пустой строкой', ''],
-    ['через null', null],
-    ['без значения', undefined],
-  ])('очищенное %s поле удаляется', (_, value) => {
+    ['with an empty string', ''],
+    ['with null', null],
+    ['with no value', undefined],
+  ])('a field cleared %s is removed', (_, value) => {
     expect(diffNode(PATH, NODE, { ...NODE, server: value })).toEqual([
       { path: ['outbounds', 1, 'server'], value: undefined },
     ]);
   });
 
-  it('пустой список удаляет ключ, а не пишет []', () => {
+  it('an empty list removes the key instead of writing []', () => {
     expect(diffNode(PATH, { ...NODE, network: ['tcp'] }, { ...NODE, network: [] })).toEqual([
       { path: ['outbounds', 1, 'network'], value: undefined },
     ]);
   });
 
-  it('поле, которого не было и которое осталось пустым, правки не даёт', () => {
+  it('a field that did not exist and stayed empty yields no edit', () => {
     expect(diffNode(PATH, NODE, { ...NODE, uuid: '', flow: undefined })).toEqual([]);
   });
 
-  it('listable из одной строки, которую форма вернула строкой, остаётся строкой', () => {
+  it('a one-string listable that the form returned as a string stays a string', () => {
     expect(diffNode(PATH, NODE, { ...NODE, tls: { ...NODE.tls, alpn: 'h2' } })).toEqual([]);
   });
 
-  it('массив сравнивается целиком: новый порядок — одна правка списка', () => {
+  it('an array is compared as a whole: a new order is one list edit', () => {
     const before = { ...NODE, network: ['tcp', 'udp'] };
 
     expect(diffNode(PATH, before, { ...NODE, network: ['udp', 'tcp'] })).toEqual([
@@ -62,17 +62,17 @@ describe('diffNode', () => {
     ]);
   });
 
-  it('новый вложенный объект пишется без пустых ключей', () => {
+  it('a new nested object is written without empty keys', () => {
     const after = { ...NODE, multiplex: { enabled: true, protocol: '', padding: undefined } };
 
     expect(diffNode(PATH, NODE, after)).toEqual([{ path: ['outbounds', 1, 'multiplex'], value: { enabled: true } }]);
   });
 
-  it('вложенный объект из одних пустых полей не дописывается', () => {
+  it('a nested object of only empty fields is not appended', () => {
     expect(diffNode(PATH, NODE, { ...NODE, multiplex: { protocol: '' } })).toEqual([]);
   });
 
-  it('правки ложатся на текст точечно: комментарий внутри узла цел', () => {
+  it('edits land on the text precisely: a comment inside the node is intact', () => {
     const text = [
       '{',
       '  "outbounds": [',

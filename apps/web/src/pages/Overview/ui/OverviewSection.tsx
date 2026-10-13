@@ -9,7 +9,7 @@ export function OverviewSection({
   children,
 }: {
   title: string;
-  /** Правая подпись: происхождение данных или общий для секции контекст. */
+  /** Right-hand label: where the data comes from or context shared by the section. */
   note?: string;
   children: ReactNode;
 }) {

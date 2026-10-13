@@ -1,104 +1,104 @@
-# ADR-0011. Поставлять демон пакетом apk, а не ipk
+# ADR-0011. Ship the daemon as an apk package, not ipk
 
-- Статус: Accepted
-- Дата: 2026-09-12
-- Ответственные: владелец репозитория
+- Status: Accepted
+- Date: 2026-09-12
+- Deciders: repository owner
 
-## Контекст и постановка проблемы
+## Context and problem statement
 
-Раздел 9 PRD фиксирует единый артефакт поставки: Go-бинарь со встроенной статикой, упакованный в ipk. Формулировка написана тогда, когда ipk был единственным форматом OpenWrt.
+Section 9 of the PRD sets a single delivery artifact: a Go binary with embedded static files, packaged as ipk. The wording was written when ipk was the only OpenWrt format.
 
-Целевое устройство ([ADR-0042](./ADR-0042-target-the-bpi-r4-pro-and-build-for-aarch64-only.md), BPI-R4 Pro) работает на собственной сборке OpenWrt SNAPSHOT r35944+4 с пакетным менеджером apk 3.0.5 — замер по прошивке устройства от 2026-09-07. Этот менеджер ipk не принимает: opkg в сборке нет. OpenWrt заменил opkg на apk в ветке main и в релизе 25.12, вышедшем в марте 2026 года; ipk остаётся форматом веток 24.10 и старше.
+The target device ([ADR-0042](./ADR-0042-target-the-bpi-r4-pro-and-build-for-aarch64-only.md), BPI-R4 Pro) runs a custom OpenWrt SNAPSHOT r35944+4 build with the apk 3.0.5 package manager, measured on the device firmware on 2026-09-07. This manager does not accept ipk: the build has no opkg. OpenWrt replaced opkg with apk in the main branch and in the 25.12 release, which came out in March 2026; ipk stays the format of the 24.10 branch and older.
 
-Расхождение уже наступило на практике: демон на устройство поставлен вручную — собран `make daemon-device`, файлы разложены по местам. Пока поставка ручная, откатывать нечего и обновление не отличается от первой установки.
+The mismatch has already happened in practice: the daemon was delivered to the device by hand, built with `make daemon-device` and with the files put in place. While delivery is manual, there is nothing to roll back, and an update is no different from the first install.
 
-Что именно поставляется, известно из репозитория и не зависит от формата: бинарь `metaboxd` в `/usr/bin`, init-скрипт procd и настройки UCI из [`apps/metaboxd/package/`](../../apps/metaboxd/package/). Зависимостей у бинаря нет — `go.mod` демона держится без `require`, сборка идёт с `CGO_ENABLED=0` ([`Makefile`](../../Makefile), цель `daemon-device`).
+What exactly is shipped is known from the repository and does not depend on the format: the `metaboxd` binary in `/usr/bin`, the procd init script and the UCI settings from [`apps/metaboxd/package/`](../../apps/metaboxd/package/). The binary has no dependencies: the daemon's `go.mod` stays without `require`, and the build runs with `CGO_ENABLED=0` ([`Makefile`](../../Makefile), target `daemon-device`).
 
-В scope: формат пакета и способ его сборки. Вне scope: репозиторий пакетов и его подпись, автообновление панели, сборка sing-box — бинарь форка ставится отдельно и метабоксом не управляется.
+In scope: the package format and the way it is built. Out of scope: the package repository and its signing, auto-update of the panel, building sing-box: the fork binary is installed separately and is not managed by metabox.
 
-## Критерии выбора
+## Decision drivers
 
-1. **Устанавливается на целевое устройство** без обходных манёвров: apk 3.0.5, SNAPSHOT.
-2. **Собирается в CI без OpenWrt SDK.** Полный SDK тянет тулчейн и сборочное дерево ради трёх файлов, которые уже готовы.
-3. **Даёт удаление и обновление менеджером**, а не «положи файлы обратно руками»: на роутере это единственный способ узнать, что панель установлена и какой версии.
-4. **Не заводит оснастки под пользователя, которого нет.** Второй формат — это второй способ сборки, вторая проверка и вторая возможность разойтись.
-5. **Обратимость**: неудачная установка не должна оставлять устройство в состоянии, из которого не выбраться по SSH.
+1. **Installs on the target device** without workarounds: apk 3.0.5, SNAPSHOT.
+2. **Builds in CI without the OpenWrt SDK.** The full SDK pulls in a toolchain and a build tree for three files that are already ready.
+3. **Provides removal and update through the manager**, not "put the files back by hand": on a router this is the only way to know that the panel is installed and which version.
+4. **Does not set up tooling for a user who does not exist.** A second format means a second build method, a second check and a second chance to diverge.
+5. **Reversibility**: a failed install must not leave the device in a state that cannot be recovered over SSH.
 
-## Рассмотренные варианты
+## Considered options
 
-1. **Оставить ipk, как записано в разделе 9 PRD.** Преимущества: формулировка PRD не меняется; ipk собирается простым `ar` из двух tar-архивов, без тулчейна. Недостатки: на целевом устройстве не устанавливается вовсе (критерий 1) — а это единственное устройство, на котором панель сегодня работает. Смысл сохраняется только для веток 24.10 и старше, пользователей которых у проекта пока нет. **Отклонён.**
+1. **Keep ipk, as written in section 9 of the PRD.** Pros: the PRD wording does not change; an ipk is built with plain `ar` from two tar archives, without a toolchain. Cons: it does not install on the target device at all (driver 1), and that is the only device the panel runs on today. It only makes sense for the 24.10 branch and older, which the project has no users of yet. **Rejected.**
 
-2. **apk, собранный `apk mkpkg` из apk-tools 3.** Преимущества: родной формат целевой ОС (критерий 1); сборка — вызов одной команды над готовым деревом файлов, SDK не нужен (критерий 2); менеджер знает о пакете, его версии и файлах, удаление и обновление идут штатно (критерий 3). Недостатки: сборочной среде нужен apk-tools версии 3 — в обычной Linux-машине его нет, и цель сборки придётся выполнять в контейнере; пакет остаётся неподписанным, а как на это отреагирует apk на устройстве, в репозитории не проверено. **Принят.**
+2. **An apk built with `apk mkpkg` from apk-tools 3.** Pros: the native format of the target OS (driver 1); building is one command over a ready file tree, no SDK needed (driver 2); the manager knows about the package, its version and files, and removal and update work normally (driver 3). Cons: the build environment needs apk-tools version 3, which a regular Linux machine does not have, so the build target has to run in a container; the package stays unsigned, and how apk on the device reacts to that has not been checked in the repository. **Chosen.**
 
-3. **tar.gz с install-скриптом.** Преимущества: работает на любой ветке OpenWrt и в стенде, собирается чем угодно (критерии 1, 2). Недостатки: менеджер о панели не знает — нет ни списка файлов, ни версии, ни удаления (критерий 3); скрипт установки становится собственным кодом, который никто не проверяет, пока он не сломается на чужом устройстве. **Отклонён как основной формат, оставлен как запасной путь для веток без apk.**
+3. **A tar.gz with an install script.** Pros: works on any OpenWrt branch and on the test bench, can be built with anything (drivers 1, 2). Cons: the manager does not know about the panel: no file list, no version, no removal (driver 3); the install script becomes our own code that nobody checks until it breaks on someone else's device. **Rejected as the main format, kept as a fallback for branches without apk.**
 
-4. **Собирать оба формата из одного дерева файлов.** Преимущества: закрывает и SNAPSHOT, и 24.10. Недостатки: две цели сборки, две проверки и два артефакта в релизе ради ветки, на которой панель никто не запускал (критерий 4); проверить ipk сейчас негде — в стенде OpenWrt 24.10 с opkg есть, но панель там не ставилась. **Отклонён для v1**, возвращаемся к нему, когда появится запрос на 24.10.
+4. **Build both formats from one file tree.** Pros: covers both SNAPSHOT and 24.10. Cons: two build targets, two checks and two artifacts in the release for a branch nobody has run the panel on (driver 4); there is nowhere to check an ipk right now: the test bench has OpenWrt 24.10 with opkg, but the panel was never installed there. **Rejected for v1**; we come back to it when there is a request for 24.10.
 
-## Принятое решение
+## Decision outcome
 
-Демон поставляется пакетом apk. Формат ipk в v1 не собирается.
+The daemon ships as an apk package. The ipk format is not built in v1.
 
-Обязательные правила:
+Mandatory rules:
 
-- **Содержимое пакета — то же дерево, что лежит в репозитории.** `apps/metaboxd/package/` плюс собранный `make daemon-device` бинарь в `/usr/bin/metaboxd`. Файлы, которых нет в репозитории, пакет не создаёт.
-- **Сборка не требует OpenWrt SDK** и выполняется отдельной целью Makefile в контейнере с apk-tools 3. Тулчейн OpenWrt в сборку панели не втягивается.
-- **Пакет не подписывается.** OpenWrt подписывает индекс репозитория, а не отдельные пакеты, поэтому подпись одиночного файла ничего не даёт ни одной из сторон.
-- **Конфиг пользователя пакет не трогает.** `/etc/config/metabox` ставится как conffile: обновление не затирает правки владельца, а `/etc/sing-box/config.json` пакету не принадлежит вовсе — им владеет протокол Apply ([ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md)).
-- **Служба не стартует сама при установке.** Запуск — явное действие: `/etc/init.d/metaboxd enable && /etc/init.d/metaboxd start`. Панель слушает адрес интерфейса lan, и тихий старт на устройстве с неожиданной сетевой раскладкой означал бы открытый порт, о котором владелец не знает.
+- **The package content is the same tree that lives in the repository.** `apps/metaboxd/package/` plus the binary built by `make daemon-device` in `/usr/bin/metaboxd`. The package creates no files that are not in the repository.
+- **The build does not require the OpenWrt SDK** and runs as a separate Makefile target in a container with apk-tools 3. The OpenWrt toolchain is not pulled into the panel build.
+- **The package is not signed.** OpenWrt signs the repository index, not individual packages, so signing a single file gives nothing to either side.
+- **The package does not touch the user's config.** `/etc/config/metabox` is installed as a conffile: an update does not overwrite the owner's edits, and `/etc/sing-box/config.json` does not belong to the package at all: the Apply protocol owns it ([ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md)).
+- **The service does not start by itself on install.** Starting is an explicit action: `/etc/init.d/metaboxd enable && /etc/init.d/metaboxd start`. The panel listens on the lan interface address, and a silent start on a device with an unexpected network layout would mean an open port the owner does not know about.
 
-Отложено осознанно: репозиторий пакетов с подписанным индексом, автообновление панели, ipk для ветки 24.10.
+Deliberately deferred: a package repository with a signed index, auto-update of the panel, ipk for the 24.10 branch.
 
-### Область действия и границы
+### Scope and boundaries
 
-Решение распространяется на артефакт поставки демона: `apps/metaboxd/package/`, цель сборки в [`Makefile`](../../Makefile) и шаг релиза в CI. Протокол Apply, схему конфига и стенд не затрагивает.
+The decision covers the daemon's delivery artifact: `apps/metaboxd/package/`, the build target in the [`Makefile`](../../Makefile) and the release step in CI. It does not affect the Apply protocol, the config schema or the test bench.
 
-## Последствия
+## Consequences
 
-### Положительные
+### Positive
 
-- Панель ставится на целевое устройство штатной командой, а не раскладкой файлов руками.
-- Менеджер знает версию и список файлов: удаление и обновление перестают быть ручной операцией, а `apk info` отвечает, что именно установлено.
-- Сборка остаётся в пределах репозитория: тулчейн OpenWrt не нужен ни в CI, ни у разработчика.
+- The panel is installed on the target device with a regular command instead of placing files by hand.
+- The manager knows the version and the file list: removal and update stop being manual operations, and `apk info` answers what exactly is installed.
+- The build stays within the repository: the OpenWrt toolchain is needed neither in CI nor on a developer machine.
 
-### Отрицательные
+### Negative
 
-- Пакет ставится только на ветки с apk: SNAPSHOT и 25.12 и новее. Владельцу 24.10 остаётся запасной путь — распаковать файлы руками.
-- Сборочной среде нужен контейнер с apk-tools 3: цель Makefile перестаёт быть самодостаточной на машине без Docker.
-- Неподписанный пакет apk может потребовать явного согласия при установке. Пока это не проверено на устройстве, команда установки в документации не фиксируется.
+- The package installs only on branches with apk: SNAPSHOT and 25.12 and newer. An owner of 24.10 is left with the fallback of unpacking the files by hand.
+- The build environment needs a container with apk-tools 3: the Makefile target stops being self-sufficient on a machine without Docker.
+- An unsigned apk package may require explicit consent on install. Until this is checked on the device, the install command is not recorded in the documentation.
 
-### Нейтральные или отложенные
+### Neutral or deferred
 
-- Раздел 9 PRD продолжает называть ipk. Требование правится при принятии этого ADR, а не раньше: до тех пор оно остаётся действующим.
-- Как именно панель будет обновляться на устройстве — отдельный вопрос; пакет даёт для этого механизм, но политика обновления здесь не выбирается.
+- Section 9 of the PRD still names ipk. The requirement is edited when this ADR is accepted, not earlier: until then it stays in force.
+- How exactly the panel will be updated on the device is a separate question; the package provides the mechanism for it, but the update policy is not chosen here.
 
-## Риски и меры снижения
+## Risks and mitigations
 
-| Риск                                                                    | Вероятность и влияние    | Митигация                                                                                                                    |
-| ----------------------------------------------------------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
-| apk на устройстве откажется ставить неподписанный пакет                 | Средняя, среднее влияние | Проверяется первой же установкой; при отказе ставится с явным согласием, и команда фиксируется в документации поставки       |
-| Формат apk-пакета изменится между версиями apk-tools                    | Низкая, среднее влияние  | Пакет собирается тем же семейством apk-tools, что стоит на устройстве; расхождение обнаружится на установке, а не в рантайме |
-| Сборка в контейнере разойдётся с тем, что собирает CI                   | Средняя, низкое влияние  | Цель Makefile одна и та же локально и в CI; образ и версия apk-tools задаются в ней явно                                     |
-| Установка на устройство с иной раскладкой сети поднимет порт неожиданно | Низкая, высокое влияние  | Служба не стартует при установке; запуск — явная команда владельца                                                           |
+| Risk                                                                             | Likelihood and impact | Mitigation                                                                                                                                     |
+| -------------------------------------------------------------------------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| apk on the device refuses to install an unsigned package                         | Medium, medium impact | Checked by the very first install; on refusal it is installed with explicit consent, and the command is recorded in the delivery documentation |
+| The apk package format changes between apk-tools versions                        | Low, medium impact    | The package is built with the same apk-tools family that is on the device; a mismatch shows up on install, not at runtime                      |
+| The build in the container diverges from what CI builds                          | Medium, low impact    | The Makefile target is the same locally and in CI; the image and the apk-tools version are set in it explicitly                                |
+| Installing on a device with a different network layout opens a port unexpectedly | Low, high impact      | The service does not start on install; starting is an explicit owner command                                                                   |
 
-## Совместимость, миграция и откат
+## Compatibility, migration and rollback
 
-Мигрировать нечего: пакетной установки до сих пор не было, на устройстве лежит копия файлов, разложенная руками. Первая установка пакета поверх ручной раскладки перезапишет те же пути; служба к этому моменту остановлена владельцем.
+There is nothing to migrate: there has been no package install so far, and the device has a copy of the files placed by hand. The first package install over the manual layout overwrites the same paths; by then the owner has stopped the service.
 
-Откат — удалить пакет менеджером и, если нужно, вернуться к ручной раскладке из `make daemon-device`. Конфиг демона в `/etc/config/metabox` переживает удаление как conffile, конфиг sing-box пакету не принадлежит.
+Rollback is to remove the package with the manager and, if needed, go back to the manual layout from `make daemon-device`. The daemon config in `/etc/config/metabox` survives removal as a conffile, and the sing-box config does not belong to the package.
 
-## Проверка решения
+## Validation
 
-- Цель сборки даёт файл `.apk`, и его содержимое совпадает с деревом `apps/metaboxd/package/` плюс бинарь: список файлов пакета читается `apk info -L`, посторонних путей в нём нет.
-- Установка на целевое устройство проходит без ручной раскладки файлов, `apk info metaboxd` показывает установленную версию.
-- После установки служба не запущена; после `enable` и `start` панель отвечает на адресе интерфейса lan, как и при ручной установке (AC-17, AC-18).
-- Обновление пакета поверх установленного не затирает правки в `/etc/config/metabox`.
-- Удаление пакета не оставляет ни бинаря, ни init-скрипта, а `/etc/sing-box/config.json` остаётся на месте.
+- The build target produces an `.apk` file, and its content matches the `apps/metaboxd/package/` tree plus the binary: the package file list is read with `apk info -L`, and it has no extra paths.
+- Installing on the target device works without placing files by hand, and `apk info metaboxd` shows the installed version.
+- After install the service is not running; after `enable` and `start` the panel answers on the lan interface address, as with a manual install (AC-17, AC-18).
+- Updating the package over the installed one does not overwrite edits in `/etc/config/metabox`.
+- Removing the package leaves neither the binary nor the init script, and `/etc/sing-box/config.json` stays in place.
 
-## Ссылки
+## Links
 
-- [PRD](../PRD.md) — раздел 9 (артефакт поставки), открытый вопрос OQ-8;
-- [ADR-0042](./ADR-0042-target-the-bpi-r4-pro-and-build-for-aarch64-only.md) — целевое железо;
-- [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md) — владение конфигом sing-box;
-- [`apps/metaboxd/package/`](../../apps/metaboxd/package/) — init-скрипт procd и настройки UCI;
-- [OpenWrt 25.12: apk вместо opkg](https://linuxiac.com/openwrt-25-12-released-with-apk-package-manager-replacing-opkg/);
+- [PRD](../PRD.md): section 9 (delivery artifact), open question OQ-8;
+- [ADR-0042](./ADR-0042-target-the-bpi-r4-pro-and-build-for-aarch64-only.md): target hardware;
+- [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md): ownership of the sing-box config;
+- [`apps/metaboxd/package/`](../../apps/metaboxd/package/): the procd init script and UCI settings;
+- [OpenWrt 25.12: apk instead of opkg](https://linuxiac.com/openwrt-25-12-released-with-apk-package-manager-replacing-opkg/);
 - [openwrt: package: do not sign individual APK packages](https://lists.infradead.org/pipermail/lede-commits/2025-October/027374.html).

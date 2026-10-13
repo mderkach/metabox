@@ -6,9 +6,10 @@ import { App } from './ui/App';
 
 import './styles/index.css';
 
-// Тексты приезжают до первого кадра: react-i18next требует поднятый инстанс,
-// а `Suspense` внутри оболочки заменил бы навигацию заглушкой на старте.
-// Здесь только словари самой оболочки — словарь экрана грузит его маршрут.
+// Texts arrive before the first frame: react-i18next requires a ready instance,
+// and a `Suspense` inside the shell would replace navigation with a fallback at
+// startup. Only the shell's own dictionaries are here; the screen's dictionary
+// is loaded by its route.
 await initI18n();
 await preloadNamespaces([
   'shared',

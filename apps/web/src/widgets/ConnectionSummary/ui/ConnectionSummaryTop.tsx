@@ -7,10 +7,10 @@ import { ConnectionSummaryBars, type SummaryBar } from './ConnectionSummaryBars'
 import { ConnectionSummaryPanel } from './ConnectionSummaryPanel';
 
 /**
- * Топ по накопленному объёму живых соединений, а не по мгновенной скорости:
- * скорость гуляет каждую секунду, и строки менялись бы местами под взглядом.
- * Длина полосы, порядок и первое число подписи — объём, живая скорость — после
- * него. Скорость считает панель: рантайм отдаёт только накопленные счётчики.
+ * Top by accumulated volume of live connections, not by instantaneous speed:
+ * speed wanders every second, and rows would swap places before the eye.
+ * Bar length, order and the first number of the caption are the volume, live speed is after
+ * it. Speed is computed by the panel: the runtime returns only accumulated counters.
  */
 export function ConnectionSummaryTop({
   title,
@@ -22,9 +22,9 @@ export function ConnectionSummaryTop({
   title: string;
   href?: string;
   shares: ConnectionShare[];
-  /** Подпись пустого ряда; без неё — общая «живых соединений нет». */
+  /** Caption of an empty row; without it, the general "no live connections". */
   empty?: string;
-  /** Подпись группы по ключу — имя устройства вместо адреса; без неё — сам ключ. */
+  /** Group caption by key — a device name instead of an address; without it, the key itself. */
   label?: (key: string) => string;
 }) {
   const { t } = useTranslation('widgets/ConnectionSummary');

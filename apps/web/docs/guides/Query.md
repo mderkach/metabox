@@ -1,20 +1,20 @@
-# Работа с запросами
+# Working with requests
 
-TanStack Query v5 поверх axios. Транспорт закрыт врапперем `ApiClient` в `shared/api`: он держит таймаут, приводит отказ транспорта к доменному `ApiError` и отдаёт наружу тело ответа, а не конверт. Единственное, что он достаёт из конверта, — `ETag` в `getTagged`: на нём стоит оптимистичная блокировка применения (`GET /api/config` → `If-Match`).
+TanStack Query v5 on top of axios. The transport is closed behind the `ApiClient` wrapper in `shared/api`: it holds the timeout, maps a transport failure to the domain `ApiError` and returns the response body, not the envelope. The only thing it takes from the envelope is the `ETag` in `getTagged`: optimistic locking of apply relies on it (`GET /api/config` → `If-Match`).
 
-Ретраев в клиенте нет: ими заведует Query, и второй слой повторов запустил бы на устройстве второй цикл применения. Таймаут, наоборот, живёт только в клиенте — у `fetch` его нет вовсе, и зависший демон держал бы запрос до закрытия вкладки.
+There are no retries in the client: Query handles them, and a second retry layer would start a second apply cycle on the device. The timeout, on the contrary, lives only in the client: `fetch` has none at all, and a hung daemon would hold the request until the tab is closed.
 
-## Из чего состоит запрос
+## What a request consists of
 
-1. **fetch-функция** — знает про endpoint и DTO, ничего не знает про React;
-2. **фабрика query-опций** — знает про ключ, кэш и meta;
-3. **хук** — тонкая обёртка `useQuery` / `useMutation`.
+1. **fetch function**: knows about the endpoint and the DTO, knows nothing about React;
+2. **query options factory**: knows about the key, the cache and meta;
+3. **hook**: a thin wrapper over `useQuery` / `useMutation`.
 
-Разделение нужно, чтобы те же опции уходили в `queryClient.query` и в тесты без React.
+The split is needed so that the same options go into `queryClient.query` and into tests without React.
 
-## fetch-функция
+## fetch function
 
-Обязательно принимает опциональный `AxiosRequestConfig` — через него Query передаёт `signal` и отменяет запрос при размонтировании.
+It must take an optional `AxiosRequestConfig`: through it Query passes `signal` and cancels the request on unmount.
 
 ```ts
 export const CONFIG_ENDPOINT = {
@@ -28,39 +28,39 @@ export async function getConfigVersions(config?: AxiosRequestConfig): Promise<Co
 }
 ```
 
-Ручки записи конфига нет: черновик живёт в сторе документа, а файл пишет только протокол Apply. Заводить `PUT /api/config` нельзя.
+There is no endpoint for writing the config: the draft lives in the document store, and only the Apply protocol writes the file. Adding `PUT /api/config` is forbidden.
 
-Требования:
+Requirements:
 
-- тип ответа задаётся дженериком, а не выводится из `any`;
-- обработка ошибок — в `ApiClient`, он бросает типизированный `ApiError`; локальный `try/catch` в fetch-функции не нужен, тосты показывает глобальный обработчик (см. ниже);
-- никаких преобразований данных: функция возвращает то, что прислал сервер. Разбирает ответ схемой фабрика опций — до того, как он ляжет в кэш.
+- the response type is set by a generic, not inferred from `any`;
+- error handling is in `ApiClient`, which throws a typed `ApiError`; a local `try/catch` in the fetch function is not needed, toasts are shown by the global handler (see below);
+- no data transformations: the function returns what the server sent. The options factory parses the response with a schema, before it goes into the cache.
 
-## Разбор ответа
+## Parsing the response
 
-Ответ проверяется схемой слайса в `queryFn` фабрики опций, и в кэш ложится проверенная форма источника:
+The response is checked with the slice schema in the `queryFn` of the options factory, and the checked source shape goes into the cache:
 
 ```ts
 queryFn: async (context) => decodeResponse(ClashProxiesSchema, await getProxies(context), 'proxies'),
 ```
 
-Перевод в модель экрана делает `select` — он берёт уже проверенные данные и в кэш не пишет:
+Conversion into the screen model is done by `select`: it takes already checked data and does not write to the cache:
 
 ```ts
 return useQuery({ ...getProxiesOptions(), select: toProxyRuntime });
 ```
 
-Разделение обязательное, и обе половины держатся на своих причинах.
+The split is mandatory, and each half rests on its own reasons.
 
-**Проверка — только в `queryFn`.** Исключение, брошенное из `select`, query-core держит у наблюдателя (`#selectError`) и в `QueryCache.onError` не проводит: глобального тоста на непонятый ответ не будет, и до правила повтора отказ тоже не дойдёт. Отказ, брошенный из `queryFn`, проходит обычным путём. Тест `entities/Proxy/__tests__/Proxy.schemaFailure.test.ts` закрепляет вторую половину: схемный отказ из `queryFn` доходит до тоста и не повторяется. Что исключение из `select` до `onError` не доходит, отдельным тестом не закреплено.
+**Checking happens only in `queryFn`.** An exception thrown from `select` is held by query-core at the observer (`#selectError`) and not passed to `QueryCache.onError`: there will be no global toast for a misunderstood response, and the failure will not reach the retry rule either. A failure thrown from `queryFn` goes the normal way. The test `entities/Proxy/__tests__/Proxy.schemaFailure.test.ts` pins the second half: a schema failure from `queryFn` reaches the toast and is not retried. That an exception from `select` does not reach `onError` is not pinned by a separate test.
 
-**В кэше — форма источника, а не модель.** По ключу запроса ходят оптимистичные обновления: `ProxySelect` правит выбранный узел прямо в кэше (`withSelectedNode`), а `useSaveApplyTransaction` кладёт туда ответ на запуск применения. Обе операции написаны на форме источника, и модель на её месте их сломает.
+**The cache holds the source shape, not the model.** Optimistic updates go through the query key: `ProxySelect` edits the selected node directly in the cache (`withSelectedNode`), and `useSaveApplyTransaction` puts the response to the apply start there. Both operations are written against the source shape, and a model in its place would break them.
 
-Непонятый ответ становится `ApiError` вида `Schema` (`decodeResponse` в `shared/api`). Повторов у него нет: форма ответа от второго запроса не меняется. Транспорт такую ошибку не рождает — она приходит с границы слайса, поэтому `status` и `code` у неё пусты, а разбор ошибки лежит в `details`.
+A misunderstood response becomes an `ApiError` of kind `Schema` (`decodeResponse` in `shared/api`). It has no retries: the response shape does not change on a second request. The transport does not produce such an error: it comes from the slice boundary, so its `status` and `code` are empty, and the parse error is in `details`.
 
 ## queryKey factory
 
-Ключи строятся от общего к частному. Общий префикс нужен для массовой инвалидации, частный — для точечной.
+Keys are built from general to specific. The general prefix is needed for bulk invalidation, the specific part for targeted invalidation.
 
 ```ts
 export const CONFIG_QUERY = {
@@ -71,11 +71,11 @@ export const CONFIG_QUERY = {
 } as const;
 ```
 
-Ключ строится **только** фабрикой: литеральный массив в `useQuery` не найти при инвалидации.
+A key is built **only** by the factory: a literal array in `useQuery` cannot be found during invalidation.
 
-Для записи в кэш ключ берётся у фабрики опций — `getServiceStateOptions().queryKey`, — а не у фабрики ключей. Тогда `setQueryData` и `getQueryData` типизируются данными этого запроса, и запись чужой формы перестаёт компилироваться; с ключом из отдельной фабрики тип пришлось бы ставить руками дженериком, а его никто не проверит.
+For writing to the cache the key is taken from the options factory, `getServiceStateOptions().queryKey`, not from the key factory. Then `setQueryData` and `getQueryData` are typed by this query's data, and writing a foreign shape stops compiling; with a key from a separate factory the type would have to be set by hand as a generic, and nobody would check it.
 
-## Фабрика опций и хук
+## Options factory and hook
 
 ```ts
 export function getConfigOptions() {
@@ -93,9 +93,9 @@ export function useConfig() {
 }
 ```
 
-`gcTime` ниже `staleTime` бессмысленен.
+`gcTime` lower than `staleTime` makes no sense.
 
-Константы времени живут в `shared/api`:
+Time constants live in `shared/api`:
 
 ```ts
 const SECOND = MS_IN_SECOND;
@@ -110,15 +110,15 @@ export const CACHE_TIME = {
 } as const;
 ```
 
-Дефолты клиента — без кэша (`staleTime: 0`, `gcTime: 0`): кэширование включается осознанно, по запросу.
+The client defaults are no cache (`staleTime: 0`, `gcTime: 0`): caching is enabled deliberately, per query.
 
-## meta и глобальная обработка ошибок
+## meta and global error handling
 
-Тосты не разбросаны по хукам — они выводятся в `QueryCache` / `MutationCache` на основании `meta`. Поля `meta` readonly, сообщения задаются **ключами локализации**, а не готовыми строками.
+Toasts are not scattered across hooks: they are shown in `QueryCache` / `MutationCache` based on `meta`. The `meta` fields are readonly, messages are set by **localization keys**, not by ready strings.
 
-Ключ берётся из неймспейса `shared` (`MessageKey` = `ParseKeys<'shared'>`), а не из словаря своего слайса: тост показывает одно место на всё приложение, и к этому моменту словарь слайса может быть ещё не загружен.
+The key is taken from the `shared` namespace (`MessageKey` = `ParseKeys<'shared'>`), not from the slice's own dictionary: one place in the whole application shows the toast, and by that moment the slice dictionary may not be loaded yet.
 
-Ключ в `meta` говорит, **что** не вышло, а **почему** — код отказа демона: `failureText` переводит его по своей таблице кодов (`FAILURE_KEY` в `shared/api/failureText.ts`, наружу она не уходит), и тост собирается из двух половин — «Проверить задержку не удалось: рантайм sing-box не отвечает». Незнакомый код перевода не получает, и тогда в ход идёт `message` из ответа — он на языке демона, но это лучше, чем общая фраза вместо причины.
+The key in `meta` says **what** failed, and the daemon's failure code says **why**: `failureText` translates the code by its own code table (`FAILURE_KEY` in `shared/api/failureText.ts`, not exported), and the toast is assembled from two halves, for example «Проверить задержку не удалось: рантайм sing-box не отвечает» ("Could not check the delay: the sing-box runtime does not respond"; the panel UI text is Russian). An unknown code gets no translation, and then the `message` from the response is used: it is in the daemon's language, but that is better than a generic phrase instead of the reason.
 
 ```ts
 type ErrorMeta =
@@ -132,10 +132,10 @@ type SuccessMeta =
 export type QueryMeta = ErrorMeta & SuccessMeta;
 ```
 
-Пересечение двух union-ов, а не набор необязательных полей: иначе
-`showSuccess: true` без текста компилируется и запрос молча ничего не
-показывает. При `showError` ключ необязателен — тогда берётся сообщение самой
-ошибки, демон присылает его готовым к показу.
+An intersection of two unions, not a set of optional fields: otherwise
+`showSuccess: true` without text compiles and the query silently shows
+nothing. With `showError` the key is optional: then the error's own message
+is used, the daemon sends it ready for display.
 
 ```ts
 export const QueryClientInstance = new QueryClient({
@@ -152,7 +152,7 @@ export const QueryClientInstance = new QueryClient({
 });
 ```
 
-Типизация `meta` расширяется через augmentation, а не кастами:
+`meta` typing is extended through augmentation, not with casts:
 
 ```ts
 declare module '@tanstack/react-query' {
@@ -163,13 +163,13 @@ declare module '@tanstack/react-query' {
 }
 ```
 
-## Преобразование данных
+## Data transformation
 
-Данные в кэше — форма источника, проверенная схемой в `queryFn`. Перевод в модель экрана — через `select`, он кэш не трогает; адаптер получает уже проверенные данные и сам ничего не разбирает. Подробности и причины — в разделе «Разбор ответа».
+Data in the cache is the source shape checked by the schema in `queryFn`. Conversion into the screen model goes through `select`, which does not touch the cache; the adapter gets already checked data and parses nothing itself. Details and reasons: the "Parsing the response" section.
 
-Исключение одно: конфиг. `parseConfig` в `select` не бросает вовсе — узел, которого схема не знает, становится записью в `issues`, а не отказом, потому что такой конфиг обязан остаться правимым ([ADR-0018](../../../../docs/adr/ADR-0018-generate-strict-schemas-and-mark-what-the-panel-does-not-know.md)).
+There is one exception: the config. `parseConfig` in `select` never throws: a node unknown to the schema becomes an entry in `issues`, not a failure, because such a config must stay editable ([ADR-0018](../../../../docs/adr/ADR-0018-generate-strict-schemas-and-mark-what-the-panel-does-not-know.md)).
 
-## Мутации и инвалидация
+## Mutations and invalidation
 
 ```ts
 export function useApplyConfig() {
@@ -185,57 +185,57 @@ export function useApplyConfig() {
 }
 ```
 
-- Инвалидируем максимально точным ключом, а не корнем, если знаем, что затронуто.
-- Оптимистичное обновление — `onMutate` пишет в кэш и возвращает снапшот, `onError` откатывает, `onSettled` инвалидирует. Применяем там, где отклик важнее консистентности (переключение ноды на экране Proxies), но **не** в цикле Apply: там результат определяет `sing-box check` на устройстве, врать пользователю нельзя.
+- Invalidate with the most precise key, not the root, if you know what is affected.
+- Optimistic update: `onMutate` writes to the cache and returns a snapshot, `onError` rolls back, `onSettled` invalidates. Use it where responsiveness matters more than consistency (switching a node on the Proxies screen), but **not** in the Apply cycle: there the result is decided by `sing-box check` on the device, and lying to the user is not allowed.
 
-## Отказы и недоступность
+## Failures and unavailability
 
-Панель обязана работать при остановленном sing-box, поэтому ошибки разделены:
+The panel must work while sing-box is stopped, so errors are separated:
 
-- `ApiError` различает «демон не ответил» и «демон ответил ошибкой». Первое — отказ панели, второе — данные экрана. К первому клиент относит и оборванный запрос, и истёкший таймаут, и шлюзовые статусы 502/503/504: их выставляет посредник между браузером и демоном, а не сам демон.
-- Отмена запроса отказом не считается: её порождает сам Query при размонтировании, и клиент пропускает её как есть — иначе баннер недоступности мигал бы на каждом переходе между экранами.
-- Состояние сервиса — обычный запрос, а не ошибка: экран рисует «сервис лежит» и оставляет доступным редактор.
-- Баннер недоступности демона живёт в `app/`, экраны его не дублируют.
+- `ApiError` distinguishes "the daemon did not answer" from "the daemon answered with an error". The first is a panel failure, the second is screen data. The client counts as the first an aborted request, an expired timeout and the gateway statuses 502/503/504: they are set by an intermediary between the browser and the daemon, not by the daemon itself.
+- Request cancellation is not a failure: Query itself produces it on unmount, and the client passes it through as is; otherwise the unavailability banner would blink on every transition between screens.
+- Service state is a regular query, not an error: the screen draws "the service is down" and keeps the editor available.
+- The daemon unavailability banner lives in `app/`, screens do not duplicate it.
 
-## Состояния блока
+## Block states
 
-Состояние блока берётся у запроса, а не выводится по пустоте данных: пустой список после отказа читается как «данных нет», и пользователь уходит чинить конфиг, который цел. У блока три разных экрана:
+A block's state is taken from the query, not inferred from empty data: an empty list after a failure reads as "there is no data", and the user goes to fix a config that is intact. A block has three different screens:
 
-- **Загрузка** — `isPending`: скелетон (`SkeletonRows` в `shared/ui`), а не строка «Загружаю». Проявляется он с задержкой (`PENDING_REVEAL`), поэтому быстрый ответ его так и не показывает. Экран целиком не блокируется.
-- **Отказ** — `isLoadingError`: блок `QueryFailure` с причиной и повтором (`refetch`). Отказ поверх уже загруженных данных (`isRefetchError`) данных не прячет — о нём говорит тост из `meta`.
-- **Пусто** — запрос успешен, данных нет: `Empty` из `shared/ui/shadcn` со словами, что это значит. «Пусто из-за отбора» — отдельный экран с кнопкой сброса ([Tables.md](./Tables.md)).
+- **Loading**: `isPending`: a skeleton (`SkeletonRows` in `shared/ui`), not a "Loading" line. It appears with a delay (`PENDING_REVEAL`), so a fast response never shows it. The whole screen is not blocked.
+- **Failure**: `isLoadingError`: a `QueryFailure` block with the reason and a retry (`refetch`). A failure on top of already loaded data (`isRefetchError`) does not hide the data: a toast from `meta` reports it.
+- **Empty**: the query succeeded, there is no data: `Empty` from `shared/ui/shadcn` with words that say what it means. "Empty because of a filter" is a separate screen with a reset button ([Tables.md](./Tables.md)).
 
-Заголовок блока отказа и тост одного запроса — один ключ: `QueryFailure` принимает тот же `MessageKey`, что стоит в `meta.errorMessageKey`. Ключи отказов чтения живут в `shared` под `source.*`, ключи отказов действий — под `toast.*`: у действия блока нет, только тост.
+The failure block title and the toast of one query are one key: `QueryFailure` takes the same `MessageKey` as `meta.errorMessageKey`. Keys of read failures live in `shared` under `source.*`, keys of action failures under `toast.*`: an action has no block, only a toast.
 
-Переход между экранами не мигает скелетоном за счёт загрузчика маршрута: он ждёт данные экрана (см. «Ретраи и префетч»), и роутер показывает общий скелетон экрана (`defaultPendingComponent`) только после `defaultPendingMs`. Сбой, который экран не обработал сам, уходит в `defaultErrorComponent` роутера — он стоит внутри оболочки, и сайдбар остаётся.
+A transition between screens does not blink with a skeleton thanks to the route loader: it waits for the screen data (see "Retries and prefetch"), and the router shows the common screen skeleton (`defaultPendingComponent`) only after `defaultPendingMs`. A failure that the screen did not handle itself goes to the router's `defaultErrorComponent`: it sits inside the shell, and the sidebar stays.
 
-## Опрос и таймеры
+## Polling and timers
 
-- Статус демона и ход цикла Apply опрашиваются `refetchInterval`; интервал — константа рядом с фабрикой ключа. Состояние службы своего опроса не имеет: оно приходит потоком рантайма ([ADR-0010](../../../../docs/adr/ADR-0010-stream-runtime-to-the-panel-over-sse.md)) и кладётся в кэш обработчиком топика.
-- На скрытой вкладке опрос останавливается: `refetchIntervalInBackground: false`.
-- Окно подтверждения после Apply (60 секунд) отсчитывает UI, но решение об откате принимает демон — таймер в браузере не источник истины.
+- Daemon status and the progress of the Apply cycle are polled with `refetchInterval`; the interval is a constant next to the key factory. Service state has no polling of its own: it arrives through the runtime stream ([ADR-0010](../../../../docs/adr/ADR-0010-stream-runtime-to-the-panel-over-sse.md)) and is put into the cache by the topic handler.
+- On a hidden tab polling stops: `refetchIntervalInBackground: false`.
+- The confirmation window after Apply (60 seconds) is counted down by the UI, but the rollback decision is made by the daemon: the browser timer is not the source of truth.
 
-## Ретраи и префетч
+## Retries and prefetch
 
-- Мутации не повторяются автоматически. Для Apply это обязательно: повтор запустит второй цикл на устройстве.
-- GET повторяется дважды. Не повторяются ответы 4xx — это вердикт демона, недоступность демона — панель ждёт его с баннером, и непонятый схемой ответ — от второго запроса он не изменится.
-- Данные экрана, известные до перехода, тянутся `queryClient.query(options)` в загрузчике маршрута, а не эффектом после монтирования. Отказ там гасится `.catch`: экран обязан открыться и при лежащем источнике, а отказ остаётся в кэше и показывается блоком экрана. `prefetchQuery`, `fetchQuery` и `ensureQueryData` в Query 5.103 объявлены устаревшими и не используются.
+- Mutations are not retried automatically. For Apply this is mandatory: a retry starts a second cycle on the device.
+- GET is retried twice. Not retried: 4xx responses, which are the daemon's verdict; daemon unavailability, where the panel waits for it with a banner; and a response the schema did not understand, which will not change on a second request.
+- Screen data known before the transition is fetched with `queryClient.query(options)` in the route loader, not by an effect after mounting. A failure there is swallowed with `.catch`: the screen must open even when the source is down, and the failure stays in the cache and is shown by the screen's block. `prefetchQuery`, `fetchQuery` and `ensureQueryData` are deprecated in Query 5.103 and are not used.
 
-## Правила
+## Rules
 
-- GET — `useQuery`, всё остальное — `useMutation`.
-- Возврат `useQuery` не деструктурируем — это ограничивает использование объекта query дальше по коду.
-- Адрес endpoint вынесен в константу. В `queryKey` он не участвует: ключ собирается фабрикой слайса из своих сегментов, и адрес в нём не повторяется.
-- Ручной запрос вне монтирования — `queryClient.query(options)`, а не `enabled` плюс костыль.
-- `enabled: false` и инвалидация несовместимы: выключенные запросы не инвалидируются, это надо помнить при построении цепочек.
+- GET is `useQuery`, everything else is `useMutation`.
+- The return of `useQuery` is not destructured: that limits the use of the query object further down the code.
+- The endpoint address is moved into a constant. It does not take part in `queryKey`: the key is assembled by the slice factory from its own segments, and the address is not repeated in it.
+- A manual request outside mounting is `queryClient.query(options)`, not `enabled` plus a workaround.
+- `enabled: false` and invalidation are incompatible: disabled queries are not invalidated; keep this in mind when building chains.
 
-## Что идёт мимо Query
+## What bypasses Query
 
-Рантайм дашборда — трафик, память, показания платы, соединения и состояние службы — приходит одним SSE-потоком `GET /api/events`. В Query он **не заворачивается** — топики пишут напрямую в сторы своих слайсов. Причина: кэш поверх высокочастотного потока даёт устаревшие данные и лишние рендеры на 5000 соединений.
+Dashboard runtime data (traffic, memory, board readings, connections and service state) arrives through one SSE stream, `GET /api/events`. It is **not wrapped** in Query: topics write directly into the stores of their slices. The reason: a cache on top of a high-frequency stream gives stale data and extra renders at 5000 connections.
 
-WebSocket в панели нет: демон отдаёт поток обычным HTTP-ответом и отклоняет апгрейд на ветке прокси `/api/clash/*`. Всё, что панель меняет, она меняет обычными запросами.
+The panel has no WebSocket: the daemon returns the stream as a regular HTTP response and rejects the upgrade on the `/api/clash/*` proxy branch. Everything the panel changes, it changes with regular requests.
 
-Одно соединение `EventSource` открывает `app/`, и оно же раздаётся слайсам. Обработчик живёт в сегменте `api` своего слайса, берёт данные из конверта через `listenTopic` и **обязан возвращать функцию отписки**:
+`app/` opens one `EventSource` connection, and it is shared with the slices. A handler lives in the `api` segment of its slice, takes data from the envelope through `listenTopic` and **must return an unsubscribe function**:
 
 ```ts
 export function listenTraffic(source: StreamSource): () => void {
@@ -249,8 +249,8 @@ export function listenTraffic(source: StreamSource): () => void {
 }
 ```
 
-Обработчик принимает `StreamSource` — узкий интерфейс подписки, а не сам `EventSource`: так его можно проверить без транспорта.
+The handler takes a `StreamSource`, a narrow subscription interface, not the `EventSource` itself: this way it can be checked without a transport.
 
-Поток лога `GET /api/logs/stream` — исключение из «одного соединения»: у демона на каждого читателя свой процесс `logread -f`, потоков не больше четырёх, а уровень лога — параметр адреса. Поэтому его открывает `useLogStream` слайса `Log`, пока смонтирован экран логов, а не оболочка на всех экранах. Строки идут в стор слайса пачкой, разрыв `seq` считается там же потерей строк. Отказ демона (429, 503) браузер не переподключает — поток заново открывает хук по `LOG_RECONNECT`; на скрытой вкладке поток закрыт, чтобы фоновые вкладки не занимали места у демона. Хвост перечитывается на каждом открытии потока, стык хвоста и потока склеивает `mergeLogEntries`.
+The log stream `GET /api/logs/stream` is an exception to "one connection": the daemon runs a separate `logread -f` process per reader, there are at most four streams, and the log level is a URL parameter. So it is opened by `useLogStream` of the `Log` slice while the logs screen is mounted, not by the shell on all screens. Lines go into the slice store in a batch, and a `seq` gap is counted there as lost lines. The browser does not reconnect after a daemon refusal (429, 503): the hook reopens the stream by `LOG_RECONNECT`; on a hidden tab the stream is closed so that background tabs do not take slots at the daemon. The tail is reread on every stream opening, and `mergeLogEntries` joins the tail and the stream.
 
-Конверт несёт сквозной `seq`. Разрыв нумерации означает, что демон отбросил событие медленному читателю, — тогда состояние перезапрашивается запросом, а не достраивается по потоку. Следит за этим `watchSequence` в `shared/api`.
+The envelope carries a shared `seq`. A gap in numbering means the daemon dropped an event for a slow reader; then the state is requested again with a query, not rebuilt from the stream. `watchSequence` in `shared/api` watches this.

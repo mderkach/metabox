@@ -6,19 +6,19 @@ import type { ConnectionFacetValue } from '@entities/Connection';
 import { cn } from '@shared/lib/utils';
 import { Button, Input, Popover, PopoverContent, PopoverTitle, PopoverTrigger } from '@shared/ui';
 
-/** Значение фасета словами: подпись и, у устройства, адрес рядом с ней. */
+/** Facet value in words: the label and, for a device, the address next to it. */
 export interface ConnectionFacetText {
   label: string;
   detail: string | null;
 }
 
-/** Цель касания на телефоне — не меньше 44px. */
+/** Touch target on a phone is at least 44px. */
 const TOUCH_TARGET = 'max-md:h-11';
 
 const OPTION =
   'flex cursor-default items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-none select-none hover:bg-muted focus-visible:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50 max-md:min-h-11';
 
-/** Куда переводит фокус клавиша в списке; `-1` — обратно в поиск. */
+/** Where a key moves focus in the list; `-1` means back to the search. */
 const OPTION_MOVE: Readonly<Partial<Record<string, (index: number, last: number) => number>>> = {
   ArrowDown: (index, last) => Math.min(index + 1, last),
   ArrowUp: (index) => index - 1,
@@ -31,14 +31,14 @@ function focusOption(list: HTMLDivElement | null, index: number) {
 }
 
 /**
- * Фасет: кнопка в тулбаре и список значений под ней. Значения выбираются
- * несколько сразу, у каждого счётчик строк, которые добавит его выбор.
+ * Facet: a toolbar button and a list of values under it. Several values are
+ * selected at once, each with a counter of the rows its selection will add.
  *
- * Кнопка называет выбор сама: одно значение — его подписью, несколько — числом.
- * Иначе спрятанный в поповере отбор выглядит пропавшими строками.
+ * The button names the selection itself: one value by its label, several by a
+ * number. Otherwise a selection hidden in a popover looks like vanished rows.
  *
- * Клавиатура: из поиска стрелка вниз ведёт в список, в списке стрелки ходят по
- * значениям, пробел и Enter переключают значение, Esc закрывает поповер.
+ * Keyboard: from search, the down arrow leads into the list, in the list arrows
+ * move over values, space and Enter toggle a value, Esc closes the popover.
  */
 export function ConnectionFacetFilter({
   label,
@@ -240,8 +240,8 @@ export function ConnectionFacetFilter({
               className={cn('w-full', TOUCH_TARGET)}
               onClick={() => {
                 onSelectedChange([]);
-                // Кнопка исчезает вместе с выбором: фокус, оставшийся на ней,
-                // ушёл бы в документ.
+                // The button disappears with the selection: focus left on it
+                // would go to the document.
                 inputRef.current?.focus();
               }}
             >

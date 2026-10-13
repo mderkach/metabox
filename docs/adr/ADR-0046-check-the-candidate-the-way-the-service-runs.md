@@ -1,127 +1,127 @@
-# ADR-0046. Проверять кандидата тем режимом, каким procd поднимает службу
+# ADR-0046. Check the candidate in the same mode in which procd runs the service
 
-- Статус: Accepted
-- Дата: 2026-10-08
-- Ответственные: владелец репозитория
-- Заменяет (в части предмета валидации): [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md)
+- Status: Accepted
+- Date: 2026-10-08
+- Deciders: repository owner
+- Supersedes (as to the subject of validation): [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md)
 
-## Контекст и постановка проблемы
+## Context and problem statement
 
-[ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md) выбрал предметом валидации каталог-кандидат — `sing-box check -C <кандидат>` — исходя из того, что служба поднимается в режиме каталога: `sing-box -D /etc/sing-box -C /etc/sing-box run`. Этот факт брался из init-скрипта стенда, который снят коммитом `22088194` вместе с переходом стенда на пакет форка ([ADR-0023](./ADR-0023-build-the-bench-from-the-device-firmware.md)).
+[ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md) chose the candidate directory as the subject of validation, `sing-box check -C <candidate>`, on the assumption that the service runs in directory mode: `sing-box -D /etc/sing-box -C /etc/sing-box run`. This fact was taken from the test bench's init script, which was removed by commit `22088194` together with the move of the test bench to the fork's package ([ADR-0023](./ADR-0023-build-the-bench-from-the-device-firmware.md)).
 
-Подтверждённые факты:
+Confirmed facts:
 
-- Пакет форка поднимает службу одним файлом: `procd_set_param command "$PROG" run -c "$config_file" -D "$working_directory"`, где `conffile` по умолчанию `/etc/sing-box/config.json`, `workdir` — `/usr/share/sing-box` (`release/config/openwrt.init:15-20` форка `v1.14.0-extended-2.7.1`). Выключенная служба (`enabled=0`) инстанса не заводит вовсе.
-- Стенд ставит этот пакет и меняет только `workdir` на `/etc/sing-box` ([`.devcontainer/target/Dockerfile`](../../.devcontainer/target/Dockerfile)). Режима каталога нет ни в стенде, ни в пакетной установке.
-- Демон уже читает команду инстанса у procd (`ubus call service list`), но брал из неё только `-D` — для сверки рабочего каталога перед записью файлов списков ([ADR-0033](./ADR-0033-keep-custom-rule-lists-in-the-singbox-config.md)).
+- The fork's package runs the service from a single file: `procd_set_param command "$PROG" run -c "$config_file" -D "$working_directory"`, where `conffile` defaults to `/etc/sing-box/config.json` and `workdir` to `/usr/share/sing-box` (`release/config/openwrt.init:15-20` of the fork at `v1.14.0-extended-2.7.1`). A disabled service (`enabled=0`) does not create an instance at all.
+- The test bench installs this package and changes only `workdir` to `/etc/sing-box` ([`.devcontainer/target/Dockerfile`](../../.devcontainer/target/Dockerfile)). There is no directory mode either on the test bench or in a package installation.
+- The daemon already reads the instance command from procd (`ubus call service list`), but took only `-D` from it, to check the working directory before writing list files ([ADR-0033](./ADR-0033-keep-custom-rule-lists-in-the-singbox-config.md)).
 
-Следствия расхождения, выведенные из кода:
+Consequences of the mismatch, derived from the code:
 
-- **Ложно-зелёная проверка.** Соседний `.json` в каталоге конфига, на outbound которого ссылается `config.json`, проходит `check -C`, а служба на `-c` его не читает и падает. Отказ выясняется рестартом, healthcheck и автооткатом вместо отказа до записи.
-- **Ложный отказ.** Битый или конфликтующий соседний `.json` блокирует Apply, хотя служба его не читает.
-- **Разная база путей.** При пакетном `workdir` без файлов списков сверки не было: `check` резолвил относительные пути от кандидата, служба — от `/usr/share/sing-box`.
-- **Служба на чужом конфиге не ловится.** Если `conffile` в UCI не равен конфигу демона, демон пишет файл, которого служба не читает, а проверяет не то, что запустится.
+- **A false green check.** A neighbouring `.json` in the config directory whose outbound is referenced by `config.json` passes `check -C`, while the service on `-c` does not read it and crashes. The failure is discovered by the restart, the healthcheck and the automatic rollback instead of a refusal before the write.
+- **A false refusal.** A broken or conflicting neighbouring `.json` blocks Apply, although the service does not read it.
+- **A different path base.** With the package `workdir` and no list files there was no check: `check` resolved relative paths from the candidate, the service from `/usr/share/sing-box`.
+- **A service on a foreign config is not caught.** If `conffile` in UCI is not the daemon's config, the daemon writes a file the service does not read, and checks something other than what will run.
 
-В scope: какой командой проверяется кандидат и когда применение отказывает до записи из-за команды службы. Вне scope: остальной протокол Apply ADR-0002, сверка рабочего каталога для файлов списков (ADR-0033 — она сохраняется), поддержка службы под другим владельцем (другой init-скрипт, чужой менеджер).
+In scope: which command checks the candidate, and when an apply is refused before the write because of the service command. Out of scope: the rest of the ADR-0002 Apply protocol, the working directory check for list files (ADR-0033; it is kept), support for a service under another owner (another init script, a foreign manager).
 
-## Критерии выбора
+## Decision drivers
 
-1. **Валидируется ровно то, что запустится** — критерий ADR-0002, ради которого выбирался `-C`.
-2. **Безопасность Apply**: расхождение с запуском службы выясняется до записи, а не автооткатом.
-3. **Совместимость**: пакетная установка форка работает без правки чужих файлов; режим каталога, если его кто-то держит, не ломается молча.
-4. **Стоимость**: без новой зависимости, на том, что демон уже читает у procd.
-5. **Наблюдаемость**: отказ называет причину кодом контракта, а не падением службы.
+1. **Exactly what will run is validated**: the ADR-0002 driver for which `-C` was chosen.
+2. **Apply safety**: a mismatch with how the service runs is discovered before the write, not by the automatic rollback.
+3. **Compatibility**: a package installation of the fork works without editing someone else's files; directory mode, if someone keeps it, does not break silently.
+4. **Cost**: no new dependency, based on what the daemon already reads from procd.
+5. **Observability**: a refusal names the reason with a contract code, not with a service crash.
 
-## Рассмотренные варианты
+## Considered options
 
-1. **Читать команду инстанса у procd и проверять тем же режимом.** Демон достаёт из команды `-c`, `-C` и `-D` и строит `check` по ним, подставляя кандидата вместо каталога конфига. Команда, которая поднимает службу не на конфиге демона, — отказ до записи. Разбор команды уже есть; цена — ещё одна ветка состояния и тесты на оба режима. Команды может не быть — служба не поднималась, выключена или procd нет; тогда нужен запасной режим. **Принят**, запасной режим — вариант 3.
-2. **Требовать режим каталога: пакет панели ставит или патчит `/etc/init.d/sing-box`.** Возвращает предпосылку ADR-0002 и не трогает демон. Но это файл чужого пакета: конфликт файлов apk, затирание при обновлении форка, расхождение с пакетной установкой, которую проверяет стенд (критерии 3 и 4). **Отклонён.**
-3. **Поддерживать только пакетный режим: `check -c <кандидат>/config.json -D <кандидат>`.** Минимальная правка и верно для пакета и стенда. Но установка в режиме каталога тихо получает ложно-зелёные проверки, а служба на чужом конфиге по-прежнему не ловится (критерии 2 и 5). Как единственное поведение **отклонён**; остаётся запасным режимом варианта 1, когда команды не видно.
-4. **Флаг демона `-run-mode`.** Просто в коде, но верность зависит от того, правильно ли владелец задал флаг: при правке UCI службы флаг расходится с запуском молча (критерий 1). **Отклонён.**
-5. **Сохранить `check -C`.** Оставляет все четыре следствия из контекста. **Отклонён.**
+1. **Read the instance command from procd and check in the same mode.** The daemon extracts `-c`, `-C` and `-D` from the command and builds `check` from them, substituting the candidate for the config directory. A command that runs the service on something other than the daemon's config is a refusal before the write. The command parsing already exists; the cost is one more state branch and tests for both modes. The command may be absent (the service has not run, is disabled, or there is no procd); then a fallback mode is needed. **Chosen**, with option 3 as the fallback mode.
+2. **Require directory mode: the panel package installs or patches `/etc/init.d/sing-box`.** Restores the ADR-0002 premise and does not touch the daemon. But it is a file of someone else's package: an apk file conflict, overwriting on a fork update, a mismatch with the package installation the test bench checks (drivers 3 and 4). **Rejected.**
+3. **Support only package mode: `check -c <candidate>/config.json -D <candidate>`.** A minimal change, and correct for the package and the test bench. But a directory mode installation silently gets false green checks, and a service on a foreign config is still not caught (drivers 2 and 5). As the only behaviour it is **rejected**; it remains the fallback mode of option 1 when the command is not visible.
+4. **A daemon flag `-run-mode`.** Simple in code, but correctness depends on the owner setting the flag right: when the service UCI is edited, the flag silently diverges from how it runs (driver 1). **Rejected.**
+5. **Keep `check -C`.** Leaves all four consequences from the context. **Rejected.**
 
-## Принятое решение
+## Decision outcome
 
-Перед проверкой демон спрашивает у procd команду инстанса службы (`procd.Launch`: файлы `-c`/`--config`, каталоги `-C`/`--config-directory`, рабочий каталог `-D`/`--directory` или `cwd` живого процесса; относительный путь конфига приводится к рабочему каталогу). Видимая команда без `-c` и `-C` разбирается как `-c config.json`: sing-box в этом случае сам читает `config.json` рабочего каталога (`cmd/sing-box/cmd.go` форка). Значение, забранное флагом, флагом не считается, после `--` разбор останавливается. По команде выбирается режим:
+Before the check the daemon asks procd for the service instance command (`procd.Launch`: files `-c`/`--config`, directories `-C`/`--config-directory`, the working directory `-D`/`--directory` or the `cwd` of the live process; a relative config path is resolved against the working directory). A visible command without `-c` and `-C` is parsed as `-c config.json`: in that case sing-box itself reads `config.json` from the working directory (`cmd/sing-box/cmd.go` of the fork). A value taken by a flag does not count as a flag, and parsing stops after `--`. The mode is chosen by the command:
 
-| Команда службы                                                                                        | Проверка кандидата                     |
-| ----------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| не видна: не поднималась, выключена, procd нет                                                        | `check -c <кандидат>/<имя> -D <база>`  |
-| один `-c`, равный `-config-dir`/`-config-name`                                                        | `check -c <кандидат>/<имя> -D <база>`  |
-| один `-C`, равный `-config-dir`                                                                       | `check -C <кандидат> -D <база>`        |
-| любая другая: чужой файл, несколько, `-c` и `-C`, относительный путь при неизвестном рабочем каталоге | отказ до записи, `409 launch_mismatch` |
+| Service command                                                                                          | Candidate check                                 |
+| -------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| not visible: has not run, disabled, no procd                                                             | `check -c <candidate>/<name> -D <base>`         |
+| a single `-c` equal to `-config-dir`/`-config-name`                                                      | `check -c <candidate>/<name> -D <base>`         |
+| a single `-C` equal to `-config-dir`                                                                     | `check -C <candidate> -D <base>`                |
+| anything else: a foreign file, several, `-c` and `-C`, a relative path with an unknown working directory | refusal before the write, `409 launch_mismatch` |
 
-База путей `-D`:
+The `-D` path base:
 
-- рабочий каталог совпадает с каталогом конфига или неизвестен — сам кандидат; он несёт подкаталоги каталога конфига той же раскладкой;
-- рабочий каталог другой, файлов списков в применении нет — рабочий каталог службы: транзакция его не меняет, и `check` видит ту же базу, что рантайм. Если каталога нет на диске — снова кандидат: несуществующий `-D` sing-box создаёт сам, и проверка не должна оставлять следов до записи;
-- рабочий каталог другой и применение пишет файлы списков — прежний отказ `409 workdir_mismatch` (ADR-0033).
+- the working directory matches the config directory or is unknown: the candidate itself; it carries the subdirectories of the config directory in the same layout;
+- the working directory is different and the apply has no list files: the service working directory, since the transaction does not change it and `check` sees the same base as the runtime. If the directory does not exist on disk, again the candidate: sing-box creates a non-existent `-D` itself, and the check must leave no traces before the write;
+- the working directory is different and the apply writes list files: the existing `409 workdir_mismatch` refusal (ADR-0033).
 
-Обязательные правила:
+Mandatory rules:
 
-- Кандидат раскладывается одинаково в обоих режимах — конфиг, соседние `.json`, подкаталоги: в режиме `-c` соседние файлы бинарь просто не читает.
-- Отказ `launch_mismatch` пути команды службы наружу не отдаёт: они уходят в лог демона уровнем `Warn`. Панель показывает текст по коду.
-- Недоступный procd применение не останавливает: в лог уходит предупреждение, проверка идёт в запасном режиме.
-- Скрипт стенда `apply-cycle-check` проверяет, что служба поднята одним `-c` на конфиге стенда, и проверяет кандидата той же командой, что демон.
+- The candidate is laid out the same way in both modes (the config, neighbouring `.json` files, subdirectories): in `-c` mode the binary simply does not read the neighbouring files.
+- The `launch_mismatch` refusal does not expose the paths of the service command: they go to the daemon log at `Warn` level. The panel shows text by code.
+- An unavailable procd does not stop the apply: a warning goes to the log, and the check runs in the fallback mode.
+- The test bench script `apply-cycle-check` checks that the service is run with a single `-c` on the test bench config, and checks the candidate with the same command as the daemon.
 
-Non-goal: управление службой, которой владеет не пакет форка (другой init-скрипт, чужой `conffile`), — такая установка получает `launch_mismatch`, а не поддержку.
+Non-goal: managing a service not owned by the fork's package (another init script, a foreign `conffile`); such an installation gets `launch_mismatch`, not support.
 
-### Область действия и границы
+### Scope and boundaries
 
-`apps/metaboxd/internal/procd` (разбор команды), `internal/singbox` (`Check`, `Launch`), `internal/apply` (выбор режима, `LaunchError`), `internal/httpapi` и `internal/contract` (код `launch_mismatch`), панель — текст отказа, стенд — `apply-cycle-check`. Остальной протокол ADR-0002 не меняется.
+`apps/metaboxd/internal/procd` (command parsing), `internal/singbox` (`Check`, `Launch`), `internal/apply` (mode selection, `LaunchError`), `internal/httpapi` and `internal/contract` (the `launch_mismatch` code), the panel: the refusal text, the test bench: `apply-cycle-check`. The rest of the ADR-0002 protocol does not change.
 
-Решение заменяет раздел «Предмет валидации перед записью» ADR-0002 и снимает с контекста ADR-0008 и ADR-0033 допущение «служба поднимается в режиме каталога»: служебные файлы вне каталога конфига и временные имена не на `.json` остаются — служба может подниматься и в режиме каталога.
+The decision supersedes the "Subject of validation before writing" section of ADR-0002 and removes the assumption "the service runs in directory mode" from the context of ADR-0008 and ADR-0033: service files outside the config directory and temporary names not ending in `.json` stay, since the service may also run in directory mode.
 
-## Последствия
+## Consequences
 
-### Положительные
+### Positive
 
-- `check` судит ту же команду, что поднимет procd: соседние `.json` не дают ни ложно-зелёной проверки, ни ложного отказа в пакетном режиме.
-- Служба на чужом конфиге выясняется до записи отказом с кодом, а не простоем и автооткатом.
-- Применение без файлов списков при пакетном `workdir` проверяется от той же базы путей, что рантайм.
-- Режим каталога, если владелец его держит, работает как раньше.
+- `check` judges the same command procd will run: neighbouring `.json` files give neither a false green check nor a false refusal in package mode.
+- A service on a foreign config is discovered before the write by a refusal with a code, not by downtime and automatic rollback.
+- An apply without list files with the package `workdir` is checked from the same path base as the runtime.
+- Directory mode, if the owner keeps it, works as before.
 
-### Отрицательные
+### Negative
 
-- Ещё одна ветка состояния: проверка зависит от ответа procd, и у неё два режима и запасной путь — больше тестов и больше способов разойтись со стендом.
-- Новый код контракта `launch_mismatch`: панель старше демона покажет его как незнакомый отказ.
-- Без команды службы (выключена, procd нет) режим угадывается по пакету форка: установка в режиме каталога, служба которой ещё не поднималась, проверится одним файлом.
-- Служба под другим владельцем — например, маршрутизация через стороннюю обвязку с собственным файлом конфига — получает отказ, а не поддержку.
+- One more state branch: the check depends on the procd answer, and it has two modes and a fallback path, so more tests and more ways to diverge from the test bench.
+- A new contract code `launch_mismatch`: a panel older than the daemon shows it as an unknown refusal.
+- Without the service command (disabled, no procd) the mode is guessed from the fork's package: a directory mode installation whose service has not run yet is checked as a single file.
+- A service under another owner (for example, routing through a third-party dataplane with its own config file) gets a refusal, not support.
 
-### Нейтральные или отложенные
+### Neutral or deferred
 
-- Подсказка в панели, как привести `conffile` службы к конфигу демона, не делается: текста отказа и лога достаточно, пока таких установок не видно.
-- Несколько `-c` и смешанный режим не поддерживаются: пакет форка их не порождает.
+- A hint in the panel on how to point the service `conffile` at the daemon's config is not made: the refusal text and the log are enough while no such installations are seen.
+- Several `-c` and a mixed mode are not supported: the fork's package does not produce them.
 
-## Риски и меры снижения
+## Risks and mitigations
 
-| Риск                                                               | Вероятность и влияние                          | Митигация                                                                                                  |
-| ------------------------------------------------------------------ | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Форк поменяет команду init-скрипта (флаги, порядок, длинные формы) | Низкая, высокое влияние — ложный отказ Apply   | Разбор принимает все формы флагов sing-box; `apply-cycle-check` на стенде падает на шаге 8 при расхождении |
-| procd отдаёт команду упавшего инстанса, а UCI уже поправлен        | Низкая, низкое влияние                         | Команду procd обновляет на следующем `restart`, который делает сам Apply; отказ называет причину           |
-| Владелец держит службу на другом `conffile` намеренно              | Средняя на сторонних обвязках, среднее влияние | Отказ `launch_mismatch` до записи вместо записи в файл, которого служба не читает                          |
+| Risk                                                                       | Probability and impact                            | Mitigation                                                                                                          |
+| -------------------------------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| The fork changes the init script command (flags, order, long forms)        | Low, high impact: a false Apply refusal           | The parser accepts all forms of sing-box flags; `apply-cycle-check` on the test bench fails at step 8 on a mismatch |
+| procd returns the command of a crashed instance while UCI is already fixed | Low, low impact                                   | procd updates the command on the next `restart`, which Apply itself performs; the refusal names the reason          |
+| The owner keeps the service on a different `conffile` on purpose           | Medium with third-party dataplanes, medium impact | A `launch_mismatch` refusal before the write instead of writing to a file the service does not read                 |
 
-## Совместимость, миграция и откат
+## Compatibility, migration and rollback
 
-Миграция не нужна: на пакетной установке и стенде меняется только команда `check`. Контракт расширяется кодом `launch_mismatch` в перечислении `ErrorCode`; панель прежней версии показывает его запасным текстом демона.
+No migration is needed: on a package installation and on the test bench only the `check` command changes. The contract is extended with the `launch_mismatch` code in the `ErrorCode` enumeration; a panel of the previous version shows it with the daemon's fallback text.
 
-Откат — вернуть `check -D <кандидат> -C <кандидат>`; вместе с ним возвращаются следствия из контекста.
+Rollback: return `check -D <candidate> -C <candidate>`; the consequences from the context come back with it.
 
-## Проверка решения
+## Validation
 
-- `cd apps/metaboxd && go test ./internal/procd/`: разбор `-c`, `-C` во всех формах, повтор флага, относительный путь от рабочего каталога, команда без флагов как `config.json`, значение флага, похожее на флаг, остановка на `--`.
-- `go test ./internal/singbox/`: `Check` вызывает `check -D <база> -c <файл>` или `check -D <база> -C <каталог>`; `Launch` берёт команду у procd по имени init-скрипта.
-- `go test ./internal/apply/`: неизвестная команда, пакетный файл с рабочим каталогом пакета, рабочий каталог, которого нет на диске, файл при рабочем каталоге конфига, режим каталога — проверка нужным режимом и базой; чужой файл, команда без флагов на чужом рабочем каталоге, относительный файл без рабочего каталога, несколько файлов, файл и каталог разом — `LaunchError` без единого шага транзакции.
-- `go test ./internal/httpapi/`: `LaunchError` отдаёт `409 launch_mismatch` без путей в теле.
-- `make schema-daemon`: в `apps/web/src/shared/api/daemon.generated.ts` появляется код `launch_mismatch`; без текста в `apps/web/src/shared/api/failureText.ts` панель не собирается.
-- `make apply-check` на стенде: шаг 8 видит `-c /etc/sing-box/config.json` без `-C`, шаг 9 проверяет кандидата той же командой.
+- `cd apps/metaboxd && go test ./internal/procd/`: parsing `-c` and `-C` in all forms, a repeated flag, a relative path from the working directory, a command without flags as `config.json`, a flag value that looks like a flag, stopping at `--`.
+- `go test ./internal/singbox/`: `Check` calls `check -D <base> -c <file>` or `check -D <base> -C <directory>`; `Launch` takes the command from procd by the init script name.
+- `go test ./internal/apply/`: an unknown command, a package file with the package working directory, a working directory that does not exist on disk, a file with the config working directory, directory mode: a check with the right mode and base; a foreign file, a command without flags on a foreign working directory, a relative file without a working directory, several files, a file and a directory at once: `LaunchError` without a single transaction step.
+- `go test ./internal/httpapi/`: `LaunchError` returns `409 launch_mismatch` without paths in the body.
+- `make schema-daemon`: the `launch_mismatch` code appears in `apps/web/src/shared/api/daemon.generated.ts`; without a text in `apps/web/src/shared/api/failureText.ts` the panel does not build.
+- `make apply-check` on the test bench: step 8 sees `-c /etc/sing-box/config.json` without `-C`, step 9 checks the candidate with the same command.
 
-## Ссылки
+## Links
 
-- [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md) — протокол Apply, раздел о предмете валидации заменяется;
-- [ADR-0033](./ADR-0033-keep-custom-rule-lists-in-the-singbox-config.md) — сверка рабочего каталога для файлов списков;
-- [ADR-0023](./ADR-0023-build-the-bench-from-the-device-firmware.md) — стенд на пакете форка;
-- [DeviceIO](../../apps/metaboxd/docs/guides/DeviceIO.md) — вызов `sing-box` и сервис через procd;
+- [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md): the Apply protocol; its section on the subject of validation is superseded;
+- [ADR-0033](./ADR-0033-keep-custom-rule-lists-in-the-singbox-config.md): the working directory check for list files;
+- [ADR-0023](./ADR-0023-build-the-bench-from-the-device-firmware.md): the test bench on the fork's package;
+- [DeviceIO](../../apps/metaboxd/docs/guides/DeviceIO.md): calling `sing-box` and the service through procd;
 - `apps/metaboxd/internal/procd/procd.go`, `internal/singbox/singbox.go`, `internal/apply/apply.go`, `internal/apply/cycle.go`;
 - [`.devcontainer/target/files/usr/bin/apply-cycle-check`](../../.devcontainer/target/files/usr/bin/apply-cycle-check);
-- `release/config/openwrt.init` форка [sing-box-extended v1.14.0-extended-2.7.1](https://github.com/shtorm-7/sing-box-extended/blob/v1.14.0-extended-2.7.1/release/config/openwrt.init).
+- `release/config/openwrt.init` of the fork [sing-box-extended v1.14.0-extended-2.7.1](https://github.com/shtorm-7/sing-box-extended/blob/v1.14.0-extended-2.7.1/release/config/openwrt.init).

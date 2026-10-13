@@ -3,7 +3,7 @@ import i18next, { type ParseKeys } from 'i18next';
 import { parseDuration } from '@entities/RuleSet';
 import { MS_IN_DAY, MS_IN_HOUR, MS_IN_MINUTE, MS_IN_WEEK } from '@shared/lib/time';
 
-/** Порядок значим: берётся первая единица, на которую интервал делится нацело. */
+/** Order matters: the first unit that divides the interval evenly is taken. */
 const INTERVAL_STEP = [
   { ms: MS_IN_WEEK, key: 'interval.week' },
   { ms: MS_IN_DAY, key: 'interval.day' },
@@ -12,11 +12,11 @@ const INTERVAL_STEP = [
 ] as const satisfies readonly { ms: number; key: ParseKeys<'shared'> }[];
 
 /**
- * Интервал обновления словами: `24h` в конфиге и «раз в сутки» на экране — одно
- * и то же, но сырую запись владелец роутера читать не обязан.
+ * Update interval in words: `24h` in the config and "once a day" on screen are the same
+ * thing, but a router owner is not obliged to read the raw entry.
  *
- * Запись, которой формат не покрывает, отдаётся как есть: её писал человек, и
- * подменять непонятое догадкой панель не вправе.
+ * An entry the format does not cover is returned as is: a human wrote it, and
+ * the panel has no right to replace the unrecognized with a guess.
  */
 export function formatUpdateInterval(interval: string): string {
   const ms = parseDuration(interval);

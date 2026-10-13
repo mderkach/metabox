@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-/** Прикладной код без тестов и оснастки: места, где панель что-то показывает. */
+/** Application code without tests and tooling: places where the panel shows something. */
 const SOURCES = import.meta.glob<string>(['/src/**/*.{ts,tsx}', '!/src/**/__tests__/**', '!/src/test/**'], {
   query: '?raw',
   import: 'default',
@@ -8,9 +8,9 @@ const SOURCES = import.meta.glob<string>(['/src/**/*.{ts,tsx}', '!/src/**/__test
 });
 
 /**
- * Где панель показывает источник соединения и кто там ставит подпись
- * устройства. Поиск, фасет и параметр адреса, выгрузка берут подпись из
- * экрана соединений; форма правила — из своего помощника условия.
+ * Where the panel shows the connection source and who sets the device label
+ * there. Search, facet and the address parameter, export take the label from the
+ * connections screen; the rule form takes it from its own condition helper.
  */
 const PLACES: readonly { place: string; file: string }[] = [
   { place: 'ячейка и мобильная карточка', file: '/src/widgets/ConnectionTable/ui/ConnectionSourceCell.tsx' },
@@ -30,12 +30,12 @@ function callers(): string[] {
     .sort();
 }
 
-describe('места подписи устройства', () => {
-  it.each(PLACES)('$place: подпись ставит deviceLabel', ({ file }) => {
+describe('device label places', () => {
+  it.each(PLACES)('$place: the label is set by deviceLabel', ({ file }) => {
     expect(SOURCES[file]).toMatch(LABEL_CALL);
   });
 
-  it('новое место подписи видно в диффе снапшота', () => {
+  it('a new label place is visible in the snapshot diff', () => {
     expect(callers()).toMatchSnapshot();
   });
 });

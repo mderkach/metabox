@@ -6,7 +6,7 @@ import { ROUTE_MATCH, ROUTE_ORIGIN } from '../model/Route.model';
 import { ROUTE_EXPLANATION_FIXTURE, ROUTE_FINAL_FIXTURE, ROUTE_UNKNOWN_FIXTURE } from './Route.fixture';
 
 describe('toRouteExplanation', () => {
-  it('переводит ответ демона в модель экрана', () => {
+  it('converts the daemon response to the screen model', () => {
     const explanation = toRouteExplanation(ROUTE_EXPLANATION_FIXTURE);
 
     expect(explanation.connectionId).toBe(ROUTE_EXPLANATION_FIXTURE.connection_id);
@@ -15,14 +15,14 @@ describe('toRouteExplanation', () => {
     expect(explanation.rules).toHaveLength(ROUTE_EXPLANATION_FIXTURE.rules.length);
   });
 
-  it('оставляет узел правила пустым, когда сработал `route.final`', () => {
+  it('leaves the rule node empty when `route.final` fired', () => {
     const explanation = toRouteExplanation(ROUTE_FINAL_FIXTURE);
 
     expect(explanation.match.kind).toBe(ROUTE_MATCH.Final);
     expect(explanation.match.index).toBeNull();
   });
 
-  it('читает незнакомое происхождение как «вычислить нечем»', () => {
+  it('reads an unknown origin as "nothing to compute with"', () => {
     const explanation = toRouteExplanation({
       ...ROUTE_EXPLANATION_FIXTURE,
       match: { ...ROUTE_EXPLANATION_FIXTURE.match, origin: 'telepathy' },
@@ -31,7 +31,7 @@ describe('toRouteExplanation', () => {
     expect(explanation.match.origin).toBe(ROUTE_ORIGIN.Unknown);
   });
 
-  it('подставляет пустые строки вместо отсутствующих необязательных полей', () => {
+  it('substitutes empty strings for absent optional fields', () => {
     const explanation = toRouteExplanation(ROUTE_UNKNOWN_FIXTURE);
 
     expect(explanation.match.conditions).toBe('');
@@ -40,7 +40,7 @@ describe('toRouteExplanation', () => {
     expect(explanation.match.reasonCode).toBe('not_in_process_list');
   });
 
-  it('читает пустую цепочку как пустую', () => {
+  it('reads an empty chain as empty', () => {
     const explanation = toRouteExplanation({
       ...ROUTE_UNKNOWN_FIXTURE,
       chain: { origin: ROUTE_ORIGIN.Unknown, nodes: [] },
@@ -51,11 +51,11 @@ describe('toRouteExplanation', () => {
 });
 
 describe('RouteExplanationSchema', () => {
-  it('не принимает ответ без сработавшего правила', () => {
+  it('does not accept a response without a matched rule', () => {
     expect(RouteExplanationSchema.safeParse({ connection_id: 'c-1' }).success).toBe(false);
   });
 
-  it('не принимает индекс правила строкой', () => {
+  it('does not accept a rule index as a string', () => {
     const broken = { ...ROUTE_EXPLANATION_FIXTURE, match: { ...ROUTE_EXPLANATION_FIXTURE.match, index: '3' } };
 
     expect(RouteExplanationSchema.safeParse(broken).success).toBe(false);

@@ -15,8 +15,8 @@ import (
 	"github.com/sagernet/sing-box/option"
 )
 
-// forkVersion попадает в шапку сгенерированного файла: по нему видно, на
-// какой схеме собран фронт.
+// forkVersion goes into the header of the generated file: it shows which
+// schema the frontend is built on.
 const forkVersion = "v1.14.1-extended-2.7.2"
 
 func main() {
@@ -50,8 +50,8 @@ func generate() (string, error) {
 		return "", err
 	}
 
-	// Описания читаются из исходников того же форка, из которого собрана схема:
-	// рефлексия godoc не видит. Каталог уже известен — его отдаёт forkDir.
+	// Descriptions are read from the sources of the same fork the schema is built from:
+	// reflection does not see godoc. The directory is already known, forkDir returns it.
 	dir, err := forkDir()
 	if err != nil {
 		return "", err
@@ -63,7 +63,7 @@ func generate() (string, error) {
 	root := w.build(reflect.TypeOf(option.Options{}), "root")
 
 	if report := w.unknownReport(); report != nil {
-		return "", fmt.Errorf("типы со своей сериализацией без правила в таблице переопределений (%d):\n%s",
+		return "", fmt.Errorf("types with their own serialization lacking a rule in the override table (%d):\n%s",
 			len(report), strings.Join(report, "\n"))
 	}
 
@@ -80,9 +80,9 @@ func generate() (string, error) {
 	return emit(w.set, root, forkVersion, gates, options, groups), nil
 }
 
-// registryUnions строит union'ы реестров до обхода корня: в дереве опций они
-// встречаются как типы с подстановкой из реестра, и обойти их рефлексией
-// нельзя.
+// registryUnions builds the registry unions before walking the root: in the options tree they
+// appear as types substituted from a registry, and they cannot be walked
+// by reflection.
 func (w *walker) registryUnions(groups []registryGroup) {
 	shadows := map[string]reflect.Type{
 		"inbound":              reflect.TypeOf(option.Inbound{}),
@@ -103,8 +103,8 @@ func (w *walker) registryUnions(groups []registryGroup) {
 		"certificate_provider": "option.CertificateProvider",
 	}
 
-	// Ссылки расставляются до обхода: bond и failover принимают вложенные
-	// inbound'ы и outbound'ы, то есть union ссылается сам на себя.
+	// References are placed before the walk: bond and failover accept nested
+	// inbounds and outbounds, that is, a union refers to itself.
 	for _, group := range groups {
 		if goType, ok := names[group.name]; ok {
 			w.byGoType[goType] = ref(camel(group.name) + "Schema")

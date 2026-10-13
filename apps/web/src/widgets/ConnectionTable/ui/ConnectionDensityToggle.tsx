@@ -7,8 +7,8 @@ import { Button } from '@shared/ui';
 import { TABLE_DENSITY, type TableDensity } from '../lib';
 
 /**
- * Плотность строк — управление видом, а не действие над данными, поэтому
- * стоит рядом с выбором полей, а не в ряду действий списка.
+ * Row density is view control, not an action on data, so it
+ * stands next to the field picker, not in the list action row.
  */
 export function ConnectionDensityToggle({
   density,

@@ -3,11 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { Button, Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle, SkeletonRows } from '@shared/ui';
 
 /**
- * Состояния пустого списка.
+ * Empty list states.
  *
- * «Ждём снимок» отделён от «пусто»: до первого кадра потока про соединения
- * ничего не известно, и фраза «соединений нет» в этот момент — неправда.
- * «Пусто из-за отбора» — третий экран, у него есть кнопка, возвращающая список.
+ * "Waiting for a snapshot" is separate from "empty": before the first stream
+ * frame nothing is known about connections, and the phrase "no connections" is
+ * untrue at that moment. "Empty because of selection" is the third screen, with
+ * a button that brings the list back.
  */
 export function ConnectionsEmpty({
   filtered,
@@ -15,7 +16,7 @@ export function ConnectionsEmpty({
   onReset,
 }: {
   filtered: boolean;
-  /** Поток ещё не прислал ни одного снимка. */
+  /** The stream has not sent a single snapshot yet. */
   pending: boolean;
   onReset: () => void;
 }) {

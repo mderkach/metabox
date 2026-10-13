@@ -18,7 +18,7 @@ vi.mock('sonner', () => ({
 
 const { toast } = await import('sonner');
 
-/** Клиент приложения: тосты показывает его кэш мутаций, у тестового клиента его нет. */
+/** App client: toasts are shown by its mutation cache, the test client has none. */
 function AppQuery({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={QueryClientInstance}>{children}</QueryClientProvider>;
 }
@@ -41,7 +41,7 @@ const MODEL: DataplaneModel = {
   ipv6: false,
 };
 
-/** `ETag` свежего мока: секцию ещё никто не менял. */
+/** `ETag` of a fresh mock: nobody has changed the section yet. */
 const BASE = '"dataplane-1"';
 
 describe('useChangeDeviceRoute', () => {
@@ -54,7 +54,7 @@ describe('useChangeDeviceRoute', () => {
     server.use(...mock.handlers);
   });
 
-  it('смену, отклонённую из-за идущего применения, называет тостом с причиной', async () => {
+  it('names a change rejected because an apply is in progress with a toast with the reason', async () => {
     server.use(
       http.put(DATAPLANE_ENDPOINT.dataplane(), () =>
         HttpResponse.json({ code: 'apply_in_progress', message: 'применение уже идёт' }, { status: 409 })
@@ -71,7 +71,7 @@ describe('useChangeDeviceRoute', () => {
     expect(toast.error).toHaveBeenCalledWith('Сменить перехват устройства не удалось: применение уже идёт');
   });
 
-  it('принятую смену объявляет тостом, подтверждение — своим', async () => {
+  it('announces an accepted change with a toast, the confirmation with its own', async () => {
     const change = renderHook(useChangeDeviceRoute, { wrapper: AppQuery });
 
     change.result.current.mutate({ model: MODEL, base: BASE });
@@ -91,7 +91,7 @@ describe('useChangeDeviceRoute', () => {
     expect(toast.success).toHaveBeenLastCalledWith('Связь подтверждена, список перехвата оставлен');
   });
 
-  it('шлёт отпечаток модели в If-Match', async () => {
+  it('sends the model fingerprint in If-Match', async () => {
     const sent: (string | null)[] = [];
 
     server.events.on('request:start', ({ request }) => {
@@ -109,7 +109,7 @@ describe('useChangeDeviceRoute', () => {
     expect(sent).toEqual([BASE]);
   });
 
-  it('секцию правили мимо панели: тост с причиной и перечитанная модель', async () => {
+  it('the section was edited behind the panel: a toast with the reason and a reread model', async () => {
     const { result } = renderHook(() => ({ change: useChangeDeviceRoute(), dataplane: useDataplane() }), {
       wrapper: AppQuery,
     });

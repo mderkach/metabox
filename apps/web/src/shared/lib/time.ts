@@ -1,11 +1,11 @@
 /**
- * Единицы времени. Всё, что переводит одни единицы в другие, берёт коэффициенты
- * отсюда: раньше `1000`, `60` и `24` жили копиями в шести модулях, и каждая
- * копия читалась как самостоятельное решение.
+ * Time units. Everything that converts some units to others takes its coefficients
+ * from here: `1000`, `60` and `24` used to live as copies in six modules, and each
+ * copy read as an independent decision.
  *
- * Здесь только коэффициенты пересчёта. Пороги и периоды — интервал опроса,
- * таймаут запроса, окно правдоподобной дельты — настройки своих модулей и
- * объявляются там же, но выражаются через эти единицы.
+ * Only conversion coefficients here. Thresholds and periods — the polling interval,
+ * the request timeout, the plausible-delta window — are settings of their own modules and
+ * are declared there, but expressed through these units.
  */
 export const MS_IN_SECOND = 1000;
 export const SECONDS_IN_MINUTE = 60;
@@ -20,6 +20,6 @@ export const MS_IN_HOUR = MS_IN_MINUTE * MINUTES_IN_HOUR;
 export const MS_IN_DAY = MS_IN_HOUR * HOURS_IN_DAY;
 export const MS_IN_WEEK = MS_IN_DAY * DAYS_IN_WEEK;
 
-/** Go отдаёт `time.Duration` наносекундами; в панели секунды. */
+/** Go returns `time.Duration` in nanoseconds; the panel uses seconds. */
 export const NS_IN_SECOND = 1_000_000_000;
 export const US_IN_SECOND = 1_000_000;

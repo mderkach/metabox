@@ -1,11 +1,12 @@
 import { scan } from 'react-scan';
 
 /**
- * Съём ререндеров react-scan. В `index.html` файл добавляет плагин
- * `metabox-scan` и только на дев-сервере, поэтому в `src` ссылок на этот
- * каталог нет и в сборку он попасть не может по построению — тем же способом
- * живут моки в `mocks/`. Отдельным скриптом, а не подменой входа: так съём
- * сочетается с моками, которые вход уже подменяют.
+ * Captures re-renders with react-scan. The file adds the `metabox-scan` plugin
+ * to `index.html` on the dev server only, so `src` has no references to this
+ * directory and it cannot end up in the build by construction, the same way the
+ * mocks in `mocks/` work. It is a separate script, not a replaced entry point,
+ * so capture works together with the mocks, which already replace the entry
+ * point.
  */
 interface ComponentStat {
   name: string;
@@ -20,8 +21,8 @@ scan({
   enabled: true,
   showToolbar: true,
   trackUnnecessaryRenders: true,
-  // Счётчики копятся здесь, а не берутся из `getReport`: в 0.5.7 его хранилище
-  // осталось от старого API и никем не заполняется.
+  // Counters accumulate here instead of coming from `getReport`: in 0.5.7 its
+  // storage is left over from the old API and nothing fills it.
   onRender: (_fiber, renders) => {
     for (const render of renders) {
       const name = render.componentName ?? 'Anonymous';
@@ -40,8 +41,9 @@ scan({
 });
 
 /**
- * Сводка для снятия из консоли: оверлей рисует вспышки в десятки миллисекунд,
- * глазами и скриншотом их не поймать, а счётчики накапливаются.
+ * Summary for reading from the console: the overlay draws flashes lasting tens
+ * of milliseconds that the eye and screenshots cannot catch, while the counters
+ * accumulate.
  */
 function summary(limit = 20): ComponentStat[] {
   return [...stats.values()]

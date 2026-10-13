@@ -1,137 +1,137 @@
-# ADR — канонический справочник
+# ADR: canonical reference
 
-Нормативный источник по структуре, статусам, шаблону, именованию и качеству ADR для скилла `create-adr`. Править шаблон и чек-лист — только здесь.
+The normative source on ADR structure, statuses, template, naming and quality for the `create-adr` skill. The template and the checklist are edited only here.
 
-## Суть
+## Essence
 
-ADR фиксирует значимое техническое или инфраструктурное решение: контекст принятия, рассмотренные варианты, последствия. Отвечает на вопрос «почему система устроена именно так и какие компромиссы приняты», а не «как устроен код».
+An ADR records a significant technical or infrastructure decision: the context in which it was made, the options considered, the consequences. It answers "why is the system built this way and which trade-offs were accepted", not "how is the code organised".
 
-ADR не является: стенограммой исследования; продуктовой спецификацией; планом реализации; заменой контрактам, тестам и документации публичного API; способом документировать каждое локальное изменение.
+An ADR is not: a transcript of research; a product specification; an implementation plan; a replacement for contracts, tests and public API documentation; a way to document every local change.
 
-## Отношение к PRD
+## Relation to the PRD
 
-`docs/PRD.md` — источник **требований**. Приложение A хранило решения, принятые до введения ADR; его разделы переехали в `docs/adr/`, в PRD остались заголовки со ссылками. Решение, уже записанное в ADR, повторно не оформляется — новый ADR на него ссылается.
+`docs/PRD.md` is the source of **requirements**. Appendix A held the decisions made before ADRs were introduced; its sections moved to `docs/adr/`, and the PRD keeps headings with links. A decision already recorded in an ADR is not recorded again: a new ADR links to it.
 
-ADR заводится на решения, к требованиям не относящиеся: устройство стенда, обход ограничения платформы, выбор инструмента, конвенция реализации. Если решение меняет требование — правится PRD, а не пишется ADR.
+An ADR is created for decisions that are not requirements: test bench setup, a workaround for a platform limitation, a tool choice, an implementation convention. If a decision changes a requirement, the PRD is edited instead of writing an ADR.
 
-## Когда нужен
+## When it is needed
 
-Создать или предложить ADR, если решение: меняет границы модулей, слоёв или направление зависимостей; вводит новый архитектурный или инфраструктурный паттерн; добавляет значимую зависимость или внешнюю интеграцию; меняет публичный контракт, модель данных или формат хранения; требует миграции, переходного периода или поддержки нескольких подходов; имеет несколько реалистичных вариантов с долгосрочными trade-offs; отвечает на вопрос, причину которого нельзя надёжно восстановить из кода.
+Create or propose an ADR if the decision: changes module or layer boundaries or the direction of dependencies; introduces a new architectural or infrastructure pattern; adds a significant dependency or external integration; changes a public contract, data model or storage format; requires a migration, a transition period or supporting several approaches; has several realistic options with long-term trade-offs; answers a question whose reason cannot be reliably recovered from the code.
 
-Не нужен: локальный багфикс, очевидный рефакторинг без изменения контрактов, форматирование, переименование, решение, уже заданное PRD или существующим ADR.
+Not needed: a local bug fix, an obvious refactoring without contract changes, formatting, a rename, a decision already set by the PRD or an existing ADR.
 
-## Жизненный цикл
+## Lifecycle
 
-- `Proposed` — черновик подготовлен, решение не принято;
-- `Accepted` — принято владельцем репозитория;
-- `Rejected` — вариант рассмотрен, но не принят;
-- `Superseded` — заменено новым ADR, добавить ссылку на заменяющий;
-- `Deprecated` — больше не рекомендуется, прямой замены может не быть.
+- `Proposed`: a draft is prepared, the decision is not made;
+- `Accepted`: accepted by the repository owner;
+- `Rejected`: the option was considered but not accepted;
+- `Superseded`: replaced by a new ADR; add a link to the replacing one;
+- `Deprecated`: no longer recommended; there may be no direct replacement.
 
-Принятый ADR не переписывают задним числом: новое решение оформляют отдельным ADR, старому ставят `Superseded` и связывают взаимными ссылками. В принятом допустимы только редакционные правки без изменения смысла.
+An accepted ADR is not rewritten after the fact: a new decision is recorded in a separate ADR, the old one gets `Superseded`, and they are linked to each other. Only editorial changes that keep the meaning are allowed in an accepted ADR.
 
-## Кто принимает решение
+## Who makes the decision
 
-Агент исследует код и документацию, выявляет ограничения, готовит и сравнивает варианты, формирует черновик `Proposed`, проверяет ссылки и соответствие шаблону. Агент **не** присваивает `Accepted` — это делает владелец репозитория.
+The agent studies the code and documentation, identifies constraints, prepares and compares options, writes a `Proposed` draft, checks links and template compliance. The agent does **not** set `Accepted`; the repository owner does.
 
-## Размещение и именование
+## Location and naming
 
-Путь: `docs/adr/ADR-NNNN-short-decision-title.md`. Номер последовательный и неизменяемый, начиная с `0001`. Перед созданием посмотреть занятые номера в каталоге и взять следующий свободный.
+Path: `docs/adr/ADR-NNNN-short-decision-title.md`. The number is sequential and immutable, starting from `0001`. Before creating, look at the numbers taken in the directory and take the next free one.
 
-Заголовок — принятое или предлагаемое решение, а не тема:
+The title is the accepted or proposed decision, not a topic:
 
-- хорошо: `Запускать procd напрямую вместо /sbin/init в целевом контейнере`;
-- плохо: `Устройство devcontainer`.
+- good: `Run procd directly instead of /sbin/init in the target container`;
+- bad: `devcontainer setup`.
 
-## Шаблон
+## Template
 
-Необязательные разделы удалять при объективной неприменимости. Не удалять: «Контекст и постановка проблемы», «Критерии выбора», «Рассмотренные варианты», «Принятое решение», «Последствия».
+Remove optional sections when they objectively do not apply. Do not remove: "Context and problem statement", "Decision drivers", "Considered options", "Decision outcome", "Consequences".
 
 ```md
-# ADR-<NNNN>. <Краткое название решения>
+# ADR-<NNNN>. <Short decision title>
 
-- Статус: Proposed | Accepted | Rejected | Superseded | Deprecated
-- Дата: YYYY-MM-DD
-- Ответственные: <владелец репозитория или команда>
-- Заменяет: <ссылка на предыдущий ADR, если применимо>
-- Заменён решением: <ссылка на новый ADR, если применимо>
+- Status: Proposed | Accepted | Rejected | Superseded | Deprecated
+- Date: YYYY-MM-DD
+- Deciders: <repository owner or team>
+- Supersedes: <link to the previous ADR, if applicable>
+- Superseded by: <link to the new ADR, if applicable>
 
-## Контекст и постановка проблемы
+## Context and problem statement
 
-Текущее состояние, проблема и границы решения: почему решение требуется сейчас; какие требования на него влияют; что входит и что явно не входит в scope; какие ограничения уже заданы кодом, инфраструктурой или другими решениями. Выбранное решение в контексте не описывать.
+Current state, the problem and the boundaries of the decision: why the decision is needed now; which requirements affect it; what is in and explicitly out of scope; which constraints are already set by code, infrastructure or other decisions. Do not describe the chosen decision in the context.
 
-## Критерии выбора
+## Decision drivers
 
-Значимые для решения критерии: соответствие требованиям PRD; совместимость с архитектурой; сложность реализации и сопровождения; воспроизводимость; надёжность и наблюдаемость; тестируемость; обратная совместимость; стоимость миграции и возможность отката. Оставить только применимые.
+Criteria that matter for the decision: compliance with PRD requirements; fit with the architecture; complexity of implementation and maintenance; reproducibility; reliability and observability; testability; backward compatibility; migration cost and the possibility of rollback. Keep only the applicable ones.
 
-## Рассмотренные варианты
+## Considered options
 
-1. **<Вариант A>** — описание, преимущества, недостатки, риски. **Принят / Отклонён** и почему.
-2. **<Вариант B>** — то же.
-3. **Сохранить текущий подход** — последствия отказа от изменений, если применимо.
+1. **<Option A>**: description, advantages, drawbacks, risks. **Chosen / Rejected** and why.
+2. **<Option B>**: the same.
+3. **Keep the current approach**: consequences of not changing anything, if applicable.
 
-Варианты реалистичны и сравниваются по одинаковым критериям. Заведомо слабый вариант ради оправдания заранее выбранного не добавлять.
+The options are realistic and compared by the same criteria. Do not add a deliberately weak option to justify a choice made in advance.
 
-## Принятое решение
+## Decision outcome
 
-Выбранный вариант в проверяемом виде: что именно делается; какие правила реализации обязательны; какие зависимости разрешены и запрещены; что сознательно отложено и что является non-goal.
+The chosen option in a verifiable form: what exactly is done; which implementation rules are mandatory; which dependencies are allowed and forbidden; what is deliberately deferred and what is a non-goal.
 
-### Область действия и границы
+### Scope and boundaries
 
-Опционально: конкретные каталоги, слои, образы или контракты, на которые распространяется решение.
+Optional: the specific directories, layers, images or contracts the decision applies to.
 
-## Последствия
+## Consequences
 
-### Положительные
+### Positive
 
-- <следствие>.
+- <consequence>.
 
-### Отрицательные
+### Negative
 
-- <принятый недостаток, техдолг, операционная сложность>.
+- <accepted drawback, tech debt, operational complexity>.
 
-### Нейтральные или отложенные
+### Neutral or deferred
 
-- <non-goal или решение, отложенное до другого ADR>.
+- <non-goal or decision deferred to another ADR>.
 
-Последствия описывают результат решения, а не повторяют его формулировку.
+Consequences describe the result of the decision; they do not repeat its wording.
 
-## Риски и меры снижения
+## Risks and mitigations
 
-Опционально, для существенных рисков:
+Optional, for significant risks:
 
-| Риск   | Вероятность и влияние | Митигация                            |
+| Risk   | Likelihood and impact | Mitigation                           |
 | ------ | --------------------- | ------------------------------------ |
-| <риск> | <оценка>              | <как предотвращаем или обнаруживаем> |
+| <risk> | <estimate>            | <how we prevent or detect it>        |
 
-## Совместимость, миграция и откат
+## Compatibility, migration and rollback
 
-Влияние на существующие данные, конфиги и клиентов; этапы миграции; поддержка старого поведения; условия и способ отката. Если не требуется — явно `Не применимо` и почему.
+Impact on existing data, configs and clients; migration stages; support for the old behaviour; conditions and method of rollback. If not required, state `Not applicable` explicitly and why.
 
-## Проверка решения
+## Validation
 
-Как проверить соблюдение и результат: команды (`make test`, `make apply-check`, `pnpm -C web lint`), тесты, ограничения линтера, наблюдаемые признаки в рантайме, ручные сценарии приёмки.
+How to check compliance and the result: commands (`make test`, `make apply-check`, `pnpm -C web lint`), tests, linter constraints, observable signs at runtime, manual acceptance scenarios.
 
-## Ссылки
+## Links
 
-- <PRD и релевантные AC>;
-- <связанные ADR>;
-- <ключевые файлы реализации>;
-- <внешние источники: документация, issue, релиз>.
+- <PRD and relevant ACs>;
+- <related ADRs>;
+- <key implementation files>;
+- <external sources: documentation, issue, release>.
 ```
 
-## Чек-лист качества
+## Quality checklist
 
-Перед согласованием убедиться, что:
+Before review, make sure that:
 
-- заголовок отражает решение, а не область обсуждения;
-- контекст объясняет проблему и не подменяет её решением;
-- критерии выбора сформулированы до сравнения вариантов;
-- рассмотрено минимум два реалистичных варианта либо объяснено, почему альтернатив нет;
-- решение сформулировано однозначно и проверяемо;
-- перечислены и отрицательные последствия;
-- миграция, совместимость и откат описаны либо явно неприменимы;
-- проверка решения содержит наблюдаемые способы, а не намерения;
-- все внешние утверждения снабжены ссылками, отсутствующие источники не выдуманы;
-- статус и «Ответственные» соответствуют фактическому состоянию согласования;
-- ADR не дублирует PRD, план реализации, код или другой ADR.
+- the title reflects the decision, not the area of discussion;
+- the context explains the problem and does not substitute the decision for it;
+- the decision drivers are formulated before comparing options;
+- at least two realistic options are considered, or it is explained why there are no alternatives;
+- the decision is unambiguous and verifiable;
+- negative consequences are listed too;
+- migration, compatibility and rollback are described or explicitly not applicable;
+- the validation contains observable methods, not intentions;
+- all external claims have links; missing sources are not invented;
+- the status and "Deciders" match the actual state of approval;
+- the ADR does not duplicate the PRD, an implementation plan, code or another ADR.

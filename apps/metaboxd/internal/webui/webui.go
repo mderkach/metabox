@@ -1,6 +1,6 @@
-// Package webui раздаёт собранную SPA, встроенную в бинарь. Каталог static
-// наполняет `make daemon`; в репозитории он держится непустым специально:
-// директива встраивания не собирается, если не нашла ни одного файла.
+// Package webui serves the built SPA embedded into the binary. The static directory
+// is filled by `make daemon`; in the repository it is kept non-empty on purpose:
+// the embed directive does not build if it found no file.
 package webui
 
 import (
@@ -15,9 +15,9 @@ import (
 	"time"
 )
 
-// Префикс all: нужен, чтобы каталог с одним лишь .gitkeep всё-таки собрался:
-// без него go:embed пропускает файлы, начинающиеся с точки, и падает на
-// «no matching files found».
+// The all: prefix is needed so a directory with only .gitkeep still builds:
+// without it go:embed skips files starting with a dot and fails on
+// "no matching files found".
 //
 //go:embed all:static
 var embedded embed.FS
@@ -25,17 +25,17 @@ var embedded embed.FS
 const (
 	indexFile = "index.html"
 
-	// indexCache — страница-оболочка обязана перепроверяться: под тем же
-	// адресом после обновления демона лежит другой набор ассетов.
+	// indexCache: the shell page must be rechecked: under the same
+	// address a different asset set lies after a daemon update.
 	indexCache = "no-cache"
-	// assetCache — файлы с хэшем в имени неизменяемы по построению, их можно
-	// кэшировать навсегда.
+	// assetCache: files with a hash in the name are immutable by construction, they can be
+	// cached forever.
 	assetCache = "public, max-age=31536000, immutable"
 )
 
-// encodings — сжатые варианты по убыванию выигрыша. Сжимает их сборка панели,
-// а не демон: жать один и тот же файл на каждый запрос — процессорное время
-// роутера на ровном месте, и оно тратится тем чаще, чем слабее железо.
+// encodings are the compressed variants in descending order of gain. They are compressed by the panel build,
+// not by the daemon: compressing the same file on every request is router processor
+// time spent for nothing, and the weaker the hardware, the more often it is spent.
 var encodings = []struct {
 	token  string
 	suffix string
@@ -44,14 +44,14 @@ var encodings = []struct {
 	{token: "gzip", suffix: ".gz"},
 }
 
-// ErrNotBuilt — SPA в бинарь не попала: демон собран без `make daemon`.
+// ErrNotBuilt means the SPA did not get into the binary: the daemon was built without `make daemon`.
 var ErrNotBuilt = errors.New("SPA не собрана")
 
-// Handler раздаёт статику и отдаёт index.html на неизвестных путях: роутинг
-// у SPA клиентский, и адрес вроде /connections существует только в браузере.
+// Handler serves static files and returns index.html on unknown paths: the SPA routing
+// is client-side, and an address like /connections exists only in the browser.
 //
-// Возвращает ErrNotBuilt, если статики в бинаре нет. Вызывающий решает, чем
-// это заменить: демон обязан подниматься и без UI.
+// Returns ErrNotBuilt if there are no static files in the binary. The caller decides what
+// to replace it with: the daemon must come up without the UI too.
 func Handler() (http.Handler, error) {
 	root, err := fs.Sub(embedded, "static")
 	if err != nil {
@@ -61,8 +61,8 @@ func Handler() (http.Handler, error) {
 	return newHandler(root)
 }
 
-// newHandler отделён от embed, чтобы раздачу можно было проверить тестом: в
-// репозитории каталог статики пуст, и через Handler туда не заглянуть.
+// newHandler is separated from embed so the serving can be checked by a test: in
+// the repository the static directory is empty, and nothing can be looked at through Handler.
 func newHandler(root fs.FS) (http.Handler, error) {
 	index, err := fs.ReadFile(root, indexFile)
 	if err != nil {
@@ -81,11 +81,11 @@ type handler struct {
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	name := strings.TrimPrefix(r.URL.Path, "/")
 
-	// index.html отдаётся своими руками: http.FileServerFS канонизирует этот
-	// адрес редиректом на «/», а браузеру незачем ходить дважды за той же
-	// страницей.
-	// Сжатый вариант — не самостоятельный адрес: отданный напрямую, он приедет
-	// без Content-Encoding и распакован не будет.
+	// index.html is served by hand: http.FileServerFS canonicalizes this
+	// address with a redirect to "/", and the browser has no need to go twice for the same
+	// page.
+	// A compressed variant is not an independent address: served directly, it would arrive
+	// without Content-Encoding and would not be unpacked.
 	if name == "" || name == indexFile || isEncoded(name) || !exists(h.root, name) {
 		h.serveIndex(w, r)
 
@@ -98,8 +98,8 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", indexCache)
 	}
 
-	// Vary стоит и на несжатом ответе: без него общий кэш отдал бы клиенту без
-	// brotli тело, сжатое для клиента с ним.
+	// Vary stands on the uncompressed response too: without it a shared cache would give a client without
+	// brotli the body compressed for a client with it.
 	w.Header().Set("Vary", "Accept-Encoding")
 
 	if h.serveEncoded(w, r, name) {
@@ -109,12 +109,12 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.files.ServeHTTP(w, r)
 }
 
-// serveEncoded отдаёт заранее сжатый вариант файла, если он есть в бинаре и
-// клиент его принимает. Сообщает, взялся ли за ответ: иначе файл уходит как
-// есть.
+// serveEncoded serves a precompressed variant of the file if it is in the binary and
+// the client accepts it. Reports whether it took over the response: otherwise the file goes
+// as is.
 //
-// Тип содержимого берётся у исходного имени: у варианта расширение своё
-// (.br, .gz), и по нему тип определился бы как «поток байт».
+// The content type is taken from the original name: the variant has its own extension
+// (.br, .gz), and by it the type would be determined as "byte stream".
 func (h *handler) serveEncoded(w http.ResponseWriter, r *http.Request, name string) bool {
 	mediaType := mime.TypeByExtension(path.Ext(name))
 	if mediaType == "" {
@@ -135,8 +135,8 @@ func (h *handler) serveEncoded(w http.ResponseWriter, r *http.Request, name stri
 
 		w.Header().Set("Content-Type", mediaType)
 		w.Header().Set("Content-Encoding", encoding.token)
-		// Время не передаётся: у файлов из embed его нет, а выдуманное дало бы
-		// клиенту повод считать ответ свежим по ошибке.
+		// Time is not passed: files from embed have none, and an invented one would give
+		// the client a reason to consider the response fresh by mistake.
 		http.ServeContent(w, r, "", time.Time{}, bytes.NewReader(body))
 
 		return true
@@ -155,8 +155,8 @@ func isEncoded(name string) bool {
 	return false
 }
 
-// accepts разбирает Accept-Encoding: токен принят, если он перечислен и его
-// вес не нулевой. Явный «br;q=0» означает отказ, а не выбор.
+// accepts parses Accept-Encoding: a token is accepted if it is listed and its
+// weight is not zero. An explicit "br;q=0" means a refusal, not a choice.
 func accepts(header, token string) bool {
 	for part := range strings.SplitSeq(header, ",") {
 		value, params, _ := strings.Cut(strings.TrimSpace(part), ";")
@@ -181,8 +181,8 @@ func (h *handler) serveIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Ошибка записи здесь означает оборвавшегося клиента: статус уже ушёл,
-	// сообщить о ней некому.
+	// A write error here means the client dropped: the status has gone,
+	// there is nobody to report it to.
 	_, _ = w.Write(h.index)
 }
 
@@ -192,9 +192,9 @@ func exists(root fs.FS, name string) bool {
 	return err == nil && !info.IsDir()
 }
 
-// hashed отвечает, несёт ли имя файла отпечаток содержимого. Vite ставит его
-// перед расширением: index-D4f8Ka1x.js. Имя без отпечатка переиспользуется
-// между сборками, и вечный кэш на нём отдал бы старый файл навсегда.
+// hashed reports whether the file name carries a content fingerprint. Vite puts it
+// before the extension: index-D4f8Ka1x.js. A name without a fingerprint is reused
+// between builds, and an eternal cache on it would serve an old file forever.
 func hashed(name string) bool {
 	base := name
 	if i := strings.LastIndexByte(base, '/'); i >= 0 {
@@ -214,8 +214,8 @@ func hashed(name string) bool {
 	return isHash(base[dash+1 : ext])
 }
 
-// isHash: Vite берёт восемь символов base64url. Меньше шести считаем частью
-// имени — так «vendor-ui.css» не попадёт под вечный кэш.
+// isHash: Vite takes eight base64url characters. Fewer than six count as a part of
+// the name, so "vendor-ui.css" does not fall under the eternal cache.
 func isHash(s string) bool {
 	const minLen = 6
 	if len(s) < minLen {

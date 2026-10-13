@@ -16,14 +16,14 @@ describe('ConfigDocumentState', () => {
     ConfigDocumentState.getState().reset();
   });
 
-  it('до чтения конфига править нечего', () => {
+  it('before the config is read there is nothing to edit', () => {
     state().edit(['route', 'final'], 'direct');
 
     expect(state().draft).toBeNull();
     expect(state().current()).toBeNull();
   });
 
-  it('без правок черновика нет, а показывается применённый конфиг', () => {
+  it('without edits there is no draft, and the applied config is shown', () => {
     state().load(TEXT);
 
     expect(state().draft).toBeNull();
@@ -31,7 +31,7 @@ describe('ConfigDocumentState', () => {
     expect(state().current()).toBe(TEXT);
   });
 
-  it('запоминает отпечаток файла и снимает его на сбросе', () => {
+  it('remembers the file fingerprint and clears it on reset', () => {
     state().load(TEXT, '"abc"');
 
     expect(state().appliedEtag).toBe('"abc"');
@@ -41,13 +41,13 @@ describe('ConfigDocumentState', () => {
     expect(state().appliedEtag).toBeNull();
   });
 
-  it('без отпечатка база пуста: применение пойдёт без сверки', () => {
+  it('without a fingerprint the base is empty: apply goes without a check', () => {
     state().load(TEXT);
 
     expect(state().appliedEtag).toBeNull();
   });
 
-  it('новый отпечаток того же текста ревизию не двигает', () => {
+  it('a new fingerprint of the same text does not move the revision', () => {
     state().load(TEXT, '"a"');
 
     const { revision } = state();
@@ -58,7 +58,7 @@ describe('ConfigDocumentState', () => {
     expect(state().revision).toBe(revision);
   });
 
-  it('правка уходит в черновик, применённый конфиг остаётся прежним', () => {
+  it('an edit goes to the draft, the applied config stays as it was', () => {
     state().load(TEXT);
     state().edit(['route', 'default_mark'], 200);
 
@@ -67,7 +67,7 @@ describe('ConfigDocumentState', () => {
     expect(parseConfig(state().current() ?? '').config?.route?.default_mark).toBe(200);
   });
 
-  it('вторая правка ложится на первую, а не на применённый конфиг', () => {
+  it('a second edit lands on the first, not on the applied config', () => {
     state().load(TEXT);
     state().edit(['route', 'default_mark'], 200);
     state().edit(['route', 'final'], 'direct');
@@ -78,7 +78,7 @@ describe('ConfigDocumentState', () => {
     expect(config?.route?.final).toBe('direct');
   });
 
-  it('пачка правок ложится одним обновлением стора', () => {
+  it('a batch of edits lands as a single store update', () => {
     state().load(TEXT);
 
     let updates = 0;
@@ -99,7 +99,7 @@ describe('ConfigDocumentState', () => {
     expect(config?.route?.final).toBe('direct');
   });
 
-  it('правка пачкой без значения удаляет ключ', () => {
+  it('a batch edit without a value removes the key', () => {
     state().load(TEXT);
     expect(parseConfig(TEXT).config?.route).toHaveProperty('default_domain_resolver');
 
@@ -108,14 +108,14 @@ describe('ConfigDocumentState', () => {
     expect(parseConfig(state().current() ?? '').config?.route).not.toHaveProperty('default_domain_resolver');
   });
 
-  it('пустая пачка черновика не заводит', () => {
+  it('an empty batch does not create a draft', () => {
     state().load(TEXT);
     state().editMany([]);
 
     expect(state().draft).toBeNull();
   });
 
-  it('отмена возвращает применённый конфиг', () => {
+  it('cancel returns the applied config', () => {
     state().load(TEXT);
     state().edit(['route', 'final'], 'direct');
     state().discard();
@@ -124,7 +124,7 @@ describe('ConfigDocumentState', () => {
     expect(state().current()).toBe(TEXT);
   });
 
-  it('перестановка меняет порядок правил и не трогает остальные', () => {
+  it('a move changes the rule order and does not touch the others', () => {
     const rules = CONFIG_FIXTURE.route?.rules ?? [];
 
     state().load(TEXT);
@@ -138,7 +138,7 @@ describe('ConfigDocumentState', () => {
     expect(left.slice(2)).toEqual(rules.slice(2));
   });
 
-  it('перестановка не переписывает текст: набор строк остаётся прежним', () => {
+  it('a move does not rewrite the text: the set of lines stays as it was', () => {
     state().load(TEXT);
     state().move(['route', 'rules'], 0, 1);
 
@@ -148,21 +148,21 @@ describe('ConfigDocumentState', () => {
     expect(after).toEqual(before);
   });
 
-  it('перестановка на то же место конфиг не трогает', () => {
+  it('a move to the same place does not touch the config', () => {
     state().load(TEXT);
     state().move(['route', 'rules'], 3, 3);
 
     expect(state().isDirty()).toBe(false);
   });
 
-  it('перестановка несуществующего правила конфиг не трогает', () => {
+  it('a move of a nonexistent rule does not touch the config', () => {
     state().load(TEXT);
     state().move(['route', 'rules'], 999, 0);
 
     expect(state().isDirty()).toBe(false);
   });
 
-  it('перестановка последнего шага кладёт правило в конец списка', () => {
+  it('a move of the last step puts the rule at the end of the list', () => {
     const rules = CONFIG_FIXTURE.route?.rules ?? [];
     const last = rules.length - 1;
 
@@ -176,7 +176,7 @@ describe('ConfigDocumentState', () => {
     expect((state().current() ?? '').split('\n').sort()).toEqual(TEXT.split('\n').sort());
   });
 
-  it('вставка в конфиг без route.rules создаёт список и не трогает остальной текст', () => {
+  it('an insert into a config without route.rules creates the list and does not touch the rest of the text', () => {
     const text = JSON.stringify(
       { outbounds: [{ type: 'direct', tag: 'direct' }], route: { final: 'direct' } },
       null,
@@ -188,11 +188,11 @@ describe('ConfigDocumentState', () => {
 
     const rules = ['    "rules": [', '      {', '        "outbound": "direct"', '      }', '    ]'].join('\n');
 
-    // Прежние строки стоят как были; у `final` только запятая перед новым ключом.
+    // The previous lines stay as they were; `final` gets only a comma before the new key.
     expect(state().current()).toBe(text.replace('"final": "direct"', `"final": "direct",\n${rules}`));
   });
 
-  it('удаление и вставка правила идут тем же черновиком', () => {
+  it('deleting and inserting a rule go through the same draft', () => {
     const rules = CONFIG_FIXTURE.route?.rules ?? [];
 
     state().load(TEXT);
@@ -207,14 +207,14 @@ describe('ConfigDocumentState', () => {
   });
 });
 
-describe('файлы списков в черновике', () => {
+describe('list files in the draft', () => {
   beforeEach(() => {
     ConfigDocumentState.getState().reset();
     state().load(TEXT);
     state().loadLists({ 'my.json': '{"version":1}' }, 'etag-1');
   });
 
-  it('изменения сводятся к реальным: то же содержимое и чужое удаление выпадают', () => {
+  it('changes reduce to real ones: the same content and a foreign deletion drop out', () => {
     state().editList('my.json', '{"version":1}');
     state().removeList('absent.json');
 
@@ -222,7 +222,7 @@ describe('файлы списков в черновике', () => {
     expect(state().isDirty()).toBe(false);
   });
 
-  it('правка и удаление файлов делают документ черновиком без правки текста', () => {
+  it('editing and deleting files make the document a draft without a text edit', () => {
     state().editList('new.json', '{"version":1,"rules":[]}');
     state().removeList('my.json');
 
@@ -234,7 +234,7 @@ describe('файлы списков в черновике', () => {
     expect(state().draft).toBeNull();
   });
 
-  it('отмена правок снимает и файлы', () => {
+  it('cancelling edits clears the files too', () => {
     state().editList('new.json', '{}');
     state().discard();
 
@@ -243,10 +243,10 @@ describe('файлы списков в черновике', () => {
   });
 });
 
-/** Тот же конфиг, переписанный на устройстве: уровень лога другой. */
+/** The same config, rewritten on the device: the log level differs. */
 const CHANGED = TEXT.replace('"error"', '"debug"');
 
-/** Перезагрузка страницы: модуль стора исполняется заново и читает браузер. */
+/** Page reload: the store module runs again and reads the browser. */
 async function reloadStore() {
   vi.resetModules();
 
@@ -263,13 +263,13 @@ function leavePage(): Event {
   return event;
 }
 
-describe('ConfigDocumentState: черновик в браузере', () => {
+describe('ConfigDocumentState: draft in the browser', () => {
   beforeEach(() => {
     ConfigDocumentState.getState().reset();
     globalThis.localStorage.clear();
   });
 
-  it('правки переживают перезагрузку и ложатся на тот же конфиг молча', async () => {
+  it('edits survive a reload and land on the same config silently', async () => {
     state().load(TEXT);
     state().edit(['route', 'final'], 'direct');
     const draft = state().draft;
@@ -284,7 +284,7 @@ describe('ConfigDocumentState: черновик в браузере', () => {
     expect(reloaded.isStale()).toBe(false);
   });
 
-  it('файлы списков в черновике тоже переживают перезагрузку', async () => {
+  it('list files in the draft also survive a reload', async () => {
     state().load(TEXT);
     state().loadLists({}, null);
     state().editList('ads.json', '{"version":3,"rules":[]}');
@@ -296,7 +296,7 @@ describe('ConfigDocumentState: черновик в браузере', () => {
     expect(reloaded.listChanges()).toEqual({ put: { 'ads.json': '{"version":3,"rules":[]}' }, remove: [] });
   });
 
-  it('предупреждает, когда конфиг на устройстве сменился с момента черновика', async () => {
+  it('warns when the config on the device changed since the draft', async () => {
     state().load(TEXT);
     state().edit(['route', 'final'], 'direct');
 
@@ -308,7 +308,7 @@ describe('ConfigDocumentState: черновик в браузере', () => {
     expect(reloaded.getState().applied).toBe(CHANGED);
   });
 
-  it('предупреждение держится до отказа от черновика, и отказ снимает запись в браузере', async () => {
+  it('the warning holds until the draft is discarded, and discarding clears the browser record', async () => {
     state().load(TEXT);
     state().edit(['route', 'final'], 'direct');
 
@@ -325,7 +325,7 @@ describe('ConfigDocumentState: черновик в браузере', () => {
     expect((await reloadStore()).getState().draft).toBeNull();
   });
 
-  it('конфиг, сменившийся на устройстве посреди сессии, тоже даёт предупреждение', () => {
+  it('a config that changed on the device mid-session also gives a warning', () => {
     state().load(TEXT);
     state().edit(['route', 'final'], 'direct');
     state().load(CHANGED);
@@ -333,7 +333,7 @@ describe('ConfigDocumentState: черновик в браузере', () => {
     expect(state().isStale()).toBe(true);
   });
 
-  it('чужая запись в хранилище читается как отсутствие черновика', async () => {
+  it('a foreign storage record is read as no draft', async () => {
     state().load(TEXT);
     state().edit(['route', 'final'], 'direct');
 
@@ -353,20 +353,20 @@ describe('useConfigLeaveGuard', () => {
     ConfigDocumentState.getState().load(TEXT);
   });
 
-  it('при неприменённых правках просит браузер подтвердить уход', () => {
+  it('with unapplied edits asks the browser to confirm leaving', () => {
     state().edit(['route', 'final'], 'direct');
     renderHook(useConfigLeaveGuard);
 
     expect(leavePage().defaultPrevented).toBe(true);
   });
 
-  it('без правок уходу не мешает', () => {
+  it('without edits does not block leaving', () => {
     renderHook(useConfigLeaveGuard);
 
     expect(leavePage().defaultPrevented).toBe(false);
   });
 
-  it('после отказа от черновика подтверждение снимается', () => {
+  it('after the draft is discarded the confirmation is cleared', () => {
     state().edit(['route', 'final'], 'direct');
     renderHook(useConfigLeaveGuard);
 

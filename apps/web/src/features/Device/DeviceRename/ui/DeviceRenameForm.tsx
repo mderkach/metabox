@@ -18,15 +18,15 @@ const ERROR_KEY: Readonly<Record<string, ParseKeys<'features/Device/DeviceRename
 const CUSTOM_SOURCE: NameSource = 'custom';
 
 /**
- * Своё имя устройства прямо в строке списка. Поле держит только своё имя:
- * имя из аренды стоит подсказкой, и пустое поле возвращает подпись к нему.
+ * Device's own name right in the list row. The field holds only the own name:
+ * the lease name is a hint, and an empty field returns the label to it.
  */
 export function DeviceRenameForm({
   device,
   onDone,
 }: {
   device: Device;
-  /** Форма закрылась: имя сохранено (`label` — новая подпись) или правка отменена (`null`). */
+  /** The form closed: the name is saved (`label` is the new label) or the edit is cancelled (`null`). */
   onDone: (label: string | null) => void;
 }) {
   const { t } = useTranslation('features/Device/DeviceRename');
@@ -57,8 +57,8 @@ export function DeviceRenameForm({
   }
 
   return (
-    // Escape отменяет правку: обработчик на форме ловит его из любого её поля.
-    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- см. выше
+    // Escape cancels the edit: the handler on the form catches it from any of its fields.
+    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- see above
     <form
       className='flex min-w-0 flex-col gap-1.5'
       onKeyDown={onKeyDown}
@@ -79,9 +79,9 @@ export function DeviceRenameForm({
               </label>
               <Input
                 id={inputId}
-                // Форма открывается по нажатию «Переименовать»: фокус обязан
-                // оказаться в поле, а не остаться на исчезнувшей кнопке.
-                // oxlint-disable-next-line jsx-a11y/no-autofocus -- см. выше
+                // The form opens on the "Rename" press: focus must land in the
+                // field, not stay on the vanished button.
+                // oxlint-disable-next-line jsx-a11y/no-autofocus -- see above
                 autoFocus
                 spellCheck={false}
                 placeholder={device.nameSource === CUSTOM_SOURCE ? device.ip : device.label}

@@ -10,14 +10,14 @@ import (
 	"strings"
 )
 
-// rootType — тип, который демон отдаёт наружу: пакет относительно корня модуля
-// и имя объявления.
+// rootType is a type the daemon returns outside: the package relative to the module root
+// and the declaration name.
 type rootType struct {
 	pkg  string
 	name string
 }
 
-// field — поле структуры в том виде, в каком его увидит панель.
+// field is a struct field in the form the panel will see it.
 type field struct {
 	json     string
 	optional bool
@@ -25,14 +25,14 @@ type field struct {
 	typ      ast.Expr
 }
 
-// sources держит объявления всех разобранных пакетов: тип поля может ссылаться
-// на соседний пакет, и искать его приходится по всем сразу.
+// sources holds the declarations of all parsed packages: a field type may refer
+// to a neighbouring package, and it has to be searched in all of them at once.
 type sources struct {
 	decls map[string]*ast.TypeSpec
 	docs  map[string]string
-	// values — строковые константы именованного типа в порядке объявления:
-	// `contract.ErrorCode` → коды отказа. Они уезжают в схему списком, и панель
-	// типизирует ими свои таблицы.
+	// values are the string constants of a named type in declaration order:
+	// `contract.ErrorCode` → rejection codes. They go into the schema as a list, and the panel
+	// types its tables with them.
 	values map[string][]string
 	root   string
 	read   map[string]bool
@@ -56,9 +56,9 @@ func parseSources(root string, pkgs []string) (*sources, error) {
 	return out, nil
 }
 
-// readPackage разбирает пакет, если он ещё не прочитан. Контракт ссылается на
-// доменные типы — `apply.Transaction`, `config.Version`, — и их пакеты
-// подгружаются по ходу, а не перечисляются вторым списком.
+// readPackage parses a package if it has not been read yet. The contract refers to
+// domain types, `apply.Transaction`, `config.Version`, and their packages
+// are loaded on the way, not listed in a second list.
 func (s *sources) readPackage(pkg string) error {
 	if s.read[pkg] {
 		return nil
@@ -72,7 +72,7 @@ func (s *sources) readPackage(pkg string) error {
 
 		entries, err := os.ReadDir(dir)
 		if err != nil {
-			return fmt.Errorf("чтение %s: %w", pkg, err)
+			return fmt.Errorf("reading %s: %w", pkg, err)
 		}
 
 		for _, entry := range entries {
@@ -82,7 +82,7 @@ func (s *sources) readPackage(pkg string) error {
 
 			file, err := parser.ParseFile(set, filepath.Join(dir, entry.Name()), nil, parser.ParseComments)
 			if err != nil {
-				return fmt.Errorf("разбор %s: %w", entry.Name(), err)
+				return fmt.Errorf("parsing %s: %w", entry.Name(), err)
 			}
 
 			collectDecls(s, pkg, file)
@@ -92,8 +92,8 @@ func (s *sources) readPackage(pkg string) error {
 	return nil
 }
 
-// isSource отбрасывает тесты: контракт объявлен в рабочих файлах, а тестовые
-// структуры с теми же именами увели бы генератор не туда.
+// isSource drops tests: the contract is declared in working files, and test
+// structs with the same names would lead the generator astray.
 func isSource(name string) bool {
 	return strings.HasSuffix(name, ".go") && !strings.HasSuffix(name, "_test.go")
 }
@@ -128,10 +128,10 @@ func collectTypes(out *sources, pkg string, group *ast.GenDecl) {
 	}
 }
 
-// collectValues запоминает строковые константы именованных типов. Тип обязан
-// стоять у самой записи: константа без него — не член перечисления, а обычная
-// строка, и приписывать её типу соседа значит выдумать значение, которого у
-// того нет.
+// collectValues remembers the string constants of named types. The type must
+// stand right at the entry: a constant without it is not a member of the enum but a plain
+// string, and attributing it to a neighbour's type means inventing a value the
+// neighbour does not have.
 func collectValues(out *sources, pkg string, group *ast.GenDecl) {
 	for _, spec := range group.Specs {
 		value, ok := spec.(*ast.ValueSpec)
@@ -179,8 +179,8 @@ func docText(groups ...*ast.CommentGroup) string {
 	return ""
 }
 
-// structOf раскрывает объявление до структуры. `false` — тип объявлен не
-// структурой: такие поля печатаются по своему базовому типу.
+// structOf expands a declaration to a struct. `false` means the type is not declared
+// as a struct: such fields are printed by their base type.
 func (s *sources) structOf(key string) (*ast.StructType, bool) {
 	spec, ok := s.decls[key]
 	if !ok {
@@ -212,8 +212,8 @@ func (s *sources) fieldsOf(body *ast.StructType) []field {
 	return out
 }
 
-// jsonName читает имя поля из тега. `false` — поле наружу не уходит: без тега
-// или со скрытым именем.
+// jsonName reads the field name from the tag. `false` means the field does not go outside: no tag
+// or a hidden name.
 func jsonName(tag *ast.BasicLit) (string, bool, bool) {
 	if tag == nil {
 		return "", false, false

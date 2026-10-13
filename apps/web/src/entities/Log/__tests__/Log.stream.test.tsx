@@ -52,7 +52,7 @@ describe('useLogStream', () => {
     vi.restoreAllMocks();
   });
 
-  it('на скрытой вкладке закрывает поток и открывает его, когда вкладка видна снова', () => {
+  it('on a hidden tab closes the stream and opens it when the tab is visible again', () => {
     const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
 
     renderStream();
@@ -70,7 +70,7 @@ describe('useLogStream', () => {
     expect(FakeLogSource.opened[1].closed).toBe(false);
   });
 
-  it('скрытая вкладка снимает запланированный повтор', () => {
+  it('a hidden tab cancels the scheduled retry', () => {
     const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(false);
 
     renderStream();
@@ -83,7 +83,7 @@ describe('useLogStream', () => {
     expect(FakeLogSource.opened).toHaveLength(1);
   });
 
-  it('отказанный поток открывает заново с задержкой, растущей вдвое', () => {
+  it('reopens a failed stream with a delay that doubles', () => {
     renderStream();
 
     refuse();
@@ -104,7 +104,7 @@ describe('useLogStream', () => {
     expect(FakeLogSource.opened).toHaveLength(3);
   });
 
-  it('задержка не растёт выше потолка', () => {
+  it('the delay does not grow above the ceiling', () => {
     renderStream();
 
     for (let attempt = 0; attempt < LOG_RECONNECT.Attempts - 1; attempt += 1) {
@@ -120,7 +120,7 @@ describe('useLogStream', () => {
     expect(FakeLogSource.opened).toHaveLength(opened + 1);
   });
 
-  it('исчерпав попытки, закрывает поток и ждёт ручного переподключения', () => {
+  it('after exhausting attempts closes the stream and waits for a manual reconnect', () => {
     const { hook } = renderStream();
 
     for (let attempt = 0; attempt < LOG_RECONNECT.Attempts; attempt += 1) {
@@ -141,12 +141,12 @@ describe('useLogStream', () => {
     expect(FakeLogSource.opened).toHaveLength(LOG_RECONNECT.Attempts + 2);
     expect(status()).toBe(LOG_STREAM_STATUS.Connecting);
 
-    // Ручное переподключение начинает счёт попыток заново.
+    // A manual reconnect restarts the attempt count.
     refuse();
     expect(status()).toBe(LOG_STREAM_STATUS.Reconnecting);
   });
 
-  it('открытие потока сбрасывает счёт неудач', () => {
+  it('opening the stream resets the failure count', () => {
     renderStream();
 
     for (let attempt = 0; attempt < LOG_RECONNECT.Attempts; attempt += 1) {
@@ -165,7 +165,7 @@ describe('useLogStream', () => {
     expect(FakeLogSource.opened).toHaveLength(LOG_RECONNECT.Attempts + 2);
   });
 
-  it('обрыв, который браузер переподключает сам, второго потока не заводит', () => {
+  it('a drop that the browser reconnects by itself does not create a second stream', () => {
     renderStream();
 
     act(() => {
@@ -177,7 +177,7 @@ describe('useLogStream', () => {
     expect(FakeLogSource.opened).toHaveLength(1);
   });
 
-  it('каждое открытие, включая первое, перечитывает хвост', () => {
+  it('every open, including the first, rereads the tail', () => {
     const { invalidate } = renderStream();
 
     act(() => {
@@ -196,7 +196,7 @@ describe('useLogStream', () => {
     expect(invalidate).toHaveBeenCalledTimes(2);
   });
 
-  it('уход с экрана отменяет запланированную попытку', () => {
+  it('leaving the screen cancels the scheduled attempt', () => {
     const { hook } = renderStream();
 
     refuse();

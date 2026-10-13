@@ -7,15 +7,15 @@ import (
 	"time"
 )
 
-// Checker ждёт, пока Clash API поднимется после рестарта сервиса — шаг 7
-// протокола применения.
+// Checker waits until the Clash API comes up after the service restart, step 7
+// of the apply protocol.
 type Checker struct {
 	client   *http.Client
 	interval time.Duration
 }
 
-// NewChecker задаёт таймаут одного запроса и паузу между попытками. Общий срок
-// ожидания приходит контекстом: он же обрывает опрос при остановке демона.
+// NewChecker sets the timeout of one request and the pause between attempts. The total wait
+// time comes via the context: it also interrupts the polling when the daemon stops.
 func NewChecker(requestTimeout, interval time.Duration) *Checker {
 	return &Checker{
 		client:   &http.Client{Timeout: requestTimeout},
@@ -23,9 +23,9 @@ func NewChecker(requestTimeout, interval time.Duration) *Checker {
 	}
 }
 
-// Wait опрашивает контроллер, пока тот не ответит или пока не истечёт срок из
-// контекста. Пустой Secret — штатный случай: форк отключает авторизацию
-// целиком, когда секрет пуст, и заголовок в этом случае не нужен.
+// Wait polls the controller until it answers or the deadline from the
+// context expires. An empty Secret is a regular case: the fork disables authorization
+// entirely when the secret is empty, and the header is not needed then.
 func (c *Checker) Wait(ctx context.Context, s Settings) error {
 	base, err := s.BaseURL()
 	if err != nil {

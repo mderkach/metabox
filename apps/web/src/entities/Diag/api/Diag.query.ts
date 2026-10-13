@@ -6,10 +6,10 @@ import { toDiagChecks } from '../model/Diag.adapter';
 import { getDiagReport } from './Diag.api';
 import { ReportSchema } from './Diag.schema';
 
-/** Прогон, который просил пользователь: узел и метка нажатия «Проверить». */
+/** A run the user asked for: the node and the mark of the "Check" press. */
 export interface DiagRun {
   proxy: string;
-  /** Уникальна на каждое нажатие, в том числе после возврата на экран: иначе ключ совпал бы с прогоном из кэша. */
+  /** Unique for every press, including after returning to the screen: otherwise the key would match a run from the cache. */
   run: number;
 }
 
@@ -19,9 +19,9 @@ export const DIAG_QUERY = {
 } as const;
 
 /**
- * Метка нажатия в ключе: каждое «Проверить» — новый прогон, а не чтение
- * кэша. Повторов нет: отказ проверки — строка отчёта, а не код HTTP, и повтор
- * лишь ещё раз отправил бы пакеты.
+ * The press mark in the key: every "Check" is a new run, not a cache read.
+ * There are no retries: a check failure is a report row, not an HTTP code, and
+ * a retry would only send the packets again.
  */
 export function getDiagOptions(target: DiagRun) {
   return queryOptions({
@@ -34,7 +34,7 @@ export function getDiagOptions(target: DiagRun) {
   });
 }
 
-/** `null` — проверку ещё не запускали: запрос не идёт, опроса нет. */
+/** `null` means the check has not been run yet: the query does not run, there is no polling. */
 export function useDiagReport(target: DiagRun | null) {
   return useQuery({
     ...getDiagOptions(target ?? { proxy: '', run: 0 }),

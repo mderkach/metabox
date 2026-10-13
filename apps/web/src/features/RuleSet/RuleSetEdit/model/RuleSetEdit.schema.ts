@@ -8,20 +8,20 @@ import {
 } from '@features/RuleSet/RuleSetAdd/@x/RuleSetEdit';
 
 /**
- * Что правит форма существующего сета: поля формы подключения, но адрес
- * может быть пуст — поле адреса общее с формами узлов и очищенным держит
- * `null`, а не пустую строку.
+ * What the edit form of an existing set edits: the add form fields, but the
+ * address may be empty: the address field is shared with node forms and when
+ * cleared holds `null`, not an empty string.
  */
 export const RuleSetEditSchema = RuleSetAddSchema.extend({
-  /** Адрес, по которому ядро скачивает набор; `null` — поле очищено */
+  /** Address core downloads the set from; `null` means the field is cleared */
   url: z.string().nullable(),
 });
 
 export type RuleSetEditModel = z.infer<typeof RuleSetEditSchema>;
 
 /**
- * Проверки те же, что при подключении: пустой адрес приводится к строке и
- * отказывает тем же кодом. Тег самого сета занятым не считается.
+ * The checks are the same as when adding: an empty address is cast to a string
+ * and fails with the same code. The set's own tag does not count as taken.
  */
 export function makeRuleSetEditSchema(takenTags: readonly string[], outbounds: readonly string[], ownTag: string) {
   return RuleSetEditSchema.transform((data) => ({ ...data, url: data.url ?? '' })).pipe(
@@ -39,8 +39,8 @@ function readText(node: Readonly<Record<string, unknown>>, key: string): string 
 }
 
 /**
- * Форма открывается на узле как есть. Поставщик и категория формой правки не
- * выбираются: адрес правится целиком.
+ * The form opens on the node as is. The provider and category are not chosen by
+ * the edit form: the address is edited as a whole.
  */
 export function ruleSetEditDefaults(node: Readonly<Record<string, unknown>>): RuleSetEditModel {
   return {
@@ -57,9 +57,9 @@ export function ruleSetEditDefaults(node: Readonly<Record<string, unknown>>): Ru
 }
 
 /**
- * Узел после правки: поля формы поверх исходного узла. Пустое значение
- * удаляет ключ (`diffNode`), остальные ключи узла — `initial_path`, `http_client`
- * — не трогаются.
+ * Node after the edit: form fields over the source node. An empty value deletes
+ * the key (`diffNode`), other node keys, `initial_path`, `http_client`, are not
+ * touched.
  */
 export function toRuleSetEditNode(
   node: Readonly<Record<string, unknown>>,

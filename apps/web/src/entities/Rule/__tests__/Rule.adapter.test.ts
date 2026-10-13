@@ -10,12 +10,12 @@ function configWithRules(rules: object[]): Config {
 }
 
 describe('toRuleRows', () => {
-  it('возвращает пустой список, когда правил нет', () => {
+  it('returns an empty list when there are no rules', () => {
     expect(toRuleRows(null)).toEqual([]);
     expect(toRuleRows({})).toEqual([]);
   });
 
-  it('нумерует правила с единицы и сохраняет порядок из конфига', () => {
+  it('numbers rules from one and keeps the config order', () => {
     const rows = toRuleRows(
       configWithRules([
         { rule_set: ['openai'], outbound: 'proxy' },
@@ -27,7 +27,7 @@ describe('toRuleRows', () => {
     expect(rows.map((row) => row.target)).toEqual(['proxy', 'direct']);
   });
 
-  it('собирает условия из полей схемы и приводит значения к списку', () => {
+  it('builds conditions from schema fields and brings values to a list', () => {
     const [row] = toRuleRows(configWithRules([{ port: 53, domain_suffix: ['rt.ru', 'usmall.ru'] }]));
 
     expect(row.matchers).toContainEqual({ key: 'port', values: ['53'] });
@@ -37,14 +37,14 @@ describe('toRuleRows', () => {
     });
   });
 
-  it('упорядочивает условия по схеме, а не по порядку ключей в файле', () => {
+  it('orders conditions by schema, not by key order in the file', () => {
     const direct = toRuleRows(configWithRules([{ domain_suffix: ['rt.ru'], port: 53 }]));
     const reversed = toRuleRows(configWithRules([{ port: 53, domain_suffix: ['rt.ru'] }]));
 
     expect(direct[0].matchers).toEqual(reversed[0].matchers);
   });
 
-  it('различает outbound и action', () => {
+  it('tells outbound and action apart', () => {
     const rows = toRuleRows(
       configWithRules([
         { inbound: ['dns-in'], action: 'hijack-dns' },
@@ -57,35 +57,35 @@ describe('toRuleRows', () => {
     expect(rows[1].targetKind).toBe(RULE_TARGET.Outbound);
   });
 
-  it('считает route действием по умолчанию, когда его не указали', () => {
+  it('treats route as the default action when none is given', () => {
     const [row] = toRuleRows(configWithRules([{ domain: ['example.com'] }]));
 
     expect(row.target).toBe('route');
     expect(row.targetKind).toBe(RULE_TARGET.Action);
   });
 
-  it('отмечает правило без условий: оно ловит весь остальной трафик', () => {
+  it('marks a rule without conditions: it catches all the remaining traffic', () => {
     const [row] = toRuleRows(configWithRules([{ outbound: 'direct' }]));
 
     expect(row.isCatchAll).toBe(true);
     expect(row.matchers).toEqual([]);
   });
 
-  it('не считает условием служебное поле type', () => {
+  it('does not count the service field type as a condition', () => {
     const [row] = toRuleRows(configWithRules([{ type: 'default', outbound: 'direct' }]));
 
     expect(row.matchers).toEqual([]);
   });
 
-  it('складывает условия и цель в строку поиска', () => {
+  it('folds conditions and the target into a search string', () => {
     const [row] = toRuleRows(configWithRules([{ domain_suffix: ['rt.ru'], outbound: 'direct' }]));
 
     expect(row.searchText).toBe('domain_suffix rt.ru direct');
   });
 });
 
-describe('логические правила', () => {
-  it('не считает логическое правило безусловным', () => {
+describe('logical rules', () => {
+  it('does not count a logical rule as unconditional', () => {
     const [row] = toRuleRows(
       configWithRules([
         {
@@ -102,7 +102,7 @@ describe('логические правила', () => {
     expect(row.group?.children).toHaveLength(2);
   });
 
-  it('разворачивает вложенность и оставляет условия внутри веток', () => {
+  it('expands nesting and keeps conditions inside branches', () => {
     const [row] = toRuleRows(
       configWithRules([
         {
@@ -125,7 +125,7 @@ describe('логические правила', () => {
     });
   });
 
-  it('ищет по условиям вложенных веток, а не только по верхнему уровню', () => {
+  it('searches by conditions of nested branches, not only the top level', () => {
     const [row] = toRuleRows(
       configWithRules([{ type: 'logical', mode: 'or', rules: [{ domain_suffix: ['media.example'] }] }])
     );
@@ -134,8 +134,8 @@ describe('логические правила', () => {
   });
 });
 
-describe('действия кроме route', () => {
-  it('показывает параметры действия рядом с ним', () => {
+describe('actions other than route', () => {
+  it('shows action parameters next to it', () => {
     const rows = toRuleRows(
       configWithRules([
         { port: 443, action: 'reject', method: 'drop' },
@@ -149,16 +149,16 @@ describe('действия кроме route', () => {
     expect(rows[2]?.targetDetail).toBeNull();
   });
 
-  it('не путает инверсию с условием', () => {
+  it('does not confuse inversion with a condition', () => {
     const [row] = toRuleRows(configWithRules([{ rule_set: ['github'], invert: true, outbound: 'direct' }]));
 
     expect(row.invert).toBe(true);
     expect(row.matchers).toEqual([{ key: 'rule_set', values: ['github'] }]);
   });
-  it('нумерует правила по их месту в файле, а не по порядку в списке', () => {
-    // Массив правит человек, и попавший в него не-объект пропускается. Если
-    // считать позицию после пропуска, правка следующего правила ушла бы в
-    // соседний узел файла.
+  it('numbers rules by their place in the file, not by list order', () => {
+    // The array is edited by a person, and a non-object that got into it is skipped. If the
+    // position were counted after the skip, an edit of the next rule would go to
+    // a neighboring node of the file.
     const rows = toRuleRowsFromNodes([null, { rule_set: ['github'], outbound: 'proxy' }]);
 
     expect(rows).toHaveLength(1);
@@ -167,29 +167,29 @@ describe('действия кроме route', () => {
   });
 });
 
-describe('узлы, которых схема не знает', () => {
-  it('правило с незнакомым условием не считается распознанным', () => {
+describe('nodes the schema does not know', () => {
+  it('a rule with an unknown condition is not counted as recognized', () => {
     expect(isRuleRecognized({ unknown_matcher: ['своё'], outbound: 'direct' })).toBe(false);
   });
 
-  it('обычное правило по-прежнему распознаётся', () => {
+  it('an ordinary rule is still recognized', () => {
     expect(isRuleRecognized({ domain_suffix: ['example.com'], outbound: 'direct' })).toBe(true);
   });
 
-  it('строка списка помечает такое правило, а не выдаёт его за безусловное', () => {
+  it('the list row marks such a rule instead of passing it off as unconditional', () => {
     const [row] = toRuleRowsFromNodes([{ unknown_matcher: ['своё'], outbound: 'direct' }]);
 
     expect(row.recognized).toBe(false);
     expect(row.isCatchAll).toBe(true);
   });
 
-  it('замечание схемы называет поле, которого она не знает', () => {
+  it('the schema issue names the field it does not know', () => {
     expect(checkRuleNode({ unknown_matcher: ['своё'], outbound: 'direct' }).join(' ')).toContain('unknown_matcher');
   });
 });
 
 describe('newRuleNode', () => {
-  it('новое правило принимает схема, а строка списка читает его безусловным с выходом', () => {
+  it('a new rule is accepted by the schema, and the list row reads it as unconditional with an outbound', () => {
     const node = newRuleNode('direct');
     const [row] = toRuleRowsFromNodes([node]);
 

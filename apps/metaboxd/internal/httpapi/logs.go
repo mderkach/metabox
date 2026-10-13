@@ -17,30 +17,30 @@ import (
 )
 
 const (
-	// defaultLogLines — хвост по умолчанию: экран открывается с ним.
+	// defaultLogLines is the default tail: the screen opens with it.
 	defaultLogLines = 200
 
-	// logQueue — очередь строк потока на читателя; переполнение отбрасывает
-	// строку, и разрыв seq показывает панели потерю.
+	// logQueue is the stream line queue per reader; an overflow drops
+	// a line, and a gap in seq shows the panel the loss.
 	logQueue = 256
 
 	logKeepAlive    = 20 * time.Second
 	logWriteTimeout = 10 * time.Second
 
-	// logRetryAfter — через сколько секунд повторить поток, упёршийся в
-	// лимит: место освобождается, когда закрывается чужой поток.
+	// logRetryAfter is after how many seconds to retry a stream that hit
+	// the limit: room frees up when someone else's stream closes.
 	logRetryAfter = "5"
 )
 
-// LogReader читает лог sing-box. Интерфейс объявлен здесь, у потребителя.
+// LogReader reads the sing-box log. The interface is declared here, at the consumer.
 type LogReader interface {
 	Tail(ctx context.Context, n int, minLevel logs.Level) (logs.Snapshot, error)
 	Follow(ctx context.Context, minLevel logs.Level, emit func(logs.Entry)) (<-chan error, error)
 	Clear(ctx context.Context) (time.Time, error)
 }
 
-// Diagnoser проверяет сетевую обвязку. Интерфейс объявлен здесь, у
-// потребителя.
+// Diagnoser checks the dataplane. The interface is declared here, at the
+// consumer.
 type Diagnoser interface {
 	Run(ctx context.Context, proxy string) (diag.Report, error)
 }
@@ -92,10 +92,10 @@ func (s *Server) handleLogsClear(w http.ResponseWriter, r *http.Request) {
 	writeJSON(s.log, w, http.StatusOK, contract.LogsCleared{Since: formatSince(since)})
 }
 
-// handleLogStream отдаёт новые строки лога потоком SSE: событие `log` с
-// contract.LogEvent. Устроен как `/api/events`, но источник у каждого
-// читателя свой: читателей у экрана логов единицы, и общий процесс с рассылкой
-// не окупил бы своей сложности. Их число ограничено logs.MaxStreams.
+// handleLogStream returns new log lines as an SSE stream: a `log` event with
+// contract.LogEvent. Built like `/api/events`, but each reader has its own source:
+// the log screen has only a few readers, and a shared process with a broadcast
+// would not pay for its complexity. Their number is limited by logs.MaxStreams.
 func (s *Server) handleLogStream(w http.ResponseWriter, r *http.Request) {
 	level, ok := logs.ParseLevel(r.URL.Query().Get("level"))
 	if !ok {
@@ -104,8 +104,8 @@ func (s *Server) handleLogStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Поддержка проверяется до первой записи: после заголовка отказать уже
-	// нечем.
+	// Support is checked before the first write: after the header there is
+	// nothing to refuse with.
 	if !events.SupportsFlush(w) {
 		fail(s.log, w, r, errors.New("поток лога: ответ без сброса буфера"))
 
@@ -144,8 +144,8 @@ func (s *Server) handleLogStream(w http.ResponseWriter, r *http.Request) {
 		finished bool
 	)
 
-	// Горутину источника останавливает cancel, и хендлер не выходит, пока
-	// она не закончилась.
+	// The source goroutine is stopped by cancel, and the handler does not exit until
+	// it has finished.
 	defer func() {
 		cancel()
 

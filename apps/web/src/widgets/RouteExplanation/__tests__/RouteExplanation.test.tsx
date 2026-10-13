@@ -20,7 +20,7 @@ import { RouteExplanation, RouteExplanationSheet } from '../ui/RouteExplanation'
 
 const JSON_INDENT = 2;
 
-/** В конфиге фикстуры 32 правила, а объяснение приходит на 7 — длины разные. */
+/** The fixture config has 32 rules, and the explanation comes for 7: the lengths differ. */
 const CONFIG_TEXT = JSON.stringify(CONFIG_FIXTURE, null, JSON_INDENT);
 
 function serveExplanation(body: typeof ROUTE_EXPLANATION_FIXTURE) {
@@ -31,7 +31,7 @@ function serveConfig(text: string) {
   server.use(http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(text)));
 }
 
-/** Конфиг ровно с тем числом правил, что отдал демон: связка с узлом жива. */
+/** A config with exactly the number of rules the daemon returned: the link to the node is alive. */
 function configWithRules(count: number): string {
   const rules = Array.from({ length: count }, (_, index) => ({ inbound: `in-${String(index)}`, outbound: 'direct' }));
 
@@ -44,7 +44,7 @@ describe('RouteExplanation', () => {
     server.use(...createDeviceHandlers());
   });
 
-  it('называет источник подписью устройства, а адрес оставляет подсказкой', async () => {
+  it('names the source by the device label, and leaves the address as a hint', async () => {
     serveExplanation(ROUTE_EXPLANATION_FIXTURE);
     serveConfig(configWithRules(ROUTE_EXPLANATION_FIXTURE.rules.length));
 
@@ -60,7 +60,7 @@ describe('RouteExplanation', () => {
     expect(await screen.findByText('с устройства Ноутбук')).toHaveAttribute('title', '192.168.1.60');
   });
 
-  it('показывает сработавшее правило и его происхождение', async () => {
+  it('shows the matched rule and its origin', async () => {
     serveExplanation(ROUTE_EXPLANATION_FIXTURE);
     serveConfig(configWithRules(ROUTE_EXPLANATION_FIXTURE.rules.length));
 
@@ -73,13 +73,13 @@ describe('RouteExplanation', () => {
       />
     ));
 
-    // Индексы демона считаются с нуля, на экране правила нумеруются с единицы.
+    // Daemon indexes count from zero, rules on the screen are numbered from one.
     expect(await screen.findByText('Сработало правило 7')).toBeInTheDocument();
     expect(screen.getByText('rule_set=google-ip')).toBeInTheDocument();
     expect(screen.getAllByText('от sing-box').length).toBeGreaterThan(0);
   });
 
-  it('ведёт к правилу в редакторе, когда список процесса сходится с конфигом', async () => {
+  it('leads to the rule in the editor when the process list matches the config', async () => {
     serveExplanation(ROUTE_EXPLANATION_FIXTURE);
     serveConfig(configWithRules(ROUTE_EXPLANATION_FIXTURE.rules.length));
 
@@ -95,13 +95,13 @@ describe('RouteExplanation', () => {
     const link = await screen.findByRole('link', { name: 'Открыть правило в редакторе' });
 
     expect(link).toHaveAttribute('href', '/config?rule=7');
-    // Классы варианта прогоняются через `cn`: иначе `border-transparent` базы
-    // доживает рядом с `border-border` варианта, и ссылка остаётся без рамки.
+    // Variant classes pass through `cn`: otherwise the base `border-transparent`
+    // survives next to the variant `border-border`, and the link is left without a border.
     expect(link).toHaveClass('border-border');
     expect(link).not.toHaveClass('border-transparent');
   });
 
-  it('отключает переход к узлу, когда процесс исполняет другой конфиг', async () => {
+  it('disables the jump to the node when the process runs a different config', async () => {
     serveExplanation(ROUTE_EXPLANATION_FIXTURE);
     serveConfig(CONFIG_TEXT);
 
@@ -116,13 +116,13 @@ describe('RouteExplanation', () => {
 
     expect(await screen.findByText('sing-box работает по другому конфигу')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Открыть правило в редакторе' })).not.toBeInTheDocument();
-    // Номер узла чужого документа не показывается вовсе: он указал бы на
-    // другое правило.
+    // The node number of a foreign document is not shown at all: it would point to
+    // a different rule.
     expect(screen.queryByText('Сработало правило 7')).not.toBeInTheDocument();
     expect(screen.getByText('Правило не определено')).toBeInTheDocument();
   });
 
-  it('выход по умолчанию показывает наблюдением, а не неизвестностью', async () => {
+  it('shows the default outbound as an observation, not as unknown', async () => {
     serveExplanation(ROUTE_FINAL_FIXTURE);
     serveConfig(configWithRules(ROUTE_FINAL_FIXTURE.rules.length));
 
@@ -139,7 +139,7 @@ describe('RouteExplanation', () => {
     expect(screen.queryByText('неизвестно')).not.toBeInTheDocument();
   });
 
-  it('неизвестное правило показывает причиной, а не догадкой', async () => {
+  it('shows an unknown rule as a reason, not as a guess', async () => {
     serveExplanation(ROUTE_UNKNOWN_FIXTURE);
     serveConfig(configWithRules(0));
 
@@ -153,13 +153,13 @@ describe('RouteExplanation', () => {
     ));
 
     expect(await screen.findByText('Правило не определено')).toBeInTheDocument();
-    // Причина — перевод панели по коду демона, а не его строка: она на его языке.
+    // The reason is the panel translation by the daemon code, not its string: it is in its language.
     expect(screen.getByText('правила этого соединения нет в списке работающего sing-box')).toBeInTheDocument();
     expect(screen.queryByText(ROUTE_UNKNOWN_FIXTURE.match.reason ?? '')).not.toBeInTheDocument();
     expect(screen.getByText('неизвестно')).toBeInTheDocument();
   });
 
-  it('цепочку показывает в порядке чтения человеком', async () => {
+  it('shows the chain in human reading order', async () => {
     serveExplanation(ROUTE_EXPLANATION_FIXTURE);
     serveConfig(configWithRules(ROUTE_EXPLANATION_FIXTURE.rules.length));
 
@@ -177,7 +177,7 @@ describe('RouteExplanation', () => {
     expect(chain).toHaveTextContent('alt-fallbackhk-01');
   });
 
-  it('называется соединением, о котором рассказывает', async () => {
+  it('is named after the connection it describes', async () => {
     serveExplanation(ROUTE_EXPLANATION_FIXTURE);
     serveConfig(configWithRules(ROUTE_EXPLANATION_FIXTURE.rules.length));
 
@@ -195,7 +195,7 @@ describe('RouteExplanation', () => {
     ).toBeInTheDocument();
   });
 
-  it('закрывается по Escape', async () => {
+  it('closes on Escape', async () => {
     serveExplanation(ROUTE_EXPLANATION_FIXTURE);
     serveConfig(configWithRules(ROUTE_EXPLANATION_FIXTURE.rules.length));
 
@@ -221,7 +221,7 @@ describe('RouteExplanationSheet', () => {
     server.use(...createDeviceHandlers());
   });
 
-  it('открыта, пока выбрано соединение, и называется им', async () => {
+  it('is open while a connection is selected, and is named after it', async () => {
     renderWithRouter(() => (
       <RouteExplanationSheet
         connectionId='c-1'
@@ -236,7 +236,7 @@ describe('RouteExplanationSheet', () => {
     expect(await within(sheet).findByText('Сработало правило 7')).toBeInTheDocument();
   });
 
-  it('без выбранного соединения закрыта', () => {
+  it('is closed without a selected connection', () => {
     renderWithRouter(() => (
       <RouteExplanationSheet connectionId={null} host='' source='' onClose={vi.fn<() => void>()} />
     ));
@@ -244,7 +244,7 @@ describe('RouteExplanationSheet', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('закрывается по Escape и кнопкой закрытия', async () => {
+  it('closes on Escape and with the close button', async () => {
     const onClose = vi.fn<() => void>();
     const user = userEvent.setup();
 

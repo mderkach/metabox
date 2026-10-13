@@ -25,9 +25,9 @@ describe('ConnectionHistory', () => {
     vi.useRealTimers();
   });
 
-  // Ось подписывает время, а не номер точки: неполный буфер не растягивается
-  // на всю минуту, а стоит у правой кромки с пустой левой частью.
-  it('при неполном буфере держит окно в минуту и ставит точки по их времени', () => {
+  // The axis labels time, not the point number: an incomplete buffer is not stretched
+  // over the whole minute, but stands at the right edge with an empty left part.
+  it('with an incomplete buffer holds a one-minute window and puts points by their time', () => {
     render(<ConnectionHistory samples={samplesOf(PARTIAL_BUFFER)} sampledAt={NOW} peak={3} />);
     vi.advanceTimersToNextFrame();
 
@@ -43,7 +43,7 @@ describe('ConnectionHistory', () => {
     expect(times[0]).toBeGreaterThan(min + HISTORY_WINDOW_SECONDS / 2);
   });
 
-  it('сдвигает ось времени по кадрам, не пересоздавая график', () => {
+  it('shifts the time axis by frames without recreating the chart', () => {
     render(<ConnectionHistory samples={samplesOf(2)} sampledAt={NOW} peak={3} />);
     vi.advanceTimersToNextFrame();
 
@@ -56,7 +56,7 @@ describe('ConnectionHistory', () => {
     expect(FakePlot.instances).toHaveLength(1);
   });
 
-  it('берёт круглую кромку шкалы от пика минуты и не сжимает её на небольшом спаде', () => {
+  it('takes a round scale edge from the minute peak and does not shrink it on a small dip', () => {
     const { rerender } = render(<ConnectionHistory samples={samplesOf(2, 37)} sampledAt={NOW} peak={37} />);
     const before = FakePlot.latest().scales.y;
 
@@ -67,14 +67,14 @@ describe('ConnectionHistory', () => {
     expect(FakePlot.latest().scales.y).toEqual(before);
   });
 
-  // Подписи оси в канвасе имени не дают: фигура называет то, что на ней видно.
-  it('называет фигуру графика пиком минуты', () => {
+  // Canvas axis labels give no name: the figure names what is visible on it.
+  it('names the chart figure by the minute peak', () => {
     render(<ConnectionHistory samples={samplesOf(2, 7)} sampledAt={NOW} peak={7} />);
 
     expect(screen.getByRole('figure', { name: 'Открытые соединения за минуту, пик 7 соединений' })).toBeInTheDocument();
   });
 
-  it('до второй точки показывает загрузку, а не пустую ось', () => {
+  it('before the second point shows loading, not an empty axis', () => {
     render(<ConnectionHistory samples={samplesOf(1)} sampledAt={NOW} peak={3} />);
 
     expect(screen.getByRole('status')).toHaveTextContent('Загружаю');

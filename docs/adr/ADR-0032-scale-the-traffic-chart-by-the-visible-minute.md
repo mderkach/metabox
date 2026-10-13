@@ -1,70 +1,70 @@
-# ADR-0032. Брать шкалу графика трафика от пика видимой минуты и держать буфер на две точки длиннее окна
+# ADR-0032. Take the traffic chart scale from the peak of the visible minute and keep the buffer two points longer than the window
 
-- Статус: Accepted
-- Дата: 2026-09-24
-- Ответственные: владелец репозитория
-- Заменяет (в части шкалы скорости): [ADR-0031](./ADR-0031-keep-overview-chart-axes-fixed-and-fill-them-from-the-daemon.md)
+- Status: Accepted
+- Date: 2026-09-24
+- Deciders: repository owner
+- Supersedes (for the speed scale): [ADR-0031](./ADR-0031-keep-overview-chart-axes-fixed-and-fill-them-from-the-daemon.md)
 
-## Контекст и постановка проблемы
+## Context and problem statement
 
-По ADR-0031 верх шкалы графика трафика — наибольшее из трёх величин: пика за всю историю демона, пика минуты и 1 МиБ/с. На роутере BPI-R4 Pro 2026-09-24 пик истории держал шкалу на 40 МБ/с, а пик минуты был 1,5–2,8 МБ/с. Обычная минута лежала на нулевой линии, и по графику нельзя было прочитать ни всплеск, ни фон. Нижний предел в 1 МиБ/с — это около 8 Мбит/с, для простаивающего канала он тоже крупный.
+Per ADR-0031 the top of the traffic chart scale is the largest of three values: the peak over the whole daemon history, the minute peak and 1 MiB/s. On the BPI-R4 Pro router on 2026-09-24 the history peak held the scale at 40 MB/s, while the minute peak was 1.5–2.8 MB/s. A normal minute lay on the zero line, and neither a spike nor the background could be read from the chart. The lower limit of 1 MiB/s is about 8 Mbit/s, which is also large for an idle link.
 
-Второй дефект — подёргивание левого края. Правая кромка окна отстаёт от «сейчас» на шаг потока (ADR-0031), а буфер держал ровно столько точек, сколько помещается в окно. Самая старая точка оказывалась внутри графика. Замер по канвасу на том же роутере: область начиналась в 8–16px от левой кромки и раз в секунду прыгала на 8px вправо, когда старая точка выпадала из буфера. У правой кромки и в сдвиге ряда скачков нет: за 1406 кадров хвост ни разу не отошёл от кромки, кадры анимации не дольше 21 мс.
+The second defect is jitter at the left edge. The right edge of the window lags "now" by one stream step (ADR-0031), and the buffer held exactly as many points as fit in the window. The oldest point ended up inside the chart. A canvas measurement on the same router: the area started 8–16px from the left edge and once a second jumped 8px to the right when the old point dropped out of the buffer. There are no jumps at the right edge or in the series shift: over 1406 frames the tail never left the edge, animation frames were no longer than 21 ms.
 
-Решение касается только графика трафика на обзоре. Ось времени, заполнение минутой от демона и спарклайны остаются по ADR-0031.
+The decision concerns only the traffic chart on the overview. The time axis, filling with the minute from the daemon and the sparklines stay per ADR-0031.
 
-## Критерии выбора
+## Decision drivers
 
-1. Обычная минута занимает высоту графика, всплеск и фон различимы.
-2. Шкала не перестраивается каждую секунду.
-3. Область графика начинается от левой кромки и не прыгает.
-4. Контракт демона не меняется.
+1. A normal minute fills the chart height, a spike and the background are distinguishable.
+2. The scale is not rebuilt every second.
+3. The chart area starts at the left edge and does not jump.
+4. The daemon contract does not change.
 
-## Рассмотренные варианты
+## Considered options
 
-1. **Шкала от пика видимой минуты, нижний предел 1 Мбит/с, запас на спад; буфер на две точки длиннее окна.** Отвечает всем критериям. **Принят.**
-2. **Оставить пик истории в шкале.** Шкала стоит неподвижно, но при одном крупном всплеске за время работы демона обычная минута лежит на нуле. Нарушает критерий 1. **Отклонён.**
-3. **Шкала строго по пику минуты, без запаса на спад.** Шкала перестраивалась бы каждый раз, когда всплеск уходит за левую кромку, и одна и та же скорость рисовалась бы разной высотой. Нарушает критерий 2. **Отклонён.**
-4. **Отдавать от демона 62 точки вместо 60.** Закрывает короткий левый край сразу после открытия панели, но меняет контракт `GET /api/history` ради первых двух секунд. Нарушает критерий 4. **Отклонён.**
+1. **Scale from the peak of the visible minute, lower limit 1 Mbit/s, headroom for decline; buffer two points longer than the window.** Meets all drivers. **Chosen.**
+2. **Keep the history peak in the scale.** The scale stays put, but after one large spike during the daemon lifetime a normal minute lies on zero. Violates driver 1. **Rejected.**
+3. **Scale strictly by the minute peak, without headroom for decline.** The scale would be rebuilt every time a spike goes past the left edge, and the same speed would be drawn at different heights. Violates driver 2. **Rejected.**
+4. **Return 62 points from the daemon instead of 60.** Closes the short left edge right after the panel opens, but changes the `GET /api/history` contract for the sake of the first two seconds. Violates driver 4. **Rejected.**
 
-## Принятое решение
+## Decision outcome
 
-- Верх шкалы — пик видимой минуты в любую сторону, не ниже `TRAFFIC_MIN_CEILING` — 1 Мбит/с, то есть 125 000 Б/с. Шкала подписывается в байтах круглыми шагами, поэтому на простаивающем канале верх встаёт на 200 КиБ/с.
-- Запас на спад прежний (`useStickyCeiling`): шкала растёт сразу, а сжимается, только когда пик упал вчетверо.
-- Пик истории демона в шкалу не входит.
-- Буфер трафика — `TRAFFIC_POINTS` = `TRAFFIC_WINDOW_POINTS` + 2, то есть 62 точки при окне 60 с и шаге 1 с. Одна лишняя точка покрывает отставание правой кромки, вторая даёт начало отрезку, который режет левая кромка.
-- Пик минуты для шкалы и подписи «пик за минуту» считается по последним `TRAFFIC_WINDOW_POINTS` точкам, а не по всему буферу.
+- The top of the scale is the peak of the visible minute in either direction, not below `TRAFFIC_MIN_CEILING` — 1 Mbit/s, that is, 125,000 B/s. The scale is labelled in bytes on round steps, so on an idle link the top sits at 200 KiB/s.
+- The headroom for decline is the same (`useStickyCeiling`): the scale grows at once and shrinks only when the peak has fallen fourfold.
+- The daemon history peak does not enter the scale.
+- The traffic buffer is `TRAFFIC_POINTS` = `TRAFFIC_WINDOW_POINTS` + 2, that is, 62 points with a 60 s window and a 1 s step. One extra point covers the lag of the right edge, the second gives the start of the segment the left edge cuts.
+- The minute peak for the scale and the "peak per minute" label is computed over the last `TRAFFIC_WINDOW_POINTS` points, not over the whole buffer.
 
-## Последствия
+## Consequences
 
-### Положительные
+### Positive
 
-- Минута с трафиком в единицы мегабайт в секунду занимает высоту графика.
-- Левый край области стоит на кромке: замер после правки — зазор 0–1px, ни одного скачка за 1428 кадров.
+- A minute with traffic of a few megabytes per second fills the chart height.
+- The left edge of the area sits on the boundary: measured after the change — a gap of 0–1px, not a single jump over 1428 frames.
 
-### Отрицательные
+### Negative
 
-- Шкала больше не одинакова между минутами. Всплеск поднимает её сразу, спад опускает не раньше, чем пик упадёт вчетверо. Высоты на двух минутах с разными пиками напрямую не сравнить.
-- Минута от демона — 60 точек. Первые две секунды после открытия панели область начинается чуть правее левой кромки, пока поток не добавит две точки.
+- The scale is no longer the same between minutes. A spike raises it at once, a decline lowers it no earlier than the peak falls fourfold. Heights on two minutes with different peaks cannot be compared directly.
+- The minute from the daemon is 60 points. For the first two seconds after the panel opens the area starts slightly right of the left edge, until the stream adds two points.
 
-### Нейтральные или отложенные
+### Neutral or deferred
 
-- График соединений за минуту и спарклайны не менялись.
+- The one-minute connections chart and the sparklines did not change.
 
-## Совместимость, миграция и откат
+## Compatibility, migration and rollback
 
-Контракт демона и формат данных не менялись. Откат — вернуть пик истории в `Math.max` шкалы в `DaemonTraffic.tsx` и `TRAFFIC_POINTS` = `TRAFFIC_WINDOW_POINTS`.
+The daemon contract and the data format did not change. Rollback: return the history peak into the scale `Math.max` in `DaemonTraffic.tsx` and set `TRAFFIC_POINTS` = `TRAFFIC_WINDOW_POINTS`.
 
-## Проверка решения
+## Validation
 
 - `pnpm --filter web exec vitest run DaemonTraffic Daemon.store OverviewPage`:
-  - шкала берётся от пика минуты;
-  - сжимается только при падении пика вчетверо;
-  - на простое не опускается ниже 200 КиБ/с;
-  - старейшая точка полного буфера стоит не правее левой кромки окна.
-- Замер на роутере: дев-сервер против демона, покадровое чтение канваса графика. Самый левый и самый правый цветной столбец в области графика не должны отходить от кромок больше чем на пиксель и не должны прыгать между кадрами.
+  - the scale is taken from the minute peak;
+  - it shrinks only when the peak falls fourfold;
+  - at idle it does not go below 200 KiB/s;
+  - the oldest point of a full buffer sits no further right than the left edge of the window.
+- Measurement on the router: the dev server against the daemon, frame-by-frame reading of the chart canvas. The leftmost and rightmost coloured columns in the chart area must not move away from the edges by more than a pixel and must not jump between frames.
 
-## Ссылки
+## Links
 
 - [ADR-0031](./ADR-0031-keep-overview-chart-axes-fixed-and-fill-them-from-the-daemon.md), [ADR-0027](./ADR-0027-draw-the-traffic-chart-with-uplot-and-keep-bars-in-html.md);
 - `apps/web/src/widgets/Daemon/DaemonTraffic/ui/DaemonTraffic.tsx`, `apps/web/src/widgets/Daemon/DaemonTraffic/model/DaemonTraffic.constants.ts`;

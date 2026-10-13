@@ -23,7 +23,7 @@ func TestReadDNSInbound(t *testing.T) {
 			found:  true,
 		},
 		{
-			name:   "wildcard приводится к loopback",
+			name:   "wildcard is turned into loopback",
 			config: `{"inbounds":[{"type":"direct","listen":"::","listen_port":5333,"network":"udp"}]}`,
 			want:   clashapi.DNSInbound{Address: "127.0.0.1:5333", Network: "udp"},
 			found:  true,
@@ -35,15 +35,15 @@ func TestReadDNSInbound(t *testing.T) {
 			found:  true,
 		},
 		{
-			name:   "direct на другом порту не dns-in",
+			name:   "direct on another port is not dns-in",
 			config: `{"inbounds":[{"type":"direct","listen":"127.0.0.1","listen_port":5353}]}`,
 		},
 		{
-			name:   "inbounds нет",
+			name:   "no inbounds",
 			config: `{"log":{}}`,
 		},
 		{
-			name: "комментарии и висячая запятая",
+			name: "comments and a dangling comma",
 			config: `{
 				// dns-in
 				"inbounds":[{"type":"direct","listen":"127.0.0.1","listen_port":5333,},],
@@ -57,38 +57,38 @@ func TestReadDNSInbound(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, found, err := clashapi.ReadDNSInbound([]byte(tt.config), 5333)
 			if err != nil {
-				t.Fatalf("чтение: %v", err)
+				t.Fatalf("reading: %v", err)
 			}
 			if found != tt.found || got != tt.want {
-				t.Errorf("получили %+v, %v; ожидали %+v, %v", got, found, tt.want, tt.found)
+				t.Errorf("got %+v, %v; expected %+v, %v", got, found, tt.want, tt.found)
 			}
 		})
 	}
 }
 
 func TestDNSProbe(t *testing.T) {
-	t.Run("ответ с адресом проходит", func(t *testing.T) {
+	t.Run("answer with an address passes", func(t *testing.T) {
 		addr := serveDNS(t, true)
 
 		probe := clashapi.NewDNSProbe("example.com", time.Second, time.Millisecond, 2)
 		if err := probe.Probe(t.Context(), clashapi.DNSInbound{Address: addr}); err != nil {
-			t.Errorf("проба: %v", err)
+			t.Errorf("probe: %v", err)
 		}
 	})
 
-	t.Run("молчащий dns-in — отказ после всех попыток", func(t *testing.T) {
+	t.Run("a silent dns-in is a failure after all attempts", func(t *testing.T) {
 		addr := serveDNS(t, false)
 
 		probe := clashapi.NewDNSProbe("example.com", 50*time.Millisecond, time.Millisecond, 2)
 		if err := probe.Probe(t.Context(), clashapi.DNSInbound{Address: addr}); err == nil {
-			t.Error("проба прошла, хотя dns-in не ответил")
+			t.Error("probe passed although dns-in did not answer")
 		}
 	})
 }
 
-// serveDNS поднимает UDP-сокет на loopback. answer — отвечать на каждый
-// запрос A-записью 192.0.2.1; ложь — читать и молчать, как dns-in, у которого
-// upstream не отвечает.
+// serveDNS starts a UDP socket on loopback. answer: reply to every
+// query with an A record 192.0.2.1; false means read and stay silent, like a dns-in whose
+// upstream does not answer.
 func serveDNS(t *testing.T, answer bool) string {
 	t.Helper()
 
@@ -117,8 +117,8 @@ func serveDNS(t *testing.T, answer bool) string {
 	return conn.LocalAddr().String()
 }
 
-// replyA собирает ответ на первый вопрос запроса: заголовок с тем же
-// идентификатором, вопрос как есть и одна A-запись со ссылкой на имя вопроса.
+// replyA builds an answer to the first question of the query: a header with the same
+// identifier, the question as is and one A record referring to the question name.
 func replyA(query []byte) []byte {
 	const header = 12
 

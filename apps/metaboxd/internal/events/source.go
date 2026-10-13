@@ -10,45 +10,45 @@ import (
 	"time"
 )
 
-// errNoService означает, что источник состояния службы не задан: поток живёт
-// и без него, просто без топика service.
+// errNoService means the service state source is not set: the stream lives
+// without it, just without the service topic.
 var errNoService = errors.New("источник состояния службы не задан")
 
-// errNoSystem означает, что показания устройства читать нечем: поток живёт и
-// без них, просто без топика system.
+// errNoSystem means there is nothing to read the device readings with: the stream lives
+// without them, just without the system topic.
 var errNoSystem = errors.New("источник показаний устройства не задан")
 
-// Settings — адрес и секрет контроллера на момент запроса.
+// Settings is the controller address and secret at the time of the request.
 type Settings struct {
 	BaseURL string
 	Secret  string
 }
 
-// Resolver отдаёт настройки контроллера. Читаются на каждое подключение: порт
-// меняется вместе с конфигом.
+// Resolver returns the controller settings. Read on every connection: the port
+// changes together with the config.
 type Resolver func(ctx context.Context) (Settings, error)
 
-// ServiceReader отдаёт состояние службы в том виде, в каком его отдаёт ручка
-// `/api/service`. Интерфейс объявлен здесь, у потребителя.
+// ServiceReader returns the service state in the form the `/api/service` handler
+// returns it. The interface is declared here, at the consumer.
 type ServiceReader func(ctx context.Context) (json.RawMessage, error)
 
-// SystemReader отдаёт показания устройства. Читает их не Clash API, но в поток
-// они идут тем же путём, что и остальное.
+// SystemReader returns the device readings. They are read not by the Clash API, but they go into the stream
+// the same way as everything else.
 type SystemReader func(ctx context.Context) (json.RawMessage, error)
 
-// ClashSource читает рантайм у Clash API. Потоки `/traffic` и `/memory` форк
-// отдаёт и без WebSocket — обычным chunked-ответом по строке в секунду,
-// поэтому клиента WebSocket в демоне не заводится.
+// ClashSource reads the runtime from the Clash API. The `/traffic` and `/memory` streams the fork
+// serves without WebSocket too, as a plain chunked response with a line per second,
+// so the daemon has no WebSocket client.
 type ClashSource struct {
 	resolve Resolver
 	service ServiceReader
 	system  SystemReader
 	client  *http.Client
-	// snapshotTimeout ограничивает разовый запрос; потоки живут без дедлайна.
+	// snapshotTimeout limits a one-off request; streams live without a deadline.
 	snapshotTimeout time.Duration
 }
 
-// NewClashSource собирает источник.
+// NewClashSource assembles the source.
 func NewClashSource(
 	resolve Resolver,
 	service ServiceReader,
@@ -64,7 +64,7 @@ func NewClashSource(
 	}
 }
 
-// Stream держит построчный ответ до обрыва или отмены.
+// Stream holds a line-by-line response until a break or cancellation.
 func (s *ClashSource) Stream(ctx context.Context, path string, sink func(json.RawMessage)) error {
 	response, err := s.do(ctx, path)
 	if err != nil {
@@ -75,17 +75,17 @@ func (s *ClashSource) Stream(ctx context.Context, path string, sink func(json.Ra
 	return lines(response.Body, sink)
 }
 
-// maxSnapshotBytes — потолок на разовый ответ. Самый крупный — `/connections`
-// загруженного роутера, единицы мегабайт; потолок перекрывает его с запасом и
-// не даёт процессу, занявшему порт контроллера при лежащем sing-box, забрать
-// память роутера.
+// maxSnapshotBytes is the ceiling on a one-off response. The largest is `/connections`
+// of a loaded router, a few megabytes; the ceiling covers it with a margin and
+// does not let a process that took the controller port while sing-box is down take
+// the router memory.
 const maxSnapshotBytes = 16 << 20
 
-// errSnapshotTooLarge — разовый ответ больше maxSnapshotBytes. Обрезанный JSON
-// не разобрался бы, а разбор целиком без потолка стоил бы памяти.
+// errSnapshotTooLarge: a one-off response is larger than maxSnapshotBytes. Truncated JSON
+// would not parse, and parsing it whole without a ceiling would cost memory.
 var errSnapshotTooLarge = errors.New("ответ больше допустимого")
 
-// Snapshot читает разовый ответ целиком.
+// Snapshot reads a one-off response whole.
 func (s *ClashSource) Snapshot(ctx context.Context, path string) (json.RawMessage, error) {
 	ctx, cancel := context.WithTimeout(ctx, s.snapshotTimeout)
 	defer cancel()
@@ -96,8 +96,8 @@ func (s *ClashSource) Snapshot(ctx context.Context, path string) (json.RawMessag
 	}
 	defer func() { _ = response.Body.Close() }()
 
-	// Байт сверх потолка читается намеренно: по нему превышение отличается от
-	// ответа ровно в потолок.
+	// A byte beyond the ceiling is read deliberately: it tells an excess from
+	// an answer exactly at the ceiling.
 	body, err := io.ReadAll(io.LimitReader(response.Body, maxSnapshotBytes+1))
 	if err != nil {
 		return nil, fmt.Errorf("чтение %s: %w", path, err)
@@ -110,7 +110,7 @@ func (s *ClashSource) Snapshot(ctx context.Context, path string) (json.RawMessag
 	return body, nil
 }
 
-// ServiceState отдаёт состояние службы.
+// ServiceState returns the service state.
 func (s *ClashSource) ServiceState(ctx context.Context) (json.RawMessage, error) {
 	if s.service == nil {
 		return nil, errNoService
@@ -119,7 +119,7 @@ func (s *ClashSource) ServiceState(ctx context.Context) (json.RawMessage, error)
 	return s.service(ctx)
 }
 
-// SystemState отдаёт показания устройства.
+// SystemState returns the device readings.
 func (s *ClashSource) SystemState(ctx context.Context) (json.RawMessage, error) {
 	if s.system == nil {
 		return nil, errNoSystem

@@ -2,21 +2,21 @@ package clashapi
 
 import "strings"
 
-// FinalRule — строка, которой Clash API обозначает соединение, не совпавшее ни
-// с одним правилом: использован route.final. Элемента с таким именем в списке
-// правил нет.
+// FinalRule is the string the Clash API uses to mark a connection that matched no
+// rule: route.final was used. There is no element with such a name in the
+// rule list.
 const FinalRule = "final"
 
-// ruleSeparator — чем Clash API склеивает условия правила с его действием.
-// gRPC форка действие не отдаёт вовсе, и разделителя в его строке не бывает.
+// ruleSeparator is what the Clash API joins the rule conditions to its action with.
+// The fork gRPC does not return the action at all, and the separator is absent from its string.
 const ruleSeparator = " => "
 
-// SplitRule разводит условия правила и его действие.
+// SplitRule separates the rule conditions and its action.
 //
-// Формат знает одно место: строка собирается рендером форка, и повторять
-// разбор в каждом потребителе значило бы чинить подъём версии в двух местах.
-// Третьим значением возвращается наличие действия — по нему видно, отдал его
-// источник или нет.
+// Only one place knows the format: the string is built by the fork renderer, and repeating
+// the parsing in every consumer would mean fixing a version bump in two places.
+// The third return value is the presence of the action: it shows whether the
+// source returned it or not.
 func SplitRule(rule string) (conditions, action string, hasAction bool) {
 	conditions, action, hasAction = strings.Cut(rule, ruleSeparator)
 

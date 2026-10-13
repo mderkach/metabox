@@ -10,22 +10,22 @@ import (
 	"strings"
 )
 
-// optionGate — опция конфига, которую закрывает build-тег, и файл-заглушка,
-// по которому существование затвора сверяется при генерации.
+// optionGate is a config option gated by a build tag and the stub file
+// the gate existence is checked against during generation.
 type optionGate struct {
-	// option — путь опции в конфиге; он же ключ таблицы BUILD_TAG_OF_OPTION.
+	// option is the option path in the config; it is also the key of the BUILD_TAG_OF_OPTION table.
 	option string
 	tag    string
-	// module и stub указывают, где живёт заглушка `//go:build !<tag>`: не все
-	// затворы лежат в самом форке — стек gvisor закрыт тегом внутри sing-tun.
+	// module and stub point to where the stub `//go:build !<tag>` lives: not all
+	// gates lie in the fork itself, the gvisor stack is gated by a tag inside sing-tun.
 	module string
 	stub   string
 }
 
-// Таблица записана руками: затворы опций разбросаны по пакетам форка и его
-// зависимостей, единого места вроде include/ у них нет. От расхождения с
-// форком её держит buildOptionGates — уехавшая или сменившая условие заглушка
-// валит генерацию, а не оставляет таблицу неполной молча.
+// The table is written by hand: option gates are scattered across the fork packages and its
+// dependencies, and there is no single place like include/ for them. It is kept from diverging from
+// the fork by buildOptionGates: a stub that moved or changed its condition
+// fails generation and does not leave the table silently incomplete.
 var optionGates = []optionGate{
 	{option: "experimental.clash_api", tag: "with_clash_api", module: forkModule, stub: "include/clashapi_stub.go"},
 	{option: "experimental.v2ray_api", tag: "with_v2ray_api", module: forkModule, stub: "include/v2rayapi_stub.go"},
@@ -33,8 +33,8 @@ var optionGates = []optionGate{
 	{option: "tun.stack", tag: "with_gvisor", module: "github.com/sagernet/sing-tun", stub: "stack_gvisor_stub.go"},
 }
 
-// buildOptionGates сверяет каждую запись таблицы с заглушкой в исходниках и
-// отдаёт таблицу для печати.
+// buildOptionGates checks each table entry against the stub in the sources and
+// returns the table for printing.
 func buildOptionGates() ([]optionGate, error) {
 	dirs := map[string]string{}
 
@@ -48,20 +48,20 @@ func buildOptionGates() ([]optionGate, error) {
 		}
 
 		if err := checkStub(filepath.Join(dirs[gate.module], gate.stub), gate.tag); err != nil {
-			return nil, fmt.Errorf("затвор опции %s: %w", gate.option, err)
+			return nil, fmt.Errorf("option gate %s: %w", gate.option, err)
 		}
 	}
 
 	return optionGates, nil
 }
 
-// checkStub убеждается, что файл собирается ровно тогда, когда тега нет:
-// такой файл и есть заглушка, отвечающая ошибкой вместо реализации.
+// checkStub makes sure the file is built exactly when the tag is absent:
+// such a file is the stub, answering with an error instead of an implementation.
 func checkStub(path, tag string) error {
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
 	if err != nil {
-		return fmt.Errorf("разбор заглушки: %w", err)
+		return fmt.Errorf("parsing the stub: %w", err)
 	}
 
 	for _, group := range file.Comments {
@@ -72,31 +72,31 @@ func checkStub(path, tag string) error {
 
 			expr, err := constraint.Parse(comment.Text)
 			if err != nil {
-				return fmt.Errorf("условие сборки %q: %w", comment.Text, err)
+				return fmt.Errorf("build condition %q: %w", comment.Text, err)
 			}
 
 			withTag := expr.Eval(func(name string) bool { return name == tag })
 			withoutTags := expr.Eval(func(string) bool { return false })
 
 			if withTag || !withoutTags {
-				return fmt.Errorf("условие %q в %s больше не значит «сборка без %s»", comment.Text, path, tag)
+				return fmt.Errorf("condition %q in %s no longer means \"build without %s\"", comment.Text, path, tag)
 			}
 
 			return nil
 		}
 	}
 
-	return fmt.Errorf("в %s нет условия сборки: файл перестал быть заглушкой тега %s", path, tag)
+	return fmt.Errorf("no build condition in %s: the file is no longer a stub of tag %s", path, tag)
 }
 
-// emitOptionGates печатает таблицу тегов опций. Литерал с `as const`, а не
-// Record: панель держит по детектору на каждый ключ, и новая запись здесь
-// обязана ломать её компиляцию, а не проходить незамеченной.
+// emitOptionGates prints the option tag table. A literal with `as const`, not
+// a Record: the panel keeps a detector for each key, and a new entry here
+// must break its compilation, not pass unnoticed.
 func emitOptionGates(b *strings.Builder, gates []optionGate) {
 	b.WriteString(`/**
- * Build-тег, без которого бинарь форка не запустит опцию конфига: путь → тег.
- * Существование затвора сверено с заглушками форка при генерации. С какими
- * тегами собран бинарь на устройстве, сообщает демон.
+ * The build tag without which the fork binary will not run a config option: path → tag.
+ * The gate existence is checked against the fork stubs at generation. Which
+ * tags the binary on the device was built with is reported by the daemon.
  */
 export const BUILD_TAG_OF_OPTION = {
 `)

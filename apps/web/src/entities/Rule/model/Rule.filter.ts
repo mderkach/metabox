@@ -6,16 +6,16 @@ import { matchesWords, toQueryWords } from '@shared/lib/search';
 import { RULE_SET_MATCHER } from './Rule.constants';
 import type { RuleBranch, RuleRow } from './Rule.model';
 
-/** Выход, по которому отбираются правила; `null` — все сразу. */
+/** Outbound by which rules are selected; `null` means all at once. */
 export type RuleTargetFilter = string | null;
 
-/** Тег сета, на который ссылаются отобранные правила; `null` — все сразу. */
+/** Set tag referenced by the selected rules; `null` means all at once. */
 export type RuleSetFilter = string | null;
 
 /**
- * Состояние экрана правил в адресе. Номер правила — как в UI, с единицы: экран
- * соединений ведёт по нему на сработавший узел. Сет — отбор, с которым приходят
- * из каталога наборов: «кто пользуется этим сетом».
+ * Rules screen state in the URL. The rule number is as in the UI, from one: the
+ * connections screen leads to the matched node by it. The set is a selection
+ * people arrive with from the set catalog: "who uses this set".
  */
 export const RuleSearchSchema = z.object({
   rule: z.coerce.number().int().positive().optional(),
@@ -24,7 +24,7 @@ export const RuleSearchSchema = z.object({
 
 export type RuleSearch = z.infer<typeof RuleSearchSchema>;
 
-/** Непонятое значение отбрасывается целиком: половина отбора хуже, чем его отсутствие. */
+/** A value that is not understood is dropped entirely: half a selection is worse than none. */
 export function parseRuleSearch(search: Record<string, unknown>): RuleSearch {
   const parsed = RuleSearchSchema.safeParse(search);
 
@@ -36,15 +36,15 @@ export interface RuleTargetGroup {
   count: number;
 }
 
-/** Выходы в порядке убывания числа правил: по ним собираются фасеты экрана. */
+/** Outbounds in descending order of rule count: the screen facets are built from them. */
 export function toTargetGroups(rules: RuleRow[]): RuleTargetGroup[] {
   return countGroups(rules, (rule) => rule.target).map((group) => ({ target: group.value, count: group.count }));
 }
 
 /**
- * Ссылается ли ветка на сет. Логическое правило ссылается на него из вложенных
- * веток, и считается это так же, как прямая ссылка, — иначе отбор разошёлся бы
- * с отметкой использования в каталоге наборов.
+ * Whether a branch refers to a set. A logical rule refers to it from nested
+ * branches, and this is counted the same way as a direct reference, otherwise
+ * the selection would diverge from the usage mark in the set catalog.
  */
 function usesRuleSet(branch: RuleBranch, tag: string): boolean {
   return (

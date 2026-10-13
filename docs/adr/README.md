@@ -1,9 +1,9 @@
-# Архитектурные решения
+# Architecture decisions
 
-Здесь лежат ADR — записи о значимых технических и инфраструктурных решениях: почему система устроена именно так и какие компромиссы приняты.
+This directory holds ADRs: records of significant technical and infrastructure decisions, why the system is built this way and which trade-offs were accepted.
 
-Требования живут в [`../PRD.md`](../PRD.md). Приложение A PRD — решения, принятые до введения ADR: оно закрыто для новых записей, а все его разделы переехали сюда. В приложении остались заголовки со ссылками, чтобы старые ссылки на A.* вели к новому месту.
+Requirements live in [`../PRD.md`](../PRD.md). Appendix A of the PRD holds decisions made before ADRs were introduced: it is closed to new entries, and all its sections moved here. The appendix keeps the headings with links, so old references to A.\* lead to the new place.
 
-Создавать и обновлять ADR — скиллом `create-adr`. Шаблон, статусы и чек-лист качества — в `.claude/skills/create-adr/ADR-reference.md`.
+ADRs are created and updated with the `create-adr` skill. The template, statuses and quality checklist are in `.claude/skills/create-adr/ADR-reference.md`.
 
-Статус `Accepted` присваивает владелец репозитория, не агент.
+The `Accepted` status is set by the repository owner, not by an agent.

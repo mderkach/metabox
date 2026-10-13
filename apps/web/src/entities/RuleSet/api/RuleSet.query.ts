@@ -12,8 +12,8 @@ export const RULE_SET_QUERY = {
 } as const;
 
 /**
- * Каталог демон сверяет с поставщиками раз в сутки, поэтому и панель держит
- * его сутки: чаще спрашивать нечего.
+ * The daemon checks the catalog against providers once a day, so the panel
+ * holds it for a day too: there is nothing to ask for more often.
  */
 export function getRuleSetCatalogOptions() {
   return queryOptions({
@@ -26,7 +26,7 @@ export function getRuleSetCatalogOptions() {
   });
 }
 
-/** Каталог готовых наборов: поставщики, их списки и категории. */
+/** Catalog of ready-made sets: providers, their lists and categories. */
 export function useRuleSetCatalog() {
   return useQuery({ ...getRuleSetCatalogOptions(), select: toRuleSetCatalog });
 }

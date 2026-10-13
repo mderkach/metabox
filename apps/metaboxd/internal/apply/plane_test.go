@@ -18,8 +18,8 @@ import (
 	"metabox/internal/dataplane"
 )
 
-// fakeEditor — секция UCI: запись подменяет её, восстановление возвращает
-// снимок.
+// fakeEditor is a UCI section: a write replaces it, a restore returns
+// the snapshot.
 type fakeEditor struct {
 	mu       sync.Mutex
 	section  dataplane.Snapshot
@@ -152,8 +152,8 @@ type planeHarness struct {
 	pstore   *fakePlaneStore
 }
 
-// previousSection — секция до смены: перехват включён, listed, админ на
-// 192.168.1.10, dns-in на 5333.
+// previousSection is the section before the change: interception enabled, listed, admin at
+// 192.168.1.10, dns-in on 5333.
 func previousSection() dataplane.Snapshot {
 	return dataplane.Snapshot{Exists: true, Type: "dataplane", Options: map[string][]string{
 		"enabled":       {"1"},
@@ -205,12 +205,12 @@ func (h *planeHarness) waitPlane(t *testing.T, phases ...apply.Phase) apply.Tran
 		time.Sleep(time.Millisecond)
 	}
 
-	t.Fatalf("смена обвязки не дошла до %v: фаза %q", phases, h.plane.Current().Phase)
+	t.Fatalf("dataplane change did not reach %v: phase %q", phases, h.plane.Current().Phase)
 
 	return apply.Transaction{}
 }
 
-// aclChange — та же модель без адреса администратора.
+// aclChange is the same model without the administrator address.
 func aclChange() dataplane.Model {
 	m := dataplane.Defaults()
 	m.SourceIP = []string{"192.168.1.20"}
@@ -226,39 +226,39 @@ func TestPlaneConfirm(t *testing.T) {
 
 	tx, err := h.plane.Start(t.Context(), aclChange(), "", admin)
 	if err != nil {
-		t.Fatalf("смена обвязки: %v", err)
+		t.Fatalf("dataplane change: %v", err)
 	}
 
 	if got := h.waitWindow(t); got != window {
-		t.Errorf("окно %v, ожидали %v", got, window)
+		t.Errorf("window %v, expected %v", got, window)
 	}
 
 	h.waitPlane(t, apply.PhaseAwaitingConfirm)
 
 	confirmed, err := h.plane.Confirm(t.Context(), tx.ID)
 	if err != nil {
-		t.Fatalf("подтверждение: %v", err)
+		t.Fatalf("confirm: %v", err)
 	}
 
 	if confirmed.Phase != apply.PhaseConfirmed {
-		t.Errorf("фаза %q, ожидали подтверждение", confirmed.Phase)
+		t.Errorf("phase %q, expected confirmation", confirmed.Phase)
 	}
 
 	h.plane.Close()
 
 	if written, restored := h.editor.counts(); written != 1 || restored != 0 {
-		t.Errorf("записей %d, откатов %d; ожидали одну запись без отката", written, restored)
+		t.Errorf("writes %d, rollbacks %d; expected one write without a rollback", written, restored)
 	}
 	if got := h.reloader.count(); got != 1 {
-		t.Errorf("reload %d раз, ожидали один", got)
+		t.Errorf("reload %d times, expected one", got)
 	}
 	if h.pstore.saved() != nil {
-		t.Error("состояние подтверждённой смены осталось на диске")
+		t.Error("state of the confirmed change stayed on disk")
 	}
 }
 
-// Смена, которая выводит адрес администратора из перехвата, применяется, а
-// без подтверждения откатывается по окну: дольше окна она его не отрезает.
+// A change that takes the administrator address out of interception is applied and
+// rolled back by the window without confirmation: it cuts the administrator off for no longer than the window.
 func TestPlaneRollbackWithoutConfirmation(t *testing.T) {
 	var logs bytes.Buffer
 
@@ -266,7 +266,7 @@ func TestPlaneRollbackWithoutConfirmation(t *testing.T) {
 	t.Cleanup(h.plane.Close)
 
 	if _, err := h.plane.Start(t.Context(), aclChange(), "", admin); err != nil {
-		t.Fatalf("смена обвязки: %v", err)
+		t.Fatalf("dataplane change: %v", err)
 	}
 
 	h.waitWindow(t)
@@ -275,7 +275,7 @@ func TestPlaneRollbackWithoutConfirmation(t *testing.T) {
 	h.plane.Close()
 
 	if got := h.plane.Current().Phase; got != apply.PhaseRolledBack {
-		t.Errorf("фаза %q, ожидали откат", got)
+		t.Errorf("phase %q, expected rollback", got)
 	}
 
 	h.editor.mu.Lock()
@@ -284,16 +284,16 @@ func TestPlaneRollbackWithoutConfirmation(t *testing.T) {
 	h.editor.mu.Unlock()
 
 	if len(restored) != 1 || !restored[0].Equal(previousSection()) || !section.Equal(previousSection()) {
-		t.Errorf("откат вернул %+v, ожидали прежнюю секцию", restored)
+		t.Errorf("rollback returned %+v, expected the previous section", restored)
 	}
 	if got := h.reloader.count(); got != 2 {
-		t.Errorf("reload %d раз, ожидали два: смена и откат", got)
+		t.Errorf("reload %d times, expected two: change and rollback", got)
 	}
 	if h.pstore.saved() != nil {
-		t.Error("состояние откаченной смены осталось на диске")
+		t.Error("state of the rolled back change stayed on disk")
 	}
 	if !strings.Contains(logs.String(), "выводит адрес запроса из перехвата") {
-		t.Errorf("вывод администратора из перехвата не отмечен в логе:\n%s", logs.String())
+		t.Errorf("taking the administrator out of interception is not noted in the log:\n%s", logs.String())
 	}
 }
 
@@ -308,8 +308,8 @@ func TestPlaneDNSPortProbeFailureRollsBack(t *testing.T) {
 		name string
 		cfg  string
 	}{
-		{"dns-in на новом порту не отвечает", cfg},
-		{"dns-in на новом порту в конфиге нет", configWithDNSIn(5333)},
+		{"dns-in on the new port does not answer", cfg},
+		{"no dns-in on the new port in the config", configWithDNSIn(5333)},
 	}
 
 	for _, tt := range tests {
@@ -318,20 +318,20 @@ func TestPlaneDNSPortProbeFailureRollsBack(t *testing.T) {
 			t.Cleanup(h.plane.Close)
 
 			if _, err := h.plane.Start(t.Context(), m, "", admin); err != nil {
-				t.Fatalf("смена обвязки: %v", err)
+				t.Fatalf("dataplane change: %v", err)
 			}
 
 			tx := h.waitPlane(t, apply.PhaseRolledBack)
 			h.plane.Close()
 
 			if tx.ReasonCode != apply.ReasonDNSProbeFailed {
-				t.Errorf("код %q, ожидали %q", tx.ReasonCode, apply.ReasonDNSProbeFailed)
+				t.Errorf("code %q, expected %q", tx.ReasonCode, apply.ReasonDNSProbeFailed)
 			}
 			if _, restored := h.editor.counts(); restored != 1 {
-				t.Errorf("откатов %d, ожидали один", restored)
+				t.Errorf("rollbacks %d, expected one", restored)
 			}
 			if got := h.reloader.count(); got != 2 {
-				t.Errorf("reload %d раз, ожидали два", got)
+				t.Errorf("reload %d times, expected two", got)
 			}
 		})
 	}
@@ -343,11 +343,11 @@ func TestPlaneMissingChainsRollBack(t *testing.T) {
 	h.editor.chains = []string{"metabox_redirect"}
 
 	if _, err := h.plane.Start(t.Context(), aclChange(), "", admin); err != nil {
-		t.Fatalf("смена обвязки: %v", err)
+		t.Fatalf("dataplane change: %v", err)
 	}
 
 	if tx := h.waitPlane(t, apply.PhaseRolledBack); tx.ReasonCode != apply.ReasonInterceptionMissing {
-		t.Errorf("код %q, ожидали %q", tx.ReasonCode, apply.ReasonInterceptionMissing)
+		t.Errorf("code %q, expected %q", tx.ReasonCode, apply.ReasonInterceptionMissing)
 	}
 }
 
@@ -360,16 +360,16 @@ func TestPlaneInvalidModelReservesNothing(t *testing.T) {
 
 	_, err := h.plane.Start(t.Context(), m, "", admin)
 	if _, ok := errors.AsType[*dataplane.InvalidError](err); !ok {
-		t.Fatalf("получили %v, ожидали InvalidError", err)
+		t.Fatalf("got %v, expected InvalidError", err)
 	}
 
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
-		t.Errorf("после отвергнутой модели применение конфига занято: %v", err)
+		t.Errorf("after the rejected model the config apply is busy: %v", err)
 	}
 }
 
-// Секцию правили по SSH после того, как панель прочитала модель: смена от
-// устаревшей базы отклоняется до записи и применение не занимает.
+// The section was edited over SSH after the panel read the model: a change from a
+// stale base is rejected before the write and does not take the apply.
 func TestPlaneStaleBase(t *testing.T) {
 	h := newPlaneHarness(t, nil, validConfig, slog.New(slog.DiscardHandler))
 	t.Cleanup(h.plane.Close)
@@ -382,24 +382,24 @@ func TestPlaneStaleBase(t *testing.T) {
 	h.editor.mu.Unlock()
 
 	if _, err := h.plane.Start(t.Context(), aclChange(), stale, admin); !errors.Is(err, apply.ErrDataplaneModified) {
-		t.Fatalf("получили %v, ожидали ErrDataplaneModified", err)
+		t.Fatalf("got %v, expected ErrDataplaneModified", err)
 	}
 
 	if written, _ := h.editor.counts(); written != 0 {
-		t.Errorf("записей в UCI %d после отказа, ожидали ни одной", written)
+		t.Errorf("UCI writes %d after the failure, expected none", written)
 	}
 	if h.pstore.saved() != nil {
-		t.Error("отклонённая смена оставила состояние на диске")
+		t.Error("the rejected change left state on disk")
 	}
 
 	if _, err := h.plane.Start(t.Context(), aclChange(), edited, admin); err != nil {
-		t.Fatalf("смена от свежей базы: %v", err)
+		t.Fatalf("change from a fresh base: %v", err)
 	}
 
 	h.waitPlane(t, apply.PhaseAwaitingConfirm)
 
 	if written, _ := h.editor.counts(); written != 1 {
-		t.Errorf("записей в UCI %d, ожидали одну", written)
+		t.Errorf("UCI writes %d, expected one", written)
 	}
 }
 
@@ -411,111 +411,111 @@ func TestPlaneForeignServiceReservesNothing(t *testing.T) {
 	t.Cleanup(plane.Close)
 
 	if _, err := plane.Start(t.Context(), aclChange(), "", admin); !errors.Is(err, apply.ErrDataplaneForeignService) {
-		t.Fatalf("получили %v, ожидали ErrDataplaneForeignService", err)
+		t.Fatalf("got %v, expected ErrDataplaneForeignService", err)
 	}
 
 	if written, _ := h.editor.counts(); written != 0 {
-		t.Errorf("записей в UCI %d после отказа, ожидали ни одной", written)
+		t.Errorf("UCI writes %d after the failure, expected none", written)
 	}
 	if h.pstore.saved() != nil {
-		t.Error("отклонённая смена оставила состояние на диске")
+		t.Error("the rejected change left state on disk")
 	}
 	if h.reloader.count() != 0 {
-		t.Error("отклонённая смена дёрнула reload службы")
+		t.Error("the rejected change pulled the service reload")
 	}
 
 	if _, err := h.plane.Start(t.Context(), aclChange(), "", admin); err != nil {
-		t.Fatalf("смена у службы metabox-singbox: %v", err)
+		t.Fatalf("change on the metabox-singbox service: %v", err)
 	}
 }
 
 func TestPlaneAndApplyAreExclusive(t *testing.T) {
-	t.Run("обвязка при идущем применении конфига", func(t *testing.T) {
+	t.Run("dataplane during a running config apply", func(t *testing.T) {
 		h := newPlaneHarness(t, nil, validConfig, slog.New(slog.DiscardHandler))
 		t.Cleanup(h.plane.Close)
 
 		if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
-			t.Fatalf("применение: %v", err)
+			t.Fatalf("apply: %v", err)
 		}
 		h.waitWindow(t)
 
 		if _, err := h.plane.Start(t.Context(), aclChange(), "", admin); !errors.Is(err, apply.ErrBusy) {
-			t.Errorf("получили %v, ожидали ErrBusy", err)
+			t.Errorf("got %v, expected ErrBusy", err)
 		}
 		if written, _ := h.editor.counts(); written != 0 {
-			t.Error("модель записана при идущем применении конфига")
+			t.Error("model written during a running config apply")
 		}
 	})
 
-	t.Run("конфиг при идущей смене обвязки", func(t *testing.T) {
+	t.Run("config during a running dataplane change", func(t *testing.T) {
 		h := newPlaneHarness(t, nil, validConfig, slog.New(slog.DiscardHandler))
 		t.Cleanup(h.plane.Close)
 
 		tx, err := h.plane.Start(t.Context(), aclChange(), "", admin)
 		if err != nil {
-			t.Fatalf("смена обвязки: %v", err)
+			t.Fatalf("dataplane change: %v", err)
 		}
 		h.waitWindow(t)
 		h.waitPlane(t, apply.PhaseAwaitingConfirm)
 
 		if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); !errors.Is(err, apply.ErrBusy) {
-			t.Errorf("получили %v, ожидали ErrBusy", err)
+			t.Errorf("got %v, expected ErrBusy", err)
 		}
 
 		if _, err := h.plane.Confirm(t.Context(), tx.ID); err != nil {
-			t.Fatalf("подтверждение: %v", err)
+			t.Fatalf("confirm: %v", err)
 		}
 
 		if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
-			t.Errorf("после подтверждения применение конфига занято: %v", err)
+			t.Errorf("after confirm the config apply is busy: %v", err)
 		}
 	})
 }
 
-// Демон упал в окне: на диске awaiting_confirm. Следующий старт поднимает окно
-// заново, и без подтверждения прежняя модель возвращается.
+// The daemon crashed in the window: awaiting_confirm is on disk. The next start raises the window
+// again, and without confirmation the previous model returns.
 func TestPlaneReplayAfterCrashInWindow(t *testing.T) {
 	h := newPlaneHarness(t, nil, validConfig, slog.New(slog.DiscardHandler))
 
 	if _, err := h.plane.Start(t.Context(), aclChange(), "", admin); err != nil {
-		t.Fatalf("смена обвязки: %v", err)
+		t.Fatalf("dataplane change: %v", err)
 	}
 	h.waitWindow(t)
 	h.waitPlane(t, apply.PhaseAwaitingConfirm)
 	h.plane.Close()
 
 	if h.pstore.saved() == nil {
-		t.Fatal("остановка демона в окне не оставила состояния")
+		t.Fatal("daemon stop within the window left no state")
 	}
 
-	// Новая жизнь демона: свой Manager, тот же диск и та же UCI.
+	// A new daemon lifetime: its own Manager, the same disk and the same UCI.
 	h.harness = newHarness(t)
 	h.plane = h.newPlane(nil, slog.New(slog.DiscardHandler))
 	t.Cleanup(h.plane.Close)
 
 	if err := h.plane.Replay(t.Context()); err != nil {
-		t.Fatalf("доигрывание: %v", err)
+		t.Fatalf("replay: %v", err)
 	}
 
 	if got := h.waitWindow(t); got != window {
-		t.Errorf("восстановленное окно %v, ожидали %v", got, window)
+		t.Errorf("restored window %v, expected %v", got, window)
 	}
 
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); !errors.Is(err, apply.ErrBusy) {
-		t.Errorf("в восстановленном окне применение конфига не занято: %v", err)
+		t.Errorf("in the restored window the config apply is not busy: %v", err)
 	}
 
 	h.clock.fire()
 	h.plane.Close()
 
 	if got := h.plane.Current().Phase; got != apply.PhaseRolledBack {
-		t.Errorf("фаза %q, ожидали откат", got)
+		t.Errorf("phase %q, expected rollback", got)
 	}
 	if _, restored := h.editor.counts(); restored != 1 {
-		t.Errorf("откатов %d, ожидали один", restored)
+		t.Errorf("rollbacks %d, expected one", restored)
 	}
 	if h.pstore.saved() != nil {
-		t.Error("состояние после отката осталось на диске")
+		t.Error("state stayed on disk after rollback")
 	}
 }
 
@@ -527,25 +527,25 @@ func TestPlaneReplay(t *testing.T) {
 		wantRestored int
 	}{
 		{
-			name:         "окно истекло",
+			name:         "window expired",
 			state:        `{"id":"x","phase":"awaiting_confirm","window":0,"previous":{"exists":false}}`,
 			section:      previousSection(),
 			wantRestored: 1,
 		},
 		{
-			name:         "оборвано после записи",
+			name:         "interrupted after the write",
 			state:        `{"id":"x","phase":"applying","window":60000000000,"previous":{"exists":false}}`,
 			section:      previousSection(),
 			wantRestored: 1,
 		},
 		{
-			name:         "оборвано до записи",
+			name:         "interrupted before the write",
 			state:        `{"id":"x","phase":"applying","window":60000000000,"previous":{"exists":false}}`,
 			section:      dataplane.Snapshot{},
 			wantRestored: 0,
 		},
 		{
-			name:         "завершённая фаза",
+			name:         "finished phase",
 			state:        `{"id":"x","phase":"confirmed","window":0,"previous":{"exists":false}}`,
 			section:      previousSection(),
 			wantRestored: 0,
@@ -560,20 +560,20 @@ func TestPlaneReplay(t *testing.T) {
 			h.pstore.state = []byte(tt.state)
 
 			if err := h.plane.Replay(t.Context()); err != nil {
-				t.Fatalf("доигрывание: %v", err)
+				t.Fatalf("replay: %v", err)
 			}
 
 			if _, restored := h.editor.counts(); restored != tt.wantRestored {
-				t.Errorf("откатов %d, ожидали %d", restored, tt.wantRestored)
+				t.Errorf("rollbacks %d, expected %d", restored, tt.wantRestored)
 			}
 			if h.reloader.count() != tt.wantRestored {
-				t.Errorf("reload %d раз, ожидали %d", h.reloader.count(), tt.wantRestored)
+				t.Errorf("reload %d times, expected %d", h.reloader.count(), tt.wantRestored)
 			}
 			if h.pstore.saved() != nil {
-				t.Error("состояние осталось на диске")
+				t.Error("state stayed on disk")
 			}
 			if h.plane.Current().Active() {
-				t.Errorf("после доигрывания транзакция активна: %+v", h.plane.Current())
+				t.Errorf("after the replay the transaction is active: %+v", h.plane.Current())
 			}
 		})
 	}

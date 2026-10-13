@@ -5,13 +5,13 @@ import { matchNarrow } from '@shared/lib/media';
 
 const STORAGE_KEY = 'metabox.rawEditor.wrap';
 
-/** Хранилище отдаёт строку, и она может быть чем угодно: ключ переживает версии панели. */
+/** Storage returns a string, and it can be anything: the key outlives panel versions. */
 const StoredWrapSchema = z.enum(['true', 'false']);
 
 /**
- * Без сохранённого выбора перенос включён на узком экране: колонка там около
- * 240px, и строка без переноса обрезается посреди значения.
- * В приватном окне обращение к хранилищу бросает.
+ * Without a saved choice wrapping is on for a narrow screen: the column there is about
+ * 240px, and an unwrapped line is cut in the middle of a value.
+ * In a private window, storage access throws.
  */
 function readWrap(): boolean {
   try {
@@ -21,7 +21,7 @@ function readWrap(): boolean {
       return stored.data === 'true';
     }
   } catch {
-    // Хранилище недоступно — решает ширина экрана.
+    // Storage is unavailable — screen width decides.
   }
 
   return matchNarrow();
@@ -31,16 +31,16 @@ function writeWrap(wrap: boolean) {
   try {
     globalThis.localStorage.setItem(STORAGE_KEY, String(wrap));
   } catch {
-    // Не сохранилось — при следующем открытии решит ширина экрана.
+    // Not saved — on the next open screen width decides.
   }
 }
 
-/** Перенос строк в текстовом редакторе. Выбор личный и переживает перезагрузку страницы. */
+/** Line wrapping in the text editor. The choice is personal and survives a page reload. */
 export function useRawEditorWrap() {
   const [wrap, setWrap] = useState(readWrap);
 
-  // Хранилище пишется снаружи обновления состояния: React зовёт обновляющую
-  // функцию дважды в строгом режиме.
+  // Storage is written outside the state update: React calls the updater
+  // function twice in strict mode.
   const toggle = useCallback(() => {
     const next = !wrap;
 

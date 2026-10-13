@@ -11,18 +11,18 @@ import {
 
 import type { Config } from '@shared/api/generated';
 
-/** Отступ конфига, если определить его по файлу не удалось. */
+/** Config indent when it could not be determined from the file. */
 const DEFAULT_TAB_SIZE = 2;
 
-/** Первая строка с отступом: по ней видно, чем отбит файл. */
+/** First indented line: it shows what the file is indented with. */
 const FIRST_INDENT = /\n([\t ]+)\S/;
 
 /**
- * Отступ и перевод строки исходного файла.
+ * Indent and line break of the source file.
  *
- * `jsonc-parser` форматирует только вставляемые узлы и собственного определения
- * отступа не имеет: без этого новая секция встала бы двумя пробелами в файл,
- * отбитый табами.
+ * `jsonc-parser` formats only the inserted nodes and has no indent detection of
+ * its own: without this a new section would go into a tab-indented file with
+ * two spaces.
  */
 function detectFormatting(text: string): FormattingOptions {
   const eol = text.includes('\r\n') ? '\r\n' : '\n';
@@ -40,26 +40,27 @@ function edit(text: string, path: JSONPath, value: unknown, options?: Modificati
 }
 
 /**
- * Записывает значение по пути, не трогая остальной текст.
+ * Writes a value at a path without touching the rest of the text.
  *
- * Узла по пути может не быть — тогда он создаётся. Возвращается новый текст:
- * именно он уходит телом `POST /api/apply`, поэтому пересобирать конфиг из
- * разобранной модели нельзя.
+ * The node at the path may be absent, and then it is created. Returns the new
+ * text: it is exactly what goes as the `POST /api/apply` body, so rebuilding
+ * the config from the parsed model is not allowed.
  */
 export function setValue(text: string, path: JSONPath, value: unknown): string {
   return edit(text, path, value);
 }
 
-/** Удаляет узел по пути: элемент массива или член объекта. */
+/** Deletes a node by path: an array element or an object member. */
 export function removeValue(text: string, path: JSONPath): string {
   return edit(text, path, undefined);
 }
 
 /**
- * Читает значение узла по пути. `undefined` — узла нет.
+ * Reads a node value by path. `undefined` means no node.
  *
- * Нужно перемещению: элемент сначала вынимается из массива, потом вставляется
- * на новое место, и между двумя правками его значение надо где-то держать.
+ * Needed by moving: an element is first taken out of the array and then
+ * inserted at the new place, and between the two edits its value has to be held
+ * somewhere.
  */
 export function findValue(text: string, path: JSONPath): unknown {
   const root = parseTree(text);
@@ -74,28 +75,28 @@ export function findValue(text: string, path: JSONPath): unknown {
 }
 
 /**
- * Вставляет элемент в массив на позицию из пути, вместо того чтобы переписать
- * тот, что там лежит.
+ * Inserts an element into an array at the position from the path, instead of
+ * rewriting the one that is there.
  */
 export function insertValue(text: string, path: JSONPath, value: unknown): string {
   return edit(text, path, value, { isArrayInsertion: true });
 }
 
 /**
- * Где в документе лежат правила маршрутизации. Адресация узлов конфига —
- * знание слайса Config: в экранах и формах оно расходилось бы копиями, и
- * промах на единицу в одной из них открывал бы соседнее правило.
+ * Where routing rules lie in the document. Addressing config nodes is Config
+ * slice knowledge: in screens and forms it would drift apart in copies, and an
+ * off-by-one in one of them would open the neighboring rule.
  */
 export const RULES_PATH: JSONPath = ['route', 'rules'];
 
-/** Путь узла правила по его номеру в интерфейсе, считая с единицы. */
+/** Path of a rule node by its number in the interface, counting from one. */
 export function ruleNodePath(index: number): JSONPath {
   return [...RULES_PATH, index - 1];
 }
 
 /**
- * Правила документа как есть. Узел, который схема не приняла, остаётся в
- * списке: одно незнакомое правило не должно прятать остальные.
+ * Document rules as is. A node the schema did not accept stays in the list: one
+ * unfamiliar rule must not hide the others.
  */
 export function readRules(text: string): unknown[] {
   const rules: unknown = findValue(text, RULES_PATH);
@@ -103,15 +104,15 @@ export function readRules(text: string): unknown[] {
   return Array.isArray(rules) ? rules : [];
 }
 
-/** Где в документе лежат наборы правил. */
+/** Where rule sets lie in the document. */
 export const RULE_SETS_PATH: JSONPath = ['route', 'rule_set'];
 
-/** Путь узла набора по его позиции в списке, считая с нуля. */
+/** Path of a set node by its position in the list, counting from zero. */
 export function ruleSetNodePath(index: number): JSONPath {
   return [...RULE_SETS_PATH, index];
 }
 
-/** Наборы документа как есть; узел, не принятый схемой, из списка не выпадает. */
+/** Document sets as is; a node not accepted by the schema does not drop out of the list. */
 export function readRuleSets(text: string): unknown[] {
   const sets: unknown = findValue(text, RULE_SETS_PATH);
 
@@ -119,8 +120,8 @@ export function readRuleSets(text: string): unknown[] {
 }
 
 /**
- * Теги наборов документа — то, на что может сослаться правило. Узел без тега
- * пропускается: сослаться на него нечем.
+ * Document set tags are what a rule can refer to. A node without a tag is
+ * skipped: there is nothing to refer to it by.
  */
 export function readRuleSetTags(text: string): string[] {
   return readRuleSets(text)
@@ -128,21 +129,22 @@ export function readRuleSetTags(text: string): string[] {
     .filter((tag): tag is string => typeof tag === 'string' && tag.length > 0);
 }
 
-/** Где лежит кэш наборов: без него недоступный поставщик обрывает старт. */
+/** Where the set cache lies: without it an unavailable provider aborts startup. */
 export const CACHE_FILE_PATH: JSONPath = ['experimental', 'cache_file', 'enabled'];
 
-/** Включён ли кэш наборов в документе. */
+/** Whether the set cache is enabled in the document. */
 export function hasRuleSetCache(text: string): boolean {
   return findValue(text, CACHE_FILE_PATH) === true;
 }
 
 /**
- * Документ конфига в модели приложения. Имя своё, а не из форка: переименование
- * типа в схеме правится здесь, а не в каждом экране, который документ читает.
+ * Config document in the app model. The name is our own, not the fork's: a type
+ * rename in the schema is fixed here, not in every screen that reads the
+ * document.
  */
 export type ConfigDocument = Config;
 
-/** Секции документа, которые панель перечисляет вкладками. */
+/** Document sections that the panel lists as tabs. */
 export const CONFIG_SECTION = {
   Route: 'route',
   RuleSet: 'ruleSet',
@@ -165,9 +167,10 @@ export const CONFIG_SECTION = {
 export type ConfigSection = (typeof CONFIG_SECTION)[keyof typeof CONFIG_SECTION];
 
 /**
- * Секции без собственного экрана: где лежат их узлы и правятся ли они
- * списком. У `route` и `ruleSet` свои экраны, здесь их нет; `dns` разложен на
- * списки серверов и правил, его скалярные поля — `Config.settings`.
+ * Sections without their own screen: where their nodes lie and whether they are
+ * edited as a list. `route` and `ruleSet` have their own screens and are not
+ * here; `dns` is split into server and rule lists, its scalar fields are
+ * `Config.settings`.
  */
 export const GENERIC_SECTIONS = {
   [CONFIG_SECTION.Inbounds]: { kind: 'list', path: ['inbounds'] },
@@ -193,9 +196,9 @@ export function isGenericSection(value: string): value is GenericSection {
 }
 
 /**
- * Узлы секции как есть, из текста: узел, который схема не приняла, из списка
- * не выпадает. Секция-объект отдаёт один узел; той, которой в файле нет, —
- * пустой список.
+ * Section nodes as is, from the text: a node the schema did not accept does not
+ * drop out of the list. An object section yields one node; a section that is
+ * not in the file yields an empty list.
  */
 export function readSectionNodes(text: string, section: GenericSection): unknown[] {
   const shape = GENERIC_SECTIONS[section];
@@ -208,7 +211,7 @@ export function readSectionNodes(text: string, section: GenericSection): unknown
   return Array.isArray(value) ? value : [];
 }
 
-/** Путь узла секции по его позиции; у секции-объекта позиция одна. */
+/** Path of a section node by its position; an object section has one position. */
 export function sectionNodePath(section: GenericSection, index: number): JSONPath {
   const shape = GENERIC_SECTIONS[section];
 
@@ -216,10 +219,10 @@ export function sectionNodePath(section: GenericSection, index: number): JSONPat
 }
 
 /**
- * Значение по пути в разобранном документе; `undefined` — узла нет.
+ * Value at a path in the parsed document; `undefined` means no node.
  *
- * Документ идёт как есть, а не через схему: узел, который схема не приняла,
- * тоже читается.
+ * The document goes as is, not through the schema: a node the schema did not
+ * accept is read too.
  */
 export function readPath(config: ConfigDocument, path: readonly string[]): unknown {
   let node: unknown = config;
@@ -232,11 +235,11 @@ export function readPath(config: ConfigDocument, path: readonly string[]): unkno
 }
 
 /**
- * Сколько элементов в секции; `null` — считать нечего: у секции-объекта
- * списка нет.
+ * How many elements are in a section; `null` means there is nothing to count:
+ * an object section has no list.
  *
- * Адресация узлов документа живёт в слайсе-владельце: иначе переименование
- * секции в форке правилось бы по всем экранам, которые её показывают.
+ * Document node addressing lives in the owner slice: otherwise a section rename
+ * in the fork would be fixed across all the screens that show it.
  */
 export function sectionSize(config: ConfigDocument | null, section: ConfigSection): number | null {
   if (config === null) {
@@ -268,8 +271,9 @@ interface TaggedOutbound {
 }
 
 /**
- * Аутбаунды документа, у которых есть тег. Узлы читаются как есть, а не через
- * схему: документ может не пройти разбор целиком, а список узлов нужен и тогда.
+ * Document outbounds that have a tag. Nodes are read as is, not through the
+ * schema: the document may fail parsing as a whole, and the node list is needed
+ * then too.
  */
 function toTaggedOutbounds(config: ConfigDocument | null): TaggedOutbound[] {
   const outbounds: unknown = config?.outbounds;
@@ -297,15 +301,15 @@ function toTaggedOutbounds(config: ConfigDocument | null): TaggedOutbound[] {
   return tagged;
 }
 
-/** Теги аутбаундов документа; узел без тега пропускается. */
+/** Document outbound tags; a node without a tag is skipped. */
 export function toOutboundTags(config: ConfigDocument | null): string[] {
   return toTaggedOutbounds(config).map((outbound) => outbound.tag);
 }
 
 /**
- * Куда уходит трафик, не попавший ни под одно правило: `route.final`, а без
- * него — первый аутбаунд, как решает sing-box. `null` — документа нет или
- * схема его не приняла, либо в нём нет ни того, ни другого.
+ * Where traffic that matched no rule goes: `route.final`, and without it the
+ * first outbound, as sing-box decides. `null` means there is no document, or
+ * the schema did not accept it, or it has neither.
  */
 export function toFinalOutbound(config: ConfigDocument | null): string | null {
   const final = config?.route?.final;
@@ -318,11 +322,12 @@ export function toFinalOutbound(config: ConfigDocument | null): string | null {
 }
 
 /**
- * Тип аутбаунда по его тегу. Тип — единственное точное указание на то, куда
- * узел ведёт трафик: тег пишет пользователь, и по имени судить о нём нельзя
- *. Что тип означает для интерфейса, решает потребитель карты.
+ * Outbound type by its tag. The type is the only exact indication of where a
+ * node leads traffic: the tag is written by the user, and one cannot judge by
+ * the name. What the type means for the interface is decided by the consumer of
+ * the map.
  *
- * Узел без тега или без типа в карту не попадает: сослаться на него нечем.
+ * A node without a tag or without a type is not in the map: there is nothing to refer to it by.
  */
 export function toOutboundTypes(config: ConfigDocument | null): ReadonlyMap<string, string> {
   const types = new Map<string, string>();
@@ -338,24 +343,25 @@ export function toOutboundTypes(config: ConfigDocument | null): ReadonlyMap<stri
   return types;
 }
 
-/** Запись истории конфига в виде, в котором её показывает экран. */
+/** Config history entry in the form the screen shows it. */
 export interface ConfigVersion {
   id: number;
   size: number;
   sum: string;
   /**
-   * Версия совпадает с файлом на устройстве байт в байт. Таких может быть
-   * несколько: демон отбрасывает повтор только относительно свежей записи.
+   * The version matches the file on the device byte for byte. There may be
+   * several: the daemon drops a repeat only relative to the newest entry.
    */
   current: boolean;
   /**
-   * Миллисекунды эпохи; `null` — отметки времени нет: роутер стартует с эпохи,
-   * и до синхронизации NTP дата сохранения врёт. Порядок всё равно задаёт
-   * номер версии.
+   * Epoch milliseconds; `null` means there is no timestamp: the router starts
+   * from the epoch, and before NTP sync the save date lies. The order is still
+   * set by the version number.
    *
-   * Числом, а не `Date`: модель лежит в кэше Query, а structural sharing не
-   * удерживает ссылку на объект вне plain-структур — список версий пересоздался
-   * бы на каждый ответ, даже когда история не менялась.
+   * A number, not `Date`: the model lives in the Query cache, and structural
+   * sharing does not keep a reference to an object outside plain structures, so
+   * the version list would be recreated on every response even when the history
+   * did not change.
    */
   savedAt: number | null;
 }
@@ -367,9 +373,9 @@ export interface CheckFailure {
 }
 
 /**
- * Применение со списками отклонено до записи: служба sing-box резолвит
- * относительный путь файла списка от своего рабочего каталога, а он не совпал
- * с каталогом конфига.
+ * Apply with lists rejected before writing: the sing-box service resolves a
+ * relative list file path from its own working directory, and it did not match
+ * the config directory.
  */
 export interface WorkdirMismatch {
   workdir: string;

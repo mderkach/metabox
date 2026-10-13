@@ -45,27 +45,27 @@ function isServiceStatus(value: string): value is ServiceStatus {
 }
 
 /**
- * Незнакомая стадия читается как отказ применения.
+ * An unfamiliar stage is read as an apply failure.
  *
- * Демон и панель обновляются порознь, и стадия, которой панель не знает, не
- * имеет права выглядеть как успешное подтверждение: окно подтверждения тогда
- * закрылось бы само, а конфиг остался бы неподтверждённым.
+ * The daemon and the panel are updated separately, and a stage the panel does
+ * not know must not look like a successful confirmation: the confirmation
+ * window would close on its own and the config would remain unconfirmed.
  */
 function toPhase(value: string): ApplyPhase {
   return isPhase(value) ? value : APPLY_PHASE.Failed;
 }
 
-/** Незнакомое состояние службы читается как падение, а не как работа. */
+/** An unfamiliar service state is read as a crash, not as running. */
 function toServiceStatus(value: string): ServiceStatus {
   return isServiceStatus(value) ? value : SERVICE_STATUS.Failed;
 }
 
-/** Незнакомый код читается как «шаг не назван»: текст тогда берётся из `reason`. */
+/** An unfamiliar code is read as "step not named": the text is then taken from `reason`. */
 function toReasonCode(value: string | undefined): ApplyReasonCode | undefined {
   return APPLY_REASON_CODE.find((code) => code === value);
 }
 
-/** Незнакомый код читается как его отсутствие: текст тогда берётся из `lastError`. */
+/** An unfamiliar code is read as its absence: the text is then taken from `lastError`. */
 function toServiceErrorCode(value: string | undefined): ServiceErrorCode | undefined {
   return SERVICE_ERROR_CODE.find((code) => code === value);
 }
@@ -136,9 +136,9 @@ export function toClashConfigs(wire: ClashConfigsWire): ClashConfigs {
 }
 
 /**
- * Сэмплы и состояние службы приходят кадрами потока, поэтому непонятый кадр
- * отбраковывается, а не роняет подписку: следующий придёт через секунду
- *.
+ * Samples and service state arrive as stream frames, so a frame that is not
+ * understood is rejected and does not drop the subscription: the next one
+ * arrives in a second.
  */
 export function toTrafficFrame(raw: unknown): TrafficSample | null {
   return decodeFrame(ClashTrafficSampleSchema, raw, 'traffic');
@@ -148,7 +148,7 @@ export function toMemoryFrame(raw: unknown): MemorySample | null {
   return decodeFrame(ClashMemorySampleSchema, raw, 'memory');
 }
 
-/** Демон отдаёт температуру тысячными долями градуса, как её отдаёт ядро. */
+/** The daemon serves temperature in thousandths of a degree, as the kernel does. */
 const MILLI_DEGREES = 1000;
 
 function toStat(wire: SystemStatWire): SystemStat {
@@ -170,7 +170,7 @@ export function toSystemFrame(raw: unknown): SystemStat | null {
   return wire === null ? null : toStat(wire);
 }
 
-/** Кадр кладётся в кэш `/api/service`, поэтому не переводится. */
+/** The frame is put into the `/api/service` cache, so it is not translated. */
 export function toServiceFrame(raw: unknown): ServiceStateWire | null {
   return decodeFrame(ServiceStateSchema, raw, 'service');
 }

@@ -17,16 +17,16 @@ import (
 	"metabox/internal/dataplane"
 )
 
-// ErrDataplaneModified — секцию UCI изменили после того, как клиент прочитал
-// модель: правка по SSH иначе затёрлась бы молча.
+// ErrDataplaneModified means the UCI section was changed after the client read
+// the model; an SSH edit would otherwise be silently overwritten.
 var ErrDataplaneModified = errors.New("модель обвязки изменена вне metabox")
 
-// ErrDataplaneForeignService — демон управляет не той службой, чей init-скрипт
-// читает модель: смена отклонена до записи.
+// ErrDataplaneForeignService means the daemon manages a service other than the one whose init script
+// reads the model; the change is rejected before the write.
 var ErrDataplaneForeignService = errors.New("модель обвязки читает только служба " + dataplane.Service)
 
-// PlaneEditor — модель обвязки в UCI: снимок секции, запись модели, возврат
-// снимка и цепочки в nft.
+// PlaneEditor is the dataplane model in UCI: a section snapshot, writing the model, restoring
+// the snapshot, and the chains in nft.
 type PlaneEditor interface {
 	Snapshot(ctx context.Context) (dataplane.Snapshot, error)
 	Write(ctx context.Context, m dataplane.Model) error
@@ -34,13 +34,13 @@ type PlaneEditor interface {
 	Chains(ctx context.Context) ([]string, dataplane.AppliedReason, error)
 }
 
-// PlaneService — служба, которая доводит обвязку до модели.
+// PlaneService is the service that brings the dataplane to the model.
 type PlaneService interface {
 	Reload(ctx context.Context) error
 }
 
-// PlaneStore — применённый конфиг, по которому ищется dns-in, и файл состояния
-// транзакции обвязки.
+// PlaneStore is the applied config in which dns-in is looked up, and the state file
+// of the dataplane transaction.
 type PlaneStore interface {
 	Read(ctx context.Context) ([]byte, error)
 	ReadPlaneState(ctx context.Context) ([]byte, error)
@@ -48,35 +48,35 @@ type PlaneStore interface {
 	ClearPlaneState(ctx context.Context) error
 }
 
-// PlaneOptions — настройки смены модели обвязки.
+// PlaneOptions are the settings of a dataplane model change.
 type PlaneOptions struct {
-	// Window — окно подтверждения, то же, что у применения конфига.
+	// Window is the confirmation window, the same as for a config apply.
 	Window time.Duration
-	// CycleTimeout ограничивает запись, reload и проверки, и отдельно — откат.
+	// CycleTimeout limits the write, reload and checks, and the rollback separately.
 	CycleTimeout time.Duration
-	// DNS — проба dns-in; nil — выключена.
+	// DNS is the dns-in probe; nil means disabled.
 	DNS DNSProber
-	// Service — имя службы, которой управляет демон: имя её init-скрипта.
-	// Смена модели идёт только при dataplane.Service.
+	// Service is the name of the service the daemon manages: the name of its init script.
+	// A model change goes only with dataplane.Service.
 	Service string
 }
 
-// planeRecord — файл состояния транзакции обвязки: транзакция и снимок секции,
-// к которому откатываться.
+// planeRecord is the dataplane transaction state file: the transaction and the section snapshot
+// to roll back to.
 type planeRecord struct {
 	Transaction
 	Previous dataplane.Snapshot `json:"previous"`
 }
 
-// Plane — владелец транзакции смены модели обвязки. Протокол тот же, что у
-// применения конфига: проверка модели, снимок прежней секции UCI, запись,
-// reload службы, проверка, окно подтверждения, без подтверждения — возврат
-// снимка и повторный reload. Применение занимается у Manager: одновременно идёт
-// одна транзакция, конфига или обвязки.
+// Plane is the owner of the dataplane model change transaction. The protocol is the same as for
+// a config apply: model check, snapshot of the previous UCI section, write,
+// service reload, check, confirmation window, and without confirmation the snapshot
+// is restored and the service reloaded again. The apply is taken from Manager: one
+// transaction runs at a time, of the config or of the dataplane.
 //
-// Окно подтверждения есть у каждой смены без исключений. Поэтому смена ACL,
-// которая выводит из перехвата адрес самого администратора, применяется так же
-// и без подтверждения откатывается по окну: дольше окна она его не отрезает.
+// Every change has a confirmation window, without exceptions. So an ACL change
+// that takes the administrator's own address out of interception is applied the same way
+// and rolled back by the window without confirmation: it cuts the administrator off for no longer than the window.
 type Plane struct {
 	gate    *Manager
 	editor  PlaneEditor
@@ -92,7 +92,7 @@ type Plane struct {
 	previous    dataplane.Snapshot
 	token       uint64
 	rollingBack bool
-	// windowEndsAt — монотонная метка конца окна, только в памяти; см. Manager.
+	// windowEndsAt is the monotonic stamp of the window end, in memory only; see Manager.
 	windowEndsAt time.Time
 	confirmed    chan struct{}
 	cancel       context.CancelFunc
@@ -100,8 +100,8 @@ type Plane struct {
 	wg sync.WaitGroup
 }
 
-// NewPlane собирает транзакцию обвязки поверх применения конфига gate. Часы
-// можно не задавать — тогда берутся системные.
+// NewPlane assembles the dataplane transaction on top of the config apply gate. The clock
+// may be omitted, then the system one is used.
 func NewPlane(
 	gate *Manager,
 	editor PlaneEditor,
@@ -122,14 +122,14 @@ func NewPlane(
 	}
 }
 
-// ForeignService — демон управляет не той службой, чей init-скрипт читает
-// модель: Start откажет, и панель узнаёт об этом из GET /api/dataplane до
-// смены.
+// ForeignService means the daemon manages a service other than the one whose init script reads
+// the model: Start will refuse, and the panel learns of this from GET /api/dataplane before
+// the change.
 func (p *Plane) ForeignService() bool {
 	return p.opts.Service != dataplane.Service
 }
 
-// Current отдаёт снимок транзакции обвязки; Window — остаток окна.
+// Current returns a snapshot of the dataplane transaction; Window is the remainder of the window.
 func (p *Plane) Current() Transaction {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -142,10 +142,10 @@ func (p *Plane) Current() Transaction {
 	return tx
 }
 
-// Start проверяет модель, занимает применение и уводит смену в фоновую
-// горутину. base — Snapshot.Sum секции, от которой строилась модель; пустой —
-// смена без сверки. client — адрес, с которого пришёл запрос: смена, которая
-// выводит его из перехвата, отмечается в логе, но идёт тем же протоколом.
+// Start checks the model, takes the apply and moves the change into a background
+// goroutine. base is the Snapshot.Sum of the section the model was built from; empty means
+// a change without a check. client is the address the request came from: a change that
+// takes it out of interception is noted in the log but goes through the same protocol.
 func (p *Plane) Start(ctx context.Context, model dataplane.Model, base string, client netip.Addr) (Transaction, error) {
 	next, err := dataplane.Normalize(model)
 	if err != nil {
@@ -213,9 +213,9 @@ func (p *Plane) Start(ctx context.Context, model dataplane.Model, base string, c
 	return tx, nil
 }
 
-// leavesClient — до смены адрес клиента шёл через sing-box, а после неё режим
-// listed его не перечисляет. MAC здесь не сверяется: по адресу запроса его не
-// узнать.
+// leavesClient: before the change the client address went through sing-box, and after it the
+// listed mode does not list it. MAC is not compared here: it cannot be learned from the request
+// address.
 func leavesClient(prev, next dataplane.Model, client netip.Addr) bool {
 	if !client.IsValid() || !prev.Enabled || !next.Enabled || next.AccessMode != dataplane.AccessListed {
 		return false
@@ -260,9 +260,9 @@ func (p *Plane) cycle(
 	p.await(ctx, log, confirmed)
 }
 
-// apply пишет модель, перечитывает её службой и проверяет результат: цепочки
-// перехвата стоят ровно тогда, когда модель включена, а при смене порта dns-in
-// или включении обвязки dnsmasq получил ответ от dns-in на новом порту.
+// apply writes the model, makes the service reread it and checks the result: the interception
+// chains stand exactly when the model is enabled, and on a dns-in port change
+// or dataplane enabling, dnsmasq got an answer from dns-in on the new port.
 func (p *Plane) apply(ctx context.Context, log *slog.Logger, previous dataplane.Snapshot, next dataplane.Model) error {
 	ctx, cancel := context.WithTimeout(ctx, p.opts.CycleTimeout)
 	defer cancel()
@@ -291,9 +291,9 @@ func (p *Plane) apply(ctx context.Context, log *slog.Logger, previous dataplane.
 	return nil
 }
 
-// checkChains сверяет цепочки в nft с моделью. nft недоступен — пропуск с
-// предупреждением, как в healthcheck применения конфига. Цепочки, оставшиеся
-// после выключения, — отказ reload: служба не довела обвязку до модели.
+// checkChains compares the chains in nft with the model. nft unavailable means a skip with
+// a warning, as in the config apply healthcheck. Chains left
+// after disabling are a reload failure: the service did not bring the dataplane to the model.
 func (p *Plane) checkChains(ctx context.Context, log *slog.Logger, enabled bool) error {
 	chains, reason, err := p.editor.Chains(ctx)
 
@@ -325,9 +325,9 @@ func (p *Plane) checkChains(ctx context.Context, log *slog.Logger, enabled bool)
 	return nil
 }
 
-// probeDNS ждёт, пока поднимется sing-box, — reload службы его перезапускает, —
-// и шлёт контрольный запрос в dns-in на порту модели. dns-in на этом порту в
-// конфиге нет — отказ: dnsmasq отдаёт запросы в пустой порт.
+// probeDNS waits until sing-box is up (the service reload restarts it)
+// and sends a probe query to dns-in on the model port. No dns-in on this port in
+// the config is a failure: dnsmasq sends queries to an empty port.
 func (p *Plane) probeDNS(ctx context.Context, port int) error {
 	cfg, err := p.store.Read(ctx)
 	if err != nil {
@@ -372,12 +372,12 @@ func (p *Plane) await(ctx context.Context, log *slog.Logger, confirmed <-chan st
 	p.wait(ctx, log, confirmed, p.opts.Window)
 }
 
-// wait держит окно: подтверждение, остановка демона или откат по таймеру.
+// wait holds the window: confirmation, daemon stop or a timer rollback.
 func (p *Plane) wait(ctx context.Context, log *slog.Logger, confirmed <-chan struct{}, window time.Duration) {
 	select {
 	case <-confirmed:
 	case <-ctx.Done():
-		// Состояние остаётся на диске, окно доиграется при следующем старте.
+		// The state stays on disk, the window is replayed at the next start.
 		log.Warn("окно подтверждения обвязки прервано остановкой демона")
 	case <-p.clock.After(window):
 		if !p.beginRollback() {
@@ -402,8 +402,8 @@ func (p *Plane) beginRollback() bool {
 	return true
 }
 
-// rollback возвращает снимок секции и перечитывает его службой. Отказ оставляет
-// состояние на диске: следующий старт демона попробует откат снова.
+// rollback restores the section snapshot and makes the service reread it. A failure leaves
+// the state on disk: the next daemon start will try the rollback again.
 func (p *Plane) rollback(ctx context.Context, log *slog.Logger) {
 	ctx, cancel := context.WithTimeout(ctx, p.opts.CycleTimeout)
 	defer cancel()
@@ -443,7 +443,7 @@ func (p *Plane) rollback(ctx context.Context, log *slog.Logger) {
 	log.Info("прежняя модель обвязки возвращена")
 }
 
-// Confirm закрывает окно подтверждения смены обвязки.
+// Confirm closes the dataplane change confirmation window.
 func (p *Plane) Confirm(ctx context.Context, id string) (Transaction, error) {
 	p.mu.Lock()
 
@@ -468,8 +468,8 @@ func (p *Plane) Confirm(ctx context.Context, id string) (Transaction, error) {
 	p.confirmed = nil
 	p.mu.Unlock()
 
-	// Порядок тот же, что у Manager.Confirm: состояние убирается до
-	// освобождения применения, а неубранное заменяется терминальной фазой.
+	// The order is the same as in Manager.Confirm: the state is removed before
+	// the apply is released, and an unremoved one is replaced by the terminal phase.
 	if err := p.store.ClearPlaneState(ctx); err != nil {
 		if persistErr := p.persist(ctx, tx, previous); persistErr != nil {
 			p.log.Error("состояние подтверждённой смены обвязки не убрано и не переписано",
@@ -491,8 +491,8 @@ func (p *Plane) Confirm(ctx context.Context, id string) (Transaction, error) {
 	return tx, nil
 }
 
-// Close останавливает окно и дожидается фоновой горутины. Состояние остаётся
-// на диске.
+// Close stops the window and waits for the background goroutine. The state stays
+// on disk.
 func (p *Plane) Close() {
 	p.mu.Lock()
 	cancel := p.cancel
@@ -505,9 +505,9 @@ func (p *Plane) Close() {
 	p.wg.Wait()
 }
 
-// Replay доигрывает смену обвязки, оставшуюся от прошлой жизни демона. На
-// загрузке роутера служба уже подняла обвязку по неподтверждённой модели из
-// UCI, и без отката она осталась бы навсегда.
+// Replay replays a dataplane change left from the previous daemon lifetime. On
+// router boot the service has already raised the dataplane by the unconfirmed model from
+// UCI, and without a rollback it would stay forever.
 func (p *Plane) Replay(ctx context.Context) error {
 	data, err := p.store.ReadPlaneState(ctx)
 	if errors.Is(err, config.ErrNoState) {
@@ -528,8 +528,8 @@ func (p *Plane) Replay(ctx context.Context) error {
 
 	switch {
 	case tx.Phase == PhaseApplying:
-		// Секция совпала со снимком — запись не случилась, и служба стоит на
-		// прежней модели: откатывать нечего.
+		// The section matched the snapshot: the write did not happen, and the service stands on
+		// the previous model: nothing to roll back.
 		if current, err := p.editor.Snapshot(ctx); err == nil && current.Equal(state.Previous) {
 			log.Warn("смена обвязки оборвана до записи модели, откат не нужен")
 
@@ -567,8 +567,8 @@ func (p *Plane) begin(tx Transaction, previous dataplane.Snapshot) {
 	p.previous = previous
 }
 
-// restoreWindow поднимает окно заново на срок из состояния: сколько его прошло
-// до перезагрузки, узнать неоткуда, как и у Manager.restoreWindow.
+// restoreWindow raises the window again for the period from the state: how much of it passed
+// before the reboot cannot be learned, as with Manager.restoreWindow.
 func (p *Plane) restoreWindow(tx Transaction, token uint64) {
 	ctx, cancel := context.WithCancel(context.Background())
 

@@ -3,14 +3,14 @@ import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 /**
- * Оснастка локалей: карта неймспейсов для i18next и сверка словарей между
- * языками. Ключи в карту не переписываются — их тип берётся из самого JSON
- * через `typeof import`, поэтому карта меняется, только когда локаль появилась
- * или исчезла.
+ * Locale tooling: the namespace map for i18next and cross-language
+ * dictionary checking. Keys are not copied into the map — their type is taken from the JSON itself
+ * via `typeof import`, so the map changes only when a locale appeared
+ * or disappeared.
  */
 
 const SOURCE_LANGUAGE = 'ru';
-/** Префикс адреса словарей; тот же путь получают файлы в `dist`. */
+/** Dictionary URL prefix; files in `dist` get the same path. */
 export const LOCALE_ROOT = 'locales';
 const HASH_LENGTH = 8;
 const SEGMENT = 'i18n';
@@ -18,32 +18,32 @@ const OUT_FILE = 'src/i18n.generated.d.ts';
 
 const IDENTIFIER = /^[A-Za-z_$][\w$]*$/;
 
-/** Суффиксы плюрализации CLDR: в разных языках их наборы разные. */
+/** CLDR plural suffixes: the sets differ between languages. */
 const PLURAL_SUFFIX = /_(zero|one|two|few|many|other)$/;
 
 const HEADER = `/*
- * Карта неймспейсов i18next. Артефакт \`tools/i18n.ts\`, руками не правится.
- * Язык-источник типов — ${SOURCE_LANGUAGE}.
+ * Namespace map for i18next. Artifact of \`tools/i18n.ts\`, not edited by hand.
+ * Type source language — ${SOURCE_LANGUAGE}.
  */`;
 
 export interface Locale {
   namespace: string;
   language: string;
-  /** Путь к файлу на диске. */
+  /** Path to the file on disk. */
   file: string;
-  /** Адрес на дев-сервере: там словарь читается из исходника и не кэшируется. */
+  /** Dev server URL: there the dictionary is read from source and not cached. */
   url: string;
 }
 
-/** Ключ словаря в карте адресов: язык и неймспейс вместе. */
+/** Dictionary key in the URL map: language and namespace together. */
 export function localeKey(language: string, namespace: string): string {
   return `${language}:${namespace}`;
 }
 
 /**
- * Адрес словаря в сборке — с отпечатком содержимого, как у остальных ассетов:
- * демон отдаёт такие файлы вечным кэшем, и словарь перестаёт перепрашиваться
- * на каждом заходе. Длина отпечатка та же, что у Vite, — восемь символов.
+ * Dictionary URL in the build — with a content fingerprint, like other assets:
+ * the daemon serves such files with an eternal cache, and the dictionary stops being re-requested
+ * on every visit. The fingerprint length is the same as Vite's — eight characters.
  */
 export function hashedLocaleUrl(locale: Locale, content: string): string {
   const digest = createHash('sha256').update(content).digest('base64url').slice(0, HASH_LENGTH);
@@ -51,7 +51,7 @@ export function hashedLocaleUrl(locale: Locale, content: string): string {
   return `${LOCALE_ROOT}/${locale.namespace}/${locale.language}-${digest}.json`;
 }
 
-/** Неймспейс — путь слайса от `src`: `features/Rule/RuleEdit`. */
+/** Namespace is the slice path from `src`: `features/Rule/RuleEdit`. */
 export function collectLocales(root: string, prefix = ''): Locale[] {
   const found: Locale[] = [];
 
@@ -86,14 +86,14 @@ export function collectLocales(root: string, prefix = ''): Locale[] {
 }
 
 function namespacesOf(locales: readonly Locale[]): string[] {
-  // Неймспейс без локали языка-источника в карту не попадает: типов у него
-  // всё равно нет, а `t` по нему вернул бы ключ.
+  // A namespace without a source-language locale does not make it into the map: it has no types
+  // anyway, and `t` over it would return the key.
   return [
     ...new Set(locales.filter((locale) => locale.language === SOURCE_LANGUAGE).map((locale) => locale.namespace)),
   ];
 }
 
-/** Кавычки только там, где без них нельзя: иначе `oxfmt` их снимет и разойдётся с артефактом. */
+/** Quotes only where they cannot be avoided: otherwise `oxfmt` strips them and diverges from the artifact. */
 function quoteKey(namespace: string): string {
   return IDENTIFIER.test(namespace) ? namespace : `'${namespace}'`;
 }
@@ -119,9 +119,9 @@ ${entries}
 }
 
 /**
- * Возвращает `true`, если файл переписан. Совпадающее содержимое не пишется:
- * иначе каждый запуск обновляет `mtime` и заставляет `tsc -b` пересобирать
- * проект заново.
+ * Returns `true` if the file was rewritten. Matching content is not written:
+ * otherwise every run updates `mtime` and makes `tsc -b` rebuild
+ * the project from scratch.
  */
 export function writeI18nTypes(projectRoot: string): boolean {
   const target = path.join(projectRoot, OUT_FILE);
@@ -145,7 +145,7 @@ function flatten(value: unknown, prefix = ''): string[] {
   return Object.entries(value).flatMap(([key, nested]) => flatten(nested, prefix === '' ? key : `${prefix}.${key}`));
 }
 
-/** Ключ без суффикса формы: сравнивать `_few` с `_other` бессмысленно. */
+/** Key without a form suffix: comparing `_few` with `_other` is meaningless. */
 function baseKeys(value: unknown): Set<string> {
   return new Set(flatten(value).map((key) => key.replace(PLURAL_SUFFIX, '')));
 }
@@ -155,9 +155,9 @@ function difference(left: Set<string>, right: Set<string>): string[] {
 }
 
 /**
- * Сверяет словари одного неймспейса между языками и возвращает список проблем;
- * пустой список — всё сошлось. Проверяются разбор файла, наличие локали
- * языка-источника и совпадение ключей с ним.
+ * Checks dictionaries of one namespace across languages and returns a list of problems;
+ * an empty list means everything matches. Checked: file parsing, presence of the
+ * source-language locale and key match with it.
  */
 export function checkLocales(projectRoot: string): string[] {
   const locales = collectLocales(path.join(projectRoot, 'src'));
@@ -170,7 +170,7 @@ export function checkLocales(projectRoot: string): string[] {
     try {
       parsed.set(`${locale.namespace}:${locale.language}`, baseKeys(JSON.parse(readFileSync(locale.file, 'utf8'))));
     } catch (error) {
-      problems.push(`${relative}: ${error instanceof Error ? error.message : 'не разобран'}`);
+      problems.push(`${relative}: ${error instanceof Error ? error.message : 'not parsed'}`);
     }
   }
 
@@ -178,7 +178,7 @@ export function checkLocales(projectRoot: string): string[] {
     const source = parsed.get(`${namespace}:${SOURCE_LANGUAGE}`);
 
     if (source === undefined) {
-      problems.push(`${namespace}: нет локали языка-источника ${SOURCE_LANGUAGE}.json`);
+      problems.push(`${namespace}: no source-language locale ${SOURCE_LANGUAGE}.json`);
 
       continue;
     }
@@ -194,11 +194,11 @@ export function checkLocales(projectRoot: string): string[] {
       const extra = difference(keys, source);
 
       if (missing.length > 0) {
-        problems.push(`${namespace}/${locale.language}.json: нет ключей — ${missing.join(', ')}`);
+        problems.push(`${namespace}/${locale.language}.json: missing keys — ${missing.join(', ')}`);
       }
 
       if (extra.length > 0) {
-        problems.push(`${namespace}/${locale.language}.json: лишние ключи — ${extra.join(', ')}`);
+        problems.push(`${namespace}/${locale.language}.json: extra keys — ${extra.join(', ')}`);
       }
     }
   }
@@ -213,7 +213,7 @@ if (process.argv[1] === import.meta.filename) {
   writeI18nTypes(root);
 
   if (problems.length > 0) {
-    console.error(`[I18N] словари разошлись:\n${problems.map((problem) => `  ${problem}`).join('\n')}`);
+    console.error(`[I18N] dictionaries diverged:\n${problems.map((problem) => `  ${problem}`).join('\n')}`);
     process.exit(1);
   }
 }

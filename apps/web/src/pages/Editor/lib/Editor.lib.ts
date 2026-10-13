@@ -25,36 +25,36 @@ import {
 import { RULE_HITS_STATE, type RuleHitsColumn } from '@widgets/Rule/RuleTable';
 
 export interface RouteEditorState {
-  /** Запрос конфига: отказ источника — своё состояние экрана, а не пустой список. */
+  /** Config request: a source failure is a screen state of its own, not an empty list. */
   source: ConfigDocumentView['query'];
   issues: ConfigIssue[];
   rules: RuleRow[];
   outbounds: string[];
-  /** Теги наборов документа: на них правило может сослаться из формы. */
+  /** Rule set tags of the document: a rule can reference them from the form. */
   ruleSets: string[];
-  /** Выход нового правила — маршрут по умолчанию; `null` — выхода нет. */
+  /** Outbound of a new rule is the default route; `null` means there is no outbound. */
   finalOutbound: string | null;
-  /** Тип аутбаунда по тегу: выход правила красится по нему, а не по имени. */
+  /** Outbound type by tag: a rule's outbound is colored by it, not by name. */
   outboundTypes: ReadonlyMap<string, string>;
-  /** Узлы правил как есть: панель правит текст узла, а не разобранную модель. */
+  /** Rule nodes as they are: the panel edits the node text, not the parsed model. */
   nodes: unknown[];
-  /** Узлы правил файла с устройства, без правок черновика. */
+  /** Rule nodes of the file from the device, without draft edits. */
   appliedNodes: unknown[];
 }
 
 /**
- * Список правил для экрана. Документ раздела читает общий хук, здесь остаётся
- * только его разбор в строки.
+ * Rule list for the screen. The section document is read by a shared hook, only its
+ * parsing into rows stays here.
  *
- * Маппинг вызывается здесь, а не в разметке: он пробегает весь список, и на
- * 500 правилах повторялся бы на каждое нажатие клавиши в поиске.
+ * The mapping is called here, not in the markup: it walks the whole list, and with
+ * 500 rules it would repeat on every keystroke in the search.
  */
 export function useRouteEditor(): RouteEditorState {
   const document = useConfigDocument();
   const text = document.text;
 
-  // Узлы читаются из текста, а не из разобранной модели: правило, которое
-  // схема не приняла, обязано остаться видимым в списке.
+  // Nodes are read from the text, not from the parsed model: a rule that the
+  // schema did not accept must stay visible in the list.
   const nodes = useMemo(() => (text === null ? [] : readRules(text)), [text]);
 
   const rules = useMemo(() => toRuleRowsFromNodes(nodes), [nodes]);
@@ -80,15 +80,15 @@ export function useRouteEditor(): RouteEditorState {
 }
 
 export interface RuleMarks {
-  /** Строки, которых в применённом конфиге нет: новые и изменённые в черновике. */
+  /** Rows absent from the applied config: new and changed in the draft. */
   edited: ReadonlySet<string>;
   hits: RuleHitsColumn;
 }
 
 /**
- * Отметки строк по применённому конфигу: что изменено в черновике и сколько
- * раз сработало. Счёт демон ведёт по правилам работающего процесса, поэтому
- * строка получает его через своё правило в применённом файле, а не по номеру.
+ * Row marks against the applied config: what is changed in the draft and how many
+ * times it hit. The daemon counts by the rules of the running process, so a
+ * row gets the count through its rule in the applied file, not by number.
  */
 export function useRuleMarks(editor: RouteEditorState): RuleMarks {
   const hits = useRuleHits();
@@ -110,8 +110,8 @@ export function useRuleMarks(editor: RouteEditorState): RuleMarks {
       return { state: RULE_HITS_STATE.Failed };
     }
 
-    // Список правил процесса другой длины — процесс работает не на файле с
-    // устройства, и его номера к строкам не относятся.
+    // The process rule list has a different length: the process does not run on the file from
+    // the device, and its numbers do not map to the rows.
     if (hits.data.byIndex.length !== appliedNodes.length) {
       return { state: RULE_HITS_STATE.Mismatch };
     }
@@ -133,55 +133,55 @@ export function useRuleMarks(editor: RouteEditorState): RuleMarks {
 }
 
 /**
- * Строка списка по номеру правила из адреса.
+ * List row by the rule number from the address.
  *
- * В адресе номер как в интерфейсе, с единицы, а строка адресуется индексом
- * узла `route.rules`, считая с нуля: экран соединений ведёт сюда на конкретный
- * узел, и промах на единицу открыл бы соседнее правило.
+ * The address uses the interface numbering, from one, while a row is addressed by the index of the
+ * `route.rules` node, counting from zero: the connections screen leads here to a specific
+ * node, and an off-by-one miss would open the neighboring rule.
  */
 export function toSelectedRuleId(rule: number | undefined): string | null {
   return rule === undefined ? null : toRuleId(rule);
 }
 
-/** Строка списка по номеру правила с единицы: её `id` — индекс узла с нуля. */
+/** List row by rule number counted from one: its `id` is the node index counted from zero. */
 function toRuleId(index: number): string {
   return String(index - 1);
 }
 
 interface RuleSelectionState {
-  /** Выбранная строка; `null` — панель закрыта. */
+  /** Selected row; `null` means the panel is closed. */
   id: string | null;
   /**
-   * Ключ панели. Растёт, когда пользователь выбирает правило или добавляет
-   * новое, и стоит на месте при перестановке: панель остаётся той же — с
-   * открытой вкладкой, введённым текстом и фокусом, — хотя правило переехало
-   * на другой номер. При закрытии не сбрасывается: лист на узком экране держит
-   * прежнее содержимое, и совпавший ключ не пересоздал бы его для другого
-   * правила.
+   * Panel key. Grows when the user selects a rule or adds a
+   * new one, and stays in place on reorder: the panel remains the same, with
+   * its open tab, entered text and focus, even though the rule moved
+   * to another number. Not reset on close: the sheet on a narrow screen keeps
+   * its previous content, and a matching key would not recreate it for another
+   * rule.
    */
   key: number;
 }
 
 export interface RuleSelection extends RuleSelectionState {
-  /** Выбор строкой списка; повторный выбор той же строки закрывает панель. */
+  /** Selection by a list row; selecting the same row again closes the panel. */
   select: (id: string) => void;
   close: () => void;
-  /** Новое правило открывается в панели. */
+  /** A new rule opens in the panel. */
   onAdded: (index: number) => void;
-  /** Панель идёт за переставленным правилом на его новый номер. */
+  /** The panel follows the moved rule to its new number. */
   onMoved: (index: number) => void;
   onDeleted: () => void;
 }
 
 /**
- * Выбранное правило и ключ его панели.
+ * Selected rule and the key of its panel.
  *
- * Строка адресуется позицией в `route.rules`, а не собственным идентификатором
- * — его у правил sing-box нет, — поэтому перестановка и удаление обязаны
- * сдвигать выбор тем же обновлением, что и черновик. Они идут без
- * `startTransition`: стор обновляется синхронно, и в Transition был бы кадр,
- * где выбор указывает на прежнюю позицию, а под ней уже соседний узел — панель
- * показала бы чужое правило.
+ * A row is addressed by position in `route.rules`, not by an identifier of its own
+ * — sing-box rules have none — so reorder and delete must
+ * shift the selection in the same update as the draft. They go without
+ * `startTransition`: the store updates synchronously, and inside a Transition there would be a frame
+ * where the selection points to the old position while a neighboring node is already under it, and the panel
+ * would show someone else's rule.
  */
 export function useRuleSelection(initialId: string | null): RuleSelection {
   const [selection, setSelection] = useState<RuleSelectionState>({ id: initialId, key: 0 });
@@ -214,22 +214,22 @@ export interface RuleFilterState {
   setQuery: (query: string) => void;
   target: RuleTargetFilter;
   setTarget: (target: RuleTargetFilter) => void;
-  /** Сет из адреса: с ним приходят из каталога наборов. */
+  /** Rule set from the address: arrives with a visit from the rule set catalog. */
   ruleSet: RuleSetFilter;
   setRuleSet: (ruleSet: RuleSetFilter) => void;
-  /** Снять поиск и оба отбора: показать список целиком. */
+  /** Clear the search and both filters: show the whole list. */
   reset: () => void;
-  /** Выходы считаются по всему списку: фасет не должен исчезать от своего выбора. */
+  /** Outbounds are counted over the whole list: a facet must not vanish because of its own selection. */
   targets: RuleTargetGroup[];
   rules: RuleRow[];
 }
 
 /**
- * Поиск и отбор по выходу и сету. Отбор клиентский: конфиг целиком уже в
- * панели, и до 500 правил фильтруются за доли миллисекунды.
+ * Search and filtering by outbound and rule set. Filtering is client-side: the whole config is already in
+ * the panel, and up to 500 rules are filtered in fractions of a millisecond.
  *
- * Сет живёт в адресе — на него ведёт ссылка из каталога наборов, — а поиск и
- * выход остаются состоянием экрана.
+ * The rule set lives in the address — a link from the rule set catalog leads to it — while search and
+ * outbound remain screen state.
  */
 export function useRuleFilter(rules: RuleRow[]): RuleFilterState {
   const [query, setQuery] = useState('');
@@ -238,8 +238,8 @@ export function useRuleFilter(rules: RuleRow[]): RuleFilterState {
   const navigate = useNavigate();
   const ruleSet = search.rule_set ?? null;
 
-  // Снятый отбор заменяет адрес, а не добавляет запись в историю: «назад»
-  // вернул бы отбор, который пользователь только что снял.
+  // A cleared filter replaces the address instead of adding a history entry: "back"
+  // would bring back the filter the user just cleared.
   const setRuleSet = useCallback(
     (next: RuleSetFilter) => {
       void navigate({

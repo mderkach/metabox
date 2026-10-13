@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { DAEMON_QUERY, getServiceStateOptions, runServiceAction } from '@entities/Daemon';
 
-/** Ответ несёт новое состояние службы: перечитывать его отдельным запросом незачем. */
+/** The response carries the new service state: there is no need to reread it with a separate query. */
 export function useServiceAction() {
   const queryClient = useQueryClient();
 

@@ -20,16 +20,16 @@ function isNodeObject(node: unknown): node is Record<string, unknown> {
 }
 
 /**
- * Узел секции конфига: форма по схеме его типа и тот же узел текстом.
+ * Config section node: a form from its type's schema and the same node as text.
  *
- * Форму получает узел секции с реестром типов, если политика реестра её
- * разрешает: автоформу — любой тип, «только оверрайды» — тип с оверрайдом. Узел, который схема его типа не принимает, формы не получает
- * вовсе: вкладка выключена, узел помечен и открыт текстом (ADR-0018).
- * Секции-объекты и секции без реестра правятся только текстом.
+ * A form is given to a section node with a type registry if the registry
+ * policy allows it: an auto-form to any type, "overrides only" to a type with an override. A node its type's schema does not accept gets no form
+ * at all: the tab is disabled, the node is marked and opened as text (ADR-0018).
+ * Object sections and sections without a registry are edited only as text.
  *
- * С `onOpenChange` узел сворачивается до шапки с типом и адресом. Свёрнутое
- * тело остаётся смонтированным: набранное в форме не теряется. Состояние
- * держит вызывающий — узел перемонтируется на каждой ревизии документа.
+ * With `onOpenChange` the node collapses to a header with the type and address. The collapsed
+ * body stays mounted: what was typed in the form is not lost. The state
+ * is held by the caller — the node remounts on every document revision.
  */
 export function ConfigNode({
   section,
@@ -42,14 +42,14 @@ export function ConfigNode({
 }: {
   section: GenericSection;
   index: number;
-  /** Узел как есть, из текста; `undefined` — секции-объекта в файле нет. */
+  /** The node as is, from the text; `undefined` means the object section is absent from the file. */
   node: unknown;
-  /** Имя узла на экране: тег, тип или путь в файле. */
+  /** Node name on screen: tag, type or path in the file. */
   name: string;
-  /** Теги сборки бинаря: по ним форма помечает опции вне сборки; `null` — не прочитаны. */
+  /** Binary build tags: the form marks options outside the build by them; `null` means not read. */
   builtTags?: readonly string[] | null;
   open?: boolean;
-  /** Без него узел не сворачивается. */
+  /** Without it the node does not collapse. */
   onOpenChange?: (open: boolean) => void;
 }) {
   const { t } = useTranslation('widgets/Config/ConfigNode');
@@ -83,7 +83,7 @@ export function ConfigNode({
         <TabsTrigger value={TAB.Raw}>JSON</TabsTrigger>
       </TabsList>
 
-      {/* Форма держит набранное, пока узел сверяют текстом: размонтирование его стирает. */}
+      {/* The form keeps what was typed while the node is checked as text: unmounting erases it. */}
       <TabsContent value={TAB.Form} keepMounted className='pt-3'>
         {recognized && isNodeObject(node) && (
           <ConfigNodeForm registry={registry} path={path} node={node} builtTags={builtTags} />

@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`обход реестров схемы > перечисляет поля, ушедшие в raw 1`] = `
+exports[`schema registry walk > lists the fields that fell to raw 1`] = `
 {
   "certificate_provider/acme": [
     "dns01_challenge",

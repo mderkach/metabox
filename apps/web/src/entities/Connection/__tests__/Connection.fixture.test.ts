@@ -2,17 +2,17 @@ import { describe, expect, it } from 'vitest';
 
 import { advanceConnectionsSnapshot, CONNECTIONS_FIXTURE, makeConnectionsSnapshot } from './Connection.fixture';
 
-/** Кадров за час дев-сессии при шаге потока в секунду — столько и проверяем. */
+/** Frames per hour of a dev session at a one-second stream step: that is what we check. */
 const FRAMES = 50;
 const SNAPSHOT_SIZE = 64;
 
-describe('живые кадры потока соединений', () => {
-  it('не даёт провернуть кадр на эталоне: он заморожен', () => {
+describe('live connection stream frames', () => {
+  it('does not let a frame be advanced on the reference: it is frozen', () => {
     expect(() => advanceConnectionsSnapshot(CONNECTIONS_FIXTURE, 1)).toThrow(TypeError);
     expect(CONNECTIONS_FIXTURE.upload_total).toBe(12376739);
   });
 
-  it('наращивает счётчики, а не пересчитывает их по живым соединениям', () => {
+  it('grows counters instead of recomputing them from live connections', () => {
     const snapshot = makeConnectionsSnapshot(SNAPSHOT_SIZE, { vary: true });
     const before = { upload: snapshot.upload_total, download: snapshot.download_total };
 
@@ -22,7 +22,7 @@ describe('живые кадры потока соединений', () => {
     expect(snapshot.download_total).toBeGreaterThan(before.download);
   });
 
-  it('держит длину идентификаторов: образец берётся из эталона, а не из прошлого кадра', () => {
+  it('keeps the identifier length: the sample is taken from the reference, not from the previous frame', () => {
     const snapshot = makeConnectionsSnapshot(SNAPSHOT_SIZE, { vary: true });
     const longest = () => Math.max(...snapshot.connections.map((row) => row.id.length));
     const start = longest();
@@ -31,11 +31,11 @@ describe('живые кадры потока соединений', () => {
       advanceConnectionsSnapshot(snapshot, seq);
     }
 
-    // Запас на суффикс кадра: он двузначный, а не растущий с каждым кадром.
+    // Margin for the frame suffix: it is two-digit, not growing with each frame.
     expect(longest()).toBeLessThan(start + 10);
   });
 
-  it('закрывает и открывает соединения, иначе панель не соберёт закрытые', () => {
+  it('closes and opens connections, otherwise the panel will not collect closed ones', () => {
     const snapshot = makeConnectionsSnapshot(SNAPSHOT_SIZE, { vary: true });
     const before = new Set(snapshot.connections.map((row) => row.id));
 

@@ -13,9 +13,9 @@ export async function getLogs(
 }
 
 /**
- * Кольцо logd не чистится вовсе: при `logread` очистка — только отметка в
- * памяти демона, строки раньше неё не отдаются до его перезапуска. Файл
- * `log.output` демон ещё и усекает.
+ * The logd ring is not cleared at all: with `logread`, clearing is only a mark
+ * in daemon memory, and lines before it are not served until it restarts. The
+ * `log.output` file the daemon also truncates.
  */
 export async function clearLogs(config?: AxiosRequestConfig): Promise<LogsClearedWire> {
   return ApiClientInstance.post<LogsClearedWire>(LOG_ENDPOINT.clear(), undefined, config);

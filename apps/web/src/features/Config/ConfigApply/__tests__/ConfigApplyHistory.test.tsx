@@ -20,7 +20,7 @@ function serveVersions(versions: unknown[] = VERSIONS, currentSum?: string) {
 }
 
 describe('ConfigApplyHistory', () => {
-  it('называет диалог так же, как кнопку', async () => {
+  it('names the dialog the same as the button', async () => {
     serveVersions();
     renderWithQuery(<ConfigApplyHistory />);
 
@@ -29,7 +29,7 @@ describe('ConfigApplyHistory', () => {
     expect(await screen.findByRole('dialog', { name: 'История версий' })).toBeInTheDocument();
   });
 
-  it('печатает время сохранения до минуты', async () => {
+  it('prints the save time down to the minute', async () => {
     serveVersions();
     renderWithQuery(<ConfigApplyHistory />);
 
@@ -40,7 +40,7 @@ describe('ConfigApplyHistory', () => {
     expect(within(oldest).getByText(/^\d{2}\.\d{2}\.\d{4}, \d{2}:\d{2}$/)).toBeInTheDocument();
   });
 
-  it('отмечает версию, совпадающую с файлом на устройстве, и не предлагает на неё откатиться', async () => {
+  it('marks the version matching the file on the device and does not offer to roll back to it', async () => {
     serveVersions(
       [
         { id: 1, size: 4096, sum: 'a'.repeat(64), saved_at: 1_757_500_000 },
@@ -60,7 +60,7 @@ describe('ConfigApplyHistory', () => {
     expect(within(oldest).getByRole('button', { name: 'Вернуть' })).toBeInTheDocument();
   });
 
-  it('показывает версии от свежей к старой', async () => {
+  it('shows versions from newest to oldest', async () => {
     serveVersions();
     renderWithQuery(<ConfigApplyHistory />);
 
@@ -74,7 +74,7 @@ describe('ConfigApplyHistory', () => {
     ]);
   });
 
-  it('часы устройства без синхронизации не показывает датой', async () => {
+  it('does not show an unsynchronized device clock as a date', async () => {
     serveVersions();
     renderWithQuery(<ConfigApplyHistory />);
 
@@ -83,7 +83,7 @@ describe('ConfigApplyHistory', () => {
     expect(await screen.findByText('время сохранения неизвестно')).toBeInTheDocument();
   });
 
-  it('пустую историю объясняет словами, а не пустым списком', async () => {
+  it('explains an empty history in words, not with an empty list', async () => {
     serveVersions([]);
     renderWithQuery(<ConfigApplyHistory />);
 
@@ -92,7 +92,7 @@ describe('ConfigApplyHistory', () => {
     expect(await screen.findByText(/Пока ничего не применялось/)).toBeInTheDocument();
   });
 
-  it('откат уходит на ручку восстановления версии', async () => {
+  it('rollback goes to the version restore handler', async () => {
     const restored: string[] = [];
 
     serveVersions();
@@ -118,7 +118,7 @@ describe('ConfigApplyHistory', () => {
     });
   });
 
-  it('отказ бинаря показывает в диалоге и оставляет его открытым', async () => {
+  it('shows a binary rejection in the dialog and leaves it open', async () => {
     serveVersions();
     server.use(
       http.post(CONFIG_ENDPOINT.versionRestore(2), () =>

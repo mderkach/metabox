@@ -1,8 +1,8 @@
-// Плагин oxlint (jsPlugins, alpha): границы слоёв и слайсов FSD.
-// Список слоёв здесь — единственный в линте; те же имена алиасов лежат в
-// `paths` обоих tsconfig и в `vite.config.ts`.
-// Файл на JS, а не TS: oxlint грузит плагины через Node, TS-вариант требует
-// нативного type stripping и лишней записи в tsconfig ради одного файла.
+// oxlint plugin (jsPlugins, alpha): FSD layer and slice boundaries.
+// The layer list here is the only one in lint; the same alias names live in
+// `paths` of both tsconfigs and in `vite.config.ts`.
+// The file is JS, not TS: oxlint loads plugins through Node, a TS variant requires
+// native type stripping and an extra tsconfig entry for one file.
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -17,25 +17,25 @@ const OWNERS = new Set(['api', 'model']);
 const ENTITIES = 'entities';
 
 /**
- * Наличие Public API спрашивается у диска каждый раз.
+ * Whether a Public API exists is asked of the disk every time.
  *
- * Кеш здесь жил бы дольше правды: языковой сервер редактора держит плагин в
- * памяти между правками, и папка, у которой `index.ts` появился уже после
- * первого вопроса, навсегда оставалась бы «без Public API». Линт в редакторе
- * ругал бы верный код, а тот же прогон из CLI молчал — и разойтись они могли
- * бы на недели.
+ * A cache here would outlive the truth: the editor language server keeps the plugin in
+ * memory between edits, and a folder whose `index.ts` appeared after the
+ * first question would stay "without Public API" forever. Lint in the editor
+ * would flag correct code while the same run from the CLI stayed silent — and they could diverge
+ * for weeks.
  */
 function hasPublicApi(dir) {
   return fs.existsSync(path.join(dir, PUBLIC_API));
 }
 
 /**
- * Сегменты слайса от корня слоя: слайс кончается там, где лежит Public API.
+ * Slice segments from the layer root: a slice ends where the Public API lies.
  *
- * Так родственные слайсы можно складывать в группу — `features/Rule/RuleEdit`, —
- * потому что у группы своего `index.ts` нет и слайсом она не становится.
- * Считать слайсом первый сегмент после слоя нельзя: группа читалась бы как
- * слайс, а `@features/Rule/RuleEdit` — как обход Public API.
+ * This way related slices can be put into a group — `features/Rule/RuleEdit` —
+ * because a group has no `index.ts` of its own and does not become a slice.
+ * The first segment after the layer cannot be taken as the slice: a group would read as
+ * a slice, and `@features/Rule/RuleEdit` as a Public API bypass.
  */
 function sliceOf(layerRoot, parts) {
   const slice = [];
@@ -48,13 +48,13 @@ function sliceOf(layerRoot, parts) {
     if (hasPublicApi(dir)) return { name: slice.join('/'), found: true };
   }
 
-  // Public API по пути не нашёлся: это группа слайсов, файл вне слайса или
-  // опечатка. Отвечать именем слайса здесь нельзя — из него получится путь до
-  // файла, и правила начнут ругаться на выдуманный слайс.
+  // The Public API was not found by path: this is a slice group, a file outside a slice, or
+  // a typo. Answering with a slice name here is not allowed — it would yield a path to
+  // the file, and rules would start complaining about an invented slice.
   return { name: slice.join('/'), found: false };
 }
 
-/** Слой и слайс файла по его пути; `null` — файл вне слоёв. */
+/** Layer and slice of a file by its path; `null` means the file is outside the layers. */
 function locate(filePath) {
   const parts = filePath.split(path.sep);
   const src = parts.lastIndexOf(SRC);
@@ -74,7 +74,7 @@ function locate(filePath) {
   };
 }
 
-/** Тест или мок: только им открыт `__tests__` чужого слайса. */
+/** A test or a mock: only they are allowed into a foreign slice's `__tests__`. */
 function isTestFile(filePath) {
   return filePath.split(path.sep).includes(TESTS);
 }
@@ -87,9 +87,9 @@ function parseAlias(source) {
 }
 
 /**
- * Схема форка и контракт демона лежат в `shared`, а значит видны всем слоям по
- * построению. Ограничить их может только это правило: чужую форму разбирает
- * сущность, наружу уходит модель.
+ * The fork schema and the daemon contract live in `shared`, so they are visible to all layers
+ * by construction. Only this rule can restrict them: a foreign shape is parsed by
+ * an entity, and the model goes outward.
  */
 function checkGenerated(from, rest, report) {
   if (!GENERATED.has(rest.at(-1) ?? '')) return;
@@ -98,13 +98,13 @@ function checkGenerated(from, rest, report) {
   const owned = segments.includes(ENTITIES) && segments.some((segment) => OWNERS.has(segment));
 
   if (!owned && !segments.includes(TESTS)) {
-    report('Сгенерированную форму разбирает сущность: экраны читают её модель.');
+    report('The generated shape is parsed by an entity: screens read its model.');
   }
 }
 
 function checkAlias(from, alias, report) {
   if (RANK.get(alias.layer) < RANK.get(from.layer)) {
-    report(`Импорт вверх по слоям: ${from.layer} не видит ${alias.layer}.`);
+    report(`Upward layer import: ${from.layer} cannot see ${alias.layer}.`);
     return;
   }
 
@@ -115,16 +115,16 @@ function checkAlias(from, alias, report) {
   const deep = alias.rest.slice(slice === '' ? 0 : slice.split('/').length);
   const isCrossImport = SLICED.has(alias.layer) && deep[0] === '@x';
 
-  // Мок ведёт сценарий через несколько слайсов сразу — цикл применения живёт
-  // в моках демона вместе с конфиговой ручкой отката. Тесту сосед открыт через
-  // его Public API; прод-код правило по-прежнему связывает.
+  // A mock drives a scenario through several slices at once — the apply cycle lives
+  // in the daemon mocks together with the config rollback endpoint. A test sees the neighbor through
+  // its Public API; for production code the rule still applies.
   if (alias.layer === from.layer && !isCrossImport && deep.length === 0 && isTestFile(from.filePath)) return;
 
   if (alias.layer === from.layer && !isCrossImport) {
     report(
       SLICED.has(from.layer)
-        ? 'Соседний слайс — только через `@x`, свой слайс — относительным путём.'
-        : 'Внутри слоя ходим относительными путями: алиас слоя — вход снаружи.'
+        ? 'A neighboring slice only through `@x`, an own slice by a relative path.'
+        : 'Within a layer use relative paths: the layer alias is an entry from outside.'
     );
     return;
   }
@@ -134,32 +134,34 @@ function checkAlias(from, alias, report) {
     return;
   }
 
-  // Слайс кончается там, где лежит Public API, поэтому путь без него — это
-  // группа слайсов или опечатка, а не вход в слайс.
+  // A slice ends where the Public API lies, so a path without it is
+  // a slice group or a typo, not an entry into a slice.
   if (target !== null && slice !== '' && !target.found) {
-    report(`У \`@${alias.layer}/${slice}\` нет Public API: это группа слайсов, а не слайс.`);
+    report(`\`@${alias.layer}/${slice}\` has no Public API: it is a slice group, not a slice.`);
     return;
   }
 
-  // Фикстуры и моки слайса — вход для тестов, а не часть Public API: через
-  // баррель их тянул бы и прод-код, а вместе с ними msw. Остальному коду
-  // `__tests__` соседа закрыт так же, как любая другая внутренность слайса.
+  // Slice fixtures and mocks are an entry for tests, not part of the Public API: through
+  // a barrel production code would pull them in, and msw with them. For other code
+  // a neighbor's `__tests__` is closed like any other slice internals.
   if (deep[0] === TESTS && isTestFile(from.filePath)) return;
 
   if (slice !== '' && deep.length > 0) {
-    report(`Импорт в обход Public API: разрешён \`@${alias.layer}/${slice}\`.`);
+    report(`Import bypassing the Public API: \`@${alias.layer}/${slice}\` is allowed.`);
   }
 }
 
 /**
- * Сегмент `@x` — вход, который слайс открывает **конкретному соседу своего
- * слоя**: `entities/Daemon/@x/config` читается как «что Daemon разрешает
- * слайсу Config». Поэтому проверяются оба конца: кто входит и с какого слоя.
- * Сверху вход не нужен — там доступен обычный Public API.
+ * The `@x` segment is an entry that a slice opens to a **specific neighbor in its
+ * layer**: `entities/Daemon/@x/config` reads as "what Daemon allows to the
+ * Config slice". So both ends are checked: who enters and from which layer.
+ * From above the entry is not needed — the ordinary Public API is available there.
  */
 function checkCrossImport(from, alias, deep, report) {
   if (alias.layer !== from.layer) {
-    report(`\`@x\` — вход для соседа своего слоя; из ${from.layer} берём Public API \`@${alias.layer}/…\`.`);
+    report(
+      `\`@x\` is an entry for a neighbor in its own layer; from ${from.layer} use the Public API \`@${alias.layer}/…\`.`
+    );
     return;
   }
 
@@ -167,7 +169,7 @@ function checkCrossImport(from, alias, deep, report) {
   const consumer = from.slice ? from.slice.split('/').at(-1) : '';
 
   if (target && consumer && target.toLowerCase() !== consumer.toLowerCase()) {
-    report(`Вход \`@x/${target}\` открыт слайсу \`${target}\`, а импортирует \`${consumer}\`.`);
+    report(`Entry \`@x/${target}\` is open to slice \`${target}\`, but \`${consumer}\` imports it.`);
   }
 }
 
@@ -175,35 +177,35 @@ function checkRelative(from, source, report) {
   const target = locate(path.resolve(path.dirname(from.filePath), source));
 
   if (!target) {
-    report('Относительный путь уводит за пределы слоёв `src`.');
+    report('A relative path leaves the `src` layers.');
     return;
   }
 
   if (target.layer !== from.layer) {
-    report(`Переход в слой ${target.layer} относительным путём — только по алиасу.`);
+    report(`Crossing into layer ${target.layer} by a relative path is allowed only via the alias.`);
     return;
   }
 
   if (from.slice && target.slice !== from.slice) {
-    report('Относительный путь вывел за слайс: соседа импортируем по алиасу.');
+    report('A relative path left the slice: import a neighbor by alias.');
   }
 }
 
 export default {
   meta: { name: 'fsd', version: '1.0.0' },
   rules: {
-    // Группа родственных слайсов названа доменом, и слайс внутри неё начинается
-    // с того же слова: `Daemon/DaemonTraffic`, а не `Daemon/TrafficChart`.
-    // Иначе имя слайса читается в отрыве от папки и домен теряется.
+    // A group of related slices is named by a domain, and a slice inside it starts
+    // with the same word: `Daemon/DaemonTraffic`, not `Daemon/TrafficChart`.
+    // Otherwise the slice name reads apart from the folder and the domain is lost.
     'slice-name': {
       meta: { type: 'problem', schema: [] },
       create(context) {
         const from = locate(context.filename);
         if (!from?.slice?.includes('/')) return {};
 
-        // Группы вкладываются, поэтому подходит и имя от ближайшей группы, и
-        // имя от всей цепочки: `Alpha/Beta/AlphaBetaCard` назван верно, и
-        // склейка всего пути в одно слово обвиняла бы его напрасно.
+        // Groups nest, so both the name from the nearest group and
+        // the name from the whole chain fit: `Alpha/Beta/AlphaBetaCard` is named correctly, and
+        // gluing the whole path into one word would blame it needlessly.
         const parts = from.slice.split('/');
         const slice = parts.pop();
         const group = parts.at(-1);
@@ -214,7 +216,7 @@ export default {
           Program(node) {
             context.report({
               node,
-              message: `Слайс в группе \`${group}\` называется \`${group}…\`, а не \`${slice}\`.`,
+              message: `A slice in group \`${group}\` is named \`${group}…\`, not \`${slice}\`.`,
             });
           },
         };

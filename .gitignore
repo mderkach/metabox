@@ -12,27 +12,27 @@ coverage
 .env.*
 !.env.example
 
-# Каталог, из которого go:embed берёт SPA: содержимое кладёт `make daemon`.
-# В git остаётся только .gitkeep — без единого файла go:embed не собирается,
-# и Go-часть переставала бы собираться на чистом клоне (docs/adr/ADR-0003).
+# Directory go:embed takes the SPA from: `make daemon` fills it.
+# Only .gitkeep stays in git: without a single file go:embed does not build,
+# and the Go part would stop building on a clean clone (docs/adr/ADR-0003).
 !apps/metaboxd/internal/webui/static/
 apps/metaboxd/internal/webui/static/*
 !apps/metaboxd/internal/webui/static/.gitkeep
 
-# кэши и артефакты сборки, в том числе из devcontainer
+# caches and build artifacts, including those from the devcontainer
 .pnpm-store/
 *.tsbuildinfo
 .devcontainer/.env
 
-# бинарь генератора схемы: собирается `make schema` в свой каталог
+# schema generator binary: `make schema` builds it into its own directory
 /tools/schemagen/schemagen
-# то же для генератора контракта: `go build ./cmd/...` кладёт его рядом с модулем
+# same for the contract generator: `go build ./cmd/...` puts it next to the module
 /apps/metaboxd/contractgen
 .playwright-mcp
 .impeccable
 
-# Рабочие документы владельца: состояние реализации, долг, интервью и runbook
-# его роутера. Лежат рядом с остальной документацией, в репозиторий не входят.
+# Owner's working documents: implementation status, debt, interviews and the runbook
+# of the owner's router. They sit next to the rest of the documentation and are not part of the repository.
 /docs/Status.md
 /docs/TechDebt.md
 /docs/Interviews.md

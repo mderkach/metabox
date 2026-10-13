@@ -52,14 +52,14 @@ import {
 } from '../model/RuleSetAdd.schema';
 
 /**
- * Подключение готового набора.
+ * Adding a ready-made set.
  *
- * Якорь формы — собранный адрес: поставщик, вид списка, зеркало и категория
- * это лишь способ его собрать, а в конфиг уходит он сам. Поэтому адрес показан
- * целиком и правится руками: вписанный адрес переводит форму в «свой
- * источник», и ни одна категория не оказывается недостижимой.
+ * The form anchor is the built address: provider, list kind, mirror and
+ * category are only a way to build it, while the address itself goes into the
+ * config. So the address is shown in full and edited by hand: a typed address
+ * switches the form to "own source", and no category becomes unreachable.
  *
- * Каталог приходит от демона: он сверяет перечни с поставщиками сам.
+ * The catalog comes from the daemon: it checks the listings against providers itself.
  */
 export function RuleSetAddForm({
   catalog,
@@ -69,15 +69,15 @@ export function RuleSetAddForm({
 }: {
   catalog: RuleSetCatalog;
   takenTags: readonly string[];
-  /** Теги аутбаундов документа; пустой список — конфиг не разобран. */
+  /** Document outbound tags; an empty list means the config is not parsed. */
   outbounds: readonly string[];
   onDone?: () => void;
 }) {
   const { t } = useTranslation('features/RuleSet/RuleSetAdd');
   const insert = ConfigDocumentState.use.insert();
   const count = takenTags.length;
-  // Форма, которая остаётся на экране, о своём успехе должна сказать: набор
-  // уезжает в черновик, и без строки таблицы рядом это ничем не видно.
+  // A form that stays on the screen must report its success: the set goes into
+  // the draft, and without a table row nearby that is not visible.
   const [added, setAdded] = useState<string | null>(null);
 
   const form = useForm<RuleSetAddModel>({
@@ -129,7 +129,7 @@ export function RuleSetAddForm({
   );
 }
 
-/** Выбранный в форме список каталога; `null` — свой адрес или такого вида у поставщика нет. */
+/** Catalog list selected in the form; `null` means an own address or the provider has no such kind. */
 function useSelectedList(catalog: RuleSetCatalog): RuleSetList | null {
   const { control } = useFormContext<RuleSetAddModel>();
   const providerId = useWatch({ control, name: 'providerId' });
@@ -139,8 +139,8 @@ function useSelectedList(catalog: RuleSetCatalog): RuleSetList | null {
 }
 
 /**
- * Пересобирает адрес и имя под выбранные поставщика и вид списка. Зеркало
- * сохраняется, если у нового списка оно есть, иначе берётся первое.
+ * Rebuilds the address and name for the selected provider and list kind. The
+ * mirror is kept if the new list has it, otherwise the first one is taken.
  */
 function useRecompose(catalog: RuleSetCatalog) {
   const { setValue, getValues } = useFormContext<RuleSetAddModel>();
@@ -157,7 +157,7 @@ function useRecompose(catalog: RuleSetCatalog) {
   };
 }
 
-/** Источник: поставщик из каталога или свой адрес. */
+/** Source: a catalog provider or an own address. */
 function ProviderField({ catalog }: { catalog: RuleSetCatalog }) {
   const { t } = useTranslation('features/RuleSet/RuleSetAdd');
   const { control, setValue, getValues } = useFormContext<RuleSetAddModel>();
@@ -181,8 +181,9 @@ function ProviderField({ catalog }: { catalog: RuleSetCatalog }) {
               const next = value ?? CUSTOM_PROVIDER;
               field.onChange(next);
 
-              // Вид списка переносится, если он есть у нового поставщика:
-              // сменивший источник обычно ищет ту же категорию у другого.
+              // The list kind carries over if the new provider has it: whoever
+              // changed the source usually looks for the same category at
+              // another.
               const lists = findProvider(catalog, next)?.lists ?? [];
               const kind = getValues('kind');
               const nextKind = lists.some((list) => list.kind === kind) ? kind : (lists.at(0)?.kind ?? kind);
@@ -209,8 +210,8 @@ function ProviderField({ catalog }: { catalog: RuleSetCatalog }) {
 }
 
 /**
- * Вид списка: домены или адреса. Отдельно от поставщика, потому что это два
- * разных вопроса — чьему списку доверять и что в нём искать.
+ * List kind: domains or addresses. Separate from the provider because these are
+ * two different questions: whose list to trust and what to look for in it.
  */
 function KindField({ catalog }: { catalog: RuleSetCatalog }) {
   const { t } = useTranslation('features/RuleSet/RuleSetAdd');
@@ -240,8 +241,8 @@ function KindField({ catalog }: { catalog: RuleSetCatalog }) {
             onValueChange={(value) => {
               const next = lists.find((list) => list.kind === value[0])?.kind;
 
-              // Повторное нажатие на отмеченный вид снимает его, а без вида
-              // адрес не собрать.
+              // Pressing the selected kind again deselects it, and without a
+              // kind the address cannot be built.
               if (next === undefined) {
                 return;
               }
@@ -268,9 +269,9 @@ function KindField({ catalog }: { catalog: RuleSetCatalog }) {
 }
 
 /**
- * Категория у поставщика. Подсказки берутся из перечня, который сверяет демон,
- * но имя, которого в нём нет, вводится тем же полем и собирается в адрес тем же
- * шаблоном: поставщик мог добавить категорию после сверки.
+ * Provider category. Hints come from the listing the daemon checks, but a name
+ * that is not in it is entered in the same field and built into the address by
+ * the same template: the provider may have added a category after the check.
  */
 function CategoryField({ catalog }: { catalog: RuleSetCatalog }) {
   const { t } = useTranslation('features/RuleSet/RuleSetAdd');
@@ -320,7 +321,7 @@ function CategoryField({ catalog }: { catalog: RuleSetCatalog }) {
   );
 }
 
-/** Откуда перечень и какой он свежести: пользователь судит по этому, можно ли верить подсказкам. */
+/** Where the listing is from and how fresh: the user judges by this whether the hints can be trusted. */
 function listFreshness(t: TFunction<'features/RuleSet/RuleSetAdd'>, list: RuleSetList): string {
   if (list.updatedAt === null) {
     return t('field.category.undated');
@@ -334,9 +335,9 @@ function listFreshness(t: TFunction<'features/RuleSet/RuleSetAdd'>, list: RuleSe
 }
 
 /**
- * Адрес и зеркало. Показан целиком: по нему видно, что именно уедет в конфиг,
- * а правка руками переводит форму в «свой источник» — угадывать поставщика по
- * чужому адресу панель не вправе.
+ * Address and mirror. Shown in full: it shows exactly what will go into the
+ * config, and hand editing switches the form to "own source", since the panel
+ * may not guess a provider from a foreign address.
  */
 function AddressField({ catalog }: { catalog: RuleSetCatalog }) {
   const { t } = useTranslation('features/RuleSet/RuleSetAdd');
@@ -382,9 +383,9 @@ function AddressField({ catalog }: { catalog: RuleSetCatalog }) {
 }
 
 /**
- * Категория вне перечня. Не отказ: поставщик мог добавить её после сверки.
- * Предупреждение называет последствие, потому что проверить адрес панель не
- * может — это сделает бинарь при применении.
+ * Category outside the listing. Not a failure: the provider may have added it
+ * after the check. The warning names the consequence, because the panel cannot
+ * check the address; the binary will do it on apply.
  */
 function CategoryNotice({ list }: { list: RuleSetList | null }) {
   const { t } = useTranslation('features/RuleSet/RuleSetAdd');
@@ -403,7 +404,7 @@ function CategoryNotice({ list }: { list: RuleSetList | null }) {
   );
 }
 
-/** Зеркало поставщика: пересобирает адрес, не трогая остальную форму. */
+/** Provider mirror: rebuilds the address without touching the rest of the form. */
 function MirrorField({ list }: { list: RuleSetList }) {
   const { t } = useTranslation('features/RuleSet/RuleSetAdd');
   const { control, setValue, getValues } = useFormContext<RuleSetAddModel>();
@@ -442,7 +443,7 @@ function MirrorField({ list }: { list: RuleSetList }) {
   );
 }
 
-/** Имя набора: по нему на него ссылаются правила, поэтому оно уникально. */
+/** Set name: rules refer to it by it, so it is unique. */
 export function TagField() {
   const { t } = useTranslation('features/RuleSet/RuleSetAdd');
   const { control } = useFormContext<RuleSetAddModel>();
@@ -475,9 +476,9 @@ export function TagField() {
 }
 
 /**
- * Формат файла. Поле появляется только тогда, когда вывести его из адреса
- * нечем: у `.srs` и `.json` ядро выводит формат само, и записанное значение
- * оказалось бы правкой, которой пользователь не делал.
+ * File format. The field appears only when it cannot be derived from the
+ * address: for `.srs` and `.json` core derives the format itself, and a written
+ * value would be an edit the user did not make.
  */
 export function FormatField() {
   const { t } = useTranslation('features/RuleSet/RuleSetAdd');
@@ -528,9 +529,10 @@ export function FormatField() {
 }
 
 /**
- * Интервал обновления и узел для скачивания. Свёрнуты: оба нужны редко, а
- * развёрнутыми занимают половину формы на узком экране. Отказ на любом из них
- * раскрывает блок принудительно — иначе сообщение осталось бы под свёрткой.
+ * Update interval and download node. Collapsed: both are rarely needed, and
+ * expanded they take half the form on a narrow screen. A failure on either
+ * expands the block forcibly, otherwise the message would stay under the
+ * disclosure.
  */
 export function ExtraFields({ outbounds }: { outbounds: readonly string[] }) {
   const { t } = useTranslation('features/RuleSet/RuleSetAdd');
@@ -626,14 +628,14 @@ export function ExtraFields({ outbounds }: { outbounds: readonly string[] }) {
   );
 }
 
-/** Узлы, подходящие под набранное: подсказка сужается так же, как поиск по спискам панели. */
+/** Nodes matching what was typed: the hint narrows the same way as search over the panel lists. */
 function matchOutbounds(outbounds: readonly string[], query: string): string[] {
   const words = toQueryWords(query);
 
   return outbounds.filter((tag) => matchesWords(tag.toLowerCase(), words)).slice(0, SUGGESTION_LIMIT);
 }
 
-/** Описания поля одной строкой: `aria-describedby` принимает идентификаторы через пробел. */
+/** Field descriptions in one string: `aria-describedby` accepts identifiers separated by spaces. */
 function describedBy(...ids: (string | undefined)[]): string | undefined {
   const list = ids.filter((id) => id !== undefined);
 
@@ -651,7 +653,7 @@ function FieldError({ id, message }: { id: string; message: string | undefined }
   );
 }
 
-/** Код отказа из схемы в текст: сообщение приходит строкой, ключи — свои. */
+/** Schema failure code into text: the message arrives as a string, the keys are our own. */
 function errorText(t: TFunction<'features/RuleSet/RuleSetAdd'>, message: string | undefined): string | null {
   const key = message === undefined ? undefined : RULE_SET_ADD_ERROR_KEY[message];
 

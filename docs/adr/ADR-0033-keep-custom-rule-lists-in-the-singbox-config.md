@@ -1,99 +1,99 @@
-# ADR-0033. Хранить свои списки маршрутизации в конфиге sing-box, а не в состоянии демона
+# ADR-0033. Keep custom routing lists in the sing-box config, not in the daemon state
 
-- Статус: Accepted
-- Дата: 2026-09-25
-- Ответственные: владелец репозитория
+- Status: Accepted
+- Date: 2026-09-25
+- Deciders: repository owner
 
-## Контекст и постановка проблемы
+## Context and problem statement
 
-AC-8 требует, чтобы пользователь собирал в панели свой список доменов и адресов, в том числе взяв за основу список поставщика, а маршрут ссылался на него как на набор правил. Открытый вопрос OQ-3 в разделе 10.1 [PRD](../PRD.md) — где такой список физически живёт: в самом конфиге, отдельным файлом рядом с ним или в состоянии демона. Пока он открыт, AC-8 нельзя начинать, а веха M2 без него не закрывается.
+AC-8 requires that the user can build a custom list of domains and addresses in the panel, including one based on a provider list, and that a route refers to it as a rule set. Open question OQ-3 in section 10.1 of the [PRD](../PRD.md) is where such a list physically lives: in the config itself, as a separate file next to it, or in the daemon state. While it is open, AC-8 cannot start, and milestone M2 does not close without it.
 
-Ограничения уже заданы другими решениями и кодом:
+Constraints are already set by other decisions and by the code:
 
-- **Конфиг — единственный источник правды о маршрутизации.** Демон владеет файлом, но обязан читать произвольный `config.json`, и нераспознанное в нём не теряется ([ADR-0039](./ADR-0039-separate-the-ui-from-the-fork-schema-by-an-adapter-layer.md)). По этой же причине OQ-11 рекомендует не заводить тумблер выключения правила: его состояние жило бы вне файла.
-- **Служба поднимается в режиме каталога** — `sing-box -D /etc/sing-box -C /etc/sing-box run` — и сливает все файлы каталога с суффиксом `.json` ([ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md)). Подкаталоги при слиянии пропускаются: `readConfig` в `cmd/sing-box/cmd_run.go` форка `v1.14.0-extended-2.7.1` берёт только записи верхнего уровня.
-- **Писать конфиг может только протокол Apply**: проверка `sing-box check -C` по каталогу-кандидату, атомарная запись, рестарт, healthcheck, окно подтверждения с автооткатом ([ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md)). История версий хранит документ целиком ([ADR-0008](./ADR-0008-store-config-versions-as-numbered-copies.md)).
+- **The config is the single source of truth about routing.** The daemon owns the file but must read an arbitrary `config.json`, and unrecognized content in it is not lost ([ADR-0039](./ADR-0039-separate-the-ui-from-the-fork-schema-by-an-adapter-layer.md)). For the same reason OQ-11 recommends not adding a rule disable toggle: its state would live outside the file.
+- **The service starts in directory mode** — `sing-box -D /etc/sing-box -C /etc/sing-box run` — and merges all files of the directory with the `.json` suffix ([ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md)). Subdirectories are skipped during the merge: `readConfig` in `cmd/sing-box/cmd_run.go` of the fork `v1.14.0-extended-2.7.1` takes only top-level entries.
+- **Only the Apply protocol may write the config**: a `sing-box check -C` check on the candidate directory, atomic write, restart, healthcheck, a confirmation window with automatic rollback ([ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md)). Version history stores the whole document ([ADR-0008](./ADR-0008-store-config-versions-as-numbered-copies.md)).
 
-Что умеет форк — проверено по исходникам `v1.14.0-extended-2.7.1`:
+What the fork can do — checked against the `v1.14.0-extended-2.7.1` sources:
 
-- `route.rule_set` принимает тип `inline` — правила лежат прямо в узле (`option/rule_set.go`, тип по умолчанию при пустом `type`).
-- `local` читает файл по `path` в обоих форматах: `source` — JSON, `binary` — `.srs` (`route/rule/rule_set_local.go`). Компиляция в `.srs` для `local` не обязательна.
-- Относительный `path` отсчитывается от рабочего каталога службы (`filemanager.BasePath`, каталог `-D`).
-- `local` следит за своим файлом (`fswatch`) и перечитывает его на лету. Изменённый файл меняет маршрутизацию без проверки, рестарта и окна подтверждения.
+- `route.rule_set` accepts the `inline` type — the rules sit right in the node (`option/rule_set.go`, the default type when `type` is empty).
+- `local` reads a file by `path` in both formats: `source` — JSON, `binary` — `.srs` (`route/rule/rule_set_local.go`). Compiling to `.srs` is not required for `local`.
+- A relative `path` is resolved from the service working directory (`filemanager.BasePath`, the `-D` directory).
+- `local` watches its file (`fswatch`) and re-reads it on the fly. A changed file changes routing without a check, a restart or a confirmation window.
 
-В scope — где хранится список и кто его пишет. Вне scope — интерфейс редактора списка, импорт списка поставщика и формат обмена с панелью.
+In scope: where the list is stored and who writes it. Out of scope: the list editor interface, importing a provider list and the exchange format with the panel.
 
-## Критерии выбора
+## Decision drivers
 
-- Конфиг остаётся единственным источником правды: по файлам на устройстве видно всё, что влияет на маршрут.
-- Список проходит тот же путь, что и конфиг: проверка, запись, откат, история версий.
-- Откат версии не разводит конфиг и список.
-- Панель без демона или после его удаления не оставляет роутер с маршрутом, который нельзя прочитать из файлов.
-- Размер конфига остаётся приемлемым для правки текстом и дифа на экране.
+- The config stays the single source of truth: the files on the device show everything that affects the route.
+- The list goes the same way as the config: check, write, rollback, version history.
+- A version rollback does not split the config and the list apart.
+- The panel without the daemon or after its removal does not leave the router with a route that cannot be read from the files.
+- The config size stays acceptable for text editing and an on-screen diff.
 
-## Рассмотренные варианты
+## Considered options
 
-1. **Список внутри конфига, `inline` rule-set** — правила лежат в узле `route.rule_set` самого конфига. Всё в одном файле: проверку, запись, историю версий и откат список получает даром, потому что протокол Apply уже работает с документом целиком. Недостаток — размер: список поставщика на тысячи записей раздувает конфиг, текстовый режим и диф. **Принят для небольших списков.**
-2. **Отдельный файл рядом с конфигом, `local` rule-set** — исходник в формате `source` лежит в подкаталоге каталога конфига, узел ссылается на него относительным `path`. Конфиг остаётся компактным, файл читается и правится руками. Цена — протокол Apply перестаёт быть однофайловым: файл списка проверяется, пишется, попадает в историю и откатывается в одной транзакции с конфигом. Кроме того, файл нельзя писать мимо транзакции: форк перечитает его сам. **Принят для больших списков.**
-3. **Исходник в состоянии демона** (`<state-dir>`) — демон хранит список у себя, собирает `.srs` и подкладывает его sing-box. Панель полностью управляет форматом. Но часть правды о маршрутизации уходит из файла конфига: по `config.json` не видно, откуда взялся набор, ручная правка конфига и удаление панели ломают маршрут неочевидно. Это противоречит [ADR-0039](./ADR-0039-separate-the-ui-from-the-fork-schema-by-an-adapter-layer.md) — та же причина, по которой не рекомендован тумблер из OQ-11. **Отклонён.**
+1. **The list inside the config, an `inline` rule set** — the rules sit in the `route.rule_set` node of the config itself. Everything in one file: the list gets check, write, version history and rollback for free, because the Apply protocol already works with the whole document. Drawback — size: a provider list of thousands of entries bloats the config, the text mode and the diff. **Chosen for small lists.**
+2. **A separate file next to the config, a `local` rule set** — the source in the `source` format lives in a subdirectory of the config directory, the node refers to it with a relative `path`. The config stays compact, the file is readable and editable by hand. The price: the Apply protocol stops being single-file: the list file is checked, written, enters history and is rolled back in one transaction with the config. Besides, the file cannot be written outside the transaction: the fork re-reads it by itself. **Chosen for large lists.**
+3. **The source in the daemon state** (`<state-dir>`) — the daemon keeps the list itself, builds `.srs` and hands it to sing-box. The panel fully controls the format. But part of the truth about routing leaves the config file: `config.json` does not show where the rule set came from, and a manual config edit or removing the panel breaks the route in non-obvious ways. This contradicts [ADR-0039](./ADR-0039-separate-the-ui-from-the-fork-schema-by-an-adapter-layer.md) — the same reason the toggle from OQ-11 is not recommended. **Rejected.**
 
-## Принятое решение
+## Decision outcome
 
-Свой список хранится в конфиге sing-box — в самом файле или рядом с ним — и пишется только протоколом Apply.
+A custom list is stored in the sing-box config — in the file itself or next to it — and is written only by the Apply protocol.
 
-- Небольшой список — узел `route.rule_set` с `type: inline` в самом конфиге.
-- Большой список — узел `type: local` с `format: source` и относительным `path` в подкаталог каталога конфига, например `rule-sets/<тег>.json`. В корень каталога файл списка не кладётся: служба слила бы его с конфигом как ещё один `.json`.
-- Файл списка — часть транзакции Apply. Кандидат проверяется `sing-box check` вместе с файлами списков по тем же относительным путям. Запись атомарна, в истории версий файл хранится рядом с конфигом той же версии, откат возвращает оба.
-- Мимо транзакции файл списка не пишется: форк перечитывает его сам, и такая правка обошла бы проверку и автооткат.
-- Состояние демона список не хранит. Черновик до применения живёт там же, где черновик конфига, — в панели.
+- A small list is a `route.rule_set` node with `type: inline` in the config itself.
+- A large list is a `type: local` node with `format: source` and a relative `path` into a subdirectory of the config directory, for example `rule-sets/<tag>.json`. The list file is not put into the directory root: the service would merge it with the config as one more `.json`.
+- The list file is part of the Apply transaction. The candidate is checked by `sing-box check` together with the list files at the same relative paths. The write is atomic, in version history the file is stored next to the config of the same version, a rollback returns both.
+- The list file is not written outside the transaction: the fork re-reads it by itself, and such an edit would bypass the check and automatic rollback.
+- The daemon state does not store the list. A draft before apply lives in the same place as the config draft — in the panel.
 
-Non-goals: компиляция в `.srs` на устройстве — `local` читает исходник. Конкретный порог между «небольшим» и «большим» списком решение не фиксирует.
+Non-goals: compiling to `.srs` on the device — `local` reads the source. The decision does not fix a specific threshold between a "small" and a "large" list.
 
-### Область действия и границы
+### Scope and boundaries
 
-`route.rule_set` конфига, подкаталог списков в каталоге конфига, протокол Apply и история версий демона (`apps/metaboxd/internal/apply`, `internal/config`).
+`route.rule_set` of the config, the lists subdirectory in the config directory, the Apply protocol and the daemon version history (`apps/metaboxd/internal/apply`, `internal/config`).
 
-## Последствия
+## Consequences
 
-### Положительные
+### Positive
 
-- По файлам в `/etc/sing-box` видно всё, что влияет на маршрут; после удаления панели конфиг продолжает работать как есть.
-- Небольшой список не требует ни одной правки в демоне: Apply уже работает с документом целиком.
-- Компиляция не нужна — на устройстве не запускается `sing-box rule-set compile` и не хранится `.srs` рядом с исходником.
+- The files in `/etc/sing-box` show everything that affects the route; after the panel is removed the config keeps working as is.
+- A small list needs no change in the daemon: Apply already works with the whole document.
+- No compilation is needed — the device does not run `sing-box rule-set compile` and does not keep `.srs` next to the source.
 
-### Отрицательные
+### Negative
 
-- Протокол Apply и история версий, рассчитанные на один файл, придётся расширить на набор файлов: проверку по каталогу-кандидату, атомарную запись нескольких файлов и откат. Это отдельная работа в демоне, и до неё большие списки не поддерживаются.
-- В одном конфиге сосуществуют два способа хранить список, и панель выбирает между ними по размеру.
-- Рукописный `local`, который пользователь положил сам и который не следует правилам выше, панель может показать, но не обязана им управлять.
+- The Apply protocol and the version history, designed for one file, will have to be extended to a set of files: a check on the candidate directory, atomic write of several files and rollback. This is separate work in the daemon, and until it is done large lists are not supported.
+- Two ways of storing a list coexist in one config, and the panel chooses between them by size.
+- A hand-written `local` that the user put in place and that does not follow the rules above can be shown by the panel, but the panel is not obliged to manage it.
 
-### Нейтральные или отложенные
+### Neutral or deferred
 
-- Порог выбора между `inline` и файлом определяется при реализации AC-8 по замеру: размер конфига, время разбора, объём дифа.
-- Формулировка AC-8 приведена к решению в PRD 1.31: компиляции в `.srs` на устройстве нет, `local` читает `source`.
+- The threshold between `inline` and a file is determined when implementing AC-8 by measurement: config size, parse time, diff volume.
+- The wording of AC-8 is aligned with the decision in PRD 1.31: there is no compilation to `.srs` on the device, `local` reads `source`.
 
-## Риски и меры снижения
+## Risks and mitigations
 
-| Риск                                                                                | Вероятность и влияние                                                                    | Митигация                                                                                                                    |
-| ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Откат возвращает конфиг, но не файл списка                                          | Средняя вероятность при многофайловой транзакции, высокое влияние — маршрут разъезжается | Версия хранит конфиг и файлы списков вместе; интеграционный тест отката проверяет оба                                        |
-| Правка файла списка мимо Apply применяется сразу, без проверки и окна подтверждения | Низкая вероятность, высокое влияние                                                      | Демон пишет файл только внутри транзакции; ручная правка на устройстве — осознанный обход, как и ручная правка `config.json` |
-| Файл списка случайно оказался в корне каталога и слился с конфигом                  | Низкая вероятность, среднее влияние — `check` отказывает                                 | Путь строит панель, файлы идут только в подкаталог; `check` по каталогу-кандидату ловит слияние до записи                    |
+| Risk                                                                                                  | Likelihood and impact                                                             | Mitigation                                                                                                                                    |
+| ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| A rollback returns the config but not the list file                                                   | Medium likelihood with a multi-file transaction, high impact — the route diverges | A version stores the config and list files together; an integration rollback test checks both                                                 |
+| An edit of the list file outside Apply takes effect at once, without a check or a confirmation window | Low likelihood, high impact                                                       | The daemon writes the file only inside a transaction; a manual edit on the device is a deliberate bypass, like a manual edit of `config.json` |
+| A list file accidentally lands in the directory root and merges with the config                       | Low likelihood, medium impact — `check` rejects                                   | The panel builds the path, files go only into the subdirectory; `check` on the candidate directory catches the merge before the write         |
 
-## Совместимость, миграция и откат
+## Compatibility, migration and rollback
 
-Не применимо для существующих конфигов: своих списков панель ещё не создавала, мигрировать нечего. Рукописные `inline` и `local` в чужом конфиге читаются по общему правилу AC-3 и AC-25 и сохраняются как есть. Отказ от решения до реализации AC-8 ничего не откатывает.
+Not applicable to existing configs: the panel has not created custom lists yet, there is nothing to migrate. Hand-written `inline` and `local` in someone else's config are read under the general rule of AC-3 and AC-25 and kept as is. Abandoning the decision before AC-8 is implemented rolls nothing back.
 
-## Проверка решения
+## Validation
 
-- Тест панели: новый небольшой список уходит в черновик узлом `type: inline`, диф показывает только его.
-- Интеграционные тесты демона (`make test`, `internal/apply`): кандидат с файлом списка проверяется `check -C` вместе с файлом; ошибка до `rename` не меняет ни конфиг, ни список; откат версии возвращает конфиг и список побайтово.
-- `make apply-check` на стенде: конфиг с `local` rule-set из подкаталога проходит цикл Apply и автооткат.
-- Поиск по коду демона: в `<state-dir>` не появляется файлов списков.
+- A panel test: a new small list goes into the draft as a `type: inline` node, the diff shows only it.
+- Daemon integration tests (`make test`, `internal/apply`): a candidate with a list file is checked by `check -C` together with the file; an error before `rename` changes neither the config nor the list; a version rollback returns the config and the list byte for byte.
+- `make apply-check` on the test bench: a config with a `local` rule set from a subdirectory passes the Apply cycle and automatic rollback.
+- A search through the daemon code: no list files appear in `<state-dir>`.
 
-## Ссылки
+## Links
 
-- [PRD](../PRD.md): AC-8, OQ-3 и OQ-11 в разделе 10.1, приложение A.5; [ADR-0039](./ADR-0039-separate-the-ui-from-the-fork-schema-by-an-adapter-layer.md) — модель конфига.
-- [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md) — протокол Apply и режим каталога.
-- [ADR-0008](./ADR-0008-store-config-versions-as-numbered-copies.md) — история версий конфига.
-- Форк `sing-box-extended` `v1.14.0-extended-2.7.1`: `option/rule_set.go`, `route/rule/rule_set_local.go`, `cmd/sing-box/cmd_run.go`.
+- [PRD](../PRD.md): AC-8, OQ-3 and OQ-11 in section 10.1, appendix A.5; [ADR-0039](./ADR-0039-separate-the-ui-from-the-fork-schema-by-an-adapter-layer.md) — the config model.
+- [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md) — the Apply protocol and directory mode.
+- [ADR-0008](./ADR-0008-store-config-versions-as-numbered-copies.md) — config version history.
+- Fork `sing-box-extended` `v1.14.0-extended-2.7.1`: `option/rule_set.go`, `route/rule/rule_set_local.go`, `cmd/sing-box/cmd_run.go`.

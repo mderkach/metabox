@@ -29,8 +29,8 @@ function ScreenStub() {
 }
 
 /**
- * Свой роутер под тест, как в `test/renderWithRouter.tsx`, но с `AppLayout` в
- * корне: оболочке нужен дочерний маршрут, чтобы было что показать в `Outlet`.
+ * Its own router per test, as in `test/renderWithRouter.tsx`, but with `AppLayout` at
+ * the root: the shell needs a child route so there is something to show in `Outlet`.
  */
 function renderAppLayout() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
@@ -56,7 +56,7 @@ function serveDaemon() {
   );
 }
 
-/** `matchMedia` в jsdom нет — подставляем ответ только на запрос узкой ширины. */
+/** jsdom has no `matchMedia`: answer only the narrow-width query. */
 function mockNarrowScreen() {
   vi.stubGlobal('matchMedia', function matchNarrowQuery(media: string) {
     return {
@@ -75,7 +75,7 @@ describe('AppLayout', () => {
     ConfigDocumentState.getState().reset();
   });
 
-  it('ссылка «к содержимому» первая в порядке табуляции и ведёт на #content', async () => {
+  it('the "skip to content" link is first in tab order and leads to #content', async () => {
     serveDaemon();
     const user = userEvent.setup();
 
@@ -90,7 +90,7 @@ describe('AppLayout', () => {
     expect(skip).toHaveFocus();
   });
 
-  it('main с id «content» оборачивает содержимое маршрута', async () => {
+  it('main with id "content" wraps the route content', async () => {
     serveDaemon();
 
     renderAppLayout();
@@ -101,7 +101,7 @@ describe('AppLayout', () => {
     expect(main).toHaveTextContent('Экран содержимого');
   });
 
-  it('показывает полосу недоступности демона над экраном, а экран остаётся на месте', async () => {
+  it('shows the daemon unavailability strip above the screen, and the screen stays in place', async () => {
     serveDaemon();
     server.use(http.get(DAEMON_ENDPOINT.status(), () => new HttpResponse(null, { status: 503 })));
 
@@ -111,7 +111,7 @@ describe('AppLayout', () => {
     expect(screen.getByRole('main')).toHaveTextContent('Экран содержимого');
   });
 
-  it('бар применения плавает под экраном и освобождает под собой место, а не сдвигает экран', async () => {
+  it('the apply bar floats under the screen and frees space beneath it instead of shifting the screen', async () => {
     const barHeight = 64;
 
     serveDaemon();
@@ -138,7 +138,7 @@ describe('AppLayout', () => {
     expect(main).toHaveStyle({ paddingBottom: '0px' });
   });
 
-  it('на широком экране разделы в боковой панели, нижней панели нет', async () => {
+  it('on a wide screen the sections are in the sidebar, there is no bottom bar', async () => {
     serveDaemon();
 
     renderAppLayout();
@@ -147,7 +147,7 @@ describe('AppLayout', () => {
     expect(screen.queryByRole('button', { name: 'Ещё' })).not.toBeInTheDocument();
   });
 
-  it('на телефоне боковой панели нет: разделы в нижней панели после содержимого', async () => {
+  it('on a phone there is no sidebar: the sections are in the bottom bar after the content', async () => {
     serveDaemon();
     mockNarrowScreen();
 
@@ -157,7 +157,7 @@ describe('AppLayout', () => {
 
     expect(screen.queryByRole('complementary', { name: 'Панель разделов' })).not.toBeInTheDocument();
     expect(within(nav).getByRole('button', { name: 'Ещё' })).toBeInTheDocument();
-    // Панель в потоке после `main`, а не поверх него: экран под ней не прячется.
+    // The bar is in flow after `main`, not over it: the screen under it is not hidden.
     expect(screen.getByRole('main').compareDocumentPosition(nav) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });

@@ -1,13 +1,14 @@
 import { createContext } from 'react';
 
-/** Тип ошибки, которую ставит raw-поле с неразобранным JSON. */
+/** Type of the error set by a raw field with unparsed JSON. */
 export const RAW_PARSE_ERROR = 'parse';
 
 /**
- * Raw-поля с неразобранным JSON: имя поля → значение формы, при котором текст
- * не разобрался. Значение у такого поля прежнее, и резолвер его пропустит,
- * поэтому запись останавливает эта таблица. Запись устаревает, когда значение
- * поля сменилось снаружи: текст поля тогда переписан новым значением.
- * Таблица одна на форму и не меняется: контекст поверх формы её не перерисовывает.
+ * Raw fields with unparsed JSON: field name to the form value at which the text
+ * did not parse. Such a field keeps its previous value, and the resolver will
+ * pass it, so this table stops the write. An entry goes stale when the field
+ * value changed from outside: the field text is then rewritten with the new
+ * value. There is one table per form and it does not change: the context over
+ * the form does not redraw it.
  */
 export const RawFailuresContext = createContext<Map<string, unknown>>(new Map());

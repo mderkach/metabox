@@ -46,6 +46,6 @@ func TestListenSetsUnackedTimeout(t *testing.T) {
 	}
 
 	if want := int(unackedTimeout.Milliseconds()); got != want {
-		t.Errorf("TCP_USER_TIMEOUT принятого соединения %d мс, ожидали %d", got, want)
+		t.Errorf("TCP_USER_TIMEOUT of the accepted connection %d ms, expected %d", got, want)
 	}
 }

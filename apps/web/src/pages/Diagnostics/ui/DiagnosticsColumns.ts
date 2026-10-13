@@ -1,4 +1,4 @@
-/** Раскладка строки проверки: одна на шапку и строки. Ниже md строка складывается карточкой. */
+/** Check row layout: one for the header and the rows. Below md the row folds into a card. */
 export const DIAGNOSTICS_COLUMN = {
   Row: 'flex w-full flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border px-4 py-3 last:border-b-0',
   Name: 'w-56 shrink-0 text-sm max-md:w-full',

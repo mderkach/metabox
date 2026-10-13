@@ -4,10 +4,10 @@ import { describeIssues } from '@shared/lib/schemaIssues';
 import { RULE_ACTION_FIELDS, RULE_MATCHER_KEYS } from './Rule.constants';
 import { RULE_TARGET, type RuleBranch, type RuleGroup, type RuleMatcher, type RuleRow } from './Rule.model';
 
-/** Действие по умолчанию: правило без `action` маршрутизирует. */
+/** Default action: a rule without `action` routes. */
 const DEFAULT_ACTION = 'route';
 
-/** Значение ветки union у логического правила. */
+/** Value of the union branch for a logical rule. */
 const LOGICAL_TYPE = 'logical';
 
 function toValues(raw: unknown): string[] {
@@ -39,10 +39,10 @@ function isLogical(rule: object): boolean {
 }
 
 /**
- * Условия логического правила лежат во вложенных `rules`, а не в самом
- * правиле. Без разбора вложенности такое правило выглядело бы как правило без
- * условий, то есть как перехватывающее весь трафик, — и пользователь решил бы,
- * что всё, что ниже, не выполняется.
+ * Logical rule conditions lie in nested `rules`, not in the rule itself.
+ * Without parsing the nesting such a rule would look like a rule without
+ * conditions, that is, one that intercepts all traffic, and the user would
+ * decide that nothing below it runs.
  */
 function toGroup(rule: object): RuleGroup | null {
   if (!isLogical(rule)) {
@@ -108,29 +108,29 @@ function toSearchText(branch: RuleBranch): string[] {
 }
 
 /**
- * Разворачивает `route.rules` в плоские строки списка.
+ * Expands `route.rules` into flat list rows.
  *
- * Порядок сохраняется дословно: в sing-box он и есть логика — срабатывает
- * первое подходящее правило, а не самое точное.
+ * The order is kept verbatim: in sing-box it is the logic, the first matching
+ * rule fires, not the most precise one.
  */
 export function toRuleRows(config: Config | null): RuleRow[] {
   return toRuleRowsFromNodes(config?.route?.rules ?? []);
 }
 
 /**
- * То же по узлам, прочитанным из текста файла.
+ * The same over nodes read from the file text.
  *
- * Экран правил обязан открываться и тогда, когда схема не приняла конфиг
- * целиком: одно незнакомое правило иначе спрятало бы весь список, а
- * пользователю нужно как раз найти это правило.
+ * The rules screen must open even when the schema did not accept the whole
+ * config: one unfamiliar rule would otherwise hide the whole list, while the
+ * user needs exactly to find this rule.
  */
 export function toRuleRowsFromNodes(nodes: readonly unknown[]): RuleRow[] {
   const rows: RuleRow[] = [];
 
   for (const [position, node] of nodes.entries()) {
-    // Позиция берётся в исходном массиве, а не в отфильтрованном: по ней
-    // правка адресует узел в файле (`route.rules[index - 1]`), и пропущенный
-    // не-объект сдвинул бы все следующие правки на чужие узлы.
+    // The position is taken in the source array, not the filtered one: an edit
+    // addresses the node in the file by it (`route.rules[index - 1]`), and a
+    // skipped non-object would shift all the following edits onto other nodes.
     if (typeof node !== 'object' || node === null) {
       continue;
     }
@@ -155,17 +155,17 @@ export function toRuleRowsFromNodes(nodes: readonly unknown[]): RuleRow[] {
   return rows;
 }
 
-/** Узел принят схемой форка: для него есть форма, а не только текстовый режим. */
+/** The node is accepted by the fork schema: it has a form, not only the text mode. */
 export function isRuleRecognized(node: unknown): boolean {
   return RuleSchema.safeParse(node).success;
 }
 
 /**
- * Замечания схемы к узлу правила; пусто — узел принят.
+ * Schema remarks on the rule node; empty means the node is accepted.
  *
- * Замечание не запрещает запись: арбитр валидности — `sing-box check` на
- * устройстве, а не схема панели. Иначе узел, которого схема не знает, нельзя
- * было бы ни поправить, ни сохранить, — а именно текстом его и правят.
+ * A remark does not forbid writing: the validity arbiter is `sing-box check` on
+ * the device, not the panel schema. Otherwise a node the schema does not know
+ * could be neither fixed nor saved, and it is edited exactly as text.
  */
 export function checkRuleNode(node: unknown): string[] {
   const checked = RuleSchema.safeParse(node);

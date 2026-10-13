@@ -4,7 +4,7 @@ import { DEVICE_ENDPOINT } from '../api/Device.endpoints';
 import type { DevicesWire } from '../api/Device.schema';
 import { DEVICES_FIXTURE } from './Device.fixture';
 
-/** Любой MAC в пути: двоеточия в нём закодированы, и шаблон `:mac` их бы не принял. */
+/** Any MAC in the path: colons in it are encoded, and the `:mac` template would not accept them. */
 const MAC_PATTERN = '*';
 
 function toName(body: unknown): string | null {
@@ -16,9 +16,9 @@ function toName(body: unknown): string | null {
 }
 
 /**
- * Свои имена — как у демона: пустое снимает своё, и подпись возвращается к
- * статической аренде или DHCP. Источник, к которому возвращаться, мок берёт из
- * исходной фикстуры.
+ * Own names work as in the daemon: an empty one clears its own, and the label returns to
+ * the static lease or DHCP. The source to return to is taken by the mock from
+ * the original fixture.
  */
 function withName(list: DevicesWire, mac: string, name: string): DevicesWire {
   return {
@@ -40,8 +40,8 @@ function withName(list: DevicesWire, mac: string, name: string): DevicesWire {
 }
 
 /**
- * Ручки устройств. Состояние — в замыкании фабрики: тест получает чистый список,
- * дев-режим держит имена до перезагрузки страницы.
+ * Device handlers. State is in the factory closure: the test gets a clean list,
+ * dev mode keeps the names until the page reloads.
  */
 export function createDeviceHandlers(initial: DevicesWire = DEVICES_FIXTURE) {
   let list = initial;

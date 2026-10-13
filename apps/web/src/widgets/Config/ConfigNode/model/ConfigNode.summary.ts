@@ -1,7 +1,7 @@
-/** Что показать в шапке свёрнутого узла: тип и адрес, по которым его узнают. */
+/** What to show in the header of a collapsed node: the type and address by which it is recognized. */
 export interface NodeSummary {
   type: string | null;
-  /** `listen:port` входа, `server:port` выхода; `null`, когда адреса у узла нет. */
+  /** Inbound `listen:port`, outbound `server:port`; `null` when the node has no address. */
   address: string | null;
 }
 

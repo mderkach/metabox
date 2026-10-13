@@ -18,12 +18,13 @@ import { ConfigApplyStale } from './ConfigApplyStale';
 import { ConfigApplyWorkdir } from './ConfigApplyWorkdir';
 
 /**
- * Бар живёт в оболочке, а не на экране редактора: неприменённые правки и окно
- * подтверждения видны с любого экрана и переживают переход между ними.
+ * The bar lives in the shell, not on the editor screen: unapplied edits and the
+ * confirmation window are visible from any screen and survive a transition
+ * between them.
  *
- * Бар плавает над нижним краем экрана и раскладку не двигает. Место под ним
- * экран освобождает сам: `onSpaceChange` сообщает высоту, которую бар
- * закрывает, пока виден, и ноль, когда его нет.
+ * The bar floats over the bottom edge of the screen and does not move the
+ * layout. The screen frees the space under it itself: `onSpaceChange` reports
+ * the height the bar covers while visible, and zero when it is gone.
  */
 export function ConfigApplyBar({ onSpaceChange }: { onSpaceChange: (space: number) => void }) {
   const { t } = useTranslation('features/Config/ConfigApply');
@@ -31,9 +32,9 @@ export function ConfigApplyBar({ onSpaceChange }: { onSpaceChange: (space: numbe
   const [dismissed, setDismissed] = useState<string | null>(null);
   const phase = apply.transaction?.phase;
   const awaiting = phase === APPLY_PHASE.AwaitingConfirm;
-  // Откат и отказ показываются и без черновика: откат версии из истории своего
-  // черновика не заводит. Скрывает сообщение пользователь сам — иначе оно
-  // исчезло бы раньше, чем его прочитали.
+  // Rollback and failure are shown without a draft too: a version rollback from
+  // the history does not create a draft of its own. The user hides the message,
+  // otherwise it would vanish before being read.
   const failure =
     apply.transaction !== null &&
     apply.transaction.id !== dismissed &&
@@ -52,9 +53,9 @@ export function ConfigApplyBar({ onSpaceChange }: { onSpaceChange: (space: numbe
     }),
     [awaiting, failure, apply.isStale, apply.isApplying, apply.transaction, apply.check, apply.workdir]
   );
-  // Уходящий бар сворачивается с тем текстом, с которым его видели: свежее
-  // состояние за время сворачивания подменило бы, например, окно подтверждения
-  // строкой «правки в черновике».
+  // The leaving bar collapses with the text it was seen with: a fresher state
+  // during collapsing would replace, for example, the confirmation window with
+  // the "edits in draft" line.
   const [held, setHeld] = useState<typeof current | null>(null);
   const reducedMotion = useReducedMotion();
 
@@ -62,8 +63,8 @@ export function ConfigApplyBar({ onSpaceChange }: { onSpaceChange: (space: numbe
     setHeld(current);
   }
 
-  // Без анимации `transitionend` не придёт, и снимок остался бы в DOM вместе
-  // с тикающим таймером окна подтверждения.
+  // Without animation `transitionend` will not arrive, and the snapshot would
+  // stay in the DOM together with the ticking confirmation window timer.
   if (!visible && reducedMotion && held !== null) {
     setHeld(null);
   }
@@ -77,9 +78,10 @@ export function ConfigApplyBar({ onSpaceChange }: { onSpaceChange: (space: numbe
     }
   }
 
-  // Ниже `md` под баром стоит нижняя панель навигации, и безопасный отступ
-  // снизу уже за ней; на широком экране бар сам стоит у нижнего края. Имя
-  // группы перехода держит бар над экраном, пока роутер меняет экран.
+  // Below `md` the bottom navigation bar stands under the bar, and the safe
+  // bottom inset is already behind it; on a wide screen the bar itself sits at
+  // the bottom edge. The transition group name keeps the bar above the screen
+  // while the router changes the screen.
   return (
     <div
       ref={layerRef}
@@ -115,8 +117,9 @@ export function ConfigApplyBar({ onSpaceChange }: { onSpaceChange: (space: numbe
               )}
               <p className='text-sm'>{shown.isApplying ? t('bar.applying') : t('bar.dirty')}</p>
               <span className='grow' />
-              {/* Сброс держится с краю группы, подальше от «Применить»:
-                    промах по соседней кнопке открывал бы сброс вместо применения. */}
+              {/* Discard is kept at the group edge, away from "Apply": a
+                    miss on the neighboring button would open discard instead of
+                    apply. */}
               {!shown.isApplying && (
                 <>
                   <ConfigApplyDiscard onDiscard={apply.discard} />
@@ -151,10 +154,11 @@ export function ConfigApplyBar({ onSpaceChange }: { onSpaceChange: (space: numbe
 }
 
 /**
- * Высота слоя бара, пока он занимает место — виден или ещё уезжает. Место под
- * уезжающим баром держится до конца выезда, иначе низ экрана прыгнул бы под
- * ним. Меряется наблюдателем, а не однажды: вывод `sing-box check`, отказ и
- * окно подтверждения меняют высоту бара на месте.
+ * Height of the bar layer while it takes space, visible or still sliding away.
+ * The space under a leaving bar is held until the end of the slide, otherwise
+ * the screen bottom would jump under it. It is measured by an observer, not
+ * once: `sing-box check` output, a failure and the confirmation window change
+ * the bar height in place.
  */
 function useBarSpace(visible: boolean, onSpaceChange: (space: number) => void) {
   const ref = useRef<HTMLDivElement>(null);
@@ -186,11 +190,11 @@ function useBarSpace(visible: boolean, onSpaceChange: (space: number) => void) {
 }
 
 /**
- * Остаток приходит от демона — он считает его монотонными часами, потому что
- * часов реального времени у роутера нет, — а браузер лишь тикает
- * между ответами: по нулю здесь ничего не происходит, откат делает демон.
- * Каждый ответ опроса пересинхронизирует отсчёт, поэтому дросселированный в
- * фоновой вкладке `setInterval` не копит расхождение.
+ * The remainder comes from the daemon, which counts it with a monotonic clock
+ * because the router has no real-time clock, while the browser only ticks
+ * between responses: nothing happens at zero here, the daemon does the
+ * rollback. Each poll response resyncs the countdown, so a `setInterval`
+ * throttled in a background tab does not accumulate drift.
  */
 function ConfirmWindow({
   transaction,
@@ -209,8 +213,9 @@ function ConfirmWindow({
       <div className='flex min-h-7 flex-wrap items-center gap-x-2.5 gap-y-1'>
         <Timer className='size-4 shrink-0 text-muted-foreground' />
         <p className='text-sm'>
-          {/* Живая область только у неизменной части: иначе тикающий остаток
-              переобъявлял бы окно целиком каждую секунду. */}
+          {/* The live region is only on the unchanging part: otherwise the
+              ticking remainder would reannounce the whole window every second.
+              */}
           <span role='status'>{t('confirm.prompt')}</span>{' '}
           {remaining > 0 ? (
             <Trans
@@ -235,8 +240,9 @@ function ConfirmWindow({
 }
 
 /**
- * Секцию `experimental.clash_api` дописывает демон: без неё читать рантайм
- * нечем, и пользователю это показывается как чужая правка в его файле.
+ * The `experimental.clash_api` section is appended by the daemon: without it
+ * there is nothing to read the runtime with, and the user is shown this as
+ * someone else's edit in their file.
  */
 function ClashAPIAdded() {
   const { t } = useTranslation('features/Config/ConfigApply');
@@ -249,7 +255,7 @@ function ClashAPIAdded() {
   );
 }
 
-/** Шаг, на котором встал цикл, словами пользователя: новый код демона — ошибка компиляции здесь. */
+/** The step the cycle stopped at, in the user's words: a new daemon code is a compile error here. */
 const REASON_KEY: Readonly<Record<ApplyReasonCode, ParseKeys<'features/Config/ConfigApply'>>> = {
   backup_failed: 'failure.reason.backup_failed',
   write_failed: 'failure.reason.write_failed',
@@ -277,8 +283,9 @@ function ApplyFailure({ transaction, onDismiss }: { transaction: ApplyTransactio
           <pre className='font-mono text-xs whitespace-pre-wrap'>{transaction.reason}</pre>
         </AlertDescription>
       )}
-      {/* Примитив ставит действие абсолютом в угол; на узком экране оно
-          наезжает на заголовок, поэтому там уходит в поток. */}
+      {/* The primitive places the action absolutely in the corner; on a
+          narrow screen it overlaps the title, so there it goes into the flow.
+          */}
       <AlertAction className='static col-start-2 mt-2 justify-self-start sm:absolute sm:mt-0'>
         <Button variant='ghost' size='sm' onClick={onDismiss}>
           {t('failure.dismiss')}

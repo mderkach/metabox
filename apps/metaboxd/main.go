@@ -43,51 +43,51 @@ const (
 	idleTimeout       = 60 * time.Second
 	shutdownTimeout   = 10 * time.Second
 
-	// Потолок на один вызов бинаря. `sing-box check` на большом конфиге
-	// укладывается в секунды, но зависший процесс держать нельзя.
+	// Ceiling for one binary call. `sing-box check` on a big config
+	// fits in seconds, but a hung process cannot be held.
 	binaryTimeout = 30 * time.Second
 
 	healthRequestTimeout = 5 * time.Second
 	healthPollInterval   = 500 * time.Millisecond
 
-	// DNS-проба: первый запрос после рестарта поднимает соединение к upstream и
-	// может занять секунды, поэтому попыток несколько. Отказ всех трёх — около
-	// семи секунд сверх опроса API.
+	// DNS probe: the first query after a restart brings up the connection to upstream and
+	// may take seconds, so there are several attempts. A failure of all three is about
+	// seven seconds on top of the API poll.
 	dnsProbeTimeout  = 2 * time.Second
 	dnsProbeAttempts = 3
 
-	// Периоды опроса источников потока; чем они заданы — events.Options.
-	// connectionsInterval — период счётчика срабатываний: снапшот соединений
-	// снимает он и он же отдаёт его потоку.
+	// Polling periods of the stream sources; what sets them is events.Options.
+	// connectionsInterval is the period of the hit counter: it takes the connections
+	// snapshot and it gives it to the stream.
 	connectionsInterval = time.Second
 	serviceInterval     = 5 * time.Second
 	systemInterval      = 2 * time.Second
 	streamRetryInterval = 3 * time.Second
 
-	// История рантайма: точка раз в десять секунд, 2160 точек до первого
-	// укрупнения шага — шесть часов. Дальше кольцо не выбрасывает старое, а
-	// сливает соседние точки и удваивает шаг, поэтому график всегда покрывает
-	// всё время работы демона.
+	// Runtime history: a point every ten seconds, 2160 points before the first
+	// step coarsening, six hours. After that the ring does not drop the old but
+	// merges neighbouring points and doubles the step, so the chart always covers
+	// the whole daemon runtime.
 	historyStepSeconds = 10
 	historyTrafficStep = historyStepSeconds
 	historyPoints      = 6 * int(time.Hour/time.Second) / historyStepSeconds
 
-	// Каталог наборов: потолок на запрос дерева к GitHub и пауза перед
-	// повтором неудачной сверки — на старте роутера сеть и часы поднимаются
-	// позже демона.
+	// Rule set catalog: the ceiling for a tree request to GitHub and the pause before
+	// retrying a failed check: at router start the network and clock come up
+	// later than the daemon.
 	ruleSetRequestTimeout = 30 * time.Second
 	ruleSetRetryInterval  = time.Hour
 
-	// Потолок одной проверки диагностики: замер узла через Clash API и запрос
-	// напрямую идут параллельно, и отчёт ждёт самый медленный из них.
+	// Ceiling of one diagnostics check: the node measurement through the Clash API and the direct
+	// request run in parallel, and the report waits for the slowest of them.
 	diagTimeout = 5 * time.Second
 
-	// Период опроса файла log.output в потоке лога.
+	// Polling period of the log.output file in the log stream.
 	logPollInterval = 500 * time.Millisecond
 )
 
-// settings — то, что демон получает флагами. Значения по умолчанию
-// устройственные: запущенный без аргументов на роутере демон работает.
+// settings is what the daemon receives by flags. The default values
+// are device ones: a daemon started without arguments on the router works.
 type settings struct {
 	addr          string
 	allowedOrigin string
@@ -176,9 +176,9 @@ func run(log *slog.Logger, s settings) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	// Незавершённая транзакция доигрывается до того, как демон начнёт
-	// принимать запросы: питание, снятое в окне подтверждения, иначе оставило
-	// бы устройство на неподтверждённом конфиге навсегда.
+	// An unfinished transaction is replayed before the daemon starts
+	// accepting requests: a power loss within the confirmation window would otherwise leave
+	// the device on the unconfirmed config forever.
 	if err := manager.Replay(ctx); err != nil {
 		log.Error("незавершённая транзакция не доиграна", "err", err)
 	}
@@ -195,16 +195,16 @@ func run(log *slog.Logger, s settings) error {
 		return fmt.Errorf("встроенный интерфейс: %w", err)
 	}
 
-	// Неудача не останавливает демон: панель обязана работать и при
-	// отсутствующем sing-box, просто без версии бинаря.
+	// A failure does not stop the daemon: the panel must work with a
+	// missing sing-box too, just without the binary version.
 	build, err := service.Build(ctx)
 	singboxVersion := build.Version
 	if err != nil {
 		log.Warn("версия sing-box не прочитана", "err", err)
 	}
 
-	// Отсутствие прокси не останавливает демон: панель обязана открываться
-	// и без рантайма, просто с деградировавшими экранами.
+	// A missing proxy does not stop the daemon: the panel must open
+	// without the runtime too, just with degraded screens.
 	var clashHandler http.Handler
 
 	clash, err := clashapi.NewProxy(configSettings(store), httpapi.ProxyError(log))
@@ -234,8 +234,8 @@ func run(log *slog.Logger, s settings) error {
 		},
 	)
 
-	// Доля канала через sing-box считается за всё время работы демона, поэтому
-	// учёт не ждёт подписчика: приращения, не снятые вовремя, теряются.
+	// The channel share through sing-box is counted over the whole daemon runtime, so
+	// the accounting does not wait for a subscriber: increments not taken in time are lost.
 	traffic := history.New(historyTrafficStep, historyStepSeconds, historyPoints)
 
 	accounting := events.NewAccounting(source, sysinfo, traffic, log, events.Options{
@@ -246,10 +246,10 @@ func run(log *slog.Logger, s settings) error {
 	accounting.Start()
 	defer accounting.Close()
 
-	// Счёт правил, как и учёт трафика, идёт с запуска демона и не ждёт панель:
-	// соединение, не замеченное вовремя, задним числом не засчитать. Его же
-	// снапшот кормит топик соединений потока — при открытой панели опрос
-	// `/connections` остаётся одним.
+	// The rule count, like traffic accounting, runs from the daemon start and does not wait for the panel:
+	// a connection not noticed in time cannot be counted retroactively. Its same
+	// snapshot feeds the connections topic of the stream: with the panel open the
+	// `/connections` poll stays single.
 	connectionSizes := &history.Connections{}
 	hits := route.NewCounter(source, log, route.CounterOptions{
 		Interval:  connectionsInterval,
@@ -270,8 +270,8 @@ func run(log *slog.Logger, s settings) error {
 	ruleSets.Start()
 	defer ruleSets.Close()
 
-	// Без списка устройств панель открывается и подписывает источники
-	// адресами; битый файл имён не затирается следующей правкой.
+	// Without a device list the panel opens and labels sources with
+	// addresses; a broken names file is not overwritten by the next edit.
 	var lan httpapi.DeviceRegistry
 
 	registry, err := devices.New(ctx, devices.Runner(runCommand(singbox.NewExec(binaryTimeout))), store, devices.Options{
@@ -336,13 +336,13 @@ func run(log *slog.Logger, s settings) error {
 		ReadHeaderTimeout: readHeaderTimeout,
 		ReadTimeout:       readTimeout,
 		IdleTimeout:       idleTimeout,
-		// WriteTimeout намеренно не задан: он режет долгие ответы — прокси
-		// Clash API и поток соединений. Дедлайн ставится точечно на ответе.
+		// WriteTimeout is deliberately not set: it cuts long responses, the Clash API
+		// proxy and the connection stream. The deadline is set pointwise on a response.
 		ErrorLog: slog.NewLogLogger(log.Handler(), slog.LevelError),
 	}
 
-	// Поток переживает запрос, поэтому Shutdown его сам не закроет: без этого
-	// остановка демона с открытой панелью упиралась бы в таймаут.
+	// The stream outlives the request, so Shutdown will not close it itself: without this
+	// the daemon stop with an open panel would run into the timeout.
 	srv.RegisterOnShutdown(hub.Close)
 
 	serveErr := make(chan error, len(listeners))
@@ -377,8 +377,8 @@ func run(log *slog.Logger, s settings) error {
 	return <-serveErr
 }
 
-// runCommand переводит запуск команды к виду, который ждёт procd: свой тип
-// результата тот пакет объявить не может, иначе получился бы цикл импортов.
+// runCommand translates a command launch to the form procd expects: that package
+// cannot declare its own result type, otherwise an import cycle would result.
 func runCommand(exec *singbox.Exec) procd.Runner {
 	return func(ctx context.Context, name string, args ...string) (string, int, error) {
 		res, err := exec.Run(ctx, name, args...)
@@ -387,7 +387,7 @@ func runCommand(exec *singbox.Exec) procd.Runner {
 	}
 }
 
-// batchCommand — то же для запуска со stdin: им модель обвязки пишется в UCI.
+// batchCommand is the same for a launch with stdin: it writes the dataplane model into UCI.
 func batchCommand(exec *singbox.Exec) dataplane.BatchRunner {
 	return func(ctx context.Context, input, name string, args ...string) (string, int, error) {
 		res, err := exec.RunInput(ctx, input, name, args...)
@@ -396,8 +396,8 @@ func batchCommand(exec *singbox.Exec) dataplane.BatchRunner {
 	}
 }
 
-// clashSettings приводит настройки контроллера к виду, который ждёт поток
-// событий: у него свой тип, чтобы пакет не зависел от секции конфига.
+// clashSettings brings the controller settings to the form the event stream
+// expects: it has its own type so the package does not depend on the config section.
 func clashSettings(store *config.Store) events.Resolver {
 	resolve := configSettings(store)
 
@@ -416,22 +416,22 @@ func clashSettings(store *config.Store) events.Resolver {
 	}
 }
 
-// serviceState отдаёт в поток то же состояние службы, что и ручка: панель
-// обязана видеть одно и то же независимо от того, откуда пришло.
+// serviceState gives the stream the same service state as the handler: the panel
+// must see the same thing regardless of where it came from.
 func serviceState(service *singbox.Client, binary string, sysinfo *device.Reader) events.ServiceReader {
 	return func(ctx context.Context) (json.RawMessage, error) {
-		// Отказ опроса не прерывает публикацию: иначе поток замирал бы на
-		// последнем удачном значении, и панель показывала бы упавший сервис
-		// работающим.
+		// A poll failure does not interrupt publication: otherwise the stream would freeze on
+		// the last successful value, and the panel would show a crashed service
+		// as running.
 		state, err := service.State(ctx)
 
 		return json.Marshal(httpapi.ServiceState(state, binary, err, sysinfo.Alive(ctx)))
 	}
 }
 
-// systemState отдаёт в поток показания устройства. Частичный отказ чтения не
-// отменяет публикацию: термозон может не быть, а процесс sing-box может быть
-// не запущен — остальные показания при этом читаются.
+// systemState gives the stream the device readings. A partial read failure does not
+// cancel publication: thermal zones may be absent, and the sing-box process may be
+// not running, while the other readings are read.
 func systemState(reader *device.Reader, log *slog.Logger) events.SystemReader {
 	return func(ctx context.Context) (json.RawMessage, error) {
 		stat, err := reader.Read(ctx)
@@ -443,8 +443,8 @@ func systemState(reader *device.Reader, log *slog.Logger) events.SystemReader {
 	}
 }
 
-// historyOf сводит два кольца в одного читателя: ручка истории отдаёт трафик и
-// показания платы одним ответом, а колец у них два — шаг считается по-разному.
+// historyOf merges two rings into one reader: the history handler returns traffic and
+// board readings in one response, and they have two rings: the step is counted differently.
 type historyReader struct {
 	*history.Traffic
 	device      *history.Device
@@ -459,8 +459,8 @@ func historyOf(traffic *history.Traffic, device *history.Device, connections *hi
 	return historyReader{Traffic: traffic, device: device, connections: connections}
 }
 
-// clashPort отдаёт порт контроллера из применённого конфига: по нему демон
-// находит процесс, который ведёт маршрутизацию.
+// clashPort returns the controller port from the applied config: by it the daemon
+// finds the process that does the routing.
 func clashPort(store *config.Store) device.PortResolver {
 	resolve := configSettings(store)
 
@@ -479,9 +479,9 @@ func clashPort(store *config.Store) device.PortResolver {
 	}
 }
 
-// configSettings читает адрес и секрет контроллера из применённого конфига.
-// Читается на каждый запрос: порт контроллера меняется вместе с конфигом, а
-// кэш отправил бы прокси на адрес, которого уже нет.
+// configSettings reads the controller address and secret from the applied config.
+// Read on every request: the controller port changes together with the config, and
+// a cache would send the proxy to an address that is no longer there.
 func configSettings(store *config.Store) clashapi.Resolver {
 	return func(ctx context.Context) (clashapi.Settings, error) {
 		data, err := store.Read(ctx)
@@ -493,8 +493,8 @@ func configSettings(store *config.Store) clashapi.Resolver {
 	}
 }
 
-// build собирает граф зависимостей. Отдельной функцией, чтобы run занимался
-// только запуском и остановкой.
+// build assembles the dependency graph. A separate function so that run only does
+// the start and stop.
 func build(
 	log *slog.Logger,
 	s settings,

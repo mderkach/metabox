@@ -17,9 +17,9 @@ import {
 import { DeviceRouteReason } from './DeviceRouteReason';
 
 /**
- * Тумблер «через sing-box» в строке устройства. Положение берётся из модели на
- * устройстве и до её перечитывания не меняется: переключение лишь открывает
- * подтверждение, а смену ведёт цикл применения.
+ * The "through sing-box" toggle in the device row. The position comes from the
+ * model on the device and does not change until it is reread: switching only
+ * opens a confirmation, and the change is driven by the apply cycle.
  */
 export function DeviceRouteSwitch({
   source,
@@ -30,11 +30,11 @@ export function DeviceRouteSwitch({
   onRoute,
 }: {
   source: RouteSource;
-  /** Подпись устройства в тексте подтверждения и доступном имени. */
+  /** Device label in the confirmation text and the accessible name. */
   label: string;
   model: DataplaneModel | null;
   locked: boolean;
-  /** Демон управляет чужой службой: положение показывается, смена не предлагается. */
+  /** The daemon manages a foreign service: the position is shown, a change is not offered. */
   foreignService: boolean;
   onRoute: (source: RouteSource, routed: boolean) => void;
 }) {
@@ -64,8 +64,9 @@ export function DeviceRouteSwitch({
   const note = reason === null ? null : <DeviceRouteReason id={noteId} reason={reason} />;
   const describedBy = reason === null ? undefined : noteId;
 
-  // Подсеть тумблер не пишет и снять не может: выключение убрало бы только MAC
-  // и адрес устройства, а подсеть оставила бы его в перехвате.
+  // The toggle does not write a subnet and cannot remove it: turning off would
+  // remove only the device MAC and address and leave the device intercepted by
+  // the subnet.
   if (reason?.kind === ROUTE_REASON.Subnet) {
     return (
       <span className='flex items-center gap-2'>

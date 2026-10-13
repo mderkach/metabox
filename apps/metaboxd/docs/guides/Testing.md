@@ -1,8 +1,8 @@
-# Тестирование Go
+# Go testing
 
-Только `testing` из стандартной библиотеки. Модуль демона не имеет зависимостей и не получит их ради ассертов: `require` в `go.mod` — отдельное решение ([Architecture&Style](./Architecture&Style.md)), а сам testify даёт свой диалект поверх языка и ломает семантику `t.Fatal` в горутинах. Сравнение — обычным `if`, различие печатается сообщением с got и want.
+Only `testing` from the standard library. The daemon module has no dependencies and will not get them for assertions: `require` in `go.mod` is a separate decision ([Architecture&Style](./Architecture&Style.md)), and testify itself adds its own dialect on top of the language and breaks the semantics of `t.Fatal` in goroutines. Comparison is a plain `if`, the difference is printed as a message with got and want.
 
-## Размещение
+## Layout
 
 ```text
 internal/apply/
@@ -12,13 +12,13 @@ internal/apply/
     └── config.golden.json
 ```
 
-Тест лежит рядом с кодом. `package apply` — когда нужны внутренности; `package apply_test` — когда проверяется публичный контракт, и это предпочтительный вариант для пакетов, которые кто-то импортирует.
+A test sits next to the code. `package apply` when internals are needed; `package apply_test` when the public contract is checked, and that is the preferred option for packages that someone imports.
 
-Имя функции — латиницей, по имени проверяемого поведения. Имена подтестов и сообщения об ошибках — на русском, читаются как утверждение: `t.Run("отказ check не меняет файл", ...)`. Существующий пример — [`tools/schemagen/generate_test.go:13`](../../../../tools/schemagen/generate_test.go).
+The function name is in Latin letters, named after the behaviour under test. Subtest names and failure messages are in English and read as a statement: `t.Run("check failure leaves the file unchanged", ...)`. An existing example: [`tools/schemagen/generate_test.go:13`](../../../../tools/schemagen/generate_test.go).
 
-Файлы фикстур — в `testdata/`: инструменты Go этот каталог игнорируют.
+Fixture files go in `testdata/`: Go tools ignore this directory.
 
-## Таблицы
+## Tables
 
 ```go
 func TestOriginAllowed(t *testing.T) {
@@ -28,41 +28,41 @@ func TestOriginAllowed(t *testing.T) {
   host   string
   want   bool
  }{
-  {"свой origin", "http://192.168.1.1", "192.168.1.1", true},
-  {"чужой origin", "http://evil.example", "192.168.1.1", false},
-  {"origin отсутствует", "", "192.168.1.1", false},
+  {"own origin", "http://192.168.1.1", "192.168.1.1", true},
+  {"foreign origin", "http://evil.example", "192.168.1.1", false},
+  {"origin missing", "", "192.168.1.1", false},
  }
 
  for _, tt := range tests {
   t.Run(tt.name, func(t *testing.T) {
    if got := originAllowed(tt.origin, tt.host); got != tt.want {
-    t.Errorf("origin %q при host %q: получили %v, ожидали %v", tt.origin, tt.host, got, tt.want)
+    t.Errorf("origin %q with host %q: got %v, want %v", tt.origin, tt.host, got, tt.want)
    }
   })
  }
 }
 ```
 
-`t.Errorf` — когда проверки в подтесте независимы, `t.Fatalf` — когда дальше идти бессмысленно. Копирование переменной цикла не требуется: с Go 1.22 у каждой итерации своя.
+`t.Errorf` when the checks in a subtest are independent, `t.Fatalf` when going further makes no sense. Copying the loop variable is not needed: since Go 1.22 each iteration has its own.
 
-`t.Parallel()` ставится осознанно. Тесты, которые пишут в один каталог или дёргают общий фейк сервиса, параллельными не делаем.
+`t.Parallel()` is added deliberately. Tests that write to one directory or call a shared service fake are not made parallel.
 
-## Инструменты testing
+## testing tools
 
-| Что нужно                       | Как                                                |
-| ------------------------------- | -------------------------------------------------- |
-| Каталог под файлы               | `t.TempDir()` — чистится сам                       |
-| Отмена по завершении            | `t.Cleanup(func() { ... })`                        |
-| Контекст в код под тестом       | `t.Context()` — отменяется по окончании теста      |
-| Переменная окружения            | `t.Setenv` (несовместим с `t.Parallel`)            |
-| Рабочий каталог                 | `t.Chdir`                                          |
-| Файлы для разбора после прогона | `t.ArtifactDir()` (Go 1.26), с флагом `-artifacts` |
+| What you need                     | How                                                     |
+| --------------------------------- | ------------------------------------------------------- |
+| A directory for files             | `t.TempDir()`: cleaned up automatically                 |
+| Teardown on completion            | `t.Cleanup(func() { ... })`                             |
+| A context for the code under test | `t.Context()`: cancelled when the test ends             |
+| An environment variable           | `t.Setenv` (incompatible with `t.Parallel`)             |
+| Working directory                 | `t.Chdir`                                               |
+| Files to inspect after the run    | `t.ArtifactDir()` (Go 1.26), with the `-artifacts` flag |
 
-Собственные хелперы помечаются `t.Helper()` — иначе ошибка указывает на строку хелпера, а не на тест.
+Own helpers are marked with `t.Helper()`, otherwise a failure points at the helper's line, not at the test.
 
-## Файловые тесты
+## File tests
 
-Всё, что пишет на диск, работает в `t.TempDir()`. Проверяется не только результат, но и то, что при отказе целевой файл не пострадал:
+Everything that writes to disk works in `t.TempDir()`. Not only the result is checked, but also that on failure the target file was not harmed:
 
 ```go
 before, err := os.ReadFile(cfgPath)
@@ -71,7 +71,7 @@ if err != nil {
 }
 
 if err := store.Write(brokenCandidate); err == nil {
- t.Fatal("битый кандидат записался")
+ t.Fatal("broken candidate was written")
 }
 
 after, err := os.ReadFile(cfgPath)
@@ -79,15 +79,15 @@ if err != nil {
  t.Fatal(err)
 }
 if !bytes.Equal(before, after) {
- t.Error("файл изменился после неудачной записи")
+ t.Error("file changed after a failed write")
 }
 ```
 
-Отсутствие `.json`-суффикса у временного файла и совпадение `sha256` при применении конфига с уже имеющейся секцией `clash_api` — обязательные проверки.
+The absence of a `.json` suffix on the temporary file and a matching `sha256` when applying a config that already has a `clash_api` section are mandatory checks.
 
-## Границы вместо моков
+## Boundaries instead of mocks
 
-Внешнее заменяется фейком через интерфейс, объявленный на стороне потребителя: запуск команд, управление сервисом, часы. Фейк — простая структура с полями-ответами, генераторы моков не заводим.
+External things are replaced with a fake through an interface declared on the consumer side: running commands, managing the service, the clock. A fake is a simple struct with response fields; we do not use mock generators.
 
 ```go
 type fakeRunner struct {
@@ -102,11 +102,11 @@ func (f *fakeRunner) Run(ctx context.Context, args ...string) (Result, error) {
 }
 ```
 
-Собственную логику не мокаем. Вызов настоящего `sing-box` — уровень интеграционных тестов, не юнит-тестов.
+We do not mock our own logic. Calling the real `sing-box` is the level of integration tests, not unit tests.
 
-## Время и конкурентность
+## Time and concurrency
 
-Окно подтверждения — 60 секунд, автооткат ждёт его истечения. Тест не спит: `testing/synctest` (стабилен с Go 1.25) даёт бабл с фиктивными часами, где время двигается мгновенно, когда все горутины заблокированы.
+The confirmation window is 60 seconds, the automatic rollback waits for it to expire. A test does not sleep: `testing/synctest` (stable since Go 1.25) gives a bubble with a fake clock where time moves instantly when all goroutines are blocked.
 
 ```go
 func TestRollbackAfterDeadline(t *testing.T) {
@@ -117,17 +117,17 @@ func TestRollbackAfterDeadline(t *testing.T) {
   synctest.Wait()
 
   if tx.State() != StateRolledBack {
-   t.Errorf("состояние %v, ожидали откат", tx.State())
+   t.Errorf("state %v, want rollback", tx.State())
   }
  })
 }
 ```
 
-В примере `startApply` собран на фейках хранилища и запуска команд: внутрь бабла попадает только логика транзакции с её таймерами. Реальные диск, сеть и внешний процесс туда не берутся — операции вне бабла не считаются блокировкой, фиктивные часы при них не двигаются, и детерминизм теряется.
+In the example `startApply` is built on fakes of the store and the command runner: only the transaction logic with its timers gets into the bubble. Real disk, network and external processes are not taken in: operations outside the bubble do not count as blocking, the fake clock does not move during them, and determinism is lost.
 
-Внутри бабла `time.Sleep`, таймеры и `context.WithTimeout` работают на фиктивных часах; `synctest.Wait` ждёт, пока все горутины бабла заблокируются.
+Inside the bubble `time.Sleep`, timers and `context.WithTimeout` run on the fake clock; `synctest.Wait` waits until all goroutines of the bubble are blocked.
 
-Всё, что запускает горутины, прогоняется с `-race`: `go test -race ./...`. Этот же прогон идёт в CI ([`ci.yml`](../../../../.github/workflows/ci.yml)). `make test` детектор не включает — он гоняет ещё и фронт, и удвоение времени на каждом локальном прогоне того не стоит, — поэтому правку с горутинами автор прогоняет с `-race` сам.
+Everything that starts goroutines is run with `-race`: `go test -race ./...`. The same run goes in CI ([`ci.yml`](../../../../.github/workflows/ci.yml)). `make test` does not enable the detector: it also runs the frontend, and doubling the time of every local run is not worth it, so the author runs a change with goroutines with `-race` personally.
 
 ## HTTP
 
@@ -136,36 +136,36 @@ srv := httptest.NewServer(httpapi.NewServer(&fakeApplier{}, nil, testLogger(t), 
 defer srv.Close()
 ```
 
-Сквозная проверка через `httptest.NewServer` — когда важна цепочка middleware (`Host`, `Origin`, паника, логи). Отдельный обработчик проверяется напрямую с `httptest.NewRecorder`, без поднятия сервера. Проверяются код, `Content-Type` и разобранное тело — не байты ответа целиком.
+An end-to-end check through `httptest.NewServer` is used when the middleware chain matters (`Host`, `Origin`, panic, logs). A single handler is checked directly with `httptest.NewRecorder`, without starting a server. The status, `Content-Type` and the parsed body are checked, not the whole response bytes.
 
-## Golden-файлы
+## Golden files
 
-Для round-trip конфига и генератора схемы: результат сравнивается с эталоном из `testdata/`. Обновление эталона — отдельным флагом (`-update`), а не правкой руками, иначе эталон подгоняют под баг.
+For the config round trip and the schema generator: the result is compared with a reference from `testdata/`. The reference is updated with a separate flag (`-update`), not by hand, otherwise the reference gets fitted to a bug.
 
-Детерминизм проверяется отдельно: два прогона обязаны дать один результат ([`generate_test.go:39`](../../../../tools/schemagen/generate_test.go)).
+Determinism is checked separately: two runs must give the same result ([`generate_test.go:39`](../../../../tools/schemagen/generate_test.go)).
 
-## Интеграционные тесты
+## Integration tests
 
-Go-тестов против живого sing-box в модуле нет, тега сборки под них тоже. Полный цикл против живого окружения гоняет стенд: скрипт `apply-cycle-check` внутри контейнера `target` (`make up`, `make apply-check`), в CI — джоба `integration`: тот же образ под другую архитектуру и тег rootfs, готовность демона по `/healthz`, тот же скрипт и `make reach-check` ([`ci.yml`](../../../../.github/workflows/ci.yml)).
+The module has no Go tests against a live sing-box, and no build tag for them either. The full cycle against a live environment is run by the test bench: the `apply-cycle-check` script inside the `target` container (`make up`, `make apply-check`); in CI, the `integration` job: the same image for another architecture and rootfs tag, daemon readiness via `/healthz`, the same script and `make reach-check` ([`ci.yml`](../../../../.github/workflows/ci.yml)).
 
-Go-тест, которому понадобятся procd, бинарь sing-box и `/etc/sing-box`, отделяется тегом сборки `//go:build integration`: на хосте этого нет, и `make test` там ломаться не должен.
+A Go test that needs procd, the sing-box binary and `/etc/sing-box` is separated with the `//go:build integration` build tag: the host has none of these, and `make test` must not break there.
 
-Проверка стенда `apply-cycle-check` ([`.devcontainer/target/files/usr/bin/apply-cycle-check`](../../../../.devcontainer/target/files/usr/bin/apply-cycle-check)) остаётся независимой от демона: она проверяет само окружение.
+The test bench check `apply-cycle-check` ([`.devcontainer/target/files/usr/bin/apply-cycle-check`](../../../../.devcontainer/target/files/usr/bin/apply-cycle-check)) stays independent of the daemon: it checks the environment itself.
 
-Перезагрузка контейнера с незавершённой транзакцией — тоже проверка, и она не автоматизируется юнит-тестом: её гоняют руками в стенде.
+Restarting the container with an unfinished transaction is also a check, and it is not automated by a unit test: it is run by hand on the test bench.
 
-## Бенчмарки
+## Benchmarks
 
-`for b.Loop() { ... }` (Go 1.24) вместо `for i := 0; i < b.N; i++`: таймер и защита от выброса вызова оптимизатором внутри. Бенчмарки пишутся под конкретный порог NFR, а не «на всякий случай».
+`for b.Loop() { ... }` (Go 1.24) instead of `for i := 0; i < b.N; i++`: the timer and protection against the optimizer dropping the call are built in. Benchmarks are written for a specific NFR threshold, not "just in case".
 
-## Команды
+## Commands
 
-| Что                     | Команда               |
-| ----------------------- | --------------------- |
-| Тесты демона            | `go test ./...`       |
-| Гонки                   | `go test -race ./...` |
-| Тесты генератора        | `make test-schemagen` |
-| Всё вместе (Go + фронт) | `make test`           |
-| Цикл Apply на стенде    | `make apply-check`    |
+| What                          | Command               |
+| ----------------------------- | --------------------- |
+| Daemon tests                  | `go test ./...`       |
+| Races                         | `go test -race ./...` |
+| Generator tests               | `make test-schemagen` |
+| Everything (Go + frontend)    | `make test`           |
+| Apply cycle on the test bench | `make apply-check`    |
 
-Генератор — отдельный модуль: `go test ./...` из корня его не видит, а собирается он только с тегами и `-ldflags` форка. Поэтому у него своя цель в [Makefile](../../../../Makefile).
+The generator is a separate module: `go test ./...` from the root does not see it, and it builds only with the fork's tags and `-ldflags`. So it has its own target in the [Makefile](../../../../Makefile).

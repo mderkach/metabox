@@ -1,16 +1,16 @@
 import type { ClashProvidersWire, ClashProxiesWire } from '../api/Proxy.schema';
 
 /**
- * Прокси с рабочего роутера, снятые 2026-09-10: 4 группы, 6 узлов VLESS,
- * 3 подписки.
+ * Proxies from a working router, taken 2026-09-10: 4 groups, 6 VLESS nodes,
+ * 3 subscriptions.
  *
- * Данные владельца вычищены: теги узлов и подписок обезличены. Реальный домен
- * или адрес здесь появиться не должен — файл лежит в git.
+ * The owner's data is scrubbed: node and subscription tags are anonymized. A real domain
+ * or address must not appear here: the file lives in git.
  */
 
 export const CHECKED_AT = '2026-09-10T19:25:31.264867247Z';
 
-/** Ответ на проверку задержки: замер того же прогона, что и история узлов. */
+/** Latency check response: a measurement of the same run as the node history. */
 export const CLASH_DELAY_FIXTURE = { time: CHECKED_AT, delay: 143 };
 
 export const CLASH_PROXIES_FIXTURE: ClashProxiesWire = {
@@ -82,7 +82,7 @@ export const CLASH_PROXIES_FIXTURE: ClashProxiesWire = {
       type: 'VLESS',
       name: 'sub-us/us-xhttp',
       udp: true,
-      // Узел не ответил на проверку: 65535 — отказ, а не задержка.
+      // The node did not answer the check: 65535 is a failure, not a latency.
       history: [{ time: CHECKED_AT, delay: 65535 }],
     },
   },

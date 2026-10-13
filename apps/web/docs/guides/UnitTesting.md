@@ -1,10 +1,10 @@
-# Тестирование фронтенда
+# Frontend testing
 
 Vitest + Testing Library.
 
-## Размещение и именование
+## Layout and naming
 
-Тесты лежат рядом с кодом, внутри слайса:
+Tests sit next to the code, inside the slice:
 
 ```text
 entities/Rule/
@@ -17,33 +17,35 @@ entities/Rule/
     └── RuleRow.test.tsx
 ```
 
-Рядом с кодом лежит не только тест: фикстуры, стабы и MSW-хендлеры того же слайса живут в его `__tests__`, а не в общем каталоге. В Public API слайса они **не** попадают: через баррель их тянул бы и прод-код, а вместе с ними `msw`. Берутся они прямым путём, и такой импорт разрешён только тестам — остальным `__tests__` соседа закрыт так же, как любая другая внутренность слайса:
+Not only the test sits next to the code: fixtures, stubs and MSW handlers of the same slice live in its `__tests__`, not in a shared directory. They do **not** get into the slice's Public API: through the barrel they would be pulled in by production code too, and `msw` with them. They are imported by a direct path, and such an import is allowed only to tests; for everything else a neighbour's `__tests__` is closed just like any other slice internals:
 
 ```ts
 // widgets/RouteExplanation/__tests__/RouteExplanation.test.tsx
 import { ROUTE_EXPLANATION_FIXTURE } from '@entities/Route/__tests__/Route.fixture';
 ```
 
-По той же причине тесту открыт Public API соседнего слайса своего слоя: мок ведёт сценарий через несколько слайсов сразу — цикл применения живёт в моках демона вместе с конфиговой ручкой отката. Прод-код это правило по-прежнему связывает.
+For the same reason a test may use the Public API of a neighbouring slice of its own layer: a mock drives a scenario across several slices at once; the apply cycle lives in the daemon mocks together with the config rollback endpoint. For production code this rule still applies.
 
-В `src/test` остаётся только оснастка без доменного знания: `setup`, обёртки рендера с `QueryClient` и роутером, подмена размеров виртуализатора, подмена потока рантайма (`fakeEventSource`), подмена графика (`fakePlot`), тестовый словарь, хелпер выбора в списке, концы выезда боковой панели и бара применения (`finishSidePanelTransition`, `finishApplyBarTransition` — jsdom переходов не играет), экземпляр MSW-сервера и точка сборки хендлеров для дев-режима. Фикстура конкретного API туда не переезжает никогда.
+`src/test` keeps only tooling without domain knowledge: `setup`, render wrappers with `QueryClient` and the router, the virtualizer size override, the runtime stream override (`fakeEventSource`), the chart override (`fakePlot`), the test dictionary, the list selection helper, the end-of-transition helpers for the side panel and the apply bar (`finishSidePanelTransition`, `finishApplyBarTransition`: jsdom does not play transitions), the MSW server instance and the handler assembly point for dev mode. A fixture of a specific API never moves there.
 
-- Имя файла: `<ТестируемыйФайл>.test.<ts|tsx>` — под `include: ["src/**/*.test.{ts,tsx}"]` из `vite.config.ts`.
-- Названия тестов — на русском, читаются как спецификация: `it("отклоняет пустой домен")`.
-- Группировка по компоненту/функции через `describe`.
+- File name: `<TestedFile>.test.<ts|tsx>`, matching `include: ["src/**/*.test.{ts,tsx}"]` from `vite.config.ts`.
+- Test titles are in English and read as a specification: `it("rejects an empty domain")`.
+- Grouping by component/function through `describe`.
 
-Vitest-глобалы **выключены** (`globals: false`): `describe`, `it`, `expect`, `vi` импортируются явно из `vitest`. Поэтому `cleanup` из Testing Library зарегистрирован вручную в `src/test/setup.ts` — не дублировать его в тестах. Правило `testing-library/no-manual-cleanup` рассчитано на автоочистку, которой здесь нет, и в наборе не включено.
+Vitest globals are **disabled** (`globals: false`): `describe`, `it`, `expect`, `vi` are imported explicitly from `vitest`. For this reason the Testing Library `cleanup` is registered manually in `src/test/setup.ts`; do not duplicate it in tests. The `testing-library/no-manual-cleanup` rule assumes automatic cleanup, which is not used here, and is not enabled in the set.
 
-## Методология
+## Methodology
 
-- **Тестируем поведение, а не реализацию.** Проверяем DOM по ролям и доступным именам, публичные эффекты, контракты. Внутреннее состояние компонента — не предмет теста.
-- **Мокаем по границам.** Сеть, роутер, сторонние виджеты. Собственную бизнес-логику не мокаем.
-- **Каждый тест изолирован.** Свой `QueryClient` на тест, `retry: false`, нулевой кэш.
-- **Минимум завязок на CSS.** Ищем по ролям и доступным именам, а не по классам Tailwind: они меняются при любой правке вёрстки. Проверка класса допустима там, где предмет теста — сам класс: так закреплена рамка ссылки, покрашенной кнопкой.
-- **Снапшоты не используем.** Исключение — статичные структуры: сгенерированные схемы, наборы ключей.
-- **Берём настоящие константы и схемы проекта**, а не их копии в тесте.
+- **Test behaviour, not implementation.** Check the DOM by roles and accessible names, public effects, contracts. The internal state of a component is not a subject of a test.
+- **Mock at the boundaries.** Network, router, third-party widgets. Do not mock our own business logic.
+- **Each test is isolated.** Its own `QueryClient` per test, `retry: false`, zero cache.
+- **Minimum coupling to CSS.** Query by roles and accessible names, not by Tailwind classes: they change with any layout edit. Checking a class is allowed where the class itself is the subject of the test: this is how the border of a link styled as a button is pinned.
+- **We do not use snapshots.** The exception is static structures: generated schemas, key sets.
+- **Use the project's real constants and schemas**, not their copies in the test.
 
-## Компоненты
+## Components
+
+The accessible name `'Правило 1'` (Rule 1) below is Russian because the panel UI renders it that way.
 
 ```tsx
 import { render, screen } from '@testing-library/react';
@@ -52,7 +54,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { RuleRow } from '../ui/RuleRow';
 
 describe('RuleRow', () => {
-  it('вызывает обработчик при клике по строке', async () => {
+  it('calls the handler on a row click', async () => {
     const onSelect = vi.fn();
     const user = userEvent.setup();
 
@@ -64,13 +66,13 @@ describe('RuleRow', () => {
 });
 ```
 
-Приоритет запросов: `getByRole` → `getByLabelText` → `getByText` → `getByTestId`. Последний — когда семантики нет.
+Query priority: `getByRole` → `getByLabelText` → `getByText` → `getByTestId`. The last one only when there are no semantics.
 
-shadcn: `CardTitle` рендерится как `<div data-slot="card-title">`. Роли `heading` там нет — ищем по тексту или ставим семантический тег явно.
+shadcn: `CardTitle` renders as `<div data-slot="card-title">`. It has no `heading` role: query by text or set a semantic tag explicitly.
 
-## Моки
+## Mocks
 
-Сеть мокается msw, а не подменой модулей: обработчики живут в `__tests__` своих слайсов и собираются в `src/test`. `vi.mock` в панели применяется к двум внешним библиотекам. Первая — тосты, чтобы проверить, что тост показан:
+The network is mocked with msw, not by replacing modules: handlers live in the `__tests__` of their slices and are assembled in `src/test`. In the panel `vi.mock` is applied to two external libraries. The first is toasts, to check that a toast was shown:
 
 ```ts
 vi.mock('sonner', () => ({
@@ -78,27 +80,27 @@ vi.mock('sonner', () => ({
 }));
 ```
 
-Вторая — uPlot, глобально в `src/test/setup.ts`: канваса в jsdom нет, `getContext` отдаёт `null`, и настоящий график падает в конструкторе. `FakePlot` запоминает вызовы (`setData`, `setScale`, `destroy`) и считает подписи оси теми же функциями, что отдал график (`axisLabels`), — тест проверяет шкалы и подписи, а не пиксели.
+The second is uPlot, globally in `src/test/setup.ts`: jsdom has no canvas, `getContext` returns `null`, and the real chart fails in the constructor. `FakePlot` records calls (`setData`, `setScale`, `destroy`) and computes axis labels with the same functions that the chart gave (`axisLabels`): the test checks scales and labels, not pixels.
 
-`vi.mock` поднимается наверх файла — объявлять до импорта тестируемого модуля. Очистка — `vi.clearAllMocks()` в `beforeEach`. Собственные слайсы подменять нельзя: это уже проверка реализации, а не поведения.
+`vi.mock` is hoisted to the top of the file: declare it before importing the module under test. Cleanup: `vi.clearAllMocks()` in `beforeEach`. Replacing our own slices is forbidden: that is already checking implementation, not behaviour.
 
-## Логика, схемы, сторы
+## Logic, schemas, stores
 
-**Zod-схемы:** позитивные примеры, негативные (пустая строка, неверный тип, краевые значения), поведение трансформов и адаптеров.
+**Zod schemas:** positive examples, negative ones (empty string, wrong type, edge values), behaviour of transforms and adapters.
 
-**Zustand:** слайс тестируется изолированно — начальное состояние, экшены, селекторы. Стор между тестами сбрасывается, иначе тесты начнут зависеть от порядка.
+**Zustand:** a slice is tested in isolation: initial state, actions, selectors. The store is reset between tests, otherwise tests start to depend on order.
 
-**Константы и фабрики ключей:** проверяем форму ключа, а не значение:
+**Constants and key factories:** check the shape of the key, not the value:
 
 ```ts
-it('строит ключ истории от корня конфига', () => {
+it('builds the history key from the config root', () => {
   expect(CONFIG_QUERY.history()).toEqual(['config', 'history']);
 });
 ```
 
 ## TanStack Query
 
-Следуем [официальному гайду](https://tanstack.com/query/latest/docs/framework/react/guides/testing). Общая обёртка рендера с новым `QueryClient` на тест живёт в `src/test`:
+Follow the [official guide](https://tanstack.com/query/latest/docs/framework/react/guides/testing). The shared render wrapper with a new `QueryClient` per test lives in `src/test`:
 
 ```tsx
 export function renderWithQuery(ui: ReactElement) {
@@ -110,44 +112,44 @@ export function renderWithQuery(ui: ReactElement) {
 }
 ```
 
-Покрываем: success, error, попадание в кэш, инвалидацию после мутации.
+Cover: success, error, cache hit, invalidation after a mutation.
 
 ## React Hook Form
 
-Тестируем поведение формы, а не её внутренности: ввод, blur, submit, тексты ошибок, состояние кнопки отправки. Взаимодействие — через `user-event`, валидация — через реальный `zodResolver`, не через мок.
+Test the form's behaviour, not its internals: input, blur, submit, error texts, the submit button state. Interaction goes through `user-event`, validation through the real `zodResolver`, not through a mock.
 
-## Golden round-trip
+## Golden round trip
 
-Набор реальных `config.json` разбирается, правится точечно и сверяется с исходным текстом: обратной сборки нет — правка кладётся на исходные байты (ADR-0004), и сериализовать нечего. Тест проверяет, что каждый файл разбирается, что число правил в тексте и в модели совпадает и что правка одного поля не трогает порядок ключей, переводы строк, комментарии и незнакомые узлы. Основная защита разбора конфига от регрессий. Корпус лежит в `entities/Config/__tests__/corpus/` и пополняется при каждом новом формате из поля.
+A set of real `config.json` files is parsed, edited at specific points and compared with the original text: there is no reverse build, an edit is applied to the original bytes (ADR-0004), and there is nothing to serialize. The test checks that every file parses, that the number of rules in the text and in the model match, and that editing one field does not touch key order, line breaks, comments and unknown nodes. This is the main protection of config parsing against regressions. The corpus lives in `entities/Config/__tests__/corpus/` and is extended with every new format from the field.
 
-## Таймеры и потоки
+## Timers and streams
 
-- Опрос, окно подтверждения Apply и throttle потока — `vi.useFakeTimers()` и `await vi.advanceTimersByTimeAsync(ms)`. Ожидание времени не изображается реальной задержкой: тест, который ждёт секунду, ждёт её по-настоящему.
-- Такт настоящих часов между шагами фейковых — исключение, и оно нужно: ответы msw и отложенный рендер React идут вне подменённых таймеров, поэтому одними `advanceTimersByTimeAsync` до них не дойти. Ссылка на настоящий `setTimeout` снимается **до** подмены (`ConfigApplyBar.test.tsx`), иначе она тоже окажется фейковой.
-- Поток рантайма подменяется `fakeEventSource` из `src/test`: тест шлёт кадры топиков и проверяет состояние стора, а не внутренности обработчика. Обработчик принимает `StreamSource`, поэтому изображать протокол `EventSource` не нужно — в jsdom его нет вовсе.
-- Виртуализованные списки: jsdom не считает размеры, высоты контейнера и строк подставляются моком, иначе рендерится ноль элементов.
-- Выпадающие списки: открытие и выбор — через `selectOption` из `src/test`. Руками не воспроизводить: у попапа Base UI в jsdom два подвоха, и оба описаны в TSDoc хелпера.
+- Polling, the Apply confirmation window and stream throttling: `vi.useFakeTimers()` and `await vi.advanceTimersByTimeAsync(ms)`. Waiting for time is not imitated by a real delay: a test that waits a second really waits it.
+- A tick of the real clock between fake clock steps is an exception, and it is needed: msw responses and React's deferred render run outside the replaced timers, so `advanceTimersByTimeAsync` alone does not reach them. The reference to the real `setTimeout` is captured **before** the replacement (`ConfigApplyBar.test.tsx`), otherwise it turns out fake too.
+- The runtime stream is replaced with `fakeEventSource` from `src/test`: the test sends topic frames and checks the store state, not the handler internals. The handler takes a `StreamSource`, so there is no need to imitate the `EventSource` protocol; jsdom has none at all.
+- Virtualized lists: jsdom does not compute sizes, the container and row heights are supplied by a mock, otherwise zero elements render.
+- Dropdowns: opening and selecting go through `selectOption` from `src/test`. Do not reproduce it by hand: the Base UI popup has two pitfalls in jsdom, and both are described in the helper's TSDoc.
 
-## Авторендерер
+## Autorenderer
 
-Тест идёт от схемы: фикстура с набором типов узлов → ожидаемый набор виджетов и подписей. Проверяются выбор виджета по типу, обязательность поля и путь, который форма отдаёт наверх.
+The test starts from the schema: a fixture with a set of node types → the expected set of widgets and labels. Checked: widget choice by type, field requiredness and the path the form passes up.
 
-## Покрытие
+## Coverage
 
-Ориентиры, не жёсткие ворота CI:
+Targets, not hard CI gates:
 
-| Зона                      | Порог  |
-| ------------------------- | ------ |
-| схемы и адаптеры, `model` | ≥ 90%  |
-| сторы zustand             | ≥ 85%  |
-| query-хуки                | ≥ 80%  |
-| `ui` фич и виджетов       | 60–70% |
+| Area                          | Threshold |
+| ----------------------------- | --------- |
+| schemas and adapters, `model` | ≥ 90%     |
+| zustand stores                | ≥ 85%     |
+| query hooks                   | ≥ 80%     |
+| `ui` of features and widgets  | 60–70%    |
 
-## Команды
+## Commands
 
-Прогон тестов и остальные проверки — таблица в [`CONTRIBUTING.md`](../../../../CONTRIBUTING.md). Специфичное для разработки тестов:
+Running tests and the other checks: the table in [`CONTRIBUTING.md`](../../../../CONTRIBUTING.md). Specific to writing tests:
 
 ```bash
 pnpm --filter web test:watch     # watch
-pnpm --filter web test -- Rule   # по подстроке пути
+pnpm --filter web test -- Rule   # by path substring
 ```

@@ -6,8 +6,9 @@ import { DIAG_ENDPOINT } from './Diag.endpoints';
 import type { ReportWire } from './Diag.schema';
 
 /**
- * Прогон шлёт пакеты с роутера и оставляет строки в логе sing-box: подключение
- * к порту redirect и замер узла. Поэтому он только по действию пользователя.
+ * A run sends packets from the router and leaves lines in the sing-box log: a
+ * connection to the redirect port and a node probe. So it runs only on a user
+ * action.
  */
 export async function getDiagReport(proxy: string, config?: AxiosRequestConfig): Promise<ReportWire> {
   return ApiClientInstance.get<ReportWire>(DIAG_ENDPOINT.report(), {

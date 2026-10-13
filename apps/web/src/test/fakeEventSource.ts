@@ -1,9 +1,9 @@
 import { RUNTIME_TOPIC, type RuntimeTopic, type StreamSource } from '@shared/api';
 
 /**
- * Фейковый источник событий для тестов потока. Проверяется обработчик, а не
- * транспорт: `EventSource` в jsdom нет вовсе, а сервер ради разбора конверта
- * ничего к проверке не добавил бы.
+ * Fake event source for stream tests. The handler is tested, not
+ * the transport: jsdom has no `EventSource` at all, and a server would add
+ * nothing to checking envelope parsing.
  */
 export function fakeEventSource() {
   const listeners = new Map<string, Set<(event: MessageEvent<string>) => void>>();
@@ -30,12 +30,12 @@ export function fakeEventSource() {
 
   return {
     source,
-    /** Событие в конверте демона: топик, номер и данные. */
+    /** Event in the daemon envelope: topic, number and data. */
     send: (topic: RuntimeTopic, data: unknown) => {
       seq += 1;
       emit(topic, JSON.stringify({ topic, seq, data }));
     },
-    /** Кадр как есть: обрыв соединения приходит обрезанным текстом. */
+    /** Frame as is: a connection drop arrives as truncated text. */
     sendRaw: (topic: RuntimeTopic, frame: string) => {
       emit(topic, frame);
     },

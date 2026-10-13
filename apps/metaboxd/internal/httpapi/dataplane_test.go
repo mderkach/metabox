@@ -49,21 +49,21 @@ func TestDataplaneModel(t *testing.T) {
 
 	got := request(t, srv, http.MethodGet, "/api/dataplane", "", nil)
 	if got.status != http.StatusOK {
-		t.Fatalf("код %d, тело %s", got.status, got.body)
+		t.Fatalf("code %d, body %s", got.status, got.body)
 	}
 
 	if etag := got.header.Get("ETag"); etag != `"`+(dataplane.Snapshot{}).Sum()+`"` {
-		t.Errorf("ETag %q, ожидали отпечаток секции", etag)
+		t.Errorf("ETag %q, expected the section fingerprint", etag)
 	}
 
 	var body contract.Dataplane
 	got.decode(t, &body)
 
 	if body.Model.RedirectPort != 5331 || body.Applied || body.AppliedReason != dataplane.NFTUnavailable {
-		t.Errorf("ответ %+v", body)
+		t.Errorf("response %+v", body)
 	}
 	if body.ForeignService {
-		t.Error("без Plane служба названа чужой")
+		t.Error("without Plane the service is called foreign")
 	}
 }
 
@@ -72,14 +72,14 @@ func TestDataplaneModelForeignService(t *testing.T) {
 
 	got := request(t, srv, http.MethodGet, "/api/dataplane", "", nil)
 	if got.status != http.StatusOK {
-		t.Fatalf("код %d, тело %s", got.status, got.body)
+		t.Fatalf("code %d, body %s", got.status, got.body)
 	}
 
 	var body contract.Dataplane
 	got.decode(t, &body)
 
 	if !body.ForeignService {
-		t.Error("foreign_service не отдан, панель предложит смену, которую демон отклонит")
+		t.Error("foreign_service not returned, the panel would offer a change the daemon will reject")
 	}
 }
 
@@ -91,7 +91,7 @@ func TestDataplaneInvalid(t *testing.T) {
 
 	got := request(t, srv, http.MethodGet, "/api/dataplane", "", nil)
 	if got.status != http.StatusUnprocessableEntity {
-		t.Fatalf("код %d, тело %s", got.status, got.body)
+		t.Fatalf("code %d, body %s", got.status, got.body)
 	}
 
 	var body struct {
@@ -101,7 +101,7 @@ func TestDataplaneInvalid(t *testing.T) {
 	got.decode(t, &body)
 
 	if body.Code != contract.ErrDataplaneInvalid || len(body.Details.Fields) != 1 || body.Details.Fields[0] != fields[0] {
-		t.Errorf("отказ %+v", body)
+		t.Errorf("failure %+v", body)
 	}
 }
 
@@ -109,7 +109,7 @@ func TestDataplaneWithoutReader(t *testing.T) {
 	srv := newDataplaneServer(t, nil)
 
 	if got := request(t, srv, http.MethodGet, "/api/dataplane", "", nil); got.status != http.StatusNotFound {
-		t.Errorf("без читателя ручка ответила %d", got.status)
+		t.Errorf("without a reader the handler answered %d", got.status)
 	}
 }
 
@@ -188,48 +188,48 @@ func TestDataplaneChangeCycle(t *testing.T) {
 
 	got := putDataplane(t, srv, etag, body)
 	if got.status != http.StatusAccepted {
-		t.Fatalf("код %d, тело %s", got.status, got.body)
+		t.Fatalf("code %d, body %s", got.status, got.body)
 	}
 
 	var tx apply.Transaction
 	got.decode(t, &tx)
 
 	if tx.ID != "plane-1" || !slices.Equal(plane.model.SourceIP, model.SourceIP) {
-		t.Errorf("транзакция %+v, модель %+v", tx, plane.model)
+		t.Errorf("transaction %+v, model %+v", tx, plane.model)
 	}
 	if want := (dataplane.Snapshot{}).Sum(); plane.base != want {
-		t.Errorf("база смены %q, ожидали отпечаток из ETag %q", plane.base, want)
+		t.Errorf("change base %q, expected the fingerprint from ETag %q", plane.base, want)
 	}
 	if !plane.client.IsLoopback() {
-		t.Errorf("адрес клиента %v, ожидали адрес запроса", plane.client)
+		t.Errorf("client address %v, expected the request address", plane.client)
 	}
 
 	var status contract.Status
 	request(t, srv, http.MethodGet, "/api/status", "", nil).decode(t, &status)
 
 	if status.DataplaneTransaction == nil || status.DataplaneTransactionHref != "/api/dataplane/apply/plane-1" {
-		t.Errorf("статус без смены обвязки: %+v", status)
+		t.Errorf("status without a dataplane change: %+v", status)
 	}
 	if status.Transaction != nil {
-		t.Error("смена обвязки показана транзакцией конфига")
+		t.Error("dataplane change shown as a config transaction")
 	}
 
 	if got := request(t, srv, http.MethodGet, "/api/dataplane/apply/plane-1", "", nil); got.status != http.StatusOK {
-		t.Errorf("состояние: код %d", got.status)
+		t.Errorf("state: code %d", got.status)
 	}
 
 	if got := request(t, srv, http.MethodGet, "/api/dataplane/apply/other", "", nil); got.status != http.StatusNotFound {
-		t.Errorf("чужая транзакция: код %d", got.status)
+		t.Errorf("foreign transaction: code %d", got.status)
 	}
 
 	got = request(t, srv, http.MethodPost, "/api/dataplane/apply/plane-1/confirm", srv.URL, nil)
 	if got.status != http.StatusOK {
-		t.Fatalf("подтверждение: код %d, тело %s", got.status, got.body)
+		t.Fatalf("confirm: code %d, body %s", got.status, got.body)
 	}
 
 	got.decode(t, &tx)
 	if tx.Phase != apply.PhaseConfirmed {
-		t.Errorf("фаза %q, ожидали подтверждение", tx.Phase)
+		t.Errorf("phase %q, expected confirmation", tx.Phase)
 	}
 }
 
@@ -241,18 +241,18 @@ func TestDataplaneChangeRejected(t *testing.T) {
 		status   int
 		code     contract.ErrorCode
 	}{
-		{"тело не JSON", nil, "{", http.StatusBadRequest, contract.ErrDataplaneInvalid},
+		{"body is not JSON", nil, "{", http.StatusBadRequest, contract.ErrDataplaneInvalid},
 		{
-			"модель не принята", &dataplane.InvalidError{Fields: []dataplane.FieldError{{Field: "dns_port", Reason: dataplane.ReasonOutOfRange}}},
+			"model not accepted", &dataplane.InvalidError{Fields: []dataplane.FieldError{{Field: "dns_port", Reason: dataplane.ReasonOutOfRange}}},
 			`{"model":{}}`, http.StatusUnprocessableEntity, contract.ErrDataplaneInvalid,
 		},
-		{"идёт применение конфига", apply.ErrBusy, `{"model":{}}`, http.StatusConflict, contract.ErrApplyInProgress},
+		{"a config apply is running", apply.ErrBusy, `{"model":{}}`, http.StatusConflict, contract.ErrApplyInProgress},
 		{
-			"секция изменилась после чтения", apply.ErrDataplaneModified, `{"model":{}}`,
+			"section changed after reading", apply.ErrDataplaneModified, `{"model":{}}`,
 			http.StatusPreconditionFailed, contract.ErrDataplaneModified,
 		},
 		{
-			"демон управляет чужой службой", apply.ErrDataplaneForeignService, `{"model":{}}`,
+			"daemon manages a foreign service", apply.ErrDataplaneForeignService, `{"model":{}}`,
 			http.StatusConflict, contract.ErrDataplaneForeignService,
 		},
 	}
@@ -263,14 +263,14 @@ func TestDataplaneChangeRejected(t *testing.T) {
 
 			got := putDataplane(t, srv, `"base"`, []byte(tt.body))
 			if got.status != tt.status {
-				t.Fatalf("код %d, ожидали %d; тело %s", got.status, tt.status, got.body)
+				t.Fatalf("code %d, expected %d; body %s", got.status, tt.status, got.body)
 			}
 
 			var body contract.Error
 			got.decode(t, &body)
 
 			if body.Code != tt.code {
-				t.Errorf("код отказа %q, ожидали %q", body.Code, tt.code)
+				t.Errorf("rejection code %q, expected %q", body.Code, tt.code)
 			}
 		})
 	}
@@ -282,17 +282,17 @@ func TestDataplaneChangeWithoutIfMatch(t *testing.T) {
 
 	got := request(t, srv, http.MethodPut, "/api/dataplane", srv.URL, []byte(`{"model":{}}`))
 	if got.status != http.StatusPreconditionRequired {
-		t.Fatalf("код %d, тело %s", got.status, got.body)
+		t.Fatalf("code %d, body %s", got.status, got.body)
 	}
 
 	var body contract.Error
 	got.decode(t, &body)
 
 	if body.Code != contract.ErrDataplaneModified {
-		t.Errorf("код отказа %q, ожидали %q", body.Code, contract.ErrDataplaneModified)
+		t.Errorf("rejection code %q, expected %q", body.Code, contract.ErrDataplaneModified)
 	}
 	if plane.Current().ID != "" {
-		t.Error("смена без If-Match дошла до транзакции")
+		t.Error("a change without If-Match reached the transaction")
 	}
 }
 
@@ -300,11 +300,11 @@ func TestDataplaneChangeWithoutPlane(t *testing.T) {
 	srv := newPlaneServer(t, nil)
 
 	if got := putDataplane(t, srv, `"base"`, []byte(`{"model":{}}`)); got.status != http.StatusNotFound {
-		t.Errorf("без смены обвязки PUT ответил %d", got.status)
+		t.Errorf("without a dataplane change PUT answered %d", got.status)
 	}
 }
 
-// putDataplane — PUT /api/dataplane со своим Origin и If-Match.
+// putDataplane is PUT /api/dataplane with its own Origin and If-Match.
 func putDataplane(t *testing.T, srv *httptest.Server, ifMatch string, body []byte) response {
 	t.Helper()
 
@@ -322,7 +322,7 @@ func putDataplane(t *testing.T, srv *httptest.Server, ifMatch string, body []byt
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			t.Errorf("закрытие тела ответа: %v", err)
+			t.Errorf("closing the response body: %v", err)
 		}
 	}()
 

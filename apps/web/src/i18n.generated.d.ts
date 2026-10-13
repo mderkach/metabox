@@ -1,6 +1,6 @@
 /*
- * Карта неймспейсов i18next. Артефакт `tools/i18n.ts`, руками не правится.
- * Язык-источник типов — ru.
+ * Namespace map for i18next. Artifact of `tools/i18n.ts`, not edited by hand.
+ * Type source language — ru.
  */
 
 import 'i18next';

@@ -19,8 +19,8 @@ export type {
 } from '@shared/api/daemon.generated';
 
 /**
- * Формы ручек Clash API, которые демон проксирует дословно: своих
- * типов у него для них нет, поэтому схемы рукописные.
+ * Shapes of the Clash API endpoints that the daemon proxies verbatim: it has no
+ * types of its own for them, so the schemas are handwritten.
  */
 export const ClashConfigsSchema = z.object({
   mode: z.string(),
@@ -31,15 +31,15 @@ export const ClashConfigsSchema = z.object({
   ipv6: z.boolean(),
 });
 
-/** Мгновенная скорость за последнюю секунду, а не накопительный счётчик. */
+/** Instantaneous speed over the last second, not an accumulating counter. */
 export const ClashTrafficSampleSchema = z.object({
   up: z.number(),
   down: z.number(),
 });
 
 /**
- * Первый сэмпл потока всегда нулевой, а `oslimit` форк не заполняет. Экран
- * обязан пережить нулевой первый кадр, а не показать «памяти 0».
+ * The first stream sample is always zero, and the fork does not fill `oslimit`.
+ * The screen must survive a zero first frame, not show "memory 0".
  */
 export const ClashMemorySampleSchema = z.object({
   inuse: z.number(),

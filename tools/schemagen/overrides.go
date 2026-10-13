@@ -10,29 +10,29 @@ import (
 	C "github.com/sagernet/sing-box/constant"
 )
 
-// У 69 типов форка своя сериализация, и форма JSON у них не выводится из
-// полей Go-структуры. Здесь собраны правила для них. Тип со своей
-// сериализацией, которого тут нет, генератор считает ошибкой: молча обойти
-// его поля значит выдать схему, не соответствующую конфигу.
+// 69 fork types have their own serialization, and their JSON shape cannot be derived from
+// the fields of the Go struct. The rules for them are collected here. A type with its own
+// serialization that is missing here is an error for the generator: silently walking
+// its fields would produce a schema that does not match the config.
 //
-// Правила записаны по коду форка (UnmarshalJSON определяет, что принимается
-// на входе), а не по документации.
+// The rules are written from the fork code (UnmarshalJSON defines what is accepted
+// on input), not from the documentation.
 
-// duration: badoption.Duration принимает строку в формате time.ParseDuration.
-// Регулярка вместо transform — иначе ломается z.toJSONSchema.
+// duration: badoption.Duration accepts a string in the time.ParseDuration format.
+// A regex instead of transform, otherwise z.toJSONSchema breaks.
 const durationPattern = `^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$`
 
 func durationSchema() *schema {
 	return scalar(fmt.Sprintf("z.string().regex(/%s/)", durationPattern))
 }
 
-// bytesSchema: byteformats.* принимает число или строку с единицей ("100MB").
+// bytesSchema: byteformats.* accepts a number or a string with a unit ("100MB").
 func bytesSchema() *schema {
 	return union(scalar("z.int().nonnegative()"), scalar("z.string()"))
 }
 
-// rangeSchema: badoption.Range[T] принимает число, строку "from-to" или
-// объект {from, to}.
+// rangeSchema: badoption.Range[T] accepts a number, a "from-to" string or
+// an object {from, to}.
 func rangeSchema(elem *schema) *schema {
 	object := &schema{kind: kindObject, fields: []field{
 		{name: "from", schema: elem},
@@ -49,8 +49,8 @@ func enumSchema(values ...string) *schema {
 	return scalar("z.enum([" + strings.Join(quoted, ", ") + "])")
 }
 
-// sortedKeys нужен, чтобы enum'ы, собранные из мап форка, печатались
-// стабильно: иначе схема меняется от запуска к запуску.
+// sortedKeys is needed so that enums collected from fork maps are printed
+// stably: otherwise the schema changes from run to run.
 func sortedKeys[V any](m map[string]V) []string {
 	out := make([]string, 0, len(m))
 	for k := range m {
@@ -60,16 +60,16 @@ func sortedKeys[V any](m map[string]V) []string {
 	return out
 }
 
-// scalarOverrides — правила по имени Go-типа для листьев дерева.
+// scalarOverrides are rules by Go type name for the leaves of the tree.
 var scalarOverrides = map[string]func() *schema{
-	// Длительности и объёмы.
+	// Durations and sizes.
 	"badoption.Duration":             durationSchema,
 	"byteformats.Bytes":              bytesSchema,
 	"byteformats.MemoryBytes":        bytesSchema,
 	"byteformats.NetworkBytes":       bytesSchema,
 	"byteformats.NetworkBytesCompat": bytesSchema,
 
-	// Адреса: у всех строковая форма.
+	// Addresses: all have a string form.
 	"badoption.Addr":       func() *schema { return scalar("z.string()") },
 	"badoption.Prefix":     func() *schema { return scalar("z.string()") },
 	"badoption.Prefixable": func() *schema { return scalar("z.string()") },
@@ -78,7 +78,7 @@ var scalarOverrides = map[string]func() *schema{
 	"netip.AddrPort":       func() *schema { return scalar("z.string()") },
 	"netip.Prefix":         func() *schema { return scalar("z.string()") },
 
-	// Перечисления, значения которых объявлены switch'ем в форке.
+	// Enums whose values are declared by a switch in the fork.
 	"option.DomainStrategy": func() *schema {
 		return enumSchema("", "as_is", "prefer_ipv4", "prefer_ipv6", "ipv4_only", "ipv6_only")
 	},
@@ -92,8 +92,8 @@ var scalarOverrides = map[string]func() *schema{
 		return enumSchema("", "off", "authed", "all")
 	},
 
-	// Перечисления, значения которых лежат в экспортированных мапах:
-	// берём их из форка, чтобы не дублировать список в генераторе.
+	// Enums whose values lie in exported maps:
+	// taken from the fork so the list is not duplicated in the generator.
 	"option.NetworkStrategy": func() *schema {
 		return enumSchema(sortedKeys(C.StringToNetworkStrategy)...)
 	},
@@ -107,7 +107,7 @@ var scalarOverrides = map[string]func() *schema{
 		return union(scalar("z.int()"), enumSchema(sortedKeys(mDNS.StringToRcode)...))
 	},
 
-	// Числа с альтернативной строковой формой.
+	// Numbers with an alternative string form.
 	"option.FwMark": func() *schema {
 		return union(scalar("z.int().nonnegative()"), scalar("z.string()"))
 	},
@@ -115,30 +115,30 @@ var scalarOverrides = map[string]func() *schema{
 		return union(scalar("z.int().nonnegative()"), durationSchema())
 	},
 
-	// Список сетей: "tcp" | "udp" | массив из них.
+	// A list of networks: "tcp" | "udp" | an array of them.
 	"option.NetworkList": func() *schema {
 		return listable(enumSchema("tcp", "udp"))
 	},
 
-	// match_response DNS-правила: true/false либо тег сервера, чей ответ
-	// сопоставляется. Полей в JSON у типа нет — только эти две формы.
+	// match_response of a DNS rule: true/false or the tag of the server whose response
+	// is matched. The type has no fields in JSON, only these two forms.
 	"option.DNSRuleMatchResponse": func() *schema {
 		return union(scalar("z.boolean()"), scalar("z.string()"))
 	},
 
-	// Провайдер сертификата в TLS: тег заведённого в certificate_providers
-	// либо тот же объект инлайном.
+	// The certificate provider in TLS: the tag of one declared in certificate_providers
+	// or the same object inline.
 	"option.CertificateProviderOptions": func() *schema {
 		return union(scalar("z.string()"), ref("CertificateProviderSchema"))
 	},
 
-	// Сырой JSON корневого конфига: содержимое не разбирается.
+	// The raw JSON of the root config: the content is not parsed.
 	"contextjson.RawMessage": func() *schema { return scalar("z.unknown()") },
 }
 
-// flattenOnly — типы, чья сериализация только уплощает встроенные структуры
-// или доопределяет значение по умолчанию. Форма JSON у них совпадает с полями,
-// поэтому обходятся как обычные структуры.
+// flattenOnly are the types whose serialization only flattens embedded structs
+// or overrides a default value. Their JSON shape matches the fields,
+// so they are walked as ordinary structs.
 var flattenOnly = map[string]bool{
 	"option.Options":                      true,
 	"option.DNSOptions":                   true,
@@ -159,8 +159,8 @@ var flattenOnly = map[string]bool{
 	"option.V2RayXHTTPOptions":            true,
 }
 
-// taggedSpecs — статические union'ы: дискриминатор и поля вариантов.
-// Значения дискриминаторов берутся из констант форка.
+// taggedSpecs are static unions: the discriminator and the variant fields.
+// The discriminator values are taken from the fork constants.
 var taggedSpecs = map[string]taggedSpec{
 	"option.Rule": {discr: "type", variants: []tagOption{
 		{C.RuleTypeDefault, "DefaultOptions"},
@@ -209,17 +209,17 @@ var taggedSpecs = map[string]taggedSpec{
 		{C.DNSProviderCloudflare, "CloudflareOptions"},
 		{C.DNSProviderACMEDNS, "ACMEDNSOptions"},
 	}},
-	// То же дерево у отдельного провайдера сертификатов: в 1.14 ACME переехал
-	// из inline-опций TLS в certificate_providers, а inline-форма осталась
-	// как устаревшая.
+	// The same tree for a separate certificate provider: in 1.14 ACME moved
+	// from the inline TLS options to certificate_providers, and the inline form stayed
+	// as deprecated.
 	"option.ACMEProviderDNS01ChallengeOptions": {discr: "provider", variants: []tagOption{
 		{C.DNSProviderAliDNS, "AliDNSOptions"},
 		{C.DNSProviderCloudflare, "CloudflareOptions"},
 		{C.DNSProviderACMEDNS, "ACMEDNSOptions"},
 	}},
-	// Версия протокола выбирает, какие настройки подмешиваются к полям
-	// клиента: HTTP/2 при 0 и 2, QUIC при 3, у HTTP/1.1 своих нет.
-	// Значение 0 форк трактует как 2 (`unmarshalHTTPClientVersionOptions`).
+	// The protocol version selects which settings are mixed into the client
+	// fields: HTTP/2 at 0 and 2, QUIC at 3, HTTP/1.1 has none of its own.
+	// The fork treats the value 0 as 2 (`unmarshalHTTPClientVersionOptions`).
 	"option.HTTPClient": {discr: "version", numeric: true, variants: []tagOption{
 		{"0", "HTTP2Options"},
 		{"1", ""},
@@ -247,21 +247,21 @@ var taggedSpecs = map[string]taggedSpec{
 	}},
 }
 
-// shorthand — типы, которые кроме объекта принимают короткие скалярные формы.
+// shorthand are the types that accept short scalar forms besides an object.
 var shorthand = map[string][]string{
-	"option.DomainResolveOptions":       {"z.string()"},            // имя DNS-сервера
-	"option.UDPOverTCPOptions":          {"z.boolean()"},           // просто включить
+	"option.DomainResolveOptions":       {"z.string()"},            // DNS server name
+	"option.UDPOverTCPOptions":          {"z.boolean()"},           // just enable
 	"option.DERPVerifyClientURLOptions": {"z.string()"},            // URL
-	"option.DERPSTUNListenOptions":      {"z.int().nonnegative()"}, // порт
-	"option.OptimisticDNSOptions":       {"z.boolean()"},           // просто включить
-	"option.TailscaleSSHServerOptions":  {"z.boolean()"},           // просто включить
-	"option.HTTPClientOptions":          {"z.string()"},            // тег клиента из http_clients
-	// Дашборд API-сервиса: включить, путь к готовым файлам или полный объект.
+	"option.DERPSTUNListenOptions":      {"z.int().nonnegative()"}, // port
+	"option.OptimisticDNSOptions":       {"z.boolean()"},           // just enable
+	"option.TailscaleSSHServerOptions":  {"z.boolean()"},           // just enable
+	"option.HTTPClientOptions":          {"z.string()"},            // client tag from http_clients
+	// The API service dashboard: enable, a path to ready files or a full object.
 	"option.APIDashboardOptions": {"z.boolean()", "z.string()"},
 }
 
-// objectForm — объектная форма типа: union по дискриминатору, если он описан
-// в таблице, иначе обычная структура.
+// objectForm is the object form of a type: a union by discriminator if it is described
+// in the table, otherwise an ordinary struct.
 func (w *walker) objectForm(t reflect.Type, name, path string) *schema {
 	if spec, ok := taggedSpecs[name]; ok {
 		return w.taggedUnion(t, spec, path)
@@ -270,7 +270,7 @@ func (w *walker) objectForm(t reflect.Type, name, path string) *schema {
 	return w.plainStruct(t, path)
 }
 
-// override возвращает схему для типа, если для него есть правило.
+// override returns the schema for a type if there is a rule for it.
 func (w *walker) override(t reflect.Type, path string) (*schema, bool) {
 	name := goTypeName(t)
 
@@ -305,10 +305,10 @@ func (w *walker) override(t reflect.Type, path string) (*schema, bool) {
 		}
 		return rangeSchema(w.build(field.Type, path)), true
 	case "badjson.TypedMap":
-		// Сохраняет порядок ключей, но в JSON это обычный объект.
-		// Тип значения снимается с сигнатуры Values() []V: поля
-		// linkedhashmap.Map неэкспортируемые, а параметры дженерика
-		// рефлексия не отдаёт.
+		// Keeps the key order, but in JSON it is an ordinary object.
+		// The value type is taken from the Values() []V signature: the fields of
+		// linkedhashmap.Map are unexported, and the generic parameters
+		// are not given by reflection.
 		values, ok := reflect.PointerTo(t).MethodByName("Values")
 		if !ok || values.Type.NumOut() != 1 {
 			return nil, false

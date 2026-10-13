@@ -1,3 +1,4 @@
-// Что форма узла разрешает слайсу добавления: новый узел типа с оверрайдом
-// собирается его заготовкой, и второй копии заготовки быть не должно.
+// What the node form allows the add slice: a new node of a type with an
+// override is built from its template, and there must be no second copy of the
+// template.
 export { nodePreset } from '../../model';

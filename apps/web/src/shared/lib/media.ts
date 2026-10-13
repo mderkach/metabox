@@ -1,22 +1,22 @@
 import { useEffect, useState } from 'react';
 
 /**
- * Ширина, ниже которой раскладка перестаёт быть настольной: сайдбар уступает
- * место нижней панели, стартовым экраном становится обзор, а таблица
- * разворачивается в список «подпись — значение».
+ * Width below which the layout stops being desktop: the sidebar yields its
+ * place to the bottom bar, the overview becomes the start screen, and the table
+ * unfolds into a "label — value" list.
  */
 export const NARROW_SCREEN = '(max-width: 48rem)';
 
 /**
- * Ширина, ниже которой боковой панели нет места рядом со списком: там она
- * открывается листом поверх него. Совпадает с `lg` Tailwind, по которому
- * раскладка экрана переходит из строки в колонку.
+ * Width below which the side panel has no room beside the list: there it
+ * opens as a sheet on top of it. Matches Tailwind's `lg`, at which the
+ * screen layout switches from a row to a column.
  */
 export const PANEL_AS_SHEET = '(width < 64rem)';
 
 const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
 
-/** В jsdom `matchMedia` нет вовсе, поэтому наличие функции проверяется. */
+/** jsdom has no `matchMedia` at all, so the presence of the function is checked. */
 function matchQuery(query: string): boolean {
   return typeof globalThis.matchMedia === 'function' && globalThis.matchMedia(query).matches;
 }
@@ -26,8 +26,8 @@ export function matchNarrow(): boolean {
 }
 
 /**
- * Медиазапрос следится подпиской, а не одним замером на старте: иначе поворот
- * телефона или смена системной настройки оставляли бы прежний ответ.
+ * The media query is followed by a subscription, not by a single measurement at start: otherwise phone
+ * rotation or a system setting change would leave the old answer.
  */
 function useMediaQuery(query: string): boolean {
   const [matches, setMatches] = useState(() => matchQuery(query));

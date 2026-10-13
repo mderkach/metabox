@@ -31,7 +31,7 @@ function makeRow(overrides: Partial<ConnectionRow> = {}): ConnectionRow {
   };
 }
 
-/** Поле поиска собирает адаптер; в фикстуре собираем по тем же полям. */
+/** The search field is built by the adapter; the fixture builds it from the same fields. */
 function withSearchText(row: ConnectionRow): ConnectionRow {
   return {
     ...row,
@@ -55,32 +55,32 @@ function search(rows: ConnectionRow[], query: string, sourceLabel?: (ip: string)
   return filterConnections(rows, query, EMPTY_FACET_SELECTION, sourceLabel).rows;
 }
 
-describe('поиск по соединению', () => {
+describe('connection search', () => {
   const rows = [makeSearchableRow()];
 
-  it('пустой запрос пропускает всё', () => {
+  it('an empty query lets everything through', () => {
     expect(search(rows, '   ')).toHaveLength(1);
   });
 
-  it('не различает регистр', () => {
+  it('is case-insensitive', () => {
     expect(search(rows, 'ANTHROPIC')).toHaveLength(1);
   });
 
-  it('требует совпадения всех слов, а не любого', () => {
+  it('requires all words to match, not any', () => {
     expect(search(rows, 'anthropic us-west')).toHaveLength(1);
     expect(search(rows, 'anthropic telegram')).toHaveLength(0);
   });
 
-  it('ищет и по узлам цепочки', () => {
+  it('also searches chain nodes', () => {
     expect(search(rows, 'sub-us')).toHaveLength(1);
   });
 
-  it('ищет по источнику и протоколу', () => {
+  it('searches by source and protocol', () => {
     expect(search([makeSearchableRow({ network: 'udp' })], '192.168.1.60 udp')).toHaveLength(1);
   });
 });
 
-describe('поиск по подписи устройства', () => {
+describe('search by device label', () => {
   const rows = [makeSearchableRow(), makeSearchableRow({ id: 'c2', source: '192.168.1.36' })];
   const LABELS = new Map([['192.168.1.60', 'Ноутбук гостя']]);
 
@@ -88,22 +88,22 @@ describe('поиск по подписи устройства', () => {
     return LABELS.get(ip) ?? ip;
   }
 
-  it('находит соединение по имени устройства, хотя в строке поиска лежит адрес', () => {
+  it('finds a connection by device name although the search string holds an address', () => {
     expect(ids(search(rows, 'ноутбук', sourceLabel))).toEqual(['c1']);
   });
 
-  it('слова запроса могут делиться между подписью и остальными полями', () => {
+  it('query words may be split between the label and the other fields', () => {
     expect(search(rows, 'гостя anthropic', sourceLabel)).toHaveLength(1);
     expect(search(rows, 'гостя telegram', sourceLabel)).toHaveLength(0);
   });
 
-  it('без подписи ищет только по адресу', () => {
+  it('without a label searches only by address', () => {
     expect(search(rows, 'ноутбук')).toHaveLength(0);
     expect(ids(search(rows, '192.168.1.36', sourceLabel))).toEqual(['c2']);
   });
 });
 
-describe('отбор фасетами', () => {
+describe('facet filtering', () => {
   const rows = [
     makeSearchableRow({ id: '1', source: '192.168.1.60', host: 'claude.example:443' }),
     makeSearchableRow({
@@ -118,17 +118,17 @@ describe('отбор фасетами', () => {
     makeSearchableRow({ id: '3', source: '192.168.1.120', kind: ROUTE_KIND.Block, chain: ['block'] }),
   ];
 
-  it('без выбора и запроса отдаёт всё', () => {
+  it('with no selection and no query returns everything', () => {
     expect(filterConnections(rows, '').rows).toHaveLength(3);
   });
 
-  it('внутри фасета складывает значения через «или»', () => {
+  it('within a facet combines values with "or"', () => {
     const { rows: shown } = filterConnections(rows, '', select({ source: ['192.168.1.60', '192.168.1.65'] }));
 
     expect(ids(shown)).toEqual(['1', '2']);
   });
 
-  it('между фасетами складывает через «и», и с запросом тоже', () => {
+  it('between facets combines with "and", and with the query too', () => {
     expect(filterConnections(rows, '', select({ source: ['192.168.1.60'], kind: [ROUTE_KIND.Direct] })).rows).toEqual(
       []
     );
@@ -136,21 +136,21 @@ describe('отбор фасетами', () => {
     expect(filterConnections(rows, 'claude', select({ kind: [ROUTE_KIND.Direct] })).rows).toEqual([]);
   });
 
-  it('отбирает по любому узлу цепочки: и по группе, и по узлу за ней', () => {
+  it('filters by any chain node: both the group and the node behind it', () => {
     expect(ids(filterConnections(rows, '', select({ chain: ['sub-us/USA'] })).rows)).toEqual(['1']);
     expect(ids(filterConnections(rows, '', select({ chain: ['us-west-fallback', 'block'] })).rows)).toEqual(['1', '3']);
   });
 
-  it('правило без условий — отдельное значение фасета', () => {
+  it('a rule without conditions is a separate facet value', () => {
     expect(ids(filterConnections(rows, '', select({ rule: [''] })).rows)).toEqual(['2']);
   });
 
-  it('отбирает по сети', () => {
+  it('filters by network', () => {
     expect(ids(filterConnections(rows, '', select({ network: ['udp'] })).rows)).toEqual(['2']);
   });
 });
 
-describe('значения и счётчики фасетов', () => {
+describe('facet values and counters', () => {
   const rows = [
     makeSearchableRow({ id: '1', source: '192.168.1.60', kind: ROUTE_KIND.Proxy }),
     makeSearchableRow({ id: '2', source: '192.168.1.60', kind: ROUTE_KIND.Direct }),
@@ -158,7 +158,7 @@ describe('значения и счётчики фасетов', () => {
     makeSearchableRow({ id: '4', source: '192.168.1.36', kind: ROUTE_KIND.Block }),
   ];
 
-  it('без отбора считает строки каждого значения по вкладке целиком', () => {
+  it('without filtering counts the rows of each value across the whole tab', () => {
     const { facets } = filterConnections(rows, '');
 
     expect(facets.kind).toEqual([
@@ -168,20 +168,20 @@ describe('значения и счётчики фасетов', () => {
     ]);
   });
 
-  it('держит порядок значений, а не порядок по числу строк: адреса — по числам в них', () => {
+  it('keeps the value order, not the order by row count: addresses by the numbers in them', () => {
     const { facets } = filterConnections(rows, '');
 
     expect(facets.source.map(({ value }) => value)).toEqual(['192.168.1.36', '192.168.1.60', '192.168.1.120']);
   });
 
-  it('устройства упорядочены по подписи, а не по адресу', () => {
+  it('devices are ordered by label, not by address', () => {
     const labels = new Map([['192.168.1.120', '0-роутер']]);
     const { facets } = filterConnections(rows, '', EMPTY_FACET_SELECTION, (ip) => labels.get(ip) ?? ip);
 
     expect(facets.source.map(({ value }) => value)).toEqual(['192.168.1.120', '192.168.1.36', '192.168.1.60']);
   });
 
-  it('сначала устройства с именем, затем безымянные адреса сети, в конце чужие адреса', () => {
+  it('first devices with a name, then nameless network addresses, and last foreign addresses', () => {
     const sources = ['198.51.100.7', '192.168.1.101', '192.168.1.60', '10.0.0.5'];
     const mixed = sources.map((source, index) => makeRow({ id: `s${index}`, source }));
     const labels = new Map([['192.168.1.60', 'macbook']]);
@@ -195,7 +195,7 @@ describe('значения и счётчики фасетов', () => {
     ]);
   });
 
-  it('свой выбор счётчики фасета не трогает: значение не исчезает и не обнуляется', () => {
+  it('its own selection does not affect the facet counters: the value neither disappears nor drops to zero', () => {
     const { facets } = filterConnections(rows, '', select({ kind: [ROUTE_KIND.Block] }));
 
     expect(facets.kind).toEqual([
@@ -205,7 +205,7 @@ describe('значения и счётчики фасетов', () => {
     ]);
   });
 
-  it('выбор соседнего фасета сужает счётчики, а значения оставляет', () => {
+  it('a neighboring facet selection narrows the counters and leaves the values', () => {
     const { facets } = filterConnections(rows, '', select({ source: ['192.168.1.60'] }));
 
     expect(facets.kind).toEqual([
@@ -220,7 +220,7 @@ describe('значения и счётчики фасетов', () => {
     ]);
   });
 
-  it('счётчики учитывают поиск', () => {
+  it('counters take the search into account', () => {
     const searchable = [
       makeSearchableRow({ id: '1', host: 'claude.example:443' }),
       makeSearchableRow({ id: '2', host: 'telegram.example:443' }),
@@ -229,7 +229,7 @@ describe('значения и счётчики фасетов', () => {
     expect(filterConnections(searchable, 'claude').facets.network).toEqual([{ value: 'tcp', count: 1 }]);
   });
 
-  it('смена счётчиков между снапшотами не переставляет значения', () => {
+  it('a change of counters between snapshots does not reorder the values', () => {
     const before = filterConnections(rows, '').facets.source.map(({ value }) => value);
     const busier = [
       ...rows,
@@ -243,14 +243,14 @@ describe('значения и счётчики фасетов', () => {
     expect(after.find(({ value }) => value === '192.168.1.120')?.count).toBe(6);
   });
 
-  it('выбранное значение, которого во вкладке нет, остаётся в списке с нулём', () => {
+  it('a selected value that is not on the tab stays in the list with zero', () => {
     const { facets, rows: shown } = filterConnections(rows, '', select({ source: ['192.168.1.200'] }));
 
     expect(shown).toEqual([]);
     expect(facets.source).toContainEqual({ value: '192.168.1.200', count: 0 });
   });
 
-  it('узел цепочки считает строку один раз в каждом узле', () => {
+  it('a chain node counts the row once in each node', () => {
     const { facets } = filterConnections([makeRow({ chain: ['group', 'node'] })], '');
 
     expect(facets.chain).toEqual([
@@ -260,8 +260,8 @@ describe('значения и счётчики фасетов', () => {
   });
 });
 
-describe('отбор в адресе', () => {
-  it('старая ссылка с одним устройством и действием читается как выбор одного значения', () => {
+describe('filter in the address', () => {
+  it('an old link with one device and action is read as a single-value selection', () => {
     const parsed = parseConnectionSearch({ source: '192.168.1.60', kind: 'proxy' });
 
     expect(toFacetSelection(parsed)).toEqual(
@@ -269,7 +269,7 @@ describe('отбор в адресе', () => {
     );
   });
 
-  it('читает несколько значений списком', () => {
+  it('reads several values as a list', () => {
     const parsed = parseConnectionSearch({ source: ['192.168.1.60', '192.168.1.65'], network: ['tcp', 'udp'] });
 
     expect(toFacetSelection(parsed)).toEqual(
@@ -277,12 +277,12 @@ describe('отбор в адресе', () => {
     );
   });
 
-  it('фасет правила живёт под ключом match и принимает правило без условий', () => {
+  it('the rule facet lives under the match key and accepts a rule without conditions', () => {
     expect(toFacetSelection(parseConnectionSearch({ match: '' }))).toEqual(select({ rule: [''] }));
     expect(toFacetSearch(select({ rule: ['rule_set=github'] })).match).toBe('rule_set=github');
   });
 
-  it('одно значение пишет строкой, несколько — списком, пустой фасет не пишет вовсе', () => {
+  it('writes one value as a string, several as a list, and does not write an empty facet at all', () => {
     expect(toFacetSearch(select({ source: ['192.168.1.60'], kind: [ROUTE_KIND.Direct, ROUTE_KIND.Block] }))).toEqual({
       source: '192.168.1.60',
       kind: [ROUTE_KIND.Direct, ROUTE_KIND.Block],
@@ -292,11 +292,11 @@ describe('отбор в адресе', () => {
     });
   });
 
-  it('непонятое действие отбрасывает отбор целиком', () => {
+  it('an unrecognized action discards the whole filter', () => {
     expect(parseConnectionSearch({ source: '192.168.1.60', kind: ['proxy', 'teleport'] })).toEqual({});
   });
 
-  it('выбор переживает дорогу в адрес и обратно', () => {
+  it('a selection survives the trip into the address and back', () => {
     const selection = select({
       source: ['a', 'b'],
       kind: [ROUTE_KIND.Dns],

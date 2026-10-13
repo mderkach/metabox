@@ -17,7 +17,7 @@ const LOGO_CLASS =
 const TOGGLE_CLASS =
   'flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none';
 
-/** Кромка отличает текущий раздел от соседнего под курсором. */
+/** The edge distinguishes the current section from a neighbor under the cursor. */
 const ACTIVE_CLASS =
   'bg-sidebar-accent font-medium text-sidebar-accent-foreground before:absolute before:inset-y-1 before:left-0 before:w-0.5 before:rounded-full before:bg-primary';
 
@@ -68,8 +68,8 @@ export function AppSidebar() {
                 <Link
                   to={item.to}
                   title={t(item.key, { ns: 'shared' })}
-                  // Ссылка сама помечает себя текущей по префиксу адреса; точное
-                  // совпадение оставляет это ей, а вложенные пути решает `active`.
+                  // The link marks itself current by address prefix; an exact
+                  // match leaves that to it, and nested paths are decided by `active`.
                   activeOptions={{ exact: true }}
                   aria-current={item.to === active ? 'page' : undefined}
                   className={cn(
@@ -117,7 +117,7 @@ export function AppSidebar() {
   );
 }
 
-/** `expand` пуст у развёрнутой панели: разворачивать нечего, логотип — только знак. */
+/** `expand` is empty for an expanded panel: nothing to expand, the logo is only a mark. */
 function Logo({ expand }: { expand?: () => void }) {
   const { t } = useTranslation('widgets/AppSidebar');
   if (expand === undefined) {

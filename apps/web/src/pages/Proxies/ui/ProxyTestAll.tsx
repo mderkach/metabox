@@ -5,17 +5,17 @@ import { useTestProxyDelay } from '@features/Proxy/ProxyDelay';
 import { Button } from '@shared/ui';
 
 /**
- * Замер по всем группам сразу.
+ * Measurement across all groups at once.
  *
- * Стоит в шапке экрана, а не в карточке: карточная кнопка работает со своей
- * группой, и действие над всеми ими в одну из них не помещается.
+ * Placed in the screen header, not in a card: a card button works with its own
+ * group, and an action over all of them does not fit into one of them.
  */
 export function ProxyTestAll({
   groups,
   onTested,
 }: {
   groups: ProxyGroup[];
-  /** Замер прошёл во всех группах: отказ хотя бы одной показывает тост ошибки. */
+  /** The measurement passed in all groups: a failure in at least one shows an error toast. */
   onTested: () => void;
 }) {
   const { t } = useTranslation('pages/Proxies');
@@ -27,8 +27,8 @@ export function ProxyTestAll({
       size='sm'
       disabled={groups.length === 0 || delay.isPending}
       onClick={() => {
-        // Колбэк `mutate` срабатывает только у последнего вызова, поэтому
-        // объявление ждёт все замеры сразу, а не последний начатый.
+        // The `mutate` callback fires only for the last call, so
+        // the announcement waits for all measurements at once, not for the last one started.
         void Promise.allSettled(groups.map(async (group) => delay.mutateAsync(group.name))).then(
           function announceTested(results) {
             if (results.every((result) => result.status === 'fulfilled')) {

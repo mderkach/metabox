@@ -8,9 +8,9 @@ import { Button, DESTRUCTIVE_OUTLINE } from '@shared/ui';
 import { useClearLog } from '../api';
 
 /**
- * Очистка с подсказкой, что именно очищается: при `logread` кольцо logd не
- * чистится, и без подсказки строки, вернувшиеся после перезапуска демона,
- * читались бы поломкой.
+ * Clear with a hint of what exactly is cleared: with `logread` the logd ring is
+ * not cleared, and without the hint lines that return after a daemon restart
+ * would read as a malfunction.
  */
 export function LogClearButton({ source }: { source: string | null }) {
   const { t } = useTranslation('features/Log/LogClear');

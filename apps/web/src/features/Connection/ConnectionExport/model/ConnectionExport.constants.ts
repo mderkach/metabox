@@ -6,9 +6,9 @@ export const EXPORT_FORMAT = {
 export type ExportFormat = (typeof EXPORT_FORMAT)[keyof typeof EXPORT_FORMAT];
 
 /**
- * Состав и порядок колонок выгрузки: шапка файла и строка читают его вместе.
- * Устройство и адрес — два столбца: имя читает человек, а сверяет с журналами
- * роутера и сопоставляет между выгрузками адрес.
+ * Export column composition and order: the file header and the row read it
+ * together. Device and address are two columns: a person reads the name, while
+ * the address is what is matched against router logs and between exports.
  */
 export const CSV_COLUMNS = [
   'host',

@@ -8,9 +8,9 @@ import (
 	"strings"
 )
 
-// Addrs режет значение флага `-listen`: адреса перечисляются через запятую.
-// Пустые куски отбрасываются, поэтому хвостовая запятая в UCI-настройке не
-// превращается в попытку слушать пустой адрес.
+// Addrs splits the value of the `-listen` flag: addresses are listed comma-separated.
+// Empty pieces are dropped, so a trailing comma in the UCI setting does not
+// turn into an attempt to listen on an empty address.
 func Addrs(spec string) []string {
 	addrs := make([]string, 0, strings.Count(spec, ",")+1)
 
@@ -23,13 +23,13 @@ func Addrs(spec string) []string {
 	return addrs
 }
 
-// Listen открывает слушатели на каждом адресе.
+// Listen opens listeners on each address.
 //
-// Отказ на части адресов не отменяет остальные: у роутера интерфейсы поднимаются
-// вразнобой, и адрес гостевой сети может появиться позже панели. Такие отказы
-// возвращаются вторым значением — вызывающий их логирует, а демон продолжает
-// работать на тех адресах, где слушатель открылся. Ошибка возвращается только
-// тогда, когда не открылся ни один: слушать нечего и панель недостижима.
+// A failure on some addresses does not cancel the others: on a router interfaces come up
+// out of order, and the guest network address may appear later than the panel. Such failures
+// are returned as the second value: the caller logs them, and the daemon keeps
+// working on the addresses where a listener opened. An error is returned only
+// when none opened: there is nothing to listen on and the panel is unreachable.
 func Listen(addrs []string) ([]net.Listener, []error, error) {
 	if len(addrs) == 0 {
 		return nil, nil, errors.New("не задан ни один адрес")
@@ -58,8 +58,8 @@ func Listen(addrs []string) ([]net.Listener, []error, error) {
 	return listeners, failures, nil
 }
 
-// Bound отдаёт адреса, на которых слушатели действительно открылись: в логе
-// нужен адрес, по которому демон отвечает, а не тот, что просили.
+// Bound returns the addresses on which listeners actually opened: the log
+// needs the address the daemon answers on, not the one that was requested.
 func Bound(listeners []net.Listener) []string {
 	addrs := make([]string, 0, len(listeners))
 

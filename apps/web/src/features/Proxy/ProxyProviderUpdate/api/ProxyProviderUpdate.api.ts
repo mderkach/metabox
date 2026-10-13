@@ -3,8 +3,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { PROXY_QUERY, updateProxyProvider } from '@entities/Proxy';
 
 /**
- * Ручное обновление подписки. Перечитываются и подписки, и узлы: узлы
- * подписки рантайм отдаёт и в общем списке прокси.
+ * Manual subscription update. Both subscriptions and nodes are reread: the
+ * runtime serves subscription nodes in the general proxy list too.
  */
 export function useUpdateProxyProvider() {
   const queryClient = useQueryClient();

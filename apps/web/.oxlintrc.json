@@ -86,10 +86,10 @@
       "error",
       {
         "types": {
-          "FC": "Компонент объявляется как Function Declaration, пропсы типизируются в аргументах.",
-          "React.FC": "Компонент объявляется как Function Declaration, пропсы типизируются в аргументах.",
-          "VFC": "React.VFC деприкейтнут, компонент объявляется как Function Declaration.",
-          "React.VFC": "React.VFC деприкейтнут, компонент объявляется как Function Declaration."
+          "FC": "Declare the component as a function declaration and type props in the arguments.",
+          "React.FC": "Declare the component as a function declaration and type props in the arguments.",
+          "VFC": "React.VFC is deprecated, declare the component as a function declaration.",
+          "React.VFC": "React.VFC is deprecated, declare the component as a function declaration."
         }
       }
     ],
@@ -123,11 +123,11 @@
         "restrict": [
           {
             "pattern": "^-?[wh]-\\[.*\\]$",
-            "message": "Жёсткие размеры не проставляем: компонент занимает место по сетке."
+            "message": "Do not set fixed sizes: the component takes its place from the grid."
           },
           {
             "pattern": "^-?(?:size|min-w|max-w|min-h|max-h|basis|text|leading|tracking|gap|gap-x|gap-y|p|px|py|pt|pr|pb|pl|m|mx|my|mt|mr|mb|ml|space-x|space-y|top|right|bottom|left|inset|inset-x|inset-y)-\\[-?[0-9.]+px\\]$",
-            "message": "Кегль, отступы и размеры — в rem: они обязаны масштабироваться вместе с настройкой шрифта у пользователя. px остаётся границам, focus-ring и теням."
+            "message": "Font size, spacing and sizes go in rem so they scale with the user's font setting. px stays for borders, focus rings and shadows."
           }
         ]
       }
@@ -289,11 +289,11 @@
             "restrict": [
               {
                 "pattern": "^-?[wh]-\\[.*\\]$",
-                "message": "Жёсткие размеры не проставляем: компонент занимает место по сетке."
+                "message": "Do not set fixed sizes: the component takes its place from the grid."
               },
               {
                 "pattern": "^-?(?:size|min-w|max-w|min-h|max-h|basis|text|leading|tracking|gap|gap-x|gap-y|p|px|py|pt|pr|pb|pl|m|mx|my|mt|mr|mb|ml|space-x|space-y|top|right|bottom|left|inset|inset-x|inset-y)-\\[-?[0-9.]+px\\]$",
-                "message": "Кегль, отступы и размеры — в rem: они обязаны масштабироваться вместе с настройкой шрифта у пользователя. px остаётся границам, focus-ring и теням."
+                "message": "Font size, spacing and sizes go in rem so they scale with the user's font setting. px stays for borders, focus rings and shadows."
               }
             ],
             "variables": [

@@ -6,7 +6,7 @@ import { cn } from '@shared/lib/utils';
 
 import { LOGS_COLUMN } from './LogsColumns';
 
-/** Уровень своим тоном шкалы `--log-*`: соседние уровни различимы. Новый уровень — ошибка компиляции здесь. */
+/** Each level has its own tone of the `--log-*` scale: adjacent levels are distinguishable. A new level is a compile error here. */
 const LEVEL_TONE: Readonly<Record<LogLevel, string>> = {
   trace: 'text-log-trace',
   debug: 'text-log-debug',
@@ -24,7 +24,7 @@ const TIME_PARTS = {
   second: '2-digit',
 } as const satisfies Intl.DateTimeFormatOptions;
 
-/** До секунды: строки одной минуты иначе не различить. Дата — в подсказке, лог читают за последние часы. */
+/** Down to the second: rows of one minute are otherwise indistinguishable. The date is in the tooltip; the log is read for the last hours. */
 function formatLogTime(at: Date): string {
   return at.toLocaleTimeString(i18next.language, TIME_PARTS);
 }

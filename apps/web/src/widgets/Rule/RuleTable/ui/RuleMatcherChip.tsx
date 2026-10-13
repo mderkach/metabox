@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { RuleMatcher } from '@entities/Rule';
 
-/** Сколько значений условия показывается до сворачивания в «и ещё N». */
+/** How many condition values are shown before folding into "and N more". */
 const VISIBLE_VALUES = 2;
 
 function RuleMatcherChipProto({ matcher }: { matcher: RuleMatcher }) {

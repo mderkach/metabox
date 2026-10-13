@@ -20,7 +20,7 @@ import {
 
 import { FILL_ALPHA, GRID_DASH, HALF_INTERVALS, LINE_WIDTH, TIME_TICK_SECONDS, TRAFFIC_MIN_CEILING } from '../model';
 
-/** По одной точке линию не проведёшь. */
+/** A line cannot be drawn through a single point. */
 const MIN_POINTS = 2;
 
 function toTimeLabels(t: TFunction<'widgets/Daemon/DaemonTraffic'>, splits: number[], max: number): string[] {
@@ -44,8 +44,8 @@ function buildOptions(t: TFunction<'widgets/Daemon/DaemonTraffic'>): PlotOptions
     series: [{}, SERIES, SERIES],
     axes: [
       {
-        // Деление на самой левой кромке не подписывается: его подпись легла бы
-        // на нижнее деление шкалы скорости.
+        // The tick at the leftmost edge is not labelled: its label would lie
+        // on the bottom tick of the speed scale.
         splits: (chart) => {
           const min = chart.scales.x.min ?? 0;
 
@@ -63,16 +63,16 @@ function buildOptions(t: TFunction<'widgets/Daemon/DaemonTraffic'>): PlotOptions
 }
 
 /**
- * Трафик за минуту двумя зеркальными областями: входящий вверх от оси,
- * исходящий вниз. Шкала у половин общая: по своей на каждую равные на вид
- * области отличались бы в разы, и сравнить направления по картинке было бы
- * нельзя.
+ * Traffic over a minute as two mirrored areas: incoming up from the axis,
+ * outgoing down. The scale is shared between the halves: with one for each, visually equal
+ * areas would differ several times over, and directions could not be compared
+ * by the picture.
  *
- * Время — всегда минута до «сейчас». Шкала — от пика этой минуты, не ниже
- * `TRAFFIC_MIN_CEILING`: пик за всю работу демона держал бы обычную минуту
- * прижатой к нулю. Растёт шкала сразу, а сжимается, только когда пик упал
- * вчетверо (`useStickyCeiling`), — иначе она перестраивалась бы каждый раз,
- * когда всплеск уходит за левую кромку.
+ * Time is always a minute up to "now". The scale is from the peak of that minute, not below
+ * `TRAFFIC_MIN_CEILING`: the peak over the whole daemon uptime would keep an ordinary minute
+ * pressed to zero. The scale grows at once and shrinks only when the peak fell
+ * fourfold (`useStickyCeiling`) — otherwise it would rebuild every time
+ * a burst leaves past the left edge.
  */
 export function DaemonTraffic({
   samples,
@@ -81,7 +81,7 @@ export function DaemonTraffic({
   peakUp,
 }: {
   samples: TrafficSample[];
-  /** Когда пришла последняя точка, миллисекунды эпохи; `null` — точек ещё не было. */
+  /** When the last point arrived, epoch milliseconds; `null` means no points yet. */
   sampledAt: number | null;
   peakDown: number;
   peakUp: number;
@@ -90,8 +90,8 @@ export function DaemonTraffic({
   const reducedMotion = useReducedMotion();
   const [chart, setChart] = useState<PlotInstance | null>(null);
   const options = useMemo(() => buildOptions(t), [t]);
-  // Страница рендерится и по тику свежести потока, а не только по новому кадру:
-  // без мемоизации график перестраивал бы пути на каждый такой рендер.
+  // The page also renders on the stream freshness tick, not only on a new frame:
+  // without memoization the chart would rebuild paths on every such render.
   const times = useMemo(
     () => (sampledAt === null ? [] : toTrafficTimes(samples.length, sampledAt)),
     [samples.length, sampledAt]

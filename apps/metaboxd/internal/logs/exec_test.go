@@ -18,11 +18,11 @@ func TestExecReadsUntilExit(t *testing.T) {
 	}
 
 	if err := out.Close(); err != nil {
-		t.Errorf("процесс, вышедший сам, закрылся с ошибкой %v", err)
+		t.Errorf("a process that exited on its own closed with an error %v", err)
 	}
 
 	if string(data) != "строка\n" {
-		t.Errorf("вывод %q", data)
+		t.Errorf("output %q", data)
 	}
 }
 
@@ -41,6 +41,6 @@ func TestExecStopsWithContext(t *testing.T) {
 	}
 
 	if err := out.Close(); err == nil {
-		t.Error("убитый процесс закрылся без ошибки")
+		t.Error("a killed process closed without an error")
 	}
 }

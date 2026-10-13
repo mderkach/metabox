@@ -21,8 +21,8 @@ import { CONFIG_FIXTURE } from './Config.fixture';
 const TEXT = JSON.stringify(CONFIG_FIXTURE, null, 2);
 
 /**
- * Строк добавлено плюс удалено — то же число, что показал бы `diff`. Наивное
- * сравнение по индексу здесь врёт: вставка одной строки сдвигает весь хвост.
+ * Lines added plus removed: the same number `diff` would show. A naive
+ * index comparison lies here: inserting one line shifts the whole tail.
  */
 function changedLines(before: string, after: string): number {
   const left = before.split('\n');
@@ -41,58 +41,58 @@ function changedLines(before: string, after: string): number {
 }
 
 /**
- * Ключи верхнего уровня читаются из текста, а не из разобранной модели: Zod
- * раскладывает поля в порядке схемы, и проверка по модели показала бы порядок
- * схемы вместо порядка файла — ровно то, от чего правка по тексту и защищает.
+ * Top-level keys are read from the text, not from the parsed model: Zod
+ * lays out fields in schema order, and a check against the model would show the order
+ * of the schema instead of the file order, exactly what editing by text protects against.
  */
 function topLevelKeys(text: string): string[] {
   return [...text.matchAll(/^ {2}"([^"]+)":/gm)].map((match) => match[1]);
 }
 
 describe('setValue', () => {
-  it('правка существующего поля меняет ровно одну строку конфига с устройства', () => {
+  it('editing an existing field changes exactly one line of the device config', () => {
     const after = setValue(TEXT, ['route', 'default_mark'], 200);
 
     expect(changedLines(TEXT, after)).toBe(2);
     expect(parseConfig(after).config?.route?.default_mark).toBe(200);
   });
 
-  it('новое поле трогает только себя и запятую у соседа', () => {
+  it('a new field touches only itself and the comma on its neighbor', () => {
     const after = setValue(TEXT, ['route', 'final'], 'direct');
 
     expect(changedLines(TEXT, after)).toBe(3);
     expect(parseConfig(after).config?.route?.final).toBe('direct');
   });
 
-  it('не переставляет ключи: порядок секций в тексте остаётся прежним', () => {
+  it('does not reorder keys: the section order in the text stays as it was', () => {
     const after = setValue(TEXT, ['route', 'final'], 'direct');
 
     expect(topLevelKeys(after)).toEqual(topLevelKeys(TEXT));
     expect(topLevelKeys(TEXT)).toEqual(Object.keys(CONFIG_FIXTURE));
   });
 
-  it('не трогает узлы, которых схема не знает', () => {
+  it('does not touch nodes the schema does not know', () => {
     const text = JSON.stringify({ route: { final: 'proxy' }, unknown_section: { a: [1, 2] } }, null, 2);
     const after = setValue(text, ['route', 'final'], 'direct');
 
     expect(Reflect.get(parseConfig(after).config ?? {}, 'unknown_section')).toEqual({ a: [1, 2] });
   });
 
-  it('вставка повторяет отступ файла, отбитого табами', () => {
+  it('an insert repeats the indent of a file indented with tabs', () => {
     const text = '{\n\t"route": {\n\t\t"final": "proxy"\n\t}\n}';
     const after = setValue(text, ['route', 'default_mark'], 100);
 
     expect(after).toContain('\n\t\t"default_mark": 100');
   });
 
-  it('вставка повторяет отступ файла, отбитого четырьмя пробелами', () => {
+  it('an insert repeats the indent of a file indented with four spaces', () => {
     const text = '{\n    "route": {\n        "final": "proxy"\n    }\n}';
     const after = setValue(text, ['route', 'default_mark'], 100);
 
     expect(after).toContain('\n        "default_mark": 100');
   });
 
-  it('вставка сохраняет перевод строки Windows', () => {
+  it('an insert keeps Windows line endings', () => {
     const text = '{\r\n  "route": {\r\n    "final": "proxy"\r\n  }\r\n}';
     const after = setValue(text, ['route', 'default_mark'], 100);
 
@@ -102,7 +102,7 @@ describe('setValue', () => {
 });
 
 describe('removeValue', () => {
-  it('удаляет правило, оставляя соседние строки прежними', () => {
+  it('deletes a rule, leaving neighboring lines as they were', () => {
     const rules = CONFIG_FIXTURE.route?.rules ?? [];
     const after = removeValue(TEXT, ['route', 'rules', 0]);
     const left = parseConfig(after).config?.route?.rules ?? [];
@@ -113,7 +113,7 @@ describe('removeValue', () => {
 });
 
 describe('insertValue', () => {
-  it('вставляет правило на место, а не поверх соседнего', () => {
+  it('inserts a rule in place, not over a neighboring one', () => {
     const rules = CONFIG_FIXTURE.route?.rules ?? [];
     const after = insertValue(TEXT, ['route', 'rules', 1], { action: 'route', outbound: 'direct' });
     const left = parseConfig(after).config?.route?.rules ?? [];
@@ -125,7 +125,7 @@ describe('insertValue', () => {
 });
 
 describe('toOutboundTypes', () => {
-  it('сводит тег аутбаунда к его типу', () => {
+  it('reduces an outbound tag to its type', () => {
     const types = toOutboundTypes(CONFIG_FIXTURE);
 
     expect(types.get('node-a-vless-reality')).toBe('vless');
@@ -134,13 +134,13 @@ describe('toOutboundTypes', () => {
     expect(types.get('direct')).toBe('direct');
   });
 
-  it('аутбаунд без тега в карту не попадает: сослаться на него нечем', () => {
+  it('an outbound without a tag does not get into the map: there is nothing to refer to it by', () => {
     const types = toOutboundTypes({ ...CONFIG_FIXTURE, outbounds: [{ type: 'direct' }] });
 
     expect(types.size).toBe(0);
   });
 
-  it('конфига нет — карта пуста', () => {
+  it('no config: the map is empty', () => {
     expect(toOutboundTypes(null).size).toBe(0);
   });
 });
@@ -151,16 +151,16 @@ describe('toFinalOutbound', () => {
     { type: 'direct', tag: 'isp' },
   ];
 
-  it('берёт route.final, если он задан', () => {
+  it('takes route.final if it is set', () => {
     expect(toFinalOutbound({ outbounds: OUTBOUNDS, route: { final: 'isp' } })).toBe('isp');
   });
 
-  it('без route.final — первый аутбаунд, как решает sing-box', () => {
+  it('without route.final the first outbound, as sing-box decides', () => {
     expect(toFinalOutbound({ outbounds: OUTBOUNDS, route: {} })).toBe('direct');
     expect(toFinalOutbound({ outbounds: OUTBOUNDS })).toBe('direct');
   });
 
-  it('без route.final и аутбаундов выхода нет', () => {
+  it('without route.final and outbounds there is no outbound', () => {
     expect(toFinalOutbound({})).toBeNull();
     expect(toFinalOutbound(null)).toBeNull();
   });
@@ -174,32 +174,32 @@ describe('readSectionNodes', () => {
   },
 }`;
 
-  it('DNS-правила читаются из dns.rules, а не из списка серверов', () => {
+  it('DNS rules are read from dns.rules, not from the server list', () => {
     expect(readSectionNodes(DNS_TEXT, CONFIG_SECTION.DnsRules)).toEqual([
       { domain: ['a.example'], server: 'local' },
       { query_type: ['AAAA'], action: 'reject' },
     ]);
   });
 
-  it('путь DNS-правила ведёт в dns.rules по позиции', () => {
+  it('a DNS rule path leads to dns.rules by position', () => {
     expect(sectionNodePath(CONFIG_SECTION.DnsRules, 1)).toEqual(['dns', 'rules', 1]);
   });
 
-  it('ntp — секция-объект: один узел, путь без позиции', () => {
+  it('ntp is an object section: one node, a path without position', () => {
     const text = '{ "ntp": { "enabled": true, "server": "time.example" } }';
 
     expect(readSectionNodes(text, CONFIG_SECTION.Ntp)).toEqual([{ enabled: true, server: 'time.example' }]);
     expect(sectionNodePath(CONFIG_SECTION.Ntp, 0)).toEqual(['ntp']);
   });
 
-  it('секции, которой в файле нет, узлов нет', () => {
+  it('a section that is not in the file has no nodes', () => {
     expect(readSectionNodes('{}', CONFIG_SECTION.Ntp)).toEqual([]);
     expect(readSectionNodes('{}', CONFIG_SECTION.Endpoints)).toEqual([]);
   });
 });
 
 describe('sectionSize', () => {
-  it('считает элементы списка по его пути в документе', () => {
+  it('counts list items by its path in the document', () => {
     const config: ConfigDocument = {
       dns: { servers: [{ type: 'local', tag: 'local' }], rules: [{ server: 'local' }, { server: 'local' }] },
     };
@@ -208,26 +208,26 @@ describe('sectionSize', () => {
     expect(sectionSize(config, CONFIG_SECTION.DnsRules)).toBe(2);
   });
 
-  it('отсутствующая секция-список — ноль', () => {
+  it('a missing list section is zero', () => {
     expect(sectionSize({}, CONFIG_SECTION.Endpoints)).toBe(0);
     expect(sectionSize({}, CONFIG_SECTION.NetworkNamespaces)).toBe(0);
   });
 
-  it('у секции-объекта счёта нет', () => {
+  it('an object section has no count', () => {
     expect(sectionSize({ ntp: { enabled: true } }, CONFIG_SECTION.Ntp)).toBeNull();
     expect(sectionSize({}, CONFIG_SECTION.Certificate)).toBeNull();
   });
 
-  it('без документа счёта нет', () => {
+  it('without a document there is no count', () => {
     expect(sectionSize(null, CONFIG_SECTION.Services)).toBeNull();
   });
 });
 
 describe('GENERIC_SECTIONS', () => {
-  // Сторожевой тест: секция, которую форк добавит в схему, без записи здесь
-  // осталась бы без вкладки и правилась бы только текстом всего файла.
-  // `route` правится своими экранами, `$schema` — не секция.
-  it('покрывает каждую секцию верхнего уровня схемы', () => {
+  // A guard test: a section the fork adds to the schema, without an entry here,
+  // would be left without a tab and be editable only by the text of the whole file.
+  // `route` is edited by its own screens, `$schema` is not a section.
+  it('covers every top-level section of the schema', () => {
     const covered = new Set<string>(Object.values(GENERIC_SECTIONS).map((shape) => shape.path[0]));
     const sections = Object.keys(OptionsSchema.shape).filter((key) => key !== '$schema' && key !== 'route');
 

@@ -1,6 +1,6 @@
 /**
- * Адреса конфига. Константами, потому что участвуют в `queryKey`: литерал в
- * двух местах разъезжается молча (Query.md).
+ * Config addresses. They are constants because they take part in `queryKey`: a
+ * literal in two places drifts apart silently (Query.md).
  */
 export const CONFIG_ENDPOINT = {
   config: () => '/api/config',

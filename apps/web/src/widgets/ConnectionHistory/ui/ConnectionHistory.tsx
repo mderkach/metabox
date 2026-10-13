@@ -23,7 +23,7 @@ import {
 
 import { FILL_ALPHA, GRID_DASH, LINE_WIDTH, TIME_TICK_SECONDS } from '../model';
 
-/** По одной точке линию не проведёшь. */
+/** A line cannot be drawn through a single point. */
 const MIN_POINTS = 2;
 
 function toTimeLabels(t: TFunction<'widgets/ConnectionHistory'>, splits: number[], max: number): string[] {
@@ -42,8 +42,8 @@ function buildOptions(t: TFunction<'widgets/ConnectionHistory'>): PlotOptions {
     series: [{}, { fillTo: 0, width: LINE_WIDTH, points: { show: false } }],
     axes: [
       {
-        // Деление на самой левой кромке не подписывается: его подпись легла бы
-        // на нижнее деление шкалы.
+        // The tick at the leftmost edge is not labelled: its label would lie
+        // on the bottom scale tick.
         splits: (chart) => {
           const min = chart.scales.x.min ?? 0;
 
@@ -61,14 +61,14 @@ function buildOptions(t: TFunction<'widgets/ConnectionHistory'>): PlotOptions {
 }
 
 /**
- * Открытые соединения за минуту. Живой буфер копит панель, а открывается он
- * минутой, которую держит демон: рантайм отдаёт только снимок живых.
+ * Open connections over a minute. The live buffer is accumulated by the panel, and it opens with
+ * the minute the daemon holds: the runtime returns only a snapshot of live ones.
  *
- * Ось времени устроена как у графика трафика: время точек считает модель
- * (`toHistoryTimes`), окно — всегда минута до «сейчас», и неполный буфер
- * оставляет левую часть пустой, а не растягивается на всю ось. Кромка шкалы
- * круглая с запасом на колебания (`useStickyCeiling`): число соединений гуляет
- * каждую секунду, и кромка по пику меняла бы подписи оси на каждом кадре.
+ * The time axis is arranged like the traffic chart: point time is computed by the model
+ * (`toHistoryTimes`), the window is always a minute up to "now", and an incomplete buffer
+ * leaves the left part empty instead of stretching across the whole axis. The scale edge
+ * is round with headroom for fluctuations (`useStickyCeiling`): the connection count wanders
+ * every second, and an edge by the peak would change axis labels on every frame.
  */
 export function ConnectionHistory({
   samples,
@@ -76,9 +76,9 @@ export function ConnectionHistory({
   peak,
 }: {
   samples: number[];
-  /** Когда пришла последняя точка, миллисекунды эпохи; `null` — точек ещё не было. */
+  /** When the last point arrived, epoch milliseconds; `null` means no points yet. */
   sampledAt: number | null;
-  /** Пик видимой минуты. */
+  /** Peak of the visible minute. */
   peak: number;
 }) {
   const { t } = useTranslation('widgets/ConnectionHistory');

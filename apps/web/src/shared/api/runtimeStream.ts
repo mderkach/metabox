@@ -3,8 +3,8 @@ import { z } from 'zod';
 import { EventSchema } from './daemon.generated';
 
 /**
- * Топики потока рантайма. Панель подписывается на все сразу: отдельной
- * подписки на топик поток не имеет.
+ * Runtime stream topics. The panel subscribes to all at once: the stream has no separate
+ * per-topic subscription.
  */
 export const RUNTIME_TOPIC = {
   Traffic: 'traffic',
@@ -20,9 +20,9 @@ export { EventSchema as RuntimeEventSchema } from './daemon.generated';
 export type { EventWire as RuntimeEvent } from './daemon.generated';
 
 /**
- * Всё, что обработчику нужно от потока. Узкий тип вместо `EventSource`: так
- * обработчик проверяется без транспорта, а подмена в тесте не изображает
- * протокол целиком — в jsdom `EventSource` нет вовсе.
+ * Everything the handler needs from the stream. A narrow type instead of `EventSource`: this way
+ * the handler is tested without transport, and a test double does not pretend to be
+ * the whole protocol — jsdom has no `EventSource` at all.
  */
 export interface StreamSource {
   addEventListener: (type: string, handler: (event: MessageEvent<string>) => void) => void;
@@ -30,10 +30,10 @@ export interface StreamSource {
 }
 
 /**
- * Следит за нумерацией конверта и зовёт `onGap`, когда номера разошлись:
- * демон считает `seq` для каждого читателя без пропусков, поэтому разрыв
- * означает отброшенное событие, а не порядок доставки. Счётчик
- * общий на подписку, значит и проверять его нужно по всем топикам сразу.
+ * Tracks envelope numbering and calls `onGap` when numbers diverge:
+ * the daemon counts `seq` per reader without gaps, so a gap
+ * means a dropped event, not delivery order. The counter
+ * is shared per subscription, so it must be checked across all topics at once.
  */
 export function watchSequence(source: StreamSource, onGap: () => void): () => void {
   let expected: number | null = null;
@@ -74,12 +74,12 @@ function safeJson(text: string): unknown {
 }
 
 /**
- * Подписка на топик потока. Возвращает функцию отписки: без неё обработчик
- * переживёт размонтирование, и каждое переоткрытие экрана добавляло бы ещё
- * один разбор тех же событий.
+ * Subscription to a stream topic. Returns an unsubscribe function: without it the handler
+ * would outlive the unmount, and every reopening of the screen would add one more
+ * parse of the same events.
  *
- * Данные достаются из конверта здесь: слайсу достаётся его топик, а не форма
- * транспорта.
+ * Data is taken out of the envelope here: the slice gets its topic, not the shape of the
+ * transport.
  */
 export function listenTopic(source: StreamSource, topic: RuntimeTopic, apply: (data: unknown) => void): () => void {
   const handler = (event: MessageEvent<string>) => {
@@ -87,14 +87,14 @@ export function listenTopic(source: StreamSource, topic: RuntimeTopic, apply: (d
       const envelope = EventSchema.safeParse(JSON.parse(event.data));
 
       if (!envelope.success) {
-        console.warn(`[STREAM] конверт топика ${topic} не разобран`, z.prettifyError(envelope.error));
+        console.warn(`[STREAM] envelope of topic ${topic} not parsed`, z.prettifyError(envelope.error));
 
         return;
       }
 
       apply(envelope.data.data);
     } catch {
-      // Битый кадр пропускается: следующий придёт через секунду.
+      // A broken frame is skipped: the next one comes in a second.
     }
   };
 

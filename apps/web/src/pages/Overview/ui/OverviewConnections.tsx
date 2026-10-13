@@ -19,8 +19,8 @@ export function OverviewConnections({
   onLatencyTested: () => void;
 }) {
   const { t } = useTranslation('pages/Overview');
-  // Обзор держат открытым часами: новое устройство в сети должно получить имя
-  // без перезагрузки, поэтому список устройств здесь опрашивается.
+  // The overview is kept open for hours: a new device on the network should get a name
+  // without a reload, so the device list is polled here.
   const devices = useDeviceIndex({ poll: true });
   const sourceLabel = useCallback((ip: string) => deviceLabel(ip, devices), [devices]);
 
@@ -41,15 +41,15 @@ export function OverviewConnections({
             <OverviewTile
               label={t('connections.closed')}
               value={runtime.connectionsAwaiting ? null : String(runtime.counts.closed)}
-              // Закрытые копит вкладка: источник отдаёт только живые, поэтому
-              // ноль сразу после открытия — не поломка, а начало счёта.
+              // Closed ones are accumulated by the tab: the source returns only live ones, so
+              // zero right after opening is not a failure but the start of the count.
               context={runtime.connectionsAwaiting ? null : t('connections.keptByPanel')}
             />
           </ul>
         </Card>
 
-        {/* Семь карточек на три колонки: две растянуты, иначе в последнем
-            ряду остаётся пустая ячейка. */}
+        {/* Seven cards over three columns: two are stretched, otherwise the last
+            row has an empty cell. */}
         <div className='xl:col-span-2'>
           <ConnectionHistory samples={runtime.history} sampledAt={runtime.historyAt} peak={runtime.historyPeak} />
         </div>

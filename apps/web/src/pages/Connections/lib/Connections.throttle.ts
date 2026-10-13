@@ -4,15 +4,15 @@ import type { ConnectionRow } from '@entities/Connection';
 import { REFRESH_INTERVAL } from '@widgets/ConnectionTable';
 
 /**
- * Показанный набор строк, обновляемый не чаще заданного интервала.
+ * Shown row set, updated no more often than the given interval.
  *
- * Дросселирование живёт на экране, а не в сторе: кольцо истории в нём подписано
- * «за минуту» при шаге снапшота в секунду, и растянутый шаг превратил бы минуту
- * в четверть часа. Сводка обзора считается там же и по той же причине остаётся
- * живой.
+ * Throttling lives on the screen, not in the store: the history ring there is
+ * labeled "per minute" at a one-second snapshot step, and a stretched step
+ * would turn a minute into a quarter of an hour. The overview summary is
+ * computed there and for the same reason stays live.
  *
- * При `Live` набор отдаётся без задержки: лишний кадр состояния на каждую
- * секунду стоил бы дороже самой задержки.
+ * With `Live` the set is served without delay: an extra state frame every
+ * second would cost more than the delay itself.
  */
 export function useThrottledRows(rows: ConnectionRow[], interval: number): ConnectionRow[] {
   const latest = useRef(rows);
@@ -24,8 +24,8 @@ export function useThrottledRows(rows: ConnectionRow[], interval: number): Conne
 
   useEffect(
     function startRefresh() {
-      // Первый набор показывается сразу: иначе смена интервала гасила бы список
-      // до конца первого периода.
+      // The first set is shown at once: otherwise an interval change would
+      // blank the list until the end of the first period.
       setShown(latest.current);
 
       if (interval === REFRESH_INTERVAL.Live) {

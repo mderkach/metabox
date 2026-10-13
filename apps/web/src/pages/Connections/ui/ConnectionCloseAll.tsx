@@ -21,15 +21,17 @@ import {
 } from '@shared/ui';
 
 /**
- * Разрыв всех живых соединений. Спрашивает подтверждение: отменить действие
- * нельзя, а последствие видно не на экране, а на устройствах в сети.
+ * Tearing all live connections. Asks for confirmation: the action cannot be
+ * undone, and the consequence is visible not on screen but on the devices in
+ * the network.
  *
- * Контур в тоне опасности, а не заливка: залитый тон среди обычных кнопок
- * читается как сообщение об ошибке.
+ * The outline is in the danger tone, not a fill: a filled tone among ordinary
+ * buttons reads as an error message.
  *
- * `compact` прячет действие в меню списка: на телефоне тулбар переносится, и
- * отдельная кнопка встаёт под поиском, в зоне большого пальца. Диалог тот же,
- * фокус после него возвращается на кнопку меню — пункт к тому времени закрыт.
+ * `compact` hides the action in the list menu: on a phone the toolbar wraps,
+ * and a separate button would sit under the search, in the thumb zone. The
+ * dialog is the same, and focus returns after it to the menu button, since the
+ * item is closed by then.
  */
 export function ConnectionCloseAll({
   count,

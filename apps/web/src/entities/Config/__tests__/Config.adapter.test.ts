@@ -14,33 +14,33 @@ const VERSIONS_WIRE = {
 };
 
 describe('toConfigVersions', () => {
-  it('отдаёт историю от свежей версии к старой', () => {
+  it('returns history from the newest version to the oldest', () => {
     expect(toConfigVersions(VERSIONS_WIRE).map((version) => version.id)).toEqual([3, 2, 1]);
   });
 
-  it('переводит секунды устройства в миллисекунды эпохи', () => {
+  it('converts device seconds to epoch milliseconds', () => {
     const [, , oldest] = toConfigVersions(VERSIONS_WIRE);
 
     expect(oldest.savedAt).toBe(1_757_000_000_000);
   });
 
-  it('читает нулевую отметку как отсутствие времени: часы устройства не синхронизованы', () => {
+  it('reads a zero mark as no time: the device clock is not synchronized', () => {
     const [newest] = toConfigVersions(VERSIONS_WIRE);
 
     expect(newest.savedAt).toBeNull();
   });
 
-  it('отмечает текущей версию с отпечатком файла на устройстве', () => {
+  it('marks as current the version whose fingerprint matches the file on the device', () => {
     const versions = toConfigVersions({ ...VERSIONS_WIRE, current_sum: 'b2' });
 
     expect(versions.filter((version) => version.current).map((version) => version.id)).toEqual([2]);
   });
 
-  it('без отпечатка файла текущей не отмечает ни одну', () => {
+  it('without a file fingerprint marks none as current', () => {
     expect(toConfigVersions(VERSIONS_WIRE).some((version) => version.current)).toBe(false);
   });
 
-  it('не отмечает текущей версию с тем же конфигом, но другими списками: её откат вернёт списки', () => {
+  it('does not mark as current a version with the same config but different lists: its rollback would restore the lists', () => {
     const versions = toConfigVersions({
       versions: [
         { id: 1, size: 2048, sum: 'a1', saved_at: 0, lists_sum: 'l1' },
@@ -53,13 +53,13 @@ describe('toConfigVersions', () => {
     expect(versions.filter((version) => version.current).map((version) => version.id)).toEqual([2]);
   });
 
-  it('у версии без снимка списков сравнивает только конфиг: её откат списков не трогает', () => {
+  it('for a version without a lists snapshot compares only the config: its rollback does not touch the lists', () => {
     const versions = toConfigVersions({ ...VERSIONS_WIRE, current_sum: 'b2', current_lists_sum: 'l1' });
 
     expect(versions.filter((version) => version.current).map((version) => version.id)).toEqual([2]);
   });
 
-  it('не принимает версию без номера: порядок истории задаёт именно он', () => {
+  it('does not accept a version without a number: it defines the history order', () => {
     expect(ConfigVersionsSchema.safeParse({ versions: [{ size: 1, sum: 'x', saved_at: 0 }] }).success).toBe(false);
   });
 });
@@ -67,19 +67,19 @@ describe('toConfigVersions', () => {
 describe('toCheckFailure', () => {
   const details = { stdout: 'ok', stderr: 'FATAL rule 3', exit_code: 1 };
 
-  it('достаёт вывод бинаря из отказа проверки', () => {
+  it('extracts the binary output from a check failure', () => {
     const error = new ApiError(API_FAILURE.Response, 'отказ', { code: 'check_failed', details });
 
     expect(toCheckFailure(error)).toEqual({ stdout: 'ok', stderr: 'FATAL rule 3', exitCode: 1 });
   });
 
-  it('молчит, когда отказ другой: показывать нечего', () => {
+  it('stays silent when the failure is a different one: nothing to show', () => {
     const error = new ApiError(API_FAILURE.Response, 'отказ', { code: 'config_missing' });
 
     expect(toCheckFailure(error)).toBeNull();
   });
 
-  it('молчит, когда в отказе лежит не вывод бинаря', () => {
+  it('stays silent when the failure carries no binary output', () => {
     const error = new ApiError(API_FAILURE.Response, 'отказ', { code: 'check_failed', details: 'просто строка' });
 
     expect(toCheckFailure(error)).toBeNull();
@@ -89,19 +89,19 @@ describe('toCheckFailure', () => {
 describe('toWorkdirMismatch', () => {
   const details = { workdir: '/usr/share/sing-box', config_dir: '/etc/sing-box' };
 
-  it('достаёт оба каталога из отказа по рабочему каталогу службы', () => {
+  it('extracts both directories from a failure about the service working directory', () => {
     const error = new ApiError(API_FAILURE.Response, 'отказ', { code: 'workdir_mismatch', details });
 
     expect(toWorkdirMismatch(error)).toEqual({ workdir: '/usr/share/sing-box', configDir: '/etc/sing-box' });
   });
 
-  it('молчит, когда отказ другой', () => {
+  it('stays silent when the failure is a different one', () => {
     const error = new ApiError(API_FAILURE.Response, 'отказ', { code: 'check_failed', details });
 
     expect(toWorkdirMismatch(error)).toBeNull();
   });
 
-  it('молчит, когда каталогов в отказе нет: собрать команду не из чего', () => {
+  it('stays silent when the failure has no directories: there is nothing to build the command from', () => {
     const error = new ApiError(API_FAILURE.Response, 'отказ', { code: 'workdir_mismatch', details: { workdir: 1 } });
 
     expect(toWorkdirMismatch(error)).toBeNull();

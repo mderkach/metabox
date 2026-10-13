@@ -6,12 +6,12 @@ import { useDaemonStatus } from '@entities/Daemon';
 import { Alert, AlertDescription, AlertTitle } from '@shared/ui';
 
 /**
- * Узлы и опции, которые бинарь на устройстве не запустит: их нет в его сборке.
+ * Nodes and options that the binary on the device will not start: they are not in its build.
  *
- * Панель такой конфиг не запрещает — черновик сохраняется и правится, — но
- * называет последствие: `sing-box check` его отвергнет, и применение не
- * пройдёт. Состав сборки сообщает демон; пока он не прочитан, предупреждать не
- * о чем, и блока нет.
+ * The panel does not forbid such a config — the draft is saved and edited — but
+ * names the consequence: `sing-box check` will reject it, and apply will not
+ * go through. The build composition is reported by the daemon; until it is read, there is nothing to
+ * warn about, and there is no block.
  */
 export function ConfigBuildNotice({ config }: { config: ConfigDocument | null }) {
   const { t } = useTranslation('widgets/Config/ConfigBuildNotice');

@@ -10,16 +10,16 @@ import (
 	"time"
 )
 
-// Follow открывает поток новых строк не ниже уровня min и отдаёт их emit до
-// отмены ctx или конца источника. emit зовётся из горутины потока и не должен
-// блокироваться надолго.
+// Follow opens a stream of new lines not below level min and passes them to emit until
+// ctx is cancelled or the source ends. emit is called from the stream goroutine and must not
+// block for long.
 //
-// Горутину останавливает отмена ctx; её итог приходит в канал done ровно
-// одним значением, и вызывающий обязан его дождаться. К этому значению место
-// в лимите потоков уже свободно: клиент, переоткрывший поток сразу после
-// закрытия прежнего, лимитом не упрётся. Ошибка до запуска —
-// лимит потоков или недоступный источник — возвращается сразу. Обрыв
-// источника поток не переподключает: панель открывает его заново.
+// The goroutine is stopped by ctx cancellation; its result arrives in the done channel as exactly
+// one value, and the caller must wait for it. By this value the slot
+// in the stream limit is already free: a client that reopens the stream right after
+// closing the previous one will not hit the limit. An error before the start (the
+// stream limit or an unavailable source) is returned at once. The stream does not reconnect
+// when the source breaks: the panel opens it again.
 func (r *Reader) Follow(ctx context.Context, minLevel Level, emit func(Entry)) (<-chan error, error) {
 	select {
 	case r.slots <- struct{}{}:
@@ -40,8 +40,8 @@ func (r *Reader) Follow(ctx context.Context, minLevel Level, emit func(Entry)) (
 	done := make(chan error, 1)
 
 	if src.file != "" {
-		// Конец файла снимается до возврата: строка, дописанная сразу после
-		// открытия потока, иначе могла бы попасть в отсчёт и не дойти до панели.
+		// The end of the file is taken before returning: a line appended right after
+		// the stream opened could otherwise get into the count and not reach the panel.
 		offset, err := fileSize(src.file)
 		if err != nil {
 			release()
@@ -73,7 +73,7 @@ func (r *Reader) Follow(ctx context.Context, minLevel Level, emit func(Entry)) (
 		})
 
 		err := errors.Join(readErr, out.Close())
-		// Отмена убивает logread, и его код возврата — следствие, а не отказ.
+		// The cancel kills logread, and its exit code is a consequence, not a failure.
 		if ctx.Err() != nil {
 			err = nil
 		}
@@ -85,9 +85,9 @@ func (r *Reader) Follow(ctx context.Context, minLevel Level, emit func(Entry)) (
 	return done, nil
 }
 
-// followFile опрашивает размер файла: inotify в стандартной библиотеке нет.
-// Файл, ставший короче, — усечён очисткой или заменён, — читается с начала;
-// пропавший файл ждётся до отмены.
+// followFile polls the file size: the standard library has no inotify.
+// A file that became shorter (truncated by cleanup or replaced) is read from the start;
+// a vanished file is waited for until cancellation.
 func (r *Reader) followFile(ctx context.Context, path string, offset int64, f filter, emit func(Entry)) {
 	ticker := time.NewTicker(r.opts.PollInterval)
 	defer ticker.Stop()
@@ -136,9 +136,9 @@ func fileSize(path string) (int64, error) {
 	return info.Size(), nil
 }
 
-// readFrom отдаёт байты файла от offset до конца и новый размер. Файл короче
-// offset читается с начала. За один опрос читается не больше fileTailBytes:
-// всплеск записи не забирает память сверх этого.
+// readFrom returns the file bytes from offset to the end and the new size. A file shorter than
+// offset is read from the start. No more than fileTailBytes is read per poll:
+// a write burst does not take memory beyond that.
 func readFrom(path string, offset int64) (string, int64, error) {
 	f, err := os.Open(path)
 	if err != nil {

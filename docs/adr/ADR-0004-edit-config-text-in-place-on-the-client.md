@@ -1,116 +1,116 @@
-# ADR-0004. Править текст конфига точечно на клиенте, а не пересобирать его из разобранной модели
+# ADR-0004. Edit the config text in place on the client instead of rebuilding it from the parsed model
 
-- Статус: Accepted
-- Дата: 2026-09-10
-- Ответственные: владелец репозитория
+- Status: Accepted
+- Date: 2026-09-10
+- Deciders: repository owner
 
-## Контекст и постановка проблемы
+## Context and problem statement
 
-Демон принимает конфиг телом запроса `POST /api/apply` и пишет его дословно: разбор в структуры или map запрещён, единственная структурная правка — вставка `experimental.clash_api` ([ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md)). Значит текст, который отправит интерфейс, и есть будущее содержимое `/etc/sing-box/config.json`.
+The daemon takes the config as the body of `POST /api/apply` and writes it verbatim: parsing into structs or a map is forbidden, and the only structural edit is inserting `experimental.clash_api` ([ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md)). So the text the interface sends is the future content of `/etc/sing-box/config.json`.
 
-Требования к этому тексту заданы [PRD](../PRD.md): AC-2 — диф с исходным файлом после правки одного поля содержит только это поле; AC-3 — конструкции, не распознанные моделью, переживают round-trip. Оба критерия относятся к вехе M3, но нарушить их можно уже на вехе M1: первый же Apply из интерфейса перезапишет файл целиком.
+The requirements for this text are set by the [PRD](../PRD.md): AC-2: after editing one field, the diff against the original file contains only that field; AC-3: constructs not recognized by the model survive a round-trip. Both criteria belong to milestone M3, but they can be violated as early as milestone M1: the very first Apply from the interface rewrites the whole file.
 
-Сейчас фронт получает ответ `GET /api/config` через axios, то есть уже разобранным в объект, и проверяет его схемой `ConfigSchema` (`apps/web/src/entities/Config/api/Config.query.ts`). Исходный текст файла нигде не сохраняется.
+At the moment the frontend gets the `GET /api/config` response through axios, that is, already parsed into an object, and checks it with the `ConfigSchema` schema (`apps/web/src/entities/Config/api/Config.query.ts`). The original text of the file is not kept anywhere.
 
-Замер на конфиге целевого устройства (745 строк, 32 правила `route.rules`, 18 remote rule-set, секция `providers`), 2026-09-10:
+Measurement on the target device's config (745 lines, 32 `route.rules` rules, 18 remote rule sets, a `providers` section), 2026-09-10:
 
-- схема принимает конфиг без замечаний;
-- значения не теряются: после рекурсивной сортировки ключей разобранный объект совпадает с исходным побайтово, расхождений по значениям нет;
-- порядок ключей не сохраняется: `providers` переезжает с седьмой позиции верхнего уровня на пятую, и при обратной сериализации расходится **418 строк из 744**;
-- форматирование исходного файла совпадает с двухпробельным `JSON.stringify`: текст файла и `JSON.parse` → `JSON.stringify(…, null, 2)` расходятся на одну строку (перевод строки в конце).
+- the schema accepts the config without remarks;
+- no values are lost: after recursive key sorting the parsed object matches the original byte for byte, with no differences in values;
+- key order is not kept: `providers` moves from the seventh top-level position to the fifth, and serializing back differs in **418 lines of 744**;
+- the original file's formatting matches two-space `JSON.stringify`: the file text and `JSON.parse` → `JSON.stringify(…, null, 2)` differ in one line (the trailing newline).
 
-Причина перестановки — устройство Zod: `safeParse` строит новый объект, раскладывая известные поля в порядке схемы, а не в порядке входных данных.
+The reordering comes from how Zod works: `safeParse` builds a new object, laying out known fields in the schema's order, not in the order of the input.
 
-Шаг 2 последовательности ADR-0002 — «сериализация в `config.json` — на фронте» — этим решением уточняется в части способа: фронт формирует байты конфига, но получает их правкой исходного текста, а не сериализацией модели. Сама последовательность и разделение шагов между фронтом и демоном не меняются.
+Step 2 of the ADR-0002 sequence, "serialization to `config.json`, on the frontend", is refined by this decision as to the method: the frontend produces the config bytes but gets them by editing the original text, not by serializing the model. The sequence itself and the split of steps between the frontend and the daemon do not change.
 
-В scope: как интерфейс формирует тело `POST /api/apply`. Вне scope: протокол применения, владение файлом и гарантия `clash_api` — они заданы ADR-0002 и не меняются; хранение черновиков (AC-26, веха M3).
+In scope: how the interface produces the body of `POST /api/apply`. Out of scope: the apply protocol, file ownership and the `clash_api` guarantee: they are set by ADR-0002 and do not change; storage of drafts (AC-26, milestone M3).
 
-## Критерии выбора
+## Decision drivers
 
-1. **AC-2 и AC-3 выполняются на произвольном конфиге**, а не только на файле, отформатированном так же, как его форматирует браузер.
-2. **Механика точечной правки не дублируется** между Go и TypeScript: две реализации одного формата расходятся молча.
-3. **Контракт демона не расширяется без нужды** — каждый новый эндпоинт нужно версионировать, тестировать и доигрывать при обрыве.
-4. **Объём кода и сопровождение**: сколько писать и сколько потом чинить на краевых случаях JSON.
-5. **Вклад в бандл** — фронт и без того отдаёт весь код одним чанком: 737 kB на момент решения.
-6. **Тестируемость**: результат проверяется golden-round-trip на фикстуре, без устройства.
+1. **AC-2 and AC-3 hold on an arbitrary config**, not only on a file formatted the same way a browser formats it.
+2. **The mechanics of a targeted edit are not duplicated** between Go and TypeScript: two implementations of one format drift silently.
+3. **The daemon contract is not extended without need**: every new endpoint has to be versioned, tested and replayed after an interruption.
+4. **Code volume and maintenance**: how much to write and how much to fix later on JSON edge cases.
+5. **Bundle contribution**: the frontend already ships all code as one chunk, 737 kB at the time of the decision.
+6. **Testability**: the result is checked by a golden round-trip on a fixture, without a device.
 
-## Рассмотренные варианты
+## Considered options
 
-1. **Править исходный текст точечно библиотекой `jsonc-parser`** — фронт хранит текст файла как есть; правка адресуется путём (`['route','rules',5,'outbound']`), `modify` возвращает список правок, `applyEdits` собирает новый текст. Остальные байты не трогаются. Библиотека — `microsoft/node-jsonc-parser` 3.3.1, лежит в основе редактора JSON в VS Code, зависимостей не имеет. Преимущества: AC-2 и AC-3 выполняются независимо от форматирования исходного файла; краевые случаи JSON уже закрыты чужими тестами; поддерживает вставку в массив (`isArrayInsertion`) и удаление элемента, что нужно редактору `route.rules`. Недостатки: новая зависимость — 16.8 kB к бандлу, 5.5 kB после gzip (замер 2026-09-10: сборка с заглушкой вместо библиотеки дала 736.85 kB, с библиотекой — 753.67 kB); на клиенте появляется вторая модель данных — текст рядом с разобранным объектом, их согласованность нужно держать явно. **Принят.**
+1. **Edit the original text in place with the `jsonc-parser` library**: the frontend keeps the file text as is; an edit is addressed by a path (`['route','rules',5,'outbound']`), `modify` returns a list of edits, `applyEdits` builds the new text. The other bytes are not touched. The library is `microsoft/node-jsonc-parser` 3.3.1, it underlies the JSON editor in VS Code and has no dependencies. Pros: AC-2 and AC-3 hold regardless of the original file's formatting; JSON edge cases are already covered by someone else's tests; it supports insertion into an array (`isArrayInsertion`) and removal of an element, which the `route.rules` editor needs. Cons: a new dependency, 16.8 kB added to the bundle, 5.5 kB after gzip (measured 2026-09-10: a build with a stub instead of the library gave 736.85 kB, with the library 753.67 kB); a second data model appears on the client, the text next to the parsed object, and their consistency has to be kept explicitly. **Chosen.**
 
-2. **Свой патчер JSON-текста на TypeScript** — та же схема без зависимости. Преимущества: ничего лишнего в бандле, полный контроль. Недостатки: 200-300 строк с собственными тестами на escape-последовательности, юникод, вложенные массивы и хвостовые запятые — то есть повторение работы, которую в `internal/clashapi/splice.go` уже пришлось делать один раз для одной-единственной вставки. Экономия по критерию 5 не окупает риск по критериям 4 и 6. **Отклонён.**
+2. **A custom JSON text patcher in TypeScript**: the same scheme without the dependency. Pros: nothing extra in the bundle, full control. Cons: 200-300 lines with their own tests for escape sequences, Unicode, nested arrays and trailing commas, that is, repeating the work that already had to be done once in `internal/clashapi/splice.go` for one single insertion. The saving on driver 5 does not pay for the risk on drivers 4 and 6. **Rejected.**
 
-3. **Патч-эндпоинт на демоне** — интерфейс отправляет список правок (путь и значение), демон применяет их к байтам конфига механикой `splice.go`. Преимущества: точечная правка байт остаётся в одном месте и уже покрыта тестами (критерий 2). Недостатки: расширение контракта демона (критерий 3) — новый формат запроса, его валидация, поведение при частично применимом патче; лишний сетевой круг перед показом дифа, который интерфейс обязан отрисовать до отправки; `splice.go` сейчас умеет вставку одного члена объекта, а не произвольные пути с массивами, — механику пришлось бы дописывать в любом случае. **Отклонён**, но остаётся запасным путём, если клиентская правка окажется несостоятельной.
+3. **A patch endpoint on the daemon**: the interface sends a list of edits (path and value), and the daemon applies them to the config bytes with the `splice.go` mechanics. Pros: the targeted byte edit stays in one place and is already covered by tests (driver 2). Cons: extending the daemon contract (driver 3): a new request format, its validation, behaviour with a partially applicable patch; an extra network round trip before showing the diff, which the interface must render before sending; `splice.go` can currently insert one object member, not arbitrary paths with arrays, so the mechanics would have to be extended anyway. **Rejected**, but it stays a fallback if the client-side edit turns out to be unworkable.
 
-4. **Пересобирать конфиг из разобранной модели** — сериализовать то, что вернул Zod. Преимущества: ничего не нужно делать. Недостатки: замер выше — 418 строк из 744 расходятся на первом же применении, AC-2 нарушается прямо и на любом конфиге. **Отклонён.**
+4. **Rebuild the config from the parsed model**: serialize what Zod returned. Pros: nothing needs to be done. Cons: the measurement above, 418 lines of 744 differ on the very first apply, AC-2 is violated directly and on any config. **Rejected.**
 
-5. **Восстанавливать порядок ключей по исходному объекту** — сериализовать разобранную модель, но выкладывать ключи в том порядке, в каком они лежали в `JSON.parse` исходного ответа, новые ключи дописывать в конец. Около 50 строк, зависимостей нет. Преимущества: дёшево, закрывает веху M1 на конфиге целевого устройства. Недостатки: держится на совпадении форматирования — файл с табами, четырьмя пробелами или записанный в одну строку будет переформатирован целиком, то есть AC-2 выполняется случайно, а не по устройству решения; на вехе M3 (AC-1, импорт чужих конфигов) переделка неизбежна. **Отклонён.**
+5. **Restore the key order from the original object**: serialize the parsed model, but lay out the keys in the order they had in `JSON.parse` of the original response, appending new keys at the end. About 50 lines, no dependencies. Pros: cheap, closes milestone M1 on the target device's config. Cons: it depends on matching formatting: a file with tabs, four spaces or written on one line gets reformatted entirely, so AC-2 holds by chance, not by design; at milestone M3 (AC-1, importing other people's configs) a rework is unavoidable. **Rejected.**
 
-## Принятое решение
+## Decision outcome
 
-Источник истины для документа конфига на клиенте — **текст файла**, полученный от `GET /api/config`. Разобранная Zod-моделью структура используется только для отображения, поиска и валидации.
+The source of truth for the config document on the client is **the file text** received from `GET /api/config`. The structure parsed by the Zod model is used only for display, search and validation.
 
-Обязательные правила реализации:
+Mandatory implementation rules:
 
-- ответ `GET /api/config` сохраняется как строка; разбор в объект делается из этой строки, а не вместо неё;
-- каждая правка документа выражается как путь плюс значение и применяется к тексту через `modify` и `applyEdits` из `jsonc-parser`;
-- телом `POST /api/apply` уходит текст, полученный из `applyEdits`. Сериализовать разобранную модель в тело запроса запрещено;
-- отступ и перевод строки для вставляемых узлов определяются по исходному тексту и передаются в `formattingOptions`; по умолчанию — два пробела и `\n`;
-- добавление правила в `route.rules` выполняется через `isArrayInsertion`, удаление — правкой того же пути со значением `undefined`. Пересборка массива целиком запрещена: она переписала бы все его элементы;
-- перестановка правила — один экшен стора: узел читается, удаляется со старой позиции и вставляется на новую. Наружу это одна операция, поэтому индексы не сдвигаются под вызывающим кодом.
+- the `GET /api/config` response is kept as a string; the object is parsed from this string, not instead of it;
+- every edit of the document is expressed as a path plus a value and is applied to the text through `modify` and `applyEdits` from `jsonc-parser`;
+- the body of `POST /api/apply` is the text produced by `applyEdits`. Serializing the parsed model into the request body is forbidden;
+- the indentation and newline for inserted nodes are detected from the original text and passed in `formattingOptions`; the default is two spaces and `\n`;
+- adding a rule to `route.rules` is done through `isArrayInsertion`, removal by editing the same path with the value `undefined`. Rebuilding the whole array is forbidden: it would rewrite all its elements;
+- moving a rule is one store action: the node is read, removed from its old position and inserted at the new one. From the outside this is one operation, so indices do not shift under the calling code.
 
-Non-goal: клиент не приводит конфиг к канонической форме, не сортирует ключи и не переформатирует то, чего не трогал пользователь.
+Non-goal: the client does not bring the config to a canonical form, does not sort keys and does not reformat what the user did not touch.
 
-### Область действия и границы
+### Scope and boundaries
 
-Решение распространяется на `apps/web/src/entities/Config` (текст документа, стор и правки) и на `apps/web/src/shared/api` в части доступа к сырому телу ответа. Демона и его контракт не затрагивает: тело `POST /api/apply` остаётся байтами конфига.
+The decision covers `apps/web/src/entities/Config` (the document text, the store and edits) and `apps/web/src/shared/api` as to access to the raw response body. It does not affect the daemon and its contract: the body of `POST /api/apply` stays the config bytes.
 
-## Последствия
+## Consequences
 
-### Положительные
+### Positive
 
-- Диф применённого конфига содержит только то, что правил пользователь, независимо от того, как отформатирован исходный файл.
-- Нераспознанные схемой конструкции не проходят через сериализацию вовсе, поэтому исказить их нечем (AC-3).
-- Контракт демона остаётся прежним: интерфейс отправляет байты, как и раньше, — меняется только то, как он их получает.
-- Диф перед применением считается по двум текстам, а не по сравнению объектов: пользователю показывается ровно то, что уедет на устройство.
+- The diff of an applied config contains only what the user edited, regardless of how the original file is formatted.
+- Constructs the schema does not recognize do not go through serialization at all, so nothing can distort them (AC-3).
+- The daemon contract stays the same: the interface sends bytes as before; only the way it gets them changes.
+- The diff before apply is computed from two texts, not by comparing objects: the user sees exactly what will go to the device.
 
-### Отрицательные
+### Negative
 
-- На клиенте два представления одного документа: текст и разобранная модель. После каждой правки модель нужно пересобирать из нового текста, иначе экран и файл разойдутся.
-- Правка адресуется путём, поэтому каждый элемент интерфейса обязан знать путь своего узла. Для `route.rules` это индекс в массиве, и при переупорядочивании правил индексы сдвигаются — порядок операций внутри одного действия становится значимым.
-- Новая зависимость в бандле, который и так велик.
+- The client has two representations of one document: the text and the parsed model. After every edit the model has to be rebuilt from the new text, otherwise the screen and the file drift apart.
+- An edit is addressed by a path, so every interface element must know the path of its node. For `route.rules` this is an array index, and reordering rules shifts the indices: the order of operations within one action becomes significant.
+- A new dependency in a bundle that is already large.
 
-### Нейтральные или отложенные
+### Neutral or deferred
 
-- Хранение черновиков (AC-26) не затрагивается: решение описывает только формирование тела Apply.
-- Вариант 3 (патч на демоне) остаётся открытым как путь отхода, если клиентская правка окажется несостоятельной на больших конфигах.
+- Storage of drafts (AC-26) is not affected: the decision only describes producing the Apply body.
+- Option 3 (a patch on the daemon) stays open as a fallback if the client-side edit turns out to be unworkable on large configs.
 
-## Риски и меры снижения
+## Risks and mitigations
 
-| Риск                                                                  | Вероятность и влияние    | Митигация                                                                                                                                         |
-| --------------------------------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Текст и разобранная модель расходятся после серии правок              | Средняя, высокое влияние | Модель пересобирается из текста после каждой правки; расхождение ловится golden-тестом round-trip на фикстуре                                     |
-| Файл на устройстве изменён извне между чтением и применением          | Низкая, высокое влияние  | Демон возвращает `sha256` записанного конфига в транзакции (`apply.Transaction.Sum`); интерфейс сверяет его и перечитывает конфиг при расхождении |
-| `jsonc-parser` перестанет поддерживаться                              | Низкая, среднее влияние  | API узкий — `modify` и `applyEdits`; замена вариантом 2 или 3 локализована в одном модуле                                                         |
-| Правка индексов `route.rules` при переупорядочивании даёт не тот узел | Средняя, среднее влияние | Перестановка выражается как одна операция над массивом, а не как серия правок по индексам; покрывается тестом на перестановку соседних правил     |
+| Risk                                                                | Likelihood and impact | Mitigation                                                                                                                                                         |
+| ------------------------------------------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| The text and the parsed model drift apart after a series of edits   | Medium, high impact   | The model is rebuilt from the text after every edit; drift is caught by a golden round-trip test on a fixture                                                      |
+| The file on the device is changed externally between read and apply | Low, high impact      | The daemon returns the `sha256` of the written config in the transaction (`apply.Transaction.Sum`); the interface compares it and rereads the config on a mismatch |
+| `jsonc-parser` stops being maintained                               | Low, medium impact    | The API is narrow, `modify` and `applyEdits`; replacing it with option 2 or 3 is contained in one module                                                           |
+| Editing `route.rules` indices on reordering hits the wrong node     | Medium, medium impact | A move is expressed as one operation on the array, not as a series of edits by index; covered by a test moving adjacent rules                                      |
 
-## Совместимость, миграция и откат
+## Compatibility, migration and rollback
 
-Миграция не требуется: интерфейс ещё не записывает конфиг, менять нечего. Формат файла на устройстве не меняется — наоборот, решение существует ради того, чтобы он не менялся сверх правок пользователя.
+No migration is needed: the interface does not write the config yet, so there is nothing to change. The file format on the device does not change; on the contrary, the decision exists so that it does not change beyond the user's edits.
 
-Откат — вернуться к варианту 4 или 5 ценой AC-2; изменения локализованы в модуле, который формирует тело Apply.
+Rollback is to go back to option 4 or 5 at the cost of AC-2; the changes are contained in the module that produces the Apply body.
 
-## Проверка решения
+## Validation
 
-- Golden round-trip на фикстуре `apps/web/src/entities/Config/__tests__/Config.fixture.ts`: применить одну правку и убедиться, что текст расходится ровно на затронутых строках, а не на всём файле.
-- Тест на вставку, удаление и перестановку правила `route.rules`: остальные правила остаются побайтово прежними. Перестановка проверяется по набору строк текста — после неё он обязан совпадать с исходным.
-- `pnpm --filter web test` и `pnpm lint`.
-- Ручной сценарий на стенде: `make up`, правка одного правила в интерфейсе, Apply, затем `diff` файла до и после — расходятся только строки этого правила и, если её добавил демон, секция `experimental.clash_api`.
+- Golden round-trip on the fixture `apps/web/src/entities/Config/__tests__/Config.fixture.ts`: apply one edit and make sure the text differs exactly in the affected lines, not in the whole file.
+- A test for inserting, removing and moving a `route.rules` rule: the other rules stay unchanged byte for byte. A move is checked by the set of text lines: after it, the set must match the original.
+- `pnpm --filter web test` and `pnpm lint`.
+- Manual scenario on the test bench: `make up`, edit one rule in the interface, Apply, then `diff` of the file before and after: only the lines of that rule differ and, if the daemon added it, the `experimental.clash_api` section.
 
-## Ссылки
+## Links
 
-- [PRD](../PRD.md): AC-2, AC-3, AC-13, AC-26; [ADR-0045](./ADR-0045-split-document-and-server-state-and-keep-a-folder-per-project.md) — стек фронтенда;
-- [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md) — владение конфигом и протокол Apply;
-- `apps/web/src/entities/Config/api/Config.query.ts` — текущий разбор ответа схемой;
-- `apps/metaboxd/internal/clashapi/splice.go` — точечная правка байт на стороне демона;
-- [microsoft/node-jsonc-parser](https://github.com/microsoft/node-jsonc-parser) — `modify`, `applyEdits`, `ModificationOptions`.
+- [PRD](../PRD.md): AC-2, AC-3, AC-13, AC-26; [ADR-0045](./ADR-0045-split-document-and-server-state-and-keep-a-folder-per-project.md): the frontend stack;
+- [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md): config ownership and the Apply protocol;
+- `apps/web/src/entities/Config/api/Config.query.ts`: the current parsing of the response with the schema;
+- `apps/metaboxd/internal/clashapi/splice.go`: targeted byte edit on the daemon side;
+- [microsoft/node-jsonc-parser](https://github.com/microsoft/node-jsonc-parser): `modify`, `applyEdits`, `ModificationOptions`.

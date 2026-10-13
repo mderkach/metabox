@@ -7,15 +7,15 @@ import { FIELD_KIND, toFieldPlan, type FieldPlan } from '@shared/lib/schemaShape
 import { ConfigNodeForm } from '../ui/ConfigNodeForm';
 
 /**
- * Обход всех типов семи реестров схемы (ADR-0035): каждый получает форму, а
- * поля, ушедшие в запасной raw-виджет, перечислены снапшотом — рост списка
- * виден в диффе. Схема генерируется, поэтому снапшот здесь допустим.
+ * A walk over all types of the seven schema registries (ADR-0035): each gets a form, and
+ * fields that fell to the fallback raw widget are listed in a snapshot: list
+ * growth is visible in the diff. The schema is generated, so a snapshot is acceptable here.
  */
 const VARIANTS = Object.values(NODE_REGISTRY).flatMap((registry) =>
   nodeVariants(registry).map((variant) => ({ registry, ...variant, key: `${registry}/${variant.type}` }))
 );
 
-/** Узлы, которые форма обязана открывать на экране секций: inbound и outbound. */
+/** Nodes the form must open on the sections screen: inbound and outbound. */
 const ROUTED = VARIANTS.filter(
   (variant) => variant.registry === NODE_REGISTRY.Inbound || variant.registry === NODE_REGISTRY.Outbound
 );
@@ -26,18 +26,18 @@ function rawPaths(plan: FieldPlan[]): string[] {
   );
 }
 
-describe('обход реестров схемы', () => {
-  it.each(VARIANTS)('$key получает план полей', ({ schema }) => {
+describe('schema registry walk', () => {
+  it.each(VARIANTS)('$key gets a field plan', ({ schema }) => {
     expect(toFieldPlan(schema).length).toBeGreaterThan(0);
   });
 
-  it('перечисляет поля, ушедшие в raw', () => {
+  it('lists the fields that fell to raw', () => {
     const raw = Object.fromEntries(VARIANTS.map((variant) => [variant.key, rawPaths(toFieldPlan(variant.schema))]));
 
     expect(raw).toMatchSnapshot();
   });
 
-  it.each(ROUTED)('$key открывается формой без исключений', ({ registry, type }) => {
+  it.each(ROUTED)('$key opens as a form without exceptions', ({ registry, type }) => {
     render(<ConfigNodeForm registry={registry} path={['outbounds', 0]} node={{ type, tag: 'node' }} />);
 
     expect(screen.getByRole('textbox', { name: 'tag' })).toHaveValue('node');

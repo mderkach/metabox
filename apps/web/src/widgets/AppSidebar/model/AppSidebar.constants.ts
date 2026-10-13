@@ -6,14 +6,14 @@ import type { LucideIcon } from 'lucide-react';
 interface NavItem {
   key: ParseKeys<'shared'>;
   icon: LucideIcon;
-  /** Маршрут есть только у сделанных разделов: остальные пункты не кликаются. */
+  /** A route exists only for finished sections: other items are not clickable. */
   to?: LinkProps['to'];
-  /** Подпись в нижней панели, если полное название не помещается в её колонку на телефоне. */
+  /** Label in the bottom bar if the full name does not fit in its column on a phone. */
   short?: ParseKeys<'widgets/AppSidebar'>;
   /**
-   * На телефоне пункт уходит в лист «Ещё»: колонок нижней панели хватает на
-   * пять разделов и сам пункт «Ещё», а служебные экраны с телефона открывают
-   * редко.
+   * On a phone the item goes to the "More" sheet: the bottom bar columns are enough for
+   * five sections and the "More" item itself, and service screens are
+   * rarely opened from a phone.
    */
   more?: true;
 }
@@ -28,5 +28,5 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { key: 'section.diagnostics', icon: Stethoscope, to: '/diagnostics', more: true },
 ];
 
-/** Адреса разделов в порядке меню: по нему роутер выбирает направление перехода. */
+/** Section addresses in menu order: the router picks the transition direction by it. */
 export const NAV_TARGETS: readonly string[] = NAV_ITEMS.flatMap((item) => (item.to === undefined ? [] : [item.to]));

@@ -12,9 +12,10 @@ const THEME_OPTIONS = [
 ] as const;
 
 /**
- * Выбор темы. До монтирования `next-themes` отдаёт `theme` неопределённым — это
- * и есть признак «ещё не знаем, что в хранилище», поэтому отметка активного
- * варианта берётся из него напрямую, без собственного флага готовности.
+ * Theme choice. Before mounting, `next-themes` serves `theme` as undefined,
+ * which is the sign of "we do not yet know what is in the storage", so the
+ * active variant mark is taken from it directly, without a readiness flag of
+ * its own.
  */
 export function ThemeSwitch({ vertical = false }: { vertical?: boolean }) {
   const { theme, setTheme } = useTheme();
@@ -28,7 +29,7 @@ export function ThemeSwitch({ vertical = false }: { vertical?: boolean }) {
       orientation={vertical ? 'vertical' : 'horizontal'}
       value={theme === undefined ? [] : [theme]}
       onValueChange={(value) => {
-        // Повторное нажатие на отмеченный вариант снимает его, а темы «никакой» нет.
+        // Pressing the selected variant again deselects it, and there is no "no theme".
         if (value.length > 0) setTheme(value[0]);
       }}
       className={cn('rounded-md bg-muted/60 p-0.5', vertical && 'flex-col')}

@@ -13,14 +13,14 @@ import { RuleMatcherChip } from './RuleMatcherChip';
 import { toTargetTone } from './RuleTargetTone';
 
 /**
- * Кнопка выбора занимает строку целиком, оставаясь внутри своей ячейки:
- * ячейками строку разбирает скринридер, а мышью правило выбирают в любом её
- * месте, и номер — слишком мелкая цель.
+ * The select button takes the whole row while staying inside its cell:
+ * a screen reader parses the row by cells, while with a mouse the rule is selected anywhere in
+ * it, and the number is too small a target.
  */
 const SELECT_CLASS =
   'rounded-sm after:absolute after:inset-0 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none';
 
-/** Выход обрезан: строка выхода или его параметров шире своей ячейки. */
+/** Outbound is truncated: the outbound string or its parameters are wider than its cell. */
 function isTruncated(target: HTMLElement | null): boolean {
   return target !== null && [...target.children].some((line) => line.scrollWidth > line.clientWidth);
 }
@@ -37,11 +37,11 @@ function RuleRowProto({
   rule: RuleRowModel;
   rowIndex: number;
   selected: boolean;
-  /** Правила нет в применённом конфиге: оно новое или изменено в черновике. */
+  /** The rule is absent from the applied config: it is new or changed in the draft. */
   edited: boolean;
-  /** `undefined` — колонки нет. */
+  /** `undefined` means there is no column. */
   hits: RuleHitCell | undefined;
-  /** Тип аутбаунда по тегу: по нему красится выход. */
+  /** Outbound type by tag: the outbound is colored by it. */
   outboundTypes: ReadonlyMap<string, string>;
   onSelect: (id: string) => void;
 }) {
@@ -61,11 +61,11 @@ function RuleRowProto({
       )}
     >
       <span role='cell' className={cn(RULE_COLUMN.Index, 'font-mono text-xs text-muted-foreground')}>
-        {/* Кнопка перекрывает строку, и `title` обрезанного выхода под ней не
-            показался бы. Полный выход — подсказкой самой кнопки и только при
-            обрезке: скринридеру он уже назван в имени кнопки. Подсказка идёт
-            за курсором по горизонтали, потому что якорь у неё — кнопка, а
-            она растянута на всю строку. */}
+        {/* The button covers the row, and the `title` of a truncated outbound under it would not
+            show. The full outbound is the button's own tooltip and only on
+            truncation: for a screen reader it is already named in the button name. The tooltip follows
+            the cursor horizontally, because its anchor is the button, and
+            it spans the whole row. */}
         <Tooltip
           open={hint}
           trackCursorAxis='x'
@@ -76,9 +76,9 @@ function RuleRowProto({
           <TooltipTrigger
             type='button'
             aria-pressed={selected}
-            // Кнопка растянута на строку, поэтому её имя — имя строки. Одного
-            // номера мало: он перекрывает содержимое, и правило звучит как
-            // «Правило 4», без условия и выхода.
+            // The button spans the row, so its name is the row name. The number
+            // alone is not enough: it overlaps the content, and the rule sounds like
+            // "Rule 4", without condition and outbound.
             aria-label={edited ? `${label}, ${t('row.edited')}` : label}
             onClick={() => {
               onSelect(rule.id);

@@ -21,10 +21,10 @@ import { ProxyNodeTile } from './ProxyNodeTile';
 const NO_OP = () => undefined;
 
 /**
- * Группы прокси, а когда их нет — список аутбаундов.
+ * Proxy groups, and when there are none, a list of outbounds.
  *
- * Конфиг без групп — обычный случай, а не пустое состояние: правила ссылаются
- * прямо на аутбаунды, и переключать в рантайме нечего.
+ * A config without groups is a normal case, not an empty state: rules reference
+ * outbounds directly, and there is nothing to switch at runtime.
  */
 export function ProxyGroups({
   groups,
@@ -34,9 +34,9 @@ export function ProxyGroups({
 }: {
   groups: ProxyGroup[];
   nodes: ProxyNode[];
-  /** Рантайм принял выбор узла: экран объявляет результат своей живой областью. */
+  /** The runtime accepted the node selection: the screen announces the result with its live region. */
   onSelected: (group: string, node: string) => void;
-  /** Замер задержки группы прошёл. */
+  /** The group latency measurement passed. */
   onTested: (group: string) => void;
 }) {
   const { t } = useTranslation('widgets/ProxyGroups');

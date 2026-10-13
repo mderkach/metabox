@@ -1,9 +1,9 @@
 import { z } from 'zod';
 
 /**
- * Вид поля схемы узла: по нему форма выбирает виджет. Вид, которого
- * распознавание не знает, — `Raw`: поле правится JSON-текстом подузла, а не
- * теряется.
+ * Kind of a node schema field: the form picks a widget by it. A kind the
+ * recognizer does not know is `Raw`: the field is edited as JSON text of the subnode and is not
+ * lost.
  */
 export const FIELD_KIND = {
   String: 'string',
@@ -22,46 +22,46 @@ export const FIELD_KIND = {
 
 export type FieldKind = (typeof FIELD_KIND)[keyof typeof FIELD_KIND];
 
-/** Поле узла, разобранное из схемы: всё, что нужно виджету, без самой схемы. */
+/** A node field parsed from the schema: everything the widget needs, without the schema itself. */
 export interface FieldPlan {
-  /** Ключ поля в своём объекте. */
+  /** Field key in its own object. */
   key: string;
-  /** Путь от корня узла: `['tls', 'reality', 'public_key']`. */
+  /** Path from the node root: `['tls', 'reality', 'public_key']`. */
   path: string[];
   kind: FieldKind;
-  /** Значения `enum` и `enumList`; у `literal` — его единственное значение. */
+  /** `enum` and `enumList` values; for `literal` its single value. */
   options?: string[];
-  /** Поля группы. */
+  /** Group fields. */
   children?: FieldPlan[];
-  /** Список, который схема принимает и одиночным значением: `"a"` вместо `["a"]`. */
+  /** A list the schema also accepts as a single value: `"a"` instead of `["a"]`. */
   listable?: boolean;
 }
 
-/** Вариант дискриминированного union реестра: значение `type` и схема узла. */
+/** A variant of the registry's discriminated union: the `type` value and the node schema. */
 export interface SchemaVariant {
   type: string;
   schema: z.core.$ZodType;
 }
 
 /**
- * Глубина пути, до которой вложенные объекты раскрываются группами. Глубже
- * группа уходит в `raw` целиком: в схеме форка вложенность не больше трёх
- * (`anytls.tls.acme.external_account`), а самоссылки идут через union и в
- * группу не попадают — граница страхует от будущих.
+ * Path depth up to which nested objects are expanded as groups. Deeper,
+ * the group goes into `raw` as a whole: in the fork schema nesting is at most three
+ * (`anytls.tls.acme.external_account`), and self-references go through a union and do not
+ * become a group — the limit insures against future ones.
  */
 const MAX_DEPTH = 4;
 
 /**
- * Шаблон длительности Go, которым `tools/schemagen` печатает `badoption.Duration`
- * (`durationPattern` в `overrides.go`). Строка с этим шаблоном — длительность,
- * а не произвольный текст: по нему поле получает подсказку формата.
+ * The Go duration pattern with which `tools/schemagen` prints `badoption.Duration`
+ * (`durationPattern` in `overrides.go`). A string with this pattern is a duration,
+ * not arbitrary text: the field gets a format hint by it.
  */
 const DURATION_SOURCE = String.raw`^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$`;
 
-/** Форматы `z.int()` и его родни: целое, а не произвольное число. */
+/** Formats of `z.int()` and its kin: an integer, not an arbitrary number. */
 const INT_FORMATS: ReadonlySet<string> = new Set(['safeint', 'int32', 'uint32']);
 
-/** Обёртки, которые не меняют вид поля: схема под ними и есть поле. */
+/** Wrappers that do not change the field kind: the schema under them is the field. */
 export function unwrap(schema: z.core.$ZodType): z.core.$ZodType {
   let inner = schema;
 
@@ -76,7 +76,7 @@ export function unwrap(schema: z.core.$ZodType): z.core.$ZodType {
   return inner;
 }
 
-/** Вид поля-значения: строка, число, флаг, перечисление. `null` — не значение. */
+/** Kind of a value field: string, number, flag, enumeration. `null` means not a value. */
 function valueKind(schema: z.core.$ZodType): Pick<FieldPlan, 'kind' | 'options'> | null {
   if (schema instanceof z.core.$ZodString) {
     return { kind: isDuration(schema) ? FIELD_KIND.Duration : FIELD_KIND.String };
@@ -116,8 +116,8 @@ function isDuration(schema: z.core.$ZodString): boolean {
 }
 
 /**
- * Элемент списка: массив `X[]` или listable `X | X[]` — так форк печатает
- * `badoption.Listable`, который принимает и одиночное значение.
+ * List element: an array `X[]` or listable `X | X[]` — this is how the fork prints
+ * `badoption.Listable`, which also accepts a single value.
  */
 function listElement(schema: z.core.$ZodType): { element: z.core.$ZodType; listable: boolean } | null {
   if (schema instanceof z.core.$ZodArray) {
@@ -143,7 +143,7 @@ function listElement(schema: z.core.$ZodType): { element: z.core.$ZodType; lista
     : null;
 }
 
-/** Union строк и чисел (`FwMark`, `UDPTimeoutCompat`): одно поле ввода. */
+/** Union of strings and numbers (`FwMark`, `UDPTimeoutCompat`): one input field. */
 function isScalarUnion(schema: z.core.$ZodType): boolean {
   if (!(schema instanceof z.core.$ZodUnion) || schema instanceof z.core.$ZodDiscriminatedUnion) {
     return false;
@@ -198,11 +198,11 @@ function planShape(schema: z.core.$ZodObject, parent: string[]): FieldPlan[] {
 }
 
 /**
- * План формы узла: поля объекта схемы в порядке схемы, вложенные объекты —
- * группами. Схема не объект — полей нет.
+ * Node form plan: the fields of the schema object in schema order, nested objects as
+ * groups. A schema that is not an object has no fields.
  *
- * Единственное место панели, которое читает внутреннее представление Zod
- * (`_zod.def`): подъём мажора Zod правит только этот модуль.
+ * The only place in the panel that reads Zod's internal representation
+ * (`_zod.def`): a Zod major bump touches only this module.
  */
 export function toFieldPlan(schema: z.core.$ZodType): FieldPlan[] {
   const inner = unwrap(schema);
@@ -211,8 +211,8 @@ export function toFieldPlan(schema: z.core.$ZodType): FieldPlan[] {
 }
 
 /**
- * Варианты дискриминированного по `type` union: реестр типов форка. Вариант,
- * у которого `type` не строковый литерал, пропускается; не union — вариантов нет.
+ * Variants of a union discriminated by `type`: the fork's type registry. A variant
+ * whose `type` is not a string literal is skipped; a non-union has no variants.
  */
 export function toVariants(union: z.core.$ZodType): SchemaVariant[] {
   const inner = unwrap(union);

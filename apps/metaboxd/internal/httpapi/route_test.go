@@ -14,9 +14,9 @@ import (
 	"metabox/internal/route"
 )
 
-// fakeExplainer подменяет объяснение маршрута: подбор правила проверяется в
-// internal/route, здесь важны коды ответов и то, что происхождение доходит до
-// клиента.
+// fakeExplainer replaces the route explanation: rule matching is checked in
+// internal/route, here the response codes and the fact that the origin reaches
+// the client matter.
 type fakeExplainer struct {
 	explanation route.Explanation
 	err         error
@@ -75,10 +75,10 @@ func TestExplainRoute(t *testing.T) {
 	got := request(t, srv, http.MethodGet, "/api/connections/c-1/route", "", nil)
 
 	if got.status != http.StatusOK {
-		t.Fatalf("код ответа: получили %d, ожидали %d", got.status, http.StatusOK)
+		t.Fatalf("response code: got %d, expected %d", got.status, http.StatusOK)
 	}
 	if len(explainer.calls) != 1 || explainer.calls[0] != "c-1" {
-		t.Errorf("идентификатор соединения из адреса: получили %v", explainer.calls)
+		t.Errorf("connection identifier from the address: got %v", explainer.calls)
 	}
 
 	var body struct {
@@ -99,23 +99,23 @@ func TestExplainRoute(t *testing.T) {
 	}
 
 	if err := json.Unmarshal([]byte(got.body), &body); err != nil {
-		t.Fatalf("разбор ответа: %v", err)
+		t.Fatalf("parsing the response: %v", err)
 	}
 
 	if body.Match.Index == nil || *body.Match.Index != 2 {
-		t.Errorf("индекс узла route.rules: получили %v, ожидали 2", body.Match.Index)
+		t.Errorf("route.rules node index: got %v, expected 2", body.Match.Index)
 	}
 
-	// Утверждений без происхождения ручка не отдаёт.
+	// The handler does not return statements without an origin.
 	if body.Match.Origin == "" {
-		t.Error("сработавшее правило ушло без происхождения")
+		t.Error("the matched rule went out without an origin")
 	}
 	if body.Chain.Origin == "" {
-		t.Error("цепочка ушла без происхождения")
+		t.Error("the chain went out without an origin")
 	}
 	for _, rule := range body.Rules {
 		if rule.Origin == "" {
-			t.Errorf("правило %d ушло без происхождения", rule.Index)
+			t.Errorf("rule %d went out without an origin", rule.Index)
 		}
 	}
 }
@@ -141,17 +141,17 @@ func TestExplainRouteUnknown(t *testing.T) {
 	}
 
 	if err := json.Unmarshal([]byte(got.body), &body); err != nil {
-		t.Fatalf("разбор ответа: %v", err)
+		t.Fatalf("parsing the response: %v", err)
 	}
 
 	if body.Match.Index != nil {
-		t.Error("индекс в чужой документ показывать нельзя")
+		t.Error("an index into a foreign document must not be shown")
 	}
 	if body.Match.Origin != string(route.OriginUnknown) {
-		t.Errorf("происхождение: получили %q, ожидали %q", body.Match.Origin, route.OriginUnknown)
+		t.Errorf("origin: got %q, expected %q", body.Match.Origin, route.OriginUnknown)
 	}
 	if body.Match.Reason == "" {
-		t.Error("неизвестность без причины наружу не уходит")
+		t.Error("an unknown without a reason does not go outside")
 	}
 }
 
@@ -161,7 +161,7 @@ func TestExplainRouteMissingConnection(t *testing.T) {
 	got := request(t, srv, http.MethodGet, "/api/connections/c-1/route", "", nil)
 
 	if got.status != http.StatusNotFound {
-		t.Fatalf("код ответа: получили %d, ожидали %d", got.status, http.StatusNotFound)
+		t.Fatalf("response code: got %d, expected %d", got.status, http.StatusNotFound)
 	}
 
 	var body struct {
@@ -169,15 +169,15 @@ func TestExplainRouteMissingConnection(t *testing.T) {
 	}
 
 	if err := json.Unmarshal([]byte(got.body), &body); err != nil {
-		t.Fatalf("разбор ответа: %v", err)
+		t.Fatalf("parsing the response: %v", err)
 	}
 	if body.Code != "connection_missing" {
-		t.Errorf("код отказа: получили %q, ожидали %q", body.Code, "connection_missing")
+		t.Errorf("rejection code: got %q, expected %q", body.Code, "connection_missing")
 	}
 }
 
-// Лежащий sing-box отвечает тем же текстом, что и прокси Clash API: адрес
-// контроллера и ошибка транспорта остаются в логе.
+// A down sing-box answers with the same text as the Clash API proxy: the controller
+// address and the transport error stay in the log.
 func TestExplainRouteRuntimeUnavailable(t *testing.T) {
 	const cause = `Get "http://127.0.0.1:9090/connections": dial tcp 127.0.0.1:9090: connect: connection refused`
 
@@ -188,7 +188,7 @@ func TestExplainRouteRuntimeUnavailable(t *testing.T) {
 	got := request(t, srv, http.MethodGet, "/api/connections/c-1/route", "", nil)
 
 	if got.status != http.StatusBadGateway {
-		t.Fatalf("код ответа: получили %d, ожидали %d", got.status, http.StatusBadGateway)
+		t.Fatalf("response code: got %d, expected %d", got.status, http.StatusBadGateway)
 	}
 
 	var body struct {
@@ -197,21 +197,21 @@ func TestExplainRouteRuntimeUnavailable(t *testing.T) {
 	}
 
 	if err := json.Unmarshal([]byte(got.body), &body); err != nil {
-		t.Fatalf("разбор ответа: %v", err)
+		t.Fatalf("parsing the response: %v", err)
 	}
 	if body.Code != "runtime_unavailable" {
-		t.Errorf("код отказа: получили %q, ожидали runtime_unavailable", body.Code)
+		t.Errorf("rejection code: got %q, expected runtime_unavailable", body.Code)
 	}
 	if body.Message != "рантайм sing-box недоступен" {
-		t.Errorf("сообщение %q, ожидали фиксированный текст без причины", body.Message)
+		t.Errorf("message %q, expected a fixed text without a reason", body.Message)
 	}
 	if strings.Contains(got.body, "127.0.0.1") {
-		t.Errorf("тело %q уносит наружу адрес контроллера", got.body)
+		t.Errorf("body %q carries the controller address outside", got.body)
 	}
 }
 
-// Без источника рантайма ручки объяснения нет: панель открывается, а экран
-// соединений остаётся без объяснения.
+// Without a runtime source there is no explanation handler: the panel opens, and the
+// connections screen stays without an explanation.
 func TestExplainRouteAbsent(t *testing.T) {
 	srv := httptest.NewServer(httpapi.NewServer(
 		&fakeApplier{},
@@ -224,12 +224,12 @@ func TestExplainRouteAbsent(t *testing.T) {
 	got := request(t, srv, http.MethodGet, "/api/connections/c-1/route", "", nil)
 
 	if got.status != http.StatusNotFound {
-		t.Errorf("код ответа: получили %d, ожидали %d", got.status, http.StatusNotFound)
+		t.Errorf("response code: got %d, expected %d", got.status, http.StatusNotFound)
 	}
 }
 
-// Апгрейд до WebSocket на ветке прокси закрыт: рантайм идёт одним потоком
-// `/api/events`, и второго пути к тем же данным быть не должно.
+// The upgrade to WebSocket on the proxy branch is closed: the runtime goes as a single stream
+// `/api/events`, and there must be no second path to the same data.
 func TestClashProxyRejectsUpgrade(t *testing.T) {
 	var proxied int
 
@@ -249,27 +249,27 @@ func TestClashProxyRejectsUpgrade(t *testing.T) {
 
 	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL+"/api/clash/traffic", nil)
 	if err != nil {
-		t.Fatalf("сборка запроса: %v", err)
+		t.Fatalf("building the request: %v", err)
 	}
 	req.Header.Set("Upgrade", "websocket")
 	req.Header.Set("Connection", "Upgrade")
 
 	resp, err := srv.Client().Do(req)
 	if err != nil {
-		t.Fatalf("запрос: %v", err)
+		t.Fatalf("request: %v", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusBadRequest {
-		t.Errorf("код ответа: получили %d, ожидали %d", resp.StatusCode, http.StatusBadRequest)
+		t.Errorf("response code: got %d, expected %d", resp.StatusCode, http.StatusBadRequest)
 	}
 	if proxied != 0 {
-		t.Error("апгрейд ушёл в прокси, а должен был остановиться на границе")
+		t.Error("the upgrade went to the proxy but had to stop at the boundary")
 	}
 }
 
-// Обычный запрос к тем же ручкам прокси проходит: правила, группы и DNS-запрос
-// остаются сквозными.
+// An ordinary request to the same proxy handlers passes: rules, groups and a DNS query
+// stay passthrough.
 func TestClashProxyPassesRequests(t *testing.T) {
 	var proxied int
 
@@ -290,6 +290,6 @@ func TestClashProxyPassesRequests(t *testing.T) {
 	got := request(t, srv, http.MethodGet, "/api/clash/rules", "", nil)
 
 	if got.status != http.StatusOK || proxied != 1 {
-		t.Errorf("запрос-ответ обязан пройти в прокси: код %d, вызовов %d", got.status, proxied)
+		t.Errorf("a request-response must pass into the proxy: code %d, calls %d", got.status, proxied)
 	}
 }

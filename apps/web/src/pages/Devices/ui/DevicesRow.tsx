@@ -15,8 +15,8 @@ import { DEVICES_COLUMN } from './DevicesColumns';
 import { DevicesLease } from './DevicesLease';
 
 /**
- * Таблица обязана покрывать набор демона: новый источник — ошибка компиляции
- * здесь. У `none` пояснять нечего: имени нет, и строка подписана адресом.
+ * The table must cover the daemon's set: a new source is a compile error
+ * here. `none` needs no explanation: there is no name, and the row is labelled by address.
  */
 const NAME_SOURCE_KEY: Readonly<Record<NameSource, ParseKeys<'pages/Devices'> | null>> = {
   custom: 'nameSource.custom',
@@ -26,9 +26,9 @@ const NAME_SOURCE_KEY: Readonly<Record<NameSource, ParseKeys<'pages/Devices'> | 
 };
 
 /**
- * Строка устройства. Подпись — первое, что читается: ею устройство названо по
- * всей панели. Переименование открывается в той же ячейке, а не в панели:
- * правится одно поле, и уводить взгляд от строки незачем.
+ * Device row. The label is the first thing read: it names the device across
+ * the whole panel. Renaming opens in the same cell, not in a side panel:
+ * one field is edited, and there is no reason to pull the eye away from the row.
  */
 function DevicesRowProto({
   device,
@@ -46,14 +46,14 @@ function DevicesRowProto({
   rowIndex: number;
   editing: boolean;
   onEdit: (mac: string) => void;
-  /** Правка закрылась: `label` — новая подпись или `null`, если её отменили. */
+  /** Editing closed: `label` is the new label or `null` if it was cancelled. */
   onDone: (label: string | null) => void;
-  /** Модель обвязки; `null` — не прочитана, и тумблер недоступен. */
+  /** Dataplane model; `null` means not read, and the toggle is unavailable. */
   routeModel: DataplaneModel | null;
   routeLocked: boolean;
   routeForeign: boolean;
   onRoute: (source: RouteSource, routed: boolean) => void;
-  /** Момент снимка списка в миллисекундах: от него считается остаток аренды. */
+  /** Moment of the list snapshot in milliseconds: the remaining lease time is counted from it. */
   now: number;
 }) {
   const { t } = useTranslation('pages/Devices');
@@ -68,8 +68,8 @@ function DevicesRowProto({
           <DeviceRenameForm device={device} onDone={onDone} />
         ) : (
           <>
-            {/* На широком экране источник имени — во всплывающей подсказке, на
-                телефоне подсказок нет, и он идёт второй строкой. */}
+            {/* On a wide screen the name source is in a tooltip; a
+                phone has no tooltips, so it goes on a second line. */}
             <span className='flex min-w-0 flex-col'>
               <span
                 title={sourceText}
@@ -140,8 +140,8 @@ function DevicesRowProto({
             to='/connections'
             search={{ source: device.ip }}
             aria-label={t('row.connectionsOf', { device: device.label })}
-            // Покрашена кнопкой, но остаётся ссылкой: `Button` с `render` ставит
-            // `role="button"` поверх `<a href>`.
+            // Styled as a button but stays a link: `Button` with `render` puts
+            // `role="button"` on top of `<a href>`.
             className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}
           >
             {t('row.connections')}

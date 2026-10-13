@@ -12,16 +12,16 @@ import (
 	"metabox/internal/config"
 )
 
-// seedState кладёт состояние так, как его оставила бы прошлая жизнь демона.
+// seedState puts the state the way the previous daemon lifetime would have left it.
 func seedState(t *testing.T, h *harness, tx apply.Transaction) {
 	t.Helper()
 
 	data, err := json.Marshal(tx)
 	if err != nil {
-		t.Fatalf("сериализация состояния: %v", err)
+		t.Fatalf("state serialization: %v", err)
 	}
 	if err := h.store.WriteState(t.Context(), data); err != nil {
-		t.Fatalf("подготовка состояния: %v", err)
+		t.Fatalf("state preparation: %v", err)
 	}
 
 	h.rec.mu.Lock()
@@ -29,8 +29,8 @@ func seedState(t *testing.T, h *harness, tx apply.Transaction) {
 	h.rec.mu.Unlock()
 }
 
-// Цикл оборвался после записи конфига: sha на диске совпал с суммой из
-// состояния, значит возвращаем предыдущий конфиг.
+// The cycle broke after the config write: the sha on disk matched the sum from the
+// state, so the previous config is restored.
 func TestReplayRollsBackInterruptedApply(t *testing.T) {
 	h := newHarness(t)
 	h.store.mu.Lock()
@@ -39,20 +39,20 @@ func TestReplayRollsBackInterruptedApply(t *testing.T) {
 	seedState(t, h, apply.Transaction{ID: "прерванная", Phase: apply.PhaseApplying, Window: window, Sum: "записанный"})
 
 	if err := h.manager.Replay(t.Context()); err != nil {
-		t.Fatalf("доигрывание: %v", err)
+		t.Fatalf("replay: %v", err)
 	}
 
 	if got := h.rec.snapshot(); !slices.Contains(got, "Restore") || !slices.Contains(got, "Restart") {
-		t.Errorf("шаги %v, ожидали откат и рестарт", got)
+		t.Errorf("steps %v, expected rollback and restart", got)
 	}
 	if got := h.manager.Current().Phase; got != apply.PhaseRolledBack {
-		t.Errorf("фаза %q, ожидали откат", got)
+		t.Errorf("phase %q, expected rollback", got)
 	}
 }
 
-// Питание снято между записью состояния и конфига: на диске конфиг прежнего
-// поколения, а бэкап мог остаться от прошлой транзакции — откат по нему
-// молча потерял бы подтверждённую версию.
+// Power lost between writing the state and the config: the disk has the config of the previous
+// generation, and the backup might be left from a previous transaction: a rollback from it
+// would silently lose the confirmed version.
 func TestReplaySkipsRollbackWhenConfigWasNotWritten(t *testing.T) {
 	h := newHarness(t)
 	h.store.mu.Lock()
@@ -61,14 +61,14 @@ func TestReplaySkipsRollbackWhenConfigWasNotWritten(t *testing.T) {
 	seedState(t, h, apply.Transaction{ID: "оборванная", Phase: apply.PhaseApplying, Window: window, Sum: "новый"})
 
 	if err := h.manager.Replay(t.Context()); err != nil {
-		t.Fatalf("доигрывание: %v", err)
+		t.Fatalf("replay: %v", err)
 	}
 
 	if got := h.rec.snapshot(); slices.Contains(got, "Restore") || slices.Contains(got, "Restart") {
-		t.Errorf("шаги %v, ожидали только очистку состояния", got)
+		t.Errorf("steps %v, expected only state cleanup", got)
 	}
 	if state, _ := h.store.ReadState(t.Context()); state != nil {
-		t.Error("состояние несостоявшейся записи осталось на диске")
+		t.Error("state of the failed write stayed on disk")
 	}
 }
 
@@ -77,19 +77,19 @@ func TestReplayRollsBackExpiredWindow(t *testing.T) {
 	seedState(t, h, apply.Transaction{ID: "истёкшая", Phase: apply.PhaseAwaitingConfirm, Window: 0})
 
 	if err := h.manager.Replay(t.Context()); err != nil {
-		t.Fatalf("доигрывание: %v", err)
+		t.Fatalf("replay: %v", err)
 	}
 
 	if !slices.Contains(h.rec.snapshot(), "Restore") {
-		t.Errorf("отката не было: %v", h.rec.snapshot())
+		t.Errorf("there was no rollback: %v", h.rec.snapshot())
 	}
 	if got := h.manager.Current().Phase; got != apply.PhaseRolledBack {
-		t.Errorf("фаза %q, ожидали откат", got)
+		t.Errorf("phase %q, expected rollback", got)
 	}
 }
 
-// Неистёкшее окно восстанавливается таймером: пользователю остаётся шанс
-// подтвердить связь, а без подтверждения откат всё равно наступит.
+// An unexpired window is restored by a timer: the user keeps a chance
+// to confirm the connection, and without confirmation the rollback still happens.
 func TestReplayRestoresLiveWindow(t *testing.T) {
 	h := newHarness(t)
 	seedState(t, h, apply.Transaction{
@@ -100,24 +100,24 @@ func TestReplayRestoresLiveWindow(t *testing.T) {
 	})
 
 	if err := h.manager.Replay(t.Context()); err != nil {
-		t.Fatalf("доигрывание: %v", err)
+		t.Fatalf("replay: %v", err)
 	}
 
 	if got := h.waitWindow(t); got != 30*time.Second {
-		t.Errorf("окно %v, ожидали 30s из состояния", got)
+		t.Errorf("window %v, expected 30s from the state", got)
 	}
 	if got := h.manager.Current().Phase; got != apply.PhaseAwaitingConfirm {
-		t.Errorf("фаза %q, ожидали ожидание подтверждения", got)
+		t.Errorf("phase %q, expected awaiting confirmation", got)
 	}
 	if slices.Contains(h.rec.snapshot(), "Restore") {
-		t.Error("живое окно откатилось сразу")
+		t.Error("the live window rolled back immediately")
 	}
 
 	h.clock.fire()
 	h.manager.Close()
 
 	if !slices.Contains(h.rec.snapshot(), "Restore") {
-		t.Errorf("восстановленное окно не привело к откату: %v", h.rec.snapshot())
+		t.Errorf("restored window did not lead to a rollback: %v", h.rec.snapshot())
 	}
 }
 
@@ -126,18 +126,18 @@ func TestReplayConfirmsRestoredWindow(t *testing.T) {
 	seedState(t, h, apply.Transaction{ID: "живая", Phase: apply.PhaseAwaitingConfirm, Window: 30 * time.Second})
 
 	if err := h.manager.Replay(t.Context()); err != nil {
-		t.Fatalf("доигрывание: %v", err)
+		t.Fatalf("replay: %v", err)
 	}
 	h.waitWindow(t)
 
 	if _, err := h.manager.Confirm(t.Context(), "живая"); err != nil {
-		t.Fatalf("подтверждение восстановленной транзакции: %v", err)
+		t.Fatalf("confirm of the restored transaction: %v", err)
 	}
 
 	h.manager.Close()
 
 	if slices.Contains(h.rec.snapshot(), "Restore") {
-		t.Error("подтверждённая транзакция откатилась")
+		t.Error("confirmed transaction was rolled back")
 	}
 }
 
@@ -146,45 +146,45 @@ func TestReplayClearsFinishedState(t *testing.T) {
 	seedState(t, h, apply.Transaction{ID: "завершённая", Phase: apply.PhaseConfirmed})
 
 	if err := h.manager.Replay(t.Context()); err != nil {
-		t.Fatalf("доигрывание: %v", err)
+		t.Fatalf("replay: %v", err)
 	}
 
 	if !slices.Contains(h.rec.snapshot(), "ClearState") {
-		t.Errorf("состояние завершённой транзакции осталось: %v", h.rec.snapshot())
+		t.Errorf("state of the finished transaction stayed: %v", h.rec.snapshot())
 	}
 }
 
-// Состояние подтверждённой транзакции не удалилось: на диске остаётся
-// терминальная фаза, и перезагрузка не откатывает подтверждённый конфиг.
+// The state of the confirmed transaction was not removed: the terminal phase
+// stays on disk, and a reboot does not roll back the confirmed config.
 func TestReplayKeepsConfirmedWhenStateNotCleared(t *testing.T) {
 	h := newHarness(t)
 	h.store.clearErr = errors.New("файловая система только для чтения")
 
 	tx, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", "")
 	if err != nil {
-		t.Fatalf("применение: %v", err)
+		t.Fatalf("apply: %v", err)
 	}
 	h.waitWindow(t)
 
 	if _, err := h.manager.Confirm(t.Context(), tx.ID); err != nil {
-		t.Fatalf("подтверждение: %v", err)
+		t.Fatalf("confirm: %v", err)
 	}
 	h.manager.Close()
 
 	data, err := h.store.ReadState(t.Context())
 	if err != nil {
-		t.Fatalf("чтение состояния: %v", err)
+		t.Fatalf("reading state: %v", err)
 	}
 
 	var saved apply.Transaction
 	if err := json.Unmarshal(data, &saved); err != nil {
-		t.Fatalf("разбор состояния: %v", err)
+		t.Fatalf("parsing state: %v", err)
 	}
 	if saved.Phase != apply.PhaseConfirmed {
-		t.Fatalf("на диске фаза %q, ожидали подтверждение", saved.Phase)
+		t.Fatalf("phase on disk %q, expected confirmation", saved.Phase)
 	}
 
-	// Следующая жизнь демона на том же диске.
+	// The next daemon lifetime on the same disk.
 	h.rec.mu.Lock()
 	h.rec.calls = nil
 	h.rec.mu.Unlock()
@@ -195,19 +195,19 @@ func TestReplayKeepsConfirmedWhenStateNotCleared(t *testing.T) {
 	t.Cleanup(restarted.Close)
 
 	if err := restarted.Replay(t.Context()); err != nil {
-		t.Fatalf("доигрывание: %v", err)
+		t.Fatalf("replay: %v", err)
 	}
 
 	if got := h.rec.snapshot(); slices.Contains(got, "Restore") || slices.Contains(got, "Restart") {
-		t.Errorf("шаги %v: подтверждённый конфиг откатился после перезагрузки", got)
+		t.Errorf("steps %v: the confirmed config was rolled back after reboot", got)
 	}
 	if state, _ := h.store.ReadState(t.Context()); state != nil {
-		t.Error("терминальное состояние не убрано доигрыванием")
+		t.Error("terminal state not removed by the replay")
 	}
 }
 
-// Цикл оборвался после записи первого конфига: бэкапа нет, и доигрывание
-// закрывает транзакцию своей причиной, а не откатом с лишним рестартом.
+// The cycle broke after writing the first config: there is no backup, and the replay
+// closes the transaction with its own reason, not with a rollback and an extra restart.
 func TestReplayWithoutBackup(t *testing.T) {
 	h := newHarness(t)
 	h.store.restoreErr = config.ErrNoBackup
@@ -217,17 +217,17 @@ func TestReplayWithoutBackup(t *testing.T) {
 	seedState(t, h, apply.Transaction{ID: "первая", Phase: apply.PhaseApplying, Window: window, Sum: "записанный"})
 
 	if err := h.manager.Replay(t.Context()); err != nil {
-		t.Fatalf("доигрывание: %v", err)
+		t.Fatalf("replay: %v", err)
 	}
 
 	if got := h.rec.snapshot(); slices.Contains(got, "Restart") {
-		t.Errorf("шаги %v: служба перезапущена, хотя возвращать было нечего", got)
+		t.Errorf("steps %v: the service was restarted although there was nothing to restore", got)
 	}
 	if tx := h.manager.Current(); tx.Phase != apply.PhaseFailed || tx.ReasonCode != apply.ReasonNoBackup {
-		t.Errorf("фаза %q с кодом %q, ожидали отказ с причиной no_backup", tx.Phase, tx.ReasonCode)
+		t.Errorf("phase %q with code %q, expected failure with reason no_backup", tx.Phase, tx.ReasonCode)
 	}
 	if state, _ := h.store.ReadState(t.Context()); state != nil {
-		t.Error("состояние закрытой транзакции осталось на диске")
+		t.Error("state of the closed transaction stayed on disk")
 	}
 }
 
@@ -235,9 +235,9 @@ func TestReplayWithoutState(t *testing.T) {
 	h := newHarness(t)
 
 	if err := h.manager.Replay(t.Context()); err != nil {
-		t.Fatalf("чистый старт: %v", err)
+		t.Fatalf("clean start: %v", err)
 	}
 	if got := h.rec.snapshot(); len(got) != 0 {
-		t.Errorf("на чистом старте выполнены шаги %v", got)
+		t.Errorf("steps %v executed on a clean start", got)
 	}
 }

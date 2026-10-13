@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-/** Потолок демона на своё имя, в символах: подпись стоит в ячейке таблицы. */
+/** Daemon ceiling for an own name, in characters: the label sits in a table cell. */
 export const DEVICE_NAME_LIMIT = 64;
 
 export const DEVICE_RENAME_ERROR = {
@@ -11,7 +11,7 @@ export const DEVICE_RENAME_ERROR = {
 const CONTROL_CHARS = /\p{Cc}/u;
 
 export const DeviceRenameSchema = z.object({
-  /** Своё имя; пустое снимает его, и подпись возвращается к статической аренде или DHCP */
+  /** Own name; empty clears it, and the label returns to the static lease or DHCP */
   name: z
     .string()
     .trim()

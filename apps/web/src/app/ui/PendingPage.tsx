@@ -1,9 +1,10 @@
 import { Skeleton, SkeletonRows } from '@shared/ui';
 
 /**
- * Экран, данные которого ещё не пришли, когда роутер уже ждёт дольше
- * `defaultPendingMs`. Раскладка общая: у экранов она разная, а скелетон
- * отвечает только на вопрос «идёт загрузка», не притворяясь их содержимым.
+ * A screen whose data has not arrived yet, when the router has already waited
+ * longer than `defaultPendingMs`. The layout is shared: screens have different
+ * ones, and the skeleton answers only the question "loading is in progress"
+ * without pretending to be their content.
  */
 export function PendingPage() {
   return (

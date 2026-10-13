@@ -9,7 +9,7 @@ import { ConfigRawEditor } from '../ui/ConfigRawEditor';
 const TEXT = '{\n  "log": { "level": 42 }\n}';
 const ISSUE_TEXT = 'строка 2, log.level: ожидалась строка';
 
-/** `matchMedia` в jsdom нет — подставляем ответ только на запрос узкой ширины. */
+/** jsdom has no `matchMedia`: answer only the narrow-width query. */
 function mockNarrowScreen() {
   vi.stubGlobal('matchMedia', function matchNarrowQuery(media: string) {
     return {
@@ -35,7 +35,7 @@ describe('ConfigRawEditor', () => {
     vi.restoreAllMocks();
   });
 
-  it('замечание с позицией ведёт к узлу в тексте', async () => {
+  it('an issue with a position leads to the node in the text', async () => {
     const user = userEvent.setup();
     const offset = TEXT.indexOf('42');
 
@@ -51,7 +51,7 @@ describe('ConfigRawEditor', () => {
     expect(input).toHaveProperty('selectionStart', offset);
   });
 
-  it('замечание без позиции остаётся текстом, а не кнопкой', () => {
+  it('an issue without a position stays text, not a button', () => {
     render(
       <ConfigRawEditor
         text={TEXT}
@@ -64,8 +64,8 @@ describe('ConfigRawEditor', () => {
     expect(screen.getByText(ISSUE_TEXT)).toBeInTheDocument();
   });
 
-  // Разбор отложен за вводом, поэтому ошибку ждём, а не проверяем сразу.
-  it('после ввода показывает ошибку разбора со строкой и оставляет введённое', async () => {
+  // Parsing is deferred behind the input, so the error is awaited, not checked at once.
+  it('after input shows a parse error with the line and keeps what was typed', async () => {
     const user = userEvent.setup();
 
     renderEditor();
@@ -81,11 +81,11 @@ describe('ConfigRawEditor', () => {
     expect(input).toHaveValue('{ "log": ');
   });
 
-  describe('оглавление', () => {
+  describe('table of contents', () => {
     const ROUTED =
       '{\n  // логи\n  "log": {},\n  "route": {\n    "rules": [{ "outbound": "direct" }],\n    "final": "direct",\n  },\n}';
 
-    it('ведёт из оглавления к вложенной секции и ставит на её ключ курсор', async () => {
+    it('leads from the table of contents to a nested section and puts the cursor on its key', async () => {
       const user = userEvent.setup();
 
       render(<ConfigRawEditor text={ROUTED} onChange={vi.fn<(next: string) => void>()} issues={[]} />);
@@ -98,8 +98,8 @@ describe('ConfigRawEditor', () => {
 
       await user.click(outline.getByRole('button', { name: /^rules/ }));
 
-      // Фокус проверяется, когда окно уже закрыто: закрытие не должно вернуть
-      // его на кнопку оглавления.
+      // Focus is checked when the window is already closed: closing must not return
+      // it to the table of contents button.
       await waitFor(() => {
         expect(screen.queryByRole('list', { name: 'Секции конфига' })).not.toBeInTheDocument();
       });
@@ -111,7 +111,7 @@ describe('ConfigRawEditor', () => {
       expect(input).toHaveProperty('selectionEnd', ROUTED.indexOf('"rules"') + '"rules"'.length);
     });
 
-    it('на тексте без объекта в корне говорит, что секций нет', async () => {
+    it('on text without a root object says there are no sections', async () => {
       const user = userEvent.setup();
 
       render(<ConfigRawEditor text='[' onChange={vi.fn<(next: string) => void>()} issues={[]} />);
@@ -121,15 +121,15 @@ describe('ConfigRawEditor', () => {
     });
   });
 
-  describe('перенос строк', () => {
-    it('на широком экране по умолчанию выключен', () => {
+  describe('line wrapping', () => {
+    it('on a wide screen is off by default', () => {
       renderEditor();
 
       expect(screen.getByRole('button', { name: 'Перенос строк' })).toHaveAttribute('aria-pressed', 'false');
       expect(screen.getByLabelText('Конфиг sing-box текстом')).toHaveAttribute('wrap', 'off');
     });
 
-    it('на узком экране по умолчанию включён', () => {
+    it('on a narrow screen is on by default', () => {
       mockNarrowScreen();
       renderEditor();
 
@@ -137,7 +137,7 @@ describe('ConfigRawEditor', () => {
       expect(screen.getByLabelText('Конфиг sing-box текстом')).toHaveAttribute('wrap', 'soft');
     });
 
-    it('выбор переживает перезагрузку страницы', async () => {
+    it('the choice survives a page reload', async () => {
       const user = userEvent.setup();
       const first = renderEditor();
 
@@ -152,20 +152,20 @@ describe('ConfigRawEditor', () => {
       expect(screen.getByLabelText('Конфиг sing-box текстом')).toHaveAttribute('wrap', 'soft');
     });
 
-    it('вернувшиеся номера строк стоят на прокрутке поля', async () => {
+    it('returned line numbers stand on the field scroll', async () => {
       mockNarrowScreen();
       const user = userEvent.setup();
       renderEditor();
       const input = screen.getByLabelText('Конфиг sing-box текстом');
 
-      // jsdom прокрутку не считает: значение подставляется полю напрямую, а
-      // запись в колонку номеров ловится на сеттере.
+      // jsdom does not compute scrolling: the value is set on the field directly, and
+      // the write to the number column is caught on the setter.
       Object.defineProperty(input, 'scrollTop', { configurable: true, value: 120 });
       const setScroll = vi.spyOn(Element.prototype, 'scrollTop', 'set');
 
       await user.click(screen.getByRole('button', { name: 'Перенос строк' }));
 
-      // Номер последней строки есть только в колонке номеров.
+      // The last line number exists only in the number column.
       const lastLine = screen.getByText('3');
       const written = setScroll.mock.calls.filter(
         (_, index) =>
@@ -175,11 +175,11 @@ describe('ConfigRawEditor', () => {
       expect(written).toContainEqual([120]);
     });
 
-    it('сохранённый выбор перекрывает ширину экрана', async () => {
+    it('a saved choice overrides the screen width', async () => {
       const user = userEvent.setup();
       const first = renderEditor();
 
-      // Включить и выключить: в хранилище остаётся явный отказ от переноса.
+      // Turn on and off: storage keeps an explicit refusal of wrapping.
       await user.click(screen.getByRole('button', { name: 'Перенос строк' }));
       await user.click(screen.getByRole('button', { name: 'Перенос строк' }));
       first.unmount();

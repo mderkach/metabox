@@ -5,8 +5,8 @@ import { CSV_COLUMNS, EXPORT_FORMAT, type ExportFormat } from '../model/Connecti
 const JSON_INDENT = 2;
 
 /**
- * Экранирование по RFC 4180: в цепочке и правиле встречаются запятые, а в
- * доменах — кавычки от sniff'а. Без кавычек такая строка сдвигает колонки.
+ * RFC 4180 escaping: commas occur in the chain and the rule, and quotes from
+ * sniff occur in domains. Without quotes such a row shifts the columns.
  */
 function toCsvCell(value: string | number): string {
   const text = String(value);
@@ -43,7 +43,7 @@ export function toExportBody(rows: ConnectionRow[], format: ExportFormat, source
     return toCsv(rows, sourceLabel);
   }
 
-  // searchText — индекс поиска экрана, а не колонка: в файле он только мешает.
+  // searchText is the screen search index, not a column: in the file it only gets in the way.
   const columns = rows.map(({ searchText: _searchText, ...rest }) => ({ ...rest, device: sourceLabel(rest.source) }));
 
   return JSON.stringify(columns, null, JSON_INDENT);

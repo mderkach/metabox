@@ -27,10 +27,10 @@ func TestParse(t *testing.T) {
 
 	got := uci.Parse(out, "dhcp")
 	if !reflect.DeepEqual(got, want) {
-		t.Errorf("секции\nполучили %+v\nожидали  %+v", got, want)
+		t.Errorf("sections\ngot      %+v\nexpected %+v", got, want)
 	}
 
 	if got[0].Option("name") != "o'brien" || got[1].Option("absent") != "" {
-		t.Errorf("первые значения опций: %q, %q", got[0].Option("name"), got[1].Option("absent"))
+		t.Errorf("first option values: %q, %q", got[0].Option("name"), got[1].Option("absent"))
 	}
 }

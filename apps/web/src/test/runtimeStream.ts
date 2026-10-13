@@ -3,18 +3,18 @@ import { http, HttpResponse } from 'msw';
 import { DAEMON_ENDPOINT } from '@entities/Daemon';
 import { type RuntimeTopic } from '@shared/api';
 
-/** Что мок шлёт в топик: значение берётся функцией, чтобы сэмплы менялись. */
+/** What the mock sends to a topic: the value is taken by a function so that samples change. */
 export interface RuntimeSample {
   topic: RuntimeTopic;
   data: () => unknown;
 }
 
 /**
- * Мок единого потока рантайма: кадры SSE в конверте демона.
+ * Mock of the single runtime stream: SSE frames in the daemon envelope.
  *
- * Живёт в оснастке, а не в слайсе: поток один на все топики, и данные в него
- * складывают фикстуры разных слайсов — собирает их точка сборки моков.
- * Доменного знания здесь нет, только кадрирование.
+ * Lives in the test harness, not in a slice: the stream is one for all topics, and fixtures of
+ * different slices put data into it — the mock assembly point collects them.
+ * No domain knowledge here, only framing.
  */
 export function runtimeStreamHandler(samples: RuntimeSample[], interval: number) {
   return http.get(DAEMON_ENDPOINT.events(), () => {
@@ -35,8 +35,8 @@ export function runtimeStreamHandler(samples: RuntimeSample[], interval: number)
           }
         };
 
-        // Подключившийся получает состояние сразу, а не через период опроса:
-        // так же ведёт себя демон.
+        // A connecting client gets the state at once, not after a polling period:
+        // the daemon behaves the same way.
         push();
         timer = setInterval(push, interval);
       },

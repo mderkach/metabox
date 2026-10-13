@@ -11,9 +11,9 @@ import { ApiError, type ApiFailureCode } from '@shared/api';
 const MODIFIED: ApiFailureCode = 'dataplane_modified';
 
 /**
- * Без ретраев: повтор запустил бы на устройстве второй цикл смены. Отказ
- * `dataplane_modified` значит, что секцию правили мимо панели: модель
- * перечитывается, и следующая смена строится уже от неё.
+ * No retries: a repeat would start a second change cycle on the device. The
+ * `dataplane_modified` failure means the section was edited behind the panel's
+ * back: the model is reread, and the next change is built from it.
  */
 export function useChangeDeviceRoute() {
   const queryClient = useQueryClient();

@@ -1,26 +1,26 @@
 import type { ConnectionWire, ConnectionsSnapshotWire } from '../api/Connection.schema';
 
 /**
- * Снапшот потока соединений с рабочего роутера, снятый 2026-09-10.
+ * A connections stream snapshot from a working router, taken 2026-09-10.
  *
- * Данные владельца вычищены: домены — зоны `.example` (RFC 2606). Адреса
- * источника оставлены в `192.168.1.0/24`: экран показывает устройство в LAN, а
- * приватный адрес сам по себе ничего о владельце не сообщает.
+ * The owner's data is scrubbed: domains are in the `.example` zone (RFC 2606). Source
+ * addresses are left in `192.168.1.0/24`: the screen shows a device on the LAN, and a
+ * private address by itself says nothing about the owner.
  *
- * Форма — контракт демона, а не Clash API: панель получает соединения уже
- * сведёнными к одной модели.
+ * The shape is the daemon contract, not the Clash API: the panel receives connections already
+ * reduced to one model.
  */
 
 const CAPTURED_AT = '2026-09-10T19:25:31.264867247Z';
 
-/** Порт назначения у всех соединений снимка один: снято на https-трафике. */
+/** The destination port is the same for all snapshot connections: taken on https traffic. */
 const PORT = '443';
 
 interface ConnectionInput {
   host: string;
   sourceIP: string;
   chains: string[];
-  /** Условия сработавшего правила; пусто у правила без условий. */
+  /** Conditions of the matched rule; empty for a rule without conditions. */
   rule: string;
   action: string;
   final?: boolean;
@@ -132,10 +132,10 @@ const CONNECTIONS: ConnectionWire[] = [
   }),
 ];
 
-// Образцы заморожены: живые кадры правят снапшот на месте, и потребитель,
-// забывший сделать копию, испортил бы эталон — счётчики разъехались бы у всех,
-// кто из него собирается. Заморозка превращает такую правку в немедленный
-// `TypeError` вместо тихо расходящихся данных.
+// The samples are frozen: live frames edit the snapshot in place, and a consumer
+// that forgot to make a copy would corrupt the reference: counters would drift apart for everyone
+// built from it. Freezing turns such an edit into an immediate
+// `TypeError` instead of quietly diverging data.
 for (const sample of CONNECTIONS) {
   Object.freeze(sample.chain);
   Object.freeze(sample);
@@ -143,7 +143,7 @@ for (const sample of CONNECTIONS) {
 
 Object.freeze(CONNECTIONS);
 
-/** Снапшот топика `connections`: то же тело, что приходит раз в секунду. */
+/** Snapshot of the `connections` topic: the same body that arrives once a second. */
 export const CONNECTIONS_FIXTURE: ConnectionsSnapshotWire = Object.freeze({
   connections: CONNECTIONS,
   upload_total: 12376739,
@@ -152,15 +152,15 @@ export const CONNECTIONS_FIXTURE: ConnectionsSnapshotWire = Object.freeze({
 });
 
 /**
- * Снапшот произвольного размера для проверки потолка: соединения размножаются из
- * образцов, а не хранятся файлом. Размножается именно снапшот целиком — поток
- * отдаёт полный список, и разбор этого списка и есть стоимость.
+ * A snapshot of arbitrary size for checking the ceiling: connections are multiplied from
+ * samples, not stored as a file. The whole snapshot is multiplied: the stream
+ * serves the full list, and parsing that list is the cost.
  *
- * `vary` разводит хост, устройство и счётчики по индексу. Без него все копии
- * одного образца совпадают, и отбор с сортировкой работают на восьми разных
- * значениях — для замера разбора это неважно, а для ручной проверки списка под
- * нагрузкой даёт неправдоподобно однородную картину. Тесты зовут генератор без
- * него, чтобы не зависеть от распределения.
+ * `vary` spreads the host, device and counters by index. Without it all copies
+ * of one sample coincide, and filtering with sorting work on eight different
+ * values: for measuring parse that does not matter, but for a manual check of the list under
+ * load it gives an implausibly uniform picture. Tests call the generator without
+ * it so as not to depend on the distribution.
  */
 export function makeConnectionsSnapshot(count: number, { vary = false } = {}): ConnectionsSnapshotWire {
   const connections = Array.from({ length: count }, (_, index) => {
@@ -185,35 +185,35 @@ export function makeConnectionsSnapshot(count: number, { vary = false } = {}): C
   return { ...CONNECTIONS_FIXTURE, connections };
 }
 
-/** Сколько разных имён и устройств разводит `vary`: у домашнего роутера столько и бывает. */
+/** How many different names and devices `vary` spreads: a home router has about that many. */
 const VARIED_HOSTS = 64;
 const VARIED_DEVICES = 24;
 
-/** Какая доля соединений набирает байты за секунду: остальные молчат. */
+/** What share of connections gain bytes per second: the rest are silent. */
 const ACTIVE_SHARE = 3;
-/** Сколько соединений закрывается и открывается за кадр на каждую тысячу. */
+/** How many connections close and open per frame for each thousand. */
 const CHURN_PER_THOUSAND = 8;
 const THOUSAND = 1000;
-/** Разброс прироста байт: у одного соединения за секунду от килобайта до мегабайта. */
+/** Byte gain spread: one connection gets from a kilobyte to a megabyte per second. */
 const MIN_STEP = 1024;
 const MAX_STEP = 1024 * 1024;
 
 /**
- * Следующий кадр потока: счётчики растут, часть соединений закрывается, на их
- * месте открываются новые.
+ * The next stream frame: counters grow, some connections close, and new ones
+ * open in their place.
  *
- * **Снапшот меняется на месте.** Вызывающий отдаёт сюда собственный экземпляр и
- * дальше владеет им один. `CONNECTIONS_FIXTURE` передавать нельзя: он делит
- * массив с образцами, из которых собираются кадры, и заморожен — попытка
- * провернуть кадр прямо на нём бросит `TypeError`.
+ * **The snapshot changes in place.** The caller passes its own instance here and
+ * owns it alone afterwards. `CONNECTIONS_FIXTURE` must not be passed: it shares an
+ * array with the samples that frames are built from, and is frozen: an attempt to
+ * advance a frame directly on it throws `TypeError`.
  *
- * Список не пересобирается: пять тысяч строк на каждый тик стоили бы дороже
- * самой панели, и стенд мерил бы генератор. При этом неподвижный снапшот мерит
- * не ту ветку — при неизменных счётчиках разбор отдаёт прежние строки целиком и
- * не собирает ни одной новой.
+ * The list is not rebuilt: five thousand rows on every tick would cost more than
+ * the panel itself, and the test bench would measure the generator. At the same time a motionless snapshot measures
+ * the wrong branch: with unchanged counters the parse returns the previous rows whole and
+ * builds none new.
  *
- * Оборот соединений нужен не для правдоподобия: закрытые панель собирает сама,
- * сравнивая соседние кадры, и без оборота эта ветка не выполняется ни разу.
+ * Connection turnover is needed not for plausibility: the panel builds closed ones itself,
+ * comparing adjacent frames, and without turnover that branch never runs.
  */
 export function advanceConnectionsSnapshot(snapshot: ConnectionsSnapshotWire, seq: number): ConnectionsSnapshotWire {
   const churn = Math.max(1, Math.round((snapshot.connections.length * CHURN_PER_THOUSAND) / THOUSAND));
@@ -234,10 +234,10 @@ export function advanceConnectionsSnapshot(snapshot: ConnectionsSnapshotWire, se
     addedDownload += step * 2;
   }
 
-  // Выбывшие разбросаны по списку, а не идут подряд с начала: панель сверяет
-  // кадры по id, и подмены id достаточно, чтобы соединение считалось новым, но
-  // оборот в первых строках виртуализованного списка читался бы как мельтешение
-  // таблицы, которого на устройстве нет.
+  // Departed ones are scattered across the list rather than going in a row from the start: the panel compares
+  // frames by id, and swapping the id is enough for a connection to count as new, but
+  // turnover in the first rows of a virtualized list would read as flicker of the
+  // table, which does not exist on the device.
   const stride = Math.max(1, Math.floor(snapshot.connections.length / churn));
 
   for (let step = 0; step < churn; step += 1) {
@@ -254,8 +254,8 @@ export function advanceConnectionsSnapshot(snapshot: ConnectionsSnapshotWire, se
     };
   }
 
-  // Счётчики растут, а не пересчитываются по списку: в снапшоте это объём с
-  // запуска sing-box, и он больше суммы по живым соединениям.
+  // Counters grow rather than being recomputed from the list: in the snapshot this is the volume since
+  // sing-box started, and it is larger than the sum over live connections.
   snapshot.upload_total += addedUpload;
   snapshot.download_total += addedDownload;
 

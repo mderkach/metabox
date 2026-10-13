@@ -14,12 +14,12 @@ import {
 } from '../model/Daemon.store';
 import { MEMORY_SAMPLES, SYSTEM_FIXTURE } from './Daemon.fixture';
 
-describe('поток трафика', () => {
+describe('traffic stream', () => {
   beforeEach(() => {
     RuntimeStore.getState().reset();
   });
 
-  it('держит минуту и не копит историю дальше', () => {
+  it('keeps a minute and does not accumulate history beyond it', () => {
     const { source, send } = fakeEventSource();
     const unsubscribe = listenTraffic(source);
 
@@ -36,7 +36,7 @@ describe('поток трафика', () => {
     unsubscribe();
   });
 
-  it('снимает обработчик при отписке', () => {
+  it('removes the handler on unsubscribe', () => {
     const { source, send } = fakeEventSource();
     const unsubscribe = listenTraffic(source);
 
@@ -47,12 +47,12 @@ describe('поток трафика', () => {
   });
 });
 
-describe('закрытие потока', () => {
+describe('stream close', () => {
   beforeEach(() => {
     RuntimeStore.getState().reset();
   });
 
-  it('снимает отметку последнего кадра, а буфер графика оставляет', () => {
+  it('clears the last-frame mark and leaves the chart buffer', () => {
     RuntimeStore.getState().pushTraffic({ up: 1, down: 2 });
     RuntimeStore.getState().closeStream();
 
@@ -60,9 +60,9 @@ describe('закрытие потока', () => {
     expect(RuntimeStore.getState().traffic).toEqual([{ up: 1, down: 2 }]);
   });
 
-  // По отметке снимка экран отличает молчание sing-box от обрыва связи с
-  // демоном; отметка из прошлого подключения выдала бы обрыв за живой поток.
-  it('снимает и отметку снимка устройства, который шлёт демон', () => {
+  // By the snapshot mark the screen tells sing-box silence from a lost connection to
+  // the daemon; a mark from a previous connection would pass a lost connection off as a live stream.
+  it('also clears the mark of the device snapshot that the daemon sends', () => {
     const { source, send } = fakeEventSource();
     const unsubscribe = listenSystem(source);
 
@@ -79,12 +79,12 @@ describe('закрытие потока', () => {
   });
 });
 
-describe('поток памяти', () => {
+describe('memory stream', () => {
   beforeEach(() => {
     RuntimeStore.getState().reset();
   });
 
-  it('пропускает нулевой первый сэмпл, а не показывает «памяти 0»', () => {
+  it('skips the zero first sample instead of showing "memory 0"', () => {
     const { source, send } = fakeEventSource();
     const unsubscribe = listenMemory(source);
 
@@ -100,7 +100,7 @@ describe('поток памяти', () => {
     unsubscribe();
   });
 
-  it('в буфер кладёт каждый десятый сэмпл: окно памяти шире окна трафика', () => {
+  it('puts every tenth sample into the buffer: the memory window is wider than the traffic window', () => {
     const { source, send } = fakeEventSource();
     const unsubscribe = listenMemory(source);
 
@@ -115,7 +115,7 @@ describe('поток памяти', () => {
   });
 });
 
-describe('показания устройства', () => {
+describe('device readings', () => {
   beforeEach(() => {
     RuntimeStore.getState().reset();
     vi.useFakeTimers();
@@ -125,7 +125,7 @@ describe('показания устройства', () => {
     vi.useRealTimers();
   });
 
-  it('первый снимок скорость канала не считает: считать её не с чем', () => {
+  it('the first snapshot does not compute channel speed: there is nothing to compute it from', () => {
     const { source, send } = fakeEventSource();
     const unsubscribe = listenSystem(source);
 
@@ -137,7 +137,7 @@ describe('показания устройства', () => {
     unsubscribe();
   });
 
-  it('скорость канала считает по приращению счётчиков за интервал', async () => {
+  it('computes channel speed from the counter increment over the interval', async () => {
     const { source, send } = fakeEventSource();
     const unsubscribe = listenSystem(source);
     const uplink = SYSTEM_FIXTURE.uplink;
@@ -158,7 +158,7 @@ describe('показания устройства', () => {
     unsubscribe();
   });
 
-  it('смена интерфейса скорость обнуляет: счётчики у нового свои', async () => {
+  it('an interface change zeroes the speed: the new one has its own counters', async () => {
     const { source, send } = fakeEventSource();
     const unsubscribe = listenSystem(source);
 
@@ -172,12 +172,12 @@ describe('показания устройства', () => {
   });
 });
 
-describe('время точек трафика', () => {
-  it('раскладывает точки назад от последней с шагом потока, а не по времени прихода', () => {
+describe('traffic point time', () => {
+  it('lays points back from the last one with the stream step, not by arrival time', () => {
     expect(toTrafficTimes(3, 10_000)).toEqual([8, 9, 10]);
   });
 
-  it('полный буфер начинается не правее левой кромки окна, даже когда точка только что пришла', () => {
+  it('a full buffer starts no further right than the left edge of the window, even when a point has just arrived', () => {
     const arrivedAt = 100_000;
     const [oldest] = toTrafficTimes(TRAFFIC_POINTS, arrivedAt);
     const leftEdge = arrivedAt / 1000 - TRAFFIC_STEP_SECONDS - TRAFFIC_WINDOW_SECONDS;
@@ -185,7 +185,7 @@ describe('время точек трафика', () => {
     expect(oldest).toBeLessThanOrEqual(leftEdge);
   });
 
-  it('заполняет пустой буфер трафика минутой от демона, а заполненный не трогает', () => {
+  it('fills an empty traffic buffer with the daemon minute, and does not touch a filled one', () => {
     const store = RuntimeStore.getState();
 
     store.reset();
@@ -199,7 +199,7 @@ describe('время точек трафика', () => {
       { down: 3, up: 4 },
     ]);
     expect(RuntimeStore.getState().trafficAt).not.toBeNull();
-    // Минута от демона — не кадр потока: живым поток она не делает.
+    // The daemon minute is not a stream frame: it does not make the stream live.
     expect(RuntimeStore.getState().sampledAt).toBeNull();
 
     store.seedTraffic([{ down: 9, up: 9 }]);

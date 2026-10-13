@@ -11,20 +11,20 @@ import {
   TRAFFIC_HISTORY_FIXTURE,
 } from './Daemon.fixture';
 
-/** Окно подтверждения демона — минута, в наносекундах `time.Duration`. */
+/** The daemon confirmation window is a minute, in nanoseconds of `time.Duration`. */
 const CONFIRM_WINDOW_NS = 60_000_000_000;
 
 /**
- * Моки демона вместе с циклом применения.
+ * Daemon mocks together with the apply cycle.
  *
- * Транзакция держится состоянием и уходит в `GET /api/status`: панель ищет
- * идущее применение именно там, и мок без состояния показывал бы окно
- * подтверждения, которое ничем не закрывается. Ручка отката версии живёт здесь
- * же, хотя адрес у неё конфиговый: она запускает ту же транзакцию, а разводить
- * её по двум мокам значило бы держать два независимых состояния одного цикла.
+ * The transaction is held as state and goes into `GET /api/status`: the panel looks for
+ * the running apply exactly there, and a stateless mock would show a confirmation
+ * window that nothing closes. The version rollback handler lives here
+ * too, although its address is a config one: it starts the same transaction, and splitting
+ * it across two mocks would mean keeping two independent states of one cycle.
  *
- * `extraStatus` дописывает в статус поля чужого мока — смену модели обвязки:
- * адрес статуса один, и держит его этот мок.
+ * `extraStatus` appends fields of a foreign mock to the status: a dataplane model change:
+ * the status address is one, and this mock holds it.
  */
 export function createStatefulDaemonHandlers(extraStatus: () => Partial<DaemonStatusWire> = () => ({})) {
   let transaction: ApplyTransactionWire | null = null;
@@ -80,7 +80,7 @@ export function createStatefulDaemonHandlers(extraStatus: () => Partial<DaemonSt
       const body: unknown = await request.json();
       const mode = typeof body === 'object' && body !== null && 'mode' in body ? String(body.mode) : '';
 
-      // Как и sing-box, незнакомый режим пропускается молча, ответ всё равно 204.
+      // Like sing-box, an unknown mode is skipped silently, the response is 204 anyway.
       if (clashConfigs['mode-list'].includes(mode)) {
         clashConfigs = { ...clashConfigs, mode };
       }

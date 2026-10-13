@@ -1,11 +1,11 @@
 import { ROUTE_KIND, toOutboundKind, type RouteKind } from '@entities/Connection';
 import { RULE_TARGET, type RuleTargetKind } from '@entities/Rule';
 
-/** Действие — не выход трафика, а вмешательство в него: свой нейтральный тон. */
+/** An action is not a traffic outbound but an intervention in it: its own neutral tone. */
 const ACTION_TONE = 'text-route-neutral';
 const PROXY_TONE = 'text-route-proxy';
 
-/** Тон по судьбе пакета, выведенной из типа аутбаунда. */
+/** Tone by packet fate derived from the outbound type. */
 const KIND_TONES: Readonly<Record<RouteKind, string>> = {
   [ROUTE_KIND.Direct]: 'text-route-direct',
   [ROUTE_KIND.Proxy]: PROXY_TONE,
@@ -15,9 +15,9 @@ const KIND_TONES: Readonly<Record<RouteKind, string>> = {
 };
 
 /**
- * Запасная таблица «подстрока → тон», а не цепочка условий: для действия и для
- * тега, которого в конфиге нет, тона по типу не будет, и совпадение ищется по
- * общепринятым именам.
+ * Fallback "substring → tone" table, not a chain of conditions: for an action and for
+ * a tag that is not in the config there is no tone by type, and the match is sought by
+ * common names.
  */
 const OUTBOUND_TONES = [
   { match: 'direct', tone: 'text-route-direct' },
@@ -27,8 +27,8 @@ const OUTBOUND_TONES = [
 ] as const;
 
 /**
- * Цвет выхода правила. Первичен тип аутбаунда: тег пишет пользователь, и
- * `directional` типа `vless` — прокси, а не прямой выход.
+ * Rule outbound color. The outbound type is primary: the tag is written by the user, and
+ * a `directional` of type `vless` is a proxy, not a direct outbound.
  */
 export function toTargetTone(kind: RuleTargetKind, target: string, outboundTypes: ReadonlyMap<string, string>): string {
   const typed = kind === RULE_TARGET.Outbound ? toOutboundKind(target, outboundTypes) : null;

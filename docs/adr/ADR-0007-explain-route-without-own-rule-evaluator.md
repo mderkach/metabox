@@ -1,143 +1,143 @@
-# ADR-0007. Объяснять маршрут наблюдаемыми данными core и точечными запросами к бинарю, не реализуя собственный evaluator правил
+# ADR-0007. Explain the route with data observed from the core and targeted queries to the binary, without implementing our own rule evaluator
 
-- Статус: Accepted
-- Дата: 2026-09-11
-- Ответственные: владелец репозитория
+- Status: Accepted
+- Date: 2026-09-11
+- Deciders: repository owner
 
-## Контекст и постановка проблемы
+## Context and problem statement
 
-US-2 требует по конкретному соединению показать, какое правило сработало и через какую цепочку прокси оно пошло; SM-2 задаёт на это две минуты без чтения конфига и логов через SSH. AC-12 требует того же от экрана Connections. Почему это место — отличие продукта, сказано в PRD, раздел 1.3.
+US-2 requires showing, for a specific connection, which rule fired and through which proxy chain it went; SM-2 gives two minutes for this without reading the config and logs over SSH. AC-12 requires the same from the Connections screen. Why this is what sets the product apart is stated in the PRD, section 1.3.
 
-Прямолинейный путь к такому объяснению — свой evaluator: metabox читает `route.rules`, прогоняет через них вход и рассказывает, что и почему совпало. У этого пути есть цена, которую нужно назвать до выбора. Язык правил sing-box — это домены, суффиксы, ключевые слова, regex, CIDR, порты и диапазоны, протоколы, процессы, соседи, clash-режим, rule-set, логические комбинации с `&&`, `||` и инверсией, и всё это со своей семантикой в конкретной версии форка. Повторение этой семантики в TypeScript или Go нарушает UX-4 напрямую: арбитром становится схема metabox, а не бинарь, — и создаёт ровно тот дрейф, от которого страхует R-2.
+The straightforward path to such an explanation is an evaluator of our own: metabox reads `route.rules`, runs the input through them and tells what matched and why. This path has a cost that must be named before choosing. The sing-box rule language covers domains, suffixes, keywords, regex, CIDR, ports and ranges, protocols, processes, neighbours, clash mode, rule sets, logical combinations with `&&`, `||` and inversion, all with their own semantics in a specific fork version. Repeating these semantics in TypeScript or Go violates UX-4 directly: the metabox schema becomes the arbiter instead of the binary, and it creates exactly the drift R-2 guards against.
 
-Проверка форка `v1.14.0-extended-2.7.1` показывает, сколько из нужного берётся наблюдением.
+Checking the fork `v1.14.0-extended-2.7.1` shows how much of what is needed can be obtained by observation.
 
-**Упорядоченный список правил доступен.** `GET /rules` (`experimental/clashapi/rules.go`) отдаёт для каждого правила `type`, `payload` — результат `rule.String()`, и `proxy` — результат `rule.Action().String()`. `rule.String()` (`route/rule/rule_abstract.go`) собирает текст всех условий правила, логические правила рендерит через `&&` и `||`, инверсию — как `!(…)`.
+**The ordered rule list is available.** `GET /rules` (`experimental/clashapi/rules.go`) returns for every rule `type`, `payload` (the result of `rule.String()`) and `proxy` (the result of `rule.Action().String()`). `rule.String()` (`route/rule/rule_abstract.go`) assembles the text of all the rule's conditions, renders logical rules with `&&` and `||`, and inversion as `!(…)`.
 
-**Порядок списка равен порядку в конфиге.** `Router.Initialize` (`route/router.go`) строит `r.rules` циклом по `option.Route.Rules` один к одному, без вставок и перестановок, а `Router.Rules()` возвращает этот же срез. Значит `i`-й элемент `/rules` соответствует `route.rules[i]` исходного документа.
+**The list order equals the order in the config.** `Router.Initialize` (`route/router.go`) builds `r.rules` with a loop over `option.Route.Rules` one to one, with no insertions or reordering, and `Router.Rules()` returns the same slice. So the `i`-th element of `/rules` corresponds to `route.rules[i]` of the source document.
 
-**Сработавшее правило связывается со списком, но форматы двух источников различаются.** `experimental/clashapi/connections.go` формирует поле `rule` как условия, `=>` и действие — тем же рендером, что и `/rules`. gRPC отдаёт только условия: `daemon/started_service.go` кладёт туда `metadata.Rule.String()` без действия, а соседнее поле `outbound` несёт разрешённый outbound соединения, а не действие правила. Совпадает у источников только часть с условиями.
+**The fired rule can be linked to the list, but the formats of the two sources differ.** `experimental/clashapi/connections.go` builds the `rule` field as the conditions, `=>` and the action, with the same rendering as `/rules`. gRPC returns only the conditions: `daemon/started_service.go` puts `metadata.Rule.String()` there without the action, and the neighbouring `outbound` field carries the connection's resolved outbound, not the rule's action. The sources match only in the conditions part.
 
-**Не всякое правило может оказаться записанным.** Цикл перебора в `route/route.go` запоминает правило и прерывается ровно на четырёх действиях: `route`, `reject`, `hijack-dns` и `bypass` с непустым outbound. `sniff`, `resolve`, `route-options` и `direct` применяются, и перебор идёт дальше; `bypass` без outbound тоже не останавливает его. Различить эти два случая можно по строке действия: `RuleActionBypass.String()` рендерит пустой вариант как `bypass()` (`route/rule/rule_action.go`).
+**Not every rule can end up recorded.** The matching loop in `route/route.go` records the rule and breaks on exactly four actions: `route`, `reject`, `hijack-dns` and `bypass` with a non-empty outbound. `sniff`, `resolve`, `route-options` and `direct` are applied and matching continues; `bypass` without an outbound does not stop it either. The two cases can be told apart by the action string: `RuleActionBypass.String()` renders the empty variant as `bypass()` (`route/rule/rule_action.go`).
 
-**Соединение может не совпасть ни с одним правилом.** Когда `Rule` пуст, Clash API подставляет строку `final` (`experimental/clashapi/connections.go`), а gRPC оставляет поле пустым. Элемента с таким именем в `/rules` нет: это не сбой сопоставления, а действие «использован `route.final`».
+**A connection may match no rule.** When `Rule` is empty, the Clash API substitutes the string `final` (`experimental/clashapi/connections.go`), and gRPC leaves the field empty. There is no element with such a name in `/rules`: this is not a matching failure but the action "`route.final` was used".
 
-**Trace недоступен.** `adapter/router.go` передаёт трекерам единственное `matchedRule`, и `route/route.go` вызывает `RoutedFlow` с ним же. Ни почему не подошли предыдущие правила, ни какие условия проверялись, нигде не сохраняется. То же в gRPC: `daemon/started_service.proto` несёт у `Connection` только строку `rule`.
+**A trace is not available.** `adapter/router.go` passes the trackers a single `matchedRule`, and `route/route.go` calls `RoutedFlow` with the same. Neither why the earlier rules did not match nor which conditions were checked is stored anywhere. The same holds for gRPC: in `daemon/started_service.proto` the `Connection` carries only the `rule` string.
 
-**Бинарь умеет отвечать про rule-set.** `cmd/sing-box/cmd_rule_set_match.go` реализует `sing-box rule-set match <rule-set path> <IP address/domain>` — проверку, попадает ли адрес или домен в набор. Рядом живут `geosite lookup`, `geosite matcher` и `geoip lookup`.
+**The binary can answer about rule sets.** `cmd/sing-box/cmd_rule_set_match.go` implements `sing-box rule-set match <rule-set path> <IP address/domain>`, a check of whether an address or domain belongs to a set. Next to it live `geosite lookup`, `geosite matcher` and `geoip lookup`.
 
-В scope: на чём строится объяснение маршрута и как обозначается его достоверность. Вне scope: откуда берутся сами данные — [ADR-0006](./ADR-0006-read-runtime-from-clash-api-and-optional-grpc.md); диф черновика перед Apply (UX-6); оценка влияния черновика на будущий трафик.
+In scope: what the route explanation is built on and how its reliability is marked. Out of scope: where the data itself comes from, [ADR-0006](./ADR-0006-read-runtime-from-clash-api-and-optional-grpc.md); the draft diff before Apply (UX-6); estimating the draft's effect on future traffic.
 
-## Критерии выбора
+## Decision drivers
 
-1. **Соответствие UX-4**: арбитром остаётся установленный бинарь, а не модель metabox.
-2. **Устойчивость к подъёму версии форка** (R-2): изменение семантики правил в форке не должно молча превращать объяснение в неверное.
-3. **Честность перед пользователем**: прогноз не выдаётся за факт. Это самый дорогой класс ошибок для панели, чья ценность — доверие к объяснению.
-4. **Стоимость реализации и сопровождения** относительно того, что уже требуется вехой M1.
-5. **Полезность ответа**: объяснение должно закрывать SM-2, а не быть формально корректным и бесполезным.
+1. **UX-4 compliance**: the installed binary stays the arbiter, not the metabox model.
+2. **Resilience to fork version bumps** (R-2): a change of rule semantics in the fork must not silently turn the explanation wrong.
+3. **Honesty towards the user**: a prediction is not passed off as a fact. This is the most expensive class of errors for a panel whose value is trust in its explanation.
+4. **Implementation and maintenance cost** relative to what milestone M1 already requires.
+5. **Usefulness of the answer**: the explanation must cover SM-2, not be formally correct and useless.
 
-## Рассмотренные варианты
+## Considered options
 
-1. **Собственный evaluator правил sing-box.** metabox повторяет семантику матчинга и объясняет по каждому правилу, почему оно не подошло. Преимущества: полный ответ, работает и для гипотетического входа, и для черновика. Недостатки: прямое нарушение UX-4 — валидность маршрута начинает определять код metabox (критерий 1); каждый релиз форка становится риском расхождения, а проявится оно неверным объяснением, а не ошибкой сборки (критерий 2); объём сравним с самим редактором и не помещается в M1 (критерий 4). **Отклонён для v1.**
+1. **Our own sing-box rule evaluator.** metabox repeats the matching semantics and explains for each rule why it did not match. Pros: a complete answer that works both for a hypothetical input and for a draft. Cons: a direct violation of UX-4: the metabox code starts deciding route validity (driver 1); every fork release becomes a risk of divergence, which shows up as a wrong explanation, not a build error (driver 2); the volume is comparable to the editor itself and does not fit into M1 (driver 4). **Rejected for v1.**
 
-2. **Только наблюдение, без объяснения непопаданий.** Показываем сработавшее правило, его индекс и цепочку, и ничего больше. Преимущества: ноль риска, минимальная стоимость. Недостатки: не закрывает половину SM-2 — «трафик пошёл не туда» чаще означает «сработало не то правило», и пользователю нужно понять, какое правило перехватило запрос раньше ожидаемого (критерий 5). **Отклонён как достаточное решение, принят как обязательное ядро.**
+2. **Observation only, without explaining non-matches.** Show the fired rule, its index and the chain, and nothing more. Pros: zero risk, minimal cost. Cons: it does not cover half of SM-2: "the traffic went the wrong way" more often means "the wrong rule fired", and the user needs to understand which rule caught the request earlier than expected (driver 5). **Rejected as a sufficient solution, chosen as the mandatory core.**
 
-3. **Наблюдение плюс точечный добор причины у бинаря и по примитивным условиям.** Список правил и сработавшее правило — наблюдение. Причина непопадания конкретного правила вычисляется по запросу пользователя и только там, где это делается без воспроизведения семантики целиком: rule-set — вопросом к бинарю, примитивные условия — прямым сравнением, всё остальное честно помечается как неизвестное. Преимущества: арбитром для самого частого условия остаётся бинарь (критерий 1); дрейфовать нечему, потому что сложная семантика не воспроизводится (критерий 2); граница знания видна пользователю (критерий 3); объём помещается в M1 (критерий 4); отвечает на вопрос «кто перехватил раньше» (критерий 5). Недостатки: ответ неполный — часть условий остаётся без причины. **Принят.**
+3. **Observation plus targeted retrieval of the reason from the binary and for primitive conditions.** The rule list and the fired rule come from observation. The reason a specific rule did not match is computed on the user's request and only where this can be done without reproducing the whole semantics: rule sets by asking the binary, primitive conditions by direct comparison, everything else is honestly marked as unknown. Pros: the binary stays the arbiter for the most frequent condition (driver 1); nothing can drift, because complex semantics are not reproduced (driver 2); the boundary of knowledge is visible to the user (driver 3); the volume fits into M1 (driver 4); it answers the question "who caught it earlier" (driver 5). Cons: the answer is incomplete: some conditions stay without a reason. **Chosen.**
 
-4. **Провести индекс правила через форк.** `route/route.go` уже вычисляет `selectedRuleIndex` рядом с выбранным правилом, но `adapter/router.go` передаёт трекерам только `matchedRule`, и до API индекс не доходит. Патч добавляет индекс в метаданные трекера и в оба API. Преимущества: связка становится точной по построению, зависимость от формата `rule.String()` и соответствующий риск исчезают; проект и так собирается против этого форка (ADR-0001), поэтому путь не экзотический. Недостатки: либо ожидание принятия PR, либо собственный патч, который придётся переносить на каждую версию форка; до этого строковая связка всё равно нужна как запасной путь, то есть вариант не заменяет третий, а дополняет его. **Отклонён для v1, оставлен как способ закрыть риск строкового сравнения после M1.**
+4. **Pass the rule index through the fork.** `route/route.go` already computes `selectedRuleIndex` next to the selected rule, but `adapter/router.go` passes the trackers only `matchedRule`, and the index never reaches the API. A patch adds the index to the tracker metadata and to both APIs. Pros: the link becomes exact by construction, and the dependency on the `rule.String()` format and the related risk disappear; the project already builds against this fork (ADR-0001), so the path is not exotic. Cons: either waiting for a PR to be accepted, or our own patch that has to be carried over to every fork version; until then the string-based link is still needed as a fallback, so the option does not replace the third one but complements it. **Rejected for v1, kept as a way to close the risk of string comparison after M1.**
 
-## Принятое решение
+## Decision outcome
 
-Собственного evaluator'а правил sing-box в v1 нет.
+There is no sing-box rule evaluator of our own in v1.
 
-**Ядро объяснения — наблюдение.** Упорядоченный список правил берётся из `GET /rules`, индекс сработавшего правила определяется сравнением с элементами этого списка. Индекс в списке равен индексу узла в `route.rules` применённого документа, поэтому переход «соединение → правило в редакторе» не требует разбора условий.
+**The core of the explanation is observation.** The ordered rule list comes from `GET /rules`, and the index of the fired rule is found by comparison with the elements of this list. The index in the list equals the node index in `route.rules` of the applied document, so the transition "connection → rule in the editor" needs no parsing of conditions.
 
-**Сопоставление идёт по условиям, а не по действию.** Условия оба источника рендерят одинаково — это то же `rule.String()`, что лежит в `payload` элемента `/rules`. Действие есть только у Clash API: он дописывает его в строку через `=>`, gRPC не отдаёт его вовсе, а поле `outbound` там — разрешённый outbound соединения, а не действие правила, и подменять им действие нельзя.
+**Matching goes by conditions, not by action.** Both sources render conditions the same way: it is the same `rule.String()` that sits in the `payload` of an `/rules` element. Only the Clash API has the action: it appends it to the string after `=>`; gRPC does not return it at all, and its `outbound` field is the connection's resolved outbound, not the rule's action, and must not be used in place of the action.
 
-Правило выбирается так. Демон берёт кандидатов с совпавшими условиями и отбрасывает те, чьё действие в `/rules` не прерывает перебор: записанным сработавшим правилом может быть только узел с `route`, `reject`, `hijack-dns` или `bypass` с непустым outbound. Из оставшихся берётся первый по порядку — роутер останавливается на первом совпадении. Когда источник Clash API, его действие сужает выбор дополнительно. Если подходящих кандидатов не осталось, отдаётся `unknown`.
+The rule is chosen as follows. The daemon takes the candidates with matching conditions and drops those whose action in `/rules` does not stop matching: a recorded fired rule can only be a node with `route`, `reject`, `hijack-dns` or `bypass` with a non-empty outbound. Of the remaining ones the first in order is taken: the router stops at the first match. When the source is the Clash API, its action narrows the choice further. If no suitable candidates remain, `unknown` is returned.
 
-Восстанавливать действие для gRPC из соседних полей нельзя. `common/trafficcontrol/tracker.go` разворачивает группы и кладёт в `outbound` конечный узел: правило `route(proxy)` с селектором `proxy`, указывающим на `hk-01`, даст `hk-01`, и сравнение со строкой действия из `/rules` не сойдётся. Первый элемент `chainList` цель правила сохраняет, но не несёт ни опций маршрута из `Action().String()`, ни действий `reject` и `hijack-dns`, поэтому основой сопоставления он тоже не становится.
+Restoring the action for gRPC from neighbouring fields is not allowed. `common/trafficcontrol/tracker.go` unfolds groups and puts the final node into `outbound`: a rule `route(proxy)` with a `proxy` selector pointing at `hk-01` gives `hk-01`, and the comparison with the action string from `/rules` does not match. The first element of `chainList` keeps the rule's target, but carries neither the route options from `Action().String()` nor the `reject` and `hijack-dns` actions, so it does not become the basis for matching either.
 
-**Отсутствие совпадения — наблюдаемое действие, а не неизвестность.** Пустое поле `rule` в gRPC и строка `final` в Clash API означают, что ни одно правило не совпало и использован `route.final`. Такое объяснение помечается `observed` и ведёт на узел `route.final`, а не на элемент `route.rules`. Значение `unknown` остаётся только для случая, когда условия непусты, а в списке не нашлись.
+**No match is an observed action, not an unknown.** An empty `rule` field in gRPC and the string `final` in the Clash API mean that no rule matched and `route.final` was used. Such an explanation is marked `observed` and leads to the `route.final` node, not to an element of `route.rules`. The value `unknown` stays only for the case when the conditions are non-empty but were not found in the list.
 
-**Список правил сверяется с применённым документом на фронте.** `/rules` — срез правил работающего процесса, а не файла: процесс мог загрузить другой конфиг. Поэтому перед тем, как вести пользователя на узел, панель сверяет длину `/rules` с длиной `route.rules` применённого документа и проверяет, что условия сработавшего правила в списке вообще нашлись. При расхождении связка «соединение → узел» отключается целиком, объяснение отдаётся с `unknown` и причиной «core исполняет другой конфиг», а индекс в чужой документ не показывается.
+**The rule list is checked against the applied document on the frontend.** `/rules` is a slice of the running process's rules, not of the file: the process may have loaded a different config. So before leading the user to a node, the panel compares the length of `/rules` with the length of `route.rules` of the applied document and checks that the conditions of the fired rule were found in the list at all. On a mismatch the "connection → node" link is turned off entirely, the explanation is returned with `unknown` and the reason "core runs a different config", and no index into a foreign document is shown.
 
-Сверка живёт на фронте, а не в демоне, по двум причинам. Демону запрещено разбирать содержимое конфига ([ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md)), а схема и модель документа принадлежат панели ([ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md)). Поэлементная сверка условий не делается ни там, ни там: она потребовала бы воспроизвести `rule.String()` — ровно тот дрейф, от которого уходит это решение. Длины и присутствия достаточно, чтобы поймать практический случай: процесс исполняет не тот файл, который открыт в редакторе.
+The check lives on the frontend, not in the daemon, for two reasons. The daemon is forbidden to parse the config contents ([ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md)), and the document schema and model belong to the panel ([ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md)). An element-by-element check of conditions is done in neither place: it would require reproducing `rule.String()`, exactly the drift this decision avoids. Length and presence are enough to catch the practical case: the process runs a file other than the one open in the editor.
 
-**Правила до сработавшего показываются как есть.** Каждое предыдущее правило выводится со своими условиями из `payload` и пометкой, что оно не совпало. Причина по каждому правилу сразу не вычисляется и не изображается.
+**Rules before the fired one are shown as is.** Each earlier rule is shown with its conditions from `payload` and a mark that it did not match. The reason for each rule is not computed or displayed up front.
 
-**Причина непопадания добирается по запросу и только тремя способами.**
+**The reason for a non-match is retrieved on request and only in three ways.**
 
-- Условие `rule_set` — вопрос к установленному бинарю: `sing-box rule-set match`. Ответ авторитетен по UX-4.
-- Примитивные условия, семантика которых исчерпывается сравнением — домен и его суффикс, CIDR, порт и диапазон портов, сеть, протокол, тип и тег inbound, — считаются демоном напрямую.
-- Всё остальное — логические комбинации, инверсия, regex, `process_name`, соседи, `clash_mode`, условия, зависящие от sniffing, — не вычисляется.
+- A `rule_set` condition: a question to the installed binary, `sing-box rule-set match`. The answer is authoritative per UX-4.
+- Primitive conditions whose semantics come down to comparison (domain and its suffix, CIDR, port and port range, network, protocol, inbound type and tag) are computed by the daemon directly.
+- Everything else (logical combinations, inversion, regex, `process_name`, neighbours, `clash_mode`, conditions that depend on sniffing) is not computed.
 
-**Каждое утверждение на экране несёт происхождение.** Значения ровно три:
+**Every statement on the screen carries an origin.** There are exactly three values:
 
-- `observed` — пришло от core: список правил, сработавшее правило, цепочка, метаданные соединения;
-- `computed` — вычислено metabox или получено вопросом к бинарю, с указанием способа;
-- `unknown` — вычислить нечем.
+- `observed`: came from the core: the rule list, the fired rule, the chain, connection metadata;
+- `computed`: computed by metabox or obtained by asking the binary, with the method stated;
+- `unknown`: nothing to compute it with.
 
-Смешивать их запрещено. Утверждения без происхождения на экране не появляются, а объяснение, в котором есть хотя бы одно `unknown`, не подаётся как полное.
+Mixing them is forbidden. Statements without an origin do not appear on the screen, and an explanation that has at least one `unknown` is not presented as complete.
 
-**Ручная трассировка произвольного входа в v1 не делается.** Без evaluator'а честный ответ на «куда пойдёт домен X» ограничен проверкой принадлежности наборам и примитивных условий, то есть дал бы `unknown` в самых интересных случаях. Возвращаться к этому имеет смысл вместе с решением по evaluator'у, а не раньше.
+**Manual tracing of an arbitrary input is not done in v1.** Without an evaluator, an honest answer to "where will domain X go" is limited to checking set membership and primitive conditions, so it would give `unknown` in the most interesting cases. It makes sense to return to this together with a decision on the evaluator, not earlier.
 
-### Область действия и границы
+### Scope and boundaries
 
-Решение распространяется на демона в части объяснения маршрута и на экраны Connections и редактора правил. Схему конфига (ADR-0001) и правку конфига текстом (ADR-0004) не затрагивает.
+The decision covers the daemon as to route explanation, and the Connections and rule editor screens. It does not affect the config schema (ADR-0001) or editing the config as text (ADR-0004).
 
-## Последствия
+## Consequences
 
-### Положительные
+### Positive
 
-- Главная функция продукта строится на наблюдаемых данных, поэтому не расходится с поведением бинаря при подъёме версии форка.
-- Переход «соединение → узел конфига» точен и не зависит от разбора условий.
-- Граница знания видна пользователю, а не скрыта: `unknown` остаётся `unknown`.
-- Объём работы помещается в M1 и не требует корпуса конфигов для проверки семантики матчинга.
+- The product's main function is built on observed data, so it does not diverge from the binary's behaviour when the fork version is bumped.
+- The transition "connection → config node" is exact and does not depend on parsing conditions.
+- The boundary of knowledge is visible to the user, not hidden: `unknown` stays `unknown`.
+- The amount of work fits into M1 and does not require a config corpus to check matching semantics.
 
-### Отрицательные
+### Negative
 
-- Объяснение неполное: для логических правил, regex и условий, зависящих от процесса или sniffing, причина непопадания не показывается.
-- Вопрос к бинарю про rule-set — это запуск процесса, то есть операция с задержкой и лимитом на частоту. Массового применения ко всем правилам сразу она не выдержит, поэтому и сделана по запросу.
-- Сравнение по строке `rule.String()` завязано на формат рендера форка. Формат стабилен и используется самим Clash API, но это неявная зависимость.
+- The explanation is incomplete: for logical rules, regex and conditions depending on the process or sniffing, the reason for a non-match is not shown.
+- Asking the binary about a rule set means launching a process, that is, an operation with latency and a rate limit. It cannot handle bulk use on all rules at once, which is why it is done on request.
+- Comparison by the `rule.String()` string is tied to the fork's rendering format. The format is stable and used by the Clash API itself, but it is an implicit dependency.
 
-### Нейтральные или отложенные
+### Neutral or deferred
 
-- Ручная трассировка произвольного входа и оценка влияния черновика на будущий трафик отложены и требуют отдельного решения.
-- Объяснение DNS-пути отдельно от маршрута — отдельная задача; источник для него (`GET /dns/query`) зафиксирован в ADR-0006.
-- Отдельного значения происхождения для прогноза не заводится: в v1 прогноза нет, а когда он появится, отличать его будут входные данные, а не вид утверждения.
+- Manual tracing of an arbitrary input and estimating the draft's effect on future traffic are deferred and need a separate decision.
+- Explaining the DNS path separately from the route is a separate task; its source (`GET /dns/query`) is recorded in ADR-0006.
+- No separate origin value is introduced for a prediction: v1 has no predictions, and when they appear, the input data will distinguish them, not the kind of statement.
 
-## Риски и меры снижения
+## Risks and mitigations
 
-| Риск                                                                       | Вероятность и влияние    | Митигация                                                                                                                                                                                                      |
-| -------------------------------------------------------------------------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Форк изменит формат `rule.String()`, и связка правила с конфигом сломается | Низкая, высокое влияние  | Несовпадение обнаружимо: правило не находится в списке, демон отдаёт `unknown`, а не неверный индекс. Закрывается полностью вариантом 4 — индексом из форка                                                    |
-| Применённый конфиг разошёлся с тем, что исполняет sing-box                 | Средняя, высокое влияние | Панель сверяет длину `/rules` с `route.rules` применённого документа и присутствие условий сработавшего правила до того, как вести на узел; при расхождении связка отключается и отдаётся `unknown` с причиной |
-| `computed` со временем начнёт восприниматься как факт                      | Средняя, среднее влияние | Происхождение — часть контракта данных, а не оформление экрана: утверждение без него не отдаётся с сервера                                                                                                     |
-| Запуск `rule-set match` на каждый клик даст заметную задержку              | Средняя, низкое влияние  | Операция по запросу, результат кешируется на время жизни применённого конфига и набора                                                                                                                         |
+| Risk                                                                                           | Likelihood and impact | Mitigation                                                                                                                                                                                                                                  |
+| ---------------------------------------------------------------------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The fork changes the `rule.String()` format, and the link between a rule and the config breaks | Low, high impact      | The mismatch is detectable: the rule is not found in the list, and the daemon returns `unknown`, not a wrong index. Fully closed by option 4, the index from the fork                                                                       |
+| The applied config diverges from what sing-box runs                                            | Medium, high impact   | The panel compares the length of `/rules` with `route.rules` of the applied document and the presence of the fired rule's conditions before leading to a node; on a mismatch the link is turned off and `unknown` is returned with a reason |
+| `computed` starts being perceived as a fact over time                                          | Medium, medium impact | The origin is part of the data contract, not of the screen design: a statement without it is not returned by the server                                                                                                                     |
+| Running `rule-set match` on every click causes noticeable latency                              | Medium, low impact    | The operation is on request, and the result is cached for the lifetime of the applied config and the set                                                                                                                                    |
 
-## Совместимость, миграция и откат
+## Compatibility, migration and rollback
 
-Миграция не требуется: объяснение маршрута — новая функция, существующие данные и конфиги не затрагиваются.
+No migration is needed: route explanation is a new function, and existing data and configs are not affected.
 
-Откат: убрать добор причины и оставить только наблюдаемое ядро. Контракт происхождения при этом сохраняется — у утверждений просто не остаётся значения `computed`.
+Rollback: remove the reason retrieval and keep only the observed core. The origin contract stays: statements simply no longer have the `computed` value.
 
-## Проверка решения
+## Validation
 
-- Для живого соединения экран показывает сработавшее правило с индексом; переход открывает тот же узел в редакторе правил, и его условия совпадают с показанными.
-- Конфиг, в котором два правила совпадают и условиями, и действием: объяснение указывает на первое по порядку.
-- Правило с условием `rule_set`: добор причины возвращает ответ бинаря, и он совпадает с результатом `sing-box rule-set match`, запущенного руками на том же наборе и домене.
-- Правило с логическим условием: экран показывает `unknown`, а не догадку.
-- Соединение, ушедшее в `route.final`: экран показывает «ни одно правило не совпало» как `observed` и открывает узел `route.final`, а не отдаёт `unknown`.
-- Конфиг заменён на устройстве в обход демона и sing-box перезапущен: длины `/rules` и `route.rules` расходятся, связка «соединение → узел» отключается, объяснение приходит с `unknown` и причиной.
-- Одно и то же соединение, прочитанное через Clash API и через gRPC, даёт один и тот же индекс правила.
-- Конфиг, где правило с действием `sniff` имеет те же условия, что и следующее за ним правило с `route`: объяснение указывает на второе, а не на первое.
-- Конфиг с незнакомым или нераспознанным правилом не ломает объяснение остальных: правило показывается с пометкой, список не обрывается.
-- Ни одно утверждение в ответе API не приходит без поля происхождения.
+- For a live connection the screen shows the fired rule with its index; the transition opens the same node in the rule editor, and its conditions match the ones shown.
+- A config where two rules match in both conditions and action: the explanation points to the first in order.
+- A rule with a `rule_set` condition: the reason retrieval returns the binary's answer, and it matches the result of `sing-box rule-set match` run by hand on the same set and domain.
+- A rule with a logical condition: the screen shows `unknown`, not a guess.
+- A connection that went to `route.final`: the screen shows "no rule matched" as `observed` and opens the `route.final` node instead of returning `unknown`.
+- The config is replaced on the device bypassing the daemon and sing-box is restarted: the lengths of `/rules` and `route.rules` differ, the "connection → node" link is turned off, and the explanation comes with `unknown` and a reason.
+- The same connection read through the Clash API and through gRPC gives the same rule index.
+- A config where a rule with the `sniff` action has the same conditions as the following rule with `route`: the explanation points to the second one, not the first.
+- A config with an unfamiliar or unrecognized rule does not break the explanation of the others: the rule is shown with a mark, and the list is not cut off.
+- No statement in the API response comes without an origin field.
 
-## Ссылки
+## Links
 
-- [PRD](../PRD.md) — US-2, SM-2, AC-12, UX-4, UX-5, риск R-2;
-- [ADR-0006](./ADR-0006-read-runtime-from-clash-api-and-optional-grpc.md) — источники рантайм-данных;
-- [ADR-0004](./ADR-0004-edit-config-text-in-place-on-the-client.md) — правка конфига текстом и сохранение нераспознанных узлов;
-- [sing-box-extended](https://github.com/shtorm-7/sing-box-extended) — форк, версия `v1.14.0-extended-2.7.1`: `experimental/clashapi/rules.go`, `experimental/clashapi/connections.go`, `route/router.go`, `route/rule/rule_abstract.go`, `route/route.go`, `adapter/router.go`, `cmd/sing-box/cmd_rule_set_match.go`, `daemon/started_service.proto`.
+- [PRD](../PRD.md): US-2, SM-2, AC-12, UX-4, UX-5, risk R-2;
+- [ADR-0006](./ADR-0006-read-runtime-from-clash-api-and-optional-grpc.md): runtime data sources;
+- [ADR-0004](./ADR-0004-edit-config-text-in-place-on-the-client.md): editing the config as text and keeping unrecognized nodes;
+- [sing-box-extended](https://github.com/shtorm-7/sing-box-extended): the fork, version `v1.14.0-extended-2.7.1`: `experimental/clashapi/rules.go`, `experimental/clashapi/connections.go`, `route/router.go`, `route/rule/rule_abstract.go`, `route/route.go`, `adapter/router.go`, `cmd/sing-box/cmd_rule_set_match.go`, `daemon/started_service.proto`.

@@ -1,96 +1,96 @@
-# ADR-0018. Генерировать строгие схемы и помечать то, чего панель не знает
+# ADR-0018. Generate strict schemas and mark what the panel does not know
 
-- Статус: Accepted
-- Дата: 2026-09-15
-- Ответственные: владелец репозитория
+- Status: Accepted
+- Date: 2026-09-15
+- Deciders: repository owner
 
-## Контекст и постановка проблемы
+## Context and problem statement
 
-Генератор печатал `z.looseObject`: поле, которого в схеме нет, разбор пропускал молча и объявлял узел валидным. Следствие проверено на стенде 2026-09-15 конфигом с правилом `{"unknown_matcher": ["своё условие"], "outbound": "direct"}`:
+The generator printed `z.looseObject`: parsing silently skipped a field the schema did not have and declared the node valid. The effect was checked on the test bench on 2026-09-15 with a config holding the rule `{"unknown_matcher": ["своё условие"], "outbound": "direct"}`:
 
-- `RuleSchema.safeParse` отвечал успехом, `isRuleRecognized` — «узел распознан»;
-- условий в разобранном узле не оставалось, и список писал «без условий — применяется ко всему трафику»;
-- панель правки открывала форму и предлагала править узел, половину которого не понимает.
+- `RuleSchema.safeParse` reported success, `isRuleRecognized` said "node recognized";
+- the parsed node had no conditions left, and the list wrote "no conditions — applies to all traffic";
+- the edit panel opened the form and offered to edit a node it half did not understand.
 
-То есть панель утверждала про правило владельца заведомо неверное: правило с условием подавалось как безусловное, обрывающее список. Байты при этом не страдали — правка держится за текст файла, — но читать такой экран нельзя.
+So the panel stated something plainly wrong about the owner's rule: a rule with a condition was shown as unconditional, cutting off the rest of the list. The bytes did not suffer — edits hold on to the file text — but such a screen cannot be read.
 
-Требования разделены: незнакомые конструкции обязаны переживать round-trip **и** отмечаться в UI как нераспознанные. Первое работало, второе — нет.
+The requirements are split: unknown constructs must survive a round-trip **and** be marked in the UI as unrecognized. The first worked, the second did not.
 
-В scope — что схема делает с полем, которого не знает, и как это доходит до экрана. Вне scope — валидность значений: арбитром остаётся `sing-box check` на устройстве.
+In scope: what the schema does with a field it does not know, and how this reaches the screen. Out of scope: validity of values; `sing-box check` on the device stays the arbiter.
 
-Ограничение: схема собирается из релизной сборки форка ([ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md)) и заведомо знает меньше бинаря — в ней нет полей типов, собираемых под другими тегами.
+Constraint: the schema is built from the release build of the fork ([ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md)) and knows less than the binary by design — it lacks fields of types built under other tags.
 
-## Критерии выбора
+## Decision drivers
 
-- Узел, которого схема не знает, виден пользователю как нераспознанный, а не как пустой.
-- Незнакомое поле не мешает ни сохранить конфиг, ни применить его: арбитр — бинарь.
-- Один незнакомый ключ не гасит экраны: модель конфига продолжает строиться.
-- Схема остаётся артефактом генератора, правок руками не требует.
-- Поведение закрывается тестами без устройства.
+- A node the schema does not know is shown to the user as unrecognized, not as empty.
+- An unknown field blocks neither saving nor applying the config: the binary is the arbiter.
+- One unknown key does not blank out screens: the config model keeps being built.
+- The schema stays a generator artifact and needs no manual edits.
+- The behaviour is covered by tests without a device.
 
-## Рассмотренные варианты
+## Considered options
 
-1. **Строгие схемы плюс разбор замечаний** — генератор печатает `z.strictObject`, а панель отличает «лишнее поле» от настоящей ошибки и помечает узел. Плюсы: панель честно отвечает, чего не знает; сохранность байт не затронута; правок в схеме руками нет. Минусы: разбор замечаний неочевиден — union прячет причину внутри веток, и его приходится разворачивать. **Принят.**
+1. **Strict schemas plus issue analysis** — the generator prints `z.strictObject`, and the panel tells an "extra field" from a real error and marks the node. Pros: the panel honestly says what it does not know; byte preservation is untouched; no manual schema edits. Cons: issue analysis is not obvious — a union hides the cause inside its branches, and it has to be unwrapped. **Chosen.**
 
-2. **Оставить `looseObject`, сверять ключи отдельным списком** — генератор дополнительно печатает набор известных ключей на тип, адаптер сравнивает с фактическими. Плюсы: поведение схем не меняется. Минусы: второй артефакт генератора про то же самое, два источника истины о полях типа и обязанность держать их в согласии. **Отклонён.**
+2. **Keep `looseObject`, check keys against a separate list** — the generator also prints a set of known keys per type, the adapter compares it with the actual ones. Pros: schema behaviour does not change. Cons: a second generator artifact about the same thing, two sources of truth about a type's fields and a duty to keep them in sync. **Rejected.**
 
-3. **Строгие схемы без поблажки** — узел с незнакомым полем считается ошибкой конфига, модель не строится. Плюсы: проще всего. Минусы: один ключ из сборки с другими тегами гасит формы и вкладки целиком, хотя бинарь такой конфиг принимает. **Отклонён.**
+3. **Strict schemas without leniency** — a node with an unknown field is a config error, the model is not built. Pros: simplest. Cons: one key from a build with other tags blanks out forms and tabs entirely, although the binary accepts such a config. **Rejected.**
 
-4. **Сохранить текущий подход** — считать, что незнакомые поля не заслуживают отметки. Минусы: панель продолжает врать про правила владельца. **Отклонён.**
+4. **Keep the current approach** — consider unknown fields not worth marking. Cons: the panel keeps lying about the owner's rules. **Rejected.**
 
-## Принятое решение
+## Decision outcome
 
-Генератор печатает `z.strictObject`. Поле, которого нет в схеме, — это замечание разбора, а не тишина.
+The generator prints `z.strictObject`. A field missing from the schema is a parse issue, not silence.
 
-Панель разбирает замечания и делит их надвое (`shared/lib/schemaIssues.ts`):
+The panel analyses the issues and splits them in two (`shared/lib/schemaIssues.ts`):
 
-- замечания только про лишние поля — узел цел, панель его просто не знает. Модель конфига строится, узлы и их поля перечисляются в `ParsedConfig.unknown`;
-- любое другое замечание — настоящая ошибка: модель не строится, замечания показываются как есть.
+- issues only about extra fields — the node is intact, the panel just does not know it. The config model is built, the nodes and their fields are listed in `ParsedConfig.unknown`;
+- any other issue is a real error: the model is not built, the issues are shown as is.
 
-Union разворачивается: правило описано вариантами, и лишний ключ приходит не отказом по ключу, а `invalid_union` с замечаниями каждой ветки. Узел считается всего лишь незнакомым, если хоть одной ветке помешали только лишние поля.
+The union is unwrapped: a rule is described by variants, and an extra key arrives not as a key rejection but as `invalid_union` with the issues of every branch. A node counts as merely unknown if at least one branch was blocked only by extra fields.
 
-На экране это выглядит так: строка списка получает пометку «UI не покрывает» и подпись «условия не показаны — схема не знает это правило» вместо «без условий»; панель правки отключает форму и открывает узел текстом. Записать такой узел по-прежнему можно — через `sing-box check` на устройстве.
+On screen it looks like this: the list row gets the mark "UI does not cover" and the caption "conditions not shown — the schema does not know this rule" instead of "no conditions"; the edit panel disables the form and opens the node as text. Such a node can still be written — through `sing-box check` on the device.
 
-## Последствия
+## Consequences
 
-### Положительные
+### Positive
 
-- Панель перестала выдавать правило с незнакомым условием за безусловное.
-- Расхождение схемы с бинарём стало видно на экране, а не только в поведении.
-- Тип `Config` больше не несёт индексную сигнатуру: код, читающий незнакомую секцию из модели, теперь не компилируется молча.
+- The panel no longer passes off a rule with an unknown condition as unconditional.
+- A mismatch between the schema and the binary became visible on screen, not only in behaviour.
+- The `Config` type no longer carries an index signature: code that reads an unknown section from the model no longer compiles silently.
 
-### Отрицательные
+### Negative
 
-- Разбор замечаний Zod стал частью панели: форма `invalid_union` — деталь библиотеки, и её смена ломает пометки. Закрыто тестами на корпусе.
-- Незнакомое поле в любом узле конфига переводит разбор на медленный путь: сначала строгая проверка, затем обход замечаний.
-- Приведение значения к `Config` на этом пути — утверждение, а не проверка: оно опирается на то, что все замечания были только про лишние поля.
+- Analysis of Zod issues became part of the panel: the shape of `invalid_union` is a library detail, and a change to it breaks the marks. Covered by tests on the corpus.
+- An unknown field in any config node moves parsing to the slow path: first the strict check, then a walk over the issues.
+- Casting the value to `Config` on this path is an assertion, not a check: it relies on all issues having been about extra fields only.
 
-### Нейтральные или отложенные
+### Neutral or deferred
 
-- Отметка живёт на экране правил. Прочие секции экранов пока не имеют, и там незнакомые поля видны только в `ParsedConfig.unknown`.
+- The mark lives on the rules screen. Other sections have no screens yet, and there unknown fields are visible only in `ParsedConfig.unknown`.
 
-## Риски и меры снижения
+## Risks and mitigations
 
-| Риск                                                              | Вероятность и влияние                                    | Митигация                                                                                    |
-| ----------------------------------------------------------------- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| Схема отстала от форка, и рабочие узлы массово помечаются         | средняя при подъёме версии, среднее — шум на экране      | пометка не мешает править и применять; корпус конфигов ловит регресс на формах из поля       |
-| Zod сменит форму замечаний union, и пометки перестанут собираться | низкая, высокое — узлы снова выдают себя за распознанные | версия зафиксирована точно, разбор закрыт тестами на корпусе и на правиле с незнакомым полем |
+| Risk                                                                     | Likelihood and impact                                     | Mitigation                                                                                                        |
+| ------------------------------------------------------------------------ | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| The schema lags behind the fork, and working nodes get marked en masse   | medium on a version bump, medium — noise on screen        | the mark does not block editing or applying; the config corpus catches regressions on forms from the field        |
+| Zod changes the shape of union issues, and the marks stop being gathered | low, high — nodes again pass themselves off as recognized | the version is pinned exactly, the analysis is covered by tests on the corpus and on a rule with an unknown field |
 
-## Совместимость, миграция и откат
+## Compatibility, migration and rollback
 
-Формат конфига не меняется, миграция не нужна. Конфиги без незнакомых полей ведут себя как прежде.
+The config format does not change, no migration is needed. Configs without unknown fields behave as before.
 
-Откат — вернуть `z.looseObject` в `writeObject` генератора и перегенерировать схему: панель снова начнёт считать такие узлы распознанными, пометки исчезнут вместе с ними.
+Rollback: return `z.looseObject` in the generator's `writeObject` and regenerate the schema: the panel again counts such nodes as recognized, and the marks disappear with them.
 
-## Проверка решения
+## Validation
 
-- `make schema` и `make test-schemagen` — схема пересобирается, тесты генератора проходят.
-- `pnpm --filter web test` — корпус: конфиг с незнакомыми секциями, полями и условием разбирается, модель строится, `unknown` называет `vendor_extension`, `unknown_option` и `unknown_matcher` с путями; остальные файлы корпуса схема принимает целиком.
-- Прогон на стенде 2026-09-15: правило `{"unknown_matcher": [...]}` в списке помечено «UI не покрывает» и подписано «условия не показаны», в панели правки форма отключена, узел открыт текстом и цел.
+- `make schema` and `make test-schemagen` — the schema is rebuilt, the generator tests pass.
+- `pnpm --filter web test` — corpus: a config with unknown sections, fields and a condition is parsed, the model is built, `unknown` names `vendor_extension`, `unknown_option` and `unknown_matcher` with paths; the schema accepts the other corpus files entirely.
+- Run on the test bench on 2026-09-15: the rule `{"unknown_matcher": [...]}` is marked "UI does not cover" in the list and captioned "conditions not shown", the form is disabled in the edit panel, the node is opened as text and is intact.
 
-## Ссылки
+## Links
 
-- [PRD, AC-3 и AC-25](../PRD.md);
-- [ADR-0001. Генерировать схему из реестров форка](./ADR-0001-generate-schema-from-fork-registries.md);
-- [ADR-0004. Править текст конфига точечно на клиенте](./ADR-0004-edit-config-text-in-place-on-the-client.md);
+- [PRD, AC-3 and AC-25](../PRD.md);
+- [ADR-0001. Generate the schema from the fork registries](./ADR-0001-generate-schema-from-fork-registries.md);
+- [ADR-0004. Edit the config text in place on the client](./ADR-0004-edit-config-text-in-place-on-the-client.md);
 - `tools/schemagen/schema.go`, `apps/web/src/shared/lib/schemaIssues.ts`, `apps/web/src/entities/Config/api/Config.query.ts`.

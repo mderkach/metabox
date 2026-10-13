@@ -1,66 +1,66 @@
-# ADR-0042. Целиться в Banana Pi BPI-R4 Pro и собирать v1 только под aarch64
+# ADR-0042. Target the Banana Pi BPI-R4 Pro and build v1 for aarch64 only
 
-- Статус: Accepted — решение принято 2026-08-30 в разделе A.7 [`../PRD.md`](../PRD.md) и перенесено сюда без изменения существа
-- Дата: 2026-08-30
-- Ответственные: владелец репозитория
-- Заменяет: раздел A.7 [`../PRD.md`](../PRD.md)
+- Status: Accepted. The decision was made on 2026-08-30 in section A.7 of [`../PRD.md`](../PRD.md) and moved here without changes in substance
+- Date: 2026-08-30
+- Deciders: repository owner
+- Supersedes: section A.7 of [`../PRD.md`](../PRD.md)
 
-## Контекст и постановка проблемы
+## Context and problem statement
 
-OpenWrt работает на устройствах от слабых mips-роутеров с флешем в мегабайты до плат с гигабайтами памяти. От целевого железа зависят язык и размер демона, бюджет ресурсов, набор архитектур сборки и то, на чём проверяется стенд.
+OpenWrt runs on devices ranging from weak mips routers with megabytes of flash to boards with gigabytes of memory. The target hardware determines the daemon's language and size, the resource budget, the set of build architectures and what the test bench is checked on.
 
-Ответ владельца в интервью `metabox-di-001`, Round 11: «Banana Pi BPI-R4 Pro, единственное устройство — целимся в него. В идеале позже поддержать маломощные девайсы, если будет запрос сообщества».
+The owner's answer in interview `metabox-di-001`, Round 11: "Banana Pi BPI-R4 Pro, the only device, we target it. Ideally, support low-power devices later if the community asks for it."
 
-В scope: целевое устройство и архитектура сборки v1. Вне scope: формат пакета ([ADR-0011](./ADR-0011-ship-the-daemon-as-an-apk-package.md)) и устройство стенда ([ADR-0023](./ADR-0023-build-the-bench-from-the-device-firmware.md)).
+In scope: the target device and the v1 build architecture. Out of scope: the package format ([ADR-0011](./ADR-0011-ship-the-daemon-as-an-apk-package.md)) and the test bench setup ([ADR-0023](./ADR-0023-build-the-bench-from-the-device-firmware.md)).
 
-## Критерии выбора
+## Decision drivers
 
-- Проект ведёт один человек для своего роутера (риск R-6).
-- Архитектура не должна требовать переписывания под слабое железо позже: пороги NFR-2, NFR-4 и NFR-5 заданы с этим расчётом.
-- Стоимость сборки и проверки на каждой поддерживаемой платформе.
+- The project is run by one person for their own router (risk R-6).
+- The architecture must not require a rewrite for weak hardware later: the NFR-2, NFR-4 and NFR-5 thresholds are set with this in mind.
+- The cost of building and checking on each supported platform.
 
-## Рассмотренные варианты
+## Considered options
 
-1. **Линейка устройств OpenWrt, включая слабые и mips.** Шире аудитория, но каждая архитектура — своя сборка и свои проверки, а ограничение флеша давит на размер бинаря со встроенной SPA. Отложено до запроса сообщества (roadmap после v1). **Отклонён для v1.**
-2. **Одно устройство — BPI-R4 Pro, одна архитектура — aarch64.** **Принят.**
+1. **A range of OpenWrt devices, including weak and mips ones.** A wider audience, but each architecture means its own build and its own checks, and the flash limit puts pressure on the size of a binary with an embedded SPA. Deferred until the community asks (roadmap after v1). **Rejected for v1.**
+2. **One device, the BPI-R4 Pro; one architecture, aarch64.** **Chosen.**
 
-## Принятое решение
+## Decision outcome
 
-Целевое железо v1 — **Banana Pi BPI-R4 Pro** (MediaTek MT7988A, aarch64, 8 ГБ RAM, NVMe/eMMC). Ресурсных ограничений уровня «влезет ли во флеш» нет. Единственная целевая архитектура сборки v1 — **aarch64**.
+The v1 target hardware is the **Banana Pi BPI-R4 Pro** (MediaTek MT7988A, aarch64, 8 GB RAM, NVMe/eMMC). There are no resource constraints of the "will it fit in flash" kind. The only target build architecture of v1 is **aarch64**.
 
-### Область действия и границы
+### Scope and boundaries
 
-- Бинарь для устройства собирает `make daemon-device`: `GOOS=linux GOARCH=arm64 CGO_ENABLED=0`.
-- Прошивка устройства — собственная сборка OpenWrt SNAPSHOT с пакетным менеджером apk; отсюда формат пакета в [ADR-0011](./ADR-0011-ship-the-daemon-as-an-apk-package.md) и база стенда в [ADR-0023](./ADR-0023-build-the-bench-from-the-device-firmware.md).
-- Пороги NFR-2, NFR-4 и NFR-5 остаются ориентирами под слабое железо, хотя на BPI-R4 Pro достижимы с запасом.
+- The binary for the device is built by `make daemon-device`: `GOOS=linux GOARCH=arm64 CGO_ENABLED=0`.
+- The device firmware is a custom OpenWrt SNAPSHOT build with the apk package manager; this is where the package format in [ADR-0011](./ADR-0011-ship-the-daemon-as-an-apk-package.md) and the test bench base in [ADR-0023](./ADR-0023-build-the-bench-from-the-device-firmware.md) come from.
+- The NFR-2, NFR-4 and NFR-5 thresholds remain guidelines for weak hardware, although on the BPI-R4 Pro they are met with a margin.
 
-## Последствия
+## Consequences
 
-### Положительные
+### Positive
 
-- Размер бинаря со встроенной SPA и выбор Go не упираются во флеш.
-- Сборка и проверка — на одной платформе; стенд повторяет ветку, таргет, архитектуру и пакетный менеджер устройства, но не его собственную сборку SNAPSHOT ([ADR-0023](./ADR-0023-build-the-bench-from-the-device-firmware.md)).
+- The size of the binary with an embedded SPA and the choice of Go are not limited by flash.
+- Building and checking happen on one platform; the test bench reproduces the device's branch, target, architecture and package manager, but not its own SNAPSHOT build ([ADR-0023](./ADR-0023-build-the-bench-from-the-device-firmware.md)).
 
-### Отрицательные
+### Negative
 
-- Поведение на других устройствах не проверяется. Раскладка корня устройства для `fsync` каталога не проверена.
-- Поддержка mips и слабого железа потребует новой архитектуры сборки и замеров NFR на ней.
+- Behaviour on other devices is not checked. The device's root layout for directory `fsync` is not checked.
+- Support for mips and weak hardware will require a new build architecture and NFR measurements on it.
 
-### Нейтральные или отложенные
+### Neutral or deferred
 
-- Слабое железо и mips — пункт roadmap после v1, при наличии запроса сообщества.
+- Weak hardware and mips are a roadmap item after v1, if the community asks for it.
 
-## Совместимость, миграция и откат
+## Compatibility, migration and rollback
 
-Не применимо: решение действует с начала проекта и переносится из PRD без изменения существа.
+Not applicable: the decision has been in effect since the start of the project and is moved from the PRD without changes in substance.
 
-## Проверка решения
+## Validation
 
-- `make daemon-device` собирает бинарь под `linux/arm64`; `make package` упаковывает его для устройства.
-- AC-35…AC-37 подтверждены прогоном демона на BPI-R4 Pro.
+- `make daemon-device` builds a binary for `linux/arm64`; `make package` packages it for the device.
+- AC-35…AC-37 are confirmed by running the daemon on the BPI-R4 Pro.
 
-## Ссылки
+## Links
 
-- [`../PRD.md`](../PRD.md): раздел 9, NFR-2, NFR-4, NFR-5, риск R-6, roadmap после v1, раздел A.7 (замещается этим ADR);
+- [`../PRD.md`](../PRD.md): section 9, NFR-2, NFR-4, NFR-5, risk R-6, the roadmap after v1, section A.7 (superseded by this ADR);
 - [ADR-0011](./ADR-0011-ship-the-daemon-as-an-apk-package.md), [ADR-0023](./ADR-0023-build-the-bench-from-the-device-firmware.md);
-- [`../../Makefile`](../../Makefile) — цель `daemon-device`.
+- [`../../Makefile`](../../Makefile): the `daemon-device` target.

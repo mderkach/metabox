@@ -1,40 +1,40 @@
 ---
 name: create-adr
-description: Создаёт, обновляет и проверяет запись об архитектурном решении (ADR) по правилам репозитория metabox. Использовать, когда просят оформить, зафиксировать или пересмотреть архитектурное или инфраструктурное решение, сравнить технические варианты, создать ADR после исследования или связать новое решение с существующими.
+description: Creates, updates and checks an architecture decision record (ADR) following the metabox repository rules. Use when asked to record, document or revisit an architectural or infrastructure decision, compare technical options, create an ADR after research, or link a new decision to existing ones.
 ---
 
-# Создание ADR
+# Creating an ADR
 
-Подготовить проверяемую запись об архитектурном решении на основе фактов из репозитория. Не подменять ADR исследованием, спецификацией или планом реализации.
+Prepare a verifiable architecture decision record based on facts from the repository. Do not substitute research notes, a specification or an implementation plan for an ADR.
 
-## Порядок работы
+## Workflow
 
-1. Полностью прочитать `ADR-reference.md` из директории этого скилла — источник истины по структуре, статусам, шаблону, именованию и критериям качества.
-2. Изучить контекст задачи: `docs/PRD.md`, существующие ADR в `docs/adr/` — туда переехало и приложение A PRD, — затронутый код и конфиги. При расхождении отдавать приоритет фактическому состоянию кода.
-3. Проверить, нужен ли ADR вообще. Не создавать его для локального багфикса, форматирования, переименования или решения, уже заданного PRD либо существующим ADR. Если пользователь настаивает — выполнить, но отметить слабую применимость.
-4. Собрать контекст решения: проблему и почему она решается сейчас; область и ограничения; критерии выбора; реалистичные варианты; последствия, риски, миграцию, откат и способы проверки.
-5. Уточняющие вопросы задавать только там, где без ответа решение меняется по существу. В остальном продолжать с явно названными допущениями и открытыми вопросами.
-6. Взять следующий свободный номер в `docs/adr/`, формат имени — `ADR-NNNN-short-decision-title.md`. Номер не переиспользовать, чужой ADR не перезаписывать.
-7. Создать документ строго по шаблону из `ADR-reference.md`. Обязательные разделы не удалять, необязательные оставлять только при применимости.
-8. Проверить по чек-листу качества: уникальность номера, существование всех локальных ссылок, отсутствие ошибок разметки.
+1. Read `ADR-reference.md` from this skill's directory in full. It is the source of truth on structure, statuses, template, naming and quality criteria.
+2. Study the task context: `docs/PRD.md`, the existing ADRs in `docs/adr/` (PRD appendix A moved there too), the affected code and configs. On a mismatch, the actual state of the code takes priority.
+3. Check whether an ADR is needed at all. Do not create one for a local bug fix, formatting, a rename, or a decision already set by the PRD or an existing ADR. If the user insists, do it, but note the weak fit.
+4. Collect the decision context: the problem and why it is being solved now; scope and constraints; decision drivers; realistic options; consequences, risks, migration, rollback and ways of validation.
+5. Ask clarifying questions only where the answer changes the decision substantially. Otherwise proceed with explicitly named assumptions and open questions.
+6. Take the next free number in `docs/adr/`; the name format is `ADR-NNNN-short-decision-title.md`. Do not reuse a number and do not overwrite someone else's ADR.
+7. Create the document strictly from the template in `ADR-reference.md`. Do not remove mandatory sections; keep optional ones only when they apply.
+8. Check against the quality checklist: the number is unique, all local links exist, the markup has no errors.
 
-## Правила содержания
+## Content rules
 
-- Писать на русском.
-- Заголовок формулировать как решение, а не как тему: «Запускать procd напрямую вместо /sbin/init» — хорошо, «Устройство devcontainer» — плохо.
-- Отделять подтверждённые факты от выводов, допущений и открытых вопросов.
-- Критерии выбора формулировать до сравнения вариантов.
-- Рассматривать минимум два реалистичных варианта, включая сохранение текущего подхода, если оно возможно. Не добавлять заведомо слабый вариант ради оправдания заранее выбранного.
-- Решение описывать так, чтобы его соблюдение можно было проверить по коду, тестам или командам.
-- Фиксировать и отрицательные последствия тоже.
-- Ссылки давать относительные и только на существующие документы. Отсутствующие источники не выдумывать.
+- Write in English.
+- Phrase the title as a decision, not a topic: "Run procd directly instead of /sbin/init" is good, "devcontainer setup" is bad.
+- Separate confirmed facts from conclusions, assumptions and open questions.
+- Formulate the decision drivers before comparing options.
+- Consider at least two realistic options, including keeping the current approach if possible. Do not add a deliberately weak option to justify a choice made in advance.
+- Describe the decision so that compliance can be checked by code, tests or commands.
+- Record the negative consequences too.
+- Use relative links and only to existing documents. Do not invent missing sources.
 
-## Статус
+## Status
 
-- Новый ADR создавать со статусом `Proposed`.
-- `Accepted` ставить **только** при явном подтверждении владельца репозитория. Собственный вывод подтверждением не считается.
-- Смысл принятого ADR задним числом не переписывать: новое решение — отдельный ADR, старому статус `Superseded` и взаимные ссылки в полях «Заменяет» и «Заменён решением». В принятом допустимы только редакционные правки.
+- Create a new ADR with the `Proposed` status.
+- Set `Accepted` **only** on explicit confirmation from the repository owner. Your own conclusion does not count as confirmation.
+- Do not rewrite the meaning of an accepted ADR after the fact: a new decision is a separate ADR, the old one gets the `Superseded` status, and both get cross-links in the "Supersedes" and "Superseded by" fields. Only editorial changes are allowed in an accepted ADR.
 
-## Результат
+## Result
 
-После записи сообщить: путь к файлу; установленный статус; ключевые допущения и открытые вопросы; какие проверки выполнены; что требуется от владельца репозитория для принятия решения.
+After writing, report: the file path; the status set; key assumptions and open questions; which checks were run; what the repository owner needs to do to accept the decision.

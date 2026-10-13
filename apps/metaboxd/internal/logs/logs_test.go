@@ -25,7 +25,7 @@ func (f fakeConfig) Read(context.Context) ([]byte, error) { return f.data, f.err
 
 func noConfig() fakeConfig { return fakeConfig{err: config.ErrNoConfig} }
 
-// fakeStart отдаёт заготовленный вывод и запоминает аргументы вызовов.
+// fakeStart returns the prepared output and remembers the call arguments.
 type fakeStart struct {
 	mu       sync.Mutex
 	stdout   string
@@ -64,56 +64,56 @@ func TestParse(t *testing.T) {
 		ok   bool
 	}{
 		{
-			name: "строка logread с цветом и секундами от старта",
+			name: "logread line with color and seconds from start",
 			line: "Fri Oct  9 05:38:01 2026 daemon.err sing-box[4233]: \x1b[33mWARN\x1b[0m[0002] legacy option",
 			want: Entry{Time: localRFC3339(t, 2026, 10, 9, 5, 38, 1), Level: LevelWarn, Message: "legacy option"},
 			ok:   true,
 		},
 		{
-			name: "строка logread с уровнем notice",
+			name: "logread line with the notice level",
 			line: "Fri Oct  9 05:38:01 2026 daemon.err sing-box[4233]: NOTICE[0000] started",
 			want: Entry{Time: localRFC3339(t, 2026, 10, 9, 5, 38, 1), Level: LevelNotice, Message: "started"},
 			ok:   true,
 		},
 		{
-			name: "строка logread с цветным notice",
+			name: "logread line with a colored notice",
 			line: "Fri Oct  9 05:38:01 2026 daemon.err sing-box[4233]: \x1b[32mNOTICE\x1b[0m[0000] started",
 			want: Entry{Time: localRFC3339(t, 2026, 10, 9, 5, 38, 1), Level: LevelNotice, Message: "started"},
 			ok:   true,
 		},
 		{
-			name: "строка logread с меткой времени sing-box",
+			name: "logread line with a sing-box timestamp",
 			line: "Fri Oct  9 05:38:01 2026 daemon.err sing-box[4233]: +0000 2026-10-09 05:38:01 ERROR [123 5.0s] connection: i/o timeout",
 			want: Entry{Time: localRFC3339(t, 2026, 10, 9, 5, 38, 1), Level: LevelError, Message: "[123 5.0s] connection: i/o timeout"},
 			ok:   true,
 		},
 		{
-			name: "чужой процесс, упомянувший sing-box",
+			name: "a foreign process that mentioned sing-box",
 			line: "Fri Oct  9 05:38:02 2026 daemon.info dnsmasq[1]: query sing-box[1] example.com",
 		},
 		{
-			name: "строка файла с меткой времени",
+			name: "file line with a timestamp",
 			line: "+0300 2026-10-09 20:00:00 ERROR [id 5.4s] connection: refused",
 			file: true,
 			want: Entry{Time: "2026-10-09T20:00:00+03:00", Level: LevelError, Message: "[id 5.4s] connection: refused"},
 			ok:   true,
 		},
 		{
-			name: "строка файла без метки времени",
+			name: "file line without a timestamp",
 			line: "FATAL start service: bind: address already in use",
 			file: true,
 			want: Entry{Level: LevelFatal, Message: "start service: bind: address already in use"},
 			ok:   true,
 		},
 		{
-			name: "строка без уровня",
+			name: "line without a level",
 			line: "goroutine 1 [running]:",
 			file: true,
 			want: Entry{Message: "goroutine 1 [running]:"},
 			ok:   true,
 		},
 		{
-			name: "уровень строчными — не уровень",
+			name: "a lowercase level is not a level",
 			line: "error is the word",
 			file: true,
 			want: Entry{Message: "error is the word"},
@@ -135,7 +135,7 @@ func TestParse(t *testing.T) {
 			}
 
 			if ok != tt.ok || got != tt.want {
-				t.Errorf("получили %+v, %v; ожидали %+v, %v", got, ok, tt.want, tt.ok)
+				t.Errorf("got %+v, %v; expected %+v, %v", got, ok, tt.want, tt.ok)
 			}
 		})
 	}
@@ -149,12 +149,12 @@ func localRFC3339(t *testing.T, y int, mo time.Month, d, h, mi, s int) string {
 
 func TestFilterOrdersNoticeBetweenInfoAndWarn(t *testing.T) {
 	if rank(LevelNotice) <= rank(LevelInfo) || rank(LevelNotice) >= rank(LevelWarn) {
-		t.Errorf("notice ранга %d вне между info %d и warn %d", rank(LevelNotice), rank(LevelInfo), rank(LevelWarn))
+		t.Errorf("notice rank %d is not between info %d and warn %d", rank(LevelNotice), rank(LevelInfo), rank(LevelWarn))
 	}
 
 	f := filter{min: rank(LevelWarn)}
 	if f.pass(Entry{Level: LevelNotice}) {
-		t.Error("notice прошёл фильтр warn")
+		t.Error("notice passed the warn filter")
 	}
 }
 
@@ -174,33 +174,33 @@ func TestTailFiltersLevelAndKeepsLast(t *testing.T) {
 
 	want := []string{"[123 5.4s] connection: refused", "goroutine 1 [running]:"}
 	if !slices.Equal(messages, want) {
-		t.Errorf("строки %q, ожидали %q", messages, want)
+		t.Errorf("lines %q, expected %q", messages, want)
 	}
 
 	if got.Source != SourceLogread {
-		t.Errorf("источник %q, ожидали logread", got.Source)
+		t.Errorf("source %q, expected logread", got.Source)
 	}
 
 	if call := start.calls[0]; slices.Contains(call, "-l") || !slices.Equal(call, []string{"/sbin/logread", "-e", "sing-box"}) {
-		t.Errorf("вызов %q: лимит -l режет журнал до фильтра", call)
+		t.Errorf("call %q: the -l limit cuts the journal before the filter", call)
 	}
 }
 
 func TestTailUnavailable(t *testing.T) {
-	t.Run("logread не задан", func(t *testing.T) {
+	t.Run("logread not set", func(t *testing.T) {
 		r := New((&fakeStart{}).start, noConfig(), Options{Process: "sing-box"})
 
 		if _, err := r.Tail(t.Context(), 10, LevelTrace); !errors.Is(err, ErrUnavailable) {
-			t.Errorf("ошибка %v, ожидали ErrUnavailable", err)
+			t.Errorf("error %v, expected ErrUnavailable", err)
 		}
 	})
 
-	t.Run("logread вышел с ошибкой", func(t *testing.T) {
+	t.Run("logread exited with an error", func(t *testing.T) {
 		start := &fakeStart{closeErr: errors.New("exit status 1")}
 		r := New(start.start, noConfig(), Options{Logread: "/sbin/logread", Process: "sing-box"})
 
 		if _, err := r.Tail(t.Context(), 10, LevelTrace); !errors.Is(err, ErrUnavailable) {
-			t.Errorf("ошибка %v, ожидали ErrUnavailable", err)
+			t.Errorf("error %v, expected ErrUnavailable", err)
 		}
 	})
 }
@@ -220,7 +220,7 @@ func TestClearHidesEarlierLines(t *testing.T) {
 	}
 
 	if !since.Equal(cleared) || !r.Since().Equal(cleared) {
-		t.Errorf("отметка %v, ожидали %v", since, cleared)
+		t.Errorf("mark %v, expected %v", since, cleared)
 	}
 
 	got, err := r.Tail(t.Context(), 10, LevelTrace)
@@ -229,16 +229,16 @@ func TestClearHidesEarlierLines(t *testing.T) {
 	}
 
 	if len(got.Entries) != 2 || got.Entries[0].Level != LevelError {
-		t.Errorf("после очистки строки %+v, ожидали две последние", got.Entries)
+		t.Errorf("after cleanup lines %+v, expected the last two", got.Entries)
 	}
 
 	if !got.Since.Equal(cleared) {
-		t.Errorf("хвост несёт отметку %v, ожидали %v", got.Since, cleared)
+		t.Errorf("the tail carries mark %v, expected %v", got.Since, cleared)
 	}
 }
 
-// pipeStart изображает logread -f: строки пишет тест, а отмена контекста
-// закрывает поток, как убитый процесс.
+// pipeStart imitates logread -f: the lines are written by the test, and the context cancel
+// closes the stream, like a killed process.
 type pipeStart struct {
 	writer chan *io.PipeWriter
 }
@@ -274,13 +274,13 @@ func TestFollowStopsWithContext(t *testing.T) {
 	_, _ = io.WriteString(w, "Fri Oct  9 05:38:01 2026 daemon.err sing-box[1]: INFO[0002] новая строка\n")
 
 	if e := <-got; e.Message != "новая строка" {
-		t.Errorf("строка %+v, ожидали «новая строка»", e)
+		t.Errorf("line %+v, expected «новая строка»", e)
 	}
 
 	cancel()
 
 	if err := <-done; err != nil {
-		t.Errorf("поток закрылся с ошибкой %v", err)
+		t.Errorf("the stream closed with an error %v", err)
 	}
 }
 
@@ -302,7 +302,7 @@ func TestFollowLimit(t *testing.T) {
 	}
 
 	if _, err := r.Follow(ctx, LevelTrace, func(Entry) {}); !errors.Is(err, ErrTooManyStreams) {
-		t.Errorf("ошибка %v, ожидали ErrTooManyStreams", err)
+		t.Errorf("error %v, expected ErrTooManyStreams", err)
 	}
 
 	cancel()
@@ -317,7 +317,7 @@ func TestFollowLimit(t *testing.T) {
 
 	done, err := r.Follow(again, LevelTrace, func(Entry) {})
 	if err != nil {
-		t.Fatalf("после закрытия потоков новый не открылся: %v", err)
+		t.Fatalf("after the streams closed a new one did not open: %v", err)
 	}
 
 	stop()
@@ -328,7 +328,7 @@ func TestFollowFreesSlotBeforeDone(t *testing.T) {
 	for _, file := range []bool{false, true} {
 		name := "logread"
 		if file {
-			name = "файл"
+			name = "file"
 		}
 
 		t.Run(name, func(t *testing.T) {
@@ -362,8 +362,8 @@ func TestFollowFreesSlotBeforeDone(t *testing.T) {
 				streams = append(streams, done)
 			}
 
-			// Клиент закрыл поток и сразу открыл новый: хендлер вернулся по
-			// done, и место к этому моменту обязано быть свободным.
+			// The client closed the stream and at once opened a new one: the handler returned by
+			// done, and the slot must be free by this moment.
 			stops[0]()
 			<-streams[0]
 
@@ -371,7 +371,7 @@ func TestFollowFreesSlotBeforeDone(t *testing.T) {
 
 			done, err := r.Follow(ctx, LevelTrace, func(Entry) {})
 			if err != nil {
-				t.Fatalf("после закрытия потока новый не открылся: %v", err)
+				t.Fatalf("after the stream closed a new one did not open: %v", err)
 			}
 
 			cancel()
@@ -406,7 +406,7 @@ func TestFileTailAndTruncate(t *testing.T) {
 	}
 
 	if got.Source != SourceFile || len(got.Entries) != 2 || got.Entries[1].Level != LevelError {
-		t.Fatalf("хвост файла %+v", got)
+		t.Fatalf("file tail %+v", got)
 	}
 
 	if _, err := r.Clear(t.Context()); err != nil {
@@ -419,7 +419,7 @@ func TestFileTailAndTruncate(t *testing.T) {
 	}
 
 	if info.Size() != 0 {
-		t.Errorf("после очистки в файле %d байт", info.Size())
+		t.Errorf("after cleanup the file has %d bytes", info.Size())
 	}
 }
 
@@ -434,7 +434,7 @@ func TestFileTruncateOutsideAllowedDirs(t *testing.T) {
 	r := New((&fakeStart{}).start, fileConfig(outside), Options{ConfigDir: allowed, TruncateDirs: []string{allowed}})
 
 	if _, err := r.Clear(t.Context()); !errors.Is(err, ErrClearForbidden) {
-		t.Fatalf("ошибка %v, ожидали ErrClearForbidden", err)
+		t.Fatalf("error %v, expected ErrClearForbidden", err)
 	}
 
 	data, err := os.ReadFile(outside)
@@ -443,11 +443,11 @@ func TestFileTruncateOutsideAllowedDirs(t *testing.T) {
 	}
 
 	if string(data) != "INFO kept\n" {
-		t.Errorf("файл вне разрешённых каталогов изменён: %q", data)
+		t.Errorf("a file outside the allowed directories was changed: %q", data)
 	}
 
 	if !r.Since().IsZero() {
-		t.Error("отказ очистки поставил отметку")
+		t.Error("a cleanup failure set a mark")
 	}
 }
 
@@ -456,9 +456,9 @@ func TestFileTruncateProtected(t *testing.T) {
 		name   string
 		output string
 	}{
-		{"файл конфига", "config.json"},
-		{"файл в подкаталоге списков", "rule-sets/ads.json"},
-		{"подкаталог списков через ..", "logs/../rule-sets/ads.json"},
+		{"config file", "config.json"},
+		{"file in the lists subdirectory", "rule-sets/ads.json"},
+		{"lists subdirectory through ..", "logs/../rule-sets/ads.json"},
 	}
 
 	for _, tt := range tests {
@@ -481,7 +481,7 @@ func TestFileTruncateProtected(t *testing.T) {
 			})
 
 			if _, err := r.Clear(t.Context()); !errors.Is(err, ErrClearForbidden) {
-				t.Fatalf("ошибка %v, ожидали ErrClearForbidden", err)
+				t.Fatalf("error %v, expected ErrClearForbidden", err)
 			}
 
 			data, err := os.ReadFile(path)
@@ -490,7 +490,7 @@ func TestFileTruncateProtected(t *testing.T) {
 			}
 
 			if string(data) != "{}" {
-				t.Errorf("защищённый файл изменён: %q", data)
+				t.Errorf("a protected file was changed: %q", data)
 			}
 		})
 	}
@@ -520,11 +520,11 @@ func TestFileFollow(t *testing.T) {
 		synctest.Wait()
 
 		if e := <-got; e.Message != "новое" {
-			t.Errorf("первая строка потока %+v, ожидали «новое»", e)
+			t.Errorf("first stream line %+v, expected «новое»", e)
 		}
 
 		if len(got) != 0 {
-			t.Errorf("недописанная строка ушла в поток: %+v", <-got)
+			t.Errorf("an incomplete line went into the stream: %+v", <-got)
 		}
 
 		if err := os.Truncate(path, 0); err != nil {
@@ -536,13 +536,13 @@ func TestFileFollow(t *testing.T) {
 		synctest.Wait()
 
 		if e := <-got; e.Message != "после усечения" {
-			t.Errorf("строка после усечения %+v", e)
+			t.Errorf("line after truncation %+v", e)
 		}
 
 		cancel()
 
 		if err := <-done; err != nil {
-			t.Errorf("поток закрылся с ошибкой %v", err)
+			t.Errorf("the stream closed with an error %v", err)
 		}
 	})
 }

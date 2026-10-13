@@ -8,8 +8,8 @@ import (
 	"strings"
 )
 
-// sseReader разбирает поток SSE: панель делает то же самое через EventSource,
-// а тесту нужен разбор без браузера.
+// sseReader parses an SSE stream: the panel does the same through EventSource,
+// and the test needs parsing without a browser.
 type sseReader struct {
 	reader *bufio.Reader
 }

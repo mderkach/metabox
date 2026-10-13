@@ -1,104 +1,104 @@
-# ADR-0027. Рисовать график трафика uPlot без анимации перехода, а полосы сводки оставить HTML с осью по делениям
+# ADR-0027. Draw the traffic chart with uPlot without transition animation, and keep the summary bars in HTML with an axis by ticks
 
-- Статус: Accepted
-- Дата: 2026-09-23
-- Ответственные: владелец репозитория
-- Заменён решением (в части окна оси времени): [ADR-0031](./ADR-0031-keep-overview-chart-axes-fixed-and-fill-them-from-the-daemon.md)
+- Status: Accepted
+- Date: 2026-09-23
+- Deciders: repository owner
+- Superseded by (for the time axis window): [ADR-0031](./ADR-0031-keep-overview-chart-axes-fixed-and-fill-them-from-the-daemon.md)
 
-## Контекст и постановка проблемы
+## Context and problem statement
 
-На обзоре — AC-10 (трафик в реальном времени и сводка живого снапшота соединений) и AC-37 (история трафика у демона) — было два вида графиков, оба на своей разметке без библиотеки: график трафика за минуту из двух зеркальных SVG-областей и полосы сводки — «Куда уходит трафик», «Топ узлов прокси», «Топ устройств», «Задержка узлов». Разбор интерфейса 2026-09-22 нашёл три дефекта:
+The overview — AC-10 (real-time traffic and a summary of the live connections snapshot) and AC-37 (traffic history in the daemon) — had two kinds of charts, both on custom markup without a library: a one-minute traffic chart of two mirrored SVG areas and the summary bars — "Where traffic goes", "Top proxy nodes", "Top devices", "Node latency". An interface review on 2026-09-22 found three defects:
 
-- **у полос нет оси значений.** Длину полосы не с чем сверить, кроме процента рядом;
-- **половины графика трафика масштабируются по своим пикам.** Равные на вид области отличаются в разы, и сравнить входящий с исходящим по картинке нельзя;
-- **ось времени печатает «−60 с … сейчас» на незаполненном буфере.** Она подписывает время, за которое данных нет.
+- **the bars have no value axis.** The bar length can be checked against nothing but the percentage next to it;
+- **the halves of the traffic chart scale by their own peaks.** Areas that look equal differ several times, and inbound cannot be compared with outbound from the picture;
+- **the time axis prints "−60 s … now" on a buffer that is not full.** It labels time for which there is no data.
 
-Там же принято решение взять библиотеку графиков, кандидат — `uPlot`. Решение сделано с одним жёстким требованием: без анимации перехода. Рантайм приходит раз в секунду, и анимированный переход рисовал бы значения, которых в данных не было.
+The same review decided to take a charting library, the candidate being `uPlot`. The decision came with one hard requirement: no transition animation. The runtime arrives once a second, and an animated transition would draw values that were not in the data.
 
-Ограничения, заданные кодом:
+Constraints set by the code:
 
-- **У кадра потока трафика нет своего времени.** Конверт — `topic`, `seq`, `data` (`apps/web/src/shared/api/daemon.generated.ts`). Демон шлёт кадр раз в секунду, а свёрнутая вкладка отдаёт накопленные кадры пачкой (`Daemon.store.ts`).
-- **Канвас не читает CSS-переменные.** Токены темы живут в `:root` и `.dark` (`apps/web/src/app/styles/index.css`), класс темы ставит `next-themes`.
-- **В jsdom нет канваса.** `getContext` возвращает `null`.
-- **Готовый график shadcn (`chart`) построен на Recharts.**
+- **A traffic stream frame has no time of its own.** The envelope is `topic`, `seq`, `data` (`apps/web/src/shared/api/daemon.generated.ts`). The daemon sends a frame once a second, and a background tab delivers accumulated frames in a batch (`Daemon.store.ts`).
+- **A canvas does not read CSS variables.** Theme tokens live in `:root` and `.dark` (`apps/web/src/app/styles/index.css`), the theme class is set by `next-themes`.
+- **jsdom has no canvas.** `getContext` returns `null`.
+- **The ready shadcn chart (`chart`) is built on Recharts.**
 
-В scope: график трафика на обзоре, полосы сводки и задержки, где лежит обёртка библиотеки и её цена в бандле. Вне scope: «Соединения за минуту» (`ConnectionHistory`) и спарклайны платы — они остаются на SVG; топология сети.
+In scope: the traffic chart on the overview, the summary and latency bars, where the library wrapper lives and its bundle cost. Out of scope: "Connections per minute" (`ConnectionHistory`) and the board sparklines — they stay on SVG; network topology.
 
-## Критерии выбора
+## Decision drivers
 
-1. **Без анимации перехода.** Новая точка появляется сразу, двигается только ось.
-2. **Ось и деления по круглым значениям** в тех единицах, которые печатает `formatBytes`.
-3. **Текст читается скринридером и растёт с кеглем** (WCAG 1.4.4): подписи строк не уходят в канвас.
-4. **Цена в бандле названа числом и не ложится на основной чанк.**
-5. **Без чтения геометрии DOM при каждой отрисовке и без синхронизации одного состояния в двух местах.**
-6. **Тестируемость в jsdom.**
+1. **No transition animation.** A new point appears immediately, only the axis moves.
+2. **Axis and ticks on round values** in the units `formatBytes` prints.
+3. **Text is readable by a screen reader and grows with font size** (WCAG 1.4.4): row labels do not go into the canvas.
+4. **The bundle cost is stated as a number and does not land on the main chunk.**
+5. **No reading of DOM geometry on every draw and no syncing of one state in two places.**
+6. **Testable in jsdom.**
 
-## Рассмотренные варианты
+## Considered options
 
-1. **uPlot для графика трафика, HTML-полосы с осью по делениям шкалы.**
-   - График трафика — канвас uPlot. Данные обновляются через `setData(data, false)`, ось времени сдвигается `setScale('x')` в `requestAnimationFrame`.
-   - Полосы остаются HTML, как были. Ось под ними — подписи делений, посчитанных `toValueScale`, по процентам от кромки шкалы.
-   - Преимущества:
-     - анимации нет по построению (критерий 1);
-     - деления 1–2–5 по ступеням килобайта (2);
-     - текст полос — HTML (3);
-     - библиотека уезжает только в чанк обзора (4);
-     - нет второго источника позиций (5).
-   - Недостатки: у двух видов графиков разный механизм; на одну ось полос библиотека не работает.
-   - **Принят.**
+1. **uPlot for the traffic chart, HTML bars with an axis by scale ticks.**
+   - The traffic chart is a uPlot canvas. Data is updated via `setData(data, false)`, the time axis is shifted by `setScale('x')` in `requestAnimationFrame`.
+   - The bars stay HTML, as they were. The axis under them is tick labels computed by `toValueScale`, by percentage from the scale edge.
+   - Advantages:
+     - no animation by construction (driver 1);
+     - 1–2–5 ticks on kilobyte steps (2);
+     - bar text is HTML (3);
+     - the library goes only into the overview chunk (4);
+     - no second source of positions (5).
+   - Disadvantages: the two kinds of charts have different mechanisms; the library does not serve the single bar axis.
+   - **Chosen.**
 
-2. **Всё на uPlot, полосы дорисовываются на канвасе поверх HTML-строк.** Строки — HTML, дорожки рисует хук `draw` по координатам, взятым `getBoundingClientRect` у размеченных мест.
-   - Недостатки:
-     - принудительная раскладка на каждой отрисовке (5);
-     - ref «последнего значения» и `useLayoutEffect`, чтобы хук видел текущие полосы;
-     - поле под ось в CSS связано с размером оси в коде.
-   - Собран и проверен в браузере, затем снят по ревью. **Отклонён.**
+2. **Everything on uPlot, bars drawn on a canvas over HTML rows.** Rows are HTML, tracks are drawn by a `draw` hook at coordinates taken with `getBoundingClientRect` from marked places.
+   - Disadvantages:
+     - forced layout on every draw (5);
+     - a "last value" ref and `useLayoutEffect` so that the hook sees the current bars;
+     - the space for the axis in CSS is tied to the axis size in code.
+   - Built and checked in the browser, then removed after review. **Rejected.**
 
-3. **Полосы — горизонтальная серия uPlot (`ori: 1`, `paths.bars`, цвет полосы через `disp.fill`), подписи — HTML-список рядом.**
-   - Совпадение строк с полосами держится на фиксированной высоте строки в rem: строка не может переноситься, подпись обрезается.
-   - Пунктир «не проверялся» пришлось бы заменить отсутствием дорожки.
-   - Настройка тяжелее, чем у варианта 1, при том же результате для четырёх подписей.
-   - **Отклонён.**
+3. **Bars as a horizontal uPlot series (`ori: 1`, `paths.bars`, bar colour via `disp.fill`), labels as an HTML list beside it.**
+   - Rows match bars only through a fixed row height in rem: a row cannot wrap, a label gets cut off.
+   - The "not checked" dashes would have to be replaced with a missing track.
+   - Configuration is heavier than in option 1 with the same result for four labels.
+   - **Rejected.**
 
-4. **ECharts или Recharts, в том числе через shadcn `chart`.** Оси, подсказки и темы готовые, но это 300+ kB против ~50 kB у uPlot (критерий 4). Переходы анимированы по умолчанию, и их пришлось бы выключать по каждому графику (1). **Отклонены.**
+4. **ECharts or Recharts, including through shadcn `chart`.** Axes, tooltips and themes are ready, but this is 300+ kB against ~50 kB for uPlot (driver 4). Transitions are animated by default and would have to be turned off per chart (1). **Rejected.**
 
-5. **Оставить свои SVG и дописать оси руками.**
-   - Для полос это и есть вариант 1: счёт делений — `toValueScale`.
-   - Для трафика пришлось бы писать свои ось времени, деления, HiDPI и плавный сдвиг, то есть то, что uPlot даёт готовым.
-   - **Отклонён для графика трафика.**
+5. **Keep the custom SVGs and add axes by hand.**
+   - For the bars this is option 1: ticks are computed by `toValueScale`.
+   - For traffic one would have to write an own time axis, ticks, HiDPI and smooth shifting, that is, what uPlot gives ready-made.
+   - **Rejected for the traffic chart.**
 
-## Принятое решение
+## Decision outcome
 
-**uPlot `1.6.32`, точная версия, только для графика трафика `DaemonTraffic`.**
+**uPlot `1.6.32`, exact version, only for the `DaemonTraffic` traffic chart.**
 
-- **Обёртка.** Жизненный цикл держит обёртка `Plot` в `apps/web/src/shared/ui/Plot.tsx`:
-  - график создаётся при монтировании и уничтожается `destroy` при размонтировании;
-  - `data` и `scales` ставятся `setData(data, false)` и `setScale` внутри `batch`;
-  - смена `options` пересоздаёт график;
-  - размер следит `ResizeObserver`;
-  - готовый экземпляр отдаётся в `onChart`.
-- **Анимация.** Анимаций перехода нет. Легенда и курсор выключены.
-- **Цвета.** Цвет — токен темы, читается при отрисовке (`plotColor`). Перерисовку по смене темы запускает `MutationObserver` на атрибуте `class` у `<html>`: `next-themes` ставит класс в своём эффекте, уже после эффектов потомков, и перерисовка из React взяла бы прежние цвета.
-- **Шрифт осей.** Шрифт и кегль осей берутся у контейнера, а не задаются пикселями.
-- **Время точки считает модель, а не виджет.** `toTrafficTimes` в `entities/Daemon/model/Daemon.store.ts` отсчитывает точки от прихода последней назад с шагом потока `TRAFFIC_STEP_SECONDS`: по времени прихода кадры из пачки слиплись бы в одну секунду.
-- **Окно оси времени.** Окно `TRAFFIC_WINDOW_SECONDS` на шаг короче буфера, иначе при заполненном буфере левая кромка прыгала бы раз в секунду. Левая кромка — первая накопленная точка, пока буфер не заполнен (`toTimeWindow`).
-- **Сдвиг оси.** Ось времени сдвигает хук `useFollowNow` в `requestAnimationFrame`. При `prefers-reduced-motion: reduce` сдвиг выключен, и ось ставится вместе с данными.
-- **Шкала.** Шкала у входящего и исходящего общая, кромка считается по большему из пиков. Пики берутся у страницы (`useOverviewRuntime`) и заново не считаются.
-- **Пустой график.** До второй точки вместо графика — текст ожидания.
+- **Wrapper.** The lifecycle is held by the `Plot` wrapper in `apps/web/src/shared/ui/Plot.tsx`:
+  - the chart is created on mount and destroyed with `destroy` on unmount;
+  - `data` and `scales` are set with `setData(data, false)` and `setScale` inside `batch`;
+  - a change of `options` recreates the chart;
+  - size is tracked by `ResizeObserver`;
+  - the ready instance is handed over in `onChart`.
+- **Animation.** There are no transition animations. The legend and cursor are disabled.
+- **Colours.** A colour is a theme token read at draw time (`plotColor`). A redraw on theme change is triggered by a `MutationObserver` on the `class` attribute of `<html>`: `next-themes` sets the class in its effect, after the effects of descendants, and a redraw from React would take the previous colours.
+- **Axis font.** The axis font and font size are taken from the container, not set in pixels.
+- **The model computes the point time, not the widget.** `toTrafficTimes` in `entities/Daemon/model/Daemon.store.ts` counts points back from the arrival of the last one with the stream step `TRAFFIC_STEP_SECONDS`: by arrival time the frames of a batch would stick together into one second.
+- **Time axis window.** The `TRAFFIC_WINDOW_SECONDS` window is one step shorter than the buffer, otherwise with a full buffer the left edge would jump once a second. The left edge is the first accumulated point while the buffer is not full (`toTimeWindow`).
+- **Axis shift.** The time axis is shifted by the `useFollowNow` hook in `requestAnimationFrame`. Under `prefers-reduced-motion: reduce` the shift is disabled, and the axis is set together with the data.
+- **Scale.** Inbound and outbound share one scale, the edge is computed from the larger of the peaks. Peaks are taken from the page (`useOverviewRuntime`) and are not recomputed.
+- **Empty chart.** Until the second point a waiting text is shown instead of the chart.
 
-**Полосы сводки и задержки узлов — HTML.**
+**The summary and node latency bars are HTML.**
 
-- Длина полосы считается от кромки шкалы, а не от суммы ряда. Процент от суммы печатается рядом.
-- Ось — компонент `ValueAxis` в `shared/ui`, деления — `toValueScale`: два деления у сводки, у задержки — постоянная шкала 0–900 мс по трети потолка.
-- Строка с нулевой величиной дорожки не получает.
+- The bar length is computed from the scale edge, not from the series sum. The percentage of the sum is printed next to it.
+- The axis is the `ValueAxis` component in `shared/ui`, ticks come from `toValueScale`: two ticks for the summary, for latency a constant 0–900 ms scale in thirds of the ceiling.
+- A row with zero value gets no track.
 
-**Свой код в `shared/ui` линтуется правилами проекта.** Примитивы shadcn вынесены в `shared/ui/shadcn/`, и override в `apps/web/.oxlintrc.json` снимает правила только с этого каталога.
+**Custom code in `shared/ui` is linted with the project rules.** shadcn primitives are moved to `shared/ui/shadcn/`, and the override in `apps/web/.oxlintrc.json` lifts rules only from that directory.
 
-**В тестах uPlot подменён глобально** (`src/test/setup.ts`, `src/test/fakePlot.ts`). Подмена запоминает вызовы и считает подписи оси теми же функциями, что отдал график.
+**In tests uPlot is replaced globally** (`src/test/setup.ts`, `src/test/fakePlot.ts`). The fake records calls and computes axis labels with the same functions the chart was given.
 
-Non-goals: подсказки по наведению, масштабирование, выделение диапазона.
+Non-goals: hover tooltips, zooming, range selection.
 
-### Область действия и границы
+### Scope and boundaries
 
 - `apps/web/src/shared/ui/Plot.tsx`, `plotColor.ts`, `ValueAxis.tsx`;
 - `apps/web/src/shared/lib/chart.ts`;
@@ -106,67 +106,67 @@ Non-goals: подсказки по наведению, масштабирова�
 - `apps/web/src/widgets/Daemon/DaemonTraffic/`, `widgets/ConnectionSummary/`, `widgets/ProxyLatency/`;
 - `apps/web/src/pages/Overview/`.
 
-## Последствия
+## Consequences
 
-### Положительные
+### Positive
 
-- У полос есть ось значений, у графика трафика — общая шкала и ось времени только за накопленное время.
-- Линия не догоняет новую точку, ось едет плавно, и нарисованные значения всегда есть в данных.
-- Основной чанк не вырос: библиотека живёт в чанке обзора.
-- Свой код в `shared/ui` больше не выпадает из линта молча: вендор и свой код разведены по каталогам.
+- The bars have a value axis, the traffic chart has a shared scale and a time axis only over accumulated time.
+- The line does not chase a new point, the axis moves smoothly, and drawn values are always present in the data.
+- The main chunk did not grow: the library lives in the overview chunk.
+- Custom code in `shared/ui` no longer silently falls out of linting: vendor and custom code are split into directories.
 
-### Отрицательные
+### Negative
 
-- **Цена uPlot.** Чанк `Overview` — 79.44 kB (30.64 kB gzip) против 26.72 kB (7.35 kB gzip), стили +2.2 kB (+0.6 kB gzip). Основной чанк: 365.10 → 365.12 kB (gzip 114.42 → 114.41). Сборка `pnpm build` 2026-09-23.
-- **Постоянная перерисовка.** Пока открыт обзор, канвас трафика перерисовывается каждый кадр. Замер LoAF (Long Animation Frames) на стенде с моками: 5 с, 709 кадров, ни одного длинного. Стенд с MSW искажает замеры, на устройстве профиль не снят.
-- **Два механизма графиков на одном экране.** uPlot у трафика, SVG у «Соединений за минуту» и спарклайнов, HTML у полос. У графика соединений остался дефект оси времени на незаполненном буфере.
-- **Общая шкала прижимает исходящий к оси** при всплеске входящего. Подписи пиков на плитках рядом остаются.
-- **Ось графика трафика — канвас.** Подписи делений не читаются скринридером и не растут с кеглем после создания графика. Доступное имя картинки называет пики.
-- **Цвет перечитывается при каждой отрисовке.** `getComputedStyle` вызывается на каждую отрисовку и на каждый цвет.
+- **The cost of uPlot.** The `Overview` chunk is 79.44 kB (30.64 kB gzip) against 26.72 kB (7.35 kB gzip), styles +2.2 kB (+0.6 kB gzip). Main chunk: 365.10 → 365.12 kB (gzip 114.42 → 114.41). `pnpm build` on 2026-09-23.
+- **Constant redraw.** While the overview is open, the traffic canvas is redrawn every frame. LoAF (Long Animation Frames) measurement on the test bench with mocks: 5 s, 709 frames, none long. The test bench with MSW distorts measurements; no profile was taken on the device.
+- **Two chart mechanisms on one screen.** uPlot for traffic, SVG for "Connections per minute" and sparklines, HTML for the bars. The connections chart keeps the time axis defect on a buffer that is not full.
+- **The shared scale presses outbound to the axis** when inbound spikes. The peak labels on the tiles next to it remain.
+- **The traffic chart axis is a canvas.** Tick labels are not read by a screen reader and do not grow with font size after the chart is created. The image's accessible name states the peaks.
+- **The colour is re-read on every draw.** `getComputedStyle` is called on every draw and for every colour.
 
-### Нейтральные или отложенные
+### Neutral or deferred
 
-- Перенос `ConnectionHistory` и спарклайнов на `Plot` отложен.
-- Топология сети требует своей зависимости, uPlot её не закрывает.
+- Moving `ConnectionHistory` and the sparklines to `Plot` is deferred.
+- Network topology needs its own dependency; uPlot does not cover it.
 
-## Риски и меры снижения
+## Risks and mitigations
 
-| Риск                                                                                    | Вероятность и влияние | Митигация                                                                                 |
-| --------------------------------------------------------------------------------------- | --------------------- | ----------------------------------------------------------------------------------------- |
-| Перерисовка каждый кадр заметна на слабом клиенте                                       | низкая, средняя       | профиль на устройстве; при цене — кэш цветов до смены темы и сдвиг 10–15 кадров в секунду |
-| uPlot зовёт `size` оси до первого расчёта подписей (`values` равен `null` вопреки типу) | найдено в браузере    | защита в `fitAxis` с объяснением у отключения правила                                     |
-| Подмена uPlot в тестах расходится с библиотекой                                         | средняя, средняя      | проверка в браузере обоих тем и ширин перед сдачей правок графика                         |
+| Risk                                                                                                 | Likelihood and impact | Mitigation                                                                                                 |
+| ---------------------------------------------------------------------------------------------------- | --------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Redrawing every frame is noticeable on a weak client                                                 | low, medium           | a profile on the device; if costly — cache colours until theme change and shift at 10–15 frames per second |
+| uPlot calls the axis `size` before the first label computation (`values` is `null` despite the type) | found in the browser  | a guard in `fitAxis` with an explanation at the rule suppression                                           |
+| The uPlot fake in tests drifts from the library                                                      | medium, medium        | a browser check of both themes and widths before handing over chart edits                                  |
 
-## Совместимость, миграция и откат
+## Compatibility, migration and rollback
 
-Данных и контрактов демона решение не касается. Для отката:
+The decision does not touch daemon data or contracts. To roll back:
 
-1. вернуть `DaemonTraffic` на SVG;
-2. снять `uplot` из `apps/web/package.json`, импорт его стилей из `index.css` и подмену из `src/test/setup.ts`;
-3. удалить `Plot` и `plotColor`.
+1. return `DaemonTraffic` to SVG;
+2. remove `uplot` from `apps/web/package.json`, the import of its styles from `index.css` and the fake from `src/test/setup.ts`;
+3. delete `Plot` and `plotColor`.
 
-`ValueAxis`, `toValueScale` и время точек в модели от uPlot не зависят и остаются.
+`ValueAxis`, `toValueScale` and point times in the model do not depend on uPlot and stay.
 
-## Проверка решения
+## Validation
 
 - `pnpm --filter web exec vitest run Plot DaemonTraffic chart Daemon.store ValueAxis`:
-  - обёртка не пересоздаёт график на новых данных и зовёт `setData` с `false`;
-  - обёртка уничтожает график при размонтировании;
-  - у половин одна кромка;
-  - на неполном буфере ось подписана «−15 с, сейчас»;
-  - ось едет по кадрам;
-  - время точек идёт с шагом потока.
-- `pnpm lint` — правила проекта действуют на `Plot.tsx`, `plotColor.ts`, `ValueAxis.tsx`.
-- `pnpm build` — `uplot` в чанке `Overview`, основной чанк не вырос.
-- Браузер на 1440×900 и 500×820 в обеих темах:
-  - переключение темы перерисовывает канвас;
-  - подписи осей полос не налезают друг на друга;
-  - у простаивающих строк нет дорожек.
+  - the wrapper does not recreate the chart on new data and calls `setData` with `false`;
+  - the wrapper destroys the chart on unmount;
+  - the halves have one edge;
+  - on a partial buffer the axis is labelled "−15 s, now";
+  - the axis moves per frame;
+  - point times follow the stream step.
+- `pnpm lint` — project rules apply to `Plot.tsx`, `plotColor.ts`, `ValueAxis.tsx`.
+- `pnpm build` — `uplot` is in the `Overview` chunk, the main chunk did not grow.
+- Browser at 1440×900 and 500×820 in both themes:
+  - switching the theme redraws the canvas;
+  - bar axis labels do not overlap;
+  - idle rows have no tracks.
 
-## Ссылки
+## Links
 
-- PRD, AC-10 и AC-37 — обзор, трафик и история;
-- [ADR-0015](./ADR-0015-keep-traffic-history-in-the-daemon.md) — история трафика у демона;
-- [ADR-0026](./ADR-0026-animate-screen-changes-with-the-router-and-in-page-changes-with-react.md) — переходы экранов; анимации графиков оттуда вынесены;
+- PRD, AC-10 and AC-37 — overview, traffic and history;
+- [ADR-0015](./ADR-0015-keep-traffic-history-in-the-daemon.md) — traffic history in the daemon;
+- [ADR-0026](./ADR-0026-animate-screen-changes-with-the-router-and-in-page-changes-with-react.md) — screen transitions; chart animations are excluded from it;
 - `apps/web/src/shared/ui/Plot.tsx`, `apps/web/src/widgets/Daemon/DaemonTraffic/`, `apps/web/src/entities/Daemon/model/Daemon.store.ts`;
 - [uPlot](https://github.com/leeoniya/uPlot) — `setData(data, resetScales)`, `setScale`, `paths.bars`.

@@ -7,19 +7,19 @@ import { Button } from './shadcn/button';
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from './shadcn/empty';
 
 /**
- * Отказ источника данных блока: что не прочиталось, почему и повтор.
+ * Failure of a block's data source: what was not read, why, and a retry.
  *
- * Отдельное состояние, а не пустота: пустой список после отказа читается как
- * «данных нет», и пользователь уходит чинить конфиг, который цел. Причина —
- * перевод кода демона, а незнакомый код показывается сообщением ошибки как
- * есть. Тексты живут в неймспейсе `shared`: блок один на всё приложение, а
- * заголовок совпадает с тостом того же отказа.
+ * A separate state, not emptiness: an empty list after a failure reads as
+ * "no data", and the user goes to fix a config that is intact. The reason is
+ * the translation of the daemon code, and an unfamiliar code is shown as the error message
+ * as is. Texts live in the `shared` namespace: the block is one for the whole application, and the
+ * title matches the toast of the same failure.
  */
 export function QueryFailure({
   messageKey,
   query,
 }: {
-  /** Что не прочиталось: тот же ключ, что у тоста в `meta` запроса. */
+  /** What was not read: the same key as the toast in the request's `meta`. */
   messageKey: MessageKey;
   query: { error: Error | null; isFetching: boolean; refetch: () => unknown };
 }) {

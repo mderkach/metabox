@@ -51,7 +51,7 @@ func (f *fakeDNS) Probe(_ context.Context, in clashapi.DNSInbound) error {
 	return f.err
 }
 
-// listen поднимает слушателя TCP на loopback и отдаёт его порт.
+// listen starts a TCP listener on loopback and returns its port.
 func listen(t *testing.T) int {
 	t.Helper()
 
@@ -76,7 +76,7 @@ func listen(t *testing.T) int {
 	return l.Addr().(*net.TCPAddr).Port
 }
 
-// closedPort отдаёт порт, который только что освободился.
+// closedPort returns a port that has just been freed.
 func closedPort(t *testing.T) int {
 	t.Helper()
 
@@ -121,7 +121,7 @@ func run(t *testing.T, c *diag.Checker, proxy string) map[diag.CheckName]diag.Ch
 	}
 
 	if len(out) != 7 {
-		t.Fatalf("проверок %d, ожидали семь: %+v", len(out), report.Checks)
+		t.Fatalf("checks %d, expected seven: %+v", len(out), report.Checks)
 	}
 
 	return out
@@ -137,80 +137,80 @@ func TestPortListeners(t *testing.T) {
 
 	for _, name := range []diag.CheckName{diag.NameRedirectPort, diag.NameTproxyPort, diag.NameDNSPort} {
 		if got[name].Status != diag.StatusOK {
-			t.Errorf("%s: %+v, ожидали ok", name, got[name])
+			t.Errorf("%s: %+v, expected ok", name, got[name])
 		}
 	}
 
 	if got[diag.NameChains].Status != diag.StatusOK {
-		t.Errorf("цепочки: %+v, ожидали ok", got[diag.NameChains])
+		t.Errorf("chains: %+v, expected ok", got[diag.NameChains])
 	}
 
-	t.Run("порт закрыт", func(t *testing.T) {
+	t.Run("port closed", func(t *testing.T) {
 		m := model(closedPort(t))
 		m.TproxyPort = 5334
 		got := run(t, diag.New(fakePlane{model: m}, configWith(5333, "127.0.0.1:1"), nil, options()), "")
 
 		for _, name := range []diag.CheckName{diag.NameRedirectPort, diag.NameTproxyPort} {
 			if c := got[name]; c.Status != diag.StatusFail || c.Reason != diag.ReasonNotListening {
-				t.Errorf("%s: %+v, ожидали not_listening", name, c)
+				t.Errorf("%s: %+v, expected not_listening", name, c)
 			}
 		}
 	})
 
-	t.Run("таблиц сокетов нет", func(t *testing.T) {
+	t.Run("no socket tables", func(t *testing.T) {
 		opts := options()
 		opts.ProcNet = t.TempDir()
 		got := run(t, diag.New(plane, configWith(5333, "127.0.0.1:1"), nil, opts), "")
 
 		if c := got[diag.NameDNSPort]; c.Status != diag.StatusSkipped || c.Reason != diag.ReasonProcUnavailable {
-			t.Errorf("dns_port: %+v, ожидали пропуск proc_unavailable", c)
+			t.Errorf("dns_port: %+v, expected a skip proc_unavailable", c)
 		}
 	})
 }
 
 func TestChains(t *testing.T) {
-	t.Run("часть цепочек снята", func(t *testing.T) {
+	t.Run("part of the chains removed", func(t *testing.T) {
 		plane := fakePlane{model: model(closedPort(t)), chains: []string{"metabox_redirect", "metabox_mangle_output"}}
 		c := run(t, diag.New(plane, configWith(5333, "127.0.0.1:1"), nil, options()), "")[diag.NameChains]
 
 		if c.Status != diag.StatusFail || c.Reason != diag.ReasonChainsMissing {
-			t.Fatalf("цепочки: %+v, ожидали chains_missing", c)
+			t.Fatalf("chains: %+v, expected chains_missing", c)
 		}
 
 		if !slices.Contains(c.Missing, "metabox_redirect_lanac") || slices.Contains(c.Missing, "metabox_redirect") {
-			t.Errorf("отсутствующие %q", c.Missing)
+			t.Errorf("missing %q", c.Missing)
 		}
 	})
 
-	t.Run("nft недоступен", func(t *testing.T) {
+	t.Run("nft unavailable", func(t *testing.T) {
 		plane := fakePlane{model: model(closedPort(t)), nftReason: dataplane.NFTUnavailable}
 		c := run(t, diag.New(plane, configWith(5333, "127.0.0.1:1"), nil, options()), "")[diag.NameChains]
 
 		if c.Status != diag.StatusSkipped || c.Reason != diag.ReasonNFTUnavailable {
-			t.Errorf("цепочки: %+v, ожидали пропуск nft_unavailable", c)
+			t.Errorf("chains: %+v, expected a skip nft_unavailable", c)
 		}
 	})
 }
 
 func TestSkippedWithoutModel(t *testing.T) {
-	t.Run("модель не прочитана", func(t *testing.T) {
+	t.Run("model not read", func(t *testing.T) {
 		plane := fakePlane{modelErr: errors.New("uci show metabox: exit 1")}
 		got := run(t, diag.New(plane, configWith(5333, "127.0.0.1:1"), &fakeDNS{}, options()), "")
 
 		for _, name := range []diag.CheckName{diag.NameRedirectPort, diag.NameDNSProbe, diag.NameChains, diag.NameDirect} {
 			if c := got[name]; c.Status != diag.StatusSkipped || c.Reason != diag.ReasonModelUnavailable {
-				t.Errorf("%s: %+v, ожидали пропуск model_unavailable", name, c)
+				t.Errorf("%s: %+v, expected a skip model_unavailable", name, c)
 			}
 		}
 	})
 
-	t.Run("перехват выключен", func(t *testing.T) {
+	t.Run("interception disabled", func(t *testing.T) {
 		m := model(closedPort(t))
 		m.Enabled = false
 		got := run(t, diag.New(fakePlane{model: m}, configWith(5333, "127.0.0.1:1"), &fakeDNS{}, options()), "")
 
 		if c := got[diag.NameRedirectPort]; c.Status != diag.StatusSkipped || c.Reason != diag.ReasonInterceptionDisabled {
-			t.Errorf("redirect_port: %+v, ожидали пропуск interception_disabled", c)
+			t.Errorf("redirect_port: %+v, expected a skip interception_disabled", c)
 		}
 	})
 }
@@ -218,48 +218,48 @@ func TestSkippedWithoutModel(t *testing.T) {
 func TestDNSProbe(t *testing.T) {
 	plane := fakePlane{model: model(closedPort(t)), chains: dataplane.ExpectedChains()}
 
-	t.Run("dns-in молчит", func(t *testing.T) {
+	t.Run("dns-in is silent", func(t *testing.T) {
 		dns := &fakeDNS{err: errors.New("i/o timeout")}
 		c := run(t, diag.New(plane, configWith(5333, "127.0.0.1:1"), dns, options()), "")[diag.NameDNSProbe]
 
 		if c.Status != diag.StatusFail || c.Reason != diag.ReasonNoAnswer {
-			t.Errorf("проба: %+v, ожидали no_answer", c)
+			t.Errorf("probe: %+v, expected no_answer", c)
 		}
 
 		if len(dns.asked) != 1 || dns.asked[0].Address != "127.0.0.1:5333" {
-			t.Errorf("запрос ушёл на %+v, ожидали dns-in на loopback", dns.asked)
+			t.Errorf("query went to %+v, expected dns-in on loopback", dns.asked)
 		}
 	})
 
-	t.Run("dns-in отвечает", func(t *testing.T) {
+	t.Run("dns-in answers", func(t *testing.T) {
 		c := run(t, diag.New(plane, configWith(5333, "127.0.0.1:1"), &fakeDNS{}, options()), "")[diag.NameDNSProbe]
 
 		if c.Status != diag.StatusOK {
-			t.Errorf("проба: %+v, ожидали ok", c)
+			t.Errorf("probe: %+v, expected ok", c)
 		}
 	})
 
-	t.Run("dns-in нет в конфиге", func(t *testing.T) {
+	t.Run("no dns-in in the config", func(t *testing.T) {
 		c := run(t, diag.New(plane, configWith(5999, "127.0.0.1:1"), &fakeDNS{}, options()), "")[diag.NameDNSProbe]
 
 		if c.Status != diag.StatusFail || c.Reason != diag.ReasonNoDNSInbound {
-			t.Errorf("проба: %+v, ожидали no_dns_inbound", c)
+			t.Errorf("probe: %+v, expected no_dns_inbound", c)
 		}
 	})
 
-	t.Run("имя не задано", func(t *testing.T) {
+	t.Run("name not set", func(t *testing.T) {
 		c := run(t, diag.New(plane, configWith(5333, "127.0.0.1:1"), nil, options()), "")[diag.NameDNSProbe]
 
 		if c.Status != diag.StatusSkipped || c.Reason != diag.ReasonDNSNameUnset {
-			t.Errorf("проба: %+v, ожидали пропуск dns_name_unset", c)
+			t.Errorf("probe: %+v, expected a skip dns_name_unset", c)
 		}
 	})
 
-	t.Run("конфига нет", func(t *testing.T) {
+	t.Run("no config", func(t *testing.T) {
 		c := run(t, diag.New(plane, fakeConfig{err: config.ErrNoConfig}, &fakeDNS{}, options()), "")[diag.NameDNSProbe]
 
 		if c.Status != diag.StatusSkipped || c.Reason != diag.ReasonConfigMissing {
-			t.Errorf("проба: %+v, ожидали пропуск config_missing", c)
+			t.Errorf("probe: %+v, expected a skip config_missing", c)
 		}
 	})
 }
@@ -297,10 +297,10 @@ func TestProxyDelay(t *testing.T) {
 		status diag.CheckStatus
 		reason diag.CheckReason
 	}{
-		{"узел отвечает", "node A", diag.StatusOK, ""},
-		{"узел не отвечает", "dead", diag.StatusFail, diag.ReasonRequestFailed},
-		{"узла нет", "missing", diag.StatusFail, diag.ReasonProxyMissing},
-		{"узел не выбран", "", diag.StatusSkipped, diag.ReasonProxyUnset},
+		{"node answers", "node A", diag.StatusOK, ""},
+		{"node does not answer", "dead", diag.StatusFail, diag.ReasonRequestFailed},
+		{"no node", "missing", diag.StatusFail, diag.ReasonProxyMissing},
+		{"node not selected", "", diag.StatusSkipped, diag.ReasonProxyUnset},
 	}
 
 	for _, tt := range tests {
@@ -308,24 +308,24 @@ func TestProxyDelay(t *testing.T) {
 			got := run(t, c, tt.proxy)[diag.NameProxy]
 
 			if got.Status != tt.status || got.Reason != tt.reason {
-				t.Errorf("узел %q: %+v, ожидали %s %s", tt.proxy, got, tt.status, tt.reason)
+				t.Errorf("node %q: %+v, expected %s %s", tt.proxy, got, tt.status, tt.reason)
 			}
 		})
 	}
 
 	if !strings.Contains(query, "url=http%3A%2F%2F127.0.0.1%3A1%2Fgenerate_204") || !strings.Contains(query, "timeout="+strconv.Itoa(1600)) {
-		t.Errorf("запрос замера %q", query)
+		t.Errorf("measurement request %q", query)
 	}
 }
 
 func TestDirectUnsupportedOutsideLinux(t *testing.T) {
 	if runtime.GOOS == "linux" {
-		t.Skip("метка сокета есть только в Linux")
+		t.Skip("socket mark exists only on Linux")
 	}
 
 	c := run(t, diag.New(fakePlane{model: model(closedPort(t))}, configWith(5333, "127.0.0.1:1"), nil, options()), "")[diag.NameDirect]
 
 	if c.Status != diag.StatusSkipped || c.Reason != diag.ReasonUnsupported {
-		t.Errorf("прямой выход: %+v, ожидали пропуск unsupported", c)
+		t.Errorf("direct outbound: %+v, expected a skip unsupported", c)
 	}
 }

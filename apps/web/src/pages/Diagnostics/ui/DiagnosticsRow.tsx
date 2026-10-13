@@ -14,7 +14,7 @@ import { cn } from '@shared/lib/utils';
 
 import { DIAGNOSTICS_COLUMN } from './DiagnosticsColumns';
 
-/** Таблицы обязаны покрывать набор демона: новая проверка или причина — ошибка компиляции здесь. */
+/** The tables must cover the daemon's set: a new check or reason is a compile error here. */
 const NAME_KEY: Readonly<Record<CheckName, ParseKeys<'pages/Diagnostics'>>> = {
   redirect_port: 'check.redirect_port',
   tproxy_port: 'check.tproxy_port',
@@ -44,7 +44,7 @@ const REASON_KEY: Readonly<Record<CheckReason, ParseKeys<'pages/Diagnostics'>>> 
   unsupported: 'reason.unsupported',
 };
 
-/** Итог несёт два признака — значок и цвет: один из них не цветовой. */
+/** The result carries two signs, an icon and a color: one of them is not color-based. */
 const STATUS_VIEW: Readonly<
   Record<CheckStatus, { icon: LucideIcon; tone: string; label: ParseKeys<'pages/Diagnostics'> }>
 > = {
@@ -53,7 +53,7 @@ const STATUS_VIEW: Readonly<
   skipped: { icon: CircleMinus, tone: 'text-signal-idle', label: 'status.skipped' },
 };
 
-/** Незнакомый код перевода не получает и показывается как пришёл. */
+/** An unknown code gets no translation and is shown as received. */
 function toReasonKey(reason: string | null): ParseKeys<'pages/Diagnostics'> | null {
   return reason !== null && isCheckReason(reason) ? REASON_KEY[reason] : null;
 }

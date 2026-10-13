@@ -20,12 +20,12 @@ function renderForm(outbounds: string[] = []) {
   return render(<RuleSetAddForm catalog={CATALOG} takenTags={[]} outbounds={outbounds} />);
 }
 
-describe('форма подключения сета', () => {
+describe('rule set add form', () => {
   beforeEach(() => {
     ConfigDocumentState.getState().reset();
   });
 
-  it('предупреждает о категории, которой нет в перечне', async () => {
+  it('warns about a category that is not in the catalog', async () => {
     const user = userEvent.setup();
 
     renderForm();
@@ -35,7 +35,7 @@ describe('форма подключения сета', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('Категории нет в перечне поставщика');
   });
 
-  it('о категории из перечня не предупреждает', async () => {
+  it('does not warn about a category from the catalog', async () => {
     const user = userEvent.setup();
 
     renderForm();
@@ -45,7 +45,7 @@ describe('форма подключения сета', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
-  it('на своём адресе о категории не судит: перечня у него нет', async () => {
+  it('on its own address does not judge the category: it has no catalog', async () => {
     const user = userEvent.setup();
 
     renderForm();
@@ -56,7 +56,7 @@ describe('форма подключения сета', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
-  it('подсказывает категорию из перечня и собирает её адрес', async () => {
+  it('suggests a category from the catalog and builds its address', async () => {
     const user = userEvent.setup();
 
     renderForm();
@@ -70,7 +70,7 @@ describe('форма подключения сета', () => {
     expect(screen.getByLabelText('Имя сета')).toHaveValue('geosite-ru-blocked-all');
   });
 
-  it('открывает подборку по фокусу, без ввода', async () => {
+  it('opens a selection on focus, without input', async () => {
     const user = userEvent.setup();
 
     renderForm();
@@ -80,9 +80,9 @@ describe('форма подключения сета', () => {
     expect(await screen.findByRole('option', { name: 'ru-blocked' })).toBeInTheDocument();
   });
 
-  // Сайты и адреса у поставщика — разные файлы: переключение вида списка
-  // обязано пересобрать адрес, а не оставить ссылку на список сайтов.
-  it('переключает вид списка и пересобирает адрес', async () => {
+  // Sites and addresses at a provider are different files: switching the list kind
+  // must rebuild the address, not leave the link to the sites list.
+  it('switches the list kind and rebuilds the address', async () => {
     const user = userEvent.setup();
 
     renderForm();
@@ -95,13 +95,13 @@ describe('форма подключения сета', () => {
     expect(screen.getByLabelText('Имя сета')).toHaveValue('geoip-ru-blocked');
   });
 
-  it('говорит, когда перечень сверен с поставщиком', () => {
+  it('says when the catalog is checked against the provider', () => {
     renderForm();
 
     expect(screen.getByText(/Перечень сверен с поставщиком/)).toBeInTheDocument();
   });
 
-  it('подсказывает узел для скачивания из аутбаундов конфига', async () => {
+  it('suggests a node for download from the config outbounds', async () => {
     const user = userEvent.setup();
 
     renderForm(['direct', 'proxy', 'proxy-fi']);

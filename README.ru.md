@@ -83,7 +83,7 @@ metabox — демон на Go (`metaboxd`), который ставится н�
 
 ## Установка
 
-Готовые пакеты пока не публикуются. Как собрать пакет из исходников и поставить на роутер — в [`docs/Development.md`](./docs/Development.md).
+Готовые пакеты пока не публикуются. Как собрать пакет из исходников и поставить на роутер — в [`docs/Development.ru.md`](./docs/Development.ru.md).
 
 Пакет зависит от `sing-box-extended`, а тот приносит свою службу `sing-box`. Её нужно выключить: sing-box поднимает служба metabox.
 
@@ -160,5 +160,5 @@ apk del metaboxd
 - [`docs/adr/`](./docs/adr/README.md) — архитектурные решения
 - [`apps/metaboxd/docs/guides/`](./apps/metaboxd/docs/guides/README.md) — гайды демона: HTTP API, работа с устройством, ошибки и логи
 - [`apps/web/docs/`](./apps/web/docs/README.md) — гайды фронтенда
-- [`docs/Development.md`](./docs/Development.md) — сборка, стенд, команды
-- [`CONTRIBUTING.md`](./CONTRIBUTING.md) — ветки, коммиты, проверки
+- [`docs/Development.ru.md`](./docs/Development.ru.md) — сборка, стенд, команды
+- [`CONTRIBUTING.ru.md`](./CONTRIBUTING.ru.md) — ветки, коммиты, проверки

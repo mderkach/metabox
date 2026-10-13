@@ -5,13 +5,13 @@ import (
 	"reflect"
 )
 
-// Правило маршрутизации встраивает действие, а действие — union по полю
-// action. В JSON и то и другое лежит на одном уровне, поэтому объект
-// приходится размножать: сколько вариантов действия, столько форм у правила.
+// A routing rule embeds an action, and an action is a union by the field
+// action. In JSON both lie on one level, so the object
+// has to be multiplied: as many forms of the rule as there are action variants.
 //
-// Общие поля при этом выносятся в отдельную схему, а варианты печатаются как
-// расширение: без этого шесть десятков полей правила дублировались бы в
-// каждом варианте.
+// The common fields are moved into a separate schema, and variants are printed as
+// an extension: otherwise six dozen rule fields would be duplicated in
+// each variant.
 func (w *walker) expand(base *schema, t reflect.Type, path string) []*schema {
 	object := &schema{kind: kindObject, base: base.base}
 	object.fields = append(object.fields, base.fields...)
@@ -25,8 +25,8 @@ func (w *walker) expand(base *schema, t reflect.Type, path string) []*schema {
 	return variants
 }
 
-// multiply размножает каждый собранный объект по вариантам встроенного
-// union'а.
+// multiply multiplies every collected object by the variants of the embedded
+// union.
 func (w *walker) multiply(objects []*schema, union embeddedUnion, owner reflect.Type, path string) []*schema {
 	discrOptional := w.discrOptional(union.typ, union.spec.discr)
 
@@ -50,7 +50,7 @@ func (w *walker) multiply(objects []*schema, union embeddedUnion, owner reflect.
 
 			variantField, ok := union.typ.FieldByName(option.field)
 			if !ok {
-				panic(fmt.Sprintf("schemagen: %s: нет поля %s",
+				panic(fmt.Sprintf("schemagen: %s: no field %s",
 					goTypeName(union.typ), option.field))
 			}
 			out = append(out, w.expand(body, deref(variantField.Type), path+"."+option.tag)...)
@@ -59,9 +59,9 @@ func (w *walker) multiply(objects []*schema, union embeddedUnion, owner reflect.
 	return out
 }
 
-// shareFields выносит уже собранные поля в отдельную схему, чтобы варианты
-// ссылались на неё, а не повторяли её целиком. Короткие объекты остаются как
-// есть: отдельная схема на три поля читается хуже, чем сами поля.
+// shareFields moves the already collected fields into a separate schema so that variants
+// refer to it and do not repeat it whole. Short objects stay as
+// they are: a separate schema for three fields reads worse than the fields themselves.
 func (w *walker) shareFields(object *schema, owner reflect.Type) *schema {
 	const worthSharing = 6
 
@@ -76,13 +76,13 @@ func (w *walker) shareFields(object *schema, owner reflect.Type) *schema {
 	return &schema{kind: kindObject, base: name}
 }
 
-// baseName даёт имя схемы с общими полями: option.RuleAction ->
+// baseName gives the name of the schema with the common fields: option.RuleAction ->
 // RuleActionBaseSchema.
 func baseName(t reflect.Type) string {
 	return t.Name() + "BaseSchema"
 }
 
-// oneOf сворачивает набор вариантов: единственный вариант остаётся объектом.
+// oneOf collapses a set of variants: a single variant stays an object.
 func oneOf(variants []*schema) *schema {
 	if len(variants) == 1 {
 		return variants[0]

@@ -7,7 +7,7 @@ import { RuntimeStore } from '@entities/Daemon';
 
 import { useRuntimeStreams } from '../useRuntimeStreams';
 
-/** В jsdom `EventSource` нет: проверяется, что делает оболочка при открытии и закрытии потока. */
+/** jsdom has no `EventSource`: checks what the shell does when a stream opens and closes. */
 class FakeEventSource {
   addEventListener(): void {}
   removeEventListener(): void {}
@@ -28,7 +28,7 @@ describe('useRuntimeStreams', () => {
     vi.unstubAllGlobals();
   });
 
-  it('закрывая поток, снимает отметку последнего кадра: на возврате экран ждёт новых данных', () => {
+  it('on close, clears the last-frame mark: on return the screen waits for new data', () => {
     renderHook(useRuntimeStreams, { wrapper });
 
     act(() => {

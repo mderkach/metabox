@@ -1,55 +1,55 @@
-# ADR-0015. Копить историю рантайма и долю канала в демоне за всё время его работы
+# ADR-0015. Accumulate the runtime history and the link share in the daemon over its whole uptime
 
-- Статус: Accepted
-- Дата: 2026-09-13
-- Ответственные: владелец репозитория
+- Status: Accepted
+- Date: 2026-09-13
+- Deciders: repository owner
 
-## Контекст и постановка проблемы
+## Context and problem statement
 
-Панель держала историю трафика кольцевым буфером на шестьдесят сэмплов в памяти вкладки. Отсюда два следствия, которые видно на живом роутере: перезагрузка страницы обнуляла график, а окно графика было равно минуте — по нему не видно ни утреннего пика, ни того, что канал молчал всю ночь.
+The panel kept the traffic history in a ring buffer of sixty samples in the tab's memory. This has two consequences visible on a live router: a page reload reset the chart, and the chart window was one minute, so it showed neither the morning peak nor that the link was silent all night.
 
-Тем же способом считалась доля канала через sing-box: вкладка складывала приращения счётчиков с момента, когда её открыли. Секундное отношение прыгало от каждого всплеска, а накопленное жило ровно до `F5`.
+The share of the link going through sing-box was computed the same way: the tab summed counter increments from the moment it was opened. The per-second ratio jumped with every burst, and the accumulated one lived exactly until `F5`.
 
-Сравнение с соседом по устройству: b4 держит счётчики у себя и отдаёт готовое отношение (`targeted_connections` к `total_connections`) за всё время своей работы, а живые значения показывает отдельной строкой. Владелец роутера ждёт того же и от metabox.
+Compare with the neighbour on the device: b4 keeps the counters on its side and returns a ready ratio (`targeted_connections` to `total_connections`) over its whole uptime, and shows live values in a separate line. The router owner expects the same from metabox.
 
-Ограничения заданы раньше: `go.mod` демона без зависимостей, бюджет NFR-4 (RSS ≤ 64 МБ, CPU в простое ≤ 1% ядра), правило [DeviceIO](../../apps/metaboxd/docs/guides/DeviceIO.md) «фоновых опросов по таймеру без потребителя нет», и запись в PRD (roadmap после v1) о том, что история глубже минуты требует хранилища на демоне.
+The constraints were set earlier: the daemon's `go.mod` has no dependencies, the NFR-4 budget (RSS ≤ 64 MB, idle CPU ≤ 1% of a core), the [DeviceIO](../../apps/metaboxd/docs/guides/DeviceIO.md) rule "no background timer polling without a consumer", and the PRD entry (roadmap after v1) saying that history deeper than a minute needs storage on the daemon.
 
-В scope: где живут история трафика и накопленные объёмы, чем они наполняются и что из этого попадает в контракт. Вне scope: разрезы истории по устройству, хосту и узлу — они остаются в roadmap.
+In scope: where the traffic history and the accumulated volumes live, what fills them and what of this goes into the contract. Out of scope: history breakdowns by device, host and node: they stay in the roadmap.
 
-## Критерии выбора
+## Decision drivers
 
-1. **История переживает перезагрузку страницы.** Это и есть причина решения.
-2. **Без новых зависимостей и без записи на флеш.** Ресурс флеша роутера не тратится на график.
-3. **Приращения не теряются.** Счётчик интерфейса идёт с подъёма линка, счётчик Clash API — с запуска процесса; не снятое вовремя приращение не восстанавливается задним числом.
-4. **Цена в простое укладывается в NFR-4.**
-5. **Время точки не зависит от часов роутера.** До синхронизации NTP он стартует с эпохи и прыгает.
+1. **The history survives a page reload.** This is the reason for the decision.
+2. **No new dependencies and no writes to flash.** The router's flash endurance is not spent on a chart.
+3. **Increments are not lost.** The interface counter runs from link up, the Clash API counter from process start; an increment not taken in time cannot be restored afterwards.
+4. **The idle cost fits into NFR-4.**
+5. **A point's time does not depend on the router clock.** Before NTP sync it starts from the epoch and jumps.
 
-## Рассмотренные варианты
+## Considered options
 
-1. **Оставить накопление во вкладке.** Преимущества: ничего не делать, демон не трогается. Недостатки: окно живёт до перезагрузки страницы (критерий 1); пока панель закрыта, приращения теряются (критерий 3). **Отклонён.**
+1. **Keep accumulating in the tab.** Pros: nothing to do, the daemon is not touched. Cons: the window lives until a page reload (driver 1); while the panel is closed, increments are lost (driver 3). **Rejected.**
 
-2. **Писать историю на диск.** Преимущества: переживает перезапуск демона. Недостатки: запись на флеш каждые несколько секунд ради графика (критерий 2); появляется формат файла, миграции и вопрос ретенции. **Отклонён** — b4 свои счётчики тоже теряет при перезапуске, и это никого не смущает.
+2. **Write the history to disk.** Pros: survives a daemon restart. Cons: writing to flash every few seconds for a chart (driver 2); a file format, migrations and a retention question appear. **Rejected**: b4 also loses its counters on restart, and nobody minds.
 
-3. **Кольцевой буфер в памяти демона плюс постоянный учёт.** Преимущества: история и доля живут, пока живёт демон, а он на устройстве работает месяцами (критерии 1, 3); памяти нужны десятки килобайт (критерий 2). Недостатки: фоновая работа без читателя — исключение из правила DeviceIO; перезапуск демона обнуляет и историю, и накопленное. **Принят.**
+3. **A ring buffer in the daemon's memory plus constant accounting.** Pros: the history and the share live as long as the daemon does, and on the device it runs for months (drivers 1, 3); tens of kilobytes of memory are needed (driver 2). Cons: background work without a reader is an exception to the DeviceIO rule; a daemon restart resets both the history and the accumulated values. **Chosen.**
 
-Отдельно решался вопрос, что делать с заполненным кольцом. **Выбрасывать старые точки** значит показывать скользящее окно: график перестал бы отвечать на вопрос «что было с утра», ради которого история и заводилась. **Укрупнять шаг** — сливать соседние точки попарно и удваивать интервал — сохраняет всё время работы демона в тех же 2160 точках, ценой того, что давние участки становятся грубее. Принято второе.
+What to do with a full ring was decided separately. **Dropping old points** means showing a sliding window: the chart would stop answering the question "what happened since the morning", which is why the history was introduced. **Coarsening the step** (merging neighbouring points in pairs and doubling the interval) keeps the whole daemon uptime in the same 2160 points, at the cost of older sections becoming coarser. The second was chosen.
 
-## Принятое решение
+## Decision outcome
 
-`internal/history` держит два кольца по 2160 точек: трафик и показания платы — загрузку, температуру, занятую память. Первые шесть часов шаг равен десяти секундам; дальше кольцо не выбрасывает старое, а сливает соседние точки и удваивает шаг, поэтому график всегда покрывает всё время работы демона. Шаг считается снятиями, а не часами: форк шлёт ровно один сэмпл в секунду, а по часам роутера время точки не восстанавливается (критерий 5). Абсолютного времени точка не несёт вовсе — `GET /api/history` отдаёт текущий шаг и порядок, подписи оси панель считает по часам браузера.
+`internal/history` holds two rings of 2160 points: traffic and board metrics (load, temperature, used memory). For the first six hours the step is ten seconds; after that the ring does not drop old data but merges neighbouring points and doubles the step, so the chart always covers the whole daemon uptime. The step is counted in samples, not by the clock: the fork sends exactly one sample per second, and a point's time cannot be restored from the router clock (driver 5). A point carries no absolute time at all: `GET /api/history` returns the current step and the order, and the panel computes the axis labels from the browser clock.
 
-`internal/events.Accounting` держит поток `/traffic` открытым всё время работы демона и раздаёт сэмплы двум потребителям: истории и счётчикам объёма в `internal/device`. Тот же учёт раз в интервал снимает показания платы целиком — счётчики интерфейса, загрузку, температуру и память, — и кладёт их в своё кольцо. Доля канала через sing-box считается по этим приращениям за всё время работы демона и приходит панели готовой в топике `system`.
+`internal/events.Accounting` keeps the `/traffic` stream open for the whole daemon uptime and delivers samples to two consumers: the history and the volume counters in `internal/device`. The same accounting takes the full board metrics once per interval (interface counters, load, temperature and memory) and puts them into its ring. The share of the link through sing-box is computed from these increments over the whole daemon uptime and reaches the panel ready-made in the `system` topic.
 
-Фоновая работа без читателя — осознанное исключение из правила DeviceIO, и цена его названа: одно постоянное соединение к localhost, по которому идут две цифры в секунду, и чтение `/proc/net/dev` раз в интервал. Причина исключения — критерий 3: потребитель здесь сама величина, и восстановить её задним числом нельзя.
+Background work without a reader is a deliberate exception to the DeviceIO rule, and its cost is named: one permanent connection to localhost carrying two numbers per second, and reading `/proc/net/dev` once per interval. The reason for the exception is driver 3: the consumer here is the value itself, and it cannot be restored afterwards.
 
-## Последствия
+## Consequences
 
-**Хорошо:** график переживает перезагрузку страницы и показывает часы, а не минуту; доля канала перестала прыгать и не зависит от того, когда открыли вкладку; панель больше ничего не копит сама, а только рисует.
+**Good:** the chart survives a page reload and shows hours, not a minute; the link share stopped jumping and does not depend on when the tab was opened; the panel no longer accumulates anything itself, it only draws.
 
-**Плохо:** перезапуск демона обнуляет историю и накопленное — на устройстве это событие редкое, но при отладке заметное. Разрешение падает с временем работы: после суток шаг равен сорока секундам, после месяца — двадцати минутам, и короткий всплеск в давнем участке размывается. Точка не несёт времени, поэтому подписи оси зависят от часов браузера: у клиента с уехавшими часами они уедут тоже.
+**Bad:** a daemon restart resets the history and the accumulated values; on the device this is a rare event, but noticeable during debugging. Resolution drops with uptime: after a day the step is forty seconds, after a month twenty minutes, and a short burst in an old section gets blurred. A point carries no time, so the axis labels depend on the browser clock: on a client with a drifted clock they drift too.
 
-**Открытое:** разрезов истории по устройству, хосту и узлу нет — снапшот соединений в историю не пишется, и его объём (до 5000 записей в секунду по NFR-2) туда класть нельзя без отдельного решения.
+**Open:** there are no history breakdowns by device, host and node: the connection snapshot is not written to the history, and its volume (up to 5000 entries per second per NFR-2) cannot go there without a separate decision.
 
-## Проверка решения
+## Validation
 
-На BPI-R4 Pro 2026-09-13: демон с ветки, `GET /api/history` отдаёт `step_seconds: 10` и растущий список точек — восемь точек через восемьдесят секунд после старта. Доля канала в топике `system` считается за всё время работы демона и не обнуляется перезагрузкой страницы. Тесты `internal/history` покрывают усреднение шага, неполный шаг, укрупнение шага при заполнении кольца и порядок показаний платы; тест `internal/events` проверяет, что учёт копит без единого читателя потока.
+On the BPI-R4 Pro on 2026-09-13: the daemon from the branch, `GET /api/history` returns `step_seconds: 10` and a growing list of points, eight points eighty seconds after start. The link share in the `system` topic is computed over the whole daemon uptime and is not reset by a page reload. The `internal/history` tests cover step averaging, an incomplete step, step coarsening when the ring fills up and the order of board metrics; an `internal/events` test checks that accounting accumulates without a single stream reader.

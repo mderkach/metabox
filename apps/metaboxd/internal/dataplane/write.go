@@ -16,26 +16,26 @@ import (
 	"metabox/internal/uci"
 )
 
-// BatchRunner запускает команду с input на stdin и отдаёт её вывод с кодом
-// возврата.
+// BatchRunner runs a command with input on stdin and returns its output with the exit
+// code.
 type BatchRunner func(ctx context.Context, input, name string, args ...string) (stdout string, exitCode int, err error)
 
-// listOptions — опции-списки модели. В выводе `uci show` список из одного
-// значения не отличить от опции, а init-скрипт читает их config_list_foreach,
-// который опцию не видит: при восстановлении они пишутся только списком.
+// listOptions are the list options of the model. In `uci show` output a list of one
+// value is indistinguishable from an option, and the init script reads them with config_list_foreach,
+// which does not see an option: on restore they are written only as a list.
 var listOptions = []string{"source_ip", "source_mac", "lan_interface", "wan_proxy_cidr", "wan_direct_cidr"}
 
-// Snapshot — секция `metabox.dataplane` как она лежит в UCI, без разбора.
-// По ней откатывается смена модели: возвращается и то, что демон не принял бы
-// сам, — опции, дописанные владельцем, и невалидные значения.
+// Snapshot is the `metabox.dataplane` section as it lies in UCI, unparsed.
+// The model change is rolled back by it: what the daemon would not accept itself is returned too,
+// options added by the owner and invalid values.
 type Snapshot struct {
-	// Exists — секция была; ложь — откат её удаляет.
+	// Exists means the section existed; false means the rollback deletes it.
 	Exists  bool                `json:"exists"`
 	Type    string              `json:"type,omitempty"`
 	Options map[string][]string `json:"options,omitempty"`
 }
 
-// Model разбирает снимок так же, как Reader.Model разбирает UCI.
+// Model parses the snapshot the same way Reader.Model parses UCI.
 func (s Snapshot) Model() (Model, error) {
 	if !s.Exists || s.Type != sectionType {
 		return Defaults(), nil
@@ -44,7 +44,7 @@ func (s Snapshot) Model() (Model, error) {
 	return decode(uci.Section{Name: section, Type: s.Type, Options: s.Options})
 }
 
-// Equal сравнивает снимки по содержимому секции.
+// Equal compares snapshots by section content.
 func (s Snapshot) Equal(other Snapshot) bool {
 	if s.Exists != other.Exists {
 		return false
@@ -57,25 +57,25 @@ func (s Snapshot) Equal(other Snapshot) bool {
 	return s.Type == other.Type && maps.EqualFunc(s.Options, other.Options, slices.Equal)
 }
 
-// Sum — отпечаток секции для оптимистичной блокировки смены модели. JSON
-// детерминирован: ключи карты сортируются, порядок значений списка значим и для
-// UCI. Отсутствующая секция даёт один отпечаток независимо от прочих полей.
+// Sum is the section fingerprint for optimistic locking of a model change. The JSON
+// is deterministic: map keys are sorted, the order of list values matters in
+// UCI too. A missing section gives one fingerprint regardless of other fields.
 func (s Snapshot) Sum() string {
 	if !s.Exists {
 		s = Snapshot{}
 	}
 
-	// Ошибки здесь не бывает: в снимке только строки, срезы строк и карта со
-	// строковыми ключами.
+	// There is no error here: the snapshot holds only strings, string slices and a map with
+	// string keys.
 	data, _ := json.Marshal(s)
 	digest := sha256.Sum256(data)
 
 	return hex.EncodeToString(digest[:])
 }
 
-// Normalize проверяет модель теми же правилами, что чтение из UCI, и отдаёт её
-// в том виде, в каком она прочитается после записи: пустые значения списков
-// выброшены, пустой lan_interface заменён умолчанием.
+// Normalize checks the model with the same rules as a read from UCI and returns it
+// in the form it will be read after the write: empty list values are
+// dropped, an empty lan_interface is replaced by the default.
 func Normalize(m Model) (Model, error) {
 	return decode(encode(m))
 }
@@ -94,8 +94,8 @@ func encode(m Model) uci.Section {
 		"ipv6":          {flagValue(m.IPv6)},
 	}
 
-	// Пустой список пишется отсутствием опции — как его и прочтут после записи:
-	// у lan_interface тогда действует умолчание.
+	// An empty list is written by the absence of the option, the way it will be read after the write:
+	// lan_interface then gets the default.
 	for name, values := range map[string][]string{
 		"source_ip":       m.SourceIP,
 		"source_mac":      m.SourceMAC,
@@ -119,8 +119,8 @@ func flagValue(v bool) string {
 	return "0"
 }
 
-// Snapshot снимает секцию `metabox.dataplane` как есть. Нет конфига `metabox`
-// или секции — снимок без неё.
+// Snapshot takes the `metabox.dataplane` section as is. No `metabox` config
+// or section means a snapshot without it.
 func (r *Reader) Snapshot(ctx context.Context) (Snapshot, error) {
 	out, code, err := r.run(ctx, r.uci, "-q", "show", config)
 	if err != nil {
@@ -140,11 +140,11 @@ func (r *Reader) Snapshot(ctx context.Context) (Snapshot, error) {
 	return Snapshot{}, nil
 }
 
-// Write записывает модель в UCI одним `uci batch` с commit и сверяет
-// прочитанное после записи с моделью. Сверка обязательна: uci batch на
-// отказе отдельной команды печатает ошибку и идёт дальше с кодом 0.
+// Write writes the model to UCI with one `uci batch` with commit and compares
+// what is read after the write with the model. The comparison is mandatory: uci batch on a
+// failure of a single command prints an error and goes on with code 0.
 //
-// Опции, которых в модели нет, остаются в секции: их мог дописать владелец.
+// Options absent from the model stay in the section: the owner could have added them.
 func (r *Reader) Write(ctx context.Context, m Model) error {
 	want, err := Normalize(m)
 	if err != nil {
@@ -183,8 +183,8 @@ func (r *Reader) Write(ctx context.Context, m Model) error {
 	return nil
 }
 
-// Restore возвращает секцию к снимку: удаляет её и пишет заново, так что
-// опции, добавленные после снимка, не остаются.
+// Restore returns the section to the snapshot: deletes it and writes anew, so
+// options added after the snapshot do not stay.
 func (r *Reader) Restore(ctx context.Context, snap Snapshot) error {
 	var b strings.Builder
 
@@ -256,20 +256,20 @@ func (r *Reader) commit(ctx context.Context, b *strings.Builder) error {
 	return nil
 }
 
-// quote заключает значение в одинарные кавычки, как его разбирает uci batch:
-// кавычка внутри значения закрывает кавычки, экранируется и открывает их
-// снова. Перевод строки так не спрятать, поэтому значение с ним не пишется
-// вовсе — см. splitsCommand.
+// quote wraps a value in single quotes the way uci batch parses it:
+// a quote inside the value closes the quotes, is escaped and opens them
+// again. A line break cannot be hidden this way, so a value with it is not written
+// at all, see splitsCommand.
 func quote(v string) string {
 	return "'" + strings.ReplaceAll(v, "'", `'\''`) + "'"
 }
 
-// splitsCommand — значение разорвало бы строку команды uci batch.
+// splitsCommand: the value would tear the uci batch command line.
 func splitsCommand(v string) bool {
 	return strings.ContainsAny(v, "\n\r\x00")
 }
 
-// safeWord — имя опции или тип секции, которые uci примет без кавычек.
+// safeWord is an option name or section type that uci accepts without quotes.
 func safeWord(s string) bool {
 	return s != "" && strings.Trim(s, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_") == ""
 }

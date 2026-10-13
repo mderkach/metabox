@@ -1,21 +1,22 @@
 import { buildTagOfType, nodeVariants, type NodeRegistry } from '@entities/Config';
 
-/** Пункт выбора типа узла. */
+/** Node type choice item. */
 export interface NodeTypeOption {
   type: string;
   /**
-   * Build-тег, которого нет в сборке бинаря: узел такого типа сохранится, но
-   * `sing-box check` его отвергнет. `null` — тип запустится или состав сборки
-   * не прочитан.
+   * Build tag that is not in the binary build: a node of such a type will be
+   * saved, but `sing-box check` will reject it. `null` means the type will run
+   * or the build contents were not read.
    */
   unbuilt: string | null;
 }
 
 /**
- * Типы реестра для выбора, по имени. Тип вне сборки бинаря не выключается, а
- * помечается (AC-47): конфиг собирают и под другой бинарь, а последствие
- * называет пометка. `builtTags` — `null`, пока демон не прочитал бинарь: о
- * составе сборки ничего не известно, и пометок нет.
+ * Registry types for selection, by name. A type outside the binary build is not
+ * disabled but marked (AC-47): a config is also built for another binary, and
+ * the mark names the consequence. `builtTags` is `null` until the daemon has
+ * read the binary: nothing is known about the build contents then, and there
+ * are no marks.
  */
 export function nodeTypeOptions(registry: NodeRegistry, builtTags: readonly string[] | null): NodeTypeOption[] {
   return nodeVariants(registry)

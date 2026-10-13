@@ -3,7 +3,7 @@ import { cn } from '@shared/lib/utils';
 
 import type { ConnectionCellProps } from './ConnectionColumns';
 
-/** Нулевая скорость — не «0 Б/с», а прочерк: молчащих строк большинство. */
+/** Zero speed is not "0 B/s" but a dash: most rows are silent. */
 const IDLE_RATE = 1;
 
 export function ConnectionRateCell({ connection }: ConnectionCellProps) {

@@ -12,7 +12,7 @@ describe('LogStore', () => {
     LogStore.getState().reset();
   });
 
-  it('копит строки потока в порядке прихода', () => {
+  it('accumulates stream lines in arrival order', () => {
     LogStore.getState().append([event(1), event(2)]);
     LogStore.getState().append([event(3)]);
 
@@ -20,14 +20,14 @@ describe('LogStore', () => {
     expect(LogStore.getState().lost).toBe(0);
   });
 
-  it('считает потерянные строки по разрыву seq', () => {
+  it('counts lost lines by the seq gap', () => {
     LogStore.getState().append([event(1), event(4)]);
     LogStore.getState().append([event(5), event(7)]);
 
     expect(LogStore.getState().lost).toBe(3);
   });
 
-  it('новое соединение начинает нумерацию заново и не считается потерей', () => {
+  it('a new connection restarts numbering and does not count as a loss', () => {
     LogStore.getState().append([event(1), event(2)]);
     LogStore.getState().restart();
     LogStore.getState().append([event(1)]);
@@ -36,7 +36,7 @@ describe('LogStore', () => {
     expect(LogStore.getState().entries.map((entry) => entry.message)).toEqual(['строка 1']);
   });
 
-  it('держит не больше LOG_LIMIT строк, выбрасывая старые', () => {
+  it('keeps no more than LOG_LIMIT lines, dropping old ones', () => {
     const events = Array.from({ length: LOG_LIMIT + 5 }, (_, index) => event(index + 1));
 
     LogStore.getState().append(events);
@@ -45,7 +45,7 @@ describe('LogStore', () => {
     expect(LogStore.getState().entries[0].message).toBe('строка 6');
   });
 
-  it('пустая пачка состояние не меняет', () => {
+  it('an empty batch does not change the state', () => {
     const before = LogStore.getState();
 
     LogStore.getState().append([]);

@@ -20,8 +20,8 @@ const (
 	leasesFile = "testdata/dhcp.leases"
 )
 
-// testNow лежит между сроками аренд фикстуры: 1000000000 уже истёк,
-// 2000000000 ещё нет.
+// testNow lies between the lease expiries of the fixture: 1000000000 has already expired,
+// 2000000000 has not yet.
 var testNow = time.Unix(1500000000, 0)
 
 type fakeRunner struct {
@@ -68,7 +68,7 @@ func newRegistry(t *testing.T, runner *fakeRunner, store devices.Store, leases s
 		Now:    func() time.Time { return testNow },
 	})
 	if err != nil {
-		t.Fatalf("сборка списка устройств: %v", err)
+		t.Fatalf("device list build: %v", err)
 	}
 
 	return registry
@@ -91,7 +91,7 @@ func TestListMergesLeasesAndStaticHosts(t *testing.T) {
 
 	list, err := registry.List(t.Context())
 	if err != nil {
-		t.Fatalf("список: %v", err)
+		t.Fatalf("list: %v", err)
 	}
 
 	want := map[string]devices.Device{
@@ -135,28 +135,28 @@ func TestListMergesLeasesAndStaticHosts(t *testing.T) {
 
 	got := byMAC(t, list)
 	if len(got) != len(want) {
-		t.Errorf("устройств %d, ожидали %d: %+v", len(got), len(want), list)
+		t.Errorf("devices %d, expected %d: %+v", len(got), len(want), list)
 	}
 
 	tests := []struct {
 		name string
 		mac  string
 	}{
-		{"аренда с именем", "aa:bb:cc:00:00:01"},
-		{"аренда без имени", "aa:bb:cc:00:00:02"},
-		{"истёкшая аренда офлайн", "aa:bb:cc:00:00:03"},
-		{"статическая перекрывает DHCP", "aa:bb:cc:00:00:04"},
-		{"второй MAC статической записи списком", "aa:bb:cc:00:00:05"},
-		{"статическая без аренды", "aa:bb:cc:00:00:06"},
-		{"бессрочная аренда онлайн", "aa:bb:cc:00:00:07"},
-		{"два MAC через пробел и кавычка в имени", "aa:bb:cc:00:00:08"},
-		{"второй MAC через пробел", "aa:bb:cc:00:00:09"},
+		{"lease with a name", "aa:bb:cc:00:00:01"},
+		{"lease without a name", "aa:bb:cc:00:00:02"},
+		{"expired lease offline", "aa:bb:cc:00:00:03"},
+		{"static overrides DHCP", "aa:bb:cc:00:00:04"},
+		{"second MAC of a static entry as a list", "aa:bb:cc:00:00:05"},
+		{"static without a lease", "aa:bb:cc:00:00:06"},
+		{"permanent lease online", "aa:bb:cc:00:00:07"},
+		{"two MACs separated by a space and a quote in the name", "aa:bb:cc:00:00:08"},
+		{"second MAC separated by a space", "aa:bb:cc:00:00:09"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got[tt.mac] != want[tt.mac] {
-				t.Errorf("получили %+v, ожидали %+v", got[tt.mac], want[tt.mac])
+				t.Errorf("got %+v, expected %+v", got[tt.mac], want[tt.mac])
 			}
 		})
 	}
@@ -164,12 +164,12 @@ func TestListMergesLeasesAndStaticHosts(t *testing.T) {
 	for i := 1; i < len(list); i++ {
 		prev, cur := netip.MustParseAddr(list[i-1].IP), netip.MustParseAddr(list[i].IP)
 		if prev.Compare(cur) > 0 {
-			t.Errorf("список не упорядочен по адресу: %s перед %s", prev, cur)
+			t.Errorf("list is not ordered by address: %s before %s", prev, cur)
 		}
 	}
 
 	if len(runner.calls) != 1 || strings.Join(runner.calls[0], " ") != testUCI+" -q show dhcp" {
-		t.Errorf("вызовы uci: %v", runner.calls)
+		t.Errorf("uci calls: %v", runner.calls)
 	}
 }
 
@@ -180,51 +180,51 @@ func TestCustomNameOverridesStaticAndSurvivesRestart(t *testing.T) {
 	registry := newRegistry(t, uciFixture(t), store, leasesFile)
 
 	if err := registry.Rename(t.Context(), "AA-BB-CC-00-00-06", "  Принтер в коридоре "); err != nil {
-		t.Fatalf("правка имени: %v", err)
+		t.Fatalf("name edit: %v", err)
 	}
 
 	if err := registry.Rename(t.Context(), "aa:bb:cc:00:00:0a", "планшет"); err != nil {
-		t.Fatalf("правка имени устройства без аренды: %v", err)
+		t.Fatalf("edit of a device name without a lease: %v", err)
 	}
 
 	if _, err := os.Stat(filepath.Join(stateDir, "devices.json")); err != nil {
-		t.Fatalf("файл имён не записан: %v", err)
+		t.Fatalf("names file not written: %v", err)
 	}
 
 	restarted := newRegistry(t, uciFixture(t), newStore(t, stateDir), leasesFile)
 
 	list, err := restarted.List(t.Context())
 	if err != nil {
-		t.Fatalf("список: %v", err)
+		t.Fatalf("list: %v", err)
 	}
 
 	got := byMAC(t, list)
 
 	printer := got["aa:bb:cc:00:00:06"]
 	if printer.Name != "Принтер в коридоре" || printer.NameSource != devices.SourceCustom || !printer.Static {
-		t.Errorf("своё имя не перекрыло статическое после рестарта: %+v", printer)
+		t.Errorf("own name did not override the static one after a restart: %+v", printer)
 	}
 
 	tablet := got["aa:bb:cc:00:00:0a"]
 	if tablet.Name != "планшет" || tablet.IP != "" || tablet.Online {
-		t.Errorf("устройство со своим именем без аренды: %+v", tablet)
+		t.Errorf("device with its own name and no lease: %+v", tablet)
 	}
 
 	if last := list[len(list)-1]; last.MAC != "aa:bb:cc:00:00:0a" {
-		t.Errorf("устройство без адреса не в конце: %+v", last)
+		t.Errorf("device without an address is not at the end: %+v", last)
 	}
 
 	if err := restarted.Rename(t.Context(), "aa:bb:cc:00:00:06", ""); err != nil {
-		t.Fatalf("сброс имени: %v", err)
+		t.Fatalf("name reset: %v", err)
 	}
 
 	list, err = restarted.List(t.Context())
 	if err != nil {
-		t.Fatalf("список: %v", err)
+		t.Fatalf("list: %v", err)
 	}
 
 	if printer := byMAC(t, list)["aa:bb:cc:00:00:06"]; printer.Name != "printer" || printer.NameSource != devices.SourceStatic {
-		t.Errorf("пустое имя не вернуло статическое: %+v", printer)
+		t.Errorf("empty name did not restore the static one: %+v", printer)
 	}
 }
 
@@ -235,10 +235,10 @@ func TestRenameRejectsInvalidInput(t *testing.T) {
 		dev  string
 		want error
 	}{
-		{"не MAC", "router", "x", devices.ErrInvalidMAC},
-		{"MAC из восьми байт", "aa:bb:cc:dd:ee:ff:00:11", "x", devices.ErrInvalidMAC},
-		{"имя длиннее потолка", "aa:bb:cc:00:00:01", strings.Repeat("я", 65), devices.ErrInvalidName},
-		{"управляющий символ", "aa:bb:cc:00:00:01", "a\nb", devices.ErrInvalidName},
+		{"not a MAC", "router", "x", devices.ErrInvalidMAC},
+		{"eight-byte MAC", "aa:bb:cc:dd:ee:ff:00:11", "x", devices.ErrInvalidMAC},
+		{"name longer than the ceiling", "aa:bb:cc:00:00:01", strings.Repeat("я", 65), devices.ErrInvalidName},
+		{"control character", "aa:bb:cc:00:00:01", "a\nb", devices.ErrInvalidName},
 	}
 
 	for _, tt := range tests {
@@ -247,11 +247,11 @@ func TestRenameRejectsInvalidInput(t *testing.T) {
 			registry := newRegistry(t, uciFixture(t), newStore(t, stateDir), leasesFile)
 
 			if err := registry.Rename(t.Context(), tt.mac, tt.dev); !errors.Is(err, tt.want) {
-				t.Errorf("ошибка %v, ожидали %v", err, tt.want)
+				t.Errorf("error %v, expected %v", err, tt.want)
 			}
 
 			if _, err := os.Stat(filepath.Join(stateDir, "devices.json")); !errors.Is(err, fs.ErrNotExist) {
-				t.Errorf("отклонённая правка оставила файл: %v", err)
+				t.Errorf("a rejected edit left a file: %v", err)
 			}
 		})
 	}
@@ -277,58 +277,58 @@ func TestRenameKeepsNameOutOfMemoryWhenWriteFails(t *testing.T) {
 	registry := newRegistry(t, uciFixture(t), failingStore{}, leasesFile)
 
 	if err := registry.Rename(t.Context(), "aa:bb:cc:00:00:06", "Принтер"); err == nil {
-		t.Fatal("отказ записи не дошёл до вызывающего")
+		t.Fatal("write failure did not reach the caller")
 	}
 
 	list, err := registry.List(t.Context())
 	if err != nil {
-		t.Fatalf("список: %v", err)
+		t.Fatalf("list: %v", err)
 	}
 
 	if printer := byMAC(t, list)["aa:bb:cc:00:00:06"]; printer.NameSource != devices.SourceStatic {
-		t.Errorf("незаписанное имя попало в список: %+v", printer)
+		t.Errorf("unwritten name got into the list: %+v", printer)
 	}
 }
 
 func TestNewRejectsBrokenNamesFile(t *testing.T) {
 	_, err := devices.New(t.Context(), uciFixture(t).run, failingStore{data: []byte("{")}, devices.Options{})
 	if err == nil {
-		t.Fatal("битый файл имён принят: следующая правка затёрла бы его")
+		t.Fatal("broken names file accepted: the next edit would overwrite it")
 	}
 }
 
 func TestListSources(t *testing.T) {
-	t.Run("без файла аренд остаются статические записи", func(t *testing.T) {
+	t.Run("without a lease file the static entries remain", func(t *testing.T) {
 		registry := newRegistry(t, uciFixture(t), newStore(t, t.TempDir()), filepath.Join(t.TempDir(), "absent"))
 
 		list, err := registry.List(t.Context())
 		if err != nil {
-			t.Fatalf("список: %v", err)
+			t.Fatalf("list: %v", err)
 		}
 
 		if len(list) != 5 {
-			t.Errorf("устройств %d, ожидали 5 статических: %+v", len(list), list)
+			t.Errorf("devices %d, expected 5 static: %+v", len(list), list)
 		}
 	})
 
-	t.Run("ненулевой код uci — статических записей нет", func(t *testing.T) {
+	t.Run("non-zero uci code means no static entries", func(t *testing.T) {
 		registry := newRegistry(t, &fakeRunner{code: 1}, newStore(t, t.TempDir()), leasesFile)
 
 		list, err := registry.List(t.Context())
 		if err != nil {
-			t.Fatalf("список: %v", err)
+			t.Fatalf("list: %v", err)
 		}
 
 		if len(list) != 5 {
-			t.Errorf("устройств %d, ожидали 5 аренд: %+v", len(list), list)
+			t.Errorf("devices %d, expected 5 leases: %+v", len(list), list)
 		}
 	})
 
-	t.Run("отказ запуска uci — ошибка", func(t *testing.T) {
+	t.Run("uci launch failure is an error", func(t *testing.T) {
 		registry := newRegistry(t, &fakeRunner{err: errors.New("нет файла")}, newStore(t, t.TempDir()), leasesFile)
 
 		if _, err := registry.List(t.Context()); err == nil {
-			t.Error("отказ uci проглочен")
+			t.Error("uci failure swallowed")
 		}
 	})
 }

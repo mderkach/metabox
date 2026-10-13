@@ -8,48 +8,48 @@ import type { FieldPlan } from '@shared/lib/schemaShape';
 import { overrideIssues, type NodeOverride } from './ConfigNodeForm.overrides';
 
 /**
- * Модель формы узла: ключи — поля узла как есть. Форма авторендерера
- * типизирована против любого узла, а не одного типа: путь поля — строка из
- * схемы, и `Path<…>` от этой модели — просто `string`.
+ * Node form model: keys are the node fields as is. The autorenderer form is
+ * typed against any node, not one type: the field path is a string from the
+ * schema, and `Path<…>` of this model is simply `string`.
  */
 export type ConfigNodeFormModel = Record<string, unknown>;
 
 /**
- * Очищенное поле. Не `undefined`: его React Hook Form читает как «взять
- * значение по умолчанию» и возвращает в поле исходное. Ключ удаляет запись в
- * документ (`compactNode`).
+ * A cleared field. Not `undefined`: React Hook Form reads it as "take the
+ * default value" and returns the original into the field. The key deletes the
+ * entry in the document (`compactNode`).
  */
 export const UNSET = null;
 
-/** Поле без значения: очищенное или не заданное в узле. */
+/** A field without a value: cleared or not set in the node. */
 export function isUnset(value: unknown): value is null | undefined {
   return value === UNSET || value === undefined;
 }
 
-/** Перевод строки в многострочном поле: значения списка идут по одному на строку. */
+/** Line break in a multiline field: list values go one per line. */
 const LINE_BREAK = /\r?\n/;
 
-/** Запись из одних цифр: поле «строка или число» отдаёт её числом. */
+/** An entry of digits only: a "string or number" field serves it as a number. */
 const DIGITS = /^\d+$/;
 
 /**
- * Схема формы узла: объект с ключами-строками и схема его типа разом.
- * Пересечение даёт резолверу вход-объект, которого базовый `$ZodType` реестра
- * по типу не несёт, — без приведения; замечания схемы типа доходят с теми же
- * путями и кодами.
+ * Node form schema: an object with string keys and its type schema at once. The
+ * intersection gives the resolver an input object that the registry's base
+ * `$ZodType` by type does not carry, without casting; the type schema remarks
+ * arrive with the same paths and codes.
  */
 function toNodeFormSchema(schema: z.core.$ZodType) {
   return z.intersection(z.record(z.string(), z.unknown()), schema);
 }
 
 /**
- * Резолвер формы узла. Проверяется то, что ляжет в документ: очищенные поля
- * выпадают до проверки — пустая длительность значит «ключа нет», а не строку,
- * которая не проходит шаблон.
+ * Node form resolver. What is checked is what will go into the document:
+ * cleared fields drop out before the check, since an empty duration means "no
+ * key", not a string that fails the pattern.
  *
- * Поверх схемы типа — проверки его оверрайда: обязательные поля и `refine`.
- * Узел до правки резолвер получает контекстом формы. Замечание схемы на том
- * же поле остаётся первым: оно точнее.
+ * On top of the type schema are its override checks: required fields and
+ * `refine`. The resolver gets the node before the edit through the form
+ * context. A schema remark on the same field stays first: it is more precise.
  */
 export function toNodeFormResolver(
   schema: z.core.$ZodType,
@@ -83,15 +83,15 @@ function isRecord(value: unknown): value is ConfigNodeFormModel {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-/** Имя поля формы: путь от корня узла через точку — RHF понимает только её. */
+/** Form field name: a dotted path from the node root, and RHF understands only that. */
 export function toFieldName(path: readonly string[]): string {
   return path.join('.');
 }
 
 /**
- * Значения списка, как их отдаёт форма. Пусто — ключа нет; одно значение
- * listable-поля — строкой, а не массивом из одного элемента: так его пишет и
- * форк, и нетронутая строка в файле не превращается в список.
+ * List values as the form serves them. Empty means no key; a single value of a
+ * listable field is a string, not a one-element array: this is how the fork
+ * writes it, and an untouched string in the file does not turn into a list.
  */
 export function packList(items: readonly string[], listable: boolean): string | string[] | null {
   if (items.length === 0) {
@@ -101,7 +101,7 @@ export function packList(items: readonly string[], listable: boolean): string | 
   return listable && items.length === 1 ? items[0] : [...items];
 }
 
-/** Значения списка из узла: listable-строка — один элемент, остальное отбрасывается. */
+/** List values from a node: a listable string is one element, the rest is dropped. */
 export function unpackList(value: unknown): string[] {
   if (typeof value === 'string') {
     return value === '' ? [] : [value];
@@ -110,7 +110,7 @@ export function unpackList(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item) => typeof item === 'string') : [];
 }
 
-/** Многострочное поле в значения списка: пустые строки и пробелы по краям выпадают. */
+/** Multiline field into list values: empty lines and surrounding spaces drop out. */
 export function textToList(text: string, listable: boolean): string | string[] | null {
   return packList(
     text
@@ -125,7 +125,7 @@ export function listToText(value: unknown): string {
   return unpackList(value).join('\n');
 }
 
-/** Поле «строка или число» (`routing_mark`): запись из одних цифр — число. */
+/** A "string or number" field (`routing_mark`): an entry of digits only is a number. */
 export function parseScalar(text: string): string | number | null {
   const trimmed = text.trim();
 
@@ -136,12 +136,12 @@ export function parseScalar(text: string): string | number | null {
   return DIGITS.test(trimmed) ? Number(trimmed) : trimmed;
 }
 
-/** Числовое поле: пустое — ключа нет. */
+/** Numeric field: empty means no key. */
 export function parseNumber(text: string): number | null {
   return text === '' ? UNSET : Number(text);
 }
 
-/** Значение поля ввода: строка и число показываются как есть, прочее — пусто. */
+/** Input field value: a string and a number are shown as is, anything else is empty. */
 export function toInputText(value: unknown): string {
   if (typeof value === 'string') {
     return value;
@@ -151,19 +151,19 @@ export function toInputText(value: unknown): string {
 }
 
 /**
- * Одинаковы ли значения поля как JSON. Форма копирует значения на каждом
- * сбросе, поэтому сравнение по ссылке видело бы смену там, где её нет.
+ * Whether field values are equal as JSON. The form copies values on every
+ * reset, so a comparison by reference would see a change where there is none.
  */
 export function isSameValue(left: unknown, right: unknown): boolean {
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
-/** Группа, в которой что-то задано: такая открывается сразу. */
+/** A group in which something is set: such a one opens right away. */
 export function isFilledGroup(value: unknown): boolean {
   return typeof value === 'object' && value !== null && Object.keys(value).length > 0;
 }
 
-/** Поля формы с оверрайдом: сверху — основные, остальные — под свёрткой. */
+/** Form fields with an override: the main ones on top, the rest under a disclosure. */
 export interface NodeFormLayout {
   primary: FieldPlan[];
   rest: FieldPlan[];
@@ -185,7 +185,7 @@ function findField(plan: readonly FieldPlan[], name: string): FieldPlan | null {
   return null;
 }
 
-/** План без полей `names`; группа, от которой ничего не осталось, выпадает целиком. */
+/** Plan without the `names` fields; a group with nothing left drops out entirely. */
 function withoutFields(plan: readonly FieldPlan[], names: ReadonlySet<string>): FieldPlan[] {
   return plan.flatMap((field) => {
     if (names.has(toFieldName(field.path))) {
@@ -202,7 +202,7 @@ function withoutFields(plan: readonly FieldPlan[], names: ReadonlySet<string>): 
   });
 }
 
-/** Вид полей, который оверрайд подменяет: остальное — как в схеме. */
+/** Field kind that an override replaces: the rest is as in the schema. */
 function withWidgets(plan: readonly FieldPlan[], widgets: NonNullable<NodeOverride['widgets']>): FieldPlan[] {
   return plan.map((field) => {
     const widget = widgets[toFieldName(field.path)];
@@ -216,10 +216,10 @@ function withWidgets(plan: readonly FieldPlan[], widgets: NonNullable<NodeOverri
 }
 
 /**
- * Раскладка формы по оверрайду: основные поля по его порядку и остальные.
- * Вложенное основное поле поднимается наверх и подписывается путём целиком
- * (`tls.server_name`), а из своей группы уходит: одно поле — один контрол.
- * Без оверрайда основных полей нет, и форма идёт по схеме как есть.
+ * Form layout by override: main fields in its order and the rest. A nested main
+ * field is lifted to the top and labeled with its full path
+ * (`tls.server_name`), and leaves its group: one field, one control. Without an
+ * override there are no main fields, and the form follows the schema as is.
  */
 export function arrangePlan(plan: readonly FieldPlan[], override: NodeOverride | null): NodeFormLayout {
   if (override === null) {
@@ -237,9 +237,10 @@ export function arrangePlan(plan: readonly FieldPlan[], override: NodeOverride |
 }
 
 /**
- * Делит поля на заданные в узле и пустые. Заданное поле видно сразу: свёрнутым
- * оно прятало бы то, что в узле уже настроено. Пустые уходят под свёртку —
- * у типа их десятки, и стеной они отодвигали бы заданные.
+ * Splits fields into those set in the node and empty ones. A set field is
+ * visible at once: collapsed, it would hide what is already configured in the
+ * node. Empty ones go under a disclosure, since a type has dozens of them, and
+ * as a wall they would push the set ones away.
  */
 export function splitByPresence(
   fields: readonly FieldPlan[],

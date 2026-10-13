@@ -15,7 +15,7 @@ function renderThemeSwitch() {
 
 describe('ThemeSwitch', () => {
   beforeEach(() => {
-    // `matchMedia` в jsdom нет, а `next-themes` спрашивает у него системную тему.
+    // jsdom has no `matchMedia`, and `next-themes` asks it for the system theme.
     vi.stubGlobal('matchMedia', (query: string) => ({
       matches: false,
       media: query,
@@ -32,7 +32,7 @@ describe('ThemeSwitch', () => {
     document.documentElement.className = '';
   });
 
-  it('отмечает тему по умолчанию', async () => {
+  it('marks the default theme', async () => {
     renderThemeSwitch();
 
     expect(screen.getByRole('group', { name: 'Оформление' })).toBeInTheDocument();
@@ -41,7 +41,7 @@ describe('ThemeSwitch', () => {
     expect(screen.getByRole('button', { name: 'Как в системе' })).toHaveAttribute('aria-pressed', 'false');
   });
 
-  it('переключает тему и запоминает выбор', async () => {
+  it('switches the theme and remembers the choice', async () => {
     renderThemeSwitch();
 
     await userEvent.click(screen.getByRole('button', { name: 'Светлая' }));
@@ -52,7 +52,7 @@ describe('ThemeSwitch', () => {
     expect(document.documentElement).toHaveClass('light');
   });
 
-  it('повторное нажатие не снимает выбор: темы «никакой» нет', async () => {
+  it('a repeated press does not clear the choice: there is no "no" theme', async () => {
     renderThemeSwitch();
 
     const dark = await screen.findByRole('button', { name: 'Тёмная', pressed: true });

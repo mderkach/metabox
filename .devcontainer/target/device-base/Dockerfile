@@ -1,10 +1,10 @@
-# База стенда из образа целевого устройства: та же ветка OpenWrt, та же арка и
-# тот же apk, что на роутере. Образ качается с downloads.openwrt.org — ничего,
-# кроме сети, для сборки не нужно.
+# Test bench base from the target device image: the same OpenWrt branch, the same arch and
+# the same apk as on the router. The image is downloaded from downloads.openwrt.org; nothing
+# but the network is needed for the build.
 #
-# Берётся sysupgrade-образ, потому что rootfs отдельным архивом OpenWrt для
-# filogic не публикует. Ядро и dtb из него не используются: контейнер работает
-# на ядре хоста, поэтому подходит образ любой платы того же таргета.
+# A sysupgrade image is taken because OpenWrt does not publish the rootfs as a separate archive for
+# filogic. The kernel and dtb from it are not used: the container runs
+# on the host kernel, so an image of any board of the same target fits.
 
 ARG DEVICE_IMAGE_URL=https://downloads.openwrt.org/releases/25.12.4/targets/mediatek/filogic/openwrt-25.12.4-mediatek-filogic-bananapi_bpi-r4-squashfs-sysupgrade.itb
 
@@ -15,13 +15,13 @@ RUN apt-get update -qq \
  && apt-get install -y --no-install-recommends -qq ca-certificates curl squashfs-tools \
  && rm -rf /var/lib/apt/lists/*
 
-# Корень лежит в образе sysupgrade за деревом FIT, отдельной записи о нём в
-# дереве нет: данные ядра и dtb вынесены наружу, и squashfs просто приклеен
-# следом. Поэтому начало ищется по магии, а не по смещению из заголовка.
+# The root lies in the sysupgrade image behind the FIT tree, and the tree has no separate entry for it:
+# the kernel and dtb data are moved out, and squashfs is simply glued on
+# after. So the start is found by magic, not by an offset from the header.
 RUN set -eu; \
     curl -fsSL -o /tmp/device.itb "$DEVICE_IMAGE_URL"; \
     offset="$(grep -abo hsqs /tmp/device.itb | head -1 | cut -d: -f1)"; \
-    [ -n "$offset" ] || { echo "в образе $DEVICE_IMAGE_URL нет squashfs" >&2; exit 1; }; \
+    [ -n "$offset" ] || { echo "no squashfs in image $DEVICE_IMAGE_URL" >&2; exit 1; }; \
     dd if=/tmp/device.itb of=/tmp/rootfs.squashfs bs=1M iflag=skip_bytes,fullblock skip="$offset" status=none; \
     unsquashfs -q -d /rootfs /tmp/rootfs.squashfs >/dev/null; \
     test -x /rootfs/sbin/procd

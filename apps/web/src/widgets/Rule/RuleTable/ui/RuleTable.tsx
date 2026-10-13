@@ -10,11 +10,11 @@ import { RULE_HIT, RULE_HITS_STATE, type RuleHitCell, type RuleHitsColumn } from
 import { RuleRow } from './RuleRow';
 import { RuleTableHeader } from './RuleTableHeader';
 
-/** Оценка для первого кадра: точную высоту виртуализатор измеряет сам. */
+/** Estimate for the first frame: the virtualizer measures the exact height itself. */
 const ROW_ESTIMATE = 52;
 const OVERSCAN = 8;
 
-/** Строка заголовка тоже строка таблицы: нумерация строк начинается с неё. */
+/** The header row is also a table row: row numbering starts with it. */
 const HEADER_ROWS = 1;
 
 const NO_EDITS: ReadonlySet<string> = new Set();
@@ -27,15 +27,15 @@ const HITS_NOTE = {
 } as const;
 
 /**
- * Список правил в порядке файла: тулбар, шапка колонок, виртуализованные строки
- * и подвал со счётчиком.
+ * Rule list in file order: toolbar, column header, virtualized rows
+ * and a footer with a counter.
  *
- * Сортировки в списке нет и не будет: правила проверяются сверху вниз, и
- * переставленный список показал бы порядок, которого в маршрутизации не
- * существует.
+ * There is no sorting in the list and never will be: rules are checked top to bottom, and
+ * a reordered list would show an order that does not exist in
+ * routing.
  *
- * Виртуализован — в конфиге бывает до 500 правил, — поэтому таблица
- * собрана ролями, а не тегом `table`: строки позиционируются абсолютно.
+ * Virtualized — a config can have up to 500 rules — so the table
+ * is built with roles, not the `table` tag: rows are positioned absolutely.
  */
 export function RuleTable({
   rules,
@@ -51,22 +51,22 @@ export function RuleTable({
   onSelect,
 }: {
   rules: RuleRowModel[];
-  /** Сколько правил в конфиге до отбора: подвал сообщает обе величины. */
+  /** How many rules are in the config before filtering: the footer reports both values. */
   total: number;
   selectedId: string | null;
-  /** Что показать вместо списка, когда строк нет. */
+  /** What to show instead of the list when there are no rows. */
   empty: ReactNode;
-  /** Поиск: левый край тулбара. */
+  /** Search: left edge of the toolbar. */
   search?: ReactNode;
-  /** Действия над списком: правый край тулбара. */
+  /** List actions: right edge of the toolbar. */
   actions?: ReactNode;
-  /** Срезы по выходу: вторая строка тулбара. */
+  /** Outbound facets: the second toolbar row. */
   facets?: ReactNode;
-  /** Строки, изменённые в черновике. */
+  /** Rows changed in the draft. */
   edited?: ReadonlySet<string>;
-  /** Счёт срабатываний; `null` — экран его не показывает. */
+  /** Hit count; `null` means the screen does not show it. */
   hits?: RuleHitsColumn | null;
-  /** Тип аутбаунда по тегу; тег, которого здесь нет, красится по имени. */
+  /** Outbound type by tag; a tag absent here is colored by name. */
   outboundTypes?: ReadonlyMap<string, string>;
   onSelect: (id: string) => void;
 }) {
@@ -83,9 +83,9 @@ export function RuleTable({
 
   const selectedPosition = useMemo(() => rules.findIndex((rule) => rule.id === selectedId), [rules, selectedId]);
 
-  // Выбранная строка может оказаться за окном: новое правило встаёт в конец
-  // списка, переставленное уезжает со своего места. Видимую строку `auto` не
-  // двигает, поэтому выбор мышью список не дёргает.
+  // The selected row may end up outside the window: a new rule goes to the end of
+  // the list, a reordered one leaves its place. `auto` does not move a visible
+  // row, so selecting with the mouse does not jerk the list.
   useEffect(
     function revealSelected() {
       if (selectedPosition >= 0) {
@@ -166,7 +166,7 @@ function toHitCell(counts: ReadonlyMap<string, number | null>, id: string): Rule
   return counts.get(id) ?? RULE_HIT.Unobserved;
 }
 
-/** Почему счёта нет: без этой строки пустая колонка выглядела бы поломкой. */
+/** Why there is no count: without this line an empty column would look like breakage. */
 function HitsNote({ hits }: { hits: RuleHitsColumn | null }) {
   const { t } = useTranslation('widgets/Rule/RuleTable');
 

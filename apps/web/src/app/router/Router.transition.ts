@@ -3,14 +3,15 @@ import type { ParsedLocation } from '@tanstack/react-router';
 import { NAV_TARGETS, pickActiveNav } from '@widgets/AppSidebar';
 
 /**
- * Типы перехода между экранами. Их читает `:active-view-transition-type()` в
- * `app/styles/index.css`, и там же лежит сама анимация.
+ * Transition types between screens. They are read by
+ * `:active-view-transition-type()` in `app/styles/index.css`, which also holds
+ * the animation itself.
  */
 export const PAGE_TRANSITION = {
   Forward: 'page-forward',
   Backward: 'page-backward',
   Fade: 'page-fade',
-  /** Переход внутри раздела: содержимое меняется, оболочка стоит. */
+  /** Transition within a section: the content changes, the shell stays. */
   Hold: 'page-hold',
 } as const;
 
@@ -23,12 +24,12 @@ interface LocationChange {
 }
 
 /**
- * Раздел адреса — его первый сегмент: у вкладок раздела он общий, и общая же у
- * них оболочка, которую держит маршрут-раскладка.
+ * A URL section is its first segment: the tabs of a section share it, and they
+ * also share the shell held by the layout route.
  *
- * Равенство сегментов означает общую оболочку, пока раскладка в панели одна.
- * Вложенный маршрут без раскладки — например, отдельный экран соединения —
- * получит этот же тип, и его шапка сменится срезом вместо растворения.
+ * Equal segments mean a shared shell while the panel has a single layout. A
+ * nested route without a layout, for example a separate connection screen, gets
+ * the same type, and its header will change by a cut instead of dissolving.
  */
 function toSection(pathname: string): string {
   return pathname.split('/')[1] ?? '';
@@ -41,17 +42,17 @@ function toNavIndex(pathname: string): number {
 }
 
 /**
- * Экран уходит в ту сторону, куда сместился текущий пункт меню. Пути вне меню
- * сменяются растворением. Первый заход и смена одних параметров адреса перехода
- * не получают: анимировать там нечего.
+ * The screen leaves in the direction the current menu item moved. Paths outside
+ * the menu change by dissolving. The first visit and a change of only the URL
+ * parameters get no transition: there is nothing to animate.
  *
- * Переход внутри раздела направления не получает по другой причине: оболочку
- * там держит маршрут-раскладка, и она стоит, а сдвиг содержимого под
- * неподвижной шапкой читается рывком, а не переходом. Направление при этом
- * показывает подчёркивание, переезжающее под новую вкладку. Цена решения:
- * «Конфигурация» и «Каталог сетов» — два соседних пункта меню, и подсветка
- * сайдбара между ними по-прежнему перескакивает, хотя содержимое только
- * растворяется.
+ * A transition within a section gets no direction for a different reason: the
+ * layout route holds the shell there and it stays, while shifting the content
+ * under a motionless header reads as a jerk, not a transition. The direction is
+ * shown instead by the underline moving under the new tab. The cost of this
+ * decision: "Configuration" and "Rule set catalog" are two adjacent menu items,
+ * and the sidebar highlight between them still jumps although the content only
+ * dissolves.
  */
 export function toPageTransitionTypes({
   fromLocation,

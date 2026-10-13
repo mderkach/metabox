@@ -3,15 +3,15 @@ import { BUILD_TAG_OF_OPTION, BUILD_TAG_OF_TYPE } from '@shared/api/generated';
 import { GENERIC_SECTIONS, readPath, type ConfigDocument } from './Config.model';
 import { SECTION_REGISTRY } from './Config.registry';
 
-/** Узел, тип которого бинарь на устройстве не запустит. */
+/** A node whose type the binary on the device will not run. */
 export interface UnbuiltNode {
-  /** Путь секции в документе: `outbounds`, `dns.servers`. */
+  /** Section path in the document: `outbounds`, `dns.servers`. */
   section: string;
   index: number;
-  /** Тег узла; `null` — тега нет, узел называется номером. */
+  /** Node tag; `null` means no tag, and the node is named by its number. */
   tag: string | null;
   type: string;
-  /** Build-тег, без которого бинарь этот тип не запускает. */
+  /** Build tag without which the binary does not run this type. */
   buildTag: string;
 }
 
@@ -22,11 +22,12 @@ function readString(node: object, key: string): string | null {
 }
 
 /**
- * Узлы документа, которых нет в сборке бинаря. Документ читается как есть, а
- * не через схему: предупреждение нужно и конфигу, который разбор не прошёл.
+ * Document nodes that are not in the binary build. The document is read as is,
+ * not through the schema: the warning is needed for a config that failed
+ * parsing too.
  *
- * `tags` — `null`, когда бинарь не прочитан: тогда о составе сборки ничего не
- * известно, и список пуст, а не полон.
+ * `tags` is `null` when the binary was not read: then nothing is known about
+ * the build contents, and the list is empty, not full.
  */
 export function findUnbuiltNodes(config: ConfigDocument | null, tags: readonly string[] | null): UnbuiltNode[] {
   if (config === null || tags === null) {
@@ -64,17 +65,17 @@ export function findUnbuiltNodes(config: ConfigDocument | null, tags: readonly s
   return found;
 }
 
-/** Опция конфига, которую бинарь на устройстве не запустит. */
+/** A config option the binary on the device will not run. */
 export interface UnbuiltOption {
-  /** Путь узла с опцией: `outbounds[1].tls.utls`, `experimental.clash_api`. */
+  /** Path of the node with the option: `outbounds[1].tls.utls`, `experimental.clash_api`. */
   path: string;
-  /** Build-тег, без которого бинарь эту опцию не запускает. */
+  /** Build tag without which the binary does not run this option. */
   buildTag: string;
 }
 
 /**
- * Стеки tun, которым нужен gVisor: `mixed` обслуживает TCP тем же стеком,
- * что и `gvisor`, и без тега оба отвечают одной ошибкой (`NewStack` в
+ * The tun stacks that need gVisor: `mixed` serves TCP with the same stack as
+ * `gvisor`, and without the tag both fail with the same error (`NewStack` in
  * sing-tun).
  */
 const GVISOR_STACKS = new Set(['gvisor', 'mixed']);
@@ -82,9 +83,9 @@ const GVISOR_STACKS = new Set(['gvisor', 'mixed']);
 type OptionFinder = (config: ConfigDocument) => string[];
 
 /**
- * По детектору на каждый ключ таблицы тегов. `satisfies` привязывает набор к
- * `BUILD_TAG_OF_OPTION`: опция, добавленная генератором, не соберётся без
- * своего детектора.
+ * One detector per key of the tag table. `satisfies` binds the set to
+ * `BUILD_TAG_OF_OPTION`: an option added by the generator will not compile
+ * without its own detector.
  */
 const OPTION_FINDERS = {
   'experimental.clash_api': findSection(['experimental', 'clash_api']),
@@ -98,9 +99,9 @@ function findSection(path: readonly string[]): OptionFinder {
 }
 
 /**
- * uTLS ездит в клиентских TLS-опциях и встречается в нескольких секциях —
- * аутбаунды, DNS-серверы, — поэтому ищется обходом всего документа: любой
- * узел с `tls.utls.enabled: true`.
+ * uTLS travels in client TLS options and occurs in several sections, outbounds
+ * and DNS servers, so it is found by walking the whole document: any node with
+ * `tls.utls.enabled: true`.
  */
 function findEnabledUTLS(config: ConfigDocument): string[] {
   const found: string[] = [];
@@ -169,9 +170,9 @@ function walkObjects(node: unknown, path: string, visit: (node: object, path: st
 }
 
 /**
- * Опции документа, которых нет в сборке бинаря. Читается как есть, теми же
- * правилами, что `findUnbuiltNodes`: `tags` — `null`, когда бинарь не
- * прочитан, и тогда список пуст, а не полон.
+ * Document options that are not in the binary build. Read as is, by the same
+ * rules as `findUnbuiltNodes`: `tags` is `null` when the binary was not read,
+ * and then the list is empty, not full.
  */
 export function findUnbuiltOptions(config: ConfigDocument | null, tags: readonly string[] | null): UnbuiltOption[] {
   if (config === null || tags === null) {
@@ -181,7 +182,7 @@ export function findUnbuiltOptions(config: ConfigDocument | null, tags: readonly
   const built = new Set(tags);
   const found: UnbuiltOption[] = [];
 
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- ключи закрытого литерала: сужение до его union
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- keys of a closed literal: narrowing to its union
   const options = Object.keys(OPTION_FINDERS) as (keyof typeof OPTION_FINDERS)[];
 
   for (const option of options) {
@@ -199,17 +200,19 @@ export function findUnbuiltOptions(config: ConfigDocument | null, tags: readonly
   return found;
 }
 
-/** Таблица тегов опций по пути: обычный `Map` читается строкой без приведения к ключам литерала. */
+/** Option tag table by path: a plain `Map` is read with a string without casting to the literal keys. */
 const OPTION_TAGS: ReadonlyMap<string, string> = new Map(Object.entries(BUILD_TAG_OF_OPTION));
 
 /**
- * Build-тег опции, которой нет в сборке бинаря, по пути поля внутри узла:
- * `tls.utls` и всё под ним — `with_utls`. Путь сверяется с ключами
- * `BUILD_TAG_OF_OPTION` вместе с предками, поэтому поле, поднятое формой из
- * своей группы (`tls.utls.fingerprint`), помечается так же, как группа.
+ * Build tag of an option missing from the binary build, by the field path
+ * inside a node: `tls.utls` and everything under it is `with_utls`. The path is
+ * matched against the `BUILD_TAG_OF_OPTION` keys together with ancestors, so a
+ * field lifted by the form out of its group (`tls.utls.fingerprint`) is marked
+ * the same way as the group.
  *
- * `null` — путь не опция из таблицы, тег в сборке есть или бинарь не прочитан
- * (`tags` — `null`): о составе сборки тогда ничего не известно.
+ * `null` means the path is not an option from the table, the tag is in the
+ * build, or the binary was not read (`tags` is `null`): then nothing is known
+ * about the build contents.
  */
 export function unbuiltOptionOf(path: string, tags: readonly string[] | null): string | null {
   if (tags === null) {

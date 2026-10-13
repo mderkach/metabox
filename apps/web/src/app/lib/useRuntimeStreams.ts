@@ -16,17 +16,18 @@ import {
 import { watchSequence } from '@shared/api';
 
 /**
- * Единый поток рантайма живёт в оболочке, а не на экранах: экран объявляет,
- * что смотрит поток, а открывает и закрывает его одно место. Иначе
- * переоткрытие экрана заводило бы ещё одну подписку поверх прежней.
+ * The single runtime stream lives in the shell, not on screens: a screen
+ * declares that it watches the stream, and one place opens and closes it.
+ * Otherwise reopening a screen would create one more subscription on top of the
+ * previous one.
  *
- * Поток один на все топики: трафик, память, соединения и состояние
- * службы приходят конвертом демона, а не тремя сокетами к Clash API.
+ * One stream serves all topics: traffic, memory, connections and service state
+ * arrive in the daemon envelope, not through three sockets to the Clash API.
  */
 export function useRuntimeStreams(): void {
   const queryClient = useQueryClient();
-  // Селекторы вызываются порознь: `||` закоротил бы второй хук, и порядок
-  // хуков поехал бы между рендерами.
+  // Selectors are called separately: `||` would short-circuit the second hook
+  // and the hook order would shift between renders.
   const connectionReaders = ConnectionState.use.readers();
   const runtimeReaders = RuntimeState.use.readers();
   const active = connectionReaders > 0 || runtimeReaders > 0;
@@ -39,15 +40,16 @@ export function useRuntimeStreams(): void {
 
       const source = new EventSource(DAEMON_ENDPOINT.events());
 
-      // Переподключение и разрыв в номерах значат одно: часть событий прошла
-      // мимо панели. Соединения догонит следующий снапшот, а состояние службы
-      // и статус демона живут в кэше — их перечитываем.
+      // A reconnect and a gap in sequence numbers mean the same: some events
+      // missed the panel. Connections catch up with the next snapshot, while
+      // the service state and the daemon status live in the cache, so they are
+      // refetched.
       function refetchRuntime() {
         void queryClient.invalidateQueries({ queryKey: DAEMON_QUERY.all });
       }
 
-      // Первое открытие переподключением не считается: данные только что
-      // запрошены, и инвалидация сходила бы к демону впустую.
+      // The first open does not count as a reconnect: the data was just
+      // requested, and invalidation would go to the daemon for nothing.
       let opened = false;
 
       function onStreamOpen() {
@@ -66,9 +68,10 @@ export function useRuntimeStreams(): void {
         listenMemory(source),
         listenSystem(source),
         listenConnections(source),
-        // Состояние службы в потоке и в ручке — одно тело, поэтому событие
-        // кладётся в кэш запроса: карточка службы читает его своим хуком и не
-        // знает, пришло оно потоком или запросом.
+        // The service state in the stream and in the endpoint is the same body,
+        // so the event is put into the query cache: the service card reads it
+        // with its own hook and does not know whether it came from the stream
+        // or from a request.
         listenService(source, (state) => {
           queryClient.setQueryData(getServiceStateOptions().queryKey, state);
         }),

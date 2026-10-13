@@ -1,11 +1,11 @@
 /**
- * Адреса демона: собственные ручки, цикл применения и проксированные ручки
- * Clash API. Цикл принадлежит демону, а не конфигу: конфиг —
- * предмет применения, а состояние транзакции живёт здесь.
+ * Daemon addresses: its own endpoints, the apply cycle and the proxied Clash
+ * API endpoints. The cycle belongs to the daemon, not to the config: the config
+ * is the subject of apply, while the transaction state lives here.
  *
- * Ветка `/api/clash/*` — рантайм запрос-ответ: демон проксирует Clash API,
- * сохраняя формы ответов дословно, и владеет его адресом и секретом. Потоки
- * туда не ходят, всё приходит одним `GET /api/events`.
+ * The `/api/clash/*` branch is request-response runtime: the daemon proxies the
+ * Clash API keeping response shapes verbatim, and owns its address and secret.
+ * Streams do not go there, everything arrives in one `GET /api/events`.
  */
 export const DAEMON_ENDPOINT = {
   status: () => '/api/status',

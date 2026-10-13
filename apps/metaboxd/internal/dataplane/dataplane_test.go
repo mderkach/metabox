@@ -21,8 +21,8 @@ type reply struct {
 	err    error
 }
 
-// fakeRunner отвечает по имени бинаря: модель и признак применения читаются
-// разными командами.
+// fakeRunner answers by binary name: the model and the applied flag are read
+// by different commands.
 type fakeRunner struct {
 	replies map[string]reply
 	calls   [][]string
@@ -55,7 +55,7 @@ func TestModelFull(t *testing.T) {
 
 	got, err := newReader(runner, testNFT).Model(t.Context())
 	if err != nil {
-		t.Fatalf("модель не прочитана: %v", err)
+		t.Fatalf("model not read: %v", err)
 	}
 
 	want := dataplane.Model{
@@ -77,11 +77,11 @@ func TestModelFull(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(got, want) {
-		t.Errorf("модель\nполучили %+v\nожидали  %+v", got, want)
+		t.Errorf("model\ngot      %+v\nexpected %+v", got, want)
 	}
 
 	if len(runner.calls) != 1 || !reflect.DeepEqual(runner.calls[0], []string{testUCI, "-q", "show", "metabox"}) {
-		t.Errorf("вызовы %v", runner.calls)
+		t.Errorf("calls %v", runner.calls)
 	}
 }
 
@@ -95,10 +95,10 @@ func TestModelDefaults(t *testing.T) {
 		reply reply
 		want  dataplane.Model
 	}{
-		{"отсутствующие опции получают умолчания", reply{stdout: fixture(t, "uci-partial.txt")}, partial},
-		{"секции обвязки нет", reply{stdout: "metabox.main=metabox\nmetabox.main.enabled='1'\n"}, dataplane.Defaults()},
-		{"секция с этим именем другого типа", reply{stdout: "metabox.dataplane=metabox\nmetabox.dataplane.redirect_port='1'\n"}, dataplane.Defaults()},
-		{"конфига metabox нет", reply{code: 1}, dataplane.Defaults()},
+		{"missing options get defaults", reply{stdout: fixture(t, "uci-partial.txt")}, partial},
+		{"no dataplane section", reply{stdout: "metabox.main=metabox\nmetabox.main.enabled='1'\n"}, dataplane.Defaults()},
+		{"a section with this name of another type", reply{stdout: "metabox.dataplane=metabox\nmetabox.dataplane.redirect_port='1'\n"}, dataplane.Defaults()},
+		{"no metabox config", reply{code: 1}, dataplane.Defaults()},
 	}
 
 	for _, tt := range tests {
@@ -107,11 +107,11 @@ func TestModelDefaults(t *testing.T) {
 
 			got, err := newReader(runner, testNFT).Model(t.Context())
 			if err != nil {
-				t.Fatalf("модель не прочитана: %v", err)
+				t.Fatalf("model not read: %v", err)
 			}
 
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("модель\nполучили %+v\nожидали  %+v", got, tt.want)
+				t.Errorf("model\ngot      %+v\nexpected %+v", got, tt.want)
 			}
 		})
 	}
@@ -124,7 +124,7 @@ func TestModelInvalid(t *testing.T) {
 
 	invalid, ok := errors.AsType[*dataplane.InvalidError](err)
 	if !ok {
-		t.Fatalf("ожидали отказ валидации, получили %v", err)
+		t.Fatalf("expected a validation failure, got %v", err)
 	}
 
 	want := []dataplane.FieldError{
@@ -142,7 +142,7 @@ func TestModelInvalid(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(invalid.Fields, want) {
-		t.Errorf("поля\nполучили %+v\nожидали  %+v", invalid.Fields, want)
+		t.Errorf("fields\ngot      %+v\nexpected %+v", invalid.Fields, want)
 	}
 }
 
@@ -150,7 +150,7 @@ func TestModelUCIFailure(t *testing.T) {
 	runner := &fakeRunner{replies: map[string]reply{testUCI: {err: errors.New("exec: no such file")}}}
 
 	if _, err := newReader(runner, testNFT).Model(t.Context()); err == nil {
-		t.Error("отказ запуска uci не дошёл до вызывающего")
+		t.Error("uci launch failure did not reach the caller")
 	}
 }
 
@@ -162,12 +162,12 @@ func TestApplied(t *testing.T) {
 		want       bool
 		wantReason dataplane.AppliedReason
 	}{
-		{"цепочки metabox в fw4", testNFT, reply{stdout: fixture(t, "nft-chains-metabox.json")}, true, ""},
-		{"цепочек metabox в fw4 нет", testNFT, reply{stdout: fixture(t, "nft-chains-foreign.json")}, false, ""},
+		{"metabox chains in fw4", testNFT, reply{stdout: fixture(t, "nft-chains-metabox.json")}, true, ""},
+		{"no metabox chains in fw4", testNFT, reply{stdout: fixture(t, "nft-chains-foreign.json")}, false, ""},
 		{"nft отсутствует", testNFT, reply{err: errors.New("exec: no such file")}, false, dataplane.NFTUnavailable},
-		{"nft вернул ненулевой код", testNFT, reply{code: 1}, false, dataplane.NFTUnavailable},
-		{"путь к nft не задан", "", reply{}, false, dataplane.NFTUnavailable},
-		{"вывод обрезан", testNFT, reply{stdout: `{"nftables": [{"chain"` + "\n…вывод обрезан"}, false, dataplane.NFTUnparsed},
+		{"nft returned a non-zero code", testNFT, reply{code: 1}, false, dataplane.NFTUnavailable},
+		{"nft path not set", "", reply{}, false, dataplane.NFTUnavailable},
+		{"output truncated", testNFT, reply{stdout: `{"nftables": [{"chain"` + "\n…вывод обрезан"}, false, dataplane.NFTUnparsed},
 	}
 
 	for _, tt := range tests {
@@ -176,11 +176,11 @@ func TestApplied(t *testing.T) {
 
 			got, reason, err := newReader(runner, tt.nft).Applied(t.Context())
 			if err != nil {
-				t.Fatalf("отказ nft стал ошибкой: %v", err)
+				t.Fatalf("nft failure became an error: %v", err)
 			}
 
 			if got != tt.want || reason != tt.wantReason {
-				t.Errorf("получили %v/%q, ожидали %v/%q", got, reason, tt.want, tt.wantReason)
+				t.Errorf("got %v/%q, expected %v/%q", got, reason, tt.want, tt.wantReason)
 			}
 		})
 	}
@@ -194,7 +194,7 @@ func TestAppliedCommand(t *testing.T) {
 	}
 
 	if len(runner.calls) != 1 || !reflect.DeepEqual(runner.calls[0], []string{testNFT, "-j", "list", "chains"}) {
-		t.Errorf("вызовы %v", runner.calls)
+		t.Errorf("calls %v", runner.calls)
 	}
 }
 
@@ -205,7 +205,7 @@ func TestAppliedCanceled(t *testing.T) {
 	runner := &fakeRunner{replies: map[string]reply{testNFT: {err: context.Canceled}}}
 
 	if _, _, err := newReader(runner, testNFT).Applied(ctx); !errors.Is(err, context.Canceled) {
-		t.Errorf("отмена потерялась: %v", err)
+		t.Errorf("cancellation lost: %v", err)
 	}
 }
 
@@ -214,10 +214,10 @@ func TestChains(t *testing.T) {
 
 	got, reason, err := newReader(runner, testNFT).Chains(t.Context())
 	if err != nil || reason != "" {
-		t.Fatalf("отказ: %v/%q", err, reason)
+		t.Fatalf("failure: %v/%q", err, reason)
 	}
 
 	if !reflect.DeepEqual(got, []string{"metabox_redirect"}) {
-		t.Errorf("цепочки %q, ожидали только metabox_redirect из fw4", got)
+		t.Errorf("chains %q, expected only metabox_redirect from fw4", got)
 	}
 }

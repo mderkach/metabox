@@ -1,100 +1,100 @@
-# ADR-0045. Разделять на фронте состояние документа и server state, а репозиторий держать папкой на проект
+# ADR-0045. Separate document state from server state on the frontend, and keep the repository as a folder per project
 
-- Статус: Accepted — решение принято 2026-08-30 в разделе A.10 [`../PRD.md`](../PRD.md) по открытому вопросу OQ-1 и перенесено сюда без изменения существа
-- Дата: 2026-08-30
-- Ответственные: владелец репозитория
-- Заменяет: раздел A.10 [`../PRD.md`](../PRD.md)
+- Status: Accepted. The decision was made on 2026-08-30 in section A.10 of [`../PRD.md`](../PRD.md) on open question OQ-1 and moved here without changes in substance
+- Date: 2026-08-30
+- Deciders: repository owner
+- Supersedes: section A.10 of [`../PRD.md`](../PRD.md)
 
-## Контекст и постановка проблемы
+## Context and problem statement
 
-Владелец зафиксировал базу стека — React, TypeScript, TanStack, Vite, oxlint, oxfmt (приложение B PRD). Стейт-менеджмент, UI-кит, роутинг, формы, тесты и структуру проекта оставили на отдельное согласование после утверждения PRD — открытый вопрос OQ-1.
+The owner fixed the base of the stack: React, TypeScript, TanStack, Vite, oxlint, oxfmt (appendix B of the PRD). State management, the UI kit, routing, forms, tests and the project structure were left for a separate agreement after the PRD approval: open question OQ-1.
 
-Определяющий факт: в приложении **два состояния с разными требованиями**, и их нельзя накрывать одним инструментом.
+The defining fact: the application has **two states with different requirements**, and they cannot be covered by one tool.
 
-- **Документ конфига** — один большой вложенный JSON. Клиентский, живёт между экранами, требует dirty-tracking, черновика отдельно от применённого (UX-2), дифа перед Apply (UX-6), истории, адресации по строковому пути (авторендерер строит поля из схемы в рантайме) и сырых блоков внутри дерева (UX-3).
-- **Рантайм-данные дашборда** — server state: эфемерный, высокочастотный, до 5000 соединений (NFR-2).
+- **The config document** is one large nested JSON. It is client-side, lives across screens, and requires dirty tracking, a draft separate from the applied config (UX-2), a diff before Apply (UX-6), history, addressing by string path (the auto-renderer builds fields from the schema at runtime) and raw blocks inside the tree (UX-3).
+- **Dashboard runtime data** is server state: ephemeral, high-frequency, up to 5000 connections (NFR-2).
 
-Кроме стека нужно было решить, как в одном репозитории живут демон на Go, фронт и генератор схемы и кто связывает их сборку.
+Besides the stack, it had to be decided how the Go daemon, the frontend and the schema generator live in one repository and what ties their build together.
 
-В scope: инструменты фронта, структура репозитория, порядок сборки, уровни тестов. Вне scope: способ встраивания SPA в бинарь ([ADR-0003](./ADR-0003-embed-the-spa-from-a-staging-directory.md)), версии инструментов ([ADR-0016](./ADR-0016-pin-tool-versions-where-tools-read-them.md)), правила внутри фронта — гайды [`apps/web/docs/`](../../apps/web/docs/README.md).
+In scope: frontend tools, repository structure, build order, test levels. Out of scope: the way the SPA is embedded in the binary ([ADR-0003](./ADR-0003-embed-the-spa-from-a-staging-directory.md)), tool versions ([ADR-0016](./ADR-0016-pin-tool-versions-where-tools-read-them.md)), rules inside the frontend: the guides in [`apps/web/docs/`](../../apps/web/docs/README.md).
 
-## Критерии выбора
+## Decision drivers
 
-- Каждое из двух состояний получает инструмент под свои требования.
-- Отзывчивость на конфиге в 500 правил и 5000 соединений (NFR-2).
-- Авторендерер собирает поля из схемы программно (AC-5).
-- Сборка воспроизводима: фронт попадает в бинарь демона.
+- Each of the two states gets a tool suited to its requirements.
+- Responsiveness on a config with 500 rules and 5000 connections (NFR-2).
+- The auto-renderer assembles fields from the schema programmatically (AC-5).
+- The build is reproducible: the frontend gets into the daemon binary.
 
-## Рассмотренные варианты
+## Considered options
 
-Отвергнутые варианты названы в обоснованиях A.10; здесь они собраны вместе.
+The rejected options are named in the rationales of A.10; here they are collected together.
 
-1. **Один инструмент на оба состояния** — документ в кэше запросов или рантайм в клиентском сторе. Требования состояний противоположны: документу нужны черновик, история и диф, рантайму — свежесть и сброс. **Отклонён.**
-2. **Документ как состояние формы.** Документ — не форма: черновик, история и диф пишутся явно, без submit-семантики. **Отклонён.**
-3. **Поток рантайма через TanStack Query.** Query поверх потока даёт кэш, который врёт. **Отклонён.**
-4. **File-based роутинг.** Экранов меньше десятка (на момент решения — шесть), плагин избыточен. **Отклонён.**
-5. **UI-кит с собственной темизацией.** Авторендереру нужны примитивы без чужой темизации сверху. **Отклонён.**
-6. **Стек и структура из таблиц ниже.** **Принят.**
+1. **One tool for both states**: the document in the query cache or the runtime in a client store. The requirements of the states are opposite: the document needs a draft, history and diff, the runtime needs freshness and reset. **Rejected.**
+2. **The document as form state.** The document is not a form: the draft, history and diff are written explicitly, without submit semantics. **Rejected.**
+3. **The runtime stream through TanStack Query.** Query on top of a stream gives a cache that lies. **Rejected.**
+4. **File-based routing.** There are fewer than ten screens (six at the time of the decision), the plugin is excessive. **Rejected.**
+5. **A UI kit with its own theming.** The auto-renderer needs primitives without someone else's theming on top. **Rejected.**
+6. **The stack and structure from the tables below.** **Chosen.**
 
-## Принятое решение
+## Decision outcome
 
-| Слой                | Решение                                                                                | Обоснование                                                                                                                                                                                    |
-| ------------------- | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Состояние документа | Zustand                                                                                | Документ — не форма; черновик, история и диф пишутся явно, без submit-семантики. Черновик immer снят: дерева в сторе нет ([ADR-0024](./ADR-0024-drop-the-immer-draft-from-frontend-stores.md)) |
-| Server state        | TanStack Query, только запрос-ответ                                                    | Поток рантайма (трафик, соединения) идёт мимо Query в отдельный стор; Query поверх потока даёт кэш, который врёт                                                                               |
-| Роутинг             | TanStack Router, code-based                                                            | Экранов меньше десятка, file-based плагин избыточен; типизированные search params держат фильтры Connections в URL                                                                             |
-| Таблицы и списки    | TanStack Table + TanStack Virtual                                                      | Требование виртуализации из NFR-2                                                                                                                                                              |
-| Формы               | React Hook Form + `@hookform/resolvers`                                                | Неконтролируемый — меньше ререндеров на конфиге в 500 правил                                                                                                                                   |
-| Валидация           | Zod (генерируется, см. [ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md)) | Единый источник со схемой                                                                                                                                                                      |
-| UI                  | shadcn/ui + Tailwind                                                                   | Авторендерер собирает поля программно, ему нужны примитивы без чужой темизации сверху                                                                                                          |
+| Layer            | Decision                                                                            | Rationale                                                                                                                                                                                                                                 |
+| ---------------- | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Document state   | Zustand                                                                             | The document is not a form; the draft, history and diff are written explicitly, without submit semantics. The immer draft is removed: there is no tree in the store ([ADR-0024](./ADR-0024-drop-the-immer-draft-from-frontend-stores.md)) |
+| Server state     | TanStack Query, request-response only                                               | The runtime stream (traffic, connections) bypasses Query into a separate store; Query on top of a stream gives a cache that lies                                                                                                          |
+| Routing          | TanStack Router, code-based                                                         | Fewer than ten screens, the file-based plugin is excessive; typed search params keep the Connections filters in the URL                                                                                                                   |
+| Tables and lists | TanStack Table + TanStack Virtual                                                   | The virtualization requirement from NFR-2                                                                                                                                                                                                 |
+| Forms            | React Hook Form + `@hookform/resolvers`                                             | Uncontrolled, so fewer re-renders on a config with 500 rules                                                                                                                                                                              |
+| Validation       | Zod (generated, see [ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md)) | A single source with the schema                                                                                                                                                                                                           |
+| UI               | shadcn/ui + Tailwind                                                                | The auto-renderer assembles fields programmatically and needs primitives without someone else's theming on top                                                                                                                            |
 
-**Ограничения RHF, влияющие на реализацию.** Имена полей — только точечная нотация (`outbounds.2.uuid`), скобки не поддерживаются; авторендерер печатает пути точками. Формы типизируются против типа **узла** (`VLESSOutboundOptions`), а не против типа всего конфига: `Path<T>` по union реестра на десятки веток разложит компилятор. Именно решение держать документ в Zustand и открывать форму на узле снимает этот риск. Для авторендерера типобезопасности путей нет ни в одной библиотеке — там строка и приведение типа.
+**RHF limitations that affect the implementation.** Field names use dot notation only (`outbounds.2.uuid`), brackets are not supported; the auto-renderer prints paths with dots. Forms are typed against the **node** type (`VLESSOutboundOptions`), not against the type of the whole config: the compiler would expand `Path<T>` over a registry union with dozens of branches. It is exactly the decision to keep the document in Zustand and open the form on a node that removes this risk. For the auto-renderer no library offers path type safety: there it is a string and a type cast.
 
-**Структура репозитория** — папка на проект: `apps/metaboxd`, `apps/web`, `tools/schemagen`, каждый со своим манифестом, `AGENTS.md` и гайдами. Актуальное дерево — в [`README.md`](../../README.md) и [`AGENTS.md`](../../AGENTS.md), чтобы описание не разъезжалось с репозиторием.
+**Repository structure**: a folder per project: `apps/metaboxd`, `apps/web`, `tools/schemagen`, each with its own manifest, `AGENTS.md` and guides. The current tree is in [`README.md`](../../README.md) and [`AGENTS.md`](../../AGENTS.md), so that the description does not drift from the repository.
 
-Сборку связывает Makefile: фронт собирается до `go build`, потому что попадает в бинарь через `go:embed`. Воркспейс pnpm держит общие devDependencies и каталог версий, сборкой не управляет.
+The build is tied together by the Makefile: the frontend is built before `go build` because it gets into the binary through `go:embed`. The pnpm workspace holds shared devDependencies and the version catalog and does not manage the build.
 
-**Тесты**
+**Tests**
 
-| Уровень             | Инструмент                                     | Что закрывает                                                                                                                                                                                                                    |
-| ------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Golden round-trip   | Vitest                                         | AC-1…AC-3: набор реальных `config.json`, парсинг → сериализация, диф обязан быть пустым. Основная защита разбора конфига от регрессий (место адаптеров — [ADR-0005](./ADR-0005-keep-foreign-api-adapters-in-the-api-segment.md)) |
-| Юнит и компонентные | Vitest + Testing Library                       | Логика модели, рендереры, формы                                                                                                                                                                                                  |
-| Интеграционные      | Go-тесты в devcontainer против живого sing-box | AC-13…AC-16, AC-21, AC-22: полный цикл Apply с `check`, рестартом procd и healthcheck                                                                                                                                            |
-| Браузерные e2e      | Vitest, браузерный режим на Playwright (OQ-6)  | Автооткат, raw-режим. Режим ещё не подключён; приёмку M1 не блокирует: AC-21/AC-22 закрываются интеграционными тестами демона, AC-32 — компонентным тестом экрана Apply                                                          |
+| Level              | Tool                                                 | What it covers                                                                                                                                                                                                                                   |
+| ------------------ | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Golden round-trip  | Vitest                                               | AC-1…AC-3: a set of real `config.json` files, parse → serialize, the diff must be empty. The main protection of config parsing against regressions (where adapters live: [ADR-0005](./ADR-0005-keep-foreign-api-adapters-in-the-api-segment.md)) |
+| Unit and component | Vitest + Testing Library                             | Model logic, renderers, forms                                                                                                                                                                                                                    |
+| Integration        | Go tests in the devcontainer against a live sing-box | AC-13…AC-16, AC-21, AC-22: the full Apply cycle with `check`, procd restart and healthcheck                                                                                                                                                      |
+| Browser e2e        | Vitest, browser mode on Playwright (OQ-6)            | Automatic rollback, raw mode. The mode is not connected yet; it does not block M1 acceptance: AC-21/AC-22 are covered by daemon integration tests, AC-32 by a component test of the Apply screen                                                 |
 
-### Область действия и границы
+### Scope and boundaries
 
-Таблица стека совпадает с разделом 9 PRD; правила применения инструментов — в гайдах фронта: [StateManagement](../../apps/web/docs/guides/StateManagement.md), [Query](../../apps/web/docs/guides/Query.md), [Form&Validation](../../apps/web/docs/guides/Form&Validation.md), [Tables](../../apps/web/docs/guides/Tables.md), [UnitTesting](../../apps/web/docs/guides/UnitTesting.md).
+The stack table matches section 9 of the PRD; the rules for using the tools are in the frontend guides: [StateManagement](../../apps/web/docs/guides/StateManagement.md), [Query](../../apps/web/docs/guides/Query.md), [Form&Validation](../../apps/web/docs/guides/Form&Validation.md), [Tables](../../apps/web/docs/guides/Tables.md), [UnitTesting](../../apps/web/docs/guides/UnitTesting.md).
 
-## Последствия
+## Consequences
 
-### Положительные
+### Positive
 
-- Документ конфига и рантайм развиваются независимо: правка одного не ломает кэш или черновик другого.
-- Форма на узле типизирована, компилятор не раскладывает union всего конфига.
+- The config document and the runtime evolve independently: a change to one does not break the cache or the draft of the other.
+- The form on a node is typed, the compiler does not expand the union of the whole config.
 
-### Отрицательные
+### Negative
 
-- Черновик, история и диф документа пишутся руками, библиотека их не даёт.
-- В авторендерере пути полей — строки без типобезопасности.
-- Браузерный режим тестов не подключён: автооткат и raw-режим проверяются интеграционными и компонентными тестами, а не в браузере.
+- The document's draft, history and diff are written by hand; no library provides them.
+- In the auto-renderer field paths are strings without type safety.
+- The browser test mode is not connected: automatic rollback and raw mode are checked by integration and component tests, not in a browser.
 
-### Нейтральные или отложенные
+### Neutral or deferred
 
-- Выбор инструмента браузерных тестов вынесен в OQ-6 и закрыт 2026-09-23: браузерный режим Vitest на движке Playwright.
+- The choice of browser test tool was moved to OQ-6 and closed on 2026-09-23: Vitest browser mode on the Playwright engine.
 
-## Совместимость, миграция и откат
+## Compatibility, migration and rollback
 
-Не применимо: решение действует с OQ-1 и переносится из PRD без изменения существа. Изменения отдельных строк стека идут своими ADR, как [ADR-0024](./ADR-0024-drop-the-immer-draft-from-frontend-stores.md).
+Not applicable: the decision has been in effect since OQ-1 and is moved from the PRD without changes in substance. Changes to individual rows of the stack go through their own ADRs, like [ADR-0024](./ADR-0024-drop-the-immer-draft-from-frontend-stores.md).
 
-## Проверка решения
+## Validation
 
-- Зависимости `apps/web/package.json` совпадают с таблицей стека.
-- `make daemon` собирает фронт до `go build`; `make test` прогоняет golden round-trip и тесты демона.
+- The dependencies in `apps/web/package.json` match the stack table.
+- `make daemon` builds the frontend before `go build`; `make test` runs the golden round-trip and the daemon tests.
 
-## Ссылки
+## Links
 
-- [`../PRD.md`](../PRD.md): раздел 9, NFR-2, UX-2, UX-3, UX-6, OQ-1 и OQ-6 в разделе 10.1, приложение B, раздел A.10 (замещается этим ADR);
+- [`../PRD.md`](../PRD.md): section 9, NFR-2, UX-2, UX-3, UX-6, OQ-1 and OQ-6 in section 10.1, appendix B, section A.10 (superseded by this ADR);
 - [ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md), [ADR-0003](./ADR-0003-embed-the-spa-from-a-staging-directory.md), [ADR-0004](./ADR-0004-edit-config-text-in-place-on-the-client.md), [ADR-0005](./ADR-0005-keep-foreign-api-adapters-in-the-api-segment.md), [ADR-0016](./ADR-0016-pin-tool-versions-where-tools-read-them.md), [ADR-0024](./ADR-0024-drop-the-immer-draft-from-frontend-stores.md);
-- [`../../apps/web/docs/`](../../apps/web/docs/README.md) — гайды фронта.
+- [`../../apps/web/docs/`](../../apps/web/docs/README.md): the frontend guides.

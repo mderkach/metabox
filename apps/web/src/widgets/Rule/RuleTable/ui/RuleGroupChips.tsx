@@ -12,8 +12,8 @@ const MODE_LABEL: Readonly<Record<string, ParseKeys<'widgets/Rule/RuleTable'> | 
 };
 
 /**
- * Условия логического правила. Показываются скобками с союзом между ветками:
- * без них правило `or` читается как `and`, а это разные правила.
+ * Conditions of a logical rule. Shown in brackets with a conjunction between branches:
+ * without them an `or` rule reads as `and`, and these are different rules.
  */
 function RuleGroupChipsProto({ group }: { group: RuleGroup }) {
   const { t } = useTranslation('widgets/Rule/RuleTable');
@@ -26,7 +26,7 @@ function RuleGroupChipsProto({ group }: { group: RuleGroup }) {
       <span className='shrink-0 text-xs text-muted-foreground'>(</span>
       {group.children.map((branch, position) => (
         <BranchChips
-          // Собственного идентификатора у вложенного правила нет, порядок задан конфигом.
+          // A nested rule has no identifier of its own, the order is set by the config.
           key={position}
           branch={branch}
           separator={position > 0 ? label : null}

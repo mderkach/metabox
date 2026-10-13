@@ -1,32 +1,32 @@
 export interface ConnectionRow {
   id: string;
-  /** Хост с портом; когда sniff не разобрал имя, остаётся адрес. */
+  /** Host with port; when sniff did not resolve a name, the address remains. */
   host: string;
   network: string;
   source: string;
-  /** Условия сработавшего правила: у безусловного правила пусто. */
+  /** Conditions of the matched rule: empty for an unconditional rule. */
   rule: string;
-  /** Действие правила, словом sing-box: `route(proxy)`, `hijack-dns`, `sniff`. */
+  /** Rule action in sing-box words: `route(proxy)`, `hijack-dns`, `sniff`. */
   action: string;
-  /** Судьба пакета, разобранная из действия и цепочки: по ней отбирают и красят строку. */
+  /** Packet fate parsed from the action and the chain: the row is filtered and colored by it. */
   kind: RouteKind;
-  /** Цепочка в порядке чтения человеком: группа → узел. */
+  /** Chain in human reading order: group → node. */
   chain: string[];
   upload: number;
   download: number;
   /**
-   * Скорость за последний интервал снапшотов, байт в секунду. Считает панель:
-   * рантайм отдаёт только накопленные счётчики, а вопрос «кто сейчас ест канал»
-   * по ним не отвечается.
+   * Speed over the last snapshot interval, bytes per second. Computed by the
+   * panel: the runtime serves only accumulated counters, and the question "who
+   * is eating the channel now" cannot be answered from them.
    */
   downRate: number;
   upRate: number;
   startedAt: number;
-  /** Хост, источник, правило, выход и цепочка одной строкой — по ней ищет экран. */
+  /** Host, source, rule, outbound and chain in one string: the screen searches by it. */
   searchText: string;
 }
 
-/** Байт в секунду за интервал между двумя снапшотами. */
+/** Bytes per second over the interval between two snapshots. */
 export interface ConnectionRate {
   down: number;
   up: number;
@@ -38,13 +38,13 @@ export interface ConnectionTotals {
   memory: number;
 }
 
-/** Действие для соединения, не совпавшего ни с одним правилом: узел `route.final`. */
+/** Action for a connection that matched no rule: the `route.final` node. */
 export const FINAL_ACTION = 'route.final';
 
 /**
- * Судьба пакета. Рантайм отдаёт действие строкой (`route(direct)`, `hijack-dns`,
- * `sniff`), и новый вид узла добавляется записью в таблицу ниже, а не веткой
- * условия.
+ * Packet fate. The runtime serves the action as a string (`route(direct)`,
+ * `hijack-dns`, `sniff`), and a new node kind is added as an entry in the table
+ * below, not as a condition branch.
  */
 export const ROUTE_KIND = {
   Direct: 'direct',
@@ -56,7 +56,7 @@ export const ROUTE_KIND = {
 
 export type RouteKind = (typeof ROUTE_KIND)[keyof typeof ROUTE_KIND];
 
-/** Порядок значим: проверка идёт до первого совпадения, `block` стоит раньше общего `route(`. */
+/** Order matters: the check goes to the first match, `block` comes before the general `route(`. */
 const ACTION_KINDS: readonly { match: string; kind: RouteKind }[] = [
   { match: 'direct', kind: ROUTE_KIND.Direct },
   { match: 'block', kind: ROUTE_KIND.Block },
@@ -65,18 +65,18 @@ const ACTION_KINDS: readonly { match: string; kind: RouteKind }[] = [
   { match: 'route(', kind: ROUTE_KIND.Proxy },
 ];
 
-/** Узел цепочки, означающий выход наружу без прокси. */
+/** Chain node meaning an exit outward without a proxy. */
 const DIRECT_NODE = 'direct';
 
 /**
- * Типы аутбаундов, у которых тон свой. Остальные — селекторы, замеры задержки и
- * все протоколы прокси из `OutboundSchema` (`@shared/api/generated`) — выводят
- * трафик через узел, поэтому незнакомый тип получает тон прокси, а списка
- * протоколов здесь нет: копия разъехалась бы со схемой форка.
+ * Outbound types that have their own tone. The rest, selectors, latency probes
+ * and all proxy protocols from `OutboundSchema` (`@shared/api/generated`),
+ * carry traffic through the node, so an unfamiliar type gets the proxy tone,
+ * and there is no protocol list here: a copy would drift from the fork schema.
  *
- * `block` и `dns` форк аутбаундами больше не принимает — их место заняли
- * действия правил, — но в конфиге с устройства они встречаются, и карта типов
- * собирается по узлам документа, а не по схеме.
+ * The fork no longer accepts `block` and `dns` as outbounds, their place was
+ * taken by rule actions, but they occur in a config from the device, and the
+ * type map is built from document nodes, not from the schema.
  */
 const OUTBOUND_TYPE_KIND: Readonly<Record<string, RouteKind>> = {
   direct: ROUTE_KIND.Direct,
@@ -84,15 +84,16 @@ const OUTBOUND_TYPE_KIND: Readonly<Record<string, RouteKind>> = {
   dns: ROUTE_KIND.Dns,
 };
 
-/** Действие маршрута с тегом аутбаунда: `route(proxy)`, но не `route-options(...)`. */
+/** Route action with an outbound tag: `route(proxy)`, but not `route-options(...)`. */
 const ROUTE_ACTION = /^route\((.+)\)$/;
 
-/** Карта типов ещё не пришла: разбор обходится таблицей подстрок. */
+/** The type map has not arrived yet: parsing falls back to a substring table. */
 export const EMPTY_OUTBOUND_TYPES: ReadonlyMap<string, string> = new Map();
 
 /**
- * Судьба пакета по типу аутбаунда с этим тегом; `null` — тега в конфиге нет,
- * тип неизвестен, и решать остаётся запасной таблице подстрок потребителя.
+ * Packet fate by the type of the outbound with this tag; `null` means the tag
+ * is not in the config, the type is unknown, and the consumer's fallback
+ * substring table decides.
  */
 export function toOutboundKind(tag: string | undefined, outboundTypes: ReadonlyMap<string, string>): RouteKind | null {
   if (tag === undefined) {
@@ -105,15 +106,17 @@ export function toOutboundKind(tag: string | undefined, outboundTypes: ReadonlyM
 }
 
 /**
- * Действие соединения.
+ * Connection action.
  *
- * Первичен тип аутбаунда: тег из `route(<тег>)` или из цепочки ищется в
- * `outboundTypes`, и `direct-ru` типа `vless` получает тон прокси. Запасной
- * вариант — таблица подстрок по самой строке действия: узла из подписки
- * поставщика в `outbounds` нет, и типа у панели для него не будет.
+ * The outbound type is primary: the tag from `route(<tag>)` or from the chain
+ * is looked up in `outboundTypes`, and `direct-ru` of type `vless` gets the
+ * proxy tone. The fallback is a substring table over the action string itself:
+ * a subscription provider node is not in `outbounds`, and the panel will have
+ * no type for it.
  *
- * У `route.final` условий нет и по строке действие не читается — там судьбу
- * показывает цепочка: она наблюдаема так же, как правило.
+ * `route.final` has no conditions and the action is not read from the string
+ * there: the fate is shown by the chain, which is observable the same way as a
+ * rule.
  */
 export function toRouteKind(
   action: string,
@@ -126,8 +129,9 @@ export function toRouteKind(
     return typed;
   }
 
-  // Цепочка читается от группы к узлу: группа объявлена в конфиге, а конечный
-  // узел часто приходит из подписки, которой в документе нет.
+  // The chain is read from group to node: the group is declared in the config,
+  // and the final node often comes from a subscription that is not in the
+  // document.
   if (action === FINAL_ACTION) {
     for (const node of chain) {
       const kind = toOutboundKind(node, outboundTypes);
@@ -152,31 +156,31 @@ export function toRouteKind(
   return chain.includes(DIRECT_NODE) ? ROUTE_KIND.Direct : ROUTE_KIND.Proxy;
 }
 
-/** Доля сводки: сколько соединений и сколько канала на них приходится. */
+/** Summary share: how many connections and how much channel they account for. */
 export interface ConnectionShare<Key extends string = string> {
-  /** Ключ группы — действие, тип сети, узел цепочки или адрес устройства. */
+  /** Group key: an action, a network type, a chain node or a device address. */
   key: Key;
   count: number;
-  /** Байт в секунду, входящий и исходящий вместе. */
+  /** Bytes per second, incoming and outgoing together. */
   rate: number;
-  /** Накопленные байты группы, входящие и исходящие вместе. */
+  /** Accumulated group bytes, incoming and outgoing together. */
   volume: number;
 }
 
-/** Сводка живого снапшота: то, что панели показывают вместо списка. */
+/** Live snapshot summary: what panels show instead of the list. */
 export interface ConnectionSummary {
   actions: ConnectionShare<RouteKind>[];
   networks: ConnectionShare[];
-  /** Конечные узлы цепочки, передавшие больше всего первыми. */
+  /** Final chain nodes that transferred the most first. */
   nodes: ConnectionShare[];
-  /** Устройства локальной сети, передавшие больше всего первыми. */
+  /** Local network devices that transferred the most first. */
   sources: ConnectionShare[];
 }
 
 export const EMPTY_SUMMARY: ConnectionSummary = { actions: [], networks: [], nodes: [], sources: [] };
 
-/** Сколько групп показывает столбчатая сводка: дальше идёт хвост из единиц. */
+/** How many groups the bar summary shows: beyond that is a tail of ones. */
 export const TOP_LIMIT = 5;
 
-/** Сколько закрытых соединений держим: список закрытых Clash API не отдаёт. */
+/** How many closed connections we keep: the Clash API does not serve the closed list. */
 export const CLOSED_LIMIT = 200;

@@ -18,19 +18,19 @@ import { MS_IN_SECOND, SECONDS_IN_HOUR, SECONDS_IN_MINUTE } from '@shared/lib/ti
 
 import { DevicesPage } from '../ui/DevicesPage';
 
-/** Модель обвязки со сменой и статус демона, который эту смену отдаёт. */
+/** Dataplane model with a change and the daemon status that serves this change. */
 function serveDataplane(initial = DATAPLANE_FIXTURE) {
   const mock = createDataplaneMock(initial);
 
   server.use(...createStatefulDaemonHandlers(mock.status), ...mock.handlers);
 }
 
-/** Base UI рисует тумблер `span`-ом: недоступность видна по `aria-disabled`, а не по `disabled`. */
+/** Base UI draws the toggle as a `span`: unavailability is visible by `aria-disabled`, not by `disabled`. */
 function isLocked(toggle: HTMLElement): boolean {
   return toggle.getAttribute('aria-disabled') === 'true';
 }
 
-/** Тумблер устройства, когда модель прочитана и он стал доступен. */
+/** The device toggle when the model is read and it became available. */
 async function readySwitch(device: string): Promise<HTMLElement> {
   const toggle = await screen.findByRole('switch', { name: `Через sing-box: ${device}` });
 
@@ -41,7 +41,7 @@ async function readySwitch(device: string): Promise<HTMLElement> {
   return toggle;
 }
 
-/** Тумблер устройства, когда модель прочитана и он показывает перехват. */
+/** The device toggle when the model is read and it shows interception. */
 async function readySwitchChecked(device: string): Promise<HTMLElement> {
   const toggle = await screen.findByRole('switch', { name: `Через sing-box: ${device}` });
 
@@ -66,10 +66,10 @@ function rowOf(label: string): HTMLElement {
   return row;
 }
 
-/** Конец динамической аренды из фикстуры, в миллисекундах. */
+/** End of the dynamic lease from the fixture, in milliseconds. */
 const LEASE_END = DEVICES_FIXTURE.devices[0].lease_expires * MS_IN_SECOND;
 
-describe('экран устройств', () => {
+describe('devices screen', () => {
   beforeEach(() => {
     serveDataplane();
   });
@@ -78,7 +78,7 @@ describe('экран устройств', () => {
     vi.useRealTimers();
   });
 
-  it('показывает устройства подписью, адресом, MAC, арендой и сетью', async () => {
+  it('shows devices with label, address, MAC, lease and network', async () => {
     server.use(...createDeviceHandlers());
 
     renderScreen();
@@ -93,13 +93,13 @@ describe('экран устройств', () => {
     expect(within(laptop).getByText('в сети')).toBeInTheDocument();
     expect(screen.queryByRole('columnheader', { name: 'Откуда имя' })).not.toBeInTheDocument();
 
-    // Без имени устройство подписано адресом, без адреса — названо так словами.
+    // Without a name the device is labeled by address, without an address it is named so in words.
     expect(within(rowOf('aa:bb:cc:00:00:40')).getAllByText('192.168.1.36')).toHaveLength(2);
     expect(within(rowOf('Принтер')).getByText('без адреса')).toBeInTheDocument();
     expect(screen.getByText('5 устройств')).toBeInTheDocument();
   });
 
-  it('источник имени называет у самого имени, а не отдельной колонкой', async () => {
+  it('names the name source at the name itself, not in a separate column', async () => {
     server.use(...createDeviceHandlers());
 
     renderScreen();
@@ -114,11 +114,11 @@ describe('экран устройств', () => {
       'имя сообщило устройство'
     );
     expect(within(rowOf('iphone-guest')).getByText('iphone-guest')).toHaveAttribute('title', 'имя сообщило устройство');
-    // Без имени пояснять нечего: строка подписана адресом.
+    // Without a name there is nothing to explain: the row is labeled by address.
     expect(screen.getByRole('button', { name: 'Переименовать 192.168.1.36' })).not.toHaveAccessibleDescription();
   });
 
-  it('у динамической аренды показывает остаток срока, у статической и без аренды — нет', async () => {
+  it('for a dynamic lease shows the remaining term, for a static one and without a lease it does not', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(LEASE_END - (3 * SECONDS_IN_HOUR + 10 * SECONDS_IN_MINUTE) * MS_IN_SECOND);
     server.use(...createDeviceHandlers());
@@ -143,7 +143,7 @@ describe('экран устройств', () => {
     expect(within(rowOf('Принтер')).queryByText(/^ещё/)).not.toBeInTheDocument();
   });
 
-  it('ведёт к соединениям устройства с отбором по его адресу', async () => {
+  it('links to the device connections filtered by its address', async () => {
     server.use(...createDeviceHandlers());
 
     renderScreen();
@@ -151,16 +151,16 @@ describe('экран устройств', () => {
     const link = await screen.findByRole('link', { name: 'Соединения устройства Ноутбук' });
 
     expect(link).toHaveAttribute('href', '/connections?source=192.168.1.60');
-    // Перейти к соединениям устройства без адреса нечем: отбор идёт по IP.
+    // There is no way to jump to the connections of a device without an address: the filter goes by IP.
     expect(within(rowOf('Принтер')).queryByRole('link')).not.toBeInTheDocument();
   });
 
-  it('переименовывает устройство и берёт список из ответа, а не перечитывает его', async () => {
+  it('renames a device and takes the list from the response instead of rereading it', async () => {
     const reads = vi.fn<() => void>();
     const renamed = vi.fn<(mac: string, body: unknown) => void>();
     const user = userEvent.setup();
 
-    // Шпионы стоят первыми и ничего не отвечают: запрос проходит дальше, к моку демона.
+    // Spies stand first and answer nothing: the request goes on to the daemon mock.
     server.use(
       http.get(DEVICE_ENDPOINT.devices(), () => {
         reads();
@@ -192,7 +192,7 @@ describe('экран устройств', () => {
     );
   });
 
-  it('пустое имя снимает своё, и подпись возвращается к адресу', async () => {
+  it('an empty name clears its own, and the label returns to the address', async () => {
     const user = userEvent.setup();
 
     server.use(...createDeviceHandlers());
@@ -210,7 +210,7 @@ describe('экран устройств', () => {
     ).not.toHaveAccessibleDescription();
   });
 
-  it('не отправляет имя длиннее потолка демона и называет причину', async () => {
+  it('does not send a name longer than the daemon ceiling and names the reason', async () => {
     const renamed = vi.fn<() => void>();
     const user = userEvent.setup();
 
@@ -232,7 +232,7 @@ describe('экран устройств', () => {
     expect(renamed).not.toHaveBeenCalled();
   });
 
-  it('Escape отменяет правку и возвращает строку', async () => {
+  it('Escape cancels the edit and restores the row', async () => {
     const user = userEvent.setup();
 
     server.use(...createDeviceHandlers());
@@ -245,7 +245,7 @@ describe('экран устройств', () => {
     expect(screen.getByRole('button', { name: 'Переименовать tv-living' })).toBeInTheDocument();
   });
 
-  it('пустой ответ демона называет пустотой, а не загрузкой', async () => {
+  it('an empty daemon response is called emptiness, not loading', async () => {
     server.use(http.get(DEVICE_ENDPOINT.devices(), () => HttpResponse.json({ devices: [] })));
 
     renderScreen();
@@ -254,7 +254,7 @@ describe('экран устройств', () => {
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 
-  it('отказ демона показывает причину и повтор, а не пустой список', async () => {
+  it('a daemon failure shows the reason and a retry, not an empty list', async () => {
     server.use(
       http.get(DEVICE_ENDPOINT.devices(), () =>
         HttpResponse.json({ code: 'internal', message: 'uci не ответил' }, { status: 500 })
@@ -268,8 +268,8 @@ describe('экран устройств', () => {
     expect(screen.queryByText('Устройств не найдено')).not.toBeInTheDocument();
   });
 
-  describe('тумблер «через sing-box»', () => {
-    it('показывает устройство включённым по MAC в любом регистре и по адресу из source_ip', async () => {
+  describe('"via sing-box" toggle', () => {
+    it('shows the device as enabled by MAC in any case and by an address from source_ip', async () => {
       server.use(...createDeviceHandlers());
       renderScreen();
 
@@ -285,7 +285,7 @@ describe('экран устройств', () => {
       expect(screen.getByRole('switch', { name: 'Через sing-box: Ноутбук' })).not.toHaveAccessibleDescription();
     });
 
-    it('устройство из подсети source_ip показывает включённым, недоступным и называет подсеть', async () => {
+    it('shows a device from a source_ip subnet as enabled, unavailable and names the subnet', async () => {
       server.use(...createDeviceHandlers());
       serveDataplane({
         ...DATAPLANE_FIXTURE,
@@ -314,7 +314,7 @@ describe('экран устройств', () => {
       expect(screen.getByRole('switch', { name: 'Через sing-box: iphone-guest' })).toBeChecked();
       expect(screen.getByRole('switch', { name: 'Через sing-box: tv-living' })).toBeChecked();
 
-      // Хост /32 подсетью не считается: его тумблер снимает.
+      // A /32 host does not count as a subnet: its toggle clears it.
       const host = await readySwitch('192.168.1.36');
 
       expect(host).toBeChecked();
@@ -322,7 +322,7 @@ describe('экран устройств', () => {
       expect(screen.getByRole('switch', { name: 'Через sing-box: Принтер' })).not.toBeChecked();
     });
 
-    it('после предупреждения шлёт модель с MAC в source_mac и открывает окно подтверждения', async () => {
+    it('after the warning sends a model with the MAC in source_mac and opens the confirmation window', async () => {
       const changed = vi.fn<(body: unknown) => void>();
       const user = userEvent.setup();
 
@@ -358,14 +358,14 @@ describe('экран устройств', () => {
 
       expect(bar).toHaveTextContent('Список перехвата сменён');
       expect(within(bar).getByRole('button', { name: 'Связь есть, оставить' })).toBeEnabled();
-      // Пока смена ждёт подтверждения, вторую не начать.
+      // While a change awaits confirmation, a second cannot start.
       expect(isLocked(screen.getByRole('switch', { name: 'Через sing-box: Ноутбук' }))).toBe(true);
       await waitFor(() => {
         expect(screen.getByRole('switch', { name: 'Через sing-box: 192.168.1.36' })).toBeChecked();
       });
     });
 
-    it('подтверждение шлёт POST и закрывает окно', async () => {
+    it('confirmation sends POST and closes the window', async () => {
       const confirmed = vi.fn<(path: string) => void>();
       const user = userEvent.setup();
 
@@ -388,7 +388,7 @@ describe('экран устройств', () => {
       await readySwitch('Ноутбук');
     });
 
-    it('откат показывает, на каком шаге встала смена, и исходную ошибку', async () => {
+    it('rollback shows at which step the change stopped, and the original error', async () => {
       const rolledBack = {
         id: 'dataplane-1',
         phase: 'rolled_back',
@@ -418,7 +418,7 @@ describe('экран устройств', () => {
       expect(screen.queryByRole('region', { name: 'Смена перехвата' })).not.toBeInTheDocument();
     });
 
-    it('в режиме перехвата для всех тумблер недоступен и объясняет почему', async () => {
+    it('in the interception-for-all mode the toggle is unavailable and explains why', async () => {
       server.use(...createDeviceHandlers());
       serveDataplane({ ...DATAPLANE_FIXTURE, model: { ...DATAPLANE_FIXTURE.model, acl_mode: 'all' } });
       renderScreen();
@@ -434,7 +434,7 @@ describe('экран устройств', () => {
       expect(toggle).toBeChecked();
     });
 
-    it('у демона на чужой службе тумблер недоступен, показывает положение и объясняет почему', async () => {
+    it('on a daemon with a foreign service the toggle is unavailable, shows the position and explains why', async () => {
       server.use(...createDeviceHandlers());
       serveDataplane({ ...DATAPLANE_FIXTURE, foreign_service: true });
       renderScreen();
@@ -449,7 +449,7 @@ describe('экран устройств', () => {
       expect(screen.getByRole('switch', { name: 'Через sing-box: iphone-guest' })).toBeChecked();
     });
 
-    it('смена, отклонённая демоном, окна не открывает и тумблер не запирает', async () => {
+    it('a change rejected by the daemon does not open the window and does not lock the toggle', async () => {
       const rejected = vi.fn<() => void>();
       const user = userEvent.setup();
 

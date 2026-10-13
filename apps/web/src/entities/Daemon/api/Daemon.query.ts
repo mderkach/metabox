@@ -6,7 +6,7 @@ import { toClashConfigs, toDaemonStatus, toServiceState, toTrafficHistory } from
 import { getClashConfigs, getDaemonStatus, getServiceState, getTrafficHistory } from './Daemon.api';
 import { ClashConfigsSchema, DaemonStatusSchema, ServiceStateSchema, TrafficHistorySchema } from './Daemon.schema';
 
-/** Значение флагов демона по умолчанию: то же, что в `main.go`. */
+/** Default daemon flag values: the same as in `main.go`. */
 const DEFAULT_CONFIG_PATH = '/etc/sing-box/config.json';
 
 export const DAEMON_QUERY = {
@@ -24,8 +24,8 @@ export function getDaemonStatusOptions() {
     staleTime: CACHE_TIME.Second,
     gcTime: CACHE_TIME.Minute,
     refetchInterval: POLL_INTERVAL.Status,
-    // Недоступность демона показывает баннер оболочки, а не тост на каждый
-    // неудачный опрос: опрос идёт постоянно и завалил бы экран.
+    // Daemon unavailability is shown by the shell banner, not by a toast on
+    // every failed poll: polling runs constantly and would flood the screen.
     meta: { showError: false },
   });
 }
@@ -41,25 +41,25 @@ export function getTrafficHistoryOptions() {
   });
 }
 
-/** История трафика с демона: панель держит в памяти только последнюю минуту. */
+/** Traffic history from the daemon: the panel keeps only the last minute in memory. */
 export function useTrafficHistory() {
   return useQuery({ ...getTrafficHistoryOptions(), select: toTrafficHistory });
 }
 
 /**
- * Состояние демона. Отказ этого запроса — единственный признак, по которому
- * панель отличает «демон не поднят» от «сервис лежит»: второе демон сообщает
- * ответом, первое — молчанием.
+ * Daemon state. A failure of this query is the only sign by which the panel
+ * tells "the daemon is not up" from "the service is down": the daemon reports
+ * the second with a response, the first with silence.
  */
 export function useDaemonStatus() {
   return useQuery({ ...getDaemonStatusOptions(), select: toDaemonStatus });
 }
 
 /**
- * Демон отвечает или молчит. Молчанием считаются те же случаи, что красят
- * баннер недоступности: обрыв запроса и непонятая схема ответа. Ответ с кодом
- * ошибки демона молчанием не считается — это отказ конкретной ручки, а не
- * панели целиком.
+ * Whether the daemon answers or is silent. Silence covers the same cases that
+ * paint the unavailability banner: a broken request and a response schema that
+ * is not understood. A response with a daemon error code is not silence: it is
+ * a failure of a specific endpoint, not of the whole panel.
  */
 export function useDaemonReachable(): boolean {
   const status = useDaemonStatus();
@@ -69,9 +69,9 @@ export function useDaemonReachable(): boolean {
 }
 
 /**
- * Путь конфига на устройстве. Демон, запущенный с другими `-config-dir` и
- * `-config-name`, сообщает свой; значение по умолчанию остаётся на случай
- * сборки демона, которая поля ещё не отдаёт.
+ * Config path on the device. A daemon started with other `-config-dir` and
+ * `-config-name` reports its own; the default stays for a daemon build that
+ * does not serve the field yet.
  */
 export function useConfigPath(): string {
   const status = useDaemonStatus();
@@ -85,22 +85,23 @@ export function getServiceStateOptions() {
     queryFn: async (context) => decodeResponse(ServiceStateSchema, await getServiceState(context), 'service'),
     staleTime: CACHE_TIME.Second,
     gcTime: CACHE_TIME.Minute,
-    // Опроса нет: состояние обновляет топик `service` единого потока, а тело
-    // у потока и у ручки одно. Запрос остаётся первым значением —
-    // до первого события экрану надо что-то показать.
+    // There is no polling: the state is updated by the `service` topic of the
+    // single stream, and the body is the same for the stream and the endpoint.
+    // The query stays the first value, since the screen needs something to show
+    // before the first event.
     meta: { showError: false },
   });
 }
 
 /**
- * Состояние сервиса. Отдельный запрос от `GET /api/status`: остановленный
- * sing-box — данные экрана, а молчание демона — отказ панели, и смешивать их
- * в одном состоянии нельзя.
+ * Service state. A separate query from `GET /api/status`: a stopped sing-box is
+ * screen data, while daemon silence is a panel failure, and they must not be
+ * mixed in one state.
  *
- * Живым состояние держит топик `service` единого потока, а поток открыт, пока
- * экран объявил себя читателем рантайма (`useRuntimeStream`). Экран, который
- * покажет состояние сервиса без этого объявления, получит его один раз и
- * дальше будет показывать устаревшее.
+ * The `service` topic of the single stream keeps the state live, and the stream
+ * is open while a screen has declared itself a runtime reader
+ * (`useRuntimeStream`). A screen that shows the service state without that
+ * declaration gets it once and then shows stale data.
  */
 export function useServiceState() {
   return useQuery({ ...getServiceStateOptions(), select: toServiceState });
@@ -116,7 +117,7 @@ export function getClashConfigsOptions() {
   });
 }
 
-/** Режим Clash API: правило `clash_mode` в конфиге сверяется именно с ним. */
+/** Clash API mode: the `clash_mode` rule in the config is matched against exactly it. */
 export function useClashConfigs() {
   return useQuery({ ...getClashConfigsOptions(), select: toClashConfigs });
 }

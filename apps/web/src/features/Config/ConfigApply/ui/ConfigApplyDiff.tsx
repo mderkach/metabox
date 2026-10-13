@@ -18,7 +18,7 @@ import {
 
 import { ConfigApplyRuleChanges } from './ConfigApplyRuleChanges';
 
-/** Строк вокруг правки: меньше — и непонятно, в какой секции она сделана. */
+/** Lines around an edit: fewer, and it is unclear which section it was made in. */
 const DIFF_CONTEXT = 3;
 
 const LINE_STYLE: Readonly<Record<DiffLine['kind'], string>> = {
@@ -27,7 +27,7 @@ const LINE_STYLE: Readonly<Record<DiffLine['kind'], string>> = {
   [DIFF_KIND.Removed]: 'bg-destructive/10 text-destructive',
 };
 
-/** Знак ставится текстом: цвет не должен быть единственным признаком правки. */
+/** The sign is put as text: color must not be the only indicator of an edit. */
 const LINE_MARK: Readonly<Record<DiffLine['kind'], string>> = {
   [DIFF_KIND.Same]: ' ',
   [DIFF_KIND.Added]: '+',
@@ -35,14 +35,14 @@ const LINE_MARK: Readonly<Record<DiffLine['kind'], string>> = {
 };
 
 /**
- * Диалог показывает текст файла, а не разобранную модель: в Apply уйдут те же
- * байты, что видны здесь.
+ * The dialog shows the file text, not the parsed model: the same bytes that are
+ * visible here go into Apply.
  */
 export function ConfigApplyDiff({ canApply, onApply }: { canApply: boolean; onApply: () => void }) {
   const { t } = useTranslation('features/Config/ConfigApply');
   const lines = useConfigDiff();
-  // Диалог перерисовывается на каждое нажатие снаружи, а проход идёт по всему
-  // файлу: на конфиге в полторы тысячи строк это заметная работа.
+  // The dialog is redrawn on every outside keystroke, and the pass walks the
+  // whole file: on a config of fifteen hundred lines that is noticeable work.
   const hunks = useMemo(() => toDiffHunks(lines, DIFF_CONTEXT), [lines]);
   const changed = useMemo(() => lines.filter((line) => line.kind !== DIFF_KIND.Same).length, [lines]);
 
@@ -109,9 +109,10 @@ export function ConfigApplyDiff({ canApply, onApply }: { canApply: boolean; onAp
 }
 
 /**
- * Файлы списков, которые уедут этим применением. Их содержимое в построчный
- * диф не попадает — файл виден на экране сетов, — но состав изменений диалог
- * обязан назвать: применяется не только текст конфига.
+ * List files that will go with this apply. Their content does not get into the
+ * line-by-line diff, since the file is visible on the sets screen, but the
+ * dialog must name the composition of changes: not only the config text is
+ * applied.
  */
 function ConfigApplyListChanges() {
   const { t } = useTranslation('features/Config/ConfigApply');

@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { PROXY_QUERY, testProxyDelay } from '@entities/Proxy';
 
-/** Замер задержки узла: рантайм дописывает его в историю, поэтому список перечитывается. */
+/** Node latency probe: the runtime appends it to the history, so the list is reread. */
 export function useTestProxyDelay() {
   const queryClient = useQueryClient();
 

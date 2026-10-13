@@ -1,77 +1,77 @@
-# ADR-0025. Держать react-scan dev-зависимостью и подключать его отдельным входом дев-сервера
+# ADR-0025. Keep react-scan as a dev dependency and connect it through a separate dev server entry
 
-- Статус: Accepted
-- Дата: 2026-09-18
-- Ответственные: владелец репозитория
+- Status: Accepted
+- Date: 2026-09-18
+- Deciders: repository owner
 
-## Контекст и постановка проблемы
+## Context and problem statement
 
-Бюджет NFR-2 — «нет блокировок главного потока дольше 100 мс» на конфиге до 500 правил и снапшоте до 5000 соединений. Трейс Chrome отвечает, сколько времени заняла работа и где именно, но не отвечает, **какой компонент** рендерится и сколько раз: в профиле видно `prepareFreshStack` и `commitTextUpdate`, а не `ConnectionRowProto`.
+The NFR-2 budget is "no main-thread blocks longer than 100 ms" on a config of up to 500 rules and a snapshot of up to 5000 connections. A Chrome trace answers how long the work took and where exactly, but not **which component** renders and how many times: the profile shows `prepareFreshStack` and `commitTextUpdate`, not `ConnectionRowProto`.
 
-React DevTools эту картину показывает, но снять её может только человек глазами: подсветка обновлений живёт десятки миллисекунд, а профайлер не отдаёт сводку в машиночитаемом виде. Для повторяемого замера — и для агента, который этот замер проводит, — нужен программный доступ к счётчикам рендеров.
+React DevTools shows this picture, but only a person can take it by eye: the update highlight lives for tens of milliseconds, and the profiler does not give a machine-readable summary. A repeatable measurement — and an agent that runs it — needs programmatic access to render counters.
 
-Ограничение, заданное сборкой: собранная панель уезжает в бинарь демона через `go:embed` ([ADR-0003](./ADR-0003-embed-the-spa-from-a-staging-directory.md)), поэтому инструмент разработки не имеет права попасть в `dist` ни при каких условиях.
+A constraint set by the build: the built panel goes into the daemon binary via `go:embed` ([ADR-0003](./ADR-0003-embed-the-spa-from-a-staging-directory.md)), so a development tool must not get into `dist` under any circumstances.
 
-В scope: чем снимать поимённые счётчики рендеров и как этот инструмент подключается. Вне scope: что делать с найденными ререндерами — состав подписок и мемоизация решаются отдельно.
+In scope: what to use to collect per-component render counters and how this tool is connected. Out of scope: what to do with the re-renders found — the set of subscriptions and memoization are solved separately.
 
-## Критерии выбора
+## Decision drivers
 
-1. **В прод-сборку не попадает.** Проверяется сборкой, а не намерением.
-2. **Данные снимаются программно.** Сводка по компонентам доступна из консоли страницы, а не только глазами по оверлею.
-3. **Цена в дереве зависимостей.** Инструмент не тащит в репозиторий больше, чем даёт.
-4. **Не ломает правило точных версий.** Прямая зависимость пинится, диапазонов в манифесте репозитория нет.
+1. **Does not get into the production build.** Checked by the build, not by intent.
+2. **Data is collected programmatically.** A per-component summary is available from the page console, not only by eye from an overlay.
+3. **Cost in the dependency tree.** The tool does not pull more into the repository than it gives.
+4. **Does not break the exact versions rule.** A direct dependency is pinned, the repository manifest has no ranges.
 
-## Рассмотренные варианты
+## Considered options
 
-1. **`react-scan` в `devDependencies` плюс отдельный вход `apps/web/dev/scan.ts`.** Вход добавляет в `index.html` плагин `metabox-scan` под `METABOX_SCAN=1`, инструментирование ставится до первого рендера, сводка по компонентам лежит в `window.__metaboxScan`. Преимущества: даёт и оверлей для глаз, и счётчики для съёма (критерий 2); `apply: 'serve'` и отсутствие ссылок из `src` держат его вне сборки (критерий 1); версия запинена точно (критерий 4). Недостатки: тянет `react-doctor`, `react-grab`, `preact`, `@preact/signals`, `bippy` и `oxlint-plugin-react-doctor` — лок вырастает на 1165 строк, в `node_modules` около 16 МБ, из них 9.5 МБ один `react-doctor` (критерий 3). **Принят.**
+1. **`react-scan` in `devDependencies` plus a separate entry `apps/web/dev/scan.ts`.** The entry is added to `index.html` by the `metabox-scan` plugin under `METABOX_SCAN=1`, instrumentation is installed before the first render, the per-component summary lives in `window.__metaboxScan`. Advantages: gives both an overlay for the eye and counters for collection (driver 2); `apply: 'serve'` and the absence of references from `src` keep it out of the build (driver 1); the version is pinned exactly (driver 4). Disadvantages: pulls `react-doctor`, `react-grab`, `preact`, `@preact/signals`, `bippy` and `oxlint-plugin-react-doctor` — the lock grows by 1165 lines, about 16 MB in `node_modules`, of which 9.5 MB is `react-doctor` alone (driver 3). **Chosen.**
 
-2. **Разовый запуск через `pnpm dlx` без записи в манифест.** Преимущества: дерево зависимостей репозитория не растёт. Недостатки: не работает для нужного режима — `dev/scan.ts` импортирует `react-scan` как модуль, а `dlx` ставит пакет во временный каталог, которого нет в графе сборки дев-сервера (критерий 2). Годится только для CLI-режима поверх готовой страницы, а он даёт оверлей без программного доступа. **Отклонён.**
+2. **One-off run via `pnpm dlx` without recording it in the manifest.** Advantages: the repository dependency tree does not grow. Disadvantages: does not work for the needed mode — `dev/scan.ts` imports `react-scan` as a module, and `dlx` installs the package into a temporary directory that is not in the dev server build graph (driver 2). It fits only the CLI mode on top of a ready page, and that gives an overlay without programmatic access. **Rejected.**
 
-3. **Обойтись трейсом Chrome.** Преимущества: инструмент уже подключён (`.mcp.json`), новых зависимостей ноль. Недостатки: поимённых счётчиков рендеров не даёт (критерий 2). Замечу честно: решающую находку — цену черновика immer ([ADR-0024](./ADR-0024-drop-the-immer-draft-from-frontend-stores.md)) — дал именно трейс, а react-scan лишь показал, что рендеры вторичны. **Отклонён как единственный инструмент, оставлен как основной.**
+3. **Make do with the Chrome trace.** Advantages: the tool is already connected (`.mcp.json`), zero new dependencies. Disadvantages: gives no per-component render counters (driver 2). To be honest: the decisive finding — the cost of the immer draft ([ADR-0024](./ADR-0024-drop-the-immer-draft-from-frontend-stores.md)) — came from the trace, and react-scan only showed that renders are secondary. **Rejected as the only tool, kept as the main one.**
 
-4. **React DevTools вручную.** Преимущества: ничего не ставится в репозиторий. Недостатки: замер не повторяется и не снимается программно (критерий 2). **Отклонён.**
+4. **React DevTools by hand.** Advantages: nothing is installed in the repository. Disadvantages: the measurement is not repeatable and not collected programmatically (driver 2). **Rejected.**
 
-## Принятое решение
+## Decision outcome
 
-`react-scan` живёт в `devDependencies` пакета `apps/web` с точной версией. Подключение — только через плагин `metabox-scan` в `vite.config.ts`: он возвращает `false` без `METABOX_SCAN=1` и объявляет `apply: 'serve'`, поэтому в сборке не участвует.
+`react-scan` lives in the `devDependencies` of the `apps/web` package with an exact version. It is connected only through the `metabox-scan` plugin in `vite.config.ts`: the plugin returns `false` without `METABOX_SCAN=1` and declares `apply: 'serve'`, so it takes no part in the build.
 
-Правила:
+Rules:
 
-- вход инструмента лежит в `apps/web/dev/`, у каталога свой проект типов `tsconfig.dev.json`; из `src` ссылаться на него нельзя — именно отсутствие ссылок и держит его вне бандла;
-- скрипт вставляется в `head`, раньше входа приложения: инструментирование подменяет хук девтулзов, и после первого рендера делать это поздно;
-- сводка снимается из `window.__metaboxScan`; сами по себе миллисекунды оттуда метрикой NFR-2 не считаются — инструментирование добавляет своё время.
+- the tool entry lives in `apps/web/dev/`, the directory has its own types project `tsconfig.dev.json`; `src` must not reference it — the absence of references is exactly what keeps it out of the bundle;
+- the script is inserted into `head`, before the app entry: instrumentation replaces the devtools hook, and after the first render it is too late to do so;
+- the summary is collected from `window.__metaboxScan`; the milliseconds from there do not count as an NFR-2 metric on their own — instrumentation adds its own time.
 
-Non-goal: гнать react-scan в CI. Это инструмент разработчика, а не проверка.
+Non-goal: running react-scan in CI. It is a developer tool, not a check.
 
-## Последствия
+## Consequences
 
-### Положительные
+### Positive
 
-- Поимённые счётчики рендеров снимаются одной командой из консоли страницы и годятся для повторяемого замера.
-- Оверлей с именами компонентов доступен на том же стенде, что и моки на 5000 соединений.
+- Per-component render counters are collected with one command from the page console and fit a repeatable measurement.
+- The overlay with component names is available on the same test bench as the mocks for 5000 connections.
 
-### Отрицательные
+### Negative
 
-- Лок вырос на 1165 строк, в дерево приехали `react-doctor` (9.5 МБ), `react-grab`, `preact`, `@preact/signals`, `bippy` и `oxlint-plugin-react-doctor` — около 16 МБ вместе с самим профилировщиком.
-- В манифесте самого `react-scan` две зависимости объявлены как `latest`. Лок их фиксирует, но при следующем обновлении подтянутся произвольные версии — это придётся смотреть глазами в диффе лока.
-- Ещё один каталог верхнего уровня в `apps/web` и ещё один проект в `tsconfig.json`.
+- The lock grew by 1165 lines, the tree got `react-doctor` (9.5 MB), `react-grab`, `preact`, `@preact/signals`, `bippy` and `oxlint-plugin-react-doctor` — about 16 MB together with the profiler itself.
+- The `react-scan` manifest itself declares two dependencies as `latest`. The lock pins them, but on the next update arbitrary versions will come in — this has to be reviewed by eye in the lock diff.
+- One more top-level directory in `apps/web` and one more project in `tsconfig.json`.
 
-### Нейтральные или отложенные
+### Neutral or deferred
 
-- Первичным инструментом замера остаётся трейс Chrome; react-scan отвечает на другой вопрос и трейс не заменяет.
+- The Chrome trace stays the primary measurement tool; react-scan answers a different question and does not replace the trace.
 
-## Совместимость, миграция и откат
+## Compatibility, migration and rollback
 
-Прикладного кода решение не касается: без `METABOX_SCAN=1` поведение дев-сервера прежнее. Откат — удалить `apps/web/dev/`, `tsconfig.dev.json`, плагин `metaboxScan` и зависимость; ничего кроме этих файлов трогать не нужно.
+The decision does not touch application code: without `METABOX_SCAN=1` the dev server behaves as before. Rollback: delete `apps/web/dev/`, `tsconfig.dev.json`, the `metaboxScan` plugin and the dependency; nothing besides these files needs to be touched.
 
-## Проверка решения
+## Validation
 
-- `pnpm --filter web build`, затем `grep -r "react-scan\|bippy\|__metaboxScan" apps/web/dist` — совпадений нет;
-- `grep -rn "dev/scan" apps/web/src apps/web/index.html` — ссылок из прикладного кода нет;
-- ручной сценарий: `METABOX_SCAN=1 METABOX_MOCK=all METABOX_MOCK_CONNECTIONS=5000 pnpm --filter web dev`, в консоли `__metaboxScan.summary()` отдаёт список компонентов с числом рендеров.
+- `pnpm --filter web build`, then `grep -r "react-scan\|bippy\|__metaboxScan" apps/web/dist` — no matches;
+- `grep -rn "dev/scan" apps/web/src apps/web/index.html` — no references from application code;
+- manual scenario: `METABOX_SCAN=1 METABOX_MOCK=all METABOX_MOCK_CONNECTIONS=5000 pnpm --filter web dev`, `__metaboxScan.summary()` in the console returns a list of components with render counts.
 
-## Ссылки
+## Links
 
-- [ADR-0003](./ADR-0003-embed-the-spa-from-a-staging-directory.md) — собранная панель уезжает в бинарь демона;
-- [ADR-0024](./ADR-0024-drop-the-immer-draft-from-frontend-stores.md) — замер, ради которого инструмент и заводился;
+- [ADR-0003](./ADR-0003-embed-the-spa-from-a-staging-directory.md) — the built panel goes into the daemon binary;
+- [ADR-0024](./ADR-0024-drop-the-immer-draft-from-frontend-stores.md) — the measurement the tool was introduced for;
 - `apps/web/dev/scan.ts`, `apps/web/vite.config.ts`.

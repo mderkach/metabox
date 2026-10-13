@@ -19,7 +19,7 @@ vi.mock('sonner', () => ({
 
 const { toast } = await import('sonner');
 
-/** Рантайм, который принимает только режимы из своего списка, как sing-box. */
+/** A runtime that accepts only modes from its own list, like sing-box. */
 function serveClash() {
   let configs = CLASH_CONFIGS_FIXTURE;
   const patches: unknown[] = [];
@@ -49,14 +49,14 @@ describe('DaemonModeSwitch', () => {
     QueryClientInstance.clear();
   });
 
-  it('показывает текущий режим рантайма', async () => {
+  it('shows the current runtime mode', async () => {
     serveClash();
     renderWithQuery(<DaemonModeSwitch />);
 
     expect(await screen.findByRole('combobox', { name: 'Режим Clash API: по правилам' })).toBeEnabled();
   });
 
-  it('переключает режим запросом в рантайм', async () => {
+  it('switches the mode with a runtime request', async () => {
     const patches = serveClash();
     const user = userEvent.setup();
     renderWithQuery(<DaemonModeSwitch />);
@@ -67,7 +67,7 @@ describe('DaemonModeSwitch', () => {
     expect(patches).toEqual([{ mode: 'Global' }]);
   });
 
-  it('показывает режим из правил конфига его именем', async () => {
+  it('shows the mode from the config rules by its name', async () => {
     server.use(
       http.get(DAEMON_ENDPOINT.clashConfigs(), () =>
         HttpResponse.json({ ...CLASH_CONFIGS_FIXTURE, mode: 'Proxy', 'mode-list': ['Rule', 'Proxy'] })
@@ -78,7 +78,7 @@ describe('DaemonModeSwitch', () => {
     expect(await screen.findByRole('combobox', { name: 'Режим Clash API: Proxy' })).toBeInTheDocument();
   });
 
-  it('вместо выбора называет причину, когда режим не прочитан', async () => {
+  it('instead of a choice names the reason when the mode is not read', async () => {
     server.use(
       http.get(DAEMON_ENDPOINT.clashConfigs(), () =>
         HttpResponse.json({ code: 'runtime_unavailable', message: 'рантайм sing-box не отвечает' }, { status: 502 })
@@ -90,7 +90,7 @@ describe('DaemonModeSwitch', () => {
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   });
 
-  it('пока режим читается, показывает скелетон, а не пустой выбор', () => {
+  it('while the mode is being read shows a skeleton, not an empty choice', () => {
     server.use(http.get(DAEMON_ENDPOINT.clashConfigs(), async () => delay('infinite')));
     renderWithQuery(<DaemonModeSwitch />);
 
@@ -98,7 +98,7 @@ describe('DaemonModeSwitch', () => {
     expect(screen.queryByText(/режим не прочитан/)).not.toBeInTheDocument();
   });
 
-  it('отказ смены возвращает прежний режим и показывает тост', async () => {
+  it('a failed switch returns the previous mode and shows a toast', async () => {
     server.use(
       http.get(DAEMON_ENDPOINT.clashConfigs(), () => HttpResponse.json(CLASH_CONFIGS_FIXTURE)),
       http.patch(DAEMON_ENDPOINT.clashConfigs(), () =>
@@ -106,7 +106,7 @@ describe('DaemonModeSwitch', () => {
       )
     );
     const user = userEvent.setup();
-    // Тосты показывает кэш мутаций клиента приложения, у тестового клиента его нет.
+    // Toasts are shown by the app client mutation cache, the test client has none.
     render(
       <QueryClientProvider client={QueryClientInstance}>
         <DaemonModeSwitch />

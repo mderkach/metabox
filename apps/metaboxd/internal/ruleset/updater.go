@@ -16,21 +16,21 @@ import (
 //go:embed snapshot.json
 var snapshot []byte
 
-// Lister читает имена файлов дерева поставщика. Интерфейс объявлен здесь, у
-// потребителя.
+// Lister reads the provider tree file names. The interface is declared here, at the
+// consumer.
 type Lister interface {
 	List(ctx context.Context, tree Tree, etag string) (Listing, error)
 }
 
-// Store хранит сверенный перечень между перезапусками. Служебным каталогом
-// владеет config.Store, поэтому запись идёт через него. Отсутствие файла —
-// ошибка, для которой errors.Is(err, fs.ErrNotExist).
+// Store keeps the checked listing between restarts. The service directory is
+// owned by config.Store, so the write goes through it. A missing file is an
+// error for which errors.Is(err, fs.ErrNotExist).
 type Store interface {
 	ReadRuleSets(ctx context.Context) ([]byte, error)
 	WriteRuleSets(ctx context.Context, data []byte) error
 }
 
-// entry — перечень одного списка в кэше и снимке.
+// entry is the listing of one list in the cache and snapshot.
 type entry struct {
 	Categories []string `json:"categories"`
 	ETag       string   `json:"etag,omitempty"`
@@ -38,14 +38,14 @@ type entry struct {
 	source     ListSource
 }
 
-// file — формат кэша и снимка: перечни по ключу `поставщик/вид`.
+// file is the cache and snapshot format: listings by the key `provider/kind`.
 type file struct {
 	Lists map[string]entry `json:"lists"`
 }
 
-// Updater держит каталог и сверяет его с поставщиками по таймеру всё время
-// жизни демона, открыта панель или нет, — исключение из правила «фоновых
-// опросов без потребителя нет».
+// Updater holds the catalog and checks it with the providers on a timer for the whole
+// daemon lifetime, whether the panel is open or not, an exception to the rule "no background
+// polling without a consumer".
 type Updater struct {
 	lister   Lister
 	store    Store
@@ -56,21 +56,21 @@ type Updater struct {
 	mu    sync.Mutex
 	lists map[string]entry
 
-	// saved — отпечаток последнего записанного кэша. Пишет его только
-	// горутина сверки, а до Start — конструктор.
+	// saved is the fingerprint of the last written cache. Written only by
+	// the check goroutine, and before Start by the constructor.
 	saved [sha256.Size]byte
 
 	stop context.CancelFunc
 	done chan struct{}
 }
 
-// NewUpdater собирает каталог из встроенного снимка и сохранённого перечня.
-// Сверки он не начинает: её поднимает Start. Испорченный кэш не мешает
-// запуску — каталог остаётся на снимке, а следующая сверка его перепишет.
+// NewUpdater assembles the catalog from the embedded snapshot and the saved listing.
+// It starts no checks: Start brings them up. A corrupted cache does not prevent
+// the start: the catalog stays on the snapshot, and the next check overwrites it.
 //
-// Нулевой интервал отключает сверку. Интервал короче паузы повтора
-// отвергается: без токена GitHub даёт 60 запросов в час, и частая сверка
-// выбрала бы лимит, так и не дойдя до повтора.
+// A zero interval disables the check. An interval shorter than the retry pause
+// is rejected: without a token GitHub gives 60 requests an hour, and frequent checks
+// would exhaust the limit without ever reaching the retry.
 func NewUpdater(ctx context.Context, lister Lister, store Store, log *slog.Logger, interval, retry time.Duration) (*Updater, error) {
 	if interval > 0 && interval < retry {
 		return nil, fmt.Errorf("интервал сверки %s короче паузы повтора %s", interval, retry)
@@ -124,9 +124,9 @@ func decode(data []byte, source ListSource) (map[string]entry, error) {
 	return lists, nil
 }
 
-// Catalog отдаёт каталог в том виде, в каком его получает панель. Срезы
-// категорий общие с внутренним состоянием: сверка подменяет их целиком и на
-// месте не меняет, поэтому копировать четыре тысячи строк на запрос незачем.
+// Catalog returns the catalog in the form the panel gets it. The category slices
+// are shared with the internal state: the check replaces them whole and does not change them
+// in place, so copying four thousand lines per request is pointless.
 func (u *Updater) Catalog() Catalog {
 	u.mu.Lock()
 	defer u.mu.Unlock()
@@ -161,8 +161,8 @@ func (u *Updater) Catalog() Catalog {
 	return catalog
 }
 
-// Start поднимает сверку на всё время работы демона. Нулевой интервал
-// оставляет каталог на снимке и кэше: сеть демон не трогает.
+// Start brings the check up for the whole daemon runtime. A zero interval
+// leaves the catalog on the snapshot and cache: the daemon does not touch the network.
 func (u *Updater) Start() {
 	u.mu.Lock()
 	defer u.mu.Unlock()
@@ -180,7 +180,7 @@ func (u *Updater) Start() {
 	}(u.done)
 }
 
-// Close останавливает сверку и дожидается её.
+// Close stops the check and waits for it.
 func (u *Updater) Close() {
 	u.mu.Lock()
 	stop, done := u.stop, u.done
@@ -195,10 +195,10 @@ func (u *Updater) Close() {
 	<-done
 }
 
-// run сверяет каталог, как только он устарел, дальше — раз в интервал.
-// Неудачная сверка повторяется через retry, а не через интервал: на старте
-// роутера сеть и часы поднимаются позже демона, и первая попытка часто
-// проваливается.
+// run checks the catalog as soon as it goes stale, then once per interval.
+// A failed check is repeated after retry, not after the interval: at router start
+// the network and clock come up later than the daemon, and the first attempt often
+// fails.
 func (u *Updater) run(ctx context.Context) {
 	timer := time.NewTimer(u.untilStale(time.Now()))
 	defer timer.Stop()
@@ -226,9 +226,9 @@ func (u *Updater) run(ctx context.Context) {
 	}
 }
 
-// untilStale — сколько ждать до сверки. Снимок и перечень с датой из будущего
-// сверяются сразу: второе значит, что часы роутера ещё не синхронизованы, и
-// возраст по ним не посчитать.
+// untilStale is how long to wait before a check. A snapshot and a listing dated in the future
+// are checked at once: the second means the router clock is not yet synchronized, and
+// the age cannot be computed by it.
 func (u *Updater) untilStale(now time.Time) time.Duration {
 	u.mu.Lock()
 	defer u.mu.Unlock()
@@ -247,8 +247,8 @@ func (u *Updater) untilStale(now time.Time) time.Duration {
 	return wait
 }
 
-// refresh сверяет каждый список с поставщиком и сохраняет результат. Список,
-// который не сверился, остаётся прежним; ошибки всех списков собираются вместе.
+// refresh checks each list with the provider and saves the result. A list
+// that did not check stays as it was; errors of all lists are collected together.
 func (u *Updater) refresh(ctx context.Context) error {
 	var errs []error
 
@@ -303,11 +303,11 @@ func (u *Updater) apply(name, prefix string, listing Listing, now time.Time) err
 	return nil
 }
 
-// save пишет сверенные списки. Списки, ещё не сверенные ни разу, в кэш не
-// попадают: иначе снимок после перезапуска выдавал бы себя за сверенный.
-// Совпавшее с записанным содержимое не перезаписывается: сверка, которая
-// провалилась целиком, повторяется каждый час и иначе писала бы на флеш тот
-// же файл.
+// save writes the checked lists. Lists not yet checked even once do not get
+// into the cache: otherwise the snapshot after a restart would pass itself off as checked.
+// Content matching what is written is not rewritten: a check that
+// failed entirely is repeated every hour and would otherwise write the same
+// file to flash.
 func (u *Updater) save(ctx context.Context) error {
 	u.mu.Lock()
 	f := file{Lists: map[string]entry{}}
@@ -341,8 +341,8 @@ func (u *Updater) save(ctx context.Context) error {
 	return nil
 }
 
-// Snapshot сверяет все списки с поставщиками и отдаёт их в формате снимка.
-// Им собирается `snapshot.json`, который встраивается в бинарь.
+// Snapshot checks all lists with the providers and returns them in the snapshot format.
+// It builds `snapshot.json`, which is embedded into the binary.
 func Snapshot(ctx context.Context, lister Lister, now time.Time) ([]byte, error) {
 	f := file{Lists: map[string]entry{}}
 

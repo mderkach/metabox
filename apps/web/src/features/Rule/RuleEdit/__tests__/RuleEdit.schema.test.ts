@@ -4,8 +4,8 @@ import { RULE_ACTION, RuleEditAdapterSchema } from '../model/RuleEdit.schema';
 
 const NO_CONDITIONS = { domain: '', domain_suffix: '', domain_keyword: '', ip_cidr: '', source_ip_cidr: '', port: '' };
 
-describe('правка выхода правила', () => {
-  it('у маршрутизации отдаёт выбранный outbound', () => {
+describe('rule outbound edit', () => {
+  it('for routing returns the chosen outbound', () => {
     const patch = RuleEditAdapterSchema.parse({
       action: RULE_ACTION.Route,
       outbound: 'proxy',
@@ -16,7 +16,7 @@ describe('правка выхода правила', () => {
     expect(patch).toEqual({ action: RULE_ACTION.Route, outbound: 'proxy', conditions: {} });
   });
 
-  it('у остальных действий не пишет outbound вовсе', () => {
+  it('for other actions does not write outbound at all', () => {
     const patch = RuleEditAdapterSchema.parse({
       action: RULE_ACTION.Reject,
       outbound: 'proxy',
@@ -28,7 +28,7 @@ describe('правка выхода правила', () => {
     expect('outbound' in patch).toBe(false);
   });
 
-  it('не принимает маршрутизацию без выхода: пустой тег попал бы в диф правкой, которой не делали', () => {
+  it('does not accept routing without an outbound: an empty tag would get into the diff as an edit nobody made', () => {
     const result = RuleEditAdapterSchema.safeParse({
       action: RULE_ACTION.Route,
       outbound: '',
@@ -40,7 +40,7 @@ describe('правка выхода правила', () => {
     expect(result.error?.issues[0]?.path).toEqual(['outbound']);
   });
 
-  it('не принимает действие, которого нет в списке', () => {
+  it('does not accept an action that is not in the list', () => {
     expect(
       RuleEditAdapterSchema.safeParse({ action: 'teleport', outbound: '', ruleSet: [], conditions: NO_CONDITIONS })
         .success
@@ -48,8 +48,8 @@ describe('правка выхода правила', () => {
   });
 });
 
-describe('сеты правила', () => {
-  it('уходят в патч списком тегов', () => {
+describe('rule sets of a rule', () => {
+  it('go into the patch as a list of tags', () => {
     const patch = RuleEditAdapterSchema.parse({
       action: RULE_ACTION.Route,
       outbound: 'proxy',
@@ -65,7 +65,7 @@ describe('сеты правила', () => {
     });
   });
 
-  it('пустой список убирает rule_set из патча, а не пишет []', () => {
+  it('an empty list removes rule_set from the patch instead of writing []', () => {
     const patch = RuleEditAdapterSchema.parse({
       action: RULE_ACTION.Route,
       outbound: 'proxy',
@@ -76,7 +76,7 @@ describe('сеты правила', () => {
     expect('rule_set' in patch).toBe(false);
   });
 
-  it('не принимает тег не строкой', () => {
+  it('does not accept a tag that is not a string', () => {
     expect(
       RuleEditAdapterSchema.safeParse({
         action: RULE_ACTION.Route,
@@ -88,8 +88,8 @@ describe('сеты правила', () => {
   });
 });
 
-describe('минимальность правки', () => {
-  it('смена действия на не-маршрутизацию убирает outbound из патча, а не обнуляет его', () => {
+describe('edit minimality', () => {
+  it('changing the action to non-routing removes outbound from the patch instead of zeroing it', () => {
     const patch = RuleEditAdapterSchema.parse({
       action: RULE_ACTION.Sniff,
       outbound: 'proxy',
@@ -101,8 +101,8 @@ describe('минимальность правки', () => {
   });
 });
 
-describe('условия правила', () => {
-  it('уходят списком по строке на значение, пустые строки и пробелы не пишутся', () => {
+describe('rule conditions', () => {
+  it('go as a list with one string per value, empty strings and spaces are not written', () => {
     const patch = RuleEditAdapterSchema.parse({
       action: RULE_ACTION.Route,
       outbound: 'proxy',
@@ -113,7 +113,7 @@ describe('условия правила', () => {
     expect(patch.conditions).toEqual({ domain_suffix: ['youtube.com', 'googlevideo.com'], port: [443, 8443] });
   });
 
-  it('пустое условие убирает поле из узла', () => {
+  it('an empty condition removes the field from the node', () => {
     const patch = RuleEditAdapterSchema.parse({
       action: RULE_ACTION.Route,
       outbound: 'proxy',
@@ -124,7 +124,7 @@ describe('условия правила', () => {
     expect(patch.conditions.domain).toBeUndefined();
   });
 
-  it('не принимает порт не числом и вне диапазона', () => {
+  it('does not accept a port that is not a number or is out of range', () => {
     for (const port of ['https', '70000']) {
       const result = RuleEditAdapterSchema.safeParse({
         action: RULE_ACTION.Route,

@@ -1,6 +1,6 @@
 import type { EntryWire, LogsWire } from '../api/Log.schema';
 
-/** Строки в формате демона: уровень разобран, время — метка logd в RFC 3339. */
+/** Lines in the daemon format: level parsed, time is a logd timestamp in RFC 3339. */
 export const LOG_ENTRIES_FIXTURE: EntryWire[] = [
   { time: '2026-10-09T10:00:01+03:00', level: 'info', message: 'router: updated default interface eth1, index 4' },
   { time: '2026-10-09T10:00:02+03:00', level: 'debug', message: 'dns: exchanged example.com A 93.184.215.14' },
@@ -18,7 +18,7 @@ export const LOGS_FIXTURE: LogsWire = {
   entries: LOG_ENTRIES_FIXTURE,
 };
 
-/** Строки, которые мок дев-режима отдаёт потоком по кругу. */
+/** Lines that the dev mode mock serves as a stream in a loop. */
 export const LOG_STREAM_SAMPLES: EntryWire[] = [
   { level: 'info', message: 'inbound/tproxy[tproxy-in]: inbound packet connection from 192.168.1.20:5353' },
   { level: 'debug', message: 'router: match[3] rule_set=geosite-youtube => route(proxy)' },

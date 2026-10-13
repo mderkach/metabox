@@ -33,13 +33,13 @@ const TAB = {
 } as const;
 
 /**
- * Панель правила: форма выхода и тот же узел текстом.
+ * Rule panel: the outbound form and the same node as text.
  *
- * Узел, который схема не приняла, формы не получает вовсе — он показывается
- * сырым блоком с пометкой и правится только текстом.
+ * A node the schema did not accept gets no form at all — it is shown
+ * as a raw block with a mark and is edited only as text.
  *
- * `sheet` — панель стоит внутри листа поверх списка: рамку и фокус держит лист,
- * а заголовок панели становится его заголовком.
+ * `sheet` — the panel stands inside a sheet on top of the list: the sheet holds the frame and focus,
+ * and the panel title becomes its title.
  */
 export function RulePanel({
   id,
@@ -57,9 +57,9 @@ export function RulePanel({
   node: unknown;
   recognized: boolean;
   outbounds: string[];
-  /** Теги наборов документа: из них форма выбирает сеты правила. */
+  /** Rule set tags of the document: the form picks the rule's rule sets from them. */
   ruleSets: string[];
-  /** Действия над правилом: шапка, перед кнопкой закрытия. */
+  /** Actions on the rule: header, before the close button. */
   actions?: ReactNode;
   sheet?: boolean;
   onClose: () => void;
@@ -67,9 +67,9 @@ export function RulePanel({
   const { t } = useTranslation('widgets/Rule/RulePanel');
   const [tab, setTab] = useState<string>(recognized ? TAB.Form : TAB.Raw);
   const revision = ConfigDocumentState.use.revision();
-  // Форма читает узел однажды, а выбор держит позицию: отмена черновика или
-  // правка текстом ставят на неё другой узел, и форма должна смениться вместе с
-  // ним. Перестановка узел не меняет — набранное в форме остаётся.
+  // The form reads the node once, while the selection holds the position: discarding the draft or
+  // a text edit puts a different node there, and the form must change along
+  // with it. A reorder does not change the node — what was typed in the form stays.
   const nodeKey = useMemo(() => JSON.stringify(node), [node]);
   const headingRef = useFocusReturn<HTMLHeadingElement>();
 
@@ -80,9 +80,9 @@ export function RulePanel({
   }
 
   return (
-    // Escape закрывает панель: обработчик на контейнере — обычный паттерн для
-    // панелей и диалогов, интерактивная роль aside для этого не нужна.
-    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- см. выше
+    // Escape closes the panel: a handler on the container is a common pattern for
+    // panels and dialogs, an interactive role on aside is not needed for it.
+    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- see above
     <aside
       id={id}
       aria-label={t('title', { index: rule.index })}
@@ -140,7 +140,7 @@ export function RulePanel({
             <TabsTrigger value={TAB.Raw}>JSON</TabsTrigger>
           </TabsList>
 
-          {/* Форма держит набранное, пока узел сверяют текстом: размонтирование его стирает. */}
+          {/* The form keeps what was typed while the node is checked as text: unmounting erases it. */}
           <TabsContent value={TAB.Form} keepMounted className='pt-3'>
             {recognized && <RuleEditForm key={nodeKey} rule={rule} outbounds={outbounds} ruleSets={ruleSets} />}
           </TabsContent>
@@ -155,23 +155,23 @@ export function RulePanel({
 }
 
 /**
- * Места переноса перед точкой домена или адреса и после подчёркивания в имени
- * поля: браузер сам их там не видит и рвал бы длинное значение на произвольной
- * букве. Посреди части перенос остаётся только для части шире строки.
+ * Wrap points before the dot of a domain or address and after an underscore in a field
+ * name: the browser does not see them there by itself and would break a long value at an arbitrary
+ * letter. Mid-part wrapping remains only for a part wider than the row.
  */
 function withBreaks(text: string): ReactNode[] {
   return text.split(BREAK_POINT).flatMap((part, index) => (index === 0 ? [part] : [<wbr key={index} />, part]));
 }
 
 /**
- * Условия правила только на чтение: из них форма правит одни сеты, остальные
- * правятся текстом узла. Значения показываются целиком, без свёртки в «и ещё N», — в отличие от
- * строки списка, где на них нет места.
+ * Rule conditions are read-only: the form edits only rule sets of them, the rest
+ * are edited as node text. Values are shown in full, without folding into "and N more", unlike
+ * a list row, where there is no room for them.
  */
 function RuleConditions({ rule }: { rule: RuleRow }) {
   const { t } = useTranslation('widgets/Rule/RulePanel');
-  // Нераспознанный узел «без условий» не бывает: условие в нём есть, просто
-  // схема не знает его поля, и показать его формой нечем.
+  // An unrecognized node is never "without conditions": there is a condition in it, it is just that
+  // the schema does not know its fields, and there is no way to show it as a form.
   if (rule.isCatchAll && !rule.recognized) {
     return <p className='rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground'>{t('conditions.unknown')}</p>;
   }

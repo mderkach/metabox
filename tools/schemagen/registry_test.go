@@ -10,13 +10,13 @@ import (
 	"github.com/sagernet/sing-box/include"
 )
 
-// Генератор перебирает строковые константы форка и спрашивает у реестров, что
-// они умеют создавать. Тип, зарегистрированный под строкой, для которой
-// константы нет, выпал бы из схемы молча. Здесь ключи реестров читаются
-// напрямую и сверяются со списком констант.
+// The generator iterates over the fork string constants and asks the registries what
+// they can create. A type registered under a string with no
+// constant would silently drop out of the schema. Here the registry keys are read
+// directly and compared with the constant list.
 //
-// unsafe нужен только здесь: поле optionsType неэкспортируемое. В самом
-// генераторе его нет.
+// unsafe is needed only here: the optionsType field is unexported. The generator
+// itself does not have it.
 func TestRegistryKeysHaveConstants(t *testing.T) {
 	names, err := constantStrings()
 	if err != nil {
@@ -47,8 +47,8 @@ func TestRegistryKeysHaveConstants(t *testing.T) {
 	sort.Strings(missing)
 
 	if len(missing) > 0 {
-		t.Errorf("типы зарегистрированы под строками, которых нет в константах форка: %s\n"+
-			"генератор их не увидит — добавь источник строк в constantStrings",
+		t.Errorf("types are registered under strings that are not in the fork constants: %s\n"+
+			"the generator will not see them: add a string source to constantStrings",
 			strings.Join(missing, ", "))
 	}
 }
@@ -59,7 +59,7 @@ func registryKeys(t *testing.T, registry any) []string {
 	value := reflect.ValueOf(registry).Elem()
 	field := value.FieldByName("optionsType")
 	if !field.IsValid() {
-		t.Fatalf("в %s нет поля optionsType: устройство реестров в форке изменилось", value.Type())
+		t.Fatalf("no optionsType field in %s: the registry structure in the fork changed", value.Type())
 	}
 
 	options := reflect.NewAt(field.Type(), unsafe.Pointer(field.UnsafeAddr())).Elem()
@@ -70,8 +70,8 @@ func registryKeys(t *testing.T, registry any) []string {
 	return keys
 }
 
-// Реестры должны отдавать типы: пустой реестр означает, что include собран
-// без нужных build-тегов и схема выйдет обрезанной.
+// Registries must return types: an empty registry means include was built
+// without the needed build tags and the schema would come out truncated.
 func TestRegistriesAreNotEmpty(t *testing.T) {
 	groups, err := collectRegistries()
 	if err != nil {
@@ -79,7 +79,7 @@ func TestRegistriesAreNotEmpty(t *testing.T) {
 	}
 	for _, group := range groups {
 		if len(group.entries) == 0 {
-			t.Errorf("реестр %s пуст", group.name)
+			t.Errorf("registry %s is empty", group.name)
 		}
 	}
 }

@@ -21,7 +21,7 @@ export const DATAPLANE_QUERY = {
   apply: (id: string) => [...DATAPLANE_QUERY.all, 'apply', id] as const,
 } as const;
 
-/** Каждый запрос запускает на роутере `uci` и `nft`, а модель меняется только сменой через панель или SSH. */
+/** Each request runs `uci` and `nft` on the router, and the model changes only by a change through the panel or SSH. */
 export function getDataplaneOptions() {
   return queryOptions({
     queryKey: DATAPLANE_QUERY.model(),
@@ -49,12 +49,12 @@ export function getDataplaneApplyStateOptions(id: string) {
     staleTime: 0,
     gcTime: CACHE_TIME.Minute,
     refetchInterval: (query) => (isApplyActive(query.state.data?.phase) ? POLL_INTERVAL.Apply : false),
-    // Ход смены показывает блок экрана, а промах опроса раз в секунду завалил бы его тостами.
+    // The change progress is shown by the screen block, while a polling miss every second would flood it with toasts.
     meta: { showError: false },
   });
 }
 
-/** Ход смены модели. `null` — смен не было, запрос не заводится. */
+/** Model change progress. `null` means there were no changes, and the query is not created. */
 export function useDataplaneTransaction(id: string | null) {
   return useQuery({
     ...getDataplaneApplyStateOptions(id ?? ''),
@@ -64,9 +64,10 @@ export function useDataplaneTransaction(id: string | null) {
 }
 
 /**
- * Кладёт транзакцию смены в кэш: в её состояние и в статус демона. Идентификатор
- * экран берёт из статуса — так окно переживает перезагрузку страницы, — а
- * опрос статуса раз в пять секунд показал бы окно с опозданием.
+ * Puts the change transaction into the cache: into its state and into the
+ * daemon status. The screen takes the identifier from the status, so the window
+ * survives a page reload, while polling the status every five seconds would
+ * show the window late.
  */
 export function useSaveDataplaneTransaction() {
   const queryClient = useQueryClient();
@@ -88,11 +89,11 @@ export function useSaveDataplaneTransaction() {
 
 export interface DataplaneChange {
   model: DataplaneModel;
-  /** `Dataplane.etag` модели, от которой строилась смена. */
+  /** `Dataplane.etag` of the model the change was built from. */
   base: string | null;
 }
 
-/** Модель пишется целиком: демон читает отсутствующее поле нулём, а не «оставить как есть». */
+/** The model is written entirely: the daemon reads a missing field as zero, not "leave as is". */
 export async function changeDataplane({ model, base }: DataplaneChange): Promise<ApplyTransactionWire> {
   return decodeResponse(ApplyTransactionSchema, await putDataplane(toDataplaneChange(model), base), 'dataplane apply');
 }

@@ -1,10 +1,10 @@
-// Package events сводит рантайм-данные в один поток к панели.
+// Package events reduces runtime data into one stream to the panel.
 //
-// Источники у форка разные — посекундные строки `/traffic` и `/memory`,
-// снапшот `/connections`, опрос службы, — а панель получает один конверт и не
-// знает, какой источник сработал. SSE выбран потому, что сервера WebSocket в
-// стандартной библиотеке нет, а зависимость в демоне требует отдельного
-// решения.
+// The fork sources differ: per-second `/traffic` and `/memory` lines, the
+// `/connections` snapshot, service polling, but the panel gets one envelope and does not
+// know which source fired. SSE is chosen because the standard library has no WebSocket
+// server, and a dependency in the daemon needs a separate
+// decision.
 package events
 
 import (
@@ -20,8 +20,8 @@ import (
 	"time"
 )
 
-// Топики потока. Панель подписывается на все сразу: отдельная подписка на
-// каждый вернула бы нас к нескольким соединениям.
+// Stream topics. The panel subscribes to all at once: a separate subscription for
+// each would bring us back to several connections.
 const (
 	TopicTraffic     = "traffic"
 	TopicMemory      = "memory"
@@ -30,62 +30,62 @@ const (
 	TopicSystem      = "system"
 )
 
-// Event — конверт. Seq считается для каждого читателя отдельно и растёт без
-// пропусков, пока события доходят: разрыв в номерах означает, что читатель не
-// успевал и событие было отброшено.
+// Event is an envelope. Seq is counted for each reader separately and grows without
+// gaps while events arrive: a gap in numbers means the reader could not
+// keep up and an event was dropped.
 type Event struct {
 	Topic string          `json:"topic"`
 	Seq   uint64          `json:"seq"`
 	Data  json.RawMessage `json:"data"`
 }
 
-// subscriber — один читатель потока со своим счётчиком. Общий счётчик на всех
-// не годится: повтор состояния при подключении ушёл бы со старыми номерами и
-// выглядел бы для панели пропуском.
+// subscriber is one stream reader with its own counter. A shared counter for everyone
+// does not fit: the state repeat on connect would go with old numbers and
+// look like a gap to the panel.
 type subscriber struct {
 	ch  chan Event
 	seq uint64
 }
 
-// Source — то, откуда Hub берёт данные. Интерфейс объявлен здесь, у
-// потребителя: сам Hub не знает ни про Clash API, ни про init-скрипт.
+// Source is where the Hub takes data from. The interface is declared here, at the
+// consumer: the Hub knows neither the Clash API nor the init script.
 type Source interface {
-	// Stream читает построчный поток и отдаёт каждую строку в sink. Возврат
-	// без ошибки означает, что поток закончился штатно.
+	// Stream reads a line-by-line stream and gives each line to the sink. A return
+	// without an error means the stream ended normally.
 	Stream(ctx context.Context, path string, sink func(json.RawMessage)) error
-	// ServiceState отдаёт состояние службы в том же виде, что и ручка.
+	// ServiceState returns the service state in the same form as the handler.
 	ServiceState(ctx context.Context) (json.RawMessage, error)
-	// SystemState отдаёт показания устройства. Источник у них не Clash API, но
-	// ходит он туда же, куда и остальные: Hub не должен знать, кто и откуда
-	// читает — он владеет только подписками.
+	// SystemState returns the device readings. Their source is not the Clash API, but
+	// it goes to the same place as the others: the Hub must not know who and from where
+	// reads, it owns only the subscriptions.
 	SystemState(ctx context.Context) (json.RawMessage, error)
 }
 
-// Options задаёт периоды опроса тех источников, которые сами ничего не шлют.
-// Снапшот соединений Hub не снимает: его приносит счётчик срабатываний через
-// PublishConnections, и частоту задаёт он.
+// Options sets the polling periods of the sources that send nothing themselves.
+// The Hub does not take the connections snapshot: it is brought by the hit counter through
+// PublishConnections, and the counter sets the frequency.
 type Options struct {
-	// ServiceInterval — период опроса службы. Он дороже остальных: это запуск
-	// внешних процессов, поэтому реже.
+	// ServiceInterval is the service polling period. It is more expensive than the others: it launches
+	// external processes, hence less often.
 	ServiceInterval time.Duration
-	// SystemInterval — период съёма показаний устройства. Загрузка и
-	// температура меняются медленнее трафика, а чтение procfs не бесплатно.
+	// SystemInterval is the device readings period. Load and
+	// temperature change more slowly than traffic, and reading procfs is not free.
 	SystemInterval time.Duration
-	// RetryInterval — пауза перед повторной попыткой после обрыва источника.
+	// RetryInterval is the pause before retrying after a source break.
 	RetryInterval time.Duration
-	// KeepAlive — период комментария в поток, когда источники молчат. Без него
-	// оборванное соединение не обнаруживает ни одна из сторон: в сокет ничего
-	// не пишется, и ошибка не возникает.
+	// KeepAlive is the period of a comment into the stream when the sources are silent. Without it
+	// a broken connection is detected by neither side: nothing is written to the
+	// socket, and no error occurs.
 	KeepAlive time.Duration
-	// WriteTimeout — дедлайн каждой записи в поток. Глобального WriteTimeout
-	// у сервера нет, и без него клиент, который держит сокет и не читает,
-	// держал бы хендлер до TCP-таймаута ретрансмиссий.
+	// WriteTimeout is the deadline of each write into the stream. The server has no global
+	// WriteTimeout, and without it a client that holds the socket and does not read
+	// would hold the handler until the TCP retransmission timeout.
 	WriteTimeout time.Duration
 }
 
-// Hub держит один набор подписок на источники, пока есть хоть один читатель,
-// и раздаёт события всем сразу. Второй читатель не удваивает нагрузку на
-// sing-box: апстрим остаётся один.
+// Hub holds one set of source subscriptions while there is at least one reader,
+// and distributes events to all at once. A second reader does not double the load on
+// sing-box: the upstream stays single.
 type Hub struct {
 	source Source
 	log    *slog.Logger
@@ -93,30 +93,30 @@ type Hub struct {
 
 	mu          sync.Mutex
 	subscribers map[*subscriber]struct{}
-	// last хранит последние данные каждого топика: подключившийся читатель
-	// получает текущее состояние сразу, а не через период опроса. Сбрасывается
-	// вместе с остановкой источников, иначе следующий читатель принял бы
-	// данные умершего апстрима за текущие.
+	// last holds the latest data of each topic: a reader that connects
+	// gets the current state at once and not after a polling period. Reset
+	// together with the source stop, otherwise the next reader would take
+	// the data of a dead upstream for current.
 	last map[string]json.RawMessage
-	// order задаёт порядок повтора: карта его не хранит, а читателю состояние
-	// должно приходить в том же порядке, в каком публиковалось.
+	// order sets the repeat order: the map does not keep it, and the state
+	// must reach the reader in the same order it was published.
 	order []string
 	stop  context.CancelFunc
 	done  chan struct{}
-	// gen — поколение комплекта источников, растёт на каждой остановке.
-	// Горутины комплекта публикуют со своим номером, и всё, что ушедший
-	// комплект присылает, пока досыпает до отмены, отбрасывается: остановка
-	// ждёт его без мьютекса, и в это окно новый читатель успевает поднять
-	// следующий комплект.
+	// gen is the generation of the source set, grows on every stop.
+	// The set goroutines publish with their number, and everything a departed
+	// set sends while finishing up to the cancellation is dropped: the stop
+	// waits for it without the mutex, and in this window a new reader manages to bring up
+	// the next set.
 	gen uint64
-	// closed — Hub закрыт остановкой демона: источники больше не поднимаются,
-	// а читатель, пришедший после Close, сразу получает закрытый канал.
+	// closed: the Hub is closed by the daemon stop: sources are no longer started,
+	// and a reader that came after Close gets a closed channel at once.
 	closed bool
 }
 
-// New собирает Hub. Опросов он не начинает: фоновый опрос без потребителя на
-// устройстве, которое месяцами простаивает, — это расход батареи процессора
-// впустую (DeviceIO).
+// New assembles the Hub. It starts no polling: background polling without a consumer on
+// a device that idles for months is a waste of processor battery
+// (DeviceIO).
 func New(source Source, log *slog.Logger, opts Options) *Hub {
 	return &Hub{
 		source:      source,
@@ -127,11 +127,11 @@ func New(source Source, log *slog.Logger, opts Options) *Hub {
 	}
 }
 
-// subscribe добавляет читателя и поднимает источники, если он первый. Вторым
-// значением возвращается снимок последних событий по каждому топику.
+// subscribe adds a reader and brings up the sources if it is the first. The second
+// return value is a snapshot of the latest events for each topic.
 func (h *Hub) subscribe() (*subscriber, []Event, func()) {
-	// Буфер читателя. Медленный читатель не должен блокировать рассылку
-	// остальным, поэтому очередь конечна и переполнение теряет событие.
+	// The reader buffer. A slow reader must not block the broadcast to
+	// the others, so the queue is finite and an overflow loses the event.
 	const buffer = 16
 
 	sub := &subscriber{ch: make(chan Event, buffer)}
@@ -180,10 +180,10 @@ func (h *Hub) removeLocked(sub *subscriber) {
 	close(sub.ch)
 }
 
-// Close закрывает всех читателей и останавливает источники. Нужен на остановке
-// демона: http.Server.Shutdown ждёт завершения запросов и контексты им не
-// отменяет, а хендлер потока живёт до ухода клиента — без Close остановка
-// упиралась бы в таймаут и демон выходил бы с ошибкой.
+// Close closes all readers and stops the sources. Needed at the daemon
+// stop: http.Server.Shutdown waits for requests to finish and does not cancel their contexts,
+// while the stream handler lives until the client leaves; without Close the stop
+// would run into the timeout and the daemon would exit with an error.
 func (h *Hub) Close() {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -197,7 +197,7 @@ func (h *Hub) Close() {
 	h.stopLocked()
 }
 
-// start поднимает опрос источников. Вызывается под h.mu.
+// start brings up the source polling. Called under h.mu.
 func (h *Hub) start() {
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
@@ -244,7 +244,7 @@ func (h *Hub) start() {
 	}()
 }
 
-// stopLocked останавливает опрос и дожидается горутин. Вызывается под h.mu.
+// stopLocked stops the polling and waits for the goroutines. Called under h.mu.
 func (h *Hub) stopLocked() {
 	if h.stop == nil {
 		return
@@ -253,25 +253,25 @@ func (h *Hub) stopLocked() {
 	stop, done := h.stop, h.done
 	h.stop, h.done = nil, nil
 
-	// Поколение сменяется до того, как мьютекс отпущен: горутина, не
-	// успевшая завершиться, состояние уже не запишет, и чистить его можно
-	// сразу. Данные умершего апстрима не должны достаться следующему
-	// читателю как текущие.
+	// The generation changes before the mutex is released: a goroutine that has not
+	// managed to finish will no longer write the state, and it can be cleared
+	// at once. The data of a dead upstream must not go to the next
+	// reader as current.
 	h.gen++
 	h.last = make(map[string]json.RawMessage)
 	h.order = nil
 
-	// Ожидание идёт без мьютекса: горутины публикуют события и взяли бы его.
-	// Комплект, поднятый за это время новым читателем, после возврата не
-	// трогается.
+	// The wait goes without the mutex: the goroutines publish events and would take it.
+	// The set brought up by a new reader in the meantime is not touched
+	// after the return.
 	h.mu.Unlock()
 	stop()
 	<-done
 	h.mu.Lock()
 }
 
-// runStream держит построчный источник, переподключаясь после обрыва. Обрыв
-// штатен: sing-box перезапускают, и поток на этом заканчивается.
+// runStream holds a line-by-line source, reconnecting after a break. A break
+// is regular: sing-box is restarted, and the stream ends with it.
 func (h *Hub) runStream(ctx context.Context, gen uint64, topic, path string) {
 	for ctx.Err() == nil {
 		err := h.source.Stream(ctx, path, func(line json.RawMessage) {
@@ -308,10 +308,10 @@ func (h *Hub) runPoll(
 	}
 }
 
-// PublishConnections принимает сырой снапшот Clash API — его снимает счётчик
-// срабатываний, и второй опрос `/connections` демону не нужен. Без читателей
-// снапшот отбрасывается до разбора: форма соединений принадлежит демону, но
-// цена перевода в контракт не платится, пока панель закрыта.
+// PublishConnections accepts the raw Clash API snapshot: it is taken by the hit
+// counter, and the daemon does not need a second `/connections` poll. Without readers the
+// snapshot is dropped before parsing: the connection shape belongs to the daemon, but
+// the cost of translating into the contract is not paid while the panel is closed.
 func (h *Hub) PublishConnections(raw json.RawMessage) {
 	h.mu.Lock()
 	idle := len(h.subscribers) == 0
@@ -332,12 +332,12 @@ func (h *Hub) PublishConnections(raw json.RawMessage) {
 	h.publish(gen, TopicConnections, body)
 }
 
-// publish раздаёт событие комплекта gen. Событие ушедшего комплекта
-// отбрасывается: его данные к текущему апстриму не относятся.
+// publish distributes an event of set gen. An event of a departed set
+// is dropped: its data does not belong to the current upstream.
 func (h *Hub) publish(gen uint64, topic string, data json.RawMessage) {
-	// Проверка стоит здесь, в единственной точке публикации: невалидные данные
-	// осели бы в последнем состоянии топика, и тогда сборка конверта падала бы
-	// у каждого подключающегося читателя — вышел бы шторм переподключений.
+	// The check stands here, at the single publication point: invalid data
+	// would settle in the topic's last state, and then envelope building would fail
+	// for every connecting reader, causing a reconnect storm.
 	if !json.Valid(data) {
 		h.log.Debug("источник отдал не JSON", "topic", topic)
 
@@ -358,43 +358,43 @@ func (h *Hub) publish(gen uint64, topic string, data json.RawMessage) {
 	h.last[topic] = data
 
 	for sub := range h.subscribers {
-		// Номер тратится и на отброшенное событие: иначе пропуск не был бы
-		// виден читателю разрывом в нумерации.
+		// The number is spent on a dropped event too: otherwise the gap would not be
+		// visible to the reader as a break in numbering.
 		sub.seq++
 
 		select {
 		case sub.ch <- Event{Topic: topic, Seq: sub.seq, Data: data}:
 		default:
-			// Читатель не успевает. Событие теряется намеренно: очередь в
-			// памяти демона, который живёт месяцами, опаснее пропуска сэмпла.
+			// The reader cannot keep up. The event is lost deliberately: a queue in the
+			// memory of a daemon that lives for months is more dangerous than a skipped sample.
 		}
 	}
 }
 
-// ServeHTTP отдаёт поток в формате SSE.
+// ServeHTTP serves the stream in the SSE format.
 func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// Поддержка проверяется до первой записи: сама попытка сброса отправила бы
-	// заголовок, и отказать после этого было бы уже нечем.
+	// Support is checked before the first write: the flush attempt itself would send
+	// the header, and there would be no way to refuse after that.
 	if !SupportsFlush(w) {
 		http.Error(w, "поток не поддерживается", http.StatusInternalServerError)
 
 		return
 	}
 
-	// Сбрасывает контроллер, а не приведение к http.Flusher: middleware
-	// оборачивает ResponseWriter, и у обёртки метода нет — она отдаёт исходный
-	// writer через Unwrap, по которому контроллер и ходит.
+	// The controller flushes, not a cast to http.Flusher: middleware
+	// wraps ResponseWriter, and the wrapper has no such method; it returns the original
+	// writer through Unwrap, which the controller follows.
 	control := http.NewResponseController(w)
 
-	// Дедлайн ставится перед каждой записью и сдвигается следующей: поток
-	// живёт сколько угодно, а одна запись — не дольше WriteTimeout. Отказ
-	// контроллера не мешает потоку: без дедлайна он работает как раньше.
+	// The deadline is set before each write and moved by the next one: the stream
+	// lives as long as needed, and a single write no longer than WriteTimeout. A controller
+	// failure does not hinder the stream: without a deadline it works as before.
 	arm := func() { _ = control.SetWriteDeadline(time.Now().Add(h.writeTimeout())) }
 
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-store")
-	// Ответ идёт до конца соединения, поэтому промежуточные прокси не должны
-	// его буферизовать.
+	// The response goes to the end of the connection, so intermediate proxies must not
+	// buffer it.
 	w.Header().Set("X-Accel-Buffering", "no")
 	arm()
 	w.WriteHeader(http.StatusOK)
@@ -421,8 +421,8 @@ func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case <-r.Context().Done():
 			return
 		case <-keepAlive.C:
-			// Комментарий SSE: панель его игнорирует, а запись в сокет
-			// обнаруживает обрыв.
+			// An SSE comment: the panel ignores it, and the write to the socket
+			// detects a break.
 			arm()
 
 			if _, err := io.WriteString(w, ": keep-alive\n\n"); err != nil {
@@ -461,8 +461,8 @@ func writeEvent(w http.ResponseWriter, event Event) bool {
 	return err == nil
 }
 
-// keepAlive отдаёт период поддержки соединения; ноль означает значение по
-// умолчанию, чтобы собранный без него Hub не слал комментарии непрерывно.
+// keepAlive returns the connection keep-alive period; zero means the default
+// value so that a Hub built without it does not send comments continuously.
 func (h *Hub) keepAlive() time.Duration {
 	const fallback = 20 * time.Second
 
@@ -473,8 +473,8 @@ func (h *Hub) keepAlive() time.Duration {
 	return h.opts.KeepAlive
 }
 
-// writeTimeout отдаёт дедлайн записи; ноль означает значение по умолчанию,
-// чтобы собранный без него Hub не обрывал каждую запись сразу.
+// writeTimeout returns the write deadline; zero means the default value
+// so that a Hub built without it does not cut off every write at once.
 func (h *Hub) writeTimeout() time.Duration {
 	const fallback = 10 * time.Second
 
@@ -485,8 +485,8 @@ func (h *Hub) writeTimeout() time.Duration {
 	return h.opts.WriteTimeout
 }
 
-// SupportsFlush отвечает, доберётся ли контроллер до writer со сбросом. Обход
-// повторяет то, что делает http.NewResponseController, но без записи в ответ.
+// SupportsFlush reports whether the controller can reach a writer with flush. The walk
+// repeats what http.NewResponseController does, but without writing to the response.
 func SupportsFlush(w http.ResponseWriter) bool {
 	for {
 		if _, ok := w.(http.Flusher); ok {
@@ -502,7 +502,7 @@ func SupportsFlush(w http.ResponseWriter) bool {
 	}
 }
 
-// sleep ждёт период и сообщает, стоит ли продолжать.
+// sleep waits for the period and reports whether to continue.
 func sleep(ctx context.Context, d time.Duration) bool {
 	timer := time.NewTimer(d)
 	defer timer.Stop()
@@ -515,21 +515,21 @@ func sleep(ctx context.Context, d time.Duration) bool {
 	}
 }
 
-// maxLineBytes — потолок на строку потока. Строки `/traffic` и `/memory` —
-// десятки байт; потолок с запасом перекрывает их и не даёт процессу, занявшему
-// порт контроллера при лежащем sing-box, кормить демона бесконечной строкой.
+// maxLineBytes is the ceiling for a stream line. The `/traffic` and `/memory` lines are
+// tens of bytes; the ceiling covers them with a margin and does not let a process that took
+// the controller port while sing-box is down feed the daemon an endless line.
 const maxLineBytes = 64 << 10
 
-// lines разбирает построчный ответ источника. Вынесено сюда, чтобы адаптер
-// источника не повторял разбор для каждого потока. Строка длиннее
-// maxLineBytes обрывает поток ошибкой bufio.ErrTooLong.
+// lines parses a line-by-line source response. Extracted here so the source adapter
+// does not repeat the parsing for each stream. A line longer than
+// maxLineBytes aborts the stream with a bufio.ErrTooLong error.
 func lines(r io.Reader, sink func(json.RawMessage)) error {
 	scanner := bufio.NewScanner(r)
 	scanner.Buffer(nil, maxLineBytes)
 
 	for scanner.Scan() {
-		// Буфер сканера переиспользуется, а строка оседает в состоянии
-		// топика, поэтому уходит копией.
+		// The scanner buffer is reused, and the line settles in the topic
+		// state, so it goes out as a copy.
 		if trimmed := bytes.TrimSpace(scanner.Bytes()); len(trimmed) > 0 {
 			sink(json.RawMessage(bytes.Clone(trimmed)))
 		}
@@ -539,7 +539,7 @@ func lines(r io.Reader, sink func(json.RawMessage)) error {
 		return fmt.Errorf("чтение потока: %w", err)
 	}
 
-	// Конец ответа для потока — обрыв, а не штатное завершение: у потока
-	// рантайма конца нет, его обрывает только перезапуск sing-box.
+	// The end of a response for a stream is a break, not a normal finish: the runtime
+	// stream has no end, it is broken only by a sing-box restart.
 	return io.EOF
 }

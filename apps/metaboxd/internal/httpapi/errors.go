@@ -16,40 +16,40 @@ import (
 	"metabox/internal/singbox"
 )
 
-// Отказы, которые порождает сам HTTP-слой. Предметные ошибки приходят из
-// internal-пакетов и получают строку в statusFor.
+// Failures produced by the HTTP layer itself. Domain errors come from the
+// internal packages and get a row in statusFor.
 var (
 	errNotFound       = errors.New("ручка не найдена")
 	errOriginMismatch = errors.New("источник запроса не совпадает с адресом панели")
-	// errHostMismatch — Host запроса не похож на адрес панели: так выглядит
-	// DNS rebinding, когда чужой домен перекинули на адрес роутера.
+	// errHostMismatch: the request Host does not look like the panel address: this is what
+	// DNS rebinding looks like, when a foreign domain is pointed at the router address.
 	errHostMismatch = errors.New("адрес запроса не совпадает с адресом панели")
-	// errUpgradeUnsupported — попытка поднять WebSocket на ветке прокси.
-	// Рантайм идёт одним потоком `/api/events`.
+	// errUpgradeUnsupported: an attempt to raise a WebSocket on the proxy branch.
+	// The runtime goes as a single `/api/events` stream.
 	errUpgradeUnsupported = errors.New("рантайм идёт потоком /api/events, апгрейд не поддерживается")
-	// errBadApplyEnvelope — тело с типом конверта применения не разобралось.
+	// errBadApplyEnvelope: a body with the apply envelope type was not parsed.
 	errBadApplyEnvelope = errors.New("конверт применения не разобран")
-	// errBadDeviceBody — тело правки имени устройства не разобрано.
+	// errBadDeviceBody: the device name edit body was not parsed.
 	errBadDeviceBody = errors.New("тело правки имени устройства не разобрано")
-	// errBadDataplaneBody — тело смены модели обвязки не разобрано как JSON.
+	// errBadDataplaneBody: the dataplane model change body was not parsed as JSON.
 	errBadDataplaneBody = errors.New("тело смены модели обвязки не разобрано")
-	// errDataplaneBaseMissing — смена модели без If-Match: без него правка
-	// UCI по SSH затёрлась бы молча.
+	// errDataplaneBaseMissing: a model change without If-Match: without it a UCI edit
+	// over SSH would be silently overwritten.
 	errDataplaneBaseMissing = errors.New("нужен If-Match с ETag из GET /api/dataplane")
-	// errBadLogQuery — уровень или число строк запроса лога не разобраны.
+	// errBadLogQuery: the level or the line count of the log query is not parsed.
 	errBadLogQuery = errors.New("параметры запроса лога не разобраны")
 )
 
-// runtimeUnavailable — текст отказа рантайма для клиента. Причина остаётся в
-// логе: в ней адрес контроллера и текст ошибки транспорта.
+// runtimeUnavailable is the runtime failure text for the client. The reason stays in
+// the log: it holds the controller address and the transport error text.
 const runtimeUnavailable = "рантайм sing-box недоступен"
 
-// fail — единственное место, где ошибка превращается в ответ: новый вид отказа
-// добавляется в statusFor, а не в хендлер. Текст неизвестной ошибки наружу не
-// уходит — в ней бывают пути, аргументы команд и содержимое конфига.
+// fail is the only place where an error turns into a response: a new kind of failure
+// is added to statusFor, not to a handler. The text of an unknown error does not go
+// outside: it may hold paths, command arguments and config content.
 func fail(log *slog.Logger, w http.ResponseWriter, r *http.Request, err error) {
-	// Клиент оборвал соединение — ушёл с экрана, перезапросил. Отвечать
-	// некому, и отказом сервера это не является.
+	// The client dropped the connection: left the screen, requested again. There is nobody
+	// to answer, and this is not a server failure.
 	if errors.Is(err, context.Canceled) {
 		log.Debug("запрос отменён клиентом", "method", r.Method, "path", r.URL.Path)
 
@@ -70,8 +70,8 @@ func fail(log *slog.Logger, w http.ResponseWriter, r *http.Request, err error) {
 		return
 	}
 
-	// Каталоги едут подробностью: из них панель собирает команду, которая
-	// настраивает рабочий каталог службы.
+	// The directories go as a detail: the panel builds from them the command that
+	// configures the service working directory.
 	if workdirErr, ok := errors.AsType[*apply.WorkdirError](err); ok {
 		writeJSON(log, w, http.StatusConflict, contract.Error{
 			Code:    contract.ErrWorkdirMismatch,
@@ -85,7 +85,7 @@ func fail(log *slog.Logger, w http.ResponseWriter, r *http.Request, err error) {
 		return
 	}
 
-	// Поля едут подробностью: по ним владелец находит, что чинить в UCI.
+	// The fields go as a detail: the owner finds what to fix in UCI by them.
 	if invalid, ok := errors.AsType[*dataplane.InvalidError](err); ok {
 		writeJSON(log, w, http.StatusUnprocessableEntity, contract.Error{
 			Code:    contract.ErrDataplaneInvalid,
@@ -104,16 +104,16 @@ func fail(log *slog.Logger, w http.ResponseWriter, r *http.Request, err error) {
 	case status == http.StatusInternalServerError:
 		log.Error("запрос не обслужен", "err", err, "method", r.Method, "path", r.URL.Path)
 		message = "внутренняя ошибка"
-	// Пути команды службы остаются в логе: в них конфиг чужой службы.
+	// The service command paths stay in the log: they hold a foreign service config.
 	case code == contract.ErrLaunchMismatch:
 		log.Warn("применение отклонено: служба поднимается не на конфиге демона", "err", err)
 		message = "служба sing-box поднимается не на конфиге, которым владеет metabox"
-	// Причина остаётся в логе: в ней путь файла лога и отказ процесса.
+	// The reason stays in the log: it holds the log file path and the process failure.
 	case code == contract.ErrLogUnavailable:
 		log.Warn("лог sing-box не прочитан", "err", err)
 		message = logs.ErrUnavailable.Error()
-	// Отказ рантайма отвечает так же, как прокси Clash API: две ручки одного
-	// слоя не должны вести себя противоположно.
+	// A runtime failure answers the same way as the Clash API proxy: two handlers of one
+	// layer must not behave oppositely.
 	case code == contract.ErrRuntimeUnavailable:
 		log.Warn(runtimeUnavailable, "err", err, "method", r.Method, "path", r.URL.Path)
 		message = runtimeUnavailable
@@ -134,8 +134,8 @@ func statusFor(err error) (status int, code contract.ErrorCode) {
 		return http.StatusNotFound, contract.ErrNotFound
 	case errors.Is(err, errOriginMismatch):
 		return http.StatusForbidden, contract.ErrOriginMismatch
-	// Код общий с отказом по Origin: класс тот же — запрос отклонён по
-	// источнику, — а новый код был бы изменением контракта.
+	// The code is shared with the Origin failure: the class is the same, the request is rejected by
+	// origin, and a new code would be a contract change.
 	case errors.Is(err, errHostMismatch):
 		return http.StatusForbidden, contract.ErrOriginMismatch
 	case errors.Is(err, errUpgradeUnsupported):
@@ -156,8 +156,8 @@ func statusFor(err error) (status int, code contract.ErrorCode) {
 		return http.StatusConflict, contract.ErrNothingToConfirm
 	case errors.Is(err, apply.ErrConfigModified):
 		return http.StatusConflict, contract.ErrConfigModified
-	// Код общий с правкой конфига: класс тот же — на устройстве не то, от чего
-	// редактировал клиент.
+	// The code is shared with a config edit: the class is the same, the device has not what
+	// the client edited from.
 	case errors.Is(err, apply.ErrListsModified):
 		return http.StatusConflict, contract.ErrConfigModified
 	case errors.Is(err, apply.ErrListName), errors.Is(err, errBadApplyEnvelope):
@@ -188,9 +188,9 @@ func statusFor(err error) (status int, code contract.ErrorCode) {
 	}
 }
 
-// ProxyError отдаёт отказ прокси в формате демона. Причину наружу не пускаем:
-// в ней адрес контроллера и текст ошибки транспорта. Экран рантайма обязан
-// увидеть отказ, а не HTML от net/http.
+// ProxyError returns a proxy failure in the daemon format. The reason is not let out:
+// it holds the controller address and the transport error text. The runtime screen must
+// see a failure and not HTML from net/http.
 func ProxyError(log *slog.Logger) func(w http.ResponseWriter, r *http.Request, err error) {
 	return func(w http.ResponseWriter, r *http.Request, err error) {
 		if errors.Is(err, context.Canceled) {
