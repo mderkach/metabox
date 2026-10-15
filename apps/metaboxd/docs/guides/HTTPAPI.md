@@ -79,11 +79,12 @@ func (s *Server) middleware(next http.Handler) http.Handler {
 	return recoverPanic(s.log,
 		logRequests(s.log,
 			checkHost(s.log, s.allowedOrigin,
-				checkOrigin(s.log, s.allowedOrigin, next))))
+				checkOrigin(s.log, s.allowedOrigin,
+					requireSession(s.log, s.auth, next)))))
 }
 ```
 
-`recoverPanic` is outermost, otherwise a panic in logging brings the process down. Each wrapper does one thing and is tested separately. The daemon has no authentication, so the origin check is the only protection of mutating requests.
+`recoverPanic` is outermost, otherwise a panic in logging brings the process down. Each wrapper does one thing and is tested separately. `requireSession` comes after the origin checks: a mutating request from a foreign page gets 403 whether or not there is a session. Without a password the origin check is the only protection of mutating requests.
 
 ## Origin check
 
@@ -92,6 +93,23 @@ The rule is not open for discussion in code: on mutating requests the host from 
 The second check is `Host`, and it applies to all requests, not only mutating ones: the daemon answers only when it holds an IP literal, `localhost` or the host from `-allowed-origin`. This protects against DNS rebinding: an attacker's domain re-pointed to the router address is same-origin for the attacker's page, the `Origin` check lets such a request through, and the browser allows reading the responses. The downside: the panel does not answer on the router's DNS name until the name is allowed by the flag.
 
 The daemon sends no CORS headers: the UI lives on the same origin, and allowing others means opening the panel to a third-party site. This also applies to the Clash API proxy: the controller's `Access-Control-*` headers are stripped from the response, because with `access_control_allow_origin` unset the fork answers `*`, and passing that on would hand the secret-authorized branch to any site.
+
+## Login
+
+The password is optional ([ADR-0052](../../../../docs/adr/ADR-0052-protect-the-panel-with-an-optional-password-and-a-cookie-session.md)). Its hash, sessions and the guessing lockout are owned by `internal/auth`; the HTTP layer gets them as the `Guard` interface. Without a password `requireSession` lets everything through.
+
+With a password a request without a live session gets 401 `unauthorized`. Exempt: paths outside `/api/` (the health check and the SPA static files), `GET /api/auth`, `POST /api/auth/login`, `POST /api/auth/logout`.
+
+| Endpoint                 | Body                  | Answer                                                                                      |
+| ------------------------ | --------------------- | ------------------------------------------------------------------------------------------- |
+| `GET /api/auth`          |                       | `{enabled, authenticated}`                                                                  |
+| `POST /api/auth/login`   | `{password}`          | 204 and the session cookie; 403 `password_wrong`, 429 `login_locked`, 409 `auth_disabled`   |
+| `POST /api/auth/logout`  |                       | 204, the cookie is cleared                                                                  |
+| `PUT /api/auth/password` | `{current, password}` | 204; an empty `password` removes the password. 403 `password_wrong`, 400 `password_invalid` |
+
+A wrong password is 403, not 401: the panel answers 401 by showing the login screen, and the refusal must stay in the form where the password was typed. 429 carries `Retry-After` in seconds. Every `/api/auth` answer carries `Cache-Control: no-store`: a cached login state or `Set-Cookie` would outlive the session.
+
+The session is the `metabox_session` cookie with `HttpOnly`, `SameSite=Strict`, `Path=/` and without `Secure`: the panel is served over http, and a browser drops a `Secure` cookie on such a page. `EventSource` sends it like any same-origin request. The session is checked when the request starts: a stream opened before logout runs until it closes.
 
 ## Server and timeouts
 

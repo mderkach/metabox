@@ -1,3 +1,4 @@
+import { createAuthHandlers } from '@entities/Auth/__tests__/Auth.handlers';
 import { CONFIG_FIXTURE } from '@entities/Config/__tests__/Config.fixture';
 import { configHandlers } from '@entities/Config/__tests__/Config.handlers';
 import {
@@ -57,6 +58,7 @@ export function createMissingHandlers(connections = 0) {
   const dataplane = createDataplaneMock();
 
   return [
+    ...createAuthHandlers(),
     ...configHandlers,
     ...createStatefulDaemonHandlers(dataplane.status),
     ...dataplane.handlers,

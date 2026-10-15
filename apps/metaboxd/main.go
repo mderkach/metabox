@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"metabox/internal/apply"
+	"metabox/internal/auth"
 	"metabox/internal/clashapi"
 	"metabox/internal/config"
 	"metabox/internal/dataplane"
@@ -284,6 +285,13 @@ func run(log *slog.Logger, s settings) error {
 		lan = registry
 	}
 
+	// A broken password file stops the start instead of opening the panel: the owner who
+	// set a password must not lose the protection silently.
+	guard, err := auth.New(ctx, store, auth.Options{})
+	if err != nil {
+		return fmt.Errorf("пароль панели: %w", err)
+	}
+
 	var probe diag.DNSProber
 	if s.healthDNSName != "" {
 		probe = clashapi.NewDNSProbe(s.healthDNSName, dnsProbeTimeout, healthPollInterval, 1)
@@ -291,6 +299,7 @@ func run(log *slog.Logger, s settings) error {
 
 	api := httpapi.NewServer(manager, store, log, httpapi.Options{
 		Version:        version.Version,
+		Auth:           guard,
 		SingboxVersion: singboxVersion,
 		SingboxTags:    build.Tags,
 		AllowedOrigin:  s.allowedOrigin,

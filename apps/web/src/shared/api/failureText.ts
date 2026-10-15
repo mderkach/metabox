@@ -35,6 +35,11 @@ const FAILURE_KEY: Readonly<Record<ApiFailureCode, ParseKeys<'shared'>>> = {
   list_invalid: 'failure.list_invalid',
   workdir_mismatch: 'failure.workdir_mismatch',
   launch_mismatch: 'failure.launch_mismatch',
+  unauthorized: 'failure.unauthorized',
+  password_wrong: 'failure.password_wrong',
+  password_invalid: 'failure.password_invalid',
+  login_locked: 'failure.login_locked',
+  auth_disabled: 'failure.auth_disabled',
   check_failed: 'failure.check_failed',
   internal: 'failure.internal',
 };

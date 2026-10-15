@@ -107,6 +107,9 @@ Put a sing-box config at `/etc/sing-box/config.json`, then start the services. T
 
 Open `http://<router LAN address>:8088`, for example `http://192.168.1.1:8088`. Use an IP address: the daemon only answers when the `Host` header is an IP or `localhost`, so `http://openwrt.lan:8088` will not open.
 
+> [!WARNING]
+> Without a password the panel is open to every device on the networks from `listen_interface`, and any of them can change routing. Set one with **Set password** at the bottom of the sidebar. A forgotten password is reset over SSH: `rm /etc/metabox/auth.json && /etc/init.d/metaboxd restart`.
+
 The daemon reads `/etc/sing-box/config.json` as is, there is no import step. A handwritten config opens in forms; whatever the forms don't know is kept unchanged and marked in the UI. If the config has no `experimental.clash_api`, the daemon adds it on the first apply (`127.0.0.1:9090`, random secret): the panel reads connections and proxies through it.
 
 | What                   | Where                                                              |

@@ -58,6 +58,11 @@ export const ERROR_CODE = [
   'log_query_invalid',
   'log_stream_limit',
   'log_clear_forbidden',
+  'unauthorized',
+  'password_wrong',
+  'password_invalid',
+  'login_locked',
+  'auth_disabled',
   'check_failed',
   'internal',
 ] as const
@@ -456,6 +461,27 @@ export const LogsClearedSchema = z.object({
   since: z.string(),
 })
 
+/** Auth is the response of `GET /api/auth`. */
+export const AuthSchema = z.object({
+  /** Enabled means the panel has a password: without a session every API request except the health check and the login endpoints gets 401. */
+  enabled: z.boolean(),
+  /** Authenticated means the request came with a live session. Always false without a password. */
+  authenticated: z.boolean(),
+})
+
+/** Login is the body of `POST /api/auth/login`. */
+export const LoginSchema = z.object({
+  password: z.string(),
+})
+
+/** PasswordChange is the body of `PUT /api/auth/password`. A successful set or change closes every session and opens a new one for the caller in the cookie; removal closes every session. */
+export const PasswordChangeSchema = z.object({
+  /** Current is the password in force. Ignored while the panel has no password. */
+  current: z.string(),
+  /** Password is the new password, 8 to 128 characters. Empty removes the password. */
+  password: z.string(),
+})
+
 /** Load is the average load. It cannot be converted to percent: it is the run queue length, and on four cores a value of 4.0 means full occupancy. */
 export const LoadSchema = z.object({
   one: z.number(),
@@ -670,6 +696,7 @@ export const CatalogSchema = z.object({
 })
 
 export type ApplyEnvelopeWire = z.infer<typeof ApplyEnvelopeSchema>
+export type AuthWire = z.infer<typeof AuthSchema>
 export type CatalogWire = z.infer<typeof CatalogSchema>
 export type ChainWire = z.infer<typeof ChainSchema>
 export type CheckDetailsWire = z.infer<typeof CheckDetailsSchema>
@@ -696,12 +723,14 @@ export type LinkWire = z.infer<typeof LinkSchema>
 export type ListWire = z.infer<typeof ListSchema>
 export type LoadWire = z.infer<typeof LoadSchema>
 export type LogEventWire = z.infer<typeof LogEventSchema>
+export type LoginWire = z.infer<typeof LoginSchema>
 export type LogsClearedWire = z.infer<typeof LogsClearedSchema>
 export type LogsWire = z.infer<typeof LogsSchema>
 export type MatchWire = z.infer<typeof MatchSchema>
 export type MemoryWire = z.infer<typeof MemorySchema>
 export type MirrorWire = z.infer<typeof MirrorSchema>
 export type ModelWire = z.infer<typeof ModelSchema>
+export type PasswordChangeWire = z.infer<typeof PasswordChangeSchema>
 export type PointWire = z.infer<typeof PointSchema>
 export type ProcessWire = z.infer<typeof ProcessSchema>
 export type ProviderWire = z.infer<typeof ProviderSchema>

@@ -717,3 +717,34 @@ func TestRuleSetsRoundTrip(t *testing.T) {
 		t.Errorf("permissions %v, expected 0600", info.Mode().Perm())
 	}
 }
+
+func TestAuthFileIsReadableByRootOnly(t *testing.T) {
+	store, cfgDir := newStore(t)
+
+	if _, err := store.ReadAuth(t.Context()); !errors.Is(err, fs.ErrNotExist) {
+		t.Fatalf("read before a password was set: got %v, want ErrNotExist", err)
+	}
+
+	want := []byte(`{"algorithm":"pbkdf2-sha256"}`)
+	if err := store.WriteAuth(t.Context(), want); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	got, err := store.ReadAuth(t.Context())
+	if err != nil {
+		t.Fatalf("read: %v", err)
+	}
+
+	if !bytes.Equal(got, want) {
+		t.Errorf("read %q, want %q", got, want)
+	}
+
+	info, err := os.Stat(filepath.Join(filepath.Dir(cfgDir), "metabox", "auth.json"))
+	if err != nil {
+		t.Fatalf("stat: %v", err)
+	}
+
+	if perm := info.Mode().Perm(); perm != 0o600 {
+		t.Errorf("mode %o, want 600", perm)
+	}
+}

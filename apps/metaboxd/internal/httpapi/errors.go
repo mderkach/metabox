@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"metabox/internal/apply"
+	"metabox/internal/auth"
 	"metabox/internal/config"
 	"metabox/internal/contract"
 	"metabox/internal/dataplane"
@@ -38,6 +39,10 @@ var (
 	errDataplaneBaseMissing = errors.New("нужен If-Match с ETag из GET /api/dataplane")
 	// errBadLogQuery: the level or the line count of the log query is not parsed.
 	errBadLogQuery = errors.New("параметры запроса лога не разобраны")
+	// errUnauthorized: the panel has a password and the request came without a session.
+	errUnauthorized = errors.New("нужен вход в панель")
+	// errBadAuthBody: the login or password change body was not parsed.
+	errBadAuthBody = errors.New("тело входа или смены пароля не разобрано")
 )
 
 // runtimeUnavailable is the runtime failure text for the client. The reason stays in
@@ -94,6 +99,10 @@ func fail(log *slog.Logger, w http.ResponseWriter, r *http.Request, err error) {
 		})
 
 		return
+	}
+
+	if locked, ok := errors.AsType[*auth.LockedError](err); ok {
+		w.Header().Set("Retry-After", retryAfter(locked))
 	}
 
 	status, code := statusFor(err)
@@ -181,6 +190,18 @@ func statusFor(err error) (status int, code contract.ErrorCode) {
 		return http.StatusConflict, contract.ErrLogClearForbidden
 	case errors.Is(err, errBadLogQuery):
 		return http.StatusBadRequest, contract.ErrLogQueryInvalid
+	case errors.Is(err, errUnauthorized), errors.Is(err, auth.ErrNoSession):
+		return http.StatusUnauthorized, contract.ErrUnauthorized
+	// 403, not 401: the panel answers 401 by showing the login screen, and a wrong
+	// password must stay on the form where it was typed.
+	case errors.Is(err, auth.ErrWrongPassword):
+		return http.StatusForbidden, contract.ErrPasswordWrong
+	case errors.Is(err, auth.ErrPasswordInvalid), errors.Is(err, errBadAuthBody):
+		return http.StatusBadRequest, contract.ErrPasswordInvalid
+	case errors.Is(err, auth.ErrNotSet):
+		return http.StatusConflict, contract.ErrAuthDisabled
+	case isLocked(err):
+		return http.StatusTooManyRequests, contract.ErrLoginLocked
 	case errors.As(err, &tooLarge):
 		return http.StatusRequestEntityTooLarge, contract.ErrConfigTooLarge
 	default:
@@ -206,4 +227,10 @@ func ProxyError(log *slog.Logger) func(w http.ResponseWriter, r *http.Request, e
 			Message: runtimeUnavailable,
 		})
 	}
+}
+
+func isLocked(err error) bool {
+	_, ok := errors.AsType[*auth.LockedError](err)
+
+	return ok
 }

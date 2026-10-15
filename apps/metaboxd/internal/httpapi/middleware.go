@@ -16,10 +16,13 @@ import (
 
 func (s *Server) middleware(next http.Handler) http.Handler {
 	// recoverPanic is outermost: a panic in logging would otherwise crash the process.
+	// requireSession goes after the origin checks: a foreign page gets 403 whether or not
+	// the browser holds a session.
 	return recoverPanic(s.log,
 		logRequests(s.log,
 			checkHost(s.log, s.allowedOrigin,
-				checkOrigin(s.log, s.allowedOrigin, next))))
+				checkOrigin(s.log, s.allowedOrigin,
+					requireSession(s.log, s.auth, next)))))
 }
 
 func recoverPanic(log *slog.Logger, next http.Handler) http.Handler {
@@ -124,9 +127,9 @@ func hostAllowed(hostport, allowedOrigin string) bool {
 	return err == nil && u.Host != "" && strings.EqualFold(host, u.Hostname())
 }
 
-// checkOrigin is the only protection of mutating requests: the daemon has no
-// authentication, and a foreign page in the owner's browser could otherwise apply
-// a config with the owner's own request.
+// checkOrigin protects mutating requests from a foreign page in the owner's browser.
+// Without a password it is the only protection: a foreign page could otherwise apply a
+// config with the owner's own request.
 func checkOrigin(log *slog.Logger, allowedOrigin string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !mutating(r.Method) {

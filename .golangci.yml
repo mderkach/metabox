@@ -75,3 +75,10 @@ linters:
       - path: internal/diag/
         text: 'G304'
         linters: [gosec]
+
+      # G124: the session cookie has no Secure flag because the panel is served over
+      # plain http in the LAN, and a browser drops a Secure cookie on such a page.
+      # HttpOnly and SameSite=Strict are set.
+      - path: internal/httpapi/auth\.go
+        text: 'G124'
+        linters: [gosec]

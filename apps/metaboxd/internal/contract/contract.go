@@ -220,6 +220,21 @@ const (
 	// ErrLogClearForbidden means the log.output file lies outside the config directory, /var/run
 	// and /tmp: the daemon does not truncate such a file.
 	ErrLogClearForbidden ErrorCode = "log_clear_forbidden"
+	// ErrUnauthorized means the panel has a password and the request came without a live
+	// session: the panel shows the login screen.
+	ErrUnauthorized ErrorCode = "unauthorized"
+	// ErrPasswordWrong means the password at login or the current password at a change
+	// did not match.
+	ErrPasswordWrong ErrorCode = "password_wrong"
+	// ErrPasswordInvalid means the new password is shorter than 8 or longer than 128
+	// characters, or the body is not parsed.
+	ErrPasswordInvalid ErrorCode = "password_invalid"
+	// ErrLoginLocked means the client address made five wrong attempts in a quarter of an
+	// hour and is locked for five minutes; the wait is in the Retry-After header.
+	ErrLoginLocked ErrorCode = "login_locked"
+	// ErrAuthDisabled means a login on a panel without a password: there is nothing to log
+	// in with.
+	ErrAuthDisabled ErrorCode = "auth_disabled"
 	// ErrCheckFailed means `sing-box check` rejected the config; the binary output is in Details.
 	ErrCheckFailed ErrorCode = "check_failed"
 	// ErrInternal is a failure there is nothing to say outside about: details are in the log.
@@ -263,6 +278,31 @@ type DeviceName struct {
 	// Name is the own device name. Empty removes it, and the label returns to
 	// the static lease or DHCP.
 	Name string `json:"name"`
+}
+
+// Auth is the response of `GET /api/auth`.
+type Auth struct {
+	// Enabled means the panel has a password: without a session every API request except
+	// the health check and the login endpoints gets 401.
+	Enabled bool `json:"enabled"`
+	// Authenticated means the request came with a live session. Always false without a
+	// password.
+	Authenticated bool `json:"authenticated"`
+}
+
+// Login is the body of `POST /api/auth/login`.
+type Login struct {
+	Password string `json:"password"`
+}
+
+// PasswordChange is the body of `PUT /api/auth/password`. A successful set or change
+// closes every session and opens a new one for the caller in the cookie; removal
+// closes every session.
+type PasswordChange struct {
+	// Current is the password in force. Ignored while the panel has no password.
+	Current string `json:"current"`
+	// Password is the new password, 8 to 128 characters. Empty removes the password.
+	Password string `json:"password"`
 }
 
 // Dataplane is the response of `GET /api/dataplane`: the dataplane model from UCI and

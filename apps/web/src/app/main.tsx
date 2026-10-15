@@ -18,6 +18,9 @@ await preloadNamespaces([
   'features/Config/ConfigApply',
   'features/Theme/ThemeSwitch',
   'features/Language/LanguageSwitch',
+  'features/Auth/AuthLogin',
+  'features/Auth/AuthPassword',
+  'features/Auth/AuthLogout',
 ]);
 
 createRoot(document.getElementById('root')!).render(

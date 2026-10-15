@@ -9,6 +9,9 @@ declare module 'i18next' {
   interface CustomTypeOptions {
     resources: {
       app: typeof import('./app/i18n/ru.json');
+      'features/Auth/AuthLogin': typeof import('./features/Auth/AuthLogin/i18n/ru.json');
+      'features/Auth/AuthLogout': typeof import('./features/Auth/AuthLogout/i18n/ru.json');
+      'features/Auth/AuthPassword': typeof import('./features/Auth/AuthPassword/i18n/ru.json');
       'features/Config/ConfigApply': typeof import('./features/Config/ConfigApply/i18n/ru.json');
       'features/Config/ConfigCacheFile': typeof import('./features/Config/ConfigCacheFile/i18n/ru.json');
       'features/Config/ConfigNodeAdd': typeof import('./features/Config/ConfigNodeAdd/i18n/ru.json');
