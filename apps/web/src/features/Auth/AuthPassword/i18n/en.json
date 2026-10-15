@@ -1,0 +1,31 @@
+{
+  "trigger": {
+    "set": "Set password",
+    "change": "Password"
+  },
+  "title": {
+    "set": "Panel password",
+    "change": "Change password"
+  },
+  "description": {
+    "set": "Without a password the panel is open to any device on the network. A forgotten password is reset over SSH.",
+    "change": "After the change, other browsers are signed out of the panel."
+  },
+  "field": {
+    "current": "Current password",
+    "password": "New password",
+    "confirm": "New password again",
+    "hint": "{{min}} to {{max}} characters"
+  },
+  "save": "Save",
+  "remove": "Remove password",
+  "error": {
+    "currentRequired": "Enter the current password",
+    "tooShort": "At least {{min}} characters",
+    "tooLong": "At most {{max}} characters",
+    "mismatch": "The passwords do not match",
+    "wrong": "The current password is wrong",
+    "locked": "Too many wrong attempts. Try again in 5 minutes.",
+    "unknown": "Could not save the password"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "title": "Sign in to metabox",
+  "description": "The panel is protected by a password.",
+  "field": {
+    "password": "Password"
+  },
+  "submit": "Sign in",
+  "reset": "Forgot the password? Delete /etc/metabox/auth.json on the router and restart metaboxd.",
+  "error": {
+    "required": "Enter the password",
+    "wrong": "Wrong password",
+    "locked": "Too many wrong attempts. Sign-in from this address is closed for 5 minutes.",
+    "unknown": "Could not sign in"
+  }
+}

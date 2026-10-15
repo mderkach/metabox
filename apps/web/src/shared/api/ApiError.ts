@@ -37,3 +37,15 @@ export class ApiError extends Error {
     this.details = extra?.details;
   }
 }
+
+const UNAUTHORIZED = 401;
+const SESSION_LOST_CODE = 'unauthorized';
+
+/**
+ * The daemon has a password and the request came without a live session. The code is checked
+ * besides the status: the Clash API proxy passes the controller's own 401 through, and a
+ * rejected sing-box secret is not a lost panel session.
+ */
+export function isSessionLost(error: unknown): boolean {
+  return error instanceof ApiError && error.status === UNAUTHORIZED && error.code === SESSION_LOST_CODE;
+}

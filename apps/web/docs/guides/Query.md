@@ -196,6 +196,7 @@ The panel must work while sing-box is stopped, so errors are separated:
 - Request cancellation is not a failure: Query itself produces it on unmount, and the client passes it through as is; otherwise the unavailability banner would blink on every transition between screens.
 - Service state is a regular query, not an error: the screen draws "the service is down" and keeps the editor available.
 - The daemon unavailability banner lives in `app/`, screens do not duplicate it.
+- A 401 is a lost session, not a screen failure. It gets no toast (`isSessionLost` in `shared/api`); `useSessionWatch` in `app/` listens to both caches and puts the logged-out state into the `Auth` query, and `AuthGate` replaces the whole panel with the login screen. After login the route loaders run again.
 
 ## Block states
 

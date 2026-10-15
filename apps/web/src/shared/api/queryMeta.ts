@@ -1,7 +1,7 @@
 import i18next, { type ParseKeys } from 'i18next';
 import { toast } from 'sonner';
 
-import { API_FAILURE, ApiError } from './ApiError';
+import { API_FAILURE, ApiError, isSessionLost } from './ApiError';
 import { failureText } from './failureText';
 
 /**
@@ -64,8 +64,12 @@ function errorText(meta: ErrorMeta, error: unknown): string {
   return action ?? reason ?? i18next.t('error.unknown', { ns: 'shared' });
 }
 
+/**
+ * A lost session is not shown as a toast either: the shell answers it with the login screen,
+ * and every request that was in flight at that moment would add its own toast.
+ */
 export function showQueryError(meta: QueryMeta | undefined, error: unknown) {
-  if (meta?.showError !== true || isDaemonUnreachable(error)) {
+  if (meta?.showError !== true || isDaemonUnreachable(error) || isSessionLost(error)) {
     return;
   }
 
