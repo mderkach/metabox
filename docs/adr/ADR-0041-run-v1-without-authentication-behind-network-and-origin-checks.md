@@ -4,6 +4,7 @@
 - Date: 2026-08-30
 - Deciders: repository owner
 - Supersedes: section A.6 of [`../PRD.md`](../PRD.md)
+- Superseded by (for the absence of authentication; the `Origin` and `Host` checks stay): [ADR-0052](./ADR-0052-protect-the-panel-with-an-optional-password-and-a-cookie-session.md)
 
 ## Context and problem statement
 
