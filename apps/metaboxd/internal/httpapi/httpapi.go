@@ -140,6 +140,9 @@ type Options struct {
 	// Diag checks the dataplane. nil means there is nothing to check with: there is no
 	// diagnostics handler.
 	Diag Diagnoser
+	// Auth guards the panel with an optional password. nil means there is no guard: the
+	// API is open and there are no login handlers.
+	Auth Guard
 	// ConfigPath is the path of the file the daemon owns. The panel shows it
 	// as a fact about the device, and it is set by the flags `-config-dir` and
 	// `-config-name`: without this field the interface would show the default
@@ -210,6 +213,7 @@ type Server struct {
 	plane          PlaneApplier
 	logs           LogReader
 	diag           Diagnoser
+	auth           Guard
 	configPath     string
 	handler        http.Handler
 }
@@ -239,6 +243,7 @@ func NewServer(applier Applier, reader ConfigReader, log *slog.Logger, opts Opti
 		plane:          opts.Plane,
 		logs:           opts.Logs,
 		diag:           opts.Diag,
+		auth:           opts.Auth,
 		configPath:     opts.ConfigPath,
 	}
 	s.handler = s.routes()
@@ -304,6 +309,13 @@ func (s *Server) routes() http.Handler {
 
 	if s.diag != nil {
 		mux.HandleFunc("GET /api/diag", s.handleDiag)
+	}
+
+	if s.auth != nil {
+		mux.HandleFunc("GET /api/auth", noStore(s.handleAuth))
+		mux.HandleFunc("POST /api/auth/login", noStore(s.handleLogin))
+		mux.HandleFunc("POST /api/auth/logout", noStore(s.handleLogout))
+		mux.HandleFunc("PUT /api/auth/password", noStore(s.handlePassword))
 	}
 
 	if s.service != nil {

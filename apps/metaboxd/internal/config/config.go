@@ -43,6 +43,7 @@ const (
 	planeName    = "dataplane.json"
 	ruleSetsName = "rule-sets.json"
 	devicesName  = "devices.json"
+	authName     = "auth.json"
 )
 
 // Store is the only owner of the config file and the daemon service directory:
@@ -772,4 +773,52 @@ func (s *Store) WriteDevices(ctx context.Context, data []byte) error {
 	defer func() { _ = root.Close() }()
 
 	return writeAtomic(root, devicesName, data, securePerm)
+}
+
+// ReadAuth returns the panel password hash file. A missing file or service directory
+// is an error for which errors.Is(err, fs.ErrNotExist) holds: no password was set.
+func (s *Store) ReadAuth(ctx context.Context) ([]byte, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	root, err := openRoot(s.serviceDir)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = root.Close() }()
+
+	data, err := root.ReadFile(authName)
+	if err != nil {
+		return nil, fmt.Errorf("чтение файла пароля в %s: %w", s.serviceDir, err)
+	}
+
+	return data, nil
+}
+
+// WriteAuth saves the panel password hash file atomically, readable by root only. The
+// service directory is created if it does not exist yet: a password may be set before
+// the first apply.
+func (s *Store) WriteAuth(ctx context.Context, data []byte) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if err := ensureDir(s.serviceDir); err != nil {
+		return fmt.Errorf("служебный каталог: %w", err)
+	}
+
+	root, err := openRoot(s.serviceDir)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = root.Close() }()
+
+	return writeAtomic(root, authName, data, securePerm)
 }

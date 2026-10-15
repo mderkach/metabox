@@ -50,6 +50,15 @@
     },
     "clashMode": {
       "failed": "Could not switch the mode"
+    },
+    "auth": {
+      "password": {
+        "saved": "Password saved, other browsers were signed out",
+        "removed": "Password removed, the panel is open to everyone on the network"
+      },
+      "logout": {
+        "failed": "Could not sign out"
+      }
     }
   },
   "daemon": {
@@ -148,6 +157,11 @@
     "list_invalid": "the daemon rejected the list file",
     "workdir_mismatch": "the sing-box service working directory does not match the config directory",
     "launch_mismatch": "the sing-box service does not run on the config the panel manages",
+    "unauthorized": "sign-in required",
+    "password_wrong": "wrong password",
+    "password_invalid": "password rejected: it must be 8 to 128 characters",
+    "login_locked": "too many wrong passwords, try again in 5 minutes",
+    "auth_disabled": "the panel has no password",
     "check_failed": "sing-box rejected the config",
     "internal": "an internal daemon error"
   },
