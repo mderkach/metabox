@@ -89,7 +89,7 @@
     "invalidCharacter": "invalid character"
   },
   "nodeEditor": {
-    "parseFailed": "JSON not parsed",
+    "notWritten": "Line {{line}}: {{reason}}. Not written to the draft",
     "submit": "Save to draft"
   },
   "schema": {

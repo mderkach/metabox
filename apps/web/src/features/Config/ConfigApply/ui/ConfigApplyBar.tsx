@@ -11,6 +11,7 @@ import { cn } from '@shared/lib/utils';
 import { Alert, AlertAction, AlertDescription, AlertTitle, Button, Separator } from '@shared/ui';
 
 import { useConfigApply } from '../lib/ConfigApply.lib';
+import { ConfigApplyBlocked } from './ConfigApplyBlocked';
 import { ConfigApplyCheck } from './ConfigApplyCheck';
 import { ConfigApplyDiff } from './ConfigApplyDiff';
 import { ConfigApplyDiscard } from './ConfigApplyDiscard';
@@ -124,13 +125,20 @@ export function ConfigApplyBar({ onSpaceChange }: { onSpaceChange: (space: numbe
                 <>
                   <ConfigApplyDiscard onDiscard={apply.discard} />
                   <Separator orientation='vertical' className='mx-1.5 h-5' />
-                  <ConfigApplyDiff canApply={apply.canApply} onApply={apply.apply} />
-                  <Button size='sm' disabled={!apply.canApply} onClick={apply.apply}>
-                    {t('bar.apply')}
-                  </Button>
+                  <ConfigApplyDiff canApply={apply.canApply} blocked={apply.blocked} onApply={apply.apply} />
                 </>
               )}
             </div>
+          )}
+
+          {!shown.isApplying && !shown.awaiting && apply.blocked !== null && (
+            <ConfigApplyBlocked blocked={apply.blocked} />
+          )}
+
+          {apply.unsent && !shown.isApplying && (
+            <p role='status' className='text-xs text-destructive'>
+              {t('unsent')}
+            </p>
           )}
 
           {shown.isStale && !shown.isApplying && !shown.awaiting && <ConfigApplyStale onDiscard={apply.discard} />}

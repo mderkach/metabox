@@ -6,6 +6,11 @@
     "apply": "Apply",
     "discard": "Discard changes"
   },
+  "blocked": {
+    "unreachable": "metabox is not responding, applying is unavailable now.",
+    "unparsed": "The config text has an error on line {{line}}: fix it to apply."
+  },
+  "unsent": "metabox did not answer, nothing was sent to the device. Try again.",
   "discard": {
     "title": "Discard every draft edit?",
     "description": "The draft resets to the config on the device. This cannot be undone.",
@@ -57,7 +62,7 @@
     "removed": "will be removed"
   },
   "diff": {
-    "open": "Show diff",
+    "description": "Check the changes. After applying, confirm the connection works, otherwise metabox restores the previous config.",
     "title": "What goes to the device",
     "same": "The draft matches the file on the device.",
     "changed": "Changed lines: {{count}}.",

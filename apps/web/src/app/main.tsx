@@ -16,6 +16,7 @@ await preloadNamespaces([
   'app',
   'widgets/AppSidebar',
   'features/Config/ConfigApply',
+  'features/Device/DeviceRoute',
   'features/Theme/ThemeSwitch',
   'features/Language/LanguageSwitch',
   'features/Auth/AuthLogin',

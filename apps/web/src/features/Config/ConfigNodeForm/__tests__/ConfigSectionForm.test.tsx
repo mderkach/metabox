@@ -48,10 +48,6 @@ function changedLines(before: string, after: string): string[] {
   return after.split('\n').filter((line, index) => line !== lines[index]);
 }
 
-function save() {
-  return screen.getByRole('button', { name: 'Сохранить в черновик' });
-}
-
 describe('section scalars form', () => {
   beforeEach(() => {
     ConfigDocumentState.getState().reset();
@@ -74,7 +70,6 @@ describe('section scalars form', () => {
     render(<SettingsFromStore section={CONFIG_SECTION.Route} />);
     await user.clear(screen.getByRole('textbox', { name: 'final' }));
     await user.type(screen.getByRole('textbox', { name: 'final' }), 'proxy');
-    await user.click(save());
 
     expect(changedLines(TEXT, draft())).toEqual(['    "final": "proxy",']);
     expect(findValue(draft(), ['route', 'rules', 0, 'outbound'])).toBe('direct');
@@ -86,7 +81,6 @@ describe('section scalars form', () => {
 
     render(<SettingsFromStore section={CONFIG_SECTION.Dns} />);
     await selectOption(user, screen.getByRole('combobox', { name: 'strategy' }), 'ipv4_only');
-    await user.click(save());
 
     expect(changedLines(TEXT, draft())).toEqual(['    "strategy": "ipv4_only",']);
     expect(draft()).toContain('// стратегия для всех серверов');
@@ -101,7 +95,6 @@ describe('section scalars form', () => {
     render(<SettingsFromStore section={CONFIG_SECTION.Dns} />);
     await user.click(screen.getByRole('button', { name: /^Ещё параметры/ }));
     await user.type(screen.getByRole('textbox', { name: 'final' }), 'local');
-    await user.click(save());
 
     await waitFor(() => {
       expect(findValue(draft(), ['dns', 'final'])).toBe('local');

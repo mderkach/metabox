@@ -16,9 +16,9 @@ function toText(rules: unknown[]): string {
 async function openDiff(applied: unknown[], draft: unknown[]) {
   ConfigDocumentState.getState().load(toText(applied));
   ConfigDocumentState.getState().replace(toText(draft));
-  renderWithQuery(<ConfigApplyDiff canApply onApply={() => undefined} />);
+  renderWithQuery(<ConfigApplyDiff canApply blocked={null} onApply={() => undefined} />);
 
-  await userEvent.click(screen.getByRole('button', { name: 'Посмотреть диф' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
 }
 
 const RULES = Array.from({ length: 8 }, (_, index) => ({
@@ -75,9 +75,9 @@ describe('ConfigApplyDiff', () => {
   it('without rule edits does not show the summary', async () => {
     ConfigDocumentState.getState().load('{\n  "log": { "level": "info" }\n}');
     ConfigDocumentState.getState().replace('{\n  "log": { "level": "debug" }\n}');
-    renderWithQuery(<ConfigApplyDiff canApply onApply={() => undefined} />);
+    renderWithQuery(<ConfigApplyDiff canApply blocked={null} onApply={() => undefined} />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Посмотреть диф' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
 
     expect(await screen.findByRole('table')).toBeInTheDocument();
     expect(screen.queryByRole('list', { name: 'Изменения правил маршрутизации' })).not.toBeInTheDocument();
@@ -86,9 +86,9 @@ describe('ConfigApplyDiff', () => {
   it('colors an added line with the success tone, a removed one with the danger tone, and keeps the sign', async () => {
     ConfigDocumentState.getState().load('{\n  "log": { "level": "info" }\n}');
     ConfigDocumentState.getState().replace('{\n  "log": { "level": "debug" }\n}');
-    renderWithQuery(<ConfigApplyDiff canApply onApply={() => undefined} />);
+    renderWithQuery(<ConfigApplyDiff canApply blocked={null} onApply={() => undefined} />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Посмотреть диф' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
 
     const added = await screen.findByRole('row', { name: /"debug"/ });
     const removed = screen.getByRole('row', { name: /"info"/ });

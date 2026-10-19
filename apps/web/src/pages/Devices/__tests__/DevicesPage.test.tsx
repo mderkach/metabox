@@ -14,6 +14,7 @@ import { createDataplaneMock } from '@entities/Dataplane/__tests__/Dataplane.han
 import { DEVICE_ENDPOINT } from '@entities/Device';
 import { DEVICES_FIXTURE } from '@entities/Device/__tests__/Device.fixture';
 import { createDeviceHandlers } from '@entities/Device/__tests__/Device.handlers';
+import { DeviceRouteBar, useDeviceRouteTransaction } from '@features/Device/DeviceRoute';
 import { MS_IN_SECOND, SECONDS_IN_HOUR, SECONDS_IN_MINUTE } from '@shared/lib/time';
 
 import { DevicesPage } from '../ui/DevicesPage';
@@ -52,8 +53,20 @@ async function readySwitchChecked(device: string): Promise<HTMLElement> {
   return toggle;
 }
 
+/** The confirmation bar lives in the shell: the screen is rendered next to it, as the shell does. */
+function DevicesWithRouteBar() {
+  const route = useDeviceRouteTransaction();
+
+  return (
+    <>
+      <DevicesPage />
+      <DeviceRouteBar transaction={route.transaction} isConfirming={route.isConfirming} onConfirm={route.confirm} />
+    </>
+  );
+}
+
 function renderScreen() {
-  return renderWithRouter(DevicesPage, { path: '/devices' });
+  return renderWithRouter(DevicesWithRouteBar, { path: '/devices' });
 }
 
 function rowOf(label: string): HTMLElement {

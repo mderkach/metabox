@@ -16,6 +16,8 @@ import {
   ScrollArea,
 } from '@shared/ui';
 
+import type { ApplyBlock } from '../lib/ConfigApply.lib';
+import { ConfigApplyBlocked } from './ConfigApplyBlocked';
 import { ConfigApplyRuleChanges } from './ConfigApplyRuleChanges';
 
 /** Lines around an edit: fewer, and it is unclear which section it was made in. */
@@ -35,10 +37,20 @@ const LINE_MARK: Readonly<Record<DiffLine['kind'], string>> = {
 };
 
 /**
- * The dialog shows the file text, not the parsed model: the same bytes that are
- * visible here go into Apply.
+ * Apply goes through this summary, there is no apply without seeing it: what
+ * changes in the rules and lists, then the file text line by line. The text is
+ * the file, not the parsed model: the same bytes that are visible here go into
+ * Apply.
  */
-export function ConfigApplyDiff({ canApply, onApply }: { canApply: boolean; onApply: () => void }) {
+export function ConfigApplyDiff({
+  canApply,
+  blocked,
+  onApply,
+}: {
+  canApply: boolean;
+  blocked: ApplyBlock | null;
+  onApply: () => void;
+}) {
   const { t } = useTranslation('features/Config/ConfigApply');
   const lines = useConfigDiff();
   // The dialog is redrawn on every outside keystroke, and the pass walks the
@@ -48,20 +60,22 @@ export function ConfigApplyDiff({ canApply, onApply }: { canApply: boolean; onAp
 
   return (
     <Dialog>
-      <DialogTrigger render={<Button variant='outline' size='sm' />}>{t('diff.open')}</DialogTrigger>
+      <DialogTrigger render={<Button size='sm' />}>{t('bar.apply')}</DialogTrigger>
 
       <DialogContent className='sm:max-w-3xl'>
         <DialogHeader>
           <DialogTitle>{t('diff.title')}</DialogTitle>
-          <DialogDescription>
-            {changed === 0 ? t('diff.same') : t('diff.changed', { count: changed })}
-          </DialogDescription>
+          <DialogDescription>{t('diff.description')}</DialogDescription>
         </DialogHeader>
 
         <ConfigApplyRuleChanges />
         <ConfigApplyListChanges />
 
-        <ScrollArea className='max-h-[60vh] rounded-lg border border-border'>
+        <p className='text-xs text-muted-foreground'>
+          {changed === 0 ? t('diff.same') : t('diff.changed', { count: changed })}
+        </p>
+
+        <ScrollArea className='max-h-[50vh] rounded-lg border border-border'>
           <table className='w-full border-collapse font-mono text-xs'>
             <caption className='sr-only'>{t('diff.caption')}</caption>
             <thead className='sr-only'>
@@ -98,7 +112,11 @@ export function ConfigApplyDiff({ canApply, onApply }: { canApply: boolean; onAp
           </table>
         </ScrollArea>
 
-        <DialogFooter>
+        <DialogFooter className='sm:items-center'>
+          {blocked !== null && <ConfigApplyBlocked blocked={blocked} className='sm:mr-auto' />}
+          <DialogClose render={<Button variant='outline' size='sm' />}>
+            {t('action.cancel', { ns: 'shared' })}
+          </DialogClose>
           <DialogClose render={<Button size='sm' disabled={!canApply} />} onClick={onApply}>
             {t('bar.apply')}
           </DialogClose>

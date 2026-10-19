@@ -89,7 +89,7 @@
     "invalidCharacter": "недопустимый символ"
   },
   "nodeEditor": {
-    "parseFailed": "JSON не разобран",
+    "notWritten": "Строка {{line}}: {{reason}}. В черновик не записано",
     "submit": "Сохранить в черновик"
   },
   "schema": {

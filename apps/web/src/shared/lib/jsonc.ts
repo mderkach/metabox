@@ -57,6 +57,11 @@ export function firstJsoncError(text: string): JsoncFailure | null {
   return { offset: first.offset, text: parseErrorText(first.error) };
 }
 
+/** Line of a parse failure, counting from one. */
+export function failureLine(text: string, failure: JsoncFailure): number {
+  return text.slice(0, failure.offset).split('\n').length;
+}
+
 /**
  * Parses text into a value. The second value is the same first error that
  * `firstJsoncError` returns: parsing does not throw, because the panel must

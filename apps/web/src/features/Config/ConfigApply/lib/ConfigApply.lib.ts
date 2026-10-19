@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef } from 'react';
 
 import {
   CONFIG_QUERY,
@@ -15,8 +15,16 @@ import {
   type CheckFailure,
   type WorkdirMismatch,
 } from '@entities/Config';
-import { APPLY_PHASE, isApplyActive, useDaemonStatus, type ApplyTransaction } from '@entities/Daemon';
+import {
+  APPLY_PHASE,
+  isApplyActive,
+  useDaemonReachable,
+  useDaemonStatus,
+  type ApplyTransaction,
+} from '@entities/Daemon';
 import { toRuleChanges, type RuleChange } from '@entities/Rule';
+import { API_FAILURE, ApiError } from '@shared/api';
+import { failureLine, firstJsoncError } from '@shared/lib/jsonc';
 
 import { useApplyConfig, useConfirmApply } from '../api/ConfigApply.api';
 
@@ -51,12 +59,27 @@ function useDocumentRefresh(transaction: ApplyTransaction | null) {
   );
 }
 
+export const APPLY_BLOCK = {
+  Unreachable: 'unreachable',
+  Unparsed: 'unparsed',
+} as const;
+
+/** Why there is something to apply but Apply is off. */
+export type ApplyBlock = { kind: typeof APPLY_BLOCK.Unreachable } | { kind: typeof APPLY_BLOCK.Unparsed; line: number };
+
 export interface ConfigApplyState {
   isDirty: boolean;
   /** The draft was started from a different config than the one on the device now. */
   isStale: boolean;
-  /** There is something to apply and the previous apply has finished. */
+  /**
+   * There is something to apply, the previous apply has finished, the daemon
+   * answers and the draft text parses.
+   */
   canApply: boolean;
+  /** `null` means nothing stands in the way, or there is nothing to apply. */
+  blocked: ApplyBlock | null;
+  /** The start request did not reach the daemon: nothing went to the device. */
+  unsent: boolean;
   /** `null` means there were no applies, neither in this session nor before the reload. */
   transaction: ApplyTransaction | null;
   /** The reference changes only with a change of the start error: the bar compares state snapshots by reference. */
@@ -94,6 +117,18 @@ export function useConfigApply(): ConfigApplyState {
 
   useDocumentRefresh(transaction);
 
+  const reachable = useDaemonReachable();
+  // Parsing the whole text is kept out of the keystroke render: in text mode
+  // the draft changes on every character.
+  const checkedText = useDeferredValue(text);
+  const unparsedLine = useMemo(() => {
+    const failure = checkedText === null ? null : firstJsoncError(checkedText);
+
+    return checkedText === null || failure === null ? null : failureLine(checkedText, failure);
+  }, [checkedText]);
+  const blocked = useMemo(() => toApplyBlock(isDirty, reachable, unparsedLine), [isDirty, reachable, unparsedLine]);
+  const unsent = start.error instanceof ApiError && start.error.kind === API_FAILURE.Unreachable;
+
   const check = useMemo(() => toCheckFailure(start.error), [start.error]);
   const workdir = useMemo(() => toWorkdirMismatch(start.error), [start.error]);
 
@@ -112,7 +147,9 @@ export function useConfigApply(): ConfigApplyState {
   return {
     isDirty,
     isStale,
-    canApply: isDirty && !start.isPending && !isApplyActive(transaction?.phase),
+    canApply: isDirty && blocked === null && !start.isPending && !isApplyActive(transaction?.phase),
+    blocked,
+    unsent,
     transaction,
     check,
     workdir,
@@ -122,6 +159,18 @@ export function useConfigApply(): ConfigApplyState {
     confirm: onConfirm,
     discard,
   };
+}
+
+function toApplyBlock(isDirty: boolean, reachable: boolean, unparsedLine: number | null): ApplyBlock | null {
+  if (!isDirty) {
+    return null;
+  }
+
+  if (!reachable) {
+    return { kind: APPLY_BLOCK.Unreachable };
+  }
+
+  return unparsedLine === null ? null : { kind: APPLY_BLOCK.Unparsed, line: unparsedLine };
 }
 
 /** Routing rule changes that Apply will bring; without a draft, empty. */

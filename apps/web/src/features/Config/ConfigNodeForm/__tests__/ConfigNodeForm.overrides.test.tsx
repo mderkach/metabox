@@ -57,10 +57,6 @@ function draft(): string {
   return ConfigDocumentState.getState().draft ?? '';
 }
 
-function save() {
-  return screen.getByRole('button', { name: 'Сохранить в черновик' });
-}
-
 /** The node is read from the store as on the screen: the form sees every text edit. */
 function NodeFromStore({
   path,
@@ -129,7 +125,6 @@ describe('VLESS/Reality form override', () => {
 
     await selectOption(user, screen.getByRole('combobox', { name: 'flow' }), 'xtls-rprx-vision');
     await selectOption(user, screen.getByRole('combobox', { name: 'tls.utls.fingerprint' }), 'firefox');
-    await user.click(save());
 
     await waitFor(() => {
       expect(findValue(draft(), [...VLESS, 'flow'])).toBe('xtls-rprx-vision');
@@ -143,7 +138,6 @@ describe('VLESS/Reality form override', () => {
     render(<NodeFromStore path={VLESS} />);
 
     await user.clear(screen.getByRole('textbox', { name: 'server' }));
-    await user.click(save());
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Обязательное поле');
     expect(ConfigDocumentState.getState().draft).toBeNull();
@@ -163,13 +157,10 @@ describe('VLESS/Reality form override', () => {
       'Ключ Reality: base64url без паддинга, 32 байта (43 символа)'
     );
 
-    await user.click(save());
-
     expect(ConfigDocumentState.getState().draft).toBeNull();
 
     await user.clear(key);
     await user.paste(PUBLIC_KEY);
-    await user.click(save());
 
     await waitFor(() => {
       expect(findValue(draft(), [...VLESS, 'tls', 'reality', 'public_key'])).toBe(PUBLIC_KEY);
@@ -182,7 +173,6 @@ describe('VLESS/Reality form override', () => {
     render(<NodeFromStore path={VLESS} />);
 
     await user.type(screen.getByRole('textbox', { name: 'tag' }), '-edited');
-    await user.click(save());
 
     await waitFor(() => {
       expect(findValue(draft(), [...VLESS, 'tag'])).toBe('hk-01-edited');
@@ -284,7 +274,6 @@ describe('VLESS/Reality from scratch', () => {
     await fill('textbox', 'tls.server_name', 'www.example');
     await fill('textbox', 'tls.reality.public_key', PUBLIC_KEY);
     await fill('textbox', 'tls.reality.short_id', '0123456789abcdef');
-    await user.click(save());
 
     await waitFor(() => {
       expect(findValue(draft(), [...VLESS, 'tls', 'reality', 'short_id'])).toBe('0123456789abcdef');
@@ -344,13 +333,11 @@ describe('api service override', () => {
     expect(screen.getByRole('button', { name: 'Поля tls' })).toBeInTheDocument();
 
     await user.type(screen.getByRole('textbox', { name: 'tag' }), '-grpc');
-    await user.click(save());
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Обязательное поле');
     expect(ConfigDocumentState.getState().draft).toBeNull();
 
     await user.type(screen.getByRole('spinbutton', { name: 'listen_port' }), '9091');
-    await user.click(save());
 
     await waitFor(() => {
       expect(findValue(draft(), [...API, 'listen_port'])).toBe(9091);
@@ -394,7 +381,6 @@ describe('secret fields', () => {
     await user.click(screen.getByRole('button', { name: 'Скрыть password' }));
 
     expect(password).toHaveAttribute('type', 'password');
-    expect(save()).toBeDisabled();
     expect(ConfigDocumentState.getState().draft).toBeNull();
   });
 
@@ -407,7 +393,6 @@ describe('secret fields', () => {
 
     await user.clear(password);
     await user.type(password, 'correct-horse');
-    await user.click(save());
 
     await waitFor(() => {
       expect(findValue(draft(), [...SHADOWSOCKS, 'password'])).toBe('correct-horse');
@@ -435,7 +420,6 @@ describe('secret fields', () => {
     expect(url).not.toHaveAttribute('readonly');
 
     await user.type(url, '2');
-    await user.click(save());
 
     await waitFor(() => {
       expect(findValue(draft(), ['providers', 0, 'url'])).toBe(`${full}2`);

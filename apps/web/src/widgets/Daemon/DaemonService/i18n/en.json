@@ -28,6 +28,11 @@
     "service_state_unread": "procd did not answer the daemon: the service state is unknown",
     "service_instance_ambiguous": "The service has several procd instances: name the sing-box instance in the daemon settings"
   },
+  "restart": {
+    "title": "Restart sing-box?",
+    "description": "Current connections of all devices will drop: downloads and calls will break. sing-box comes back in a few seconds.",
+    "confirm": "Restart sing-box"
+  },
   "stop": {
     "title": "Stop sing-box?",
     "description": "Routing will stop: devices on the network lose internet access until sing-box is started again.",

@@ -6,9 +6,9 @@ import { newRuleNode } from '@entities/Rule';
 import { Button } from '@shared/ui';
 
 /**
- * A new rule at the end of `route.rules`: without conditions, with an outbound
- * to the default route. The array may be absent from the file, and the insert
- * creates it.
+ * A new rule without conditions at the given position (`newRulePlace` from
+ * the `Rule` entity chooses it). The array may be absent from the file, and
+ * the insert creates it.
  *
  * Without an outbound the button goes dim and says why: sing-box rejects a rule
  * without `outbound`, and the panel may not invent a tag that is not in the
@@ -19,7 +19,7 @@ export function RuleAddButton({
   outbound,
   onAdded,
 }: {
-  /** New rule number, from one: the `route.rules` length plus one. */
+  /** New rule number, from one. */
   index: number;
   /** New rule outbound; `null` means there is no outbound, adding is impossible. */
   outbound: string | null;

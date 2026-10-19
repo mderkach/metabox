@@ -207,7 +207,7 @@ describe('rules screen', () => {
     expect(ruleButton).toHaveFocus();
   });
 
-  it('the outbound form opens on the value from the config and does not let apply an empty edit', async () => {
+  it('the outbound form opens on the value from the config and writes nothing until a change', async () => {
     const user = userEvent.setup();
 
     renderWithRouter(EditorPage);
@@ -217,7 +217,7 @@ describe('rules screen', () => {
     const panel = await screen.findByRole('complementary');
 
     expect(within(panel).getByRole('combobox', { name: 'Куда отправить' })).toHaveTextContent('proxy');
-    expect(within(panel).getByRole('button', { name: 'Сохранить в черновик' })).toBeDisabled();
+    expect(ConfigDocumentState.getState().draft).toBeNull();
   });
 
   it('an outbound change in the panel edits one line of the file, does not touch the rest of the rule', async () => {
@@ -239,8 +239,6 @@ describe('rules screen', () => {
 
     expect(outbound).toHaveTextContent('direct');
 
-    await user.click(within(panel).getByRole('button', { name: 'Сохранить в черновик' }));
-
     await waitFor(() => {
       expect(ConfigDocumentState.getState().draft).not.toBeNull();
     });
@@ -249,7 +247,6 @@ describe('rules screen', () => {
       rule_set: ['github'],
       outbound: 'direct',
     });
-    expect(within(panel).getByRole('button', { name: 'Сохранить в черновик' })).toBeDisabled();
     expect(
       await screen.findByRole('button', { name: 'Правило 1, выход direct, изменено в черновике' })
     ).toBeInTheDocument();
@@ -305,9 +302,8 @@ describe('rules screen', () => {
 
     await user.clear(editor);
     await user.type(editor, '{{ "port": ');
-    await user.click(within(panel).getByRole('button', { name: 'Сохранить в черновик' }));
 
-    expect(await within(panel).findByText('JSON не разобран')).toBeInTheDocument();
+    expect(await within(panel).findByText(/В черновик не записано/)).toBeInTheDocument();
     expect(editor).toHaveValue('{ "port": ');
     expect(ConfigDocumentState.getState().draft).toBeNull();
   });
@@ -349,7 +345,6 @@ describe('rules screen', () => {
 
     await user.clear(editor);
     await user.type(editor, '{{ "action": "quantum-teleport", "port": 443 }');
-    await user.click(within(panel).getByRole('button', { name: 'Сохранить в черновик' }));
 
     await waitFor(() => {
       expect(ConfigDocumentState.getState().draft).not.toBeNull();
@@ -403,7 +398,6 @@ describe('rules screen', () => {
     await user.click(settings.getByRole('button', { name: 'Параметры маршрутизации' }));
     await user.click(settings.getByRole('button', { name: /^Ещё параметры/ }));
     await user.type(settings.getByRole('textbox', { name: 'final' }), 'proxy');
-    await user.click(settings.getByRole('button', { name: 'Сохранить в черновик' }));
 
     await waitFor(() => {
       expect(findValue(ConfigDocumentState.getState().draft ?? '', ['route', 'final'])).toBe('proxy');
@@ -797,8 +791,6 @@ describe('rule sets of a rule from the panel', () => {
 
     // Escape closes the list, not the panel around it.
     expect(panel).toBeInTheDocument();
-
-    await user.click(within(panel).getByRole('button', { name: 'Сохранить в черновик' }));
 
     await waitFor(() => {
       expect(

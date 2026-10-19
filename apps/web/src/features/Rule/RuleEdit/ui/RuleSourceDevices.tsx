@@ -1,6 +1,6 @@
 import { TriangleAlert } from 'lucide-react';
 import { useId } from 'react';
-import { useFormContext, useWatch } from 'react-hook-form';
+import { useController, useFormContext, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import { deviceLabel, useDeviceIndex, type DeviceIndex } from '@entities/Device';
@@ -46,8 +46,11 @@ function toSourceLines(text: string, devices: DeviceIndex): SourceLine[] {
  */
 export function RuleSourceDevices() {
   const { t } = useTranslation('features/Rule/RuleEdit');
-  const { control, getValues, setValue } = useFormContext<RuleEditModel>();
+  const { control, getValues } = useFormContext<RuleEditModel>();
   const text = useWatch({ control, name: FIELD });
+  // A pick goes through the field change, as typed text does: the form writes
+  // only user changes to the draft, and `setValue` does not count as one.
+  const { field } = useController({ control, name: FIELD });
   const devices = useDeviceIndex({ poll: true });
   const pickId = useId();
   const lines = toSourceLines(text, devices);
@@ -75,7 +78,7 @@ export function RuleSourceDevices() {
               const cidr = toHostCidr(ip);
 
               if (!current.includes(cidr)) {
-                setValue(FIELD, [...current, cidr].join('\n'), { shouldDirty: true, shouldValidate: true });
+                field.onChange([...current, cidr].join('\n'));
               }
             }}
           >

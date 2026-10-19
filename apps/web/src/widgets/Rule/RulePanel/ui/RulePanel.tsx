@@ -1,5 +1,5 @@
 import { X } from 'lucide-react';
-import { useMemo, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useState, type KeyboardEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ConfigDocumentState } from '@entities/Config';
@@ -66,11 +66,11 @@ export function RulePanel({
 }) {
   const { t } = useTranslation('widgets/Rule/RulePanel');
   const [tab, setTab] = useState<string>(recognized ? TAB.Form : TAB.Raw);
+  // The form writes on every change and follows edits of its own node: a
+  // remount on a node change would drop focus after each keystroke. It is
+  // rebuilt only when the document is replaced from outside, by a discard of
+  // the draft or a reread from the device.
   const revision = ConfigDocumentState.use.revision();
-  // The form reads the node once, while the selection holds the position: discarding the draft or
-  // a text edit puts a different node there, and the form must change along
-  // with it. A reorder does not change the node — what was typed in the form stays.
-  const nodeKey = useMemo(() => JSON.stringify(node), [node]);
   const headingRef = useFocusReturn<HTMLHeadingElement>();
 
   function onKeyDown(event: KeyboardEvent<HTMLElement>) {
@@ -142,7 +142,7 @@ export function RulePanel({
 
           {/* The form keeps what was typed while the node is checked as text: unmounting erases it. */}
           <TabsContent value={TAB.Form} keepMounted className='pt-3'>
-            {recognized && <RuleEditForm key={nodeKey} rule={rule} outbounds={outbounds} ruleSets={ruleSets} />}
+            {recognized && <RuleEditForm key={revision} rule={rule} outbounds={outbounds} ruleSets={ruleSets} />}
           </TabsContent>
 
           <TabsContent value={TAB.Raw} className='pt-3'>

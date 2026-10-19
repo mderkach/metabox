@@ -10,6 +10,7 @@ import { AppSidebar, AppSidebarBottomNav } from '@widgets/AppSidebar';
 
 import { useRuntimeStreams } from '../lib/useRuntimeStreams';
 import { DaemonBanner } from './DaemonBanner';
+import { DeviceRouteLayer } from './DeviceRouteLayer';
 
 /** Primary tone and position over the layout: the link must not get lost under the sidebar. */
 const SKIP_LINK_CLASS =
@@ -27,6 +28,7 @@ export function AppLayout() {
   const { t } = useTranslation('app');
   const narrow = useNarrowScreen();
   const [applySpace, setApplySpace] = useState(0);
+  const [deviceRouteSpace, setDeviceRouteSpace] = useState(0);
 
   return (
     // `viewport-fit=cover` gives the panel the whole screen, including side
@@ -46,17 +48,18 @@ export function AppLayout() {
         <div className='relative flex min-h-0 grow flex-col'>
           {/* The screen is its own View Transitions group for the router
               transition; a `<ViewTransition>` boundary around `Outlet` would
-              not work. The bottom padding is space under the floating apply
-              bar: without it the bar would cover the bottom of the screen. */}
+              not work. The bottom padding is space under the floating bars:
+              without it they would cover the bottom of the screen. */}
           <main
             id='content'
             tabIndex={-1}
-            style={{ paddingBottom: applySpace }}
+            style={{ paddingBottom: Math.max(applySpace, deviceRouteSpace) }}
             className='flex min-h-0 grow flex-col [view-transition-name:page]'
           >
             <Outlet />
           </main>
           <ConfigApplyBar onSpaceChange={setApplySpace} />
+          <DeviceRouteLayer bottom={applySpace} onSpaceChange={setDeviceRouteSpace} />
         </div>
       </div>
       {narrow && <AppSidebarBottomNav />}

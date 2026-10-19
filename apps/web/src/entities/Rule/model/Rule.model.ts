@@ -69,6 +69,33 @@ export interface RuleRow {
   searchText: string;
 }
 
+/** Position of a new rule in `route.rules`, from one, and its outbound. */
+export interface NewRulePlace {
+  index: number;
+  outbound: string;
+}
+
+/**
+ * A new rule goes before the first rule without conditions that sends traffic
+ * to an outbound: rules below it never fire, and a rule added at the end of
+ * such a list would be dead. It takes that rule's outbound, so until its
+ * conditions are set it routes the same traffic the same way. Without such a
+ * rule the new one goes to the end with the default route outbound
+ * (`fallback`); `null` means there is no outbound to give it.
+ *
+ * `total` is the number of nodes in `route.rules`, not of rows: a non-object
+ * node gets no row but still takes a position.
+ */
+export function newRulePlace(rules: readonly RuleRow[], total: number, fallback: string | null): NewRulePlace | null {
+  const catchAll = rules.find((rule) => rule.isCatchAll && rule.targetKind === RULE_TARGET.Outbound);
+
+  if (catchAll !== undefined) {
+    return { index: catchAll.index, outbound: catchAll.target };
+  }
+
+  return fallback === null ? null : { index: total + 1, outbound: fallback };
+}
+
 /**
  * Set tags the rule refers to itself, without nested branches. The string
  * `"rule_set": "x"` arrives as a list of one tag.

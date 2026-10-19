@@ -1,10 +1,10 @@
 import { useSearch } from '@tanstack/react-router';
 import { CircleAlert, Search, X } from 'lucide-react';
-import { useCallback, useState, type ReactNode } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
 import { CONFIG_SECTION, type ConfigIssue } from '@entities/Config';
-import { isRuleRecognized } from '@entities/Rule';
+import { isRuleRecognized, newRulePlace } from '@entities/Rule';
 import { RuleAddButton } from '@features/Rule/RuleAdd';
 import { RuleDeleteButton } from '@features/Rule/RuleDelete';
 import { RuleReorderButtons } from '@features/Rule/RuleReorder';
@@ -76,9 +76,17 @@ export function EditorPage() {
 
   const selected = editor.rules.find((row) => row.id === selection.id) ?? null;
   const selectedNode = selected === null ? null : editor.nodes[selected.index - 1];
-  // The number of the new rule is by file nodes, not by rows: only an object node
-  // gets a row, while an insert is addressed by position in the array.
-  const add = <RuleAddButton index={editor.nodes.length + 1} outbound={editor.finalOutbound} onAdded={onAdded} />;
+  const place = useMemo(
+    () => newRulePlace(editor.rules, editor.nodes.length, editor.finalOutbound),
+    [editor.rules, editor.nodes.length, editor.finalOutbound]
+  );
+  const add = (
+    <RuleAddButton
+      index={place?.index ?? editor.nodes.length + 1}
+      outbound={place?.outbound ?? null}
+      onAdded={onAdded}
+    />
+  );
   const actions =
     selected === null ? null : (
       <>

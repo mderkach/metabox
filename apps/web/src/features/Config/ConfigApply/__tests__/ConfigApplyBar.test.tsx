@@ -52,6 +52,14 @@ function loadDocument(draft = true) {
   if (draft) ConfigDocumentState.getState().replace(DRAFT);
 }
 
+/** Apply goes through the summary: the bar button opens it, the dialog button sends. */
+async function applyFromSummary() {
+  await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
+  await userEvent.click(
+    within(screen.getByRole('dialog', { name: 'Что уйдёт на устройство' })).getByRole('button', { name: 'Применить' })
+  );
+}
+
 describe('ConfigApplyBar', () => {
   beforeEach(() => {
     ConfigDocumentState.getState().reset();
@@ -91,13 +99,46 @@ describe('ConfigApplyBar', () => {
     expect(onSpaceChange).toHaveBeenLastCalledWith(0);
   });
 
-  it('on a draft offers to apply and view the diff', () => {
+  it('on a draft applies through the summary of changes', async () => {
     loadDocument();
     renderWithQuery(<ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />);
 
     expect(screen.getByRole('region', { name: 'Применение конфига' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Применить' })).toBeEnabled();
-    expect(screen.getByRole('button', { name: 'Посмотреть диф' })).toBeInTheDocument();
+
+    await applyFromSummary();
+
+    const summary = screen.getByRole('dialog', { name: 'Что уйдёт на устройство' });
+
+    expect(within(summary).getByRole('button', { name: 'Применить' })).toBeEnabled();
+    expect(within(summary).getByRole('button', { name: 'Отмена' })).toBeInTheDocument();
+  });
+
+  it('does not apply a draft whose text does not parse and names the line to fix', async () => {
+    ConfigDocumentState.getState().load(APPLIED, APPLIED_ETAG);
+    ConfigDocumentState.getState().replace('{\n  "log": {\n}');
+    renderWithQuery(<ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />);
+
+    expect(await screen.findByText(/ошибка в строке \d+/)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
+
+    expect(
+      within(screen.getByRole('dialog', { name: 'Что уйдёт на устройство' })).getByRole('button', { name: 'Применить' })
+    ).toBeDisabled();
+  });
+
+  it('does not apply while metabox does not answer and says so', async () => {
+    server.use(http.get(DAEMON_ENDPOINT.status(), () => new HttpResponse(null, { status: 502 })));
+    loadDocument();
+    renderWithQuery(<ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />);
+
+    expect(await screen.findByText('metabox не отвечает — применить сейчас нельзя.')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
+
+    expect(
+      within(screen.getByRole('dialog', { name: 'Что уйдёт на устройство' })).getByRole('button', { name: 'Применить' })
+    ).toBeDisabled();
   });
 
   it('keeps the draft reset at the edge, apart from "Apply"', () => {
@@ -109,7 +150,7 @@ describe('ConfigApplyBar', () => {
       .getAllByRole('button')
       .map((button) => button.textContent);
 
-    expect(names).toEqual(['Отменить правки', 'Посмотреть диф', 'Применить']);
+    expect(names).toEqual(['Отменить правки', 'Применить']);
   });
 
   it('cancels edits only after confirmation: the draft is cleared, the file from the device is in place', async () => {
@@ -154,7 +195,7 @@ describe('ConfigApplyBar', () => {
     loadDocument();
     renderWithQuery(<ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
+    await applyFromSummary();
 
     await waitFor(() => {
       expect(sent).toEqual([{ text: DRAFT, base: APPLIED_ETAG }]);
@@ -236,7 +277,7 @@ describe('ConfigApplyBar', () => {
     loadDocument();
     renderWithQuery(<ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
+    await applyFromSummary();
 
     expect(await screen.findByText('FATAL decode config: unknown field')).toBeInTheDocument();
     expect(screen.getByText(/Код выхода: 1/)).toBeInTheDocument();
@@ -261,7 +302,7 @@ describe('ConfigApplyBar', () => {
     loadDocument();
     renderWithQuery(<ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
+    await applyFromSummary();
 
     expect(
       await screen.findByText('Служба sing-box запущена не из каталога конфига — на устройство ничего не записано')

@@ -1,12 +1,15 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { ParseKeys, TFunction } from 'i18next';
+import type { JSONPath } from 'jsonc-parser';
 import { TriangleAlert } from 'lucide-react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Controller, FormProvider, useForm, useFormContext } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { ConfigDocumentState, ruleNodePath } from '@entities/Config';
-import { RULE_SET_MATCHER, ruleSetsOf, type RuleRow } from '@entities/Rule';
-import { Button, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/ui';
+import { ConfigDocumentState, findValue, ruleNodePath } from '@entities/Config';
+import { RULE_SET_MATCHER, ruleSetsOf, toRuleRowsFromNodes, type RuleRow } from '@entities/Rule';
+import { isTextEntryFocused } from '@shared/lib/focus';
+import { Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/ui';
 
 import {
   conditionLines,
@@ -28,8 +31,10 @@ const ERROR_KEY: Readonly<Record<string, ParseKeys<'features/Rule/RuleEdit'> | u
  * The rule outbound, what to do with traffic and where to send it, the sets it
  * refers to, and common conditions.
  *
- * The edit goes onto the file text by the node path: one line changes, key
- * order and unfamiliar nodes stay as they were.
+ * A valid change goes into the draft at once, there is no save step: an edit
+ * that only lives in the form would be lost on closing the panel and left out
+ * of Apply. The edit goes onto the file text by the node path:
+ * one line changes, key order and unfamiliar nodes stay as they were.
  *
  * `ruleSets` are document set tags. A logical rule gets neither sets nor
  * conditions: its schema branch has none, they live in nested rules.
@@ -43,70 +48,91 @@ export function RuleEditForm({
   outbounds: string[];
   ruleSets: string[];
 }) {
-  const { t } = useTranslation('features/Rule/RuleEdit');
   const edit = ConfigDocumentState.use.edit();
   const initialSets = ruleSetsOf(rule);
   const initialConditions = conditionTexts(rule);
   const onlyEditable = hasOnlyEditableConditions(rule);
+  const values = useMemo(() => toFormValues(rule), [rule]);
 
   const form = useForm<RuleEditModel, unknown, RuleEditPatch>({
     // Values are taken from the node as is: a default appended by the form
-    // would get into the diff as an edit the user did not make.
-    defaultValues: {
-      action: isKnownAction(rule.target, rule.targetKind) ? rule.target : RULE_ACTION.Route,
-      outbound: rule.targetKind === 'outbound' ? rule.target : '',
-      // The `"rule_set": "x"` string arrives as a list; while the field is
-      // untouched, the node is not rewritten and the string stays a string.
-      ruleSet: initialSets,
-      conditions: initialConditions,
-    },
+    // would get into the diff as an edit the user did not make. `values` pulls
+    // in an edit of the same node made as text, `keepDirtyValues` does not
+    // erase what is being typed.
+    defaultValues: values,
+    values,
+    resetOptions: { keepDirtyValues: true },
     mode: 'onChange',
+    // A write follows every keystroke: focus must stay in the field being
+    // typed, not jump to another field with an error.
+    shouldFocusError: false,
     resolver: zodResolver(RuleEditAdapterSchema),
   });
 
-  const onSubmit = form.handleSubmit((patch) => {
-    const path = ruleNodePath(rule.index);
-    const touched = form.formState.dirtyFields;
+  const index = rule.index;
 
-    // Only touched fields are written. A rule without an `action` key is normal
-    // (`route` is implied), and an appended key would get into the diff as an
-    // edit the user did not make.
-    if (touched.action === true) {
-      edit([...path, 'action'], patch.action);
-    }
+  // An emptied field is removed from the node when it is left, not at the
+  // first erased character: see `writeRuleEdit`.
+  const removalPending = useRef(false);
+  const formRef = useRef<HTMLFormElement>(null);
 
-    if (touched.outbound === true || touched.action === true) {
-      edit([...path, 'outbound'], 'outbound' in patch ? patch.outbound : undefined);
-    }
+  const writeAll = useMemo(
+    () =>
+      form.handleSubmit((patch) => {
+        removalPending.current = false;
+        writeRuleEdit(edit, index, patch, form.getValues(), true);
+      }),
+    [form, edit, index]
+  );
 
-    // Sets are compared as sets, not by `dirtyFields`: for an array RHF gives
-    // per-element flags, and a set that was removed and chosen again changes
-    // only the order.
-    if (!sameTags(form.getValues('ruleSet'), form.formState.defaultValues?.ruleSet ?? [])) {
-      edit([...path, RULE_SET_MATCHER], 'rule_set' in patch ? patch.rule_set : undefined);
-    }
+  useEffect(
+    function writeOnChange() {
+      const revision = ConfigDocumentState.getState().revision;
+      const writeTyped = form.handleSubmit((patch) => {
+        removalPending.current = writeRuleEdit(edit, index, patch, form.getValues(), !isTextEntryFocused());
+      });
 
-    // A condition is compared by lines: an extra space or an empty line does
-    // not count as an edit and does not get into the diff.
-    for (const key of RULE_CONDITIONS) {
-      const before = conditionLines(form.formState.defaultValues?.conditions?.[key] ?? '');
+      // Only a user change is written. A reset from `values` sets the
+      // untouched fields one by one with `setValue`, and a write in the middle
+      // of it would put half-reset values over an edit that came from outside.
+      const subscription = form.watch((_values, { type }) => {
+        if (type === 'change') {
+          void writeTyped();
+        }
+      });
 
-      if (!sameLines(conditionLines(form.getValues(`conditions.${key}`)), before)) {
-        edit([...path, key], patch.conditions[key]);
-      }
-    }
+      // Leaving a field writes only a held-back removal: an unconditional
+      // write here would resolve after the next change and take it too.
+      const element = formRef.current;
+      const writeHeldBack = () => {
+        if (removalPending.current) {
+          void writeAll();
+        }
+      };
 
-    // Saved becomes the new reference point: the button goes dim until the form
-    // diverges from the draft again.
-    form.reset(form.getValues());
-  });
+      element?.addEventListener('focusout', writeHeldBack);
+
+      return function stopWritingOnChange() {
+        subscription.unsubscribe();
+        element?.removeEventListener('focusout', writeHeldBack);
+
+        // A document replaced from outside (a discarded draft) is not written
+        // over: the form would bring back what was just discarded.
+        if (removalPending.current && ConfigDocumentState.getState().revision === revision) {
+          void writeAll();
+        }
+      };
+    },
+    [form, edit, index, writeAll]
+  );
 
   return (
     <FormProvider {...form}>
       <form
+        ref={formRef}
         className='flex flex-col gap-3'
         onSubmit={(event) => {
-          void onSubmit(event);
+          event.preventDefault();
         }}
       >
         <ActionField />
@@ -116,13 +142,89 @@ export function RuleEditForm({
           <RuleConditionFields initial={RULE_CONDITIONS.filter((key) => initialConditions[key].length > 0)} />
         )}
         {rule.group === null && onlyEditable && <CatchAllWarning />}
-
-        <Button type='submit' size='sm' disabled={!form.formState.isDirty}>
-          {t('submit')}
-        </Button>
       </form>
     </FormProvider>
   );
+}
+
+/**
+ * Writes the fields that differ from the node in the current draft, not from
+ * the form start: a value typed and then erased back must leave the draft too.
+ * The node is read from the store text at the moment of the write, since the
+ * parsed rule rows lag the text by a frame.
+ *
+ * Without `withRemovals` an emptied condition or set list stays in the draft
+ * until the field is left, and the result says something was held back: removing the key at the first erased character and
+ * adding it back with the next typed one would move it to the end of the node,
+ * and the diff would show the whole node instead of one line.
+ */
+function writeRuleEdit(
+  edit: (path: JSONPath, value: unknown) => void,
+  index: number,
+  patch: RuleEditPatch,
+  values: RuleEditModel,
+  withRemovals: boolean
+): boolean {
+  const path = ruleNodePath(index);
+  const current = toRuleRowsFromNodes([findValue(ConfigDocumentState.getState().current() ?? '', path)]).at(0);
+
+  if (current === undefined) {
+    return false;
+  }
+
+  const before = toFormValues(current);
+  let skipped = false;
+
+  // A rule without an `action` key is normal (`route` is implied), and an
+  // appended key would get into the diff as an edit the user did not make.
+  if (values.action !== before.action) {
+    edit([...path, 'action'], patch.action);
+  }
+
+  if (values.action !== before.action || values.outbound !== before.outbound) {
+    edit([...path, 'outbound'], 'outbound' in patch ? patch.outbound : undefined);
+  }
+
+  // Sets are compared as sets: a set removed and chosen again changes only the
+  // order.
+  const ruleSet = 'rule_set' in patch ? patch.rule_set : undefined;
+
+  if (!sameTags(values.ruleSet, before.ruleSet)) {
+    if (withRemovals || ruleSet !== undefined) {
+      edit([...path, RULE_SET_MATCHER], ruleSet);
+    } else {
+      skipped = true;
+    }
+  }
+
+  // A condition is compared by lines: an extra space or an empty line does
+  // not count as an edit and does not get into the diff.
+  for (const key of RULE_CONDITIONS) {
+    const condition = patch.conditions[key];
+
+    if (sameLines(conditionLines(values.conditions[key]), conditionLines(before.conditions[key]))) {
+      continue;
+    }
+
+    if (withRemovals || condition !== undefined) {
+      edit([...path, key], condition);
+    } else {
+      skipped = true;
+    }
+  }
+
+  return skipped;
+}
+
+function toFormValues(rule: RuleRow): RuleEditModel {
+  return {
+    action: isKnownAction(rule.target, rule.targetKind) ? rule.target : RULE_ACTION.Route,
+    outbound: rule.targetKind === 'outbound' ? rule.target : '',
+    // The `"rule_set": "x"` string arrives as a list; while the field is
+    // untouched, the node is not rewritten and the string stays a string.
+    ruleSet: ruleSetsOf(rule),
+    conditions: conditionTexts(rule),
+  };
 }
 
 function ActionField() {

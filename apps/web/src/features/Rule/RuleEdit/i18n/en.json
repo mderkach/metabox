@@ -24,7 +24,6 @@
       "hint": "One value per line"
     }
   },
-  "submit": "Save to draft",
   "error": {
     "outboundRequired": "pick an outbound",
     "portInvalid": "A port is a number from 0 to 65535, one per line"

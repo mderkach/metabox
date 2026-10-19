@@ -205,4 +205,36 @@ describe('service state', () => {
       expect(called).toHaveBeenCalledWith('stop');
     });
   });
+
+  it('restarts the service only after confirmation that names the dropped connections', async () => {
+    const called = vi.fn<(action: string) => void>();
+    const user = userEvent.setup();
+
+    serveService(SERVICE_RUNNING_FIXTURE);
+    server.use(
+      http.post(DAEMON_ENDPOINT.serviceAction(':action'), ({ params }) => {
+        called(String(params.action));
+        return HttpResponse.json(SERVICE_RUNNING_FIXTURE);
+      })
+    );
+
+    renderWithQuery(<DaemonService heap={0} />);
+
+    await user.click(await screen.findByRole('button', { name: 'Перезапустить' }));
+
+    expect(screen.getByRole('alertdialog', { name: 'Перезапустить sing-box?' })).toHaveTextContent(
+      'соединения всех устройств оборвутся'
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Отмена' }));
+
+    expect(called).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'Перезапустить' }));
+    await user.click(screen.getByRole('button', { name: 'Перезапустить sing-box' }));
+
+    await waitFor(() => {
+      expect(called).toHaveBeenCalledWith('restart');
+    });
+  });
 });

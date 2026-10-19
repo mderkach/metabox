@@ -123,7 +123,6 @@ describe('section screen', () => {
 
     await user.clear(server);
     await user.type(server, 'b.example');
-    await user.click(node.getByRole('button', { name: 'Сохранить в черновик' }));
 
     await waitFor(() => {
       expect(findValue(ConfigDocumentState.getState().draft ?? '{}', ['outbounds', 1, 'server'])).toBe('b.example');
@@ -154,7 +153,6 @@ describe('section screen', () => {
 
     await user.clear(editor);
     await user.paste('{ "type": "direct", "tag": "main" }');
-    await user.click(node.getByRole('button', { name: 'Сохранить в черновик' }));
 
     await waitFor(() => {
       expect(ConfigDocumentState.getState().draft).toContain('"tag": "main"');
@@ -190,8 +188,6 @@ describe('section screen', () => {
     await user.clear(editor);
     await user.paste('{ "query_type": ["HTTPS"], "action": "reject" }');
 
-    await user.click(node.getByRole('button', { name: 'Сохранить в черновик' }));
-
     await waitFor(() => {
       expect(ConfigDocumentState.getState().draft).toContain('"HTTPS"');
     });
@@ -224,7 +220,6 @@ describe('section screen', () => {
     await user.click(settings.getByRole('button', { name: 'Параметры DNS' }));
     await user.clear(settings.getByRole('textbox', { name: 'final' }));
     await user.type(settings.getByRole('textbox', { name: 'final' }), 'remote');
-    await user.click(settings.getByRole('button', { name: 'Сохранить в черновик' }));
 
     await waitFor(() => {
       expect(findValue(draft(), ['dns', 'final'])).toBe('remote');
@@ -258,7 +253,6 @@ describe('section screen', () => {
 
     await user.clear(secret);
     await user.type(secret, 'new');
-    await user.click(node.getByRole('button', { name: 'Сохранить в черновик' }));
 
     await waitFor(() => {
       expect(findValue(draft(), ['experimental', 'clash_api', 'secret'])).toBe('new');
@@ -292,7 +286,6 @@ describe('section screen', () => {
 
     await user.clear(editor);
     await user.paste('{ "enabled": true, "server": "time.example" }');
-    await user.click(screen.getByRole('button', { name: 'Сохранить в черновик' }));
 
     await waitFor(() => {
       expect(findValue(ConfigDocumentState.getState().draft ?? '{}', ['ntp'])).toEqual({

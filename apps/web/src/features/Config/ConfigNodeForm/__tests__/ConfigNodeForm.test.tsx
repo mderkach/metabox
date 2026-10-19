@@ -70,10 +70,6 @@ async function showEmptyFields() {
   await userEvent.click(screen.getByRole('button', { name: /^Ещё параметры/ }));
 }
 
-function save() {
-  return screen.getByRole('button', { name: 'Сохранить в черновик' });
-}
-
 describe('node form by schema', () => {
   beforeEach(() => {
     ConfigDocumentState.getState().reset();
@@ -93,7 +89,7 @@ describe('node form by schema', () => {
     expect(screen.getByRole('combobox', { name: 'domain_strategy' })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'connect_timeout' })).toHaveAttribute('placeholder', '10s, 1m30s');
     expect(screen.queryByRole('textbox', { name: 'type' })).not.toBeInTheDocument();
-    expect(save()).toBeDisabled();
+    expect(ConfigDocumentState.getState().draft).toBeNull();
   });
 
   it('a field edit lands as one line: a comment inside the node is intact', async () => {
@@ -105,13 +101,11 @@ describe('node form by schema', () => {
 
     await user.clear(server);
     await user.type(server, 'b.example');
-    await user.click(save());
 
     await waitFor(() => {
       expect(changedLines(TEXT, draft())).toEqual(['      "server": "b.example",']);
     });
     expect(draft()).toContain('// узел в Гонконге');
-    expect(save()).toBeDisabled();
   });
 
   it('a cleared field is removed from the node, not written empty', async () => {
@@ -120,7 +114,8 @@ describe('node form by schema', () => {
     renderVmess();
 
     await user.clear(screen.getByRole('spinbutton', { name: 'server_port' }));
-    await user.click(save());
+    // An emptied field leaves the node when it is left, not while it is being typed in.
+    await user.tab();
 
     await waitFor(() => {
       expect(findValue(draft(), VMESS)).not.toHaveProperty('server_port');
@@ -134,7 +129,6 @@ describe('node form by schema', () => {
 
     // The tls group is set in the node and open at once.
     await user.click(screen.getByRole('button', { name: 'Сбросить enabled' }));
-    await user.click(save());
 
     await waitFor(() => {
       expect(findValue(draft(), [...VMESS, 'tls'])).toEqual({ server_name: 'a.example', alpn: 'h2' });
@@ -152,14 +146,12 @@ describe('node form by schema', () => {
 
     await user.clear(alpn);
     await user.type(alpn, 'http/1.1');
-    await user.click(save());
 
     await waitFor(() => {
       expect(findValue(draft(), [...VMESS, 'tls', 'alpn'])).toBe('http/1.1');
     });
 
     await user.type(alpn, '{Enter}h2');
-    await user.click(save());
 
     await waitFor(() => {
       expect(findValue(draft(), [...VMESS, 'tls', 'alpn'])).toEqual(['http/1.1', 'h2']);
@@ -172,7 +164,6 @@ describe('node form by schema', () => {
     renderVmess();
 
     await user.click(screen.getByRole('button', { name: 'udp' }));
-    await user.click(save());
 
     await waitFor(() => {
       expect(findValue(draft(), [...VMESS, 'network'])).toEqual(['tcp', 'udp']);
@@ -186,14 +177,12 @@ describe('node form by schema', () => {
     await showEmptyFields();
 
     await selectOption(user, screen.getByRole('combobox', { name: 'domain_strategy' }), 'prefer_ipv4');
-    await user.click(save());
 
     await waitFor(() => {
       expect(findValue(draft(), [...VMESS, 'domain_strategy'])).toBe('prefer_ipv4');
     });
 
     await selectOption(user, screen.getByRole('combobox', { name: 'domain_strategy' }), 'не задано');
-    await user.click(save());
 
     await waitFor(() => {
       expect(findValue(draft(), VMESS)).not.toHaveProperty('domain_strategy');
@@ -229,8 +218,6 @@ describe('node form by schema', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Длительность в формате 10s, 1m30s, 500ms');
 
-    await user.click(save());
-
     expect(ConfigDocumentState.getState().draft).toBeNull();
   });
 
@@ -241,7 +228,6 @@ describe('node form by schema', () => {
     await showEmptyFields();
 
     await user.type(screen.getByRole('textbox', { name: 'routing_mark' }), '255');
-    await user.click(save());
 
     await waitFor(() => {
       expect(findValue(draft(), [...VMESS, 'routing_mark'])).toBe(255);
@@ -261,12 +247,9 @@ describe('node form by schema', () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent('JSON не разобран');
 
-    await user.click(save());
-
     expect(ConfigDocumentState.getState().draft).toBeNull();
 
     await user.paste('"local" }');
-    await user.click(save());
 
     await waitFor(() => {
       expect(findValue(draft(), [...VMESS, 'domain_resolver'])).toEqual({ server: 'local' });
@@ -296,7 +279,6 @@ describe('node form by schema', () => {
 
     await user.clear(server);
     await user.type(server, 'b.example');
-    await user.click(save());
 
     await waitFor(() => {
       expect(findValue(draft(), [...VMESS, 'server'])).toBe('b.example');
@@ -417,7 +399,6 @@ describe('JSON text field with secrets', () => {
 
     await user.clear(address);
     await user.type(address, '10.0.0.3/32');
-    await user.click(save());
 
     await waitFor(() => {
       expect(findValue(draft(), [...WIREGUARD, 'address'])).toBe('10.0.0.3/32');
@@ -439,8 +420,6 @@ describe('JSON text field with secrets', () => {
 
     expect(screen.queryByRole('button', { name: 'Скрыть peers' })).not.toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent('JSON не разобран');
-
-    await user.click(save());
 
     expect(ConfigDocumentState.getState().draft).toBeNull();
   });
@@ -475,7 +454,6 @@ describe('node form on the config corpus', () => {
     const tag = screen.getByRole('textbox', { name: 'tag' });
 
     await user.type(tag, '-edited');
-    await user.click(save());
 
     await waitFor(() => {
       expect(changedLines(text, draft())).toHaveLength(1);

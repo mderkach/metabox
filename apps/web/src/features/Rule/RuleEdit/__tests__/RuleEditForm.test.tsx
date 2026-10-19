@@ -1,7 +1,7 @@
 import { renderWithQuery } from '@test/renderWithQuery';
 import { selectOption } from '@test/selectOption';
 import { server } from '@test/server';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 
@@ -49,11 +49,11 @@ describe('rule outbound form', () => {
     ConfigDocumentState.getState().load(CONFIG);
   });
 
-  it('opens on the value from the config and does not let apply an empty edit', () => {
+  it('opens on the value from the config and writes nothing until a change', () => {
     render(<RuleEditForm rule={RULE} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
 
     expect(screen.getByRole('combobox', { name: 'Куда отправить' })).toHaveTextContent('proxy');
-    expect(screen.getByRole('button', { name: 'Сохранить в черновик' })).toBeDisabled();
+    expect(ConfigDocumentState.getState().draft).toBeNull();
   });
 
   it('an outbound change edits one line of the file, does not touch the rest of the rule', async () => {
@@ -66,8 +66,6 @@ describe('rule outbound form', () => {
     await selectOption(user, outbound, 'direct');
 
     expect(outbound).toHaveTextContent('direct');
-
-    await user.click(screen.getByRole('button', { name: 'Сохранить в черновик' }));
 
     expect(findValue(ConfigDocumentState.getState().draft ?? '', ['route', 'rules', 0])).toEqual({
       rule_set: ['github'],
@@ -83,8 +81,6 @@ describe('rule outbound form', () => {
     await selectOption(user, screen.getByRole('combobox', { name: 'Что делать' }), 'оборвать');
 
     expect(screen.queryByRole('combobox', { name: 'Куда отправить' })).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: 'Сохранить в черновик' }));
 
     expect(findValue(ConfigDocumentState.getState().draft ?? '', ['route', 'rules', 0])).toEqual({
       rule_set: ['github'],
@@ -137,8 +133,6 @@ describe('rule sets of a rule in the form', () => {
 
     expect(sets).toHaveTextContent('github, geoip-cn');
 
-    await user.click(screen.getByRole('button', { name: 'Сохранить в черновик' }));
-
     expect(draftRule()).toEqual({ rule_set: ['github', 'geoip-cn'], outbound: 'proxy' });
   });
 
@@ -149,7 +143,6 @@ describe('rule sets of a rule in the form', () => {
 
     await selectOption(user, screen.getByRole('combobox', { name: 'Сеты правил' }), 'github');
     await user.keyboard('{Escape}');
-    await user.click(screen.getByRole('button', { name: 'Сохранить в черновик' }));
 
     expect(draftRule()).toEqual({ outbound: 'proxy' });
   });
@@ -163,7 +156,6 @@ describe('rule sets of a rule in the form', () => {
     expect(screen.getByRole('combobox', { name: 'Сеты правил' })).toHaveTextContent('github');
 
     await selectOption(user, screen.getByRole('combobox', { name: 'Куда отправить' }), 'direct');
-    await user.click(screen.getByRole('button', { name: 'Сохранить в черновик' }));
 
     expect(draftRule()).toEqual({ rule_set: 'github', outbound: 'direct' });
   });
@@ -198,7 +190,7 @@ describe('rule sets of a rule in the form', () => {
     expect(screen.getByRole('option', { name: 'github' })).not.toHaveTextContent('нет в документе');
   });
 
-  it('warns that a rule without rule sets and other conditions takes all traffic, but does not block saving', async () => {
+  it('warns that a rule without rule sets and other conditions takes all traffic, but still writes it', async () => {
     const user = userEvent.setup();
 
     render(<RuleEditForm rule={RULE} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
@@ -209,7 +201,9 @@ describe('rule sets of a rule in the form', () => {
     await user.keyboard('{Escape}');
 
     expect(screen.getByRole('status')).toHaveTextContent('заберёт весь трафик');
-    expect(screen.getByRole('button', { name: 'Сохранить в черновик' })).toBeEnabled();
+    await waitFor(() => {
+      expect(draftRule()).toEqual({ outbound: 'proxy' });
+    });
   });
 
   it('for a rule with other conditions removing rule sets gives no warning', async () => {
@@ -234,7 +228,6 @@ describe('rule conditions in the form', () => {
 
     await selectOption(user, screen.getByRole('combobox', { name: 'Добавить условие' }), 'Домен с поддоменами');
     await user.type(screen.getByRole('textbox', { name: 'Домен с поддоменами' }), 'youtube.com{Enter}googlevideo.com');
-    await user.click(screen.getByRole('button', { name: 'Сохранить в черновик' }));
 
     expect(draftRule()).toEqual({
       rule_set: ['github'],
@@ -252,9 +245,12 @@ describe('rule conditions in the form', () => {
     expect(screen.getByRole('textbox', { name: 'Порт' })).toHaveValue('443');
 
     await user.clear(screen.getByRole('textbox', { name: 'Домен' }));
-    await user.click(screen.getByRole('button', { name: 'Сохранить в черновик' }));
+    // An emptied field leaves the node when it is left, not while it is being typed in.
+    await user.tab();
 
-    expect(draftRule()).toEqual({ port: [443], outbound: 'proxy' });
+    await waitFor(() => {
+      expect(draftRule()).toEqual({ port: [443], outbound: 'proxy' });
+    });
   });
 
   it('a port that is not a number gives an error and writes no edit', async () => {
@@ -269,8 +265,6 @@ describe('rule conditions in the form', () => {
     await user.type(port, 'https');
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Порт — число от 0 до 65535 на строку');
-
-    await user.click(screen.getByRole('button', { name: 'Сохранить в черновик' }));
 
     expect(ConfigDocumentState.getState().draft).toBeNull();
   });
@@ -311,8 +305,6 @@ describe('rule conditions in the form', () => {
 
     expect(within(chosen).getByText('iphone-guest')).toBeInTheDocument();
     expect(within(chosen).getByText('Аренда динамическая, адрес может смениться')).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: 'Сохранить в черновик' }));
 
     expect(draftRule()).toEqual({ rule_set: ['github'], outbound: 'proxy', source_ip_cidr: ['192.168.1.120/32'] });
   });

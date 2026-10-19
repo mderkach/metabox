@@ -38,6 +38,40 @@ function useModelRefresh(transaction: ApplyTransaction | null) {
   );
 }
 
+export interface DeviceRouteTransaction {
+  /** `null` means there were no model changes in this daemon lifetime. */
+  transaction: ApplyTransaction | null;
+  isConfirming: boolean;
+  confirm: () => void;
+}
+
+/**
+ * The running interception change and its confirmation, without the model:
+ * the shell holds the confirmation window on every screen, since checking the
+ * connection on another screen is exactly what the window asks for. The change
+ * id is taken from the daemon status, not from the `PUT` response, so the
+ * window survives a page reload.
+ */
+export function useDeviceRouteTransaction(): DeviceRouteTransaction {
+  const status = useDaemonStatus();
+  const confirm = useConfirmDeviceRoute();
+
+  const id = status.data?.dataplaneTransaction?.id ?? null;
+  const state = useDataplaneTransaction(id);
+  const transaction = state.data ?? status.data?.dataplaneTransaction ?? null;
+
+  useModelRefresh(transaction);
+
+  const confirmMutate = confirm.mutate;
+  const onConfirm = useCallback(() => {
+    if (transaction === null) return;
+
+    confirmMutate(transaction.id);
+  }, [transaction, confirmMutate]);
+
+  return { transaction, isConfirming: confirm.isPending, confirm: onConfirm };
+}
+
 export interface DeviceRouteState {
   /** `null` means the model was not read, and there is nothing to write it from. */
   model: DataplaneModel | null;
@@ -52,24 +86,16 @@ export interface DeviceRouteState {
 }
 
 /**
- * The change id is taken from the daemon status, not from the `PUT` response,
- * so the confirmation window survives a page reload. Config apply blocks the
- * toggles too: the daemon holds both transactions in one cycle and would reject
- * the second with 409.
+ * A running config apply locks the toggles as well: the daemon holds both
+ * transactions in one cycle and would reject the second with 409.
  */
 export function useDeviceRoute(): DeviceRouteState {
   const status = useDaemonStatus();
   const dataplane = useDataplane();
   const change = useChangeDeviceRoute();
-  const confirm = useConfirmDeviceRoute();
-
-  const id = status.data?.dataplaneTransaction?.id ?? null;
-  const state = useDataplaneTransaction(id);
-  const transaction = state.data ?? status.data?.dataplaneTransaction ?? null;
+  const { transaction, isConfirming, confirm } = useDeviceRouteTransaction();
   const model = dataplane.data?.model ?? null;
   const etag = dataplane.data?.etag ?? null;
-
-  useModelRefresh(transaction);
 
   const mutate = change.mutate;
   const onRoute = useCallback(
@@ -81,13 +107,6 @@ export function useDeviceRoute(): DeviceRouteState {
     [model, etag, mutate]
   );
 
-  const confirmMutate = confirm.mutate;
-  const onConfirm = useCallback(() => {
-    if (transaction === null) return;
-
-    confirmMutate(transaction.id);
-  }, [transaction, confirmMutate]);
-
   return {
     model,
     locked:
@@ -97,8 +116,8 @@ export function useDeviceRoute(): DeviceRouteState {
       isApplyActive(status.data?.transaction?.phase),
     foreignService: dataplane.data?.foreignService ?? false,
     transaction,
-    isConfirming: confirm.isPending,
+    isConfirming,
     route: onRoute,
-    confirm: onConfirm,
+    confirm,
   };
 }

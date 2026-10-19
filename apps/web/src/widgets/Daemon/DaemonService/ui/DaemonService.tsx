@@ -29,6 +29,7 @@ import {
 } from '@shared/ui';
 
 import { useLastConfirmedService } from '../lib';
+import { DaemonServiceRestart } from './DaemonServiceRestart';
 import { DaemonServiceStop } from './DaemonServiceStop';
 
 const STATUS_LABEL = {
@@ -147,21 +148,18 @@ export function DaemonService({
         {running && !managed && <span className='text-xs text-muted-foreground'>{t('status.foreign')}</span>}
         <span className='grow' />
         {managed && (
-          <Button
-            variant='outline'
-            size='sm'
+          <DaemonServiceRestart
             disabled={action.isPending}
-            onClick={() => {
+            onConfirm={() => {
               action.mutate(SERVICE_ACTION.Restart);
             }}
-          >
-            {t('action.restart')}
-          </Button>
+          />
         )}
         {managed && (
           <>
-            {/* Stop cuts off routing on the whole router, restart
-                does not. Two identical buttons in a row do not tell these two actions apart. */}
+            {/* Stop cuts off routing until a start, a restart only drops the
+                current connections. Two identical buttons in a row do not tell
+                these two actions apart. */}
             <Separator orientation='vertical' className='mx-0.5 h-5' />
             <DaemonServiceStop
               disabled={action.isPending}
