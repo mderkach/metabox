@@ -6,7 +6,7 @@ import {
   isSectionSettingsRecognized,
   readSectionSettings,
   useConfigDocument,
-  type SettingsSection,
+  type ListSettingsSection,
 } from '@entities/Config';
 import { ConfigSectionForm } from '@features/Config/ConfigNodeForm';
 import { cn } from '@shared/lib/utils';
@@ -21,7 +21,7 @@ import { Badge, Button, SURFACE } from '@shared/ui';
  * The form does not open a section with an unfamiliar field: the schema will not accept it, and
  * not a single field could be saved.
  */
-export function ConfigSectionSettings({ section }: { section: SettingsSection }) {
+export function ConfigSectionSettings({ section }: { section: ListSettingsSection }) {
   const { t } = useTranslation('widgets/Config/ConfigSectionSettings');
   const document = useConfigDocument();
   const [open, setOpen] = useState(false);

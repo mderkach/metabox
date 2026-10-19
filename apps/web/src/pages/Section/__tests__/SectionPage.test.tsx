@@ -55,6 +55,10 @@ function NtpSection() {
   return <SectionNodes section='ntp' />;
 }
 
+function ExperimentalSection() {
+  return <SectionNodes section='experimental' />;
+}
+
 const DNS_TEXT = `{
   "dns": {
     // серверы
@@ -232,6 +236,38 @@ describe('section screen', () => {
     ).toEqual(['    "final": "remote",']);
     expect(draft()).toContain('// серверы');
     expect(findValue(draft(), ['dns', 'servers', 0, 'tag'])).toBe('local');
+  });
+
+  it('experimental opens with a form: the secret is hidden, its edit lands as one line', async () => {
+    const text = `{
+  "experimental": {
+    // панель
+    "clash_api": { "external_controller": "127.0.0.1:9090", "secret": "old" },
+  },
+}`;
+    const user = userEvent.setup();
+
+    serveConfig(text);
+    renderWithRouter(ExperimentalSection);
+
+    const node = within(await screen.findByRole('region', { name: 'experimental' }));
+    const secret = node.getByLabelText('secret');
+
+    expect(screen.getAllByRole('region')).toHaveLength(1);
+    expect(secret).toHaveAttribute('type', 'password');
+
+    await user.clear(secret);
+    await user.type(secret, 'new');
+    await user.click(node.getByRole('button', { name: 'Сохранить в черновик' }));
+
+    await waitFor(() => {
+      expect(findValue(draft(), ['experimental', 'clash_api', 'secret'])).toBe('new');
+    });
+    expect(
+      draft()
+        .split('\n')
+        .filter((line, index) => line !== text.split('\n')[index])
+    ).toEqual(['    "clash_api": { "external_controller": "127.0.0.1:9090", "secret": "new" },']);
   });
 
   it('a node without a tag and type is named by the path in the file, not by the tab name', async () => {

@@ -2,8 +2,16 @@ import { ChevronRight } from 'lucide-react';
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { isNodeRecognized, registryOfSection, sectionNodePath, type GenericSection } from '@entities/Config';
-import { ConfigNodeForm, hasNodeOverride } from '@features/Config/ConfigNodeForm';
+import {
+  isNodeRecognized,
+  isSectionSettingsRecognized,
+  isSettingsSection,
+  registryOfSection,
+  sectionNodePath,
+  toSectionSettings,
+  type GenericSection,
+} from '@entities/Config';
+import { ConfigNodeForm, ConfigSectionForm, hasNodeOverride } from '@features/Config/ConfigNodeForm';
 import { ConfigNodeRawEditor } from '@features/Config/ConfigNodeRaw';
 import { cn } from '@shared/lib/utils';
 import { Badge, Button, SURFACE, Tabs, TabsContent, TabsList, TabsTrigger } from '@shared/ui';
@@ -25,7 +33,9 @@ function isNodeObject(node: unknown): node is Record<string, unknown> {
  * A form is given to a section node with a type registry if the registry
  * policy allows it: an auto-form to any type, "overrides only" to a type with an override. A node its type's schema does not accept gets no form
  * at all: the tab is disabled, the node is marked and opened as text (ADR-0018).
- * Object sections and sections without a registry are edited only as text.
+ * An object section with a settings schema (`experimental`) gets the section
+ * form by the same rule; other object sections and sections without a registry
+ * are edited only as text.
  *
  * With `onOpenChange` the node collapses to a header with the type and address. The collapsed
  * body stays mounted: what was typed in the form is not lost. The state
@@ -56,10 +66,15 @@ export function ConfigNode({
   const registry = registryOfSection(section);
   const path = sectionNodePath(section, index);
   const type: unknown = isNodeObject(node) ? node.type : undefined;
-  const hasForm =
+  const settingsSection = registry === null && isSettingsSection(section) ? section : null;
+  const settings = settingsSection === null ? null : toSectionSettings(settingsSection, node);
+  const hasNodeForm =
     registry !== null &&
     (NODE_FORM_POLICY[registry] === FORM_POLICY.Auto || (typeof type === 'string' && hasNodeOverride(registry, type)));
-  const recognized = hasForm && isNodeRecognized(registry, node);
+  const hasForm = hasNodeForm || settings !== null;
+  const recognized =
+    (hasNodeForm && isNodeRecognized(registry, node)) ||
+    (settingsSection !== null && settings !== null && isSectionSettingsRecognized(settingsSection, settings));
   const [tab, setTab] = useState<string>(recognized ? TAB.Form : TAB.Raw);
   const headingId = useId();
   const bodyId = useId();
@@ -85,8 +100,11 @@ export function ConfigNode({
 
       {/* The form keeps what was typed while the node is checked as text: unmounting erases it. */}
       <TabsContent value={TAB.Form} keepMounted className='pt-3'>
-        {recognized && isNodeObject(node) && (
+        {recognized && hasNodeForm && isNodeObject(node) && (
           <ConfigNodeForm registry={registry} path={path} node={node} builtTags={builtTags} />
+        )}
+        {recognized && settingsSection !== null && settings !== null && (
+          <ConfigSectionForm section={settingsSection} settings={settings} />
         )}
       </TabsContent>
 
