@@ -66,10 +66,7 @@ export function RulePanel({
 }) {
   const { t } = useTranslation('widgets/Rule/RulePanel');
   const [tab, setTab] = useState<string>(recognized ? TAB.Form : TAB.Raw);
-  // The form writes on every change and follows edits of its own node: a
-  // remount on a node change would drop focus after each keystroke. It is
-  // rebuilt only when the document is replaced from outside, by a discard of
-  // the draft or a reread from the device.
+  // Keyed by revision, not by the node: the form writes on every keystroke and would lose focus.
   const revision = ConfigDocumentState.use.revision();
   const headingRef = useFocusReturn<HTMLHeadingElement>();
 

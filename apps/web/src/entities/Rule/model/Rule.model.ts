@@ -76,15 +76,10 @@ export interface NewRulePlace {
 }
 
 /**
- * A new rule goes before the first rule without conditions that sends traffic
- * to an outbound: rules below it never fire, and a rule added at the end of
- * such a list would be dead. It takes that rule's outbound, so until its
- * conditions are set it routes the same traffic the same way. Without such a
- * rule the new one goes to the end with the default route outbound
- * (`fallback`); `null` means there is no outbound to give it.
- *
- * `total` is the number of nodes in `route.rules`, not of rows: a non-object
- * node gets no row but still takes a position.
+ * Before the first unconditional rule to an outbound, with its outbound: rules
+ * below it never fire, and until conditions are set the new rule routes the
+ * same way. Otherwise at the end with `fallback`; `null` means no outbound.
+ * `total` counts nodes, not rows.
  */
 export function newRulePlace(rules: readonly RuleRow[], total: number, fallback: string | null): NewRulePlace | null {
   const catchAll = rules.find((rule) => rule.isCatchAll && rule.targetKind === RULE_TARGET.Outbound);

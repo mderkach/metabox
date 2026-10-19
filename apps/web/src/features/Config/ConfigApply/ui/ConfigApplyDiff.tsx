@@ -36,12 +36,7 @@ const LINE_MARK: Readonly<Record<DiffLine['kind'], string>> = {
   [DIFF_KIND.Removed]: '−',
 };
 
-/**
- * Apply goes through this summary, there is no apply without seeing it: what
- * changes in the rules and lists, then the file text line by line. The text is
- * the file, not the parsed model: the same bytes that are visible here go into
- * Apply.
- */
+/** Apply goes only through this summary. The diff is the file text: these bytes go into Apply. */
 export function ConfigApplyDiff({
   canApply,
   blocked,

@@ -3,15 +3,9 @@ import { useEffect, useRef } from 'react';
 import { DeviceRouteBar, useDeviceRouteTransaction } from '@features/Device/DeviceRoute';
 
 /**
- * The interception change bar floats over the bottom edge of any screen, above
- * the config apply bar: the confirmation window asks to check the connection,
- * and the user goes to another screen to do it. A bar on the devices screen
- * alone would be gone after the first transition, and the daemon would roll
- * the change back.
- *
- * `bottom` is the space the apply bar takes; `onSpaceChange` reports the
- * space from the bar top to the bottom edge, so the screen bottom is not
- * covered.
+ * The interception confirmation on every screen, above the apply bar: the user
+ * leaves the devices screen to check the connection. `bottom` is the apply bar
+ * space; `onSpaceChange` reports the space from this bar's top to the edge.
  */
 export function DeviceRouteLayer({
   bottom,
@@ -46,7 +40,6 @@ export function DeviceRouteLayer({
     [bottom, onSpaceChange]
   );
 
-  // Without the apply bar the layer keeps the same gap to the edge as that bar.
   return (
     <div
       ref={ref}

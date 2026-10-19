@@ -14,11 +14,7 @@ import {
   Button,
 } from '@shared/ui';
 
-/**
- * Restarting sing-box. Asks for confirmation: the restart drops the current
- * connections of all devices, the same cost the interception change dialog
- * names, and one click next to "Stop" must not cut a call off unannounced.
- */
+/** Asks first: a restart drops the current connections of all devices. */
 export function DaemonServiceRestart({ disabled, onConfirm }: { disabled: boolean; onConfirm: () => void }) {
   const { t } = useTranslation('widgets/Daemon/DaemonService');
   const [open, setOpen] = useState(false);

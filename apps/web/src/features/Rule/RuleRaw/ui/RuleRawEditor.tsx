@@ -10,16 +10,9 @@ import { Alert, AlertDescription, AlertTitle, Textarea } from '@shared/ui';
 const JSON_INDENT = 2;
 
 /**
- * Editing a rule node as text.
- *
- * Parsed JSON goes into the draft as it is typed, there is no save step: text
- * that only lives in the field would be lost on closing the panel and left out
- * of Apply. Only unparsed JSON blocks the write. A schema remark
- * does not block the write and is shown as a warning: the validity arbiter is
- * `sing-box check` on the device, not the panel schema, otherwise a node the
- * schema does not know could be neither fixed nor saved.
- *
- * A parse error does not erase the input: otherwise there would be nothing to fix a typo with.
+ * A rule node as text. Parsed JSON goes into the draft as it is typed; only a
+ * parse error stops the write, a schema remark is a warning: `sing-box check`
+ * decides validity.
  */
 export function RuleRawEditor({ index, node }: { index: number; node: unknown }) {
   const { t } = useTranslation('features/Rule/RuleRaw');
@@ -47,7 +40,6 @@ export function RuleRawEditor({ index, node }: { index: number; node: unknown })
 
     const path = ruleNodePath(index);
 
-    // The parsed node is compared, not the text: a reformatting alone is not an edit.
     if (JSON.stringify(parsed) !== JSON.stringify(findValue(ConfigDocumentState.getState().current() ?? '', path))) {
       edit(path, parsed);
     }
@@ -66,8 +58,7 @@ export function RuleRawEditor({ index, node }: { index: number; node: unknown })
         className='min-h-40 resize-none font-mono text-xs'
       />
 
-      {/* The line holds its height without an error: it appears and disappears
-          as the user types, and the content below must not jump. */}
+      {/* Keeps its height while empty: the error comes and goes with typing. */}
       <p role='status' className='min-h-4 text-xs text-destructive'>
         {failure !== null && t('nodeEditor.notWritten', { ns: 'shared', ...failure })}
       </p>

@@ -71,10 +71,7 @@ export interface ConfigApplyState {
   isDirty: boolean;
   /** The draft was started from a different config than the one on the device now. */
   isStale: boolean;
-  /**
-   * There is something to apply, the previous apply has finished, the daemon
-   * answers and the draft text parses.
-   */
+  /** Dirty, idle, the daemon answers and the draft parses. */
   canApply: boolean;
   /** `null` means nothing stands in the way, or there is nothing to apply. */
   blocked: ApplyBlock | null;
@@ -118,8 +115,7 @@ export function useConfigApply(): ConfigApplyState {
   useDocumentRefresh(transaction);
 
   const reachable = useDaemonReachable();
-  // Parsing the whole text is kept out of the keystroke render: in text mode
-  // the draft changes on every character.
+  // Text mode changes the draft on every keystroke: the whole-file parse waits for a deferred render.
   const checkedText = useDeferredValue(text);
   const unparsedLine = useMemo(() => {
     const failure = checkedText === null ? null : firstJsoncError(checkedText);
