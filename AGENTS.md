@@ -53,6 +53,8 @@ One fact, one home; everywhere else, a link. The layer is chosen by the cost of 
 
 TSDoc and godoc do not retell the implementation line by line, only what the signature does not show.
 
+A code comment is written in two cases only: a contract the signature does not show (TSDoc, godoc), or a non-obvious "why": a bug workaround, a protocol requirement, a link to an ADR or issue. One or two sentences; a longer explanation belongs in an ADR or a guide. Not allowed: retelling the neighbouring line, section headers and separators, `Note:` / `Important:`, traces of the edit ("now", "previously", "added", `v2`), a TODO without an addressee, commented-out code. A comment does not state a rule: the rule lives in `AGENTS.md` or a guide.
+
 Technical decisions (test bench setup, a workaround for a platform limitation, a tool choice, the architecture of a part of the system) are recorded as ADRs in `docs/adr/` with the `create-adr` skill. The repository owner sets the `Accepted` status; the agent creates a `Proposed` draft. A decision that changes a requirement edits sections 1–11 of the PRD.
 
 PRD appendix A is closed to new entries: decisions made before ADRs were introduced moved to `docs/adr/`, and the appendix keeps only headings with links to them. Look for decisions in ADRs; do not add to appendix A.

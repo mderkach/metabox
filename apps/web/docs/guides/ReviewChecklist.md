@@ -22,6 +22,8 @@ Only what a human checks. Layer boundaries, file and folder naming, `any`, unsaf
 - [ ] Constants are in `SCREAMING_SNAKE_CASE`, grouped ones are an object with keys in `PascalCase`
 - [ ] No magic strings; anything repeated more than twice is moved into a constant
 - [ ] Custom logs are in upper case and in brackets: `[APPLY] ...`
+- [ ] One component per file; fields and blocks are neighbouring files, helpers are in `model` or `lib`, JSX is not kept in variables ([`AGENTS.md`](../../AGENTS.md))
+- [ ] Comments are only a contract the signature does not show or a non-obvious "why", one or two sentences ([root `AGENTS.md`](../../../../AGENTS.md))
 
 ## Maintainability
 
