@@ -366,6 +366,96 @@ function commentLines(text: string): string[] {
   return text.split(/\r?\n/).filter((line) => /^\s*(?:\/\/|\/\*)/.test(line));
 }
 
+const WIREGUARD_TEXT = `{
+  "endpoints": [
+    {
+      "type": "wireguard",
+      "tag": "wg",
+      "address": "10.0.0.2/32",
+      "peers": [{ "address": "b.example", "port": 51820, "public_key": "pub", "pre_shared_key": "psk-1" }],
+    },
+  ],
+}`;
+
+const WIREGUARD: JSONPath = ['endpoints', 0];
+
+describe('JSON text field with secrets', () => {
+  beforeEach(() => {
+    ConfigDocumentState.getState().reset();
+    ConfigDocumentState.getState().load(WIREGUARD_TEXT);
+  });
+
+  it('shows the secrets inside masked and read-only until revealed', async () => {
+    const user = userEvent.setup();
+
+    render(<NodeFromStore registry={NODE_REGISTRY.Endpoint} path={WIREGUARD} />);
+
+    const peers = screen.getByRole('textbox', { name: 'peers' });
+
+    expect(peers).toHaveAttribute('readonly');
+    expect(peers).not.toHaveDisplayValue(/psk-1/);
+    expect(peers).toHaveDisplayValue(/"public_key": "pub"/);
+
+    await user.click(screen.getByRole('button', { name: 'Показать peers' }));
+
+    const revealed = screen.getByRole('textbox', { name: 'peers' });
+
+    expect(revealed).not.toHaveAttribute('readonly');
+    expect(revealed).toHaveDisplayValue(/"pre_shared_key": "psk-1"/);
+
+    await user.click(screen.getByRole('button', { name: 'Скрыть peers' }));
+
+    expect(screen.getByRole('textbox', { name: 'peers' })).toHaveAttribute('readonly');
+  });
+
+  it('the mask does not reach the draft: an edit of a neighbouring field keeps the secret', async () => {
+    const user = userEvent.setup();
+
+    render(<NodeFromStore registry={NODE_REGISTRY.Endpoint} path={WIREGUARD} />);
+
+    const address = screen.getByRole('textbox', { name: 'address' });
+
+    await user.clear(address);
+    await user.type(address, '10.0.0.3/32');
+    await user.click(save());
+
+    await waitFor(() => {
+      expect(findValue(draft(), [...WIREGUARD, 'address'])).toBe('10.0.0.3/32');
+    });
+    expect(findValue(draft(), [...WIREGUARD, 'peers', 0, 'pre_shared_key'])).toBe('psk-1');
+  });
+
+  it('unparsed text of a revealed field that lost its secrets still stops the write', async () => {
+    const user = userEvent.setup();
+
+    render(<NodeFromStore registry={NODE_REGISTRY.Endpoint} path={WIREGUARD} />);
+
+    await user.click(screen.getByRole('button', { name: 'Показать peers' }));
+
+    const peers = screen.getByRole('textbox', { name: 'peers' });
+
+    await user.clear(peers);
+    await user.paste('[{ "address": "c.example" }');
+
+    expect(screen.queryByRole('button', { name: 'Скрыть peers' })).not.toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('JSON не разобран');
+
+    await user.click(save());
+
+    expect(ConfigDocumentState.getState().draft).toBeNull();
+  });
+
+  it('a JSON field without secrets has no show button', () => {
+    ConfigDocumentState.getState().reset();
+    ConfigDocumentState.getState().load(WIREGUARD_TEXT.replace(', "pre_shared_key": "psk-1"', ''));
+
+    render(<NodeFromStore registry={NODE_REGISTRY.Endpoint} path={WIREGUARD} />);
+
+    expect(screen.getByRole('textbox', { name: 'peers' })).not.toHaveAttribute('readonly');
+    expect(screen.queryByRole('button', { name: 'Показать peers' })).not.toBeInTheDocument();
+  });
+});
+
 describe('node form on the config corpus', () => {
   beforeEach(() => {
     ConfigDocumentState.getState().reset();

@@ -50,13 +50,15 @@ export type {
 export { findUnbuiltNodes, findUnbuiltOptions, unbuiltOptionOf } from './model/Config.build';
 export { compactNode, diffNode } from './model/Config.patch';
 export {
+  isListSettingsSection,
   isSectionSettingsRecognized,
   isSettingsSection,
   readSectionSettings,
   sectionSettingsPath,
   sectionSettingsSchema,
+  toSectionSettings,
 } from './model/Config.settings';
-export type { SettingsSection } from './model/Config.settings';
+export type { ListSettingsSection, SettingsSection } from './model/Config.settings';
 export type { NodeEdit } from './model/Config.patch';
 export {
   buildTagOfType,

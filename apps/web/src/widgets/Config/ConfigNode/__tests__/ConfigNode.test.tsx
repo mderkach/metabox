@@ -63,6 +63,35 @@ describe('section node', () => {
     expect(screen.getByRole('spinbutton', { name: 'listen_port' })).toHaveValue(9091);
   });
 
+  it('the experimental section opens with a form that hides the clash_api secret', async () => {
+    const user = userEvent.setup();
+    const node = { clash_api: { external_controller: '127.0.0.1:9090', secret: 's3cr3t' } };
+
+    render(<ConfigNode section={CONFIG_SECTION.Experimental} index={0} node={node} name='experimental' />);
+
+    expect(screen.getByRole('tab', { name: 'Форма' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.queryByRole('textbox', { name: 'Узел experimental текстом' })).not.toBeInTheDocument();
+
+    const secret = screen.getByLabelText('secret');
+
+    expect(secret).toHaveAttribute('type', 'password');
+    expect(secret).toHaveValue('s3cr3t');
+
+    await user.click(screen.getByRole('button', { name: 'Показать secret' }));
+
+    expect(secret).toHaveAttribute('type', 'text');
+  });
+
+  it('an experimental section with a key the schema does not know opens as text', () => {
+    const node = { vendor_api: { enabled: true } };
+
+    render(<ConfigNode section={CONFIG_SECTION.Experimental} index={0} node={node} name='experimental' />);
+
+    expect(screen.getByText('UI не покрывает')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Форма' })).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('textbox', { name: 'Узел experimental текстом' })).toBeInTheDocument();
+  });
+
   it('any other service is edited only as text: services have no auto forms', () => {
     render(
       <ConfigNode

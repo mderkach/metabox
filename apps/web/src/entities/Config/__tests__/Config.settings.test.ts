@@ -4,11 +4,13 @@ import { toFieldPlan } from '@shared/lib/schemaShape';
 
 import { CONFIG_SECTION } from '../model/Config.model';
 import {
+  isListSettingsSection,
   isSectionSettingsRecognized,
   isSettingsSection,
   readSectionSettings,
   sectionSettingsPath,
   sectionSettingsSchema,
+  toSectionSettings,
 } from '../model/Config.settings';
 
 const TEXT = `{
@@ -20,8 +22,23 @@ describe('section scalars', () => {
   it('recognizes sections with scalars', () => {
     expect(isSettingsSection(CONFIG_SECTION.Route)).toBe(true);
     expect(isSettingsSection(CONFIG_SECTION.Dns)).toBe(true);
+    expect(isSettingsSection(CONFIG_SECTION.Experimental)).toBe(true);
     expect(isSettingsSection(CONFIG_SECTION.Log)).toBe(false);
     expect(sectionSettingsPath(CONFIG_SECTION.Route)).toEqual(['route']);
+  });
+
+  it('only sections with lists get the card above the list', () => {
+    expect(isListSettingsSection(CONFIG_SECTION.Route)).toBe(true);
+    expect(isListSettingsSection(CONFIG_SECTION.Dns)).toBe(true);
+    expect(isListSettingsSection(CONFIG_SECTION.Experimental)).toBe(false);
+  });
+
+  it('an object section is read whole', () => {
+    const experimental = { clash_api: { secret: 's3cr3t' }, cache_file: { enabled: true } };
+
+    expect(toSectionSettings(CONFIG_SECTION.Experimental, experimental)).toEqual(experimental);
+    expect(isSectionSettingsRecognized(CONFIG_SECTION.Experimental, experimental)).toBe(true);
+    expect(isSectionSettingsRecognized(CONFIG_SECTION.Experimental, { vendor_api: {} })).toBe(false);
   });
 
   it('reads scalars without lists', () => {

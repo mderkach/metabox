@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import {
   GENERIC_SECTIONS,
   isGenericSection,
+  isListSettingsSection,
   isSettingsSection,
   readNodeTags,
   readSectionNodes,
@@ -56,7 +57,7 @@ export function SectionPage() {
  * A node of a section with a type registry is added by a form in the panel beside the list
  * (ADR-0037); below `lg` the panel opens as a sheet. Object sections and lists without
  * a registry are extended only as text. In `dns` the section's own scalars
- * sit above the servers.
+ * sit above the servers; an object section with a settings form opens it in its node.
  */
 export function SectionNodes({ section }: { section: GenericSection }) {
   const { t } = useTranslation('pages/Section');
@@ -113,7 +114,7 @@ export function SectionNodes({ section }: { section: GenericSection }) {
 
       {document.query.isLoadingError && <QueryFailure messageKey='source.config' query={document.query} />}
 
-      {isSettingsSection(section) && <ConfigSectionSettings section={section} />}
+      {isSettingsSection(section) && isListSettingsSection(section) && <ConfigSectionSettings section={section} />}
 
       {loaded && addable && nodes.length > 0 && <div className='flex justify-end'>{addButton}</div>}
 
