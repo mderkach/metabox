@@ -1,12 +1,60 @@
 name: CI
 
 on:
+  # A branch with a PR is checked by the pull_request event alone: an unfiltered push
+  # trigger would run every such push twice.
   push:
+    branches: [main]
   pull_request:
 
+# A new push to a PR cancels the run still checking its previous commit; on main every
+# merge commit keeps its verdict.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  # Fast checks: types, linters, unit tests. They need no target environment.
-  checks:
+  go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # setup-go saves the cache once per key, so a key shared by two jobs loses the modules of
+      # the job that finishes second. The Makefile pins golangci-lint, which `go run` fetches.
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: .go-version
+          cache-dependency-path: |
+            Makefile
+            apps/metaboxd/go.mod
+            tools/schemagen/go.mod
+            tools/schemagen/go.sum
+
+      # govet is part of the golangci-lint set, a separate step is not needed. The generator
+      # is checked with the fork's tags, which `go vet` did not do here.
+      - name: Go lint
+        run: make lint
+
+      # -race catches races that are not visible on a single developer core.
+      - run: cd apps/metaboxd && go test -race ./...
+
+  # The generator is a separate module and builds the fork; `go test` in the daemon does not see it.
+  schemagen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: .go-version
+          cache-dependency-path: |
+            tools/schemagen/go.mod
+            tools/schemagen/go.sum
+
+      - name: Schemagen tests
+        run: make test-schemagen
+
+  web:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -14,13 +62,11 @@ jobs:
           # commitlint checks the whole commit range of the PR, so history is needed
           fetch-depth: 0
 
+      # Go is needed only for `make daemon` at the end, and the daemon has no modules to cache.
       - uses: actions/setup-go@v6
         with:
           go-version-file: .go-version
-          # The daemon has no dependencies and no go.sum, so the cache key is computed from
-          # the generator manifest: without a path setup-go looks for go.mod in the root, does not
-          # find it and every run downloads the modules again.
-          cache-dependency-path: tools/schemagen/go.sum
+          cache: false
 
       - uses: pnpm/action-setup@v6
 
@@ -32,16 +78,6 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # govet is part of the golangci-lint set, a separate step is not needed. The generator
-      # is checked with the fork's tags, which `go vet` did not do here.
-      - name: Go lint
-        run: make lint
-
-      # -race catches races that are not visible on a single developer core.
-      - run: cd apps/metaboxd && go test -race ./...
-      # The generator is a separate module, the step above does not see it.
-      - name: Schemagen tests
-        run: make test-schemagen
       - name: Commitlint
         if: github.event_name == 'pull_request'
         run: >
@@ -64,6 +100,16 @@ jobs:
       # Full build: only here it is checked that the built SPA reaches
       # go:embed and ends up in the binary (AC-17).
       - run: make daemon
+
+  # The main branch rule requires a check named `checks`. A job skipped because a dependency
+  # failed counts as passed for the rule, so the job always runs and fails by itself.
+  checks:
+    runs-on: ubuntu-latest
+    needs: [go, schemagen, web]
+    if: always()
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
+        run: exit 1
 
   # AC-22: integration run on the target environment image of the same OpenWrt
   # branch as on the device. CI has no device firmware, so the base is
