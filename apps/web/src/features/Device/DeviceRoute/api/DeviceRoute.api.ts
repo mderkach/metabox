@@ -24,8 +24,6 @@ export function useChangeDeviceRoute() {
     meta: {
       showError: true,
       errorMessageKey: 'toast.device.route.failed',
-      showSuccess: true,
-      successMessageKey: 'toast.device.route.accepted',
     },
     onSuccess: onTransaction,
     onError: (error) => {

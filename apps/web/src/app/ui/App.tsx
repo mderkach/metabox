@@ -1,6 +1,7 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
 import { ThemeProvider } from 'next-themes';
+import { useTranslation } from 'react-i18next';
 
 import { QueryClientInstance } from '@shared/api';
 import { Toaster } from '@shared/ui';
@@ -13,6 +14,8 @@ function reloadRoutes() {
 }
 
 export function App() {
+  const { t } = useTranslation('app');
+
   return (
     <ThemeProvider attribute='class' defaultTheme='dark' enableSystem disableTransitionOnChange>
       <QueryClientProvider client={QueryClientInstance}>
@@ -21,7 +24,8 @@ export function App() {
             <RouterProvider router={Router} />
           </AuthGate>
         </div>
-        <Toaster />
+        {/* At the top: the apply and interception bars hold the bottom edge with their buttons. */}
+        <Toaster position='top-right' containerAriaLabel={t('toasts.label')} />
       </QueryClientProvider>
     </ThemeProvider>
   );

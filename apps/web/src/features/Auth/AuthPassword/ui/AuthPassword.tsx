@@ -3,7 +3,17 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@entities/Auth';
-import { Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@shared/ui';
+import {
+  Button,
+  Dialog,
+  DIALOG_SIZE,
+  DialogCloseButton,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@shared/ui';
 
 import { AuthPasswordForm } from './AuthPasswordForm';
 
@@ -39,7 +49,8 @@ export function AuthPassword({ collapsed = false }: { collapsed?: boolean }) {
         <KeyRound aria-hidden='true' className='size-3.5' />
         {!collapsed && label}
       </DialogTrigger>
-      <DialogContent className='sm:max-w-sm'>
+      <DialogContent showCloseButton={false} className={DIALOG_SIZE.Form}>
+        <DialogCloseButton label={t('action.close', { ns: 'shared' })} />
         <DialogHeader>
           <DialogTitle>{t(protectedPanel ? 'title.change' : 'title.set')}</DialogTitle>
           <DialogDescription>{t(protectedPanel ? 'description.change' : 'description.set')}</DialogDescription>

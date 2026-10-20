@@ -3,9 +3,6 @@
     "apply": {
       "confirm": {
         "done": "Link confirmed, the config stays"
-      },
-      "start": {
-        "accepted": "Config accepted, applying"
       }
     },
     "connection": {
@@ -31,8 +28,7 @@
       },
       "route": {
         "failed": "Could not change the device interception",
-        "confirmed": "Connection confirmed, the setting stays",
-        "accepted": "Setting accepted, sing-box is restarting"
+        "confirmed": "Connection confirmed, the setting stays"
       }
     },
     "log": {
@@ -217,7 +213,8 @@
   "soon": "soon",
   "action": {
     "cancel": "Cancel",
-    "closePanel": "Close the panel"
+    "closePanel": "Close the panel",
+    "close": "Close"
   },
   "section": {
     "overview": "Overview",

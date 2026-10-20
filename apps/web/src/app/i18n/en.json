@@ -22,5 +22,8 @@
   "drift": {
     "newer": "The router runs sing-box {{binary}}, the forms target {{schema}}. Edit new fields in “Text” mode.",
     "older": "The router runs sing-box {{binary}}, the forms target {{schema}}. A field it does not know fails the check on apply."
+  },
+  "toasts": {
+    "label": "Notifications"
   }
 }

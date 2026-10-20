@@ -6,6 +6,8 @@ import { DIFF_KIND, toDiffHunks, type DiffLine } from '@shared/lib/diff';
 import {
   Button,
   Dialog,
+  DIALOG_SIZE,
+  DialogCloseButton,
   DialogClose,
   DialogContent,
   DialogDescription,
@@ -57,7 +59,8 @@ export function ConfigApplyDiff({
     <Dialog>
       <DialogTrigger render={<Button size='sm' />}>{t('bar.apply')}</DialogTrigger>
 
-      <DialogContent className='sm:max-w-3xl'>
+      <DialogContent showCloseButton={false} className={DIALOG_SIZE.Document}>
+        <DialogCloseButton label={t('action.close', { ns: 'shared' })} />
         <DialogHeader>
           <DialogTitle>{t('diff.title')}</DialogTitle>
           <DialogDescription>{t('diff.description')}</DialogDescription>

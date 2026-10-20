@@ -3,16 +3,8 @@ import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
   Button,
+  ConfirmDialog,
   DESTRUCTIVE_OUTLINE,
   DropdownMenu,
   DropdownMenuContent,
@@ -48,11 +40,6 @@ export function ConnectionCloseAll({
   const [open, setOpen] = useState(false);
   const menuTrigger = useRef<HTMLButtonElement>(null);
 
-  const onConfirmClick = useCallback(() => {
-    setOpen(false);
-    onConfirm();
-  }, [onConfirm]);
-
   const onMenuItemClick = useCallback(() => {
     setOpen(true);
   }, []);
@@ -74,29 +61,24 @@ export function ConnectionCloseAll({
         </DropdownMenu>
       )}
 
-      <AlertDialog open={open} onOpenChange={setOpen}>
-        {!compact && (
-          <AlertDialogTrigger
-            render={<Button variant='outline' size='sm' disabled={disabled} className={DESTRUCTIVE_OUTLINE} />}
-          >
-            {t('closeAll.action')}
-          </AlertDialogTrigger>
-        )}
-
-        <AlertDialogContent finalFocus={compact ? menuTrigger : undefined}>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('closeAll.title')}</AlertDialogTitle>
-            <AlertDialogDescription>{t('closeAll.description', { count })}</AlertDialogDescription>
-          </AlertDialogHeader>
-
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t('action.cancel', { ns: 'shared' })}</AlertDialogCancel>
-            <AlertDialogAction variant='destructive' onClick={onConfirmClick}>
-              {t('closeAll.confirm')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        trigger={
+          compact ? undefined : (
+            <Button variant='outline' size='sm' disabled={disabled} className={DESTRUCTIVE_OUTLINE}>
+              {t('closeAll.action')}
+            </Button>
+          )
+        }
+        open={open}
+        onOpenChange={setOpen}
+        title={t('closeAll.title')}
+        description={t('closeAll.description', { count })}
+        cancelLabel={t('action.cancel', { ns: 'shared' })}
+        confirmLabel={t('closeAll.confirm')}
+        destructive
+        finalFocus={compact ? menuTrigger : undefined}
+        onConfirm={onConfirm}
+      />
     </>
   );
 }

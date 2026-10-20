@@ -2,17 +2,7 @@ import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ACL_MODE, ROUTE_REASON, routeReason, type DataplaneModel, type RouteSource } from '@entities/Dataplane';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  Switch,
-} from '@shared/ui';
+import { ConfirmDialog, Switch } from '@shared/ui';
 
 import { DeviceRouteReason } from './DeviceRouteReason';
 
@@ -77,12 +67,7 @@ export function DeviceRouteSwitch({
   }
 
   return (
-    <AlertDialog
-      open={target !== null}
-      onOpenChange={(open) => {
-        if (!open) setTarget(null);
-      }}
-    >
+    <>
       <span className='flex items-center gap-2'>
         <Switch
           checked={reason !== null}
@@ -94,25 +79,19 @@ export function DeviceRouteSwitch({
         {note}
       </span>
 
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{t(target === true ? 'dialog.on' : 'dialog.off', { device: label })}</AlertDialogTitle>
-          <AlertDialogDescription>{t('dialog.description')}</AlertDialogDescription>
-        </AlertDialogHeader>
-
-        <AlertDialogFooter>
-          <AlertDialogCancel>{t('dialog.cancel')}</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={() => {
-              if (target !== null) onRoute(source, target);
-
-              setTarget(null);
-            }}
-          >
-            {t('dialog.apply')}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+      <ConfirmDialog
+        open={target !== null}
+        onOpenChange={(open) => {
+          if (!open) setTarget(null);
+        }}
+        title={t(target === true ? 'dialog.on' : 'dialog.off', { device: label })}
+        description={t('dialog.description')}
+        cancelLabel={t('dialog.cancel')}
+        confirmLabel={t('dialog.apply')}
+        onConfirm={() => {
+          if (target !== null) onRoute(source, target);
+        }}
+      />
+    </>
   );
 }

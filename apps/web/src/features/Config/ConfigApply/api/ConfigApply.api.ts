@@ -4,14 +4,15 @@ import { applyConfig, confirmApply, restoreConfigVersion, useSaveApplyTransactio
 
 /**
  * Applying a draft. No retries: a repeat would start a second cycle on the
- * device (Query.md). The body is the draft text, not reassembled JSON.
+ * device (Query.md). The body is the draft text, not reassembled JSON. No
+ * success toast: the apply bar shows the accepted start itself.
  */
 export function useApplyConfig() {
   const onTransaction = useSaveApplyTransaction();
 
   return useMutation({
     mutationFn: applyConfig,
-    meta: { showError: true, showSuccess: true, successMessageKey: 'toast.apply.start.accepted' },
+    meta: { showError: true },
     onSuccess: onTransaction,
   });
 }
@@ -32,7 +33,7 @@ export function useRestoreConfigVersion() {
 
   return useMutation({
     mutationFn: restoreConfigVersion,
-    meta: { showError: true, showSuccess: true, successMessageKey: 'toast.apply.start.accepted' },
+    meta: { showError: true },
     onSuccess: onTransaction,
   });
 }

@@ -71,7 +71,7 @@ describe('useChangeDeviceRoute', () => {
     expect(toast.error).toHaveBeenCalledWith('Сменить перехват устройства не удалось: применение уже идёт');
   });
 
-  it('announces an accepted change with a toast, the confirmation with its own', async () => {
+  it('announces only the confirmation with a toast: the bar shows the accepted change', async () => {
     const change = renderHook(useChangeDeviceRoute, { wrapper: AppQuery });
 
     change.result.current.mutate({ model: MODEL, base: BASE });
@@ -79,7 +79,7 @@ describe('useChangeDeviceRoute', () => {
     await waitFor(() => {
       expect(change.result.current.isSuccess).toBe(true);
     });
-    expect(toast.success).toHaveBeenCalledWith('Настройка принята, sing-box перезапускается');
+    expect(toast.success).not.toHaveBeenCalled();
 
     const confirm = renderHook(useConfirmDeviceRoute, { wrapper: AppQuery });
 

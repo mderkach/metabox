@@ -85,3 +85,10 @@ export const PENDING_REVEAL = 'animate-in fade-in fill-mode-backwards delay-200 
  */
 export const SHEET_BOTTOM =
   'duration-(--motion-sheet-enter) ease-(--motion-ease-out) data-ending-style:duration-(--motion-sheet-exit) data-ending-style:opacity-100 data-starting-style:opacity-100 data-[side=bottom]:data-ending-style:translate-y-full data-[side=bottom]:data-starting-style:translate-y-full motion-reduce:transition-none';
+
+/** Dialog widths by content: a form, a list of a few rows, a document such as a diff. */
+export const DIALOG_SIZE = {
+  Form: 'sm:max-w-sm',
+  List: 'sm:max-w-xl',
+  Document: 'sm:max-w-3xl',
+} as const;

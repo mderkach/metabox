@@ -1,19 +1,6 @@
-import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-  Button,
-  DESTRUCTIVE_OUTLINE,
-} from '@shared/ui';
+import { Button, ConfirmDialog, DESTRUCTIVE_OUTLINE } from '@shared/ui';
 
 /**
  * Discard of the whole draft.
@@ -25,32 +12,19 @@ import {
  */
 export function ConfigApplyDiscard({ label, onDiscard }: { label?: string; onDiscard: () => void }) {
   const { t } = useTranslation('features/Config/ConfigApply');
-  const [open, setOpen] = useState(false);
-
-  const onConfirmClick = useCallback(() => {
-    setOpen(false);
-    onDiscard();
-  }, [onDiscard]);
-
   return (
-    <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogTrigger render={<Button variant='outline' size='sm' className={DESTRUCTIVE_OUTLINE} />}>
-        {label ?? t('bar.discard')}
-      </AlertDialogTrigger>
-
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{t('discard.title')}</AlertDialogTitle>
-          <AlertDialogDescription>{t('discard.description')}</AlertDialogDescription>
-        </AlertDialogHeader>
-
-        <AlertDialogFooter>
-          <AlertDialogCancel>{t('discard.cancel')}</AlertDialogCancel>
-          <AlertDialogAction variant='destructive' onClick={onConfirmClick}>
-            {t('discard.confirm')}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmDialog
+      trigger={
+        <Button variant='outline' size='sm' className={DESTRUCTIVE_OUTLINE}>
+          {label ?? t('bar.discard')}
+        </Button>
+      }
+      title={t('discard.title')}
+      description={t('discard.description')}
+      cancelLabel={t('discard.cancel')}
+      confirmLabel={t('discard.confirm')}
+      destructive
+      onConfirm={onDiscard}
+    />
   );
 }
