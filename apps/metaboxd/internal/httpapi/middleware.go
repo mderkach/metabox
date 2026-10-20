@@ -130,14 +130,19 @@ func hostAllowed(hostport, allowedOrigin string) bool {
 // checkOrigin protects mutating requests from a foreign page in the owner's browser.
 // Without a password it is the only protection: a foreign page could otherwise apply a
 // config with the owner's own request.
+//
+// The MCP endpoint is checked on every method but accepts a request without Origin: an
+// agent is not a browser and sends none, and a foreign page cannot attach the token
+// header without a CORS preflight, which the daemon never answers.
 func checkOrigin(log *slog.Logger, allowedOrigin string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !mutating(r.Method) {
+		origin := r.Header.Get("Origin")
+		agent := r.URL.Path == mcpPath
+
+		if (!agent && !mutating(r.Method)) || (agent && origin == "") {
 			next.ServeHTTP(w, r)
 			return
 		}
-
-		origin := r.Header.Get("Origin")
 
 		// A relaxation for the origin set by a flag: compared whole,
 		// with scheme and port.

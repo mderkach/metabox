@@ -107,6 +107,10 @@ export const LEVEL = [
   'panic',
 ] as const
 
+export const MCP_PERMISSION = [
+  'read',
+] as const
+
 export const CHECK_NAME = [
   'redirect_port',
   'tproxy_port',
@@ -482,6 +486,23 @@ export const PasswordChangeSchema = z.object({
   password: z.string(),
 })
 
+/** MCP is the response of `GET /api/mcp`. */
+export const MCPSchema = z.object({
+  /** Enabled means the endpoint serves a request with the token. While false it answers 404, as an unknown path. */
+  enabled: z.boolean(),
+  /** Endpoint is the path of the MCP endpoint on the panel address. */
+  endpoint: z.string(),
+  /** Permissions are what the token allows. Empty while MCP is disabled. */
+  permissions: z.array(z.string()),
+})
+
+/** MCPToken is the response of `POST /api/mcp/token`: a new token, which enables MCP and invalidates the previous token. The daemon keeps only its hash, so the token is shown once; the agent sends it as `Authorization: Bearer <token>`. */
+export const MCPTokenSchema = z.object({
+  token: z.string(),
+  endpoint: z.string(),
+  permissions: z.array(z.string()),
+})
+
 /** Load is the average load. It cannot be converted to percent: it is the run queue length, and on four cores a value of 4.0 means full occupancy. */
 export const LoadSchema = z.object({
   one: z.number(),
@@ -726,6 +747,8 @@ export type LogEventWire = z.infer<typeof LogEventSchema>
 export type LoginWire = z.infer<typeof LoginSchema>
 export type LogsClearedWire = z.infer<typeof LogsClearedSchema>
 export type LogsWire = z.infer<typeof LogsSchema>
+export type MCPTokenWire = z.infer<typeof MCPTokenSchema>
+export type MCPWire = z.infer<typeof MCPSchema>
 export type MatchWire = z.infer<typeof MatchSchema>
 export type MemoryWire = z.infer<typeof MemorySchema>
 export type MirrorWire = z.infer<typeof MirrorSchema>

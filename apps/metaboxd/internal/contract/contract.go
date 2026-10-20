@@ -305,6 +305,34 @@ type PasswordChange struct {
 	Password string `json:"password"`
 }
 
+// MCPPermission is what an MCP access token allows. The set is closed: a tool exists in
+// the MCP server only for a token whose permissions cover it.
+type MCPPermission string
+
+// MCPRead allows the read-only tools: state, connections, nodes, config versions, the
+// sing-box log and diagnostics.
+const MCPRead MCPPermission = "read"
+
+// MCP is the response of `GET /api/mcp`.
+type MCP struct {
+	// Enabled means the endpoint serves a request with the token. While false it answers
+	// 404, as an unknown path.
+	Enabled bool `json:"enabled"`
+	// Endpoint is the path of the MCP endpoint on the panel address.
+	Endpoint string `json:"endpoint"`
+	// Permissions are what the token allows. Empty while MCP is disabled.
+	Permissions []MCPPermission `json:"permissions"`
+}
+
+// MCPToken is the response of `POST /api/mcp/token`: a new token, which enables MCP and
+// invalidates the previous token. The daemon keeps only its hash, so the token is
+// shown once; the agent sends it as `Authorization: Bearer <token>`.
+type MCPToken struct {
+	Token       string          `json:"token"`
+	Endpoint    string          `json:"endpoint"`
+	Permissions []MCPPermission `json:"permissions"`
+}
+
 // Dataplane is the response of `GET /api/dataplane`: the dataplane model from UCI and
 // whether its rules stand on the device.
 type Dataplane struct {

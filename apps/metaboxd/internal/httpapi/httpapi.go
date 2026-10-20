@@ -143,6 +143,9 @@ type Options struct {
 	// Auth guards the panel with an optional password. nil means there is no guard: the
 	// API is open and there are no login handlers.
 	Auth Guard
+	// MCP serves agents at /mcp behind its own token. nil means there is no MCP: the
+	// endpoint answers as an unknown path and there are no settings handlers.
+	MCP MCP
 	// ConfigPath is the path of the file the daemon owns. The panel shows it
 	// as a fact about the device, and it is set by the flags `-config-dir` and
 	// `-config-name`: without this field the interface would show the default
@@ -214,6 +217,7 @@ type Server struct {
 	logs           LogReader
 	diag           Diagnoser
 	auth           Guard
+	mcp            MCP
 	configPath     string
 	handler        http.Handler
 }
@@ -244,6 +248,7 @@ func NewServer(applier Applier, reader ConfigReader, log *slog.Logger, opts Opti
 		logs:           opts.Logs,
 		diag:           opts.Diag,
 		auth:           opts.Auth,
+		mcp:            opts.MCP,
 		configPath:     opts.ConfigPath,
 	}
 	s.handler = s.routes()
@@ -316,6 +321,14 @@ func (s *Server) routes() http.Handler {
 		mux.HandleFunc("POST /api/auth/login", noStore(s.handleLogin))
 		mux.HandleFunc("POST /api/auth/logout", noStore(s.handleLogout))
 		mux.HandleFunc("PUT /api/auth/password", noStore(s.handlePassword))
+	}
+
+	mux.HandleFunc(mcpPath, s.handleMCP)
+
+	if s.mcp != nil {
+		mux.HandleFunc("GET /api/mcp", noStore(s.handleMCPState))
+		mux.HandleFunc("POST /api/mcp/token", noStore(s.handleMCPToken))
+		mux.HandleFunc("DELETE /api/mcp/token", noStore(s.handleMCPDisable))
 	}
 
 	if s.service != nil {

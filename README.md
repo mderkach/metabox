@@ -39,6 +39,7 @@ The package also ships its own sing-box service and LAN interception (nftables, 
 - Devices from DHCP leases, with a per-device switch to route it through sing-box
 - Overview: traffic, connections, top devices and nodes, router load, temperature and memory
 - sing-box log and interception diagnostics
+- MCP endpoint for AI agents such as Claude Code: they read the router state through typed tools, read-only, behind a separate token
 - Light and dark theme, English and Russian, desktop and phone layouts
 
 ## Preview
@@ -135,6 +136,18 @@ uci commit metabox
 ```
 
 With `acl_mode 'listed'` (default) only devices enabled on the Devices screen or listed in `source_ip` and `source_mac` go through sing-box. With `all`, every device on `br-lan` does.
+
+### AI agents over MCP
+
+The daemon serves an [MCP](https://modelcontextprotocol.io) endpoint at `/mcp`, off by default. Turn it on with **MCP access** at the bottom of the sidebar: the panel shows a token once, together with the command for Claude Code:
+
+```sh
+claude mcp add --transport http metabox http://192.168.1.1:8088/mcp --header "Authorization: Bearer <token>"
+```
+
+The agent can then ask why a site goes through a given rule, which connections a device has, which nodes respond, what earlier config versions contained, and what the sing-box log and interception diagnostics say. Access is read-only: there are no tools that change the config or the service. Secrets in config fragments are masked; the sing-box log tail is returned as is.
+
+The token does not depend on the panel password and does not open the panel. A new token makes the old one stop working; **Disable** in the same dialog turns MCP off. Over SSH: `rm /etc/metabox/mcp.json && /etc/init.d/metaboxd restart`.
 
 ## Update and removal
 

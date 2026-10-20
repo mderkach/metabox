@@ -111,6 +111,18 @@ A wrong password is 403, not 401: the panel answers 401 by showing the login scr
 
 The session is the `metabox_session` cookie with `HttpOnly`, `SameSite=Strict`, `Path=/` and without `Secure`: the panel is served over http, and a browser drops a `Secure` cookie on such a page. `EventSource` sends it like any same-origin request. The session is checked when the request starts: a stream opened before logout runs until it closes.
 
+## MCP
+
+`/mcp` serves agents over MCP, streamable HTTP without sessions; the server and its tools live in `internal/mcp`, the only package that imports the SDK ([ADR-0055](../../../../docs/adr/ADR-0055-embed-a-read-only-mcp-server-in-the-daemon-with-the-official-go-sdk.md)). The path is outside `/api/`, so `requireSession` does not apply and the panel cookie does not open it; the token is checked by the handler, so it does not open `/api/*`. While MCP is off the path answers as an unknown one, with the panel page; without the token or with a wrong one, 401 `unauthorized` with `WWW-Authenticate: Bearer`. `checkHost` applies as everywhere. `checkOrigin` checks every method on `/mcp`, rejects a foreign `Origin` with 403 and accepts a request without `Origin`: an agent sends none, and a foreign page cannot attach the token header without a CORS preflight.
+
+| Endpoint                | Body | Answer                                                                   |
+| ----------------------- | ---- | ------------------------------------------------------------------------ |
+| `GET /api/mcp`          |      | `{enabled, endpoint, permissions}`                                       |
+| `POST /api/mcp/token`   |      | `{token, endpoint, permissions}`: enables MCP, invalidates the old token |
+| `DELETE /api/mcp/token` |      | 204, MCP is off                                                          |
+
+The token is shown once: the daemon keeps its SHA-256 in `mcp.json` of the service directory. The answers carry `Cache-Control: no-store`.
+
 ## Server and timeouts
 
 ```go

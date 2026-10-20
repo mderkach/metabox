@@ -1,0 +1,47 @@
+{
+  "trigger": "MCP access",
+  "title": "MCP access",
+  "description": {
+    "off": "MCP lets AI agents such as Claude Code read the router state: service status, routes, connections, nodes, config versions, the log and diagnostics. Access is read-only: an agent cannot change anything.",
+    "on": "An agent connects to the address below with the access token. The access is read-only."
+  },
+  "off": {
+    "status": "MCP is off. No agent can connect.",
+    "enable": "Enable"
+  },
+  "on": {
+    "state": "State",
+    "enabled": "On",
+    "url": "Address",
+    "permissions": "Permissions",
+    "regenerate": {
+      "action": "Regenerate token",
+      "title": "Regenerate the token?",
+      "description": "The old token stops working at once. Every agent that uses it has to be given the new one.",
+      "confirm": "Regenerate"
+    },
+    "disable": {
+      "action": "Disable",
+      "title": "Disable MCP?",
+      "description": "The address stops answering and the token stops working. Enabling MCP again issues a new token.",
+      "confirm": "Disable"
+    }
+  },
+  "permission": {
+    "read": "read"
+  },
+  "token": {
+    "warning": {
+      "title": "The token is shown only once",
+      "description": "Copy it now. After you close this window it cannot be shown again; you can only regenerate it."
+    },
+    "label": "Token",
+    "command": "Claude Code command",
+    "done": "Done"
+  },
+  "copy": {
+    "action": "Copy: {{name}}",
+    "done": "Copied: {{name}}",
+    "failed": "The browser did not allow copying: {{name}} is selected, press Ctrl+C"
+  }
+}

@@ -22,6 +22,7 @@ import { createDataplaneMock } from '@entities/Dataplane/__tests__/Dataplane.han
 import { createDeviceHandlers } from '@entities/Device/__tests__/Device.handlers';
 import { createDiagHandlers } from '@entities/Diag/__tests__/Diag.handlers';
 import { createLogHandlers } from '@entities/Log/__tests__/Log.handlers';
+import { createMcpHandlers } from '@entities/Mcp/__tests__/Mcp.handlers';
 import { createStatefulProxyHandlers } from '@entities/Proxy/__tests__/Proxy.handlers';
 import { createRouteHandlers, createRuleHitsHandler } from '@entities/Route/__tests__/Route.handlers';
 import { ruleSetHandlers } from '@entities/RuleSet/__tests__/RuleSet.handlers';
@@ -63,6 +64,7 @@ export function createMissingHandlers(connections = 0) {
 
   return [
     ...createAuthHandlers(),
+    ...createMcpHandlers(),
     ...configHandlers,
     // The daemon minute of open connections matches the live snapshot: with the
     // test fixture's 150 the chart would drop where the stream takes over.

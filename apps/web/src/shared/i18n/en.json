@@ -55,6 +55,15 @@
       "logout": {
         "failed": "Could not sign out"
       }
+    },
+    "mcp": {
+      "token": {
+        "failed": "Could not issue the MCP token"
+      },
+      "disable": {
+        "failed": "Could not disable MCP",
+        "done": "MCP disabled"
+      }
     }
   },
   "daemon": {

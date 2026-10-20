@@ -4,6 +4,7 @@ import { useDaemonStatus, type ServiceStatus } from '@entities/Daemon';
 import { AuthLogout } from '@features/Auth/AuthLogout';
 import { AuthPassword } from '@features/Auth/AuthPassword';
 import { LanguageSwitch } from '@features/Language/LanguageSwitch';
+import { McpAccess } from '@features/Mcp/McpAccess';
 import { ThemeSwitch } from '@features/Theme/ThemeSwitch';
 import { cn } from '@shared/lib/utils';
 
@@ -43,6 +44,7 @@ export function AppSidebarControls({ collapsed }: { collapsed: boolean }) {
 
       <div className={cn('flex flex-col gap-0.5 empty:hidden', collapsed && 'items-center')}>
         <AuthPassword collapsed={collapsed} />
+        <McpAccess collapsed={collapsed} />
         <AuthLogout collapsed={collapsed} />
       </div>
     </>

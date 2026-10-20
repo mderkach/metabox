@@ -22,6 +22,7 @@ await preloadNamespaces([
   'features/Auth/AuthLogin',
   'features/Auth/AuthPassword',
   'features/Auth/AuthLogout',
+  'features/Mcp/McpAccess',
 ]);
 
 createRoot(document.getElementById('root')!).render(

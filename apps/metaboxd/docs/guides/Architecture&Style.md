@@ -5,7 +5,7 @@ The `metaboxd` daemon and the schema generator.
 ## Two modules
 
 ```text
-apps/metaboxd/go.mod     module metabox: the daemon, no dependencies
+apps/metaboxd/go.mod     module metabox: the daemon, the MCP SDK as the only dependency
   main.go                entry point
   cmd/contractgen/       contract generator for the panel (make schema-daemon)
   cmd/rulesetsnap/       snapshot of the rule set catalog (make rule-set-snapshot)
@@ -17,7 +17,7 @@ The module is named `metabox` regardless of where the directory is, so imports s
 
 The modules are split on purpose: the generator pulls in the sing-box fork with its whole dependency tree ([`tools/schemagen/go.mod`](../../../../tools/schemagen/go.mod)), and none of that belongs in the delivery artifact. Daemon tests do not see the generator; `make test-schemagen` runs it with the fork's tags and `-ldflags`.
 
-**The daemon's `go.mod` stays without `require`.** Everything the daemon needs is in the standard library: routing with methods and wildcards, `log/slog`, `os/exec`, `crypto/sha256`, `embed`. Every dependency is third-party code in the single delivery artifact, cross-compilation for aarch64 with `CGO_ENABLED=0`, and a duty to track updates. A new dependency in the daemon is a separate decision, not a side effect of a task.
+**The daemon's `go.mod` has one `require`, the MCP Go SDK, imported only by `internal/mcp` ([ADR-0055](../../../../docs/adr/ADR-0055-embed-a-read-only-mcp-server-in-the-daemon-with-the-official-go-sdk.md)).** Everything else the daemon needs is in the standard library: routing with methods and wildcards, `log/slog`, `os/exec`, `crypto/sha256`, `embed`. Every dependency is third-party code in the single delivery artifact, cross-compilation for aarch64 with `CGO_ENABLED=0`, and a duty to track updates. A new dependency in the daemon is a separate decision, not a side effect of a task.
 
 The generator is not a style showcase: it builds the schema from third-party types by reflection and lives by the fork's rules. The rules below apply to the daemon; for the generator only the "Style" section and the tools are mandatory.
 

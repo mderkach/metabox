@@ -44,6 +44,7 @@ const (
 	ruleSetsName = "rule-sets.json"
 	devicesName  = "devices.json"
 	authName     = "auth.json"
+	mcpName      = "mcp.json"
 )
 
 // Store is the only owner of the config file and the daemon service directory:
@@ -821,4 +822,50 @@ func (s *Store) WriteAuth(ctx context.Context, data []byte) error {
 	defer func() { _ = root.Close() }()
 
 	return writeAtomic(root, authName, data, securePerm)
+}
+
+// ReadMCP returns the MCP access token hash file. A missing file or service directory is
+// an error for which errors.Is(err, fs.ErrNotExist) holds: MCP was never enabled.
+func (s *Store) ReadMCP(ctx context.Context) ([]byte, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	root, err := openRoot(s.serviceDir)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = root.Close() }()
+
+	data, err := root.ReadFile(mcpName)
+	if err != nil {
+		return nil, fmt.Errorf("чтение файла токена MCP в %s: %w", s.serviceDir, err)
+	}
+
+	return data, nil
+}
+
+// WriteMCP saves the MCP access token hash file atomically, readable by root only.
+func (s *Store) WriteMCP(ctx context.Context, data []byte) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if err := ensureDir(s.serviceDir); err != nil {
+		return fmt.Errorf("служебный каталог: %w", err)
+	}
+
+	root, err := openRoot(s.serviceDir)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = root.Close() }()
+
+	return writeAtomic(root, mcpName, data, securePerm)
 }

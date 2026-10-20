@@ -73,9 +73,25 @@ type clashSnapshot struct {
 // the accumulated byte counter: the channel share through sing-box is counted by it, and
 // it is visible only here.
 func connectionsSnapshot(raw json.RawMessage) (json.RawMessage, int64, error) {
+	snapshot, err := ParseConnections(raw)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	body, err := json.Marshal(snapshot)
+	if err != nil {
+		return nil, 0, fmt.Errorf("сборка снапшота соединений: %w", err)
+	}
+
+	return body, snapshot.UploadTotal + snapshot.DownloadTotal, nil
+}
+
+// ParseConnections translates the raw Clash API `/connections` snapshot into the daemon
+// contract: the same shape the panel gets from the stream.
+func ParseConnections(raw json.RawMessage) (ConnectionsSnapshot, error) {
 	var source clashSnapshot
 	if err := json.Unmarshal(raw, &source); err != nil {
-		return nil, 0, fmt.Errorf("разбор снапшота соединений: %w", err)
+		return ConnectionsSnapshot{}, fmt.Errorf("разбор снапшота соединений: %w", err)
 	}
 
 	snapshot := ConnectionsSnapshot{
@@ -103,12 +119,7 @@ func connectionsSnapshot(raw json.RawMessage) (json.RawMessage, int64, error) {
 		})
 	}
 
-	body, err := json.Marshal(snapshot)
-	if err != nil {
-		return nil, 0, fmt.Errorf("сборка снапшота соединений: %w", err)
-	}
-
-	return body, snapshot.UploadTotal + snapshot.DownloadTotal, nil
+	return snapshot, nil
 }
 
 // splitRule separates the conditions and the outbound of a rule and marks the default outbound.
