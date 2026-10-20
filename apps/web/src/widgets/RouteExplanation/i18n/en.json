@@ -31,7 +31,7 @@
     "action": "Action",
     "open": "Open the rule in the editor",
     "observed": "The rule that hit, as sing-box reports it",
-    "unmapped": "The number in the file is not matched: sing-box runs another config version."
+    "unmapped": "The number of this rule in the file is unknown."
   },
   "chain": {
     "title": "Chain",
