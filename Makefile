@@ -15,7 +15,8 @@ all: daemon
 # -checklinkname=0. with_purego is added on top of the fork's set: otherwise
 # with_naive_outbound pulls in cronet, whose libcronet.a GNU ld on CI rejects
 # ("skipping incompatible"). The schema with purego comes out byte for byte the same.
-SINGBOX_DIR = $(shell cd tools/schemagen && go list -m -f '{{.Dir}}' github.com/sagernet/sing-box)
+# `go list -m` prints an empty Dir until the module is in the cache, so it is downloaded first.
+SINGBOX_DIR = $(shell cd tools/schemagen && go mod download github.com/sagernet/sing-box && go list -m -f '{{.Dir}}' github.com/sagernet/sing-box)
 SCHEMA_TAGS = $(shell cat '$(SINGBOX_DIR)/release/DEFAULT_BUILD_TAGS'),with_purego
 SCHEMA_LDFLAGS = $(shell cat '$(SINGBOX_DIR)/release/LDFLAGS')
 
