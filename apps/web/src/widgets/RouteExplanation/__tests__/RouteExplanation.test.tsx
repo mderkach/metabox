@@ -16,7 +16,8 @@ import {
   ROUTE_UNKNOWN_FIXTURE,
 } from '@entities/Route/__tests__/Route.fixture';
 
-import { RouteExplanation, RouteExplanationSheet } from '../ui/RouteExplanation';
+import { RouteExplanation } from '../ui/RouteExplanation';
+import { RouteExplanationSheet } from '../ui/RouteExplanationSheet';
 
 const JSON_INDENT = 2;
 
@@ -75,7 +76,7 @@ describe('RouteExplanation', () => {
 
     // Daemon indexes count from zero, rules on the screen are numbered from one.
     expect(await screen.findByText('Сработало правило 7')).toBeInTheDocument();
-    expect(screen.getByText('rule_set=google-ip')).toBeInTheDocument();
+    expect(screen.getByText('Сет правил: google-ip')).toHaveAttribute('title', 'rule_set=google-ip');
     expect(screen.getAllByText('от sing-box').length).toBeGreaterThan(0);
   });
 
@@ -119,7 +120,15 @@ describe('RouteExplanation', () => {
     // The node number of a foreign document is not shown at all: it would point to
     // a different rule.
     expect(screen.queryByText('Сработало правило 7')).not.toBeInTheDocument();
-    expect(screen.getByText('Правило не определено')).toBeInTheDocument();
+    // The rule sing-box reported stays visible by its conditions, with its origin.
+    expect(screen.getByText('Сработавшее правило по данным sing-box')).toBeInTheDocument();
+    expect(screen.getByText('Сет правил: google-ip')).toBeInTheDocument();
+    expect(screen.queryByText('Правило не определено')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Открыть конфигурацию' })).toHaveAttribute('href', '/config');
+    // Rule positions above are not those of the file either.
+    expect(
+      within(screen.getByRole('list', { name: 'Правила выше сработавшего' })).queryByText('1')
+    ).not.toBeInTheDocument();
   });
 
   it('shows the default outbound as an observation, not as unknown', async () => {

@@ -6,7 +6,8 @@
   "drift": {
     "title": "sing-box runs another config version",
     "description": "Running sing-box has {{running}} rules, the applied file has {{document}}, so the rule number is not shown. Apply the config to make them match.",
-    "notCompared": "The applied config was not read, so there is no link to the rule."
+    "notCompared": "The applied config was not read, so there is no link to the rule.",
+    "open": "Open the config"
   },
   "origin": {
     "observed": "from sing-box",
@@ -21,7 +22,6 @@
   "unknown": {
     "title": "The rule is undetermined",
     "missing": "The rule of this connection is not in the sing-box rule list.",
-    "drifted": "The rule cannot be found in the file: sing-box runs another config version.",
     "reason": {
       "not_in_process_list": "the rule of this connection is not in the running sing-box rule list"
     }
@@ -29,7 +29,9 @@
   "matched": {
     "title": "Rule {{number}} matched",
     "action": "Action",
-    "open": "Open the rule in the editor"
+    "open": "Open the rule in the editor",
+    "observed": "The rule that hit, as sing-box reports it",
+    "unmapped": "The number in the file is not matched: sing-box runs another config version."
   },
   "chain": {
     "title": "Chain",
