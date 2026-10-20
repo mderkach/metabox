@@ -181,3 +181,21 @@ func TestGeneratedFileIsFresh(t *testing.T) {
 		t.Error("apps/web/src/shared/api/daemon.generated.ts not built from the current contract: `make schema-daemon`")
 	}
 }
+
+func TestConstantName(t *testing.T) {
+	tests := []struct {
+		in   string
+		want string
+	}{
+		{"ErrorCode", "ERROR_CODE"},
+		{"Level", "LEVEL"},
+		{"MCPPermission", "MCP_PERMISSION"},
+		{"RuntimeSource", "RUNTIME_SOURCE"},
+	}
+
+	for _, tt := range tests {
+		if got := constantName(tt.in); got != tt.want {
+			t.Errorf("constantName(%q) = %q, want %q", tt.in, got, tt.want)
+		}
+	}
+}

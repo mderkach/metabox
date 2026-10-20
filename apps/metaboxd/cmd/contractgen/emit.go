@@ -320,12 +320,17 @@ func enumBody(name string, values []string) string {
 	return fmt.Sprintf("export const %s = [\n%s\n] as const\n", name, strings.Join(quoted, "\n"))
 }
 
-// constantName turns a type name into a constant name: ErrorCode → ERROR_CODE.
+// constantName turns a type name into a constant name: ErrorCode → ERROR_CODE,
+// MCPPermission → MCP_PERMISSION. An abbreviation stays one word.
 func constantName(name string) string {
 	var out strings.Builder
 
-	for i, r := range name {
-		if unicode.IsUpper(r) && i > 0 {
+	runes := []rune(name)
+
+	for i, r := range runes {
+		wordStart := i > 0 && unicode.IsUpper(r) &&
+			(unicode.IsLower(runes[i-1]) || i+1 < len(runes) && unicode.IsLower(runes[i+1]))
+		if wordStart {
 			out.WriteByte('_')
 		}
 
