@@ -52,6 +52,7 @@ describe('McpAccess', () => {
 
     expect(token).toHaveValue(MCP_TOKEN_FIXTURE[0]);
     expect(token).toHaveAttribute('readonly');
+    await waitFor(() => expect(token).toHaveFocus());
     expect(screen.getByRole('alert')).toHaveTextContent('Токен показывается один раз');
     expect(screen.getByLabelText('Команда для Claude Code')).toHaveValue(
       `claude mcp add --transport http metabox ${window.location.origin}/mcp --header "Authorization: Bearer ${MCP_TOKEN_FIXTURE[0]}"`

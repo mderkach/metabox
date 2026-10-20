@@ -1,5 +1,5 @@
 import { Check, Copy } from 'lucide-react';
-import { useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button, Input, Textarea } from '@shared/ui';
@@ -14,17 +14,27 @@ export function McpAccessCopyField({
   label,
   value,
   multiline = false,
+  focusOnMount = false,
   announce,
 }: {
   label: string;
   value: string;
   multiline?: boolean;
+  /** Takes focus when shown: the button that led here has just unmounted. */
+  focusOnMount?: boolean;
   announce: (text: string) => void;
 }) {
   const { t } = useTranslation('features/Mcp/McpAccess');
   const fieldId = useId();
   const field = useRef<HTMLInputElement & HTMLTextAreaElement>(null);
   const [copied, setCopied] = useState(false);
+
+  useEffect(
+    function focusOnShow() {
+      if (focusOnMount) field.current?.focus();
+    },
+    [focusOnMount]
+  );
 
   async function onCopy() {
     const done = await copyText(value);

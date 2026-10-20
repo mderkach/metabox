@@ -28,7 +28,7 @@ export function McpAccessToken({
         <AlertDescription>{t('token.warning.description')}</AlertDescription>
       </Alert>
 
-      <McpAccessCopyField label={t('token.label')} value={token} announce={announce} />
+      <McpAccessCopyField label={t('token.label')} value={token} focusOnMount announce={announce} />
       <McpAccessCopyField
         label={t('token.command')}
         value={toClaudeCodeCommand(url, token)}
