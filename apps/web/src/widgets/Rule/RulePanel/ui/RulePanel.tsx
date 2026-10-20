@@ -72,6 +72,7 @@ export function RulePanel({
 }) {
   const { t } = useTranslation('widgets/Rule/RulePanel');
   const creating = onCreate !== undefined;
+  const title = creating ? t('titleNew', { index: rule.index }) : t('title', { index: rule.index });
   const [tab, setTab] = useState<string>(recognized ? TAB.Form : TAB.Raw);
   // Keyed by revision, not by the node: the form writes on every keystroke and would lose focus.
   const revision = ConfigDocumentState.use.revision();
@@ -89,7 +90,7 @@ export function RulePanel({
     // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- see above
     <aside
       id={id}
-      aria-label={t('title', { index: rule.index })}
+      aria-label={title}
       onKeyDown={onKeyDown}
       className={cn(
         'flex min-h-0 flex-col overflow-hidden',
@@ -99,7 +100,7 @@ export function RulePanel({
       <header className={cn('flex items-center gap-2.5', SURFACE_HEAD)}>
         <div className='flex min-w-0 grow flex-col'>
           {sheet ? (
-            <SheetTitle className={SECTION_HEADING}>{t('title', { index: rule.index })}</SheetTitle>
+            <SheetTitle className={SECTION_HEADING}>{title}</SheetTitle>
           ) : (
             <h2
               ref={headingRef}
@@ -109,7 +110,7 @@ export function RulePanel({
                 SECTION_HEADING
               )}
             >
-              {t('title', { index: rule.index })}
+              {title}
             </h2>
           )}
         </div>
@@ -127,6 +128,7 @@ export function RulePanel({
 
       <div className='flex min-h-0 grow flex-col gap-4 overflow-y-auto p-4'>
         {!creating && <RuleConditions rule={rule} />}
+        {creating && <p className='text-sm text-pretty text-muted-foreground'>{t('creating')}</p>}
 
         {!recognized && (
           <Alert>

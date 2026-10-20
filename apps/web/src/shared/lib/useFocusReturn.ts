@@ -12,9 +12,14 @@ import { useEffect, useRef, type RefObject } from 'react';
  */
 export function useFocusReturn<T extends HTMLElement>(): RefObject<T | null> {
   const ref = useRef<T>(null);
+  // Kept across effect re-runs: Strict Mode mounts the effect twice, and the
+  // second run would take the panel's own heading for where it was opened from.
+  const openerRef = useRef<Element | null>(null);
 
   useEffect(function focusOnOpen() {
-    const opener = document.activeElement;
+    openerRef.current ??= document.activeElement;
+
+    const opener = openerRef.current;
 
     ref.current?.focus();
 

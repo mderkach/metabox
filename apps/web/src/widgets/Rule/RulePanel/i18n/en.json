@@ -1,5 +1,7 @@
 {
   "title": "Rule {{index}}",
+  "titleNew": "New rule · position {{index}}",
+  "creating": "The rule appears in the draft once it has a condition or a rule set: without conditions it would take all traffic.",
   "unknown": {
     "title": "The panel does not know this rule",
     "description": "It can be edited only as JSON. It is kept unchanged."

@@ -205,6 +205,21 @@ describe('rules screen', () => {
     expect(ruleButton).toHaveFocus();
   });
 
+  it('the close button returns focus to the row the panel was opened from', async () => {
+    const user = userEvent.setup();
+
+    renderWithRouter(EditorPage);
+
+    const ruleButton = await screen.findByRole('button', { name: /^Правило 3, / });
+
+    await user.click(ruleButton);
+    await user.click(within(await screen.findByRole('complementary')).getByRole('button', { name: 'Закрыть панель' }));
+
+    finishSidePanelTransition();
+
+    expect(ruleButton).toHaveFocus();
+  });
+
   it('the outbound form opens on the value from the config and writes nothing until a change', async () => {
     const user = userEvent.setup();
 
@@ -411,6 +426,16 @@ describe('rule list editing', () => {
     serveConfig(editConfig(EDIT_RULES));
   });
 
+  it('names an action in words in the outbound filter and in the row, not as an outbound', async () => {
+    renderWithRouter(EditorPage);
+
+    const targets = await screen.findByRole('list', { name: 'Действия правил' });
+
+    expect(within(targets).getByRole('button', { name: /перехватить DNS/ })).toBeInTheDocument();
+    expect(within(targets).queryByRole('button', { name: /hijack-dns/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Правило 2, действие: перехватить DNS' })).toBeInTheDocument();
+  });
+
   it('opens a new rule without writing it and writes it on the first condition, keeping focus', async () => {
     const user = userEvent.setup();
 
@@ -418,9 +443,10 @@ describe('rule list editing', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Добавить правило' }));
 
-    const panel = await screen.findByRole('complementary', { name: 'Правило 4' });
+    const panel = await screen.findByRole('complementary', { name: 'Новое правило · место 4' });
 
     expect(ConfigDocumentState.getState().draft).toBeNull();
+    expect(within(panel).getByText(/появится в черновике, когда у него будет условие/)).toBeInTheDocument();
     expect(within(panel).queryByRole('tab', { name: 'JSON' })).not.toBeInTheDocument();
 
     await selectOption(user, within(panel).getByRole('combobox', { name: 'Добавить условие' }), 'Домен');
@@ -446,7 +472,7 @@ describe('rule list editing', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Добавить правило' }));
 
-    const panel = await screen.findByRole('complementary', { name: 'Правило 4' });
+    const panel = await screen.findByRole('complementary', { name: 'Новое правило · место 4' });
 
     await selectOption(user, within(panel).getByRole('combobox', { name: 'Добавить условие' }), 'Домен');
     await user.type(within(panel).getByRole('textbox', { name: 'Домен' }), 'a.example');
@@ -468,7 +494,7 @@ describe('rule list editing', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Добавить правило' }));
 
-    const panel = await screen.findByRole('complementary', { name: 'Правило 4' });
+    const panel = await screen.findByRole('complementary', { name: 'Новое правило · место 4' });
 
     await user.click(within(panel).getByRole('button', { name: 'Закрыть панель' }));
 
@@ -486,7 +512,7 @@ describe('rule list editing', () => {
 
     await user.click(screen.getByRole('button', { name: 'Добавить правило' }));
 
-    const panel = await screen.findByRole('complementary', { name: 'Правило 1' });
+    const panel = await screen.findByRole('complementary', { name: 'Новое правило · место 1' });
 
     expect(ConfigDocumentState.getState().draft).toBeNull();
 
@@ -523,7 +549,7 @@ describe('rule list editing', () => {
 
     expect(search).toHaveValue('');
     expect(screen.getByRole('status')).toHaveTextContent('3 правила');
-    expect(await screen.findByRole('complementary', { name: 'Правило 4' })).toBeInTheDocument();
+    expect(await screen.findByRole('complementary', { name: 'Новое правило · место 4' })).toBeInTheDocument();
   });
 
   it('deleting after confirmation removes the node and closes the panel, does not touch neighbors', async () => {
