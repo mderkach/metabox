@@ -19,18 +19,28 @@ const (
 
 // secretKeys are the config keys whose string values are hidden at any depth: the same
 // names and rules the panel masks in forms. A key matches regardless of case, because the
-// sing-box decoder matches field names that way.
+// sing-box decoder matches field names that way. A vless or vmess uuid is the credential
+// itself; every key named "key" in the fork schema holds key material (TLS, ECH, OpenVPN,
+// VPN users); authorization is an HTTP header inside headers.
 var secretKeys = map[string]maskRule{
-	"secret":            maskWhole,
-	"password":          maskWhole,
-	"private_key":       maskWhole,
-	"pre_shared_key":    maskWhole,
-	"psk":               maskWhole,
-	"token":             maskWhole,
-	"auth_str":          maskWhole,
-	"access_key_secret": maskWhole,
-	"url":               maskAfterHost,
-	"download_url":      maskAfterHost,
+	"secret":              maskWhole,
+	"password":            maskWhole,
+	"private_key":         maskWhole,
+	"pre_shared_key":      maskWhole,
+	"psk":                 maskWhole,
+	"token":               maskWhole,
+	"auth_str":            maskWhole,
+	"access_key_secret":   maskWhole,
+	"uuid":                maskWhole,
+	"key":                 maskWhole,
+	"auth_key":            maskWhole,
+	"api_token":           maskWhole,
+	"api_key":             maskWhole,
+	"mac_key":             maskWhole,
+	"authorization":       maskWhole,
+	"proxy-authorization": maskWhole,
+	"url":                 maskAfterHost,
+	"download_url":        maskAfterHost,
 }
 
 // maskConfig hides secret values in the config text and drops comments: a comment may

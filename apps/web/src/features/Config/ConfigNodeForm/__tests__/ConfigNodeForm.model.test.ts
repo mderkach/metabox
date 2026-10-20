@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { listToText, packList, parseNumber, parseScalar, textToList, UNSET } from '../model';
+import { listToText, packList, parseNumber, parseScalar, SECRET_MASK, secretMaskOf, textToList, UNSET } from '../model';
 
 describe('node form field values', () => {
   it('a multiline field returns values without empty lines and edge spaces', () => {
@@ -32,5 +32,25 @@ describe('node form field values', () => {
   it('an empty numeric field means "no key"', () => {
     expect(parseNumber('')).toBe(UNSET);
     expect(parseNumber('443')).toBe(443);
+  });
+});
+
+describe('secret field mask', () => {
+  it.each(['uuid', 'key', 'auth_key', 'api_token', 'api_key', 'mac_key', 'authorization', 'proxy-authorization'])(
+    'hides %s whole',
+    (key) => {
+      expect(secretMaskOf(['tls', key])).toBe(SECRET_MASK.Whole);
+    }
+  );
+
+  it('matches a key in another case, as the sing-box decoder does', () => {
+    expect(secretMaskOf(['UUID'])).toBe(SECRET_MASK.Whole);
+    expect(secretMaskOf(['headers', 'Authorization'])).toBe(SECRET_MASK.Whole);
+    expect(secretMaskOf(['Private_Key'])).toBe(SECRET_MASK.Whole);
+  });
+
+  it('leaves a path to a key file and other keys open', () => {
+    expect(secretMaskOf(['tls', 'key_path'])).toBeNull();
+    expect(secretMaskOf(['tls', 'certificate'])).toBeNull();
   });
 });

@@ -213,10 +213,13 @@ export type SecretMask = (typeof SECRET_MASK)[keyof typeof SECRET_MASK];
 
 /**
  * Secret fields by key name, in a node of any type and at any depth: the form
- * shows them masked and reveals them on a button. For a URL the scheme and host
- * are visible, they show whose subscription it is, while the token lies in the
- * path or in the query. `uuid` is not hidden: it is a user identifier, not a
- * password.
+ * shows them masked and reveals them on a button. A key matches regardless of
+ * case, as the sing-box decoder matches field names. For a URL the scheme and
+ * host are visible, they show whose subscription it is, while the token lies in
+ * the path or in the query. A vless or vmess `uuid` is the credential itself;
+ * every `key` in the fork schema holds key material (TLS, ECH, OpenVPN, VPN
+ * users); `authorization` is an HTTP header inside `headers`. The daemon masks
+ * MCP results by the same list.
  */
 const SECRET_FIELD: Readonly<Partial<Record<string, SecretMask>>> = {
   secret: SECRET_MASK.Whole,
@@ -227,6 +230,14 @@ const SECRET_FIELD: Readonly<Partial<Record<string, SecretMask>>> = {
   token: SECRET_MASK.Whole,
   auth_str: SECRET_MASK.Whole,
   access_key_secret: SECRET_MASK.Whole,
+  uuid: SECRET_MASK.Whole,
+  key: SECRET_MASK.Whole,
+  auth_key: SECRET_MASK.Whole,
+  api_token: SECRET_MASK.Whole,
+  api_key: SECRET_MASK.Whole,
+  mac_key: SECRET_MASK.Whole,
+  authorization: SECRET_MASK.Whole,
+  'proxy-authorization': SECRET_MASK.Whole,
   url: SECRET_MASK.AfterHost,
   download_url: SECRET_MASK.AfterHost,
 };
@@ -235,7 +246,7 @@ const SECRET_FIELD: Readonly<Partial<Record<string, SecretMask>>> = {
 export function secretMaskOf(path: readonly string[]): SecretMask | null {
   const key = path.at(-1);
 
-  return key === undefined ? null : (SECRET_FIELD[key] ?? null);
+  return key === undefined ? null : (SECRET_FIELD[key.toLowerCase()] ?? null);
 }
 
 /** Type override; `null` means the type opens with the autoform as is. */
