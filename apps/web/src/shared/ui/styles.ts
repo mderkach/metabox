@@ -92,3 +92,40 @@ export const DIALOG_SIZE = {
   List: 'sm:max-w-xl',
   Document: 'sm:max-w-3xl',
 } as const;
+
+/** Font of every `JsonTextarea` layer: the layers overlay each other, so the metrics must match to the pixel. */
+export const JSON_CODE = 'font-mono text-xs/5';
+
+/**
+ * Box of the highlight layer and the field. Both reserve space for the scrollbar:
+ * the field has one, the highlight does not, and without the reserve their line widths
+ * would differ by its thickness.
+ */
+export const JSON_LAYER = 'px-3 py-3 [scrollbar-gutter:stable]';
+
+/** Text layout of the field and the highlight layer is one for both, otherwise wrapping would diverge. */
+export const JSON_LAYOUT = {
+  Wrap: 'whitespace-pre-wrap wrap-break-word',
+  NoWrap: 'whitespace-pre',
+} as const;
+
+/**
+ * Who sets the height of a `JsonTextarea`: the parent, or the text. In the second case the
+ * highlight layer stays in the flow and stretches the frame, and the field lies over it.
+ */
+export const JSON_HEIGHT = {
+  Fill: 'absolute inset-0',
+  Content: 'min-h-40',
+} as const;
+
+/** JSON highlight tones, the `--code-*` tokens. */
+export const JSON_TONE = {
+  String: 'text-code-string',
+  Number: 'text-code-number',
+  Literal: 'text-code-literal',
+  Comment: 'text-code-comment italic',
+  Unknown: 'text-destructive',
+  Key: 'text-foreground',
+  Plain: 'text-foreground',
+  Punctuation: 'text-muted-foreground',
+} as const;

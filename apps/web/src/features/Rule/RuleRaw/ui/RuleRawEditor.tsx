@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ConfigDocumentState, ConfigDocumentStore, findValue, ruleNodePath } from '@entities/Config';
 import { checkRuleNode } from '@entities/Rule';
 import { failureLine, parseJsonc } from '@shared/lib/jsonc';
-import { Alert, AlertDescription, AlertTitle, Textarea } from '@shared/ui';
+import { Alert, AlertDescription, AlertTitle, JsonTextarea } from '@shared/ui';
 
 /** Node indent: the same as in the config file on the device. */
 const JSON_INDENT = 2;
@@ -47,15 +47,11 @@ export function RuleRawEditor({ index, node }: { index: number; node: unknown })
 
   return (
     <section className='flex flex-col gap-2'>
-      <Textarea
+      <JsonTextarea
         id={`rule-raw-${String(index)}`}
-        aria-label={t('editor.label', { index })}
-        spellCheck={false}
+        label={t('editor.label', { index })}
         value={text}
-        onChange={(event) => {
-          onChange(event.target.value);
-        }}
-        className='min-h-40 resize-none font-mono text-xs'
+        onChange={onChange}
       />
 
       {/* Keeps its height while empty: the error comes and goes with typing. */}

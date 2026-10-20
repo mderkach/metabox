@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { ConfigDocumentState, ConfigDocumentStore, findValue } from '@entities/Config';
 import { failureLine, parseJsonc } from '@shared/lib/jsonc';
-import { Textarea } from '@shared/ui';
+import { JsonTextarea } from '@shared/ui';
 
 /** Node indent: the same as in the config file on the device. */
 const JSON_INDENT = 2;
@@ -52,16 +52,7 @@ export function ConfigNodeRawEditor({
 
   return (
     <section className='flex flex-col gap-2'>
-      <Textarea
-        id={editorId}
-        aria-label={label}
-        spellCheck={false}
-        value={text}
-        onChange={(event) => {
-          onChange(event.target.value);
-        }}
-        className='min-h-40 resize-none font-mono text-xs'
-      />
+      <JsonTextarea id={editorId} label={label} value={text} onChange={onChange} />
 
       {/* Keeps its height while empty: the error comes and goes with typing. */}
       <p role='status' className='min-h-4 text-xs text-destructive'>

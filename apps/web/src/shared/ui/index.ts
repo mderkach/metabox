@@ -27,6 +27,7 @@ export * from './shadcn/tooltip';
 export * from './Autocomplete';
 export * from './ConfirmDialog';
 export * from './DialogCloseButton';
+export * from './JsonTextarea';
 export * from './LiveRegion';
 export * from './Plot';
 export * from './QueryFailure';
