@@ -572,4 +572,32 @@ describe('section screen', () => {
     expect(await screen.findByRole('region', { name: 'ntp' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Удалить/ })).not.toBeInTheDocument();
   });
+
+  it('names a group type in words beside its config key', async () => {
+    serveConfig(
+      '{ "outbounds": [{ "type": "urltest", "tag": "auto", "outbounds": ["a"] }, { "type": "direct", "tag": "a" }] }'
+    );
+
+    renderWithRouter(OutboundsSection);
+
+    const node = within(await screen.findByRole('region', { name: 'auto' }));
+
+    expect(node.getByText('самый быстрый')).toBeInTheDocument();
+    expect(node.getByText('urltest')).toBeInTheDocument();
+  });
+
+  it('the outbound add panel has one main button: adding by link, the manual one is secondary', async () => {
+    serveConfig(CONFIG_TEXT);
+
+    const user = userEvent.setup();
+
+    renderWithRouter(OutboundsSection);
+
+    await user.click(await screen.findByRole('button', { name: 'Добавить узел' }));
+
+    const panel = within(screen.getByRole('complementary', { name: 'Новый узел' }));
+
+    expect(panel.getByRole('button', { name: 'Добавить по ссылке' })).toHaveClass('bg-primary');
+    expect(panel.getByRole('button', { name: 'Добавить' })).not.toHaveClass('bg-primary');
+  });
 });
