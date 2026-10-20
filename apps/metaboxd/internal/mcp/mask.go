@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/url"
+	"strings"
 )
 
 // maskChars stands in place of a hidden secret, the same characters the panel shows.
@@ -16,8 +17,9 @@ const (
 	maskAfterHost
 )
 
-// secretKeys are the config keys whose string value is hidden at any depth: the same
-// names and rules the panel masks in forms.
+// secretKeys are the config keys whose string values are hidden at any depth: the same
+// names and rules the panel masks in forms. A key matches regardless of case, because the
+// sing-box decoder matches field names that way.
 var secretKeys = map[string]maskRule{
 	"secret":            maskWhole,
 	"password":          maskWhole,
@@ -34,14 +36,18 @@ var secretKeys = map[string]maskRule{
 // maskConfig hides secret values in the config text and drops comments: a comment may
 // hold a commented-out node with its password, and its text has no key to recognise the
 // secret by. The scan works on tokens, without parsing the config into a structure: the
-// daemon does not interpret config content. Only a string value right after a secret
-// key is masked; an empty string stays, as in the panel.
+// daemon does not interpret config content. Every string inside the value of a secret
+// key is masked, nested arrays and objects included: sing-box accepts a private key as a
+// list of PEM lines. An empty string stays, as in the panel.
 func maskConfig(data []byte) []byte {
 	out := make([]byte, 0, len(data))
 
 	var (
 		key         string
 		expectValue bool
+		depth       int
+		secretDepth int
+		secretRule  maskRule
 	)
 
 	for i := 0; i < len(data); {
@@ -59,8 +65,10 @@ func maskConfig(data []byte) []byte {
 				continue
 			}
 
-			if rule, secret := secretKeys[key]; secret && expectValue {
+			if rule, secret := secretKeys[strings.ToLower(key)]; secret && expectValue {
 				literal = maskLiteral(literal, rule)
+			} else if secretDepth != 0 {
+				literal = maskLiteral(literal, secretRule)
 			}
 
 			expectValue = false
@@ -72,6 +80,24 @@ func maskConfig(data []byte) []byte {
 			out = append(out, ' ')
 		case c == ':':
 			expectValue = true
+			out = append(out, c)
+			i++
+		case c == '[' || c == '{':
+			if rule, secret := secretKeys[strings.ToLower(key)]; secret && expectValue && secretDepth == 0 {
+				secretDepth, secretRule = depth+1, rule
+			}
+
+			depth++
+			expectValue = false
+			out = append(out, c)
+			i++
+		case c == ']' || c == '}':
+			if depth == secretDepth {
+				secretDepth = 0
+			}
+
+			depth--
+			expectValue = false
 			out = append(out, c)
 			i++
 		case isBlank(c):
