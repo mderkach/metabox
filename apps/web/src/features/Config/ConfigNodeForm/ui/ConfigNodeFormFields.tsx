@@ -47,6 +47,8 @@ import {
   type SecretMask,
 } from '../model';
 import { RAW_PARSE_ERROR, RawFailuresContext } from './ConfigNodeForm.context';
+import { useFieldLabel } from './ConfigNodeForm.labels';
+import { ConfigNodeFormFieldName } from './ConfigNodeFormFieldName';
 
 const NS = 'features/Config/ConfigNodeForm';
 
@@ -94,24 +96,28 @@ function errorText(t: TFunction<typeof NS>, error: FormFieldError | undefined): 
 /** Label, field and field error: a frame shared by value widgets. */
 function FieldRow({
   id,
-  label,
+  name,
+  fieldKey,
   errorId,
   error,
   children,
   aside = null,
 }: {
   id: string;
-  label: string;
+  name: string;
+  fieldKey: string;
   errorId: string;
   error: string | null;
   children: ReactNode;
   aside?: ReactNode;
 }) {
+  const label = useFieldLabel(name);
+
   return (
     <div className='flex flex-col gap-1.5'>
       <div className='flex min-h-6 items-center gap-2'>
-        <Label htmlFor={id} className='font-mono text-xs'>
-          {label}
+        <Label htmlFor={id} className='flex-wrap gap-x-2 gap-y-0.5'>
+          <ConfigNodeFormFieldName label={label} fieldKey={fieldKey} />
         </Label>
         {aside}
       </div>
@@ -156,7 +162,7 @@ function TextField({ field, name, placeholder }: NodeFieldProps & { placeholder?
       control={control}
       name={name}
       render={({ field: input, fieldState }) => (
-        <FieldRow id={id} label={field.key} errorId={errorId} error={errorText(t, fieldState.error)}>
+        <FieldRow id={id} name={name} fieldKey={field.key} errorId={errorId} error={errorText(t, fieldState.error)}>
           <Input
             id={id}
             value={toInputText(input.value)}
@@ -242,6 +248,7 @@ function maskedJsonText(value: unknown): string | null {
  */
 function SecretField({ field, name, mask }: NodeFieldProps & { mask: SecretMask }) {
   const { t } = useTranslation(NS);
+  const label = useFieldLabel(name) ?? field.key;
   const { control } = useFormContext<ConfigNodeFormModel>();
   const id = useId();
   const errorId = useId();
@@ -256,7 +263,7 @@ function SecretField({ field, name, mask }: NodeFieldProps & { mask: SecretMask 
         const masked = mask === SECRET_MASK.AfterHost && !revealed && text !== '' ? maskUrl(text) : null;
 
         return (
-          <FieldRow id={id} label={field.key} errorId={errorId} error={errorText(t, fieldState.error)}>
+          <FieldRow id={id} name={name} fieldKey={field.key} errorId={errorId} error={errorText(t, fieldState.error)}>
             <InputGroup>
               <InputGroupInput
                 id={id}
@@ -281,7 +288,7 @@ function SecretField({ field, name, mask }: NodeFieldProps & { mask: SecretMask 
               <InputGroupAddon align='inline-end'>
                 <InputGroupButton
                   size='icon-xs'
-                  aria-label={t(revealed ? 'secret.hide' : 'secret.show', { name: field.key })}
+                  aria-label={t(revealed ? 'secret.hide' : 'secret.show', { name: label })}
                   aria-controls={id}
                   onClick={() => {
                     setRevealed(!revealed);
@@ -315,7 +322,7 @@ export function NumberField({ field, name }: NodeFieldProps) {
       control={control}
       name={name}
       render={({ field: input, fieldState }) => (
-        <FieldRow id={id} label={field.key} errorId={errorId} error={errorText(t, fieldState.error)}>
+        <FieldRow id={id} name={name} fieldKey={field.key} errorId={errorId} error={errorText(t, fieldState.error)}>
           <Input
             id={id}
             type='number'
@@ -346,7 +353,7 @@ export function ScalarField({ field, name }: NodeFieldProps) {
       control={control}
       name={name}
       render={({ field: input, fieldState }) => (
-        <FieldRow id={id} label={field.key} errorId={errorId} error={errorText(t, fieldState.error)}>
+        <FieldRow id={id} name={name} fieldKey={field.key} errorId={errorId} error={errorText(t, fieldState.error)}>
           <Input
             id={id}
             value={toInputText(input.value)}
@@ -373,6 +380,7 @@ export function ScalarField({ field, name }: NodeFieldProps) {
  */
 export function BooleanField({ field, name }: NodeFieldProps) {
   const { t } = useTranslation(NS);
+  const label = useFieldLabel(name) ?? field.key;
   const { control } = useFormContext<ConfigNodeFormModel>();
   const id = useId();
   const errorId = useId();
@@ -384,7 +392,8 @@ export function BooleanField({ field, name }: NodeFieldProps) {
       render={({ field: input, fieldState }) => (
         <FieldRow
           id={id}
-          label={field.key}
+          name={name}
+          fieldKey={field.key}
           errorId={errorId}
           error={errorText(t, fieldState.error)}
           aside={
@@ -395,7 +404,7 @@ export function BooleanField({ field, name }: NodeFieldProps) {
                 type='button'
                 variant='ghost'
                 size='icon-xs'
-                aria-label={t('boolean.reset', { name: field.key })}
+                aria-label={t('boolean.reset', { name: label })}
                 onClick={() => {
                   input.onChange(UNSET);
                 }}
@@ -436,7 +445,7 @@ export function EnumField({ field, name }: NodeFieldProps) {
       control={control}
       name={name}
       render={({ field: input, fieldState }) => (
-        <FieldRow id={id} label={field.key} errorId={errorId} error={errorText(t, fieldState.error)}>
+        <FieldRow id={id} name={name} fieldKey={field.key} errorId={errorId} error={errorText(t, fieldState.error)}>
           <Select
             items={items}
             value={typeof input.value === 'string' ? input.value : ENUM_UNSET}
@@ -479,7 +488,7 @@ export function ListField({ field, name }: NodeFieldProps) {
       control={control}
       name={name}
       render={({ field: input, fieldState }) => (
-        <FieldRow id={id} label={field.key} errorId={errorId} error={errorText(t, fieldState.error)}>
+        <FieldRow id={id} name={name} fieldKey={field.key} errorId={errorId} error={errorText(t, fieldState.error)}>
           <ListInput
             id={id}
             value={input.value}
@@ -540,6 +549,7 @@ function ListInput({
 /** Set of enum values: each is turned on by its own button. */
 export function EnumListField({ field, name }: NodeFieldProps) {
   const { t } = useTranslation(NS);
+  const label = useFieldLabel(name);
   const { control } = useFormContext<ConfigNodeFormModel>();
   const labelId = useId();
   const errorId = useId();
@@ -551,8 +561,8 @@ export function EnumListField({ field, name }: NodeFieldProps) {
       name={name}
       render={({ field: input, fieldState }) => (
         <div className='flex flex-col gap-1.5'>
-          <span id={labelId} className='font-mono text-xs font-medium'>
-            {field.key}
+          <span id={labelId} className='flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm font-medium'>
+            <ConfigNodeFormFieldName label={label} fieldKey={field.key} />
           </span>
           <ToggleGroup
             multiple
@@ -600,6 +610,7 @@ function toJsonText(value: unknown): string {
  */
 export function RawField({ field, name }: NodeFieldProps) {
   const { t } = useTranslation(NS);
+  const label = useFieldLabel(name) ?? field.key;
   const { control } = useFormContext<ConfigNodeFormModel>();
   const failures = use(RawFailuresContext);
   const id = useId();
@@ -635,7 +646,8 @@ export function RawField({ field, name }: NodeFieldProps) {
         return (
           <FieldRow
             id={id}
-            label={field.key}
+            name={name}
+            fieldKey={field.key}
             errorId={errorId}
             error={reason === null ? errorText(t, fieldState.error) : t('error.parse', { reason })}
             aside={
@@ -644,7 +656,7 @@ export function RawField({ field, name }: NodeFieldProps) {
                   type='button'
                   variant='ghost'
                   size='icon-xs'
-                  aria-label={t(revealed ? 'secret.hide' : 'secret.show', { name: field.key })}
+                  aria-label={t(revealed ? 'secret.hide' : 'secret.show', { name: label })}
                   aria-controls={id}
                   onClick={() => {
                     // Switching between the mask and the text drops unparsed text: its failure goes with it.
@@ -757,7 +769,7 @@ function RawInput({
  * fields. Collapsed fields are not mounted, and form values are not lost.
  */
 export function GroupField({ field, name, children }: NodeFieldProps) {
-  const { t } = useTranslation(NS);
+  const label = useFieldLabel(name);
   const { getValues } = useFormContext<ConfigNodeFormModel>();
   const [open, setOpen] = useState(() => isFilledGroup(getValues(name)));
   const contentId = useId();
@@ -771,14 +783,13 @@ export function GroupField({ field, name, children }: NodeFieldProps) {
           size='sm'
           aria-expanded={open}
           aria-controls={contentId}
-          aria-label={t('group.toggle', { name: field.key })}
-          className='-mx-1 font-mono text-xs'
+          className='-mx-1'
           onClick={() => {
             setOpen(!open);
           }}
         >
           <ChevronRight className={cn('transition-transform motion-reduce:transition-none', open && 'rotate-90')} />
-          {field.key}
+          <ConfigNodeFormFieldName label={label} fieldKey={field.key} />
         </Button>
       </FieldLegend>
       <div id={contentId} hidden={!open} className='flex flex-col gap-3'>

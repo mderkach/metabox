@@ -15,9 +15,6 @@
   "raw": {
     "hint": "JSON-значение поля"
   },
-  "group": {
-    "toggle": "Поля {{name}}"
-  },
   "secret": {
     "show": "Показать {{name}}",
     "hide": "Скрыть {{name}}"
@@ -33,5 +30,40 @@
     "realityShortId": "Short ID: hex, не длиннее 16 символов, чётной длины"
   },
   "unbuilt": "нет в сборке: {{tag}}",
-  "advanced": "Ещё параметры ({{count}})"
+  "advanced": "Ещё параметры ({{count}})",
+  "label": {
+    "tag": "Имя узла",
+    "server": "Сервер",
+    "serverPort": "Порт сервера",
+    "uuid": "UUID пользователя",
+    "password": "Пароль",
+    "flow": "Режим XTLS",
+    "method": "Шифр",
+    "security": "Шифрование",
+    "network": "Сеть",
+    "detour": "Через узел",
+    "connectTimeout": "Тайм-аут подключения",
+    "tls": "TLS",
+    "serverName": "Имя сервера (SNI)",
+    "insecure": "Не проверять сертификат",
+    "alpn": "Протоколы ALPN",
+    "utls": "Маскировка под браузер (uTLS)",
+    "fingerprint": "Отпечаток браузера",
+    "reality": "Reality",
+    "realityPublicKey": "Публичный ключ Reality",
+    "realityShortId": "Short ID Reality",
+    "transport": "Транспорт",
+    "multiplex": "Мультиплексирование",
+    "obfs": "Обфускация",
+    "upMbps": "Отдача, Мбит/с",
+    "downMbps": "Загрузка, Мбит/с",
+    "plugin": "Плагин",
+    "pluginOpts": "Параметры плагина",
+    "outbounds": "Узлы группы",
+    "default": "Узел по умолчанию",
+    "interval": "Интервал проверки",
+    "listen": "Адрес прослушивания",
+    "listenPort": "Порт прослушивания",
+    "secret": "Секрет"
+  }
 }

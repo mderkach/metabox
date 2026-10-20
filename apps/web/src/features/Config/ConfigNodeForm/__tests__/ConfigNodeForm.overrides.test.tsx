@@ -91,15 +91,15 @@ describe('VLESS/Reality form override', () => {
     render(<NodeFromStore path={VLESS} />);
 
     const primary = [
-      screen.getByRole('textbox', { name: 'tag' }),
-      screen.getByRole('textbox', { name: 'server' }),
-      screen.getByRole('spinbutton', { name: 'server_port' }),
-      screen.getByRole('textbox', { name: 'uuid' }),
-      screen.getByRole('combobox', { name: 'flow' }),
-      screen.getByRole('textbox', { name: 'tls.server_name' }),
-      screen.getByRole('combobox', { name: 'tls.utls.fingerprint' }),
-      screen.getByRole('textbox', { name: 'tls.reality.public_key' }),
-      screen.getByRole('textbox', { name: 'tls.reality.short_id' }),
+      screen.getByRole('textbox', { name: 'Имя узла' }),
+      screen.getByRole('textbox', { name: 'Сервер' }),
+      screen.getByRole('spinbutton', { name: 'Порт сервера' }),
+      screen.getByRole('textbox', { name: 'UUID пользователя' }),
+      screen.getByRole('combobox', { name: 'Режим XTLS' }),
+      screen.getByRole('textbox', { name: 'Имя сервера (SNI)' }),
+      screen.getByRole('combobox', { name: 'Отпечаток браузера' }),
+      screen.getByRole('textbox', { name: 'Публичный ключ Reality' }),
+      screen.getByRole('textbox', { name: 'Short ID Reality' }),
     ];
 
     expect(inDocumentOrder([...primary, screen.getByRole('button', { name: /^Ещё параметры/ })])).toBe(true);
@@ -115,7 +115,7 @@ describe('VLESS/Reality form override', () => {
     await user.click(screen.getByRole('button', { name: /^Ещё параметры/ }));
 
     expect(screen.getByRole('combobox', { name: 'domain_strategy' })).toBeInTheDocument();
-    expect(screen.getAllByRole('textbox', { name: /server_name$/ })).toHaveLength(1);
+    expect(screen.getAllByRole('textbox', { name: 'Имя сервера (SNI)' })).toHaveLength(1);
   });
 
   it('flow and the uTLS fingerprint are chosen from the fork values', async () => {
@@ -123,8 +123,8 @@ describe('VLESS/Reality form override', () => {
 
     render(<NodeFromStore path={VLESS} />);
 
-    await selectOption(user, screen.getByRole('combobox', { name: 'flow' }), 'xtls-rprx-vision');
-    await selectOption(user, screen.getByRole('combobox', { name: 'tls.utls.fingerprint' }), 'firefox');
+    await selectOption(user, screen.getByRole('combobox', { name: 'Режим XTLS' }), 'xtls-rprx-vision');
+    await selectOption(user, screen.getByRole('combobox', { name: 'Отпечаток браузера' }), 'firefox');
 
     await waitFor(() => {
       expect(findValue(draft(), [...VLESS, 'flow'])).toBe('xtls-rprx-vision');
@@ -137,7 +137,7 @@ describe('VLESS/Reality form override', () => {
 
     render(<NodeFromStore path={VLESS} />);
 
-    await user.clear(screen.getByRole('textbox', { name: 'server' }));
+    await user.clear(screen.getByRole('textbox', { name: 'Сервер' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Обязательное поле');
     expect(ConfigDocumentState.getState().draft).toBeNull();
@@ -148,7 +148,7 @@ describe('VLESS/Reality form override', () => {
 
     render(<NodeFromStore path={VLESS} />);
 
-    const key = screen.getByRole('textbox', { name: 'tls.reality.public_key' });
+    const key = screen.getByRole('textbox', { name: 'Публичный ключ Reality' });
 
     await user.clear(key);
     await user.type(key, 'not-a-key');
@@ -172,7 +172,7 @@ describe('VLESS/Reality form override', () => {
 
     render(<NodeFromStore path={VLESS} />);
 
-    await user.type(screen.getByRole('textbox', { name: 'tag' }), '-edited');
+    await user.type(screen.getByRole('textbox', { name: 'Имя узла' }), '-edited');
 
     await waitFor(() => {
       expect(findValue(draft(), [...VLESS, 'tag'])).toBe('hk-01-edited');
@@ -250,7 +250,11 @@ describe('VLESS/Reality from scratch', () => {
     const user = userEvent.setup();
     const add = renderWithQuery(<ConfigNodeAddForm section='outbounds' takenTags={[]} builtTags={['with_utls']} />);
 
-    await selectOption(user, screen.getByRole('combobox', { name: 'Тип' }), 'vless');
+    await selectOption(
+      user,
+      screen.getByRole('combobox', { name: 'Тип' }),
+      'vlessVLESS: лёгкий прокси, обычно с Reality или TLS'
+    );
     await user.type(screen.getByRole('textbox', { name: 'Тег' }), 'vless-out');
     await user.click(screen.getByRole('button', { name: 'Добавить' }));
 
@@ -268,12 +272,12 @@ describe('VLESS/Reality from scratch', () => {
       await user.paste(value);
     };
 
-    await fill('textbox', 'server', 'a.example');
-    await fill('spinbutton', 'server_port', '443');
-    await fill('textbox', 'uuid', UUID);
-    await fill('textbox', 'tls.server_name', 'www.example');
-    await fill('textbox', 'tls.reality.public_key', PUBLIC_KEY);
-    await fill('textbox', 'tls.reality.short_id', '0123456789abcdef');
+    await fill('textbox', 'Сервер', 'a.example');
+    await fill('spinbutton', 'Порт сервера', '443');
+    await fill('textbox', 'UUID пользователя', UUID);
+    await fill('textbox', 'Имя сервера (SNI)', 'www.example');
+    await fill('textbox', 'Публичный ключ Reality', PUBLIC_KEY);
+    await fill('textbox', 'Short ID Reality', '0123456789abcdef');
 
     await waitFor(() => {
       expect(findValue(draft(), [...VLESS, 'tls', 'reality', 'short_id'])).toBe('0123456789abcdef');
@@ -329,15 +333,15 @@ describe('api service override', () => {
     );
     render(<NodeFromStore path={API} registry={NODE_REGISTRY.Service} />);
 
-    expect(screen.getByRole('textbox', { name: 'listen' })).toHaveValue('127.0.0.1');
-    expect(screen.getByRole('button', { name: 'Поля tls' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Адрес прослушивания' })).toHaveValue('127.0.0.1');
+    expect(screen.getByRole('button', { name: 'TLS' })).toBeInTheDocument();
 
-    await user.type(screen.getByRole('textbox', { name: 'tag' }), '-grpc');
+    await user.type(screen.getByRole('textbox', { name: 'Имя узла' }), '-grpc');
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Обязательное поле');
     expect(ConfigDocumentState.getState().draft).toBeNull();
 
-    await user.type(screen.getByRole('spinbutton', { name: 'listen_port' }), '9091');
+    await user.type(screen.getByRole('spinbutton', { name: 'Порт прослушивания' }), '9091');
 
     await waitFor(() => {
       expect(findValue(draft(), [...API, 'listen_port'])).toBe(9091);
@@ -369,16 +373,16 @@ describe('secret fields', () => {
 
     render(<NodeFromStore path={SHADOWSOCKS} />);
 
-    const password = screen.getByLabelText('password');
+    const password = screen.getByLabelText(/^Пароль/);
 
     expect(password).toHaveAttribute('type', 'password');
     expect(password).toHaveValue('hunter2');
 
-    await user.click(screen.getByRole('button', { name: 'Показать password' }));
+    await user.click(screen.getByRole('button', { name: 'Показать Пароль' }));
 
     expect(password).toHaveAttribute('type', 'text');
 
-    await user.click(screen.getByRole('button', { name: 'Скрыть password' }));
+    await user.click(screen.getByRole('button', { name: 'Скрыть Пароль' }));
 
     expect(password).toHaveAttribute('type', 'password');
     expect(ConfigDocumentState.getState().draft).toBeNull();
@@ -389,7 +393,7 @@ describe('secret fields', () => {
 
     render(<NodeFromStore path={SHADOWSOCKS} />);
 
-    const password = screen.getByLabelText('password');
+    const password = screen.getByLabelText(/^Пароль/);
 
     await user.clear(password);
     await user.type(password, 'correct-horse');
@@ -444,6 +448,6 @@ describe('secret fields', () => {
     ConfigDocumentState.getState().load(TEXT);
     render(<NodeFromStore path={VLESS} />);
 
-    expect(screen.getByRole('textbox', { name: 'uuid' })).toHaveValue('REDACTED');
+    expect(screen.getByRole('textbox', { name: 'UUID пользователя' })).toHaveValue('REDACTED');
   });
 });

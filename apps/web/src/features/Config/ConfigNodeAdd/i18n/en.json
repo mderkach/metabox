@@ -7,16 +7,70 @@
     "tag": {
       "label": "Tag",
       "hint": "Node name: rules and other nodes refer to the node by it"
+    },
+    "link": {
+      "label": "Paste a link",
+      "placeholder": "vless://…",
+      "hint": "Server link from your provider's app or email: the node is built from it, and the name comes from the link"
     }
   },
+  "manual": "or choose a type by hand",
+  "group": {
+    "proxy": "Proxy protocol",
+    "group": "Node group",
+    "service": "Service"
+  },
+  "description": {
+    "anytls": "AnyTLS: proxy over TLS that hides packet sizes",
+    "call": "Tunnel through video calls: VK, Dion, Telemost",
+    "http": "HTTP proxy, with or without TLS",
+    "hysteria": "Hysteria version 1: proxy over QUIC",
+    "hysteria2": "Hysteria 2: fast proxy over QUIC",
+    "masque": "MASQUE: Cloudflare proxy over QUIC or HTTP/2",
+    "mieru": "Mieru: a protocol that is hard to recognize",
+    "naive": "NaiveProxy: traffic looks like the Chrome browser",
+    "parser": "Node from a link that sing-box parses itself at startup",
+    "shadowsocks": "Shadowsocks: encrypted proxy with a password",
+    "shadowtls": "ShadowTLS: poses as the TLS handshake of another site",
+    "snell": "Snell: lightweight encrypted proxy",
+    "socks": "SOCKS4 or SOCKS5 proxy",
+    "ssh": "Tunnel through an SSH server",
+    "sudoku": "Sudoku: disguises traffic as random noise",
+    "tor": "The Tor network",
+    "trojan": "Trojan: proxy that looks like ordinary HTTPS",
+    "trusttunnel": "TrustTunnel by AdGuard: VPN indistinguishable from HTTPS",
+    "tuic": "TUIC: proxy over QUIC",
+    "vless": "VLESS: lightweight proxy, usually with Reality or TLS",
+    "vmess": "VMess: encrypted V2Ray proxy",
+    "selector": "The node is chosen by hand from a list",
+    "urltest": "The fastest node by measured delay",
+    "fallback": "The next node by priority when the current one is down",
+    "failover": "Switches nodes and keeps connections alive",
+    "bond": "Several links together for speed",
+    "direct": "Directly, without a proxy",
+    "bridge": "Forwards L3 traffic straight out of a network interface",
+    "bandwidth-limiter": "Speed limit",
+    "connection-limiter": "Limit on concurrent connections",
+    "rate-limiter": "Request rate limit",
+    "traffic-limiter": "Traffic quota per user"
+  },
   "unbuilt": {
-    "badge": "not in build: {{tag}}",
-    "hint": "The binary on the device is built without {{tag}}: the node is saved, but sing-box check rejects a config with it"
+    "badge": "not available in this sing-box build",
+    "hint": "sing-box on the device is built without this type ({{tag}}): the node is saved, but the check rejects a config with it"
   },
   "submit": "Add",
+  "submitLink": "Add from link",
   "error": {
     "typeRequired": "Choose a node type",
     "tagRequired": "Enter a tag",
-    "tagTaken": "Another node already uses this tag"
+    "tagTaken": "Another node already uses this tag",
+    "linkRequired": "Paste a link",
+    "link": {
+      "scheme": "Link not recognized: vless://, vmess://, trojan://, ss:// and hysteria2:// are supported",
+      "malformed": "The link is damaged, copy it again in full",
+      "server": "The link has no server address or port",
+      "credential": "The link has no access key: UUID or password",
+      "transport": "sing-box does not support the transport from the link"
+    }
   }
 }
