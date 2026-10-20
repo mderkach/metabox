@@ -85,8 +85,7 @@
     "invalidCharacter": "недопустимый символ"
   },
   "nodeEditor": {
-    "notWritten": "Строка {{line}}: {{reason}}. В черновик не записано",
-    "submit": "Сохранить в черновик"
+    "notWritten": "Строка {{line}}: {{reason}}. В черновик не записано"
   },
   "schema": {
     "unknownFields": "панель не знает поля: {{fields}}",
@@ -223,7 +222,8 @@
   "action": {
     "cancel": "Отмена",
     "closePanel": "Закрыть панель",
-    "close": "Закрыть"
+    "close": "Закрыть",
+    "done": "Готово"
   },
   "section": {
     "overview": "Обзор",

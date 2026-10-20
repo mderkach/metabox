@@ -1,11 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { FormProvider, useForm, useFormContext, useWatch } from 'react-hook-form';
+import { FormProvider, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { ConfigDocumentState, diffNode, ruleSetNodePath } from '@entities/Config';
+import { ConfigDocumentState, ConfigDocumentStore, diffNode, findValue, ruleSetNodePath } from '@entities/Config';
 import { StringField } from '@features/Config/ConfigNodeForm/@x/RuleSetEdit';
-import { ExtraFields, FormatField, TagField, type RuleSetAddModel } from '@features/RuleSet/RuleSetAdd/@x/RuleSetEdit';
+import { ExtraFields, TagField, type RuleSetAddModel } from '@features/RuleSet/RuleSetAdd/@x/RuleSetEdit';
 import { FIELD_KIND, type FieldPlan } from '@shared/lib/schemaShape';
+import { useWriteOnChange } from '@shared/lib/useWriteOnChange';
 import { Button } from '@shared/ui';
 
 import {
@@ -14,17 +15,16 @@ import {
   toRuleSetEditNode,
   type RuleSetEditModel,
 } from '../model/RuleSetEdit.schema';
+import { RuleSetEditFormatField } from './RuleSetEditFormatField';
 
 const URL_FIELD: FieldPlan = { key: 'url', path: ['url'], kind: FIELD_KIND.String };
 
 /**
- * Editing an existing `remote` set: tag, address, format, interval and download
- * node, with the same fields and checks as when adding.
- *
- * Only changed node fields go into the draft (`diffNode`): editing one field is
- * one diff line. The address is shown by the node form field: everything after
- * the host is hidden until revealed with a button, and the full address goes
- * into the draft.
+ * Editing an existing `remote` set with the same fields and checks as when
+ * adding. A valid change goes into the draft at once; only changed node fields
+ * are written (`diffNode`), so editing one field is one diff line. The address
+ * field hides everything after the host until revealed, and the full address
+ * goes into the draft.
  */
 export function RuleSetEditForm({
   index,
@@ -43,54 +43,59 @@ export function RuleSetEditForm({
 }) {
   const { t } = useTranslation('shared');
   const editMany = ConfigDocumentState.use.editMany();
+  const revision = ConfigDocumentState.use.revision();
   const defaults = ruleSetEditDefaults(node);
 
   const form = useForm<RuleSetEditModel, unknown, RuleSetAddModel>({
     defaultValues: defaults,
-    mode: 'onTouched',
+    mode: 'onChange',
+    shouldFocusError: false,
     resolver: zodResolver(makeRuleSetEditSchema(takenTags, outbounds, defaults.tag)),
   });
 
-  const onSubmit = form.handleSubmit((data) => {
-    editMany(diffNode(ruleSetNodePath(index), node, toRuleSetEditNode(node, data)));
-    onDone();
-  });
+  const formRef = useWriteOnChange(
+    form,
+    (data, withRemovals) => {
+      const path = ruleSetNodePath(index);
+      const current = findValue(ConfigDocumentStore.getState().current() ?? '', path);
+
+      if (!isRecord(current)) {
+        return false;
+      }
+
+      const edits = diffNode(path, current, toRuleSetEditNode(current, data));
+      const written = withRemovals ? edits : edits.filter((item) => item.value !== undefined);
+
+      editMany(written);
+
+      return written.length < edits.length;
+    },
+    () => ConfigDocumentStore.getState().revision !== revision
+  );
 
   return (
     <FormProvider {...form}>
       <form
+        ref={formRef}
         noValidate
         className='flex flex-col gap-4'
         onSubmit={(event) => {
-          void onSubmit(event);
+          event.preventDefault();
         }}
       >
         <StringField field={URL_FIELD} name={URL_FIELD.key} />
         <TagField />
-        <EditFormatField />
+        <RuleSetEditFormatField />
         <ExtraFields outbounds={outbounds} />
 
-        <div className='flex flex-wrap items-center gap-2'>
-          <Button type='submit' disabled={!form.formState.isDirty}>
-            {t('nodeEditor.submit')}
-          </Button>
-          <Button type='button' variant='ghost' onClick={onDone}>
-            {t('action.cancel')}
-          </Button>
-        </div>
+        <Button type='button' variant='outline' className='self-start' onClick={onDone}>
+          {t('action.done')}
+        </Button>
       </form>
     </FormProvider>
   );
 }
 
-/**
- * The format field of the add form reads the address as a string; a cleared
- * address is `null` here, and a format without an address is not needed there
- * either.
- */
-function EditFormatField() {
-  const { control } = useFormContext<RuleSetEditModel>();
-  const url = useWatch({ control, name: 'url' });
-
-  return url === null ? null : <FormatField />;
+function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

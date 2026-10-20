@@ -85,8 +85,7 @@
     "invalidCharacter": "invalid character"
   },
   "nodeEditor": {
-    "notWritten": "Line {{line}}: {{reason}}. Not written to the draft",
-    "submit": "Save to draft"
+    "notWritten": "Line {{line}}: {{reason}}. Not written to the draft"
   },
   "schema": {
     "unknownFields": "the panel does not know the fields: {{fields}}",
@@ -214,7 +213,8 @@
   "action": {
     "cancel": "Cancel",
     "closePanel": "Close the panel",
-    "close": "Close"
+    "close": "Close",
+    "done": "Done"
   },
   "section": {
     "overview": "Overview",

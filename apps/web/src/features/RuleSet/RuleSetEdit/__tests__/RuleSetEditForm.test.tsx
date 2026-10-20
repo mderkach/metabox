@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -74,19 +74,20 @@ describe('rule set edit form', () => {
     expect(url).toHaveValue(URL_WITH_TOKEN);
   });
 
-  it('a tag edit changes one line, the full address and foreign fields remain', async () => {
+  it('a tag edit goes into the draft as typed: one line changes, the full address and foreign fields remain', async () => {
     const user = userEvent.setup();
-    const onDone = renderForm();
+
+    renderForm();
 
     await user.clear(screen.getByLabelText('Имя сета'));
     await user.type(screen.getByLabelText('Имя сета'), 'ads-new');
-    await user.click(screen.getByRole('button', { name: 'Сохранить в черновик' }));
 
-    expect(changedLines(TEXT, draft())).toEqual(['        "tag": "ads-new",']);
+    await waitFor(() => {
+      expect(changedLines(TEXT, draft())).toEqual(['        "tag": "ads-new",']);
+    });
     expect(findValue(draft(), ['route', 'rule_set', INDEX, 'url'])).toBe(URL_WITH_TOKEN);
     expect(findValue(draft(), ['route', 'rule_set', INDEX, 'http_client'])).toBe('default');
     expect(draft()).toContain('// реклама');
-    expect(onDone).toHaveBeenCalledOnce();
   });
 
   it('writes the new address in full', async () => {
@@ -97,33 +98,42 @@ describe('rule set edit form', () => {
     await user.click(screen.getByRole('button', { name: 'Показать url' }));
     await user.clear(screen.getByRole('textbox', { name: 'url' }));
     await user.type(screen.getByRole('textbox', { name: 'url' }), 'https://cdn.example.com/a/ads.srs?key=k');
-    await user.click(screen.getByRole('button', { name: 'Сохранить в черновик' }));
 
-    expect(findValue(draft(), ['route', 'rule_set', INDEX, 'url'])).toBe('https://cdn.example.com/a/ads.srs?key=k');
+    await waitFor(() => {
+      expect(findValue(draft(), ['route', 'rule_set', INDEX, 'url'])).toBe('https://cdn.example.com/a/ads.srs?key=k');
+    });
   });
 
-  it('does not allow taking another rule set tag and does not write the draft', async () => {
+  it('does not write a tag taken by another rule set and says why', async () => {
     const user = userEvent.setup();
-    const onDone = renderForm();
+
+    renderForm();
 
     await user.clear(screen.getByLabelText('Имя сета'));
     await user.type(screen.getByLabelText('Имя сета'), 'own');
-    await user.click(screen.getByRole('button', { name: 'Сохранить в черновик' }));
 
     expect(await screen.findByText('такое имя уже занято другим сетом')).toBeInTheDocument();
-    expect(ConfigDocumentState.getState().draft).toBeNull();
-    expect(onDone).not.toHaveBeenCalled();
+    expect(findValue(draft(), ['route', 'rule_set', INDEX, 'tag'])).not.toBe('own');
   });
 
-  it('a cleared address is not saved', async () => {
+  it('a cleared address is not saved, not even on leaving the field', async () => {
     const user = userEvent.setup();
-    const onDone = renderForm();
+
+    renderForm();
 
     await user.click(screen.getByRole('button', { name: 'Показать url' }));
     await user.clear(screen.getByRole('textbox', { name: 'url' }));
-    await user.click(screen.getByRole('button', { name: 'Сохранить в черновик' }));
+    await user.tab();
 
     expect(ConfigDocumentState.getState().draft).toBeNull();
-    expect(onDone).not.toHaveBeenCalled();
+  });
+
+  it('"Done" closes the form', async () => {
+    const user = userEvent.setup();
+    const onDone = renderForm();
+
+    await user.click(screen.getByRole('button', { name: 'Готово' }));
+
+    expect(onDone).toHaveBeenCalledOnce();
   });
 });
