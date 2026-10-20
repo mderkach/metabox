@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { sectionSize, type ConfigDocument } from '@entities/Config';
+import { useScrollEdges } from '@shared/lib/useScrollEdges';
 import { cn } from '@shared/lib/utils';
 import {
   Button,
@@ -16,7 +17,6 @@ import {
   TabsTrigger,
 } from '@shared/ui';
 
-import { useScrollEdges } from '../lib';
 import { CONFIG_TABS, CONFIG_TABS_FREQUENT, tabPath } from '../model';
 import { ConfigModeSwitch } from './ConfigModeSwitch';
 

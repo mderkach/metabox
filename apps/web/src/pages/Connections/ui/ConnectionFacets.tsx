@@ -1,6 +1,6 @@
 import type { ParseKeys } from 'i18next';
 import { X } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -10,6 +10,8 @@ import {
   ROUTE_KIND,
   type ConnectionFacet,
 } from '@entities/Connection';
+import { useScrollEdges } from '@shared/lib/useScrollEdges';
+import { cn } from '@shared/lib/utils';
 import { Button } from '@shared/ui';
 
 import type { ConnectionsScreen } from '../lib';
@@ -66,11 +68,19 @@ export function ConnectionFacets({ screen }: { screen: ConnectionsScreen }) {
     [sourceLabel, t]
   );
 
+  const strip = useRef<HTMLDivElement>(null);
+  const edges = useScrollEdges(strip, screen.facets);
+
   return (
     <div
+      ref={strip}
       role='group'
       aria-label={t('facet.group')}
-      className='flex min-w-0 items-center gap-1.5 max-md:order-last max-md:w-full max-md:overflow-x-auto'
+      className={cn(
+        'flex min-w-0 items-center gap-1.5 max-md:order-last max-md:w-full max-md:overflow-x-auto',
+        edges.start && 'max-md:mask-l-from-85%',
+        edges.end && 'max-md:mask-r-from-85%'
+      )}
     >
       {CONNECTION_FACETS.map((facet) => (
         <ConnectionFacetFilter
