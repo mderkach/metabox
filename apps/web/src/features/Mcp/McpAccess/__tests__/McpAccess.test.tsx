@@ -4,7 +4,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import type { ReactElement } from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { MCP_ENDPOINT } from '@entities/Mcp';
 import { createMcpHandlers, MCP_TOKEN_FIXTURE } from '@entities/Mcp/__tests__/Mcp.handlers';
@@ -167,6 +167,43 @@ describe('McpAccess', () => {
 
     expect(await screen.findByRole('status', { name: 'Результат действия' })).toHaveTextContent('Скопировано: Токен');
     expect(await navigator.clipboard.readText()).toBe(MCP_TOKEN_FIXTURE[0]);
+  });
+
+  it('copies through a selected field when the page has no clipboard API, as over plain http', async () => {
+    const user = userEvent.setup();
+    server.use(...createMcpHandlers());
+    Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true });
+    let copied: string | null = null;
+    Object.defineProperty(document, 'execCommand', {
+      configurable: true,
+      value: vi.fn<(command: string) => boolean>((command) => {
+        // oxlint-disable-next-line testing-library/no-node-access -- the temporary field is hidden from the accessibility tree
+        const field = document.activeElement;
+
+        if (command === 'copy' && field instanceof HTMLTextAreaElement) {
+          copied = field.value.slice(field.selectionStart, field.selectionEnd);
+        }
+
+        return copied !== null;
+      }),
+    });
+    onTestFinished(() => {
+      Reflect.deleteProperty(document, 'execCommand');
+    });
+
+    renderMcp(<McpAccess />);
+    await user.click(await screen.findByRole('button', { name: 'Доступ MCP' }));
+    await user.click(screen.getByRole('button', { name: 'Включить' }));
+    await screen.findByLabelText('Токен');
+
+    const copy = screen.getByRole('button', { name: 'Скопировать: Токен' });
+
+    await user.click(copy);
+
+    expect(await screen.findByRole('status', { name: 'Результат действия' })).toHaveTextContent('Скопировано: Токен');
+    expect(copied).toBe(MCP_TOKEN_FIXTURE[0]);
+    expect(screen.getAllByLabelText('Токен')).toHaveLength(1);
+    expect(copy).toHaveFocus();
   });
 
   it('selects the token and says so when the browser refuses the clipboard', async () => {

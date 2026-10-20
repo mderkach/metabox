@@ -208,6 +208,26 @@ function maskUrl(text: string): string | null {
 }
 
 /**
+ * Value of a secret field with every non-empty string inside masked: sing-box
+ * accepts a key as a list of PEM lines and a header as a list of values.
+ */
+function maskValue(value: unknown, mask: SecretMask): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => maskValue(item, mask));
+  }
+
+  if (typeof value === 'object' && value !== null) {
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, maskValue(item, mask)]));
+  }
+
+  if (typeof value !== 'string' || value === '') {
+    return value;
+  }
+
+  return mask === SECRET_MASK.Whole ? MASK : (maskUrl(value) ?? value);
+}
+
+/**
  * JSON value with secret keys masked at any depth, by the same names and rule
  * as `SecretField`.
  */
@@ -224,20 +244,26 @@ function maskSecrets(value: unknown): unknown {
     Object.entries(value).map(([key, item]) => {
       const mask = secretMaskOf([key]);
 
-      if (mask === null || typeof item !== 'string' || item === '') {
-        return [key, maskSecrets(item)];
-      }
-
-      return [key, mask === SECRET_MASK.Whole ? MASK : (maskUrl(item) ?? item)];
+      return [key, mask === null ? maskSecrets(item) : maskValue(item, mask)];
     })
   );
 }
 
-/** Field JSON text with secrets masked; `null` means there is nothing to hide. */
-function maskedJsonText(value: unknown): string | null {
-  const masked = maskSecrets(value);
+/**
+ * Field JSON text with secrets masked; `null` means there is nothing to hide.
+ * `mask` is the mask of the field itself: then everything inside it is hidden.
+ */
+function maskedJsonText(value: unknown, mask: SecretMask | null): string | null {
+  const masked = mask === null ? maskSecrets(value) : maskValue(value, mask);
 
   return isSameValue(masked, value) ? null : toJsonText(masked);
+}
+
+/** List field text with every item masked; `null` means there is nothing to hide. */
+function maskedListText(value: unknown, mask: SecretMask): string | null {
+  const masked = maskValue(value, mask);
+
+  return isSameValue(masked, value) ? null : listToText(masked);
 }
 
 /**
@@ -478,31 +504,73 @@ export function EnumField({ field, name }: NodeFieldProps) {
 /** List of strings: one value per line. */
 export function ListField({ field, name }: NodeFieldProps) {
   const { t } = useTranslation(NS);
+  const label = useFieldLabel(name) ?? field.key;
   const { control } = useFormContext<ConfigNodeFormModel>();
   const id = useId();
   const errorId = useId();
   const hintId = useId();
+  const mask = secretMaskOf(field.path);
+  const [revealed, setRevealed] = useState(false);
 
   return (
     <Controller
       control={control}
       name={name}
-      render={({ field: input, fieldState }) => (
-        <FieldRow id={id} name={name} fieldKey={field.key} errorId={errorId} error={errorText(t, fieldState.error)}>
-          <ListInput
+      render={({ field: input, fieldState }) => {
+        const masked = mask === null ? null : maskedListText(input.value, mask);
+        const describedBy = fieldState.invalid ? `${hintId} ${errorId}` : hintId;
+
+        return (
+          <FieldRow
             id={id}
-            value={input.value}
-            invalid={fieldState.invalid}
-            describedBy={fieldState.invalid ? `${hintId} ${errorId}` : hintId}
-            onBlur={input.onBlur}
-            onChange={(text) => textToList(text, field.listable === true)}
-            onValue={input.onChange}
-          />
-          <p id={hintId} className='text-xs text-muted-foreground'>
-            {t('list.hint')}
-          </p>
-        </FieldRow>
-      )}
+            name={name}
+            fieldKey={field.key}
+            errorId={errorId}
+            error={errorText(t, fieldState.error)}
+            aside={
+              masked !== null && (
+                <Button
+                  type='button'
+                  variant='ghost'
+                  size='icon-xs'
+                  aria-label={t(revealed ? 'secret.hide' : 'secret.show', { name: label })}
+                  aria-controls={id}
+                  onClick={() => {
+                    setRevealed(!revealed);
+                  }}
+                >
+                  {revealed ? <EyeOff /> : <Eye />}
+                </Button>
+              )
+            }
+          >
+            {masked !== null && !revealed ? (
+              <Textarea
+                id={id}
+                value={masked}
+                readOnly
+                spellCheck={false}
+                className='min-h-16 font-mono text-xs'
+                aria-invalid={fieldState.invalid}
+                aria-describedby={describedBy}
+              />
+            ) : (
+              <ListInput
+                id={id}
+                value={input.value}
+                invalid={fieldState.invalid}
+                describedBy={describedBy}
+                onBlur={input.onBlur}
+                onChange={(text) => textToList(text, field.listable === true)}
+                onValue={input.onChange}
+              />
+            )}
+            <p id={hintId} className='text-xs text-muted-foreground'>
+              {t('list.hint')}
+            </p>
+          </FieldRow>
+        );
+      }}
     />
   );
 }
@@ -618,6 +686,7 @@ export function RawField({ field, name }: NodeFieldProps) {
   const hintId = useId();
   const [failure, setFailure] = useState<{ reason: string; value: unknown } | null>(null);
   const [revealed, setRevealed] = useState(false);
+  const mask = secretMaskOf(field.path);
 
   // A collapsed group removes the field together with the typed text: its
   // failure no longer stops the write.
@@ -638,7 +707,7 @@ export function RawField({ field, name }: NodeFieldProps) {
         // The failure belongs to the value at which the text did not parse: a
         // value that changed from outside rewrote the field text too.
         const reason = failure !== null && isSameValue(failure.value, input.value) ? failure.reason : null;
-        const masked = maskedJsonText(input.value);
+        const masked = maskedJsonText(input.value, mask);
         const hidden = revealed ? null : masked;
         const invalid = reason !== null || fieldState.invalid;
         const describedBy = invalid ? `${hintId} ${errorId}` : hintId;

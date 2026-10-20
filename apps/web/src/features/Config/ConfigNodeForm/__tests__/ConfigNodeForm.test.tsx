@@ -446,6 +446,42 @@ describe('JSON text field with secrets', () => {
   });
 });
 
+describe('JSON text field with secrets in other shapes', () => {
+  /** The token is made up. */
+  const HEADERS_TEXT = `{
+  "outbounds": [
+    {
+      "type": "vless",
+      "tag": "ws",
+      "server": "a.example",
+      "server_port": 443,
+      "transport": { "type": "ws", "path": "/ws", "headers": { "Host": "a.example", "Authorization": ["Bearer t-1"] } },
+    },
+  ],
+}`;
+
+  beforeEach(() => {
+    ConfigDocumentState.getState().reset();
+    ConfigDocumentState.getState().load(HEADERS_TEXT);
+  });
+
+  it('hides an Authorization header in another case and given as a list', async () => {
+    const user = userEvent.setup();
+
+    render(<NodeFromStore registry={NODE_REGISTRY.Outbound} path={['outbounds', 0]} />);
+
+    const transport = screen.getByRole('textbox', { name: 'Транспорт' });
+
+    expect(transport).toHaveAttribute('readonly');
+    expect(transport).not.toHaveDisplayValue(/Bearer t-1/);
+    expect(transport).toHaveDisplayValue(/"Host": "a.example"/);
+
+    await user.click(screen.getByRole('button', { name: 'Показать Транспорт' }));
+
+    expect(screen.getByRole('textbox', { name: 'Транспорт' })).toHaveDisplayValue(/"Bearer t-1"/);
+  });
+});
+
 describe('node form on the config corpus', () => {
   beforeEach(() => {
     ConfigDocumentState.getState().reset();

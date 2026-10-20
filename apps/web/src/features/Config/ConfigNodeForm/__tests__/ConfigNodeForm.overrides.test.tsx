@@ -94,7 +94,7 @@ describe('VLESS/Reality form override', () => {
       screen.getByRole('textbox', { name: 'Имя узла' }),
       screen.getByRole('textbox', { name: 'Сервер' }),
       screen.getByRole('spinbutton', { name: 'Порт сервера' }),
-      screen.getByRole('textbox', { name: 'UUID пользователя' }),
+      screen.getByLabelText(/^UUID пользователя/),
       screen.getByRole('combobox', { name: 'Режим XTLS' }),
       screen.getByRole('textbox', { name: 'Имя сервера (SNI)' }),
       screen.getByRole('combobox', { name: 'Отпечаток браузера' }),
@@ -274,7 +274,8 @@ describe('VLESS/Reality from scratch', () => {
 
     await fill('textbox', 'Сервер', 'a.example');
     await fill('spinbutton', 'Порт сервера', '443');
-    await fill('textbox', 'UUID пользователя', UUID);
+    await user.click(screen.getByLabelText(/^UUID пользователя/));
+    await user.paste(UUID);
     await fill('textbox', 'Имя сервера (SNI)', 'www.example');
     await fill('textbox', 'Публичный ключ Reality', PUBLIC_KEY);
     await fill('textbox', 'Short ID Reality', '0123456789abcdef');
@@ -443,11 +444,45 @@ describe('secret fields', () => {
     expect(url).not.toHaveAttribute('readonly');
   });
 
-  it('uuid is not hidden: it is an identifier, not a password', () => {
+  it('uuid is hidden: for vless it is the credential itself', async () => {
+    const user = userEvent.setup();
+
     ConfigDocumentState.getState().reset();
     ConfigDocumentState.getState().load(TEXT);
     render(<NodeFromStore path={VLESS} />);
 
-    expect(screen.getByRole('textbox', { name: 'UUID пользователя' })).toHaveValue('REDACTED');
+    const uuid = screen.getByLabelText(/^UUID пользователя/);
+
+    expect(uuid).toHaveAttribute('type', 'password');
+
+    await user.click(screen.getByRole('button', { name: 'Показать UUID пользователя' }));
+
+    expect(uuid).toHaveAttribute('type', 'text');
+    expect(ConfigDocumentState.getState().draft).toBeNull();
+  });
+
+  it('a private key given as a list of PEM lines is hidden line by line until revealed', async () => {
+    const user = userEvent.setup();
+
+    ConfigDocumentState.getState().reset();
+    ConfigDocumentState.getState().load(`{
+  "outbounds": [
+    { "type": "ssh", "tag": "ssh", "server": "a.example", "private_key": ["-----BEGIN KEY-----", "k1"] },
+  ],
+}`);
+    render(<NodeFromStore path={['outbounds', 0]} />);
+
+    const key = screen.getByRole('textbox', { name: 'private_key' });
+
+    expect(key).toHaveAttribute('readonly');
+    expect(key).toHaveValue('••••••\n••••••');
+
+    await user.click(screen.getByRole('button', { name: 'Показать private_key' }));
+
+    const revealed = screen.getByRole('textbox', { name: 'private_key' });
+
+    expect(revealed).not.toHaveAttribute('readonly');
+    expect(revealed).toHaveValue('-----BEGIN KEY-----\nk1');
+    expect(ConfigDocumentState.getState().draft).toBeNull();
   });
 });
