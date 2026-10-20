@@ -28,7 +28,7 @@ type MCP interface {
 // that the endpoint exists.
 func (s *Server) handleMCP(w http.ResponseWriter, r *http.Request) {
 	if s.mcp == nil || !s.mcp.Enabled() {
-		fail(s.log, w, r, errNotFound)
+		s.spaHandler().ServeHTTP(w, r)
 
 		return
 	}

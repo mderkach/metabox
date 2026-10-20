@@ -314,28 +314,26 @@ func run(log *slog.Logger, s settings) error {
 	})
 
 	// A broken token file leaves MCP off instead of stopping the daemon: the panel stays
-	// up, and the owner removes the file over SSH.
-	var agents httpapi.MCP
-
+	// up, and a new token from the panel overwrites the file.
 	access, err := mcp.NewAccess(ctx, store)
 	if err != nil {
 		log.Error("MCP выключен: файл токена не прочитан", "err", err)
-	} else {
-		agents = mcp.New(access, log, mcp.Options{
-			Version:        version.Version,
-			SingboxVersion: singboxVersion,
-			SingboxTags:    build.Tags,
-			SchemaVersion:  version.Schema,
-			Service:        mcp.ServiceReader(serviceState(service, singboxVersion, sysinfo)),
-			Runtime:        source,
-			Explain:        explainer,
-			Config:         store,
-			Dataplane:      plane,
-			Devices:        lan,
-			Logs:           logReader,
-			Diag:           diagnoser,
-		})
 	}
+
+	agents := mcp.New(access, log, mcp.Options{
+		Version:        version.Version,
+		SingboxVersion: singboxVersion,
+		SingboxTags:    build.Tags,
+		SchemaVersion:  version.Schema,
+		Service:        mcp.ServiceReader(serviceState(service, singboxVersion, sysinfo)),
+		Runtime:        source,
+		Explain:        explainer,
+		Config:         store,
+		Dataplane:      plane,
+		Devices:        lan,
+		Logs:           logReader,
+		Diag:           diagnoser,
+	})
 
 	api := httpapi.NewServer(manager, store, log, httpapi.Options{
 		Version:        version.Version,

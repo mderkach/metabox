@@ -54,7 +54,7 @@ The agent goes through REST or a browser. No dependency, but no tool schemas, an
 
 The daemon serves MCP at `/mcp` on the same listener and mux as the REST API, with the official Go SDK, streamable HTTP transport, `Stateless: true`. Phase 1 is read-only.
 
-- **Off by default.** Without MCP settings the route answers 404, as an unknown path. MCP is enabled and disabled in the panel; enabling generates a token. MCP cannot be enabled without a token.
+- **Off by default.** Without MCP settings the route answers as an unknown path: the panel page. MCP is enabled and disabled in the panel; enabling generates a token. MCP cannot be enabled without a token.
 - **Token.** 32 random bytes from `crypto/rand`, shown to the owner once on generation and stored as a SHA-256 hash in a file in the daemon service directory, next to `auth.json`, with the same atomic write and mode 0600. A request carries `Authorization: Bearer <token>`; the daemon hashes it and compares the hashes with `crypto/subtle.ConstantTimeCompare`. A missing or wrong token gets 401. Regenerating the token invalidates the old one; removing the file and restarting the daemon disables MCP, which is the SSH reset. Changing MCP settings restarts neither sing-box nor the daemon.
 - **Independent of the panel password.** `/mcp` does not accept the panel session cookie, and the panel API does not accept the MCP token. `requireSession` does not apply to `/mcp`: the token replaces it whether or not a panel password is set.
 - **Filter in front of the endpoint.** `checkHost` from `middleware.go` applies to `/mcp` unchanged. For the origin, `originAllowed` is reused with one difference: a request without `Origin` is accepted on `/mcp`, because a page in the owner's browser cannot attach the `Authorization` header to a cross-origin request without a CORS preflight, and the daemon sends no CORS headers. A request with a foreign `Origin` gets 403. `recoverPanic` and `logRequests` wrap `/mcp` as every other route.
@@ -122,7 +122,7 @@ Backward compatible: MCP is off by default, the panel API and its middleware do 
 
 ## Validation
 
-- `cd apps/metaboxd && go test ./...`: tests through an SDK client session for every tool; a request without a token or with a wrong one gets 401; with MCP disabled `/mcp` gets 404; a foreign `Origin` gets 403; a foreign `Host` is rejected; a panel session cookie does not open `/mcp`, and the MCP token does not open `/api/*`; with a read-only token `tools/list` has no tool without `ReadOnlyHint`; a panicking tool returns a tool error and the server keeps answering; a config fragment with a known secret comes back masked.
+- `cd apps/metaboxd && go test ./...`: tests through an SDK client session for every tool; a request without a token or with a wrong one gets 401; with MCP disabled `/mcp` answers as an unknown path; a foreign `Origin` gets 403; a foreign `Host` is rejected; a panel session cookie does not open `/mcp`, and the MCP token does not open `/api/*`; with a read-only token `tools/list` has no tool without `ReadOnlyHint`; a panicking tool returns a tool error and the server keeps answering; a config fragment with a known secret comes back masked.
 - `make lint` and the daemon build for `linux/arm64`: the size of the stripped binary grows by no more than 2.2 MB.
 - Manual: Claude Code connected to `/mcp` with the token on the test bench and on the router lists the phase 1 tools and calls each of them.
 

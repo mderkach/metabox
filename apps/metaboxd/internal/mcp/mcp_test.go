@@ -281,7 +281,13 @@ type reply struct {
 func (b *bench) post(path string, header map[string]string, body string) reply {
 	b.t.Helper()
 
-	req, err := http.NewRequestWithContext(b.t.Context(), http.MethodPost, b.srv.URL+path, strings.NewReader(body))
+	return b.send(http.MethodPost, path, header, body)
+}
+
+func (b *bench) send(method, path string, header map[string]string, body string) reply {
+	b.t.Helper()
+
+	req, err := http.NewRequestWithContext(b.t.Context(), method, b.srv.URL+path, strings.NewReader(body))
 	if err != nil {
 		b.t.Fatal(err)
 	}
@@ -380,27 +386,14 @@ func text(result *sdk.CallToolResult) string {
 	return strings.Join(parts, "\n")
 }
 
-func errorCode(t *testing.T, resp reply) contract.ErrorCode {
-	t.Helper()
-
-	var body contract.Error
-	if err := json.Unmarshal(resp.body, &body); err != nil {
-		t.Fatalf("error body: %v", err)
-	}
-
-	return body.Code
-}
-
 func TestEndpointIsUnknownPathWhileOff(t *testing.T) {
 	b := newBench(t, nil, &memoryStore{})
 
-	resp := b.post("/mcp", nil, initializeBody)
-	if resp.status != http.StatusNotFound {
-		t.Fatalf("status %d, want 404", resp.status)
-	}
+	resp := b.send(http.MethodGet, "/mcp", nil, "")
+	unknown := b.send(http.MethodGet, "/no-such-page", nil, "")
 
-	if code := errorCode(t, resp); code != contract.ErrNotFound {
-		t.Errorf("code %q, want not_found", code)
+	if resp.status != unknown.status || !bytes.Equal(resp.body, unknown.body) {
+		t.Errorf("/mcp answered %d %q, an unknown path %d %q", resp.status, resp.body, unknown.status, unknown.body)
 	}
 }
 
@@ -945,7 +938,8 @@ func TestPanelEndpointsManageToken(t *testing.T) {
 		t.Fatalf("disable: status %d, want 204", del.StatusCode)
 	}
 
-	if resp := b.post("/mcp", map[string]string{"Authorization": "Bearer " + issued.Token}, initializeBody); resp.status != http.StatusNotFound {
-		t.Errorf("after disable: status %d, want 404", resp.status)
+	resp = b.send(http.MethodGet, "/mcp", map[string]string{"Authorization": "Bearer " + issued.Token}, "")
+	if unknown := b.send(http.MethodGet, "/no-such-page", nil, ""); resp.status != unknown.status {
+		t.Errorf("after disable: status %d, an unknown path %d", resp.status, unknown.status)
 	}
 }

@@ -41,8 +41,9 @@ type Access struct {
 	hash []byte
 }
 
-// NewAccess reads the hash file. A file that cannot be parsed is an error: the caller
-// decides whether to start without MCP.
+// NewAccess reads the hash file. It always returns a usable Access: with a file that
+// cannot be read or parsed MCP is off and the error is returned for the log, so issuing a
+// token from the panel overwrites the broken file.
 func NewAccess(ctx context.Context, store Store) (*Access, error) {
 	a := &Access{store: store}
 
@@ -51,16 +52,16 @@ func NewAccess(ctx context.Context, store Store) (*Access, error) {
 		return a, nil
 	}
 	if err != nil {
-		return nil, err
+		return a, err
 	}
 
 	var rec record
 	if err := json.Unmarshal(data, &rec); err != nil {
-		return nil, fmt.Errorf("разбор файла токена MCP: %w", err)
+		return a, fmt.Errorf("разбор файла токена MCP: %w", err)
 	}
 
 	if len(rec.Hash) != 0 && len(rec.Hash) != sha256.Size {
-		return nil, fmt.Errorf("файл токена MCP: хэш длиной %d байт", len(rec.Hash))
+		return a, fmt.Errorf("файл токена MCP: хэш длиной %d байт", len(rec.Hash))
 	}
 
 	a.hash = rec.Hash
