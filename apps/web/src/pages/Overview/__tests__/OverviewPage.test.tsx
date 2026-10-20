@@ -4,7 +4,7 @@ import { server } from '@test/server';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CONFIG_ENDPOINT } from '@entities/Config';
 import { ConnectionStore } from '@entities/Connection';
@@ -350,5 +350,39 @@ describe('overview screen', () => {
 
     expect(await screen.findByText('демон отвечает')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+});
+
+describe('overview screen on a phone', () => {
+  beforeEach(() => {
+    ConnectionStore.getState().reset();
+    RuntimeStore.getState().reset();
+    serveStatus();
+    vi.stubGlobal('matchMedia', function matchNarrowQuery(media: string) {
+      return { matches: true, media, addEventListener: vi.fn<() => void>(), removeEventListener: vi.fn<() => void>() };
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('keeps board and process readings folded until their title is pressed', async () => {
+    const user = userEvent.setup();
+
+    RuntimeStore.getState().pushSystem({ ...SYSTEM_FIXTURE, thermal: [{ name: 'cpu-thermal', celsius: 42.5 }] });
+    renderWithRouter(OverviewPage);
+
+    const device = await screen.findByRole('button', { name: 'Роутер' });
+
+    expect(device).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('button', { name: 'Процессы' })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('list', { name: 'Показания устройства' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Трафик' })).toBeInTheDocument();
+
+    await user.click(device);
+
+    expect(device).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('list', { name: 'Показания устройства' })).toBeInTheDocument();
   });
 });

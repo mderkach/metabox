@@ -36,7 +36,7 @@ function toTemperature(system: SystemStat | null, hottest: SystemStat['thermal']
   return hottest === undefined ? '—' : formatCelsius(hottest.celsius);
 }
 
-export function OverviewDevice({ system }: { system: SystemStat | null }) {
+export function OverviewDevice({ system, collapsible }: { system: SystemStat | null; collapsible: boolean }) {
   const { t } = useTranslation('pages/Overview');
   const history = useTrafficHistory();
   const deviceHistory = history.data?.device ?? [];
@@ -48,7 +48,7 @@ export function OverviewDevice({ system }: { system: SystemStat | null }) {
   const usedMemory = system === null ? 0 : system.memory.total - system.memory.available;
 
   return (
-    <OverviewSection title={t('device.title')}>
+    <OverviewSection title={t('device.title')} collapsible={collapsible}>
       <Card className={CARD_FLUSH}>
         <ul aria-label={t('device.label')} className='grid grid-cols-2 gap-px bg-border lg:grid-cols-4'>
           <OverviewTile

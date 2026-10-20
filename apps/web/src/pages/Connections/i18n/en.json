@@ -29,6 +29,7 @@
     "description": "Rows appear as soon as traffic goes through sing-box."
   },
   "export": {
+    "menu": "Export",
     "csv": "Export CSV",
     "json": "Export JSON"
   },

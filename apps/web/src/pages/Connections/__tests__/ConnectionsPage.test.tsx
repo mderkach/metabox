@@ -622,6 +622,19 @@ describe('connections screen on a phone', () => {
     });
   });
 
+  it('offers both export formats from one footer button', async () => {
+    const user = userEvent.setup();
+
+    ConnectionStore.getState().apply(makeConnectionsSnapshot(3));
+    renderScreen();
+
+    await user.click(await screen.findByRole('button', { name: 'Выгрузить' }));
+
+    expect(await screen.findByRole('menuitem', { name: 'Выгрузить CSV' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Выгрузить JSON' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Выгрузить CSV' })).not.toBeInTheDocument();
+  });
+
   it('explains the route with a sheet over the list and clears the selection on Escape', async () => {
     server.use(...createRouteHandlers(CONNECTIONS_FIXTURE.connections));
     const user = userEvent.setup();
