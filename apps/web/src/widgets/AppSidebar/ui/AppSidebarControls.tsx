@@ -1,33 +1,15 @@
-import type { ParseKeys } from 'i18next';
 import { useTranslation } from 'react-i18next';
 
-import {
-  SERVICE_STATUS,
-  toConfirmedStatus,
-  useDaemonReachable,
-  useDaemonStatus,
-  useServiceState,
-  type ServiceStatus,
-} from '@entities/Daemon';
+import { useDaemonStatus, type ServiceStatus } from '@entities/Daemon';
 import { AuthLogout } from '@features/Auth/AuthLogout';
 import { AuthPassword } from '@features/Auth/AuthPassword';
 import { LanguageSwitch } from '@features/Language/LanguageSwitch';
 import { ThemeSwitch } from '@features/Theme/ThemeSwitch';
 import { cn } from '@shared/lib/utils';
 
+import { useShellServiceStatus } from '../lib/AppSidebar.lib';
 import { AppSidebarDrift } from './AppSidebarDrift';
-
-const STATUS_TONE: Readonly<Record<ServiceStatus, string>> = {
-  [SERVICE_STATUS.Running]: 'bg-signal-ok',
-  [SERVICE_STATUS.Stopped]: 'bg-signal-idle',
-  [SERVICE_STATUS.Failed]: 'bg-signal-bad',
-};
-
-const STATUS_LABEL = {
-  [SERVICE_STATUS.Running]: 'service.running',
-  [SERVICE_STATUS.Stopped]: 'service.stopped',
-  [SERVICE_STATUS.Failed]: 'service.failed',
-} as const satisfies Readonly<Record<ServiceStatus, ParseKeys<'widgets/AppSidebar'>>>;
+import { SERVICE_LABEL, SERVICE_TONE } from './AppSidebarService';
 
 /**
  * Service state and shell settings: the sidebar footer on a wide screen and
@@ -37,15 +19,11 @@ const STATUS_LABEL = {
 export function AppSidebarControls({ collapsed }: { collapsed: boolean }) {
   const { t } = useTranslation('widgets/AppSidebar');
   const status = useDaemonStatus();
-  const reachable = useDaemonReachable();
-  const service = useServiceState();
+  const service = useShellServiceStatus();
 
   return (
     <>
-      <ServiceDot
-        status={reachable && service.data !== undefined ? toConfirmedStatus(service.data) : null}
-        collapsed={collapsed}
-      />
+      <ServiceDot status={service} collapsed={collapsed} />
 
       <AppSidebarDrift collapsed={collapsed} />
 
@@ -77,8 +55,8 @@ export function AppSidebarControls({ collapsed }: { collapsed: boolean }) {
  */
 function ServiceDot({ status, collapsed }: { status: ServiceStatus | null; collapsed: boolean }) {
   const { t } = useTranslation('widgets/AppSidebar');
-  const label = t(status === null ? 'service.unknown' : STATUS_LABEL[status]);
-  const tone = status === null ? 'bg-signal-idle' : STATUS_TONE[status];
+  const label = t(status === null ? 'service.unknown' : SERVICE_LABEL[status]);
+  const tone = status === null ? 'bg-signal-idle' : SERVICE_TONE[status];
 
   return (
     <p title={label} className='flex items-center gap-2 text-xs text-muted-foreground'>

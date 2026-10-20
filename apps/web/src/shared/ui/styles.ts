@@ -31,7 +31,7 @@ export const SEARCH_FIELD = 'relative w-full max-w-80';
 
 /** Filter chip: outbound facet on rules. */
 export const FACET_CLASS =
-  'flex h-6 shrink-0 items-center gap-1.5 rounded-md border px-2 text-xs transition-colors focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none';
+  'flex h-6 shrink-0 items-center gap-1.5 rounded-md border px-2 text-xs transition-colors pointer-coarse:h-11 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none';
 
 export const FACET_ACTIVE = 'border-selected-edge bg-selected text-foreground';
 export const FACET_IDLE = 'border-border text-muted-foreground hover:text-foreground';

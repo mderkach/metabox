@@ -19,7 +19,8 @@
     "label": "Ещё",
     "title": "Состояние и настройки",
     "close": "Закрыть",
-    "sections": "Разделы"
+    "sections": "Разделы",
+    "withStatus": "Ещё, {{status}}"
   },
   "short": {
     "config": "Конфиг",

@@ -36,6 +36,27 @@ describe('AppSidebarBottomNav', () => {
     expect(within(nav).getByRole('link', { name: 'Клиенты' })).toHaveAttribute('href', '/devices');
   });
 
+  it('marks a stopped sing-box on the "More" item, not only inside its sheet', async () => {
+    server.use(
+      http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json({ ...SERVICE_RUNNING_FIXTURE, status: 'stopped' }))
+    );
+    renderWithRouter(AppSidebarBottomNav);
+
+    const nav = await screen.findByRole('navigation', { name: 'Разделы панели' });
+
+    expect(await within(nav).findByRole('button', { name: 'Ещё, sing-box остановлен' })).toBeInTheDocument();
+  });
+
+  it('leaves the "More" item unmarked while sing-box runs', async () => {
+    renderWithRouter(AppSidebarBottomNav);
+
+    const nav = await screen.findByRole('navigation', { name: 'Разделы панели' });
+
+    await waitFor(() => {
+      expect(within(nav).getByRole('button', { name: 'Ещё' })).toBeInTheDocument();
+    });
+  });
+
   it('marks one section as current, even when the address is nested in it', async () => {
     renderWithRouter(AppSidebarBottomNav, { path: '/config/rule-set' });
 

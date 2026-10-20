@@ -57,7 +57,7 @@ export function ConfigApplyHistory() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button variant='outline' size='sm' />}>
         <History />
-        {t('history.open')}
+        <span className='max-sm:sr-only'>{t('history.open')}</span>
       </DialogTrigger>
 
       <DialogContent showCloseButton={false} className={DIALOG_SIZE.List}>

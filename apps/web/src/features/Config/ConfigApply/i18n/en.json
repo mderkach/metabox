@@ -4,7 +4,8 @@
     "applying": "Applying the config on the device…",
     "dirty": "There are unapplied changes",
     "apply": "Apply",
-    "discard": "Discard changes"
+    "discard": "Discard changes",
+    "more": "More draft actions"
   },
   "blocked": {
     "unreachable": "metabox is not responding, applying is unavailable now.",

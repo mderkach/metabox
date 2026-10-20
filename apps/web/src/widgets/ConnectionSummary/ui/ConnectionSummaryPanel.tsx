@@ -23,7 +23,7 @@ export function ConnectionSummaryPanel({
           <h3>
             <Link
               to={href}
-              className='flex items-center gap-1 text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none'
+              className='flex items-center gap-1 text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none pointer-coarse:min-h-11'
             >
               <span className={SECTION_LABEL}>{title}</span>
               <ArrowUpRight className='size-3.5' aria-hidden='true' />

@@ -80,8 +80,8 @@ export function ConfigTabs({ config }: { config: ConfigDocument | null }) {
   );
 
   return (
-    <div className='flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-border px-4 py-1.5 [view-transition-name:config-tabs] sm:px-6'>
-      <div className='flex max-w-full min-w-0 items-center gap-1'>
+    <div className='flex shrink-0 items-center gap-3 border-b border-border px-4 py-1.5 [view-transition-name:config-tabs] sm:px-6'>
+      <div className='flex min-w-0 flex-1 items-center gap-1'>
         <Tabs value={current} className='min-w-0'>
           <TabsList
             ref={list}
@@ -136,9 +136,7 @@ export function ConfigTabs({ config }: { config: ConfigDocument | null }) {
         </DropdownMenu>
       </div>
 
-      <div className='ml-auto'>
-        <ConfigModeSwitch />
-      </div>
+      <ConfigModeSwitch />
     </div>
   );
 }
