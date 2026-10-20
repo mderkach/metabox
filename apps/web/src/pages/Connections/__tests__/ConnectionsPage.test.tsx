@@ -428,6 +428,33 @@ describe('connections screen', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
+  it('closes the explained connection from the panel: the panel covers the row button', async () => {
+    const closed = vi.fn<(id: string) => void>();
+
+    server.use(
+      ...createRouteHandlers(CONNECTIONS_FIXTURE.connections),
+      http.delete(`${CONNECTION_ENDPOINT.connections()}/:id`, ({ params }) => {
+        closed(String(params.id));
+
+        return new HttpResponse(null, { status: 204 });
+      })
+    );
+    const user = userEvent.setup();
+
+    ConnectionStore.getState().apply(CONNECTIONS_FIXTURE);
+    renderScreen();
+
+    await user.click(await screen.findByRole('button', { name: /Почему соединение api\.git\.example/ }));
+
+    const panel = await screen.findByRole('complementary', { name: /api\.git\.example/ });
+
+    await user.click(within(panel).getByRole('button', { name: /Закрыть соединение api\.git\.example/ }));
+
+    await waitFor(() => {
+      expect(closed).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it('each row has its own explanation with the chain of that row', async () => {
     server.use(...createRouteHandlers(CONNECTIONS_FIXTURE.connections));
     const user = userEvent.setup();

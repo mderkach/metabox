@@ -51,5 +51,6 @@
   "announce": {
     "closed": "Connection closed",
     "closedAll": "All live connections closed"
-  }
+  },
+  "closeExplained": "Close the {{host}} connection"
 }

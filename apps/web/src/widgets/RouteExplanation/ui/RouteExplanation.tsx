@@ -60,6 +60,7 @@ export function RouteExplanation({
   connectionId,
   host,
   source,
+  actions = null,
   onClose,
 }: {
   id?: string;
@@ -68,6 +69,8 @@ export function RouteExplanation({
   host: string;
   /** Source address; the panel names it by the device label. */
   source: string;
+  /** Actions on the connection: header, before the close button. */
+  actions?: ReactNode;
   onClose: () => void;
 }) {
   const { t } = useTranslation('widgets/RouteExplanation');
@@ -95,6 +98,7 @@ export function RouteExplanation({
             <Title host={host} source={source} />
           </h2>
         }
+        actions={actions}
         onClose={onClose}
       />
       <Body connectionId={connectionId} />
@@ -163,12 +167,21 @@ export function RouteExplanationSheet({
   );
 }
 
-function Header({ heading, onClose }: { heading: ReactNode; onClose: () => void }) {
+function Header({
+  heading,
+  actions = null,
+  onClose,
+}: {
+  heading: ReactNode;
+  actions?: ReactNode;
+  onClose: () => void;
+}) {
   const { t } = useTranslation('widgets/RouteExplanation');
 
   return (
     <header className={cn('flex items-center gap-2.5', SURFACE_HEAD)}>
       {heading}
+      {actions}
       <Button variant='outline' size='icon-sm' aria-label={t('close')} onClick={onClose}>
         <X />
       </Button>
