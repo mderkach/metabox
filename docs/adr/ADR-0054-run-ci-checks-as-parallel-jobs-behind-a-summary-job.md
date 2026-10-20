@@ -40,10 +40,10 @@ Out of scope: sharding the web tests, a self-hosted runner, running `integration
 
 ## Considered options
 
-1. **Parallel jobs `go`, `schemagen`, `web` and a summary job `checks` with `needs` on all three.** `checks` runs with `if: always()` and fails when any dependency did not succeed: a job skipped because of a failed dependency counts as passed for a branch rule, so a plain `needs` without `always()` would let a red run through. The Go cache key includes `Makefile` and both module manifests, so a change of the linter pin or a dependency resaves it. `push` is limited to `main`, and a `concurrency` group cancels the run of a superseded commit. Drawbacks: three runners set up the toolchain instead of one, which costs minutes of runner time though not wall time; `web` still needs Go for `make daemon`. **Chosen.**
+1. **Parallel jobs `go`, `schemagen`, `web` and a summary job `checks` with `needs` on all three.** `checks` runs with `if: always()` and fails when any dependency did not succeed: a job skipped because of a failed dependency counts as passed for a branch rule, so a plain `needs` without `always()` would let a red run through. The Go cache key includes `Makefile` and both module manifests, so a change of the linter pin or a dependency resaves it. `push` is limited to `main`, and a `concurrency` group cancels the run of a superseded commit. Drawbacks: three runners set up the toolchain instead of one, which costs minutes of runner time though not wall time; `web` still needs Go for `make daemon`. **Chosen**: meets drivers 1–5.
 2. **Keep one job, fix only the cache key.** Removes the download and its failure mode. Drawbacks: the three two-minute steps stay sequential, so the run stays above six minutes; double runs stay. **Rejected**: driver 1.
 3. **One job, cache fix, and `golangci/golangci-lint-action` with its own cache.** The action caches the linter binary and analysis results. Drawbacks: a new action, a second place that pins the linter version next to the `Makefile`, and the lint command in CI stops being `make lint`. **Rejected**: drivers 4 and 5.
-4. **Keep the current approach.** 8–9 minutes per run, a network-dependent lint step, two runs per push. **Rejected.**
+4. **Keep the current approach.** 8–9 minutes per run, a network-dependent lint step, two runs per push. **Rejected**: drivers 1 and 2.
 
 ## Decision outcome
 
@@ -51,7 +51,7 @@ Out of scope: sharding the web tests, a self-hosted runner, running `integration
 - `checks` depends on `go`, `schemagen` and `web`, runs with `if: always()` and exits non-zero when any of them ended in `failure`, `cancelled` or `skipped`. Its name and the name `integration` are the only contexts the branch rule needs.
 - Each job lists in `cache-dependency-path` the files that decide what it downloads: `go` lists `Makefile`, both `go.mod` files and `tools/schemagen/go.sum`; `schemagen` lists the generator's `go.mod` and `go.sum`; `web` runs with `cache: false`, because the daemon has no external modules. `setup-go` saves a cache once per key, so no two jobs may share a key: the first job to finish would save a cache without the other job's modules.
 - The `Makefile` downloads the fork module before `go list -m` reads its directory: on a cold module cache `go list` prints an empty path, and the generator tests ran with no fork tags. One job hid this because `make lint` downloaded the fork first.
-- The workflow runs on `pull_request` and on `push` to `main` only. A `concurrency` group keyed by the PR number, or the ref outside a PR, cancels the run in progress when a new commit arrives.
+- The workflow runs on `pull_request` and on `push` to `main` only. A `concurrency` group keyed by the PR number, or the ref outside a PR, cancels the run in progress when a new commit arrives to a PR; runs on `main` are never cancelled, so every merge commit keeps its verdict.
 - A new check joins one of the three jobs by what it needs, not a new job; a new job is added to `needs` of `checks` in the same change.
 
 ## Consequences
@@ -98,6 +98,7 @@ The branch rule is untouched: the contexts `checks` and `integration` exist befo
 - [CONTRIBUTING.md](../../CONTRIBUTING.md), section "PR": the branch rule and the jobs it names;
 - [ADR-0016](./ADR-0016-pin-tool-versions-where-tools-read-them.md): the linter pin lives in the `Makefile`, which is why it keys the cache;
 - [ADR-0023](./ADR-0023-build-the-bench-from-the-device-firmware.md): the integration job and its base image;
+- [ADR-0044](./ADR-0044-catch-schema-drift-in-ci-and-at-runtime.md): the fork release tracking that stays out of scope here;
 - `.github/workflows/ci.yml`;
 - GitHub Docs, [Using jobs in a workflow: `needs`](https://docs.github.com/en/actions/using-jobs/using-jobs-in-a-workflow#defining-prerequisite-jobs) and [Control the concurrency of workflows and jobs](https://docs.github.com/en/actions/using-jobs/using-concurrency);
 - Runs: 39470699173 (before); 39473711053, 39475562085, 39477748924 (after).

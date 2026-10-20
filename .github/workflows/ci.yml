@@ -1,30 +1,26 @@
 name: CI
 
 on:
-  # A branch with a PR is checked by the pull_request event alone: a push trigger
-  # without a filter ran every such push twice.
+  # A branch with a PR is checked by the pull_request event alone: an unfiltered push
+  # trigger would run every such push twice.
   push:
     branches: [main]
   pull_request:
 
-# A new push to the same PR or branch cancels the run that is still checking the old commit.
+# A new push to a PR cancels the run still checking its previous commit; on main every
+# merge commit keeps its verdict.
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # The three check jobs do not depend on each other and run in parallel; `checks` below
-  # sums them up under the name the main branch rule requires.
   go:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
 
-      # setup-go keys the module cache by the hash of the listed files and saves it once per
-      # key, so each job lists what it downloads and no two jobs share a key: the first job to
-      # finish would otherwise save a cache without the other job's modules. The Makefile pins
-      # golangci-lint, which `go run` fetches into the module cache; the daemon has no
-      # dependencies, so without a path setup-go would look for go.mod in the root and not find it.
+      # setup-go saves the cache once per key, so a key shared by two jobs loses the modules of
+      # the job that finishes second. The Makefile pins golangci-lint, which `go run` fetches.
       - uses: actions/setup-go@v6
         with:
           go-version-file: .go-version
