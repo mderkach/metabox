@@ -5,7 +5,13 @@ import { FormProvider, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import type { z } from 'zod';
 
-import { ConfigDocumentState, nodeSchemaOf, unbuiltOptionOf, type NodeRegistry } from '@entities/Config';
+import {
+  ConfigDocumentState,
+  ConfigDocumentStore,
+  nodeSchemaOf,
+  unbuiltOptionOf,
+  type NodeRegistry,
+} from '@entities/Config';
 import { toFieldPlan, type FieldPlan } from '@shared/lib/schemaShape';
 import { useWriteOnChange } from '@shared/lib/useWriteOnChange';
 import { cn } from '@shared/lib/utils';
@@ -122,7 +128,7 @@ export function ConfigNodeFormBody({
 
       return unparsed.length === 0 && writeNodeForm(editMany, path, node, form.getValues(), withRemovals);
     },
-    () => ConfigDocumentState.getState().revision !== revision
+    () => ConfigDocumentStore.getState().revision !== revision
   );
 
   return (

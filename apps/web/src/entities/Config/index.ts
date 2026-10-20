@@ -76,6 +76,7 @@ export { useConfigDocument } from './model/Config.document';
 export type { ConfigDocumentView } from './model/Config.document';
 export {
   ConfigDocumentState,
+  ConfigDocumentStore,
   useConfigDiff,
   useConfigDirty,
   useConfigLeaveGuard,

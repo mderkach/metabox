@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 import {
   ConfigDocumentState,
+  ConfigDocumentStore,
   newSectionNode,
   readSectionNodes,
   registryOfSection,
@@ -89,7 +90,7 @@ function NodeAddForm({
     // The position is taken from the text at the moment of writing: an insert
     // at the end of the section, and an array missing from the file is created
     // by the insert.
-    const count = readSectionNodes(ConfigDocumentState.getState().current() ?? '{}', section).length;
+    const count = readSectionNodes(ConfigDocumentStore.getState().current() ?? '{}', section).length;
 
     insert(sectionNodePath(section, count), nodePreset(registry, data.type, tag, newSectionNode));
     form.reset(NODE_ADD_DEFAULTS);

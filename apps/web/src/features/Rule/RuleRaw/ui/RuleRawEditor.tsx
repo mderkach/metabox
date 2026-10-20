@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { ConfigDocumentState, findValue, ruleNodePath } from '@entities/Config';
+import { ConfigDocumentState, ConfigDocumentStore, findValue, ruleNodePath } from '@entities/Config';
 import { checkRuleNode } from '@entities/Rule';
 import { failureLine, parseJsonc } from '@shared/lib/jsonc';
 import { Alert, AlertDescription, AlertTitle, Textarea } from '@shared/ui';
@@ -40,7 +40,7 @@ export function RuleRawEditor({ index, node }: { index: number; node: unknown })
 
     const path = ruleNodePath(index);
 
-    if (JSON.stringify(parsed) !== JSON.stringify(findValue(ConfigDocumentState.getState().current() ?? '', path))) {
+    if (JSON.stringify(parsed) !== JSON.stringify(findValue(ConfigDocumentStore.getState().current() ?? '', path))) {
       edit(path, parsed);
     }
   };
