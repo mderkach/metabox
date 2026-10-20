@@ -1,7 +1,7 @@
 import { useSearch } from '@tanstack/react-router';
 import { useCallback, useRef } from 'react';
 
-import { CONFIG_SECTION } from '@entities/Config';
+import { CONFIG_SECTION, ConfigDocumentState, ruleNodePath } from '@entities/Config';
 import { toNewRuleRow, type NewRulePlace } from '@entities/Rule';
 import { useCreateRule } from '@features/Rule/RuleAdd';
 import { usePanelAsSheet } from '@shared/lib/media';
@@ -32,6 +32,7 @@ export function EditorPage() {
   const { rule } = useSearch({ strict: false });
   const selection = useRuleSelection(toSelectedRuleId(rule), editor.rules);
   const createRule = useCreateRule();
+  const edit = ConfigDocumentState.use.edit();
   const { reset: resetFilter } = filter;
   const { startAdding, onCreated } = selection;
 
@@ -46,14 +47,16 @@ export function EditorPage() {
   );
 
   const pending = selection.pending;
-  // A change typed before the panel re-renders still calls this closure: the
-  // same pending rule must not be inserted twice.
+  // A change typed before the panel re-renders still calls this closure: it
+  // goes over the rule already inserted instead of inserting it again.
   const createdFrom = useRef<NewRulePlace | null>(null);
   const onCreate =
     pending === null
       ? undefined
       : (node: Record<string, unknown>) => {
           if (createdFrom.current === pending) {
+            edit(ruleNodePath(pending.index), node);
+
             return;
           }
 
