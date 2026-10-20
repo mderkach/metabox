@@ -139,7 +139,8 @@ describe('connections screen', () => {
     ConnectionStore.getState().apply(makeConnectionsSnapshot(3));
     renderScreen();
 
-    await user.click(await screen.findByRole('button', { name: 'Закрыть все' }));
+    await user.click(await screen.findByRole('button', { name: 'Действия со списком' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Закрыть все…' }));
 
     const dialog = await screen.findByRole('alertdialog');
 
@@ -150,7 +151,8 @@ describe('connections screen', () => {
 
     expect(closedAll).not.toHaveBeenCalled();
 
-    await user.click(await screen.findByRole('button', { name: 'Закрыть все' }));
+    await user.click(await screen.findByRole('button', { name: 'Действия со списком' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Закрыть все…' }));
     await user.click(await screen.findByRole('button', { name: 'Оборвать' }));
 
     await waitFor(() => {

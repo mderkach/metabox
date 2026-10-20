@@ -1,5 +1,5 @@
 import type { ParseKeys } from 'i18next';
-import { useId, useState, type ComponentType } from 'react';
+import { useEffect, useId, useRef, useState, type ComponentType } from 'react';
 import { Controller, useFormContext } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
@@ -31,6 +31,7 @@ const CONDITION_HELPER: Readonly<Partial<Record<RuleCondition, ComponentType>>> 
 export function RuleConditionFields({ initial }: { initial: readonly RuleCondition[] }) {
   const { t } = useTranslation('features/Rule/RuleEdit');
   const [shown, setShown] = useState<readonly RuleCondition[]>(initial);
+  const [added, setAdded] = useState<RuleCondition | null>(null);
   const hidden = RULE_CONDITIONS.filter((key) => !shown.includes(key));
   const addId = useId();
 
@@ -39,7 +40,7 @@ export function RuleConditionFields({ initial }: { initial: readonly RuleConditi
       <legend className='mb-1.5 text-sm font-medium'>{t('field.conditions.label')}</legend>
 
       {shown.map((key) => (
-        <ConditionField key={key} condition={key} />
+        <ConditionField key={key} condition={key} focusOnMount={key === added} />
       ))}
 
       {hidden.length > 0 && (
@@ -52,6 +53,7 @@ export function RuleConditionFields({ initial }: { initial: readonly RuleConditi
             onValueChange={(key: RuleCondition | null) => {
               if (key !== null) {
                 setShown([...shown, key]);
+                setAdded(key);
               }
             }}
           >
@@ -72,12 +74,32 @@ export function RuleConditionFields({ initial }: { initial: readonly RuleConditi
   );
 }
 
-function ConditionField({ condition }: { condition: RuleCondition }) {
+function ConditionField({ condition, focusOnMount }: { condition: RuleCondition; focusOnMount: boolean }) {
   const { t } = useTranslation('features/Rule/RuleEdit');
   const { control } = useFormContext<RuleEditModel>();
   const id = useId();
   const hintId = useId();
   const Helper = CONDITION_HELPER[condition];
+  const input = useRef<HTMLTextAreaElement | null>(null);
+
+  // A condition just picked from the list is typed into next. The frame waits
+  // for the closing list, which gives focus back to its trigger.
+  useEffect(
+    function focusAddedCondition() {
+      if (!focusOnMount) {
+        return;
+      }
+
+      const frame = requestAnimationFrame(function focusInput() {
+        input.current?.focus();
+      });
+
+      return function cancelFocus() {
+        cancelAnimationFrame(frame);
+      };
+    },
+    [focusOnMount]
+  );
 
   return (
     <Controller
@@ -98,6 +120,10 @@ function ConditionField({ condition }: { condition: RuleCondition }) {
               placeholder={t(`condition.${condition}.placeholder`)}
               className='font-mono text-sm'
               {...field}
+              ref={(element) => {
+                field.ref(element);
+                input.current = element;
+              }}
             />
             {errorKey === undefined ? (
               <p id={hintId} className='text-xs text-muted-foreground'>

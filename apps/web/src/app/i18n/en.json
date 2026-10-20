@@ -6,7 +6,7 @@
   "notFound": {
     "title": "Page not found",
     "message": "Check the address in the browser — the panel has no such section.",
-    "back": "Go to the configuration"
+    "back": "Go to the start screen"
   },
   "skip": {
     "content": "Skip to content"

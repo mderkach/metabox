@@ -220,6 +220,19 @@ describe('rule sets of a rule in the form', () => {
 });
 
 describe('rule conditions in the form', () => {
+  it('moves focus into a condition picked from the list', async () => {
+    const user = userEvent.setup();
+    const rule = loadRule({ rule_set: ['github'], outbound: 'proxy' });
+
+    render(<RuleEditForm rule={rule} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
+
+    await selectOption(user, screen.getByRole('combobox', { name: 'Добавить условие' }), 'Домен с поддоменами');
+
+    await waitFor(() => {
+      expect(screen.getByRole('textbox', { name: 'Домен с поддоменами' })).toHaveFocus();
+    });
+  });
+
   it('an added condition lands in the node as a list, does not touch the rest of the rule', async () => {
     const user = userEvent.setup();
     const rule = loadRule({ rule_set: ['github'], outbound: 'proxy' });

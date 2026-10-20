@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderWithQuery } from '@test/renderWithQuery';
 import { server } from '@test/server';
 import { act, fireEvent, isInaccessible, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -36,6 +37,29 @@ function serveSilence() {
 describe('DaemonBanner', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it('asks the daemon again by the retry button', async () => {
+    const asked = vi.fn<() => void>();
+    const user = userEvent.setup();
+
+    serveSilence();
+    renderBanner();
+
+    expect(await screen.findByText(UNREACHABLE)).toBeInTheDocument();
+
+    server.use(
+      http.get(DAEMON_ENDPOINT.status(), () => {
+        asked();
+
+        return HttpResponse.json(DAEMON_STATUS_FIXTURE);
+      })
+    );
+    await user.click(screen.getByRole('button', { name: 'Повторить' }));
+
+    await waitFor(() => {
+      expect(asked).toHaveBeenCalledTimes(1);
+    });
   });
 
   // A live region announces what was inserted into it: if it appeared together with

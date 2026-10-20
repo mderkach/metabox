@@ -210,7 +210,7 @@ describe('logs screen', () => {
     });
   });
 
-  it('the clear calls the daemon, removes lines and explains that the logd ring is not cleared', async () => {
+  it('with logread the action hides lines and explains that the system log keeps them', async () => {
     const user = userEvent.setup();
     const cleared = vi.fn<() => void>();
 
@@ -227,7 +227,7 @@ describe('logs screen', () => {
 
     await screen.findByText('outbound/vless[proxy]: dial tcp: i/o timeout');
 
-    const clear = screen.getByRole('button', { name: 'Очистить' });
+    const clear = screen.getByRole('button', { name: 'Скрыть строки' });
 
     expect(clear).toHaveAccessibleDescription(/останутся в системном логе роутера/);
 

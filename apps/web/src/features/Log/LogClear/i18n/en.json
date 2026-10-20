@@ -4,5 +4,6 @@
   "hint": {
     "logread": "Lines are hidden in the panel but stay in the router system log and come back after metabox restarts.",
     "file": "The sing-box log file will be truncated — lines before clearing cannot be restored."
-  }
+  },
+  "actionHide": "Hide lines"
 }

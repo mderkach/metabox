@@ -6,6 +6,7 @@ import { useDaemonReachable, useDaemonStatus } from '@entities/Daemon';
 import { API_FAILURE, ApiError } from '@shared/api';
 import { useReducedMotion } from '@shared/lib/media';
 import { cn } from '@shared/lib/utils';
+import { Button } from '@shared/ui';
 
 /**
  * Daemon unavailable strip. It lives in the shell because the failure concerns
@@ -72,7 +73,18 @@ export function DaemonBanner() {
               ) : (
                 <CircleAlert className='size-4 shrink-0' />
               )}
-              <p>{t(held)}</p>
+              <p className='min-w-0 flex-1'>{t(held)}</p>
+              <Button
+                variant='ghost'
+                size='sm'
+                disabled={status.isFetching}
+                className='shrink-0 text-destructive hover:text-destructive'
+                onClick={() => {
+                  void status.refetch();
+                }}
+              >
+                {t(status.isFetching ? 'source.retrying' : 'source.retry', { ns: 'shared' })}
+              </Button>
             </div>
           </div>
         )}
