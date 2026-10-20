@@ -78,7 +78,7 @@ func (a *Access) Enabled() bool {
 }
 
 // Permissions returns what the token allows; nil means the token is wrong or MCP is
-// disabled. Phase one has a single permission, so every valid token gets read.
+// disabled. There is a single permission, so every valid token gets read.
 func (a *Access) Permissions(token string) []contract.MCPPermission {
 	sum := sha256.Sum256([]byte(token))
 
