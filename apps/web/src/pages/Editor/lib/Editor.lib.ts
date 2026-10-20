@@ -163,7 +163,10 @@ interface RuleSelectionState {
   key: number;
   /** A new rule being filled in: it is not in the document until its first condition. */
   pending: NewRulePlace | null;
-  /** The rule just created: the panel shows it until the parsed list catches up, a frame later. */
+  /**
+   * The rule just created: the panel shows it until the parsed list catches up, a frame later.
+   * Cleared once the list has it, so a rule gone from the document later closes the panel.
+   */
   created: RuleRow | null;
 }
 
@@ -190,13 +193,19 @@ export interface RuleSelection extends RuleSelectionState {
  * where the selection points to the old position while a neighboring node is already under it, and the panel
  * would show someone else's rule.
  */
-export function useRuleSelection(initialId: string | null): RuleSelection {
+export function useRuleSelection(initialId: string | null, rules: readonly RuleRow[]): RuleSelection {
   const [selection, setSelection] = useState<RuleSelectionState>({
     id: initialId,
     key: 0,
     pending: null,
     created: null,
   });
+
+  const { created } = selection;
+
+  if (created !== null && rules.some((row) => row.id === created.id)) {
+    setSelection({ ...selection, created: null });
+  }
 
   const select = useCallback((id: string) => {
     setSelection((current) =>

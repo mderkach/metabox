@@ -1,5 +1,5 @@
 import { useSearch } from '@tanstack/react-router';
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 
 import { CONFIG_SECTION } from '@entities/Config';
 import { toNewRuleRow, type NewRulePlace } from '@entities/Rule';
@@ -30,7 +30,7 @@ export function EditorPage() {
   // the node that hit. After that the screen owns the selection, otherwise a closed panel
   // would reopen on every render.
   const { rule } = useSearch({ strict: false });
-  const selection = useRuleSelection(toSelectedRuleId(rule));
+  const selection = useRuleSelection(toSelectedRuleId(rule), editor.rules);
   const createRule = useCreateRule();
   const { reset: resetFilter } = filter;
   const { startAdding, onCreated } = selection;
@@ -46,10 +46,18 @@ export function EditorPage() {
   );
 
   const pending = selection.pending;
+  // A change typed before the panel re-renders still calls this closure: the
+  // same pending rule must not be inserted twice.
+  const createdFrom = useRef<NewRulePlace | null>(null);
   const onCreate =
     pending === null
       ? undefined
       : (node: Record<string, unknown>) => {
+          if (createdFrom.current === pending) {
+            return;
+          }
+
+          createdFrom.current = pending;
           createRule(pending.index, node);
           onCreated(pending.index, node);
         };

@@ -439,6 +439,28 @@ describe('rule list editing', () => {
     );
   });
 
+  it('closes the panel of a created rule once the draft is discarded', async () => {
+    const user = userEvent.setup();
+
+    renderWithRouter(EditorPage);
+
+    await user.click(await screen.findByRole('button', { name: 'Добавить правило' }));
+
+    const panel = await screen.findByRole('complementary', { name: 'Правило 4' });
+
+    await selectOption(user, within(panel).getByRole('combobox', { name: 'Добавить условие' }), 'Домен');
+    await user.type(within(panel).getByRole('textbox', { name: 'Домен' }), 'a.example');
+    await screen.findByRole('button', { name: 'Правило 4, выход proxy, изменено в черновике' });
+
+    act(() => {
+      ConfigDocumentState.getState().discard();
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByRole('complementary', { name: 'Правило 4' })).not.toBeInTheDocument();
+    });
+  });
+
   it('a new rule closed without a condition leaves the draft untouched', async () => {
     const user = userEvent.setup();
 
