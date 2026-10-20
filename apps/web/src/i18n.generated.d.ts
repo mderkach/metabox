@@ -21,6 +21,7 @@ declare module 'i18next' {
       'features/Device/DeviceRoute': typeof import('./features/Device/DeviceRoute/i18n/ru.json');
       'features/Language/LanguageSwitch': typeof import('./features/Language/LanguageSwitch/i18n/ru.json');
       'features/Log/LogClear': typeof import('./features/Log/LogClear/i18n/ru.json');
+      'features/Mcp/McpAccess': typeof import('./features/Mcp/McpAccess/i18n/ru.json');
       'features/Rule/RuleAdd': typeof import('./features/Rule/RuleAdd/i18n/ru.json');
       'features/Rule/RuleDelete': typeof import('./features/Rule/RuleDelete/i18n/ru.json');
       'features/Rule/RuleEdit': typeof import('./features/Rule/RuleEdit/i18n/ru.json');
