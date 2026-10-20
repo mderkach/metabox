@@ -9,7 +9,8 @@
     "label": "Rule {{index}}, outbound {{target}}",
     "unconditional": "no conditions — applies to all traffic",
     "unknown": "conditions not shown: the panel does not know this rule",
-    "edited": "changed in the draft"
+    "edited": "changed in the draft",
+    "labelAction": "Rule {{index}}, action: {{action}}"
   },
   "group": {
     "and": "and",

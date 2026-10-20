@@ -46,11 +46,14 @@ function RuleRowProto({
   onSelect: (id: string) => void;
 }) {
   const { t, i18n } = useTranslation('widgets/Rule/RuleTable');
-  const label = t('row.label', { index: rule.index, target: rule.target });
   const actionName =
     rule.targetKind === RULE_TARGET.Action && isNamedRuleAction(rule.target)
       ? t(`ruleAction.${rule.target}`, { ns: 'shared' })
       : null;
+  const label =
+    rule.targetKind === RULE_TARGET.Action
+      ? t('row.labelAction', { index: rule.index, action: actionName ?? rule.target })
+      : t('row.label', { index: rule.index, target: rule.target });
   const targetRef = useRef<HTMLSpanElement>(null);
   const [hint, setHint] = useState(false);
 

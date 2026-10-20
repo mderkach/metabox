@@ -9,7 +9,7 @@ import { AppSidebarMore } from './AppSidebarMore';
 
 /** Height 56px: the touch target is at least 44px both in height and in column width. */
 const ITEM_CLASS =
-  'relative flex h-14 w-full flex-col items-center justify-center gap-1 px-1 text-xs transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none focus-visible:ring-inset';
+  'relative flex h-14 w-full flex-col items-center justify-center gap-1 px-1 text-[11px] transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none focus-visible:ring-inset';
 
 const IDLE_CLASS = 'text-muted-foreground hover:text-foreground';
 
@@ -43,7 +43,7 @@ export function AppSidebarBottomNav() {
           // An unfinished section and the "More" sheet item do not get a column:
           // the phone width is enough for five.
           item.to === undefined || item.more === true ? null : (
-            <li key={item.key} className='min-w-0 flex-1'>
+            <li key={item.key} className='min-w-11 flex-auto'>
               <Link
                 to={item.to}
                 // As in the sidebar: nested paths are decided by `active`, not the link.
@@ -59,7 +59,7 @@ export function AppSidebarBottomNav() {
             </li>
           )
         )}
-        <li className='min-w-0 flex-1'>
+        <li className='min-w-11 flex-auto'>
           <AppSidebarMore
             active={active}
             className={cn(ITEM_CLASS, MORE_TARGETS.includes(active ?? '') ? ACTIVE_CLASS : IDLE_CLASS)}

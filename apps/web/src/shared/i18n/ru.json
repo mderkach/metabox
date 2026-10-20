@@ -309,5 +309,11 @@
     "certificateProviders": "поставщик сертификатов",
     "httpClients": "HTTP-клиент",
     "networkNamespaces": "сетевое пространство имён"
+  },
+  "groupType": {
+    "selector": "ручной выбор",
+    "urltest": "самый быстрый",
+    "fallback": "резерв",
+    "loadBalance": "балансировка"
   }
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { isNamedRuleAction, RULE_TARGET } from '@entities/Rule';
 import { cn } from '@shared/lib/utils';
 import { FACET_ACTIVE, FACET_CLASS, FACET_IDLE, FACET_MORE } from '@shared/ui';
 
@@ -25,9 +26,15 @@ export function EditorTargetFacets({ filter }: { filter: RuleFilterState }) {
             onClick={() => {
               filter.setTarget(filter.target === group.target ? null : group.target);
             }}
-            className={cn(FACET_CLASS, 'font-mono', filter.target === group.target ? FACET_ACTIVE : FACET_IDLE)}
+            className={cn(
+              FACET_CLASS,
+              group.kind === RULE_TARGET.Outbound && 'font-mono',
+              filter.target === group.target ? FACET_ACTIVE : FACET_IDLE
+            )}
           >
-            {group.target}
+            {group.kind === RULE_TARGET.Action && isNamedRuleAction(group.target)
+              ? t(`ruleAction.${group.target}`, { ns: 'shared' })
+              : group.target}
             <span className='tabular-nums'>{group.count}</span>
           </button>
         </li>

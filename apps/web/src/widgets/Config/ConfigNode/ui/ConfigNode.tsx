@@ -18,6 +18,7 @@ import { cn } from '@shared/lib/utils';
 import { Badge, Button, SURFACE, Tabs, TabsContent, TabsList, TabsTrigger } from '@shared/ui';
 
 import { FORM_POLICY, NODE_FORM_POLICY, nodeSummary } from '../model';
+import { ConfigNodeTypeBadge } from './ConfigNodeTypeBadge';
 
 const TAB = {
   Form: 'form',
@@ -143,7 +144,7 @@ export function ConfigNode({
             </Button>
           )}
         </h2>
-        {summary.type !== null && summary.type !== name && <Badge variant='secondary'>{summary.type}</Badge>}
+        {summary.type !== null && summary.type !== name && <ConfigNodeTypeBadge type={summary.type} />}
         {summary.address !== null && <span className='font-mono text-xs text-muted-foreground'>{summary.address}</span>}
         {hasForm && !recognized && <Badge variant='outline'>{t('rule.uncovered', { ns: 'shared' })}</Badge>}
         {onDeleted !== undefined && (

@@ -23,9 +23,7 @@
     "withStatus": "More, {{status}}"
   },
   "short": {
-    "config": "Config",
-    "connections": "Conns",
-    "devices": "Devices"
+    "config": "Config"
   },
   "drift": {
     "newer": "forms lag behind sing-box",

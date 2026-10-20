@@ -300,5 +300,11 @@
     "certificateProviders": "certificate provider",
     "httpClients": "HTTP client",
     "networkNamespaces": "network namespace"
+  },
+  "groupType": {
+    "selector": "manual choice",
+    "urltest": "fastest",
+    "fallback": "fallback",
+    "loadBalance": "load balance"
   }
 }

@@ -31,9 +31,8 @@ describe('AppSidebarBottomNav', () => {
     expect(within(nav).getByRole('link', { name: 'Обзор' })).toBeInTheDocument();
     // The full "Конфигурация" does not fit in a phone column.
     expect(within(nav).getByRole('link', { name: 'Конфиг' })).toHaveAttribute('href', '/config');
-    // "Соединения" and "Устройства" are wider than the column at 375px and would be truncated.
-    expect(within(nav).getByRole('link', { name: 'Связи' })).toHaveAttribute('href', '/connections');
-    expect(within(nav).getByRole('link', { name: 'Клиенты' })).toHaveAttribute('href', '/devices');
+    expect(within(nav).getByRole('link', { name: 'Соединения' })).toHaveAttribute('href', '/connections');
+    expect(within(nav).getByRole('link', { name: 'Устройства' })).toHaveAttribute('href', '/devices');
   });
 
   it('marks a stopped sing-box on the "More" item, not only inside its sheet', async () => {
