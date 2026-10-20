@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMemo } from 'react';
 import { FormProvider, useForm } from 'react-hook-form';
 
-import { ConfigDocumentState } from '@entities/Config';
+import { ConfigDocumentState, ConfigDocumentStore } from '@entities/Config';
 import { ruleSetsOf, type RuleRow } from '@entities/Rule';
 import { useWriteOnChange } from '@shared/lib/useWriteOnChange';
 
@@ -28,11 +28,14 @@ export function RuleEditForm({
   rule,
   outbounds,
   ruleSets,
+  onCreate,
 }: {
   rule: RuleRow;
   outbounds: string[];
   /** Set tags of the document. */
   ruleSets: string[];
+  /** The rule is not in the document yet: its node goes here once it has a condition. */
+  onCreate?: (node: Record<string, unknown>) => void;
 }) {
   const edit = ConfigDocumentState.use.edit();
   const revision = ConfigDocumentState.use.revision();
@@ -51,8 +54,8 @@ export function RuleEditForm({
 
   const formRef = useWriteOnChange(
     form,
-    (patch, withRemovals) => writeRuleEdit(edit, rule.index, patch, form.getValues(), withRemovals),
-    () => ConfigDocumentState.getState().revision !== revision
+    (patch, withRemovals) => writeRuleEdit(edit, rule.index, patch, form.getValues(), withRemovals, onCreate),
+    () => ConfigDocumentStore.getState().revision !== revision
   );
 
   return (

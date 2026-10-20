@@ -1,6 +1,6 @@
 import type { JSONPath } from 'jsonc-parser';
 
-import { ConfigDocumentState, findValue, ruleNodePath } from '@entities/Config';
+import { ConfigDocumentStore, findValue, ruleNodePath } from '@entities/Config';
 import { RULE_SET_MATCHER, RULE_TARGET, ruleSetsOf, toRuleRowsFromNodes, type RuleRow } from '@entities/Rule';
 
 import {
@@ -27,16 +27,30 @@ export function toRuleEditValues(rule: RuleRow): RuleEditModel {
  * parsed rows lag the text by a frame, and a value typed and erased back
  * within it must leave the draft too. Returns whether an emptied field was
  * held back because `withRemovals` is off.
+ *
+ * A rule not in the document yet goes to `onCreate` once it has a condition
+ * or a set: without them it would take all traffic.
  */
 export function writeRuleEdit(
   edit: (path: JSONPath, value: unknown) => void,
   index: number,
   patch: RuleEditPatch,
   values: RuleEditModel,
-  withRemovals: boolean
+  withRemovals: boolean,
+  onCreate?: (node: Record<string, unknown>) => void
 ): boolean {
+  if (onCreate !== undefined) {
+    const node = toNewRuleNode(patch);
+
+    if (node !== null) {
+      onCreate(node);
+    }
+
+    return false;
+  }
+
   const path = ruleNodePath(index);
-  const current = toRuleRowsFromNodes([findValue(ConfigDocumentState.getState().current() ?? '', path)]).at(0);
+  const current = toRuleRowsFromNodes([findValue(ConfigDocumentStore.getState().current() ?? '', path)]).at(0);
 
   if (current === undefined) {
     return false;
@@ -79,6 +93,25 @@ export function writeRuleEdit(
   }
 
   return held;
+}
+
+/** The node of a new rule, conditions first; `null` while it has neither a condition nor a set. */
+export function toNewRuleNode(patch: RuleEditPatch): Record<string, unknown> | null {
+  const conditions = Object.fromEntries(
+    RULE_CONDITIONS.flatMap((key) => (patch.conditions[key] === undefined ? [] : [[key, patch.conditions[key]]]))
+  );
+  const ruleSet = 'rule_set' in patch ? patch.rule_set : undefined;
+
+  if (Object.keys(conditions).length === 0 && ruleSet === undefined) {
+    return null;
+  }
+
+  return {
+    ...conditions,
+    ...(ruleSet === undefined ? {} : { [RULE_SET_MATCHER]: ruleSet }),
+    ...(patch.action === RULE_ACTION.Route ? {} : { action: patch.action }),
+    ...('outbound' in patch ? { outbound: patch.outbound } : {}),
+  };
 }
 
 /**

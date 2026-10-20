@@ -2,7 +2,8 @@ import { useSearch } from '@tanstack/react-router';
 import { useCallback } from 'react';
 
 import { CONFIG_SECTION } from '@entities/Config';
-import { isRuleRecognized } from '@entities/Rule';
+import { toNewRuleRow, type NewRulePlace } from '@entities/Rule';
+import { useCreateRule } from '@features/Rule/RuleAdd';
 import { usePanelAsSheet } from '@shared/lib/media';
 import { QueryFailure, SidePanelLayout, SURFACE, SkeletonRows } from '@shared/ui';
 import { ConfigSectionSettings } from '@widgets/Config/ConfigSectionSettings';
@@ -30,21 +31,32 @@ export function EditorPage() {
   // would reopen on every render.
   const { rule } = useSearch({ strict: false });
   const selection = useRuleSelection(toSelectedRuleId(rule));
+  const createRule = useCreateRule();
   const { reset: resetFilter } = filter;
-  const { onAdded: selectAdded } = selection;
+  const { startAdding, onCreated } = selection;
 
   // A new rule almost never passes the filter: without clearing the filter it
   // would open in the panel but not be in the list.
-  const onAdded = useCallback(
-    (index: number) => {
+  const onAdd = useCallback(
+    (place: NewRulePlace) => {
       resetFilter();
-      selectAdded(index);
+      startAdding(place);
     },
-    [resetFilter, selectAdded]
+    [resetFilter, startAdding]
   );
 
-  const selected = editor.rules.find((row) => row.id === selection.id) ?? null;
-  const selectedNode = selected === null ? null : editor.nodes[selected.index - 1];
+  const pending = selection.pending;
+  const onCreate =
+    pending === null
+      ? undefined
+      : (node: Record<string, unknown>) => {
+          createRule(pending.index, node);
+          onCreated(pending.index, node);
+        };
+
+  const listed = editor.rules.find((row) => row.id === selection.id);
+  const selected = listed ?? selection.created ?? (pending === null ? null : toNewRuleRow(pending));
+  const selectedNode = listed === undefined ? undefined : editor.nodes[listed.index - 1];
   // Below lg the list keeps a minimum height and does not fit on a short screen:
   // the whole screen scrolls there instead of being cut off under the apply bar.
   return (
@@ -64,11 +76,11 @@ export function EditorPage() {
           rules={editor.rules}
           total={editor.nodes.length}
           finalOutbound={editor.finalOutbound}
-          onAdded={onAdded}
+          onAdd={onAdd}
         />
       )}
 
-      {editor.rules.length > 0 && (
+      {(editor.rules.length > 0 || selected !== null) && (
         <SidePanelLayout.Root open={selected !== null && !asSheet} className='min-h-0 grow max-lg:min-h-96'>
           <SidePanelLayout.Main>
             <RuleTable
@@ -90,7 +102,7 @@ export function EditorPage() {
                   rules={editor.rules}
                   total={editor.nodes.length}
                   finalOutbound={editor.finalOutbound}
-                  onAdded={onAdded}
+                  onAdd={onAdd}
                 />
               }
               facets={<EditorTargetFacets filter={filter} />}
@@ -104,16 +116,19 @@ export function EditorPage() {
                 key={selection.key}
                 rule={selected}
                 node={selectedNode}
-                recognized={isRuleRecognized(selectedNode)}
+                recognized={selected.recognized}
                 outbounds={editor.outbounds}
                 ruleSets={editor.ruleSets}
+                onCreate={onCreate}
                 actions={
-                  <EditorRuleActions
-                    index={selected.index}
-                    total={editor.nodes.length}
-                    onMoved={selection.onMoved}
-                    onDeleted={selection.onDeleted}
-                  />
+                  pending === null ? (
+                    <EditorRuleActions
+                      index={selected.index}
+                      total={editor.nodes.length}
+                      onMoved={selection.onMoved}
+                      onDeleted={selection.onDeleted}
+                    />
+                  ) : null
                 }
                 onClose={selection.close}
               />
@@ -128,12 +143,13 @@ export function EditorPage() {
         <RulePanelSheet
           rule={selected}
           node={selectedNode}
-          recognized={isRuleRecognized(selectedNode)}
+          recognized={selected?.recognized ?? false}
           panelKey={selection.key}
           outbounds={editor.outbounds}
           ruleSets={editor.ruleSets}
+          onCreate={onCreate}
           actions={
-            selected === null ? null : (
+            selected === null || pending !== null ? null : (
               <EditorRuleActions
                 index={selected.index}
                 total={editor.nodes.length}

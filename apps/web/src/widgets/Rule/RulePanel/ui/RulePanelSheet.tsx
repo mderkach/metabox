@@ -26,6 +26,7 @@ export function RulePanelSheet({
   outbounds,
   ruleSets,
   actions = null,
+  onCreate,
   onClose,
 }: {
   /** `null` means no rule is selected, the sheet is closed. */
@@ -41,6 +42,8 @@ export function RulePanelSheet({
   ruleSets: string[];
   /** Actions on the rule: panel header, before the close button. */
   actions?: ReactNode;
+  /** The rule is not in the document yet; see `RulePanel`. */
+  onCreate?: (node: Record<string, unknown>) => void;
   onClose: () => void;
 }) {
   const [shown, setShown] = useState<RulePanelContent | null>(null);
@@ -71,6 +74,7 @@ export function RulePanelSheet({
             outbounds={outbounds}
             ruleSets={ruleSets}
             actions={actions}
+            onCreate={onCreate}
             sheet
             onClose={onClose}
           />

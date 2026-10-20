@@ -1,49 +1,23 @@
 import { Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { ConfigDocumentState, ruleNodePath } from '@entities/Config';
-import { newRuleNode } from '@entities/Rule';
 import { Button } from '@shared/ui';
 
 /**
- * A new rule without conditions at the given position (`newRulePlace` from
- * the `Rule` entity chooses it). The array may be absent from the file, and
- * the insert creates it.
+ * Opens a new rule in the panel. Nothing is written until the rule gets a
+ * condition: a rule without one would take all traffic.
  *
- * Without an outbound the button goes dim and says why: sing-box rejects a rule
- * without `outbound`, and the panel may not invent a tag that is not in the
- * config.
+ * Without an outbound the button goes dim and says why: sing-box rejects a
+ * rule without `outbound`, and the panel may not invent a tag that is not in
+ * the config.
  */
-export function RuleAddButton({
-  index,
-  outbound,
-  onAdded,
-}: {
-  /** New rule number, from one. */
-  index: number;
-  /** New rule outbound; `null` means there is no outbound, adding is impossible. */
-  outbound: string | null;
-  onAdded: (index: number) => void;
-}) {
+export function RuleAddButton({ disabled, onAdd }: { disabled: boolean; onAdd: () => void }) {
   const { t } = useTranslation('features/Rule/RuleAdd');
-  const insert = ConfigDocumentState.use.insert();
 
   return (
     <>
-      {outbound === null && <p className='text-xs text-muted-foreground'>{t('unavailable')}</p>}
-      <Button
-        variant='outline'
-        size='sm'
-        disabled={outbound === null}
-        onClick={() => {
-          if (outbound === null) {
-            return;
-          }
-
-          insert(ruleNodePath(index), newRuleNode(outbound));
-          onAdded(index);
-        }}
-      >
+      {disabled && <p className='text-xs text-muted-foreground'>{t('unavailable')}</p>}
+      <Button variant='outline' size='sm' disabled={disabled} onClick={onAdd}>
         <Plus />
         {t('add')}
       </Button>

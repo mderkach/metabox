@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-import type { RuleRow } from '@entities/Rule';
+import type { NewRulePlace, RuleRow } from '@entities/Rule';
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from '@shared/ui';
 
 import { EditorRuleAdd } from './EditorRuleAdd';
@@ -10,12 +10,12 @@ export function EditorNoRules({
   rules,
   total,
   finalOutbound,
-  onAdded,
+  onAdd,
 }: {
   rules: readonly RuleRow[];
   total: number;
   finalOutbound: string | null;
-  onAdded: (index: number) => void;
+  onAdd: (place: NewRulePlace) => void;
 }) {
   const { t } = useTranslation('pages/Editor');
 
@@ -26,7 +26,7 @@ export function EditorNoRules({
         <EmptyDescription>{t('empty.description')}</EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
-        <EditorRuleAdd rules={rules} total={total} finalOutbound={finalOutbound} onAdded={onAdded} />
+        <EditorRuleAdd rules={rules} total={total} finalOutbound={finalOutbound} onAdd={onAdd} />
       </EmptyContent>
     </Empty>
   );

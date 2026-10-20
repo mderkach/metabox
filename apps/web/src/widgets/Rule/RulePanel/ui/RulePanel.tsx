@@ -50,6 +50,7 @@ export function RulePanel({
   ruleSets,
   actions = null,
   sheet = false,
+  onCreate,
   onClose,
 }: {
   id?: string;
@@ -62,9 +63,15 @@ export function RulePanel({
   /** Actions on the rule: header, before the close button. */
   actions?: ReactNode;
   sheet?: boolean;
+  /**
+   * The rule is not in the document yet: the form creates it here on the first
+   * condition. Until then there is no node to show as text.
+   */
+  onCreate?: (node: Record<string, unknown>) => void;
   onClose: () => void;
 }) {
   const { t } = useTranslation('widgets/Rule/RulePanel');
+  const creating = onCreate !== undefined;
   const [tab, setTab] = useState<string>(recognized ? TAB.Form : TAB.Raw);
   // Keyed by revision, not by the node: the form writes on every keystroke and would lose focus.
   const revision = ConfigDocumentState.use.revision();
@@ -119,7 +126,7 @@ export function RulePanel({
       </header>
 
       <div className='flex min-h-0 grow flex-col gap-4 overflow-y-auto p-4'>
-        <RuleConditions rule={rule} />
+        {!creating && <RuleConditions rule={rule} />}
 
         {!recognized && (
           <Alert>
@@ -133,17 +140,21 @@ export function RulePanel({
             <TabsTrigger value={TAB.Form} disabled={!recognized}>
               {t('tab.form')}
             </TabsTrigger>
-            <TabsTrigger value={TAB.Raw}>JSON</TabsTrigger>
+            {!creating && <TabsTrigger value={TAB.Raw}>JSON</TabsTrigger>}
           </TabsList>
 
           {/* The form keeps what was typed while the node is checked as text: unmounting erases it. */}
           <TabsContent value={TAB.Form} keepMounted className='pt-3'>
-            {recognized && <RuleEditForm key={revision} rule={rule} outbounds={outbounds} ruleSets={ruleSets} />}
+            {recognized && (
+              <RuleEditForm key={revision} rule={rule} outbounds={outbounds} ruleSets={ruleSets} onCreate={onCreate} />
+            )}
           </TabsContent>
 
-          <TabsContent value={TAB.Raw} className='pt-3'>
-            <RuleRawEditor key={revision} index={rule.index} node={node} />
-          </TabsContent>
+          {!creating && (
+            <TabsContent value={TAB.Raw} className='pt-3'>
+              <RuleRawEditor key={revision} index={rule.index} node={node} />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </aside>

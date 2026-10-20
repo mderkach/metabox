@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { Config } from '@shared/api/generated';
 
 import { checkRuleNode, isRuleRecognized, toRuleRows, toRuleRowsFromNodes } from '../model/Rule.adapter';
-import { newRuleNode, RULE_TARGET } from '../model/Rule.model';
+import { RULE_TARGET } from '../model/Rule.model';
 
 function configWithRules(rules: object[]): Config {
   return { route: { rules } };
@@ -185,18 +185,5 @@ describe('nodes the schema does not know', () => {
 
   it('the schema issue names the field it does not know', () => {
     expect(checkRuleNode({ unknown_matcher: ['своё'], outbound: 'direct' }).join(' ')).toContain('unknown_matcher');
-  });
-});
-
-describe('newRuleNode', () => {
-  it('a new rule is accepted by the schema, and the list row reads it as unconditional with an outbound', () => {
-    const node = newRuleNode('direct');
-    const [row] = toRuleRowsFromNodes([node]);
-
-    expect(node).toEqual({ outbound: 'direct' });
-    expect(isRuleRecognized(node)).toBe(true);
-    expect(row.isCatchAll).toBe(true);
-    expect(row.target).toBe('direct');
-    expect(row.targetKind).toBe(RULE_TARGET.Outbound);
   });
 });
