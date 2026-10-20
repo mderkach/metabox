@@ -55,9 +55,9 @@ function loadDocument(draft = true) {
 /** Apply goes through the summary: the bar button opens it, the dialog button sends. */
 async function applyFromSummary() {
   await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
-  await userEvent.click(
-    within(screen.getByRole('dialog', { name: 'Что уйдёт на устройство' })).getByRole('button', { name: 'Применить' })
-  );
+  const summary = await screen.findByRole('dialog', { name: 'Что уйдёт на устройство' });
+
+  await userEvent.click(within(summary).getByRole('button', { name: 'Применить' }));
 }
 
 describe('ConfigApplyBar', () => {
@@ -105,9 +105,9 @@ describe('ConfigApplyBar', () => {
 
     expect(screen.getByRole('region', { name: 'Применение конфига' })).toBeInTheDocument();
 
-    await applyFromSummary();
+    await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
 
-    const summary = screen.getByRole('dialog', { name: 'Что уйдёт на устройство' });
+    const summary = await screen.findByRole('dialog', { name: 'Что уйдёт на устройство' });
 
     expect(within(summary).getByRole('button', { name: 'Применить' })).toBeEnabled();
     expect(within(summary).getByRole('button', { name: 'Отмена' })).toBeInTheDocument();
@@ -123,7 +123,9 @@ describe('ConfigApplyBar', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
 
     expect(
-      within(screen.getByRole('dialog', { name: 'Что уйдёт на устройство' })).getByRole('button', { name: 'Применить' })
+      within(await screen.findByRole('dialog', { name: 'Что уйдёт на устройство' })).getByRole('button', {
+        name: 'Применить',
+      })
     ).toBeDisabled();
   });
 
@@ -137,7 +139,9 @@ describe('ConfigApplyBar', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
 
     expect(
-      within(screen.getByRole('dialog', { name: 'Что уйдёт на устройство' })).getByRole('button', { name: 'Применить' })
+      within(await screen.findByRole('dialog', { name: 'Что уйдёт на устройство' })).getByRole('button', {
+        name: 'Применить',
+      })
     ).toBeDisabled();
   });
 
