@@ -7,8 +7,8 @@ import { Button, Input, Textarea } from '@shared/ui';
 import { copyText } from '../lib';
 
 /**
- * A read-only value with a copy button. When the browser refuses the clipboard the value is
- * selected instead, and the result is announced through `announce`.
+ * A read-only value with a copy button. When the browser cannot copy the value is selected
+ * instead, and the result is announced through `announce`.
  */
 export function McpAccessCopyField({
   label,
@@ -37,7 +37,7 @@ export function McpAccessCopyField({
   );
 
   async function onCopy() {
-    const done = await copyText(value);
+    const done = await copyText(value, field.current?.parentElement ?? undefined);
 
     setCopied(done);
     announce(t(done ? 'copy.done' : 'copy.failed', { name: label }));
