@@ -100,7 +100,7 @@ describe('section screen', () => {
     await user.click(node.getByRole('button', { name: 'hk-01' }));
 
     expect(node.getByRole('tab', { name: 'Форма' })).toHaveAttribute('aria-selected', 'true');
-    expect(node.getByRole('textbox', { name: 'server' })).toHaveValue('a.example');
+    expect(node.getByRole('textbox', { name: 'Сервер' })).toHaveValue('a.example');
 
     await user.click(node.getByRole('tab', { name: 'JSON' }));
 
@@ -119,7 +119,7 @@ describe('section screen', () => {
 
     await user.click(node.getByRole('button', { name: 'hk-01' }));
 
-    const server = node.getByRole('textbox', { name: 'server' });
+    const server = node.getByRole('textbox', { name: 'Сервер' });
 
     await user.clear(server);
     await user.type(server, 'b.example');
@@ -338,7 +338,7 @@ describe('section screen', () => {
 
     const panel = within(screen.getByRole('complementary', { name: 'Новый узел' }));
 
-    await selectOption(user, panel.getByRole('combobox', { name: 'Тип' }), 'direct');
+    await selectOption(user, panel.getByRole('combobox', { name: 'Тип' }), 'directНапрямую, без прокси');
     await user.type(panel.getByRole('textbox', { name: 'Тег' }), 'direct-2');
     await user.click(panel.getByRole('button', { name: 'Добавить' }));
 
@@ -364,7 +364,11 @@ describe('section screen', () => {
 
     const panel = within(screen.getByRole('complementary', { name: 'Новый узел' }));
 
-    await selectOption(user, panel.getByRole('combobox', { name: 'Тип' }), 'vless');
+    await selectOption(
+      user,
+      panel.getByRole('combobox', { name: 'Тип' }),
+      'vlessVLESS: лёгкий прокси, обычно с Reality или TLS'
+    );
     await user.type(panel.getByRole('textbox', { name: 'Тег' }), 'vless-out');
     await user.click(panel.getByRole('button', { name: 'Добавить' }));
 
@@ -375,6 +379,67 @@ describe('section screen', () => {
         tls: { enabled: true, utls: { enabled: true, fingerprint: 'chrome' }, reality: { enabled: true } },
       });
     });
+  });
+
+  it('adds an outbound from a share link and opens it in the node form', async () => {
+    serveConfig(CONFIG_TEXT);
+
+    const user = userEvent.setup();
+    const publicKey = 'jNXHt1yRo0vDuchQlIP6Z0ZvjT3KtzVI-T4E7RoLJS0';
+
+    renderWithRouter(OutboundsSection);
+
+    await user.click(await screen.findByRole('button', { name: 'Добавить узел' }));
+
+    const panel = within(screen.getByRole('complementary', { name: 'Новый узел' }));
+
+    await user.click(panel.getByRole('textbox', { name: 'Вставить ссылку' }));
+    await user.paste(
+      `vless://${HK_01.uuid}@b.example:8443?security=reality&sni=www.example&fp=chrome&pbk=${publicKey}&sid=ab#nl-01`
+    );
+    await user.click(panel.getByRole('button', { name: 'Добавить по ссылке' }));
+
+    await waitFor(() => {
+      expect(findValue(draft(), ['outbounds', 2])).toEqual({
+        type: 'vless',
+        tag: 'nl-01',
+        server: 'b.example',
+        server_port: 8443,
+        uuid: HK_01.uuid,
+        tls: {
+          enabled: true,
+          server_name: 'www.example',
+          utls: { enabled: true, fingerprint: 'chrome' },
+          reality: { enabled: true, public_key: publicKey, short_id: 'ab' },
+        },
+      });
+    });
+    expect(draft()).toContain('// выходы');
+
+    const node = within(await screen.findByRole('region', { name: 'nl-01' }));
+
+    expect(await node.findByRole('textbox', { name: 'Сервер' })).toHaveValue('b.example');
+  });
+
+  it('names a link it cannot read and writes nothing', async () => {
+    serveConfig(CONFIG_TEXT);
+
+    const user = userEvent.setup();
+
+    renderWithRouter(OutboundsSection);
+
+    await user.click(await screen.findByRole('button', { name: 'Добавить узел' }));
+
+    const panel = within(screen.getByRole('complementary', { name: 'Новый узел' }));
+
+    await user.click(panel.getByRole('textbox', { name: 'Вставить ссылку' }));
+    await user.paste('https://provider.example/sub/token');
+    await user.click(panel.getByRole('button', { name: 'Добавить по ссылке' }));
+
+    expect(await panel.findByRole('alert')).toHaveTextContent(
+      'Ссылка не распознана: поддерживаются vless://, vmess://, trojan://, ss:// и hysteria2://'
+    );
+    expect(ConfigDocumentState.getState().draft).toBeNull();
   });
 
   it('rejects a tag taken by another node and writes nothing', async () => {
@@ -388,7 +453,7 @@ describe('section screen', () => {
 
     const panel = within(screen.getByRole('complementary', { name: 'Новый узел' }));
 
-    await selectOption(user, panel.getByRole('combobox', { name: 'Тип' }), 'direct');
+    await selectOption(user, panel.getByRole('combobox', { name: 'Тип' }), 'directНапрямую, без прокси');
     await user.type(panel.getByRole('textbox', { name: 'Тег' }), 'hk-01');
     await user.click(panel.getByRole('button', { name: 'Добавить' }));
 
@@ -419,9 +484,13 @@ describe('section screen', () => {
 
     const panel = within(screen.getByRole('complementary', { name: 'Новый узел' }));
 
-    await selectOption(user, panel.getByRole('combobox', { name: 'Тип' }), 'hysteria2нет в сборке: with_quic');
+    await selectOption(
+      user,
+      panel.getByRole('combobox', { name: 'Тип' }),
+      'hysteria2недоступен в этой сборке sing-boxHysteria 2: быстрый прокси поверх QUIC'
+    );
 
-    expect(panel.getByText(/собран без with_quic/)).toBeInTheDocument();
+    expect(panel.getByText(/собран без этого типа \(with_quic\)/)).toBeInTheDocument();
 
     await user.type(panel.getByRole('textbox', { name: 'Тег' }), 'hy2');
     await user.click(panel.getByRole('button', { name: 'Добавить' }));

@@ -97,6 +97,12 @@ export function SectionNodes({ section }: { section: GenericSection }) {
     setAdding(false);
   }
 
+  // The new node is the last one: it opens so that its form is filled in next.
+  function openAdded() {
+    setAdding(false);
+    setNodeOpen(nodes.length, true);
+  }
+
   const addButton = (
     <Button variant='outline' size='sm' aria-expanded={adding} onClick={toggleAdding}>
       <Plus data-icon='inline-start' />
@@ -105,7 +111,7 @@ export function SectionNodes({ section }: { section: GenericSection }) {
   );
 
   const addForm = (
-    <ConfigNodeAddForm section={section} takenTags={takenTags} builtTags={builtTags} onAdded={closeAdding} />
+    <ConfigNodeAddForm section={section} takenTags={takenTags} builtTags={builtTags} onAdded={openAdded} />
   );
 
   return (

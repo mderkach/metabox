@@ -15,9 +15,6 @@
   "raw": {
     "hint": "Field value as JSON"
   },
-  "group": {
-    "toggle": "{{name}} fields"
-  },
   "secret": {
     "show": "Show {{name}}",
     "hide": "Hide {{name}}"
@@ -33,5 +30,40 @@
     "realityShortId": "Short ID: hex, up to 16 characters, even length"
   },
   "unbuilt": "not in build: {{tag}}",
-  "advanced": "More options ({{count}})"
+  "advanced": "More options ({{count}})",
+  "label": {
+    "tag": "Node name",
+    "server": "Server",
+    "serverPort": "Server port",
+    "uuid": "User UUID",
+    "password": "Password",
+    "flow": "XTLS mode",
+    "method": "Cipher",
+    "security": "Encryption",
+    "network": "Network",
+    "detour": "Through node",
+    "connectTimeout": "Connect timeout",
+    "tls": "TLS",
+    "serverName": "Server name (SNI)",
+    "insecure": "Skip certificate check",
+    "alpn": "ALPN protocols",
+    "utls": "Browser disguise (uTLS)",
+    "fingerprint": "Browser fingerprint",
+    "reality": "Reality",
+    "realityPublicKey": "Reality public key",
+    "realityShortId": "Reality short ID",
+    "transport": "Transport",
+    "multiplex": "Multiplexing",
+    "obfs": "Obfuscation",
+    "upMbps": "Upload, Mbit/s",
+    "downMbps": "Download, Mbit/s",
+    "plugin": "Plugin",
+    "pluginOpts": "Plugin options",
+    "outbounds": "Group nodes",
+    "default": "Default node",
+    "interval": "Check interval",
+    "listen": "Listen address",
+    "listenPort": "Listen port",
+    "secret": "Secret"
+  }
 }

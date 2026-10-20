@@ -5,20 +5,31 @@ import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import {
-  ConfigDocumentState,
-  ConfigDocumentStore,
   newSectionNode,
-  readSectionNodes,
+  NODE_REGISTRY,
   registryOfSection,
-  sectionNodePath,
   type GenericSection,
   type NodeRegistry,
 } from '@entities/Config';
 import { nodePreset } from '@features/Config/ConfigNodeForm/@x/ConfigNodeAdd';
-import { Badge, Button, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/ui';
+import {
+  Button,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+  Separator,
+} from '@shared/ui';
 
-import { nodeTypeOptions } from '../model/ConfigNodeAdd.model';
+import { useNodeInsert } from '../model/ConfigNodeAdd.insert';
+import { nodeTypeOptions, nodeTypeSections } from '../model/ConfigNodeAdd.model';
 import { makeNodeAddSchema, NODE_ADD_DEFAULTS, NODE_ADD_ERROR, type NodeAddModel } from '../model/ConfigNodeAdd.schema';
+import { ConfigNodeAddLink } from './ConfigNodeAddLink';
+import { ConfigNodeAddTypeItem } from './ConfigNodeAddTypeItem';
 
 const NS = 'features/Config/ConfigNodeAdd';
 
@@ -28,7 +39,7 @@ const NS = 'features/Config/ConfigNodeAdd';
  * append them, otherwise the diff would contain values the user did not set.
  * The exception is a type override template: it fills in what the type cannot
  * be built without (VLESS with Reality without uTLS is not created by the fork
- * client).
+ * client). An outbound can also be added from a provider's share link.
  *
  * `takenTags` are tags the new node may not repeat; `builtTags` is the binary
  * build contents, `null` means not read.
@@ -45,14 +56,41 @@ export function ConfigNodeAddForm({
   /** The node went into the draft: its tag. */
   onAdded?: (tag: string) => void;
 }) {
+  const { t } = useTranslation(NS);
   const registry = registryOfSection(section);
 
   if (registry === null) {
     return null;
   }
 
+  if (registry !== NODE_REGISTRY.Outbound) {
+    return (
+      <NodeAddForm
+        section={section}
+        registry={registry}
+        takenTags={takenTags}
+        builtTags={builtTags}
+        onAdded={onAdded}
+      />
+    );
+  }
+
   return (
-    <NodeAddForm section={section} registry={registry} takenTags={takenTags} builtTags={builtTags} onAdded={onAdded} />
+    <div className='flex flex-col gap-5'>
+      <ConfigNodeAddLink section={section} takenTags={takenTags} onAdded={onAdded} />
+      <div className='flex items-center gap-3 text-xs text-muted-foreground'>
+        <Separator className='flex-1' />
+        {t('manual')}
+        <Separator className='flex-1' />
+      </div>
+      <NodeAddForm
+        section={section}
+        registry={registry}
+        takenTags={takenTags}
+        builtTags={builtTags}
+        onAdded={onAdded}
+      />
+    </div>
   );
 }
 
@@ -70,8 +108,9 @@ function NodeAddForm({
   onAdded?: (tag: string) => void;
 }) {
   const { t } = useTranslation(NS);
-  const insert = ConfigDocumentState.use.insert();
+  const insertNode = useNodeInsert(section);
   const options = useMemo(() => nodeTypeOptions(registry, builtTags), [registry, builtTags]);
+  const sections = useMemo(() => nodeTypeSections(options, registry), [options, registry]);
   const typeId = useId();
   const typeErrorId = useId();
   const typeHintId = useId();
@@ -87,12 +126,8 @@ function NodeAddForm({
 
   const onSubmit = form.handleSubmit((data) => {
     const tag = data.tag.trim();
-    // The position is taken from the text at the moment of writing: an insert
-    // at the end of the section, and an array missing from the file is created
-    // by the insert.
-    const count = readSectionNodes(ConfigDocumentStore.getState().current() ?? '{}', section).length;
 
-    insert(sectionNodePath(section, count), nodePreset(registry, data.type, tag, newSectionNode));
+    insertNode(nodePreset(registry, data.type, tag, newSectionNode));
     form.reset(NODE_ADD_DEFAULTS);
     onAdded?.(tag);
   });
@@ -135,15 +170,13 @@ function NodeAddForm({
                   <SelectValue placeholder={t('field.type.placeholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  {options.map((option) => (
-                    <SelectItem key={option.type} value={option.type} className='font-mono'>
-                      {option.type}
-                      {option.unbuilt !== null && (
-                        <Badge variant='outline' className='font-sans'>
-                          {t('unbuilt.badge', { tag: option.unbuilt })}
-                        </Badge>
-                      )}
-                    </SelectItem>
+                  {sections.map((typeSection) => (
+                    <SelectGroup key={typeSection.group ?? ''}>
+                      {typeSection.group !== null && <SelectLabel>{t(`group.${typeSection.group}`)}</SelectLabel>}
+                      {typeSection.options.map((option) => (
+                        <ConfigNodeAddTypeItem key={option.type} option={option} />
+                      ))}
+                    </SelectGroup>
                   ))}
                 </SelectContent>
               </Select>

@@ -1,10 +1,13 @@
 import { z } from 'zod';
 
+import { parseShareLink } from './ConfigNodeAdd.link';
+
 /** Failure codes of the node add form: the `ui` substitutes the text by them. */
 export const NODE_ADD_ERROR = {
   TypeRequired: 'typeRequired',
   TagRequired: 'tagRequired',
   TagTaken: 'tagTaken',
+  LinkRequired: 'linkRequired',
 } as const;
 
 /** What the add form asks: the other fields are edited by the node form. */
@@ -42,3 +45,28 @@ export function makeNodeAddSchema(takenTags: readonly string[]) {
     }
   });
 }
+
+/** Node from a share link: the link alone, the tag is taken from it. */
+export const NodeLinkSchema = z.object({
+  /** Share link of a proxy provider: `vless://`, `vmess://`, `trojan://`, `ss://`, `hysteria2://` */
+  link: z.string(),
+});
+
+export type NodeLinkModel = z.infer<typeof NodeLinkSchema>;
+
+export const NODE_LINK_DEFAULTS: NodeLinkModel = { link: '' };
+
+/** A link that does not parse fails with the parser code (`NODE_LINK_ERROR`). */
+export const NodeLinkFormSchema = NodeLinkSchema.superRefine((data, ctx) => {
+  if (data.link.trim() === '') {
+    ctx.addIssue({ code: 'custom', path: ['link'], message: NODE_ADD_ERROR.LinkRequired });
+
+    return;
+  }
+
+  const { error } = parseShareLink(data.link);
+
+  if (error !== null) {
+    ctx.addIssue({ code: 'custom', path: ['link'], message: error });
+  }
+});

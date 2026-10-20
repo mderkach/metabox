@@ -18,7 +18,7 @@ describe('section node', () => {
     render(<ConfigNode section={CONFIG_SECTION.Outbounds} index={0} node={VLESS} name='hk-01' />);
 
     expect(screen.getByRole('tab', { name: 'Форма' })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('textbox', { name: 'server' })).toHaveValue('a.example');
+    expect(screen.getByRole('textbox', { name: 'Сервер' })).toHaveValue('a.example');
     expect(screen.queryByText('панель не знает')).not.toBeInTheDocument();
   });
 
@@ -27,7 +27,7 @@ describe('section node', () => {
 
     render(<ConfigNode section={CONFIG_SECTION.Outbounds} index={0} node={VLESS} name='hk-01' />);
 
-    const server = screen.getByRole('textbox', { name: 'server' });
+    const server = screen.getByRole('textbox', { name: 'Сервер' });
 
     await user.clear(server);
     await user.type(server, 'b.example');
@@ -35,12 +35,12 @@ describe('section node', () => {
 
     expect(screen.getByRole('textbox', { name: 'Узел hk-01 текстом' })).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.queryByRole('textbox', { name: 'server' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('textbox', { name: 'Сервер' })).not.toBeInTheDocument();
     });
 
     await user.click(screen.getByRole('tab', { name: 'Форма' }));
 
-    expect(screen.getByRole('textbox', { name: 'server' })).toHaveValue('b.example');
+    expect(screen.getByRole('textbox', { name: 'Сервер' })).toHaveValue('b.example');
   });
 
   it('a node with a field the schema does not know is marked and opened as text, the form is disabled', () => {
@@ -60,7 +60,7 @@ describe('section node', () => {
     render(<ConfigNode section={CONFIG_SECTION.Services} index={0} node={node} name='api' />);
 
     expect(screen.getByRole('tab', { name: 'Форма' })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('spinbutton', { name: 'listen_port' })).toHaveValue(9091);
+    expect(screen.getByRole('spinbutton', { name: 'Порт прослушивания' })).toHaveValue(9091);
   });
 
   it('the experimental section opens with a form that hides the clash_api secret', async () => {
