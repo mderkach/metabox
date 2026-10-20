@@ -2,7 +2,9 @@ BIN        := dist/metaboxd
 DEVICE_BIN := dist/metaboxd-linux-arm64
 # Version in semver, a single source for the binary and the package.
 VERSION    ?= $(shell cat VERSION)
-LDFLAGS    := -s -w -X metabox/internal/version.Version=$(VERSION)
+# Fork version of the panel schemas: the daemon reports it to MCP agents next to the binary version.
+SCHEMA_VERSION := $(shell sed -n 's/^export const SCHEMA_FORK_VERSION = "\(.*\)"$$/\1/p' apps/web/src/shared/api/generated.ts)
+LDFLAGS    := -s -w -X metabox/internal/version.Version=$(VERSION) -X metabox/internal/version.Schema=$(SCHEMA_VERSION)
 
 # Pins the version down: the `go` directive in go.mod raises it but does not lower it.
 export GOTOOLCHAIN := go$(shell cat .go-version)
