@@ -170,12 +170,12 @@ describe('list view', () => {
     const rows = makeRows(4);
     const first = renderWithQuery(<TableHarness rows={rows} onReset={vi.fn<() => void>()} />);
 
-    expect(headerLabels()).toEqual(['Откуда', 'Куда', 'Правило', 'Действие', 'Цепочка', 'Объём', 'Время']);
+    expect(headerLabels()).toEqual(['Откуда', 'Куда', 'Правило', 'Действие', 'Цепочка', 'Объём', 'С открытия']);
 
     await user.click(screen.getByRole('button', { name: /^Поля/ }));
     await user.click(await screen.findByRole('button', { name: 'Поднять поле Куда выше' }));
 
-    expect(headerLabels()).toEqual(['Куда', 'Откуда', 'Правило', 'Действие', 'Цепочка', 'Объём', 'Время']);
+    expect(headerLabels()).toEqual(['Куда', 'Откуда', 'Правило', 'Действие', 'Цепочка', 'Объём', 'С открытия']);
     // The field stood first, "up" went out: focus moves to the neighboring button
     // of the same field instead of being lost.
     expect(screen.getByRole('button', { name: 'Поднять поле Куда выше' })).toBeDisabled();
@@ -184,7 +184,7 @@ describe('list view', () => {
     first.unmount();
     renderWithQuery(<TableHarness rows={rows} onReset={vi.fn<() => void>()} />);
 
-    expect(headerLabels()).toEqual(['Куда', 'Откуда', 'Правило', 'Действие', 'Цепочка', 'Объём', 'Время']);
+    expect(headerLabels()).toEqual(['Куда', 'Откуда', 'Правило', 'Действие', 'Цепочка', 'Объём', 'С открытия']);
   });
 
   it('moves a column from the keyboard without losing focus', async () => {
@@ -202,11 +202,11 @@ describe('list view', () => {
     expect(
       screen.getAllByRole('button', { name: /^Опустить поле/ }).map((button) => button.getAttribute('aria-label'))
     ).toEqual(
-      ['Куда', 'Сеть', 'Откуда', 'Правило', 'Действие', 'Цепочка', 'Скорость', 'Объём', 'Время'].map(
+      ['Куда', 'Сеть', 'Откуда', 'Правило', 'Действие', 'Цепочка', 'Скорость', 'Объём', 'С открытия'].map(
         (column) => `Опустить поле ${column} ниже`
       )
     );
-    expect(headerLabels()).toEqual(['Куда', 'Откуда', 'Правило', 'Действие', 'Цепочка', 'Объём', 'Время']);
+    expect(headerLabels()).toEqual(['Куда', 'Откуда', 'Правило', 'Действие', 'Цепочка', 'Объём', 'С открытия']);
     expect(screen.getByRole('button', { name: 'Опустить поле Откуда ниже' })).toHaveFocus();
   });
 
@@ -226,13 +226,13 @@ describe('list view', () => {
     // overwrite the first with a view taken before it.
     await user.click(screen.getByRole('button', { name: 'По умолчанию' }));
 
-    expect(headerLabels()).toEqual(['Откуда', 'Куда', 'Правило', 'Действие', 'Цепочка', 'Объём', 'Время']);
+    expect(headerLabels()).toEqual(['Откуда', 'Куда', 'Правило', 'Действие', 'Цепочка', 'Объём', 'С открытия']);
     expect(screen.queryByRole('columnheader', { name: /Сеть/ })).not.toBeInTheDocument();
 
     first.unmount();
     renderWithQuery(<TableHarness rows={rows} onReset={vi.fn<() => void>()} />);
 
-    expect(headerLabels()).toEqual(['Откуда', 'Куда', 'Правило', 'Действие', 'Цепочка', 'Объём', 'Время']);
+    expect(headerLabels()).toEqual(['Откуда', 'Куда', 'Правило', 'Действие', 'Цепочка', 'Объём', 'С открытия']);
     expect(screen.queryByRole('columnheader', { name: /Сеть/ })).not.toBeInTheDocument();
     expect(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}')).toMatchObject({
       columns: CONNECTION_COLUMNS_HIDDEN,
@@ -249,7 +249,7 @@ describe('list view', () => {
     await user.click(screen.getByRole('button', { name: /^Поля/ }));
     await user.click(await screen.findByRole('button', { name: 'По умолчанию' }));
 
-    expect(headerLabels()).toEqual(['Откуда', 'Куда', 'Правило', 'Действие', 'Цепочка', 'Объём', 'Время']);
+    expect(headerLabels()).toEqual(['Откуда', 'Куда', 'Правило', 'Действие', 'Цепочка', 'Объём', 'С открытия']);
   });
 
   // Reset is one view change: two setters in a row would take the view from the same
@@ -263,11 +263,11 @@ describe('list view', () => {
     await user.click(await screen.findByRole('checkbox', { name: 'Цепочка' }));
     await user.click(screen.getByRole('button', { name: 'Поднять поле Куда выше' }));
 
-    expect(headerLabels()).toEqual(['Куда', 'Откуда', 'Правило', 'Действие', 'Объём', 'Время']);
+    expect(headerLabels()).toEqual(['Куда', 'Откуда', 'Правило', 'Действие', 'Объём', 'С открытия']);
 
     await user.click(screen.getByRole('button', { name: 'По умолчанию' }));
 
-    expect(headerLabels()).toEqual(['Откуда', 'Куда', 'Правило', 'Действие', 'Цепочка', 'Объём', 'Время']);
+    expect(headerLabels()).toEqual(['Откуда', 'Куда', 'Правило', 'Действие', 'Цепочка', 'Объём', 'С открытия']);
     expect(screen.getByRole('checkbox', { name: 'Цепочка' })).toBeChecked();
   });
 
@@ -276,7 +276,7 @@ describe('list view', () => {
 
     renderWithQuery(<TableHarness rows={makeRows(4)} onReset={vi.fn<() => void>()} />);
 
-    expect(headerLabels()).toEqual(['Время', 'Куда', 'Откуда', 'Правило', 'Действие', 'Цепочка', 'Объём']);
+    expect(headerLabels()).toEqual(['С открытия', 'Куда', 'Откуда', 'Правило', 'Действие', 'Цепочка', 'Объём']);
     expect(screen.getByRole('button', { name: 'Плотные строки' })).toHaveAttribute('aria-pressed', 'true');
   });
 
@@ -351,7 +351,15 @@ describe('narrow screen card', () => {
   it('labels every visible field for the screen reader and does not show hidden ones', () => {
     renderWithQuery(<TableHarness rows={makeRows(3)} onReset={vi.fn<() => void>()} />);
 
-    expect(fieldLabels(firstCard())).toEqual(['Куда', 'Правило', 'Действие', 'Цепочка', 'Откуда', 'Время', 'Объём']);
+    expect(fieldLabels(firstCard())).toEqual([
+      'Куда',
+      'Правило',
+      'Действие',
+      'Цепочка',
+      'Откуда',
+      'С открытия',
+      'Объём',
+    ]);
   });
 
   it('shows an enabled column and hides a disabled one', () => {
