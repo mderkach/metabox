@@ -1,22 +1,38 @@
-import { renderWithQuery } from '@test/renderWithQuery';
-import { screen, within } from '@testing-library/react';
+import { renderWithRouter } from '@test/renderWithRouter';
+import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { FunctionComponent } from 'react';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { ConfigDocumentState } from '@entities/Config';
 
 import { ConfigApplyDiff } from '../ui/ConfigApplyDiff';
 
+/** The router renders its route after a tick: the screen is queried once it is there. */
+async function renderScreen(Component: FunctionComponent) {
+  const { router } = renderWithRouter(Component);
+
+  await act(async () => {
+    await router.load();
+  });
+}
+
 const JSON_INDENT = 2;
 
+function toConfigText(config: unknown): string {
+  return JSON.stringify(config, null, JSON_INDENT);
+}
+
 function toText(rules: unknown[]): string {
-  return JSON.stringify({ route: { rules } }, null, JSON_INDENT);
+  return toConfigText({ route: { rules } });
 }
 
 async function openDiff(applied: unknown[], draft: unknown[]) {
   ConfigDocumentState.getState().load(toText(applied));
   ConfigDocumentState.getState().replace(toText(draft));
-  renderWithQuery(<ConfigApplyDiff canApply blocked={null} onApply={() => undefined} />);
+  await renderScreen(function Screen() {
+    return <ConfigApplyDiff canApply blocked={null} onApply={() => undefined} />;
+  });
 
   await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
 }
@@ -72,23 +88,70 @@ describe('ConfigApplyDiff', () => {
     expect(items.at(-1)).toHaveTextContent('И ещё 3 изменения');
   });
 
-  it('without rule edits does not show the summary', async () => {
+  it('names node and parameter edits in words and folds the text of the changes under them', async () => {
+    ConfigDocumentState.getState().load(
+      toConfigText({ outbounds: [{ type: 'direct', tag: 'direct' }], route: { default_mark: 100 } })
+    );
+    ConfigDocumentState.getState().replace(
+      toConfigText({
+        outbounds: [
+          { type: 'direct', tag: 'direct' },
+          { type: 'vless', tag: 'NL test', server: 'nl.example' },
+        ],
+        route: { default_mark: 7 },
+      })
+    );
+    await renderScreen(function Screen() {
+      return <ConfigApplyDiff canApply blocked={null} onApply={() => undefined} />;
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
+
+    const summary = await screen.findByRole('list', { name: 'Изменения узлов и параметров' });
+
+    expect(
+      within(summary)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent)
+    ).toEqual(['Добавлено: аутбаунд NL test', 'Параметр route.default_mark: 100 → 7']);
+    expect(within(summary).getByRole('link', { name: 'NL test' })).toHaveAttribute('href', '/config/outbounds');
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /Текст изменений/ }));
+
+    expect(screen.getByRole('table')).toBeInTheDocument();
+  });
+
+  it('closes the summary when a link leads to the edit', async () => {
+    await openDiff(RULES.slice(0, 2), [RULES[0], { ...RULES[1], outbound: 'direct' }]);
+
+    await userEvent.click(await screen.findByRole('link', { name: 'Правило 2' }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('shows the text at once when no summary line names the edit', async () => {
     ConfigDocumentState.getState().load('{\n  "log": { "level": "info" }\n}');
-    ConfigDocumentState.getState().replace('{\n  "log": { "level": "debug" }\n}');
-    renderWithQuery(<ConfigApplyDiff canApply blocked={null} onApply={() => undefined} />);
+    ConfigDocumentState.getState().replace('{\n  // verbose\n  "log": { "level": "info" }\n}');
+    await renderScreen(function Screen() {
+      return <ConfigApplyDiff canApply blocked={null} onApply={() => undefined} />;
+    });
 
     await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
 
     expect(await screen.findByRole('table')).toBeInTheDocument();
-    expect(screen.queryByRole('list', { name: 'Изменения правил маршрутизации' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('list')).not.toBeInTheDocument();
   });
 
   it('colors an added line with the success tone, a removed one with the danger tone, and keeps the sign', async () => {
     ConfigDocumentState.getState().load('{\n  "log": { "level": "info" }\n}');
     ConfigDocumentState.getState().replace('{\n  "log": { "level": "debug" }\n}');
-    renderWithQuery(<ConfigApplyDiff canApply blocked={null} onApply={() => undefined} />);
+    await renderScreen(function Screen() {
+      return <ConfigApplyDiff canApply blocked={null} onApply={() => undefined} />;
+    });
 
     await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
+    await userEvent.click(await screen.findByRole('button', { name: /Текст изменений/ }));
 
     const added = await screen.findByRole('row', { name: /"debug"/ });
     const removed = screen.getByRole('row', { name: /"info"/ });

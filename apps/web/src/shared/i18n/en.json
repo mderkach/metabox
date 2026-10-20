@@ -287,5 +287,18 @@
     "sniff": "detect protocol",
     "resolve": "resolve address",
     "route-options": "route options"
+  },
+  "nodeKind": {
+    "ruleSet": "rule set",
+    "inbounds": "inbound",
+    "outbounds": "outbound",
+    "providers": "subscription",
+    "endpoints": "endpoint",
+    "dns": "DNS server",
+    "dnsRules": "DNS rule",
+    "services": "service",
+    "certificateProviders": "certificate provider",
+    "httpClients": "HTTP client",
+    "networkNamespaces": "network namespace"
   }
 }

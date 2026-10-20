@@ -63,10 +63,9 @@
     "removed": "will be removed"
   },
   "diff": {
-    "description": "Check the changes. After applying, confirm the connection works, otherwise metabox restores the previous config.",
+    "description": "Check the changes. After applying, confirm the connection works — there is time for it (a minute by default), otherwise metabox restores the previous config.",
     "title": "What goes to the device",
     "same": "The draft matches the file on the device.",
-    "changed": "Changed lines: {{count}}.",
     "caption": "Line by line difference between the draft and the applied config",
     "column": {
       "before": "Line in the applied config",
@@ -77,14 +76,16 @@
     "skipped_other": "… {{count}} matching lines",
     "rules": {
       "label": "Routing rule changes",
-      "target": "Rule {{index}}: {{from}} → {{to}}",
-      "added": "Rule {{index}} added",
+      "target": "<node>Rule {{index}}</node>: {{from}} → {{to}}",
+      "added": "<node>Rule {{index}}</node> added",
       "removed": "Rule {{index}} removed",
-      "changed": "Rule {{index}} changed",
-      "moved": "Rule {{previous}} moved to position {{index}}",
+      "changed": "<node>Rule {{index}}</node> changed",
+      "moved": "Rule {{previous}} moved to position <node>{{index}}</node>",
       "more_one": "And {{count}} more change",
       "more_other": "And {{count}} more changes"
-    }
+    },
+    "changed_one": "Text of the changes: {{count}} line",
+    "changed_other": "Text of the changes: {{count}} lines"
   },
   "history": {
     "open": "Version history",
@@ -95,5 +96,15 @@
     "unknownTime": "save time unknown",
     "restore": "Restore",
     "current": "current"
+  },
+  "changes": {
+    "label": "Node and parameter changes",
+    "added": "Added: {{kind}} <node>{{name}}</node>",
+    "removed": "Removed: {{kind}} <node>{{name}}</node>",
+    "changed": "Changed: {{kind}} <node>{{name}}</node> ({{fields}})",
+    "setting": "Parameter <node>{{path}}</node>: {{from}} → {{to}}",
+    "settingChanged": "Parameter <node>{{path}}</node> changed",
+    "more_one": "And {{count}} more change — in the text of the changes",
+    "more_other": "And {{count}} more changes — in the text of the changes"
   }
 }

@@ -296,5 +296,18 @@
     "sniff": "определить протокол",
     "resolve": "разрешить адрес",
     "route-options": "параметры маршрута"
+  },
+  "nodeKind": {
+    "ruleSet": "сет правил",
+    "inbounds": "инбаунд",
+    "outbounds": "аутбаунд",
+    "providers": "подписка",
+    "endpoints": "эндпоинт",
+    "dns": "DNS-сервер",
+    "dnsRules": "DNS-правило",
+    "services": "сервис",
+    "certificateProviders": "поставщик сертификатов",
+    "httpClients": "HTTP-клиент",
+    "networkNamespaces": "сетевое пространство имён"
   }
 }

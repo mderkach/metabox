@@ -48,6 +48,8 @@ export type {
   WorkdirMismatch,
 } from './model/Config.model';
 export { findUnbuiltNodes, findUnbuiltOptions, unbuiltOptionOf } from './model/Config.build';
+export { CONFIG_CHANGE, toConfigChanges } from './model/Config.changes';
+export type { ConfigChange, NodeListSection } from './model/Config.changes';
 export { compactNode, diffNode } from './model/Config.patch';
 export {
   isListSettingsSection,

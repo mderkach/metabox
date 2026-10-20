@@ -3,8 +3,11 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useRef } from 'react
 
 import {
   CONFIG_QUERY,
+  CONFIG_SECTION,
   ConfigDocumentState,
+  isGenericSection,
   readRules,
+  toConfigChanges,
   toCheckFailure,
   toWorkdirMismatch,
   useApplyTransaction,
@@ -13,6 +16,9 @@ import {
   useConfigText,
   useListChanges,
   type CheckFailure,
+  type ConfigChange,
+  type ConfigSection,
+  type GenericSection,
   type WorkdirMismatch,
 } from '@entities/Config';
 import {
@@ -178,4 +184,37 @@ export function useRuleChanges(): RuleChange[] {
     () => (applied === null || draft === null ? [] : toRuleChanges(readRules(applied), readRules(draft))),
     [applied, draft]
   );
+}
+
+/** Node and parameter changes that Apply will bring, beside the rule ones; without a draft, empty. */
+export function useConfigChanges(): ConfigChange[] {
+  const applied = ConfigDocumentState.use.applied();
+  const draft = ConfigDocumentState.use.draft();
+
+  return useMemo(() => (applied === null || draft === null ? [] : toConfigChanges(applied, draft)), [applied, draft]);
+}
+
+export type SectionLink =
+  | { to: '/config' | '/config/rule-set' }
+  | { to: '/config/$section'; params: { section: GenericSection } };
+
+export function toSectionLink(section: ConfigSection): SectionLink | null {
+  if (section === CONFIG_SECTION.Route) {
+    return { to: '/config' };
+  }
+
+  if (section === CONFIG_SECTION.RuleSet) {
+    return { to: '/config/rule-set' };
+  }
+
+  return isGenericSection(section) ? { to: '/config/$section', params: { section } } : null;
+}
+
+/** A value as one line of the summary; `null` means a list or an object, which are named as changed without a value. */
+export function toValueText(value: unknown): string | null {
+  if (value === undefined) {
+    return '—';
+  }
+
+  return typeof value === 'object' && value !== null ? null : JSON.stringify(value);
 }
