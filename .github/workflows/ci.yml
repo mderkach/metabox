@@ -31,6 +31,7 @@ jobs:
           cache-dependency-path: |
             Makefile
             apps/metaboxd/go.mod
+            tools/schemagen/go.mod
             tools/schemagen/go.sum
 
       # govet is part of the golangci-lint set, a separate step is not needed. The generator
