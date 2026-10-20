@@ -137,6 +137,7 @@ const configSectionRoute = createRoute({
       'widgets/Config/ConfigSectionSettings',
       'features/Config/ConfigNodeForm',
       'features/Config/ConfigNodeAdd',
+      'features/Config/ConfigNodeDelete',
     ]),
   component: lazyRouteComponent(async () => import('@pages/Section'), 'SectionPage'),
 });

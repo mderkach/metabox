@@ -89,6 +89,14 @@ export function SectionNodes({ section }: { section: GenericSection }) {
     });
   }
 
+  // Nodes below the deleted one move up a place, and their open state with them.
+  function shiftExpanded(deleted: number) {
+    setExpanded(
+      (current) =>
+        new Set([...current].flatMap((index) => (index === deleted ? [] : [index > deleted ? index - 1 : index])))
+    );
+  }
+
   function toggleAdding() {
     setAdding((open) => !open);
   }
@@ -158,6 +166,9 @@ export function SectionNodes({ section }: { section: GenericSection }) {
                 node={node}
                 name={nodeName(shape.path, node, index)}
                 builtTags={builtTags}
+                onDeleted={() => {
+                  shiftExpanded(index);
+                }}
                 {...(nodes.length > 1 && {
                   open: expanded.has(index),
                   onOpenChange: (open: boolean) => {

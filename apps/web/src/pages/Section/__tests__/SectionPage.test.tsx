@@ -529,4 +529,47 @@ describe('section screen', () => {
     expect(await screen.findByRole('heading', { name: 'dns.rules[0]' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Добавить узел' })).not.toBeInTheDocument();
   });
+
+  it('deletes a node after a confirmation that names what still points to it', async () => {
+    serveConfig(`{
+  // выходы
+  "outbounds": [
+    { "type": "direct", "tag": "direct" },
+    { "type": "vless", "tag": "hk-01", "server": "a.example", "server_port": 443, "uuid": "REDACTED" },
+  ],
+  "route": { "rules": [{ "domain": ["a.example"], "outbound": "hk-01" }], "final": "hk-01" },
+}`);
+
+    const user = userEvent.setup();
+
+    renderWithRouter(OutboundsSection);
+
+    const node = within(await screen.findByRole('region', { name: 'hk-01' }));
+
+    await user.click(node.getByRole('button', { name: 'Удалить «hk-01»' }));
+
+    const dialog = await screen.findByRole('alertdialog', { name: 'Удалить «hk-01»?' });
+
+    expect(
+      within(dialog)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent)
+    ).toEqual(['правило 1', 'параметр route.final']);
+
+    await user.click(within(dialog).getByRole('button', { name: 'Удалить' }));
+
+    await waitFor(() => {
+      expect(findValue(draft(), ['outbounds'])).toEqual([{ type: 'direct', tag: 'direct' }]);
+    });
+    expect(draft()).toContain('// выходы');
+  });
+
+  it('an object section node has no delete button', async () => {
+    serveConfig('{ "ntp": { "enabled": true } }');
+
+    renderWithRouter(NtpSection);
+
+    expect(await screen.findByRole('region', { name: 'ntp' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Удалить/ })).not.toBeInTheDocument();
+  });
 });
