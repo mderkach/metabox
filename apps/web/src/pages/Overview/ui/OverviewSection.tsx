@@ -21,7 +21,8 @@ export function OverviewSection({
   collapsible?: boolean;
   children: ReactNode;
 }) {
-  const [open, setOpen] = useState(!collapsible);
+  const [open, setOpen] = useState(false);
+  const expanded = !collapsible || open;
   const contentId = useId();
 
   return (
@@ -31,7 +32,7 @@ export function OverviewSection({
           {collapsible ? (
             <Button
               variant='ghost'
-              aria-expanded={open}
+              aria-expanded={expanded}
               aria-controls={contentId}
               className={cn(SECTION_HEADING, '-mx-2.5 h-auto px-2.5')}
               onClick={() => {
@@ -40,7 +41,7 @@ export function OverviewSection({
             >
               <ChevronRight
                 aria-hidden='true'
-                className={cn('transition-transform motion-reduce:transition-none', open && 'rotate-90')}
+                className={cn('transition-transform motion-reduce:transition-none', expanded && 'rotate-90')}
               />
               {title}
             </Button>
@@ -55,8 +56,8 @@ export function OverviewSection({
           </p>
         )}
       </div>
-      <div id={contentId} hidden={!open} className='flex flex-col gap-3'>
-        {open && children}
+      <div id={contentId} hidden={!expanded} className='flex flex-col gap-3'>
+        {expanded && children}
       </div>
     </section>
   );

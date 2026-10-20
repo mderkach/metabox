@@ -1,7 +1,7 @@
 import { renderWithRouter } from '@test/renderWithRouter';
 import { selectOption } from '@test/selectOption';
 import { server } from '@test/server';
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -353,18 +353,46 @@ describe('overview screen', () => {
   });
 });
 
+const narrowListeners = new Set<(event: { matches: boolean }) => void>();
+
 describe('overview screen on a phone', () => {
   beforeEach(() => {
     ConnectionStore.getState().reset();
     RuntimeStore.getState().reset();
     serveStatus();
+    narrowListeners.clear();
     vi.stubGlobal('matchMedia', function matchNarrowQuery(media: string) {
-      return { matches: true, media, addEventListener: vi.fn<() => void>(), removeEventListener: vi.fn<() => void>() };
+      return {
+        matches: true,
+        media,
+        addEventListener: (_type: string, listener: (event: { matches: boolean }) => void) => {
+          narrowListeners.add(listener);
+        },
+        removeEventListener: (_type: string, listener: (event: { matches: boolean }) => void) => {
+          narrowListeners.delete(listener);
+        },
+      };
     });
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it('shows the folded sections when the screen gets wide', async () => {
+    RuntimeStore.getState().pushSystem({ ...SYSTEM_FIXTURE, thermal: [{ name: 'cpu-thermal', celsius: 42.5 }] });
+    renderWithRouter(OverviewPage);
+
+    await screen.findByRole('button', { name: 'Роутер' });
+
+    act(() => {
+      for (const listener of narrowListeners) {
+        listener({ matches: false });
+      }
+    });
+
+    expect(screen.queryByRole('button', { name: 'Роутер' })).not.toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Показания устройства' })).toBeInTheDocument();
   });
 
   it('keeps board and process readings folded until their title is pressed', async () => {
