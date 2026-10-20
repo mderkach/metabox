@@ -30,6 +30,7 @@ import (
 	"metabox/internal/history"
 	"metabox/internal/httpapi"
 	"metabox/internal/logs"
+	"metabox/internal/mcp"
 	"metabox/internal/procd"
 	"metabox/internal/route"
 	"metabox/internal/ruleset"
@@ -297,6 +298,45 @@ func run(log *slog.Logger, s settings) error {
 		probe = clashapi.NewDNSProbe(s.healthDNSName, dnsProbeTimeout, healthPollInterval, 1)
 	}
 
+	explainer := route.NewExplainer(source)
+	logReader := logs.New(logs.Exec, store, logs.Options{
+		Logread:      s.logread,
+		Process:      filepath.Base(s.binary),
+		ConfigDir:    s.configDir,
+		TruncateDirs: []string{s.configDir, "/var/run", "/tmp"},
+		Protected:    []string{store.Path(), store.ListsPath(), s.serviceDir},
+		PollInterval: logPollInterval,
+	})
+	diagnoser := diag.New(plane, store, probe, diag.Options{
+		ProcNet: "/proc/net",
+		URL:     s.diagURL,
+		Timeout: diagTimeout,
+	})
+
+	// A broken token file leaves MCP off instead of stopping the daemon: the panel stays
+	// up, and the owner removes the file over SSH.
+	var agents httpapi.MCP
+
+	access, err := mcp.NewAccess(ctx, store)
+	if err != nil {
+		log.Error("MCP выключен: файл токена не прочитан", "err", err)
+	} else {
+		agents = mcp.New(access, log, mcp.Options{
+			Version:        version.Version,
+			SingboxVersion: singboxVersion,
+			SingboxTags:    build.Tags,
+			SchemaVersion:  version.Schema,
+			Service:        mcp.ServiceReader(serviceState(service, singboxVersion, sysinfo)),
+			Runtime:        source,
+			Explain:        explainer,
+			Config:         store,
+			Dataplane:      plane,
+			Devices:        lan,
+			Logs:           logReader,
+			Diag:           diagnoser,
+		})
+	}
+
 	api := httpapi.NewServer(manager, store, log, httpapi.Options{
 		Version:        version.Version,
 		Auth:           guard,
@@ -307,7 +347,7 @@ func run(log *slog.Logger, s settings) error {
 		Service:        service,
 		Events:         hub,
 		Clash:          clashHandler,
-		Explain:        route.NewExplainer(source),
+		Explain:        explainer,
 		Hits:           hits,
 		History:        historyOf(traffic, deviceHistory, connectionSizes),
 		RuleSets:       ruleSets,
@@ -315,20 +355,10 @@ func run(log *slog.Logger, s settings) error {
 		Devices:        lan,
 		Dataplane:      plane,
 		Plane:          planeTx,
-		Logs: logs.New(logs.Exec, store, logs.Options{
-			Logread:      s.logread,
-			Process:      filepath.Base(s.binary),
-			ConfigDir:    s.configDir,
-			TruncateDirs: []string{s.configDir, "/var/run", "/tmp"},
-			Protected:    []string{store.Path(), store.ListsPath(), s.serviceDir},
-			PollInterval: logPollInterval,
-		}),
-		Diag: diag.New(plane, store, probe, diag.Options{
-			ProcNet: "/proc/net",
-			URL:     s.diagURL,
-			Timeout: diagTimeout,
-		}),
-		ConfigPath: store.Path(),
+		Logs:           logReader,
+		Diag:           diagnoser,
+		MCP:            agents,
+		ConfigPath:     store.Path(),
 	})
 
 	listeners, failures, err := httpapi.Listen(httpapi.Addrs(s.addr))

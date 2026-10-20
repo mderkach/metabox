@@ -41,6 +41,8 @@ var (
 	errBadLogQuery = errors.New("параметры запроса лога не разобраны")
 	// errUnauthorized: the panel has a password and the request came without a session.
 	errUnauthorized = errors.New("нужен вход в панель")
+	// errMCPToken: MCP is on and the request came without its token or with a wrong one.
+	errMCPToken = errors.New("нужен токен MCP")
 	// errBadAuthBody: the login or password change body was not parsed.
 	errBadAuthBody = errors.New("тело входа или смены пароля не разобрано")
 )
@@ -190,7 +192,7 @@ func statusFor(err error) (status int, code contract.ErrorCode) {
 		return http.StatusConflict, contract.ErrLogClearForbidden
 	case errors.Is(err, errBadLogQuery):
 		return http.StatusBadRequest, contract.ErrLogQueryInvalid
-	case errors.Is(err, errUnauthorized), errors.Is(err, auth.ErrNoSession):
+	case errors.Is(err, errUnauthorized), errors.Is(err, auth.ErrNoSession), errors.Is(err, errMCPToken):
 		return http.StatusUnauthorized, contract.ErrUnauthorized
 	// 403, not 401: the panel answers 401 by showing the login screen, and a wrong
 	// password must stay on the form where it was typed.
