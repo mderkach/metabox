@@ -1,4 +1,4 @@
-# ADR-0054. Embed a read-only MCP server in the daemon with the official Go SDK
+# ADR-0055. Embed a read-only MCP server in the daemon with the official Go SDK
 
 - Status: Accepted
 - Date: 2026-10-20
