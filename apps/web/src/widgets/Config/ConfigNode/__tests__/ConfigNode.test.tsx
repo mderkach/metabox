@@ -19,7 +19,7 @@ describe('section node', () => {
 
     expect(screen.getByRole('tab', { name: 'Форма' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('textbox', { name: 'server' })).toHaveValue('a.example');
-    expect(screen.queryByText('UI не покрывает')).not.toBeInTheDocument();
+    expect(screen.queryByText('панель не знает')).not.toBeInTheDocument();
   });
 
   it('what was typed in the form survives a switch to JSON and back', async () => {
@@ -48,7 +48,7 @@ describe('section node', () => {
 
     render(<ConfigNode section={CONFIG_SECTION.Outbounds} index={0} node={node} name='hk-01' />);
 
-    expect(screen.getByText('UI не покрывает')).toBeInTheDocument();
+    expect(screen.getByText('панель не знает')).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Форма' })).toHaveAttribute('aria-disabled', 'true');
     expect(screen.getByRole('tab', { name: 'JSON' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('textbox', { name: 'Узел hk-01 текстом' })).toHaveValue(JSON.stringify(node, null, 2));
@@ -87,7 +87,7 @@ describe('section node', () => {
 
     render(<ConfigNode section={CONFIG_SECTION.Experimental} index={0} node={node} name='experimental' />);
 
-    expect(screen.getByText('UI не покрывает')).toBeInTheDocument();
+    expect(screen.getByText('панель не знает')).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Форма' })).toHaveAttribute('aria-disabled', 'true');
     expect(screen.getByRole('textbox', { name: 'Узел experimental текстом' })).toBeInTheDocument();
   });
@@ -113,7 +113,7 @@ describe('section node', () => {
     render(<ConfigNode section={section} index={0} node={node} name={section} />);
 
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
-    expect(screen.queryByText('UI не покрывает')).not.toBeInTheDocument();
+    expect(screen.queryByText('панель не знает')).not.toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: `Узел ${section} текстом` })).toBeInTheDocument();
   });
 });

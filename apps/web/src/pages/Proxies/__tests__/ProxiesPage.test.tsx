@@ -278,9 +278,9 @@ describe('proxies screen', () => {
 
     renderWithQuery(<ProxiesPage />);
 
-    const nested = await screen.findByRole('button', { name: 'us, URL-тест, 609 мс' });
+    const nested = await screen.findByRole('button', { name: 'us, самый быстрый, 609 мс' });
 
-    expect(within(nested).getByText('URL-тест')).toBeInTheDocument();
+    expect(within(nested).getByText('самый быстрый')).toBeInTheDocument();
     expect(within(nested).queryByText('URLTest')).not.toBeInTheDocument();
   });
 });

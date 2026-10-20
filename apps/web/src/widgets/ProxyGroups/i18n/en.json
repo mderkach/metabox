@@ -5,14 +5,14 @@
     "outbounds": "Config outbounds"
   },
   "type": {
-    "selector": "selector",
-    "urlTest": "URL test",
+    "selector": "manual choice",
+    "urlTest": "fastest",
     "fallback": "fallback",
     "loadBalance": "load balance"
   },
   "card": {
     "manual": "you pick the node",
-    "automatic": "the node is picked automatically, by delay",
+    "automatic": "the node is chosen by delay",
     "testGroup": "Test the nodes of group {{group}}",
     "none": "no node selected"
   },

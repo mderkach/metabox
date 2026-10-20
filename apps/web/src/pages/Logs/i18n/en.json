@@ -23,13 +23,13 @@
   },
   "closed": {
     "title": "The log stream is closed",
-    "description": "The daemon refused the stream or the connection dropped, and retries did not help. There are at most four log streams across all tabs: close the extra ones and reconnect.",
+    "description": "Close extra panel tabs and reconnect: there are at most four log streams.",
     "reconnect": "Reconnect"
   },
   "lost": {
     "title_one": "{{count}} line skipped",
     "title_other": "{{count}} lines skipped",
-    "description": "The tab could not keep up with the stream, and the daemon dropped lines. You can reload the log tail.",
+    "description": "The tab could not keep up with the stream. Reload the log tail.",
     "reload": "Reload the tail"
   },
   "empty": {

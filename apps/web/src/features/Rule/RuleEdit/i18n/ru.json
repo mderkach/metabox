@@ -1,6 +1,6 @@
 {
   "action": {
-    "route": "отправить в outbound",
+    "route": "направить через выход",
     "reject": "оборвать",
     "hijack-dns": "перехватить DNS",
     "sniff": "определить протокол"
@@ -11,7 +11,7 @@
     },
     "outbound": {
       "label": "Куда отправить",
-      "placeholder": "выберите outbound"
+      "placeholder": "выберите выход"
     },
     "ruleSet": {
       "label": "Сеты правил",
@@ -25,7 +25,7 @@
     }
   },
   "error": {
-    "outboundRequired": "выберите outbound",
+    "outboundRequired": "выберите выход",
     "portInvalid": "Порт — число от 0 до 65535 на строку"
   },
   "device": {

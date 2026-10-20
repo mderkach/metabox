@@ -1,4 +1,6 @@
 {
-  "editor": { "label": "Rule {{index}} as text" },
-  "unknownNode": "The schema does not know this node — it is kept as is"
+  "editor": {
+    "label": "Rule {{index}} as text"
+  },
+  "unknownNode": "The panel does not know some fields: the rule is written as is"
 }

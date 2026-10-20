@@ -2,7 +2,7 @@ import { ArrowRight } from 'lucide-react';
 import { memo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import type { RuleRow as RuleRowModel } from '@entities/Rule';
+import { isNamedRuleAction, RULE_TARGET, type RuleRow as RuleRowModel } from '@entities/Rule';
 import { cn } from '@shared/lib/utils';
 import { Badge, Tooltip, TooltipContent, TooltipTrigger } from '@shared/ui';
 
@@ -47,6 +47,10 @@ function RuleRowProto({
 }) {
   const { t, i18n } = useTranslation('widgets/Rule/RuleTable');
   const label = t('row.label', { index: rule.index, target: rule.target });
+  const actionName =
+    rule.targetKind === RULE_TARGET.Action && isNamedRuleAction(rule.target)
+      ? t(`ruleAction.${rule.target}`, { ns: 'shared' })
+      : null;
   const targetRef = useRef<HTMLSpanElement>(null);
   const [hint, setHint] = useState(false);
 
@@ -132,8 +136,15 @@ function RuleRowProto({
           ref={targetRef}
           className={cn(RULE_COLUMN.Target, 'flex flex-col truncate font-mono text-sm font-medium')}
         >
-          <span className={cn('truncate', toTargetTone(rule.targetKind, rule.target, outboundTypes))}>
-            {rule.target}
+          <span
+            className={cn(
+              'truncate',
+              actionName !== null && 'font-sans',
+              toTargetTone(rule.targetKind, rule.target, outboundTypes)
+            )}
+            title={rule.target}
+          >
+            {actionName ?? rule.target}
           </span>
           {rule.targetDetail !== null && (
             <span className='truncate font-sans text-xs font-normal text-muted-foreground'>{rule.targetDetail}</span>

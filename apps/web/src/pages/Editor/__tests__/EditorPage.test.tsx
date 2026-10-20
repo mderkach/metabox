@@ -115,7 +115,7 @@ describe('rules screen', () => {
       within(table)
         .getAllByRole('columnheader')
         .map((cell) => cell.textContent)
-    ).toEqual(['№', 'Условия', 'Выход', 'Сработало']);
+    ).toEqual(['№', 'Условия', 'Действие', 'Сработало']);
     expect(screen.getByRole('status')).toHaveTextContent('3 правила');
   });
 
@@ -143,9 +143,9 @@ describe('rules screen', () => {
     const [, , dnsRow] = within(table).getAllByRole('row');
 
     await waitFor(() => {
-      expect(dnsRow).toHaveTextContent('не видно');
+      expect(dnsRow).toHaveTextContent('—');
     });
-    expect(within(dnsRow).getByTitle(/^sing-box не показывает такие соединения/)).toBeInTheDocument();
+    expect(within(dnsRow).getByTitle(/^sing-box не считает срабатывания таких правил/)).toBeInTheDocument();
   });
 
   it('a process on another config does not hand its count to the rows of this one', async () => {
@@ -153,9 +153,7 @@ describe('rules screen', () => {
 
     renderWithRouter(EditorPage);
 
-    expect(
-      await screen.findByText('sing-box работает не на этом конфиге — счёт срабатываний не показан')
-    ).toBeInTheDocument();
+    expect(await screen.findByText('sing-box работает на другой версии конфига — счёт не показан')).toBeInTheDocument();
     expect(screen.queryByRole('columnheader', { name: 'Сработало' })).not.toBeInTheDocument();
   });
 
@@ -178,7 +176,7 @@ describe('rules screen', () => {
 
     const panel = await screen.findByRole('complementary');
 
-    expect(within(panel).getByText('route.rules[0]')).toBeInTheDocument();
+    expect(within(panel).getByText('Правило 1', { selector: 'h2, h3' })).toBeInTheDocument();
 
     await user.click(within(panel).getByRole('button', { name: 'Закрыть панель' }));
 
@@ -282,7 +280,7 @@ describe('rules screen', () => {
 
     const panel = await screen.findByRole('complementary');
 
-    expect(within(panel).getByText('UI не покрывает')).toBeInTheDocument();
+    expect(within(panel).getByText('панель не знает')).toBeInTheDocument();
     expect(within(panel).getByRole('tab', { name: 'Форма' })).toHaveAttribute('aria-disabled', 'true');
     expect(within(panel).getByRole('textbox', { name: 'Правило 3 текстом' })).toBeInTheDocument();
   });
@@ -350,7 +348,7 @@ describe('rules screen', () => {
       expect(ConfigDocumentState.getState().draft).not.toBeNull();
     });
 
-    expect(within(panel).getByText('Схема этот узел не знает — записан как есть')).toBeInTheDocument();
+    expect(within(panel).getByText('Панель не знает часть полей — правило записано как есть')).toBeInTheDocument();
     const draft: unknown = JSON.parse(ConfigDocumentState.getState().draft ?? '');
 
     expect(findValue(JSON.stringify(draft), ['route', 'rules', 2])).toEqual({
@@ -424,7 +422,7 @@ describe('rule list editing', () => {
 
     const panel = await screen.findByRole('complementary', { name: 'Правило 4' });
 
-    expect(within(panel).getByText('route.rules[3]')).toBeInTheDocument();
+    expect(within(panel).getByText('Правило 4', { selector: 'h2, h3' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Правило 4, выход proxy, изменено в черновике' })).toHaveAttribute(
       'aria-pressed',
       'true'
@@ -530,7 +528,7 @@ describe('rule list editing', () => {
 
     expect(draftRules()).toEqual([EDIT_RULES[0], EDIT_RULES[2], EDIT_RULES[1]]);
     expect(within(panel).getByRole('heading', { name: 'Правило 2' })).toBeInTheDocument();
-    expect(within(panel).getByText('route.rules[1]')).toBeInTheDocument();
+    expect(within(panel).getByText('Правило 2', { selector: 'h2, h3' })).toBeInTheDocument();
     // The panel is not recreated: the open tab stayed, and the node text is the same.
     expect(within(panel).getByRole('tab', { name: 'JSON' })).toHaveAttribute('aria-selected', 'true');
     expect(within(panel).getByRole('textbox', { name: 'Правило 2 текстом' })).toHaveValue(
@@ -624,7 +622,7 @@ describe('rules screen on a narrow screen', () => {
 
     const sheet = await screen.findByRole('dialog', { name: 'Правило 1' });
 
-    expect(within(sheet).getByText('route.rules[0]')).toBeInTheDocument();
+    expect(within(sheet).getByText('Правило 1', { selector: 'h2, h3' })).toBeInTheDocument();
 
     await user.keyboard('{Escape}');
 

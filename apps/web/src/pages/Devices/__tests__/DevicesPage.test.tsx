@@ -322,7 +322,7 @@ describe('devices screen', () => {
       expect(isLocked(laptop)).toBe(true);
       expect(within(rowOf('Ноутбук')).getByText('по подсети 192.168.1.60/31')).toBeInTheDocument();
       expect(laptop).toHaveAccessibleDescription(
-        'Устройство входит в подсеть 192.168.1.60/31 из списка перехвата. Выключить его отдельно нельзя: для этого подсеть нужно убрать из списка или сузить'
+        'Устройство входит в подсеть 192.168.1.60/31 из списка перехвата. Отдельно его не выключить: уберите или сузьте подсеть.'
       );
       expect(screen.getByRole('switch', { name: 'Через sing-box: iphone-guest' })).toBeChecked();
       expect(screen.getByRole('switch', { name: 'Через sing-box: tv-living' })).toBeChecked();
@@ -351,7 +351,7 @@ describe('devices screen', () => {
 
       const dialog = await screen.findByRole('alertdialog', { name: 'Пустить 192.168.1.36 через sing-box?' });
 
-      expect(dialog).toHaveTextContent('перезапускает sing-box и рвёт текущие соединения');
+      expect(dialog).toHaveTextContent('sing-box перезапустится, соединения всех устройств оборвутся');
       expect(changed).not.toHaveBeenCalled();
 
       await user.click(within(dialog).getByRole('button', { name: 'Применить' }));
@@ -369,7 +369,7 @@ describe('devices screen', () => {
 
       const bar = await screen.findByRole('region', { name: 'Смена перехвата' });
 
-      expect(bar).toHaveTextContent('Список перехвата сменён');
+      expect(bar).toHaveTextContent('Устройство переключено');
       expect(within(bar).getByRole('button', { name: 'Связь есть, оставить' })).toBeEnabled();
       // While a change awaits confirmation, a second cannot start.
       expect(isLocked(screen.getByRole('switch', { name: 'Через sing-box: Ноутбук' }))).toBe(true);
@@ -422,7 +422,7 @@ describe('devices screen', () => {
 
       const bar = await screen.findByRole('region', { name: 'Смена перехвата' });
 
-      expect(bar).toHaveTextContent('Подтверждения не было — прежний список перехвата возвращён');
+      expect(bar).toHaveTextContent('Подтверждения не было — прежняя настройка возвращена');
       expect(bar).toHaveTextContent('после перезапуска правила nft перехвата не стоят');
       expect(bar).toHaveTextContent('nft: нет цепочки metabox_prerouting');
 

@@ -8,7 +8,10 @@
     "rows_one": "{{count}} set",
     "rows_other": "{{count}} sets"
   },
-  "type": { "local": "file on the device", "inline": "rules inside the config" },
+  "type": {
+    "local": "file on the device",
+    "inline": "rules inside the config"
+  },
   "row": {
     "untagged": "unnamed",
     "interval": "refreshes {{interval}}",
@@ -22,9 +25,9 @@
   },
   "remove": {
     "title": "Remove the {{tag}} set?",
-    "description": "The set leaves the draft. A single removal cannot be undone: the set comes back only if you discard every change in the draft.",
-    "used_one": "{{count}} rule refers to this set: sing-box rejects the config until the reference is removed. A single removal cannot be undone, only by discarding every change in the draft.",
-    "used_other": "{{count}} rules refer to this set: sing-box rejects the config until the references are removed. A single removal cannot be undone, only by discarding every change in the draft.",
+    "description": "The set leaves the draft. Only discarding the whole draft brings it back.",
+    "used_one": "{{count}} rule uses the set. Remove it there first, or the config will not apply.",
+    "used_other": "{{count}} rules use the set. Remove it there first, or the config will not apply.",
     "action": "Remove"
   }
 }

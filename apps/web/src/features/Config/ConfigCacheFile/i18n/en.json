@@ -1,5 +1,5 @@
 {
   "title": "The rule set cache is off",
-  "description": "Without a cache sing-box does not start after a reboot if the rule set source is unreachable. With one it starts from the last downloaded copy.",
+  "description": "Without the cache, sing-box will not start after a reboot if the sets fail to download.",
   "enable": "Turn the cache on"
 }

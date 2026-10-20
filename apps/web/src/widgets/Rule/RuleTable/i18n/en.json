@@ -2,13 +2,13 @@
   "label": "Routing rules",
   "column": {
     "index": "#",
-    "target": "Outbound",
+    "target": "Action",
     "hits": "Hits"
   },
   "row": {
     "label": "Rule {{index}}, outbound {{target}}",
     "unconditional": "no conditions — applies to all traffic",
-    "unknown": "conditions are not shown — the schema does not know this rule",
+    "unknown": "conditions not shown: the panel does not know this rule",
     "edited": "changed in the draft"
   },
   "group": {
@@ -18,8 +18,8 @@
   },
   "hits": {
     "failed": "Hit count unavailable",
-    "mismatch": "sing-box runs a different config — hit count is not shown",
-    "unobservedCell": "not seen",
-    "unobserved": "sing-box does not list such connections: sniff and resolve do not stop matching, hijacked DNS and reject never reach the connection list"
+    "mismatch": "sing-box runs another config version: the count is not shown",
+    "unobservedCell": "—",
+    "unobserved": "sing-box does not count hits of such rules"
   }
 }

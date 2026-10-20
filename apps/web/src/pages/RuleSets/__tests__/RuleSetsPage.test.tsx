@@ -163,7 +163,7 @@ describe('rule sets screen', () => {
 
     const dialog = screen.getByRole('alertdialog', { name: 'Убрать сет geosite-google?' });
 
-    expect(dialog).toHaveTextContent('На сет ссылается 1 правило');
+    expect(dialog).toHaveTextContent('Сет используется в 1 правиле');
 
     await user.click(within(dialog).getByRole('button', { name: 'Убрать' }));
 

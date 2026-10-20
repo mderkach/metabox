@@ -3,7 +3,7 @@ import { useState, type KeyboardEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ConfigDocumentState } from '@entities/Config';
-import type { RuleRow } from '@entities/Rule';
+import { isNamedRuleMatcher, type RuleRow } from '@entities/Rule';
 import { RuleEditForm } from '@features/Rule/RuleEdit';
 import { RuleRawEditor } from '@features/Rule/RuleRaw';
 import { useFocusReturn } from '@shared/lib/useFocusReturn';
@@ -105,7 +105,6 @@ export function RulePanel({
               {t('title', { index: rule.index })}
             </h2>
           )}
-          <p className='font-mono text-xs text-muted-foreground'>route.rules[{rule.index - 1}]</p>
         </div>
         {!recognized && <Badge variant='outline'>{t('rule.uncovered', { ns: 'shared' })}</Badge>}
         {actions !== null && <div className='flex shrink-0 items-center gap-0.5'>{actions}</div>}
@@ -191,7 +190,13 @@ function RuleConditions({ rule }: { rule: RuleRow }) {
       <dl className='flex flex-col gap-1'>
         {rule.matchers.map((matcher) => (
           <div key={matcher.key} className='flex gap-3 border-t border-border py-1.5 text-xs first:border-t-0'>
-            <dt className='w-32 shrink-0 font-mono wrap-anywhere text-muted-foreground'>{withBreaks(matcher.key)}</dt>
+            {isNamedRuleMatcher(matcher.key) ? (
+              <dt className='w-32 shrink-0 wrap-anywhere text-muted-foreground' title={matcher.key}>
+                {t(`matcher.${matcher.key}`, { ns: 'shared' })}
+              </dt>
+            ) : (
+              <dt className='w-32 shrink-0 font-mono wrap-anywhere text-muted-foreground'>{withBreaks(matcher.key)}</dt>
+            )}
             <dd className='min-w-0 grow font-mono wrap-anywhere'>
               <ul>
                 {matcher.values.map((value, index) => (

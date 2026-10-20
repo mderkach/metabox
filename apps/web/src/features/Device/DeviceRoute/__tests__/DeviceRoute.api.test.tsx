@@ -79,7 +79,7 @@ describe('useChangeDeviceRoute', () => {
     await waitFor(() => {
       expect(change.result.current.isSuccess).toBe(true);
     });
-    expect(toast.success).toHaveBeenCalledWith('Список перехвата принят, sing-box перезапускается');
+    expect(toast.success).toHaveBeenCalledWith('Настройка принята, sing-box перезапускается');
 
     const confirm = renderHook(useConfirmDeviceRoute, { wrapper: AppQuery });
 
@@ -88,7 +88,7 @@ describe('useChangeDeviceRoute', () => {
     await waitFor(() => {
       expect(confirm.result.current.data?.phase).toBe('confirmed');
     });
-    expect(toast.success).toHaveBeenLastCalledWith('Связь подтверждена, список перехвата оставлен');
+    expect(toast.success).toHaveBeenLastCalledWith('Связь подтверждена, настройка оставлена');
   });
 
   it('sends the model fingerprint in If-Match', async () => {

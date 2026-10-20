@@ -10,25 +10,25 @@
     "host": "by address",
     "hostFull": "The device address is in the interception list",
     "subnet": "by subnet {{subnet}}",
-    "subnetFull": "The device is inside subnet {{subnet}} from the interception list. It cannot be turned off on its own: remove or narrow the subnet in the list instead"
+    "subnetFull": "The device is in the {{subnet}} subnet from the interception list. It cannot be turned off alone: remove or narrow the subnet."
   },
   "dialog": {
     "on": "Route {{device}} through sing-box?",
     "off": "Route {{device}} around sing-box?",
-    "description": "Changing the interception list restarts sing-box and drops the current connections of every device. After the restart confirm that the connection works, otherwise the previous list returns when the countdown ends.",
+    "description": "sing-box restarts and all devices lose their connections. Then confirm the connection works, or everything reverts when the countdown ends.",
     "apply": "Apply",
     "cancel": "Cancel"
   },
   "bar": {
     "label": "Interception change",
-    "applying": "Changing the interception list and restarting sing-box…",
-    "prompt": "The interception list has changed. Confirm the connection is alive —",
+    "applying": "Switching the device and restarting sing-box…",
+    "prompt": "The device is switched. Confirm the connection works,",
     "left": "<time>{{seconds}} s</time> left",
     "rollback": "otherwise the daemon restores the previous one",
     "submit": "Connection works, keep it"
   },
   "failure": {
-    "rolledBack": "No confirmation — the previous interception list is back",
+    "rolledBack": "No confirmation came: the previous setting is back",
     "failed": "The interception change did not go through",
     "dismiss": "Dismiss",
     "reason": {

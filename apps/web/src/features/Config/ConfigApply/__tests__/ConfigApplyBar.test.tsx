@@ -171,7 +171,7 @@ describe('ConfigApplyBar', () => {
     ConfigDocumentState.getState().load(APPLIED.replace('info', 'warn'), APPLIED_ETAG);
     renderWithQuery(<ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />);
 
-    expect(screen.getByText('Конфиг на устройстве изменился с момента черновика')).toBeInTheDocument();
+    expect(screen.getByText('Конфиг на роутере изменился после начала правок')).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: 'Отбросить черновик' }));
     await userEvent.click(screen.getByRole('button', { name: 'Сбросить черновик' }));
@@ -305,9 +305,9 @@ describe('ConfigApplyBar', () => {
     await applyFromSummary();
 
     expect(
-      await screen.findByText('Служба sing-box запущена не из каталога конфига — на устройство ничего не записано')
+      await screen.findByText('Служба sing-box запущена из другого каталога — применение остановлено')
     ).toBeInTheDocument();
-    expect(screen.getByText(/от своего рабочего каталога \/usr\/share\/sing-box/)).toBeInTheDocument();
+    expect(screen.getByText(/служба ищет их в \/usr\/share\/sing-box/)).toBeInTheDocument();
     expect(
       screen.getByText(
         "uci set sing-box.main.workdir='/etc/sing-box' && uci commit sing-box && /etc/init.d/sing-box restart"
@@ -328,7 +328,7 @@ describe('ConfigApplyBar', () => {
     loadDocument();
     renderWithQuery(<ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />);
 
-    expect(await screen.findByText('metabox дописал в конфиг experimental.clash_api')).toBeInTheDocument();
+    expect(await screen.findByText('metabox добавил в конфиг experimental.clash_api')).toBeInTheDocument();
     expect(screen.getByText(/Служба перезапущена тем же применением/)).toBeInTheDocument();
   });
 

@@ -1,7 +1,7 @@
 {
-  "title_one": "The binary on the device will not start {{count}} config node",
-  "title_other": "The binary on the device will not start {{count}} config nodes",
-  "description": "The sing-box binary on the device is built without these types and options. The draft can be saved and edited, but not applied: the config check on the device will reject it.",
+  "title_one": "sing-box on the router does not support {{count}} config item",
+  "title_other": "sing-box on the router does not support {{count}} config items",
+  "description": "While they are in the config, it will not apply. Remove them or update sing-box.",
   "node": "{{name}} — {{type}}, needs a build with {{tag}}",
   "option": "{{path}} — needs a build with {{tag}}"
 }

@@ -11,7 +11,7 @@ import { DAEMON_STATUS_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture
 import { DaemonBanner } from '../DaemonBanner';
 
 const UNREACHABLE = 'metabox не отвечает. Панель показывает последние загруженные данные, применять изменения нельзя.';
-const SCHEMA = 'Панель не разобрала ответ metabox: версия демона новее панели. Данные на экранах могут быть неполными.';
+const SCHEMA = 'metabox новее панели: часть данных может не отображаться. Обновите страницу.';
 
 /** Its own client instead of `renderWithQuery`: the recovery test needs a repeated status poll. */
 function renderBanner() {

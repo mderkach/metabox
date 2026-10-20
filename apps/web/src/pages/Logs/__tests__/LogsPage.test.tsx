@@ -229,7 +229,7 @@ describe('logs screen', () => {
 
     const clear = screen.getByRole('button', { name: 'Очистить' });
 
-    expect(clear).toHaveAccessibleDescription(/кольцо logd не очищается/);
+    expect(clear).toHaveAccessibleDescription(/останутся в системном логе роутера/);
 
     act(() => {
       FakeLogSource.last().line(1, 'строка до очистки');

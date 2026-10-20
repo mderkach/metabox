@@ -36,3 +36,53 @@ export const RULE_ACTION_FIELDS: Readonly<Partial<Record<string, readonly string
   sniff: ['sniffer', 'timeout'],
   resolve: ['server', 'strategy'],
 };
+
+/** Conditions with a name in the interface; the rest are shown by their schema key. */
+export const RULE_MATCHER_NAMED = [
+  'inbound',
+  'ip_version',
+  'network',
+  'auth_user',
+  'protocol',
+  'client',
+  'domain',
+  'domain_suffix',
+  'domain_keyword',
+  'domain_regex',
+  'geosite',
+  'source_geoip',
+  'geoip',
+  'source_ip_cidr',
+  'source_ip_is_private',
+  'ip_cidr',
+  'ip_is_private',
+  'source_port',
+  'source_port_range',
+  'port',
+  'port_range',
+  'process_name',
+  'process_path',
+  'package_name',
+  'user',
+  'clash_mode',
+  'wifi_ssid',
+  'wifi_bssid',
+  'source_mac_address',
+  'source_hostname',
+  'rule_set',
+] as const;
+
+export type NamedRuleMatcher = (typeof RULE_MATCHER_NAMED)[number];
+
+export function isNamedRuleMatcher(key: string): key is NamedRuleMatcher {
+  return RULE_MATCHER_NAMED.some((named) => named === key);
+}
+
+/** Rule actions other than routing to an outbound, with a name in the interface. */
+export const RULE_ACTION_NAMED = ['reject', 'hijack-dns', 'sniff', 'resolve', 'route-options'] as const;
+
+export type NamedRuleAction = (typeof RULE_ACTION_NAMED)[number];
+
+export function isNamedRuleAction(action: string): action is NamedRuleAction {
+  return RULE_ACTION_NAMED.some((named) => named === action);
+}

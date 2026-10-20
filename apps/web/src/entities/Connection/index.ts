@@ -2,6 +2,8 @@ export { CONNECTION_ENDPOINT } from './api/Connection.endpoints';
 export { closeAllConnections, closeConnection, listenConnections } from './api/Connection.api';
 export { useConnectionStream } from './api/Connection.query';
 export { toConnectionRow } from './model/Connection.adapter';
+export { routeOutboundOf, toActionText, toRuleText, toRuleTextParts } from './model/Connection.rule';
+export type { RuleTextPart } from './model/Connection.rule';
 export {
   CONNECTION_FACET,
   CONNECTION_FACETS,

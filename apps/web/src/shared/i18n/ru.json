@@ -31,8 +31,8 @@
       },
       "route": {
         "failed": "Сменить перехват устройства не удалось",
-        "confirmed": "Связь подтверждена, список перехвата оставлен",
-        "accepted": "Список перехвата принят, sing-box перезапускается"
+        "confirmed": "Связь подтверждена, настройка оставлена",
+        "accepted": "Настройка принята, sing-box перезапускается"
       }
     },
     "log": {
@@ -211,11 +211,12 @@
     "direct": "напрямую",
     "block": "в блок",
     "dns": "перехват DNS",
-    "other": "прочее"
+    "other": "прочее",
+    "via": "через {{outbound}}"
   },
   "rule": {
     "unconditional": "без условий",
-    "uncovered": "UI не покрывает",
+    "uncovered": "панель не знает",
     "conditions": "Условия"
   },
   "chart": {
@@ -258,5 +259,45 @@
   },
   "liveRegion": {
     "label": "Результат действия"
+  },
+  "matcher": {
+    "inbound": "Вход",
+    "ip_version": "Версия IP",
+    "network": "Сеть",
+    "auth_user": "Пользователь входа",
+    "protocol": "Протокол",
+    "client": "Клиент",
+    "domain": "Домен",
+    "domain_suffix": "Домен с поддоменами",
+    "domain_keyword": "Слово в домене",
+    "domain_regex": "Шаблон домена",
+    "geosite": "Геосайт",
+    "source_geoip": "Страна источника",
+    "geoip": "Страна адреса",
+    "source_ip_cidr": "Адрес источника",
+    "source_ip_is_private": "Источник из локальной сети",
+    "ip_cidr": "IP или подсеть",
+    "ip_is_private": "Адрес в локальной сети",
+    "source_port": "Порт источника",
+    "source_port_range": "Порты источника",
+    "port": "Порт",
+    "port_range": "Диапазон портов",
+    "process_name": "Процесс",
+    "process_path": "Путь процесса",
+    "package_name": "Приложение",
+    "user": "Пользователь системы",
+    "clash_mode": "Режим Clash",
+    "wifi_ssid": "Сеть Wi-Fi",
+    "wifi_bssid": "Точка Wi-Fi",
+    "source_mac_address": "MAC источника",
+    "source_hostname": "Имя устройства",
+    "rule_set": "Сет правил"
+  },
+  "ruleAction": {
+    "reject": "оборвать",
+    "hijack-dns": "перехватить DNS",
+    "sniff": "определить протокол",
+    "resolve": "разрешить адрес",
+    "route-options": "параметры маршрута"
   }
 }

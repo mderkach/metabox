@@ -114,7 +114,7 @@ describe('RouteExplanation', () => {
       />
     ));
 
-    expect(await screen.findByText('sing-box работает по другому конфигу')).toBeInTheDocument();
+    expect(await screen.findByText('sing-box работает на другой версии конфига')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Открыть правило в редакторе' })).not.toBeInTheDocument();
     // The node number of a foreign document is not shown at all: it would point to
     // a different rule.

@@ -9,8 +9,8 @@
   "closeAll": {
     "action": "Close all",
     "title": "Cut every live connection?",
-    "description_one": "{{count}} live connection will be cut. Devices reconnect on their own, but downloads and calls in progress will break.",
-    "description_other": "{{count}} live connections will be cut. Devices reconnect on their own, but downloads and calls in progress will break.",
+    "description_one": "Downloads and calls on {{count}} connection will break. Devices reconnect on their own.",
+    "description_other": "Downloads and calls on {{count}} connections will break. Devices reconnect on their own.",
     "confirm": "Cut",
     "menuItem": "Close all…"
   },
@@ -27,7 +27,7 @@
   "closedNote": "Closed connections are kept while this tab is open.",
   "empty": {
     "title": "No connections",
-    "description": "The stream is running: rows appear as soon as traffic goes through sing-box."
+    "description": "Rows appear as soon as traffic goes through sing-box."
   },
   "export": {
     "csv": "Export CSV",
