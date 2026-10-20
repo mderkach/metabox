@@ -36,7 +36,7 @@
   },
   "empty": {
     "title": "No devices found",
-    "description": "dnsmasq on the router has neither DHCP leases nor static entries. A device shows up here once it gets an address."
+    "description": "The router has neither DHCP leases nor static addresses. A device appears once it gets an address."
   },
   "announce": {
     "renamed": "The device is now labelled “{{device}}”"

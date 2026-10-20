@@ -14,7 +14,7 @@
   "lines_one": "{{count}} line",
   "lines_other": "{{count}} lines",
   "parsed": "JSON parsed",
-  "issues": "schema notes: {{count}} — they do not block saving, <code>sing-box check</code> decides",
+  "issues": "schema notes: {{count}}; they do not block saving, <code>sing-box check</code> verifies on apply",
   "issuesMore_one": "and {{count}} more issue",
   "issuesMore_other": "and {{count}} more issues",
   "wrap": "Wrap lines",

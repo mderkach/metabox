@@ -5,8 +5,15 @@ import { FormProvider, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import type { z } from 'zod';
 
-import { ConfigDocumentState, diffNode, nodeSchemaOf, unbuiltOptionOf, type NodeRegistry } from '@entities/Config';
+import {
+  ConfigDocumentState,
+  ConfigDocumentStore,
+  nodeSchemaOf,
+  unbuiltOptionOf,
+  type NodeRegistry,
+} from '@entities/Config';
 import { toFieldPlan, type FieldPlan } from '@shared/lib/schemaShape';
+import { useWriteOnChange } from '@shared/lib/useWriteOnChange';
 import { cn } from '@shared/lib/utils';
 import { Badge, Button, FieldLegend, FieldSet } from '@shared/ui';
 
@@ -14,9 +21,10 @@ import {
   arrangePlan,
   isSameValue,
   nodeOverrideOf,
-  splitByPresence,
+  splitFieldsSinceOpen,
   toFieldName,
   toNodeFormResolver,
+  writeNodeForm,
   type ConfigNodeFormModel,
   type NodeOverride,
 } from '../model';
@@ -28,10 +36,10 @@ const NS = 'features/Config/ConfigNodeForm';
 /**
  * Section node form drawn from the schema of its type (ADR-0035).
  *
- * Only the changed node leaves go into the draft: editing one field gives one
- * diff line, while comments and key order inside the node stay as they were. A
- * node that the schema of its type does not know gets no form: text mode opens
- * it (ADR-0018).
+ * A valid change goes into the draft at once. Only the changed node leaves
+ * go into the draft: editing one field gives one diff line, while comments and
+ * key order inside the node stay as they were. A node that the schema of its
+ * type does not know gets no form: text mode opens it (ADR-0018).
  *
  * A type with an override (`NODE_OVERRIDE`) opens with its main fields;
  * override checks go on top of the schema. The other fields set in the node
@@ -74,10 +82,10 @@ export function ConfigNodeFormBody({
   node: ConfigNodeFormModel;
   builtTags: readonly string[] | null;
 }) {
-  const { t } = useTranslation('shared');
   const editMany = ConfigDocumentState.use.editMany();
+  const revision = ConfigDocumentState.use.revision();
   const layout = useMemo(() => arrangePlan(toFieldPlan(schema), override), [schema, override]);
-  const rest = useMemo(() => splitByPresence(layout.rest, node), [layout.rest, node]);
+  const [openedNode] = useState(node);
   const resolver = useMemo(() => toNodeFormResolver(schema, override), [schema, override]);
   const [failures] = useState(() => new Map<string, unknown>());
   // A node from text parsing consists of objects without a prototype: RHF does
@@ -95,39 +103,43 @@ export function ConfigNodeFormBody({
     values,
     resetOptions: { keepDirtyValues: true },
     mode: 'onChange',
+    shouldFocusError: false,
     // Node before the edit: override checks do not recheck the untouched.
     context: node,
     resolver,
   });
 
-  const onSubmit = form.handleSubmit(() => {
-    // The resolver does not see unparsed raw field JSON: the field value is the previous one.
-    const unparsed = [...failures].filter(([name, value]) => isSameValue(form.getValues(name), value));
+  const rest = splitFieldsSinceOpen(
+    layout.rest,
+    openedNode,
+    node,
+    (field) => form.getFieldState(toFieldName(field.path), form.formState).isDirty
+  );
 
-    if (unparsed.length > 0) {
+  const formRef = useWriteOnChange(
+    form,
+    (_output, withRemovals) => {
+      // The resolver does not see unparsed raw field JSON: the field value is the previous one.
+      const unparsed = [...failures].filter(([name, value]) => isSameValue(form.getValues(name), value));
+
       for (const [name] of unparsed) {
-        form.setError(name, { type: RAW_PARSE_ERROR }, { shouldFocus: true });
+        form.setError(name, { type: RAW_PARSE_ERROR });
       }
 
-      return;
-    }
-
-    const data = form.getValues();
-
-    editMany(diffNode(path, node, data));
-    // Saved becomes the new reference point: the button goes dim until the form
-    // diverges from the draft again.
-    form.reset(data);
-  });
+      return unparsed.length === 0 && writeNodeForm(editMany, path, node, form.getValues(), withRemovals);
+    },
+    () => ConfigDocumentStore.getState().revision !== revision
+  );
 
   return (
     <FormProvider {...form}>
       <RawFailuresContext value={failures}>
         <form
+          ref={formRef}
           noValidate
           className='flex flex-col gap-3'
           onSubmit={(event) => {
-            void onSubmit(event);
+            event.preventDefault();
           }}
         >
           {layout.primary.map((field) => (
@@ -145,10 +157,6 @@ export function ConfigNodeFormBody({
               ))}
             </AdvancedFields>
           )}
-
-          <Button type='submit' size='sm' disabled={!form.formState.isDirty} className='self-start'>
-            {t('nodeEditor.submit')}
-          </Button>
         </form>
       </RawFailuresContext>
     </FormProvider>

@@ -31,7 +31,7 @@ export const SEARCH_FIELD = 'relative w-full max-w-80';
 
 /** Filter chip: outbound facet on rules. */
 export const FACET_CLASS =
-  'flex h-6 shrink-0 items-center gap-1.5 rounded-md border px-2 text-xs transition-colors focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none';
+  'flex h-6 shrink-0 items-center gap-1.5 rounded-md border px-2 text-xs transition-colors pointer-coarse:h-11 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none';
 
 export const FACET_ACTIVE = 'border-selected-edge bg-selected text-foreground';
 export const FACET_IDLE = 'border-border text-muted-foreground hover:text-foreground';
@@ -85,3 +85,47 @@ export const PENDING_REVEAL = 'animate-in fade-in fill-mode-backwards delay-200 
  */
 export const SHEET_BOTTOM =
   'duration-(--motion-sheet-enter) ease-(--motion-ease-out) data-ending-style:duration-(--motion-sheet-exit) data-ending-style:opacity-100 data-starting-style:opacity-100 data-[side=bottom]:data-ending-style:translate-y-full data-[side=bottom]:data-starting-style:translate-y-full motion-reduce:transition-none';
+
+/** Dialog widths by content: a form, a list of a few rows, a document such as a diff. */
+export const DIALOG_SIZE = {
+  Form: 'sm:max-w-sm',
+  List: 'sm:max-w-xl',
+  Document: 'sm:max-w-3xl',
+} as const;
+
+/** Font of every `JsonTextarea` layer: the layers overlay each other, so the metrics must match to the pixel. */
+export const JSON_CODE = 'font-mono text-xs/5';
+
+/**
+ * Box of the highlight layer and the field. Both reserve space for the scrollbar:
+ * the field has one, the highlight does not, and without the reserve their line widths
+ * would differ by its thickness.
+ */
+export const JSON_LAYER = 'px-3 py-3 [scrollbar-gutter:stable]';
+
+/** Text layout of the field and the highlight layer is one for both, otherwise wrapping would diverge. */
+export const JSON_LAYOUT = {
+  Wrap: 'whitespace-pre-wrap wrap-break-word',
+  NoWrap: 'whitespace-pre',
+} as const;
+
+/**
+ * Who sets the height of a `JsonTextarea`: the parent, or the text. In the second case the
+ * highlight layer stays in the flow and stretches the frame, and the field lies over it.
+ */
+export const JSON_HEIGHT = {
+  Fill: 'absolute inset-0',
+  Content: 'min-h-40',
+} as const;
+
+/** JSON highlight tones, the `--code-*` tokens. */
+export const JSON_TONE = {
+  String: 'text-code-string',
+  Number: 'text-code-number',
+  Literal: 'text-code-literal',
+  Comment: 'text-code-comment italic',
+  Unknown: 'text-destructive',
+  Key: 'text-foreground',
+  Plain: 'text-foreground',
+  Punctuation: 'text-muted-foreground',
+} as const;

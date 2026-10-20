@@ -7,7 +7,7 @@ import { DELAY_TIMEOUT, type ProxyNode } from '@entities/Proxy';
 import { cn } from '@shared/lib/utils';
 
 import { DELAY_TONE } from './ProxyDelayTone';
-import { toGroupLabel } from './ProxyGroupLabel';
+import { toMemberLabel } from './ProxyGroupLabel';
 
 /** Latency in words: the same label goes into the tile name and its visible corner. */
 function toDelayText(t: TFunction<'widgets/ProxyGroups'>, node: ProxyNode): string {
@@ -58,7 +58,7 @@ function ProxyNodeTileProto({
         <span className='min-w-0 grow truncate font-mono text-xs'>{node.name}</span>
       </span>
       <span className='flex items-center justify-between gap-2'>
-        <span className='truncate text-xs text-muted-foreground'>{toGroupLabel(t, node.type)}</span>
+        <span className='truncate text-xs text-muted-foreground'>{toMemberLabel(t, node.type)}</span>
         <DelayValue node={node} />
       </span>
     </>
@@ -68,7 +68,7 @@ function ProxyNodeTileProto({
   // between them, and the accessible name would glue into "usURL-test609 ms".
   const label = t('node.label', {
     name: node.name,
-    type: toGroupLabel(t, node.type),
+    type: toMemberLabel(t, node.type),
     delay: toDelayText(t, node),
   });
 

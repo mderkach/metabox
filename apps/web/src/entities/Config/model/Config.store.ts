@@ -257,6 +257,9 @@ function toListChanges(
 
 export const ConfigDocumentState = createReactSelectors(ConfigDocumentStateProto);
 
+/** The same store outside React: event handlers and writes read the text at the moment they run. */
+export const ConfigDocumentStore = ConfigDocumentStateProto;
+
 /**
  * Subscription to the presence of unsaved edits.
  *

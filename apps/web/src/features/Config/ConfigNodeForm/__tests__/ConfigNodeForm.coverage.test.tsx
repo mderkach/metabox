@@ -40,6 +40,6 @@ describe('schema registry walk', () => {
   it.each(ROUTED)('$key opens as a form without exceptions', ({ registry, type }) => {
     render(<ConfigNodeForm registry={registry} path={['outbounds', 0]} node={{ type, tag: 'node' }} />);
 
-    expect(screen.getByRole('textbox', { name: 'tag' })).toHaveValue('node');
+    expect(screen.getByRole('textbox', { name: 'Имя узла' })).toHaveValue('node');
   });
 });

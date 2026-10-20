@@ -1,6 +1,8 @@
 import { useCallback, useState } from 'react';
 import { z } from 'zod';
 
+import { toConfirmedStatus, useDaemonReachable, useServiceState, type ServiceStatus } from '@entities/Daemon';
+
 const STORAGE_KEY = 'metabox.sidebar.collapsed';
 
 /** Storage returns a string, and it can be anything: the key outlives panel versions. */
@@ -66,4 +68,12 @@ export function useSidebarCollapsed() {
   }, [collapsed]);
 
   return { collapsed, toggle };
+}
+
+/** Service state for the shell; `null` while the daemon is silent or the state is unread. */
+export function useShellServiceStatus(): ServiceStatus | null {
+  const reachable = useDaemonReachable();
+  const service = useServiceState();
+
+  return reachable && service.data !== undefined ? toConfirmedStatus(service.data) : null;
 }

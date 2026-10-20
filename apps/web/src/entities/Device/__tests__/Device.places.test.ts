@@ -17,7 +17,7 @@ const PLACES: readonly { place: string; file: string }[] = [
   { place: 'сортировка и фильтр колонки', file: '/src/widgets/ConnectionTable/ui/ConnectionTable.tsx' },
   { place: 'поиск, фасет, параметр адреса и выгрузка', file: '/src/pages/Connections/lib/Connections.lib.ts' },
   { place: 'сводка обзора', file: '/src/pages/Overview/ui/OverviewConnections.tsx' },
-  { place: 'объяснение маршрута', file: '/src/widgets/RouteExplanation/ui/RouteExplanation.tsx' },
+  { place: 'объяснение маршрута', file: '/src/widgets/RouteExplanation/ui/RouteExplanationTitle.tsx' },
   { place: 'форма правила', file: '/src/features/Rule/RuleEdit/ui/RuleSourceDevices.tsx' },
 ];
 

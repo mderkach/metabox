@@ -17,6 +17,7 @@ import {
   toAppliedIndices,
   toRuleRowsFromNodes,
   toTargetGroups,
+  type NewRulePlace,
   type RuleRow,
   type RuleSetFilter,
   type RuleTargetFilter,
@@ -160,14 +161,23 @@ interface RuleSelectionState {
    * rule.
    */
   key: number;
+  /** A new rule being filled in: it is not in the document until its first condition. */
+  pending: NewRulePlace | null;
+  /**
+   * The rule just created: the panel shows it until the parsed list catches up, a frame later.
+   * Cleared once the list has it, so a rule gone from the document later closes the panel.
+   */
+  created: RuleRow | null;
 }
 
 export interface RuleSelection extends RuleSelectionState {
   /** Selection by a list row; selecting the same row again closes the panel. */
   select: (id: string) => void;
   close: () => void;
-  /** A new rule opens in the panel. */
-  onAdded: (index: number) => void;
+  /** A new rule opens in the panel without being written. */
+  startAdding: (place: NewRulePlace) => void;
+  /** The new rule was written at `index`: the same panel goes on with it, without a remount. */
+  onCreated: (index: number, node: unknown) => void;
   /** The panel follows the moved rule to its new number. */
   onMoved: (index: number) => void;
   onDeleted: () => void;
@@ -183,19 +193,41 @@ export interface RuleSelection extends RuleSelectionState {
  * where the selection points to the old position while a neighboring node is already under it, and the panel
  * would show someone else's rule.
  */
-export function useRuleSelection(initialId: string | null): RuleSelection {
-  const [selection, setSelection] = useState<RuleSelectionState>({ id: initialId, key: 0 });
+export function useRuleSelection(initialId: string | null, rules: readonly RuleRow[]): RuleSelection {
+  const [selection, setSelection] = useState<RuleSelectionState>({
+    id: initialId,
+    key: 0,
+    pending: null,
+    created: null,
+  });
+
+  const { created } = selection;
+
+  if (created !== null && rules.some((row) => row.id === created.id)) {
+    setSelection({ ...selection, created: null });
+  }
 
   const select = useCallback((id: string) => {
-    setSelection((current) => (current.id === id ? { ...current, id: null } : { id, key: current.key + 1 }));
+    setSelection((current) =>
+      current.id === id
+        ? { ...current, id: null, pending: null, created: null }
+        : { id, key: current.key + 1, pending: null, created: null }
+    );
   }, []);
 
   const close = useCallback(() => {
-    setSelection((current) => ({ ...current, id: null }));
+    setSelection((current) => ({ ...current, id: null, pending: null, created: null }));
   }, []);
 
-  const onAdded = useCallback((index: number) => {
-    setSelection((current) => ({ id: toRuleId(index), key: current.key + 1 }));
+  const startAdding = useCallback((place: NewRulePlace) => {
+    setSelection((current) => ({ id: null, key: current.key + 1, pending: place, created: null }));
+  }, []);
+
+  const onCreated = useCallback((index: number, node: unknown) => {
+    const row = toRuleRowsFromNodes([node]).at(0);
+    const created = row === undefined ? null : { ...row, id: toRuleId(index), index };
+
+    setSelection((current) => ({ ...current, id: toRuleId(index), pending: null, created }));
   }, []);
 
   const onMoved = useCallback((index: number) => {
@@ -203,10 +235,10 @@ export function useRuleSelection(initialId: string | null): RuleSelection {
   }, []);
 
   const onDeleted = useCallback(() => {
-    setSelection((current) => ({ ...current, id: null }));
+    setSelection((current) => ({ ...current, id: null, pending: null, created: null }));
   }, []);
 
-  return { ...selection, select, close, onAdded, onMoved, onDeleted };
+  return { ...selection, select, close, startAdding, onCreated, onMoved, onDeleted };
 }
 
 export interface RuleFilterState {

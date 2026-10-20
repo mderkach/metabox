@@ -1,6 +1,6 @@
 {
   "action": {
-    "route": "send to an outbound",
+    "route": "route through an outbound",
     "reject": "reject",
     "hijack-dns": "hijack DNS",
     "sniff": "sniff the protocol"
@@ -11,7 +11,7 @@
     },
     "outbound": {
       "label": "Where to send",
-      "placeholder": "pick an outbound"
+      "placeholder": "choose an outbound"
     },
     "ruleSet": {
       "label": "Rule sets",
@@ -24,9 +24,8 @@
       "hint": "One value per line"
     }
   },
-  "submit": "Save to draft",
   "error": {
-    "outboundRequired": "pick an outbound",
+    "outboundRequired": "choose an outbound",
     "portInvalid": "A port is a number from 0 to 65535, one per line"
   },
   "device": {

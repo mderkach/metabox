@@ -1,6 +1,6 @@
 {
   "rejected": {
-    "title": "The schema rejected this config",
-    "description": "Forms cannot be built from it, so edit the text. The file on the device stays untouched until you press Apply."
+    "title": "The panel could not read this config",
+    "description": "Forms are unavailable for it: edit the text. Nothing changes on the router until you press “Apply”."
   }
 }

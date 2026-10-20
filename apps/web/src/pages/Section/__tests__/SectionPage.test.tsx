@@ -100,7 +100,7 @@ describe('section screen', () => {
     await user.click(node.getByRole('button', { name: 'hk-01' }));
 
     expect(node.getByRole('tab', { name: 'Форма' })).toHaveAttribute('aria-selected', 'true');
-    expect(node.getByRole('textbox', { name: 'server' })).toHaveValue('a.example');
+    expect(node.getByRole('textbox', { name: 'Сервер' })).toHaveValue('a.example');
 
     await user.click(node.getByRole('tab', { name: 'JSON' }));
 
@@ -119,11 +119,10 @@ describe('section screen', () => {
 
     await user.click(node.getByRole('button', { name: 'hk-01' }));
 
-    const server = node.getByRole('textbox', { name: 'server' });
+    const server = node.getByRole('textbox', { name: 'Сервер' });
 
     await user.clear(server);
     await user.type(server, 'b.example');
-    await user.click(node.getByRole('button', { name: 'Сохранить в черновик' }));
 
     await waitFor(() => {
       expect(findValue(ConfigDocumentState.getState().draft ?? '{}', ['outbounds', 1, 'server'])).toBe('b.example');
@@ -154,7 +153,6 @@ describe('section screen', () => {
 
     await user.clear(editor);
     await user.paste('{ "type": "direct", "tag": "main" }');
-    await user.click(node.getByRole('button', { name: 'Сохранить в черновик' }));
 
     await waitFor(() => {
       expect(ConfigDocumentState.getState().draft).toContain('"tag": "main"');
@@ -190,8 +188,6 @@ describe('section screen', () => {
     await user.clear(editor);
     await user.paste('{ "query_type": ["HTTPS"], "action": "reject" }');
 
-    await user.click(node.getByRole('button', { name: 'Сохранить в черновик' }));
-
     await waitFor(() => {
       expect(ConfigDocumentState.getState().draft).toContain('"HTTPS"');
     });
@@ -224,7 +220,6 @@ describe('section screen', () => {
     await user.click(settings.getByRole('button', { name: 'Параметры DNS' }));
     await user.clear(settings.getByRole('textbox', { name: 'final' }));
     await user.type(settings.getByRole('textbox', { name: 'final' }), 'remote');
-    await user.click(settings.getByRole('button', { name: 'Сохранить в черновик' }));
 
     await waitFor(() => {
       expect(findValue(draft(), ['dns', 'final'])).toBe('remote');
@@ -258,7 +253,6 @@ describe('section screen', () => {
 
     await user.clear(secret);
     await user.type(secret, 'new');
-    await user.click(node.getByRole('button', { name: 'Сохранить в черновик' }));
 
     await waitFor(() => {
       expect(findValue(draft(), ['experimental', 'clash_api', 'secret'])).toBe('new');
@@ -292,7 +286,6 @@ describe('section screen', () => {
 
     await user.clear(editor);
     await user.paste('{ "enabled": true, "server": "time.example" }');
-    await user.click(screen.getByRole('button', { name: 'Сохранить в черновик' }));
 
     await waitFor(() => {
       expect(findValue(ConfigDocumentState.getState().draft ?? '{}', ['ntp'])).toEqual({
@@ -345,7 +338,7 @@ describe('section screen', () => {
 
     const panel = within(screen.getByRole('complementary', { name: 'Новый узел' }));
 
-    await selectOption(user, panel.getByRole('combobox', { name: 'Тип' }), 'direct');
+    await selectOption(user, panel.getByRole('combobox', { name: 'Тип' }), 'directНапрямую, без прокси');
     await user.type(panel.getByRole('textbox', { name: 'Тег' }), 'direct-2');
     await user.click(panel.getByRole('button', { name: 'Добавить' }));
 
@@ -371,7 +364,11 @@ describe('section screen', () => {
 
     const panel = within(screen.getByRole('complementary', { name: 'Новый узел' }));
 
-    await selectOption(user, panel.getByRole('combobox', { name: 'Тип' }), 'vless');
+    await selectOption(
+      user,
+      panel.getByRole('combobox', { name: 'Тип' }),
+      'vlessVLESS: лёгкий прокси, обычно с Reality или TLS'
+    );
     await user.type(panel.getByRole('textbox', { name: 'Тег' }), 'vless-out');
     await user.click(panel.getByRole('button', { name: 'Добавить' }));
 
@@ -382,6 +379,67 @@ describe('section screen', () => {
         tls: { enabled: true, utls: { enabled: true, fingerprint: 'chrome' }, reality: { enabled: true } },
       });
     });
+  });
+
+  it('adds an outbound from a share link and opens it in the node form', async () => {
+    serveConfig(CONFIG_TEXT);
+
+    const user = userEvent.setup();
+    const publicKey = 'jNXHt1yRo0vDuchQlIP6Z0ZvjT3KtzVI-T4E7RoLJS0';
+
+    renderWithRouter(OutboundsSection);
+
+    await user.click(await screen.findByRole('button', { name: 'Добавить узел' }));
+
+    const panel = within(screen.getByRole('complementary', { name: 'Новый узел' }));
+
+    await user.click(panel.getByRole('textbox', { name: 'Вставить ссылку' }));
+    await user.paste(
+      `vless://${HK_01.uuid}@b.example:8443?security=reality&sni=www.example&fp=chrome&pbk=${publicKey}&sid=ab#nl-01`
+    );
+    await user.click(panel.getByRole('button', { name: 'Добавить по ссылке' }));
+
+    await waitFor(() => {
+      expect(findValue(draft(), ['outbounds', 2])).toEqual({
+        type: 'vless',
+        tag: 'nl-01',
+        server: 'b.example',
+        server_port: 8443,
+        uuid: HK_01.uuid,
+        tls: {
+          enabled: true,
+          server_name: 'www.example',
+          utls: { enabled: true, fingerprint: 'chrome' },
+          reality: { enabled: true, public_key: publicKey, short_id: 'ab' },
+        },
+      });
+    });
+    expect(draft()).toContain('// выходы');
+
+    const node = within(await screen.findByRole('region', { name: 'nl-01' }));
+
+    expect(await node.findByRole('textbox', { name: 'Сервер' })).toHaveValue('b.example');
+  });
+
+  it('names a link it cannot read and writes nothing', async () => {
+    serveConfig(CONFIG_TEXT);
+
+    const user = userEvent.setup();
+
+    renderWithRouter(OutboundsSection);
+
+    await user.click(await screen.findByRole('button', { name: 'Добавить узел' }));
+
+    const panel = within(screen.getByRole('complementary', { name: 'Новый узел' }));
+
+    await user.click(panel.getByRole('textbox', { name: 'Вставить ссылку' }));
+    await user.paste('https://provider.example/sub/token');
+    await user.click(panel.getByRole('button', { name: 'Добавить по ссылке' }));
+
+    expect(await panel.findByRole('alert')).toHaveTextContent(
+      'Ссылка не распознана: поддерживаются vless://, vmess://, trojan://, ss:// и hysteria2://'
+    );
+    expect(ConfigDocumentState.getState().draft).toBeNull();
   });
 
   it('rejects a tag taken by another node and writes nothing', async () => {
@@ -395,7 +453,7 @@ describe('section screen', () => {
 
     const panel = within(screen.getByRole('complementary', { name: 'Новый узел' }));
 
-    await selectOption(user, panel.getByRole('combobox', { name: 'Тип' }), 'direct');
+    await selectOption(user, panel.getByRole('combobox', { name: 'Тип' }), 'directНапрямую, без прокси');
     await user.type(panel.getByRole('textbox', { name: 'Тег' }), 'hk-01');
     await user.click(panel.getByRole('button', { name: 'Добавить' }));
 
@@ -426,9 +484,13 @@ describe('section screen', () => {
 
     const panel = within(screen.getByRole('complementary', { name: 'Новый узел' }));
 
-    await selectOption(user, panel.getByRole('combobox', { name: 'Тип' }), 'hysteria2нет в сборке: with_quic');
+    await selectOption(
+      user,
+      panel.getByRole('combobox', { name: 'Тип' }),
+      'hysteria2недоступен в этой сборке sing-boxHysteria 2: быстрый прокси поверх QUIC'
+    );
 
-    expect(panel.getByText(/собран без with_quic/)).toBeInTheDocument();
+    expect(panel.getByText(/собран без этого типа \(with_quic\)/)).toBeInTheDocument();
 
     await user.type(panel.getByRole('textbox', { name: 'Тег' }), 'hy2');
     await user.click(panel.getByRole('button', { name: 'Добавить' }));
@@ -466,5 +528,76 @@ describe('section screen', () => {
 
     expect(await screen.findByRole('heading', { name: 'dns.rules[0]' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Добавить узел' })).not.toBeInTheDocument();
+  });
+
+  it('deletes a node after a confirmation that names what still points to it', async () => {
+    serveConfig(`{
+  // выходы
+  "outbounds": [
+    { "type": "direct", "tag": "direct" },
+    { "type": "vless", "tag": "hk-01", "server": "a.example", "server_port": 443, "uuid": "REDACTED" },
+  ],
+  "route": { "rules": [{ "domain": ["a.example"], "outbound": "hk-01" }], "final": "hk-01" },
+}`);
+
+    const user = userEvent.setup();
+
+    renderWithRouter(OutboundsSection);
+
+    const node = within(await screen.findByRole('region', { name: 'hk-01' }));
+
+    await user.click(node.getByRole('button', { name: 'Удалить «hk-01»' }));
+
+    const dialog = await screen.findByRole('alertdialog', { name: 'Удалить «hk-01»?' });
+
+    expect(
+      within(dialog)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent)
+    ).toEqual(['правило 1', 'параметр route.final']);
+
+    await user.click(within(dialog).getByRole('button', { name: 'Удалить' }));
+
+    await waitFor(() => {
+      expect(findValue(draft(), ['outbounds'])).toEqual([{ type: 'direct', tag: 'direct' }]);
+    });
+    expect(draft()).toContain('// выходы');
+  });
+
+  it('an object section node has no delete button', async () => {
+    serveConfig('{ "ntp": { "enabled": true } }');
+
+    renderWithRouter(NtpSection);
+
+    expect(await screen.findByRole('region', { name: 'ntp' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Удалить/ })).not.toBeInTheDocument();
+  });
+
+  it('names a group type in words beside its config key', async () => {
+    serveConfig(
+      '{ "outbounds": [{ "type": "urltest", "tag": "auto", "outbounds": ["a"] }, { "type": "direct", "tag": "a" }] }'
+    );
+
+    renderWithRouter(OutboundsSection);
+
+    const node = within(await screen.findByRole('region', { name: 'auto' }));
+
+    expect(node.getByText('самый быстрый')).toBeInTheDocument();
+    expect(node.getByText('urltest')).toBeInTheDocument();
+  });
+
+  it('the outbound add panel has one main button: adding by link, the manual one is secondary', async () => {
+    serveConfig(CONFIG_TEXT);
+
+    const user = userEvent.setup();
+
+    renderWithRouter(OutboundsSection);
+
+    await user.click(await screen.findByRole('button', { name: 'Добавить узел' }));
+
+    const panel = within(screen.getByRole('complementary', { name: 'Новый узел' }));
+
+    expect(panel.getByRole('button', { name: 'Добавить по ссылке' })).toHaveClass('bg-primary');
+    expect(panel.getByRole('button', { name: 'Добавить' })).not.toHaveClass('bg-primary');
   });
 });

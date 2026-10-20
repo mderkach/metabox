@@ -163,7 +163,7 @@ describe('rule sets screen', () => {
 
     const dialog = screen.getByRole('alertdialog', { name: 'Убрать сет geosite-google?' });
 
-    expect(dialog).toHaveTextContent('На сет ссылается 1 правило');
+    expect(dialog).toHaveTextContent('Сет используется в 1 правиле');
 
     await user.click(within(dialog).getByRole('button', { name: 'Убрать' }));
 
@@ -293,7 +293,7 @@ describe('rule set panel', () => {
     expect(within(table).getAllByRole('row')).toHaveLength(3 + HEADER_ROWS);
     expect(within(table).getByText('my-list')).toBeInTheDocument();
   });
-  it('the row pencil opens a rule set edit in the panel, saving writes one field', async () => {
+  it('the row pencil opens a rule set edit in the panel, the edit goes into the draft as typed', async () => {
     const user = userEvent.setup();
 
     renderWithRouter(RuleSetsPage);
@@ -308,12 +308,19 @@ describe('rule set panel', () => {
 
     await user.clear(within(panel).getByLabelText('Имя сета'));
     await user.type(within(panel).getByLabelText('Имя сета'), 'geoip-russia');
-    await user.click(within(panel).getByRole('button', { name: 'Сохранить в черновик' }));
+
+    expect(within(panel).getByLabelText('Имя сета')).toHaveFocus();
+    await waitFor(() => {
+      expect(findValue(ConfigDocumentState.getState().draft ?? '', ['route', 'rule_set', 1, 'tag'])).toBe(
+        'geoip-russia'
+      );
+    });
+
+    await user.click(within(panel).getByRole('button', { name: 'Готово' }));
 
     await waitFor(() => {
       expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
     });
-    expect(findValue(ConfigDocumentState.getState().draft ?? '', ['route', 'rule_set', 1, 'tag'])).toBe('geoip-russia');
     expect(findValue(ConfigDocumentState.getState().draft ?? '', ['route', 'rule_set', 1, 'update_interval'])).toBe(
       '12h'
     );

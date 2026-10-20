@@ -4,13 +4,14 @@ import { useEffect, useMemo, useRef, useState, type TransitionEvent } from 'reac
 import { Trans, useTranslation } from 'react-i18next';
 
 import { APPLY_PHASE, type ApplyReasonCode, type ApplyTransaction } from '@entities/Daemon';
-import { useReducedMotion } from '@shared/lib/media';
+import { useNarrowScreen, useReducedMotion } from '@shared/lib/media';
 import { NS_IN_SECOND } from '@shared/lib/time';
 import { useCountdown } from '@shared/lib/useCountdown';
 import { cn } from '@shared/lib/utils';
 import { Alert, AlertAction, AlertDescription, AlertTitle, Button, Separator } from '@shared/ui';
 
 import { useConfigApply } from '../lib/ConfigApply.lib';
+import { ConfigApplyBlocked } from './ConfigApplyBlocked';
 import { ConfigApplyCheck } from './ConfigApplyCheck';
 import { ConfigApplyDiff } from './ConfigApplyDiff';
 import { ConfigApplyDiscard } from './ConfigApplyDiscard';
@@ -58,6 +59,7 @@ export function ConfigApplyBar({ onSpaceChange }: { onSpaceChange: (space: numbe
   // the "edits in draft" line.
   const [held, setHeld] = useState<typeof current | null>(null);
   const reducedMotion = useReducedMotion();
+  const narrow = useNarrowScreen();
 
   if (visible && held !== current) {
     setHeld(current);
@@ -109,28 +111,34 @@ export function ConfigApplyBar({ onSpaceChange }: { onSpaceChange: (space: numbe
               onConfirm={apply.confirm}
             />
           ) : (
-            <div className='flex min-h-7 flex-wrap items-center gap-x-2.5 gap-y-1'>
+            <div className='flex min-h-7 items-center gap-2.5'>
               {shown.isApplying ? (
                 <LoaderCircle className='size-4 shrink-0 animate-spin text-muted-foreground motion-reduce:animate-none' />
               ) : (
-                <FilePen className='size-4 shrink-0 text-muted-foreground' />
+                <FilePen className='size-4 shrink-0 text-muted-foreground max-sm:hidden' />
               )}
-              <p className='text-sm'>{shown.isApplying ? t('bar.applying') : t('bar.dirty')}</p>
-              <span className='grow' />
+              <p className='min-w-0 flex-1 text-sm'>{shown.isApplying ? t('bar.applying') : t('bar.dirty')}</p>
               {/* Discard is kept at the group edge, away from "Apply": a
                     miss on the neighboring button would open discard instead of
                     apply. */}
               {!shown.isApplying && (
                 <>
-                  <ConfigApplyDiscard onDiscard={apply.discard} />
-                  <Separator orientation='vertical' className='mx-1.5 h-5' />
-                  <ConfigApplyDiff canApply={apply.canApply} onApply={apply.apply} />
-                  <Button size='sm' disabled={!apply.canApply} onClick={apply.apply}>
-                    {t('bar.apply')}
-                  </Button>
+                  <ConfigApplyDiscard compact={narrow} onDiscard={apply.discard} />
+                  {!narrow && <Separator orientation='vertical' className='mx-1.5 h-5' />}
+                  <ConfigApplyDiff canApply={apply.canApply} blocked={apply.blocked} onApply={apply.apply} />
                 </>
               )}
             </div>
+          )}
+
+          {!shown.isApplying && !shown.awaiting && apply.blocked !== null && (
+            <ConfigApplyBlocked blocked={apply.blocked} />
+          )}
+
+          {apply.unsent && !shown.isApplying && (
+            <p role='status' className='text-xs text-destructive'>
+              {t('unsent')}
+            </p>
           )}
 
           {shown.isStale && !shown.isApplying && !shown.awaiting && <ConfigApplyStale onDiscard={apply.discard} />}

@@ -4,21 +4,16 @@
     "description": "Rules point straight at outbounds. To switch the exit on the fly, the config needs a selector group.",
     "outbounds": "Config outbounds"
   },
-  "type": {
-    "selector": "selector",
-    "urlTest": "URL test",
-    "fallback": "fallback",
-    "loadBalance": "load balance"
-  },
   "card": {
     "manual": "you pick the node",
-    "automatic": "the node is picked automatically, by delay",
+    "automatic": "the node is chosen by delay",
     "testGroup": "Test the nodes of group {{group}}",
     "none": "no node selected"
   },
   "node": {
     "selected": "selected now",
-    "label": "{{name}}, {{type}}, {{delay}}"
+    "label": "{{name}}, {{type}}, {{delay}}",
+    "group": "group · {{type}}"
   },
   "legend": {
     "label": "Delay colour",

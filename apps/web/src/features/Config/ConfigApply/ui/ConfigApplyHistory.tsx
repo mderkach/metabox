@@ -8,8 +8,12 @@ import {
   Badge,
   Button,
   Dialog,
+  DIALOG_SIZE,
+  DialogClose,
+  DialogCloseButton,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -53,10 +57,11 @@ export function ConfigApplyHistory() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button variant='outline' size='sm' />}>
         <History />
-        {t('history.open')}
+        <span className='max-sm:sr-only'>{t('history.open')}</span>
       </DialogTrigger>
 
-      <DialogContent className='sm:max-w-xl'>
+      <DialogContent showCloseButton={false} className={DIALOG_SIZE.List}>
+        <DialogCloseButton label={t('action.close', { ns: 'shared' })} />
         <DialogHeader>
           <DialogTitle>{t('history.title')}</DialogTitle>
           <DialogDescription>{t('history.description')}</DialogDescription>
@@ -85,6 +90,12 @@ export function ConfigApplyHistory() {
             </ul>
           </ScrollArea>
         )}
+
+        <DialogFooter>
+          <DialogClose render={<Button variant='outline' size='sm' />}>
+            {t('action.close', { ns: 'shared' })}
+          </DialogClose>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

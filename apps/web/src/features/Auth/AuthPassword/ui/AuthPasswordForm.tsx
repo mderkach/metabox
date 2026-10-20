@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 import { ApiError, failureText, type ApiFailureCode } from '@shared/api';
 import { cn } from '@shared/lib/utils';
-import { Button, Input } from '@shared/ui';
+import { Button, DialogFooter, Input } from '@shared/ui';
 
 import { useRemovePassword, useSetPassword } from '../api';
 import {
@@ -110,7 +110,7 @@ export function AuthPasswordForm({ protectedPanel, onDone }: { protectedPanel: b
         </p>
       )}
 
-      <div className='flex flex-wrap justify-end gap-2'>
+      <DialogFooter>
         {protectedPanel && (
           <Button type='button' variant='outline' disabled={pending} className='mr-auto' onClick={onRemove}>
             {t('remove')}
@@ -119,7 +119,7 @@ export function AuthPasswordForm({ protectedPanel, onDone }: { protectedPanel: b
         <Button type='submit' disabled={pending}>
           {t('save')}
         </Button>
-      </div>
+      </DialogFooter>
     </form>
   );
 }

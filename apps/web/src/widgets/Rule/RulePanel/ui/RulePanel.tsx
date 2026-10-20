@@ -1,9 +1,9 @@
 import { X } from 'lucide-react';
-import { useMemo, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useState, type KeyboardEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ConfigDocumentState } from '@entities/Config';
-import type { RuleRow } from '@entities/Rule';
+import { isNamedRuleMatcher, type RuleRow } from '@entities/Rule';
 import { RuleEditForm } from '@features/Rule/RuleEdit';
 import { RuleRawEditor } from '@features/Rule/RuleRaw';
 import { useFocusReturn } from '@shared/lib/useFocusReturn';
@@ -50,6 +50,7 @@ export function RulePanel({
   ruleSets,
   actions = null,
   sheet = false,
+  onCreate,
   onClose,
 }: {
   id?: string;
@@ -62,15 +63,19 @@ export function RulePanel({
   /** Actions on the rule: header, before the close button. */
   actions?: ReactNode;
   sheet?: boolean;
+  /**
+   * The rule is not in the document yet: the form creates it here on the first
+   * condition. Until then there is no node to show as text.
+   */
+  onCreate?: (node: Record<string, unknown>) => void;
   onClose: () => void;
 }) {
   const { t } = useTranslation('widgets/Rule/RulePanel');
+  const creating = onCreate !== undefined;
+  const title = creating ? t('titleNew', { index: rule.index }) : t('title', { index: rule.index });
   const [tab, setTab] = useState<string>(recognized ? TAB.Form : TAB.Raw);
+  // Keyed by revision, not by the node: the form writes on every keystroke and would lose focus.
   const revision = ConfigDocumentState.use.revision();
-  // The form reads the node once, while the selection holds the position: discarding the draft or
-  // a text edit puts a different node there, and the form must change along
-  // with it. A reorder does not change the node — what was typed in the form stays.
-  const nodeKey = useMemo(() => JSON.stringify(node), [node]);
   const headingRef = useFocusReturn<HTMLHeadingElement>();
 
   function onKeyDown(event: KeyboardEvent<HTMLElement>) {
@@ -85,7 +90,7 @@ export function RulePanel({
     // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- see above
     <aside
       id={id}
-      aria-label={t('title', { index: rule.index })}
+      aria-label={title}
       onKeyDown={onKeyDown}
       className={cn(
         'flex min-h-0 flex-col overflow-hidden',
@@ -95,7 +100,7 @@ export function RulePanel({
       <header className={cn('flex items-center gap-2.5', SURFACE_HEAD)}>
         <div className='flex min-w-0 grow flex-col'>
           {sheet ? (
-            <SheetTitle className={SECTION_HEADING}>{t('title', { index: rule.index })}</SheetTitle>
+            <SheetTitle className={SECTION_HEADING}>{title}</SheetTitle>
           ) : (
             <h2
               ref={headingRef}
@@ -105,10 +110,9 @@ export function RulePanel({
                 SECTION_HEADING
               )}
             >
-              {t('title', { index: rule.index })}
+              {title}
             </h2>
           )}
-          <p className='font-mono text-xs text-muted-foreground'>route.rules[{rule.index - 1}]</p>
         </div>
         {!recognized && <Badge variant='outline'>{t('rule.uncovered', { ns: 'shared' })}</Badge>}
         {actions !== null && <div className='flex shrink-0 items-center gap-0.5'>{actions}</div>}
@@ -123,7 +127,8 @@ export function RulePanel({
       </header>
 
       <div className='flex min-h-0 grow flex-col gap-4 overflow-y-auto p-4'>
-        <RuleConditions rule={rule} />
+        {!creating && <RuleConditions rule={rule} />}
+        {creating && <p className='text-sm text-pretty text-muted-foreground'>{t('creating')}</p>}
 
         {!recognized && (
           <Alert>
@@ -137,17 +142,21 @@ export function RulePanel({
             <TabsTrigger value={TAB.Form} disabled={!recognized}>
               {t('tab.form')}
             </TabsTrigger>
-            <TabsTrigger value={TAB.Raw}>JSON</TabsTrigger>
+            {!creating && <TabsTrigger value={TAB.Raw}>JSON</TabsTrigger>}
           </TabsList>
 
           {/* The form keeps what was typed while the node is checked as text: unmounting erases it. */}
           <TabsContent value={TAB.Form} keepMounted className='pt-3'>
-            {recognized && <RuleEditForm key={nodeKey} rule={rule} outbounds={outbounds} ruleSets={ruleSets} />}
+            {recognized && (
+              <RuleEditForm key={revision} rule={rule} outbounds={outbounds} ruleSets={ruleSets} onCreate={onCreate} />
+            )}
           </TabsContent>
 
-          <TabsContent value={TAB.Raw} className='pt-3'>
-            <RuleRawEditor key={revision} index={rule.index} node={node} />
-          </TabsContent>
+          {!creating && (
+            <TabsContent value={TAB.Raw} className='pt-3'>
+              <RuleRawEditor key={revision} index={rule.index} node={node} />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </aside>
@@ -194,7 +203,13 @@ function RuleConditions({ rule }: { rule: RuleRow }) {
       <dl className='flex flex-col gap-1'>
         {rule.matchers.map((matcher) => (
           <div key={matcher.key} className='flex gap-3 border-t border-border py-1.5 text-xs first:border-t-0'>
-            <dt className='w-32 shrink-0 font-mono wrap-anywhere text-muted-foreground'>{withBreaks(matcher.key)}</dt>
+            {isNamedRuleMatcher(matcher.key) ? (
+              <dt className='w-32 shrink-0 wrap-anywhere text-muted-foreground' title={matcher.key}>
+                {t(`matcher.${matcher.key}`, { ns: 'shared' })}
+              </dt>
+            ) : (
+              <dt className='w-32 shrink-0 font-mono wrap-anywhere text-muted-foreground'>{withBreaks(matcher.key)}</dt>
+            )}
             <dd className='min-w-0 grow font-mono wrap-anywhere'>
               <ul>
                 {matcher.values.map((value, index) => (

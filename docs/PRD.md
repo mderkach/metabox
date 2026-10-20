@@ -2,10 +2,10 @@
 
 |                      |                                                                           |
 | -------------------- | ------------------------------------------------------------------------- |
-| **Document version** | 1.43                                                                      |
+| **Document version** | 1.44                                                                      |
 | **Status**           | **approved** 2026-08-30, except the open questions in section 10.1        |
 | **Owner**            | project author                                                            |
-| **Last revision**    | 2026-10-19                                                                |
+| **Last revision**    | 2026-10-20                                                                |
 | **Basis**            | deep-interview `metabox-di-001` (11 rounds) + `metabox-di-002` (7 rounds) |
 | **Final ambiguity**  | 11% / 15% (threshold 20%)                                                 |
 
@@ -66,6 +66,7 @@
 | 1.41    | 2026-10-13 | Sections 1.1 and 1.3 checked against the analogs' READMEs as of this date: panels and LuCI apps with a config editor already exist, MetaCubeXD edits profiles; the metabox row no longer promises full form coverage of the schema (AC-23, OQ-21). Requirements did not change                                                                                                                                                                                                                                                                                                                                                         |
 | 1.42    | 2026-10-15 | AC-69: the password is optional and off by default; with a password, a request without a session gets 401 and guessing is locked per address; the 403 for a mutating request from a foreign origin stays from AC-19. R-1 mitigation updated. Decision in [ADR-0052](./adr/ADR-0052-protect-the-panel-with-an-optional-password-and-a-cookie-session.md)                                                                                                                                                                                                                                                                                |
 | 1.43    | 2026-10-19 | AC-66 checked as done: `experimental` gets a form from its schema, and JSON-text fields of a form mask secret keys inside them. The JSON tab and the whole-config text stay unmasked; the limitation is in the AC text.                                                                                                                                                                                                                                                                                                                                                                                                                |
+| 1.44    | 2026-10-20 | UX-2 and AC-26: a form or node text edit goes into the draft as it is made, there is no separate save step; a form edit typed but not saved was lost on Apply. Apply goes through the summary of changes (UX-6). The requirement that saving and applying are different actions stays.                                                                                                                                                                                                                                                                                                                                                 |
 
 > The document is living. Any decision in [`adr/`](./adr/README.md), including those moved from Appendix A, may be revised — they are decisions, not requirements; requirements are in sections 5 and 6.
 
@@ -244,7 +245,7 @@ Implementation state is not tracked in the PRD: it describes requirements, not t
 - [x] **AC-23.** Any config node can be opened in raw mode and edited as JSON; the changes go back into the model without losing other data. The criterion is closed by forms for an existing `remote` set and the `route` and `dns` scalars (`final`, `strategy` and neighbors); the rest stays in raw mode (OQ-21, 2026-10-09).
 - [x] **AC-24.** There is a mode for editing the JSON of the whole config in the web.
 - [x] **AC-25.** A node the model did not recognize is shown as a raw block marked "not covered by the UI" and saved without distortion; a form for this node is unavailable, the rest of the config is edited normally.
-- [x] **AC-26.** Save saves the draft even with warnings; Apply is rejected if `sing-box check` did not pass, and shows the binary output.
+- [x] **AC-26.** An edit goes into the draft even with warnings, without a separate save step; Apply is rejected if `sing-box check` did not pass, and shows the binary output.
 - [x] **AC-70.** The draft survives a page reload: it is stored in the browser and restored on the next opening; if the config on the device changed in the meantime, the panel says so rather than silently applying the draft over it. Leaving the page with an unsaved draft requires browser confirmation.
 
 ### Resilience and schema
@@ -328,7 +329,7 @@ The NFR-2, NFR-4 and NFR-5 thresholds are guidelines and must be confirmed by me
 | ID   | Principle                                                         | Consequence                                                                                                                                                    |
 | ---- | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | UX-1 | GUI is the main path, JSON is an equal alternative                | Forms cover the schema by the type checklist; raw mode is available on any node; there is a separate mode for editing the whole config as text                 |
-| UX-2 | Saving and applying are different actions                         | Save writes a draft and allows an incomplete state; Apply sends the config to the device and requires a successful `sing-box check`                            |
+| UX-2 | Saving and applying are different actions                         | An edit goes into the draft as it is made, an incomplete state included; Apply sends the config to the device and requires a successful `sing-box check`       |
 | UX-3 | User data is never lost                                           | An unrecognized node is preserved as is and shown as a raw block with a mark, not thrown away and not silently "fixed"                                         |
 | UX-4 | The judge of validity is `sing-box check`, not the metabox schema | The schema serves forms and hints, but has no right to forbid what the binary accepts; otherwise metabox becomes a brake on every fork release                 |
 | UX-5 | An error is specific                                              | A message about an invalid value points to the specific node and reason, not "the config is invalid"                                                           |

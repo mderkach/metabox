@@ -139,7 +139,8 @@ describe('connections screen', () => {
     ConnectionStore.getState().apply(makeConnectionsSnapshot(3));
     renderScreen();
 
-    await user.click(await screen.findByRole('button', { name: 'Закрыть все' }));
+    await user.click(await screen.findByRole('button', { name: 'Действия со списком' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Закрыть все…' }));
 
     const dialog = await screen.findByRole('alertdialog');
 
@@ -150,7 +151,8 @@ describe('connections screen', () => {
 
     expect(closedAll).not.toHaveBeenCalled();
 
-    await user.click(await screen.findByRole('button', { name: 'Закрыть все' }));
+    await user.click(await screen.findByRole('button', { name: 'Действия со списком' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Закрыть все…' }));
     await user.click(await screen.findByRole('button', { name: 'Оборвать' }));
 
     await waitFor(() => {
@@ -428,6 +430,33 @@ describe('connections screen', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
+  it('closes the explained connection from the panel: the panel covers the row button', async () => {
+    const closed = vi.fn<(id: string) => void>();
+
+    server.use(
+      ...createRouteHandlers(CONNECTIONS_FIXTURE.connections),
+      http.delete(`${CONNECTION_ENDPOINT.connections()}/:id`, ({ params }) => {
+        closed(String(params.id));
+
+        return new HttpResponse(null, { status: 204 });
+      })
+    );
+    const user = userEvent.setup();
+
+    ConnectionStore.getState().apply(CONNECTIONS_FIXTURE);
+    renderScreen();
+
+    await user.click(await screen.findByRole('button', { name: /Почему соединение api\.git\.example/ }));
+
+    const panel = await screen.findByRole('complementary', { name: /api\.git\.example/ });
+
+    await user.click(within(panel).getByRole('button', { name: /Закрыть соединение api\.git\.example/ }));
+
+    await waitFor(() => {
+      expect(closed).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it('each row has its own explanation with the chain of that row', async () => {
     server.use(...createRouteHandlers(CONNECTIONS_FIXTURE.connections));
     const user = userEvent.setup();
@@ -591,6 +620,19 @@ describe('connections screen on a phone', () => {
     await waitFor(() => {
       expect(closedAll).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it('offers both export formats from one footer button', async () => {
+    const user = userEvent.setup();
+
+    ConnectionStore.getState().apply(makeConnectionsSnapshot(3));
+    renderScreen();
+
+    await user.click(await screen.findByRole('button', { name: 'Выгрузить' }));
+
+    expect(await screen.findByRole('menuitem', { name: 'Выгрузить CSV' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Выгрузить JSON' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Выгрузить CSV' })).not.toBeInTheDocument();
   });
 
   it('explains the route with a sheet over the list and clears the selection on Escape', async () => {

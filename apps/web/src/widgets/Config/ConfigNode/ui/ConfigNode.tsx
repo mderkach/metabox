@@ -11,12 +11,14 @@ import {
   toSectionSettings,
   type GenericSection,
 } from '@entities/Config';
+import { ConfigNodeDeleteButton } from '@features/Config/ConfigNodeDelete';
 import { ConfigNodeForm, ConfigSectionForm, hasNodeOverride } from '@features/Config/ConfigNodeForm';
 import { ConfigNodeRawEditor } from '@features/Config/ConfigNodeRaw';
 import { cn } from '@shared/lib/utils';
 import { Badge, Button, SURFACE, Tabs, TabsContent, TabsList, TabsTrigger } from '@shared/ui';
 
 import { FORM_POLICY, NODE_FORM_POLICY, nodeSummary } from '../model';
+import { ConfigNodeTypeBadge } from './ConfigNodeTypeBadge';
 
 const TAB = {
   Form: 'form',
@@ -49,6 +51,7 @@ export function ConfigNode({
   builtTags = null,
   open = true,
   onOpenChange,
+  onDeleted,
 }: {
   section: GenericSection;
   index: number;
@@ -61,11 +64,14 @@ export function ConfigNode({
   open?: boolean;
   /** Without it the node does not collapse. */
   onOpenChange?: (open: boolean) => void;
+  /** Without it the node has no delete button: an object section is not deleted from the forms. */
+  onDeleted?: () => void;
 }) {
   const { t } = useTranslation('widgets/Config/ConfigNode');
   const registry = registryOfSection(section);
   const path = sectionNodePath(section, index);
   const type: unknown = isNodeObject(node) ? node.type : undefined;
+  const tag: unknown = isNodeObject(node) ? node.tag : undefined;
   const settingsSection = registry === null && isSettingsSection(section) ? section : null;
   const settings = settingsSection === null ? null : toSectionSettings(settingsSection, node);
   const hasNodeForm =
@@ -138,9 +144,20 @@ export function ConfigNode({
             </Button>
           )}
         </h2>
-        {summary.type !== null && summary.type !== name && <Badge variant='secondary'>{summary.type}</Badge>}
+        {summary.type !== null && summary.type !== name && <ConfigNodeTypeBadge type={summary.type} />}
         {summary.address !== null && <span className='font-mono text-xs text-muted-foreground'>{summary.address}</span>}
         {hasForm && !recognized && <Badge variant='outline'>{t('rule.uncovered', { ns: 'shared' })}</Badge>}
+        {onDeleted !== undefined && (
+          <span className='ml-auto'>
+            <ConfigNodeDeleteButton
+              section={section}
+              index={index}
+              name={name}
+              tag={typeof tag === 'string' ? tag : ''}
+              onDeleted={onDeleted}
+            />
+          </span>
+        )}
       </header>
 
       <div id={bodyId} hidden={!open}>

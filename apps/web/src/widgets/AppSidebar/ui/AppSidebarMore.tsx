@@ -3,11 +3,14 @@ import { Ellipsis, X } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { SERVICE_STATUS } from '@entities/Daemon';
 import { cn } from '@shared/lib/utils';
 import { Button, Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from '@shared/ui';
 
+import { useShellServiceStatus } from '../lib/AppSidebar.lib';
 import { NAV_ITEMS } from '../model';
 import { AppSidebarControls } from './AppSidebarControls';
+import { SERVICE_LABEL, SERVICE_TONE } from './AppSidebarService';
 
 const LINK_CLASS =
   'flex h-11 items-center gap-3 rounded-md px-2.5 text-sm transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none';
@@ -21,11 +24,25 @@ export function AppSidebarMore({ className, active }: { className: string; activ
   const { t } = useTranslation('widgets/AppSidebar');
   // The sheet is controlled: navigating to a section from it must close it.
   const [open, setOpen] = useState(false);
+  const service = useShellServiceStatus();
+  // Only a known stop or failure is marked: an unread state is not news, and a silent daemon has its banner.
+  const down = service === null || service === SERVICE_STATUS.Running ? null : service;
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger className={className}>
-        <Ellipsis aria-hidden='true' className='size-5 shrink-0' />
+      <SheetTrigger
+        className={className}
+        aria-label={down === null ? undefined : t('more.withStatus', { status: t(SERVICE_LABEL[down]) })}
+      >
+        <span className='relative'>
+          <Ellipsis aria-hidden='true' className='size-5 shrink-0' />
+          {down !== null && (
+            <span
+              aria-hidden='true'
+              className={cn('absolute -top-0.5 -right-1 size-2.5 rounded-full ring-2 ring-sidebar', SERVICE_TONE[down])}
+            />
+          )}
+        </span>
         <span className='max-w-full truncate'>{t('more.label')}</span>
       </SheetTrigger>
       <SheetContent side='bottom' showCloseButton={false} className='gap-0 pb-[env(safe-area-inset-bottom)]'>

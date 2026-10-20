@@ -2,7 +2,7 @@ import { Plus, Search } from 'lucide-react';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { ConfigDocumentState, readRuleSets, ruleSetNodePath } from '@entities/Config';
+import { ConfigDocumentState, ConfigDocumentStore, readRuleSets, ruleSetNodePath } from '@entities/Config';
 import { localListFile } from '@entities/RuleSet';
 import { ConfigCacheNotice } from '@features/Config/ConfigCacheFile';
 import { RuleSetAddForm } from '@features/RuleSet/RuleSetAdd';
@@ -61,7 +61,7 @@ export function RuleSetsPage() {
 
       // The file of its own list goes away with the node: an orphaned file is not visible
       // in the config but stays on the device.
-      const file = localListFile(readRuleSets(ConfigDocumentState.getState().current() ?? '')[index]);
+      const file = localListFile(readRuleSets(ConfigDocumentStore.getState().current() ?? '')[index]);
 
       remove(ruleSetNodePath(index));
 

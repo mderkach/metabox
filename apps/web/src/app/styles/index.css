@@ -474,27 +474,31 @@
 
 /* The screen, its header and the config tab strip are named groups. Outside a
  * router transition (during tab animations) they are shown live, without a
- * snapshot and dissolve. The apply bar floats over the screen and is named for
- * the sake of layer order: in the root snapshot the screen group would cover it
- * for the whole router transition. It has no animation in any branch. */
+ * snapshot and dissolve. The apply bar and the interception change bar float
+ * over the screen and are named for the sake of layer order: in the root
+ * snapshot the screen group would cover them for the whole router transition.
+ * They have no animation in any branch. */
 ::view-transition-group(page),
 ::view-transition-group(page-header),
 ::view-transition-group(config-tabs),
-::view-transition-group(apply-bar) {
+::view-transition-group(apply-bar),
+::view-transition-group(device-route-bar) {
   animation-duration: 0s;
 }
 
 ::view-transition-old(page),
 ::view-transition-old(page-header),
 ::view-transition-old(config-tabs),
-::view-transition-old(apply-bar) {
+::view-transition-old(apply-bar),
+::view-transition-old(device-route-bar) {
   display: none;
 }
 
 ::view-transition-new(page),
 ::view-transition-new(page-header),
 ::view-transition-new(config-tabs),
-::view-transition-new(apply-bar) {
+::view-transition-new(apply-bar),
+::view-transition-new(device-route-bar) {
   animation: none;
 }
 

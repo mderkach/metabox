@@ -4,9 +4,10 @@
   "from": "from {{device}}",
   "close": "Close the explanation",
   "drift": {
-    "title": "sing-box runs a different config",
-    "description": "The running sing-box has {{running}} rules, the applied file has {{document}}, so the rule number is not shown.",
-    "notCompared": "The applied config was not read, so there is no link to the rule."
+    "title": "sing-box runs another config version",
+    "description": "Running sing-box has {{running}} rules, the applied file has {{document}}, so the rule number is not shown. Apply the config to make them match.",
+    "notCompared": "The applied config was not read, so there is no link to the rule.",
+    "open": "Open the config"
   },
   "origin": {
     "observed": "from sing-box",
@@ -16,12 +17,11 @@
   },
   "final": {
     "title": "No rule matched",
-    "description": "The traffic went to <code>route.final</code> — the default action, not a missed rule."
+    "description": "Traffic went by the default route (<code>route.final</code>): no rule matched."
   },
   "unknown": {
     "title": "The rule is undetermined",
     "missing": "The rule of this connection is not in the sing-box rule list.",
-    "drifted": "The sing-box rule list diverged from the applied config, there is nothing to determine the node with.",
     "reason": {
       "not_in_process_list": "the rule of this connection is not in the running sing-box rule list"
     }
@@ -29,7 +29,9 @@
   "matched": {
     "title": "Rule {{number}} matched",
     "action": "Action",
-    "open": "Open the rule in the editor"
+    "open": "Open the rule in the editor",
+    "observed": "The rule that hit, as sing-box reports it",
+    "unmapped": "The number of this rule in the file is unknown."
   },
   "chain": {
     "title": "Chain",

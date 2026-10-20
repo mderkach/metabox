@@ -1,10 +1,13 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef } from 'react';
 
 import {
   CONFIG_QUERY,
+  CONFIG_SECTION,
   ConfigDocumentState,
+  isGenericSection,
   readRules,
+  toConfigChanges,
   toCheckFailure,
   toWorkdirMismatch,
   useApplyTransaction,
@@ -13,10 +16,21 @@ import {
   useConfigText,
   useListChanges,
   type CheckFailure,
+  type ConfigChange,
+  type ConfigSection,
+  type GenericSection,
   type WorkdirMismatch,
 } from '@entities/Config';
-import { APPLY_PHASE, isApplyActive, useDaemonStatus, type ApplyTransaction } from '@entities/Daemon';
+import {
+  APPLY_PHASE,
+  isApplyActive,
+  useDaemonReachable,
+  useDaemonStatus,
+  type ApplyTransaction,
+} from '@entities/Daemon';
 import { toRuleChanges, type RuleChange } from '@entities/Rule';
+import { API_FAILURE, ApiError } from '@shared/api';
+import { failureLine, firstJsoncError } from '@shared/lib/jsonc';
 
 import { useApplyConfig, useConfirmApply } from '../api/ConfigApply.api';
 
@@ -51,12 +65,24 @@ function useDocumentRefresh(transaction: ApplyTransaction | null) {
   );
 }
 
+export const APPLY_BLOCK = {
+  Unreachable: 'unreachable',
+  Unparsed: 'unparsed',
+} as const;
+
+/** Why there is something to apply but Apply is off. */
+export type ApplyBlock = { kind: typeof APPLY_BLOCK.Unreachable } | { kind: typeof APPLY_BLOCK.Unparsed; line: number };
+
 export interface ConfigApplyState {
   isDirty: boolean;
   /** The draft was started from a different config than the one on the device now. */
   isStale: boolean;
-  /** There is something to apply and the previous apply has finished. */
+  /** Dirty, idle, the daemon answers and the draft parses. */
   canApply: boolean;
+  /** `null` means nothing stands in the way, or there is nothing to apply. */
+  blocked: ApplyBlock | null;
+  /** The start request did not reach the daemon: nothing went to the device. */
+  unsent: boolean;
   /** `null` means there were no applies, neither in this session nor before the reload. */
   transaction: ApplyTransaction | null;
   /** The reference changes only with a change of the start error: the bar compares state snapshots by reference. */
@@ -94,6 +120,17 @@ export function useConfigApply(): ConfigApplyState {
 
   useDocumentRefresh(transaction);
 
+  const reachable = useDaemonReachable();
+  // Text mode changes the draft on every keystroke: the whole-file parse waits for a deferred render.
+  const checkedText = useDeferredValue(text);
+  const unparsedLine = useMemo(() => {
+    const failure = checkedText === null ? null : firstJsoncError(checkedText);
+
+    return checkedText === null || failure === null ? null : failureLine(checkedText, failure);
+  }, [checkedText]);
+  const blocked = useMemo(() => toApplyBlock(isDirty, reachable, unparsedLine), [isDirty, reachable, unparsedLine]);
+  const unsent = start.error instanceof ApiError && start.error.kind === API_FAILURE.Unreachable;
+
   const check = useMemo(() => toCheckFailure(start.error), [start.error]);
   const workdir = useMemo(() => toWorkdirMismatch(start.error), [start.error]);
 
@@ -112,7 +149,9 @@ export function useConfigApply(): ConfigApplyState {
   return {
     isDirty,
     isStale,
-    canApply: isDirty && !start.isPending && !isApplyActive(transaction?.phase),
+    canApply: isDirty && blocked === null && !start.isPending && !isApplyActive(transaction?.phase),
+    blocked,
+    unsent,
     transaction,
     check,
     workdir,
@@ -124,6 +163,18 @@ export function useConfigApply(): ConfigApplyState {
   };
 }
 
+function toApplyBlock(isDirty: boolean, reachable: boolean, unparsedLine: number | null): ApplyBlock | null {
+  if (!isDirty) {
+    return null;
+  }
+
+  if (!reachable) {
+    return { kind: APPLY_BLOCK.Unreachable };
+  }
+
+  return unparsedLine === null ? null : { kind: APPLY_BLOCK.Unparsed, line: unparsedLine };
+}
+
 /** Routing rule changes that Apply will bring; without a draft, empty. */
 export function useRuleChanges(): RuleChange[] {
   const applied = ConfigDocumentState.use.applied();
@@ -133,4 +184,37 @@ export function useRuleChanges(): RuleChange[] {
     () => (applied === null || draft === null ? [] : toRuleChanges(readRules(applied), readRules(draft))),
     [applied, draft]
   );
+}
+
+/** Node and parameter changes that Apply will bring, beside the rule ones; without a draft, empty. */
+export function useConfigChanges(): ConfigChange[] {
+  const applied = ConfigDocumentState.use.applied();
+  const draft = ConfigDocumentState.use.draft();
+
+  return useMemo(() => (applied === null || draft === null ? [] : toConfigChanges(applied, draft)), [applied, draft]);
+}
+
+export type SectionLink =
+  | { to: '/config' | '/config/rule-set' }
+  | { to: '/config/$section'; params: { section: GenericSection } };
+
+export function toSectionLink(section: ConfigSection): SectionLink | null {
+  if (section === CONFIG_SECTION.Route) {
+    return { to: '/config' };
+  }
+
+  if (section === CONFIG_SECTION.RuleSet) {
+    return { to: '/config/rule-set' };
+  }
+
+  return isGenericSection(section) ? { to: '/config/$section', params: { section } } : null;
+}
+
+/** A value as one line of the summary; `null` means a list or an object, which are named as changed without a value. */
+export function toValueText(value: unknown): string | null {
+  if (value === undefined) {
+    return '—';
+  }
+
+  return typeof value === 'object' && value !== null ? null : JSON.stringify(value);
 }

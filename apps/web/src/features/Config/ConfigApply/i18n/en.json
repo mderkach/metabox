@@ -2,10 +2,16 @@
   "bar": {
     "label": "Config apply",
     "applying": "Applying the config on the device…",
-    "dirty": "The draft has changes that are not on the device yet",
+    "dirty": "There are unapplied changes",
     "apply": "Apply",
-    "discard": "Discard changes"
+    "discard": "Discard changes",
+    "more": "More draft actions"
   },
+  "blocked": {
+    "unreachable": "metabox is not responding, applying is unavailable now.",
+    "unparsed": "The config text has an error on line {{line}}: fix it to apply."
+  },
+  "unsent": "metabox did not answer, nothing was sent to the device. Try again.",
   "discard": {
     "title": "Discard every draft edit?",
     "description": "The draft resets to the config on the device. This cannot be undone.",
@@ -13,8 +19,8 @@
     "cancel": "Keep the draft"
   },
   "stale": {
-    "title": "The config on the device changed since this draft",
-    "description": "The draft was started from an earlier version. Applying it replaces what changed on the device: check the diff or discard the draft.",
+    "title": "The config on the router changed after editing started",
+    "description": "Applying overwrites those changes. Check the diff or discard the draft.",
     "discard": "Discard the draft"
   },
   "confirm": {
@@ -25,7 +31,7 @@
   },
   "clashApi": {
     "title": "metabox added experimental.clash_api to the config",
-    "description": "Status screens are empty without it. The service was restarted by the same apply."
+    "description": "Without it the status screens are empty. The service was restarted by the same apply."
   },
   "failure": {
     "rolledBack": "No confirmation arrived — the previous config was restored",
@@ -36,20 +42,20 @@
       "write_failed": "the config was not written to the device",
       "restart_failed": "the service did not restart with the new config",
       "healthcheck_failed": "the service started, but sing-box did not answer",
-      "dns_probe_failed": "sing-box started, but does not resolve DNS queries through dns-in — check the dns section",
-      "interception_missing": "LAN traffic interception is gone after the restart: the nft rules are not in place",
+      "dns_probe_failed": "sing-box started but does not answer DNS queries: check the DNS section",
+      "interception_missing": "after the restart, traffic interception from the network stopped working",
       "rollback_failed": "the previous config could not be restored — the new one stayed on the device",
       "no_backup": "there was nothing to roll back to: the device had no config before this apply, so the service stayed on the new one"
     }
   },
   "check": {
     "title": "sing-box rejected the config — nothing was written to the device",
-    "exitCode": "Exit code: {{code}}. The draft is kept, fix it and apply again."
+    "exitCode": "Exit code: {{code}}. The draft is kept: fix it and apply again."
   },
   "workdir": {
-    "title": "The sing-box service does not run from the config directory — nothing was written to the device",
-    "description": "The list files go to {{configDir}}, but the service looks for them relative to its working directory {{workdir}} and would crash after the apply. Point it at the config directory, restart it and apply again:",
-    "sideEffect": "Other relative paths of the service will resolve from the config directory too — for example, cache.db without an explicit cache_file.path moves there as well."
+    "title": "The sing-box service runs from another directory: applying stopped",
+    "description": "Lists go to {{configDir}}, but the service looks in {{workdir}}. Point it at the config directory and restart it:",
+    "sideEffect": "Other relative service paths, such as cache.db, will also resolve from the config directory."
   },
   "lists": {
     "title_one": "{{count}} list file will change",
@@ -57,10 +63,9 @@
     "removed": "will be removed"
   },
   "diff": {
-    "open": "Show diff",
+    "description": "Check the changes. After applying, confirm the connection works — there is time for it (a minute by default), otherwise metabox restores the previous config.",
     "title": "What goes to the device",
     "same": "The draft matches the file on the device.",
-    "changed": "Changed lines: {{count}}.",
     "caption": "Line by line difference between the draft and the applied config",
     "column": {
       "before": "Line in the applied config",
@@ -71,23 +76,35 @@
     "skipped_other": "… {{count}} matching lines",
     "rules": {
       "label": "Routing rule changes",
-      "target": "Rule {{index}}: {{from}} → {{to}}",
-      "added": "Rule {{index}} added",
+      "target": "<node>Rule {{index}}</node>: {{from}} → {{to}}",
+      "added": "<node>Rule {{index}}</node> added",
       "removed": "Rule {{index}} removed",
-      "changed": "Rule {{index}} changed",
-      "moved": "Rule {{previous}} moved to position {{index}}",
+      "changed": "<node>Rule {{index}}</node> changed",
+      "moved": "Rule {{previous}} moved to position <node>{{index}}</node>",
       "more_one": "And {{count}} more change",
       "more_other": "And {{count}} more changes"
-    }
+    },
+    "changed_one": "Text of the changes: {{count}} line",
+    "changed_other": "Text of the changes: {{count}} lines"
   },
   "history": {
     "open": "Version history",
     "title": "Version history",
-    "description": "The last 10 applies. A rollback runs the same cycle: check, write, restart and confirmation.",
+    "description": "The last 10 applies. “Restore” applies a version the same way: with a check and a connection confirmation.",
     "empty": "Nothing has been applied yet.",
     "version": "No. {{id}}",
     "unknownTime": "save time unknown",
     "restore": "Restore",
     "current": "current"
+  },
+  "changes": {
+    "label": "Node and parameter changes",
+    "added": "Added: {{kind}} <node>{{name}}</node>",
+    "removed": "Removed: {{kind}} <node>{{name}}</node>",
+    "changed": "Changed: {{kind}} <node>{{name}}</node> ({{fields}})",
+    "setting": "Parameter <node>{{path}}</node>: {{from}} → {{to}}",
+    "settingChanged": "Parameter <node>{{path}}</node> changed",
+    "more_one": "And {{count}} more change — in the text of the changes",
+    "more_other": "And {{count}} more changes — in the text of the changes"
   }
 }

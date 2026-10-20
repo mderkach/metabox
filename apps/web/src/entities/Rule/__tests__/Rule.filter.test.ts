@@ -47,15 +47,18 @@ describe('rule outbounds', () => {
     ];
 
     expect(toTargetGroups(rules)).toEqual([
-      { target: 'proxy', count: 2 },
-      { target: 'direct', count: 1 },
+      { target: 'proxy', kind: RULE_TARGET.Outbound, count: 2 },
+      { target: 'direct', kind: RULE_TARGET.Outbound, count: 1 },
     ]);
   });
 
   it('counts an action on a par with an outbound: for filtering it is the same kind of outbound', () => {
     const rules = [makeRule({ id: '0', target: 'sniff', targetKind: RULE_TARGET.Action }), makeRule({ id: '1' })];
 
-    expect(toTargetGroups(rules).map((group) => group.target)).toEqual(['sniff', 'us-west-fallback']);
+    expect(toTargetGroups(rules).map(({ target, kind }) => [target, kind])).toEqual([
+      ['sniff', RULE_TARGET.Action],
+      ['us-west-fallback', RULE_TARGET.Outbound],
+    ]);
   });
 });
 

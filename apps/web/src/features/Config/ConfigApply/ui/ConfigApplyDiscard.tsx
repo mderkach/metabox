@@ -1,56 +1,76 @@
-import { useCallback, useState } from 'react';
+import { Ellipsis } from 'lucide-react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
   Button,
+  ConfirmDialog,
   DESTRUCTIVE_OUTLINE,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from '@shared/ui';
 
 /**
- * Discard of the whole draft.
- *
- * Asks for confirmation: the document has no step-by-step undo, and an
- * accidental press takes all the work away irreversibly. The outline in the
- * danger tone tells it from the bar buttons, which keep edits rather than erase
- * them.
+ * Discard of the whole draft, after a confirmation: the document has no
+ * step-by-step undo. `compact` puts it into a menu, which keeps the phone bar
+ * in one row; focus then returns to the menu button.
  */
-export function ConfigApplyDiscard({ label, onDiscard }: { label?: string; onDiscard: () => void }) {
+export function ConfigApplyDiscard({
+  label,
+  compact = false,
+  onDiscard,
+}: {
+  label?: string;
+  compact?: boolean;
+  onDiscard: () => void;
+}) {
   const { t } = useTranslation('features/Config/ConfigApply');
   const [open, setOpen] = useState(false);
-
-  const onConfirmClick = useCallback(() => {
-    setOpen(false);
-    onDiscard();
-  }, [onDiscard]);
+  const menuTrigger = useRef<HTMLButtonElement>(null);
+  const text = label ?? t('bar.discard');
 
   return (
-    <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogTrigger render={<Button variant='outline' size='sm' className={DESTRUCTIVE_OUTLINE} />}>
-        {label ?? t('bar.discard')}
-      </AlertDialogTrigger>
+    <>
+      {compact && (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={<Button ref={menuTrigger} variant='ghost' size='icon-sm' aria-label={t('bar.more')} />}
+          >
+            <Ellipsis />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align='end' className='w-auto'>
+            <DropdownMenuItem
+              variant='destructive'
+              onClick={() => {
+                setOpen(true);
+              }}
+            >
+              {text}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
 
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{t('discard.title')}</AlertDialogTitle>
-          <AlertDialogDescription>{t('discard.description')}</AlertDialogDescription>
-        </AlertDialogHeader>
-
-        <AlertDialogFooter>
-          <AlertDialogCancel>{t('discard.cancel')}</AlertDialogCancel>
-          <AlertDialogAction variant='destructive' onClick={onConfirmClick}>
-            {t('discard.confirm')}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+      <ConfirmDialog
+        trigger={
+          compact ? undefined : (
+            <Button variant='outline' size='sm' className={DESTRUCTIVE_OUTLINE}>
+              {text}
+            </Button>
+          )
+        }
+        open={open}
+        onOpenChange={setOpen}
+        title={t('discard.title')}
+        description={t('discard.description')}
+        cancelLabel={t('discard.cancel')}
+        confirmLabel={t('discard.confirm')}
+        destructive
+        finalFocus={compact ? menuTrigger : undefined}
+        onConfirm={onDiscard}
+      />
+    </>
   );
 }

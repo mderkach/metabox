@@ -14,6 +14,7 @@ import { createDataplaneMock } from '@entities/Dataplane/__tests__/Dataplane.han
 import { DEVICE_ENDPOINT } from '@entities/Device';
 import { DEVICES_FIXTURE } from '@entities/Device/__tests__/Device.fixture';
 import { createDeviceHandlers } from '@entities/Device/__tests__/Device.handlers';
+import { DeviceRouteBar, useDeviceRouteTransaction } from '@features/Device/DeviceRoute';
 import { MS_IN_SECOND, SECONDS_IN_HOUR, SECONDS_IN_MINUTE } from '@shared/lib/time';
 
 import { DevicesPage } from '../ui/DevicesPage';
@@ -52,8 +53,20 @@ async function readySwitchChecked(device: string): Promise<HTMLElement> {
   return toggle;
 }
 
+/** The confirmation bar lives in the shell: the screen is rendered next to it, as the shell does. */
+function DevicesWithRouteBar() {
+  const route = useDeviceRouteTransaction();
+
+  return (
+    <>
+      <DevicesPage />
+      <DeviceRouteBar transaction={route.transaction} isConfirming={route.isConfirming} onConfirm={route.confirm} />
+    </>
+  );
+}
+
 function renderScreen() {
-  return renderWithRouter(DevicesPage, { path: '/devices' });
+  return renderWithRouter(DevicesWithRouteBar, { path: '/devices' });
 }
 
 function rowOf(label: string): HTMLElement {
@@ -309,7 +322,7 @@ describe('devices screen', () => {
       expect(isLocked(laptop)).toBe(true);
       expect(within(rowOf('Ноутбук')).getByText('по подсети 192.168.1.60/31')).toBeInTheDocument();
       expect(laptop).toHaveAccessibleDescription(
-        'Устройство входит в подсеть 192.168.1.60/31 из списка перехвата. Выключить его отдельно нельзя: для этого подсеть нужно убрать из списка или сузить'
+        'Устройство входит в подсеть 192.168.1.60/31 из списка перехвата. Отдельно его не выключить: уберите или сузьте подсеть.'
       );
       expect(screen.getByRole('switch', { name: 'Через sing-box: iphone-guest' })).toBeChecked();
       expect(screen.getByRole('switch', { name: 'Через sing-box: tv-living' })).toBeChecked();
@@ -338,7 +351,7 @@ describe('devices screen', () => {
 
       const dialog = await screen.findByRole('alertdialog', { name: 'Пустить 192.168.1.36 через sing-box?' });
 
-      expect(dialog).toHaveTextContent('перезапускает sing-box и рвёт текущие соединения');
+      expect(dialog).toHaveTextContent('sing-box перезапустится, соединения всех устройств оборвутся');
       expect(changed).not.toHaveBeenCalled();
 
       await user.click(within(dialog).getByRole('button', { name: 'Применить' }));
@@ -356,7 +369,7 @@ describe('devices screen', () => {
 
       const bar = await screen.findByRole('region', { name: 'Смена перехвата' });
 
-      expect(bar).toHaveTextContent('Список перехвата сменён');
+      expect(bar).toHaveTextContent('Устройство переключено');
       expect(within(bar).getByRole('button', { name: 'Связь есть, оставить' })).toBeEnabled();
       // While a change awaits confirmation, a second cannot start.
       expect(isLocked(screen.getByRole('switch', { name: 'Через sing-box: Ноутбук' }))).toBe(true);
@@ -409,7 +422,7 @@ describe('devices screen', () => {
 
       const bar = await screen.findByRole('region', { name: 'Смена перехвата' });
 
-      expect(bar).toHaveTextContent('Подтверждения не было — прежний список перехвата возвращён');
+      expect(bar).toHaveTextContent('Подтверждения не было — прежняя настройка возвращена');
       expect(bar).toHaveTextContent('после перезапуска правила nft перехвата не стоят');
       expect(bar).toHaveTextContent('nft: нет цепочки metabox_prerouting');
 

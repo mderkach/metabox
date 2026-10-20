@@ -4,7 +4,7 @@ import { countGroups } from '@shared/lib/group';
 import { matchesWords, toQueryWords } from '@shared/lib/search';
 
 import { RULE_SET_MATCHER } from './Rule.constants';
-import type { RuleBranch, RuleRow } from './Rule.model';
+import { RULE_TARGET, type RuleBranch, type RuleRow, type RuleTargetKind } from './Rule.model';
 
 /** Outbound by which rules are selected; `null` means all at once. */
 export type RuleTargetFilter = string | null;
@@ -33,12 +33,20 @@ export function parseRuleSearch(search: Record<string, unknown>): RuleSearch {
 
 export interface RuleTargetGroup {
   target: string;
+  /** An action is named in words on screen, an outbound by its tag. */
+  kind: RuleTargetKind;
   count: number;
 }
 
 /** Outbounds in descending order of rule count: the screen facets are built from them. */
 export function toTargetGroups(rules: RuleRow[]): RuleTargetGroup[] {
-  return countGroups(rules, (rule) => rule.target).map((group) => ({ target: group.value, count: group.count }));
+  const actions = new Set(rules.filter((rule) => rule.targetKind === RULE_TARGET.Action).map((rule) => rule.target));
+
+  return countGroups(rules, (rule) => rule.target).map((group) => ({
+    target: group.value,
+    kind: actions.has(group.value) ? RULE_TARGET.Action : RULE_TARGET.Outbound,
+    count: group.count,
+  }));
 }
 
 /**

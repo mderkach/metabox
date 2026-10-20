@@ -20,6 +20,7 @@ import {
   DAEMON_STATUS_FIXTURE,
   SERVICE_RUNNING_FIXTURE,
 } from '@entities/Daemon/__tests__/Daemon.fixture';
+import { DATAPLANE_ENDPOINT } from '@entities/Dataplane';
 import { NARROW_SCREEN } from '@shared/lib/media';
 
 import { AppLayout } from '../AppLayout';
@@ -136,6 +137,23 @@ describe('AppLayout', () => {
     finishApplyBarTransition();
 
     expect(main).toHaveStyle({ paddingBottom: '0px' });
+  });
+
+  it('holds the interception change confirmation on any screen, not only on the devices one', async () => {
+    const transaction = { id: 'dp-1', phase: 'awaiting_confirm', window: 60_000_000_000, sha256: 'b'.repeat(64) };
+
+    serveDaemon();
+    server.use(
+      http.get(DAEMON_ENDPOINT.status(), () =>
+        HttpResponse.json({ ...DAEMON_STATUS_FIXTURE, dataplane_transaction: transaction })
+      ),
+      http.get(DATAPLANE_ENDPOINT.applyState(transaction.id), () => HttpResponse.json(transaction))
+    );
+
+    renderAppLayout();
+
+    expect(await screen.findByRole('button', { name: 'Связь есть, оставить' })).toBeInTheDocument();
+    expect(screen.getByRole('main')).toHaveTextContent('Экран содержимого');
   });
 
   it('on a wide screen the sections are in the sidebar, there is no bottom bar', async () => {

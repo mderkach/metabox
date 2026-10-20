@@ -16,7 +16,7 @@
   },
   "idle": {
     "title": "No check has run yet",
-    "description": "Press “Check”: the panel tests the interception ports, DNS through dns-in, the nft chains, the exit through the chosen node and the direct exit."
+    "description": "Press “Check”: the panel tests traffic interception, DNS and internet access, through the chosen node and directly."
   },
   "check": {
     "redirect_port": "Redirect port (TCP)",

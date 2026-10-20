@@ -115,7 +115,7 @@ describe('rules screen', () => {
       within(table)
         .getAllByRole('columnheader')
         .map((cell) => cell.textContent)
-    ).toEqual(['№', 'Условия', 'Выход', 'Сработало']);
+    ).toEqual(['№', 'Условия', 'Действие', 'Сработало']);
     expect(screen.getByRole('status')).toHaveTextContent('3 правила');
   });
 
@@ -143,9 +143,9 @@ describe('rules screen', () => {
     const [, , dnsRow] = within(table).getAllByRole('row');
 
     await waitFor(() => {
-      expect(dnsRow).toHaveTextContent('не видно');
+      expect(dnsRow).toHaveTextContent('—');
     });
-    expect(within(dnsRow).getByTitle(/^sing-box не показывает такие соединения/)).toBeInTheDocument();
+    expect(within(dnsRow).getByTitle(/^sing-box не считает срабатывания таких правил/)).toBeInTheDocument();
   });
 
   it('a process on another config does not hand its count to the rows of this one', async () => {
@@ -153,9 +153,7 @@ describe('rules screen', () => {
 
     renderWithRouter(EditorPage);
 
-    expect(
-      await screen.findByText('sing-box работает не на этом конфиге — счёт срабатываний не показан')
-    ).toBeInTheDocument();
+    expect(await screen.findByText('sing-box работает на другой версии конфига — счёт не показан')).toBeInTheDocument();
     expect(screen.queryByRole('columnheader', { name: 'Сработало' })).not.toBeInTheDocument();
   });
 
@@ -178,7 +176,7 @@ describe('rules screen', () => {
 
     const panel = await screen.findByRole('complementary');
 
-    expect(within(panel).getByText('route.rules[0]')).toBeInTheDocument();
+    expect(within(panel).getByText('Правило 1', { selector: 'h2, h3' })).toBeInTheDocument();
 
     await user.click(within(panel).getByRole('button', { name: 'Закрыть панель' }));
 
@@ -207,7 +205,22 @@ describe('rules screen', () => {
     expect(ruleButton).toHaveFocus();
   });
 
-  it('the outbound form opens on the value from the config and does not let apply an empty edit', async () => {
+  it('the close button returns focus to the row the panel was opened from', async () => {
+    const user = userEvent.setup();
+
+    renderWithRouter(EditorPage);
+
+    const ruleButton = await screen.findByRole('button', { name: /^Правило 3, / });
+
+    await user.click(ruleButton);
+    await user.click(within(await screen.findByRole('complementary')).getByRole('button', { name: 'Закрыть панель' }));
+
+    finishSidePanelTransition();
+
+    expect(ruleButton).toHaveFocus();
+  });
+
+  it('the outbound form opens on the value from the config and writes nothing until a change', async () => {
     const user = userEvent.setup();
 
     renderWithRouter(EditorPage);
@@ -217,7 +230,7 @@ describe('rules screen', () => {
     const panel = await screen.findByRole('complementary');
 
     expect(within(panel).getByRole('combobox', { name: 'Куда отправить' })).toHaveTextContent('proxy');
-    expect(within(panel).getByRole('button', { name: 'Сохранить в черновик' })).toBeDisabled();
+    expect(ConfigDocumentState.getState().draft).toBeNull();
   });
 
   it('an outbound change in the panel edits one line of the file, does not touch the rest of the rule', async () => {
@@ -239,8 +252,6 @@ describe('rules screen', () => {
 
     expect(outbound).toHaveTextContent('direct');
 
-    await user.click(within(panel).getByRole('button', { name: 'Сохранить в черновик' }));
-
     await waitFor(() => {
       expect(ConfigDocumentState.getState().draft).not.toBeNull();
     });
@@ -249,7 +260,6 @@ describe('rules screen', () => {
       rule_set: ['github'],
       outbound: 'direct',
     });
-    expect(within(panel).getByRole('button', { name: 'Сохранить в черновик' })).toBeDisabled();
     expect(
       await screen.findByRole('button', { name: 'Правило 1, выход direct, изменено в черновике' })
     ).toBeInTheDocument();
@@ -285,7 +295,7 @@ describe('rules screen', () => {
 
     const panel = await screen.findByRole('complementary');
 
-    expect(within(panel).getByText('UI не покрывает')).toBeInTheDocument();
+    expect(within(panel).getByText('панель не знает')).toBeInTheDocument();
     expect(within(panel).getByRole('tab', { name: 'Форма' })).toHaveAttribute('aria-disabled', 'true');
     expect(within(panel).getByRole('textbox', { name: 'Правило 3 текстом' })).toBeInTheDocument();
   });
@@ -305,9 +315,8 @@ describe('rules screen', () => {
 
     await user.clear(editor);
     await user.type(editor, '{{ "port": ');
-    await user.click(within(panel).getByRole('button', { name: 'Сохранить в черновик' }));
 
-    expect(await within(panel).findByText('JSON не разобран')).toBeInTheDocument();
+    expect(await within(panel).findByText(/В черновик не записано/)).toBeInTheDocument();
     expect(editor).toHaveValue('{ "port": ');
     expect(ConfigDocumentState.getState().draft).toBeNull();
   });
@@ -349,13 +358,12 @@ describe('rules screen', () => {
 
     await user.clear(editor);
     await user.type(editor, '{{ "action": "quantum-teleport", "port": 443 }');
-    await user.click(within(panel).getByRole('button', { name: 'Сохранить в черновик' }));
 
     await waitFor(() => {
       expect(ConfigDocumentState.getState().draft).not.toBeNull();
     });
 
-    expect(within(panel).getByText('Схема этот узел не знает — записан как есть')).toBeInTheDocument();
+    expect(within(panel).getByText('Панель не знает часть полей — правило записано как есть')).toBeInTheDocument();
     const draft: unknown = JSON.parse(ConfigDocumentState.getState().draft ?? '');
 
     expect(findValue(JSON.stringify(draft), ['route', 'rules', 2])).toEqual({
@@ -403,7 +411,6 @@ describe('rules screen', () => {
     await user.click(settings.getByRole('button', { name: 'Параметры маршрутизации' }));
     await user.click(settings.getByRole('button', { name: /^Ещё параметры/ }));
     await user.type(settings.getByRole('textbox', { name: 'final' }), 'proxy');
-    await user.click(settings.getByRole('button', { name: 'Сохранить в черновик' }));
 
     await waitFor(() => {
       expect(findValue(ConfigDocumentState.getState().draft ?? '', ['route', 'final'])).toBe('proxy');
@@ -419,25 +426,82 @@ describe('rule list editing', () => {
     serveConfig(editConfig(EDIT_RULES));
   });
 
-  it('adds a rule to the end, leads it to route.final and opens it in the panel', async () => {
+  it('names an action in words in the outbound filter and in the row, not as an outbound', async () => {
+    renderWithRouter(EditorPage);
+
+    const targets = await screen.findByRole('list', { name: 'Действия правил' });
+
+    expect(within(targets).getByRole('button', { name: /перехватить DNS/ })).toBeInTheDocument();
+    expect(within(targets).queryByRole('button', { name: /hijack-dns/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Правило 2, действие: перехватить DNS' })).toBeInTheDocument();
+  });
+
+  it('opens a new rule without writing it and writes it on the first condition, keeping focus', async () => {
     const user = userEvent.setup();
 
     renderWithRouter(EditorPage);
 
     await user.click(await screen.findByRole('button', { name: 'Добавить правило' }));
 
-    expect(draftRules()).toEqual([...EDIT_RULES, { outbound: 'proxy' }]);
+    const panel = await screen.findByRole('complementary', { name: 'Новое правило · место 4' });
 
-    const panel = await screen.findByRole('complementary', { name: 'Правило 4' });
+    expect(ConfigDocumentState.getState().draft).toBeNull();
+    expect(within(panel).getByText(/появится в черновике, когда у него будет условие/)).toBeInTheDocument();
+    expect(within(panel).queryByRole('tab', { name: 'JSON' })).not.toBeInTheDocument();
 
-    expect(within(panel).getByText('route.rules[3]')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Правило 4, выход proxy, изменено в черновике' })).toHaveAttribute(
+    await selectOption(user, within(panel).getByRole('combobox', { name: 'Добавить условие' }), 'Домен');
+
+    const domain = within(panel).getByRole('textbox', { name: 'Домен' });
+
+    await user.type(domain, 'a.example');
+
+    await waitFor(() => {
+      expect(draftRules()).toEqual([...EDIT_RULES, { domain: ['a.example'], outbound: 'proxy' }]);
+    });
+    expect(domain).toHaveFocus();
+    expect(await screen.findByRole('button', { name: 'Правило 4, выход proxy, изменено в черновике' })).toHaveAttribute(
       'aria-pressed',
       'true'
     );
   });
 
-  it('in a config without rules the empty state button creates route.rules', async () => {
+  it('closes the panel of a created rule once the draft is discarded', async () => {
+    const user = userEvent.setup();
+
+    renderWithRouter(EditorPage);
+
+    await user.click(await screen.findByRole('button', { name: 'Добавить правило' }));
+
+    const panel = await screen.findByRole('complementary', { name: 'Новое правило · место 4' });
+
+    await selectOption(user, within(panel).getByRole('combobox', { name: 'Добавить условие' }), 'Домен');
+    await user.type(within(panel).getByRole('textbox', { name: 'Домен' }), 'a.example');
+    await screen.findByRole('button', { name: 'Правило 4, выход proxy, изменено в черновике' });
+
+    act(() => {
+      ConfigDocumentState.getState().discard();
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByRole('complementary', { name: 'Правило 4' })).not.toBeInTheDocument();
+    });
+  });
+
+  it('a new rule closed without a condition leaves the draft untouched', async () => {
+    const user = userEvent.setup();
+
+    renderWithRouter(EditorPage);
+
+    await user.click(await screen.findByRole('button', { name: 'Добавить правило' }));
+
+    const panel = await screen.findByRole('complementary', { name: 'Новое правило · место 4' });
+
+    await user.click(within(panel).getByRole('button', { name: 'Закрыть панель' }));
+
+    expect(ConfigDocumentState.getState().draft).toBeNull();
+  });
+
+  it('in a config without rules the empty state button opens the first rule and the condition creates route.rules', async () => {
     serveConfig(JSON.stringify({ outbounds: [{ type: 'direct', tag: 'direct' }] }, null, 2));
 
     const user = userEvent.setup();
@@ -448,9 +512,17 @@ describe('rule list editing', () => {
 
     await user.click(screen.getByRole('button', { name: 'Добавить правило' }));
 
-    expect(draftRules()).toEqual([{ outbound: 'direct' }]);
+    const panel = await screen.findByRole('complementary', { name: 'Новое правило · место 1' });
+
+    expect(ConfigDocumentState.getState().draft).toBeNull();
+
+    await selectOption(user, within(panel).getByRole('combobox', { name: 'Добавить условие' }), 'Домен');
+    await user.type(within(panel).getByRole('textbox', { name: 'Домен' }), 'a.example');
+
+    await waitFor(() => {
+      expect(draftRules()).toEqual([{ domain: ['a.example'], outbound: 'direct' }]);
+    });
     expect(await screen.findByRole('table', { name: 'Правила маршрутизации' })).toBeInTheDocument();
-    expect(screen.getByRole('complementary', { name: 'Правило 1' })).toBeInTheDocument();
   });
 
   it('without outbounds and route.final a new rule has nowhere to get an outbound: the button is disabled and says why', async () => {
@@ -462,7 +534,7 @@ describe('rule list editing', () => {
     expect(screen.getByText(/нет ни route\.final, ни аутбаунда/)).toBeInTheDocument();
   });
 
-  it('adding with an active search clears the filter: the new rule is visible in the list', async () => {
+  it('adding with an active search clears the filter: the new rule will be visible in the list', async () => {
     const user = userEvent.setup();
 
     renderWithRouter(EditorPage);
@@ -476,10 +548,8 @@ describe('rule list editing', () => {
     await user.click(screen.getByRole('button', { name: 'Добавить правило' }));
 
     expect(search).toHaveValue('');
-    expect(screen.getByRole('status')).toHaveTextContent('4 правила');
-    expect(
-      await screen.findByRole('button', { name: 'Правило 4, выход proxy, изменено в черновике' })
-    ).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('3 правила');
+    expect(await screen.findByRole('complementary', { name: 'Новое правило · место 4' })).toBeInTheDocument();
   });
 
   it('deleting after confirmation removes the node and closes the panel, does not touch neighbors', async () => {
@@ -536,7 +606,7 @@ describe('rule list editing', () => {
 
     expect(draftRules()).toEqual([EDIT_RULES[0], EDIT_RULES[2], EDIT_RULES[1]]);
     expect(within(panel).getByRole('heading', { name: 'Правило 2' })).toBeInTheDocument();
-    expect(within(panel).getByText('route.rules[1]')).toBeInTheDocument();
+    expect(within(panel).getByText('Правило 2', { selector: 'h2, h3' })).toBeInTheDocument();
     // The panel is not recreated: the open tab stayed, and the node text is the same.
     expect(within(panel).getByRole('tab', { name: 'JSON' })).toHaveAttribute('aria-selected', 'true');
     expect(within(panel).getByRole('textbox', { name: 'Правило 2 текстом' })).toHaveValue(
@@ -630,7 +700,7 @@ describe('rules screen on a narrow screen', () => {
 
     const sheet = await screen.findByRole('dialog', { name: 'Правило 1' });
 
-    expect(within(sheet).getByText('route.rules[0]')).toBeInTheDocument();
+    expect(within(sheet).getByText('Правило 1', { selector: 'h2, h3' })).toBeInTheDocument();
 
     await user.keyboard('{Escape}');
 
@@ -797,8 +867,6 @@ describe('rule sets of a rule from the panel', () => {
 
     // Escape closes the list, not the panel around it.
     expect(panel).toBeInTheDocument();
-
-    await user.click(within(panel).getByRole('button', { name: 'Сохранить в черновик' }));
 
     await waitFor(() => {
       expect(

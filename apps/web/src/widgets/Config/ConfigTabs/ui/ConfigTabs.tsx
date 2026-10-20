@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { sectionSize, type ConfigDocument } from '@entities/Config';
+import { useScrollEdges } from '@shared/lib/useScrollEdges';
 import { cn } from '@shared/lib/utils';
 import {
   Button,
@@ -16,7 +17,6 @@ import {
   TabsTrigger,
 } from '@shared/ui';
 
-import { useScrollEdges } from '../lib';
 import { CONFIG_TABS, CONFIG_TABS_FREQUENT, tabPath } from '../model';
 import { ConfigModeSwitch } from './ConfigModeSwitch';
 
@@ -80,8 +80,8 @@ export function ConfigTabs({ config }: { config: ConfigDocument | null }) {
   );
 
   return (
-    <div className='flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-border px-4 py-1.5 [view-transition-name:config-tabs] sm:px-6'>
-      <div className='flex max-w-full min-w-0 items-center gap-1'>
+    <div className='flex shrink-0 items-center gap-3 border-b border-border px-4 py-1.5 [view-transition-name:config-tabs] sm:px-6'>
+      <div className='flex min-w-0 flex-1 items-center gap-1'>
         <Tabs value={current} className='min-w-0'>
           <TabsList
             ref={list}
@@ -136,9 +136,7 @@ export function ConfigTabs({ config }: { config: ConfigDocument | null }) {
         </DropdownMenu>
       </div>
 
-      <div className='ml-auto'>
-        <ConfigModeSwitch />
-      </div>
+      <ConfigModeSwitch />
     </div>
   );
 }

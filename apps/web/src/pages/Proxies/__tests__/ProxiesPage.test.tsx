@@ -273,14 +273,14 @@ describe('proxies screen', () => {
   });
 
   // In the fixture the us group is nested in us-fallback: its tile is checked.
-  it('the tile of a nested group translates the type instead of showing it as a Clash API string', async () => {
+  it('the tile of a nested group is named a group and translates its type instead of the Clash API string', async () => {
     serveProxies();
 
     renderWithQuery(<ProxiesPage />);
 
-    const nested = await screen.findByRole('button', { name: 'us, URL-тест, 609 мс' });
+    const nested = await screen.findByRole('button', { name: 'us, группа · самый быстрый, 609 мс' });
 
-    expect(within(nested).getByText('URL-тест')).toBeInTheDocument();
+    expect(within(nested).getByText('группа · самый быстрый')).toBeInTheDocument();
     expect(within(nested).queryByText('URLTest')).not.toBeInTheDocument();
   });
 });

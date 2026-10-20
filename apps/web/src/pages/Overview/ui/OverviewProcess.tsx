@@ -18,7 +18,7 @@ import { OverviewTrend } from './OverviewTrend';
  * is low-powered, and how much the panel itself consumes is a question for the device owner, not
  * only for debugging.
  */
-export function OverviewProcess({ runtime }: { runtime: OverviewRuntime }) {
+export function OverviewProcess({ runtime, collapsible }: { runtime: OverviewRuntime; collapsible: boolean }) {
   const { t } = useTranslation('pages/Overview');
   const status = useDaemonStatus();
   const configPath = useConfigPath();
@@ -28,7 +28,7 @@ export function OverviewProcess({ runtime }: { runtime: OverviewRuntime }) {
   const stepSeconds = history.data?.stepSeconds ?? 0;
 
   return (
-    <OverviewSection title={t('process.title')}>
+    <OverviewSection title={t('process.title')} collapsible={collapsible}>
       <div className='grid items-start gap-4 xl:grid-cols-2'>
         <DaemonService
           process={system?.singbox}

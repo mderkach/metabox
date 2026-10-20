@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useConnectionStream } from '@entities/Connection';
 import { useRuntimeStream } from '@entities/Daemon';
+import { useNarrowScreen } from '@shared/lib/media';
 import { useLiveRegion } from '@shared/lib/useLiveRegion';
 import { LiveRegion } from '@shared/ui';
 import { PageHeader } from '@widgets/PageHeader';
@@ -25,6 +26,7 @@ export function OverviewPage() {
   // A measurement changes numbers in place: visible to the eye, but for a screen reader
   // the result is announced by one region per screen.
   const { message, announce } = useLiveRegion();
+  const narrow = useNarrowScreen();
 
   const onLatencyTested = useCallback(() => {
     announce(t('announce.latencyTested'));
@@ -41,8 +43,8 @@ export function OverviewPage() {
       <div className='flex min-h-0 grow flex-col gap-6 overflow-y-auto px-4 py-5 *:shrink-0 sm:px-6'>
         <OverviewTraffic runtime={runtime} />
         <OverviewConnections runtime={runtime} onLatencyTested={onLatencyTested} />
-        <OverviewDevice system={runtime.system} />
-        <OverviewProcess runtime={runtime} />
+        <OverviewDevice system={runtime.system} collapsible={narrow} />
+        <OverviewProcess runtime={runtime} collapsible={narrow} />
       </div>
     </>
   );

@@ -23,6 +23,7 @@ import { useConnectionsScreen, useWhileVisible } from '../lib';
 import { ConnectionActions } from './ConnectionActions';
 import { ConnectionExport } from './ConnectionExport';
 import { ConnectionFacets } from './ConnectionFacets';
+import { ConnectionsCloseExplained } from './ConnectionsCloseExplained';
 import { ConnectionSearch } from './ConnectionSearch';
 import { ConnectionsEmpty } from './ConnectionsEmpty';
 import { ConnectionsStreamStatus } from './ConnectionsStreamStatus';
@@ -226,6 +227,9 @@ export function ConnectionsPage() {
                 connectionId={explainedId}
                 host={explainedHost}
                 source={explainedSource}
+                actions={
+                  activeShown ? <ConnectionsCloseExplained connectionId={explainedId} host={explainedHost} /> : null
+                }
                 onClose={onCloseExplanation}
               />
             )}

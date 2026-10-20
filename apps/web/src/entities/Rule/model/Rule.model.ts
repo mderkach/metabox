@@ -29,17 +29,7 @@ export const RULE_TARGET = {
 
 export type RuleTargetKind = (typeof RULE_TARGET)[keyof typeof RULE_TARGET];
 
-/**
- * New rule node: without conditions, with one outbound. The fork rejects an
- * empty node (`missing conditions`), and `action: route` without an outbound
- * too (`missing outbound field`), while `sing-box check` accepts an
- * unconditional rule with an outbound. With an outbound that matches the
- * default route at the end of the list, such a rule does not change routing
- * until conditions are set for it.
- */
-export function newRuleNode(outbound: string): { outbound: string } {
-  return { outbound };
-}
+const REJECT = 'reject';
 
 export interface RuleRow {
   /** Position in the list: sing-box rules have no identifier of their own. */
@@ -67,6 +57,46 @@ export interface RuleRow {
   recognized: boolean;
   /** Conditions and target in one string: the table search looks through it. */
   searchText: string;
+}
+
+/** Position of a new rule in `route.rules`, from one, and its outbound. */
+export interface NewRulePlace {
+  index: number;
+  outbound: string;
+}
+
+/**
+ * Before the first unconditional rule that ends the list, to an outbound or
+ * `reject`: rules below it never fire. The new rule takes that rule's outbound,
+ * or `fallback` before a `reject`; otherwise it goes to the end with
+ * `fallback`. `null` means no outbound to give it. `total` counts nodes, not
+ * rows.
+ */
+export function newRulePlace(rules: readonly RuleRow[], total: number, fallback: string | null): NewRulePlace | null {
+  const catchAll = rules.find(
+    (rule) => rule.isCatchAll && (rule.targetKind === RULE_TARGET.Outbound || rule.target === REJECT)
+  );
+  const index = catchAll?.index ?? total + 1;
+  const outbound = catchAll?.targetKind === RULE_TARGET.Outbound ? catchAll.target : fallback;
+
+  return outbound === null ? null : { index, outbound };
+}
+
+/** The row of a rule that is not in the document yet: what the panel shows while it is being filled in. */
+export function toNewRuleRow(place: NewRulePlace): RuleRow {
+  return {
+    id: `new:${String(place.index)}`,
+    index: place.index,
+    matchers: [],
+    group: null,
+    invert: false,
+    target: place.outbound,
+    targetKind: RULE_TARGET.Outbound,
+    targetDetail: null,
+    isCatchAll: true,
+    recognized: true,
+    searchText: place.outbound,
+  };
 }
 
 /**

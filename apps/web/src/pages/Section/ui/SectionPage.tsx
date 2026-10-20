@@ -89,12 +89,26 @@ export function SectionNodes({ section }: { section: GenericSection }) {
     });
   }
 
+  // Nodes below the deleted one move up a place, and their open state with them.
+  function shiftExpanded(deleted: number) {
+    setExpanded(
+      (current) =>
+        new Set([...current].flatMap((index) => (index === deleted ? [] : [index > deleted ? index - 1 : index])))
+    );
+  }
+
   function toggleAdding() {
     setAdding((open) => !open);
   }
 
   function closeAdding() {
     setAdding(false);
+  }
+
+  // The new node is the last one: it opens so that its form is filled in next.
+  function openAdded() {
+    setAdding(false);
+    setNodeOpen(nodes.length, true);
   }
 
   const addButton = (
@@ -105,7 +119,7 @@ export function SectionNodes({ section }: { section: GenericSection }) {
   );
 
   const addForm = (
-    <ConfigNodeAddForm section={section} takenTags={takenTags} builtTags={builtTags} onAdded={closeAdding} />
+    <ConfigNodeAddForm section={section} takenTags={takenTags} builtTags={builtTags} onAdded={openAdded} />
   );
 
   return (
@@ -152,6 +166,9 @@ export function SectionNodes({ section }: { section: GenericSection }) {
                 node={node}
                 name={nodeName(shape.path, node, index)}
                 builtTags={builtTags}
+                onDeleted={() => {
+                  shiftExpanded(index);
+                }}
                 {...(nodes.length > 1 && {
                   open: expanded.has(index),
                   onOpenChange: (open: boolean) => {

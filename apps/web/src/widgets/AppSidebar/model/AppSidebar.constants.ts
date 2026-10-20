@@ -22,8 +22,8 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { key: 'section.overview', icon: Gauge, to: '/overview' },
   { key: 'section.config', icon: SlidersHorizontal, to: '/config', short: 'short.config' },
   { key: 'section.proxies', icon: Share2, to: '/proxies' },
-  { key: 'section.connections', icon: Activity, to: '/connections', short: 'short.connections' },
-  { key: 'section.devices', icon: MonitorSmartphone, to: '/devices', short: 'short.devices' },
+  { key: 'section.connections', icon: Activity, to: '/connections' },
+  { key: 'section.devices', icon: MonitorSmartphone, to: '/devices' },
   { key: 'section.logs', icon: ScrollText, to: '/logs', more: true },
   { key: 'section.diagnostics', icon: Stethoscope, to: '/diagnostics', more: true },
 ];

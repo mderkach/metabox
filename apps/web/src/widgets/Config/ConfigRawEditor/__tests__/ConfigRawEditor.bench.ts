@@ -2,8 +2,9 @@ import { expect, test } from 'vitest';
 
 import ROUTER_LIKE from '@entities/Config/__tests__/corpus/router-like.json?raw';
 import { firstJsoncError } from '@shared/lib/jsonc';
+import { toJsonTokens } from '@shared/ui/JsonTextarea.lib';
 
-import { findMatches, toJsonTokens } from '../lib';
+import { findMatches } from '../lib';
 
 /** A search query with many matches in the corpus file. */
 const QUERY = 'outbound';

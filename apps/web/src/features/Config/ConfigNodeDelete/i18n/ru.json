@@ -1,0 +1,34 @@
+{
+  "remove": "Удалить «{{name}}»",
+  "confirm": {
+    "title": "Удалить «{{name}}»?",
+    "description": "Узел уйдёт из черновика. Вернуть его можно только сбросом всего черновика.",
+    "referenced": "На него ссылаются:",
+    "broken": "Эти ссылки останутся, и sing-box не примет конфиг, пока их не исправить.",
+    "action": "Удалить"
+  },
+  "reference": {
+    "rules_one": "правило {{list}}",
+    "rules_few": "правила {{list}}",
+    "rules_many": "правила {{list}}",
+    "setting": "параметр {{path}}",
+    "node": "{{kind}} {{names}}",
+    "nodes": "{{kind}}: {{names}}",
+    "more_one": "{{names}} и ещё {{count}}",
+    "more_few": "{{names}} и ещё {{count}}",
+    "more_many": "{{names}} и ещё {{count}}"
+  },
+  "kinds": {
+    "ruleSet": "сеты правил",
+    "inbounds": "инбаунды",
+    "outbounds": "аутбаунды",
+    "providers": "подписки",
+    "endpoints": "эндпоинты",
+    "dns": "DNS-серверы",
+    "dnsRules": "DNS-правила",
+    "services": "сервисы",
+    "certificateProviders": "поставщики сертификатов",
+    "httpClients": "HTTP-клиенты",
+    "networkNamespaces": "сетевые пространства имён"
+  }
+}

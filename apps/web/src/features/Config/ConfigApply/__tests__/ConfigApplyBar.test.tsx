@@ -1,9 +1,10 @@
 import { finishApplyBarTransition } from '@test/applyBar';
-import { renderWithQuery } from '@test/renderWithQuery';
+import { renderWithRouter } from '@test/renderWithRouter';
 import { server } from '@test/server';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
+import type { FunctionComponent } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ConfigDocumentState } from '@entities/Config';
@@ -12,6 +13,15 @@ import { DAEMON_ENDPOINT } from '@entities/Daemon';
 import { DAEMON_STATUS_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture';
 
 import { ConfigApplyBar } from '../ui/ConfigApplyBar';
+
+/** The router renders its route after a tick: the screen is queried once it is there. */
+async function renderScreen(Component: FunctionComponent) {
+  const { router } = renderWithRouter(Component);
+
+  await act(async () => {
+    await router.load();
+  });
+}
 
 const APPLIED = '{\n  "log": { "level": "info" }\n}';
 const APPLIED_ETAG = `"${'e'.repeat(64)}"`;
@@ -52,6 +62,14 @@ function loadDocument(draft = true) {
   if (draft) ConfigDocumentState.getState().replace(DRAFT);
 }
 
+/** Apply goes through the summary: the bar button opens it, the dialog button sends. */
+async function applyFromSummary() {
+  await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
+  const summary = await screen.findByRole('dialog', { name: 'Что уйдёт на устройство' });
+
+  await userEvent.click(within(summary).getByRole('button', { name: 'Применить' }));
+}
+
 describe('ConfigApplyBar', () => {
   beforeEach(() => {
     ConfigDocumentState.getState().reset();
@@ -63,20 +81,24 @@ describe('ConfigApplyBar', () => {
     vi.restoreAllMocks();
   });
 
-  it('stays silent while there are no edits and no apply is running', () => {
+  it('stays silent while there are no edits and no apply is running', async () => {
     loadDocument(false);
-    renderWithQuery(<ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />);
+    await renderScreen(function Screen() {
+      return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+    });
 
     expect(screen.queryByRole('region', { name: 'Применение конфига' })).not.toBeInTheDocument();
   });
 
-  it('reports the space it covers while visible or sliding away, and zero after it leaves', () => {
+  it('reports the space it covers while visible or sliding away, and zero after it leaves', async () => {
     const barHeight = 64;
     const onSpaceChange = vi.fn<(space: number) => void>();
 
     vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(barHeight);
     loadDocument();
-    renderWithQuery(<ConfigApplyBar onSpaceChange={onSpaceChange} />);
+    await renderScreen(function Screen() {
+      return <ConfigApplyBar onSpaceChange={onSpaceChange} />;
+    });
 
     expect(onSpaceChange).toHaveBeenLastCalledWith(barHeight);
 
@@ -91,30 +113,77 @@ describe('ConfigApplyBar', () => {
     expect(onSpaceChange).toHaveBeenLastCalledWith(0);
   });
 
-  it('on a draft offers to apply and view the diff', () => {
+  it('on a draft applies through the summary of changes', async () => {
     loadDocument();
-    renderWithQuery(<ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />);
+    await renderScreen(function Screen() {
+      return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+    });
 
     expect(screen.getByRole('region', { name: 'Применение конфига' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Применить' })).toBeEnabled();
-    expect(screen.getByRole('button', { name: 'Посмотреть диф' })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
+
+    const summary = await screen.findByRole('dialog', { name: 'Что уйдёт на устройство' });
+
+    expect(within(summary).getByRole('button', { name: 'Применить' })).toBeEnabled();
+    expect(within(summary).getByRole('button', { name: 'Отмена' })).toBeInTheDocument();
   });
 
-  it('keeps the draft reset at the edge, apart from "Apply"', () => {
+  it('does not apply a draft whose text does not parse and names the line to fix', async () => {
+    ConfigDocumentState.getState().load(APPLIED, APPLIED_ETAG);
+    ConfigDocumentState.getState().replace('{\n  "log": {\n}');
+    await renderScreen(function Screen() {
+      return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+    });
+
+    expect(await screen.findByText(/ошибка в строке \d+/)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
+
+    expect(
+      within(await screen.findByRole('dialog', { name: 'Что уйдёт на устройство' })).getByRole('button', {
+        name: 'Применить',
+      })
+    ).toBeDisabled();
+  });
+
+  it('does not apply while metabox does not answer and says so', async () => {
+    server.use(http.get(DAEMON_ENDPOINT.status(), () => new HttpResponse(null, { status: 502 })));
     loadDocument();
-    renderWithQuery(<ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />);
+    await renderScreen(function Screen() {
+      return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+    });
+
+    expect(await screen.findByText('metabox не отвечает — применить сейчас нельзя.')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
+
+    expect(
+      within(await screen.findByRole('dialog', { name: 'Что уйдёт на устройство' })).getByRole('button', {
+        name: 'Применить',
+      })
+    ).toBeDisabled();
+  });
+
+  it('keeps the draft reset at the edge, apart from "Apply"', async () => {
+    loadDocument();
+    await renderScreen(function Screen() {
+      return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+    });
 
     const bar = screen.getByRole('region', { name: 'Применение конфига' });
     const names = within(bar)
       .getAllByRole('button')
       .map((button) => button.textContent);
 
-    expect(names).toEqual(['Отменить правки', 'Посмотреть диф', 'Применить']);
+    expect(names).toEqual(['Отменить правки', 'Применить']);
   });
 
   it('cancels edits only after confirmation: the draft is cleared, the file from the device is in place', async () => {
     loadDocument();
-    renderWithQuery(<ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />);
+    await renderScreen(function Screen() {
+      return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+    });
 
     await userEvent.click(screen.getByRole('button', { name: 'Отменить правки' }));
     expect(ConfigDocumentState.getState().draft).not.toBeNull();
@@ -128,9 +197,11 @@ describe('ConfigApplyBar', () => {
   it('warns that the config on the device changed since the draft, and lets it be discarded', async () => {
     loadDocument();
     ConfigDocumentState.getState().load(APPLIED.replace('info', 'warn'), APPLIED_ETAG);
-    renderWithQuery(<ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />);
+    await renderScreen(function Screen() {
+      return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+    });
 
-    expect(screen.getByText('Конфиг на устройстве изменился с момента черновика')).toBeInTheDocument();
+    expect(screen.getByText('Конфиг на роутере изменился после начала правок')).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: 'Отбросить черновик' }));
     await userEvent.click(screen.getByRole('button', { name: 'Сбросить черновик' }));
@@ -152,9 +223,11 @@ describe('ConfigApplyBar', () => {
     );
 
     loadDocument();
-    renderWithQuery(<ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />);
+    await renderScreen(function Screen() {
+      return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+    });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
+    await applyFromSummary();
 
     await waitFor(() => {
       expect(sent).toEqual([{ text: DRAFT, base: APPLIED_ETAG }]);
@@ -175,7 +248,9 @@ describe('ConfigApplyBar', () => {
 
     serveStatus(TRANSACTION);
     loadDocument();
-    renderWithQuery(<ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />);
+    await renderScreen(function Screen() {
+      return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+    });
 
     const confirm = await screen.findByRole('button', { name: 'Связь есть, оставить' });
 
@@ -196,7 +271,9 @@ describe('ConfigApplyBar', () => {
     loadDocument();
 
     vi.useFakeTimers();
-    renderWithQuery(<ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />);
+    await renderScreen(function Screen() {
+      return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+    });
 
     // The confirmation window arrives with a deferred render: `act` brings it along with
     // the countdown effect to the DOM while the fake clock stands still.
@@ -234,9 +311,11 @@ describe('ConfigApplyBar', () => {
     );
 
     loadDocument();
-    renderWithQuery(<ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />);
+    await renderScreen(function Screen() {
+      return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+    });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
+    await applyFromSummary();
 
     expect(await screen.findByText('FATAL decode config: unknown field')).toBeInTheDocument();
     expect(screen.getByText(/Код выхода: 1/)).toBeInTheDocument();
@@ -259,14 +338,16 @@ describe('ConfigApplyBar', () => {
     );
 
     loadDocument();
-    renderWithQuery(<ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />);
+    await renderScreen(function Screen() {
+      return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+    });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
+    await applyFromSummary();
 
     expect(
-      await screen.findByText('Служба sing-box запущена не из каталога конфига — на устройство ничего не записано')
+      await screen.findByText('Служба sing-box запущена из другого каталога — применение остановлено')
     ).toBeInTheDocument();
-    expect(screen.getByText(/от своего рабочего каталога \/usr\/share\/sing-box/)).toBeInTheDocument();
+    expect(screen.getByText(/служба ищет их в \/usr\/share\/sing-box/)).toBeInTheDocument();
     expect(
       screen.getByText(
         "uci set sing-box.main.workdir='/etc/sing-box' && uci commit sing-box && /etc/init.d/sing-box restart"
@@ -285,9 +366,11 @@ describe('ConfigApplyBar', () => {
     );
 
     loadDocument();
-    renderWithQuery(<ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />);
+    await renderScreen(function Screen() {
+      return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+    });
 
-    expect(await screen.findByText('metabox дописал в конфиг experimental.clash_api')).toBeInTheDocument();
+    expect(await screen.findByText('metabox добавил в конфиг experimental.clash_api')).toBeInTheDocument();
     expect(screen.getByText(/Служба перезапущена тем же применением/)).toBeInTheDocument();
   });
 
@@ -301,7 +384,9 @@ describe('ConfigApplyBar', () => {
     );
 
     loadDocument(false);
-    renderWithQuery(<ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />);
+    await renderScreen(function Screen() {
+      return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+    });
 
     expect(await screen.findByText('Подтверждения не было — предыдущий конфиг возвращён')).toBeInTheDocument();
 
@@ -327,7 +412,9 @@ describe('ConfigApplyBar', () => {
     );
 
     loadDocument(false);
-    renderWithQuery(<ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />);
+    await renderScreen(function Screen() {
+      return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+    });
 
     expect(await screen.findByText('Применение не прошло')).toBeInTheDocument();
     expect(screen.getByText(/откатывать было не на что/)).toBeInTheDocument();

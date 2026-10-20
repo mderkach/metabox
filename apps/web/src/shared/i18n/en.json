@@ -3,9 +3,6 @@
     "apply": {
       "confirm": {
         "done": "Link confirmed, the config stays"
-      },
-      "start": {
-        "accepted": "Config accepted, applying"
       }
     },
     "connection": {
@@ -31,8 +28,7 @@
       },
       "route": {
         "failed": "Could not change the device interception",
-        "confirmed": "Connection confirmed, the interception list stays",
-        "accepted": "Interception list accepted, sing-box is restarting"
+        "confirmed": "Connection confirmed, the setting stays"
       }
     },
     "log": {
@@ -89,8 +85,7 @@
     "invalidCharacter": "invalid character"
   },
   "nodeEditor": {
-    "parseFailed": "JSON not parsed",
-    "submit": "Save to draft"
+    "notWritten": "Line {{line}}: {{reason}}. Not written to the draft"
   },
   "schema": {
     "unknownFields": "the panel does not know the fields: {{fields}}",
@@ -202,11 +197,12 @@
     "direct": "direct",
     "block": "blocked",
     "dns": "DNS hijack",
-    "other": "other"
+    "other": "other",
+    "via": "via {{outbound}}"
   },
   "rule": {
     "unconditional": "no conditions",
-    "uncovered": "not covered by the UI",
+    "uncovered": "unknown to the panel",
     "conditions": "Conditions"
   },
   "chart": {
@@ -216,7 +212,9 @@
   "soon": "soon",
   "action": {
     "cancel": "Cancel",
-    "closePanel": "Close the panel"
+    "closePanel": "Close the panel",
+    "close": "Close",
+    "done": "Done"
   },
   "section": {
     "overview": "Overview",
@@ -249,5 +247,64 @@
   },
   "liveRegion": {
     "label": "Action result"
+  },
+  "matcher": {
+    "inbound": "Inbound",
+    "ip_version": "IP version",
+    "network": "Network",
+    "auth_user": "Inbound user",
+    "protocol": "Protocol",
+    "client": "Client",
+    "domain": "Domain",
+    "domain_suffix": "Domain and subdomains",
+    "domain_keyword": "Word in domain",
+    "domain_regex": "Domain pattern",
+    "geosite": "Geosite",
+    "source_geoip": "Source country",
+    "geoip": "Destination country",
+    "source_ip_cidr": "Source address",
+    "source_ip_is_private": "Source in local network",
+    "ip_cidr": "IP or subnet",
+    "ip_is_private": "Address in local network",
+    "source_port": "Source port",
+    "source_port_range": "Source ports",
+    "port": "Port",
+    "port_range": "Port range",
+    "process_name": "Process",
+    "process_path": "Process path",
+    "package_name": "App",
+    "user": "System user",
+    "clash_mode": "Clash mode",
+    "wifi_ssid": "Wi-Fi network",
+    "wifi_bssid": "Wi-Fi access point",
+    "source_mac_address": "Source MAC",
+    "source_hostname": "Device name",
+    "rule_set": "Rule set"
+  },
+  "ruleAction": {
+    "reject": "reject",
+    "hijack-dns": "hijack DNS",
+    "sniff": "detect protocol",
+    "resolve": "resolve address",
+    "route-options": "route options"
+  },
+  "nodeKind": {
+    "ruleSet": "rule set",
+    "inbounds": "inbound",
+    "outbounds": "outbound",
+    "providers": "subscription",
+    "endpoints": "endpoint",
+    "dns": "DNS server",
+    "dnsRules": "DNS rule",
+    "services": "service",
+    "certificateProviders": "certificate provider",
+    "httpClients": "HTTP client",
+    "networkNamespaces": "network namespace"
+  },
+  "groupType": {
+    "selector": "manual choice",
+    "urltest": "fastest",
+    "fallback": "fallback",
+    "loadBalance": "load balance"
   }
 }

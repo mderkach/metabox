@@ -1,3 +1,5 @@
+import { http, HttpResponse } from 'msw';
+
 import { createAuthHandlers } from '@entities/Auth/__tests__/Auth.handlers';
 import { CONFIG_FIXTURE } from '@entities/Config/__tests__/Config.fixture';
 import { configHandlers } from '@entities/Config/__tests__/Config.handlers';
@@ -7,10 +9,12 @@ import {
   makeConnectionsSnapshot,
 } from '@entities/Connection/__tests__/Connection.fixture';
 import { connectionHandlers } from '@entities/Connection/__tests__/Connection.handlers';
+import { DAEMON_ENDPOINT } from '@entities/Daemon';
 import {
   MEMORY_SAMPLES,
   SERVICE_RUNNING_FIXTURE,
   SYSTEM_FIXTURE,
+  TRAFFIC_HISTORY_FIXTURE,
   TRAFFIC_SAMPLE,
 } from '@entities/Daemon/__tests__/Daemon.fixture';
 import { createStatefulDaemonHandlers } from '@entities/Daemon/__tests__/Daemon.handlers';
@@ -60,6 +64,14 @@ export function createMissingHandlers(connections = 0) {
   return [
     ...createAuthHandlers(),
     ...configHandlers,
+    // The daemon minute of open connections matches the live snapshot: with the
+    // test fixture's 150 the chart would drop where the stream takes over.
+    http.get(DAEMON_ENDPOINT.history(), () =>
+      HttpResponse.json({
+        ...TRAFFIC_HISTORY_FIXTURE,
+        connections: TRAFFIC_HISTORY_FIXTURE.connections.map(() => snapshot.connections.length),
+      })
+    ),
     ...createStatefulDaemonHandlers(dataplane.status),
     ...dataplane.handlers,
     ...createStatefulProxyHandlers(),

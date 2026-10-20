@@ -1,5 +1,5 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { useEffect, useMemo, useRef, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { RuleRow as RuleRowModel } from '@entities/Rule';
@@ -73,26 +73,55 @@ export function RuleTable({
   const { t } = useTranslation('widgets/Rule/RuleTable');
   const counts = hits?.state === RULE_HITS_STATE.Counted ? hits.counts : null;
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [headerHeight, setHeaderHeight] = useState(0);
+  const listed = rules.length > 0;
+
+  // The sticky header scrolls together with the rows: without its height the
+  // virtualizer puts a row under it at the top and short of the edge at the bottom.
+  useEffect(
+    function measureHeader() {
+      const header = scrollRef.current?.firstElementChild;
+
+      if (!listed || !(header instanceof HTMLElement)) {
+        return;
+      }
+
+      const observer = new ResizeObserver(() => {
+        setHeaderHeight(header.offsetHeight);
+      });
+
+      observer.observe(header);
+
+      return function stopMeasuringHeader() {
+        observer.disconnect();
+      };
+    },
+    [listed]
+  );
 
   const virtualizer = useVirtualizer({
     count: rules.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => ROW_ESTIMATE,
     overscan: OVERSCAN,
+    scrollMargin: headerHeight,
+    scrollPaddingStart: headerHeight,
   });
 
   const selectedPosition = useMemo(() => rules.findIndex((rule) => rule.id === selectedId), [rules, selectedId]);
 
-  // The selected row may end up outside the window: a new rule goes to the end of
-  // the list, a reordered one leaves its place. `auto` does not move a visible
-  // row, so selecting with the mouse does not jerk the list.
+  const viewportHeight = virtualizer.scrollRect?.height ?? 0;
+
+  // The selected row may be outside the window: a new rule at the end, a moved
+  // one, a link to a rule far down; the window also shrinks while the blocks
+  // above it load. `auto` leaves a visible row where it is.
   useEffect(
     function revealSelected() {
       if (selectedPosition >= 0) {
         virtualizer.scrollToIndex(selectedPosition, { align: 'auto' });
       }
     },
-    [selectedPosition, virtualizer]
+    [selectedPosition, viewportHeight, virtualizer]
   );
 
   return (
@@ -128,7 +157,7 @@ export function RuleTable({
                   ref={virtualizer.measureElement}
                   data-index={item.index}
                   className='absolute inset-x-0 top-0'
-                  style={{ transform: `translateY(${String(item.start)}px)` }}
+                  style={{ transform: `translateY(${String(item.start - headerHeight)}px)` }}
                 >
                   <RuleRow
                     rule={rule}

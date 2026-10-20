@@ -45,7 +45,7 @@ describe('config as text', () => {
 
     renderWithRouter(RawConfigPage);
 
-    expect(await screen.findByText('Схема не приняла этот конфиг')).toBeInTheDocument();
+    expect(await screen.findByText('Панель не разобрала этот конфиг')).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Конфиг sing-box текстом' })).toHaveValue(UNPARSED_CONFIG);
   });
 

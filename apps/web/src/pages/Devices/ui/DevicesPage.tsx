@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useDevices } from '@entities/Device';
-import { DeviceRouteBar, useDeviceRoute } from '@features/Device/DeviceRoute';
+import { useDeviceRoute } from '@features/Device/DeviceRoute';
 import { useLiveRegion } from '@shared/lib/useLiveRegion';
 import { cn } from '@shared/lib/utils';
 import {
@@ -60,8 +60,6 @@ export function DevicesPage() {
       <LiveRegion message={message} />
 
       <div className='flex min-h-0 grow flex-col gap-5 overflow-y-auto px-4 py-5 *:shrink-0 sm:px-6'>
-        <DeviceRouteBar transaction={route.transaction} isConfirming={route.isConfirming} onConfirm={route.confirm} />
-
         {devices.isPending && <SkeletonRows className={SURFACE} />}
 
         {devices.isLoadingError && <QueryFailure messageKey='source.devices' query={devices} />}

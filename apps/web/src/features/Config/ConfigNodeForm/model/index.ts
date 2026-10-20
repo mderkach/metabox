@@ -16,6 +16,7 @@ export {
   unpackList,
 } from './ConfigNodeForm.model';
 export type { ConfigNodeFormModel } from './ConfigNodeForm.model';
+export { splitFieldsSinceOpen, writeNodeForm } from './ConfigNodeForm.draft';
 export {
   hasNodeOverride,
   NODE_OVERRIDE_ERROR,

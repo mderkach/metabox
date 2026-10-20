@@ -1,0 +1,32 @@
+{
+  "remove": "Delete “{{name}}”",
+  "confirm": {
+    "title": "Delete “{{name}}”?",
+    "description": "The node leaves the draft. It can be brought back only by discarding the whole draft.",
+    "referenced": "It is referenced by:",
+    "broken": "These references stay, and sing-box will not accept the config until they are fixed.",
+    "action": "Delete"
+  },
+  "reference": {
+    "rules_one": "rule {{list}}",
+    "rules_other": "rules {{list}}",
+    "setting": "parameter {{path}}",
+    "node": "{{kind}} {{names}}",
+    "nodes": "{{kind}}: {{names}}",
+    "more_one": "{{names}} and {{count}} more",
+    "more_other": "{{names}} and {{count}} more"
+  },
+  "kinds": {
+    "ruleSet": "rule sets",
+    "inbounds": "inbounds",
+    "outbounds": "outbounds",
+    "providers": "subscriptions",
+    "endpoints": "endpoints",
+    "dns": "DNS servers",
+    "dnsRules": "DNS rules",
+    "services": "services",
+    "certificateProviders": "certificate providers",
+    "httpClients": "HTTP clients",
+    "networkNamespaces": "network namespaces"
+  }
+}

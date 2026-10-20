@@ -31,9 +31,29 @@ describe('AppSidebarBottomNav', () => {
     expect(within(nav).getByRole('link', { name: 'Обзор' })).toBeInTheDocument();
     // The full "Конфигурация" does not fit in a phone column.
     expect(within(nav).getByRole('link', { name: 'Конфиг' })).toHaveAttribute('href', '/config');
-    // "Соединения" and "Устройства" are wider than the column at 375px and would be truncated.
-    expect(within(nav).getByRole('link', { name: 'Связи' })).toHaveAttribute('href', '/connections');
-    expect(within(nav).getByRole('link', { name: 'Клиенты' })).toHaveAttribute('href', '/devices');
+    expect(within(nav).getByRole('link', { name: 'Соединения' })).toHaveAttribute('href', '/connections');
+    expect(within(nav).getByRole('link', { name: 'Устройства' })).toHaveAttribute('href', '/devices');
+  });
+
+  it('marks a stopped sing-box on the "More" item, not only inside its sheet', async () => {
+    server.use(
+      http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json({ ...SERVICE_RUNNING_FIXTURE, status: 'stopped' }))
+    );
+    renderWithRouter(AppSidebarBottomNav);
+
+    const nav = await screen.findByRole('navigation', { name: 'Разделы панели' });
+
+    expect(await within(nav).findByRole('button', { name: 'Ещё, sing-box остановлен' })).toBeInTheDocument();
+  });
+
+  it('leaves the "More" item unmarked while sing-box runs', async () => {
+    renderWithRouter(AppSidebarBottomNav);
+
+    const nav = await screen.findByRole('navigation', { name: 'Разделы панели' });
+
+    await waitFor(() => {
+      expect(within(nav).getByRole('button', { name: 'Ещё' })).toBeInTheDocument();
+    });
   });
 
   it('marks one section as current, even when the address is nested in it', async () => {

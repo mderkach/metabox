@@ -19,12 +19,11 @@
     "label": "More",
     "title": "Status and settings",
     "close": "Close",
-    "sections": "Sections"
+    "sections": "Sections",
+    "withStatus": "More, {{status}}"
   },
   "short": {
-    "config": "Config",
-    "connections": "Conns",
-    "devices": "Devices"
+    "config": "Config"
   },
   "drift": {
     "newer": "forms lag behind sing-box",

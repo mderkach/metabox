@@ -19,12 +19,11 @@
     "label": "Ещё",
     "title": "Состояние и настройки",
     "close": "Закрыть",
-    "sections": "Разделы"
+    "sections": "Разделы",
+    "withStatus": "Ещё, {{status}}"
   },
   "short": {
-    "config": "Конфиг",
-    "connections": "Связи",
-    "devices": "Клиенты"
+    "config": "Конфиг"
   },
   "drift": {
     "newer": "формы отстают от sing-box",
