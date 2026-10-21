@@ -109,7 +109,18 @@ func TestSplitTLSServesBothProtocolsOnOnePort(t *testing.T) {
 }
 
 func TestSplitTLSClosesBothSidesWithTheServer(t *testing.T) {
-	addr, _, srv := splitServer(t, http.NotFoundHandler())
+	addr, client, srv := splitServer(t, http.NotFoundHandler())
+
+	// http.Server.Close closes only the listeners Serve has registered; a request on each
+	// side waits for both Serve calls, otherwise the listener closes later, in Serve.
+	for _, url := range []string{"http://" + addr + "/", "https://" + addr + "/"} {
+		resp, err := client.Get(url)
+		if err != nil {
+			t.Fatalf("%s: %v", url, err)
+		}
+
+		_ = resp.Body.Close()
+	}
 
 	if err := srv.Close(); err != nil {
 		t.Fatalf("close: %v", err)
