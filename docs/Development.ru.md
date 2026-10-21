@@ -149,6 +149,8 @@ apk add metaboxd
 
 Новый релиз после этого ставится командой `apk upgrade metaboxd`. Скачанный отдельно пакет по-прежнему ставится по пути: `apk add /tmp/metaboxd-<версия>.apk`.
 
+На чистом роутере эти шаги делает [`install.sh`](../install.sh), а перед ними ставит пакет форка ([ADR-0058](./adr/ADR-0058-install-on-a-clean-router-with-a-script-on-top-of-the-apk-repository.md)). Релиз прикладывает скрипт к себе, а workflow apk-repo кладёт копию из самого нового релиза по адресу `https://mderkach.github.io/metabox/install.sh`. Версия форка и его sha256 записаны в скрипте: подъём форка меняет их вместе с `SINGBOX_VERSION` в `.devcontainer/target/Dockerfile`. sha256 — это `digest` ассета релиза: `gh api repos/shtorm-7/sing-box-extended/releases/tags/v<версия> --jq '.assets[] | select(.name | endswith("openwrt_aarch64_cortex-a53.apk")) | .digest'`.
+
 ## Переменные сборки
 
 Версия выпуска — файл [`VERSION`](../VERSION) в semver. Из неё `make` выводит версию бинаря и версию пакета apk: `0.1.0-rc.2` становится `0.1.0_rc2-r0` ([ADR-0050](./adr/ADR-0050-version-releases-by-semver-and-derive-the-apk-version.md)).
