@@ -101,7 +101,12 @@ apk add --allow-untrusted /tmp/sing-box-extended_*.apk /tmp/metaboxd.apk
 
 ## Релиз
 
-Релиз — тег `v*` на коммите из `main`. Workflow [`release`](../.github/workflows/release.yml) проверяет, что тег равен `v` плюс [`VERSION`](../VERSION) и что `apps/web/package.json` объявляет ту же версию, собирает пакет под `aarch64_cortex-a53` с подписью ключом из секрета `APK_SIGN_KEY`, сверяет подпись с `keys/metabox-release.pem` и публикует GitHub Release с пакетом, его sha256 и публичным ключом. Версия с суффиксом пре-релиза публикуется как prerelease.
+Релиз — тег `v*` на коммите из `main`. Workflow [`release`](../.github/workflows/release.yml) проверяет, что тег равен `v` плюс [`VERSION`](../VERSION) и что `apps/web/package.json` объявляет ту же версию, собирает пакет под `aarch64_cortex-a53` с подписью ключом из секрета `APK_SIGN_KEY`, сверяет подпись с `keys/metabox-release.pem` и публикует GitHub Release с пакетом, его sha256 и публичным ключом. Версия с суффиксом пре-релиза публикуется как prerelease. Затем workflow [`apk repository`](../.github/workflows/apk-repo.yml) пересобирает репозиторий пакетов из всех релизов и выкладывает его на GitHub Pages; его же можно запустить руками со вкладки Actions, так что релиз с упавшей выкладкой переиздаётся без нового тега. Pages владелец включает один раз с источником «GitHub Actions», а окружению `github-pages`, которое при этом создаётся, добавляет правило для тегов `v*`: релизная джоба деплоит с тега.
+
+```sh
+gh api -X POST repos/mderkach/metabox/pages -f build_type=workflow
+gh api -X POST repos/mderkach/metabox/environments/github-pages/deployment-branch-policies -f name='v*' -f type=tag
+```
 
 Шаги: PR с правкой `VERSION` и `apps/web/package.json`; после мержа — тег на коммит мержа:
 
@@ -132,11 +137,17 @@ gh secret set APK_SIGN_KEY < ~/.config/metabox/release.key
 wget -O /etc/apk/keys/metabox-release.pem https://raw.githubusercontent.com/mderkach/metabox/main/keys/metabox-release.pem
 ```
 
-После этого пакет релиза ставится и обновляется без `--allow-untrusted`, а пакет, изменённый по дороге или подписанный другим ключом, apk отвергает. `sing-box-extended` должен уже стоять: он этим ключом не подписан.
+После этого пакет релиза ставится и обновляется без `--allow-untrusted`, а пакет, изменённый по дороге или подписанный другим ключом, apk отвергает. `sing-box-extended` должен уже стоять: он этим ключом не подписан и в репозитории его нет.
+
+Пакеты берутся из репозитория на GitHub Pages. Его индекс подписан тем же ключом, каналов два: в `testing` лежат все релизы, в `stable` — только версии без суффикса пре-релиза, поэтому `stable` пуст до первой такой версии. Канал подключается одной строкой в `/etc/apk/repositories.d/`:
 
 ```sh
-apk add /tmp/metaboxd-<версия>.apk
+echo https://mderkach.github.io/metabox/apk/testing/packages.adb > /etc/apk/repositories.d/metabox.list
+apk update
+apk add metaboxd
 ```
+
+Новый релиз после этого ставится командой `apk upgrade metaboxd`. Скачанный отдельно пакет по-прежнему ставится по пути: `apk add /tmp/metaboxd-<версия>.apk`.
 
 ## Переменные сборки
 

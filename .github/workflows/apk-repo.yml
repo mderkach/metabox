@@ -1,0 +1,73 @@
+name: apk repository
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+# One deploy at a time: two releases in a row must not race for the site.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    env:
+      PUBLIC_KEY: keys/metabox-release.pem
+    steps:
+      - uses: actions/checkout@v5
+
+      # The site is rebuilt from the releases every time, so the releases stay the only
+      # source of packages and a rerun gives the same site.
+      - name: Collect release packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -o pipefail
+          mkdir -p site/apk/stable site/apk/testing
+          gh release list --limit 1000 --json tagName,isPrerelease,isDraft \
+            --jq '.[] | select(.isDraft | not) | "\(.tagName) \(.isPrerelease)"' |
+          while read -r tag prerelease; do
+            gh release download "$tag" --pattern '*.apk' --dir site/apk/testing < /dev/null
+            [ "$prerelease" = true ] || gh release download "$tag" --pattern '*.apk' --dir site/apk/stable < /dev/null
+          done
+          ls -l site/apk/stable site/apk/testing
+          # A listing that came back empty would deploy a site without packages.
+          ls site/apk/testing/*.apk > /dev/null
+
+      # The key is on disk only for this step. mkndx refuses a package whose signature
+      # does not match the committed public key, and the index is checked against the
+      # same key: a secret that does not match it would give an index the router rejects.
+      - name: Signed index
+        env:
+          APK_SIGN_KEY_PEM: ${{ secrets.APK_SIGN_KEY }}
+        run: |
+          [ -n "$APK_SIGN_KEY_PEM" ] || { echo "::error::secret APK_SIGN_KEY is not set"; exit 1; }
+          key="$RUNNER_TEMP/apk-sign-key.pem"
+          trap 'rm -f "$key"' EXIT
+          (umask 077 && printf '%s\n' "$APK_SIGN_KEY_PEM" > "$key")
+          docker run --rm -v "$PWD:/w" -v "$key:/run/apk-sign-key.pem:ro" -w /w alpine:3.23 sh -euc '
+            mkdir /keys && cp "$1" /keys/
+            for channel in stable testing; do
+              cd "/w/site/apk/$channel"
+              set --
+              for f in *.apk; do [ -e "$f" ] && set -- "$@" "$f"; done
+              apk mkndx --keys-dir /keys --sign-key /run/apk-sign-key.pem \
+                --description "metabox $channel" --output packages.adb "$@"
+              apk verify --keys-dir /keys packages.adb
+            done
+          ' sh "$PUBLIC_KEY"
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+      - id: deploy
+        uses: actions/deploy-pages@v5

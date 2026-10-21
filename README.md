@@ -84,7 +84,16 @@ The package also ships its own sing-box service and LAN interception (nftables, 
 
 ## Installation
 
-Prebuilt packages are not published yet. To build the package from source and install it on the router, see [`docs/Development.md`](./docs/Development.md).
+Releases are published as a signed apk repository. Put the project key on the router once, connect the repository and install the package. Until the first version without a pre-release suffix the packages are in the `testing` channel; `stable` is the same address with `stable` instead of `testing`.
+
+```sh
+wget -O /etc/apk/keys/metabox-release.pem https://raw.githubusercontent.com/mderkach/metabox/main/keys/metabox-release.pem
+echo https://mderkach.github.io/metabox/apk/testing/packages.adb > /etc/apk/repositories.d/metabox.list
+apk update
+apk add metaboxd
+```
+
+The package needs `sing-box-extended` installed first: it is not in the repository, take it from the [fork releases](https://github.com/shtorm-7/sing-box-extended/releases). Updates are `apk update && apk upgrade metaboxd`. Building the package from source and installing a single file are in [`docs/Development.md`](./docs/Development.md).
 
 The package depends on `sing-box-extended`, which brings its own `sing-box` service. Disable it: sing-box is started by the metabox service.
 
