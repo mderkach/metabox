@@ -146,6 +146,13 @@ type Options struct {
 	// MCP serves agents at /mcp behind its own token. nil means there is no MCP: the
 	// endpoint answers as an unknown path and there are no settings handlers.
 	MCP MCP
+	// HTTPS reports that the listeners serve TLS: a plain request is redirected to the
+	// same address over https, and the session cookie carries Secure. The health check
+	// and the root certificate stay reachable over plain http.
+	HTTPS bool
+	// CA returns the panel root certificate in PEM, served at /metabox-ca.crt for the
+	// owner to install on their devices. nil means there is no file to serve.
+	CA func() []byte
 	// ConfigPath is the path of the file the daemon owns. The panel shows it
 	// as a fact about the device, and it is set by the flags `-config-dir` and
 	// `-config-name`: without this field the interface would show the default
@@ -218,6 +225,8 @@ type Server struct {
 	diag           Diagnoser
 	auth           Guard
 	mcp            MCP
+	https          bool
+	ca             func() []byte
 	configPath     string
 	handler        http.Handler
 }
@@ -249,6 +258,8 @@ func NewServer(applier Applier, reader ConfigReader, log *slog.Logger, opts Opti
 		diag:           opts.Diag,
 		auth:           opts.Auth,
 		mcp:            opts.MCP,
+		https:          opts.HTTPS,
+		ca:             opts.CA,
 		configPath:     opts.ConfigPath,
 	}
 	s.handler = s.routes()
@@ -265,6 +276,11 @@ func (s *Server) routes() http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /healthz", s.handleHealth)
+
+	if s.ca != nil {
+		mux.HandleFunc("GET "+caPath, s.handleCA)
+	}
+
 	mux.HandleFunc("GET /api/status", s.handleStatus)
 	mux.HandleFunc("GET /api/config", s.handleConfig)
 	mux.HandleFunc("GET /api/config/rule-sets", s.handleConfigLists)

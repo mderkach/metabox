@@ -109,7 +109,7 @@ With a password a request without a live session gets 401 `unauthorized`. Exempt
 
 A wrong password is 403, not 401: the panel answers 401 by showing the login screen, and the refusal must stay in the form where the password was typed. 429 carries `Retry-After` in seconds. Every `/api/auth` answer carries `Cache-Control: no-store`: a cached login state or `Set-Cookie` would outlive the session.
 
-The session is the `metabox_session` cookie with `HttpOnly`, `SameSite=Strict`, `Path=/` and without `Secure`: the panel is served over http, and a browser drops a `Secure` cookie on such a page. `EventSource` sends it like any same-origin request. The session is checked when the request starts: a stream opened before logout runs until it closes.
+The session is the `metabox_session` cookie with `HttpOnly`, `SameSite=Strict`, `Path=/`, and `Secure` when the request came over TLS: with HTTPS off the panel is served over plain http, and a browser drops a `Secure` cookie on such a page. `EventSource` sends it like any same-origin request. The session is checked when the request starts: a stream opened before logout runs until it closes.
 
 ## MCP
 
@@ -141,6 +141,14 @@ We do not set `WriteTimeout` globally: it cuts long responses, the Clash API pro
 We listen on the owner's networks and only on them. Addresses come from the `-listen` flag as a comma-separated list, and each one gets its own listener of one `http.Server`; `0.0.0.0` does not appear in the default value. Which networks these are is decided by the device: the package's init script takes the address of each network from `listen_interface` in `/etc/config/metabox` and restarts the daemon on a trigger from any of them.
 
 An address that failed to open does not stop the daemon: router interfaces come up in random order, and the guest network may appear later than the panel. Such a failure goes to the log as a warning, and the daemon works on the remaining addresses. A failure on all addresses is a startup error: there is nothing to listen on.
+
+## HTTPS
+
+The panel is served over TLS by default ([ADR-0056](../../../../docs/adr/ADR-0056-serve-the-panel-over-https-with-a-root-the-daemon-issues.md)); the `-https` flag turns it off, and `-https-cert` with `-https-key` serve a pair the owner already has, read once at start, with no root of the daemon's own and no root file. Otherwise certificates are owned by `internal/cert`: a root issued once and kept in the `tls/` subdirectory of the service directory, and a server certificate under it for the listen addresses, `localhost` and the `-allowed-origin` host. The server certificate is reissued on a TLS handshake when less than thirty days remain, and at start when the addresses changed; the root is reissued only when it is missing, expired or cannot cover a new address, since a new root means trusting the panel again on every device. The router has no real-time clock, so a certificate is never dated before `clockFloor` in that package, and expiry is judged only by a clock past it.
+
+One port serves both protocols: `SplitTLS` sorts each connection by its first byte and hands TLS to one listener and plain http to another, both served by the same `http.Server`. `redirectToTLS` sends a plain request to `https://` on the same `Host` with 308; `/healthz` and `/metabox-ca.crt` stay on plain http, because scripts poll the first without a trust store and the second is what builds that trust store. The middleware goes after `checkHost`, so a foreign name is refused rather than redirected.
+
+`GET /metabox-ca.crt` returns the root in PEM as `application/x-x509-ca-cert`; it is outside `/api/`, so no session is needed. Only HTTP/1.1 is offered in ALPN: the streams and the Clash API proxy are written for it, and HTTP/2 is a separate change.
 
 ## Shutdown
 
@@ -174,11 +182,11 @@ Serving rules:
 - an unknown path under `/api/` is a 404 with an error body, not `index.html`: otherwise the frontend gets HTML instead of JSON and shows nonsense;
 - other unknown paths get `index.html` with `Cache-Control: no-cache`, routing is client-side;
 - files with a hash in the name get `Cache-Control: public, max-age=31536000, immutable`;
-- compression is not computed on the fly: the panel build puts `.br` and `.gz` next to each file, the daemon picks the variant by `Accept-Encoding` and sets `Vary: Accept-Encoding`. Compressing the same file on every request costs router CPU time, and the weaker the hardware, the more often it is spent. Both formats, not only brotli: the panel is served over plain http, and the browser does not announce `br` on every connection;
+- compression is not computed on the fly: the panel build puts `.br` and `.gz` next to each file, the daemon picks the variant by `Accept-Encoding` and sets `Vary: Accept-Encoding`. Compressing the same file on every request costs router CPU time, and the weaker the hardware, the more often it is spent. Both formats, not only brotli: with HTTPS off the panel is served over plain http, and the browser does not announce `br` on such a connection;
 - the content type of a compressed variant comes from the original name: by `.br` it would be detected as a byte stream;
 - a `.br` or `.gz` itself is not an address: a direct request gets the shell, otherwise the client would see uncompressed bytes.
 
-The daemon does not run HTTP/2. In browsers it works only over TLS (no browser supports cleartext h2c, `Protocols.SetUnencryptedHTTP2`), and the panel is served over http in the local network. Until the panel has TLS, there is no reason to enable it.
+The daemon does not run HTTP/2: the TLS config offers only `http/1.1` in ALPN. Enabling it is a separate change with the streams and the Clash API proxy checked under it.
 
 ## Clash API proxy
 

@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -194,5 +195,46 @@ func TestStatusRecorderUnwraps(t *testing.T) {
 	}
 	if !inner.Flushed {
 		t.Error("Flush did not reach the underlying writer: streaming responses would lose buffering")
+	}
+}
+
+func TestRedirectToTLS(t *testing.T) {
+	served := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
+
+	tests := []struct {
+		name     string
+		enabled  bool
+		tls      bool
+		target   string
+		want     int
+		location string
+	}{
+		{"plain request is sent to https", true, false, "/api/status?x=1", http.StatusPermanentRedirect, "https://192.168.1.1:8088/api/status?x=1"},
+		{"tls request passes", true, true, "/api/status", http.StatusNoContent, ""},
+		{"health check stays on plain http", true, false, "/healthz", http.StatusNoContent, ""},
+		{"root certificate stays on plain http", true, false, "/metabox-ca.crt", http.StatusNoContent, ""},
+		{"disabled passes everything", false, false, "/api/status", http.StatusNoContent, ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "http://192.168.1.1:8088"+tt.target, nil)
+			if tt.tls {
+				req.TLS = &tls.ConnectionState{}
+			}
+
+			rec := httptest.NewRecorder()
+			redirectToTLS(tt.enabled, served).ServeHTTP(rec, req)
+
+			if rec.Code != tt.want {
+				t.Fatalf("status %d, want %d", rec.Code, tt.want)
+			}
+
+			if got := rec.Header().Get("Location"); got != tt.location {
+				t.Errorf("Location %q, want %q", got, tt.location)
+			}
+		})
 	}
 }

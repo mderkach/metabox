@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/url"
 	"strings"
 )
 
@@ -21,6 +22,28 @@ func Addrs(spec string) []string {
 	}
 
 	return addrs
+}
+
+// Hosts returns the host of each listen address and the host of the allowed origin:
+// the names the panel certificate must cover. An address without a port is taken
+// whole; the allowed origin contributes nothing when it does not parse.
+func Hosts(addrs []string, allowedOrigin string) []string {
+	hosts := make([]string, 0, len(addrs)+1)
+
+	for _, addr := range addrs {
+		host, _, err := net.SplitHostPort(addr)
+		if err != nil {
+			host = addr
+		}
+
+		hosts = append(hosts, host)
+	}
+
+	if u, err := url.Parse(allowedOrigin); err == nil && u.Hostname() != "" {
+		hosts = append(hosts, u.Hostname())
+	}
+
+	return hosts
 }
 
 // Listen opens listeners on each address.

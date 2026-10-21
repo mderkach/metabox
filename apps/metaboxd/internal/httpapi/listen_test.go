@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"net"
+	"slices"
 	"testing"
 )
 
@@ -91,4 +92,17 @@ func freePort(t *testing.T) string {
 	}
 
 	return port
+}
+
+func TestHosts(t *testing.T) {
+	got := Hosts([]string{"192.168.1.1:8088", "[fd00::1]:8088", "10.0.0.1"}, "http://router.lan:5173")
+	want := []string{"192.168.1.1", "fd00::1", "10.0.0.1", "router.lan"}
+
+	if !slices.Equal(got, want) {
+		t.Errorf("hosts %v, want %v", got, want)
+	}
+
+	if got := Hosts(nil, ""); len(got) != 0 {
+		t.Errorf("hosts without addresses: %v", got)
+	}
 }
