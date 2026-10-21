@@ -82,7 +82,7 @@ jobs:
           prerelease=
           case "$TAG" in *-*) prerelease=--prerelease ;; esac
           gh release create "$TAG" --verify-tag --generate-notes $prerelease \
-            "dist/$PACKAGE" "dist/$PACKAGE.sha256" "$PUBLIC_KEY"
+            "dist/$PACKAGE" "dist/$PACKAGE.sha256" "$PUBLIC_KEY" install.sh
 
   apk-repo:
     needs: release

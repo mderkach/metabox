@@ -84,7 +84,15 @@ metabox — демон на Go (`metaboxd`), который ставится н�
 
 ## Установка
 
-Релизы выкладываются подписанным репозиторием apk. Положите ключ проекта на роутер один раз, подключите репозиторий и поставьте пакет. До первой версии без суффикса пре-релиза пакеты лежат в канале `testing`; `stable` — тот же адрес со `stable` вместо `testing`.
+Релизы выкладываются подписанным репозиторием apk. На роутере, от root:
+
+```sh
+wget -qO- https://mderkach.github.io/metabox/install.sh | sh
+```
+
+Скрипт ([`install.sh`](./install.sh)) проверяет, что на роутере OpenWrt с apk и архитектура `aarch64_cortex-a53`, кладёт ключ проекта и строку репозитория, ставит `sing-box-extended` из [релиза форка](https://github.com/shtorm-7/sing-box-extended/releases), если его нет, со сверкой пакета по sha256, записанному в скрипте, и выполняет `apk add metaboxd`. До первой версии без суффикса пре-релиза пакеты лежат в канале `testing`; `sh -s -- --channel stable` подключает `stable`. Обновление — `apk update && apk upgrade metaboxd`. Сборка пакета из исходников и установка отдельного файла — в [`docs/Development.ru.md`](./docs/Development.ru.md).
+
+Руками то же самое: ключ, репозиторий, затем пакет. `sing-box-extended` должен стоять заранее: в репозитории его нет.
 
 ```sh
 wget -O /etc/apk/keys/metabox-release.pem https://raw.githubusercontent.com/mderkach/metabox/main/keys/metabox-release.pem
@@ -93,9 +101,7 @@ apk update
 apk add metaboxd
 ```
 
-Пакету нужен уже установленный `sing-box-extended`: в репозитории его нет, берите из [релизов форка](https://github.com/shtorm-7/sing-box-extended/releases). Обновление — `apk update && apk upgrade metaboxd`. Сборка пакета из исходников и установка отдельного файла — в [`docs/Development.ru.md`](./docs/Development.ru.md).
-
-Пакет зависит от `sing-box-extended`, а тот приносит свою службу `sing-box`. Её нужно выключить: sing-box поднимает служба metabox.
+`sing-box-extended` приносит свою службу `sing-box`. Скрипт выключает её, когда сам ставит форк; после ручной установки выключите её сами: sing-box поднимает служба metabox.
 
 ```sh
 /etc/init.d/sing-box stop

@@ -84,7 +84,15 @@ The package also ships its own sing-box service and LAN interception (nftables, 
 
 ## Installation
 
-Releases are published as a signed apk repository. Put the project key on the router once, connect the repository and install the package. Until the first version without a pre-release suffix the packages are in the `testing` channel; `stable` is the same address with `stable` instead of `testing`.
+Releases are published as a signed apk repository. On the router, as root:
+
+```sh
+wget -qO- https://mderkach.github.io/metabox/install.sh | sh
+```
+
+The script ([`install.sh`](./install.sh)) checks that the router runs OpenWrt with apk on `aarch64_cortex-a53`, puts the project key and the feed line, installs `sing-box-extended` from the [fork release](https://github.com/shtorm-7/sing-box-extended/releases) if it is missing, checking the package against a sha256 pinned in the script, and runs `apk add metaboxd`. Until the first version without a pre-release suffix the packages are in the `testing` channel; `sh -s -- --channel stable` connects `stable`. Updates are `apk update && apk upgrade metaboxd`. Building the package from source and installing a single file are in [`docs/Development.md`](./docs/Development.md).
+
+By hand, the same is: the key, the feed, then the package. `sing-box-extended` has to be installed first: it is not in the repository.
 
 ```sh
 wget -O /etc/apk/keys/metabox-release.pem https://raw.githubusercontent.com/mderkach/metabox/main/keys/metabox-release.pem
@@ -93,9 +101,7 @@ apk update
 apk add metaboxd
 ```
 
-The package needs `sing-box-extended` installed first: it is not in the repository, take it from the [fork releases](https://github.com/shtorm-7/sing-box-extended/releases). Updates are `apk update && apk upgrade metaboxd`. Building the package from source and installing a single file are in [`docs/Development.md`](./docs/Development.md).
-
-The package depends on `sing-box-extended`, which brings its own `sing-box` service. Disable it: sing-box is started by the metabox service.
+`sing-box-extended` brings its own `sing-box` service. The script disables it when it installs the fork; after a manual install, disable it yourself: sing-box is started by the metabox service.
 
 ```sh
 /etc/init.d/sing-box stop

@@ -37,7 +37,12 @@ jobs:
           while read -r tag prerelease; do
             gh release download "$tag" --pattern '*.apk' --dir site/apk/testing < /dev/null
             [ "$prerelease" = true ] || gh release download "$tag" --pattern '*.apk' --dir site/apk/stable < /dev/null
+            # The list is newest first, so the site root gets the install.sh of the newest
+            # release that has one; releases before ADR-0058 have none.
+            [ -e site/install.sh ] || gh release download "$tag" --pattern install.sh --dir site < /dev/null 2> /dev/null || true
           done
+          # Until a release carries install.sh, the site serves the one of the checked-out ref.
+          [ -e site/install.sh ] || cp install.sh site/
           ls -l site/apk/stable site/apk/testing
           # A listing that came back empty would deploy a site without packages.
           ls site/apk/testing/*.apk > /dev/null
