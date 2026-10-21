@@ -18,11 +18,14 @@ func (s *Server) middleware(next http.Handler) http.Handler {
 	// recoverPanic is outermost: a panic in logging would otherwise crash the process.
 	// requireSession goes after the origin checks: a foreign page gets 403 whether or not
 	// the browser holds a session.
+	// redirectToTLS goes after checkHost: the redirect target is built from Host, and a
+	// foreign name must be refused, not sent back with an https scheme.
 	return recoverPanic(s.log,
 		logRequests(s.log,
 			checkHost(s.log, s.allowedOrigin,
-				checkOrigin(s.log, s.allowedOrigin,
-					requireSession(s.log, s.auth, next)))))
+				redirectToTLS(s.https,
+					checkOrigin(s.log, s.allowedOrigin,
+						requireSession(s.log, s.auth, next))))))
 }
 
 func recoverPanic(log *slog.Logger, next http.Handler) http.Handler {
@@ -125,6 +128,29 @@ func hostAllowed(hostport, allowedOrigin string) bool {
 	u, err := url.Parse(allowedOrigin)
 
 	return err == nil && u.Host != "" && strings.EqualFold(host, u.Hostname())
+}
+
+// redirectToTLS sends a plain request to the same address over https while the panel
+// serves TLS. The health check and the root certificate stay on plain http: scripts poll
+// the first without a trust store, and the second is what builds that trust store.
+func redirectToTLS(enabled bool, next http.Handler) http.Handler {
+	if !enabled {
+		return next
+	}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.TLS != nil || plainAllowed(r.URL.Path) {
+			next.ServeHTTP(w, r)
+
+			return
+		}
+
+		http.Redirect(w, r, "https://"+r.Host+r.URL.RequestURI(), http.StatusPermanentRedirect)
+	})
+}
+
+func plainAllowed(path string) bool {
+	return path == "/healthz" || path == caPath
 }
 
 // checkOrigin protects mutating requests from a foreign page in the owner's browser.

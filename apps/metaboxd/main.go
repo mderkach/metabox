@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -20,6 +21,7 @@ import (
 
 	"metabox/internal/apply"
 	"metabox/internal/auth"
+	"metabox/internal/cert"
 	"metabox/internal/clashapi"
 	"metabox/internal/config"
 	"metabox/internal/dataplane"
@@ -93,6 +95,9 @@ const (
 type settings struct {
 	addr          string
 	allowedOrigin string
+	https         bool
+	httpsCert     string
+	httpsKey      string
 	configDir     string
 	configName    string
 	serviceDir    string
@@ -120,6 +125,11 @@ func main() {
 		"адреса и порты, которые слушает демон; несколько — через запятую")
 	flag.StringVar(&s.allowedOrigin, "allowed-origin", "",
 		"дополнительный разрешённый Origin мутирующих запросов; нужен дев-стенду")
+	flag.BoolVar(&s.https, "https", true,
+		"обслуживать панель по HTTPS с сертификатом от собственного корня демона; http на том же порту перенаправляется")
+	flag.StringVar(&s.httpsCert, "https-cert", "",
+		"путь к готовому сертификату панели в PEM вместе с -https-key; тогда свой корень демон не выпускает")
+	flag.StringVar(&s.httpsKey, "https-key", "", "путь к ключу сертификата из -https-cert")
 	flag.StringVar(&s.configDir, "config-dir", "/etc/sing-box", "каталог конфига sing-box")
 	flag.StringVar(&s.configName, "config-name", "config.json", "имя файла конфига в этом каталоге")
 	flag.StringVar(&s.serviceDir, "state-dir", "/etc/metabox",
@@ -298,6 +308,43 @@ func run(log *slog.Logger, s settings) error {
 		probe = clashapi.NewDNSProbe(s.healthDNSName, dnsProbeTimeout, healthPollInterval, 1)
 	}
 
+	// Without certificates there is nothing to serve HTTPS with, so a pair that cannot
+	// be read or a store that cannot hold the daemon's own stops the start; the owner
+	// turns HTTPS off in UCI to run without them.
+	var (
+		tlsConfig *tls.Config
+		rootCert  func() []byte
+	)
+
+	switch {
+	case !s.https:
+	case (s.httpsCert == "") != (s.httpsKey == ""):
+		return errors.New("флаги -https-cert и -https-key задаются вместе")
+	case s.httpsCert != "":
+		tlsConfig, err = cert.LoadPair(s.httpsCert, s.httpsKey)
+		if err != nil {
+			return err
+		}
+
+		log.Info("сертификат панели из файла", "cert", s.httpsCert,
+			"expires", tlsConfig.Certificates[0].Leaf.NotAfter)
+	default:
+		certs, err := cert.New(ctx, store, log, cert.Options{Hosts: httpapi.Hosts(httpapi.Addrs(s.addr), s.allowedOrigin)})
+		if err != nil {
+			return fmt.Errorf("сертификат панели: %w", err)
+		}
+
+		if certs.RootCreated() {
+			log.Warn("выпущен новый корневой сертификат панели, установите его на свои устройства",
+				"path", "/metabox-ca.crt", "ca_sha256", certs.Fingerprint())
+		} else {
+			log.Info("сертификат панели", "ca_sha256", certs.Fingerprint(), "expires", certs.Expiry())
+		}
+
+		tlsConfig = certs.Config()
+		rootCert = certs.CA
+	}
+
 	explainer := route.NewExplainer(source)
 	logReader := logs.New(logs.Exec, store, logs.Options{
 		Logread:      s.logread,
@@ -356,6 +403,8 @@ func run(log *slog.Logger, s settings) error {
 		Logs:           logReader,
 		Diag:           diagnoser,
 		MCP:            agents,
+		HTTPS:          s.https,
+		CA:             rootCert,
 		ConfigPath:     store.Path(),
 	})
 
@@ -382,9 +431,24 @@ func run(log *slog.Logger, s settings) error {
 	// the daemon stop with an open panel would run into the timeout.
 	srv.RegisterOnShutdown(hub.Close)
 
-	serveErr := make(chan error, len(listeners))
+	// With HTTPS each address serves two listeners split off one socket: TLS and the
+	// plain http that is redirected to it.
+	served := make([]net.Listener, 0, 2*len(listeners))
 
 	for _, listener := range listeners {
+		if tlsConfig == nil {
+			served = append(served, listener)
+
+			continue
+		}
+
+		plain, secure := httpapi.SplitTLS(listener, tlsConfig)
+		served = append(served, plain, secure)
+	}
+
+	serveErr := make(chan error, len(served))
+
+	for _, listener := range served {
 		go func() {
 			err := srv.Serve(listener)
 			if errors.Is(err, http.ErrServerClosed) {
@@ -394,7 +458,7 @@ func run(log *slog.Logger, s settings) error {
 		}()
 	}
 
-	log.Info("демон запущен", "addr", httpapi.Bound(listeners), "version", version.Version)
+	log.Info("демон запущен", "addr", httpapi.Bound(listeners), "https", s.https, "version", version.Version)
 
 	select {
 	case err := <-serveErr:
@@ -411,7 +475,12 @@ func run(log *slog.Logger, s settings) error {
 
 	log.Info("демон остановлен")
 
-	return <-serveErr
+	var errs []error
+	for range served {
+		errs = append(errs, <-serveErr)
+	}
+
+	return errors.Join(errs...)
 }
 
 // runCommand translates a command launch to the form procd expects: that package

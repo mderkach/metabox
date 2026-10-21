@@ -45,6 +45,8 @@ const (
 	devicesName  = "devices.json"
 	authName     = "auth.json"
 	mcpName      = "mcp.json"
+	// tlsDir holds the panel certificates and keys under the service directory.
+	tlsDir = "tls"
 )
 
 // Store is the only owner of the config file and the daemon service directory:
@@ -868,4 +870,53 @@ func (s *Store) WriteMCP(ctx context.Context, data []byte) error {
 	defer func() { _ = root.Close() }()
 
 	return writeAtomic(root, mcpName, data, securePerm)
+}
+
+// ReadTLS returns a panel certificate or key file by name from the tls
+// subdirectory of the service directory. A missing file or directory is an error for
+// which errors.Is(err, fs.ErrNotExist) holds.
+func (s *Store) ReadTLS(ctx context.Context, name string) ([]byte, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	root, err := openRoot(filepath.Join(s.serviceDir, tlsDir))
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = root.Close() }()
+
+	data, err := root.ReadFile(name)
+	if err != nil {
+		return nil, fmt.Errorf("чтение файла сертификата %s: %w", name, err)
+	}
+
+	return data, nil
+}
+
+// WriteTLS saves a panel certificate or key file atomically, readable by root only.
+// The directory is created on the first write.
+func (s *Store) WriteTLS(ctx context.Context, name string, data []byte) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	dir := filepath.Join(s.serviceDir, tlsDir)
+	if err := ensureDir(dir); err != nil {
+		return fmt.Errorf("каталог сертификатов: %w", err)
+	}
+
+	root, err := openRoot(dir)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = root.Close() }()
+
+	return writeAtomic(root, name, data, securePerm)
 }

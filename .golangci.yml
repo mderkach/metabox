@@ -76,9 +76,16 @@ linters:
         text: 'G304'
         linters: [gosec]
 
-      # G124: the session cookie has no Secure flag because the panel is served over
-      # plain http in the LAN, and a browser drops a Secure cookie on such a page.
-      # HttpOnly and SameSite=Strict are set.
+      # G710: the https redirect target is the request's own Host, and checkHost before
+      # this middleware admits only an IP literal, localhost or the -allowed-origin
+      # host, so a foreign name is refused before it could be sent back.
+      - path: internal/httpapi/middleware\.go
+        text: 'G710'
+        linters: [gosec]
+
+      # G124: the session cookie gets Secure only on a TLS request. With HTTPS off the
+      # panel is served over plain http in the LAN, and a browser drops a Secure cookie
+      # on such a page. HttpOnly and SameSite=Strict are always set.
       - path: internal/httpapi/auth\.go
         text: 'G124'
         linters: [gosec]

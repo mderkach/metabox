@@ -11,6 +11,14 @@ config metabox 'main'
 	# Networks the panel is reachable from. A guest or a separate wireless network
 	# is added here too: the daemon listens on the address of each of them and no others.
 	list listen_interface 'lan'
+	# The panel is served over HTTPS with a certificate from the daemon's own root,
+	# kept in state_dir/tls; http on the same port is redirected. The root is installed
+	# on the owner's devices from /metabox-ca.crt. '0' serves plain http. A pair the
+	# router already has, such as the one acme.sh issues for uhttpd, is served instead of
+	# the daemon's own when both paths are set; the daemon is restarted after a renewal.
+	option https '1'
+	option https_cert ''
+	option https_key ''
 	option config_dir '/etc/sing-box'
 	option config_name 'config.json'
 	option state_dir '/etc/metabox'

@@ -91,25 +91,28 @@ func clientAddr(r *http.Request) netip.Addr {
 }
 
 // setSession sends the session cookie. Without Max-Age the browser keeps it until it is
-// closed, and the daemon ends an idle session itself. There is no Secure flag: the panel
-// is served over http in the LAN.
-func setSession(w http.ResponseWriter, token string) {
+// closed, and the daemon ends an idle session itself. Secure follows the request: with
+// HTTPS off the panel is served over plain http in the LAN, and a browser drops a Secure
+// cookie on such a page.
+func setSession(w http.ResponseWriter, r *http.Request, token string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     sessionCookie,
 		Value:    token,
 		Path:     "/",
 		HttpOnly: true,
+		Secure:   r.TLS != nil,
 		SameSite: http.SameSiteStrictMode,
 	})
 }
 
-func clearSession(w http.ResponseWriter) {
+func clearSession(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     sessionCookie,
 		Value:    "",
 		Path:     "/",
 		MaxAge:   -1,
 		HttpOnly: true,
+		Secure:   r.TLS != nil,
 		SameSite: http.SameSiteStrictMode,
 	})
 }
@@ -148,13 +151,13 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.log.Info("вход в панель", "addr", addr)
-	setSession(w, token)
+	setSession(w, r, token)
 	w.WriteHeader(http.StatusNoContent)
 }
 
 func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 	s.auth.Logout(sessionToken(r))
-	clearSession(w)
+	clearSession(w, r)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -180,12 +183,12 @@ func (s *Server) handlePassword(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case token == "" && wasEnabled:
 		s.log.Info("пароль панели снят", "addr", addr)
-		clearSession(w)
+		clearSession(w, r)
 	case token == "":
-		clearSession(w)
+		clearSession(w, r)
 	default:
 		s.log.Info("пароль панели задан", "addr", addr)
-		setSession(w, token)
+		setSession(w, r, token)
 	}
 
 	w.WriteHeader(http.StatusNoContent)

@@ -76,11 +76,11 @@ The package also ships its own sing-box service and LAN interception (nftables, 
 - aarch64, tested on Banana Pi BPI-R4 Pro. The package architecture must match `/etc/apk/arch` on the router; for mediatek/filogic firmware it is `aarch64_cortex-a53`.
 - The `sing-box-extended` package, a dependency of `metaboxd`. Tested version: `1.14.1-extended-2.7.2`. OpenWrt packages are in the [fork's releases](https://github.com/shtorm-7/sing-box-extended/releases).
 
-| Port             | Listener                                                                    |
-| ---------------- | --------------------------------------------------------------------------- |
-| 8088             | the panel, on the addresses of networks from `listen_interface`             |
-| 9090             | sing-box Clash API on `127.0.0.1`, when the daemon added `clash_api` itself |
-| 5331, 5332, 5333 | sing-box inbounds for interception: TCP redirect, UDP tproxy, DNS           |
+| Port             | Listener                                                                                                              |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------- |
+| 8088             | the panel over HTTPS, on the addresses of networks from `listen_interface`; plain http on the same port is redirected |
+| 9090             | sing-box Clash API on `127.0.0.1`, when the daemon added `clash_api` itself                                           |
+| 5331, 5332, 5333 | sing-box inbounds for interception: TCP redirect, UDP tproxy, DNS                                                     |
 
 ## Installation
 
@@ -106,19 +106,22 @@ Put a sing-box config at `/etc/sing-box/config.json`, then start the services. T
 
 ## First run
 
-Open `http://<router LAN address>:8088`, for example `http://192.168.1.1:8088`. Use an IP address: the daemon only answers when the `Host` header is an IP or `localhost`, so `http://openwrt.lan:8088` will not open.
+Open `https://<router LAN address>:8088`, for example `https://192.168.1.1:8088`. Use an IP address: the daemon only answers when the `Host` header is an IP or `localhost`, so `https://openwrt.lan:8088` will not open.
+
+The certificate comes from a root the daemon issued on its first start, so the browser warns until that root is installed on the device. Download it from `http://192.168.1.1:8088/metabox-ca.crt` and add it to the system or browser trust store; on a phone, open the address and install the profile. Before trusting it, compare its fingerprint with the `ca_sha256` line in `logread -e metaboxd`. The root is limited to private networks and the panel addresses: it cannot sign a certificate for a public site. Plain http stays available with `option https '0'` in `/etc/config/metabox` and a restart of `metaboxd`. A certificate the router already has, for example one `acme.sh` issues for LuCI, is served instead of the daemon's own: set `https_cert` and `https_key` in the same section to the PEM files and restart `metaboxd`; after a renewal, restart it again.
 
 > [!WARNING]
 > Without a password the panel is open to every device on the networks from `listen_interface`, and any of them can change routing. Set one with **Set password** at the bottom of the sidebar. A forgotten password is reset over SSH: `rm /etc/metabox/auth.json && /etc/init.d/metaboxd restart`.
 
 The daemon reads `/etc/sing-box/config.json` as is, there is no import step. A handwritten config opens in forms; whatever the forms don't know is kept unchanged and marked in the UI. If the config has no `experimental.clash_api`, the daemon adds it on the first apply (`127.0.0.1:9090`, random secret): the panel reads connections and proxies through it.
 
-| What                   | Where                                                              |
-| ---------------------- | ------------------------------------------------------------------ |
-| Panel settings         | `/etc/config/metabox`                                              |
-| sing-box config        | `/etc/sing-box/config.json`, set by `config_dir` and `config_name` |
-| Config versions, state | `/etc/metabox/`                                                    |
-| Logs                   | `logread`, or the Logs screen                                      |
+| What                   | Where                                                                           |
+| ---------------------- | ------------------------------------------------------------------------------- |
+| Panel settings         | `/etc/config/metabox`                                                           |
+| sing-box config        | `/etc/sing-box/config.json`, set by `config_dir` and `config_name`              |
+| Config versions, state | `/etc/metabox/`                                                                 |
+| Certificates           | `/etc/metabox/tls/`; remove the directory and restart `metaboxd` for a new root |
+| Logs                   | `logread`, or the Logs screen                                                   |
 
 ### LAN interception
 
@@ -142,8 +145,10 @@ With `acl_mode 'listed'` (default) only devices enabled on the Devices screen or
 The daemon serves an [MCP](https://modelcontextprotocol.io) endpoint at `/mcp`, off by default. Turn it on with **MCP access** at the bottom of the sidebar: the panel shows a token once, together with the command for Claude Code:
 
 ```sh
-claude mcp add --transport http metabox http://192.168.1.1:8088/mcp --header "Authorization: Bearer <token>"
+claude mcp add --transport http metabox https://192.168.1.1:8088/mcp --header "Authorization: Bearer <token>"
 ```
+
+Node, which Claude Code runs on, does not read the system trust store: start it with the root from the previous section in `NODE_EXTRA_CA_CERTS`, for example `NODE_EXTRA_CA_CERTS=~/.config/metabox/metabox-ca.crt claude`. Other MCP clients need the same root in whatever trust store they use.
 
 The agent can then ask why a site goes through a given rule, which connections a device has, which nodes respond, what earlier config versions contained, and what the sing-box log and interception diagnostics say. Access is read-only: there are no tools that change the config or the service. Secrets in config fragments are masked; the sing-box log tail is returned as is.
 

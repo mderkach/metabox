@@ -779,3 +779,49 @@ func TestMCPFileIsReadableByRootOnly(t *testing.T) {
 		t.Errorf("mode %o, want 600", perm)
 	}
 }
+
+func TestTLSFilesAreReadableByRootOnly(t *testing.T) {
+	store, cfgDir := newStore(t)
+
+	if _, err := store.ReadTLS(t.Context(), "ca.crt"); !errors.Is(err, fs.ErrNotExist) {
+		t.Fatalf("read before a certificate was issued: got %v, want ErrNotExist", err)
+	}
+
+	want := []byte("-----BEGIN CERTIFICATE-----\n")
+	if err := store.WriteTLS(t.Context(), "ca.crt", want); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	got, err := store.ReadTLS(t.Context(), "ca.crt")
+	if err != nil {
+		t.Fatalf("read: %v", err)
+	}
+
+	if !bytes.Equal(got, want) {
+		t.Errorf("read %q, want %q", got, want)
+	}
+
+	dir := filepath.Join(filepath.Dir(cfgDir), "metabox", "tls")
+
+	info, err := os.Stat(filepath.Join(dir, "ca.crt"))
+	if err != nil {
+		t.Fatalf("stat: %v", err)
+	}
+
+	if perm := info.Mode().Perm(); perm != 0o600 {
+		t.Errorf("file mode %o, want 600", perm)
+	}
+
+	dirInfo, err := os.Stat(dir)
+	if err != nil {
+		t.Fatalf("stat dir: %v", err)
+	}
+
+	if perm := dirInfo.Mode().Perm(); perm != 0o700 {
+		t.Errorf("dir mode %o, want 700", perm)
+	}
+
+	if _, err := store.ReadTLS(t.Context(), "../auth.json"); err == nil {
+		t.Error("a name outside the tls directory was read")
+	}
+}
