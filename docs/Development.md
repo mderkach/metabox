@@ -101,7 +101,12 @@ apk add --allow-untrusted /tmp/sing-box-extended_*.apk /tmp/metaboxd.apk
 
 ## Release
 
-A release is a `v*` tag on a commit in `main`. The [`release`](../.github/workflows/release.yml) workflow checks that the tag equals `v` plus [`VERSION`](../VERSION) and that `apps/web/package.json` declares the same version, builds the package for `aarch64_cortex-a53` signed with the `APK_SIGN_KEY` secret, checks the signature against `keys/metabox-release.pem` and publishes a GitHub Release with the package, its sha256 and the public key. A version with a pre-release suffix becomes a prerelease.
+A release is a `v*` tag on a commit in `main`. The [`release`](../.github/workflows/release.yml) workflow checks that the tag equals `v` plus [`VERSION`](../VERSION) and that `apps/web/package.json` declares the same version, builds the package for `aarch64_cortex-a53` signed with the `APK_SIGN_KEY` secret, checks the signature against `keys/metabox-release.pem` and publishes a GitHub Release with the package, its sha256 and the public key. A version with a pre-release suffix becomes a prerelease. The [`apk repository`](../.github/workflows/apk-repo.yml) workflow then rebuilds the package repository from every release and deploys it to GitHub Pages; it also runs by hand from the Actions tab, so a release whose deploy failed is republished without a new tag. Pages is enabled once by the owner with the "GitHub Actions" source, and the `github-pages` environment it creates gets a rule that allows `v*` tags, because the release job deploys from the tag:
+
+```sh
+gh api -X POST repos/mderkach/metabox/pages -f build_type=workflow
+gh api -X POST repos/mderkach/metabox/environments/github-pages/deployment-branch-policies -f name='v*' -f type=tag
+```
 
 Steps: a PR that changes `VERSION` and `apps/web/package.json`; after the merge, a tag on the merge commit:
 
@@ -132,11 +137,17 @@ The public key is put on the router once:
 wget -O /etc/apk/keys/metabox-release.pem https://raw.githubusercontent.com/mderkach/metabox/main/keys/metabox-release.pem
 ```
 
-After that a release package installs and updates without `--allow-untrusted`, and a package changed on the way or signed with another key is rejected. `sing-box-extended` must already be installed: it is not signed with this key.
+After that a release package installs and updates without `--allow-untrusted`, and a package changed on the way or signed with another key is rejected. `sing-box-extended` must already be installed: it is not signed with this key and is not in the repository.
+
+The packages come from the repository on GitHub Pages. Its index is signed with the same key and has two channels: `testing` holds every release, `stable` only versions without a pre-release suffix, so `stable` stays empty until the first such version. A channel is one line in `/etc/apk/repositories.d/`:
 
 ```sh
-apk add /tmp/metaboxd-<version>.apk
+echo https://mderkach.github.io/metabox/apk/testing/packages.adb > /etc/apk/repositories.d/metabox.list
+apk update
+apk add metaboxd
 ```
+
+A newer release is then `apk upgrade metaboxd`. A single downloaded package still installs by path: `apk add /tmp/metaboxd-<version>.apk`.
 
 ## Build variables
 

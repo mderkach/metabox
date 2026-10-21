@@ -84,7 +84,16 @@ metabox — демон на Go (`metaboxd`), который ставится н�
 
 ## Установка
 
-Готовые пакеты пока не публикуются. Как собрать пакет из исходников и поставить на роутер — в [`docs/Development.ru.md`](./docs/Development.ru.md).
+Релизы выкладываются подписанным репозиторием apk. Положите ключ проекта на роутер один раз, подключите репозиторий и поставьте пакет. До первой версии без суффикса пре-релиза пакеты лежат в канале `testing`; `stable` — тот же адрес со `stable` вместо `testing`.
+
+```sh
+wget -O /etc/apk/keys/metabox-release.pem https://raw.githubusercontent.com/mderkach/metabox/main/keys/metabox-release.pem
+echo https://mderkach.github.io/metabox/apk/testing/packages.adb > /etc/apk/repositories.d/metabox.list
+apk update
+apk add metaboxd
+```
+
+Пакету нужен уже установленный `sing-box-extended`: в репозитории его нет, берите из [релизов форка](https://github.com/shtorm-7/sing-box-extended/releases). Обновление — `apk update && apk upgrade metaboxd`. Сборка пакета из исходников и установка отдельного файла — в [`docs/Development.ru.md`](./docs/Development.ru.md).
 
 Пакет зависит от `sing-box-extended`, а тот приносит свою службу `sing-box`. Её нужно выключить: sing-box поднимает служба metabox.
 

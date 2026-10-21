@@ -83,3 +83,12 @@ jobs:
           case "$TAG" in *-*) prerelease=--prerelease ;; esac
           gh release create "$TAG" --verify-tag --generate-notes $prerelease \
             "dist/$PACKAGE" "dist/$PACKAGE.sha256" "$PUBLIC_KEY"
+
+  apk-repo:
+    needs: release
+    uses: ./.github/workflows/apk-repo.yml
+    secrets: inherit
+    permissions:
+      contents: read
+      pages: write
+      id-token: write

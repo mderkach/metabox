@@ -68,7 +68,7 @@ Out of scope: a package repository with a signed index, auto-update of the panel
 
 ### Neutral or deferred
 
-- A package repository with a signed index, and pre-release delivery through it: a separate decision.
+- A package repository with a signed index, and pre-release delivery through it: decided in [ADR-0057](./ADR-0057-publish-the-apk-repository-on-github-pages-rebuilt-from-releases.md).
 - Key rotation without manual steps, for example a keys package, is not addressed.
 
 ## Risks and mitigations
