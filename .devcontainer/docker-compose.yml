@@ -17,7 +17,7 @@ services:
     environment:
       # The address is the IP of the wired network, not the service name: the dev proxy passes
       # the target in Host, and the daemon answers only to a Host with an IP literal.
-      METABOX_API_TARGET: https://192.168.210.2:8080
+      METABOX_API_TARGET: http://192.168.210.2:8080
     # The devcontainer attaches to this service: the main process must survive
     # tool crashes.
     command: sleep infinity
@@ -43,7 +43,7 @@ services:
     environment:
       # The address is the IP of the wired network, not the service name: the dev proxy passes
       # the target in Host, and the daemon answers only to a Host with an IP literal.
-      METABOX_API_TARGET: https://192.168.210.2:8080
+      METABOX_API_TARGET: http://192.168.210.2:8080
       # Without a TTY pnpm does not rebuild node_modules and fails on the confirmation.
       CI: 'true'
     command: pnpm dev --host 0.0.0.0

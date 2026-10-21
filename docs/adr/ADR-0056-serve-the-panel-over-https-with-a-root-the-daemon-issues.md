@@ -51,7 +51,7 @@ Leaving the panel on http keeps the password, the session and the MCP token in c
 
 ## Decision outcome
 
-HTTPS is on by default: the `-https` flag of the daemon, `option https` in UCI `metabox`; `0` serves plain http as before.
+HTTPS is off by default: the `-https` flag of the daemon, `option https` in UCI `metabox`; `1` turns it on. It was on by default in `0.1.0-rc.6`. That release showed the cost: every device warns until the root is installed by hand, which a new user does not do, and Claude Code rejects the root with `unsupported name constraint type`. A certificate that needs no trust step is option 4 above, a public certificate for a domain.
 
 - **Owner's certificate.** `-https-cert` and `-https-key` (`https_cert` and `https_key` in UCI) make the daemon serve that PEM pair instead of its own root: a router that already has a certificate for LuCI, from `acme.sh` or the owner's authority, needs no second trust step. The pair is read at start, so a renewal takes a daemon restart; the root file is not served, and the rest of this decision, the single port, the redirect and the cookie, applies as is. One path without the other is a start error.
 
@@ -77,14 +77,14 @@ HTTPS is on by default: the `-https` flag of the daemon, `option https` in UCI `
 
 ### Positive
 
-- The password, the session cookie and the MCP token no longer cross the LAN in clear text.
-- The panel is a secure context: the clipboard and other HTTPS-only browser APIs work.
+- With HTTPS on, the password, the session cookie and the MCP token no longer cross the LAN in clear text, and the panel is a secure context for the clipboard and other HTTPS-only browser APIs.
 - One trust step per device; a new guest network or an expiring server certificate does not repeat it.
 - Nothing changes in the firewall, the UCI address settings, the bench or CI.
 
 ### Negative
 
-- Until the root is installed, every browser warns on the panel, and Claude Code refuses the MCP endpoint without `NODE_EXTRA_CA_CERTS`.
+- By default the password, the session cookie and the MCP token cross the LAN in clear text, as with LuCI; a browser API that needs a secure context gets a path without it, as copying the MCP token does through a temporary selected field.
+- With HTTPS on, every browser warns until the root is installed, and Claude Code refuses the root with `unsupported name constraint type`.
 - The root key lives on the router with mode 0600; a copy of `/etc/metabox` is a copy of the key. The name constraints bound the damage to private networks and the panel addresses.
 - The daemon stops at start when the certificate files cannot be written; the owner turns HTTPS off in UCI to run without them.
 - The same port with two protocols costs a one-byte peek per connection and a goroutine for it; a connection that sends nothing holds the goroutine for up to ten seconds.
