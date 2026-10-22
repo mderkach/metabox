@@ -125,7 +125,7 @@ func main() {
 		"адреса и порты, которые слушает демон; несколько — через запятую")
 	flag.StringVar(&s.allowedOrigin, "allowed-origin", "",
 		"дополнительный разрешённый Origin мутирующих запросов; нужен дев-стенду")
-	flag.BoolVar(&s.https, "https", true,
+	flag.BoolVar(&s.https, "https", false,
 		"обслуживать панель по HTTPS с сертификатом от собственного корня демона; http на том же порту перенаправляется")
 	flag.StringVar(&s.httpsCert, "https-cert", "",
 		"путь к готовому сертификату панели в PEM вместе с -https-key; тогда свой корень демон не выпускает")

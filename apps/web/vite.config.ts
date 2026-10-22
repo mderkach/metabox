@@ -262,7 +262,7 @@ function* walk(dir: string): Generator<string> {
   }
 }
 
-const daemonTarget = process.env.METABOX_API_TARGET ?? 'https://127.0.0.1:8080';
+const daemonTarget = process.env.METABOX_API_TARGET ?? 'http://127.0.0.1:8080';
 
 // changeOrigin replaces only Host, while the daemon checks Origin against the panel address and
 // rejects any mutating request without a match. The dev server presents itself as
@@ -291,8 +291,8 @@ export default defineConfig({
     watch: { usePolling: false },
     proxy: {
       // The daemon lives in the target environment (the target container), not next to the dev server.
-      // The daemon certificate comes from its own root, which the dev machine does not
-      // trust; the proxy talks to the daemon without checking it.
+      // With -https the daemon certificate comes from its own root, which the dev machine
+      // does not trust; the proxy talks to such a daemon without checking it.
       '/api': {
         target: daemonTarget,
         changeOrigin: true,

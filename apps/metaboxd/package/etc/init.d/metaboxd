@@ -52,7 +52,7 @@ start_service() {
 	config_get clash_port main clash_port 9090
 	config_get log_level main log_level info
 	config_get health_dns_name main health_dns_name cloudflare.com
-	config_get_bool https main https 1
+	config_get_bool https main https 0
 	config_get https_cert main https_cert ""
 	config_get https_key main https_key ""
 

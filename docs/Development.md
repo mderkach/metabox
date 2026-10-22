@@ -50,17 +50,17 @@ Frontend without the test bench:
 
 The test bench is OpenWrt in a container with procd, sing-box and the panel from the package, with wired, guest and external networks ([ADR-0023](./adr/ADR-0023-build-the-bench-from-the-device-firmware.md)):
 
-| Command                     | What it does                                                                                                                      |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `make stand-base`           | builds the test bench base from the BPI-R4 firmware image from downloads.openwrt.org                                              |
-| `make up`                   | brings up the test bench; panel at `https://localhost:8080` (the browser warns: the bench root is not trusted), Clash API on 9090 |
-| `make up-dev`               | the same plus the Vite dev server with HMR on 5173                                                                                |
-| `make down`                 | stops the test bench                                                                                                              |
-| `make stand-reset`          | resets the test bench config to the reference from the image                                                                      |
-| `make sh`, `make target-sh` | shell in the dev container and in the OpenWrt container                                                                           |
-| `make apply-check`          | runs the Apply cycle in the test bench                                                                                            |
-| `make reach-check`          | checks that the panel answers from the test bench local networks and not from the external one                                    |
-| `make dataplane-check`      | checks traffic interception; needs a privileged container and a kernel with tproxy                                                |
+| Command                     | What it does                                                                                   |
+| --------------------------- | ---------------------------------------------------------------------------------------------- |
+| `make stand-base`           | builds the test bench base from the BPI-R4 firmware image from downloads.openwrt.org           |
+| `make up`                   | brings up the test bench; panel at `http://localhost:8080`, Clash API on 9090                  |
+| `make up-dev`               | the same plus the Vite dev server with HMR on 5173                                             |
+| `make down`                 | stops the test bench                                                                           |
+| `make stand-reset`          | resets the test bench config to the reference from the image                                   |
+| `make sh`, `make target-sh` | shell in the dev container and in the OpenWrt container                                        |
+| `make apply-check`          | runs the Apply cycle in the test bench                                                         |
+| `make reach-check`          | checks that the panel answers from the test bench local networks and not from the external one |
+| `make dataplane-check`      | checks traffic interception; needs a privileged container and a kernel with tproxy             |
 
 Checks:
 
