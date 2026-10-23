@@ -9,7 +9,7 @@ LDFLAGS    := -s -w -X metabox/internal/version.Version=$(VERSION) -X metabox/in
 # Pins the version down: the `go` directive in go.mod raises it but does not lower it.
 export GOTOOLCHAIN := go$(shell cat .go-version)
 
-.PHONY: all schema schema-daemon rule-set-snapshot web embed daemon daemon-device daemon-target dev dev-mock dev-mock-missing test test-schemagen lint hooks clean up up-dev down sh target-sh apply-check reach-check dataplane-check package stand-base stand-reset
+.PHONY: all schema schema-daemon rule-set-snapshot web embed daemon daemon-device daemon-target ldflags dev dev-mock dev-mock-missing test test-schemagen lint hooks clean up up-dev down sh target-sh apply-check reach-check dataplane-check package stand-base stand-reset
 
 all: daemon
 
@@ -59,6 +59,10 @@ daemon: embed
 daemon-device: embed
 	cd apps/metaboxd && GOOS=linux GOARCH=arm64 CGO_ENABLED=0 \
 		go build -ldflags "$(LDFLAGS)" -o ../../$(DEVICE_BIN) .
+
+# CI builds the daemon for its own arch without the panel, and takes the version stamps from here.
+ldflags:
+	@echo '$(LDFLAGS)'
 
 dev:
 	pnpm --filter web dev
