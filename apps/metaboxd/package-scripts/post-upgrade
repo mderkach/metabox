@@ -1,0 +1,7 @@
+#!/bin/sh
+# apk swaps the binary under the running process, and procd keeps the old one until the
+# service restarts. sing-box is left running: a panel upgrade must not cut traffic.
+if /etc/init.d/metaboxd running >/dev/null 2>&1; then
+	/etc/init.d/metaboxd restart
+fi
+exit 0

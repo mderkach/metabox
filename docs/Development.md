@@ -147,7 +147,7 @@ apk update
 apk add metaboxd
 ```
 
-A newer release is then `apk upgrade metaboxd`. A single downloaded package still installs by path: `apk add /tmp/metaboxd-<version>.apk`.
+A newer release is then `apk upgrade metaboxd`; the package restarts the daemon if it was running, and sing-box keeps running. A single downloaded package still installs by path: `apk add /tmp/metaboxd-<version>.apk`.
 
 On a clean router [`install.sh`](../install.sh) does these steps and installs the fork package first ([ADR-0058](./adr/ADR-0058-install-on-a-clean-router-with-a-script-on-top-of-the-apk-repository.md)). The release attaches it, and the apk-repo workflow puts the copy of the newest release at `https://mderkach.github.io/metabox/install.sh`. The fork version and sha256 are pinned in the script: a fork upgrade changes them together with `SINGBOX_VERSION` in `.devcontainer/target/Dockerfile`. The sha256 is the `digest` of the release asset: `gh api repos/shtorm-7/sing-box-extended/releases/tags/v<version> --jq '.assets[] | select(.name | endswith("openwrt_aarch64_cortex-a53.apk")) | .digest'`.
 

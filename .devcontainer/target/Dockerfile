@@ -35,6 +35,7 @@ ARG DAEMON_BINARY
 ARG PKG_ARCH
 COPY --from=base /etc/apk/arch /tmp/arch
 COPY apps/metaboxd/package /src/package
+COPY apps/metaboxd/package-scripts /src/package-scripts
 COPY ${DAEMON_BINARY} /src/metaboxd
 # The signing key comes as a BuildKit secret, so it stays out of build args and layers.
 # Without it the package is unsigned, as in the test bench.
@@ -54,6 +55,7 @@ RUN --mount=type=secret,id=apk_sign_key \
       --info description:"Панель настройки sing-box" \
       --info license:GPL-3.0-or-later \
       --info depends:sing-box-extended \
+      --script post-upgrade:/src/package-scripts/post-upgrade \
       --files /pkgroot \
       --output /out/metaboxd.apk
 
