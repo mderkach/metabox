@@ -70,7 +70,7 @@ The `Makefile` starts with the line `export GOTOOLCHAIN := go$(shell cat .go-ver
 
 The `go` directive in both `go.mod` files matches `.go-version` in number: it declares the module's minimum version and pins only upwards. We do not add a `toolchain` directive: on a patch version it adds nothing to `go`.
 
-The dev image is built from `golang:1.26-trixie`, a branch, not an exact version: the exact one is set by `GOTOOLCHAIN` from `.go-version` when the command goes through `make`.
+The dev image is built from the `golang:<major.minor>-trixie` branch that matches `.go-version`, not an exact version: the exact one is set by `GOTOOLCHAIN` from `.go-version` when the command goes through `make`. A Go minor bump edits this `FROM` line together with `.go-version`.
 
 `engines.node` and `engines.pnpm` declare the version, they do not check it. They are not an enforcement measure: on pnpm 11.25.0 a mismatch gave `[WARN] Unsupported engine`, and `engineStrict: true` failed the install; on pnpm 12.4.1 neither happens: an install on Node 24.16.0 with `engines.node: 24.21.0` passes silently (measured 2026-09-14). So we do not keep `engineStrict` in `pnpm-workspace.yaml`.
 
@@ -92,24 +92,24 @@ The decision covers the repository root, `.devcontainer/`, `.github/workflows/ci
 
 ### Negative
 
-- `GOTOOLCHAIN` from the `Makefile` applies only to commands through `make`. `go test ./...` by hand and the "Run test" button in an IDE use the system Go. This can be closed completely only by the user setting `go env -w GOTOOLCHAIN=go1.26.8`, which applies to the whole user, not to the repository.
+- `GOTOOLCHAIN` from the `Makefile` applies only to commands through `make`. `go test ./...` by hand and the "Run test" button in an IDE use the system Go. This can be closed completely only by the user setting `go env -w GOTOOLCHAIN=go<version from .go-version>`, which applies to the whole user, not to the repository.
 - The first run on a machine with a different Go spends time and space downloading the toolchain into `GOMODCACHE` (about 100 MB).
 - `.nvmrc` repeats `engines.node`, and nothing prevents them from diverging. The cost of a mismatch is low: `nvm use` gives the wrong Node version, and CI and the dev image do not notice because they read `package.json`.
-- The dev image is no longer tied to an exact Go version: `go build` inside the container bypassing `make` takes whatever ended up in the `1.26` branch.
+- The dev image is no longer tied to an exact Go version: `go build` inside the container bypassing `make` takes whatever ended up in that minor branch.
 
 ### Neutral or deferred
 
-- The decision does not remove the fork's fragility: `//go:linkname` to an unexported method of `x/net/http2` breaks on any Go whose linker stops keeping this symbol. The pin fixes a known working version and keeps Go on the 1.26 branch.
+- The decision does not remove the fork's fragility: `//go:linkname` to an unexported method of `x/net/http2` breaks on any Go whose linker stops keeping this symbol. The pin fixes a known working version. It kept Go on the 1.26 branch until the fork `v1.14.1-extended-2.7.2` gained a `go1.27` variant in `common/force_close`; since 2026-10-24 `.go-version` follows the 1.27 branch, and every Go or fork bump checks that `common/force_close` has a variant for the new Go minor.
 - There is no check of the Node version on a developer machine. `engines` in pnpm 12 does not provide it; if it is needed, that is a separate decision.
 
 ## Risks and mitigations
 
-| Risk                                                               | Likelihood and impact                      | Mitigation                                                                 |
-| ------------------------------------------------------------------ | ------------------------------------------ | -------------------------------------------------------------------------- |
-| A developer builds bypassing `make` and gets the system Go         | medium; a build error, not data corruption | the `go` directive names the expected version; the error is reproducible   |
-| `.nvmrc` diverges from `engines.node`                              | medium; the wrong Node version locally     | both values sit next to each other in the root and are changed in one edit |
-| The `golang:1.26` branch moves to a patch older than `.go-version` | low; inside the container bypassing `make` | `make` targets take the exact version anyway                               |
-| The fork requires Go newer than 1.26 while 1.27 stays broken       | low; the schema build stops                | the Go version is bumped after the fork is fixed                           |
+| Risk                                                                  | Likelihood and impact                      | Mitigation                                                                 |
+| --------------------------------------------------------------------- | ------------------------------------------ | -------------------------------------------------------------------------- |
+| A developer builds bypassing `make` and gets the system Go            | medium; a build error, not data corruption | the `go` directive names the expected version; the error is reproducible   |
+| `.nvmrc` diverges from `engines.node`                                 | medium; the wrong Node version locally     | both values sit next to each other in the root and are changed in one edit |
+| The `golang:<minor>` branch moves to a patch older than `.go-version` | low; inside the container bypassing `make` | `make` targets take the exact version anyway                               |
+| A new Go minor drops a symbol the fork links to                       | low; the schema build stops                | `.go-version` stays until `common/force_close` has a variant for that Go   |
 
 ## Compatibility, migration and rollback
 

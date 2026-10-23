@@ -1,5 +1,5 @@
 # A branch, not a patch version: the exact version comes from GOTOOLCHAIN in the Makefile targets.
-FROM golang:1.26-trixie
+FROM golang:1.27-trixie
 
 # jq and curl are needed by the Apply cycle check scripts; the rest is go mod.
 RUN apt-get update \
