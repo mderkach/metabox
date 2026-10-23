@@ -12,12 +12,16 @@ export const API_FAILURE = {
 
 export type ApiFailure = (typeof API_FAILURE)[keyof typeof API_FAILURE];
 
-/** `details` of `check_failed` carries the verbatim sing-box output. */
+/**
+ * `details` of `check_failed` carries the verbatim sing-box output. `retryAfter` is the
+ * `Retry-After` header in seconds, `null` when the answer had none.
+ */
 export class ApiError extends Error {
   readonly kind: ApiFailure;
   readonly status: number | null;
   readonly code: string | null;
   readonly details: unknown;
+  readonly retryAfter: number | null;
 
   constructor(
     kind: ApiFailure,
@@ -26,6 +30,7 @@ export class ApiError extends Error {
       status?: number;
       code?: string;
       details?: unknown;
+      retryAfter?: number | null;
       cause?: unknown;
     }
   ) {
@@ -35,6 +40,7 @@ export class ApiError extends Error {
     this.status = extra?.status ?? null;
     this.code = extra?.code ?? null;
     this.details = extra?.details;
+    this.retryAfter = extra?.retryAfter ?? null;
   }
 }
 
