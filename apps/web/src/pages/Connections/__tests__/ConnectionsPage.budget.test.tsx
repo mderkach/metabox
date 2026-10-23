@@ -42,10 +42,11 @@ const TEST_TIMEOUT_MS = 30 * MS_IN_SECOND;
  * jsdom is slower than a browser, and the absolute numbers cannot be carried over: the share of
  * the hidden tab in the tick does carry over. There is no browser profile of this measurement.
  *
- * The threshold has a margin of several times, like the table budget: test files run
- * in parallel, and neighbors take the CPU. The test catches a several-fold slowdown:
- * rendering all rows bypassing the virtualizer or redrawing the hidden tab
- * as a whole, not a micro-regression.
+ * The threshold has a margin of several times, like the table budget: neighbors take the CPU.
+ * The test catches only a several-fold slowdown of the tick, such as rendering all rows
+ * bypassing the virtualizer. It does not catch a redraw of the hidden tab: that is about a fifth
+ * of the tick and sits inside the margin. That the hidden tab does not re-render is checked by
+ * 'the hidden tab stands on a snapshot, and the number on its label is live' in `ConnectionsPage.test.tsx`.
  */
 const TICK_BUDGET_MS = 250;
 
