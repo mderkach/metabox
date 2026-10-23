@@ -49,3 +49,32 @@ func TestMaskConfig(t *testing.T) {
 		})
 	}
 }
+
+func TestMaskLog(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{"rule-set download error", `initialize rule-set[geosite-x]: Get "https://h.example/x.srs?token=t1": dial tcp: i/o timeout`, `initialize rule-set[geosite-x]: Get "https://h.example/••••••": dial tcp: i/o timeout`},
+		{"subscription token in path", "provider[sub]: update failed: https://sub.example/api/v1/client/abc123, status 403", "provider[sub]: update failed: https://sub.example/••••••, status 403"},
+		{"credentials", "dial http://u:p@10.0.0.1:8080 failed", "dial http://10.0.0.1:8080/•••••• failed"},
+		{"trailing punctuation kept", "fetch https://h.example/s/t1.", "fetch https://h.example/••••••."},
+		{"single quotes", "url 'https://h.example/k?a=1' rejected", "url 'https://h.example/••••••' rejected"},
+		{"two urls", "https://a.example/1 -> https://b.example/2", "https://a.example/•••••• -> https://b.example/••••••"},
+		{"socks credentials", "outbound/socks[s]: dial socks5://u:p@h.example:1080", "outbound/socks[s]: dial socks5://h.example:1080/••••••"},
+		{"ipv6 host with port", "fetch http://[2001:db8::1]:8080/sub?token=x failed", "fetch http://[2001:db8::1]:8080/•••••• failed"},
+		{"bare host stays", `Get "https://h.example/": EOF`, `Get "https://h.example/": EOF`},
+		{"bare ipv6 host stays", "probe http://[::1] ok", "probe http://[::1] ok"},
+		{"no url", "inbound/tproxy[tproxy-in]: connection from 192.168.1.40:51234", "inbound/tproxy[tproxy-in]: connection from 192.168.1.40:51234"},
+		{"empty", "", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := maskLog(tt.in); got != tt.want {
+				t.Errorf("maskLog(%q) = %q, want %q", tt.in, got, tt.want)
+			}
+		})
+	}
+}

@@ -98,8 +98,8 @@ func (t tools) addRead(server *sdk.Server, log *slog.Logger) {
 			Description: "Last lines of the sing-box log, oldest first, the same text the panel log screen shows. " +
 				"level is the minimum level: trace, debug, info, notice, warn, error, fatal or panic (default: all). " +
 				"lines is 1 to 1000, default 200. Lines without a level (stack traces, continuations) pass the filter. " +
-				"The log is not masked: it may contain addresses and whatever sing-box itself prints. An empty list " +
-				"means no line at this level since the last clear in the panel.",
+				"URLs are hidden after the host; the rest of the line is not masked and may contain addresses and " +
+				"whatever sing-box itself prints. An empty list means no line at this level since the last clear in the panel.",
 		}, t.logTail)
 	}
 
@@ -504,9 +504,10 @@ func (t tools) logTail(ctx context.Context, in logTailIn) (logTailOut, error) {
 		return logTailOut{}, err
 	}
 
-	entries := snapshot.Entries
-	if entries == nil {
-		entries = []logs.Entry{}
+	entries := make([]logs.Entry, len(snapshot.Entries))
+	for i, entry := range snapshot.Entries {
+		entry.Message = maskLog(entry.Message)
+		entries[i] = entry
 	}
 
 	return logTailOut{Source: snapshot.Source, Entries: entries}, nil

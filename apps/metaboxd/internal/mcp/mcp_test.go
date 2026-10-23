@@ -167,7 +167,9 @@ func (f *fakeLogs) Tail(_ context.Context, n int, minLevel logs.Level) (logs.Sna
 
 	f.level, f.lines = minLevel, n
 
-	return logs.Snapshot{Source: logs.SourceLogread, Entries: []logs.Entry{{Level: logs.LevelWarn, Message: "dial failed"}}}, nil
+	return logs.Snapshot{Source: logs.SourceLogread, Entries: []logs.Entry{
+		{Time: "2026-10-23T10:00:00Z", Level: logs.LevelWarn, Message: `initialize rule-set[ads]: Get "https://h.example/ads.srs?token=t1": dial failed`},
+	}}, nil
 }
 
 func (f *fakeLogs) last() (logs.Level, int) {
@@ -566,6 +568,21 @@ func TestPanicInToolIsAToolError(t *testing.T) {
 	}](t, session, "metabox_log_tail", nil)
 	if len(out.Entries) != 1 {
 		t.Errorf("entries after the panic %v, want one", out.Entries)
+	}
+}
+
+func TestLogTailMasksURLs(t *testing.T) {
+	b := newBench(t, nil, &memoryStore{})
+	session := b.session(b.enable())
+
+	out := call[struct {
+		Source  logs.Source  `json:"source"`
+		Entries []logs.Entry `json:"entries"`
+	}](t, session, "metabox_log_tail", nil)
+
+	want := logs.Entry{Time: "2026-10-23T10:00:00Z", Level: logs.LevelWarn, Message: `initialize rule-set[ads]: Get "https://h.example/••••••": dial failed`}
+	if out.Source != logs.SourceLogread || len(out.Entries) != 1 || out.Entries[0] != want {
+		t.Errorf("tail %+v, want source %q and %+v", out, logs.SourceLogread, want)
 	}
 }
 
