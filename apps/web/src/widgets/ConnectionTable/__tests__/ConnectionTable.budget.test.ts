@@ -1,4 +1,5 @@
 import { sortFn_alphanumeric, sortFn_basic, sortFn_text } from '@tanstack/react-table';
+import { scaledBudget } from '@test/loadFactor';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { ConnectionStore, type ConnectionRow } from '@entities/Connection';
@@ -19,8 +20,8 @@ const RUNS = 5;
  * The keys are taken the same as in production, so an expensive `accessorFn` is caught
  * by the test; the library overhead itself is not.
  *
- * The threshold has a margin of several times: test files run in parallel, and under neighbor
- * load the measurement floats. The test catches a several-fold slowdown, not a micro-regression.
+ * The threshold is set for an idle machine and multiplied by `loadFactor` taken in the same run,
+ * so neighbor load does not fail it. The test catches a several-fold slowdown, not a micro-regression.
  */
 const SORT_BUDGET_MS = 60;
 
@@ -93,13 +94,13 @@ describe('connection table budget', () => {
   it('sorts 5000 rows by a numeric column within the budget', () => {
     const runs = Array.from({ length: RUNS }, () => sortBy(CONNECTION_FIELD.Volume, rows));
 
-    expect(median(runs)).toBeLessThan(SORT_BUDGET_MS);
+    expect(median(runs)).toBeLessThan(scaledBudget(SORT_BUDGET_MS));
   });
 
   it('sorts 5000 rows by a text column within the budget', () => {
     const runs = Array.from({ length: RUNS }, () => sortBy(CONNECTION_FIELD.Host, rows));
 
-    expect(median(runs)).toBeLessThan(SORT_BUDGET_MS);
+    expect(median(runs)).toBeLessThan(scaledBudget(SORT_BUDGET_MS));
   });
 
   it('parses a snapshot of 5000 connections within the budget', () => {
@@ -133,7 +134,7 @@ describe('connection table budget', () => {
     // parse and measure the return of previous rows.
     expect(state.closed.length).toBeGreaterThan(0);
     expect(state.active.some((row) => row.downRate > 0)).toBe(true);
-    expect(fastest(runs)).toBeLessThan(APPLY_BUDGET_MS);
+    expect(fastest(runs)).toBeLessThan(scaledBudget(APPLY_BUDGET_MS));
   });
 
   it('declares a comparison for every column: without it the list silently goes in stream order', () => {
