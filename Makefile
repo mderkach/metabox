@@ -82,7 +82,7 @@ test-schemagen:
 	cd tools/schemagen && go test \
 		-tags "$(SCHEMA_TAGS)" -ldflags "$(SCHEMA_LDFLAGS)" ./...
 
-GOLANGCI = go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.2
+GOLANGCI = go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0
 
 lint:
 	cd apps/metaboxd && $(GOLANGCI) run ./...
