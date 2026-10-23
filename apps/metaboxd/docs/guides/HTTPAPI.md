@@ -109,7 +109,7 @@ With a password a request without a live session gets 401 `unauthorized`. Exempt
 
 A wrong password is 403, not 401: the panel answers 401 by showing the login screen, and the refusal must stay in the form where the password was typed. 429 carries `Retry-After` in seconds. Every `/api/auth` answer carries `Cache-Control: no-store`: a cached login state or `Set-Cookie` would outlive the session.
 
-The session is the `metabox_session` cookie with `HttpOnly`, `SameSite=Strict`, `Path=/`, and `Secure` when the request came over TLS: with HTTPS off the panel is served over plain http, and a browser drops a `Secure` cookie on such a page. `EventSource` sends it like any same-origin request. The session is checked when the request starts: a stream opened before logout runs until it closes.
+The session is the `metabox_session` cookie with `HttpOnly`, `SameSite=Strict`, `Path=/`, and `Secure` when the request came over TLS: with HTTPS off the panel is served over plain http, and a browser drops a `Secure` cookie on such a page. `EventSource` sends it like any same-origin request. The session is checked when the request starts, and `requireSession` cancels the request context when the session ends, so logout and a password change close the open streams. Sessions are kept in `sessions.json` of the service directory and survive a daemon restart.
 
 ## MCP
 

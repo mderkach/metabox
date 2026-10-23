@@ -1,6 +1,7 @@
 package auth_test
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -19,6 +20,10 @@ type fakeStore struct {
 	data     []byte
 	writeErr error
 	writes   int
+
+	sessions        []byte
+	sessionsReadErr error
+	sessionWriteErr error
 }
 
 func (f *fakeStore) ReadAuth(context.Context) ([]byte, error) {
@@ -36,6 +41,28 @@ func (f *fakeStore) WriteAuth(_ context.Context, data []byte) error {
 	}
 
 	f.data = data
+
+	return nil
+}
+
+func (f *fakeStore) ReadSessions(context.Context) ([]byte, error) {
+	if f.sessionsReadErr != nil {
+		return nil, f.sessionsReadErr
+	}
+
+	if f.sessions == nil {
+		return nil, fs.ErrNotExist
+	}
+
+	return f.sessions, nil
+}
+
+func (f *fakeStore) WriteSessions(_ context.Context, data []byte) error {
+	if f.sessionWriteErr != nil {
+		return f.sessionWriteErr
+	}
+
+	f.sessions = data
 
 	return nil
 }
@@ -94,8 +121,8 @@ func TestWithoutPasswordThePanelIsOpen(t *testing.T) {
 	}
 }
 
-func TestFirstPasswordOpensASessionAndSurvivesRestart(t *testing.T) {
-	g, _, store, token := protected(t)
+func TestFirstPasswordOpensASessionAndBothSurviveRestart(t *testing.T) {
+	g, c, store, token := protected(t)
 
 	if enabled, valid := g.Check(token); !enabled || !valid {
 		t.Fatalf("caller session after setting the password: enabled %v, valid %v", enabled, valid)
@@ -110,13 +137,13 @@ func TestFirstPasswordOpensASessionAndSurvivesRestart(t *testing.T) {
 		t.Errorf("stored algorithm %v", rec["algorithm"])
 	}
 
-	restarted, err := auth.New(t.Context(), store, auth.Options{Iterations: 1000})
+	restarted, err := auth.New(t.Context(), store, auth.Options{Now: c.now, Iterations: 1000})
 	if err != nil {
 		t.Fatalf("restart: %v", err)
 	}
 
-	if _, valid := restarted.Check(token); valid {
-		t.Error("session survived a daemon restart")
+	if _, valid := restarted.Check(token); !valid {
+		t.Error("session did not survive a daemon restart")
 	}
 
 	if _, err := restarted.Login(t.Context(), owner, password); err != nil {
@@ -251,7 +278,7 @@ func TestSessionTableIsBounded(t *testing.T) {
 func TestLogoutClosesTheSession(t *testing.T) {
 	g, _, _, token := protected(t)
 
-	g.Logout(token)
+	g.Logout(t.Context(), token)
 
 	if _, valid := g.Check(token); valid {
 		t.Error("session is valid after logout")
@@ -669,4 +696,184 @@ func isLocked(err error) bool {
 	_, ok := errors.AsType[*auth.LockedError](err)
 
 	return ok
+}
+
+func TestSessionFileHoldsNoTokens(t *testing.T) {
+	_, _, store, token := protected(t)
+
+	if bytes.Contains(store.sessions, []byte(token)) {
+		t.Error("session file holds the token itself")
+	}
+}
+
+func TestLogoutAndChangeSurviveRestart(t *testing.T) {
+	g, c, store, token := protected(t)
+
+	other, err := g.Login(t.Context(), stranger, password)
+	if err != nil {
+		t.Fatalf("second login: %v", err)
+	}
+
+	g.Logout(t.Context(), other)
+
+	restarted, err := auth.New(t.Context(), store, auth.Options{Now: c.now, Iterations: 1000})
+	if err != nil {
+		t.Fatalf("restart: %v", err)
+	}
+
+	if _, valid := restarted.Check(other); valid {
+		t.Error("a session closed by logout came back after a restart")
+	}
+
+	if _, valid := restarted.Check(token); !valid {
+		t.Fatal("a live session did not survive the restart")
+	}
+
+	if _, err := restarted.SetPassword(t.Context(), owner, token, password, "new password"); err != nil {
+		t.Fatalf("change: %v", err)
+	}
+
+	again, err := auth.New(t.Context(), store, auth.Options{Now: c.now, Iterations: 1000})
+	if err != nil {
+		t.Fatalf("second restart: %v", err)
+	}
+
+	if _, valid := again.Check(token); valid {
+		t.Error("a session closed by the password change came back after a restart")
+	}
+}
+
+func TestIdleSessionExpiresAcrossRestart(t *testing.T) {
+	_, c, store, token := protected(t)
+
+	c.advance(auth.SessionIdle)
+
+	restarted, err := auth.New(t.Context(), store, auth.Options{Now: c.now, Iterations: 1000})
+	if err != nil {
+		t.Fatalf("restart: %v", err)
+	}
+
+	if _, valid := restarted.Check(token); valid {
+		t.Error("a session idle past the limit came back after a restart")
+	}
+}
+
+func TestBrokenSessionFileStartsWithoutSessions(t *testing.T) {
+	tests := []struct {
+		name  string
+		setup func(store *fakeStore)
+	}{
+		{"missing", func(store *fakeStore) { store.sessions = nil }},
+		{"not JSON", func(store *fakeStore) { store.sessions = []byte("{") }},
+		{"unreadable", func(store *fakeStore) { store.sessionsReadErr = errors.New("permission denied") }},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, c, store, token := protected(t)
+			tt.setup(store)
+
+			restarted, err := auth.New(t.Context(), store, auth.Options{Now: c.now, Iterations: 1000})
+			if err != nil {
+				t.Fatalf("a broken session file kept the daemon down: %v", err)
+			}
+
+			if enabled, valid := restarted.Check(token); !enabled || valid {
+				t.Errorf("enabled %v, valid %v; want a protected panel without sessions", enabled, valid)
+			}
+
+			if _, err := restarted.Login(t.Context(), owner, password); err != nil {
+				t.Errorf("login after a broken session file: %v", err)
+			}
+		})
+	}
+}
+
+func TestSessionWriteFailureDoesNotRefuseLogin(t *testing.T) {
+	g, _, store, _ := protected(t)
+	store.sessionWriteErr = errors.New("disk full")
+
+	token, err := g.Login(t.Context(), owner, password)
+	if err != nil {
+		t.Fatalf("login with a failing session write: %v", err)
+	}
+
+	if _, valid := g.Check(token); !valid {
+		t.Error("session from login is not valid")
+	}
+}
+
+func TestEndedClosesOnLogoutAndChange(t *testing.T) {
+	g, _, _, token := protected(t)
+
+	other, err := g.Login(t.Context(), stranger, password)
+	if err != nil {
+		t.Fatalf("second login: %v", err)
+	}
+
+	otherEnded := g.Ended(other)
+	callerEnded := g.Ended(token)
+
+	g.Logout(t.Context(), other)
+
+	select {
+	case <-otherEnded:
+	default:
+		t.Error("logout did not end the session")
+	}
+
+	select {
+	case <-callerEnded:
+		t.Fatal("logout of another session ended the caller's")
+	default:
+	}
+
+	if _, err := g.SetPassword(t.Context(), owner, token, password, "new password"); err != nil {
+		t.Fatalf("change: %v", err)
+	}
+
+	select {
+	case <-callerEnded:
+	default:
+		t.Error("password change did not end the session")
+	}
+
+	select {
+	case <-g.Ended("unknown"):
+	default:
+		t.Error("a token without a session is not ended")
+	}
+}
+
+func TestSessionSurvivesAClockBehindTheSaveTime(t *testing.T) {
+	_, _, store, token := protected(t)
+
+	booted := &clock{at: time.Unix(0, 0).UTC()}
+
+	restarted, err := auth.New(t.Context(), store, auth.Options{Now: booted.now, Iterations: 1000})
+	if err != nil {
+		t.Fatalf("restart: %v", err)
+	}
+
+	if _, valid := restarted.Check(token); !valid {
+		t.Error("a router clock behind the save time dropped the session")
+	}
+}
+
+func TestFailedSaveAfterAChangeDoesNotBringSessionsBack(t *testing.T) {
+	g, c, store, token := protected(t)
+	store.sessionWriteErr = errors.New("disk full")
+
+	if _, err := g.SetPassword(t.Context(), owner, token, password, "new password"); err != nil {
+		t.Fatalf("change: %v", err)
+	}
+
+	restarted, err := auth.New(t.Context(), store, auth.Options{Now: c.now, Iterations: 1000})
+	if err != nil {
+		t.Fatalf("restart: %v", err)
+	}
+
+	if _, valid := restarted.Check(token); valid {
+		t.Error("a session closed by the password change came back from a stale session file")
+	}
 }

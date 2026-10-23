@@ -27,13 +27,15 @@ const maxAuthBytes = 4 << 10
 type Guard interface {
 	Check(token string) (enabled, valid bool)
 	Login(ctx context.Context, addr netip.Addr, password string) (string, error)
-	Logout(token string)
+	Logout(ctx context.Context, token string)
+	Ended(token string) <-chan struct{}
 	SetPassword(ctx context.Context, addr netip.Addr, token, current, next string) (string, error)
 }
 
 // requireSession lets a request without a session through only while the panel has no
 // password, or to an address that must answer before login: the health check, the SPA
-// static files and the login endpoints.
+// static files and the login endpoints. A request lives no longer than its session:
+// logout or a password change cancels it, and so closes an open stream.
 func requireSession(log *slog.Logger, guard Guard, next http.Handler) http.Handler {
 	if guard == nil {
 		return next
@@ -46,15 +48,39 @@ func requireSession(log *slog.Logger, guard Guard, next http.Handler) http.Handl
 			return
 		}
 
-		if enabled, valid := guard.Check(sessionToken(r)); enabled && !valid {
+		token := sessionToken(r)
+
+		enabled, valid := guard.Check(token)
+		if enabled && !valid {
 			log.Debug("запрос без сессии", "method", r.Method, "path", r.URL.Path)
 			fail(log, w, r, errUnauthorized)
 
 			return
 		}
 
+		if enabled {
+			r = r.WithContext(untilEnded(r.Context(), guard.Ended(token)))
+		}
+
 		next.ServeHTTP(w, r)
 	})
+}
+
+// untilEnded cancels ctx when ended closes. The goroutine lives no longer than the
+// request: it exits when the request context ends.
+func untilEnded(ctx context.Context, ended <-chan struct{}) context.Context {
+	ctx, cancel := context.WithCancel(ctx)
+
+	go func() {
+		defer cancel()
+
+		select {
+		case <-ended:
+		case <-ctx.Done():
+		}
+	}()
+
+	return ctx
 }
 
 func exemptFromSession(r *http.Request) bool {
@@ -156,7 +182,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
-	s.auth.Logout(sessionToken(r))
+	s.auth.Logout(r.Context(), sessionToken(r))
 	clearSession(w, r)
 	w.WriteHeader(http.StatusNoContent)
 }

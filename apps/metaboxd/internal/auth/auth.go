@@ -2,8 +2,8 @@
 // in the daemon service directory, issues sessions and locks out guessing by client
 // network.
 //
-// Sessions and failed attempts live only in memory: a daemon restart logs everybody out
-// and forgets the lockouts.
+// Sessions are saved next to the hash and survive a daemon restart; failed attempts live
+// only in memory, and a restart forgets the lockouts.
 package auth
 
 import (
@@ -12,10 +12,12 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/subtle"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"net/netip"
 	"sync"
 	"time"
@@ -81,11 +83,14 @@ func (e *LockedError) Error() string {
 	return fmt.Sprintf("слишком много неверных паролей, повтор через %s", e.RetryAfter.Round(time.Second))
 }
 
-// Store keeps the password hash file. ReadAuth returns an error for which
-// errors.Is(err, fs.ErrNotExist) holds when no password was ever set.
+// Store keeps the password hash file and the session file. ReadAuth and ReadSessions
+// return an error for which errors.Is(err, fs.ErrNotExist) holds when the file was never
+// written.
 type Store interface {
 	ReadAuth(ctx context.Context) ([]byte, error)
 	WriteAuth(ctx context.Context, data []byte) error
+	ReadSessions(ctx context.Context) ([]byte, error)
+	WriteSessions(ctx context.Context, data []byte) error
 }
 
 // Options are the guard settings that tests replace.
@@ -98,6 +103,9 @@ type Options struct {
 	// Hashing is called in every PBKDF2 computation after it takes a slot and before it
 	// hashes; tests block in it to hold a check midway.
 	Hashing func()
+	// Log receives the session file failures: they do not refuse a login. nil means
+	// discard.
+	Log *slog.Logger
 }
 
 // record is the hash file. The algorithm and the iteration count are stored with the key,
@@ -119,6 +127,28 @@ func (r *record) matches(password string) bool {
 	return subtle.ConstantTimeCompare(key, r.Key) == 1
 }
 
+// session is a live login. ended closes when the session ends, so that a stream opened
+// with it stops.
+type session struct {
+	seen  time.Time
+	ended chan struct{}
+}
+
+// sessionFile is the session file: the SHA-256 of each token, so that a copy of the file
+// does not open the panel, and the time of its last request known at the last write.
+// Generation is the SHA-256 of the password salt the sessions were opened under: a file
+// left behind by a failed write after a password change does not bring its sessions
+// back.
+type sessionFile struct {
+	Generation string         `json:"generation"`
+	Sessions   []savedSession `json:"sessions"`
+}
+
+type savedSession struct {
+	Key  string    `json:"key"`
+	Seen time.Time `json:"seen"`
+}
+
 type attempts struct {
 	times       []time.Time
 	lockedUntil time.Time
@@ -132,6 +162,7 @@ type Guard struct {
 	store      Store
 	now        func() time.Time
 	iterations int
+	log        *slog.Logger
 	hashing    func()
 	slots      chan struct{}
 
@@ -139,9 +170,14 @@ type Guard struct {
 	// write must not interleave with another change.
 	change sync.Mutex
 
+	// save serializes session file writes: each one takes the table after the previous
+	// one is written, so an older table never overwrites a newer one.
+	save sync.Mutex
+
 	mu       sync.Mutex
 	password *record
-	sessions map[string]time.Time
+	// sessions is keyed by tokenKey of the token.
+	sessions map[string]*session
 	failures map[netip.Prefix]*attempts
 	// lockedUntil is the global lockout set by the attempt budget.
 	lockedUntil time.Time
@@ -154,14 +190,19 @@ func New(ctx context.Context, store Store, opts Options) (*Guard, error) {
 		store:      store,
 		now:        opts.Now,
 		iterations: opts.Iterations,
+		log:        opts.Log,
 		hashing:    opts.Hashing,
 		slots:      make(chan struct{}, maxHashing),
-		sessions:   map[string]time.Time{},
+		sessions:   map[string]*session{},
 		failures:   map[netip.Prefix]*attempts{},
 	}
 
 	if g.now == nil {
 		g.now = time.Now
+	}
+
+	if g.log == nil {
+		g.log = slog.New(slog.DiscardHandler)
 	}
 
 	if g.iterations == 0 {
@@ -191,8 +232,50 @@ func New(ctx context.Context, store Store, opts Options) (*Guard, error) {
 	}
 
 	g.password = &rec
+	g.restoreSessions(ctx)
 
 	return g, nil
+}
+
+// restoreSessions reads the session file. A missing or broken file is not an error:
+// the panel stays protected, and its users log in again.
+func (g *Guard) restoreSessions(ctx context.Context) {
+	data, err := g.store.ReadSessions(ctx)
+	if errors.Is(err, fs.ErrNotExist) {
+		return
+	}
+
+	var file sessionFile
+	if err == nil {
+		err = json.Unmarshal(data, &file)
+	}
+
+	if err != nil {
+		g.log.Warn("сессии панели не восстановлены", "err", err)
+
+		return
+	}
+
+	if file.Generation != saltKey(g.password) {
+		return
+	}
+
+	now := g.now()
+
+	for _, saved := range file.Sessions {
+		seen := saved.Seen
+		// The router has no real-time clock: after a reboot it may run behind the time
+		// the session was saved at.
+		if seen.After(now) {
+			seen = now
+		}
+
+		if now.Sub(seen) >= SessionIdle || len(g.sessions) >= maxSessions {
+			continue
+		}
+
+		g.sessions[saved.Key] = &session{seen: seen, ended: make(chan struct{})}
+	}
 }
 
 // Check reports whether the panel has a password and, if it does, whether the token
@@ -205,21 +288,40 @@ func (g *Guard) Check(token string) (enabled, valid bool) {
 		return false, false
 	}
 
-	seen, ok := g.sessions[token]
+	key := tokenKey(token)
+
+	live, ok := g.sessions[key]
 	if !ok {
 		return true, false
 	}
 
 	now := g.now()
-	if now.Sub(seen) >= SessionIdle {
-		delete(g.sessions, token)
+	if now.Sub(live.seen) >= SessionIdle {
+		g.endSession(key)
 
 		return true, false
 	}
 
-	g.sessions[token] = now
+	live.seen = now
 
 	return true, true
+}
+
+// Ended returns a channel that closes when the session of the token ends: logout,
+// password change, eviction, or expiry noticed by Check. For a token without a live
+// session the channel is already closed.
+func (g *Guard) Ended(token string) <-chan struct{} {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	if live, ok := g.sessions[tokenKey(token)]; ok {
+		return live.ended
+	}
+
+	ended := make(chan struct{})
+	close(ended)
+
+	return ended
 }
 
 // Login checks the password and opens a session. The attempt counts against the address
@@ -239,23 +341,36 @@ func (g *Guard) Login(ctx context.Context, addr netip.Addr, password string) (st
 	}
 
 	g.mu.Lock()
-	defer g.mu.Unlock()
-
 	// The hash is computed outside the lock: a password changed meanwhile has closed every
 	// session, and a login checked against the old one must not open a new one.
 	if g.password != rec {
+		g.mu.Unlock()
+
 		return "", ErrWrongPassword
 	}
 
-	return g.openSession(), nil
+	token := g.openSession()
+	g.mu.Unlock()
+
+	g.saveSessions(ctx, false)
+
+	return token, nil
 }
 
 // Logout closes the session. An unknown token is not an error.
-func (g *Guard) Logout(token string) {
-	g.mu.Lock()
-	defer g.mu.Unlock()
+func (g *Guard) Logout(ctx context.Context, token string) {
+	key := tokenKey(token)
 
-	delete(g.sessions, token)
+	g.mu.Lock()
+	_, ok := g.sessions[key]
+	if ok {
+		g.endSession(key)
+	}
+	g.mu.Unlock()
+
+	if ok {
+		g.saveSessions(ctx, true)
+	}
 }
 
 // SetPassword sets, changes or, with an empty next, removes the password. While the panel
@@ -292,10 +407,11 @@ func (g *Guard) SetPassword(ctx context.Context, addr netip.Addr, token, current
 		}
 
 		g.mu.Lock()
-		defer g.mu.Unlock()
-
 		g.password = nil
-		clear(g.sessions)
+		g.endSessions()
+		g.mu.Unlock()
+
+		g.saveSessions(ctx, true)
 
 		return "", nil
 	}
@@ -319,12 +435,14 @@ func (g *Guard) SetPassword(ctx context.Context, addr netip.Addr, token, current
 	}
 
 	g.mu.Lock()
-	defer g.mu.Unlock()
-
 	g.password = fresh
-	clear(g.sessions)
+	g.endSessions()
+	opened := g.openSession()
+	g.mu.Unlock()
 
-	return g.openSession(), nil
+	g.saveSessions(ctx, true)
+
+	return opened, nil
 }
 
 func (g *Guard) derive(ctx context.Context, password string) (*record, error) {
@@ -493,9 +611,9 @@ func (g *Guard) pruneFailures(now time.Time) {
 func (g *Guard) openSession() string {
 	now := g.now()
 
-	for token, seen := range g.sessions {
-		if now.Sub(seen) >= SessionIdle {
-			delete(g.sessions, token)
+	for key, live := range g.sessions {
+		if now.Sub(live.seen) >= SessionIdle {
+			g.endSession(key)
 		}
 	}
 
@@ -505,17 +623,78 @@ func (g *Guard) openSession() string {
 			oldestAt time.Time
 		)
 
-		for token, seen := range g.sessions {
-			if oldest == "" || seen.Before(oldestAt) {
-				oldest, oldestAt = token, seen
+		for key, live := range g.sessions {
+			if oldest == "" || live.seen.Before(oldestAt) {
+				oldest, oldestAt = key, live.seen
 			}
 		}
 
-		delete(g.sessions, oldest)
+		g.endSession(oldest)
 	}
 
 	token := rand.Text() + rand.Text()
-	g.sessions[token] = now
+	g.sessions[tokenKey(token)] = &session{seen: now, ended: make(chan struct{})}
 
 	return token
+}
+
+// endSession is called under mu.
+func (g *Guard) endSession(key string) {
+	close(g.sessions[key].ended)
+	delete(g.sessions, key)
+}
+
+// endSessions is called under mu.
+func (g *Guard) endSessions() {
+	for key := range g.sessions {
+		g.endSession(key)
+	}
+}
+
+// saveSessions writes the session table. A failed write does not fail the login or the
+// logout that caused it: the table in memory is right until the daemon restarts. After a
+// revocation the failure is an error, since a restart would bring the revoked session
+// back. The write is not cancelled with the request: a client that drops a logout must
+// not keep its session on disk.
+func (g *Guard) saveSessions(ctx context.Context, revoked bool) {
+	g.save.Lock()
+	defer g.save.Unlock()
+
+	g.mu.Lock()
+	file := sessionFile{Generation: saltKey(g.password), Sessions: make([]savedSession, 0, len(g.sessions))}
+	for key, live := range g.sessions {
+		file.Sessions = append(file.Sessions, savedSession{Key: key, Seen: live.seen})
+	}
+	g.mu.Unlock()
+
+	data, err := json.Marshal(file)
+	if err == nil {
+		err = g.store.WriteSessions(context.WithoutCancel(ctx), data)
+	}
+
+	switch {
+	case err == nil:
+	case revoked:
+		g.log.Error("отзыв сессий панели не сохранён, рестарт их вернёт", "err", err)
+	default:
+		g.log.Warn("сессии панели не сохранены", "err", err)
+	}
+}
+
+// saltKey identifies the password the sessions belong to; no password gives an empty
+// key.
+func saltKey(rec *record) string {
+	if rec == nil {
+		return ""
+	}
+
+	sum := sha256.Sum256(rec.Salt)
+
+	return hex.EncodeToString(sum[:])
+}
+
+func tokenKey(token string) string {
+	sum := sha256.Sum256([]byte(token))
+
+	return hex.EncodeToString(sum[:])
 }

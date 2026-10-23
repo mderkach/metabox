@@ -749,6 +749,37 @@ func TestAuthFileIsReadableByRootOnly(t *testing.T) {
 	}
 }
 
+func TestSessionFileIsReadableByRootOnly(t *testing.T) {
+	store, cfgDir := newStore(t)
+
+	if _, err := store.ReadSessions(t.Context()); !errors.Is(err, fs.ErrNotExist) {
+		t.Fatalf("read before a login: got %v, want ErrNotExist", err)
+	}
+
+	want := []byte(`{"sessions":[]}`)
+	if err := store.WriteSessions(t.Context(), want); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	got, err := store.ReadSessions(t.Context())
+	if err != nil {
+		t.Fatalf("read: %v", err)
+	}
+
+	if !bytes.Equal(got, want) {
+		t.Errorf("read %q, want %q", got, want)
+	}
+
+	info, err := os.Stat(filepath.Join(filepath.Dir(cfgDir), "metabox", "sessions.json"))
+	if err != nil {
+		t.Fatalf("stat: %v", err)
+	}
+
+	if perm := info.Mode().Perm(); perm != 0o600 {
+		t.Errorf("mode %o, want 600", perm)
+	}
+}
+
 func TestMCPFileIsReadableByRootOnly(t *testing.T) {
 	store, cfgDir := newStore(t)
 

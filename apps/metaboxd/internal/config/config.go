@@ -44,6 +44,7 @@ const (
 	ruleSetsName = "rule-sets.json"
 	devicesName  = "devices.json"
 	authName     = "auth.json"
+	sessionsName = "sessions.json"
 	mcpName      = "mcp.json"
 	// tlsDir holds the panel certificates and keys under the service directory.
 	tlsDir = "tls"
@@ -824,6 +825,52 @@ func (s *Store) WriteAuth(ctx context.Context, data []byte) error {
 	defer func() { _ = root.Close() }()
 
 	return writeAtomic(root, authName, data, securePerm)
+}
+
+// ReadSessions returns the panel session file. A missing file or service directory is an
+// error for which errors.Is(err, fs.ErrNotExist) holds: nobody has logged in yet.
+func (s *Store) ReadSessions(ctx context.Context) ([]byte, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	root, err := openRoot(s.serviceDir)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = root.Close() }()
+
+	data, err := root.ReadFile(sessionsName)
+	if err != nil {
+		return nil, fmt.Errorf("чтение файла сессий в %s: %w", s.serviceDir, err)
+	}
+
+	return data, nil
+}
+
+// WriteSessions saves the panel session file atomically, readable by root only.
+func (s *Store) WriteSessions(ctx context.Context, data []byte) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if err := ensureDir(s.serviceDir); err != nil {
+		return fmt.Errorf("служебный каталог: %w", err)
+	}
+
+	root, err := openRoot(s.serviceDir)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = root.Close() }()
+
+	return writeAtomic(root, sessionsName, data, securePerm)
 }
 
 // ReadMCP returns the MCP access token hash file. A missing file or service directory is
