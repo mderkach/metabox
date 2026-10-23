@@ -1,6 +1,6 @@
 // Package auth guards the panel with an optional password: it keeps the password hash
 // in the daemon service directory, issues sessions and locks out guessing by client
-// address.
+// network.
 //
 // Sessions and failed attempts live only in memory: a daemon restart logs everybody out
 // and forgets the lockouts.
@@ -34,6 +34,21 @@ const (
 	failWindow = 15 * time.Minute
 	lockFor    = 5 * time.Minute
 
+	// globalFailKeys is the global attempt budget: once this many lockout keys have a
+	// wrong password within failWindow, login is locked for every address for lockFor.
+	// It stops guessing spread over many addresses, at the price of locking the owner out
+	// while such guessing goes on.
+	globalFailKeys = 10
+
+	// maxHashing bounds the PBKDF2 computations running at once; the rest wait for a slot.
+	// The router has four cores, and the other two keep routing while guesses arrive from
+	// many addresses.
+	maxHashing = 2
+
+	// ipv6LockBits is the IPv6 prefix the lockout counts by: a LAN device picks new
+	// addresses inside its /64 at will.
+	ipv6LockBits = 64
+
 	minPasswordRunes = 8
 	maxPasswordRunes = 128
 
@@ -56,7 +71,8 @@ var (
 	ErrNoSession = errors.New("нужен вход в панель")
 )
 
-// LockedError means the client address made too many wrong attempts and is locked out.
+// LockedError means login is locked out: the client address made too many wrong
+// attempts, or too many addresses did.
 type LockedError struct {
 	RetryAfter time.Duration
 }
@@ -79,6 +95,9 @@ type Options struct {
 	// Iterations is the PBKDF2 iteration count for a new password. Zero means the
 	// production value; tests set a small one, otherwise each hash takes a CPU slice.
 	Iterations int
+	// Hashing is called in every PBKDF2 computation after it takes a slot and before it
+	// hashes; tests block in it to hold a check midway.
+	Hashing func()
 }
 
 // record is the hash file. The algorithm and the iteration count are stored with the key,
@@ -103,6 +122,9 @@ func (r *record) matches(password string) bool {
 type attempts struct {
 	times       []time.Time
 	lockedUntil time.Time
+	// lastFailed is the last wrong password from the key, as opposed to an attempt still
+	// being checked: the global budget counts keys that failed within failWindow.
+	lastFailed time.Time
 }
 
 // Guard owns the password, the sessions and the failed attempts.
@@ -110,6 +132,8 @@ type Guard struct {
 	store      Store
 	now        func() time.Time
 	iterations int
+	hashing    func()
+	slots      chan struct{}
 
 	// change serializes password changes: the check of the current password and the
 	// write must not interleave with another change.
@@ -118,7 +142,9 @@ type Guard struct {
 	mu       sync.Mutex
 	password *record
 	sessions map[string]time.Time
-	failures map[netip.Addr]*attempts
+	failures map[netip.Prefix]*attempts
+	// lockedUntil is the global lockout set by the attempt budget.
+	lockedUntil time.Time
 }
 
 // New reads the hash file. A file that cannot be parsed is an error, not an open panel:
@@ -128,8 +154,10 @@ func New(ctx context.Context, store Store, opts Options) (*Guard, error) {
 		store:      store,
 		now:        opts.Now,
 		iterations: opts.Iterations,
+		hashing:    opts.Hashing,
+		slots:      make(chan struct{}, maxHashing),
 		sessions:   map[string]time.Time{},
-		failures:   map[netip.Addr]*attempts{},
+		failures:   map[netip.Prefix]*attempts{},
 	}
 
 	if g.now == nil {
@@ -196,8 +224,8 @@ func (g *Guard) Check(token string) (enabled, valid bool) {
 
 // Login checks the password and opens a session. The attempt counts against the address
 // before the check: parallel guesses from one address do not get past the limit while
-// the hash is being computed.
-func (g *Guard) Login(addr netip.Addr, password string) (string, error) {
+// the hash is being computed. Waiting for a hashing slot ends with ctx.
+func (g *Guard) Login(ctx context.Context, addr netip.Addr, password string) (string, error) {
 	g.mu.Lock()
 	rec := g.password
 	g.mu.Unlock()
@@ -206,7 +234,7 @@ func (g *Guard) Login(addr netip.Addr, password string) (string, error) {
 		return "", ErrNotSet
 	}
 
-	if err := g.verify(addr, rec, password); err != nil {
+	if err := g.verify(ctx, addr, rec, password); err != nil {
 		return "", err
 	}
 
@@ -249,7 +277,7 @@ func (g *Guard) SetPassword(ctx context.Context, addr netip.Addr, token, current
 			return "", ErrNoSession
 		}
 
-		if err := g.verify(addr, rec, current); err != nil {
+		if err := g.verify(ctx, addr, rec, current); err != nil {
 			return "", err
 		}
 	}
@@ -276,7 +304,7 @@ func (g *Guard) SetPassword(ctx context.Context, addr netip.Addr, token, current
 		return "", fmt.Errorf("%w: от %d до %d символов", ErrPasswordInvalid, minPasswordRunes, maxPasswordRunes)
 	}
 
-	fresh, err := g.derive(next)
+	fresh, err := g.derive(ctx, next)
 	if err != nil {
 		return "", err
 	}
@@ -299,26 +327,63 @@ func (g *Guard) SetPassword(ctx context.Context, addr netip.Addr, token, current
 	return g.openSession(), nil
 }
 
-func (g *Guard) derive(password string) (*record, error) {
+func (g *Guard) derive(ctx context.Context, password string) (*record, error) {
 	salt := make([]byte, saltBytes)
 	_, _ = rand.Read(salt) // crypto/rand.Read never fails since Go 1.24
 
-	key, err := pbkdf2.Key(sha256.New, password, salt, g.iterations, keyBytes)
-	if err != nil {
-		return nil, fmt.Errorf("хеш пароля: %w", err)
+	var (
+		key     []byte
+		hashErr error
+	)
+
+	if err := g.hash(ctx, func() {
+		key, hashErr = pbkdf2.Key(sha256.New, password, salt, g.iterations, keyBytes)
+	}); err != nil {
+		return nil, err
+	}
+
+	if hashErr != nil {
+		return nil, fmt.Errorf("хеш пароля: %w", hashErr)
 	}
 
 	return &record{Algorithm: algorithm, Iterations: g.iterations, Salt: salt, Key: key}, nil
 }
 
+// hash runs one PBKDF2 computation in a free slot, waiting for one while ctx lives.
+func (g *Guard) hash(ctx context.Context, compute func()) error {
+	select {
+	case g.slots <- struct{}{}:
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+
+	defer func() { <-g.slots }()
+
+	if g.hashing != nil {
+		g.hashing()
+	}
+
+	compute()
+
+	return nil
+}
+
 // verify counts the attempt, computes the hash outside the lock and forgets the
 // address on success.
-func (g *Guard) verify(addr netip.Addr, rec *record, password string) error {
+func (g *Guard) verify(ctx context.Context, addr netip.Addr, rec *record, password string) error {
+	key := lockKey(addr)
+
 	g.mu.Lock()
 	now := g.now()
 	g.pruneFailures(now)
 
-	entry := g.failures[addr]
+	if now.Before(g.lockedUntil) {
+		g.mu.Unlock()
+
+		return &LockedError{RetryAfter: g.lockedUntil.Sub(now)}
+	}
+
+	entry := g.failures[key]
 	if entry != nil && now.Before(entry.lockedUntil) {
 		g.mu.Unlock()
 
@@ -327,7 +392,7 @@ func (g *Guard) verify(addr netip.Addr, rec *record, password string) error {
 
 	if entry == nil {
 		entry = &attempts{}
-		g.failures[addr] = entry
+		g.failures[key] = entry
 	}
 
 	entry.times = append(entry.times, now)
@@ -337,21 +402,76 @@ func (g *Guard) verify(addr netip.Addr, rec *record, password string) error {
 	}
 	g.mu.Unlock()
 
-	if !rec.matches(password) {
-		return ErrWrongPassword
+	var ok bool
+	if err := g.hash(ctx, func() { ok = rec.matches(password) }); err != nil {
+		return err
 	}
 
 	g.mu.Lock()
-	delete(g.failures, addr)
-	g.mu.Unlock()
+	defer g.mu.Unlock()
 
-	return nil
+	// A check that waited for a slot may finish after the global lockout fired, and its
+	// answer must not get past it.
+	now = g.now()
+	if now.Before(g.lockedUntil) {
+		return &LockedError{RetryAfter: g.lockedUntil.Sub(now)}
+	}
+
+	if ok {
+		delete(g.failures, key)
+
+		return nil
+	}
+
+	// The entry may have been dropped meanwhile by a success from the same key.
+	entry = g.failures[key]
+	if entry == nil {
+		entry = &attempts{}
+		g.failures[key] = entry
+	}
+
+	entry.lastFailed = now
+	g.countGlobal(now)
+
+	return ErrWrongPassword
+}
+
+// countGlobal is called under mu after a wrong password and locks every address once
+// globalFailKeys keys have failed within the window.
+func (g *Guard) countGlobal(now time.Time) {
+	failed := 0
+
+	for _, entry := range g.failures {
+		if now.Sub(entry.lastFailed) < failWindow {
+			failed++
+		}
+	}
+
+	if failed >= globalFailKeys {
+		g.lockedUntil = now.Add(lockFor)
+	}
+}
+
+// lockKey is what the lockout counts by: an IPv4 address as is, an IPv6 address by its
+// /64.
+func lockKey(addr netip.Addr) netip.Prefix {
+	bits := addr.BitLen()
+	if addr.Is6() {
+		bits = ipv6LockBits
+	}
+
+	key, err := addr.Prefix(bits)
+	if err != nil {
+		return netip.Prefix{}
+	}
+
+	return key
 }
 
 // pruneFailures drops attempts older than the window and expired lockouts, so the table
 // holds only addresses active in the last quarter of an hour.
 func (g *Guard) pruneFailures(now time.Time) {
-	for addr, entry := range g.failures {
+	for key, entry := range g.failures {
 		kept := entry.times[:0]
 
 		for _, at := range entry.times {
@@ -362,8 +482,8 @@ func (g *Guard) pruneFailures(now time.Time) {
 
 		entry.times = kept
 
-		if len(kept) == 0 && !now.Before(entry.lockedUntil) {
-			delete(g.failures, addr)
+		if len(kept) == 0 && !now.Before(entry.lockedUntil) && now.Sub(entry.lastFailed) >= failWindow {
+			delete(g.failures, key)
 		}
 	}
 }

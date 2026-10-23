@@ -6,7 +6,10 @@ import (
 	"errors"
 	"io/fs"
 	"net/netip"
+	"sync"
+	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"metabox/internal/auth"
@@ -86,7 +89,7 @@ func TestWithoutPasswordThePanelIsOpen(t *testing.T) {
 		t.Error("guard without a password reports protection")
 	}
 
-	if _, err := g.Login(owner, password); !errors.Is(err, auth.ErrNotSet) {
+	if _, err := g.Login(t.Context(), owner, password); !errors.Is(err, auth.ErrNotSet) {
 		t.Errorf("login without a password: got %v, want ErrNotSet", err)
 	}
 }
@@ -116,7 +119,7 @@ func TestFirstPasswordOpensASessionAndSurvivesRestart(t *testing.T) {
 		t.Error("session survived a daemon restart")
 	}
 
-	if _, err := restarted.Login(owner, password); err != nil {
+	if _, err := restarted.Login(t.Context(), owner, password); err != nil {
 		t.Errorf("login after restart: %v", err)
 	}
 }
@@ -124,11 +127,11 @@ func TestFirstPasswordOpensASessionAndSurvivesRestart(t *testing.T) {
 func TestLoginRejectsAWrongPassword(t *testing.T) {
 	g, _, _, _ := protected(t)
 
-	if _, err := g.Login(stranger, "wrong password"); !errors.Is(err, auth.ErrWrongPassword) {
+	if _, err := g.Login(t.Context(), stranger, "wrong password"); !errors.Is(err, auth.ErrWrongPassword) {
 		t.Fatalf("wrong password: got %v, want ErrWrongPassword", err)
 	}
 
-	token, err := g.Login(owner, password)
+	token, err := g.Login(t.Context(), owner, password)
 	if err != nil {
 		t.Fatalf("right password: %v", err)
 	}
@@ -142,12 +145,12 @@ func TestFiveWrongPasswordsLockTheAddress(t *testing.T) {
 	g, c, _, _ := protected(t)
 
 	for range 5 {
-		if _, err := g.Login(stranger, "wrong password"); !errors.Is(err, auth.ErrWrongPassword) {
+		if _, err := g.Login(t.Context(), stranger, "wrong password"); !errors.Is(err, auth.ErrWrongPassword) {
 			t.Fatalf("wrong password before the limit: %v", err)
 		}
 	}
 
-	_, err := g.Login(stranger, password)
+	_, err := g.Login(t.Context(), stranger, password)
 
 	locked, ok := errors.AsType[*auth.LockedError](err)
 	if !ok {
@@ -158,13 +161,13 @@ func TestFiveWrongPasswordsLockTheAddress(t *testing.T) {
 		t.Errorf("retry after %v, want 5m", locked.RetryAfter)
 	}
 
-	if _, err := g.Login(owner, password); err != nil {
+	if _, err := g.Login(t.Context(), owner, password); err != nil {
 		t.Errorf("another address is locked too: %v", err)
 	}
 
 	c.advance(5 * time.Minute)
 
-	if _, err := g.Login(stranger, password); err != nil {
+	if _, err := g.Login(t.Context(), stranger, password); err != nil {
 		t.Errorf("login after the lockout expired: %v", err)
 	}
 }
@@ -173,16 +176,16 @@ func TestOldFailuresDoNotCount(t *testing.T) {
 	g, c, _, _ := protected(t)
 
 	for range 4 {
-		_, _ = g.Login(stranger, "wrong password")
+		_, _ = g.Login(t.Context(), stranger, "wrong password")
 	}
 
 	c.advance(16 * time.Minute)
 
 	for range 4 {
-		_, _ = g.Login(stranger, "wrong password")
+		_, _ = g.Login(t.Context(), stranger, "wrong password")
 	}
 
-	if _, err := g.Login(stranger, password); err != nil {
+	if _, err := g.Login(t.Context(), stranger, password); err != nil {
 		t.Errorf("failures outside the window locked the address: %v", err)
 	}
 }
@@ -191,18 +194,18 @@ func TestSuccessResetsTheFailures(t *testing.T) {
 	g, _, _, _ := protected(t)
 
 	for range 4 {
-		_, _ = g.Login(stranger, "wrong password")
+		_, _ = g.Login(t.Context(), stranger, "wrong password")
 	}
 
-	if _, err := g.Login(stranger, password); err != nil {
+	if _, err := g.Login(t.Context(), stranger, password); err != nil {
 		t.Fatalf("right password: %v", err)
 	}
 
 	for range 4 {
-		_, _ = g.Login(stranger, "wrong password")
+		_, _ = g.Login(t.Context(), stranger, "wrong password")
 	}
 
-	if _, err := g.Login(stranger, password); err != nil {
+	if _, err := g.Login(t.Context(), stranger, password); err != nil {
 		t.Errorf("failures before a success still count: %v", err)
 	}
 }
@@ -235,7 +238,7 @@ func TestSessionTableIsBounded(t *testing.T) {
 	for range 64 {
 		c.advance(time.Second)
 
-		if _, err := g.Login(owner, password); err != nil {
+		if _, err := g.Login(t.Context(), owner, password); err != nil {
 			t.Fatalf("login: %v", err)
 		}
 	}
@@ -275,7 +278,7 @@ func TestChangeNeedsASessionAndTheCurrentPassword(t *testing.T) {
 func TestChangeClosesOtherSessions(t *testing.T) {
 	g, _, _, token := protected(t)
 
-	other, err := g.Login(stranger, password)
+	other, err := g.Login(t.Context(), stranger, password)
 	if err != nil {
 		t.Fatalf("second login: %v", err)
 	}
@@ -295,7 +298,7 @@ func TestChangeClosesOtherSessions(t *testing.T) {
 		t.Error("the caller did not get a new session")
 	}
 
-	if _, err := g.Login(owner, password); !errors.Is(err, auth.ErrWrongPassword) {
+	if _, err := g.Login(t.Context(), owner, password); !errors.Is(err, auth.ErrWrongPassword) {
 		t.Errorf("old password after the change: got %v, want ErrWrongPassword", err)
 	}
 }
@@ -338,7 +341,7 @@ func TestWriteFailureKeepsTheOldPassword(t *testing.T) {
 		t.Error("a failed change closed the session")
 	}
 
-	if _, err := g.Login(owner, password); err != nil {
+	if _, err := g.Login(t.Context(), owner, password); err != nil {
 		t.Errorf("old password after a failed change: %v", err)
 	}
 }
@@ -388,4 +391,282 @@ func TestBrokenFileKeepsTheDaemonDown(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestOneIPv6NetworkSharesTheLockout(t *testing.T) {
+	g, _, _, _ := protected(t)
+
+	for i := range 5 {
+		addr := netip.AddrFrom16([16]byte{0x20, 0x01, 0x0d, 0xb8, 15: byte(i + 1)})
+
+		if _, err := g.Login(t.Context(), addr, "wrong password"); !errors.Is(err, auth.ErrWrongPassword) {
+			t.Fatalf("wrong password %d before the limit: %v", i+1, err)
+		}
+	}
+
+	sixth := netip.MustParseAddr("2001:db8::ffff:1234")
+	if _, err := g.Login(t.Context(), sixth, password); !isLocked(err) {
+		t.Fatalf("sixth address of the same /64: got %v, want LockedError", err)
+	}
+
+	other := netip.MustParseAddr("2001:db8:0:1::1")
+	if _, err := g.Login(t.Context(), other, password); err != nil {
+		t.Errorf("another /64 is locked too: %v", err)
+	}
+}
+
+func TestIPv4AddressesAreCountedApart(t *testing.T) {
+	g, _, _, _ := protected(t)
+
+	for range 4 {
+		_, _ = g.Login(t.Context(), stranger, "wrong password")
+	}
+
+	neighbour := netip.MustParseAddr("192.168.1.67")
+	if _, err := g.Login(t.Context(), neighbour, "wrong password"); !errors.Is(err, auth.ErrWrongPassword) {
+		t.Errorf("a neighbouring IPv4 address shares the lockout: %v", err)
+	}
+}
+
+func TestGlobalBudgetLocksEveryAddress(t *testing.T) {
+	g, c, _, _ := protected(t)
+
+	for i := range 9 {
+		addr := netip.AddrFrom4([4]byte{10, 0, 0, byte(i + 1)})
+
+		if _, err := g.Login(t.Context(), addr, "wrong password"); !errors.Is(err, auth.ErrWrongPassword) {
+			t.Fatalf("wrong password from address %d: %v", i+1, err)
+		}
+	}
+
+	if _, err := g.Login(t.Context(), owner, password); err != nil {
+		t.Fatalf("login locked below the budget: %v", err)
+	}
+
+	tenth := netip.AddrFrom4([4]byte{10, 0, 0, 10})
+	if _, err := g.Login(t.Context(), tenth, "wrong password"); !errors.Is(err, auth.ErrWrongPassword) {
+		t.Fatalf("wrong password from the tenth address: %v", err)
+	}
+
+	_, err := g.Login(t.Context(), owner, password)
+
+	locked, ok := errors.AsType[*auth.LockedError](err)
+	if !ok {
+		t.Fatalf("login after ten addresses failed: got %v, want LockedError", err)
+	}
+
+	if locked.RetryAfter != 5*time.Minute {
+		t.Errorf("retry after %v, want 5m", locked.RetryAfter)
+	}
+
+	c.advance(5 * time.Minute)
+
+	if _, err := g.Login(t.Context(), owner, password); err != nil {
+		t.Errorf("login after the global lockout expired: %v", err)
+	}
+}
+
+func TestLockedKeysStillCountTowardsTheBudget(t *testing.T) {
+	g, c, _, _ := protected(t)
+
+	for i := range 9 {
+		addr := netip.AddrFrom4([4]byte{10, 0, 0, byte(i + 1)})
+
+		for range 5 {
+			_, _ = g.Login(t.Context(), addr, "wrong password")
+		}
+	}
+
+	c.advance(6 * time.Minute)
+
+	tenth := netip.AddrFrom4([4]byte{10, 0, 0, 10})
+	if _, err := g.Login(t.Context(), tenth, "wrong password"); !errors.Is(err, auth.ErrWrongPassword) {
+		t.Fatalf("wrong password from the tenth address: %v", err)
+	}
+
+	if _, err := g.Login(t.Context(), owner, password); !isLocked(err) {
+		t.Errorf("keys whose lockout expired inside the window were not counted: got %v", err)
+	}
+}
+
+func TestQueuedCheckDoesNotPassTheGlobalLockout(t *testing.T) {
+	paused := make(chan struct{})
+	resume := make(chan struct{})
+
+	g := pausedOnce(t, paused, resume)
+
+	login := make(chan error, 1)
+
+	go func() {
+		_, err := g.Login(t.Context(), owner, password)
+		login <- err
+	}()
+
+	<-paused
+
+	for i := range 10 {
+		addr := netip.AddrFrom4([4]byte{10, 0, 0, byte(i + 1)})
+
+		if _, err := g.Login(t.Context(), addr, "wrong password"); !errors.Is(err, auth.ErrWrongPassword) {
+			t.Fatalf("wrong password from address %d: %v", i+1, err)
+		}
+	}
+
+	close(resume)
+
+	if err := <-login; !isLocked(err) {
+		t.Errorf("check queued before the global lockout: got %v, want LockedError", err)
+	}
+}
+
+func TestHashingIsBounded(t *testing.T) {
+	const logins = 50
+
+	store := withPassword(t)
+
+	synctest.Test(t, func(t *testing.T) {
+		var (
+			mu       sync.Mutex
+			inFlight int
+			peak     int
+		)
+
+		release := make(chan struct{})
+
+		g, err := auth.New(t.Context(), store, auth.Options{Hashing: func() {
+			mu.Lock()
+			inFlight++
+			peak = max(peak, inFlight)
+			mu.Unlock()
+
+			<-release
+
+			mu.Lock()
+			inFlight--
+			mu.Unlock()
+		}})
+		if err != nil {
+			t.Fatalf("restart: %v", err)
+		}
+
+		errs := make(chan error, logins)
+
+		for i := range logins {
+			addr := netip.AddrFrom4([4]byte{10, 1, 0, byte(i + 1)})
+
+			go func() {
+				_, err := g.Login(t.Context(), addr, password)
+				errs <- err
+			}()
+		}
+
+		synctest.Wait()
+
+		mu.Lock()
+		waiting := inFlight
+		mu.Unlock()
+
+		if waiting != 2 {
+			t.Errorf("%d hash checks in flight while 50 logins wait, want 2", waiting)
+		}
+
+		close(release)
+
+		for range logins {
+			if err := <-errs; err != nil {
+				t.Errorf("login: %v", err)
+			}
+		}
+
+		if peak > 2 {
+			t.Errorf("%d hash checks ran at once, want at most 2", peak)
+		}
+	})
+}
+
+func TestLoginDuringPasswordChangeIsRefused(t *testing.T) {
+	paused := make(chan struct{})
+	resume := make(chan struct{})
+
+	g := pausedOnce(t, paused, resume)
+
+	type result struct {
+		token string
+		err   error
+	}
+
+	login := make(chan result, 1)
+
+	go func() {
+		token, err := g.Login(t.Context(), stranger, password)
+		login <- result{token, err}
+	}()
+
+	<-paused
+
+	token, err := g.Login(t.Context(), owner, password)
+	if err != nil {
+		t.Fatalf("owner login: %v", err)
+	}
+
+	if _, err := g.SetPassword(t.Context(), owner, token, password, "new password"); err != nil {
+		t.Fatalf("change while a login is checked: %v", err)
+	}
+
+	close(resume)
+
+	got := <-login
+	if !errors.Is(got.err, auth.ErrWrongPassword) {
+		t.Errorf("login checked against the old password: got %v, want ErrWrongPassword", got.err)
+	}
+
+	if got.token != "" {
+		if _, valid := g.Check(got.token); valid {
+			t.Error("login checked against the old password opened a session")
+		}
+	}
+}
+
+// withPassword returns a store holding a password set with few iterations.
+func withPassword(t *testing.T) *fakeStore {
+	t.Helper()
+
+	store := &fakeStore{}
+
+	g, err := auth.New(t.Context(), store, auth.Options{Iterations: 1000})
+	if err != nil {
+		t.Fatalf("new guard: %v", err)
+	}
+
+	if _, err := g.SetPassword(t.Context(), owner, "", "", password); err != nil {
+		t.Fatalf("set first password: %v", err)
+	}
+
+	return store
+}
+
+// pausedOnce returns a guard with a password whose first hash computation closes paused
+// and waits for resume.
+func pausedOnce(t *testing.T, paused chan<- struct{}, resume <-chan struct{}) *auth.Guard {
+	t.Helper()
+
+	var first atomic.Bool
+
+	g, err := auth.New(t.Context(), withPassword(t), auth.Options{Iterations: 1000, Hashing: func() {
+		if first.CompareAndSwap(false, true) {
+			close(paused)
+			<-resume
+		}
+	}})
+	if err != nil {
+		t.Fatalf("restart: %v", err)
+	}
+
+	return g
+}
+
+func isLocked(err error) bool {
+	_, ok := errors.AsType[*auth.LockedError](err)
+
+	return ok
 }
