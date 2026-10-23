@@ -361,6 +361,9 @@ func (s *Server) routes() http.Handler {
 	}
 
 	mux.HandleFunc("/api/", s.handleAPINotFound)
+	// After a 401 on /mcp some clients look for OAuth metadata here; the panel page with 200
+	// would be read as broken metadata instead of a wrong token.
+	mux.HandleFunc("/.well-known/", s.handleAPINotFound)
 	mux.Handle("/", s.spaHandler())
 
 	return s.middleware(mux)

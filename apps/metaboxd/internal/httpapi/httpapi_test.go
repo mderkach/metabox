@@ -853,6 +853,32 @@ func TestAPIPathNeverReachesSPA(t *testing.T) {
 	}
 }
 
+// An MCP client probes OAuth metadata after a 401; the panel page there would look like a
+// broken metadata document.
+func TestWellKnownPathNeverReachesSPA(t *testing.T) {
+	spa := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("оболочка"))
+	})
+	srv := newTestServerWithSPA(t, &fakeApplier{}, "", spa)
+
+	for _, path := range []string{"/.well-known/oauth-protected-resource", "/.well-known/oauth-authorization-server/mcp"} {
+		t.Run(path, func(t *testing.T) {
+			got := request(t, srv, http.MethodGet, path, "", nil)
+
+			if got.status != http.StatusNotFound {
+				t.Fatalf("code %d, expected %d", got.status, http.StatusNotFound)
+			}
+
+			var apiErr contract.Error
+			got.decode(t, &apiErr)
+
+			if apiErr.Code != "not_found" {
+				t.Errorf("error code %q, expected not_found", apiErr.Code)
+			}
+		})
+	}
+}
+
 // A daemon built without the frontend must come up and serve the API: the panel
 // explains what is missing and does not stay silent with a 404.
 func TestDaemonWithoutSPAStillServesAPI(t *testing.T) {
