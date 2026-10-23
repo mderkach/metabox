@@ -75,6 +75,14 @@ Go-команды выполняются из каталога модуля, м�
 
 `pnpm lint` запускается только из корня: плагин Tailwind ищет конфиг фронта от каталога запуска. Полный список проверок перед коммитом и что гоняет CI — в [`CONTRIBUTING.ru.md`](../CONTRIBUTING.ru.md).
 
+## Схема и релизы форка
+
+Схема генерируется из релиза sing-box-extended, закреплённого в блоке `replace` файла `tools/schemagen/go.mod`. Workflow `fork release watch` (`.github/workflows/fork-release-watch.yml`) запускается раз в сутки и вручную (`workflow_dispatch`; необязательный `dry_run` печатает diff и ничего не пушит). Он сравнивает закреплённую версию с последним релизом форка и при совпадении пишет в лог `no change`. Иначе пересобирает блок `replace` по `go.mod` форка на новом теге, поднимает `forkVersion` в `tools/schemagen/main.go`, выполняет `go mod tidy` и `make schema` и открывает один PR из ветки `build/bump-sing-box-extended`: в описании обе версии и diff схемы. Ветку, которая уже предлагает последний релиз, workflow не трогает; следующий релиз переписывает ту же ветку и тот же PR.
+
+Workflow не трогает `SINGBOX_VERSION` стенда, `install.sh` и README: они следуют за бинарником, проверенным на роутере.
+
+PR, открытый стандартным `GITHUB_TOKEN`, не запускает workflow, и обязательные `checks` и `integration` не пойдут. Поэтому workflow берёт секрет репозитория `FORK_BUMP_TOKEN` (токен с правом записи в `contents` и `pull requests`), а без него — стандартный токен. Стандартный токен откроет PR, только если в настройках репозитория включено «Allow GitHub Actions to create and approve pull requests».
+
 ## Пакет на роутер
 
 Архитектура пакета берётся из базового образа OpenWrt и должна совпадать с `/etc/apk/arch` на роутере, иначе apk пакет не поставит. Для роутеров mediatek/filogic (`aarch64_cortex-a53`) база собирается из образа прошивки; без `METABOX_BASE_IMAGE` пакет соберётся под `aarch64_generic`.
