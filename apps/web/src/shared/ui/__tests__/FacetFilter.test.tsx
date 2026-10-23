@@ -3,11 +3,9 @@ import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { ConnectionFacetValue } from '@entities/Connection';
+import { FacetFilter, type FacetText, type FacetValue } from '../FacetFilter';
 
-import { ConnectionFacetFilter, type ConnectionFacetText } from '../ui/ConnectionFacetFilter';
-
-const VALUES: readonly ConnectionFacetValue[] = [
+const VALUES: readonly FacetValue[] = [
   { value: '192.168.1.36', count: 3 },
   { value: '192.168.1.60', count: 12 },
   { value: '192.168.1.120', count: 0 },
@@ -15,7 +13,7 @@ const VALUES: readonly ConnectionFacetValue[] = [
 
 const LABELS = new Map([['192.168.1.60', 'Ноутбук гостя']]);
 
-function describeSource(value: string): ConnectionFacetText {
+function describeSource(value: string): FacetText {
   const label = LABELS.get(value) ?? value;
 
   return { label, detail: label === value ? null : value };
@@ -32,7 +30,7 @@ function Harness({
   const [selected, setSelected] = useState(initial);
 
   return (
-    <ConnectionFacetFilter
+    <FacetFilter
       label='Устройство'
       values={VALUES}
       selected={selected}
@@ -45,7 +43,7 @@ function Harness({
   );
 }
 
-describe('ConnectionFacetFilter', () => {
+describe('FacetFilter', () => {
   it('opens the value list with counters, search in focus and multiple selection', async () => {
     const user = userEvent.setup();
 

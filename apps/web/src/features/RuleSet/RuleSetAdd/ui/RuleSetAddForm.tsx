@@ -22,9 +22,6 @@ import { cn } from '@shared/lib/utils';
 import {
   Autocomplete,
   Button,
-  FACET_ACTIVE,
-  FACET_CLASS,
-  FACET_IDLE,
   Input,
   Label,
   Select,
@@ -235,6 +232,8 @@ function KindField({ catalog }: { catalog: RuleSetCatalog }) {
             {t('field.kind.label')}
           </span>
           <ToggleGroup
+            variant='outline'
+            size='sm'
             aria-labelledby={labelId}
             spacing={1.5}
             value={[field.value]}
@@ -253,11 +252,7 @@ function KindField({ catalog }: { catalog: RuleSetCatalog }) {
             className='w-fit'
           >
             {lists.map((list) => (
-              <ToggleGroupItem
-                key={list.kind}
-                value={list.kind}
-                className={cn(FACET_CLASS, field.value === list.kind ? FACET_ACTIVE : FACET_IDLE)}
-              >
+              <ToggleGroupItem key={list.kind} value={list.kind}>
                 {t(`kind.${list.kind}`)}
               </ToggleGroupItem>
             ))}

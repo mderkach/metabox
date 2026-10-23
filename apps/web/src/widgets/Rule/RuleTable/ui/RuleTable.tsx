@@ -44,7 +44,6 @@ export function RuleTable({
   empty,
   search = null,
   actions = null,
-  facets = null,
   edited = NO_EDITS,
   hits = null,
   outboundTypes = NO_OUTBOUND_TYPES,
@@ -60,8 +59,6 @@ export function RuleTable({
   search?: ReactNode;
   /** List actions: right edge of the toolbar. */
   actions?: ReactNode;
-  /** Outbound facets: the second toolbar row. */
-  facets?: ReactNode;
   /** Rows changed in the draft. */
   edited?: ReadonlySet<string>;
   /** Hit count; `null` means the screen does not show it. */
@@ -131,7 +128,6 @@ export function RuleTable({
           {search}
           {actions !== null && <div className='ml-auto flex items-center gap-2'>{actions}</div>}
         </div>
-        {facets}
       </div>
 
       {rules.length === 0 ? (

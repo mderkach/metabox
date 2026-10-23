@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { filterRules, parseRuleSearch, toTargetGroups } from '../model/Rule.filter';
+import { filterRules, parseRuleSearch, toTargetFilter, toTargetGroups, toTargetParam } from '../model/Rule.filter';
 import { RULE_TARGET } from '../model/Rule.model';
 import type { RuleRow } from '../model/Rule.model';
 
@@ -25,16 +25,16 @@ describe('rule search', () => {
   const rules = [makeRule()];
 
   it('an empty query lets everything through', () => {
-    expect(filterRules(rules, '', null)).toHaveLength(1);
+    expect(filterRules(rules, '', [])).toHaveLength(1);
   });
 
   it('is case-insensitive', () => {
-    expect(filterRules(rules, 'GOOGLE', null)).toHaveLength(1);
+    expect(filterRules(rules, 'GOOGLE', [])).toHaveLength(1);
   });
 
   it('requires all words to match', () => {
-    expect(filterRules(rules, 'google fallback', null)).toHaveLength(1);
-    expect(filterRules(rules, 'google direct', null)).toHaveLength(0);
+    expect(filterRules(rules, 'google fallback', [])).toHaveLength(1);
+    expect(filterRules(rules, 'google direct', [])).toHaveLength(0);
   });
 });
 
@@ -60,6 +60,19 @@ describe('rule outbounds', () => {
       ['us-west-fallback', RULE_TARGET.Outbound],
     ]);
   });
+
+  it('keeps every outbound of the list and counts only the rows the other filters leave', () => {
+    const rules = [
+      makeRule({ id: '0', target: 'direct' }),
+      makeRule({ id: '1', target: 'proxy' }),
+      makeRule({ id: '2', target: 'proxy' }),
+    ];
+
+    expect(toTargetGroups(rules, [rules[0]])).toEqual([
+      { target: 'proxy', kind: RULE_TARGET.Outbound, count: 0 },
+      { target: 'direct', kind: RULE_TARGET.Outbound, count: 1 },
+    ]);
+  });
 });
 
 describe('rule filtering', () => {
@@ -69,12 +82,16 @@ describe('rule filtering', () => {
   ];
 
   it('narrows by outbound', () => {
-    expect(filterRules(rules, '', 'proxy').map((rule) => rule.id)).toEqual(['1']);
+    expect(filterRules(rules, '', ['proxy']).map((rule) => rule.id)).toEqual(['1']);
+  });
+
+  it('takes rules of any selected outbound', () => {
+    expect(filterRules(rules, '', ['direct', 'proxy']).map((rule) => rule.id)).toEqual(['0', '1']);
   });
 
   it('combines outbound and query', () => {
-    expect(filterRules(rules, 'github', 'direct')).toEqual([]);
-    expect(filterRules(rules, 'github', 'proxy').map((rule) => rule.id)).toEqual(['1']);
+    expect(filterRules(rules, 'github', ['direct'])).toEqual([]);
+    expect(filterRules(rules, 'github', ['proxy']).map((rule) => rule.id)).toEqual(['1']);
   });
 });
 
@@ -98,11 +115,11 @@ describe('filter by rule set', () => {
   ];
 
   it('takes rules that refer to the rule set, including from a nested branch', () => {
-    expect(filterRules(rules, '', null, 'geosite-ru').map((rule) => rule.id)).toEqual(['0', '1']);
+    expect(filterRules(rules, '', [], 'geosite-ru').map((rule) => rule.id)).toEqual(['0', '1']);
   });
 
   it('does not confuse a rule set with a substring match', () => {
-    expect(filterRules(rules, '', null, 'geosite')).toEqual([]);
+    expect(filterRules(rules, '', [], 'geosite')).toEqual([]);
   });
 });
 
@@ -115,6 +132,22 @@ describe('rule filter in the address', () => {
   // stays a tag and does not drop the rule number along with it.
   it('a tag of digits is read as a string', () => {
     expect(parseRuleSearch({ rule: 3, rule_set: 123 })).toEqual({ rule: 3, rule_set: '123' });
+  });
+
+  it('reads one outbound as a string and several as a list', () => {
+    expect(toTargetFilter(parseRuleSearch({ target: 'proxy' }).target)).toEqual(['proxy']);
+    expect(toTargetFilter(parseRuleSearch({ target: ['proxy', 'direct'] }).target)).toEqual(['proxy', 'direct']);
+    expect(toTargetFilter(parseRuleSearch({}).target)).toEqual([]);
+  });
+
+  it('a list of outbounds stays a list, with tags of digits read as strings', () => {
+    expect(parseRuleSearch({ target: [1, 'proxy'] })).toEqual({ target: ['1', 'proxy'] });
+  });
+
+  it('writes one outbound as a string and drops an empty selection', () => {
+    expect(toTargetParam(['proxy'])).toBe('proxy');
+    expect(toTargetParam(['proxy', 'direct'])).toEqual(['proxy', 'direct']);
+    expect(toTargetParam([])).toBeUndefined();
   });
 
   it('an empty rule set discards the whole filter', () => {

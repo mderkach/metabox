@@ -12,7 +12,7 @@ export {
   RULE_SET_MATCHER,
 } from './model/Rule.constants';
 export type { NamedRuleAction, NamedRuleMatcher } from './model/Rule.constants';
-export { filterRules, parseRuleSearch, toTargetGroups } from './model/Rule.filter';
+export { filterRules, parseRuleSearch, toTargetFilter, toTargetGroups, toTargetParam } from './model/Rule.filter';
 export type { RuleSearch, RuleSetFilter, RuleTargetFilter, RuleTargetGroup } from './model/Rule.filter';
 export { newRulePlace, RULE_TARGET, ruleSetsOf, toNewRuleRow } from './model/Rule.model';
 export type { NewRulePlace, RuleBranch, RuleGroup, RuleMatcher, RuleRow, RuleTargetKind } from './model/Rule.model';

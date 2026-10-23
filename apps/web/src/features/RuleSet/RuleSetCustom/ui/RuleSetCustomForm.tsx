@@ -6,18 +6,7 @@ import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import { ConfigDocumentState, RULE_SETS_PATH } from '@entities/Config';
-import { cn } from '@shared/lib/utils';
-import {
-  Button,
-  FACET_ACTIVE,
-  FACET_CLASS,
-  FACET_IDLE,
-  Input,
-  Label,
-  Textarea,
-  ToggleGroup,
-  ToggleGroupItem,
-} from '@shared/ui';
+import { Button, Input, Label, Textarea, ToggleGroup, ToggleGroupItem } from '@shared/ui';
 
 import {
   LIST_STORAGE,
@@ -110,6 +99,8 @@ export function RuleSetCustomForm({ takenTags, onDone }: { takenTags: readonly s
               {t('field.storage.label')}
             </span>
             <ToggleGroup
+              variant='outline'
+              size='sm'
               aria-labelledby={storageLabelId}
               aria-describedby={storageHintId}
               spacing={1.5}
@@ -123,18 +114,8 @@ export function RuleSetCustomForm({ takenTags, onDone }: { takenTags: readonly s
               }}
               className='w-fit'
             >
-              <ToggleGroupItem
-                value={LIST_STORAGE.Inline}
-                className={cn(FACET_CLASS, field.value === LIST_STORAGE.Inline ? FACET_ACTIVE : FACET_IDLE)}
-              >
-                {t('field.storage.inline')}
-              </ToggleGroupItem>
-              <ToggleGroupItem
-                value={LIST_STORAGE.File}
-                className={cn(FACET_CLASS, field.value === LIST_STORAGE.File ? FACET_ACTIVE : FACET_IDLE)}
-              >
-                {t('field.storage.file')}
-              </ToggleGroupItem>
+              <ToggleGroupItem value={LIST_STORAGE.Inline}>{t('field.storage.inline')}</ToggleGroupItem>
+              <ToggleGroupItem value={LIST_STORAGE.File}>{t('field.storage.file')}</ToggleGroupItem>
             </ToggleGroup>
             <p id={storageHintId} className='text-xs text-pretty text-muted-foreground'>
               {t('field.storage.hint')}

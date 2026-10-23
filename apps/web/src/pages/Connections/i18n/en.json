@@ -40,12 +40,6 @@
     "rule": "Rule",
     "chain": "Chain",
     "network": "Network",
-    "one": "{{facet}}: {{value}}",
-    "several": "{{facet}}: {{count}} selected",
-    "search": "Find",
-    "searchLabel": "Find a value: {{facet}}",
-    "nothing": "Nothing found",
-    "reset": "Reset",
     "resetAll": "Reset all"
   },
   "announce": {

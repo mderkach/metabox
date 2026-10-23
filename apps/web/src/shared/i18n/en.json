@@ -190,9 +190,15 @@
     "resetFilter": "Reset the filter",
     "shown": "Showing {{shown}} of {{total}}",
     "rowActions": "Row actions",
-    "more": "{{count}} more",
-    "collapse": "Collapse",
     "andMore": "and {{count}} more"
+  },
+  "facet": {
+    "one": "{{facet}}: {{value}}",
+    "several": "{{facet}}: {{count}} selected",
+    "search": "Find",
+    "searchLabel": "Find a value: {{facet}}",
+    "nothing": "Nothing found",
+    "reset": "Reset"
   },
   "delay": {
     "value": "{{value}} ms",

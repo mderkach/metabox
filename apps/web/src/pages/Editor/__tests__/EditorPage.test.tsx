@@ -427,13 +427,57 @@ describe('rule list editing', () => {
   });
 
   it('names an action in words in the outbound filter and in the row, not as an outbound', async () => {
+    const user = userEvent.setup();
+
     renderWithRouter(EditorPage);
 
-    const targets = await screen.findByRole('list', { name: 'Действия правил' });
+    await user.click(await screen.findByRole('button', { name: 'Действия правил' }));
 
-    expect(within(targets).getByRole('button', { name: /перехватить DNS/ })).toBeInTheDocument();
-    expect(within(targets).queryByRole('button', { name: /hijack-dns/ })).not.toBeInTheDocument();
+    const targets = await screen.findByRole('listbox', { name: 'Действия правил' });
+
+    expect(within(targets).getByRole('option', { name: /перехватить DNS/ })).toBeInTheDocument();
+    expect(within(targets).queryByRole('option', { name: /hijack-dns/ })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Правило 2, действие: перехватить DNS' })).toBeInTheDocument();
+  });
+
+  it('the outbound facet selects several outbounds at once and keeps them in the address', async () => {
+    const user = userEvent.setup();
+    const { router } = renderWithRouter(EditorPage, { validateSearch: parseRuleSearch });
+
+    await user.click(await screen.findByRole('button', { name: 'Действия правил' }));
+
+    const targets = await screen.findByRole('listbox', { name: 'Действия правил' });
+
+    expect(targets).toHaveAttribute('aria-multiselectable', 'true');
+
+    await user.click(within(targets).getByRole('option', { name: /proxy/ }));
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Показано 1 из 3');
+    expect(router.state.location.search).toEqual({ target: 'proxy' });
+
+    await user.click(within(targets).getByRole('option', { name: /direct/ }));
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Показано 2 из 3');
+    expect(router.state.location.search).toEqual({ target: ['proxy', 'direct'] });
+    expect(screen.getByRole('button', { name: 'Действия правил: выбрано 2' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Правило 2, / })).not.toBeInTheDocument();
+  });
+
+  it('opens with the outbounds selected in the address, and the search narrows their counters', async () => {
+    const user = userEvent.setup();
+
+    renderWithRouter(EditorPage, { validateSearch: parseRuleSearch, initialEntry: '/?target=hijack-dns' });
+
+    expect(await screen.findByRole('button', { name: 'Правило 2, действие: перехватить DNS' })).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Показано 1 из 3');
+
+    await user.type(screen.getByRole('textbox', { name: 'Поиск по правилам' }), 'github');
+    await user.click(screen.getByRole('button', { name: 'Действия правил: перехватить DNS' }));
+
+    const targets = await screen.findByRole('listbox', { name: 'Действия правил' });
+
+    expect(within(targets).getByRole('option', { name: /proxy/ })).toHaveTextContent(/1$/);
+    expect(within(targets).getByRole('option', { name: /перехватить DNS/ })).toHaveTextContent(/0$/);
   });
 
   it('opens a new rule without writing it and writes it on the first condition, keeping focus', async () => {

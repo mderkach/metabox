@@ -105,6 +105,7 @@ export function EditorPage() {
               search={
                 <>
                   <EditorRuleSearch filter={filter} />
+                  <EditorTargetFacets filter={filter} />
                   <EditorRuleSetChip filter={filter} />
                 </>
               }
@@ -116,7 +117,6 @@ export function EditorPage() {
                   onAdd={onAdd}
                 />
               }
-              facets={<EditorTargetFacets filter={filter} />}
               empty={<EditorFilteredEmpty filter={filter} />}
             />
           </SidePanelLayout.Main>

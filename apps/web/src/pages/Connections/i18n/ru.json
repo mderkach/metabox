@@ -41,12 +41,6 @@
     "rule": "Правило",
     "chain": "Цепочка",
     "network": "Сеть",
-    "one": "{{facet}}: {{value}}",
-    "several": "{{facet}}: выбрано {{count}}",
-    "search": "Найти",
-    "searchLabel": "Найти значение: {{facet}}",
-    "nothing": "Ничего не нашлось",
-    "reset": "Сбросить",
     "resetAll": "Сбросить всё"
   },
   "announce": {
