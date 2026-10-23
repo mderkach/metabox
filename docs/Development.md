@@ -77,7 +77,7 @@ Checks:
 
 ## Schema and fork releases
 
-The schema is generated from the sing-box-extended release pinned in the `replace` block of `tools/schemagen/go.mod`. The `fork release watch` workflow (`.github/workflows/fork-release-watch.yml`) runs daily and by hand (`workflow_dispatch`, optional `dry_run` prints the diff and pushes nothing). It compares the pin with the latest release of the fork and logs `no change` when they match. Otherwise it rebuilds the `replace` block from the fork's `go.mod` at the new tag, raises `forkVersion` in `tools/schemagen/main.go`, runs `go mod tidy` and `make schema`, and opens one PR from the branch `build/bump-sing-box-extended` with both versions and the schema diff in the body. The next release rewrites the same branch and PR.
+The schema is generated from the sing-box-extended release pinned in the `replace` block of `tools/schemagen/go.mod`. The `fork release watch` workflow (`.github/workflows/fork-release-watch.yml`) runs daily and by hand (`workflow_dispatch`, optional `dry_run` prints the diff and pushes nothing). It compares the pin with the latest release of the fork and logs `no change` when they match. Otherwise it rebuilds the `replace` block from the fork's `go.mod` at the new tag, raises `forkVersion` in `tools/schemagen/main.go`, runs `go mod tidy` and `make schema`, and opens one PR from the branch `build/bump-sing-box-extended` with both versions and the schema diff in the body. A branch that already proposes the latest release is left alone; the next release rewrites the same branch and PR.
 
 The workflow does not touch `SINGBOX_VERSION` of the test bench, `install.sh` or the README: they follow the binary tested on the router.
 

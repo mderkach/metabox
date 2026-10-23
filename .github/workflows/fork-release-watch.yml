@@ -52,6 +52,9 @@ jobs:
             echo "no change: the pin is the latest release"
           elif [ "$(printf '%s\n' "$pinned" "$latest" | sort -V | tail -n 1)" = "$pinned" ]; then
             echo "no change: the pin is newer than the latest release"
+          elif branch=$(gh api "repos/$GITHUB_REPOSITORY/contents/tools/schemagen/go.mod?ref=$BRANCH" --jq .content 2> /dev/null | base64 -d) \
+              && grep -q "sing-box-extended $latest\$" <<< "$branch"; then
+            echo "no change: branch $BRANCH already proposes $latest"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
             echo "pinned=$pinned" >> "$GITHUB_OUTPUT"

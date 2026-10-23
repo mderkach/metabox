@@ -77,7 +77,7 @@ Go-команды выполняются из каталога модуля, м�
 
 ## Схема и релизы форка
 
-Схема генерируется из релиза sing-box-extended, закреплённого в блоке `replace` файла `tools/schemagen/go.mod`. Workflow `fork release watch` (`.github/workflows/fork-release-watch.yml`) запускается раз в сутки и вручную (`workflow_dispatch`; необязательный `dry_run` печатает diff и ничего не пушит). Он сравнивает закреплённую версию с последним релизом форка и при совпадении пишет в лог `no change`. Иначе пересобирает блок `replace` по `go.mod` форка на новом теге, поднимает `forkVersion` в `tools/schemagen/main.go`, выполняет `go mod tidy` и `make schema` и открывает один PR из ветки `build/bump-sing-box-extended`: в описании обе версии и diff схемы. Следующий релиз переписывает ту же ветку и тот же PR.
+Схема генерируется из релиза sing-box-extended, закреплённого в блоке `replace` файла `tools/schemagen/go.mod`. Workflow `fork release watch` (`.github/workflows/fork-release-watch.yml`) запускается раз в сутки и вручную (`workflow_dispatch`; необязательный `dry_run` печатает diff и ничего не пушит). Он сравнивает закреплённую версию с последним релизом форка и при совпадении пишет в лог `no change`. Иначе пересобирает блок `replace` по `go.mod` форка на новом теге, поднимает `forkVersion` в `tools/schemagen/main.go`, выполняет `go mod tidy` и `make schema` и открывает один PR из ветки `build/bump-sing-box-extended`: в описании обе версии и diff схемы. Ветку, которая уже предлагает последний релиз, workflow не трогает; следующий релиз переписывает ту же ветку и тот же PR.
 
 Workflow не трогает `SINGBOX_VERSION` стенда, `install.sh` и README: они следуют за бинарником, проверенным на роутере.
 
