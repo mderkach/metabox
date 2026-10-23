@@ -15,28 +15,39 @@ export function AuthGate({
   onLogin,
 }: {
   children: ReactNode;
-  /** The panel came back after the login screen: route loaders ran without a session and hold its refusals. */
+  /**
+   * The panel came back after a login screen that replaced it: its route loaders ran without a
+   * session and hold the refusals. Not called after the first login: the panel mounts then and
+   * runs its loaders itself.
+   */
   onLogin: () => void;
 }) {
   useSessionWatch();
   const auth = useAuth();
   const locked = auth.isSuccess && isLoginRequired(auth.data);
-  const wasLocked = useRef(false);
+  const panelShown = useRef(false);
+  const panelLocked = useRef(false);
 
   useEffect(
     function reloadAfterLogin() {
+      if (auth.isPending) {
+        return;
+      }
+
       if (locked) {
-        wasLocked.current = true;
+        panelLocked.current = panelShown.current;
 
         return;
       }
 
-      if (wasLocked.current) {
-        wasLocked.current = false;
+      panelShown.current = true;
+
+      if (panelLocked.current) {
+        panelLocked.current = false;
         onLogin();
       }
     },
-    [locked, onLogin]
+    [auth.isPending, locked, onLogin]
   );
 
   if (auth.isPending) {

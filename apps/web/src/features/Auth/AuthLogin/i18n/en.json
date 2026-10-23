@@ -9,7 +9,9 @@
   "error": {
     "required": "Enter the password",
     "wrong": "Wrong password",
-    "locked": "Too many wrong attempts. Sign-in from this address is closed for 5 minutes.",
+    "locked_one": "Too many wrong attempts. Sign-in is closed for {{count}} minute.",
+    "locked_other": "Too many wrong attempts. Sign-in is closed for {{count}} minutes.",
+    "lockedUnknown": "Too many wrong attempts. Sign-in is closed for a few minutes.",
     "unknown": "Could not sign in"
   }
 }

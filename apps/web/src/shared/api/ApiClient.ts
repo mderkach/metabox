@@ -39,6 +39,14 @@ function asErrorBody(data: unknown): unknown {
   }
 }
 
+/** The daemon sends `Retry-After` in whole seconds; the HTTP date form is not used by it. */
+function readRetryAfter(response: AxiosResponse<unknown>): number | null {
+  const value: unknown = response.headers['retry-after'];
+  const seconds = typeof value === 'string' && value.trim() !== '' ? Number(value) : Number.NaN;
+
+  return Number.isInteger(seconds) && seconds >= 0 ? seconds : null;
+}
+
 function fromResponse(response: AxiosResponse<unknown>): ApiError {
   const body = ApiErrorBodySchema.safeParse(asErrorBody(response.data));
 
@@ -50,6 +58,7 @@ function fromResponse(response: AxiosResponse<unknown>): ApiError {
       status: response.status,
       code: body.data.code,
       details: body.data.details,
+      retryAfter: readRetryAfter(response),
     });
   }
 

@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import type { ParseKeys } from 'i18next';
+import type { ParseKeys, TFunction } from 'i18next';
 import { LockKeyhole } from 'lucide-react';
 import { useId } from 'react';
 import { Controller, useForm } from 'react-hook-form';
@@ -9,7 +9,7 @@ import { ApiError, failureText, type ApiFailureCode } from '@shared/api';
 import { Button, Card, CardContent, CardDescription, CardHeader, Input } from '@shared/ui';
 
 import { useLogin } from '../api';
-import { AUTH_LOGIN_ERROR, AuthLoginSchema, type AuthLoginModel } from '../model';
+import { AUTH_LOGIN_ERROR, AuthLoginSchema, lockoutMinutes, type AuthLoginModel } from '../model';
 
 type LoginKey = ParseKeys<'features/Auth/AuthLogin'>;
 
@@ -17,13 +17,24 @@ const FIELD_ERROR_KEY: Readonly<Record<string, LoginKey | undefined>> = {
   [AUTH_LOGIN_ERROR.Required]: 'error.required',
 };
 
+const LOGIN_LOCKED: ApiFailureCode = 'login_locked';
+
 /** Refusals the login form explains in its own words; the rest go through the shared failure table. */
 const REFUSAL_KEY: Readonly<Record<string, LoginKey | undefined>> = {
   password_wrong: 'error.wrong',
-  login_locked: 'error.locked',
 } satisfies Partial<Record<ApiFailureCode, LoginKey>>;
 
-function refusalText(error: unknown, t: (key: LoginKey) => string): string {
+function lockedText(error: ApiError, t: TFunction<'features/Auth/AuthLogin'>): string {
+  const minutes = lockoutMinutes(error.retryAfter);
+
+  return minutes === null ? t('error.lockedUnknown') : t('error.locked', { count: minutes });
+}
+
+function refusalText(error: unknown, t: TFunction<'features/Auth/AuthLogin'>): string {
+  if (error instanceof ApiError && error.code === LOGIN_LOCKED) {
+    return lockedText(error, t);
+  }
+
   if (error instanceof ApiError && error.code !== null) {
     const key = REFUSAL_KEY[error.code];
 
