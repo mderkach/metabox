@@ -137,7 +137,8 @@ jobs:
           CGO_ENABLED: '0'
         run: |
           mkdir -p dist
-          cd apps/metaboxd && go build -ldflags "-s -w -X metabox/internal/version.Version=ci" -o "../../$DAEMON_BINARY" .
+          ldflags="$(make -s ldflags VERSION=ci)"
+          cd apps/metaboxd && go build -ldflags "$ldflags" -o "../../$DAEMON_BINARY" .
 
       - name: Environment
         run: docker compose -f .devcontainer/docker-compose.yml up -d target

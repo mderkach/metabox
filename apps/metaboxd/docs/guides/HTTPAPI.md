@@ -180,6 +180,7 @@ Static files are embedded with `go:embed`. The directive cannot reach above its 
 Serving rules:
 
 - an unknown path under `/api/` is a 404 with an error body, not `index.html`: otherwise the frontend gets HTML instead of JSON and shows nonsense;
+- so is any path under `/.well-known/`: after a 401 on `/mcp` some MCP clients request OAuth metadata there, and the shell with 200 would be read as broken metadata;
 - other unknown paths get `index.html` with `Cache-Control: no-cache`, routing is client-side;
 - files with a hash in the name get `Cache-Control: public, max-age=31536000, immutable`;
 - compression is not computed on the fly: the panel build puts `.br` and `.gz` next to each file, the daemon picks the variant by `Accept-Encoding` and sets `Vary: Accept-Encoding`. Compressing the same file on every request costs router CPU time, and the weaker the hardware, the more often it is spent. Both formats, not only brotli: with HTTPS off the panel is served over plain http, and the browser does not announce `br` on such a connection;
