@@ -311,7 +311,7 @@
       }
     },
     {
-      "files": ["tools/**"],
+      "files": ["tools/*.js"],
       "rules": {
         "import/no-default-export": "off",
         "typescript/no-unsafe-argument": "off",
