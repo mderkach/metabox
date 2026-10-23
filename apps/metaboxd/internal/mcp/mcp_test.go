@@ -456,7 +456,7 @@ func TestEndpointChecksOriginAndHost(t *testing.T) {
 	}
 }
 
-type memoryAuthStore struct{ data []byte }
+type memoryAuthStore struct{ data, sessions []byte }
 
 func (m *memoryAuthStore) ReadAuth(context.Context) ([]byte, error) {
 	if m.data == nil {
@@ -468,6 +468,20 @@ func (m *memoryAuthStore) ReadAuth(context.Context) ([]byte, error) {
 
 func (m *memoryAuthStore) WriteAuth(_ context.Context, data []byte) error {
 	m.data = data
+
+	return nil
+}
+
+func (m *memoryAuthStore) ReadSessions(context.Context) ([]byte, error) {
+	if m.sessions == nil {
+		return nil, fs.ErrNotExist
+	}
+
+	return m.sessions, nil
+}
+
+func (m *memoryAuthStore) WriteSessions(_ context.Context, data []byte) error {
+	m.sessions = data
 
 	return nil
 }

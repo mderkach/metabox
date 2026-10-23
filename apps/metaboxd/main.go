@@ -298,7 +298,7 @@ func run(log *slog.Logger, s settings) error {
 
 	// A broken password file stops the start instead of opening the panel: the owner who
 	// set a password must not lose the protection silently.
-	guard, err := auth.New(ctx, store, auth.Options{})
+	guard, err := auth.New(ctx, store, auth.Options{Log: log})
 	if err != nil {
 		return fmt.Errorf("пароль панели: %w", err)
 	}

@@ -11,13 +11,14 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"metabox/internal/auth"
 	"metabox/internal/contract"
 	"metabox/internal/httpapi"
 )
 
-type memoryAuthStore struct{ data []byte }
+type memoryAuthStore struct{ data, sessions []byte }
 
 func (m *memoryAuthStore) ReadAuth(context.Context) ([]byte, error) {
 	if m.data == nil {
@@ -29,6 +30,20 @@ func (m *memoryAuthStore) ReadAuth(context.Context) ([]byte, error) {
 
 func (m *memoryAuthStore) WriteAuth(_ context.Context, data []byte) error {
 	m.data = data
+
+	return nil
+}
+
+func (m *memoryAuthStore) ReadSessions(context.Context) ([]byte, error) {
+	if m.sessions == nil {
+		return nil, fs.ErrNotExist
+	}
+
+	return m.sessions, nil
+}
+
+func (m *memoryAuthStore) WriteSessions(_ context.Context, data []byte) error {
+	m.sessions = data
 
 	return nil
 }
@@ -340,4 +355,106 @@ func TestOversizedLoginBodyIsAPasswordFailure(t *testing.T) {
 
 	wantCode(t, b.do(http.MethodPost, "/api/auth/login", contract.Login{Password: strings.Repeat("x", 8<<10)}),
 		http.StatusBadRequest, contract.ErrPasswordInvalid)
+}
+
+// heldStream answers like an event stream and holds the connection until the request
+// context ends; stopped closes then.
+type heldStream struct{ stopped chan struct{} }
+
+func (h *heldStream) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.WriteHeader(http.StatusOK)
+	_ = http.NewResponseController(w).Flush()
+
+	<-r.Context().Done()
+	close(h.stopped)
+}
+
+func newStreamAuthServer(t *testing.T) (*browser, *heldStream, *fakeLogs) {
+	t.Helper()
+
+	guard, err := auth.New(t.Context(), &memoryAuthStore{}, auth.Options{Iterations: 1000})
+	if err != nil {
+		t.Fatalf("guard: %v", err)
+	}
+
+	events := &heldStream{stopped: make(chan struct{})}
+	logs := &fakeLogs{stopped: make(chan struct{})}
+
+	srv := httptest.NewServer(httpapi.NewServer(&fakeApplier{}, fakeReader{}, testLogger(t), httpapi.Options{
+		Version: "test",
+		Auth:    guard,
+		Events:  events,
+		Logs:    logs,
+	}))
+	t.Cleanup(srv.Close)
+
+	return newBrowser(t, srv), events, logs
+}
+
+// openStream opens an event stream with the browser's session. It sends no Accept: the
+// session must close the stream whatever the client asked for.
+func (b *browser) openStream(path string) {
+	b.t.Helper()
+
+	req, err := http.NewRequestWithContext(b.t.Context(), http.MethodGet, b.srv.URL+path, nil)
+	if err != nil {
+		b.t.Fatal(err)
+	}
+
+	resp, err := b.client.Do(req)
+	if err != nil {
+		b.t.Fatalf("stream %s: %v", path, err)
+	}
+
+	b.t.Cleanup(func() { _ = resp.Body.Close() })
+
+	if resp.StatusCode != http.StatusOK {
+		b.t.Fatalf("stream %s: status %d", path, resp.StatusCode)
+	}
+}
+
+func waitStopped(t *testing.T, stopped <-chan struct{}, what string) {
+	t.Helper()
+
+	select {
+	case <-stopped:
+	case <-time.After(5 * time.Second):
+		t.Fatalf("%s kept running", what)
+	}
+}
+
+func TestLogoutClosesTheStreamsOfTheSession(t *testing.T) {
+	b, events, logs := newStreamAuthServer(t)
+	b.setPassword("", panelPassword)
+
+	b.openStream("/api/events")
+	b.openStream("/api/logs/stream")
+
+	if r := b.do(http.MethodPost, "/api/auth/logout", nil); r.status != http.StatusNoContent {
+		t.Fatalf("logout: %d", r.status)
+	}
+
+	waitStopped(t, events.stopped, "the event stream after logout")
+	waitStopped(t, logs.stopped, "the log stream after logout")
+}
+
+func TestPasswordChangeClosesTheStreamsOfOtherSessions(t *testing.T) {
+	b, events, logs := newStreamAuthServer(t)
+	b.setPassword("", panelPassword)
+
+	other := newBrowser(t, b.srv)
+	if r := other.do(http.MethodPost, "/api/auth/login", contract.Login{Password: panelPassword}); r.status != http.StatusNoContent {
+		t.Fatalf("login: %d %s", r.status, r.body)
+	}
+
+	other.openStream("/api/events")
+	other.openStream("/api/logs/stream")
+
+	if r := b.setPassword(panelPassword, "new password"); r.status != http.StatusNoContent {
+		t.Fatalf("change: %d %s", r.status, r.body)
+	}
+
+	waitStopped(t, events.stopped, "the event stream after the password change")
+	waitStopped(t, logs.stopped, "the log stream after the password change")
 }
