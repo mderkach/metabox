@@ -75,6 +75,14 @@ Checks:
 
 `pnpm lint` runs only from the root: the Tailwind plugin looks for the frontend config relative to the directory it is run from. The full list of checks before committing and what CI runs: [`CONTRIBUTING.md`](../CONTRIBUTING.md).
 
+## Schema and fork releases
+
+The schema is generated from the sing-box-extended release pinned in the `replace` block of `tools/schemagen/go.mod`. The `fork release watch` workflow (`.github/workflows/fork-release-watch.yml`) runs daily and by hand (`workflow_dispatch`, optional `dry_run` prints the diff and pushes nothing). It compares the pin with the latest release of the fork and logs `no change` when they match. Otherwise it rebuilds the `replace` block from the fork's `go.mod` at the new tag, raises `forkVersion` in `tools/schemagen/main.go`, runs `go mod tidy` and `make schema`, and opens one PR from the branch `build/bump-sing-box-extended` with both versions and the schema diff in the body. The next release rewrites the same branch and PR.
+
+The workflow does not touch `SINGBOX_VERSION` of the test bench, `install.sh` or the README: they follow the binary tested on the router.
+
+A PR opened with the default `GITHUB_TOKEN` starts no workflows, so the required `checks` and `integration` would never run. The workflow therefore takes the repository secret `FORK_BUMP_TOKEN` (a token with `contents` and `pull requests` write access) and falls back to the default token. The default token can open a PR only if the repository setting "Allow GitHub Actions to create and approve pull requests" is on.
+
 ## Package for the router
 
 The package architecture comes from the OpenWrt base image and must match `/etc/apk/arch` on the router, otherwise apk will not install the package. For mediatek/filogic routers (`aarch64_cortex-a53`) the base is built from the firmware image; without `METABOX_BASE_IMAGE` the package is built for `aarch64_generic`.
