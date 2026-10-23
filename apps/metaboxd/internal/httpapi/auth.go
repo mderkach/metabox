@@ -26,7 +26,7 @@ const maxAuthBytes = 4 << 10
 // at the consumer.
 type Guard interface {
 	Check(token string) (enabled, valid bool)
-	Login(addr netip.Addr, password string) (string, error)
+	Login(ctx context.Context, addr netip.Addr, password string) (string, error)
 	Logout(token string)
 	SetPassword(ctx context.Context, addr netip.Addr, token, current, next string) (string, error)
 }
@@ -142,7 +142,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 
 	addr := clientAddr(r)
 
-	token, err := s.auth.Login(addr, req.Password)
+	token, err := s.auth.Login(r.Context(), addr, req.Password)
 	if err != nil {
 		s.logRejected("вход отклонён", addr, err)
 		fail(s.log, w, r, err)
