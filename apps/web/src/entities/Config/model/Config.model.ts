@@ -11,6 +11,8 @@ import {
 
 import type { Config } from '@shared/api/generated';
 
+import { insertElement, moveElement, removeElement } from './Config.array';
+
 /** Config indent when it could not be determined from the file. */
 const DEFAULT_TAB_SIZE = 2;
 
@@ -50,18 +52,16 @@ export function setValue(text: string, path: JSONPath, value: unknown): string {
   return edit(text, path, value);
 }
 
-/** Deletes a node by path: an array element or an object member. */
+/**
+ * Deletes a node by path: an array element or an object member. An element of a
+ * list goes together with its comma and comments, and the neighbours keep their
+ * text: `modify` would reformat the next one.
+ */
 export function removeValue(text: string, path: JSONPath): string {
-  return edit(text, path, undefined);
+  return removeElement(text, path) ?? edit(text, path, undefined);
 }
 
-/**
- * Reads a node value by path. `undefined` means no node.
- *
- * Needed by moving: an element is first taken out of the array and then
- * inserted at the new place, and between the two edits its value has to be held
- * somewhere.
- */
+/** Reads a node value by path. `undefined` means no node. */
 export function findValue(text: string, path: JSONPath): unknown {
   const root = parseTree(text);
 
@@ -76,10 +76,32 @@ export function findValue(text: string, path: JSONPath): unknown {
 
 /**
  * Inserts an element into an array at the position from the path, instead of
- * rewriting the one that is there.
+ * rewriting the one that is there. The neighbours keep their text: `modify`
+ * would reformat the previous one; it is left only for a list that is empty or
+ * absent, where there are no neighbours.
  */
 export function insertValue(text: string, path: JSONPath, value: unknown): string {
-  return edit(text, path, value, { isArrayInsertion: true });
+  return (
+    insertElement(text, path, value, detectFormatting(text)) ?? edit(text, path, value, { isArrayInsertion: true })
+  );
+}
+
+/**
+ * Moves an array element from one position to another by carrying its source
+ * text with its comments. When that text cannot be placed without changing the
+ * data, the element is moved by value instead. A missing element or the same
+ * position leave the text as it was.
+ */
+export function moveValue(text: string, path: JSONPath, from: number, to: number): string {
+  if (from === to) return text;
+
+  const moved = moveElement(text, path, from, to);
+
+  if (moved !== null) return moved;
+
+  const node = findValue(text, [...path, from]);
+
+  return node === undefined ? text : insertValue(removeValue(text, [...path, from]), [...path, to], node);
 }
 
 /**

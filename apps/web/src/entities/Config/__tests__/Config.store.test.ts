@@ -2,6 +2,7 @@ import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { parseConfig } from '../api/Config.query';
+import { findValue, readRules } from '../model/Config.model';
 import { ConfigDocumentState, useConfigLeaveGuard } from '../model/Config.store';
 import { CONFIG_FIXTURE } from './Config.fixture';
 
@@ -204,6 +205,225 @@ describe('ConfigDocumentState', () => {
     expect(left).toHaveLength(rules.length);
     expect(left[0]).toEqual({ action: 'route', outbound: 'direct' });
     expect(left[1]).toEqual(rules[1]);
+  });
+});
+
+/**
+ * Rules written one per line, as people write them by hand, with a comment inside
+ * the rule that moves and one above it.
+ */
+const ONE_LINE_RULES = `{
+  "route": {
+    "rules": [
+      { "action": "sniff" },
+      // DNS goes to the resolver
+      { "protocol": "dns", /* hijack */ "action": "hijack-dns" },
+      { "ip_is_private": true, "outbound": "direct" },
+      {
+        "domain_suffix": [".example"],
+        "outbound": "direct"
+      },
+      { "port": [80, 443], "outbound": "proxy" }
+    ],
+    "final": "proxy"
+  }
+}
+`;
+
+/** Lines an edit added, counted as a multiset: a repeated line counts as many times as it occurs. */
+function addedLines(before: string, after: string): string[] {
+  const left = before.split('\n');
+
+  return after.split('\n').filter((line) => {
+    const found = left.indexOf(line);
+
+    if (found === -1) return true;
+
+    left.splice(found, 1);
+
+    return false;
+  });
+}
+
+function removedLines(before: string, after: string): string[] {
+  return addedLines(after, before);
+}
+
+/** A hand-written config from the corpus: one-line rules and a comma before the closing bracket. */
+const HANDWRITTEN = Object.values(
+  import.meta.glob<string>('./corpus/handwritten.jsonc', { query: '?raw', import: 'default', eager: true })
+)[0];
+
+describe('ConfigDocumentState array edits on one-line rules', () => {
+  beforeEach(() => {
+    ConfigDocumentState.getState().reset();
+  });
+
+  it('a move carries the rule text with its comments and changes nothing else', () => {
+    state().load(ONE_LINE_RULES);
+    state().move(['route', 'rules'], 1, 3);
+
+    const after = state().current() ?? '';
+    const moved = [
+      '      // DNS goes to the resolver',
+      '      { "protocol": "dns", /* hijack */ "action": "hijack-dns" },',
+    ];
+
+    expect(after.split('\n').sort()).toEqual(ONE_LINE_RULES.split('\n').sort());
+    expect(after).toBe(
+      ONE_LINE_RULES.replace(`${moved.join('\n')}\n`, '').replace(
+        '        "outbound": "direct"\n      },\n',
+        `        "outbound": "direct"\n      },\n${moved.join('\n')}\n`
+      )
+    );
+  });
+
+  it('a move to the end gives the old last rule a comma and keeps the moved one on one line', () => {
+    state().load(ONE_LINE_RULES);
+    state().move(['route', 'rules'], 0, 4);
+
+    const after = state().current() ?? '';
+
+    expect(after).toContain('      { "port": [80, 443], "outbound": "proxy" },\n      { "action": "sniff" }\n    ],');
+    expect(removedLines(ONE_LINE_RULES, after)).toEqual([
+      '      { "action": "sniff" },',
+      '      { "port": [80, 443], "outbound": "proxy" }',
+    ]);
+  });
+
+  it('appending keeps the previous last rule on one line', () => {
+    state().load(ONE_LINE_RULES);
+    state().insert(['route', 'rules', 5], { outbound: 'direct' });
+
+    const after = state().current() ?? '';
+
+    expect(removedLines(ONE_LINE_RULES, after)).toEqual(['      { "port": [80, 443], "outbound": "proxy" }']);
+    expect(addedLines(ONE_LINE_RULES, after)).toEqual([
+      '      { "port": [80, 443], "outbound": "proxy" },',
+      '      {',
+      '        "outbound": "direct"',
+      '      }',
+    ]);
+  });
+
+  it('inserting in the middle touches neither neighbour', () => {
+    state().load(ONE_LINE_RULES);
+    state().insert(['route', 'rules', 1], { outbound: 'direct' });
+
+    expect(removedLines(ONE_LINE_RULES, state().current() ?? '')).toEqual([]);
+    expect(readRules(state().current() ?? '')[1]).toEqual({ outbound: 'direct' });
+  });
+
+  it('deleting a rule in the middle keeps the next one on one line', () => {
+    state().load(ONE_LINE_RULES);
+    state().remove(['route', 'rules', 2]);
+
+    const after = state().current() ?? '';
+
+    expect(addedLines(ONE_LINE_RULES, after)).toEqual([]);
+    expect(removedLines(ONE_LINE_RULES, after)).toEqual(['      { "ip_is_private": true, "outbound": "direct" },']);
+  });
+
+  it.each([0, 1, 3, 4])('deleting rule %i of a list with a trailing comma keeps the next one on one line', (index) => {
+    state().load(HANDWRITTEN);
+    state().remove(['route', 'rules', index]);
+
+    const after = state().current() ?? '';
+
+    expect(addedLines(HANDWRITTEN, after)).toEqual([]);
+    expect(readRules(after)).toEqual(readRules(HANDWRITTEN).toSpliced(index, 1));
+  });
+
+  it('deleting a rule takes its comments with it', () => {
+    state().load(ONE_LINE_RULES);
+    state().remove(['route', 'rules', 1]);
+
+    expect(removedLines(ONE_LINE_RULES, state().current() ?? '')).toEqual([
+      '      // DNS goes to the resolver',
+      '      { "protocol": "dns", /* hijack */ "action": "hijack-dns" },',
+    ]);
+  });
+
+  it('deleting the last rule takes the comma from the previous one only', () => {
+    state().load(ONE_LINE_RULES);
+    state().remove(['route', 'rules', 4]);
+
+    const after = state().current() ?? '';
+
+    expect(removedLines(ONE_LINE_RULES, after)).toEqual([
+      '      },',
+      '      { "port": [80, 443], "outbound": "proxy" }',
+    ]);
+    expect(addedLines(ONE_LINE_RULES, after)).toEqual(['      }']);
+  });
+
+  it('a list with a trailing comma keeps it', () => {
+    const text = '{ "rules": [\n  { "a": 1 },\n  { "b": 2 },\n] }\n';
+
+    state().load(text);
+    state().remove(['rules', 1]);
+    expect(state().current()).toBe('{ "rules": [\n  { "a": 1 },\n] }\n');
+
+    state().insert(['rules', 1], 3);
+    expect(state().current()).toBe('{ "rules": [\n  { "a": 1 },\n  3,\n] }\n');
+  });
+
+  it('a list written on one line stays on one line', () => {
+    const text = '{ "ports": [80, 443, 8080] }';
+
+    state().load(text);
+    state().insert(['ports', 3], 22);
+    expect(state().current()).toBe('{ "ports": [80, 443, 8080, 22] }');
+
+    state().move(['ports'], 0, 3);
+    expect(state().current()).toBe('{ "ports": [443, 8080, 22, 80] }');
+
+    state().remove(['ports', 1]);
+    expect(state().current()).toBe('{ "ports": [443, 22, 80] }');
+  });
+
+  it('a comment on its own line above the first rule moves with it', () => {
+    state().load('{ "r": [\n  // about A\n  "A",\n  "B",\n  "C"\n] }');
+    state().move(['r'], 0, 2);
+
+    expect(state().current()).toBe('{ "r": [\n  "B",\n  "C",\n  // about A\n  "A"\n] }');
+  });
+
+  it('a commented-out rule before the closing bracket survives deleting the last rule', () => {
+    state().load('{ "r": [\n  "A",\n  "B"\n  // "disabled"\n] }');
+    state().remove(['r', 1]);
+
+    expect(state().current()).toBe('{ "r": [\n  "A"\n  // "disabled"\n] }');
+  });
+
+  it('a move in a one-line list of two keeps the space after the comma', () => {
+    state().load('{ "p": [80, 443] }');
+    state().move(['p'], 1, 0);
+
+    expect(state().current()).toBe('{ "p": [443, 80] }');
+  });
+
+  it('a line comment that would swallow the next rules falls back to a move by value', () => {
+    state().load('{"r": [\n  1, 2, // two\n  3\n]}');
+    state().move(['r'], 1, 0);
+
+    expect(findValue(state().current() ?? '', ['r'])).toEqual([2, 1, 3]);
+  });
+
+  it('a negative position leaves the text to modify', () => {
+    state().load('{ "r": [1, 2, 3] }');
+    state().move(['r'], 0, -1);
+
+    expect(findValue(state().current() ?? '', ['r'])).toHaveLength(3);
+  });
+
+  it('a trailing comment of a rule moves with it and does not swallow the comma', () => {
+    const text = '{ "rules": [\n  1, // one\n  2\n] }';
+
+    state().load(text);
+    state().move(['rules'], 0, 1);
+
+    expect(state().current()).toBe('{ "rules": [\n  2,\n  1 // one\n] }');
   });
 });
 

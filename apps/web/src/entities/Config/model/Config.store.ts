@@ -4,7 +4,7 @@ import { useEffect, useMemo } from 'react';
 import { diffLines, type DiffLine } from '@shared/lib/diff';
 import { createReactSelectors, stateCreator, useStore } from '@shared/lib/state';
 
-import { findValue, insertValue, removeValue, setValue } from './Config.model';
+import { insertValue, moveValue, removeValue, setValue } from './Config.model';
 import type { NodeEdit } from './Config.patch';
 import { readStoredDraft, writeStoredDraft } from './Config.storage';
 
@@ -164,17 +164,9 @@ const ConfigDocumentStateProto = stateCreator<ConfigDocumentState>((set, get) =>
     move: (path, from, to) => {
       set((state) => {
         const text = state.draft ?? state.applied;
+        const next = text === null ? text : moveValue(text, path, from, to);
 
-        if (text === null || from === to) return state;
-
-        const node = findValue(text, [...path, from]);
-
-        if (node === undefined) return state;
-
-        return {
-          draft: insertValue(removeValue(text, [...path, from]), [...path, to], node),
-          draftBase: baseOf(state),
-        };
+        return next === text ? state : { draft: next, draftBase: baseOf(state) };
       });
     },
 
