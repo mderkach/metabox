@@ -5,6 +5,7 @@ import { ConnectionState, listenConnections } from '@entities/Connection';
 import {
   DAEMON_ENDPOINT,
   DAEMON_QUERY,
+  getDaemonStatusOptions,
   getServiceStateOptions,
   listenMemory,
   listenService,
@@ -62,6 +63,21 @@ export function useRuntimeStreams(): void {
 
       source.addEventListener('open', onStreamOpen);
 
+      // The browser hides the status of a refused stream, and after a daemon restart or a
+      // logout elsewhere the refusal is a 401. A status request tells it at once: its 401
+      // reaches the session watch, which shows the login screen without waiting for a poll.
+      function onStreamError() {
+        if (source.readyState !== EventSource.CLOSED) {
+          return;
+        }
+
+        void queryClient.fetchQuery({ ...getDaemonStatusOptions(), staleTime: 0 }).catch(function ignoreProbeFailure() {
+          // The failure is already in the query cache, where the session watch and the banner read it.
+        });
+      }
+
+      source.addEventListener('error', onStreamError);
+
       const unsubscribe = [
         watchSequence(source, refetchRuntime),
         listenTraffic(source),
@@ -81,6 +97,7 @@ export function useRuntimeStreams(): void {
         for (const off of unsubscribe) off();
 
         source.removeEventListener('open', onStreamOpen);
+        source.removeEventListener('error', onStreamError);
         source.close();
         RuntimeStore.getState().closeStream();
       };

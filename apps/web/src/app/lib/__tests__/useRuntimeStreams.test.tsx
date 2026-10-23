@@ -1,17 +1,60 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, renderHook } from '@testing-library/react';
-import type { ReactNode } from 'react';
+import { server } from '@test/server';
+import { act, render, renderHook, screen } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
+import { useEffect, type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { RuntimeStore } from '@entities/Daemon';
+import { AUTH_ENDPOINT } from '@entities/Auth';
+import { DAEMON_ENDPOINT, RuntimeStore } from '@entities/Daemon';
 
+import { AuthGate } from '../../ui/AuthGate';
 import { useRuntimeStreams } from '../useRuntimeStreams';
 
 /** jsdom has no `EventSource`: checks what the shell does when a stream opens and closes. */
 class FakeEventSource {
-  addEventListener(): void {}
+  static readonly CLOSED = 2;
+  static last: FakeEventSource | null = null;
+
+  readyState = 0;
+  private readonly listeners = new Map<string, () => void>();
+
+  constructor() {
+    FakeEventSource.last = this;
+  }
+
+  addEventListener(type: string, handler: () => void): void {
+    this.listeners.set(type, handler);
+  }
+
   removeEventListener(): void {}
   close(): void {}
+
+  /** The connection dropped: the browser reconnects by itself and reports an error event. */
+  drop(): void {
+    this.listeners.get('error')?.();
+  }
+
+  /** The daemon refused the stream: the browser closes it and reports only an error event. */
+  refuse(): void {
+    this.readyState = FakeEventSource.CLOSED;
+    this.listeners.get('error')?.();
+  }
+}
+
+/** The shell part that holds the stream open while a screen reads it. */
+function Shell() {
+  useRuntimeStreams();
+
+  useEffect(function readRuntime() {
+    RuntimeStore.getState().addReader();
+
+    return function stopReadingRuntime() {
+      RuntimeStore.getState().removeReader();
+    };
+  }, []);
+
+  return <p>панель</p>;
 }
 
 function wrapper({ children }: { children: ReactNode }) {
@@ -41,5 +84,51 @@ describe('useRuntimeStreams', () => {
     });
 
     expect(RuntimeStore.getState().sampledAt).toBeNull();
+  });
+
+  it('shows the login screen when the stream closes and a probe gets 401', async () => {
+    server.use(
+      http.get(AUTH_ENDPOINT.state(), () => HttpResponse.json({ enabled: true, authenticated: true })),
+      http.get(DAEMON_ENDPOINT.status(), () =>
+        HttpResponse.json({ code: 'unauthorized', message: 'нужен вход в панель' }, { status: 401 })
+      )
+    );
+
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <AuthGate onLogin={vi.fn<() => void>()}>
+          <Shell />
+        </AuthGate>
+      </QueryClientProvider>
+    );
+
+    expect(await screen.findByText('панель')).toBeInTheDocument();
+
+    act(() => {
+      FakeEventSource.last?.refuse();
+    });
+
+    expect(await screen.findByLabelText('Пароль')).toBeInTheDocument();
+  });
+
+  it('does not probe while the browser reconnects the stream', () => {
+    const queryClient = new QueryClient();
+    const fetchQuery = vi.spyOn(queryClient, 'fetchQuery');
+
+    renderHook(useRuntimeStreams, {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      ),
+    });
+
+    act(() => {
+      RuntimeStore.getState().addReader();
+    });
+
+    act(() => {
+      FakeEventSource.last?.drop();
+    });
+
+    expect(fetchQuery).not.toHaveBeenCalled();
   });
 });
