@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/url"
+	"regexp"
 	"strings"
 )
 
@@ -166,6 +167,26 @@ func maskURL(value string) (string, bool) {
 	}
 
 	return u.Scheme + "://" + u.Host + "/" + maskChars, true
+}
+
+// logURL finds a URL in a log line. sing-box prints a failed download as Go's url.Error,
+// `Get "<url>": <cause>`, so a quote ends the URL as well as a blank.
+var logURL = regexp.MustCompile("[A-Za-z][A-Za-z0-9+.-]*://[^\\s\"'<>`]+")
+
+// maskLog hides every URL in a log line after its host, as maskURL does for the url
+// keys of the config: subscription and rule-set addresses carry tokens in the path or
+// the query. The rest of the line, other secrets included, is not recognised.
+func maskLog(message string) string {
+	return logURL.ReplaceAllStringFunc(message, func(raw string) string {
+		value := strings.TrimRight(raw, ".,:;)")
+
+		masked, ok := maskURL(value)
+		if !ok {
+			return raw
+		}
+
+		return masked + raw[len(value):]
+	})
 }
 
 func encodeString(value string) []byte {
