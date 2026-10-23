@@ -12,10 +12,9 @@ import {
 } from '@entities/Connection';
 import { useScrollEdges } from '@shared/lib/useScrollEdges';
 import { cn } from '@shared/lib/utils';
-import { Button } from '@shared/ui';
+import { Button, FacetFilter, type FacetText } from '@shared/ui';
 
 import type { ConnectionsScreen } from '../lib';
-import { ConnectionFacetFilter, type ConnectionFacetText } from './ConnectionFacetFilter';
 
 const FACET_LABEL: Readonly<Record<ConnectionFacet, ParseKeys<'pages/Connections'>>> = {
   [CONNECTION_FACET.Source]: 'facet.source',
@@ -46,7 +45,7 @@ export function ConnectionFacets({ screen }: { screen: ConnectionsScreen }) {
   const { t } = useTranslation('pages/Connections');
   const { sourceLabel } = screen;
 
-  const describe = useMemo<Readonly<Record<ConnectionFacet, (value: string) => ConnectionFacetText>>>(
+  const describe = useMemo<Readonly<Record<ConnectionFacet, (value: string) => FacetText>>>(
     () => ({
       [CONNECTION_FACET.Source]: (value) => {
         const label = sourceLabel(value);
@@ -83,7 +82,7 @@ export function ConnectionFacets({ screen }: { screen: ConnectionsScreen }) {
       )}
     >
       {CONNECTION_FACETS.map((facet) => (
-        <ConnectionFacetFilter
+        <FacetFilter
           key={facet}
           label={t(FACET_LABEL[facet])}
           values={screen.facets[facet]}

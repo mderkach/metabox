@@ -6,11 +6,18 @@ import { matchesWords, toQueryWords } from '@shared/lib/search';
 import { RULE_SET_MATCHER } from './Rule.constants';
 import { RULE_TARGET, type RuleBranch, type RuleRow, type RuleTargetKind } from './Rule.model';
 
-/** Outbound by which rules are selected; `null` means all at once. */
-export type RuleTargetFilter = string | null;
+/** Outbounds and actions by which rules are selected; an empty list means all at once. */
+export type RuleTargetFilter = readonly string[];
 
 /** Set tag referenced by the selected rules; `null` means all at once. */
 export type RuleSetFilter = string | null;
+
+/**
+ * Outbound facet in the URL: one value as a string, several as a list. The list
+ * goes first: coercion would glue a list into one string. A tag of digits
+ * arrives from the router as a number and stays a tag.
+ */
+const TargetParamSchema = z.union([z.array(z.coerce.string().min(1)).min(1), z.coerce.string().min(1)]);
 
 /**
  * Rules screen state in the URL. The rule number is as in the UI, from one: the
@@ -20,6 +27,7 @@ export type RuleSetFilter = string | null;
 export const RuleSearchSchema = z.object({
   rule: z.coerce.number().int().positive().optional(),
   rule_set: z.coerce.string().min(1).optional(),
+  target: TargetParamSchema.optional(),
 });
 
 export type RuleSearch = z.infer<typeof RuleSearchSchema>;
@@ -31,6 +39,24 @@ export function parseRuleSearch(search: Record<string, unknown>): RuleSearch {
   return parsed.success ? parsed.data : {};
 }
 
+/** Outbound facet selection from the URL. */
+export function toTargetFilter(param: RuleSearch['target']): RuleTargetFilter {
+  if (param === undefined) {
+    return [];
+  }
+
+  return typeof param === 'string' ? [param] : param;
+}
+
+/** Outbound facet selection for the URL: one value is written as a string, so a link stays short. */
+export function toTargetParam(targets: RuleTargetFilter): RuleSearch['target'] {
+  if (targets.length === 0) {
+    return undefined;
+  }
+
+  return targets.length === 1 ? targets[0] : [...targets];
+}
+
 export interface RuleTargetGroup {
   target: string;
   /** An action is named in words on screen, an outbound by its tag. */
@@ -38,14 +64,19 @@ export interface RuleTargetGroup {
   count: number;
 }
 
-/** Outbounds in descending order of rule count: the screen facets are built from them. */
-export function toTargetGroups(rules: RuleRow[]): RuleTargetGroup[] {
+/**
+ * Outbounds of the whole list in descending order of rule count: the screen facet is built from them.
+ * The counter is taken over `counted`, the rows the other filters leave: it says how many rows the
+ * selection adds, while a value stays even when nothing is left under it.
+ */
+export function toTargetGroups(rules: RuleRow[], counted: RuleRow[] = rules): RuleTargetGroup[] {
   const actions = new Set(rules.filter((rule) => rule.targetKind === RULE_TARGET.Action).map((rule) => rule.target));
+  const counts = new Map(countGroups(counted, (rule) => rule.target).map((group) => [group.value, group.count]));
 
   return countGroups(rules, (rule) => rule.target).map((group) => ({
     target: group.value,
     kind: actions.has(group.value) ? RULE_TARGET.Action : RULE_TARGET.Outbound,
-    count: group.count,
+    count: counts.get(group.value) ?? 0,
   }));
 }
 
@@ -64,14 +95,14 @@ function usesRuleSet(branch: RuleBranch, tag: string): boolean {
 export function filterRules(
   rules: RuleRow[],
   query: string,
-  target: RuleTargetFilter,
+  targets: RuleTargetFilter,
   ruleSet: RuleSetFilter = null
 ): RuleRow[] {
   const words = toQueryWords(query);
 
   return rules.filter(
     (rule) =>
-      (target === null || rule.target === target) &&
+      (targets.length === 0 || targets.includes(rule.target)) &&
       (ruleSet === null || usesRuleSet(rule, ruleSet)) &&
       matchesWords(rule.searchText.toLowerCase(), words)
   );

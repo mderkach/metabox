@@ -29,14 +29,6 @@ export const TABLE_HEADER = 'text-xs font-medium tracking-[0.06em] text-muted-fo
 /** Search field in a list toolbar: one width for all panel lists. */
 export const SEARCH_FIELD = 'relative w-full max-w-80';
 
-/** Filter chip: outbound facet on rules. */
-export const FACET_CLASS =
-  'flex h-6 shrink-0 items-center gap-1.5 rounded-md border px-2 text-xs transition-colors pointer-coarse:h-11 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none';
-
-export const FACET_ACTIVE = 'border-selected-edge bg-selected text-foreground';
-export const FACET_IDLE = 'border-border text-muted-foreground hover:text-foreground';
-export const FACET_MORE = 'border-dashed border-border text-muted-foreground hover:text-foreground';
-
 /**
  * Destructive action: an outline in the danger tone, not a fill. A filled tone
  * among ordinary buttons reads as an error message, not as an available

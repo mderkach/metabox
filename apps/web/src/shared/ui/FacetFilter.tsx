@@ -2,12 +2,19 @@ import { Check, ChevronDown } from 'lucide-react';
 import { useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import type { ConnectionFacetValue } from '@entities/Connection';
-import { cn } from '@shared/lib/utils';
-import { Button, Input, Popover, PopoverContent, PopoverTitle, PopoverTrigger } from '@shared/ui';
+import { cn } from '../lib/utils';
+import { Button } from './shadcn/button';
+import { Input } from './shadcn/input';
+import { Popover, PopoverContent, PopoverTitle, PopoverTrigger } from './shadcn/popover';
+
+/** Facet value and the number of rows its selection adds. */
+export interface FacetValue {
+  value: string;
+  count: number;
+}
 
 /** Facet value in words: the label and, for a device, the address next to it. */
-export interface ConnectionFacetText {
+export interface FacetText {
   label: string;
   detail: string | null;
 }
@@ -40,7 +47,7 @@ function focusOption(list: HTMLDivElement | null, index: number) {
  * Keyboard: from search, the down arrow leads into the list, in the list arrows
  * move over values, space and Enter toggle a value, Esc closes the popover.
  */
-export function ConnectionFacetFilter({
+export function FacetFilter({
   label,
   values,
   selected,
@@ -48,12 +55,12 @@ export function ConnectionFacetFilter({
   onSelectedChange,
 }: {
   label: string;
-  values: readonly ConnectionFacetValue[];
+  values: readonly FacetValue[];
   selected: readonly string[];
-  describe: (value: string) => ConnectionFacetText;
+  describe: (value: string) => FacetText;
   onSelectedChange: (values: readonly string[]) => void;
 }) {
-  const { t } = useTranslation('pages/Connections');
+  const { t } = useTranslation('shared');
   const [query, setQuery] = useState('');
   const [current, setCurrent] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);

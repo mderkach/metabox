@@ -1,8 +1,7 @@
 import { X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { cn } from '@shared/lib/utils';
-import { FACET_ACTIVE, FACET_CLASS } from '@shared/ui';
+import { Button } from '@shared/ui';
 
 import type { RuleFilterState } from '../lib/Editor.lib';
 
@@ -18,17 +17,18 @@ export function EditorRuleSetChip({ filter }: { filter: RuleFilterState }) {
   }
 
   return (
-    <button
-      type='button'
+    <Button
+      variant='outline'
+      size='sm'
       aria-label={t('ruleSet.clear', { tag: filter.ruleSet })}
       onClick={() => {
         filter.setRuleSet(null);
       }}
-      className={cn(FACET_CLASS, FACET_ACTIVE)}
+      className='border-selected-edge bg-selected text-foreground hover:bg-selected max-md:h-11'
     >
       {t('ruleSet.label')}
       <span className='font-mono'>{filter.ruleSet}</span>
-      <X className='size-3' aria-hidden='true' />
-    </button>
+      <X aria-hidden='true' />
+    </Button>
   );
 }

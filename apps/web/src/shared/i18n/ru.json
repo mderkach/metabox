@@ -199,9 +199,15 @@
     "resetFilter": "Сбросить отбор",
     "shown": "Показано {{shown}} из {{total}}",
     "rowActions": "Действия над строкой",
-    "more": "Ещё {{count}}",
-    "collapse": "Свернуть",
     "andMore": "и ещё {{count}}"
+  },
+  "facet": {
+    "one": "{{facet}}: {{value}}",
+    "several": "{{facet}}: выбрано {{count}}",
+    "search": "Найти",
+    "searchLabel": "Найти значение: {{facet}}",
+    "nothing": "Ничего не нашлось",
+    "reset": "Сбросить"
   },
   "delay": {
     "value": "{{value}} мс",
