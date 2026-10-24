@@ -11,6 +11,8 @@ node_modules
 dist
 dist-ssr
 *.local
+# Failure screenshots of the Vitest browser mode
+.vitest
 
 # Editor directories and files
 .vscode/*

@@ -1,6 +1,6 @@
 # Frontend testing
 
-Vitest + Testing Library.
+Vitest + Testing Library. Tests run in jsdom; those that need a real browser run in Chromium in the `browser` project ([ADR-0064](../../../../docs/adr/ADR-0064-run-browser-tests-in-a-vitest-browser-project-next-to-jsdom.md)).
 
 ## Layout and naming
 
@@ -28,7 +28,7 @@ For the same reason a test may use the Public API of a neighbouring slice of its
 
 `src/test` keeps only tooling without domain knowledge: `setup`, render wrappers with `QueryClient` and the router, the virtualizer size override, the runtime stream override (`fakeEventSource`), the chart override (`fakePlot`), the test dictionary, the list selection helper, the end-of-transition helpers for the side panel and the apply bar (`finishSidePanelTransition`, `finishApplyBarTransition`: jsdom does not play transitions), the MSW server instance and the handler assembly point for dev mode. A fixture of a specific API never moves there.
 
-- File name: `<TestedFile>.test.<ts|tsx>`, matching `include: ["src/**/*.test.{ts,tsx}"]` from `vite.config.ts`.
+- File name: `<TestedFile>.test.<ts|tsx>`, matching `include: ["src/**/*.test.{ts,tsx}"]` from `vite.config.ts`. A browser test is `<TestedFile>.browser.test.tsx`.
 - Test titles are in English and read as a specification: `it("rejects an empty domain")`.
 - Grouping by component/function through `describe`.
 
@@ -130,6 +130,15 @@ A set of real `config.json` files is parsed, edited at specific points and compa
 - Virtualized lists: jsdom does not compute sizes, the container and row heights are supplied by a mock, otherwise zero elements render.
 - Dropdowns: opening and selecting go through `selectOption` from `src/test`. Do not reproduce it by hand: the Base UI popup has two pitfalls in jsdom, and both are described in the helper's TSDoc.
 
+## Browser tests
+
+A test goes to the `browser` project when jsdom cannot reproduce what it checks: Base UI dropdowns and other pointer interactions, layout and sizes, computed styles, accessibility checks by a tool. The rest stays in jsdom: it is faster and needs no browser.
+
+- The file is `*.browser.test.tsx` next to the jsdom tests of the same slice. It is typed by `tsconfig.browser.json`: the browser mode declares its own matchers, and in one program with `@testing-library/jest-dom` they break the types of jsdom tests.
+- Clicks and typing go through `userEvent` from `vitest/browser`: it drives Playwright, so the click is a real mouse click. `@testing-library/user-event` dispatches synthetic events and is not used here.
+- Queries are the same Testing Library `screen` queries; matchers are the browser mode's own, `@testing-library/jest-dom` is not loaded.
+- `src/test/browserSetup.ts` loads the panel styles and the test dictionary. The jsdom stubs and `msw/node` from `setup.ts` are not there.
+
 ## Autorenderer
 
 The test starts from the schema: a fixture with a set of node types → the expected set of widgets and labels. Checked: widget choice by type, field requiredness and the path the form passes up.
@@ -152,4 +161,7 @@ Running tests and the other checks: the table in [`CONTRIBUTING.md`](../../../..
 ```bash
 pnpm --filter web test:watch     # watch
 pnpm --filter web test -- Rule   # by path substring
+pnpm --filter web test:browser   # the browser project
 ```
+
+`test` and the pre-push hook run only the jsdom projects; the browser project runs in the `web-browser` CI job. Before the first local run, download the browser: `pnpm --filter web exec playwright install --only-shell chromium`.
