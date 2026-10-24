@@ -165,7 +165,7 @@ func main() {
 	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: s.logLevel}))
 
 	if err := run(log, s); err != nil {
-		log.Error("демон остановлен", "err", err)
+		log.Error("daemon stopped", "err", err)
 		os.Exit(1)
 	}
 }
@@ -192,19 +192,19 @@ func run(log *slog.Logger, s settings) error {
 	// accepting requests: a power loss within the confirmation window would otherwise leave
 	// the device on the unconfirmed config forever.
 	if err := manager.Replay(ctx); err != nil {
-		log.Error("незавершённая транзакция не доиграна", "err", err)
+		log.Error("unfinished transaction not replayed", "err", err)
 	}
 
 	if err := planeTx.Replay(ctx); err != nil {
-		log.Error("незавершённая смена обвязки не доиграна", "err", err)
+		log.Error("unfinished dataplane change not replayed", "err", err)
 	}
 
 	spa, err := webui.Handler()
 	if errors.Is(err, webui.ErrNotBuilt) {
-		log.Warn("интерфейс в бинарь не попал, отдаём только API", "как_починить", "make daemon")
+		log.Warn("interface not embedded in the binary, serving the API only", "fix", "make daemon")
 		spa = nil
 	} else if err != nil {
-		return fmt.Errorf("встроенный интерфейс: %w", err)
+		return fmt.Errorf("embedded interface: %w", err)
 	}
 
 	// A failure does not stop the daemon: the panel must work with a
@@ -212,7 +212,7 @@ func run(log *slog.Logger, s settings) error {
 	build, err := service.Build(ctx)
 	singboxVersion := build.Version
 	if err != nil {
-		log.Warn("версия sing-box не прочитана", "err", err)
+		log.Warn("sing-box version not read", "err", err)
 	}
 
 	// A missing proxy does not stop the daemon: the panel must open
@@ -221,7 +221,7 @@ func run(log *slog.Logger, s settings) error {
 
 	clash, err := clashapi.NewProxy(configSettings(store), httpapi.ProxyError(log))
 	if err != nil {
-		log.Warn("прокси Clash API не собран", "err", err)
+		log.Warn("Clash API proxy not built", "err", err)
 	} else {
 		clashHandler = clash
 	}
@@ -276,7 +276,7 @@ func run(log *slog.Logger, s settings) error {
 
 	ruleSets, err := ruleset.NewUpdater(ctx, github, store, log, s.ruleSetPeriod, ruleSetRetryInterval)
 	if err != nil {
-		return fmt.Errorf("каталог наборов: %w", err)
+		return fmt.Errorf("rule set catalog: %w", err)
 	}
 
 	ruleSets.Start()
@@ -291,7 +291,7 @@ func run(log *slog.Logger, s settings) error {
 		UCI:    s.uci,
 	})
 	if err != nil {
-		log.Error("список устройств не собран", "err", err)
+		log.Error("device list not built", "err", err)
 	} else {
 		lan = registry
 	}
@@ -300,7 +300,7 @@ func run(log *slog.Logger, s settings) error {
 	// set a password must not lose the protection silently.
 	guard, err := auth.New(ctx, store, auth.Options{Log: log})
 	if err != nil {
-		return fmt.Errorf("пароль панели: %w", err)
+		return fmt.Errorf("panel password: %w", err)
 	}
 
 	var probe diag.DNSProber
@@ -319,26 +319,26 @@ func run(log *slog.Logger, s settings) error {
 	switch {
 	case !s.https:
 	case (s.httpsCert == "") != (s.httpsKey == ""):
-		return errors.New("флаги -https-cert и -https-key задаются вместе")
+		return errors.New("flags -https-cert and -https-key go together")
 	case s.httpsCert != "":
 		tlsConfig, err = cert.LoadPair(s.httpsCert, s.httpsKey)
 		if err != nil {
 			return err
 		}
 
-		log.Info("сертификат панели из файла", "cert", s.httpsCert,
+		log.Info("panel certificate from file", "cert", s.httpsCert,
 			"expires", tlsConfig.Certificates[0].Leaf.NotAfter)
 	default:
 		certs, err := cert.New(ctx, store, log, cert.Options{Hosts: httpapi.Hosts(httpapi.Addrs(s.addr), s.allowedOrigin)})
 		if err != nil {
-			return fmt.Errorf("сертификат панели: %w", err)
+			return fmt.Errorf("panel certificate: %w", err)
 		}
 
 		if certs.RootCreated() {
-			log.Warn("выпущен новый корневой сертификат панели, установите его на свои устройства",
+			log.Warn("new panel root certificate issued, install it on your devices",
 				"path", "/metabox-ca.crt", "ca_sha256", certs.Fingerprint())
 		} else {
-			log.Info("сертификат панели", "ca_sha256", certs.Fingerprint(), "expires", certs.Expiry())
+			log.Info("panel certificate", "ca_sha256", certs.Fingerprint(), "expires", certs.Expiry())
 		}
 
 		tlsConfig = certs.Config()
@@ -364,7 +364,7 @@ func run(log *slog.Logger, s settings) error {
 	// up, and a new token from the panel overwrites the file.
 	access, err := mcp.NewAccess(ctx, store)
 	if err != nil {
-		log.Error("MCP выключен: файл токена не прочитан", "err", err)
+		log.Error("MCP disabled: token file not read", "err", err)
 	}
 
 	agents := mcp.New(access, log, mcp.Options{
@@ -411,11 +411,11 @@ func run(log *slog.Logger, s settings) error {
 
 	listeners, failures, err := httpapi.Listen(httpapi.Addrs(s.addr))
 	if err != nil {
-		return fmt.Errorf("слушатели: %w", err)
+		return fmt.Errorf("listeners: %w", err)
 	}
 
 	for _, failure := range failures {
-		log.Warn("адрес не открыт, панель на нём недоступна", "err", failure)
+		log.Warn("address not opened, the panel is unavailable on it", "err", failure)
 	}
 
 	srv := &http.Server{
@@ -459,7 +459,7 @@ func run(log *slog.Logger, s settings) error {
 		}()
 	}
 
-	log.Info("демон запущен", "addr", httpapi.Bound(listeners), "https", s.https, "version", version.Version)
+	log.Info("daemon started", "addr", httpapi.Bound(listeners), "https", s.https, "version", version.Version)
 
 	select {
 	case err := <-serveErr:
@@ -471,10 +471,10 @@ func run(log *slog.Logger, s settings) error {
 	defer cancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
-		return fmt.Errorf("остановка сервера: %w", err)
+		return fmt.Errorf("stop server: %w", err)
 	}
 
-	log.Info("демон остановлен")
+	log.Info("daemon stopped")
 
 	var errs []error
 	for range served {
@@ -543,7 +543,7 @@ func systemState(reader *device.Reader, log *slog.Logger) events.SystemReader {
 	return func(ctx context.Context) (json.RawMessage, error) {
 		stat, err := reader.Read(ctx)
 		if err != nil {
-			log.Debug("показания устройства прочитаны частично", "err", err)
+			log.Debug("device readings read partially", "err", err)
 		}
 
 		return json.Marshal(stat)
@@ -579,7 +579,7 @@ func clashPort(store *config.Store) device.PortResolver {
 
 		_, port, err := net.SplitHostPort(settings.Address)
 		if err != nil {
-			return 0, fmt.Errorf("адрес контроллера %q: %w", settings.Address, err)
+			return 0, fmt.Errorf("controller address %q: %w", settings.Address, err)
 		}
 
 		return strconv.Atoi(port)

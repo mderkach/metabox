@@ -301,7 +301,7 @@ func (r *Reader) load() (Load, error) {
 	}
 
 	if len(fields) < averages {
-		return Load{}, fmt.Errorf("разбор loadavg: полей %d", len(fields))
+		return Load{}, fmt.Errorf("parse loadavg: %d fields", len(fields))
 	}
 
 	values := make([]float64, averages)
@@ -309,7 +309,7 @@ func (r *Reader) load() (Load, error) {
 	for index := range values {
 		value, err := strconv.ParseFloat(fields[index], 64)
 		if err != nil {
-			return Load{}, fmt.Errorf("разбор loadavg: %w", err)
+			return Load{}, fmt.Errorf("parse loadavg: %w", err)
 		}
 
 		values[index] = value
@@ -336,12 +336,12 @@ func (r *Reader) uptime() (int, error) {
 	}
 
 	if len(fields) == 0 {
-		return 0, errors.New("разбор uptime: пусто")
+		return 0, errors.New("parse uptime: empty")
 	}
 
 	seconds, err := strconv.ParseFloat(fields[0], 64)
 	if err != nil {
-		return 0, fmt.Errorf("разбор uptime: %w", err)
+		return 0, fmt.Errorf("parse uptime: %w", err)
 	}
 
 	return int(seconds), nil
@@ -362,7 +362,7 @@ func (r *Reader) thermal() ([]Zone, error) {
 			return zones, nil
 		}
 
-		return zones, fmt.Errorf("чтение %s: %w", root, err)
+		return zones, fmt.Errorf("read %s: %w", root, err)
 	}
 
 	var failures []error
@@ -398,7 +398,7 @@ func readZone(dir string) (Zone, error) {
 
 	milli, err := strconv.Atoi(raw)
 	if err != nil {
-		return Zone{}, fmt.Errorf("разбор температуры %s: %w", dir, err)
+		return Zone{}, fmt.Errorf("parse temperature %s: %w", dir, err)
 	}
 
 	return Zone{Name: name, Milli: milli}, nil
@@ -447,7 +447,7 @@ func readFields(path string) ([]string, error) {
 func readTrimmed(path string) (string, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return "", fmt.Errorf("чтение %s: %w", path, err)
+		return "", fmt.Errorf("read %s: %w", path, err)
 	}
 
 	return strings.TrimSpace(string(data)), nil
@@ -459,7 +459,7 @@ func readTrimmed(path string) (string, error) {
 func readKeyedKB(path string, keys ...string) (map[string]int64, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("чтение %s: %w", path, err)
+		return nil, fmt.Errorf("read %s: %w", path, err)
 	}
 
 	wanted := make(map[string]struct{}, len(keys))
@@ -486,7 +486,7 @@ func readKeyedKB(path string, keys ...string) (map[string]int64, error) {
 
 		kb, err := strconv.ParseInt(fields[0], 10, 64)
 		if err != nil {
-			return nil, fmt.Errorf("разбор %s в %s: %w", key, path, err)
+			return nil, fmt.Errorf("parse %s in %s: %w", key, path, err)
 		}
 
 		values[key] = kb * bytesInKB

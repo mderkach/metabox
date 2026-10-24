@@ -12,7 +12,7 @@ import (
 
 // errNoPort means the Clash API port is unknown: without it there is nothing
 // to look for the process by.
-var errNoPort = errors.New("порт Clash API не задан")
+var errNoPort = errors.New("port of the Clash API not set")
 
 // The process name in `comm` is cut to fifteen characters, "sing-box" fits
 // whole.
@@ -79,7 +79,7 @@ func (r *Reader) rssOfSingbox(pid int) (int64, error) {
 	}
 
 	if comm != singboxComm {
-		return 0, fmt.Errorf("процесс %d больше не sing-box: %s", pid, comm)
+		return 0, fmt.Errorf("process %d is no longer sing-box: %s", pid, comm)
 	}
 
 	return processRSS(r.proc, id)
@@ -92,7 +92,7 @@ func (r *Reader) findSingbox(ctx context.Context) (int, error) {
 
 	port, err := r.port(ctx)
 	if err != nil {
-		return 0, fmt.Errorf("порт Clash API: %w", err)
+		return 0, fmt.Errorf("port of the Clash API: %w", err)
 	}
 
 	inodes, err := r.listenerInodes(port)
@@ -101,7 +101,7 @@ func (r *Reader) findSingbox(ctx context.Context) (int, error) {
 	}
 
 	if len(inodes) == 0 {
-		return 0, fmt.Errorf("порт %d никто не слушает", port)
+		return 0, fmt.Errorf("nobody listens on port %d", port)
 	}
 
 	return r.ownerOf(ctx, inodes)
@@ -128,7 +128,7 @@ func (r *Reader) listenerInodes(port int) (map[string]struct{}, error) {
 		if err != nil {
 			// A kernel without IPv6 creates no such table: this is not a failure.
 			if !errors.Is(err, os.ErrNotExist) {
-				failures = append(failures, fmt.Errorf("чтение %s: %w", path, err))
+				failures = append(failures, fmt.Errorf("read %s: %w", path, err))
 			}
 
 			continue
@@ -156,7 +156,7 @@ func (r *Reader) listenerInodes(port int) (map[string]struct{}, error) {
 func (r *Reader) ownerOf(ctx context.Context, inodes map[string]struct{}) (int, error) {
 	entries, err := os.ReadDir(r.proc)
 	if err != nil {
-		return 0, fmt.Errorf("чтение %s: %w", r.proc, err)
+		return 0, fmt.Errorf("read %s: %w", r.proc, err)
 	}
 
 	for _, entry := range entries {
@@ -174,7 +174,7 @@ func (r *Reader) ownerOf(ctx context.Context, inodes map[string]struct{}) (int, 
 		}
 	}
 
-	return 0, errors.New("процесс со слушающим сокетом не найден")
+	return 0, errors.New("no process with the listening socket found")
 }
 
 func (r *Reader) holdsSocket(pid string, inodes map[string]struct{}) bool {

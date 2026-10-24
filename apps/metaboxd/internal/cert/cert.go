@@ -183,9 +183,9 @@ func (m *Manager) certificate(hello *tls.ClientHelloInfo) (*tls.Certificate, err
 
 	if err := m.issueLeaf(hello.Context(), now); err != nil {
 		m.retryFrom = now.Add(retryInterval)
-		m.log.Warn("сертификат панели не перевыпущен", "err", err, "expires", m.leafX509.NotAfter)
+		m.log.Warn("panel certificate not reissued", "err", err, "expires", m.leafX509.NotAfter)
 	} else {
-		m.log.Info("сертификат панели перевыпущен", "expires", m.leafX509.NotAfter)
+		m.log.Info("panel certificate reissued", "expires", m.leafX509.NotAfter)
 	}
 
 	return m.leaf, nil
@@ -206,12 +206,12 @@ func (m *Manager) loadRoot(ctx context.Context) error {
 	switch {
 	case key == nil:
 	case !cert.IsCA:
-		m.log.Warn("файл корневого сертификата не является CA, выпускается новый")
+		m.log.Warn("root certificate file is not a CA, issuing a new one")
 	case !m.rootCovers(cert):
-		m.log.Warn("корневой сертификат не покрывает адреса панели, выпускается новый",
+		m.log.Warn("root certificate does not cover the panel addresses, issuing a new one",
 			"hosts", m.hosts())
 	case clockSane(now) && now.After(cert.NotAfter):
-		m.log.Warn("корневой сертификат истёк, выпускается новый", "expired", cert.NotAfter)
+		m.log.Warn("root certificate expired, issuing a new one", "expired", cert.NotAfter)
 	default:
 		m.caKey, m.ca, m.caPEM = key, cert, encodeCert(cert.Raw)
 
@@ -265,7 +265,7 @@ func (m *Manager) readPair(ctx context.Context, keyName, certName string) (*ecds
 
 	key, cert, err := decodePair(keyPEM, certPEM)
 	if err != nil {
-		m.log.Warn("файлы сертификата не прочитаны, выпускаются заново", "file", certName, "err", err)
+		m.log.Warn("certificate files not read, issuing them again", "file", certName, "err", err)
 
 		return nil, nil, nil
 	}
@@ -276,7 +276,7 @@ func (m *Manager) readPair(ctx context.Context, keyName, certName string) (*ecds
 func (m *Manager) issueRoot(ctx context.Context, now time.Time) error {
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
-		return fmt.Errorf("ключ корневого сертификата: %w", err)
+		return fmt.Errorf("root certificate key: %w", err)
 	}
 
 	serial, err := serialNumber()
@@ -304,12 +304,12 @@ func (m *Manager) issueRoot(ctx context.Context, now time.Time) error {
 
 	der, err := x509.CreateCertificate(rand.Reader, template, template, &key.PublicKey, key)
 	if err != nil {
-		return fmt.Errorf("выпуск корневого сертификата: %w", err)
+		return fmt.Errorf("issue root certificate: %w", err)
 	}
 
 	cert, err := x509.ParseCertificate(der)
 	if err != nil {
-		return fmt.Errorf("разбор корневого сертификата: %w", err)
+		return fmt.Errorf("parse root certificate: %w", err)
 	}
 
 	if err := m.writePair(ctx, CAKeyName, CACertName, key, der); err != nil {
@@ -325,7 +325,7 @@ func (m *Manager) issueRoot(ctx context.Context, now time.Time) error {
 func (m *Manager) issueLeaf(ctx context.Context, now time.Time) error {
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
-		return fmt.Errorf("ключ сертификата панели: %w", err)
+		return fmt.Errorf("panel certificate key: %w", err)
 	}
 
 	serial, err := serialNumber()
@@ -347,12 +347,12 @@ func (m *Manager) issueLeaf(ctx context.Context, now time.Time) error {
 
 	der, err := x509.CreateCertificate(rand.Reader, template, m.ca, &key.PublicKey, m.caKey)
 	if err != nil {
-		return fmt.Errorf("выпуск сертификата панели: %w", err)
+		return fmt.Errorf("issue panel certificate: %w", err)
 	}
 
 	cert, err := x509.ParseCertificate(der)
 	if err != nil {
-		return fmt.Errorf("разбор сертификата панели: %w", err)
+		return fmt.Errorf("parse panel certificate: %w", err)
 	}
 
 	if err := m.writePair(ctx, ServerKeyName, ServerCertName, key, der); err != nil {
@@ -379,7 +379,7 @@ func (m *Manager) setLeaf(key *ecdsa.PrivateKey, cert *x509.Certificate) {
 func (m *Manager) writePair(ctx context.Context, keyName, certName string, key *ecdsa.PrivateKey, der []byte) error {
 	keyDER, err := x509.MarshalPKCS8PrivateKey(key)
 	if err != nil {
-		return fmt.Errorf("кодирование ключа %s: %w", keyName, err)
+		return fmt.Errorf("encode key %s: %w", keyName, err)
 	}
 
 	if err := m.store.WriteTLS(ctx, certName, encodeCert(der)); err != nil {
@@ -505,7 +505,7 @@ func decodePair(keyPEM, certPEM []byte) (*ecdsa.PrivateKey, *x509.Certificate, e
 
 	key, ok := pair.PrivateKey.(*ecdsa.PrivateKey)
 	if !ok {
-		return nil, nil, fmt.Errorf("ключ типа %T, ожидался ECDSA", pair.PrivateKey)
+		return nil, nil, fmt.Errorf("key of type %T, expected ECDSA", pair.PrivateKey)
 	}
 
 	return key, pair.Leaf, nil
@@ -518,7 +518,7 @@ func encodeCert(der []byte) []byte {
 func serialNumber() (*big.Int, error) {
 	serial, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), serialBits))
 	if err != nil {
-		return nil, fmt.Errorf("серийный номер сертификата: %w", err)
+		return nil, fmt.Errorf("certificate serial number: %w", err)
 	}
 
 	return serial, nil

@@ -26,11 +26,11 @@ const srsSuffix = ".srs"
 
 // errTruncated: GitHub returned the tree not whole. A truncated tree would give a
 // catalog without some categories, and this would not be visible from the response.
-var errTruncated = errors.New("дерево отдано не целиком")
+var errTruncated = errors.New("tree returned truncated")
 
 // errEmpty: no rule set file found in the tree. This is what a changed provider
 // layout looks like, not an empty catalog: the previous listing stays.
-var errEmpty = errors.New("в дереве нет файлов наборов")
+var errEmpty = errors.New("no rule set files in the tree")
 
 // Listing is the result of checking one tree.
 type Listing struct {
@@ -81,7 +81,7 @@ func (g *GitHub) List(ctx context.Context, tree Tree, etag string) (Listing, err
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
-		return Listing{}, fmt.Errorf("запрос дерева %s/%s: %w", tree.Owner, tree.Repo, err)
+		return Listing{}, fmt.Errorf("request tree %s/%s: %w", tree.Owner, tree.Repo, err)
 	}
 
 	req.Header.Set("Accept", "application/vnd.github+json")
@@ -93,7 +93,7 @@ func (g *GitHub) List(ctx context.Context, tree Tree, etag string) (Listing, err
 
 	resp, err := g.client.Do(req)
 	if err != nil {
-		return Listing{}, fmt.Errorf("дерево %s/%s: %w", tree.Owner, tree.Repo, err)
+		return Listing{}, fmt.Errorf("tree %s/%s: %w", tree.Owner, tree.Repo, err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
@@ -102,16 +102,16 @@ func (g *GitHub) List(ctx context.Context, tree Tree, etag string) (Listing, err
 	case http.StatusNotModified:
 		return Listing{ETag: etag, NotModified: true}, nil
 	default:
-		return Listing{}, fmt.Errorf("дерево %s/%s: ответ %s", tree.Owner, tree.Repo, resp.Status)
+		return Listing{}, fmt.Errorf("tree %s/%s: response %s", tree.Owner, tree.Repo, resp.Status)
 	}
 
 	var body treeResponse
 	if err := json.NewDecoder(io.LimitReader(resp.Body, maxTreeBytes)).Decode(&body); err != nil {
-		return Listing{}, fmt.Errorf("разбор дерева %s/%s: %w", tree.Owner, tree.Repo, err)
+		return Listing{}, fmt.Errorf("parse tree %s/%s: %w", tree.Owner, tree.Repo, err)
 	}
 
 	if body.Truncated {
-		return Listing{}, fmt.Errorf("дерево %s/%s: %w", tree.Owner, tree.Repo, errTruncated)
+		return Listing{}, fmt.Errorf("tree %s/%s: %w", tree.Owner, tree.Repo, errTruncated)
 	}
 
 	names := make([]string, 0, len(body.Tree))

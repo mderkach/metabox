@@ -288,7 +288,7 @@ func (c *Checker) udpListening(port int) (bool, error) {
 	}
 
 	if !read {
-		return false, errors.New("таблицы сокетов UDP не прочитаны")
+		return false, errors.New("UDP socket tables not read")
 	}
 
 	return false, nil

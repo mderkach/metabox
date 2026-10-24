@@ -125,7 +125,7 @@ describe('ConfigApplyHistory', () => {
         HttpResponse.json(
           {
             code: 'check_failed',
-            message: 'sing-box отверг конфиг',
+            message: 'sing-box rejected the config',
             details: { stdout: '', stderr: 'FATAL старая версия не принимается', exit_code: 1 },
           },
           { status: 422 }
