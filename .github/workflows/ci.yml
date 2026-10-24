@@ -161,6 +161,10 @@ jobs:
       - name: Reach check
         run: make reach-check
 
+      # Needs nft_tproxy and the nat modules on the runner kernel, which the target container shares.
+      - name: Dataplane check
+        run: make dataplane-check
+
       - name: Target logs
         if: failure()
         run: docker compose -f .devcontainer/docker-compose.yml logs target
