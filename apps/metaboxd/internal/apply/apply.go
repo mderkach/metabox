@@ -144,25 +144,25 @@ func (t Transaction) Active() bool {
 var (
 	// ErrBusy means a second apply while a transaction is active. This is a contract
 	// error, not a race for the file: the config has one owner.
-	ErrBusy = errors.New("применение уже идёт")
+	ErrBusy = errors.New("apply already in progress")
 
 	// ErrUnknownTransaction means the identifier does not match the active transaction.
-	ErrUnknownTransaction = errors.New("транзакции с таким идентификатором нет")
+	ErrUnknownTransaction = errors.New("no transaction with this ID")
 
 	// ErrNothingToConfirm means nothing to confirm, the window is already closed.
-	ErrNothingToConfirm = errors.New("подтверждать нечего")
+	ErrNothingToConfirm = errors.New("nothing to confirm")
 
 	// ErrConfigModified means the config was edited bypassing the daemon. Silently overwriting such an edit
 	// is not allowed: the owner could have made it over SSH.
-	ErrConfigModified = errors.New("файл конфига изменён вне metabox")
+	ErrConfigModified = errors.New("config file changed outside metabox")
 
 	// ErrListsModified means list files were edited bypassing the daemon; the failure class
 	// is the same as for ErrConfigModified.
-	ErrListsModified = errors.New("файлы списков изменены вне metabox")
+	ErrListsModified = errors.New("list files changed outside metabox")
 
 	// ErrListName means the list file name does not fit the subdirectory: the path is built by
 	// the panel, and anything else is an attempt to escape it or to collide with the config.
-	ErrListName = errors.New("недопустимое имя файла списка")
+	ErrListName = errors.New("invalid list file name")
 )
 
 // WorkdirError means the service working directory does not match the config directory.
@@ -176,7 +176,7 @@ type WorkdirError struct {
 }
 
 func (e *WorkdirError) Error() string {
-	return fmt.Sprintf("рабочий каталог службы %s не совпадает с каталогом конфига %s", e.Workdir, e.ConfigDir)
+	return fmt.Sprintf("service working directory %s does not match the config directory %s", e.Workdir, e.ConfigDir)
 }
 
 // LaunchError means the service starts not on the config the daemon owns:
@@ -190,7 +190,7 @@ type LaunchError struct {
 }
 
 func (e *LaunchError) Error() string {
-	return fmt.Sprintf("служба поднимается на %q и %q, а не на конфиге %s", e.Configs, e.ConfigDirs, e.Config)
+	return fmt.Sprintf("the service starts with %q and %q, not with the config %s", e.Configs, e.ConfigDirs, e.Config)
 }
 
 // Lists are the list file changes that travel with an apply: put is written into the
@@ -377,7 +377,7 @@ func (m *Manager) Start(ctx context.Context, cfg []byte, lists Lists, base, list
 
 	prepared, added, err := clashapi.Ensure(cfg, m.opts.ClashPort)
 	if err != nil {
-		return Transaction{}, fmt.Errorf("гарантия clash_api: %w", err)
+		return Transaction{}, fmt.Errorf("ensure clash_api: %w", err)
 	}
 
 	settings, err := clashapi.Read(prepared)
@@ -443,7 +443,7 @@ func validateLists(lists Lists) error {
 		}
 
 		if _, ok := lists.Put[name]; ok {
-			return fmt.Errorf("%w: %q и пишется, и удаляется", ErrListName, name)
+			return fmt.Errorf("%w: %q is both written and removed", ErrListName, name)
 		}
 	}
 
@@ -506,7 +506,7 @@ type checkTarget struct {
 func (m *Manager) resolveCheck(ctx context.Context, withLists bool) (checkTarget, error) {
 	launch, err := m.service.Launch(ctx)
 	if err != nil {
-		m.log.Warn("команда службы не прочитана, кандидат проверяется как у пакета форка", "err", err)
+		m.log.Warn("service command not read, the candidate is checked as for the fork package", "err", err)
 
 		launch = procd.Launch{}
 	}
@@ -580,7 +580,7 @@ func (m *Manager) narrowLists(ctx context.Context, lists Lists) (map[string][]by
 
 	current, err := m.store.ListSums(ctx)
 	if err != nil {
-		return nil, nil, fmt.Errorf("сверка списков: %w", err)
+		return nil, nil, fmt.Errorf("compare lists: %w", err)
 	}
 
 	changed := make(map[string][]byte, len(lists.Put))
@@ -646,10 +646,10 @@ func (m *Manager) Confirm(ctx context.Context, id string) (Transaction, error) {
 		// would roll back the confirmed config. The terminal phase is not rolled back by Replay,
 		// only removed.
 		if persistErr := m.persist(ctx, tx); persistErr != nil {
-			m.log.Error("состояние подтверждённой транзакции не убрано и не переписано",
+			m.log.Error("state of the confirmed transaction neither removed nor rewritten",
 				"err", errors.Join(err, persistErr), "transaction_id", id)
 		} else {
-			m.log.Warn("состояние подтверждённой транзакции не убрано, записана терминальная фаза",
+			m.log.Warn("state of the confirmed transaction not removed, the terminal phase is written",
 				"err", err, "transaction_id", id)
 		}
 	}
@@ -662,7 +662,7 @@ func (m *Manager) Confirm(ctx context.Context, id string) (Transaction, error) {
 		close(confirmed)
 	}
 
-	m.log.Info("применение подтверждено", "transaction_id", id)
+	m.log.Info("apply confirmed", "transaction_id", id)
 
 	return tx, nil
 }
@@ -732,7 +732,7 @@ func (m *Manager) verifyConfigBase(ctx context.Context, base string) error {
 			return ErrConfigModified
 		}
 		if err != nil {
-			return fmt.Errorf("сверка конфига: %w", err)
+			return fmt.Errorf("compare config: %w", err)
 		}
 		if current != base {
 			return ErrConfigModified
@@ -752,7 +752,7 @@ func (m *Manager) verifyConfigBase(ctx context.Context, base string) error {
 		return nil
 	}
 	if err != nil {
-		return fmt.Errorf("сверка конфига: %w", err)
+		return fmt.Errorf("compare config: %w", err)
 	}
 	if current != m.lastSum {
 		return ErrConfigModified
@@ -774,7 +774,7 @@ func (m *Manager) verifyListsBase(ctx context.Context, listsBase string) error {
 
 	current, err := m.store.ListSums(ctx)
 	if err != nil {
-		return fmt.Errorf("сверка списков: %w", err)
+		return fmt.Errorf("compare lists: %w", err)
 	}
 
 	if config.ListsEtag(current) != expected {
@@ -825,7 +825,7 @@ func (m *Manager) release(phase Phase, err error) {
 func (m *Manager) persist(ctx context.Context, tx Transaction) error {
 	data, err := json.Marshal(tx)
 	if err != nil {
-		return fmt.Errorf("сериализация состояния: %w", err)
+		return fmt.Errorf("encode state: %w", err)
 	}
 
 	return m.store.WriteState(ctx, data)

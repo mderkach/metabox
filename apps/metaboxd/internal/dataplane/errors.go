@@ -35,5 +35,5 @@ type InvalidError struct {
 }
 
 func (e *InvalidError) Error() string {
-	return fmt.Sprintf("модель обвязки не принята: полей с ошибкой %d", len(e.Fields))
+	return fmt.Sprintf("dataplane model rejected: %d invalid fields", len(e.Fields))
 }

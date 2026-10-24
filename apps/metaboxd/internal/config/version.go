@@ -18,11 +18,11 @@ import (
 
 var (
 	// ErrNoVersion means there is no version with such a number in the history.
-	ErrNoVersion = errors.New("версии конфига нет")
+	ErrNoVersion = errors.New("no config version")
 
 	// ErrNoVersionLists means the version was saved without a snapshot of list files, by a daemon
 	// that did not take them yet. Restoring such a version does not touch the lists.
-	ErrNoVersionLists = errors.New("у версии нет снимка списков")
+	ErrNoVersionLists = errors.New("the version has no list snapshot")
 )
 
 const (
@@ -115,7 +115,7 @@ func (s *Store) SaveVersion(ctx context.Context, data []byte) error {
 
 	lists, err := s.readLists()
 	if err != nil {
-		return fmt.Errorf("чтение списков под версию: %w", err)
+		return fmt.Errorf("read lists for the version: %w", err)
 	}
 
 	// prev is the sums of the newest version snapshot: they catch a repeat and
@@ -155,7 +155,7 @@ func (s *Store) SaveVersion(ctx context.Context, data []byte) error {
 	}
 
 	if err := trimVersions(root, append([]int{next}, saved...)); err != nil {
-		return fmt.Errorf("версия %d сохранена, подрезка истории: %w", next, err)
+		return fmt.Errorf("version %d saved, trim history: %w", next, err)
 	}
 
 	return nil
@@ -173,17 +173,17 @@ func saveVersionLists(root *os.Root, next int, prev map[string]string, lists map
 	// is then not taken, and the snapshot is assembled anew.
 	for _, name := range []string{versionListsName(next), versionListsStaging} {
 		if err := root.RemoveAll(name); err != nil {
-			return fmt.Errorf("очистка черновика снимка списков %s: %w", name, err)
+			return fmt.Errorf("clear list snapshot draft %s: %w", name, err)
 		}
 	}
 
 	if err := root.Mkdir(versionListsStaging, secureDirPerm); err != nil {
-		return fmt.Errorf("каталог черновика снимка списков: %w", err)
+		return fmt.Errorf("list snapshot draft directory: %w", err)
 	}
 
 	staging, err := root.OpenRoot(versionListsStaging)
 	if err != nil {
-		return fmt.Errorf("открытие черновика снимка списков: %w", err)
+		return fmt.Errorf("open list snapshot draft: %w", err)
 	}
 	defer func() { _ = staging.Close() }()
 
@@ -196,7 +196,7 @@ func saveVersionLists(root *os.Root, next int, prev map[string]string, lists map
 		}
 
 		if err := writeAtomic(staging, name, data, securePerm); err != nil {
-			return fmt.Errorf("снимок списка %s: %w", name, err)
+			return fmt.Errorf("snapshot list %s: %w", name, err)
 		}
 	}
 
@@ -207,7 +207,7 @@ func saveVersionLists(root *os.Root, next int, prev map[string]string, lists map
 	}
 
 	if err := root.Rename(versionListsStaging, versionListsName(next)); err != nil {
-		return fmt.Errorf("снимок списков версии %d: %w", next, err)
+		return fmt.Errorf("list snapshot of version %d: %w", next, err)
 	}
 
 	return syncDir(root)
@@ -289,7 +289,7 @@ func (s *Store) ReadVersion(ctx context.Context, id int) ([]byte, error) {
 		return nil, ErrNoVersion
 	}
 	if err != nil {
-		return nil, fmt.Errorf("чтение версии %d: %w", id, err)
+		return nil, fmt.Errorf("read version %d: %w", id, err)
 	}
 
 	return data, nil
@@ -319,7 +319,7 @@ func (s *Store) ReadVersionLists(ctx context.Context, id int) (map[string][]byte
 	if _, err := root.Stat(versionName(id)); errors.Is(err, fs.ErrNotExist) {
 		return nil, ErrNoVersion
 	} else if err != nil {
-		return nil, fmt.Errorf("версия %d: %w", id, err)
+		return nil, fmt.Errorf("version %d: %w", id, err)
 	}
 
 	snapshot, err := root.OpenRoot(versionListsName(id))
@@ -327,13 +327,13 @@ func (s *Store) ReadVersionLists(ctx context.Context, id int) (map[string][]byte
 		return nil, ErrNoVersionLists
 	}
 	if err != nil {
-		return nil, fmt.Errorf("открытие снимка списков версии %d: %w", id, err)
+		return nil, fmt.Errorf("open list snapshot of version %d: %w", id, err)
 	}
 	defer func() { _ = snapshot.Close() }()
 
 	entries, err := fs.ReadDir(snapshot.FS(), ".")
 	if err != nil {
-		return nil, fmt.Errorf("чтение снимка списков версии %d: %w", id, err)
+		return nil, fmt.Errorf("read list snapshot of version %d: %w", id, err)
 	}
 
 	files := make(map[string][]byte, len(entries))
@@ -345,7 +345,7 @@ func (s *Store) ReadVersionLists(ctx context.Context, id int) (map[string][]byte
 
 		data, err := snapshot.ReadFile(entry.Name())
 		if err != nil {
-			return nil, fmt.Errorf("чтение снимка списка %s версии %d: %w", entry.Name(), id, err)
+			return nil, fmt.Errorf("read list snapshot %s of version %d: %w", entry.Name(), id, err)
 		}
 
 		files[entry.Name()] = data
@@ -356,7 +356,7 @@ func (s *Store) ReadVersionLists(ctx context.Context, id int) (map[string][]byte
 
 // errNoHistory: there is no history directory yet. For reading this is an empty history, not
 // a failure: there was nothing to save before the first apply.
-var errNoHistory = errors.New("каталога истории нет")
+var errNoHistory = errors.New("no history directory")
 
 // versionsRoot opens the history directory. With create it is created together with the
 // daemon service directory; without create a missing directory means an empty
@@ -364,7 +364,7 @@ var errNoHistory = errors.New("каталога истории нет")
 func (s *Store) versionsRoot(create bool) (*os.Root, error) {
 	if create {
 		if err := ensureDir(s.serviceDir); err != nil {
-			return nil, fmt.Errorf("служебный каталог: %w", err)
+			return nil, fmt.Errorf("service directory: %w", err)
 		}
 	}
 
@@ -384,7 +384,7 @@ func (s *Store) versionsRoot(create bool) (*os.Root, error) {
 	if create {
 		err := serviceRoot.Mkdir(versionsDir, secureDirPerm)
 		if err != nil && !errors.Is(err, fs.ErrExist) {
-			return nil, fmt.Errorf("создание каталога истории %s: %w", s.VersionsPath(), err)
+			return nil, fmt.Errorf("create history directory %s: %w", s.VersionsPath(), err)
 		}
 
 		// A fresh directory is fixed by an fsync of the parent, as in ensureDir.
@@ -401,7 +401,7 @@ func (s *Store) versionsRoot(create bool) (*os.Root, error) {
 			return nil, errNoHistory
 		}
 
-		return nil, fmt.Errorf("открытие каталога истории %s: %w", s.VersionsPath(), err)
+		return nil, fmt.Errorf("open history directory %s: %w", s.VersionsPath(), err)
 	}
 
 	return root, nil
@@ -413,7 +413,7 @@ func (s *Store) versionsRoot(create bool) (*os.Root, error) {
 func listVersions(root *os.Root) ([]Version, []SkippedVersion, error) {
 	entries, err := fs.ReadDir(root.FS(), ".")
 	if err != nil {
-		return nil, nil, fmt.Errorf("чтение каталога истории: %w", err)
+		return nil, nil, fmt.Errorf("read history directory: %w", err)
 	}
 
 	versions := make([]Version, 0, len(entries))
@@ -432,14 +432,14 @@ func listVersions(root *os.Root) ([]Version, []SkippedVersion, error) {
 
 		info, err := entry.Info()
 		if err != nil {
-			skipped = append(skipped, SkippedVersion{ID: id, Err: fmt.Errorf("версия %d: %w", id, err)})
+			skipped = append(skipped, SkippedVersion{ID: id, Err: fmt.Errorf("version %d: %w", id, err)})
 
 			continue
 		}
 
 		sum, err := streamSum(root, entry.Name())
 		if err != nil {
-			skipped = append(skipped, SkippedVersion{ID: id, Err: fmt.Errorf("чтение версии %d: %w", id, err)})
+			skipped = append(skipped, SkippedVersion{ID: id, Err: fmt.Errorf("read version %d: %w", id, err)})
 
 			continue
 		}
@@ -499,13 +499,13 @@ func trimVersions(root *os.Root, ids []int) error {
 
 	for _, stale := range ids[len(kept):] {
 		if err := root.Remove(versionName(stale)); err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return fmt.Errorf("удаление версии %d: %w", stale, err)
+			return fmt.Errorf("remove version %d: %w", stale, err)
 		}
 	}
 
 	entries, err := fs.ReadDir(root.FS(), ".")
 	if err != nil {
-		return fmt.Errorf("чтение каталога истории: %w", err)
+		return fmt.Errorf("read history directory: %w", err)
 	}
 
 	for _, entry := range entries {
@@ -515,7 +515,7 @@ func trimVersions(root *os.Root, ids []int) error {
 		}
 
 		if err := root.RemoveAll(entry.Name()); err != nil {
-			return fmt.Errorf("удаление снимка списков %s: %w", entry.Name(), err)
+			return fmt.Errorf("remove list snapshot %s: %w", entry.Name(), err)
 		}
 	}
 
@@ -526,7 +526,7 @@ func trimVersions(root *os.Root, ids []int) error {
 func listIDs(root *os.Root) ([]int, error) {
 	entries, err := fs.ReadDir(root.FS(), ".")
 	if err != nil {
-		return nil, fmt.Errorf("чтение каталога истории: %w", err)
+		return nil, fmt.Errorf("read history directory: %w", err)
 	}
 
 	ids := make([]int, 0, len(entries))
@@ -553,7 +553,7 @@ func sameContent(root *os.Root, id int, data []byte) (bool, error) {
 		return false, nil
 	}
 	if err != nil {
-		return false, fmt.Errorf("чтение версии %d: %w", id, err)
+		return false, fmt.Errorf("read version %d: %w", id, err)
 	}
 
 	return sha256.Sum256(saved) == sha256.Sum256(data), nil
@@ -570,7 +570,7 @@ func snapshotSums(root *os.Root, id int) (map[string]string, error) {
 		return nil, ErrNoVersionLists
 	}
 	if err != nil {
-		return nil, fmt.Errorf("чтение снимка списков версии %d: %w", id, err)
+		return nil, fmt.Errorf("read list snapshot of version %d: %w", id, err)
 	}
 
 	sums := make(map[string]string, len(entries))
@@ -582,7 +582,7 @@ func snapshotSums(root *os.Root, id int) (map[string]string, error) {
 
 		sum, err := streamSum(root, dir+"/"+entry.Name())
 		if err != nil {
-			return nil, fmt.Errorf("снимок списка %s версии %d: %w", entry.Name(), id, err)
+			return nil, fmt.Errorf("list snapshot %s of version %d: %w", entry.Name(), id, err)
 		}
 
 		sums[entry.Name()] = sum

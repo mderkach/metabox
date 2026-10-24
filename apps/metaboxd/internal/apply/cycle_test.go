@@ -321,7 +321,7 @@ func TestReadFailureBeforeSaveVersionIsLogged(t *testing.T) {
 				t.Error("a version that was not read went into the history")
 			}
 
-			warned := strings.Contains(logs.String(), "level=WARN msg=\"конфиг не прочитан, версия в историю не сохранена\"")
+			warned := strings.Contains(logs.String(), "level=WARN msg=\"config not read, version not saved to the history\"")
 			if warned != tt.wantWarn {
 				t.Errorf("warning in the log: %v, expected %v; log:\n%s", warned, tt.wantWarn, logs.String())
 			}

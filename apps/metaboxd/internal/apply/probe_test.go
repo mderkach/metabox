@@ -238,7 +238,7 @@ func TestDNSProbeBeforeRestart(t *testing.T) {
 				t.Errorf("reason code %q, expected %q", tx.ReasonCode, tt.wantCode)
 			}
 
-			warned := strings.Contains(logs.String(), "level=WARN") && strings.Contains(logs.String(), "DNS-проба не прошла и до рестарта")
+			warned := strings.Contains(logs.String(), "level=WARN") && strings.Contains(logs.String(), "DNS probe did not go through before the restart either")
 			if warned != tt.wantWarn {
 				t.Errorf("skip warning %v, expected %v:\n%s", warned, tt.wantWarn, logs.String())
 			}

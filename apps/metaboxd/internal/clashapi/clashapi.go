@@ -18,7 +18,7 @@ import (
 	"strconv"
 )
 
-var errNotJSON = errors.New("конфиг не является корректным JSON")
+var errNotJSON = errors.New("config is not valid JSON")
 
 // Settings is what the daemon needs from the section to reach the Clash API.
 type Settings struct {
@@ -41,7 +41,7 @@ func Read(data []byte) (Settings, error) {
 	}
 
 	if err := json.Unmarshal(mask(data), &cfg); err != nil {
-		return Settings{}, fmt.Errorf("чтение clash_api: %w", err)
+		return Settings{}, fmt.Errorf("read clash_api: %w", err)
 	}
 
 	return Settings{
@@ -61,7 +61,7 @@ func LogOutput(data []byte) (string, error) {
 	}
 
 	if err := json.Unmarshal(mask(data), &cfg); err != nil {
-		return "", fmt.Errorf("чтение log.output: %w", err)
+		return "", fmt.Errorf("read log.output: %w", err)
 	}
 
 	switch {
@@ -77,12 +77,12 @@ func LogOutput(data []byte) (string, error) {
 // routable as a destination address.
 func (s Settings) BaseURL() (string, error) {
 	if s.Address == "" {
-		return "", errors.New("адрес контроллера пуст")
+		return "", errors.New("controller address is empty")
 	}
 
 	host, port, err := net.SplitHostPort(s.Address)
 	if err != nil {
-		return "", fmt.Errorf("разбор адреса %q: %w", s.Address, err)
+		return "", fmt.Errorf("parse address %q: %w", s.Address, err)
 	}
 
 	switch host {

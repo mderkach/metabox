@@ -45,7 +45,7 @@ func (c *Checker) Wait(ctx context.Context, s Settings) error {
 
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("ожидание Clash API: %w, последняя попытка: %w", ctx.Err(), last)
+			return fmt.Errorf("wait for the Clash API: %w, last attempt: %w", ctx.Err(), last)
 		case <-ticker.C:
 		}
 	}
@@ -54,7 +54,7 @@ func (c *Checker) Wait(ctx context.Context, s Settings) error {
 func (c *Checker) ping(ctx context.Context, base, secret string) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, base+"/version", nil)
 	if err != nil {
-		return fmt.Errorf("сборка запроса к %s: %w", base, err)
+		return fmt.Errorf("build request to %s: %w", base, err)
 	}
 	if secret != "" {
 		req.Header.Set("Authorization", "Bearer "+secret)
@@ -62,12 +62,12 @@ func (c *Checker) ping(ctx context.Context, base, secret string) error {
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("запрос к %s: %w", base, err)
+		return fmt.Errorf("request to %s: %w", base, err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("%s ответил %d", base, resp.StatusCode)
+		return fmt.Errorf("%s answered %d", base, resp.StatusCode)
 	}
 
 	return nil

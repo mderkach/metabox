@@ -80,7 +80,7 @@ func New(runner Runner, ubus string) *Client {
 // ErrAmbiguousInstance means the instance name is not set and the service has several: which
 // of them is sing-box procd does not say, and the first one found may turn out to be
 // a neighbouring script of the same service.
-var ErrAmbiguousInstance = errors.New("у службы несколько инстансов, а имя инстанса не задано")
+var ErrAmbiguousInstance = errors.New("the service has several instances and no instance name is set")
 
 // Service returns the service state by its name in procd. The name is the same as the
 // init script's: procd registers the service under the script name.
@@ -91,11 +91,11 @@ var ErrAmbiguousInstance = errors.New("у службы несколько инс
 func (c *Client) Service(ctx context.Context, name, instance string) (State, error) {
 	stdout, code, err := c.runner(ctx, c.ubus, "call", "service", "list")
 	if err != nil {
-		return State{}, fmt.Errorf("опрос procd: %w", err)
+		return State{}, fmt.Errorf("query procd: %w", err)
 	}
 
 	if code != 0 {
-		return State{}, fmt.Errorf("опрос procd: код %d", code)
+		return State{}, fmt.Errorf("query procd: exit code %d", code)
 	}
 
 	var services map[string]struct {
@@ -107,7 +107,7 @@ func (c *Client) Service(ctx context.Context, name, instance string) (State, err
 	}
 
 	if err := json.Unmarshal([]byte(stdout), &services); err != nil {
-		return State{}, fmt.Errorf("разбор ответа procd: %w", err)
+		return State{}, fmt.Errorf("parse procd response: %w", err)
 	}
 
 	service, ok := services[name]
@@ -121,7 +121,7 @@ func (c *Client) Service(ctx context.Context, name, instance string) (State, err
 
 	if instance == "" {
 		if len(service.Instances) > 1 {
-			return State{}, fmt.Errorf("служба %s: %w", name, ErrAmbiguousInstance)
+			return State{}, fmt.Errorf("service %s: %w", name, ErrAmbiguousInstance)
 		}
 
 		for only := range service.Instances {
@@ -308,7 +308,7 @@ func (c *Client) processStart(pid int) (time.Duration, error) {
 	// and not from the start of the line.
 	end := strings.LastIndex(string(raw), ")")
 	if end < 0 {
-		return 0, fmt.Errorf("неожиданный формат stat для pid %d", pid)
+		return 0, fmt.Errorf("unexpected stat format for pid %d", pid)
 	}
 
 	fields := strings.Fields(string(raw)[end+1:])
@@ -316,12 +316,12 @@ func (c *Client) processStart(pid int) (time.Duration, error) {
 	// starttime is the 22nd field of the whole line, that is the 20th after the state.
 	const startTimeField = 19
 	if len(fields) <= startTimeField {
-		return 0, fmt.Errorf("в stat для pid %d нет поля starttime", pid)
+		return 0, fmt.Errorf("no starttime field in stat for pid %d", pid)
 	}
 
 	ticks, err := strconv.ParseInt(fields[startTimeField], 10, 64)
 	if err != nil {
-		return 0, fmt.Errorf("разбор starttime для pid %d: %w", pid, err)
+		return 0, fmt.Errorf("parse starttime for pid %d: %w", pid, err)
 	}
 
 	// USER_HZ on aarch64 and other common architectures equals 100;

@@ -167,7 +167,7 @@ func TestApplied(t *testing.T) {
 		{"nft отсутствует", testNFT, reply{err: errors.New("exec: no such file")}, false, dataplane.NFTUnavailable},
 		{"nft returned a non-zero code", testNFT, reply{code: 1}, false, dataplane.NFTUnavailable},
 		{"nft path not set", "", reply{}, false, dataplane.NFTUnavailable},
-		{"output truncated", testNFT, reply{stdout: `{"nftables": [{"chain"` + "\n…вывод обрезан"}, false, dataplane.NFTUnparsed},
+		{"output truncated", testNFT, reply{stdout: `{"nftables": [{"chain"` + "\n…output truncated"}, false, dataplane.NFTUnparsed},
 	}
 
 	for _, tt := range tests {

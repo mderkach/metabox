@@ -8,7 +8,7 @@ import (
 )
 
 // errNotObject: the value turned out not to be an object, there is no member to insert into it.
-var errNotObject = errors.New("значение не объект")
+var errNotObject = errors.New("value is not an object")
 
 // span is the boundaries of a value in the original bytes: [start, end).
 type span struct {
@@ -23,13 +23,13 @@ func objectStart(data []byte) (int, error) {
 			continue
 		}
 		if b != '{' {
-			return 0, fmt.Errorf("конфиг начинается с %q, а не с объекта", b)
+			return 0, fmt.Errorf("config starts with %q, not with an object", b)
 		}
 
 		return i, nil
 	}
 
-	return 0, errors.New("конфиг пуст")
+	return 0, errors.New("config is empty")
 }
 
 // findMember looks for a member of the object starting at data[start] and returns the boundaries of
@@ -41,7 +41,7 @@ func findMember(data []byte, start int, key string) (span, bool, error) {
 
 	tok, err := dec.Token()
 	if err != nil {
-		return span{}, false, fmt.Errorf("разбор объекта: %w", err)
+		return span{}, false, fmt.Errorf("parse object: %w", err)
 	}
 	if delim, ok := tok.(json.Delim); !ok || delim != '{' {
 		return span{}, false, errNotObject
@@ -50,12 +50,12 @@ func findMember(data []byte, start int, key string) (span, bool, error) {
 	for dec.More() {
 		name, err := dec.Token()
 		if err != nil {
-			return span{}, false, fmt.Errorf("разбор ключа: %w", err)
+			return span{}, false, fmt.Errorf("parse key: %w", err)
 		}
 
 		var raw json.RawMessage
 		if err := dec.Decode(&raw); err != nil {
-			return span{}, false, fmt.Errorf("разбор значения %v: %w", name, err)
+			return span{}, false, fmt.Errorf("parse value %v: %w", name, err)
 		}
 
 		end := start + int(dec.InputOffset())

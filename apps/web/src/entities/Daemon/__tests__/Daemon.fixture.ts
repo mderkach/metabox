@@ -91,7 +91,7 @@ export const SERVICE_UNREAD_FIXTURE: ServiceStateWire = {
   uptime: 0,
   binary: '1.14.1-extended-2.7.2',
   managed: false,
-  lastError: 'состояние сервиса не прочитано',
+  lastError: 'service state not read',
   lastErrorCode: 'service_state_unread',
 };
 

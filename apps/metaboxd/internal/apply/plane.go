@@ -19,11 +19,11 @@ import (
 
 // ErrDataplaneModified means the UCI section was changed after the client read
 // the model; an SSH edit would otherwise be silently overwritten.
-var ErrDataplaneModified = errors.New("модель обвязки изменена вне metabox")
+var ErrDataplaneModified = errors.New("dataplane model changed outside metabox")
 
 // ErrDataplaneForeignService means the daemon manages a service other than the one whose init script
 // reads the model; the change is rejected before the write.
-var ErrDataplaneForeignService = errors.New("модель обвязки читает только служба " + dataplane.Service)
+var ErrDataplaneForeignService = errors.New("the dataplane model is read only by the service " + dataplane.Service)
 
 // PlaneEditor is the dataplane model in UCI: a section snapshot, writing the model, restoring
 // the snapshot, and the chains in nft.
@@ -165,7 +165,7 @@ func (p *Plane) Start(ctx context.Context, model dataplane.Model, base string, c
 	if err != nil {
 		p.gate.unreserve(token)
 
-		return Transaction{}, fmt.Errorf("снимок модели обвязки: %w", err)
+		return Transaction{}, fmt.Errorf("dataplane model snapshot: %w", err)
 	}
 
 	if base != "" && previous.Sum() != base {
@@ -185,7 +185,7 @@ func (p *Plane) Start(ctx context.Context, model dataplane.Model, base string, c
 	log := p.log.With("transaction_id", tx.ID)
 
 	if prev, err := previous.Model(); err == nil && leavesClient(prev, next, client) {
-		log.Warn("смена ACL выводит адрес запроса из перехвата, без подтверждения она откатится по окну",
+		log.Warn("the ACL change takes the request address out of interception; without confirmation it rolls back when the window ends",
 			"client", client.String())
 	}
 
@@ -246,11 +246,11 @@ func (p *Plane) cycle(
 	next dataplane.Model,
 	confirmed <-chan struct{},
 ) {
-	log.Info("смена модели обвязки начата",
+	log.Info("dataplane model change started",
 		"enabled", next.Enabled, "acl_mode", next.AccessMode, "dns_port", next.DNSPort)
 
 	if err := p.apply(ctx, log, previous, next); err != nil {
-		log.Error("смена модели обвязки не прошла", "err", err)
+		log.Error("dataplane model change did not go through", "err", err)
 		p.release(PhaseFailed, err)
 		p.rollback(context.WithoutCancel(ctx), log)
 
@@ -268,7 +268,7 @@ func (p *Plane) apply(ctx context.Context, log *slog.Logger, previous dataplane.
 	defer cancel()
 
 	if err := p.editor.Write(ctx, next); err != nil {
-		return stepFailed(ReasonWriteFailed, fmt.Errorf("запись модели обвязки: %w", err))
+		return stepFailed(ReasonWriteFailed, fmt.Errorf("write dataplane model: %w", err))
 	}
 
 	if err := p.service.Reload(ctx); err != nil {
@@ -299,13 +299,13 @@ func (p *Plane) checkChains(ctx context.Context, log *slog.Logger, enabled bool)
 
 	switch {
 	case err != nil:
-		return stepFailed(ReasonInterceptionMissing, fmt.Errorf("проверка перехвата: %w", err))
+		return stepFailed(ReasonInterceptionMissing, fmt.Errorf("check interception: %w", err))
 	case reason != "":
-		log.Warn("перехват после reload не проверен: nft недоступен", "applied_reason", reason)
+		log.Warn("interception not checked after reload: nft unavailable", "applied_reason", reason)
 
 		return nil
 	case !enabled && len(chains) > 0:
-		return stepFailed(ReasonRestartFailed, errors.New("цепочки перехвата остались после выключения обвязки"))
+		return stepFailed(ReasonRestartFailed, errors.New("interception chains remain after the dataplane was turned off"))
 	case !enabled:
 		return nil
 	}
@@ -319,7 +319,7 @@ func (p *Plane) checkChains(ctx context.Context, log *slog.Logger, enabled bool)
 	}
 
 	if len(missing) > 0 {
-		return stepFailed(ReasonInterceptionMissing, fmt.Errorf("цепочек перехвата в nft нет: %v", missing))
+		return stepFailed(ReasonInterceptionMissing, fmt.Errorf("interception chains missing in nft: %v", missing))
 	}
 
 	return nil
@@ -331,7 +331,7 @@ func (p *Plane) checkChains(ctx context.Context, log *slog.Logger, enabled bool)
 func (p *Plane) probeDNS(ctx context.Context, port int) error {
 	cfg, err := p.store.Read(ctx)
 	if err != nil {
-		return fmt.Errorf("конфиг для DNS-пробы: %w", err)
+		return fmt.Errorf("config for the DNS probe: %w", err)
 	}
 
 	settings, err := clashapi.Read(cfg)
@@ -349,7 +349,7 @@ func (p *Plane) probeDNS(ctx context.Context, port int) error {
 	}
 
 	if !ok {
-		return fmt.Errorf("dns-in на порту %d в конфиге нет", port)
+		return fmt.Errorf("no dns-in on port %d in the config", port)
 	}
 
 	return p.opts.DNS.Probe(ctx, inbound)
@@ -364,10 +364,10 @@ func (p *Plane) await(ctx context.Context, log *slog.Logger, confirmed <-chan st
 	p.mu.Unlock()
 
 	if err := p.persist(ctx, tx, previous); err != nil {
-		log.Error("состояние окна подтверждения обвязки не сохранено", "err", err)
+		log.Error("dataplane confirmation window state not saved", "err", err)
 	}
 
-	log.Info("модель обвязки применена, идёт окно подтверждения", "window", p.opts.Window)
+	log.Info("dataplane model applied, confirmation window open", "window", p.opts.Window)
 
 	p.wait(ctx, log, confirmed, p.opts.Window)
 }
@@ -378,13 +378,13 @@ func (p *Plane) wait(ctx context.Context, log *slog.Logger, confirmed <-chan str
 	case <-confirmed:
 	case <-ctx.Done():
 		// The state stays on disk, the window is replayed at the next start.
-		log.Warn("окно подтверждения обвязки прервано остановкой демона")
+		log.Warn("dataplane confirmation window interrupted by daemon shutdown")
 	case <-p.clock.After(window):
 		if !p.beginRollback() {
 			return
 		}
 
-		log.Warn("подтверждения не было, возвращаем прежнюю модель обвязки")
+		log.Warn("no confirmation, restoring the previous dataplane model")
 		p.rollback(context.WithoutCancel(ctx), log)
 	}
 }
@@ -420,7 +420,7 @@ func (p *Plane) rollback(ctx context.Context, log *slog.Logger) {
 	}
 
 	if err := errors.Join(restoreErr, reloadErr); err != nil {
-		log.Error("откат модели обвязки не прошёл", "err", err)
+		log.Error("dataplane model rollback did not go through", "err", err)
 		p.release(PhaseFailed, stepFailed(ReasonRollbackFailed, err))
 
 		return
@@ -435,12 +435,12 @@ func (p *Plane) rollback(ctx context.Context, log *slog.Logger) {
 	p.mu.Unlock()
 
 	if err := p.store.ClearPlaneState(ctx); err != nil {
-		log.Error("состояние откаченной смены обвязки не убрано", "err", err)
+		log.Error("state of the rolled back dataplane change not removed", "err", err)
 	}
 
 	p.gate.unreserve(token)
 
-	log.Info("прежняя модель обвязки возвращена")
+	log.Info("previous dataplane model restored")
 }
 
 // Confirm closes the dataplane change confirmation window.
@@ -472,10 +472,10 @@ func (p *Plane) Confirm(ctx context.Context, id string) (Transaction, error) {
 	// the apply is released, and an unremoved one is replaced by the terminal phase.
 	if err := p.store.ClearPlaneState(ctx); err != nil {
 		if persistErr := p.persist(ctx, tx, previous); persistErr != nil {
-			p.log.Error("состояние подтверждённой смены обвязки не убрано и не переписано",
+			p.log.Error("state of the confirmed dataplane change neither removed nor rewritten",
 				"err", errors.Join(err, persistErr), "transaction_id", id)
 		} else {
-			p.log.Warn("состояние подтверждённой смены обвязки не убрано, записана терминальная фаза",
+			p.log.Warn("state of the confirmed dataplane change not removed, the terminal phase is written",
 				"err", err, "transaction_id", id)
 		}
 	}
@@ -486,7 +486,7 @@ func (p *Plane) Confirm(ctx context.Context, id string) (Transaction, error) {
 		close(confirmed)
 	}
 
-	p.log.Info("смена модели обвязки подтверждена", "transaction_id", id)
+	p.log.Info("dataplane model change confirmed", "transaction_id", id)
 
 	return tx, nil
 }
@@ -515,12 +515,12 @@ func (p *Plane) Replay(ctx context.Context) error {
 	}
 
 	if err != nil {
-		return fmt.Errorf("чтение состояния обвязки: %w", err)
+		return fmt.Errorf("read dataplane state: %w", err)
 	}
 
 	var state planeRecord
 	if err := json.Unmarshal(data, &state); err != nil {
-		return fmt.Errorf("разбор состояния обвязки: %w", err)
+		return fmt.Errorf("parse dataplane state: %w", err)
 	}
 
 	tx := state.Transaction
@@ -531,28 +531,28 @@ func (p *Plane) Replay(ctx context.Context) error {
 		// The section matched the snapshot: the write did not happen, and the service stands on
 		// the previous model: nothing to roll back.
 		if current, err := p.editor.Snapshot(ctx); err == nil && current.Equal(state.Previous) {
-			log.Warn("смена обвязки оборвана до записи модели, откат не нужен")
+			log.Warn("dataplane change interrupted before the model write, no rollback needed")
 
 			return p.store.ClearPlaneState(ctx)
 		}
 
-		log.Warn("смена обвязки оборвана, возвращаем прежнюю модель")
+		log.Warn("dataplane change interrupted, restoring the previous model")
 		p.begin(tx, state.Previous)
 		p.rollback(ctx, log)
 
 	case tx.Phase == PhaseAwaitingConfirm && tx.Window <= 0:
-		log.Warn("окно подтверждения обвязки истекло, возвращаем прежнюю модель")
+		log.Warn("dataplane confirmation window expired, restoring the previous model")
 		p.begin(tx, state.Previous)
 		p.rollback(ctx, log)
 
 	case tx.Phase == PhaseAwaitingConfirm:
-		log.Warn("окно подтверждения обвязки восстановлено", "window", tx.Window)
+		log.Warn("dataplane confirmation window restored", "window", tx.Window)
 		p.begin(tx, state.Previous)
 		p.restoreWindow(tx, p.gate.reserveRestored())
 
 	default:
 		if err := p.store.ClearPlaneState(ctx); err != nil {
-			return fmt.Errorf("очистка завершённого состояния обвязки: %w", err)
+			return fmt.Errorf("clear finished dataplane state: %w", err)
 		}
 	}
 
@@ -605,7 +605,7 @@ func (p *Plane) release(phase Phase, err error) {
 func (p *Plane) persist(ctx context.Context, tx Transaction, previous dataplane.Snapshot) error {
 	data, err := json.Marshal(planeRecord{Transaction: tx, Previous: previous})
 	if err != nil {
-		return fmt.Errorf("сериализация состояния обвязки: %w", err)
+		return fmt.Errorf("encode dataplane state: %w", err)
 	}
 
 	return p.store.WritePlaneState(ctx, data)

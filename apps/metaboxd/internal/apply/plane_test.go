@@ -292,7 +292,7 @@ func TestPlaneRollbackWithoutConfirmation(t *testing.T) {
 	if h.pstore.saved() != nil {
 		t.Error("state of the rolled back change stayed on disk")
 	}
-	if !strings.Contains(logs.String(), "выводит адрес запроса из перехвата") {
+	if !strings.Contains(logs.String(), "takes the request address out of interception") {
 		t.Errorf("taking the administrator out of interception is not noted in the log:\n%s", logs.String())
 	}
 }

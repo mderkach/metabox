@@ -329,7 +329,7 @@ describe('ConfigApplyBar', () => {
         HttpResponse.json(
           {
             code: 'workdir_mismatch',
-            message: 'рабочий каталог службы sing-box не совпадает с каталогом конфига',
+            message: 'the sing-box service working directory does not match the config directory',
             details: { workdir: '/usr/share/sing-box', config_dir: '/etc/sing-box' },
           },
           { status: 409 }
@@ -402,7 +402,7 @@ describe('ConfigApplyBar', () => {
       phase: 'failed',
       window: 0,
       reason_code: 'no_backup',
-      reason: 'бэкапа нет',
+      reason: 'no backup',
     };
 
     serveStatus(noBackup);
@@ -418,6 +418,8 @@ describe('ConfigApplyBar', () => {
 
     expect(await screen.findByText('Применение не прошло')).toBeInTheDocument();
     expect(screen.getByText(/откатывать было не на что/)).toBeInTheDocument();
+    // The cause is translated by the code; the daemon's own text stays as the detail under it.
+    expect(screen.getByText('no backup')).toBeInTheDocument();
     expect(screen.queryByText('Подтверждения не было — предыдущий конфиг возвращён')).not.toBeInTheDocument();
   });
 });
