@@ -86,7 +86,7 @@ function ConnectionCardProto({
   cells: readonly ConnectionCell[];
   /** Time reference moment. Passed in from outside, otherwise the card would lie about freshness. */
   now: number;
-  onClose: ((id: string) => void) | null;
+  onClose: ((id: string, host: string) => void) | null;
   onExplain: ((id: string) => void) | null;
   selected: boolean;
   panelId?: string;
@@ -111,7 +111,7 @@ function ConnectionCardProto({
             </dd>
           </div>
         </dl>
-        <div className='flex shrink-0 items-center gap-1'>
+        <div className='flex shrink-0 items-center gap-2'>
           <ConnectionRowActions
             connection={connection}
             onClose={onClose}

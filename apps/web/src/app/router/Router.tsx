@@ -156,7 +156,13 @@ const proxiesRoute = createRoute({
 
 const connectionsRoute = createRoute({
   getParentRoute: () => rootRoute,
-  loader: async () => preloadNamespaces(['pages/Connections', 'widgets/ConnectionTable', 'widgets/RouteExplanation']),
+  loader: async () =>
+    preloadNamespaces([
+      'pages/Connections',
+      'widgets/ConnectionTable',
+      'widgets/RouteExplanation',
+      'features/Connection/ConnectionClose',
+    ]),
   path: '/connections',
   validateSearch: parseConnectionSearch,
   component: lazyRouteComponent(async () => import('@pages/Connections'), 'ConnectionsPage'),

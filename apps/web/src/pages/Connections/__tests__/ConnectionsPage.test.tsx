@@ -67,7 +67,7 @@ describe('connections screen', () => {
     expect(rendered.length).toBeLessThan(100);
   });
 
-  it('closes a connection at the address from the shared constant', async () => {
+  it('closes a connection only after confirmation, at the address from the shared constant', async () => {
     const closed = vi.fn<(id: string) => void>();
 
     server.use(
@@ -86,6 +86,18 @@ describe('connections screen', () => {
     const button = await screen.findAllByRole('button', { name: /Закрыть соединение/ });
 
     await user.click(button[0]);
+
+    const dialog = await screen.findByRole('alertdialog');
+
+    expect(dialog).toHaveTextContent(/Закрыть соединение с .+\?/);
+    expect(closed).not.toHaveBeenCalled();
+
+    await user.click(within(dialog).getByRole('button', { name: 'Отмена' }));
+
+    expect(closed).not.toHaveBeenCalled();
+
+    await user.click((await screen.findAllByRole('button', { name: /Закрыть соединение/ }))[0]);
+    await user.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Закрыть' }));
 
     await waitFor(() => {
       expect(closed).toHaveBeenCalledTimes(1);
@@ -451,6 +463,7 @@ describe('connections screen', () => {
     const panel = await screen.findByRole('complementary', { name: /api\.git\.example/ });
 
     await user.click(within(panel).getByRole('button', { name: /Закрыть соединение api\.git\.example/ }));
+    await user.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Закрыть' }));
 
     await waitFor(() => {
       expect(closed).toHaveBeenCalledTimes(1);

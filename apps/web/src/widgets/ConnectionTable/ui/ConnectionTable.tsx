@@ -1,11 +1,11 @@
 import { useTable } from '@tanstack/react-table';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { memo, useCallback, useMemo, useRef, type ReactNode } from 'react';
+import { memo, useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { ConnectionRow as ConnectionRowModel } from '@entities/Connection';
 import { deviceLabel, useDeviceIndex } from '@entities/Device';
-import { useCloseConnection } from '@features/Connection/ConnectionClose';
+import { ConnectionCloseConfirm, useCloseConnection } from '@features/Connection/ConnectionClose';
 import { useNarrowScreen } from '@shared/lib/media';
 import { cn } from '@shared/lib/utils';
 import { SURFACE } from '@shared/ui';
@@ -157,18 +157,31 @@ function ConnectionTableBodyProto({
   const now = useNow();
   const narrow = useNarrowScreen();
 
-  const onClose = useCallback(
-    (id: string) => {
-      // The `mutate` callback fires only for the last call: two rows
-      // closed in a row would give one announcement. The mutation itself shows a failure.
-      void Promise.allSettled([close.mutateAsync(id)]).then(function announceClosed([result]) {
-        if (result.status === 'fulfilled') {
-          onClosed?.();
-        }
-      });
-    },
-    [close, onClosed]
-  );
+  const [closing, setClosing] = useState<{ id: string; host: string } | null>(null);
+
+  const onClose = useCallback((id: string, host: string) => {
+    setClosing({ id, host });
+  }, []);
+
+  const onCloseConfirm = useCallback(() => {
+    if (closing === null) {
+      return;
+    }
+
+    // The `mutate` callback fires only for the last call: two rows
+    // closed in a row would give one announcement. The mutation itself shows a failure.
+    void Promise.allSettled([close.mutateAsync(closing.id)]).then(function announceClosed([result]) {
+      if (result.status === 'fulfilled') {
+        onClosed?.();
+      }
+    });
+  }, [close, closing, onClosed]);
+
+  const onCloseOpenChange = useCallback((open: boolean) => {
+    if (!open) {
+      setClosing(null);
+    }
+  }, []);
 
   const devices = useDeviceIndex();
   // New column definitions re-sort the table, so they change
@@ -279,6 +292,13 @@ function ConnectionTableBodyProto({
           </div>
         </div>
       )}
+
+      <ConnectionCloseConfirm
+        host={closing?.host ?? ''}
+        open={closing !== null}
+        onOpenChange={onCloseOpenChange}
+        onConfirm={onCloseConfirm}
+      />
 
       <div className='flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-t border-border px-3.5 py-2 text-xs text-muted-foreground'>
         <p role='status'>
