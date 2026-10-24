@@ -111,9 +111,10 @@ func waitOutcome(t *testing.T, h *harness) apply.Transaction {
 	return apply.Transaction{}
 }
 
-// A broken dns section crashes neither the process nor the Clash API: only a query to dns-in
-// catches it. The config is rolled back the usual way.
-func TestBrokenDNSRollsBack(t *testing.T) {
+// silentDNSPort is a dns-in that never answers, the port of a UDP socket nobody reads.
+func silentDNSPort(t *testing.T) int {
+	t.Helper()
+
 	silent, err := net.ListenPacket("udp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
@@ -129,6 +130,14 @@ func TestBrokenDNSRollsBack(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	return port
+}
+
+// A broken dns section crashes neither the process nor the Clash API: only a query to dns-in
+// catches it. The config is rolled back the usual way.
+func TestBrokenDNSRollsBack(t *testing.T) {
+	port := silentDNSPort(t)
+
 	probe := clashapi.NewDNSProbe("example.com", 30*time.Millisecond, time.Millisecond, 2)
 	h := newProbeHarness(t, &fakePlane{model: planeWith(false, port)}, probe)
 
@@ -143,6 +152,35 @@ func TestBrokenDNSRollsBack(t *testing.T) {
 	}
 	if tx.ReasonCode != apply.ReasonDNSProbeFailed {
 		t.Errorf("reason code %q, expected %q", tx.ReasonCode, apply.ReasonDNSProbeFailed)
+	}
+	if h.rec.index("Restore") < 0 {
+		t.Error("previous config not restored")
+	}
+}
+
+// All provider nodes are dead while the uplink is alive: the process is new, the Clash API answers
+// and the interception chains stay. A dns-in whose upstream goes through a dead node answers
+// nothing: the fork's HijackDNSPacket writes no response when the exchange fails. So the healthcheck
+// rolls the config back, although the previous one goes through the same nodes. A probe name
+// resolved by a direct server or by FakeIP does not reach the nodes and passes.
+func TestAllNodesDeadRollsBackOnDNSProbe(t *testing.T) {
+	port := silentDNSPort(t)
+
+	probe := clashapi.NewDNSProbe("example.com", 30*time.Millisecond, time.Millisecond, 2)
+	plane := &fakePlane{model: planeWith(true, port), applied: []bool{true}}
+	h := newProbeHarness(t, plane, probe)
+
+	if _, err := h.manager.Start(t.Context(), []byte(configWithDNSIn(port)), apply.Lists{}, "", ""); err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+
+	tx := waitOutcome(t, h)
+
+	if tx.Phase != apply.PhaseRolledBack {
+		t.Fatalf("phase %q, expected rollback", tx.Phase)
+	}
+	if tx.ReasonCode != apply.ReasonDNSProbeFailed {
+		t.Errorf("reason code %q, expected %q: the Clash API and interception must pass with dead nodes", tx.ReasonCode, apply.ReasonDNSProbeFailed)
 	}
 	if h.rec.index("Restore") < 0 {
 		t.Error("previous config not restored")
