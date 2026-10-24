@@ -138,6 +138,8 @@ A test goes to the `browser` project when jsdom cannot reproduce what it checks:
 - Clicks and typing go through `userEvent` from `vitest/browser`: it drives Playwright, so the click is a real mouse click. `@testing-library/user-event` dispatches synthetic events and is not used here.
 - Queries are the same Testing Library `screen` queries; matchers are the browser mode's own, `@testing-library/jest-dom` is not loaded.
 - `src/test/browserSetup.ts` loads the panel styles and the test dictionary. The jsdom stubs and `msw/node` from `setup.ts` are not there.
+- The network is mocked by the msw service worker (`msw/browser`); the browser project serves its script the same way the dev server does with mocks.
+- The WCAG 2.2 AA check is `App.axe.browser.test.tsx`: axe-core runs in the page over Overview, Editor, Rule sets, Connections and Proxies in both themes, with the dev mock data (`createMissingHandlers`). A violation that is not fixed yet is listed in its `KNOWN_VIOLATIONS` with the number of failing elements; the test fails on any other set, so a fix also removes its line.
 
 ## Autorenderer
 
