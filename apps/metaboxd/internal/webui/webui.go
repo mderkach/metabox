@@ -45,7 +45,7 @@ var encodings = []struct {
 }
 
 // ErrNotBuilt means the SPA did not get into the binary: the daemon was built without `make daemon`.
-var ErrNotBuilt = errors.New("SPA не собрана")
+var ErrNotBuilt = errors.New("SPA not built")
 
 // Handler serves static files and returns index.html on unknown paths: the SPA routing
 // is client-side, and an address like /connections exists only in the browser.

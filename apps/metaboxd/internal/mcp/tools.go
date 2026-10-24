@@ -155,7 +155,7 @@ func (t tools) status(ctx context.Context, _ struct{}) (statusOut, error) {
 
 		var service contract.Service
 		if err := json.Unmarshal(raw, &service); err != nil {
-			return statusOut{}, fmt.Errorf("разбор состояния сервиса: %w", err)
+			return statusOut{}, fmt.Errorf("parse service state: %w", err)
 		}
 
 		out.Service = &service
@@ -226,7 +226,7 @@ func (t tools) connections(ctx context.Context, in connectionsIn) (connectionsOu
 func (t tools) liveConnections(ctx context.Context) (events.ConnectionsSnapshot, error) {
 	raw, err := t.opts.Runtime.Snapshot(ctx, "/connections")
 	if err != nil {
-		return events.ConnectionsSnapshot{}, fmt.Errorf("%w: соединения: %w", route.ErrRuntimeUnavailable, err)
+		return events.ConnectionsSnapshot{}, fmt.Errorf("%w: connections: %w", route.ErrRuntimeUnavailable, err)
 	}
 
 	return events.ParseConnections(raw)
@@ -311,7 +311,7 @@ type domainRoute struct {
 func (t tools) explainDomain(ctx context.Context, in explainIn) (explainOut, error) {
 	domain := strings.TrimSuffix(strings.ToLower(strings.TrimSpace(in.Domain)), ".")
 	if domain == "" {
-		return explainOut{}, fmt.Errorf("%w: domain пуст", errBadInput)
+		return explainOut{}, fmt.Errorf("%w: domain is empty", errBadInput)
 	}
 
 	snapshot, err := t.liveConnections(ctx)
@@ -405,14 +405,14 @@ type clashProxy struct {
 func (t tools) proxies(ctx context.Context, _ struct{}) (proxiesOut, error) {
 	raw, err := t.opts.Runtime.Snapshot(ctx, "/proxies")
 	if err != nil {
-		return proxiesOut{}, fmt.Errorf("%w: узлы: %w", route.ErrRuntimeUnavailable, err)
+		return proxiesOut{}, fmt.Errorf("%w: nodes: %w", route.ErrRuntimeUnavailable, err)
 	}
 
 	var body struct {
 		Proxies map[string]clashProxy `json:"proxies"`
 	}
 	if err := json.Unmarshal(raw, &body); err != nil {
-		return proxiesOut{}, fmt.Errorf("разбор списка узлов: %w", err)
+		return proxiesOut{}, fmt.Errorf("parse node list: %w", err)
 	}
 
 	out := proxiesOut{Groups: []proxyGroup{}, Nodes: []proxyNode{}}
@@ -472,7 +472,7 @@ type versionOut struct {
 
 func (t tools) version(ctx context.Context, in versionIn) (versionOut, error) {
 	if in.ID <= 0 {
-		return versionOut{}, fmt.Errorf("%w: id должен быть больше нуля", errBadInput)
+		return versionOut{}, fmt.Errorf("%w: id must be greater than zero", errBadInput)
 	}
 
 	data, err := t.opts.Config.ReadVersion(ctx, in.ID)

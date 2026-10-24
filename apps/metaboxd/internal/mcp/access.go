@@ -57,11 +57,11 @@ func NewAccess(ctx context.Context, store Store) (*Access, error) {
 
 	var rec record
 	if err := json.Unmarshal(data, &rec); err != nil {
-		return a, fmt.Errorf("разбор файла токена MCP: %w", err)
+		return a, fmt.Errorf("parse MCP token file: %w", err)
 	}
 
 	if len(rec.Hash) != 0 && len(rec.Hash) != sha256.Size {
-		return a, fmt.Errorf("файл токена MCP: хэш длиной %d байт", len(rec.Hash))
+		return a, fmt.Errorf("MCP token file: hash of %d bytes", len(rec.Hash))
 	}
 
 	a.hash = rec.Hash
@@ -101,7 +101,7 @@ func (a *Access) Issue(ctx context.Context) (string, error) {
 
 	raw := make([]byte, tokenBytes)
 	if _, err := rand.Read(raw); err != nil {
-		return "", fmt.Errorf("генерация токена MCP: %w", err)
+		return "", fmt.Errorf("generate MCP token: %w", err)
 	}
 
 	token := base64.RawURLEncoding.EncodeToString(raw)
@@ -138,7 +138,7 @@ func (a *Access) Disable(ctx context.Context) error {
 func (a *Access) write(ctx context.Context, rec record) error {
 	data, err := json.Marshal(rec)
 	if err != nil {
-		return fmt.Errorf("сборка файла токена MCP: %w", err)
+		return fmt.Errorf("encode MCP token file: %w", err)
 	}
 
 	return a.store.WriteMCP(ctx, data)

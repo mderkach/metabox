@@ -10,7 +10,7 @@ import { AUTH_ENDPOINT } from '@entities/Auth';
 
 import { AuthLoginPage } from '../ui/AuthLoginPage';
 
-const LOCKED_BODY = { code: 'login_locked', message: 'слишком много неверных паролей' };
+const LOCKED_BODY = { code: 'login_locked', message: 'too many wrong passwords' };
 
 function serveLockout(headers: Record<string, string>) {
   server.use(http.post(AUTH_ENDPOINT.login(), () => HttpResponse.json(LOCKED_BODY, { status: 429, headers })));

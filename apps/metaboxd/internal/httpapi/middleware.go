@@ -42,7 +42,7 @@ func recoverPanic(log *slog.Logger, next http.Handler) http.Handler {
 				panic(rec)
 			}
 
-			log.Error("паника в обработчике",
+			log.Error("handler panic",
 				"err", rec,
 				"method", r.Method,
 				"path", r.URL.Path,
@@ -54,7 +54,7 @@ func recoverPanic(log *slog.Logger, next http.Handler) http.Handler {
 			// has gone by then, and there is no other way to refuse.
 			writeJSON(log, w, http.StatusInternalServerError, contract.Error{
 				Code:    contract.ErrInternal,
-				Message: "внутренняя ошибка",
+				Message: "internal error",
 			})
 		}()
 
@@ -69,7 +69,7 @@ func logRequests(log *slog.Logger, next http.Handler) http.Handler {
 
 		next.ServeHTTP(rec, r)
 
-		log.Debug("запрос",
+		log.Debug("request",
 			"method", r.Method,
 			"path", r.URL.Path,
 			"status", rec.status,
@@ -86,7 +86,7 @@ func logRequests(log *slog.Logger, next http.Handler) http.Handler {
 func checkHost(log *slog.Logger, allowedOrigin string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !hostAllowed(r.Host, allowedOrigin) {
-			log.Warn("запрос отклонён по Host",
+			log.Warn("request rejected by Host",
 				"host", r.Host,
 				"method", r.Method,
 				"path", r.URL.Path,
@@ -175,7 +175,7 @@ func checkOrigin(log *slog.Logger, allowedOrigin string, next http.Handler) http
 		exempt := allowedOrigin != "" && origin == allowedOrigin
 
 		if !originAllowed(origin, r.Host) && !exempt {
-			log.Warn("запрос отклонён по Origin",
+			log.Warn("request rejected by Origin",
 				"origin", origin,
 				"host", r.Host,
 				"method", r.Method,

@@ -31,11 +31,11 @@ export function createAuthHandlers({ password = null }: { password?: string | nu
     ),
     http.post(AUTH_ENDPOINT.login(), async ({ request }) => {
       if (state.password === null) {
-        return HttpResponse.json({ code: 'auth_disabled', message: 'пароль панели не задан' }, { status: 409 });
+        return HttpResponse.json({ code: 'auth_disabled', message: 'panel password is not set' }, { status: 409 });
       }
 
       if (field(await request.json(), 'password') !== state.password) {
-        return HttpResponse.json({ code: 'password_wrong', message: 'пароль не подошёл' }, { status: 403 });
+        return HttpResponse.json({ code: 'password_wrong', message: 'wrong password' }, { status: 403 });
       }
 
       state.session = true;
@@ -51,7 +51,7 @@ export function createAuthHandlers({ password = null }: { password?: string | nu
       const body: unknown = await request.json();
 
       if (state.password !== null && field(body, 'current') !== state.password) {
-        return HttpResponse.json({ code: 'password_wrong', message: 'пароль не подошёл' }, { status: 403 });
+        return HttpResponse.json({ code: 'password_wrong', message: 'wrong password' }, { status: 403 });
       }
 
       const next = field(body, 'password');

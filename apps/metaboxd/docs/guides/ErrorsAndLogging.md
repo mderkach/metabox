@@ -1,6 +1,6 @@
 # Errors and logging
 
-Error and log texts of the daemon are in Russian: they reach the panel and the system log as they are. The string literals in the examples below are kept in Russian for that reason.
+Error and log texts of the daemon are in English. The panel does not show them as the failure: it picks the text in the user's language by the code, and the daemon text stays a fallback and a detail for whoever fixes the failure.
 
 ## Return an error, do not log it
 
@@ -10,13 +10,13 @@ One failure is one log record, at the top level. Lower levels add context by wra
 func (s *Store) Write(cfg []byte) error {
 	tmp, err := os.CreateTemp(s.dir, ".metabox-*")
 	if err != nil {
-		return fmt.Errorf("временный файл в %s: %w", s.dir, err)
+		return fmt.Errorf("temporary file in %s: %w", s.dir, err)
 	}
 	...
 }
 ```
 
-Context says what was being done and to what, without the words "ошибка" (error) or "не удалось" (failed) and without a capital letter: the string is assembled into a chain and read as a whole. No punctuation at the end. The message language is one for the whole daemon; do not mix languages.
+Context says what was being done and to what, without the words "error" or "failed" and without a capital letter: the string is assembled into a chain and read as a whole. No punctuation at the end. The message language is one for the whole daemon; do not mix languages.
 
 `%w` is used when the caller can react to the original error or when it carries data (`*exec.ExitError`, `fs.ErrNotExist`). `%v` is used when an error of a foreign package becomes an implementation detail and its type must not leak into the contract.
 
@@ -28,8 +28,8 @@ A sentinel is used when the fact of failure is informative by itself:
 
 ```go
 var (
-	ErrNoTransaction  = errors.New("активной транзакции нет")
-	ErrConfigModified = errors.New("файл изменён вне metabox")
+	ErrNoTransaction  = errors.New("no active transaction")
+	ErrConfigModified = errors.New("file changed outside metabox")
 )
 ```
 
@@ -43,7 +43,7 @@ type CheckError struct {
 }
 
 func (e *CheckError) Error() string {
-	return fmt.Sprintf("sing-box check: код %d", e.ExitCode)
+	return fmt.Sprintf("sing-box check: exit code %d", e.ExitCode)
 }
 ```
 
@@ -76,7 +76,7 @@ The set of codes is closed and declared as an enumeration in `internal/contract`
 
 The value set of the named type goes into the contract schema as a list, and the panel types its tables with it: a missing code is a compile error in the panel ([ADR-0021](../../../../docs/adr/ADR-0021-print-contract-enumerations-as-value-lists.md)). Parsing the response stays tolerant: a value outside the set must not take the screen down.
 
-The same reasoning gives the rule for `Message`: it stays in the daemon's language and serves as fallback text. The panel shows it only when it does not know the code, for example when the panel is older than the daemon. The daemon returns no localized strings and does not know the client's language ([ADR-0019](../../../../docs/adr/ADR-0019-keep-interface-texts-in-the-slice-and-load-them-over-the-network.md)).
+The same reasoning gives the rule for `Message`: it is in English, the daemon's language, and serves as fallback text. The panel shows it only when it does not know the code, for example when the panel is older than the daemon. The daemon returns no localized strings and does not know the client's language ([ADR-0019](../../../../docs/adr/ADR-0019-keep-interface-texts-in-the-slice-and-load-them-over-the-network.md)).
 
 There is exactly one exception: the output of `sing-box check` is returned verbatim, the user fixes the config from it.
 
@@ -104,8 +104,8 @@ The level is set by a flag through `slog.HandlerOptions.Level` and defaults to `
 Write key-value pairs, not a formatted string:
 
 ```go
-s.log.Info("применение начато", "transaction_id", tx.ID, "sha256", sum[:12], "size", len(cfg))
-s.log.Error("рестарт сервиса", "err", err)
+s.log.Info("apply started", "transaction_id", tx.ID, "sha256", sum[:12], "size", len(cfg))
+s.log.Error("service restart", "err", err)
 ```
 
 An error goes as a value under the `err` key, it is not glued into the message. Keys are stable and in snake case when they have two words: `transaction_id`, `exit_code`. The message describes the event, it does not list the filled fields.

@@ -81,7 +81,7 @@ describe('DaemonModeSwitch', () => {
   it('instead of a choice names the reason when the mode is not read', async () => {
     server.use(
       http.get(DAEMON_ENDPOINT.clashConfigs(), () =>
-        HttpResponse.json({ code: 'runtime_unavailable', message: 'рантайм sing-box не отвечает' }, { status: 502 })
+        HttpResponse.json({ code: 'runtime_unavailable', message: 'sing-box runtime unavailable' }, { status: 502 })
       )
     );
     renderWithQuery(<DaemonModeSwitch />);
@@ -102,7 +102,7 @@ describe('DaemonModeSwitch', () => {
     server.use(
       http.get(DAEMON_ENDPOINT.clashConfigs(), () => HttpResponse.json(CLASH_CONFIGS_FIXTURE)),
       http.patch(DAEMON_ENDPOINT.clashConfigs(), () =>
-        HttpResponse.json({ code: 'runtime_unavailable', message: 'рантайм sing-box не отвечает' }, { status: 502 })
+        HttpResponse.json({ code: 'runtime_unavailable', message: 'sing-box runtime unavailable' }, { status: 502 })
       )
     );
     const user = userEvent.setup();

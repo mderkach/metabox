@@ -82,7 +82,7 @@ describe('ApiClient', () => {
   it('parses a daemon failure and keeps its code', async () => {
     const client = clientAnswering(NOT_FOUND, {
       code: 'unknown_transaction',
-      message: 'транзакции с таким идентификатором нет',
+      message: 'no transaction with this ID',
     });
 
     const error = asApiError(await client.get('/api/apply/42').catch((cause: unknown) => cause));
@@ -90,7 +90,7 @@ describe('ApiClient', () => {
     expect(error.kind).toBe(API_FAILURE.Response);
     expect(error.code).toBe('unknown_transaction');
     expect(error.status).toBe(NOT_FOUND);
-    expect(error.message).toBe('транзакции с таким идентификатором нет');
+    expect(error.message).toBe('no transaction with this ID');
   });
 
   it('keeps sing-box failure details without parsing', async () => {
@@ -118,7 +118,7 @@ describe('ApiClient', () => {
   it('a gateway status with a daemon body counts as a response', async () => {
     const client = clientAnswering(BAD_GATEWAY, {
       code: 'runtime_unavailable',
-      message: 'рантайм sing-box недоступен',
+      message: 'sing-box runtime unavailable',
     });
 
     const error = asApiError(await client.get('/api/clash/rules').catch((cause: unknown) => cause));

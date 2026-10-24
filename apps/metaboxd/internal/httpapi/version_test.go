@@ -71,7 +71,7 @@ func TestConfigVersionsLogsSkipped(t *testing.T) {
 
 	var lines []string
 	for line := range strings.Lines(logs.String()) {
-		if strings.Contains(line, "версия пропущена в истории") {
+		if strings.Contains(line, "level=WARN") && strings.Contains(line, "version_id=") {
 			lines = append(lines, line)
 		}
 	}

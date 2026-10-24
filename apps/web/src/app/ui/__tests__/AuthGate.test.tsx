@@ -96,7 +96,7 @@ describe('AuthGate', () => {
       http.get(PROTECTED_PATH, () =>
         session
           ? HttpResponse.json({ ok: true })
-          : HttpResponse.json({ code: 'unauthorized', message: 'нужен вход в панель' }, { status: 401 })
+          : HttpResponse.json({ code: 'unauthorized', message: 'sign-in required' }, { status: 401 })
       )
     );
 
@@ -127,7 +127,7 @@ describe('AuthGate', () => {
     server.use(
       ...createAuthHandlers(),
       http.get(PROTECTED_PATH, () =>
-        HttpResponse.json({ code: 'unauthorized', message: 'нужен вход в панель' }, { status: 401 })
+        HttpResponse.json({ code: 'unauthorized', message: 'sign-in required' }, { status: 401 })
       )
     );
 
@@ -151,7 +151,7 @@ describe('AuthGate', () => {
   it('shows the panel when the daemon does not know the login endpoint', async () => {
     server.use(
       http.get('/api/auth', () =>
-        HttpResponse.json({ code: 'not_found', message: 'ручка не найдена' }, { status: 404 })
+        HttpResponse.json({ code: 'not_found', message: 'endpoint not found' }, { status: 404 })
       ),
       http.get(PROTECTED_PATH, () => HttpResponse.json({ ok: true }))
     );

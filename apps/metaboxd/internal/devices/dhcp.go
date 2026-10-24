@@ -41,7 +41,7 @@ func readLeases(path string) ([]lease, error) {
 		return nil, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("аренды DHCP: %w", err)
+		return nil, fmt.Errorf("DHCP leases: %w", err)
 	}
 	defer func() { _ = f.Close() }()
 
@@ -67,7 +67,7 @@ func readLeases(path string) ([]lease, error) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("аренды DHCP: %w", err)
+		return nil, fmt.Errorf("DHCP leases: %w", err)
 	}
 
 	out := make([]lease, 0, len(order))
