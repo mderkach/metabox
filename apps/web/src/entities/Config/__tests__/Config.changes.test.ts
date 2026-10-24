@@ -57,6 +57,29 @@ describe('toConfigChanges', () => {
     ]);
   });
 
+  it('names a section that did not exist once, by its nodes', () => {
+    const draft = { ...APPLIED, dns: { servers: [{ type: 'local', tag: 'local' }] } };
+
+    expect(toConfigChanges(toText(APPLIED), toText(draft))).toEqual([{ kind: 'added', section: 'dns', name: 'local' }]);
+  });
+
+  it('keeps the parameters of a new section beside its nodes', () => {
+    const draft = { ...APPLIED, dns: { servers: [{ type: 'local', tag: 'local' }], final: 'local' } };
+
+    expect(toConfigChanges(toText(APPLIED), toText(draft))).toEqual([
+      { kind: 'added', section: 'dns', name: 'local' },
+      { kind: 'setting', section: 'dns', path: 'dns', from: undefined, to: { final: 'local' } },
+    ]);
+  });
+
+  it('names a section that went away once, by its nodes', () => {
+    const applied = { ...APPLIED, dns: { servers: [{ type: 'local', tag: 'local' }] } };
+
+    expect(toConfigChanges(toText(applied), toText(APPLIED))).toEqual([
+      { kind: 'removed', section: 'dns', name: 'local' },
+    ]);
+  });
+
   it('gives nothing when a root is not an object', () => {
     expect(toConfigChanges('[]', toText(APPLIED))).toEqual([]);
   });

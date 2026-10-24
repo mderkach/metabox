@@ -8,7 +8,7 @@ import {
   RULES_PATH,
   type ConfigSection,
 } from './Config.model';
-import { diffNode } from './Config.patch';
+import { diffNode, type NodeEdit } from './Config.patch';
 
 export const CONFIG_CHANGE = {
   Added: 'added',
@@ -115,6 +115,60 @@ function startsWith(path: JSONPath, prefix: JSONPath): boolean {
   return prefix.every((key, index) => path[index] === key);
 }
 
+function isEmptyRecord(value: unknown): boolean {
+  return isRecord(value) && Object.keys(value).length === 0;
+}
+
+/** `value` without the node at `path`, and without the objects that held only it. */
+function omitNode(value: unknown, path: JSONPath): unknown {
+  const [key, ...rest] = path;
+
+  if (path.length === 0 || !isRecord(value) || !Object.hasOwn(value, key)) {
+    return value;
+  }
+
+  const child = rest.length === 0 ? undefined : omitNode(value[key], rest);
+  const keep = child !== undefined && !isEmptyRecord(child);
+
+  return Object.fromEntries(
+    Object.entries(value).flatMap(([name, item]): [string, unknown][] => {
+      if (name !== String(key)) {
+        return [[name, item]];
+      }
+
+      return keep ? [[name, child]] : [];
+    })
+  );
+}
+
+/**
+ * A setting whose key holds node lists (a whole section that appeared or went away)
+ * keeps only the rest: the nodes are named by their own lines.
+ */
+function toSettingChange(before: unknown, edit: NodeEdit): ConfigChange[] {
+  const held = NODE_LISTS.map(({ path }) => path).filter(
+    (path) => path.length > edit.path.length && startsWith(path, edit.path)
+  );
+  const rest = (value: unknown) => held.reduce((left, path) => omitNode(left, path.slice(edit.path.length)), value);
+  const from = rest(valueAt(before, edit.path));
+  const to = rest(edit.value);
+  const gone = (value: unknown) => value === undefined || isEmptyRecord(value);
+
+  if (held.length > 0 && gone(from) && gone(to)) {
+    return [];
+  }
+
+  return [
+    {
+      kind: CONFIG_CHANGE.Setting,
+      section: SETTING_SECTION.get(edit.path[0]) ?? null,
+      path: edit.path.join('.'),
+      from,
+      to,
+    },
+  ];
+}
+
 /**
  * Edits of the draft against the applied text, named by node and parameter
  * rather than by line. Routing rules are left out: `toRuleChanges` names them.
@@ -135,13 +189,7 @@ export function toConfigChanges(applied: string, draft: string): ConfigChange[] 
 
   const settings = diffNode([], before, after)
     .filter((edit) => !skipped.some((prefix) => startsWith(edit.path, prefix)))
-    .map((edit): ConfigChange => ({
-      kind: CONFIG_CHANGE.Setting,
-      section: SETTING_SECTION.get(edit.path[0]) ?? null,
-      path: edit.path.join('.'),
-      from: valueAt(before, edit.path),
-      to: edit.value,
-    }));
+    .flatMap((edit) => toSettingChange(before, edit));
 
   return [...nodes, ...settings];
 }
