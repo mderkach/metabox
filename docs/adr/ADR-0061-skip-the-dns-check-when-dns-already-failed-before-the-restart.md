@@ -1,6 +1,6 @@
 # ADR-0061. Skip the DNS check after the restart when the running config already fails it
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-24
 - Deciders: repository owner
 - Supersedes (as to the DNS probe of the healthcheck): [ADR-0047](./ADR-0047-set-up-lan-interception-in-the-singbox-init-script.md)

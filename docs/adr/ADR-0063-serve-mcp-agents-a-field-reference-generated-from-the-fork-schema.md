@@ -1,6 +1,6 @@
 # ADR-0063. Serve MCP agents a field reference generated from the fork schema
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-24
 - Deciders: repository owner
 
