@@ -27,6 +27,7 @@ export const APPLY_REASON_CODE = [
   'interception_missing',
   'rollback_failed',
   'no_backup',
+  'lists_restored',
 ] as const
 
 export const SERVICE_ERROR_CODE = [

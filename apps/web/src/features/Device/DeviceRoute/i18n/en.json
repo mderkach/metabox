@@ -39,7 +39,8 @@
       "dns_probe_failed": "sing-box did not answer a DNS query through dns-in on the port from the interception settings",
       "interception_missing": "after the restart the nft interception rules are not in place",
       "rollback_failed": "the previous interception settings could not be restored — the new ones stayed on the device",
-      "no_backup": "there was nothing to roll back to: the device had no previous interception settings"
+      "no_backup": "there was nothing to roll back to: the device had no previous interception settings",
+      "lists_restored": "only the rule-set files were restored: the device had no previous config"
     }
   }
 }

@@ -273,6 +273,7 @@ const REASON_KEY: Readonly<Record<ApplyReasonCode, ParseKeys<'features/Config/Co
   interception_missing: 'failure.reason.interception_missing',
   rollback_failed: 'failure.reason.rollback_failed',
   no_backup: 'failure.reason.no_backup',
+  lists_restored: 'failure.reason.lists_restored',
 };
 
 function ApplyFailure({ transaction, onDismiss }: { transaction: ApplyTransaction; onDismiss: () => void }) {

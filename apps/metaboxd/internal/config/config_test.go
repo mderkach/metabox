@@ -355,19 +355,21 @@ func TestRestoreWithoutBackup(t *testing.T) {
 }
 
 // The owner deleted the config over SSH and applied a new one: the rollback of this apply
-// must return "nothing", not the deleted config from the backup of a previous transaction.
+// must not return the deleted config from the backup of a previous transaction.
 func TestBackupWithoutConfigDropsStaleBackup(t *testing.T) {
 	tests := []struct {
 		name string
 		drop func(cfgDir string) error
-		// listsKept: list files lie in the config directory and survive
-		// the deletion of a single config file.
-		listsKept bool
 	}{
 		{
-			name:      "config deleted",
-			drop:      func(cfgDir string) error { return os.Remove(filepath.Join(cfgDir, configName)) },
-			listsKept: true,
+			name: "config and lists deleted",
+			drop: func(cfgDir string) error {
+				if err := os.Remove(filepath.Join(cfgDir, configName)); err != nil {
+					return err
+				}
+
+				return os.RemoveAll(filepath.Join(cfgDir, "rule-sets"))
+			},
 		},
 		{
 			name: "no config directory at all",
@@ -380,8 +382,7 @@ func TestBackupWithoutConfigDropsStaleBackup(t *testing.T) {
 			store, cfgDir := newStore(t)
 			writeConfig(t, cfgDir, configName, []byte(`{"было":true}`), 0o600)
 
-			list := []byte(`{"rules":[]}`)
-			if err := store.WriteLists(t.Context(), map[string][]byte{"my.json": list}, nil); err != nil {
+			if err := store.WriteLists(t.Context(), map[string][]byte{"my.json": []byte(`{"rules":[]}`)}, nil); err != nil {
 				t.Fatalf("preparing the list: %v", err)
 			}
 			if err := store.Backup(t.Context()); err != nil {
@@ -405,19 +406,88 @@ func TestBackupWithoutConfigDropsStaleBackup(t *testing.T) {
 			if err := store.Restore(t.Context()); !errors.Is(err, config.ErrNoBackup) {
 				t.Errorf("rollback: got %v, expected ErrNoBackup", err)
 			}
-
-			if !tt.listsKept {
-				return
-			}
-
-			files, err := store.ReadLists(t.Context())
-			if err != nil {
-				t.Fatalf("reading lists: %v", err)
-			}
-			if !bytes.Equal(files["my.json"], list) {
-				t.Errorf("list after taking the backup: %q, expected untouched", files["my.json"])
-			}
 		})
+	}
+}
+
+// The config is gone but the list files stay: the backup drops the deleted config and
+// snapshots the lists, and the rollback returns the lists alone.
+func TestBackupWithoutConfigKeepsLists(t *testing.T) {
+	store, cfgDir := newStore(t)
+	writeConfig(t, cfgDir, configName, []byte(`{"было":true}`), 0o600)
+
+	original := []byte(`{"rules":[{"domain_suffix":["example.com"]}]}`)
+	if err := store.WriteLists(t.Context(), map[string][]byte{"my.json": original}, nil); err != nil {
+		t.Fatalf("preparing the list: %v", err)
+	}
+	if err := store.Backup(t.Context()); err != nil {
+		t.Fatalf("backup of the previous transaction: %v", err)
+	}
+
+	if err := os.Remove(filepath.Join(cfgDir, configName)); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := store.Backup(t.Context()); !errors.Is(err, config.ErrNoConfig) {
+		t.Fatalf("backup without a config: got %v, expected ErrNoConfig", err)
+	}
+	if _, err := os.Stat(store.BackupPath()); !errors.Is(err, fs.ErrNotExist) {
+		t.Errorf("the deleted config survived in the backup: %v", err)
+	}
+
+	changed := map[string][]byte{
+		"my.json":    []byte(`{"rules":[]}`),
+		"extra.json": []byte(`{"rules":[]}`),
+	}
+	if err := store.WriteLists(t.Context(), changed, nil); err != nil {
+		t.Fatalf("lists edit: %v", err)
+	}
+	written := []byte(`{"стало":true}`)
+	if err := store.Write(t.Context(), written); err != nil {
+		t.Fatalf("config write: %v", err)
+	}
+
+	if err := store.Restore(t.Context()); !errors.Is(err, config.ErrListsOnly) {
+		t.Fatalf("rollback: got %v, expected ErrListsOnly", err)
+	}
+
+	if got := readConfig(t, cfgDir); !bytes.Equal(got, written) {
+		t.Errorf("config after rollback: %q, expected the written one in place", got)
+	}
+
+	files, err := store.ReadLists(t.Context())
+	if err != nil {
+		t.Fatalf("reading lists after rollback: %v", err)
+	}
+	if !bytes.Equal(files["my.json"], original) {
+		t.Errorf("list after rollback: %q, expected the original", files["my.json"])
+	}
+	if _, ok := files["extra.json"]; ok {
+		t.Error("a file that appeared after the backup survived the rollback")
+	}
+}
+
+// A failed snapshot of the lists without a config is a backup failure, not "no config":
+// the apply must stop before the write.
+func TestBackupWithoutConfigListsFailure(t *testing.T) {
+	store, _ := newStore(t)
+
+	if err := store.WriteLists(t.Context(), map[string][]byte{"my.json": []byte("{}")}, nil); err != nil {
+		t.Fatalf("preparing the list: %v", err)
+	}
+
+	// A file in place of the service directory: the snapshot has nowhere to go.
+	serviceDir := filepath.Dir(store.BackupPath())
+	if err := os.RemoveAll(serviceDir); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(serviceDir, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	err := store.Backup(t.Context())
+	if err == nil || errors.Is(err, config.ErrNoConfig) {
+		t.Errorf("got %v, expected a backup failure", err)
 	}
 }
 

@@ -84,6 +84,8 @@ The daemon is responsible for steps 3–9. Steps 1 and 2 stay on the frontend.
 
 **Transaction.** `POST /api/apply` returns an identifier and a state, `GET /api/apply/{id}` returns the state, `POST /api/apply/{id}/confirm` confirms the apply. `GET /api/status` holds a reference to the active transaction: without it, reloading the page loses an ongoing apply. The transaction state is written to disk before the config is written. On start the daemon replays an unfinished transaction: an apply without completion means rollback to the backup; waiting for confirmation with the deadline passed means immediate rollback; with the deadline not passed, the timer is restored.
 
+**Rollback without a previous config.** The device may have no config before an apply: the first run, or a config deleted by the owner over SSH. Step 4 then removes the config backup of an earlier transaction, so the rollback cannot bring back a deleted config, but still snapshots the `rule-sets/` files if there are any. Step 9 returns those files alone, leaves the written config in place and does not restart the service: there is no config to restart onto, and the fork rereads list files without a restart. The transaction closes as `failed` with reason `lists_restored`; with no list files either, nothing is touched and the reason is `no_backup`. Neither case is reported as `rolled_back`. The replay on start takes the same path.
+
 **External edits.** Before applying, the daemon compares the file's `sha256` with the last one it wrote itself. A mismatch is returned as a separate state and is not silently overwritten.
 
 **Binary errors.** The output of `check` is passed to the caller verbatim: `stdout`, `stderr` and the exit code, without rewording.
@@ -131,7 +133,7 @@ Rolling back the decision means giving up the asynchronous contract for a synchr
 
 ## Validation
 
-- `make test`: unit checks of writing and of the transaction: the temporary file does not end with `.json`; an error at any step before `rename` leaves `config.json` unchanged byte for byte; applying a config that already has a `clash_api` section gives the same `sha256`; a config without the section gets only that section; an unfinished transaction is replayed on start for each of the states.
+- `make test`: unit checks of writing and of the transaction: the temporary file does not end with `.json`; an error at any step before `rename` leaves `config.json` unchanged byte for byte; applying a config that already has a `clash_api` section gives the same `sha256`; a config without the section gets only that section; an unfinished transaction is replayed on start for each of the states; a rollback without a previous config returns the list files alone with reason `lists_restored`, and without them closes with `no_backup`.
 - `make apply-check` and a run through the daemon on the test bench: the full cycle up to the healthcheck; no confirmation in time restores the previous config; a broken config does not change the file's `sha256`; an apply with the service stopped brings it up (AC-16).
 - Rebooting the `target` container with an unfinished transaction: the automatic rollback happens.
 - A request through the vite proxy with `-allowed-origin` passes; the same request without the flag and with a foreign `Origin` is rejected.
