@@ -95,6 +95,9 @@ type Plane struct {
 	previous    dataplane.Snapshot
 	token       uint64
 	rollingBack bool
+	// confirming and confirmDone: see Manager.
+	confirming  bool
+	confirmDone chan struct{}
 	// windowEndsAt is the monotonic stamp of the window end, in memory only; see Manager.
 	windowEndsAt time.Time
 	confirmed    chan struct{}
@@ -358,17 +361,23 @@ func (p *Plane) probeDNS(ctx context.Context, port int) error {
 	return p.opts.DNS.Probe(ctx, inbound)
 }
 
+// await opens the confirmation window; the window record reaches the disk before the
+// phase does, for the reason given in Manager.await.
 func (p *Plane) await(ctx context.Context, log *slog.Logger, confirmed <-chan struct{}) {
 	p.mu.Lock()
-	p.current.Phase = PhaseAwaitingConfirm
-	p.windowEndsAt = time.Now().Add(p.opts.Window)
 	tx := p.current
 	previous := p.previous
 	p.mu.Unlock()
 
+	tx.Phase = PhaseAwaitingConfirm
 	if err := p.persist(ctx, tx, previous); err != nil {
 		log.Error("dataplane confirmation window state not saved", "err", err)
 	}
+
+	p.mu.Lock()
+	p.current.Phase = PhaseAwaitingConfirm
+	p.windowEndsAt = time.Now().Add(p.opts.Window)
+	p.mu.Unlock()
 
 	log.Info("dataplane model applied, confirmation window open", "window", p.opts.Window)
 
@@ -392,17 +401,29 @@ func (p *Plane) wait(ctx context.Context, log *slog.Logger, confirmed <-chan str
 	}
 }
 
+// beginRollback is Manager.beginRollback for the dataplane change.
 func (p *Plane) beginRollback() bool {
-	p.mu.Lock()
-	defer p.mu.Unlock()
+	for {
+		p.mu.Lock()
 
-	if p.current.Phase != PhaseAwaitingConfirm {
-		return false
+		if p.current.Phase != PhaseAwaitingConfirm {
+			p.mu.Unlock()
+
+			return false
+		}
+
+		if !p.confirming {
+			p.rollingBack = true
+			p.mu.Unlock()
+
+			return true
+		}
+
+		done := p.confirmDone
+		p.mu.Unlock()
+
+		<-done
 	}
-
-	p.rollingBack = true
-
-	return true
 }
 
 // rollback restores the section snapshot and makes the service reread it. A failure leaves
@@ -446,7 +467,9 @@ func (p *Plane) rollback(ctx context.Context, log *slog.Logger) {
 	log.Info("previous dataplane model restored")
 }
 
-// Confirm closes the dataplane change confirmation window.
+// Confirm closes the dataplane change confirmation window. The state on disk is made
+// terminal before the call returns, as in Manager.Confirm; ErrConfirmNotSaved leaves the
+// window open.
 func (p *Plane) Confirm(ctx context.Context, id string) (Transaction, error) {
 	p.mu.Lock()
 
@@ -456,37 +479,53 @@ func (p *Plane) Confirm(ctx context.Context, id string) (Transaction, error) {
 		return Transaction{}, ErrUnknownTransaction
 	}
 
-	if p.current.Phase != PhaseAwaitingConfirm || p.rollingBack {
+	if p.current.Phase != PhaseAwaitingConfirm || p.rollingBack || p.confirming {
 		p.mu.Unlock()
 
 		return Transaction{}, ErrNothingToConfirm
 	}
 
-	p.current.Phase = PhaseConfirmed
-	p.current.Window = 0
+	p.confirming = true
+	done := make(chan struct{})
+	p.confirmDone = done
 	tx := p.current
+	tx.Phase = PhaseConfirmed
+	tx.Window = 0
 	previous := p.previous
-	token := p.token
-	confirmed := p.confirmed
-	p.confirmed = nil
 	p.mu.Unlock()
 
 	// The order is the same as in Manager.Confirm: the state is removed before
 	// the apply is released, and an unremoved one is replaced by the terminal phase.
-	if err := p.store.ClearPlaneState(ctx); err != nil {
-		if persistErr := p.persist(ctx, tx, previous); persistErr != nil {
-			p.log.Error("state of the confirmed dataplane change neither removed nor rewritten",
-				"err", errors.Join(err, persistErr), "transaction_id", id)
-		} else {
-			p.log.Warn("state of the confirmed dataplane change not removed, the terminal phase is written",
-				"err", err, "transaction_id", id)
-		}
+	kept, err := settleState(ctx, p.store.ClearPlaneState, func(ctx context.Context) error {
+		return p.persist(ctx, tx, previous)
+	})
+
+	p.mu.Lock()
+	p.confirming = false
+
+	if err != nil {
+		p.mu.Unlock()
+		close(done)
+
+		return Transaction{}, err
 	}
+
+	p.current = tx
+	token := p.token
+	confirmed := p.confirmed
+	p.confirmed = nil
+	p.mu.Unlock()
+	close(done)
 
 	p.gate.unreserve(token)
 
 	if confirmed != nil {
 		close(confirmed)
+	}
+
+	if kept != nil {
+		p.log.Warn("state of the confirmed dataplane change not removed, the terminal phase is written",
+			"err", kept, "transaction_id", id)
 	}
 
 	p.log.Info("dataplane model change confirmed", "transaction_id", id)

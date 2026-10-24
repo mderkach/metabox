@@ -325,13 +325,13 @@ func TestReplayAfterCrashInBackupKeepsRunningConfig(t *testing.T) {
 			h.store.mu.Unlock()
 
 			// The backup step returns only when the test is over; the harness Close runs after that.
-			h.store.backupStarted, h.store.backupRelease = make(chan struct{}), make(chan struct{})
-			t.Cleanup(func() { close(h.store.backupRelease) })
+			backupStarted, backupRelease := h.store.hold("Backup")
+			t.Cleanup(func() { close(backupRelease) })
 
 			if _, err := h.manager.Start(t.Context(), []byte(settled), tt.lists, "", ""); err != nil {
 				t.Fatalf("second apply: %v", err)
 			}
-			<-h.store.backupStarted
+			<-backupStarted
 
 			// The next daemon lifetime over the same disk.
 			h.rec.mu.Lock()

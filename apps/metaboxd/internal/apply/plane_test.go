@@ -97,8 +97,23 @@ func (r *fakeReloader) count() int {
 type fakePlaneStore struct {
 	cfg []byte
 
-	mu    sync.Mutex
-	state []byte
+	mu       sync.Mutex
+	state    []byte
+	stateErr error
+	clearErr error
+	// writeStarted and writeRelease gate the next WritePlaneState once.
+	writeStarted chan struct{}
+	writeRelease chan struct{}
+}
+
+// holdWrite arms the gate of the next WritePlaneState.
+func (s *fakePlaneStore) holdWrite() (started, release chan struct{}) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.writeStarted, s.writeRelease = make(chan struct{}), make(chan struct{})
+
+	return s.writeStarted, s.writeRelease
 }
 
 func (s *fakePlaneStore) Read(context.Context) ([]byte, error) { return s.cfg, nil }
@@ -114,22 +129,55 @@ func (s *fakePlaneStore) ReadPlaneState(context.Context) ([]byte, error) {
 	return s.state, nil
 }
 
-func (s *fakePlaneStore) WritePlaneState(_ context.Context, data []byte) error {
+// WritePlaneState and ClearPlaneState refuse a cancelled context first, as config.Store does.
+func (s *fakePlaneStore) WritePlaneState(ctx context.Context, data []byte) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	s.mu.Lock()
+	started, release := s.writeStarted, s.writeRelease
+	s.writeStarted, s.writeRelease = nil, nil
+	s.mu.Unlock()
+
+	if started != nil {
+		close(started)
+		<-release
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	if s.stateErr != nil {
+		return s.stateErr
+	}
 	s.state = data
 
 	return nil
 }
 
-func (s *fakePlaneStore) ClearPlaneState(context.Context) error {
+func (s *fakePlaneStore) ClearPlaneState(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	if s.clearErr != nil {
+		return s.clearErr
+	}
 	s.state = nil
 
 	return nil
+}
+
+func (s *fakePlaneStore) setDiskErr(err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.stateErr = err
+	s.clearErr = err
 }
 
 func (s *fakePlaneStore) saved() []byte {
@@ -252,6 +300,95 @@ func TestPlaneConfirm(t *testing.T) {
 	}
 	if got := h.reloader.count(); got != 1 {
 		t.Errorf("reload %d times, expected one", got)
+	}
+	if h.pstore.saved() != nil {
+		t.Error("state of the confirmed change stayed on disk")
+	}
+}
+
+// The client dropped the confirm request: the dataplane state on disk still becomes terminal.
+func TestPlaneConfirmSurvivesCancelledRequest(t *testing.T) {
+	h := newPlaneHarness(t, nil, validConfig, slog.New(slog.DiscardHandler))
+	t.Cleanup(h.plane.Close)
+
+	tx, err := h.plane.Start(t.Context(), aclChange(), "", admin)
+	if err != nil {
+		t.Fatalf("dataplane change: %v", err)
+	}
+	h.waitWindow(t)
+	h.waitPlane(t, apply.PhaseAwaitingConfirm)
+
+	gone, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	if _, err := h.plane.Confirm(gone, tx.ID); err != nil {
+		t.Fatalf("confirm with a dropped request: %v", err)
+	}
+	if h.pstore.saved() != nil {
+		t.Error("state of the confirmed change stayed on disk")
+	}
+}
+
+// A Confirm while the window record is being written is refused; after the record is
+// on disk it goes through. See TestConfirmWaitsForWindowRecord.
+func TestPlaneConfirmWaitsForWindowRecord(t *testing.T) {
+	h := newPlaneHarness(t, nil, validConfig, slog.New(slog.DiscardHandler))
+	t.Cleanup(h.plane.Close)
+
+	tx, err := h.plane.Start(t.Context(), aclChange(), "", admin)
+	if err != nil {
+		t.Fatalf("dataplane change: %v", err)
+	}
+
+	// The journal was written by Start itself; the next write is the window record.
+	stateStarted, stateRelease := h.pstore.holdWrite()
+	<-stateStarted
+
+	if _, err := h.plane.Confirm(t.Context(), tx.ID); !errors.Is(err, apply.ErrNothingToConfirm) {
+		t.Errorf("confirm before the window record is on disk: got %v, expected ErrNothingToConfirm", err)
+	}
+
+	close(stateRelease)
+	h.waitWindow(t)
+	h.waitPlane(t, apply.PhaseAwaitingConfirm)
+
+	if _, err := h.plane.Confirm(t.Context(), tx.ID); err != nil {
+		t.Fatalf("confirm: %v", err)
+	}
+	if h.pstore.saved() != nil {
+		t.Error("state of the confirmed change stayed on disk")
+	}
+}
+
+// The disk refused the terminal state: the dataplane Confirm fails, the window stays open
+// and the apply stays taken; a retry after the disk is back succeeds.
+func TestPlaneConfirmFailsWhenStateNotSaved(t *testing.T) {
+	h := newPlaneHarness(t, nil, validConfig, slog.New(slog.DiscardHandler))
+	t.Cleanup(h.plane.Close)
+
+	tx, err := h.plane.Start(t.Context(), aclChange(), "", admin)
+	if err != nil {
+		t.Fatalf("dataplane change: %v", err)
+	}
+	h.waitWindow(t)
+	h.waitPlane(t, apply.PhaseAwaitingConfirm)
+
+	h.pstore.setDiskErr(errors.New("файловая система только для чтения"))
+
+	if _, err := h.plane.Confirm(t.Context(), tx.ID); !errors.Is(err, apply.ErrConfirmNotSaved) {
+		t.Fatalf("got %v, expected ErrConfirmNotSaved", err)
+	}
+	if got := h.plane.Current().Phase; got != apply.PhaseAwaitingConfirm {
+		t.Errorf("phase %q, expected the window still open", got)
+	}
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); !errors.Is(err, apply.ErrBusy) {
+		t.Errorf("config apply after a failed confirm: got %v, expected ErrBusy", err)
+	}
+
+	h.pstore.setDiskErr(nil)
+
+	if _, err := h.plane.Confirm(t.Context(), tx.ID); err != nil {
+		t.Fatalf("confirm after the disk is back: %v", err)
 	}
 	if h.pstore.saved() != nil {
 		t.Error("state of the confirmed change stayed on disk")
