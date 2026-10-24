@@ -1,10 +1,11 @@
 <div align="center">
 
-<img src="docs/logo.svg" alt="metabox" width="72" />
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/readme/banner-dark.webp" />
+  <img src="docs/readme/banner-light.webp" alt="metabox" width="100%" />
+</picture>
 
-# metabox
-
-**Веб-панель для sing-box на роутерах с OpenWrt**
+**Смотрите, что роутер делает с трафиком, и меняйте это**
 
 Правка конфига в формах, применение с автоматическим откатом, объяснение, куда ушло каждое соединение.
 
