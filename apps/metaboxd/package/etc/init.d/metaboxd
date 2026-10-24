@@ -25,7 +25,7 @@ local_addresses() {
 
 start_service() {
 	[ -x "$PROG" ] || {
-		echo "metaboxd: $PROG отсутствует" >&2
+		echo "metaboxd: $PROG is missing" >&2
 		return 1
 	}
 
@@ -63,7 +63,7 @@ start_service() {
 	fi
 
 	[ -n "$listen" ] || {
-		echo "metaboxd: у сетей '$listen_interface' нет адресов, задайте listen_addr в /etc/config/metabox" >&2
+		echo "metaboxd: network '$listen_interface' has no addresses, set listen_addr in /etc/config/metabox" >&2
 		return 1
 	}
 

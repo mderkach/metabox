@@ -36,7 +36,7 @@ dp_add() {
 	[ -n "$value" ] || return 0
 	case "$value" in
 	*[!$pattern]*)
-		dp_fail "недопустимое значение '$value' в metabox.dataplane"
+		dp_fail "invalid value '$value' in metabox.dataplane"
 		dp_invalid=1
 		return 0
 		;;
@@ -80,7 +80,7 @@ dp_load() {
 	local n
 	for n in "$dp_redirect_port" "$dp_tproxy_port" "$dp_dns_port" "$dp_self_mark" "$dp_tproxy_mark" "$dp_route_table"; do
 		dp_number "$n" || {
-			dp_fail "в metabox.dataplane ожидалось десятичное число, получено '$n'"
+			dp_fail "metabox.dataplane expects a decimal number, got '$n'"
 			dp_invalid=1
 		}
 	done
@@ -88,7 +88,7 @@ dp_load() {
 	case "$dp_acl_mode" in
 	all | listed) ;;
 	*)
-		dp_fail "acl_mode '$dp_acl_mode' не all и не listed"
+		dp_fail "acl_mode '$dp_acl_mode' is neither all nor listed"
 		dp_invalid=1
 		;;
 	esac
@@ -251,13 +251,13 @@ dp_nft_up() {
 			rm -f "$NFT_FILE"
 			dp_fw_unregister
 		fi
-		dp_fail "фрагмент nft не прошёл fw4 check, перехват не изменён"
+		dp_fail "nft fragment failed fw4 check, interception left unchanged"
 		return 1
 	fi
 
 	rm -f "$NFT_FILE.old"
 	fw4 -q reload || {
-		dp_fail "fw4 reload не прошёл"
+		dp_fail "fw4 reload failed"
 		return 1
 	}
 	dp_sets_sync
@@ -278,7 +278,7 @@ dp_sets_sync() {
 		dp_set_sync metabox_wan_direct_addr_v4 "$dp_wan_direct"
 		dp_set_sync metabox_src_ip "$dp_src_ip"
 		dp_set_sync metabox_src_mac "$dp_src_mac"
-	} | nft -f - || dp_fail "наборы metabox_ не перезалиты"
+	} | nft -f - || dp_fail "metabox_ sets were not reloaded"
 }
 
 # fw4 reload does flush table: the rules go away, while the chains and sets
@@ -401,7 +401,7 @@ dp_up() {
 	local dnsmasq_file
 
 	mkdir -p "$RUN_DIR"
-	dnsmasq_file=$(dp_dnsmasq_file) || dp_fail "секция dnsmasq в /etc/config/dhcp не найдена"
+	dnsmasq_file=$(dp_dnsmasq_file) || dp_fail "dnsmasq section not found in /etc/config/dhcp"
 
 	dp_state_read
 	if [ -n "$st_mark" ] && [ "$st_mark:$st_table" != "$dp_tproxy_mark:$dp_route_table" ]; then
@@ -428,12 +428,12 @@ start_service() {
 	config="$config_dir/$config_name"
 
 	[ -x "$singbox" ] || {
-		echo "metabox-singbox: $singbox отсутствует" >&2
+		echo "metabox-singbox: $singbox is missing" >&2
 		return 1
 	}
 
 	[ -f "$config" ] || {
-		echo "metabox-singbox: конфига $config нет" >&2
+		echo "metabox-singbox: config $config not found" >&2
 		return 1
 	}
 
