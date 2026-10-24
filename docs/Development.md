@@ -157,6 +157,15 @@ apk add metaboxd
 
 A newer release is then `apk upgrade metaboxd`; the package restarts the daemon if it was running, and sing-box keeps running. A single downloaded package still installs by path: `apk add /tmp/metaboxd-<version>.apk`.
 
+A package installed from a file is recorded in `/etc/apk/world` pinned to its hash, `metaboxd><Q1…`, so that exactly this file stays installed. `apk upgrade metaboxd` does not move such an entry, and `apk add -u metaboxd` upgrades the package together with its dependencies, which pulls system upgrades in as well. To return to the repository, install an exact version from it and then the plain name:
+
+```sh
+apk add metaboxd=<version>
+apk add metaboxd
+```
+
+The second command turns the entry into a plain `metaboxd`; from then on `apk upgrade metaboxd` updates it as described above. `apk upgrade --available` also switches a file-installed package back to the repository version ([apk-add(8)](https://gitlab.alpinelinux.org/alpine/apk-tools/-/blob/master/doc/apk-add.8.scd)).
+
 On a clean router [`install.sh`](../install.sh) does these steps and installs the fork package first ([ADR-0058](./adr/ADR-0058-install-on-a-clean-router-with-a-script-on-top-of-the-apk-repository.md)). The release attaches it, and the apk-repo workflow puts the copy of the newest release at `https://mderkach.github.io/metabox/install.sh`. The fork version and sha256 are pinned in the script: a fork upgrade changes them together with `SINGBOX_VERSION` in `.devcontainer/target/Dockerfile`. The sha256 is the `digest` of the release asset: `gh api repos/shtorm-7/sing-box-extended/releases/tags/v<version> --jq '.assets[] | select(.name | endswith("openwrt_aarch64_cortex-a53.apk")) | .digest'`.
 
 ## Build variables

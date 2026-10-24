@@ -178,6 +178,8 @@ Install the new package the same way as the first one, then restart the services
 /etc/init.d/metaboxd restart
 ```
 
+A package installed from a file (`apk add /tmp/metaboxd-<version>.apk`) is recorded in `/etc/apk/world` pinned to its hash, `metaboxd><Q1…`. `apk upgrade metaboxd` does not update such an entry, and `apk add -u metaboxd` pulls system dependency upgrades in with it. To get back to the repository, run `apk add metaboxd=<version>` and then `apk add metaboxd`: the entry becomes a plain name and `apk upgrade metaboxd` works again.
+
 Your `/etc/config/metabox` is not overwritten on update: the packaged version lands next to it as `/etc/config/metabox.apk-new`. sysupgrade keeps `/etc/config/metabox` and `/etc/metabox/`.
 
 ```sh
