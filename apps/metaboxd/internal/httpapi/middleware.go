@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"metabox/internal/contract"
+	"metabox/internal/locale"
 )
 
 func (s *Server) middleware(next http.Handler) http.Handler {
@@ -20,12 +21,13 @@ func (s *Server) middleware(next http.Handler) http.Handler {
 	// the browser holds a session.
 	// redirectToTLS goes after checkHost: the redirect target is built from Host, and a
 	// foreign name must be refused, not sent back with an https scheme.
-	return recoverPanic(s.log,
-		logRequests(s.log,
-			checkHost(s.log, s.allowedOrigin,
-				redirectToTLS(s.https,
-					checkOrigin(s.log, s.allowedOrigin,
-						requireSession(s.log, s.auth, next))))))
+	return withLang(s.lang,
+		recoverPanic(s.log,
+			logRequests(s.log,
+				checkHost(s.log, s.allowedOrigin,
+					redirectToTLS(s.https,
+						checkOrigin(s.log, s.allowedOrigin,
+							requireSession(s.log, s.auth, next)))))))
 }
 
 func recoverPanic(log *slog.Logger, next http.Handler) http.Handler {
@@ -54,7 +56,7 @@ func recoverPanic(log *slog.Logger, next http.Handler) http.Handler {
 			// has gone by then, and there is no other way to refuse.
 			writeJSON(log, w, http.StatusInternalServerError, contract.Error{
 				Code:    contract.ErrInternal,
-				Message: "internal error",
+				Message: locale.T(langOf(r), "internal error"),
 			})
 		}()
 

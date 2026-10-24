@@ -33,6 +33,9 @@ config metabox 'main'
 	# The name that the sing-box dns-in must resolve after a restart, otherwise Apply
 	# is rolled back. An empty value disables this check.
 	option health_dns_name 'cloudflare.com'
+	# Language of the texts the daemon and its init scripts show the operator: en or ru.
+	# Set by install.sh; the panel language is chosen in the panel and does not follow it.
+	option lang 'en'
 
 # Dataplane of the metabox-singbox service: LAN interception in nft, ip rule for
 # tproxy and the dnsmasq upstream. Disabled while homeproxy owns interception: two

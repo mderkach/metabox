@@ -1,6 +1,6 @@
 # Errors and logging
 
-Error and log texts of the daemon are in English. The panel does not show them as the failure: it picks the text in the user's language by the code, and the daemon text stays a fallback and a detail for whoever fixes the failure.
+Error and log texts of the daemon are written in English. Logs stay English; an error text the operator sees is translated into the operator's language at the boundary that shows it ("Texts the operator sees" below). The panel does not show the daemon text as the failure: it picks the text in the user's language by the code, and the daemon text stays a fallback and a detail for whoever fixes the failure.
 
 ## Return an error, do not log it
 
@@ -76,11 +76,22 @@ The set of codes is closed and declared as an enumeration in `internal/contract`
 
 The value set of the named type goes into the contract schema as a list, and the panel types its tables with it: a missing code is a compile error in the panel ([ADR-0021](../../../../docs/adr/ADR-0021-print-contract-enumerations-as-value-lists.md)). Parsing the response stays tolerant: a value outside the set must not take the screen down.
 
-The same reasoning gives the rule for `Message`: it is in English, the daemon's language, and serves as fallback text. The panel shows it only when it does not know the code, for example when the panel is older than the daemon. The daemon returns no localized strings and does not know the client's language ([ADR-0019](../../../../docs/adr/ADR-0019-keep-interface-texts-in-the-slice-and-load-them-over-the-network.md)).
+The same reasoning gives the rule for `Message`: it serves as fallback text, in the operator's language from `-lang`. The panel shows it only when it does not know the code, for example when the panel is older than the daemon. The daemon does not know the client's language: the panel language is the user's choice in the browser ([ADR-0019](../../../../docs/adr/ADR-0019-keep-interface-texts-in-the-slice-and-load-them-over-the-network.md)), the operator's language is UCI `metabox.main.lang`, and the two are independent.
 
 There is exactly one exception: the output of `sing-box check` is returned verbatim, the user fixes the config from it.
 
 The mapping of errors to HTTP codes is kept in one place, the API package, not in every handler. A panic in a handler is caught by middleware, logged with the stack and turned into a 500 with the `internal` code and the fallback text, without panic details.
+
+## Texts the operator sees
+
+The operator's language is UCI `metabox.main.lang` (`en`, `ru`), passed by the init script as `-lang`; the catalogue is `internal/locale`, keyed by the English text ([ADR-0062](../../../../docs/adr/ADR-0062-translate-operator-texts-with-an-english-keyed-catalogue-chosen-in-uci.md)).
+
+- An error whose text reaches the operator is built with `locale.New` or `locale.Errorf` instead of `errors.New` and `fmt.Errorf`. `Error()` stays English, so the log and `errors.Is` work as before.
+- A text shown as is goes through `locale.T` or `locale.Sprintf`. The text is a string literal: the catalogue test finds it in the sources.
+- The boundary translates: `fail` and the MCP tool wrapper take the text with `locale.Message`, which translates the layers built by `locale` and leaves an OS or sing-box error under them as it is.
+- A new text gets its Russian entry in `internal/locale/ru.go` in the same commit; `TestCatalogueMatchesSources` fails on a missing or orphaned entry and on different format verbs.
+- The init scripts print to the operator through `mb_msg` and `dp_fail` from `package/lib/metabox/locale.sh`, with a value as a `printf` argument, never inside the text; `dp_fail` writes syslog in English.
+- Logs are not translated: the `err` attribute is the English `Error()`.
 
 ## Logs
 

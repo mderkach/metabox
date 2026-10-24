@@ -76,15 +76,17 @@ The chain is assembled once, the order is outside in:
 
 ```go
 func (s *Server) middleware(next http.Handler) http.Handler {
-	return recoverPanic(s.log,
-		logRequests(s.log,
-			checkHost(s.log, s.allowedOrigin,
-				checkOrigin(s.log, s.allowedOrigin,
-					requireSession(s.log, s.auth, next)))))
+	return withLang(s.lang,
+		recoverPanic(s.log,
+			logRequests(s.log,
+				checkHost(s.log, s.allowedOrigin,
+					redirectToTLS(s.https,
+						checkOrigin(s.log, s.allowedOrigin,
+							requireSession(s.log, s.auth, next)))))))
 }
 ```
 
-`recoverPanic` is outermost, otherwise a panic in logging brings the process down. Each wrapper does one thing and is tested separately. `requireSession` comes after the origin checks: a mutating request from a foreign page gets 403 whether or not there is a session. Without a password the origin check is the only protection of mutating requests.
+`withLang` wraps the chain from outside: it puts the operator's language from `-lang` into the request context, and `fail`, which handlers and middleware reach with nothing but the request, takes the language of `message` from there. `recoverPanic` is the outermost of the rest, otherwise a panic in logging brings the process down. Each wrapper does one thing and is tested separately. `requireSession` comes after the origin checks: a mutating request from a foreign page gets 403 whether or not there is a session. Without a password the origin check is the only protection of mutating requests.
 
 ## Origin check
 
@@ -122,6 +124,8 @@ The session is the `metabox_session` cookie with `HttpOnly`, `SameSite=Strict`, 
 | `DELETE /api/mcp/token` |      | 204, MCP is off                                                          |
 
 The token is shown once: the daemon keeps its SHA-256 in `mcp.json` of the service directory. The answers carry `Cache-Control: no-store`.
+
+Tool descriptions and tool errors are in the operator's language from `-lang`; the field descriptions of the inputs and outputs come from struct tags and stay English. The daemon log records a tool failure in English.
 
 ## Server and timeouts
 

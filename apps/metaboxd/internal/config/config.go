@@ -20,12 +20,14 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"metabox/internal/locale"
 )
 
 var (
 	// ErrNoConfig means there is no config in place, neither a file nor a directory for it.
 	// A regular case, sing-box may not have been configured on the device yet.
-	ErrNoConfig = errors.New("no config file")
+	ErrNoConfig = locale.New("no config file")
 
 	// ErrNoBackup means nothing to roll back to, the device had neither a config
 	// nor list files before the apply.

@@ -3,6 +3,7 @@ package locale
 import (
 	"errors"
 	"fmt"
+	"strings"
 )
 
 // Error is an error whose text reaches the operator. Error returns English, the
@@ -42,7 +43,8 @@ func (e *Error) Unwrap() []error {
 	}
 }
 
-func (e *Error) in(l Lang) string {
+// In returns the text in the language l.
+func (e *Error) In(l Lang) string {
 	if e.verbatim {
 		return T(l, e.format)
 	}
@@ -62,13 +64,44 @@ func (e *Error) in(l Lang) string {
 	return fmt.Errorf(T(l, e.format), args...).Error()
 }
 
-// Message returns the text of err in the language l. A layer made by New or
-// Errorf is translated together with the errors it formats; a layer made
-// otherwise is returned as is, with everything it wraps.
+// Message returns the text of err in the language l. A layer with an In method,
+// such as one made by New or Errorf, is translated together with the errors it
+// formats, and so is each part of errors.Join; any other layer is returned as
+// is, with everything it wraps.
 func Message(l Lang, err error) string {
-	if e, ok := err.(*Error); ok { //nolint:errorlint // only the outer layer: an inner one is already part of a foreign text
-		return e.in(l)
+	switch e := err.(type) { //nolint:errorlint // only the outer layer: an inner one is already part of a foreign text
+	case interface{ In(l Lang) string }:
+		return e.In(l)
+	case interface{ Unwrap() []error }:
+		if parts := joined(err, e.Unwrap()); parts != nil {
+			texts := make([]string, len(parts))
+			for i, part := range parts {
+				texts[i] = Message(l, part)
+			}
+
+			return strings.Join(texts, "\n")
+		}
 	}
 
 	return err.Error()
+}
+
+// joined returns the parts when err is made by errors.Join, whose text is the parts
+// joined by newlines; a fmt.Errorf with several %w has a text of its own and gets nil.
+func joined(err error, wrapped []error) []error {
+	var parts []error
+	var texts []string
+
+	for _, part := range wrapped {
+		if part != nil {
+			parts = append(parts, part)
+			texts = append(texts, part.Error())
+		}
+	}
+
+	if len(parts) == 0 || strings.Join(texts, "\n") != err.Error() {
+		return nil
+	}
+
+	return parts
 }

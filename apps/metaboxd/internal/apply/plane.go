@@ -15,15 +15,16 @@ import (
 	"metabox/internal/clashapi"
 	"metabox/internal/config"
 	"metabox/internal/dataplane"
+	"metabox/internal/locale"
 )
 
 // ErrDataplaneModified means the UCI section was changed after the client read
 // the model; an SSH edit would otherwise be silently overwritten.
-var ErrDataplaneModified = errors.New("dataplane model changed outside metabox")
+var ErrDataplaneModified = locale.New("dataplane model changed outside metabox")
 
 // ErrDataplaneForeignService means the daemon manages a service other than the one whose init script
 // reads the model; the change is rejected before the write.
-var ErrDataplaneForeignService = errors.New("the dataplane model is read only by the service " + dataplane.Service)
+var ErrDataplaneForeignService = locale.Errorf("the dataplane model is read only by the service %s", dataplane.Service)
 
 // PlaneEditor is the dataplane model in UCI: a section snapshot, writing the model, restoring
 // the snapshot, and the chains in nft.

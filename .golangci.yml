@@ -45,6 +45,12 @@ linters:
         text: 'G304|G306'
         linters: [gosec]
 
+      # G101: the Russian texts mention passwords and tokens ("wrong password",
+      # "MCP token required"); they are messages, not credentials.
+      - path: internal/locale/ru\.go
+        text: 'G101'
+        linters: [gosec]
+
       # G304: the path is built from the procfs and sysfs roots set by Options fields
       # and the process name read from /proc itself. There is no user input
       # in it, and reading goes only through these two trees.

@@ -17,6 +17,7 @@ import (
 	"metabox/internal/contract"
 	"metabox/internal/diag"
 	"metabox/internal/events"
+	"metabox/internal/locale"
 	"metabox/internal/logs"
 	"metabox/internal/route"
 )
@@ -37,79 +38,79 @@ type tools struct {
 }
 
 func (t tools) addRead(server *sdk.Server, log *slog.Logger) {
-	addTool(server, log, &sdk.Tool{
+	addTool(server, log, t.opts.Lang, &sdk.Tool{
 		Name: "metabox_status",
-		Description: "State of the router running metabox: whether the sing-box service runs and who owns the process " +
-			"(managed=false with status running means a foreign package started it), the daemon, sing-box binary and " +
-			"panel schema versions, the dataplane routing mode, the runtime sources the daemon reads, and the " +
-			"permissions of this MCP token. An empty version means it could not be read or was not built in. " +
-			"Does not tell whether traffic actually flows: use metabox_diagnostics for that.",
+		Description: locale.T(t.opts.Lang, "State of the router running metabox: whether the sing-box service runs and who owns the process "+
+			"(managed=false with status running means a foreign package started it), the daemon, sing-box binary and "+
+			"panel schema versions, the dataplane routing mode, the runtime sources the daemon reads, and the "+
+			"permissions of this MCP token. An empty version means it could not be read or was not built in. "+
+			"Does not tell whether traffic actually flows: use metabox_diagnostics for that."),
 	}, t.status)
 
 	if t.opts.Runtime != nil {
-		addTool(server, log, &sdk.Tool{
+		addTool(server, log, t.opts.Lang, &sdk.Tool{
 			Name: "metabox_connections",
-			Description: "Live sing-box connections, newest data from the Clash API, filtered by host, device, rule, " +
-				"chain and network. Filters are case-insensitive substrings, except network (exact tcp or udp) and " +
-				"device (a source IP, a MAC or a device name from DHCP). total counts all matches, connections holds " +
-				"at most limit of them (default 50, at most 500). An empty list means no live connection matches " +
-				"right now; it says nothing about connections that already closed.",
+			Description: locale.T(t.opts.Lang, "Live sing-box connections, newest data from the Clash API, filtered by host, device, rule, "+
+				"chain and network. Filters are case-insensitive substrings, except network (exact tcp or udp) and "+
+				"device (a source IP, a MAC or a device name from DHCP). total counts all matches, connections holds "+
+				"at most limit of them (default 50, at most 500). An empty list means no live connection matches "+
+				"right now; it says nothing about connections that already closed."),
 		}, t.connections)
 
-		addTool(server, log, &sdk.Tool{
+		addTool(server, log, t.opts.Lang, &sdk.Tool{
 			Name: "metabox_proxies",
-			Description: "Proxy groups with their selected member, and nodes with the last latency sing-box recorded. " +
-				"Does not run a latency check: a failed check erases the node's delay history. last_delay_ms is " +
-				"absent when the node was never checked; 0 means the last check failed.",
+			Description: locale.T(t.opts.Lang, "Proxy groups with their selected member, and nodes with the last latency sing-box recorded. "+
+				"Does not run a latency check: a failed check erases the node's delay history. last_delay_ms is "+
+				"absent when the node was never checked; 0 means the last check failed."),
 		}, t.proxies)
 	}
 
 	if t.opts.Runtime != nil && t.opts.Explain != nil {
-		addTool(server, log, &sdk.Tool{
+		addTool(server, log, t.opts.Lang, &sdk.Tool{
 			Name: "metabox_explain_domain",
-			Description: "Explains how sing-box routed a domain: for live connections whose host is the domain or its " +
-				"subdomain, the matched rule (its index in route.rules, conditions and action) and the outbound chain, " +
-				"as sing-box reported them. found=false means there is no live connection to the domain: the tool " +
-				"does not evaluate rules on its own, so open the site first and ask again. At most limit connections " +
-				"are explained (default 5, at most 20).",
+			Description: locale.T(t.opts.Lang, "Explains how sing-box routed a domain: for live connections whose host is the domain or its "+
+				"subdomain, the matched rule (its index in route.rules, conditions and action) and the outbound chain, "+
+				"as sing-box reported them. found=false means there is no live connection to the domain: the tool "+
+				"does not evaluate rules on its own, so open the site first and ask again. At most limit connections "+
+				"are explained (default 5, at most 20)."),
 		}, t.explainDomain)
 	}
 
 	if t.opts.Config != nil {
-		addTool(server, log, &sdk.Tool{
+		addTool(server, log, t.opts.Lang, &sdk.Tool{
 			Name: "metabox_config_versions",
-			Description: "History of applied sing-box configs, newest first: id, size, sha256 and save time. The save " +
-				"time is the router clock and is wrong before NTP sync. An empty list means nothing was applied " +
-				"through metabox yet.",
+			Description: locale.T(t.opts.Lang, "History of applied sing-box configs, newest first: id, size, sha256 and save time. The save "+
+				"time is the router clock and is wrong before NTP sync. An empty list means nothing was applied "+
+				"through metabox yet."),
 		}, t.versions)
 
-		addTool(server, log, &sdk.Tool{
+		addTool(server, log, t.opts.Lang, &sdk.Tool{
 			Name: "metabox_config_version",
-			Description: "Content of one config version from metabox_config_versions. Secrets are masked " +
-				"(secret, password, private_key, pre_shared_key, psk, token, auth_str, access_key_secret; for url and " +
-				"download_url everything after the host) and cannot be revealed through MCP. Comments are removed, " +
-				"since they may hold secrets the mask cannot recognise.",
+			Description: locale.T(t.opts.Lang, "Content of one config version from metabox_config_versions. Secrets are masked "+
+				"(secret, password, private_key, pre_shared_key, psk, token, auth_str, access_key_secret; for url and "+
+				"download_url everything after the host) and cannot be revealed through MCP. Comments are removed, "+
+				"since they may hold secrets the mask cannot recognise."),
 		}, t.version)
 	}
 
 	if t.opts.Logs != nil {
-		addTool(server, log, &sdk.Tool{
+		addTool(server, log, t.opts.Lang, &sdk.Tool{
 			Name: "metabox_log_tail",
-			Description: "Last lines of the sing-box log, oldest first, the same text the panel log screen shows. " +
-				"level is the minimum level: trace, debug, info, notice, warn, error, fatal or panic (default: all). " +
-				"lines is 1 to 1000, default 200. Lines without a level (stack traces, continuations) pass the filter. " +
-				"URLs are hidden after the host; the rest of the line is not masked and may contain addresses and " +
-				"whatever sing-box itself prints. An empty list means no line at this level since the last clear in the panel.",
+			Description: locale.T(t.opts.Lang, "Last lines of the sing-box log, oldest first, the same text the panel log screen shows. "+
+				"level is the minimum level: trace, debug, info, notice, warn, error, fatal or panic (default: all). "+
+				"lines is 1 to 1000, default 200. Lines without a level (stack traces, continuations) pass the filter. "+
+				"URLs are hidden after the host; the rest of the line is not masked and may contain addresses and "+
+				"whatever sing-box itself prints. An empty list means no line at this level since the last clear in the panel."),
 		}, t.logTail)
 	}
 
 	if t.opts.Diag != nil {
-		addTool(server, log, &sdk.Tool{
+		addTool(server, log, t.opts.Lang, &sdk.Tool{
 			Name: "metabox_diagnostics",
-			Description: "Dataplane checks of the router, nothing is changed: sing-box listeners on the redirect, tproxy " +
-				"and DNS ports, a DNS query to sing-box dns-in, the nft interception chains, and a direct internet " +
-				"request bypassing interception. Each check is ok, fail or skipped with a reason; skipped is not a " +
-				"failure. The node latency check is always skipped here: run it from the panel.",
+			Description: locale.T(t.opts.Lang, "Dataplane checks of the router, nothing is changed: sing-box listeners on the redirect, tproxy "+
+				"and DNS ports, a DNS query to sing-box dns-in, the nft interception chains, and a direct internet "+
+				"request bypassing interception. Each check is ok, fail or skipped with a reason; skipped is not a "+
+				"failure. The node latency check is always skipped here: run it from the panel."),
 		}, t.diagnostics)
 	}
 }
@@ -311,7 +312,7 @@ type domainRoute struct {
 func (t tools) explainDomain(ctx context.Context, in explainIn) (explainOut, error) {
 	domain := strings.TrimSuffix(strings.ToLower(strings.TrimSpace(in.Domain)), ".")
 	if domain == "" {
-		return explainOut{}, fmt.Errorf("%w: domain is empty", errBadInput)
+		return explainOut{}, locale.Errorf("%w: domain is empty", errBadInput)
 	}
 
 	snapshot, err := t.liveConnections(ctx)
@@ -472,7 +473,7 @@ type versionOut struct {
 
 func (t tools) version(ctx context.Context, in versionIn) (versionOut, error) {
 	if in.ID <= 0 {
-		return versionOut{}, fmt.Errorf("%w: id must be greater than zero", errBadInput)
+		return versionOut{}, locale.Errorf("%w: id must be greater than zero", errBadInput)
 	}
 
 	data, err := t.opts.Config.ReadVersion(ctx, in.ID)
@@ -496,7 +497,7 @@ type logTailOut struct {
 func (t tools) logTail(ctx context.Context, in logTailIn) (logTailOut, error) {
 	level, ok := logs.ParseLevel(in.Level)
 	if !ok {
-		return logTailOut{}, fmt.Errorf("%w: level %q", errBadInput, in.Level)
+		return logTailOut{}, locale.Errorf("%w: level %q", errBadInput, in.Level)
 	}
 
 	snapshot, err := t.opts.Logs.Tail(ctx, clamp(in.Lines, defaultLogLines, logs.MaxLines), level)

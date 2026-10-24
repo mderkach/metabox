@@ -10,11 +10,11 @@ package route
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 
 	"metabox/internal/clashapi"
+	"metabox/internal/locale"
 )
 
 // Origin is the origin of a statement. There are exactly three values, they must not be mixed,
@@ -57,11 +57,11 @@ const (
 var (
 	// ErrNoConnection means core has no connection with such an identifier. It
 	// could have closed between the snapshot the panel sees and this request.
-	ErrNoConnection = errors.New("no connection with this ID")
+	ErrNoConnection = locale.New("no connection with this ID")
 
 	// ErrRuntimeUnavailable means the runtime did not answer. This is a source failure, not the
 	// panel's: the screen must tell "no data" from "the daemon is broken".
-	ErrRuntimeUnavailable = errors.New("sing-box runtime unavailable")
+	ErrRuntimeUnavailable = locale.New("sing-box runtime unavailable")
 )
 
 // Rule is a rule of the running process. The index equals the node index in

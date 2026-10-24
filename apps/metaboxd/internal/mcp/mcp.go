@@ -22,6 +22,7 @@ import (
 	"metabox/internal/dataplane"
 	"metabox/internal/devices"
 	"metabox/internal/diag"
+	"metabox/internal/locale"
 	"metabox/internal/logs"
 	"metabox/internal/route"
 )
@@ -31,9 +32,9 @@ const serverName = "metabox"
 var (
 	// errInternal replaces a failure whose text may hold paths or command output: the
 	// reason stays in the daemon log.
-	errInternal = errors.New("internal error, the cause is in the daemon log")
+	errInternal = locale.New("internal error, the cause is in the daemon log")
 	// errBadInput means a tool argument is outside its allowed values.
-	errBadInput = errors.New("tool argument out of range")
+	errBadInput = locale.New("tool argument out of range")
 )
 
 // exposed are the failures whose text goes to the agent as is: it says what is missing,
@@ -88,6 +89,8 @@ type ServiceReader func(ctx context.Context) (json.RawMessage, error)
 // Options are the tool dependencies. A nil dependency leaves its tool out of the server,
 // except status, which reports what is missing.
 type Options struct {
+	// Lang is the language of the tool descriptions and errors; the zero value is English.
+	Lang           locale.Lang
 	Version        string
 	SingboxVersion string
 	SingboxTags    []string
@@ -169,7 +172,7 @@ func readOnly() *sdk.ToolAnnotations {
 // addTool registers a tool through the single wrapper: a panic turns into a tool error
 // and the server keeps answering; every call leaves one log line without the arguments,
 // which may name the owner's devices and domains.
-func addTool[In, Out any](server *sdk.Server, log *slog.Logger, tool *sdk.Tool, run func(context.Context, In) (Out, error)) {
+func addTool[In, Out any](server *sdk.Server, log *slog.Logger, lang locale.Lang, tool *sdk.Tool, run func(context.Context, In) (Out, error)) {
 	tool.Annotations = readOnly()
 
 	sdk.AddTool(server, tool, func(ctx context.Context, _ *sdk.CallToolRequest, in In) (_ *sdk.CallToolResult, out Out, err error) {
@@ -181,7 +184,7 @@ func addTool[In, Out any](server *sdk.Server, log *slog.Logger, tool *sdk.Tool, 
 
 			if rec := recover(); rec != nil {
 				var zero Out
-				out, err = zero, errInternal
+				out, err = zero, errors.New(locale.Message(lang, errInternal))
 
 				log.Error("MCP tool call", append(attrs, "err", fmt.Sprint(rec), "stack", string(debug.Stack()))...)
 
@@ -190,7 +193,7 @@ func addTool[In, Out any](server *sdk.Server, log *slog.Logger, tool *sdk.Tool, 
 
 			if err != nil {
 				log.Warn("MCP tool call", append(attrs, "err", err)...)
-				err = toolError(err)
+				err = errors.New(locale.Message(lang, toolError(err)))
 
 				return
 			}

@@ -12,6 +12,7 @@ import (
 	"metabox/internal/contract"
 	"metabox/internal/dataplane"
 	"metabox/internal/devices"
+	"metabox/internal/locale"
 	"metabox/internal/logs"
 	"metabox/internal/route"
 	"metabox/internal/singbox"
@@ -20,36 +21,55 @@ import (
 // Failures produced by the HTTP layer itself. Domain errors come from the
 // internal packages and get a row in statusFor.
 var (
-	errNotFound       = errors.New("endpoint not found")
-	errOriginMismatch = errors.New("request origin does not match the panel address")
+	errNotFound       = locale.New("endpoint not found")
+	errOriginMismatch = locale.New("request origin does not match the panel address")
 	// errHostMismatch: the request Host does not look like the panel address: this is what
 	// DNS rebinding looks like, when a foreign domain is pointed at the router address.
-	errHostMismatch = errors.New("request host does not match the panel address")
+	errHostMismatch = locale.New("request host does not match the panel address")
 	// errUpgradeUnsupported: an attempt to raise a WebSocket on the proxy branch.
 	// The runtime goes as a single `/api/events` stream.
-	errUpgradeUnsupported = errors.New("WebSocket upgrade is not supported: the runtime comes through the /api/events stream")
+	errUpgradeUnsupported = locale.New("WebSocket upgrade is not supported: the runtime comes through the /api/events stream")
 	// errBadApplyEnvelope: a body with the apply envelope type was not parsed.
-	errBadApplyEnvelope = errors.New("apply request body not parsed")
+	errBadApplyEnvelope = locale.New("apply request body not parsed")
 	// errBadDeviceBody: the device name edit body was not parsed.
-	errBadDeviceBody = errors.New("device rename body not parsed")
+	errBadDeviceBody = locale.New("device rename body not parsed")
 	// errBadDataplaneBody: the dataplane model change body was not parsed as JSON.
-	errBadDataplaneBody = errors.New("dataplane model change body not parsed")
+	errBadDataplaneBody = locale.New("dataplane model change body not parsed")
 	// errDataplaneBaseMissing: a model change without If-Match: without it a UCI edit
 	// over SSH would be silently overwritten.
-	errDataplaneBaseMissing = errors.New("If-Match with the ETag from GET /api/dataplane is required")
+	errDataplaneBaseMissing = locale.New("If-Match with the ETag from GET /api/dataplane is required")
 	// errBadLogQuery: the level or the line count of the log query is not parsed.
-	errBadLogQuery = errors.New("log query parameters not parsed")
+	errBadLogQuery = locale.New("log query parameters not parsed")
 	// errUnauthorized: the panel has a password and the request came without a session.
-	errUnauthorized = errors.New("sign-in required")
+	errUnauthorized = locale.New("sign-in required")
 	// errMCPToken: MCP is on and the request came without its token or with a wrong one.
-	errMCPToken = errors.New("MCP token required")
+	errMCPToken = locale.New("MCP token required")
 	// errBadAuthBody: the login or password change body was not parsed.
-	errBadAuthBody = errors.New("sign-in or password change body not parsed")
+	errBadAuthBody = locale.New("sign-in or password change body not parsed")
 )
 
-// runtimeUnavailable is the runtime failure text for the client. The reason stays in
-// the log: it holds the controller address and the transport error text.
+// runtimeUnavailable is the log message of a runtime failure; the client gets the
+// text of route.ErrRuntimeUnavailable. The reason stays in the log: it holds the
+// controller address and the transport error text.
 const runtimeUnavailable = "sing-box runtime unavailable"
+
+type langKey struct{}
+
+// withLang carries the operator's language to the error writer, which handlers and
+// middleware reach with nothing but the request.
+func withLang(lang locale.Lang, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), langKey{}, lang)))
+	})
+}
+
+func langOf(r *http.Request) locale.Lang {
+	if lang, ok := r.Context().Value(langKey{}).(locale.Lang); ok {
+		return lang
+	}
+
+	return locale.English
+}
 
 // fail is the only place where an error turns into a response: a new kind of failure
 // is added to statusFor, not to a handler. The text of an unknown error does not go
@@ -63,10 +83,12 @@ func fail(log *slog.Logger, w http.ResponseWriter, r *http.Request, err error) {
 		return
 	}
 
+	lang := langOf(r)
+
 	if checkErr, ok := errors.AsType[*singbox.CheckError](err); ok {
 		writeJSON(log, w, http.StatusUnprocessableEntity, contract.Error{
 			Code:    contract.ErrCheckFailed,
-			Message: "sing-box rejected the config",
+			Message: locale.T(lang, "sing-box rejected the config"),
 			Details: contract.CheckDetails{
 				Stdout:   checkErr.Stdout,
 				Stderr:   checkErr.Stderr,
@@ -82,7 +104,7 @@ func fail(log *slog.Logger, w http.ResponseWriter, r *http.Request, err error) {
 	if workdirErr, ok := errors.AsType[*apply.WorkdirError](err); ok {
 		writeJSON(log, w, http.StatusConflict, contract.Error{
 			Code:    contract.ErrWorkdirMismatch,
-			Message: "the sing-box service working directory does not match the config directory",
+			Message: locale.T(lang, "the sing-box service working directory does not match the config directory"),
 			Details: contract.WorkdirDetails{
 				Workdir:   workdirErr.Workdir,
 				ConfigDir: workdirErr.ConfigDir,
@@ -96,7 +118,7 @@ func fail(log *slog.Logger, w http.ResponseWriter, r *http.Request, err error) {
 	if invalid, ok := errors.AsType[*dataplane.InvalidError](err); ok {
 		writeJSON(log, w, http.StatusUnprocessableEntity, contract.Error{
 			Code:    contract.ErrDataplaneInvalid,
-			Message: "dataplane model rejected",
+			Message: locale.T(lang, "dataplane model rejected"),
 			Details: contract.DataplaneDetails{Fields: invalid.Fields},
 		})
 
@@ -109,25 +131,25 @@ func fail(log *slog.Logger, w http.ResponseWriter, r *http.Request, err error) {
 
 	status, code := statusFor(err)
 
-	message := err.Error()
+	message := locale.Message(lang, err)
 
 	switch {
 	case status == http.StatusInternalServerError:
 		log.Error("request not served", "err", err, "method", r.Method, "path", r.URL.Path)
-		message = "internal error"
+		message = locale.T(lang, "internal error")
 	// The service command paths stay in the log: they hold a foreign service config.
 	case code == contract.ErrLaunchMismatch:
 		log.Warn("apply rejected: the service starts with a config the daemon does not own", "err", err)
-		message = "the sing-box service starts with a config metabox does not own"
+		message = locale.T(lang, "the sing-box service starts with a config metabox does not own")
 	// The reason stays in the log: it holds the log file path and the process failure.
 	case code == contract.ErrLogUnavailable:
 		log.Warn("sing-box log not read", "err", err)
-		message = logs.ErrUnavailable.Error()
+		message = locale.Message(lang, logs.ErrUnavailable)
 	// A runtime failure answers the same way as the Clash API proxy: two handlers of one
 	// layer must not behave oppositely.
 	case code == contract.ErrRuntimeUnavailable:
 		log.Warn(runtimeUnavailable, "err", err, "method", r.Method, "path", r.URL.Path)
-		message = runtimeUnavailable
+		message = locale.Message(lang, route.ErrRuntimeUnavailable)
 	}
 
 	writeJSON(log, w, status, contract.Error{Code: code, Message: message})
@@ -226,7 +248,7 @@ func ProxyError(log *slog.Logger) func(w http.ResponseWriter, r *http.Request, e
 
 		writeJSON(log, w, http.StatusBadGateway, contract.Error{
 			Code:    contract.ErrRuntimeUnavailable,
-			Message: runtimeUnavailable,
+			Message: locale.Message(langOf(r), route.ErrRuntimeUnavailable),
 		})
 	}
 }

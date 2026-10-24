@@ -14,11 +14,13 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"metabox/internal/locale"
 )
 
 var (
 	// ErrNoVersion means there is no version with such a number in the history.
-	ErrNoVersion = errors.New("no config version")
+	ErrNoVersion = locale.New("no config version")
 
 	// ErrNoVersionLists means the version was saved without a snapshot of list files, by a daemon
 	// that did not take them yet. Restoring such a version does not touch the lists.

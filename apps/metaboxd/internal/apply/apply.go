@@ -23,6 +23,7 @@ import (
 	"metabox/internal/clashapi"
 	"metabox/internal/config"
 	"metabox/internal/dataplane"
+	"metabox/internal/locale"
 	"metabox/internal/procd"
 )
 
@@ -144,25 +145,25 @@ func (t Transaction) Active() bool {
 var (
 	// ErrBusy means a second apply while a transaction is active. This is a contract
 	// error, not a race for the file: the config has one owner.
-	ErrBusy = errors.New("apply already in progress")
+	ErrBusy = locale.New("apply already in progress")
 
 	// ErrUnknownTransaction means the identifier does not match the active transaction.
-	ErrUnknownTransaction = errors.New("no transaction with this ID")
+	ErrUnknownTransaction = locale.New("no transaction with this ID")
 
 	// ErrNothingToConfirm means nothing to confirm, the window is already closed.
-	ErrNothingToConfirm = errors.New("nothing to confirm")
+	ErrNothingToConfirm = locale.New("nothing to confirm")
 
 	// ErrConfigModified means the config was edited bypassing the daemon. Silently overwriting such an edit
 	// is not allowed: the owner could have made it over SSH.
-	ErrConfigModified = errors.New("config file changed outside metabox")
+	ErrConfigModified = locale.New("config file changed outside metabox")
 
 	// ErrListsModified means list files were edited bypassing the daemon; the failure class
 	// is the same as for ErrConfigModified.
-	ErrListsModified = errors.New("list files changed outside metabox")
+	ErrListsModified = locale.New("list files changed outside metabox")
 
 	// ErrListName means the list file name does not fit the subdirectory: the path is built by
 	// the panel, and anything else is an attempt to escape it or to collide with the config.
-	ErrListName = errors.New("invalid list file name")
+	ErrListName = locale.New("invalid list file name")
 )
 
 // WorkdirError means the service working directory does not match the config directory.
@@ -433,17 +434,17 @@ func (m *Manager) Start(ctx context.Context, cfg []byte, lists Lists, base, list
 func validateLists(lists Lists) error {
 	for name := range lists.Put {
 		if !config.ValidListName(name) {
-			return fmt.Errorf("%w: %q", ErrListName, name)
+			return locale.Errorf("%w: %q", ErrListName, name)
 		}
 	}
 
 	for _, name := range lists.Remove {
 		if !config.ValidListName(name) {
-			return fmt.Errorf("%w: %q", ErrListName, name)
+			return locale.Errorf("%w: %q", ErrListName, name)
 		}
 
 		if _, ok := lists.Put[name]; ok {
-			return fmt.Errorf("%w: %q is both written and removed", ErrListName, name)
+			return locale.Errorf("%w: %q is both written and removed", ErrListName, name)
 		}
 	}
 

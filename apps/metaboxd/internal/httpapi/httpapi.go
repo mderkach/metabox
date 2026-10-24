@@ -26,6 +26,7 @@ import (
 	"metabox/internal/devices"
 	"metabox/internal/events"
 	"metabox/internal/history"
+	"metabox/internal/locale"
 	"metabox/internal/procd"
 	"metabox/internal/route"
 	"metabox/internal/ruleset"
@@ -88,6 +89,8 @@ type Explainer interface {
 // Options are the layer settings that come into the daemon as flags.
 type Options struct {
 	Version string
+	// Lang is the language of the texts in error answers; the zero value is English.
+	Lang locale.Lang
 	// SingboxVersion is the binary version on the device: the panel forms are built for
 	// one fork version, and a mismatch with the binary is visible only from here. An empty
 	// string means the version could not be read.
@@ -232,6 +235,7 @@ type Server struct {
 	diag           Diagnoser
 	auth           Guard
 	mcp            MCP
+	lang           locale.Lang
 	https          bool
 	ca             func() []byte
 	configPath     string
@@ -266,6 +270,7 @@ func NewServer(applier Applier, reader ConfigReader, log *slog.Logger, opts Opti
 		diag:           opts.Diag,
 		auth:           opts.Auth,
 		mcp:            opts.MCP,
+		lang:           opts.Lang,
 		https:          opts.HTTPS,
 		ca:             opts.CA,
 		configPath:     opts.ConfigPath,

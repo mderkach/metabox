@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"syscall"
@@ -378,6 +379,7 @@ func run(log *slog.Logger, s settings) error {
 	}
 
 	agents := mcp.New(access, log, mcp.Options{
+		Lang:           s.lang,
 		Version:        version.Version,
 		SingboxVersion: singboxVersion,
 		SingboxTags:    build.Tags,
@@ -393,6 +395,7 @@ func run(log *slog.Logger, s settings) error {
 	})
 
 	api := httpapi.NewServer(manager, store, log, httpapi.Options{
+		Lang:           s.lang,
 		Version:        version.Version,
 		Auth:           guard,
 		SingboxVersion: singboxVersion,
@@ -496,7 +499,13 @@ func run(log *slog.Logger, s settings) error {
 
 // helpLang is the language of -h: the one from -lang, otherwise the one from UCI
 // that the init script would pass, so help typed by hand on the router speaks it too.
+// A flag error also prints the usage, and under procd that goes to syslog, which
+// stays English: only an asked-for help is translated.
 func helpLang(s settings) locale.Lang {
+	if !slices.ContainsFunc(os.Args[1:], isHelpFlag) {
+		return locale.English
+	}
+
 	explicit := false
 
 	flag.Visit(func(f *flag.Flag) {
@@ -518,6 +527,15 @@ func helpLang(s settings) locale.Lang {
 	}
 
 	return lang
+}
+
+func isHelpFlag(arg string) bool {
+	switch arg {
+	case "-h", "-help", "--h", "--help":
+		return true
+	default:
+		return false
+	}
 }
 
 // runCommand translates a command launch to the form procd expects: that package
