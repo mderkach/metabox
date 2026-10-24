@@ -31,15 +31,9 @@ const CASES = SCREENS.flatMap((screenCase) => THEMES.map((theme) => ({ ...screen
 
 /**
  * Violations not fixed yet: axe rule → number of failing elements. The test fails on any other count, so a new
- * element breaking a listed rule is caught and a fix shrinks the list: an inactive config tab is 4.49:1 on the
- * light tab strip, a proxy group card's `aria-label` leaves out the latency it shows.
+ * element breaking a rule is caught and a fix shrinks the list. Keyed by `<screen> <theme>`.
  */
-const KNOWN_VIOLATIONS: Record<string, Record<string, number>> = {
-  'Editor light': { 'color-contrast': 1 },
-  'Rule sets light': { 'color-contrast': 1 },
-  'Proxies dark': { 'label-content-name-mismatch': 2 },
-  'Proxies light': { 'label-content-name-mismatch': 2 },
-};
+const KNOWN_VIOLATIONS: Record<string, Record<string, number>> = {};
 
 const READY_TIMEOUT_MS = 10_000;
 
