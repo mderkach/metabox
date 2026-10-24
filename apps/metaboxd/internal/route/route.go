@@ -62,6 +62,9 @@ var (
 	// ErrRuntimeUnavailable means the runtime did not answer. This is a source failure, not the
 	// panel's: the screen must tell "no data" from "the daemon is broken".
 	ErrRuntimeUnavailable = locale.New("sing-box runtime unavailable")
+
+	// errNotInProcessList is the text of ReasonNotInProcessList.
+	errNotInProcessList = locale.New("the connection rule is not in the rule list of the running process")
 )
 
 // Rule is a rule of the running process. The index equals the node index in
@@ -118,12 +121,13 @@ type Source interface {
 // Explainer assembles the explanation from core data.
 type Explainer struct {
 	source Source
+	lang   locale.Lang
 }
 
 // NewExplainer assembles the explanation on top of the same source as the runtime
 // stream: the daemon does not create a second set of Clash API requests.
-func NewExplainer(source Source) *Explainer {
-	return &Explainer{source: source}
+func NewExplainer(source Source, lang locale.Lang) *Explainer {
+	return &Explainer{source: source, lang: lang}
 }
 
 type clashRule struct {
@@ -159,9 +163,14 @@ func (e *Explainer) Explain(ctx context.Context, id string) (Explanation, error)
 		return Explanation{}, err
 	}
 
+	match := matchRule(connection.Rule, rules)
+	if match.ReasonCode == ReasonNotInProcessList {
+		match.Reason = locale.Message(e.lang, errNotInProcessList)
+	}
+
 	return Explanation{
 		ConnectionID: connection.ID,
-		Match:        matchRule(connection.Rule, rules),
+		Match:        match,
 		Chain:        Chain{Origin: OriginObserved, Nodes: connection.Chains},
 		Rules:        rules,
 	}, nil
@@ -254,7 +263,7 @@ func matchRule(rule string, rules []Rule) Match {
 		Origin:     OriginUnknown,
 		Kind:       KindUnknown,
 		ReasonCode: ReasonNotInProcessList,
-		Reason:     "the connection rule is not in the rule list of the running process",
+		Reason:     errNotInProcessList.Error(),
 	}
 }
 

@@ -827,15 +827,15 @@ func (s *Server) handleDataplane(w http.ResponseWriter, r *http.Request) {
 // The observed argument says whether a live sing-box process was found on the device. It matters
 // when the daemon service is stopped: routing may be owned by a foreign package,
 // and without this flag the panel would show "stopped" while traffic flows.
-func ServiceState(state singbox.State, binary string, err error, observed bool) any {
+func ServiceState(state singbox.State, binary string, err error, observed bool, lang locale.Lang) any {
 	body := contract.Service{Status: "stopped", Binary: binary}
 
 	if err != nil {
-		body.LastError = "service state not read"
+		body.LastError = locale.T(lang, "service state not read")
 		body.LastErrorCode = contract.ServiceStateUnread
 
 		if errors.Is(err, procd.ErrAmbiguousInstance) {
-			body.LastError = err.Error()
+			body.LastError = locale.Message(lang, err)
 			body.LastErrorCode = contract.ServiceInstanceAmbiguous
 		}
 
@@ -884,7 +884,7 @@ func (s *Server) handleServiceState(w http.ResponseWriter, r *http.Request) {
 		s.log.Warn("service state not read", "err", err)
 	}
 
-	writeJSON(s.log, w, http.StatusOK, ServiceState(state, s.singboxVersion, err, s.observeRuntime(r.Context())))
+	writeJSON(s.log, w, http.StatusOK, ServiceState(state, s.singboxVersion, err, s.observeRuntime(r.Context()), s.lang))
 }
 
 // handleServiceAction performs the action and returns the new state: the panel must not

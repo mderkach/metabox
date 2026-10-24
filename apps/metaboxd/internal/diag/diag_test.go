@@ -18,6 +18,7 @@ import (
 	"metabox/internal/config"
 	"metabox/internal/dataplane"
 	"metabox/internal/diag"
+	"metabox/internal/locale"
 )
 
 type fakePlane struct {
@@ -228,6 +229,21 @@ func TestDNSProbe(t *testing.T) {
 
 		if len(dns.asked) != 1 || dns.asked[0].Address != "127.0.0.1:5333" {
 			t.Errorf("query went to %+v, expected dns-in on loopback", dns.asked)
+		}
+	})
+
+	t.Run("detail follows the language", func(t *testing.T) {
+		for lang, want := range map[locale.Lang]string{
+			locale.English: "DNS probe cloudflare.com via 127.0.0.1:5333, 3 attempts: i/o timeout",
+			locale.Russian: "DNS-проба cloudflare.com через 127.0.0.1:5333, попыток 3: i/o timeout",
+		} {
+			dns := &fakeDNS{err: locale.Errorf("DNS probe %s via %s, %d attempts: %w", "cloudflare.com", "127.0.0.1:5333", 3, errors.New("i/o timeout"))}
+			opts := options()
+			opts.Lang = lang
+
+			if c := run(t, diag.New(plane, configWith(5333, "127.0.0.1:1"), dns, opts), "")[diag.NameDNSProbe]; c.Detail != want {
+				t.Errorf("%s: detail %q, want %q", lang, c.Detail, want)
+			}
 		}
 	})
 

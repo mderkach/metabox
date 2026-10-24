@@ -16,6 +16,7 @@ import (
 	"metabox/internal/clashapi"
 	"metabox/internal/config"
 	"metabox/internal/dataplane"
+	"metabox/internal/locale"
 )
 
 // check lays the candidate out in a temporary directory and gives it to the binary in the same
@@ -129,7 +130,7 @@ func (m *Manager) apply(
 		// removed it. There is then nothing to roll back to, but the apply is not
 		// stopped either.
 		if !errors.Is(err, config.ErrNoConfig) {
-			return stepFailed(ReasonBackupFailed, fmt.Errorf("backup: %w", err))
+			return stepFailed(ReasonBackupFailed, locale.Errorf("backup: %w", err))
 		}
 		m.log.Warn("no config on the device, config backup not taken")
 	}
@@ -149,11 +150,11 @@ func (m *Manager) apply(
 	}
 
 	if err := m.store.WriteLists(ctx, putLists, removeLists); err != nil {
-		return stepFailed(ReasonWriteFailed, fmt.Errorf("write lists: %w", err))
+		return stepFailed(ReasonWriteFailed, locale.Errorf("write lists: %w", err))
 	}
 
 	if err := m.store.Write(ctx, data); err != nil {
-		return stepFailed(ReasonWriteFailed, fmt.Errorf("write config: %w", err))
+		return stepFailed(ReasonWriteFailed, locale.Errorf("write config: %w", err))
 	}
 
 	lastLists, err := m.store.ListSums(ctx)
@@ -288,13 +289,13 @@ func (m *Manager) checkInterception(ctx context.Context, before planeState) erro
 
 	switch {
 	case err != nil:
-		return fmt.Errorf("check interception: %w", err)
+		return locale.Errorf("check interception: %w", err)
 	case reason != "":
 		m.log.Warn("interception not checked after the restart: nft unavailable", "applied_reason", reason)
 
 		return nil
 	case !applied:
-		return errors.New("no interception chains in nft after the restart")
+		return locale.New("no interception chains in nft after the restart")
 	}
 
 	return nil
@@ -341,14 +342,14 @@ func (m *Manager) awaitProcess(ctx context.Context, before int) error {
 		case pid > 0 && pid != before:
 			return nil
 		case pid == 0:
-			last = errors.New("service not up")
+			last = locale.New("service not up")
 		default:
-			last = fmt.Errorf("procd still reports the old pid %d", pid)
+			last = locale.Errorf("procd still reports the old pid %d", pid)
 		}
 
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("wait for the new service process: %w, last attempt: %w", ctx.Err(), last)
+			return locale.Errorf("wait for the new service process: %w, last attempt: %w", ctx.Err(), last)
 		case <-ticker.C:
 		}
 	}
@@ -466,7 +467,7 @@ func (m *Manager) rollback(ctx context.Context, log *slog.Logger) {
 		m.current.Phase = PhaseFailed
 		m.current.ReasonCode = noBackupCode
 		if m.current.Reason == "" {
-			m.current.Reason = noBackupErr.Error()
+			m.current.Reason = locale.Message(m.opts.Lang, noBackupErr)
 		}
 		if noBackupCode == ReasonListsRestored {
 			// The lists on disk are no longer the ones the daemon wrote.

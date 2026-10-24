@@ -144,4 +144,28 @@ var ru = map[string]string{
 		"и DNS, DNS-запрос к dns-in sing-box, цепочки перехвата nft и прямой запрос в интернет " +
 		"в обход перехвата. Каждая проверка — ok, fail или skipped с причиной; skipped — не " +
 		"сбой. Проверка задержки узла здесь всегда пропускается: запустите её из панели.",
+
+	"backup: %w":             "бэкап: %w",
+	"write lists: %w":        "запись списков: %w",
+	"write config: %w":       "запись конфига: %w",
+	"check interception: %w": "проверка перехвата: %w",
+	"no interception chains in nft after the restart": "цепочек перехвата в nft после рестарта нет",
+	"service not up":                                                     "служба не поднята",
+	"procd still reports the old pid %d":                                 "procd отдаёт прежний pid %d",
+	"wait for the new service process: %w, last attempt: %w":             "ожидание нового процесса службы: %w, последняя попытка: %w",
+	"write dataplane model: %w":                                          "запись модели обвязки: %w",
+	"interception chains remain after the dataplane was turned off":      "цепочки перехвата остались после выключения обвязки",
+	"interception chains missing in nft: %v":                             "цепочек перехвата в nft нет: %v",
+	"config for the DNS probe: %w":                                       "конфиг для DNS-пробы: %w",
+	"no dns-in on port %d in the config":                                 "dns-in на порту %d в конфиге нет",
+	"no backup":                                                          "бэкапа нет",
+	"no config before the apply, only the lists were restored":           "конфига до применения не было, возвращены только списки",
+	"wait for the Clash API: %w, last attempt: %w":                       "ожидание Clash API: %w, последняя попытка: %w",
+	"request to %s: %w":                                                  "запрос к %s: %w",
+	"%s answered %d":                                                     "%s ответил %d",
+	"DNS probe %s via %s: %w, last attempt: %w":                          "DNS-проба %s через %s: %w, последняя попытка: %w",
+	"DNS probe %s via %s, %d attempts: %w":                               "DNS-проба %s через %s, попыток %d: %w",
+	"the service has several instances and no instance name is set":      "у службы несколько инстансов, а имя инстанса не задано",
+	"service state not read":                                             "состояние службы не прочитано",
+	"the connection rule is not in the rule list of the running process": "правила соединения нет в списке правил работающего процесса",
 }

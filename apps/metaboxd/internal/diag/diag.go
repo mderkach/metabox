@@ -25,6 +25,7 @@ import (
 	"metabox/internal/clashapi"
 	"metabox/internal/config"
 	"metabox/internal/dataplane"
+	"metabox/internal/locale"
 )
 
 // detailLimit is the ceiling of a detail: the Clash API answer goes into it.
@@ -149,6 +150,9 @@ type Options struct {
 	URL string
 	// Timeout is the ceiling of one network check.
 	Timeout time.Duration
+	// Lang is the language of Check.Detail built from the daemon's own errors; the zero
+	// value is English.
+	Lang locale.Lang
 }
 
 // Checker runs the checks. It caches nothing: the model, config and rules
@@ -221,10 +225,10 @@ func (c *Checker) Run(ctx context.Context, proxy string) (Report, error) {
 }
 
 // interception returns a skip when the dataplane checks have nothing to apply to.
-func interception(name CheckName, modelErr error, model dataplane.Model) (Check, bool) {
+func interception(lang locale.Lang, name CheckName, modelErr error, model dataplane.Model) (Check, bool) {
 	switch {
 	case modelErr != nil:
-		return Check{Name: name, Status: StatusSkipped, Reason: ReasonModelUnavailable, Detail: modelErr.Error()}, true
+		return Check{Name: name, Status: StatusSkipped, Reason: ReasonModelUnavailable, Detail: locale.Message(lang, modelErr)}, true
 	case !model.Enabled:
 		return Check{Name: name, Status: StatusSkipped, Reason: ReasonInterceptionDisabled}, true
 	default:
@@ -238,7 +242,7 @@ func interception(name CheckName, modelErr error, model dataplane.Model) (Check,
 // to the redirect inbound leaves a failure line in the sing-box log: such a connection
 // has no original destination address.
 func (c *Checker) port(ctx context.Context, name CheckName, model dataplane.Model, modelErr error, network string, port int) Check {
-	if skip, ok := interception(name, modelErr, model); ok {
+	if skip, ok := interception(c.opts.Lang, name, modelErr, model); ok {
 		return skip
 	}
 
@@ -314,7 +318,7 @@ func udpBound(table string, port int) bool {
 }
 
 func (c *Checker) dnsProbe(ctx context.Context, model dataplane.Model, modelErr error, cfg []byte, cfgErr error) Check {
-	if skip, ok := interception(NameDNSProbe, modelErr, model); ok {
+	if skip, ok := interception(c.opts.Lang, NameDNSProbe, modelErr, model); ok {
 		return skip
 	}
 
@@ -322,7 +326,7 @@ func (c *Checker) dnsProbe(ctx context.Context, model dataplane.Model, modelErr 
 		return Check{Name: NameDNSProbe, Status: StatusSkipped, Reason: ReasonDNSNameUnset}
 	}
 
-	if skip, ok := configSkip(NameDNSProbe, cfgErr); ok {
+	if skip, ok := configSkip(c.opts.Lang, NameDNSProbe, cfgErr); ok {
 		return skip
 	}
 
@@ -332,14 +336,14 @@ func (c *Checker) dnsProbe(ctx context.Context, model dataplane.Model, modelErr 
 	}
 
 	if err := c.dns.Probe(ctx, in); err != nil {
-		return Check{Name: NameDNSProbe, Status: StatusFail, Reason: ReasonNoAnswer, Detail: clamp(err.Error())}
+		return Check{Name: NameDNSProbe, Status: StatusFail, Reason: ReasonNoAnswer, Detail: clamp(locale.Message(c.opts.Lang, err))}
 	}
 
 	return Check{Name: NameDNSProbe, Status: StatusOK, Detail: in.Address}
 }
 
 func (c *Checker) chains(ctx context.Context, model dataplane.Model, modelErr error) Check {
-	if skip, ok := interception(NameChains, modelErr, model); ok {
+	if skip, ok := interception(c.opts.Lang, NameChains, modelErr, model); ok {
 		return skip
 	}
 
@@ -347,7 +351,7 @@ func (c *Checker) chains(ctx context.Context, model dataplane.Model, modelErr er
 
 	switch {
 	case err != nil:
-		return Check{Name: NameChains, Status: StatusSkipped, Reason: ReasonNFTUnavailable, Detail: err.Error()}
+		return Check{Name: NameChains, Status: StatusSkipped, Reason: ReasonNFTUnavailable, Detail: locale.Message(c.opts.Lang, err)}
 	case reason == dataplane.NFTUnparsed:
 		return Check{Name: NameChains, Status: StatusSkipped, Reason: ReasonNFTUnparsed}
 	case reason != "":
@@ -375,12 +379,12 @@ func (c *Checker) chains(ctx context.Context, model dataplane.Model, modelErr er
 	return Check{Name: NameChains, Status: StatusOK}
 }
 
-func configSkip(name CheckName, cfgErr error) (Check, bool) {
+func configSkip(lang locale.Lang, name CheckName, cfgErr error) (Check, bool) {
 	switch {
 	case errors.Is(cfgErr, config.ErrNoConfig):
 		return Check{Name: name, Status: StatusSkipped, Reason: ReasonConfigMissing}, true
 	case cfgErr != nil:
-		return Check{Name: name, Status: StatusSkipped, Reason: ReasonConfigMissing, Detail: cfgErr.Error()}, true
+		return Check{Name: name, Status: StatusSkipped, Reason: ReasonConfigMissing, Detail: locale.Message(lang, cfgErr)}, true
 	default:
 		return Check{}, false
 	}
@@ -393,7 +397,7 @@ func (c *Checker) proxy(ctx context.Context, proxy string, cfg []byte, cfgErr er
 		return Check{Name: NameProxy, Status: StatusSkipped, Reason: ReasonProxyUnset}
 	}
 
-	if skip, ok := configSkip(NameProxy, cfgErr); ok {
+	if skip, ok := configSkip(c.opts.Lang, NameProxy, cfgErr); ok {
 		return skip
 	}
 
@@ -453,7 +457,7 @@ func (c *Checker) proxy(ctx context.Context, proxy string, cfg []byte, cfgErr er
 // of the direct TCP path, not DNS.
 func (c *Checker) direct(ctx context.Context, model dataplane.Model, modelErr error) Check {
 	if modelErr != nil {
-		return Check{Name: NameDirect, Status: StatusSkipped, Reason: ReasonModelUnavailable, Detail: modelErr.Error()}
+		return Check{Name: NameDirect, Status: StatusSkipped, Reason: ReasonModelUnavailable, Detail: locale.Message(c.opts.Lang, modelErr)}
 	}
 
 	control, ok := markControl(model.SelfMark)
@@ -477,7 +481,7 @@ func (c *Checker) direct(ctx context.Context, model dataplane.Model, modelErr er
 
 	res, err := client.Do(req)
 	if err != nil {
-		return Check{Name: NameDirect, Status: StatusFail, Reason: ReasonRequestFailed, Detail: clamp(err.Error())}
+		return Check{Name: NameDirect, Status: StatusFail, Reason: ReasonRequestFailed, Detail: clamp(locale.Message(c.opts.Lang, err))}
 	}
 
 	_ = res.Body.Close()

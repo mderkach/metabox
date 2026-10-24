@@ -11,6 +11,7 @@ import (
 
 	"metabox/internal/contract"
 	"metabox/internal/httpapi"
+	"metabox/internal/locale"
 	"metabox/internal/procd"
 	"metabox/internal/singbox"
 )
@@ -276,6 +277,23 @@ func TestServiceStateObservedRuntime(t *testing.T) {
 	}
 }
 
+func TestServiceStateFollowsLang(t *testing.T) {
+	tests := []struct {
+		lang locale.Lang
+		want string
+	}{
+		{locale.English, "service state not read"},
+		{locale.Russian, "состояние службы не прочитано"},
+	}
+
+	for _, tt := range tests {
+		body, ok := httpapi.ServiceState(singbox.State{}, testSingboxVersion, context.DeadlineExceeded, false, tt.lang).(contract.Service)
+		if !ok || body.LastError != tt.want {
+			t.Errorf("%s: last error %q, want %q", tt.lang, body.LastError, tt.want)
+		}
+	}
+}
+
 // A procd read failure is not a stop: the status in such a response is substituted, and
 // the panel tells it from an observed one only by the reason code. The code must
 // arrive on any error, including when a live process is visible and the service
@@ -300,7 +318,7 @@ func TestServiceStateUnreadCarriesCode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			body, ok := httpapi.ServiceState(singbox.State{}, testSingboxVersion, tt.err, tt.observed).(contract.Service)
+			body, ok := httpapi.ServiceState(singbox.State{}, testSingboxVersion, tt.err, tt.observed, locale.English).(contract.Service)
 			if !ok {
 				t.Fatal("response body is not contract.Service")
 			}

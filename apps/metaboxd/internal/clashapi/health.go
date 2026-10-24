@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
+	"metabox/internal/locale"
 )
 
 // Checker waits until the Clash API comes up after the service restart, step 7
@@ -45,7 +47,7 @@ func (c *Checker) Wait(ctx context.Context, s Settings) error {
 
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("wait for the Clash API: %w, last attempt: %w", ctx.Err(), last)
+			return locale.Errorf("wait for the Clash API: %w, last attempt: %w", ctx.Err(), last)
 		case <-ticker.C:
 		}
 	}
@@ -62,12 +64,12 @@ func (c *Checker) ping(ctx context.Context, base, secret string) error {
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("request to %s: %w", base, err)
+		return locale.Errorf("request to %s: %w", base, err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("%s answered %d", base, resp.StatusCode)
+		return locale.Errorf("%s answered %d", base, resp.StatusCode)
 	}
 
 	return nil

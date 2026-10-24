@@ -88,7 +88,7 @@ The operator's language is UCI `metabox.main.lang` (`en`, `ru`), passed by the i
 
 - An error whose text reaches the operator is built with `locale.New` or `locale.Errorf` instead of `errors.New` and `fmt.Errorf`. `Error()` stays English, so the log and `errors.Is` work as before.
 - A text shown as is goes through `locale.T` or `locale.Sprintf`. The text is a string literal: the catalogue test finds it in the sources.
-- The boundary translates: `fail` and the MCP tool wrapper take the text with `locale.Message`, which translates the layers built by `locale` and leaves an OS or sing-box error under them as it is.
+- The boundary translates: `fail`, the MCP tool wrapper, `Transaction.Reason` of both Apply cycles, the route explanation, the diagnostics `detail` and the service `lastError` take the text with `locale.Message`, which translates the layers built by `locale` and leaves an OS or sing-box error under them as it is. `Transaction.Reason` is stored translated in the state file: a language change applies to the next transaction.
 - A new text gets its Russian entry in `internal/locale/ru.go` in the same commit; `TestCatalogueMatchesSources` fails on a missing or orphaned entry and on different format verbs.
 - The init scripts print to the operator through `mb_msg` and `dp_fail` from `package/lib/metabox/locale.sh`, with a value as a `printf` argument, never inside the text; `dp_fail` writes syslog in English.
 - Logs are not translated: the `err` attribute is the English `Error()`.

@@ -7,6 +7,8 @@ import (
 	"net"
 	"strconv"
 	"time"
+
+	"metabox/internal/locale"
 )
 
 // DNSInbound is the address the daemon reaches the candidate dns-in at.
@@ -91,7 +93,7 @@ func (p *DNSProbe) Probe(ctx context.Context, in DNSInbound) error {
 		if attempt > 0 {
 			select {
 			case <-ctx.Done():
-				return fmt.Errorf("DNS probe %s via %s: %w, last attempt: %w", p.name, in.Address, ctx.Err(), last)
+				return locale.Errorf("DNS probe %s via %s: %w, last attempt: %w", p.name, in.Address, ctx.Err(), last)
 			case <-time.After(p.interval):
 			}
 		}
@@ -106,5 +108,5 @@ func (p *DNSProbe) Probe(ctx context.Context, in DNSInbound) error {
 		last = err
 	}
 
-	return fmt.Errorf("DNS probe %s via %s, %d attempts: %w", p.name, in.Address, p.attempts, last)
+	return locale.Errorf("DNS probe %s via %s, %d attempts: %w", p.name, in.Address, p.attempts, last)
 }
