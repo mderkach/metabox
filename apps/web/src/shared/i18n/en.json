@@ -108,7 +108,7 @@
     "megabyte": "MB",
     "gigabyte": "GB",
     "terabyte": "TB",
-    "rate": "{{value}}/s",
+    "rate": "{{value}}/\u2060s",
     "second": "{{value}} s",
     "minute": "{{value}} min",
     "hour": "{{value}} h",

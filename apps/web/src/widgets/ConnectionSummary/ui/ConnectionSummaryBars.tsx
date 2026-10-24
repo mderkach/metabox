@@ -75,9 +75,7 @@ export function ConnectionSummaryBars({
       <ul className='flex flex-col gap-2.5'>
         {bars.map((bar, index) => (
           <li key={bar.key} className={ROW}>
-            <p className='min-w-0 truncate text-xs' title={bar.label}>
-              {bar.label}
-            </p>
+            <p className='min-w-0 text-xs wrap-break-word'>{bar.label}</p>
             <p className='font-mono text-xs whitespace-nowrap text-muted-foreground tabular-nums'>
               {format(bar.value)} · {percents[index]}% · {bar.caption}
             </p>

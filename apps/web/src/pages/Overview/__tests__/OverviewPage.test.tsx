@@ -1,6 +1,7 @@
 import { renderWithRouter } from '@test/renderWithRouter';
 import { selectOption } from '@test/selectOption';
 import { server } from '@test/server';
+import { stripWordJoiners, WITHOUT_WORD_JOINERS } from '@test/wordJoiner';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
@@ -64,8 +65,8 @@ describe('overview screen', () => {
 
     const tiles = within(await screen.findByRole('list', { name: 'Скорость' }));
 
-    expect(tiles.getByText('42.4 кБ/с')).toBeInTheDocument();
-    expect(tiles.getByText('8.3 кБ/с')).toBeInTheDocument();
+    expect(tiles.getByText('42.4 кБ/с', WITHOUT_WORD_JOINERS)).toBeInTheDocument();
+    expect(tiles.getByText('8.3 кБ/с', WITHOUT_WORD_JOINERS)).toBeInTheDocument();
   });
 
   // The first stream sample is zero: showing "0 B" would
@@ -104,7 +105,9 @@ describe('overview screen', () => {
     renderWithRouter(OverviewPage);
 
     expect(
-      await screen.findByRole('figure', { name: 'Трафик за минуту: входящий до 97.7 кБ/с, исходящий до 1000 Б/с' })
+      await screen.findByRole('figure', {
+        name: (name) => stripWordJoiners(name) === 'Трафик за минуту: входящий до 97.7 кБ/с, исходящий до 1000 Б/с',
+      })
     ).toBeInTheDocument();
   });
 
@@ -282,7 +285,10 @@ describe('overview screen', () => {
     renderWithRouter(OverviewPage);
 
     expect(
-      await screen.findByText('канал pppoe-wan сейчас: входящий 2.0 кБ/с, исходящий 1.0 кБ/с', { exact: false })
+      await screen.findByText('канал pppoe-wan сейчас: входящий 2.0 кБ/с, исходящий 1.0 кБ/с', {
+        exact: false,
+        ...WITHOUT_WORD_JOINERS,
+      })
     ).toBeInTheDocument();
     expect(screen.getByText('sing-box: входящий')).toBeInTheDocument();
   });
