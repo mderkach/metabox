@@ -128,14 +128,14 @@ A set of real `config.json` files is parsed, edited at specific points and compa
 - A tick of the real clock between fake clock steps is an exception, and it is needed: msw responses and React's deferred render run outside the replaced timers, so `advanceTimersByTimeAsync` alone does not reach them. The reference to the real `setTimeout` is captured **before** the replacement (`ConfigApplyBar.test.tsx`), otherwise it turns out fake too.
 - The runtime stream is replaced with `fakeEventSource` from `src/test`: the test sends topic frames and checks the store state, not the handler internals. The handler takes a `StreamSource`, so there is no need to imitate the `EventSource` protocol; jsdom has none at all.
 - Virtualized lists: jsdom does not compute sizes, the container and row heights are supplied by a mock, otherwise zero elements render.
-- Dropdowns: opening and selecting go through `selectOption` from `src/test`. Do not reproduce it by hand: the Base UI popup has two pitfalls in jsdom, and both are described in the helper's TSDoc.
+- Dropdowns: a new select test goes to the browser project (below) and opens and picks with the mouse. The jsdom tests that still have dropdowns go through `selectOption` from `src/test`; do not reproduce it by hand: the Base UI popup has two pitfalls in jsdom, and both are described in the helper's TSDoc.
 
 ## Browser tests
 
 A test goes to the `browser` project when jsdom cannot reproduce what it checks: Base UI dropdowns and other pointer interactions, layout and sizes, computed styles, accessibility checks by a tool. The rest stays in jsdom: it is faster and needs no browser.
 
 - The file is `*.browser.test.tsx` next to the jsdom tests of the same slice. It is typed by `tsconfig.browser.json`: the browser mode declares its own matchers, and in one program with `@testing-library/jest-dom` they break the types of jsdom tests.
-- Clicks and typing go through `userEvent` from `vitest/browser`: it drives Playwright, so the click is a real mouse click. `@testing-library/user-event` dispatches synthetic events and is not used here.
+- Clicks and typing go through `userEvent` from `vitest/browser`: it drives Playwright, so the click is a real mouse click. `@testing-library/user-event` dispatches synthetic events and is not used here. A dropdown is opened by a click on the trigger and an option is picked by a click on it (`ConfigNodeAddManual.browser.test.tsx`), without `selectOption`.
 - Queries are the same Testing Library `screen` queries; matchers are the browser mode's own, `@testing-library/jest-dom` is not loaded.
 - `src/test/browserSetup.ts` loads the panel styles and the test dictionary. The jsdom stubs and `msw/node` from `setup.ts` are not there.
 
