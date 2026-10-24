@@ -1,6 +1,7 @@
 package apply_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"io/fs"
@@ -278,5 +279,82 @@ func TestReplayWithoutState(t *testing.T) {
 	}
 	if got := h.rec.snapshot(); len(got) != 0 {
 		t.Errorf("steps %v executed on a clean start", got)
+	}
+}
+
+// The same text applied twice, the daemon dies in the backup step: a journal written
+// before the backup would describe a target hash the disk already carries, and the
+// replay would restore the backup of the earlier transaction, an older config than the
+// running one. With the journal after the backup there is nothing to replay, and the
+// running config stays.
+func TestReplayAfterCrashInBackupKeepsRunningConfig(t *testing.T) {
+	tests := []struct {
+		name  string
+		lists apply.Lists
+	}{
+		{name: "same config"},
+		{name: "list-only apply", lists: apply.Lists{Put: map[string][]byte{"my.json": []byte(`{"rules":[]}`)}}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := newHarness(t)
+
+			older := []byte(`{"log":{"level":"debug"}}`)
+			h.store.mu.Lock()
+			h.store.written = older
+			h.store.sum = config.Sum(older)
+			h.store.mu.Unlock()
+
+			// The section is already in place, as in a config the panel reread after an apply:
+			// Ensure would otherwise add a fresh secret and the second text would not be the same.
+			const settled = `{"log":{"level":"info"},"experimental":{"clash_api":{"external_controller":"127.0.0.1:9090"}}}`
+
+			tx, err := h.manager.Start(t.Context(), []byte(settled), apply.Lists{}, "", "")
+			if err != nil {
+				t.Fatalf("first apply: %v", err)
+			}
+			h.waitWindow(t)
+			if _, err := h.manager.Confirm(t.Context(), tx.ID); err != nil {
+				t.Fatalf("confirm: %v", err)
+			}
+
+			running := h.store.config()
+			h.store.mu.Lock()
+			h.store.sum = config.Sum(running)
+			h.store.mu.Unlock()
+
+			// The backup step returns only when the test is over; the harness Close runs after that.
+			h.store.backupStarted, h.store.backupRelease = make(chan struct{}), make(chan struct{})
+			t.Cleanup(func() { close(h.store.backupRelease) })
+
+			if _, err := h.manager.Start(t.Context(), []byte(settled), tt.lists, "", ""); err != nil {
+				t.Fatalf("second apply: %v", err)
+			}
+			<-h.store.backupStarted
+
+			// The next daemon lifetime over the same disk.
+			h.rec.mu.Lock()
+			h.rec.calls = nil
+			h.rec.mu.Unlock()
+
+			restarted := apply.New(h.store, h.service, h.health, h.clock, slog.New(slog.DiscardHandler),
+				apply.Options{Window: window, ClashPort: clashPort, CycleTimeout: cycleTimeout, ProcessInterval: time.Millisecond})
+			t.Cleanup(restarted.Close)
+
+			if err := restarted.Replay(t.Context()); err != nil {
+				t.Fatalf("replay: %v", err)
+			}
+
+			if got := h.store.config(); !bytes.Equal(got, running) {
+				t.Errorf("config after replay %s, expected the running one %s", got, running)
+			}
+			if got := h.rec.snapshot(); slices.Contains(got, "Restore") || slices.Contains(got, "Restart") {
+				t.Errorf("steps %v: the replay rolled back although nothing was written", got)
+			}
+			if restarted.Current().Active() {
+				t.Errorf("after the replay the transaction is active: %+v", restarted.Current())
+			}
+		})
 	}
 }

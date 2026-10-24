@@ -33,8 +33,9 @@ import (
 type Phase string
 
 const (
-	// PhaseApplying means the state is written, the config is being applied. An interruption at this
-	// stage means a rollback at the next start.
+	// PhaseApplying means the backup is taken and the state is written, the config is being
+	// applied. An interruption at this stage means a rollback at the next start, and the
+	// backup it restores is this transaction's: the state reaches the disk only after it.
 	PhaseApplying Phase = "applying"
 	// PhaseAwaitingConfirm means the service is up, the confirmation window is open.
 	PhaseAwaitingConfirm Phase = "awaiting_confirm"
@@ -424,14 +425,8 @@ func (m *Manager) Start(ctx context.Context, cfg []byte, lists Lists, base, list
 		ClashAPIAdded: added,
 	}
 
-	if err := m.persist(ctx, tx); err != nil {
-		m.unreserve(token)
-
-		return Transaction{}, err
-	}
-
 	m.begin(tx)
-	m.run(prepared, changed, removed, settings, token)
+	m.run(tx, prepared, changed, removed, settings, token)
 
 	return tx, nil
 }

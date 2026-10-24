@@ -60,7 +60,14 @@ func (m *Manager) check(
 // run moves the apply into a background goroutine: the cycle outlives the request, and the confirmation
 // window lasts up to a minute. The goroutine is stopped by
 // Close, errors go to the log and to the transaction state, and wg waits for it.
-func (m *Manager) run(data []byte, putLists map[string][]byte, removeLists []string, settings clashapi.Settings, token uint64) {
+func (m *Manager) run(
+	tx Transaction,
+	data []byte,
+	putLists map[string][]byte,
+	removeLists []string,
+	settings clashapi.Settings,
+	token uint64,
+) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	m.mu.Lock()
@@ -75,35 +82,44 @@ func (m *Manager) run(data []byte, putLists map[string][]byte, removeLists []str
 		defer cancel()
 		defer m.unreserve(token)
 
-		m.cycle(ctx, data, putLists, removeLists, settings, confirmed)
+		m.cycle(ctx, tx, data, putLists, removeLists, settings, confirmed)
 	}()
 }
 
 func (m *Manager) cycle(
 	ctx context.Context,
+	tx Transaction,
 	data []byte,
 	putLists map[string][]byte,
 	removeLists []string,
 	settings clashapi.Settings,
 	confirmed <-chan struct{},
 ) {
-	id := m.Current().ID
-	log := m.log.With("transaction_id", id)
+	log := m.log.With("transaction_id", tx.ID)
 
 	log.Info("apply started",
 		"sha256", short(sum(data)), "size", len(data),
 		"lists_put", len(putLists), "lists_removed", len(removeLists))
 
-	if err := m.apply(ctx, data, putLists, removeLists, settings); err != nil {
+	// The ceiling covers the steps up to the healthcheck; the confirmation window
+	// keeps the cycle context without it.
+	stepCtx, cancel := context.WithTimeout(ctx, m.opts.CycleTimeout)
+	defer cancel()
+
+	// Nothing is written before the journal: the disk has the previous config, and
+	// a rollback from the backup, incomplete or left by an earlier transaction,
+	// would lose what works now.
+	if err := m.prepare(stepCtx, tx); err != nil {
 		log.Error("apply did not go through", "err", err)
 		m.release(PhaseFailed, err)
+		m.closeUnwritten(context.WithoutCancel(ctx), log)
 
-		if reasonOf(err) == ReasonBackupFailed {
-			m.closeUnwritten(context.WithoutCancel(ctx), log)
+		return
+	}
 
-			return
-		}
-
+	if err := m.apply(stepCtx, data, putLists, removeLists, settings); err != nil {
+		log.Error("apply did not go through", "err", err)
+		m.release(PhaseFailed, err)
 		m.rollback(context.WithoutCancel(ctx), log)
 
 		return
@@ -112,19 +128,12 @@ func (m *Manager) cycle(
 	m.await(ctx, log, confirmed)
 }
 
-// apply performs steps 4–7 of the protocol: backup, write, restart, healthcheck.
-// List files are written before the config: the config is the commit point of the transaction, and
-// the replay judges a started write by it and by the changing files.
-func (m *Manager) apply(
-	ctx context.Context,
-	data []byte,
-	putLists map[string][]byte,
-	removeLists []string,
-	settings clashapi.Settings,
-) error {
-	ctx, cancel := context.WithTimeout(ctx, m.opts.CycleTimeout)
-	defer cancel()
-
+// prepare performs step 4 of the protocol, the backup, and then writes the state.
+// The order matters for the replay: a state record on disk means the backup
+// belongs to this transaction, so a rollback from it is safe even when the config
+// hash already matched the target before the write, as with the same text applied
+// twice or a list-only apply.
+func (m *Manager) prepare(ctx context.Context, tx Transaction) error {
 	if err := m.store.Backup(ctx); err != nil {
 		// The config may be absent: before the first apply or after the owner
 		// removed it. There is then nothing to roll back to, but the apply is not
@@ -135,6 +144,23 @@ func (m *Manager) apply(
 		m.log.Warn("no config on the device, config backup not taken")
 	}
 
+	if err := m.persist(ctx, tx); err != nil {
+		return stepFailed(ReasonWriteFailed, locale.Errorf("save transaction state: %w", err))
+	}
+
+	return nil
+}
+
+// apply performs steps 5–7 of the protocol: write, restart, healthcheck.
+// List files are written before the config: the config is the commit point of the transaction, and
+// the replay judges a started write by it and by the changing files.
+func (m *Manager) apply(
+	ctx context.Context,
+	data []byte,
+	putLists map[string][]byte,
+	removeLists []string,
+	settings clashapi.Settings,
+) error {
 	// The history is built on top of the backup and has nothing to do with the rollback: its failure does not
 	// stop the apply.
 	previous, err := m.store.Read(ctx)
@@ -495,7 +521,7 @@ func (m *Manager) rollback(ctx context.Context, log *slog.Logger) {
 	}
 }
 
-// closeUnwritten closes a transaction that stopped at the backup. There was no write yet,
+// closeUnwritten closes a transaction that stopped before the journal. There was no write yet,
 // the disk has the previous config, and the backup is left from a previous transaction or
 // is incomplete: a rollback from it would lose what works now. So neither
 // Restore nor a restart; lastSum is not touched: the disk has exactly what it had before
