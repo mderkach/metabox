@@ -20,7 +20,6 @@ import {
   type ConfigChange,
   type ConfigSection,
   type GenericSection,
-  type ListChanges,
   type WorkdirMismatch,
 } from '@entities/Config';
 import {
@@ -82,17 +81,13 @@ function useDocumentRefresh(transaction: ApplyTransaction | null) {
 
 function settleDraft({ text, lists }: SubmittedApply) {
   const document = ConfigDocumentStore.getState();
-  const unchanged = document.current() === text && isSameLists(document.listChanges(), lists);
+  const unchanged = document.current() === text && JSON.stringify(document.listChanges()) === JSON.stringify(lists);
 
   if (unchanged) {
     document.discard();
   } else {
     document.rebase(text);
   }
-}
-
-function isSameLists(left: ListChanges, right: ListChanges): boolean {
-  return JSON.stringify(left) === JSON.stringify(right);
 }
 
 export const APPLY_BLOCK = {
