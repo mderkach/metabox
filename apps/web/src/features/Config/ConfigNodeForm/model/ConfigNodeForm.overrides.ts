@@ -1,4 +1,4 @@
-import type { NodeRegistry } from '@entities/Config';
+import { CONFIG_SECRET_KEYS, type NodeRegistry } from '@entities/Config';
 import { FIELD_KIND } from '@shared/lib/schemaShape';
 
 /** Failure codes of override checks on top of the schema: the `ui` substitutes the text by them. */
@@ -212,41 +212,29 @@ export const SECRET_MASK = {
 export type SecretMask = (typeof SECRET_MASK)[keyof typeof SECRET_MASK];
 
 /**
- * Secret fields by key name, in a node of any type and at any depth: the form
- * shows them masked and reveals them on a button. A key matches regardless of
- * case, as the sing-box decoder matches field names. For a URL the scheme and
- * host are visible, they show whose subscription it is, while the token lies in
- * the path or in the query. A vless or vmess `uuid` is the credential itself;
- * every `key` in the fork schema holds key material (TLS, ECH, OpenVPN, VPN
- * users); `authorization` is an HTTP header inside `headers`. The daemon masks
- * MCP results by the same list.
+ * Keys hidden after the URL host: the scheme and host show whose subscription or rule set
+ * it is, while the token lies in the path or in the query. The generator cannot tell such a
+ * key by its name, so the list is kept here, apart from the catalogue.
  */
-const SECRET_FIELD: Readonly<Partial<Record<string, SecretMask>>> = {
-  secret: SECRET_MASK.Whole,
-  password: SECRET_MASK.Whole,
-  private_key: SECRET_MASK.Whole,
-  pre_shared_key: SECRET_MASK.Whole,
-  psk: SECRET_MASK.Whole,
-  token: SECRET_MASK.Whole,
-  auth_str: SECRET_MASK.Whole,
-  access_key_secret: SECRET_MASK.Whole,
-  uuid: SECRET_MASK.Whole,
-  key: SECRET_MASK.Whole,
-  auth_key: SECRET_MASK.Whole,
-  api_token: SECRET_MASK.Whole,
-  api_key: SECRET_MASK.Whole,
-  mac_key: SECRET_MASK.Whole,
-  authorization: SECRET_MASK.Whole,
-  'proxy-authorization': SECRET_MASK.Whole,
-  url: SECRET_MASK.AfterHost,
-  download_url: SECRET_MASK.AfterHost,
-};
+const URL_FIELD: ReadonlySet<string> = new Set(['url', 'download_url']);
 
-/** Field mask by the last key of its path; `null` means the field is not a secret. */
+/**
+ * Field mask by the last key of its path; `null` means the field is not a secret. A key
+ * matches regardless of case, as the sing-box decoder matches field names. Whole-masked
+ * keys are the generated catalogue, the same one the daemon masks MCP results by.
+ */
 export function secretMaskOf(path: readonly string[]): SecretMask | null {
-  const key = path.at(-1);
+  const key = path.at(-1)?.toLowerCase();
 
-  return key === undefined ? null : (SECRET_FIELD[key.toLowerCase()] ?? null);
+  if (key === undefined) {
+    return null;
+  }
+
+  if (CONFIG_SECRET_KEYS.has(key)) {
+    return SECRET_MASK.Whole;
+  }
+
+  return URL_FIELD.has(key) ? SECRET_MASK.AfterHost : null;
 }
 
 /** Type override; `null` means the type opens with the autoform as is. */
