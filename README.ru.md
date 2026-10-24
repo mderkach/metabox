@@ -1,15 +1,16 @@
 <div align="center">
 
-<img src="docs/logo.svg" alt="metabox" width="72" />
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/readme/banner-dark.webp" />
+  <img src="docs/readme/banner-light.webp" alt="metabox" width="100%" />
+</picture>
 
-# metabox
-
-**Веб-панель для sing-box на роутерах с OpenWrt**
+**Смотрите, что роутер делает с трафиком, и меняйте это**
 
 Правка конфига в формах, применение с автоматическим откатом, объяснение, куда ушло каждое соединение.
 
 [![license](https://img.shields.io/badge/license-GPL--3.0--or--later-blue?style=flat-square)](./LICENSE)
-![version](https://img.shields.io/badge/version-0.1.0--rc.2-orange?style=flat-square)
+![release](https://img.shields.io/github/v/release/mderkach/metabox?include_prereleases&style=flat-square)
 ![OpenWrt](https://img.shields.io/badge/OpenWrt-25.12%20%7C%20SNAPSHOT-00B5E2?style=flat-square)
 ![arch](https://img.shields.io/badge/arch-aarch64-lightgrey?style=flat-square)
 
@@ -19,11 +20,11 @@
 
 ---
 
-metabox — демон на Go (`metaboxd`), который ставится на роутер пакетом apk и раздаёт встроенный веб-интерфейс. Панель работает с конфигом [sing-box-extended](https://github.com/shtorm-7/sing-box-extended) — форка sing-box: формы для узлов, правил маршрутизации и наборов правил (rule-set), ручная правка JSON и проверка значений по схеме форка до того, как конфиг попадёт на роутер.
+metabox — демон на Go (`metaboxd`), который ставится на роутер пакетом apk и раздаёт встроенный веб-интерфейс. Сейчас панель работает с [sing-box-extended](https://github.com/shtorm-7/sing-box-extended) — форком sing-box — на OpenWrt: формы для узлов, правил маршрутизации и наборов правил (rule-set), ручная правка JSON и проверка значений по схеме форка до того, как конфиг попадёт на роутер.
 
 Применение (Apply) проверяет конфиг бинарём sing-box, перезапускает службу, ждёт ответа Clash API и DNS и возвращает предыдущую версию, если проверка не прошла или вы не подтвердили в панели за минуту, что связь жива.
 
-В пакете есть своя служба sing-box и перехват трафика LAN (nftables, tproxy, upstream для dnsmasq), поэтому metabox может работать вместо re:HomeProxy.
+В пакете есть своя служба sing-box и перехват трафика LAN (nftables, tproxy, upstream для dnsmasq).
 
 <img src="docs/screenshots/desktop/overview.png" alt="Обзор" />
 
@@ -90,7 +91,15 @@ metabox — демон на Go (`metaboxd`), который ставится н�
 wget -qO- https://mderkach.github.io/metabox/install.sh | sh
 ```
 
-Скрипт ([`install.sh`](./install.sh)) проверяет, что на роутере OpenWrt с apk и архитектура `aarch64_cortex-a53`, кладёт ключ проекта и строку репозитория, ставит `sing-box-extended` из [релиза форка](https://github.com/shtorm-7/sing-box-extended/releases), если его нет, со сверкой пакета по sha256, записанному в скрипте, и выполняет `apk add metaboxd`. До первой версии без суффикса пре-релиза пакеты лежат в канале `testing`; `sh -s -- --channel stable` подключает `stable`. Скрипт спрашивает язык текстов, которые демон показывает оператору (справка, сообщения init-скриптов, детали ответов API, MCP), и пишет его в UCI `metabox.main.lang`; `--lang en|ru` отвечает заранее. Язык панели выбирается в самой панели. Обновление — `apk update && apk upgrade metaboxd`. Сборка пакета из исходников и установка отдельного файла — в [`docs/Development.ru.md`](./docs/Development.ru.md).
+Скрипт ([`install.sh`](./install.sh)):
+
+- спрашивает язык текстов, которые демон показывает оператору: справка, сообщения init-скриптов, детали ответов API, MCP; `--lang en|ru` отвечает заранее. Язык панели выбирается в самой панели;
+- проверяет, что на роутере OpenWrt с apk и архитектура `aarch64_cortex-a53`;
+- кладёт ключ проекта и строку репозитория;
+- ставит `sing-box-extended` из [релиза форка](https://github.com/shtorm-7/sing-box-extended/releases), если его нет, со сверкой пакета по sha256, записанному в скрипте;
+- выполняет `apk add metaboxd` и пишет язык в UCI `metabox.main.lang`.
+
+До первой версии без суффикса пре-релиза пакеты лежат в канале `testing`; `sh -s -- --channel stable` подключает `stable`. Обновление — `apk update && apk upgrade metaboxd`. Сборка пакета из исходников и установка отдельного файла — в [`docs/Development.ru.md`](./docs/Development.ru.md).
 
 Руками то же самое: ключ, репозиторий, затем пакет. `sing-box-extended` должен стоять заранее: в репозитории его нет.
 
@@ -108,8 +117,6 @@ apk add metaboxd
 /etc/init.d/sing-box disable
 ```
 
-Если сейчас sing-box поднимает homeproxy, оставьте его как есть: перехват metabox по умолчанию выключен и с ним не конфликтует.
-
 Положите конфиг sing-box в `/etc/sing-box/config.json` и запустите службы — при установке пакета они сами не стартуют.
 
 ```sh
@@ -123,7 +130,15 @@ apk add metaboxd
 
 Откройте `http://<адрес роутера в LAN>:8088`, например `http://192.168.1.1:8088`. Адрес нужен IP, а не имя: демон отвечает, только если в заголовке `Host` стоит IP-адрес или `localhost`, поэтому `http://openwrt.lan:8088` не откроется.
 
-Панель работает по обычному http, как LuCI: пароль, сессия и токен MCP идут по LAN открытым текстом. `option https '1'` в `/etc/config/metabox` и перезапуск `metaboxd` включают HTTPS с сертификатом от корня, который выпускает демон, а http на том же порту перенаправляется. Браузер тогда предупреждает, пока этот корень не установлен на каждом устройстве: скачайте его по адресу `http://192.168.1.1:8088/metabox-ca.crt`, сверьте отпечаток со строкой `ca_sha256` в `logread -e metaboxd` и добавьте в хранилище доверенных сертификатов системы или браузера; на телефоне откройте адрес и установите профиль. Корень ограничен приватными сетями и адресами панели: подписать сертификат для публичного сайта им нельзя. Сертификат, который на роутере уже есть, например выпущенный `acme.sh` для LuCI, отдаётся вместо собственного: укажите в той же секции `https_cert` и `https_key` с путями к PEM-файлам и перезапустите `metaboxd`; после продления перезапустите ещё раз.
+Панель работает по обычному http, как LuCI: пароль, сессия и токен MCP идут по LAN открытым текстом. Чтобы включить HTTPS, задайте `option https '1'` в `/etc/config/metabox` и перезапустите `metaboxd`: сертификат выпускается от корня, который создаёт демон, а http на том же порту перенаправляется. Корень ограничен приватными сетями и адресами панели: подписать сертификат для публичного сайта им нельзя.
+
+Браузер предупреждает, пока этот корень не установлен на каждом устройстве:
+
+1. Скачайте его по адресу `http://192.168.1.1:8088/metabox-ca.crt`.
+2. Сверьте отпечаток со строкой `ca_sha256` в `logread -e metaboxd`.
+3. Добавьте в хранилище доверенных сертификатов системы или браузера; на телефоне откройте адрес и установите профиль.
+
+Сертификат, который на роутере уже есть, например выпущенный `acme.sh` для LuCI, отдаётся вместо собственного: укажите в той же секции `https_cert` и `https_key` с путями к PEM-файлам и перезапустите `metaboxd`. После продления перезапустите ещё раз.
 
 > [!WARNING]
 > Без пароля панель открыта любому устройству в сетях из `listen_interface`, и любое из них может поменять маршрутизацию. Пароль задаётся кнопкой **Задать пароль** внизу боковой панели. Забытый пароль сбрасывается по SSH: `rm /etc/metabox/auth.json && /etc/init.d/metaboxd restart`.
@@ -140,7 +155,7 @@ apk add metaboxd
 
 ### Перехват трафика LAN
 
-По умолчанию перехват выключен: `option enabled '0'` в секции `dataplane` файла `/etc/config/metabox`. Если стоит homeproxy, сначала остановите его, иначе две системы будут заворачивать один и тот же трафик.
+По умолчанию перехват выключен: `option enabled '0'` в секции `dataplane` файла `/etc/config/metabox`. Если трафик LAN уже перехватывает другая служба, сначала остановите её, иначе две системы будут заворачивать один и тот же трафик.
 
 В конфиге sing-box должны быть входы на портах из секции `dataplane`: `direct` на 5333 для DNS, `redirect` на 5331, `tproxy` на 5332 для UDP, а `route.default_mark` должен быть равен `self_mark` (100).
 
@@ -190,7 +205,7 @@ claude mcp add --transport http metabox http://192.168.1.1:8088/mcp --header "Au
 apk del metaboxd
 ```
 
-`stop` службы `metabox-singbox` снимает перехват: правила nftables, `ip rule` и фрагмент dnsmasq. После удаления sing-box не запущен — если он нужен, включите службу форка или homeproxy.
+`stop` службы `metabox-singbox` снимает перехват: правила nftables, `ip rule` и фрагмент dnsmasq. После удаления sing-box не запущен — если он нужен, включите службу форка.
 
 ## Документация
 
