@@ -26,7 +26,7 @@ export function OverviewTile({
   return (
     <li className='flex flex-col gap-1 bg-card px-4 py-3.5'>
       <dl className='flex flex-col gap-0.5'>
-        <dt className='text-xs text-muted-foreground'>{label}</dt>
+        <dt className='text-sm font-medium text-muted-foreground'>{label}</dt>
         <dd className={cn('text-xl font-semibold tabular-nums', tone)}>
           {value ?? <Skeleton aria-hidden='true' className={cn('h-7 w-24', PENDING_REVEAL)} />}
         </dd>
