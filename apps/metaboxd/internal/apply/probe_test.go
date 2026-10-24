@@ -1,11 +1,14 @@
 package apply_test
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -44,7 +47,10 @@ func (p *fakePlane) Applied(context.Context) (bool, dataplane.AppliedReason, err
 	return p.applied[i], "", nil
 }
 
+// fakeProber answers in call order with errs, the last one repeats; without errs every probe passes.
 type fakeProber struct {
+	errs []error
+
 	mu    sync.Mutex
 	calls []clashapi.DNSInbound
 }
@@ -55,14 +61,24 @@ func (p *fakeProber) Probe(_ context.Context, in clashapi.DNSInbound) error {
 
 	p.calls = append(p.calls, in)
 
-	return nil
+	if len(p.errs) == 0 {
+		return nil
+	}
+
+	return p.errs[min(len(p.calls), len(p.errs))-1]
 }
 
 func newProbeHarness(t *testing.T, plane apply.Dataplane, dns apply.DNSProber) *harness {
 	t.Helper()
 
+	return newProbeHarnessWith(t, plane, dns, slog.New(slog.DiscardHandler))
+}
+
+func newProbeHarnessWith(t *testing.T, plane apply.Dataplane, dns apply.DNSProber, log *slog.Logger) *harness {
+	t.Helper()
+
 	h := newHarness(t)
-	h.manager = apply.New(h.store, h.service, h.health, h.clock, slog.New(slog.DiscardHandler), apply.Options{
+	h.manager = apply.New(h.store, h.service, h.health, h.clock, log, apply.Options{
 		Window:          window,
 		ClashPort:       clashPort,
 		CycleTimeout:    cycleTimeout,
@@ -160,15 +176,17 @@ func TestBrokenDNSRollsBack(t *testing.T) {
 
 // All provider nodes are dead while the uplink is alive: the process is new, the Clash API answers
 // and the interception chains stay. A dns-in whose upstream goes through a dead node answers
-// nothing: the fork's HijackDNSPacket writes no response when the exchange fails. So the healthcheck
-// rolls the config back, although the previous one goes through the same nodes. A probe name
-// resolved by a direct server or by FakeIP does not reach the nodes and passes.
-func TestAllNodesDeadRollsBackOnDNSProbe(t *testing.T) {
+// nothing: the fork's HijackDNSPacket writes no response when the exchange fails. The running config
+// goes through the same nodes and fails the probe before the restart too, so the apply keeps the
+// new config and leaves it to the confirmation window. A probe name resolved by a direct server or
+// by FakeIP does not reach the nodes and passes.
+func TestAllNodesDeadKeepsConfigOnDNSProbe(t *testing.T) {
 	port := silentDNSPort(t)
 
 	probe := clashapi.NewDNSProbe("example.com", 30*time.Millisecond, time.Millisecond, 2)
 	plane := &fakePlane{model: planeWith(true, port), applied: []bool{true}}
 	h := newProbeHarness(t, plane, probe)
+	h.store.written = []byte(configWithDNSIn(port))
 
 	if _, err := h.manager.Start(t.Context(), []byte(configWithDNSIn(port)), apply.Lists{}, "", ""); err != nil {
 		t.Fatalf("apply: %v", err)
@@ -176,14 +194,55 @@ func TestAllNodesDeadRollsBackOnDNSProbe(t *testing.T) {
 
 	tx := waitOutcome(t, h)
 
-	if tx.Phase != apply.PhaseRolledBack {
-		t.Fatalf("phase %q, expected rollback", tx.Phase)
+	if tx.Phase != apply.PhaseAwaitingConfirm {
+		t.Fatalf("phase %q, expected awaiting confirmation: %s", tx.Phase, tx.Reason)
 	}
-	if tx.ReasonCode != apply.ReasonDNSProbeFailed {
-		t.Errorf("reason code %q, expected %q: the Clash API and interception must pass with dead nodes", tx.ReasonCode, apply.ReasonDNSProbeFailed)
+	if h.rec.index("Restore") >= 0 {
+		t.Error("previous config restored, although it failed the probe as well")
 	}
-	if h.rec.index("Restore") < 0 {
-		t.Error("previous config not restored")
+}
+
+func TestDNSProbeBeforeRestart(t *testing.T) {
+	failed := errors.New("dns-in silent")
+
+	tests := []struct {
+		name      string
+		errs      []error
+		wantPhase apply.Phase
+		wantCode  apply.ReasonCode
+		wantWarn  bool
+	}{
+		{"DNS answered before the restart and fails after: rollback", []error{nil, failed}, apply.PhaseRolledBack, apply.ReasonDNSProbeFailed, false},
+		{"DNS broken before and after the restart: no rollback, warning", []error{failed}, apply.PhaseAwaitingConfirm, "", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var logs bytes.Buffer
+
+			prober := &fakeProber{errs: tt.errs}
+			h := newProbeHarnessWith(t, &fakePlane{model: planeWith(false, 5333)}, prober, slog.New(slog.NewTextHandler(&logs, nil)))
+			h.store.written = []byte(configWithDNSIn(5333))
+
+			if _, err := h.manager.Start(t.Context(), []byte(configWithDNSIn(5333)), apply.Lists{}, "", ""); err != nil {
+				t.Fatalf("apply: %v", err)
+			}
+
+			tx := waitOutcome(t, h)
+			h.manager.Close()
+
+			if tx.Phase != tt.wantPhase {
+				t.Errorf("phase %q, expected %q: %s", tx.Phase, tt.wantPhase, tx.Reason)
+			}
+			if tx.ReasonCode != tt.wantCode {
+				t.Errorf("reason code %q, expected %q", tx.ReasonCode, tt.wantCode)
+			}
+
+			warned := strings.Contains(logs.String(), "level=WARN") && strings.Contains(logs.String(), "DNS-проба не прошла и до рестарта")
+			if warned != tt.wantWarn {
+				t.Errorf("skip warning %v, expected %v:\n%s", warned, tt.wantWarn, logs.String())
+			}
+		})
 	}
 }
 

@@ -181,6 +181,15 @@ func (m *Manager) apply(
 
 	plane, planeRead := m.planeBefore(ctx)
 
+	// Only an unanswered query to the running dns-in counts: a previous config that is absent or
+	// unreadable says nothing about DNS before the restart.
+	var dnsBefore error
+	if planeRead && m.opts.DNS != nil {
+		if inbound, ok, err := clashapi.ReadDNSInbound(previous, plane.model.DNSPort); err == nil && ok {
+			dnsBefore = m.opts.DNS.Probe(ctx, inbound)
+		}
+	}
+
 	if err := m.service.Restart(ctx); err != nil {
 		return stepFailed(ReasonRestartFailed, err)
 	}
@@ -201,6 +210,14 @@ func (m *Manager) apply(
 
 	if err := m.checkInterception(ctx, plane); err != nil {
 		return stepFailed(ReasonInterceptionMissing, err)
+	}
+
+	// DNS that failed on the running config was not broken by this apply, and a rollback to the
+	// same upstream would not repair it: dead provider nodes take both configs down.
+	if dnsBefore != nil {
+		m.log.Warn("DNS-проба не прошла и до рестарта; проверка DNS после рестарта пропущена", "err", dnsBefore)
+
+		return nil
 	}
 
 	if err := m.probeDNS(ctx, data, plane.model.DNSPort); err != nil {
