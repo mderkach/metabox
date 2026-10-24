@@ -151,7 +151,7 @@ var ru = map[string]string{
 	"check interception: %w": "проверка перехвата: %w",
 	"no interception chains in nft after the restart": "цепочек перехвата в nft после рестарта нет",
 	"service not up":                                                     "служба не поднята",
-	"procd still reports the old pid %d":                                 "procd отдаёт прежний pid %d",
+	"procd still reports the old pid %d":                                 "procd всё ещё сообщает прежний pid %d",
 	"wait for the new service process: %w, last attempt: %w":             "ожидание нового процесса службы: %w, последняя попытка: %w",
 	"write dataplane model: %w":                                          "запись модели обвязки: %w",
 	"interception chains remain after the dataplane was turned off":      "цепочки перехвата остались после выключения обвязки",
@@ -168,4 +168,7 @@ var ru = map[string]string{
 	"the service has several instances and no instance name is set":      "у службы несколько инстансов, а имя инстанса не задано",
 	"service state not read":                                             "состояние службы не прочитано",
 	"the connection rule is not in the rule list of the running process": "правила соединения нет в списке правил работающего процесса",
+	"service %s: %w":                                                     "служба %s: %w",
+	"service state: %w":                                                  "состояние службы: %w",
+	"build request to %s: %w":                                            "сборка запроса к %s: %w",
 }

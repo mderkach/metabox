@@ -2,7 +2,6 @@ package clashapi
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -56,7 +55,7 @@ func (c *Checker) Wait(ctx context.Context, s Settings) error {
 func (c *Checker) ping(ctx context.Context, base, secret string) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, base+"/version", nil)
 	if err != nil {
-		return fmt.Errorf("build request to %s: %w", base, err)
+		return locale.Errorf("build request to %s: %w", base, err)
 	}
 	if secret != "" {
 		req.Header.Set("Authorization", "Bearer "+secret)

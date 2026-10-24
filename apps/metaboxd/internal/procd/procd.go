@@ -122,7 +122,7 @@ func (c *Client) Service(ctx context.Context, name, instance string) (State, err
 
 	if instance == "" {
 		if len(service.Instances) > 1 {
-			return State{}, fmt.Errorf("service %s: %w", name, ErrAmbiguousInstance)
+			return State{}, locale.Errorf("service %s: %w", name, ErrAmbiguousInstance)
 		}
 
 		for only := range service.Instances {

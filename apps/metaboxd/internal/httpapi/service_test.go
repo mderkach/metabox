@@ -292,6 +292,19 @@ func TestServiceStateFollowsLang(t *testing.T) {
 			t.Errorf("%s: last error %q, want %q", tt.lang, body.LastError, tt.want)
 		}
 	}
+
+	// The chain the service client builds when procd lists several instances.
+	ambiguous := locale.Errorf("service state: %w", locale.Errorf("service %s: %w", "metabox-singbox", procd.ErrAmbiguousInstance))
+
+	for lang, want := range map[locale.Lang]string{
+		locale.English: "service state: service metabox-singbox: the service has several instances and no instance name is set",
+		locale.Russian: "состояние службы: служба metabox-singbox: у службы несколько инстансов, а имя инстанса не задано",
+	} {
+		body, ok := httpapi.ServiceState(singbox.State{}, testSingboxVersion, ambiguous, true, lang).(contract.Service)
+		if !ok || body.LastError != want {
+			t.Errorf("%s: last error %q, want %q", lang, body.LastError, want)
+		}
+	}
 }
 
 // A procd read failure is not a stop: the status in such a response is substituted, and
