@@ -47,8 +47,6 @@ func writeAtomic(dir, name string, data []byte, perm os.FileMode) (err error) {
 }
 ```
 
-The error texts in the examples are in Russian, like all daemon error texts: see [ErrorsAndLogging](./ErrorsAndLogging.md).
-
 The temporary file name does not end in `.json`: the service can run in directory mode (`sing-box -D /etc/sing-box -C /etc/sing-box run`) and then merges all `.json` files of the directory; otherwise the temporary file gets into the config between steps. The fork's package runs it with a single file (`run -c <conffile> -D <workdir>`), but the daemon must handle both modes.
 
 `os.CreateTemp` creates the file with mode 0600. The target file mode is taken from the existing file (`os.Stat` before writing), not set by a constant: the owner may have narrowed it on purpose. The daemon's service files, the backup and the transaction state, live outside the config directory and are created with 0600: they hold the same content as the config, including keys.
