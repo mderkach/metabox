@@ -1,6 +1,6 @@
 # ADR-0062. Translate the daemon's operator texts with an English-keyed catalogue, the language chosen in UCI
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-24
 - Deciders: repository owner
 

@@ -1,6 +1,6 @@
 # ADR-0064. Run browser tests in a Vitest browser project next to the jsdom projects
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-24
 - Deciders: repository owner
 
