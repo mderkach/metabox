@@ -1,6 +1,7 @@
+import { stripWordJoiners } from '@test/wordJoiner';
 import { describe, expect, it } from 'vitest';
 
-import { formatAge, formatDate, formatDateTime } from '../format';
+import { formatAge, formatBytes, formatDate, formatDateTime, formatRate } from '../format';
 
 describe('connection age', () => {
   it('in the first minute counts in seconds', () => {
@@ -18,6 +19,16 @@ describe('connection age', () => {
     expect(formatAge(3600)).toBe('1 ч');
     expect(formatAge(86_399)).toBe('23 ч');
     expect(formatAge(86_400)).toBe('1 д');
+  });
+});
+
+describe('rate', () => {
+  it('joins the unit to the slash so it does not break after it', () => {
+    expect(formatRate(2048)).toContain('/\u2060с');
+  });
+
+  it('reads as bytes per second once the joiner is dropped', () => {
+    expect(stripWordJoiners(formatRate(2048))).toBe(`${formatBytes(2048)}/с`);
   });
 });
 
