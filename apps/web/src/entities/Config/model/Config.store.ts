@@ -64,6 +64,8 @@ export interface ConfigDocumentState {
   /** Remove a list file on apply. */
   removeList: (name: string) => void;
   discard: () => void;
+  /** Moves the base of the draft onto `base`: the text it was written on top of is now on the device. */
+  rebase: (base: string) => void;
   /** Forget both the file and the draft: the panel rereads the config from the device. */
   reset: () => void;
   /** Text the user will see and that goes into Apply. */
@@ -176,6 +178,10 @@ const ConfigDocumentStateProto = stateCreator<ConfigDocumentState>((set, get) =>
           ? state
           : { draft: null, draftBase: null, listsDraft: {}, revision: state.revision + 1 }
       );
+    },
+
+    rebase: (base) => {
+      set((state) => (state.draft === null || state.draftBase === base ? state : { draftBase: base }));
     },
 
     reset: () => {
