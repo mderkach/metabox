@@ -36,11 +36,11 @@ const (
 
 var (
 	// ErrInvalidMAC means the address does not look like a six-byte Ethernet MAC.
-	ErrInvalidMAC = errors.New("MAC-адрес не разобран")
+	ErrInvalidMAC = errors.New("MAC address not parsed")
 	// ErrInvalidName means the name is longer than allowed or has control characters.
-	ErrInvalidName = errors.New("имя устройства не принято")
+	ErrInvalidName = errors.New("device name rejected")
 	// ErrTooManyNames means there are more own names than the daemon agrees to store.
-	ErrTooManyNames = errors.New("своих имён устройств слишком много")
+	ErrTooManyNames = errors.New("too many custom device names")
 )
 
 // NameSource is where the device label comes from. The set is closed: the panel
@@ -144,7 +144,7 @@ func New(ctx context.Context, run Runner, store Store, opts Options) (*Registry,
 
 	var saved map[string]string
 	if err := json.Unmarshal(data, &saved); err != nil {
-		return nil, fmt.Errorf("разбор имён устройств: %w", err)
+		return nil, fmt.Errorf("parse device names: %w", err)
 	}
 
 	for raw, name := range saved {
@@ -284,12 +284,12 @@ func (r *Registry) Rename(ctx context.Context, rawMAC, name string) error {
 	}
 
 	if len(next) > maxNames {
-		return fmt.Errorf("%w: потолок %d", ErrTooManyNames, maxNames)
+		return fmt.Errorf("%w: limit %d", ErrTooManyNames, maxNames)
 	}
 
 	data, err := json.Marshal(next)
 	if err != nil {
-		return fmt.Errorf("имена устройств в JSON: %w", err)
+		return fmt.Errorf("encode device names: %w", err)
 	}
 
 	if err := r.store.WriteDevices(ctx, data); err != nil {
@@ -303,11 +303,11 @@ func (r *Registry) Rename(ctx context.Context, rawMAC, name string) error {
 
 func validName(name string) error {
 	if utf8.RuneCountInString(name) > maxNameRunes {
-		return fmt.Errorf("%w: длиннее %d символов", ErrInvalidName, maxNameRunes)
+		return fmt.Errorf("%w: longer than %d characters", ErrInvalidName, maxNameRunes)
 	}
 
 	if strings.ContainsFunc(name, unicode.IsControl) {
-		return fmt.Errorf("%w: управляющие символы", ErrInvalidName)
+		return fmt.Errorf("%w: control characters", ErrInvalidName)
 	}
 
 	return nil

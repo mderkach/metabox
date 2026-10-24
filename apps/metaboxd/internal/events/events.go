@@ -278,7 +278,7 @@ func (h *Hub) runStream(ctx context.Context, gen uint64, topic, path string) {
 			h.publish(gen, topic, line)
 		})
 		if err != nil && ctx.Err() == nil {
-			h.log.Debug("поток рантайма оборван", "topic", topic, "err", err)
+			h.log.Debug("runtime stream broke", "topic", topic, "err", err)
 		}
 
 		if !sleep(ctx, h.opts.RetryInterval) {
@@ -299,7 +299,7 @@ func (h *Hub) runPoll(
 		if err == nil {
 			h.publish(gen, topic, data)
 		} else if ctx.Err() == nil {
-			h.log.Debug("опрос рантайма не удался", "topic", topic, "err", err)
+			h.log.Debug("runtime not polled", "topic", topic, "err", err)
 		}
 
 		if !sleep(ctx, interval) {
@@ -324,7 +324,7 @@ func (h *Hub) PublishConnections(raw json.RawMessage) {
 
 	body, _, err := connectionsSnapshot(raw)
 	if err != nil {
-		h.log.Debug("опрос рантайма не удался", "topic", TopicConnections, "err", err)
+		h.log.Debug("runtime not polled", "topic", TopicConnections, "err", err)
 
 		return
 	}
@@ -339,7 +339,7 @@ func (h *Hub) publish(gen uint64, topic string, data json.RawMessage) {
 	// would settle in the topic's last state, and then envelope building would fail
 	// for every connecting reader, causing a reconnect storm.
 	if !json.Valid(data) {
-		h.log.Debug("источник отдал не JSON", "topic", topic)
+		h.log.Debug("source returned non-JSON", "topic", topic)
 
 		return
 	}
@@ -376,7 +376,7 @@ func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Support is checked before the first write: the flush attempt itself would send
 	// the header, and there would be no way to refuse after that.
 	if !SupportsFlush(w) {
-		http.Error(w, "поток не поддерживается", http.StatusInternalServerError)
+		http.Error(w, "streaming not supported", http.StatusInternalServerError)
 
 		return
 	}
@@ -536,7 +536,7 @@ func lines(r io.Reader, sink func(json.RawMessage)) error {
 	}
 
 	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("чтение потока: %w", err)
+		return fmt.Errorf("read stream: %w", err)
 	}
 
 	// The end of a response for a stream is a break, not a normal finish: the runtime

@@ -52,7 +52,7 @@ func requireSession(log *slog.Logger, guard Guard, next http.Handler) http.Handl
 
 		enabled, valid := guard.Check(token)
 		if enabled && !valid {
-			log.Debug("запрос без сессии", "method", r.Method, "path", r.URL.Path)
+			log.Debug("request without a session", "method", r.Method, "path", r.URL.Path)
 			fail(log, w, r, errUnauthorized)
 
 			return
@@ -170,13 +170,13 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 
 	token, err := s.auth.Login(r.Context(), addr, req.Password)
 	if err != nil {
-		s.logRejected("вход отклонён", addr, err)
+		s.logRejected("sign-in rejected", addr, err)
 		fail(s.log, w, r, err)
 
 		return
 	}
 
-	s.log.Info("вход в панель", "addr", addr)
+	s.log.Info("panel sign-in", "addr", addr)
 	setSession(w, r, token)
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -200,7 +200,7 @@ func (s *Server) handlePassword(w http.ResponseWriter, r *http.Request) {
 
 	token, err := s.auth.SetPassword(r.Context(), addr, sessionToken(r), req.Current, req.Password)
 	if err != nil {
-		s.logRejected("смена пароля отклонена", addr, err)
+		s.logRejected("password change rejected", addr, err)
 		fail(s.log, w, r, err)
 
 		return
@@ -208,12 +208,12 @@ func (s *Server) handlePassword(w http.ResponseWriter, r *http.Request) {
 
 	switch {
 	case token == "" && wasEnabled:
-		s.log.Info("пароль панели снят", "addr", addr)
+		s.log.Info("panel password removed", "addr", addr)
 		clearSession(w, r)
 	case token == "":
 		clearSession(w, r)
 	default:
-		s.log.Info("пароль панели задан", "addr", addr)
+		s.log.Info("panel password set", "addr", addr)
 		setSession(w, r, token)
 	}
 

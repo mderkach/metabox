@@ -35,7 +35,7 @@ func (s *Server) handleMCP(w http.ResponseWriter, r *http.Request) {
 
 	next := s.mcp.Handler(bearerToken(r))
 	if next == nil {
-		s.log.Warn("запрос MCP без верного токена", "addr", clientAddr(r))
+		s.log.Warn("MCP request without a valid token", "addr", clientAddr(r))
 		w.Header().Set("WWW-Authenticate", "Bearer")
 		fail(s.log, w, r, errMCPToken)
 
@@ -75,7 +75,7 @@ func (s *Server) handleMCPToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.log.Info("выпущен токен MCP", "addr", clientAddr(r))
+	s.log.Info("MCP token issued", "addr", clientAddr(r))
 	writeJSON(s.log, w, http.StatusOK, contract.MCPToken{
 		Token:       token,
 		Endpoint:    mcpPath,
@@ -90,6 +90,6 @@ func (s *Server) handleMCPDisable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.log.Info("MCP выключен", "addr", clientAddr(r))
+	s.log.Info("MCP disabled", "addr", clientAddr(r))
 	w.WriteHeader(http.StatusNoContent)
 }

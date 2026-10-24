@@ -90,7 +90,7 @@ describe('useRuntimeStreams', () => {
     server.use(
       http.get(AUTH_ENDPOINT.state(), () => HttpResponse.json({ enabled: true, authenticated: true })),
       http.get(DAEMON_ENDPOINT.status(), () =>
-        HttpResponse.json({ code: 'unauthorized', message: 'нужен вход в панель' }, { status: 401 })
+        HttpResponse.json({ code: 'unauthorized', message: 'sign-in required' }, { status: 401 })
       )
     );
 

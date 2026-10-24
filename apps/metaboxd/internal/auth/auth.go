@@ -63,14 +63,14 @@ const (
 
 var (
 	// ErrWrongPassword means the password does not match the stored one.
-	ErrWrongPassword = errors.New("пароль не подошёл")
+	ErrWrongPassword = errors.New("wrong password")
 	// ErrPasswordInvalid means the new password is shorter or longer than allowed.
-	ErrPasswordInvalid = errors.New("пароль не принят")
+	ErrPasswordInvalid = errors.New("password rejected")
 	// ErrNotSet means a login was attempted while the panel has no password.
-	ErrNotSet = errors.New("пароль панели не задан")
+	ErrNotSet = errors.New("panel password is not set")
 	// ErrNoSession means a password change on a protected panel came without a valid
 	// session.
-	ErrNoSession = errors.New("нужен вход в панель")
+	ErrNoSession = errors.New("sign-in required")
 )
 
 // LockedError means login is locked out: the client address made too many wrong
@@ -80,7 +80,7 @@ type LockedError struct {
 }
 
 func (e *LockedError) Error() string {
-	return fmt.Sprintf("слишком много неверных паролей, повтор через %s", e.RetryAfter.Round(time.Second))
+	return fmt.Sprintf("too many wrong passwords, retry in %s", e.RetryAfter.Round(time.Second))
 }
 
 // Store keeps the password hash file and the session file. ReadAuth and ReadSessions
@@ -219,16 +219,16 @@ func New(ctx context.Context, store Store, opts Options) (*Guard, error) {
 
 	var rec record
 	if err := json.Unmarshal(data, &rec); err != nil {
-		return nil, fmt.Errorf("разбор файла пароля: %w", err)
+		return nil, fmt.Errorf("parse password file: %w", err)
 	}
 
 	switch {
 	case rec.Algorithm == "" && len(rec.Key) == 0:
 		return g, nil
 	case rec.Algorithm != algorithm:
-		return nil, fmt.Errorf("файл пароля: алгоритм %q не поддерживается", rec.Algorithm)
+		return nil, fmt.Errorf("password file: algorithm %q is not supported", rec.Algorithm)
 	case rec.Iterations <= 0 || len(rec.Salt) == 0 || len(rec.Key) == 0:
-		return nil, errors.New("файл пароля: нет числа итераций, соли или ключа")
+		return nil, errors.New("password file: no iteration count, salt or key")
 	}
 
 	g.password = &rec
@@ -251,7 +251,7 @@ func (g *Guard) restoreSessions(ctx context.Context) {
 	}
 
 	if err != nil {
-		g.log.Warn("сессии панели не восстановлены", "err", err)
+		g.log.Warn("panel sessions not restored", "err", err)
 
 		return
 	}
@@ -417,7 +417,7 @@ func (g *Guard) SetPassword(ctx context.Context, addr netip.Addr, token, current
 	}
 
 	if n := utf8.RuneCountInString(next); n < minPasswordRunes || n > maxPasswordRunes {
-		return "", fmt.Errorf("%w: от %d до %d символов", ErrPasswordInvalid, minPasswordRunes, maxPasswordRunes)
+		return "", fmt.Errorf("%w: %d to %d characters", ErrPasswordInvalid, minPasswordRunes, maxPasswordRunes)
 	}
 
 	fresh, err := g.derive(ctx, next)
@@ -427,7 +427,7 @@ func (g *Guard) SetPassword(ctx context.Context, addr netip.Addr, token, current
 
 	data, err := json.Marshal(fresh)
 	if err != nil {
-		return "", fmt.Errorf("файл пароля в JSON: %w", err)
+		return "", fmt.Errorf("encode password file: %w", err)
 	}
 
 	if err := g.store.WriteAuth(ctx, data); err != nil {
@@ -461,7 +461,7 @@ func (g *Guard) derive(ctx context.Context, password string) (*record, error) {
 	}
 
 	if hashErr != nil {
-		return nil, fmt.Errorf("хеш пароля: %w", hashErr)
+		return nil, fmt.Errorf("hash password: %w", hashErr)
 	}
 
 	return &record{Algorithm: algorithm, Iterations: g.iterations, Salt: salt, Key: key}, nil
@@ -675,9 +675,9 @@ func (g *Guard) saveSessions(ctx context.Context, revoked bool) {
 	switch {
 	case err == nil:
 	case revoked:
-		g.log.Error("отзыв сессий панели не сохранён, рестарт их вернёт", "err", err)
+		g.log.Error("panel session revocation not saved, a restart brings the sessions back", "err", err)
 	default:
-		g.log.Warn("сессии панели не сохранены", "err", err)
+		g.log.Warn("panel sessions not saved", "err", err)
 	}
 }
 

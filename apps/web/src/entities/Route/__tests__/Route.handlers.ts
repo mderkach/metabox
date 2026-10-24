@@ -112,10 +112,7 @@ export function createRouteHandlers(connections: readonly ExplainedConnection[])
       const explanation = findExplanation(id);
 
       return explanation === undefined
-        ? HttpResponse.json(
-            { code: 'connection_missing', message: 'соединения с таким идентификатором нет' },
-            { status: 404 }
-          )
+        ? HttpResponse.json({ code: 'connection_missing', message: 'no connection with this ID' }, { status: 404 })
         : HttpResponse.json({ ...explanation, connection_id: id });
     }),
   ];

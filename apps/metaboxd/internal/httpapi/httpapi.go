@@ -24,6 +24,7 @@ import (
 	"metabox/internal/contract"
 	"metabox/internal/dataplane"
 	"metabox/internal/devices"
+	"metabox/internal/events"
 	"metabox/internal/history"
 	"metabox/internal/procd"
 	"metabox/internal/route"
@@ -361,7 +362,7 @@ func (s *Server) routes() http.Handler {
 	}
 
 	if s.events != nil {
-		mux.Handle("GET /api/events", s.events)
+		mux.HandleFunc("GET /api/events", s.handleEvents)
 	}
 
 	if s.clash != nil {
@@ -429,6 +430,18 @@ func (s *Server) runtimeSources() contract.Runtime {
 	return out
 }
 
+// handleEvents checks flush support before the hub does: the hub refuses in plain text,
+// and the panel reads a refusal by its code.
+func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
+	if !events.SupportsFlush(w) {
+		fail(s.log, w, r, errors.New("event stream: response without buffer flush"))
+
+		return
+	}
+
+	s.events.ServeHTTP(w, r)
+}
+
 // handleConfig returns the config with exactly the bytes it lies on disk with:
 // the daemon neither parses nor reformats it, otherwise a round trip
 // of a handwritten config would lose formatting.
@@ -452,7 +465,7 @@ func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 
 	if _, err := w.Write(data); err != nil {
 		// The status has already gone to the client, there is nowhere to return the error.
-		s.log.Error("конфиг не дописан в ответ", "err", err)
+		s.log.Error("config not fully written to the response", "err", err)
 	}
 }
 
@@ -490,7 +503,7 @@ func (s *Server) handleVersions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, v := range skipped {
-		s.log.Warn("версия пропущена в истории", "version_id", v.ID, "err", v.Err)
+		s.log.Warn("version skipped in the history", "version_id", v.ID, "err", v.Err)
 	}
 
 	out := contract.Versions{Versions: versions}
@@ -537,7 +550,7 @@ func (s *Server) handleVersion(w http.ResponseWriter, r *http.Request) {
 	// daemon service directory, the response type is JSON, there is no HTML here.
 	if _, err := w.Write(data); err != nil { //nolint:gosec // G705: the body is from a daemon file, not from the request
 		// The status has already gone to the client, there is nowhere to return the error.
-		s.log.Error("версия не дописана в ответ", "err", err)
+		s.log.Error("version not fully written to the response", "err", err)
 	}
 }
 
@@ -813,7 +826,7 @@ func ServiceState(state singbox.State, binary string, err error, observed bool) 
 	body := contract.Service{Status: "stopped", Binary: binary}
 
 	if err != nil {
-		body.LastError = "состояние сервиса не прочитано"
+		body.LastError = "service state not read"
 		body.LastErrorCode = contract.ServiceStateUnread
 
 		if errors.Is(err, procd.ErrAmbiguousInstance) {
@@ -863,7 +876,7 @@ func (s *Server) handleHistory(w http.ResponseWriter, _ *http.Request) {
 func (s *Server) handleServiceState(w http.ResponseWriter, r *http.Request) {
 	state, err := s.service.State(r.Context())
 	if err != nil {
-		s.log.Warn("состояние сервиса не прочитано", "err", err)
+		s.log.Warn("service state not read", "err", err)
 	}
 
 	writeJSON(s.log, w, http.StatusOK, ServiceState(state, s.singboxVersion, err, s.observeRuntime(r.Context())))
@@ -930,6 +943,6 @@ func (s *Server) spaHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusServiceUnavailable)
-		_, _ = w.Write([]byte("интерфейс не собран: соберите демон через `make daemon`\n"))
+		_, _ = w.Write([]byte("interface not built: build the daemon with `make daemon`\n"))
 	})
 }

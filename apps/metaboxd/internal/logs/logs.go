@@ -47,12 +47,12 @@ const (
 var (
 	// ErrUnavailable means the log source cannot be read: logread is not set or
 	// exited with an error, the log.output file did not open.
-	ErrUnavailable = errors.New("лог sing-box недоступен")
+	ErrUnavailable = errors.New("sing-box log unavailable")
 	// ErrTooManyStreams means MaxStreams streams are open, a new one is not started.
-	ErrTooManyStreams = errors.New("открыто слишком много потоков лога")
+	ErrTooManyStreams = errors.New("too many log streams open")
 	// ErrClearForbidden means the log.output file lies outside the directories in which the daemon
 	// agrees to truncate it.
-	ErrClearForbidden = errors.New("файл лога вне разрешённых каталогов")
+	ErrClearForbidden = errors.New("log file outside the allowed directories")
 )
 
 // Level is a sing-box log line level.
@@ -201,7 +201,7 @@ func (r *Reader) Tail(ctx context.Context, n int, minLevel Level) (Snapshot, err
 	if src.file != "" {
 		tail, err := readTail(src.file, fileTailBytes)
 		if err != nil {
-			return Snapshot{}, fmt.Errorf("%w: хвост %s: %w", ErrUnavailable, src.file, err)
+			return Snapshot{}, fmt.Errorf("%w: tail %s: %w", ErrUnavailable, src.file, err)
 		}
 
 		for line := range strings.SplitSeq(tail, "\n") {
@@ -277,7 +277,7 @@ func (r *Reader) truncate(path string) error {
 
 		root, err := os.OpenRoot(dir)
 		if err != nil {
-			return fmt.Errorf("каталог %s: %w", dir, err)
+			return fmt.Errorf("directory %s: %w", dir, err)
 		}
 
 		f, err := root.OpenFile(rel, os.O_WRONLY|os.O_TRUNC, 0)
@@ -288,11 +288,11 @@ func (r *Reader) truncate(path string) error {
 		}
 
 		if err != nil {
-			return fmt.Errorf("усечение %s: %w", path, err)
+			return fmt.Errorf("truncate %s: %w", path, err)
 		}
 
 		if err := f.Close(); err != nil {
-			return fmt.Errorf("закрытие %s: %w", path, err)
+			return fmt.Errorf("close %s: %w", path, err)
 		}
 
 		return nil

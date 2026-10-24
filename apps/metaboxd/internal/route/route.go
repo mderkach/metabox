@@ -57,11 +57,11 @@ const (
 var (
 	// ErrNoConnection means core has no connection with such an identifier. It
 	// could have closed between the snapshot the panel sees and this request.
-	ErrNoConnection = errors.New("соединения с таким идентификатором нет")
+	ErrNoConnection = errors.New("no connection with this ID")
 
 	// ErrRuntimeUnavailable means the runtime did not answer. This is a source failure, not the
 	// panel's: the screen must tell "no data" from "the daemon is broken".
-	ErrRuntimeUnavailable = errors.New("рантайм sing-box недоступен")
+	ErrRuntimeUnavailable = errors.New("sing-box runtime unavailable")
 )
 
 // Rule is a rule of the running process. The index equals the node index in
@@ -170,12 +170,12 @@ func (e *Explainer) Explain(ctx context.Context, id string) (Explanation, error)
 func (e *Explainer) connection(ctx context.Context, id string) (clashConnection, error) {
 	body, err := e.source.Snapshot(ctx, "/connections")
 	if err != nil {
-		return clashConnection{}, fmt.Errorf("%w: соединения: %w", ErrRuntimeUnavailable, err)
+		return clashConnection{}, fmt.Errorf("%w: connections: %w", ErrRuntimeUnavailable, err)
 	}
 
 	var snapshot clashConnections
 	if err := json.Unmarshal(body, &snapshot); err != nil {
-		return clashConnection{}, fmt.Errorf("разбор снапшота соединений: %w", err)
+		return clashConnection{}, fmt.Errorf("parse connections snapshot: %w", err)
 	}
 
 	for _, connection := range snapshot.Connections {
@@ -191,12 +191,12 @@ func (e *Explainer) connection(ctx context.Context, id string) (clashConnection,
 func readRules(ctx context.Context, source Source) ([]Rule, error) {
 	body, err := source.Snapshot(ctx, "/rules")
 	if err != nil {
-		return nil, fmt.Errorf("%w: список правил: %w", ErrRuntimeUnavailable, err)
+		return nil, fmt.Errorf("%w: rule list: %w", ErrRuntimeUnavailable, err)
 	}
 
 	var list clashRules
 	if err := json.Unmarshal(body, &list); err != nil {
-		return nil, fmt.Errorf("разбор списка правил: %w", err)
+		return nil, fmt.Errorf("parse rule list: %w", err)
 	}
 
 	rules := make([]Rule, 0, len(list.Rules))
@@ -254,7 +254,7 @@ func matchRule(rule string, rules []Rule) Match {
 		Origin:     OriginUnknown,
 		Kind:       KindUnknown,
 		ReasonCode: ReasonNotInProcessList,
-		Reason:     "правила соединения нет в списке работающего процесса",
+		Reason:     "the connection rule is not in the rule list of the running process",
 	}
 }
 

@@ -107,7 +107,7 @@ func (s *Server) handleLogStream(w http.ResponseWriter, r *http.Request) {
 	// Support is checked before the first write: after the header there is
 	// nothing to refuse with.
 	if !events.SupportsFlush(w) {
-		fail(s.log, w, r, errors.New("поток лога: ответ без сброса буфера"))
+		fail(s.log, w, r, errors.New("log stream: response without buffer flush"))
 
 		return
 	}
@@ -154,7 +154,7 @@ func (s *Server) handleLogStream(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if result != nil {
-			s.log.Warn("поток лога sing-box оборвался", "err", result)
+			s.log.Warn("sing-box log stream broke", "err", result)
 		}
 	}()
 

@@ -55,7 +55,7 @@ func Hosts(addrs []string, allowedOrigin string) []string {
 // when none opened: there is nothing to listen on and the panel is unreachable.
 func Listen(addrs []string) ([]net.Listener, []error, error) {
 	if len(addrs) == 0 {
-		return nil, nil, errors.New("не задан ни один адрес")
+		return nil, nil, errors.New("no listen address set")
 	}
 
 	var (
@@ -75,7 +75,7 @@ func Listen(addrs []string) ([]net.Listener, []error, error) {
 	}
 
 	if len(listeners) == 0 {
-		return nil, failures, fmt.Errorf("ни один адрес не открыт: %w", errors.Join(failures...))
+		return nil, failures, fmt.Errorf("no address opened: %w", errors.Join(failures...))
 	}
 
 	return listeners, failures, nil

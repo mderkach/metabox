@@ -80,7 +80,7 @@ func connectionsSnapshot(raw json.RawMessage) (json.RawMessage, int64, error) {
 
 	body, err := json.Marshal(snapshot)
 	if err != nil {
-		return nil, 0, fmt.Errorf("сборка снапшота соединений: %w", err)
+		return nil, 0, fmt.Errorf("build connections snapshot: %w", err)
 	}
 
 	return body, snapshot.UploadTotal + snapshot.DownloadTotal, nil
@@ -91,7 +91,7 @@ func connectionsSnapshot(raw json.RawMessage) (json.RawMessage, int64, error) {
 func ParseConnections(raw json.RawMessage) (ConnectionsSnapshot, error) {
 	var source clashSnapshot
 	if err := json.Unmarshal(raw, &source); err != nil {
-		return ConnectionsSnapshot{}, fmt.Errorf("разбор снапшота соединений: %w", err)
+		return ConnectionsSnapshot{}, fmt.Errorf("parse connections snapshot: %w", err)
 	}
 
 	snapshot := ConnectionsSnapshot{

@@ -141,7 +141,7 @@ func (c *Counter) run(ctx context.Context) {
 	for {
 		err := c.observe(ctx)
 		if err != nil && ctx.Err() == nil {
-			c.log.Debug("снапшот для счёта правил не снят", "err", err)
+			c.log.Debug("snapshot for rule hit counting not taken", "err", err)
 		}
 
 		pause := c.opts.Interval
@@ -165,12 +165,12 @@ func (c *Counter) run(ctx context.Context) {
 func (c *Counter) observe(ctx context.Context) error {
 	body, err := c.source.Snapshot(ctx, "/connections")
 	if err != nil {
-		return fmt.Errorf("соединения: %w", err)
+		return fmt.Errorf("connections: %w", err)
 	}
 
 	var snapshot clashConnections
 	if err := json.Unmarshal(body, &snapshot); err != nil {
-		return fmt.Errorf("разбор снапшота соединений: %w", err)
+		return fmt.Errorf("parse connections snapshot: %w", err)
 	}
 
 	if c.opts.Sizes != nil {

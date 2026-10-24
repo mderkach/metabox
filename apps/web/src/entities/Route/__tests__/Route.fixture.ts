@@ -53,7 +53,7 @@ export const ROUTE_UNKNOWN_FIXTURE: RouteExplanationWire = {
     origin: 'unknown',
     kind: 'unknown',
     reason_code: 'not_in_process_list',
-    reason: 'правила соединения нет в списке работающего процесса',
+    reason: 'the connection rule is not in the rule list of the running process',
   },
   chain: { origin: 'observed', nodes: ['direct'] },
   rules: [],

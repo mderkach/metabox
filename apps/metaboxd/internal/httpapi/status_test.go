@@ -1,6 +1,8 @@
 package httpapi_test
 
 import (
+	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -89,3 +91,38 @@ func TestStatusSourcesAreListEvenWhenEmpty(t *testing.T) {
 		t.Error("the source list came as null, expected an empty array")
 	}
 }
+
+// The stream refusal goes in the error format: the panel reads every failure by its code.
+func TestEventsWithoutFlushAnswersWithCode(t *testing.T) {
+	stub := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
+	server := httpapi.NewServer(&fakeApplier{}, fakeReader{}, testLogger(t), httpapi.Options{Events: stub})
+
+	writer := &noFlushWriter{header: make(http.Header)}
+	req := httptest.NewRequest(http.MethodGet, "/api/events", nil)
+	req.Host = "192.168.1.1"
+	server.ServeHTTP(writer, req)
+
+	if writer.code != http.StatusInternalServerError {
+		t.Fatalf("response code: got %d, expected %d", writer.code, http.StatusInternalServerError)
+	}
+
+	var body contract.Error
+	if err := json.Unmarshal(writer.body.Bytes(), &body); err != nil {
+		t.Fatalf("body %q is not the error envelope: %v", writer.body.String(), err)
+	}
+	if body.Code != contract.ErrInternal {
+		t.Errorf("code: got %q, expected %q", body.Code, contract.ErrInternal)
+	}
+}
+
+// noFlushWriter implements only http.ResponseWriter: embedding httptest.ResponseRecorder
+// would promote its Flush.
+type noFlushWriter struct {
+	header http.Header
+	body   bytes.Buffer
+	code   int
+}
+
+func (w *noFlushWriter) Header() http.Header         { return w.header }
+func (w *noFlushWriter) Write(b []byte) (int, error) { return w.body.Write(b) }
+func (w *noFlushWriter) WriteHeader(code int)        { w.code = code }

@@ -12,11 +12,11 @@ import (
 
 // errNoService means the service state source is not set: the stream lives
 // without it, just without the service topic.
-var errNoService = errors.New("источник состояния службы не задан")
+var errNoService = errors.New("service state source not set")
 
 // errNoSystem means there is nothing to read the device readings with: the stream lives
 // without them, just without the system topic.
-var errNoSystem = errors.New("источник показаний устройства не задан")
+var errNoSystem = errors.New("device readings source not set")
 
 // Settings is the controller address and secret at the time of the request.
 type Settings struct {
@@ -83,7 +83,7 @@ const maxSnapshotBytes = 16 << 20
 
 // errSnapshotTooLarge: a one-off response is larger than maxSnapshotBytes. Truncated JSON
 // would not parse, and parsing it whole without a ceiling would cost memory.
-var errSnapshotTooLarge = errors.New("ответ больше допустимого")
+var errSnapshotTooLarge = errors.New("response larger than allowed")
 
 // Snapshot reads a one-off response whole.
 func (s *ClashSource) Snapshot(ctx context.Context, path string) (json.RawMessage, error) {
@@ -100,11 +100,11 @@ func (s *ClashSource) Snapshot(ctx context.Context, path string) (json.RawMessag
 	// an answer exactly at the ceiling.
 	body, err := io.ReadAll(io.LimitReader(response.Body, maxSnapshotBytes+1))
 	if err != nil {
-		return nil, fmt.Errorf("чтение %s: %w", path, err)
+		return nil, fmt.Errorf("read %s: %w", path, err)
 	}
 
 	if len(body) > maxSnapshotBytes {
-		return nil, fmt.Errorf("чтение %s: %w", path, errSnapshotTooLarge)
+		return nil, fmt.Errorf("read %s: %w", path, errSnapshotTooLarge)
 	}
 
 	return body, nil
@@ -136,7 +136,7 @@ func (s *ClashSource) do(ctx context.Context, path string) (*http.Response, erro
 
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, settings.BaseURL+path, nil)
 	if err != nil {
-		return nil, fmt.Errorf("сборка запроса %s: %w", path, err)
+		return nil, fmt.Errorf("build request %s: %w", path, err)
 	}
 
 	if settings.Secret != "" {
@@ -145,13 +145,13 @@ func (s *ClashSource) do(ctx context.Context, path string) (*http.Response, erro
 
 	response, err := s.client.Do(request)
 	if err != nil {
-		return nil, fmt.Errorf("запрос %s: %w", path, err)
+		return nil, fmt.Errorf("request %s: %w", path, err)
 	}
 
 	if response.StatusCode != http.StatusOK {
 		_ = response.Body.Close()
 
-		return nil, fmt.Errorf("запрос %s: код %d", path, response.StatusCode)
+		return nil, fmt.Errorf("request %s: status %d", path, response.StatusCode)
 	}
 
 	return response, nil

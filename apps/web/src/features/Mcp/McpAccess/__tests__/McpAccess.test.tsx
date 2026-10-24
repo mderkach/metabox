@@ -228,7 +228,7 @@ describe('McpAccess', () => {
 
     server.use(
       http.post(MCP_ENDPOINT.token(), () =>
-        HttpResponse.json({ code: 'internal', message: 'внутренняя ошибка демона' }, { status: 500 })
+        HttpResponse.json({ code: 'internal', message: 'internal error' }, { status: 500 })
       ),
       ...createMcpHandlers()
     );

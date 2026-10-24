@@ -121,7 +121,7 @@ func (a *Accounting) countProxy(ctx context.Context) {
 			}
 		})
 		if err != nil && ctx.Err() == nil {
-			a.log.Debug("учёт трафика оборван", "err", err)
+			a.log.Debug("traffic accounting broke", "err", err)
 		}
 
 		if !sleep(ctx, a.opts.RetryInterval) {

@@ -158,7 +158,7 @@ defer stop()
 
 go func() {
 	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		log.Error("сервер остановлен", "err", err)
+		log.Error("server stopped", "err", err)
 	}
 }()
 
@@ -167,7 +167,7 @@ go func() {
 shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 defer cancel()
 if err := srv.Shutdown(shutdownCtx); err != nil {
-	log.Error("остановка не завершилась", "err", err)
+	log.Error("shutdown did not finish", "err", err)
 }
 ```
 

@@ -31,7 +31,7 @@ func Exec(ctx context.Context, name string, args ...string) (io.ReadCloser, erro
 	if err := cmd.Start(); err != nil {
 		cancel()
 
-		return nil, fmt.Errorf("запуск %s: %w", name, err)
+		return nil, fmt.Errorf("start %s: %w", name, err)
 	}
 
 	return &process{ReadCloser: out, cmd: cmd, cancel: cancel}, nil

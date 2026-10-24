@@ -20,36 +20,36 @@ import (
 // Failures produced by the HTTP layer itself. Domain errors come from the
 // internal packages and get a row in statusFor.
 var (
-	errNotFound       = errors.New("ручка не найдена")
-	errOriginMismatch = errors.New("источник запроса не совпадает с адресом панели")
+	errNotFound       = errors.New("endpoint not found")
+	errOriginMismatch = errors.New("request origin does not match the panel address")
 	// errHostMismatch: the request Host does not look like the panel address: this is what
 	// DNS rebinding looks like, when a foreign domain is pointed at the router address.
-	errHostMismatch = errors.New("адрес запроса не совпадает с адресом панели")
+	errHostMismatch = errors.New("request host does not match the panel address")
 	// errUpgradeUnsupported: an attempt to raise a WebSocket on the proxy branch.
 	// The runtime goes as a single `/api/events` stream.
-	errUpgradeUnsupported = errors.New("рантайм идёт потоком /api/events, апгрейд не поддерживается")
+	errUpgradeUnsupported = errors.New("WebSocket upgrade is not supported: the runtime comes through the /api/events stream")
 	// errBadApplyEnvelope: a body with the apply envelope type was not parsed.
-	errBadApplyEnvelope = errors.New("конверт применения не разобран")
+	errBadApplyEnvelope = errors.New("apply request body not parsed")
 	// errBadDeviceBody: the device name edit body was not parsed.
-	errBadDeviceBody = errors.New("тело правки имени устройства не разобрано")
+	errBadDeviceBody = errors.New("device rename body not parsed")
 	// errBadDataplaneBody: the dataplane model change body was not parsed as JSON.
-	errBadDataplaneBody = errors.New("тело смены модели обвязки не разобрано")
+	errBadDataplaneBody = errors.New("dataplane model change body not parsed")
 	// errDataplaneBaseMissing: a model change without If-Match: without it a UCI edit
 	// over SSH would be silently overwritten.
-	errDataplaneBaseMissing = errors.New("нужен If-Match с ETag из GET /api/dataplane")
+	errDataplaneBaseMissing = errors.New("If-Match with the ETag from GET /api/dataplane is required")
 	// errBadLogQuery: the level or the line count of the log query is not parsed.
-	errBadLogQuery = errors.New("параметры запроса лога не разобраны")
+	errBadLogQuery = errors.New("log query parameters not parsed")
 	// errUnauthorized: the panel has a password and the request came without a session.
-	errUnauthorized = errors.New("нужен вход в панель")
+	errUnauthorized = errors.New("sign-in required")
 	// errMCPToken: MCP is on and the request came without its token or with a wrong one.
-	errMCPToken = errors.New("нужен токен MCP")
+	errMCPToken = errors.New("MCP token required")
 	// errBadAuthBody: the login or password change body was not parsed.
-	errBadAuthBody = errors.New("тело входа или смены пароля не разобрано")
+	errBadAuthBody = errors.New("sign-in or password change body not parsed")
 )
 
 // runtimeUnavailable is the runtime failure text for the client. The reason stays in
 // the log: it holds the controller address and the transport error text.
-const runtimeUnavailable = "рантайм sing-box недоступен"
+const runtimeUnavailable = "sing-box runtime unavailable"
 
 // fail is the only place where an error turns into a response: a new kind of failure
 // is added to statusFor, not to a handler. The text of an unknown error does not go
@@ -58,7 +58,7 @@ func fail(log *slog.Logger, w http.ResponseWriter, r *http.Request, err error) {
 	// The client dropped the connection: left the screen, requested again. There is nobody
 	// to answer, and this is not a server failure.
 	if errors.Is(err, context.Canceled) {
-		log.Debug("запрос отменён клиентом", "method", r.Method, "path", r.URL.Path)
+		log.Debug("request cancelled by the client", "method", r.Method, "path", r.URL.Path)
 
 		return
 	}
@@ -66,7 +66,7 @@ func fail(log *slog.Logger, w http.ResponseWriter, r *http.Request, err error) {
 	if checkErr, ok := errors.AsType[*singbox.CheckError](err); ok {
 		writeJSON(log, w, http.StatusUnprocessableEntity, contract.Error{
 			Code:    contract.ErrCheckFailed,
-			Message: "sing-box отверг конфиг",
+			Message: "sing-box rejected the config",
 			Details: contract.CheckDetails{
 				Stdout:   checkErr.Stdout,
 				Stderr:   checkErr.Stderr,
@@ -82,7 +82,7 @@ func fail(log *slog.Logger, w http.ResponseWriter, r *http.Request, err error) {
 	if workdirErr, ok := errors.AsType[*apply.WorkdirError](err); ok {
 		writeJSON(log, w, http.StatusConflict, contract.Error{
 			Code:    contract.ErrWorkdirMismatch,
-			Message: "рабочий каталог службы sing-box не совпадает с каталогом конфига",
+			Message: "the sing-box service working directory does not match the config directory",
 			Details: contract.WorkdirDetails{
 				Workdir:   workdirErr.Workdir,
 				ConfigDir: workdirErr.ConfigDir,
@@ -96,7 +96,7 @@ func fail(log *slog.Logger, w http.ResponseWriter, r *http.Request, err error) {
 	if invalid, ok := errors.AsType[*dataplane.InvalidError](err); ok {
 		writeJSON(log, w, http.StatusUnprocessableEntity, contract.Error{
 			Code:    contract.ErrDataplaneInvalid,
-			Message: "модель сетевой обвязки не принята",
+			Message: "dataplane model rejected",
 			Details: contract.DataplaneDetails{Fields: invalid.Fields},
 		})
 
@@ -113,15 +113,15 @@ func fail(log *slog.Logger, w http.ResponseWriter, r *http.Request, err error) {
 
 	switch {
 	case status == http.StatusInternalServerError:
-		log.Error("запрос не обслужен", "err", err, "method", r.Method, "path", r.URL.Path)
-		message = "внутренняя ошибка"
+		log.Error("request not served", "err", err, "method", r.Method, "path", r.URL.Path)
+		message = "internal error"
 	// The service command paths stay in the log: they hold a foreign service config.
 	case code == contract.ErrLaunchMismatch:
-		log.Warn("применение отклонено: служба поднимается не на конфиге демона", "err", err)
-		message = "служба sing-box поднимается не на конфиге, которым владеет metabox"
+		log.Warn("apply rejected: the service starts with a config the daemon does not own", "err", err)
+		message = "the sing-box service starts with a config metabox does not own"
 	// The reason stays in the log: it holds the log file path and the process failure.
 	case code == contract.ErrLogUnavailable:
-		log.Warn("лог sing-box не прочитан", "err", err)
+		log.Warn("sing-box log not read", "err", err)
 		message = logs.ErrUnavailable.Error()
 	// A runtime failure answers the same way as the Clash API proxy: two handlers of one
 	// layer must not behave oppositely.
@@ -217,7 +217,7 @@ func statusFor(err error) (status int, code contract.ErrorCode) {
 func ProxyError(log *slog.Logger) func(w http.ResponseWriter, r *http.Request, err error) {
 	return func(w http.ResponseWriter, r *http.Request, err error) {
 		if errors.Is(err, context.Canceled) {
-			log.Debug("поток закрыт клиентом", "path", r.URL.Path)
+			log.Debug("stream closed by the client", "path", r.URL.Path)
 
 			return
 		}

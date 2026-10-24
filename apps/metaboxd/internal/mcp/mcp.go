@@ -31,9 +31,9 @@ const serverName = "metabox"
 var (
 	// errInternal replaces a failure whose text may hold paths or command output: the
 	// reason stays in the daemon log.
-	errInternal = errors.New("внутренняя ошибка, причина в логе демона")
+	errInternal = errors.New("internal error, the cause is in the daemon log")
 	// errBadInput means a tool argument is outside its allowed values.
-	errBadInput = errors.New("аргумент инструмента вне допустимых значений")
+	errBadInput = errors.New("tool argument out of range")
 )
 
 // exposed are the failures whose text goes to the agent as is: it says what is missing,
@@ -183,19 +183,19 @@ func addTool[In, Out any](server *sdk.Server, log *slog.Logger, tool *sdk.Tool, 
 				var zero Out
 				out, err = zero, errInternal
 
-				log.Error("вызов инструмента MCP", append(attrs, "err", fmt.Sprint(rec), "stack", string(debug.Stack()))...)
+				log.Error("MCP tool call", append(attrs, "err", fmt.Sprint(rec), "stack", string(debug.Stack()))...)
 
 				return
 			}
 
 			if err != nil {
-				log.Warn("вызов инструмента MCP", append(attrs, "err", err)...)
+				log.Warn("MCP tool call", append(attrs, "err", err)...)
 				err = toolError(err)
 
 				return
 			}
 
-			log.Info("вызов инструмента MCP", attrs...)
+			log.Info("MCP tool call", attrs...)
 		}()
 
 		out, err = run(ctx, in)
