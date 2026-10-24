@@ -222,6 +222,8 @@ export const StatusSchema = z.object({
   singbox_build: SingboxBuildSchema.optional(),
   /** ConfigPath is the file the daemon owns: the path is set by start flags, and the panel side cannot compute it. */
   config_path: z.string().optional(),
+  /** ConfirmWindowSeconds is how long an apply waits for confirmation before the rollback, from the `-confirm-window` start flag. */
+  confirm_window_seconds: z.int(),
   /** Runtime is where the daemon reads the runtime from. A silent swap of one source for another is forbidden, so the composition is declared by the contract. */
   runtime: RuntimeSchema,
   transaction: TransactionSchema.optional(),

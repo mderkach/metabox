@@ -406,6 +406,7 @@ func run(log *slog.Logger, s settings) error {
 		HTTPS:          s.https,
 		CA:             rootCert,
 		ConfigPath:     store.Path(),
+		ConfirmWindow:  s.confirmWindow,
 	})
 
 	listeners, failures, err := httpapi.Listen(httpapi.Addrs(s.addr))

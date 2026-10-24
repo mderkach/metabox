@@ -43,6 +43,8 @@ export interface DaemonStatus {
   singboxTags: readonly string[] | null;
   /** A file owned by the daemon: the path is set by its launch flags. */
   configPath?: string;
+  /** How long an apply waits for confirmation before the rollback: set by the daemon's launch flag. */
+  confirmWindowSeconds: number;
   transaction?: ApplyTransaction;
   transactionHref?: string;
   /** Last dataplane model change: the same protocol as config apply, and not run at the same time as it. */

@@ -11,10 +11,12 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"math"
 	"mime"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"metabox/internal/apply"
 	"metabox/internal/clashapi"
@@ -158,6 +160,10 @@ type Options struct {
 	// `-config-name`: without this field the interface would show the default
 	// value regardless of how the daemon is started.
 	ConfigPath string
+	// ConfirmWindow is how long an apply waits for confirmation before the
+	// rollback, set by the `-confirm-window` flag. The panel names it before the
+	// apply starts, when there is no transaction to read the deadline from.
+	ConfirmWindow time.Duration
 }
 
 // HitsReader returns the rule hit count. The interface is declared here, at the
@@ -228,6 +234,7 @@ type Server struct {
 	https          bool
 	ca             func() []byte
 	configPath     string
+	confirmWindow  time.Duration
 	handler        http.Handler
 }
 
@@ -261,6 +268,7 @@ func NewServer(applier Applier, reader ConfigReader, log *slog.Logger, opts Opti
 		https:          opts.HTTPS,
 		ca:             opts.CA,
 		configPath:     opts.ConfigPath,
+		confirmWindow:  opts.ConfirmWindow,
 	}
 	s.handler = s.routes()
 
@@ -379,6 +387,8 @@ func (s *Server) handleStatus(w http.ResponseWriter, _ *http.Request) {
 		SingboxVersion: s.singboxVersion,
 		ConfigPath:     s.configPath,
 		Runtime:        s.runtimeSources(),
+		// Rounded up: a window shown shorter than it is rushes the owner for nothing.
+		ConfirmWindowSeconds: int(math.Ceil(s.confirmWindow.Seconds())),
 	}
 
 	if s.singboxTags != nil {

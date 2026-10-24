@@ -33,6 +33,9 @@ type Status struct {
 	// ConfigPath is the file the daemon owns: the path is set by start flags,
 	// and the panel side cannot compute it.
 	ConfigPath string `json:"config_path,omitempty"`
+	// ConfirmWindowSeconds is how long an apply waits for confirmation before the
+	// rollback, from the `-confirm-window` start flag.
+	ConfirmWindowSeconds int `json:"confirm_window_seconds"`
 	// Runtime is where the daemon reads the runtime from. A silent swap of one source for
 	// another is forbidden, so the composition is declared by the contract.
 	Runtime     Runtime            `json:"runtime"`

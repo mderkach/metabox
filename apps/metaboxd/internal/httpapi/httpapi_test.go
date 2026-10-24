@@ -16,6 +16,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"metabox/internal/apply"
 	"metabox/internal/config"
@@ -234,6 +235,7 @@ func newTestServerWith(
 		AllowedOrigin:  allowedOrigin,
 		SPA:            spa,
 		ConfigPath:     testConfigPath,
+		ConfirmWindow:  90 * time.Second,
 	}))
 	t.Cleanup(srv.Close)
 
@@ -763,6 +765,21 @@ func TestStatusReportsConfigPath(t *testing.T) {
 
 	if status.ConfigPath != testConfigPath {
 		t.Errorf("path %q, expected %q", status.ConfigPath, testConfigPath)
+	}
+}
+
+// The window is set by a start flag, and the panel names it before an apply
+// starts, so it must come from the daemon.
+func TestStatusReportsConfirmWindow(t *testing.T) {
+	srv := newTestServer(t, &fakeApplier{}, "")
+
+	var status struct {
+		ConfirmWindowSeconds int `json:"confirm_window_seconds"`
+	}
+	request(t, srv, http.MethodGet, "/api/status", "", nil).decode(t, &status)
+
+	if status.ConfirmWindowSeconds != 90 {
+		t.Errorf("window %d s, expected 90", status.ConfirmWindowSeconds)
 	}
 }
 

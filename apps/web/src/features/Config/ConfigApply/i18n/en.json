@@ -64,7 +64,14 @@
     "removed": "will be removed"
   },
   "diff": {
-    "description": "Check the changes. After applying, confirm the connection works — there is time for it (a minute by default), otherwise metabox restores the previous config.",
+    "description": "Check the changes. After applying, confirm the connection works, otherwise metabox restores the previous config.",
+    "descriptionWindow": "Check the changes. After applying, you have {{window}} to confirm the connection works, otherwise metabox restores the previous config.",
+    "window": {
+      "minute_one": "{{count}} minute",
+      "minute_other": "{{count}} minutes",
+      "second_one": "{{count}} second",
+      "second_other": "{{count}} seconds"
+    },
     "title": "What goes to the device",
     "same": "The draft matches the file on the device.",
     "caption": "Line by line difference between the draft and the applied config",
