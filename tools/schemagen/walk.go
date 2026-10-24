@@ -193,9 +193,16 @@ func (w *walker) appendFieldsAt(out *schema, t reflect.Type, path string, depth 
 		// All fields are optional: encoding/json knows no required fields,
 		// a missing key gives a zero value, not an error. Only the discriminator
 		// of a union is required: without it the fork cannot select a variant.
+		s := w.build(f.Type, path+"."+name)
+		if kind := f.Tag.Get("reference"); kind != "" {
+			marked := *s
+			marked.reference = kind
+			s = &marked
+		}
+
 		out.fields = append(out.fields, field{
 			name:     name,
-			schema:   w.build(f.Type, path+"."+name),
+			schema:   s,
 			optional: true,
 			depth:    depth,
 			doc:      w.docs.field(goTypeName(t), f.Name),

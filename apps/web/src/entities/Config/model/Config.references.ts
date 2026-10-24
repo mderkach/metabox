@@ -1,5 +1,7 @@
 import type { JSONPath } from 'jsonc-parser';
 
+import { TAG_REFERENCE_LOOPS, TAG_REFERENCE_PATHS } from '@shared/api/generated';
+
 import { NODE_LISTS, nodeNameOf, valueAt, type NodeListSection } from './Config.changes';
 import { findValue, RULES_PATH } from './Config.model';
 
@@ -15,12 +17,33 @@ export type ConfigReference =
   | { kind: typeof CONFIG_REFERENCE.Node; section: NodeListSection; name: string }
   | { kind: typeof CONFIG_REFERENCE.Setting; path: string };
 
-/** Keys whose value names the node itself or a type, not a link to another node. */
-const NOT_REFERENCES = new Set<string | number>(['tag', 'type']);
+const ARRAY_INDEX = '*';
+const MAP_KEY = '{}';
+
+function matches(pattern: readonly string[], segments: readonly string[]): boolean {
+  return pattern.every((key, index) => key === segments[index] || (key === MAP_KEY && segments[index] !== ARRAY_INDEX));
+}
+
+function loopAt(segments: readonly string[]) {
+  return TAG_REFERENCE_LOOPS.find(({ from }) => from.length < segments.length && matches(from, segments));
+}
+
+/** Whether the schema marks the value at `path` as a tag reference. */
+function isReference(path: JSONPath): boolean {
+  let segments = path.map((key) => (typeof key === 'number' ? ARRAY_INDEX : key));
+
+  for (let loop = loopAt(segments); loop !== undefined; loop = loopAt(segments)) {
+    segments = [...loop.to, ...segments.slice(loop.from.length)];
+  }
+
+  return TAG_REFERENCE_PATHS.some((pattern) => pattern.length === segments.length && matches(pattern, segments));
+}
 
 function collectPaths(value: unknown, tag: string, path: JSONPath, found: JSONPath[]): void {
   if (value === tag) {
-    found.push(path);
+    if (isReference(path)) {
+      found.push(path);
+    }
 
     return;
   }
@@ -28,7 +51,7 @@ function collectPaths(value: unknown, tag: string, path: JSONPath, found: JSONPa
   if (Array.isArray(value)) {
     const items: readonly unknown[] = value;
 
-    if (items.includes(tag)) {
+    if (items.includes(tag) && isReference(path)) {
       found.push(path);
 
       return;
@@ -43,9 +66,7 @@ function collectPaths(value: unknown, tag: string, path: JSONPath, found: JSONPa
 
   if (typeof value === 'object' && value !== null) {
     for (const [key, item] of Object.entries(value)) {
-      if (!NOT_REFERENCES.has(key)) {
-        collectPaths(item, tag, [...path, key], found);
-      }
+      collectPaths(item, tag, [...path, key], found);
     }
   }
 }
@@ -75,9 +96,9 @@ function toReference(root: unknown, path: JSONPath): ConfigReference {
 }
 
 /**
- * Places that name `tag` as a value: a rule outbound, a group member, `route.final`.
- * The match is by value, without the schema, so a field that only happens to
- * hold the same string is counted too. Each place is named once.
+ * Places that name `tag` in a field the schema marks as a tag reference: a rule outbound,
+ * a group member, `route.final`. A field that only happens to hold the same string is
+ * not counted. Each place is named once.
  */
 export function findReferences(text: string, tag: string): ConfigReference[] {
   const root = findValue(text, []);

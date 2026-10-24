@@ -129,7 +129,9 @@ var scalarOverrides = map[string]func() *schema{
 	// The certificate provider in TLS: the tag of one declared in certificate_providers
 	// or the same object inline.
 	"option.CertificateProviderOptions": func() *schema {
-		return union(scalar("z.string()"), ref("CertificateProviderSchema"))
+		tag := scalar("z.string()")
+		tag.reference = "certificate_provider"
+		return union(tag, ref("CertificateProviderSchema"))
 	},
 
 	// The raw JSON of the root config: the content is not parsed.
@@ -286,7 +288,11 @@ func (w *walker) override(t reflect.Type, path string) (*schema, bool) {
 	if alts, ok := shorthand[name]; ok {
 		items := make([]*schema, 0, len(alts)+1)
 		for _, alt := range alts {
-			items = append(items, scalar(alt))
+			item := scalar(alt)
+			if alt == "z.string()" {
+				item.reference = shorthandReference[name]
+			}
+			items = append(items, item)
 		}
 
 		return union(append(items, w.objectForm(t, name, path))...), true
