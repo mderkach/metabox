@@ -125,6 +125,12 @@ func (fakeConfig) Versions(context.Context) ([]config.Version, error) {
 	return []config.Version{{ID: 2, Size: int64(len(secretConfig)), Sum: "abc"}}, nil
 }
 
+func (c fakeConfig) History(ctx context.Context) ([]config.Version, []config.SkippedVersion, error) {
+	versions, err := c.Versions(ctx)
+
+	return versions, nil, err
+}
+
 func (fakeConfig) ReadVersion(_ context.Context, id int) ([]byte, error) {
 	if id != 2 {
 		return nil, config.ErrNoVersion

@@ -122,6 +122,8 @@ type fakeReader struct {
 	// readErr breaks only the config read, leaving the history available.
 	readErr  error
 	versions []config.Version
+	// skipped are the history entries the store could not read.
+	skipped []config.SkippedVersion
 	// byID replaces the version content; an empty map means there are no versions.
 	byID map[int][]byte
 	// versionLists are the version list snapshots; versions without an entry were saved without
@@ -167,12 +169,12 @@ func (r fakeReader) ListSums(context.Context) (map[string]string, error) {
 	return r.listSums, nil
 }
 
-func (r fakeReader) Versions(context.Context) ([]config.Version, error) {
+func (r fakeReader) History(context.Context) ([]config.Version, []config.SkippedVersion, error) {
 	if r.err != nil {
-		return nil, r.err
+		return nil, nil, r.err
 	}
 
-	return r.versions, nil
+	return r.versions, r.skipped, nil
 }
 
 func (r fakeReader) ReadVersion(_ context.Context, id int) ([]byte, error) {

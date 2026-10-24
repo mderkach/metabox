@@ -75,6 +75,13 @@ type Version struct {
 	ListsSum string `json:"lists_sum,omitempty"`
 }
 
+// SkippedVersion is a history entry left out of the listing because its config file or its
+// list snapshot could not be read.
+type SkippedVersion struct {
+	ID  int
+	Err error
+}
+
 // VersionsPath returns the history directory.
 func (s *Store) VersionsPath() string {
 	return filepath.Join(s.serviceDir, versionsDir)
@@ -229,8 +236,16 @@ func sameLists(prev map[string]string, lists map[string][]byte) bool {
 
 // Versions returns the history from newest to oldest.
 func (s *Store) Versions(ctx context.Context) ([]Version, error) {
+	versions, _, err := s.History(ctx)
+
+	return versions, err
+}
+
+// History is Versions together with the entries left out of it: an unreadable version is not
+// a reason to refuse the whole history, but the owner must be able to find out about it.
+func (s *Store) History(ctx context.Context) ([]Version, []SkippedVersion, error) {
 	if err := ctx.Err(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	s.mu.Lock()
@@ -240,10 +255,10 @@ func (s *Store) Versions(ctx context.Context) ([]Version, error) {
 	if errors.Is(err, errNoHistory) {
 		// An empty slice, not nil: in JSON the difference between `[]` and `null` is visible, and
 		// the panel would break on `null` on the very first list walk.
-		return []Version{}, nil
+		return []Version{}, nil, nil
 	}
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer func() { _ = root.Close() }()
 
@@ -394,14 +409,16 @@ func (s *Store) versionsRoot(create bool) (*os.Root, error) {
 
 // listVersions reads the directory and returns entries from newest to oldest. Files with
 // names not in the format are skipped: the directory is a service one, but a foreign file in it is not
-// a reason to refuse the history.
-func listVersions(root *os.Root) ([]Version, error) {
+// a reason to refuse the history. A version that cannot be read goes into skipped.
+func listVersions(root *os.Root) ([]Version, []SkippedVersion, error) {
 	entries, err := fs.ReadDir(root.FS(), ".")
 	if err != nil {
-		return nil, fmt.Errorf("чтение каталога истории: %w", err)
+		return nil, nil, fmt.Errorf("чтение каталога истории: %w", err)
 	}
 
 	versions := make([]Version, 0, len(entries))
+
+	var skipped []SkippedVersion
 
 	for _, entry := range entries {
 		if entry.IsDir() {
@@ -415,11 +432,15 @@ func listVersions(root *os.Root) ([]Version, error) {
 
 		info, err := entry.Info()
 		if err != nil {
+			skipped = append(skipped, SkippedVersion{ID: id, Err: fmt.Errorf("версия %d: %w", id, err)})
+
 			continue
 		}
 
 		sum, err := streamSum(root, entry.Name())
 		if err != nil {
+			skipped = append(skipped, SkippedVersion{ID: id, Err: fmt.Errorf("чтение версии %d: %w", id, err)})
+
 			continue
 		}
 
@@ -436,6 +457,8 @@ func listVersions(root *os.Root) ([]Version, error) {
 			version.ListsSum = ListsEtag(lists)
 		case errors.Is(err, ErrNoVersionLists):
 		default:
+			skipped = append(skipped, SkippedVersion{ID: id, Err: err})
+
 			continue
 		}
 
@@ -443,8 +466,9 @@ func listVersions(root *os.Root) ([]Version, error) {
 	}
 
 	sort.Slice(versions, func(i, j int) bool { return versions[i].ID > versions[j].ID })
+	sort.Slice(skipped, func(i, j int) bool { return skipped[i].ID > skipped[j].ID })
 
-	return versions, nil
+	return versions, skipped, nil
 }
 
 // streamSum counts the sha256 of a version as a stream: the history list is requested on
