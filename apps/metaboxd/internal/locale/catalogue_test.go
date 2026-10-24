@@ -5,6 +5,7 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -66,6 +67,74 @@ func TestCatalogueMatchesSources(t *testing.T) {
 			t.Errorf("Russian text for %q formats %v, the source formats %v", source, got, want)
 		}
 	}
+}
+
+var (
+	shellEntry = regexp.MustCompile(`(?m)^\t"(.*)"\) printf '%s' "(.*)" ;;$`)
+	shellUse   = regexp.MustCompile(`(?:mb_msg [\w-]+|dp_fail) "([^"]*)"`)
+)
+
+// TestShellCatalogueMatchesScripts applies the same checks to the init scripts and
+// their catalogue: they print through mb_msg and dp_fail, with the text as a fixed format.
+func TestShellCatalogueMatchesScripts(t *testing.T) {
+	catalogue := readFile(t, "package/lib/metabox/locale.sh")
+
+	entries := map[string]string{}
+	for _, m := range shellEntry.FindAllStringSubmatch(catalogue, -1) {
+		entries[m[1]] = m[2]
+	}
+
+	if len(entries) == 0 {
+		t.Fatal("no entries found in locale.sh")
+	}
+
+	used := map[string]bool{}
+
+	for _, script := range []string{"package/etc/init.d/metaboxd", "package/etc/init.d/metabox-singbox"} {
+		for _, m := range shellUse.FindAllStringSubmatch(readFile(t, script), -1) {
+			text := m[1]
+			if text == "$@" {
+				continue
+			}
+
+			if strings.ContainsAny(text, "$`") {
+				t.Errorf("%s: %q interpolates a value, pass it as a printf argument", script, text)
+
+				continue
+			}
+
+			used[text] = true
+
+			if _, ok := entries[text]; !ok {
+				t.Errorf("%s: no Russian text for %q", script, text)
+			}
+		}
+	}
+
+	for source, translated := range entries {
+		if !used[source] {
+			t.Errorf("locale.sh: Russian text for %q is not shown anywhere", source)
+		}
+
+		if got, want := verbs(translated), verbs(source); !slices.Equal(got, want) {
+			t.Errorf("locale.sh: Russian text for %q formats %v, the source formats %v", source, got, want)
+		}
+
+		if strings.ContainsAny(translated, "$`\"") {
+			t.Errorf("locale.sh: Russian text for %q holds a shell metacharacter", source)
+		}
+	}
+}
+
+func readFile(t *testing.T, path string) string {
+	t.Helper()
+
+	b, err := os.ReadFile(filepath.Join(moduleRoot, path))
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+
+	return string(b)
 }
 
 func TestCatalogueHasCLIHelp(t *testing.T) {

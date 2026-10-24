@@ -42,7 +42,8 @@ func (e *Error) Unwrap() []error {
 	}
 }
 
-func (e *Error) in(l Lang) string {
+// In returns the text in the language l.
+func (e *Error) In(l Lang) string {
 	if e.verbatim {
 		return T(l, e.format)
 	}
@@ -62,12 +63,12 @@ func (e *Error) in(l Lang) string {
 	return fmt.Errorf(T(l, e.format), args...).Error()
 }
 
-// Message returns the text of err in the language l. A layer made by New or
-// Errorf is translated together with the errors it formats; a layer made
-// otherwise is returned as is, with everything it wraps.
+// Message returns the text of err in the language l. A layer with an In method,
+// such as one made by New or Errorf, is translated together with the errors it
+// formats; a layer without it is returned as is, with everything it wraps.
 func Message(l Lang, err error) string {
-	if e, ok := err.(*Error); ok { //nolint:errorlint // only the outer layer: an inner one is already part of a foreign text
-		return e.in(l)
+	if e, ok := err.(interface{ In(l Lang) string }); ok { //nolint:errorlint // only the outer layer: an inner one is already part of a foreign text
+		return e.In(l)
 	}
 
 	return err.Error()

@@ -28,6 +28,7 @@ import (
 	"metabox/internal/devices"
 	"metabox/internal/diag"
 	"metabox/internal/httpapi"
+	"metabox/internal/locale"
 	"metabox/internal/logs"
 	"metabox/internal/mcp"
 	"metabox/internal/route"
@@ -236,6 +237,12 @@ func (b *syncBuffer) String() string {
 func newBench(t *testing.T, guard httpapi.Guard, store mcp.Store) *bench {
 	t.Helper()
 
+	return newBenchIn(t, guard, store, locale.English)
+}
+
+func newBenchIn(t *testing.T, guard httpapi.Guard, store mcp.Store, lang locale.Lang) *bench {
+	t.Helper()
+
 	access, err := mcp.NewAccess(t.Context(), store)
 	if err != nil {
 		t.Fatalf("access: %v", err)
@@ -245,6 +252,7 @@ func newBench(t *testing.T, guard httpapi.Guard, store mcp.Store) *bench {
 	log := slog.New(slog.NewTextHandler(b.logBuf, &slog.HandlerOptions{Level: slog.LevelDebug}))
 
 	server := mcp.New(access, log, mcp.Options{
+		Lang:           lang,
 		Version:        "test",
 		SingboxVersion: "1.14.1",
 		Service: func(context.Context) (json.RawMessage, error) {

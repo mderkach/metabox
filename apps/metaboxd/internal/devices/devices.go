@@ -22,6 +22,8 @@ import (
 	"time"
 	"unicode"
 	"unicode/utf8"
+
+	"metabox/internal/locale"
 )
 
 const (
@@ -36,11 +38,11 @@ const (
 
 var (
 	// ErrInvalidMAC means the address does not look like a six-byte Ethernet MAC.
-	ErrInvalidMAC = errors.New("MAC address not parsed")
+	ErrInvalidMAC = locale.New("MAC address not parsed")
 	// ErrInvalidName means the name is longer than allowed or has control characters.
-	ErrInvalidName = errors.New("device name rejected")
+	ErrInvalidName = locale.New("device name rejected")
 	// ErrTooManyNames means there are more own names than the daemon agrees to store.
-	ErrTooManyNames = errors.New("too many custom device names")
+	ErrTooManyNames = locale.New("too many custom device names")
 )
 
 // NameSource is where the device label comes from. The set is closed: the panel
@@ -284,7 +286,7 @@ func (r *Registry) Rename(ctx context.Context, rawMAC, name string) error {
 	}
 
 	if len(next) > maxNames {
-		return fmt.Errorf("%w: limit %d", ErrTooManyNames, maxNames)
+		return locale.Errorf("%w: limit %d", ErrTooManyNames, maxNames)
 	}
 
 	data, err := json.Marshal(next)
@@ -303,11 +305,11 @@ func (r *Registry) Rename(ctx context.Context, rawMAC, name string) error {
 
 func validName(name string) error {
 	if utf8.RuneCountInString(name) > maxNameRunes {
-		return fmt.Errorf("%w: longer than %d characters", ErrInvalidName, maxNameRunes)
+		return locale.Errorf("%w: longer than %d characters", ErrInvalidName, maxNameRunes)
 	}
 
 	if strings.ContainsFunc(name, unicode.IsControl) {
-		return fmt.Errorf("%w: control characters", ErrInvalidName)
+		return locale.Errorf("%w: control characters", ErrInvalidName)
 	}
 
 	return nil
@@ -318,7 +320,7 @@ func validName(name string) error {
 func normalizeMAC(raw string) (string, error) {
 	hw, err := net.ParseMAC(raw)
 	if err != nil || len(hw) != 6 {
-		return "", fmt.Errorf("%w: %q", ErrInvalidMAC, raw)
+		return "", locale.Errorf("%w: %q", ErrInvalidMAC, raw)
 	}
 
 	return hw.String(), nil

@@ -6,6 +6,8 @@ USE_PROCD=1
 
 PROG=/usr/bin/metaboxd
 
+. /lib/metabox/locale.sh
+
 # Addresses are taken from the networks in listen_interface: the panel must be reachable from
 # all local networks of the owner and from no foreign one, and an address hardcoded in the script
 # would diverge from their network. The address list goes to the daemon comma-separated.
@@ -25,7 +27,7 @@ local_addresses() {
 
 start_service() {
 	[ -x "$PROG" ] || {
-		echo "metaboxd: $PROG is missing" >&2
+		mb_msg metaboxd "%s is missing" "$PROG"
 		return 1
 	}
 
@@ -34,7 +36,7 @@ start_service() {
 	local enabled listen_addr listen_port listen_interface listen
 	local config_dir config_name state_dir
 	local singbox init_script service_instance ubus clash_port log_level health_dns_name
-	local https https_cert https_key
+	local https https_cert https_key lang
 
 	config_get_bool enabled main enabled 1
 	[ "$enabled" -eq 1 ] || return 0
@@ -55,6 +57,13 @@ start_service() {
 	config_get_bool https main https 0
 	config_get https_cert main https_cert ""
 	config_get https_key main https_key ""
+	config_get lang main lang en
+
+	# The daemon refuses an unknown language at start; a typo in UCI must not take the panel down.
+	case "$lang" in
+	en | ru) ;;
+	*) lang=en ;;
+	esac
 
 	if [ -n "$listen_addr" ]; then
 		listen="$listen_addr:$listen_port"
@@ -63,7 +72,7 @@ start_service() {
 	fi
 
 	[ -n "$listen" ] || {
-		echo "metaboxd: network '$listen_interface' has no addresses, set listen_addr in /etc/config/metabox" >&2
+		mb_msg metaboxd "network '%s' has no addresses, set listen_addr in /etc/config/metabox" "$listen_interface"
 		return 1
 	}
 
@@ -85,7 +94,8 @@ start_service() {
 		-ubus "$ubus" \
 		-clash-port "$clash_port" \
 		-log-level "$log_level" \
-		-health-dns-name "$health_dns_name"
+		-health-dns-name "$health_dns_name" \
+		-lang "$lang"
 	procd_set_param stdout 1
 	procd_set_param stderr 1
 	procd_set_param respawn 3600 5 5

@@ -378,6 +378,7 @@ func run(log *slog.Logger, s settings) error {
 	}
 
 	agents := mcp.New(access, log, mcp.Options{
+		Lang:           s.lang,
 		Version:        version.Version,
 		SingboxVersion: singboxVersion,
 		SingboxTags:    build.Tags,
@@ -393,6 +394,7 @@ func run(log *slog.Logger, s settings) error {
 	})
 
 	api := httpapi.NewServer(manager, store, log, httpapi.Options{
+		Lang:           s.lang,
 		Version:        version.Version,
 		Auth:           guard,
 		SingboxVersion: singboxVersion,

@@ -22,6 +22,8 @@ import (
 	"sync"
 	"time"
 	"unicode/utf8"
+
+	"metabox/internal/locale"
 )
 
 const (
@@ -63,14 +65,14 @@ const (
 
 var (
 	// ErrWrongPassword means the password does not match the stored one.
-	ErrWrongPassword = errors.New("wrong password")
+	ErrWrongPassword = locale.New("wrong password")
 	// ErrPasswordInvalid means the new password is shorter or longer than allowed.
-	ErrPasswordInvalid = errors.New("password rejected")
+	ErrPasswordInvalid = locale.New("password rejected")
 	// ErrNotSet means a login was attempted while the panel has no password.
-	ErrNotSet = errors.New("panel password is not set")
+	ErrNotSet = locale.New("panel password is not set")
 	// ErrNoSession means a password change on a protected panel came without a valid
 	// session.
-	ErrNoSession = errors.New("sign-in required")
+	ErrNoSession = locale.New("sign-in required")
 )
 
 // LockedError means login is locked out: the client address made too many wrong
@@ -80,7 +82,16 @@ type LockedError struct {
 }
 
 func (e *LockedError) Error() string {
-	return fmt.Sprintf("too many wrong passwords, retry in %s", e.RetryAfter.Round(time.Second))
+	return e.text().Error()
+}
+
+// In returns the text in the language l: the lockout reaches the panel login form.
+func (e *LockedError) In(l locale.Lang) string {
+	return e.text().In(l)
+}
+
+func (e *LockedError) text() *locale.Error {
+	return locale.Errorf("too many wrong passwords, retry in %s", e.RetryAfter.Round(time.Second))
 }
 
 // Store keeps the password hash file and the session file. ReadAuth and ReadSessions
@@ -417,7 +428,7 @@ func (g *Guard) SetPassword(ctx context.Context, addr netip.Addr, token, current
 	}
 
 	if n := utf8.RuneCountInString(next); n < minPasswordRunes || n > maxPasswordRunes {
-		return "", fmt.Errorf("%w: %d to %d characters", ErrPasswordInvalid, minPasswordRunes, maxPasswordRunes)
+		return "", locale.Errorf("%w: %d to %d characters", ErrPasswordInvalid, minPasswordRunes, maxPasswordRunes)
 	}
 
 	fresh, err := g.derive(ctx, next)

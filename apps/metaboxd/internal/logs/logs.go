@@ -23,6 +23,7 @@ import (
 
 	"metabox/internal/clashapi"
 	"metabox/internal/config"
+	"metabox/internal/locale"
 )
 
 const (
@@ -47,12 +48,12 @@ const (
 var (
 	// ErrUnavailable means the log source cannot be read: logread is not set or
 	// exited with an error, the log.output file did not open.
-	ErrUnavailable = errors.New("sing-box log unavailable")
+	ErrUnavailable = locale.New("sing-box log unavailable")
 	// ErrTooManyStreams means MaxStreams streams are open, a new one is not started.
-	ErrTooManyStreams = errors.New("too many log streams open")
+	ErrTooManyStreams = locale.New("too many log streams open")
 	// ErrClearForbidden means the log.output file lies outside the directories in which the daemon
 	// agrees to truncate it.
-	ErrClearForbidden = errors.New("log file outside the allowed directories")
+	ErrClearForbidden = locale.New("log file outside the allowed directories")
 )
 
 // Level is a sing-box log line level.

@@ -18,9 +18,16 @@ FW_INCLUDE=metabox_post
 
 LOCAL_ADDR_V4="0.0.0.0/8, 10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8, 169.254.0.0/16, 172.16.0.0/12, 192.0.0.0/24, 192.0.2.0/24, 192.31.196.0/24, 192.52.193.0/24, 192.88.99.0/24, 192.168.0.0/16, 192.175.48.0/24, 198.18.0.0/15, 198.51.100.0/24, 203.0.113.0/24, 224.0.0.0/4, 240.0.0.0/4"
 
+. /lib/metabox/locale.sh
+
+# dp_fail tells the operator in their language and syslog in English; $1 is a
+# printf format.
 dp_fail() {
-	echo "metabox-singbox: $*" >&2
-	logger -t metabox-singbox "$*"
+	local format="$1"
+
+	mb_msg metabox-singbox "$@"
+	shift
+	logger -t metabox-singbox "$(printf "$format" "$@")"
 	return 1
 }
 
@@ -36,7 +43,7 @@ dp_add() {
 	[ -n "$value" ] || return 0
 	case "$value" in
 	*[!$pattern]*)
-		dp_fail "invalid value '$value' in metabox.dataplane"
+		dp_fail "invalid value '%s' in metabox.dataplane" "$value"
 		dp_invalid=1
 		return 0
 		;;
@@ -80,7 +87,7 @@ dp_load() {
 	local n
 	for n in "$dp_redirect_port" "$dp_tproxy_port" "$dp_dns_port" "$dp_self_mark" "$dp_tproxy_mark" "$dp_route_table"; do
 		dp_number "$n" || {
-			dp_fail "metabox.dataplane expects a decimal number, got '$n'"
+			dp_fail "metabox.dataplane expects a decimal number, got '%s'" "$n"
 			dp_invalid=1
 		}
 	done
@@ -88,7 +95,7 @@ dp_load() {
 	case "$dp_acl_mode" in
 	all | listed) ;;
 	*)
-		dp_fail "acl_mode '$dp_acl_mode' is neither all nor listed"
+		dp_fail "acl_mode '%s' is neither all nor listed" "$dp_acl_mode"
 		dp_invalid=1
 		;;
 	esac
@@ -428,12 +435,12 @@ start_service() {
 	config="$config_dir/$config_name"
 
 	[ -x "$singbox" ] || {
-		echo "metabox-singbox: $singbox is missing" >&2
+		mb_msg metabox-singbox "%s is missing" "$singbox"
 		return 1
 	}
 
 	[ -f "$config" ] || {
-		echo "metabox-singbox: config $config not found" >&2
+		mb_msg metabox-singbox "config %s not found" "$config"
 		return 1
 	}
 
