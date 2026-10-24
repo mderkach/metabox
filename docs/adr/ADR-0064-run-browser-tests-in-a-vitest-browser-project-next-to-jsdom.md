@@ -1,4 +1,4 @@
-# ADR-0062. Run browser tests in a Vitest browser project next to the jsdom projects
+# ADR-0064. Run browser tests in a Vitest browser project next to the jsdom projects
 
 - Status: Proposed
 - Date: 2026-10-24

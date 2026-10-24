@@ -1,6 +1,6 @@
 # Frontend testing
 
-Vitest + Testing Library. Tests run in jsdom; those that need a real browser run in Chromium in the `browser` project ([ADR-0062](../../../../docs/adr/ADR-0062-run-browser-tests-in-a-vitest-browser-project-next-to-jsdom.md)).
+Vitest + Testing Library. Tests run in jsdom; those that need a real browser run in Chromium in the `browser` project ([ADR-0064](../../../../docs/adr/ADR-0064-run-browser-tests-in-a-vitest-browser-project-next-to-jsdom.md)).
 
 ## Layout and naming
 
