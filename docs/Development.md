@@ -30,15 +30,15 @@ Go commands run from the module directory; there is no module at the root. Go bu
 
 Build and generation:
 
-| Command              | What it does                                                                                                |
-| -------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `make daemon`        | builds the SPA and the daemon for the current machine into `dist/metaboxd`                                  |
-| `make daemon-device` | builds the SPA and the daemon for the router (`linux/arm64`, no cgo) into `dist/metaboxd-linux-arm64`       |
-| `make daemon-target` | builds the daemon inside the dev container; on macOS `make daemon` gives a darwin binary                    |
-| `make package`       | builds the `dist/metaboxd.apk` package with the same Docker stage that installs the panel in the test bench |
-| `make schema`        | regenerates the config schema from the fork into `apps/web/src/shared/api/generated.ts`                     |
-| `make schema-daemon` | reprints the daemon contract for the panel into `apps/web/src/shared/api/daemon.generated.ts`               |
-| `make clean`         | removes `dist/`, the frontend build and the static files copied into the daemon                             |
+| Command              | What it does                                                                                                                                                              |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `make daemon`        | builds the SPA and the daemon for the current machine into `dist/metaboxd`                                                                                                |
+| `make daemon-device` | builds the SPA and the daemon for the router (`linux/arm64`, no cgo) into `dist/metaboxd-linux-arm64`                                                                     |
+| `make daemon-target` | builds the daemon inside the dev container; on macOS `make daemon` gives a darwin binary                                                                                  |
+| `make package`       | builds the `dist/metaboxd.apk` package with the same Docker stage that installs the panel in the test bench                                                               |
+| `make schema`        | regenerates the config schema from the fork into `apps/web/src/shared/api/generated.ts` and the MCP field reference into `apps/metaboxd/internal/mcp/fields.generated.go` |
+| `make schema-daemon` | reprints the daemon contract for the panel into `apps/web/src/shared/api/daemon.generated.ts`                                                                             |
+| `make clean`         | removes `dist/`, the frontend build and the static files copied into the daemon                                                                                           |
 
 Frontend without the test bench:
 

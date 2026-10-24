@@ -127,6 +127,8 @@ The token is shown once: the daemon keeps its SHA-256 in `mcp.json` of the servi
 
 Tool descriptions and tool errors are in the operator's language from `-lang`; the field descriptions of the inputs and outputs come from struct tags and stay English. The daemon log records a tool failure in English.
 
+`metabox_config_field` answers from a field reference, not from the router: `fields.generated.go` in `internal/mcp` is printed by `make schema` from the same fork schema as the panel's `generated.ts`, and hand-written notes for it live in `fieldnotes.json` next to it, keyed by config path and then by language ([ADR-0063](../../../../docs/adr/ADR-0063-serve-mcp-agents-a-field-reference-generated-from-the-fork-schema.md)). The generated file is not edited by hand; a note is added to the JSON in both languages, not to Go code, and a test fails on a note whose path the reference does not have or that lacks a language. Type words and fork comments in the answer stay English. The reference is data for the agent: the daemon does not check or parse a config with it.
+
 ## Server and timeouts
 
 ```go

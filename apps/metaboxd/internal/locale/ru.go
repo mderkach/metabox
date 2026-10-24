@@ -84,6 +84,22 @@ var ru = map[string]string{
 	"%w: id must be greater than zero":               "%w: id должен быть больше нуля",
 	"%w: level %q":                                   "%w: level %q",
 
+	"%w: the config has no top-level key %q":                   "%w: в конфиге нет ключа верхнего уровня %q",
+	"%w: %q has no key %q; call with path %q to list its keys": "%w: у %q нет ключа %q; вызовите с путём %q, чтобы увидеть его ключи",
+	"Reference for one sing-box config path, from the schema of the sing-box-extended fork the panel " +
+		"is built on (schema_version): the value type, the allowed values of an enum or a type discriminator, " +
+		"reference (the kind of node the value names by its tag: outbound, dns_server, rule_set and so on), " +
+		"when (the discriminator values along the path the field needs, for example type vless at outbounds.*), " +
+		"the fork's own field comment, a hand-written note where the schema is not enough, and the keys under " +
+		"the path. An array index may be a number or *, so a path from a real config works. The reference does " +
+		"not read the config on the router: use metabox_config_version for that.": "Справка по одному пути конфига sing-box по схеме форка sing-box-extended, на которой построена панель " +
+		"(schema_version): тип значения, допустимые значения перечисления или дискриминатора type, " +
+		"reference (вид узла, который значение называет по тегу: outbound, dns_server, rule_set и так далее), " +
+		"when (значения дискриминаторов на пути, при которых поле есть, например type vless у outbounds.*), " +
+		"собственный комментарий поля в форке, заметка от руки там, где схемы мало, и ключи под путём. " +
+		"Индекс массива — число или *, так что подходит путь из настоящего конфига. Справка не читает " +
+		"конфиг на роутере: для этого есть metabox_config_version.",
+
 	"State of the router running metabox: whether the sing-box service runs and who owns the process " +
 		"(managed=false with status running means a foreign package started it), the daemon, sing-box binary and " +
 		"panel schema versions, the dataplane routing mode, the runtime sources the daemon reads, and the " +

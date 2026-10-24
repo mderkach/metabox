@@ -35,6 +35,7 @@ const (
 type tools struct {
 	opts        Options
 	permissions []contract.MCPPermission
+	fields      fieldIndex
 }
 
 func (t tools) addRead(server *sdk.Server, log *slog.Logger) {
@@ -46,6 +47,17 @@ func (t tools) addRead(server *sdk.Server, log *slog.Logger) {
 			"permissions of this MCP token. An empty version means it could not be read or was not built in. "+
 			"Does not tell whether traffic actually flows: use metabox_diagnostics for that."),
 	}, t.status)
+
+	addTool(server, log, t.opts.Lang, &sdk.Tool{
+		Name: "metabox_config_field",
+		Description: locale.T(t.opts.Lang, "Reference for one sing-box config path, from the schema of the sing-box-extended fork the panel "+
+			"is built on (schema_version): the value type, the allowed values of an enum or a type discriminator, "+
+			"reference (the kind of node the value names by its tag: outbound, dns_server, rule_set and so on), "+
+			"when (the discriminator values along the path the field needs, for example type vless at outbounds.*), "+
+			"the fork's own field comment, a hand-written note where the schema is not enough, and the keys under "+
+			"the path. An array index may be a number or *, so a path from a real config works. The reference does "+
+			"not read the config on the router: use metabox_config_version for that."),
+	}, t.field)
 
 	if t.opts.Runtime != nil {
 		addTool(server, log, t.opts.Lang, &sdk.Tool{

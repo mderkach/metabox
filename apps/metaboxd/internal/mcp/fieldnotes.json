@@ -1,0 +1,22 @@
+{
+  "dns.rules.*.ip_cidr": {
+    "en": "Matches the addresses in the DNS response, not anything in the query. Without match_response it is a legacy address filter field, deprecated in sing-box 1.14.0 and to be removed in 1.16.0: it acts only on A, AAAA and HTTPS queries, and when the response addresses do not match, the rule is skipped. With match_response it matches the response of a preceding evaluate action. ip_cidr items in rule sets the rule includes act the same way.",
+    "ru": "Сравнивается с адресами в DNS-ответе, а не с чем-либо в запросе. Без match_response это устаревшее поле фильтра адресов: объявлено устаревшим в sing-box 1.14.0 и будет удалено в 1.16.0, действует только на запросы A, AAAA и HTTPS, а если адреса ответа не подошли, правило пропускается. С match_response сравнивается с ответом предшествующего действия evaluate. Пункты ip_cidr в наборах правил, которые подключает правило, ведут себя так же."
+  },
+  "dns.rules.*.ip_is_private": {
+    "en": "Matches a private address in the DNS response. The same legacy address filter field as ip_cidr: deprecated in sing-box 1.14.0, to be removed in 1.16.0; use it with match_response instead.",
+    "ru": "Срабатывает на частный адрес в DNS-ответе. Такое же устаревшее поле фильтра адресов, как ip_cidr: объявлено устаревшим в sing-box 1.14.0, будет удалено в 1.16.0; используйте его вместе с match_response."
+  },
+  "log.level": {
+    "en": "One of trace, debug, info, warn, error, fatal, panic. The schema types it as a plain string.",
+    "ru": "Одно из trace, debug, info, warn, error, fatal, panic. В схеме это просто строка."
+  },
+  "outbounds.*.outbounds": {
+    "en": "Latency of group members: the Clash API endpoints GET /proxies/{name}/delay and GET /group/{name}/delay run a real check, and so does a urltest group on its interval. A failed check deletes the member's delay history; a urltest group then chooses only among members that have a recorded delay, and when none has one it takes the first member that supports the network. metabox_proxies reads the recorded delay without running a check.",
+    "ru": "Задержка участников группы: эндпоинты Clash API GET /proxies/{name}/delay и GET /group/{name}/delay запускают настоящую проверку, как и группа urltest по своему interval. Неудачная проверка стирает историю задержки участника; группа urltest затем выбирает только из участников с записанной задержкой, а если её нет ни у кого, берёт первого участника, который поддерживает нужную сеть. metabox_proxies читает записанную задержку, не запуская проверку."
+  },
+  "route.final": {
+    "en": "Tag of the outbound for connections no rule sends elsewhere. In the top-level route, empty means the first outbound in outbounds; in the route of a bandwidth, connection, rate or traffic limiter outbound it is required, and empty fails the start.",
+    "ru": "Тег outbound для соединений, которые ни одно правило не отправило в другое место. В route верхнего уровня пустое значение означает первый outbound из outbounds; в route аутбаунда-ограничителя bandwidth, connection, rate или traffic поле обязательно, и с пустым значением sing-box не запустится."
+  }
+}

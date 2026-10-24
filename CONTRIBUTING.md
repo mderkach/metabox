@@ -43,16 +43,16 @@ The whole commit message is in English. The header is in the imperative mood ("a
 
 ### Scopes
 
-| Scope    | What it covers                                            |
-| -------- | --------------------------------------------------------- |
-| `daemon` | `apps/metaboxd/`                                          |
-| `schema` | `tools/schemagen`, `apps/web/src/shared/api/generated.ts` |
-| `fe`     | `apps/web/` except the generated schema                   |
-| `docs`   | `docs/` and root documents, when the type is not `docs`   |
-| `ci`     | `.github/`                                                |
-| `infra`  | `.devcontainer/`, `Makefile`                              |
-| `deps`   | dependency and toolchain version updates                  |
-| `ai`     | `.claude/`, agent instructions and skills                 |
+| Scope    | What it covers                                                                                              |
+| -------- | ----------------------------------------------------------------------------------------------------------- |
+| `daemon` | `apps/metaboxd/`                                                                                            |
+| `schema` | `tools/schemagen`, `apps/web/src/shared/api/generated.ts`, `apps/metaboxd/internal/mcp/fields.generated.go` |
+| `fe`     | `apps/web/` except the generated schema                                                                     |
+| `docs`   | `docs/` and root documents, when the type is not `docs`                                                     |
+| `ci`     | `.github/`                                                                                                  |
+| `infra`  | `.devcontainer/`, `Makefile`                                                                                |
+| `deps`   | dependency and toolchain version updates                                                                    |
+| `ai`     | `.claude/`, agent instructions and skills                                                                   |
 
 The same list is in `scope-enum` of `commitlint.config.mjs`. The scope is omitted when the change really touches the whole repository, and for a `docs` commit that edits only `docs/` and root documents (`README.md`, `AGENTS.md`, `CONTRIBUTING.md`): `docs(docs)` would repeat the type. A project's documentation (its guides, `AGENTS.md`, `README.md` and code comments) goes with the project scope: `docs(daemon)`, `docs(fe)`.
 
@@ -85,7 +85,7 @@ Only what belongs to the commit's topic goes into the index. A blind `git add -A
 
 ## What we do not commit
 
-- `apps/web/src/shared/api/generated.ts` edited by hand: the generator is edited, and the file is rebuilt with `make schema`.
+- `apps/web/src/shared/api/generated.ts` or `apps/metaboxd/internal/mcp/fields.generated.go` edited by hand: the generator is edited, and the files are rebuilt with `make schema`.
 - `apps/web/src/shared/api/daemon.generated.ts` edited by hand: the daemon is edited, and the file is rebuilt with `make schema-daemon`.
 - `*.local.*` (`AGENTS.local.md`, `.claude/settings.local.json`): they are in `.gitignore`.
 - `.omc/**`: agents' working notes; do not link to them from commits, code or documentation.
@@ -112,11 +112,11 @@ Check results are quoted as is; do not commit anything red.
 
 Checks are run by lefthook, installed once: `make hooks` (in the devcontainer, `postCreateCommand` does it). The config is `lefthook.yml` at the root.
 
-| Hook         | What it does                                                                                                                                                                                                                            |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pre-commit` | gofmt, lint and format of **changed files only**; `go vet ./...` over both Go modules in full if the commit has Go files; the generated `generated.ts` and `daemon.generated.ts` require a change to their generator in the same commit |
-| `commit-msg` | commitlint by the rules of this document                                                                                                                                                                                                |
-| `pre-push`   | the whole repository: `pnpm lint`, `make lint`, `pnpm format:check`, `make test`, frontend build with type checking                                                                                                                     |
+| Hook         | What it does                                                                                                                                                                                                                                                   |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pre-commit` | gofmt, lint and format of **changed files only**; `go vet ./...` over both Go modules in full if the commit has Go files; the generated `generated.ts`, `fields.generated.go` and `daemon.generated.ts` require a change to their generator in the same commit |
+| `commit-msg` | commitlint by the rules of this document                                                                                                                                                                                                                       |
+| `pre-push`   | the whole repository: `pnpm lint`, `make lint`, `pnpm format:check`, `make test`, frontend build with type checking                                                                                                                                            |
 
 The split is by cost: a commit checks what went into it and takes under a second; a push runs everything. The reason is that type-aware rules see the whole project: a change in one file breaks types in another, and checking only the changed files does not catch it.
 
@@ -148,7 +148,7 @@ New technical decisions are recorded as ADRs in [`docs/adr/`](./docs/adr/README.
 
 **Daemon (`apps/metaboxd/`).** Owns the config files and the Apply cycle. Changes to the API or the storage format are breaking and require a footer and a PRD edit. Before editing code, read the document from the table in [`apps/metaboxd/AGENTS.md`](./apps/metaboxd/AGENTS.md); before handing in, the [review checklist](./apps/metaboxd/docs/guides/ReviewChecklist.md).
 
-**Schema (`tools/schemagen`).** The generator is the source, `apps/web/src/shared/api/generated.ts` is the artifact. A commit must contain both the generator change and the regenerated file, otherwise the frontend diverges from the schema.
+**Schema (`tools/schemagen`).** The generator is the source, `apps/web/src/shared/api/generated.ts` and the MCP field reference `apps/metaboxd/internal/mcp/fields.generated.go` are the artifacts. A commit must contain both the generator change and the regenerated files, otherwise the frontend or the agent diverges from the schema.
 
 **Daemon contract.** The same order applies to `apps/web/src/shared/api/daemon.generated.ts`: it is printed by `apps/metaboxd/cmd/contractgen`, its source is the daemon structures, and the artifact goes in the same commit as their change.
 

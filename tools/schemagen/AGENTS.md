@@ -12,5 +12,5 @@ Before editing tests: [Testing.md](../../apps/metaboxd/docs/guides/Testing.md).
 
 ## Changes in `tools/schemagen/`
 
-- The generator's artifact is `apps/web/src/shared/api/generated.ts`. It is committed together with the generator change, otherwise the frontend diverges from the schema; the pre-commit hook checks this.
+- The generator's artifacts are `apps/web/src/shared/api/generated.ts` and the MCP field reference `apps/metaboxd/internal/mcp/fields.generated.go`. They are committed together with the generator change, otherwise the frontend or the agent diverges from the schema; the pre-commit hook checks this.
 - Build, run and tests only through `make schema` and `make test-schemagen`: without the fork's tags and `-ldflags` the module does not build.
