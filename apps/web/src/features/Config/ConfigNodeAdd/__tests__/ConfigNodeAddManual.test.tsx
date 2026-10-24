@@ -7,17 +7,13 @@ import { NODE_REGISTRY } from '@entities/Config';
 
 import { ConfigNodeAddManual } from '../ui/ConfigNodeAddManual';
 
-function renderManual() {
-  return render(
-    <ConfigNodeAddManual section='outbounds' registry={NODE_REGISTRY.Outbound} takenTags={[]} builtTags={null} />
-  );
-}
-
 describe('ConfigNodeAddManual type select', () => {
   it('shows the placeholder in the interface font and the chosen type in monospace', async () => {
     const user = userEvent.setup();
 
-    renderManual();
+    render(
+      <ConfigNodeAddManual section='outbounds' registry={NODE_REGISTRY.Outbound} takenTags={[]} builtTags={null} />
+    );
 
     const trigger = screen.getByRole('combobox', { name: 'Тип' });
 
