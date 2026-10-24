@@ -25,18 +25,18 @@ import (
 var (
 	// ErrNoConfig means there is no config in place, neither a file nor a directory for it.
 	// A regular case, sing-box may not have been configured on the device yet.
-	ErrNoConfig = errors.New("файла конфига нет")
+	ErrNoConfig = errors.New("no config file")
 
 	// ErrNoBackup means nothing to roll back to, the device had neither a config
 	// nor list files before the apply.
-	ErrNoBackup = errors.New("бэкапа нет")
+	ErrNoBackup = errors.New("no backup")
 
 	// ErrListsOnly means the rollback returned only the list files: the device had no
 	// config before the apply, and the written one stays in place.
-	ErrListsOnly = errors.New("конфига до применения не было, возвращены только списки")
+	ErrListsOnly = errors.New("no config before the apply, only the lists were restored")
 
 	// ErrNoState means there is no unfinished transaction, nothing to replay.
-	ErrNoState = errors.New("состояния транзакции нет")
+	ErrNoState = errors.New("no transaction state")
 )
 
 // Names of service files in the daemon directory. They are not configurable: the directory
@@ -73,14 +73,14 @@ type Store struct {
 // discovered on the device.
 func NewStore(dir, name, serviceDir string) (*Store, error) {
 	if name == "" {
-		return nil, errors.New("имя файла конфига пусто")
+		return nil, errors.New("config file name is empty")
 	}
 
 	dir = filepath.Clean(dir)
 	serviceDir = filepath.Clean(serviceDir)
 
 	if within(dir, serviceDir) {
-		return nil, fmt.Errorf("служебный каталог %s лежит в каталоге конфига %s", serviceDir, dir)
+		return nil, fmt.Errorf("service directory %s lies inside the config directory %s", serviceDir, dir)
 	}
 
 	return &Store{dir: dir, name: name, serviceDir: serviceDir}, nil
@@ -135,7 +135,7 @@ func (s *Store) Read(ctx context.Context) ([]byte, error) {
 		return nil, ErrNoConfig
 	}
 	if err != nil {
-		return nil, fmt.Errorf("чтение конфига %s: %w", s.Path(), err)
+		return nil, fmt.Errorf("read config %s: %w", s.Path(), err)
 	}
 
 	return data, nil
@@ -159,13 +159,13 @@ func (s *Store) Sum(ctx context.Context) (string, error) {
 
 	f, err := root.Open(s.name)
 	if err != nil {
-		return "", fmt.Errorf("открытие конфига %s: %w", s.Path(), err)
+		return "", fmt.Errorf("open config %s: %w", s.Path(), err)
 	}
 	defer func() { _ = f.Close() }()
 
 	h := sha256.New()
 	if _, err := io.Copy(h, f); err != nil {
-		return "", fmt.Errorf("чтение конфига %s: %w", s.Path(), err)
+		return "", fmt.Errorf("read config %s: %w", s.Path(), err)
 	}
 
 	return hex.EncodeToString(h.Sum(nil)), nil
@@ -218,11 +218,11 @@ func (s *Store) Backup(ctx context.Context) error {
 		return s.backupListsOnly()
 	}
 	if err != nil {
-		return fmt.Errorf("чтение конфига %s под бэкап: %w", s.Path(), err)
+		return fmt.Errorf("read config %s for the backup: %w", s.Path(), err)
 	}
 
 	if err := ensureDir(s.serviceDir); err != nil {
-		return fmt.Errorf("служебный каталог: %w", err)
+		return fmt.Errorf("service directory: %w", err)
 	}
 
 	serviceRoot, err := openRoot(s.serviceDir)
@@ -244,14 +244,14 @@ func (s *Store) Backup(ctx context.Context) error {
 func (s *Store) backupListsOnly() error {
 	sums, err := s.listSums()
 	if err != nil {
-		return fmt.Errorf("чтение списков под бэкап: %w", err)
+		return fmt.Errorf("read lists for the backup: %w", err)
 	}
 	if len(sums) == 0 {
 		return s.dropBackup()
 	}
 
 	if err := ensureDir(s.serviceDir); err != nil {
-		return fmt.Errorf("служебный каталог: %w", err)
+		return fmt.Errorf("service directory: %w", err)
 	}
 
 	serviceRoot, err := openRoot(s.serviceDir)
@@ -261,7 +261,7 @@ func (s *Store) backupListsOnly() error {
 	defer func() { _ = serviceRoot.Close() }()
 
 	if err := serviceRoot.Remove(backupName); err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return fmt.Errorf("снятие устаревшего бэкапа %s: %w", s.BackupPath(), err)
+		return fmt.Errorf("remove stale backup %s: %w", s.BackupPath(), err)
 	}
 
 	if err := s.backupLists(serviceRoot); err != nil {
@@ -286,12 +286,12 @@ func (s *Store) dropBackup() error {
 	defer func() { _ = serviceRoot.Close() }()
 
 	if err := serviceRoot.Remove(backupName); err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return fmt.Errorf("снятие устаревшего бэкапа %s: %w", s.BackupPath(), err)
+		return fmt.Errorf("remove stale backup %s: %w", s.BackupPath(), err)
 	}
 
 	for _, name := range []string{listsBackupName, listsBackupStaging} {
 		if err := serviceRoot.RemoveAll(name); err != nil {
-			return fmt.Errorf("снятие устаревшего бэкапа списков %s: %w", name, err)
+			return fmt.Errorf("remove stale list backup %s: %w", name, err)
 		}
 	}
 
@@ -308,35 +308,35 @@ func (s *Store) dropBackup() error {
 func (s *Store) backupLists(serviceRoot *os.Root) error {
 	files, err := s.readLists()
 	if err != nil {
-		return fmt.Errorf("чтение списков под бэкап: %w", err)
+		return fmt.Errorf("read lists for the backup: %w", err)
 	}
 
 	if err := serviceRoot.RemoveAll(listsBackupStaging); err != nil {
-		return fmt.Errorf("очистка черновика бэкапа списков: %w", err)
+		return fmt.Errorf("clear list backup draft: %w", err)
 	}
 
 	if err := serviceRoot.Mkdir(listsBackupStaging, secureDirPerm); err != nil {
-		return fmt.Errorf("каталог черновика бэкапа списков: %w", err)
+		return fmt.Errorf("list backup draft directory: %w", err)
 	}
 
 	staging, err := serviceRoot.OpenRoot(listsBackupStaging)
 	if err != nil {
-		return fmt.Errorf("открытие черновика бэкапа списков: %w", err)
+		return fmt.Errorf("open list backup draft: %w", err)
 	}
 	defer func() { _ = staging.Close() }()
 
 	for name, data := range files {
 		if err := writeAtomic(staging, name, data, securePerm); err != nil {
-			return fmt.Errorf("бэкап списка %s: %w", name, err)
+			return fmt.Errorf("back up list %s: %w", name, err)
 		}
 	}
 
 	if err := serviceRoot.RemoveAll(listsBackupName); err != nil {
-		return fmt.Errorf("снятие прежнего бэкапа списков: %w", err)
+		return fmt.Errorf("remove previous list backup: %w", err)
 	}
 
 	if err := serviceRoot.Rename(listsBackupStaging, listsBackupName); err != nil {
-		return fmt.Errorf("подмена бэкапа списков: %w", err)
+		return fmt.Errorf("replace list backup: %w", err)
 	}
 
 	return syncDir(serviceRoot)
@@ -366,7 +366,7 @@ func (s *Store) Restore(ctx context.Context) error {
 		return s.restoreListsOnly(serviceRoot)
 	}
 	if err != nil {
-		return fmt.Errorf("чтение бэкапа %s: %w", s.BackupPath(), err)
+		return fmt.Errorf("read backup %s: %w", s.BackupPath(), err)
 	}
 
 	if err := s.restoreLists(serviceRoot); err != nil {
@@ -383,7 +383,7 @@ func (s *Store) restoreListsOnly(serviceRoot *os.Root) error {
 		return ErrNoBackup
 	}
 	if err != nil {
-		return fmt.Errorf("открытие бэкапа списков: %w", err)
+		return fmt.Errorf("open list backup: %w", err)
 	}
 
 	if err := s.restoreLists(serviceRoot); err != nil {
@@ -403,13 +403,13 @@ func (s *Store) restoreLists(serviceRoot *os.Root) error {
 		return nil
 	}
 	if err != nil {
-		return fmt.Errorf("открытие бэкапа списков: %w", err)
+		return fmt.Errorf("open list backup: %w", err)
 	}
 	defer func() { _ = backup.Close() }()
 
 	entries, err := fs.ReadDir(backup.FS(), ".")
 	if err != nil {
-		return fmt.Errorf("чтение бэкапа списков: %w", err)
+		return fmt.Errorf("read list backup: %w", err)
 	}
 
 	saved := make(map[string][]byte, len(entries))
@@ -421,7 +421,7 @@ func (s *Store) restoreLists(serviceRoot *os.Root) error {
 
 		data, err := backup.ReadFile(entry.Name())
 		if err != nil {
-			return fmt.Errorf("чтение бэкапа списка %s: %w", entry.Name(), err)
+			return fmt.Errorf("read list backup %s: %w", entry.Name(), err)
 		}
 
 		saved[entry.Name()] = data
@@ -451,13 +451,13 @@ func (s *Store) restoreLists(serviceRoot *os.Root) error {
 
 	for name, data := range saved {
 		if err := writeAtomic(root, name, data, permOf(root, name)); err != nil {
-			return fmt.Errorf("возврат списка %s: %w", name, err)
+			return fmt.Errorf("restore list %s: %w", name, err)
 		}
 	}
 
 	for _, name := range remove {
 		if err := root.Remove(name); err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return fmt.Errorf("снятие списка %s: %w", name, err)
+			return fmt.Errorf("remove list %s: %w", name, err)
 		}
 	}
 
@@ -501,7 +501,7 @@ func (s *Store) StageCandidate(
 
 	entries, err := fs.ReadDir(srcRoot.FS(), ".")
 	if err != nil {
-		return fmt.Errorf("чтение каталога конфига %s: %w", s.dir, err)
+		return fmt.Errorf("read config directory %s: %w", s.dir, err)
 	}
 
 	for _, entry := range entries {
@@ -530,7 +530,7 @@ func (s *Store) StageCandidate(
 	}
 
 	if err := dstRoot.WriteFile(s.name, data, securePerm); err != nil {
-		return fmt.Errorf("запись кандидата в %s: %w", dst, err)
+		return fmt.Errorf("write candidate to %s: %w", dst, err)
 	}
 
 	return nil
@@ -546,24 +546,24 @@ func (s *Store) stageLists(dstRoot *os.Root, put map[string][]byte, remove []str
 	}
 
 	if err := dstRoot.Mkdir(listsDirName, secureDirPerm); err != nil && !errors.Is(err, fs.ErrExist) {
-		return fmt.Errorf("каталог списков кандидата: %w", err)
+		return fmt.Errorf("candidate list directory: %w", err)
 	}
 
 	listsRoot, err := dstRoot.OpenRoot(listsDirName)
 	if err != nil {
-		return fmt.Errorf("открытие каталога списков кандидата: %w", err)
+		return fmt.Errorf("open candidate list directory: %w", err)
 	}
 	defer func() { _ = listsRoot.Close() }()
 
 	for _, name := range remove {
 		if err := listsRoot.Remove(name); err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return fmt.Errorf("снятие списка %s в кандидате: %w", name, err)
+			return fmt.Errorf("remove list %s in the candidate: %w", name, err)
 		}
 	}
 
 	for name, data := range put {
 		if err := listsRoot.WriteFile(name, data, securePerm); err != nil {
-			return fmt.Errorf("список %s в кандидате: %w", name, err)
+			return fmt.Errorf("list %s in the candidate: %w", name, err)
 		}
 	}
 
@@ -584,7 +584,7 @@ func (s *Store) write(data []byte) error {
 func openRoot(dir string) (*os.Root, error) {
 	root, err := os.OpenRoot(dir)
 	if err != nil {
-		return nil, fmt.Errorf("открытие каталога %s: %w", dir, err)
+		return nil, fmt.Errorf("open directory %s: %w", dir, err)
 	}
 
 	return root, nil
@@ -596,12 +596,12 @@ func openRoot(dir string) (*os.Root, error) {
 func copyTree(src, dst *os.Root, dir string) error {
 	return fs.WalkDir(src.FS(), dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return fmt.Errorf("обход %s: %w", path, err)
+			return fmt.Errorf("walk %s: %w", path, err)
 		}
 
 		if d.IsDir() {
 			if err := dst.Mkdir(path, secureDirPerm); err != nil {
-				return fmt.Errorf("каталог %s в %s: %w", path, dst.Name(), err)
+				return fmt.Errorf("directory %s in %s: %w", path, dst.Name(), err)
 			}
 
 			return nil
@@ -614,23 +614,23 @@ func copyTree(src, dst *os.Root, dir string) error {
 func copyFile(src, dst *os.Root, name string) error {
 	in, err := src.Open(name)
 	if err != nil {
-		return fmt.Errorf("открытие %s: %w", name, err)
+		return fmt.Errorf("open %s: %w", name, err)
 	}
 	defer func() { _ = in.Close() }()
 
 	out, err := dst.OpenFile(name, os.O_CREATE|os.O_EXCL|os.O_WRONLY, securePerm)
 	if err != nil {
-		return fmt.Errorf("создание %s в %s: %w", name, dst.Name(), err)
+		return fmt.Errorf("create %s in %s: %w", name, dst.Name(), err)
 	}
 
 	if _, err := io.Copy(out, in); err != nil {
 		_ = out.Close()
 
-		return fmt.Errorf("копирование %s в %s: %w", name, dst.Name(), err)
+		return fmt.Errorf("copy %s to %s: %w", name, dst.Name(), err)
 	}
 
 	if err := out.Close(); err != nil {
-		return fmt.Errorf("закрытие %s в %s: %w", name, dst.Name(), err)
+		return fmt.Errorf("close %s in %s: %w", name, dst.Name(), err)
 	}
 
 	return nil
@@ -667,7 +667,7 @@ func (s *Store) readState(ctx context.Context, name string) ([]byte, error) {
 		return nil, ErrNoState
 	}
 	if err != nil {
-		return nil, fmt.Errorf("чтение состояния %s: %w", filepath.Join(s.serviceDir, name), err)
+		return nil, fmt.Errorf("read state %s: %w", filepath.Join(s.serviceDir, name), err)
 	}
 
 	return data, nil
@@ -696,7 +696,7 @@ func (s *Store) writeState(ctx context.Context, name string, data []byte) error 
 	defer s.mu.Unlock()
 
 	if err := ensureDir(s.serviceDir); err != nil {
-		return fmt.Errorf("служебный каталог: %w", err)
+		return fmt.Errorf("service directory: %w", err)
 	}
 
 	root, err := openRoot(s.serviceDir)
@@ -734,7 +734,7 @@ func (s *Store) clearState(ctx context.Context, name string) error {
 	defer func() { _ = root.Close() }()
 
 	if err := root.Remove(name); err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return fmt.Errorf("удаление состояния %s: %w", filepath.Join(s.serviceDir, name), err)
+		return fmt.Errorf("remove state %s: %w", filepath.Join(s.serviceDir, name), err)
 	}
 
 	return syncDir(root)
@@ -759,7 +759,7 @@ func (s *Store) ReadRuleSets(ctx context.Context) ([]byte, error) {
 
 	data, err := root.ReadFile(ruleSetsName)
 	if err != nil {
-		return nil, fmt.Errorf("чтение каталога наборов в %s: %w", s.serviceDir, err)
+		return nil, fmt.Errorf("read rule set catalog in %s: %w", s.serviceDir, err)
 	}
 
 	return data, nil
@@ -777,7 +777,7 @@ func (s *Store) WriteRuleSets(ctx context.Context, data []byte) error {
 	defer s.mu.Unlock()
 
 	if err := ensureDir(s.serviceDir); err != nil {
-		return fmt.Errorf("служебный каталог: %w", err)
+		return fmt.Errorf("service directory: %w", err)
 	}
 
 	root, err := openRoot(s.serviceDir)
@@ -808,7 +808,7 @@ func (s *Store) ReadDevices(ctx context.Context) ([]byte, error) {
 
 	data, err := root.ReadFile(devicesName)
 	if err != nil {
-		return nil, fmt.Errorf("чтение имён устройств в %s: %w", s.serviceDir, err)
+		return nil, fmt.Errorf("read device names in %s: %w", s.serviceDir, err)
 	}
 
 	return data, nil
@@ -825,7 +825,7 @@ func (s *Store) WriteDevices(ctx context.Context, data []byte) error {
 	defer s.mu.Unlock()
 
 	if err := ensureDir(s.serviceDir); err != nil {
-		return fmt.Errorf("служебный каталог: %w", err)
+		return fmt.Errorf("service directory: %w", err)
 	}
 
 	root, err := openRoot(s.serviceDir)
@@ -855,7 +855,7 @@ func (s *Store) ReadAuth(ctx context.Context) ([]byte, error) {
 
 	data, err := root.ReadFile(authName)
 	if err != nil {
-		return nil, fmt.Errorf("чтение файла пароля в %s: %w", s.serviceDir, err)
+		return nil, fmt.Errorf("read password file in %s: %w", s.serviceDir, err)
 	}
 
 	return data, nil
@@ -873,7 +873,7 @@ func (s *Store) WriteAuth(ctx context.Context, data []byte) error {
 	defer s.mu.Unlock()
 
 	if err := ensureDir(s.serviceDir); err != nil {
-		return fmt.Errorf("служебный каталог: %w", err)
+		return fmt.Errorf("service directory: %w", err)
 	}
 
 	root, err := openRoot(s.serviceDir)
@@ -903,7 +903,7 @@ func (s *Store) ReadSessions(ctx context.Context) ([]byte, error) {
 
 	data, err := root.ReadFile(sessionsName)
 	if err != nil {
-		return nil, fmt.Errorf("чтение файла сессий в %s: %w", s.serviceDir, err)
+		return nil, fmt.Errorf("read sessions file in %s: %w", s.serviceDir, err)
 	}
 
 	return data, nil
@@ -919,7 +919,7 @@ func (s *Store) WriteSessions(ctx context.Context, data []byte) error {
 	defer s.mu.Unlock()
 
 	if err := ensureDir(s.serviceDir); err != nil {
-		return fmt.Errorf("служебный каталог: %w", err)
+		return fmt.Errorf("service directory: %w", err)
 	}
 
 	root, err := openRoot(s.serviceDir)
@@ -949,7 +949,7 @@ func (s *Store) ReadMCP(ctx context.Context) ([]byte, error) {
 
 	data, err := root.ReadFile(mcpName)
 	if err != nil {
-		return nil, fmt.Errorf("чтение файла токена MCP в %s: %w", s.serviceDir, err)
+		return nil, fmt.Errorf("read MCP token file in %s: %w", s.serviceDir, err)
 	}
 
 	return data, nil
@@ -965,7 +965,7 @@ func (s *Store) WriteMCP(ctx context.Context, data []byte) error {
 	defer s.mu.Unlock()
 
 	if err := ensureDir(s.serviceDir); err != nil {
-		return fmt.Errorf("служебный каталог: %w", err)
+		return fmt.Errorf("service directory: %w", err)
 	}
 
 	root, err := openRoot(s.serviceDir)
@@ -996,7 +996,7 @@ func (s *Store) ReadTLS(ctx context.Context, name string) ([]byte, error) {
 
 	data, err := root.ReadFile(name)
 	if err != nil {
-		return nil, fmt.Errorf("чтение файла сертификата %s: %w", name, err)
+		return nil, fmt.Errorf("read certificate file %s: %w", name, err)
 	}
 
 	return data, nil
@@ -1014,7 +1014,7 @@ func (s *Store) WriteTLS(ctx context.Context, name string, data []byte) error {
 
 	dir := filepath.Join(s.serviceDir, tlsDir)
 	if err := ensureDir(dir); err != nil {
-		return fmt.Errorf("каталог сертификатов: %w", err)
+		return fmt.Errorf("certificate directory: %w", err)
 	}
 
 	root, err := openRoot(dir)

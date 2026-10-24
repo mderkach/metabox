@@ -470,7 +470,10 @@ describe('devices screen', () => {
         http.put(DATAPLANE_ENDPOINT.dataplane(), () => {
           rejected();
 
-          return HttpResponse.json({ code: 'apply_in_progress', message: 'применение уже идёт' }, { status: 409 });
+          return HttpResponse.json(
+            { code: 'apply_in_progress', message: 'apply already in progress' },
+            { status: 409 }
+          );
         }),
         ...createDeviceHandlers()
       );

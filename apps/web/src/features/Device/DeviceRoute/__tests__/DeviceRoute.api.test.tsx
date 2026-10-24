@@ -57,7 +57,7 @@ describe('useChangeDeviceRoute', () => {
   it('names a change rejected because an apply is in progress with a toast with the reason', async () => {
     server.use(
       http.put(DATAPLANE_ENDPOINT.dataplane(), () =>
-        HttpResponse.json({ code: 'apply_in_progress', message: 'применение уже идёт' }, { status: 409 })
+        HttpResponse.json({ code: 'apply_in_progress', message: 'apply already in progress' }, { status: 409 })
       )
     );
 

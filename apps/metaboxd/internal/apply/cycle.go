@@ -31,11 +31,11 @@ func (m *Manager) check(
 ) error {
 	dir, err := os.MkdirTemp("", "metabox-candidate-")
 	if err != nil {
-		return fmt.Errorf("каталог кандидата: %w", err)
+		return fmt.Errorf("candidate directory: %w", err)
 	}
 	defer func() {
 		if err := os.RemoveAll(dir); err != nil {
-			m.log.Error("каталог кандидата не убран", "err", err, "dir", dir)
+			m.log.Error("candidate directory not removed", "err", err, "dir", dir)
 		}
 	}()
 
@@ -89,12 +89,12 @@ func (m *Manager) cycle(
 	id := m.Current().ID
 	log := m.log.With("transaction_id", id)
 
-	log.Info("применение начато",
+	log.Info("apply started",
 		"sha256", short(sum(data)), "size", len(data),
 		"lists_put", len(putLists), "lists_removed", len(removeLists))
 
 	if err := m.apply(ctx, data, putLists, removeLists, settings); err != nil {
-		log.Error("применение не прошло", "err", err)
+		log.Error("apply did not go through", "err", err)
 		m.release(PhaseFailed, err)
 
 		if reasonOf(err) == ReasonBackupFailed {
@@ -129,9 +129,9 @@ func (m *Manager) apply(
 		// removed it. There is then nothing to roll back to, but the apply is not
 		// stopped either.
 		if !errors.Is(err, config.ErrNoConfig) {
-			return stepFailed(ReasonBackupFailed, fmt.Errorf("бэкап: %w", err))
+			return stepFailed(ReasonBackupFailed, fmt.Errorf("backup: %w", err))
 		}
-		m.log.Warn("конфига на устройстве нет, бэкап конфига не снят")
+		m.log.Warn("no config on the device, config backup not taken")
 	}
 
 	// The history is built on top of the backup and has nothing to do with the rollback: its failure does not
@@ -140,26 +140,26 @@ func (m *Manager) apply(
 	switch {
 	case err == nil:
 		if err := m.store.SaveVersion(ctx, previous); err != nil {
-			m.log.Warn("история версий не обновлена", "err", err)
+			m.log.Warn("version history not updated", "err", err)
 		}
 	case errors.Is(err, config.ErrNoConfig):
 		// The first apply: nothing to save into the history.
 	default:
-		m.log.Warn("конфиг не прочитан, версия в историю не сохранена", "err", err)
+		m.log.Warn("config not read, version not saved to the history", "err", err)
 	}
 
 	if err := m.store.WriteLists(ctx, putLists, removeLists); err != nil {
-		return stepFailed(ReasonWriteFailed, fmt.Errorf("запись списков: %w", err))
+		return stepFailed(ReasonWriteFailed, fmt.Errorf("write lists: %w", err))
 	}
 
 	if err := m.store.Write(ctx, data); err != nil {
-		return stepFailed(ReasonWriteFailed, fmt.Errorf("запись конфига: %w", err))
+		return stepFailed(ReasonWriteFailed, fmt.Errorf("write config: %w", err))
 	}
 
 	lastLists, err := m.store.ListSums(ctx)
 	if err != nil {
 		// There will be nothing to compare the next apply with, as after a restart.
-		m.log.Warn("отпечаток списков после записи не снят", "err", err)
+		m.log.Warn("list fingerprint not taken after the write", "err", err)
 	}
 
 	m.mu.Lock()
@@ -176,7 +176,7 @@ func (m *Manager) apply(
 	// insured by the confirmation window.
 	before, pidErr := m.service.PID(ctx)
 	if pidErr != nil {
-		m.log.Warn("pid службы до рестарта не прочитан, healthcheck без сверки процесса", "err", pidErr)
+		m.log.Warn("service pid not read before the restart, healthcheck without the process check", "err", pidErr)
 	}
 
 	plane, planeRead := m.planeBefore(ctx)
@@ -247,7 +247,7 @@ func (m *Manager) planeBefore(ctx context.Context) (planeState, bool) {
 
 	model, err := m.opts.Dataplane.Model(ctx)
 	if err != nil {
-		m.log.Warn("модель обвязки не прочитана, DNS-проба и проверка перехвата пропущены", "err", err)
+		m.log.Warn("dataplane model not read, DNS probe and interception check skipped", "err", err)
 
 		return planeState{}, false
 	}
@@ -275,11 +275,11 @@ func (m *Manager) checkInterception(ctx context.Context, before planeState) erro
 	case !before.model.Enabled:
 		return nil
 	case before.reason != "":
-		m.log.Warn("перехват не проверен: nft недоступен", "applied_reason", before.reason)
+		m.log.Warn("interception not checked: nft unavailable", "applied_reason", before.reason)
 
 		return nil
 	case !before.intercepted:
-		m.log.Warn("перехват включён, но его цепочек не было и до рестарта; проверка пропущена")
+		m.log.Warn("interception is on, but its chains were missing before the restart too; check skipped")
 
 		return nil
 	}
@@ -288,13 +288,13 @@ func (m *Manager) checkInterception(ctx context.Context, before planeState) erro
 
 	switch {
 	case err != nil:
-		return fmt.Errorf("проверка перехвата: %w", err)
+		return fmt.Errorf("check interception: %w", err)
 	case reason != "":
-		m.log.Warn("перехват после рестарта не проверен: nft недоступен", "applied_reason", reason)
+		m.log.Warn("interception not checked after the restart: nft unavailable", "applied_reason", reason)
 
 		return nil
 	case !applied:
-		return errors.New("цепочек перехвата в nft после рестарта нет")
+		return errors.New("no interception chains in nft after the restart")
 	}
 
 	return nil
@@ -314,7 +314,7 @@ func (m *Manager) probeDNS(ctx context.Context, data []byte, port int) error {
 	}
 
 	if !ok {
-		m.log.Debug("dns-in в конфиге нет, DNS-проба пропущена", "dns_port", port)
+		m.log.Debug("no dns-in in the config, DNS probe skipped", "dns_port", port)
 
 		return nil
 	}
@@ -341,14 +341,14 @@ func (m *Manager) awaitProcess(ctx context.Context, before int) error {
 		case pid > 0 && pid != before:
 			return nil
 		case pid == 0:
-			last = errors.New("служба не поднята")
+			last = errors.New("service not up")
 		default:
-			last = fmt.Errorf("procd отдаёт прежний pid %d", pid)
+			last = fmt.Errorf("procd still reports the old pid %d", pid)
 		}
 
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("ожидание нового процесса службы: %w, последняя попытка: %w", ctx.Err(), last)
+			return fmt.Errorf("wait for the new service process: %w, last attempt: %w", ctx.Err(), last)
 		case <-ticker.C:
 		}
 	}
@@ -364,10 +364,10 @@ func (m *Manager) await(ctx context.Context, log *slog.Logger, confirmed <-chan 
 	m.mu.Unlock()
 
 	if err := m.persist(ctx, tx); err != nil {
-		log.Error("состояние окна подтверждения не сохранено", "err", err)
+		log.Error("confirmation window state not saved", "err", err)
 	}
 
-	log.Info("сервис поднялся, идёт окно подтверждения", "window", m.opts.Window)
+	log.Info("service is up, confirmation window open", "window", m.opts.Window)
 
 	select {
 	case <-confirmed:
@@ -375,7 +375,7 @@ func (m *Manager) await(ctx context.Context, log *slog.Logger, confirmed <-chan 
 	case <-ctx.Done():
 		// The daemon is being stopped. The state stays on disk, the window is replayed
 		// at the next start.
-		log.Warn("окно подтверждения прервано остановкой демона")
+		log.Warn("confirmation window interrupted by daemon shutdown")
 
 		return
 	case <-m.clock.After(m.opts.Window):
@@ -383,7 +383,7 @@ func (m *Manager) await(ctx context.Context, log *slog.Logger, confirmed <-chan 
 			return
 		}
 
-		log.Warn("подтверждения не было, возвращаем предыдущий конфиг")
+		log.Warn("no confirmation, restoring the previous config")
 		m.rollback(context.WithoutCancel(ctx), log)
 	}
 }
@@ -420,10 +420,10 @@ func (m *Manager) rollback(ctx context.Context, log *slog.Logger) {
 	var noBackupCode ReasonCode
 	switch {
 	case errors.Is(restoreErr, config.ErrListsOnly):
-		log.Warn("конфига до применения не было: списки возвращены, служба остаётся на записанном конфиге")
+		log.Warn("no config before the apply: lists restored, the service stays on the written config")
 		noBackupCode = ReasonListsRestored
 	case errors.Is(restoreErr, config.ErrNoBackup):
-		log.Warn("откатываться не на что: бэкапа нет, служба остаётся на записанном")
+		log.Warn("nothing to roll back to: no backup, the service stays on the written config")
 		noBackupCode = ReasonNoBackup
 	}
 
@@ -439,7 +439,7 @@ func (m *Manager) rollback(ctx context.Context, log *slog.Logger) {
 	}
 
 	if err := errors.Join(restoreErr, restartErr); err != nil {
-		log.Error("откат не прошёл", "err", err)
+		log.Error("rollback did not go through", "err", err)
 		m.release(PhaseFailed, stepFailed(ReasonRollbackFailed, err))
 
 		// What landed on disk is unknown: Restore could have both finished and failed in
@@ -482,7 +482,7 @@ func (m *Manager) rollback(ctx context.Context, log *slog.Logger) {
 	// The state is removed before busy is released: busy released earlier lets in
 	// the next Start, and ClearState would erase its state file.
 	if err := m.store.ClearState(ctx); err != nil {
-		log.Error("состояние откаченной транзакции не убрано", "err", err)
+		log.Error("state of the rolled back transaction not removed", "err", err)
 	}
 
 	m.mu.Lock()
@@ -490,7 +490,7 @@ func (m *Manager) rollback(ctx context.Context, log *slog.Logger) {
 	m.mu.Unlock()
 
 	if !noBackup {
-		log.Info("предыдущий конфиг возвращён")
+		log.Info("previous config restored")
 	}
 }
 
@@ -512,7 +512,7 @@ func (m *Manager) closeUnwritten(ctx context.Context, log *slog.Logger) {
 	// rollback. An applying left on disk will be closed by the replay without a rollback:
 	// writeHappened finds no write.
 	if err := m.store.ClearState(ctx); err != nil {
-		log.Error("состояние транзакции без записи не убрано", "err", err)
+		log.Error("state of the transaction without a write not removed", "err", err)
 	}
 
 	m.mu.Lock()
@@ -529,12 +529,12 @@ func (m *Manager) Replay(ctx context.Context) error {
 		return nil
 	}
 	if err != nil {
-		return fmt.Errorf("чтение состояния: %w", err)
+		return fmt.Errorf("read state: %w", err)
 	}
 
 	var tx Transaction
 	if err := json.Unmarshal(data, &tx); err != nil {
-		return fmt.Errorf("разбор состояния: %w", err)
+		return fmt.Errorf("parse state: %w", err)
 	}
 
 	log := m.log.With("transaction_id", tx.ID)
@@ -546,31 +546,31 @@ func (m *Manager) Replay(ctx context.Context) error {
 		// and the backup may be left from a previous transaction, and restoring from
 		// it would silently lose an already confirmed version.
 		if !m.writeHappened(ctx, tx) {
-			log.Warn("применение оборвано до записи конфига, откат не нужен")
+			log.Warn("apply interrupted before the config write, no rollback needed")
 
 			if err := m.store.ClearState(ctx); err != nil {
-				return fmt.Errorf("очистка оборванного состояния: %w", err)
+				return fmt.Errorf("clear interrupted state: %w", err)
 			}
 
 			return nil
 		}
 
-		log.Warn("применение оборвано, возвращаем предыдущий конфиг")
+		log.Warn("apply interrupted, restoring the previous config")
 		m.begin(tx)
 		m.rollback(ctx, log)
 
 	case tx.Phase == PhaseAwaitingConfirm && tx.Window <= 0:
-		log.Warn("окно подтверждения истекло, возвращаем предыдущий конфиг")
+		log.Warn("confirmation window expired, restoring the previous config")
 		m.begin(tx)
 		m.rollback(ctx, log)
 
 	case tx.Phase == PhaseAwaitingConfirm:
-		log.Warn("окно подтверждения восстановлено", "window", tx.Window)
+		log.Warn("confirmation window restored", "window", tx.Window)
 		m.restoreWindow(tx, m.reserveRestored())
 
 	default:
 		if err := m.store.ClearState(ctx); err != nil {
-			return fmt.Errorf("очистка завершённого состояния: %w", err)
+			return fmt.Errorf("clear finished state: %w", err)
 		}
 	}
 
@@ -586,7 +586,7 @@ func (m *Manager) writeHappened(ctx context.Context, tx Transaction) bool {
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		// The comparison failed: we assume the write happened, since an extra rollback
 		// returns the backup, while a skipped one would leave the device without an automatic rollback.
-		m.log.Warn("сверка конфига при доигрывании не прошла", "err", err)
+		m.log.Warn("config comparison on replay did not go through", "err", err)
 
 		return true
 	}
@@ -600,7 +600,7 @@ func (m *Manager) writeHappened(ctx context.Context, tx Transaction) bool {
 
 	sums, err := m.store.ListSums(ctx)
 	if err != nil {
-		m.log.Warn("сверка списков при доигрывании не прошла", "err", err)
+		m.log.Warn("list comparison on replay did not go through", "err", err)
 
 		return true
 	}
@@ -651,13 +651,13 @@ func (m *Manager) restoreWindow(tx Transaction, token uint64) {
 		select {
 		case <-confirmed:
 		case <-ctx.Done():
-			log.Warn("восстановленное окно прервано остановкой демона")
+			log.Warn("restored window interrupted by daemon shutdown")
 		case <-m.clock.After(tx.Window):
 			if !m.beginRollback() {
 				return
 			}
 
-			log.Warn("подтверждения не было, возвращаем предыдущий конфиг")
+			log.Warn("no confirmation, restoring the previous config")
 			m.rollback(context.WithoutCancel(ctx), log)
 		}
 	}()

@@ -32,7 +32,7 @@ func ReadDNSInbound(data []byte, port int) (DNSInbound, bool, error) {
 	}
 
 	if err := json.Unmarshal(mask(data), &cfg); err != nil {
-		return DNSInbound{}, false, fmt.Errorf("чтение inbounds: %w", err)
+		return DNSInbound{}, false, fmt.Errorf("read inbounds: %w", err)
 	}
 
 	for _, in := range cfg.Inbounds {
@@ -91,7 +91,7 @@ func (p *DNSProbe) Probe(ctx context.Context, in DNSInbound) error {
 		if attempt > 0 {
 			select {
 			case <-ctx.Done():
-				return fmt.Errorf("DNS-проба %s через %s: %w, последняя попытка: %w", p.name, in.Address, ctx.Err(), last)
+				return fmt.Errorf("DNS probe %s via %s: %w, last attempt: %w", p.name, in.Address, ctx.Err(), last)
 			case <-time.After(p.interval):
 			}
 		}
@@ -106,5 +106,5 @@ func (p *DNSProbe) Probe(ctx context.Context, in DNSInbound) error {
 		last = err
 	}
 
-	return fmt.Errorf("DNS-проба %s через %s, попыток %d: %w", p.name, in.Address, p.attempts, last)
+	return fmt.Errorf("DNS probe %s via %s, %d attempts: %w", p.name, in.Address, p.attempts, last)
 }

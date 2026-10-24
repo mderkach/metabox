@@ -73,7 +73,7 @@ func (s *Store) readLists() (map[string][]byte, error) {
 
 	entries, err := fs.ReadDir(root.FS(), ".")
 	if err != nil {
-		return nil, fmt.Errorf("чтение каталога списков %s: %w", s.ListsPath(), err)
+		return nil, fmt.Errorf("read list directory %s: %w", s.ListsPath(), err)
 	}
 
 	files := make(map[string][]byte, len(entries))
@@ -85,7 +85,7 @@ func (s *Store) readLists() (map[string][]byte, error) {
 
 		data, err := root.ReadFile(entry.Name())
 		if err != nil {
-			return nil, fmt.Errorf("чтение списка %s: %w", entry.Name(), err)
+			return nil, fmt.Errorf("read list %s: %w", entry.Name(), err)
 		}
 
 		files[entry.Name()] = data
@@ -122,7 +122,7 @@ func (s *Store) listSums() (map[string]string, error) {
 
 	entries, err := fs.ReadDir(root.FS(), ".")
 	if err != nil {
-		return nil, fmt.Errorf("чтение каталога списков %s: %w", s.ListsPath(), err)
+		return nil, fmt.Errorf("read list directory %s: %w", s.ListsPath(), err)
 	}
 
 	sums := make(map[string]string, len(entries))
@@ -134,7 +134,7 @@ func (s *Store) listSums() (map[string]string, error) {
 
 		sum, err := streamSum(root, entry.Name())
 		if err != nil {
-			return nil, fmt.Errorf("чтение списка %s: %w", entry.Name(), err)
+			return nil, fmt.Errorf("read list %s: %w", entry.Name(), err)
 		}
 
 		sums[entry.Name()] = sum
@@ -167,13 +167,13 @@ func (s *Store) WriteLists(ctx context.Context, put map[string][]byte, remove []
 
 	for name, data := range put {
 		if err := writeAtomic(root, name, data, permOf(root, name)); err != nil {
-			return fmt.Errorf("запись списка %s: %w", name, err)
+			return fmt.Errorf("write list %s: %w", name, err)
 		}
 	}
 
 	for _, name := range remove {
 		if err := root.Remove(name); err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return fmt.Errorf("удаление списка %s: %w", name, err)
+			return fmt.Errorf("remove list %s: %w", name, err)
 		}
 	}
 
@@ -181,7 +181,7 @@ func (s *Store) WriteLists(ctx context.Context, put map[string][]byte, remove []
 }
 
 // errNoLists: there is no lists subdirectory. For reading this is an empty set.
-var errNoLists = errors.New("каталога списков нет")
+var errNoLists = errors.New("no list directory")
 
 // listsRoot opens the lists subdirectory from the open config directory root:
 // a symlink in its place would take the write outside. With create the subdirectory is created,
@@ -196,7 +196,7 @@ func (s *Store) listsRoot(create bool) (*os.Root, error) {
 
 	if create {
 		if err := cfgRoot.Mkdir(listsDirName, secureDirPerm); err != nil && !errors.Is(err, fs.ErrExist) {
-			return nil, fmt.Errorf("создание каталога списков %s: %w", s.ListsPath(), err)
+			return nil, fmt.Errorf("create list directory %s: %w", s.ListsPath(), err)
 		}
 
 		if err := syncDir(cfgRoot); err != nil {
@@ -210,7 +210,7 @@ func (s *Store) listsRoot(create bool) (*os.Root, error) {
 			return nil, errNoLists
 		}
 
-		return nil, fmt.Errorf("открытие каталога списков %s: %w", s.ListsPath(), err)
+		return nil, fmt.Errorf("open list directory %s: %w", s.ListsPath(), err)
 	}
 
 	return root, nil

@@ -17,7 +17,7 @@ A power loss during a write does not leave a half-written `config.json`. The seq
 func writeAtomic(dir, name string, data []byte, perm os.FileMode) (err error) {
 	tmp, err := os.CreateTemp(dir, ".metabox-*")
 	if err != nil {
-		return fmt.Errorf("временный файл в %s: %w", dir, err)
+		return fmt.Errorf("temporary file in %s: %w", dir, err)
 	}
 	defer func() {
 		if err != nil {
@@ -27,20 +27,20 @@ func writeAtomic(dir, name string, data []byte, perm os.FileMode) (err error) {
 
 	if _, err = tmp.Write(data); err != nil {
 		tmp.Close()
-		return fmt.Errorf("запись %s: %w", tmp.Name(), err)
+		return fmt.Errorf("write %s: %w", tmp.Name(), err)
 	}
 	if err = tmp.Sync(); err != nil {
 		tmp.Close()
 		return fmt.Errorf("fsync %s: %w", tmp.Name(), err)
 	}
 	if err = tmp.Close(); err != nil {
-		return fmt.Errorf("закрытие %s: %w", tmp.Name(), err)
+		return fmt.Errorf("close %s: %w", tmp.Name(), err)
 	}
 	if err = os.Chmod(tmp.Name(), perm); err != nil {
-		return fmt.Errorf("права %s: %w", tmp.Name(), err)
+		return fmt.Errorf("chmod %s: %w", tmp.Name(), err)
 	}
 	if err = os.Rename(tmp.Name(), filepath.Join(dir, name)); err != nil {
-		return fmt.Errorf("rename в %s: %w", name, err)
+		return fmt.Errorf("rename to %s: %w", name, err)
 	}
 
 	return syncDir(dir)

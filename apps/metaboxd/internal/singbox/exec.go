@@ -21,7 +21,7 @@ const (
 	// the pipes open. Without this a hung sing-box holds the goroutine indefinitely.
 	waitDelay = 5 * time.Second
 
-	cutMark = "\n…вывод обрезан"
+	cutMark = "\n…output truncated"
 )
 
 // Exec is the production Runner on top of os/exec.
@@ -66,7 +66,7 @@ func (e *Exec) run(ctx context.Context, stdin io.Reader, name string, args ...st
 	// by a signal also returns *exec.ExitError, and code -1 would look like
 	// a binary verdict.
 	if ctxErr := ctx.Err(); ctxErr != nil {
-		return res, fmt.Errorf("запуск %s: %w", name, ctxErr)
+		return res, fmt.Errorf("start %s: %w", name, ctxErr)
 	}
 
 	if err == nil {
@@ -79,7 +79,7 @@ func (e *Exec) run(ctx context.Context, stdin io.Reader, name string, args ...st
 		return res, nil
 	}
 
-	return res, fmt.Errorf("запуск %s: %w", name, err)
+	return res, fmt.Errorf("start %s: %w", name, err)
 }
 
 // limitWriter accumulates no more than limit bytes and always reports a full write:

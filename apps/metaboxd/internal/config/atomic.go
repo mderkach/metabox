@@ -46,7 +46,7 @@ func writeAtomic(root *os.Root, name string, data []byte, perm fs.FileMode) (err
 	if _, err = tmp.Write(data); err != nil {
 		_ = tmp.Close()
 
-		return fmt.Errorf("запись %s: %w", tmpName, err)
+		return fmt.Errorf("write %s: %w", tmpName, err)
 	}
 
 	if err = tmp.Sync(); err != nil {
@@ -56,15 +56,15 @@ func writeAtomic(root *os.Root, name string, data []byte, perm fs.FileMode) (err
 	}
 
 	if err = tmp.Close(); err != nil {
-		return fmt.Errorf("закрытие %s: %w", tmpName, err)
+		return fmt.Errorf("close %s: %w", tmpName, err)
 	}
 
 	if err = root.Chmod(tmpName, perm); err != nil {
-		return fmt.Errorf("права %s: %w", tmpName, err)
+		return fmt.Errorf("chmod %s: %w", tmpName, err)
 	}
 
 	if err = root.Rename(tmpName, name); err != nil {
-		return fmt.Errorf("rename в %s: %w", name, err)
+		return fmt.Errorf("rename to %s: %w", name, err)
 	}
 
 	return syncDir(root)
@@ -81,29 +81,29 @@ func createTemp(root *os.Root) (*os.File, string, error) {
 			continue
 		}
 		if err != nil {
-			return nil, "", fmt.Errorf("временный файл в %s: %w", root.Name(), err)
+			return nil, "", fmt.Errorf("temporary file in %s: %w", root.Name(), err)
 		}
 
 		return f, name, nil
 	}
 
-	return nil, "", fmt.Errorf("временный файл в %s: имя занято %d раз подряд", root.Name(), tempAttempts)
+	return nil, "", fmt.Errorf("temporary file in %s: name taken %d times in a row", root.Name(), tempAttempts)
 }
 
 func syncDir(root *os.Root) error {
 	d, err := root.Open(".")
 	if err != nil {
-		return fmt.Errorf("открытие каталога %s: %w", root.Name(), err)
+		return fmt.Errorf("open directory %s: %w", root.Name(), err)
 	}
 
 	if err := d.Sync(); err != nil {
 		_ = d.Close()
 
-		return fmt.Errorf("fsync каталога %s: %w", root.Name(), err)
+		return fmt.Errorf("fsync directory %s: %w", root.Name(), err)
 	}
 
 	if err := d.Close(); err != nil {
-		return fmt.Errorf("закрытие каталога %s: %w", root.Name(), err)
+		return fmt.Errorf("close directory %s: %w", root.Name(), err)
 	}
 
 	return nil
@@ -117,13 +117,13 @@ func ensureDir(dir string) error {
 	info, err := os.Stat(dir)
 	if err == nil {
 		if !info.IsDir() {
-			return fmt.Errorf("%s не каталог", dir)
+			return fmt.Errorf("%s is not a directory", dir)
 		}
 
 		return nil
 	}
 	if !errors.Is(err, fs.ErrNotExist) {
-		return fmt.Errorf("каталог %s: %w", dir, err)
+		return fmt.Errorf("directory %s: %w", dir, err)
 	}
 
 	parent := filepath.Dir(dir)
@@ -138,7 +138,7 @@ func ensureDir(dir string) error {
 			return nil
 		}
 
-		return fmt.Errorf("создание каталога %s: %w", dir, err)
+		return fmt.Errorf("create directory %s: %w", dir, err)
 	}
 
 	root, err := openRoot(parent)

@@ -37,7 +37,7 @@ type CheckError struct {
 }
 
 func (e *CheckError) Error() string {
-	return fmt.Sprintf("sing-box check: код %d", e.ExitCode)
+	return fmt.Sprintf("sing-box check: exit code %d", e.ExitCode)
 }
 
 // Client is the daemon access to sing-box: config check and service control.
@@ -62,12 +62,12 @@ type Client struct {
 func New(runner Runner, binary, initScript, instance, logread string, supervisor Supervisor) (*Client, error) {
 	for _, path := range []string{binary, initScript} {
 		if !filepath.IsAbs(path) {
-			return nil, fmt.Errorf("путь %q не абсолютный", path)
+			return nil, fmt.Errorf("path %q is not absolute", path)
 		}
 	}
 
 	if logread != "" && !filepath.IsAbs(logread) {
-		return nil, fmt.Errorf("путь %q не абсолютный", logread)
+		return nil, fmt.Errorf("path %q is not absolute", logread)
 	}
 
 	return &Client{
@@ -92,7 +92,7 @@ func (c *Client) Check(ctx context.Context, dir, config, workdir string) error {
 
 	res, err := c.runner.Run(ctx, c.binary, args...)
 	if err != nil {
-		return fmt.Errorf("проверка конфига: %w", err)
+		return fmt.Errorf("check config: %w", err)
 	}
 
 	if res.ExitCode != 0 {
@@ -120,16 +120,16 @@ type Build struct {
 func (c *Client) Build(ctx context.Context) (Build, error) {
 	res, err := c.runner.Run(ctx, c.binary, "version")
 	if err != nil {
-		return Build{}, fmt.Errorf("версия sing-box: %w", err)
+		return Build{}, fmt.Errorf("sing-box version: %w", err)
 	}
 
 	if res.ExitCode != 0 {
-		return Build{}, fmt.Errorf("версия sing-box: код %d, %s", res.ExitCode, firstLine(res.Stderr))
+		return Build{}, fmt.Errorf("sing-box version: exit code %d, %s", res.ExitCode, firstLine(res.Stderr))
 	}
 
 	version := parseVersion(res.Stdout)
 	if version == "" {
-		return Build{}, fmt.Errorf("версия sing-box: вывод %q не разобран", firstLine(res.Stdout))
+		return Build{}, fmt.Errorf("sing-box version: output %q not parsed", firstLine(res.Stdout))
 	}
 
 	return Build{Version: version, Tags: parseTags(res.Stdout)}, nil
@@ -197,11 +197,11 @@ func (c *Client) Stop(ctx context.Context) error {
 func (c *Client) service(ctx context.Context, action string) error {
 	res, err := c.runner.Run(ctx, c.initScript, action)
 	if err != nil {
-		return fmt.Errorf("%s сервиса: %w", action, err)
+		return fmt.Errorf("service %s: %w", action, err)
 	}
 
 	if res.ExitCode != 0 {
-		return fmt.Errorf("%s сервиса: код %d, %s", action, res.ExitCode, firstLine(res.Stderr))
+		return fmt.Errorf("service %s: exit code %d, %s", action, res.ExitCode, firstLine(res.Stderr))
 	}
 
 	return nil
@@ -232,7 +232,7 @@ type Supervisor interface {
 func (c *Client) Running(ctx context.Context) (bool, error) {
 	res, err := c.running(ctx)
 	if err != nil {
-		return false, fmt.Errorf("состояние сервиса: %w", err)
+		return false, fmt.Errorf("service state: %w", err)
 	}
 
 	return res.ExitCode == 0, nil
@@ -240,11 +240,11 @@ func (c *Client) Running(ctx context.Context) (bool, error) {
 
 // ErrNoSupervisor means the process manager is not attached, and there is nobody to learn the service pid
 // from.
-var ErrNoSupervisor = errors.New("менеджер процессов не подключён")
+var ErrNoSupervisor = errors.New("process manager not connected")
 
 // ErrUnknownService means procd does not know the service: the init script is not under procd or
 // the service is registered under another name, and there is nowhere to learn the process pid.
-var ErrUnknownService = errors.New("служба не зарегистрирована в procd")
+var ErrUnknownService = errors.New("service not registered in procd")
 
 // PID returns the pid of the running service process from procd; zero means no instance is
 // up. By the pid change the apply tells the process after a restart from the previous one:
@@ -256,7 +256,7 @@ func (c *Client) PID(ctx context.Context) (int, error) {
 
 	state, err := c.supervisor.Service(ctx, c.ServiceName(), c.instance)
 	if err != nil {
-		return 0, fmt.Errorf("pid службы: %w", err)
+		return 0, fmt.Errorf("service pid: %w", err)
 	}
 
 	if !state.Known {
@@ -272,7 +272,7 @@ func (c *Client) PID(ctx context.Context) (int, error) {
 func (c *Client) State(ctx context.Context) (State, error) {
 	running, err := c.running(ctx)
 	if err != nil {
-		return State{}, fmt.Errorf("состояние сервиса: %w", err)
+		return State{}, fmt.Errorf("service state: %w", err)
 	}
 
 	state := State{Running: running.ExitCode == 0}
@@ -285,7 +285,7 @@ func (c *Client) State(ctx context.Context) (State, error) {
 	if errors.Is(err, procd.ErrAmbiguousInstance) {
 		// Other procd failures only impoverish the state, and this one means
 		// the daemon does not know which process is its own: guessing is not allowed.
-		return State{}, fmt.Errorf("состояние сервиса: %w", err)
+		return State{}, fmt.Errorf("service state: %w", err)
 	}
 
 	if err != nil {

@@ -42,11 +42,11 @@ type target struct {
 // to the client in the net/http format, not in the daemon format.
 func NewProxy(resolve Resolver, onError ErrorHandler) (*Proxy, error) {
 	if resolve == nil {
-		return nil, errors.New("резолвер настроек не задан")
+		return nil, errors.New("settings resolver not set")
 	}
 
 	if onError == nil {
-		return nil, errors.New("обработчик ошибок не задан")
+		return nil, errors.New("error handler not set")
 	}
 
 	p := &Proxy{resolve: resolve, onError: onError}

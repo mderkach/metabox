@@ -173,11 +173,11 @@ func (r *Reader) Write(ctx context.Context, m Model) error {
 
 	got, err := r.Model(ctx)
 	if err != nil {
-		return fmt.Errorf("модель после записи: %w", err)
+		return fmt.Errorf("model after the write: %w", err)
 	}
 
 	if !reflect.DeepEqual(got, want) {
-		return errors.New("модель в UCI после записи не совпала с записанной")
+		return errors.New("model in UCI after the write does not match the written one")
 	}
 
 	return nil
@@ -192,7 +192,7 @@ func (r *Reader) Restore(ctx context.Context, snap Snapshot) error {
 
 	if snap.Exists {
 		if !safeWord(snap.Type) {
-			return fmt.Errorf("тип секции %q не записать", snap.Type)
+			return fmt.Errorf("section type %q cannot be written", snap.Type)
 		}
 
 		fmt.Fprintf(&b, "set %s.%s=%s\n", config, section, snap.Type)
@@ -200,7 +200,7 @@ func (r *Reader) Restore(ctx context.Context, snap Snapshot) error {
 		for _, name := range slices.Sorted(maps.Keys(snap.Options)) {
 			values := snap.Options[name]
 			if !safeWord(name) || len(values) == 0 || slices.ContainsFunc(values, splitsCommand) {
-				return fmt.Errorf("опция %q не записать", name)
+				return fmt.Errorf("option %q cannot be written", name)
 			}
 
 			if slices.Contains(listOptions, name) || len(values) > 1 {
@@ -219,11 +219,11 @@ func (r *Reader) Restore(ctx context.Context, snap Snapshot) error {
 
 	got, err := r.Snapshot(ctx)
 	if err != nil {
-		return fmt.Errorf("секция после восстановления: %w", err)
+		return fmt.Errorf("section after the restore: %w", err)
 	}
 
 	if !got.Equal(snap) {
-		return errors.New("секция в UCI после восстановления не совпала со снимком")
+		return errors.New("section in UCI after the restore does not match the snapshot")
 	}
 
 	return nil
@@ -239,7 +239,7 @@ func writeList(b *strings.Builder, name string, values []string) {
 
 func (r *Reader) commit(ctx context.Context, b *strings.Builder) error {
 	if r.batch == nil {
-		return errors.New("запись UCI не настроена")
+		return errors.New("UCI write not configured")
 	}
 
 	fmt.Fprintf(b, "commit %s\n", config)
@@ -250,7 +250,7 @@ func (r *Reader) commit(ctx context.Context, b *strings.Builder) error {
 	}
 
 	if code != 0 {
-		return fmt.Errorf("uci batch: код %d", code)
+		return fmt.Errorf("uci batch: exit code %d", code)
 	}
 
 	return nil
