@@ -34,5 +34,6 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": ["src/**/*.browser.test.tsx", "src/test/browserSetup.ts"]
 }

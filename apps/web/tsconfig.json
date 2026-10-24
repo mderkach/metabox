@@ -12,6 +12,9 @@
     },
     {
       "path": "./tsconfig.dev.json"
+    },
+    {
+      "path": "./tsconfig.browser.json"
     }
   ],
   "compilerOptions": {

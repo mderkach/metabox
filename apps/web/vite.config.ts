@@ -5,12 +5,18 @@ import { brotliCompressSync, constants, gzipSync } from 'node:zlib';
 
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
+import { playwright } from '@vitest/browser-playwright';
 import type { ProxyOptions } from 'vite';
 import { configDefaults, defineConfig, type Plugin } from 'vitest/config';
 
 import { LOCALE_ROOT, checkLocales, collectLocales, hashedLocaleUrl, localeKey, writeI18nTypes } from './tools/i18n.ts';
 
 const BUDGET_TESTS = 'src/**/*.budget.test.{ts,tsx}';
+const BROWSER_TESTS = 'src/**/*.browser.test.{ts,tsx}';
+
+// Inline projects inherit the root `test` and merge `setupFiles`, so the jsdom setup is
+// given to its projects only: the browser one has no `msw/node` and needs no jsdom stubs.
+const JSDOM_PROJECT = { environment: 'jsdom', setupFiles: './src/test/setup.ts' } as const;
 
 // FSD layers; the same list is in `paths` of both tsconfigs.
 const LAYERS = ['app', 'pages', 'widgets', 'features', 'entities', 'shared'];
@@ -311,25 +317,38 @@ export default defineConfig({
     },
   },
   test: {
-    environment: 'jsdom',
-    setupFiles: './src/test/setup.ts',
     // Budget measurements run as a separate group after the rest, one file at a time:
     // parallel neighbours take the CPU, and the measurement on a CI runner goes over the threshold.
     projects: [
       {
         test: {
+          ...JSDOM_PROJECT,
           name: 'unit',
           include: ['src/**/*.test.{ts,tsx}'],
-          exclude: [...configDefaults.exclude, BUDGET_TESTS],
+          exclude: [...configDefaults.exclude, BUDGET_TESTS, BROWSER_TESTS],
           sequence: { groupOrder: 0 },
         },
       },
       {
         test: {
+          ...JSDOM_PROJECT,
           name: 'budget',
           include: [BUDGET_TESTS],
           fileParallelism: false,
           sequence: { groupOrder: 1 },
+        },
+      },
+      {
+        test: {
+          name: 'browser',
+          include: [BROWSER_TESTS],
+          setupFiles: './src/test/browserSetup.ts',
+          browser: {
+            enabled: true,
+            provider: playwright(),
+            headless: true,
+            instances: [{ browser: 'chromium' }],
+          },
         },
       },
     ],
