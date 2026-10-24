@@ -1,7 +1,6 @@
-import { selectOption } from '@test/selectOption';
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
+import { userEvent } from 'vitest/browser';
 
 import { NODE_REGISTRY } from '@entities/Config';
 
@@ -9,8 +8,6 @@ import { ConfigNodeAddManual } from '../ui/ConfigNodeAddManual';
 
 describe('ConfigNodeAddManual type select', () => {
   it('shows the placeholder in the interface font and the chosen type in monospace', async () => {
-    const user = userEvent.setup();
-
     render(
       <ConfigNodeAddManual section='outbounds' registry={NODE_REGISTRY.Outbound} takenTags={[]} builtTags={null} />
     );
@@ -18,11 +15,13 @@ describe('ConfigNodeAddManual type select', () => {
     const trigger = screen.getByRole('combobox', { name: 'Тип' });
 
     expect(trigger).toHaveAttribute('data-placeholder');
-    expect(trigger).toHaveClass('font-mono', 'data-placeholder:font-sans');
+    expect(getComputedStyle(trigger).fontFamily).toMatch(/^"Geist Variable"/);
 
-    await selectOption(user, trigger, 'directНапрямую, без прокси');
+    await userEvent.click(trigger);
+    await userEvent.click(await screen.findByRole('option', { name: /^direct/ }));
 
     expect(trigger).not.toHaveAttribute('data-placeholder');
-    expect(trigger).toHaveTextContent('direct');
+    expect(within(trigger).getByText('direct')).toBeVisible();
+    expect(getComputedStyle(trigger).fontFamily).toMatch(/^"Fira Code Variable"/);
   });
 });

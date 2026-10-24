@@ -35,5 +35,5 @@
     "noFallthroughCasesInSwitch": true
   },
   "include": ["src"],
-  "exclude": ["src/**/*.browser.test.tsx", "src/test/browserSetup.ts"]
+  "exclude": ["src/**/*.browser.test.ts", "src/**/*.browser.test.tsx", "src/test/browserSetup.ts"]
 }
