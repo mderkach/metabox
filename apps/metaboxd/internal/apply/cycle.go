@@ -215,7 +215,7 @@ func (m *Manager) apply(
 	// DNS that failed on the running config was not broken by this apply, and a rollback to the
 	// same upstream would not repair it: dead provider nodes take both configs down.
 	if dnsBefore != nil {
-		m.log.Warn("DNS-проба не прошла и до рестарта; проверка DNS после рестарта пропущена", "err", dnsBefore)
+		m.log.Warn("DNS probe did not go through before the restart either; DNS check after the restart skipped", "err", dnsBefore)
 
 		return nil
 	}
