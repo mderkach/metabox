@@ -15,6 +15,11 @@ pre-commit:
       run: git diff --cached --name-only | grep -q '^tools/schemagen/'
       fail_text: The file is built by `make schema`; commit it together with the change in tools/schemagen
 
+    - name: generated-fields
+      glob: 'apps/metaboxd/internal/mcp/fields.generated.go'
+      run: git diff --cached --name-only | grep -q '^tools/schemagen/'
+      fail_text: The file is built by `make schema`; commit it together with the change in tools/schemagen
+
     - name: generated-contract
       glob: 'apps/web/src/shared/api/daemon.generated.ts'
       run: git diff --cached --name-only | grep -qE '^apps/metaboxd/'

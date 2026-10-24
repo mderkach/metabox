@@ -27,7 +27,8 @@ schema:
 	mkdir -p apps/web/src/shared/api
 	cd tools/schemagen && go run \
 		-tags "$(SCHEMA_TAGS)" -ldflags "$(SCHEMA_LDFLAGS)" . \
-		-out ../../apps/web/src/shared/api/generated.ts
+		-out ../../apps/web/src/shared/api/generated.ts \
+		-fields ../../apps/metaboxd/internal/mcp/fields.generated.go
 
 schema-daemon:
 	mkdir -p apps/web/src/shared/api

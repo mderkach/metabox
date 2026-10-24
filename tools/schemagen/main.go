@@ -1,5 +1,6 @@
 // Command schemagen generates Zod schemas from the sing-box-extended option
-// types: it imports the fork as a library and inspects it with reflection.
+// types, and the field reference the daemon's MCP server gives agents: it imports
+// the fork as a library and inspects it with reflection.
 //
 // This is a separate Go module on purpose, so the fork's dependency tree is
 // never linked into the daemon.
@@ -21,14 +22,15 @@ const forkVersion = "v1.14.1-extended-2.7.2"
 
 func main() {
 	out := flag.String("out", "", "path of the generated schema file")
+	fieldsOut := flag.String("fields", "", "path of the generated field reference for the daemon's MCP package")
 	flag.Parse()
 
-	if *out == "" {
-		fmt.Fprintln(os.Stderr, "schemagen: -out is required")
+	if *out == "" || *fieldsOut == "" {
+		fmt.Fprintln(os.Stderr, "schemagen: -out and -fields are required")
 		os.Exit(2)
 	}
 
-	content, err := generate()
+	content, fields, err := generateBoth()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "schemagen:", err)
 		os.Exit(1)
@@ -38,27 +40,34 @@ func main() {
 		fmt.Fprintln(os.Stderr, "schemagen:", err)
 		os.Exit(1)
 	}
+
+	if err := os.WriteFile(*fieldsOut, []byte(fields), 0o644); err != nil {
+		fmt.Fprintln(os.Stderr, "schemagen:", err)
+		os.Exit(1)
+	}
 }
 
-func generate() (string, error) {
+// generateBoth builds the schema once and prints it twice: the Zod file for the panel and
+// the field reference for the daemon's MCP package.
+func generateBoth() (string, string, error) {
 	if err := checkBuildTags(); err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	if err := checkUnmarkedReferences(); err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	groups, err := collectRegistries()
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	// Descriptions are read from the sources of the same fork the schema is built from:
 	// reflection does not see godoc. The directory is already known, forkDir returns it.
 	dir, err := forkDir()
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	w := newWalker(readDocs(dir, docPackages))
@@ -67,21 +76,31 @@ func generate() (string, error) {
 	root := w.build(reflect.TypeOf(option.Options{}), "root")
 
 	if report := w.unknownReport(); report != nil {
-		return "", fmt.Errorf("types with their own serialization lacking a rule in the override table (%d):\n%s",
+		return "", "", fmt.Errorf("types with their own serialization lacking a rule in the override table (%d):\n%s",
 			len(report), strings.Join(report, "\n"))
 	}
 
 	gates, err := buildGates(dir)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	options, err := buildOptionGates()
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
-	return emit(w.set, root, forkVersion, gates, options, groups, tagReferences(w.set, root)), nil
+	reference, err := fieldReference(w.set, root)
+	if err != nil {
+		return "", "", err
+	}
+
+	fields, err := emitFields(reference, forkVersion)
+	if err != nil {
+		return "", "", err
+	}
+
+	return emit(w.set, root, forkVersion, gates, options, groups, tagReferences(w.set, root)), fields, nil
 }
 
 // registryUnions builds the registry unions before walking the root: in the options tree they

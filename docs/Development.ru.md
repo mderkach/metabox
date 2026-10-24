@@ -30,15 +30,15 @@ Go-команды выполняются из каталога модуля, м�
 
 Сборка и генерация:
 
-| Команда              | Что делает                                                                                |
-| -------------------- | ----------------------------------------------------------------------------------------- |
-| `make daemon`        | собирает SPA и демон под текущую машину в `dist/metaboxd`                                 |
-| `make daemon-device` | собирает SPA и демон под роутер (`linux/arm64`, без cgo) в `dist/metaboxd-linux-arm64`    |
-| `make daemon-target` | собирает демон внутри dev-контейнера; на macOS `make daemon` даёт darwin-бинарь           |
-| `make package`       | собирает пакет `dist/metaboxd.apk` той же стадией Docker, что ставит панель в стенд       |
-| `make schema`        | перегенерирует схему конфига из форка в `apps/web/src/shared/api/generated.ts`            |
-| `make schema-daemon` | перепечатывает контракт демона для панели в `apps/web/src/shared/api/daemon.generated.ts` |
-| `make clean`         | удаляет `dist/`, сборку фронта и скопированную в демон статику                            |
+| Команда              | Что делает                                                                                                                                                   |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `make daemon`        | собирает SPA и демон под текущую машину в `dist/metaboxd`                                                                                                    |
+| `make daemon-device` | собирает SPA и демон под роутер (`linux/arm64`, без cgo) в `dist/metaboxd-linux-arm64`                                                                       |
+| `make daemon-target` | собирает демон внутри dev-контейнера; на macOS `make daemon` даёт darwin-бинарь                                                                              |
+| `make package`       | собирает пакет `dist/metaboxd.apk` той же стадией Docker, что ставит панель в стенд                                                                          |
+| `make schema`        | перегенерирует схему конфига из форка в `apps/web/src/shared/api/generated.ts` и справочник полей для MCP в `apps/metaboxd/internal/mcp/fields.generated.go` |
+| `make schema-daemon` | перепечатывает контракт демона для панели в `apps/web/src/shared/api/daemon.generated.ts`                                                                    |
+| `make clean`         | удаляет `dist/`, сборку фронта и скопированную в демон статику                                                                                               |
 
 Фронтенд без стенда:
 

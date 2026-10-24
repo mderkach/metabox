@@ -165,7 +165,7 @@ claude mcp add --transport http metabox http://192.168.1.1:8088/mcp --header "Au
 
 With HTTPS on, the command carries `https://`, and the client has to trust the panel certificate. Claude Code rejects the daemon's own root with `unsupported name constraint type`; a certificate pair of your own through `https_cert` and `https_key` avoids that.
 
-The agent can then ask why a site goes through a given rule, which connections a device has, which nodes respond, what earlier config versions contained, and what the sing-box log and interception diagnostics say. Access is read-only: there are no tools that change the config or the service. Secrets in config fragments are masked; the sing-box log tail is returned as is.
+The agent can then ask why a site goes through a given rule, which connections a device has, which nodes respond, what earlier config versions contained, and what the sing-box log and interception diagnostics say. It can also look up any config field: its type, allowed values and which node types have it, from the same fork schema the panel uses. Access is read-only: there are no tools that change the config or the service. Secrets in config fragments are masked; the sing-box log tail is returned as is.
 
 The token does not depend on the panel password and does not open the panel. A new token makes the old one stop working; **Disable** in the same dialog turns MCP off. Over SSH: `rm /etc/metabox/mcp.json && /etc/init.d/metaboxd restart`.
 

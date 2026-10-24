@@ -150,7 +150,7 @@ func handler(server *sdk.Server) http.Handler {
 
 func newServer(log *slog.Logger, opts Options, permissions []contract.MCPPermission) *sdk.Server {
 	server := sdk.NewServer(&sdk.Implementation{Name: serverName, Version: opts.Version}, nil)
-	t := tools{opts: opts, permissions: permissions}
+	t := tools{opts: opts, permissions: permissions, fields: newFieldIndex()}
 
 	if slices.Contains(permissions, contract.MCPRead) {
 		t.addRead(server, log)

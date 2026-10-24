@@ -552,7 +552,7 @@ func TestToolsAreReadOnly(t *testing.T) {
 	}
 
 	want := []string{
-		"metabox_config_version", "metabox_config_versions", "metabox_connections", "metabox_diagnostics",
+		"metabox_config_field", "metabox_config_version", "metabox_config_versions", "metabox_connections", "metabox_diagnostics",
 		"metabox_explain_domain", "metabox_log_tail", "metabox_proxies", "metabox_status",
 	}
 
@@ -838,6 +838,168 @@ func TestVersionsLogAndDiagnostics(t *testing.T) {
 
 	if proxy != "" || len(report.Checks) != 1 {
 		t.Errorf("diagnostics ran with node %q, report %+v", proxy, report)
+	}
+}
+
+type fieldCondition struct {
+	Path   string   `json:"path"`
+	Key    string   `json:"key"`
+	Values []string `json:"values"`
+}
+
+type fieldOut struct {
+	Path          string           `json:"path"`
+	Type          string           `json:"type"`
+	Values        []string         `json:"values"`
+	Reference     string           `json:"reference"`
+	When          []fieldCondition `json:"when"`
+	Note          string           `json:"note"`
+	Keys          []string         `json:"keys"`
+	SchemaVersion string           `json:"schema_version"`
+}
+
+func TestConfigField(t *testing.T) {
+	b := newBench(t, nil, &memoryStore{})
+	session := b.session(b.enable())
+
+	field := func(t *testing.T, path string) fieldOut {
+		t.Helper()
+
+		return call[fieldOut](t, session, "metabox_config_field", map[string]any{"path": path})
+	}
+
+	t.Run("empty path lists the top-level keys", func(t *testing.T) {
+		out := field(t, "")
+		for _, want := range []string{"dns", "outbounds", "route"} {
+			if !slices.Contains(out.Keys, want) {
+				t.Errorf("top-level keys %v lack %q", out.Keys, want)
+			}
+		}
+
+		if out.SchemaVersion == "" {
+			t.Error("schema version is empty")
+		}
+	})
+
+	t.Run("index of a real config resolves and carries a note", func(t *testing.T) {
+		out := field(t, "dns.rules.0.ip_cidr")
+		if out.Path != "dns.rules.*.ip_cidr" || !strings.Contains(out.Type, "string") {
+			t.Errorf("got path %q type %q, want dns.rules.*.ip_cidr of strings", out.Path, out.Type)
+		}
+
+		want := []fieldCondition{{Path: "dns.rules.*", Key: "type", Values: []string{"default"}}}
+		if !slices.EqualFunc(out.When, want, conditionEqual) {
+			t.Errorf("when %v, want %v", out.When, want)
+		}
+
+		if !strings.Contains(out.Note, "response") {
+			t.Errorf("note %q does not explain the response match", out.Note)
+		}
+	})
+
+	t.Run("reference names the node kind and the action that has it", func(t *testing.T) {
+		out := field(t, "route.rules.3.outbound")
+		if out.Reference != "outbound" || len(out.When) != 1 || out.When[0].Key != "action" || !slices.Contains(out.When[0].Values, "route") {
+			t.Errorf("got reference %q when %v, want outbound under action route", out.Reference, out.When)
+		}
+	})
+
+	t.Run("discriminator lists its values", func(t *testing.T) {
+		out := field(t, "outbounds.*.type")
+		if !slices.Contains(out.Values, "vless") || !slices.Contains(out.Values, "urltest") {
+			t.Errorf("outbound types %v lack vless or urltest", out.Values)
+		}
+
+		if node := field(t, "outbounds.0"); !slices.Contains(node.Keys, "flow") {
+			t.Errorf("outbound keys %v lack flow", node.Keys)
+		}
+	})
+
+	t.Run("recursive rule resolves like the outer rule", func(t *testing.T) {
+		out := field(t, "route.rules.0.rules.1.outbound")
+		if out.Path != "route.rules.*.rules.*.outbound" || out.Reference != "outbound" {
+			t.Errorf("got path %q reference %q, want an outbound reference inside a logical rule", out.Path, out.Reference)
+		}
+	})
+
+	t.Run("a shared shape keeps the conditions of the form it sits in", func(t *testing.T) {
+		out := field(t, "inbounds.0.fallback.host_key")
+
+		found := slices.ContainsFunc(out.When, func(c fieldCondition) bool {
+			return c.Path == "inbounds.*" && c.Key == "type" && slices.Equal(c.Values, []string{"ssh"})
+		})
+		if !found {
+			t.Errorf("when %v, want type ssh at inbounds.*", out.When)
+		}
+	})
+
+	t.Run("map value lists only its own keys", func(t *testing.T) {
+		out := field(t, "inbounds.0.fallback_for_alpn.h2")
+		if out.Path != "inbounds.*.fallback_for_alpn.{}" || !slices.Contains(out.Keys, "server") || slices.Contains(out.Keys, "host_key") {
+			t.Errorf("got path %q keys %v, want the server keys of a fallback target", out.Path, out.Keys)
+		}
+	})
+
+	t.Run("forms with different values under one key are both reachable", func(t *testing.T) {
+		bond := field(t, "outbounds.0.outbounds.0.outbound.type")
+		if !slices.Contains(bond.Values, "vless") {
+			t.Errorf("bond member outbound types %v lack vless", bond.Values)
+		}
+
+		if out := field(t, "outbounds.0.outbounds.0.download_ratio"); out.Path != "outbounds.*.outbounds.*.download_ratio" {
+			t.Errorf("got path %q for a bond member field", out.Path)
+		}
+	})
+
+	t.Run("unknown key is a tool error naming the known prefix", func(t *testing.T) {
+		result, err := session.CallTool(t.Context(), &sdk.CallToolParams{
+			Name:      "metabox_config_field",
+			Arguments: map[string]any{"path": "route.rules.0.nope"},
+		})
+		if err != nil {
+			t.Fatalf("call: %v", err)
+		}
+
+		if !result.IsError || !strings.Contains(text(result), `"route.rules.*" has no key "nope"`) {
+			t.Errorf("result %q, want a tool error naming route.rules.*", text(result))
+		}
+	})
+}
+
+func conditionEqual(a, b fieldCondition) bool {
+	return a.Path == b.Path && a.Key == b.Key && slices.Equal(a.Values, b.Values)
+}
+
+// A note keyed by a path the reference lacks never reaches the agent, and a note without
+// one of the languages reaches it in English only: a fork update that renames the field,
+// or a note added in one language, must fail here instead.
+func TestFieldNotesNameKnownPathsInBothLanguages(t *testing.T) {
+	data, err := os.ReadFile("fieldnotes.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var notes map[string]map[locale.Lang]string
+	if err := json.Unmarshal(data, &notes); err != nil {
+		t.Fatalf("parse notes: %v", err)
+	}
+
+	for _, lang := range []locale.Lang{locale.English, locale.Russian} {
+		b := newBenchIn(t, nil, &memoryStore{}, lang)
+		session := b.session(b.enable())
+
+		for path, texts := range notes {
+			if texts[lang] == "" {
+				t.Errorf("note for %q has no %s text", path, lang)
+
+				continue
+			}
+
+			out := call[fieldOut](t, session, "metabox_config_field", map[string]any{"path": path})
+			if out.Path != path || out.Note != texts[lang] {
+				t.Errorf("%s note for %q came back at %q as %q", lang, path, out.Path, out.Note)
+			}
+		}
 	}
 }
 
