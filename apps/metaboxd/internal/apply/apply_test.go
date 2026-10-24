@@ -136,6 +136,8 @@ func (s *fakeStore) Write(_ context.Context, data []byte) error {
 }
 
 func (s *fakeStore) Read(context.Context) ([]byte, error) {
+	s.pass("Read")
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -246,6 +248,7 @@ func (s *fakeStore) ReadState(context.Context) ([]byte, error) {
 // config.Store does: a Confirm that forwarded the request context would lose its write.
 func (s *fakeStore) WriteState(ctx context.Context, data []byte) error {
 	s.rec.add("WriteState")
+	s.pass("WriteState")
 
 	if err := ctx.Err(); err != nil {
 		return err
@@ -1055,6 +1058,40 @@ func TestConfirmFailsWhenStateNotSaved(t *testing.T) {
 
 	if _, err := h.manager.Confirm(t.Context(), tx.ID); err != nil {
 		t.Fatalf("confirm after the disk is back: %v", err)
+	}
+	if state, _ := h.store.ReadState(t.Context()); state != nil {
+		t.Error("state of the confirmed transaction stayed on disk")
+	}
+}
+
+// The window record is still being written: a Confirm at that moment must be refused,
+// otherwise the record would land over the terminal state and a reboot would roll back
+// the confirmed config. Once the record is on disk the same Confirm goes through.
+func TestConfirmWaitsForWindowRecord(t *testing.T) {
+	h := newHarness(t)
+	// Read follows the journal: arming the WriteState gate from there catches the
+	// window record and not the journal.
+	readStarted, readRelease := h.store.hold("Read")
+
+	tx, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", "")
+	if err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+
+	<-readStarted
+	stateStarted, stateRelease := h.store.hold("WriteState")
+	close(readRelease)
+	<-stateStarted
+
+	if _, err := h.manager.Confirm(t.Context(), tx.ID); !errors.Is(err, apply.ErrNothingToConfirm) {
+		t.Errorf("confirm before the window record is on disk: got %v, expected ErrNothingToConfirm", err)
+	}
+
+	close(stateRelease)
+	h.waitWindow(t)
+
+	if _, err := h.manager.Confirm(t.Context(), tx.ID); err != nil {
+		t.Fatalf("confirm: %v", err)
 	}
 	if state, _ := h.store.ReadState(t.Context()); state != nil {
 		t.Error("state of the confirmed transaction stayed on disk")

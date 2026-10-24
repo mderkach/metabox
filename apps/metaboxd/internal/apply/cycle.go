@@ -385,14 +385,21 @@ func (m *Manager) awaitProcess(ctx context.Context, before int) error {
 // is returned to the previous one.
 func (m *Manager) await(ctx context.Context, log *slog.Logger, confirmed <-chan struct{}) {
 	m.mu.Lock()
-	m.current.Phase = PhaseAwaitingConfirm
-	m.windowEndsAt = time.Now().Add(m.opts.Window)
 	tx := m.current
 	m.mu.Unlock()
 
+	// The window record reaches the disk before the phase opens Confirm: a Confirm that
+	// slipped in between would make the state terminal, and this write would then
+	// put awaiting_confirm back over it for the replay to roll back.
+	tx.Phase = PhaseAwaitingConfirm
 	if err := m.persist(ctx, tx); err != nil {
 		log.Error("confirmation window state not saved", "err", err)
 	}
+
+	m.mu.Lock()
+	m.current.Phase = PhaseAwaitingConfirm
+	m.windowEndsAt = time.Now().Add(m.opts.Window)
+	m.mu.Unlock()
 
 	log.Info("service is up, confirmation window open", "window", m.opts.Window)
 

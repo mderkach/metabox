@@ -261,8 +261,8 @@ type DNSProber interface {
 	Probe(ctx context.Context, inbound clashapi.DNSInbound) error
 }
 
-// stateTimeout bounds the state file write that finishes a confirmation. It runs
-// detached from the request, so the request deadline no longer limits it.
+// stateTimeout bounds the state file write that finishes a confirmation: it runs
+// detached from the request, and the request deadline does not limit it.
 const stateTimeout = 10 * time.Second
 
 // Clock returns the confirmation window firing. A separate dependency, not

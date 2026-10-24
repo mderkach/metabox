@@ -361,17 +361,23 @@ func (p *Plane) probeDNS(ctx context.Context, port int) error {
 	return p.opts.DNS.Probe(ctx, inbound)
 }
 
+// await opens the confirmation window; the window record reaches the disk before the
+// phase does, for the reason given in Manager.await.
 func (p *Plane) await(ctx context.Context, log *slog.Logger, confirmed <-chan struct{}) {
 	p.mu.Lock()
-	p.current.Phase = PhaseAwaitingConfirm
-	p.windowEndsAt = time.Now().Add(p.opts.Window)
 	tx := p.current
 	previous := p.previous
 	p.mu.Unlock()
 
+	tx.Phase = PhaseAwaitingConfirm
 	if err := p.persist(ctx, tx, previous); err != nil {
 		log.Error("dataplane confirmation window state not saved", "err", err)
 	}
+
+	p.mu.Lock()
+	p.current.Phase = PhaseAwaitingConfirm
+	p.windowEndsAt = time.Now().Add(p.opts.Window)
+	p.mu.Unlock()
 
 	log.Info("dataplane model applied, confirmation window open", "window", p.opts.Window)
 
