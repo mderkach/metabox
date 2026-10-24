@@ -1,9 +1,12 @@
+//go:build unix
+
 package locale
 
 import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 )
 
@@ -57,5 +60,29 @@ func TestShellTextsFollowLang(t *testing.T) {
 				t.Errorf("install.sh %q, want %q", got, tt.wantInstall)
 			}
 		})
+	}
+}
+
+// Without --lang and without a terminal, as under ssh or a script, install.sh goes on in
+// English instead of stopping on the language question.
+func TestInstallWithoutTerminal(t *testing.T) {
+	sh, err := exec.LookPath("sh")
+	if err != nil {
+		t.Skip("no sh on this host")
+	}
+
+	install, err := filepath.Abs(filepath.Join(moduleRoot, "../../install.sh"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := exec.CommandContext(t.Context(), sh, install, "--channel", "beta")
+	cmd.Env = []string{"PATH=/usr/bin:/bin"}
+	// A new session has no controlling terminal, so /dev/tty cannot be opened.
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+
+	out, _ := cmd.CombinedOutput()
+	if got, want := string(out), "install.sh: unknown channel: beta\n"; got != want {
+		t.Errorf("install.sh %q, want %q", got, want)
 	}
 }

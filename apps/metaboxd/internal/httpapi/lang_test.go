@@ -17,7 +17,7 @@ func TestErrorMessageFollowsLang(t *testing.T) {
 		wantOrigin  string
 	}{
 		{locale.English, "endpoint not found", "request origin does not match the panel address"},
-		{locale.Russian, "ручка не найдена", "источник запроса не совпадает с адресом панели"},
+		{locale.Russian, "адрес API не найден", "источник запроса не совпадает с адресом панели"},
 	}
 
 	for _, tt := range tests {

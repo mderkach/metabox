@@ -62,7 +62,7 @@ die() {
 while [ $# -gt 0 ]; do
 	case "$1" in
 	--channel)
-		[ $# -ge 2 ] || die "%s needs a value" "%s требует значение" --channel
+		[ $# -ge 2 ] || die "%s needs a value" "%s требует значения" --channel
 		channel=$2
 		shift 2
 		;;
@@ -71,7 +71,7 @@ while [ $# -gt 0 ]; do
 		shift
 		;;
 	--lang)
-		[ $# -ge 2 ] || die "%s needs a value" "%s требует значение" --lang
+		[ $# -ge 2 ] || die "%s needs a value" "%s требует значения" --lang
 		lang=$2
 		shift 2
 		;;
@@ -87,12 +87,19 @@ while [ $# -gt 0 ]; do
 	esac
 done
 
-# The script arrives on stdin through wget | sh, so the answer is read from the terminal.
-if [ -z "$lang" ] && { : </dev/tty; } 2>/dev/null; then
-	printf 'Language / Язык [en/ru] (en): ' >/dev/tty
+# A second run keeps the language chosen before. The script arrives on stdin through
+# wget | sh, so the answer is read from the terminal; the probe runs in a subshell because
+# a failed redirection of a builtin would end the script itself.
+current=$(uci -q get metabox.main.lang 2>/dev/null || true)
+case "$current" in
+en | ru) ;;
+*) current=en ;;
+esac
+if [ -z "$lang" ] && (: </dev/tty) 2>/dev/null; then
+	printf 'Language / Язык [en/ru] (%s): ' "$current" >/dev/tty
 	read -r lang </dev/tty || lang=
 fi
-lang=${lang:-en}
+lang=${lang:-$current}
 
 case "$lang" in
 en | ru) ;;
@@ -133,7 +140,7 @@ if apk info -e sing-box-extended >/dev/null 2>&1; then
 	say "sing-box-extended is installed, left as is" "sing-box-extended уже установлен, не трогаем"
 else
 	# The fork provides sing-box and would replace the official package under a running setup.
-	! apk info -e sing-box >/dev/null 2>&1 || die "the official sing-box package is installed; metabox needs sing-box-extended instead" "установлен официальный пакет sing-box; metabox нужен sing-box-extended вместо него"
+	! apk info -e sing-box >/dev/null 2>&1 || die "the official sing-box package is installed; metabox needs sing-box-extended instead" "установлен официальный пакет sing-box; вместо него для metabox нужен sing-box-extended"
 
 	say "sing-box-extended %s" "sing-box-extended %s" "$SINGBOX_VERSION"
 	wget -q -O "$tmp/sing-box.apk" "$SINGBOX_URL" || die "cannot download %s" "не удалось скачать %s" "$SINGBOX_URL"

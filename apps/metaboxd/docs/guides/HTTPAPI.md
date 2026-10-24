@@ -76,11 +76,13 @@ The chain is assembled once, the order is outside in:
 
 ```go
 func (s *Server) middleware(next http.Handler) http.Handler {
-	return recoverPanic(s.log,
-		logRequests(s.log,
-			checkHost(s.log, s.allowedOrigin,
-				checkOrigin(s.log, s.allowedOrigin,
-					requireSession(s.log, s.auth, next)))))
+	return withLang(s.lang,
+		recoverPanic(s.log,
+			logRequests(s.log,
+				checkHost(s.log, s.allowedOrigin,
+					redirectToTLS(s.https,
+						checkOrigin(s.log, s.allowedOrigin,
+							requireSession(s.log, s.auth, next)))))))
 }
 ```
 

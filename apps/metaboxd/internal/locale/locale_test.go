@@ -3,6 +3,7 @@ package locale
 import (
 	"errors"
 	"flag"
+	"fmt"
 	"io/fs"
 	"strings"
 	"testing"
@@ -125,10 +126,30 @@ func TestErrorKeepsLogEnglishAndTranslatesChain(t *testing.T) {
 func TestMessageLeavesForeignLayer(t *testing.T) {
 	withCatalogue(t, map[string]string{"nothing to confirm": "нечего подтверждать"})
 
-	err := errors.Join(New("nothing to confirm"))
+	err := fmt.Errorf("parse: %w", New("nothing to confirm"))
 
-	if got, want := Message(Russian, err), "nothing to confirm"; got != want {
+	if got, want := Message(Russian, err), "parse: nothing to confirm"; got != want {
 		t.Errorf("got %q, want %q: a foreign layer already holds the English text", got, want)
+	}
+
+	multi := fmt.Errorf("%w and %w", New("nothing to confirm"), fs.ErrNotExist)
+
+	if got, want := Message(Russian, multi), multi.Error(); got != want {
+		t.Errorf("fmt.Errorf with two %%w: got %q, want %q", got, want)
+	}
+}
+
+func TestMessageTranslatesJoinedParts(t *testing.T) {
+	withCatalogue(t, map[string]string{"apply request body not parsed": "тело запроса применения не разобрано"})
+
+	err := errors.Join(New("apply request body not parsed"), errors.New("unexpected EOF"))
+
+	if got, want := Message(Russian, err), "тело запроса применения не разобрано\nunexpected EOF"; got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+
+	if got, want := Message(English, err), err.Error(); got != want {
+		t.Errorf("English: got %q, want %q", got, want)
 	}
 }
 

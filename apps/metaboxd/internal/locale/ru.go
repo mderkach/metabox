@@ -31,7 +31,7 @@ var ru = map[string]string{
 	"log level: debug, info, warn, error":                                                                                                  "уровень логов: debug, info, warn, error",
 	"language of the texts the daemon shows the operator: en or ru":                                                                        "язык текстов, которые демон показывает оператору: en или ru",
 
-	"endpoint not found":                                                                   "ручка не найдена",
+	"endpoint not found":                                                                   "адрес API не найден",
 	"request origin does not match the panel address":                                      "источник запроса не совпадает с адресом панели",
 	"request host does not match the panel address":                                        "адрес запроса не совпадает с адресом панели",
 	"WebSocket upgrade is not supported: the runtime comes through the /api/events stream": "апгрейд до WebSocket не поддерживается: рантайм идёт потоком /api/events",
@@ -66,7 +66,7 @@ var ru = map[string]string{
 	"MAC address not parsed":                             "MAC-адрес не разобран",
 	"device name rejected":                               "имя устройства не принято",
 	"too many custom device names":                       "своих имён устройств слишком много",
-	"%w: limit %d":                                       "%w: потолок %d",
+	"%w: limit %d":                                       "%w: не больше %d",
 	"%w: longer than %d characters":                      "%w: длиннее %d символов",
 	"%w: control characters":                             "%w: управляющие символы",
 	"sing-box log unavailable":                           "лог sing-box недоступен",
@@ -75,7 +75,7 @@ var ru = map[string]string{
 	"wrong password":                                     "пароль не подошёл",
 	"password rejected":                                  "пароль не принят",
 	"panel password is not set":                          "пароль панели не задан",
-	"too many wrong passwords, retry in %s":              "слишком много неверных паролей, повтор через %s",
+	"too many wrong passwords, retry in %s":              "слишком много неверных паролей, повторите через %s",
 	"%w: %d to %d characters":                            "%w: от %d до %d символов",
 
 	"internal error, the cause is in the daemon log": "внутренняя ошибка, причина в логе демона",
@@ -135,13 +135,13 @@ var ru = map[string]string{
 		"whatever sing-box itself prints. An empty list means no line at this level since the last clear in the panel.": "Последние строки лога sing-box, старые первыми, тот же текст, что на экране лога в панели. " +
 		"level — минимальный уровень: trace, debug, info, notice, warn, error, fatal или panic (по умолчанию все). " +
 		"lines — от 1 до 1000, по умолчанию 200. Строки без уровня (стектрейсы, продолжения) проходят фильтр. " +
-		"Адреса URL скрыты после хоста; остальное в строке не маскируется и может содержать адреса и " +
+		"В URL всё после хоста скрыто; остальное в строке не маскируется и может содержать адреса и " +
 		"всё, что печатает сам sing-box. Пустой список значит, что с последней очистки в панели строк этого уровня не было.",
 	"Dataplane checks of the router, nothing is changed: sing-box listeners on the redirect, tproxy " +
 		"and DNS ports, a DNS query to sing-box dns-in, the nft interception chains, and a direct internet " +
 		"request bypassing interception. Each check is ok, fail or skipped with a reason; skipped is not a " +
 		"failure. The node latency check is always skipped here: run it from the panel.": "Проверки обвязки роутера, ничего не меняют: слушатели sing-box на портах redirect, tproxy " +
 		"и DNS, DNS-запрос к dns-in sing-box, цепочки перехвата nft и прямой запрос в интернет " +
-		"в обход перехвата. Каждая проверка — ok, fail или skipped с причиной; skipped не " +
+		"в обход перехвата. Каждая проверка — ok, fail или skipped с причиной; skipped — не " +
 		"сбой. Проверка задержки узла здесь всегда пропускается: запустите её из панели.",
 }
