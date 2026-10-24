@@ -27,9 +27,13 @@ var (
 	// A regular case, sing-box may not have been configured on the device yet.
 	ErrNoConfig = errors.New("файла конфига нет")
 
-	// ErrNoBackup means nothing to roll back to, the device had no config
-	// before the apply.
+	// ErrNoBackup means nothing to roll back to, the device had neither a config
+	// nor list files before the apply.
 	ErrNoBackup = errors.New("бэкапа нет")
+
+	// ErrListsOnly means the rollback returned only the list files: the device had no
+	// config before the apply, and the written one stays in place.
+	ErrListsOnly = errors.New("конфига до применения не было, возвращены только списки")
 
 	// ErrNoState means there is no unfinished transaction, nothing to replay.
 	ErrNoState = errors.New("состояния транзакции нет")
@@ -188,9 +192,10 @@ func (s *Store) Write(ctx context.Context, data []byte) error {
 // Called before writing the new one (step 4 of the apply protocol). The service directory
 // is created if absent, as in WriteState.
 //
-// No config in place is ErrNoConfig, and the backup of the previous transaction is removed:
-// the owner could have deleted the config over SSH, and the rollback of this apply must return
-// "nothing" (Restore gives ErrNoBackup), not the deleted config.
+// No config in place is ErrNoConfig, and the config backup of the previous transaction is removed:
+// the owner could have deleted the config over SSH, and the rollback of this apply must not return
+// the deleted config. The list files are still snapshotted if there are any, and Restore
+// returns them alone (ErrListsOnly); without them it gives ErrNoBackup.
 func (s *Store) Backup(ctx context.Context) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -210,7 +215,7 @@ func (s *Store) Backup(ctx context.Context) error {
 
 	data, err := cfgRoot.ReadFile(s.name)
 	if errors.Is(err, fs.ErrNotExist) {
-		return s.dropBackup()
+		return s.backupListsOnly()
 	}
 	if err != nil {
 		return fmt.Errorf("чтение конфига %s под бэкап: %w", s.Path(), err)
@@ -233,9 +238,42 @@ func (s *Store) Backup(ctx context.Context) error {
 	return s.backupLists(serviceRoot)
 }
 
+// backupListsOnly is Backup without a config: the config backup of the previous transaction
+// is removed, and the lists snapshot is taken as usual. No list files means
+// nothing to snapshot, as in dropBackup. Returns ErrNoConfig. Called under mu.
+func (s *Store) backupListsOnly() error {
+	sums, err := s.listSums()
+	if err != nil {
+		return fmt.Errorf("чтение списков под бэкап: %w", err)
+	}
+	if len(sums) == 0 {
+		return s.dropBackup()
+	}
+
+	if err := ensureDir(s.serviceDir); err != nil {
+		return fmt.Errorf("служебный каталог: %w", err)
+	}
+
+	serviceRoot, err := openRoot(s.serviceDir)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = serviceRoot.Close() }()
+
+	if err := serviceRoot.Remove(backupName); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return fmt.Errorf("снятие устаревшего бэкапа %s: %w", s.BackupPath(), err)
+	}
+
+	if err := s.backupLists(serviceRoot); err != nil {
+		return err
+	}
+
+	return ErrNoConfig
+}
+
 // dropBackup removes the backup of the previous transaction together with the lists snapshot and
-// returns ErrNoConfig. The config backup is removed first: a break in the middle
-// leaves a lists snapshot without a backup, and Restore does not read such. No service
+// returns ErrNoConfig. A break in the middle leaves a part of the previous backup, but Restore
+// runs only after a Backup of the same transaction has finished, so it does not read it. No service
 // directory means nothing to remove. Called under mu.
 func (s *Store) dropBackup() error {
 	serviceRoot, err := openRoot(s.serviceDir)
@@ -306,6 +344,9 @@ func (s *Store) backupLists(serviceRoot *os.Root) error {
 
 // Restore returns the config and the lists directory from the backup. The permissions of the target file
 // are kept: the rollback must not change what the owner narrowed deliberately.
+//
+// A backup taken without a config returns the lists alone and gives ErrListsOnly: the
+// written config stays in place. No backup at all is ErrNoBackup.
 func (s *Store) Restore(ctx context.Context) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -322,7 +363,7 @@ func (s *Store) Restore(ctx context.Context) error {
 
 	data, err := serviceRoot.ReadFile(backupName)
 	if errors.Is(err, fs.ErrNotExist) {
-		return ErrNoBackup
+		return s.restoreListsOnly(serviceRoot)
 	}
 	if err != nil {
 		return fmt.Errorf("чтение бэкапа %s: %w", s.BackupPath(), err)
@@ -333,6 +374,23 @@ func (s *Store) Restore(ctx context.Context) error {
 	}
 
 	return s.write(data)
+}
+
+// restoreListsOnly is Restore of a backup taken without a config.
+func (s *Store) restoreListsOnly(serviceRoot *os.Root) error {
+	_, err := serviceRoot.Stat(listsBackupName)
+	if errors.Is(err, fs.ErrNotExist) {
+		return ErrNoBackup
+	}
+	if err != nil {
+		return fmt.Errorf("открытие бэкапа списков: %w", err)
+	}
+
+	if err := s.restoreLists(serviceRoot); err != nil {
+		return err
+	}
+
+	return ErrListsOnly
 }
 
 // restoreLists brings the lists directory to the backup snapshot: files are returned

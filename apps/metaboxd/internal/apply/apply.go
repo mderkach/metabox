@@ -69,10 +69,14 @@ const (
 	// ReasonRollbackFailed means restoring the previous config failed. This is the worst
 	// outcome of the cycle, and the device is left with a foreign config.
 	ReasonRollbackFailed ReasonCode = "rollback_failed"
-	// ReasonNoBackup means a rollback was needed but there is nothing to restore: the device had no
-	// config before the apply. The service stays on what managed to
+	// ReasonNoBackup means a rollback was needed but there is nothing to restore: the device had
+	// neither a config nor list files before the apply. The service stays on what managed to
 	// be written and is not restarted.
 	ReasonNoBackup ReasonCode = "no_backup"
+	// ReasonListsRestored means a rollback was needed, and the device had list files but no
+	// config before the apply: the list files are returned, the written config stays, and the
+	// service is not restarted.
+	ReasonListsRestored ReasonCode = "lists_restored"
 )
 
 // StepError is a cycle step failure: the code goes to the panel, the original error goes to the log and

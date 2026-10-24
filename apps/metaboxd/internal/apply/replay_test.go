@@ -3,6 +3,7 @@ package apply_test
 import (
 	"encoding/json"
 	"errors"
+	"io/fs"
 	"log/slog"
 	"slices"
 	"testing"
@@ -225,6 +226,44 @@ func TestReplayWithoutBackup(t *testing.T) {
 	}
 	if tx := h.manager.Current(); tx.Phase != apply.PhaseFailed || tx.ReasonCode != apply.ReasonNoBackup {
 		t.Errorf("phase %q with code %q, expected failure with reason no_backup", tx.Phase, tx.ReasonCode)
+	}
+	if state, _ := h.store.ReadState(t.Context()); state != nil {
+		t.Error("state of the closed transaction stayed on disk")
+	}
+}
+
+// The cycle broke after writing the list files over a device without a config: the config
+// is not there, the lists are the transaction's. The replay returns the lists alone and
+// closes the transaction with its own reason, without a restart.
+func TestReplayReturnsListsWithoutConfig(t *testing.T) {
+	h := newHarness(t)
+	h.store.restoreErr = config.ErrListsOnly
+	written := []byte(`{"rules":[]}`)
+	h.store.mu.Lock()
+	h.store.sumErr = fs.ErrNotExist
+	h.store.lists = map[string][]byte{"my.json": written}
+	h.store.mu.Unlock()
+	seedState(t, h, apply.Transaction{
+		ID:     "без-конфига",
+		Phase:  apply.PhaseApplying,
+		Window: window,
+		Sum:    "записанный",
+		Lists:  map[string]string{"my.json": config.Sum(written)},
+	})
+
+	if err := h.manager.Replay(t.Context()); err != nil {
+		t.Fatalf("replay: %v", err)
+	}
+
+	got := h.rec.snapshot()
+	if !slices.Contains(got, "Restore") {
+		t.Errorf("steps %v: the written lists were not returned", got)
+	}
+	if slices.Contains(got, "Restart") {
+		t.Errorf("steps %v: the service was restarted although there was no config to restore", got)
+	}
+	if tx := h.manager.Current(); tx.Phase != apply.PhaseFailed || tx.ReasonCode != apply.ReasonListsRestored {
+		t.Errorf("phase %q with code %q, expected failure with reason lists_restored", tx.Phase, tx.ReasonCode)
 	}
 	if state, _ := h.store.ReadState(t.Context()); state != nil {
 		t.Error("state of the closed transaction stayed on disk")

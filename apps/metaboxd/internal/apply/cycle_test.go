@@ -251,6 +251,48 @@ func TestBackupWithoutConfigContinues(t *testing.T) {
 	}
 }
 
+// No config on the device, but list files are there: the rollback returns the lists alone.
+// The phase does not lie about a rollback, the service is not restarted, and the returned
+// lists are not taken for an outside edit by the next apply.
+func TestRollbackReturnsListsWithoutConfig(t *testing.T) {
+	h := newHarness(t)
+	h.store.backupErr = config.ErrNoConfig
+	h.store.restoreErr = config.ErrListsOnly
+
+	lists := apply.Lists{Put: map[string][]byte{"my.json": []byte(`{"rules":[]}`)}}
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig), lists, "", ""); err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+	h.waitWindow(t)
+
+	h.clock.fire()
+	h.manager.Close()
+
+	tx := h.manager.Current()
+	if tx.Phase != apply.PhaseFailed || tx.ReasonCode != apply.ReasonListsRestored {
+		t.Errorf("phase %q with code %q, expected failure with reason lists_restored", tx.Phase, tx.ReasonCode)
+	}
+	if tx.Reason == "" {
+		t.Error("detail is empty")
+	}
+	if got := countOf(h.rec.snapshot(), "Restart"); got != 1 {
+		t.Errorf("restarts %d, expected one: from the apply itself", got)
+	}
+	if state, _ := h.store.ReadState(t.Context()); state != nil {
+		t.Error("state of the closed transaction stayed on disk")
+	}
+
+	// Restore put the previous lists back, and the config written by the daemon stays.
+	h.store.mu.Lock()
+	h.store.sum = config.Sum(h.store.written)
+	h.store.lists = map[string][]byte{"my.json": []byte(`{"rules":[{"domain":["example.com"]}]}`)}
+	h.store.mu.Unlock()
+
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
+		t.Errorf("apply after returning the lists: %v", err)
+	}
+}
+
 // A failure to read the config before the history does not stop the apply, but it does not
 // pass silently either; a missing config is a regular first start without a write.
 func TestReadFailureBeforeSaveVersionIsLogged(t *testing.T) {

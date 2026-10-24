@@ -131,7 +131,7 @@ func (m *Manager) apply(
 		if !errors.Is(err, config.ErrNoConfig) {
 			return stepFailed(ReasonBackupFailed, fmt.Errorf("бэкап: %w", err))
 		}
-		m.log.Warn("конфига на устройстве нет, бэкапа нет")
+		m.log.Warn("конфига на устройстве нет, бэкап конфига не снят")
 	}
 
 	// The history is built on top of the backup and has nothing to do with the rollback: its failure does not
@@ -396,12 +396,23 @@ func (m *Manager) rollback(ctx context.Context, log *slog.Logger) {
 
 	restoreErr := m.store.Restore(ctx)
 
-	// There is no backup: the device had no config before the apply. A restart would return
+	// There is no config backup: the device had no config before the apply. A restart would return
 	// nothing, and rolled_back would lie that the previous config is in place:
-	// the transaction is closed with a failure with its own reason.
-	noBackup := errors.Is(restoreErr, config.ErrNoBackup)
-	if noBackup {
+	// the transaction is closed with a failure with its own reason. The list files,
+	// if there were any, are already returned: the fork rereads them without a restart.
+	var noBackupCode ReasonCode
+	switch {
+	case errors.Is(restoreErr, config.ErrListsOnly):
+		log.Warn("конфига до применения не было: списки возвращены, служба остаётся на записанном конфиге")
+		noBackupCode = ReasonListsRestored
+	case errors.Is(restoreErr, config.ErrNoBackup):
 		log.Warn("откатываться не на что: бэкапа нет, служба остаётся на записанном")
+		noBackupCode = ReasonNoBackup
+	}
+
+	noBackup := noBackupCode != ""
+	noBackupErr := restoreErr
+	if noBackup {
 		restoreErr = nil
 	}
 
@@ -436,9 +447,13 @@ func (m *Manager) rollback(ctx context.Context, log *slog.Logger) {
 		// the rollback was needed. lastSum is not touched: there was no rollback, and the disk has
 		// exactly what the cycle left.
 		m.current.Phase = PhaseFailed
-		m.current.ReasonCode = ReasonNoBackup
+		m.current.ReasonCode = noBackupCode
 		if m.current.Reason == "" {
-			m.current.Reason = config.ErrNoBackup.Error()
+			m.current.Reason = noBackupErr.Error()
+		}
+		if noBackupCode == ReasonListsRestored {
+			// The lists on disk are no longer the ones the daemon wrote.
+			m.lastListsSum = ""
 		}
 	} else {
 		m.current.Phase = PhaseRolledBack
