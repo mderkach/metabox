@@ -6,7 +6,7 @@ import { brotliCompressSync, constants, gzipSync } from 'node:zlib';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { playwright } from '@vitest/browser-playwright';
-import type { ProxyOptions } from 'vite';
+import type { ProxyOptions, ViteDevServer } from 'vite';
 import { configDefaults, defineConfig, type Plugin } from 'vitest/config';
 
 import { LOCALE_ROOT, checkLocales, collectLocales, hashedLocaleUrl, localeKey, writeI18nTypes } from './tools/i18n.ts';
@@ -53,18 +53,25 @@ function metaboxMocks(): Plugin | false {
         __METABOX_MOCK_CONNECTIONS__: JSON.stringify(Number(process.env.METABOX_MOCK_CONNECTIONS ?? 0)),
       },
     }),
-    configureServer(server) {
-      const require = createRequire(import.meta.url);
-      const worker = path.join(path.dirname(require.resolve('msw/package.json')), 'lib/mockServiceWorker.js');
-
-      server.middlewares.use(WORKER_PATH, (_request, response) => {
-        response.setHeader('Content-Type', 'text/javascript');
-        response.setHeader('Service-Worker-Allowed', '/');
-        response.end(readFileSync(worker, 'utf8'));
-      });
-    },
+    configureServer: serveMockWorker,
     transformIndexHtml: (html) => html.replace(APP_ENTRY, MOCK_ENTRY),
   };
+}
+
+function serveMockWorker(server: ViteDevServer) {
+  const require = createRequire(import.meta.url);
+  const worker = path.join(path.dirname(require.resolve('msw/package.json')), 'lib/mockServiceWorker.js');
+
+  server.middlewares.use(WORKER_PATH, (_request, response) => {
+    response.setHeader('Content-Type', 'text/javascript');
+    response.setHeader('Service-Worker-Allowed', '/');
+    response.end(readFileSync(worker, 'utf8'));
+  });
+}
+
+/** The same worker script for browser tests: they answer the panel's requests with the dev mocks. */
+function metaboxTestMocks(): Plugin {
+  return { name: 'metabox-test-mocks', configureServer: serveMockWorker };
 }
 
 const SCAN_ENTRY = '/dev/scan.ts';
@@ -339,6 +346,7 @@ export default defineConfig({
         },
       },
       {
+        plugins: [metaboxTestMocks()],
         test: {
           name: 'browser',
           include: [BROWSER_TESTS],
