@@ -732,3 +732,65 @@ func TestSaveVersionSkipsForeignLists(t *testing.T) {
 		t.Errorf("version fingerprint %+v did not match the current set %q", versions, ListsEtag(current))
 	}
 }
+
+// An unreadable version does not take the whole history down, and it does not vanish silently
+// either: History names it with the reason, so the HTTP layer can log it.
+func TestHistoryReportsUnreadableVersions(t *testing.T) {
+	store := newVersionStore(t)
+
+	for i := 1; i <= 3; i++ {
+		writeVersionLists(t, store, map[string][]byte{"my.json": []byte(`{"v":` + strconv.Itoa(i) + `}`)})
+
+		if err := store.SaveVersion(t.Context(), []byte(`{"v":`+strconv.Itoa(i)+`}`)); err != nil {
+			t.Fatalf("saving version %d: %v", i, err)
+		}
+	}
+
+	// A file in place of the snapshot directory and a version file that os.Root refuses to
+	// follow break the read regardless of the user the test runs as.
+	snapshot := filepath.Join(store.VersionsPath(), versionListsName(2))
+	if err := os.RemoveAll(snapshot); err != nil {
+		t.Fatalf("removing the snapshot of version 2: %v", err)
+	}
+
+	if err := os.WriteFile(snapshot, []byte("broken"), securePerm); err != nil {
+		t.Fatalf("breaking the snapshot of version 2: %v", err)
+	}
+
+	version := filepath.Join(store.VersionsPath(), versionName(1))
+	if err := os.Remove(version); err != nil {
+		t.Fatalf("removing version 1: %v", err)
+	}
+
+	if err := os.Symlink(filepath.Join(t.TempDir(), "outside"), version); err != nil {
+		t.Fatalf("breaking version 1: %v", err)
+	}
+
+	versions, skipped, err := store.History(t.Context())
+	if err != nil {
+		t.Fatalf("reading history: %v", err)
+	}
+
+	if len(versions) != 1 || versions[0].ID != 3 {
+		t.Errorf("history %+v, expected only version 3", versions)
+	}
+
+	if len(skipped) != 2 || skipped[0].ID != 2 || skipped[1].ID != 1 {
+		t.Fatalf("skipped %+v, expected versions 2 and 1", skipped)
+	}
+
+	for _, v := range skipped {
+		if v.Err == nil {
+			t.Errorf("version %d skipped without a reason", v.ID)
+		}
+	}
+
+	listed, err := store.Versions(t.Context())
+	if err != nil {
+		t.Fatalf("reading versions: %v", err)
+	}
+
+	if len(listed) != 1 || listed[0].ID != 3 {
+		t.Errorf("Versions %+v, expected only version 3", listed)
+	}
+}

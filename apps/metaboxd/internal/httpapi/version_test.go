@@ -1,14 +1,20 @@
 package httpapi_test
 
 import (
+	"bytes"
 	"errors"
+	"log/slog"
 	"net/http"
+	"net/http/httptest"
 	"slices"
+	"strconv"
+	"strings"
 	"testing"
 
 	"metabox/internal/apply"
 	"metabox/internal/config"
 	"metabox/internal/contract"
+	"metabox/internal/httpapi"
 )
 
 func TestConfigVersionsList(t *testing.T) {
@@ -39,6 +45,45 @@ func TestConfigVersionsList(t *testing.T) {
 
 	if body.Versions[0].Sum != "c3" {
 		t.Errorf("fingerprint of the first version %q, expected %q", body.Versions[0].Sum, "c3")
+	}
+}
+
+// A version the store could not read leaves the history without a trace for the panel, so the
+// daemon log is the only place where the owner learns about it.
+func TestConfigVersionsLogsSkipped(t *testing.T) {
+	reader := fakeReader{
+		versions: []config.Version{{ID: 3, Sum: "c3"}},
+		skipped: []config.SkippedVersion{
+			{ID: 2, Err: errors.New("снимок списков сломан")},
+			{ID: 1, Err: errors.New("файл версии не читается")},
+		},
+	}
+
+	var logs bytes.Buffer
+	srv := httpapi.NewServer(&fakeApplier{}, reader, slog.New(slog.NewTextHandler(&logs, nil)), httpapi.Options{})
+
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "http://127.0.0.1/api/config/versions", nil))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("response code: got %d, expected %d", rec.Code, http.StatusOK)
+	}
+
+	var lines []string
+	for line := range strings.Lines(logs.String()) {
+		if strings.Contains(line, "версия пропущена в истории") {
+			lines = append(lines, line)
+		}
+	}
+
+	if len(lines) != len(reader.skipped) {
+		t.Fatalf("log lines about skipped versions %d, expected %d:\n%s", len(lines), len(reader.skipped), logs.String())
+	}
+
+	for i, v := range reader.skipped {
+		if !strings.Contains(lines[i], "version_id="+strconv.Itoa(v.ID)) || !strings.Contains(lines[i], v.Err.Error()) {
+			t.Errorf("line %q does not name version %d with its reason %q", lines[i], v.ID, v.Err)
+		}
 	}
 }
 

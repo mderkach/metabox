@@ -71,7 +71,7 @@ type ConfigReader interface {
 	Read(ctx context.Context) ([]byte, error)
 	ReadLists(ctx context.Context) (map[string][]byte, error)
 	ListSums(ctx context.Context) (map[string]string, error)
-	Versions(ctx context.Context) ([]config.Version, error)
+	History(ctx context.Context) ([]config.Version, []config.SkippedVersion, error)
 	ReadVersion(ctx context.Context, id int) ([]byte, error)
 	ReadVersionLists(ctx context.Context, id int) (map[string][]byte, error)
 }
@@ -472,11 +472,15 @@ func (s *Server) handleConfigLists(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleVersions(w http.ResponseWriter, r *http.Request) {
-	versions, err := s.reader.Versions(r.Context())
+	versions, skipped, err := s.reader.History(r.Context())
 	if err != nil {
 		fail(s.log, w, r, err)
 
 		return
+	}
+
+	for _, v := range skipped {
+		s.log.Warn("версия пропущена в истории", "version_id", v.ID, "err", v.Err)
 	}
 
 	out := contract.Versions{Versions: versions}
