@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"io/fs"
 	"net/http"
@@ -18,7 +19,13 @@ import (
 	"metabox/internal/httpapi"
 )
 
-type memoryAuthStore struct{ data, sessions []byte }
+type memoryAuthStore struct {
+	data, sessions []byte
+
+	sessionWriteErr error
+	// sessionWriteFailsOnce clears sessionWriteErr after the first failed write.
+	sessionWriteFailsOnce bool
+}
 
 func (m *memoryAuthStore) ReadAuth(context.Context) ([]byte, error) {
 	if m.data == nil {
@@ -43,6 +50,14 @@ func (m *memoryAuthStore) ReadSessions(context.Context) ([]byte, error) {
 }
 
 func (m *memoryAuthStore) WriteSessions(_ context.Context, data []byte) error {
+	if err := m.sessionWriteErr; err != nil {
+		if m.sessionWriteFailsOnce {
+			m.sessionWriteErr = nil
+		}
+
+		return err
+	}
+
 	m.sessions = data
 
 	return nil
@@ -61,7 +76,13 @@ type browser struct {
 func newAuthServer(t *testing.T) *browser {
 	t.Helper()
 
-	guard, err := auth.New(t.Context(), &memoryAuthStore{}, auth.Options{Iterations: 1000})
+	return newAuthServerWith(t, &memoryAuthStore{})
+}
+
+func newAuthServerWith(t *testing.T, store *memoryAuthStore) *browser {
+	t.Helper()
+
+	guard, err := auth.New(t.Context(), store, auth.Options{Iterations: 1000})
 	if err != nil {
 		t.Fatalf("guard: %v", err)
 	}
@@ -268,6 +289,38 @@ func TestLoginAndLogout(t *testing.T) {
 	}
 
 	wantCode(t, other.do(http.MethodGet, "/api/status", nil), http.StatusUnauthorized, contract.ErrUnauthorized)
+}
+
+// The two logout tests below wait the real retry pause of the guard: the server runs over
+// the network, outside a synctest bubble.
+func TestLogoutWhoseWriteFailsIsAnError(t *testing.T) {
+	store := &memoryAuthStore{}
+	b := newAuthServerWith(t, store)
+	b.setPassword("", panelPassword)
+
+	store.sessionWriteErr = errors.New("disk full")
+
+	r := b.do(http.MethodPost, "/api/auth/logout", nil)
+	wantCode(t, r, http.StatusInternalServerError, contract.ErrLogoutNotSaved)
+
+	if !bytes.Contains([]byte(r.header.Get("Set-Cookie")), []byte("Max-Age=0")) {
+		t.Errorf("a failed logout did not clear the cookie: %q", r.header.Get("Set-Cookie"))
+	}
+
+	wantCode(t, b.do(http.MethodGet, "/api/status", nil), http.StatusUnauthorized, contract.ErrUnauthorized)
+}
+
+func TestLogoutWhoseWriteFailsOnceSucceeds(t *testing.T) {
+	store := &memoryAuthStore{}
+	b := newAuthServerWith(t, store)
+	b.setPassword("", panelPassword)
+
+	store.sessionWriteErr = errors.New("disk full")
+	store.sessionWriteFailsOnce = true
+
+	if r := b.do(http.MethodPost, "/api/auth/logout", nil); r.status != http.StatusNoContent {
+		t.Fatalf("logout with a write that fails once: %d %s", r.status, r.body)
+	}
 }
 
 func TestGuessingLocksTheAddress(t *testing.T) {

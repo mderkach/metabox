@@ -75,6 +75,7 @@ var ru = map[string]string{
 	"wrong password":                                     "пароль не подошёл",
 	"password rejected":                                  "пароль не принят",
 	"panel password is not set":                          "пароль панели не задан",
+	"session revocation not saved":                       "отзыв сессии не сохранён",
 	"too many wrong passwords, retry in %s":              "слишком много неверных паролей, повторите через %s",
 	"%w: %d to %d characters":                            "%w: от %d до %d символов",
 

@@ -27,7 +27,7 @@ const maxAuthBytes = 4 << 10
 type Guard interface {
 	Check(token string) (enabled, valid bool)
 	Login(ctx context.Context, addr netip.Addr, password string) (string, error)
-	Logout(ctx context.Context, token string)
+	Logout(ctx context.Context, token string) error
 	Ended(token string) <-chan struct{}
 	SetPassword(ctx context.Context, addr netip.Addr, token, current, next string) (string, error)
 }
@@ -181,9 +181,18 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// handleLogout clears the cookie whatever the guard answers: the session is closed in
+// memory, and the browser must not keep sending it.
 func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
-	s.auth.Logout(r.Context(), sessionToken(r))
+	err := s.auth.Logout(r.Context(), sessionToken(r))
 	clearSession(w, r)
+
+	if err != nil {
+		fail(s.log, w, r, err)
+
+		return
+	}
+
 	w.WriteHeader(http.StatusNoContent)
 }
 

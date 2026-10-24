@@ -64,6 +64,7 @@ export const ERROR_CODE = [
   'password_invalid',
   'login_locked',
   'auth_disabled',
+  'logout_not_saved',
   'check_failed',
   'internal',
 ] as const

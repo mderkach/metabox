@@ -166,6 +166,7 @@
     "password_invalid": "password rejected: it must be 8 to 128 characters",
     "login_locked": "too many wrong passwords, try again in 5 minutes",
     "auth_disabled": "the panel has no password",
+    "logout_not_saved": "the sign-out was not saved on the router, the session may come back after a daemon restart",
     "check_failed": "sing-box rejected the config",
     "internal": "an internal daemon error"
   },

@@ -134,6 +134,10 @@ func fail(log *slog.Logger, w http.ResponseWriter, r *http.Request, err error) {
 	message := locale.Message(lang, err)
 
 	switch {
+	// The store failure stays in the log: it holds the session file path.
+	case code == contract.ErrLogoutNotSaved:
+		log.Error("panel session revocation not saved, a restart brings the session back", "err", err)
+		message = locale.Message(lang, auth.ErrSessionNotRevoked)
 	case status == http.StatusInternalServerError:
 		log.Error("request not served", "err", err, "method", r.Method, "path", r.URL.Path)
 		message = locale.T(lang, "internal error")
@@ -226,6 +230,8 @@ func statusFor(err error) (status int, code contract.ErrorCode) {
 		return http.StatusConflict, contract.ErrAuthDisabled
 	case isLocked(err):
 		return http.StatusTooManyRequests, contract.ErrLoginLocked
+	case errors.Is(err, auth.ErrSessionNotRevoked):
+		return http.StatusInternalServerError, contract.ErrLogoutNotSaved
 	case errors.As(err, &tooLarge):
 		return http.StatusRequestEntityTooLarge, contract.ErrConfigTooLarge
 	default:
