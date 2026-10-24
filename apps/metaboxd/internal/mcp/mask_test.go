@@ -1,6 +1,12 @@
 package mcp
 
-import "testing"
+import (
+	"fmt"
+	"maps"
+	"slices"
+	"strings"
+	"testing"
+)
 
 func TestMaskConfig(t *testing.T) {
 	tests := []struct {
@@ -39,6 +45,9 @@ func TestMaskConfig(t *testing.T) {
 		{"proxy authorization header", `{"headers": {"Proxy-Authorization": "Basic x"}}`, `{"headers": {"Proxy-Authorization": "••••••"}}`},
 		{"new keys in another case", `{"UUID": "u", "Key": "k", "API_KEY": "a"}`, `{"UUID": "••••••", "Key": "••••••", "API_KEY": "••••••"}`},
 		{"key path stays", `{"tls": {"key_path": "/etc/k.pem"}}`, `{"tls": {"key_path": "/etc/k.pem"}}`},
+		{"client key password", `{"tls": {"client_key_password": "p"}}`, `{"tls": {"client_key_password": "••••••"}}`},
+		{"mesh psk", `{"mesh_psk": "k", "mesh_psk_file": "/etc/psk"}`, `{"mesh_psk": "••••••", "mesh_psk_file": "/etc/psk"}`},
+		{"public key stays", `{"tls": {"reality": {"public_key": "pk"}}}`, `{"tls": {"reality": {"public_key": "pk"}}}`},
 	}
 
 	for _, tt := range tests {
@@ -47,6 +56,43 @@ func TestMaskConfig(t *testing.T) {
 				t.Errorf("maskConfig(%s) = %s, want %s", tt.in, got, tt.want)
 			}
 		})
+	}
+}
+
+// Every catalogued key is hidden whether it holds a string or a list, at any depth.
+func TestMaskConfigHidesEveryCataloguedKey(t *testing.T) {
+	const value = "plain-credential"
+
+	var strs, lists strings.Builder
+	strs.WriteString(`{"tag": "t"`)
+	lists.WriteString(`{"tag": "t"`)
+	for _, key := range slices.Sorted(maps.Keys(secretFieldKeys)) {
+		fmt.Fprintf(&strs, `, %q: %q`, key, value)
+		fmt.Fprintf(&lists, `, %q: [%q]`, key, value)
+	}
+	strs.WriteString(`}`)
+	lists.WriteString(`}`)
+
+	got := string(maskConfig([]byte(`{"nodes": [` + strs.String() + `, ` + lists.String() + `]}`)))
+
+	if strings.Contains(got, value) {
+		t.Errorf("a catalogued key kept its value:\n%s", got)
+	}
+	if want := 2 * len(secretFieldKeys); strings.Count(got, maskChars) != want {
+		t.Errorf("masked %d values, want %d", strings.Count(got, maskChars), want)
+	}
+	if !strings.Contains(got, `"tag": "t"`) {
+		t.Error("a key outside the catalogue was masked")
+	}
+}
+
+// The after-host list is the hand-written remainder: a key the generator classifies must not
+// be in it, or the two rules would fight over the value.
+func TestURLKeysOutsideCatalogue(t *testing.T) {
+	for key := range urlKeys {
+		if secretFieldKeys[key] {
+			t.Errorf("%q is in both urlKeys and the generated catalogue", key)
+		}
 	}
 }
 

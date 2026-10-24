@@ -21,53 +21,61 @@ import (
 const forkVersion = "v1.14.1-extended-2.7.2"
 
 func main() {
-	out := flag.String("out", "", "path of the generated schema file")
+	outPath := flag.String("out", "", "path of the generated schema file")
 	fieldsOut := flag.String("fields", "", "path of the generated field reference for the daemon's MCP package")
 	flag.Parse()
 
-	if *out == "" || *fieldsOut == "" {
+	if *outPath == "" || *fieldsOut == "" {
 		fmt.Fprintln(os.Stderr, "schemagen: -out and -fields are required")
 		os.Exit(2)
 	}
 
-	content, fields, err := generateBoth()
+	out, err := generateBoth()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "schemagen:", err)
 		os.Exit(1)
 	}
 
-	if err := os.WriteFile(*out, []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(*outPath, []byte(out.schema), 0o644); err != nil {
 		fmt.Fprintln(os.Stderr, "schemagen:", err)
 		os.Exit(1)
 	}
 
-	if err := os.WriteFile(*fieldsOut, []byte(fields), 0o644); err != nil {
+	if err := os.WriteFile(*fieldsOut, []byte(out.fields), 0o644); err != nil {
 		fmt.Fprintln(os.Stderr, "schemagen:", err)
 		os.Exit(1)
 	}
 }
 
+// output is one generator run: the Zod file for the panel, the field reference for the
+// daemon's MCP package, and the secret catalogue both of them carry.
+type output struct {
+	schema  string
+	fields  string
+	secrets []string
+}
+
 // generateBoth builds the schema once and prints it twice: the Zod file for the panel and
 // the field reference for the daemon's MCP package.
-func generateBoth() (string, string, error) {
+func generateBoth() (*output, error) {
 	if err := checkBuildTags(); err != nil {
-		return "", "", err
+		return nil, err
 	}
 
 	if err := checkUnmarkedReferences(); err != nil {
-		return "", "", err
+		return nil, err
 	}
 
 	groups, err := collectRegistries()
 	if err != nil {
-		return "", "", err
+		return nil, err
 	}
 
 	// Descriptions are read from the sources of the same fork the schema is built from:
 	// reflection does not see godoc. The directory is already known, forkDir returns it.
 	dir, err := forkDir()
 	if err != nil {
-		return "", "", err
+		return nil, err
 	}
 
 	w := newWalker(readDocs(dir, docPackages))
@@ -76,31 +84,49 @@ func generateBoth() (string, string, error) {
 	root := w.build(reflect.TypeOf(option.Options{}), "root")
 
 	if report := w.unknownReport(); report != nil {
-		return "", "", fmt.Errorf("types with their own serialization lacking a rule in the override table (%d):\n%s",
+		return nil, fmt.Errorf("types with their own serialization lacking a rule in the override table (%d):\n%s",
 			len(report), strings.Join(report, "\n"))
 	}
 
 	gates, err := buildGates(dir)
 	if err != nil {
-		return "", "", err
+		return nil, err
 	}
 
 	options, err := buildOptionGates()
 	if err != nil {
-		return "", "", err
+		return nil, err
 	}
 
 	reference, err := fieldReference(w.set, root)
 	if err != nil {
-		return "", "", err
+		return nil, err
 	}
 
-	fields, err := emitFields(reference, forkVersion)
+	secrets := secretCatalogue(optionRoots(groups))
+
+	fields, err := emitFields(reference, forkVersion, secrets)
 	if err != nil {
-		return "", "", err
+		return nil, err
 	}
 
-	return emit(w.set, root, forkVersion, gates, options, groups, tagReferences(w.set, root)), fields, nil
+	return &output{
+		schema:  emit(w.set, root, forkVersion, gates, options, groups, tagReferences(w.set, root), secrets),
+		fields:  fields,
+		secrets: secrets,
+	}, nil
+}
+
+// optionRoots are the fork types a config is read into: the root options and the options
+// of every registered node type.
+func optionRoots(groups []registryGroup) []reflect.Type {
+	roots := []reflect.Type{reflect.TypeOf(option.Options{})}
+	for _, group := range groups {
+		for _, entry := range group.entries {
+			roots = append(roots, entry.typ)
+		}
+	}
+	return roots
 }
 
 // registryUnions builds the registry unions before walking the root: in the options tree they

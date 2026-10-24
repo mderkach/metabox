@@ -33,12 +33,14 @@ func emit(
 	options []optionGate,
 	groups []registryGroup,
 	references referenceTable,
+	secrets []string,
 ) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, fileHeader, version)
 	emitGates(&b, gates, groups)
 	emitOptionGates(&b, options)
 	emitTagReferences(&b, references)
+	emitSecretKeys(&b, secrets)
 
 	for _, named := range set.sorted() {
 		fmt.Fprintf(&b, "export const %s = ", named.name)

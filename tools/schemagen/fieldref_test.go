@@ -9,13 +9,19 @@ import (
 )
 
 func generate() (string, error) {
-	content, _, err := generateBoth()
-	return content, err
+	out, err := generateBoth()
+	if err != nil {
+		return "", err
+	}
+	return out.schema, nil
 }
 
 func generateFields() (string, error) {
-	_, fields, err := generateBoth()
-	return fields, err
+	out, err := generateBoth()
+	if err != nil {
+		return "", err
+	}
+	return out.fields, nil
 }
 
 // The daemon serves the committed reference: a generator change without `make schema`

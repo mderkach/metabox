@@ -18,30 +18,28 @@ const (
 	maskAfterHost
 )
 
-// secretKeys are the config keys whose string values are hidden at any depth: the same
-// names and rules the panel masks in forms. A key matches regardless of case, because the
-// sing-box decoder matches field names that way. A vless or vmess uuid is the credential
-// itself; every key named "key" in the fork schema holds key material (TLS, ECH, OpenVPN,
-// VPN users); authorization is an HTTP header inside headers.
-var secretKeys = map[string]maskRule{
-	"secret":              maskWhole,
-	"password":            maskWhole,
-	"private_key":         maskWhole,
-	"pre_shared_key":      maskWhole,
-	"psk":                 maskWhole,
-	"token":               maskWhole,
-	"auth_str":            maskWhole,
-	"access_key_secret":   maskWhole,
-	"uuid":                maskWhole,
-	"key":                 maskWhole,
-	"auth_key":            maskWhole,
-	"api_token":           maskWhole,
-	"api_key":             maskWhole,
-	"mac_key":             maskWhole,
-	"authorization":       maskWhole,
-	"proxy-authorization": maskWhole,
-	"url":                 maskAfterHost,
-	"download_url":        maskAfterHost,
+// urlKeys are hidden after the host: the scheme and host show whose subscription or rule
+// set it is, the token sits in the path or the query. The generator cannot tell such a key
+// by its name, so the list is kept here; TestURLKeysOutsideCatalogue keeps it apart from
+// secretFieldKeys.
+var urlKeys = map[string]bool{
+	"url":          true,
+	"download_url": true,
+}
+
+// secretRuleOf returns how the value of a config key is masked; false means the key is
+// not a secret. A key matches regardless of case, because the sing-box decoder matches
+// field names that way. Whole-masked keys come from the generated catalogue, the same one
+// the panel masks forms by.
+func secretRuleOf(key string) (maskRule, bool) {
+	key = strings.ToLower(key)
+	if secretFieldKeys[key] {
+		return maskWhole, true
+	}
+	if urlKeys[key] {
+		return maskAfterHost, true
+	}
+	return 0, false
 }
 
 // maskConfig hides secret values in the config text and drops comments: a comment may
@@ -76,7 +74,7 @@ func maskConfig(data []byte) []byte {
 				continue
 			}
 
-			if rule, secret := secretKeys[strings.ToLower(key)]; secret && expectValue {
+			if rule, secret := secretRuleOf(key); secret && expectValue {
 				literal = maskLiteral(literal, rule)
 			} else if secretDepth != 0 {
 				literal = maskLiteral(literal, secretRule)
@@ -94,7 +92,7 @@ func maskConfig(data []byte) []byte {
 			out = append(out, c)
 			i++
 		case c == '[' || c == '{':
-			if rule, secret := secretKeys[strings.ToLower(key)]; secret && expectValue && secretDepth == 0 {
+			if rule, secret := secretRuleOf(key); secret && expectValue && secretDepth == 0 {
 				secretDepth, secretRule = depth+1, rule
 			}
 

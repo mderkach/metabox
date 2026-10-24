@@ -373,6 +373,52 @@ export const TAG_REFERENCE_LOOPS: readonly { readonly from: readonly string[]; r
   { from: ["route", "rules", "*", "rules", "*"], to: ["route", "rules", "*"] },
 ]
 
+/**
+ * Config keys whose values are credentials, by the name rule of tools/schemagen/secrets.go,
+ * plus the header names that carry credentials; lower case. Forms and the daemon's MCP
+ * mask hide their values whole at any depth.
+ */
+export const SECRET_FIELD_KEYS: readonly string[] = [
+  "access_key_secret",
+  "account_key",
+  "api_key",
+  "api_token",
+  "auth",
+  "auth_key",
+  "auth_str",
+  "auth_token",
+  "authorization",
+  "client_key",
+  "client_key_password",
+  "header_protection_key",
+  "host_key",
+  "key",
+  "license_key",
+  "mac_key",
+  "mca_key",
+  "mca_key_password",
+  "mesh_psk",
+  "origin_ca_key",
+  "password",
+  "pre_shared_key",
+  "private_key",
+  "private_key_passphrase",
+  "proxy-authorization",
+  "psk",
+  "secret",
+  "security_token",
+  "seq_key",
+  "session_key",
+  "static_key",
+  "submission_key",
+  "token",
+  "uplink_data_key",
+  "userkey",
+  "uuid",
+  "x_padding_key",
+  "zone_token",
+]
+
 export const ACMEDNS01ChallengeOptionsSchema = z.union([
   z.strictObject({
     provider: z.literal("alidns").optional(),

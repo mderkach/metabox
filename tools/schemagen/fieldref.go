@@ -416,8 +416,8 @@ const fieldForkVersion = %q
 `
 
 // emitFields prints the field graph as a Go source of the daemon's MCP package: static
-// data indexed by node id.
-func emitFields(g *fieldGraph, version string) (string, error) {
+// data indexed by node id, followed by the secret catalogue.
+func emitFields(g *fieldGraph, version string, secrets []string) (string, error) {
 	var b strings.Builder
 	fmt.Fprintf(&b, fieldsHeader, version, version)
 	fmt.Fprintf(&b, "// fieldRoot is the node of the whole config.\nconst fieldRoot = %d\n\n", g.root)
@@ -457,7 +457,8 @@ func emitFields(g *fieldGraph, version string) (string, error) {
 		}
 		b.WriteString("},\n")
 	}
-	b.WriteString("}\n")
+	b.WriteString("}\n\n")
+	emitGoSecretKeys(&b, secrets)
 
 	src, err := format.Source([]byte(b.String()))
 	if err != nil {
