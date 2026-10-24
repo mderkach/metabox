@@ -1,7 +1,8 @@
 export * from './shadcn/alert';
 export * from './shadcn/alert-dialog';
 export * from './shadcn/badge';
-export * from './shadcn/button';
+export { Button } from './Button';
+export { buttonVariants } from './Button.lib';
 export * from './shadcn/card';
 export * from './shadcn/checkbox';
 export * from './shadcn/dialog';

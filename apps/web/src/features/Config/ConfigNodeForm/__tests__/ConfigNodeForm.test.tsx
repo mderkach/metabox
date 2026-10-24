@@ -219,6 +219,14 @@ describe('node form by schema', () => {
     expect(screen.getByRole('switch', { name: 'padding' })).toBeInTheDocument();
   });
 
+  it('lets a nested group shrink below its content so it fits a phone width', async () => {
+    renderVmess();
+    await showEmptyFields();
+
+    // A fieldset keeps `min-width: min-content` by default, which widens the form past the viewport.
+    expect(screen.getByRole('group', { name: 'TLS' })).toHaveClass('min-w-0');
+  });
+
   it('names a duration in the wrong format and does not write it', async () => {
     const user = userEvent.setup();
 

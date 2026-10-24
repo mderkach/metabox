@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { failureText, type MessageKey } from '../api';
 import { cn } from '../lib/utils';
-import { Button } from './shadcn/button';
+import { Button } from './Button';
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from './shadcn/empty';
 
 /**
