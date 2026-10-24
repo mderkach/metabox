@@ -14,6 +14,8 @@ import { RuleTableHeader } from './RuleTableHeader';
 const ROW_ESTIMATE = 52;
 const OVERSCAN = 8;
 
+const USER_INPUT_EVENTS = ['wheel', 'touchstart', 'pointerdown', 'keydown'] as const;
+
 /** The header row is also a table row: row numbering starts with it. */
 const HEADER_ROWS = 1;
 
@@ -108,17 +110,61 @@ export function RuleTable({
   const selectedPosition = useMemo(() => rules.findIndex((rule) => rule.id === selectedId), [rules, selectedId]);
 
   const viewportHeight = virtualizer.scrollRect?.height ?? 0;
+  const followSelection = useRef(true);
+  const lastViewportHeight = useRef(viewportHeight);
+
+  // The first input on the list ends the load: after that the person decides where it is scrolled.
+  useEffect(
+    function stopFollowingOnInput() {
+      const scroller = scrollRef.current;
+
+      if (scroller === null) {
+        return;
+      }
+
+      function stopFollowing() {
+        followSelection.current = false;
+      }
+
+      for (const event of USER_INPUT_EVENTS) {
+        scroller.addEventListener(event, stopFollowing, { passive: true });
+      }
+
+      return function resumeFollowing() {
+        for (const event of USER_INPUT_EVENTS) {
+          scroller.removeEventListener(event, stopFollowing);
+        }
+      };
+    },
+    [listed]
+  );
 
   // The selected row may be outside the window: a new rule at the end, a moved
-  // one, a link to a rule far down; the window also shrinks while the blocks
-  // above it load. `auto` leaves a visible row where it is.
+  // one, a link to a rule far down. `auto` leaves a visible row where it is.
   useEffect(
     function revealSelected() {
+      followSelection.current = true;
+
       if (selectedPosition >= 0) {
         virtualizer.scrollToIndex(selectedPosition, { align: 'auto' });
       }
     },
-    [selectedPosition, viewportHeight, virtualizer]
+    [selectedPosition, virtualizer]
+  );
+
+  // The window shrinks while the blocks above it load and pushes the selected row out;
+  // a later change (a rotated phone) must not pull the list back.
+  useEffect(
+    function revealSelectedOnShrink() {
+      const shrank = viewportHeight < lastViewportHeight.current;
+
+      lastViewportHeight.current = viewportHeight;
+
+      if (shrank && followSelection.current && selectedPosition >= 0) {
+        virtualizer.scrollToIndex(selectedPosition, { align: 'auto' });
+      }
+    },
+    [viewportHeight, selectedPosition, virtualizer]
   );
 
   return (
