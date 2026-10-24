@@ -178,6 +178,8 @@ claude mcp add --transport http metabox http://192.168.1.1:8088/mcp --header "Au
 /etc/init.d/metaboxd restart
 ```
 
+Пакет, установленный из файла (`apk add /tmp/metaboxd-<версия>.apk`), записывается в `/etc/apk/world` с привязкой к хешу, `metaboxd><Q1…`. `apk upgrade metaboxd` такую запись не обновляет, а `apk add -u metaboxd` тянет вместе с ней обновления системных зависимостей. Чтобы вернуться на репозиторий, выполните `apk add metaboxd=<версия>`, а затем `apk add metaboxd`: запись станет обычным именем, и `apk upgrade metaboxd` снова работает.
+
 Ваш `/etc/config/metabox` при обновлении не затирается: версия из пакета ложится рядом как `/etc/config/metabox.apk-new`. sysupgrade сохраняет `/etc/config/metabox` и `/etc/metabox/`.
 
 ```sh
