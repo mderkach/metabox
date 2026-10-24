@@ -3,7 +3,7 @@ import { useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { cn } from '../lib/utils';
-import { Button } from './shadcn/button';
+import { Button } from './Button';
 import { Input } from './shadcn/input';
 import { Popover, PopoverContent, PopoverTitle, PopoverTrigger } from './shadcn/popover';
 
