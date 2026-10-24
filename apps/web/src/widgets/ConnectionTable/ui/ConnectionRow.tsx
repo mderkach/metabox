@@ -25,7 +25,7 @@ function ConnectionRowProto({
   density: TableDensity;
   rowIndex: number;
   now: number;
-  onClose: ((id: string) => void) | null;
+  onClose: ((id: string, host: string) => void) | null;
   /** `null` means route explanation is unavailable: the daemon did not provide the endpoint. */
   onExplain: ((id: string) => void) | null;
   selected: boolean;
@@ -52,7 +52,7 @@ function ConnectionRowProto({
         );
       })}
 
-      <span role='cell' className={cn(CONNECTION_COLUMN.RowActions, 'flex items-center gap-1')}>
+      <span role='cell' className={cn(CONNECTION_COLUMN.RowActions, 'flex items-center gap-2')}>
         <ConnectionRowActions
           connection={connection}
           onClose={onClose}

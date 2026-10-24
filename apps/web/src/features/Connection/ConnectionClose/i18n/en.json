@@ -1,0 +1,5 @@
+{
+  "title": "Close the connection to {{host}}?",
+  "description": "A download or call over it will break. The device reconnects on its own.",
+  "confirm": "Close"
+}

@@ -16,7 +16,7 @@ export function ConnectionRowActions({
   panelId,
 }: {
   connection: ConnectionRowModel;
-  onClose: ((id: string) => void) | null;
+  onClose: ((id: string, host: string) => void) | null;
   onExplain: ((id: string) => void) | null;
   selected: boolean;
   panelId?: string;
@@ -47,7 +47,7 @@ export function ConnectionRowActions({
           aria-label={t('row.close', { host: connection.host })}
           className={cn(ROW_ACTION, 'hover:bg-destructive/15 hover:text-destructive')}
           onClick={() => {
-            onClose(connection.id);
+            onClose(connection.id, connection.host);
           }}
         >
           <X className='size-3.5' />
