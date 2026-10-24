@@ -50,6 +50,26 @@ describe('findReferences', () => {
     ]);
   });
 
+  it('names a fallback group whose member is the tag', () => {
+    const config = JSON.stringify({
+      outbounds: [
+        { type: 'vless', tag: 'nl', server: 'nl.example' },
+        { type: 'fallback', tag: 'backup', outbounds: ['nl'] },
+      ],
+    });
+
+    expect(findReferences(config, 'nl')).toEqual([{ kind: 'node', section: 'outbounds', name: 'backup' }]);
+  });
+
+  it('follows fields the fork leaves without a reference mark', () => {
+    const config = JSON.stringify({
+      outbounds: [{ type: 'vless', tag: 'nl', server: 'nl.example' }],
+      experimental: { v2ray_api: { stats: { enabled: true, outbounds: ['nl'] } } },
+    });
+
+    expect(findReferences(config, 'nl')).toEqual([{ kind: 'setting', path: 'experimental.v2ray_api.stats.outbounds' }]);
+  });
+
   it('finds nothing for a node nobody points to', () => {
     expect(findReferences(CONFIG, 'auto')).toEqual([]);
   });
