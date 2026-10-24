@@ -2,10 +2,15 @@ import { useMutation } from '@tanstack/react-query';
 
 import { applyConfig, confirmApply, restoreConfigVersion, useSaveApplyTransaction } from '@entities/Config';
 
+import { ConfigApplyStore } from '../model/ConfigApply.store';
+
 /**
  * Applying a draft. No retries: a repeat would start a second cycle on the
  * device (Query.md). The body is the draft text, not reassembled JSON. No
  * success toast: the apply bar shows the accepted start itself.
+ *
+ * An accepted start records the sent draft: it is how the panel later tells
+ * the transaction of this tab from any other one.
  */
 export function useApplyConfig() {
   const onTransaction = useSaveApplyTransaction();
@@ -13,7 +18,14 @@ export function useApplyConfig() {
   return useMutation({
     mutationFn: applyConfig,
     meta: { showError: true },
-    onSuccess: onTransaction,
+    onSuccess: (transaction, { text, lists }) => {
+      onTransaction(transaction);
+      ConfigApplyStore.getState().submit({
+        id: transaction.id,
+        text,
+        lists: { put: lists?.put ?? {}, remove: lists?.remove ?? [] },
+      });
+    },
   });
 }
 

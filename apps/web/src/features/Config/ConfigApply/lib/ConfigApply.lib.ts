@@ -5,6 +5,7 @@ import {
   CONFIG_QUERY,
   CONFIG_SECTION,
   ConfigDocumentState,
+  ConfigDocumentStore,
   isGenericSection,
   readRules,
   toConfigChanges,
@@ -19,6 +20,7 @@ import {
   type ConfigChange,
   type ConfigSection,
   type GenericSection,
+  type ListChanges,
   type WorkdirMismatch,
 } from '@entities/Config';
 import {
@@ -33,18 +35,29 @@ import { API_FAILURE, ApiError } from '@shared/api';
 import { failureLine, firstJsoncError } from '@shared/lib/jsonc';
 
 import { useApplyConfig, useConfirmApply } from '../api/ConfigApply.api';
+import { ConfigApplyStore, type SubmittedApply } from '../model/ConfigApply.store';
 
 /**
- * Rereads the document when the cycle reached its end.
+ * Rereads the document when the cycle reached its end, and settles the draft
+ * of the Apply this tab started.
  *
- * A confirmed draft stops being a draft: the file on the device now contains
- * it, and the daemon may have appended `experimental.clash_api`, so keeping old
- * edits on top would mean showing a diff with itself. Rollback and failure do
- * not touch the draft: it is what the user repairs the config on.
+ * Only the transaction the tab submitted (`ConfigApplyStore`) may touch the
+ * draft. `GET /api/status` keeps the last transaction, so after a reload the
+ * panel sees an old `Confirmed` it never sent, and a draft started since is
+ * the user's unsaved work: that transaction only rereads the document.
+ *
+ * When the submitted Apply is confirmed, its draft is on the device and stops
+ * being a draft (the daemon may also have appended `experimental.clash_api`,
+ * so keeping old edits on top would mean showing a diff with itself). A draft
+ * the user kept editing while the Apply was in flight is kept: it holds the
+ * submitted changes plus the new ones, its base moves to the submitted text,
+ * and the diff against the reread file shows only what is still unapplied.
+ * Rollback and failure do not touch the draft: it is what the user repairs the
+ * config on. A rollback to a version is not sent from the draft, so its
+ * confirmation leaves the draft alone as well.
  */
 function useDocumentRefresh(transaction: ApplyTransaction | null) {
   const queryClient = useQueryClient();
-  const discard = ConfigDocumentState.use.discard();
   const seen = useRef<string | null>(null);
 
   useEffect(
@@ -59,10 +72,27 @@ function useDocumentRefresh(transaction: ApplyTransaction | null) {
 
       void queryClient.invalidateQueries({ queryKey: CONFIG_QUERY.all });
 
-      if (transaction.phase === APPLY_PHASE.Confirmed) discard();
+      const submitted = ConfigApplyStore.getState().settle(transaction.id);
+
+      if (submitted !== null && transaction.phase === APPLY_PHASE.Confirmed) settleDraft(submitted);
     },
-    [transaction, queryClient, discard]
+    [transaction, queryClient]
   );
+}
+
+function settleDraft({ text, lists }: SubmittedApply) {
+  const document = ConfigDocumentStore.getState();
+  const unchanged = document.current() === text && isSameLists(document.listChanges(), lists);
+
+  if (unchanged) {
+    document.discard();
+  } else {
+    document.rebase(text);
+  }
+}
+
+function isSameLists(left: ListChanges, right: ListChanges): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
 }
 
 export const APPLY_BLOCK = {
