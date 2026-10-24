@@ -31,6 +31,8 @@ type schema struct {
 	elem     *schema   // kindArray, kindRecord
 	variants []variant // kindUnion, kindTagged
 	discr    string    // kindTagged: name of the discriminator field
+
+	reference string // the kind of node the value names by its tag: outbound, rule_set and so on
 }
 
 type field struct {

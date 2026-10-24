@@ -135,3 +135,33 @@ func TestForkExamplesArePresent(t *testing.T) {
 	}
 	t.Logf("config examples in the fork: %d", len(configs))
 }
+
+// The panel looks for references to a node only in fields the fork marks with
+// `reference`: a field that merely holds the same string is not a reference.
+func TestGenerateMarksTagReferences(t *testing.T) {
+	out, err := generate()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, want := range []string{
+		`["route", "rules", "*", "outbound"]`,
+		`["route", "rules", "*", "rule_set"]`,
+		`["route", "final"]`,
+		`["outbounds", "*", "outbounds"]`,
+		`["dns", "rules", "*", "server"]`,
+		// A short form declared by the fork's DescribeSchema, not by a struct tag.
+		`["outbounds", "*", "domain_resolver"]`,
+		`{ from: ["route", "rules", "*", "rules", "*"], to: ["route", "rules", "*"] }`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("tag references lack %s", want)
+		}
+	}
+
+	for _, unwanted := range []string{`["outbounds", "*", "server"]`, `["outbounds", "*", "tag"]`} {
+		if strings.Contains(out, unwanted) {
+			t.Errorf("tag references list %s, which is not a reference", unwanted)
+		}
+	}
+}

@@ -77,7 +77,7 @@ func generate() (string, error) {
 		return "", err
 	}
 
-	return emit(w.set, root, forkVersion, gates, options, groups), nil
+	return emit(w.set, root, forkVersion, gates, options, groups, tagReferences(w.set, root)), nil
 }
 
 // registryUnions builds the registry unions before walking the root: in the options tree they
