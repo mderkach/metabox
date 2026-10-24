@@ -57,7 +57,7 @@ func (r *Reader) defaultRoute() (string, error) {
 
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return "", fmt.Errorf("чтение %s: %w", path, err)
+		return "", fmt.Errorf("read %s: %w", path, err)
 	}
 
 	best := ""
@@ -103,7 +103,7 @@ func (r *Reader) defaultRoute() (string, error) {
 		return fallback, nil
 	}
 
-	return "", errors.New("маршрута по умолчанию нет")
+	return "", errors.New("no default route")
 }
 
 // isTunnel tells TUN/TAP by a file the kernel creates only for them.
@@ -118,7 +118,7 @@ func (r *Reader) counters(name string) (*Link, error) {
 
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("чтение %s: %w", path, err)
+		return nil, fmt.Errorf("read %s: %w", path, err)
 	}
 
 	for line := range strings.Lines(string(data)) {
@@ -129,21 +129,21 @@ func (r *Reader) counters(name string) (*Link, error) {
 
 		fields := strings.Fields(rest)
 		if len(fields) <= transmittedField {
-			return nil, fmt.Errorf("разбор %s: у %s полей %d", path, name, len(fields))
+			return nil, fmt.Errorf("parse %s: %s has %d fields", path, name, len(fields))
 		}
 
 		rx, err := strconv.ParseInt(fields[receivedField], 10, 64)
 		if err != nil {
-			return nil, fmt.Errorf("разбор счётчика %s: %w", name, err)
+			return nil, fmt.Errorf("parse counter %s: %w", name, err)
 		}
 
 		tx, err := strconv.ParseInt(fields[transmittedField], 10, 64)
 		if err != nil {
-			return nil, fmt.Errorf("разбор счётчика %s: %w", name, err)
+			return nil, fmt.Errorf("parse counter %s: %w", name, err)
 		}
 
 		return &Link{Name: name, RX: rx, TX: tx}, nil
 	}
 
-	return nil, fmt.Errorf("интерфейса %s нет в %s", name, path)
+	return nil, fmt.Errorf("no interface %s in %s", name, path)
 }

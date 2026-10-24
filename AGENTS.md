@@ -96,7 +96,7 @@ Message format, scopes, branches, PRs and additional requirements for agents: [`
 - A new dependency only when there is no way around it; justify it.
 - Dependency versions are pinned exactly, without `^` and `~`: a range gives different trees on a developer machine and in CI. `saveExact: true` in the root `pnpm-workspace.yaml` enforces this; a range typed by hand is caught by `pnpm install --frozen-lockfile` in CI, because the lockfile stores the specifier and diverges from the manifest. A version update is a separate, deliberate change.
 - `apps/web/src/shared/api/generated.ts` is not edited by hand; the generator is. Writing to it is blocked in `.claude/settings.json`.
-- The repository language is English: code, comments, commit messages, documentation, ADRs, the PRD. README, CONTRIBUTING and docs/Development have Russian copies (`README.ru.md`, `CONTRIBUTING.ru.md`, `docs/Development.ru.md`), updated in the same commit as the English file. Text shown to users lives in the i18n dictionaries, in English and Russian. Known exception: daemon error texts shown in the panel stay in Russian until they move to i18n.
+- The repository language is English: code, comments, commit messages, documentation, ADRs, the PRD. README, CONTRIBUTING and docs/Development have Russian copies (`README.ru.md`, `CONTRIBUTING.ru.md`, `docs/Development.ru.md`), updated in the same commit as the English file. Text shown to users lives in the i18n dictionaries, in English and Russian.
 - Personal settings that are not shared through git go into `AGENTS.local.md` (response formats, your own triggers, aliases). The file is ignored in `.gitignore` by the `*.local.*` pattern.
 
 ## Context hygiene

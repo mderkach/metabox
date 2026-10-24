@@ -73,12 +73,12 @@ type Updater struct {
 // would exhaust the limit without ever reaching the retry.
 func NewUpdater(ctx context.Context, lister Lister, store Store, log *slog.Logger, interval, retry time.Duration) (*Updater, error) {
 	if interval > 0 && interval < retry {
-		return nil, fmt.Errorf("интервал сверки %s короче паузы повтора %s", interval, retry)
+		return nil, fmt.Errorf("refresh interval %s is shorter than the retry pause %s", interval, retry)
 	}
 
 	lists, err := decode(snapshot, ListSourceSnapshot)
 	if err != nil {
-		return nil, fmt.Errorf("встроенный снимок каталога: %w", err)
+		return nil, fmt.Errorf("embedded catalog snapshot: %w", err)
 	}
 
 	u := &Updater{lister: lister, store: store, log: log, interval: interval, retry: retry, lists: lists}
@@ -88,11 +88,11 @@ func NewUpdater(ctx context.Context, lister Lister, store Store, log *slog.Logge
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
 	case err != nil:
-		log.Warn("кэш каталога наборов не прочитан, каталог на снимке", "err", err)
+		log.Warn("rule set catalog cache not read, catalog from the snapshot", "err", err)
 	default:
 		saved, err := decode(cached, ListSourceProvider)
 		if err != nil {
-			log.Warn("кэш каталога наборов испорчен, каталог на снимке", "err", err)
+			log.Warn("rule set catalog cache corrupt, catalog from the snapshot", "err", err)
 
 			break
 		}
@@ -216,10 +216,10 @@ func (u *Updater) run(ctx context.Context) {
 				return
 			}
 
-			u.log.Warn("каталог наборов не сверен с поставщиками", "err", err, "retry", u.retry)
+			u.log.Warn("rule set catalog not refreshed from the providers", "err", err, "retry", u.retry)
 			next = u.retry
 		} else {
-			u.log.Info("каталог наборов сверен с поставщиками", "next", next)
+			u.log.Info("rule set catalog refreshed from the providers", "next", next)
 		}
 
 		timer.Reset(next)
@@ -324,7 +324,7 @@ func (u *Updater) save(ctx context.Context) error {
 
 	data, err := json.Marshal(f)
 	if err != nil {
-		return fmt.Errorf("кэш каталога: %w", err)
+		return fmt.Errorf("catalog cache: %w", err)
 	}
 
 	sum := sha256.Sum256(data)
@@ -333,7 +333,7 @@ func (u *Updater) save(ctx context.Context) error {
 	}
 
 	if err := u.store.WriteRuleSets(ctx, data); err != nil {
-		return fmt.Errorf("кэш каталога: %w", err)
+		return fmt.Errorf("catalog cache: %w", err)
 	}
 
 	u.saved = sum

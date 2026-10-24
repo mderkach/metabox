@@ -11,7 +11,7 @@ import (
 func LoadPair(certPath, keyPath string) (*tls.Config, error) {
 	pair, err := tls.LoadX509KeyPair(certPath, keyPath)
 	if err != nil {
-		return nil, fmt.Errorf("сертификат %s: %w", certPath, err)
+		return nil, fmt.Errorf("certificate %s: %w", certPath, err)
 	}
 
 	return &tls.Config{
