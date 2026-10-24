@@ -125,10 +125,11 @@ func TestRollbackWithoutBackup(t *testing.T) {
 		if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
 			t.Fatalf("apply: %v", err)
 		}
+
+		tx := waitPhase(t, h, apply.PhaseFailed)
 		h.manager.Close()
 
-		tx := h.manager.Current()
-		if tx.Phase != apply.PhaseFailed || tx.ReasonCode != apply.ReasonNoBackup {
+		if tx.ReasonCode != apply.ReasonNoBackup {
 			t.Errorf("phase %q with code %q, expected failure with reason no_backup", tx.Phase, tx.ReasonCode)
 		}
 		if !strings.Contains(tx.Reason, "порт молчит") {
@@ -187,10 +188,11 @@ func TestJournalFailureSkipsRollback(t *testing.T) {
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
 		t.Fatalf("apply: %v", err)
 	}
+
+	tx := waitPhase(t, h, apply.PhaseFailed)
 	h.manager.Close()
 
-	tx := h.manager.Current()
-	if tx.Phase != apply.PhaseFailed || tx.ReasonCode != apply.ReasonWriteFailed {
+	if tx.ReasonCode != apply.ReasonWriteFailed {
 		t.Errorf("phase %q with code %q, expected failure with reason write_failed", tx.Phase, tx.ReasonCode)
 	}
 	if !strings.Contains(tx.Reason, "файловая система только для чтения") {

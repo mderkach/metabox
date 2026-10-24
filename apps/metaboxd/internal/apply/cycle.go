@@ -417,18 +417,30 @@ func (m *Manager) await(ctx context.Context, log *slog.Logger, confirmed <-chan 
 
 // beginRollback closes the window before the rollback touches the disk: from this
 // moment Confirm gets a refusal. False means the confirmation got in
-// before the timer and there is nothing to roll back.
+// before the timer and there is nothing to roll back. A Confirm caught writing the
+// terminal state is waited for: its outcome decides.
 func (m *Manager) beginRollback() bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	for {
+		m.mu.Lock()
 
-	if m.current.Phase != PhaseAwaitingConfirm {
-		return false
+		if m.current.Phase != PhaseAwaitingConfirm {
+			m.mu.Unlock()
+
+			return false
+		}
+
+		if !m.confirming {
+			m.rollingBack = true
+			m.mu.Unlock()
+
+			return true
+		}
+
+		done := m.confirmDone
+		m.mu.Unlock()
+
+		<-done
 	}
-
-	m.rollingBack = true
-
-	return true
 }
 
 // rollback returns the previous config and brings the service up on it. Both

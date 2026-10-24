@@ -74,18 +74,38 @@ type fakeStore struct {
 	backup      []byte
 	backupLists map[string][]byte
 
-	// Gates for race tests: started closes on entering the step, release
-	// holds the step until the test lets it go.
-	restoreStarted chan struct{}
-	restoreRelease chan struct{}
-	clearStarted   chan struct{}
-	clearRelease   chan struct{}
-	backupStarted  chan struct{}
-	backupRelease  chan struct{}
+	// Gates for race tests, set by hold: the first call of the step closes started and
+	// waits for release; later calls pass.
+	gates   sync.Mutex
+	started map[string]chan struct{}
+	release map[string]chan struct{}
 }
 
-// gate closes started and holds the step until release; a nil gate lets the step through.
-func gate(started, release chan struct{}) {
+// hold arms the gate of a step and returns its channels: started closes when the step
+// is entered, release lets it go on.
+func (s *fakeStore) hold(step string) (started, release chan struct{}) {
+	s.gates.Lock()
+	defer s.gates.Unlock()
+
+	if s.started == nil {
+		s.started = map[string]chan struct{}{}
+		s.release = map[string]chan struct{}{}
+	}
+
+	started, release = make(chan struct{}), make(chan struct{})
+	s.started[step], s.release[step] = started, release
+
+	return started, release
+}
+
+// pass goes through the gate of a step, if one is armed, and disarms it.
+func (s *fakeStore) pass(step string) {
+	s.gates.Lock()
+	started, release := s.started[step], s.release[step]
+	delete(s.started, step)
+	delete(s.release, step)
+	s.gates.Unlock()
+
 	if started != nil {
 		close(started)
 	}
@@ -134,7 +154,7 @@ func (s *fakeStore) SaveVersion(_ context.Context, _ []byte) error {
 
 func (s *fakeStore) Backup(context.Context) error {
 	s.rec.add("Backup")
-	gate(s.backupStarted, s.backupRelease)
+	s.pass("Backup")
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -150,7 +170,7 @@ func (s *fakeStore) Backup(context.Context) error {
 
 func (s *fakeStore) Restore(context.Context) error {
 	s.rec.add("Restore")
-	gate(s.restoreStarted, s.restoreRelease)
+	s.pass("Restore")
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -222,8 +242,14 @@ func (s *fakeStore) ReadState(context.Context) ([]byte, error) {
 	return s.state, nil
 }
 
-func (s *fakeStore) WriteState(_ context.Context, data []byte) error {
+// WriteState and ClearState refuse a cancelled context before touching anything, as
+// config.Store does: a Confirm that forwarded the request context would lose its write.
+func (s *fakeStore) WriteState(ctx context.Context, data []byte) error {
 	s.rec.add("WriteState")
+
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -236,9 +262,13 @@ func (s *fakeStore) WriteState(_ context.Context, data []byte) error {
 	return nil
 }
 
-func (s *fakeStore) ClearState(context.Context) error {
+func (s *fakeStore) ClearState(ctx context.Context) error {
 	s.rec.add("ClearState")
-	gate(s.clearStarted, s.clearRelease)
+	s.pass("ClearState")
+
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -811,8 +841,7 @@ func TestReasonFollowsLang(t *testing.T) {
 // of the rollback, and a new Start is not let in at that moment either.
 func TestConfirmDuringRollbackIsRejected(t *testing.T) {
 	h := newHarness(t)
-	h.store.restoreStarted = make(chan struct{})
-	h.store.restoreRelease = make(chan struct{})
+	restoreStarted, restoreRelease := h.store.hold("Restore")
 
 	tx, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", "")
 	if err != nil {
@@ -821,7 +850,7 @@ func TestConfirmDuringRollbackIsRejected(t *testing.T) {
 	h.waitWindow(t)
 
 	h.clock.fire()
-	<-h.store.restoreStarted
+	<-restoreStarted
 
 	if _, err := h.manager.Confirm(t.Context(), tx.ID); !errors.Is(err, apply.ErrNothingToConfirm) {
 		t.Errorf("confirm during rollback: got %v, expected ErrNothingToConfirm", err)
@@ -830,7 +859,7 @@ func TestConfirmDuringRollbackIsRejected(t *testing.T) {
 		t.Errorf("apply during rollback: got %v, expected ErrBusy", err)
 	}
 
-	close(h.store.restoreRelease)
+	close(restoreRelease)
 	h.manager.Close()
 
 	if got := h.manager.Current().Phase; got != apply.PhaseRolledBack {
@@ -843,8 +872,7 @@ func TestConfirmDuringRollbackIsRejected(t *testing.T) {
 // window would not be replayed.
 func TestConfirmHoldsApplyUntilStateCleared(t *testing.T) {
 	h := newHarness(t)
-	h.store.clearStarted = make(chan struct{})
-	h.store.clearRelease = make(chan struct{})
+	clearStarted, clearRelease := h.store.hold("ClearState")
 
 	tx, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", "")
 	if err != nil {
@@ -862,13 +890,13 @@ func TestConfirmHoldsApplyUntilStateCleared(t *testing.T) {
 		}
 	}()
 
-	<-h.store.clearStarted
+	<-clearStarted
 
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); !errors.Is(err, apply.ErrBusy) {
 		t.Errorf("apply during state cleanup: got %v, expected ErrBusy", err)
 	}
 
-	close(h.store.clearRelease)
+	close(clearRelease)
 	<-done
 
 	// After the confirmation the outside edit check is live: the fake is given the sha
@@ -964,6 +992,131 @@ func TestFailedRollbackDoesNotJamApply(t *testing.T) {
 
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); errors.Is(err, apply.ErrConfigModified) {
 		t.Error("after a failed rollback the apply got stuck on a false outside edit")
+	}
+}
+
+// The client dropped the request: the state on disk must still become terminal, otherwise
+// a reboot would roll back the confirmed config.
+func TestConfirmSurvivesCancelledRequest(t *testing.T) {
+	h := newHarness(t)
+
+	tx, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", "")
+	if err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+	h.waitWindow(t)
+
+	gone, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	confirmed, err := h.manager.Confirm(gone, tx.ID)
+	if err != nil {
+		t.Fatalf("confirm with a dropped request: %v", err)
+	}
+	if confirmed.Phase != apply.PhaseConfirmed {
+		t.Errorf("phase %q, expected confirmation", confirmed.Phase)
+	}
+	if state, _ := h.store.ReadState(t.Context()); state != nil {
+		t.Error("state of the confirmed transaction stayed on disk")
+	}
+}
+
+// The disk refused both the removal and the terminal record: Confirm must not report
+// success over an awaiting_confirm left on disk. The window stays open, and a retry
+// after the disk is back succeeds.
+func TestConfirmFailsWhenStateNotSaved(t *testing.T) {
+	h := newHarness(t)
+
+	tx, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", "")
+	if err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+	h.waitWindow(t)
+
+	h.store.mu.Lock()
+	h.store.clearErr = errors.New("файловая система только для чтения")
+	h.store.stateErr = errors.New("файловая система только для чтения")
+	h.store.mu.Unlock()
+
+	if _, err := h.manager.Confirm(t.Context(), tx.ID); !errors.Is(err, apply.ErrConfirmNotSaved) {
+		t.Fatalf("got %v, expected ErrConfirmNotSaved", err)
+	}
+	if got := h.manager.Current().Phase; got != apply.PhaseAwaitingConfirm {
+		t.Errorf("phase %q, expected the window still open", got)
+	}
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); !errors.Is(err, apply.ErrBusy) {
+		t.Errorf("apply after a failed confirm: got %v, expected ErrBusy", err)
+	}
+
+	h.store.mu.Lock()
+	h.store.clearErr = nil
+	h.store.stateErr = nil
+	h.store.mu.Unlock()
+
+	if _, err := h.manager.Confirm(t.Context(), tx.ID); err != nil {
+		t.Fatalf("confirm after the disk is back: %v", err)
+	}
+	if state, _ := h.store.ReadState(t.Context()); state != nil {
+		t.Error("state of the confirmed transaction stayed on disk")
+	}
+}
+
+// The window ends while Confirm is writing the terminal state: the rollback waits for
+// the outcome. A confirmation that took leaves nothing to roll back; one the disk refused
+// is followed by the rollback.
+func TestRollbackWaitsForConfirmInFlight(t *testing.T) {
+	tests := []struct {
+		name     string
+		diskErr  error
+		wantErr  error
+		wantBack bool
+	}{
+		{name: "confirmation took", wantBack: false},
+		{name: "confirmation refused by the disk", diskErr: errors.New("диск переполнен"), wantErr: apply.ErrConfirmNotSaved, wantBack: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := newHarness(t)
+
+			tx, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", "")
+			if err != nil {
+				t.Fatalf("apply: %v", err)
+			}
+			h.waitWindow(t)
+
+			clearStarted, clearRelease := h.store.hold("ClearState")
+			h.store.mu.Lock()
+			h.store.clearErr = tt.diskErr
+			h.store.stateErr = tt.diskErr
+			h.store.mu.Unlock()
+
+			done := make(chan error, 1)
+
+			go func() {
+				_, err := h.manager.Confirm(t.Context(), tx.ID)
+				done <- err
+			}()
+
+			<-clearStarted
+			h.clock.fire()
+
+			if slices.Contains(h.rec.snapshot(), "Restore") {
+				t.Fatal("rollback started while the confirmation was being written")
+			}
+
+			close(clearRelease)
+
+			if err := <-done; !errors.Is(err, tt.wantErr) {
+				t.Errorf("confirm: got %v, expected %v", err, tt.wantErr)
+			}
+
+			h.manager.Close()
+
+			if got := slices.Contains(h.rec.snapshot(), "Restore"); got != tt.wantBack {
+				t.Errorf("rollback happened: %v, expected %v; steps %v", got, tt.wantBack, h.rec.snapshot())
+			}
+		})
 	}
 }
 

@@ -157,6 +157,11 @@ var (
 	// ErrNothingToConfirm means nothing to confirm, the window is already closed.
 	ErrNothingToConfirm = locale.New("nothing to confirm")
 
+	// ErrConfirmNotSaved means the disk refused both the removal of the state file and
+	// its terminal record: the confirmation did not take, the window stays open and
+	// the client may try again.
+	ErrConfirmNotSaved = errors.New("confirmation not saved")
+
 	// ErrConfigModified means the config was edited bypassing the daemon. Silently overwriting such an edit
 	// is not allowed: the owner could have made it over SSH.
 	ErrConfigModified = locale.New("config file changed outside metabox")
@@ -256,6 +261,10 @@ type DNSProber interface {
 	Probe(ctx context.Context, inbound clashapi.DNSInbound) error
 }
 
+// stateTimeout bounds the state file write that finishes a confirmation. It runs
+// detached from the request, so the request deadline no longer limits it.
+const stateTimeout = 10 * time.Second
+
 // Clock returns the confirmation window firing. A separate dependency, not
 // a direct time call: otherwise the automatic rollback check turns into a minute of sleep.
 type Clock interface {
@@ -317,6 +326,11 @@ type Manager struct {
 	// awaiting_confirm until the end of Restore and Restart, and without this flag
 	// a confirmation would wedge into a rollback already in progress.
 	rollingBack bool
+	// confirming closes a second Confirm and holds the timer rollback while the
+	// terminal state is being written: the outcome of that write decides whether
+	// there is anything left to roll back. confirmDone closes when it is known.
+	confirming  bool
+	confirmDone chan struct{}
 	current     Transaction
 	// lastSum is the sha256 of what the daemon wrote itself. It survives a restart through
 	// the state file.
@@ -617,6 +631,10 @@ func listSums(files map[string][]byte) map[string]string {
 }
 
 // Confirm closes the confirmation window: the connection is alive, no rollback is needed.
+// The state on disk is made terminal before the call returns, under a context detached
+// from the request: a client that drops the request must not leave awaiting_confirm on
+// disk, which Replay would roll back after a restart. ErrConfirmNotSaved means the disk
+// refused both the removal and the terminal record; the window stays open.
 func (m *Manager) Confirm(ctx context.Context, id string) (Transaction, error) {
 	m.mu.Lock()
 
@@ -625,47 +643,77 @@ func (m *Manager) Confirm(ctx context.Context, id string) (Transaction, error) {
 
 		return Transaction{}, ErrUnknownTransaction
 	}
-	if m.current.Phase != PhaseAwaitingConfirm || m.rollingBack {
+	if m.current.Phase != PhaseAwaitingConfirm || m.rollingBack || m.confirming {
 		m.mu.Unlock()
 
 		return Transaction{}, ErrNothingToConfirm
 	}
 
-	m.current.Phase = PhaseConfirmed
-	m.current.Window = 0
+	m.confirming = true
+	done := make(chan struct{})
+	m.confirmDone = done
 	tx := m.current
-	confirmed := m.confirmed
-	m.confirmed = nil
+	tx.Phase = PhaseConfirmed
+	tx.Window = 0
 	m.mu.Unlock()
 
 	// The state is removed before busy is released: busy released earlier lets in
 	// the next Start, and ClearState would erase its state file. The response
 	// goes after the cleanup, so "confirmed and immediately applied" does not
 	// run into busy.
-	if err := m.store.ClearState(ctx); err != nil {
-		// awaiting_confirm stayed on disk, and after a reboot the replay
-		// would roll back the confirmed config. The terminal phase is not rolled back by Replay,
-		// only removed.
-		if persistErr := m.persist(ctx, tx); persistErr != nil {
-			m.log.Error("state of the confirmed transaction neither removed nor rewritten",
-				"err", errors.Join(err, persistErr), "transaction_id", id)
-		} else {
-			m.log.Warn("state of the confirmed transaction not removed, the terminal phase is written",
-				"err", err, "transaction_id", id)
-		}
-	}
+	kept, err := settleState(ctx, m.store.ClearState, func(ctx context.Context) error { return m.persist(ctx, tx) })
 
 	m.mu.Lock()
+	m.confirming = false
+
+	if err != nil {
+		m.mu.Unlock()
+		close(done)
+
+		return Transaction{}, err
+	}
+
+	m.current = tx
+	confirmed := m.confirmed
+	m.confirmed = nil
 	m.busy = false
 	m.mu.Unlock()
+	close(done)
 
 	if confirmed != nil {
 		close(confirmed)
 	}
 
+	if kept != nil {
+		m.log.Warn("state of the confirmed transaction not removed, the terminal phase is written",
+			"err", kept, "transaction_id", id)
+	}
+
 	m.log.Info("apply confirmed", "transaction_id", id)
 
 	return tx, nil
+}
+
+// settleState makes the state file of a confirmed transaction terminal: removed, or
+// rewritten with the terminal phase when the removal fails, since Replay only removes a
+// terminal phase while a leftover awaiting_confirm would roll back the confirmed config.
+// kept is the removal failure when the terminal record stands in its place. The write
+// runs detached from the request with its own ceiling: it must finish even when the
+// client is gone.
+func settleState(ctx context.Context, remove, persist func(context.Context) error) (kept, err error) {
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), stateTimeout)
+	defer cancel()
+
+	clearErr := remove(ctx)
+	if clearErr == nil {
+		return nil, nil
+	}
+
+	if err := persist(ctx); err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrConfirmNotSaved, errors.Join(clearErr, err))
+	}
+
+	return clearErr, nil
 }
 
 // Close stops waiting for the confirmation and waits for the background goroutine.
