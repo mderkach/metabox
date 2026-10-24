@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { RULE_TARGET, type RuleRow as RuleRowModel } from '@entities/Rule';
 
+import { RULE_HIT, type RuleHitCell } from '../model';
 import { RuleRow } from '../ui/RuleRow';
 
 const TARGET = 'proxy-eu-reality-frankfurt-02';
@@ -44,7 +45,7 @@ async function hover(element: HTMLElement) {
   });
 }
 
-function renderRow() {
+function renderRow(hits?: RuleHitCell) {
   render(
     <div role='table'>
       <RuleRow
@@ -52,7 +53,7 @@ function renderRow() {
         rowIndex={1}
         selected={false}
         edited={false}
-        hits={undefined}
+        hits={hits}
         outboundTypes={NO_TYPES}
         onSelect={vi.fn<(id: string) => void>()}
       />
@@ -91,5 +92,22 @@ describe('RuleRow', () => {
     await hover(screen.getByRole('button', { name: `Правило 4, выход ${TARGET}` }));
 
     expect(screen.getAllByText(TARGET)).toHaveLength(1);
+  });
+
+  it('explains an unobserved hit count to keyboard and touch users', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+
+    renderRow(RULE_HIT.Unobserved);
+    const hint = screen.getByRole('button', { name: 'sing-box не считает срабатывания таких правил' });
+
+    await user.tab();
+    await user.tab();
+    expect(hint).toHaveFocus();
+
+    await user.keyboard('{Enter}');
+
+    expect(
+      screen.getByText('sing-box не считает срабатывания таких правил', { selector: '[data-slot=popover-content]' })
+    ).toBeVisible();
   });
 });

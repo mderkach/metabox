@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { isNamedRuleAction, RULE_TARGET, type RuleRow as RuleRowModel } from '@entities/Rule';
 import { cn } from '@shared/lib/utils';
-import { Badge, Tooltip, TooltipContent, TooltipTrigger } from '@shared/ui';
+import { Badge, Popover, PopoverContent, PopoverTrigger, Tooltip, TooltipContent, TooltipTrigger } from '@shared/ui';
 
 import { RULE_HIT, type RuleHitCell } from '../model';
 import { RULE_COLUMN } from './RuleColumns';
@@ -174,7 +174,19 @@ function RuleHitValue({ hits, language }: { hits: RuleHitCell; language: string 
   }
 
   if (hits === RULE_HIT.Unobserved) {
-    return <span title={t('hits.unobserved')}>{t('hits.unobservedCell')}</span>;
+    return (
+      <Popover>
+        {/* `relative` lifts the trigger above the select button that covers the row. */}
+        <PopoverTrigger
+          type='button'
+          aria-label={t('hits.unobserved')}
+          className='relative rounded-sm focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none pointer-coarse:min-h-11 pointer-coarse:min-w-11'
+        >
+          {t('hits.unobservedCell')}
+        </PopoverTrigger>
+        <PopoverContent className='w-auto max-w-xs'>{t('hits.unobserved')}</PopoverContent>
+      </Popover>
+    );
   }
 
   return <data value={hits}>{hits.toLocaleString(language)}</data>;

@@ -145,7 +145,9 @@ describe('rules screen', () => {
     await waitFor(() => {
       expect(dnsRow).toHaveTextContent('—');
     });
-    expect(within(dnsRow).getByTitle(/^sing-box не считает срабатывания таких правил/)).toBeInTheDocument();
+    expect(
+      within(dnsRow).getByRole('button', { name: /^sing-box не считает срабатывания таких правил/ })
+    ).toBeInTheDocument();
   });
 
   it('a process on another config does not hand its count to the rows of this one', async () => {
