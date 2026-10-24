@@ -52,7 +52,7 @@ RUN --mount=type=secret,id=apk_sign_key \
       --info name:metaboxd \
       --info "version:${PKG_VERSION}" \
       --info "arch:${PKG_ARCH:-$(cat /tmp/arch)}" \
-      --info description:"Панель настройки sing-box" \
+      --info description:"sing-box configuration panel" \
       --info license:GPL-3.0-or-later \
       --info depends:sing-box-extended \
       --script post-upgrade:/src/package-scripts/post-upgrade \

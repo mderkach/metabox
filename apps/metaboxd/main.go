@@ -122,44 +122,44 @@ func main() {
 	var s settings
 
 	flag.StringVar(&s.addr, "listen", "127.0.0.1:8080",
-		"адреса и порты, которые слушает демон; несколько — через запятую")
+		"addresses and ports the daemon listens on, comma-separated")
 	flag.StringVar(&s.allowedOrigin, "allowed-origin", "",
-		"дополнительный разрешённый Origin мутирующих запросов; нужен дев-стенду")
+		"extra allowed Origin for mutating requests; needed by the dev stand")
 	flag.BoolVar(&s.https, "https", false,
-		"обслуживать панель по HTTPS с сертификатом от собственного корня демона; http на том же порту перенаправляется")
+		"serve the panel over HTTPS with a certificate from the daemon's own root; http on the same port is redirected")
 	flag.StringVar(&s.httpsCert, "https-cert", "",
-		"путь к готовому сертификату панели в PEM вместе с -https-key; тогда свой корень демон не выпускает")
-	flag.StringVar(&s.httpsKey, "https-key", "", "путь к ключу сертификата из -https-cert")
-	flag.StringVar(&s.configDir, "config-dir", "/etc/sing-box", "каталог конфига sing-box")
-	flag.StringVar(&s.configName, "config-name", "config.json", "имя файла конфига в этом каталоге")
+		"path to a ready panel certificate in PEM, used with -https-key; the daemon then issues no root of its own")
+	flag.StringVar(&s.httpsKey, "https-key", "", "path to the key of the -https-cert certificate")
+	flag.StringVar(&s.configDir, "config-dir", "/etc/sing-box", "sing-box config directory")
+	flag.StringVar(&s.configName, "config-name", "config.json", "config file name in that directory")
 	flag.StringVar(&s.serviceDir, "state-dir", "/etc/metabox",
-		"служебный каталог демона под бэкап и состояние транзакции; вне каталога конфига")
-	flag.StringVar(&s.binary, "singbox", "/usr/bin/sing-box", "путь к бинарю sing-box")
-	flag.StringVar(&s.initScript, "init-script", "/etc/init.d/metabox-singbox", "путь к init-скрипту сервиса")
+		"daemon state directory for the backup and transaction state; outside the config directory")
+	flag.StringVar(&s.binary, "singbox", "/usr/bin/sing-box", "path to the sing-box binary")
+	flag.StringVar(&s.initScript, "init-script", "/etc/init.d/metabox-singbox", "path to the service init script")
 	flag.StringVar(&s.instance, "service-instance", "sing-box",
-		"инстанс procd, в котором служба init-скрипта держит sing-box; пустой — единственный инстанс службы")
-	flag.StringVar(&s.ubus, "ubus", "/bin/ubus", "путь к ubus: через него читается состояние службы у procd")
+		"procd instance the init script service runs sing-box in; empty means the service's only instance")
+	flag.StringVar(&s.ubus, "ubus", "/bin/ubus", "path to ubus, used to read the service state from procd")
 	flag.StringVar(&s.logread, "logread", "/sbin/logread",
-		"путь к logread: из него берутся лог и причина падения sing-box; пустой отключает чтение")
-	flag.StringVar(&s.dhcpLeases, "dhcp-leases", "/tmp/dhcp.leases", "файл аренд dnsmasq: из него берутся устройства LAN")
+		"path to logread, the source of the log and the reason sing-box crashed; empty disables reading")
+	flag.StringVar(&s.dhcpLeases, "dhcp-leases", "/tmp/dhcp.leases", "dnsmasq lease file, the source of LAN devices")
 	flag.StringVar(&s.uci, "uci", "/sbin/uci",
-		"путь к uci: через него читаются статические аренды из UCI dhcp, читается и пишется модель обвязки в UCI metabox")
+		"path to uci, used to read static leases from UCI dhcp and to read and write the plumbing model in UCI metabox")
 	flag.StringVar(&s.nft, "nft", "/usr/sbin/nft",
-		"путь к nft: через него демон видит, стоят ли правила обвязки; пустой отключает проверку")
+		"path to nft, used to see whether the plumbing rules are in place; empty disables the check")
 	flag.StringVar(&s.healthDNSName, "health-dns-name", "cloudflare.com",
-		"имя, которое dns-in sing-box обязан разрешить после рестарта, иначе откат; пустое выключает DNS-пробу")
+		"name the sing-box dns-in must resolve after a restart, otherwise the change is rolled back; empty disables the DNS probe")
 	flag.StringVar(&s.diagURL, "diag-url", "https://www.gstatic.com/generate_204",
-		"адрес, по которому диагностика проверяет выход в интернет через узел и напрямую")
-	flag.IntVar(&s.clashPort, "clash-port", 9090, "порт Clash API, если демон заводит секцию сам")
+		"URL diagnostics uses to check internet access through the node and directly")
+	flag.IntVar(&s.clashPort, "clash-port", 9090, "Clash API port, used when the daemon creates the section itself")
 	flag.DurationVar(&s.confirmWindow, "confirm-window", time.Minute,
-		"сколько ждать подтверждения связи до автоотката")
+		"how long to wait for connectivity confirmation before the automatic rollback")
 	flag.DurationVar(&s.cycleTimeout, "cycle-timeout", 2*time.Minute,
-		"потолок на шаги применения от бэкапа до healthcheck")
+		"time limit for the apply steps from backup to healthcheck")
 	flag.DurationVar(&s.ruleSetPeriod, "rule-set-refresh", 24*time.Hour,
-		"как часто сверять каталог наборов с поставщиками; 0 — без сверки: каталог из кэша или встроенного снимка")
+		"how often to sync the rule set catalog with providers; 0 disables syncing: the catalog comes from the cache or the built-in snapshot")
 
 	s.logLevel = slog.LevelInfo
-	flag.TextVar(&s.logLevel, "log-level", slog.LevelInfo, "уровень логов: debug, info, warn, error")
+	flag.TextVar(&s.logLevel, "log-level", slog.LevelInfo, "log level: debug, info, warn, error")
 	flag.Parse()
 
 	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: s.logLevel}))
