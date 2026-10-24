@@ -92,6 +92,7 @@ export function toDaemonStatus(wire: DaemonStatusWire): DaemonStatus {
     singboxVersion: wire.singbox_version,
     singboxTags: wire.singbox_build?.tags ?? null,
     configPath: wire.config_path,
+    confirmWindowSeconds: wire.confirm_window_seconds,
     transaction: wire.transaction === undefined ? undefined : toTransaction(wire.transaction),
     transactionHref: wire.transaction_href,
     dataplaneTransaction:

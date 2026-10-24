@@ -8,6 +8,7 @@ export {
   getServiceStateOptions,
   useClashConfigs,
   useConfigPath,
+  useConfirmWindow,
   useDaemonReachable,
   getTrafficHistoryOptions,
   useDaemonStatus,

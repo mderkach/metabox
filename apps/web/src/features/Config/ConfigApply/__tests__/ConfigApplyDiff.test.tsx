@@ -1,10 +1,14 @@
 import { renderWithRouter } from '@test/renderWithRouter';
+import { server } from '@test/server';
 import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
 import type { FunctionComponent } from 'react';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { ConfigDocumentState } from '@entities/Config';
+import { DAEMON_ENDPOINT } from '@entities/Daemon';
+import { DAEMON_STATUS_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture';
 
 import { ConfigApplyDiff } from '../ui/ConfigApplyDiff';
 
@@ -18,6 +22,14 @@ async function renderScreen(Component: FunctionComponent) {
 }
 
 const JSON_INDENT = 2;
+
+function serveConfirmWindow(seconds: number) {
+  server.use(
+    http.get(DAEMON_ENDPOINT.status(), () =>
+      HttpResponse.json({ ...DAEMON_STATUS_FIXTURE, confirm_window_seconds: seconds })
+    )
+  );
+}
 
 function toConfigText(config: unknown): string {
   return JSON.stringify(config, null, JSON_INDENT);
@@ -45,6 +57,18 @@ const RULES = Array.from({ length: 8 }, (_, index) => ({
 describe('ConfigApplyDiff', () => {
   beforeEach(() => {
     ConfigDocumentState.getState().reset();
+    serveConfirmWindow(DAEMON_STATUS_FIXTURE.confirm_window_seconds);
+  });
+
+  it.each([
+    [90, 'у вас будет 90 секунд, чтобы подтвердить'],
+    [120, 'у вас будет 2 минуты, чтобы подтвердить'],
+  ])('names the %i s confirmation window the daemon reports', async (seconds, text) => {
+    serveConfirmWindow(seconds);
+
+    await openDiff(RULES.slice(0, 1), RULES.slice(0, 2));
+
+    expect(await screen.findByText(new RegExp(text))).toBeInTheDocument();
   });
 
   it('above the diff summarizes rule edits in words, numbered as in the rule list', async () => {

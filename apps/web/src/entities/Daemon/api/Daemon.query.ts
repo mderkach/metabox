@@ -79,6 +79,13 @@ export function useConfigPath(): string {
   return status.data?.configPath ?? DEFAULT_CONFIG_PATH;
 }
 
+/** How long an apply waits for confirmation; `null` until the daemon status arrives. */
+export function useConfirmWindow(): number | null {
+  const status = useDaemonStatus();
+
+  return status.data?.confirmWindowSeconds ?? null;
+}
+
 export function getServiceStateOptions() {
   return queryOptions({
     queryKey: DAEMON_QUERY.service(),

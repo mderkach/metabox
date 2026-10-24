@@ -8,7 +8,6 @@ import {
   DialogCloseButton,
   DialogClose,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -18,6 +17,7 @@ import {
 import { useConfigChanges, useRuleChanges, type ApplyBlock } from '../lib/ConfigApply.lib';
 import { ConfigApplyBlocked } from './ConfigApplyBlocked';
 import { ConfigApplyChanges } from './ConfigApplyChanges';
+import { ConfigApplyDiffDescription } from './ConfigApplyDiffDescription';
 import { ConfigApplyDiffText } from './ConfigApplyDiffText';
 import { ConfigApplyListChanges } from './ConfigApplyListChanges';
 import { ConfigApplyRuleChanges } from './ConfigApplyRuleChanges';
@@ -47,7 +47,7 @@ export function ConfigApplyDiff({
         <DialogCloseButton label={t('action.close', { ns: 'shared' })} />
         <DialogHeader>
           <DialogTitle>{t('diff.title')}</DialogTitle>
-          <DialogDescription>{t('diff.description')}</DialogDescription>
+          <ConfigApplyDiffDescription />
         </DialogHeader>
 
         <ConfigApplyRuleChanges onNavigate={close} />
