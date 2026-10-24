@@ -18,6 +18,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -25,6 +26,7 @@ import (
 	"metabox/internal/auth"
 	"metabox/internal/config"
 	"metabox/internal/contract"
+	"metabox/internal/dataplane"
 	"metabox/internal/devices"
 	"metabox/internal/diag"
 	"metabox/internal/httpapi"
@@ -191,7 +193,7 @@ type fakeDiag struct {
 	proxy string
 }
 
-func (f *fakeDiag) Run(_ context.Context, proxy string) (diag.Report, error) {
+func (f *fakeDiag) Observe(_ context.Context, proxy string) (diag.Report, error) {
 	f.mu.Lock()
 	f.proxy = proxy
 	f.mu.Unlock()
@@ -237,10 +239,11 @@ func (b *syncBuffer) String() string {
 func newBench(t *testing.T, guard httpapi.Guard, store mcp.Store) *bench {
 	t.Helper()
 
-	return newBenchIn(t, guard, store, locale.English)
+	return newBenchIn(t, guard, store, locale.English, nil)
 }
 
-func newBenchIn(t *testing.T, guard httpapi.Guard, store mcp.Store, lang locale.Lang) *bench {
+// newBenchIn wires the tools; diagnoser nil means the recording fake.
+func newBenchIn(t *testing.T, guard httpapi.Guard, store mcp.Store, lang locale.Lang, diagnoser mcp.Diagnoser) *bench {
 	t.Helper()
 
 	access, err := mcp.NewAccess(t.Context(), store)
@@ -249,6 +252,9 @@ func newBenchIn(t *testing.T, guard httpapi.Guard, store mcp.Store, lang locale.
 	}
 
 	b := &bench{t: t, access: access, runtime: newRuntime(), logs: &fakeLogs{}, diag: &fakeDiag{proxy: "unset"}, logBuf: &syncBuffer{}}
+	if diagnoser == nil {
+		diagnoser = b.diag
+	}
 	log := slog.New(slog.NewTextHandler(b.logBuf, &slog.HandlerOptions{Level: slog.LevelDebug}))
 
 	server := mcp.New(access, log, mcp.Options{
@@ -263,7 +269,7 @@ func newBenchIn(t *testing.T, guard httpapi.Guard, store mcp.Store, lang locale.
 		Config:  fakeConfig{},
 		Devices: fakeDevices{},
 		Logs:    b.logs,
-		Diag:    b.diag,
+		Diag:    diagnoser,
 	})
 
 	opts := httpapi.Options{Version: "test", MCP: server}
@@ -839,6 +845,99 @@ func TestVersionsLogAndDiagnostics(t *testing.T) {
 	if proxy != "" || len(report.Checks) != 1 {
 		t.Errorf("diagnostics ran with node %q, report %+v", proxy, report)
 	}
+
+	call[diag.Report](t, session, "metabox_diagnostics", map[string]any{"proxy": "node-a"})
+
+	b.diag.mu.Lock()
+	proxy = b.diag.proxy
+	b.diag.mu.Unlock()
+
+	if proxy != "node-a" {
+		t.Errorf("diagnostics ran with node %q, want node-a", proxy)
+	}
+}
+
+// noPlane has no dataplane model: every check but the proxy row is skipped.
+type noPlane struct{}
+
+func (noPlane) Model(context.Context) (dataplane.Model, error) {
+	return dataplane.Model{}, errors.New("no model")
+}
+
+func (noPlane) Chains(context.Context) ([]string, dataplane.AppliedReason, error) {
+	return nil, "", errors.New("no model")
+}
+
+type clashConfig struct{ data []byte }
+
+func (c clashConfig) Read(context.Context) ([]byte, error) { return c.data, nil }
+
+func TestDiagnosticsDoNotRunLatencyCheck(t *testing.T) {
+	var (
+		mu        sync.Mutex
+		requested []string
+	)
+
+	clash := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		requested = append(requested, r.URL.Path)
+		mu.Unlock()
+
+		if r.URL.Path != "/proxies" {
+			w.WriteHeader(http.StatusNotFound)
+
+			return
+		}
+
+		_, _ = w.Write([]byte(newRuntime().responses["/proxies"]))
+	}))
+	t.Cleanup(clash.Close)
+
+	cfg := clashConfig{data: []byte(`{"experimental":{"clash_api":{"external_controller":"` + strings.TrimPrefix(clash.URL, "http://") + `"}}}`)}
+	checker := diag.New(noPlane{}, cfg, nil, diag.Options{ProcNet: t.TempDir(), URL: "http://127.0.0.1:1/generate_204", Timeout: 2 * time.Second})
+
+	b := newBenchIn(t, nil, &memoryStore{}, locale.English, checker)
+	session := b.session(b.enable())
+
+	tests := []struct {
+		name   string
+		proxy  string
+		status diag.CheckStatus
+		reason diag.CheckReason
+		delay  int
+	}{
+		{"recorded latency is reported", "node-a", diag.StatusOK, "", 120},
+		{"a node never measured says so", "node-b", diag.StatusSkipped, diag.ReasonNotMeasured, 0},
+		{"no node is skipped", "", diag.StatusSkipped, diag.ReasonProxyUnset, 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			report := call[diag.Report](t, session, "metabox_diagnostics", map[string]any{"proxy": tt.proxy})
+
+			i := slices.IndexFunc(report.Checks, func(c diag.Check) bool { return c.Name == diag.NameProxy })
+			if i < 0 {
+				t.Fatalf("no proxy row in %+v", report.Checks)
+			}
+
+			if got := report.Checks[i]; got.Status != tt.status || got.Reason != tt.reason || got.DelayMS != tt.delay {
+				t.Errorf("proxy row %+v, want %s %s %d ms", got, tt.status, tt.reason, tt.delay)
+			}
+		})
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	if len(requested) == 0 {
+		t.Fatal("the Clash API was never read")
+	}
+
+	for _, path := range requested {
+		if strings.Contains(path, "/delay") {
+			t.Errorf("latency check requested: %s", path)
+		}
+	}
 }
 
 type fieldCondition struct {
@@ -985,7 +1084,7 @@ func TestFieldNotesNameKnownPathsInBothLanguages(t *testing.T) {
 	}
 
 	for _, lang := range []locale.Lang{locale.English, locale.Russian} {
-		b := newBenchIn(t, nil, &memoryStore{}, lang)
+		b := newBenchIn(t, nil, &memoryStore{}, lang, nil)
 		session := b.session(b.enable())
 
 		for path, texts := range notes {

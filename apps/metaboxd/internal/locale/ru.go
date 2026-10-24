@@ -156,10 +156,14 @@ var ru = map[string]string{
 	"Dataplane checks of the router, nothing is changed: sing-box listeners on the redirect, tproxy " +
 		"and DNS ports, a DNS query to sing-box dns-in, the nft interception chains, and a direct internet " +
 		"request bypassing interception. Each check is ok, fail or skipped with a reason; skipped is not a " +
-		"failure. The node latency check is always skipped here: run it from the panel.": "Проверки обвязки роутера, ничего не меняют: слушатели sing-box на портах redirect, tproxy " +
+		"failure. proxy names a node for the proxy check: it reports the latency sing-box last recorded for " +
+		"it, as metabox_proxies does, and is skipped with not_measured when there is none; no latency check " +
+		"is run, that is done from the panel.": "Проверки обвязки роутера, ничего не меняют: слушатели sing-box на портах redirect, tproxy " +
 		"и DNS, DNS-запрос к dns-in sing-box, цепочки перехвата nft и прямой запрос в интернет " +
 		"в обход перехвата. Каждая проверка — ok, fail или skipped с причиной; skipped — не " +
-		"сбой. Проверка задержки узла здесь всегда пропускается: запустите её из панели.",
+		"сбой. proxy задаёт узел для проверки proxy: она сообщает задержку, которую sing-box записал для него " +
+		"последней, как и metabox_proxies, и пропускается с not_measured, когда записи нет; проверка задержки " +
+		"не запускается, её делают из панели.",
 
 	"backup: %w":                 "бэкап: %w",
 	"save transaction state: %w": "сохранение состояния транзакции: %w",
