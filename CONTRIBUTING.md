@@ -102,6 +102,7 @@ Only what belongs to the commit's topic goes into the index. A blind `git add -A
 | Lint (whole repo)        | `pnpm lint`                         |
 | Format (whole repo)      | `pnpm format:check`                 |
 | Frontend types and build | `pnpm --filter web build`           |
+| Frontend browser tests   | `pnpm --filter web test:browser`    |
 | Everything               | `make test`                         |
 
 Commands run from the root, except the daemon tests: there is no module at the root, so `go test ./...` works only from the module directory. The frontend is a workspace package, hence `pnpm --filter web <script>`. The linter config cascades (`apps/web/.oxlintrc.json` extends the root one) and runs only from the root: the Tailwind plugin resolves the frontend config through the `cwd` setting, which is relative to the directory it is run from.
@@ -141,7 +142,7 @@ New technical decisions are recorded as ADRs in [`docs/adr/`](./docs/adr/README.
 ## PR
 
 - Describes what and why; links to the PRD or an ADR if the decision goes there.
-- CI is mandatory and runs the same as `pre-push`, plus commitlint over all PR commits, `make daemon`, an integration run on the target environment image, and react-doctor advice (`pnpm --filter web lint:react`) as a step that does not fail the build. The checks run as three parallel jobs, `go`, `schemagen` and `web`; `checks` sums them up. CI runs on every PR and on pushes to `main`; a push to a branch without a PR is not checked.
+- CI is mandatory and runs the same as `pre-push`, plus commitlint over all PR commits, `make daemon`, an integration run on the target environment image, and react-doctor advice (`pnpm --filter web lint:react`) as a step that does not fail the build. The checks run as four parallel jobs, `go`, `schemagen`, `web` and `web-browser` (frontend tests in Chromium, not part of `pre-push`); `checks` sums them up. CI runs on every PR and on pushes to `main`; a push to a branch without a PR is not checked.
 - Changes reach `main` only through a PR. A repository rule blocks the merge until the `checks` and `integration` jobs pass. Updating the branch to the latest `main` before the merge is not required. The job names are written into the rule: renaming them in `ci.yml` goes together with editing the rule, otherwise the merge waits for a check that no longer exists.
 
 ## Project specifics
