@@ -146,7 +146,7 @@ Determinism is checked separately: two runs must give the same result ([`generat
 
 ## Integration tests
 
-The module has no Go tests against a live sing-box, and no build tag for them either. The full cycle against a live environment is run by the test bench: the `apply-cycle-check` script inside the `target` container (`make up`, `make apply-check`); in CI, the `integration` job: the same image for another architecture and rootfs tag, daemon readiness via `/healthz`, the same script and `make reach-check` ([`ci.yml`](../../../../.github/workflows/ci.yml)).
+The module has no Go tests against a live sing-box, and no build tag for them either. The full cycle against a live environment is run by the test bench: the `apply-cycle-check` script inside the `target` container (`make up`, `make apply-check`); in CI, the `integration` job: the same image for another architecture and rootfs tag, daemon readiness via `/healthz`, the same script, `make reach-check` and `make dataplane-check` ([`ci.yml`](../../../../.github/workflows/ci.yml)).
 
 A Go test that needs procd, the sing-box binary and `/etc/sing-box` is separated with the `//go:build integration` build tag: the host has none of these, and `make test` must not break there.
 
