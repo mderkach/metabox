@@ -377,7 +377,7 @@ func (p *Plane) await(ctx context.Context, log *slog.Logger, confirmed <-chan st
 	p.mu.Unlock()
 
 	tx.Phase = PhaseAwaitingConfirm
-	if err := p.persist(ctx, tx, previous); err != nil {
+	if err := p.persist(ctx, tx, previous); err != nil && ctx.Err() == nil {
 		log.Error("dataplane confirmation window state not saved", "err", err)
 	}
 

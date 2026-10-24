@@ -414,7 +414,7 @@ func (m *Manager) await(ctx context.Context, log *slog.Logger, confirmed <-chan 
 	// slipped in between would make the state terminal, and this write would then
 	// put awaiting_confirm back over it for the replay to roll back.
 	tx.Phase = PhaseAwaitingConfirm
-	if err := m.persist(ctx, tx); err != nil {
+	if err := m.persist(ctx, tx); err != nil && ctx.Err() == nil {
 		log.Error("confirmation window state not saved", "err", err)
 	}
 
