@@ -3,8 +3,12 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"reflect"
+	"slices"
 	"strings"
 	"testing"
+
+	"github.com/sagernet/sing-box/option"
 )
 
 // The schema must build whole: any type with its own serialization and no
@@ -152,6 +156,12 @@ func TestGenerateMarksTagReferences(t *testing.T) {
 		`["dns", "rules", "*", "server"]`,
 		// A short form declared by the fork's DescribeSchema, not by a struct tag.
 		`["outbounds", "*", "domain_resolver"]`,
+		// Fields the fork leaves unmarked, from unmarkedReferences.
+		`["outbounds", "*", "providers"]`,
+		`["providers", "*", "download_detour"]`,
+		`["dns", "servers", "*", "servers"]`,
+		`["experimental", "v2ray_api", "stats", "outbounds"]`,
+		`["services", "*", "inbounds"]`,
 		`{ from: ["route", "rules", "*", "rules", "*"], to: ["route", "rules", "*"] }`,
 	} {
 		if !strings.Contains(out, want) {
@@ -163,5 +173,22 @@ func TestGenerateMarksTagReferences(t *testing.T) {
 		if strings.Contains(out, unwanted) {
 			t.Errorf("tag references list %s, which is not a reference", unwanted)
 		}
+	}
+}
+
+// A listed field the fork removed must stop generation, not quietly drop its references.
+func TestUnmarkedReferencesFailOnMissingField(t *testing.T) {
+	saved := unmarkedReferences
+	t.Cleanup(func() { unmarkedReferences = saved })
+
+	if err := checkUnmarkedReferences(); err != nil {
+		t.Fatalf("the table does not match the fork: %v", err)
+	}
+
+	unmarkedReferences = append(slices.Clone(saved), unmarkedField{reflect.TypeFor[option.FallbackOutboundOptions](), "Gone", "outbound"})
+
+	err := checkUnmarkedReferences()
+	if err == nil || !strings.Contains(err.Error(), "option.FallbackOutboundOptions.Gone") {
+		t.Errorf("missing field not reported: %v", err)
 	}
 }

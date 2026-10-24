@@ -2,8 +2,11 @@ package main
 
 import (
 	"fmt"
+	"reflect"
 	"slices"
 	"strings"
+
+	"github.com/sagernet/sing-box/option"
 )
 
 // The fork marks a field whose value names another node by its tag with the struct tag
@@ -13,6 +16,52 @@ import (
 var shorthandReference = map[string]string{
 	"option.DomainResolveOptions": "dns_server",
 	"option.HTTPClientOptions":    "http_client",
+}
+
+// unmarkedReferences are the fork fields that name nodes by tag but carry no `reference`
+// struct tag. Types are listed as values so that the compiler and checkUnmarkedReferences
+// catch a field the fork removes: a stale entry would silently hide references again.
+var unmarkedReferences = []unmarkedField{
+	{reflect.TypeFor[option.FallbackOutboundOptions](), "Outbounds", "outbound"},
+	{reflect.TypeFor[option.FairQueueOutboundOptions](), "Outbound", "outbound"},
+	{reflect.TypeFor[option.GroupCommonOption](), "Providers", "provider"},
+	{reflect.TypeFor[option.ProviderRemoteOptions](), "DownloadDetour", "outbound"},
+	{reflect.TypeFor[option.CloudflareProfile](), "Detour", "outbound"},
+	{reflect.TypeFor[option.V2RayXHTTPDownloadOptions](), "Detour", "outbound"},
+	{reflect.TypeFor[option.FallbackDNSServerOptions](), "Servers", "dns_server"},
+	{reflect.TypeFor[option.V2RayStatsServiceOptions](), "Inbounds", "inbound"},
+	{reflect.TypeFor[option.V2RayStatsServiceOptions](), "Outbounds", "outbound"},
+	{reflect.TypeFor[option.NodeServiceOptions](), "Inbounds", "inbound"},
+	{reflect.TypeFor[option.ManagerServiceOptions](), "Inbounds", "inbound"},
+}
+
+type unmarkedField struct {
+	typ   reflect.Type
+	field string
+	kind  string
+}
+
+// unmarkedReference returns the reference kind of an unmarked fork field, or "".
+func unmarkedReference(t reflect.Type, field string) string {
+	for _, u := range unmarkedReferences {
+		if u.typ == t && u.field == field {
+			return u.kind
+		}
+	}
+	return ""
+}
+
+func checkUnmarkedReferences() error {
+	var missing []string
+	for _, u := range unmarkedReferences {
+		if _, ok := u.typ.FieldByName(u.field); !ok {
+			missing = append(missing, goTypeName(u.typ)+"."+u.field)
+		}
+	}
+	if missing != nil {
+		return fmt.Errorf("fields of the unmarked reference table are gone from the fork: %s", strings.Join(missing, ", "))
+	}
+	return nil
 }
 
 // referenceTable is where a config names nodes by tag. A path is a list of JSON keys,

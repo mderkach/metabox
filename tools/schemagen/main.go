@@ -45,6 +45,10 @@ func generate() (string, error) {
 		return "", err
 	}
 
+	if err := checkUnmarkedReferences(); err != nil {
+		return "", err
+	}
+
 	groups, err := collectRegistries()
 	if err != nil {
 		return "", err

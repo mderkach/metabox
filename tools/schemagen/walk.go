@@ -194,7 +194,11 @@ func (w *walker) appendFieldsAt(out *schema, t reflect.Type, path string, depth 
 		// a missing key gives a zero value, not an error. Only the discriminator
 		// of a union is required: without it the fork cannot select a variant.
 		s := w.build(f.Type, path+"."+name)
-		if kind := f.Tag.Get("reference"); kind != "" {
+		kind := f.Tag.Get("reference")
+		if kind == "" {
+			kind = unmarkedReference(t, f.Name)
+		}
+		if kind != "" {
 			marked := *s
 			marked.reference = kind
 			s = &marked
