@@ -3,6 +3,7 @@
 - Status: Accepted
 - Date: 2026-10-09
 - Deciders: repository owner
+- Superseded by (as to the DNS probe of the healthcheck): [ADR-0061](./ADR-0061-skip-the-dns-check-when-dns-already-failed-before-the-restart.md) (Proposed)
 
 ## Context and problem statement
 
