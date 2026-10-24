@@ -256,6 +256,13 @@ func (p *Plane) cycle(
 		"enabled", next.Enabled, "acl_mode", next.AccessMode, "dns_port", next.DNSPort)
 
 	if err := p.apply(ctx, log, previous, next); err != nil {
+		// Cancelled by Close: see Manager.interrupted.
+		if ctx.Err() != nil {
+			log.Warn("dataplane model change interrupted by daemon shutdown, the transaction is replayed at the next start")
+
+			return
+		}
+
 		log.Error("dataplane model change did not go through", "err", err)
 		p.release(PhaseFailed, err)
 		p.rollback(context.WithoutCancel(ctx), log)
@@ -370,7 +377,7 @@ func (p *Plane) await(ctx context.Context, log *slog.Logger, confirmed <-chan st
 	p.mu.Unlock()
 
 	tx.Phase = PhaseAwaitingConfirm
-	if err := p.persist(ctx, tx, previous); err != nil {
+	if err := p.persist(ctx, tx, previous); err != nil && ctx.Err() == nil {
 		log.Error("dataplane confirmation window state not saved", "err", err)
 	}
 
@@ -533,8 +540,8 @@ func (p *Plane) Confirm(ctx context.Context, id string) (Transaction, error) {
 	return tx, nil
 }
 
-// Close stops the window and waits for the background goroutine. The state stays
-// on disk.
+// Close cancels the change at once and waits for the background goroutine, as
+// Manager.Close does. The state stays on disk.
 func (p *Plane) Close() {
 	p.mu.Lock()
 	cancel := p.cancel

@@ -3,6 +3,7 @@ package apply_test
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/netip"
@@ -22,6 +23,8 @@ import (
 // fakeEditor is a UCI section: a write replaces it, a restore returns
 // the snapshot.
 type fakeEditor struct {
+	gates
+
 	mu       sync.Mutex
 	section  dataplane.Snapshot
 	written  []dataplane.Model
@@ -36,7 +39,11 @@ func (e *fakeEditor) Snapshot(context.Context) (dataplane.Snapshot, error) {
 	return e.section, nil
 }
 
-func (e *fakeEditor) Write(_ context.Context, m dataplane.Model) error {
+func (e *fakeEditor) Write(ctx context.Context, m dataplane.Model) error {
+	if err := e.pass(ctx, "Write"); err != nil {
+		return err
+	}
+
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
@@ -74,11 +81,17 @@ func (e *fakeEditor) counts() (int, int) {
 }
 
 type fakeReloader struct {
+	gates
+
 	mu    sync.Mutex
 	calls int
 }
 
-func (r *fakeReloader) Reload(context.Context) error {
+func (r *fakeReloader) Reload(ctx context.Context) error {
+	if err := r.pass(ctx, "Reload"); err != nil {
+		return err
+	}
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -740,6 +753,70 @@ func TestPlaneReplay(t *testing.T) {
 			}
 			if h.pstore.saved() != nil {
 				t.Error("state stayed on disk")
+			}
+			if h.plane.Current().Active() {
+				t.Errorf("after the replay the transaction is active: %+v", h.plane.Current())
+			}
+		})
+	}
+}
+
+// The daemon stops in the middle of a dataplane step: no rollback in the dying process,
+// the state stays for the next start. A model that was not written is cleared by the
+// replay; a written one is rolled back.
+func TestPlaneCloseDuringStepLeavesReplayableState(t *testing.T) {
+	tests := []struct {
+		name    string
+		hold    func(h *planeHarness) (started, release chan struct{})
+		written bool
+	}{
+		{"write", func(h *planeHarness) (chan struct{}, chan struct{}) { return h.editor.hold("Write") }, false},
+		{"reload", func(h *planeHarness) (chan struct{}, chan struct{}) { return h.reloader.hold("Reload") }, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := newPlaneHarness(t, nil, validConfig, slog.New(slog.DiscardHandler))
+			started, _ := tt.hold(h)
+
+			tx, err := h.plane.Start(t.Context(), aclChange(), "", admin)
+			if err != nil {
+				t.Fatalf("dataplane change: %v", err)
+			}
+			<-started
+
+			h.plane.Close()
+
+			if _, restored := h.editor.counts(); restored != 0 {
+				t.Errorf("rollbacks %d in the stopping daemon, expected none", restored)
+			}
+			if got := h.plane.Current().Phase; got != apply.PhaseApplying {
+				t.Errorf("phase %q after the stop, expected applying", got)
+			}
+
+			var saved apply.Transaction
+			if err := json.Unmarshal(h.pstore.saved(), &saved); err != nil {
+				t.Fatalf("parsing state: %v", err)
+			}
+			if saved.ID != tx.ID || saved.Phase != apply.PhaseApplying {
+				t.Fatalf("state on disk %+v, expected the applying transaction %s", saved, tx.ID)
+			}
+
+			// A new daemon lifetime: its own Manager, the same disk and the same UCI.
+			h.harness = newHarness(t)
+			h.plane = h.newPlane(nil, slog.New(slog.DiscardHandler))
+			t.Cleanup(h.plane.Close)
+
+			if err := h.plane.Replay(t.Context()); err != nil {
+				t.Fatalf("replay: %v", err)
+			}
+
+			written, restored := h.editor.counts()
+			if (restored == 1) != tt.written {
+				t.Errorf("replay rolled back %d times with %d writes, expected a rollback: %v", restored, written, tt.written)
+			}
+			if h.pstore.saved() != nil {
+				t.Error("state stayed on disk after the replay")
 			}
 			if h.plane.Current().Active() {
 				t.Errorf("after the replay the transaction is active: %+v", h.plane.Current())

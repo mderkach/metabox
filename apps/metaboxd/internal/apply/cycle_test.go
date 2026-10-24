@@ -2,6 +2,7 @@ package apply_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"slices"
@@ -151,10 +152,11 @@ func TestBackupFailureSkipsRollback(t *testing.T) {
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
 		t.Fatalf("apply: %v", err)
 	}
+
+	tx := waitPhase(t, h, apply.PhaseFailed)
 	h.manager.Close()
 
-	tx := h.manager.Current()
-	if tx.Phase != apply.PhaseFailed || tx.ReasonCode != apply.ReasonBackupFailed {
+	if tx.ReasonCode != apply.ReasonBackupFailed {
 		t.Errorf("phase %q with code %q, expected failure with reason backup_failed", tx.Phase, tx.ReasonCode)
 	}
 	if !strings.Contains(tx.Reason, "диск переполнен") {
@@ -330,4 +332,88 @@ func countOf(calls []string, name string) int {
 	}
 
 	return n
+}
+
+// The daemon stops in the middle of a step: Close cancels the cycle, and the dying process
+// neither rolls back nor closes the transaction. The journal stays on disk, and the next
+// start replays it: a write that did not happen is cleared, a written config is rolled back.
+func TestCloseDuringStepLeavesReplayableState(t *testing.T) {
+	tests := []struct {
+		name string
+		hold func(h *harness) (started, release chan struct{})
+		// written: the config reached the disk before the stop, so the replay rolls back.
+		written bool
+	}{
+		{"write", func(h *harness) (chan struct{}, chan struct{}) { return h.store.hold("Write") }, false},
+		{"restart", func(h *harness) (chan struct{}, chan struct{}) { return h.service.hold("Restart") }, true},
+		{"healthcheck", func(h *harness) (chan struct{}, chan struct{}) { return h.health.hold("Wait") }, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := newHarness(t)
+			started, _ := tt.hold(h)
+
+			tx, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", "")
+			if err != nil {
+				t.Fatalf("apply: %v", err)
+			}
+			<-started
+
+			h.manager.Close()
+
+			calls := h.rec.snapshot()
+			for _, step := range []string{"Restore", "ClearState"} {
+				if slices.Contains(calls, step) {
+					t.Errorf("%s called in the stopping daemon: steps %v", step, calls)
+				}
+			}
+			if got := h.manager.Current().Phase; got != apply.PhaseApplying {
+				t.Errorf("phase %q after the stop, expected applying", got)
+			}
+
+			data, err := h.store.ReadState(t.Context())
+			if err != nil {
+				t.Fatalf("state after the stop: %v", err)
+			}
+
+			var saved apply.Transaction
+			if err := json.Unmarshal(data, &saved); err != nil {
+				t.Fatalf("parsing state: %v", err)
+			}
+			if saved.ID != tx.ID || saved.Phase != apply.PhaseApplying {
+				t.Fatalf("state on disk %+v, expected the applying transaction %s", saved, tx.ID)
+			}
+
+			// The next daemon lifetime over the same disk.
+			h.rec.mu.Lock()
+			h.rec.calls = nil
+			h.rec.mu.Unlock()
+
+			if tt.written {
+				h.store.mu.Lock()
+				h.store.sum = config.Sum(h.store.written)
+				h.store.mu.Unlock()
+			}
+
+			restarted := apply.New(h.store, h.service, h.health, h.clock, slog.New(slog.DiscardHandler),
+				apply.Options{Window: window, ClashPort: clashPort, CycleTimeout: cycleTimeout, ProcessInterval: time.Millisecond})
+			t.Cleanup(restarted.Close)
+
+			if err := restarted.Replay(t.Context()); err != nil {
+				t.Fatalf("replay: %v", err)
+			}
+
+			calls = h.rec.snapshot()
+			if rolledBack := slices.Contains(calls, "Restore") && slices.Contains(calls, "Restart"); rolledBack != tt.written {
+				t.Errorf("replay rolled back: %v, expected %v; steps %v", rolledBack, tt.written, calls)
+			}
+			if state, _ := h.store.ReadState(t.Context()); state != nil {
+				t.Error("state stayed on disk after the replay")
+			}
+			if restarted.Current().Active() {
+				t.Errorf("after the replay the transaction is active: %+v", restarted.Current())
+			}
+		})
+	}
 }

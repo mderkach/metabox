@@ -716,8 +716,11 @@ func settleState(ctx context.Context, remove, persist func(context.Context) erro
 	return clearErr, nil
 }
 
-// Close stops waiting for the confirmation and waits for the background goroutine.
-// The state stays on disk: an unclosed window is replayed at the next start.
+// Close cancels the cycle at once and waits for the background goroutine. It does not
+// give the current step time to finish: procd sends SIGKILL five seconds after SIGTERM,
+// while a step may take the whole cycle timeout, so a grace period would only move the
+// kill into the step. Whatever the cycle was doing, the state stays on disk as it is: an
+// interrupted step or an unclosed window is replayed at the next start.
 func (m *Manager) Close() {
 	m.mu.Lock()
 	cancel := m.cancel
