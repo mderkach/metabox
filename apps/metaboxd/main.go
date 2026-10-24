@@ -16,6 +16,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -31,6 +32,7 @@ import (
 	"metabox/internal/events"
 	"metabox/internal/history"
 	"metabox/internal/httpapi"
+	"metabox/internal/locale"
 	"metabox/internal/logs"
 	"metabox/internal/mcp"
 	"metabox/internal/procd"
@@ -88,6 +90,9 @@ const (
 
 	// Polling period of the log.output file in the log stream.
 	logPollInterval = 500 * time.Millisecond
+
+	// Ceiling for reading the help language from UCI: help must not hang on uci.
+	helpLangTimeout = 2 * time.Second
 )
 
 // settings is what the daemon receives by flags. The default values
@@ -116,6 +121,7 @@ type settings struct {
 	cycleTimeout  time.Duration
 	ruleSetPeriod time.Duration
 	logLevel      slog.Level
+	lang          locale.Lang
 }
 
 func main() {
@@ -160,6 +166,10 @@ func main() {
 
 	s.logLevel = slog.LevelInfo
 	flag.TextVar(&s.logLevel, "log-level", slog.LevelInfo, "log level: debug, info, warn, error")
+	flag.TextVar(&s.lang, "lang", locale.English, "language of the texts the daemon shows the operator: en or ru")
+	flag.Usage = func() {
+		locale.PrintDefaults(flag.CommandLine.Output(), flag.CommandLine, helpLang(s))
+	}
 	flag.Parse()
 
 	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: s.logLevel}))
@@ -482,6 +492,32 @@ func run(log *slog.Logger, s settings) error {
 	}
 
 	return errors.Join(errs...)
+}
+
+// helpLang is the language of -h: the one from -lang, otherwise the one from UCI
+// that the init script would pass, so help typed by hand on the router speaks it too.
+func helpLang(s settings) locale.Lang {
+	explicit := false
+
+	flag.Visit(func(f *flag.Flag) {
+		explicit = explicit || f.Name == "lang"
+	})
+
+	if explicit || s.uci == "" {
+		return s.lang
+	}
+
+	res, err := singbox.NewExec(helpLangTimeout).Run(context.Background(), s.uci, "-q", "get", "metabox.main.lang")
+	if err != nil || res.ExitCode != 0 {
+		return s.lang
+	}
+
+	lang, err := locale.Parse(strings.TrimSpace(res.Stdout))
+	if err != nil {
+		return s.lang
+	}
+
+	return lang
 }
 
 // runCommand translates a command launch to the form procd expects: that package
