@@ -17,7 +17,7 @@ import (
 
 // forkVersion goes into the header of the generated file: it shows which
 // schema the frontend is built on.
-const forkVersion = "v1.14.1-extended-2.7.2"
+const forkVersion = "v1.14.3-extended-2.7.3"
 
 func main() {
 	out := flag.String("out", "", "path of the generated schema file")
