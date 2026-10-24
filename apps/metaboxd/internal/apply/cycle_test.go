@@ -177,51 +177,40 @@ func TestBackupFailureSkipsRollback(t *testing.T) {
 	}
 }
 
-// A backup failure and an unremoved state: the apply is released, and the applying phase
-// left on disk is closed at the next start without a rollback: there was
-// no write, and a rollback from the backup of a previous transaction would lose the working config.
-func TestBackupFailureWithStateLeftReplaysWithoutRollback(t *testing.T) {
+// The journal did not reach the disk after the backup: nothing is written, the disk has
+// the previous config, and the transaction is closed without a rollback or a restart. The
+// apply is released: the owner retries once the disk is back.
+func TestJournalFailureSkipsRollback(t *testing.T) {
 	h := newHarness(t)
-	h.store.backupErr = errors.New("диск переполнен")
-	h.store.clearErr = errors.New("файловая система только для чтения")
+	h.store.stateErr = errors.New("файловая система только для чтения")
 
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
 		t.Fatalf("apply: %v", err)
 	}
 	h.manager.Close()
 
-	if tx := h.manager.Current(); tx.Phase != apply.PhaseFailed || tx.ReasonCode != apply.ReasonBackupFailed {
-		t.Fatalf("phase %q with code %q, expected failure with reason backup_failed", tx.Phase, tx.ReasonCode)
+	tx := h.manager.Current()
+	if tx.Phase != apply.PhaseFailed || tx.ReasonCode != apply.ReasonWriteFailed {
+		t.Errorf("phase %q with code %q, expected failure with reason write_failed", tx.Phase, tx.ReasonCode)
 	}
-
-	if state, _ := h.store.ReadState(t.Context()); state == nil {
-		t.Fatal("state removed although ClearState refused: nothing to check the replay with")
-	}
-
-	// The next daemon lifetime on the same disk.
-	h.rec.mu.Lock()
-	h.rec.calls = nil
-	h.rec.mu.Unlock()
-
-	h.store.backupErr = nil
-	h.store.clearErr = nil
-	restarted := apply.New(h.store, h.service, h.health, h.clock, slog.New(slog.DiscardHandler),
-		apply.Options{Window: window, ClashPort: clashPort, CycleTimeout: cycleTimeout, ProcessInterval: time.Millisecond})
-	t.Cleanup(restarted.Close)
-
-	if err := restarted.Replay(t.Context()); err != nil {
-		t.Fatalf("replay: %v", err)
+	if !strings.Contains(tx.Reason, "файловая система только для чтения") {
+		t.Errorf("detail %q lost the journal failure", tx.Reason)
 	}
 
 	calls := h.rec.snapshot()
-	for _, step := range []string{"Restore", "Restart"} {
+	if !slices.Contains(calls, "Backup") {
+		t.Errorf("journal written without a backup: steps %v", calls)
+	}
+	for _, step := range []string{"Restore", "WriteLists", "Write", "Restart"} {
 		if slices.Contains(calls, step) {
-			t.Errorf("replay of a transaction without a write called %s: steps %v", step, calls)
+			t.Errorf("%s called after journal failure: steps %v", step, calls)
 		}
 	}
 
-	if state, _ := h.store.ReadState(t.Context()); state != nil {
-		t.Error("replay left the state on disk")
+	h.store.stateErr = nil
+
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
+		t.Errorf("apply after journal failure: %v", err)
 	}
 }
 

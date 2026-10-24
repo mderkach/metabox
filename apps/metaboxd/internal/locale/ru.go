@@ -161,10 +161,11 @@ var ru = map[string]string{
 		"в обход перехвата. Каждая проверка — ok, fail или skipped с причиной; skipped — не " +
 		"сбой. Проверка задержки узла здесь всегда пропускается: запустите её из панели.",
 
-	"backup: %w":             "бэкап: %w",
-	"write lists: %w":        "запись списков: %w",
-	"write config: %w":       "запись конфига: %w",
-	"check interception: %w": "проверка перехвата: %w",
+	"backup: %w":                 "бэкап: %w",
+	"save transaction state: %w": "сохранение состояния транзакции: %w",
+	"write lists: %w":            "запись списков: %w",
+	"write config: %w":           "запись конфига: %w",
+	"check interception: %w":     "проверка перехвата: %w",
 	"no interception chains in nft after the restart": "цепочек перехвата в nft после рестарта нет",
 	"service not up":                                                     "служба не поднята",
 	"procd still reports the old pid %d":                                 "procd всё ещё сообщает прежний pid %d",

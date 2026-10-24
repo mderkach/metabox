@@ -60,7 +60,7 @@ Go through it before handing in a change to the Go part. The checklist items are
 - [ ] `exec.CommandContext` has `WaitDelay` set; the output is size-limited; the exit code is taken from `*exec.ExitError`.
 - [ ] The service is managed by the init script, not by running the binary directly or by `kill`.
 - [ ] A restart of a stopped service is a normal path.
-- [ ] The transaction state is written before the config, the deadline is stored as a duration, not as absolute time.
+- [ ] The transaction state is written after the backup and before the config, the deadline is stored as a duration, not as absolute time.
 - [ ] An unfinished transaction is replayed on start along all three branches.
 
 ## Concurrency

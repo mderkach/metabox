@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io/fs"
 	"log/slog"
+	"maps"
 	"slices"
 	"sync"
 	"testing"
@@ -60,6 +61,7 @@ type fakeStore struct {
 	sumErr     error
 	written    []byte
 	state      []byte
+	stateErr   error
 	lists      map[string][]byte
 	listsErr   error
 	backupErr  error
@@ -67,6 +69,10 @@ type fakeStore struct {
 	writeErr   error
 	readErr    error
 	clearErr   error
+	// backup and backupLists are what Backup took and Restore brings back: the
+	// replay tests check which transaction's backup a rollback restores.
+	backup      []byte
+	backupLists map[string][]byte
 
 	// Gates for race tests: started closes on entering the step, release
 	// holds the step until the test lets it go.
@@ -74,6 +80,18 @@ type fakeStore struct {
 	restoreRelease chan struct{}
 	clearStarted   chan struct{}
 	clearRelease   chan struct{}
+	backupStarted  chan struct{}
+	backupRelease  chan struct{}
+}
+
+// gate closes started and holds the step until release; a nil gate lets the step through.
+func gate(started, release chan struct{}) {
+	if started != nil {
+		close(started)
+	}
+	if release != nil {
+		<-release
+	}
 }
 
 func (s *fakeStore) Sum(context.Context) (string, error) {
@@ -116,21 +134,34 @@ func (s *fakeStore) SaveVersion(_ context.Context, _ []byte) error {
 
 func (s *fakeStore) Backup(context.Context) error {
 	s.rec.add("Backup")
+	gate(s.backupStarted, s.backupRelease)
 
-	return s.backupErr
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.backupErr != nil {
+		return s.backupErr
+	}
+	s.backup = s.written
+	s.backupLists = maps.Clone(s.lists)
+
+	return nil
 }
 
 func (s *fakeStore) Restore(context.Context) error {
 	s.rec.add("Restore")
+	gate(s.restoreStarted, s.restoreRelease)
 
-	if s.restoreStarted != nil {
-		close(s.restoreStarted)
-	}
-	if s.restoreRelease != nil {
-		<-s.restoreRelease
-	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-	return s.restoreErr
+	if s.restoreErr != nil {
+		return s.restoreErr
+	}
+	s.written = s.backup
+	s.lists = maps.Clone(s.backupLists)
+
+	return nil
 }
 
 func (s *fakeStore) StageCandidate(context.Context, string, []byte, map[string][]byte, []string) error {
@@ -196,6 +227,10 @@ func (s *fakeStore) WriteState(_ context.Context, data []byte) error {
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	if s.stateErr != nil {
+		return s.stateErr
+	}
 	s.state = data
 
 	return nil
@@ -203,13 +238,7 @@ func (s *fakeStore) WriteState(_ context.Context, data []byte) error {
 
 func (s *fakeStore) ClearState(context.Context) error {
 	s.rec.add("ClearState")
-
-	if s.clearStarted != nil {
-		close(s.clearStarted)
-	}
-	if s.clearRelease != nil {
-		<-s.clearRelease
-	}
+	gate(s.clearStarted, s.clearRelease)
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -426,11 +455,12 @@ func TestApplyFollowsProtocolOrder(t *testing.T) {
 		t.Errorf("window %v, expected %v", got, window)
 	}
 
-	// SaveVersion stands between the backup and the write: the history holds what was
-	// applied before this cycle. The service pid is taken before the restart and compared
+	// The state follows the backup: a state record on disk means the backup is this
+	// transaction's. SaveVersion stands between them and the write: the history holds what
+	// was applied before this cycle. The service pid is taken before the restart and compared
 	// after it, before the API poll.
 	want := []string{
-		"StageCandidate", "Check", "WriteState", "Backup", "SaveVersion", "WriteLists", "Write",
+		"StageCandidate", "Check", "Backup", "WriteState", "SaveVersion", "WriteLists", "Write",
 		"PID", "Restart", "PID", "Wait", "WriteState",
 	}
 	if got := h.rec.snapshot(); !slices.Equal(got, want) {
@@ -462,9 +492,11 @@ func TestCurrentReportsRemainingWindow(t *testing.T) {
 	}
 }
 
-// The state must reach the disk before the config: a power loss between
-// the write and the timer start would otherwise leave the device without an automatic rollback.
-func TestStateIsWrittenBeforeConfig(t *testing.T) {
+// The state must reach the disk after the backup and before the config: a power loss
+// between the write and the timer start would otherwise leave the device without an
+// automatic rollback, and a state written before the backup would send the replay to
+// the backup of an earlier transaction.
+func TestStateIsWrittenBetweenBackupAndConfig(t *testing.T) {
 	h := newHarness(t)
 
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
@@ -472,8 +504,9 @@ func TestStateIsWrittenBeforeConfig(t *testing.T) {
 	}
 	h.waitWindow(t)
 
-	if state, write := h.rec.index("WriteState"), h.rec.index("Write"); state > write || state < 0 {
-		t.Errorf("state written %dth, config %dth", state, write)
+	backup, state, write := h.rec.index("Backup"), h.rec.index("WriteState"), h.rec.index("Write")
+	if backup < 0 || state < backup || write < state {
+		t.Errorf("backup %dth, state %dth, config %dth", backup, state, write)
 	}
 }
 
