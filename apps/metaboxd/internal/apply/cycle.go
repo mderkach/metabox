@@ -110,6 +110,10 @@ func (m *Manager) cycle(
 	// a rollback from the backup, incomplete or left by an earlier transaction,
 	// would lose what works now.
 	if err := m.prepare(stepCtx, tx); err != nil {
+		if m.interrupted(ctx, log) {
+			return
+		}
+
 		log.Error("apply did not go through", "err", err)
 		m.release(PhaseFailed, err)
 		m.closeUnwritten(context.WithoutCancel(ctx), log)
@@ -118,6 +122,10 @@ func (m *Manager) cycle(
 	}
 
 	if err := m.apply(stepCtx, data, putLists, removeLists, settings); err != nil {
+		if m.interrupted(ctx, log) {
+			return
+		}
+
 		log.Error("apply did not go through", "err", err)
 		m.release(PhaseFailed, err)
 		m.rollback(context.WithoutCancel(ctx), log)
@@ -126,6 +134,20 @@ func (m *Manager) cycle(
 	}
 
 	m.await(ctx, log, confirmed)
+}
+
+// interrupted reports whether the daemon is stopping: the cycle context is cancelled only by
+// Close. A step that failed on it is not a failure of the apply, and a rollback in the dying
+// process would be cut by procd in the middle of a service restart; the state stays on
+// disk as it is, and Replay at the next start finishes or rolls back by its own rules.
+func (m *Manager) interrupted(ctx context.Context, log *slog.Logger) bool {
+	if ctx.Err() == nil {
+		return false
+	}
+
+	log.Warn("apply interrupted by daemon shutdown, the transaction is replayed at the next start")
+
+	return true
 }
 
 // prepare performs step 4 of the protocol, the backup, and then writes the state.

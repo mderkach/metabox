@@ -74,43 +74,55 @@ type fakeStore struct {
 	backup      []byte
 	backupLists map[string][]byte
 
-	// Gates for race tests, set by hold: the first call of the step closes started and
-	// waits for release; later calls pass.
-	gates   sync.Mutex
+	gates
+}
+
+// gates hold a fake's steps for race tests: the first call of an armed step closes
+// started and waits for release or for the context to end; later calls pass.
+type gates struct {
+	mu      sync.Mutex
 	started map[string]chan struct{}
 	release map[string]chan struct{}
 }
 
 // hold arms the gate of a step and returns its channels: started closes when the step
 // is entered, release lets it go on.
-func (s *fakeStore) hold(step string) (started, release chan struct{}) {
-	s.gates.Lock()
-	defer s.gates.Unlock()
+func (g *gates) hold(step string) (started, release chan struct{}) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
 
-	if s.started == nil {
-		s.started = map[string]chan struct{}{}
-		s.release = map[string]chan struct{}{}
+	if g.started == nil {
+		g.started = map[string]chan struct{}{}
+		g.release = map[string]chan struct{}{}
 	}
 
 	started, release = make(chan struct{}), make(chan struct{})
-	s.started[step], s.release[step] = started, release
+	g.started[step], g.release[step] = started, release
 
 	return started, release
 }
 
-// pass goes through the gate of a step, if one is armed, and disarms it.
-func (s *fakeStore) pass(step string) {
-	s.gates.Lock()
-	started, release := s.started[step], s.release[step]
-	delete(s.started, step)
-	delete(s.release, step)
-	s.gates.Unlock()
+// pass goes through the gate of a step, if one is armed, and disarms it. A context that
+// ends while the step is held is returned as the step's error, the way a real step
+// gives up on cancellation.
+func (g *gates) pass(ctx context.Context, step string) error {
+	g.mu.Lock()
+	started, release := g.started[step], g.release[step]
+	delete(g.started, step)
+	delete(g.release, step)
+	g.mu.Unlock()
 
-	if started != nil {
-		close(started)
+	if started == nil {
+		return nil
 	}
-	if release != nil {
-		<-release
+
+	close(started)
+
+	select {
+	case <-release:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
 	}
 }
 
@@ -121,8 +133,12 @@ func (s *fakeStore) Sum(context.Context) (string, error) {
 	return s.sum, s.sumErr
 }
 
-func (s *fakeStore) Write(_ context.Context, data []byte) error {
+func (s *fakeStore) Write(ctx context.Context, data []byte) error {
 	s.rec.add("Write")
+
+	if err := s.pass(ctx, "Write"); err != nil {
+		return err
+	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -135,8 +151,10 @@ func (s *fakeStore) Write(_ context.Context, data []byte) error {
 	return nil
 }
 
-func (s *fakeStore) Read(context.Context) ([]byte, error) {
-	s.pass("Read")
+func (s *fakeStore) Read(ctx context.Context) ([]byte, error) {
+	if err := s.pass(ctx, "Read"); err != nil {
+		return nil, err
+	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -154,9 +172,12 @@ func (s *fakeStore) SaveVersion(_ context.Context, _ []byte) error {
 	return nil
 }
 
-func (s *fakeStore) Backup(context.Context) error {
+func (s *fakeStore) Backup(ctx context.Context) error {
 	s.rec.add("Backup")
-	s.pass("Backup")
+
+	if err := s.pass(ctx, "Backup"); err != nil {
+		return err
+	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -170,9 +191,12 @@ func (s *fakeStore) Backup(context.Context) error {
 	return nil
 }
 
-func (s *fakeStore) Restore(context.Context) error {
+func (s *fakeStore) Restore(ctx context.Context) error {
 	s.rec.add("Restore")
-	s.pass("Restore")
+
+	if err := s.pass(ctx, "Restore"); err != nil {
+		return err
+	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -248,7 +272,10 @@ func (s *fakeStore) ReadState(context.Context) ([]byte, error) {
 // config.Store does: a Confirm that forwarded the request context would lose its write.
 func (s *fakeStore) WriteState(ctx context.Context, data []byte) error {
 	s.rec.add("WriteState")
-	s.pass("WriteState")
+
+	if err := s.pass(ctx, "WriteState"); err != nil {
+		return err
+	}
 
 	if err := ctx.Err(); err != nil {
 		return err
@@ -267,7 +294,10 @@ func (s *fakeStore) WriteState(ctx context.Context, data []byte) error {
 
 func (s *fakeStore) ClearState(ctx context.Context) error {
 	s.rec.add("ClearState")
-	s.pass("ClearState")
+
+	if err := s.pass(ctx, "ClearState"); err != nil {
+		return err
+	}
 
 	if err := ctx.Err(); err != nil {
 		return err
@@ -292,6 +322,8 @@ func (s *fakeStore) config() []byte {
 }
 
 type fakeService struct {
+	gates
+
 	rec      *recorder
 	checkErr error
 	// checked holds the arguments of the last Check: directory, config file, working
@@ -324,8 +356,12 @@ func (s *fakeService) Check(_ context.Context, dir, config, workdir string) erro
 	return s.checkErr
 }
 
-func (s *fakeService) Restart(context.Context) error {
+func (s *fakeService) Restart(ctx context.Context) error {
 	s.rec.add("Restart")
+
+	if err := s.pass(ctx, "Restart"); err != nil {
+		return err
+	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -373,12 +409,18 @@ func (s *fakeService) setRestartErr(err error) {
 }
 
 type fakeHealth struct {
+	gates
+
 	rec *recorder
 	err error
 }
 
-func (h *fakeHealth) Wait(context.Context, clashapi.Settings) error {
+func (h *fakeHealth) Wait(ctx context.Context, _ clashapi.Settings) error {
 	h.rec.add("Wait")
+
+	if err := h.pass(ctx, "Wait"); err != nil {
+		return err
+	}
 
 	return h.err
 }
