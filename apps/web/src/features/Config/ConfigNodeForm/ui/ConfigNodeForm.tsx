@@ -214,7 +214,7 @@ function AdvancedFields({ count, children }: { count: number; children: ReactNod
   const contentId = useId();
 
   return (
-    <FieldSet className='gap-3 rounded-lg border border-border p-3'>
+    <FieldSet className='min-w-0 gap-3 rounded-lg border border-border p-3'>
       <FieldLegend variant='label' className='mb-0 px-1'>
         <Button
           type='button'
