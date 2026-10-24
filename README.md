@@ -10,7 +10,7 @@
 Edit the config in forms, apply it with automatic rollback, see where every connection goes.
 
 [![license](https://img.shields.io/badge/license-GPL--3.0--or--later-blue?style=flat-square)](./LICENSE)
-![version](https://img.shields.io/badge/version-0.1.0--rc.2-orange?style=flat-square)
+![release](https://img.shields.io/github/v/release/mderkach/metabox?include_prereleases&style=flat-square)
 ![OpenWrt](https://img.shields.io/badge/OpenWrt-25.12%20%7C%20SNAPSHOT-00B5E2?style=flat-square)
 ![arch](https://img.shields.io/badge/arch-aarch64-lightgrey?style=flat-square)
 
@@ -20,11 +20,11 @@ Edit the config in forms, apply it with automatic rollback, see where every conn
 
 ---
 
-metabox is a Go daemon (`metaboxd`) that installs on the router as an apk package and serves a built-in web UI. It works with the config of [sing-box-extended](https://github.com/shtorm-7/sing-box-extended), a fork of sing-box: forms for nodes, routing rules and rule sets, raw JSON editing, and validation against the fork's schema before anything reaches the router.
+metabox is a Go daemon (`metaboxd`) that installs on the router as an apk package and serves a built-in web UI. Today it works with [sing-box-extended](https://github.com/shtorm-7/sing-box-extended), a fork of sing-box, on OpenWrt: forms for nodes, routing rules and rule sets, raw JSON editing, and validation against the fork's schema before anything reaches the router.
 
 Apply checks the config with the sing-box binary, restarts the service, waits for Clash API and DNS to answer, and rolls back to the previous version if a check fails or you don't confirm in the panel within a minute that the connection is still alive.
 
-The package also ships its own sing-box service and LAN interception (nftables, tproxy, upstream for dnsmasq), so metabox can replace re:HomeProxy.
+The package also ships its own sing-box service and LAN interception (nftables, tproxy, upstream for dnsmasq).
 
 <img src="docs/screenshots/desktop/overview.png" alt="Overview" />
 
@@ -91,7 +91,15 @@ Releases are published as a signed apk repository. On the router, as root:
 wget -qO- https://mderkach.github.io/metabox/install.sh | sh
 ```
 
-The script ([`install.sh`](./install.sh)) checks that the router runs OpenWrt with apk on `aarch64_cortex-a53`, puts the project key and the feed line, installs `sing-box-extended` from the [fork release](https://github.com/shtorm-7/sing-box-extended/releases) if it is missing, checking the package against a sha256 pinned in the script, and runs `apk add metaboxd`. Until the first version without a pre-release suffix the packages are in the `testing` channel; `sh -s -- --channel stable` connects `stable`. The script asks for the language of the texts the daemon shows the operator (help, init-script messages, API details, MCP) and writes it to UCI `metabox.main.lang`; `--lang en|ru` answers in advance. The panel language is chosen in the panel. Updates are `apk update && apk upgrade metaboxd`. Building the package from source and installing a single file are in [`docs/Development.md`](./docs/Development.md).
+The script ([`install.sh`](./install.sh)):
+
+- asks for the language of the texts the daemon shows the operator: help, init-script messages, API details, MCP; `--lang en|ru` answers in advance. The panel language is chosen in the panel;
+- checks that the router runs OpenWrt with apk on `aarch64_cortex-a53`;
+- adds the project key and the feed line;
+- installs `sing-box-extended` from the [fork release](https://github.com/shtorm-7/sing-box-extended/releases) if it is missing, checking the package against a sha256 pinned in the script;
+- runs `apk add metaboxd` and writes the language to UCI `metabox.main.lang`.
+
+Until the first version without a pre-release suffix the packages are in the `testing` channel; `sh -s -- --channel stable` connects `stable`. Updates are `apk update && apk upgrade metaboxd`. Building the package from source and installing a single file are in [`docs/Development.md`](./docs/Development.md).
 
 By hand, the same is: the key, the feed, then the package. `sing-box-extended` has to be installed first: it is not in the repository.
 
@@ -109,8 +117,6 @@ apk add metaboxd
 /etc/init.d/sing-box disable
 ```
 
-If homeproxy runs sing-box now, leave it as is: metabox interception is off by default and does not conflict with it.
-
 Put a sing-box config at `/etc/sing-box/config.json`, then start the services. The package does not start them on install.
 
 ```sh
@@ -124,7 +130,15 @@ Put a sing-box config at `/etc/sing-box/config.json`, then start the services. T
 
 Open `http://<router LAN address>:8088`, for example `http://192.168.1.1:8088`. Use an IP address: the daemon only answers when the `Host` header is an IP or `localhost`, so `http://openwrt.lan:8088` will not open.
 
-The panel is served over plain http, like LuCI: the password, the session and the MCP token cross the LAN in clear text. `option https '1'` in `/etc/config/metabox` and a restart of `metaboxd` serve it over HTTPS with a certificate from a root the daemon issues, and plain http on the same port is redirected. The browser then warns until that root is installed on every device: download it from `http://192.168.1.1:8088/metabox-ca.crt`, compare its fingerprint with the `ca_sha256` line in `logread -e metaboxd` and add it to the system or browser trust store; on a phone, open the address and install the profile. The root is limited to private networks and the panel addresses: it cannot sign a certificate for a public site. A certificate the router already has, for example one `acme.sh` issues for LuCI, is served instead of the daemon's own: set `https_cert` and `https_key` in the same section to the PEM files and restart `metaboxd`; after a renewal, restart it again.
+The panel is served over plain http, like LuCI: the password, the session and the MCP token cross the LAN in clear text. To serve it over HTTPS, set `option https '1'` in `/etc/config/metabox` and restart `metaboxd`: the certificate comes from a root the daemon issues, and plain http on the same port is redirected. The root is limited to private networks and the panel addresses: it cannot sign a certificate for a public site.
+
+The browser warns until that root is installed on every device:
+
+1. Download it from `http://192.168.1.1:8088/metabox-ca.crt`.
+2. Compare its fingerprint with the `ca_sha256` line in `logread -e metaboxd`.
+3. Add it to the system or browser trust store; on a phone, open the address and install the profile.
+
+A certificate the router already has, for example one `acme.sh` issues for LuCI, is served instead of the daemon's own: set `https_cert` and `https_key` in the same section to the PEM files and restart `metaboxd`. After a renewal, restart it again.
 
 > [!WARNING]
 > Without a password the panel is open to every device on the networks from `listen_interface`, and any of them can change routing. Set one with **Set password** at the bottom of the sidebar. A forgotten password is reset over SSH: `rm /etc/metabox/auth.json && /etc/init.d/metaboxd restart`.
@@ -141,7 +155,7 @@ The daemon reads `/etc/sing-box/config.json` as is, there is no import step. A h
 
 ### LAN interception
 
-Interception is off by default: `option enabled '0'` in the `dataplane` section of `/etc/config/metabox`. Stop homeproxy first if you have it, otherwise two setups capture the same traffic.
+Interception is off by default: `option enabled '0'` in the `dataplane` section of `/etc/config/metabox`. If another service already intercepts LAN traffic, stop it first, otherwise two setups capture the same traffic.
 
 The sing-box config needs inbounds on the ports from the `dataplane` section: `direct` on 5333 for DNS, `redirect` on 5331, `tproxy` on 5332 for UDP, and `route.default_mark` equal to `self_mark` (100).
 
@@ -191,7 +205,7 @@ Your `/etc/config/metabox` is not overwritten on update: the packaged version la
 apk del metaboxd
 ```
 
-Stopping `metabox-singbox` removes interception: nftables rules, `ip rule` and the dnsmasq fragment. After removal sing-box is not running; enable the fork's service or homeproxy if you need it.
+Stopping `metabox-singbox` removes interception: nftables rules, `ip rule` and the dnsmasq fragment. After removal sing-box is not running; enable the fork's service if you need it.
 
 ## Documentation
 
