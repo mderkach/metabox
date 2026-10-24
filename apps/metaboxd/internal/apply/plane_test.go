@@ -16,6 +16,7 @@ import (
 	"metabox/internal/clashapi"
 	"metabox/internal/config"
 	"metabox/internal/dataplane"
+	"metabox/internal/locale"
 )
 
 // fakeEditor is a UCI section: a write replaces it, a restore returns
@@ -332,6 +333,37 @@ func TestPlaneDNSPortProbeFailureRollsBack(t *testing.T) {
 			}
 			if got := h.reloader.count(); got != 2 {
 				t.Errorf("reload %d times, expected two", got)
+			}
+		})
+	}
+}
+
+func TestPlaneReasonFollowsLang(t *testing.T) {
+	m := aclChange()
+	m.DNSPort = 5444
+
+	for lang, want := range map[locale.Lang]string{
+		locale.English: "no dns-in on port 5444 in the config",
+		locale.Russian: "dns-in на порту 5444 в конфиге нет",
+	} {
+		t.Run(string(lang), func(t *testing.T) {
+			h := newPlaneHarness(t, failingProber{}, configWithDNSIn(5333), slog.New(slog.DiscardHandler))
+			h.plane.Close()
+			h.plane = apply.NewPlane(h.manager, h.editor, h.reloader, h.pstore, h.health, h.clock, slog.New(slog.DiscardHandler), apply.PlaneOptions{
+				Window:       window,
+				CycleTimeout: cycleTimeout,
+				DNS:          failingProber{},
+				Service:      dataplane.Service,
+				Lang:         lang,
+			})
+			t.Cleanup(h.plane.Close)
+
+			if _, err := h.plane.Start(t.Context(), m, "", admin); err != nil {
+				t.Fatalf("dataplane change: %v", err)
+			}
+
+			if tx := h.waitPlane(t, apply.PhaseRolledBack); tx.Reason != want {
+				t.Errorf("reason %q, want %q", tx.Reason, want)
 			}
 		})
 	}

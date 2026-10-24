@@ -8,13 +8,14 @@ package procd
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	"metabox/internal/locale"
 )
 
 // Runner runs an external command and returns its output with the exit code.
@@ -80,7 +81,7 @@ func New(runner Runner, ubus string) *Client {
 // ErrAmbiguousInstance means the instance name is not set and the service has several: which
 // of them is sing-box procd does not say, and the first one found may turn out to be
 // a neighbouring script of the same service.
-var ErrAmbiguousInstance = errors.New("the service has several instances and no instance name is set")
+var ErrAmbiguousInstance = locale.New("the service has several instances and no instance name is set")
 
 // Service returns the service state by its name in procd. The name is the same as the
 // init script's: procd registers the service under the script name.
@@ -121,7 +122,7 @@ func (c *Client) Service(ctx context.Context, name, instance string) (State, err
 
 	if instance == "" {
 		if len(service.Instances) > 1 {
-			return State{}, fmt.Errorf("service %s: %w", name, ErrAmbiguousInstance)
+			return State{}, locale.Errorf("service %s: %w", name, ErrAmbiguousInstance)
 		}
 
 		for only := range service.Instances {

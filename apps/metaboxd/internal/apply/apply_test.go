@@ -15,6 +15,7 @@ import (
 	"metabox/internal/apply"
 	"metabox/internal/clashapi"
 	"metabox/internal/config"
+	"metabox/internal/locale"
 	"metabox/internal/procd"
 )
 
@@ -365,6 +366,12 @@ func newHarness(t *testing.T) *harness {
 func newHarnessWith(t *testing.T, timeout time.Duration, log *slog.Logger) *harness {
 	t.Helper()
 
+	return newHarnessIn(t, timeout, log, locale.English)
+}
+
+func newHarnessIn(t *testing.T, timeout time.Duration, log *slog.Logger, lang locale.Lang) *harness {
+	t.Helper()
+
 	rec := &recorder{}
 	h := &harness{
 		rec:     rec,
@@ -380,6 +387,7 @@ func newHarnessWith(t *testing.T, timeout time.Duration, log *slog.Logger) *harn
 		ConfigDir:       configDir,
 		ConfigName:      configName,
 		ProcessInterval: time.Millisecond,
+		Lang:            lang,
 	})
 
 	t.Cleanup(h.manager.Close)
@@ -733,6 +741,33 @@ func TestFailureCarriesStepCode(t *testing.T) {
 			}
 			if tx.Reason == "" {
 				t.Error("step detail lost: nothing to fix the failure by")
+			}
+		})
+	}
+}
+
+// The step detail is in the operator's language, while the original OS error under it is
+// passed on as it is.
+func TestReasonFollowsLang(t *testing.T) {
+	tests := []struct {
+		lang locale.Lang
+		want string
+	}{
+		{locale.English, "write lists: no space left on device"},
+		{locale.Russian, "запись списков: no space left on device"},
+	}
+
+	for _, tt := range tests {
+		t.Run(string(tt.lang), func(t *testing.T) {
+			h := newHarnessIn(t, cycleTimeout, slog.New(slog.DiscardHandler), tt.lang)
+			h.store.writeErr = errors.New("no space left on device")
+
+			if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
+				t.Fatalf("apply: %v", err)
+			}
+
+			if tx := waitPhase(t, h, apply.PhaseRolledBack); tx.Reason != tt.want {
+				t.Errorf("reason %q, want %q", tx.Reason, tt.want)
 			}
 		})
 	}

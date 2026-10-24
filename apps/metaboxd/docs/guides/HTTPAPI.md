@@ -25,7 +25,7 @@ Runtime endpoints (the stream, service state, history, the Clash API proxy) are 
 
 The method in the pattern is mandatory: without it a handler written for `GET` answers `POST`. The parameter is read with `r.PathValue("id")`. API endpoints are under `/api/`, everything else serves the SPA.
 
-A failed cycle carries the step code: `Transaction.ReasonCode` says where the apply stopped, `Reason` holds the step's original error. The panel picks the text for the user by the code ([ADR-0022](../../../../docs/adr/ADR-0022-report-the-apply-failure-step-as-a-code.md)).
+A failed cycle carries the step code: `Transaction.ReasonCode` says where the apply stopped, `Reason` holds the step's original error, its daemon wrappers in the operator's language from `-lang`. The panel picks the text for the user by the code ([ADR-0022](../../../../docs/adr/ADR-0022-report-the-apply-failure-step-as-a-code.md)).
 
 The set of Apply endpoints is not reinvented along the way: `POST /api/apply`, `GET /api/apply/{id}`, `POST /api/apply/{id}/confirm`, a link to the active transaction in `GET /api/status`. The same response carries `confirm_window_seconds`, the confirmation window from the `-confirm-window` flag: the panel names it in the Apply summary before a transaction exists.
 
@@ -221,7 +221,7 @@ An upgrade to WebSocket on the proxy branch is rejected: runtime data goes throu
 
 `POST /api/logs/clear` takes `{since}`: a mark before which lines are not shown, and with a `log.output` file also truncation. A file outside the allowed directories is 409 `log_clear_forbidden`. What exactly is cleared: [DeviceIO](./DeviceIO.md), "sing-box log".
 
-`GET /api/diag?proxy=<node>` is a report `{checks: [{name, status, reason?, detail?, missing?, delay_ms?}]}` in a fixed order. `status` is `ok`, `fail` or `skipped`; a failed check is a report row, not an HTTP code. The panel picks the row text by `name` and `reason`, `detail` is a detail in the daemon's language. What is checked: [DeviceIO](./DeviceIO.md), "Dataplane diagnostics".
+`GET /api/diag?proxy=<node>` is a report `{checks: [{name, status, reason?, detail?, missing?, delay_ms?}]}` in a fixed order. `status` is `ok`, `fail` or `skipped`; a failed check is a report row, not an HTTP code. The panel picks the row text by `name` and `reason`, `detail` is a detail in the operator's language from `-lang`, with the original error under the daemon's words. What is checked: [DeviceIO](./DeviceIO.md), "Dataplane diagnostics".
 
 ## Tests
 

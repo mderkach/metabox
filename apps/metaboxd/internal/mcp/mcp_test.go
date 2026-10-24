@@ -259,7 +259,7 @@ func newBenchIn(t *testing.T, guard httpapi.Guard, store mcp.Store, lang locale.
 			return json.RawMessage(`{"status":"running","uptime":5,"binary":"1.14.1","managed":true}`), nil
 		},
 		Runtime: b.runtime,
-		Explain: route.NewExplainer(b.runtime),
+		Explain: route.NewExplainer(b.runtime, lang),
 		Config:  fakeConfig{},
 		Devices: fakeDevices{},
 		Logs:    b.logs,

@@ -91,6 +91,9 @@ func (e *StepError) Error() string { return e.Err.Error() }
 
 func (e *StepError) Unwrap() error { return e.Err }
 
+// In returns the step error in the language l: it becomes Transaction.Reason.
+func (e *StepError) In(l locale.Lang) string { return locale.Message(l, e.Err) }
+
 // stepFailed wraps a step error into a code. A separate function so that steps
 // read uniformly and the code is not lost on wrapping.
 func stepFailed(code ReasonCode, err error) error {
@@ -288,6 +291,8 @@ type Options struct {
 	Dataplane Dataplane
 	// DNS is the dns-in probe; nil means disabled.
 	DNS DNSProber
+	// Lang is the language of Transaction.Reason; the zero value is English.
+	Lang locale.Lang
 }
 
 // Manager is the only owner of the apply cycle.
@@ -819,7 +824,7 @@ func (m *Manager) release(phase Phase, err error) {
 
 	m.current.Phase = phase
 	m.current.ReasonCode = reasonOf(err)
-	m.current.Reason = err.Error()
+	m.current.Reason = locale.Message(m.opts.Lang, err)
 	m.rollingBack = false
 }
 

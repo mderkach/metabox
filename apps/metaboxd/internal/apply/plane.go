@@ -60,6 +60,8 @@ type PlaneOptions struct {
 	// Service is the name of the service the daemon manages: the name of its init script.
 	// A model change goes only with dataplane.Service.
 	Service string
+	// Lang is the language of Transaction.Reason; the zero value is English.
+	Lang locale.Lang
 }
 
 // planeRecord is the dataplane transaction state file: the transaction and the section snapshot
@@ -269,7 +271,7 @@ func (p *Plane) apply(ctx context.Context, log *slog.Logger, previous dataplane.
 	defer cancel()
 
 	if err := p.editor.Write(ctx, next); err != nil {
-		return stepFailed(ReasonWriteFailed, fmt.Errorf("write dataplane model: %w", err))
+		return stepFailed(ReasonWriteFailed, locale.Errorf("write dataplane model: %w", err))
 	}
 
 	if err := p.service.Reload(ctx); err != nil {
@@ -300,13 +302,13 @@ func (p *Plane) checkChains(ctx context.Context, log *slog.Logger, enabled bool)
 
 	switch {
 	case err != nil:
-		return stepFailed(ReasonInterceptionMissing, fmt.Errorf("check interception: %w", err))
+		return stepFailed(ReasonInterceptionMissing, locale.Errorf("check interception: %w", err))
 	case reason != "":
 		log.Warn("interception not checked after reload: nft unavailable", "applied_reason", reason)
 
 		return nil
 	case !enabled && len(chains) > 0:
-		return stepFailed(ReasonRestartFailed, errors.New("interception chains remain after the dataplane was turned off"))
+		return stepFailed(ReasonRestartFailed, locale.New("interception chains remain after the dataplane was turned off"))
 	case !enabled:
 		return nil
 	}
@@ -320,7 +322,7 @@ func (p *Plane) checkChains(ctx context.Context, log *slog.Logger, enabled bool)
 	}
 
 	if len(missing) > 0 {
-		return stepFailed(ReasonInterceptionMissing, fmt.Errorf("interception chains missing in nft: %v", missing))
+		return stepFailed(ReasonInterceptionMissing, locale.Errorf("interception chains missing in nft: %v", missing))
 	}
 
 	return nil
@@ -332,7 +334,7 @@ func (p *Plane) checkChains(ctx context.Context, log *slog.Logger, enabled bool)
 func (p *Plane) probeDNS(ctx context.Context, port int) error {
 	cfg, err := p.store.Read(ctx)
 	if err != nil {
-		return fmt.Errorf("config for the DNS probe: %w", err)
+		return locale.Errorf("config for the DNS probe: %w", err)
 	}
 
 	settings, err := clashapi.Read(cfg)
@@ -350,7 +352,7 @@ func (p *Plane) probeDNS(ctx context.Context, port int) error {
 	}
 
 	if !ok {
-		return fmt.Errorf("no dns-in on port %d in the config", port)
+		return locale.Errorf("no dns-in on port %d in the config", port)
 	}
 
 	return p.opts.DNS.Probe(ctx, inbound)
@@ -599,7 +601,7 @@ func (p *Plane) release(phase Phase, err error) {
 
 	p.current.Phase = phase
 	p.current.ReasonCode = reasonOf(err)
-	p.current.Reason = err.Error()
+	p.current.Reason = locale.Message(p.opts.Lang, err)
 	p.rollingBack = false
 }
 

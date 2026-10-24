@@ -6,6 +6,8 @@ import (
 	"errors"
 	"sync"
 	"testing"
+
+	"metabox/internal/locale"
 )
 
 // fakeSource returns preset Clash API responses.
@@ -188,7 +190,7 @@ func TestExplain(t *testing.T) {
 		]}`,
 	}}
 
-	explainer := NewExplainer(source)
+	explainer := NewExplainer(source, locale.English)
 
 	explanation, err := explainer.Explain(t.Context(), "c-1")
 	if err != nil {
@@ -215,13 +217,39 @@ func TestExplain(t *testing.T) {
 	}
 }
 
+func TestExplainReasonFollowsLang(t *testing.T) {
+	source := &fakeSource{bodies: map[string]string{
+		"/rules":       rulesBody,
+		"/connections": `{"connections":[{"id":"c-1","rule":"domain=gone.example => route(proxy)","chains":["proxy"]}]}`,
+	}}
+
+	tests := []struct {
+		lang locale.Lang
+		want string
+	}{
+		{locale.English, "the connection rule is not in the rule list of the running process"},
+		{locale.Russian, "правила соединения нет в списке правил работающего процесса"},
+	}
+
+	for _, tt := range tests {
+		explanation, err := NewExplainer(source, tt.lang).Explain(t.Context(), "c-1")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if got := explanation.Match; got.ReasonCode != ReasonNotInProcessList || got.Reason != tt.want {
+			t.Errorf("%s: got %q %q, want %q %q", tt.lang, got.ReasonCode, got.Reason, ReasonNotInProcessList, tt.want)
+		}
+	}
+}
+
 func TestExplainUnknownConnection(t *testing.T) {
 	source := &fakeSource{bodies: map[string]string{
 		"/rules":       rulesBody,
 		"/connections": `{"connections":[]}`,
 	}}
 
-	_, err := NewExplainer(source).Explain(t.Context(), "c-1")
+	_, err := NewExplainer(source, locale.English).Explain(t.Context(), "c-1")
 
 	if !errors.Is(err, ErrNoConnection) {
 		t.Errorf("got %v, expected ErrNoConnection", err)
@@ -233,7 +261,7 @@ func TestExplainUnknownConnection(t *testing.T) {
 func TestExplainRuntimeUnavailable(t *testing.T) {
 	source := &fakeSource{err: errors.New("соединение отклонено")}
 
-	_, err := NewExplainer(source).Explain(t.Context(), "c-1")
+	_, err := NewExplainer(source, locale.English).Explain(t.Context(), "c-1")
 
 	if !errors.Is(err, ErrRuntimeUnavailable) {
 		t.Errorf("got %v, expected ErrRuntimeUnavailable", err)
@@ -243,7 +271,7 @@ func TestExplainRuntimeUnavailable(t *testing.T) {
 func TestExplainBrokenSnapshot(t *testing.T) {
 	source := &fakeSource{bodies: map[string]string{"/connections": `{`}}
 
-	_, err := NewExplainer(source).Explain(t.Context(), "c-1")
+	_, err := NewExplainer(source, locale.English).Explain(t.Context(), "c-1")
 
 	if err == nil {
 		t.Fatal("an unparsed snapshot must become an error")

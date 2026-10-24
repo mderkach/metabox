@@ -242,7 +242,7 @@ func run(log *slog.Logger, s settings) error {
 
 	source := events.NewClashSource(
 		clashSettings(store),
-		serviceState(service, singboxVersion, sysinfo),
+		serviceState(service, singboxVersion, sysinfo, s.lang),
 		systemState(sysinfo, log),
 		healthRequestTimeout,
 	)
@@ -356,7 +356,7 @@ func run(log *slog.Logger, s settings) error {
 		rootCert = certs.CA
 	}
 
-	explainer := route.NewExplainer(source)
+	explainer := route.NewExplainer(source, s.lang)
 	logReader := logs.New(logs.Exec, store, logs.Options{
 		Logread:      s.logread,
 		Process:      filepath.Base(s.binary),
@@ -369,6 +369,7 @@ func run(log *slog.Logger, s settings) error {
 		ProcNet: "/proc/net",
 		URL:     s.diagURL,
 		Timeout: diagTimeout,
+		Lang:    s.lang,
 	})
 
 	// A broken token file leaves MCP off instead of stopping the daemon: the panel stays
@@ -384,7 +385,7 @@ func run(log *slog.Logger, s settings) error {
 		SingboxVersion: singboxVersion,
 		SingboxTags:    build.Tags,
 		SchemaVersion:  version.Schema,
-		Service:        mcp.ServiceReader(serviceState(service, singboxVersion, sysinfo)),
+		Service:        mcp.ServiceReader(serviceState(service, singboxVersion, sysinfo, s.lang)),
 		Runtime:        source,
 		Explain:        explainer,
 		Config:         store,
@@ -579,14 +580,14 @@ func clashSettings(store *config.Store) events.Resolver {
 
 // serviceState gives the stream the same service state as the handler: the panel
 // must see the same thing regardless of where it came from.
-func serviceState(service *singbox.Client, binary string, sysinfo *device.Reader) events.ServiceReader {
+func serviceState(service *singbox.Client, binary string, sysinfo *device.Reader, lang locale.Lang) events.ServiceReader {
 	return func(ctx context.Context) (json.RawMessage, error) {
 		// A poll failure does not interrupt publication: otherwise the stream would freeze on
 		// the last successful value, and the panel would show a crashed service
 		// as running.
 		state, err := service.State(ctx)
 
-		return json.Marshal(httpapi.ServiceState(state, binary, err, sysinfo.Alive(ctx)))
+		return json.Marshal(httpapi.ServiceState(state, binary, err, sysinfo.Alive(ctx), lang))
 	}
 }
 
@@ -689,6 +690,7 @@ func build(
 		ProcessInterval: healthPollInterval,
 		Dataplane:       plane,
 		DNS:             dns,
+		Lang:            s.lang,
 	})
 
 	planeTx := apply.NewPlane(manager, plane, service, store, health, nil, log, apply.PlaneOptions{
@@ -696,6 +698,7 @@ func build(
 		CycleTimeout: s.cycleTimeout,
 		DNS:          dns,
 		Service:      service.ServiceName(),
+		Lang:         s.lang,
 	})
 
 	return manager, planeTx, store, service, nil

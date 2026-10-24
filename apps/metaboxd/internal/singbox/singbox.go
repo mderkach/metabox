@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"metabox/internal/locale"
 	"metabox/internal/procd"
 )
 
@@ -272,7 +273,7 @@ func (c *Client) PID(ctx context.Context) (int, error) {
 func (c *Client) State(ctx context.Context) (State, error) {
 	running, err := c.running(ctx)
 	if err != nil {
-		return State{}, fmt.Errorf("service state: %w", err)
+		return State{}, locale.Errorf("service state: %w", err)
 	}
 
 	state := State{Running: running.ExitCode == 0}
