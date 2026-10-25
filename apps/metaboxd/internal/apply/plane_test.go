@@ -114,16 +114,20 @@ type fakePlaneStore struct {
 	state    []byte
 	stateErr error
 	clearErr error
-	// writeStarted and writeRelease gate the next WritePlaneState once.
+	// writeStarted and writeRelease gate one WritePlaneState after skipWrites have passed.
+	skipWrites   int
 	writeStarted chan struct{}
 	writeRelease chan struct{}
 }
 
-// holdWrite arms the gate of the next WritePlaneState.
-func (s *fakePlaneStore) holdWrite() (started, release chan struct{}) {
+// holdWrite arms the gate of the WritePlaneState that follows skip ungated writes. It is
+// armed before Start: a gate armed afterwards races with the cycle, which may have written
+// the record already on a slow machine.
+func (s *fakePlaneStore) holdWrite(skip int) (started, release chan struct{}) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	s.skipWrites = skip
 	s.writeStarted, s.writeRelease = make(chan struct{}), make(chan struct{})
 
 	return s.writeStarted, s.writeRelease
@@ -150,7 +154,12 @@ func (s *fakePlaneStore) WritePlaneState(ctx context.Context, data []byte) error
 
 	s.mu.Lock()
 	started, release := s.writeStarted, s.writeRelease
-	s.writeStarted, s.writeRelease = nil, nil
+	if s.skipWrites > 0 {
+		s.skipWrites--
+		started, release = nil, nil
+	} else {
+		s.writeStarted, s.writeRelease = nil, nil
+	}
 	s.mu.Unlock()
 
 	if started != nil {
@@ -348,14 +357,14 @@ func TestPlaneConfirmWaitsForWindowRecord(t *testing.T) {
 	h := newPlaneHarness(t, nil, validConfig, slog.New(slog.DiscardHandler))
 	t.Cleanup(h.plane.Close)
 
+	// The first write is the journal, by Start itself; the second is the window record.
+	stateStarted, stateRelease := h.pstore.holdWrite(1)
+
 	tx, err := h.plane.Start(t.Context(), aclChange(), "", admin)
 	if err != nil {
 		t.Fatalf("dataplane change: %v", err)
 	}
-
-	// The journal was written by Start itself; the next write is the window record.
-	stateStarted, stateRelease := h.pstore.holdWrite()
-	<-stateStarted
+	entered(t, stateStarted)
 
 	if _, err := h.plane.Confirm(t.Context(), tx.ID); !errors.Is(err, apply.ErrNothingToConfirm) {
 		t.Errorf("confirm before the window record is on disk: got %v, expected ErrNothingToConfirm", err)
@@ -783,7 +792,7 @@ func TestPlaneCloseDuringStepLeavesReplayableState(t *testing.T) {
 			if err != nil {
 				t.Fatalf("dataplane change: %v", err)
 			}
-			<-started
+			entered(t, started)
 
 			h.plane.Close()
 
