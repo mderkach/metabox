@@ -2,6 +2,7 @@ import type { JSONPath } from 'jsonc-parser';
 import { useEffect, useMemo } from 'react';
 
 import { diffLines, type DiffLine } from '@shared/lib/diff';
+import { fingerprint } from '@shared/lib/fingerprint';
 import { createReactSelectors, stateCreator, useStore } from '@shared/lib/state';
 
 import { insertValue, moveValue, removeValue, setValue } from './Config.model';
@@ -26,11 +27,12 @@ export interface ConfigDocumentState {
   /** User edits on top of `applied`. `null` means there were no edits. */
   draft: string | null;
   /**
-   * Text from the device the draft was started from. The draft survives a page
-   * reload, and the config on the device may be rewritten meanwhile: applying
-   * the draft on top of a new base would silently erase someone else's edits,
-   * so the mismatch is shown. `null` means the draft was started before the
-   * config was read, or there is none.
+   * Fingerprint of the text from the device the draft was started from
+   * (`fingerprint` from `shared/lib`). The draft survives a page reload, and
+   * the config on the device may be rewritten meanwhile: applying the draft on
+   * top of a new base would silently erase someone else's edits, so the
+   * mismatch is shown. `null` means the draft was started before the config
+   * was read, or there is none.
    */
   draftBase: string | null;
   /** Files of its own lists from the device: name to content. `null` means not read. */
@@ -64,7 +66,7 @@ export interface ConfigDocumentState {
   /** Remove a list file on apply. */
   removeList: (name: string) => void;
   discard: () => void;
-  /** Moves the base of the draft onto `base`: the text it was written on top of is now on the device. */
+  /** Moves the base of the draft onto the text `base`: what it was written on top of is now on the device. */
   rebase: (base: string) => void;
   /** Forget both the file and the draft: the panel rereads the config from the device. */
   reset: () => void;
@@ -181,7 +183,13 @@ const ConfigDocumentStateProto = stateCreator<ConfigDocumentState>((set, get) =>
     },
 
     rebase: (base) => {
-      set((state) => (state.draft === null || state.draftBase === base ? state : { draftBase: base }));
+      set((state) => {
+        if (state.draft === null) return state;
+
+        const draftBase = fingerprint(base);
+
+        return state.draftBase === draftBase ? state : { draftBase };
+      });
     },
 
     reset: () => {
@@ -209,7 +217,13 @@ const ConfigDocumentStateProto = stateCreator<ConfigDocumentState>((set, get) =>
     isStale: () => {
       const { draft, draftBase, applied } = get();
 
-      return draft !== null && draftBase !== null && applied !== null && draft !== applied && draftBase !== applied;
+      return (
+        draft !== null &&
+        draftBase !== null &&
+        applied !== null &&
+        draft !== applied &&
+        draftBase !== fingerprint(applied)
+      );
     },
 
     listChanges: () => toListChanges(get().listsDraft, get().appliedLists),
@@ -218,7 +232,9 @@ const ConfigDocumentStateProto = stateCreator<ConfigDocumentState>((set, get) =>
 
 /** A started draft keeps its own base, a new one takes it from the device text. */
 function baseOf(state: ConfigDocumentState): string | null {
-  return state.draft === null ? state.applied : state.draftBase;
+  if (state.draft !== null) return state.draftBase;
+
+  return state.applied === null ? null : fingerprint(state.applied);
 }
 
 ConfigDocumentStateProto.subscribe(function storeDraft(state, previous) {

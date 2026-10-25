@@ -9,6 +9,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ConfigDocumentState } from '@entities/Config';
 import { DAEMON_ENDPOINT } from '@entities/Daemon';
 import { DAEMON_STATUS_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture';
+import { fingerprint } from '@shared/lib/fingerprint';
 
 import { ConfigApplyStore } from '../model/ConfigApply.store';
 import { ConfigApplyBar } from '../ui/ConfigApplyBar';
@@ -119,6 +120,6 @@ describe('ConfigApply draft after the cycle ends', () => {
     });
 
     expect(ConfigDocumentState.getState().draft).toBe(NEWER_DRAFT);
-    expect(ConfigDocumentState.getState().draftBase).toBe(DRAFT);
+    expect(ConfigDocumentState.getState().draftBase).toBe(fingerprint(DRAFT));
   });
 });
