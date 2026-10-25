@@ -11,6 +11,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -331,6 +332,112 @@ func TestProxyDelay(t *testing.T) {
 
 	if !strings.Contains(query, "url=http%3A%2F%2F127.0.0.1%3A1%2Fgenerate_204") || !strings.Contains(query, "timeout="+strconv.Itoa(1600)) {
 		t.Errorf("measurement request %q", query)
+	}
+}
+
+func TestObserveReportsRecordedDelay(t *testing.T) {
+	var (
+		mu        sync.Mutex
+		requested []string
+	)
+
+	clash := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		requested = append(requested, r.URL.Path)
+		mu.Unlock()
+
+		if r.Header.Get("Authorization") != "Bearer s3" {
+			w.WriteHeader(http.StatusUnauthorized)
+
+			return
+		}
+
+		if r.URL.Path != "/proxies" {
+			w.WriteHeader(http.StatusNotFound)
+
+			return
+		}
+
+		_, _ = w.Write([]byte(`{"proxies":{
+			"node A":{"type":"VLESS","history":[{"time":"2026-10-20T10:05:00Z","delay":42}]},
+			"fresh":{"type":"VLESS","history":[]}
+		}}`))
+	}))
+	t.Cleanup(clash.Close)
+
+	cfg := configWith(5333, strings.TrimPrefix(clash.URL, "http://"))
+	c := diag.New(fakePlane{model: model(closedPort(t))}, cfg, nil, options())
+
+	tests := []struct {
+		name   string
+		proxy  string
+		status diag.CheckStatus
+		reason diag.CheckReason
+		delay  int
+	}{
+		{"last recorded delay", "node A", diag.StatusOK, "", 42},
+		{"no record: never measured or the last test failed", "fresh", diag.StatusSkipped, diag.ReasonNotMeasured, 0},
+		{"no node", "missing", diag.StatusFail, diag.ReasonProxyMissing, 0},
+		{"node not selected", "", diag.StatusSkipped, diag.ReasonProxyUnset, 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			report, err := c.Observe(t.Context(), tt.proxy)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			i := slices.IndexFunc(report.Checks, func(c diag.Check) bool { return c.Name == diag.NameProxy })
+			if i < 0 {
+				t.Fatalf("no proxy row in %+v", report.Checks)
+			}
+
+			if got := report.Checks[i]; got.Status != tt.status || got.Reason != tt.reason || got.DelayMS != tt.delay {
+				t.Errorf("node %q: %+v, expected %s %s %d ms", tt.proxy, got, tt.status, tt.reason, tt.delay)
+			}
+		})
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	for _, path := range requested {
+		if strings.Contains(path, "/delay") {
+			t.Errorf("latency check requested: %s", path)
+		}
+	}
+}
+
+func TestObserveControllerFailures(t *testing.T) {
+	refusing := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	t.Cleanup(refusing.Close)
+
+	tests := []struct {
+		name       string
+		controller string
+		reason     diag.CheckReason
+	}{
+		{"controller down", "127.0.0.1:1", diag.ReasonRuntimeUnavailable},
+		{"controller refuses", strings.TrimPrefix(refusing.URL, "http://"), diag.ReasonRequestFailed},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := diag.New(fakePlane{model: model(closedPort(t))}, configWith(5333, tt.controller), nil, options())
+
+			report, err := c.Observe(t.Context(), "node A")
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			i := slices.IndexFunc(report.Checks, func(c diag.Check) bool { return c.Name == diag.NameProxy })
+			if i < 0 || report.Checks[i].Status != diag.StatusFail || report.Checks[i].Reason != tt.reason {
+				t.Errorf("proxy row %+v, expected fail %s", report.Checks, tt.reason)
+			}
+		})
 	}
 }
 

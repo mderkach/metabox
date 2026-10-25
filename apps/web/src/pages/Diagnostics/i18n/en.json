@@ -46,6 +46,7 @@
     "chains_missing": "nft has no interception chains:",
     "proxy_unset": "no node is chosen",
     "proxy_missing": "the running sing-box has no such node",
+    "not_measured": "sing-box has no latency recorded for the node: it was never tested, or the last test failed",
     "runtime_unavailable": "sing-box does not respond",
     "request_failed": "the request failed",
     "unsupported": "the check is not supported on this system"

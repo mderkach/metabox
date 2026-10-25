@@ -31,6 +31,10 @@ import (
 // detailLimit is the ceiling of a detail: the Clash API answer goes into it.
 const detailLimit = 300
 
+// proxiesLimit is the ceiling of the `/proxies` answer, the same as the ceiling of a
+// runtime snapshot: a node list the panel shows must fit the diagnostics too.
+const proxiesLimit = 16 << 20
+
 // CheckName is what was checked. The set is closed: the panel labels the report
 // row by it.
 type CheckName string
@@ -96,6 +100,10 @@ const (
 	ReasonProxyUnset CheckReason = "proxy_unset"
 	// ReasonProxyMissing means the Clash API does not know such a node.
 	ReasonProxyMissing CheckReason = "proxy_missing"
+	// ReasonNotMeasured means sing-box has no latency recorded for the node: it was never
+	// tested, or the last test failed and erased the record. The Clash API does not tell
+	// the two apart.
+	ReasonNotMeasured CheckReason = "not_measured"
 	// ReasonRuntimeUnavailable means the Clash API does not answer.
 	ReasonRuntimeUnavailable CheckReason = "runtime_unavailable"
 	// ReasonRequestFailed means the request to the check address failed.
@@ -174,11 +182,25 @@ func New(plane Plane, cfg ConfigReader, dns DNSProber, opts Options) *Checker {
 	return &Checker{plane: plane, config: cfg, dns: dns, opts: opts, client: client}
 }
 
-// Run runs all the checks; proxy is the node the access is checked through.
-// Network checks run in parallel: sequentially the report would wait the sum of their
-// timeouts. A check failure is a report row, not an error; an error is only
-// ctx cancellation.
+// Run runs all the checks; proxy is the node the access is checked through with a
+// Clash API latency test. Network checks run in parallel: sequentially the report would
+// wait the sum of their timeouts. A check failure is a report row, not an error; an
+// error is only ctx cancellation.
 func (c *Checker) Run(ctx context.Context, proxy string) (Report, error) {
+	return c.run(ctx, proxy, c.proxy)
+}
+
+// Observe is Run without the latency test: the proxy row carries the latency sing-box
+// last recorded for the node and is skipped with not_measured when there is none. A
+// latency test writes the node's delay history and a failed one erases it, which moves
+// the choice of a urltest group; a caller that must not change the router takes this
+// path.
+func (c *Checker) Observe(ctx context.Context, proxy string) (Report, error) {
+	return c.run(ctx, proxy, c.lastDelay)
+}
+
+// run runs the checks; check fills the proxy row.
+func (c *Checker) run(ctx context.Context, proxy string, check func(context.Context, string, []byte, error) Check) (Report, error) {
 	model, modelErr := c.plane.Model(ctx)
 	cfg, cfgErr := c.config.Read(ctx)
 
@@ -198,7 +220,7 @@ func (c *Checker) Run(ctx context.Context, proxy string) (Report, error) {
 		},
 		func(ctx context.Context) Check { return c.dnsProbe(ctx, model, modelErr, cfg, cfgErr) },
 		func(ctx context.Context) Check { return c.chains(ctx, model, modelErr) },
-		func(ctx context.Context) Check { return c.proxy(ctx, proxy, cfg, cfgErr) },
+		func(ctx context.Context) Check { return check(ctx, proxy, cfg, cfgErr) },
 		func(ctx context.Context) Check { return c.direct(ctx, model, modelErr) },
 	}
 
@@ -390,25 +412,49 @@ func configSkip(lang locale.Lang, name CheckName, cfgErr error) (Check, bool) {
 	}
 }
 
-// proxy measures the node delay with the Clash API handle `/proxies/{name}/delay`:
-// the request to the check address is made by sing-box itself through this node.
-func (c *Checker) proxy(ctx context.Context, proxy string, cfg []byte, cfgErr error) Check {
+// controller resolves the Clash API of the applied config for the proxy row. When it
+// cannot, the returned row is the report row and ok is false.
+func (c *Checker) controller(proxy string, cfg []byte, cfgErr error) (clashapi.Settings, string, Check, bool) {
 	if proxy == "" {
-		return Check{Name: NameProxy, Status: StatusSkipped, Reason: ReasonProxyUnset}
+		return clashapi.Settings{}, "", Check{Name: NameProxy, Status: StatusSkipped, Reason: ReasonProxyUnset}, false
 	}
 
 	if skip, ok := configSkip(c.opts.Lang, NameProxy, cfgErr); ok {
-		return skip
+		return clashapi.Settings{}, "", skip, false
 	}
 
 	settings, err := clashapi.Read(cfg)
 	if err != nil {
-		return Check{Name: NameProxy, Status: StatusFail, Reason: ReasonRuntimeUnavailable}
+		return clashapi.Settings{}, "", Check{Name: NameProxy, Status: StatusFail, Reason: ReasonRuntimeUnavailable}, false
 	}
 
 	base, err := settings.BaseURL()
 	if err != nil {
-		return Check{Name: NameProxy, Status: StatusFail, Reason: ReasonRuntimeUnavailable}
+		return clashapi.Settings{}, "", Check{Name: NameProxy, Status: StatusFail, Reason: ReasonRuntimeUnavailable}, false
+	}
+
+	return settings, base, Check{}, true
+}
+
+func (c *Checker) get(ctx context.Context, settings clashapi.Settings, u string) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if settings.Secret != "" {
+		req.Header.Set("Authorization", "Bearer "+settings.Secret)
+	}
+
+	return c.client.Do(req)
+}
+
+// proxy measures the node delay with the Clash API handle `/proxies/{name}/delay`:
+// the request to the check address is made by sing-box itself through this node.
+func (c *Checker) proxy(ctx context.Context, proxy string, cfg []byte, cfgErr error) Check {
+	settings, base, row, ok := c.controller(proxy, cfg, cfgErr)
+	if !ok {
+		return row
 	}
 
 	query := url.Values{
@@ -418,17 +464,7 @@ func (c *Checker) proxy(ctx context.Context, proxy string, cfg []byte, cfgErr er
 		"timeout": {strconv.Itoa(int(c.opts.Timeout * 4 / 5 / time.Millisecond))},
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
-		base+"/proxies/"+url.PathEscape(proxy)+"/delay?"+query.Encode(), nil)
-	if err != nil {
-		return Check{Name: NameProxy, Status: StatusFail, Reason: ReasonRequestFailed}
-	}
-
-	if settings.Secret != "" {
-		req.Header.Set("Authorization", "Bearer "+settings.Secret)
-	}
-
-	res, err := c.client.Do(req)
+	res, err := c.get(ctx, settings, base+"/proxies/"+url.PathEscape(proxy)+"/delay?"+query.Encode())
 	if err != nil {
 		return Check{Name: NameProxy, Status: StatusFail, Reason: ReasonRuntimeUnavailable}
 	}
@@ -448,6 +484,48 @@ func (c *Checker) proxy(ctx context.Context, proxy string, cfg []byte, cfgErr er
 		return Check{Name: NameProxy, Status: StatusFail, Reason: ReasonProxyMissing, Detail: proxy}
 	default:
 		return Check{Name: NameProxy, Status: StatusFail, Reason: ReasonRequestFailed, Detail: clamp(body.Message)}
+	}
+}
+
+// lastDelay reads the node's delay history from `/proxies`, the same answer the node
+// list is built from.
+func (c *Checker) lastDelay(ctx context.Context, proxy string, cfg []byte, cfgErr error) Check {
+	settings, base, row, ok := c.controller(proxy, cfg, cfgErr)
+	if !ok {
+		return row
+	}
+
+	res, err := c.get(ctx, settings, base+"/proxies")
+	if err != nil {
+		return Check{Name: NameProxy, Status: StatusFail, Reason: ReasonRuntimeUnavailable}
+	}
+	defer func() { _ = res.Body.Close() }()
+
+	if res.StatusCode != http.StatusOK {
+		return Check{Name: NameProxy, Status: StatusFail, Reason: ReasonRequestFailed, Detail: res.Status}
+	}
+
+	var body struct {
+		Proxies map[string]struct {
+			History []struct {
+				Delay int `json:"delay"`
+			} `json:"history"`
+		} `json:"proxies"`
+	}
+
+	if err := json.NewDecoder(io.LimitReader(res.Body, proxiesLimit)).Decode(&body); err != nil {
+		return Check{Name: NameProxy, Status: StatusFail, Reason: ReasonRequestFailed, Detail: clamp(locale.Message(c.opts.Lang, err))}
+	}
+
+	node, found := body.Proxies[proxy]
+
+	switch {
+	case !found:
+		return Check{Name: NameProxy, Status: StatusFail, Reason: ReasonProxyMissing, Detail: proxy}
+	case len(node.History) == 0:
+		return Check{Name: NameProxy, Status: StatusSkipped, Reason: ReasonNotMeasured, Detail: proxy}
+	default:
+		return Check{Name: NameProxy, Status: StatusOK, DelayMS: node.History[len(node.History)-1].Delay, Detail: proxy}
 	}
 }
 

@@ -39,6 +39,7 @@ const REASON_KEY: Readonly<Record<CheckReason, ParseKeys<'pages/Diagnostics'>>> 
   chains_missing: 'reason.chains_missing',
   proxy_unset: 'reason.proxy_unset',
   proxy_missing: 'reason.proxy_missing',
+  not_measured: 'reason.not_measured',
   runtime_unavailable: 'reason.runtime_unavailable',
   request_failed: 'reason.request_failed',
   unsupported: 'reason.unsupported',

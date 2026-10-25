@@ -78,9 +78,10 @@ type LogReader interface {
 	Tail(ctx context.Context, n int, minLevel logs.Level) (logs.Snapshot, error)
 }
 
-// Diagnoser checks the dataplane.
+// Diagnoser checks the dataplane without measuring a node: the agent must not
+// write the delay history.
 type Diagnoser interface {
-	Run(ctx context.Context, proxy string) (diag.Report, error)
+	Observe(ctx context.Context, proxy string) (diag.Report, error)
 }
 
 // ServiceReader returns the sing-box service state in the panel contract form.

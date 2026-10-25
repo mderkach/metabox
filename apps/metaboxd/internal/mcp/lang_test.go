@@ -21,7 +21,7 @@ func TestToolTextsFollowLang(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(string(tt.lang), func(t *testing.T) {
-			b := newBenchIn(t, nil, &memoryStore{}, tt.lang)
+			b := newBenchIn(t, nil, &memoryStore{}, tt.lang, nil)
 			session := b.session(b.enable())
 
 			tools, err := session.ListTools(t.Context(), nil)

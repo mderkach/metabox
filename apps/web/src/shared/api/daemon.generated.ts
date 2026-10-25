@@ -143,6 +143,7 @@ export const CHECK_REASON = [
   'chains_missing',
   'proxy_unset',
   'proxy_missing',
+  'not_measured',
   'runtime_unavailable',
   'request_failed',
   'unsupported',

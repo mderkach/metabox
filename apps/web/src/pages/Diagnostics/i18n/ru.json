@@ -46,6 +46,7 @@
     "chains_missing": "в nft нет цепочек перехвата:",
     "proxy_unset": "узел не выбран",
     "proxy_missing": "такого узла нет в работающем sing-box",
+    "not_measured": "у sing-box нет записанной задержки узла: его не проверяли или последняя проверка упала",
     "runtime_unavailable": "sing-box не отвечает",
     "request_failed": "запрос не прошёл",
     "unsupported": "на этой системе проверка не поддерживается"
