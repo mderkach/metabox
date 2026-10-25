@@ -236,7 +236,7 @@ Dashboard runtime data (traffic, memory, board readings, connections and service
 
 The panel has no WebSocket: the daemon returns the stream as a regular HTTP response and rejects the upgrade on the `/api/clash/*` proxy branch. Everything the panel changes, it changes with regular requests.
 
-`app/` opens one `EventSource` connection, and it is shared with the slices. A handler lives in the `api` segment of its slice, takes data from the envelope through `listenTopic` and **must return an unsubscribe function**:
+`app/` opens one `EventSource` connection, and it is shared with the slices. The browser closes a source for good after a non-200 answer (502/503, a refused connection, the reader limit), so the shell reopens it by `STREAM_RECONNECT` from `shared/api`, the policy the log stream uses too; it does not stop trying, because the Overview promises the panel reconnects, and it stops only when the status probe returns a lost session (`isSessionLost`), where the session watch takes over. A handler lives in the `api` segment of its slice, takes data from the envelope through `listenTopic` and **must return an unsubscribe function**:
 
 ```ts
 export function listenTraffic(source: StreamSource): () => void {

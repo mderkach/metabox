@@ -6,3 +6,4 @@ export * from './failureText';
 export * from './queryClient';
 export * from './queryMeta';
 export * from './runtimeStream';
+export * from './streamReconnect';

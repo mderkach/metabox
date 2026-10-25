@@ -3,8 +3,10 @@ import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { STREAM_RECONNECT } from '@shared/api';
+
 import { LOG_QUERY } from '../api/Log.query';
-import { LOG_RECONNECT, useLogStream } from '../api/Log.stream';
+import { useLogStream } from '../api/Log.stream';
 import { LOG_STREAM_STATUS } from '../model/Log.model';
 import { LogStore } from '../model/Log.store';
 import { FakeLogSource } from './Log.source';
@@ -79,7 +81,7 @@ describe('useLogStream', () => {
     act(() => {
       document.dispatchEvent(new Event('visibilitychange'));
     });
-    wait(LOG_RECONNECT.MaxDelay);
+    wait(STREAM_RECONNECT.MaxDelay);
     expect(FakeLogSource.opened).toHaveLength(1);
   });
 
@@ -90,32 +92,32 @@ describe('useLogStream', () => {
     expect(status()).toBe(LOG_STREAM_STATUS.Reconnecting);
     expect(FakeLogSource.opened[0].closed).toBe(true);
 
-    wait(LOG_RECONNECT.FirstDelay - 1);
+    wait(STREAM_RECONNECT.FirstDelay - 1);
     expect(FakeLogSource.opened).toHaveLength(1);
 
     wait(1);
     expect(FakeLogSource.opened).toHaveLength(2);
 
     refuse();
-    wait(LOG_RECONNECT.FirstDelay);
+    wait(STREAM_RECONNECT.FirstDelay);
     expect(FakeLogSource.opened).toHaveLength(2);
 
-    wait(LOG_RECONNECT.FirstDelay);
+    wait(STREAM_RECONNECT.FirstDelay);
     expect(FakeLogSource.opened).toHaveLength(3);
   });
 
   it('the delay does not grow above the ceiling', () => {
     renderStream();
 
-    for (let attempt = 0; attempt < LOG_RECONNECT.Attempts - 1; attempt += 1) {
+    for (let attempt = 0; attempt < STREAM_RECONNECT.Attempts - 1; attempt += 1) {
       refuse();
-      wait(LOG_RECONNECT.MaxDelay);
+      wait(STREAM_RECONNECT.MaxDelay);
     }
 
     const opened = FakeLogSource.opened.length;
 
     refuse();
-    wait(LOG_RECONNECT.MaxDelay);
+    wait(STREAM_RECONNECT.MaxDelay);
 
     expect(FakeLogSource.opened).toHaveLength(opened + 1);
   });
@@ -123,22 +125,22 @@ describe('useLogStream', () => {
   it('after exhausting attempts closes the stream and waits for a manual reconnect', () => {
     const { hook } = renderStream();
 
-    for (let attempt = 0; attempt < LOG_RECONNECT.Attempts; attempt += 1) {
+    for (let attempt = 0; attempt < STREAM_RECONNECT.Attempts; attempt += 1) {
       refuse();
-      wait(LOG_RECONNECT.MaxDelay);
+      wait(STREAM_RECONNECT.MaxDelay);
     }
 
     refuse();
-    wait(LOG_RECONNECT.MaxDelay);
+    wait(STREAM_RECONNECT.MaxDelay);
 
     expect(status()).toBe(LOG_STREAM_STATUS.Closed);
-    expect(FakeLogSource.opened).toHaveLength(LOG_RECONNECT.Attempts + 1);
+    expect(FakeLogSource.opened).toHaveLength(STREAM_RECONNECT.Attempts + 1);
 
     act(() => {
       hook.result.current.reconnect();
     });
 
-    expect(FakeLogSource.opened).toHaveLength(LOG_RECONNECT.Attempts + 2);
+    expect(FakeLogSource.opened).toHaveLength(STREAM_RECONNECT.Attempts + 2);
     expect(status()).toBe(LOG_STREAM_STATUS.Connecting);
 
     // A manual reconnect restarts the attempt count.
@@ -149,9 +151,9 @@ describe('useLogStream', () => {
   it('opening the stream resets the failure count', () => {
     renderStream();
 
-    for (let attempt = 0; attempt < LOG_RECONNECT.Attempts; attempt += 1) {
+    for (let attempt = 0; attempt < STREAM_RECONNECT.Attempts; attempt += 1) {
       refuse();
-      wait(LOG_RECONNECT.MaxDelay);
+      wait(STREAM_RECONNECT.MaxDelay);
     }
 
     act(() => {
@@ -161,8 +163,8 @@ describe('useLogStream', () => {
 
     expect(status()).toBe(LOG_STREAM_STATUS.Reconnecting);
 
-    wait(LOG_RECONNECT.FirstDelay);
-    expect(FakeLogSource.opened).toHaveLength(LOG_RECONNECT.Attempts + 2);
+    wait(STREAM_RECONNECT.FirstDelay);
+    expect(FakeLogSource.opened).toHaveLength(STREAM_RECONNECT.Attempts + 2);
   });
 
   it('a drop that the browser reconnects by itself does not create a second stream', () => {
@@ -171,7 +173,7 @@ describe('useLogStream', () => {
     act(() => {
       FakeLogSource.last().emit('error');
     });
-    wait(LOG_RECONNECT.MaxDelay);
+    wait(STREAM_RECONNECT.MaxDelay);
 
     expect(status()).toBe(LOG_STREAM_STATUS.Connecting);
     expect(FakeLogSource.opened).toHaveLength(1);
@@ -188,7 +190,7 @@ describe('useLogStream', () => {
     expect(invalidate).toHaveBeenLastCalledWith({ queryKey: LOG_QUERY.tail('info') });
 
     refuse();
-    wait(LOG_RECONNECT.FirstDelay);
+    wait(STREAM_RECONNECT.FirstDelay);
     act(() => {
       FakeLogSource.last().open();
     });
@@ -201,7 +203,7 @@ describe('useLogStream', () => {
 
     refuse();
     hook.unmount();
-    wait(LOG_RECONNECT.MaxDelay);
+    wait(STREAM_RECONNECT.MaxDelay);
 
     expect(FakeLogSource.opened).toHaveLength(1);
   });
