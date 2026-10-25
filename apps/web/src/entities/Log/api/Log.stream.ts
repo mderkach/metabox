@@ -1,8 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useState } from 'react';
 
-import { decodeFrame, type StreamSource } from '@shared/api';
-import { MS_IN_SECOND } from '@shared/lib/time';
+import { decodeFrame, reconnectDelay, STREAM_RECONNECT, type StreamSource } from '@shared/api';
 
 import { toLogEntry } from '../model/Log.adapter';
 import { LOG_STREAM_STATUS, type LogEvent, type LogLevel } from '../model/Log.model';
@@ -66,26 +65,6 @@ export function listenLog(source: StreamSource): () => void {
   };
 }
 
-const RECONNECT_MAX_SECONDS = 30;
-const RECONNECT_GROWTH = 2;
-
-/**
- * Retry of a stream that the daemon refused or that broke for good: the delay
- * doubles from `FirstDelay` to `MaxDelay`, and after `Attempts` failures in a
- * row the screen waits for a manual reconnect. A stream limit refusal clears
- * when someone else's stream closes, while a log unavailable for a minute will
- * not come back without the router owner.
- */
-export const LOG_RECONNECT = {
-  FirstDelay: MS_IN_SECOND,
-  MaxDelay: RECONNECT_MAX_SECONDS * MS_IN_SECOND,
-  Attempts: 6,
-} as const;
-
-function reconnectDelay(failures: number): number {
-  return Math.min(LOG_RECONNECT.FirstDelay * RECONNECT_GROWTH ** failures, LOG_RECONNECT.MaxDelay);
-}
-
 /**
  * The log stream is open while the screen that calls it is mounted. Unlike
  * `/api/events`, the daemon has its own stream for every reader, a `logread -f`
@@ -94,7 +73,7 @@ function reconnectDelay(failures: number): number {
  *
  * The level goes into the stream address: a level change closes the stream and
  * opens a new one. `EventSource` reconnects on a break by itself; a stream the
- * daemon refused is reopened by the hook per `LOG_RECONNECT`, and after
+ * daemon refused is reopened by the hook per `STREAM_RECONNECT`, and after
  * exhausting the attempts it waits for
  * `reconnect`.
  *
@@ -135,7 +114,7 @@ export function useLogStream(level: LogLevel): { reconnect: () => void } {
 
         disconnect();
 
-        if (failures >= LOG_RECONNECT.Attempts) {
+        if (failures >= STREAM_RECONNECT.Attempts) {
           store.setStatus(LOG_STREAM_STATUS.Closed);
 
           return;

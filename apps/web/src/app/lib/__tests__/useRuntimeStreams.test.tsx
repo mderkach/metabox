@@ -7,20 +7,26 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AUTH_ENDPOINT } from '@entities/Auth';
 import { DAEMON_ENDPOINT, RuntimeStore } from '@entities/Daemon';
+import { STREAM_RECONNECT } from '@shared/api';
 
 import { AuthGate } from '../../ui/AuthGate';
 import { useRuntimeStreams } from '../useRuntimeStreams';
+
+// Captured before the fake clock replaces it: msw responses arrive on the real one.
+const realSetTimeout = globalThis.setTimeout;
 
 /** jsdom has no `EventSource`: checks what the shell does when a stream opens and closes. */
 class FakeEventSource {
   static readonly CLOSED = 2;
   static last: FakeEventSource | null = null;
+  static opened = 0;
 
   readyState = 0;
   private readonly listeners = new Map<string, () => void>();
 
   constructor() {
     FakeEventSource.last = this;
+    FakeEventSource.opened += 1;
   }
 
   addEventListener(type: string, handler: () => void): void {
@@ -64,10 +70,12 @@ function wrapper({ children }: { children: ReactNode }) {
 describe('useRuntimeStreams', () => {
   beforeEach(() => {
     vi.stubGlobal('EventSource', FakeEventSource);
+    FakeEventSource.opened = 0;
     RuntimeStore.getState().reset();
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
   });
 
@@ -130,5 +138,100 @@ describe('useRuntimeStreams', () => {
     });
 
     expect(fetchQuery).not.toHaveBeenCalled();
+  });
+
+  describe('when the browser closes the stream', () => {
+    function mountOpened(status: 401 | 503) {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      server.use(
+        http.get(DAEMON_ENDPOINT.status(), () =>
+          HttpResponse.json(
+            status === 401
+              ? { code: 'unauthorized', message: 'sign-in required' }
+              : { code: 'unavailable', message: 'down' },
+            { status }
+          )
+        )
+      );
+
+      const view = renderHook(useRuntimeStreams, { wrapper });
+
+      act(() => {
+        RuntimeStore.getState().addReader();
+      });
+
+      return view;
+    }
+
+    async function settleProbe() {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+        await new Promise((resolve) => {
+          realSetTimeout(resolve, 0);
+        });
+      });
+    }
+
+    it('reopens it after the backoff when the probe is not a 401', async () => {
+      mountOpened(503);
+
+      act(() => {
+        FakeEventSource.last?.refuse();
+      });
+      await settleProbe();
+
+      expect(FakeEventSource.opened).toBe(1);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(STREAM_RECONNECT.FirstDelay);
+      });
+
+      expect(FakeEventSource.opened).toBe(2);
+
+      act(() => {
+        FakeEventSource.last?.refuse();
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(STREAM_RECONNECT.FirstDelay);
+      });
+
+      expect(FakeEventSource.opened).toBe(2);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(STREAM_RECONNECT.FirstDelay);
+      });
+
+      expect(FakeEventSource.opened).toBe(3);
+    });
+
+    it('does not reopen it after a 401', async () => {
+      mountOpened(401);
+
+      act(() => {
+        FakeEventSource.last?.refuse();
+      });
+      await settleProbe();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(STREAM_RECONNECT.MaxDelay);
+      });
+
+      expect(FakeEventSource.opened).toBe(1);
+    });
+
+    it('stops reconnecting on unmount', async () => {
+      const view = mountOpened(503);
+
+      act(() => {
+        FakeEventSource.last?.refuse();
+      });
+      await settleProbe();
+
+      view.unmount();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(STREAM_RECONNECT.MaxDelay);
+      });
+
+      expect(FakeEventSource.opened).toBe(1);
+    });
   });
 });

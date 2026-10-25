@@ -14,7 +14,7 @@ import {
   RuntimeState,
   RuntimeStore,
 } from '@entities/Daemon';
-import { watchSequence } from '@shared/api';
+import { isSessionLost, reconnectDelay, watchSequence } from '@shared/api';
 
 /**
  * The single runtime stream lives in the shell, not on screens: a screen
@@ -39,8 +39,6 @@ export function useRuntimeStreams(): void {
         return undefined;
       }
 
-      const source = new EventSource(DAEMON_ENDPOINT.events());
-
       // A reconnect and a gap in sequence numbers mean the same: some events
       // missed the panel. Connections catch up with the next snapshot, while
       // the service state and the daemon status live in the cache, so they are
@@ -49,11 +47,18 @@ export function useRuntimeStreams(): void {
         void queryClient.invalidateQueries({ queryKey: DAEMON_QUERY.all });
       }
 
+      let source: EventSource | null = null;
+      let unsubscribe: (() => void)[] = [];
+      let retry: ReturnType<typeof setTimeout> | null = null;
+      let failures = 0;
+      let stopped = false;
       // The first open does not count as a reconnect: the data was just
       // requested, and invalidation would go to the daemon for nothing.
       let opened = false;
 
       function onStreamOpen() {
+        failures = 0;
+
         if (opened) {
           refetchRuntime();
         }
@@ -61,44 +66,81 @@ export function useRuntimeStreams(): void {
         opened = true;
       }
 
-      source.addEventListener('open', onStreamOpen);
-
       // The browser hides the status of a refused stream, and after a daemon restart or a
       // logout elsewhere the refusal is a 401. A status request tells it at once: its 401
-      // reaches the session watch, which shows the login screen without waiting for a poll.
+      // reaches the session watch, which shows the login screen without waiting for a poll,
+      // and any other failure reaches the banner. A closed source is never reopened by the
+      // browser (a 502/503 from a proxy, a refused connection, the reader limit), so the
+      // hook reopens it per `STREAM_RECONNECT`; a lost session is not retried.
       function onStreamError() {
-        if (source.readyState !== EventSource.CLOSED) {
+        if (source?.readyState !== EventSource.CLOSED) {
           return;
         }
 
-        void queryClient.fetchQuery({ ...getDaemonStatusOptions(), staleTime: 0 }).catch(function ignoreProbeFailure() {
-          // The failure is already in the query cache, where the session watch and the banner read it.
+        disconnect();
+        retry ??= setTimeout(connect, reconnectDelay(failures));
+        failures += 1;
+
+        queryClient.fetchQuery({ ...getDaemonStatusOptions(), staleTime: 0 }).catch(function stopOnLostSession(
+          error: unknown
+        ) {
+          // Any other failure is already in the query cache, where the banner reads it.
+          if (isSessionLost(error)) {
+            stopped = true;
+            cancelRetry();
+          }
         });
       }
 
-      source.addEventListener('error', onStreamError);
+      function connect() {
+        retry = null;
 
-      const unsubscribe = [
-        watchSequence(source, refetchRuntime),
-        listenTraffic(source),
-        listenMemory(source),
-        listenSystem(source),
-        listenConnections(source),
-        // The service state in the stream and in the endpoint is the same body,
-        // so the event is put into the query cache: the service card reads it
-        // with its own hook and does not know whether it came from the stream
-        // or from a request.
-        listenService(source, (state) => {
-          queryClient.setQueryData(getServiceStateOptions().queryKey, state);
-        }),
-      ];
+        if (stopped) {
+          return;
+        }
 
-      return function closeRuntimeStream() {
+        source = new EventSource(DAEMON_ENDPOINT.events());
+        source.addEventListener('open', onStreamOpen);
+        source.addEventListener('error', onStreamError);
+        unsubscribe = [
+          watchSequence(source, refetchRuntime),
+          listenTraffic(source),
+          listenMemory(source),
+          listenSystem(source),
+          listenConnections(source),
+          // The service state in the stream and in the endpoint is the same body,
+          // so the event is put into the query cache: the service card reads it
+          // with its own hook and does not know whether it came from the stream
+          // or from a request.
+          listenService(source, (state) => {
+            queryClient.setQueryData(getServiceStateOptions().queryKey, state);
+          }),
+        ];
+      }
+
+      function disconnect() {
         for (const off of unsubscribe) off();
 
-        source.removeEventListener('open', onStreamOpen);
-        source.removeEventListener('error', onStreamError);
-        source.close();
+        unsubscribe = [];
+        source?.removeEventListener('open', onStreamOpen);
+        source?.removeEventListener('error', onStreamError);
+        source?.close();
+        source = null;
+      }
+
+      function cancelRetry() {
+        if (retry !== null) {
+          clearTimeout(retry);
+          retry = null;
+        }
+      }
+
+      connect();
+
+      return function closeRuntimeStream() {
+        stopped = true;
+        cancelRetry();
+        disconnect();
         RuntimeStore.getState().closeStream();
       };
     },
