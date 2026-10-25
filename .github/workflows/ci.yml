@@ -7,8 +7,9 @@ on:
     branches: [main]
   pull_request:
 
-# A new push to a PR cancels the run still checking its previous commit; on main every
-# merge commit keeps its verdict.
+# A new push to a PR cancels the run still checking its previous commit. On main a run in
+# progress is never cancelled, but a newer push replaces a pending one in the group, so a
+# merge commit may end without a verdict; the release workflow checks for one.
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -200,11 +201,22 @@ jobs:
         timeout-minutes: 25
         run: |
           set -u
-          for i in $(seq 1 400); do
-            case $((i % 2)) in 0) set -- "" "" ;; 1) set -- sing-box started ;; esac
-            if timeout 30 docker exec metabox-target-1 /usr/bin/dataplane-check log-has "$@" >/dev/null 2>&1; then continue; fi
+          in_target() { timeout 30 docker exec metabox-target-1 /usr/bin/dataplane-check "$@"; }
+          client() {
+            docker run --rm --network metabox_lan --ip 192.168.210.40 --cap-add NET_ADMIN alpine:3 \
+              sh -c "ip route replace default via 192.168.210.2 && $1" >/dev/null 2>&1 || true
+          }
+          for i in $(seq 1 150); do
+            # The sequence of sections 2 and 5: traffic through sing-box, two counters, then the log.
+            case $((i % 2)) in
+              0) client "nc -w 3 1.1.1.1 80 </dev/null"; set -- redirect-in ;;
+              1) client "echo metabox | nc -u -w 1 1.1.1.1 9999"; set -- tproxy-in ;;
+            esac
+            in_target counter metabox_redirect 'redirect to' >/dev/null
+            in_target counter metabox_mangle_prerouting 'tproxy ip to' >/dev/null
+            if in_target log-has "$1" 192.168.210.40 >/dev/null 2>&1; then continue; fi
             rc=$?
-            echo "iteration $i (log-has '$1' '$2') exit $rc"
+            echo "iteration $i (log-has $1) exit $rc"
             [ "$rc" -eq 124 ] || continue
             echo "== host processes"
             ps -eo pid,ppid,stat,wchan:32,etime,cmd | grep -E 'docker|containerd|runc' | grep -v grep
@@ -222,12 +234,11 @@ jobs:
                 esac
               done
               echo "-- ubus call log read lines=1"; ubus -t 5 call log read "{\"lines\":1}" | head -c 300; echo
-              echo "-- logread -l 1"; timeout 5 logread -l 1 2>&1 || echo "no timeout in busybox: skipped"
             ' || true
             docker version
             exit 1
           done
-          echo "no hang in 400 iterations"
+          echo "no hang in 150 iterations"
 
       # Needs nft_tproxy and the nat modules on the runner kernel, which the target container shares.
       - name: Dataplane check
