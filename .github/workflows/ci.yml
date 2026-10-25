@@ -214,8 +214,9 @@ jobs:
             esac
             in_target counter metabox_redirect 'redirect to' >/dev/null
             in_target counter metabox_mangle_prerouting 'tproxy ip to' >/dev/null
-            if in_target log-has "$1" 192.168.210.40 >/dev/null 2>&1; then continue; fi
-            rc=$?
+            rc=0
+            in_target log-has "$1" 192.168.210.40 >/dev/null 2>&1 || rc=$?
+            [ "$rc" -ne 0 ] || continue
             echo "iteration $i (log-has $1) exit $rc"
             [ "$rc" -eq 124 ] || continue
             echo "== host processes"

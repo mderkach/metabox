@@ -44,7 +44,8 @@ in_target() {
 	watchdog=$!
 	rc=0
 	wait "$exec_pid" || rc=$?
-	kill "$watchdog" 2>/dev/null
+	# The watchdog is already gone when it was the one that fired.
+	kill "$watchdog" 2>/dev/null || true
 	wait "$watchdog" 2>/dev/null || true
 	if [ "$rc" -ne 0 ] && [ $(($(date +%s) - started)) -ge "$STEP_TIMEOUT" ]; then
 		echo "  HUNG    dataplane-check $* did not finish within ${STEP_TIMEOUT}s" >&2
