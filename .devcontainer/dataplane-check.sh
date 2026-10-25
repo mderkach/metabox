@@ -25,7 +25,7 @@ docker inspect "$TARGET" >/dev/null 2>&1 || {
 
 # Deadline of one step inside the test bench, in seconds. docker exec has no deadline of
 # its own, and a step that never returned held a CI run for hours (issue #122).
-STEP_TIMEOUT=${DATAPLANE_STEP_TIMEOUT:-60}
+STEP_TIMEOUT=60
 
 failed=0
 
@@ -42,11 +42,11 @@ in_target() {
 	exec_pid=$!
 	(sleep "$STEP_TIMEOUT" && kill "$exec_pid") >/dev/null 2>&1 &
 	watchdog=$!
-	wait "$exec_pid"
-	rc=$?
+	rc=0
+	wait "$exec_pid" || rc=$?
 	kill "$watchdog" 2>/dev/null
 	wait "$watchdog" 2>/dev/null || true
-	if [ $(($(date +%s) - started)) -ge "$STEP_TIMEOUT" ]; then
+	if [ "$rc" -ne 0 ] && [ $(($(date +%s) - started)) -ge "$STEP_TIMEOUT" ]; then
 		echo "  HUNG    dataplane-check $* did not finish within ${STEP_TIMEOUT}s" >&2
 		docker exec "$TARGET" sh -c '
 			for p in /proc/[0-9]*; do
