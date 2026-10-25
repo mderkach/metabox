@@ -194,6 +194,41 @@ jobs:
         timeout-minutes: 5
         run: make reach-check
 
+      # Temporary probe for issue #122: loops the step that hung in runs 40116156272,
+      # 40134718809 and 40181241418 and dumps what is still alive when it hangs.
+      - name: Dataplane hang probe
+        timeout-minutes: 25
+        run: |
+          set -u
+          for i in $(seq 1 400); do
+            case $((i % 2)) in 0) set -- "" "" ;; 1) set -- sing-box started ;; esac
+            if timeout 30 docker exec metabox-target-1 /usr/bin/dataplane-check log-has "$@" >/dev/null 2>&1; then continue; fi
+            rc=$?
+            echo "iteration $i (log-has '$1' '$2') exit $rc"
+            [ "$rc" -eq 124 ] || continue
+            echo "== host processes"
+            ps -eo pid,ppid,stat,wchan:32,etime,cmd | grep -E 'docker|containerd|runc' | grep -v grep
+            echo "== container processes"
+            docker exec metabox-target-1 sh -c '
+              for p in /proc/[0-9]*; do
+                [ "${p#/proc/}" = "$$" ] && continue
+                cmd=$(tr "\0" " " < "$p/cmdline" 2>/dev/null) || continue
+                case "$cmd" in */usr/bin/dataplane-check\ *|logread*|grep*|*/logd\ *|*/ubusd*)
+                  echo "-- pid ${p#/proc/} wchan=$(cat $p/wchan) state=$(awk "/^State/{print \$2}" $p/status) ppid=$(awk "/^PPid/{print \$2}" $p/status): $cmd"
+                  ls -l $p/fd 2>/dev/null | awk "{print \"   fd\", \$9, \$10, \$11}"
+                  for f in $p/fdinfo/*; do echo "   $(basename $f): $(tr "\n" " " < $f)"; done
+                  sed "s/^/   stack /" $p/stack 2>/dev/null
+                ;;
+                esac
+              done
+              echo "-- ubus call log read lines=1"; ubus -t 5 call log read "{\"lines\":1}" | head -c 300; echo
+              echo "-- logread -l 1"; timeout 5 logread -l 1 2>&1 || echo "no timeout in busybox: skipped"
+            ' || true
+            docker version
+            exit 1
+          done
+          echo "no hang in 400 iterations"
+
       # Needs nft_tproxy and the nat modules on the runner kernel, which the target container shares.
       - name: Dataplane check
         timeout-minutes: 10
