@@ -35,6 +35,9 @@ jobs:
             tools/schemagen/go.mod
             tools/schemagen/go.sum
 
+      - name: Release publication tests
+        run: python3 .github/tests/test_release_publish.py
+
       # govet is part of the golangci-lint set, a separate step is not needed. The generator
       # is checked with the fork's tags, which `go vet` did not do here.
       - name: Go lint
@@ -193,6 +196,12 @@ jobs:
       - name: Apply cycle
         timeout-minutes: 5
         run: docker compose -f .devcontainer/docker-compose.yml exec -T target sh /usr/bin/apply-cycle-check
+
+      - name: HTTP Apply integration
+        timeout-minutes: 6
+        env:
+          METABOX_EPHEMERAL_BENCH: '1'
+        run: cd apps/metaboxd && go test -tags integration -run TestApplyHTTPOnEphemeralBench -count=1 -v -timeout 5m .
 
       - name: Reach check
         timeout-minutes: 5

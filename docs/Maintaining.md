@@ -24,6 +24,12 @@ The [`release`](../.github/workflows/release.yml) workflow then:
 - builds the package for `aarch64_cortex-a53`, signed with the `APK_SIGN_KEY` secret, and checks the signature against `keys/metabox-release.pem`;
 - publishes a GitHub Release with the package, its sha256 and the public key. A version with a pre-release suffix becomes a prerelease.
 
+Publication of one tag runs one at a time. Before creating the release, the workflow saves the four verified public files as one immutable Actions artifact, named by the tag and the full commit, with a SHA256 manifest bound to the repository and the run ([ADR-0068](./adr/ADR-0068-persist-the-verified-release-bundle-before-publication.md)). The signing key is not in the artifact. The artifact is kept for 90 days, within the repository policy.
+
+If publication fails, re-run the original workflow run; do not start a new run for the same tag. The draft release notes link to that run. A re-run restores the saved files, skips the build and signing, and checks the package signature again. Publication starts with a draft on the tagged commit, uploads only the missing assets, downloads and compares all four files, then publishes the draft; the package repository skips drafts. The workflow stops without replacing assets when the original artifact is missing or expired, the commit differs, an asset is unexpected or differs, or the release is already published.
+
+Publication regression tests, including a retry from a clean workspace, mock GitHub responses: `python3 .github/tests/test_release_publish.py`.
+
 The [`apk repository`](../.github/workflows/apk-repo.yml) workflow then rebuilds the package repository from every release and deploys it to GitHub Pages. It also copies `install.sh` from the newest release to `https://mderkach.github.io/metabox/install.sh`. If a deploy failed, run this workflow by hand from the Actions tab; no new tag is needed.
 
 The repository has two channels. `testing` has every release. `stable` has only versions without a pre-release suffix.

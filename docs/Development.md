@@ -105,6 +105,12 @@ Bench variables are set in `.devcontainer/.env`. The file is not committed. Both
 
 `PKG_ARCH` and `APK_SIGN_KEY` are read only by `make`. The release sets them; the bench builds without them.
 
+### HTTP Apply test on the CI bench
+
+The CI integration job also runs `go test -tags integration -run TestApplyHTTPOnEphemeralBench -count=1 -v -timeout 5m .` from `apps/metaboxd` against its disposable target. The test checks HTTP Apply, confirmation, rejection without a write, timeout rollback, daemon restart and an interrupted write.
+
+It needs `CI=true` and `METABOX_EPHEMERAL_BENCH=1`: it changes the config and restarts the daemon, so do not enable it on your own bench. `make apply-check` stays the independent environment check. Container tests do not prove recovery from a power loss or directory `fsync` on a router's overlayfs ([ADR-0067](./adr/ADR-0067-test-http-apply-on-the-disposable-ci-bench.md)).
+
 ## Package for the router
 
 `make package` builds the package with the same Docker stage that installs the panel on the bench, so the two cannot differ.
