@@ -75,6 +75,6 @@ Go through it before handing in a change to the Go part. The checklist items are
 - [ ] New behaviour is covered by a test, and so is failure, not only the success path.
 - [ ] No assertion libraries were added.
 - [ ] File tests work in `t.TempDir()`.
-- [ ] Waiting for time is done through `testing/synctest` or a replaceable clock, not `time.Sleep`.
-- [ ] A Go test that needs a live environment (procd, the sing-box binary) is tagged `integration` and does not break `make test` on the host. There are no such tests yet: the live environment is checked by the test bench's `apply-cycle-check`.
+- [ ] Unit tests wait through `testing/synctest` or a replaceable clock; live integration tests use bounded polling of the real environment as described in [Testing](./Testing.md).
+- [ ] A Go test that needs a live environment (procd, the sing-box binary) is tagged `integration` and does not break `make test` on the host. The HTTP Apply suite runs only on the disposable CI bench; the independent environment check stays in `apply-cycle-check`.
 - [ ] `make test` was run, the result is quoted as is.
