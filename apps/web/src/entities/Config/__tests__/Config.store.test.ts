@@ -1,6 +1,8 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { fingerprint } from '@shared/lib/fingerprint';
+
 import { parseConfig } from '../api/Config.query';
 import { findValue, readRules } from '../model/Config.model';
 import { ConfigDocumentState, useConfigLeaveGuard } from '../model/Config.store';
@@ -475,6 +477,11 @@ async function reloadStore() {
   return reloaded.ConfigDocumentState;
 }
 
+/** The one record the store keeps in the browser. */
+function storedRecord(): string {
+  return globalThis.localStorage.getItem(globalThis.localStorage.key(0) ?? '') ?? '';
+}
+
 function leavePage(): Event {
   const event = new Event('beforeunload', { cancelable: true });
 
@@ -551,6 +558,54 @@ describe('ConfigDocumentState: draft in the browser', () => {
     state().load(CHANGED);
 
     expect(state().isStale()).toBe(true);
+  });
+
+  it('keeps a fingerprint of the base in the browser, not the config text', () => {
+    state().load(TEXT);
+    state().edit(['route', 'final'], 'direct');
+
+    const record = storedRecord();
+    const parsed: unknown = JSON.parse(record);
+
+    expect(record).not.toContain(JSON.stringify(TEXT));
+    expect(parsed).toMatchObject({ base: fingerprint(TEXT) });
+  });
+
+  it('a record written with the config text as its base is kept as a draft and rewritten without the text', async () => {
+    state().load(TEXT);
+    state().edit(['route', 'final'], 'direct');
+
+    const key = globalThis.localStorage.key(0) ?? '';
+    const draft = state().draft;
+
+    globalThis.localStorage.setItem(key, JSON.stringify({ base: TEXT, draft, lists: {} }));
+
+    const reloaded = (await reloadStore()).getState();
+    const rewritten = storedRecord();
+    const parsed: unknown = JSON.parse(rewritten);
+
+    expect(reloaded.draft).toBe(draft);
+    expect(rewritten).not.toContain(JSON.stringify(TEXT));
+    expect(parsed).toMatchObject({ base: fingerprint(TEXT), version: 2 });
+
+    reloaded.load(CHANGED);
+
+    expect(reloaded.isStale()).toBe(true);
+
+    reloaded.load(TEXT);
+
+    expect(reloaded.isStale()).toBe(false);
+  });
+
+  it('a record of a later version is read as no draft, not as a text base', async () => {
+    state().load(TEXT);
+    state().edit(['route', 'final'], 'direct');
+
+    const key = globalThis.localStorage.key(0) ?? '';
+
+    globalThis.localStorage.setItem(key, JSON.stringify({ version: 3, base: 'x', draft: '{}', lists: {} }));
+
+    expect((await reloadStore()).getState().draft).toBeNull();
   });
 
   it('a foreign storage record is read as no draft', async () => {
