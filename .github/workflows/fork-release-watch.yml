@@ -10,7 +10,7 @@ on:
         type: boolean
         default: false
 
-# One bump at a time: the branch is rewritten on every run.
+# One bump at a time: an existing branch is never overwritten.
 concurrency:
   group: fork-release-watch
   cancel-in-progress: false
@@ -23,8 +23,10 @@ env:
   FORK: shtorm-7/sing-box-extended
   BRANCH: build/bump-sing-box-extended
   # A PR opened with the default token starts no workflows, so the required checks never run.
-  # FORK_BUMP_TOKEN is a token that may push and open PRs; without it the default one is used.
+  # The default token can compare versions; mutations require FORK_BUMP_TOKEN.
   GH_TOKEN: ${{ secrets.FORK_BUMP_TOKEN || github.token }}
+  FORK_BUMP_TOKEN_AVAILABLE: ${{ secrets.FORK_BUMP_TOKEN != '' }}
+  DRY_RUN: ${{ inputs.dry_run }}
 
 jobs:
   watch:
@@ -44,23 +46,7 @@ jobs:
 
       - name: Compare the pin with the latest release
         id: versions
-        run: |
-          pinned=$(sed -n "s|^replace github.com/sagernet/sing-box => github.com/$FORK \(v[^ ]*\)\$|\1|p" tools/schemagen/go.mod)
-          [ -n "$pinned" ] || { echo "::error::no replace of github.com/sagernet/sing-box in tools/schemagen/go.mod"; exit 1; }
-          latest=$(gh api "repos/$FORK/releases/latest" --jq .tag_name)
-          echo "pinned: $pinned, latest: $latest"
-          if [ "$pinned" = "$latest" ]; then
-            echo "no change: the pin is the latest release"
-          elif [ "$(printf '%s\n' "$pinned" "$latest" | sort -V | tail -n 1)" = "$pinned" ]; then
-            echo "no change: the pin is newer than the latest release"
-          elif branch=$(gh api "repos/$GITHUB_REPOSITORY/contents/tools/schemagen/go.mod?ref=$BRANCH" --jq .content 2> /dev/null | base64 -d) \
-              && grep -q "sing-box-extended $latest\$" <<< "$branch"; then
-            echo "no change: branch $BRANCH already proposes $latest"
-          else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            echo "pinned=$pinned" >> "$GITHUB_OUTPUT"
-            echo "latest=$latest" >> "$GITHUB_OUTPUT"
-          fi
+        run: bash .github/scripts/fork-release-check.sh
 
       # Go does not inherit replace from dependencies, so the pin and the fork's own replace
       # directives move together: the block is rebuilt from the fork's go.mod at the new tag.
@@ -125,12 +111,13 @@ jobs:
           title="build(schema): bump sing-box-extended to $LATEST"
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git switch -C "$BRANCH"
+          git switch -c "$BRANCH"
           git add tools/schemagen apps/web/src/shared/api/generated.ts apps/metaboxd/internal/mcp/fields.generated.go
           git commit -m "$title"
-          git push --force origin "$BRANCH"
+          git push origin "$BRANCH"
 
-          if [ -n "$(gh pr list --head "$BRANCH" --state open --json number --jq '.[].number')" ]; then
+          pr=$(gh pr list --repo "$GITHUB_REPOSITORY" --base main --head "$BRANCH" --state open --json number --jq '.[].number')
+          if [ -n "$pr" ]; then
             gh pr edit "$BRANCH" --title "$title" --body-file "$RUNNER_TEMP/body.md"
           else
             gh pr create --base main --head "$BRANCH" --title "$title" --body-file "$RUNNER_TEMP/body.md"
