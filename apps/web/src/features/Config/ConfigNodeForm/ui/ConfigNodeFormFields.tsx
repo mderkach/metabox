@@ -75,6 +75,7 @@ export interface NodeFieldProps {
 const ERROR_KEY: Readonly<Record<string, ParseKeys<typeof NS> | undefined>> = {
   invalid_format: 'error.duration',
   too_small: 'error.tooSmall',
+  too_big: 'error.tooBig',
   invalid_type: 'error.type',
   [NODE_OVERRIDE_ERROR.Required]: 'error.required',
   [NODE_OVERRIDE_ERROR.RealityPublicKey]: 'error.realityPublicKey',

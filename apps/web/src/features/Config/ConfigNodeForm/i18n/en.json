@@ -22,6 +22,7 @@
   "error": {
     "duration": "Duration like 10s, 1m30s, 500ms",
     "tooSmall": "Must be 0 or more",
+    "tooBig": "Above the field's maximum",
     "type": "Value of the wrong type",
     "invalid": "Value does not match the schema",
     "parse": "JSON not parsed: {{reason}}",

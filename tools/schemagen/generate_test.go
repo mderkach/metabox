@@ -41,6 +41,25 @@ func TestGenerate(t *testing.T) {
 	}
 }
 
+// The panel bundles the committed schema: a generator change without `make schema`
+// would leave the form on the old one, and the lefthook rule only checks that a
+// generator commit touches an artifact, not that the artifact matches.
+func TestSchemaIsCommitted(t *testing.T) {
+	out, err := generate()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	committed, err := os.ReadFile("../../apps/web/src/shared/api/generated.ts")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if out != string(committed) {
+		t.Error("generated.ts differs from the generator output, run make schema")
+	}
+}
+
 // Fork field descriptions reach the schema: hints are seen by both the developer and
 // the auto-renderer of uncovered nodes (Form&Validation).
 func TestGenerateCarriesDocs(t *testing.T) {

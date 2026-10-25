@@ -317,6 +317,7 @@ func (g *fieldGraph) describe(s *schema, seen map[string]bool) ([]string, []stri
 var (
 	enumPattern    = regexp.MustCompile(`^z\.enum\(\[(.*)\]\)$`)
 	literalPattern = regexp.MustCompile(`^z\.literal\((.*)\)$`)
+	intPattern     = regexp.MustCompile(`^z\.int\(\)(?:\.nonnegative\(\)|\.min\((-?\d+)\))\.max\((\d+)\)$`)
 )
 
 // describeScalar reads back the Zod expressions the walker prints for leaves.
@@ -336,6 +337,14 @@ func describeScalar(expr string) (string, []string, bool) {
 		return "any JSON", nil, true
 	case durationSchema().expr:
 		return "duration string (30s, 1h30m, 1d)", nil, true
+	}
+	// A bounded integer as intSchema prints it: the range the field accepts.
+	if m := intPattern.FindStringSubmatch(expr); m != nil {
+		low := m[1]
+		if low == "" {
+			low = "0"
+		}
+		return "integer " + low + ".." + m[2], nil, true
 	}
 	if m := enumPattern.FindStringSubmatch(expr); m != nil {
 		var values []string
