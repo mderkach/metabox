@@ -9,7 +9,7 @@
 
 The panel on the router needs a server side: the browser cannot write `config.json` by itself, call `sing-box check`, restart the service through procd or roll the config back. It has to be decided what this part is and how the interface reaches the device together with it.
 
-The owner's answer in interview `metabox-di-001`, Round 3: "Own Go daemon with an embedded UI." The architectural model is [daniellavrushin/b4](https://github.com/daniellavrushin/b4): a Go daemon with an embedded UI and a single JSON config (appendix B of the PRD). LuCI integration was deferred in Round 0.
+The owner's answer in interview `metabox-di-001`, Round 3: "Own Go daemon with an embedded UI." This is a pattern common among router panels: a Go daemon with an embedded UI and a single JSON config. LuCI integration was deferred in Round 0.
 
 In scope: what the panel runtime on the device consists of and what it does. Out of scope: the way static files are embedded ([ADR-0003](./ADR-0003-embed-the-spa-from-a-staging-directory.md)), the apply protocol ([ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md)), the package format ([ADR-0011](./ADR-0011-ship-the-daemon-as-an-apk-package.md)).
 
@@ -74,5 +74,4 @@ Not applicable: the decision has been in effect since the start of the project a
 
 - [`../PRD.md`](../PRD.md): AC-17, NFR-1, SM-3, sections 9 and 11, appendix B, section A.3 (superseded by this ADR);
 - [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md), [ADR-0003](./ADR-0003-embed-the-spa-from-a-staging-directory.md), [ADR-0006](./ADR-0006-read-runtime-from-clash-api-and-optional-grpc.md), [ADR-0008](./ADR-0008-store-config-versions-as-numbered-copies.md), [ADR-0009](./ADR-0009-read-service-state-from-procd.md), [ADR-0011](./ADR-0011-ship-the-daemon-as-an-apk-package.md), [ADR-0033](./ADR-0033-keep-custom-rule-lists-in-the-singbox-config.md);
-- [`../../apps/metaboxd`](../../apps/metaboxd): the implementation;
-- [daniellavrushin/b4](https://github.com/daniellavrushin/b4): the architectural model.
+- [`../../apps/metaboxd`](../../apps/metaboxd): the implementation.

@@ -198,16 +198,15 @@ evicted.
 ## What we do not do
 
 - Pagination: see above.
-- A display mode as a user setting (`Auto / Table / Cards`, as in metacubexd):
-  the screen chooses the width, not the person. The setting will appear only if
-  a scenario turns up where the automatic choice gets in the way.
+- A display mode as a user setting (`Auto / Table / Cards`, common among router
+  panels): the screen chooses the width, not the person. The setting will appear
+  only if a scenario turns up where the automatic choice gets in the way.
 - Sorting and filtering by a field that is not in the row model: a column does
   not invent data that the source did not provide.
 
 ## Sources
 
-A competitor review of b4, Re:HomeProxy and metacubexd and practices for working
-with large tables:
+A review of other router panels and practices for working with large tables:
 
 - [Data table UI design reference guide](https://www.setproduct.com/blog/data-table-ui-design)
 - [Best practices for creating user-friendly data grids](https://www.telerik.com/blogs/best-practices-creating-user-friendly-data-grids)

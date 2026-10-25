@@ -73,7 +73,13 @@ Working notes made during tasks live in `.omc/plans/*`. These files are **not in
 
 ## Commits
 
-Message format, scopes, branches, PRs and additional requirements for agents: [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+Message format, scopes, branches and PRs: [`CONTRIBUTING.md`](./CONTRIBUTING.md). An agent writes the same one-line message as a person, and in addition:
+
+- Commits and pushes only on explicit request. Without it, changes stay in the working tree, and the response lists what was changed.
+- Works on a branch: if the current one is `main`, creates a branch first.
+- Before committing, runs the checks of the affected part and quotes the result as is.
+- Keeps one topic per commit. If the diff is mixed, proposes a split and waits for a decision.
+- Does not rewrite history: `amend`, `rebase` and force-push only on direct request.
 
 ## General
 
@@ -96,7 +102,7 @@ Message format, scopes, branches, PRs and additional requirements for agents: [`
 - A new dependency only when there is no way around it; justify it.
 - Dependency versions are pinned exactly, without `^` and `~`: a range gives different trees on a developer machine and in CI. `saveExact: true` in the root `pnpm-workspace.yaml` enforces this; a range typed by hand is caught by `pnpm install --frozen-lockfile` in CI, because the lockfile stores the specifier and diverges from the manifest. A version update is a separate, deliberate change.
 - `apps/web/src/shared/api/generated.ts` is not edited by hand; the generator is. Writing to it is blocked in `.claude/settings.json`.
-- The repository language is English: code, comments, commit messages, documentation, ADRs, the PRD. README, CONTRIBUTING and docs/Development have Russian copies (`README.ru.md`, `CONTRIBUTING.ru.md`, `docs/Development.ru.md`), updated in the same commit as the English file. Text shown to users lives in the i18n dictionaries, in English and Russian.
+- The repository language is English: code, comments, commit messages, documentation, ADRs, the PRD. README, CONTRIBUTING, docs/Development and docs/Maintaining have Russian copies (`README.ru.md`, `CONTRIBUTING.ru.md`, `docs/Development.ru.md`, `docs/Maintaining.ru.md`), updated in the same commit as the English file. Text shown to users lives in the i18n dictionaries, in English and Russian.
 - Personal settings that are not shared through git go into `AGENTS.local.md` (response formats, your own triggers, aliases). The file is ignored in `.gitignore` by the `*.local.*` pattern.
 
 ## Context hygiene

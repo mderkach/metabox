@@ -97,6 +97,6 @@ Packages already installed by file are not affected: the repository publishes th
 - [ADR-0050](./ADR-0050-version-releases-by-semver-and-derive-the-apk-version.md): apk version order of pre-releases;
 - [ADR-0011](./ADR-0011-ship-the-daemon-as-an-apk-package.md): delivery as an apk package;
 - [`.github/workflows/apk-repo.yml`](../../.github/workflows/apk-repo.yml), [`.github/workflows/release.yml`](../../.github/workflows/release.yml);
-- [`docs/Development.md`](../Development.md), sections "Release" and "Installing a release on the router";
+- [`docs/Maintaining.md`](../Maintaining.md), section "Release"; installing a release: [`README.md`](../../README.md);
 - [apk-tools](https://gitlab.alpinelinux.org/alpine/apk-tools): `apk mkndx`, `apk verify`, `apk-repositories(5)`;
 - [GitHub Pages limits](https://docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits).

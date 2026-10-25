@@ -8,7 +8,7 @@
 
 An agent (Claude Code or another MCP client) can work with the panel today only through the REST API or a browser. The REST contracts are written for the panel: the agent has to guess the endpoints and the shapes of the answers, and with a panel password set (AC-69) it would need the browser session cookie. The owner wants an MCP endpoint in `metaboxd`, read-only in the first phase, as the scope of `0.1.0-rc.4`.
 
-Reference implementation: the MCP server inside the b4 daemon, files `mcp*.go` in [`src/http/handler`](https://github.com/DanielLavrushin/b4/tree/main/src/http/handler) of DanielLavrushin/b4. It uses the official `github.com/modelcontextprotocol/go-sdk`, the streamable HTTP transport without sessions on the same mux as its REST API, a Bearer token, a server built per permission set and a `recover` with a log line around every tool.
+MCP servers already embedded in router daemons follow a common pattern: the official `github.com/modelcontextprotocol/go-sdk`, the streamable HTTP transport without sessions on the same mux as the REST API, a Bearer token, a server built per permission set and a `recover` with a log line around every tool.
 
 Facts the decision depends on:
 
@@ -133,5 +133,4 @@ Backward compatible: MCP is off by default, the panel API and its middleware do 
 - [ADR-0052](./ADR-0052-protect-the-panel-with-an-optional-password-and-a-cookie-session.md): the optional panel password and the daemon service directory;
 - [`../../apps/metaboxd/internal/httpapi/middleware.go`](../../apps/metaboxd/internal/httpapi/middleware.go): `checkHost`, `checkOrigin`, `originAllowed`;
 - [`../../apps/metaboxd/AGENTS.md`](../../apps/metaboxd/AGENTS.md): a new dependency needs an ADR;
-- [modelcontextprotocol/go-sdk](https://github.com/modelcontextprotocol/go-sdk): `StreamableHTTPOptions.Stateless`, `ToolAnnotations`;
-- [DanielLavrushin/b4, `src/http/handler`](https://github.com/DanielLavrushin/b4/tree/main/src/http/handler): the reference implementation, files `mcp*.go`.
+- [modelcontextprotocol/go-sdk](https://github.com/modelcontextprotocol/go-sdk): `StreamableHTTPOptions.Stateless`, `ToolAnnotations`.

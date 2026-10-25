@@ -10,7 +10,7 @@ The panel kept the traffic history in a ring buffer of sixty samples in the tab'
 
 The share of the link going through sing-box was computed the same way: the tab summed counter increments from the moment it was opened. The per-second ratio jumped with every burst, and the accumulated one lived exactly until `F5`.
 
-Compare with the neighbour on the device: b4 keeps the counters on its side and returns a ready ratio (`targeted_connections` to `total_connections`) over its whole uptime, and shows live values in a separate line. The router owner expects the same from metabox.
+A pattern common among router panels: the daemon keeps the counters on its side, returns a ready ratio of targeted to total connections over its whole uptime and shows live values in a separate line. The router owner expects the same from metabox.
 
 The constraints were set earlier: the daemon's `go.mod` has no dependencies, the NFR-4 budget (RSS ≤ 64 MB, idle CPU ≤ 1% of a core), the [DeviceIO](../../apps/metaboxd/docs/guides/DeviceIO.md) rule "no background timer polling without a consumer", and the PRD entry (roadmap after v1) saying that history deeper than a minute needs storage on the daemon.
 
@@ -28,7 +28,7 @@ In scope: where the traffic history and the accumulated volumes live, what fills
 
 1. **Keep accumulating in the tab.** Pros: nothing to do, the daemon is not touched. Cons: the window lives until a page reload (driver 1); while the panel is closed, increments are lost (driver 3). **Rejected.**
 
-2. **Write the history to disk.** Pros: survives a daemon restart. Cons: writing to flash every few seconds for a chart (driver 2); a file format, migrations and a retention question appear. **Rejected**: b4 also loses its counters on restart, and nobody minds.
+2. **Write the history to disk.** Pros: survives a daemon restart. Cons: writing to flash every few seconds for a chart (driver 2); a file format, migrations and a retention question appear. **Rejected**: other router panels also lose their counters on restart, and nobody minds.
 
 3. **A ring buffer in the daemon's memory plus constant accounting.** Pros: the history and the share live as long as the daemon does, and on the device it runs for months (drivers 1, 3); tens of kilobytes of memory are needed (driver 2). Cons: background work without a reader is an exception to the DeviceIO rule; a daemon restart resets both the history and the accumulated values. **Chosen.**
 

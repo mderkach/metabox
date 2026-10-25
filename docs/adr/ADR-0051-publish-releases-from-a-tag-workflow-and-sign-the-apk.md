@@ -97,5 +97,5 @@ Already installed packages are not affected. The router has the unsigned `metabo
 - [ADR-0050](./ADR-0050-version-releases-by-semver-and-derive-the-apk-version.md): version from `VERSION`;
 - [ADR-0023](./ADR-0023-build-the-bench-from-the-device-firmware.md): test bench base from the firmware image;
 - [`.github/workflows/release.yml`](../../.github/workflows/release.yml), [`Makefile`](../../Makefile), [`.devcontainer/target/Dockerfile`](../../.devcontainer/target/Dockerfile);
-- [`docs/Development.md`](../Development.md), section "Release": key generation and install;
+- [`docs/Maintaining.md`](../Maintaining.md), sections "Release" and "Signing key"; installing a release: [`README.md`](../../README.md);
 - [apk-tools](https://gitlab.alpinelinux.org/alpine/apk-tools): `apk mkpkg`, `apk verify`.

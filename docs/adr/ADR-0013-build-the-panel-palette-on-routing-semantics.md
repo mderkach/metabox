@@ -8,7 +8,7 @@
 
 Before this decision, the theme tokens in `apps/web/src/app/styles/index.css` were the neutral shadcn preset verbatim: all colors of the form `oklch(x 0 0)`, that is, with zero chroma, and `--chart-1…5` were five shades of grey. Yet the panel's subject is categorical by nature: a packet goes `direct`, `proxy` or to a block; a node answers fast, slowly or not at all; a config is applied, sits as a draft or is rolled back.
 
-What this cost on a live router (captured 2026-09-13 on a working homeproxy config):
+What this cost on a live router (captured 2026-09-13 on a working config):
 
 - The selected proxy node did not stand out from its neighbours. The data arrived and the code computed it (`Proxy.adapter.ts` moves `now` into `selected`), but the selection mark was a `bg-muted/60` fill over `bg-card`: in the dark theme this is oklch 0.243 against 0.196, a lightness difference of 0.038. The screen's main fact did not come across at all.
 - A selected rule row differed from the row under the cursor by ten percent alpha: `bg-muted/60` against `bg-muted/50`.
@@ -47,7 +47,7 @@ In scope: the set of theme tokens, the set of semantic roles and where they are 
 
 **Chart series are separated by hue.** `--series-down` is azure, `--series-up` is amber.
 
-**There is one accent: azure.** It is also `--primary` and `--ring`. Against competitors on the same router this is a distinguishable position: b4 took amber with magenta, the official sing-box dashboard a neutral grey-green, metacubexd orange with teal.
+**There is one accent: azure.** It is also `--primary` and `--ring`. Unlike competitors on the same router, which use amber with magenta, a neutral grey-green or orange with teal, this is a distinguishable position.
 
 **The color scheme is declared explicitly.** `color-scheme: light` and `color-scheme: dark` in the theme blocks. Without the declaration, a browser with automatic dark mode recolors the light theme itself, and draws native elements (the scrollbar, the caret, a checkbox) from the system setting, not from the panel theme.
 

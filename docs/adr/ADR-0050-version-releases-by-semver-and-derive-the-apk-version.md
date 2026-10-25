@@ -73,6 +73,6 @@ The decision does not touch contracts or data. On the router the package `0.1.0-
 ## Links
 
 - [ADR-0011](./ADR-0011-ship-the-daemon-as-an-apk-package.md): delivery as an apk package;
-- `Makefile`, `VERSION`, `apps/web/package.json`, `CONTRIBUTING.md` (the variables table);
+- `Makefile`, `VERSION`, `apps/web/package.json`, `docs/Development.md` (the variables table);
 - [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html): pre-release order;
 - [apk-tools, version format](https://wiki.alpinelinux.org/wiki/APKBUILD_Reference#pkgver): the `_alpha`, `_beta`, `_rc` suffixes.
