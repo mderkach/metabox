@@ -75,6 +75,8 @@ Checks:
 
 `pnpm lint` runs only from the root: the Tailwind plugin looks for the frontend config relative to the directory it is run from. The full list of checks before committing and what CI runs: [`CONTRIBUTING.md`](../CONTRIBUTING.md).
 
+The CI integration job also runs `go test -tags integration -run TestApplyHTTPOnEphemeralBench -count=1 -v -timeout 5m .` from `apps/metaboxd` against its disposable target. This suite checks HTTP Apply, confirmation, rejection without a write, timeout rollback, daemon restart and an interrupted write. It requires `CI=true` and `METABOX_EPHEMERAL_BENCH=1` because it changes the config and restarts the daemon; do not enable it on the owner's bench. `make apply-check` remains the independent environment check. These container tests do not prove physical power-loss recovery or directory `fsync` on a router's overlayfs ([ADR-0067](./adr/ADR-0067-test-http-apply-on-the-disposable-ci-bench.md)).
+
 ## Schema and fork releases
 
 The schema is generated from the sing-box-extended release pinned in the `replace` block of `tools/schemagen/go.mod`. The `fork release watch` workflow (`.github/workflows/fork-release-watch.yml`) runs daily and by hand (`workflow_dispatch`, optional `dry_run` prints the diff and pushes nothing). It compares the pin with the latest release of the fork and logs `no change` when they match. Otherwise it rebuilds the `replace` block from the fork's `go.mod` at the new tag, raises `forkVersion` in `tools/schemagen/main.go`, runs `go mod tidy` and `make schema`, and opens one PR from the branch `build/bump-sing-box-extended` with both versions and the schema diff in the body. A branch that already proposes the latest release is left alone; the next release rewrites the same branch and PR.

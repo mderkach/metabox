@@ -146,13 +146,13 @@ Determinism is checked separately: two runs must give the same result ([`generat
 
 ## Integration tests
 
-The module has no Go tests against a live sing-box, and no build tag for them either. The full cycle against a live environment is run by the test bench: the `apply-cycle-check` script inside the `target` container (`make up`, `make apply-check`); in CI, the `integration` job: the same image for another architecture and rootfs tag, daemon readiness via `/healthz`, the same script, `make reach-check` and `make dataplane-check` ([`ci.yml`](../../../../.github/workflows/ci.yml)).
+The test bench runs the independent environment check `apply-cycle-check` inside the `target` container (`make up`, `make apply-check`). In CI, the `integration` job additionally runs [`apply_integration_test.go`](../../apply_integration_test.go) from the host against the real daemon, Store, sing-box and procd over HTTP, before `make reach-check` and `make dataplane-check` ([`ci.yml`](../../../../.github/workflows/ci.yml)).
 
 A Go test that needs procd, the sing-box binary and `/etc/sing-box` is separated with the `//go:build integration` build tag: the host has none of these, and `make test` must not break there.
 
 The test bench check `apply-cycle-check` ([`.devcontainer/target/files/usr/bin/apply-cycle-check`](../../../../.devcontainer/target/files/usr/bin/apply-cycle-check)) stays independent of the daemon: it checks the environment itself.
 
-Restarting the container with an unfinished transaction is also a check, and it is not automated by a unit test: it is run by hand on the test bench.
+The HTTP suite requires both `CI=true` and `METABOX_EPHEMERAL_BENCH=1`, checks the Compose target identity and refuses an active transaction or a nonstandard fixture. It changes the disposable CI config and restarts the daemon: do not enable it on an owner's bench. It covers confirmation, invalid-candidate rejection, timeout rollback, restoration of a confirmation window after restart and a graceful interruption after the config write at a test-only restart barrier. Polls of real external processes use bounded wall-clock deadlines, since they cannot run inside `synctest`. The fixture is restored on failure too. This does not simulate a power loss or prove directory `fsync` on a device's overlayfs; AC-14 and AC-29 require their own evidence. The harness choice is [ADR-0067](../../../../docs/adr/ADR-0067-test-http-apply-on-the-disposable-ci-bench.md).
 
 ## Benchmarks
 
