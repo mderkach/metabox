@@ -331,7 +331,7 @@ func TestReplayAfterCrashInBackupKeepsRunningConfig(t *testing.T) {
 			if _, err := h.manager.Start(t.Context(), []byte(settled), tt.lists, "", ""); err != nil {
 				t.Fatalf("second apply: %v", err)
 			}
-			<-backupStarted
+			entered(t, backupStarted)
 
 			// The next daemon lifetime over the same disk.
 			h.rec.mu.Lock()

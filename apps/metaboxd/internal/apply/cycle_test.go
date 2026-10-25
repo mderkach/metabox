@@ -358,7 +358,7 @@ func TestCloseDuringStepLeavesReplayableState(t *testing.T) {
 			if err != nil {
 				t.Fatalf("apply: %v", err)
 			}
-			<-started
+			entered(t, started)
 
 			h.manager.Close()
 

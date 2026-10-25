@@ -499,6 +499,18 @@ func newHarnessIn(t *testing.T, timeout time.Duration, log *slog.Logger, lang lo
 	return h
 }
 
+// entered waits until a held step is entered; a step that never comes fails the test
+// instead of hanging the run.
+func entered(t *testing.T, started <-chan struct{}) {
+	t.Helper()
+
+	select {
+	case <-started:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the held step was not entered")
+	}
+}
+
 // waitWindow waits until the apply reaches the confirmation window.
 func (h *harness) waitWindow(t *testing.T) time.Duration {
 	t.Helper()
@@ -895,7 +907,7 @@ func TestConfirmDuringRollbackIsRejected(t *testing.T) {
 	h.waitWindow(t)
 
 	h.clock.fire()
-	<-restoreStarted
+	entered(t, restoreStarted)
 
 	if _, err := h.manager.Confirm(t.Context(), tx.ID); !errors.Is(err, apply.ErrNothingToConfirm) {
 		t.Errorf("confirm during rollback: got %v, expected ErrNothingToConfirm", err)
@@ -935,7 +947,7 @@ func TestConfirmHoldsApplyUntilStateCleared(t *testing.T) {
 		}
 	}()
 
-	<-clearStarted
+	entered(t, clearStarted)
 
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); !errors.Is(err, apply.ErrBusy) {
 		t.Errorf("apply during state cleanup: got %v, expected ErrBusy", err)
@@ -1120,10 +1132,10 @@ func TestConfirmWaitsForWindowRecord(t *testing.T) {
 		t.Fatalf("apply: %v", err)
 	}
 
-	<-readStarted
+	entered(t, readStarted)
 	stateStarted, stateRelease := h.store.hold("WriteState")
 	close(readRelease)
-	<-stateStarted
+	entered(t, stateStarted)
 
 	if _, err := h.manager.Confirm(t.Context(), tx.ID); !errors.Is(err, apply.ErrNothingToConfirm) {
 		t.Errorf("confirm before the window record is on disk: got %v, expected ErrNothingToConfirm", err)
@@ -1177,7 +1189,7 @@ func TestRollbackWaitsForConfirmInFlight(t *testing.T) {
 				done <- err
 			}()
 
-			<-clearStarted
+			entered(t, clearStarted)
 			h.clock.fire()
 
 			if slices.Contains(h.rec.snapshot(), "Restore") {
