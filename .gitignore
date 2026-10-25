@@ -5,6 +5,7 @@ coverage
 *.local
 .DS_Store
 .omc/
+.omx*
 .vite
 
 *.local.*
