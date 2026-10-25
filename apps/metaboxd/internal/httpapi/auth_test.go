@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"io/fs"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -18,7 +20,13 @@ import (
 	"metabox/internal/httpapi"
 )
 
-type memoryAuthStore struct{ data, sessions []byte }
+type memoryAuthStore struct {
+	data, sessions []byte
+
+	sessionWriteErr error
+	// sessionWriteFailsOnce clears sessionWriteErr after the first failed write.
+	sessionWriteFailsOnce bool
+}
 
 func (m *memoryAuthStore) ReadAuth(context.Context) ([]byte, error) {
 	if m.data == nil {
@@ -42,7 +50,20 @@ func (m *memoryAuthStore) ReadSessions(context.Context) ([]byte, error) {
 	return m.sessions, nil
 }
 
-func (m *memoryAuthStore) WriteSessions(_ context.Context, data []byte) error {
+// WriteSessions refuses a cancelled context like the daemon store does.
+func (m *memoryAuthStore) WriteSessions(ctx context.Context, data []byte) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	if err := m.sessionWriteErr; err != nil {
+		if m.sessionWriteFailsOnce {
+			m.sessionWriteErr = nil
+		}
+
+		return err
+	}
+
 	m.sessions = data
 
 	return nil
@@ -61,7 +82,13 @@ type browser struct {
 func newAuthServer(t *testing.T) *browser {
 	t.Helper()
 
-	guard, err := auth.New(t.Context(), &memoryAuthStore{}, auth.Options{Iterations: 1000})
+	return newAuthServerWith(t, &memoryAuthStore{})
+}
+
+func newAuthServerWith(t *testing.T, store *memoryAuthStore) *browser {
+	t.Helper()
+
+	guard, err := auth.New(t.Context(), store, auth.Options{Iterations: 1000})
 	if err != nil {
 		t.Fatalf("guard: %v", err)
 	}
@@ -121,6 +148,24 @@ func (b *browser) do(method, path string, body any) response {
 	}
 
 	return response{status: resp.StatusCode, contentType: resp.Header.Get("Content-Type"), header: resp.Header, body: string(data)}
+}
+
+// sessionCookie is the session token the browser holds for the server.
+func (b *browser) sessionCookie() string {
+	b.t.Helper()
+
+	u, err := url.Parse(b.srv.URL)
+	if err != nil {
+		b.t.Fatal(err)
+	}
+
+	for _, c := range b.client.Jar.Cookies(u) {
+		if c.Name == "metabox_session" {
+			return c.Value
+		}
+	}
+
+	return ""
 }
 
 func (b *browser) setPassword(current, next string) response {
@@ -270,6 +315,38 @@ func TestLoginAndLogout(t *testing.T) {
 	wantCode(t, other.do(http.MethodGet, "/api/status", nil), http.StatusUnauthorized, contract.ErrUnauthorized)
 }
 
+// The two logout tests below wait the real retry pause of the guard: the server runs over
+// the network, outside a synctest bubble.
+func TestLogoutWhoseWriteFailsIsAnError(t *testing.T) {
+	store := &memoryAuthStore{}
+	b := newAuthServerWith(t, store)
+	b.setPassword("", panelPassword)
+
+	store.sessionWriteErr = errors.New("disk full")
+
+	r := b.do(http.MethodPost, "/api/auth/logout", nil)
+	wantCode(t, r, http.StatusInternalServerError, contract.ErrLogoutNotSaved)
+
+	if !bytes.Contains([]byte(r.header.Get("Set-Cookie")), []byte("Max-Age=0")) {
+		t.Errorf("a failed logout did not clear the cookie: %q", r.header.Get("Set-Cookie"))
+	}
+
+	wantCode(t, b.do(http.MethodGet, "/api/status", nil), http.StatusUnauthorized, contract.ErrUnauthorized)
+}
+
+func TestLogoutWhoseWriteFailsOnceSucceeds(t *testing.T) {
+	store := &memoryAuthStore{}
+	b := newAuthServerWith(t, store)
+	b.setPassword("", panelPassword)
+
+	store.sessionWriteErr = errors.New("disk full")
+	store.sessionWriteFailsOnce = true
+
+	if r := b.do(http.MethodPost, "/api/auth/logout", nil); r.status != http.StatusNoContent {
+		t.Fatalf("logout with a write that fails once: %d %s", r.status, r.body)
+	}
+}
+
 func TestGuessingLocksTheAddress(t *testing.T) {
 	b := newAuthServer(t)
 	b.setPassword("", panelPassword)
@@ -309,6 +386,27 @@ func TestPasswordChangeAndRemoval(t *testing.T) {
 
 	if r := newBrowser(t, b.srv).do(http.MethodGet, "/api/status", nil); r.status != http.StatusOK {
 		t.Errorf("status without a password after removal: %d", r.status)
+	}
+}
+
+// The session of a password change request ends inside the call, which cancels the
+// request context; the new session must still reach the file.
+func TestSessionFromAPasswordChangeSurvivesRestart(t *testing.T) {
+	store := &memoryAuthStore{}
+	b := newAuthServerWith(t, store)
+	b.setPassword("", panelPassword)
+
+	if r := b.setPassword(panelPassword, "new password"); r.status != http.StatusNoContent {
+		t.Fatalf("change: %d %s", r.status, r.body)
+	}
+
+	restarted, err := auth.New(t.Context(), store, auth.Options{Iterations: 1000})
+	if err != nil {
+		t.Fatalf("restart: %v", err)
+	}
+
+	if _, valid := restarted.Check(b.sessionCookie()); !valid {
+		t.Error("the session from the password change did not survive a restart")
 	}
 }
 

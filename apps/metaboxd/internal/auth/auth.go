@@ -44,6 +44,10 @@ const (
 	// while such guessing goes on.
 	globalFailKeys = 10
 
+	// revokeRetryPause separates the two tries of the session write after a revocation: a
+	// transient failure of the flash does not surface to the user.
+	revokeRetryPause = 500 * time.Millisecond
+
 	// maxHashing bounds the PBKDF2 computations running at once; the rest wait for a slot.
 	// The router has four cores, and the other two keep routing while guesses arrive from
 	// many addresses.
@@ -73,6 +77,9 @@ var (
 	// ErrNoSession means a password change on a protected panel came without a valid
 	// session.
 	ErrNoSession = locale.New("sign-in required")
+	// ErrSessionNotRevoked means logout closed the session in memory, but the session file
+	// could not be written: a daemon restart would bring the session back.
+	ErrSessionNotRevoked = locale.New("session revocation not saved")
 )
 
 // LockedError means login is locked out: the client address made too many wrong
@@ -363,13 +370,16 @@ func (g *Guard) Login(ctx context.Context, addr netip.Addr, password string) (st
 	token := g.openSession()
 	g.mu.Unlock()
 
-	g.saveSessions(ctx, false)
+	g.saveSessionsOrWarn(ctx)
 
 	return token, nil
 }
 
-// Logout closes the session. An unknown token is not an error.
-func (g *Guard) Logout(ctx context.Context, token string) {
+// Logout closes the session. An unknown token is not an error. The session file is
+// written before the call returns, with one more try after revokeRetryPause: a failure
+// means the revocation lives only until the daemon restarts, and the caller must hear
+// that.
+func (g *Guard) Logout(ctx context.Context, token string) error {
 	key := tokenKey(token)
 
 	g.mu.Lock()
@@ -379,9 +389,21 @@ func (g *Guard) Logout(ctx context.Context, token string) {
 	}
 	g.mu.Unlock()
 
-	if ok {
-		g.saveSessions(ctx, true)
+	if !ok {
+		return nil
 	}
+
+	err := g.saveSessions(ctx)
+	if err != nil {
+		time.Sleep(revokeRetryPause)
+		err = g.saveSessions(ctx)
+	}
+
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrSessionNotRevoked, err)
+	}
+
+	return nil
 }
 
 // SetPassword sets, changes or, with an empty next, removes the password. While the panel
@@ -422,7 +444,7 @@ func (g *Guard) SetPassword(ctx context.Context, addr netip.Addr, token, current
 		g.endSessions()
 		g.mu.Unlock()
 
-		g.saveSessions(ctx, true)
+		g.saveSessionsOrWarn(ctx)
 
 		return "", nil
 	}
@@ -451,7 +473,7 @@ func (g *Guard) SetPassword(ctx context.Context, addr netip.Addr, token, current
 	opened := g.openSession()
 	g.mu.Unlock()
 
-	g.saveSessions(ctx, true)
+	g.saveSessionsOrWarn(ctx)
 
 	return opened, nil
 }
@@ -662,12 +684,20 @@ func (g *Guard) endSessions() {
 	}
 }
 
-// saveSessions writes the session table. A failed write does not fail the login or the
-// logout that caused it: the table in memory is right until the daemon restarts. After a
-// revocation the failure is an error, since a restart would bring the revoked session
-// back. The write is not cancelled with the request: a client that drops a logout must
-// not keep its session on disk.
-func (g *Guard) saveSessions(ctx context.Context, revoked bool) {
+// saveSessionsOrWarn is the write after a login or a password change: a failure does not
+// refuse them, the table in memory is right until the daemon restarts.
+func (g *Guard) saveSessionsOrWarn(ctx context.Context) {
+	if err := g.saveSessions(ctx); err != nil {
+		g.log.Warn("panel sessions not saved", "err", err)
+	}
+}
+
+// saveSessions writes the session table. The write is not cancelled with the request: a
+// client that drops a logout must not keep its session on disk, and a password change
+// ends the session of its own request. A stale file after a failed write is harmless for
+// a password change, since it does not match the new password generation; after a logout
+// it is not, and Logout answers for it.
+func (g *Guard) saveSessions(ctx context.Context) error {
 	g.save.Lock()
 	defer g.save.Unlock()
 
@@ -679,17 +709,11 @@ func (g *Guard) saveSessions(ctx context.Context, revoked bool) {
 	g.mu.Unlock()
 
 	data, err := json.Marshal(file)
-	if err == nil {
-		err = g.store.WriteSessions(context.WithoutCancel(ctx), data)
+	if err != nil {
+		return fmt.Errorf("encode session file: %w", err)
 	}
 
-	switch {
-	case err == nil:
-	case revoked:
-		g.log.Error("panel session revocation not saved, a restart brings the sessions back", "err", err)
-	default:
-		g.log.Warn("panel sessions not saved", "err", err)
-	}
+	return g.store.WriteSessions(context.WithoutCancel(ctx), data)
 }
 
 // saltKey identifies the password the sessions belong to; no password gives an empty

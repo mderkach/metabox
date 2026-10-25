@@ -102,12 +102,12 @@ The password is optional ([ADR-0052](../../../../docs/adr/ADR-0052-protect-the-p
 
 With a password a request without a live session gets 401 `unauthorized`. Exempt: paths outside `/api/` (the health check and the SPA static files), `GET /api/auth`, `POST /api/auth/login`, `POST /api/auth/logout`.
 
-| Endpoint                 | Body                  | Answer                                                                                      |
-| ------------------------ | --------------------- | ------------------------------------------------------------------------------------------- |
-| `GET /api/auth`          |                       | `{enabled, authenticated}`                                                                  |
-| `POST /api/auth/login`   | `{password}`          | 204 and the session cookie; 403 `password_wrong`, 429 `login_locked`, 409 `auth_disabled`   |
-| `POST /api/auth/logout`  |                       | 204, the cookie is cleared                                                                  |
-| `PUT /api/auth/password` | `{current, password}` | 204; an empty `password` removes the password. 403 `password_wrong`, 400 `password_invalid` |
+| Endpoint                 | Body                  | Answer                                                                                                                      |
+| ------------------------ | --------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/auth`          |                       | `{enabled, authenticated}`                                                                                                  |
+| `POST /api/auth/login`   | `{password}`          | 204 and the session cookie; 403 `password_wrong`, 429 `login_locked`, 409 `auth_disabled`                                   |
+| `POST /api/auth/logout`  |                       | 204, the cookie is cleared; 500 `logout_not_saved` when the session file could not be written, the cookie is cleared anyway |
+| `PUT /api/auth/password` | `{current, password}` | 204; an empty `password` removes the password. 403 `password_wrong`, 400 `password_invalid`                                 |
 
 A wrong password is 403, not 401: the panel answers 401 by showing the login screen, and the refusal must stay in the form where the password was typed. 429 carries `Retry-After` in seconds. Every `/api/auth` answer carries `Cache-Control: no-store`: a cached login state or `Set-Cookie` would outlive the session.
 

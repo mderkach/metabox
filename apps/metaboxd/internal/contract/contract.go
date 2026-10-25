@@ -238,6 +238,10 @@ const (
 	// ErrAuthDisabled means a login on a panel without a password: there is nothing to log
 	// in with.
 	ErrAuthDisabled ErrorCode = "auth_disabled"
+	// ErrLogoutNotSaved means logout closed the session, but the daemon could not write the
+	// session file: after a daemon restart the session comes back. The cookie is cleared
+	// anyway.
+	ErrLogoutNotSaved ErrorCode = "logout_not_saved"
 	// ErrCheckFailed means `sing-box check` rejected the config; the binary output is in Details.
 	ErrCheckFailed ErrorCode = "check_failed"
 	// ErrInternal is a failure there is nothing to say outside about: details are in the log.

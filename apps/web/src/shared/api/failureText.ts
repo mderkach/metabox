@@ -40,6 +40,7 @@ const FAILURE_KEY: Readonly<Record<ApiFailureCode, ParseKeys<'shared'>>> = {
   password_invalid: 'failure.password_invalid',
   login_locked: 'failure.login_locked',
   auth_disabled: 'failure.auth_disabled',
+  logout_not_saved: 'failure.logout_not_saved',
   check_failed: 'failure.check_failed',
   internal: 'failure.internal',
 };

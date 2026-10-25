@@ -24,6 +24,8 @@ type fakeStore struct {
 	sessions        []byte
 	sessionsReadErr error
 	sessionWriteErr error
+	// sessionWriteFailsOnce clears sessionWriteErr after the first failed write.
+	sessionWriteFailsOnce bool
 }
 
 func (f *fakeStore) ReadAuth(context.Context) ([]byte, error) {
@@ -58,8 +60,12 @@ func (f *fakeStore) ReadSessions(context.Context) ([]byte, error) {
 }
 
 func (f *fakeStore) WriteSessions(_ context.Context, data []byte) error {
-	if f.sessionWriteErr != nil {
-		return f.sessionWriteErr
+	if err := f.sessionWriteErr; err != nil {
+		if f.sessionWriteFailsOnce {
+			f.sessionWriteErr = nil
+		}
+
+		return err
 	}
 
 	f.sessions = data
@@ -278,7 +284,9 @@ func TestSessionTableIsBounded(t *testing.T) {
 func TestLogoutClosesTheSession(t *testing.T) {
 	g, _, _, token := protected(t)
 
-	g.Logout(t.Context(), token)
+	if err := g.Logout(t.Context(), token); err != nil {
+		t.Fatalf("logout: %v", err)
+	}
 
 	if _, valid := g.Check(token); valid {
 		t.Error("session is valid after logout")
@@ -714,7 +722,9 @@ func TestLogoutAndChangeSurviveRestart(t *testing.T) {
 		t.Fatalf("second login: %v", err)
 	}
 
-	g.Logout(t.Context(), other)
+	if err := g.Logout(t.Context(), other); err != nil {
+		t.Fatalf("logout: %v", err)
+	}
 
 	restarted, err := auth.New(t.Context(), store, auth.Options{Now: c.now, Iterations: 1000})
 	if err != nil {
@@ -803,6 +813,70 @@ func TestSessionWriteFailureDoesNotRefuseLogin(t *testing.T) {
 	}
 }
 
+// TestLogoutReportsAFailedSessionWrite runs in a synctest bubble: the retry pause between
+// the two writes passes on the fake clock.
+func TestLogoutReportsAFailedSessionWrite(t *testing.T) {
+	store := withPassword(t)
+
+	synctest.Test(t, func(t *testing.T) {
+		g, err := auth.New(t.Context(), store, auth.Options{Iterations: 1000})
+		if err != nil {
+			t.Fatalf("restart: %v", err)
+		}
+
+		token, err := g.Login(t.Context(), owner, password)
+		if err != nil {
+			t.Fatalf("login: %v", err)
+		}
+
+		store.sessionWriteErr = errors.New("disk full")
+
+		if err := g.Logout(t.Context(), token); !errors.Is(err, auth.ErrSessionNotRevoked) {
+			t.Errorf("logout with a failing session write: got %v, want ErrSessionNotRevoked", err)
+		}
+
+		if _, valid := g.Check(token); valid {
+			t.Error("session is valid after a logout whose write failed")
+		}
+
+		if err := g.Logout(t.Context(), token); err != nil {
+			t.Errorf("logout of an unknown token: %v", err)
+		}
+	})
+}
+
+func TestLogoutRetriesTheSessionWriteOnce(t *testing.T) {
+	store := withPassword(t)
+
+	synctest.Test(t, func(t *testing.T) {
+		g, err := auth.New(t.Context(), store, auth.Options{Iterations: 1000})
+		if err != nil {
+			t.Fatalf("restart: %v", err)
+		}
+
+		token, err := g.Login(t.Context(), owner, password)
+		if err != nil {
+			t.Fatalf("login: %v", err)
+		}
+
+		store.sessionWriteErr = errors.New("disk full")
+		store.sessionWriteFailsOnce = true
+
+		if err := g.Logout(t.Context(), token); err != nil {
+			t.Fatalf("logout with a write that fails once: %v", err)
+		}
+
+		restarted, err := auth.New(t.Context(), store, auth.Options{Iterations: 1000})
+		if err != nil {
+			t.Fatalf("restart: %v", err)
+		}
+
+		if _, valid := restarted.Check(token); valid {
+			t.Error("a session closed by logout came back after a restart")
+		}
+	})
+}
+
 func TestEndedClosesOnLogoutAndChange(t *testing.T) {
 	g, _, _, token := protected(t)
 
@@ -814,7 +888,9 @@ func TestEndedClosesOnLogoutAndChange(t *testing.T) {
 	otherEnded := g.Ended(other)
 	callerEnded := g.Ended(token)
 
-	g.Logout(t.Context(), other)
+	if err := g.Logout(t.Context(), other); err != nil {
+		t.Fatalf("logout: %v", err)
+	}
 
 	select {
 	case <-otherEnded:
