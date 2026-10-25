@@ -62,25 +62,6 @@ func TestDataplaneModel(t *testing.T) {
 	if body.Model.RedirectPort != 5331 || body.Applied || body.AppliedReason != dataplane.NFTUnavailable {
 		t.Errorf("response %+v", body)
 	}
-	if body.ForeignService {
-		t.Error("without Plane the service is called foreign")
-	}
-}
-
-func TestDataplaneModelForeignService(t *testing.T) {
-	srv := newPlaneServer(t, &fakePlaneApplier{foreign: true})
-
-	got := request(t, srv, http.MethodGet, "/api/dataplane", "", nil)
-	if got.status != http.StatusOK {
-		t.Fatalf("code %d, body %s", got.status, got.body)
-	}
-
-	var body contract.Dataplane
-	got.decode(t, &body)
-
-	if !body.ForeignService {
-		t.Error("foreign_service not returned, the panel would offer a change the daemon will reject")
-	}
 }
 
 func TestDataplaneInvalid(t *testing.T) {
@@ -120,10 +101,7 @@ type fakePlaneApplier struct {
 	model    dataplane.Model
 	base     string
 	client   netip.Addr
-	foreign  bool
 }
-
-func (f *fakePlaneApplier) ForeignService() bool { return f.foreign }
 
 func (f *fakePlaneApplier) Start(_ context.Context, m dataplane.Model, base string, client netip.Addr) (apply.Transaction, error) {
 	f.mu.Lock()
@@ -250,10 +228,6 @@ func TestDataplaneChangeRejected(t *testing.T) {
 		{
 			"section changed after reading", apply.ErrDataplaneModified, `{"model":{}}`,
 			http.StatusPreconditionFailed, contract.ErrDataplaneModified,
-		},
-		{
-			"daemon manages a service other than metabox-singbox", apply.ErrDataplaneForeignService, `{"model":{}}`,
-			http.StatusConflict, contract.ErrDataplaneForeignService,
 		},
 	}
 

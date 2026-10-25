@@ -14,8 +14,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"metabox/internal/locale"
 )
 
 // Runner runs an external command and returns its output with the exit code.
@@ -78,17 +76,11 @@ func New(runner Runner, ubus string) *Client {
 	return &Client{runner: runner, ubus: ubus, procDir: "/proc"}
 }
 
-// ErrAmbiguousInstance means the instance name is not set and the service has several: which
-// of them is sing-box procd does not say, and the first one found may turn out to be
-// a neighbouring script of the same service.
-var ErrAmbiguousInstance = locale.New("the service has several instances and no instance name is set")
-
 // Service returns the service state by its name in procd. The name is the same as the
 // init script's: procd registers the service under the script name.
 //
-// State, pid and command are taken only from the instance instance. An empty name
-// means the single service instance; with several, ErrAmbiguousInstance.
-// If there is no instance with such a name, the service is considered unknown, Known is false.
+// State, pid and command are taken only from the instance instance. If there is no
+// instance with such a name, the service is considered unknown, Known is false.
 func (c *Client) Service(ctx context.Context, name, instance string) (State, error) {
 	stdout, code, err := c.runner(ctx, c.ubus, "call", "service", "list")
 	if err != nil {
@@ -118,16 +110,6 @@ func (c *Client) Service(ctx context.Context, name, instance string) (State, err
 
 	if len(service.Instances) == 0 {
 		return State{Known: true}, nil
-	}
-
-	if instance == "" {
-		if len(service.Instances) > 1 {
-			return State{}, locale.Errorf("service %s: %w", name, ErrAmbiguousInstance)
-		}
-
-		for only := range service.Instances {
-			instance = only
-		}
 	}
 
 	selected, ok := service.Instances[instance]

@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	"metabox/internal/apply"
 	"metabox/internal/config"
 	"metabox/internal/contract"
 )
@@ -72,28 +71,5 @@ func TestFailKeepsKnownMessage(t *testing.T) {
 	}
 	if body := rec.Body.String(); !strings.Contains(body, errNotFound.Error()) {
 		t.Errorf("body %q, expected the text %q", body, errNotFound.Error())
-	}
-}
-
-// A service on a foreign config has a separate code, and its command paths stay in the log.
-func TestFailHidesLaunchPaths(t *testing.T) {
-	rec := httptest.NewRecorder()
-	err := fmt.Errorf("применение: %w", &apply.LaunchError{
-		Configs: []string{"/var/run/other-proxy/sing-box.json"},
-		Config:  "/etc/sing-box/config.json",
-	})
-
-	fail(testLogger(t), rec, httptest.NewRequest(http.MethodPost, "/api/apply", nil), err)
-
-	if rec.Code != http.StatusConflict {
-		t.Fatalf("code %d, expected %d", rec.Code, http.StatusConflict)
-	}
-
-	body := rec.Body.String()
-	if !strings.Contains(body, string(contract.ErrLaunchMismatch)) {
-		t.Errorf("body %q, expected the code %q", body, contract.ErrLaunchMismatch)
-	}
-	if strings.Contains(body, "/var/run") || strings.Contains(body, "/etc/sing-box") {
-		t.Errorf("body %q: service command paths do not go outside", body)
 	}
 }

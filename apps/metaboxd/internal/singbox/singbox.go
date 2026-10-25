@@ -41,15 +41,15 @@ func (e *CheckError) Error() string {
 	return fmt.Sprintf("sing-box check: exit code %d", e.ExitCode)
 }
 
+// Instance is the procd instance in which the metabox-singbox service holds sing-box.
+const Instance = "sing-box"
+
 // Client is the daemon access to sing-box: config check and service control.
 type Client struct {
 	supervisor Supervisor
 	runner     Runner
 	binary     string
 	initScript string
-	// instance is the procd instance in which the service holds sing-box. Empty means the
-	// single service instance.
-	instance string
 	// logread is the device logger utility; empty means "nowhere to take the crash reason
 	// from", and the service state is reduced to the fact of a failure.
 	logread string
@@ -60,7 +60,7 @@ type Client struct {
 // file or not resolve at all.
 // New assembles the client. supervisor is optional: without it the state is reduced
 // to the init script exit code, and the panel keeps working.
-func New(runner Runner, binary, initScript, instance, logread string, supervisor Supervisor) (*Client, error) {
+func New(runner Runner, binary, initScript, logread string, supervisor Supervisor) (*Client, error) {
 	for _, path := range []string{binary, initScript} {
 		if !filepath.IsAbs(path) {
 			return nil, fmt.Errorf("path %q is not absolute", path)
@@ -76,22 +76,15 @@ func New(runner Runner, binary, initScript, instance, logread string, supervisor
 		supervisor: supervisor,
 		binary:     binary,
 		initScript: initScript,
-		instance:   instance,
 		logread:    logread,
 	}, nil
 }
 
-// Check validates a candidate in the mode the service will start in: config is
-// the config file (-c), an empty string is the dir directory as a whole (-C), which the service
-// merges from all .json. workdir is the base of relative config paths (-D), the same
-// as the service's: otherwise the check and runtime verdicts diverge.
-func (c *Client) Check(ctx context.Context, dir, config, workdir string) error {
-	args := []string{"check", "-D", workdir, "-C", dir}
-	if config != "" {
-		args = []string{"check", "-D", workdir, "-c", config}
-	}
-
-	res, err := c.runner.Run(ctx, c.binary, args...)
+// Check validates the config file the way the service starts it (-c). workdir is the base
+// of relative config paths (-D), the same as the service's: otherwise the check and runtime
+// verdicts diverge.
+func (c *Client) Check(ctx context.Context, config, workdir string) error {
+	res, err := c.runner.Run(ctx, c.binary, "check", "-D", workdir, "-c", config)
 	if err != nil {
 		return fmt.Errorf("check config: %w", err)
 	}
@@ -255,7 +248,7 @@ func (c *Client) PID(ctx context.Context) (int, error) {
 		return 0, ErrNoSupervisor
 	}
 
-	state, err := c.supervisor.Service(ctx, c.ServiceName(), c.instance)
+	state, err := c.supervisor.Service(ctx, c.ServiceName(), Instance)
 	if err != nil {
 		return 0, fmt.Errorf("service pid: %w", err)
 	}
@@ -282,13 +275,7 @@ func (c *Client) State(ctx context.Context) (State, error) {
 		return state, nil
 	}
 
-	supervised, err := c.supervisor.Service(ctx, c.ServiceName(), c.instance)
-	if errors.Is(err, procd.ErrAmbiguousInstance) {
-		// Other procd failures only impoverish the state, and this one means
-		// the daemon does not know which process is its own: guessing is not allowed.
-		return State{}, fmt.Errorf("service state: %w", err)
-	}
-
+	supervised, err := c.supervisor.Service(ctx, c.ServiceName(), Instance)
 	if err != nil {
 		return state, nil
 	}
@@ -316,7 +303,7 @@ func (c *Client) Launch(ctx context.Context) (procd.Launch, error) {
 		return procd.Launch{}, nil
 	}
 
-	state, err := c.supervisor.Service(ctx, c.ServiceName(), c.instance)
+	state, err := c.supervisor.Service(ctx, c.ServiceName(), Instance)
 	if err != nil {
 		return procd.Launch{}, err
 	}
@@ -325,14 +312,9 @@ func (c *Client) Launch(ctx context.Context) (procd.Launch, error) {
 }
 
 // running asks the init script whether the sing-box instance is up. Without an instance
-// name rc.common answers for the service, and it may have other instances.
+// name rc.common answers for the service as a whole.
 func (c *Client) running(ctx context.Context) (Result, error) {
-	args := []string{"running"}
-	if c.instance != "" {
-		args = append(args, c.instance)
-	}
-
-	return c.runner.Run(ctx, c.initScript, args...)
+	return c.runner.Run(ctx, c.initScript, "running", Instance)
 }
 
 // ServiceName derives the procd service name from the init script path: procd

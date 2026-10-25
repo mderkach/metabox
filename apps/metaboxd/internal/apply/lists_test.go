@@ -3,6 +3,7 @@ package apply_test
 import (
 	"errors"
 	"maps"
+	"path/filepath"
 	"slices"
 	"testing"
 
@@ -265,7 +266,7 @@ func TestStartIgnoresWorkdirWithoutLists(t *testing.T) {
 	h.waitWindow(t)
 }
 
-// The panel package service starts sing-box with a single -c on the daemon config with -D on its
+// The metabox-singbox service starts sing-box with a single -c on the daemon config with -D on its
 // directory: list files are applied without refusal, and the candidate is checked
 // as a file from its own directory.
 func TestStartAcceptsPackageService(t *testing.T) {
@@ -280,10 +281,10 @@ func TestStartAcceptsPackageService(t *testing.T) {
 	h.waitWindow(t)
 
 	h.service.mu.Lock()
-	dir, file, workdir := h.service.checked[0], h.service.checked[1], h.service.checked[2]
+	file, workdir := h.service.checked[0], h.service.checked[1]
 	h.service.mu.Unlock()
 
-	if file != dir+"/"+configName || workdir != dir {
+	if dir := filepath.Dir(file); file != dir+"/"+configName || workdir != dir {
 		t.Errorf("check -c %q -D %q, expected -c %q -D %q", file, workdir, dir+"/"+configName, dir)
 	}
 }
@@ -353,49 +354,34 @@ func TestSnapshotLists(t *testing.T) {
 	}
 }
 
-// The candidate is checked in the mode and from the path base with which procd will start
-// the service; a service on a foreign config refuses before the write.
+// The candidate is checked as a single file from the path base with which procd will start
+// the service.
 func TestStartChecksLikeTheService(t *testing.T) {
 	ours := configDir + "/" + configName
 
-	// packageWorkdir is replaced with an existing directory: the check takes
+	// otherWorkdir is replaced with an existing directory: the check takes
 	// the working directory as the path base only if it exists on disk.
-	const packageWorkdir = "<рабочий каталог пакета>"
+	const otherWorkdir = "<другой рабочий каталог>"
 
 	tests := []struct {
 		name        string
 		launch      procd.Launch
-		wantFile    bool
 		wantWorkdir string
-		wantRefuse  bool
 	}{
-		{name: "command unknown: as with a single file", wantFile: true},
+		{name: "command unknown: the candidate is the path base"},
 		{
-			name:        "package init script: file and package working directory",
-			launch:      procd.Launch{Configs: []string{ours}, Workdir: packageWorkdir},
-			wantFile:    true,
-			wantWorkdir: packageWorkdir,
+			name:        "working directory outside the config directory",
+			launch:      procd.Launch{Configs: []string{ours}, Workdir: otherWorkdir},
+			wantWorkdir: otherWorkdir,
 		},
 		{
-			name:     "no working directory on disk: the path base is the candidate",
-			launch:   procd.Launch{Configs: []string{ours}, Workdir: "/nonexistent/sing-box"},
-			wantFile: true,
+			name:   "no working directory on disk: the path base is the candidate",
+			launch: procd.Launch{Configs: []string{ours}, Workdir: "/nonexistent/sing-box"},
 		},
 		{
-			name:       "command without -c and -C on a foreign working directory",
-			launch:     procd.Launch{Configs: []string{"/usr/share/sing-box/config.json"}, Workdir: "/usr/share/sing-box"},
-			wantRefuse: true,
+			name:   "file with the config working directory",
+			launch: procd.Launch{Configs: []string{ours}, Workdir: configDir},
 		},
-		{name: "relative file with an unknown working directory", launch: procd.Launch{Configs: []string{"config.json"}}, wantRefuse: true},
-		{
-			name:     "file with the config working directory",
-			launch:   procd.Launch{Configs: []string{ours}, Workdir: configDir},
-			wantFile: true,
-		},
-		{name: "directory mode", launch: procd.Launch{ConfigDirs: []string{configDir}, Workdir: configDir}},
-		{name: "foreign config file", launch: procd.Launch{Configs: []string{"/var/run/other-proxy/sing-box.json"}}, wantRefuse: true},
-		{name: "several files", launch: procd.Launch{Configs: []string{ours, configDir + "/extra.json"}}, wantRefuse: true},
-		{name: "file and directory together", launch: procd.Launch{Configs: []string{ours}, ConfigDirs: []string{configDir}}, wantRefuse: true},
 	}
 
 	for _, tt := range tests {
@@ -403,39 +389,23 @@ func TestStartChecksLikeTheService(t *testing.T) {
 			h := newHarness(t)
 			h.service.launch = tt.launch
 
-			if tt.launch.Workdir == packageWorkdir {
+			if tt.launch.Workdir == otherWorkdir {
 				h.service.launch.Workdir = t.TempDir()
 				tt.wantWorkdir = h.service.launch.Workdir
 			}
 
-			_, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", "")
-
-			if tt.wantRefuse {
-				launchErr, ok := errors.AsType[*apply.LaunchError](err)
-				if !ok {
-					t.Fatalf("error %v, expected LaunchError", err)
-				}
-				if launchErr.Config != ours {
-					t.Errorf("daemon config in the failure %q, expected %q", launchErr.Config, ours)
-				}
-				if got := h.rec.snapshot(); len(got) != 0 {
-					t.Errorf("reached the transaction: %v", got)
-				}
-
-				return
-			}
-
-			if err != nil {
+			if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
 				t.Fatalf("apply: %v", err)
 			}
 			h.waitWindow(t)
 
 			h.service.mu.Lock()
-			dir, file, workdir := h.service.checked[0], h.service.checked[1], h.service.checked[2]
+			file, workdir := h.service.checked[0], h.service.checked[1]
 			h.service.mu.Unlock()
 
-			if wantFile := dir + "/" + configName; tt.wantFile != (file == wantFile) || (!tt.wantFile && file != "") {
-				t.Errorf("check file %q with directory %q, expected a file: %v", file, dir, tt.wantFile)
+			dir := filepath.Dir(file)
+			if filepath.Base(file) != configName {
+				t.Errorf("check file %q, expected %s in the candidate", file, configName)
 			}
 
 			wantWorkdir := tt.wantWorkdir

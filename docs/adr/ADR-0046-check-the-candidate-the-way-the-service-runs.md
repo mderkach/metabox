@@ -4,6 +4,7 @@
 - Date: 2026-10-08
 - Deciders: repository owner
 - Supersedes (as to the subject of validation): [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md)
+- Superseded by (as to the check mode, the `launch_mismatch` refusal and services under another owner): [ADR-0069](./ADR-0069-manage-only-the-metabox-singbox-service.md) (Proposed)
 
 ## Context and problem statement
 

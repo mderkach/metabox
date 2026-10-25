@@ -326,9 +326,8 @@ type fakeService struct {
 
 	rec      *recorder
 	checkErr error
-	// checked holds the arguments of the last Check: directory, config file, working
-	// directory.
-	checked [3]string
+	// checked holds the arguments of the last Check: config file, working directory.
+	checked [2]string
 	// launch is what procd starts the service with; empty means unknown.
 	launch    procd.Launch
 	launchErr error
@@ -346,11 +345,11 @@ type fakeService struct {
 	stale int
 }
 
-func (s *fakeService) Check(_ context.Context, dir, config, workdir string) error {
+func (s *fakeService) Check(_ context.Context, config, workdir string) error {
 	s.rec.add("Check")
 
 	s.mu.Lock()
-	s.checked = [3]string{dir, config, workdir}
+	s.checked = [2]string{config, workdir}
 	s.mu.Unlock()
 
 	return s.checkErr

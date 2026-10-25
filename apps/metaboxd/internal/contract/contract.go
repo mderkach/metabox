@@ -127,10 +127,6 @@ type ServiceErrorCode string
 // such a response is not observed but substituted.
 const ServiceStateUnread ServiceErrorCode = "service_state_unread"
 
-// ServiceInstanceAmbiguous means the service has several procd instances, and the instance
-// name is not set for the daemon: it does not guess which one is sing-box.
-const ServiceInstanceAmbiguous ServiceErrorCode = "service_instance_ambiguous"
-
 // History is the response of `GET /api/history`: traffic over the whole time the daemon accumulated.
 //
 // The point time is not transmitted: the router has no clock before NTP synchronization, and
@@ -190,11 +186,6 @@ const (
 	// the service would not find the relative path of a local node. The directories lie in
 	// Details.
 	ErrWorkdirMismatch ErrorCode = "workdir_mismatch"
-	// ErrLaunchMismatch means the apply is rejected before the write: procd starts
-	// the sing-box service not on the config the daemon owns, but on a foreign
-	// file, on several, or on a file and a directory at once. A write would change nothing
-	// for the service, and the check would verify not what will run.
-	ErrLaunchMismatch ErrorCode = "launch_mismatch"
 	// ErrDeviceInvalid means the own device name was not accepted: the MAC is not parsed, the name
 	// is longer than allowed or has control characters, the body is not parsed,
 	// or there are more own names than the daemon stores.
@@ -207,11 +198,6 @@ const (
 	// the client read the model (412), or `PUT /api/dataplane` came without
 	// If-Match (428).
 	ErrDataplaneModified ErrorCode = "dataplane_modified"
-	// ErrDataplaneForeignService means the model change is rejected before the write: the daemon
-	// manages not the `metabox-singbox` service, while the model is read only by its
-	// init script. A write would install nothing, and a reload would restart
-	// foreign routing.
-	ErrDataplaneForeignService ErrorCode = "dataplane_foreign_service"
 	// ErrLogUnavailable means the sing-box log cannot be read: logread is not set or
 	// failed, the log.output file did not open.
 	ErrLogUnavailable ErrorCode = "log_unavailable"
@@ -350,10 +336,6 @@ type Dataplane struct {
 	Applied bool `json:"applied"`
 	// AppliedReason is why Applied was not observed but substituted with false.
 	AppliedReason dataplane.AppliedReason `json:"applied_reason,omitempty"`
-	// ForeignService means the daemon manages not the `metabox-singbox` service, and
-	// `PUT /api/dataplane` will get `dataplane_foreign_service`: the panel does not
-	// offer a change the daemon will reject.
-	ForeignService bool `json:"foreign_service,omitempty"`
 }
 
 // DataplaneChange is the body of `PUT /api/dataplane`: the model in the same form as the

@@ -189,20 +189,6 @@ func (e *WorkdirError) Error() string {
 	return fmt.Sprintf("service working directory %s does not match the config directory %s", e.Workdir, e.ConfigDir)
 }
 
-// LaunchError means the service starts not on the config the daemon owns:
-// a write would change nothing for it, and the check would verify not what
-// will run. Configs and ConfigDirs are the -c and -C flags of the service command, Config is
-// the daemon config path.
-type LaunchError struct {
-	Configs    []string
-	ConfigDirs []string
-	Config     string
-}
-
-func (e *LaunchError) Error() string {
-	return fmt.Sprintf("the service starts with %q and %q, not with the config %s", e.Configs, e.ConfigDirs, e.Config)
-}
-
 // Lists are the list file changes that travel with an apply: put is written into the
 // lists subdirectory, remove is deleted from it. Both are applied by the same transaction
 // as the config: check, write, rollback and replay are shared.
@@ -235,9 +221,9 @@ type Store interface {
 
 // Service is the sing-box binary and its service.
 type Service interface {
-	// Check checks a candidate: config is the config file (-c), empty means the whole
-	// dir directory (-C); workdir is the base of relative paths (-D).
-	Check(ctx context.Context, dir, config, workdir string) error
+	// Check checks a candidate: config is the config file (-c), workdir is the base of
+	// relative paths (-D).
+	Check(ctx context.Context, config, workdir string) error
 	Restart(ctx context.Context) error
 	// Launch is what procd starts the service with; empty fields mean nowhere to learn it from.
 	Launch(ctx context.Context) (procd.Launch, error)
@@ -498,22 +484,17 @@ func SnapshotLists(snapshot map[string][]byte, current map[string]string) Lists 
 	return lists
 }
 
-// checkTarget is how to check a candidate: in the mode and from the path base with
-// which procd will start the service, otherwise the check and runtime verdicts diverge.
+// checkTarget is how to check a candidate: from the path base with which procd will start
+// the service, otherwise the check and runtime verdicts diverge.
 type checkTarget struct {
-	// directory: the service merges the config directory (-C), not reads a single file.
-	directory bool
 	// workdir is the service working directory outside the config directory; empty means the path
 	// base is the candidate itself.
 	workdir string
 }
 
-// resolveCheck compares the service command with the daemon config before the write: a mismatch
-// would otherwise be found only by the service crashing on the new config or by checking not
-// what will run. An unknown command does not stop the apply:
-// procd may be absent and the service may never have started, and a refusal would then
-// be false; the check runs the way the sing-box package's own init script starts the service,
-// with one file.
+// resolveCheck takes the path base of the check from the service command. An unknown
+// command does not stop the apply: procd may be absent and the service may never have
+// started; the candidate is then its own path base, as with the service init script.
 //
 // A working directory outside the config directory does not break the check: the transaction does not
 // change it, and check takes it as the path base. A refusal only with list files:
@@ -522,23 +503,12 @@ type checkTarget struct {
 func (m *Manager) resolveCheck(ctx context.Context, withLists bool) (checkTarget, error) {
 	launch, err := m.service.Launch(ctx)
 	if err != nil {
-		m.log.Warn("service command not read, the candidate is checked as a single file", "err", err)
+		m.log.Warn("service command not read, the candidate is its own path base", "err", err)
 
 		launch = procd.Launch{}
 	}
 
 	var target checkTarget
-
-	configPath := filepath.Join(m.opts.ConfigDir, m.opts.ConfigName)
-
-	switch {
-	case len(launch.Configs) == 0 && len(launch.ConfigDirs) == 0:
-	case len(launch.ConfigDirs) == 0 && len(launch.Configs) == 1 && samePath(launch.Configs[0], configPath):
-	case len(launch.Configs) == 0 && len(launch.ConfigDirs) == 1 && samePath(launch.ConfigDirs[0], m.opts.ConfigDir):
-		target.directory = true
-	default:
-		return checkTarget{}, &LaunchError{Configs: launch.Configs, ConfigDirs: launch.ConfigDirs, Config: configPath}
-	}
 
 	if launch.Workdir == "" || samePath(launch.Workdir, m.opts.ConfigDir) {
 		return target, nil

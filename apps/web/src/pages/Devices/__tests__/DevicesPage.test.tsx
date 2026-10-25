@@ -447,21 +447,6 @@ describe('devices screen', () => {
       expect(toggle).toBeChecked();
     });
 
-    it('on a daemon managing another service the toggle is unavailable, shows the position and explains why', async () => {
-      server.use(...createDeviceHandlers());
-      serveDataplane({ ...DATAPLANE_FIXTURE, foreign_service: true });
-      renderScreen();
-
-      await screen.findByText('Ноутбук');
-      await waitFor(() => {
-        expect(within(rowOf('Ноутбук')).getByText('панель управляет не metabox-singbox')).toBeInTheDocument();
-      });
-
-      expect(isLocked(screen.getByRole('switch', { name: 'Через sing-box: Ноутбук' }))).toBe(true);
-      expect(screen.getByRole('switch', { name: 'Через sing-box: Ноутбук' })).not.toBeChecked();
-      expect(screen.getByRole('switch', { name: 'Через sing-box: iphone-guest' })).toBeChecked();
-    });
-
     it('a change rejected by the daemon does not open the window and does not lock the toggle', async () => {
       const rejected = vi.fn<() => void>();
       const user = userEvent.setup();

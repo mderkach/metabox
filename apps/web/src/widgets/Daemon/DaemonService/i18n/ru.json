@@ -25,8 +25,7 @@
   "unread": "Состояние службы не прочитано",
   "crashed": "Служба не запустилась",
   "reason": {
-    "service_state_unread": "procd не ответил демону: состояние службы неизвестно",
-    "service_instance_ambiguous": "У службы несколько инстансов procd: укажите инстанс sing-box в настройках демона"
+    "service_state_unread": "procd не ответил демону: состояние службы неизвестно"
   },
   "restart": {
     "title": "Перезапустить sing-box?",

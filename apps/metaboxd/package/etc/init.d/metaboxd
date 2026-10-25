@@ -35,7 +35,7 @@ start_service() {
 
 	local enabled listen_addr listen_port listen_interface listen
 	local config_dir config_name state_dir
-	local singbox init_script service_instance ubus clash_port log_level health_dns_name
+	local singbox ubus clash_port log_level health_dns_name
 	local https https_cert https_key lang
 
 	config_get_bool enabled main enabled 1
@@ -48,8 +48,6 @@ start_service() {
 	config_get config_name main config_name config.json
 	config_get state_dir main state_dir /etc/metabox
 	config_get singbox main singbox /usr/bin/sing-box
-	config_get init_script main init_script /etc/init.d/metabox-singbox
-	config_get service_instance main service_instance sing-box
 	config_get ubus main ubus /bin/ubus
 	config_get clash_port main clash_port 9090
 	config_get log_level main log_level info
@@ -89,8 +87,6 @@ start_service() {
 		-config-name "$config_name" \
 		-state-dir "$state_dir" \
 		-singbox "$singbox" \
-		-init-script "$init_script" \
-		-service-instance "$service_instance" \
 		-ubus "$ubus" \
 		-clash-port "$clash_port" \
 		-log-level "$log_level" \

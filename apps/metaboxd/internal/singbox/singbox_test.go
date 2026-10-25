@@ -3,7 +3,6 @@ package singbox_test
 import (
 	"context"
 	"errors"
-	"fmt"
 	"slices"
 	"testing"
 
@@ -13,7 +12,7 @@ import (
 
 const (
 	binary     = "/usr/bin/sing-box"
-	initScript = "/etc/init.d/sing-box"
+	initScript = "/etc/init.d/metabox-singbox"
 )
 
 type fakeRunner struct {
@@ -31,7 +30,7 @@ func (f *fakeRunner) Run(_ context.Context, name string, args ...string) (singbo
 func newClient(t *testing.T, runner singbox.Runner) *singbox.Client {
 	t.Helper()
 
-	client, err := singbox.New(runner, binary, initScript, "", "", nil)
+	client, err := singbox.New(runner, binary, initScript, "", nil)
 	if err != nil {
 		t.Fatalf("client build: %v", err)
 	}
@@ -46,52 +45,31 @@ func TestNewRejectsRelativePaths(t *testing.T) {
 		initScript string
 	}{
 		{"relative binary", "sing-box", initScript},
-		{"relative init script", binary, "init.d/sing-box"},
+		{"relative init script", binary, "init.d/metabox-singbox"},
 		{"empty path", "", initScript},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if _, err := singbox.New(&fakeRunner{}, tt.binary, tt.initScript, "", "", nil); err == nil {
+			if _, err := singbox.New(&fakeRunner{}, tt.binary, tt.initScript, "", nil); err == nil {
 				t.Error("path accepted: under procd PATH is not the one in the shell")
 			}
 		})
 	}
 }
 
-// A candidate is checked in the mode the service will start in: a file (-c) or
-// a directory (-C). -D is the same relative path base as the service's.
+// A candidate is checked the way the service starts: a single file (-c) and -D as the
+// same relative path base as the service's.
 func TestCheckFollowsServiceMode(t *testing.T) {
-	tests := []struct {
-		name    string
-		config  string
-		workdir string
-		want    []string
-	}{
-		{
-			"config file",
-			"/tmp/candidate/config.json", "/usr/share/sing-box",
-			[]string{binary, "check", "-D", "/usr/share/sing-box", "-c", "/tmp/candidate/config.json"},
-		},
-		{
-			"whole directory",
-			"", "/tmp/candidate",
-			[]string{binary, "check", "-D", "/tmp/candidate", "-C", "/tmp/candidate"},
-		},
+	runner := &fakeRunner{}
+
+	if err := newClient(t, runner).Check(t.Context(), "/tmp/candidate/config.json", "/tmp/candidate"); err != nil {
+		t.Fatalf("check: %v", err)
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			runner := &fakeRunner{}
-
-			if err := newClient(t, runner).Check(t.Context(), "/tmp/candidate", tt.config, tt.workdir); err != nil {
-				t.Fatalf("check: %v", err)
-			}
-
-			if len(runner.calls) != 1 || !slices.Equal(runner.calls[0], tt.want) {
-				t.Errorf("called %v, expected %v", runner.calls, tt.want)
-			}
-		})
+	want := []string{binary, "check", "-D", "/tmp/candidate", "-c", "/tmp/candidate/config.json"}
+	if len(runner.calls) != 1 || !slices.Equal(runner.calls[0], want) {
+		t.Errorf("called %v, expected %v", runner.calls, want)
 	}
 }
 
@@ -102,7 +80,7 @@ func TestCheckReturnsBinaryOutputVerbatim(t *testing.T) {
 		ExitCode: 1,
 	}}
 
-	err := newClient(t, runner).Check(t.Context(), "/tmp/candidate", "", "/tmp/candidate")
+	err := newClient(t, runner).Check(t.Context(), "/tmp/candidate/config.json", "/tmp/candidate")
 
 	checkErr, ok := errors.AsType[*singbox.CheckError](err)
 	if !ok {
@@ -120,7 +98,7 @@ func TestCheckWrapsLaunchFailure(t *testing.T) {
 	launch := errors.New("executable file not found")
 	runner := &fakeRunner{err: launch}
 
-	err := newClient(t, runner).Check(t.Context(), "/tmp/candidate", "", "/tmp/candidate")
+	err := newClient(t, runner).Check(t.Context(), "/tmp/candidate/config.json", "/tmp/candidate")
 
 	if !errors.Is(err, launch) {
 		t.Errorf("got %v, expected a wrapper over the start error", err)
@@ -278,7 +256,7 @@ func TestLaunch(t *testing.T) {
 		want := procd.Launch{Workdir: "/etc/sing-box", Configs: []string{"/etc/sing-box/config.json"}}
 		supervisor := &fakeSupervisor{state: procd.State{Known: true, Launch: want}}
 
-		client, err := singbox.New(&fakeRunner{}, binary, initScript, "", "", supervisor)
+		client, err := singbox.New(&fakeRunner{}, binary, initScript, "", supervisor)
 		if err != nil {
 			t.Fatalf("client build: %v", err)
 		}
@@ -290,15 +268,15 @@ func TestLaunch(t *testing.T) {
 		if got.Workdir != want.Workdir || !slices.Equal(got.Configs, want.Configs) {
 			t.Errorf("got %+v, expected %+v", got, want)
 		}
-		if !slices.Equal(supervisor.names, []string{"sing-box"}) {
-			t.Errorf("procd asked about %v, expected the sing-box service", supervisor.names)
+		if !slices.Equal(supervisor.names, []string{"metabox-singbox"}) {
+			t.Errorf("procd asked about %v, expected the metabox-singbox service", supervisor.names)
 		}
 	})
 
 	t.Run("procd failure is returned to the caller", func(t *testing.T) {
 		supervisor := &fakeSupervisor{err: errors.New("ubus не отвечает")}
 
-		client, err := singbox.New(&fakeRunner{}, binary, initScript, "", "", supervisor)
+		client, err := singbox.New(&fakeRunner{}, binary, initScript, "", supervisor)
 		if err != nil {
 			t.Fatalf("client build: %v", err)
 		}
@@ -321,7 +299,7 @@ func TestLaunch(t *testing.T) {
 func TestPIDReadsSupervisor(t *testing.T) {
 	supervisor := &fakeSupervisor{state: procd.State{Known: true, Running: true, PID: 4242}}
 
-	client, err := singbox.New(&fakeRunner{}, binary, initScript, "", "", supervisor)
+	client, err := singbox.New(&fakeRunner{}, binary, initScript, "", supervisor)
 	if err != nil {
 		t.Fatalf("client build: %v", err)
 	}
@@ -333,7 +311,7 @@ func TestPIDReadsSupervisor(t *testing.T) {
 	if pid != 4242 {
 		t.Errorf("pid %d, expected 4242", pid)
 	}
-	if !slices.Equal(supervisor.names, []string{"sing-box"}) {
+	if !slices.Equal(supervisor.names, []string{"metabox-singbox"}) {
 		t.Errorf("procd asked about %v, expected the init script service", supervisor.names)
 	}
 }
@@ -346,7 +324,7 @@ func TestPIDFails(t *testing.T) {
 	})
 
 	t.Run("procd did not answer", func(t *testing.T) {
-		client, err := singbox.New(&fakeRunner{}, binary, initScript, "", "", &fakeSupervisor{err: errors.New("ubus молчит")})
+		client, err := singbox.New(&fakeRunner{}, binary, initScript, "", &fakeSupervisor{err: errors.New("ubus молчит")})
 		if err != nil {
 			t.Fatalf("client build: %v", err)
 		}
@@ -360,7 +338,7 @@ func TestPIDFails(t *testing.T) {
 	// here is not "not up" but "nobody to ask", otherwise the apply would wait for
 	// a new process until the cycle timeout and roll back.
 	t.Run("procd does not know the service", func(t *testing.T) {
-		client, err := singbox.New(&fakeRunner{}, binary, initScript, "", "", &fakeSupervisor{state: procd.State{}})
+		client, err := singbox.New(&fakeRunner{}, binary, initScript, "", &fakeSupervisor{state: procd.State{}})
 		if err != nil {
 			t.Fatalf("client build: %v", err)
 		}
@@ -371,13 +349,13 @@ func TestPIDFails(t *testing.T) {
 	})
 }
 
-// The sing-box instance is set by name: both the init script and procd are asked about it, and
-// not about the whole service, where a foreign script may live nearby.
+// The sing-box instance is asked by name: both the init script and procd are asked about it, and
+// not about the whole service, where another script may live nearby.
 func TestStateAsksNamedInstance(t *testing.T) {
 	runner := &fakeRunner{}
 	supervisor := &fakeSupervisor{state: procd.State{Known: true, Running: true, PID: 4242}}
 
-	client, err := singbox.New(runner, binary, "/etc/init.d/other-proxy", "proxy", "", supervisor)
+	client, err := singbox.New(runner, binary, initScript, "", supervisor)
 	if err != nil {
 		t.Fatalf("client build: %v", err)
 	}
@@ -386,33 +364,12 @@ func TestStateAsksNamedInstance(t *testing.T) {
 		t.Fatalf("service state: %v", err)
 	}
 
-	want := []string{"/etc/init.d/other-proxy", "running", "proxy"}
+	want := []string{initScript, "running", singbox.Instance}
 	if len(runner.calls) != 1 || !slices.Equal(runner.calls[0], want) {
 		t.Errorf("init script called as %q, expected %q", runner.calls, want)
 	}
 
-	if !slices.Equal(supervisor.instances, []string{"proxy"}) {
-		t.Errorf("procd asked about instances %q, expected proxy", supervisor.instances)
-	}
-}
-
-// Without a name for a service with several instances the daemon does not know which process
-// is its own, and the state is not guessed by the init script.
-func TestStateFailsOnAmbiguousInstance(t *testing.T) {
-	runner := &fakeRunner{}
-	supervisor := &fakeSupervisor{err: fmt.Errorf("служба other-proxy: %w", procd.ErrAmbiguousInstance)}
-
-	client, err := singbox.New(runner, binary, "/etc/init.d/other-proxy", "", "", supervisor)
-	if err != nil {
-		t.Fatalf("client build: %v", err)
-	}
-
-	if _, err := client.State(t.Context()); !errors.Is(err, procd.ErrAmbiguousInstance) {
-		t.Errorf("got %v, expected ErrAmbiguousInstance", err)
-	}
-
-	want := []string{"/etc/init.d/other-proxy", "running"}
-	if len(runner.calls) != 1 || !slices.Equal(runner.calls[0], want) {
-		t.Errorf("init script called as %q, expected %q", runner.calls, want)
+	if !slices.Equal(supervisor.instances, []string{singbox.Instance}) {
+		t.Errorf("procd asked about instances %q, expected %s", supervisor.instances, singbox.Instance)
 	}
 }

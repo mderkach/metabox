@@ -1,8 +1,7 @@
 {
   "switch": {
     "label": "Through sing-box: {{device}}",
-    "forAll": "interception for everyone",
-    "foreignService": "the panel manages a service other than metabox-singbox"
+    "forAll": "interception for everyone"
   },
   "reason": {
     "mac": "by MAC",

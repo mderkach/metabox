@@ -47,12 +47,8 @@ func TestApplyHTTPOnEphemeralBench(t *testing.T) {
 	if status.Transaction != nil && status.Transaction.Active() {
 		t.Fatal("the bench already has an active Apply transaction")
 	}
-	initScript := strings.TrimSpace(string(benchExec(t, nil, "uci", "get", "metabox.main.init_script")))
-	if initScript != "/etc/init.d/metabox-singbox" {
-		t.Fatal("the bench does not manage the packaged sing-box service")
-	}
 	baseline := benchRequest(t, http.MethodGet, "/api/config", nil, http.StatusOK)
-	t.Cleanup(func() { restoreBench(t, baseline, initScript) })
+	t.Cleanup(func() { restoreBench(t, baseline) })
 
 	t.Log("invalid candidate: the real binary rejects it without changing the config")
 	benchRequest(t, http.MethodPost, "/api/apply", []byte(`{"route":{"rules":[{"outbound":42}]}}`), http.StatusUnprocessableEntity)
@@ -95,10 +91,6 @@ func TestApplyHTTPOnEphemeralBench(t *testing.T) {
 
 	t.Log("interruption: stopping at the restart barrier leaves a replayable write")
 	installBenchBarrier(t)
-	benchExec(t, nil, "uci", "set", "metabox.main.init_script=/tmp/metabox-apply-integration/metabox-singbox")
-	benchExec(t, nil, "uci", "commit", "metabox")
-	benchExec(t, nil, "/etc/init.d/metaboxd", "restart")
-	waitBenchReady(t)
 	interrupted := benchCandidate(t, baseline, "apply-http-interrupted.metabox.example")
 	tx = startBenchApply(t, interrupted)
 	waitBench(t, 20*time.Second, "restart barrier", func() bool {
@@ -110,8 +102,7 @@ func TestApplyHTTPOnEphemeralBench(t *testing.T) {
 	benchExec(t, nil, "/etc/init.d/metaboxd", "stop")
 	assertBenchJournal(t, tx.ID, apply.PhaseApplying)
 	benchExec(t, nil, "rm", "-f", "/tmp/metabox-apply-integration/hold")
-	benchExec(t, nil, "uci", "set", "metabox.main.init_script="+initScript)
-	benchExec(t, nil, "uci", "commit", "metabox")
+	benchExec(t, nil, "sh", "-c", restoreInitScript)
 	benchExec(t, nil, "/etc/init.d/metaboxd", "start")
 	waitBenchReady(t)
 	waitBenchPhase(t, tx.ID, apply.PhaseRolledBack, 30*time.Second)
@@ -312,21 +303,31 @@ func runBenchCommand(ctx context.Context, input []byte, args ...string) ([]byte,
 	return cmd.CombinedOutput()
 }
 
+// restoreInitScript puts the saved init script back by rename: a barrier still waiting
+// keeps reading its own file, and after release it runs the saved copy.
+const restoreInitScript = `if [ -f /tmp/metabox-apply-integration/metabox-singbox ]; then
+  cp /tmp/metabox-apply-integration/metabox-singbox /etc/init.d/.metabox-singbox.restore &&
+  mv /etc/init.d/.metabox-singbox.restore /etc/init.d/metabox-singbox
+fi`
+
+// installBenchBarrier puts a wrapper in place of the init script the daemon calls; the
+// original is kept under the same basename, so procd still sees the metabox-singbox service.
 func installBenchBarrier(t *testing.T) {
 	t.Helper()
 	benchExec(t, nil, "mkdir", "/tmp/metabox-apply-integration")
+	benchExec(t, nil, "cp", "-p", "/etc/init.d/metabox-singbox", "/tmp/metabox-apply-integration/metabox-singbox")
 	const script = `#!/bin/sh
 if [ "$1" = restart ] && [ -e /tmp/metabox-apply-integration/hold ]; then
   touch /tmp/metabox-apply-integration/entered
   while [ -e /tmp/metabox-apply-integration/hold ]; do sleep 1; done
 fi
-exec /etc/init.d/metabox-singbox "$@"
+exec /tmp/metabox-apply-integration/metabox-singbox "$@"
 `
-	benchExec(t, []byte(script), "sh", "-c", "cat > /tmp/metabox-apply-integration/metabox-singbox; chmod 700 /tmp/metabox-apply-integration/metabox-singbox")
 	benchExec(t, nil, "touch", "/tmp/metabox-apply-integration/hold")
+	benchExec(t, []byte(script), "sh", "-c", "cat > /etc/init.d/.metabox-singbox.barrier; chmod 755 /etc/init.d/.metabox-singbox.barrier; mv /etc/init.d/.metabox-singbox.barrier /etc/init.d/metabox-singbox")
 }
 
-func restoreBench(t *testing.T, baseline []byte, initScript string) {
+func restoreBench(t *testing.T, baseline []byte) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
@@ -340,8 +341,7 @@ func restoreBench(t *testing.T, baseline []byte, initScript string) {
 	}{
 		{nil, []string{"rm", "-f", "/tmp/metabox-apply-integration/hold"}},
 		{nil, []string{"/etc/init.d/metaboxd", "stop"}},
-		{nil, []string{"uci", "set", "metabox.main.init_script=" + initScript}},
-		{nil, []string{"uci", "commit", "metabox"}},
+		{nil, []string{"sh", "-c", restoreInitScript}},
 		{baseline, []string{"sh", "-c", "cat > /etc/sing-box/config.json"}},
 		{nil, []string{"rm", "-f", "/etc/metabox/apply.json"}},
 		{nil, []string{"/etc/init.d/metabox-singbox", "restart"}},

@@ -38,7 +38,6 @@ function DevicesRowProto({
   onDone,
   routeModel,
   routeLocked,
-  routeForeign,
   onRoute,
   now,
 }: {
@@ -51,7 +50,6 @@ function DevicesRowProto({
   /** Dataplane model; `null` means not read, and the toggle is unavailable. */
   routeModel: DataplaneModel | null;
   routeLocked: boolean;
-  routeForeign: boolean;
   onRoute: (source: RouteSource, routed: boolean) => void;
   /** Moment of the list snapshot in milliseconds: the remaining lease time is counted from it. */
   now: number;
@@ -129,7 +127,6 @@ function DevicesRowProto({
           label={device.label}
           model={routeModel}
           locked={routeLocked}
-          foreignService={routeForeign}
           onRoute={onRoute}
         />
       </span>
