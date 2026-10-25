@@ -1,5 +1,5 @@
 #!/bin/sh
-# Assigns roles to the test bench networks and hands control to procd.
+# Assigns roles to the test bench networks, hides the host kernel log and hands control to procd.
 #
 # On the router the interfaces are described by the firmware, here Docker creates them, and the eth*
 # names it hands out come in arbitrary order: between two starts the same
@@ -89,5 +89,9 @@ INTERFACE
 		printf "\toption gateway '%s'\n" "$GATEWAY" >>"$CONF"
 	fi
 done
+
+# The container has no kernel of its own: /proc/kmsg is the host's log, and logd reading
+# it next to the host's own reader blocks in the kernel for hours.
+mount --bind /dev/null /proc/kmsg
 
 exec /sbin/procd

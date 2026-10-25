@@ -7,8 +7,10 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: write
+      checks: read
     env:
       TAG: ${{ github.ref_name }}
       # The router's arch. There is no public rootfs for it, so the package is built on
@@ -29,6 +31,21 @@ jobs:
           [ "$web" = "$version" ] || { echo "::error::apps/web/package.json $web, VERSION $version"; exit 1; }
           git merge-base --is-ancestor HEAD origin/main || { echo "::error::$TAG is not on main"; exit 1; }
           [ -s "$PUBLIC_KEY" ] || { echo "::error::$PUBLIC_KEY is missing"; exit 1; }
+
+      # Being on main is not enough: a newer push replaces a pending run in the concurrency
+      # group, so a commit may have no CI verdict. `checks` sums up every CI job, and its
+      # latest check run is the verdict.
+      - name: CI is green for the tagged commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          latest=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs?check_name=checks" \
+            --jq '.check_runs | sort_by(.started_at) | last | .conclusion // .status // empty')
+          [ "$latest" = success ] || {
+            echo "::error::the latest 'checks' run for $GITHUB_SHA is ${latest:-missing}, not success; re-run this workflow once CI on main is green"
+            exit 1
+          }
+          echo "checks: $latest"
 
       - uses: actions/setup-go@v6
         with:
