@@ -90,4 +90,8 @@ INTERFACE
 	fi
 done
 
+# The container has no kernel of its own: /proc/kmsg is the host's log, and logd reading
+# it next to the host's own reader blocks in the kernel for hours (ADR-0066).
+mount --bind /dev/null /proc/kmsg
+
 exec /sbin/procd
