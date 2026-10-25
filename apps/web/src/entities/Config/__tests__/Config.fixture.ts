@@ -619,7 +619,7 @@ export const CONFIG_FIXTURE: Config = {
     clash_api: {
       external_controller: '0.0.0.0:9090',
       external_ui: 'ui',
-      external_ui_download_url: 'https://github.com/MetaCubeX/metacubexd/archive/refs/heads/gh-pages.zip',
+      external_ui_download_url: 'https://example.com/clash-dashboard.zip',
       external_ui_download_detour: 'proxy',
       default_mode: 'Rule',
       access_control_allow_origin: ['*'],

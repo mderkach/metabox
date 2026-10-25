@@ -21,8 +21,8 @@ type DNSInbound struct {
 
 // ReadDNSInbound looks for dns-in: the first inbound of type direct whose listen_port equals
 // port, the port the init script sends dnsmasq queries to. The tag is not
-// considered: in homeproxy it is `dns-in`, the owner's may be anything, and the port
-// is set by the dataplane model. False without an error means there is no such inbound in the config.
+// considered: the owner may name the inbound anything, and the port is set by the
+// dataplane model. False without an error means there is no such inbound in the config.
 func ReadDNSInbound(data []byte, port int) (DNSInbound, bool, error) {
 	var cfg struct {
 		Inbounds []struct {

@@ -18,7 +18,7 @@ type Holder struct {
 	Kind Kind `json:"kind"`
 }
 
-// Borrower refers to an enum of a foreign package.
+// Borrower refers to an enum of another package.
 type Borrower struct {
 	Kind sample.Kind `json:"kind"`
 }

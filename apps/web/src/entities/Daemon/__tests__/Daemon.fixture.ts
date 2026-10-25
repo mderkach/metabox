@@ -65,8 +65,8 @@ export const SERVICE_RUNNING_FIXTURE: ServiceStateWire = {
 };
 
 /**
- * The process is alive but was not started by the daemon service: on the device routing
- * is owned by a foreign package, and procd does not know the process age.
+ * The process is alive but was not started by the daemon service, so procd does not know
+ * the process age.
  */
 export const SERVICE_UNMANAGED_FIXTURE: ServiceStateWire = {
   status: 'running',

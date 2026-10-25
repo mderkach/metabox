@@ -1,6 +1,6 @@
 #!/bin/sh
 # Installs metabox on a clean OpenWrt router: the project key, the apk feed, the
-# sing-box-extended fork package and the metaboxd package. Decision: docs/adr/ADR-0058.
+# sing-box-extended package and the metaboxd package. Decision: docs/adr/ADR-0058.
 #
 #   wget -qO- https://mderkach.github.io/metabox/install.sh | sh
 #   wget -qO- https://mderkach.github.io/metabox/install.sh | sh -s -- --channel stable
@@ -145,11 +145,11 @@ else
 	say "sing-box-extended %s" "sing-box-extended %s" "$SINGBOX_VERSION"
 	wget -q -O "$tmp/sing-box.apk" "$SINGBOX_URL" || die "cannot download %s" "не удалось скачать %s" "$SINGBOX_URL"
 	sum=$(sha256sum "$tmp/sing-box.apk" | cut -d ' ' -f 1)
-	[ "$sum" = "$SINGBOX_SHA256" ] || die "sha256 of the fork package is %s, expected %s" "sha256 пакета форка %s, ожидался %s" "$sum" "$SINGBOX_SHA256"
-	# The fork package is signed by the fork, not by the project key: the pinned hash is the check.
+	[ "$sum" = "$SINGBOX_SHA256" ] || die "sha256 of the sing-box-extended package is %s, expected %s" "sha256 пакета sing-box-extended %s, ожидался %s" "$sum" "$SINGBOX_SHA256"
+	# The sing-box-extended package is not signed by the project key: the pinned hash is the check.
 	apk add --allow-untrusted "$tmp/sing-box.apk"
 
-	# sing-box is run by metabox-singbox, so the fork's own service stays off.
+	# sing-box is run by metabox-singbox, so the package's own service stays off.
 	/etc/init.d/sing-box stop >/dev/null 2>&1 || true
 	/etc/init.d/sing-box disable
 fi

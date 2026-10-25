@@ -447,7 +447,7 @@ describe('devices screen', () => {
       expect(toggle).toBeChecked();
     });
 
-    it('on a daemon with a foreign service the toggle is unavailable, shows the position and explains why', async () => {
+    it('on a daemon managing another service the toggle is unavailable, shows the position and explains why', async () => {
       server.use(...createDeviceHandlers());
       serveDataplane({ ...DATAPLANE_FIXTURE, foreign_service: true });
       renderScreen();

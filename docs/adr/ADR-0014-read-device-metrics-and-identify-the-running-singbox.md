@@ -8,7 +8,7 @@
 
 The panel showed the runtime only through what the Clash API returns: speed, sing-box heap memory, connections. Everything around it (whether the router CPU is loaded, whether the board is heating up, how much memory is left, how much of the link goes past the proxy at all) stayed behind SSH.
 
-The second gap was more visible. On the target BPI-R4 Pro, routing is owned by the re:HomeProxy package: it starts `/usr/bin/sing-box` with its own service against a working config in `/var/run/homeproxy/`. The daemon, however, asks procd about the state of `/etc/init.d/sing-box`, the sing-box package's service, disabled on 2026-09-11. The result on the live device: the screen showed active connections and ongoing traffic, and next to them the label "sing-box stopped" with a "Start" button that would have started a second copy of the process on top of the running one.
+The second gap was more visible. On the target BPI-R4 Pro, routing is owned by another package: it starts `/usr/bin/sing-box` with its own service against a working config in its own directory under `/var/run/`. The daemon, however, asks procd about the state of `/etc/init.d/sing-box`, the sing-box package's service, disabled on 2026-09-11. The result on the live device: the screen showed active connections and ongoing traffic, and next to them the label "sing-box stopped" with a "Start" button that would have started a second copy of the process on top of the running one.
 
 The constraints were set earlier: the daemon's `go.mod` has no dependencies ([Architecture and style guide](../../apps/metaboxd/docs/guides/Architecture&Style.md)), the NFR-4 budget (RSS ≤ 64 MB, idle CPU ≤ 1% of a core), service control only through the init script (PRD, Constraints).
 
@@ -36,7 +36,7 @@ In scope: where the daemon gets device metrics, how it identifies the running si
 
 1. **Trust procd.** Pros: nothing to do. Cons: exactly the failure this decision is made for (driver 2). **Rejected.**
 
-2. **Find the process by the binary name.** Pros: one read of `comm` per process. Cons: the device may have several sing-box processes, for example a disabled package service and a running homeproxy, and the choice between them would be arbitrary (driver 2). **Rejected.**
+2. **Find the process by the binary name.** Pros: one read of `comm` per process. Cons: the device may have several sing-box processes, for example a disabled package service and a running service of another routing package, and the choice between them would be arbitrary (driver 2). **Rejected.**
 
 3. **Find the process that listens on the Clash API port.** Pros: this is exactly the process whose data the panel shows; no other one is drawn by it (driver 2). Cons: procfs expresses the socket–process link only through links in `fd`, so the search walks the descriptors of all processes. **Chosen**; the walk is done once and cached by pid.
 
@@ -52,7 +52,7 @@ The same search answers the question "is the runtime alive": `contract.Service` 
 
 The outward interface is chosen by the default route with the lowest metric, skipping tunnels: in TUN mode the default route belongs to sing-box itself, and its traffic would be both the numerator and the denominator. A tunnel is recognized by the `tun_flags` file, which the kernel creates only for TUN/TAP devices.
 
-The share of the link going through sing-box is computed from increments over one window, not from accumulated counters: the interface counter runs from link up, the Clash API counter from process start, and dividing one by the other would give a number that means nothing. The daemon accumulates the increments: it reads the link counter itself and gets the sing-box counter with the connection snapshot. Accumulation on the client was rejected: the observation window would reset on a page reload, and the per-second ratio jumps with every burst (b4 works the same way: it returns a ready ratio of `targeted_connections` to `total_connections` and shows live values separately).
+The share of the link going through sing-box is computed from increments over one window, not from accumulated counters: the interface counter runs from link up, the Clash API counter from process start, and dividing one by the other would give a number that means nothing. The daemon accumulates the increments: it reads the link counter itself and gets the sing-box counter with the connection snapshot. Accumulation on the client was rejected: the observation window would reset on a page reload, and the per-second ratio jumps with every burst (a pattern common among router panels: a ready ratio of targeted to total connections, with live values shown separately).
 
 ## Consequences
 
@@ -64,4 +64,4 @@ The share of the link going through sing-box is computed from increments over on
 
 ## Validation
 
-On the BPI-R4 Pro on 2026-09-13, the daemon from the branch against the working homeproxy config: `GET /api/service` returned `{"status":"running","managed":false}` with the package service disabled; the `system` topic returned a load of 0.01 with four cores, a temperature of 42.8 °C, 355 MB of used memory out of 7.8 GB, a WAN link of 93.6 kB/s, a share through sing-box of 37%, a process RSS of 82.3 MB at pid 5872 (the Clash API at the same moment reported 45.8 MB: it counts only the Go runtime memory, without the binary's resident code), a daemon RSS of 14.2 MB and 23 goroutines. The `internal/device` tests pass on a fake procfs tree, including a pid reused by a foreign process and a default route through a tunnel.
+On the BPI-R4 Pro on 2026-09-13, the daemon from the branch against the working config of that other routing package: `GET /api/service` returned `{"status":"running","managed":false}` with the package service disabled; the `system` topic returned a load of 0.01 with four cores, a temperature of 42.8 °C, 355 MB of used memory out of 7.8 GB, a WAN link of 93.6 kB/s, a share through sing-box of 37%, a process RSS of 82.3 MB at pid 5872 (the Clash API at the same moment reported 45.8 MB: it counts only the Go runtime memory, without the binary's resident code), a daemon RSS of 14.2 MB and 23 goroutines. The `internal/device` tests pass on a fake procfs tree, including a pid reused by a foreign process and a default route through a tunnel.

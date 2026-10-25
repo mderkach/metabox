@@ -8,11 +8,11 @@
 
 The panel shows a sing-box service card: the state, the process age and the failure reason. The `GET /api/service` contract requires three states (`running`, `stopped`, `failed`) and the uptime.
 
-The init script provides less. `/etc/init.d/<service> running` returns only an exit code: zero or non-zero. `/etc/rc.common` brings this command to every script with `USE_PROCD`, so the package does not need to declare it; checked on the device: `/etc/init.d/homeproxy running` answers with zero even though the script itself does not have it. It provides neither the age, nor the difference between "stopped" and "failed", nor the failure reason. Before this decision the daemon always returned `uptime: 0` and did not distinguish `failed` from `stopped`.
+The init script provides less. `/etc/init.d/<service> running` returns only an exit code: zero or non-zero. `/etc/rc.common` brings this command to every script with `USE_PROCD`, so the package does not need to declare it; checked on the device: `running` of a routing service whose script does not declare the command answers with zero. It provides neither the age, nor the difference between "stopped" and "failed", nor the failure reason. Before this decision the daemon always returned `uptime: 0` and did not distinguish `failed` from `stopped`.
 
 Checked on the target device with `ubus call service list`: an instance has `running`, `pid`, `respawn`, `term_timeout`, `limits` and `command`. Neither the age nor the exit code is among them.
 
-A separate difficulty showed up on the same router: `sing-box` was started twice, by the `homeproxy` service and by the `sing-box` package's service. The "right" process cannot be found by the binary name: `pidof sing-box` returned two pids. Only procd knows which service a process belongs to.
+A separate difficulty showed up on the same router: `sing-box` was started twice, by another routing service and by the `sing-box` package's service. The "right" process cannot be found by the binary name: `pidof sing-box` returned two pids. Only procd knows which service a process belongs to.
 
 The constraint was set earlier: [DeviceIO](../../apps/metaboxd/docs/guides/DeviceIO.md) requires controlling the service only through the init script: "starting the binary directly, `kill` by pid and editing `/etc/rc.d` are forbidden: procd owns the process, restarts it by `respawn` and does not know about outside interference".
 
@@ -32,7 +32,7 @@ In scope: where the daemon gets the process age and the failure flag. Out of sco
 
 2. **Find the process by the binary name.** `pidof` or walking `/proc` with a name filter. Pros: no ubus needed. Cons: on the target router this already gives two pids from different services (driver 2); picking "the first one found" would show the age of someone else's process. **Rejected.**
 
-3. **Extend the init script with our own `status` command.** Pros: one source, everything through the init script. Cons: the script belongs to the sing-box or re:HomeProxy package, not to us, so our own command cannot be added there; the real package does not even have `check`. **Rejected.**
+3. **Extend the init script with our own `status` command.** Pros: one source, everything through the init script. Cons: the script then came with another package, not with the panel, so our own command could not be added there; that package does not even have `check`. **Rejected.**
 
 4. **Ask procd over `ubus`, compute the age from `/proc`.** Pros: the owner answers which service a process belongs to (driver 2); the age is counted from system boot and does not depend on the clock (driver 3); `ubus` is procd's regular interface, not a way around it (driver 1); JSON parsing and reading a file are in the standard library (driver 5). Cons: one more external call and parsing of its output; on a system without procd the source is missing. **Chosen.**
 

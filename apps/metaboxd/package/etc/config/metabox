@@ -1,7 +1,6 @@
 # Settings of the panel daemon and of the sing-box service from the same package. The defaults
-# point to the metabox-singbox service. The transitional mode, in which sing-box
-# is started by re:HomeProxy and the paths here point to it, is allowed for
-# the move from homeproxy.
+# point to the metabox-singbox service; they may also point to another service that
+# starts sing-box, then the daemon edits its config but does not manage the dataplane.
 
 config metabox 'main'
 	option enabled '1'
@@ -38,7 +37,7 @@ config metabox 'main'
 	option lang 'en'
 
 # Dataplane of the metabox-singbox service: LAN interception in nft, ip rule for
-# tproxy and the dnsmasq upstream. Disabled while homeproxy owns interception: two
+# tproxy and the dnsmasq upstream. Disabled while another service owns interception: two
 # dataplanes would intercept the same traffic at once. Without this section the service
 # takes the defaults, and in them the dataplane is enabled.
 config dataplane 'dataplane'

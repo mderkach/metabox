@@ -27,11 +27,11 @@
       }
     },
     { "chain": { "family": "inet", "table": "fw4", "name": "metabox_redirect", "handle": 61 } },
-    { "table": { "family": "inet", "name": "b4_mangle", "handle": 2 } },
+    { "table": { "family": "inet", "name": "other_mangle", "handle": 2 } },
     {
       "chain": {
         "family": "inet",
-        "table": "b4_mangle",
+        "table": "other_mangle",
         "name": "prerouting",
         "handle": 1,
         "type": "filter",

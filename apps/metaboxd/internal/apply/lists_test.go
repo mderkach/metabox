@@ -369,9 +369,9 @@ func TestStartChecksLikeTheService(t *testing.T) {
 		wantWorkdir string
 		wantRefuse  bool
 	}{
-		{name: "command unknown: as with the fork package", wantFile: true},
+		{name: "command unknown: as with a single file", wantFile: true},
 		{
-			name:        "fork package: file and package working directory",
+			name:        "package init script: file and package working directory",
 			launch:      procd.Launch{Configs: []string{ours}, Workdir: packageWorkdir},
 			wantFile:    true,
 			wantWorkdir: packageWorkdir,
@@ -393,7 +393,7 @@ func TestStartChecksLikeTheService(t *testing.T) {
 			wantFile: true,
 		},
 		{name: "directory mode", launch: procd.Launch{ConfigDirs: []string{configDir}, Workdir: configDir}},
-		{name: "foreign config file", launch: procd.Launch{Configs: []string{"/var/run/homeproxy/sing-box-c.json"}}, wantRefuse: true},
+		{name: "foreign config file", launch: procd.Launch{Configs: []string{"/var/run/other-proxy/sing-box.json"}}, wantRefuse: true},
 		{name: "several files", launch: procd.Launch{Configs: []string{ours, configDir + "/extra.json"}}, wantRefuse: true},
 		{name: "file and directory together", launch: procd.Launch{Configs: []string{ours}, ConfigDirs: []string{configDir}}, wantRefuse: true},
 	}

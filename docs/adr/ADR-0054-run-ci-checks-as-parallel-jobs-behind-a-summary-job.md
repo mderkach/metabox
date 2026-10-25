@@ -6,7 +6,7 @@
 
 ## Context and problem statement
 
-CI (`.github/workflows/ci.yml`) is mandatory for every change: the `main` branch rule requires the `checks` and `integration` jobs ([CONTRIBUTING.md](../../CONTRIBUTING.md), section "PR"). `checks` ran every step in one job: Go lint over both modules, daemon tests with `-race`, generator tests, web lint, format, tests, build and the full daemon build. The run of `main` 39470699173 (2026-10-20) took 8 min 18 s; `integration` finished in 33 s next to it.
+CI (`.github/workflows/ci.yml`) is mandatory for every change: the `main` branch rule requires the `checks` and `integration` jobs ([`docs/Maintaining.md`](../Maintaining.md), section "Branch rule"). `checks` ran every step in one job: Go lint over both modules, daemon tests with `-race`, generator tests, web lint, format, tests, build and the full daemon build. The run of `main` 39470699173 (2026-10-20) took 8 min 18 s; `integration` finished in 33 s next to it.
 
 Measured on that run, three steps cost two minutes each, and none depends on another:
 
@@ -105,7 +105,7 @@ The branch rule is untouched: the contexts `checks` and `integration` exist befo
 
 ## Links
 
-- [CONTRIBUTING.md](../../CONTRIBUTING.md), section "PR": the branch rule and the jobs it names;
+- [`docs/Maintaining.md`](../Maintaining.md), section "Branch rule": the branch rule and the jobs it names;
 - [ADR-0016](./ADR-0016-pin-tool-versions-where-tools-read-them.md): the linter pin lives in the `Makefile`, which is why it keys the cache;
 - [ADR-0023](./ADR-0023-build-the-bench-from-the-device-firmware.md): the integration job and its base image;
 - [ADR-0044](./ADR-0044-catch-schema-drift-in-ci-and-at-runtime.md): the fork release tracking that stays out of scope here;

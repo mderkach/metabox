@@ -28,8 +28,8 @@ var listenerTables = []string{"net/tcp", "net/tcp6"}
 // singbox returns the readings of the process that does the routing.
 //
 // The process is looked up by the listener of the Clash API port, not by the daemon service: on
-// the device routing may be owned by a foreign package (re:HomeProxy starts
-// the same binary with its own service), and procd knows nothing about it. The found pid
+// the device routing may be owned by another service that starts the same binary,
+// and procd knows nothing about it. The found pid
 // is remembered: walking the descriptors of all processes every few seconds
 // is not needed by the device.
 func (r *Reader) singbox(ctx context.Context) (*Process, error) {

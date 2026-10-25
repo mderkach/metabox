@@ -130,9 +130,8 @@ dp_sources() {
 # the dstnat, mangle_prerouting and mangle_output declared here append
 # rules to the end of the fw4 chains and do not create new ones.
 #
-# Traffic of the router itself with a foreign mark (b4 marks its packets via SO_MARK)
-# bypasses interception: another service already handles it, and tproxy would overwrite
-# its mark.
+# Router traffic that another daemon already marked via SO_MARK keeps its mark and
+# bypasses interception: tproxy would overwrite the mark.
 dp_render() {
 	dp_set metabox_local_addr_v4 ipv4_addr "$LOCAL_ADDR_V4"
 	dp_set metabox_wan_proxy_addr_v4 ipv4_addr "$dp_wan_proxy"
@@ -330,7 +329,7 @@ dp_route_down() {
 
 # The dnsmasq conf-dir is different for each instance (/tmp/dnsmasq.<section>.d or
 # the confdir option), the common /tmp/dnsmasq.d is not read by the dnsmasq init. The first
-# instance is taken, as in homeproxy.
+# instance is taken.
 dp_dnsmasq_file() {
 	local section dir
 
@@ -383,8 +382,8 @@ dp_state_read() {
 
 # Removes the whole dataplane. Without a state file (a reboot wiped /var/run,
 # while the include in UCI stayed) the marks and path are taken from the current model, but only
-# when it is enabled: ip rule and the table with the same numbers are held by homeproxy,
-# and a disabled model gives no right to remove them.
+# when it is enabled: ip rule and the table with the same numbers may be held by another
+# service, and a disabled model gives no right to remove them.
 dp_down() {
 	dp_state_read
 	if [ -z "$st_mark" ] && [ "$dp_enabled" = 1 ]; then

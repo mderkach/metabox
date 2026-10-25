@@ -69,7 +69,7 @@ export interface ServiceState {
   uptime: number;
   /**
    * The process is owned by the service the daemon manages. False with the
-   * "running" status means sing-box was started by a foreign service: panel
+   * "running" status means sing-box was started outside that service: panel
    * commands do not apply to that process, and procd does not know its age.
    */
   managed: boolean;

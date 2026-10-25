@@ -79,7 +79,7 @@ func TestFailKeepsKnownMessage(t *testing.T) {
 func TestFailHidesLaunchPaths(t *testing.T) {
 	rec := httptest.NewRecorder()
 	err := fmt.Errorf("применение: %w", &apply.LaunchError{
-		Configs: []string{"/var/run/homeproxy/sing-box-c.json"},
+		Configs: []string{"/var/run/other-proxy/sing-box.json"},
 		Config:  "/etc/sing-box/config.json",
 	})
 

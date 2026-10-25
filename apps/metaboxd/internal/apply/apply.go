@@ -512,7 +512,8 @@ type checkTarget struct {
 // would otherwise be found only by the service crashing on the new config or by checking not
 // what will run. An unknown command does not stop the apply:
 // procd may be absent and the service may never have started, and a refusal would then
-// be false; the check runs the way the fork package starts the service, with one file.
+// be false; the check runs the way the sing-box package's own init script starts the service,
+// with one file.
 //
 // A working directory outside the config directory does not break the check: the transaction does not
 // change it, and check takes it as the path base. A refusal only with list files:
@@ -521,7 +522,7 @@ type checkTarget struct {
 func (m *Manager) resolveCheck(ctx context.Context, withLists bool) (checkTarget, error) {
 	launch, err := m.service.Launch(ctx)
 	if err != nil {
-		m.log.Warn("service command not read, the candidate is checked as for the fork package", "err", err)
+		m.log.Warn("service command not read, the candidate is checked as a single file", "err", err)
 
 		launch = procd.Launch{}
 	}

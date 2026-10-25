@@ -68,7 +68,7 @@ Existing published releases remain untouched. Drafts created before this workflo
 - [Release workflow](../../.github/workflows/release.yml).
 - [Bundle creation and recovery](../../.github/scripts/release-bundle.py).
 - [Draft publisher](../../.github/scripts/publish-release.sh).
-- [Development release procedure](../Development.md#release).
+- [Release procedure](../Maintaining.md#release).
 - [Official upload-artifact action at the pinned commit](https://github.com/actions/upload-artifact/tree/cf430e030ddbb5b0abf93d22962f4752f3646cd9).
 - [GitHub artifact REST API](https://docs.github.com/en/rest/actions/artifacts).
 - [GitHub CLI artifact download](https://cli.github.com/manual/gh_run_download).
