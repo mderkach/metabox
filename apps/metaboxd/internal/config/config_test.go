@@ -533,11 +533,16 @@ func TestBackupWithoutConfigOrBackup(t *testing.T) {
 	})
 }
 
+// Every root file goes into the candidate: a certificate or a rule set the config refers
+// to by a relative path is resolved by check from -D, and without the file a config that
+// runs fine would fail the check.
 func TestStageCandidate(t *testing.T) {
 	store, cfgDir := newStore(t)
 	writeConfig(t, cfgDir, configName, []byte(`{"старое":true}`), 0o600)
 	writeConfig(t, cfgDir, "10-dns.json", []byte(`{"dns":{}}`), 0o600)
-	writeConfig(t, cfgDir, "notes.txt", []byte("не конфиг"), 0o600)
+	writeConfig(t, cfgDir, "cert.pem", []byte("-----BEGIN CERTIFICATE-----"), 0o600)
+	writeConfig(t, cfgDir, "key.pem", []byte("-----BEGIN PRIVATE KEY-----"), 0o600)
+	writeConfig(t, cfgDir, "geosite-ads.srs", []byte("SRS"), 0o600)
 
 	dst := t.TempDir()
 	candidate := []byte(`{"новое":true}`)
@@ -554,11 +559,41 @@ func TestStageCandidate(t *testing.T) {
 		t.Errorf("candidate %q, expected %q", got, candidate)
 	}
 
-	if _, err := os.Stat(filepath.Join(dst, "10-dns.json")); err != nil {
-		t.Errorf("neighbouring .json did not move: %v", err)
+	for _, name := range []string{"10-dns.json", "cert.pem", "key.pem", "geosite-ads.srs"} {
+		if _, err := os.Stat(filepath.Join(dst, name)); err != nil {
+			t.Errorf("root file %s did not move: %v", name, err)
+		}
 	}
-	if _, err := os.Stat(filepath.Join(dst, "notes.txt")); !errors.Is(err, fs.ErrNotExist) {
-		t.Error("non-.json moved into the candidate: the service does not read it")
+}
+
+// The backup and the transaction state are the daemon's, not the service's: they lie in
+// the service directory and must not appear in the candidate next to the config.
+func TestStageCandidateLeavesOutDaemonFiles(t *testing.T) {
+	store, cfgDir := newStore(t)
+	writeConfig(t, cfgDir, configName, []byte(`{"старое":true}`), 0o600)
+
+	if err := store.Backup(t.Context()); err != nil {
+		t.Fatalf("backup: %v", err)
+	}
+	if err := store.WriteState(t.Context(), []byte(`{"phase":"applying"}`)); err != nil {
+		t.Fatalf("state: %v", err)
+	}
+
+	dst := t.TempDir()
+	if err := store.StageCandidate(t.Context(), dst, []byte(`{"новое":true}`), nil, nil); err != nil {
+		t.Fatalf("candidate layout: %v", err)
+	}
+
+	entries, err := os.ReadDir(dst)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 || entries[0].Name() != configName {
+		names := make([]string, 0, len(entries))
+		for _, entry := range entries {
+			names = append(names, entry.Name())
+		}
+		t.Errorf("candidate holds %v, want only %s", names, configName)
 	}
 }
 

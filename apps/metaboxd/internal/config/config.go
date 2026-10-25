@@ -467,13 +467,15 @@ func (s *Store) restoreLists(serviceRoot *os.Root) error {
 }
 
 // StageCandidate lays out a candidate directory: the config with the new content,
-// the other .json files of the working directory and its subdirectories whole. The lists directory
+// every other file of the working directory and its subdirectories whole. The lists directory
 // is assembled with the transaction changes: putLists lie over the current
 // files, removeLists do not get into the candidate: exactly what will land on disk after the write
 // must be checked. The layout repeats the whole config directory:
 // the service in directory mode merges all its .json, and check runs with -D on
-// the candidate, and files the config refers to by a relative path
-// must lie in it in the same layout.
+// the candidate, so a certificate, a key or a rule set the config refers to by a
+// relative path must lie in it in the same layout. The daemon's own files live in the
+// service directory, which NewStore keeps outside the config directory, so only the
+// config itself is skipped here: its new content takes that place.
 // The directory is created and removed by the caller.
 func (s *Store) StageCandidate(
 	ctx context.Context,
@@ -514,7 +516,7 @@ func (s *Store) StageCandidate(
 
 			continue
 		}
-		if entry.Name() == s.name || !strings.HasSuffix(entry.Name(), ".json") {
+		if entry.Name() == s.name {
 			continue
 		}
 

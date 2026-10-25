@@ -21,8 +21,9 @@ import (
 
 // check lays the candidate out in a temporary directory and gives it to the binary in the same
 // mode the service will start in. The candidate carries the whole layout of the config
-// directory: in -C mode the service merges its .json, and list changes
-// land in the candidate by the same paths they will take on disk.
+// directory: in -C mode the service merges its .json, files named by a relative path
+// resolve from -D, and list changes land in the candidate by the same paths they will
+// take on disk.
 func (m *Manager) check(
 	ctx context.Context,
 	data []byte,
