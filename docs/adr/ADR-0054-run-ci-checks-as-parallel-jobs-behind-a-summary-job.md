@@ -26,6 +26,8 @@ github.com/securego/gosec/v2@v2.28.0: verifying module: reading https://sum.gola
 
 The workflow also ran on `push` and `pull_request` without filters, so each push to a branch with a PR started two identical runs.
 
+Until 2026-10-25 `checks` did not wait for `integration`, so a PR showed a green summary while the integration job was still running or hung, and no job had a time limit: on 2026-10-24 the `Dataplane check` step of run 40116156272 hung for over three hours, the pending runs of ten pushes to `main` were cancelled by the concurrency group, and tag v0.1.0-rc.9 was cut from a commit with no CI verdict, which the release workflow did not notice.
+
 Constraints: the branch rule names the contexts `checks` and `integration`, and renaming a job means editing the rule in the same change; the GitHub-hosted runner has 2 cores, so the web tests take five times longer than on a developer machine; the repository avoids new dependencies, including actions, when the existing ones suffice.
 
 Out of scope: sharding the web tests, a self-hosted runner, running `integration` on the device image, tracking fork releases (ADR-0044).
@@ -37,6 +39,7 @@ Out of scope: sharding the web tests, a self-hosted runner, running `integration
 3. The `main` branch rule keeps working without edits, and a failed check can never pass through it.
 4. No new actions or tools.
 5. The steps and their commands stay the same as `pre-push`, so local and CI checks do not diverge.
+6. Every run and every release ends with a verdict: a hung step fails its job instead of holding the queue, and a tag is released only when its commit has one.
 
 ## Considered options
 
@@ -47,9 +50,10 @@ Out of scope: sharding the web tests, a self-hosted runner, running `integration
 
 ## Decision outcome
 
-- `ci.yml` has the jobs `go` (`make lint`, `go test -race ./...` in the daemon), `schemagen` (`make test-schemagen`), `web` (commitlint on PRs, `pnpm lint`, `pnpm format:check`, web tests and build, react-doctor advice, `make daemon`), `checks` (summary) and `integration` (unchanged).
-- `checks` depends on `go`, `schemagen`, `web`, `web-browser` and `integration`, runs with `if: always()` and exits non-zero when any of them ended in `failure`, `cancelled` or `skipped`. Its name is the only context the branch rule needs; the rule also names `integration`, which the owner may drop. Until 2026-10-25 `checks` did not wait for `integration`, and a PR showed a green summary while the integration job was still running or hung.
-- Every job has `timeout-minutes` sized from the 60 runs before 2026-10-25 with a margin: `go` 30 (longest success 19 min, median about 1), `schemagen` 20 (3.5 min cold), `web` 30 (23 min), `web-browser` 15 (1.3 min), `checks` 5, `integration` 30 (15 min; the long outliers are runner stalls between steps, not slow steps). The integration steps that run the test bench have their own limits: `Environment` 10, `Daemon ready` 3, `Apply cycle` and `Reach check` 5, `Dataplane check` 10. The release, apk-repo and fork-release-watch jobs get 30, 20 and 15. Without a limit a hung step holds the concurrency group: on 2026-10-24 the `Dataplane check` step of run 40116156272 hung for over three hours, the pending runs of ten pushes to `main` were cancelled by the group, and tag v0.1.0-rc.9 was cut from a commit with no CI verdict.
+- `ci.yml` has the jobs `go` (`make lint`, `go test -race ./...` in the daemon), `schemagen` (`make test-schemagen`), `web` (commitlint on PRs, `pnpm lint`, `pnpm format:check`, web tests and build, react-doctor advice, `make daemon`), `checks` (summary) and `integration`.
+- `checks` depends on `go`, `schemagen`, `web`, `web-browser` and `integration`, runs with `if: always()` and exits non-zero when any of them ended in `failure`, `cancelled` or `skipped`. Its name is the only context the branch rule needs; the rule also names `integration`, which the owner may drop.
+- Every job has `timeout-minutes` sized from the 60 runs before 2026-10-25 (`gh run list --workflow ci.yml --limit 60`, job durations from `gh run view <id> --json jobs`) with a margin: `go` 30 (longest success 19 min, median about 1), `schemagen` 20 (3.5 min cold), `web` 30 (23 min), `web-browser` 15 (1.3 min), `checks` 5, `integration` 30 (15 min; the long outliers are runner stalls between steps, not slow steps). The integration steps that run the test bench have their own limits: `Environment` 10, `Daemon ready` 3, `Apply cycle` and `Reach check` 5, `Dataplane check` 10. The release, apk-repo and fork-release-watch jobs get 30, 20 and 15.
+- The dataplane check gives every step inside the test bench a 60 s deadline on the host side (`in_target` in `.devcontainer/dataplane-check.sh`): the `docker exec` is killed, the step fails with a `HUNG` line naming it, and the processes still alive in the container are listed with their `wchan`. The in-container busybox and macOS have no `timeout`, so the deadline is a `sleep && kill` watchdog in POSIX sh.
 - The release workflow refuses a tag whose commit's latest `checks` check run is not `success` (the commit check-runs API, which also shows a cancelled or still running CI); being on `main` was the only condition before. The fix for a refused tag is to re-run the release once CI on `main` is green.
 - Each job lists in `cache-dependency-path` the files that decide what it downloads: `go` lists `Makefile`, both `go.mod` files and `tools/schemagen/go.sum`; `schemagen` lists the generator's `go.mod` and `go.sum`; `web` runs with `cache: false`, because the daemon has no external modules. `setup-go` saves a cache once per key, so no two jobs may share a key: the first job to finish would save a cache without the other job's modules.
 - The `Makefile` downloads the fork module before `go list -m` reads its directory: on a cold module cache `go list` prints an empty path, and the generator tests ran with no fork tags. One job hid this because `make lint` downloaded the fork first.
@@ -77,6 +81,8 @@ Out of scope: sharding the web tests, a self-hosted runner, running `integration
 - A push to a branch without a PR is not checked by CI; `pre-push` stays the only check until the PR is opened.
 - Three runners install Go per run; runner minutes roughly double while wall time halves. Acceptable for a public repository on the free plan.
 - A change to the `Makefile` for any reason invalidates the `go` job cache once.
+- `checks` turns green only after `integration`, so a PR waits for the test bench run (about a minute, up to the 30-minute limit) before it is mergeable.
+- A run on `main` that waits in the concurrency group is still replaced by a newer push, and that commit stays without a verdict; the release gate then refuses its tag until the release workflow is re-run after a green run, and it looks at `checks` only.
 - A cold cache still downloads through `proxy.golang.org` and `sum.golang.org`; two of the three branch runs of this change failed on a stream error there. A warm cache is the mitigation, not a fix.
 
 ### Neutral or deferred
@@ -95,7 +101,7 @@ The branch rule is untouched: the contexts `checks` and `integration` exist befo
 - One push to a PR branch produces one run in `gh run list --branch <branch>`.
 - A red job makes `checks` fail rather than skip: in run 39473711053 `schemagen` failed and `checks` concluded `failure`.
 - `checks` waits for `integration`: in a run where `integration` fails, `checks` concludes `failure`; before this change the `main` commit e5fbcf66 had `integration=failure` next to `checks=success`.
-- The release gate: the rc.9 commit 3c770c11 has no `checks` check run at all, so the gate reports `found: none` and exits 1.
+- The release gate: the rc.9 commit 3c770c11 has no `checks` check run at all, so the gate reports `is missing, not success` and exits 1.
 
 ## Links
 
