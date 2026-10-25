@@ -38,12 +38,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          conclusions=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs?check_name=checks" \
-            --jq '[.check_runs[] | .conclusion // .status] | join(" ")')
-          case " $conclusions " in
-            *" success "*) echo "checks: $conclusions" ;;
-            *) echo "::error::no successful 'checks' run for $GITHUB_SHA (found: ${conclusions:-none}); wait for CI on main or fix it before tagging"; exit 1 ;;
-          esac
+          latest=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs?check_name=checks" \
+            --jq '.check_runs | sort_by(.started_at) | last | .conclusion // .status // empty')
+          [ "$latest" = success ] || {
+            echo "::error::the latest 'checks' run for $GITHUB_SHA is ${latest:-missing}, not success; re-run this workflow once CI on main is green"
+            exit 1
+          }
+          echo "checks: $latest"
 
       - uses: actions/setup-go@v6
         with:
