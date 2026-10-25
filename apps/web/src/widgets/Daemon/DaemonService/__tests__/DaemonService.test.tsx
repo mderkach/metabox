@@ -95,23 +95,6 @@ describe('service state', () => {
     expect(screen.getByText('service state not read')).toBeInTheDocument();
   });
 
-  it.each([
-    ['ru', 'У службы несколько инстансов procd: укажите инстанс sing-box в настройках демона'],
-    ['en', 'The service has several procd instances: name the sing-box instance in the daemon settings'],
-  ])('an ambiguous instance is translated by code (%s)', async (language, title) => {
-    await i18next.changeLanguage(language);
-    serveService({
-      ...SERVICE_UNREAD_FIXTURE,
-      lastError: 'service sing-box: the service has several instances and no instance name is set',
-      lastErrorCode: 'service_instance_ambiguous',
-    });
-
-    renderWithQuery(<DaemonService heap={0} />);
-
-    expect(await screen.findByText(title)).toBeInTheDocument();
-    expect(screen.getByText(/no instance name is set/)).toBeInTheDocument();
-  });
-
   // The daemon serves `stopped` also when procd simply did not answer: this is not a stop.
   it('an unread state without a known previous one is shown neutrally and without commands', async () => {
     serveService(SERVICE_UNREAD_FIXTURE);

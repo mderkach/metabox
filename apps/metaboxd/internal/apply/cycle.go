@@ -19,11 +19,10 @@ import (
 	"metabox/internal/locale"
 )
 
-// check lays the candidate out in a temporary directory and gives it to the binary in the same
-// mode the service will start in. The candidate carries the whole layout of the config
-// directory: in -C mode the service merges its .json, files named by a relative path
-// resolve from -D, and list changes land in the candidate by the same paths they will
-// take on disk.
+// check lays the candidate out in a temporary directory and gives it to the binary the way
+// the service will start it. The candidate carries the whole layout of the config
+// directory: files named by a relative path resolve from -D, and list changes land in the
+// candidate by the same paths they will take on disk.
 func (m *Manager) check(
 	ctx context.Context,
 	data []byte,
@@ -45,17 +44,12 @@ func (m *Manager) check(
 		return err
 	}
 
-	config := filepath.Join(dir, m.opts.ConfigName)
-	if target.directory {
-		config = ""
-	}
-
 	workdir := dir
 	if target.workdir != "" {
 		workdir = target.workdir
 	}
 
-	return m.service.Check(ctx, dir, config, workdir)
+	return m.service.Check(ctx, filepath.Join(dir, m.opts.ConfigName), workdir)
 }
 
 // run moves the apply into a background goroutine: the cycle outlives the request, and the confirmation
@@ -317,9 +311,7 @@ func (m *Manager) planeBefore(ctx context.Context) (planeState, bool) {
 
 // checkInterception compares interception after the restart with what stood before it.
 // A failure only when the chains were there and vanished: interception that was absent even before
-// the restart was not removed by the config apply and the rollback will not bring it back. Likewise
-// skipped is a service other than metabox-singbox that installs interception with chains
-// of its own.
+// the restart was not removed by the config apply and the rollback will not bring it back.
 func (m *Manager) checkInterception(ctx context.Context, before planeState) error {
 	switch {
 	case !before.model.Enabled:

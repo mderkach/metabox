@@ -34,10 +34,8 @@ const (
 	chainPrefix = "metabox_"
 )
 
-// Service is the name of the service whose init script reads the model and brings the
-// dataplane to it. Another service running the same sing-box, including the sing-box
-// package's own init script, does not read the section: the written model would install
-// nothing, and its reload would restart routing the daemon does not own.
+// Service is the name of the sing-box service the daemon manages: its init script reads
+// the model and brings the dataplane to it.
 const Service = "metabox-singbox"
 
 // AccessMode is which sources from the LAN interfaces go through sing-box.

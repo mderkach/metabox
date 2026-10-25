@@ -141,10 +141,6 @@ func fail(log *slog.Logger, w http.ResponseWriter, r *http.Request, err error) {
 	case status == http.StatusInternalServerError:
 		log.Error("request not served", "err", err, "method", r.Method, "path", r.URL.Path)
 		message = locale.T(lang, "internal error")
-	// The service command paths stay in the log: they point to a config the daemon does not own.
-	case code == contract.ErrLaunchMismatch:
-		log.Warn("apply rejected: the service starts with a config the daemon does not own", "err", err)
-		message = locale.T(lang, "the sing-box service starts with a config metabox does not own")
 	// The reason stays in the log: it holds the log file path and the process failure.
 	case code == contract.ErrLogUnavailable:
 		log.Warn("sing-box log not read", "err", err)
@@ -161,10 +157,6 @@ func fail(log *slog.Logger, w http.ResponseWriter, r *http.Request, err error) {
 
 func statusFor(err error) (status int, code contract.ErrorCode) {
 	var tooLarge *http.MaxBytesError
-
-	if _, ok := errors.AsType[*apply.LaunchError](err); ok {
-		return http.StatusConflict, contract.ErrLaunchMismatch
-	}
 
 	switch {
 	case errors.Is(err, errNotFound):
@@ -206,8 +198,6 @@ func statusFor(err error) (status int, code contract.ErrorCode) {
 		return http.StatusBadRequest, contract.ErrDataplaneInvalid
 	case errors.Is(err, apply.ErrDataplaneModified):
 		return http.StatusPreconditionFailed, contract.ErrDataplaneModified
-	case errors.Is(err, apply.ErrDataplaneForeignService):
-		return http.StatusConflict, contract.ErrDataplaneForeignService
 	case errors.Is(err, errDataplaneBaseMissing):
 		return http.StatusPreconditionRequired, contract.ErrDataplaneModified
 	case errors.Is(err, logs.ErrUnavailable):

@@ -89,7 +89,6 @@ export function DevicesPage() {
                     onDone={onDone}
                     routeModel={route.model}
                     routeLocked={route.locked}
-                    routeForeign={route.foreignService}
                     onRoute={route.route}
                     now={devices.dataUpdatedAt}
                   />

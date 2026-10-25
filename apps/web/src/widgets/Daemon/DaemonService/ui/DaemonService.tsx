@@ -48,7 +48,6 @@ const STATUS_TONE: Readonly<Record<ServiceState['status'], string>> = {
 /** Why the state is substituted, in the user's words: a new daemon code is a compile error here. */
 const REASON_KEY: Readonly<Record<ServiceErrorCode, ParseKeys<'widgets/Daemon/DaemonService'>>> = {
   service_state_unread: 'reason.service_state_unread',
-  service_instance_ambiguous: 'reason.service_instance_ambiguous',
 };
 
 /** The first hour in minutes: "0 h" for a just-started process reads as breakage. */

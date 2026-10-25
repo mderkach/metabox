@@ -249,15 +249,10 @@ func newPlaneHarness(t *testing.T, dns apply.DNSProber, cfg string, log *slog.Lo
 }
 
 func (h *planeHarness) newPlane(dns apply.DNSProber, log *slog.Logger) *apply.Plane {
-	return h.newPlaneFor(dataplane.Service, dns, log)
-}
-
-func (h *planeHarness) newPlaneFor(service string, dns apply.DNSProber, log *slog.Logger) *apply.Plane {
 	return apply.NewPlane(h.manager, h.editor, h.reloader, h.pstore, h.health, h.clock, log, apply.PlaneOptions{
 		Window:       window,
 		CycleTimeout: cycleTimeout,
 		DNS:          dns,
-		Service:      service,
 	})
 }
 
@@ -512,7 +507,6 @@ func TestPlaneReasonFollowsLang(t *testing.T) {
 				Window:       window,
 				CycleTimeout: cycleTimeout,
 				DNS:          failingProber{},
-				Service:      dataplane.Service,
 				Lang:         lang,
 			})
 			t.Cleanup(h.plane.Close)
@@ -591,32 +585,6 @@ func TestPlaneStaleBase(t *testing.T) {
 
 	if written, _ := h.editor.counts(); written != 1 {
 		t.Errorf("UCI writes %d, expected one", written)
-	}
-}
-
-func TestPlaneForeignServiceReservesNothing(t *testing.T) {
-	h := newPlaneHarness(t, nil, validConfig, slog.New(slog.DiscardHandler))
-	t.Cleanup(h.plane.Close)
-
-	plane := h.newPlaneFor("other-proxy", nil, slog.New(slog.DiscardHandler))
-	t.Cleanup(plane.Close)
-
-	if _, err := plane.Start(t.Context(), aclChange(), "", admin); !errors.Is(err, apply.ErrDataplaneForeignService) {
-		t.Fatalf("got %v, expected ErrDataplaneForeignService", err)
-	}
-
-	if written, _ := h.editor.counts(); written != 0 {
-		t.Errorf("UCI writes %d after the failure, expected none", written)
-	}
-	if h.pstore.saved() != nil {
-		t.Error("the rejected change left state on disk")
-	}
-	if h.reloader.count() != 0 {
-		t.Error("the rejected change pulled the service reload")
-	}
-
-	if _, err := h.plane.Start(t.Context(), aclChange(), "", admin); err != nil {
-		t.Fatalf("change on the metabox-singbox service: %v", err)
 	}
 }
 

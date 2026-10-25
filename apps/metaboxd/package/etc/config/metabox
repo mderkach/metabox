@@ -1,6 +1,5 @@
-# Settings of the panel daemon and of the sing-box service from the same package. The defaults
-# point to the metabox-singbox service; they may also point to another service that
-# starts sing-box, then the daemon edits its config but does not manage the dataplane.
+# Settings of the panel daemon and of the metabox-singbox service from the same package: the
+# service starts sing-box on the config from config_dir and config_name.
 
 config metabox 'main'
 	option enabled '1'
@@ -22,10 +21,6 @@ config metabox 'main'
 	option config_name 'config.json'
 	option state_dir '/etc/metabox'
 	option singbox '/usr/bin/sing-box'
-	option init_script '/etc/init.d/metabox-singbox'
-	# The procd instance with sing-box. Empty fits a service with one instance; for
-	# a service with several, the state cannot be read without it.
-	option service_instance 'sing-box'
 	option ubus '/bin/ubus'
 	option clash_port '9090'
 	option log_level 'info'

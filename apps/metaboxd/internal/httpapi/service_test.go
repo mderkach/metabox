@@ -3,7 +3,6 @@ package httpapi_test
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -12,7 +11,6 @@ import (
 	"metabox/internal/contract"
 	"metabox/internal/httpapi"
 	"metabox/internal/locale"
-	"metabox/internal/procd"
 	"metabox/internal/singbox"
 )
 
@@ -98,13 +96,6 @@ func TestServiceState(t *testing.T) {
 			"stopped",
 			true,
 			"service_state_unread",
-		},
-		{
-			"instance not selected",
-			&fakeService{runningErr: fmt.Errorf("служба sing-box: %w", procd.ErrAmbiguousInstance)},
-			"stopped",
-			true,
-			"service_instance_ambiguous",
 		},
 	}
 
@@ -292,19 +283,6 @@ func TestServiceStateFollowsLang(t *testing.T) {
 			t.Errorf("%s: last error %q, want %q", tt.lang, body.LastError, tt.want)
 		}
 	}
-
-	// The chain the service client builds when procd lists several instances.
-	ambiguous := locale.Errorf("service state: %w", locale.Errorf("service %s: %w", "metabox-singbox", procd.ErrAmbiguousInstance))
-
-	for lang, want := range map[locale.Lang]string{
-		locale.English: "service state: service metabox-singbox: the service has several instances and no instance name is set",
-		locale.Russian: "состояние службы: служба metabox-singbox: у службы несколько инстансов, а имя инстанса не задано",
-	} {
-		body, ok := httpapi.ServiceState(singbox.State{}, testSingboxVersion, ambiguous, true, lang).(contract.Service)
-		if !ok || body.LastError != want {
-			t.Errorf("%s: last error %q, want %q", lang, body.LastError, want)
-		}
-	}
 }
 
 // A procd read failure is not a stop: the status in such a response is substituted, and
@@ -321,12 +299,6 @@ func TestServiceStateUnreadCarriesCode(t *testing.T) {
 		{"init-скрипт не ответил", errors.New("init-скрипт не найден"), false, contract.ServiceStateUnread},
 		{"poll did not fit in the timeout", context.DeadlineExceeded, true, contract.ServiceStateUnread},
 		{"poll cancelled", context.Canceled, true, contract.ServiceStateUnread},
-		{
-			"instance not selected",
-			fmt.Errorf("служба sing-box: %w", procd.ErrAmbiguousInstance),
-			true,
-			contract.ServiceInstanceAmbiguous,
-		},
 	}
 
 	for _, tt := range tests {

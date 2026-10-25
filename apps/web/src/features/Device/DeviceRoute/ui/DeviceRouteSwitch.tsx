@@ -16,7 +16,6 @@ export function DeviceRouteSwitch({
   label,
   model,
   locked,
-  foreignService,
   onRoute,
 }: {
   source: RouteSource;
@@ -24,23 +23,12 @@ export function DeviceRouteSwitch({
   label: string;
   model: DataplaneModel | null;
   locked: boolean;
-  /** The daemon manages a service other than metabox-singbox: the position is shown, a change is not offered. */
-  foreignService: boolean;
   onRoute: (source: RouteSource, routed: boolean) => void;
 }) {
   const { t } = useTranslation('features/Device/DeviceRoute');
   const [target, setTarget] = useState<boolean | null>(null);
   const noteId = useId();
   const reason = model === null ? null : routeReason(model, source);
-
-  if (foreignService) {
-    return (
-      <span className='flex items-center gap-2'>
-        <Switch checked={reason !== null} disabled aria-label={t('switch.label', { device: label })} />
-        <span className='text-xs text-muted-foreground'>{t('switch.foreignService')}</span>
-      </span>
-    );
-  }
 
   if (model?.aclMode === ACL_MODE.All) {
     return (

@@ -94,6 +94,8 @@ const (
 
 	// Ceiling for reading the help language from UCI: help must not hang on uci.
 	helpLangTimeout = 2 * time.Second
+
+	initScript = "/etc/init.d/" + dataplane.Service
 )
 
 // settings is what the daemon receives by flags. The default values
@@ -108,8 +110,6 @@ type settings struct {
 	configName    string
 	serviceDir    string
 	binary        string
-	initScript    string
-	instance      string
 	ubus          string
 	logread       string
 	dhcpLeases    string
@@ -142,9 +142,6 @@ func main() {
 	flag.StringVar(&s.serviceDir, "state-dir", "/etc/metabox",
 		"daemon state directory for the backup and transaction state; outside the config directory")
 	flag.StringVar(&s.binary, "singbox", "/usr/bin/sing-box", "path to the sing-box binary")
-	flag.StringVar(&s.initScript, "init-script", "/etc/init.d/metabox-singbox", "path to the service init script")
-	flag.StringVar(&s.instance, "service-instance", "sing-box",
-		"procd instance the init script service runs sing-box in; empty means the service's only instance")
 	flag.StringVar(&s.ubus, "ubus", "/bin/ubus", "path to ubus, used to read the service state from procd")
 	flag.StringVar(&s.logread, "logread", "/sbin/logread",
 		"path to logread, the source of the log and the reason sing-box crashed; empty disables reading")
@@ -669,7 +666,7 @@ func build(
 
 	exec := singbox.NewExec(binaryTimeout)
 
-	service, err := singbox.New(exec, s.binary, s.initScript, s.instance, s.logread, procd.New(runCommand(exec), s.ubus))
+	service, err := singbox.New(exec, s.binary, initScript, s.logread, procd.New(runCommand(exec), s.ubus))
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
@@ -697,7 +694,6 @@ func build(
 		Window:       s.confirmWindow,
 		CycleTimeout: s.cycleTimeout,
 		DNS:          dns,
-		Service:      service.ServiceName(),
 		Lang:         s.lang,
 	})
 

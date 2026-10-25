@@ -22,10 +22,6 @@ import (
 // the model; an SSH edit would otherwise be silently overwritten.
 var ErrDataplaneModified = locale.New("dataplane model changed outside metabox")
 
-// ErrDataplaneForeignService means the daemon manages a service other than the one whose init script
-// reads the model; the change is rejected before the write.
-var ErrDataplaneForeignService = locale.Errorf("the dataplane model is read only by the service %s", dataplane.Service)
-
 // PlaneEditor is the dataplane model in UCI: a section snapshot, writing the model, restoring
 // the snapshot, and the chains in nft.
 type PlaneEditor interface {
@@ -57,9 +53,6 @@ type PlaneOptions struct {
 	CycleTimeout time.Duration
 	// DNS is the dns-in probe; nil means disabled.
 	DNS DNSProber
-	// Service is the name of the service the daemon manages: the name of its init script.
-	// A model change goes only with dataplane.Service.
-	Service string
 	// Lang is the language of Transaction.Reason; the zero value is English.
 	Lang locale.Lang
 }
@@ -128,13 +121,6 @@ func NewPlane(
 	}
 }
 
-// ForeignService means the daemon manages a service other than the one whose init script reads
-// the model: Start will refuse, and the panel learns of this from GET /api/dataplane before
-// the change.
-func (p *Plane) ForeignService() bool {
-	return p.opts.Service != dataplane.Service
-}
-
 // Current returns a snapshot of the dataplane transaction; Window is the remainder of the window.
 func (p *Plane) Current() Transaction {
 	p.mu.Lock()
@@ -156,10 +142,6 @@ func (p *Plane) Start(ctx context.Context, model dataplane.Model, base string, c
 	next, err := dataplane.Normalize(model)
 	if err != nil {
 		return Transaction{}, err
-	}
-
-	if p.ForeignService() {
-		return Transaction{}, ErrDataplaneForeignService
 	}
 
 	token, err := p.gate.reserveExclusive()

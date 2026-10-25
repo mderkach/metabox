@@ -27,7 +27,6 @@ import (
 	"metabox/internal/events"
 	"metabox/internal/history"
 	"metabox/internal/locale"
-	"metabox/internal/procd"
 	"metabox/internal/route"
 	"metabox/internal/ruleset"
 	"metabox/internal/singbox"
@@ -816,7 +815,6 @@ func (s *Server) handleDataplane(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("ETag", `"`+snap.Sum()+`"`)
 	writeJSON(s.log, w, http.StatusOK, contract.Dataplane{
 		Model: model, Applied: applied, AppliedReason: reason,
-		ForeignService: s.plane != nil && s.plane.ForeignService(),
 	})
 }
 
@@ -833,11 +831,6 @@ func ServiceState(state singbox.State, binary string, err error, observed bool, 
 	if err != nil {
 		body.LastError = locale.T(lang, "service state not read")
 		body.LastErrorCode = contract.ServiceStateUnread
-
-		if errors.Is(err, procd.ErrAmbiguousInstance) {
-			body.LastError = locale.Message(lang, err)
-			body.LastErrorCode = contract.ServiceInstanceAmbiguous
-		}
 
 		return body
 	}

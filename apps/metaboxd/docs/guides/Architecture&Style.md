@@ -89,7 +89,7 @@ The daemon is configured with `flag` flags. We do not add environment variables:
 
 Defaults are device values (`127.0.0.1:8080`, directories in `/etc`): the daemon started on the router without arguments works. The test bench and tests pass their values explicitly.
 
-Flags set everything the daemon knows about the device: address, config directory and name, service directory, paths to the binary, the init script and `ubus`, the procd instance with sing-box, the Clash API port, apply windows, log level and the operator's language ([`apps/metaboxd/main.go`](../../main.go)). The defaults target the sing-box service from the panel's package, [`metabox-singbox`](../../package/etc/init.d/metabox-singbox) with the `sing-box` instance; device values are set by the init script [`apps/metaboxd/package/etc/init.d/metaboxd`](../../package/etc/init.d/metaboxd), and its settings by the `metabox` UCI section.
+Flags set everything the daemon knows about the device: address, config directory and name, service directory, paths to the binary and `ubus`, the Clash API port, apply windows, log level and the operator's language ([`apps/metaboxd/main.go`](../../main.go)). The sing-box service is not a flag: the daemon manages only [`metabox-singbox`](../../package/etc/init.d/metabox-singbox) from the panel's package, instance `sing-box` ([ADR-0069](../../../../docs/adr/ADR-0069-manage-only-the-metabox-singbox-service.md)); device values are set by the init script [`apps/metaboxd/package/etc/init.d/metaboxd`](../../package/etc/init.d/metaboxd), and its settings by the `metabox` UCI section.
 
 ## Tools
 

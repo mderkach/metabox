@@ -1,8 +1,7 @@
 {
   "switch": {
     "label": "Через sing-box: {{device}}",
-    "forAll": "перехват для всех",
-    "foreignService": "панель управляет не metabox-singbox"
+    "forAll": "перехват для всех"
   },
   "reason": {
     "mac": "по MAC",

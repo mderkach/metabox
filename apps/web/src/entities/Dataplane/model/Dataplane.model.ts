@@ -32,8 +32,6 @@ export interface Dataplane {
   model: DataplaneModel;
   /** Section fingerprint from `ETag`: with it the change goes into `If-Match`. */
   etag: string | null;
-  /** The daemon does not manage the `metabox-singbox` service: it will reject a model change, and the toggles do not offer it. */
-  foreignService: boolean;
 }
 
 /** LAN traffic source that can be sent through sing-box. */

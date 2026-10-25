@@ -25,8 +25,7 @@
   "unread": "The service state was not read",
   "crashed": "The service did not start",
   "reason": {
-    "service_state_unread": "procd did not answer the daemon: the service state is unknown",
-    "service_instance_ambiguous": "The service has several procd instances: name the sing-box instance in the daemon settings"
+    "service_state_unread": "procd did not answer the daemon: the service state is unknown"
   },
   "restart": {
     "title": "Restart sing-box?",

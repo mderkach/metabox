@@ -77,7 +77,6 @@ export interface DeviceRouteState {
   model: DataplaneModel | null;
   /** Change is unavailable: the model was not read or an apply is running, a model change or a config one. */
   locked: boolean;
-  foreignService: boolean;
   /** `null` means there were no model changes in this daemon lifetime. */
   transaction: ApplyTransaction | null;
   isConfirming: boolean;
@@ -114,7 +113,6 @@ export function useDeviceRoute(): DeviceRouteState {
       change.isPending ||
       isApplyActive(transaction?.phase) ||
       isApplyActive(status.data?.transaction?.phase),
-    foreignService: dataplane.data?.foreignService ?? false,
     transaction,
     isConfirming,
     route: onRoute,

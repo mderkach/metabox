@@ -13,8 +13,8 @@ import (
 )
 
 const listOutput = `{
-  "other-proxy": {"instances": {"proxy": {"running": true, "pid": 5810}}},
-  "sing-box": {"instances": {"instance1": {"running": false, "pid": 0}}},
+  "metabox-singbox": {"instances": {"sing-box": {"running": true, "pid": 5810}}},
+  "stopped-singbox": {"instances": {"sing-box": {"running": false, "pid": 0}}},
   "dnsmasq": {"instances": {"cfg01": {"running": true, "pid": 1234}}}
 }`
 
@@ -32,8 +32,8 @@ func TestServiceReadsState(t *testing.T) {
 		wantRunning bool
 		wantPID     int
 	}{
-		{"service up", "other-proxy", true, true, 5810},
-		{"service known but not running", "sing-box", true, false, 0},
+		{"service up", "metabox-singbox", true, true, 5810},
+		{"service known but not running", "stopped-singbox", true, false, 0},
 		{"service unknown to procd", "unknown-service", false, false, 0},
 	}
 
@@ -41,7 +41,7 @@ func TestServiceReadsState(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			client := New(runnerWith(listOutput, 0, nil), "/bin/ubus")
 
-			got, err := client.Service(t.Context(), tt.service, "")
+			got, err := client.Service(t.Context(), tt.service, "sing-box")
 			if err != nil {
 				t.Fatalf("service poll: %v", err)
 			}
@@ -64,9 +64,9 @@ func TestServiceReadsState(t *testing.T) {
 // A service may run a cleanup script next to sing-box: the state and pid
 // are taken only from the instance with the given name.
 func TestServiceSelectsInstance(t *testing.T) {
-	const twoInstances = `{"other-proxy": {"instances": {
-		"proxy": {"running": %s, "pid": %d, "command": ["/usr/bin/sing-box", "run", "-c", "/var/run/other-proxy/proxy.json"]},
-		"cleanup": {"running": true, "pid": 7001, "command": ["/usr/libexec/other-proxy/cleanup.sh"]}
+	const twoInstances = `{"metabox-singbox": {"instances": {
+		"sing-box": {"running": %s, "pid": %d, "command": ["/usr/bin/sing-box", "run", "-c", "/etc/sing-box/config.json"]},
+		"cleanup": {"running": true, "pid": 7001, "command": ["/usr/libexec/metabox/cleanup.sh"]}
 	}}}`
 
 	tests := []struct {
@@ -81,23 +81,18 @@ func TestServiceSelectsInstance(t *testing.T) {
 	}{
 		{
 			"sing-box instance crashed, the neighbour is alive",
-			fmt.Sprintf(twoInstances, "false", 0), "other-proxy", "proxy",
-			true, false, 0, []string{"/var/run/other-proxy/proxy.json"},
+			fmt.Sprintf(twoInstances, "false", 0), "metabox-singbox", "sing-box",
+			true, false, 0, []string{"/etc/sing-box/config.json"},
 		},
 		{
 			"sing-box instance up",
-			fmt.Sprintf(twoInstances, "true", 5810), "other-proxy", "proxy",
-			true, true, 5810, []string{"/var/run/other-proxy/proxy.json"},
+			fmt.Sprintf(twoInstances, "true", 5810), "metabox-singbox", "sing-box",
+			true, true, 5810, []string{"/etc/sing-box/config.json"},
 		},
 		{
 			"no instance with such a name",
-			fmt.Sprintf(twoInstances, "true", 5810), "other-proxy", "sing-box",
+			fmt.Sprintf(twoInstances, "true", 5810), "metabox-singbox", "other",
 			false, false, 0, nil,
-		},
-		{
-			"name not set, single instance",
-			`{"sing-box": {"instances": {"instance1": {"running": true, "pid": 4242, "command": ["/usr/bin/sing-box", "run", "-c", "/etc/sing-box/config.json"]}}}}`, "sing-box", "",
-			true, true, 4242, []string{"/etc/sing-box/config.json"},
 		},
 	}
 
@@ -123,26 +118,6 @@ func TestServiceSelectsInstance(t *testing.T) {
 	}
 }
 
-// Without an instance name a service with several instances has nothing to choose from:
-// the first live one could turn out to be a neighbouring script.
-func TestServiceRejectsAmbiguousInstance(t *testing.T) {
-	list := `{"other-proxy": {"instances": {
-		"proxy": {"running": false, "pid": 0},
-		"cleanup": {"running": true, "pid": 7001}
-	}}}`
-
-	client := New(runnerWith(list, 0, nil), "/bin/ubus")
-
-	got, err := client.Service(t.Context(), "other-proxy", "")
-	if !errors.Is(err, ErrAmbiguousInstance) {
-		t.Fatalf("got %v, expected ErrAmbiguousInstance", err)
-	}
-
-	if got.PID != 0 || got.Running {
-		t.Errorf("on failure the state %+v was returned", got)
-	}
-}
-
 func TestServiceReportsFailures(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -157,7 +132,7 @@ func TestServiceReportsFailures(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			client := New(tt.runner, "/bin/ubus")
 
-			if _, err := client.Service(t.Context(), "other-proxy", ""); err == nil {
+			if _, err := client.Service(t.Context(), "metabox-singbox", "sing-box"); err == nil {
 				t.Error("failure not reported")
 			}
 		})
@@ -182,7 +157,7 @@ func TestUptimeFromProc(t *testing.T) {
 	client := New(runnerWith(procList(pid), 0, nil), "/bin/ubus")
 	client.procDir = dir
 
-	got, err := client.Service(t.Context(), "other-proxy", "")
+	got, err := client.Service(t.Context(), "metabox-singbox", "sing-box")
 	if err != nil {
 		t.Fatalf("service poll: %v", err)
 	}
@@ -199,7 +174,7 @@ func TestUptimeUnavailable(t *testing.T) {
 	client := New(runnerWith(procList(4242), 0, nil), "/bin/ubus")
 	client.procDir = filepath.Join(t.TempDir(), "нет-такого")
 
-	got, err := client.Service(t.Context(), "other-proxy", "")
+	got, err := client.Service(t.Context(), "metabox-singbox", "sing-box")
 	if err != nil {
 		t.Fatalf("service poll: %v", err)
 	}
@@ -214,7 +189,7 @@ func TestUptimeUnavailable(t *testing.T) {
 }
 
 func procList(pid int) string {
-	return `{"other-proxy": {"instances": {"proxy": {"running": true, "pid": ` + strconv.Itoa(pid) + `}}}}`
+	return `{"metabox-singbox": {"instances": {"sing-box": {"running": true, "pid": ` + strconv.Itoa(pid) + `}}}}`
 }
 
 func procStat(startTicks int) string {
@@ -249,37 +224,37 @@ func TestServiceReadsWorkdir(t *testing.T) {
 	}{
 		{
 			"flag as a separate argument",
-			`{"sing-box": {"instances": {"sing-box.main": {"running": true, "pid": 0,
+			`{"metabox-singbox": {"instances": {"sing-box": {"running": true, "pid": 0,
 				"command": ["/usr/bin/sing-box", "run", "-c", "/etc/sing-box/config.json", "-D", "/usr/share/sing-box"]}}}}`,
 			"/usr/share/sing-box",
 		},
 		{
 			"long form with an equals sign",
-			`{"sing-box": {"instances": {"main": {"running": true, "pid": 0,
+			`{"metabox-singbox": {"instances": {"sing-box": {"running": true, "pid": 0,
 				"command": ["/usr/bin/sing-box", "--directory=/etc/sing-box", "run"]}}}}`,
 			"/etc/sing-box",
 		},
 		{
 			"crashed instance",
-			`{"sing-box": {"instances": {"main": {"running": false,
+			`{"metabox-singbox": {"instances": {"sing-box": {"running": false,
 				"command": ["/usr/bin/sing-box", "-D", "/etc/sing-box", "-C", "/etc/sing-box", "run"]}}}}`,
 			"/etc/sing-box",
 		},
 		{
 			"repeated flag: the last wins",
-			`{"sing-box": {"instances": {"main": {"running": true, "pid": 0,
+			`{"metabox-singbox": {"instances": {"sing-box": {"running": true, "pid": 0,
 				"command": ["/usr/bin/sing-box", "-D", "/a", "-D/b", "run"]}}}}`,
 			"/b",
 		},
 		{
 			"relative path is not returned",
-			`{"sing-box": {"instances": {"main": {"running": true, "pid": 0,
+			`{"metabox-singbox": {"instances": {"sing-box": {"running": true, "pid": 0,
 				"command": ["/usr/bin/sing-box", "-D", "etc", "run"]}}}}`,
 			"",
 		},
 		{
 			"no flag and no process: unknown",
-			`{"sing-box": {"instances": {"main": {"running": false, "command": ["/usr/bin/sing-box", "run"]}}}}`,
+			`{"metabox-singbox": {"instances": {"sing-box": {"running": false, "command": ["/usr/bin/sing-box", "run"]}}}}`,
 			"",
 		},
 	}
@@ -289,7 +264,7 @@ func TestServiceReadsWorkdir(t *testing.T) {
 			client := New(runnerWith(tt.list, 0, nil), "/bin/ubus")
 			client.procDir = t.TempDir()
 
-			got, err := client.Service(t.Context(), "sing-box", "")
+			got, err := client.Service(t.Context(), "metabox-singbox", "sing-box")
 			if err != nil {
 				t.Fatalf("service poll: %v", err)
 			}
@@ -364,11 +339,11 @@ func TestServiceReadsConfigFlags(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			list := `{"sing-box": {"instances": {"main": {"running": false, "command": ` + tt.command + `}}}}`
+			list := `{"metabox-singbox": {"instances": {"sing-box": {"running": false, "command": ` + tt.command + `}}}}`
 			client := New(runnerWith(list, 0, nil), "/bin/ubus")
 			client.procDir = t.TempDir()
 
-			got, err := client.Service(t.Context(), "sing-box", "")
+			got, err := client.Service(t.Context(), "metabox-singbox", "sing-box")
 			if err != nil {
 				t.Fatalf("service poll: %v", err)
 			}
@@ -396,13 +371,13 @@ func TestServiceReadsWorkdirFromProc(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	list := `{"sing-box": {"instances": {"main": {"running": true, "pid": ` + strconv.Itoa(pid) +
+	list := `{"metabox-singbox": {"instances": {"sing-box": {"running": true, "pid": ` + strconv.Itoa(pid) +
 		`, "command": ["/usr/bin/sing-box", "run"]}}}}`
 
 	client := New(runnerWith(list, 0, nil), "/bin/ubus")
 	client.procDir = dir
 
-	got, err := client.Service(t.Context(), "sing-box", "")
+	got, err := client.Service(t.Context(), "metabox-singbox", "sing-box")
 	if err != nil {
 		t.Fatalf("service poll: %v", err)
 	}

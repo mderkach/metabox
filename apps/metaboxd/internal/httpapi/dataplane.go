@@ -22,7 +22,6 @@ type PlaneApplier interface {
 	Start(ctx context.Context, model dataplane.Model, base string, client netip.Addr) (apply.Transaction, error)
 	Confirm(ctx context.Context, id string) (apply.Transaction, error)
 	Current() apply.Transaction
-	ForeignService() bool
 }
 
 // handleDataplaneChange starts a model change. The response goes after the model

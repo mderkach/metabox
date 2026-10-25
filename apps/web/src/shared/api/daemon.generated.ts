@@ -32,7 +32,6 @@ export const APPLY_REASON_CODE = [
 
 export const SERVICE_ERROR_CODE = [
   'service_state_unread',
-  'service_instance_ambiguous',
 ] as const
 
 export const ERROR_CODE = [
@@ -50,11 +49,9 @@ export const ERROR_CODE = [
   'config_too_large',
   'list_invalid',
   'workdir_mismatch',
-  'launch_mismatch',
   'device_invalid',
   'dataplane_invalid',
   'dataplane_modified',
-  'dataplane_foreign_service',
   'log_unavailable',
   'log_query_invalid',
   'log_stream_limit',
@@ -417,8 +414,6 @@ export const DataplaneSchema = z.object({
   applied: z.boolean(),
   /** AppliedReason is why Applied was not observed but substituted with false. */
   applied_reason: z.string().optional(),
-  /** ForeignService means the daemon manages not the `metabox-singbox` service, and `PUT /api/dataplane` will get `dataplane_foreign_service`: the panel does not offer a change the daemon will reject. */
-  foreign_service: z.boolean().optional(),
 })
 
 /** DataplaneChange is the body of `PUT /api/dataplane`: the model in the same form as the model field of the `GET /api/dataplane` response. Written whole: a missing field is a zero value, not "leave as is". */
