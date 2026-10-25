@@ -39,10 +39,12 @@ const (
 	lockFor    = 5 * time.Minute
 
 	// globalFailKeys is the global attempt budget: once this many lockout keys have a
-	// wrong password within failWindow, login is locked for every address for lockFor.
-	// It stops guessing spread over many addresses, at the price of locking the owner out
-	// while such guessing goes on.
+	// wrong password within failWindow, every login attempt waits slowdownDelay before the
+	// check. The delay adds latency to a guess spread over many networks without closing
+	// the door on the owner, whose own network has not failed; the attempt rate stays
+	// bounded by the per-network lockout and the hashing slots.
 	globalFailKeys = 10
+	slowdownDelay  = 2 * time.Second
 
 	// revokeRetryPause separates the two tries of the session write after a revocation: a
 	// transient failure of the flash does not surface to the user.
@@ -53,8 +55,10 @@ const (
 	// many addresses.
 	maxHashing = 2
 
-	// ipv6LockBits is the IPv6 prefix the lockout counts by: a LAN device picks new
-	// addresses inside its /64 at will.
+	// ipv4LockBits and ipv6LockBits are the prefixes the lockout counts by: a LAN device
+	// picks new addresses inside its /64 at will, and IPv4 aliases inside the segment are
+	// as cheap.
+	ipv4LockBits = 24
 	ipv6LockBits = 64
 
 	minPasswordRunes = 8
@@ -82,8 +86,8 @@ var (
 	ErrSessionNotRevoked = locale.New("session revocation not saved")
 )
 
-// LockedError means login is locked out: the client address made too many wrong
-// attempts, or too many addresses did.
+// LockedError means login is locked out: the client network made too many wrong
+// attempts.
 type LockedError struct {
 	RetryAfter time.Duration
 }
@@ -197,8 +201,6 @@ type Guard struct {
 	// sessions is keyed by tokenKey of the token.
 	sessions map[string]*session
 	failures map[netip.Prefix]*attempts
-	// lockedUntil is the global lockout set by the attempt budget.
-	lockedUntil time.Time
 }
 
 // New reads the hash file. A file that cannot be parsed is an error, not an open panel:
@@ -520,19 +522,14 @@ func (g *Guard) hash(ctx context.Context, compute func()) error {
 }
 
 // verify counts the attempt, computes the hash outside the lock and forgets the
-// address on success.
+// network on success. While the global budget is exhausted the check starts after
+// slowdownDelay; waiting ends with ctx.
 func (g *Guard) verify(ctx context.Context, addr netip.Addr, rec *record, password string) error {
 	key := lockKey(addr)
 
 	g.mu.Lock()
 	now := g.now()
 	g.pruneFailures(now)
-
-	if now.Before(g.lockedUntil) {
-		g.mu.Unlock()
-
-		return &LockedError{RetryAfter: g.lockedUntil.Sub(now)}
-	}
 
 	entry := g.failures[key]
 	if entry != nil && now.Before(entry.lockedUntil) {
@@ -551,7 +548,15 @@ func (g *Guard) verify(ctx context.Context, addr netip.Addr, rec *record, passwo
 		entry.lockedUntil = now.Add(lockFor)
 		entry.times = nil
 	}
+
+	slowed := g.failedKeys(now) >= globalFailKeys
 	g.mu.Unlock()
+
+	if slowed {
+		if err := wait(ctx, slowdownDelay); err != nil {
+			return err
+		}
+	}
 
 	var ok bool
 	if err := g.hash(ctx, func() { ok = rec.matches(password) }); err != nil {
@@ -561,12 +566,7 @@ func (g *Guard) verify(ctx context.Context, addr netip.Addr, rec *record, passwo
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
-	// A check that waited for a slot may finish after the global lockout fired, and its
-	// answer must not get past it.
 	now = g.now()
-	if now.Before(g.lockedUntil) {
-		return &LockedError{RetryAfter: g.lockedUntil.Sub(now)}
-	}
 
 	if ok {
 		delete(g.failures, key)
@@ -582,14 +582,13 @@ func (g *Guard) verify(ctx context.Context, addr netip.Addr, rec *record, passwo
 	}
 
 	entry.lastFailed = now
-	g.countGlobal(now)
 
 	return ErrWrongPassword
 }
 
-// countGlobal is called under mu after a wrong password and locks every address once
-// globalFailKeys keys have failed within the window.
-func (g *Guard) countGlobal(now time.Time) {
+// failedKeys is called under mu and counts the keys with a wrong password within the
+// window.
+func (g *Guard) failedKeys(now time.Time) int {
 	failed := 0
 
 	for _, entry := range g.failures {
@@ -598,15 +597,26 @@ func (g *Guard) countGlobal(now time.Time) {
 		}
 	}
 
-	if failed >= globalFailKeys {
-		g.lockedUntil = now.Add(lockFor)
+	return failed
+}
+
+// wait sleeps for d or until ctx ends.
+func wait(ctx context.Context, d time.Duration) error {
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+
+	select {
+	case <-timer.C:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
 	}
 }
 
-// lockKey is what the lockout counts by: an IPv4 address as is, an IPv6 address by its
-// /64.
+// lockKey is what the lockout counts by: an IPv4 address by its /24, an IPv6 address by
+// its /64.
 func lockKey(addr netip.Addr) netip.Prefix {
-	bits := addr.BitLen()
+	bits := ipv4LockBits
 	if addr.Is6() {
 		bits = ipv6LockBits
 	}

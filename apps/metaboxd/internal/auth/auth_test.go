@@ -79,9 +79,10 @@ func (c *clock) now() time.Time { return c.at }
 
 func (c *clock) advance(d time.Duration) { c.at = c.at.Add(d) }
 
+// owner and stranger sit in different /24: the lockout counts an IPv4 network as one key.
 var (
 	owner    = netip.MustParseAddr("192.168.1.10")
-	stranger = netip.MustParseAddr("192.168.1.66")
+	stranger = netip.MustParseAddr("192.168.2.66")
 )
 
 const password = "correct horse"
@@ -195,7 +196,7 @@ func TestFiveWrongPasswordsLockTheAddress(t *testing.T) {
 	}
 
 	if _, err := g.Login(t.Context(), owner, password); err != nil {
-		t.Errorf("another address is locked too: %v", err)
+		t.Errorf("another network is locked too: %v", err)
 	}
 
 	c.advance(5 * time.Minute)
@@ -450,108 +451,138 @@ func TestOneIPv6NetworkSharesTheLockout(t *testing.T) {
 	}
 }
 
-func TestIPv4AddressesAreCountedApart(t *testing.T) {
+func TestOneIPv4NetworkSharesTheLockout(t *testing.T) {
 	g, _, _, _ := protected(t)
 
-	for range 4 {
-		_, _ = g.Login(t.Context(), stranger, "wrong password")
-	}
-
-	neighbour := netip.MustParseAddr("192.168.1.67")
-	if _, err := g.Login(t.Context(), neighbour, "wrong password"); !errors.Is(err, auth.ErrWrongPassword) {
-		t.Errorf("a neighbouring IPv4 address shares the lockout: %v", err)
-	}
-}
-
-func TestGlobalBudgetLocksEveryAddress(t *testing.T) {
-	g, c, _, _ := protected(t)
-
-	for i := range 9 {
-		addr := netip.AddrFrom4([4]byte{10, 0, 0, byte(i + 1)})
+	for i := range 5 {
+		addr := netip.AddrFrom4([4]byte{192, 168, 2, byte(i + 1)})
 
 		if _, err := g.Login(t.Context(), addr, "wrong password"); !errors.Is(err, auth.ErrWrongPassword) {
-			t.Fatalf("wrong password from address %d: %v", i+1, err)
+			t.Fatalf("wrong password %d before the limit: %v", i+1, err)
 		}
 	}
 
+	if _, err := g.Login(t.Context(), stranger, password); !isLocked(err) {
+		t.Fatalf("sixth address of the same /24: got %v, want LockedError", err)
+	}
+
+	other := netip.MustParseAddr("192.168.3.1")
+	if _, err := g.Login(t.Context(), other, password); err != nil {
+		t.Errorf("another /24 is locked too: %v", err)
+	}
+}
+
+// failFrom sends one wrong password from the first address of n different /24.
+func failFrom(t *testing.T, g *auth.Guard, n int) {
+	t.Helper()
+
+	for i := range n {
+		addr := netip.AddrFrom4([4]byte{10, 0, byte(i + 1), 1})
+
+		if _, err := g.Login(t.Context(), addr, "wrong password"); !errors.Is(err, auth.ErrWrongPassword) {
+			t.Fatalf("wrong password from network %d: %v", i+1, err)
+		}
+	}
+}
+
+// timedLogin returns how long a correct login from the owner took on the bubble clock.
+func timedLogin(t *testing.T, g *auth.Guard) time.Duration {
+	t.Helper()
+
+	started := time.Now()
+
 	if _, err := g.Login(t.Context(), owner, password); err != nil {
-		t.Fatalf("login locked below the budget: %v", err)
+		t.Fatalf("owner login: %v", err)
 	}
 
-	tenth := netip.AddrFrom4([4]byte{10, 0, 0, 10})
-	if _, err := g.Login(t.Context(), tenth, "wrong password"); !errors.Is(err, auth.ErrWrongPassword) {
-		t.Fatalf("wrong password from the tenth address: %v", err)
-	}
+	return time.Since(started)
+}
 
-	_, err := g.Login(t.Context(), owner, password)
+// The slowdown tests run in a synctest bubble: the delay passes on the fake clock.
+func TestGlobalBudgetSlowsEveryNetworkInsteadOfLocking(t *testing.T) {
+	store := withPassword(t)
 
-	locked, ok := errors.AsType[*auth.LockedError](err)
-	if !ok {
-		t.Fatalf("login after ten addresses failed: got %v, want LockedError", err)
-	}
+	synctest.Test(t, func(t *testing.T) {
+		g, err := auth.New(t.Context(), store, auth.Options{Iterations: 1000})
+		if err != nil {
+			t.Fatalf("restart: %v", err)
+		}
 
-	if locked.RetryAfter != 5*time.Minute {
-		t.Errorf("retry after %v, want 5m", locked.RetryAfter)
-	}
+		failFrom(t, g, 9)
 
-	c.advance(5 * time.Minute)
+		if d := timedLogin(t, g); d != 0 {
+			t.Errorf("login slowed below the budget by %v", d)
+		}
 
-	if _, err := g.Login(t.Context(), owner, password); err != nil {
-		t.Errorf("login after the global lockout expired: %v", err)
-	}
+		failFrom(t, g, 10)
+
+		if d := timedLogin(t, g); d != 2*time.Second {
+			t.Errorf("login after ten networks failed took %v, want the 2s slowdown", d)
+		}
+
+		time.Sleep(15 * time.Minute)
+
+		if d := timedLogin(t, g); d != 0 {
+			t.Errorf("login slowed after the window passed by %v", d)
+		}
+	})
 }
 
 func TestLockedKeysStillCountTowardsTheBudget(t *testing.T) {
-	g, c, _, _ := protected(t)
+	store := withPassword(t)
 
-	for i := range 9 {
-		addr := netip.AddrFrom4([4]byte{10, 0, 0, byte(i + 1)})
+	synctest.Test(t, func(t *testing.T) {
+		g, err := auth.New(t.Context(), store, auth.Options{Iterations: 1000})
+		if err != nil {
+			t.Fatalf("restart: %v", err)
+		}
 
 		for range 5 {
-			_, _ = g.Login(t.Context(), addr, "wrong password")
+			failFrom(t, g, 9)
 		}
-	}
 
-	c.advance(6 * time.Minute)
+		time.Sleep(6 * time.Minute)
 
-	tenth := netip.AddrFrom4([4]byte{10, 0, 0, 10})
-	if _, err := g.Login(t.Context(), tenth, "wrong password"); !errors.Is(err, auth.ErrWrongPassword) {
-		t.Fatalf("wrong password from the tenth address: %v", err)
-	}
+		failFrom(t, g, 10)
 
-	if _, err := g.Login(t.Context(), owner, password); !isLocked(err) {
-		t.Errorf("keys whose lockout expired inside the window were not counted: got %v", err)
-	}
+		if d := timedLogin(t, g); d != 2*time.Second {
+			t.Errorf("keys whose lockout expired inside the window were not counted: login took %v", d)
+		}
+	})
 }
 
-func TestQueuedCheckDoesNotPassTheGlobalLockout(t *testing.T) {
-	paused := make(chan struct{})
-	resume := make(chan struct{})
+func TestSlowedLoginEndsWithItsContext(t *testing.T) {
+	store := withPassword(t)
 
-	g := pausedOnce(t, paused, resume)
-
-	login := make(chan error, 1)
-
-	go func() {
-		_, err := g.Login(t.Context(), owner, password)
-		login <- err
-	}()
-
-	<-paused
-
-	for i := range 10 {
-		addr := netip.AddrFrom4([4]byte{10, 0, 0, byte(i + 1)})
-
-		if _, err := g.Login(t.Context(), addr, "wrong password"); !errors.Is(err, auth.ErrWrongPassword) {
-			t.Fatalf("wrong password from address %d: %v", i+1, err)
+	synctest.Test(t, func(t *testing.T) {
+		g, err := auth.New(t.Context(), store, auth.Options{Iterations: 1000})
+		if err != nil {
+			t.Fatalf("restart: %v", err)
 		}
-	}
 
-	close(resume)
+		failFrom(t, g, 10)
 
-	if err := <-login; !isLocked(err) {
-		t.Errorf("check queued before the global lockout: got %v, want LockedError", err)
-	}
+		ctx, cancel := context.WithCancel(t.Context())
+		login := make(chan error, 1)
+		started := time.Now()
+
+		go func() {
+			_, err := g.Login(ctx, owner, password)
+			login <- err
+		}()
+
+		// The login is blocked in the wait when every goroutine of the bubble is idle.
+		synctest.Wait()
+		cancel()
+
+		if err := <-login; !errors.Is(err, context.Canceled) {
+			t.Errorf("slowed login cancelled while waiting: got %v, want context.Canceled", err)
+		}
+
+		if d := time.Since(started); d != 0 {
+			t.Errorf("the cancelled login still waited %v", d)
+		}
+	})
 }
 
 func TestHashingIsBounded(t *testing.T) {
@@ -587,7 +618,7 @@ func TestHashingIsBounded(t *testing.T) {
 		errs := make(chan error, logins)
 
 		for i := range logins {
-			addr := netip.AddrFrom4([4]byte{10, 1, 0, byte(i + 1)})
+			addr := netip.AddrFrom4([4]byte{10, 1, byte(i + 1), 1})
 
 			go func() {
 				_, err := g.Login(t.Context(), addr, password)
