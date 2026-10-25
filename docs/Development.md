@@ -116,6 +116,8 @@ gh api -X POST repos/mderkach/metabox/pages -f build_type=workflow
 gh api -X POST repos/mderkach/metabox/environments/github-pages/deployment-branch-policies -f name='v*' -f type=tag
 ```
 
+Publication is serialized per tag. Before creating a release, the workflow saves the four verified public files in one immutable Actions artifact named by the tag and full commit, with a SHA256 manifest bound to the repository and workflow run ([ADR-0068](./adr/ADR-0068-persist-the-verified-release-bundle-before-publication.md)). The signing key is not included. The artifact is retained for 90 days, subject to repository policy. Re-running the original workflow restores those exact files before the build steps, skips rebuilding and signing, and verifies the restored package signature again. Publication starts with a draft targeting the tagged commit, uploads only missing assets, downloads and compares all four files, then publishes the complete draft; the package feed excludes drafts. Draft notes link to the original workflow run: retry that run, rather than creating a new run for the same tag. A missing or expired original artifact, a different commit, an unexpected or mismatching asset, or an already published release stops the workflow without replacing release assets. Publication regression tests, including a retry from a fresh workspace, run with mocked GitHub responses: `python3 .github/tests/test_release_publish.py`.
+
 Steps: a PR that changes `VERSION` and `apps/web/package.json`; after the merge, a tag on the merge commit:
 
 ```sh
