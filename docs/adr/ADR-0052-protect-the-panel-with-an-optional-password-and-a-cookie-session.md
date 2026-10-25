@@ -56,7 +56,7 @@ The password is optional. Without `auth.json` or with an empty hash in it, the p
 - **Session.** `POST /api/auth/login` checks the password and sets the `metabox_session` cookie: a random token of about 260 bits (`crypto/rand.Text` twice), `HttpOnly`, `SameSite=Strict`, `Path=/`, without `Max-Age`. Sessions live in the daemon memory and in the session file: 24 hours since the last request, at most 64 at once, the one closest to expiry is evicted first. A daemon restart keeps them. `POST /api/auth/logout` drops the session and clears the cookie. A request, an event stream included, is cancelled when its session ends by logout, a password change or eviction.
 - **Protected routes.** With a password set, every request without a valid session gets 401 `unauthorized`, except `GET /healthz`, `GET /api/auth`, `POST /api/auth/login`, `POST /api/auth/logout` and paths outside `/api/`, which serve the SPA. The check runs after the `Host` and `Origin` checks, so a mutating request from a foreign origin still gets 403 before the session is looked at.
 - **Password change.** `PUT /api/auth/password` with `{current, password}`. Without a password, anyone who reaches the panel may set the first one, as in b4. With a password, the call needs a session and the current password. An empty `password` removes the password. A successful change drops every session and gives the caller a new one; removal drops every session.
-- **Brute force.** Five wrong passwords from one address within 15 minutes lock that address for 5 minutes: login and password change answer 429 `login_locked` with `Retry-After`. The address comes from `RemoteAddr`; an IPv6 address counts by its /64, since a device picks new addresses inside it at will. Once ten such keys have a wrong password within 15 minutes, login is locked for every address for 5 minutes. Entries older than 15 minutes are dropped on each check. At most two PBKDF2 computations run at once; the rest wait for a slot while the request lives.
+- **Brute force.** Five wrong passwords from one network within 15 minutes lock that network for 5 minutes: login and password change answer 429 `login_locked` with `Retry-After`. The network is the key the lockout counts by: an IPv4 address by its /24 and an IPv6 address by its /64, both taken from `RemoteAddr`, since a device picks new addresses inside its segment at will. Once ten such keys have a wrong password within 15 minutes, every login attempt waits 2 seconds before the check, for as long as the budget stays exhausted; the owner's network, which has not failed, still logs in after the wait. The budget was a lockout of every address for 5 minutes until 2026-10-25: ten devices or aliases on a guest network could keep the owner out indefinitely, while the slowdown throttles a distributed guess without closing the door. Entries older than 15 minutes are dropped on each check. At most two PBKDF2 computations run at once; the rest wait for a slot while the request lives.
 - **Origin and Host.** The checks from ADR-0041 stay as they are.
 
 ### Scope and boundaries
@@ -79,7 +79,7 @@ The password is optional. Without `auth.json` or with an empty hash in it, the p
 - The session file lets whoever reads `/etc/metabox` see when each session was last used; it is root-only, like the hash.
 - A session idle past 24 hours ends when it is next looked at, so an open stream of such a session is not cut by the expiry alone. A stream opened while the panel had no password survives the first password being set.
 - Without HTTPS the password and the cookie travel in clear text inside the LAN.
-- The lockout counts by `RemoteAddr`: behind the dev server proxy all clients share one address, and a device with several IPv4 aliases gets five guesses per alias. The global budget caps that at ten keys, but while someone guesses from that many addresses, the owner cannot log in either. In a home LAN one /64 is the whole segment, so five wrong passwords from any IPv6 device lock out every IPv6 client of that segment, the owner included. A login waiting for a hashing slot is bounded only by its connection: the daemon sets no handler timeout.
+- The lockout counts by `RemoteAddr`: behind the dev server proxy all clients share one address. In a home LAN one /24 or /64 is the whole segment, so five wrong passwords from any device lock out every client of that segment, the owner included, for 5 minutes; a guest network on its own segment locks only itself. A device with aliases in several networks gets five guesses per network, and ten such networks only slow every login by 2 seconds, so a distributed guess is throttled, not stopped. A login waiting for a hashing slot is bounded only by its connection: the daemon sets no handler timeout.
 - PBKDF2 at 600 000 iterations takes a noticeable CPU slice on each login and password change; this was not measured on the BPI-R4.
 
 ### Neutral or deferred
@@ -90,12 +90,12 @@ The password is optional. Without `auth.json` or with an empty hash in it, the p
 
 ## Risks and mitigations
 
-| Risk                                                       | Likelihood and impact          | Mitigation                                                                |
-| ---------------------------------------------------------- | ------------------------------ | ------------------------------------------------------------------------- |
-| A guest sets the first password before the owner           | low, the owner loses the panel | reset over SSH; the README says that without a password the panel is open |
-| Password guessing from the LAN                             | medium, routing control        | the per-address lockout; PBKDF2 slows offline guessing of a stolen file   |
-| The owner forgets the password                             | medium, a panel without access | reset over SSH, written in the README                                     |
-| The session table grows without bound on a months-long run | low, memory                    | at most 64 sessions, expired ones are dropped                             |
+| Risk                                                       | Likelihood and impact          | Mitigation                                                                                      |
+| ---------------------------------------------------------- | ------------------------------ | ----------------------------------------------------------------------------------------------- |
+| A guest sets the first password before the owner           | low, the owner loses the panel | reset over SSH; the README says that without a password the panel is open                       |
+| Password guessing from the LAN                             | medium, routing control        | the per-network lockout and the global slowdown; PBKDF2 slows offline guessing of a stolen file |
+| The owner forgets the password                             | medium, a panel without access | reset over SSH, written in the README                                                           |
+| The session table grows without bound on a months-long run | low, memory                    | at most 64 sessions, expired ones are dropped                                                   |
 
 ## Compatibility, migration and rollback
 

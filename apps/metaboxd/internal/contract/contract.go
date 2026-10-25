@@ -232,8 +232,9 @@ const (
 	// ErrPasswordInvalid means the new password is shorter than 8 or longer than 128
 	// characters, or the body is not parsed.
 	ErrPasswordInvalid ErrorCode = "password_invalid"
-	// ErrLoginLocked means the client address made five wrong attempts in a quarter of an
-	// hour and is locked for five minutes; the wait is in the Retry-After header.
+	// ErrLoginLocked means the client network (an IPv4 /24 or an IPv6 /64) made five wrong
+	// attempts in a quarter of an hour and is locked for five minutes; the wait is in the
+	// Retry-After header.
 	ErrLoginLocked ErrorCode = "login_locked"
 	// ErrAuthDisabled means a login on a panel without a password: there is nothing to log
 	// in with.
