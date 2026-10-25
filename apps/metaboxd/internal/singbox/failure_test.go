@@ -29,7 +29,7 @@ func TestLastFailureTakesTheProcessMessage(t *testing.T) {
 // would send the owner to fix the wrong thing.
 func TestLastFailureIgnoresOtherServices(t *testing.T) {
 	if strings.Contains(lastFailure(crashLog, "sing-box"), "dnsmasq") {
-		t.Error("a foreign service got into the reason")
+		t.Error("another service got into the reason")
 	}
 }
 

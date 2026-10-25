@@ -72,8 +72,8 @@ COPY .devcontainer/target/files/ /
 
 # sing-box and the panel are installed as packages: their own init scripts
 # come with them, and services start in the test bench the same way as on the router. sing-box
-# is started by the service of the panel package, the service of the fork package does not enter autostart,
-# on the router it is also disabled. The packages are not signed. The panel settings are put
+# is started by the service of the panel package, the sing-box package's own service does not enter
+# autostart, on the router it is also disabled. The packages are not signed. The panel settings are put
 # before the install: apk does not overwrite a file in /etc, the package value is put next to it
 # as .apk-new; the test bench address relies on this, so after the install it
 # is checked.

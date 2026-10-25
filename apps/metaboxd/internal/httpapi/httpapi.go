@@ -825,7 +825,7 @@ func (s *Server) handleDataplane(w http.ResponseWriter, r *http.Request) {
 // format regardless of whether it came from a handler or a stream.
 //
 // The observed argument says whether a live sing-box process was found on the device. It matters
-// when the daemon service is stopped: routing may be owned by a foreign package,
+// when the daemon service is stopped: sing-box may have been started outside it,
 // and without this flag the panel would show "stopped" while traffic flows.
 func ServiceState(state singbox.State, binary string, err error, observed bool, lang locale.Lang) any {
 	body := contract.Service{Status: "stopped", Binary: binary}

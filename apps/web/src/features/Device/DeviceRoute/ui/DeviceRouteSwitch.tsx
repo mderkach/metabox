@@ -24,7 +24,7 @@ export function DeviceRouteSwitch({
   label: string;
   model: DataplaneModel | null;
   locked: boolean;
-  /** The daemon manages a foreign service: the position is shown, a change is not offered. */
+  /** The daemon manages a service other than metabox-singbox: the position is shown, a change is not offered. */
   foreignService: boolean;
   onRoute: (source: RouteSource, routed: boolean) => void;
 }) {

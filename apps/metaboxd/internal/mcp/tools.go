@@ -42,7 +42,7 @@ func (t tools) addRead(server *sdk.Server, log *slog.Logger) {
 	addTool(server, log, t.opts.Lang, &sdk.Tool{
 		Name: "metabox_status",
 		Description: locale.T(t.opts.Lang, "State of the router running metabox: whether the sing-box service runs and who owns the process "+
-			"(managed=false with status running means a foreign package started it), the daemon, sing-box binary and "+
+			"(managed=false with status running means sing-box was started outside that service), the daemon, sing-box binary and "+
 			"panel schema versions, the dataplane routing mode, the runtime sources the daemon reads, and the "+
 			"permissions of this MCP token. An empty version means it could not be read or was not built in. "+
 			"Does not tell whether traffic actually flows: use metabox_diagnostics for that."),

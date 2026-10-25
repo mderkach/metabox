@@ -318,8 +318,8 @@ func (m *Manager) planeBefore(ctx context.Context) (planeState, bool) {
 // checkInterception compares interception after the restart with what stood before it.
 // A failure only when the chains were there and vanished: interception that was absent even before
 // the restart was not removed by the config apply and the rollback will not bring it back. Likewise
-// skipped is a service that installs interception with foreign chains, homeproxy in
-// the transitional mode.
+// skipped is a service other than metabox-singbox that installs interception with chains
+// of its own.
 func (m *Manager) checkInterception(ctx context.Context, before planeState) error {
 	switch {
 	case !before.model.Enabled:

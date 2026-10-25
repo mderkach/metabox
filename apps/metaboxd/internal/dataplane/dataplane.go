@@ -35,9 +35,9 @@ const (
 )
 
 // Service is the name of the service whose init script reads the model and brings the
-// dataplane to it. Another service on the same sing-box, homeproxy or the fork package,
-// does not read the section: the written model would install nothing, and its reload
-// would restart foreign routing.
+// dataplane to it. Another service running the same sing-box, including the sing-box
+// package's own init script, does not read the section: the written model would install
+// nothing, and its reload would restart routing the daemon does not own.
 const Service = "metabox-singbox"
 
 // AccessMode is which sources from the LAN interfaces go through sing-box.
@@ -86,7 +86,7 @@ type Model struct {
 	IPv6 bool `json:"ipv6"`
 }
 
-// Defaults is the model with no options: the ports, marks and table of homeproxy, listed
+// Defaults is the model with no options: the default ports, marks and table, listed
 // mode without sources, that is, interception stands but nobody goes
 // through sing-box.
 func Defaults() Model {

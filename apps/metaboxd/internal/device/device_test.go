@@ -189,7 +189,7 @@ func TestUplinkSkipsTunnel(t *testing.T) {
 }
 
 // The process is looked up by the port listener, not by the service name: routing on the
-// device may be owned by a foreign package.
+// device may be owned by a service other than metabox-singbox.
 func TestSingboxFoundByListener(t *testing.T) {
 	fs := newTree(t)
 	fs.listener(t, clashPortHex, socketInode)

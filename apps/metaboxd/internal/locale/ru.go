@@ -102,11 +102,11 @@ var ru = map[string]string{
 		"конфиг на роутере: для этого есть metabox_config_version.",
 
 	"State of the router running metabox: whether the sing-box service runs and who owns the process " +
-		"(managed=false with status running means a foreign package started it), the daemon, sing-box binary and " +
+		"(managed=false with status running means sing-box was started outside that service), the daemon, sing-box binary and " +
 		"panel schema versions, the dataplane routing mode, the runtime sources the daemon reads, and the " +
 		"permissions of this MCP token. An empty version means it could not be read or was not built in. " +
 		"Does not tell whether traffic actually flows: use metabox_diagnostics for that.": "Состояние роутера с metabox: работает ли служба sing-box и кто владеет процессом " +
-		"(managed=false при status running значит, что его запустил чужой пакет), версии демона, бинаря sing-box и " +
+		"(managed=false при status running значит, что sing-box запущен в обход этой службы), версии демона, бинаря sing-box и " +
 		"схемы панели, режим маршрутизации обвязки, источники рантайма, которые читает демон, и " +
 		"права этого токена MCP. Пустая версия значит, что её не удалось прочитать или она не встроена при сборке. " +
 		"Не говорит, идёт ли трафик на самом деле: для этого есть metabox_diagnostics.",

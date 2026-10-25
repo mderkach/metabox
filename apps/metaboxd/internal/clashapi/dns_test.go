@@ -17,7 +17,7 @@ func TestReadDNSInbound(t *testing.T) {
 		found  bool
 	}{
 		{
-			name:   "dns-in homeproxy",
+			name:   "direct inbound tagged dns-in",
 			config: `{"inbounds":[{"type":"mixed","listen_port":5333},{"type":"direct","tag":"dns-in","listen":"127.0.0.1","listen_port":5333}]}`,
 			want:   clashapi.DNSInbound{Address: "127.0.0.1:5333"},
 			found:  true,

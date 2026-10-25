@@ -11,7 +11,7 @@
 // runs, the coarser the old sections.
 //
 // The buffer lives in memory: writing to the router flash for a chart is not worth its
-// wear, and a daemon restart zeroes the history, like the b4 counters.
+// wear, and a daemon restart zeroes the history.
 package history
 
 import "sync"

@@ -598,7 +598,7 @@ func TestPlaneForeignServiceReservesNothing(t *testing.T) {
 	h := newPlaneHarness(t, nil, validConfig, slog.New(slog.DiscardHandler))
 	t.Cleanup(h.plane.Close)
 
-	plane := h.newPlaneFor("homeproxy", nil, slog.New(slog.DiscardHandler))
+	plane := h.newPlaneFor("other-proxy", nil, slog.New(slog.DiscardHandler))
 	t.Cleanup(plane.Close)
 
 	if _, err := plane.Start(t.Context(), aclChange(), "", admin); !errors.Is(err, apply.ErrDataplaneForeignService) {

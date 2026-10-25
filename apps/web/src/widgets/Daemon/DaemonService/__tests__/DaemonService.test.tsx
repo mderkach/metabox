@@ -58,7 +58,7 @@ describe('service state', () => {
     expect(screen.getByRole('button', { name: 'Остановить' })).toBeInTheDocument();
   });
 
-  // A foreign package can run routing on the device: "Start" would
+  // sing-box may run outside the daemon service: "Start" would
   // bring up a second copy of sing-box next to the running one.
   it('a process outside the service is shown as running, but without commands', async () => {
     serveService(SERVICE_UNMANAGED_FIXTURE);

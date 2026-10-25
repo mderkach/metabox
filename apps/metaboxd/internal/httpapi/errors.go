@@ -141,7 +141,7 @@ func fail(log *slog.Logger, w http.ResponseWriter, r *http.Request, err error) {
 	case status == http.StatusInternalServerError:
 		log.Error("request not served", "err", err, "method", r.Method, "path", r.URL.Path)
 		message = locale.T(lang, "internal error")
-	// The service command paths stay in the log: they hold a foreign service config.
+	// The service command paths stay in the log: they point to a config the daemon does not own.
 	case code == contract.ErrLaunchMismatch:
 		log.Warn("apply rejected: the service starts with a config the daemon does not own", "err", err)
 		message = locale.T(lang, "the sing-box service starts with a config metabox does not own")

@@ -99,13 +99,13 @@ router-tcp)
 router-udp)
 	nslookup example.com 1.1.1.1 >/dev/null 2>&1 || true
 	;;
-b4-sim-up)
-	# Not b4 but its trace in nft: a separate table marks router UDP to 1.0.0.1
-	# with mark 0x8000, the way b4 marks its packets. In postrouting the probe is counted
+foreign-mark-up)
+	# Another daemon's trace in nft: a separate table marks router UDP to 1.0.0.1
+	# with mark 0x8000, as a daemon setting SO_MARK would. In postrouting the probe is counted
 	# by the mark it arrived with: the general tproxy mark counter in mangle_output
 	# is also moved by background router UDP.
 	nft -f - <<-EOF
-		table inet metabox_check_b4 {
+		table inet metabox_check_mark {
 			chain output {
 				type route hook output priority mangle - 10; policy accept;
 				ip daddr 1.0.0.1 udp dport 53 meta mark set 0x8000 counter
@@ -119,12 +119,12 @@ b4-sim-up)
 	EOF
 	nslookup example.com 1.0.0.1 >/dev/null 2>&1 || true
 	;;
-b4-sim-counter)
+foreign-mark-counter)
 	# $2 is the mark in the nft entry: 0x00008000 or 0x00000065.
-	nft list chain inet metabox_check_b4 postrouting | grep -F -- "meta mark $2 " |
+	nft list chain inet metabox_check_mark postrouting | grep -F -- "meta mark $2 " |
 		sed -n 's/.*counter packets \([0-9]*\) .*/\1/p'
 	;;
-b4-sim-down) nft delete table inet metabox_check_b4 ;;
+foreign-mark-down) nft delete table inet metabox_check_mark ;;
 snapshot) snapshot ;;
 apply) /usr/bin/apply-cycle-check >/dev/null ;;
 kill)
@@ -143,8 +143,8 @@ acl)
 	wait_singbox
 	;;
 foreign-up)
-	# Not homeproxy but its trace in the kernel: the same mark 101 and table 100 as the
-	# dataplane has, so a disabled service cannot tell a foreign one from its own.
+	# Another service's trace in the kernel: the same mark 101 and table 100 as the
+	# dataplane has, so a disabled service cannot tell them from its own.
 	ip rule add fwmark 101 table 100
 	ip route replace local 0.0.0.0/0 dev lo table 100
 	;;
@@ -165,7 +165,7 @@ forget-state) rm -f /var/run/metabox/dataplane.state ;;
 stop) /etc/init.d/$SERVICE stop ;;
 start) /etc/init.d/$SERVICE start ;;
 *)
-	echo "usage: $0 state|expect-up|expect-down|counter <chain> <pattern>|singbox-pid|wait|log-has <a> <b>|acl all|listed|router-tcp|router-udp|b4-sim-up|b4-sim-counter <mark>|b4-sim-down|snapshot|apply|kill|foreign-up|foreign-down|foreign-present|dataplane 0|1|forget-state|stop|start" >&2
+	echo "usage: $0 state|expect-up|expect-down|counter <chain> <pattern>|singbox-pid|wait|log-has <a> <b>|acl all|listed|router-tcp|router-udp|foreign-mark-up|foreign-mark-counter <mark>|foreign-mark-down|snapshot|apply|kill|foreign-up|foreign-down|foreign-present|dataplane 0|1|forget-state|stop|start" >&2
 	exit 2
 	;;
 esac

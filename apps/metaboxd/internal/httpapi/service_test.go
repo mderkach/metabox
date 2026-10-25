@@ -233,8 +233,8 @@ func TestServiceAbsent(t *testing.T) {
 	}
 }
 
-// Routing on the device may be owned by a foreign package: it starts the same
-// binary with its own service, and procd knows nothing about it.
+// Routing on the device may be owned by another service that starts the same
+// binary, and procd knows nothing about it.
 func TestServiceStateObservedRuntime(t *testing.T) {
 	tests := []struct {
 		name        string

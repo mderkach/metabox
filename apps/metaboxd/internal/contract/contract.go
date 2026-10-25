@@ -109,8 +109,8 @@ type Service struct {
 	Binary string `json:"binary"`
 	// Managed means the process is owned by the service the daemon manages.
 	// False with the status `running` reads as: sing-box on the device works,
-	// but was started not by it: routing is owned by a foreign package, and the service buttons do not
-	// apply to this process.
+	// but was started outside that service, and the service buttons do not apply to this
+	// process.
 	Managed   bool   `json:"managed"`
 	LastError string `json:"lastError,omitempty"`
 	// LastErrorCode is why LastError was written by the daemon and not by the service. Empty

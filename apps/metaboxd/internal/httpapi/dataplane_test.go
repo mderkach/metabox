@@ -252,7 +252,7 @@ func TestDataplaneChangeRejected(t *testing.T) {
 			http.StatusPreconditionFailed, contract.ErrDataplaneModified,
 		},
 		{
-			"daemon manages a foreign service", apply.ErrDataplaneForeignService, `{"model":{}}`,
+			"daemon manages a service other than metabox-singbox", apply.ErrDataplaneForeignService, `{"model":{}}`,
 			http.StatusConflict, contract.ErrDataplaneForeignService,
 		},
 	}

@@ -377,7 +377,7 @@ func TestStateAsksNamedInstance(t *testing.T) {
 	runner := &fakeRunner{}
 	supervisor := &fakeSupervisor{state: procd.State{Known: true, Running: true, PID: 4242}}
 
-	client, err := singbox.New(runner, binary, "/etc/init.d/homeproxy", "proxy", "", supervisor)
+	client, err := singbox.New(runner, binary, "/etc/init.d/other-proxy", "proxy", "", supervisor)
 	if err != nil {
 		t.Fatalf("client build: %v", err)
 	}
@@ -386,7 +386,7 @@ func TestStateAsksNamedInstance(t *testing.T) {
 		t.Fatalf("service state: %v", err)
 	}
 
-	want := []string{"/etc/init.d/homeproxy", "running", "proxy"}
+	want := []string{"/etc/init.d/other-proxy", "running", "proxy"}
 	if len(runner.calls) != 1 || !slices.Equal(runner.calls[0], want) {
 		t.Errorf("init script called as %q, expected %q", runner.calls, want)
 	}
@@ -400,9 +400,9 @@ func TestStateAsksNamedInstance(t *testing.T) {
 // is its own, and the state is not guessed by the init script.
 func TestStateFailsOnAmbiguousInstance(t *testing.T) {
 	runner := &fakeRunner{}
-	supervisor := &fakeSupervisor{err: fmt.Errorf("служба homeproxy: %w", procd.ErrAmbiguousInstance)}
+	supervisor := &fakeSupervisor{err: fmt.Errorf("служба other-proxy: %w", procd.ErrAmbiguousInstance)}
 
-	client, err := singbox.New(runner, binary, "/etc/init.d/homeproxy", "", "", supervisor)
+	client, err := singbox.New(runner, binary, "/etc/init.d/other-proxy", "", "", supervisor)
 	if err != nil {
 		t.Fatalf("client build: %v", err)
 	}
@@ -411,7 +411,7 @@ func TestStateFailsOnAmbiguousInstance(t *testing.T) {
 		t.Errorf("got %v, expected ErrAmbiguousInstance", err)
 	}
 
-	want := []string{"/etc/init.d/homeproxy", "running"}
+	want := []string{"/etc/init.d/other-proxy", "running"}
 	if len(runner.calls) != 1 || !slices.Equal(runner.calls[0], want) {
 		t.Errorf("init script called as %q, expected %q", runner.calls, want)
 	}

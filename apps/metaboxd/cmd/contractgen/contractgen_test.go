@@ -110,7 +110,7 @@ func TestGenerateEmitsEnumValues(t *testing.T) {
 	}
 }
 
-// An enum from a foreign package is printed with the same list as an own one: a field
+// An enum from another package is printed with the same list as an own one: a field
 // that refers to it must not stop generation.
 func TestGenerateEmitsForeignEnum(t *testing.T) {
 	out, err := generate("testdata", []rootType{{pkg: "internal/twin", name: "Borrower"}})

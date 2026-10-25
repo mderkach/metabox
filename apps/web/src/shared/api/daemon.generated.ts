@@ -267,7 +267,7 @@ export const ServiceSchema = z.object({
   uptime: z.int(),
   /** Binary is the binary version on the device. The panel knows its own schema and checks the mismatch itself. */
   binary: z.string(),
-  /** Managed means the process is owned by the service the daemon manages. False with the status `running` reads as: sing-box on the device works, but was started not by it: routing is owned by a foreign package, and the service buttons do not apply to this process. */
+  /** Managed means the process is owned by the service the daemon manages. False with the status `running` reads as: sing-box on the device works, but was started outside that service, and the service buttons do not apply to this process. */
   managed: z.boolean(),
   lastError: z.string().optional(),
   /** LastErrorCode is why LastError was written by the daemon and not by the service. Empty when LastError holds the output of a failed service: the panel shows it verbatim. */

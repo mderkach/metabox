@@ -175,13 +175,13 @@ in_target router-udp
 check "mangle output marked router UDP" "$(counter metabox_mangle_output 'meta mark set 0x00000065')" -gt "$mark_out"
 check "the marked packet came back through lo to tproxy" "$(counter metabox_mangle_lanac 'iifname "lo"')" -gt "$lo"
 
-section "9. A packet with a foreign mark (b4 trace) does not go to tproxy"
+section "9. A packet with a foreign mark does not go to tproxy"
 foreign=$(counter metabox_mangle_output 'meta mark != 0x00000000')
-in_target b4-sim-up
+in_target foreign-mark-up
 check "packet with mark 0x8000 passed by interception" "$(counter metabox_mangle_output 'meta mark != 0x00000000')" -gt "$foreign"
-check "the tproxy mark was not set on the probe" "$(in_target b4-sim-counter 0x00000065)" = 0
-check "mark 0x8000 reached postrouting" "$(in_target b4-sim-counter 0x00008000)" -gt 0
-in_target b4-sim-down
+check "the tproxy mark was not set on the probe" "$(in_target foreign-mark-counter 0x00000065)" = 0
+check "mark 0x8000 reached postrouting" "$(in_target foreign-mark-counter 0x00008000)" -gt 0
+in_target foreign-mark-down
 
 section "10. Config Apply does not touch fw4 and dnsmasq"
 before=$(in_target snapshot)
@@ -230,9 +230,9 @@ in_target expect-up || failed=1
 got=$(tcp_to_outside "$LISTED_IP" -)
 check "after start the connection is accepted ($got)" "$got" = connected
 
-section "14. Disabled model next to homeproxy: foreign ip rule and table stay"
+section "14. Disabled model next to another service's ip rule and table: they stay"
 # The service is stopped, there is no state file, as after a reboot. The rule and
-# the table with the dataplane numbers are held by a foreign service.
+# the table with the dataplane numbers are held by another service.
 in_target stop
 in_target foreign-up
 in_target dataplane 0

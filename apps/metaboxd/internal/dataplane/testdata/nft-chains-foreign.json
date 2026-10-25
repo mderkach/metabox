@@ -14,7 +14,7 @@
         "policy": "accept"
       }
     },
-    { "chain": { "family": "inet", "table": "fw4", "name": "homeproxy_redirect", "handle": 61 } },
+    { "chain": { "family": "inet", "table": "fw4", "name": "other_redirect", "handle": 61 } },
     { "table": { "family": "inet", "name": "other" } },
     { "chain": { "family": "inet", "table": "other", "name": "metabox_redirect", "handle": 2 } }
   ]

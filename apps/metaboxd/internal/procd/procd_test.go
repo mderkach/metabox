@@ -13,7 +13,7 @@ import (
 )
 
 const listOutput = `{
-  "homeproxy": {"instances": {"proxy": {"running": true, "pid": 5810}}},
+  "other-proxy": {"instances": {"proxy": {"running": true, "pid": 5810}}},
   "sing-box": {"instances": {"instance1": {"running": false, "pid": 0}}},
   "dnsmasq": {"instances": {"cfg01": {"running": true, "pid": 1234}}}
 }`
@@ -32,9 +32,9 @@ func TestServiceReadsState(t *testing.T) {
 		wantRunning bool
 		wantPID     int
 	}{
-		{"service up", "homeproxy", true, true, 5810},
+		{"service up", "other-proxy", true, true, 5810},
 		{"service known but not running", "sing-box", true, false, 0},
-		{"service unknown to procd", "b4", false, false, 0},
+		{"service unknown to procd", "unknown-service", false, false, 0},
 	}
 
 	for _, tt := range tests {
@@ -61,12 +61,12 @@ func TestServiceReadsState(t *testing.T) {
 	}
 }
 
-// homeproxy has a log cleanup script next to sing-box: the state and pid
+// A service may run a cleanup script next to sing-box: the state and pid
 // are taken only from the instance with the given name.
 func TestServiceSelectsInstance(t *testing.T) {
-	const twoInstances = `{"homeproxy": {"instances": {
-		"proxy": {"running": %s, "pid": %d, "command": ["/usr/bin/sing-box", "run", "-c", "/var/run/homeproxy/proxy.json"]},
-		"log-cleaner": {"running": true, "pid": 7001, "command": ["/etc/homeproxy/scripts/clean_log.sh"]}
+	const twoInstances = `{"other-proxy": {"instances": {
+		"proxy": {"running": %s, "pid": %d, "command": ["/usr/bin/sing-box", "run", "-c", "/var/run/other-proxy/proxy.json"]},
+		"cleanup": {"running": true, "pid": 7001, "command": ["/usr/libexec/other-proxy/cleanup.sh"]}
 	}}}`
 
 	tests := []struct {
@@ -81,17 +81,17 @@ func TestServiceSelectsInstance(t *testing.T) {
 	}{
 		{
 			"sing-box instance crashed, the neighbour is alive",
-			fmt.Sprintf(twoInstances, "false", 0), "homeproxy", "proxy",
-			true, false, 0, []string{"/var/run/homeproxy/proxy.json"},
+			fmt.Sprintf(twoInstances, "false", 0), "other-proxy", "proxy",
+			true, false, 0, []string{"/var/run/other-proxy/proxy.json"},
 		},
 		{
 			"sing-box instance up",
-			fmt.Sprintf(twoInstances, "true", 5810), "homeproxy", "proxy",
-			true, true, 5810, []string{"/var/run/homeproxy/proxy.json"},
+			fmt.Sprintf(twoInstances, "true", 5810), "other-proxy", "proxy",
+			true, true, 5810, []string{"/var/run/other-proxy/proxy.json"},
 		},
 		{
 			"no instance with such a name",
-			fmt.Sprintf(twoInstances, "true", 5810), "homeproxy", "sing-box",
+			fmt.Sprintf(twoInstances, "true", 5810), "other-proxy", "sing-box",
 			false, false, 0, nil,
 		},
 		{
@@ -126,14 +126,14 @@ func TestServiceSelectsInstance(t *testing.T) {
 // Without an instance name a service with several instances has nothing to choose from:
 // the first live one could turn out to be a neighbouring script.
 func TestServiceRejectsAmbiguousInstance(t *testing.T) {
-	list := `{"homeproxy": {"instances": {
+	list := `{"other-proxy": {"instances": {
 		"proxy": {"running": false, "pid": 0},
-		"log-cleaner": {"running": true, "pid": 7001}
+		"cleanup": {"running": true, "pid": 7001}
 	}}}`
 
 	client := New(runnerWith(list, 0, nil), "/bin/ubus")
 
-	got, err := client.Service(t.Context(), "homeproxy", "")
+	got, err := client.Service(t.Context(), "other-proxy", "")
 	if !errors.Is(err, ErrAmbiguousInstance) {
 		t.Fatalf("got %v, expected ErrAmbiguousInstance", err)
 	}
@@ -157,7 +157,7 @@ func TestServiceReportsFailures(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			client := New(tt.runner, "/bin/ubus")
 
-			if _, err := client.Service(t.Context(), "homeproxy", ""); err == nil {
+			if _, err := client.Service(t.Context(), "other-proxy", ""); err == nil {
 				t.Error("failure not reported")
 			}
 		})
@@ -182,7 +182,7 @@ func TestUptimeFromProc(t *testing.T) {
 	client := New(runnerWith(procList(pid), 0, nil), "/bin/ubus")
 	client.procDir = dir
 
-	got, err := client.Service(t.Context(), "homeproxy", "")
+	got, err := client.Service(t.Context(), "other-proxy", "")
 	if err != nil {
 		t.Fatalf("service poll: %v", err)
 	}
@@ -199,7 +199,7 @@ func TestUptimeUnavailable(t *testing.T) {
 	client := New(runnerWith(procList(4242), 0, nil), "/bin/ubus")
 	client.procDir = filepath.Join(t.TempDir(), "нет-такого")
 
-	got, err := client.Service(t.Context(), "homeproxy", "")
+	got, err := client.Service(t.Context(), "other-proxy", "")
 	if err != nil {
 		t.Fatalf("service poll: %v", err)
 	}
@@ -214,7 +214,7 @@ func TestUptimeUnavailable(t *testing.T) {
 }
 
 func procList(pid int) string {
-	return `{"homeproxy": {"instances": {"proxy": {"running": true, "pid": ` + strconv.Itoa(pid) + `}}}}`
+	return `{"other-proxy": {"instances": {"proxy": {"running": true, "pid": ` + strconv.Itoa(pid) + `}}}}`
 }
 
 func procStat(startTicks int) string {
@@ -311,7 +311,7 @@ func TestServiceReadsConfigFlags(t *testing.T) {
 		wantDir  []string
 	}{
 		{
-			"fork package: one file",
+			"package init script: one file",
 			`["/usr/bin/sing-box", "run", "-c", "/etc/sing-box/config.json", "-D", "/usr/share/sing-box"]`,
 			[]string{"/etc/sing-box/config.json"}, nil,
 		},
