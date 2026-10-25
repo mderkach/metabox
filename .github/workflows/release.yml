@@ -7,8 +7,10 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: write
+      checks: read
     env:
       TAG: ${{ github.ref_name }}
       # The router's arch. There is no public rootfs for it, so the package is built on
@@ -29,6 +31,19 @@ jobs:
           [ "$web" = "$version" ] || { echo "::error::apps/web/package.json $web, VERSION $version"; exit 1; }
           git merge-base --is-ancestor HEAD origin/main || { echo "::error::$TAG is not on main"; exit 1; }
           [ -s "$PUBLIC_KEY" ] || { echo "::error::$PUBLIC_KEY is missing"; exit 1; }
+
+      # Being on main is not enough: rc.9 was cut from a commit whose CI run was cancelled.
+      # `checks` sums up every CI job, so one successful check run of it is the verdict.
+      - name: CI is green for the tagged commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          conclusions=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs?check_name=checks" \
+            --jq '[.check_runs[] | .conclusion // .status] | join(" ")')
+          case " $conclusions " in
+            *" success "*) echo "checks: $conclusions" ;;
+            *) echo "::error::no successful 'checks' run for $GITHUB_SHA (found: ${conclusions:-none}); wait for CI on main or fix it before tagging"; exit 1 ;;
+          esac
 
       - uses: actions/setup-go@v6
         with:
