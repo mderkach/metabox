@@ -201,6 +201,13 @@ jobs:
         timeout-minutes: 25
         run: |
           set -u
+          echo "== host readers of /proc/kmsg and the kernel log tail"
+          sudo ls -l /proc/[0-9]*/fd 2>/dev/null | grep kmsg || echo "no host process holds /proc/kmsg"
+          ps -eo pid,cmd | grep -E 'rsyslog|klog|journal' | grep -v grep || true
+          grep -rn 'imklog\|kmsg' /etc/rsyslog.conf /etc/rsyslog.d 2>/dev/null || true
+          uname -r; sudo dmesg | tail -5
+          echo "== inside the test bench"
+          docker exec metabox-target-1 sh -c 'ls -lL /proc/kmsg; p=$(pidof logd); echo "logd $p wchan=$(cat /proc/$p/wchan) kmsg fds $(ls -l /proc/$p/fd | grep -c kmsg)"; echo "log lines $(logread | wc -l), kernel lines $(logread | grep -c kernel:)"'
           in_target() { timeout 30 docker exec metabox-target-1 /usr/bin/dataplane-check "$@"; }
           client() {
             docker run --rm --network metabox_lan --ip 192.168.210.40 --cap-add NET_ADMIN alpine:3 \
