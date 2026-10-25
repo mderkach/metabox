@@ -21,6 +21,9 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: Fork release watch tests
+        run: bash .github/scripts/fork-release-check.test.sh
+
       # setup-go saves the cache once per key, so a key shared by two jobs loses the modules of
       # the job that finishes second. The Makefile pins golangci-lint, which `go run` fetches.
       - uses: actions/setup-go@v6
