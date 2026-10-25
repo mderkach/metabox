@@ -1,5 +1,15 @@
 {
   "toast": {
+    "config": {
+      "edit": {
+        "failed": "Could not edit the config safely. Check its syntax in text mode; your draft was left unchanged."
+      }
+    },
+    "rule": {
+      "reorder": {
+        "failed": "Could not move the rule without changing its comments. The config was left unchanged."
+      }
+    },
     "apply": {
       "confirm": {
         "done": "Link confirmed, the config stays"

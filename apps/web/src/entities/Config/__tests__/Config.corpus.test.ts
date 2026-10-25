@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { parseConfig } from '../api/Config.query';
-import { findValue, readRules, setValue } from '../model/Config.model';
+import { findValue, insertValue, moveValue, readRules, removeValue, setValue } from '../model/Config.model';
 
 /**
  * The corpus is picked up as a whole directory: a new config just needs to be put
@@ -18,6 +18,17 @@ const FILES = Object.entries(CORPUS).map(([path, text]) => ({
 /** Top-level keys in file order: by the model the order would be the schema's. */
 function topLevelKeys(text: string): string[] {
   return [...text.matchAll(/^(?: {2}|\t)"([^"]+)":/gm)].map((match) => match[1]);
+}
+
+function documentWithRules(text: string, rules: unknown[]): object {
+  const document = findValue(text, []);
+  const route = findValue(text, ['route']);
+
+  if (document === null || typeof document !== 'object' || route === null || typeof route !== 'object') {
+    throw new Error('The corpus config must contain a route object');
+  }
+
+  return { ...document, route: { ...route, rules } };
 }
 
 describe('config corpus', () => {
@@ -41,6 +52,30 @@ describe('config corpus', () => {
 
     expect(parseConfig(after).config?.route?.final).toBe('direct');
     expect(topLevelKeys(after)).toEqual(topLevelKeys(text));
+  });
+
+  it.each(FILES)('$name preserves the whole document when inserting and deleting an array element', ({ text }) => {
+    const before = findValue(text, []);
+    const rules = readRules(text);
+    const value = { action: 'route', outbound: 'direct' };
+    const inserted = insertValue(text, ['route', 'rules', 0], value);
+
+    expect(findValue(inserted ?? '', [])).toEqual(documentWithRules(text, [value, ...rules]));
+    expect(findValue(removeValue(inserted ?? '', ['route', 'rules', 0]) ?? '', [])).toEqual(before);
+  });
+
+  it.each(FILES)('$name preserves the whole document and comments when moving array elements', ({ text }) => {
+    const rules = readRules(text);
+
+    if (rules.length < 2) return;
+
+    const after = moveValue(text, ['route', 'rules'], 0, rules.length - 1);
+
+    expect(after).not.toBeNull();
+    expect(findValue(after ?? '', [])).toEqual(documentWithRules(text, [...rules.slice(1), rules[0]]));
+    expect((after?.match(/\/\/[^\r\n]*|\/\*[\s\S]*?\*\//g) ?? []).sort()).toEqual(
+      (text.match(/\/\/[^\r\n]*|\/\*[\s\S]*?\*\//g) ?? []).sort()
+    );
   });
 
   it.each(FILES)('$name keeps its line endings', ({ text }) => {

@@ -5,6 +5,7 @@ import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import type { GenericSection } from '@entities/Config';
+import { showQueryError } from '@shared/api';
 import { Button, Label, Textarea } from '@shared/ui';
 
 import { useNodeInsert } from '../model/ConfigNodeAdd.insert';
@@ -63,7 +64,11 @@ export function ConfigNodeAddLink({
 
     const tag = shareLinkTag(link, takenTags);
 
-    insertNode(shareLinkNode(link, tag));
+    if (!insertNode(shareLinkNode(link, tag))) {
+      showQueryError({ showError: true, errorMessageKey: 'toast.config.edit.failed' }, null);
+
+      return;
+    }
     form.reset(NODE_LINK_DEFAULTS);
     onAdded?.(tag);
   });

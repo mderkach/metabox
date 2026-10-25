@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ConfigDocumentState, RULES_PATH } from '@entities/Config';
+import { showQueryError } from '@shared/api';
 import { Button } from '@shared/ui';
 
 import { MOVE, type Move } from '../model/RuleReorder.constants';
@@ -56,8 +57,13 @@ export function RuleReorderButtons({
     const target = index + step;
     const atEdge = target === 1 || target === total;
 
+    if (!move(RULES_PATH, index - 1, target - 1)) {
+      showQueryError({ showError: true, errorMessageKey: 'toast.rule.reorder.failed' }, null);
+
+      return;
+    }
+
     focusAfterMove.current = atEdge ? opposite(step) : step;
-    move(RULES_PATH, index - 1, target - 1);
     onMoved(target);
   }
 

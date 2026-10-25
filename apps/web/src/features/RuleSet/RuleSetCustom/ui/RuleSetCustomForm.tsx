@@ -6,6 +6,7 @@ import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import { ConfigDocumentState, RULE_SETS_PATH } from '@entities/Config';
+import { showQueryError } from '@shared/api';
 import { Button, Input, Label, Textarea, ToggleGroup, ToggleGroupItem } from '@shared/ui';
 
 import {
@@ -49,12 +50,15 @@ export function RuleSetCustomForm({ takenTags, onDone }: { takenTags: readonly s
   });
 
   const onSubmit = form.handleSubmit((data) => {
-    if (data.storage === LIST_STORAGE.File) {
-      editList(listFileName(data.tag), toListFileContent(data));
-      insert([...RULE_SETS_PATH, count], toLocalRuleSet(data));
-    } else {
-      insert([...RULE_SETS_PATH, count], toInlineRuleSet(data));
+    const node = data.storage === LIST_STORAGE.File ? toLocalRuleSet(data) : toInlineRuleSet(data);
+
+    if (!insert([...RULE_SETS_PATH, count], node)) {
+      showQueryError({ showError: true, errorMessageKey: 'toast.config.edit.failed' }, null);
+
+      return;
     }
+
+    if (data.storage === LIST_STORAGE.File) editList(listFileName(data.tag), toListFileContent(data));
 
     form.reset(ruleSetCustomDefaults());
     setAdded(data.tag.trim());

@@ -178,24 +178,37 @@ function insertEdits(spans: readonly ElementSpan[], index: number, chunk: Chunk,
   ];
 }
 
-/**
- * Accepts the edited text only if the list holds exactly the expected values and
- * no new syntax errors appeared. Comment ownership is decided by layout, and a
- * layout it misjudges must not silently change the data: the caller then falls
- * back to `modify`.
- */
+/** Rejects a text splice unless the whole document differs only by the intended array edit. */
 function verified(before: string, after: string, arrayPath: JSONPath, expected: unknown[]): string | null {
   const errorsBefore: ParseError[] = [];
   const errorsAfter: ParseError[] = [];
+  const beforeRoot = parseTree(before, errorsBefore, { allowTrailingComma: true });
+  const afterRoot = parseTree(after, errorsAfter, { allowTrailingComma: true });
 
-  parseTree(before, errorsBefore);
+  if (beforeRoot === undefined || afterRoot === undefined || errorsBefore.length > 0 || errorsAfter.length > 0) {
+    return null;
+  }
 
-  const root = parseTree(after, errorsAfter);
-  const array = root === undefined ? undefined : findNodeAtLocation(root, arrayPath);
+  const document: unknown = getNodeValue(beforeRoot);
+  let parent: unknown = document;
 
-  if (array === undefined || errorsAfter.length > errorsBefore.length) return null;
+  for (const segment of arrayPath.slice(0, -1)) {
+    if (parent === null || typeof parent !== 'object') return null;
 
-  return JSON.stringify(getNodeValue(array)) === JSON.stringify(expected) ? after : null;
+    parent = Reflect.get(parent, segment);
+  }
+
+  const key = arrayPath.at(-1);
+
+  if (key !== undefined) {
+    if (parent === null || typeof parent !== 'object') return null;
+
+    Reflect.set(parent, key, expected);
+  }
+
+  return JSON.stringify(getNodeValue(afterRoot)) === JSON.stringify(key === undefined ? expected : document)
+    ? after
+    : null;
 }
 
 /** The list at the path and its elements; `null` when the path is not a non-negative index of a list. */
@@ -212,15 +225,21 @@ function locate(text: string, path: JSONPath): { index: number; values: unknown[
 
 /**
  * Removes an array element as a range of text: its comma and comments go with
- * it, the neighbours keep their bytes. `null` means the path is not an element
- * of a list with neighbours, and the caller edits it its own way.
+ * it, the neighbours keep their bytes. `undefined` means a non-array path;
+ * `null` refuses an unsafe edit.
  */
-export function removeElement(text: string, path: JSONPath): string | null {
+export function removeElement(text: string, path: JSONPath): string | null | undefined {
   const list = locate(text, path);
 
-  if (list === null || list.spans.length <= 1 || list.index >= list.spans.length) return null;
+  if (list === null) return undefined;
+  if (list.index >= list.spans.length) return text;
 
-  const after = applyEdits(text, removeEdits(list.spans, list.index));
+  const target = list.spans[list.index];
+  const edits =
+    list.spans.length === 1
+      ? [{ offset: target.start, length: target.end - target.start, content: '' }]
+      : removeEdits(list.spans, list.index);
+  const after = applyEdits(text, edits);
 
   return verified(text, after, path.slice(0, -1), list.values.toSpliced(list.index, 1));
 }
@@ -230,17 +249,19 @@ export function removeElement(text: string, path: JSONPath): string | null {
  * neighbours. The value is laid out with the file indent, shifted to the indent
  * of the list; in a list written on one line it goes on one line too.
  *
- * `null` means there is no list with elements to take the layout from.
+ * `undefined` means there is no list with elements to take the layout from;
+ * `null` refuses an unsafe edit.
  */
 export function insertElement(
   text: string,
   path: JSONPath,
   value: unknown,
   formatting: FormattingOptions
-): string | null {
+): string | null | undefined {
   const list = locate(text, path);
 
-  if (list === null || list.spans.length === 0 || value === undefined) return null;
+  if (value === undefined) return null;
+  if (list === null || list.spans.length === 0) return undefined;
 
   const json = JSON.stringify(value);
   const position = Math.min(list.index, list.spans.length);

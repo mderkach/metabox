@@ -4,6 +4,7 @@ import { useCallback, useRef } from 'react';
 import { CONFIG_SECTION, ConfigDocumentState, ruleNodePath } from '@entities/Config';
 import { toNewRuleRow, type NewRulePlace } from '@entities/Rule';
 import { useCreateRule } from '@features/Rule/RuleAdd';
+import { showQueryError } from '@shared/api';
 import { usePanelAsSheet } from '@shared/lib/media';
 import { QueryFailure, SidePanelLayout, SURFACE, SkeletonRows } from '@shared/ui';
 import { ConfigSectionSettings } from '@widgets/Config/ConfigSectionSettings';
@@ -60,8 +61,13 @@ export function EditorPage() {
             return;
           }
 
+          if (!createRule(pending.index, node)) {
+            showQueryError({ showError: true, errorMessageKey: 'toast.config.edit.failed' }, null);
+
+            return;
+          }
+
           createdFrom.current = pending;
-          createRule(pending.index, node);
           onCreated(pending.index, node);
         };
 

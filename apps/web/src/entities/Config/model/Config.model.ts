@@ -7,6 +7,7 @@ import {
   type FormattingOptions,
   type JSONPath,
   type ModificationOptions,
+  type ParseError,
 } from 'jsonc-parser';
 
 import type { Config } from '@shared/api/generated';
@@ -41,6 +42,13 @@ function edit(text: string, path: JSONPath, value: unknown, options?: Modificati
   return applyEdits(text, modify(text, path, value, { formattingOptions: detectFormatting(text), ...options }));
 }
 
+function isValidDocument(text: string): boolean {
+  const errors: ParseError[] = [];
+  const root = parseTree(text, errors, { allowTrailingComma: true });
+
+  return root !== undefined && errors.length === 0;
+}
+
 /**
  * Writes a value at a path without touching the rest of the text.
  *
@@ -55,10 +63,14 @@ export function setValue(text: string, path: JSONPath, value: unknown): string {
 /**
  * Deletes a node by path: an array element or an object member. An element of a
  * list goes together with its comma and comments, and the neighbours keep their
- * text: `modify` would reformat the next one.
+ * text: `modify` would reformat the next one. `null` refuses an unsafe edit.
  */
-export function removeValue(text: string, path: JSONPath): string {
-  return removeElement(text, path) ?? edit(text, path, undefined);
+export function removeValue(text: string, path: JSONPath): string | null {
+  if (!isValidDocument(text)) return null;
+
+  const removed = removeElement(text, path);
+
+  return removed === undefined ? edit(text, path, undefined) : removed;
 }
 
 /** Reads a node value by path. `undefined` means no node. */
@@ -78,30 +90,24 @@ export function findValue(text: string, path: JSONPath): unknown {
  * Inserts an element into an array at the position from the path, instead of
  * rewriting the one that is there. The neighbours keep their text: `modify`
  * would reformat the previous one; it is left only for a list that is empty or
- * absent, where there are no neighbours.
+ * absent, where there are no neighbours. `null` refuses an unsafe edit.
  */
-export function insertValue(text: string, path: JSONPath, value: unknown): string {
-  return (
-    insertElement(text, path, value, detectFormatting(text)) ?? edit(text, path, value, { isArrayInsertion: true })
-  );
+export function insertValue(text: string, path: JSONPath, value: unknown): string | null {
+  if (!isValidDocument(text)) return null;
+
+  const inserted = insertElement(text, path, value, detectFormatting(text));
+
+  return inserted === undefined ? edit(text, path, value, { isArrayInsertion: true }) : inserted;
 }
 
 /**
- * Moves an array element from one position to another by carrying its source
- * text with its comments. When that text cannot be placed without changing the
- * data, the element is moved by value instead. A missing element or the same
- * position leave the text as it was.
+ * Moves an element with its source text and comments. `null` refuses a move whose
+ * layout cannot be preserved; a missing element or the same position is a no-op.
  */
-export function moveValue(text: string, path: JSONPath, from: number, to: number): string {
-  if (from === to) return text;
+export function moveValue(text: string, path: JSONPath, from: number, to: number): string | null {
+  if (from === to || findValue(text, [...path, from]) === undefined) return text;
 
-  const moved = moveElement(text, path, from, to);
-
-  if (moved !== null) return moved;
-
-  const node = findValue(text, [...path, from]);
-
-  return node === undefined ? text : insertValue(removeValue(text, [...path, from]), [...path, to], node);
+  return moveElement(text, path, from, to);
 }
 
 /**

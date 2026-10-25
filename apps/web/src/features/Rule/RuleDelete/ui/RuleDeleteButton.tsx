@@ -2,6 +2,7 @@ import { Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { ConfigDocumentState, ruleNodePath } from '@entities/Config';
+import { showQueryError } from '@shared/api';
 import { Button, ConfirmDialog } from '@shared/ui';
 
 /**
@@ -33,8 +34,13 @@ export function RuleDeleteButton({
       confirmLabel={t('confirm.action')}
       destructive
       onConfirm={() => {
+        if (!remove(ruleNodePath(index))) {
+          showQueryError({ showError: true, errorMessageKey: 'toast.config.edit.failed' }, null);
+
+          return;
+        }
+
         onDeleted();
-        remove(ruleNodePath(index));
       }}
     />
   );

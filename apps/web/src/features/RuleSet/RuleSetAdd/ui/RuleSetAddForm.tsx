@@ -16,6 +16,7 @@ import {
   type RuleSetCatalog,
   type RuleSetList,
 } from '@entities/RuleSet';
+import { showQueryError } from '@shared/api';
 import { formatDate } from '@shared/lib/format';
 import { matchesWords, toQueryWords } from '@shared/lib/search';
 import { cn } from '@shared/lib/utils';
@@ -84,7 +85,11 @@ export function RuleSetAddForm({
   });
 
   const onSubmit = form.handleSubmit((data) => {
-    insert([...RULE_SETS_PATH, count], toRuleSetPatch(data));
+    if (!insert([...RULE_SETS_PATH, count], toRuleSetPatch(data))) {
+      showQueryError({ showError: true, errorMessageKey: 'toast.config.edit.failed' }, null);
+
+      return;
+    }
     form.reset(ruleSetAddDefaults(catalog));
     setAdded(data.tag);
     onDone?.();

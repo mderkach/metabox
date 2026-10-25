@@ -10,6 +10,7 @@ import {
   type ConfigReference,
   type GenericSection,
 } from '@entities/Config';
+import { showQueryError } from '@shared/api';
 import { Button, ConfirmDialog } from '@shared/ui';
 
 import { ConfigNodeDeleteReferences } from './ConfigNodeDeleteReferences';
@@ -56,8 +57,13 @@ export function ConfigNodeDeleteButton({
         }
       }}
       onConfirm={() => {
+        if (!remove(sectionNodePath(section, index))) {
+          showQueryError({ showError: true, errorMessageKey: 'toast.config.edit.failed' }, null);
+
+          return;
+        }
+
         onDeleted();
-        remove(sectionNodePath(section, index));
       }}
     />
   );

@@ -127,6 +127,18 @@ describe('ConfigDocumentState', () => {
     expect(state().current()).toBe(TEXT);
   });
 
+  it.each(['remove', 'insert'] as const)('refuses an unsafe %s without changing any draft state', (action) => {
+    const text = '{"r":[1, // first\n 2],"broken":}';
+
+    state().load(text);
+    const before = state();
+    const changed = action === 'remove' ? state().remove(['r', 1]) : state().insert(['r', 1], 3);
+
+    expect(changed).toBe(false);
+    expect(state()).toBe(before);
+    expect(state().current()).toBe(text);
+  });
+
   it('a move changes the rule order and does not touch the others', () => {
     const rules = CONFIG_FIXTURE.route?.rules ?? [];
 
@@ -405,11 +417,16 @@ describe('ConfigDocumentState array edits on one-line rules', () => {
     expect(state().current()).toBe('{ "p": [443, 80] }');
   });
 
-  it('a line comment that would swallow the next rules falls back to a move by value', () => {
-    state().load('{"r": [\n  1, 2, // two\n  3\n]}');
-    state().move(['r'], 1, 0);
+  it('rejects a move that cannot retain its comments and leaves the draft untouched', () => {
+    const text = '{"r": [\n  1, 2, // two\n  3\n]}';
 
-    expect(findValue(state().current() ?? '', ['r'])).toEqual([2, 1, 3]);
+    state().load(text);
+    const before = state();
+
+    expect(state().move(['r'], 1, 0)).toBe(false);
+    expect(state()).toBe(before);
+    expect(state().current()).toBe(text);
+    expect(state().draft).toBeNull();
   });
 
   it('a negative position leaves the text to modify', () => {
