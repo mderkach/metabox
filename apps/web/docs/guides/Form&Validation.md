@@ -216,7 +216,7 @@ useForm<ConfigNodeFormModel>({
 
 The node comes from text parsing as objects without a prototype: RHF does not copy those, and editing a field would also rewrite the original values, so the form would not know it was touched. That is why `values` is a copy of the node (`structuredClone`).
 
-The resolver is the node type schema, and it checks what will go into the document: cleared fields drop out before the check, otherwise an empty duration would fail the pattern. The generated schema carries no failure codes, so the renderer's `ui` translates the error by the Zod issue code: `invalid_format` is a duration not in Go format, `too_small` is a negative number, `invalid_type` is a value of the wrong type. `sing-box check` on apply stays the arbiter of validity: the binary can still reject a node that is valid by the schema.
+The resolver is the node type schema, and it checks what will go into the document: cleared fields drop out before the check, otherwise an empty duration would fail the pattern. The generated schema carries no failure codes, so the renderer's `ui` translates the error by the Zod issue code: `invalid_format` is a duration not in Go format, `too_small` is a negative number, `too_big` is a number above the Go type of the field (a port above 65535), `invalid_type` is a value of the wrong type. `sing-box check` on apply stays the arbiter of validity: the binary can still reject a node that is valid by the schema.
 
 ## Arrays and order
 

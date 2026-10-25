@@ -125,11 +125,17 @@ func (w *walker) body(t reflect.Type, path string) *schema {
 	}
 }
 
-// intSchema: a JSON number limited by the range of the Go type as far as
-// it is expressible without transform.
+// intSchema: a JSON number limited by the range of the Go type. A 64-bit range does
+// not fit a JS number, so int64 keeps the safe-integer bound of z.int() and uint64 only
+// its sign; the narrower kinds get the exact bounds, so a uint16 port stops at 65535.
 func intSchema(t reflect.Type) string {
+	bits := t.Bits()
 	switch t.Kind() {
-	case reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int, reflect.Int64:
+	case reflect.Int8, reflect.Int16, reflect.Int32:
+		return fmt.Sprintf("z.int().min(-%d).max(%d)", uint64(1)<<(bits-1), uint64(1)<<(bits-1)-1)
+	case reflect.Uint8, reflect.Uint16, reflect.Uint32:
+		return fmt.Sprintf("z.int().nonnegative().max(%d)", uint64(1)<<bits-1)
+	case reflect.Int, reflect.Int64:
 		return "z.int()"
 	default:
 		return "z.int().nonnegative()"

@@ -240,6 +240,22 @@ describe('node form by schema', () => {
     expect(ConfigDocumentState.getState().draft).toBeNull();
   });
 
+  it('names a port above 65535 and does not write it', async () => {
+    const user = userEvent.setup();
+
+    renderVmess();
+
+    const port = screen.getByRole('spinbutton', { name: 'Порт сервера' });
+
+    await user.clear(port);
+    await user.type(port, '65536');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Больше максимума поля');
+
+    // Every keystroke writes: the draft keeps the last accepted value, not 65536.
+    expect(findValue(draft(), [...VMESS, 'server_port'])).toBe(6553);
+  });
+
   it('a "string or number" field writes digits as a number', async () => {
     const user = userEvent.setup();
 
