@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -49,7 +50,12 @@ func (m *memoryAuthStore) ReadSessions(context.Context) ([]byte, error) {
 	return m.sessions, nil
 }
 
-func (m *memoryAuthStore) WriteSessions(_ context.Context, data []byte) error {
+// WriteSessions refuses a cancelled context like the daemon store does.
+func (m *memoryAuthStore) WriteSessions(ctx context.Context, data []byte) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	if err := m.sessionWriteErr; err != nil {
 		if m.sessionWriteFailsOnce {
 			m.sessionWriteErr = nil
@@ -142,6 +148,24 @@ func (b *browser) do(method, path string, body any) response {
 	}
 
 	return response{status: resp.StatusCode, contentType: resp.Header.Get("Content-Type"), header: resp.Header, body: string(data)}
+}
+
+// sessionCookie is the session token the browser holds for the server.
+func (b *browser) sessionCookie() string {
+	b.t.Helper()
+
+	u, err := url.Parse(b.srv.URL)
+	if err != nil {
+		b.t.Fatal(err)
+	}
+
+	for _, c := range b.client.Jar.Cookies(u) {
+		if c.Name == "metabox_session" {
+			return c.Value
+		}
+	}
+
+	return ""
 }
 
 func (b *browser) setPassword(current, next string) response {
@@ -362,6 +386,27 @@ func TestPasswordChangeAndRemoval(t *testing.T) {
 
 	if r := newBrowser(t, b.srv).do(http.MethodGet, "/api/status", nil); r.status != http.StatusOK {
 		t.Errorf("status without a password after removal: %d", r.status)
+	}
+}
+
+// The session of a password change request ends inside the call, which cancels the
+// request context; the new session must still reach the file.
+func TestSessionFromAPasswordChangeSurvivesRestart(t *testing.T) {
+	store := &memoryAuthStore{}
+	b := newAuthServerWith(t, store)
+	b.setPassword("", panelPassword)
+
+	if r := b.setPassword(panelPassword, "new password"); r.status != http.StatusNoContent {
+		t.Fatalf("change: %d %s", r.status, r.body)
+	}
+
+	restarted, err := auth.New(t.Context(), store, auth.Options{Iterations: 1000})
+	if err != nil {
+		t.Fatalf("restart: %v", err)
+	}
+
+	if _, valid := restarted.Check(b.sessionCookie()); !valid {
+		t.Error("the session from the password change did not survive a restart")
 	}
 }
 

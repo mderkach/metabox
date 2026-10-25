@@ -370,9 +370,7 @@ func (g *Guard) Login(ctx context.Context, addr netip.Addr, password string) (st
 	token := g.openSession()
 	g.mu.Unlock()
 
-	if err := g.saveSessions(ctx); err != nil {
-		g.log.Warn("panel sessions not saved", "err", err)
-	}
+	g.saveSessionsOrWarn(ctx)
 
 	return token, nil
 }
@@ -380,8 +378,7 @@ func (g *Guard) Login(ctx context.Context, addr netip.Addr, password string) (st
 // Logout closes the session. An unknown token is not an error. The session file is
 // written before the call returns, with one more try after revokeRetryPause: a failure
 // means the revocation lives only until the daemon restarts, and the caller must hear
-// that. The write is not cancelled with the request: a client that drops a logout must
-// not keep its session on disk.
+// that.
 func (g *Guard) Logout(ctx context.Context, token string) error {
 	key := tokenKey(token)
 
@@ -395,8 +392,6 @@ func (g *Guard) Logout(ctx context.Context, token string) error {
 	if !ok {
 		return nil
 	}
-
-	ctx = context.WithoutCancel(ctx)
 
 	err := g.saveSessions(ctx)
 	if err != nil {
@@ -449,9 +444,7 @@ func (g *Guard) SetPassword(ctx context.Context, addr netip.Addr, token, current
 		g.endSessions()
 		g.mu.Unlock()
 
-		if err := g.saveSessions(ctx); err != nil {
-			g.log.Warn("panel sessions not saved", "err", err)
-		}
+		g.saveSessionsOrWarn(ctx)
 
 		return "", nil
 	}
@@ -480,9 +473,7 @@ func (g *Guard) SetPassword(ctx context.Context, addr netip.Addr, token, current
 	opened := g.openSession()
 	g.mu.Unlock()
 
-	if err := g.saveSessions(ctx); err != nil {
-		g.log.Warn("panel sessions not saved", "err", err)
-	}
+	g.saveSessionsOrWarn(ctx)
 
 	return opened, nil
 }
@@ -693,10 +684,19 @@ func (g *Guard) endSessions() {
 	}
 }
 
-// saveSessions writes the session table. A failed write after a login or a password
-// change is harmless: the table in memory is right until the daemon restarts, and a
-// stale file does not match the new password generation. After a logout it is not, and
-// Logout answers for it.
+// saveSessionsOrWarn is the write after a login or a password change: a failure does not
+// refuse them, the table in memory is right until the daemon restarts.
+func (g *Guard) saveSessionsOrWarn(ctx context.Context) {
+	if err := g.saveSessions(ctx); err != nil {
+		g.log.Warn("panel sessions not saved", "err", err)
+	}
+}
+
+// saveSessions writes the session table. The write is not cancelled with the request: a
+// client that drops a logout must not keep its session on disk, and a password change
+// ends the session of its own request. A stale file after a failed write is harmless for
+// a password change, since it does not match the new password generation; after a logout
+// it is not, and Logout answers for it.
 func (g *Guard) saveSessions(ctx context.Context) error {
 	g.save.Lock()
 	defer g.save.Unlock()
@@ -713,7 +713,7 @@ func (g *Guard) saveSessions(ctx context.Context) error {
 		return fmt.Errorf("encode session file: %w", err)
 	}
 
-	return g.store.WriteSessions(ctx, data)
+	return g.store.WriteSessions(context.WithoutCancel(ctx), data)
 }
 
 // saltKey identifies the password the sessions belong to; no password gives an empty
