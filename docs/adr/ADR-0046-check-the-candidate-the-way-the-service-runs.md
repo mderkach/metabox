@@ -53,13 +53,13 @@ Before the check the daemon asks procd for the service instance command (`procd.
 
 The `-D` path base:
 
-- the working directory matches the config directory or is unknown: the candidate itself; it carries the subdirectories of the config directory in the same layout;
+- the working directory matches the config directory or is unknown: the candidate itself; it carries every file and subdirectory of the config directory in the same layout;
 - the working directory is different and the apply has no list files: the service working directory, since the transaction does not change it and `check` sees the same base as the runtime. If the directory does not exist on disk, again the candidate: sing-box creates a non-existent `-D` itself, and the check must leave no traces before the write;
 - the working directory is different and the apply writes list files: the existing `409 workdir_mismatch` refusal (ADR-0033).
 
 Mandatory rules:
 
-- The candidate is laid out the same way in both modes (the config, neighbouring `.json` files, subdirectories): in `-c` mode the binary simply does not read the neighbouring files.
+- The candidate is laid out the same way in both modes (the config, every neighbouring file, subdirectories): in `-c` mode the binary simply does not merge the neighbouring `.json`, but still resolves certificates, keys and rule sets by relative paths from `-D`.
 - The `launch_mismatch` refusal does not expose the paths of the service command: they go to the daemon log at `Warn` level. The panel shows text by code.
 - An unavailable procd does not stop the apply: a warning goes to the log, and the check runs in the fallback mode.
 - The test bench script `apply-cycle-check` checks that the service is run with a single `-c` on the test bench config, and checks the candidate with the same command as the daemon.
