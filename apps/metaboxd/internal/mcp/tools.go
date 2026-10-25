@@ -123,8 +123,9 @@ func (t tools) addRead(server *sdk.Server, log *slog.Logger) {
 				"and DNS ports, a DNS query to sing-box dns-in, the nft interception chains, and a direct internet "+
 				"request bypassing interception. Each check is ok, fail or skipped with a reason; skipped is not a "+
 				"failure. proxy names a node for the proxy check: it reports the latency sing-box last recorded for "+
-				"it, as metabox_proxies does, and is skipped with not_measured when there is none; no latency check "+
-				"is run, that is done from the panel."),
+				"it, as metabox_proxies does, where the time of that record is. not_measured means there is no "+
+				"record: the node was never tested, or its last test failed and erased it; sing-box does not tell "+
+				"the two apart, so it is not a sign of health. No latency check is run, that is done from the panel."),
 		}, t.diagnostics)
 	}
 }
@@ -529,7 +530,7 @@ func (t tools) logTail(ctx context.Context, in logTailIn) (logTailOut, error) {
 }
 
 type diagnosticsIn struct {
-	Proxy string `json:"proxy,omitempty" jsonschema:"node whose last recorded latency the proxy check reports; empty skips the check"`
+	Proxy string `json:"proxy,omitempty" jsonschema:"node whose last recorded latency the proxy check reports; empty skips the row"`
 }
 
 func (t tools) diagnostics(ctx context.Context, in diagnosticsIn) (diag.Report, error) {

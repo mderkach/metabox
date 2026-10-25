@@ -157,13 +157,15 @@ var ru = map[string]string{
 		"and DNS ports, a DNS query to sing-box dns-in, the nft interception chains, and a direct internet " +
 		"request bypassing interception. Each check is ok, fail or skipped with a reason; skipped is not a " +
 		"failure. proxy names a node for the proxy check: it reports the latency sing-box last recorded for " +
-		"it, as metabox_proxies does, and is skipped with not_measured when there is none; no latency check " +
-		"is run, that is done from the panel.": "Проверки обвязки роутера, ничего не меняют: слушатели sing-box на портах redirect, tproxy " +
+		"it, as metabox_proxies does, where the time of that record is. not_measured means there is no " +
+		"record: the node was never tested, or its last test failed and erased it; sing-box does not tell " +
+		"the two apart, so it is not a sign of health. No latency check is run, that is done from the panel.": "Проверки обвязки роутера, ничего не меняют: слушатели sing-box на портах redirect, tproxy " +
 		"и DNS, DNS-запрос к dns-in sing-box, цепочки перехвата nft и прямой запрос в интернет " +
 		"в обход перехвата. Каждая проверка — ok, fail или skipped с причиной; skipped — не " +
 		"сбой. proxy задаёт узел для проверки proxy: она сообщает задержку, которую sing-box записал для него " +
-		"последней, как и metabox_proxies, и пропускается с not_measured, когда записи нет; проверка задержки " +
-		"не запускается, её делают из панели.",
+		"последней, как и metabox_proxies, где есть и время этой записи. not_measured значит, что записи нет: " +
+		"узел не проверяли или последняя проверка упала и стёрла её; sing-box их не различает, так что это не " +
+		"признак здоровья. Проверка задержки не запускается, её делают из панели.",
 
 	"backup: %w":                 "бэкап: %w",
 	"save transaction state: %w": "сохранение состояния транзакции: %w",

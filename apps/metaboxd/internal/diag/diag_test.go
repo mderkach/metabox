@@ -359,8 +359,7 @@ func TestObserveReportsRecordedDelay(t *testing.T) {
 		}
 
 		_, _ = w.Write([]byte(`{"proxies":{
-			"node A":{"type":"VLESS","history":[{"time":"2026-10-20T10:00:00Z","delay":300},{"time":"2026-10-20T10:05:00Z","delay":42}]},
-			"dead":{"type":"VLESS","history":[{"time":"2026-10-20T10:00:00Z","delay":0}]},
+			"node A":{"type":"VLESS","history":[{"time":"2026-10-20T10:05:00Z","delay":42}]},
 			"fresh":{"type":"VLESS","history":[]}
 		}}`))
 	}))
@@ -377,8 +376,7 @@ func TestObserveReportsRecordedDelay(t *testing.T) {
 		delay  int
 	}{
 		{"last recorded delay", "node A", diag.StatusOK, "", 42},
-		{"recorded failure", "dead", diag.StatusFail, diag.ReasonRequestFailed, 0},
-		{"never measured", "fresh", diag.StatusSkipped, diag.ReasonNotMeasured, 0},
+		{"no record: never measured or the last test failed", "fresh", diag.StatusSkipped, diag.ReasonNotMeasured, 0},
 		{"no node", "missing", diag.StatusFail, diag.ReasonProxyMissing, 0},
 		{"node not selected", "", diag.StatusSkipped, diag.ReasonProxyUnset, 0},
 	}
@@ -408,6 +406,38 @@ func TestObserveReportsRecordedDelay(t *testing.T) {
 		if strings.Contains(path, "/delay") {
 			t.Errorf("latency check requested: %s", path)
 		}
+	}
+}
+
+func TestObserveControllerFailures(t *testing.T) {
+	refusing := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	t.Cleanup(refusing.Close)
+
+	tests := []struct {
+		name       string
+		controller string
+		reason     diag.CheckReason
+	}{
+		{"controller down", "127.0.0.1:1", diag.ReasonRuntimeUnavailable},
+		{"controller refuses", strings.TrimPrefix(refusing.URL, "http://"), diag.ReasonRequestFailed},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := diag.New(fakePlane{model: model(closedPort(t))}, configWith(5333, tt.controller), nil, options())
+
+			report, err := c.Observe(t.Context(), "node A")
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			i := slices.IndexFunc(report.Checks, func(c diag.Check) bool { return c.Name == diag.NameProxy })
+			if i < 0 || report.Checks[i].Status != diag.StatusFail || report.Checks[i].Reason != tt.reason {
+				t.Errorf("proxy row %+v, expected fail %s", report.Checks, tt.reason)
+			}
+		})
 	}
 }
 

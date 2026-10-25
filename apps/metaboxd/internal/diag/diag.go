@@ -31,8 +31,9 @@ import (
 // detailLimit is the ceiling of a detail: the Clash API answer goes into it.
 const detailLimit = 300
 
-// proxiesLimit is the ceiling of the `/proxies` answer: a few hundred nodes fit.
-const proxiesLimit = 1 << 20
+// proxiesLimit is the ceiling of the `/proxies` answer, the same as the ceiling of a
+// runtime snapshot: a node list the panel shows must fit the diagnostics too.
+const proxiesLimit = 16 << 20
 
 // CheckName is what was checked. The set is closed: the panel labels the report
 // row by it.
@@ -99,7 +100,9 @@ const (
 	ReasonProxyUnset CheckReason = "proxy_unset"
 	// ReasonProxyMissing means the Clash API does not know such a node.
 	ReasonProxyMissing CheckReason = "proxy_missing"
-	// ReasonNotMeasured means sing-box has no latency recorded for the node.
+	// ReasonNotMeasured means sing-box has no latency recorded for the node: it was never
+	// tested, or the last test failed and erased the record. The Clash API does not tell
+	// the two apart.
 	ReasonNotMeasured CheckReason = "not_measured"
 	// ReasonRuntimeUnavailable means the Clash API does not answer.
 	ReasonRuntimeUnavailable CheckReason = "runtime_unavailable"
@@ -188,18 +191,16 @@ func (c *Checker) Run(ctx context.Context, proxy string) (Report, error) {
 }
 
 // Observe is Run without the latency test: the proxy row carries the latency sing-box
-// last recorded for the node, fails when that recorded test failed and is skipped with
-// not_measured when there is none. A latency test writes the node's delay history and a
-// failed one clears it, which moves the choice of a urltest group; a caller that must
-// not change the router takes this path.
+// last recorded for the node and is skipped with not_measured when there is none. A
+// latency test writes the node's delay history and a failed one erases it, which moves
+// the choice of a urltest group; a caller that must not change the router takes this
+// path.
 func (c *Checker) Observe(ctx context.Context, proxy string) (Report, error) {
 	return c.run(ctx, proxy, c.lastDelay)
 }
 
-// proxyCheck fills the proxy row of the report.
-type proxyCheck func(ctx context.Context, proxy string, cfg []byte, cfgErr error) Check
-
-func (c *Checker) run(ctx context.Context, proxy string, check proxyCheck) (Report, error) {
+// run runs the checks; check fills the proxy row.
+func (c *Checker) run(ctx context.Context, proxy string, check func(context.Context, string, []byte, error) Check) (Report, error) {
 	model, modelErr := c.plane.Model(ctx)
 	cfg, cfgErr := c.config.Read(ctx)
 
@@ -487,8 +488,7 @@ func (c *Checker) proxy(ctx context.Context, proxy string, cfg []byte, cfgErr er
 }
 
 // lastDelay reads the node's delay history from `/proxies`, the same answer the node
-// list is built from. A history entry with a zero delay is how the Clash API records a
-// failed test.
+// list is built from.
 func (c *Checker) lastDelay(ctx context.Context, proxy string, cfg []byte, cfgErr error) Check {
 	settings, base, row, ok := c.controller(proxy, cfg, cfgErr)
 	if !ok {
@@ -524,14 +524,9 @@ func (c *Checker) lastDelay(ctx context.Context, proxy string, cfg []byte, cfgEr
 		return Check{Name: NameProxy, Status: StatusFail, Reason: ReasonProxyMissing, Detail: proxy}
 	case len(node.History) == 0:
 		return Check{Name: NameProxy, Status: StatusSkipped, Reason: ReasonNotMeasured, Detail: proxy}
+	default:
+		return Check{Name: NameProxy, Status: StatusOK, DelayMS: node.History[len(node.History)-1].Delay, Detail: proxy}
 	}
-
-	delay := node.History[len(node.History)-1].Delay
-	if delay == 0 {
-		return Check{Name: NameProxy, Status: StatusFail, Reason: ReasonRequestFailed, Detail: proxy}
-	}
-
-	return Check{Name: NameProxy, Status: StatusOK, DelayMS: delay, Detail: proxy}
 }
 
 // direct goes to the check address with a socket marked self_mark: nft lets such a packet
