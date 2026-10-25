@@ -48,7 +48,8 @@ Out of scope: sharding the web tests, a self-hosted runner, running `integration
 ## Decision outcome
 
 - `ci.yml` has the jobs `go` (`make lint`, `go test -race ./...` in the daemon), `schemagen` (`make test-schemagen`), `web` (commitlint on PRs, `pnpm lint`, `pnpm format:check`, web tests and build, react-doctor advice, `make daemon`), `checks` (summary) and `integration` (unchanged).
-- `checks` depends on `go`, `schemagen` and `web`, runs with `if: always()` and exits non-zero when any of them ended in `failure`, `cancelled` or `skipped`. Its name and the name `integration` are the only contexts the branch rule needs.
+- `checks` depends on `go`, `schemagen`, `web`, `web-browser` and `integration`, runs with `if: always()` and exits non-zero when any of them ended in `failure`, `cancelled` or `skipped`. Its name is the only context the branch rule needs; the rule also names `integration`, which the owner may drop. Until 2026-10-25 `checks` did not wait for `integration`, and a PR showed a green summary while the integration job was still running or hung.
+- Every job has `timeout-minutes` sized from the 60 runs before 2026-10-25 with a margin: `go` 30 (longest success 19 min, median about 1), `schemagen` 20 (3.5 min cold), `web` 30 (23 min), `web-browser` 15 (1.3 min), `checks` 5, `integration` 30 (15 min; the long outliers are runner stalls between steps, not slow steps). The integration steps that run the test bench have their own limits: `Environment` 10, `Daemon ready` 3, `Apply cycle` and `Reach check` 5, `Dataplane check` 10. The release, apk-repo and fork-release-watch jobs get 30, 20 and 15. Without a limit a hung step holds the concurrency group: on 2026-10-24 the `Dataplane check` step of run 40116156272 hung for over three hours, the pending runs of ten pushes to `main` were cancelled by the group, and tag v0.1.0-rc.9 was cut from a commit with no CI verdict.
 - Each job lists in `cache-dependency-path` the files that decide what it downloads: `go` lists `Makefile`, both `go.mod` files and `tools/schemagen/go.sum`; `schemagen` lists the generator's `go.mod` and `go.sum`; `web` runs with `cache: false`, because the daemon has no external modules. `setup-go` saves a cache once per key, so no two jobs may share a key: the first job to finish would save a cache without the other job's modules.
 - The `Makefile` downloads the fork module before `go list -m` reads its directory: on a cold module cache `go list` prints an empty path, and the generator tests ran with no fork tags. One job hid this because `make lint` downloaded the fork first.
 - The workflow runs on `pull_request` and on `push` to `main` only. A `concurrency` group keyed by the PR number, or the ref outside a PR, cancels the run in progress when a new commit arrives to a PR; runs on `main` are never cancelled, so every merge commit keeps its verdict.
@@ -92,6 +93,7 @@ The branch rule is untouched: the contexts `checks` and `integration` exist befo
 - The `Go lint` step log of a run after the cache was saved has no `go: downloading` lines for golangci-lint modules.
 - One push to a PR branch produces one run in `gh run list --branch <branch>`.
 - A red job makes `checks` fail rather than skip: in run 39473711053 `schemagen` failed and `checks` concluded `failure`.
+- `checks` waits for `integration`: in a run where `integration` fails, `checks` concludes `failure`; before this change the `main` commit e5fbcf66 had `integration=failure` next to `checks=success`.
 
 ## Links
 
