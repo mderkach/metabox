@@ -8,6 +8,7 @@ import { ConfigCacheNotice } from '@features/Config/ConfigCacheFile';
 import { RuleSetAddForm } from '@features/RuleSet/RuleSetAdd';
 import { RuleSetCustomForm } from '@features/RuleSet/RuleSetCustom';
 import { RuleSetEditForm } from '@features/RuleSet/RuleSetEdit';
+import { showQueryError } from '@shared/api';
 import { usePanelAsSheet } from '@shared/lib/media';
 import {
   Button,
@@ -56,14 +57,18 @@ export function RuleSetsPage() {
   const { form: openForm, close: closePanel } = panel;
   const onRemove = useCallback(
     (index: number) => {
-      // Editing addresses a rule set by position: after deletion it would point to a neighbor.
-      if (openForm === RULE_SET_FORM.Edit) closePanel();
-
       // The file of its own list goes away with the node: an orphaned file is not visible
       // in the config but stays on the device.
       const file = localListFile(readRuleSets(ConfigDocumentStore.getState().current() ?? '')[index]);
 
-      remove(ruleSetNodePath(index));
+      if (!remove(ruleSetNodePath(index))) {
+        showQueryError({ showError: true, errorMessageKey: 'toast.config.edit.failed' }, null);
+
+        return;
+      }
+
+      // Editing addresses a rule set by position: after deletion it would point to a neighbor.
+      if (openForm === RULE_SET_FORM.Edit) closePanel();
 
       if (file !== null) removeList(file);
     },

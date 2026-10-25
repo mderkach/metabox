@@ -11,12 +11,12 @@ import {
  * text at the moment of writing, and an array missing from the file is created
  * by the insert.
  */
-export function useNodeInsert(section: GenericSection): (node: object) => void {
+export function useNodeInsert(section: GenericSection): (node: object) => boolean {
   const insert = ConfigDocumentState.use.insert();
 
   return function insertNode(node) {
     const count = readSectionNodes(ConfigDocumentStore.getState().current() ?? '{}', section).length;
 
-    insert(sectionNodePath(section, count), node);
+    return insert(sectionNodePath(section, count), node);
   };
 }

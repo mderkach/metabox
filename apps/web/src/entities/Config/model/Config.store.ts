@@ -58,9 +58,12 @@ export interface ConfigDocumentState {
    * a batch, and subscribers see one new text, not the intermediate ones.
    */
   editMany: (edits: readonly NodeEdit[]) => void;
-  remove: (path: JSONPath) => void;
-  insert: (path: JSONPath, value: unknown) => void;
-  move: (path: JSONPath, from: number, to: number) => void;
+  /** `false` refuses an unsafe edit without changing the draft. */
+  remove: (path: JSONPath) => boolean;
+  /** `false` refuses an unsafe edit without changing the draft. */
+  insert: (path: JSONPath, value: unknown) => boolean;
+  /** `false` means the source layout cannot be moved safely; the document stays unchanged. */
+  move: (path: JSONPath, from: number, to: number) => boolean;
   /** Write a list file into the draft; apply will deliver it in the envelope. */
   editList: (name: string, content: string) => void;
   /** Remove a list file on apply. */
@@ -89,12 +92,18 @@ export interface ConfigDocumentState {
  */
 const ConfigDocumentStateProto = stateCreator<ConfigDocumentState>((set, get) => {
   /** An edit goes onto the draft, and before the first edit onto the text from the device. */
-  const patch = (edit: (text: string) => string) => {
-    set((state) => {
-      const text = state.draft ?? state.applied;
+  const patch = (edit: (text: string) => string | null): boolean => {
+    const state = get();
+    const text = state.draft ?? state.applied;
 
-      return text === null ? state : { draft: edit(text), draftBase: baseOf(state) };
-    });
+    if (text === null) return false;
+
+    const next = edit(text);
+
+    if (next === null) return false;
+    if (next !== text) set({ draft: next, draftBase: baseOf(state) });
+
+    return true;
   };
   const stored = readStoredDraft();
 
@@ -157,22 +166,11 @@ const ConfigDocumentStateProto = stateCreator<ConfigDocumentState>((set, get) =>
       patch((text) => edits.reduce((next, { path, value }) => setValue(next, path, value), text));
     },
 
-    remove: (path) => {
-      patch((text) => removeValue(text, path));
-    },
+    remove: (path) => patch((text) => removeValue(text, path)),
 
-    insert: (path, value) => {
-      patch((text) => insertValue(text, path, value));
-    },
+    insert: (path, value) => patch((text) => insertValue(text, path, value)),
 
-    move: (path, from, to) => {
-      set((state) => {
-        const text = state.draft ?? state.applied;
-        const next = text === null ? text : moveValue(text, path, from, to);
-
-        return next === text ? state : { draft: next, draftBase: baseOf(state) };
-      });
-    },
+    move: (path, from, to) => patch((text) => moveValue(text, path, from, to)),
 
     discard: () => {
       set((state) =>

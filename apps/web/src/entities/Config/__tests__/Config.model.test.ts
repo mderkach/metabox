@@ -6,7 +6,9 @@ import { parseConfig } from '../api/Config.query';
 import {
   CONFIG_SECTION,
   GENERIC_SECTIONS,
+  findValue,
   insertValue,
+  moveValue,
   readSectionNodes,
   removeValue,
   sectionNodePath,
@@ -105,7 +107,7 @@ describe('removeValue', () => {
   it('deletes a rule, leaving neighboring lines as they were', () => {
     const rules = CONFIG_FIXTURE.route?.rules ?? [];
     const after = removeValue(TEXT, ['route', 'rules', 0]);
-    const left = parseConfig(after).config?.route?.rules ?? [];
+    const left = parseConfig(after ?? '').config?.route?.rules ?? [];
 
     expect(left).toHaveLength(rules.length - 1);
     expect(left[0]).toEqual(rules[1]);
@@ -116,11 +118,38 @@ describe('insertValue', () => {
   it('inserts a rule in place, not over a neighboring one', () => {
     const rules = CONFIG_FIXTURE.route?.rules ?? [];
     const after = insertValue(TEXT, ['route', 'rules', 1], { action: 'route', outbound: 'direct' });
-    const left = parseConfig(after).config?.route?.rules ?? [];
+    const left = parseConfig(after ?? '').config?.route?.rules ?? [];
 
     expect(left).toHaveLength(rules.length + 1);
     expect(left[1]).toEqual({ action: 'route', outbound: 'direct' });
     expect(left[2]).toEqual(rules[1]);
+  });
+});
+
+describe('array edit refusals', () => {
+  it.each(['{"r":[1,2],"broken":}', '{"r":[1, // first\n 2],"broken":}', '{"r":[],"broken":}', '{"broken":}'])(
+    'refuses array inserts and removals in malformed surrounding text: %s',
+    (text) => {
+      expect(removeValue(text, ['r', 1])).toBeNull();
+      expect(insertValue(text, ['r', 1], 3)).toBeNull();
+    }
+  );
+
+  it('deletes an object member without changing sibling values or comments', () => {
+    const after = removeValue('{"keep":[1,/* keep this comment */2],"remove":3}', ['remove']);
+
+    expect(findValue(after ?? '', [])).toEqual({ keep: [1, 2] });
+    expect(after).toContain('/* keep this comment */');
+  });
+});
+
+describe('moveValue', () => {
+  it('refuses to move an array when another part of the document is malformed', () => {
+    expect(moveValue('{"rules":[1,2],"broken":}', ['rules'], 0, 1)).toBeNull();
+  });
+
+  it('validates a document whose root is an array', () => {
+    expect(moveValue('[1,2]', [], 0, 1)).toBe('[2,1]');
   });
 });
 

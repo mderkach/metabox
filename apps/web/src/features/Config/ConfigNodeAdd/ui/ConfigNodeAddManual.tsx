@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import { newSectionNode, type GenericSection, type NodeRegistry } from '@entities/Config';
 import { nodePreset } from '@features/Config/ConfigNodeForm/@x/ConfigNodeAdd';
+import { showQueryError } from '@shared/api';
 import {
   Button,
   Input,
@@ -62,7 +63,11 @@ export function ConfigNodeAddManual({
   const onSubmit = form.handleSubmit((data) => {
     const tag = data.tag.trim();
 
-    insertNode(nodePreset(registry, data.type, tag, newSectionNode));
+    if (!insertNode(nodePreset(registry, data.type, tag, newSectionNode))) {
+      showQueryError({ showError: true, errorMessageKey: 'toast.config.edit.failed' }, null);
+
+      return;
+    }
     form.reset(NODE_ADD_DEFAULTS);
     onAdded?.(tag);
   });
