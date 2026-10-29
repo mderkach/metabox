@@ -55,6 +55,7 @@ export const ERROR_CODE = [
   'log_unavailable',
   'log_query_invalid',
   'log_stream_limit',
+  'event_stream_limit',
   'log_clear_forbidden',
   'unauthorized',
   'password_wrong',

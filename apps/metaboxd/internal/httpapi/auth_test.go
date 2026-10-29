@@ -459,13 +459,15 @@ func TestOversizedLoginBodyIsAPasswordFailure(t *testing.T) {
 // context ends; stopped closes then.
 type heldStream struct{ stopped chan struct{} }
 
-func (h *heldStream) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *heldStream) Serve(w http.ResponseWriter, r *http.Request) error {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.WriteHeader(http.StatusOK)
 	_ = http.NewResponseController(w).Flush()
 
 	<-r.Context().Done()
 	close(h.stopped)
+
+	return nil
 }
 
 func newStreamAuthServer(t *testing.T) (*browser, *heldStream, *fakeLogs) {
