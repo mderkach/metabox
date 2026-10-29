@@ -27,6 +27,7 @@ function isTruncated(target: HTMLElement | null): boolean {
 
 function RuleRowProto({
   rule,
+  title,
   rowIndex,
   selected,
   edited,
@@ -35,6 +36,8 @@ function RuleRowProto({
   onSelect,
 }: {
   rule: RuleRowModel;
+  /** The rule name, or its label derived from the content: the row name for a screen reader. */
+  title: string;
   rowIndex: number;
   selected: boolean;
   /** The rule is absent from the applied config: it is new or changed in the draft. */
@@ -50,10 +53,7 @@ function RuleRowProto({
     rule.targetKind === RULE_TARGET.Action && isNamedRuleAction(rule.target)
       ? t(`ruleAction.${rule.target}`, { ns: 'shared' })
       : null;
-  const label =
-    rule.targetKind === RULE_TARGET.Action
-      ? t('row.labelAction', { index: rule.index, action: actionName ?? rule.target })
-      : t('row.label', { index: rule.index, target: rule.target });
+  const label = t('row.label', { title, index: rule.index });
   const targetRef = useRef<HTMLSpanElement>(null);
   const [hint, setHint] = useState(false);
 
@@ -85,7 +85,7 @@ function RuleRowProto({
             aria-pressed={selected}
             // The button spans the row, so its name is the row name. The number
             // alone is not enough: it overlaps the content, and the rule sounds like
-            // "Rule 4", without condition and outbound.
+            // "Rule 4", without its name, condition and outbound.
             aria-label={edited ? `${label}, ${t('row.edited')}` : label}
             onClick={() => {
               onSelect(rule.id);
@@ -108,6 +108,8 @@ function RuleRowProto({
       </span>
 
       <span role='cell' className={RULE_COLUMN.Conditions}>
+        {rule.name !== null && <span className='w-full truncate text-sm font-medium'>{rule.name}</span>}
+
         {rule.isCatchAll &&
           (rule.recognized ? (
             <span className='text-sm text-muted-foreground'>{t('row.unconditional')}</span>

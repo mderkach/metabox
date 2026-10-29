@@ -58,17 +58,19 @@ export function EditorPage() {
           if (createdFrom.current === pending) {
             edit(ruleNodePath(pending.index), node);
 
-            return;
+            return true;
           }
 
           if (!createRule(pending.index, node)) {
             showQueryError({ showError: true, errorMessageKey: 'toast.config.edit.failed' }, null);
 
-            return;
+            return false;
           }
 
           createdFrom.current = pending;
           onCreated(pending.index, node);
+
+          return true;
         };
 
   const listed = editor.rules.find((row) => row.id === selection.id);

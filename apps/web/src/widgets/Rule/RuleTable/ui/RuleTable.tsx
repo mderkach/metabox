@@ -2,7 +2,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import type { RuleRow as RuleRowModel } from '@entities/Rule';
+import { useRuleTitle, type RuleRow as RuleRowModel } from '@entities/Rule';
 import { cn } from '@shared/lib/utils';
 import { SURFACE } from '@shared/ui';
 
@@ -70,6 +70,7 @@ export function RuleTable({
   onSelect: (id: string) => void;
 }) {
   const { t } = useTranslation('widgets/Rule/RuleTable');
+  const { title } = useRuleTitle();
   const counts = hits?.state === RULE_HITS_STATE.Counted ? hits.counts : null;
   const scrollRef = useRef<HTMLDivElement>(null);
   const [headerHeight, setHeaderHeight] = useState(0);
@@ -203,6 +204,7 @@ export function RuleTable({
                 >
                   <RuleRow
                     rule={rule}
+                    title={title(rule)}
                     rowIndex={item.index + 1 + HEADER_ROWS}
                     selected={rule.id === selectedId}
                     edited={edited.has(rule.id)}

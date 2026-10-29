@@ -1,0 +1,25 @@
+{
+  "log": { "level": "warn" },
+  "outbounds": [{ "type": "direct", "tag": "direct" }],
+  "route": {
+    "rules": [
+      // Sniff first
+      { "action": "sniff" },
+      { "protocol": "dns", "action": "hijack-dns" }, // DNS goes to the resolver
+      /* Not a name: a block comment */
+      { "ip_is_private": true, "outbound": "direct" },
+      // Section: local services
+
+      // TV through VPN
+      {
+        "source_ip_cidr": ["198.51.100.60/32"],
+        "outbound": "direct",
+      },
+      // Notes on the next rule
+      // Ads
+      { "domain_suffix": [".invalid"], "action": "reject" },
+      { "port": [80, 443], "outbound": "direct" },
+    ],
+    "final": "direct",
+  },
+}

@@ -8,6 +8,9 @@
     "rule": {
       "reorder": {
         "failed": "Could not move the rule without changing its comments. The config was left unchanged."
+      },
+      "rename": {
+        "failed": "Could not write the rule name without changing the rest of the config. The config was left unchanged."
       }
     },
     "apply": {
@@ -227,7 +230,12 @@
   "rule": {
     "unconditional": "no conditions",
     "uncovered": "unknown to the panel",
-    "conditions": "Conditions"
+    "conditions": "Conditions",
+    "numbered": "Rule {{index}}",
+    "allTraffic": "all traffic",
+    "conditionMore": "{{condition}} +{{more}}",
+    "caption": "{{subject}} → {{target}}",
+    "flagOff": "not: {{matcher}}"
   },
   "chart": {
     "now": "now",

@@ -9,6 +9,8 @@ import {
   findValue,
   insertValue,
   moveValue,
+  nameValue,
+  readRuleNames,
   readSectionNodes,
   removeValue,
   sectionNodePath,
@@ -261,5 +263,82 @@ describe('GENERIC_SECTIONS', () => {
     const sections = Object.keys(OptionsSchema.shape).filter((key) => key !== '$schema' && key !== 'route');
 
     expect(sections.filter((key) => !covered.has(key))).toEqual([]);
+  });
+});
+
+describe('rule names', () => {
+  const RULES = ['route', 'rules'];
+  const LISTED = [
+    '{',
+    '  "route": {',
+    '    "rules": [',
+    '      { "domain": ["a.example"], "outbound": "direct" },',
+    '      // keep',
+    '      { "port": [443], "outbound": "direct" }',
+    '    ]',
+    '  }',
+    '}',
+  ].join('\n');
+
+  it('reads the line comment right above a rule as its name', () => {
+    expect(readRuleNames(LISTED)).toEqual([null, 'keep']);
+  });
+
+  it('writes a name as one new line above the rule, in its indent', () => {
+    const after = nameValue(LISTED, [...RULES, 0], 'TV through VPN') ?? '';
+
+    expect(after).toBe(LISTED.replace('      { "domain"', '      // TV through VPN\n      { "domain"'));
+    expect(readRuleNames(after)).toEqual(['TV through VPN', 'keep']);
+  });
+
+  it('replaces only the comment text on rename', () => {
+    const after = nameValue(LISTED, [...RULES, 1], 'Web') ?? '';
+
+    expect(after).toBe(LISTED.replace('// keep', '// Web'));
+  });
+
+  it('removes the comment line for an empty name', () => {
+    expect(nameValue(LISTED, [...RULES, 1], '  ')).toBe(LISTED.replace('      // keep\n', ''));
+  });
+
+  it('keeps a name on one line', () => {
+    expect(readRuleNames(nameValue(LISTED, [...RULES, 0], ' TV\n through  VPN ') ?? '')[0]).toBe('TV through VPN');
+  });
+
+  it('moves a rule of a one-line list to its own line under the name', () => {
+    const text = '{\n  "route": { "rules": [{ "outbound": "a" }, { "outbound": "b" }] }\n}';
+    const after = nameValue(text, [...RULES, 1], 'B') ?? '';
+
+    expect(after).toBe('{\n  "route": { "rules": [{ "outbound": "a" },\n    // B\n    { "outbound": "b" }] }\n}');
+    expect(readRuleNames(after)).toEqual([null, 'B']);
+  });
+
+  it('keeps CRLF line breaks', () => {
+    const text = LISTED.replaceAll('\n', '\r\n');
+
+    expect(nameValue(text, [...RULES, 0], 'A')).toBe(
+      text.replace('      { "domain"', '      // A\r\n      { "domain"')
+    );
+  });
+
+  it('a comment at the end of the previous rule line is not a name', () => {
+    const text = LISTED.replace('"outbound": "direct" },\n      // keep', '"outbound": "direct" }, // keep');
+
+    expect(readRuleNames(text)).toEqual([null, null]);
+  });
+
+  it('a name moves and is deleted together with its rule', () => {
+    expect(readRuleNames(moveValue(LISTED, RULES, 1, 0) ?? '')).toEqual(['keep', null]);
+    expect(removeValue(LISTED, [...RULES, 1])).not.toContain('keep');
+  });
+
+  it('a whole-node edit keeps the name', () => {
+    expect(readRuleNames(setValue(LISTED, [...RULES, 1], { outbound: 'block' }))).toEqual([null, 'keep']);
+  });
+
+  it('refuses a path outside a list and a broken document', () => {
+    expect(nameValue(LISTED, ['route'], 'x')).toBeNull();
+    expect(nameValue(LISTED, [...RULES, 5], 'x')).toBeNull();
+    expect(nameValue(`${LISTED},`, [...RULES, 0], 'x')).toBeNull();
   });
 });

@@ -12,7 +12,7 @@ import {
 
 import type { Config } from '@shared/api/generated';
 
-import { insertElement, moveElement, removeElement } from './Config.array';
+import { insertElement, moveElement, nameElement, readElementNames, removeElement } from './Config.array';
 
 /** Config indent when it could not be determined from the file. */
 const DEFAULT_TAB_SIZE = 2;
@@ -111,6 +111,16 @@ export function moveValue(text: string, path: JSONPath, from: number, to: number
 }
 
 /**
+ * Names a list element with a line comment right above it; an empty name
+ * removes the comment. `null` refuses an unsafe edit.
+ */
+export function nameValue(text: string, path: JSONPath, name: string): string | null {
+  if (!isValidDocument(text)) return null;
+
+  return nameElement(text, path, name, detectFormatting(text));
+}
+
+/**
  * Where routing rules lie in the document. Addressing config nodes is Config
  * slice knowledge: in screens and forms it would drift apart in copies, and an
  * off-by-one in one of them would open the neighboring rule.
@@ -130,6 +140,14 @@ export function readRules(text: string): unknown[] {
   const rules: unknown = findValue(text, RULES_PATH);
 
   return Array.isArray(rules) ? rules : [];
+}
+
+/**
+ * Rule names, one per node of `readRules`: sing-box has no name field on a
+ * rule, so the name is the line comment above the rule node. `null` means none.
+ */
+export function readRuleNames(text: string): (string | null)[] {
+  return readElementNames(text, RULES_PATH);
 }
 
 /** Where rule sets lie in the document. */

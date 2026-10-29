@@ -8,6 +8,9 @@
     "rule": {
       "reorder": {
         "failed": "Переместить правило без изменения комментариев не удалось. Конфиг оставлен без изменений."
+      },
+      "rename": {
+        "failed": "Записать имя правила, не изменив остальной конфиг, не удалось. Конфиг оставлен без изменений."
       }
     },
     "apply": {
@@ -236,7 +239,12 @@
   "rule": {
     "unconditional": "без условий",
     "uncovered": "панель не знает",
-    "conditions": "Условия"
+    "conditions": "Условия",
+    "numbered": "Правило {{index}}",
+    "allTraffic": "весь трафик",
+    "conditionMore": "{{condition}} +{{more}}",
+    "caption": "{{subject}} → {{target}}",
+    "flagOff": "не: {{matcher}}"
   },
   "chart": {
     "now": "сейчас",

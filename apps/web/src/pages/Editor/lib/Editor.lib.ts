@@ -2,6 +2,7 @@ import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useCallback, useMemo, useState } from 'react';
 
 import {
+  readRuleNames,
   readRules,
   readRuleSetTags,
   toFinalOutbound,
@@ -61,7 +62,7 @@ export function useRouteEditor(): RouteEditorState {
   // schema did not accept must stay visible in the list.
   const nodes = useMemo(() => (text === null ? [] : readRules(text)), [text]);
 
-  const rules = useMemo(() => toRuleRowsFromNodes(nodes), [nodes]);
+  const rules = useMemo(() => toRuleRowsFromNodes(nodes, text === null ? [] : readRuleNames(text)), [nodes, text]);
   const ruleSets = useMemo(() => (text === null ? [] : readRuleSetTags(text)), [text]);
 
   const config = document.config;

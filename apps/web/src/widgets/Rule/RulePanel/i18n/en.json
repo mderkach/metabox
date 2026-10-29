@@ -1,5 +1,4 @@
 {
-  "title": "Rule {{index}}",
   "titleNew": "New rule · position {{index}}",
   "creating": "The rule appears in the draft once it has a condition or a rule set: without conditions it would take all traffic.",
   "unknown": {

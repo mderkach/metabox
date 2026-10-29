@@ -71,7 +71,7 @@ describe('ConfigApplyDiff', () => {
     expect(await screen.findByText(new RegExp(text))).toBeInTheDocument();
   });
 
-  it('above the diff summarizes rule edits in words, numbered as in the rule list', async () => {
+  it('above the diff names rule edits by the rule content, the number as in the rule list going second', async () => {
     const draft = RULES.slice(0, 7).map((rule, index) => (index === 1 ? { ...rule, outbound: 'direct' } : rule));
 
     await openDiff(RULES.slice(0, 7), [
@@ -85,7 +85,11 @@ describe('ConfigApplyDiff', () => {
       within(summary)
         .getAllByRole('listitem')
         .map((item) => item.textContent)
-    ).toEqual(['Правило 2: proxy → direct', 'Правило 5 удалено', 'Правило 7 добавлено']);
+    ).toEqual([
+      'site-1.example (правило 2): proxy → direct',
+      'Удалено: site-4.example → proxy (правило 5)',
+      'Добавлено: Адрес в локальной сети → direct (правило 7)',
+    ]);
   });
 
   it('names a moved rule a move, not a deletion and an addition', async () => {
@@ -99,7 +103,34 @@ describe('ConfigApplyDiff', () => {
       within(summary)
         .getAllByRole('listitem')
         .map((item) => item.textContent)
-    ).toEqual(['Правило 1 перемещено на место 2']);
+    ).toEqual(['Перемещено: site-0.example → proxy с места 1 на 2']);
+  });
+
+  it('names a rule by the comment above it', async () => {
+    const applied = toText(RULES.slice(0, 2));
+
+    ConfigDocumentState.getState().load(applied);
+    ConfigDocumentState.getState().replace(
+      applied
+        .replace(
+          '      {\n        "domain_suffix": "site-1',
+          '      // TV through VPN\n      {\n        "domain_suffix": "site-1'
+        )
+        .replace('"site-1.example",\n        "outbound": "proxy"', '"site-1.example",\n        "outbound": "direct"')
+    );
+    await renderScreen(function Screen() {
+      return <ConfigApplyDiff canApply blocked={null} onApply={() => undefined} />;
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
+
+    const summary = await screen.findByRole('list', { name: 'Изменения правил маршрутизации' });
+
+    expect(
+      within(summary)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent)
+    ).toEqual(['TV through VPN (правило 2): proxy → direct']);
   });
 
   it('truncates a long summary and says how many remain', async () => {
@@ -149,7 +180,7 @@ describe('ConfigApplyDiff', () => {
   it('closes the summary when a link leads to the edit', async () => {
     await openDiff(RULES.slice(0, 2), [RULES[0], { ...RULES[1], outbound: 'direct' }]);
 
-    await userEvent.click(await screen.findByRole('link', { name: 'Правило 2' }));
+    await userEvent.click(await screen.findByRole('link', { name: 'site-1.example' }));
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
