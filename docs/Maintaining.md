@@ -78,7 +78,7 @@ The workflow does not change the version installed on routers and on the test be
 - `SINGBOX_VERSION` and `SINGBOX_SHA256` in `install.sh` (`make singbox-pin-check` compares them with the file);
 - the tested version in the README and the examples in `docs/Development.md`.
 
-The file has one line for `aarch64_cortex-a53` (the router) and one for `aarch64_generic` (the CI bench). The sha256 is the `digest` of the release asset; use the other arch suffix for the second line:
+The file has a line for `aarch64_cortex-a53` (the router), `aarch64_generic` (the public-rootfs bench) and `x86_64` (the CI bench). The sha256 is the `digest` of the release asset; use the other arch suffix for the other lines:
 
 ```sh
 gh api repos/shtorm-7/sing-box-extended/releases/tags/v<version> --jq '.assets[] | select(.name | endswith("openwrt_aarch64_cortex-a53.apk")) | .digest'

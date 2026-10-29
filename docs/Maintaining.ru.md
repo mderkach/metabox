@@ -78,7 +78,7 @@ Workflow не меняет версию, которая ставится на р
 - `SINGBOX_VERSION` и `SINGBOX_SHA256` в `install.sh` (`make singbox-pin-check` сверяет их с файлом);
 - проверенную версию в README и примеры в `docs/Development.md`.
 
-В файле по строке для `aarch64_cortex-a53` (роутер) и для `aarch64_generic` (стенд в CI). sha256 — это `digest` ассета релиза; для второй строки замените суффикс архитектуры:
+В файле есть строки для `aarch64_cortex-a53` (роутер), `aarch64_generic` (стенд на публичном rootfs) и `x86_64` (стенд в CI). sha256 — это `digest` ассета релиза; для остальных строк замените суффикс архитектуры:
 
 ```sh
 gh api repos/shtorm-7/sing-box-extended/releases/tags/v<версия> --jq '.assets[] | select(.name | endswith("openwrt_aarch64_cortex-a53.apk")) | .digest'
