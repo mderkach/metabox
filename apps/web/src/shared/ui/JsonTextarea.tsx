@@ -1,11 +1,15 @@
-import { useImperativeHandle, useMemo, useRef, type Ref } from 'react';
+import { useImperativeHandle, useMemo, useRef, type KeyboardEvent, type Ref } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { cn } from '../lib/utils';
-import { lineIndexOf, toJsonTokens, tokenIndexAt } from './JsonTextarea.lib';
+import { indentLines, indentUnit, lineIndexOf, replaceText, toJsonTokens, tokenIndexAt } from './JsonTextarea.lib';
 import { JSON_CODE, JSON_HEIGHT, JSON_LAYER, JSON_LAYOUT, SURFACE } from './styles';
 
 /** A selection is placed in the middle of the visible area, not at its edge. */
 const HALVES = 2;
+
+/** Keys that do not cancel a pressed Escape: Shift is held down before Shift+Tab. */
+const RELEASE_KEYS = new Set(['Escape', 'Shift', 'Tab']);
 
 export interface JsonTextareaHandle {
   /** Focus the field, select the range and scroll it to the middle of the visible area. */
@@ -20,6 +24,10 @@ export interface JsonTextareaHandle {
  * `jsonc-parser` scanner, which is already a dependency for config parsing.
  * Because of the overlay, font metrics of the layers must match to the pixel, so
  * font size and line height are set by one constant for all of them.
+ *
+ * Tab and Shift+Tab indent the selected lines with the unit of the text itself. Escape frees
+ * Tab for one press, so the keyboard can leave the field: the first Escape does not reach the
+ * panel around, the second one does. The keys are told to a screen reader in the field description.
  *
  * There is no line numbering in wrap mode: the number column draws one row per
  * number, while a wrapped line takes several. They can be reconciled only by
@@ -47,7 +55,9 @@ export function JsonTextarea({
   height?: 'fill' | 'content';
   className?: string;
 }) {
+  const { t } = useTranslation('shared');
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const tabReleased = useRef(false);
   const highlightRef = useRef<HTMLPreElement>(null);
   const gutterRef = useRef<HTMLDivElement>(null);
 
@@ -71,6 +81,44 @@ export function JsonTextarea({
 
     if (gutterRef.current !== null) {
       gutterRef.current.scrollTop = input.scrollTop;
+    }
+  }
+
+  function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (!RELEASE_KEYS.has(event.key)) {
+      tabReleased.current = false;
+    }
+
+    if (event.key === 'Escape' && !tabReleased.current) {
+      tabReleased.current = true;
+      event.stopPropagation();
+
+      return;
+    }
+
+    if (event.key !== 'Tab' || event.ctrlKey || event.altKey || event.metaKey || event.nativeEvent.isComposing) {
+      return;
+    }
+
+    if (tabReleased.current) {
+      tabReleased.current = false;
+
+      return;
+    }
+
+    event.preventDefault();
+
+    const input = event.currentTarget;
+    const edit = indentLines(
+      input.value,
+      input.selectionStart,
+      input.selectionEnd,
+      indentUnit(input.value),
+      event.shiftKey
+    );
+
+    if (edit !== null) {
+      replaceText(input, edit);
     }
   }
 
@@ -162,10 +210,15 @@ export function JsonTextarea({
           ref={inputRef}
           id={id}
           aria-label={label}
+          aria-describedby={`${id}-keys`}
           spellCheck={false}
           wrap={wrap ? 'soft' : 'off'}
           value={value}
           onScroll={syncScroll}
+          onKeyDown={onKeyDown}
+          onBlur={() => {
+            tabReleased.current = false;
+          }}
           onChange={(event) => {
             onChange(event.target.value);
           }}
@@ -176,6 +229,9 @@ export function JsonTextarea({
             JSON_CODE
           )}
         />
+        <span id={`${id}-keys`} className='sr-only'>
+          {t('jsonTextarea.keys')}
+        </span>
       </div>
     </div>
   );

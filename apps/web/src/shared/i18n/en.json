@@ -269,6 +269,9 @@
     "direct": "direct",
     "unavailable": "mode unknown: {{reason}}"
   },
+  "jsonTextarea": {
+    "keys": "Tab indents the selected lines, Shift+Tab outdents them. To leave the field, press Escape, then Tab."
+  },
   "liveRegion": {
     "label": "Action result"
   },

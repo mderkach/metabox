@@ -1,5 +1,6 @@
 import { createScanner } from 'jsonc-parser';
 
+import { detectIndent } from '../lib/jsonc';
 import { JSON_TONE } from './styles';
 
 export interface JsonToken {
@@ -135,4 +136,123 @@ export function lineIndexOf(text: string, position: number): number {
   }
 
   return line;
+}
+
+/** Replacement of a text range and the selection after it. */
+export interface TextEdit {
+  from: number;
+  to: number;
+  text: string;
+  selectionStart: number;
+  selectionEnd: number;
+}
+
+/** Indent unit of the text: a tab or the number of spaces of its first indented line. */
+export function indentUnit(text: string): string {
+  const { tabSize, insertSpaces } = detectIndent(text);
+
+  return insertSpaces ? ' '.repeat(tabSize) : '\t';
+}
+
+/** How many leading characters one outdent step removes: the unit, a tab, or up to the unit width of spaces. */
+function outdentWidth(line: string, unit: string): number {
+  if (line.startsWith(unit)) {
+    return unit.length;
+  }
+
+  if (line.startsWith('\t')) {
+    return 1;
+  }
+
+  let spaces = 0;
+
+  while (spaces < unit.length && line[spaces] === ' ') {
+    spaces += 1;
+  }
+
+  return spaces;
+}
+
+/**
+ * Tab and Shift+Tab over a selection, as a replacement of the touched lines.
+ *
+ * Tab on a caret or inside one line inserts the unit in place of the selection; over several
+ * lines it indents each non-empty one. Shift+Tab outdents every touched line, a caret
+ * included. A selection that ends at the start of a line does not touch that line. A
+ * selection edge at the start of a line stays there, so whole selected lines stay selected
+ * together with their new indent. `null` means there is nothing to change.
+ */
+export function indentLines(text: string, start: number, end: number, unit: string, outdent: boolean): TextEdit | null {
+  if (!outdent && !text.slice(start, end).includes('\n')) {
+    const caret = start + unit.length;
+
+    return { from: start, to: end, text: unit, selectionStart: caret, selectionEnd: caret };
+  }
+
+  // `lastIndexOf` clamps a negative start to zero and would find a line feed at offset zero.
+  const from = start === 0 ? 0 : text.lastIndexOf('\n', start - 1) + 1;
+  const last = end > start && text[end - 1] === '\n' ? end - 1 : end;
+  const lineEnd = text.indexOf('\n', last);
+  const to = lineEnd === -1 ? text.length : lineEnd;
+  const lines = text.slice(from, to).split('\n');
+  const shifts = lines.map((line) => {
+    if (outdent) {
+      return -outdentWidth(line, unit);
+    }
+
+    return line.trim() === '' ? 0 : unit.length;
+  });
+
+  if (shifts.every((shift) => shift === 0)) {
+    return null;
+  }
+
+  const replaced = lines.map((line, index) => (shifts[index] > 0 ? unit + line : line.slice(-shifts[index])));
+  const total = shifts.reduce((sum, shift) => sum + shift, 0);
+
+  function moved(position: number): number {
+    if (position > to) {
+      return position + total;
+    }
+
+    let lineStart = from;
+    let delta = 0;
+
+    for (const [index, line] of lines.entries()) {
+      const column = position - lineStart;
+
+      if (column <= line.length) {
+        return lineStart + delta + (column === 0 ? 0 : Math.max(0, column + shifts[index]));
+      }
+
+      lineStart += line.length + 1;
+      delta += shifts[index];
+    }
+
+    return position + total;
+  }
+
+  return { from, to, text: replaced.join('\n'), selectionStart: moved(start), selectionEnd: moved(end) };
+}
+
+/**
+ * Applies an edit to the field as typing. `execCommand('insertText')` is the only way to
+ * change a `textarea` that stays on the browser undo stack, and it fires `input`, which
+ * React reads as a change. It is deprecated but kept by all engines; where it refuses,
+ * `setRangeText` changes the text without undo, and the `input` event is sent by hand.
+ */
+export function replaceText(input: HTMLTextAreaElement, edit: TextEdit): void {
+  const direction = input.selectionDirection;
+
+  input.setSelectionRange(edit.from, edit.to);
+
+  const typed =
+    edit.text === '' ? document.execCommand('delete') : document.execCommand('insertText', false, edit.text);
+
+  if (!typed) {
+    input.setRangeText(edit.text, edit.from, edit.to);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  input.setSelectionRange(edit.selectionStart, edit.selectionEnd, direction);
 }

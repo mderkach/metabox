@@ -1,5 +1,13 @@
 import i18next, { type ParseKeys } from 'i18next';
-import { type JSONPath, type Node, type ParseError, findNodeAtLocation, parse, parseTree } from 'jsonc-parser';
+import {
+  type FormattingOptions,
+  type JSONPath,
+  type Node,
+  type ParseError,
+  findNodeAtLocation,
+  parse,
+  parseTree,
+} from 'jsonc-parser';
 
 /**
  * `jsonc-parser` error codes as human-readable text. It prints them itself
@@ -35,6 +43,26 @@ function parseErrorText(code: number): string {
  * the owner an invented error in a working config.
  */
 const DIALECT = { allowTrailingComma: true, allowEmptyContent: false } as const;
+
+/** Indent when it could not be determined from the text. */
+const DEFAULT_TAB_SIZE = 2;
+
+/** First indented line: it shows what the text is indented with. */
+const FIRST_INDENT = /\n([\t ]+)\S/;
+
+/**
+ * Indent of the text by its first indented line. `jsonc-parser` has no detection of
+ * its own: without it an edit would go into a tab-indented file with two spaces.
+ */
+export function detectIndent(text: string): Required<Pick<FormattingOptions, 'tabSize' | 'insertSpaces'>> {
+  const indent = FIRST_INDENT.exec(text)?.[1];
+
+  if (indent === undefined) {
+    return { tabSize: DEFAULT_TAB_SIZE, insertSpaces: true };
+  }
+
+  return { tabSize: indent.length, insertSpaces: !indent.startsWith('\t') };
+}
 
 export interface JsoncFailure {
   /** Offset in characters: the screen converts it to a line number. */
