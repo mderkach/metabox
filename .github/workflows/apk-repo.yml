@@ -23,7 +23,7 @@ jobs:
     env:
       PUBLIC_KEY: keys/metabox-release.pem
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       # The site is rebuilt from the releases every time, so the releases stay the only
       # source of packages and a rerun gives the same site.
@@ -71,9 +71,9 @@ jobs:
             done
           ' sh "$PUBLIC_KEY"
 
-      - uses: actions/upload-pages-artifact@v5
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
         with:
           path: site
 
       - id: deploy
-        uses: actions/deploy-pages@v5
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5
