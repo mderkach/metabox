@@ -18,8 +18,9 @@ const ERROR_KEY: Readonly<Record<string, ParseKeys<'features/Device/DeviceRename
 const CUSTOM_SOURCE: NameSource = 'custom';
 
 /**
- * Device's own name right in the list row. The field holds only the own name:
- * the lease name is a hint, and an empty field returns the label to it.
+ * Device's name right in the list row. The field holds the current label, so a
+ * typo is fixed in place; an unchanged value is never saved (it would pin the
+ * lease name as an own one), and the return to the lease name is a button.
  */
 export function DeviceRenameForm({
   device,
@@ -34,12 +35,12 @@ export function DeviceRenameForm({
   const inputId = useId();
   const hintId = useId();
   const form = useForm<DeviceRenameModel>({
-    defaultValues: { name: device.nameSource === CUSTOM_SOURCE ? device.name : '' },
+    defaultValues: { name: device.name },
     mode: 'onChange',
     resolver: zodResolver(DeviceRenameSchema),
   });
 
-  const onSubmit = form.handleSubmit(({ name }) => {
+  function save(name: string) {
     rename.mutate(
       { mac: device.mac, name },
       {
@@ -48,6 +49,16 @@ export function DeviceRenameForm({
         },
       }
     );
+  }
+
+  const onSubmit = form.handleSubmit(({ name }) => {
+    if (name === device.name) {
+      onDone(null);
+
+      return;
+    }
+
+    save(name);
   });
 
   function onKeyDown(event: KeyboardEvent<HTMLFormElement>) {
@@ -84,7 +95,7 @@ export function DeviceRenameForm({
                 // oxlint-disable-next-line jsx-a11y/no-autofocus -- see above
                 autoFocus
                 spellCheck={false}
-                placeholder={device.nameSource === CUSTOM_SOURCE ? device.ip : device.label}
+                placeholder={device.ip}
                 aria-describedby={hintId}
                 aria-invalid={errorKey !== undefined}
                 className='h-8 text-sm'
@@ -118,6 +129,20 @@ export function DeviceRenameForm({
         >
           {t('cancel')}
         </Button>
+        {device.nameSource === CUSTOM_SOURCE && (
+          <Button
+            type='button'
+            variant='ghost'
+            size='sm'
+            className='ml-auto'
+            disabled={rename.isPending}
+            onClick={() => {
+              save('');
+            }}
+          >
+            {t('useLease')}
+          </Button>
+        )}
       </div>
     </form>
   );
