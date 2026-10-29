@@ -7,6 +7,7 @@ const NO_CONDITIONS = { domain: '', domain_suffix: '', domain_keyword: '', ip_ci
 describe('rule outbound edit', () => {
   it('for routing returns the chosen outbound', () => {
     const patch = RuleEditAdapterSchema.parse({
+      name: '',
       action: RULE_ACTION.Route,
       outbound: 'proxy',
       ruleSet: [],
@@ -18,6 +19,7 @@ describe('rule outbound edit', () => {
 
   it('for other actions does not write outbound at all', () => {
     const patch = RuleEditAdapterSchema.parse({
+      name: '',
       action: RULE_ACTION.Reject,
       outbound: 'proxy',
       ruleSet: [],
@@ -30,6 +32,7 @@ describe('rule outbound edit', () => {
 
   it('does not accept routing without an outbound: an empty tag would get into the diff as an edit nobody made', () => {
     const result = RuleEditAdapterSchema.safeParse({
+      name: '',
       action: RULE_ACTION.Route,
       outbound: '',
       ruleSet: [],
@@ -51,6 +54,7 @@ describe('rule outbound edit', () => {
 describe('rule sets of a rule', () => {
   it('go into the patch as a list of tags', () => {
     const patch = RuleEditAdapterSchema.parse({
+      name: '',
       action: RULE_ACTION.Route,
       outbound: 'proxy',
       ruleSet: ['github', 'geoip-cn'],
@@ -67,6 +71,7 @@ describe('rule sets of a rule', () => {
 
   it('an empty list removes rule_set from the patch instead of writing []', () => {
     const patch = RuleEditAdapterSchema.parse({
+      name: '',
       action: RULE_ACTION.Route,
       outbound: 'proxy',
       ruleSet: [],
@@ -79,6 +84,7 @@ describe('rule sets of a rule', () => {
   it('does not accept a tag that is not a string', () => {
     expect(
       RuleEditAdapterSchema.safeParse({
+        name: '',
         action: RULE_ACTION.Route,
         outbound: 'proxy',
         ruleSet: [42],
@@ -91,6 +97,7 @@ describe('rule sets of a rule', () => {
 describe('edit minimality', () => {
   it('changing the action to non-routing removes outbound from the patch instead of zeroing it', () => {
     const patch = RuleEditAdapterSchema.parse({
+      name: '',
       action: RULE_ACTION.Sniff,
       outbound: 'proxy',
       ruleSet: [],
@@ -104,6 +111,7 @@ describe('edit minimality', () => {
 describe('rule conditions', () => {
   it('go as a list with one string per value, empty strings and spaces are not written', () => {
     const patch = RuleEditAdapterSchema.parse({
+      name: '',
       action: RULE_ACTION.Route,
       outbound: 'proxy',
       ruleSet: [],
@@ -115,6 +123,7 @@ describe('rule conditions', () => {
 
   it('an empty condition removes the field from the node', () => {
     const patch = RuleEditAdapterSchema.parse({
+      name: '',
       action: RULE_ACTION.Route,
       outbound: 'proxy',
       ruleSet: [],
@@ -127,6 +136,7 @@ describe('rule conditions', () => {
   it('does not accept a port that is not a number or is out of range', () => {
     for (const port of ['https', '70000']) {
       const result = RuleEditAdapterSchema.safeParse({
+        name: '',
         action: RULE_ACTION.Route,
         outbound: 'proxy',
         ruleSet: [],

@@ -12,6 +12,7 @@ const TARGET = 'proxy-eu-reality-frankfurt-02';
 const RULE: RuleRowModel = {
   id: '3',
   index: 4,
+  name: null,
   matchers: [],
   group: null,
   invert: false,
@@ -50,6 +51,7 @@ function renderRow(hits?: RuleHitCell) {
     <div role='table'>
       <RuleRow
         rule={RULE}
+        title={`весь трафик → ${TARGET}`}
         rowIndex={1}
         selected={false}
         edited={false}
@@ -74,7 +76,7 @@ describe('RuleRow', () => {
   it('the select button names the row by number and outbound', () => {
     renderRow();
 
-    expect(screen.getByRole('button', { name: `Правило 4, выход ${TARGET}` })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: `весь трафик → ${TARGET}, правило 4` })).toBeInTheDocument();
   });
 
   // The button covers the row, and the outbound `title` under it was not shown.
@@ -82,14 +84,14 @@ describe('RuleRow', () => {
     vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockReturnValue(CUT_WIDTH);
 
     renderRow();
-    await hover(screen.getByRole('button', { name: `Правило 4, выход ${TARGET}` }));
+    await hover(screen.getByRole('button', { name: `весь трафик → ${TARGET}, правило 4` }));
 
     expect(screen.getAllByText(TARGET)).toHaveLength(2);
   });
 
   it('without truncation does not show the tooltip', async () => {
     renderRow();
-    await hover(screen.getByRole('button', { name: `Правило 4, выход ${TARGET}` }));
+    await hover(screen.getByRole('button', { name: `весь трафик → ${TARGET}, правило 4` }));
 
     expect(screen.getAllByText(TARGET)).toHaveLength(1);
   });

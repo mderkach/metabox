@@ -174,11 +174,11 @@ describe('rules screen', () => {
 
     renderWithRouter(EditorPage);
 
-    await user.click(await screen.findByRole('button', { name: /^Правило 1, / }));
+    await user.click(await screen.findByRole('button', { name: /, правило 1(,|$)/ }));
 
     const panel = await screen.findByRole('complementary');
 
-    expect(within(panel).getByText('Правило 1', { selector: 'h2, h3' })).toBeInTheDocument();
+    expect(within(panel).getByText('Правило 1', { selector: 'p' })).toBeInTheDocument();
 
     await user.click(within(panel).getByRole('button', { name: 'Закрыть панель' }));
 
@@ -190,13 +190,13 @@ describe('rules screen', () => {
 
     renderWithRouter(EditorPage);
 
-    const ruleButton = await screen.findByRole('button', { name: /^Правило 1, / });
+    const ruleButton = await screen.findByRole('button', { name: /, правило 1(,|$)/ });
 
     await user.click(ruleButton);
 
     const panel = await screen.findByRole('complementary');
 
-    expect(within(panel).getByRole('heading', { name: 'Правило 1' })).toHaveFocus();
+    expect(within(panel).getByRole('heading', { name: 'github → proxy' })).toHaveFocus();
 
     await user.keyboard('{Escape}');
 
@@ -212,7 +212,7 @@ describe('rules screen', () => {
 
     renderWithRouter(EditorPage);
 
-    const ruleButton = await screen.findByRole('button', { name: /^Правило 3, / });
+    const ruleButton = await screen.findByRole('button', { name: /, правило 3(,|$)/ });
 
     await user.click(ruleButton);
     await user.click(within(await screen.findByRole('complementary')).getByRole('button', { name: 'Закрыть панель' }));
@@ -227,7 +227,7 @@ describe('rules screen', () => {
 
     renderWithRouter(EditorPage);
 
-    await user.click(await screen.findByRole('button', { name: /^Правило 1, / }));
+    await user.click(await screen.findByRole('button', { name: /, правило 1(,|$)/ }));
 
     const panel = await screen.findByRole('complementary');
 
@@ -245,7 +245,7 @@ describe('rules screen', () => {
 
     renderWithRouter(EditorPage);
 
-    await user.click(await screen.findByRole('button', { name: /^Правило 1, / }));
+    await user.click(await screen.findByRole('button', { name: /, правило 1(,|$)/ }));
 
     const panel = await screen.findByRole('complementary');
     const outbound = within(panel).getByRole('combobox', { name: 'Куда отправить' });
@@ -263,7 +263,7 @@ describe('rules screen', () => {
       outbound: 'direct',
     });
     expect(
-      await screen.findByRole('button', { name: 'Правило 1, выход direct, изменено в черновике' })
+      await screen.findByRole('button', { name: 'github → direct, правило 1, изменено в черновике' })
     ).toBeInTheDocument();
   });
 
@@ -274,7 +274,7 @@ describe('rules screen', () => {
 
     renderWithRouter(EditorPage);
 
-    await user.click(await screen.findByRole('button', { name: /^Правило 1, / }));
+    await user.click(await screen.findByRole('button', { name: /, правило 1(,|$)/ }));
 
     const panel = await screen.findByRole('complementary');
 
@@ -293,7 +293,7 @@ describe('rules screen', () => {
 
     renderWithRouter(EditorPage);
 
-    await user.click(await screen.findByRole('button', { name: /^Правило 3, / }));
+    await user.click(await screen.findByRole('button', { name: /, правило 3(,|$)/ }));
 
     const panel = await screen.findByRole('complementary');
 
@@ -307,7 +307,7 @@ describe('rules screen', () => {
 
     renderWithRouter(EditorPage);
 
-    await user.click(await screen.findByRole('button', { name: /^Правило 2, / }));
+    await user.click(await screen.findByRole('button', { name: /, правило 2(,|$)/ }));
 
     const panel = await screen.findByRole('complementary');
 
@@ -328,7 +328,7 @@ describe('rules screen', () => {
 
     renderWithRouter(EditorPage);
 
-    await user.click(await screen.findByRole('button', { name: /^Правило 1, / }));
+    await user.click(await screen.findByRole('button', { name: /, правило 1(,|$)/ }));
 
     const panel = await screen.findByRole('complementary');
 
@@ -338,7 +338,7 @@ describe('rules screen', () => {
       JSON.stringify({ rule_set: ['github'], outbound: 'proxy' }, null, 2)
     );
 
-    await user.click(screen.getByRole('button', { name: /^Правило 2, / }));
+    await user.click(screen.getByRole('button', { name: /, правило 2(,|$)/ }));
 
     // The panel is recreated and opened on the form: choose the tab again.
     await user.click(within(await screen.findByRole('complementary')).getByRole('tab', { name: 'JSON' }));
@@ -353,7 +353,7 @@ describe('rules screen', () => {
 
     renderWithRouter(EditorPage);
 
-    await user.click(await screen.findByRole('button', { name: /^Правило 3, / }));
+    await user.click(await screen.findByRole('button', { name: /, правило 3(,|$)/ }));
 
     const panel = await screen.findByRole('complementary');
     const editor = within(panel).getByRole('textbox', { name: 'Правило 3 текстом' });
@@ -439,7 +439,7 @@ describe('rule list editing', () => {
 
     expect(within(targets).getByRole('option', { name: /перехватить DNS/ })).toBeInTheDocument();
     expect(within(targets).queryByRole('option', { name: /hijack-dns/ })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Правило 2, действие: перехватить DNS' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '53 → перехватить DNS, правило 2' })).toBeInTheDocument();
   });
 
   it('the outbound facet selects several outbounds at once and keeps them in the address', async () => {
@@ -462,7 +462,7 @@ describe('rule list editing', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('Показано 2 из 3');
     expect(router.state.location.search).toEqual({ target: ['proxy', 'direct'] });
     expect(screen.getByRole('button', { name: 'Действия правил: выбрано 2' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Правило 2, / })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /, правило 2(,|$)/ })).not.toBeInTheDocument();
   });
 
   it('opens with the outbounds selected in the address, and the search narrows their counters', async () => {
@@ -470,7 +470,7 @@ describe('rule list editing', () => {
 
     renderWithRouter(EditorPage, { validateSearch: parseRuleSearch, initialEntry: '/?target=hijack-dns' });
 
-    expect(await screen.findByRole('button', { name: 'Правило 2, действие: перехватить DNS' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: '53 → перехватить DNS, правило 2' })).toBeInTheDocument();
     expect(screen.getByRole('status')).toHaveTextContent('Показано 1 из 3');
 
     await user.type(screen.getByRole('textbox', { name: 'Поиск по правилам' }), 'github');
@@ -505,10 +505,9 @@ describe('rule list editing', () => {
       expect(draftRules()).toEqual([...EDIT_RULES, { domain: ['a.example'], outbound: 'proxy' }]);
     });
     expect(domain).toHaveFocus();
-    expect(await screen.findByRole('button', { name: 'Правило 4, выход proxy, изменено в черновике' })).toHaveAttribute(
-      'aria-pressed',
-      'true'
-    );
+    expect(
+      await screen.findByRole('button', { name: 'a.example → proxy, правило 4, изменено в черновике' })
+    ).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('closes the panel of a created rule once the draft is discarded', async () => {
@@ -522,14 +521,14 @@ describe('rule list editing', () => {
 
     await selectOption(user, within(panel).getByRole('combobox', { name: 'Добавить условие' }), 'Домен');
     await user.type(within(panel).getByRole('textbox', { name: 'Домен' }), 'a.example');
-    await screen.findByRole('button', { name: 'Правило 4, выход proxy, изменено в черновике' });
+    await screen.findByRole('button', { name: 'a.example → proxy, правило 4, изменено в черновике' });
 
     act(() => {
       ConfigDocumentState.getState().discard();
     });
 
     await waitFor(() => {
-      expect(screen.queryByRole('complementary', { name: 'Правило 4' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('complementary', { name: 'a.example → proxy' })).not.toBeInTheDocument();
     });
   });
 
@@ -603,7 +602,7 @@ describe('rule list editing', () => {
 
     renderWithRouter(EditorPage);
 
-    await user.click(await screen.findByRole('button', { name: /^Правило 2, / }));
+    await user.click(await screen.findByRole('button', { name: /, правило 2(,|$)/ }));
     await user.click(
       within(await screen.findByRole('complementary')).getByRole('button', { name: 'Удалить правило 2' })
     );
@@ -622,7 +621,7 @@ describe('rule list editing', () => {
 
     renderWithRouter(EditorPage);
 
-    await user.click(await screen.findByRole('button', { name: /^Правило 2, / }));
+    await user.click(await screen.findByRole('button', { name: /, правило 2(,|$)/ }));
     await user.click(
       within(await screen.findByRole('complementary')).getByRole('button', { name: 'Удалить правило 2' })
     );
@@ -643,7 +642,7 @@ describe('rule list editing', () => {
 
     renderWithRouter(EditorPage);
 
-    await user.click(await screen.findByRole('button', { name: /^Правило 3, / }));
+    await user.click(await screen.findByRole('button', { name: /, правило 3(,|$)/ }));
 
     const panel = await screen.findByRole('complementary');
 
@@ -651,8 +650,8 @@ describe('rule list editing', () => {
     await user.click(within(panel).getByRole('button', { name: 'Поднять правило 3 выше' }));
 
     expect(draftRules()).toEqual([EDIT_RULES[0], EDIT_RULES[2], EDIT_RULES[1]]);
-    expect(within(panel).getByRole('heading', { name: 'Правило 2' })).toBeInTheDocument();
-    expect(within(panel).getByText('Правило 2', { selector: 'h2, h3' })).toBeInTheDocument();
+    expect(within(panel).getByRole('heading', { name: 'example.org → direct' })).toBeInTheDocument();
+    expect(within(panel).getByText('Правило 2', { selector: 'p' })).toBeInTheDocument();
     // The panel is not recreated: the open tab stayed, and the node text is the same.
     expect(within(panel).getByRole('tab', { name: 'JSON' })).toHaveAttribute('aria-selected', 'true');
     expect(within(panel).getByRole('textbox', { name: 'Правило 2 текстом' })).toHaveValue(
@@ -666,7 +665,7 @@ describe('rule list editing', () => {
 
     renderWithRouter(EditorPage);
 
-    await user.click(await screen.findByRole('button', { name: /^Правило 3, / }));
+    await user.click(await screen.findByRole('button', { name: /, правило 3(,|$)/ }));
 
     const panel = await screen.findByRole('complementary');
 
@@ -680,7 +679,7 @@ describe('rule list editing', () => {
     });
 
     // The selection stayed at the first position, and there is rule 1 of the file again.
-    expect(within(panel).getByRole('heading', { name: 'Правило 1' })).toBeInTheDocument();
+    expect(within(panel).getByRole('heading', { name: 'github → proxy' })).toBeInTheDocument();
     expect(within(panel).getByRole('combobox', { name: 'Куда отправить' })).toHaveTextContent('proxy');
   });
 
@@ -689,7 +688,7 @@ describe('rule list editing', () => {
 
     renderWithRouter(EditorPage);
 
-    await user.click(await screen.findByRole('button', { name: /^Правило 2, / }));
+    await user.click(await screen.findByRole('button', { name: /, правило 2(,|$)/ }));
 
     const panel = await screen.findByRole('complementary');
 
@@ -704,7 +703,7 @@ describe('rule list editing', () => {
 
     renderWithRouter(EditorPage);
 
-    await user.click(await screen.findByRole('button', { name: /^Правило 1, / }));
+    await user.click(await screen.findByRole('button', { name: /, правило 1(,|$)/ }));
     await user.click(
       within(await screen.findByRole('complementary')).getByRole('button', { name: 'Опустить правило 1 ниже' })
     );
@@ -712,9 +711,37 @@ describe('rule list editing', () => {
     const table = screen.getByRole('table', { name: 'Правила маршрутизации' });
     const [, , secondRow] = within(table).getAllByRole('row');
 
-    expect(within(secondRow).getByRole('button', { name: 'Правило 2, выход proxy' })).toBeInTheDocument();
+    expect(within(secondRow).getByRole('button', { name: 'github → proxy, правило 2' })).toBeInTheDocument();
     expect(await within(secondRow).findByText('1 234')).toBeInTheDocument();
     expect(screen.queryByText('изменено в черновике', { exact: false })).not.toBeInTheDocument();
+  });
+
+  it('the name field writes a comment above the rule, and an empty field removes it', async () => {
+    const user = userEvent.setup();
+
+    renderWithRouter(EditorPage);
+
+    await user.click(await screen.findByRole('button', { name: /, правило 3(,|$)/ }));
+
+    const panel = await screen.findByRole('complementary');
+    const name = within(panel).getByRole('textbox', { name: 'Имя' });
+
+    expect(name).toHaveAttribute('placeholder', 'example.org → direct');
+
+    await user.type(name, 'Work sites');
+
+    await waitFor(() => {
+      expect(ConfigDocumentState.getState().draft).toContain('      // Work sites\n      {\n        "domain_suffix"');
+    });
+    expect(draftRules()).toEqual(EDIT_RULES);
+    expect(within(panel).getByRole('heading', { name: 'Work sites' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Work sites, правило 3' })).toBeInTheDocument();
+
+    await user.clear(name);
+
+    await waitFor(() => {
+      expect(ConfigDocumentState.getState().draft ?? editConfig(EDIT_RULES)).toBe(editConfig(EDIT_RULES));
+    });
   });
 });
 
@@ -742,11 +769,11 @@ describe('rules screen on a narrow screen', () => {
 
     renderWithRouter(EditorPage);
 
-    await user.click(await screen.findByRole('button', { name: /^Правило 1, / }));
+    await user.click(await screen.findByRole('button', { name: /, правило 1(,|$)/ }));
 
-    const sheet = await screen.findByRole('dialog', { name: 'Правило 1' });
+    const sheet = await screen.findByRole('dialog', { name: 'github → proxy' });
 
-    expect(within(sheet).getByText('Правило 1', { selector: 'h2, h3' })).toBeInTheDocument();
+    expect(within(sheet).getByText('Правило 1', { selector: 'p' })).toBeInTheDocument();
 
     await user.keyboard('{Escape}');
 
@@ -780,14 +807,15 @@ describe('rule list editing on a narrow screen', () => {
 
     renderWithRouter(EditorPage);
 
-    await user.click(await screen.findByRole('button', { name: /^Правило 1, / }));
+    await user.click(await screen.findByRole('button', { name: /, правило 1(,|$)/ }));
 
-    const sheet = await screen.findByRole('dialog', { name: 'Правило 1' });
+    const sheet = await screen.findByRole('dialog', { name: 'github → proxy' });
 
     await user.click(within(sheet).getByRole('tab', { name: 'JSON' }));
     await user.click(within(sheet).getByRole('button', { name: 'Опустить правило 1 ниже' }));
 
-    expect(await screen.findByRole('dialog', { name: 'Правило 2' })).toBe(sheet);
+    expect(await within(sheet).findByText('Правило 2', { selector: 'p' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'github → proxy' })).toBe(sheet);
     expect(within(sheet).getByRole('tab', { name: 'JSON' })).toHaveAttribute('aria-selected', 'true');
     expect(draftRules()).toEqual([EDIT_RULES[1], EDIT_RULES[0], EDIT_RULES[2]]);
   });
@@ -904,7 +932,7 @@ describe('rule sets of a rule from the panel', () => {
     const user = userEvent.setup();
     const { router } = renderWithRouter(EditorPage, { validateSearch: parseRuleSearch });
 
-    await user.click(await screen.findByRole('button', { name: /^Правило 3, / }));
+    await user.click(await screen.findByRole('button', { name: /, правило 3(,|$)/ }));
 
     const panel = await screen.findByRole('complementary');
 
@@ -930,7 +958,7 @@ describe('rule sets of a rule from the panel', () => {
     await router.navigate({ to: '/', search: { rule_set: 'geoip-cn' } });
 
     expect(await screen.findByRole('status')).toHaveTextContent('Показано 1 из 3');
-    expect(screen.getByRole('button', { name: /^Правило 3, / })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /, правило 3(,|$)/ })).toBeInTheDocument();
   });
 });
 

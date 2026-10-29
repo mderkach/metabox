@@ -23,6 +23,7 @@ export {
   hasRuleSetCache,
   insertValue,
   isGenericSection,
+  readRuleNames,
   readRules,
   readRuleSets,
   readRuleSetTags,
@@ -53,6 +54,7 @@ export type { ConfigChange, NodeListSection } from './model/Config.changes';
 export { CONFIG_REFERENCE, findReferences } from './model/Config.references';
 export type { ConfigReference } from './model/Config.references';
 export { CONFIG_SECRET_KEYS } from './model/Config.secrets';
+export { toElementName } from './model/Config.array';
 export { compactNode, diffNode } from './model/Config.patch';
 export {
   isListSettingsSection,

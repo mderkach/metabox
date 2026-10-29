@@ -6,11 +6,10 @@
     "hits": "Hits"
   },
   "row": {
-    "label": "Rule {{index}}, outbound {{target}}",
+    "label": "{{title}}, rule {{index}}",
     "unconditional": "no conditions — applies to all traffic",
     "unknown": "conditions not shown: the panel does not know this rule",
-    "edited": "changed in the draft",
-    "labelAction": "Rule {{index}}, action: {{action}}"
+    "edited": "changed in the draft"
   },
   "group": {
     "and": "and",

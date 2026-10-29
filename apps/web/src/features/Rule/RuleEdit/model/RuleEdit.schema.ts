@@ -72,6 +72,8 @@ const ConditionsSchema = z.object({
  * list.
  */
 export const RuleEditSchema = z.object({
+  /** Rule name: the line comment above the node; empty means no comment */
+  name: z.string(),
   /** What to do with traffic that matched the rule conditions */
   action: z.enum([RULE_ACTION.Route, RULE_ACTION.Reject, RULE_ACTION.HijackDns, RULE_ACTION.Sniff]),
   /** Outbound tag; required only for `route` */

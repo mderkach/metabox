@@ -1,5 +1,6 @@
+import { renderWithQuery } from '@test/renderWithQuery';
 import { mockVirtualSizes } from '@test/virtualSizes';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { RULE_TARGET, type RuleRow } from '@entities/Rule';
@@ -15,6 +16,7 @@ const ROW_HEIGHT = 52;
 const RULES: RuleRow[] = Array.from({ length: RULE_COUNT }, (_, position) => ({
   id: String(position),
   index: position + 1,
+  name: null,
   matchers: [],
   group: null,
   invert: false,
@@ -83,7 +85,7 @@ describe('RuleTable scroll to the selected rule', () => {
   });
 
   function renderTable() {
-    render(
+    renderWithQuery(
       <RuleTable
         rules={RULES}
         total={RULE_COUNT}

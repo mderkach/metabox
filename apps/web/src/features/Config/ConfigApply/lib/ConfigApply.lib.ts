@@ -7,6 +7,7 @@ import {
   ConfigDocumentState,
   ConfigDocumentStore,
   isGenericSection,
+  readRuleNames,
   readRules,
   toConfigChanges,
   toCheckFailure,
@@ -29,7 +30,7 @@ import {
   useDaemonStatus,
   type ApplyTransaction,
 } from '@entities/Daemon';
-import { toRuleChanges, type RuleChange } from '@entities/Rule';
+import { toRuleChanges, toRuleRowsFromNodes, type RuleChange, type RuleRow } from '@entities/Rule';
 import { API_FAILURE, ApiError } from '@shared/api';
 import { failureLine, firstJsoncError } from '@shared/lib/jsonc';
 
@@ -209,6 +210,23 @@ export function useRuleChanges(): RuleChange[] {
     () => (applied === null || draft === null ? [] : toRuleChanges(readRules(applied), readRules(draft))),
     [applied, draft]
   );
+}
+
+/** Rules on both sides of Apply, with their names: a change is labelled by its rule, not by its number. */
+export interface RuleChangeSides {
+  applied: RuleRow[];
+  draft: RuleRow[];
+}
+
+function toRuleSide(text: string | null): RuleRow[] {
+  return text === null ? [] : toRuleRowsFromNodes(readRules(text), readRuleNames(text));
+}
+
+export function useRuleChangeSides(): RuleChangeSides {
+  const applied = ConfigDocumentState.use.applied();
+  const draft = ConfigDocumentState.use.draft();
+
+  return useMemo(() => ({ applied: toRuleSide(applied), draft: toRuleSide(draft) }), [applied, draft]);
 }
 
 /** Node and parameter changes that Apply will bring, beside the rule ones; without a draft, empty. */

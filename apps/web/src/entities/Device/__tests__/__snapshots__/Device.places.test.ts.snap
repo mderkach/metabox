@@ -2,6 +2,7 @@
 
 exports[`device label places > a new label place is visible in the snapshot diff 1`] = `
 [
+  "/src/entities/Rule/ui/useRuleTitle.ts",
   "/src/features/Rule/RuleEdit/ui/RuleSourceDevices.tsx",
   "/src/pages/Connections/lib/Connections.lib.ts",
   "/src/pages/Overview/ui/OverviewConnections.tsx",

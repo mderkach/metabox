@@ -84,11 +84,11 @@
     "skipped_other": "… {{count}} matching lines",
     "rules": {
       "label": "Routing rule changes",
-      "target": "<node>Rule {{index}}</node>: {{from}} → {{to}}",
-      "added": "<node>Rule {{index}}</node> added",
-      "removed": "Rule {{index}} removed",
-      "changed": "<node>Rule {{index}}</node> changed",
-      "moved": "Rule {{previous}} moved to position <node>{{index}}</node>",
+      "target": "<node>{{title}}</node> (rule {{index}}): {{from}} → {{to}}",
+      "added": "Added: <node>{{title}}</node> (rule {{index}})",
+      "removed": "Removed: {{title}} (rule {{index}})",
+      "changed": "Changed: <node>{{title}}</node> (rule {{index}})",
+      "moved": "Moved: <node>{{title}}</node> from position {{previous}} to {{index}}",
       "more_one": "And {{count}} more change",
       "more_other": "And {{count}} more changes"
     },

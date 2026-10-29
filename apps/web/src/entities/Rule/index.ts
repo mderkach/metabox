@@ -1,5 +1,7 @@
 export { checkRuleNode, isRuleRecognized, toRuleRows, toRuleRowsFromNodes } from './model/Rule.adapter';
 export { toAppliedIndices } from './model/Rule.applied';
+export { toHostAddress, toRuleCaption } from './model/Rule.caption';
+export type { RuleCaption } from './model/Rule.caption';
 export { RULE_CHANGE, toRuleChanges } from './model/Rule.changes';
 export type { RuleChange } from './model/Rule.changes';
 export {
@@ -16,3 +18,5 @@ export { filterRules, parseRuleSearch, toTargetFilter, toTargetGroups, toTargetP
 export type { RuleSearch, RuleSetFilter, RuleTargetFilter, RuleTargetGroup } from './model/Rule.filter';
 export { newRulePlace, RULE_TARGET, ruleSetsOf, toNewRuleRow } from './model/Rule.model';
 export type { NewRulePlace, RuleBranch, RuleGroup, RuleMatcher, RuleRow, RuleTargetKind } from './model/Rule.model';
+export { useRuleTitle } from './ui/useRuleTitle';
+export type { RuleTitle } from './ui/useRuleTitle';

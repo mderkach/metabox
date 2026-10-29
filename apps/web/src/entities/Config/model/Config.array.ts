@@ -17,6 +17,7 @@ import {
  */
 interface ElementSpan {
   start: number;
+  valueStart: number;
   valueEnd: number;
   /** `-1` means the element has no comma after it. */
   comma: number;
@@ -96,7 +97,13 @@ function toSpans(text: string, array: Node): ElementSpan[] {
 
     if (item !== undefined) {
       from = item.offset + item.length;
-      spans.push({ start: gap.nextStart ?? item.offset, valueEnd: from, comma: -1, end: from });
+      spans.push({
+        start: gap.nextStart ?? item.offset,
+        valueStart: item.offset,
+        valueEnd: from,
+        comma: -1,
+        end: from,
+      });
     }
   }
 
@@ -303,4 +310,131 @@ export function moveElement(text: string, path: JSONPath, from: number, to: numb
   const after = applyEdits(removed, insertEdits(toSpans(removed, rest), position, toChunk(text, span), separator));
 
   return verified(text, after, path, list.values.toSpliced(from, 1).toSpliced(position, 0, list.values[from]));
+}
+
+/** A line comment that names the element: the last one above it, with no blank line in between. */
+interface NameComment {
+  offset: number;
+  end: number;
+  name: string;
+}
+
+const NAME_MARK = '//';
+
+/** Only the line break and indents separate the name from its element. */
+const NAME_GAP = /^[\t ]*\r?\n[\t ]*$/;
+
+const BLANK = /^[\t ]*$/;
+
+const SPACES = /\s+/g;
+
+/** The name as it goes into the comment: one line, no edge spaces. */
+export function toElementName(name: string): string {
+  return name.replaceAll(SPACES, ' ').trim();
+}
+
+function nameCommentOf(text: string, span: ElementSpan): NameComment | null {
+  const scanner = createScanner(text.slice(span.start, span.valueStart), false);
+  let last: { token: number; offset: number; end: number } | null = null;
+
+  for (let token = scanner.scan(); token !== TOKEN.Eof; token = scanner.scan()) {
+    if (token === TOKEN.LineComment || token === TOKEN.BlockComment) {
+      const offset = span.start + scanner.getTokenOffset();
+
+      last = { token, offset, end: offset + scanner.getTokenLength() };
+    }
+  }
+
+  if (last?.token !== TOKEN.LineComment || !NAME_GAP.test(text.slice(last.end, span.valueStart))) return null;
+
+  return { offset: last.offset, end: last.end, name: text.slice(last.offset + NAME_MARK.length, last.end).trim() };
+}
+
+function lineStart(text: string, offset: number): number {
+  return text.lastIndexOf('\n', offset - 1) + 1;
+}
+
+/**
+ * Names of the list elements, one per element: the line comment right above
+ * it. `null` means no name. A comment at the end of the previous element's
+ * line belongs to that element, not to the next one (see `splitGap`).
+ */
+export function readElementNames(text: string, path: JSONPath): (string | null)[] {
+  const array = findArray(text, [...path, 0]);
+
+  if (array === undefined) return [];
+
+  return toSpans(text, array).map((span) => {
+    const name = nameCommentOf(text, span)?.name ?? '';
+
+    return name.length > 0 ? name : null;
+  });
+}
+
+function removeNameEdit(text: string, comment: NameComment, span: ElementSpan): Edit {
+  const start = lineStart(text, comment.offset);
+
+  // Another comment shares the line: only the name goes, the line stays.
+  if (!BLANK.test(text.slice(start, comment.offset))) {
+    return { offset: comment.offset, length: comment.end - comment.offset, content: '' };
+  }
+
+  return { offset: start, length: lineStart(text, span.valueStart) - start, content: '' };
+}
+
+function insertNameEdit(text: string, span: ElementSpan, line: string, formatting: FormattingOptions): Edit {
+  const eol = formatting.eol ?? '\n';
+  const start = lineStart(text, span.valueStart);
+  const indent = text.slice(start, span.valueStart);
+
+  if (BLANK.test(indent)) {
+    return { offset: start, length: 0, content: `${indent}${line}${eol}` };
+  }
+
+  // A list on one line: a line comment needs a line of its own, so the element
+  // moves to the next line, one indent deeper than the line it was on.
+  const unit =
+    formatting.insertSpaces === true && formatting.tabSize !== undefined ? ' '.repeat(formatting.tabSize) : '\t';
+  const deeper = `${/^[\t ]*/.exec(text.slice(start))?.[0] ?? ''}${unit}`;
+  let gap = span.valueStart;
+
+  while (gap > start && WHITESPACE.test(text[gap - 1])) gap--;
+
+  return { offset: gap, length: span.valueStart - gap, content: `${eol}${deeper}${line}${eol}${deeper}` };
+}
+
+/**
+ * Writes the element name as a line comment right above it, replaces the one
+ * there or, for an empty name, removes it. The element and the rest of the
+ * text keep their bytes. `null` refuses an unsafe edit or a path that is not a
+ * list element.
+ */
+export function nameElement(text: string, path: JSONPath, name: string, formatting: FormattingOptions): string | null {
+  const list = locate(text, path);
+  const span = list?.spans.at(list.index);
+
+  if (list === null || span === undefined) return null;
+
+  const next = toElementName(name);
+  const comment = nameCommentOf(text, span);
+  const line = `${NAME_MARK} ${next}`;
+  let edit: Edit | null = null;
+
+  if (comment !== null) {
+    edit =
+      next.length === 0
+        ? removeNameEdit(text, comment, span)
+        : { offset: comment.offset, length: comment.end - comment.offset, content: line };
+  } else if (next.length > 0) {
+    edit = insertNameEdit(text, span, line, formatting);
+  }
+
+  if (edit === null) return text;
+
+  const after = applyEdits(text, [edit]);
+  const arrayPath = path.slice(0, -1);
+
+  if (verified(text, after, arrayPath, list.values) === null) return null;
+
+  return readElementNames(after, arrayPath).at(list.index) === (next.length > 0 ? next : null) ? after : null;
 }

@@ -19,6 +19,7 @@ const PLACES: readonly { place: string; file: string }[] = [
   { place: 'сводка обзора', file: '/src/pages/Overview/ui/OverviewConnections.tsx' },
   { place: 'объяснение маршрута', file: '/src/widgets/RouteExplanation/ui/RouteExplanationTitle.tsx' },
   { place: 'форма правила', file: '/src/features/Rule/RuleEdit/ui/RuleSourceDevices.tsx' },
+  { place: 'подпись правила без имени', file: '/src/entities/Rule/ui/useRuleTitle.ts' },
 ];
 
 const LABEL_CALL = /\bdeviceLabel\(/;

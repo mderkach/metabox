@@ -2,10 +2,10 @@
 
 |                      |                                                                           |
 | -------------------- | ------------------------------------------------------------------------- |
-| **Document version** | 1.62                                                                      |
+| **Document version** | 1.63                                                                      |
 | **Status**           | **approved** 2026-08-30, except the open questions in section 10.1        |
 | **Owner**            | project author                                                            |
-| **Last revision**    | 2026-10-25                                                                |
+| **Last revision**    | 2026-10-30                                                                |
 | **Basis**            | deep-interview `metabox-di-001` (11 rounds) + `metabox-di-002` (7 rounds) |
 | **Final ambiguity**  | 11% / 15% (threshold 20%)                                                 |
 
@@ -85,6 +85,7 @@
 | 1.60    | 2026-10-25 | AC-72: the MCP wiring can no longer reach the Clash API latency test: `mcp.Diagnoser` offers only an observing run, whose proxy row reports the latency sing-box last recorded for the node the tool is now asked about, the same `/proxies` answer the proxies tool reads, and is skipped with the new `not_measured` reason when there is no record (never tested, or the last test failed and erased it). The live test stays on the panel's own diagnostics path. Issue #112                                                                                                                                                       |
 | 1.61    | 2026-10-25 | Third-party router packages are no longer named: requirements, the analog review and appendix B state the behaviour itself (US-11, AC-48, AC-49, AC-52, AC-57, AC-67, AC-79, OQ-11, M5). Requirements unchanged                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | 1.62    | 2026-10-25 | The daemon manages only the `metabox-singbox` service (AC-48, AC-56, component "Dataplane"): UCI `init_script` and `service_instance`, the daemon flags for them, multi-instance selection and the support for a service of another package are removed, with the API codes `launch_mismatch`, `dataplane_foreign_service`, `service_instance_ambiguous` and the `foreign_service` field ([ADR-0069](./adr/ADR-0069-manage-only-the-metabox-singbox-service.md))                                                                                                                                                                       |
+| 1.63    | 2026-10-30 | AC-86 opened: a routing rule has a name, kept as a line comment right above the rule because the fork has no name field on a rule; the rule form edits it, and a rule without one is labelled by its content in the list, the rule panel and the Apply summary, the number going second ([ADR-0070](./adr/ADR-0070-name-route-rules-with-a-line-comment-above-the-rule.md))                                                                                                                                                                                                                                                            |
 
 > The document is living. Any decision in [`adr/`](./adr/README.md), including those moved from Appendix A, may be revised — they are decisions, not requirements; requirements are in sections 5 and 6.
 
@@ -226,6 +227,7 @@ Implementation state is not tracked in the PRD: it describes requirements, not t
 - [x] **AC-4.** Invalid values are highlighted in the UI before an apply attempt, with the node and the reason.
 - [x] **AC-5.** Each inbound/outbound type from the fork checklist has either a manual form or an auto-generated renderer — there are no nodes without a renderer.
 - [ ] **AC-6.** A config built from scratch in the UI for the "VLESS/Reality + rule-based routing" scenario passes `sing-box check` without manual edits.
+- [x] **AC-86.** A routing rule has a name: the line comment right above the rule object in `route.rules` (`// TV through VPN`), since the fork has no name field on a rule. The rule form has a "Name" field that writes, replaces and, when emptied, removes that comment without touching the rest of the text, and the name moves and is deleted together with its rule. A rule without a name is labelled by its content: the main condition (a source device by its device label) and the outbound or action, "geosite-ru → direct". The rules list, the rule panel and the Apply summary call a rule by its name or that label, the number going second. Decision in [ADR-0070](./adr/ADR-0070-name-route-rules-with-a-line-comment-above-the-rule.md).
 
 ### Rule-set Manager
 

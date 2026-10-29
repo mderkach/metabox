@@ -5,7 +5,7 @@ import { diffLines, type DiffLine } from '@shared/lib/diff';
 import { fingerprint } from '@shared/lib/fingerprint';
 import { createReactSelectors, stateCreator, useStore } from '@shared/lib/state';
 
-import { insertValue, moveValue, removeValue, setValue } from './Config.model';
+import { insertValue, moveValue, nameValue, removeValue, setValue } from './Config.model';
 import type { NodeEdit } from './Config.patch';
 import { readStoredDraft, writeStoredDraft } from './Config.storage';
 
@@ -64,6 +64,8 @@ export interface ConfigDocumentState {
   insert: (path: JSONPath, value: unknown) => boolean;
   /** `false` means the source layout cannot be moved safely; the document stays unchanged. */
   move: (path: JSONPath, from: number, to: number) => boolean;
+  /** Names a list element with the comment above it, an empty name removes it; `false` refuses an unsafe edit. */
+  rename: (path: JSONPath, name: string) => boolean;
   /** Write a list file into the draft; apply will deliver it in the envelope. */
   editList: (name: string, content: string) => void;
   /** Remove a list file on apply. */
@@ -171,6 +173,8 @@ const ConfigDocumentStateProto = stateCreator<ConfigDocumentState>((set, get) =>
     insert: (path, value) => patch((text) => insertValue(text, path, value)),
 
     move: (path, from, to) => patch((text) => moveValue(text, path, from, to)),
+
+    rename: (path, name) => patch((text) => nameValue(text, path, name)),
 
     discard: () => {
       set((state) =>
