@@ -60,6 +60,10 @@ gh secret set APK_SIGN_KEY < ~/.config/metabox/release.key
 
 В `main` изменения попадают только через PR. Правило репозитория закрывает мерж, пока не прошли джобы CI `checks` и `integration`. `checks` уже включает `integration`; вторую запись из правила можно убрать. Правило хранит имена джоб, поэтому переименование джобы в `ci.yml` требует правки правила в том же изменении. Иначе мерж будет ждать проверку, которой больше нет.
 
+## Actions в workflow
+
+Каждый внешний action в `.github/workflows/` закреплён по SHA коммита, тег указан комментарием в конце строки (`uses: actions/checkout@<sha> # v5`). Тег можно переставить, SHA нельзя. Чтобы обновить action, получите SHA нового тега через `gh api repos/<owner>/<repo>/git/ref/tags/<tag>` (у аннотированного тега `type` равен `tag`: разыменуйте его через `git/tags/<sha>`) и замените SHA и комментарий вместе.
+
 ## Обновления sing-box-extended
 
 Схема конфига генерируется по версии sing-box-extended, закреплённой в `tools/schemagen/go.mod`.
