@@ -199,7 +199,9 @@ export interface SystemStat {
 export interface TrafficHistory {
   stepSeconds: number;
   points: TrafficSample[];
-  /** Board readings with the same step: load, temperature, used memory. */
+  /** Step of `device`: the board ring coarsens apart from the traffic one. */
+  deviceStepSeconds: number;
+  /** Board readings with step `deviceStepSeconds`: load, temperature, used memory. */
   device: DeviceHistoryPoint[];
   /** Last minute of traffic by the second: the chart is filled with it on open. */
   recent: TrafficSample[];

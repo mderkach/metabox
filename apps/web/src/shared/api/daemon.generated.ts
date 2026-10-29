@@ -295,7 +295,9 @@ export const DevicePointSchema = z.object({
 export const HistorySchema = z.object({
   step_seconds: z.int(),
   points: z.array(PointSchema),
-  /** Device is the board readings with the same step: load, temperature, memory. */
+  /** DeviceStepSeconds is the step of Device. The board ring coarsens on its own: the readings go on while the traffic stream is down. */
+  device_step_seconds: z.int(),
+  /** Device is the board readings in sequence with the step DeviceStepSeconds: load, temperature, memory. */
   device: z.array(DevicePointSchema),
   /** Recent is the last minute of traffic per second, without averaging. Empty until the daemon has received a single sample. */
   recent: z.array(PointSchema),

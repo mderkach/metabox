@@ -135,7 +135,11 @@ const ServiceStateUnread ServiceErrorCode = "service_state_unread"
 type History struct {
 	StepSeconds int             `json:"step_seconds"`
 	Points      []history.Point `json:"points"`
-	// Device is the board readings with the same step: load, temperature, memory.
+	// DeviceStepSeconds is the step of Device. The board ring coarsens on its own: the
+	// readings go on while the traffic stream is down.
+	DeviceStepSeconds int `json:"device_step_seconds"`
+	// Device is the board readings in sequence with the step DeviceStepSeconds: load,
+	// temperature, memory.
 	Device []history.DevicePoint `json:"device"`
 	// Recent is the last minute of traffic per second, without averaging. Empty
 	// until the daemon has received a single sample.

@@ -40,7 +40,7 @@ func TestTrafficKeepsPartialStepOut(t *testing.T) {
 func TestTrafficWidensStep(t *testing.T) {
 	traffic := history.New(1, 10, 4)
 
-	for value := range int64(4) {
+	for value := range int64(3) {
 		traffic.Record(value, 0)
 	}
 
@@ -48,25 +48,64 @@ func TestTrafficWidensStep(t *testing.T) {
 		t.Fatalf("step before filling: got %d, expected 10", got)
 	}
 
-	traffic.Record(4, 0)
+	traffic.Record(3, 0)
 
 	if got := traffic.Step(); got != 20 {
 		t.Errorf("step after coarsening: got %d, expected 20", got)
 	}
+
+	// After coarsening a point takes two samples, as the merged ones do.
+	traffic.Record(4, 0)
+	traffic.Record(6, 0)
 
 	points := traffic.Points()
 	if len(points) != 3 {
 		t.Fatalf("points: got %d, expected 3", len(points))
 	}
 
-	// Pairs 0+1 and 2+3 merged into averages, the fifth point lay after them.
-	if points[0].Up != 0 || points[1].Up != 2 || points[2].Up != 4 {
+	// Pairs 0+1 and 2+3 merged into averages, the point of samples 4 and 6 lay after them.
+	if points[0].Up != 0 || points[1].Up != 2 || points[2].Up != 5 {
 		t.Errorf("point merge: got %+v", points)
 	}
 }
 
+// The window the panel draws is points times step. After any number of ring doublings it
+// must equal the samples taken, short of one unfinished point: a step doubled without
+// doubling the samples per point stretched six days of uptime into months.
+func TestWindowFollowsSamplesAcrossDoublings(t *testing.T) {
+	const (
+		points  = 8
+		samples = 100_000
+	)
+
+	traffic := history.New(1, 1, points)
+	device := history.NewDevice(1, 1, points)
+
+	for sample := 1; sample <= samples; sample++ {
+		traffic.Record(1, 1)
+		device.Record(history.DevicePoint{Load: 1})
+
+		checkWindow(t, "traffic", sample, len(traffic.Points()), traffic.Step())
+		checkWindow(t, "device", sample, len(device.Points()), device.Step())
+	}
+
+	// 100000 samples in an eight-point ring take a dozen doublings.
+	if got := traffic.Step(); got < 1<<12 {
+		t.Errorf("traffic step after %d samples: got %d, expected at least %d", samples, got, 1<<12)
+	}
+}
+
+func checkWindow(t *testing.T, name string, samples, points, step int) {
+	t.Helper()
+
+	window := points * step
+	if window > samples || samples-window >= step {
+		t.Fatalf("%s after %d samples: %d points of %d s cover %d s", name, samples, points, step, window)
+	}
+}
+
 func TestDeviceKeepsOrder(t *testing.T) {
-	device := history.NewDevice(1, 3)
+	device := history.NewDevice(1, 10, 3)
 
 	device.Record(history.DevicePoint{Load: 0.5, Celsius: 40, Memory: 100, Singbox: 10, Daemon: 1})
 	device.Record(history.DevicePoint{Load: 1.5, Celsius: 44, Memory: 300, Singbox: 30, Daemon: 3})
@@ -80,15 +119,14 @@ func TestDeviceKeepsOrder(t *testing.T) {
 // An overheating of one reading from a step must not dissolve among the neighbours: the history
 // is needed to notice it.
 func TestDeviceKeepsPeaksAndAveragesMemory(t *testing.T) {
-	device := history.NewDevice(2, 2)
+	device := history.NewDevice(2, 10, 4)
 
 	device.Record(history.DevicePoint{Load: 0.2, Celsius: 40, Memory: 100, Singbox: 10})
 	device.Record(history.DevicePoint{Load: 3.5, Celsius: 90, Memory: 300, Singbox: 30})
-	device.Record(history.DevicePoint{Load: 0.1, Celsius: 41, Memory: 100, Singbox: 10})
-	device.Record(history.DevicePoint{Load: 0.1, Celsius: 41, Memory: 100, Singbox: 10})
-	// The two-point ring is full: the next one merges them into one.
-	device.Record(history.DevicePoint{Load: 0.1, Celsius: 41, Memory: 100, Singbox: 10})
-	device.Record(history.DevicePoint{Load: 0.1, Celsius: 41, Memory: 100, Singbox: 10})
+	// Three calm points fill the four-point ring, and it merges them in pairs.
+	for range 6 {
+		device.Record(history.DevicePoint{Load: 0.1, Celsius: 41, Memory: 100, Singbox: 10})
+	}
 
 	points := device.Points()
 	if len(points) != 2 {
