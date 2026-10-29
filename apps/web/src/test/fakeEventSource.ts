@@ -22,9 +22,12 @@ export function fakeEventSource() {
 
   let seq = 0;
 
+  // One event object for all listeners of the topic, as the browser dispatches it.
   const emit = (topic: string, data: string) => {
+    const event = new MessageEvent(topic, { data });
+
     for (const handler of listeners.get(topic) ?? []) {
-      handler(new MessageEvent(topic, { data }));
+      handler(event);
     }
   };
 

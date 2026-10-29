@@ -12,12 +12,16 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
+
+	"metabox/internal/locale"
 )
 
 // Stream topics. The panel subscribes to all at once: a separate subscription for
@@ -28,6 +32,23 @@ const (
 	TopicConnections = "connections"
 	TopicService     = "service"
 	TopicSystem      = "system"
+)
+
+// MaxSubscribers is how many streams the Hub holds at once. A browser gives an origin six
+// HTTP/1.1 connections, and a panel needs at least two of them for requests and the log
+// stream, so one client holds at most four streams; the ceiling covers two such clients.
+// Every reader gets each connections frame of up to ~10 MB written to its socket, and on
+// a router an unbounded count turns into an unbounded write load.
+const MaxSubscribers = 8
+
+// RetryAfter is after how many seconds a reader refused with ErrTooManySubscribers retries.
+const RetryAfter = "5"
+
+var (
+	// ErrTooManySubscribers means MaxSubscribers streams are open, a new one is refused.
+	ErrTooManySubscribers = locale.New("too many runtime streams open")
+
+	errNoFlush = errors.New("streaming not supported")
 )
 
 // Event is an envelope. Seq is counted for each reader separately and grows without
@@ -128,8 +149,9 @@ func New(source Source, log *slog.Logger, opts Options) *Hub {
 }
 
 // subscribe adds a reader and brings up the sources if it is the first. The second
-// return value is a snapshot of the latest events for each topic.
-func (h *Hub) subscribe() (*subscriber, []Event, func()) {
+// return value is a snapshot of the latest events for each topic. Beyond MaxSubscribers
+// readers it returns ErrTooManySubscribers.
+func (h *Hub) subscribe() (*subscriber, []Event, func(), error) {
 	// The reader buffer. A slow reader must not block the broadcast to
 	// the others, so the queue is finite and an overflow loses the event.
 	const buffer = 16
@@ -141,7 +163,13 @@ func (h *Hub) subscribe() (*subscriber, []Event, func()) {
 		h.mu.Unlock()
 		close(sub.ch)
 
-		return sub, nil, func() {}
+		return sub, nil, func() {}, nil
+	}
+
+	if len(h.subscribers) >= MaxSubscribers {
+		h.mu.Unlock()
+
+		return nil, nil, nil, ErrTooManySubscribers
 	}
 
 	h.subscribers[sub] = struct{}{}
@@ -157,7 +185,7 @@ func (h *Hub) subscribe() (*subscriber, []Event, func()) {
 	}
 	h.mu.Unlock()
 
-	return sub, recent, func() { h.unsubscribe(sub) }
+	return sub, recent, func() { h.unsubscribe(sub) }, nil
 }
 
 func (h *Hub) unsubscribe(sub *subscriber) {
@@ -334,15 +362,20 @@ func (h *Hub) PublishConnections(raw json.RawMessage) {
 
 // publish distributes an event of set gen. An event of a departed set
 // is dropped: its data does not belong to the current upstream.
-func (h *Hub) publish(gen uint64, topic string, data json.RawMessage) {
+func (h *Hub) publish(gen uint64, topic string, raw json.RawMessage) {
 	// The check stands here, at the single publication point: invalid data
 	// would settle in the topic's last state, and then envelope building would fail
-	// for every connecting reader, causing a reconnect storm.
-	if !json.Valid(data) {
+	// for every connecting reader, causing a reconnect storm. The compact form is
+	// built once here and shared by all readers: writeEvent puts it into the
+	// envelope as is instead of re-encoding a frame of up to ~10 MB per reader.
+	var compact bytes.Buffer
+	if err := json.Compact(&compact, raw); err != nil {
 		h.log.Debug("source returned non-JSON", "topic", topic)
 
 		return
 	}
+
+	data := json.RawMessage(compact.Bytes())
 
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -371,15 +404,34 @@ func (h *Hub) publish(gen uint64, topic string, data json.RawMessage) {
 	}
 }
 
-// ServeHTTP serves the stream in the SSE format.
+// ServeHTTP serves the stream like Serve and refuses in plain text.
 func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	err := h.Serve(w, r)
+
+	switch {
+	case errors.Is(err, ErrTooManySubscribers):
+		w.Header().Set("Retry-After", RetryAfter)
+		http.Error(w, err.Error(), http.StatusTooManyRequests)
+	case err != nil:
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+// Serve serves the stream in the SSE format until the client leaves. An error is
+// returned only before anything is written, so the caller can still answer with a
+// status: ErrTooManySubscribers beyond MaxSubscribers readers, or a writer without flush.
+func (h *Hub) Serve(w http.ResponseWriter, r *http.Request) error {
 	// Support is checked before the first write: the flush attempt itself would send
 	// the header, and there would be no way to refuse after that.
 	if !SupportsFlush(w) {
-		http.Error(w, "streaming not supported", http.StatusInternalServerError)
-
-		return
+		return errNoFlush
 	}
+
+	sub, recent, cancel, err := h.subscribe()
+	if err != nil {
+		return err
+	}
+	defer cancel()
 
 	// The controller flushes, not a cast to http.Flusher: middleware
 	// wraps ResponseWriter, and the wrapper has no such method; it returns the original
@@ -400,14 +452,11 @@ func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	_ = control.Flush()
 
-	sub, recent, cancel := h.subscribe()
-	defer cancel()
-
 	arm()
 
 	for _, event := range recent {
 		if !writeEvent(w, event) {
-			return
+			return nil
 		}
 	}
 
@@ -419,44 +468,59 @@ func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	for {
 		select {
 		case <-r.Context().Done():
-			return
+			return nil
 		case <-keepAlive.C:
 			// An SSE comment: the panel ignores it, and the write to the socket
 			// detects a break.
 			arm()
 
 			if _, err := io.WriteString(w, ": keep-alive\n\n"); err != nil {
-				return
+				return nil
 			}
 
 			if err := control.Flush(); err != nil {
-				return
+				return nil
 			}
 		case event, ok := <-sub.ch:
 			if !ok {
-				return
+				return nil
 			}
 
 			arm()
 
 			if !writeEvent(w, event) {
-				return
+				return nil
 			}
 
 			if err := control.Flush(); err != nil {
-				return
+				return nil
 			}
 		}
 	}
 }
 
+// writeEvent writes the envelope by hand, in the field order of json.Marshal: Data is
+// already compact JSON shared by all readers, and Topic is one of the package constants,
+// which need no escaping.
 func writeEvent(w http.ResponseWriter, event Event) bool {
-	body, err := json.Marshal(event)
-	if err != nil {
+	head := make([]byte, 0, 64)
+	head = append(head, "event: "...)
+	head = append(head, event.Topic...)
+	head = append(head, "\ndata: {\"topic\":\""...)
+	head = append(head, event.Topic...)
+	head = append(head, "\",\"seq\":"...)
+	head = strconv.AppendUint(head, event.Seq, 10)
+	head = append(head, ",\"data\":"...)
+
+	if _, err := w.Write(head); err != nil {
 		return false
 	}
 
-	_, err = fmt.Fprintf(w, "event: %s\ndata: %s\n\n", event.Topic, body)
+	if _, err := w.Write(event.Data); err != nil {
+		return false
+	}
+
+	_, err := io.WriteString(w, "}\n\n")
 
 	return err == nil
 }

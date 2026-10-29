@@ -12,6 +12,7 @@ import (
 	"metabox/internal/contract"
 	"metabox/internal/dataplane"
 	"metabox/internal/devices"
+	"metabox/internal/events"
 	"metabox/internal/locale"
 	"metabox/internal/logs"
 	"metabox/internal/route"
@@ -204,6 +205,8 @@ func statusFor(err error) (status int, code contract.ErrorCode) {
 		return http.StatusServiceUnavailable, contract.ErrLogUnavailable
 	case errors.Is(err, logs.ErrTooManyStreams):
 		return http.StatusTooManyRequests, contract.ErrLogStreamLimit
+	case errors.Is(err, events.ErrTooManySubscribers):
+		return http.StatusTooManyRequests, contract.ErrEventStreamLimit
 	case errors.Is(err, logs.ErrClearForbidden):
 		return http.StatusConflict, contract.ErrLogClearForbidden
 	case errors.Is(err, errBadLogQuery):

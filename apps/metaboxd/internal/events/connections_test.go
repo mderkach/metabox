@@ -170,9 +170,8 @@ func TestConnectionsSnapshotBroken(t *testing.T) {
 	}
 }
 
-// The benchmark holds the NFR-2 ceiling: translating a snapshot of five thousand connections into
-// the daemon contract is the price of one topic event with the panel open.
-func BenchmarkConnectionsSnapshot5000(b *testing.B) {
+// clashSnapshot5000 is a raw Clash API snapshot of five thousand connections, the NFR-2 load.
+func clashSnapshot5000() json.RawMessage {
 	var sb strings.Builder
 
 	sb.WriteString(`{"connections":[`)
@@ -191,7 +190,13 @@ func BenchmarkConnectionsSnapshot5000(b *testing.B) {
 
 	sb.WriteString(`],"uploadTotal":1,"downloadTotal":2,"memory":1024}`)
 
-	raw := json.RawMessage(sb.String())
+	return json.RawMessage(sb.String())
+}
+
+// The benchmark holds the NFR-2 ceiling: translating a snapshot of five thousand connections into
+// the daemon contract is the price of one topic event with the panel open.
+func BenchmarkConnectionsSnapshot5000(b *testing.B) {
+	raw := clashSnapshot5000()
 
 	b.ReportAllocs()
 

@@ -1,7 +1,7 @@
 import { fakeEventSource } from '@test/fakeEventSource';
 import { describe, expect, it, vi } from 'vitest';
 
-import { RUNTIME_TOPIC } from '../runtimeStream';
+import { listenTopic, RUNTIME_TOPIC } from '../runtimeStream';
 import { watchSequence } from '../runtimeStream';
 
 describe('watchSequence', () => {
@@ -57,5 +57,36 @@ describe('watchSequence', () => {
     expect(stream.count(RUNTIME_TOPIC.Traffic)).toBe(1);
     stop();
     expect(stream.count(RUNTIME_TOPIC.Traffic)).toBe(0);
+  });
+});
+
+describe('listenTopic', () => {
+  it('shares one parse of a frame with the sequence watch', () => {
+    const stream = fakeEventSource();
+    const apply = vi.fn<(data: unknown) => void>();
+
+    watchSequence(stream.source, vi.fn<() => void>());
+    listenTopic(stream.source, RUNTIME_TOPIC.Connections, apply);
+
+    const parse = vi.spyOn(JSON, 'parse');
+
+    stream.send(RUNTIME_TOPIC.Connections, { connections: [] });
+
+    expect(parse).toHaveBeenCalledTimes(1);
+    expect(apply).toHaveBeenCalledWith({ connections: [] });
+    parse.mockRestore();
+  });
+
+  it('skips a frame that is not JSON without a warning', () => {
+    const stream = fakeEventSource();
+    const apply = vi.fn<(data: unknown) => void>();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    listenTopic(stream.source, RUNTIME_TOPIC.Traffic, apply);
+    stream.sendRaw(RUNTIME_TOPIC.Traffic, '{ оборвался');
+
+    expect(apply).not.toHaveBeenCalled();
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
   });
 });
