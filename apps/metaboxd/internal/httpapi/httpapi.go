@@ -5,6 +5,7 @@ package httpapi
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -67,6 +68,13 @@ type Service interface {
 	Restart(ctx context.Context) error
 }
 
+// Restarter restarts the daemon's own service. The interface is declared here, at the
+// consumer.
+type Restarter interface {
+	// Restart launches the restart and returns before this process is stopped.
+	Restart(ctx context.Context) error
+}
+
 // ConfigReader returns the applied config and its history. The interface is declared
 // here, at the consumer, and contains only reading: the files are owned by
 // config.Store, and the write goes by the Apply protocol.
@@ -107,6 +115,9 @@ type Options struct {
 	// Service controls the sing-box service. nil means control
 	// is unavailable: the panel opens, but the service card does not show.
 	Service Service
+	// Restart restarts the daemon's own service. nil means there is nothing to restart it
+	// with: there is no restart handler.
+	Restart Restarter
 	// Events is the single runtime stream to the panel. nil means the
 	// stream is not assembled: the screens stay on the Clash API proxy.
 	Events http.Handler
@@ -220,6 +231,7 @@ type Server struct {
 	allowedOrigin  string
 	spa            http.Handler
 	service        Service
+	restart        Restarter
 	events         http.Handler
 	clash          http.Handler
 	explain        Explainer
@@ -239,6 +251,7 @@ type Server struct {
 	ca             func() []byte
 	configPath     string
 	confirmWindow  time.Duration
+	instance       string
 	handler        http.Handler
 }
 
@@ -255,6 +268,7 @@ func NewServer(applier Applier, reader ConfigReader, log *slog.Logger, opts Opti
 		allowedOrigin:  opts.AllowedOrigin,
 		spa:            opts.SPA,
 		service:        opts.Service,
+		restart:        opts.Restart,
 		events:         opts.Events,
 		clash:          opts.Clash,
 		explain:        opts.Explain,
@@ -274,6 +288,7 @@ func NewServer(applier Applier, reader ConfigReader, log *slog.Logger, opts Opti
 		ca:             opts.CA,
 		configPath:     opts.ConfigPath,
 		confirmWindow:  opts.ConfirmWindow,
+		instance:       rand.Text(),
 	}
 	s.handler = s.routes()
 
@@ -365,6 +380,10 @@ func (s *Server) routes() http.Handler {
 		mux.HandleFunc("POST /api/service/{action}", s.handleServiceAction)
 	}
 
+	if s.restart != nil {
+		mux.HandleFunc("POST /api/daemon/restart", s.handleDaemonRestart)
+	}
+
 	if s.events != nil {
 		mux.HandleFunc("GET /api/events", s.handleEvents)
 	}
@@ -389,6 +408,7 @@ func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
 func (s *Server) handleStatus(w http.ResponseWriter, _ *http.Request) {
 	body := contract.Status{
 		Version:        s.version,
+		Instance:       s.instance,
 		SingboxVersion: s.singboxVersion,
 		ConfigPath:     s.configPath,
 		Runtime:        s.runtimeSources(),
@@ -905,6 +925,19 @@ func (s *Server) handleServiceAction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.handleServiceState(w, r)
+}
+
+// handleDaemonRestart launches the restart of the daemon's own service and answers 202 before
+// the service stops this process: the panel waits for a new instance in `GET /api/status`.
+func (s *Server) handleDaemonRestart(w http.ResponseWriter, r *http.Request) {
+	if err := s.restart.Restart(r.Context()); err != nil {
+		fail(s.log, w, r, err)
+
+		return
+	}
+
+	s.log.Info("daemon restart requested")
+	w.WriteHeader(http.StatusAccepted)
 }
 
 // noUpgrade closes the upgrade to WebSocket on the proxy branch.

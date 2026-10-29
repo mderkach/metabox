@@ -36,6 +36,7 @@ export const DAEMON_STATUS_FIXTURE: DaemonStatusWire = {
   },
   config_path: '/etc/sing-box/config.json',
   confirm_window_seconds: 60,
+  instance: 'MOCKINSTANCE00000000000000',
   runtime: { sources: ['clash_api'], connections: 'clash_api' },
 };
 

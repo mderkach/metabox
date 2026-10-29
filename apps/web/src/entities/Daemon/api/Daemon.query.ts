@@ -56,6 +56,19 @@ export function useDaemonStatus() {
 }
 
 /**
+ * The daemon process that answers the status: a new value means the daemon was
+ * restarted. Only the value is selected, so a status poll with the same process
+ * does not rerender the reader.
+ */
+export function useDaemonInstance(): string | undefined {
+  return useQuery({ ...getDaemonStatusOptions(), select: selectInstance }).data;
+}
+
+function selectInstance(wire: { instance: string }): string {
+  return wire.instance;
+}
+
+/**
  * Whether the daemon answers or is silent. Silence covers the same cases that
  * paint the unavailability banner: a broken request and a response schema that
  * is not understood. A response with a daemon error code is not silence: it is

@@ -33,6 +33,12 @@ linters:
         text: 'G204|G702'
         linters: [gosec]
 
+      # G204: the command is the daemon's own init script, a constant in main.go that
+      # restart.New requires to be absolute, with the fixed argument `restart`; no shell.
+      - path: internal/restart/restart\.go
+        text: 'G204'
+        linters: [gosec]
+
       # The schema cannot be obtained from the fork otherwise: registry options live in an unexported
       # field, and the test reads it through unsafe deliberately (ADR-0001).
       - path: _test\.go

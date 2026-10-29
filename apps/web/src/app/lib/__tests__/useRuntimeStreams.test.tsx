@@ -6,7 +6,8 @@ import { useEffect, type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AUTH_ENDPOINT } from '@entities/Auth';
-import { DAEMON_ENDPOINT, RuntimeStore } from '@entities/Daemon';
+import { DAEMON_ENDPOINT, DAEMON_QUERY, RuntimeStore } from '@entities/Daemon';
+import { DAEMON_STATUS_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture';
 import { STREAM_RECONNECT } from '@shared/api';
 
 import { AuthGate } from '../../ui/AuthGate';
@@ -63,8 +64,14 @@ function Shell() {
   return <p>панель</p>;
 }
 
+// Without retries, as the panel client for a 4xx: a probe joining a retried status fetch
+// would wait for the fake clock.
 function wrapper({ children }: { children: ReactNode }) {
-  return <QueryClientProvider client={new QueryClient()}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      {children}
+    </QueryClientProvider>
+  );
 }
 
 describe('useRuntimeStreams', () => {
@@ -216,6 +223,45 @@ describe('useRuntimeStreams', () => {
       });
 
       expect(FakeEventSource.opened).toBe(1);
+    });
+
+    // A restarted daemon is back while the backoff grown during its silence still counts down.
+    it('reopens it at once when a new daemon process answers', async () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+
+      let instance = 'OLD-INSTANCE';
+
+      server.use(http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json({ ...DAEMON_STATUS_FIXTURE, instance })));
+
+      const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+      renderHook(useRuntimeStreams, {
+        wrapper: ({ children }: { children: ReactNode }) => (
+          <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+        ),
+      });
+
+      act(() => {
+        RuntimeStore.getState().addReader();
+      });
+      await vi.waitFor(async () => {
+        await settleProbe();
+        expect(queryClient.getQueryData(DAEMON_QUERY.status())).toMatchObject({ instance: 'OLD-INSTANCE' });
+      });
+
+      act(() => {
+        FakeEventSource.last?.refuse();
+      });
+      await settleProbe();
+
+      expect(FakeEventSource.opened).toBe(1);
+
+      instance = 'NEW-INSTANCE';
+      await act(async () => queryClient.refetchQueries({ queryKey: DAEMON_QUERY.status() }));
+      await vi.waitFor(async () => {
+        await settleProbe();
+        expect(FakeEventSource.opened).toBe(2);
+      });
     });
 
     it('stops reconnecting on unmount', async () => {

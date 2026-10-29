@@ -37,6 +37,7 @@ import (
 	"metabox/internal/logs"
 	"metabox/internal/mcp"
 	"metabox/internal/procd"
+	"metabox/internal/restart"
 	"metabox/internal/route"
 	"metabox/internal/ruleset"
 	"metabox/internal/singbox"
@@ -96,6 +97,9 @@ const (
 	helpLangTimeout = 2 * time.Second
 
 	initScript = "/etc/init.d/" + dataplane.Service
+
+	// The daemon's own service, restarted from the panel.
+	daemonInitScript = "/etc/init.d/metaboxd"
 )
 
 // settings is what the daemon receives by flags. The default values
@@ -392,6 +396,11 @@ func run(log *slog.Logger, s settings) error {
 		Diag:           diagnoser,
 	})
 
+	self, err := restart.New(daemonInitScript, nil, log)
+	if err != nil {
+		return fmt.Errorf("daemon restart: %w", err)
+	}
+
 	api := httpapi.NewServer(manager, store, log, httpapi.Options{
 		Lang:           s.lang,
 		Version:        version.Version,
@@ -401,6 +410,7 @@ func run(log *slog.Logger, s settings) error {
 		AllowedOrigin:  s.allowedOrigin,
 		SPA:            spa,
 		Service:        service,
+		Restart:        self,
 		Events:         hub,
 		Clash:          clashHandler,
 		Explain:        explainer,

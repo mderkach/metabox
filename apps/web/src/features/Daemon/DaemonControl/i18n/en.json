@@ -1,0 +1,9 @@
+{
+  "restart": {
+    "action": "Restart",
+    "pending": "Restarting…",
+    "title": "Restart the panel?",
+    "description": "The panel goes silent for a few seconds and reconnects on its own. Charts and rule hit counts start over: the daemon keeps them in memory. sing-box and routing keep working.",
+    "confirm": "Restart the panel"
+  }
+}
