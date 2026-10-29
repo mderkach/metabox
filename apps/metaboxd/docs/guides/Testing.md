@@ -152,6 +152,8 @@ A Go test that needs procd, the sing-box binary and `/etc/sing-box` is separated
 
 The test bench check `apply-cycle-check` ([`.devcontainer/target/files/usr/bin/apply-cycle-check`](../../../../.devcontainer/target/files/usr/bin/apply-cycle-check)) stays independent of the daemon: it checks the environment itself.
 
+On the host, without a tag, [`internal/apply/http_test.go`](../../internal/apply/http_test.go) runs the Apply transaction through the HTTP handlers and the real `config.Store` in `t.TempDir()`, with the service and `sing-box check` scripted. It cuts the power of a daemon instance at the boundaries between the steps of the cycle, Confirm and the rollback (a torn write inside a step is not simulated), and a fresh instance on the same directories replays the journal; the disk, the journal and the API answers are checked after both.
+
 The HTTP suite requires both `CI=true` and `METABOX_EPHEMERAL_BENCH=1`, checks the Compose target identity and refuses an active transaction or a nonstandard fixture. It changes the disposable CI config and restarts the daemon: do not enable it on an owner's bench. It covers confirmation, invalid-candidate rejection, timeout rollback, restoration of a confirmation window after restart and a graceful interruption after the config write at a test-only restart barrier. Polls of real external processes use bounded wall-clock deadlines, since they cannot run inside `synctest`. The fixture is restored on failure too. This does not simulate a power loss or prove directory `fsync` on a device's overlayfs; AC-14 and AC-29 require their own evidence. The harness choice is [ADR-0067](../../../../docs/adr/ADR-0067-test-http-apply-on-the-disposable-ci-bench.md).
 
 ## Benchmarks
