@@ -4,7 +4,6 @@
 # stand-base`), CI has no firmware and takes the public OpenWrt rootfs of the same
 # branch with apk.
 ARG BASE_IMAGE=openwrt/rootfs:aarch64_generic-25.12.4
-ARG SINGBOX_VERSION=1.14.1-extended-2.7.2
 # The built daemon binary: the arch is set from outside because the target environment
 # image comes in both aarch64 and x86_64.
 ARG DAEMON_BINARY=dist/metaboxd-linux-arm64
@@ -16,14 +15,23 @@ FROM ${BASE_IMAGE} AS base
 # the OpenWrt rootfs has neither curl nor trusted roots for GitHub.
 # $BUILDPLATFORM: otherwise BuildKit would look for alpine under the OpenWrt platform.
 FROM --platform=$BUILDPLATFORM alpine:3.23 AS fetch
-ARG SINGBOX_VERSION
 COPY --from=base /etc/apk/arch /tmp/arch
+# The version and the hashes come from the pin shared with install.sh: the file name in a line
+# carries the version and the arch, so the package is found and verified by the arch of the base.
+COPY sing-box-extended.sha256 /tmp/pin
 RUN set -eu; \
     apk add --no-cache curl; \
     arch="$(cat /tmp/arch)"; \
-    curl -fsSL -o /sing-box.apk \
-      "https://github.com/shtorm-7/sing-box-extended/releases/download/v${SINGBOX_VERSION}/sing-box-extended_${SINGBOX_VERSION}_openwrt_${arch}.apk"
+    name="$(sed -n "s/^[0-9a-f]*  \(.*_openwrt_${arch}\.apk\)\$/\1/p" /tmp/pin)"; \
+    [ -n "$name" ] || { echo "sing-box-extended.sha256 has no package for arch $arch" >&2; exit 1; }; \
+    version="${name#sing-box-extended_}"; version="${version%_openwrt_*}"; \
+    curl -fsSL -o "/$name" \
+      "https://github.com/shtorm-7/sing-box-extended/releases/download/v${version}/${name}"; \
+    cd /; grep "  $name\$" /tmp/pin | sha256sum -c -; \
+    mv "/$name" /sing-box.apk
 
+# The fork's apk version is its release version with `-extended-` read as a dot
+# (1.14.1-extended-2.7.2 is 1.14.1.2.7.2); the minimum is the version the bench and the script install.
 # The panel is built as the same package that goes to the router (ADR-0011): the test bench
 # checks the delivery, not files laid out in place. The version is numeric:
 # apk does not accept a string like `dev` as a version.
@@ -37,6 +45,7 @@ COPY --from=base /etc/apk/arch /tmp/arch
 COPY apps/metaboxd/package /src/package
 COPY apps/metaboxd/package-scripts /src/package-scripts
 COPY ${DAEMON_BINARY} /src/metaboxd
+COPY sing-box-extended.sha256 /src/pin
 # The signing key comes as a BuildKit secret, so it stays out of build args and layers.
 # Without it the package is unsigned, as in the test bench.
 RUN --mount=type=secret,id=apk_sign_key \
@@ -46,6 +55,8 @@ RUN --mount=type=secret,id=apk_sign_key \
     install -m 0755 /src/metaboxd /pkgroot/usr/bin/metaboxd; \
     chmod 0755 /pkgroot/etc/init.d/metaboxd /pkgroot/etc/init.d/metabox-singbox; \
     chown -R root:root /pkgroot; \
+    fork="$(sed -n '1s/^[0-9a-f]*  sing-box-extended_\(.*\)_openwrt_.*/\1/p' /src/pin | sed 's/-extended-/./')"; \
+    [ -n "$fork" ] || { echo "cannot read the fork version from sing-box-extended.sha256" >&2; exit 1; }; \
     sign=; \
     if [ -s /run/secrets/apk_sign_key ]; then sign="--sign-key /run/secrets/apk_sign_key"; fi; \
     apk mkpkg $sign \
@@ -54,7 +65,7 @@ RUN --mount=type=secret,id=apk_sign_key \
       --info "arch:${PKG_ARCH:-$(cat /tmp/arch)}" \
       --info description:"sing-box configuration panel" \
       --info license:GPL-3.0-or-later \
-      --info depends:sing-box-extended \
+      --info "depends:sing-box-extended>=${fork}" \
       --script post-upgrade:/src/package-scripts/post-upgrade \
       --files /pkgroot \
       --output /out/metaboxd.apk
@@ -73,7 +84,8 @@ COPY .devcontainer/target/files/ /
 # sing-box and the panel are installed as packages: their own init scripts
 # come with them, and services start in the test bench the same way as on the router. sing-box
 # is started by the service of the panel package, the sing-box package's own service does not enter
-# autostart, on the router it is also disabled. The packages are not signed. The panel settings are put
+# autostart, on the router it is also disabled. The panel package is not signed; the fork
+# package was checked against its pinned hash in the fetch stage. The panel settings are put
 # before the install: apk does not overwrite a file in /etc, the package value is put next to it
 # as .apk-new; the test bench address relies on this, so after the install it
 # is checked.

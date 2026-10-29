@@ -74,11 +74,11 @@ The workflow logic is tested offline by `bash .github/scripts/fork-release-check
 
 The workflow does not change the version installed on routers and on the test bench: that follows the build tested on a real router. [`install.sh`](../install.sh) pins it in `SINGBOX_VERSION` and `SINGBOX_SHA256`, and checks the downloaded package against that hash. To move to a new version, change in one commit:
 
-- `SINGBOX_VERSION` and `SINGBOX_SHA256` in `install.sh`;
-- `SINGBOX_VERSION` in `.devcontainer/target/Dockerfile` and `.devcontainer/docker-compose.yml`;
+- `sing-box-extended.sha256`: the file name carries the version, the line the hash; the test bench reads this file;
+- `SINGBOX_VERSION` and `SINGBOX_SHA256` in `install.sh` (`make singbox-pin-check` compares them with the file);
 - the tested version in the README and the examples in `docs/Development.md`.
 
-The sha256 is the `digest` of the release asset:
+The file has one line for `aarch64_cortex-a53` (the router) and one for `aarch64_generic` (the CI bench). The sha256 is the `digest` of the release asset; use the other arch suffix for the second line:
 
 ```sh
 gh api repos/shtorm-7/sing-box-extended/releases/tags/v<version> --jq '.assets[] | select(.name | endswith("openwrt_aarch64_cortex-a53.apk")) | .digest'

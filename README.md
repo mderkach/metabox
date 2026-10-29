@@ -135,7 +135,7 @@ apk add metaboxd
 
 The repository index is signed with the same key. The `testing` channel has every release. The `stable` channel has only releases without a pre-release suffix, so it is empty until the first such release.
 
-The `sing-box-extended` package has its own `sing-box` service. metabox starts sing-box through `metabox-singbox`, so the `sing-box` service must stay off. The install script turns it off; after a manual install, do it yourself:
+The `sing-box-extended` package has its own `sing-box` service. metabox starts sing-box through `metabox-singbox`, so the `sing-box` service must stay off. The install script turns it off (for a fork that was already installed it asks first, and without a terminal it only prints the commands); after a manual install, do it yourself:
 
 ```sh
 /etc/init.d/sing-box stop

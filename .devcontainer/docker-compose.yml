@@ -61,7 +61,6 @@ services:
         # the public OpenWrt rootfs: CI has no firmware. Test bench variables live in
         # `.devcontainer/.env`, docker compose reads it.
         BASE_IMAGE: ${METABOX_BASE_IMAGE:-openwrt/rootfs:aarch64_generic-25.12.4}
-        SINGBOX_VERSION: ${SINGBOX_VERSION:-1.14.1-extended-2.7.2}
         DAEMON_BINARY: ${DAEMON_BINARY:-dist/metaboxd-linux-arm64}
     platform: ${OPENWRT_PLATFORM:-linux/aarch64_generic}
     # procd as init: needs its own namespaces and the right to start services.

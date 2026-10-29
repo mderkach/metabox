@@ -99,11 +99,24 @@ Go-модуля в корне репозитория нет. Сборка, ге�
 | `DAEMON_BINARY`      | `dist/metaboxd-linux-arm64`                 | бинарь, из которого собирается пакет                                    |
 | `OPENWRT_PLATFORM`   | `linux/aarch64_generic`                     | платформа образа: у публичного rootfs она нестандартная и задаётся явно |
 | `PKG_VERSION`        | из `VERSION`: `0.1.0-rc.2` → `0.1.0_rc2-r0` | версия пакета: пре-релиз semver apk пишет суффиксом `_rcN`              |
-| `SINGBOX_VERSION`    | `1.14.1-extended-2.7.2`                     | релиз sing-box-extended, который ставится на стенд                      |
 | `PKG_ARCH`           | пусто — архитектура базового образа         | архитектура пакета; релиз задаёт роутерную `aarch64_cortex-a53`         |
 | `APK_SIGN_KEY`       | пусто — пакет без подписи                   | путь к приватному ключу, которым подписывается пакет                    |
 
 `PKG_ARCH` и `APK_SIGN_KEY` читает только `make`. Их задаёт релиз, стенд собирается без них.
+
+Релиз sing-box-extended, который ставится на стенд, не переменная: версия и sha256 каждой архитектуры закреплены в [`sing-box-extended.sha256`](../sing-box-extended.sha256) — файле формата `sha256sum`. Dockerfile стенда скачивает пакет под архитектуру базы и проверяет его `sha256sum -c`; `metaboxd` зависит от `sing-box-extended` этой версии или новее. [`install.sh`](../install.sh) хранит ту же версию и хеш для роутера литералами, а `make singbox-pin-check` (его же запускает CI) падает, если они расходятся с файлом.
+
+### Проверка `install.sh`
+
+Запускайте скрипт в контейнере из образа устройства, не на роутере. В контейнере нет procd, поэтому каталоги блокировок создайте заранее. Скрипт ставит форк и `metaboxd` из опубликованного фида:
+
+```sh
+make stand-base
+docker run -d --name install-check --platform linux/aarch64_generic -v "$PWD/install.sh:/install.sh:ro" metabox/openwrt-device:latest sleep 3600
+docker exec install-check sh -c 'mkdir -p /var/lock /var/run && sh /install.sh --lang ru'
+```
+
+Второй запуск сделайте после `docker exec install-check /etc/init.d/sing-box enable`: скрипт должен сообщить о включённой службе форка и без терминала вместо обычной подсказки о запуске напечатать команды остановки. С терминалом (`docker exec -it`) он спросит, прежде чем выключать службу. Контейнер удаляется командой `docker rm -f install-check`.
 
 ### Тест HTTP Apply на стенде CI
 
