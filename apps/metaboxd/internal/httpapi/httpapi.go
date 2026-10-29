@@ -183,6 +183,7 @@ type HistoryReader interface {
 	Connections() []int
 	Device() []history.DevicePoint
 	Step() int
+	DeviceStep() int
 }
 
 // RuleSetsReader returns the catalog of ready rule sets. The interface is declared here, at the
@@ -861,11 +862,12 @@ func (s *Server) observeRuntime(ctx context.Context) bool {
 // handleHistory returns the traffic history: points go in sequence with the response step.
 func (s *Server) handleHistory(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(s.log, w, http.StatusOK, contract.History{
-		StepSeconds: s.history.Step(),
-		Points:      s.history.Points(),
-		Device:      s.history.Device(),
-		Recent:      s.history.Recent(),
-		Connections: s.history.Connections(),
+		StepSeconds:       s.history.Step(),
+		Points:            s.history.Points(),
+		DeviceStepSeconds: s.history.DeviceStep(),
+		Device:            s.history.Device(),
+		Recent:            s.history.Recent(),
+		Connections:       s.history.Connections(),
 	})
 }
 
