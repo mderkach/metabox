@@ -35,6 +35,9 @@ jobs:
             tools/schemagen/go.mod
             tools/schemagen/go.sum
 
+      - name: Fork pin matches install.sh
+        run: make singbox-pin-check
+
       - name: Release publication tests
         run: python3 .github/tests/test_release_publish.py
 

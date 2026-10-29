@@ -78,11 +78,11 @@ Workflow нужен секрет `FORK_BUMP_TOKEN` — токен с право�
 
 Workflow не меняет версию, которая ставится на роутеры и на стенд: она следует за сборкой, проверенной на настоящем роутере. [`install.sh`](../install.sh) закрепляет её в `SINGBOX_VERSION` и `SINGBOX_SHA256` и сверяет скачанный пакет с этим хешем. Чтобы перейти на новую версию, в одном коммите поменяйте:
 
-- `SINGBOX_VERSION` и `SINGBOX_SHA256` в `install.sh`;
-- `SINGBOX_VERSION` в `.devcontainer/target/Dockerfile` и `.devcontainer/docker-compose.yml`;
+- `sing-box-extended.sha256`: имя файла несёт версию, строка — хеш; стенд читает этот файл;
+- `SINGBOX_VERSION` и `SINGBOX_SHA256` в `install.sh` (`make singbox-pin-check` сверяет их с файлом);
 - проверенную версию в README и примеры в `docs/Development.md`.
 
-sha256 — это `digest` ассета релиза:
+В файле есть строки для `aarch64_cortex-a53` (роутер), `aarch64_generic` (стенд на публичном rootfs) и `x86_64` (стенд в CI). sha256 — это `digest` ассета релиза; для остальных строк замените суффикс архитектуры:
 
 ```sh
 gh api repos/shtorm-7/sing-box-extended/releases/tags/v<версия> --jq '.assets[] | select(.name | endswith("openwrt_aarch64_cortex-a53.apk")) | .digest'
