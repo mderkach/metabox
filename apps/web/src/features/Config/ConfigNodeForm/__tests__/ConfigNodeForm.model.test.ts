@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { NODE_REGISTRY } from '@entities/Config';
 import { SECRET_FIELD_KEYS } from '@shared/api/generated';
 
 import { listToText, packList, parseNumber, parseScalar, SECRET_MASK, secretMaskOf, textToList, UNSET } from '../model';
@@ -67,26 +68,33 @@ describe('secret field mask', () => {
     'submission_key',
     'uplink_data_key',
   ])('hides %s whole', (key) => {
-    expect(secretMaskOf(['tls', key])).toBe(SECRET_MASK.Whole);
+    expect(secretMaskOf(['tls', key], null)).toBe(SECRET_MASK.Whole);
   });
 
-  it('hides a URL after its host and keeps the URL keys out of the catalogue', () => {
+  it('hides a provider URL after its host and keeps the URL keys out of the catalogue', () => {
     for (const key of ['url', 'download_url']) {
-      expect(secretMaskOf(['providers', key])).toBe(SECRET_MASK.AfterHost);
+      expect(secretMaskOf([key], NODE_REGISTRY.Provider)).toBe(SECRET_MASK.AfterHost);
       expect(SECRET_FIELD_KEYS).not.toContain(key);
     }
   });
 
+  it('hides a URL outside a provider only when it carries userinfo or a query', () => {
+    for (const registry of [null, NODE_REGISTRY.Outbound, NODE_REGISTRY.Dns]) {
+      expect(secretMaskOf(['url'], registry)).toBe(SECRET_MASK.UrlCredentials);
+      expect(secretMaskOf(['route', 'geoip', 'download_url'], registry)).toBe(SECRET_MASK.UrlCredentials);
+    }
+  });
+
   it('matches a key in another case, as the sing-box decoder does', () => {
-    expect(secretMaskOf(['UUID'])).toBe(SECRET_MASK.Whole);
-    expect(secretMaskOf(['headers', 'Authorization'])).toBe(SECRET_MASK.Whole);
-    expect(secretMaskOf(['Private_Key'])).toBe(SECRET_MASK.Whole);
+    expect(secretMaskOf(['UUID'], null)).toBe(SECRET_MASK.Whole);
+    expect(secretMaskOf(['headers', 'Authorization'], null)).toBe(SECRET_MASK.Whole);
+    expect(secretMaskOf(['Private_Key'], null)).toBe(SECRET_MASK.Whole);
   });
 
   it('leaves a path to a key file, public material and other keys open', () => {
-    expect(secretMaskOf(['tls', 'key_path'])).toBeNull();
-    expect(secretMaskOf(['tls', 'certificate'])).toBeNull();
-    expect(secretMaskOf(['tls', 'reality', 'public_key'])).toBeNull();
-    expect(secretMaskOf(['mesh_psk_file'])).toBeNull();
+    expect(secretMaskOf(['tls', 'key_path'], null)).toBeNull();
+    expect(secretMaskOf(['tls', 'certificate'], null)).toBeNull();
+    expect(secretMaskOf(['tls', 'reality', 'public_key'], null)).toBeNull();
+    expect(secretMaskOf(['mesh_psk_file'], null)).toBeNull();
   });
 });
