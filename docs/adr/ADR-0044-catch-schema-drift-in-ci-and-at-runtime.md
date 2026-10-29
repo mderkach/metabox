@@ -38,7 +38,7 @@ Two independent mechanisms:
 
 The runtime mechanism works like this: the daemon reads `sing-box version` and returns it in `GET /api/status`; the schema carries the fork version as the `SCHEMA_FORK_VERSION` constant; the panel compares them (`schemaDrift` in `apps/web/src/entities/Daemon/model/Daemon.version.ts`) and shows a mark in the sidebar footer, visible from any screen, plus a details block in the configuration section under the tabs, since the divergence affects only forms. A binary newer than the schema gives a note that the forms have no new fields and they are edited in the "Text" mode; an older binary gives a warning that a field from a form will not pass the check. An unknown binary version does not count as a divergence.
 
-The CI mechanism is not implemented: `.github/workflows/` has only `ci.yml` on push and pull request, and it does not track fork releases. The fork version is bumped by hand by editing the `replace` block of `tools/schemagen/go.mod` and running `make schema` ([ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md)). Automating schema tracking is PRD milestone M4.
+The CI mechanism is `.github/workflows/fork-release-watch.yml`, run daily and on demand. `.github/scripts/fork-release-check.sh` compares the pin in the `replace` block of `tools/schemagen/go.mod` with the latest fork release. On a newer one the workflow rebuilds the `replace` block from the fork's `go.mod`, raises `forkVersion` in `tools/schemagen/main.go`, runs `make schema` ([ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md)) and opens or updates the PR from the branch `build/bump-sing-box-extended` with the schema diff; an existing branch is never overwritten. A PR opened with the default token starts no workflows, so the required checks need the `FORK_BUMP_TOKEN` secret. `SINGBOX_VERSION` of the test bench, `install.sh` and the README version follow the binary tested on the router and are not bumped.
 
 ## Consequences
 
@@ -49,11 +49,11 @@ The CI mechanism is not implemented: `.github/workflows/` has only `ci.yml` on p
 ### Negative
 
 - The comparison is strict by version: any fork release, even without schema changes, produces the block in the configuration section. Newer than the schema: a note; older: a warning.
-- Until the CI mechanism exists, the repository learns about a new fork release only when a person notices it.
+- Without the `FORK_BUMP_TOKEN` secret the workflow cannot open a PR that starts the required checks.
 
 ### Neutral or deferred
 
-- The CI mechanism is milestone M4.
+- The bump PR is reviewed and merged by a person.
 
 ## Compatibility, migration and rollback
 
@@ -62,7 +62,7 @@ Not applicable: the decision has been in effect since the start of the project a
 ## Validation
 
 - AC-28: the `internal/httpapi` tests, the `Daemon.version` test, the Overview screen and a daemon run with a 1.14 binary.
-- The CI mechanism is validated by an automatic PR with the schema diff appearing on a fork release, once it is implemented.
+- The CI mechanism is validated by `fork release watch` run with `dry_run` (prints the diff, pushes nothing) and by the PR with the schema diff it opens on a fork release.
 
 ## Links
 
