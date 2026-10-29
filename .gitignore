@@ -42,3 +42,5 @@ apps/metaboxd/internal/webui/static/*
 
 # apk signing key: lives only in the repository secret
 *.key
+*.pem
+!keys/metabox-release.pem

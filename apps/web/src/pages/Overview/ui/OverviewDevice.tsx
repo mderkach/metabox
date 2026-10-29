@@ -40,7 +40,7 @@ export function OverviewDevice({ system, collapsible }: { system: SystemStat | n
   const { t } = useTranslation('pages/Overview');
   const history = useTrafficHistory();
   const deviceHistory = history.data?.device ?? [];
-  const stepSeconds = history.data?.stepSeconds ?? 0;
+  const stepSeconds = history.data?.deviceStepSeconds ?? 0;
   // A board may have no zones at all, so the first of the sorted ones is taken
   // only on a non-empty list.
   const zones = system === null ? [] : system.thermal.toSorted((left, right) => right.celsius - left.celsius);

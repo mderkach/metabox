@@ -8,8 +8,14 @@ import (
 	"testing"
 
 	"metabox/internal/contract"
+	"metabox/internal/events"
 	"metabox/internal/httpapi"
 )
+
+// refusingStream is an event stream that refuses every reader with err.
+type refusingStream struct{ err error }
+
+func (s refusingStream) Serve(http.ResponseWriter, *http.Request) error { return s.err }
 
 func newStatusServer(t *testing.T, opts httpapi.Options) *httptest.Server {
 	t.Helper()
@@ -24,6 +30,7 @@ func newStatusServer(t *testing.T, opts httpapi.Options) *httptest.Server {
 // goes by the contract and is not guessed from the presence of data.
 func TestStatusReportsRuntimeSources(t *testing.T) {
 	stub := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
+	stream := refusingStream{}
 
 	tests := []struct {
 		name        string
@@ -33,7 +40,7 @@ func TestStatusReportsRuntimeSources(t *testing.T) {
 	}{
 		{
 			name:        "stream assembled",
-			opts:        httpapi.Options{Events: stub, Clash: stub},
+			opts:        httpapi.Options{Events: stream, Clash: stub},
 			sources:     []contract.RuntimeSource{contract.SourceClashAPI},
 			connections: contract.SourceClashAPI,
 		},
@@ -94,8 +101,8 @@ func TestStatusSourcesAreListEvenWhenEmpty(t *testing.T) {
 
 // The stream refusal goes in the error format: the panel reads every failure by its code.
 func TestEventsWithoutFlushAnswersWithCode(t *testing.T) {
-	stub := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
-	server := httpapi.NewServer(&fakeApplier{}, fakeReader{}, testLogger(t), httpapi.Options{Events: stub})
+	hub := events.New(nil, testLogger(t), events.Options{})
+	server := httpapi.NewServer(&fakeApplier{}, fakeReader{}, testLogger(t), httpapi.Options{Events: hub})
 
 	writer := &noFlushWriter{header: make(http.Header)}
 	req := httptest.NewRequest(http.MethodGet, "/api/events", nil)
@@ -112,6 +119,33 @@ func TestEventsWithoutFlushAnswersWithCode(t *testing.T) {
 	}
 	if body.Code != contract.ErrInternal {
 		t.Errorf("code: got %q, expected %q", body.Code, contract.ErrInternal)
+	}
+}
+
+// A stream over its reader limit is refused with a code and a time to retry: the panel
+// reopens it after a pause instead of a reconnect storm.
+func TestEventsOverLimitAnswersWithCode(t *testing.T) {
+	stream := refusingStream{err: events.ErrTooManySubscribers}
+	server := httpapi.NewServer(&fakeApplier{}, fakeReader{}, testLogger(t), httpapi.Options{Events: stream})
+
+	recorder := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/events", nil)
+	req.Host = "192.168.1.1"
+	server.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusTooManyRequests {
+		t.Fatalf("response code: got %d, expected %d", recorder.Code, http.StatusTooManyRequests)
+	}
+	if got := recorder.Header().Get("Retry-After"); got != events.RetryAfter {
+		t.Errorf("Retry-After: got %q, expected %q", got, events.RetryAfter)
+	}
+
+	var body contract.Error
+	if err := json.Unmarshal(recorder.Body.Bytes(), &body); err != nil {
+		t.Fatalf("body %q is not the error envelope: %v", recorder.Body.String(), err)
+	}
+	if body.Code != contract.ErrEventStreamLimit {
+		t.Errorf("code: got %q, expected %q", body.Code, contract.ErrEventStreamLimit)
 	}
 }
 

@@ -1,5 +1,7 @@
 import { createContext } from 'react';
 
+import type { NodeRegistry } from '@entities/Config';
+
 /** Type of the error set by a raw field with unparsed JSON. */
 export const RAW_PARSE_ERROR = 'parse';
 
@@ -12,3 +14,6 @@ export const RAW_PARSE_ERROR = 'parse';
  * the form does not redraw it.
  */
 export const RawFailuresContext = createContext<Map<string, unknown>>(new Map());
+
+/** Registry of the node the form edits; `null` for a field outside a node form. */
+export const NodeRegistryContext = createContext<NodeRegistry | null>(null);

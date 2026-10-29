@@ -99,11 +99,24 @@ Bench variables are set in `.devcontainer/.env`. The file is not committed. Both
 | `DAEMON_BINARY`      | `dist/metaboxd-linux-arm64`                   | the binary the package is built from                                              |
 | `OPENWRT_PLATFORM`   | `linux/aarch64_generic`                       | image platform: the public rootfs has a non-standard one, so it is set explicitly |
 | `PKG_VERSION`        | from `VERSION`: `0.1.0-rc.2` → `0.1.0_rc2-r0` | package version: apk writes a semver pre-release as an `_rcN` suffix              |
-| `SINGBOX_VERSION`    | `1.14.1-extended-2.7.2`                       | the sing-box-extended release installed on the bench                              |
 | `PKG_ARCH`           | empty: the architecture of the base image     | package architecture; the release sets the router's `aarch64_cortex-a53`          |
 | `APK_SIGN_KEY`       | empty: the package is unsigned                | path to the private key that signs the package                                    |
 
 `PKG_ARCH` and `APK_SIGN_KEY` are read only by `make`. The release sets them; the bench builds without them.
+
+The sing-box-extended release installed on the bench is not a variable: the version and the sha256 of each architecture are pinned in [`sing-box-extended.sha256`](../sing-box-extended.sha256), a `sha256sum` file. The bench Dockerfile downloads the package for the base architecture and checks it with `sha256sum -c`; `metaboxd` depends on `sing-box-extended` of that version or newer. [`install.sh`](../install.sh) carries the same version and the router hash as literals, and `make singbox-pin-check` (also run by CI) fails if they differ from the file.
+
+### Checking `install.sh`
+
+Run the script in a container from the device image, never on the router. The container has no procd, so create the lock directories first. The script installs the fork and `metaboxd` from the published feed:
+
+```sh
+make stand-base
+docker run -d --name install-check --platform linux/aarch64_generic -v "$PWD/install.sh:/install.sh:ro" metabox/openwrt-device:latest sleep 3600
+docker exec install-check sh -c 'mkdir -p /var/lock /var/run && sh /install.sh --lang en'
+```
+
+Run it a second time with `docker exec install-check /etc/init.d/sing-box enable` before it: the script must report the enabled fork service and, without a terminal, print the stop commands instead of the plain start hint. With a terminal (`docker exec -it`) it asks before disabling the service. Remove the container with `docker rm -f install-check`.
 
 ### HTTP Apply test on the CI bench
 

@@ -74,6 +74,25 @@ describe('rule set edit form', () => {
     expect(url).toHaveValue(URL_WITH_TOKEN);
   });
 
+  it('shows a public address without userinfo or query in full, editable at once', () => {
+    const open = 'https://lists.example.com/rules/ads.srs';
+
+    render(
+      <RuleSetEditForm
+        index={INDEX}
+        node={{ type: 'remote', tag: 'ads', url: open }}
+        takenTags={['own', 'ads']}
+        outbounds={['direct']}
+        onDone={vi.fn<() => void>()}
+      />
+    );
+
+    const url = screen.getByRole('textbox', { name: 'url' });
+
+    expect(url).toHaveValue(open);
+    expect(url).not.toHaveAttribute('readonly');
+  });
+
   it('a tag edit goes into the draft as typed: one line changes, the full address and foreign fields remain', async () => {
     const user = userEvent.setup();
 

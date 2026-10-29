@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
+import { NODE_REGISTRY } from '@entities/Config';
 import { Badge, SelectItem } from '@shared/ui';
 
 import type { NodeTypeOption } from '../model/ConfigNodeAdd.model';
@@ -17,7 +18,9 @@ export function ConfigNodeAddTypeItem({ option }: { option: NodeTypeOption }) {
         </span>
         {option.described !== null && (
           <span className='text-xs whitespace-normal text-muted-foreground'>
-            {t(`description.${option.described}`)}
+            {option.described.registry === NODE_REGISTRY.Inbound
+              ? t(`inboundDescription.${option.described.type}`)
+              : t(`description.${option.described.type}`)}
           </span>
         )}
       </span>

@@ -175,7 +175,7 @@ describe('overview screen', () => {
     expect(
       await screen.findByRole('img', { name: 'Память процесса sing-box за время работы демона' })
     ).toBeInTheDocument();
-    expect(screen.getAllByText(/^за 6 мин · от /)).toHaveLength(5);
+    expect(screen.getAllByText(/^за 13 мин · от /)).toHaveLength(5);
   });
 
   // The panel is not always open: a minute of traffic accumulates at the daemon, and the chart

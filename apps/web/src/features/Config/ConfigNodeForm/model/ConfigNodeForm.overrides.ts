@@ -1,4 +1,4 @@
-import { CONFIG_SECRET_KEYS, type NodeRegistry } from '@entities/Config';
+import { CONFIG_SECRET_KEYS, NODE_REGISTRY, type NodeRegistry } from '@entities/Config';
 import { FIELD_KIND } from '@shared/lib/schemaShape';
 
 /** Failure codes of override checks on top of the schema: the `ui` substitutes the text by them. */
@@ -203,27 +203,34 @@ export const NODE_OVERRIDE: Readonly<Partial<Record<NodeOverrideKey, NodeOverrid
   'service/api': API_OVERRIDE,
 };
 
-/** How a secret field hides its value: entirely or everything after the URL host. */
+/**
+ * How a secret field hides its value: entirely, everything after the URL host, or the
+ * same only for a URL that carries userinfo or a query string.
+ */
 export const SECRET_MASK = {
   Whole: 'whole',
   AfterHost: 'afterHost',
+  UrlCredentials: 'urlCredentials',
 } as const;
 
 export type SecretMask = (typeof SECRET_MASK)[keyof typeof SECRET_MASK];
 
 /**
- * Keys hidden after the URL host: the scheme and host show whose subscription or rule set
- * it is, while the token lies in the path or in the query. The generator cannot tell such a
- * key by its name, so the list is kept here, apart from the catalogue.
+ * URL keys. In a provider the URL is a subscription and its token may lie in the path, so
+ * everything after the host is hidden. Elsewhere (a rule set, a urltest probe, a database
+ * download) the URL is public and shown, unless it carries userinfo or a query string. The
+ * generator cannot tell such a key by its name, so the list is kept here, apart from the
+ * catalogue.
  */
 const URL_FIELD: ReadonlySet<string> = new Set(['url', 'download_url']);
 
 /**
- * Field mask by the last key of its path; `null` means the field is not a secret. A key
+ * Field mask by the last key of its path and the registry of the node it belongs to
+ * (`null` outside a node form); `null` result means the field is not a secret. A key
  * matches regardless of case, as the sing-box decoder matches field names. Whole-masked
  * keys are the generated catalogue, the same one the daemon masks MCP results by.
  */
-export function secretMaskOf(path: readonly string[]): SecretMask | null {
+export function secretMaskOf(path: readonly string[], registry: NodeRegistry | null): SecretMask | null {
   const key = path.at(-1)?.toLowerCase();
 
   if (key === undefined) {
@@ -234,7 +241,11 @@ export function secretMaskOf(path: readonly string[]): SecretMask | null {
     return SECRET_MASK.Whole;
   }
 
-  return URL_FIELD.has(key) ? SECRET_MASK.AfterHost : null;
+  if (!URL_FIELD.has(key)) {
+    return null;
+  }
+
+  return registry === NODE_REGISTRY.Provider ? SECRET_MASK.AfterHost : SECRET_MASK.UrlCredentials;
 }
 
 /** Type override; `null` means the type opens with the autoform as is. */

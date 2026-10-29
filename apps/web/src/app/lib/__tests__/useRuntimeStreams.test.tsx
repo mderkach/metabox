@@ -22,6 +22,7 @@ class FakeEventSource {
   static opened = 0;
 
   readyState = 0;
+  closed = false;
   private readonly listeners = new Map<string, () => void>();
 
   constructor() {
@@ -34,7 +35,15 @@ class FakeEventSource {
   }
 
   removeEventListener(): void {}
-  close(): void {}
+
+  close(): void {
+    this.closed = true;
+  }
+
+  /** The daemon accepted the stream. */
+  open(): void {
+    this.listeners.get('open')?.();
+  }
 
   /** The connection dropped: the browser reconnects by itself and reports an error event. */
   drop(): void {
@@ -138,6 +147,79 @@ describe('useRuntimeStreams', () => {
     });
 
     expect(fetchQuery).not.toHaveBeenCalled();
+  });
+
+  describe('on a hidden tab', () => {
+    function setHidden(hidden: boolean) {
+      vi.spyOn(document, 'hidden', 'get').mockReturnValue(hidden);
+      act(() => {
+        document.dispatchEvent(new Event('visibilitychange'));
+      });
+    }
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('closes the stream and opens it again with a refetch when the tab is visible', () => {
+      const queryClient = new QueryClient();
+      const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+
+      renderHook(useRuntimeStreams, {
+        wrapper: ({ children }: { children: ReactNode }) => (
+          <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+        ),
+      });
+
+      act(() => {
+        RuntimeStore.getState().addReader();
+      });
+
+      const first = FakeEventSource.last;
+
+      act(() => {
+        first?.open();
+      });
+      setHidden(true);
+
+      expect(first?.closed).toBe(true);
+      expect(FakeEventSource.opened).toBe(1);
+
+      setHidden(false);
+
+      expect(FakeEventSource.opened).toBe(2);
+
+      act(() => {
+        FakeEventSource.last?.open();
+      });
+
+      expect(invalidate).toHaveBeenCalledTimes(1);
+    });
+
+    it('cancels the scheduled reopen', async () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      server.use(
+        http.get(DAEMON_ENDPOINT.status(), () =>
+          HttpResponse.json({ code: 'unavailable', message: 'down' }, { status: 503 })
+        )
+      );
+
+      renderHook(useRuntimeStreams, { wrapper });
+
+      act(() => {
+        RuntimeStore.getState().addReader();
+      });
+      act(() => {
+        FakeEventSource.last?.refuse();
+      });
+      setHidden(true);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(STREAM_RECONNECT.MaxDelay);
+      });
+
+      expect(FakeEventSource.opened).toBe(1);
+    });
   });
 
   describe('when the browser closes the stream', () => {

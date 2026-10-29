@@ -28,7 +28,7 @@ import {
   type ConfigNodeFormModel,
   type NodeOverride,
 } from '../model';
-import { RAW_PARSE_ERROR, RawFailuresContext } from './ConfigNodeForm.context';
+import { NodeRegistryContext, RAW_PARSE_ERROR, RawFailuresContext } from './ConfigNodeForm.context';
 import { CONFIG_NODE_FORM_WIDGET } from './ConfigNodeForm.widgets';
 
 const NS = 'features/Config/ConfigNodeForm';
@@ -66,7 +66,11 @@ export function ConfigNodeForm({
     return null;
   }
 
-  return <ConfigNodeFormBody schema={schema} override={override} path={path} node={node} builtTags={builtTags} />;
+  return (
+    <NodeRegistryContext value={registry}>
+      <ConfigNodeFormBody schema={schema} override={override} path={path} node={node} builtTags={builtTags} />
+    </NodeRegistryContext>
+  );
 }
 
 export function ConfigNodeFormBody({

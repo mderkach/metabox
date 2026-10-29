@@ -192,6 +192,15 @@ func waitBenchReady(t *testing.T) {
 
 func benchRequest(t *testing.T, method, path string, body []byte, status int) []byte {
 	t.Helper()
+	data, code := benchRequestStatus(t, method, path, body)
+	if code != status {
+		t.Fatalf("%s %s: status %d, want %d", method, path, code, status)
+	}
+	return data
+}
+
+func benchRequestStatus(t *testing.T, method, path string, body []byte) ([]byte, int) {
+	t.Helper()
 	ctx, cancel := context.WithTimeout(t.Context(), 15*time.Second)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, method, benchURL+path, bytes.NewReader(body))
@@ -215,10 +224,7 @@ func benchRequest(t *testing.T, method, path string, body []byte, status int) []
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp.StatusCode != status {
-		t.Fatalf("%s %s: status %d, want %d", method, path, resp.StatusCode, status)
-	}
-	return data
+	return data, resp.StatusCode
 }
 
 func assertBenchConfig(t *testing.T, want []byte) {
@@ -260,7 +266,14 @@ func assertBenchStateCleared(t *testing.T) {
 
 func assertBenchRuntime(t *testing.T, domain string) {
 	t.Helper()
-	if !bytes.Contains(benchRequest(t, http.MethodGet, "/api/clash/rules", nil, http.StatusOK), []byte(domain)) {
+	// The transaction phase settles before the restarted sing-box listens on the Clash API again.
+	var rules []byte
+	waitBench(t, 15*time.Second, "the sing-box runtime after the service restart", func() bool {
+		data, status := benchRequestStatus(t, http.MethodGet, "/api/clash/rules", nil)
+		rules = data
+		return status == http.StatusOK
+	})
+	if !bytes.Contains(rules, []byte(domain)) {
 		t.Fatal("the applied rule is missing from the real sing-box runtime")
 	}
 }

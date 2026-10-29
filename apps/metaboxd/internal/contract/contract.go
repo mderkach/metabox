@@ -135,7 +135,11 @@ const ServiceStateUnread ServiceErrorCode = "service_state_unread"
 type History struct {
 	StepSeconds int             `json:"step_seconds"`
 	Points      []history.Point `json:"points"`
-	// Device is the board readings with the same step: load, temperature, memory.
+	// DeviceStepSeconds is the step of Device. The board ring coarsens on its own: the
+	// readings go on while the traffic stream is down.
+	DeviceStepSeconds int `json:"device_step_seconds"`
+	// Device is the board readings in sequence with the step DeviceStepSeconds: load,
+	// temperature, memory.
 	Device []history.DevicePoint `json:"device"`
 	// Recent is the last minute of traffic per second, without averaging. Empty
 	// until the daemon has received a single sample.
@@ -206,6 +210,9 @@ const (
 	// ErrLogStreamLimit means the maximum number of log streams is open; a new one
 	// opens when one of them closes.
 	ErrLogStreamLimit ErrorCode = "log_stream_limit"
+	// ErrEventStreamLimit means the maximum number of runtime streams is open; a new one
+	// opens when one of them closes.
+	ErrEventStreamLimit ErrorCode = "event_stream_limit"
 	// ErrLogClearForbidden means the log.output file lies outside the config directory, /var/run
 	// and /tmp: the daemon does not truncate such a file.
 	ErrLogClearForbidden ErrorCode = "log_clear_forbidden"

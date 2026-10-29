@@ -9,7 +9,7 @@ LDFLAGS    := -s -w -X metabox/internal/version.Version=$(VERSION) -X metabox/in
 # Pins the version down: the `go` directive in go.mod raises it but does not lower it.
 export GOTOOLCHAIN := go$(shell cat .go-version)
 
-.PHONY: all schema schema-daemon rule-set-snapshot web embed daemon daemon-device daemon-target ldflags dev dev-mock dev-mock-missing test test-schemagen lint hooks clean up up-dev down sh target-sh apply-check reach-check dataplane-check package stand-base stand-reset
+.PHONY: all schema schema-daemon rule-set-snapshot web embed daemon daemon-device daemon-target ldflags dev dev-mock dev-mock-missing test test-schemagen singbox-pin-check lint hooks clean up up-dev down sh target-sh apply-check reach-check dataplane-check package stand-base stand-reset
 
 all: daemon
 
@@ -82,6 +82,16 @@ test:
 test-schemagen:
 	cd tools/schemagen && go test \
 		-tags "$(SCHEMA_TAGS)" -ldflags "$(SCHEMA_LDFLAGS)" ./...
+
+# install.sh carries the fork version and the router package hash as literals, because it runs
+# from a bare router; they must equal the pin the test bench reads.
+singbox-pin-check:
+	@set -eu; \
+	line=$$(grep '_openwrt_aarch64_cortex-a53\.apk$$' sing-box-extended.sha256); \
+	sum=$${line%% *}; \
+	version=$${line#*sing-box-extended_}; version=$${version%%_openwrt_*}; \
+	grep -qx "SINGBOX_VERSION=$$version" install.sh || { echo "install.sh SINGBOX_VERSION differs from sing-box-extended.sha256 ($$version)" >&2; exit 1; }; \
+	grep -qx "SINGBOX_SHA256=$$sum" install.sh || { echo "install.sh SINGBOX_SHA256 differs from sing-box-extended.sha256 ($$sum)" >&2; exit 1; }
 
 GOLANGCI = go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0
 

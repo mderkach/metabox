@@ -20,8 +20,9 @@ import {
 
 import { nodeAddErrorText } from '../model/ConfigNodeAdd.errors';
 import { useNodeInsert } from '../model/ConfigNodeAdd.insert';
-import { nodeTypeOptions, nodeTypeSections } from '../model/ConfigNodeAdd.model';
+import { nodeTypeDocsUrl, nodeTypeOptions, nodeTypeSections } from '../model/ConfigNodeAdd.model';
 import { makeNodeAddSchema, NODE_ADD_DEFAULTS, type NodeAddModel } from '../model/ConfigNodeAdd.schema';
+import { ConfigNodeAddDocsLink } from './ConfigNodeAddDocsLink';
 import { ConfigNodeAddTypeItem } from './ConfigNodeAddTypeItem';
 
 const NS = 'features/Config/ConfigNodeAdd';
@@ -85,6 +86,7 @@ export function ConfigNodeAddManual({
         name='type'
         render={({ field, fieldState }) => {
           const unbuilt = options.find((option) => option.type === field.value)?.unbuilt ?? null;
+          const docsUrl = nodeTypeDocsUrl(registry, field.value);
           const error = nodeAddErrorText(t, fieldState.error?.message);
           const describedBy = [unbuilt === null ? null : typeHintId, error === null ? null : typeErrorId]
             .filter((id) => id !== null)
@@ -120,6 +122,7 @@ export function ConfigNodeAddManual({
                   ))}
                 </SelectContent>
               </Select>
+              {docsUrl !== null && <ConfigNodeAddDocsLink type={field.value} url={docsUrl} />}
               {unbuilt !== null && (
                 <p id={typeHintId} className='text-xs text-pretty text-signal-warn'>
                   {t('unbuilt.hint', { tag: unbuilt })}

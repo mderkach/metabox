@@ -67,6 +67,7 @@ var ru = map[string]string{
 	"%w: control characters":                   "%w: управляющие символы",
 	"sing-box log unavailable":                 "лог sing-box недоступен",
 	"too many log streams open":                "открыто слишком много потоков лога",
+	"too many runtime streams open":            "открыто слишком много потоков рантайма",
 	"log file outside the allowed directories": "файл лога вне разрешённых каталогов",
 	"wrong password":                           "пароль не подошёл",
 	"password rejected":                        "пароль не принят",

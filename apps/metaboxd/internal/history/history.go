@@ -23,25 +23,25 @@ type ring[T any] struct {
 	filled int
 }
 
-// push puts a point. A filled ring first merges neighbouring points in pairs
-// and frees half the space; in that case it returns true and the caller
-// doubles the step.
+// push puts a point. When the point fills the ring, neighbouring points are merged
+// in pairs and half the space is freed; in that case it returns true, and the caller
+// doubles both the step and the readings per point, so the next point covers the
+// same span as the merged ones.
 func (r *ring[T]) push(point T, merge func(older, newer T) T) bool {
 	if len(r.points) == 0 {
 		return false
 	}
 
-	compacted := false
-
-	if r.filled == len(r.points) {
-		r.compact(merge)
-		compacted = true
-	}
-
 	r.points[(r.first+r.filled)%len(r.points)] = point
 	r.filled++
 
-	return compacted
+	if r.filled < len(r.points) {
+		return false
+	}
+
+	r.compact(merge)
+
+	return true
 }
 
 // compact merges neighbouring points in pairs, leaving half. After it the data
@@ -147,6 +147,7 @@ func (t *Traffic) Record(up, down int64) {
 
 	if t.ring.push(point, mergePoints) {
 		t.stepSeconds *= 2
+		t.perPoint *= 2
 	}
 }
 
@@ -179,21 +180,27 @@ func (t *Traffic) Step() int {
 	return t.stepSeconds
 }
 
-// Device is the board readings history with the same step as the traffic.
+// Device is the board readings history. Its ring coarsens on its own schedule:
+// the readings go on while the traffic stream is down, so its step is its own.
 type Device struct {
 	mu sync.Mutex
 
-	perPoint int
-	ring     ring[DevicePoint]
+	perPoint    int
+	stepSeconds int
+	ring        ring[DevicePoint]
 
 	step    DevicePoint
 	counted int64
 }
 
-// NewDevice assembles the board history: `perPoint` readings per point, `points` points
-// before the first step coarsening.
-func NewDevice(perPoint, points int) *Device {
-	return &Device{perPoint: perPoint, ring: ring[DevicePoint]{points: make([]DevicePoint, points)}}
+// NewDevice assembles the board history: `perPoint` readings per point, `stepSeconds`
+// seconds between points, `points` points before the first step coarsening.
+func NewDevice(perPoint, stepSeconds, points int) *Device {
+	return &Device{
+		perPoint:    perPoint,
+		stepSeconds: stepSeconds,
+		ring:        ring[DevicePoint]{points: make([]DevicePoint, points)},
+	}
 }
 
 // Record accepts a readings take.
@@ -221,7 +228,10 @@ func (d *Device) Record(sample DevicePoint) {
 	}
 	d.step, d.counted = DevicePoint{}, 0
 
-	d.ring.push(point, mergeDevicePoints)
+	if d.ring.push(point, mergeDevicePoints) {
+		d.stepSeconds *= 2
+		d.perPoint *= 2
+	}
 }
 
 func mergeDevicePoints(older, newer DevicePoint) DevicePoint {
@@ -240,6 +250,14 @@ func (d *Device) Points() []DevicePoint {
 	defer d.mu.Unlock()
 
 	return d.ring.all()
+}
+
+// Step returns the current step between the readings points in seconds.
+func (d *Device) Step() int {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	return d.stepSeconds
 }
 
 // Connections is the number of live connections over the last minute, one snapshot

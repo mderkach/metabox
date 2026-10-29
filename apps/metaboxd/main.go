@@ -234,7 +234,7 @@ func run(log *slog.Logger, s settings) error {
 		clashHandler = clash
 	}
 
-	deviceHistory := history.NewDevice(historyStepSeconds/int(systemInterval/time.Second), historyPoints)
+	deviceHistory := history.NewDevice(historyStepSeconds/int(systemInterval/time.Second), historyStepSeconds, historyPoints)
 	sysinfo := device.New(device.Options{Port: clashPort(store), History: deviceHistory})
 
 	source := events.NewClashSource(
@@ -611,6 +611,8 @@ type historyReader struct {
 }
 
 func (h historyReader) Device() []history.DevicePoint { return h.device.Points() }
+
+func (h historyReader) DeviceStep() int { return h.device.Step() }
 
 func (h historyReader) Connections() []int { return h.connections.Recent() }
 
