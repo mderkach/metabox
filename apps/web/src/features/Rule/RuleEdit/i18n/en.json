@@ -6,6 +6,10 @@
     "sniff": "sniff the protocol"
   },
   "field": {
+    "name": {
+      "label": "Name",
+      "hint": "Kept in the config as a comment above the rule. Leave it empty and the rule is called by its conditions."
+    },
     "action": {
       "label": "What to do"
     },

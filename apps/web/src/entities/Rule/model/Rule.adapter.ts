@@ -118,13 +118,14 @@ export function toRuleRows(config: Config | null): RuleRow[] {
 }
 
 /**
- * The same over nodes read from the file text.
+ * The same over nodes read from the file text, with the rule names read from
+ * the same text in node order.
  *
  * The rules screen must open even when the schema did not accept the whole
  * config: one unfamiliar rule would otherwise hide the whole list, while the
  * user needs exactly to find this rule.
  */
-export function toRuleRowsFromNodes(nodes: readonly unknown[]): RuleRow[] {
+export function toRuleRowsFromNodes(nodes: readonly unknown[], names: readonly (string | null)[] = []): RuleRow[] {
   const rows: RuleRow[] = [];
 
   for (const [position, node] of nodes.entries()) {
@@ -137,17 +138,19 @@ export function toRuleRowsFromNodes(nodes: readonly unknown[]): RuleRow[] {
 
     const branch = toBranch(node);
     const target = toTarget(node);
+    const name = names.at(position) ?? null;
 
     rows.push({
       id: String(position),
       index: position + 1,
+      name,
       matchers: branch.matchers,
       group: branch.group,
       invert: Reflect.get(node, 'invert') === true,
       targetDetail: toTargetDetail(node, target.target),
       isCatchAll: branch.matchers.length === 0 && branch.group === null,
       recognized: isRuleRecognized(node),
-      searchText: [...toSearchText(branch), target.target].join(' '),
+      searchText: [...(name === null ? [] : [name]), ...toSearchText(branch), target.target].join(' '),
       ...target,
     });
   }

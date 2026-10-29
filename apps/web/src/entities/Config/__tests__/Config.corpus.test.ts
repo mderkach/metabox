@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
 import { parseConfig } from '../api/Config.query';
-import { findValue, insertValue, moveValue, readRules, removeValue, setValue } from '../model/Config.model';
+import {
+  findValue,
+  insertValue,
+  moveValue,
+  nameValue,
+  readRuleNames,
+  readRules,
+  removeValue,
+  setValue,
+} from '../model/Config.model';
 
 /**
  * The corpus is picked up as a whole directory: a new config just needs to be put
@@ -76,6 +85,39 @@ describe('config corpus', () => {
     expect((after?.match(/\/\/[^\r\n]*|\/\*[\s\S]*?\*\//g) ?? []).sort()).toEqual(
       (text.match(/\/\/[^\r\n]*|\/\*[\s\S]*?\*\//g) ?? []).sort()
     );
+  });
+
+  it.each(FILES)('$name keeps the document and the other names when a rule is named and unnamed', ({ text }) => {
+    const names = readRuleNames(text);
+
+    expect(names).toHaveLength(readRules(text).length);
+
+    if (names.length === 0) return;
+
+    const path = ['route', 'rules', names.length - 1];
+    const named = nameValue(text, path, 'Renamed rule');
+
+    expect(named).not.toBeNull();
+    expect(findValue(named ?? '', [])).toEqual(findValue(text, []));
+    expect(readRuleNames(named ?? '')).toEqual([...names.slice(0, -1), 'Renamed rule']);
+
+    const unnamed = nameValue(named ?? '', path, '');
+
+    expect(readRuleNames(unnamed ?? '')).toEqual([...names.slice(0, -1), null]);
+    expect(findValue(unnamed ?? '', [])).toEqual(findValue(text, []));
+  });
+
+  it('names are read from the comment right above the rule only', () => {
+    const file = FILES.find((item) => item.name === 'named-rules.jsonc');
+
+    expect(readRuleNames(file?.text ?? '')).toEqual(['Sniff first', null, null, 'TV through VPN', 'Ads', null]);
+  });
+
+  it('renaming a rule touches only its comment line', () => {
+    const text = FILES.find((item) => item.name === 'named-rules.jsonc')?.text ?? '';
+    const after = nameValue(text, ['route', 'rules', 3], 'TV');
+
+    expect(after).toBe(text.replace('// TV through VPN', '// TV'));
   });
 
   it.each(FILES)('$name keeps its line endings', ({ text }) => {

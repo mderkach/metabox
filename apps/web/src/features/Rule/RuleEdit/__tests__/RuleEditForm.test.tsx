@@ -1,7 +1,7 @@
 import { renderWithQuery } from '@test/renderWithQuery';
 import { selectOption } from '@test/selectOption';
 import { server } from '@test/server';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 
@@ -32,6 +32,7 @@ const RULE_SETS = ['github', 'geoip-cn'];
 const RULE: RuleRow = {
   id: '0',
   index: 1,
+  name: null,
   matchers: [{ key: 'rule_set', values: ['github'] }],
   group: null,
   invert: false,
@@ -50,7 +51,7 @@ describe('rule outbound form', () => {
   });
 
   it('opens on the value from the config and writes nothing until a change', () => {
-    render(<RuleEditForm rule={RULE} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
+    renderWithQuery(<RuleEditForm rule={RULE} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
 
     expect(screen.getByRole('combobox', { name: 'Куда отправить' })).toHaveTextContent('proxy');
     expect(ConfigDocumentState.getState().draft).toBeNull();
@@ -59,7 +60,7 @@ describe('rule outbound form', () => {
   it('an outbound change edits one line of the file, does not touch the rest of the rule', async () => {
     const user = userEvent.setup();
 
-    render(<RuleEditForm rule={RULE} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
+    renderWithQuery(<RuleEditForm rule={RULE} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
 
     const outbound = screen.getByRole('combobox', { name: 'Куда отправить' });
 
@@ -76,7 +77,7 @@ describe('rule outbound form', () => {
   it('changing the action to non-routing removes the outbound from the node instead of zeroing it', async () => {
     const user = userEvent.setup();
 
-    render(<RuleEditForm rule={RULE} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
+    renderWithQuery(<RuleEditForm rule={RULE} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
 
     await selectOption(user, screen.getByRole('combobox', { name: 'Что делать' }), 'оборвать');
 
@@ -116,7 +117,7 @@ describe('rule sets of a rule in the form', () => {
   });
 
   it('opens on the rule sets of the rule', () => {
-    render(<RuleEditForm rule={RULE} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
+    renderWithQuery(<RuleEditForm rule={RULE} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
 
     expect(screen.getByRole('combobox', { name: 'Сеты правил' })).toHaveTextContent('github');
   });
@@ -124,7 +125,7 @@ describe('rule sets of a rule in the form', () => {
   it('an added rule set lands in rule_set, the rest of the rule is untouched', async () => {
     const user = userEvent.setup();
 
-    render(<RuleEditForm rule={RULE} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
+    renderWithQuery(<RuleEditForm rule={RULE} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
 
     const sets = screen.getByRole('combobox', { name: 'Сеты правил' });
 
@@ -139,7 +140,7 @@ describe('rule sets of a rule in the form', () => {
   it('removing all rule sets deletes the field from the node instead of writing an empty list', async () => {
     const user = userEvent.setup();
 
-    render(<RuleEditForm rule={RULE} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
+    renderWithQuery(<RuleEditForm rule={RULE} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
 
     await selectOption(user, screen.getByRole('combobox', { name: 'Сеты правил' }), 'github');
     await user.keyboard('{Escape}');
@@ -151,7 +152,7 @@ describe('rule sets of a rule in the form', () => {
     const user = userEvent.setup();
     const rule = loadRule({ rule_set: 'github', outbound: 'proxy' });
 
-    render(<RuleEditForm rule={rule} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
+    renderWithQuery(<RuleEditForm rule={rule} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
 
     expect(screen.getByRole('combobox', { name: 'Сеты правил' })).toHaveTextContent('github');
 
@@ -168,7 +169,7 @@ describe('rule sets of a rule in the form', () => {
       outbound: 'proxy',
     });
 
-    render(<RuleEditForm rule={rule} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
+    renderWithQuery(<RuleEditForm rule={rule} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
 
     expect(screen.getByRole('combobox', { name: 'Куда отправить' })).toBeInTheDocument();
     expect(screen.queryByRole('combobox', { name: 'Сеты правил' })).not.toBeInTheDocument();
@@ -178,7 +179,7 @@ describe('rule sets of a rule in the form', () => {
     const user = userEvent.setup();
     const rule = loadRule({ rule_set: ['old-set'], outbound: 'proxy' });
 
-    render(<RuleEditForm rule={rule} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
+    renderWithQuery(<RuleEditForm rule={rule} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
 
     const sets = screen.getByRole('combobox', { name: 'Сеты правил' });
 
@@ -193,7 +194,7 @@ describe('rule sets of a rule in the form', () => {
   it('warns that a rule without rule sets and other conditions takes all traffic, but still writes it', async () => {
     const user = userEvent.setup();
 
-    render(<RuleEditForm rule={RULE} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
+    renderWithQuery(<RuleEditForm rule={RULE} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
 
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
 
@@ -210,7 +211,7 @@ describe('rule sets of a rule in the form', () => {
     const user = userEvent.setup();
     const rule = loadRule({ rule_set: ['github'], port: 443, outbound: 'proxy' });
 
-    render(<RuleEditForm rule={rule} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
+    renderWithQuery(<RuleEditForm rule={rule} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
 
     await selectOption(user, screen.getByRole('combobox', { name: 'Сеты правил' }), 'github');
     await user.keyboard('{Escape}');
@@ -224,7 +225,7 @@ describe('rule conditions in the form', () => {
     const user = userEvent.setup();
     const rule = loadRule({ rule_set: ['github'], outbound: 'proxy' });
 
-    render(<RuleEditForm rule={rule} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
+    renderWithQuery(<RuleEditForm rule={rule} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
 
     await selectOption(user, screen.getByRole('combobox', { name: 'Добавить условие' }), 'Домен с поддоменами');
 
@@ -237,7 +238,7 @@ describe('rule conditions in the form', () => {
     const user = userEvent.setup();
     const rule = loadRule({ rule_set: ['github'], outbound: 'proxy' });
 
-    render(<RuleEditForm rule={rule} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
+    renderWithQuery(<RuleEditForm rule={rule} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
 
     await selectOption(user, screen.getByRole('combobox', { name: 'Добавить условие' }), 'Домен с поддоменами');
     await user.type(screen.getByRole('textbox', { name: 'Домен с поддоменами' }), 'youtube.com{Enter}googlevideo.com');
@@ -253,7 +254,7 @@ describe('rule conditions in the form', () => {
     const user = userEvent.setup();
     const rule = loadRule({ domain: ['a.example'], port: [443], outbound: 'proxy' });
 
-    render(<RuleEditForm rule={rule} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
+    renderWithQuery(<RuleEditForm rule={rule} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
 
     expect(screen.getByRole('textbox', { name: 'Порт' })).toHaveValue('443');
 
@@ -270,7 +271,7 @@ describe('rule conditions in the form', () => {
     const user = userEvent.setup();
     const rule = loadRule({ port: [443], outbound: 'proxy' });
 
-    render(<RuleEditForm rule={rule} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
+    renderWithQuery(<RuleEditForm rule={rule} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
 
     const port = screen.getByRole('textbox', { name: 'Порт' });
 
@@ -286,7 +287,7 @@ describe('rule conditions in the form', () => {
     const user = userEvent.setup();
     const rule = loadRule({ domain: ['a.example'], outbound: 'proxy' });
 
-    render(<RuleEditForm rule={rule} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
+    renderWithQuery(<RuleEditForm rule={rule} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
 
     await user.clear(screen.getByRole('textbox', { name: 'Домен' }));
 

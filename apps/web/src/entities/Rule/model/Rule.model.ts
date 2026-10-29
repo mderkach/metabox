@@ -36,6 +36,8 @@ export interface RuleRow {
   id: string;
   /** Number in `route.rules`, counting from one. */
   index: number;
+  /** The line comment above the rule node; `null` means the rule has no name. */
+  name: string | null;
   matchers: RuleMatcher[];
   /** `null` means an ordinary rule; otherwise the conditions are joined by `and` or `or`. */
   group: RuleGroup | null;
@@ -87,6 +89,7 @@ export function toNewRuleRow(place: NewRulePlace): RuleRow {
   return {
     id: `new:${String(place.index)}`,
     index: place.index,
+    name: null,
     matchers: [],
     group: null,
     invert: false,

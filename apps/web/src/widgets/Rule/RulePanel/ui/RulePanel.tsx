@@ -3,7 +3,7 @@ import { useState, type KeyboardEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ConfigDocumentState } from '@entities/Config';
-import { isNamedRuleMatcher, type RuleRow } from '@entities/Rule';
+import { isNamedRuleMatcher, useRuleTitle, type RuleRow } from '@entities/Rule';
 import { RuleEditForm } from '@features/Rule/RuleEdit';
 import { RuleRawEditor } from '@features/Rule/RuleRaw';
 import { useFocusReturn } from '@shared/lib/useFocusReturn';
@@ -33,7 +33,8 @@ const TAB = {
 } as const;
 
 /**
- * Rule panel: the outbound form and the same node as text.
+ * Rule panel: the form and the same node as text. The title is the rule
+ * name or its label from the content; the number goes under it.
  *
  * A node the schema did not accept gets no form at all — it is shown
  * as a raw block with a mark and is edited only as text.
@@ -67,12 +68,14 @@ export function RulePanel({
    * The rule is not in the document yet: the form creates it here on the first
    * condition. Until then there is no node to show as text.
    */
-  onCreate?: (node: Record<string, unknown>) => void;
+  onCreate?: (node: Record<string, unknown>) => boolean;
   onClose: () => void;
 }) {
   const { t } = useTranslation('widgets/Rule/RulePanel');
+  const { title: titleOf } = useRuleTitle();
   const creating = onCreate !== undefined;
-  const title = creating ? t('titleNew', { index: rule.index }) : t('title', { index: rule.index });
+  const title = creating ? t('titleNew', { index: rule.index }) : titleOf(rule);
+  const number = t('rule.numbered', { ns: 'shared', index: rule.index });
   const [tab, setTab] = useState<string>(recognized ? TAB.Form : TAB.Raw);
   // Keyed by revision, not by the node: the form writes on every keystroke and would lose focus.
   const revision = ConfigDocumentState.use.revision();
@@ -100,19 +103,20 @@ export function RulePanel({
       <header className={cn('flex items-center gap-2.5', SURFACE_HEAD)}>
         <div className='flex min-w-0 grow flex-col'>
           {sheet ? (
-            <SheetTitle className={SECTION_HEADING}>{title}</SheetTitle>
+            <SheetTitle className={cn(SECTION_HEADING, 'wrap-anywhere')}>{title}</SheetTitle>
           ) : (
             <h2
               ref={headingRef}
               tabIndex={-1}
               className={cn(
-                '-mx-1.5 -my-0.5 rounded-md px-1.5 py-0.5 outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
+                '-mx-1.5 -my-0.5 rounded-md px-1.5 py-0.5 wrap-anywhere outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
                 SECTION_HEADING
               )}
             >
               {title}
             </h2>
           )}
+          {!creating && title !== number && <p className='text-xs text-muted-foreground'>{number}</p>}
         </div>
         {!recognized && <Badge variant='outline'>{t('rule.uncovered', { ns: 'shared' })}</Badge>}
         {actions !== null && <div className='flex shrink-0 items-center gap-0.5'>{actions}</div>}

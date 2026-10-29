@@ -1,6 +1,6 @@
 import type { JSONPath } from 'jsonc-parser';
 
-import { ConfigDocumentStore, findValue, ruleNodePath } from '@entities/Config';
+import { ConfigDocumentStore, findValue, readRuleNames, ruleNodePath, toElementName } from '@entities/Config';
 import { RULE_SET_MATCHER, RULE_TARGET, ruleSetsOf, toRuleRowsFromNodes, type RuleRow } from '@entities/Rule';
 
 import {
@@ -15,6 +15,7 @@ import {
 /** Form values from the node as is: a default added here would reach the diff as an edit nobody made. */
 export function toRuleEditValues(rule: RuleRow): RuleEditModel {
   return {
+    name: rule.name ?? '',
     action: isKnownAction(rule) ? rule.target : RULE_ACTION.Route,
     outbound: rule.targetKind === RULE_TARGET.Outbound ? rule.target : '',
     ruleSet: ruleSetsOf(rule),
@@ -26,31 +27,38 @@ export function toRuleEditValues(rule: RuleRow): RuleEditModel {
  * Writes the fields that differ from the rule in the draft text right now:
  * parsed rows lag the text by a frame, and a value typed and erased back
  * within it must leave the draft too. Returns whether an emptied field was
- * held back because `withRemovals` is off.
+ * held back because `withRemovals` is off. The name is not held back: it is a
+ * comment line, there is no key order to keep.
  *
  * A rule not in the document yet goes to `onCreate` once it has a condition
- * or a set: without them it would take all traffic.
+ * or a set: without them it would take all traffic. A name typed before that
+ * is written right after it, if `onCreate` reports the rule written.
  */
 export function writeRuleEdit(
   edit: (path: JSONPath, value: unknown) => void,
+  rename: (path: JSONPath, name: string) => void,
   index: number,
   patch: RuleEditPatch,
   values: RuleEditModel,
   withRemovals: boolean,
-  onCreate?: (node: Record<string, unknown>) => void
+  onCreate?: (node: Record<string, unknown>) => boolean
 ): boolean {
   if (onCreate !== undefined) {
     const node = toNewRuleNode(patch);
 
-    if (node !== null) {
-      onCreate(node);
+    // A refused insert leaves another rule at this position: the name must not go to it.
+    if (node !== null && onCreate(node)) {
+      if (toElementName(values.name).length > 0) {
+        rename(ruleNodePath(index), values.name);
+      }
     }
 
     return false;
   }
 
   const path = ruleNodePath(index);
-  const current = toRuleRowsFromNodes([findValue(ConfigDocumentStore.getState().current() ?? '', path)]).at(0);
+  const text = ConfigDocumentStore.getState().current() ?? '';
+  const current = toRuleRowsFromNodes([findValue(text, path)], [readRuleNames(text).at(index - 1) ?? null]).at(0);
 
   if (current === undefined) {
     return false;
@@ -58,6 +66,10 @@ export function writeRuleEdit(
 
   const before = toRuleEditValues(current);
   let held = false;
+
+  if (toElementName(values.name) !== before.name) {
+    rename(path, values.name);
+  }
 
   // `route` without an `action` key is the norm: the key is written only when the action changed.
   if (values.action !== before.action) {

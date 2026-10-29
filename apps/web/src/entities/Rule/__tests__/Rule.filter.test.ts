@@ -8,6 +8,7 @@ function makeRule(overrides: Partial<RuleRow> = {}): RuleRow {
   return {
     id: '0',
     index: 1,
+    name: null,
     matchers: [{ key: 'rule_set', values: ['google-ip'] }],
     group: null,
     invert: false,
