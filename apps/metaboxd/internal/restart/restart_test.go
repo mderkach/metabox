@@ -154,17 +154,14 @@ func TestDetachedRunsInOwnSession(t *testing.T) {
 		t.Fatalf("script pid %q: %v", data, err)
 	}
 
-	sid, err := syscall.Getsid(pid)
+	// A new session makes the script the leader of a new process group: Getpgid is in the
+	// syscall package on Linux and macOS alike, Getsid is not.
+	group, err := syscall.Getpgid(pid)
 	if err != nil {
-		t.Fatalf("session of the script: %v", err)
+		t.Fatalf("process group of the script: %v", err)
 	}
 
-	own, err := syscall.Getsid(0)
-	if err != nil {
-		t.Fatalf("session of the test: %v", err)
-	}
-
-	if sid != pid || sid == own {
-		t.Errorf("script %d runs in session %d, the test in %d: want a session of its own", pid, sid, own)
+	if group != pid || group == syscall.Getpgrp() {
+		t.Errorf("script %d runs in process group %d, the test in %d: want a group of its own", pid, group, syscall.Getpgrp())
 	}
 }
