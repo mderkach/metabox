@@ -18,7 +18,10 @@
   "group": {
     "proxy": "Proxy protocol",
     "group": "Node group",
-    "service": "Service"
+    "service": "Service",
+    "router": "For the router",
+    "server": "Inbound proxy server",
+    "other": "Other"
   },
   "description": {
     "anytls": "AnyTLS: proxy over TLS that hides packet sizes",
@@ -54,6 +57,35 @@
     "rate-limiter": "Request rate limit",
     "traffic-limiter": "Traffic quota per user"
   },
+  "inboundDescription": {
+    "tun": "Virtual network interface: takes the traffic of the whole router or its devices",
+    "mixed": "One port for SOCKS4, SOCKS5 and HTTP proxy clients",
+    "redirect": "Takes TCP connections the firewall redirects to sing-box",
+    "tproxy": "Takes TCP and UDP traffic the firewall passes on transparently",
+    "anytls": "Server for AnyTLS clients",
+    "call": "Server for the tunnel through video calls",
+    "http": "HTTP proxy server, with or without TLS",
+    "hysteria": "Server for Hysteria 1 clients",
+    "hysteria2": "Server for Hysteria 2 clients",
+    "mieru": "Server for Mieru clients",
+    "mtproxy": "Telegram MTProto proxy server",
+    "naive": "Server for NaiveProxy clients",
+    "shadowsocks": "Shadowsocks server, single user or several",
+    "shadowtls": "ShadowTLS server: poses as another site's TLS handshake",
+    "snell": "Server for Snell clients",
+    "socks": "SOCKS4 or SOCKS5 proxy server",
+    "ssh": "SSH server for tunnel clients",
+    "sudoku": "Server for Sudoku clients",
+    "trojan": "Trojan server that looks like ordinary HTTPS",
+    "trusttunnel": "Server for TrustTunnel clients",
+    "tuic": "Server for TUIC clients",
+    "vless": "VLESS server, usually with Reality or TLS",
+    "vmess": "VMess server",
+    "bond": "Receiving end of the bond outbound: several links into one",
+    "cloudflared": "Cloudflare Tunnel client: exposes the router's services through Cloudflare",
+    "direct": "Tunnel server: forwards a port to a fixed address",
+    "failover": "Receiving end of the failover outbound"
+  },
   "unbuilt": {
     "badge": "not available in this sing-box build",
     "hint": "sing-box on the device is built without this type ({{tag}}): the node is saved, but the check rejects a config with it"
@@ -72,5 +104,8 @@
       "credential": "The link has no access key: UUID or password",
       "transport": "sing-box does not support the transport from the link"
     }
+  },
+  "docs": {
+    "link": "{{type}} in the fork documentation"
   }
 }
