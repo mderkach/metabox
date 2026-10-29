@@ -1,12 +1,13 @@
 {
   "field": {
     "label": "Custom name for {{device}}",
-    "hint": "An empty field brings back the name from the lease"
+    "hint": "A changed name replaces the one from the lease"
   },
   "save": "Save",
   "cancel": "Cancel",
   "error": {
     "tooLong": "At most {{limit}} characters",
     "controlChars": "No control characters"
-  }
+  },
+  "useLease": "Use the lease name"
 }

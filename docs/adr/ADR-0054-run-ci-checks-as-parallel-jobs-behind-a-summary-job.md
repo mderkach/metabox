@@ -20,7 +20,7 @@ Measured on that run, three steps cost two minutes each, and none depends on ano
 
 Two of those minutes were spent downloading, not checking. `setup-go` keyed its cache by `tools/schemagen/go.sum` alone, and that file does not change between runs: the cache was saved once and never again, so golangci-lint (`go run …@v2.13.2` in the `Makefile`) and its modules were fetched on every run. The logs confirm it: a cache hit, then `go: downloading` for the linter's modules. The fetch is also the only network dependency of the lint step. On 2026-10-20 the first attempt of PR #8 failed in it:
 
-```
+```text
 github.com/securego/gosec/v2@v2.28.0: verifying module: reading https://sum.golang.org/tile/8/0/x224/084: stream error: stream ID 657; INTERNAL_ERROR
 ```
 
@@ -30,7 +30,7 @@ Until 2026-10-25 `checks` did not wait for `integration`, so a PR showed a green
 
 Constraints: the branch rule names the contexts `checks` and `integration`, and renaming a job means editing the rule in the same change; the GitHub-hosted runner has 2 cores, so the web tests take five times longer than on a developer machine; the repository avoids new dependencies, including actions, when the existing ones suffice.
 
-Out of scope: sharding the web tests, a self-hosted runner, running `integration` on the device image, tracking fork releases (ADR-0044).
+Out of scope: sharding the web tests, a self-hosted runner, running `integration` on the device image, tracking fork releases (ADR-0044, `fork-release-watch.yml`).
 
 ## Decision drivers
 
@@ -50,7 +50,7 @@ Out of scope: sharding the web tests, a self-hosted runner, running `integration
 
 ## Decision outcome
 
-- `ci.yml` has the jobs `go` (`make lint`, `go test -race ./...` in the daemon), `schemagen` (`make test-schemagen`), `web` (commitlint on PRs, `pnpm lint`, `pnpm format:check`, web tests and build, react-doctor advice, `make daemon`), `checks` (summary) and `integration`.
+- `ci.yml` has the jobs `go` (`make lint`, `go test -race ./...` in the daemon), `schemagen` (`make test-schemagen`), `web` (commitlint on PRs, `pnpm lint`, `pnpm format:check`, web tests and build, react-doctor advice, `make daemon`), `web-browser` (the Vitest browser project in headless Chromium, [ADR-0064](./ADR-0064-run-browser-tests-in-a-vitest-browser-project-next-to-jsdom.md); a separate job so the Chromium download does not hold back `web`), `checks` (summary) and `integration`.
 - `checks` depends on `go`, `schemagen`, `web`, `web-browser` and `integration`, runs with `if: always()` and exits non-zero when any of them ended in `failure`, `cancelled` or `skipped`. Its name is the only context the branch rule needs; the rule also names `integration`, which the owner may drop.
 - Every job has `timeout-minutes` sized from the 60 runs before 2026-10-25 (`gh run list --workflow ci.yml --limit 60`, job durations from `gh run view <id> --json jobs`) with a margin: `go` 30 (longest success 19 min, median about 1), `schemagen` 20 (3.5 min cold), `web` 30 (23 min), `web-browser` 15 (1.3 min), `checks` 5, `integration` 30 (15 min; the long outliers are runner stalls between steps, not slow steps). The integration steps that run the test bench have their own limits: `Environment` 10, `Daemon ready` 3, `Apply cycle` and `Reach check` 5, `Dataplane check` 10. The release, apk-repo and fork-release-watch jobs get 30, 20 and 15.
 - The dataplane check gives every step inside the test bench a 60 s deadline on the host side (`in_target` in `.devcontainer/dataplane-check.sh`): the `docker exec` is killed, the step fails with a `HUNG` line naming it, and the processes still alive in the container are listed with their `wchan`. The in-container busybox and macOS have no `timeout`, so the deadline is a `sleep && kill` watchdog in POSIX sh.
@@ -58,7 +58,7 @@ Out of scope: sharding the web tests, a self-hosted runner, running `integration
 - Each job lists in `cache-dependency-path` the files that decide what it downloads: `go` lists `Makefile`, both `go.mod` files and `tools/schemagen/go.sum`; `schemagen` lists the generator's `go.mod` and `go.sum`; `web` runs with `cache: false`, because the daemon has no external modules. `setup-go` saves a cache once per key, so no two jobs may share a key: the first job to finish would save a cache without the other job's modules.
 - The `Makefile` downloads the fork module before `go list -m` reads its directory: on a cold module cache `go list` prints an empty path, and the generator tests ran with no fork tags. One job hid this because `make lint` downloaded the fork first.
 - The workflow runs on `pull_request` and on `push` to `main` only. A `concurrency` group keyed by the PR number, or the ref outside a PR, cancels the run in progress when a new commit arrives to a PR; a run in progress on `main` is never cancelled, but GitHub keeps one pending run per group, so a newer push to `main` replaces a pending one and that merge commit gets no verdict.
-- A new check joins one of the three jobs by what it needs, not a new job; a new job is added to `needs` of `checks` in the same change.
+- A new check joins one of the existing jobs by what it needs, not a new job; a new job is added to `needs` of `checks` in the same change.
 
 ## Consequences
 

@@ -60,6 +60,10 @@ gh secret set APK_SIGN_KEY < ~/.config/metabox/release.key
 
 Changes reach `main` only through a PR. A repository rule blocks the merge until the `checks` and `integration` CI jobs pass. `checks` already includes `integration`; the second entry can be removed from the rule. The rule stores job names, so renaming a job in `ci.yml` requires editing the rule in the same change. Otherwise the merge waits for a check that no longer exists.
 
+## Workflow actions
+
+Every external action in `.github/workflows/` is pinned to a commit SHA with the tag in a trailing comment (`uses: actions/checkout@<sha> # v5`). A tag can be moved; a SHA cannot. To update one, resolve the new tag with `gh api repos/<owner>/<repo>/git/ref/tags/<tag>` (for an annotated tag, `type` is `tag`: dereference it with `git/tags/<sha>`), then change the SHA and the comment together.
+
 ## sing-box-extended updates
 
 The config schema is generated from the sing-box-extended version pinned in `tools/schemagen/go.mod`.
