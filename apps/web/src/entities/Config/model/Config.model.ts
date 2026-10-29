@@ -11,31 +11,13 @@ import {
 } from 'jsonc-parser';
 
 import type { Config } from '@shared/api/generated';
+import { detectIndent } from '@shared/lib/jsonc';
 
 import { insertElement, moveElement, nameElement, readElementNames, removeElement } from './Config.array';
 
-/** Config indent when it could not be determined from the file. */
-const DEFAULT_TAB_SIZE = 2;
-
-/** First indented line: it shows what the file is indented with. */
-const FIRST_INDENT = /\n([\t ]+)\S/;
-
-/**
- * Indent and line break of the source file.
- *
- * `jsonc-parser` formats only the inserted nodes and has no indent detection of
- * its own: without this a new section would go into a tab-indented file with
- * two spaces.
- */
+/** Indent and line break of the source file: inserted nodes are formatted like the rest of it. */
 function detectFormatting(text: string): FormattingOptions {
-  const eol = text.includes('\r\n') ? '\r\n' : '\n';
-  const indent = FIRST_INDENT.exec(text)?.[1];
-
-  if (indent === undefined) {
-    return { tabSize: DEFAULT_TAB_SIZE, insertSpaces: true, eol };
-  }
-
-  return { tabSize: indent.length, insertSpaces: !indent.startsWith('\t'), eol };
+  return { ...detectIndent(text), eol: text.includes('\r\n') ? '\r\n' : '\n' };
 }
 
 function edit(text: string, path: JSONPath, value: unknown, options?: ModificationOptions): string {

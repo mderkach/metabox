@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { lineIndexOf, toJsonTokens, tokenIndexAt } from '../JsonTextarea.lib';
+import { indentLines, indentUnit, lineIndexOf, toJsonTokens, tokenIndexAt } from '../JsonTextarea.lib';
 
 describe('config split into colored chunks', () => {
   it('joined chunks repeat the source text verbatim', () => {
@@ -67,5 +67,81 @@ describe('highlight chunk by text position', () => {
     const tokens = toJsonTokens('{}');
 
     expect(tokenIndexAt(tokens, 2)).toBe(tokens.length - 1);
+  });
+});
+
+/** Text after an edit, with the selection marked by `[` and `]`. */
+function pressTab(marked: string, unit: string, outdent = false): string {
+  const start = marked.indexOf('[');
+  const end = marked.indexOf(']') - 1;
+  const text = marked.replace('[', '').replace(']', '');
+  const edit = indentLines(text, start, end, unit, outdent);
+
+  if (edit === null) {
+    return marked;
+  }
+
+  const after = text.slice(0, edit.from) + edit.text + text.slice(edit.to);
+
+  return `${after.slice(0, edit.selectionStart)}[${after.slice(edit.selectionStart, edit.selectionEnd)}]${after.slice(edit.selectionEnd)}`;
+}
+
+describe('indent unit of the text', () => {
+  it('takes spaces of the first indented line', () => {
+    expect(indentUnit('{\n    "a": {\n      "b": 1\n    }\n}')).toBe('    ');
+  });
+
+  it('takes a tab when the text is indented with tabs', () => {
+    expect(indentUnit('{\n\t"a": 1\n}')).toBe('\t');
+  });
+
+  it('falls back to two spaces when nothing is indented', () => {
+    expect(indentUnit('{"a": 1}')).toBe('  ');
+  });
+});
+
+describe('Tab and Shift+Tab over lines', () => {
+  it('inserts one unit at a caret', () => {
+    expect(pressTab('{\n[]"a": 1\n}', '  ')).toBe('{\n  []"a": 1\n}');
+  });
+
+  it('replaces a selection inside one line with one unit', () => {
+    expect(pressTab('{"a": [1]}', '\t')).toBe('{"a": \t[]}');
+  });
+
+  it('indents every non-empty selected line and keeps the lines selected', () => {
+    expect(pressTab('{\n["a": 1,\n\n"b": 2]\n}', '  ')).toBe('{\n[  "a": 1,\n\n  "b": 2]\n}');
+  });
+
+  it('moves a selection edge inside a line together with the text', () => {
+    expect(pressTab('{\n"a[": 1,\n"b]": 2\n}', '  ')).toBe('{\n  "a[": 1,\n  "b]": 2\n}');
+  });
+
+  it('leaves the line alone when the selection ends at its start', () => {
+    expect(pressTab('[a\nb\n]c', '  ')).toBe('[  a\n  b\n]c');
+  });
+
+  it('outdents the line of a caret by one unit', () => {
+    expect(pressTab('{\n    "a"[]: 1\n}', '  ', true)).toBe('{\n  "a"[]: 1\n}');
+  });
+
+  it('outdents each selected line by what it has, up to one unit', () => {
+    expect(pressTab('[\t\ta\n b\nc]', '\t', true)).toBe('[\ta\nb\nc]');
+  });
+
+  it('keeps a caret inside the removed indent at the line start', () => {
+    expect(pressTab(' [] a', '  ', true)).toBe('[]a');
+  });
+
+  it('keeps the carriage return of CRLF lines', () => {
+    expect(pressTab('[a\r\nb]', '  ')).toBe('[  a\r\n  b]');
+  });
+
+  it('outdents nothing below an empty first line when the caret is on it', () => {
+    expect(indentLines('\n  a', 0, 0, '  ', true)).toBeNull();
+  });
+
+  it('changes nothing when there is nothing to outdent', () => {
+    expect(indentLines('a\nb', 0, 3, '  ', true)).toBeNull();
   });
 });
