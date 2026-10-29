@@ -30,6 +30,7 @@ const FAILURE_KEY: Readonly<Record<ApiFailureCode, ParseKeys<'shared'>>> = {
   log_unavailable: 'failure.log_unavailable',
   log_query_invalid: 'failure.log_query_invalid',
   log_stream_limit: 'failure.log_stream_limit',
+  event_stream_limit: 'failure.event_stream_limit',
   log_clear_forbidden: 'failure.log_clear_forbidden',
   list_invalid: 'failure.list_invalid',
   workdir_mismatch: 'failure.workdir_mismatch',

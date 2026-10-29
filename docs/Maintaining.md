@@ -60,6 +60,10 @@ gh secret set APK_SIGN_KEY < ~/.config/metabox/release.key
 
 Changes reach `main` only through a PR. A repository rule blocks the merge until the `checks` and `integration` CI jobs pass. `checks` already includes `integration`; the second entry can be removed from the rule. The rule stores job names, so renaming a job in `ci.yml` requires editing the rule in the same change. Otherwise the merge waits for a check that no longer exists.
 
+## Workflow actions
+
+Every external action in `.github/workflows/` is pinned to a commit SHA with the tag in a trailing comment (`uses: actions/checkout@<sha> # v5`). A tag can be moved; a SHA cannot. To update one, resolve the new tag with `gh api repos/<owner>/<repo>/git/ref/tags/<tag>` (for an annotated tag, `type` is `tag`: dereference it with `git/tags/<sha>`), then change the SHA and the comment together.
+
 ## sing-box-extended updates
 
 The config schema is generated from the sing-box-extended version pinned in `tools/schemagen/go.mod`.
@@ -74,11 +78,11 @@ The workflow logic is tested offline by `bash .github/scripts/fork-release-check
 
 The workflow does not change the version installed on routers and on the test bench: that follows the build tested on a real router. [`install.sh`](../install.sh) pins it in `SINGBOX_VERSION` and `SINGBOX_SHA256`, and checks the downloaded package against that hash. To move to a new version, change in one commit:
 
-- `SINGBOX_VERSION` and `SINGBOX_SHA256` in `install.sh`;
-- `SINGBOX_VERSION` in `.devcontainer/target/Dockerfile` and `.devcontainer/docker-compose.yml`;
+- `sing-box-extended.sha256`: the file name carries the version, the line the hash; the test bench reads this file;
+- `SINGBOX_VERSION` and `SINGBOX_SHA256` in `install.sh` (`make singbox-pin-check` compares them with the file);
 - the tested version in the README and the examples in `docs/Development.md`.
 
-The sha256 is the `digest` of the release asset:
+The file has a line for `aarch64_cortex-a53` (the router), `aarch64_generic` (the public-rootfs bench) and `x86_64` (the CI bench). The sha256 is the `digest` of the release asset; use the other arch suffix for the other lines:
 
 ```sh
 gh api repos/shtorm-7/sing-box-extended/releases/tags/v<version> --jq '.assets[] | select(.name | endswith("openwrt_aarch64_cortex-a53.apk")) | .digest'

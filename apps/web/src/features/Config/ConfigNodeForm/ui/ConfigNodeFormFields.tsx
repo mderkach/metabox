@@ -4,6 +4,7 @@ import { use, useEffect, useId, useState, type ReactNode } from 'react';
 import { Controller, useFormContext, type FieldError as FormFieldError } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
+import type { NodeRegistry } from '@entities/Config';
 import { parseJsonc } from '@shared/lib/jsonc';
 import type { FieldPlan } from '@shared/lib/schemaShape';
 import { cn } from '@shared/lib/utils';
@@ -46,7 +47,7 @@ import {
   type ConfigNodeFormModel,
   type SecretMask,
 } from '../model';
-import { RAW_PARSE_ERROR, RawFailuresContext } from './ConfigNodeForm.context';
+import { NodeRegistryContext, RAW_PARSE_ERROR, RawFailuresContext } from './ConfigNodeForm.context';
 import { useFieldLabel } from './ConfigNodeForm.labels';
 import { ConfigNodeFormFieldName } from './ConfigNodeFormFieldName';
 
@@ -185,9 +186,14 @@ function TextField({ field, name, placeholder }: NodeFieldProps & { placeholder?
 }
 
 export function StringField(props: NodeFieldProps) {
-  const mask = secretMaskOf(props.field.path);
+  const registry = use(NodeRegistryContext);
+  const mask = secretMaskOf(props.field.path, registry);
 
   return mask === null ? <TextField {...props} /> : <SecretField {...props} mask={mask} />;
+}
+
+function isUrlMask(mask: SecretMask): boolean {
+  return mask !== SECRET_MASK.Whole;
 }
 
 /** Characters in place of a hidden secret or of the part of a URL after the host. */
@@ -197,13 +203,17 @@ const MASK = '••••••';
  * URL with everything after the host masked: credentials, path, query, anchor.
  * `null` means there is nothing to hide, the URL is just a host.
  */
-function maskUrl(text: string): string | null {
+function maskUrl(text: string, mask: SecretMask): string | null {
   if (!URL.canParse(text)) {
     return MASK;
   }
 
   const url = new URL(text);
-  const tail = `${url.username}${url.password}${url.pathname === '/' ? '' : url.pathname}${url.search}${url.hash}`;
+  const credentials = `${url.username}${url.password}${url.search}`;
+  const tail =
+    mask === SECRET_MASK.UrlCredentials
+      ? credentials
+      : `${url.username}${url.password}${url.pathname === '/' ? '' : url.pathname}${url.search}${url.hash}`;
 
   return tail === '' ? null : `${url.protocol}//${url.host}/${MASK}`;
 }
@@ -225,16 +235,16 @@ function maskValue(value: unknown, mask: SecretMask): unknown {
     return value;
   }
 
-  return mask === SECRET_MASK.Whole ? MASK : (maskUrl(value) ?? value);
+  return mask === SECRET_MASK.Whole ? MASK : (maskUrl(value, mask) ?? value);
 }
 
 /**
  * JSON value with secret keys masked at any depth, by the same names and rule
  * as `SecretField`.
  */
-function maskSecrets(value: unknown): unknown {
+function maskSecrets(value: unknown, registry: NodeRegistry | null): unknown {
   if (Array.isArray(value)) {
-    return value.map(maskSecrets);
+    return value.map((item) => maskSecrets(item, registry));
   }
 
   if (typeof value !== 'object' || value === null) {
@@ -243,9 +253,9 @@ function maskSecrets(value: unknown): unknown {
 
   return Object.fromEntries(
     Object.entries(value).map(([key, item]) => {
-      const mask = secretMaskOf([key]);
+      const mask = secretMaskOf([key], registry);
 
-      return [key, mask === null ? maskSecrets(item) : maskValue(item, mask)];
+      return [key, mask === null ? maskSecrets(item, registry) : maskValue(item, mask)];
     })
   );
 }
@@ -254,8 +264,8 @@ function maskSecrets(value: unknown): unknown {
  * Field JSON text with secrets masked; `null` means there is nothing to hide.
  * `mask` is the mask of the field itself: then everything inside it is hidden.
  */
-function maskedJsonText(value: unknown, mask: SecretMask | null): string | null {
-  const masked = mask === null ? maskSecrets(value) : maskValue(value, mask);
+function maskedJsonText(value: unknown, mask: SecretMask | null, registry: NodeRegistry | null): string | null {
+  const masked = mask === null ? maskSecrets(value, registry) : maskValue(value, mask);
 
   return isSameValue(masked, value) ? null : toJsonText(masked);
 }
@@ -287,7 +297,7 @@ function SecretField({ field, name, mask }: NodeFieldProps & { mask: SecretMask 
       name={name}
       render={({ field: input, fieldState }) => {
         const text = toInputText(input.value);
-        const masked = mask === SECRET_MASK.AfterHost && !revealed && text !== '' ? maskUrl(text) : null;
+        const masked = isUrlMask(mask) && !revealed && text !== '' ? maskUrl(text, mask) : null;
 
         return (
           <FieldRow id={id} name={name} fieldKey={field.key} errorId={errorId} error={errorText(t, fieldState.error)}>
@@ -305,7 +315,7 @@ function SecretField({ field, name, mask }: NodeFieldProps & { mask: SecretMask 
                 onBlur={input.onBlur}
                 onChange={(event) => {
                   // A URL typed into an empty field is not hidden at the first character.
-                  if (mask === SECRET_MASK.AfterHost) {
+                  if (isUrlMask(mask)) {
                     setRevealed(true);
                   }
 
@@ -510,7 +520,8 @@ export function ListField({ field, name }: NodeFieldProps) {
   const id = useId();
   const errorId = useId();
   const hintId = useId();
-  const mask = secretMaskOf(field.path);
+  const registry = use(NodeRegistryContext);
+  const mask = secretMaskOf(field.path, registry);
   const [revealed, setRevealed] = useState(false);
 
   return (
@@ -687,7 +698,8 @@ export function RawField({ field, name }: NodeFieldProps) {
   const hintId = useId();
   const [failure, setFailure] = useState<{ reason: string; value: unknown } | null>(null);
   const [revealed, setRevealed] = useState(false);
-  const mask = secretMaskOf(field.path);
+  const registry = use(NodeRegistryContext);
+  const mask = secretMaskOf(field.path, registry);
 
   // A collapsed group removes the field together with the typed text: its
   // failure no longer stops the write.
@@ -708,7 +720,7 @@ export function RawField({ field, name }: NodeFieldProps) {
         // The failure belongs to the value at which the text did not parse: a
         // value that changed from outside rewrote the field text too.
         const reason = failure !== null && isSameValue(failure.value, input.value) ? failure.reason : null;
-        const masked = maskedJsonText(input.value, mask);
+        const masked = maskedJsonText(input.value, mask, registry);
         const hidden = revealed ? null : masked;
         const invalid = reason !== null || fieldState.invalid;
         const describedBy = invalid ? `${hintId} ${errorId}` : hintId;

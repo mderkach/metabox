@@ -75,6 +75,12 @@ type Restarter interface {
 	Restart(ctx context.Context) error
 }
 
+// EventStream serves the runtime stream. Serve returns an error only before it writes
+// anything: beyond its reader limit that is events.ErrTooManySubscribers.
+type EventStream interface {
+	Serve(w http.ResponseWriter, r *http.Request) error
+}
+
 // ConfigReader returns the applied config and its history. The interface is declared
 // here, at the consumer, and contains only reading: the files are owned by
 // config.Store, and the write goes by the Apply protocol.
@@ -120,7 +126,7 @@ type Options struct {
 	Restart Restarter
 	// Events is the single runtime stream to the panel. nil means the
 	// stream is not assembled: the screens stay on the Clash API proxy.
-	Events http.Handler
+	Events EventStream
 	// Clash proxies the sing-box runtime under the clashapi.Prefix branch. nil
 	// means the proxy is not assembled: the panel opens, but the runtime screens
 	// degrade.
@@ -194,6 +200,7 @@ type HistoryReader interface {
 	Connections() []int
 	Device() []history.DevicePoint
 	Step() int
+	DeviceStep() int
 }
 
 // RuleSetsReader returns the catalog of ready rule sets. The interface is declared here, at the
@@ -232,7 +239,7 @@ type Server struct {
 	spa            http.Handler
 	service        Service
 	restart        Restarter
-	events         http.Handler
+	events         EventStream
 	clash          http.Handler
 	explain        Explainer
 	hits           HitsReader
@@ -454,16 +461,19 @@ func (s *Server) runtimeSources() contract.Runtime {
 	return out
 }
 
-// handleEvents checks flush support before the hub does: the hub refuses in plain text,
-// and the panel reads a refusal by its code.
+// handleEvents turns a refused stream into a contract error: the panel reads a refusal by
+// its code.
 func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
-	if !events.SupportsFlush(w) {
-		fail(s.log, w, r, errors.New("event stream: response without buffer flush"))
-
+	err := s.events.Serve(w, r)
+	if err == nil {
 		return
 	}
 
-	s.events.ServeHTTP(w, r)
+	if errors.Is(err, events.ErrTooManySubscribers) {
+		w.Header().Set("Retry-After", events.RetryAfter)
+	}
+
+	fail(s.log, w, r, err)
 }
 
 // handleConfig returns the config with exactly the bytes it lies on disk with:
@@ -881,11 +891,12 @@ func (s *Server) observeRuntime(ctx context.Context) bool {
 // handleHistory returns the traffic history: points go in sequence with the response step.
 func (s *Server) handleHistory(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(s.log, w, http.StatusOK, contract.History{
-		StepSeconds: s.history.Step(),
-		Points:      s.history.Points(),
-		Device:      s.history.Device(),
-		Recent:      s.history.Recent(),
-		Connections: s.history.Connections(),
+		StepSeconds:       s.history.Step(),
+		Points:            s.history.Points(),
+		DeviceStepSeconds: s.history.DeviceStep(),
+		Device:            s.history.Device(),
+		Recent:            s.history.Recent(),
+		Connections:       s.history.Connections(),
 	})
 }
 

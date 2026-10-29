@@ -191,6 +191,8 @@ describe('devices screen', () => {
     const field = screen.getByRole('textbox', { name: 'Своё имя для iphone-guest' });
 
     expect(field).toHaveFocus();
+    expect(field).toHaveValue('iphone-guest');
+    await user.clear(field);
     await user.type(field, 'Телефон гостя');
     await user.click(screen.getByRole('button', { name: 'Сохранить' }));
 
@@ -205,22 +207,56 @@ describe('devices screen', () => {
     );
   });
 
-  it('an empty name clears its own, and the label returns to the address', async () => {
+  it('the lease name button clears its own name, and the label returns to the address', async () => {
+    const renamed = vi.fn<(body: unknown) => void>();
     const user = userEvent.setup();
 
-    server.use(...createDeviceHandlers());
+    server.use(
+      http.put(DEVICE_ENDPOINT.device('*'), async ({ request }) => {
+        renamed(await request.clone().json());
+      }),
+      ...createDeviceHandlers()
+    );
     renderScreen();
 
     await user.click(await screen.findByRole('button', { name: 'Переименовать Ноутбук' }));
-    await user.clear(screen.getByRole('textbox', { name: 'Своё имя для Ноутбук' }));
-    await user.click(screen.getByRole('button', { name: 'Сохранить' }));
+    expect(screen.getByRole('textbox', { name: 'Своё имя для Ноутбук' })).toHaveValue('Ноутбук');
+    await user.click(screen.getByRole('button', { name: 'Вернуть имя из аренды' }));
 
     await waitFor(() => {
       expect(screen.queryByText('Ноутбук')).not.toBeInTheDocument();
     });
+    expect(renamed).toHaveBeenCalledWith({ name: '' });
     expect(
       within(rowOf('aa:bb:cc:00:00:70')).getByRole('button', { name: 'Переименовать 192.168.1.60' })
     ).not.toHaveAccessibleDescription();
+  });
+
+  it('saving the untouched lease name sends nothing and closes the form', async () => {
+    const renamed = vi.fn<() => void>();
+    const user = userEvent.setup();
+
+    server.use(
+      http.put(DEVICE_ENDPOINT.device('*'), () => {
+        renamed();
+      }),
+      ...createDeviceHandlers()
+    );
+    renderScreen();
+
+    await user.click(await screen.findByRole('button', { name: 'Переименовать tv-living' }));
+
+    const field = screen.getByRole('textbox', { name: 'Своё имя для tv-living' });
+
+    expect(field).toHaveValue('tv-living');
+    expect(screen.queryByRole('button', { name: 'Вернуть имя из аренды' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Сохранить' })).toBeDisabled();
+
+    await user.type(field, ' ');
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }));
+
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(renamed).not.toHaveBeenCalled();
   });
 
   it('does not send a name longer than the daemon ceiling and names the reason', async () => {

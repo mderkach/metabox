@@ -14,8 +14,9 @@ KEY_URL=https://raw.githubusercontent.com/mderkach/metabox/main/keys/metabox-rel
 KEY_FILE=/etc/apk/keys/metabox-release.pem
 FEED_FILE=/etc/apk/repositories.d/metabox.list
 
-# Same version as SINGBOX_VERSION in .devcontainer/target/Dockerfile. The fork release has
-# no checksum file: the hash is the asset digest from the GitHub API.
+# The pin is sing-box-extended.sha256, which the test bench reads too; `make singbox-pin-check`
+# fails when these two lines drift from it. The fork release has no checksum file: the hash
+# is the asset digest from the GitHub API.
 SINGBOX_VERSION=1.14.1-extended-2.7.2
 SINGBOX_SHA256=be11f74666b11167e5071547a705f7e730731dfaac39650c51b49f4d68aa8870
 SINGBOX_URL="https://github.com/shtorm-7/sing-box-extended/releases/download/v${SINGBOX_VERSION}/sing-box-extended_${SINGBOX_VERSION}_openwrt_${ARCH}.apk"
@@ -121,6 +122,18 @@ command -v apk >/dev/null 2>&1 || die "apk is missing: OpenWrt 25.12 or a snapsh
 arch=$(cat /etc/apk/arch 2>/dev/null || true)
 [ "$arch" = "$ARCH" ] || die "arch %s, packages are built for %s only" "архитектура %s, пакеты собираются только под %s" "${arch:-unknown}" "$ARCH"
 
+# The fork package ships its own sing-box service; metabox runs sing-box through
+# metabox-singbox, and two instances would fight over the ports and the routing rules.
+fork_service_on() {
+	[ -x /etc/init.d/sing-box ] || return 1
+	/etc/init.d/sing-box enabled >/dev/null 2>&1 || /etc/init.d/sing-box running >/dev/null 2>&1
+}
+fork_service_off() {
+	/etc/init.d/sing-box stop >/dev/null 2>&1 || true
+	/etc/init.d/sing-box disable
+}
+fork_service_left=
+
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
@@ -138,6 +151,18 @@ apk update
 
 if apk info -e sing-box-extended >/dev/null 2>&1; then
 	say "sing-box-extended is installed, left as is" "sing-box-extended уже установлен, не трогаем"
+	if fork_service_on; then
+		say "the sing-box service of sing-box-extended is enabled or running; metabox runs sing-box through metabox-singbox" "служба sing-box из sing-box-extended включена или запущена; metabox запускает sing-box через metabox-singbox"
+		answer=n
+		if (: </dev/tty) 2>/dev/null; then
+			msg 'Stop and disable the sing-box service? [y/N]: ' 'Остановить и выключить службу sing-box? [y/N]: ' >/dev/tty
+			read -r answer </dev/tty || answer=n
+		fi
+		case "$answer" in
+		y | Y | yes | YES) fork_service_off ;;
+		*) fork_service_left=1 ;;
+		esac
+	fi
 else
 	# The fork provides sing-box and would replace the official package under a running setup.
 	! apk info -e sing-box >/dev/null 2>&1 || die "the official sing-box package is installed; metabox needs sing-box-extended instead" "установлен официальный пакет sing-box; вместо него для metabox нужен sing-box-extended"
@@ -149,9 +174,7 @@ else
 	# The sing-box-extended package is not signed by the project key: the pinned hash is the check.
 	apk add --allow-untrusted "$tmp/sing-box.apk"
 
-	# sing-box is run by metabox-singbox, so the package's own service stays off.
-	/etc/init.d/sing-box stop >/dev/null 2>&1 || true
-	/etc/init.d/sing-box disable
+	fork_service_off
 fi
 
 say "metaboxd" "metaboxd"
@@ -161,19 +184,40 @@ say "language %s in metabox.main.lang" "язык %s в metabox.main.lang" "$lang
 uci set metabox.main.lang="$lang"
 uci commit metabox
 
-msg '
+if [ -n "$fork_service_left" ]; then
+	msg '
+metaboxd is installed; the services are not started.
+The sing-box service of sing-box-extended is still enabled or running. Stop it first,
+otherwise metabox-singbox cannot start:
+
+  /etc/init.d/sing-box stop && /etc/init.d/sing-box disable
+
+Then put a sing-box config at /etc/sing-box/config.json and start the services:
+' '
+metaboxd установлен; службы не запущены.
+Служба sing-box из sing-box-extended всё ещё включена или запущена. Сначала остановите её,
+иначе metabox-singbox не запустится:
+
+  /etc/init.d/sing-box stop && /etc/init.d/sing-box disable
+
+Затем положите конфиг sing-box в /etc/sing-box/config.json и запустите службы:
+'
+else
+	msg '
 metaboxd is installed; the services are not started.
 Put a sing-box config at /etc/sing-box/config.json, then:
-
+' '
+metaboxd установлен; службы не запущены.
+Положите конфиг sing-box в /etc/sing-box/config.json, затем:
+'
+fi
+msg '
   /etc/init.d/metabox-singbox enable && /etc/init.d/metabox-singbox start
   /etc/init.d/metaboxd enable && /etc/init.d/metaboxd start
 
 Updates: apk update && apk upgrade metaboxd
 Language: uci set metabox.main.lang=ru && uci commit metabox && /etc/init.d/metaboxd restart
 ' '
-metaboxd установлен; службы не запущены.
-Положите конфиг sing-box в /etc/sing-box/config.json, затем:
-
   /etc/init.d/metabox-singbox enable && /etc/init.d/metabox-singbox start
   /etc/init.d/metaboxd enable && /etc/init.d/metaboxd start
 

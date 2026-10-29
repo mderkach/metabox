@@ -25,6 +25,11 @@ import { isSessionLost, reconnectDelay, watchSequence } from '@shared/api';
  *
  * One stream serves all topics: traffic, memory, connections and service state
  * arrive in the daemon envelope, not through three sockets to the Clash API.
+ *
+ * On a hidden tab the stream is closed, like the log stream: the browser gives an
+ * origin six HTTP/1.1 connections, and background tabs holding theirs would leave
+ * the log stream of the visible one waiting. A tab that becomes visible again opens
+ * the stream anew and refetches what it missed.
  */
 export function useRuntimeStreams(): void {
   const queryClient = useQueryClient();
@@ -141,8 +146,9 @@ export function useRuntimeStreams(): void {
 
       // A restarted daemon is back, while the retry may still be counting down a
       // pause grown during its silence: the stream opens now, not in half a minute.
+      // A hidden tab keeps the stream closed and opens it when shown.
       reopen.current = function reopenStream() {
-        if (stopped || (source !== null && source.readyState !== EventSource.CLOSED)) {
+        if (stopped || document.hidden || (source !== null && source.readyState !== EventSource.CLOSED)) {
           return;
         }
 
@@ -152,10 +158,27 @@ export function useRuntimeStreams(): void {
         connect();
       };
 
+      function onVisibilityChange() {
+        if (document.hidden) {
+          cancelRetry();
+          disconnect();
+          RuntimeStore.getState().closeStream();
+
+          return;
+        }
+
+        if (source === null && retry === null && !stopped) {
+          failures = 0;
+          connect();
+        }
+      }
+
       connect();
+      document.addEventListener('visibilitychange', onVisibilityChange);
 
       return function closeRuntimeStream() {
         reopen.current = null;
+        document.removeEventListener('visibilitychange', onVisibilityChange);
         stopped = true;
         cancelRetry();
         disconnect();

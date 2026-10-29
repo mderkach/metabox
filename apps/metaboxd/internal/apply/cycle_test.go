@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"metabox/internal/apply"
@@ -41,25 +42,31 @@ func TestHealthcheckWaitsForNewProcess(t *testing.T) {
 // credited to it: the healthcheck does not pass, the cycle stops with healthcheck_failed and
 // rolls back.
 func TestHealthcheckIgnoresOldProcess(t *testing.T) {
-	h := newHarnessWith(t, 20*time.Millisecond, slog.New(slog.DiscardHandler))
-	h.service.pid = 100
-	h.service.lag = -1
+	synctest.Test(t, func(t *testing.T) {
+		h := newHarnessWith(t, 20*time.Millisecond, slog.New(slog.DiscardHandler))
+		h.service.pid = 100
+		h.service.lag = -1
 
-	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
-		t.Fatalf("apply: %v", err)
-	}
+		if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
+			t.Fatalf("apply: %v", err)
+		}
 
-	tx := waitPhase(t, h, apply.PhaseRolledBack)
+		// The bubble clock moves only while this goroutine sleeps too: the cycle ceiling
+		// passes here.
+		time.Sleep(time.Second)
 
-	if slices.Contains(h.rec.snapshot(), "Wait") {
-		t.Error("API polled although procd returns the old pid: the answer was credited to the old process")
-	}
-	if tx.ReasonCode != apply.ReasonHealthcheckFailed {
-		t.Errorf("reason code %q, expected %q", tx.ReasonCode, apply.ReasonHealthcheckFailed)
-	}
-	if !strings.Contains(tx.Reason, "100") {
-		t.Errorf("detail %q does not name the old pid", tx.Reason)
-	}
+		tx := waitPhase(t, h, apply.PhaseRolledBack)
+
+		if slices.Contains(h.rec.snapshot(), "Wait") {
+			t.Error("API polled although procd returns the old pid: the answer was credited to the old process")
+		}
+		if tx.ReasonCode != apply.ReasonHealthcheckFailed {
+			t.Errorf("reason code %q, expected %q", tx.ReasonCode, apply.ReasonHealthcheckFailed)
+		}
+		if !strings.Contains(tx.Reason, "100") {
+			t.Errorf("detail %q does not name the old pid", tx.Reason)
+		}
+	})
 }
 
 // Without procd there is nothing to compare the pid with: the apply is not stopped, the healthcheck
@@ -119,9 +126,38 @@ func TestRollbackWithoutBackup(t *testing.T) {
 	})
 
 	t.Run("cycle step failed", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			h := newHarness(t)
+			h.store.restoreErr = config.ErrNoBackup
+			h.health.err = errors.New("порт молчит")
+
+			if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
+				t.Fatalf("apply: %v", err)
+			}
+
+			tx := waitPhase(t, h, apply.PhaseFailed)
+			h.manager.Close()
+
+			if tx.ReasonCode != apply.ReasonNoBackup {
+				t.Errorf("phase %q with code %q, expected failure with reason no_backup", tx.Phase, tx.ReasonCode)
+			}
+			if !strings.Contains(tx.Reason, "порт молчит") {
+				t.Errorf("detail %q lost the step failure", tx.Reason)
+			}
+			if got := countOf(h.rec.snapshot(), "Restart"); got != 1 {
+				t.Errorf("restarts %d, expected one: from the apply itself", got)
+			}
+		})
+	})
+}
+
+// The backup failed: there was no write yet, the disk has the previous config. A rollback from
+// the backup of a previous transaction would lose what works: the transaction
+// is closed with a failure without Restore and a restart.
+func TestBackupFailureSkipsRollback(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
 		h := newHarness(t)
-		h.store.restoreErr = config.ErrNoBackup
-		h.health.err = errors.New("порт молчит")
+		h.store.backupErr = errors.New("диск переполнен")
 
 		if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
 			t.Fatalf("apply: %v", err)
@@ -130,92 +166,69 @@ func TestRollbackWithoutBackup(t *testing.T) {
 		tx := waitPhase(t, h, apply.PhaseFailed)
 		h.manager.Close()
 
-		if tx.ReasonCode != apply.ReasonNoBackup {
-			t.Errorf("phase %q with code %q, expected failure with reason no_backup", tx.Phase, tx.ReasonCode)
+		if tx.ReasonCode != apply.ReasonBackupFailed {
+			t.Errorf("phase %q with code %q, expected failure with reason backup_failed", tx.Phase, tx.ReasonCode)
 		}
-		if !strings.Contains(tx.Reason, "порт молчит") {
-			t.Errorf("detail %q lost the step failure", tx.Reason)
+		if !strings.Contains(tx.Reason, "диск переполнен") {
+			t.Errorf("detail %q lost the backup failure", tx.Reason)
 		}
-		if got := countOf(h.rec.snapshot(), "Restart"); got != 1 {
-			t.Errorf("restarts %d, expected one: from the apply itself", got)
+
+		calls := h.rec.snapshot()
+		for _, step := range []string{"Restore", "WriteLists", "Write", "Restart"} {
+			if slices.Contains(calls, step) {
+				t.Errorf("%s called after backup failure: steps %v", step, calls)
+			}
+		}
+		if state, _ := h.store.ReadState(t.Context()); state != nil {
+			t.Error("state of the closed transaction stayed on disk")
+		}
+
+		h.store.backupErr = nil
+
+		if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
+			t.Errorf("apply after backup failure: %v", err)
 		}
 	})
-}
-
-// The backup failed: there was no write yet, the disk has the previous config. A rollback from
-// the backup of a previous transaction would lose what works: the transaction
-// is closed with a failure without Restore and a restart.
-func TestBackupFailureSkipsRollback(t *testing.T) {
-	h := newHarness(t)
-	h.store.backupErr = errors.New("диск переполнен")
-
-	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
-		t.Fatalf("apply: %v", err)
-	}
-
-	tx := waitPhase(t, h, apply.PhaseFailed)
-	h.manager.Close()
-
-	if tx.ReasonCode != apply.ReasonBackupFailed {
-		t.Errorf("phase %q with code %q, expected failure with reason backup_failed", tx.Phase, tx.ReasonCode)
-	}
-	if !strings.Contains(tx.Reason, "диск переполнен") {
-		t.Errorf("detail %q lost the backup failure", tx.Reason)
-	}
-
-	calls := h.rec.snapshot()
-	for _, step := range []string{"Restore", "WriteLists", "Write", "Restart"} {
-		if slices.Contains(calls, step) {
-			t.Errorf("%s called after backup failure: steps %v", step, calls)
-		}
-	}
-	if state, _ := h.store.ReadState(t.Context()); state != nil {
-		t.Error("state of the closed transaction stayed on disk")
-	}
-
-	h.store.backupErr = nil
-
-	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
-		t.Errorf("apply after backup failure: %v", err)
-	}
 }
 
 // The journal did not reach the disk after the backup: nothing is written, the disk has
 // the previous config, and the transaction is closed without a rollback or a restart. The
 // apply is released: the owner retries once the disk is back.
 func TestJournalFailureSkipsRollback(t *testing.T) {
-	h := newHarness(t)
-	h.store.stateErr = errors.New("файловая система только для чтения")
+	synctest.Test(t, func(t *testing.T) {
+		h := newHarness(t)
+		h.store.stateErr = errors.New("файловая система только для чтения")
 
-	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
-		t.Fatalf("apply: %v", err)
-	}
-
-	tx := waitPhase(t, h, apply.PhaseFailed)
-	h.manager.Close()
-
-	if tx.ReasonCode != apply.ReasonWriteFailed {
-		t.Errorf("phase %q with code %q, expected failure with reason write_failed", tx.Phase, tx.ReasonCode)
-	}
-	if !strings.Contains(tx.Reason, "файловая система только для чтения") {
-		t.Errorf("detail %q lost the journal failure", tx.Reason)
-	}
-
-	calls := h.rec.snapshot()
-	if !slices.Contains(calls, "Backup") {
-		t.Errorf("journal written without a backup: steps %v", calls)
-	}
-	for _, step := range []string{"Restore", "WriteLists", "Write", "Restart"} {
-		if slices.Contains(calls, step) {
-			t.Errorf("%s called after journal failure: steps %v", step, calls)
+		if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
+			t.Fatalf("apply: %v", err)
 		}
-	}
 
-	h.store.stateErr = nil
+		tx := waitPhase(t, h, apply.PhaseFailed)
+		h.manager.Close()
 
-	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
-		t.Errorf("apply after journal failure: %v", err)
-	}
+		if tx.ReasonCode != apply.ReasonWriteFailed {
+			t.Errorf("phase %q with code %q, expected failure with reason write_failed", tx.Phase, tx.ReasonCode)
+		}
+		if !strings.Contains(tx.Reason, "файловая система только для чтения") {
+			t.Errorf("detail %q lost the journal failure", tx.Reason)
+		}
+
+		calls := h.rec.snapshot()
+		if !slices.Contains(calls, "Backup") {
+			t.Errorf("journal written without a backup: steps %v", calls)
+		}
+		for _, step := range []string{"Restore", "WriteLists", "Write", "Restart"} {
+			if slices.Contains(calls, step) {
+				t.Errorf("%s called after journal failure: steps %v", step, calls)
+			}
+		}
+
+		h.store.stateErr = nil
+
+		if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
+			t.Errorf("apply after journal failure: %v", err)
+		}
+	})
 }
 
 // There is no config on the device: first start or removed by the owner. The apply

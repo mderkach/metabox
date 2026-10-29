@@ -27,7 +27,7 @@ export function OverviewProcess({ runtime, collapsible }: { runtime: OverviewRun
   const system = runtime.system;
   const history = useTrafficHistory();
   const points = history.data?.device ?? [];
-  const stepSeconds = history.data?.stepSeconds ?? 0;
+  const stepSeconds = history.data?.deviceStepSeconds ?? 0;
 
   return (
     <OverviewSection title={t('process.title')} collapsible={collapsible}>

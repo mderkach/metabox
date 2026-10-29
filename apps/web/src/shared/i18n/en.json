@@ -173,6 +173,7 @@
     "log_unavailable": "the sing-box log is unavailable: logread did not respond or the log file could not be opened",
     "log_query_invalid": "the daemon rejected the log level or line count",
     "log_stream_limit": "too many log streams are open — close extra tabs",
+    "event_stream_limit": "too many panel tabs are open — close extra tabs",
     "log_clear_forbidden": "the log file is outside the config directory, /var/run and /tmp — the daemon does not clear it",
     "list_invalid": "the daemon rejected the list file",
     "workdir_mismatch": "the sing-box service working directory does not match the config directory",

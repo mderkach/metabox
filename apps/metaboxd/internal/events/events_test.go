@@ -278,7 +278,7 @@ func TestHubStopsWithLastSubscriber(t *testing.T) {
 	source := &fakeSource{service: json.RawMessage(`{}`)}
 	hub := New(source, testLogger(t), fastOptions())
 
-	sub, _, cancel := hub.subscribe()
+	sub, _, cancel, _ := hub.subscribe()
 
 	select {
 	case <-sub.ch:
@@ -400,7 +400,7 @@ func TestHubForgetsStateAfterStop(t *testing.T) {
 	source := &fakeSource{service: json.RawMessage(`{}`)}
 	hub := New(source, testLogger(t), fastOptions())
 
-	sub, _, cancel := hub.subscribe()
+	sub, _, cancel, _ := hub.subscribe()
 
 	select {
 	case <-sub.ch:
@@ -423,7 +423,7 @@ func TestHubForgetsStateAfterStop(t *testing.T) {
 func TestHubCloseReleasesSubscribers(t *testing.T) {
 	hub := New(&fakeSource{service: json.RawMessage(`{}`)}, testLogger(t), fastOptions())
 
-	sub, _, _ := hub.subscribe()
+	sub, _, _, _ := hub.subscribe()
 	hub.Close()
 
 	for range sub.ch { //nolint:revive // drain the rest of the queue until it closes
@@ -442,7 +442,7 @@ func TestHubCloseReleasesSubscribers(t *testing.T) {
 func TestHubPublishesCounterSnapshot(t *testing.T) {
 	hub := New(&fakeSource{service: json.RawMessage(`{}`)}, testLogger(t), fastOptions())
 
-	sub, _, cancel := hub.subscribe()
+	sub, _, cancel, _ := hub.subscribe()
 	defer cancel()
 
 	hub.PublishConnections(json.RawMessage(clashSnapshotBody))
@@ -609,7 +609,7 @@ func TestHubStopKeepsNextGeneration(t *testing.T) {
 	source := newStallSource()
 	hub := New(source, testLogger(t), slowOptions())
 
-	first, _, leave := hub.subscribe()
+	first, _, leave, _ := hub.subscribe()
 	readTopics(t, first.ch, 3)
 
 	left := make(chan struct{})
@@ -621,7 +621,7 @@ func TestHubStopKeepsNextGeneration(t *testing.T) {
 
 	waitStopping(t, hub)
 
-	next, _, cancel := hub.subscribe()
+	next, _, cancel, _ := hub.subscribe()
 	defer cancel()
 
 	// traffic, memory and service of the new set.
@@ -648,7 +648,7 @@ func TestHubCloseRejectsLateSubscriber(t *testing.T) {
 	source := newStallSource()
 	hub := New(source, testLogger(t), slowOptions())
 
-	first, _, _ := hub.subscribe()
+	first, _, _, _ := hub.subscribe()
 	readTopics(t, first.ch, 3)
 
 	closed := make(chan struct{})
@@ -660,7 +660,7 @@ func TestHubCloseRejectsLateSubscriber(t *testing.T) {
 
 	waitStopping(t, hub)
 
-	late, recent, cancel := hub.subscribe()
+	late, recent, cancel, _ := hub.subscribe()
 	defer cancel()
 
 	if len(recent) != 0 {
@@ -768,5 +768,185 @@ func TestLinesEOF(t *testing.T) {
 	}
 	if len(got) != 2 || got[0] != `{"up":1}` || got[1] != `{"up":2}` {
 		t.Errorf("lines %q returned, expected two lines without edge spaces", got)
+	}
+}
+
+// frameWriter drops the stream body and reports every flushed connections frame.
+type frameWriter struct {
+	header http.Header
+	frames chan struct{}
+	seen   bool
+}
+
+func (w *frameWriter) Header() http.Header { return w.header }
+
+func (w *frameWriter) WriteHeader(int) {}
+
+func (w *frameWriter) Write(p []byte) (int, error) {
+	if strings.Contains(string(p[:min(len(p), 64)]), "event: "+TopicConnections) {
+		w.seen = true
+	}
+
+	return len(p), nil
+}
+
+func (w *frameWriter) Flush() {
+	if w.seen {
+		w.seen = false
+		w.frames <- struct{}{}
+	}
+}
+
+// The benchmark is the price of one connections tick of five thousand entries
+// delivered to MaxSubscribers readers: translation plus the write to every stream.
+func BenchmarkHubFanOut5000(b *testing.B) {
+	const readers = 8
+
+	hub := New(&fakeSource{}, slog.New(slog.NewTextHandler(io.Discard, nil)), Options{
+		ServiceInterval: time.Hour,
+		SystemInterval:  time.Hour,
+		RetryInterval:   time.Hour,
+		KeepAlive:       time.Hour,
+	})
+	raw := clashSnapshot5000()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	frames := make(chan struct{}, readers)
+
+	var wg sync.WaitGroup
+
+	for range readers {
+		wg.Add(1)
+
+		go func() {
+			defer wg.Done()
+
+			w := &frameWriter{header: make(http.Header), frames: frames}
+			hub.ServeHTTP(w, httptest.NewRequestWithContext(ctx, http.MethodGet, "/", nil))
+		}()
+	}
+
+	for {
+		hub.mu.Lock()
+		n := len(hub.subscribers)
+		hub.mu.Unlock()
+
+		if n == readers {
+			break
+		}
+
+		time.Sleep(time.Millisecond)
+	}
+
+	b.ReportAllocs()
+
+	for b.Loop() {
+		hub.PublishConnections(raw)
+
+		for range readers {
+			<-frames
+		}
+	}
+
+	b.StopTimer()
+	cancel()
+	wg.Wait()
+}
+
+// Beyond MaxSubscribers a reader is refused with a status it can retry on, and a
+// departed reader frees its slot.
+func TestHubLimitsSubscribers(t *testing.T) {
+	hub := New(&fakeSource{}, testLogger(t), fastOptions())
+	defer hub.Close()
+
+	leave := make([]func(), 0, MaxSubscribers)
+
+	for range MaxSubscribers {
+		_, _, cancel, err := hub.subscribe()
+		if err != nil {
+			t.Fatalf("a reader within the limit was refused: %v", err)
+		}
+
+		leave = append(leave, cancel)
+	}
+
+	recorder := httptest.NewRecorder()
+	hub.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/", nil))
+
+	if recorder.Code != http.StatusTooManyRequests {
+		t.Errorf("code %d, expected %d", recorder.Code, http.StatusTooManyRequests)
+	}
+	if recorder.Header().Get("Retry-After") == "" {
+		t.Error("the refusal does not say when to retry")
+	}
+
+	leave[0]()
+
+	_, _, cancel, err := hub.subscribe()
+	if err != nil {
+		t.Fatalf("the slot of a departed reader is not freed: %v", err)
+	}
+
+	cancel()
+
+	for _, cancel := range leave[1:] {
+		cancel()
+	}
+}
+
+// The envelope written by hand is the one json.Marshal gives for the same event.
+func TestWriteEventMatchesMarshal(t *testing.T) {
+	event := Event{Topic: TopicConnections, Seq: 42, Data: json.RawMessage(`{"connections":[{"id":"a"}],"memory":1}`)}
+
+	body, err := json.Marshal(event)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+
+	recorder := httptest.NewRecorder()
+	if !writeEvent(recorder, event) {
+		t.Fatal("write failed")
+	}
+
+	want := "event: " + TopicConnections + "\ndata: " + string(body) + "\n\n"
+	if got := recorder.Body.String(); got != want {
+		t.Errorf("frame %q, expected %q", got, want)
+	}
+}
+
+// Data is compacted once at publication: a reader gets it without the source whitespace.
+func TestHubCompactsOnce(t *testing.T) {
+	hub := New(&fakeSource{}, testLogger(t), fastOptions())
+	defer hub.Close()
+
+	sub, _, cancel, err := hub.subscribe()
+	if err != nil {
+		t.Fatalf("subscribe: %v", err)
+	}
+	defer cancel()
+
+	hub.mu.Lock()
+	gen := hub.gen
+	hub.mu.Unlock()
+
+	hub.publish(gen, TopicTraffic, json.RawMessage("{ \"up\" : 1,\n \"down\": 2 }"))
+
+	deadline := time.After(time.Second)
+
+	for {
+		select {
+		case event := <-sub.ch:
+			if event.Topic != TopicTraffic {
+				continue
+			}
+
+			if got := string(event.Data); got != `{"up":1,"down":2}` {
+				t.Errorf("data %q, expected the compact form", got)
+			}
+
+			return
+		case <-deadline:
+			t.Fatal("the event did not reach the reader")
+		}
 	}
 }

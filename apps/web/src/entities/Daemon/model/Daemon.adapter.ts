@@ -120,6 +120,7 @@ export function toTrafficHistory(wire: TrafficHistoryWire): TrafficHistory {
   return {
     stepSeconds: wire.step_seconds,
     points: wire.points,
+    deviceStepSeconds: wire.device_step_seconds,
     device: wire.device,
     recent: wire.recent,
     connections: wire.connections,

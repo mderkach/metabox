@@ -11,6 +11,7 @@ import (
 	"slices"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"metabox/internal/apply"
@@ -846,21 +847,23 @@ func TestFailureCarriesStepCode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			h := newHarness(t)
-			tt.setup(h)
+			synctest.Test(t, func(t *testing.T) {
+				h := newHarness(t)
+				tt.setup(h)
 
-			if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
-				t.Fatalf("apply: %v", err)
-			}
+				if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
+					t.Fatalf("apply: %v", err)
+				}
 
-			tx := waitPhase(t, h, apply.PhaseRolledBack)
+				tx := waitPhase(t, h, apply.PhaseRolledBack)
 
-			if tx.ReasonCode != tt.want {
-				t.Errorf("reason code %q, expected %q", tx.ReasonCode, tt.want)
-			}
-			if tx.Reason == "" {
-				t.Error("step detail lost: nothing to fix the failure by")
-			}
+				if tx.ReasonCode != tt.want {
+					t.Errorf("reason code %q, expected %q", tx.ReasonCode, tt.want)
+				}
+				if tx.Reason == "" {
+					t.Error("step detail lost: nothing to fix the failure by")
+				}
+			})
 		})
 	}
 }
@@ -878,16 +881,18 @@ func TestReasonFollowsLang(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(string(tt.lang), func(t *testing.T) {
-			h := newHarnessIn(t, cycleTimeout, slog.New(slog.DiscardHandler), tt.lang)
-			h.store.writeErr = errors.New("no space left on device")
+			synctest.Test(t, func(t *testing.T) {
+				h := newHarnessIn(t, cycleTimeout, slog.New(slog.DiscardHandler), tt.lang)
+				h.store.writeErr = errors.New("no space left on device")
 
-			if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
-				t.Fatalf("apply: %v", err)
-			}
+				if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
+					t.Fatalf("apply: %v", err)
+				}
 
-			if tx := waitPhase(t, h, apply.PhaseRolledBack); tx.Reason != tt.want {
-				t.Errorf("reason %q, want %q", tx.Reason, tt.want)
-			}
+				if tx := waitPhase(t, h, apply.PhaseRolledBack); tx.Reason != tt.want {
+					t.Errorf("reason %q, want %q", tx.Reason, tt.want)
+				}
+			})
 		})
 	}
 }
@@ -1210,19 +1215,18 @@ func TestRollbackWaitsForConfirmInFlight(t *testing.T) {
 	}
 }
 
-// waitPhase waits until the cycle reaches the phase: the steps run in their own goroutine.
+// waitPhase waits until the cycle that runs in its own goroutine has nothing left to do and
+// checks the phase it stopped in. Called inside synctest.Test: the bubble knows when every
+// goroutine is blocked or gone, so the wait does not depend on how loaded the runner is.
 func waitPhase(t *testing.T, h *harness, phase apply.Phase) apply.Transaction {
 	t.Helper()
 
-	for range 100 {
-		if tx := h.manager.Current(); tx.Phase == phase {
-			return tx
-		}
+	synctest.Wait()
 
-		time.Sleep(time.Millisecond)
+	tx := h.manager.Current()
+	if tx.Phase != phase {
+		t.Fatalf("phase %q did not occur: current %q", phase, tx.Phase)
 	}
 
-	t.Fatalf("phase %q did not occur: current %q", phase, h.manager.Current().Phase)
-
-	return apply.Transaction{}
+	return tx
 }

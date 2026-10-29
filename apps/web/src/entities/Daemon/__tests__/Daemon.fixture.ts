@@ -104,9 +104,13 @@ export const SERVICE_DRIFT_FIXTURE: ServiceStateWire = {
   managed: true,
 };
 
-/** Traffic history: ten-second step, forty points, as the daemon serves it. */
+/**
+ * Traffic history: forty points, as the daemon serves it. The board step differs from the traffic
+ * one, as after a doubling only one of the rings went through.
+ */
 export const TRAFFIC_HISTORY_FIXTURE: TrafficHistoryWire = {
   step_seconds: 10,
+  device_step_seconds: 20,
   points: Array.from({ length: 40 }, (_, index) => ({
     down: 40_000 + index * 900,
     up: 6000 + ((index * 7) % 11) * 400,

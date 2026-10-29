@@ -355,11 +355,16 @@ describe('secret fields', () => {
   const SECRET_TEXT = `{
   "outbounds": [
     { "type": "shadowsocks", "tag": "ss", "server": "a.example", "server_port": 8388, "password": "hunter2" },
+    { "type": "urltest", "tag": "auto", "outbounds": ["ss"], "url": "https://probe.example/generate_204" },
   ],
   "providers": [
     { "type": "remote", "tag": "sub", "url": "https://sub.example/api/v1/client/subscribe?token=abc123" },
     { "type": "remote", "tag": "bare", "url": "https://bare.example" },
+    { "type": "remote", "tag": "path", "url": "https://sub.example/s/abc123" },
   ],
+  "route": {
+    "rule_set": [{ "type": "remote", "tag": "ads", "url": "https://lists.example/ads.srs" }],
+  },
 }`;
 
   const SHADOWSOCKS: JSONPath = ['outbounds', 0];
@@ -441,6 +446,21 @@ describe('secret fields', () => {
     const url = screen.getByRole('textbox', { name: 'url' });
 
     expect(url).toHaveValue('https://bare.example');
+    expect(url).not.toHaveAttribute('readonly');
+  });
+
+  it('a provider URL with its token in the path is hidden after the host', () => {
+    render(<NodeFromStore path={['providers', 2]} registry={NODE_REGISTRY.Provider} />);
+
+    expect(screen.getByRole('textbox', { name: 'url' })).toHaveValue('https://sub.example/••••••');
+  });
+
+  it('a URL outside a provider is shown while it has no userinfo or query', () => {
+    render(<NodeFromStore path={['outbounds', 1]} />);
+
+    const url = screen.getByRole('textbox', { name: 'url' });
+
+    expect(url).toHaveValue('https://probe.example/generate_204');
     expect(url).not.toHaveAttribute('readonly');
   });
 

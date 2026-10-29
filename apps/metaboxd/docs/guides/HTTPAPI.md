@@ -211,6 +211,7 @@ An upgrade to WebSocket on the proxy branch is rejected: runtime data goes throu
 - Upstreams are held as one set for all readers, not one set per subscription. When the last reader leaves, polling stops.
 - A new subscriber gets the last event of each topic immediately, otherwise the screen stays empty until the next poll period.
 - The subscriber queue is bounded: overflow drops an event instead of accumulating it. The daemon runs for months, and an unbounded queue is more dangerous than a missed sample.
+- The number of readers is bounded by `events.MaxSubscribers`; the next one gets 429 `event_stream_limit` with `Retry-After: 5`. Each event is compacted once at publication and its bytes are shared by all readers: the connections frame is up to ~10 MB, and encoding it per reader multiplies the cost by their number.
 - The buffer is flushed through `http.NewResponseController`, not by a cast to `http.Flusher`: middleware wraps `ResponseWriter` in its own type, which lacks the method.
 
 ## Log and diagnostics

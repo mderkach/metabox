@@ -23,7 +23,7 @@ jobs:
       PKG_ARCH: aarch64_cortex-a53
       PUBLIC_KEY: keys/metabox-release.pem
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           # The tagged commit is checked against main, so history is needed
           fetch-depth: 0
@@ -58,16 +58,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: python3 .github/scripts/release-bundle.py restore
 
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         if: steps.bundle.outputs.restored != 'true'
         with:
           go-version-file: .go-version
           cache-dependency-path: tools/schemagen/go.sum
 
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
         if: steps.bundle.outputs.restored != 'true'
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         if: steps.bundle.outputs.restored != 'true'
         with:
           node-version-file: package.json

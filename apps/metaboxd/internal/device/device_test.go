@@ -310,7 +310,7 @@ func TestSampleDeviceRecordsProcessMemory(t *testing.T) {
 	fs.listener(t, clashPortHex, socketInode)
 	fs.process(t, 5872, "sing-box", socketInode, 83900)
 
-	recorded := history.NewDevice(1, 4)
+	recorded := history.NewDevice(1, 10, 4)
 	reader := device.New(device.Options{
 		Proc:    fs.proc,
 		Sys:     fs.sys,

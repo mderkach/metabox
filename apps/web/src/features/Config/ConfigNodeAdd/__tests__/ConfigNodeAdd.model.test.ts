@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { NODE_REGISTRY } from '@entities/Config';
 
-import { NODE_TYPE_GROUP, nodeTypeOptions, nodeTypeSections } from '../model/ConfigNodeAdd.model';
+import { NODE_TYPE_GROUP, nodeTypeDocsUrl, nodeTypeOptions, nodeTypeSections } from '../model/ConfigNodeAdd.model';
 
 describe('nodeTypeOptions', () => {
   it('returns registry types by name', () => {
@@ -54,10 +54,50 @@ describe('nodeTypeSections', () => {
     ]);
   });
 
-  it('leaves the types of another registry as one ungrouped list without descriptions', () => {
-    const options = nodeTypeOptions(NODE_REGISTRY.Inbound, null);
+  it('describes every inbound type of the fork', () => {
+    const undescribed = nodeTypeOptions(NODE_REGISTRY.Inbound, null).filter((option) => option.described === null);
+
+    expect(undescribed.map((option) => option.type)).toEqual([]);
+  });
+
+  it('groups inbound types into router, proxy server and other, in this order', () => {
+    const sections = nodeTypeSections(nodeTypeOptions(NODE_REGISTRY.Inbound, null), NODE_REGISTRY.Inbound);
+    const typesOf = (group: string) =>
+      sections.find((section) => section.group === group)?.options.map((option) => option.type) ?? [];
+
+    expect(sections.map((section) => section.group)).toEqual([
+      NODE_TYPE_GROUP.Router,
+      NODE_TYPE_GROUP.Server,
+      NODE_TYPE_GROUP.Other,
+    ]);
+    expect(typesOf(NODE_TYPE_GROUP.Router)).toEqual(['mixed', 'redirect', 'tproxy', 'tun']);
+    expect(typesOf(NODE_TYPE_GROUP.Server)).toEqual(expect.arrayContaining(['vless', 'shadowsocks', 'hysteria2']));
+    expect(typesOf(NODE_TYPE_GROUP.Other)).toEqual(expect.arrayContaining(['direct']));
+  });
+
+  it('puts an inbound type without an entry into the last group', () => {
+    const sections = nodeTypeSections([{ type: 'future', unbuilt: null, described: null }], NODE_REGISTRY.Inbound);
+
+    expect(sections.map((section) => section.group)).toEqual([NODE_TYPE_GROUP.Other]);
+  });
+
+  it('leaves the types of a registry without groups as one ungrouped list without descriptions', () => {
+    const options = nodeTypeOptions(NODE_REGISTRY.Endpoint, null);
 
     expect(options.every((option) => option.described === null)).toBe(true);
-    expect(nodeTypeSections(options, NODE_REGISTRY.Inbound)).toEqual([{ group: null, options }]);
+    expect(nodeTypeSections(options, NODE_REGISTRY.Endpoint)).toEqual([{ group: null, options }]);
+  });
+});
+
+describe('nodeTypeDocsUrl', () => {
+  it('links an inbound type to its page in the fork documentation', () => {
+    expect(nodeTypeDocsUrl(NODE_REGISTRY.Inbound, 'tun')).toBe(
+      'https://github.com/shtorm-7/sing-box-extended/blob/extended/docs/configuration/inbound/tun.md'
+    );
+  });
+
+  it('has no link for a type the fork did not document, or for another registry', () => {
+    expect(nodeTypeDocsUrl(NODE_REGISTRY.Inbound, 'mtproxy')).toBeNull();
+    expect(nodeTypeDocsUrl(NODE_REGISTRY.Outbound, 'vless')).toBeNull();
   });
 });
