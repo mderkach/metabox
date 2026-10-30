@@ -2,10 +2,10 @@
 
 |                      |                                                                           |
 | -------------------- | ------------------------------------------------------------------------- |
-| **Document version** | 1.63                                                                      |
+| **Document version** | 1.65                                                                      |
 | **Status**           | **approved** 2026-08-30, except the open questions in section 10.1        |
 | **Owner**            | project author                                                            |
-| **Last revision**    | 2026-10-30                                                                |
+| **Last revision**    | 2026-10-31                                                                |
 | **Basis**            | deep-interview `metabox-di-001` (11 rounds) + `metabox-di-002` (7 rounds) |
 | **Final ambiguity**  | 11% / 15% (threshold 20%)                                                 |
 
@@ -87,6 +87,7 @@
 | 1.62    | 2026-10-25 | The daemon manages only the `metabox-singbox` service (AC-48, AC-56, component "Dataplane"): UCI `init_script` and `service_instance`, the daemon flags for them, multi-instance selection and the support for a service of another package are removed, with the API codes `launch_mismatch`, `dataplane_foreign_service`, `service_instance_ambiguous` and the `foreign_service` field ([ADR-0069](./adr/ADR-0069-manage-only-the-metabox-singbox-service.md))                                                                                                                                                                       |
 | 1.63    | 2026-10-30 | AC-86 opened: a routing rule has a name, kept as a line comment right above the rule because the fork has no name field on a rule; the rule form edits it, and a rule without one is labelled by its content in the list, the rule panel and the Apply summary, the number going second ([ADR-0070](./adr/ADR-0070-name-route-rules-with-a-line-comment-above-the-rule.md))                                                                                                                                                                                                                                                            |
 | 1.64    | 2026-10-30 | Added AC-87: the panel restarts its own daemon from Overview with a confirmation that names the in-memory history it resets, and reconnects on its own. Issue #143                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| 1.65    | 2026-10-31 | AC-15: readable saved history remains available when current list files cannot be read, with a warning and no current-version badge; restore keeps its Apply checks ([ADR-0071](./adr/ADR-0071-keep-version-history-readable-when-current-lists-are-unavailable.md)). Issue #164                                                                                                                                                                                                                                                                                                                                                       |
 
 > The document is living. Any decision in [`adr/`](./adr/README.md), including those moved from Appendix A, may be revised — they are decisions, not requirements; requirements are in sections 5 and 6.
 
@@ -253,7 +254,7 @@ Implementation state is not tracked in the PRD: it describes requirements, not t
 
 - [x] **AC-13.** Apply runs the full sequence from [ADR-0002](./adr/ADR-0002-apply-protocol-and-config-ownership.md); if `sing-box check` fails, nothing is written and the user sees the error from the binary.
 - [ ] **AC-14.** A config that is known to break connectivity leads to an automatic return of the previous one and restored access without SSH intervention.
-- [x] **AC-15.** Config version history is available in the UI; rollback to any previous version works.
+- [x] **AC-15.** Config version history is available in the UI; rollback to any previous version works. If the current list files cannot be read while saved history is readable, the history stays available with a warning and no version marked as current. Restore retains the ordinary Apply checks and may still fail.
 - [x] **AC-16.** Service restart is done via procd and works correctly when the service is already stopped.
 - [x] **AC-87.** Overview restarts the panel daemon itself, next to the sing-box service controls, after a confirmation that says the panel goes silent for a few seconds and that history the daemon keeps in memory (charts, rule hit counts) starts over. The daemon answers before it stops and launches the restart through its init script detached from its own process; the panel waits for a new daemon process, reconnects the runtime stream and refetches its data without a page reload. A daemon that does not come back is reported by the unavailability banner.
 

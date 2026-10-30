@@ -7,7 +7,7 @@ import {
   type ConfigVersionsWire,
   type ConfigVersionWire,
 } from '../api/Config.schema';
-import type { CheckFailure, ConfigVersion, WorkdirMismatch } from './Config.model';
+import type { CheckFailure, ConfigVersion, ConfigVersions, WorkdirMismatch } from './Config.model';
 
 /**
  * A version matches the device when both the config and the list file set
@@ -16,7 +16,9 @@ import type { CheckFailure, ConfigVersion, WorkdirMismatch } from './Config.mode
  */
 function isCurrent(wire: ConfigVersionWire, versions: ConfigVersionsWire): boolean {
   return (
-    wire.sum === versions.current_sum && (wire.lists_sum === undefined || wire.lists_sum === versions.current_lists_sum)
+    versions.current_lists_unavailable !== true &&
+    wire.sum === versions.current_sum &&
+    (wire.lists_sum === undefined || wire.lists_sum === versions.current_lists_sum)
   );
 }
 
@@ -35,8 +37,13 @@ function toConfigVersion(wire: ConfigVersionWire, versions: ConfigVersionsWire):
  * ascending number, while rollbacks usually go to the previous config, not the
  * oldest one.
  */
-export function toConfigVersions(wire: ConfigVersionsWire): ConfigVersion[] {
-  return [...wire.versions].sort((left, right) => right.id - left.id).map((version) => toConfigVersion(version, wire));
+export function toConfigVersions(wire: ConfigVersionsWire): ConfigVersions {
+  return {
+    versions: [...wire.versions]
+      .sort((left, right) => right.id - left.id)
+      .map((version) => toConfigVersion(version, wire)),
+    currentListsUnavailable: wire.current_lists_unavailable === true,
+  };
 }
 
 /** Daemon failure code whose `details` holds the binary output. */

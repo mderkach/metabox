@@ -148,7 +148,7 @@ func (s *Store) SaveVersion(ctx context.Context, data []byte) error {
 		next = saved[0] + 1
 	}
 
-	if err := saveVersionLists(root, next, prev, lists); err != nil {
+	if err := saveVersionLists(root, next, prev, lists, root.Link); err != nil {
 		return err
 	}
 
@@ -170,7 +170,7 @@ func (s *Store) SaveVersion(ctx context.Context, data []byte) error {
 // an unchanged list must not cost space in every version. The file system
 // may refuse the link, and then the file is copied: saving space is not
 // a reason to refuse a version.
-func saveVersionLists(root *os.Root, next int, prev map[string]string, lists map[string][]byte) error {
+func saveVersionLists(root *os.Root, next int, prev map[string]string, lists map[string][]byte, link func(string, string) error) error {
 	// An orphan of the same number is a trace of a break before the version file was written: the number
 	// is then not taken, and the snapshot is assembled anew.
 	for _, name := range []string{versionListsName(next), versionListsStaging} {
@@ -192,7 +192,7 @@ func saveVersionLists(root *os.Root, next int, prev map[string]string, lists map
 	for name, data := range lists {
 		if sum, ok := prev[name]; ok && sum == Sum(data) {
 			from := versionListsName(next-1) + "/" + name
-			if root.Link(from, versionListsStaging+"/"+name) == nil {
+			if link(from, versionListsStaging+"/"+name) == nil {
 				continue
 			}
 		}

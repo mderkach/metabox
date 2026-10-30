@@ -1,10 +1,13 @@
-import { History } from 'lucide-react';
+import { History, TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { toCheckFailure, useConfigVersions, type ConfigVersion } from '@entities/Config';
 import { formatBytes, formatDateTime } from '@shared/lib/format';
 import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
   Badge,
   Button,
   Dialog,
@@ -73,7 +76,15 @@ export function ConfigApplyHistory() {
 
         {versions.isLoadingError && <QueryFailure messageKey='source.versions' query={versions} />}
 
-        {versions.isSuccess && versions.data.length === 0 && (
+        {versions.isSuccess && versions.data.currentListsUnavailable && (
+          <Alert>
+            <TriangleAlert className='text-signal-warn' />
+            <AlertTitle>{t('history.listsUnavailable.title')}</AlertTitle>
+            <AlertDescription>{t('history.listsUnavailable.description')}</AlertDescription>
+          </Alert>
+        )}
+
+        {versions.isSuccess && versions.data.versions.length === 0 && (
           <Empty>
             <EmptyHeader>
               <EmptyDescription>{t('history.empty')}</EmptyDescription>
@@ -81,10 +92,10 @@ export function ConfigApplyHistory() {
           </Empty>
         )}
 
-        {versions.isSuccess && versions.data.length > 0 && (
+        {versions.isSuccess && versions.data.versions.length > 0 && (
           <ScrollArea className='max-h-[50vh]'>
             <ul className='flex flex-col'>
-              {versions.data.map((version) => (
+              {versions.data.versions.map((version) => (
                 <VersionRow key={version.id} version={version} disabled={restore.isPending} onRestore={onRestore} />
               ))}
             </ul>

@@ -45,6 +45,7 @@ export type {
   ConfigDocument,
   ConfigSection,
   ConfigVersion,
+  ConfigVersions,
   GenericSection,
   WorkdirMismatch,
 } from './model/Config.model';

@@ -92,6 +92,39 @@ describe('ConfigApplyHistory', () => {
     expect(await screen.findByText(/Пока ничего не применялось/)).toBeInTheDocument();
   });
 
+  it('shows saved versions and a comparison warning when the current lists are unreadable', async () => {
+    server.use(
+      http.get(CONFIG_ENDPOINT.versions(), () =>
+        HttpResponse.json({
+          versions: VERSIONS,
+          current_sum: VERSIONS[1].sum,
+          current_lists_unavailable: true,
+        })
+      )
+    );
+    renderWithQuery(<ConfigApplyHistory />);
+
+    await userEvent.click(screen.getByRole('button', { name: /История версий/ }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Не удалось прочитать текущие списки правил');
+    expect(screen.getAllByRole('listitem')).toHaveLength(VERSIONS.length);
+    expect(screen.queryByText('текущая')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Вернуть' })).toHaveLength(VERSIONS.length);
+  });
+
+  it('shows the comparison warning even when no versions have been saved', async () => {
+    server.use(
+      http.get(CONFIG_ENDPOINT.versions(), () => HttpResponse.json({ versions: [], current_lists_unavailable: true }))
+    );
+    renderWithQuery(<ConfigApplyHistory />);
+
+    await userEvent.click(screen.getByRole('button', { name: /История версий/ }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Не удалось прочитать текущие списки правил');
+    expect(screen.getByText(/Пока ничего не применялось/)).toBeInTheDocument();
+    expect(screen.queryByRole('listitem')).not.toBeInTheDocument();
+  });
+
   it('rollback goes to the version restore handler', async () => {
     const restored: string[] = [];
 
