@@ -25,11 +25,14 @@ import {
 } from '@entities/Config';
 import {
   APPLY_PHASE,
+  DAEMON_QUERY,
   isApplyActive,
   useDaemonReachable,
   useDaemonStatus,
   type ApplyTransaction,
 } from '@entities/Daemon';
+import { PROXY_QUERY } from '@entities/Proxy';
+import { ROUTE_QUERY } from '@entities/Route';
 import { toRuleChanges, toRuleRowsFromNodes, type RuleChange, type RuleRow } from '@entities/Rule';
 import { API_FAILURE, ApiError } from '@shared/api';
 import { failureLine, firstJsoncError } from '@shared/lib/jsonc';
@@ -71,6 +74,13 @@ function useDocumentRefresh(transaction: ApplyTransaction | null) {
       seen.current = mark;
 
       void queryClient.invalidateQueries({ queryKey: CONFIG_QUERY.all });
+
+      if (transaction.phase === APPLY_PHASE.Confirmed) {
+        void queryClient.invalidateQueries({ queryKey: PROXY_QUERY.all });
+        void queryClient.invalidateQueries({ queryKey: ROUTE_QUERY.all });
+        void queryClient.invalidateQueries({ queryKey: DAEMON_QUERY.clashConfigs() });
+        void queryClient.invalidateQueries({ queryKey: DAEMON_QUERY.service() });
+      }
 
       const submitted = ConfigApplyStore.getState().settle(transaction.id);
 
