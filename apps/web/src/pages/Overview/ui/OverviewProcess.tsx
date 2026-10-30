@@ -1,13 +1,14 @@
 import { useTranslation } from 'react-i18next';
 
 import { SCHEMA_VERSION, useConfigPath, useDaemonStatus, useTrafficHistory } from '@entities/Daemon';
+import { DaemonRestart } from '@features/Daemon/DaemonControl';
 import { DaemonModeSwitch } from '@features/Daemon/DaemonMode';
 import { formatBytes } from '@shared/lib/format';
 import { cn } from '@shared/lib/utils';
 import { Card, CardContent, CardHeader, PENDING_REVEAL, SECTION_LABEL, Skeleton } from '@shared/ui';
 import { DaemonService } from '@widgets/Daemon/DaemonService';
 
-import type { OverviewRuntime } from '../lib';
+import { useDaemonMark, type OverviewRuntime } from '../lib';
 import { OverviewSection } from './OverviewSection';
 import { OverviewTrend } from './OverviewTrend';
 
@@ -21,6 +22,7 @@ import { OverviewTrend } from './OverviewTrend';
 export function OverviewProcess({ runtime, collapsible }: { runtime: OverviewRuntime; collapsible: boolean }) {
   const { t } = useTranslation('pages/Overview');
   const status = useDaemonStatus();
+  const daemon = useDaemonMark(status.isSuccess);
   const configPath = useConfigPath();
   const system = runtime.system;
   const history = useTrafficHistory();
@@ -47,11 +49,8 @@ export function OverviewProcess({ runtime, collapsible }: { runtime: OverviewRun
           <CardHeader className='flex flex-row flex-wrap items-center gap-x-2.5 gap-y-1'>
             <h3 className={SECTION_LABEL}>{t('process.panel')}</h3>
             <p className='flex items-center gap-1.5 text-xs'>
-              <span
-                aria-hidden='true'
-                className={cn('size-2 shrink-0 rounded-full', status.isSuccess ? 'bg-signal-ok' : 'bg-signal-bad')}
-              />
-              {status.isSuccess ? t('process.daemonUp') : t('daemon.silent', { ns: 'shared' })}
+              <span aria-hidden='true' className={cn('size-2 shrink-0 rounded-full', daemon.tone)} />
+              {daemon.label}
             </p>
             <p className='flex items-center gap-1.5 text-xs'>
               <span
@@ -60,6 +59,8 @@ export function OverviewProcess({ runtime, collapsible }: { runtime: OverviewRun
               />
               {runtime.live ? t('process.streamUp') : t('process.streamDown')}
             </p>
+            <span className='grow' />
+            <DaemonRestart />
           </CardHeader>
 
           <CardContent>

@@ -64,6 +64,7 @@
   "process": {
     "title": "Процессы",
     "panel": "Панель",
+    "daemonRestarting": "перезапускается",
     "daemonUp": "демон отвечает",
     "streamUp": "поток идёт",
     "streamDown": "поток молчит",

@@ -213,6 +213,7 @@ const overviewRoute = createRoute({
         'widgets/ConnectionHistory',
         'widgets/Daemon/DaemonService',
         'widgets/Daemon/DaemonTraffic',
+        'features/Daemon/DaemonControl',
         'widgets/ProxyLatency',
       ]),
       QueryClientInstance.query(getProxiesOptions()).catch(keepFailureForScreen),

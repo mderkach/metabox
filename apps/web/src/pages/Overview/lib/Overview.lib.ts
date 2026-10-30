@@ -26,6 +26,7 @@ import {
   type UplinkRate,
 } from '@entities/Daemon';
 import { DELAY_STATE, useProxies } from '@entities/Proxy';
+import { useDaemonRestarting } from '@features/Daemon/DaemonControl';
 import { MS_IN_SECOND } from '@shared/lib/time';
 
 /**
@@ -269,4 +270,21 @@ export function useOverviewVerdict(
   }
 
   return { tone: VERDICT_TONE.Ok, title: t('verdict.ok'), hint: t('verdict.okHint'), action: null };
+}
+
+/**
+ * The panel daemon mark in the process card. A restart started from this tab is
+ * expected silence, not a failure.
+ */
+export function useDaemonMark(answers: boolean): { tone: string; label: string } {
+  const { t } = useTranslation('pages/Overview');
+  const restarting = useDaemonRestarting();
+
+  if (restarting) {
+    return { tone: 'bg-signal-warn', label: t('process.daemonRestarting') };
+  }
+
+  return answers
+    ? { tone: 'bg-signal-ok', label: t('process.daemonUp') }
+    : { tone: 'bg-signal-bad', label: t('daemon.silent', { ns: 'shared' }) };
 }

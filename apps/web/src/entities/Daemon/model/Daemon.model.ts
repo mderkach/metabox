@@ -33,6 +33,8 @@ export interface ApplyTransaction {
 export interface DaemonStatus {
   /** Daemon version, not sing-box: the binary is served in a separate field. */
   version: string;
+  /** Random for each daemon process: a different value means the daemon was restarted. */
+  instance: string;
   /** sing-box version on the device; empty if the daemon did not read it. */
   singboxVersion?: string;
   /**

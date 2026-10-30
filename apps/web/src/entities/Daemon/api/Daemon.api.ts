@@ -27,6 +27,15 @@ export async function runServiceAction(action: ServiceAction): Promise<ServiceSt
   return ApiClientInstance.post<ServiceStateWire>(DAEMON_ENDPOINT.serviceAction(action));
 }
 
+/**
+ * Restart of the daemon's own service. The daemon answers before it stops, so the
+ * response says only that the restart is launched: the new process is recognized by
+ * its `instance` in the status.
+ */
+export async function restartDaemon(): Promise<void> {
+  return ApiClientInstance.post<void>(DAEMON_ENDPOINT.restart());
+}
+
 /** Runtime routing mode: `Rule`, `Global` or `Direct`. */
 export async function getClashConfigs(config?: AxiosRequestConfig): Promise<ClashConfigsWire> {
   return ApiClientInstance.get<ClashConfigsWire>(DAEMON_ENDPOINT.clashConfigs(), config);
