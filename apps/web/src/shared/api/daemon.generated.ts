@@ -258,6 +258,8 @@ export const VersionsSchema = z.object({
   current_sum: z.string().optional(),
   /** CurrentListsSum is the fingerprint of the current list file set in the same notation as `Version.ListsSum`: a version matches the device only when both the config and the lists match. The field is absent from a daemon that does not store list snapshots. */
   current_lists_sum: z.string().optional(),
+  /** CurrentListsUnavailable means the current lists could not be read, so history is available but cannot be compared with the full applied state. The field is absent from older daemons and when the lists are readable. */
+  current_lists_unavailable: z.boolean().optional(),
 })
 
 /** Service is the response of `GET /api/service` and an event of the same form in the stream: the panel gets one format regardless of the source. */

@@ -2,6 +2,8 @@ package httpapi_test
 
 import (
 	"bytes"
+	"context"
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -333,5 +335,86 @@ func TestConfigVersionsCurrentListsSum(t *testing.T) {
 
 	if want := config.ListsEtag(sums); body.CurrentListsSum != want {
 		t.Errorf("lists fingerprint %q, expected %q", body.CurrentListsSum, want)
+	}
+
+	var fields map[string]json.RawMessage
+	got.decode(t, &fields)
+
+	if _, ok := fields["current_lists_unavailable"]; ok {
+		t.Error("readable current lists are marked unavailable")
+	}
+}
+
+func TestConfigVersionsUnreadableCurrentLists(t *testing.T) {
+	for _, versions := range [][]config.Version{{{ID: 3, Sum: "saved", ListsSum: "lists"}}, {}} {
+		t.Run(strconv.Itoa(len(versions))+" versions", func(t *testing.T) {
+			applied := []byte("{}")
+			reader := fakeReader{
+				data: applied, versions: versions,
+				listSumsErr: errors.New("read private rule-set path: permission denied"),
+			}
+			var logs bytes.Buffer
+			srv := httpapi.NewServer(&fakeApplier{}, reader, slog.New(slog.NewTextHandler(&logs, nil)), httpapi.Options{})
+			rec := httptest.NewRecorder()
+			srv.ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "http://127.0.0.1/api/config/versions", nil))
+
+			if rec.Code != http.StatusOK {
+				t.Fatalf("response code: got %d, expected %d", rec.Code, http.StatusOK)
+			}
+
+			var body struct {
+				Versions                []config.Version `json:"versions"`
+				CurrentSum              string           `json:"current_sum"`
+				CurrentListsUnavailable bool             `json:"current_lists_unavailable"`
+				CurrentListsSum         *string          `json:"current_lists_sum"`
+			}
+			if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+				t.Fatal(err)
+			}
+			if !slices.Equal(body.Versions, versions) {
+				t.Errorf("versions: got %+v, expected %+v", body.Versions, versions)
+			}
+			if body.CurrentSum != config.Sum(applied) || !body.CurrentListsUnavailable || body.CurrentListsSum != nil {
+				t.Errorf("degraded response: %+v", body)
+			}
+			if strings.Contains(rec.Body.String(), "private rule-set path") {
+				t.Error("response exposes the read failure detail")
+			}
+			if strings.Count(logs.String(), "level=WARN") != 1 || !strings.Contains(logs.String(), reader.listSumsErr.Error()) {
+				t.Errorf("expected one warning with the original error, got %s", logs.String())
+			}
+		})
+	}
+}
+
+func TestConfigVersionsFailureIsNotDegradedHistory(t *testing.T) {
+	for _, tt := range []struct {
+		name   string
+		reader fakeReader
+	}{
+		{"history unreadable", fakeReader{err: errors.New("history unreadable")}},
+		{"config unreadable", fakeReader{readErr: errors.New("config unreadable")}},
+		{"list read deadline", fakeReader{listSumsErr: context.DeadlineExceeded}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := request(t, newTestServerWithReader(t, tt.reader), http.MethodGet, "/api/config/versions", "", nil)
+			if got.status == http.StatusOK {
+				t.Fatalf("failure returned successful history: %s", got.body)
+			}
+			if strings.Contains(got.body, "current_lists_unavailable") {
+				t.Error("failure is marked as degraded history")
+			}
+		})
+	}
+}
+
+func TestConfigVersionsCancelledListReadStaysQuiet(t *testing.T) {
+	var logs bytes.Buffer
+	srv := httpapi.NewServer(&fakeApplier{}, fakeReader{listSumsErr: context.Canceled}, slog.New(slog.NewTextHandler(&logs, nil)), httpapi.Options{})
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "http://127.0.0.1/api/config/versions", nil))
+
+	if rec.Body.Len() != 0 || strings.Contains(logs.String(), "level=WARN") {
+		t.Errorf("cancelled request returned %q, logs %s", rec.Body.String(), logs.String())
 	}
 }

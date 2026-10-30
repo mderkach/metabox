@@ -394,6 +394,11 @@ export interface ConfigVersion {
   savedAt: number | null;
 }
 
+export interface ConfigVersions {
+  versions: ConfigVersion[];
+  currentListsUnavailable: boolean;
+}
+
 export interface CheckFailure {
   stdout: string;
   stderr: string;

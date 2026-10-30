@@ -98,6 +98,10 @@ type Versions struct {
 	// when both the config and the lists match. The field is absent from a daemon that does not
 	// store list snapshots.
 	CurrentListsSum string `json:"current_lists_sum,omitempty"`
+	// CurrentListsUnavailable means the current lists could not be read, so
+	// history is available but cannot be compared with the full applied state.
+	// The field is absent from older daemons and when the lists are readable.
+	CurrentListsUnavailable bool `json:"current_lists_unavailable,omitempty"`
 }
 
 // Service is the response of `GET /api/service` and an event of the same form in the stream: the panel

@@ -103,7 +103,11 @@
     "version": "No. {{id}}",
     "unknownTime": "save time unknown",
     "restore": "Restore",
-    "current": "current"
+    "current": "current",
+    "listsUnavailable": {
+      "title": "Current rule-set lists could not be read",
+      "description": "Version history remains available, but the current version cannot be identified until the lists are readable."
+    }
   },
   "changes": {
     "label": "Node and parameter changes",

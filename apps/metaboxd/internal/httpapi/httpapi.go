@@ -554,13 +554,17 @@ func (s *Server) handleVersions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sums, err := s.reader.ListSums(r.Context())
-	if err != nil {
+	switch {
+	case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
 		fail(s.log, w, r, err)
 
 		return
+	case err != nil:
+		s.log.Warn("current lists unavailable for version comparison", "err", err)
+		out.CurrentListsUnavailable = true
+	default:
+		out.CurrentListsSum = config.ListsEtag(sums)
 	}
-
-	out.CurrentListsSum = config.ListsEtag(sums)
 
 	writeJSON(s.log, w, http.StatusOK, out)
 }
