@@ -34,7 +34,7 @@ The panel carries the marker separately from the version rows. When true, it sho
 
 ### Scope and boundaries
 
-The change covers the versions response, generated daemon contract and panel history model and dialog. Restore with an unreadable current list set still fails before Apply starts. Snapshot layout, retention, hard-link reuse and copy fallback remain governed by ADR-0036. Injecting a failed link operation in a private test seam verifies that existing fallback; it introduces no filesystem policy.
+The change covers the versions response, generated daemon contract and panel history model and dialog. Restoring a version with a list snapshot still fails before Apply starts when the current list set is unreadable. Restoring a legacy version without a list snapshot uses ordinary Apply with its candidate and backup checks. Snapshot layout, retention, hard-link reuse and copy fallback remain governed by ADR-0036. Injecting a failed link operation in a private test seam verifies that existing fallback; it introduces no filesystem policy.
 
 ## Consequences
 
@@ -65,7 +65,7 @@ The daemon API change requires `!` in the commit header under [CONTRIBUTING](../
 
 These checks define the required evidence; they do not claim a device run:
 
-- `cd apps/metaboxd && go test ./internal/httpapi`: unreadable current lists return history, the marker and no list fingerprint, with one warning; empty history behaves the same; readable lists omit the marker; history/config failures and cancellation do not become partial success; restore still refuses an unreadable current list set before Apply.
+- `cd apps/metaboxd && go test ./internal/httpapi`: unreadable current lists return history, the marker and no list fingerprint, with one warning; empty history behaves the same; readable lists omit the marker; history/config failures and cancellation do not become partial success; restoring a version with a list snapshot still refuses an unreadable current list set before Apply starts; legacy restoration retains the ordinary Apply path.
 - `cd apps/metaboxd && go test ./internal/config`: `TestSaveVersionListsCopiesAfterLinkFailure` injects `EXDEV` and checks independent inodes, identical bytes, private file and directory permissions, and survival after removing the preceding snapshot. The existing `TestSaveVersionSnapshotsLists` checks that a snapshot survives later changes to the working lists.
 - `make schema-daemon`: regenerate the optional boolean in the panel contract.
 - `pnpm --filter web exec vitest run --project unit Config.adapter ConfigApplyHistory`: cover the warning with populated and empty history, conservative current badges, absent/false marker compatibility, and restoration error handling.
