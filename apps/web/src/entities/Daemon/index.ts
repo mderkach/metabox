@@ -1,5 +1,5 @@
 export { DAEMON_ENDPOINT } from './api/Daemon.endpoints';
-export { runServiceAction, setClashMode } from './api/Daemon.api';
+export { restartDaemon, runServiceAction, setClashMode } from './api/Daemon.api';
 export { listenMemory, listenService, listenSystem, listenTraffic } from './api/Daemon.stream';
 export {
   DAEMON_QUERY,
@@ -9,6 +9,7 @@ export {
   useClashConfigs,
   useConfigPath,
   useConfirmWindow,
+  useDaemonInstance,
   useDaemonReachable,
   getTrafficHistoryOptions,
   useDaemonStatus,

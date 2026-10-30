@@ -217,6 +217,8 @@ export const TransactionSchema = z.object({
 export const StatusSchema = z.object({
   /** Version is the daemon version; the sing-box binary version is a separate field. */
   version: z.string(),
+  /** Instance is random for each daemon process. After a restart the panel tells by it that a new process answers, not the old one that has not stopped yet. */
+  instance: z.string(),
   singbox_version: z.string().optional(),
   /** SingboxBuild is the binary build composition. No field means the binary was not read, and the panel has nothing to judge which node types are missing in it by. */
   singbox_build: SingboxBuildSchema.optional(),

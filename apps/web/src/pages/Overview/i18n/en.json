@@ -65,6 +65,7 @@
     "title": "Processes",
     "panel": "Panel",
     "daemonUp": "the daemon responds",
+    "daemonRestarting": "restarting",
     "streamUp": "the stream is running",
     "streamDown": "the stream is silent",
     "schema": "Form schema",

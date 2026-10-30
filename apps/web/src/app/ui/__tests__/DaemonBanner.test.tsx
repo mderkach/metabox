@@ -8,10 +8,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { DAEMON_ENDPOINT } from '@entities/Daemon';
 import { DAEMON_STATUS_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture';
+import { DAEMON_RESTART, useDaemonRestart } from '@features/Daemon/DaemonControl';
 
 import { DaemonBanner } from '../DaemonBanner';
 
 const UNREACHABLE = 'metabox не отвечает. Панель показывает последние загруженные данные, применять изменения нельзя.';
+const RESTARTING = 'metabox перезапускается. Панель переподключится сама через несколько секунд.';
 const SCHEMA = 'metabox новее панели: часть данных может не отображаться. Обновите страницу.';
 
 /** Its own client instead of `renderWithQuery`: the recovery test needs a repeated status poll. */
@@ -124,5 +126,48 @@ describe('DaemonBanner', () => {
     await waitFor(() => {
       expect(screen.getByRole('status')).toHaveTextContent(/^$/);
     });
+  });
+
+  // Silence after a restart from this tab is expected: the panel already waits for the daemon.
+  it('announces a restart from this tab instead of silence, without a retry', async () => {
+    // The daemon answers before the restart and goes silent after it.
+    server.use(
+      http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE)),
+      http.post(DAEMON_ENDPOINT.restart(), () => {
+        serveSilence();
+
+        return new HttpResponse(null, { status: 202 });
+      })
+    );
+
+    function Restart() {
+      const restart = useDaemonRestart();
+
+      return (
+        <button
+          type='button'
+          onClick={() => {
+            restart.mutate();
+          }}
+        >
+          перезапуск
+        </button>
+      );
+    }
+
+    const user = userEvent.setup();
+
+    renderWithQuery(
+      <>
+        <DaemonBanner />
+        <Restart />
+      </>
+    );
+    await user.click(screen.getByRole('button', { name: 'перезапуск' }));
+
+    // The panel asks for the daemon a second after the launch.
+    expect(await screen.findByText(RESTARTING, undefined, { timeout: 3 * DAEMON_RESTART.Poll })).toBeInTheDocument();
+    expect(screen.queryByText(UNREACHABLE)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Повторить' })).not.toBeInTheDocument();
   });
 });

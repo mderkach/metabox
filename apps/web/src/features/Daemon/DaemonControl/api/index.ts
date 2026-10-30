@@ -1,1 +1,1 @@
-export * from './DaemonControl.api';
+export { DAEMON_RESTART, useDaemonRestart, useDaemonRestarting, useServiceAction } from './DaemonControl.api';

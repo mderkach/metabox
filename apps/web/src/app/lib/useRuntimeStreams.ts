@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 import { ConnectionState, listenConnections } from '@entities/Connection';
 import {
@@ -13,6 +13,7 @@ import {
   listenTraffic,
   RuntimeState,
   RuntimeStore,
+  useDaemonInstance,
 } from '@entities/Daemon';
 import { isSessionLost, reconnectDelay, watchSequence } from '@shared/api';
 
@@ -37,6 +38,9 @@ export function useRuntimeStreams(): void {
   const connectionReaders = ConnectionState.use.readers();
   const runtimeReaders = RuntimeState.use.readers();
   const active = connectionReaders > 0 || runtimeReaders > 0;
+  const instance = useDaemonInstance();
+  const reopen = useRef<(() => void) | null>(null);
+  const seenInstance = useRef(instance);
 
   useEffect(
     function openRuntimeStream() {
@@ -140,6 +144,20 @@ export function useRuntimeStreams(): void {
         }
       }
 
+      // A restarted daemon is back, while the retry may still be counting down a
+      // pause grown during its silence: the stream opens now, not in half a minute.
+      // A hidden tab keeps the stream closed and opens it when shown.
+      reopen.current = function reopenStream() {
+        if (stopped || document.hidden || (source !== null && source.readyState !== EventSource.CLOSED)) {
+          return;
+        }
+
+        cancelRetry();
+        disconnect();
+        failures = 0;
+        connect();
+      };
+
       function onVisibilityChange() {
         if (document.hidden) {
           cancelRetry();
@@ -159,6 +177,7 @@ export function useRuntimeStreams(): void {
       document.addEventListener('visibilitychange', onVisibilityChange);
 
       return function closeRuntimeStream() {
+        reopen.current = null;
         document.removeEventListener('visibilitychange', onVisibilityChange);
         stopped = true;
         cancelRetry();
@@ -167,5 +186,18 @@ export function useRuntimeStreams(): void {
       };
     },
     [active, queryClient]
+  );
+
+  useEffect(
+    function reopenOnNewDaemon() {
+      const previous = seenInstance.current;
+
+      seenInstance.current = instance;
+
+      if (previous !== undefined && instance !== undefined && previous !== instance) {
+        reopen.current?.();
+      }
+    },
+    [instance]
   );
 }

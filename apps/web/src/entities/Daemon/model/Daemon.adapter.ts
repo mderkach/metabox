@@ -89,6 +89,7 @@ export function toApplyTransaction(wire: ApplyTransactionWire): ApplyTransaction
 export function toDaemonStatus(wire: DaemonStatusWire): DaemonStatus {
   return {
     version: wire.version,
+    instance: wire.instance,
     singboxVersion: wire.singbox_version,
     singboxTags: wire.singbox_build?.tags ?? null,
     configPath: wire.config_path,

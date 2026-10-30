@@ -49,6 +49,13 @@
         "failed": "Could not clear the log"
       }
     },
+    "daemon": {
+      "restart": {
+        "done": "The panel restarted",
+        "failed": "Could not restart the panel",
+        "stalled": "the old daemon process still answers"
+      }
+    },
     "service": {
       "action": {
         "failed": "The service did not accept the command"

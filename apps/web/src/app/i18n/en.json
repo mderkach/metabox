@@ -1,5 +1,6 @@
 {
   "banner": {
+    "restarting": "metabox is restarting. The panel reconnects on its own in a few seconds.",
     "unreachable": "metabox is not responding. The panel shows the last loaded data; changes cannot be applied.",
     "schema": "metabox is newer than the panel: some data may not show. Reload the page."
   },

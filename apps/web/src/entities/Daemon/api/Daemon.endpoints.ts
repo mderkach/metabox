@@ -13,6 +13,7 @@ export const DAEMON_ENDPOINT = {
   history: () => '/api/history',
   service: () => '/api/service',
   serviceAction: (action: string) => `/api/service/${action}`,
+  restart: () => '/api/daemon/restart',
   apply: () => '/api/apply',
   applyState: (id: string) => `/api/apply/${id}`,
   applyConfirm: (id: string) => `/api/apply/${id}/confirm`,

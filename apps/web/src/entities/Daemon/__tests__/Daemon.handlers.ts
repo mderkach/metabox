@@ -29,6 +29,8 @@ const CONFIRM_WINDOW_NS = 60_000_000_000;
 export function createStatefulDaemonHandlers(extraStatus: () => Partial<DaemonStatusWire> = () => ({})) {
   let transaction: ApplyTransactionWire | null = null;
   let clashConfigs = CLASH_CONFIGS_FIXTURE;
+  // A restart answers at once and the next status carries a new process.
+  let instance = DAEMON_STATUS_FIXTURE.instance;
 
   const start = (): ApplyTransactionWire => {
     transaction = {
@@ -47,6 +49,7 @@ export function createStatefulDaemonHandlers(extraStatus: () => Partial<DaemonSt
         ...(transaction === null
           ? DAEMON_STATUS_FIXTURE
           : { ...DAEMON_STATUS_FIXTURE, transaction, transaction_href: `/api/apply/${transaction.id}` }),
+        instance,
         ...extraStatus(),
       })
     ),
@@ -75,6 +78,11 @@ export function createStatefulDaemonHandlers(extraStatus: () => Partial<DaemonSt
 
     http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE)),
     http.post(DAEMON_ENDPOINT.serviceAction(':action'), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE)),
+    http.post(DAEMON_ENDPOINT.restart(), () => {
+      instance = `mock-${String(Date.now())}`;
+
+      return new HttpResponse(null, { status: 202 });
+    }),
     http.get(DAEMON_ENDPOINT.clashConfigs(), () => HttpResponse.json(clashConfigs)),
     http.patch(DAEMON_ENDPOINT.clashConfigs(), async ({ request }) => {
       const body: unknown = await request.json();

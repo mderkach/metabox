@@ -25,7 +25,10 @@ type Health struct {
 // Status is the response of `GET /api/status`.
 type Status struct {
 	// Version is the daemon version; the sing-box binary version is a separate field.
-	Version        string `json:"version"`
+	Version string `json:"version"`
+	// Instance is random for each daemon process. After a restart the panel tells by it that
+	// a new process answers, not the old one that has not stopped yet.
+	Instance       string `json:"instance"`
 	SingboxVersion string `json:"singbox_version,omitempty"`
 	// SingboxBuild is the binary build composition. No field means the binary was not read, and
 	// the panel has nothing to judge which node types are missing in it by.
