@@ -9,7 +9,7 @@ Go through it before handing in a change to the Go part. The checklist items are
 - [ ] The package is named by subject, not by layer; no `util`, `common`, `helpers` were created.
 - [ ] Dependencies are passed through the constructor, there are no global variables and no `init()`.
 - [ ] The interface is declared at the consumer and contains only the methods used.
-- [ ] The daemon does not parse the config into structs or a map
+- [ ] Config parsing stays within the [bounded read-only projection exception](./Architecture&Style.md#bounded-read-only-config-projections), without reverse serialization or a general Go config model.
 - [ ] No own validation of config contents was added: the binary checks it.
 
 ## Style

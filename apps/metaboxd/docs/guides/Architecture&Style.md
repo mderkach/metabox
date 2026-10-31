@@ -35,11 +35,25 @@ We do not create a `pkg/` directory: the project ships no public library, and `i
 
 These three boundaries must not be changed in code: a conflict is resolved by a decision, not by an in-place edit.
 
-| Boundary                                                 | What it means in code                                                                                                                    |
-| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| The daemon does not understand config contents           | The request body is `[]byte`. Parsing into structs or `map[string]any` is forbidden; the only edit is inserting `experimental.clash_api` |
-| Config validation is a `sing-box` call, not our own code | There are no own checks of the contents; the binary's output is passed on verbatim                                                       |
-| The schema lives on the frontend                         | We do not write a config model in Go: there will be no second schema implementation in the project                                       |
+| Boundary                                                 | What it means in code                                                                                                                                                                                                 |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The daemon does not model config contents                | The request body stays `[]byte`; typed config reads are limited to the [bounded read-only projections](#bounded-read-only-config-projections) below. The only edit is ensuring `experimental.clash_api` by byte edits |
+| Config validation is a `sing-box` call, not our own code | There are no own checks of the contents; the binary's output is passed on verbatim                                                                                                                                    |
+| The schema lives on the frontend                         | We do not write a config model in Go: there will be no second schema implementation in the project                                                                                                                    |
+
+### Bounded read-only config projections
+
+`internal/clashapi` may decode only these fields into narrow, local typed projections for daemon operations:
+
+| Reader           | Config fields                                                                          | Purpose                                                                                    |
+| ---------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `Read`           | `experimental.clash_api.external_controller`, `experimental.clash_api.secret`          | Reach the runtime API and perform health checks                                            |
+| `LogOutput`      | `log.disabled`, `log.output`                                                           | Select the file log source for log reading and service failure diagnosis                   |
+| `ReadDNSInbound` | `inbounds[].type`, `inbounds[].listen`, `inbounds[].listen_port`, `inbounds[].network` | Find the first `direct` inbound matching the configured DNS port and address the DNS probe |
+
+These reads preserve the original config bytes: projections are never serialized back into the config. They do not authorize a general Go config model, parsing into `map[string]any`, or custom config validation; `sing-box` remains the validator.
+
+Extending this list requires a concrete daemon operational need, the smallest field set in `internal/clashapi`, an update to this list, and tests for the read behavior and preservation of the original bytes. This exception does not permit config models elsewhere in the daemon.
 
 ## Dependencies inside the daemon
 
