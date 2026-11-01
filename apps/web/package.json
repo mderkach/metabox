@@ -14,8 +14,8 @@
     "build": "node tools/i18n.ts && tsc -b && vite build",
     "preview": "vite preview",
     "gen:i18n": "node tools/i18n.ts",
-    "test": "vitest run --project unit --project budget",
-    "test:watch": "vitest --project unit --project budget",
+    "test": "vitest run --project unit --project budget --project tooling",
+    "test:watch": "vitest --project unit --project budget --project tooling",
     "test:browser": "vitest run --project browser",
     "lint:react": "react-doctor --no-telemetry --no-supply-chain"
   },
@@ -29,7 +29,6 @@
     "axios": "1.20.0",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
-    "cn": "0.3.0",
     "i18next": "26.4.2",
     "i18next-resources-to-backend": "1.2.3",
     "jsonc-parser": "3.3.1",
