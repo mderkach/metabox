@@ -128,7 +128,7 @@
     "megabyte": "МБ",
     "gigabyte": "ГБ",
     "terabyte": "ТБ",
-    "rate": "{{value}}/\u2060с",
+    "rate": "{{value}}/⁠с",
     "second": "{{value}} с",
     "minute": "{{value}} мин",
     "hour": "{{value}} ч",
@@ -295,7 +295,8 @@
     "unavailable": "режим не прочитан: {{reason}}"
   },
   "jsonTextarea": {
-    "keys": "Tab добавляет отступ выделенным строкам, Shift+Tab убирает его. Чтобы выйти из поля, нажмите Escape, затем Tab."
+    "keys": "Tab добавляет отступ выделенным строкам, Shift+Tab убирает его. Чтобы выйти из поля, нажмите Escape, затем Tab.",
+    "leave": "Esc, затем Tab: выйти из поля"
   },
   "liveRegion": {
     "label": "Результат действия"
