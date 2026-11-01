@@ -35,6 +35,26 @@ function draft(): string {
   return ConfigDocumentState.getState().draft ?? '';
 }
 
+/** A list node row: the name button covers it, the type and address sit beside it. */
+async function findRow(name: string) {
+  await screen.findByRole('button', { name });
+
+  const row = screen.getAllByRole('listitem').find((item) => within(item).queryByRole('button', { name }) !== null);
+
+  if (row === undefined) {
+    throw new Error(`no row ${name}`);
+  }
+
+  return row;
+}
+
+/** Picks a node in the list: it opens in the panel named after it. */
+async function openNode(user: ReturnType<typeof userEvent.setup>, name: string) {
+  await user.click(await screen.findByRole('button', { name }));
+
+  return screen.getByRole('complementary', { name });
+}
+
 function OutboundsSection() {
   return <SectionNodes section='outbounds' />;
 }
@@ -75,17 +95,41 @@ describe('section screen', () => {
     ConfigDocumentState.getState().reset();
   });
 
-  it('section nodes are collapsed to a header with type and address', async () => {
+  it('section nodes are rows with type and address, and none is open', async () => {
     serveConfig(CONFIG_TEXT);
 
     renderWithRouter(OutboundsSection);
 
-    const node = within(await screen.findByRole('region', { name: 'hk-01' }));
+    const row = within(await findRow('hk-01'));
 
-    expect(node.getByRole('button', { name: 'hk-01' })).toHaveAttribute('aria-expanded', 'false');
-    expect(node.getByText('vless')).toBeInTheDocument();
-    expect(node.getByText('a.example:443')).toBeInTheDocument();
-    expect(node.queryByRole('tab', { name: 'Форма' })).not.toBeInTheDocument();
+    expect(row.getByRole('button', { name: 'hk-01' })).toHaveAttribute('aria-pressed', 'false');
+    expect(row.getByText('vless')).toBeInTheDocument();
+    expect(row.getByText('a.example:443')).toBeInTheDocument();
+    expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+  });
+
+  it('a picked node opens in the panel with focus on its name, another row switches it, Escape closes', async () => {
+    serveConfig(CONFIG_TEXT);
+
+    const user = userEvent.setup();
+
+    renderWithRouter(OutboundsSection);
+
+    const panel = within(await openNode(user, 'hk-01'));
+
+    expect(panel.getByRole('heading', { name: 'hk-01' })).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'hk-01' })).toHaveAttribute('aria-pressed', 'true');
+
+    await user.click(screen.getByRole('button', { name: 'direct' }));
+
+    expect(screen.getByRole('complementary', { name: 'direct' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'hk-01' })).toHaveAttribute('aria-pressed', 'false');
+
+    await user.keyboard('{Escape}');
+
+    await waitFor(() => {
+      expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+    });
   });
 
   it('opens an outbound node with a form, and the same node as text on the JSON tab', async () => {
@@ -95,9 +139,7 @@ describe('section screen', () => {
 
     renderWithRouter(OutboundsSection);
 
-    const node = within(await screen.findByRole('region', { name: 'hk-01' }));
-
-    await user.click(node.getByRole('button', { name: 'hk-01' }));
+    const node = within(await openNode(user, 'hk-01'));
 
     expect(node.getByRole('tab', { name: 'Форма' })).toHaveAttribute('aria-selected', 'true');
     expect(node.getByRole('textbox', { name: 'Сервер' })).toHaveValue('a.example');
@@ -105,7 +147,7 @@ describe('section screen', () => {
     await user.click(node.getByRole('tab', { name: 'JSON' }));
 
     expect(node.getByRole('textbox', { name: 'Узел hk-01 текстом' })).toHaveValue(JSON.stringify(HK_01, null, 2));
-    expect(screen.getByRole('heading', { name: 'direct' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'direct' })).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('a field edit by the form lands as one line: the comment and the neighboring node are intact', async () => {
@@ -115,9 +157,7 @@ describe('section screen', () => {
 
     renderWithRouter(OutboundsSection);
 
-    const node = within(await screen.findByRole('region', { name: 'hk-01' }));
-
-    await user.click(node.getByRole('button', { name: 'hk-01' }));
+    const node = within(await openNode(user, 'hk-01'));
 
     const server = node.getByRole('textbox', { name: 'Сервер' });
 
@@ -143,9 +183,7 @@ describe('section screen', () => {
 
     renderWithRouter(OutboundsSection);
 
-    const node = within(await screen.findByRole('region', { name: 'direct' }));
-
-    await user.click(node.getByRole('button', { name: 'direct' }));
+    const node = within(await openNode(user, 'direct'));
 
     await user.click(node.getByRole('tab', { name: 'JSON' }));
 
@@ -179,9 +217,7 @@ describe('section screen', () => {
 
     renderWithRouter(DnsRulesSection);
 
-    const node = within(await screen.findByRole('region', { name: 'dns.rules[1]' }));
-
-    await user.click(node.getByRole('button', { name: 'dns.rules[1]' }));
+    const node = within(await openNode(user, 'dns.rules[1]'));
 
     const editor = node.getByRole('textbox', { name: 'Узел dns.rules[1] текстом' });
 
@@ -215,7 +251,7 @@ describe('section screen', () => {
 
     const settings = within(await screen.findByRole('region', { name: 'Параметры DNS' }));
 
-    expect(screen.getByRole('region', { name: 'local' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'local' })).toBeInTheDocument();
 
     await user.click(settings.getByRole('button', { name: 'Параметры DNS' }));
     await user.clear(settings.getByRole('textbox', { name: 'final' }));
@@ -269,8 +305,8 @@ describe('section screen', () => {
 
     renderWithRouter(DnsRulesSection);
 
-    expect(await screen.findByRole('heading', { name: 'dns.rules[0]' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'dnsRules[0]' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'dns.rules[0]' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'dnsRules[0]' })).not.toBeInTheDocument();
   });
 
   it('a missing ntp opens as an empty node, saving creates the section', async () => {
@@ -347,7 +383,7 @@ describe('section screen', () => {
     });
     expect(draft()).toContain('// выходы');
     expect(findValue(draft(), ['outbounds', 1])).toEqual(HK_01);
-    expect(await screen.findByRole('region', { name: 'direct-2' })).toBeInTheDocument();
+    expect(await screen.findByRole('complementary', { name: 'direct-2' })).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.queryByRole('complementary', { name: 'Новый узел' })).not.toBeInTheDocument();
     });
@@ -416,7 +452,7 @@ describe('section screen', () => {
     });
     expect(draft()).toContain('// выходы');
 
-    const node = within(await screen.findByRole('region', { name: 'nl-01' }));
+    const node = within(await screen.findByRole('complementary', { name: 'nl-01' }));
 
     expect(await node.findByRole('textbox', { name: 'Сервер' })).toHaveValue('b.example');
   });
@@ -526,7 +562,7 @@ describe('section screen', () => {
 
     renderWithRouter(DnsRulesSection);
 
-    expect(await screen.findByRole('heading', { name: 'dns.rules[0]' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'dns.rules[0]' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Добавить узел' })).not.toBeInTheDocument();
   });
 
@@ -544,7 +580,7 @@ describe('section screen', () => {
 
     renderWithRouter(OutboundsSection);
 
-    const node = within(await screen.findByRole('region', { name: 'hk-01' }));
+    const node = within(await openNode(user, 'hk-01'));
 
     await user.click(node.getByRole('button', { name: 'Удалить «hk-01»' }));
 
@@ -562,6 +598,7 @@ describe('section screen', () => {
       expect(findValue(draft(), ['outbounds'])).toEqual([{ type: 'direct', tag: 'direct' }]);
     });
     expect(draft()).toContain('// выходы');
+    expect(screen.queryByRole('complementary', { name: 'hk-01' })).not.toBeInTheDocument();
   });
 
   it('an object section node has no delete button', async () => {
@@ -580,7 +617,7 @@ describe('section screen', () => {
 
     renderWithRouter(OutboundsSection);
 
-    const node = within(await screen.findByRole('region', { name: 'auto' }));
+    const node = within(await findRow('auto'));
 
     expect(node.getByText('самый быстрый')).toBeInTheDocument();
     expect(node.getByText('urltest')).toBeInTheDocument();
