@@ -324,6 +324,18 @@
         "typescript/no-confusing-void-expression": "off",
         "typescript/no-unnecessary-condition": "off"
       }
+    },
+    {
+      "files": ["tools/**/*.test.js"],
+      "rules": {
+        "vitest/consistent-test-filename": [
+          "error",
+          {
+            "pattern": ".*\\.test\\.js$",
+            "allTestPattern": ".*\\.(test|spec)\\.[jt]sx?$"
+          }
+        ]
+      }
     }
   ]
 }
