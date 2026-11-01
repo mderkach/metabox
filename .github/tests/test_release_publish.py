@@ -39,6 +39,9 @@ with (root / "lock").open("a") as lock:
             sys.exit(1)
         if "/actions/runs/" in args[-1]:
             print(json.dumps([{"artifacts": state.get("artifacts", [])}]))
+        elif state.get("list_lag", 0) > 0:
+            state["list_lag"] -= 1
+            print(json.dumps([[]]))
         else:
             print(json.dumps([[release] if release else []]))
     elif args[:2] == ["run", "download"]:
@@ -54,6 +57,7 @@ with (root / "lock").open("a") as lock:
                 "target_commitish": args[args.index("--target") + 1],
                 "assets": [], "body": args[args.index("--notes") + 1],
             }
+            state["list_lag"] = int(os.environ.get("FAKE_LIST_LAG", "0"))
     elif args[:2] == ["release", "upload"]:
         asset = Path(args[3])
         name = asset.name
@@ -165,6 +169,26 @@ class PublishReleaseTest(unittest.TestCase):
         self.assertIn("--prerelease", create)
         self.assertEqual(calls[-1][:3], ["release", "edit", TAG])
         self.assertEqual(sum(call[:2] == ["release", "download"] for call in calls), 4)
+
+    def no_sleep(self):
+        sleep = self.root / "bin" / "sleep"
+        sleep.write_text("#!/bin/sh\n")
+        sleep.chmod(0o755)
+
+    def test_new_draft_missing_from_lagging_release_list_is_awaited(self):
+        self.no_sleep()
+        result = self.run_publish(FAKE_LIST_LAG="2")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.state()["published"], 1)
+        self.assertEqual(len(self.state()["release"]["assets"]), 4)
+
+    def test_new_draft_that_never_appears_is_not_treated_as_published(self):
+        self.no_sleep()
+        result = self.run_publish(FAKE_LIST_LAG="100")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("did not appear", result.stderr)
+        self.assertFalse(any(call[:2] in [["release", "upload"], ["release", "edit"]]
+                             for call in self.calls()))
 
     def test_stable_tag_is_not_marked_as_prerelease(self):
         self.git("tag", "v0.1.0")
