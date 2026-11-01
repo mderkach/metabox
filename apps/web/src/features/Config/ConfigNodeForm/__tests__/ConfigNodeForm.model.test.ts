@@ -3,7 +3,17 @@ import { describe, expect, it } from 'vitest';
 import { NODE_REGISTRY } from '@entities/Config';
 import { SECRET_FIELD_KEYS } from '@shared/api/generated';
 
-import { listToText, packList, parseNumber, parseScalar, SECRET_MASK, secretMaskOf, textToList, UNSET } from '../model';
+import {
+  countFilled,
+  listToText,
+  packList,
+  parseNumber,
+  parseScalar,
+  SECRET_MASK,
+  secretMaskOf,
+  textToList,
+  UNSET,
+} from '../model';
 
 describe('node form field values', () => {
   it('a multiline field returns values without empty lines and edge spaces', () => {
@@ -96,5 +106,18 @@ describe('secret field mask', () => {
     expect(secretMaskOf(['tls', 'certificate'], null)).toBeNull();
     expect(secretMaskOf(['tls', 'reality', 'public_key'], null)).toBeNull();
     expect(secretMaskOf(['mesh_psk_file'], null)).toBeNull();
+  });
+});
+
+describe('group fill count', () => {
+  // The count says what goes into the node: a cleared field or an empty nested group writes no key.
+  it('counts only values that write a key, a nested group as one', () => {
+    expect(
+      countFilled({ enabled: true, server_name: '', alpn: [], utls: { enabled: true }, reality: {}, ech: null })
+    ).toBe(2);
+  });
+
+  it('counts nothing for a group that is not set', () => {
+    expect(countFilled(undefined)).toBe(0);
   });
 });

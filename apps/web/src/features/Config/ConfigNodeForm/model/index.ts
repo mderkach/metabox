@@ -1,5 +1,6 @@
 export {
   arrangePlan,
+  countFilled,
   isFilledGroup,
   isSameValue,
   isUnset,

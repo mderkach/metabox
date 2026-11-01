@@ -141,7 +141,8 @@ export function ConfigNodeFormBody({
         <form
           ref={formRef}
           noValidate
-          className='flex flex-col gap-3'
+          // A port or a timeout stretched over a wide screen reads as a long value.
+          className='flex max-w-3xl flex-col gap-5'
           onSubmit={(event) => {
             event.preventDefault();
           }}
@@ -218,7 +219,7 @@ function AdvancedFields({ count, children }: { count: number; children: ReactNod
   const contentId = useId();
 
   return (
-    <FieldSet className='min-w-0 gap-3 rounded-lg border border-border p-3'>
+    <FieldSet className='min-w-0 gap-4 rounded-lg border border-border p-3'>
       <FieldLegend variant='label' className='mb-0 px-1'>
         <Button
           type='button'
@@ -235,7 +236,7 @@ function AdvancedFields({ count, children }: { count: number; children: ReactNod
           {t('advanced', { count })}
         </Button>
       </FieldLegend>
-      <div id={contentId} hidden={!open} className='flex flex-col gap-3'>
+      <div id={contentId} hidden={!open} className='flex flex-col gap-5'>
         {open && children}
       </div>
     </FieldSet>

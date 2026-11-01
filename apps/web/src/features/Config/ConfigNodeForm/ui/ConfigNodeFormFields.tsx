@@ -1,7 +1,7 @@
 import type { ParseKeys, TFunction } from 'i18next';
 import { ChevronRight, Eye, EyeOff, RotateCcw } from 'lucide-react';
 import { use, useEffect, useId, useState, type ReactNode } from 'react';
-import { Controller, useFormContext, type FieldError as FormFieldError } from 'react-hook-form';
+import { Controller, useFormContext, useWatch, type FieldError as FormFieldError } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import type { NodeRegistry } from '@entities/Config';
@@ -10,6 +10,7 @@ import type { FieldPlan } from '@shared/lib/schemaShape';
 import { cn } from '@shared/lib/utils';
 import {
   Button,
+  Field,
   FieldLegend,
   FieldSet,
   Input,
@@ -30,6 +31,7 @@ import {
 } from '@shared/ui';
 
 import {
+  countFilled,
   isFilledGroup,
   isSameValue,
   isUnset,
@@ -116,7 +118,7 @@ function FieldRow({
   const label = useFieldLabel(name);
 
   return (
-    <div className='flex flex-col gap-1.5'>
+    <Field data-invalid={error !== null} className='gap-1.5'>
       <div className='flex min-h-6 items-center gap-2'>
         <Label htmlFor={id} className='flex-wrap gap-x-2 gap-y-0.5'>
           <ConfigNodeFormFieldName label={label} fieldKey={fieldKey} />
@@ -129,7 +131,7 @@ function FieldRow({
           {error}
         </p>
       )}
-    </div>
+    </Field>
   );
 }
 
@@ -845,20 +847,49 @@ function RawInput({
   );
 }
 
+/** A group this small reads as one block: a collapse would hide two fields behind a click. */
+const FLAT_GROUP_FIELDS = 3;
+
 /**
- * Nested object: its own fields under a common label. Collapsed while nothing
- * in it is set: a long type would otherwise open as a wall of TLS and multiplex
- * fields. Collapsed fields are not mounted, and form values are not lost.
+ * Nested object: its own fields under a common label, with the count of set fields so a
+ * collapsed group still tells whether there is anything in it. A small group is a flat
+ * subsection; a larger one is collapsed while nothing in it is set: a long type would otherwise
+ * open as a wall of TLS and multiplex fields. Collapsed fields are not mounted, and form values
+ * are not lost.
  */
 export function GroupField({ field, name, children }: NodeFieldProps) {
+  const { t } = useTranslation(NS);
   const label = useFieldLabel(name);
-  const { getValues } = useFormContext<ConfigNodeFormModel>();
-  const [open, setOpen] = useState(() => isFilledGroup(getValues(name)));
+  const { control, getValues } = useFormContext<ConfigNodeFormModel>();
+  const value: unknown = useWatch({ control, name });
+  const total = field.children?.length ?? 0;
+  const flat = total <= FLAT_GROUP_FIELDS;
+  const [open, setOpen] = useState(() => flat || isFilledGroup(getValues(name)));
   const contentId = useId();
+  const filled = countFilled(value);
+  // Seen, not read out: a screen reader reaches the fields themselves, and the count in the
+  // group name would rename the group on every keystroke.
+  const caption = (
+    <span aria-hidden='true' className='text-xs font-normal text-muted-foreground tabular-nums'>
+      {t('group.filled', { count: filled, total })}
+    </span>
+  );
+
+  if (flat) {
+    return (
+      <FieldSet className='min-w-0 gap-4 border-l border-border pl-3'>
+        <FieldLegend variant='label' className='mb-0 flex flex-wrap items-baseline gap-x-2'>
+          <ConfigNodeFormFieldName label={label} fieldKey={field.key} />
+          {caption}
+        </FieldLegend>
+        {children}
+      </FieldSet>
+    );
+  }
 
   return (
-    <FieldSet className='min-w-0 gap-3 rounded-lg border border-border p-3'>
-      <FieldLegend variant='label' className='mb-0 px-1'>
+    <FieldSet className='min-w-0 gap-4 rounded-lg border border-border p-3'>
+      <FieldLegend variant='label' className='mb-0 flex flex-wrap items-center gap-x-2 px-1'>
         <Button
           type='button'
           variant='ghost'
@@ -873,8 +904,9 @@ export function GroupField({ field, name, children }: NodeFieldProps) {
           <ChevronRight className={cn('transition-transform motion-reduce:transition-none', open && 'rotate-90')} />
           <ConfigNodeFormFieldName label={label} fieldKey={field.key} />
         </Button>
+        {caption}
       </FieldLegend>
-      <div id={contentId} hidden={!open} className='flex flex-col gap-3'>
+      <div id={contentId} hidden={!open} className='flex flex-col gap-5'>
         {open && children}
       </div>
     </FieldSet>

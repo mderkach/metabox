@@ -66,5 +66,9 @@
     "listen": "Listen address",
     "listenPort": "Listen port",
     "secret": "Secret"
+  },
+  "group": {
+    "filled_one": "{{count}} of {{total}} set",
+    "filled_other": "{{count}} of {{total}} set"
   }
 }
