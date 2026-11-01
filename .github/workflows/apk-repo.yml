@@ -22,22 +22,40 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     env:
       PUBLIC_KEY: keys/metabox-release.pem
+      # Versions kept per channel. A package is about 5.5 MB and Pages is limited to 1 GB.
+      RETAIN: 10
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       # The site is rebuilt from the releases every time, so the releases stay the only
-      # source of packages and a rerun gives the same site.
+      # source of packages and a rerun gives the same site. Each channel keeps the newest
+      # RETAIN versions; testing also keeps the newest stable one even when RETAIN
+      # prereleases are newer. Older packages leave the site only, never the release.
       - name: Collect release packages
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -o pipefail
           mkdir -p site/apk/stable site/apk/testing
+          testing=0 stable=0
           gh release list --limit 1000 --json tagName,isPrerelease,isDraft \
             --jq '.[] | select(.isDraft | not) | "\(.tagName) \(.isPrerelease)"' |
           while read -r tag prerelease; do
-            gh release download "$tag" --pattern '*.apk' --dir site/apk/testing < /dev/null
-            [ "$prerelease" = true ] || gh release download "$tag" --pattern '*.apk' --dir site/apk/stable < /dev/null
+            if [ "$prerelease" = true ]; then
+              [ "$testing" -lt "$RETAIN" ] && want_testing=1 || want_testing=0
+              want_stable=0
+            else
+              [ "$testing" -lt "$RETAIN" ] || [ "$stable" -eq 0 ] && want_testing=1 || want_testing=0
+              [ "$stable" -lt "$RETAIN" ] && want_stable=1 || want_stable=0
+            fi
+            if [ "$want_testing" = 1 ]; then
+              gh release download "$tag" --pattern '*.apk' --dir site/apk/testing < /dev/null
+              testing=$((testing + 1))
+            fi
+            if [ "$want_stable" = 1 ]; then
+              gh release download "$tag" --pattern '*.apk' --dir site/apk/stable < /dev/null
+              stable=$((stable + 1))
+            fi
             # The list is newest first, so the site root gets the install.sh of the newest
             # release that has one; releases before ADR-0058 have none.
             [ -e site/install.sh ] || gh release download "$tag" --pattern install.sh --dir site < /dev/null 2> /dev/null || true

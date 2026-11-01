@@ -32,7 +32,9 @@ Publication regression tests, including a retry from a clean workspace, mock Git
 
 The [`apk repository`](../.github/workflows/apk-repo.yml) workflow then rebuilds the package repository from every release and deploys it to GitHub Pages. It also copies `install.sh` from the newest release to `https://mderkach.github.io/metabox/install.sh`. If a deploy failed, run this workflow by hand from the Actions tab; no new tag is needed.
 
-The repository has two channels. `testing` has every release. `stable` has only versions without a pre-release suffix.
+The repository has two channels. `testing` has releases with pre-release suffixes too, `stable` has only versions without a pre-release suffix.
+
+Retention: each channel keeps the newest 10 versions (`RETAIN` in the workflow), because a package is about 5.5 MB and Pages is limited to 1 GB. `testing` also keeps the newest stable version even if 10 newer prereleases exist, so the version `stable` points at is never dropped. Older packages leave the index and the site on the next deploy; their GitHub Releases are not touched, and raising `RETAIN` and re-running the workflow brings them back.
 
 ### GitHub Pages
 
