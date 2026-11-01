@@ -10,7 +10,7 @@ import { MCP_ENDPOINT } from '@entities/Mcp';
 import { createMcpHandlers, MCP_TOKEN_FIXTURE } from '@entities/Mcp/__tests__/Mcp.handlers';
 import { showQueryError } from '@shared/api';
 
-import { McpAccess } from '../ui';
+import { McpAccessSection } from '../ui';
 
 vi.mock('sonner', () => ({
   toast: { error: vi.fn<(text: string) => void>(), success: vi.fn<(text: string) => void>() },
@@ -32,7 +32,7 @@ function renderMcp(ui: ReactElement) {
   return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 }
 
-describe('McpAccess', () => {
+describe('McpAccessSection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -41,8 +41,8 @@ describe('McpAccess', () => {
     const user = userEvent.setup();
     server.use(...createMcpHandlers());
 
-    renderMcp(<McpAccess />);
-    await user.click(await screen.findByRole('button', { name: 'Доступ MCP' }));
+    renderMcp(<McpAccessSection />);
+    await screen.findByRole('heading');
 
     expect(screen.getByText(/Доступ только на чтение/)).toBeInTheDocument();
 
@@ -59,21 +59,15 @@ describe('McpAccess', () => {
     );
   });
 
-  it('clears the token when the dialog closes and never shows it again', async () => {
+  it('clears the token on "Done" and never shows it again', async () => {
     const user = userEvent.setup();
     server.use(...createMcpHandlers());
 
-    renderMcp(<McpAccess />);
-    await user.click(await screen.findByRole('button', { name: 'Доступ MCP' }));
-    await user.click(screen.getByRole('button', { name: 'Включить' }));
+    renderMcp(<McpAccessSection />);
+    await screen.findByRole('heading');
+    await user.click(await screen.findByRole('button', { name: 'Включить' }));
     await screen.findByLabelText('Токен');
     await user.click(screen.getByRole('button', { name: 'Готово' }));
-
-    await waitFor(() => {
-      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    });
-
-    await user.click(screen.getByRole('button', { name: 'Доступ MCP' }));
 
     expect(await screen.findByText(window.location.origin + '/mcp')).toBeInTheDocument();
     expect(screen.queryByLabelText('Токен')).not.toBeInTheDocument();
@@ -81,11 +75,10 @@ describe('McpAccess', () => {
   });
 
   it('shows status, address and permissions while it is on', async () => {
-    const user = userEvent.setup();
     server.use(...createMcpHandlers({ enabled: true }));
 
-    renderMcp(<McpAccess />);
-    await user.click(await screen.findByRole('button', { name: 'Доступ MCP' }));
+    renderMcp(<McpAccessSection />);
+    await screen.findByRole('heading');
 
     expect(await screen.findByText('Включён')).toBeInTheDocument();
     expect(screen.getByText(`${window.location.origin}/mcp`)).toBeInTheDocument();
@@ -105,8 +98,8 @@ describe('McpAccess', () => {
       ...createMcpHandlers({ enabled: true })
     );
 
-    renderMcp(<McpAccess />);
-    await user.click(await screen.findByRole('button', { name: 'Доступ MCP' }));
+    renderMcp(<McpAccessSection />);
+    await screen.findByRole('heading');
     await user.click(await screen.findByRole('button', { name: 'Перевыпустить токен' }));
 
     const confirm = await screen.findByRole('alertdialog');
@@ -133,8 +126,8 @@ describe('McpAccess', () => {
       ...createMcpHandlers({ enabled: true })
     );
 
-    renderMcp(<McpAccess />);
-    await user.click(await screen.findByRole('button', { name: 'Доступ MCP' }));
+    renderMcp(<McpAccessSection />);
+    await screen.findByRole('heading');
     await user.click(await screen.findByRole('button', { name: 'Перевыпустить токен' }));
     await user.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Отмена' }));
 
@@ -146,8 +139,8 @@ describe('McpAccess', () => {
     const user = userEvent.setup();
     server.use(...createMcpHandlers({ enabled: true }));
 
-    renderMcp(<McpAccess />);
-    await user.click(await screen.findByRole('button', { name: 'Доступ MCP' }));
+    renderMcp(<McpAccessSection />);
+    await screen.findByRole('heading');
     await user.click(await screen.findByRole('button', { name: 'Выключить' }));
     await user.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Выключить' }));
 
@@ -159,8 +152,8 @@ describe('McpAccess', () => {
     const user = userEvent.setup();
     server.use(...createMcpHandlers());
 
-    renderMcp(<McpAccess />);
-    await user.click(await screen.findByRole('button', { name: 'Доступ MCP' }));
+    renderMcp(<McpAccessSection />);
+    await screen.findByRole('heading');
     await user.click(screen.getByRole('button', { name: 'Включить' }));
     await screen.findByLabelText('Токен');
     await user.click(screen.getByRole('button', { name: 'Скопировать: Токен' }));
@@ -191,8 +184,8 @@ describe('McpAccess', () => {
       Reflect.deleteProperty(document, 'execCommand');
     });
 
-    renderMcp(<McpAccess />);
-    await user.click(await screen.findByRole('button', { name: 'Доступ MCP' }));
+    renderMcp(<McpAccessSection />);
+    await screen.findByRole('heading');
     await user.click(screen.getByRole('button', { name: 'Включить' }));
     await screen.findByLabelText('Токен');
 
@@ -211,8 +204,8 @@ describe('McpAccess', () => {
     server.use(...createMcpHandlers());
     vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValue(new Error('not allowed'));
 
-    renderMcp(<McpAccess />);
-    await user.click(await screen.findByRole('button', { name: 'Доступ MCP' }));
+    renderMcp(<McpAccessSection />);
+    await screen.findByRole('heading');
     await user.click(screen.getByRole('button', { name: 'Включить' }));
     await screen.findByLabelText('Токен');
     await user.click(screen.getByRole('button', { name: 'Скопировать: Токен' }));
@@ -233,8 +226,8 @@ describe('McpAccess', () => {
       ...createMcpHandlers()
     );
 
-    renderMcp(<McpAccess />);
-    await user.click(await screen.findByRole('button', { name: 'Доступ MCP' }));
+    renderMcp(<McpAccessSection />);
+    await screen.findByRole('heading');
     await user.click(screen.getByRole('button', { name: 'Включить' }));
 
     await waitFor(() => {
@@ -255,11 +248,11 @@ describe('McpAccess', () => {
       })
     );
 
-    renderMcp(<McpAccess />);
+    renderMcp(<McpAccessSection />);
 
     await waitFor(() => {
       expect(asked).toBe(true);
     });
-    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading')).not.toBeInTheDocument();
   });
 });

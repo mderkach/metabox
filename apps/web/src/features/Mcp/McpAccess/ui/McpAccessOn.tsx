@@ -1,7 +1,7 @@
 import type { ParseKeys } from 'i18next';
 import { useTranslation } from 'react-i18next';
 
-import { Button, ConfirmDialog, DialogFooter } from '@shared/ui';
+import { Button, ConfirmDialog, FORM_ACTIONS } from '@shared/ui';
 
 type McpKey = ParseKeys<'features/Mcp/McpAccess'>;
 
@@ -40,7 +40,7 @@ export function McpAccessOn({
         <dd>{permissionTexts.join(', ')}</dd>
       </dl>
 
-      <DialogFooter>
+      <div className={FORM_ACTIONS}>
         <ConfirmDialog
           trigger={
             <Button type='button' variant='outline' disabled={pending}>
@@ -67,7 +67,7 @@ export function McpAccessOn({
           destructive
           onConfirm={onRegenerate}
         />
-      </DialogFooter>
+      </div>
     </div>
   );
 }

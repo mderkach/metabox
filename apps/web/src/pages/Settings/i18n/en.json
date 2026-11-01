@@ -1,0 +1,18 @@
+{
+  "access": {
+    "title": "Access"
+  },
+  "agents": {
+    "title": "Agents"
+  },
+  "system": {
+    "title": "System",
+    "versions": "Versions",
+    "panel": "Panel",
+    "core": "sing-box",
+    "schema": "Form schema",
+    "config": "Config",
+    "devices": "Which devices go through sing-box is set on the Devices screen.",
+    "devicesLink": "Open devices"
+  }
+}

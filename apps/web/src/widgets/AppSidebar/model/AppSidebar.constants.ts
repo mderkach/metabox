@@ -1,6 +1,15 @@
 import type { LinkProps } from '@tanstack/react-router';
 import type { ParseKeys } from 'i18next';
-import { Activity, Gauge, MonitorSmartphone, ScrollText, Share2, SlidersHorizontal, Stethoscope } from 'lucide-react';
+import {
+  Activity,
+  Gauge,
+  MonitorSmartphone,
+  ScrollText,
+  Settings,
+  Share2,
+  SlidersHorizontal,
+  Stethoscope,
+} from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 interface NavItem {
@@ -26,6 +35,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { key: 'section.devices', icon: MonitorSmartphone, to: '/devices' },
   { key: 'section.logs', icon: ScrollText, to: '/logs', more: true },
   { key: 'section.diagnostics', icon: Stethoscope, to: '/diagnostics', more: true },
+  { key: 'section.settings', icon: Settings, to: '/settings', more: true },
 ];
 
 /** Section addresses in menu order: the router picks the transition direction by it. */

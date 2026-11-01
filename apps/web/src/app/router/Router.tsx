@@ -222,6 +222,21 @@ const overviewRoute = createRoute({
   component: lazyRouteComponent(async () => import('@pages/Overview'), 'OverviewPage'),
 });
 
+/** Rare settings of the panel itself: AC-77. The state is read by the sections, nothing is preloaded but texts. */
+const settingsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  loader: async () =>
+    preloadNamespaces([
+      'pages/Settings',
+      'features/Auth/AuthPassword',
+      'features/Mcp/McpAccess',
+      'widgets/Daemon/DaemonService',
+      'features/Daemon/DaemonControl',
+    ]),
+  path: '/settings',
+  component: lazyRouteComponent(async () => import('@pages/Settings'), 'SettingsPage'),
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   configLayoutRoute.addChildren([routeEditorRoute, ruleSetsRoute, rawConfigRoute, configSectionRoute]),
@@ -231,6 +246,7 @@ const routeTree = rootRoute.addChildren([
   logsRoute,
   diagnosticsRoute,
   overviewRoute,
+  settingsRoute,
 ]);
 
 /**

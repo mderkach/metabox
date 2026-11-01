@@ -78,4 +78,18 @@ describe('AppSidebar', () => {
     expect(await screen.findByText('sing-box работает')).toBeInTheDocument();
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   });
+
+  // AC-77: rare settings live on their screen, the footer keeps theme, language, logout and the service.
+  it('leads to the settings screen instead of keeping password and MCP buttons in the footer', async () => {
+    server.use(
+      http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE)),
+      http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE))
+    );
+
+    renderWithRouter(AppSidebar);
+
+    expect(await screen.findByRole('link', { name: 'Настройки' })).toHaveAttribute('href', '/settings');
+    expect(screen.queryByRole('button', { name: /пароль/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Доступ MCP' })).not.toBeInTheDocument();
+  });
 });

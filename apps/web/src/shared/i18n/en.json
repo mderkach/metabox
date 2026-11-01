@@ -263,7 +263,8 @@
     "connections": "Connections",
     "devices": "Devices",
     "logs": "Logs",
-    "diagnostics": "Diagnostics"
+    "diagnostics": "Diagnostics",
+    "settings": "Settings"
   },
   "stat": {
     "uptime": "Uptime"

@@ -1,1 +1,1 @@
-export * from './McpAccess';
+export * from './McpAccessSection';

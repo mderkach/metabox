@@ -2,9 +2,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useDaemonStatus, type ServiceStatus } from '@entities/Daemon';
 import { AuthLogout } from '@features/Auth/AuthLogout';
-import { AuthPassword } from '@features/Auth/AuthPassword';
 import { LanguageSwitch } from '@features/Language/LanguageSwitch';
-import { McpAccess } from '@features/Mcp/McpAccess';
 import { ThemeSwitch } from '@features/Theme/ThemeSwitch';
 import { cn } from '@shared/lib/utils';
 
@@ -13,7 +11,7 @@ import { AppSidebarDrift } from './AppSidebarDrift';
 import { SERVICE_LABEL, SERVICE_TONE } from './AppSidebarService';
 
 /**
- * Service state and shell settings: the sidebar footer on a wide screen and
+ * Service state, theme, language and logout: the sidebar footer on a wide screen and
  * the "More" sheet of the bottom bar on a phone. Returns a fragment — the layout is set by the
  * container.
  */
@@ -43,8 +41,6 @@ export function AppSidebarControls({ collapsed }: { collapsed: boolean }) {
       </div>
 
       <div className={cn('flex flex-col gap-0.5 empty:hidden', collapsed && 'items-center')}>
-        <AuthPassword collapsed={collapsed} />
-        <McpAccess collapsed={collapsed} />
         <AuthLogout collapsed={collapsed} />
       </div>
     </>
