@@ -11,7 +11,7 @@
   },
   "run": {
     "action": "Check",
-    "pending": "Checking",
+    "pending": "Checking…",
     "hint": "The check sends packets from the router and leaves lines in the sing-box log."
   },
   "idle": {
@@ -28,9 +28,15 @@
     "direct": "Direct exit"
   },
   "status": {
-    "ok": "fine",
+    "ok": "passed",
     "fail": "failed",
     "skipped": "skipped"
+  },
+  "summary": {
+    "failed_one": "{{count}} of {{total}} checks failed",
+    "failed_other": "{{count}} of {{total}} checks failed",
+    "passed": "All checks passed: {{total}}",
+    "passedSkipped": "No failures: {{passed}} passed, {{skipped}} skipped"
   },
   "reason": {
     "model_unavailable": "the metabox.dataplane interception settings in UCI could not be read",

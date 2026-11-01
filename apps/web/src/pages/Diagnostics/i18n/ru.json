@@ -11,7 +11,7 @@
   },
   "run": {
     "action": "Проверить",
-    "pending": "Проверяю",
+    "pending": "Проверяем…",
     "hint": "Проверка шлёт пакеты с роутера и оставляет строки в логе sing-box."
   },
   "idle": {
@@ -28,9 +28,16 @@
     "direct": "Прямой выход"
   },
   "status": {
-    "ok": "в порядке",
-    "fail": "отказ",
+    "ok": "пройдено",
+    "fail": "не пройдено",
     "skipped": "пропущено"
+  },
+  "summary": {
+    "failed_one": "Не прошла {{count}} проверка из {{total}}",
+    "failed_few": "Не прошли {{count}} проверки из {{total}}",
+    "failed_many": "Не прошли {{count}} проверок из {{total}}",
+    "passed": "Все проверки пройдены: {{total}}",
+    "passedSkipped": "Отказов нет: пройдено {{passed}}, пропущено {{skipped}}"
   },
   "reason": {
     "model_unavailable": "настройки перехвата metabox.dataplane в UCI не прочитались",

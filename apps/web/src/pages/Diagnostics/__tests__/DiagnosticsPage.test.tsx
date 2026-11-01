@@ -56,9 +56,12 @@ describe('diagnostics screen', () => {
 
     await screen.findByRole('table', { name: 'Проверки обвязки' });
 
+    // Two of the fixture checks fail: the run outcome is read before the rows.
+    expect(screen.getByRole('status')).toHaveTextContent('Не прошли 2 проверки из 7');
+
     const redirect = rowOf('Порт redirect (TCP)');
 
-    expect(within(redirect).getByText('отказ')).toBeInTheDocument();
+    expect(within(redirect).getByText('не пройдено')).toBeInTheDocument();
     expect(
       within(redirect).getByText('порт никто не слушает: sing-box остановлен или в конфиге нет такого inbound')
     ).toBeInTheDocument();
@@ -75,7 +78,7 @@ describe('diagnostics screen', () => {
 
     const proxy = rowOf('Выход через узел');
 
-    expect(within(proxy).getByText('в порядке')).toBeInTheDocument();
+    expect(within(proxy).getByText('пройдено')).toBeInTheDocument();
     expect(within(proxy).getByText('182 мс')).toBeInTheDocument();
 
     const direct = rowOf('Прямой выход');
