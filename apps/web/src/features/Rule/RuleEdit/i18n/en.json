@@ -25,12 +25,12 @@
     "conditions": {
       "label": "Conditions",
       "add": "Add condition",
-      "hint": "One value per line"
+      "hint": "Enter, a comma or a space adds a value; a pasted list splits by itself"
     }
   },
   "error": {
     "outboundRequired": "choose an outbound",
-    "portInvalid": "A port is a number from 0 to 65535, one per line"
+    "portInvalid": "A port is a number from 0 to 65535"
   },
   "device": {
     "pick": "Pick a device",

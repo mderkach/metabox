@@ -3,9 +3,11 @@ import { useEffect, useId, useRef, useState, type ComponentType } from 'react';
 import { Controller, useFormContext } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea } from '@shared/ui';
+import { Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, TokenInput } from '@shared/ui';
 
 import {
+  conditionLines,
+  isPort,
   RULE_CONDITION,
   RULE_CONDITIONS,
   RULE_EDIT_ERROR,
@@ -23,6 +25,10 @@ const CONDITION_HELPER: Readonly<Partial<Record<RuleCondition, ComponentType>>> 
   [RULE_CONDITION.SourceIpCidr]: RuleSourceDevices,
 };
 
+const CONDITION_VALID: Readonly<Partial<Record<RuleCondition, (value: string) => boolean>>> = {
+  [RULE_CONDITION.Port]: isPort,
+};
+
 /**
  * Common rule conditions. Set ones are visible; the others are added by choice
  * rather than standing as empty fields: a rule usually has one or two
@@ -36,7 +42,7 @@ export function RuleConditionFields({ initial }: { initial: readonly RuleConditi
   const addId = useId();
 
   return (
-    <fieldset className='flex flex-col gap-3'>
+    <fieldset className='flex min-w-0 flex-col gap-3'>
       <legend className='mb-1.5 text-sm font-medium'>{t('field.conditions.label')}</legend>
 
       {shown.map((key) => (
@@ -80,7 +86,7 @@ function ConditionField({ condition, focusOnMount }: { condition: RuleCondition;
   const id = useId();
   const hintId = useId();
   const Helper = CONDITION_HELPER[condition];
-  const input = useRef<HTMLTextAreaElement | null>(null);
+  const input = useRef<HTMLInputElement | null>(null);
 
   // A condition just picked from the list is typed into next. The frame waits
   // for the closing list, which gives focus back to its trigger.
@@ -111,15 +117,23 @@ function ConditionField({ condition, focusOnMount }: { condition: RuleCondition;
         return (
           <div className='flex flex-col gap-1.5'>
             <Label htmlFor={id}>{t(`condition.${condition}.label`)}</Label>
-            <Textarea
+            <TokenInput
               id={id}
-              rows={2}
+              label={t(`condition.${condition}.label`)}
               spellCheck={false}
+              autoCapitalize='off'
+              autoComplete='off'
               aria-describedby={hintId}
               aria-invalid={errorKey !== undefined}
               placeholder={t(`condition.${condition}.placeholder`)}
-              className='font-mono text-sm'
-              {...field}
+              isValid={CONDITION_VALID[condition]}
+              value={conditionLines(field.value)}
+              onValueChange={(values) => {
+                field.onChange(values.join('\n'));
+              }}
+              onBlur={field.onBlur}
+              name={field.name}
+              disabled={field.disabled}
               ref={(element) => {
                 field.ref(element);
                 input.current = element;

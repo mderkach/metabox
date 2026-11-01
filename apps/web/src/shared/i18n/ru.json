@@ -360,5 +360,10 @@
     "urltest": "самый быстрый",
     "fallback": "резерв",
     "loadBalance": "балансировка"
+  },
+  "tokenInput": {
+    "values": "{{label}}: значения",
+    "remove": "Убрать {{value}}",
+    "invalid": ", ошибка"
   }
 }

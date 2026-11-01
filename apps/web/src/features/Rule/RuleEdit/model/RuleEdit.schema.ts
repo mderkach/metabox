@@ -18,7 +18,7 @@ export const RULE_EDIT_ERROR = {
 } as const;
 
 /**
- * Conditions that the form edits as a list, one value per line: they set the
+ * Conditions that the form edits as a list of values: they set the
  * scenarios "domain or address through an outbound" and "device through an
  * outbound". There are more than forty other kinds, and they are edited as node
  * text.
@@ -53,7 +53,7 @@ function nonEmpty<T>(values: T[]): T[] | undefined {
   return values.length > 0 ? values : undefined;
 }
 
-function isPort(line: string): boolean {
+export function isPort(line: string): boolean {
   return PORT.test(line) && Number(line) <= MAX_PORT;
 }
 

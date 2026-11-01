@@ -35,6 +35,7 @@ export * from './Plot';
 export * from './QueryFailure';
 export * as SidePanelLayout from './SidePanelLayout';
 export * from './SkeletonRows';
+export * from './TokenInput';
 export * from './styles';
 export * from './useFollowNow';
 export * from './ValueAxis';
