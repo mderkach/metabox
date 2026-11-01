@@ -255,7 +255,7 @@ describe('devices screen', () => {
     await user.type(field, ' ');
     await user.click(screen.getByRole('button', { name: 'Сохранить' }));
 
-    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: /^Своё имя/ })).not.toBeInTheDocument();
     expect(renamed).not.toHaveBeenCalled();
   });
 
@@ -290,7 +290,7 @@ describe('devices screen', () => {
     await user.click(await screen.findByRole('button', { name: 'Переименовать tv-living' }));
     await user.keyboard('{Escape}');
 
-    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: /^Своё имя/ })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Переименовать tv-living' })).toBeInTheDocument();
   });
 
@@ -334,7 +334,7 @@ describe('devices screen', () => {
       expect(screen.getByRole('switch', { name: 'Через sing-box: Ноутбук' })).not.toHaveAccessibleDescription();
     });
 
-    it('shows a device from a source_ip subnet as enabled, unavailable and names the subnet', async () => {
+    it('shows a device from a source_ip subnet as enabled, available and names the subnet', async () => {
       server.use(...createDeviceHandlers());
       serveDataplane({
         ...DATAPLANE_FIXTURE,
@@ -355,10 +355,12 @@ describe('devices screen', () => {
 
       const laptop = await readySwitchChecked('Ноутбук');
 
-      expect(isLocked(laptop)).toBe(true);
+      await waitFor(() => {
+        expect(isLocked(laptop)).toBe(false);
+      });
       expect(within(rowOf('Ноутбук')).getByText('по подсети 192.168.1.60/31')).toBeInTheDocument();
       expect(laptop).toHaveAccessibleDescription(
-        'Устройство входит в подсеть 192.168.1.60/31 из списка перехвата. Отдельно его не выключить: уберите или сузьте подсеть.'
+        'Устройство входит в подсеть 192.168.1.60/31 из списка перехвата. Выключение исключит его из подсети.'
       );
       expect(screen.getByRole('switch', { name: 'Через sing-box: iphone-guest' })).toBeChecked();
       expect(screen.getByRole('switch', { name: 'Через sing-box: tv-living' })).toBeChecked();
@@ -405,13 +407,60 @@ describe('devices screen', () => {
 
       const bar = await screen.findByRole('region', { name: 'Смена перехвата' });
 
-      expect(bar).toHaveTextContent('Устройство переключено');
+      expect(bar).toHaveTextContent('Перехват изменён');
       expect(within(bar).getByRole('button', { name: 'Связь есть, оставить' })).toBeEnabled();
       // While a change awaits confirmation, a second cannot start.
       expect(isLocked(screen.getByRole('switch', { name: 'Через sing-box: Ноутбук' }))).toBe(true);
       await waitFor(() => {
         expect(screen.getByRole('switch', { name: 'Через sing-box: 192.168.1.36' })).toBeChecked();
       });
+    });
+
+    it('turning off a device inside a subnet writes its MAC and static address into the exclusions', async () => {
+      const changed = vi.fn<(body: unknown) => void>();
+      const user = userEvent.setup();
+
+      serveDataplane({ ...DATAPLANE_FIXTURE, model: { ...DATAPLANE_FIXTURE.model, source_ip: ['192.168.1.0/24'] } });
+      server.use(
+        http.put(DATAPLANE_ENDPOINT.dataplane(), async ({ request }) => {
+          changed(await request.clone().json());
+        }),
+        ...createDeviceHandlers()
+      );
+      renderScreen();
+
+      await user.click(await readySwitch('Ноутбук'));
+      await user.click(
+        within(await screen.findByRole('alertdialog', { name: 'Пустить Ноутбук мимо sing-box?' })).getByRole('button', {
+          name: 'Применить',
+        })
+      );
+
+      await waitFor(() => {
+        expect(changed).toHaveBeenCalledWith({
+          model: {
+            ...DATAPLANE_FIXTURE.model,
+            source_ip: ['192.168.1.0/24'],
+            source_ip_exclude: ['192.168.1.60/32'],
+            source_mac_exclude: ['aa:bb:cc:00:00:70'],
+          },
+        });
+      });
+    });
+
+    it('shows a device excluded from a subnet as going direct and names the subnet', async () => {
+      server.use(...createDeviceHandlers());
+      serveDataplane({
+        ...DATAPLANE_FIXTURE,
+        model: { ...DATAPLANE_FIXTURE.model, source_ip: ['192.168.1.0/24'], source_mac_exclude: ['aa:bb:cc:00:00:70'] },
+      });
+      renderScreen();
+
+      const laptop = await readySwitch('Ноутбук');
+
+      expect(laptop).not.toBeChecked();
+      expect(within(rowOf('Ноутбук')).getByText('исключено из 192.168.1.0/24')).toBeInTheDocument();
+      expect(screen.getByRole('switch', { name: 'Через sing-box: iphone-guest' })).toBeChecked();
     });
 
     it('confirmation sends POST and closes the window', async () => {
@@ -509,6 +558,86 @@ describe('devices screen', () => {
       await readySwitch('192.168.1.36');
       expect(screen.queryByRole('region', { name: 'Смена перехвата' })).not.toBeInTheDocument();
       expect(screen.getByRole('switch', { name: 'Через sing-box: 192.168.1.36' })).not.toBeChecked();
+    });
+  });
+
+  describe('addresses and subnets list', () => {
+    it('shows the source_ip entries and sends the edited list after the warning', async () => {
+      const changed = vi.fn<(body: unknown) => void>();
+      const user = userEvent.setup();
+
+      server.use(
+        http.put(DATAPLANE_ENDPOINT.dataplane(), async ({ request }) => {
+          changed(await request.clone().json());
+        }),
+        ...createDeviceHandlers()
+      );
+      renderScreen();
+
+      const list = await screen.findByRole('list', { name: 'Адреса и подсети через sing-box: значения' });
+
+      expect(within(list).getByText('192.168.1.180')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Применить список' })).toBeDisabled();
+
+      await user.type(screen.getByRole('textbox', { name: 'Адреса и подсети через sing-box' }), '10.0.0.0/8{Enter}');
+      await user.click(screen.getByRole('button', { name: 'Применить список' }));
+
+      const dialog = await screen.findByRole('alertdialog', { name: 'Применить новый список адресов и подсетей?' });
+
+      expect(changed).not.toHaveBeenCalled();
+
+      await user.click(within(dialog).getByRole('button', { name: 'Применить' }));
+
+      await waitFor(() => {
+        expect(changed).toHaveBeenCalledWith({
+          model: { ...DATAPLANE_FIXTURE.model, source_ip: ['192.168.1.180', '10.0.0.0/8'] },
+        });
+      });
+    });
+
+    it('names a subnet with host bits and the subnet it was meant to be, and does not send it', async () => {
+      const changed = vi.fn<(body: unknown) => void>();
+      const user = userEvent.setup();
+
+      server.use(
+        http.put(DATAPLANE_ENDPOINT.dataplane(), async ({ request }) => {
+          changed(await request.clone().json());
+        }),
+        ...createDeviceHandlers()
+      );
+      renderScreen();
+
+      const input = await screen.findByRole('textbox', { name: 'Адреса и подсети через sing-box' });
+
+      await user.type(input, '192.168.1.5/24{Enter}');
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        '192.168.1.5/24 не начало подсети: напишите 192.168.1.0/24.'
+      );
+
+      await user.click(screen.getByRole('button', { name: 'Применить список' }));
+
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+      expect(changed).not.toHaveBeenCalled();
+    });
+
+    it('rejects text that is not an IPv4 address and resets to the list on the device', async () => {
+      const user = userEvent.setup();
+
+      server.use(...createDeviceHandlers());
+      renderScreen();
+
+      await user.type(
+        await screen.findByRole('textbox', { name: 'Адреса и подсети через sing-box' }),
+        'fd00::1{Enter}'
+      );
+
+      expect(await screen.findByRole('alert')).toHaveTextContent('«fd00::1» — не IPv4-адрес и не подсеть.');
+
+      await user.click(screen.getByRole('button', { name: 'Сбросить' }));
+
+      expect(screen.queryByText('fd00::1')).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Применить список' })).toBeDisabled();
     });
   });
 });

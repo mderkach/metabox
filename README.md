@@ -190,7 +190,7 @@ uci commit metabox
 /etc/init.d/metabox-singbox restart
 ```
 
-With `acl_mode 'listed'` (the default), only some devices go through sing-box: those enabled on the Devices screen, or listed in `source_ip` and `source_mac`. With `acl_mode 'all'`, every device on `br-lan` does.
+With `acl_mode 'listed'` (the default), only some devices go through sing-box: those enabled on the Devices screen, or listed in `source_ip` and `source_mac`, minus those in `source_ip_exclude` and `source_mac_exclude`. With `acl_mode 'all'`, every device on `br-lan` does.
 
 </details>
 

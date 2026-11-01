@@ -13,11 +13,13 @@ import { ConfigNodePanel } from './ConfigNodePanel';
 export function ConfigNodePanelSheet({
   open,
   title,
+  actions,
   onClose,
   children,
 }: {
   open: boolean;
   title: string;
+  actions?: ReactNode;
   onClose: () => void;
   children: ReactNode;
 }) {
@@ -31,7 +33,7 @@ export function ConfigNodePanelSheet({
       }}
     >
       <SheetContent side='bottom' showCloseButton={false} className={cn(SHEET_BOTTOM, 'max-h-[85svh] gap-0 p-0')}>
-        <ConfigNodePanel title={title} sheet onClose={onClose}>
+        <ConfigNodePanel title={title} actions={actions} sheet onClose={onClose}>
           {children}
         </ConfigNodePanel>
       </SheetContent>

@@ -2,7 +2,7 @@
   "empty": {
     "title": "No nodes",
     "description": "No nodes yet. Add the first one: type and tag.",
-    "descriptionText": "No nodes yet. Add one in Text mode."
+    "descriptionText": "No nodes yet. Add one in “Whole config as text”."
   },
   "add": {
     "open": "Add node",

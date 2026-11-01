@@ -142,6 +142,26 @@ acl)
 	sleep 2
 	wait_singbox
 	;;
+exclude)
+	# $2 is an intercepted subnet over the listed clients, $3 an excluded address,
+	# $4 an excluded MAC. The listed entries stay: the subnet overlaps them in the set.
+	uci add_list metabox.dataplane.source_ip="$2"
+	uci add_list metabox.dataplane.source_ip_exclude="$3"
+	uci add_list metabox.dataplane.source_mac_exclude="$4"
+	uci commit metabox
+	reload_config
+	sleep 2
+	wait_singbox
+	;;
+exclude-off)
+	uci del_list metabox.dataplane.source_ip="$2"
+	uci delete metabox.dataplane.source_ip_exclude
+	uci delete metabox.dataplane.source_mac_exclude
+	uci commit metabox
+	reload_config
+	sleep 2
+	wait_singbox
+	;;
 foreign-up)
 	# Another service's trace in the kernel: the same mark 101 and table 100 as the
 	# dataplane has, so a disabled service cannot tell them from its own.
@@ -165,7 +185,7 @@ forget-state) rm -f /var/run/metabox/dataplane.state ;;
 stop) /etc/init.d/$SERVICE stop ;;
 start) /etc/init.d/$SERVICE start ;;
 *)
-	echo "usage: $0 state|expect-up|expect-down|counter <chain> <pattern>|singbox-pid|wait|log-has <a> <b>|acl all|listed|router-tcp|router-udp|foreign-mark-up|foreign-mark-counter <mark>|foreign-mark-down|snapshot|apply|kill|foreign-up|foreign-down|foreign-present|dataplane 0|1|forget-state|stop|start" >&2
+	echo "usage: $0 state|expect-up|expect-down|counter <chain> <pattern>|singbox-pid|wait|log-has <a> <b>|acl all|listed|exclude <subnet> <ip> <mac>|exclude-off <subnet>|router-tcp|router-udp|foreign-mark-up|foreign-mark-counter <mark>|foreign-mark-down|snapshot|apply|kill|foreign-up|foreign-down|foreign-present|dataplane 0|1|forget-state|stop|start" >&2
 	exit 2
 	;;
 esac

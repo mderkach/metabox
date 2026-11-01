@@ -18,6 +18,8 @@ export const DATAPLANE_FIXTURE: DataplaneWire = {
     acl_mode: 'listed',
     source_ip: ['192.168.1.180'],
     source_mac: ['AA:BB:CC:00:01:04'],
+    source_ip_exclude: [],
+    source_mac_exclude: [],
     lan_interface: ['br-lan'],
     wan_proxy_cidr: [],
     wan_direct_cidr: [],

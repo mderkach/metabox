@@ -56,6 +56,8 @@ dp_add() {
 dp_add_iface() { dp_add dp_ifaces "$1" 'A-Za-z0-9._@-' '"'; }
 dp_add_ip() { dp_add dp_src_ip "$1" '0-9./'; }
 dp_add_mac() { dp_add dp_src_mac "$(echo "$1" | tr 'A-F' 'a-f')" '0-9a-f:'; }
+dp_add_ip_exclude() { dp_add dp_src_ip_exclude "$1" '0-9./'; }
+dp_add_mac_exclude() { dp_add dp_src_mac_exclude "$(echo "$1" | tr 'A-F' 'a-f')" '0-9a-f:'; }
 dp_add_proxy() { dp_add dp_wan_proxy "$1" '0-9./'; }
 dp_add_direct() { dp_add dp_wan_direct "$1" '0-9./'; }
 
@@ -64,6 +66,8 @@ dp_load() {
 	dp_ifaces=
 	dp_src_ip=
 	dp_src_mac=
+	dp_src_ip_exclude=
+	dp_src_mac_exclude=
 	dp_wan_proxy=
 	dp_wan_direct=
 
@@ -81,6 +85,8 @@ dp_load() {
 	[ -n "$dp_ifaces" ] || dp_ifaces='"br-lan"'
 	config_list_foreach dataplane source_ip dp_add_ip
 	config_list_foreach dataplane source_mac dp_add_mac
+	config_list_foreach dataplane source_ip_exclude dp_add_ip_exclude
+	config_list_foreach dataplane source_mac_exclude dp_add_mac_exclude
 	config_list_foreach dataplane wan_proxy_cidr dp_add_proxy
 	config_list_foreach dataplane wan_direct_cidr dp_add_direct
 
@@ -113,7 +119,8 @@ dp_set() {
 }
 
 # ACL sources: in mode all there is no source check at all, in listed only
-# the listed addresses and MACs.
+# the listed addresses and MACs. Exclusions come first: a device inside a listed
+# subnet or with a listed MAC goes direct when it is excluded.
 dp_sources() {
 	local target="$1"
 
@@ -122,6 +129,8 @@ dp_sources() {
 		return
 	fi
 
+	printf '\tip saddr @metabox_src_ip_exclude counter return\n'
+	printf '\tether saddr @metabox_src_mac_exclude counter return\n'
 	printf '\tip saddr @metabox_src_ip counter goto %s\n' "$target"
 	printf '\tether saddr @metabox_src_mac counter goto %s\n' "$target"
 }
@@ -138,6 +147,8 @@ dp_render() {
 	dp_set metabox_wan_direct_addr_v4 ipv4_addr "$dp_wan_direct"
 	dp_set metabox_src_ip ipv4_addr "$dp_src_ip"
 	dp_set metabox_src_mac ether_addr "$dp_src_mac"
+	dp_set metabox_src_ip_exclude ipv4_addr "$dp_src_ip_exclude"
+	dp_set metabox_src_mac_exclude ether_addr "$dp_src_mac_exclude"
 
 	cat <<EOF
 chain metabox_redirect_lanac {
@@ -284,6 +295,8 @@ dp_sets_sync() {
 		dp_set_sync metabox_wan_direct_addr_v4 "$dp_wan_direct"
 		dp_set_sync metabox_src_ip "$dp_src_ip"
 		dp_set_sync metabox_src_mac "$dp_src_mac"
+		dp_set_sync metabox_src_ip_exclude "$dp_src_ip_exclude"
+		dp_set_sync metabox_src_mac_exclude "$dp_src_mac_exclude"
 	} | nft -f - || dp_fail "metabox_ sets were not reloaded"
 }
 

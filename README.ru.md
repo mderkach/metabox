@@ -190,7 +190,7 @@ uci commit metabox
 /etc/init.d/metabox-singbox restart
 ```
 
-С `acl_mode 'listed'` (по умолчанию) через sing-box идут только некоторые устройства: включённые на экране «Устройства» или перечисленные в `source_ip` и `source_mac`. С `acl_mode 'all'` — все устройства с `br-lan`.
+С `acl_mode 'listed'` (по умолчанию) через sing-box идут только некоторые устройства: включённые на экране «Устройства» или перечисленные в `source_ip` и `source_mac`, кроме записанных в `source_ip_exclude` и `source_mac_exclude`. С `acl_mode 'all'` — все устройства с `br-lan`.
 
 </details>
 

@@ -1,7 +1,7 @@
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { ACL_MODE, ROUTE_REASON, routeReason, type DataplaneModel, type RouteSource } from '@entities/Dataplane';
+import { ACL_MODE, isRouted, routeReason, type DataplaneModel, type RouteSource } from '@entities/Dataplane';
 import { ConfirmDialog, Switch } from '@shared/ui';
 
 import { DeviceRouteReason } from './DeviceRouteReason';
@@ -42,23 +42,11 @@ export function DeviceRouteSwitch({
   const note = reason === null ? null : <DeviceRouteReason id={noteId} reason={reason} />;
   const describedBy = reason === null ? undefined : noteId;
 
-  // The toggle does not write a subnet and cannot remove it: turning off would
-  // remove only the device MAC and address and leave the device intercepted by
-  // the subnet.
-  if (reason?.kind === ROUTE_REASON.Subnet) {
-    return (
-      <span className='flex items-center gap-2'>
-        <Switch checked disabled aria-label={t('switch.label', { device: label })} aria-describedby={describedBy} />
-        {note}
-      </span>
-    );
-  }
-
   return (
     <>
       <span className='flex items-center gap-2'>
         <Switch
-          checked={reason !== null}
+          checked={isRouted(reason)}
           disabled={locked || model?.aclMode !== ACL_MODE.Listed}
           aria-label={t('switch.label', { device: label })}
           aria-describedby={describedBy}

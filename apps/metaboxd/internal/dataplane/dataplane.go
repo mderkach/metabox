@@ -44,7 +44,8 @@ type AccessMode string
 const (
 	// AccessAll means all sources; the source lists are stored but have no effect.
 	AccessAll AccessMode = "all"
-	// AccessListed means only those listed in source_ip and source_mac.
+	// AccessListed means only those listed in source_ip and source_mac, minus those
+	// listed in source_ip_exclude and source_mac_exclude.
 	AccessListed AccessMode = "listed"
 )
 
@@ -74,6 +75,11 @@ type Model struct {
 	SourceIP []string `json:"source_ip"`
 	// SourceMAC are the sources of listed mode by MAC: they do not depend on a lease change.
 	SourceMAC []string `json:"source_mac"`
+	// SourceIPExclude are listed mode sources that go direct even when SourceIP or
+	// SourceMAC lists them: a device inside an intercepted subnet. Same form as SourceIP.
+	SourceIPExclude []string `json:"source_ip_exclude"`
+	// SourceMACExclude are the same exclusions by MAC.
+	SourceMACExclude []string `json:"source_mac_exclude"`
 	// LANInterface are the interfaces traffic is intercepted from.
 	LANInterface []string `json:"lan_interface"`
 	// WANProxyCIDR are the destinations that always go through sing-box.
@@ -89,20 +95,22 @@ type Model struct {
 // through sing-box.
 func Defaults() Model {
 	return Model{
-		Enabled:       true,
-		RedirectPort:  5331,
-		TproxyPort:    5332,
-		DNSPort:       5333,
-		DNSHijack:     true,
-		SelfMark:      100,
-		TproxyMark:    101,
-		RouteTable:    100,
-		AccessMode:    AccessListed,
-		SourceIP:      []string{},
-		SourceMAC:     []string{},
-		LANInterface:  []string{"br-lan"},
-		WANProxyCIDR:  []string{},
-		WANDirectCIDR: []string{},
+		Enabled:          true,
+		RedirectPort:     5331,
+		TproxyPort:       5332,
+		DNSPort:          5333,
+		DNSHijack:        true,
+		SelfMark:         100,
+		TproxyMark:       101,
+		RouteTable:       100,
+		AccessMode:       AccessListed,
+		SourceIP:         []string{},
+		SourceMAC:        []string{},
+		SourceIPExclude:  []string{},
+		SourceMACExclude: []string{},
+		LANInterface:     []string{"br-lan"},
+		WANProxyCIDR:     []string{},
+		WANDirectCIDR:    []string{},
 	}
 }
 
@@ -253,6 +261,9 @@ func decode(s uci.Section) (Model, error) {
 	d.list("source_ip", &m.SourceIP, validIPv4)
 	d.list("source_mac", &m.SourceMAC, validMAC)
 	m.SourceMAC = canonicalMACs(m.SourceMAC)
+	d.list("source_ip_exclude", &m.SourceIPExclude, validIPv4)
+	d.list("source_mac_exclude", &m.SourceMACExclude, validMAC)
+	m.SourceMACExclude = canonicalMACs(m.SourceMACExclude)
 	d.list("lan_interface", &m.LANInterface, validIface)
 	d.list("wan_proxy_cidr", &m.WANProxyCIDR, validIPv4)
 	d.list("wan_direct_cidr", &m.WANDirectCIDR, validIPv4)
