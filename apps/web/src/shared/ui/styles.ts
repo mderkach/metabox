@@ -5,13 +5,6 @@
  */
 
 /**
- * Card title: small caps with tracking instead of one more font size step.
- * Size 12px, not 10: functional text below eleven is unreadable at
- * working distance, and every panel card is labelled with this set.
- */
-export const SECTION_LABEL = 'text-xs font-medium tracking-[0.06em] text-muted-foreground uppercase';
-
-/**
  * Title of a card inside a screen section: sentence case, one step below
  * `SECTION_HEADING`. Small caps stay with the table header: a card titled like
  * a column reads as a part of a table.
@@ -20,16 +13,15 @@ export const CARD_TITLE = 'text-sm font-semibold';
 
 /**
  * Mid-level title: a screen section, a panel, a group card. One
- * step between the card label and the screen title, 18px, one weight:
- * two steps at one level read as two levels. The `SECTION_LABEL` small caps
- * remains a card label and does not serve as a title.
+ * step between the card title and the screen title, 18px, one weight:
+ * two steps at one level read as two levels.
  */
 export const SECTION_HEADING = 'text-lg font-semibold';
 
 /**
- * Table header small caps: the same technique as `SECTION_LABEL`, but a separate
- * constant — the table header and the card title change independently of each
- * other, even if they look the same today.
+ * Table header small caps: tracking instead of one more font size step. Size
+ * 12px, not 10: functional text below eleven is unreadable at working distance.
+ * Only column labels wear it, so a card title never reads as part of a table.
  */
 export const TABLE_HEADER = 'text-xs font-medium tracking-[0.06em] text-muted-foreground uppercase';
 

@@ -68,6 +68,9 @@ export function ConnectionTableHeader({
                 onClick={column.getToggleSortingHandler()}
                 className={cn(
                   'group/sort inline-flex max-w-full min-w-0 items-center gap-1 rounded-md px-1 py-0.5 [text-transform:inherit] transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none',
+                  // The sort mark goes before a number label: after it, the hidden mark kept
+                  // the label a mark's width left of the values under it.
+                  def.meta.numeric === true && '-mr-1 flex-row-reverse',
                   direction !== false && 'text-foreground'
                 )}
               >

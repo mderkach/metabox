@@ -26,7 +26,11 @@ export function ConfigLayout() {
   return (
     <>
       <PageHeader title={t('section.config', { ns: 'shared' })} actions={<ConfigApplyHistory />}>
-        <p className='font-mono text-xs text-muted-foreground'>{configPath}</p>
+        {/* On a phone the path takes a line of its own under the title and history: beside
+            them it pushed the history button onto a second line, alone. */}
+        <p className='font-mono text-xs break-all text-muted-foreground max-sm:order-last max-sm:basis-full'>
+          {configPath}
+        </p>
         {document.isDirty && <Badge variant='secondary'>{t('config.draft')}</Badge>}
       </PageHeader>
 

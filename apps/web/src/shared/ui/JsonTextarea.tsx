@@ -189,7 +189,9 @@ export function JsonTextarea({
           ref={highlightRef}
           aria-hidden='true'
           className={cn(
-            'pointer-events-none overflow-hidden',
+            // In forced colors the field text is no longer transparent: the layer would draw
+            // the same text a second time under it.
+            'pointer-events-none overflow-hidden forced-colors:invisible',
             height === 'fill' ? JSON_HEIGHT.Fill : JSON_HEIGHT.Content,
             JSON_LAYER,
             layout,
@@ -223,7 +225,7 @@ export function JsonTextarea({
             onChange(event.target.value);
           }}
           className={cn(
-            'absolute inset-0 size-full resize-none overflow-auto bg-transparent text-transparent caret-foreground outline-none',
+            'peer absolute inset-0 size-full resize-none overflow-auto bg-transparent text-transparent caret-foreground outline-none',
             JSON_LAYER,
             layout,
             JSON_CODE
@@ -231,6 +233,14 @@ export function JsonTextarea({
         />
         <span id={`${id}-keys`} className='sr-only'>
           {t('jsonTextarea.keys')}
+        </span>
+        {/* The way out for a sighted keyboard user, over the corner of the field while it has
+            focus: a line under the field would shift the layout of every editor. */}
+        <span
+          aria-hidden='true'
+          className='pointer-events-none absolute right-2 bottom-2 hidden rounded-md bg-muted px-1.5 py-0.5 text-xs text-muted-foreground peer-focus-visible:block'
+        >
+          {t('jsonTextarea.leave')}
         </span>
       </div>
     </div>

@@ -75,7 +75,11 @@ export function ConnectionSummaryBars({
       <ul className='flex flex-col gap-2.5'>
         {bars.map((bar, index) => (
           <li key={bar.key} className={ROW}>
-            <p className='min-w-0 text-xs wrap-break-word'>{bar.label}</p>
+            {/* One line: a node name from a subscription is long, and a wrapped one made
+                the row taller than its neighbours. The full name is in the tooltip. */}
+            <p className='min-w-0 truncate text-xs' title={bar.label}>
+              {bar.label}
+            </p>
             <p className='font-mono text-xs whitespace-nowrap text-muted-foreground tabular-nums'>
               {format(bar.value)} · {percents[index]}% · {bar.caption}
             </p>

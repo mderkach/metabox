@@ -15,7 +15,7 @@ import {
   Badge,
   Button,
   SECTION_HEADING,
-  SECTION_LABEL,
+  CARD_TITLE,
   SURFACE,
   SURFACE_HEAD,
   SheetTitle,
@@ -203,7 +203,7 @@ function RuleConditions({ rule }: { rule: RuleRow }) {
 
   return (
     <section className='flex flex-col gap-1.5'>
-      <h3 className={SECTION_LABEL}>{t('rule.conditions', { ns: 'shared' })}</h3>
+      <h3 className={CARD_TITLE}>{t('rule.conditions', { ns: 'shared' })}</h3>
       <dl className='flex flex-col gap-1'>
         {rule.matchers.map((matcher) => (
           <div key={matcher.key} className='flex gap-3 border-t border-border py-1.5 text-xs first:border-t-0'>
