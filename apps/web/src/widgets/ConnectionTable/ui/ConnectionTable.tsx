@@ -88,8 +88,11 @@ function ConnectionTableToolbar({
       {search}
       {facets}
       <span className='grow' />
-      <ConnectionColumnPicker view={view} />
-      <ConnectionDensityToggle density={view.density} onDensityChange={view.setDensity} />
+      {/* Below md rows are cards: they have neither columns nor density. */}
+      <div className='flex items-center gap-2 max-md:hidden'>
+        <ConnectionColumnPicker view={view} />
+        <ConnectionDensityToggle density={view.density} onDensityChange={view.setDensity} />
+      </div>
       <ConnectionRefreshSelect interval={view.interval} onIntervalChange={view.setInterval} />
       {actions}
     </div>

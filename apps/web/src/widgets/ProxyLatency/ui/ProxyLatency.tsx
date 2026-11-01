@@ -93,8 +93,11 @@ export function ProxyLatency({
       <CardHeader className='flex flex-row flex-wrap items-baseline gap-x-2.5 gap-y-1'>
         <h3 className={CARD_TITLE}>{t('title')}</h3>
         {/* The ceiling here is constant, while in neighboring summary panels it follows
-            the series leader: without a named scale the lengths would read the same. */}
-        <p className='text-xs text-muted-foreground'>{t('scale', { ceiling: SCALE_CEILING, fast: DELAY_FAST })}</p>
+            the series leader: without a named scale the lengths would read the same. It goes
+            under the title row, otherwise it pushes the button onto a line of its own. */}
+        <p className='order-last basis-full text-xs text-muted-foreground'>
+          {t('scale', { ceiling: SCALE_CEILING, fast: DELAY_FAST })}
+        </p>
         <span className='grow' />
         <Button
           variant='outline'

@@ -3,6 +3,7 @@ import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { LOG_SOURCE } from '@entities/Log';
+import { cn } from '@shared/lib/utils';
 import { Button, DESTRUCTIVE_OUTLINE } from '@shared/ui';
 
 import { useClearLog } from '../api';
@@ -20,7 +21,9 @@ export function LogClearButton({ source }: { source: string | null }) {
 
   return (
     <div className='flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1'>
-      <p id={hintId} className='max-w-prose text-xs text-pretty text-muted-foreground'>
+      {/* On a phone the hiding needs no explanation in the toolbar: the button names it,
+          and the hint stays the button description. Clearing a file keeps it visible. */}
+      <p id={hintId} className={cn('max-w-prose text-xs text-pretty text-muted-foreground', !file && 'max-md:sr-only')}>
         {file ? t('hint.file') : t('hint.logread')}
       </p>
       <Button

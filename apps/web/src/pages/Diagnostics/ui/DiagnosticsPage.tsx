@@ -20,6 +20,7 @@ import { PageHeader } from '@widgets/PageHeader';
 
 import { DIAGNOSTICS_COLUMN } from './DiagnosticsColumns';
 import { DiagnosticsRow } from './DiagnosticsRow';
+import { DiagnosticsSummary } from './DiagnosticsSummary';
 import { DiagnosticsTargetSelect } from './DiagnosticsTargetSelect';
 
 /** The header row is also a table row: row numbering starts with it. */
@@ -79,6 +80,8 @@ export function DiagnosticsPage() {
               <QueryFailure messageKey='source.diag' query={report} />
             </div>
           )}
+
+          {checks.length > 0 && <DiagnosticsSummary checks={checks} />}
 
           {checks.length > 0 && (
             <div role='table' aria-label={t('title')} aria-rowcount={checks.length + HEADER_ROWS}>
