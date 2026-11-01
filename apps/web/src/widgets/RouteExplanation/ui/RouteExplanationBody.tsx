@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router';
+import { TriangleAlert } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { cn } from '@shared/lib/utils';
@@ -33,7 +34,10 @@ export function RouteExplanationBody({ connectionId }: { connectionId: string })
           <RouteExplanationMatched explanation={state.explanation} trusted={state.trusted} drifted={drifted} />
 
           {drifted && (
-            <Alert>
+            // Without an icon the alert grid has one column, and the action placed in the second
+            // squeezed the title into a narrow strip.
+            <Alert className='has-data-[slot=alert-action]:pr-2.5'>
+              <TriangleAlert aria-hidden='true' />
               <AlertTitle>{t('drift.title')}</AlertTitle>
               <AlertDescription>
                 {t('drift.description', {
