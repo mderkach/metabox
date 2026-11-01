@@ -1,6 +1,6 @@
 # Frontend testing
 
-Vitest + Testing Library. Tests run in jsdom; those that need a real browser run in Chromium in the `browser` project ([ADR-0064](../../../../docs/adr/ADR-0064-run-browser-tests-in-a-vitest-browser-project-next-to-jsdom.md)).
+Vitest + Testing Library. Application tests run in jsdom; those that need a real browser run in Chromium in the `browser` project ([ADR-0064](../../../../docs/adr/ADR-0064-run-browser-tests-in-a-vitest-browser-project-next-to-jsdom.md)).
 
 ## Layout and naming
 
@@ -33,6 +33,10 @@ For the same reason a test may use the Public API of a neighbouring slice of its
 - Grouping by component/function through `describe`.
 
 Vitest globals are **disabled** (`globals: false`): `describe`, `it`, `expect`, `vi` are imported explicitly from `vitest`. For this reason the Testing Library `cleanup` is registered manually in `src/test/setup.ts`; do not duplicate it in tests. The `testing-library/no-manual-cleanup` rule assumes automatic cleanup, which is not used here, and is not enabled in the set.
+
+## Tooling rules
+
+`tools/**/*.test.js` runs in the `tooling` Vitest project with the Node environment and no application setup ([ADR-0072](../../../../docs/adr/ADR-0072-test-lint-rules-with-oxlint-in-a-vitest-node-project.md)). Local lint rules use the native `RuleTester` from `oxlint/plugins-dev`, wired to Vitest's `describe` and `it`. Boundary tests parse real imports and use temporary filesystem Public APIs, including creation and removal between checks; they do not mock the AST or filesystem. Run them with `pnpm --filter web exec vitest run --project tooling`.
 
 ## Methodology
 
@@ -166,4 +170,4 @@ pnpm --filter web test -- Rule   # by path substring
 pnpm --filter web test:browser   # the browser project
 ```
 
-`test` and the pre-push hook run only the jsdom projects; the browser project runs in the `web-browser` CI job. Before the first local run, download the browser: `pnpm --filter web exec playwright install --only-shell chromium`.
+`test` and the pre-push hook run the jsdom and Node tooling projects; the browser project runs in the `web-browser` CI job. Before the first local run, download the browser: `pnpm --filter web exec playwright install --only-shell chromium`.

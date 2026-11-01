@@ -329,6 +329,14 @@ export default defineConfig({
     projects: [
       {
         test: {
+          name: 'tooling',
+          environment: 'node',
+          include: ['tools/**/*.test.js'],
+          sequence: { groupOrder: 0 },
+        },
+      },
+      {
+        test: {
           ...JSDOM_PROJECT,
           name: 'unit',
           include: ['src/**/*.test.{ts,tsx}'],
