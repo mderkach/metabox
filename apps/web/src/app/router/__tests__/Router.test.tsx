@@ -152,7 +152,10 @@ describe('panel routes', () => {
 
     const items = await screen.findAllByRole('menuitem');
 
-    const targets = [...tabs, ...items].map((link) => link.getAttribute('href'));
+    // The last item is the whole config as text: on a phone the mode switch moves there.
+    expect(items.at(-1)).toHaveAttribute('href', '/config/raw');
+
+    const targets = [...tabs, ...items.slice(0, -1)].map((link) => link.getAttribute('href'));
 
     expect(new Set(targets).size).toBe(Object.values(CONFIG_SECTION).length);
     expect(targets).toHaveLength(Object.values(CONFIG_SECTION).length);
@@ -214,6 +217,22 @@ describe('panel routes', () => {
 
     expect(await screen.findAllByRole('heading', { level: 1, name: 'Конфигурация' })).toHaveLength(1);
     expect(screen.getAllByRole('button', { name: 'История версий' })).toHaveLength(1);
+  });
+
+  // The text is a detour from a section, not a new start: forms lead back to where it began.
+  it('from the text "Forms" leads back to the section that was open', async () => {
+    serveDaemon();
+    const user = userEvent.setup();
+
+    renderRouter('/config/rule-set');
+
+    const mode = await screen.findByRole('tablist', { name: 'Как показан документ' });
+
+    await user.click(within(mode).getByRole('tab', { name: 'Текст' }));
+
+    await waitFor(() => {
+      expect(within(mode).getByRole('tab', { name: 'Формы' })).toHaveAttribute('href', '/config/rule-set');
+    });
   });
 
   // Outside /config/raw the strip picks "Forms" by the section address, and `Link`

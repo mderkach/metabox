@@ -76,7 +76,7 @@ export type ConfigModeRoute = (typeof CONFIG_MODE_ROUTE)[keyof typeof CONFIG_MOD
 /**
  * The second axis of the strip: how the document is shown. Sections answer "which part
  * am I looking at", the mode answers "forms or text". Text shows the whole file,
- * so no section is selected in it, and returning to forms leads to the first one.
+ * so no section is selected in it; returning to forms leads to the section open before it.
  */
 export const CONFIG_MODES = [
   { key: 'forms', label: 'mode.forms', route: CONFIG_MODE_ROUTE.Forms },

@@ -22,6 +22,7 @@
   "mode": {
     "label": "How the document is shown",
     "forms": "Forms",
-    "text": "Text"
+    "text": "Text",
+    "textItem": "Whole config as text"
   }
 }

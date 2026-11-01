@@ -11,13 +11,14 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
   Tabs,
   TabsList,
   TabsTrigger,
 } from '@shared/ui';
 
-import { CONFIG_TABS, CONFIG_TABS_FREQUENT, tabPath } from '../model';
+import { CONFIG_MODE_ROUTE, CONFIG_TABS, CONFIG_TABS_FREQUENT, tabPath } from '../model';
 import { ConfigModeSwitch } from './ConfigModeSwitch';
 
 const HALF = 0.5;
@@ -132,11 +133,19 @@ export function ConfigTabs({ config }: { config: ConfigDocument | null }) {
                 </DropdownMenuItem>
               );
             })}
+            {/* On a phone the mode switch leaves the strip, where it left room for one tab:
+                text editing from a phone is not a target scenario. */}
+            <DropdownMenuSeparator className='sm:hidden' />
+            <DropdownMenuItem render={<Link to={CONFIG_MODE_ROUTE.Text} />} className='sm:hidden'>
+              {t('mode.textItem')}
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
 
-      <ConfigModeSwitch />
+      <div className='max-sm:hidden'>
+        <ConfigModeSwitch />
+      </div>
     </div>
   );
 }
