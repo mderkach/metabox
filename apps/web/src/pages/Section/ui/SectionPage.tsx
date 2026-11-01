@@ -17,6 +17,7 @@ import {
 import { useDaemonStatus } from '@entities/Daemon';
 import { ConfigNodeAddForm } from '@features/Config/ConfigNodeAdd';
 import { usePanelAsSheet } from '@shared/lib/media';
+import { cn } from '@shared/lib/utils';
 import {
   Button,
   Empty,
@@ -27,6 +28,7 @@ import {
   QueryFailure,
   SidePanelLayout,
   SURFACE,
+  SURFACE_HEAD,
   SkeletonRows,
 } from '@shared/ui';
 import { ConfigNode } from '@widgets/Config/ConfigNode';
@@ -130,8 +132,6 @@ export function SectionNodes({ section }: { section: GenericSection }) {
 
       {isSettingsSection(section) && isListSettingsSection(section) && <ConfigSectionSettings section={section} />}
 
-      {loaded && addable && nodes.length > 0 && <div className='flex justify-end'>{addButton}</div>}
-
       <SidePanelLayout.Root open={addable && adding && !asSheet}>
         <SidePanelLayout.Main className='gap-4'>
           {loaded && shape.kind === 'list' && nodes.length === 0 && (
@@ -145,38 +145,52 @@ export function SectionNodes({ section }: { section: GenericSection }) {
           )}
 
           {loaded && shape.kind === 'object' && (
-            <ConfigNode
-              key={document.revision}
-              section={section}
-              index={0}
-              node={nodes.length === 0 ? undefined : nodes[0]}
-              name={section}
-            />
+            <div className={SURFACE}>
+              <ConfigNode
+                key={document.revision}
+                section={section}
+                index={0}
+                node={nodes.length === 0 ? undefined : nodes[0]}
+                name={section}
+              />
+            </div>
           )}
 
-          {shape.kind === 'list' &&
-            nodes.map((node, index) => (
-              // The revision in the key recreates the form and editor on an update not from
-              // the user: after discarding changes the field must not keep
-              // the discarded text.
-              <ConfigNode
-                key={`${String(document.revision)}:${String(index)}`}
-                section={section}
-                index={index}
-                node={node}
-                name={nodeName(shape.path, node, index)}
-                builtTags={builtTags}
-                onDeleted={() => {
-                  shiftExpanded(index);
-                }}
-                {...(nodes.length > 1 && {
-                  open: expanded.has(index),
-                  onOpenChange: (open: boolean) => {
-                    setNodeOpen(index, open);
-                  },
-                })}
-              />
-            ))}
+          {/* One surface for the whole section: a card per node turned a list of ten
+              servers into ten separate objects of equal weight. */}
+          {shape.kind === 'list' && nodes.length > 0 && (
+            <div className={cn('overflow-hidden', SURFACE)}>
+              <div className={cn('flex items-center justify-between gap-3', SURFACE_HEAD)}>
+                <p className='text-sm text-muted-foreground'>{t('list.count', { count: nodes.length })}</p>
+                {addable && addButton}
+              </div>
+              <ul className='divide-y divide-border'>
+                {nodes.map((node, index) => (
+                  // The revision in the key recreates the form and editor on an update not from
+                  // the user: after discarding changes the field must not keep
+                  // the discarded text.
+                  <li key={`${String(document.revision)}:${String(index)}`}>
+                    <ConfigNode
+                      section={section}
+                      index={index}
+                      node={node}
+                      name={nodeName(shape.path, node, index)}
+                      builtTags={builtTags}
+                      onDeleted={() => {
+                        shiftExpanded(index);
+                      }}
+                      {...(nodes.length > 1 && {
+                        open: expanded.has(index),
+                        onOpenChange: (open: boolean) => {
+                          setNodeOpen(index, open);
+                        },
+                      })}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </SidePanelLayout.Main>
 
         {/* The wrapper spans the full list height, and the panel its own content height:

@@ -17,7 +17,8 @@ export function RuleTableHeader({ hits }: { hits: boolean }) {
       <div
         role='row'
         aria-rowindex={1}
-        className={cn(RULE_COLUMN.Row, 'border-b border-border bg-table-head py-2', TABLE_HEADER)}
+        // Below `sm` a row is two lines, and column labels above them would name nothing.
+        className={cn(RULE_COLUMN.Row, 'border-b border-border bg-table-head py-2 max-sm:sr-only', TABLE_HEADER)}
       >
         <span role='columnheader' className={RULE_COLUMN.Index}>
           {t('column.index')}

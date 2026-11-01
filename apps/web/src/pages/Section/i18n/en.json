@@ -7,5 +7,9 @@
   "add": {
     "open": "Add node",
     "title": "New node"
+  },
+  "list": {
+    "count_one": "{{count}} node",
+    "count_other": "{{count}} nodes"
   }
 }
