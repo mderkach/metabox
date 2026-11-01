@@ -20,9 +20,7 @@ await preloadNamespaces([
   'features/Theme/ThemeSwitch',
   'features/Language/LanguageSwitch',
   'features/Auth/AuthLogin',
-  'features/Auth/AuthPassword',
   'features/Auth/AuthLogout',
-  'features/Mcp/McpAccess',
 ]);
 
 createRoot(document.getElementById('root')!).render(

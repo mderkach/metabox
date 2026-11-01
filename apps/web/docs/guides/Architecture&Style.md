@@ -36,14 +36,14 @@ SOLID (five principles of object design) and GRASP (general responsibility assig
 
 The layer set is trimmed: there are ten screens. An empty layer is not created in advance.
 
-| Layer       | Purpose                                                                                                           | Created        |
-| ----------- | ----------------------------------------------------------------------------------------------------------------- | -------------- |
-| `app/`      | startup: router, providers, global styles, entry point                                                            | from the start |
-| `pages/`    | router screens (Editor, RuleSets, RawConfig, Section, Overview, Proxies, Connections, Devices, Logs, Diagnostics) | from the start |
-| `widgets/`  | self-contained parts of a screen: the config tree, the diff panel, the connections table                          | as needed      |
-| `features/` | user actions: `Config/ConfigApply`, `Rule/RuleEdit`, `Connection/ConnectionClose`                                 | as needed      |
-| `entities/` | domain entities: `Config`, `Rule`, `RuleSet`, `Route`, `Proxy`, `Connection`, `Daemon`, `Device`, `Log`, `Diag`   | from the start |
-| `shared/`   | reusable code without domain specifics: UI primitives, the http client, helpers                                   | from the start |
+| Layer       | Purpose                                                                                                                     | Created        |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| `app/`      | startup: router, providers, global styles, entry point                                                                      | from the start |
+| `pages/`    | router screens (Editor, RuleSets, RawConfig, Section, Overview, Proxies, Connections, Devices, Logs, Diagnostics, Settings) | from the start |
+| `widgets/`  | self-contained parts of a screen: the config tree, the diff panel, the connections table                                    | as needed      |
+| `features/` | user actions: `Config/ConfigApply`, `Rule/RuleEdit`, `Connection/ConnectionClose`                                           | as needed      |
+| `entities/` | domain entities: `Config`, `Rule`, `RuleSet`, `Route`, `Proxy`, `Connection`, `Daemon`, `Device`, `Log`, `Diag`             | from the start |
+| `shared/`   | reusable code without domain specifics: UI primitives, the http client, helpers                                             | from the start |
 
 `app` and `shared` have no slices: they consist of segments directly.
 

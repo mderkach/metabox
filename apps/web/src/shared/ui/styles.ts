@@ -33,6 +33,12 @@ export const SECTION_HEADING = 'text-lg font-semibold';
  */
 export const TABLE_HEADER = 'text-xs font-medium tracking-[0.06em] text-muted-foreground uppercase';
 
+/**
+ * Action row under a form on a settings screen: the main action at the right edge,
+ * stacked under the fields on a phone.
+ */
+export const FORM_ACTIONS = 'flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end';
+
 /** Search field in a list toolbar: one width for all panel lists. */
 export const SEARCH_FIELD = 'relative w-full max-w-80';
 

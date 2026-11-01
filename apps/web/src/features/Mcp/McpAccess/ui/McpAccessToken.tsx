@@ -1,7 +1,7 @@
 import { TriangleAlert } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Alert, AlertDescription, AlertTitle, Button, DialogFooter } from '@shared/ui';
+import { Alert, AlertDescription, AlertTitle, Button, FORM_ACTIONS } from '@shared/ui';
 
 import { toClaudeCodeCommand } from '../model';
 import { McpAccessCopyField } from './McpAccessCopyField';
@@ -36,11 +36,11 @@ export function McpAccessToken({
         announce={announce}
       />
 
-      <DialogFooter>
+      <div className={FORM_ACTIONS}>
         <Button type='button' onClick={onDone}>
           {t('token.done')}
         </Button>
-      </DialogFooter>
+      </div>
     </div>
   );
 }

@@ -1,1 +1,1 @@
-export { McpAccess } from './ui';
+export { McpAccessSection } from './ui';

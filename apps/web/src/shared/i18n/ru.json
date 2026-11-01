@@ -128,7 +128,7 @@
     "megabyte": "МБ",
     "gigabyte": "ГБ",
     "terabyte": "ТБ",
-    "rate": "{{value}}/\u2060с",
+    "rate": "{{value}}/⁠с",
     "second": "{{value}} с",
     "minute": "{{value}} мин",
     "hour": "{{value}} ч",
@@ -272,7 +272,8 @@
     "connections": "Соединения",
     "devices": "Устройства",
     "logs": "Логи",
-    "diagnostics": "Диагностика"
+    "diagnostics": "Диагностика",
+    "settings": "Настройки"
   },
   "stat": {
     "uptime": "Время работы"

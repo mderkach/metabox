@@ -1,8 +1,4 @@
 {
-  "trigger": {
-    "set": "Set password",
-    "change": "Password"
-  },
   "title": {
     "set": "Panel password",
     "change": "Change password"

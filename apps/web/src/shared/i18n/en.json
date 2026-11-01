@@ -128,7 +128,7 @@
     "megabyte": "MB",
     "gigabyte": "GB",
     "terabyte": "TB",
-    "rate": "{{value}}/\u2060s",
+    "rate": "{{value}}/⁠s",
     "second": "{{value}} s",
     "minute": "{{value}} min",
     "hour": "{{value}} h",
@@ -263,7 +263,8 @@
     "connections": "Connections",
     "devices": "Devices",
     "logs": "Logs",
-    "diagnostics": "Diagnostics"
+    "diagnostics": "Diagnostics",
+    "settings": "Settings"
   },
   "stat": {
     "uptime": "Uptime"

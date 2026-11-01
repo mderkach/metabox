@@ -1,1 +1,1 @@
-export * from './AuthPassword';
+export * from './AuthPasswordSection';

@@ -1,5 +1,4 @@
 {
-  "trigger": "MCP access",
   "title": "MCP access",
   "description": {
     "off": "MCP lets AI agents such as Claude Code read the router state: service status, routes, connections, nodes, config versions, the log and diagnostics. Access is read-only: an agent cannot change anything.",
