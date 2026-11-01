@@ -172,11 +172,11 @@ describe('ConfigApplyBar', () => {
     });
 
     const bar = screen.getByRole('region', { name: 'Применение конфига' });
-    const names = within(bar)
-      .getAllByRole('button')
-      .map((button) => button.textContent);
+    const buttons = within(bar).getAllByRole('button');
 
-    expect(names).toEqual(['Отменить правки', 'Применить']);
+    expect(buttons).toHaveLength(2);
+    expect(buttons[0]).toHaveAccessibleName('Отменить правки');
+    expect(buttons[1]).toHaveAccessibleName('Применить');
   });
 
   it('cancels edits only after confirmation: the draft is cleared, the file from the device is in place', async () => {

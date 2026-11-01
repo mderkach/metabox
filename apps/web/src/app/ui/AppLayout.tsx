@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useConfigLeaveGuard } from '@entities/Config';
 import { ConfigApplyBar } from '@features/Config/ConfigApply';
 import { useNarrowScreen } from '@shared/lib/media';
+import { useShortcuts } from '@shared/lib/shortcuts';
 import { cn } from '@shared/lib/utils';
 import { AppSidebar, AppSidebarBottomNav } from '@widgets/AppSidebar';
 
@@ -25,6 +26,7 @@ const SKIP_LINK_CLASS =
 export function AppLayout() {
   useRuntimeStreams();
   useConfigLeaveGuard();
+  useShortcuts();
   const { t } = useTranslation('app');
   const narrow = useNarrowScreen();
   const [applySpace, setApplySpace] = useState(0);
