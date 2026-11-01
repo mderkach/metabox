@@ -5,7 +5,7 @@ import { DaemonRestart } from '@features/Daemon/DaemonControl';
 import { DaemonModeSwitch } from '@features/Daemon/DaemonMode';
 import { formatBytes } from '@shared/lib/format';
 import { cn } from '@shared/lib/utils';
-import { Card, CardContent, CardHeader, PENDING_REVEAL, SECTION_LABEL, Skeleton } from '@shared/ui';
+import { CARD_TITLE, Card, CardContent, CardHeader, PENDING_REVEAL, Skeleton } from '@shared/ui';
 import { DaemonService } from '@widgets/Daemon/DaemonService';
 
 import { useDaemonMark, type OverviewRuntime } from '../lib';
@@ -47,7 +47,7 @@ export function OverviewProcess({ runtime, collapsible }: { runtime: OverviewRun
 
         <Card>
           <CardHeader className='flex flex-row flex-wrap items-center gap-x-2.5 gap-y-1'>
-            <h3 className={SECTION_LABEL}>{t('process.panel')}</h3>
+            <h3 className={CARD_TITLE}>{t('process.panel')}</h3>
             <p className='flex items-center gap-1.5 text-xs'>
               <span aria-hidden='true' className={cn('size-2 shrink-0 rounded-full', daemon.tone)} />
               {daemon.label}

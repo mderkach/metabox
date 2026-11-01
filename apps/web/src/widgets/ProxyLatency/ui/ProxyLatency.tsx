@@ -7,6 +7,7 @@ import { toShare, toValueScale } from '@shared/lib/chart';
 import { cn } from '@shared/lib/utils';
 import {
   Button,
+  CARD_TITLE,
   Card,
   CardContent,
   CardHeader,
@@ -15,7 +16,6 @@ import {
   EmptyDescription,
   EmptyHeader,
   QueryFailure,
-  SECTION_LABEL,
   SkeletonRows,
   ValueAxis,
 } from '@shared/ui';
@@ -91,7 +91,7 @@ export function ProxyLatency({
   return (
     <Card className='gap-3'>
       <CardHeader className='flex flex-row flex-wrap items-baseline gap-x-2.5 gap-y-1'>
-        <h3 className={SECTION_LABEL}>{t('title')}</h3>
+        <h3 className={CARD_TITLE}>{t('title')}</h3>
         {/* The ceiling here is constant, while in neighboring summary panels it follows
             the series leader: without a named scale the lengths would read the same. */}
         <p className='text-xs text-muted-foreground'>{t('scale', { ceiling: SCALE_CEILING, fast: DELAY_FAST })}</p>

@@ -8,7 +8,14 @@ export {
   useProxyProviders,
 } from './api/Proxy.query';
 export { toProxyRuntime, withSelectedNode } from './model/Proxy.adapter';
-export { DELAY_FAST, DELAY_STATE, DELAY_TIMEOUT, GROUP_TYPES, SERVICE_GROUPS } from './model/Proxy.model';
+export {
+  DELAY_FAST,
+  DELAY_STATE,
+  DELAY_TIMEOUT,
+  GROUP_TYPES,
+  SERVICE_GROUPS,
+  toOutboundTargets,
+} from './model/Proxy.model';
 export type {
   DelayState,
   ProviderUpdate,

@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useDiagReport, type DiagRun } from '@entities/Diag';
-import { useProxies } from '@entities/Proxy';
+import { toOutboundTargets, useProxies } from '@entities/Proxy';
 import { cn } from '@shared/lib/utils';
 import {
   Button,
@@ -18,7 +18,6 @@ import {
 } from '@shared/ui';
 import { PageHeader } from '@widgets/PageHeader';
 
-import { toDiagTargets } from '../lib';
 import { DIAGNOSTICS_COLUMN } from './DiagnosticsColumns';
 import { DiagnosticsRow } from './DiagnosticsRow';
 import { DiagnosticsTargetSelect } from './DiagnosticsTargetSelect';
@@ -34,7 +33,7 @@ const HEADER_ROWS = 1;
 export function DiagnosticsPage() {
   const { t } = useTranslation('pages/Diagnostics');
   const proxies = useProxies();
-  const targets = useMemo(() => toDiagTargets(proxies.data), [proxies.data]);
+  const targets = useMemo(() => toOutboundTargets(proxies.data), [proxies.data]);
   const [chosen, setChosen] = useState<string | null>(null);
   const [run, setRun] = useState<DiagRun | null>(null);
   const report = useDiagReport(run);

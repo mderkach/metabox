@@ -10,7 +10,8 @@
     "underMinute": "меньше минуты",
     "minutes": "{{minutes}} мин",
     "hours": "{{hours}} ч",
-    "days": "{{days}} д {{hours}} ч"
+    "days": "{{days}} д {{hours}} ч",
+    "label": "{{value}} без перезапуска"
   },
   "action": {
     "restart": "Перезапустить",

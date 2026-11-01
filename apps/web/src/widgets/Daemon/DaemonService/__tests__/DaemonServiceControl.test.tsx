@@ -15,7 +15,7 @@ import {
   SERVICE_UNREAD_FIXTURE,
 } from '@entities/Daemon/__tests__/Daemon.fixture';
 
-import { DaemonService } from '../ui/DaemonService';
+import { DaemonServiceControl } from '../ui/DaemonServiceControl';
 
 function serveService(state: typeof SERVICE_RUNNING_FIXTURE) {
   server.use(http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(state)));
@@ -28,13 +28,13 @@ afterEach(async () => {
 describe('service state', () => {
   // "0 h" for a process started half an hour ago reads as a malfunction.
   it.each([
-    [2443, '40 мин'],
-    [30, 'меньше минуты'],
-    [7300, '2 ч'],
+    [2443, '40 мин без перезапуска'],
+    [30, 'меньше минуты без перезапуска'],
+    [7300, '2 ч без перезапуска'],
   ])('uptime of %i s is labeled as "%s"', async (uptime, text) => {
     serveService({ ...SERVICE_RUNNING_FIXTURE, uptime });
 
-    renderWithQuery(<DaemonService heap={0} />);
+    renderWithQuery(<DaemonServiceControl />);
 
     expect(await screen.findByText(text)).toBeInTheDocument();
   });
@@ -42,16 +42,16 @@ describe('service state', () => {
   it('zero uptime means unknown age: does not show it', async () => {
     serveService({ ...SERVICE_RUNNING_FIXTURE, uptime: 0 });
 
-    renderWithQuery(<DaemonService heap={0} />);
+    renderWithQuery(<DaemonServiceControl />);
 
     expect(await screen.findByText('работает')).toBeInTheDocument();
-    expect(screen.queryByText('Время работы')).not.toBeInTheDocument();
+    expect(screen.queryByText(/без перезапуска/)).not.toBeInTheDocument();
   });
 
   it('shows a running service and offers a restart', async () => {
     serveService(SERVICE_RUNNING_FIXTURE);
 
-    renderWithQuery(<DaemonService heap={0} />);
+    renderWithQuery(<DaemonServiceControl />);
 
     expect(await screen.findByText('работает')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Перезапустить' })).toBeInTheDocument();
@@ -63,7 +63,7 @@ describe('service state', () => {
   it('a process outside the service is shown as running, but without commands', async () => {
     serveService(SERVICE_UNMANAGED_FIXTURE);
 
-    renderWithQuery(<DaemonService heap={0} />);
+    renderWithQuery(<DaemonServiceControl />);
 
     expect(await screen.findByText('работает')).toBeInTheDocument();
     expect(screen.getByText('поднят другой службой')).toBeInTheDocument();
@@ -74,7 +74,7 @@ describe('service state', () => {
   it('on a crashed service shows the binary output verbatim', async () => {
     serveService(SERVICE_FAILED_FIXTURE);
 
-    renderWithQuery(<DaemonService heap={0} />);
+    renderWithQuery(<DaemonServiceControl />);
 
     expect(await screen.findByText('упал')).toBeInTheDocument();
     expect(screen.getByText(/provider sub-nl not found/)).toBeInTheDocument();
@@ -89,7 +89,7 @@ describe('service state', () => {
     await i18next.changeLanguage(language);
     serveService(SERVICE_UNREAD_FIXTURE);
 
-    renderWithQuery(<DaemonService heap={0} />);
+    renderWithQuery(<DaemonServiceControl />);
 
     expect(await screen.findByText(title)).toBeInTheDocument();
     expect(screen.getByText('service state not read')).toBeInTheDocument();
@@ -99,7 +99,7 @@ describe('service state', () => {
   it('an unread state without a known previous one is shown neutrally and without commands', async () => {
     serveService(SERVICE_UNREAD_FIXTURE);
 
-    renderWithQuery(<DaemonService heap={0} />);
+    renderWithQuery(<DaemonServiceControl />);
 
     expect(await screen.findByText('состояние неизвестно')).toBeInTheDocument();
     expect(screen.queryByText('остановлен')).not.toBeInTheDocument();
@@ -115,7 +115,7 @@ describe('service state', () => {
 
     render(
       <QueryClientProvider client={queryClient}>
-        <DaemonService heap={0} />
+        <DaemonServiceControl />
       </QueryClientProvider>
     );
 
@@ -152,7 +152,7 @@ describe('service state', () => {
 
     const user = userEvent.setup();
 
-    renderWithQuery(<DaemonService heap={0} />);
+    renderWithQuery(<DaemonServiceControl />);
 
     await user.click(await screen.findByRole('button', { name: 'Запустить' }));
 
@@ -174,7 +174,7 @@ describe('service state', () => {
       })
     );
 
-    renderWithQuery(<DaemonService heap={0} />);
+    renderWithQuery(<DaemonServiceControl />);
 
     await user.click(await screen.findByRole('button', { name: 'Остановить' }));
     await user.click(screen.getByRole('button', { name: 'Отмена' }));
@@ -201,7 +201,7 @@ describe('service state', () => {
       })
     );
 
-    renderWithQuery(<DaemonService heap={0} />);
+    renderWithQuery(<DaemonServiceControl />);
 
     await user.click(await screen.findByRole('button', { name: 'Перезапустить' }));
 

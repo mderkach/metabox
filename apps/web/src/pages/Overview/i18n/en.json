@@ -7,7 +7,7 @@
     "silent": "sing-box is silent",
     "silentHint": "The daemon responds, but no data comes from sing-box: the numbers below are frozen. Look for the cause in the log.",
     "stopped": "sing-box is not running",
-    "stoppedHint": "No traffic goes through sing-box. Start it from the sing-box card below; the reason it stopped is in the log.",
+    "stoppedHint": "No traffic goes through sing-box. Start it in the status panel below; the reason it stopped is in the log.",
     "nodeDown": "The selected node does not respond",
     "nodeDownHint": "Traffic through this node does not get through. Pick another node or test the latency again.",
     "hot": "The router is overheating: {{celsius}} °C",
@@ -19,6 +19,39 @@
     "action": {
       "logs": "Open logs",
       "proxies": "Open proxies"
+    }
+  },
+  "status": {
+    "label": "System status"
+  },
+  "node": {
+    "title": "Node",
+    "none": "No group has a manual choice: groups pick their nodes by latency.",
+    "select": "Node of the {{group}} group",
+    "selected": "{{group}}: node {{node}} selected"
+  },
+  "check": {
+    "title": "Quick check",
+    "action": "Run check",
+    "pending": "Checking…",
+    "target": "through {{target}} and directly",
+    "hint": "Sends packets from the router and leaves lines in the sing-box log.",
+    "details": "Details in diagnostics",
+    "label": "Check results",
+    "area": {
+      "interception": "Interception",
+      "dns": "DNS",
+      "proxy": "Through the node",
+      "direct": "Directly"
+    },
+    "status": {
+      "ok": "passed",
+      "fail": "failed",
+      "skipped": "skipped"
+    },
+    "announce": {
+      "ok": "Quick check passed",
+      "fail": "Quick check found a problem"
     }
   },
   "traffic": {
@@ -36,11 +69,10 @@
     "noPeak": "no peak yet"
   },
   "connections": {
-    "label": "Connection counters",
-    "open": "Open",
+    "title": "Open connections",
     "peak": "peak this minute {{count}}",
-    "closed": "Closed",
-    "keptByPanel": "since the tab opened",
+    "closedSince": "{{count}} closed since the tab opened",
+    "history": "Open connections this minute",
     "topNodes": "Top proxy nodes",
     "topNodesEmpty": "Nothing goes through the proxy right now",
     "topSources": "Top devices"

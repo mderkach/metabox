@@ -2,16 +2,16 @@ import { useTranslation } from 'react-i18next';
 
 import type { ConnectionShare } from '@entities/Connection';
 
-import { ConnectionSummaryDonut, type DonutSlice } from './ConnectionSummaryDonut';
 import { ConnectionSummaryPanel } from './ConnectionSummaryPanel';
+import { ConnectionSummarySplit, type SplitSlice } from './ConnectionSummarySplit';
 
 /** The tone is tied to the name: order comes by load and is not stable. */
 const PROTOCOL_TONES: Readonly<Record<string, string>> = {
-  tcp: 'text-primary',
-  udp: 'text-signal-warn',
+  tcp: 'bg-primary',
+  udp: 'bg-signal-warn',
 };
 
-const OTHER_TONE = 'text-muted-foreground';
+const OTHER_TONE = 'bg-muted-foreground';
 
 const PROTOCOL_ORDER = ['tcp', 'udp'];
 
@@ -24,7 +24,7 @@ function byProtocol(left: ConnectionShare, right: ConnectionShare): number {
 
 export function ConnectionSummaryNetwork({ shares }: { shares: ConnectionShare[] }) {
   const { t } = useTranslation('widgets/ConnectionSummary');
-  const slices: DonutSlice[] = shares.toSorted(byProtocol).map((share) => ({
+  const slices: SplitSlice[] = shares.toSorted(byProtocol).map((share) => ({
     key: share.key,
     label: share.key.toUpperCase(),
     value: share.count,
@@ -34,7 +34,7 @@ export function ConnectionSummaryNetwork({ shares }: { shares: ConnectionShare[]
 
   return (
     <ConnectionSummaryPanel title={t('network.title')}>
-      <ConnectionSummaryDonut slices={slices} empty={t('empty')} />
+      <ConnectionSummarySplit slices={slices} empty={t('empty')} />
     </ConnectionSummaryPanel>
   );
 }

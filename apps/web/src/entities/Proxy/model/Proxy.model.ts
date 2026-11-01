@@ -78,3 +78,22 @@ export interface ProxyProvider {
   /** `null` when the expiry is not reported. */
   expiresAt: Date | null;
 }
+
+/**
+ * Where an outbound can be checked: groups, then nodes without repeats. Service
+ * Clash API groups do not exist in the config, and an outbound through them says
+ * nothing about the configured routing. The first one is the default target.
+ */
+export function toOutboundTargets(runtime: ProxyRuntime | undefined): string[] {
+  if (runtime === undefined) {
+    return [];
+  }
+
+  const names = [
+    ...runtime.groups.map((group) => group.name),
+    ...runtime.groups.flatMap((group) => group.nodes.map((node) => node.name)),
+    ...runtime.standalone.map((node) => node.name),
+  ];
+
+  return [...new Set(names)].filter((name) => !SERVICE_GROUPS.has(name));
+}

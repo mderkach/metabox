@@ -12,6 +12,13 @@
 export const SECTION_LABEL = 'text-xs font-medium tracking-[0.06em] text-muted-foreground uppercase';
 
 /**
+ * Title of a card inside a screen section: sentence case, one step below
+ * `SECTION_HEADING`. Small caps stay with the table header: a card titled like
+ * a column reads as a part of a table.
+ */
+export const CARD_TITLE = 'text-sm font-semibold';
+
+/**
  * Mid-level title: a screen section, a panel, a group card. One
  * step between the card label and the screen title, 18px, one weight:
  * two steps at one level read as two levels. The `SECTION_LABEL` small caps

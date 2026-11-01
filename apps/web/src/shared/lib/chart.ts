@@ -9,8 +9,6 @@ const MIN_POINTS = 2;
 /** Hundredths of the area: the area stretches to fit in place anyway. */
 const COORD_PRECISION = 2;
 
-const FULL_TURN = 360;
-
 export interface AreaGeometry {
   /** Points for `polyline`. */
   line: string;
@@ -70,35 +68,6 @@ export function toPercents(values: number[]): number[] {
   );
 
   return floors.map((value, index) => (order.has(index) ? value + 1 : value));
-}
-
-export interface DonutSegment {
-  /** `stroke-dasharray` value: the arc length and the rest of the circumference. */
-  dash: string;
-  /** Rotation of the arc start in degrees — it lines segments up one after another. */
-  turn: number;
-}
-
-/**
- * A ring from shares, one circle per segment. Arcs are drawn with a dash, not
- * with `arc` paths: with a dash a share is a length, and it does not have to be computed
- * by trigonometry for each segment.
- */
-export function toDonutSegments(values: number[], circumference: number): DonutSegment[] {
-  const total = values.reduce((sum, value) => sum + value, 0);
-  let passed = 0;
-
-  return values.map((value) => {
-    const share = toShare(value, total);
-    const turn = passed * FULL_TURN;
-
-    passed += share;
-
-    return {
-      dash: `${(circumference * share).toFixed(COORD_PRECISION)} ${circumference.toFixed(COORD_PRECISION)}`,
-      turn,
-    };
-  });
 }
 
 /** No more than four ticks on the scale: otherwise labels in a narrow card overlap each other. */
