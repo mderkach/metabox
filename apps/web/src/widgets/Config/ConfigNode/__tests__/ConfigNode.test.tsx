@@ -15,7 +15,7 @@ describe('section node', () => {
   });
 
   it('a recognized node opens with a schema form', () => {
-    render(<ConfigNode section={CONFIG_SECTION.Outbounds} index={0} node={VLESS} name='hk-01' />);
+    render(<ConfigNode section={CONFIG_SECTION.Outbounds} node={VLESS} name='hk-01' />);
 
     expect(screen.getByRole('tab', { name: 'Форма' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('textbox', { name: 'Сервер' })).toHaveValue('a.example');
@@ -25,7 +25,7 @@ describe('section node', () => {
   it('what was typed in the form survives a switch to JSON and back', async () => {
     const user = userEvent.setup();
 
-    render(<ConfigNode section={CONFIG_SECTION.Outbounds} index={0} node={VLESS} name='hk-01' />);
+    render(<ConfigNode section={CONFIG_SECTION.Outbounds} node={VLESS} name='hk-01' />);
 
     const server = screen.getByRole('textbox', { name: 'Сервер' });
 
@@ -46,7 +46,7 @@ describe('section node', () => {
   it('a node with a field the schema does not know is marked and opened as text, the form is disabled', () => {
     const node = { ...VLESS, vendor_option: true };
 
-    render(<ConfigNode section={CONFIG_SECTION.Outbounds} index={0} node={node} name='hk-01' />);
+    render(<ConfigNode section={CONFIG_SECTION.Outbounds} node={node} name='hk-01' />);
 
     expect(screen.getByText('панель не знает')).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Форма' })).toHaveAttribute('aria-disabled', 'true');
@@ -57,7 +57,7 @@ describe('section node', () => {
   it('the api service opens with the form of its override', () => {
     const node = { type: 'api', tag: 'api', listen: '127.0.0.1', listen_port: 9091 };
 
-    render(<ConfigNode section={CONFIG_SECTION.Services} index={0} node={node} name='api' />);
+    render(<ConfigNode section={CONFIG_SECTION.Services} node={node} name='api' />);
 
     expect(screen.getByRole('tab', { name: 'Форма' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('spinbutton', { name: 'Порт прослушивания' })).toHaveValue(9091);
@@ -67,7 +67,7 @@ describe('section node', () => {
     const user = userEvent.setup();
     const node = { clash_api: { external_controller: '127.0.0.1:9090', secret: 's3cr3t' } };
 
-    render(<ConfigNode section={CONFIG_SECTION.Experimental} index={0} node={node} name='experimental' />);
+    render(<ConfigNode section={CONFIG_SECTION.Experimental} node={node} name='experimental' />);
 
     expect(screen.getByRole('tab', { name: 'Форма' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.queryByRole('textbox', { name: 'Узел experimental текстом' })).not.toBeInTheDocument();
@@ -85,7 +85,7 @@ describe('section node', () => {
   it('an experimental section with a key the schema does not know opens as text', () => {
     const node = { vendor_api: { enabled: true } };
 
-    render(<ConfigNode section={CONFIG_SECTION.Experimental} index={0} node={node} name='experimental' />);
+    render(<ConfigNode section={CONFIG_SECTION.Experimental} node={node} name='experimental' />);
 
     expect(screen.getByText('панель не знает')).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Форма' })).toHaveAttribute('aria-disabled', 'true');
@@ -96,7 +96,7 @@ describe('section node', () => {
     render(
       <ConfigNode
         section={CONFIG_SECTION.Services}
-        index={0}
+
         node={{ type: 'resolved', tag: 'resolved' }}
         name='resolved'
       />
@@ -110,7 +110,7 @@ describe('section node', () => {
     [CONFIG_SECTION.Log, { level: 'info' }],
     [CONFIG_SECTION.DnsRules, { domain: ['a.example'], server: 'local' }],
   ])('section %s without a registry is edited only as text', (section, node) => {
-    render(<ConfigNode section={section} index={0} node={node} name={section} />);
+    render(<ConfigNode section={section} node={node} name={section} />);
 
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
     expect(screen.queryByText('панель не знает')).not.toBeInTheDocument();

@@ -15,7 +15,6 @@ import {
   type GenericSection,
 } from '@entities/Config';
 import { useDaemonStatus } from '@entities/Daemon';
-import { ConfigNodeAddForm } from '@features/Config/ConfigNodeAdd';
 import { usePanelAsSheet } from '@shared/lib/media';
 import { cn } from '@shared/lib/utils';
 import {
@@ -31,11 +30,23 @@ import {
   SURFACE_HEAD,
   SkeletonRows,
 } from '@shared/ui';
-import { ConfigNode } from '@widgets/Config/ConfigNode';
-import { ConfigNodePanel, ConfigNodePanelSheet } from '@widgets/Config/ConfigNodePanel';
+import { ConfigNode, ConfigNodeRow } from '@widgets/Config/ConfigNode';
 import { ConfigSectionSettings } from '@widgets/Config/ConfigSectionSettings';
 
+import { SectionPanel } from './SectionPanel';
+
 const routeApi = getRouteApi('/config/$section');
+
+/** What the panel holds: the add form or a node by its place in the section. */
+type PanelTarget = { kind: 'add' } | { kind: 'node'; index: number };
+
+/** The sheet slides away after closing, so the target outlives `open`: it would slide away empty. */
+interface PanelState {
+  open: boolean;
+  target: PanelTarget;
+}
+
+const CLOSED: PanelState = { open: false, target: { kind: 'add' } };
 
 export function SectionPage() {
   const { section } = routeApi.useParams();
@@ -56,19 +67,18 @@ export function SectionPage() {
  * from the parsed model — a node that the schema did not accept must stay on
  * screen and be editable.
  *
- * A node of a section with a type registry is added by a form in the panel beside the list
- * (ADR-0037); below `lg` the panel opens as a sheet. Object sections and lists without
- * a registry are extended only as text. In `dns` the section's own scalars
- * sit above the servers; an object section with a settings form opens it in its node.
+ * A list node opens in the panel beside the list, and a node of a section with a
+ * type registry is added there too (ADR-0037); below `lg` the panel opens as a
+ * sheet. Object sections and lists without a registry are extended only as text.
+ * In `dns` the section's own scalars sit above the servers; an object section with
+ * a settings form opens it in its node.
  */
 export function SectionNodes({ section }: { section: GenericSection }) {
   const { t } = useTranslation('pages/Section');
   const document = useConfigDocument();
   const status = useDaemonStatus();
   const asSheet = usePanelAsSheet();
-  const [adding, setAdding] = useState(false);
-  // The node remounts on every document revision: the screen keeps the expanded ones.
-  const [expanded, setExpanded] = useState<ReadonlySet<number>>(() => new Set());
+  const [panel, setPanel] = useState<PanelState>(CLOSED);
   const text = document.text;
   const nodes = useMemo(() => (text === null ? [] : readSectionNodes(text, section)), [text, section]);
   const takenTags = useMemo(() => (text === null ? [] : readNodeTags(text)), [text]);
@@ -77,40 +87,27 @@ export function SectionNodes({ section }: { section: GenericSection }) {
   const addable = shape.kind === 'list' && registryOfSection(section) !== null;
   const loaded = document.query.isSuccess;
 
-  function setNodeOpen(index: number, open: boolean) {
-    setExpanded((current) => {
-      const next = new Set(current);
-
-      if (open) {
-        next.add(index);
-      } else {
-        next.delete(index);
-      }
-
-      return next;
-    });
-  }
-
-  // Nodes below the deleted one move up a place, and their open state with them.
-  function shiftExpanded(deleted: number) {
-    setExpanded(
-      (current) =>
-        new Set([...current].flatMap((index) => (index === deleted ? [] : [index > deleted ? index - 1 : index])))
-    );
-  }
+  // A node removed from the text by other means closes its panel.
+  const target = panel.target;
+  const picked = target.kind === 'node' && target.index < nodes.length ? nodes[target.index] : undefined;
+  const shown = panel.open && (target.kind === 'add' ? addable : picked !== undefined);
+  const adding = shown && target.kind === 'add';
 
   function toggleAdding() {
-    setAdding((open) => !open);
+    setPanel(adding ? { ...panel, open: false } : { open: true, target: { kind: 'add' } });
   }
 
-  function closeAdding() {
-    setAdding(false);
+  function openNode(index: number) {
+    setPanel({ open: true, target: { kind: 'node', index } });
+  }
+
+  function closePanel() {
+    setPanel({ ...panel, open: false });
   }
 
   // The new node is the last one: it opens so that its form is filled in next.
   function openAdded() {
-    setAdding(false);
-    setNodeOpen(nodes.length, true);
+    openNode(nodes.length);
   }
 
   const addButton = (
@@ -120,9 +117,12 @@ export function SectionNodes({ section }: { section: GenericSection }) {
     </Button>
   );
 
-  const addForm = (
-    <ConfigNodeAddForm section={section} takenTags={takenTags} builtTags={builtTags} onAdded={openAdded} />
-  );
+  const pickedNode =
+    picked === undefined || target.kind !== 'node'
+      ? null
+      : { index: target.index, node: picked, name: nodeName(shape.path, picked, target.index) };
+  // A deleted node has nothing left to show while the sheet slides away: the sheet goes at once.
+  const hasSheetTarget = target.kind === 'add' ? addable : pickedNode !== null;
 
   return (
     <div className='flex min-h-0 grow flex-col gap-4 overflow-y-auto px-4 py-5 sm:px-6'>
@@ -132,7 +132,7 @@ export function SectionNodes({ section }: { section: GenericSection }) {
 
       {isSettingsSection(section) && isListSettingsSection(section) && <ConfigSectionSettings section={section} />}
 
-      <SidePanelLayout.Root open={addable && adding && !asSheet}>
+      <SidePanelLayout.Root open={shown && !asSheet}>
         <SidePanelLayout.Main className='gap-4'>
           {loaded && shape.kind === 'list' && nodes.length === 0 && (
             <Empty className='border'>
@@ -149,7 +149,6 @@ export function SectionNodes({ section }: { section: GenericSection }) {
               <ConfigNode
                 key={document.revision}
                 section={section}
-                index={0}
                 node={nodes.length === 0 ? undefined : nodes[0]}
                 name={section}
               />
@@ -166,25 +165,15 @@ export function SectionNodes({ section }: { section: GenericSection }) {
               </div>
               <ul className='divide-y divide-border'>
                 {nodes.map((node, index) => (
-                  // The revision in the key recreates the form and editor on an update not from
-                  // the user: after discarding changes the field must not keep
-                  // the discarded text.
-                  <li key={`${String(document.revision)}:${String(index)}`}>
-                    <ConfigNode
+                  <li key={index}>
+                    <ConfigNodeRow
                       section={section}
-                      index={index}
                       node={node}
                       name={nodeName(shape.path, node, index)}
-                      builtTags={builtTags}
-                      onDeleted={() => {
-                        shiftExpanded(index);
+                      selected={shown && target.kind === 'node' && target.index === index}
+                      onSelect={() => {
+                        openNode(index);
                       }}
-                      {...(nodes.length > 1 && {
-                        open: expanded.has(index),
-                        onOpenChange: (open: boolean) => {
-                          setNodeOpen(index, open);
-                        },
-                      })}
                     />
                   </li>
                 ))}
@@ -196,19 +185,33 @@ export function SectionNodes({ section }: { section: GenericSection }) {
         {/* The wrapper spans the full list height, and the panel its own content height:
             otherwise it has nowhere to stick when scrolling. */}
         <SidePanelLayout.Panel className='items-start'>
-          {adding && (
-            <ConfigNodePanel title={t('add.title')} onClose={closeAdding}>
-              {addForm}
-            </ConfigNodePanel>
+          {shown && (
+            <SectionPanel
+              section={section}
+              picked={pickedNode}
+              takenTags={takenTags}
+              builtTags={builtTags}
+              onClose={closePanel}
+              onAdded={openAdded}
+              onDeleted={closePanel}
+            />
           )}
         </SidePanelLayout.Panel>
       </SidePanelLayout.Root>
 
       {/* Below lg there is no room for the panel beside the list: there it opens as a sheet. */}
-      {addable && asSheet && (
-        <ConfigNodePanelSheet open={adding} title={t('add.title')} onClose={closeAdding}>
-          {addForm}
-        </ConfigNodePanelSheet>
+      {asSheet && hasSheetTarget && (
+        <SectionPanel
+          section={section}
+          picked={pickedNode}
+          takenTags={takenTags}
+          builtTags={builtTags}
+          sheet
+          open={shown}
+          onClose={closePanel}
+          onAdded={openAdded}
+          onDeleted={closePanel}
+        />
       )}
     </div>
   );

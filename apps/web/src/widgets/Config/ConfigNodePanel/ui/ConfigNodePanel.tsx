@@ -7,8 +7,8 @@ import { cn } from '@shared/lib/utils';
 import { Button, SECTION_HEADING, SURFACE, SURFACE_HEAD, SheetTitle } from '@shared/ui';
 
 /**
- * Section node panel beside the list: the add form opens in it, and
- * nodes stay in place and do not shift down (ADR-0037). The structure is the same
+ * Section node panel beside the list: the add form and the picked node open in it,
+ * and nodes stay in place and do not shift down (ADR-0037). The structure is the same
  * as in the rule and rule set panels; they deliberately have no shared frame — the ADR
  * defers it while the panel headers diverge.
  *
@@ -20,14 +20,17 @@ import { Button, SECTION_HEADING, SURFACE, SURFACE_HEAD, SheetTitle } from '@sha
  */
 export function ConfigNodePanel({
   title,
+  actions,
   sheet = false,
   onClose,
   children,
 }: {
   title: string;
+  /** Actions on the open node: header, before the close button. */
+  actions?: ReactNode;
   sheet?: boolean;
   onClose: () => void;
-  /** The form opened from the section toolbar. */
+  /** The add form or the editor of the picked node. */
   children: ReactNode;
 }) {
   const { t } = useTranslation('shared');
@@ -59,13 +62,14 @@ export function ConfigNodePanel({
             ref={headingRef}
             tabIndex={-1}
             className={cn(
-              '-mx-1.5 -my-0.5 min-w-0 grow rounded-md px-1.5 py-0.5 outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
+              '-mx-1.5 -my-0.5 min-w-0 grow rounded-md px-1.5 py-0.5 wrap-anywhere outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
               SECTION_HEADING
             )}
           >
             {title}
           </h2>
         )}
+        {actions !== undefined && <div className='flex shrink-0 items-center gap-0.5'>{actions}</div>}
         <Button variant='outline' size='icon-sm' aria-label={t('action.closePanel')} onClick={onClose}>
           <X />
         </Button>

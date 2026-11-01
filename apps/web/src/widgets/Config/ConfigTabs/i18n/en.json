@@ -19,10 +19,8 @@
     "log": "Logs",
     "experimental": "Experimental"
   },
-  "mode": {
-    "label": "How the document is shown",
-    "forms": "Forms",
-    "text": "Text",
-    "textItem": "Whole config as text"
+  "text": {
+    "open": "Whole config as text",
+    "back": "Back to forms"
   }
 }
