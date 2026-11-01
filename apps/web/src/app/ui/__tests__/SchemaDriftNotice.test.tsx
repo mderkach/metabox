@@ -39,7 +39,9 @@ describe('SchemaDriftNotice', () => {
 
     renderWithQuery(<SchemaDriftNotice />);
 
-    expect(await screen.findByText(/Новые поля правьте в режиме «Текст»/)).toHaveTextContent('99.0.0-extended-0.0.1');
+    expect(await screen.findByText(/Новые поля правьте через «Весь конфиг текстом»/)).toHaveTextContent(
+      '99.0.0-extended-0.0.1'
+    );
   });
 
   it('stays silent on matching versions', async () => {

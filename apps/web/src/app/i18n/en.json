@@ -21,7 +21,7 @@
     "details": "Details for a bug report"
   },
   "drift": {
-    "newer": "The router runs sing-box {{binary}}, the forms target {{schema}}. Edit new fields in “Text” mode.",
+    "newer": "The router runs sing-box {{binary}}, the forms target {{schema}}. Edit new fields in “Whole config as text”.",
     "older": "The router runs sing-box {{binary}}, the forms target {{schema}}. A field it does not know fails the check on apply."
   },
   "toasts": {
