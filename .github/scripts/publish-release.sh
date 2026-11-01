@@ -53,7 +53,14 @@ if [ "$(jq length "$tmp/release.json")" = 0 ]; then
     --notes "Verified publication bundle: https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID")
   case "$TAG" in *-*) create_args+=(--prerelease) ;; esac
   gh release create "$TAG" "${create_args[@]}"
-  read_release
+  # The release list shows a new draft only after a delay, and without it check_draft
+  # reads an empty list as a published release.
+  for _ in 1 2 3 4 5 6 7 8 9 10; do
+    read_release
+    [ "$(jq length "$tmp/release.json")" = 0 ] || break
+    sleep 3
+  done
+  [ "$(jq length "$tmp/release.json")" = 1 ] || fail "created draft $TAG did not appear in the release list"
 fi
 check_draft
 
