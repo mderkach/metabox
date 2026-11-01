@@ -7,7 +7,6 @@ import {
   BYTE_STEPS,
   toAreaGeometry,
   toMirroredTicks,
-  toDonutSegments,
   toPercents,
   toShare,
   toTimeTicks,
@@ -86,15 +85,6 @@ describe('toPercents', () => {
 
   it('on empty data returns zeros, not NaN', () => {
     expect(toPercents([0, 0])).toEqual([0, 0]);
-  });
-});
-
-describe('toDonutSegments', () => {
-  it('puts each segment after the previous one', () => {
-    const segments = toDonutSegments([1, 1], 100);
-
-    expect(segments.map((segment) => segment.turn)).toEqual([0, 180]);
-    expect(segments[0].dash).toBe('50.00 100.00');
   });
 });
 

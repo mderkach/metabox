@@ -4,5 +4,9 @@
   },
   "chart": {
     "label": "Traffic {{window}}: inbound up to {{down}}, outbound up to {{up}}"
+  },
+  "axis": {
+    "down": "↓ {{value}}",
+    "up": "↑ {{value}}"
   }
 }

@@ -210,7 +210,6 @@ const overviewRoute = createRoute({
       preloadNamespaces([
         'pages/Overview',
         'widgets/ConnectionSummary',
-        'widgets/ConnectionHistory',
         'widgets/Daemon/DaemonService',
         'widgets/Daemon/DaemonTraffic',
         'features/Daemon/DaemonControl',

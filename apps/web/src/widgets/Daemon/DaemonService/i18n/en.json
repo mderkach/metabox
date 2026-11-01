@@ -10,7 +10,8 @@
     "underMinute": "under a minute",
     "minutes": "{{minutes}} min",
     "hours": "{{hours}} h",
-    "days": "{{days}} d {{hours}} h"
+    "days": "{{days}} d {{hours}} h",
+    "label": "for {{value}}"
   },
   "action": {
     "restart": "Restart",

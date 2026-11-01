@@ -12,6 +12,7 @@ import { useOverviewRuntime, useOverviewVerdict } from '../lib';
 import { OverviewConnections } from './OverviewConnections';
 import { OverviewDevice } from './OverviewDevice';
 import { OverviewProcess } from './OverviewProcess';
+import { OverviewStatus } from './OverviewStatus';
 import { OverviewTraffic } from './OverviewTraffic';
 import { OverviewVerdict } from './OverviewVerdict';
 
@@ -41,6 +42,7 @@ export function OverviewPage() {
       <LiveRegion message={message} />
 
       <div className='flex min-h-0 grow flex-col gap-6 overflow-y-auto px-4 py-5 *:shrink-0 sm:px-6'>
+        <OverviewStatus onAnnounce={announce} />
         <OverviewTraffic runtime={runtime} />
         <OverviewConnections runtime={runtime} onLatencyTested={onLatencyTested} />
         <OverviewDevice system={runtime.system} collapsible={narrow} />

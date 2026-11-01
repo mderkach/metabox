@@ -31,6 +31,14 @@ function toTimeLabels(t: TFunction<'widgets/Daemon/DaemonTraffic'>, splits: numb
   });
 }
 
+function toRateLabel(t: TFunction<'widgets/Daemon/DaemonTraffic'>, value: number): string {
+  if (value === 0) {
+    return formatRate(0);
+  }
+
+  return t(value > 0 ? 'axis.down' : 'axis.up', { value: formatRate(Math.abs(value)) });
+}
+
 const SERIES = { fillTo: 0, width: LINE_WIDTH, points: { show: false } };
 
 const TONES: readonly PlotTone[] = [
@@ -55,7 +63,8 @@ function buildOptions(t: TFunction<'widgets/Daemon/DaemonTraffic'>): PlotOptions
       },
       {
         splits: (chart) => toMirroredTicks(toValueScale(chart.scales.y.max ?? 0, BYTE_STEPS, HALF_INTERVALS).ticks),
-        values: (_, splits) => splits.map((value) => formatRate(Math.abs(value))),
+        // The lower half is mirrored: without a direction mark its labels repeat the upper ones.
+        values: (_, splits) => splits.map((value) => toRateLabel(t, value)),
         grid: { show: true, dash: GRID_DASH },
       },
     ],

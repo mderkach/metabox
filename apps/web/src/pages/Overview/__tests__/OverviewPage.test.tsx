@@ -20,6 +20,8 @@ import {
   SYSTEM_FIXTURE,
   TRAFFIC_HISTORY_FIXTURE,
 } from '@entities/Daemon/__tests__/Daemon.fixture';
+import { DIAG_ENDPOINT } from '@entities/Diag';
+import { DIAG_REPORT_FIXTURE } from '@entities/Diag/__tests__/Diag.fixture';
 import { PROXY_ENDPOINT } from '@entities/Proxy';
 import { proxyHandlers } from '@entities/Proxy/__tests__/Proxy.handlers';
 
@@ -93,9 +95,7 @@ describe('overview screen', () => {
 
     renderWithRouter(OverviewPage);
 
-    const counters = within(await screen.findByRole('list', { name: 'Счётчики соединений' }));
-
-    expect(counters.getByText('7')).toBeInTheDocument();
+    expect(await screen.findByText('7')).toBeInTheDocument();
   });
 
   it('names the peak of each direction in the traffic chart name', async () => {
@@ -151,6 +151,70 @@ describe('overview screen', () => {
     });
   });
 
+  // From a phone the node is switched where the state is read, without going to the proxies screen.
+  it('switches the node of a selector group from the status strip and announces it', async () => {
+    server.use(...proxyHandlers);
+
+    const user = userEvent.setup();
+
+    renderWithRouter(OverviewPage);
+
+    const region = await screen.findByRole('status', { name: 'Результат действия' });
+
+    await selectOption(user, await screen.findByRole('combobox', { name: 'Узел группы us-fallback' }), 'proxy');
+
+    await waitFor(() => {
+      expect(region).toHaveTextContent('us-fallback: выбран узел proxy');
+    });
+  });
+
+  // A URL test picks its node itself: a switch there would be undone by the next measurement.
+  it('offers no switch for a group that picks its node by latency', async () => {
+    server.use(...proxyHandlers);
+
+    renderWithRouter(OverviewPage);
+
+    expect(await screen.findByRole('combobox', { name: 'Узел группы us-fallback' })).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Узел группы proxy' })).not.toBeInTheDocument();
+  });
+
+  // A check sends packets from the router: it runs on the button only, and a failure leads
+  // to the screen with the checks themselves.
+  it('runs the quick check on demand and folds a failure into its area', async () => {
+    const requested = vi.fn<() => void>();
+
+    server.use(
+      ...proxyHandlers,
+      http.get(DIAG_ENDPOINT.report(), () => {
+        requested();
+
+        return HttpResponse.json(DIAG_REPORT_FIXTURE);
+      })
+    );
+
+    const user = userEvent.setup();
+
+    renderWithRouter(OverviewPage);
+
+    const region = await screen.findByRole('status', { name: 'Результат действия' });
+
+    expect(requested).not.toHaveBeenCalled();
+
+    await user.click(await screen.findByRole('button', { name: 'Запустить проверку' }));
+
+    const results = within(await screen.findByRole('list', { name: 'Результаты проверки' }));
+
+    const [interception, dns, proxy] = results.getAllByRole('listitem');
+
+    expect(interception).toHaveTextContent('Перехватне пройдено');
+    expect(dns).toHaveTextContent('DNSпройдено');
+    expect(proxy).toHaveTextContent('Через узелпройдено182 мс');
+    expect(screen.getByRole('link', { name: 'Подробности в диагностике' })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(region).toHaveTextContent('Быстрая проверка нашла проблему');
+    });
+  });
+
   it('shows device readings as a separate section', async () => {
     RuntimeStore.getState().pushSystem({
       ...SYSTEM_FIXTURE,
@@ -184,7 +248,7 @@ describe('overview screen', () => {
     renderWithRouter(OverviewPage);
 
     expect(await screen.findByRole('figure', { name: /Трафик за минуту/ })).toBeInTheDocument();
-    expect(await screen.findByRole('figure', { name: /Открытые соединения за минуту/ })).toBeInTheDocument();
+    expect(await screen.findByRole('img', { name: 'Открытые соединения за минуту' })).toBeInTheDocument();
     expect(RuntimeStore.getState().traffic).toHaveLength(60);
     expect(ConnectionStore.getState().history).toHaveLength(60);
   });
@@ -270,9 +334,7 @@ describe('overview screen', () => {
 
     renderWithRouter(OverviewPage);
 
-    const counters = within(await screen.findByRole('list', { name: 'Счётчики соединений' }));
-
-    expect(counters.getByText('с открытия вкладки')).toBeInTheDocument();
+    expect(await screen.findByText('закрыто с открытия вкладки: 0')).toBeInTheDocument();
   });
 
   // Channel is the whole outside interface, tiles are only sing-box: the numbers legitimately
