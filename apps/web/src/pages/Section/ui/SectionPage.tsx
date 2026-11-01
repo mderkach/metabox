@@ -16,6 +16,7 @@ import {
 } from '@entities/Config';
 import { useDaemonStatus } from '@entities/Daemon';
 import { usePanelAsSheet } from '@shared/lib/media';
+import { SHORTCUT } from '@shared/lib/shortcuts';
 import { cn } from '@shared/lib/utils';
 import {
   Button,
@@ -28,6 +29,7 @@ import {
   SidePanelLayout,
   SURFACE,
   SURFACE_HEAD,
+  ShortcutKbd,
   SkeletonRows,
 } from '@shared/ui';
 import { ConfigNode, ConfigNodeRow } from '@widgets/Config/ConfigNode';
@@ -113,9 +115,10 @@ export function SectionNodes({ section }: { section: GenericSection }) {
   }
 
   const addButton = (
-    <Button variant='outline' size='sm' aria-expanded={adding} onClick={toggleAdding}>
+    <Button variant='outline' size='sm' aria-expanded={adding} aria-keyshortcuts={SHORTCUT.Add} onClick={toggleAdding}>
       <Plus data-icon='inline-start' />
       {t('add.open')}
+      <ShortcutKbd shortcut={SHORTCUT.Add} />
     </Button>
   );
 

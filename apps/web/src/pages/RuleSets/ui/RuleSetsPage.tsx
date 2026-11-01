@@ -1,4 +1,4 @@
-import { Plus, Search } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -10,6 +10,7 @@ import { RuleSetCustomForm } from '@features/RuleSet/RuleSetCustom';
 import { RuleSetEditForm } from '@features/RuleSet/RuleSetEdit';
 import { showQueryError } from '@shared/api';
 import { usePanelAsSheet } from '@shared/lib/media';
+import { SHORTCUT } from '@shared/lib/shortcuts';
 import {
   Button,
   Empty,
@@ -17,9 +18,9 @@ import {
   EmptyDescription,
   EmptyHeader,
   EmptyTitle,
-  Input,
   QueryFailure,
-  SEARCH_FIELD,
+  SearchInput,
+  ShortcutKbd,
   SidePanelLayout,
   SURFACE,
   SkeletonRows,
@@ -156,12 +157,14 @@ export function RuleSetsPage() {
                     variant='outline'
                     size='sm'
                     aria-expanded={panel.form === RULE_SET_FORM.Catalog}
+                    aria-keyshortcuts={SHORTCUT.Add}
                     onClick={() => {
                       panel.toggle(RULE_SET_FORM.Catalog);
                     }}
                   >
                     <Plus data-icon='inline-start' />
                     {t('add.open')}
+                    <ShortcutKbd shortcut={SHORTCUT.Add} />
                   </Button>
                   <Button
                     variant='outline'
@@ -249,18 +252,12 @@ function RuleSetSearch({ filter }: { filter: RuleSetFilterState }) {
   const { t } = useTranslation('pages/RuleSets');
 
   return (
-    <div className={SEARCH_FIELD}>
-      <Search className='pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground' />
-      <Input
-        value={filter.query}
-        onChange={(event) => {
-          filter.setQuery(event.target.value);
-        }}
-        placeholder={t('search.placeholder')}
-        className='pl-8'
-        aria-label={t('search.label')}
-      />
-    </div>
+    <SearchInput
+      value={filter.query}
+      onValueChange={filter.setQuery}
+      placeholder={t('search.placeholder')}
+      aria-label={t('search.label')}
+    />
   );
 }
 

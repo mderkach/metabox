@@ -1,7 +1,8 @@
 import { Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Button } from '@shared/ui';
+import { SHORTCUT } from '@shared/lib/shortcuts';
+import { Button, ShortcutKbd } from '@shared/ui';
 
 /**
  * Opens a new rule in the panel. Nothing is written until the rule gets a
@@ -17,9 +18,10 @@ export function RuleAddButton({ disabled, onAdd }: { disabled: boolean; onAdd: (
   return (
     <>
       {disabled && <p className='text-xs text-muted-foreground'>{t('unavailable')}</p>}
-      <Button variant='outline' size='sm' disabled={disabled} onClick={onAdd}>
+      <Button variant='outline' size='sm' disabled={disabled} aria-keyshortcuts={SHORTCUT.Add} onClick={onAdd}>
         <Plus />
         {t('add')}
+        <ShortcutKbd shortcut={SHORTCUT.Add} />
       </Button>
     </>
   );

@@ -1,12 +1,12 @@
 import type { TFunction } from 'i18next';
-import { ChevronDown, ChevronUp, CircleAlert, CircleCheck, Search, WrapText } from 'lucide-react';
+import { ChevronDown, ChevronUp, CircleAlert, CircleCheck, WrapText } from 'lucide-react';
 import { useDeferredValue, useMemo, useRef, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
 import type { ConfigIssue } from '@entities/Config';
 import { failureLine, firstJsoncError } from '@shared/lib/jsonc';
 import { cn } from '@shared/lib/utils';
-import { Badge, Button, Input, JsonTextarea, type JsonTextareaHandle, SEARCH_FIELD } from '@shared/ui';
+import { Badge, Button, JsonTextarea, type JsonTextareaHandle, SearchInput } from '@shared/ui';
 
 import { findMatches, useRawEditorWrap } from '../lib';
 import { ConfigRawOutline } from './ConfigRawOutline';
@@ -73,19 +73,15 @@ export function ConfigRawEditor({
   return (
     <section className='flex min-h-0 grow flex-col gap-3'>
       <div className='flex shrink-0 flex-wrap items-center gap-2'>
-        <div className={SEARCH_FIELD}>
-          <Search className='pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground' />
-          <Input
-            value={query}
-            onChange={(event) => {
-              setQuery(event.target.value);
-              setMatch(0);
-            }}
-            placeholder={t('search.placeholder')}
-            className='pl-8'
-            aria-label={t('search.label')}
-          />
-        </div>
+        <SearchInput
+          value={query}
+          onValueChange={(next) => {
+            setQuery(next);
+            setMatch(0);
+          }}
+          placeholder={t('search.placeholder')}
+          aria-label={t('search.label')}
+        />
 
         {query.length > 0 && (
           <>

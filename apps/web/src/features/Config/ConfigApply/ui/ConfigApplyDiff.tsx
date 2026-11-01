@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { SHORTCUT } from '@shared/lib/shortcuts';
 import {
   Button,
   Dialog,
@@ -12,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  ShortcutKbd,
 } from '@shared/ui';
 
 import { useConfigChanges, useRuleChanges, type ApplyBlock } from '../lib/ConfigApply.lib';
@@ -41,7 +43,10 @@ export function ConfigApplyDiff({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button size='sm' />}>{t('bar.apply')}</DialogTrigger>
+      <DialogTrigger render={<Button size='sm' aria-keyshortcuts={SHORTCUT.Apply} />}>
+        {t('bar.apply')}
+        <ShortcutKbd shortcut={SHORTCUT.Apply} className='bg-primary-foreground/20 text-primary-foreground' />
+      </DialogTrigger>
 
       <DialogContent showCloseButton={false} className={DIALOG_SIZE.Document}>
         <DialogCloseButton label={t('action.close', { ns: 'shared' })} />
