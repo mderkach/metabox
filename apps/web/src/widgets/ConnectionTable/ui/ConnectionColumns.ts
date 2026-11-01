@@ -23,11 +23,11 @@ import type { ConnectionRow, ConnectionSourceLabel } from '@entities/Connection'
 export const CONNECTION_COLUMN = {
   Row: 'flex w-full items-center gap-3 border-b border-border px-3.5 text-sm',
   Source: 'w-28 shrink-0',
-  Host: 'sticky left-0 z-10 w-52 shrink-0 bg-inherit',
+  Host: 'sticky left-0 z-10 w-60 shrink-0 bg-inherit',
   Network: 'w-16 shrink-0',
   Rule: 'min-w-0 grow',
   Action: 'w-40 shrink-0',
-  Chain: 'w-36 shrink-0',
+  Chain: 'w-32 shrink-0',
   Rate: 'w-28 shrink-0 text-right',
   Volume: 'w-24 shrink-0 text-right',
   Age: 'w-20 shrink-0 text-right',
@@ -89,6 +89,8 @@ export interface ConnectionColumnMeta {
   width: number;
   /** The column cannot be hidden: without it a row stops being recognizable. */
   required: boolean;
+  /** Numbers aligned to the right edge: the header label ends where the values end. */
+  numeric?: boolean;
 }
 
 /** Gap between cells and row side margins in `rem`: the same as in `CONNECTION_COLUMN.Row`. */
@@ -158,7 +160,7 @@ export const CONNECTION_COLUMNS: readonly ConnectionColumnDef[] = [
     id: CONNECTION_FIELD.Host,
     accessorFn: (row) => row.host,
     sortFn: 'alphanumeric',
-    meta: { label: 'column.host', className: CONNECTION_COLUMN.Host, width: 13, required: true },
+    meta: { label: 'column.host', className: CONNECTION_COLUMN.Host, width: 15, required: true },
   },
   {
     id: CONNECTION_FIELD.Network,
@@ -182,21 +184,21 @@ export const CONNECTION_COLUMNS: readonly ConnectionColumnDef[] = [
     id: CONNECTION_FIELD.Chain,
     accessorFn: (row) => row.chain.join(' '),
     sortFn: 'text',
-    meta: { label: 'column.chain', className: CONNECTION_COLUMN.Chain, width: 9, required: false },
+    meta: { label: 'column.chain', className: CONNECTION_COLUMN.Chain, width: 8, required: false },
   },
   {
     id: CONNECTION_FIELD.Rate,
     accessorFn: (row) => row.downRate + row.upRate,
     sortFn: 'basic',
     sortDescFirst: true,
-    meta: { label: 'column.rate', className: CONNECTION_COLUMN.Rate, width: 7, required: false },
+    meta: { label: 'column.rate', className: CONNECTION_COLUMN.Rate, width: 7, required: false, numeric: true },
   },
   {
     id: CONNECTION_FIELD.Volume,
     accessorFn: (row) => row.download + row.upload,
     sortFn: 'basic',
     sortDescFirst: true,
-    meta: { label: 'column.volume', className: CONNECTION_COLUMN.Volume, width: 6, required: false },
+    meta: { label: 'column.volume', className: CONNECTION_COLUMN.Volume, width: 6, required: false, numeric: true },
   },
   {
     id: CONNECTION_FIELD.Age,
@@ -204,7 +206,7 @@ export const CONNECTION_COLUMNS: readonly ConnectionColumnDef[] = [
     accessorFn: (row) => row.startedAt,
     sortFn: 'basic',
     sortDescFirst: true,
-    meta: { label: 'column.age', className: CONNECTION_COLUMN.Age, width: 5, required: false },
+    meta: { label: 'column.age', className: CONNECTION_COLUMN.Age, width: 5, required: false, numeric: true },
   },
 ];
 
