@@ -33,7 +33,7 @@ import {
 import { ConfigNode, ConfigNodeRow } from '@widgets/Config/ConfigNode';
 import { ConfigSectionSettings } from '@widgets/Config/ConfigSectionSettings';
 
-import { SectionPanel } from './SectionPanel';
+import { SectionPanel, type SectionPanelNode } from './SectionPanel';
 
 const routeApi = getRouteApi('/config/$section');
 
@@ -79,6 +79,8 @@ export function SectionNodes({ section }: { section: GenericSection }) {
   const status = useDaemonStatus();
   const asSheet = usePanelAsSheet();
   const [panel, setPanel] = useState<PanelState>(CLOSED);
+  // A deleted node is gone from the text, and the sheet still slides away with it, not empty.
+  const [held, setHeld] = useState<SectionPanelNode | null>(null);
   const text = document.text;
   const nodes = useMemo(() => (text === null ? [] : readSectionNodes(text, section)), [text, section]);
   const takenTags = useMemo(() => (text === null ? [] : readNodeTags(text)), [text]);
@@ -121,8 +123,13 @@ export function SectionNodes({ section }: { section: GenericSection }) {
     picked === undefined || target.kind !== 'node'
       ? null
       : { index: target.index, node: picked, name: nodeName(shape.path, picked, target.index) };
-  // A deleted node has nothing left to show while the sheet slides away: the sheet goes at once.
-  const hasSheetTarget = target.kind === 'add' ? addable : pickedNode !== null;
+
+  if (pickedNode !== null && (held === null || held.node !== pickedNode.node || held.index !== pickedNode.index)) {
+    setHeld(pickedNode);
+  }
+
+  const sheetNode = target.kind === 'add' ? null : held;
+  const hasSheetTarget = target.kind === 'add' ? addable : sheetNode !== null;
 
   return (
     <div className='flex min-h-0 grow flex-col gap-4 overflow-y-auto px-4 py-5 sm:px-6'>
@@ -203,7 +210,7 @@ export function SectionNodes({ section }: { section: GenericSection }) {
       {asSheet && hasSheetTarget && (
         <SectionPanel
           section={section}
-          picked={pickedNode}
+          picked={sheetNode}
           takenTags={takenTags}
           builtTags={builtTags}
           sheet

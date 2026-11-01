@@ -132,6 +132,69 @@ describe('section screen', () => {
     });
   });
 
+  it('Escape closes the node panel and returns focus to its row', async () => {
+    serveConfig(CONFIG_TEXT);
+
+    const user = userEvent.setup();
+
+    renderWithRouter(OutboundsSection);
+
+    const row = await screen.findByRole('button', { name: 'hk-01' });
+
+    await user.click(row);
+    await user.keyboard('{Escape}');
+
+    await waitFor(() => {
+      expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+    });
+
+    finishSidePanelTransition();
+
+    expect(row).toHaveFocus();
+  });
+
+  it('the close button returns focus to the row the panel was opened from', async () => {
+    serveConfig(CONFIG_TEXT);
+
+    const user = userEvent.setup();
+
+    renderWithRouter(OutboundsSection);
+
+    const row = await screen.findByRole('button', { name: 'direct' });
+    const panel = within(await openNode(user, 'direct'));
+
+    await user.click(panel.getByRole('button', { name: 'Закрыть панель' }));
+
+    finishSidePanelTransition();
+
+    expect(row).toHaveFocus();
+  });
+
+  it('the add panel and a node panel replace each other', async () => {
+    serveConfig(CONFIG_TEXT);
+
+    const user = userEvent.setup();
+
+    renderWithRouter(OutboundsSection);
+
+    const add = await screen.findByRole('button', { name: 'Добавить узел' });
+
+    await openNode(user, 'hk-01');
+
+    expect(add).toHaveAttribute('aria-expanded', 'false');
+
+    await user.click(add);
+
+    expect(screen.getByRole('complementary', { name: 'Новый узел' })).toBeInTheDocument();
+    expect(screen.queryByRole('complementary', { name: 'hk-01' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'hk-01' })).toHaveAttribute('aria-pressed', 'false');
+
+    await openNode(user, 'hk-01');
+
+    expect(screen.queryByRole('complementary', { name: 'Новый узел' })).not.toBeInTheDocument();
+    expect(add).toHaveAttribute('aria-expanded', 'false');
+  });
+
   it('opens an outbound node with a form, and the same node as text on the JSON tab', async () => {
     serveConfig(CONFIG_TEXT);
 
