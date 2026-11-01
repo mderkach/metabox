@@ -40,7 +40,7 @@ metabox installs on the router as one apk package. It contains the `metaboxd` da
 - Connections: live list with filters, CSV and JSON export, and which rule routed each connection
 - Proxies: node groups with latency tests, subscription updates
 - Devices from DHCP leases, with a per-device switch to route it through sing-box
-- Overview: traffic, connections, top devices and nodes, router load, temperature and memory
+- Overview: sing-box state with restart and stop, node switch and a quick check up top; traffic, connections, top devices and nodes, router load, temperature and memory below
 - sing-box log and interception diagnostics
 - Read-only MCP endpoint for AI agents such as Claude Code
 - Light and dark theme, English and Russian, desktop and phone layouts
