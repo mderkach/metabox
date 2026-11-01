@@ -9,7 +9,9 @@
     "host": "by address",
     "hostFull": "The device address is in the interception list",
     "subnet": "by subnet {{subnet}}",
-    "subnetFull": "The device is in the {{subnet}} subnet from the interception list. It cannot be turned off alone: remove or narrow the subnet."
+    "subnetFull": "The device is in the {{subnet}} subnet from the interception list. Turning it off excludes it from the subnet.",
+    "excluded": "excluded from {{subnet}}",
+    "excludedFull": "The device is in the {{subnet}} subnet from the interception list but excluded from it, so it goes direct."
   },
   "dialog": {
     "on": "Route {{device}} through sing-box?",
@@ -20,8 +22,8 @@
   },
   "bar": {
     "label": "Interception change",
-    "applying": "Switching the device and restarting sing-box…",
-    "prompt": "The device is switched. Confirm the connection works,",
+    "applying": "Changing interception and restarting sing-box…",
+    "prompt": "Interception changed. Confirm the connection works,",
     "left": "<time>{{seconds}} s</time> left",
     "rollback": "otherwise the daemon restores the previous one",
     "submit": "Connection works, keep it"
@@ -41,5 +43,19 @@
       "no_backup": "there was nothing to roll back to: the device had no previous interception settings",
       "lists_restored": "only the rule-set files were restored: the device had no previous config"
     }
+  },
+  "subnets": {
+    "title": "Addresses and subnets through sing-box",
+    "description": "Every device whose address falls into the list goes through sing-box: <code>192.168.1.20</code> is one device, <code>192.168.1.0/24</code> the whole 192.168.1.x range. A device inside a subnet is excluded with its toggle below.",
+    "forAll": "Interception for everyone is on: the list takes effect only when interception is limited to listed devices.",
+    "placeholder": "192.168.1.0/24",
+    "hint": "Enter, a comma or a space adds an entry. To change one, remove it and type it again.",
+    "error": {
+      "invalid": "“{{value}}” is not an IPv4 address or subnet. Write it like 192.168.1.20 or 192.168.1.0/24.",
+      "hostBits": "{{value}} does not start the subnet: write {{subnet}}."
+    },
+    "apply": "Apply the list",
+    "reset": "Reset",
+    "dialog": "Apply the new list of addresses and subnets?"
   }
 }

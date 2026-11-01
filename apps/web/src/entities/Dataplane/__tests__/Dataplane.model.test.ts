@@ -3,9 +3,12 @@ import { describe, expect, it } from 'vitest';
 import { toDataplane, toDataplaneChange } from '../model/Dataplane.adapter';
 import {
   cidrContains,
+  isRouted,
   parseIpv4Cidr,
   ROUTE_REASON,
   routeReason,
+  SOURCE_IP_ERROR,
+  sourceIpError,
   withDeviceRoute,
   type RouteSource,
 } from '../model/Dataplane.model';
@@ -117,14 +120,21 @@ describe('routeReason', () => {
     expect(routeReason(model, { ...DYNAMIC, ip: '192.168.1.37' })).toBeNull();
   });
 
-  it('a subnet overrides MAC and address: the device cannot be disabled separately', () => {
+  it('an exclusion overrides the subnet, the MAC and the address: the device goes direct', () => {
     const model = { ...MODEL, sourceIp: ['192.168.1.120/32', '192.168.1.112/28'] };
+    const excluded = { kind: ROUTE_REASON.Excluded, subnet: '192.168.1.112/28' };
 
     expect(routeReason(model, BY_MAC)).toEqual({ kind: ROUTE_REASON.Subnet, subnet: '192.168.1.112/28' });
-    expect(routeReason(withDeviceRoute(model, BY_MAC, false), BY_MAC)).toEqual({
-      kind: ROUTE_REASON.Subnet,
-      subnet: '192.168.1.112/28',
-    });
+    expect(routeReason({ ...model, sourceMacExclude: ['AA:BB:CC:00:01:04'] }, BY_MAC)).toEqual(excluded);
+    expect(routeReason({ ...model, sourceIpExclude: ['192.168.1.120'] }, BY_MAC)).toEqual(excluded);
+    expect(routeReason({ ...model, sourceIpExclude: ['192.168.1.120/30'] }, BY_MAC)).toEqual(excluded);
+    expect(isRouted(excluded)).toBe(false);
+  });
+
+  it('an exclusion outside any subnet is not named: nothing lists the device', () => {
+    const model = { ...MODEL, sourceIp: [], sourceMac: ['aa:bb:cc:00:01:04'], sourceMacExclude: ['aa:bb:cc:00:01:04'] };
+
+    expect(routeReason(model, BY_MAC)).toBeNull();
   });
 
   it('skips garbage and IPv6 in the list', () => {
@@ -170,7 +180,77 @@ describe('withDeviceRoute', () => {
     expect(routeReason(next, BY_MAC)).toBeNull();
   });
 
+  it('disabling a device inside a subnet excludes its MAC, and the address for a static lease', () => {
+    const model = { ...MODEL, sourceIp: ['192.168.1.0/24', '192.168.1.60/32'], sourceMac: ['aa:bb:cc:00:00:70'] };
+
+    const dynamic = withDeviceRoute(model, DYNAMIC, false);
+
+    expect(dynamic.sourceMacExclude).toEqual(['aa:bb:cc:00:00:40']);
+    expect(dynamic.sourceIpExclude).toEqual([]);
+
+    const fixed = withDeviceRoute(model, STATIC, false);
+
+    expect(fixed.sourceIp).toEqual(['192.168.1.0/24']);
+    expect(fixed.sourceMac).toEqual([]);
+    expect(fixed.sourceMacExclude).toEqual(['aa:bb:cc:00:00:70']);
+    expect(fixed.sourceIpExclude).toEqual(['192.168.1.60/32']);
+    expect(isRouted(routeReason(fixed, STATIC))).toBe(false);
+  });
+
+  it('disabling a device outside subnets writes no exclusion', () => {
+    const next = withDeviceRoute(MODEL, BY_MAC, false);
+
+    expect(next.sourceMacExclude).toEqual([]);
+    expect(next.sourceIpExclude).toEqual([]);
+  });
+
+  it('enabling an excluded device inside a subnet only removes the exclusion', () => {
+    const model = {
+      ...MODEL,
+      sourceIp: ['192.168.1.0/24'],
+      sourceMac: [],
+      sourceMacExclude: ['AA:BB:CC:00:00:70', 'aa:bb:cc:00:00:99'],
+      sourceIpExclude: ['192.168.1.60', '192.168.1.61/32'],
+    };
+    const next = withDeviceRoute(model, STATIC, true);
+
+    expect(next.sourceMac).toEqual([]);
+    expect(next.sourceIp).toEqual(['192.168.1.0/24']);
+    expect(next.sourceMacExclude).toEqual(['aa:bb:cc:00:00:99']);
+    expect(next.sourceIpExclude).toEqual(['192.168.1.61/32']);
+    expect(routeReason(next, STATIC)).toEqual({ kind: ROUTE_REASON.Subnet, subnet: '192.168.1.0/24' });
+  });
+
+  it('enabling an excluded device outside subnets lists it and drops the exclusion', () => {
+    const next = withDeviceRoute({ ...MODEL, sourceMacExclude: ['aa:bb:cc:00:00:40'] }, DYNAMIC, true);
+
+    expect(next.sourceMac).toContain('aa:bb:cc:00:00:40');
+    expect(next.sourceMacExclude).toEqual([]);
+  });
+
   it('other model fields go to the daemon unchanged', () => {
     expect(toDataplaneChange(withDeviceRoute(MODEL, DYNAMIC, false))).toEqual({ model: DATAPLANE_FIXTURE.model });
+  });
+});
+
+describe('sourceIpError', () => {
+  it('accepts an address and a subnet that starts at its network address', () => {
+    expect(sourceIpError('192.168.1.20')).toBeNull();
+    expect(sourceIpError('192.168.1.0/24')).toBeNull();
+    expect(sourceIpError('0.0.0.0/0')).toBeNull();
+    expect(sourceIpError('192.168.1.20/32')).toBeNull();
+  });
+
+  it('names the subnet meant by an entry with host bits', () => {
+    expect(sourceIpError('192.168.1.5/24')).toEqual({ kind: SOURCE_IP_ERROR.HostBits, subnet: '192.168.1.0/24' });
+    expect(sourceIpError('10.1.2.3/8')).toEqual({ kind: SOURCE_IP_ERROR.HostBits, subnet: '10.0.0.0/8' });
+    expect(sourceIpError('192.168.1.255/25')).toEqual({ kind: SOURCE_IP_ERROR.HostBits, subnet: '192.168.1.128/25' });
+  });
+
+  it('rejects IPv6, garbage and an octet above 255', () => {
+    expect(sourceIpError('fd00::1')).toEqual({ kind: SOURCE_IP_ERROR.Invalid });
+    expect(sourceIpError('router')).toEqual({ kind: SOURCE_IP_ERROR.Invalid });
+    expect(sourceIpError('192.168.1.256')).toEqual({ kind: SOURCE_IP_ERROR.Invalid });
+    expect(sourceIpError('')).toEqual({ kind: SOURCE_IP_ERROR.Invalid });
   });
 });

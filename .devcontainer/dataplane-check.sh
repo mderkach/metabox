@@ -5,7 +5,8 @@
 # visible only from inside the router is read by /usr/bin/dataplane-check of the test bench.
 #
 # Client addresses match the ACL lists in /etc/config/metabox of the test bench:
-# .40 is listed by IP, .42 by MAC, .41 is not listed.
+# .40 is listed by IP, .42 by MAC, .41 is not listed. Step 13 lists the subnet
+# over all three and excludes .42 by address and .41 by MAC.
 set -eu
 
 TARGET=metabox-target-1
@@ -15,6 +16,8 @@ LISTED_IP=192.168.210.40
 UNLISTED_IP=192.168.210.41
 MAC_IP=192.168.210.42
 LISTED_MAC=02:00:00:00:d2:2a
+SUBNET=192.168.210.32/28
+EXCLUDED_MAC=02:00:00:00:d2:29
 # An external address outside private networks: the dataplane never intercepts them.
 OUTSIDE=1.1.1.1
 
@@ -218,7 +221,27 @@ check "connection accepted ($got)" "$got" = connected
 check "redirect counter grew" "$(counter metabox_redirect 'redirect to')" -gt "$redir"
 in_target acl listed
 
-section "13. stop removes the dataplane, start brings it back"
+section "13. A device excluded inside an intercepted subnet goes direct"
+in_target exclude "$SUBNET" "$MAC_IP" "$EXCLUDED_MAC"
+excl_ip=$(counter metabox_redirect_lanac 'ip saddr @metabox_src_ip_exclude')
+excl_mac=$(counter metabox_redirect_lanac 'ether saddr @metabox_src_mac_exclude')
+redir=$(counter metabox_redirect 'redirect to')
+tcp_to_outside "$UNLISTED_IP" "$EXCLUDED_MAC" >/dev/null
+check "MAC exclusion counter grew" "$(counter metabox_redirect_lanac 'ether saddr @metabox_src_mac_exclude')" -gt "$excl_mac"
+tcp_to_outside "$MAC_IP" "$LISTED_MAC" >/dev/null
+check "address exclusion counter grew, the listed MAC did not win" "$(counter metabox_redirect_lanac 'ip saddr @metabox_src_ip_exclude')" -gt "$excl_ip"
+check "redirect counter did not change for the excluded clients" "$(counter metabox_redirect 'redirect to')" = "$redir"
+udp_excl=$(counter metabox_mangle_lanac 'ip saddr @metabox_src_ip_exclude')
+tproxy=$(counter metabox_mangle_prerouting 'tproxy ip to')
+client_sh "$MAC_IP" "$LISTED_MAC" "echo metabox | nc -u -w 1 $OUTSIDE 9999 >/dev/null 2>&1 || true"
+check "UDP of the excluded address returns before tproxy" "$(counter metabox_mangle_lanac 'ip saddr @metabox_src_ip_exclude')" -gt "$udp_excl"
+check "tproxy counter did not change for it" "$(counter metabox_mangle_prerouting 'tproxy ip to')" = "$tproxy"
+got=$(tcp_to_outside "$UNLISTED_IP" -)
+check "a client of the subnet without exclusion goes through sing-box ($got)" "$got" = connected
+check "redirect counter grew for it" "$(counter metabox_redirect 'redirect to')" -gt "$redir"
+in_target exclude-off "$SUBNET"
+
+section "14. stop removes the dataplane, start brings it back"
 dnsmasq_before=$(in_target snapshot | sed 's/.*dnsmasq=//')
 in_target stop
 in_target state
@@ -230,7 +253,7 @@ in_target expect-up || failed=1
 got=$(tcp_to_outside "$LISTED_IP" -)
 check "after start the connection is accepted ($got)" "$got" = connected
 
-section "14. Disabled model next to another service's ip rule and table: they stay"
+section "15. Disabled model next to another service's ip rule and table: they stay"
 # The service is stopped, there is no state file, as after a reboot. The rule and
 # the table with the dataplane numbers are held by another service.
 in_target stop

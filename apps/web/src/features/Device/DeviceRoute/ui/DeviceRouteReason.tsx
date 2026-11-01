@@ -10,11 +10,12 @@ const REASON_KEY: Readonly<Record<RouteReason['kind'], { short: ParseKeys<Namesp
   [ROUTE_REASON.Mac]: { short: 'reason.mac', full: 'reason.macFull' },
   [ROUTE_REASON.Host]: { short: 'reason.host', full: 'reason.hostFull' },
   [ROUTE_REASON.Subnet]: { short: 'reason.subnet', full: 'reason.subnetFull' },
+  [ROUTE_REASON.Excluded]: { short: 'reason.excluded', full: 'reason.excludedFull' },
 };
 
 export function DeviceRouteReason({ id, reason }: { id: string; reason: RouteReason }) {
   const { t } = useTranslation('features/Device/DeviceRoute');
-  const values = { subnet: reason.kind === ROUTE_REASON.Subnet ? reason.subnet : '' };
+  const values = { subnet: 'subnet' in reason ? reason.subnet : '' };
   const full = t(REASON_KEY[reason.kind].full, values);
 
   return (

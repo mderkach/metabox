@@ -81,6 +81,8 @@ export interface DeviceRouteState {
   transaction: ApplyTransaction | null;
   isConfirming: boolean;
   route: (source: RouteSource, routed: boolean) => void;
+  /** Writes the whole `source_ip` list. */
+  setSourceIp: (sourceIp: string[]) => void;
   confirm: () => void;
 }
 
@@ -105,6 +107,14 @@ export function useDeviceRoute(): DeviceRouteState {
     },
     [model, etag, mutate]
   );
+  const onSourceIp = useCallback(
+    (sourceIp: string[]) => {
+      if (model === null) return;
+
+      mutate({ model: { ...model, sourceIp }, base: etag });
+    },
+    [model, etag, mutate]
+  );
 
   return {
     model,
@@ -116,6 +126,7 @@ export function useDeviceRoute(): DeviceRouteState {
     transaction,
     isConfirming,
     route: onRoute,
+    setSourceIp: onSourceIp,
     confirm,
   };
 }

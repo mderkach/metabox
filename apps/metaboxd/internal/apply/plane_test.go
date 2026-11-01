@@ -452,6 +452,41 @@ func TestPlaneRollbackWithoutConfirmation(t *testing.T) {
 	}
 }
 
+func TestPlaneNotesExcludedAdministrator(t *testing.T) {
+	tests := []struct {
+		name    string
+		exclude []string
+		want    bool
+	}{
+		{"subnet lists the administrator", nil, false},
+		{"exclusion takes the administrator out", []string{"192.168.1.10"}, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var logs bytes.Buffer
+
+			h := newPlaneHarness(t, nil, validConfig, slog.New(slog.NewTextHandler(&logs, nil)))
+			t.Cleanup(h.plane.Close)
+
+			m := dataplane.Defaults()
+			m.SourceIP = []string{"192.168.1.0/24"}
+			m.SourceIPExclude = tt.exclude
+
+			if _, err := h.plane.Start(t.Context(), m, "", admin); err != nil {
+				t.Fatalf("dataplane change: %v", err)
+			}
+
+			h.waitPlane(t, apply.PhaseAwaitingConfirm)
+			h.plane.Close()
+
+			if got := strings.Contains(logs.String(), "takes the request address out of interception"); got != tt.want {
+				t.Errorf("warning in the log %v, expected %v:\n%s", got, tt.want, logs.String())
+			}
+		})
+	}
+}
+
 func TestPlaneDNSPortProbeFailureRollsBack(t *testing.T) {
 	m := aclChange()
 	m.DNSPort = 5444

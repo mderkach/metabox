@@ -59,21 +59,23 @@ func TestModelFull(t *testing.T) {
 	}
 
 	want := dataplane.Model{
-		Enabled:       true,
-		RedirectPort:  6331,
-		TproxyPort:    6332,
-		DNSPort:       6333,
-		DNSHijack:     false,
-		SelfMark:      200,
-		TproxyMark:    201,
-		RouteTable:    300,
-		AccessMode:    dataplane.AccessAll,
-		SourceIP:      []string{"192.168.1.36/32", "192.168.1.60/31", "192.168.1.5"},
-		SourceMAC:     []string{"aa:bb:cc:dd:ee:ff"},
-		LANInterface:  []string{"br-lan", "br-guest"},
-		WANProxyCIDR:  []string{"1.1.1.0/24"},
-		WANDirectCIDR: []string{},
-		IPv6:          true,
+		Enabled:          true,
+		RedirectPort:     6331,
+		TproxyPort:       6332,
+		DNSPort:          6333,
+		DNSHijack:        false,
+		SelfMark:         200,
+		TproxyMark:       201,
+		RouteTable:       300,
+		AccessMode:       dataplane.AccessAll,
+		SourceIP:         []string{"192.168.1.36/32", "192.168.1.60/31", "192.168.1.5"},
+		SourceMAC:        []string{"aa:bb:cc:dd:ee:ff"},
+		SourceIPExclude:  []string{"192.168.1.61"},
+		SourceMACExclude: []string{"aa:bb:cc:dd:ee:01"},
+		LANInterface:     []string{"br-lan", "br-guest"},
+		WANProxyCIDR:     []string{"1.1.1.0/24"},
+		WANDirectCIDR:    []string{},
+		IPv6:             true,
 	}
 
 	if !reflect.DeepEqual(got, want) {
@@ -137,6 +139,8 @@ func TestModelInvalid(t *testing.T) {
 		{Field: "source_ip", Value: "fd00::1", Reason: dataplane.ReasonInvalid},
 		{Field: "source_ip", Value: "host", Reason: dataplane.ReasonInvalid},
 		{Field: "source_mac", Value: "00:00:00:00:fe:80:00:00:00:00:00:00:02:00:5e:10:00:00:00:01", Reason: dataplane.ReasonInvalid},
+		{Field: "source_ip_exclude", Value: "192.168.1.0/16", Reason: dataplane.ReasonInvalid},
+		{Field: "source_mac_exclude", Value: "aa:bb", Reason: dataplane.ReasonInvalid},
 		{Field: "dns_port", Value: "5333", Reason: dataplane.ReasonDuplicate},
 		{Field: "lan_interface", Value: "", Reason: dataplane.ReasonRequired},
 	}
