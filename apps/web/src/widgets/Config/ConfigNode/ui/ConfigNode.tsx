@@ -15,7 +15,7 @@ import { ConfigNodeDeleteButton } from '@features/Config/ConfigNodeDelete';
 import { ConfigNodeForm, ConfigSectionForm, hasNodeOverride } from '@features/Config/ConfigNodeForm';
 import { ConfigNodeRawEditor } from '@features/Config/ConfigNodeRaw';
 import { cn } from '@shared/lib/utils';
-import { Badge, Button, SURFACE, Tabs, TabsContent, TabsList, TabsTrigger } from '@shared/ui';
+import { Badge, Button, Tabs, TabsContent, TabsList, TabsTrigger } from '@shared/ui';
 
 import { FORM_POLICY, NODE_FORM_POLICY, nodeSummary } from '../model';
 import { ConfigNodeTypeBadge } from './ConfigNodeTypeBadge';
@@ -38,6 +38,8 @@ function isNodeObject(node: unknown): node is Record<string, unknown> {
  * An object section with a settings schema (`experimental`) gets the section
  * form by the same rule; other object sections and sections without a registry
  * are edited only as text.
+ *
+ * The node draws no edge: the screen puts it into a surface, alone or as a list row.
  *
  * With `onOpenChange` the node collapses to a header with the type and address. The collapsed
  * body stays mounted: what was typed in the form is not lost. The state
@@ -123,7 +125,7 @@ export function ConfigNode({
   );
 
   return (
-    <section aria-labelledby={headingId} className={cn('flex flex-col gap-2 p-4', SURFACE)}>
+    <section aria-labelledby={headingId} className='flex flex-col gap-2 px-4 py-3'>
       <header className='flex flex-wrap items-center gap-2'>
         <h2 id={headingId} className='font-mono text-sm'>
           {onOpenChange === undefined ? (

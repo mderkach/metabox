@@ -7,5 +7,10 @@
   "add": {
     "open": "Добавить узел",
     "title": "Новый узел"
+  },
+  "list": {
+    "count_one": "{{count}} узел",
+    "count_few": "{{count}} узла",
+    "count_many": "{{count}} узлов"
   }
 }
