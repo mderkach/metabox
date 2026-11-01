@@ -163,6 +163,24 @@ export function isFilledGroup(value: unknown): boolean {
   return typeof value === 'object' && value !== null && Object.keys(value).length > 0;
 }
 
+/** A value that puts a key into the node: `null`, `''`, `[]` and an empty object do not (`compactNode`). */
+function isSetValue(value: unknown): boolean {
+  if (isUnset(value) || value === '') {
+    return false;
+  }
+
+  if (Array.isArray(value)) {
+    return value.length > 0;
+  }
+
+  return typeof value !== 'object' || isFilledGroup(value);
+}
+
+/** Set fields of a group, its own level only: a nested group counts as one when anything in it is set. */
+export function countFilled(value: unknown): number {
+  return typeof value === 'object' && value !== null ? Object.values(value).filter(isSetValue).length : 0;
+}
+
 /** Form fields with an override: the main ones on top, the rest under a disclosure. */
 export interface NodeFormLayout {
   primary: FieldPlan[];

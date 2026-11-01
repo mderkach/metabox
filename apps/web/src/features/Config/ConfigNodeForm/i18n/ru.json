@@ -66,5 +66,10 @@
     "listen": "Адрес прослушивания",
     "listenPort": "Порт прослушивания",
     "secret": "Секрет"
+  },
+  "group": {
+    "filled_one": "задано {{count}} из {{total}}",
+    "filled_few": "задано {{count}} из {{total}}",
+    "filled_many": "задано {{count}} из {{total}}"
   }
 }
