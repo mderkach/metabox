@@ -66,23 +66,5 @@ export function tabPath(tab: (typeof CONFIG_TABS)[number]): string {
   return 'params' in tab.link ? `/config/${tab.link.params.section}` : tab.link.to;
 }
 
-export const CONFIG_MODE_ROUTE = {
-  Forms: '/config',
-  Text: '/config/raw',
-} as const;
-
-export type ConfigModeRoute = (typeof CONFIG_MODE_ROUTE)[keyof typeof CONFIG_MODE_ROUTE];
-
-/**
- * The second axis of the strip: how the document is shown. Sections answer "which part
- * am I looking at", the mode answers "forms or text". Text shows the whole file,
- * so no section is selected in it; returning to forms leads to the section open before it.
- */
-export const CONFIG_MODES = [
-  { key: 'forms', label: 'mode.forms', route: CONFIG_MODE_ROUTE.Forms },
-  { key: 'text', label: 'mode.text', route: CONFIG_MODE_ROUTE.Text },
-] as const satisfies ReadonlyArray<{
-  key: string;
-  label: ParseKeys<'widgets/Config/ConfigTabs'>;
-  route: ConfigModeRoute;
-}>;
+/** The whole config as text: a screen of its own, outside the sections. */
+export const CONFIG_TEXT_ROUTE = '/config/raw';

@@ -151,11 +151,7 @@ describe('panel routes', () => {
     await user.click(screen.getByRole('button', { name: 'Ещё' }));
 
     const items = await screen.findAllByRole('menuitem');
-
-    // The last item is the whole config as text: on a phone the mode switch moves there.
-    expect(items.at(-1)).toHaveAttribute('href', '/config/raw');
-
-    const targets = [...tabs, ...items.slice(0, -1)].map((link) => link.getAttribute('href'));
+    const targets = [...tabs, ...items].map((link) => link.getAttribute('href'));
 
     expect(new Set(targets).size).toBe(Object.values(CONFIG_SECTION).length);
     expect(targets).toHaveLength(Object.values(CONFIG_SECTION).length);
@@ -185,27 +181,24 @@ describe('panel routes', () => {
     expect(within(sections).getAllByRole('tab')).toHaveLength(frequent + 1);
   });
 
-  // Text mode is the second axis of the section, not a way out of it: sections answer
-  // "which part am I looking at", the mode answers "forms or text".
-  it('text mode stays inside the section: tabs and switch are in place', async () => {
+  // The whole file is not a view of one section: the strip has only sections, and the
+  // text opens from the header, next to the version history of the same file.
+  it('the text editor opens from the header, not from the section strip', async () => {
     serveDaemon();
+    const user = userEvent.setup();
 
-    renderRouter('/config/raw');
+    const router = renderRouter('/config');
 
     const sections = await screen.findByRole('tablist', { name: 'Секции конфига' });
-    const targets = within(sections)
-      .getAllByRole('tab')
-      .map((tab) => tab.getAttribute('href'));
 
-    expect(targets).toContain('/config');
-    expect(targets).toContain('/config/rule-set');
+    expect(screen.getAllByRole('tablist')).toHaveLength(1);
 
-    const mode = screen.getByRole('tablist', { name: 'Как показан документ' });
-    const current = within(mode).getAllByRole('tab', { current: 'page' });
+    await user.click(screen.getByRole('link', { name: 'Весь конфиг текстом' }));
 
-    expect(within(mode).getByRole('tab', { selected: true })).toHaveAttribute('href', '/config/raw');
-    expect(current).toHaveLength(1);
-    expect(current[0]).toHaveAttribute('href', '/config/raw');
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/config/raw');
+    });
+    expect(within(sections).queryByRole('tab', { selected: true })).not.toBeInTheDocument();
   });
 
   // The section header belongs to the layout, not to a tab: a copy on each tab
@@ -219,33 +212,31 @@ describe('panel routes', () => {
     expect(screen.getAllByRole('button', { name: 'История версий' })).toHaveLength(1);
   });
 
-  // The text is a detour from a section, not a new start: forms lead back to where it began.
-  it('from the text "Forms" leads back to the section that was open', async () => {
+  // The text is a detour from a section, not a new start: the way back leads to where it began.
+  it('from the text "Back to forms" returns to the section that was open', async () => {
     serveDaemon();
     const user = userEvent.setup();
 
-    renderRouter('/config/rule-set');
+    const router = renderRouter('/config/ntp');
 
-    const mode = await screen.findByRole('tablist', { name: 'Как показан документ' });
-
-    await user.click(within(mode).getByRole('tab', { name: 'Текст' }));
+    await user.click(await screen.findByRole('link', { name: 'Весь конфиг текстом' }));
+    await user.click(await screen.findByRole('link', { name: 'К формам' }));
 
     await waitFor(() => {
-      expect(within(mode).getByRole('tab', { name: 'Формы' })).toHaveAttribute('href', '/config/rule-set');
+      expect(router.state.location.pathname).toBe('/config/ntp');
     });
+
+    const sections = screen.getByRole('tablist', { name: 'Секции конфига' });
+
+    expect(within(sections).getByRole('tab', { selected: true })).toHaveTextContent('NTP');
   });
 
-  // Outside /config/raw the strip picks "Forms" by the section address, and `Link`
-  // does not mark it as the current page: `/config` is active only on an exact match.
-  it('on the rule sets tab the current mode stays "Forms"', async () => {
+  it('the text opened by its address leads back to routing', async () => {
     serveDaemon();
 
-    renderRouter('/config/rule-set');
+    renderRouter('/config/raw');
 
-    const mode = await screen.findByRole('tablist', { name: 'Как показан документ' });
-
-    expect(within(mode).getByRole('tab', { selected: true })).toHaveAttribute('href', '/config');
-    expect(within(mode).queryAllByRole('tab', { current: 'page' })).toHaveLength(0);
+    expect(await screen.findByRole('link', { name: 'К формам' })).toHaveAttribute('href', '/config');
   });
 
   // A dictionary not preloaded by the loader pushes part of the screen into `Suspense`: the
