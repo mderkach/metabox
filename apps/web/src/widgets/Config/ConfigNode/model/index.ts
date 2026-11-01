@@ -2,3 +2,4 @@ export { FORM_POLICY, GROUP_TYPE_LABEL, NODE_FORM_POLICY } from './ConfigNode.co
 export type { FormPolicy } from './ConfigNode.constants';
 export { nodeSummary } from './ConfigNode.summary';
 export type { NodeSummary } from './ConfigNode.summary';
+export { isNodeObject, toNodeForm } from './ConfigNode.form';
