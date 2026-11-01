@@ -22,6 +22,9 @@ export interface DataplaneModel {
   /** IPv4 address or subnet. */
   sourceIp: readonly string[];
   sourceMac: readonly string[];
+  /** Sources that go direct in `listed` mode even when `sourceIp` or `sourceMac` lists them. */
+  sourceIpExclude: readonly string[];
+  sourceMacExclude: readonly string[];
   lanInterface: readonly string[];
   wanProxyCidr: readonly string[];
   wanDirectCidr: readonly string[];
@@ -46,6 +49,8 @@ export interface RouteSource {
 const HOST_PREFIX = '/32';
 const IPV4_BITS = 32;
 const IPV4_OCTET_MAX = 255;
+const IPV4_OCTETS = 4;
+const OCTET_BITS = 8;
 const IPV4_CIDR = /^(\d{1,3}(?:\.\d{1,3}){3})(?:\/(\d{1,2}))?$/;
 
 /** IPv4 address or subnet from `source_ip`; the address is an unsigned 32-bit number. */
@@ -77,11 +82,45 @@ export function parseIpv4Cidr(entry: string): Ipv4Cidr | null {
 
 /** The address falls into the subnet. The mask drops host bits: `192.168.1.67/29` reads as `192.168.1.64/29`. */
 export function cidrContains(cidr: Ipv4Cidr, address: number): boolean {
-  if (cidr.prefix === 0) return true;
-
-  const mask = (~0 << (IPV4_BITS - cidr.prefix)) >>> 0;
+  const mask = maskOf(cidr.prefix);
 
   return (cidr.address & mask) >>> 0 === (address & mask) >>> 0;
+}
+
+function maskOf(prefix: number): number {
+  return prefix === 0 ? 0 : (~0 << (IPV4_BITS - prefix)) >>> 0;
+}
+
+function formatIpv4(address: number): string {
+  return Array.from({ length: IPV4_OCTETS }, (_, index) =>
+    String((address >>> ((IPV4_OCTETS - 1 - index) * OCTET_BITS)) & IPV4_OCTET_MAX)
+  ).join('.');
+}
+
+export const SOURCE_IP_ERROR = {
+  Invalid: 'invalid',
+  HostBits: 'hostBits',
+} as const;
+
+export type SourceIpError =
+  | { kind: typeof SOURCE_IP_ERROR.Invalid }
+  | { kind: typeof SOURCE_IP_ERROR.HostBits; subnet: string };
+
+/**
+ * Checks a `source_ip` entry by the daemon rule: an IPv4 address or a subnet
+ * without host bits, since nft does not take `192.168.1.5/24` into a set. For
+ * host bits the error carries the subnet the entry was meant to be.
+ */
+export function sourceIpError(entry: string): SourceIpError | null {
+  const cidr = parseIpv4Cidr(entry);
+
+  if (cidr === null) return { kind: SOURCE_IP_ERROR.Invalid };
+
+  const network = (cidr.address & maskOf(cidr.prefix)) >>> 0;
+
+  return network === cidr.address
+    ? null
+    : { kind: SOURCE_IP_ERROR.HostBits, subnet: `${formatIpv4(network)}/${String(cidr.prefix)}` };
 }
 
 function sameMac(left: string, right: string): boolean {
@@ -93,8 +132,8 @@ function isHostOf(entry: string, ip: string): boolean {
   return ip !== '' && (entry === ip || entry === `${ip}${HOST_PREFIX}`);
 }
 
-/** A subnet wider than one host that contains the address. */
-function subnetOf(entries: readonly string[], ip: string): string | null {
+/** The first entry that contains the address; `wider` skips one-host entries. */
+function entryContaining(entries: readonly string[], ip: string, wider: boolean): string | null {
   const address = parseIpv4Cidr(ip);
 
   if (address === null || address.prefix !== IPV4_BITS) return null;
@@ -103,8 +142,21 @@ function subnetOf(entries: readonly string[], ip: string): string | null {
     entries.find((entry) => {
       const cidr = parseIpv4Cidr(entry);
 
-      return cidr !== null && cidr.prefix < IPV4_BITS && cidrContains(cidr, address.address);
+      return cidr !== null && (!wider || cidr.prefix < IPV4_BITS) && cidrContains(cidr, address.address);
     }) ?? null
+  );
+}
+
+/** A subnet wider than one host that contains the address. */
+function subnetOf(entries: readonly string[], ip: string): string | null {
+  return entryContaining(entries, ip, true);
+}
+
+/** nft checks the exclusions before the interception list, so an excluded device goes direct whatever lists it. */
+function isExcluded(model: DataplaneModel, source: RouteSource): boolean {
+  return (
+    model.sourceMacExclude.some((mac) => sameMac(mac, source.mac)) ||
+    entryContaining(model.sourceIpExclude, source.ip, false) !== null
   );
 }
 
@@ -112,21 +164,31 @@ export const ROUTE_REASON = {
   Mac: 'mac',
   Host: 'host',
   Subnet: 'subnet',
+  Excluded: 'excluded',
 } as const;
 
-/** Why a device goes through sing-box in `listed` mode. */
+/**
+ * Why a device goes through sing-box in `listed` mode, or, for `excluded`, why
+ * it goes direct although a subnet from the interception list contains it.
+ */
 export type RouteReason =
   | { kind: typeof ROUTE_REASON.Mac }
   | { kind: typeof ROUTE_REASON.Host }
-  | { kind: typeof ROUTE_REASON.Subnet; subnet: string };
+  | { kind: typeof ROUTE_REASON.Subnet; subnet: string }
+  | { kind: typeof ROUTE_REASON.Excluded; subnet: string };
+
+export function isRouted(reason: RouteReason | null): boolean {
+  return reason !== null && reason.kind !== ROUTE_REASON.Excluded;
+}
 
 /**
- * The subnet is checked first: a device in it stays intercepted even if its MAC
- * and address are removed, so only it honestly answers whether the device can
- * be turned off separately.
+ * `null` means the device goes direct and nothing lists it. An exclusion
+ * without a subnet around the device is not named: it changes nothing.
  */
 export function routeReason(model: DataplaneModel, source: RouteSource): RouteReason | null {
   const subnet = subnetOf(model.sourceIp, source.ip);
+
+  if (isExcluded(model, source)) return subnet === null ? null : { kind: ROUTE_REASON.Excluded, subnet };
 
   if (subnet !== null) return { kind: ROUTE_REASON.Subnet, subnet };
 
@@ -150,21 +212,40 @@ export function routeReason(model: DataplaneModel, source: RouteSource): RouteRe
  * interval overlap.
  *
  * Turning off removes both the MAC and the address in both forms, otherwise the
- * device would stay intercepted by the second entry.
+ * device would stay intercepted by the second entry. A device inside a subnet
+ * from the list is then written into the exclusions by the same rule: the MAC,
+ * and the address for a static lease.
+ *
+ * Turning on removes the device from the exclusions; inside a subnet nothing
+ * else is written, the subnet already intercepts it.
  */
 export function withDeviceRoute(model: DataplaneModel, source: RouteSource, routed: boolean): DataplaneModel {
   const sourceMac = model.sourceMac.filter((mac) => !sameMac(mac, source.mac));
   const sourceIp = model.sourceIp.filter((ip) => !isHostOf(ip, source.ip));
+  const sourceMacExclude = model.sourceMacExclude.filter((mac) => !sameMac(mac, source.mac));
+  const sourceIpExclude = model.sourceIpExclude.filter((ip) => !isHostOf(ip, source.ip));
+  const host = source.static && source.ip !== '' ? [`${source.ip}${HOST_PREFIX}`] : [];
+  const inSubnet = subnetOf(sourceIp, source.ip) !== null;
 
   if (!routed) {
-    return { ...model, sourceMac, sourceIp };
+    return inSubnet
+      ? {
+          ...model,
+          sourceMac,
+          sourceIp,
+          sourceMacExclude: source.mac === '' ? sourceMacExclude : [...sourceMacExclude, source.mac],
+          sourceIpExclude: [...sourceIpExclude, ...host],
+        }
+      : { ...model, sourceMac, sourceIp, sourceMacExclude, sourceIpExclude };
   }
 
-  const withIp = source.static && source.ip !== '';
+  if (inSubnet) return { ...model, sourceMacExclude, sourceIpExclude };
 
   return {
     ...model,
     sourceMac: [...sourceMac, source.mac],
-    sourceIp: withIp ? [...sourceIp, `${source.ip}${HOST_PREFIX}`] : model.sourceIp,
+    sourceIp: host.length > 0 ? [...sourceIp, ...host] : model.sourceIp,
+    sourceMacExclude,
+    sourceIpExclude,
   };
 }

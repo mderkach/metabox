@@ -40,7 +40,7 @@
         "failed": "Could not rename the device"
       },
       "route": {
-        "failed": "Could not change the device interception",
+        "failed": "Could not change the interception",
         "confirmed": "Connection confirmed, the setting stays"
       }
     },

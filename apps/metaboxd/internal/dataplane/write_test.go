@@ -102,6 +102,8 @@ func TestWriteRoundTrip(t *testing.T) {
 	m.AccessMode = dataplane.AccessAll
 	m.SourceIP = []string{"192.168.1.10", "192.168.1.0/30"}
 	m.SourceMAC = []string{"aa:bb:cc:dd:ee:ff"}
+	m.SourceIPExclude = []string{"192.168.1.2"}
+	m.SourceMACExclude = []string{"aa:bb:cc:dd:ee:01"}
 	m.DNSPort = 5444
 
 	if err := newWriter(u).Write(t.Context(), m); err != nil {

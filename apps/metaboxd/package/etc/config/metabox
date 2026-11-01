@@ -45,7 +45,8 @@ config dataplane 'dataplane'
 	option tproxy_mark '101'
 	option route_table '100'
 	# all: all sources with lan_interface go through sing-box, listed: only
-	# those listed in source_ip and source_mac.
+	# those listed in source_ip and source_mac, except those in source_ip_exclude
+	# and source_mac_exclude.
 	option acl_mode 'listed'
 	list lan_interface 'br-lan'
 	option ipv6 '0'

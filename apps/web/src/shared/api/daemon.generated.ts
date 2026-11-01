@@ -404,6 +404,10 @@ export const ModelSchema = z.object({
   source_ip: z.array(z.string()),
   /** SourceMAC are the sources of listed mode by MAC: they do not depend on a lease change. */
   source_mac: z.array(z.string()),
+  /** SourceIPExclude are listed mode sources that go direct even when SourceIP or SourceMAC lists them: a device inside an intercepted subnet. Same form as SourceIP. */
+  source_ip_exclude: z.array(z.string()),
+  /** SourceMACExclude are the same exclusions by MAC. */
+  source_mac_exclude: z.array(z.string()),
   /** LANInterface are the interfaces traffic is intercepted from. */
   lan_interface: z.array(z.string()),
   /** WANProxyCIDR are the destinations that always go through sing-box. */

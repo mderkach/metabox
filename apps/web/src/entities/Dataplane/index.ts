@@ -9,5 +9,13 @@ export {
   useSaveDataplaneTransaction,
 } from './api/Dataplane.query';
 export type { DataplaneChange } from './api/Dataplane.query';
-export { ACL_MODE, ROUTE_REASON, routeReason, withDeviceRoute } from './model/Dataplane.model';
-export type { DataplaneModel, RouteReason, RouteSource } from './model/Dataplane.model';
+export {
+  ACL_MODE,
+  ROUTE_REASON,
+  SOURCE_IP_ERROR,
+  isRouted,
+  routeReason,
+  sourceIpError,
+  withDeviceRoute,
+} from './model/Dataplane.model';
+export type { DataplaneModel, RouteReason, RouteSource, SourceIpError } from './model/Dataplane.model';

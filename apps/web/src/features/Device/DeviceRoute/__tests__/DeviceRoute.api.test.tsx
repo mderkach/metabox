@@ -35,6 +35,8 @@ const MODEL: DataplaneModel = {
   aclMode: 'listed',
   sourceIp: [],
   sourceMac: ['aa:bb:cc:00:00:40'],
+  sourceIpExclude: [],
+  sourceMacExclude: [],
   lanInterface: ['br-lan'],
   wanProxyCidr: [],
   wanDirectCidr: [],
@@ -68,7 +70,7 @@ describe('useChangeDeviceRoute', () => {
     await waitFor(() => {
       expect(result.current.isError).toBe(true);
     });
-    expect(toast.error).toHaveBeenCalledWith('Сменить перехват устройства не удалось: применение уже идёт');
+    expect(toast.error).toHaveBeenCalledWith('Сменить перехват не удалось: применение уже идёт');
   });
 
   it('announces only the confirmation with a toast: the bar shows the accepted change', async () => {
@@ -125,7 +127,7 @@ describe('useChangeDeviceRoute', () => {
       expect(result.current.change.isError).toBe(true);
     });
     expect(toast.error).toHaveBeenCalledWith(
-      'Сменить перехват устройства не удалось: настройки перехвата трафика изменились на устройстве, список перечитан'
+      'Сменить перехват не удалось: настройки перехвата трафика изменились на устройстве, список перечитан'
     );
 
     await waitFor(() => {

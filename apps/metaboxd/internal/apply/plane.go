@@ -202,17 +202,21 @@ func (p *Plane) Start(ctx context.Context, model dataplane.Model, base string, c
 }
 
 // leavesClient: before the change the client address went through sing-box, and after it the
-// listed mode does not list it. MAC is not compared here: it cannot be learned from the request
-// address.
+// listed mode does not list it or excludes it. MAC is not compared here: it cannot be learned
+// from the request address.
 func leavesClient(prev, next dataplane.Model, client netip.Addr) bool {
 	if !client.IsValid() || !prev.Enabled || !next.Enabled || next.AccessMode != dataplane.AccessListed {
 		return false
 	}
 
 	client = client.Unmap()
-	before := prev.AccessMode == dataplane.AccessAll || covers(prev.SourceIP, client)
+	before := prev.AccessMode == dataplane.AccessAll || listed(prev, client)
 
-	return before && !covers(next.SourceIP, client)
+	return before && !listed(next, client)
+}
+
+func listed(m dataplane.Model, addr netip.Addr) bool {
+	return covers(m.SourceIP, addr) && !covers(m.SourceIPExclude, addr)
 }
 
 func covers(sources []string, addr netip.Addr) bool {

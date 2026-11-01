@@ -23,7 +23,9 @@ type BatchRunner func(ctx context.Context, input, name string, args ...string) (
 // listOptions are the list options of the model. In `uci show` output a list of one
 // value is indistinguishable from an option, and the init script reads them with config_list_foreach,
 // which does not see an option: on restore they are written only as a list.
-var listOptions = []string{"source_ip", "source_mac", "lan_interface", "wan_proxy_cidr", "wan_direct_cidr"}
+var listOptions = []string{
+	"source_ip", "source_mac", "source_ip_exclude", "source_mac_exclude", "lan_interface", "wan_proxy_cidr", "wan_direct_cidr",
+}
 
 // Snapshot is the `metabox.dataplane` section as it lies in UCI, unparsed.
 // The model change is rolled back by it: what the daemon would not accept itself is returned too,
@@ -97,11 +99,13 @@ func encode(m Model) uci.Section {
 	// An empty list is written by the absence of the option, the way it will be read after the write:
 	// lan_interface then gets the default.
 	for name, values := range map[string][]string{
-		"source_ip":       m.SourceIP,
-		"source_mac":      m.SourceMAC,
-		"lan_interface":   m.LANInterface,
-		"wan_proxy_cidr":  m.WANProxyCIDR,
-		"wan_direct_cidr": m.WANDirectCIDR,
+		"source_ip":          m.SourceIP,
+		"source_mac":         m.SourceMAC,
+		"source_ip_exclude":  m.SourceIPExclude,
+		"source_mac_exclude": m.SourceMACExclude,
+		"lan_interface":      m.LANInterface,
+		"wan_proxy_cidr":     m.WANProxyCIDR,
+		"wan_direct_cidr":    m.WANDirectCIDR,
 	} {
 		if values = slices.DeleteFunc(slices.Clone(values), func(v string) bool { return v == "" }); len(values) > 0 {
 			options[name] = values
