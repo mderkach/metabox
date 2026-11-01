@@ -8,16 +8,18 @@ import { ConfigNodePanel } from './ConfigNodePanel';
 /**
  * Node panel as a sheet on top of the list — on a narrow screen, where there is no room for it
  * beside the list. The sheet slides away with an animation after closing, so the page
- * gives the title and form to the closed sheet too: otherwise it would slide away empty.
+ * gives the title and content to the closed sheet too: otherwise it would slide away empty.
  */
 export function ConfigNodePanelSheet({
   open,
   title,
+  actions = null,
   onClose,
   children,
 }: {
   open: boolean;
   title: string;
+  actions?: ReactNode;
   onClose: () => void;
   children: ReactNode;
 }) {
@@ -31,7 +33,7 @@ export function ConfigNodePanelSheet({
       }}
     >
       <SheetContent side='bottom' showCloseButton={false} className={cn(SHEET_BOTTOM, 'max-h-[85svh] gap-0 p-0')}>
-        <ConfigNodePanel title={title} sheet onClose={onClose}>
+        <ConfigNodePanel title={title} sheet actions={actions} onClose={onClose}>
           {children}
         </ConfigNodePanel>
       </SheetContent>

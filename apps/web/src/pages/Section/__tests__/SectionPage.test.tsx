@@ -5,11 +5,12 @@ import { finishSidePanelTransition } from '@test/sidePanel';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CONFIG_ENDPOINT, ConfigDocumentState, findValue } from '@entities/Config';
 import { DAEMON_ENDPOINT } from '@entities/Daemon';
 import { DAEMON_STATUS_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture';
+import { PANEL_AS_SHEET } from '@shared/lib/media';
 
 import { SectionNodes } from '../ui/SectionPage';
 
@@ -33,6 +34,18 @@ function serveConfig(text: string) {
 
 function draft(): string {
   return ConfigDocumentState.getState().draft ?? '';
+}
+
+/** A node row is named by the node name alone; the type and address describe it. */
+async function nodeRow(name: string): Promise<HTMLElement> {
+  return screen.findByRole('button', { name });
+}
+
+/** Opens a node from its row and returns its panel. */
+async function openNode(user: ReturnType<typeof userEvent.setup>, name: string): Promise<HTMLElement> {
+  await user.click(await nodeRow(name));
+
+  return screen.findByRole('complementary', { name });
 }
 
 function OutboundsSection() {
@@ -75,37 +88,120 @@ describe('section screen', () => {
     ConfigDocumentState.getState().reset();
   });
 
-  it('section nodes are collapsed to a header with type and address', async () => {
+  it('section nodes are list rows with type and address, and no form until one is selected', async () => {
     serveConfig(CONFIG_TEXT);
 
     renderWithRouter(OutboundsSection);
 
-    const node = within(await screen.findByRole('region', { name: 'hk-01' }));
+    const row = await nodeRow('hk-01');
 
-    expect(node.getByRole('button', { name: 'hk-01' })).toHaveAttribute('aria-expanded', 'false');
-    expect(node.getByText('vless')).toBeInTheDocument();
-    expect(node.getByText('a.example:443')).toBeInTheDocument();
-    expect(node.queryByRole('tab', { name: 'Форма' })).not.toBeInTheDocument();
+    expect(row).toHaveAttribute('aria-pressed', 'false');
+    expect(within(row).getByText('vless')).toBeInTheDocument();
+    expect(within(row).getByText('a.example:443')).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'Форма' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
   });
 
-  it('opens an outbound node with a form, and the same node as text on the JSON tab', async () => {
+  it('opens an outbound node in the panel with a form, and the same node as text on the JSON tab', async () => {
     serveConfig(CONFIG_TEXT);
 
     const user = userEvent.setup();
 
     renderWithRouter(OutboundsSection);
 
-    const node = within(await screen.findByRole('region', { name: 'hk-01' }));
+    const node = within(await openNode(user, 'hk-01'));
 
-    await user.click(node.getByRole('button', { name: 'hk-01' }));
-
+    expect(node.getByRole('heading', { name: 'hk-01' })).toHaveFocus();
+    expect(await nodeRow('hk-01')).toHaveAttribute('aria-pressed', 'true');
     expect(node.getByRole('tab', { name: 'Форма' })).toHaveAttribute('aria-selected', 'true');
     expect(node.getByRole('textbox', { name: 'Сервер' })).toHaveValue('a.example');
 
     await user.click(node.getByRole('tab', { name: 'JSON' }));
 
     expect(node.getByRole('textbox', { name: 'Узел hk-01 текстом' })).toHaveValue(JSON.stringify(HK_01, null, 2));
-    expect(screen.getByRole('heading', { name: 'direct' })).toBeInTheDocument();
+    expect(await nodeRow('direct')).toBeInTheDocument();
+  });
+
+  it('Escape closes the node panel and returns focus to its row', async () => {
+    serveConfig(CONFIG_TEXT);
+
+    const user = userEvent.setup();
+
+    renderWithRouter(OutboundsSection);
+
+    const row = await nodeRow('hk-01');
+
+    await user.click(row);
+    expect(within(screen.getByRole('complementary', { name: 'hk-01' })).getByRole('heading')).toHaveFocus();
+
+    await user.keyboard('{Escape}');
+
+    await waitFor(() => {
+      expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+    });
+
+    finishSidePanelTransition();
+
+    expect(row).toHaveFocus();
+    expect(row).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('the close button returns focus to the row the panel was opened from', async () => {
+    serveConfig(CONFIG_TEXT);
+
+    const user = userEvent.setup();
+
+    renderWithRouter(OutboundsSection);
+
+    const row = await nodeRow('direct');
+    const node = within(await openNode(user, 'direct'));
+
+    await user.click(node.getByRole('button', { name: 'Закрыть панель' }));
+
+    finishSidePanelTransition();
+
+    expect(row).toHaveFocus();
+  });
+
+  it('selecting another row moves the panel to that node, a second click on it closes the panel', async () => {
+    serveConfig(CONFIG_TEXT);
+
+    const user = userEvent.setup();
+
+    renderWithRouter(OutboundsSection);
+
+    await openNode(user, 'direct');
+
+    const node = within(await openNode(user, 'hk-01'));
+
+    expect(node.getByRole('heading', { name: 'hk-01' })).toHaveFocus();
+    expect(screen.getAllByRole('complementary')).toHaveLength(1);
+    expect(await nodeRow('direct')).toHaveAttribute('aria-pressed', 'false');
+
+    await user.click(await nodeRow('hk-01'));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+    });
+  });
+
+  it('the add panel and a node panel replace each other', async () => {
+    serveConfig(CONFIG_TEXT);
+
+    const user = userEvent.setup();
+
+    renderWithRouter(OutboundsSection);
+
+    const add = await screen.findByRole('button', { name: 'Добавить узел' });
+
+    await openNode(user, 'hk-01');
+    expect(add).toHaveAttribute('aria-expanded', 'false');
+
+    await user.click(add);
+
+    expect(screen.getByRole('complementary', { name: 'Новый узел' })).toBeInTheDocument();
+    expect(screen.queryByRole('complementary', { name: 'hk-01' })).not.toBeInTheDocument();
+    expect(await nodeRow('hk-01')).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('a field edit by the form lands as one line: the comment and the neighboring node are intact', async () => {
@@ -115,10 +211,7 @@ describe('section screen', () => {
 
     renderWithRouter(OutboundsSection);
 
-    const node = within(await screen.findByRole('region', { name: 'hk-01' }));
-
-    await user.click(node.getByRole('button', { name: 'hk-01' }));
-
+    const node = within(await openNode(user, 'hk-01'));
     const server = node.getByRole('textbox', { name: 'Сервер' });
 
     await user.clear(server);
@@ -143,9 +236,7 @@ describe('section screen', () => {
 
     renderWithRouter(OutboundsSection);
 
-    const node = within(await screen.findByRole('region', { name: 'direct' }));
-
-    await user.click(node.getByRole('button', { name: 'direct' }));
+    const node = within(await openNode(user, 'direct'));
 
     await user.click(node.getByRole('tab', { name: 'JSON' }));
 
@@ -179,10 +270,7 @@ describe('section screen', () => {
 
     renderWithRouter(DnsRulesSection);
 
-    const node = within(await screen.findByRole('region', { name: 'dns.rules[1]' }));
-
-    await user.click(node.getByRole('button', { name: 'dns.rules[1]' }));
-
+    const node = within(await openNode(user, 'dns.rules[1]'));
     const editor = node.getByRole('textbox', { name: 'Узел dns.rules[1] текстом' });
 
     await user.clear(editor);
@@ -215,7 +303,7 @@ describe('section screen', () => {
 
     const settings = within(await screen.findByRole('region', { name: 'Параметры DNS' }));
 
-    expect(screen.getByRole('region', { name: 'local' })).toBeInTheDocument();
+    expect(await nodeRow('local')).toBeInTheDocument();
 
     await user.click(settings.getByRole('button', { name: 'Параметры DNS' }));
     await user.clear(settings.getByRole('textbox', { name: 'final' }));
@@ -269,8 +357,8 @@ describe('section screen', () => {
 
     renderWithRouter(DnsRulesSection);
 
-    expect(await screen.findByRole('heading', { name: 'dns.rules[0]' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'dnsRules[0]' })).not.toBeInTheDocument();
+    expect(await nodeRow('dns.rules[0]')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^dnsRules/ })).not.toBeInTheDocument();
   });
 
   it('a missing ntp opens as an empty node, saving creates the section', async () => {
@@ -347,7 +435,8 @@ describe('section screen', () => {
     });
     expect(draft()).toContain('// выходы');
     expect(findValue(draft(), ['outbounds', 1])).toEqual(HK_01);
-    expect(await screen.findByRole('region', { name: 'direct-2' })).toBeInTheDocument();
+    expect(await screen.findByRole('complementary', { name: 'direct-2' })).toBeInTheDocument();
+    expect(await nodeRow('direct-2')).toHaveAttribute('aria-pressed', 'true');
     await waitFor(() => {
       expect(screen.queryByRole('complementary', { name: 'Новый узел' })).not.toBeInTheDocument();
     });
@@ -416,7 +505,7 @@ describe('section screen', () => {
     });
     expect(draft()).toContain('// выходы');
 
-    const node = within(await screen.findByRole('region', { name: 'nl-01' }));
+    const node = within(await screen.findByRole('complementary', { name: 'nl-01' }));
 
     expect(await node.findByRole('textbox', { name: 'Сервер' })).toHaveValue('b.example');
   });
@@ -526,11 +615,11 @@ describe('section screen', () => {
 
     renderWithRouter(DnsRulesSection);
 
-    expect(await screen.findByRole('heading', { name: 'dns.rules[0]' })).toBeInTheDocument();
+    expect(await nodeRow('dns.rules[0]')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Добавить узел' })).not.toBeInTheDocument();
   });
 
-  it('deletes a node after a confirmation that names what still points to it', async () => {
+  it('deletes a node from its panel after a confirmation that names what still points to it', async () => {
     serveConfig(`{
   // выходы
   "outbounds": [
@@ -544,7 +633,7 @@ describe('section screen', () => {
 
     renderWithRouter(OutboundsSection);
 
-    const node = within(await screen.findByRole('region', { name: 'hk-01' }));
+    const node = within(await openNode(user, 'hk-01'));
 
     await user.click(node.getByRole('button', { name: 'Удалить «hk-01»' }));
 
@@ -562,6 +651,9 @@ describe('section screen', () => {
       expect(findValue(draft(), ['outbounds'])).toEqual([{ type: 'direct', tag: 'direct' }]);
     });
     expect(draft()).toContain('// выходы');
+    await waitFor(() => {
+      expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+    });
   });
 
   it('an object section node has no delete button', async () => {
@@ -580,10 +672,10 @@ describe('section screen', () => {
 
     renderWithRouter(OutboundsSection);
 
-    const node = within(await screen.findByRole('region', { name: 'auto' }));
+    const row = within(await nodeRow('auto'));
 
-    expect(node.getByText('самый быстрый')).toBeInTheDocument();
-    expect(node.getByText('urltest')).toBeInTheDocument();
+    expect(row.getByText('самый быстрый')).toBeInTheDocument();
+    expect(row.getByText('urltest')).toBeInTheDocument();
   });
 
   it('the outbound add panel has one main button: adding by link, the manual one is secondary', async () => {
@@ -599,5 +691,49 @@ describe('section screen', () => {
 
     expect(panel.getByRole('button', { name: 'Добавить по ссылке' })).toHaveClass('bg-primary');
     expect(panel.getByRole('button', { name: 'Добавить' })).not.toHaveClass('bg-primary');
+  });
+});
+
+describe('section screen on a narrow screen', () => {
+  beforeEach(() => {
+    ConfigDocumentState.getState().reset();
+    vi.stubGlobal('matchMedia', function matchQuery(media: string) {
+      return {
+        matches: media === PANEL_AS_SHEET,
+        media,
+        addEventListener: vi.fn<() => void>(),
+        removeEventListener: vi.fn<() => void>(),
+      };
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('opens a node as a sheet over the list, Escape closes it and returns focus to the row', async () => {
+    serveConfig(CONFIG_TEXT);
+
+    const user = userEvent.setup();
+
+    renderWithRouter(OutboundsSection);
+
+    const row = await nodeRow('hk-01');
+
+    await user.click(row);
+
+    const sheet = await screen.findByRole('dialog', { name: 'hk-01' });
+
+    expect(within(sheet).getByRole('textbox', { name: 'Сервер' })).toHaveValue('a.example');
+    expect(screen.queryByRole('complementary', { name: 'hk-01' })).toBe(within(sheet).getByRole('complementary'));
+
+    await user.keyboard('{Escape}');
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(row).toHaveFocus();
+    });
   });
 });

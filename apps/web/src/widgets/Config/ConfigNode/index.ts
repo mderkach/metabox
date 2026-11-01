@@ -1,1 +1,1 @@
-export { ConfigNode } from './ui';
+export { ConfigNode, ConfigNodeRow } from './ui';

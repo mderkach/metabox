@@ -1,33 +1,18 @@
-import { ChevronRight } from 'lucide-react';
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import {
-  isNodeRecognized,
-  isSectionSettingsRecognized,
-  isSettingsSection,
-  registryOfSection,
-  sectionNodePath,
-  toSectionSettings,
-  type GenericSection,
-} from '@entities/Config';
-import { ConfigNodeDeleteButton } from '@features/Config/ConfigNodeDelete';
-import { ConfigNodeForm, ConfigSectionForm, hasNodeOverride } from '@features/Config/ConfigNodeForm';
+import { sectionNodePath, type GenericSection } from '@entities/Config';
+import { ConfigNodeForm, ConfigSectionForm } from '@features/Config/ConfigNodeForm';
 import { ConfigNodeRawEditor } from '@features/Config/ConfigNodeRaw';
-import { cn } from '@shared/lib/utils';
-import { Badge, Button, Tabs, TabsContent, TabsList, TabsTrigger } from '@shared/ui';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@shared/ui';
 
-import { FORM_POLICY, NODE_FORM_POLICY, nodeSummary } from '../model';
-import { ConfigNodeTypeBadge } from './ConfigNodeTypeBadge';
+import { isNodeObject, nodeFormOf } from '../model';
+import { ConfigNodeDetails } from './ConfigNodeDetails';
 
 const TAB = {
   Form: 'form',
   Raw: 'raw',
 } as const;
-
-function isNodeObject(node: unknown): node is Record<string, unknown> {
-  return typeof node === 'object' && node !== null && !Array.isArray(node);
-}
 
 /**
  * Config section node: a form from its type's schema and the same node as text.
@@ -39,11 +24,8 @@ function isNodeObject(node: unknown): node is Record<string, unknown> {
  * form by the same rule; other object sections and sections without a registry
  * are edited only as text.
  *
- * The node draws no edge: the screen puts it into a surface, alone or as a list row.
- *
- * With `onOpenChange` the node collapses to a header with the type and address. The collapsed
- * body stays mounted: what was typed in the form is not lost. The state
- * is held by the caller — the node remounts on every document revision.
+ * The node draws no edge: the screen puts it into a surface or into the node panel. In the panel
+ * (`panel`) the panel title names the node, and the node has no heading of its own.
  */
 export function ConfigNode({
   section,
@@ -51,9 +33,7 @@ export function ConfigNode({
   node,
   name,
   builtTags = null,
-  open = true,
-  onOpenChange,
-  onDeleted,
+  panel = false,
 }: {
   section: GenericSection;
   index: number;
@@ -63,30 +43,14 @@ export function ConfigNode({
   name: string;
   /** Binary build tags: the form marks options outside the build by them; `null` means not read. */
   builtTags?: readonly string[] | null;
-  open?: boolean;
-  /** Without it the node does not collapse. */
-  onOpenChange?: (open: boolean) => void;
-  /** Without it the node has no delete button: an object section is not deleted from the forms. */
-  onDeleted?: () => void;
+  panel?: boolean;
 }) {
   const { t } = useTranslation('widgets/Config/ConfigNode');
-  const registry = registryOfSection(section);
+  const form = nodeFormOf(section, node);
+  const { registry, settingsSection, settings, recognized } = form;
   const path = sectionNodePath(section, index);
-  const type: unknown = isNodeObject(node) ? node.type : undefined;
-  const tag: unknown = isNodeObject(node) ? node.tag : undefined;
-  const settingsSection = registry === null && isSettingsSection(section) ? section : null;
-  const settings = settingsSection === null ? null : toSectionSettings(settingsSection, node);
-  const hasNodeForm =
-    registry !== null &&
-    (NODE_FORM_POLICY[registry] === FORM_POLICY.Auto || (typeof type === 'string' && hasNodeOverride(registry, type)));
-  const hasForm = hasNodeForm || settings !== null;
-  const recognized =
-    (hasNodeForm && isNodeRecognized(registry, node)) ||
-    (settingsSection !== null && settings !== null && isSectionSettingsRecognized(settingsSection, settings));
   const [tab, setTab] = useState<string>(recognized ? TAB.Form : TAB.Raw);
   const headingId = useId();
-  const bodyId = useId();
-  const summary = nodeSummary(node);
 
   const raw = (
     <ConfigNodeRawEditor
@@ -97,7 +61,7 @@ export function ConfigNode({
     />
   );
 
-  const body = hasForm ? (
+  const body = form.hasForm ? (
     <Tabs value={tab} onValueChange={setTab}>
       <TabsList variant='line'>
         <TabsTrigger value={TAB.Form} disabled={!recognized}>
@@ -108,7 +72,7 @@ export function ConfigNode({
 
       {/* The form keeps what was typed while the node is checked as text: unmounting erases it. */}
       <TabsContent value={TAB.Form} keepMounted className='pt-3'>
-        {recognized && hasNodeForm && isNodeObject(node) && (
+        {recognized && form.hasNodeForm && registry !== null && isNodeObject(node) && (
           <ConfigNodeForm registry={registry} path={path} node={node} builtTags={builtTags} />
         )}
         {recognized && settingsSection !== null && settings !== null && (
@@ -124,47 +88,27 @@ export function ConfigNode({
     raw
   );
 
+  const uncovered = form.hasForm && !recognized;
+
+  if (panel) {
+    return (
+      <div className='flex flex-col gap-3'>
+        <ConfigNodeDetails node={node} name={name} uncovered={uncovered} />
+        {body}
+      </div>
+    );
+  }
+
   return (
     <section aria-labelledby={headingId} className='flex flex-col gap-2 px-4 py-3'>
       <header className='flex flex-wrap items-center gap-2'>
         <h2 id={headingId} className='font-mono text-sm'>
-          {onOpenChange === undefined ? (
-            name
-          ) : (
-            <Button
-              variant='ghost'
-              size='sm'
-              aria-expanded={open}
-              aria-controls={bodyId}
-              className='-ml-2 font-mono'
-              onClick={() => {
-                onOpenChange(!open);
-              }}
-            >
-              <ChevronRight className={cn('transition-transform motion-reduce:transition-none', open && 'rotate-90')} />
-              {name}
-            </Button>
-          )}
+          {name}
         </h2>
-        {summary.type !== null && summary.type !== name && <ConfigNodeTypeBadge type={summary.type} />}
-        {summary.address !== null && <span className='font-mono text-xs text-muted-foreground'>{summary.address}</span>}
-        {hasForm && !recognized && <Badge variant='outline'>{t('rule.uncovered', { ns: 'shared' })}</Badge>}
-        {onDeleted !== undefined && (
-          <span className='ml-auto'>
-            <ConfigNodeDeleteButton
-              section={section}
-              index={index}
-              name={name}
-              tag={typeof tag === 'string' ? tag : ''}
-              onDeleted={onDeleted}
-            />
-          </span>
-        )}
+        <ConfigNodeDetails node={node} name={name} uncovered={uncovered} />
       </header>
 
-      <div id={bodyId} hidden={!open}>
-        {body}
-      </div>
+      {body}
     </section>
   );
 }
