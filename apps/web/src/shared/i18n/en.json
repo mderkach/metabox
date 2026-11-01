@@ -351,5 +351,10 @@
     "urltest": "fastest",
     "fallback": "fallback",
     "loadBalance": "load balance"
+  },
+  "tokenInput": {
+    "values": "{{label}}: values",
+    "remove": "Remove {{value}}",
+    "invalid": ", invalid"
   }
 }

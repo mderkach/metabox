@@ -256,9 +256,9 @@ describe('rule conditions in the form', () => {
 
     renderWithQuery(<RuleEditForm rule={rule} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
 
-    expect(screen.getByRole('textbox', { name: 'Порт' })).toHaveValue('443');
+    expect(within(screen.getByRole('list', { name: 'Порт: значения' })).getByText('443')).toBeInTheDocument();
 
-    await user.clear(screen.getByRole('textbox', { name: 'Домен' }));
+    await user.click(screen.getByRole('button', { name: 'Убрать a.example' }));
     // An emptied field leaves the node when it is left, not while it is being typed in.
     await user.tab();
 
@@ -273,12 +273,9 @@ describe('rule conditions in the form', () => {
 
     renderWithQuery(<RuleEditForm rule={rule} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
 
-    const port = screen.getByRole('textbox', { name: 'Порт' });
+    await user.type(screen.getByRole('textbox', { name: 'Порт' }), 'https');
 
-    await user.clear(port);
-    await user.type(port, 'https');
-
-    expect(await screen.findByRole('alert')).toHaveTextContent('Порт — число от 0 до 65535 на строку');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Порт — число от 0 до 65535');
 
     expect(ConfigDocumentState.getState().draft).toBeNull();
   });
@@ -289,7 +286,7 @@ describe('rule conditions in the form', () => {
 
     renderWithQuery(<RuleEditForm rule={rule} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
 
-    await user.clear(screen.getByRole('textbox', { name: 'Домен' }));
+    await user.click(screen.getByRole('button', { name: 'Убрать a.example' }));
 
     expect(screen.getByRole('status')).toHaveTextContent('заберёт весь трафик');
   });
@@ -313,7 +310,11 @@ describe('rule conditions in the form', () => {
       'iphone-guest · 192.168.1.120'
     );
 
-    expect(screen.getByRole('textbox', { name: 'Устройство или адрес источника' })).toHaveValue('192.168.1.120/32');
+    expect(
+      within(screen.getByRole('list', { name: 'Устройство или адрес источника: значения' })).getByText(
+        '192.168.1.120/32'
+      )
+    ).toBeInTheDocument();
 
     const chosen = screen.getByRole('list', { name: 'Устройства в условии' });
 
