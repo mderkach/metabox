@@ -13,6 +13,34 @@ make dev-mock
 
 `pnpm install` installs the dependencies and the git hooks. `make dev-mock` starts the Vite dev server on mock data: the panel works without a router, a daemon or sing-box. Open the address Vite prints.
 
+## Shared agent harness
+
+Rules and requirements are shared across clients: root and project `AGENTS.md` files, `docs/PRD.md` and project guides. Portable skills live in `.agents/skills/`; `.claude/skills/` contains links to shared skills and workflows that require Claude. `CLAUDE.md` imports the adjacent `AGENTS.md`, while Codex reads it directly.
+
+For frontend work, use the condition table in [`apps/web/AGENTS.md`](../apps/web/AGENTS.md), which routes to the design system and relevant guides. Lint-rule tests run in the Node `tooling` project; ordinary `pnpm --filter web test` already includes it. For work on those rules alone, run `pnpm --filter web exec vitest run --project tooling`.
+
+After updating a branch, check ADR number uniqueness, skill link resolution and MCP launch settings in both adapters. Permissions, authentication and hooks remain client-specific; matching MCP declarations do not prove server connectivity. Plugin installation and personal configuration changes are outside the shared harness.
+
+## Codex
+
+Open the repository or its worktree in Codex, or run `codex` from its root. Codex reads the root and project `AGENTS.md` files directly. Trust the project to load [`.codex/config.toml`](../.codex/config.toml); personal model and plugin choices remain in your user configuration.
+
+The project config registers the same development MCP servers as [`.mcp.json`](../.mcp.json): Playwright, Context7 and Chrome DevTools. It preserves their existing launch arguments, including the unpinned Chrome DevTools `@latest` tag. Node.js and `npx` must be available. Chrome DevTools expects a browser with remote debugging already listening on `127.0.0.1:9222`.
+
+Provide `CONTEXT7_API_KEY` through the environment of the Codex process, using a local secret manager or an interactive shell before launching `codex`. For the desktop app, the variable must be available to the app process; a terminal export does not update an already running app. Codex does not read Claude's `settings.local.json`. Never put the key in a committed file.
+
+From the repository root, check that Codex discovers the servers:
+
+```sh
+codex mcp list
+```
+
+This checks registration, not connectivity. In a fresh chat, call a read-only tool from each server and check that `create-adr` and `vercel-react-view-transitions` appear in the skills list. The [ADR skill](../.agents/skills/create-adr/SKILL.md) lives in the shared directory; Claude links to it so the procedure and reference stay in one place.
+
+Codex defaults to `workspace-write` with approvals on request. Claude's command allowlist and per-tool file denials do not transfer to Codex: this config does not enforce equivalent secret-file read denials or generated-file edit denials. Follow [the repository rules](../AGENTS.md), keep credentials outside the worktree and use the generators for generated files. Existing Git hooks still check staged changes. Managed permission policies and explicit client overrides can further constrain access.
+
+Claude's OMC session hook and wiki require its own plugin runtime. They are not installed by this config. OMX is optional user tooling, and its CLI/tmux workflows require that runtime; the project setup also works with native Codex tools. Personal `AGENTS.local.md` is not loaded automatically by Codex; use a user-level instruction or explicitly ask Codex to read it. Configuration and discovery details: [Codex configuration](https://learn.chatgpt.com/docs/config-file/config-basic), [MCP](https://learn.chatgpt.com/docs/extend/mcp?surface=cli) and [skills](https://learn.chatgpt.com/docs/build-skills).
+
 ## Repository layout
 
 A monorepo. Each project keeps its code, manifest, rules (`AGENTS.md`) and guides in its own folder. The [`Makefile`](../Makefile) ties the build together; the JS packages are a pnpm workspace.
