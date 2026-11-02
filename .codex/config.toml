@@ -1,0 +1,14 @@
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+
+[mcp_servers.playwright]
+command = "npx"
+args = ["-y", "@playwright/mcp@0.0.80", "--no-sandbox"]
+
+[mcp_servers.context7]
+url = "https://mcp.context7.com/mcp"
+env_http_headers = { Authorization = "CONTEXT7_API_KEY" }
+
+[mcp_servers.chrome-devtools]
+command = "npx"
+args = ["-y", "chrome-devtools-mcp@latest", "--browser-url", "http://127.0.0.1:9222"]

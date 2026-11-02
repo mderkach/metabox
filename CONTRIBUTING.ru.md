@@ -67,7 +67,7 @@ build(deps): bump oxlint to 1.80.0
 | `ci`     | `.github/`                                                                                                  |
 | `infra`  | `.devcontainer/`, `Makefile`                                                                                |
 | `deps`   | обновление зависимостей и версий тулчейна                                                                   |
-| `ai`     | `.claude/`, инструкции и скиллы агентов                                                                     |
+| `ai`     | `.claude/`, `.codex/`, `.agents/`, инструкции и скиллы агентов                                              |
 
 Тот же список — в `scope-enum` файла `commitlint.config.mjs`.
 

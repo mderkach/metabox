@@ -4,7 +4,7 @@ This directory holds ADRs: records of significant technical and infrastructure d
 
 Requirements live in [`../PRD.md`](../PRD.md). Appendix A of the PRD holds decisions made before ADRs were introduced: it is closed to new entries, and all its sections moved here. The appendix keeps the headings with links, so old references to A.\* lead to the new place.
 
-ADRs are created and updated with the `create-adr` skill. The template, statuses and quality checklist are in `.claude/skills/create-adr/ADR-reference.md`.
+ADRs are created and updated with the `create-adr` skill. The template, statuses and quality checklist are in [the shared ADR reference](../../.agents/skills/create-adr/ADR-reference.md).
 
 The `Accepted` status is set by the repository owner, not by an agent.
 
@@ -80,3 +80,7 @@ The `Accepted` status is set by the repository owner, not by an agent.
 | [0067](./ADR-0067-test-http-apply-on-the-disposable-ci-bench.md)                             | Test HTTP Apply on the disposable CI bench                                                                                         | Proposed |
 | [0068](./ADR-0068-persist-the-verified-release-bundle-before-publication.md)                 | Persist the verified release bundle before publication                                                                             | Proposed |
 | [0069](./ADR-0069-manage-only-the-metabox-singbox-service.md)                                | Manage only the metabox-singbox service                                                                                            | Proposed |
+| [0070](./ADR-0070-name-route-rules-with-a-line-comment-above-the-rule.md)                    | Name route rules with a line comment above the rule                                                                                | Proposed |
+| [0071](./ADR-0071-keep-version-history-readable-when-current-lists-are-unavailable.md)       | Keep version history readable when current lists are unavailable                                                                   | Proposed |
+| [0072](./ADR-0072-test-lint-rules-with-oxlint-in-a-vitest-node-project.md)                   | Test lint rules with oxlint in a Vitest Node project                                                                               | Proposed |
+| [0073](./ADR-0073-share-agent-skills-and-keep-native-client-adapters.md)                     | Share agent skills and keep native client adapters                                                                                 | Proposed |

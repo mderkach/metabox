@@ -18,7 +18,7 @@ Each project owns its folder: code, manifest, `AGENTS.md` and guides. A project'
 
 ## Rule sources and their priority
 
-The canonical sources are this file, the projects' `AGENTS.md`, `docs/PRD.md` and the project guides. `CLAUDE.md`, `.claude/*`, `.cursor/*` and files of other AI products are **adapters only**: tool settings, access permissions, entry points. Do not put separate development rules in them and do not duplicate the text of the canonical sources.
+The canonical sources are this file, the projects' `AGENTS.md`, `docs/PRD.md` and the project guides. `CLAUDE.md`, `.claude/*`, `.codex/*`, `.cursor/*` and files of other AI products are **adapters only**: tool settings, access permissions, entry points. Do not put separate development rules in them and do not duplicate the text of the canonical sources.
 
 On conflict, apply in this order:
 
@@ -27,7 +27,7 @@ On conflict, apply in this order:
 3. `docs/PRD.md`, then `AGENTS.md` (the project one before the root one), then the project guides.
 4. Personal agent settings and external plugins, only where they do not weaken the repository rules.
 
-The oh-my-claudecode plugin from `.claude/CLAUDE.md` (subagents, memory, its own commit format, skills) applies only if it does not contradict the canonical sources and its runtime is deployed in the current session. It does not override PRD requirements, and subagents do not replace solving the task directly.
+Client-specific plugins and orchestration adapters apply only when their runtime is available and they do not contradict the canonical sources. Keep their setup in the client adapter; they do not override PRD requirements.
 
 ## Order of studying the project
 
@@ -49,7 +49,7 @@ One fact, one home; everywhere else, a link. The layer is chosen by the cost of 
 | Rule      | this file and the projects' `AGENTS.md`                              | always in context                | a standing requirement for the repository or a part of it           |
 | Document  | guides in each project's `docs/`                                     | by condition from the table      | large topical rules                                                 |
 | Decision  | `docs/adr/*`; requirements and decisions already made: `docs/PRD.md` | by link                          | why the system is built this way, which options were rejected       |
-| Procedure | `.claude/skills/*`                                                   | by trigger                       | a repeatable scenario that is not always needed                     |
+| Procedure | `.agents/skills/*`; client-specific skills in `.claude/skills/*`     | by trigger                       | a repeatable scenario that is not always needed                     |
 
 TSDoc and godoc do not retell the implementation line by line, only what the signature does not show.
 
@@ -83,15 +83,15 @@ Message format, scopes, branches and PRs: [`CONTRIBUTING.md`](./CONTRIBUTING.md)
 
 ## General
 
-- When working with libraries, frameworks and their APIs, use the Context7 MCP. The server is declared in `.mcp.json`; the key comes from the `CONTEXT7_API_KEY` variable. Get your own at context7.com and put it in `.claude/settings.local.json` (the file is in `.gitignore`):
+- When working with libraries, frameworks and their APIs, use the Context7 MCP. The server is declared in `.mcp.json` for Claude Code and `.codex/config.toml` for Codex; the key comes from the `CONTEXT7_API_KEY` variable. For Codex, export it in the environment before starting the client (see [Development](./docs/Development.md#codex)). For Claude Code, get your own at context7.com and put it in `.claude/settings.local.json` (the file is in `.gitignore`):
 
   ```json
   { "env": { "CONTEXT7_API_KEY": "your-key" } }
   ```
 
-  Do not write the key into `.mcp.json` itself: that file is committed.
+  Do not write the key into either committed MCP config.
 
-- Other MCP servers from `.mcp.json`:
+- Other MCP servers from these configs:
 
   | Server            | Purpose                                                           |
   | ----------------- | ----------------------------------------------------------------- |
@@ -107,7 +107,7 @@ Message format, scopes, branches and PRs: [`CONTRIBUTING.md`](./CONTRIBUTING.md)
 
 ## Context hygiene
 
-- Development rules live only in `AGENTS.md`. `.claude/*`, `.cursor/*`, `.vscode/*` hold tool settings only: permissions, MCP, formatting, entry points.
+- Development rules live only in `AGENTS.md`. `.claude/*`, `.codex/*`, `.cursor/*`, `.vscode/*` hold tool settings only: permissions, MCP, formatting, entry points.
 - Do not copy repository rules into the agent's global user instructions, or the other way round.
-- Do not duplicate the same list of paths in several configs without need: permissions are currently set in one place, `.claude/settings.json`.
+- Do not duplicate the same list of paths in several configs without need. Claude tool permissions live in `.claude/settings.json`; Codex uses its own sandbox settings in `.codex/config.toml`. Their enforcement differs; see [Development](./docs/Development.md#codex).
 - Connect external plugins only when their features are actually needed; do not describe their behaviour in the canonical sources.
