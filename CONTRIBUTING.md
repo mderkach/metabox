@@ -67,7 +67,7 @@ Bad: `update code`, `fix bug`, `wip`, `review fixes`, `chore: misc`.
 | `ci`     | `.github/`                                                                                                  |
 | `infra`  | `.devcontainer/`, `Makefile`                                                                                |
 | `deps`   | dependency and toolchain version updates                                                                    |
-| `ai`     | `.claude/`, agent instructions and skills                                                                   |
+| `ai`     | `.claude/`, `.codex/`, `.agents/`, agent instructions and skills                                            |
 
 The same list is in `scope-enum` of `commitlint.config.mjs`.
 

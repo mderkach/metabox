@@ -100,9 +100,9 @@ Consequences describe the result of the decision; they do not repeat its wording
 
 Optional, for significant risks:
 
-| Risk   | Likelihood and impact | Mitigation                           |
-| ------ | --------------------- | ------------------------------------ |
-| <risk> | <estimate>            | <how we prevent or detect it>        |
+| Risk   | Likelihood and impact | Mitigation                    |
+| ------ | --------------------- | ----------------------------- |
+| <risk> | <estimate>            | <how we prevent or detect it> |
 
 ## Compatibility, migration and rollback
 
