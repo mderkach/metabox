@@ -19,6 +19,13 @@ const AS_TEXT: AxiosRequestConfig = { responseType: 'text', transformResponse: K
  */
 const SEND_TEXT = { 'Content-Type': 'application/json' } as const;
 
+/**
+ * With a JSON type axios passes a string through `JSON.parse`: a config with
+ * comments or a trailing comma fails it and goes out as a quoted string, a valid
+ * one goes out trimmed.
+ */
+const SEND_RAW: AxiosRequestConfig = { transformRequest: KEEP_RAW };
+
 export interface ConfigFile {
   /** File bytes as is. */
   text: string;
@@ -92,6 +99,7 @@ export async function applyConfig({ text, base, lists }: ApplyDraft): Promise<Ap
 
   if (lists === undefined || (Object.keys(lists.put).length === 0 && lists.remove.length === 0)) {
     return ApiClientInstance.post<ApplyTransactionWire, string>(DAEMON_ENDPOINT.apply(), text, {
+      ...SEND_RAW,
       headers: { ...SEND_TEXT, ...match },
     });
   }

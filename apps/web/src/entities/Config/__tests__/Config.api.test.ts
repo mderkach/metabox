@@ -43,6 +43,15 @@ describe('applyConfig', () => {
     expect(captured.current()?.ifMatch).toBe('abc');
   });
 
+  it('a config with comments and a trailing comma goes out byte for byte', async () => {
+    const captured = captureApply();
+    const text = '{\n  // log\n  "log": {},\n}\n';
+
+    await applyConfig({ text, base: null });
+
+    expect(captured.current()?.body).toBe(text);
+  });
+
   it('with files an envelope with its own type goes out', async () => {
     const captured = captureApply();
 
