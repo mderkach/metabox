@@ -1,4 +1,3 @@
-import { Link } from '@tanstack/react-router';
 import { Pencil } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -6,9 +5,11 @@ import { useTranslation } from 'react-i18next';
 import { RULE_SET_TYPE, type RuleSetRow as RuleSetRowModel } from '@entities/RuleSet';
 import { Badge, Button, Separator } from '@shared/ui';
 
+import { isEditable } from '../model/RuleSetTable.model';
 import { RULE_SET_COLUMN } from './RuleSetColumns';
 import { formatUpdateInterval } from './RuleSetInterval';
 import { RuleSetRemove } from './RuleSetRemove';
+import { RuleSetUsageMark } from './RuleSetUsageMark';
 
 /**
  * Rule set row.
@@ -81,7 +82,7 @@ function RuleSetRowProto({
       </span>
 
       <span role='cell' className={RULE_SET_COLUMN.Usage}>
-        <UsageMark tag={set.tag} usedBy={set.usedBy} />
+        <RuleSetUsageMark tag={set.tag} usedBy={set.usedBy} />
       </span>
       <span role='cell' className={RULE_SET_COLUMN.RowActions}>
         <Separator orientation='vertical' className='h-5' />
@@ -108,52 +109,6 @@ function RuleSetRowProto({
         />
       </span>
     </div>
-  );
-}
-
-/**
- * Only `remote` that the schema accepted and with a string tag is edited by the form: the
- * other kinds have different fields, and the form would lose an unfamiliar field.
- */
-function isEditable(set: RuleSetRowModel): boolean {
-  return set.type === RULE_SET_TYPE.Remote && set.recognized && set.tag !== '';
-}
-
-/**
- * How many rules use the rule set. Zero is not an error or an alarm: the rule set
- * is fine, it just affects nothing — so it is marked with an outline, not
- * the failure tone, and color is not a sign here at all.
- *
- * The mark leads to the screen of rules filtered by this rule set: attaching a rule set and
- * referencing it from a rule are two different screens, and the next step after
- * attaching starts here. A rule set without a name has no link — a rule cannot
- * reference it.
- */
-function UsageMark({ tag, usedBy }: { tag: string; usedBy: number }) {
-  const { t } = useTranslation('widgets/RuleSet/RuleSetTable');
-
-  const mark =
-    usedBy === 0 ? (
-      <Badge variant='outline' className='border-dashed text-muted-foreground'>
-        {t('row.unused')}
-      </Badge>
-    ) : (
-      <span className='text-xs text-muted-foreground tabular-nums'>{t('row.usedBy', { count: usedBy })}</span>
-    );
-
-  if (tag === '') {
-    return mark;
-  }
-
-  return (
-    <Link
-      to='/config'
-      search={{ rule_set: tag }}
-      title={t('row.rules', { tag })}
-      className='rounded-sm underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none'
-    >
-      {mark}
-    </Link>
   );
 }
 

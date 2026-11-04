@@ -54,10 +54,25 @@ describe('useLogStream', () => {
     vi.restoreAllMocks();
   });
 
-  it('on a hidden tab closes the stream and opens it when the tab is visible again', () => {
+  it('does not open a stream until an initially hidden tab becomes visible', () => {
     const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
 
     renderStream();
+    wait(STREAM_RECONNECT.MaxDelay);
+    expect(FakeLogSource.opened).toHaveLength(0);
+
+    hidden.mockReturnValue(false);
+    act(() => {
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    expect(FakeLogSource.opened).toHaveLength(1);
+  });
+
+  it('on a hidden tab closes the stream and opens it when the tab is visible again', () => {
+    const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(false);
+
+    renderStream();
+    hidden.mockReturnValue(true);
     act(() => {
       document.dispatchEvent(new Event('visibilitychange'));
     });

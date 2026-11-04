@@ -1,21 +1,9 @@
-import type { ParseKeys } from 'i18next';
 import { useTranslation } from 'react-i18next';
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/ui';
 
-import { REFRESH_INTERVAL, type RefreshInterval } from '../lib';
-
-const REFRESH_OPTIONS = [
-  { interval: REFRESH_INTERVAL.Live, label: 'refresh.live' },
-  { interval: REFRESH_INTERVAL.Slow, label: 'refresh.slow' },
-  { interval: REFRESH_INTERVAL.Slower, label: 'refresh.slower' },
-] as const satisfies readonly { interval: RefreshInterval; label: ParseKeys<'widgets/ConnectionTable'> }[];
-
-function toInterval(value: string | null): RefreshInterval {
-  const option = REFRESH_OPTIONS.find((entry) => String(entry.interval) === value);
-
-  return option === undefined ? REFRESH_INTERVAL.Live : option.interval;
-}
+import { type RefreshInterval } from '../lib';
+import { toInterval, REFRESH_OPTIONS } from '../lib/ConnectionTable.interval';
 
 /**
  * Refresh rate of the shown rows. View control, so it stands next to

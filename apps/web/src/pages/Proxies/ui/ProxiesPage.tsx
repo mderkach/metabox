@@ -67,6 +67,10 @@ export function ProxiesPage() {
         {/* Subscriptions are a source of nodes, not one more group of them: a separate section
             with its own title, not a card in the shared stack. The card has no
             header of its own: the section already has the title, and repeating it is pointless. */}
+        {providers.isPending && <SkeletonRows className={SURFACE} />}
+
+        {providers.isLoadingError && <QueryFailure messageKey='source.providers' query={providers} />}
+
         {subscriptions.length > 0 && (
           <ProxiesSection title={t('providers.title')}>
             <Card className={CARD_FLUSH}>

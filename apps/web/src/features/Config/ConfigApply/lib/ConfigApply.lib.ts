@@ -2,6 +2,10 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef } from 'react';
 
 import {
+  selectConfigCurrent,
+  selectConfigDirty,
+  selectConfigStale,
+  selectListChanges,
   CONFIG_QUERY,
   CONFIG_SECTION,
   ConfigDocumentState,
@@ -13,9 +17,6 @@ import {
   toCheckFailure,
   toWorkdirMismatch,
   useApplyTransaction,
-  useConfigDirty,
-  useConfigStale,
-  useConfigText,
   useListChanges,
   type CheckFailure,
   type ConfigChange,
@@ -36,6 +37,7 @@ import { ROUTE_QUERY } from '@entities/Route';
 import { toRuleChanges, toRuleRowsFromNodes, type RuleChange, type RuleRow } from '@entities/Rule';
 import { API_FAILURE, ApiError } from '@shared/api';
 import { failureLine, firstJsoncError } from '@shared/lib/jsonc';
+import { useStore } from '@shared/lib/state';
 
 import { useApplyConfig, useConfirmApply } from '../api/ConfigApply.api';
 import { ConfigApplyStore, type SubmittedApply } from '../model/ConfigApply.store';
@@ -92,7 +94,8 @@ function useDocumentRefresh(transaction: ApplyTransaction | null) {
 
 function settleDraft({ text, lists }: SubmittedApply) {
   const document = ConfigDocumentStore.getState();
-  const unchanged = document.current() === text && JSON.stringify(document.listChanges()) === JSON.stringify(lists);
+  const unchanged =
+    selectConfigCurrent(document) === text && JSON.stringify(selectListChanges(document)) === JSON.stringify(lists);
 
   if (unchanged) {
     document.discard();
@@ -140,13 +143,15 @@ export interface ConfigApplyState {
  */
 export function useConfigApply(): ConfigApplyState {
   const status = useDaemonStatus();
-  const text = useConfigText();
-  const base = ConfigDocumentState.use.appliedEtag();
-  const listsBase = ConfigDocumentState.use.listsEtag();
+  const { text, base, listsBase, isDirty, isStale, discard } = useStore(ConfigDocumentStore, (state) => ({
+    text: selectConfigCurrent(state),
+    base: state.appliedEtag,
+    listsBase: state.listsEtag,
+    isDirty: selectConfigDirty(state),
+    isStale: selectConfigStale(state),
+    discard: state.discard,
+  }));
   const lists = useListChanges();
-  const isDirty = useConfigDirty();
-  const isStale = useConfigStale();
-  const discard = ConfigDocumentState.use.discard();
   const start = useApplyConfig();
   const confirm = useConfirmApply();
 

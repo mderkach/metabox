@@ -10,7 +10,7 @@ import {
   findValue,
   isNodeRecognized,
   NODE_REGISTRY,
-  useConfigText,
+  useConfigCurrent,
   type NodeRegistry,
 } from '@entities/Config';
 
@@ -44,7 +44,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 /** The node is read from the store as on the screen: the form sees every text edit. */
 function NodeFromStore({ registry, path }: { registry: NodeRegistry; path: JSONPath }) {
-  const text = useConfigText();
+  const text = useConfigCurrent();
   const node = useMemo(() => (text === null ? undefined : findValue(text, path)), [text, path]);
 
   return isRecord(node) ? <ConfigNodeForm registry={registry} path={path} node={node} /> : null;

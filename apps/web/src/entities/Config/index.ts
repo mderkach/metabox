@@ -82,14 +82,7 @@ export type { NodeRegistry } from './model/Config.registry';
 export type { UnbuiltNode, UnbuiltOption } from './model/Config.build';
 export { useConfigDocument } from './model/Config.document';
 export type { ConfigDocumentView } from './model/Config.document';
-export {
-  ConfigDocumentState,
-  ConfigDocumentStore,
-  useConfigDiff,
-  useConfigDirty,
-  useConfigLeaveGuard,
-  useConfigStale,
-  useConfigText,
-  useListChanges,
-} from './model/Config.store';
-export type { ListChanges } from './model/Config.store';
+export { ConfigDocumentState, ConfigDocumentStore } from './model/Config.store';
+export { selectConfigCurrent, selectConfigDirty, selectConfigStale, selectListChanges } from './model/Config.selectors';
+export type { ListChanges } from './model/Config.selectors';
+export { useConfigCurrent, useConfigDiff, useConfigDirty, useConfigStale, useListChanges } from './model/Config.hooks';

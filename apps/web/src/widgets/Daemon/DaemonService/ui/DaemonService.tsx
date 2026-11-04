@@ -3,8 +3,9 @@ import { useTranslation } from 'react-i18next';
 
 import { useServiceState, type SystemProcess } from '@entities/Daemon';
 import { formatBytes } from '@shared/lib/format';
-import { cn } from '@shared/lib/utils';
 import { CARD_TITLE, Card, CardContent, CardHeader } from '@shared/ui';
+
+import { DaemonServiceRow } from './DaemonServiceRow';
 
 /**
  * sing-box process readings: binary, memory and its history. The state and
@@ -41,24 +42,18 @@ export function DaemonService({
 
       <CardContent className='flex flex-col gap-3'>
         <dl className='text-sm'>
-          <Row label={t('row.binary')} value={service.data.binary} mono />
+          <DaemonServiceRow label={t('row.binary')} value={service.data.binary} mono />
           {process !== undefined && (
-            <Row label={t('row.processMemory')} value={`${formatBytes(process.rss)} · pid ${String(process.pid)}`} />
+            <DaemonServiceRow
+              label={t('row.processMemory')}
+              value={`${formatBytes(process.rss)} · pid ${String(process.pid)}`}
+            />
           )}
-          {heap > 0 && <Row label={t('row.goMemory')} value={formatBytes(heap)} />}
+          {heap > 0 && <DaemonServiceRow label={t('row.goMemory')} value={formatBytes(heap)} />}
         </dl>
 
         {memoryTrend}
       </CardContent>
     </Card>
-  );
-}
-
-function Row({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
-  return (
-    <div className='flex items-center justify-between gap-4 border-t border-border py-2 first:border-t-0'>
-      <dt className='text-muted-foreground'>{label}</dt>
-      <dd className={cn('min-w-0 truncate', mono && 'font-mono text-xs')}>{value}</dd>
-    </div>
   );
 }

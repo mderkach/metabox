@@ -28,7 +28,7 @@ function toMatchers(rule: object): RuleMatcher[] {
       continue;
     }
 
-    matchers.push({ key, values: toValues(raw) });
+    matchers.push({ key, values: toValues(raw), ...(typeof raw === 'boolean' ? { flag: raw } : {}) });
   }
 
   return matchers;

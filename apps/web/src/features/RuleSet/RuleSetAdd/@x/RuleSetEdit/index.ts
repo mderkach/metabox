@@ -3,4 +3,6 @@
 export { CUSTOM_PROVIDER } from '../../model/RuleSetAdd.constants';
 export { makeRuleSetAddSchema, RuleSetAddSchema } from '../../model/RuleSetAdd.schema';
 export type { RuleSetAddModel } from '../../model/RuleSetAdd.schema';
-export { ExtraFields, FormatField, TagField } from '../../ui/RuleSetAddForm';
+export { RuleSetAddExtraFields as ExtraFields } from '../../ui/RuleSetAddExtraFields';
+export { RuleSetAddFormatField as FormatField } from '../../ui/RuleSetAddFormatField';
+export { RuleSetAddTagField as TagField } from '../../ui/RuleSetAddTagField';

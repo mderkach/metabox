@@ -13,6 +13,8 @@ export interface RuleCaption {
   condition: string | null;
   /** Values of the same condition beyond the first one. */
   more: number;
+  /** Boolean matcher value, kept separately from display text. */
+  flag?: boolean;
 }
 
 const SOURCE_MATCHER = 'source_ip_cidr';
@@ -83,5 +85,5 @@ export function toRuleCaption(
 
   return main === undefined
     ? { key: null, condition: null, more: 0 }
-    : { key: main.key, condition: main.values[0], more: main.values.length - 1 };
+    : { key: main.key, condition: main.values[0], more: main.values.length - 1, flag: main.flag };
 }

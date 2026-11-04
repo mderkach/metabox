@@ -4,60 +4,10 @@ import { useTranslation } from 'react-i18next';
 import type { ConnectionRow as ConnectionRowModel } from '@entities/Connection';
 import { cn } from '@shared/lib/utils';
 
+import { toCardLines } from '../lib/ConnectionTable.card';
 import { CELL } from './ConnectionCells';
-import { CONNECTION_FIELD, type ConnectionCell, type ConnectionField } from './ConnectionColumns';
+import { type ConnectionCell } from './ConnectionColumns';
 import { ConnectionRowActions } from './ConnectionRowActions';
-
-const CARD_PLACE = {
-  Title: 'title',
-  Route: 'route',
-  Chain: 'chain',
-  Origin: 'origin',
-  Traffic: 'traffic',
-} as const;
-
-type CardPlace = (typeof CARD_PLACE)[keyof typeof CARD_PLACE];
-
-/**
- * Field place in the card. An entry is required for every field: a column without
- * a card place fails to build instead of silently vanishing on a narrow screen.
- */
-const FIELD_PLACE: Readonly<Record<ConnectionField, CardPlace>> = {
-  [CONNECTION_FIELD.Source]: CARD_PLACE.Origin,
-  [CONNECTION_FIELD.Host]: CARD_PLACE.Title,
-  [CONNECTION_FIELD.Network]: CARD_PLACE.Origin,
-  [CONNECTION_FIELD.Rule]: CARD_PLACE.Route,
-  [CONNECTION_FIELD.Action]: CARD_PLACE.Route,
-  [CONNECTION_FIELD.Chain]: CARD_PLACE.Chain,
-  [CONNECTION_FIELD.Rate]: CARD_PLACE.Traffic,
-  [CONNECTION_FIELD.Volume]: CARD_PLACE.Traffic,
-  [CONNECTION_FIELD.Age]: CARD_PLACE.Origin,
-};
-
-/** Rows under the header top to bottom and the sign between values of one row. */
-const CARD_LINES: readonly { place: CardPlace; separator: string }[] = [
-  { place: CARD_PLACE.Route, separator: '→' },
-  { place: CARD_PLACE.Chain, separator: '' },
-  { place: CARD_PLACE.Origin, separator: '·' },
-];
-
-interface CardLine {
-  place: CardPlace;
-  separator: string;
-  cells: readonly ConnectionCell[];
-}
-
-function toCardLines(cells: readonly ConnectionCell[]): { lines: CardLine[]; traffic: ConnectionCell[] } {
-  const lines = CARD_LINES.map((line) => ({
-    ...line,
-    cells: cells.filter(({ id }) => FIELD_PLACE[id] === line.place),
-  }));
-
-  return {
-    lines: lines.filter((line) => line.cells.length > 0),
-    traffic: cells.filter(({ id }) => FIELD_PLACE[id] === CARD_PLACE.Traffic),
-  };
-}
 
 /**
  * A connection as a narrow-screen card.

@@ -1,26 +1,16 @@
 import { Link } from '@tanstack/react-router';
-import type { ParseKeys, TFunction } from 'i18next';
 import { Trans, useTranslation } from 'react-i18next';
 
 import { toActionText, toRuleText } from '@entities/Connection';
-import {
-  ROUTE_MATCH,
-  type RouteExplanation as RouteExplanationModel,
-  type RouteMatch,
-  type RouteReasonCode,
-} from '@entities/Route';
+import { ROUTE_MATCH, type RouteExplanation as RouteExplanationModel } from '@entities/Route';
 import { isNamedRuleAction, isNamedRuleMatcher } from '@entities/Rule';
 import { cn } from '@shared/lib/utils';
 import { buttonVariants } from '@shared/ui';
 
+import { unknownReason } from '../lib/RouteExplanation.reason';
 import { RouteExplanationRow } from './RouteExplanationRow';
 import { RouteExplanationUnknown } from './RouteExplanationUnknown';
 import { RouteOriginBadge } from './RouteOriginBadge';
-
-/** The table must cover the daemon's set: a new code is a compile error here. */
-const REASON_KEY: Readonly<Record<RouteReasonCode, ParseKeys<'widgets/RouteExplanation'>>> = {
-  not_in_process_list: 'unknown.reason.not_in_process_list',
-};
 
 /**
  * The rule sing-box reported. On a config drift its number would point to
@@ -96,13 +86,4 @@ export function RouteExplanationMatched({
       )}
     </section>
   );
-}
-
-/** Text from the response is used only for an unfamiliar code: it is in the daemon's language. */
-function unknownReason(t: TFunction<'widgets/RouteExplanation'>, match: RouteMatch): string {
-  if (match.reasonCode !== null) {
-    return t(REASON_KEY[match.reasonCode]);
-  }
-
-  return match.reason.length > 0 ? match.reason : t('unknown.missing');
 }

@@ -2,12 +2,17 @@ import { Plus } from 'lucide-react';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { ConfigDocumentState, ConfigDocumentStore, readRuleSets, ruleSetNodePath } from '@entities/Config';
+import {
+  selectConfigCurrent,
+  ConfigDocumentState,
+  ConfigDocumentStore,
+  readRuleSets,
+  ruleSetNodePath,
+} from '@entities/Config';
 import { localListFile } from '@entities/RuleSet';
 import { ConfigCacheNotice } from '@features/Config/ConfigCacheFile';
 import { RuleSetAddForm } from '@features/RuleSet/RuleSetAdd';
 import { RuleSetCustomForm } from '@features/RuleSet/RuleSetCustom';
-import { RuleSetEditForm } from '@features/RuleSet/RuleSetEdit';
 import { showQueryError } from '@shared/api';
 import { usePanelAsSheet } from '@shared/lib/media';
 import { SHORTCUT } from '@shared/lib/shortcuts';
@@ -19,7 +24,6 @@ import {
   EmptyHeader,
   EmptyTitle,
   QueryFailure,
-  SearchInput,
   ShortcutKbd,
   SidePanelLayout,
   SURFACE,
@@ -28,15 +32,10 @@ import {
 import { RuleSetPanel, RuleSetPanelSheet } from '@widgets/RuleSet/RuleSetPanel';
 import { RuleSetTable } from '@widgets/RuleSet/RuleSetTable';
 
-import {
-  RULE_SET_FORM,
-  useRuleSetEditor,
-  useRuleSetFilter,
-  useRuleSetPanel,
-  type RuleSetEditorState,
-  type RuleSetFilterState,
-  type RuleSetForm,
-} from '../lib/RuleSets.lib';
+import { RULE_SET_FORM, useRuleSetEditor, useRuleSetFilter, useRuleSetPanel } from '../lib/RuleSets.lib';
+import { RuleSetsEmptyState } from './RuleSetsEmptyState';
+import { RuleSetsPanelForm } from './RuleSetsPanelForm';
+import { RuleSetsSearch } from './RuleSetsSearch';
 
 /**
  * Rule sets: what is attached and what to add to it.
@@ -60,7 +59,7 @@ export function RuleSetsPage() {
     (index: number) => {
       // The file of its own list goes away with the node: an orphaned file is not visible
       // in the config but stays on the device.
-      const file = localListFile(readRuleSets(ConfigDocumentStore.getState().current() ?? '')[index]);
+      const file = localListFile(readRuleSets(selectConfigCurrent(ConfigDocumentStore.getState()) ?? '')[index]);
 
       if (!remove(ruleSetNodePath(index))) {
         showQueryError({ showError: true, errorMessageKey: 'toast.config.edit.failed' }, null);
@@ -88,9 +87,6 @@ export function RuleSetsPage() {
     [RULE_SET_FORM.Custom]: t('custom.title'),
     [RULE_SET_FORM.Edit]: t('edit.title', { tag: editedTag }),
   }[panel.shown];
-  const panelForm = (
-    <RuleSetPanelForm editor={editor} form={panel.shown} editing={panel.editing} onDone={panel.close} />
-  );
 
   return (
     <div className='flex min-h-0 grow flex-col gap-4 overflow-y-auto px-4 py-5 sm:px-6'>
@@ -149,8 +145,8 @@ export function RuleSetsPage() {
               total={editor.sets.length}
               onEdit={panel.edit}
               onRemove={onRemove}
-              search={<RuleSetSearch filter={filter} />}
-              empty={<EmptyState onReset={filter.reset} />}
+              search={<RuleSetsSearch filter={filter} />}
+              empty={<RuleSetsEmptyState onReset={filter.reset} />}
               actions={
                 <>
                   <Button
@@ -185,7 +181,7 @@ export function RuleSetsPage() {
           <SidePanelLayout.Panel>
             {panel.form !== null && (
               <RuleSetPanel key={`${panel.form}:${String(panel.editing)}`} title={panelTitle} onClose={panel.close}>
-                {panelForm}
+                <RuleSetsPanelForm editor={editor} form={panel.shown} editing={panel.editing} onDone={panel.close} />
               </RuleSetPanel>
             )}
           </SidePanelLayout.Panel>
@@ -195,85 +191,9 @@ export function RuleSetsPage() {
       {/* Below lg there is no room for the panel beside the list: there it opens as a sheet. */}
       {asSheet && (
         <RuleSetPanelSheet open={listed && panel.form !== null} title={panelTitle} onClose={panel.close}>
-          {panelForm}
+          <RuleSetsPanelForm editor={editor} form={panel.shown} editing={panel.editing} onDone={panel.close} />
         </RuleSetPanelSheet>
       )}
     </div>
-  );
-}
-
-/** Form open in the rule set panel. */
-function RuleSetPanelForm({
-  editor,
-  form,
-  editing,
-  onDone,
-}: {
-  editor: RuleSetEditorState;
-  form: RuleSetForm;
-  editing: number | null;
-  onDone: () => void;
-}) {
-  if (form === RULE_SET_FORM.Custom) {
-    return <RuleSetCustomForm takenTags={editor.takenTags} onDone={onDone} />;
-  }
-
-  if (form === RULE_SET_FORM.Catalog) {
-    return (
-      <RuleSetAddForm
-        catalog={editor.catalog}
-        takenTags={editor.takenTags}
-        outbounds={editor.outbounds}
-        onDone={onDone}
-      />
-    );
-  }
-
-  const node: unknown = editing === null ? undefined : editor.nodes[editing];
-
-  if (editing === null || typeof node !== 'object' || node === null) {
-    return null;
-  }
-
-  return (
-    <RuleSetEditForm
-      key={editing}
-      index={editing}
-      node={{ ...node }}
-      takenTags={editor.takenTags}
-      outbounds={editor.outbounds}
-      onDone={onDone}
-    />
-  );
-}
-
-/** Search: left edge of the table toolbar. */
-function RuleSetSearch({ filter }: { filter: RuleSetFilterState }) {
-  const { t } = useTranslation('pages/RuleSets');
-
-  return (
-    <SearchInput
-      value={filter.query}
-      onValueChange={filter.setQuery}
-      placeholder={t('search.placeholder')}
-      aria-label={t('search.label')}
-    />
-  );
-}
-
-function EmptyState({ onReset }: { onReset: () => void }) {
-  const { t } = useTranslation('pages/RuleSets');
-
-  return (
-    <Empty>
-      <EmptyHeader>
-        <EmptyTitle>{t('list.notFound', { ns: 'shared' })}</EmptyTitle>
-      </EmptyHeader>
-      <EmptyContent>
-        <Button variant='outline' size='sm' onClick={onReset}>
-          {t('list.resetFilter', { ns: 'shared' })}
-        </Button>
-      </EmptyContent>
-    </Empty>
   );
 }

@@ -26,19 +26,41 @@ export * from './shadcn/textarea';
 export * from './shadcn/toggle';
 export * from './shadcn/toggle-group';
 export * from './shadcn/tooltip';
-export * from './Autocomplete';
-export * from './ConfirmDialog';
-export * from './DialogCloseButton';
-export * from './FacetFilter';
-export * from './JsonTextarea';
-export * from './LiveRegion';
-export * from './Plot';
-export * from './QueryFailure';
-export * from './SearchInput';
-export * from './ShortcutKbd';
+export { Autocomplete } from './Autocomplete';
+export { ConfirmDialog } from './ConfirmDialog';
+export { DialogCloseButton } from './DialogCloseButton';
+export { FacetFilter } from './FacetFilter';
+export type { FacetValue, FacetText } from './FacetFilter';
+export { JsonTextarea } from './JsonTextarea';
+export type { JsonTextareaHandle } from './JsonTextarea';
+export { LiveRegion } from './LiveRegion';
+export { Plot } from './Plot';
+export type { PlotOptions, PlotData, PlotInstance, PlotTone, PlotScales } from './Plot';
+export { QueryFailure } from './QueryFailure';
+export { SearchInput } from './SearchInput';
+export { ShortcutKbd } from './ShortcutKbd';
 export * as SidePanelLayout from './SidePanelLayout';
-export * from './SkeletonRows';
-export * from './TokenInput';
-export * from './styles';
-export * from './useFollowNow';
-export * from './ValueAxis';
+export { SkeletonRows } from './SkeletonRows';
+export { TokenInput } from './TokenInput';
+export {
+  CARD_TITLE,
+  SECTION_HEADING,
+  TABLE_HEADER,
+  FORM_ACTIONS,
+  SEARCH_FIELD,
+  DESTRUCTIVE_OUTLINE,
+  SURFACE,
+  SURFACE_HEAD,
+  CARD_FLUSH,
+  EMPTY_INLINE,
+  PENDING_REVEAL,
+  SHEET_BOTTOM,
+  DIALOG_SIZE,
+  JSON_CODE,
+  JSON_LAYER,
+  JSON_LAYOUT,
+  JSON_HEIGHT,
+  JSON_TONE,
+} from './styles';
+export { useFollowNow } from './useFollowNow';
+export { ValueAxis } from './ValueAxis';

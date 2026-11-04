@@ -77,13 +77,19 @@ function DraftBadge() {
 }
 ```
 
-A computed value is returned by a hook next to the store: the generated selector would return the function itself, not the result, and the subscription would not work.
+Computed values are pure selectors of a state snapshot, outside the state object. Domain hooks next to the store subscribe to those selectors; generated selectors remain for fields and actions.
 
 ```ts
-export function useConfigDirty(): boolean {
-  return useStore(ConfigDocumentStateProto, (state) => state.isDirty());
+export function selectConfigCurrent(state: ConfigDocumentState): string | null {
+  return state.draft ?? state.applied;
+}
+
+export function useConfigCurrent(): string | null {
+  return useStore(ConfigDocumentStore, selectConfigCurrent);
 }
 ```
+
+Selectors live in `Config.selectors.ts`, React subscriptions in `Config.hooks.ts`, and updates plus draft persistence in `Config.store.ts`. Browser lifecycle effects belong to the application that installs them. Derived objects and arrays are memoized in hooks by their input fields; shallow comparison does not stabilize newly allocated nested values.
 
 Several values go through `useStore`, which memoizes the selection with `shallow`:
 
@@ -100,7 +106,7 @@ function ApplyBar() {
 
 ### Outside React
 
-Direct access to the state goes through `getState()` / `setState()` on the `*Store` alias (`ConnectionStore`, `DaemonStore`): `*Proto` itself does not leave its module. This is how, for example, the runtime stream topic handlers that live outside the component tree work.
+Direct access to the state goes through `getState()` / `setState()` on the `*Store` alias (`ConnectionStore`, `DaemonStore`): `*Proto` itself does not leave its module. Derived reads use the same pure selector, for example `selectConfigCurrent(ConfigDocumentStore.getState())`. This is how, for example, the runtime stream topic handlers that live outside the component tree work.
 
 ## Config document
 
@@ -132,15 +138,16 @@ The stream store receives topic frames of `GET /api/events`. The budget is thous
 const state = useStore(DocumentStateProto, (s) => s); // ❌
 ```
 
-**Calling a computing action instead of a selector.** The subscription does not work, there is no rerender:
+**Computed getters in state.** `current`, `isDirty` and similar calculations are selectors, not actions. Keeping them as state functions makes `State.use.isDirty()` subscribe to a stable function rather than its result.
+
+**Reading a snapshot instead of subscribing.** An imperative read in a component does not rerender on changes:
 
 ```tsx
-// ❌ no rerender
-const calc = useStore(StateProto, (state) => state.calcTotal);
-const total = calc();
+// ❌ no subscription
+const current = selectConfigCurrent(ConfigDocumentStore.getState());
 
 // ✅
-const total = useStore(StateProto, (state) => state.calcTotal());
+const current = useConfigCurrent();
 ```
 
 **Excessive multiple selectors.** If a component selects eight fields, it most likely needs to be split.
@@ -148,6 +155,6 @@ const total = useStore(StateProto, (state) => state.calcTotal());
 ## Useful zustand recipes
 
 1. [No-action stores](https://zustand.docs.pmnd.rs/guides/practice-with-no-store-actions): for writes from handlers outside React, see the "Outside React" section
-2. [Store slices](https://zustand.docs.pmnd.rs/guides/slices-pattern): for the config document, so that the draft, history and dirty tracking are separate files
+2. [Store slices](https://zustand.docs.pmnd.rs/guides/slices-pattern): for stores with independently growing groups of state and actions; derived selectors remain outside state
 3. [Map and Set](https://zustand.docs.pmnd.rs/guides/maps-and-sets-usage): for the connection index by id
 4. [Resetting state](https://zustand.docs.pmnd.rs/guides/how-to-reset-state): on device change or config reload

@@ -1,44 +1,12 @@
-import type { TFunction } from 'i18next';
-import { Check } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { DELAY_TIMEOUT, type ProxyNode } from '@entities/Proxy';
+import { type ProxyNode } from '@entities/Proxy';
 import { cn } from '@shared/lib/utils';
 
-import { DELAY_TONE } from './ProxyDelayTone';
+import { toDelayText } from '../lib/ProxyGroups.delay';
 import { toMemberLabel } from './ProxyGroupLabel';
-
-/** Latency in words: the same label goes into the tile name and its visible corner. */
-function toDelayText(t: TFunction<'widgets/ProxyGroups'>, node: ProxyNode): string {
-  if (node.delay === null) {
-    return t('delay.untested', { ns: 'shared' });
-  }
-
-  return node.delay >= DELAY_TIMEOUT
-    ? t('delay.timedOut', { ns: 'shared' })
-    : t('delay.value', { ns: 'shared', value: node.delay });
-}
-
-function DelayValue({ node }: { node: ProxyNode }) {
-  const { t } = useTranslation('widgets/ProxyGroups');
-  const text = toDelayText(t, node);
-
-  if (node.delay === null) {
-    return <span className='text-xs text-muted-foreground'>{text}</span>;
-  }
-
-  // A separate label, not "65535 ms": this is a connection failure, not a latency.
-  if (node.delay >= DELAY_TIMEOUT) {
-    return <span className='text-xs font-medium text-signal-bad'>{text}</span>;
-  }
-
-  return (
-    <span className={cn('font-mono text-xs font-medium tabular-nums', DELAY_TONE[node.delayState])}>
-      <data value={node.delay}>{text}</data>
-    </span>
-  );
-}
+import { ProxyNodeContent } from './ProxyNodeContent';
 
 /** The selected node carries an edge and a checkmark: two signs, one of them not color-based. */
 function ProxyNodeTileProto({
@@ -51,21 +19,6 @@ function ProxyNodeTileProto({
   onSelect: (name: string) => void;
 }) {
   const { t } = useTranslation('widgets/ProxyGroups');
-  // The spaces between the parts are invisible in a flex row; they keep the visible text word-separated for
-  // the name-contains-label check (WCAG 2.5.3), which reads "usgroup609 ms" otherwise.
-  const content = (
-    <>
-      <span className='flex min-w-0 items-center gap-1.5'>
-        {node.selected && <Check className='size-3.5 shrink-0 text-primary' aria-hidden='true' />}
-        <span className='min-w-0 grow truncate font-mono text-xs'>{node.name}</span>
-      </span>{' '}
-      <span className='flex items-center justify-between gap-2'>
-        <span className='truncate text-xs text-muted-foreground'>{toMemberLabel(t, node.type)}</span>{' '}
-        <DelayValue node={node} />
-      </span>
-    </>
-  );
-
   // The name is assembled explicitly: tile parts lie in separate blocks without spaces
   // between them, and the accessible name would glue into "usURL-test609 ms".
   const label = t('node.label', {
@@ -97,12 +50,12 @@ function ProxyNodeTileProto({
             onSelect(node.name);
           }}
         >
-          {content}
+          <ProxyNodeContent node={node} />
         </button>
       ) : (
         <p className={className}>
           {node.selected && <span className='sr-only'>{t('node.selected')}</span>}
-          {content}
+          <ProxyNodeContent node={node} />
         </p>
       )}
     </li>

@@ -168,6 +168,18 @@ describe('useRuntimeStreams', () => {
       vi.restoreAllMocks();
     });
 
+    it('waits for visibility when mounted in an already hidden tab', () => {
+      server.use(http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE)));
+      vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
+      RuntimeStore.getState().addReader();
+
+      renderHook(useRuntimeStreams, { wrapper });
+
+      expect(FakeEventSource.opened).toBe(0);
+      setHidden(false);
+      expect(FakeEventSource.opened).toBe(1);
+    });
+
     it('closes the stream and opens it again with a refetch when the tab is visible', () => {
       const queryClient = new QueryClient();
       const invalidate = vi.spyOn(queryClient, 'invalidateQueries');

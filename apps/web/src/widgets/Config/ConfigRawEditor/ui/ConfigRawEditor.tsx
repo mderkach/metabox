@@ -1,28 +1,17 @@
-import type { TFunction } from 'i18next';
 import { ChevronDown, ChevronUp, CircleAlert, CircleCheck, WrapText } from 'lucide-react';
 import { useDeferredValue, useMemo, useRef, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
 import type { ConfigIssue } from '@entities/Config';
-import { failureLine, firstJsoncError } from '@shared/lib/jsonc';
 import { cn } from '@shared/lib/utils';
 import { Badge, Button, JsonTextarea, type JsonTextareaHandle, SearchInput } from '@shared/ui';
 
 import { findMatches, useRawEditorWrap } from '../lib';
+import { parseError } from '../lib/ConfigRawEditor.error';
 import { ConfigRawOutline } from './ConfigRawOutline';
 
 /** Remarks beyond this number are named by a counter: the footer is not a journal. */
 const VISIBLE_ISSUES = 3;
-
-function parseError(t: TFunction<'widgets/Config/ConfigRawEditor'>, text: string): string | null {
-  const failure = firstJsoncError(text);
-
-  if (failure === null) {
-    return null;
-  }
-
-  return t('parseError', { line: failureLine(text, failure), reason: failure.text });
-}
 
 /**
  * Editing the whole config as text.

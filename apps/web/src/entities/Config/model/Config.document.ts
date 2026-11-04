@@ -2,8 +2,9 @@ import type { UseQueryResult } from '@tanstack/react-query';
 import { useDeferredValue, useEffect } from 'react';
 
 import { parseConfig, useConfig, useConfigLists, type ConfigIssue, type ParsedConfig } from '../api/Config.query';
+import { useConfigDirty, useConfigCurrent } from './Config.hooks';
 import type { ConfigDocument } from './Config.model';
-import { ConfigDocumentState, useConfigDirty, useConfigText } from './Config.store';
+import { ConfigDocumentState } from './Config.store';
 
 /** How many recent texts the draft parse remembers. */
 const PARSED_DRAFTS = 2;
@@ -98,7 +99,7 @@ export function useConfigDocument(): ConfigDocumentView {
   const draft = ConfigDocumentState.use.draft();
   const revision = ConfigDocumentState.use.revision();
   const isDirty = useConfigDirty();
-  const current = useConfigText();
+  const current = useConfigCurrent();
   const applied = config.data?.text ?? null;
   const etag = config.data?.etag ?? null;
   const listFiles = lists.data?.files;

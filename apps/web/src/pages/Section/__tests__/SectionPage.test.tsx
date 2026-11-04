@@ -11,7 +11,7 @@ import { CONFIG_ENDPOINT, ConfigDocumentState, findValue } from '@entities/Confi
 import { DAEMON_ENDPOINT } from '@entities/Daemon';
 import { DAEMON_STATUS_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture';
 
-import { SectionNodes } from '../ui/SectionPage';
+import { SectionNodes } from '../ui/SectionNodes';
 
 /** A VLESS node from the text below: server, port and UUID are what the form will not save it without. */
 const HK_01 = { type: 'vless', tag: 'hk-01', server: 'a.example', server_port: 443, uuid: 'REDACTED' };

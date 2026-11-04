@@ -1,5 +1,4 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import type { TFunction } from 'i18next';
 import { CircleCheck } from 'lucide-react';
 import { useId, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
@@ -11,10 +10,8 @@ import { Button, Input, Label, Textarea, ToggleGroup, ToggleGroupItem } from '@s
 
 import {
   LIST_STORAGE,
-  RULE_SET_CUSTOM_ERROR,
   listFileName,
   makeRuleSetCustomSchema,
-  parseListEntries,
   ruleSetCustomDefaults,
   toInlineRuleSet,
   toListFileContent,
@@ -22,6 +19,7 @@ import {
   type ListStorage,
   type RuleSetCustomModel,
 } from '../model/RuleSetCustom.schema';
+import { RuleSetCustomFieldError } from './RuleSetCustomFieldError';
 
 /**
  * Own list of domains and addresses. A small one goes into the draft as an
@@ -89,7 +87,7 @@ export function RuleSetCustomForm({ takenTags, onDone }: { takenTags: readonly s
               aria-invalid={fieldState.error !== undefined}
               aria-describedby={fieldState.error === undefined ? undefined : tagErrorId}
             />
-            <FieldError id={tagErrorId} t={t} error={fieldState.error?.message} entries={field.value} />
+            <RuleSetCustomFieldError id={tagErrorId} error={fieldState.error?.message} entries={field.value} />
           </div>
         )}
       />
@@ -147,7 +145,7 @@ export function RuleSetCustomForm({ takenTags, onDone }: { takenTags: readonly s
             <p id={entriesHintId} className='text-xs text-pretty text-muted-foreground'>
               {t('field.entries.hint')}
             </p>
-            <FieldError id={entriesErrorId} t={t} error={fieldState.error?.message} entries={field.value} />
+            <RuleSetCustomFieldError id={entriesErrorId} error={fieldState.error?.message} entries={field.value} />
           </div>
         )}
       />
@@ -169,48 +167,4 @@ export function RuleSetCustomForm({ takenTags, onDone }: { takenTags: readonly s
       )}
     </form>
   );
-}
-
-function FieldError({
-  id,
-  t,
-  error,
-  entries,
-}: {
-  id: string;
-  t: TFunction<'features/RuleSet/RuleSetCustom'>;
-  error: string | undefined;
-  entries: string;
-}) {
-  const text = errorText(t, error, entries);
-
-  return text === null ? null : (
-    <p id={id} role='alert' className='text-xs text-destructive'>
-      {text}
-    </p>
-  );
-}
-
-/** Schema failure code into text; an unrecognized string is named as itself. */
-function errorText(
-  t: TFunction<'features/RuleSet/RuleSetCustom'>,
-  error: string | undefined,
-  entries: string
-): string | null {
-  switch (error) {
-    case undefined:
-      return null;
-    case RULE_SET_CUSTOM_ERROR.TagRequired:
-      return t('error.tagRequired');
-    case RULE_SET_CUSTOM_ERROR.TagTaken:
-      return t('error.tagTaken');
-    case RULE_SET_CUSTOM_ERROR.TagNotFileName:
-      return t('error.tagNotFileName');
-    case RULE_SET_CUSTOM_ERROR.EntriesRequired:
-      return t('error.entriesRequired');
-    case RULE_SET_CUSTOM_ERROR.EntryInvalid:
-      return t('error.entryInvalid', { entry: parseListEntries(entries).invalid ?? '' });
-    default:
-      return error;
-  }
 }

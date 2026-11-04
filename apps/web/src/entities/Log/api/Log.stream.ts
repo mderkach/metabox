@@ -127,6 +127,9 @@ export function useLogStream(level: LogLevel): { reconnect: () => void } {
 
       function connect() {
         retry = null;
+
+        if (document.hidden) return;
+
         source = new EventSource(url);
         source.addEventListener('open', onStreamOpen);
         source.addEventListener('error', onStreamError);

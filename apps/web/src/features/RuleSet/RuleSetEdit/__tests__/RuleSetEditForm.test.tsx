@@ -1,8 +1,8 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ConfigDocumentState, findValue, readRuleSets } from '@entities/Config';
+import { ConfigDocumentState, findValue, readRuleSets, useConfigCurrent } from '@entities/Config';
 
 import { RuleSetEditForm } from '../ui/RuleSetEditForm';
 
@@ -154,5 +154,66 @@ describe('rule set edit form', () => {
     await user.click(screen.getByRole('button', { name: 'Готово' }));
 
     expect(onDone).toHaveBeenCalledOnce();
+  });
+});
+
+function LiveRuleSetForm() {
+  const text = useConfigCurrent();
+  const current: unknown = readRuleSets(text ?? '')[INDEX];
+
+  if (typeof current !== 'object' || current === null) throw new Error('Missing rule set');
+
+  return (
+    <RuleSetEditForm
+      index={INDEX}
+      node={{ ...current }}
+      takenTags={['own', 'ads']}
+      outbounds={['direct']}
+      onDone={() => {}}
+    />
+  );
+}
+
+describe('rule set form document synchronization', () => {
+  beforeEach(() => {
+    ConfigDocumentState.getState().reset();
+    ConfigDocumentState.getState().load(TEXT);
+  });
+
+  it('discards form values with the draft and does not restore them on the next edit', async () => {
+    const user = userEvent.setup();
+
+    render(<LiveRuleSetForm />);
+    await user.clear(screen.getByLabelText('Имя сета'));
+    await user.type(screen.getByLabelText('Имя сета'), 'ads-new');
+    await waitFor(() => {
+      expect(findValue(draft(), ['route', 'rule_set', INDEX, 'tag'])).toBe('ads-new');
+    });
+
+    act(() => {
+      ConfigDocumentState.getState().discard();
+    });
+    await waitFor(() => {
+      expect(screen.getByLabelText('Имя сета')).toHaveValue('ads');
+    });
+    await user.click(screen.getByRole('button', { name: 'Ещё настройки' }));
+    await user.clear(screen.getByLabelText('Как часто обновлять'));
+    await user.type(screen.getByLabelText('Как часто обновлять'), '2d');
+    await waitFor(() => {
+      expect(findValue(draft(), ['route', 'rule_set', INDEX, 'update_interval'])).toBe('2d');
+    });
+    expect(findValue(draft(), ['route', 'rule_set', INDEX, 'tag'])).toBe('ads');
+  });
+
+  it('pulls a replacement device node into the mounted form', async () => {
+    render(<LiveRuleSetForm />);
+
+    act(() => {
+      ConfigDocumentState.getState().load(TEXT.replace('"tag": "ads"', '"tag": "fresh"'));
+    });
+    await waitFor(() => {
+      expect(screen.getByLabelText('Имя сета')).toHaveValue('fresh');
+    });
+    expect(ConfigDocumentState.getState().draft).toBeNull();
   });
 });

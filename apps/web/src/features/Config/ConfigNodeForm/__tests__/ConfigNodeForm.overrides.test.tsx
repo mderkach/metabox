@@ -13,7 +13,7 @@ import {
   NODE_REGISTRY,
   RULES_PATH,
   useConfigDiff,
-  useConfigText,
+  useConfigCurrent,
   type NodeRegistry,
 } from '@entities/Config';
 import { ConfigNodeAddForm } from '@features/Config/ConfigNodeAdd';
@@ -67,7 +67,7 @@ function NodeFromStore({
   registry?: NodeRegistry;
   builtTags?: readonly string[] | null;
 }) {
-  const text = useConfigText();
+  const text = useConfigCurrent();
   const node = useMemo(() => (text === null ? undefined : findValue(text, path)), [text, path]);
 
   return isRecord(node) ? <ConfigNodeForm registry={registry} path={path} node={node} builtTags={builtTags} /> : null;

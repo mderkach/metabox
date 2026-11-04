@@ -27,30 +27,33 @@ export function useRuleTitle(): RuleTitle {
   return useMemo(() => {
     const deviceOf = (address: string) => (devices.has(address) ? deviceLabel(address, devices) : null);
 
-    const subject = (rule: RuleRow): string => {
-      if (rule.name !== null) return rule.name;
+    function describeSubject(rule: RuleRow): { text: string; numbered: boolean } {
+      if (rule.name !== null) return { text: rule.name, numbered: false };
 
-      const { key, condition, more } = toRuleCaption(rule, deviceOf);
+      const { key, condition, more, flag } = toRuleCaption(rule, deviceOf);
 
       if (key === null || condition === null) {
-        return rule.recognized ? t('rule.allTraffic') : t('rule.numbered', { index: rule.index });
+        return {
+          text: rule.recognized ? t('rule.allTraffic') : t('rule.numbered', { index: rule.index }),
+          numbered: !rule.recognized,
+        };
       }
 
-      // A flag (`ip_is_private: true`) says nothing by its value: the condition is named instead.
-      if (condition === String(true) || condition === String(false)) {
+      if (flag !== undefined) {
         const matcher = isNamedRuleMatcher(key) ? t(`matcher.${key}`) : key;
 
-        return condition === String(true) ? matcher : t('rule.flagOff', { matcher });
+        return { text: flag ? matcher : t('rule.flagOff', { matcher }), numbered: false };
       }
 
-      return more > 0 ? t('rule.conditionMore', { condition, more }) : condition;
-    };
+      return { text: more > 0 ? t('rule.conditionMore', { condition, more }) : condition, numbered: false };
+    }
+
+    const subject = (rule: RuleRow): string => describeSubject(rule).text;
 
     const title = (rule: RuleRow): string => {
-      const own = subject(rule);
+      const { text: own, numbered } = describeSubject(rule);
 
-      // An unknown rule with nothing to show keeps its number alone, without an outbound after it.
-      if (rule.name !== null || own === t('rule.numbered', { index: rule.index })) return own;
+      if (rule.name !== null || numbered) return own;
 
       const target =
         rule.targetKind === RULE_TARGET.Action && isNamedRuleAction(rule.target)

@@ -1,5 +1,5 @@
 import { Link, useRouterState } from '@tanstack/react-router';
-import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { PanelLeftClose } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { cn } from '@shared/lib/utils';
@@ -7,12 +7,10 @@ import { cn } from '@shared/lib/utils';
 import { pickActiveNav, useSidebarCollapsed } from '../lib/AppSidebar.lib';
 import { NAV_ITEMS, NAV_TARGETS } from '../model';
 import { AppSidebarControls } from './AppSidebarControls';
+import { AppSidebarLogo } from './AppSidebarLogo';
 
 const ITEM_CLASS =
   'relative flex h-8 items-center gap-2.5 rounded-md px-2.5 text-sm transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none';
-
-const LOGO_CLASS =
-  'flex size-7 shrink-0 items-center justify-center rounded-md bg-primary text-sm font-semibold text-primary-foreground';
 
 const TOGGLE_CLASS =
   'flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none';
@@ -42,10 +40,10 @@ export function AppSidebar() {
         )}
       >
         {sidebar.collapsed ? (
-          <Logo expand={sidebar.toggle} />
+          <AppSidebarLogo expand={sidebar.toggle} />
         ) : (
           <>
-            <Logo />
+            <AppSidebarLogo />
             <p className='grow text-base font-semibold tracking-tight'>metabox</p>
             <button
               type='button'
@@ -114,33 +112,5 @@ export function AppSidebar() {
         <AppSidebarControls collapsed={sidebar.collapsed} />
       </footer>
     </aside>
-  );
-}
-
-/** `expand` is empty for an expanded panel: nothing to expand, the logo is only a mark. */
-function Logo({ expand }: { expand?: () => void }) {
-  const { t } = useTranslation('widgets/AppSidebar');
-  if (expand === undefined) {
-    return (
-      <span title='metabox' className={LOGO_CLASS}>
-        m
-      </span>
-    );
-  }
-
-  return (
-    <button
-      type='button'
-      onClick={expand}
-      aria-label={t('nav.expand')}
-      aria-expanded={false}
-      className={cn(
-        LOGO_CLASS,
-        'group transition-colors hover:bg-primary/85 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none'
-      )}
-    >
-      <span className='group-hover:hidden group-focus-visible:hidden'>m</span>
-      <PanelLeftOpen className='hidden size-4 group-hover:block group-focus-visible:block' />
-    </button>
   );
 }

@@ -45,7 +45,6 @@ export async function initI18n(): Promise<void> {
       lng: language,
       fallbackLng: FALLBACK_LANGUAGE,
       supportedLngs: LANGUAGES,
-      // The namespace is always named explicitly: the project has no shared dictionary.
       ns: [],
       defaultNS: false,
       // React escapes on its own, a second pass breaks quotes and angle brackets.

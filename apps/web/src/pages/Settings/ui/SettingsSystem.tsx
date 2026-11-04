@@ -2,9 +2,10 @@ import { Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 
 import { SCHEMA_VERSION, useConfigPath, useDaemonStatus } from '@entities/Daemon';
-import { cn } from '@shared/lib/utils';
-import { CARD_TITLE, Card, CardContent, CardHeader, PENDING_REVEAL, Skeleton } from '@shared/ui';
+import { CARD_TITLE, Card, CardContent, CardHeader } from '@shared/ui';
 import { DaemonServiceControl } from '@widgets/Daemon/DaemonService';
+
+import { SettingsSystemRow } from './SettingsSystemRow';
 
 /**
  * Versions and the service: what is asked about when something breaks after an update.
@@ -29,13 +30,16 @@ export function SettingsSystem() {
         </CardHeader>
         <CardContent className='flex flex-col gap-3'>
           <dl className='text-sm'>
-            <SettingsRow label={t('system.panel')} value={status.isPending ? null : (status.data?.version ?? '—')} />
-            <SettingsRow
+            <SettingsSystemRow
+              label={t('system.panel')}
+              value={status.isPending ? null : (status.data?.version ?? '—')}
+            />
+            <SettingsSystemRow
               label={t('system.core')}
               value={status.isPending ? null : (status.data?.singboxVersion ?? '—')}
             />
-            <SettingsRow label={t('system.schema')} value={SCHEMA_VERSION} />
-            <SettingsRow label={t('system.config')} value={configPath} />
+            <SettingsSystemRow label={t('system.schema')} value={SCHEMA_VERSION} />
+            <SettingsSystemRow label={t('system.config')} value={configPath} />
           </dl>
           <p className='text-sm text-pretty text-muted-foreground'>
             {t('system.devices')}{' '}
@@ -48,18 +52,6 @@ export function SettingsSystem() {
           </p>
         </CardContent>
       </Card>
-    </div>
-  );
-}
-
-/** `null` instead of a value means no answer yet: a skeleton, not a dash. */
-function SettingsRow({ label, value }: { label: string; value: string | null }) {
-  return (
-    <div className='flex justify-between gap-4 border-t border-border py-2 first:border-t-0'>
-      <dt className='text-muted-foreground'>{label}</dt>
-      <dd className='min-w-0 truncate font-mono text-xs'>
-        {value ?? <Skeleton aria-hidden='true' className={cn('h-4 w-24', PENDING_REVEAL)} />}
-      </dd>
     </div>
   );
 }

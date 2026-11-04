@@ -18,6 +18,23 @@ describe('parseListEntries', () => {
     expect(rules.cidrs).toEqual(['203.0.113.0/24', '198.51.100.7', '2001:db8::/32']);
   });
 
+  it.each(['999.999.999.999/99', '192.0.2.1/33', '::::/999', '2001:db8::/129', '1:2:3:4:5:6:7:8:9'])(
+    'rejects invalid address %s',
+    (entry) => {
+      expect(parseListEntries(entry).invalid).toBe(entry);
+      expect(makeRuleSetCustomSchema([]).safeParse({ tag: 'ips', storage: 'inline', entries: entry }).success).toBe(
+        false
+      );
+    }
+  );
+
+  it.each(['0.0.0.0/0', '255.255.255.255/32', '::', '::/0', '2001:db8::1/128', '::ffff:192.0.2.1'])(
+    'accepts address boundary %s',
+    (entry) => {
+      expect(parseListEntries(entry)).toEqual({ rules: { domainSuffixes: [], cidrs: [entry] }, invalid: null });
+    }
+  );
+
   it('skips empty lines and comments', () => {
     const { rules, invalid } = parseListEntries('\n# список\n  example.org  \n\n');
 

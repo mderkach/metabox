@@ -149,6 +149,70 @@ describe('proxies screen', () => {
     expect(screen.getAllByRole('heading', { name: 'Подписки' })).toHaveLength(1);
   });
 
+  it('shows provider failures with a retry while proxy groups remain available', async () => {
+    serveProxies();
+    server.use(http.get(PROXY_ENDPOINT.providers(), () => new HttpResponse(null, { status: 500 })));
+    const user = userEvent.setup();
+
+    renderWithQuery(<ProxiesPage />);
+
+    expect(await screen.findByRole('heading', { name: 'proxy' })).toBeInTheDocument();
+    expect(await screen.findByText('Не удалось получить подписки')).toBeInTheDocument();
+
+    server.use(http.get(PROXY_ENDPOINT.providers(), () => HttpResponse.json(CLASH_PROVIDERS_FIXTURE)));
+    await user.click(screen.getByRole('button', { name: 'Повторить' }));
+
+    expect(await screen.findByText('sub-eu')).toBeInTheDocument();
+  });
+
+  it('keeps the provider loading state visible after proxy groups have loaded', async () => {
+    let release = () => {};
+    const ready = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    serveProxies();
+    server.use(
+      http.get(PROXY_ENDPOINT.providers(), async () => {
+        await ready;
+
+        return HttpResponse.json(CLASH_PROVIDERS_FIXTURE);
+      })
+    );
+    renderWithQuery(<ProxiesPage />);
+
+    expect(await screen.findByRole('heading', { name: 'proxy' })).toBeInTheDocument();
+    expect(screen.getByText('Загружаю')).toBeInTheDocument();
+
+    release();
+    expect(await screen.findByText('sub-eu')).toBeInTheDocument();
+  });
+
+  it('keeps loaded subscriptions visible after their refetch fails', async () => {
+    serveProxies();
+    const user = userEvent.setup();
+
+    renderWithQuery(<ProxiesPage />);
+    expect(await screen.findByText('sub-eu')).toBeInTheDocument();
+
+    const refetched = vi.fn<() => void>();
+
+    server.use(
+      http.get(PROXY_ENDPOINT.providers(), () => {
+        refetched();
+
+        return new HttpResponse(null, { status: 500 });
+      })
+    );
+    await user.click(screen.getByRole('button', { name: 'Обновить подписку sub-eu' }));
+    await waitFor(() => {
+      expect(refetched).toHaveBeenCalledOnce();
+      expect(screen.getByRole('button', { name: 'Обновить подписку sub-eu' })).toBeEnabled();
+    });
+    expect(screen.getByText('sub-eu')).toBeInTheDocument();
+    expect(screen.queryByText('Не удалось получить подписки')).not.toBeInTheDocument();
+  });
+
   describe('subscription update time', () => {
     afterEach(() => {
       vi.useRealTimers();

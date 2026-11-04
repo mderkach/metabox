@@ -1,9 +1,11 @@
 import { TriangleAlert } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { findUnbuiltNodes, findUnbuiltOptions, type ConfigDocument, type UnbuiltNode } from '@entities/Config';
+import { findUnbuiltNodes, findUnbuiltOptions, type ConfigDocument } from '@entities/Config';
 import { useDaemonStatus } from '@entities/Daemon';
 import { Alert, AlertDescription, AlertTitle } from '@shared/ui';
+
+import { toNodeName } from '../model/ConfigBuildNotice.model';
 
 /**
  * Nodes and options that the binary on the device will not start: they are not in its build.
@@ -45,8 +47,4 @@ export function ConfigBuildNotice({ config }: { config: ConfigDocument | null })
       </AlertDescription>
     </Alert>
   );
-}
-
-function toNodeName(node: UnbuiltNode): string {
-  return node.tag ?? `${node.section}[${String(node.index)}]`;
 }

@@ -3,6 +3,8 @@ import { RULE_SET_MATCHER } from './Rule.constants';
 export interface RuleMatcher {
   key: string;
   values: string[];
+  /** Original boolean value; absent for textual and numeric conditions. */
+  flag?: boolean;
 }
 
 /**

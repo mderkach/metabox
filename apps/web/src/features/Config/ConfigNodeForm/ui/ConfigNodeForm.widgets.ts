@@ -2,19 +2,17 @@ import type { ComponentType } from 'react';
 
 import { FIELD_KIND, type FieldKind } from '@shared/lib/schemaShape';
 
-import {
-  BooleanField,
-  DurationField,
-  EnumField,
-  EnumListField,
-  GroupField,
-  ListField,
-  NumberField,
-  RawField,
-  ScalarField,
-  StringField,
-  type NodeFieldProps,
-} from './ConfigNodeFormFields';
+import type { NodeFieldProps } from './ConfigNodeForm.field';
+import { ConfigNodeFormBooleanField as BooleanField } from './ConfigNodeFormBooleanField';
+import { ConfigNodeFormDurationField as DurationField } from './ConfigNodeFormDurationField';
+import { ConfigNodeFormEnumField as EnumField } from './ConfigNodeFormEnumField';
+import { ConfigNodeFormEnumListField as EnumListField } from './ConfigNodeFormEnumListField';
+import { ConfigNodeFormGroupField as GroupField } from './ConfigNodeFormGroupField';
+import { ConfigNodeFormListField as ListField } from './ConfigNodeFormListField';
+import { ConfigNodeFormNumberField as NumberField } from './ConfigNodeFormNumberField';
+import { ConfigNodeFormRawField as RawField } from './ConfigNodeFormRawField';
+import { ConfigNodeFormScalarField as ScalarField } from './ConfigNodeFormScalarField';
+import { ConfigNodeFormStringField as StringField } from './ConfigNodeFormStringField';
 
 /**
  * Field kind to widget. A new kind is added by an entry, not an `if` branch;

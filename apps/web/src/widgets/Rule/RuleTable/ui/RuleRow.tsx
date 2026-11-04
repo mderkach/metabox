@@ -4,11 +4,13 @@ import { useTranslation } from 'react-i18next';
 
 import { isNamedRuleAction, RULE_TARGET, type RuleRow as RuleRowModel } from '@entities/Rule';
 import { cn } from '@shared/lib/utils';
-import { Badge, Popover, PopoverContent, PopoverTrigger, Tooltip, TooltipContent, TooltipTrigger } from '@shared/ui';
+import { Badge, Tooltip, TooltipContent, TooltipTrigger } from '@shared/ui';
 
-import { RULE_HIT, type RuleHitCell } from '../model';
+import { isTruncated } from '../lib/RuleTable.truncation';
+import { type RuleHitCell } from '../model';
 import { RULE_COLUMN } from './RuleColumns';
 import { RuleGroupChips } from './RuleGroupChips';
+import { RuleHitValue } from './RuleHitValue';
 import { RuleMatcherChip } from './RuleMatcherChip';
 import { toTargetTone } from './RuleTargetTone';
 
@@ -19,11 +21,6 @@ import { toTargetTone } from './RuleTargetTone';
  */
 const SELECT_CLASS =
   'rounded-sm after:absolute after:inset-0 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none';
-
-/** Outbound is truncated: the outbound string or its parameters are wider than its cell. */
-function isTruncated(target: HTMLElement | null): boolean {
-  return target !== null && [...target.children].some((line) => line.scrollWidth > line.clientWidth);
-}
 
 function RuleRowProto({
   rule,
@@ -167,29 +164,3 @@ function RuleRowProto({
 }
 
 export const RuleRow = memo(RuleRowProto);
-
-function RuleHitValue({ hits, language }: { hits: RuleHitCell; language: string }) {
-  const { t } = useTranslation('widgets/Rule/RuleTable');
-
-  if (hits === RULE_HIT.Edited) {
-    return <span aria-hidden='true'>—</span>;
-  }
-
-  if (hits === RULE_HIT.Unobserved) {
-    return (
-      <Popover>
-        {/* `relative` lifts the trigger above the select button that covers the row. */}
-        <PopoverTrigger
-          type='button'
-          aria-label={t('hits.unobserved')}
-          className='relative rounded-sm focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none pointer-coarse:min-h-11 pointer-coarse:min-w-11'
-        >
-          {t('hits.unobservedCell')}
-        </PopoverTrigger>
-        <PopoverContent className='w-auto max-w-xs'>{t('hits.unobserved')}</PopoverContent>
-      </Popover>
-    );
-  }
-
-  return <data value={hits}>{hits.toLocaleString(language)}</data>;
-}

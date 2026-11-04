@@ -6,19 +6,8 @@ import { cn } from '@shared/lib/utils';
 import { Button, Checkbox, Label, Popover, PopoverContent, PopoverTitle, PopoverTrigger } from '@shared/ui';
 
 import type { ConnectionView } from '../lib';
+import { toMoveButtonId, MOVE, type Move } from '../lib/ConnectionTable.move';
 import { CONNECTION_COLUMNS, CONNECTION_COLUMNS_HIDDEN, toOrderedColumns } from './ConnectionColumns';
-
-/** Where a column moves: one position back or forward. */
-const MOVE = {
-  Up: -1,
-  Down: 1,
-} as const;
-
-type Move = (typeof MOVE)[keyof typeof MOVE];
-
-function toMoveButtonId(field: string, move: Move): string {
-  return `connection-field-${field}-${move === MOVE.Up ? 'up' : 'down'}`;
-}
 
 /**
  * Choosing the shown fields is view control, not an action on data,

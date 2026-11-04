@@ -104,7 +104,7 @@ export function useRuntimeStreams(): void {
       function connect() {
         retry = null;
 
-        if (stopped) {
+        if (stopped || document.hidden) {
           return;
         }
 

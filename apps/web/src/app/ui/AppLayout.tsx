@@ -2,13 +2,13 @@ import { Outlet } from '@tanstack/react-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useConfigLeaveGuard } from '@entities/Config';
 import { ConfigApplyBar } from '@features/Config/ConfigApply';
 import { useNarrowScreen } from '@shared/lib/media';
 import { useShortcuts } from '@shared/lib/shortcuts';
 import { cn } from '@shared/lib/utils';
 import { AppSidebar, AppSidebarBottomNav } from '@widgets/AppSidebar';
 
+import { useConfigLeaveGuard } from '../lib/useConfigLeaveGuard';
 import { useRuntimeStreams } from '../lib/useRuntimeStreams';
 import { DaemonBanner } from './DaemonBanner';
 import { DeviceRouteLayer } from './DeviceRouteLayer';

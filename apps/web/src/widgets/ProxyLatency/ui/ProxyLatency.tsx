@@ -1,10 +1,7 @@
-import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 
-import { DELAY_FAST, DELAY_STATE, DELAY_TIMEOUT, useProxies, type ProxyGroup, type ProxyNode } from '@entities/Proxy';
-import { useTestProxyDelay } from '@features/Proxy/ProxyDelay';
-import { toShare, toValueScale } from '@shared/lib/chart';
-import { cn } from '@shared/lib/utils';
+import { DELAY_FAST, useProxies } from '@entities/Proxy';
+import { useTestProxyDelays } from '@features/Proxy/ProxyDelay';
 import {
   Button,
   CARD_TITLE,
@@ -20,61 +17,10 @@ import {
   ValueAxis,
 } from '@shared/ui';
 
-const DELAY_TONE: Readonly<Record<string, string>> = {
-  [DELAY_STATE.Fast]: 'bg-signal-ok',
-  [DELAY_STATE.Slow]: 'bg-signal-warn',
-  [DELAY_STATE.Failed]: 'bg-signal-bad',
-  [DELAY_STATE.Unknown]: 'bg-signal-idle',
-};
-
-const PERCENT = 100;
-
-/** Ticks at thirds of the ceiling: the first of them is the "fast" threshold. */
-const SCALE_INTERVALS = 3;
-
-/** Absolute scale ceiling, milliseconds: three times the "fast" threshold. */
-const SCALE_CEILING = DELAY_FAST * SCALE_INTERVALS;
-const SCALE = toValueScale(SCALE_CEILING, [DELAY_FAST]);
-
-interface GroupDelay {
-  group: string;
-  node: ProxyNode;
-}
-
-/** A group that selected another group is skipped: there is one measurement for them. */
-function toSelected(groups: ProxyGroup[]): GroupDelay[] {
-  const names = new Set(groups.map((group) => group.name));
-
-  return groups.flatMap((group) => {
-    if (group.now !== null && names.has(group.now)) {
-      return [];
-    }
-
-    const node = group.nodes.find((candidate) => candidate.name === group.now);
-
-    return node === undefined ? [] : [{ group: group.name, node }];
-  });
-}
-
-function toDelayLabel(t: TFunction<'widgets/ProxyLatency'>, node: ProxyNode): string {
-  if (node.delay === null) {
-    return t('delay.untested', { ns: 'shared' });
-  }
-
-  // A connection failure, not a latency: the runtime returns it as the number 65535.
-  return node.delay >= DELAY_TIMEOUT
-    ? t('delay.timedOut', { ns: 'shared' })
-    : t('delay.value', { ns: 'shared', value: node.delay });
-}
-
-/** Bar length is the share of the scale ceiling; an unchecked node gets no bar at all. */
-function toMeter(node: ProxyNode): number | null {
-  if (node.delay === null) {
-    return null;
-  }
-
-  return node.delay >= DELAY_TIMEOUT ? 1 : toShare(Math.min(node.delay, SCALE_CEILING), SCALE_CEILING);
-}
+import { toDelayLabel } from '../lib/ProxyLatency.delay';
+import { toSelected } from '../model/ProxyLatency.model';
+import { SCALE_CEILING, SCALE } from '../model/ProxyLatency.scale';
+import { ProxyLatencyMeter } from './ProxyLatencyMeter';
 
 /** The measurement is made by sing-box: from the browser the channel to the panel would be measured. */
 export function ProxyLatency({
@@ -85,7 +31,7 @@ export function ProxyLatency({
 }) {
   const { t } = useTranslation('widgets/ProxyLatency');
   const proxies = useProxies();
-  const delay = useTestProxyDelay();
+  const delay = useTestProxyDelays();
   const selected = proxies.data === undefined ? [] : toSelected(proxies.data.groups);
 
   return (
@@ -104,15 +50,9 @@ export function ProxyLatency({
           size='sm'
           disabled={selected.length === 0 || delay.isPending}
           onClick={() => {
-            // The `mutate` callback fires only for the last call, so
-            // the announcement waits for all measurements at once, not for the last one started.
-            void Promise.allSettled(selected.map(async (entry) => delay.mutateAsync(entry.node.name))).then(
-              function announceTested(results) {
-                if (results.every((result) => result.status === 'fulfilled')) {
-                  onTested();
-                }
-              }
-            );
+            void delay.test(selected.map((entry) => entry.node.name)).then(function announceTested(success) {
+              if (success) onTested();
+            });
           }}
         >
           {delay.isPending ? t('delay.testing', { ns: 'shared' }) : t('delay.test', { ns: 'shared' })}
@@ -140,7 +80,7 @@ export function ProxyLatency({
                     <span className='font-mono'>{entry.node.name}</span>
                   </p>
                   <p className='font-mono text-xs text-muted-foreground tabular-nums'>{toDelayLabel(t, entry.node)}</p>
-                  <Meter node={entry.node} />
+                  <ProxyLatencyMeter node={entry.node} />
                 </li>
               ))}
             </ul>
@@ -149,27 +89,5 @@ export function ProxyLatency({
         )}
       </CardContent>
     </Card>
-  );
-}
-
-/**
- * Latency bar. An unchecked node gets an empty dashed track:
- * a solid track with zero fill reads as "zero milliseconds", that is,
- * as the fastest node in the list.
- */
-function Meter({ node }: { node: ProxyNode }) {
-  const share = toMeter(node);
-
-  if (share === null) {
-    return <span className='col-span-2 block h-1.5 rounded-full border border-dashed border-border' />;
-  }
-
-  return (
-    <span className='col-span-2 block h-1.5 overflow-hidden rounded-full bg-meter-track'>
-      <span
-        className={cn('block h-full rounded-full', DELAY_TONE[node.delayState])}
-        style={{ width: `${String(share * PERCENT)}%` }}
-      />
-    </span>
   );
 }

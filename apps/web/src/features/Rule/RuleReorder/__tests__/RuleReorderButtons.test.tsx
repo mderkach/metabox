@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { toast } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ConfigDocumentStore } from '@entities/Config';
+import { selectConfigCurrent, selectConfigDirty, ConfigDocumentStore } from '@entities/Config';
 
 import { RuleReorderButtons } from '../ui/RuleReorderButtons';
 
@@ -29,7 +29,7 @@ describe('RuleReorderButtons', () => {
       'Переместить правило без изменения комментариев не удалось. Конфиг оставлен без изменений.'
     );
     expect(onMoved).not.toHaveBeenCalled();
-    expect(ConfigDocumentStore.getState().current()).toBe(text);
+    expect(selectConfigCurrent(ConfigDocumentStore.getState())).toBe(text);
     expect(ConfigDocumentStore.getState().draft).toBeNull();
     expect(screen.getByRole('button', { name: 'Поднять правило 2 выше' })).toHaveFocus();
   });
@@ -44,6 +44,6 @@ describe('RuleReorderButtons', () => {
 
     expect(onMoved).toHaveBeenCalledWith(1);
     expect(toast.error).not.toHaveBeenCalled();
-    expect(ConfigDocumentStore.getState().isDirty()).toBe(true);
+    expect(selectConfigDirty(ConfigDocumentStore.getState())).toBe(true);
   });
 });
