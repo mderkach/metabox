@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
 import type { ProxyGroup } from '@entities/Proxy';
-import { useTestProxyDelay } from '@features/Proxy/ProxyDelay';
+import { useTestProxyDelays } from '@features/Proxy/ProxyDelay';
 import { Button } from '@shared/ui';
 
 /**
@@ -19,7 +19,7 @@ export function ProxyTestAll({
   onTested: () => void;
 }) {
   const { t } = useTranslation('pages/Proxies');
-  const delay = useTestProxyDelay();
+  const delay = useTestProxyDelays();
 
   return (
     <Button
@@ -27,15 +27,9 @@ export function ProxyTestAll({
       size='sm'
       disabled={groups.length === 0 || delay.isPending}
       onClick={() => {
-        // The `mutate` callback fires only for the last call, so
-        // the announcement waits for all measurements at once, not for the last one started.
-        void Promise.allSettled(groups.map(async (group) => delay.mutateAsync(group.name))).then(
-          function announceTested(results) {
-            if (results.every((result) => result.status === 'fulfilled')) {
-              onTested();
-            }
-          }
-        );
+        void delay.test(groups.map((group) => group.name)).then(function announceTested(success) {
+          if (success) onTested();
+        });
       }}
     >
       {delay.isPending ? t('delay.testing', { ns: 'shared' }) : t('testAll.action')}

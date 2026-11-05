@@ -9,7 +9,7 @@ import {
   CONFIG_SECTION,
   findValue,
   readSectionSettings,
-  useConfigText,
+  useConfigCurrent,
   type SettingsSection,
 } from '@entities/Config';
 
@@ -32,7 +32,7 @@ const TEXT = `{
 }`;
 
 function SettingsFromStore({ section }: { section: SettingsSection }) {
-  const text = useConfigText();
+  const text = useConfigCurrent();
   const settings = useMemo(() => (text === null ? null : readSectionSettings(text, section)), [text, section]);
 
   return settings === null ? null : <ConfigSectionForm section={section} settings={settings} />;

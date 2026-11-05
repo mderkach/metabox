@@ -2,13 +2,11 @@ import { History, TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { toCheckFailure, useConfigVersions, type ConfigVersion } from '@entities/Config';
-import { formatBytes, formatDateTime } from '@shared/lib/format';
+import { toCheckFailure, useConfigVersions } from '@entities/Config';
 import {
   Alert,
   AlertDescription,
   AlertTitle,
-  Badge,
   Button,
   Dialog,
   DIALOG_SIZE,
@@ -30,6 +28,7 @@ import {
 
 import { useRestoreConfigVersion } from '../api/ConfigApply.api';
 import { ConfigApplyCheck } from './ConfigApplyCheck';
+import { ConfigApplyVersionRow } from './ConfigApplyVersionRow';
 
 /**
  * Rollback goes through the regular Apply protocol, so after the start the same
@@ -96,7 +95,12 @@ export function ConfigApplyHistory() {
           <ScrollArea className='max-h-[50vh]'>
             <ul className='flex flex-col'>
               {versions.data.versions.map((version) => (
-                <VersionRow key={version.id} version={version} disabled={restore.isPending} onRestore={onRestore} />
+                <ConfigApplyVersionRow
+                  key={version.id}
+                  version={version}
+                  disabled={restore.isPending}
+                  onRestore={onRestore}
+                />
               ))}
             </ul>
           </ScrollArea>
@@ -109,54 +113,5 @@ export function ConfigApplyHistory() {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-}
-
-/** Rollback to the current version would restart the service for the same config, so it has no button. */
-function VersionRow({
-  version,
-  disabled,
-  onRestore,
-}: {
-  version: ConfigVersion;
-  disabled: boolean;
-  onRestore: (id: number) => void;
-}) {
-  const { t } = useTranslation('features/Config/ConfigApply');
-  return (
-    <li className='flex items-center gap-3 border-t border-border py-2 first:border-t-0'>
-      <span className='text-sm font-medium'>{t('history.version', { id: version.id })}</span>
-      {version.savedAt === null ? (
-        <span className='text-xs text-muted-foreground'>{t('history.unknownTime')}</span>
-      ) : (
-        <SavedAt at={version.savedAt} />
-      )}
-      <span className='font-mono text-xs text-muted-foreground'>{formatBytes(version.size)}</span>
-      <span className='grow' />
-      {version.current ? (
-        <Badge variant='secondary'>{t('history.current')}</Badge>
-      ) : (
-        <Button
-          variant='outline'
-          size='sm'
-          disabled={disabled}
-          onClick={() => {
-            onRestore(version.id);
-          }}
-        >
-          {t('history.restore')}
-        </Button>
-      )}
-    </li>
-  );
-}
-
-function SavedAt({ at }: { at: number }) {
-  const saved = new Date(at);
-
-  return (
-    <time dateTime={saved.toISOString()} className='text-xs text-muted-foreground'>
-      {formatDateTime(saved)}
-    </time>
   );
 }

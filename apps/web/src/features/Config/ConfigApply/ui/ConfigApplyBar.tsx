@@ -1,20 +1,20 @@
-import type { ParseKeys } from 'i18next';
-import { CircleAlert, FilePen, Info, LoaderCircle, Timer } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState, type TransitionEvent } from 'react';
-import { Trans, useTranslation } from 'react-i18next';
+import { FilePen, LoaderCircle } from 'lucide-react';
+import { useMemo, useState, type TransitionEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 
-import { APPLY_PHASE, type ApplyReasonCode, type ApplyTransaction } from '@entities/Daemon';
+import { APPLY_PHASE } from '@entities/Daemon';
 import { useNarrowScreen, useReducedMotion } from '@shared/lib/media';
-import { NS_IN_SECOND } from '@shared/lib/time';
-import { useCountdown } from '@shared/lib/useCountdown';
 import { cn } from '@shared/lib/utils';
-import { Alert, AlertAction, AlertDescription, AlertTitle, Button, Separator } from '@shared/ui';
+import { Separator } from '@shared/ui';
 
 import { useConfigApply } from '../lib/ConfigApply.lib';
+import { useBarSpace } from '../lib/ConfigApply.space';
 import { ConfigApplyBlocked } from './ConfigApplyBlocked';
 import { ConfigApplyCheck } from './ConfigApplyCheck';
+import { ConfigApplyConfirmWindow } from './ConfigApplyConfirmWindow';
 import { ConfigApplyDiff } from './ConfigApplyDiff';
 import { ConfigApplyDiscard } from './ConfigApplyDiscard';
+import { ConfigApplyFailure } from './ConfigApplyFailure';
 import { ConfigApplyStale } from './ConfigApplyStale';
 import { ConfigApplyWorkdir } from './ConfigApplyWorkdir';
 
@@ -104,7 +104,7 @@ export function ConfigApplyBar({ onSpaceChange }: { onSpaceChange: (space: numbe
           className='flex max-h-[60svh] w-full max-w-4xl flex-col gap-2 overflow-y-auto rounded-xl bg-popover px-4 py-2.5 text-popover-foreground shadow-lg ring-1 ring-foreground/10'
         >
           {shown.awaiting && shown.transaction !== null ? (
-            <ConfirmWindow
+            <ConfigApplyConfirmWindow
               key={shown.transaction.id}
               transaction={shown.transaction}
               isConfirming={apply.isConfirming}
@@ -148,7 +148,7 @@ export function ConfigApplyBar({ onSpaceChange }: { onSpaceChange: (space: numbe
           {shown.workdir !== null && <ConfigApplyWorkdir mismatch={shown.workdir} />}
 
           {shown.failure && shown.transaction !== null && (
-            <ApplyFailure
+            <ConfigApplyFailure
               transaction={shown.transaction}
               onDismiss={() => {
                 setDismissed(shown.transaction?.id ?? null);
@@ -158,148 +158,5 @@ export function ConfigApplyBar({ onSpaceChange }: { onSpaceChange: (space: numbe
         </section>
       )}
     </div>
-  );
-}
-
-/**
- * Height of the bar layer while it takes space, visible or still sliding away.
- * The space under a leaving bar is held until the end of the slide, otherwise
- * the screen bottom would jump under it. It is measured by an observer, not
- * once: `sing-box check` output, a failure and the confirmation window change
- * the bar height in place.
- */
-function useBarSpace(visible: boolean, onSpaceChange: (space: number) => void) {
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(
-    function reportBarSpace() {
-      const layer = ref.current;
-
-      if (!visible || layer === null) {
-        onSpaceChange(0);
-
-        return;
-      }
-
-      const observer = new ResizeObserver(function measureBar() {
-        onSpaceChange(layer.offsetHeight);
-      });
-
-      observer.observe(layer);
-
-      return function stopMeasuringBar() {
-        observer.disconnect();
-      };
-    },
-    [visible, onSpaceChange]
-  );
-
-  return ref;
-}
-
-/**
- * The remainder comes from the daemon, which counts it with a monotonic clock
- * because the router has no real-time clock, while the browser only ticks
- * between responses: nothing happens at zero here, the daemon does the
- * rollback. Each poll response resyncs the countdown, so a `setInterval`
- * throttled in a background tab does not accumulate drift.
- */
-function ConfirmWindow({
-  transaction,
-  isConfirming,
-  onConfirm,
-}: {
-  transaction: ApplyTransaction;
-  isConfirming: boolean;
-  onConfirm: () => void;
-}) {
-  const { t } = useTranslation('features/Config/ConfigApply');
-  const remaining = useCountdown(Math.ceil(transaction.window / NS_IN_SECOND));
-
-  return (
-    <div className='flex flex-col gap-2'>
-      <div className='flex min-h-7 flex-wrap items-center gap-x-2.5 gap-y-1'>
-        <Timer className='size-4 shrink-0 text-muted-foreground' />
-        <p className='text-sm'>
-          {/* The live region is only on the unchanging part: otherwise the
-              ticking remainder would reannounce the whole window every second.
-              */}
-          <span role='status'>{t('confirm.prompt')}</span>{' '}
-          {remaining > 0 ? (
-            <Trans
-              t={t}
-              i18nKey='confirm.left'
-              values={{ seconds: remaining }}
-              components={{ time: <data value={remaining} /> }}
-            />
-          ) : (
-            t('confirm.rollback')
-          )}
-        </p>
-        <span className='grow' />
-        <Button size='sm' disabled={isConfirming} onClick={onConfirm}>
-          {t('confirm.submit')}
-        </Button>
-      </div>
-
-      {transaction.clashApiAdded === true && <ClashAPIAdded />}
-    </div>
-  );
-}
-
-/**
- * The `experimental.clash_api` section is appended by the daemon: without it
- * there is nothing to read the runtime with, and the user is shown this as
- * someone else's edit in their file.
- */
-function ClashAPIAdded() {
-  const { t } = useTranslation('features/Config/ConfigApply');
-  return (
-    <Alert>
-      <Info />
-      <AlertTitle>{t('clashApi.title')}</AlertTitle>
-      <AlertDescription>{t('clashApi.description')}</AlertDescription>
-    </Alert>
-  );
-}
-
-/** The step the cycle stopped at, in the user's words: a new daemon code is a compile error here. */
-const REASON_KEY: Readonly<Record<ApplyReasonCode, ParseKeys<'features/Config/ConfigApply'>>> = {
-  backup_failed: 'failure.reason.backup_failed',
-  write_failed: 'failure.reason.write_failed',
-  restart_failed: 'failure.reason.restart_failed',
-  healthcheck_failed: 'failure.reason.healthcheck_failed',
-  dns_probe_failed: 'failure.reason.dns_probe_failed',
-  interception_missing: 'failure.reason.interception_missing',
-  rollback_failed: 'failure.reason.rollback_failed',
-  no_backup: 'failure.reason.no_backup',
-  lists_restored: 'failure.reason.lists_restored',
-};
-
-function ApplyFailure({ transaction, onDismiss }: { transaction: ApplyTransaction; onDismiss: () => void }) {
-  const { t } = useTranslation('features/Config/ConfigApply');
-  const reasonKey = transaction.reasonCode === undefined ? undefined : REASON_KEY[transaction.reasonCode];
-
-  return (
-    <Alert variant='destructive' className='max-sm:pr-2.5'>
-      <CircleAlert />
-      <AlertTitle>
-        {transaction.phase === APPLY_PHASE.RolledBack ? t('failure.rolledBack') : t('failure.failed')}
-      </AlertTitle>
-      {reasonKey !== undefined && <AlertDescription>{t(reasonKey)}</AlertDescription>}
-      {transaction.reason !== undefined && (
-        <AlertDescription>
-          <pre className='font-mono text-xs whitespace-pre-wrap'>{transaction.reason}</pre>
-        </AlertDescription>
-      )}
-      {/* The primitive places the action absolutely in the corner; on a
-          narrow screen it overlaps the title, so there it goes into the flow.
-          */}
-      <AlertAction className='static col-start-2 mt-2 justify-self-start sm:absolute sm:mt-0'>
-        <Button variant='ghost' size='sm' onClick={onDismiss}>
-          {t('failure.dismiss')}
-        </Button>
-      </AlertAction>
-    </Alert>
   );
 }

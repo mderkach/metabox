@@ -160,7 +160,6 @@ export function Plot({
         return;
       }
 
-      // Data is set by the update effect below: it runs in the same commit right after this one.
       const empty: PlotData = [[], ...options.series.slice(1).map((): number[] => [])];
       let palette = readPalette(element, tones);
       const instance = new uPlot(
@@ -214,7 +213,7 @@ export function Plot({
         applyScales(instance, scales);
       });
     },
-    [options, data, scales]
+    [options, tones, onChart, data, scales]
   );
 
   return <figure ref={container} aria-label={label} className={cn('min-w-0 font-mono text-xs', className)} />;

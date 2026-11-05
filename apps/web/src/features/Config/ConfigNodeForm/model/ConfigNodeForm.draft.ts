@@ -1,6 +1,6 @@
 import type { JSONPath } from 'jsonc-parser';
 
-import { ConfigDocumentStore, diffNode, findValue, type NodeEdit } from '@entities/Config';
+import { selectConfigCurrent, ConfigDocumentStore, diffNode, findValue, type NodeEdit } from '@entities/Config';
 import type { FieldPlan } from '@shared/lib/schemaShape';
 
 import { splitByPresence, type ConfigNodeFormModel } from './ConfigNodeForm.model';
@@ -19,7 +19,7 @@ export function writeNodeForm(
   data: ConfigNodeFormModel,
   withRemovals: boolean
 ): boolean {
-  const current = findValue(ConfigDocumentStore.getState().current() ?? '', path) ?? {};
+  const current = findValue(selectConfigCurrent(ConfigDocumentStore.getState()) ?? '', path) ?? {};
 
   if (!isRecord(current)) {
     return false;

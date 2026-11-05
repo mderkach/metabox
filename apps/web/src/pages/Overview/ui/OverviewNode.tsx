@@ -1,9 +1,8 @@
 import { Link } from '@tanstack/react-router';
-import type { TFunction } from 'i18next';
 import { ArrowUpRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { DELAY_TIMEOUT, SERVICE_GROUPS, useProxies, type ProxyNode } from '@entities/Proxy';
+import { SERVICE_GROUPS, useProxies } from '@entities/Proxy';
 import { useSelectProxy } from '@features/Proxy/ProxySelect';
 import { cn } from '@shared/lib/utils';
 import {
@@ -18,18 +17,7 @@ import {
 } from '@shared/ui';
 import { DELAY_TONE } from '@widgets/ProxyGroups';
 
-function toDelayLabel(t: TFunction<'pages/Overview'>, node: ProxyNode | undefined): string {
-  const delay = node?.delay ?? null;
-
-  if (delay === null) {
-    return t('delay.untested', { ns: 'shared' });
-  }
-
-  // A connection failure, not a latency: the runtime returns it as the number 65535.
-  return delay >= DELAY_TIMEOUT
-    ? t('delay.timedOut', { ns: 'shared' })
-    : t('delay.value', { ns: 'shared', value: delay });
-}
+import { toDelayLabel } from '../lib/Overview.delay';
 
 /**
  * The node the traffic leaves through, switched in place: from a phone this is

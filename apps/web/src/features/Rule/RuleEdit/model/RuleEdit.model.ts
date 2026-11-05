@@ -1,6 +1,13 @@
 import type { JSONPath } from 'jsonc-parser';
 
-import { ConfigDocumentStore, findValue, readRuleNames, ruleNodePath, toElementName } from '@entities/Config';
+import {
+  selectConfigCurrent,
+  ConfigDocumentStore,
+  findValue,
+  readRuleNames,
+  ruleNodePath,
+  toElementName,
+} from '@entities/Config';
 import { RULE_SET_MATCHER, RULE_TARGET, ruleSetsOf, toRuleRowsFromNodes, type RuleRow } from '@entities/Rule';
 
 import {
@@ -57,7 +64,7 @@ export function writeRuleEdit(
   }
 
   const path = ruleNodePath(index);
-  const text = ConfigDocumentStore.getState().current() ?? '';
+  const text = selectConfigCurrent(ConfigDocumentStore.getState()) ?? '';
   const current = toRuleRowsFromNodes([findValue(text, path)], [readRuleNames(text).at(index - 1) ?? null]).at(0);
 
   if (current === undefined) {

@@ -1,6 +1,6 @@
 import { FakePlot } from '@test/fakePlot';
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { Plot, type PlotData, type PlotOptions, type PlotTone } from '../Plot';
 
@@ -36,6 +36,35 @@ describe('Plot', () => {
 
     expect(FakePlot.latest().scales.y).toEqual({ min: -8, max: 8 });
   });
+
+  it.each(['tones', 'onChart'] as const)(
+    'applies current data and scales when only %s recreates the chart',
+    (changed) => {
+      const data: PlotData = [[1], [2]];
+      const scales = { y: { min: 0, max: 4 } };
+      const onChart = vi.fn<(chart: import('../Plot').PlotInstance | null) => void>();
+      const { rerender } = render(
+        <Plot options={OPTIONS} tones={TONES} data={data} scales={scales} onChart={onChart} label='график' />
+      );
+      const first = FakePlot.latest();
+
+      rerender(
+        <Plot
+          options={OPTIONS}
+          tones={changed === 'tones' ? [...TONES] : TONES}
+          data={data}
+          scales={scales}
+          onChart={changed === 'onChart' ? vi.fn<(chart: import('../Plot').PlotInstance | null) => void>() : onChart}
+          label='график'
+        />
+      );
+
+      expect(first.destroy).toHaveBeenCalledOnce();
+      expect(FakePlot.latest()).not.toBe(first);
+      expect(FakePlot.latest().data).toEqual(data);
+      expect(FakePlot.latest().scales.y).toEqual(scales.y);
+    }
+  );
 
   it('destroys the chart on unmount', () => {
     const { unmount } = render(<Plot options={OPTIONS} tones={TONES} data={[[1], [1]]} label='график' />);

@@ -10,8 +10,7 @@ export interface CustomListRules {
   cidrs: string[];
 }
 
-const IPV4_ENTRY = /^\d{1,3}(?:\.\d{1,3}){3}(?:\/\d{1,2})?$/;
-const IPV6_ENTRY = /^[0-9a-f:]+(?:\/\d{1,3})?$/i;
+const AddressEntrySchema = z.union([z.ipv4(), z.ipv6(), z.cidrv4(), z.cidrv6()]);
 /** Domain: ASCII labels separated by dots, no leading hyphen; IDN is entered as punycode. */
 const DOMAIN_ENTRY = /^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z][a-z0-9-]*$/i;
 
@@ -24,7 +23,7 @@ export function listEntries(text: string): string[] {
 }
 
 function classifyEntry(entry: string): keyof CustomListRules | null {
-  if (IPV4_ENTRY.test(entry) || (entry.includes(':') && IPV6_ENTRY.test(entry))) {
+  if (AddressEntrySchema.safeParse(entry).success) {
     return 'cidrs';
   }
 

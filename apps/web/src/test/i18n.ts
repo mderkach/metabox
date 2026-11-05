@@ -4,7 +4,7 @@ import { initReactI18next } from 'react-i18next';
 /**
  * The test dictionary is assembled at once and synchronously: a render in a test does not wait, and
  * a network load would substitute a placeholder for the text the
- * assertion checks. The loading itself is checked by the browser, not by jsdom.
+ * assertion checks. The production backend has separate HTTP-loading tests.
  */
 const LOCALES = import.meta.glob<Record<string, unknown>>('/src/**/i18n/*.json', {
   eager: true,

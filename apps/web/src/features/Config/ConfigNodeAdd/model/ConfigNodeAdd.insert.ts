@@ -1,4 +1,5 @@
 import {
+  selectConfigCurrent,
   ConfigDocumentState,
   ConfigDocumentStore,
   readSectionNodes,
@@ -15,7 +16,7 @@ export function useNodeInsert(section: GenericSection): (node: object) => boolea
   const insert = ConfigDocumentState.use.insert();
 
   return function insertNode(node) {
-    const count = readSectionNodes(ConfigDocumentStore.getState().current() ?? '{}', section).length;
+    const count = readSectionNodes(selectConfigCurrent(ConfigDocumentStore.getState()) ?? '{}', section).length;
 
     return insert(sectionNodePath(section, count), node);
   };

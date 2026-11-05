@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { ConnectionShare } from '@entities/Connection';
 
+import { byProtocol } from '../model/ConnectionSummary.network';
 import { ConnectionSummaryPanel } from './ConnectionSummaryPanel';
 import { ConnectionSummarySplit, type SplitSlice } from './ConnectionSummarySplit';
 
@@ -12,15 +13,6 @@ const PROTOCOL_TONES: Readonly<Record<string, string>> = {
 };
 
 const OTHER_TONE = 'bg-muted-foreground';
-
-const PROTOCOL_ORDER = ['tcp', 'udp'];
-
-function byProtocol(left: ConnectionShare, right: ConnectionShare): number {
-  const leftIndex = PROTOCOL_ORDER.indexOf(left.key);
-  const rightIndex = PROTOCOL_ORDER.indexOf(right.key);
-
-  return (leftIndex < 0 ? PROTOCOL_ORDER.length : leftIndex) - (rightIndex < 0 ? PROTOCOL_ORDER.length : rightIndex);
-}
 
 export function ConnectionSummaryNetwork({ shares }: { shares: ConnectionShare[] }) {
   const { t } = useTranslation('widgets/ConnectionSummary');

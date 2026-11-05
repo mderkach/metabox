@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { toast } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ConfigDocumentState } from '@entities/Config';
+import { selectConfigCurrent, ConfigDocumentState } from '@entities/Config';
 
 import { RuleSetCustomForm } from '../ui/RuleSetCustomForm';
 
@@ -79,7 +79,7 @@ describe('custom list', () => {
         'Безопасно изменить конфиг не удалось. Проверьте синтаксис в текстовом режиме; черновик оставлен без изменений.'
       );
     });
-    expect(ConfigDocumentState.getState().current()).toBe(text);
+    expect(selectConfigCurrent(ConfigDocumentState.getState())).toBe(text);
     expect(ConfigDocumentState.getState().draft).toBeNull();
     expect(ConfigDocumentState.getState().listsDraft).toEqual({});
     expect(screen.getByLabelText('Имя списка')).toHaveValue('big-list');

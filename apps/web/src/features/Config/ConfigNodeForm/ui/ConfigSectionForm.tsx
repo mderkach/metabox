@@ -1,7 +1,7 @@
 import { sectionSettingsPath, sectionSettingsSchema, type SettingsSection } from '@entities/Config';
 
 import type { ConfigNodeFormModel } from '../model';
-import { ConfigNodeFormBody } from './ConfigNodeForm';
+import { ConfigNodeFormBody } from './ConfigNodeFormBody';
 
 /**
  * Section fields as a form by the section schema without its lists: scalars of

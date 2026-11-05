@@ -1,1 +1,2 @@
-export { SectionNodes, SectionPage } from './SectionPage';
+export { SectionPage } from './SectionPage';
+export { SectionNodes } from './SectionNodes';

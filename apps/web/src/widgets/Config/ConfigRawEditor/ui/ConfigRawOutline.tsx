@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { type JsoncOutlineEntry, jsoncOutline } from '@shared/lib/jsonc';
 import { Button, Popover, PopoverContent, PopoverTrigger } from '@shared/ui';
 
+import { ConfigRawOutlineEntry } from './ConfigRawOutlineEntry';
+
 /**
  * Config text outline: root sections and their nested lists, navigation is
  * by the cursor in the field to the section key. Computed only while the window is open: there is
@@ -51,12 +53,12 @@ export function ConfigRawOutline({
           <ul aria-label={t('outline.label')} className='flex flex-col'>
             {outline.map((entry) => (
               <li key={entry.offset}>
-                <OutlineEntry entry={entry} onJump={jump} />
+                <ConfigRawOutlineEntry entry={entry} onJump={jump} />
                 {entry.children.length > 0 && (
                   <ul className='flex flex-col pl-4'>
                     {entry.children.map((child) => (
                       <li key={child.offset}>
-                        <OutlineEntry entry={child} onJump={jump} />
+                        <ConfigRawOutlineEntry entry={child} onJump={jump} />
                       </li>
                     ))}
                   </ul>
@@ -67,21 +69,5 @@ export function ConfigRawOutline({
         )}
       </PopoverContent>
     </Popover>
-  );
-}
-
-function OutlineEntry({ entry, onJump }: { entry: JsoncOutlineEntry; onJump: (entry: JsoncOutlineEntry) => void }) {
-  return (
-    <Button
-      variant='ghost'
-      size='sm'
-      onClick={() => {
-        onJump(entry);
-      }}
-      className='w-full justify-between font-mono text-xs'
-    >
-      <span className='truncate'>{entry.key}</span>
-      {entry.size !== null && <span className='text-muted-foreground tabular-nums'>{entry.size}</span>}
-    </Button>
   );
 }

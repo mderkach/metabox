@@ -18,6 +18,7 @@ import {
 } from '@shared/ui';
 
 import { CONFIG_TABS, CONFIG_TABS_FREQUENT, tabPath } from '../model';
+import { ConfigSectionCount } from './ConfigSectionCount';
 
 const HALF = 0.5;
 
@@ -104,7 +105,7 @@ export function ConfigTabs({ config }: { config: ConfigDocument | null }) {
                   className='flex-none'
                 >
                   {t(section.label)}
-                  {count !== null && <SectionCount count={count} />}
+                  {count !== null && <ConfigSectionCount count={count} />}
                 </TabsTrigger>
               );
             })}
@@ -127,7 +128,7 @@ export function ConfigTabs({ config }: { config: ConfigDocument | null }) {
                   className='justify-between gap-4'
                 >
                   {t(section.label)}
-                  {count !== null && <SectionCount count={count} />}
+                  {count !== null && <ConfigSectionCount count={count} />}
                 </DropdownMenuItem>
               );
             })}
@@ -136,8 +137,4 @@ export function ConfigTabs({ config }: { config: ConfigDocument | null }) {
       </div>
     </div>
   );
-}
-
-function SectionCount({ count }: { count: number }) {
-  return <span className='text-xs text-muted-foreground tabular-nums'>{count}</span>;
 }

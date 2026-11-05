@@ -2,7 +2,7 @@ import type { JSONPath } from 'jsonc-parser';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { ConfigDocumentState, ConfigDocumentStore, findValue } from '@entities/Config';
+import { selectConfigCurrent, ConfigDocumentState, ConfigDocumentStore, findValue } from '@entities/Config';
 import { failureLine, parseJsonc } from '@shared/lib/jsonc';
 import { JsonTextarea } from '@shared/ui';
 
@@ -45,7 +45,10 @@ export function ConfigNodeRawEditor({
 
     setFailure(null);
 
-    if (JSON.stringify(parsed) !== JSON.stringify(findValue(ConfigDocumentStore.getState().current() ?? '', path))) {
+    if (
+      JSON.stringify(parsed) !==
+      JSON.stringify(findValue(selectConfigCurrent(ConfigDocumentStore.getState()) ?? '', path))
+    ) {
       edit(path, parsed);
     }
   };

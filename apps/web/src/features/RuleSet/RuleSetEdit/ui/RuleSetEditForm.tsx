@@ -43,6 +43,7 @@ export function RuleSetEditForm({
 
   const form = useForm<RuleSetEditModel, unknown, RuleSetAddModel>({
     defaultValues: defaults,
+    values: defaults,
     mode: 'onChange',
     shouldFocusError: false,
     resolver: zodResolver(makeRuleSetEditSchema(takenTags, outbounds, defaults.tag)),

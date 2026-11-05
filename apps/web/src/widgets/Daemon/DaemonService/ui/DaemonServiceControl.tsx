@@ -1,4 +1,4 @@
-import type { ParseKeys, TFunction } from 'i18next';
+import type { ParseKeys } from 'i18next';
 import { CircleAlert, Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -11,11 +11,11 @@ import {
 } from '@entities/Daemon';
 import { useServiceAction } from '@features/Daemon/DaemonControl';
 import { failureText } from '@shared/api';
-import { HOURS_IN_DAY, SECONDS_IN_HOUR, SECONDS_IN_MINUTE } from '@shared/lib/time';
 import { cn } from '@shared/lib/utils';
 import { Alert, AlertDescription, AlertTitle, Button, CARD_TITLE, Separator } from '@shared/ui';
 
 import { useLastConfirmedService } from '../lib';
+import { formatUptime } from '../lib/DaemonService.uptime';
 import { DaemonServiceRestart } from './DaemonServiceRestart';
 import { DaemonServiceStop } from './DaemonServiceStop';
 
@@ -36,23 +36,6 @@ const STATUS_TONE: Readonly<Record<ServiceState['status'], string>> = {
 const REASON_KEY: Readonly<Record<ServiceErrorCode, ParseKeys<'widgets/Daemon/DaemonService'>>> = {
   service_state_unread: 'reason.service_state_unread',
 };
-
-/** The first hour in minutes: "0 h" for a just-started process reads as breakage. */
-function formatUptime(t: TFunction<'widgets/Daemon/DaemonService'>, seconds: number): string {
-  if (seconds < SECONDS_IN_MINUTE) {
-    return t('uptime.underMinute');
-  }
-
-  if (seconds < SECONDS_IN_HOUR) {
-    return t('uptime.minutes', { minutes: Math.floor(seconds / SECONDS_IN_MINUTE) });
-  }
-
-  const hours = Math.floor(seconds / SECONDS_IN_HOUR);
-
-  return hours >= HOURS_IN_DAY
-    ? t('uptime.days', { days: Math.floor(hours / HOURS_IN_DAY), hours: hours % HOURS_IN_DAY })
-    : t('uptime.hours', { hours });
-}
 
 /**
  * The sing-box service state and its commands.

@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { toast } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ConfigDocumentStore } from '@entities/Config';
+import { selectConfigCurrent, ConfigDocumentStore } from '@entities/Config';
 
 import { RuleDeleteButton } from '../ui/RuleDeleteButton';
 
@@ -31,7 +31,7 @@ describe('RuleDeleteButton', () => {
       'Безопасно изменить конфиг не удалось. Проверьте синтаксис в текстовом режиме; черновик оставлен без изменений.'
     );
     expect(onDeleted).not.toHaveBeenCalled();
-    expect(ConfigDocumentStore.getState().current()).toBe(text);
+    expect(selectConfigCurrent(ConfigDocumentStore.getState())).toBe(text);
     expect(ConfigDocumentStore.getState().draft).toBeNull();
   });
 });

@@ -4,13 +4,10 @@ import { useTrafficHistory, type SystemStat } from '@entities/Daemon';
 import { formatAge, formatBytes } from '@shared/lib/format';
 import { CARD_FLUSH, Card } from '@shared/ui';
 
+import { formatLoad, formatCelsius, toTemperature } from '../lib/Overview.temperature';
 import { OverviewSection } from './OverviewSection';
 import { OverviewTile } from './OverviewTile';
 import { OverviewTrend } from './OverviewTrend';
-
-const DEGREE_PRECISION = 1;
-/** Load is printed in hundredths: tenths are too coarse to tell idle from work. */
-const LOAD_PRECISION = 2;
 
 /**
  * Top of the temperature scale. The daemon does not give throttle points, and for router SoCs
@@ -18,23 +15,6 @@ const LOAD_PRECISION = 2;
  * a fluctuation around forty degrees at full height.
  */
 const TEMPERATURE_CAPACITY = 100;
-
-function formatLoad(value: number): string {
-  return value.toFixed(LOAD_PRECISION);
-}
-
-function formatCelsius(value: number): string {
-  return `${value.toFixed(DEGREE_PRECISION)} °C`;
-}
-
-/** Dash means the board has no thermal zones; `null` means there was no snapshot yet. */
-function toTemperature(system: SystemStat | null, hottest: SystemStat['thermal'][number] | undefined): string | null {
-  if (system === null) {
-    return null;
-  }
-
-  return hottest === undefined ? '—' : formatCelsius(hottest.celsius);
-}
 
 export function OverviewDevice({ system, collapsible }: { system: SystemStat | null; collapsible: boolean }) {
   const { t } = useTranslation('pages/Overview');

@@ -6,9 +6,11 @@ import { useRuleTitle, type RuleRow as RuleRowModel } from '@entities/Rule';
 import { cn } from '@shared/lib/utils';
 import { SURFACE } from '@shared/ui';
 
-import { RULE_HIT, RULE_HITS_STATE, type RuleHitCell, type RuleHitsColumn } from '../model';
+import { RULE_HITS_STATE, type RuleHitsColumn } from '../model';
+import { toHitCell } from '../model/RuleTable.cell';
 import { RuleRow } from './RuleRow';
 import { RuleTableHeader } from './RuleTableHeader';
+import { RuleTableHitsNote } from './RuleTableHitsNote';
 
 /** Estimate for the first frame: the virtualizer measures the exact height itself. */
 const ROW_ESTIMATE = 52;
@@ -22,11 +24,6 @@ const HEADER_ROWS = 1;
 const NO_EDITS: ReadonlySet<string> = new Set();
 
 const NO_OUTBOUND_TYPES: ReadonlyMap<string, string> = new Map();
-
-const HITS_NOTE = {
-  [RULE_HITS_STATE.Failed]: 'hits.failed',
-  [RULE_HITS_STATE.Mismatch]: 'hits.mismatch',
-} as const;
 
 /**
  * Rule list in file order: toolbar, column header, virtualized rows
@@ -225,27 +222,8 @@ export function RuleTable({
             ? t('count.rule', { ns: 'shared', count: total })
             : t('list.shown', { ns: 'shared', shown: rules.length, total })}
         </p>
-        <HitsNote hits={hits} />
+        <RuleTableHitsNote hits={hits} />
       </div>
     </section>
   );
-}
-
-function toHitCell(counts: ReadonlyMap<string, number | null>, id: string): RuleHitCell {
-  if (!counts.has(id)) {
-    return RULE_HIT.Edited;
-  }
-
-  return counts.get(id) ?? RULE_HIT.Unobserved;
-}
-
-/** Why there is no count: without this line an empty column would look like breakage. */
-function HitsNote({ hits }: { hits: RuleHitsColumn | null }) {
-  const { t } = useTranslation('widgets/Rule/RuleTable');
-
-  if (hits === null || hits.state === RULE_HITS_STATE.Pending || hits.state === RULE_HITS_STATE.Counted) {
-    return null;
-  }
-
-  return <p className='ml-auto'>{t(HITS_NOTE[hits.state])}</p>;
 }

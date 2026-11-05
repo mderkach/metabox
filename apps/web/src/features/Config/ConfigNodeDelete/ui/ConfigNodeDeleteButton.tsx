@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {
+  selectConfigCurrent,
   ConfigDocumentState,
   ConfigDocumentStore,
   findReferences,
@@ -53,7 +54,7 @@ export function ConfigNodeDeleteButton({
       destructive
       onOpenChange={(open) => {
         if (open) {
-          setReferences(findReferences(ConfigDocumentStore.getState().current() ?? '', tag));
+          setReferences(findReferences(selectConfigCurrent(ConfigDocumentStore.getState()) ?? '', tag));
         }
       }}
       onConfirm={() => {

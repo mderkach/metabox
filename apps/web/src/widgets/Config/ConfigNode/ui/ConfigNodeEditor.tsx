@@ -38,17 +38,15 @@ export function ConfigNodeEditor({
   const form = toNodeForm(section, node);
   const [tab, setTab] = useState<string>(form.recognized ? TAB.Form : TAB.Raw);
 
-  const raw = (
-    <ConfigNodeRawEditor
-      path={path}
-      node={node}
-      editorId={`section-node-${section}-${String(index)}`}
-      label={t('editor.label', { name })}
-    />
-  );
-
   if (!form.hasForm) {
-    return raw;
+    return (
+      <ConfigNodeRawEditor
+        path={path}
+        node={node}
+        editorId={`section-node-${section}-${String(index)}`}
+        label={t('editor.label', { name })}
+      />
+    );
   }
 
   return (
@@ -71,7 +69,12 @@ export function ConfigNodeEditor({
       </TabsContent>
 
       <TabsContent value={TAB.Raw} className='pt-3'>
-        {raw}
+        <ConfigNodeRawEditor
+          path={path}
+          node={node}
+          editorId={`section-node-${section}-${String(index)}`}
+          label={t('editor.label', { name })}
+        />
       </TabsContent>
     </Tabs>
   );

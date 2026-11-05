@@ -1,29 +1,16 @@
-import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 
-import { formatAge, formatBytes, formatRate } from '@shared/lib/format';
+import { formatAge, formatRate } from '@shared/lib/format';
 import { CARD_FLUSH, Card } from '@shared/ui';
 import { ConnectionSummaryVolume } from '@widgets/ConnectionSummary';
 import { DaemonTraffic } from '@widgets/Daemon/DaemonTraffic';
 
 import type { OverviewRuntime } from '../lib';
+import { toVolume, toPeak } from '../lib/Overview.traffic';
 import { OverviewSection } from './OverviewSection';
 import { OverviewTile } from './OverviewTile';
 
 const PERCENT = 100;
-
-/** `null` means there was no device snapshot yet; a dash means the volume over the observation window is zero. */
-function toVolume(pending: boolean, bytes: number): string | null {
-  if (pending) {
-    return null;
-  }
-
-  return bytes > 0 ? formatBytes(bytes) : '—';
-}
-
-function toPeak(t: TFunction<'pages/Overview'>, peak: number): string {
-  return peak > 0 ? t('traffic.peak', { value: formatRate(peak) }) : t('traffic.noPeak');
-}
 
 export function OverviewTraffic({ runtime }: { runtime: OverviewRuntime }) {
   const { t } = useTranslation('pages/Overview');

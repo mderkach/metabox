@@ -9,7 +9,7 @@ import { playwright } from '@vitest/browser-playwright';
 import type { ProxyOptions, ViteDevServer } from 'vite';
 import { configDefaults, defineConfig, type Plugin } from 'vitest/config';
 
-import { LOCALE_ROOT, checkLocales, collectLocales, hashedLocaleUrl, localeKey, writeI18nTypes } from './tools/i18n.ts';
+import { metaboxI18n } from './tools/i18nPlugin.ts';
 
 const BUDGET_TESTS = 'src/**/*.budget.test.{ts,tsx}';
 const BROWSER_TESTS = 'src/**/*.browser.test.{ts,tsx}';
@@ -97,115 +97,6 @@ function metaboxScan(): Plugin | false {
   };
 }
 
-const LOCALE_SEGMENT = 'i18n';
-const LOCALE_GLOB = `src/**/${LOCALE_SEGMENT}/*.json`;
-
-/** The URL map of dictionaries arrives in the bundle as a module: there is no extra request for it. */
-const LOCALE_MODULE = 'virtual:metabox-locales';
-
-/**
- * Locale tooling: the namespace map (artifact of `tools/i18n.ts`), cross-language
- * dictionary checking and serving of the dictionaries themselves.
- *
- * Dictionaries go to `dist/locales/<namespace>/<language>-<fingerprint>.json` as files,
- * not as chunks: the runtime fetches them with `fetch`, so the text does not end up in any
- * build module — neither as an import error nor as a lazy chunk. The fingerprint in the name is the same
- * as for other assets: the daemon serves such a file with an eternal cache, and a new
- * panel version arrives under a new address. The runtime cannot know the name
- * in advance, so the plugin prints the URL map.
- *
- * The map changes only when a locale appears or disappears — keys are taken from
- * the JSON itself. A text edit inside a file does not touch the map but reloads
- * the page: the loaded dictionary sits in i18next memory, and a hot update
- * of the module does not reach it.
- */
-function metaboxI18n(): Plugin {
-  const root = import.meta.dirname;
-  let isBuild = false;
-  const urls = new Map<string, string>();
-
-  function report(problems: readonly string[]) {
-    if (problems.length > 0) {
-      console.warn(`[I18N] dictionaries diverged:\n${problems.map((problem) => `  ${problem}`).join('\n')}`);
-    }
-  }
-
-  return {
-    name: 'metabox-i18n',
-    configResolved(config) {
-      isBuild = config.command === 'build';
-    },
-    resolveId(id) {
-      return id === LOCALE_MODULE ? `\0${LOCALE_MODULE}` : undefined;
-    },
-    load(id) {
-      if (id !== `\0${LOCALE_MODULE}`) {
-        return undefined;
-      }
-
-      return `export const LOCALE_URLS = ${JSON.stringify(Object.fromEntries(urls))};`;
-    },
-    buildStart() {
-      writeI18nTypes(root);
-
-      const problems = checkLocales(root);
-
-      report(problems);
-
-      if (problems.length > 0) {
-        this.error('[I18N] language dictionaries do not match by keys');
-      }
-
-      urls.clear();
-
-      for (const locale of collectLocales(path.join(root, 'src'))) {
-        const source = readFileSync(locale.file, 'utf8');
-        // On the dev server the dictionary is read by the middleware below — there it is taken from
-        // the source, and a fingerprint in the name would only get in the way of editing.
-        const url = isBuild ? hashedLocaleUrl(locale, source) : locale.url;
-
-        urls.set(localeKey(locale.language, locale.namespace), `/${url}`);
-
-        if (isBuild) {
-          this.emitFile({ type: 'asset', fileName: url, source });
-        }
-      }
-    },
-    configureServer(server) {
-      server.watcher.add(path.join(root, LOCALE_GLOB));
-
-      // The dev server serves dictionaries from the same addresses as the build: otherwise
-      // the runtime would have to be taught two ways to look for them.
-      server.middlewares.use(`/${LOCALE_ROOT}/`, (request, response, next) => {
-        const locale = collectLocales(path.join(root, 'src')).find(
-          (candidate) => `/${candidate.url}` === `/${LOCALE_ROOT}${request.url ?? ''}`
-        );
-
-        if (locale === undefined) {
-          next();
-
-          return;
-        }
-
-        response.setHeader('Content-Type', 'application/json; charset=utf-8');
-        response.end(readFileSync(locale.file, 'utf8'));
-      });
-
-      function onLocaleChange(file: string) {
-        if (!file.endsWith('.json') || !file.includes(`${path.sep}${LOCALE_SEGMENT}${path.sep}`)) {
-          return;
-        }
-
-        writeI18nTypes(root);
-        report(checkLocales(root));
-        server.ws.send({ type: 'full-reload' });
-      }
-
-      server.watcher.on('add', onLocaleChange).on('change', onLocaleChange).on('unlink', onLocaleChange);
-    },
-  };
-}
-
 /** What to compress: the rest is either already compressed (woff2) or smaller than a response header. */
 const COMPRESSIBLE = new Set(['.js', '.css', '.html', '.json', '.svg']);
 const MIN_COMPRESS_BYTES = 256;
@@ -288,7 +179,7 @@ const sendDaemonOrigin: ProxyOptions['configure'] = (proxy) => {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss(), metaboxI18n(), metaboxCompress(), metaboxMocks(), metaboxScan()],
+  plugins: [react(), tailwindcss(), metaboxI18n(import.meta.dirname), metaboxCompress(), metaboxMocks(), metaboxScan()],
   resolve: {
     alias: {
       ...Object.fromEntries(LAYERS.map((layer) => [`@${layer}`, path.resolve(import.meta.dirname, `./src/${layer}`)])),

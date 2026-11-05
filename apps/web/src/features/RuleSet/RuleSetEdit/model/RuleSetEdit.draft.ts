@@ -1,4 +1,11 @@
-import { ConfigDocumentStore, diffNode, findValue, ruleSetNodePath, type NodeEdit } from '@entities/Config';
+import {
+  selectConfigCurrent,
+  ConfigDocumentStore,
+  diffNode,
+  findValue,
+  ruleSetNodePath,
+  type NodeEdit,
+} from '@entities/Config';
 import type { RuleSetAddModel } from '@features/RuleSet/RuleSetAdd/@x/RuleSetEdit';
 
 import { toRuleSetEditNode } from './RuleSetEdit.schema';
@@ -15,7 +22,7 @@ export function writeRuleSetEdit(
   withRemovals: boolean
 ): boolean {
   const path = ruleSetNodePath(index);
-  const current = findValue(ConfigDocumentStore.getState().current() ?? '', path);
+  const current = findValue(selectConfigCurrent(ConfigDocumentStore.getState()) ?? '', path);
 
   if (!isRecord(current)) {
     return false;

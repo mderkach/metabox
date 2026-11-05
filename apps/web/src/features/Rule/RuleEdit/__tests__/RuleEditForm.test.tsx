@@ -1,7 +1,8 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderWithQuery } from '@test/renderWithQuery';
 import { selectOption } from '@test/selectOption';
 import { server } from '@test/server';
-import { screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 
@@ -346,4 +347,28 @@ describe('rule conditions in the form', () => {
     expect(within(chosen).getByText('Ноутбук')).toBeInTheDocument();
     expect(within(chosen).queryByText('Аренда динамическая, адрес может смениться')).not.toBeInTheDocument();
   });
+});
+
+it('reveals a condition added through an external JSON edit without remounting', async () => {
+  const rule = loadRule({ rule_set: ['github'], outbound: 'proxy' });
+  server.use(...createDeviceHandlers());
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+  const { rerender } = render(
+    <QueryClientProvider client={client}>
+      <RuleEditForm rule={rule} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />
+    </QueryClientProvider>
+  );
+  const changed = toRuleRowsFromNodes([
+    { rule_set: ['github'], outbound: 'proxy', domain_suffix: ['added.example'] },
+  ]).at(0);
+
+  if (changed === undefined) throw new Error('Missing changed rule');
+  rerender(
+    <QueryClientProvider client={client}>
+      <RuleEditForm rule={changed} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />
+    </QueryClientProvider>
+  );
+
+  expect(await screen.findByRole('textbox', { name: 'Домен с поддоменами' })).toBeInTheDocument();
+  expect(screen.getByRole('list', { name: 'Домен с поддоменами: значения' })).toHaveTextContent('added.example');
 });

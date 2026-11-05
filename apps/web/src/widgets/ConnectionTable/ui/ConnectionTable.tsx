@@ -7,12 +7,9 @@ import type { ConnectionRow as ConnectionRowModel } from '@entities/Connection';
 import { deviceLabel, useDeviceIndex } from '@entities/Device';
 import { ConnectionCloseConfirm, useCloseConnection } from '@features/Connection/ConnectionClose';
 import { useNarrowScreen } from '@shared/lib/media';
-import { cn } from '@shared/lib/utils';
-import { SURFACE } from '@shared/ui';
 
 import { DENSITY_ROW_ESTIMATE, useNow, type ConnectionView } from '../lib';
 import { ConnectionCard } from './ConnectionCard';
-import { ConnectionColumnPicker } from './ConnectionColumnPicker';
 import {
   CONNECTION_TABLE_FEATURES,
   toLabeledColumns,
@@ -21,8 +18,6 @@ import {
   toTableMinWidth,
   type ConnectionField,
 } from './ConnectionColumns';
-import { ConnectionDensityToggle } from './ConnectionDensityToggle';
-import { ConnectionRefreshSelect } from './ConnectionRefreshSelect';
 import { ConnectionRow } from './ConnectionRow';
 import { ConnectionTableHeader } from './ConnectionTableHeader';
 
@@ -42,62 +37,6 @@ export interface ConnectionTableEmpty {
 }
 
 const NO_FILTERED_COLUMNS: ReadonlySet<ConnectionField> = new Set();
-
-/**
- * Connection list card: the toolbar above the tabs and the body of each tab.
- *
- * There is one toolbar per screen, and each tab has its own body: search, facets and view
- * are shared, while scrolling and rows are not. So the table is assembled from
- * parts rather than as one component: the screen places one `Toolbar` above the tabs and
- * a `Body` in each.
- *
- * Anatomy, virtualization, sort policy and scroll structure —
- * [tables guide](../../../../docs/guides/Tables.md).
- */
-function ConnectionTableRoot({ children }: { children: ReactNode }) {
-  return (
-    <section className={cn('flex min-h-0 grow flex-col overflow-hidden max-lg:min-h-96', SURFACE)}>{children}</section>
-  );
-}
-
-/**
- * Card toolbar: search and facets on the left, list view and list actions on the right.
- * The view changes the picture, not the system, so it stands to the left of the actions and is not part
- * of their row.
- */
-function ConnectionTableToolbar({
-  view,
-  search = null,
-  actions = null,
-  facets = null,
-}: {
-  /** List view: it survives a reload, so it lives outside the table. */
-  view: ConnectionView;
-  /** Search: left edge of the toolbar. */
-  search?: ReactNode;
-  /** List actions: they live in the table card, not in the page header. */
-  actions?: ReactNode;
-  /**
-   * Facets: in the search row. At a narrow width they go on a separate row under
-   * the toolbar and scroll horizontally instead of wrapping as a cloud.
-   */
-  facets?: ReactNode;
-}) {
-  return (
-    <div className='flex shrink-0 flex-wrap items-center gap-2 border-b border-border px-3.5 py-2.5'>
-      {search}
-      {facets}
-      <span className='grow' />
-      {/* Below md rows are cards: they have neither columns nor density. */}
-      <div className='flex items-center gap-2 max-md:hidden'>
-        <ConnectionColumnPicker view={view} />
-        <ConnectionDensityToggle density={view.density} onDensityChange={view.setDensity} />
-      </div>
-      <ConnectionRefreshSelect interval={view.interval} onIntervalChange={view.setInterval} />
-      {actions}
-    </div>
-  );
-}
 
 /**
  * Tab body: header with sorting, virtualized rows and a footer with
@@ -322,4 +261,6 @@ const ConnectionTableBody = memo(ConnectionTableBodyProto);
 // The parts are assembled into `ConnectionTable.Root`, `.Toolbar` and `.Body` by re-exporting
 // the whole module (`ui/index.ts`): a wrapper object in this file would turn off Fast
 // Refresh for all three.
-export { ConnectionTableBody as Body, ConnectionTableRoot as Root, ConnectionTableToolbar as Toolbar };
+export { ConnectionTableBody as Body };
+export { ConnectionTableRoot as Root } from './ConnectionTableRoot';
+export { ConnectionTableToolbar as Toolbar } from './ConnectionTableToolbar';
