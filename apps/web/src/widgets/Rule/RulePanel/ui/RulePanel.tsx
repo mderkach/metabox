@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { ConfigDocumentState } from '@entities/Config';
 import { useRuleTitle, type RuleRow } from '@entities/Rule';
-import { RuleEditForm } from '@features/Rule/RuleEdit';
+import { actionOutsideForm, RuleEditForm } from '@features/Rule/RuleEdit';
 import { RuleRawEditor } from '@features/Rule/RuleRaw';
 import { useFocusReturn } from '@shared/lib/useFocusReturn';
 import { cn } from '@shared/lib/utils';
@@ -75,7 +75,9 @@ export function RulePanel({
   const creating = onCreate !== undefined;
   const title = creating ? t('titleNew', { index: rule.index }) : titleOf(rule);
   const number = t('rule.numbered', { ns: 'shared', index: rule.index });
-  const [tab, setTab] = useState<string>(recognized ? TAB.Form : TAB.Raw);
+  const formlessAction = actionOutsideForm(node);
+  const formable = recognized && formlessAction === null;
+  const [tab, setTab] = useState<string>(formable ? TAB.Form : TAB.Raw);
   // Keyed by revision, not by the node: the form writes on every keystroke and would lose focus.
   const revision = ConfigDocumentState.use.revision();
   const headingRef = useFocusReturn<HTMLHeadingElement>();
@@ -140,9 +142,13 @@ export function RulePanel({
           </Alert>
         )}
 
+        {recognized && formlessAction !== null && (
+          <p className='text-sm text-pretty text-muted-foreground'>{t('formlessAction', { action: formlessAction })}</p>
+        )}
+
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList variant='line'>
-            <TabsTrigger value={TAB.Form} disabled={!recognized}>
+            <TabsTrigger value={TAB.Form} disabled={!formable}>
               {t('tab.form')}
             </TabsTrigger>
             {!creating && <TabsTrigger value={TAB.Raw}>JSON</TabsTrigger>}
@@ -150,7 +156,7 @@ export function RulePanel({
 
           {/* The form keeps what was typed while the node is checked as text: unmounting erases it. */}
           <TabsContent value={TAB.Form} keepMounted className='pt-3'>
-            {recognized && (
+            {formable && (
               <RuleEditForm key={revision} rule={rule} outbounds={outbounds} ruleSets={ruleSets} onCreate={onCreate} />
             )}
           </TabsContent>
