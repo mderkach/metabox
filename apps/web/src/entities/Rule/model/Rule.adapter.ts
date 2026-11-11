@@ -158,21 +158,29 @@ export function toRuleRowsFromNodes(nodes: readonly unknown[], names: readonly (
   return rows;
 }
 
-const BASE_FIELDS: ReadonlySet<string> = new Set(Object.keys(DefaultRuleBaseSchema.shape));
+let schemaActionFieldsMap: ReadonlyMap<string, readonly string[]> | null = null;
 
-/** Fields each action adds to the conditions, read from the default-rule branches of the strict schema. */
-const ACTION_FIELDS: ReadonlyMap<string, readonly string[]> = new Map(
-  RuleSchema.options
-    .filter((branch) => !('rules' in branch.shape))
-    .map((branch) => [
-      String(branch.shape.action.unwrap().value),
-      Object.keys(branch.shape).filter((key) => key !== 'action' && !BASE_FIELDS.has(key)),
-    ])
-);
+/**
+ * Fields of the action beyond the conditions, from its default-rule branch of
+ * the strict schema: the branch of another action does not accept them. Unlike
+ * the display table `RULE_ACTION_FIELDS` it lists every field; a field that
+ * redefines a condition key (`network_type` of `direct`) is not counted.
+ */
+export function schemaActionFields(action: string): readonly string[] {
+  if (schemaActionFieldsMap === null) {
+    const base = new Set(Object.keys(DefaultRuleBaseSchema.shape));
 
-/** Fields of the action beyond the conditions: the strict branch of another action does not accept them. */
-export function ruleActionFields(action: string): readonly string[] {
-  return ACTION_FIELDS.get(action) ?? [];
+    schemaActionFieldsMap = new Map(
+      RuleSchema.options
+        .filter((branch) => !('rules' in branch.shape))
+        .map((branch) => [
+          String(branch.shape.action.unwrap().value),
+          Object.keys(branch.shape).filter((key) => key !== 'action' && !base.has(key)),
+        ])
+    );
+  }
+
+  return schemaActionFieldsMap.get(action) ?? [];
 }
 
 /** The node is accepted by the fork schema: it has a form, not only the text mode. */

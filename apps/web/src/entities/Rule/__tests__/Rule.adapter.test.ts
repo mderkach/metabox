@@ -5,7 +5,7 @@ import type { Config } from '@shared/api/generated';
 import {
   checkRuleNode,
   isRuleRecognized,
-  ruleActionFields,
+  schemaActionFields,
   toRuleRows,
   toRuleRowsFromNodes,
 } from '../model/Rule.adapter';
@@ -194,17 +194,17 @@ describe('nodes the schema does not know', () => {
   });
 });
 
-describe('ruleActionFields', () => {
+describe('schemaActionFields', () => {
   it('reads the fields each action adds to the conditions from the schema', () => {
-    expect(ruleActionFields('reject')).toEqual(['method', 'no_drop']);
-    expect(ruleActionFields('route')).toEqual(
+    expect(schemaActionFields('reject')).toEqual(['method', 'no_drop']);
+    expect(schemaActionFields('route')).toEqual(
       expect.arrayContaining(['outbound', 'override_address', 'override_port'])
     );
-    expect(ruleActionFields('route')).not.toContain('domain');
-    expect(ruleActionFields('hijack-dns')).toEqual([]);
+    expect(schemaActionFields('route')).not.toContain('domain');
+    expect(schemaActionFields('hijack-dns')).toEqual([]);
   });
 
   it('returns nothing for an action the schema does not have', () => {
-    expect(ruleActionFields('teleport')).toEqual([]);
+    expect(schemaActionFields('teleport')).toEqual([]);
   });
 });

@@ -1,7 +1,7 @@
 export {
   checkRuleNode,
   isRuleRecognized,
-  ruleActionFields,
+  schemaActionFields,
   toRuleRows,
   toRuleRowsFromNodes,
 } from './model/Rule.adapter';

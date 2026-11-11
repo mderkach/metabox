@@ -11,7 +11,7 @@ import {
 import {
   RULE_SET_MATCHER,
   RULE_TARGET,
-  ruleActionFields,
+  schemaActionFields,
   ruleSetsOf,
   toRuleRowsFromNodes,
   type RuleRow,
@@ -72,7 +72,8 @@ export function writeRuleEdit(
 
   const path = ruleNodePath(index);
   const text = selectConfigCurrent(ConfigDocumentStore.getState()) ?? '';
-  const current = toRuleRowsFromNodes([findValue(text, path)], [readRuleNames(text).at(index - 1) ?? null]).at(0);
+  const node = findValue(text, path);
+  const current = toRuleRowsFromNodes([node], [readRuleNames(text).at(index - 1) ?? null]).at(0);
 
   if (current === undefined) {
     return false;
@@ -90,10 +91,12 @@ export function writeRuleEdit(
     edit([...path, 'action'], patch.action);
 
     // The schema branch of each action is strict: a field left from the previous one makes the node invalid.
-    const kept = ruleActionFields(values.action);
+    const kept = schemaActionFields(values.action);
 
-    for (const field of ruleActionFields(before.action)) {
-      if (!kept.includes(field)) edit([...path, field], undefined);
+    for (const field of schemaActionFields(before.action)) {
+      if (!kept.includes(field) && typeof node === 'object' && node !== null && field in node) {
+        edit([...path, field], undefined);
+      }
     }
   }
 
