@@ -104,6 +104,17 @@ describe('rule action change', () => {
     expect(draftRule()).toEqual({ rule_set: ['github'], action: 'route', outbound: 'proxy' });
   });
 
+  it('removes the sniffing fields when sniffing turns into rejecting', async () => {
+    const user = userEvent.setup();
+    const rule = loadRule({ rule_set: ['github'], action: 'sniff', sniffer: ['tls'], timeout: '1s' });
+
+    renderWithQuery(<RuleEditForm rule={rule} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
+
+    await selectOption(user, screen.getByRole('combobox', { name: 'Что делать' }), 'оборвать');
+
+    expect(draftRule()).toEqual({ rule_set: ['github'], action: 'reject' });
+  });
+
   it('removes the routing fields when routing turns into another action', async () => {
     const user = userEvent.setup();
     const rule = loadRule({ rule_set: ['github'], outbound: 'proxy', override_port: 53 });
