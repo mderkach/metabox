@@ -5,6 +5,7 @@
     "title": "The panel does not know this rule",
     "description": "It can be edited only as JSON. It is kept unchanged."
   },
+  "formlessAction": "The form does not know the “{{action}}” action: edit the rule on the JSON tab.",
   "tab": {
     "form": "Form"
   },

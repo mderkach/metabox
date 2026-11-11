@@ -8,7 +8,14 @@ import {
   ruleNodePath,
   toElementName,
 } from '@entities/Config';
-import { RULE_SET_MATCHER, RULE_TARGET, ruleSetsOf, toRuleRowsFromNodes, type RuleRow } from '@entities/Rule';
+import {
+  RULE_SET_MATCHER,
+  RULE_TARGET,
+  ruleActionFields,
+  ruleSetsOf,
+  toRuleRowsFromNodes,
+  type RuleRow,
+} from '@entities/Rule';
 
 import {
   conditionLines,
@@ -81,6 +88,13 @@ export function writeRuleEdit(
   // `route` without an `action` key is the norm: the key is written only when the action changed.
   if (values.action !== before.action) {
     edit([...path, 'action'], patch.action);
+
+    // The schema branch of each action is strict: a field left from the previous one makes the node invalid.
+    const kept = ruleActionFields(values.action);
+
+    for (const field of ruleActionFields(before.action)) {
+      if (!kept.includes(field)) edit([...path, field], undefined);
+    }
   }
 
   if (values.action !== before.action || values.outbound !== before.outbound) {
@@ -172,6 +186,21 @@ function sameTags(left: readonly (string | undefined)[], right: readonly (string
   return tags.size === new Set(right).size && right.every((tag) => tags.has(tag));
 }
 
+/**
+ * The node action the form does not edit (`resolve`, `bypass`, `route-options`),
+ * or `null`. The form would show such a rule as `route` and write fields its
+ * action does not have.
+ */
+export function actionOutsideForm(node: unknown): string | null {
+  const action: unknown = typeof node === 'object' && node !== null ? Reflect.get(node, 'action') : undefined;
+
+  return typeof action !== 'string' || isFormAction(action) ? null : action;
+}
+
+function isFormAction(action: string): action is RuleEditModel['action'] {
+  return Object.values(RULE_ACTION).some((known) => known === action);
+}
+
 function isKnownAction(rule: RuleRow): rule is RuleRow & { target: RuleEditModel['action'] } {
-  return rule.targetKind === RULE_TARGET.Action && Object.values(RULE_ACTION).some((action) => action === rule.target);
+  return rule.targetKind === RULE_TARGET.Action && isFormAction(rule.target);
 }

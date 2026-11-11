@@ -1,4 +1,4 @@
-import { RuleSchema, type Config } from '@shared/api/generated';
+import { DefaultRuleBaseSchema, RuleSchema, type Config } from '@shared/api/generated';
 import { describeIssues } from '@shared/lib/schemaIssues';
 
 import { RULE_ACTION_FIELDS, RULE_MATCHER_KEYS } from './Rule.constants';
@@ -156,6 +156,23 @@ export function toRuleRowsFromNodes(nodes: readonly unknown[], names: readonly (
   }
 
   return rows;
+}
+
+const BASE_FIELDS: ReadonlySet<string> = new Set(Object.keys(DefaultRuleBaseSchema.shape));
+
+/** Fields each action adds to the conditions, read from the default-rule branches of the strict schema. */
+const ACTION_FIELDS: ReadonlyMap<string, readonly string[]> = new Map(
+  RuleSchema.options
+    .filter((branch) => !('rules' in branch.shape))
+    .map((branch) => [
+      String(branch.shape.action.unwrap().value),
+      Object.keys(branch.shape).filter((key) => key !== 'action' && !BASE_FIELDS.has(key)),
+    ])
+);
+
+/** Fields of the action beyond the conditions: the strict branch of another action does not accept them. */
+export function ruleActionFields(action: string): readonly string[] {
+  return ACTION_FIELDS.get(action) ?? [];
 }
 
 /** The node is accepted by the fork schema: it has a form, not only the text mode. */

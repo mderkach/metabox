@@ -1,4 +1,10 @@
-export { checkRuleNode, isRuleRecognized, toRuleRows, toRuleRowsFromNodes } from './model/Rule.adapter';
+export {
+  checkRuleNode,
+  isRuleRecognized,
+  ruleActionFields,
+  toRuleRows,
+  toRuleRowsFromNodes,
+} from './model/Rule.adapter';
 export { toAppliedIndices } from './model/Rule.applied';
 export { toHostAddress, toRuleCaption } from './model/Rule.caption';
 export type { RuleCaption } from './model/Rule.caption';

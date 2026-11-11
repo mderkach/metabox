@@ -91,6 +91,31 @@ describe('rule outbound form', () => {
   });
 });
 
+describe('rule action change', () => {
+  it('removes the fields of the previous action: the schema branch of the new one does not have them', async () => {
+    const user = userEvent.setup();
+    const rule = loadRule({ rule_set: ['github'], action: 'reject', method: 'drop' });
+
+    renderWithQuery(<RuleEditForm rule={rule} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
+
+    await selectOption(user, screen.getByRole('combobox', { name: 'Что делать' }), 'направить через выход');
+    await selectOption(user, screen.getByRole('combobox', { name: 'Куда отправить' }), 'proxy');
+
+    expect(draftRule()).toEqual({ rule_set: ['github'], action: 'route', outbound: 'proxy' });
+  });
+
+  it('removes the routing fields when routing turns into another action', async () => {
+    const user = userEvent.setup();
+    const rule = loadRule({ rule_set: ['github'], outbound: 'proxy', override_port: 53 });
+
+    renderWithQuery(<RuleEditForm rule={rule} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
+
+    await selectOption(user, screen.getByRole('combobox', { name: 'Что делать' }), 'оборвать');
+
+    expect(draftRule()).toEqual({ rule_set: ['github'], action: 'reject' });
+  });
+});
+
 /** A document with one rule: the rule row is built by the same adapter as on the screen. */
 function loadRule(rule: object): RuleRow {
   const text = JSON.stringify({ ...DOCUMENT, route: { ...DOCUMENT.route, rules: [rule] } }, null, 2);

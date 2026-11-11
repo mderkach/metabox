@@ -2,7 +2,13 @@ import { describe, expect, it } from 'vitest';
 
 import type { Config } from '@shared/api/generated';
 
-import { checkRuleNode, isRuleRecognized, toRuleRows, toRuleRowsFromNodes } from '../model/Rule.adapter';
+import {
+  checkRuleNode,
+  isRuleRecognized,
+  ruleActionFields,
+  toRuleRows,
+  toRuleRowsFromNodes,
+} from '../model/Rule.adapter';
 import { RULE_TARGET } from '../model/Rule.model';
 
 function configWithRules(rules: object[]): Config {
@@ -185,5 +191,20 @@ describe('nodes the schema does not know', () => {
 
   it('the schema issue names the field it does not know', () => {
     expect(checkRuleNode({ unknown_matcher: ['своё'], outbound: 'direct' }).join(' ')).toContain('unknown_matcher');
+  });
+});
+
+describe('ruleActionFields', () => {
+  it('reads the fields each action adds to the conditions from the schema', () => {
+    expect(ruleActionFields('reject')).toEqual(['method', 'no_drop']);
+    expect(ruleActionFields('route')).toEqual(
+      expect.arrayContaining(['outbound', 'override_address', 'override_port'])
+    );
+    expect(ruleActionFields('route')).not.toContain('domain');
+    expect(ruleActionFields('hijack-dns')).toEqual([]);
+  });
+
+  it('returns nothing for an action the schema does not have', () => {
+    expect(ruleActionFields('teleport')).toEqual([]);
   });
 });
