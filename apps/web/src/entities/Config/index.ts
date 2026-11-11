@@ -80,9 +80,15 @@ export {
 } from './model/Config.registry';
 export type { NodeRegistry } from './model/Config.registry';
 export type { UnbuiltNode, UnbuiltOption } from './model/Config.build';
-export { useConfigDocument } from './model/Config.document';
+export { useConfigDocument, useConfigLoad } from './model/Config.document';
 export type { ConfigDocumentView } from './model/Config.document';
 export { ConfigDocumentState, ConfigDocumentStore } from './model/Config.store';
-export { selectConfigCurrent, selectConfigDirty, selectConfigStale, selectListChanges } from './model/Config.selectors';
+export {
+  selectConfigCurrent,
+  selectConfigDirty,
+  selectConfigLoaded,
+  selectConfigStale,
+  selectListChanges,
+} from './model/Config.selectors';
 export type { ListChanges } from './model/Config.selectors';
 export { useConfigCurrent, useConfigDiff, useConfigDirty, useConfigStale, useListChanges } from './model/Config.hooks';

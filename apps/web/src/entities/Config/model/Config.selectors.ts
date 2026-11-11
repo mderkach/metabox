@@ -19,6 +19,14 @@ export function selectConfigDirty(state: ConfigDocumentState): boolean {
   return (draft !== null && draft !== applied) || Object.keys(lists.put).length > 0 || lists.remove.length > 0;
 }
 
+/**
+ * The device file is in the store, and so are the list files when the draft
+ * changes any: a draft restored after a reload has no Apply base before that.
+ */
+export function selectConfigLoaded({ applied, appliedLists, listsDraft }: ConfigDocumentState): boolean {
+  return applied !== null && (appliedLists !== null || Object.keys(listsDraft).length === 0);
+}
+
 /** The device config changed since the draft was started. */
 export function selectConfigStale({ draft, draftBase, applied }: ConfigDocumentState): boolean {
   return (

@@ -4,6 +4,7 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useRef } from 'react
 import {
   selectConfigCurrent,
   selectConfigDirty,
+  selectConfigLoaded,
   selectConfigStale,
   selectListChanges,
   CONFIG_QUERY,
@@ -17,6 +18,7 @@ import {
   toCheckFailure,
   toWorkdirMismatch,
   useApplyTransaction,
+  useConfigLoad,
   useListChanges,
   type CheckFailure,
   type ConfigChange,
@@ -106,17 +108,21 @@ function settleDraft({ text, lists }: SubmittedApply) {
 
 export const APPLY_BLOCK = {
   Unreachable: 'unreachable',
+  NotLoaded: 'notLoaded',
   Unparsed: 'unparsed',
 } as const;
 
 /** Why there is something to apply but Apply is off. */
-export type ApplyBlock = { kind: typeof APPLY_BLOCK.Unreachable } | { kind: typeof APPLY_BLOCK.Unparsed; line: number };
+export type ApplyBlock =
+  | { kind: typeof APPLY_BLOCK.Unreachable }
+  | { kind: typeof APPLY_BLOCK.NotLoaded }
+  | { kind: typeof APPLY_BLOCK.Unparsed; line: number };
 
 export interface ConfigApplyState {
   isDirty: boolean;
   /** The draft was started from a different config than the one on the device now. */
   isStale: boolean;
-  /** Dirty, idle, the daemon answers and the draft parses. */
+  /** Dirty, idle, the daemon answers, the device config is read and the draft parses. */
   canApply: boolean;
   /** `null` means nothing stands in the way, or there is nothing to apply. */
   blocked: ApplyBlock | null;
@@ -143,14 +149,18 @@ export interface ConfigApplyState {
  */
 export function useConfigApply(): ConfigApplyState {
   const status = useDaemonStatus();
-  const { text, base, listsBase, isDirty, isStale, discard } = useStore(ConfigDocumentStore, (state) => ({
+  const { text, base, listsBase, isDirty, isLoaded, isStale, discard } = useStore(ConfigDocumentStore, (state) => ({
     text: selectConfigCurrent(state),
     base: state.appliedEtag,
     listsBase: state.listsEtag,
     isDirty: selectConfigDirty(state),
+    isLoaded: selectConfigLoaded(state),
     isStale: selectConfigStale(state),
     discard: state.discard,
   }));
+
+  // The bar is on every screen, the config screens are not: a draft restored after a reload gets its device file here.
+  useConfigLoad(isDirty);
   const lists = useListChanges();
   const start = useApplyConfig();
   const confirm = useConfirmApply();
@@ -169,7 +179,10 @@ export function useConfigApply(): ConfigApplyState {
 
     return checkedText === null || failure === null ? null : failureLine(checkedText, failure);
   }, [checkedText]);
-  const blocked = useMemo(() => toApplyBlock(isDirty, reachable, unparsedLine), [isDirty, reachable, unparsedLine]);
+  const blocked = useMemo(
+    () => toApplyBlock(isDirty, reachable, isLoaded, unparsedLine),
+    [isDirty, reachable, isLoaded, unparsedLine]
+  );
   const unsent = start.error instanceof ApiError && start.error.kind === API_FAILURE.Unreachable;
 
   const check = useMemo(() => toCheckFailure(start.error), [start.error]);
@@ -204,13 +217,22 @@ export function useConfigApply(): ConfigApplyState {
   };
 }
 
-function toApplyBlock(isDirty: boolean, reachable: boolean, unparsedLine: number | null): ApplyBlock | null {
+function toApplyBlock(
+  isDirty: boolean,
+  reachable: boolean,
+  isLoaded: boolean,
+  unparsedLine: number | null
+): ApplyBlock | null {
   if (!isDirty) {
     return null;
   }
 
   if (!reachable) {
     return { kind: APPLY_BLOCK.Unreachable };
+  }
+
+  if (!isLoaded) {
+    return { kind: APPLY_BLOCK.NotLoaded };
   }
 
   return unparsedLine === null ? null : { kind: APPLY_BLOCK.Unparsed, line: unparsedLine };

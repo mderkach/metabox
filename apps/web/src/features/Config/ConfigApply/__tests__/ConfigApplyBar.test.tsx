@@ -7,10 +7,11 @@ import { http, HttpResponse } from 'msw';
 import type { FunctionComponent } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ConfigDocumentState } from '@entities/Config';
+import { ConfigDocumentState, ConfigDocumentStore } from '@entities/Config';
 import { CONFIG_ENDPOINT } from '@entities/Config';
 import { DAEMON_ENDPOINT } from '@entities/Daemon';
 import { DAEMON_STATUS_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture';
+import { fingerprint } from '@shared/lib/fingerprint';
 
 import { ConfigApplyBar } from '../ui/ConfigApplyBar';
 
@@ -421,5 +422,31 @@ describe('ConfigApplyBar', () => {
     // The cause is translated by the code; the daemon's own text stays as the detail under it.
     expect(screen.getByText('no backup')).toBeInTheDocument();
     expect(screen.queryByText('Подтверждения не было — предыдущий конфиг возвращён')).not.toBeInTheDocument();
+  });
+
+  it('holds Apply of a restored draft until it reads the device config, then compares the draft with it', async () => {
+    let release = () => {};
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    server.use(
+      http.get(CONFIG_ENDPOINT.config(), async () => {
+        await released;
+
+        return HttpResponse.text(APPLIED.replace('info', 'warn'), { headers: { ETag: APPLIED_ETAG } });
+      })
+    );
+    ConfigDocumentStore.setState({ draft: DRAFT, draftBase: fingerprint(APPLIED) });
+    await renderScreen(function Screen() {
+      return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+    });
+
+    expect(await screen.findByText('Конфиг с устройства ещё не прочитан — применить пока нельзя.')).toBeInTheDocument();
+
+    release();
+
+    expect(await screen.findByText('Конфиг на роутере изменился после начала правок')).toBeInTheDocument();
+    expect(screen.queryByText('Конфиг с устройства ещё не прочитан — применить пока нельзя.')).not.toBeInTheDocument();
   });
 });
