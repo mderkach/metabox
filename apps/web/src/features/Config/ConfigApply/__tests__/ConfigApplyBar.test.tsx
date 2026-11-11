@@ -37,6 +37,16 @@ const TRANSACTION = {
   sha256: 'a'.repeat(64),
 };
 
+const LISTS_ETAG = '"lists"';
+
+/** The device side of the document: the bar reads it itself while there is a draft. */
+function serveDocument(text = APPLIED) {
+  server.use(
+    http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(text, { headers: { ETag: APPLIED_ETAG } })),
+    http.get(CONFIG_ENDPOINT.ruleSetFiles(), () => HttpResponse.json({ files: {}, etag: LISTS_ETAG }))
+  );
+}
+
 function serveStatus(transaction?: unknown) {
   server.use(http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json({ ...DAEMON_STATUS_FIXTURE, transaction })));
 }
@@ -75,6 +85,7 @@ describe('ConfigApplyBar', () => {
   beforeEach(() => {
     ConfigDocumentState.getState().reset();
     serveStatus();
+    serveDocument();
   });
 
   afterEach(() => {
@@ -196,6 +207,7 @@ describe('ConfigApplyBar', () => {
   });
 
   it('warns that the config on the device changed since the draft, and lets it be discarded', async () => {
+    serveDocument(APPLIED.replace('info', 'warn'));
     loadDocument();
     ConfigDocumentState.getState().load(APPLIED.replace('info', 'warn'), APPLIED_ETAG);
     await renderScreen(function Screen() {
@@ -424,7 +436,8 @@ describe('ConfigApplyBar', () => {
     expect(screen.queryByText('Подтверждения не было — предыдущий конфиг возвращён')).not.toBeInTheDocument();
   });
 
-  it('holds Apply of a restored draft until it reads the device config, then compares the draft with it', async () => {
+  it('holds Apply of a restored draft until it reads the device config, then sends the device fingerprint', async () => {
+    const sent: (string | null)[] = [];
     let release = () => {};
     const released = new Promise<void>((resolve) => {
       release = resolve;
@@ -434,8 +447,14 @@ describe('ConfigApplyBar', () => {
       http.get(CONFIG_ENDPOINT.config(), async () => {
         await released;
 
-        return HttpResponse.text(APPLIED.replace('info', 'warn'), { headers: { ETag: APPLIED_ETAG } });
-      })
+        return HttpResponse.text(APPLIED, { headers: { ETag: APPLIED_ETAG } });
+      }),
+      http.post(DAEMON_ENDPOINT.apply(), ({ request }) => {
+        sent.push(request.headers.get('If-Match'));
+
+        return HttpResponse.json(TRANSACTION, { status: 202 });
+      }),
+      http.get(DAEMON_ENDPOINT.applyState(TRANSACTION.id), () => HttpResponse.json(TRANSACTION))
     );
     ConfigDocumentStore.setState({ draft: DRAFT, draftBase: fingerprint(APPLIED) });
     await renderScreen(function Screen() {
@@ -444,9 +463,70 @@ describe('ConfigApplyBar', () => {
 
     expect(await screen.findByText('Конфиг с устройства ещё не прочитан — применить пока нельзя.')).toBeInTheDocument();
 
+    await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
+    const summary = await screen.findByRole('dialog', { name: 'Что уйдёт на устройство' });
+
+    expect(within(summary).getByRole('button', { name: 'Применить' })).toBeDisabled();
+
     release();
 
+    await waitFor(() => {
+      expect(within(summary).getByRole('button', { name: 'Применить' })).toBeEnabled();
+    });
+    await userEvent.click(within(summary).getByRole('button', { name: 'Применить' }));
+
+    await waitFor(() => {
+      expect(sent).toEqual([APPLIED_ETAG]);
+    });
+  });
+
+  it('shows the stale warning once a restored draft meets a changed device config', async () => {
+    serveDocument(APPLIED.replace('info', 'warn'));
+    ConfigDocumentStore.setState({ draft: DRAFT, draftBase: fingerprint(APPLIED) });
+    await renderScreen(function Screen() {
+      return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+    });
+
     expect(await screen.findByText('Конфиг на роутере изменился после начала правок')).toBeInTheDocument();
-    expect(screen.queryByText('Конфиг с устройства ещё не прочитан — применить пока нельзя.')).not.toBeInTheDocument();
+  });
+
+  it('names a failed read of the device config and rereads it on retry', async () => {
+    let failing = true;
+
+    server.use(
+      http.get(CONFIG_ENDPOINT.config(), () =>
+        failing
+          ? HttpResponse.json({ error: 'internal', message: 'boom' }, { status: 500 })
+          : HttpResponse.text(APPLIED, { headers: { ETag: APPLIED_ETAG } })
+      )
+    );
+    ConfigDocumentStore.setState({ draft: DRAFT, draftBase: fingerprint(APPLIED) });
+    await renderScreen(function Screen() {
+      return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+    });
+
+    expect(await screen.findByText(/Конфиг с устройства не прочитался — применить нельзя\./)).toBeInTheDocument();
+
+    failing = false;
+    await userEvent.click(screen.getByRole('button', { name: 'Повторить' }));
+
+    await waitFor(() => {
+      expect(ConfigDocumentState.getState().applied).toBe(APPLIED);
+    });
+    expect(screen.queryByText(/не прочитался/)).not.toBeInTheDocument();
+  });
+
+  it('loads the list files for a draft that only removes a list file', async () => {
+    server.use(
+      http.get(CONFIG_ENDPOINT.ruleSetFiles(), () =>
+        HttpResponse.json({ files: { 'rule-sets/old.json': '[]' }, etag: LISTS_ETAG })
+      )
+    );
+    ConfigDocumentStore.setState({ listsDraft: { 'rule-sets/old.json': null } });
+    await renderScreen(function Screen() {
+      return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+    });
+
+    expect(await screen.findByRole('region', { name: 'Применение конфига' })).toBeInTheDocument();
   });
 });

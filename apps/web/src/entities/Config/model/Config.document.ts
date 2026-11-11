@@ -1,5 +1,5 @@
 import type { UseQueryResult } from '@tanstack/react-query';
-import { useDeferredValue, useEffect } from 'react';
+import { useCallback, useDeferredValue, useEffect } from 'react';
 
 import {
   parseConfig,
@@ -86,12 +86,18 @@ export interface ConfigDocumentView {
   isDirty: boolean;
 }
 
+export interface ConfigLoad {
+  /** A request ended in a failure: the store will not get its file until a retry. */
+  failed: boolean;
+  retry: () => void;
+}
+
 /**
  * Loads the device file and the list files into the store: the draft is
  * compared with them, and Apply takes their fingerprints for `If-Match` and
  * `lists_base`. Off, both requests stay idle.
  */
-export function useConfigLoad(enabled: boolean): void {
+export function useConfigLoad(enabled: boolean): ConfigLoad {
   const file = useConfigFile(enabled);
   const lists = useConfigLists(enabled);
   const load = ConfigDocumentState.use.load();
@@ -116,6 +122,17 @@ export function useConfigLoad(enabled: boolean): void {
     },
     [listFiles, listsEtag, loadLists]
   );
+
+  const refetchFile = file.refetch;
+  const refetchLists = lists.refetch;
+  const fileFailed = file.isError;
+  const listsFailed = lists.isError;
+  const retry = useCallback(() => {
+    if (fileFailed) void refetchFile();
+    if (listsFailed) void refetchLists();
+  }, [fileFailed, listsFailed, refetchFile, refetchLists]);
+
+  return { failed: fileFailed || listsFailed, retry };
 }
 
 /**

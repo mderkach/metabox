@@ -132,7 +132,7 @@ export function ConfigApplyBar({ onSpaceChange }: { onSpaceChange: (space: numbe
           )}
 
           {!shown.isApplying && !shown.awaiting && apply.blocked !== null && (
-            <ConfigApplyBlocked blocked={apply.blocked} />
+            <ConfigApplyBlocked blocked={apply.blocked} onRetry={apply.retryLoad} />
           )}
 
           {apply.unsent && !shown.isApplying && (
