@@ -54,12 +54,11 @@ export function ConfigNodeFormBody({
     resolver,
   });
 
-  const rest = splitFieldsSinceOpen(
-    layout.rest,
-    openedNode,
-    node,
-    (field) => form.getFieldState(toFieldName(field.path), form.formState).isDirty
-  );
+  const rest = splitFieldsSinceOpen(layout.rest, openedNode, node, (field) => {
+    const state = form.getFieldState(toFieldName(field.path), form.formState);
+
+    return state.isDirty || state.isTouched;
+  });
 
   const formRef = useWriteOnChange(
     form,

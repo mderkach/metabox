@@ -35,6 +35,7 @@ export function ConfigNodeFormEnumListField({ field, name }: NodeFieldProps) {
             aria-labelledby={labelId}
             aria-describedby={fieldState.invalid ? errorId : undefined}
             value={unpackList(input.value)}
+            onBlur={input.onBlur}
             onValueChange={(next) => {
               // The order is the schema order, not the press order: otherwise
               // the same set would give different file text.
