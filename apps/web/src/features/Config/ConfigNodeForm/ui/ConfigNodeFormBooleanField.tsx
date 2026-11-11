@@ -57,7 +57,6 @@ export function ConfigNodeFormBooleanField({ field, name }: NodeFieldProps) {
             id={id}
             checked={input.value === true}
             aria-invalid={fieldState.invalid}
-            onBlur={input.onBlur}
             onCheckedChange={(checked) => {
               input.onChange(checked);
             }}

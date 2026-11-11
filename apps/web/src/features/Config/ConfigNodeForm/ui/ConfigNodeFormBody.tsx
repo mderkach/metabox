@@ -1,5 +1,5 @@
 import type { JSONPath } from 'jsonc-parser';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { FormProvider, useForm } from 'react-hook-form';
 import type { z } from 'zod';
 
@@ -40,6 +40,8 @@ export function ConfigNodeFormBody({
   const [openedNode] = useState(node);
   const resolver = useMemo(() => toNodeFormResolver(schema, override), [schema, override]);
   const [failures] = useState(() => new Map<string, unknown>());
+  // Dirty state is rebased when focus leaves the form: a field changed since opening keeps its place by this set.
+  const [changed] = useState(() => new Set<string>());
   // RHF retains prototype-less parsed objects by reference; clone them so field edits do not mutate the baseline.
   const values = useMemo(() => structuredClone(node), [node]);
 
@@ -54,11 +56,26 @@ export function ConfigNodeFormBody({
     resolver,
   });
 
-  const rest = splitFieldsSinceOpen(layout.rest, openedNode, node, (field) => {
-    const state = form.getFieldState(toFieldName(field.path), form.formState);
+  useEffect(
+    function rememberChangedFields() {
+      const subscription = form.watch(function rememberChange(_values, { name, type }) {
+        if (type === 'change' && name !== undefined) changed.add(name);
+      });
 
-    return state.isDirty || state.isTouched;
-  });
+      return function forgetChangedFields() {
+        subscription.unsubscribe();
+      };
+    },
+    [form, changed]
+  );
+
+  const rest = splitFieldsSinceOpen(
+    layout.rest,
+    openedNode,
+    node,
+    (field) =>
+      changed.has(toFieldName(field.path)) || form.getFieldState(toFieldName(field.path), form.formState).isDirty
+  );
 
   const formRef = useWriteOnChange(
     form,

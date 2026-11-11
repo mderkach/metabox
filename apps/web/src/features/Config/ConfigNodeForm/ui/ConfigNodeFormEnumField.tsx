@@ -49,7 +49,6 @@ export function ConfigNodeFormEnumField({ field, name }: NodeFieldProps) {
               className='w-full font-mono text-xs'
               aria-invalid={fieldState.invalid}
               aria-describedby={fieldState.invalid ? errorId : undefined}
-              onBlur={input.onBlur}
             >
               <SelectValue />
             </SelectTrigger>

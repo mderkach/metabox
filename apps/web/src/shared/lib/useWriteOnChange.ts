@@ -9,7 +9,6 @@ const REBASE = {
   keepValues: true,
   keepErrors: true,
   keepTouched: true,
-  keepIsValid: true,
   keepIsSubmitted: true,
   keepSubmitCount: true,
 } as const;
@@ -21,10 +20,11 @@ const REBASE = {
  * would move to the end of its object. A held-back removal is also written on
  * unmount, unless `isReplaced` says the target was replaced from outside.
  *
- * Once focus leaves the form with everything written, the written values
- * become the form baseline: `keepDirtyValues` then guards only what is typed
- * after it, and an outside edit of a field changed earlier reaches the form.
- * Touched state survives, so fields keep their place in the layout.
+ * Once focus leaves the form with every write done and accepted, the written
+ * values become the form baseline: `keepDirtyValues` then guards only what is
+ * typed after it, and an outside edit of a field changed earlier reaches the
+ * form. A form with an invalid field is not rebased: its values are not in the
+ * document yet.
  *
  * The returned ref goes on the `<form>`.
  */
@@ -43,15 +43,22 @@ export function useWriteOnChange<TValues extends FieldValues, TContext, TOutput>
   useEffect(
     function writeOnChange() {
       let held = false;
-      let written = true;
+      let pending = 0;
+      let accepted = true;
       const submit = form.handleSubmit.bind(form);
 
       async function writeForm(withRemovals: boolean) {
-        written = false;
-        await submit((output) => {
-          held = latest.current.write(output, withRemovals);
-          written = true;
-        })();
+        pending += 1;
+        accepted = false;
+
+        try {
+          await submit((output) => {
+            held = latest.current.write(output, withRemovals);
+            accepted = true;
+          })();
+        } finally {
+          pending -= 1;
+        }
       }
 
       // A reset from `values` sets untouched fields with `setValue`: only a
@@ -74,7 +81,7 @@ export function useWriteOnChange<TValues extends FieldValues, TContext, TOutput>
 
         const stays = event.relatedTarget instanceof Node && element?.contains(event.relatedTarget) === true;
 
-        if (!stays && written && !held) {
+        if (!stays && pending === 0 && accepted && !held) {
           form.reset(form.getValues(), REBASE);
         }
       }
