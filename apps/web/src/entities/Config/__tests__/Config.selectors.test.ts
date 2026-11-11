@@ -5,6 +5,7 @@ import { useConfigDiff, useConfigDirty, useConfigStale, useConfigCurrent, useLis
 import {
   selectConfigCurrent,
   selectConfigDirty,
+  selectConfigLoaded,
   selectConfigStale,
   selectListChanges,
 } from '../model/Config.selectors';
@@ -131,5 +132,26 @@ describe('config document selectors', () => {
     expect(selectListChanges(snapshot)).toEqual({ put: { 'new.json': '[]' }, remove: [] });
     expect(selectConfigCurrent(ConfigDocumentStore.getState())).toBe('{}');
     expect(selectConfigDirty(ConfigDocumentStore.getState())).toBe(false);
+  });
+
+  it('counts the document as loaded only with the device file and, for list edits, the list files', () => {
+    const document = ConfigDocumentStore.getState();
+
+    document.reset();
+    ConfigDocumentStore.setState({ draft: DRAFT });
+
+    expect(selectConfigLoaded(ConfigDocumentStore.getState())).toBe(false);
+
+    document.load(APPLIED);
+
+    expect(selectConfigLoaded(ConfigDocumentStore.getState())).toBe(true);
+
+    document.editList('new.json', '[]');
+
+    expect(selectConfigLoaded(ConfigDocumentStore.getState())).toBe(false);
+
+    document.loadLists({}, 'lists');
+
+    expect(selectConfigLoaded(ConfigDocumentStore.getState())).toBe(true);
   });
 });

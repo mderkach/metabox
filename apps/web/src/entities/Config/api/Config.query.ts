@@ -140,6 +140,11 @@ export function useConfig() {
   return useQuery({ ...getConfigOptions(), select: parseConfigFile });
 }
 
+/** The device file as text and fingerprint, without the schema parse. */
+export function useConfigFile(enabled: boolean) {
+  return useQuery({ ...getConfigOptions(), enabled });
+}
+
 export function getConfigListsOptions() {
   return queryOptions({
     queryKey: CONFIG_QUERY.lists(),
@@ -151,8 +156,8 @@ export function getConfigListsOptions() {
 }
 
 /** Files of its own lists with the set fingerprint: it goes into the apply `lists_base`. */
-export function useConfigLists() {
-  return useQuery(getConfigListsOptions());
+export function useConfigLists(enabled: boolean) {
+  return useQuery({ ...getConfigListsOptions(), enabled });
 }
 
 /** Type of each outbound of the applied config by its tag. */

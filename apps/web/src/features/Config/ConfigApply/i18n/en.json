@@ -9,6 +9,8 @@
   },
   "blocked": {
     "unreachable": "metabox is not responding, applying is unavailable now.",
+    "notLoaded": "The config on the device is not read yet, applying is unavailable for now.",
+    "loadFailed": "The config on the device could not be read, applying is unavailable.",
     "unparsed": "The config text has an error on line {{line}}: fix it to apply."
   },
   "unsent": "metabox did not answer, nothing was sent to the device. Try again.",

@@ -1,7 +1,14 @@
 import type { UseQueryResult } from '@tanstack/react-query';
-import { useDeferredValue, useEffect } from 'react';
+import { useCallback, useDeferredValue, useEffect } from 'react';
 
-import { parseConfig, useConfig, useConfigLists, type ConfigIssue, type ParsedConfig } from '../api/Config.query';
+import {
+  parseConfig,
+  useConfig,
+  useConfigFile,
+  useConfigLists,
+  type ConfigIssue,
+  type ParsedConfig,
+} from '../api/Config.query';
 import { useConfigDirty, useConfigCurrent } from './Config.hooks';
 import type { ConfigDocument } from './Config.model';
 import { ConfigDocumentState } from './Config.store';
@@ -79,29 +86,24 @@ export interface ConfigDocumentView {
   isDirty: boolean;
 }
 
+export interface ConfigLoad {
+  /** A request ended in a failure: the store will not get its file until a retry. */
+  failed: boolean;
+  retry: () => void;
+}
+
 /**
- * The config document for the whole section: the query, loading into the store
- * and draft parsing in one place.
- *
- * Draft parsing, `parseJsonc` of the whole file and the whole strict schema,
- * runs in a deferred render (`useDeferredValue`): in text mode the draft
- * changes on every character, and parsing in the urgent render would stand
- * between a keystroke and the letter on screen. The text, the edit flag and the
- * update counter are read bypassing the parse and do not lag; the parsed
- * document is needed by tab counters and form lists, for which a frame of lag
- * does not matter.
+ * Loads the device file and the list files into the store: the draft is
+ * compared with them, and Apply takes their fingerprints for `If-Match` and
+ * `lists_base`. Off, both requests stay idle.
  */
-export function useConfigDocument(): ConfigDocumentView {
-  const config = useConfig();
-  const lists = useConfigLists();
+export function useConfigLoad(enabled: boolean): ConfigLoad {
+  const file = useConfigFile(enabled);
+  const lists = useConfigLists(enabled);
   const load = ConfigDocumentState.use.load();
   const loadLists = ConfigDocumentState.use.loadLists();
-  const draft = ConfigDocumentState.use.draft();
-  const revision = ConfigDocumentState.use.revision();
-  const isDirty = useConfigDirty();
-  const current = useConfigCurrent();
-  const applied = config.data?.text ?? null;
-  const etag = config.data?.etag ?? null;
+  const applied = file.data?.text ?? null;
+  const etag = file.data?.etag ?? null;
   const listFiles = lists.data?.files;
   const listsEtag = lists.data?.etag ?? null;
 
@@ -120,6 +122,40 @@ export function useConfigDocument(): ConfigDocumentView {
     },
     [listFiles, listsEtag, loadLists]
   );
+
+  const refetchFile = file.refetch;
+  const refetchLists = lists.refetch;
+  const fileFailed = file.isError;
+  const listsFailed = lists.isError;
+  const retry = useCallback(() => {
+    if (fileFailed) void refetchFile();
+    if (listsFailed) void refetchLists();
+  }, [fileFailed, listsFailed, refetchFile, refetchLists]);
+
+  return { failed: fileFailed || listsFailed, retry };
+}
+
+/**
+ * The config document for the whole section: the query, loading into the store
+ * and draft parsing in one place.
+ *
+ * Draft parsing, `parseJsonc` of the whole file and the whole strict schema,
+ * runs in a deferred render (`useDeferredValue`): in text mode the draft
+ * changes on every character, and parsing in the urgent render would stand
+ * between a keystroke and the letter on screen. The text, the edit flag and the
+ * update counter are read bypassing the parse and do not lag; the parsed
+ * document is needed by tab counters and form lists, for which a frame of lag
+ * does not matter.
+ */
+export function useConfigDocument(): ConfigDocumentView {
+  const config = useConfig();
+  const draft = ConfigDocumentState.use.draft();
+  const revision = ConfigDocumentState.use.revision();
+  const isDirty = useConfigDirty();
+  const current = useConfigCurrent();
+  const applied = config.data?.text ?? null;
+
+  useConfigLoad(true);
 
   const parsedDraft = useDeferredValue(draft);
   const shown = (parsedDraft === null ? null : parseDraft(parsedDraft)) ?? config.data ?? null;
