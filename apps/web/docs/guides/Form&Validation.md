@@ -212,7 +212,7 @@ useForm<ConfigNodeFormModel>({
 });
 ```
 
-`values` pulls into the form an external edit of the same node (as text in the neighbouring tab), and `keepDirtyValues` keeps it from erasing what the user has already typed. After a write, `form.reset(data)` makes the saved value the new baseline.
+`values` pulls into the form an external edit of the same node (as text in the neighbouring tab), and `keepDirtyValues` keeps it from erasing what the user has already typed. When focus leaves the form and everything is written, `useWriteOnChange` makes the written values the new baseline (`reset` with `keepValues` and `keepDirtyValues: false`): otherwise a field changed once would stay dirty for the life of the form, and a later text edit of it would neither reach the form nor survive its next write. A form with an invalid field is not rebased until it is valid again. The node form keeps a field changed since opening in its place by the names of user changes (`watch`, type `change`), not by the dirty state, which the rebase clears.
 
 The node comes from text parsing as objects without a prototype: RHF does not copy those, and editing a field would also rewrite the original values, so the form would not know it was touched. That is why `values` is a copy of the node (`structuredClone`).
 

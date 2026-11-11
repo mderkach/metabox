@@ -2,11 +2,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderWithQuery } from '@test/renderWithQuery';
 import { selectOption } from '@test/selectOption';
 import { server } from '@test/server';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { ConfigDocumentState, findValue, readRules } from '@entities/Config';
+import { ConfigDocumentState, findValue, readRuleNames, readRules } from '@entities/Config';
 import { createDeviceHandlers } from '@entities/Device/__tests__/Device.handlers';
 import { RULE_TARGET, toRuleRowsFromNodes, type RuleRow } from '@entities/Rule';
 
@@ -407,4 +407,60 @@ it('reveals a condition added through an external JSON edit without remounting',
 
   expect(await screen.findByRole('textbox', { name: 'Домен с поддоменами' })).toBeInTheDocument();
   expect(screen.getByRole('list', { name: 'Домен с поддоменами: значения' })).toHaveTextContent('added.example');
+});
+
+it('takes a JSON edit of an outbound changed in the form earlier once focus left the form', async () => {
+  const user = userEvent.setup();
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+
+  server.use(...createDeviceHandlers());
+
+  /** As on the screen: the form gets its rule from the current document after every write. */
+  function FormFromDraft() {
+    const rule = toRuleRowsFromNodes([draftRule() ?? DOCUMENT.route.rules[0]]).at(0);
+
+    return rule === undefined ? null : (
+      <RuleEditForm rule={rule} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />
+    );
+  }
+
+  loadRule({ rule_set: ['github'], outbound: 'proxy' });
+
+  const { rerender } = render(
+    <QueryClientProvider client={client}>
+      <FormFromDraft />
+    </QueryClientProvider>
+  );
+  const redraw = () => {
+    rerender(
+      <QueryClientProvider client={client}>
+        <FormFromDraft />
+      </QueryClientProvider>
+    );
+  };
+  const outbound = screen.getByRole('combobox', { name: 'Куда отправить' });
+
+  await selectOption(user, outbound, 'direct');
+  redraw();
+  // A browser returns focus to the trigger when the popup closes; jsdom leaves it in the popup.
+  act(() => {
+    outbound.focus();
+  });
+  await user.click(document.body);
+
+  act(() => {
+    ConfigDocumentState.getState().edit(['route', 'rules', 0, 'outbound'], 'proxy');
+  });
+  redraw();
+
+  await waitFor(() => {
+    expect(outbound).toHaveTextContent('proxy');
+  });
+
+  await user.type(screen.getByRole('textbox', { name: 'Имя' }), 'Work');
+
+  await waitFor(() => {
+    expect(readRuleNames(ConfigDocumentState.getState().draft ?? '')).toEqual(['Work']);
+  });
+  expect(draftRule()).toEqual({ rule_set: ['github'], outbound: 'proxy' });
 });

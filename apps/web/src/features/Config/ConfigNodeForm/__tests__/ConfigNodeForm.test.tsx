@@ -1,5 +1,5 @@
 import { selectOption } from '@test/selectOption';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { JSONPath } from 'jsonc-parser';
 import { useMemo } from 'react';
@@ -319,6 +319,57 @@ describe('node form by schema', () => {
       expect(findValue(draft(), [...VMESS, 'server'])).toBe('b.example');
     });
     expect(findValue(draft(), [...VMESS, 'domain_resolver'])).toBe('local');
+  });
+
+  it('a text edit of a field changed in the form earlier reaches it once focus left the form', async () => {
+    const user = userEvent.setup();
+
+    renderVmess();
+
+    const server = screen.getByRole('textbox', { name: 'Сервер' });
+
+    await user.clear(server);
+    await user.type(server, 'form.example');
+    await user.click(document.body);
+
+    act(() => {
+      ConfigDocumentState.getState().edit([...VMESS, 'server'], 'json.example');
+    });
+
+    await waitFor(() => {
+      expect(server).toHaveValue('json.example');
+    });
+
+    const port = screen.getByRole('spinbutton', { name: 'Порт сервера' });
+
+    await user.clear(port);
+    await user.type(port, '8443');
+
+    await waitFor(() => {
+      expect(findValue(draft(), [...VMESS, 'server_port'])).toBe(8443);
+    });
+    expect(findValue(draft(), [...VMESS, 'server'])).toBe('json.example');
+  });
+
+  it('a field filled under "More parameters" stays there after focus leaves the form and the node changes', async () => {
+    const user = userEvent.setup();
+
+    renderVmess();
+    await showEmptyFields();
+    await user.click(screen.getByRole('switch', { name: 'tcp_fast_open' }));
+    await user.click(document.body);
+
+    const server = screen.getByRole('textbox', { name: 'Сервер' });
+
+    await user.clear(server);
+    await user.type(server, 'b.example');
+
+    await waitFor(() => {
+      expect(findValue(draft(), [...VMESS, 'server'])).toBe('b.example');
+    });
+    expect(
+      within(screen.getByRole('group', { name: /^Ещё параметры/ })).getByRole('switch', { name: 'tcp_fast_open' })
+    ).toBeChecked();
   });
 
   it('an edit of the same node by text reaches the form, what was typed is not erased', async () => {
