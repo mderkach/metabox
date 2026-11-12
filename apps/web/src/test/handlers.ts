@@ -15,7 +15,7 @@ import {
   SERVICE_RUNNING_FIXTURE,
   SYSTEM_FIXTURE,
   TRAFFIC_HISTORY_FIXTURE,
-  TRAFFIC_SAMPLE,
+  TRAFFIC_STREAM_SAMPLES,
 } from '@entities/Daemon/__tests__/Daemon.fixture';
 import { createStatefulDaemonHandlers } from '@entities/Daemon/__tests__/Daemon.handlers';
 import { createDataplaneMock } from '@entities/Dataplane/__tests__/Dataplane.handlers';
@@ -36,6 +36,14 @@ const STREAM_INTERVAL = MS_IN_SECOND;
 
 let memorySample = 0;
 let connectionsFrame = 0;
+let trafficSample = 0;
+
+/** The stream traffic sample `offset` steps from the last one sent; the minute is cycled. */
+function streamSampleAt(offset: number) {
+  const count = TRAFFIC_STREAM_SAMPLES.length;
+
+  return TRAFFIC_STREAM_SAMPLES[(((trafficSample + offset) % count) + count) % count];
+}
 
 /**
  * Mock assembly for dev mode. The handlers and fixtures themselves live in the `__tests__`
@@ -68,10 +76,14 @@ export function createMissingHandlers(connections = 0) {
     ...configHandlers,
     // The daemon minute of open connections matches the live snapshot: with the
     // test fixture's 150 the chart would drop where the stream takes over.
+    // The daemon minute of traffic is the last minute of the same stream, as on the
+    // device: it moves with every poll, and a chart refilled after a stream break
+    // continues what the stream sent.
     http.get(DAEMON_ENDPOINT.history(), () =>
       HttpResponse.json({
         ...TRAFFIC_HISTORY_FIXTURE,
         connections: TRAFFIC_HISTORY_FIXTURE.connections.map(() => snapshot.connections.length),
+        recent: TRAFFIC_HISTORY_FIXTURE.recent.map((_, index, all) => streamSampleAt(index - all.length + 1)),
       })
     ),
     ...createStatefulDaemonHandlers(dataplane.status),
@@ -95,7 +107,14 @@ export function createMissingHandlers(connections = 0) {
             return advanceConnectionsSnapshot(snapshot, connectionsFrame);
           },
         },
-        { topic: RUNTIME_TOPIC.Traffic, data: () => TRAFFIC_SAMPLE },
+        {
+          topic: RUNTIME_TOPIC.Traffic,
+          data: () => {
+            trafficSample += 1;
+
+            return streamSampleAt(0);
+          },
+        },
         { topic: RUNTIME_TOPIC.System, data: () => SYSTEM_FIXTURE },
         {
           topic: RUNTIME_TOPIC.Memory,

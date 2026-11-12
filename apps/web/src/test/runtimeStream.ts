@@ -3,6 +3,17 @@ import { http, HttpResponse } from 'msw';
 import { DAEMON_ENDPOINT } from '@entities/Daemon';
 import { type RuntimeTopic } from '@shared/api';
 
+let silentUntil = 0;
+
+/**
+ * Keeps the open runtime stream silent for `ms`: frames stop, the connection stays,
+ * as when the router stops answering. For checking the panel by hand in dev mode,
+ * from the browser console: `(await import('/mocks/browser.ts')).silenceRuntimeStream(15_000)`.
+ */
+export function silenceRuntimeStream(ms: number): void {
+  silentUntil = Date.now() + ms;
+}
+
 /** What the mock sends to a topic: the value is taken by a function so that samples change. */
 export interface RuntimeSample {
   topic: RuntimeTopic;
@@ -26,6 +37,8 @@ export function runtimeStreamHandler(samples: RuntimeSample[], interval: number)
         let seq = 0;
 
         const push = () => {
+          if (Date.now() < silentUntil) return;
+
           for (const sample of samples) {
             seq += 1;
 
