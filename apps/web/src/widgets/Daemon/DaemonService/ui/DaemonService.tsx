@@ -30,7 +30,7 @@ export function DaemonService({
   const { t } = useTranslation('widgets/Daemon/DaemonService');
   const service = useServiceState();
 
-  if (!service.isSuccess) {
+  if (service.data === undefined) {
     return null;
   }
 

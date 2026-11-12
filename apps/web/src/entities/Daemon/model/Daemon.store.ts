@@ -53,6 +53,14 @@ export const MEMORY_POINTS = SECONDS_IN_MINUTE;
 const MIN_INTERVAL = 0.5;
 const MAX_INTERVAL = 30;
 
+/**
+ * Silence after which the next traffic frame starts a new run of the buffer:
+ * the points carry no time, and a frame after a break glued to the old ones
+ * would draw the break as a continuous line.
+ */
+const STREAM_GAP_SECONDS = 5;
+const STREAM_GAP = STREAM_GAP_SECONDS * MS_IN_SECOND;
+
 const NO_UPLINK_RATE: UplinkRate = { rx: 0, tx: 0 };
 
 /** The interface counter only grows; after link up it starts from zero. */
@@ -94,11 +102,14 @@ interface RuntimeState {
   systemAt: number | null;
   /** How many screens watch the runtime stream. */
   readers: number;
+  /** The current run of the buffer is already filled from the daemon history. */
+  trafficSeeded: boolean;
   pushTraffic: (sample: TrafficSample) => void;
   /**
-   * Fills an empty buffer with the last minute the daemon accumulated: the
-   * chart opens full instead of starting from the moment the tab was opened. A
-   * buffer the stream has already written to is not touched.
+   * Fills the buffer to the left of what the stream wrote since the last break
+   * with the last minute the daemon accumulated: the chart opens full instead
+   * of starting from the moment the tab was opened or the stream came back.
+   * Once per run: a later history poll does not touch the buffer.
    */
   seedTraffic: (samples: TrafficSample[]) => void;
   pushMemory: (sample: MemorySample) => void;
@@ -131,21 +142,33 @@ const RuntimeStateProto = stateCreator<RuntimeState>((set) => {
     trafficAt: null,
     systemAt: null,
     readers: 0,
+    trafficSeeded: false,
     pushTraffic: (sample) => {
       const receivedAt = Date.now();
 
-      set((state) => ({
-        sampledAt: receivedAt,
-        trafficAt: receivedAt,
-        traffic: [...state.traffic, sample].slice(-TRAFFIC_POINTS),
-      }));
+      set((state) => {
+        const broken = state.trafficAt !== null && receivedAt - state.trafficAt > STREAM_GAP;
+
+        return {
+          sampledAt: receivedAt,
+          trafficAt: receivedAt,
+          traffic: broken ? [sample] : [...state.traffic, sample].slice(-TRAFFIC_POINTS),
+          trafficSeeded: broken ? false : state.trafficSeeded,
+        };
+      });
     },
     seedTraffic: (samples) => {
-      set((state) =>
-        state.traffic.length > 0 || samples.length === 0
-          ? state
-          : { traffic: samples.slice(-TRAFFIC_POINTS), trafficAt: Date.now() }
-      );
+      set((state) => {
+        if (state.trafficSeeded || samples.length === 0) return state;
+
+        const before = samples.slice(0, Math.max(0, samples.length - state.traffic.length));
+
+        return {
+          traffic: [...before, ...state.traffic].slice(-TRAFFIC_POINTS),
+          trafficAt: state.trafficAt ?? Date.now(),
+          trafficSeeded: true,
+        };
+      });
     },
     pushMemory: (sample) => {
       // The first stream sample is always zero: showing it would be lying that
@@ -209,6 +232,7 @@ const RuntimeStateProto = stateCreator<RuntimeState>((set) => {
         sampledAt: null,
         trafficAt: null,
         systemAt: null,
+        trafficSeeded: false,
       });
     },
   };

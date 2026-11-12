@@ -2,6 +2,7 @@ import { fakeEventSource } from '@test/fakeEventSource';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { RUNTIME_TOPIC } from '@shared/api';
+import { MS_IN_SECOND } from '@shared/lib/time';
 
 import { listenMemory, listenSystem, listenTraffic } from '../api/Daemon.stream';
 import {
@@ -205,5 +206,31 @@ describe('traffic point time', () => {
     store.seedTraffic([{ down: 9, up: 9 }]);
 
     expect(RuntimeStore.getState().traffic).toHaveLength(2);
+  });
+
+  it('after a break in the stream starts the chart anew instead of gluing it to the old points', () => {
+    const store = RuntimeStore.getState();
+
+    vi.useFakeTimers();
+    vi.setSystemTime(1_000 * MS_IN_SECOND);
+    store.pushTraffic({ down: 1, up: 1 });
+    store.pushTraffic({ down: 2, up: 2 });
+    vi.setSystemTime(1_600 * MS_IN_SECOND);
+    store.pushTraffic({ down: 3, up: 3 });
+
+    expect(RuntimeStore.getState().traffic).toEqual([{ down: 3, up: 3 }]);
+
+    store.seedTraffic([
+      { down: 7, up: 7 },
+      { down: 8, up: 8 },
+      { down: 9, up: 9 },
+    ]);
+
+    expect(RuntimeStore.getState().traffic).toEqual([
+      { down: 7, up: 7 },
+      { down: 8, up: 8 },
+      { down: 3, up: 3 },
+    ]);
+    vi.useRealTimers();
   });
 });

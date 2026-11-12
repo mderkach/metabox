@@ -237,6 +237,29 @@ describe('McpAccessSection', () => {
     expect(screen.getByRole('button', { name: 'Включить' })).toBeEnabled();
   });
 
+  it('keeps the issued token when the reread after enabling fails', async () => {
+    const user = userEvent.setup();
+    let reread = false;
+
+    server.use(...createMcpHandlers());
+    renderMcp(<McpAccessSection />);
+    await screen.findByRole('heading');
+
+    server.use(
+      http.get(MCP_ENDPOINT.state(), () => {
+        reread = true;
+
+        return HttpResponse.json({ code: 'internal', message: 'boom' }, { status: 500 });
+      })
+    );
+    await user.click(screen.getByRole('button', { name: 'Включить' }));
+
+    await waitFor(() => {
+      expect(reread).toBe(true);
+    });
+    expect(await screen.findByLabelText('Токен')).toHaveValue(MCP_TOKEN_FIXTURE[0]);
+  });
+
   it('is hidden while the daemon does not know the MCP endpoint', async () => {
     let asked = false;
 

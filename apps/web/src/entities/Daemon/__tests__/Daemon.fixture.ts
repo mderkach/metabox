@@ -54,8 +54,73 @@ export const CLASH_CONFIGS_FIXTURE: ClashConfigsWire = {
 /** The first memory sample on the device is zero: the mock repeats this. */
 export const MEMORY_SAMPLES = [0, 47_923_200, 51_380_224];
 
-/** Traffic sample: measured on the device on 2026-09-10, bytes per second. */
-export const TRAFFIC_SAMPLE = { up: 8500, down: 43_400 };
+/**
+ * A minute of the traffic stream taken on the BPI-R4 Pro on 2026-11-12: bursts of
+ * hundreds of kilobytes between quiet seconds. The dev mock cycles it, otherwise
+ * the chart is a flat line and a break in it cannot be seen.
+ */
+export const TRAFFIC_STREAM_SAMPLES = [
+  { down: 15603, up: 2034 },
+  { down: 18480, up: 4823 },
+  { down: 24118, up: 25896 },
+  { down: 16849, up: 32188 },
+  { down: 16691, up: 3214 },
+  { down: 17589, up: 535 },
+  { down: 14618, up: 606 },
+  { down: 15625, up: 24929 },
+  { down: 12890, up: 464 },
+  { down: 8158, up: 4018 },
+  { down: 14855, up: 376 },
+  { down: 15950, up: 5255 },
+  { down: 14593, up: 936 },
+  { down: 6994, up: 2456 },
+  { down: 24213, up: 2531 },
+  { down: 25735, up: 626155 },
+  { down: 16001, up: 8829 },
+  { down: 17390, up: 5912 },
+  { down: 26409, up: 1976 },
+  { down: 21795, up: 546 },
+  { down: 19032, up: 1128 },
+  { down: 19810, up: 458 },
+  { down: 24894, up: 14746 },
+  { down: 26162, up: 557 },
+  { down: 22807, up: 623 },
+  { down: 17411, up: 598 },
+  { down: 19567, up: 2668 },
+  { down: 25134, up: 27804 },
+  { down: 23581, up: 33397 },
+  { down: 28030, up: 17622 },
+  { down: 36466, up: 63683 },
+  { down: 18277, up: 602 },
+  { down: 24494, up: 934 },
+  { down: 25206, up: 33301 },
+  { down: 23876, up: 30278 },
+  { down: 24712, up: 28998 },
+  { down: 157395, up: 719 },
+  { down: 534504, up: 749 },
+  { down: 17608, up: 568 },
+  { down: 15286, up: 571 },
+  { down: 19141, up: 7401 },
+  { down: 27944, up: 672 },
+  { down: 38314, up: 48184 },
+  { down: 25158, up: 494 },
+  { down: 26174, up: 79257 },
+  { down: 38589, up: 77724 },
+  { down: 27223, up: 27389 },
+  { down: 21573, up: 48192 },
+  { down: 27491, up: 529 },
+  { down: 29465, up: 833 },
+  { down: 24115, up: 25860 },
+  { down: 20143, up: 648 },
+  { down: 16375, up: 7875 },
+  { down: 14597, up: 498 },
+  { down: 17959, up: 2500 },
+  { down: 26037, up: 434 },
+  { down: 27811, up: 683 },
+  { down: 26447, up: 725 },
+  { down: 22272, up: 22804 },
+  { down: 27277, up: 12580 },
+];
 
 /** Service is up: uptime taken from the device on 2026-09-10. */
 export const SERVICE_RUNNING_FIXTURE: ServiceStateWire = {
