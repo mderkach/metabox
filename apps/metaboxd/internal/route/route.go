@@ -141,13 +141,17 @@ type clashRules struct {
 }
 
 type clashConnection struct {
-	ID     string   `json:"id"`
-	Rule   string   `json:"rule"`
-	Chains []string `json:"chains"`
+	ID       string   `json:"id"`
+	Rule     string   `json:"rule"`
+	Chains   []string `json:"chains"`
+	Upload   int64    `json:"upload"`
+	Download int64    `json:"download"`
 }
 
 type clashConnections struct {
-	Connections []clashConnection `json:"connections"`
+	Connections   []clashConnection `json:"connections"`
+	UploadTotal   int64             `json:"uploadTotal"`
+	DownloadTotal int64             `json:"downloadTotal"`
 }
 
 // Explain explains the route of a connection: which rule fired, which config

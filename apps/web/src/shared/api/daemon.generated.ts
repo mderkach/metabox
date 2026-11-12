@@ -545,10 +545,20 @@ export const LinkSchema = z.object({
   tx: z.int(),
 })
 
+/** Split is the bytes that passed through sing-box since the daemon start, by connection kind. */
+export const SplitSchema = z.object({
+  proxy: z.int(),
+  direct: z.int(),
+  block: z.int(),
+})
+
 /** Share is how much passed through the channel and through sing-box during the observation. The share is computed by dividing one by the other and is meaningful only together with Seconds: the window starts when the daemon first took readings. */
 export const ShareSchema = z.object({
   link: z.int(),
+  /** Proxy is everything that passed through the sing-box process, a direct exit included. */
   proxy: z.int(),
+  /** Split is the same volume by the outbound of the connection; the channel share through a proxy is counted by Split.Proxy. */
+  split: SplitSchema,
   seconds: z.int(),
 })
 
@@ -776,6 +786,7 @@ export type RuntimeWire = z.infer<typeof RuntimeSchema>
 export type ServiceWire = z.infer<typeof ServiceSchema>
 export type ShareWire = z.infer<typeof ShareSchema>
 export type SingboxBuildWire = z.infer<typeof SingboxBuildSchema>
+export type SplitWire = z.infer<typeof SplitSchema>
 export type StatWire = z.infer<typeof StatSchema>
 export type StatusWire = z.infer<typeof StatusSchema>
 export type TransactionWire = z.infer<typeof TransactionSchema>

@@ -40,7 +40,7 @@ const STALE_AFTER = STALE_SECONDS * MS_IN_SECOND;
 const TICK_SECONDS = 3;
 const FRESHNESS_TICK = TICK_SECONDS * MS_IN_SECOND;
 
-const NO_SHARE: TrafficShare = { link: 0, proxy: 0, seconds: 0 };
+const NO_SHARE: TrafficShare = { link: 0, proxy: 0, split: { proxy: 0, direct: 0, block: 0 }, seconds: 0 };
 
 export interface OverviewRuntime {
   traffic: TrafficSample[];
