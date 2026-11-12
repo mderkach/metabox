@@ -1,7 +1,14 @@
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { ACL_MODE, isRouted, routeReason, type DataplaneModel, type RouteSource } from '@entities/Dataplane';
+import {
+  ACL_MODE,
+  ROUTE_REASON,
+  isRouted,
+  routeReason,
+  type DataplaneModel,
+  type RouteSource,
+} from '@entities/Dataplane';
 import { ConfirmDialog, Switch } from '@shared/ui';
 
 import { DeviceRouteReason } from './DeviceRouteReason';
@@ -21,6 +28,7 @@ export function DeviceRouteSwitch({
   source: RouteSource;
   /** Device label in the confirmation text and the accessible name. */
   label: string;
+  /** `null` renders nothing: the screen shows the model read state itself. */
   model: DataplaneModel | null;
   locked: boolean;
   onRoute: (source: RouteSource, routed: boolean) => void;
@@ -28,9 +36,11 @@ export function DeviceRouteSwitch({
   const { t } = useTranslation('features/Device/DeviceRoute');
   const [target, setTarget] = useState<boolean | null>(null);
   const noteId = useId();
-  const reason = model === null ? null : routeReason(model, source);
+  if (model === null) return null;
 
-  if (model?.aclMode === ACL_MODE.All) {
+  const reason = routeReason(model, source);
+
+  if (model.aclMode === ACL_MODE.All) {
     return (
       <span className='flex items-center gap-2'>
         <Switch checked disabled aria-label={t('switch.label', { device: label })} />
@@ -47,7 +57,7 @@ export function DeviceRouteSwitch({
       <span className='flex items-center gap-2'>
         <Switch
           checked={isRouted(reason)}
-          disabled={locked || model?.aclMode !== ACL_MODE.Listed}
+          disabled={locked || model.aclMode !== ACL_MODE.Listed || reason?.kind === ROUTE_REASON.ExcludedSubnet}
           aria-label={t('switch.label', { device: label })}
           aria-describedby={describedBy}
           onCheckedChange={setTarget}

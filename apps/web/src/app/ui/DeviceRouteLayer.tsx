@@ -20,7 +20,8 @@ export function DeviceRouteLayer({
   useEffect(
     function reportLayerSpace() {
       const layer = ref.current;
-      const parent = layer?.offsetParent;
+      // Not `offsetParent`: the layer is `display: none` while the bar is empty, and then it has none.
+      const parent = layer?.parentElement;
 
       if (layer === null || !(parent instanceof HTMLElement)) {
         return;

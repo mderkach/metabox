@@ -165,20 +165,24 @@ export const ROUTE_REASON = {
   Host: 'host',
   Subnet: 'subnet',
   Excluded: 'excluded',
+  ExcludedSubnet: 'excludedSubnet',
 } as const;
 
 /**
  * Why a device goes through sing-box in `listed` mode, or, for `excluded`, why
  * it goes direct although a subnet from the interception list contains it.
+ * `excludedSubnet` is an exclusion wider than the device: its toggle cannot lift it
+ * without taking the other devices of that subnet along.
  */
 export type RouteReason =
   | { kind: typeof ROUTE_REASON.Mac }
   | { kind: typeof ROUTE_REASON.Host }
   | { kind: typeof ROUTE_REASON.Subnet; subnet: string }
-  | { kind: typeof ROUTE_REASON.Excluded; subnet: string };
+  | { kind: typeof ROUTE_REASON.Excluded; subnet: string }
+  | { kind: typeof ROUTE_REASON.ExcludedSubnet; subnet: string };
 
 export function isRouted(reason: RouteReason | null): boolean {
-  return reason !== null && reason.kind !== ROUTE_REASON.Excluded;
+  return reason !== null && reason.kind !== ROUTE_REASON.Excluded && reason.kind !== ROUTE_REASON.ExcludedSubnet;
 }
 
 /**
@@ -186,6 +190,10 @@ export function isRouted(reason: RouteReason | null): boolean {
  * without a subnet around the device is not named: it changes nothing.
  */
 export function routeReason(model: DataplaneModel, source: RouteSource): RouteReason | null {
+  const excludedBy = subnetOf(model.sourceIpExclude, source.ip);
+
+  if (excludedBy !== null) return { kind: ROUTE_REASON.ExcludedSubnet, subnet: excludedBy };
+
   const subnet = subnetOf(model.sourceIp, source.ip);
 
   if (isExcluded(model, source)) return subnet === null ? null : { kind: ROUTE_REASON.Excluded, subnet };
@@ -217,7 +225,8 @@ export function routeReason(model: DataplaneModel, source: RouteSource): RouteRe
  * and the address for a static lease.
  *
  * Turning on removes the device from the exclusions; inside a subnet nothing
- * else is written, the subnet already intercepts it.
+ * else is written, the subnet already intercepts it. An exclusion wider than
+ * the device stays: `routeReason` names it, and the toggle is not offered.
  */
 export function withDeviceRoute(model: DataplaneModel, source: RouteSource, routed: boolean): DataplaneModel {
   const sourceMac = model.sourceMac.filter((mac) => !sameMac(mac, source.mac));
@@ -243,7 +252,7 @@ export function withDeviceRoute(model: DataplaneModel, source: RouteSource, rout
 
   return {
     ...model,
-    sourceMac: [...sourceMac, source.mac],
+    sourceMac: source.mac === '' ? sourceMac : [...sourceMac, source.mac],
     sourceIp: host.length > 0 ? [...sourceIp, ...host] : model.sourceIp,
     sourceMacExclude,
     sourceIpExclude,

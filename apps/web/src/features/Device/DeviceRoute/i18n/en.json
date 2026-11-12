@@ -11,7 +11,9 @@
     "subnet": "by subnet {{subnet}}",
     "subnetFull": "The device is in the {{subnet}} subnet from the interception list. Turning it off excludes it from the subnet.",
     "excluded": "excluded from {{subnet}}",
-    "excludedFull": "The device is in the {{subnet}} subnet from the interception list but excluded from it, so it goes direct."
+    "excludedFull": "The device is in the {{subnet}} subnet from the interception list but excluded from it, so it goes direct.",
+    "excludedSubnet": "in exclusions: {{subnet}}",
+    "excludedSubnetFull": "The {{subnet}} subnet is in the exclusion list, so the device goes direct. The toggle cannot lift it: the exclusion covers other devices of the subnet too. To change it, remove {{subnet}} from source_ip_exclude in the UCI section metabox.dataplane on the router."
   },
   "dialog": {
     "on": "Route {{device}} through sing-box?",
