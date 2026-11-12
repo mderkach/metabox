@@ -722,11 +722,11 @@ func TestHTTPApplyInterruptedAtEveryStep(t *testing.T) {
 				return tx
 			},
 			// The backup is already back on disk, the journal still holds the window: the
-			// next instance opens it again, and its expiry restores the same backup.
-			journal:      apply.PhaseAwaitingConfirm,
-			phase:        apply.PhaseAwaitingConfirm,
-			keptJournal:  true,
-			applyRefused: true,
+			// next instance finishes the rollback instead of opening a window over the
+			// previous config, which Confirm would keep as the new one.
+			journal:  apply.PhaseAwaitingConfirm,
+			phase:    apply.PhaseRolledBack,
+			restarts: 1,
 		},
 	}
 

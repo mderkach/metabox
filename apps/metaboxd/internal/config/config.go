@@ -661,6 +661,11 @@ func (s *Store) readState(ctx context.Context, name string) ([]byte, error) {
 	defer s.mu.Unlock()
 
 	root, err := openRoot(s.serviceDir)
+	if errors.Is(err, fs.ErrNotExist) {
+		// The service directory appears with the first write: a daemon that never
+		// applied anything has no state, not a broken one.
+		return nil, ErrNoState
+	}
 	if err != nil {
 		return nil, err
 	}

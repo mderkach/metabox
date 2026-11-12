@@ -74,6 +74,24 @@ func TestNewStoreAcceptsServiceDirOutside(t *testing.T) {
 	}
 }
 
+// A daemon that never applied anything has no service directory yet: the replay on
+// start must see no state, not a read failure.
+func TestReadStateWithoutServiceDir(t *testing.T) {
+	root := t.TempDir()
+
+	store, err := config.NewStore(filepath.Join(root, "sing-box"), configName, filepath.Join(root, "metabox"))
+	if err != nil {
+		t.Fatalf("store build: %v", err)
+	}
+
+	if _, err := store.ReadState(t.Context()); !errors.Is(err, config.ErrNoState) {
+		t.Errorf("got %v, expected ErrNoState without the service directory", err)
+	}
+	if _, err := store.ReadPlaneState(t.Context()); !errors.Is(err, config.ErrNoState) {
+		t.Errorf("got %v, expected ErrNoState for the dataplane state without the service directory", err)
+	}
+}
+
 func TestStateRoundTrip(t *testing.T) {
 	store, _ := newStore(t)
 
