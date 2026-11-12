@@ -713,6 +713,67 @@ func TestPlaneReplayAfterCrashInWindow(t *testing.T) {
 	}
 }
 
+// Power lost inside the window rollback after the snapshot was written back: the section is
+// the previous one while dataplane.json still holds the window. Restoring the window would let
+// Confirm keep the previous section as the confirmed change, so the rollback is finished.
+func TestPlaneReplayFinishesRollbackInterruptedInWindow(t *testing.T) {
+	h := newPlaneHarness(t, nil, validConfig, slog.New(slog.DiscardHandler))
+
+	if _, err := h.plane.Start(t.Context(), aclChange(), "", admin); err != nil {
+		t.Fatalf("dataplane change: %v", err)
+	}
+	h.waitWindow(t)
+	h.waitPlane(t, apply.PhaseAwaitingConfirm)
+
+	// The state removal does not reach the disk: the record of the window outlives Restore.
+	h.pstore.mu.Lock()
+	h.pstore.clearErr = errors.New("питание пропало")
+	h.pstore.mu.Unlock()
+
+	h.clock.fire()
+	h.waitPlane(t, apply.PhaseRolledBack)
+	h.plane.Close()
+
+	var saved apply.Transaction
+	if err := json.Unmarshal(h.pstore.saved(), &saved); err != nil {
+		t.Fatalf("parsing state: %v", err)
+	}
+	if saved.Phase != apply.PhaseAwaitingConfirm {
+		t.Fatalf("state on disk in phase %q, expected the window", saved.Phase)
+	}
+	if section, _ := h.editor.Snapshot(t.Context()); !section.Equal(previousSection()) {
+		t.Fatalf("section %+v, expected the previous one written back", section)
+	}
+
+	// A new daemon lifetime: its own Manager, the same disk and the same UCI.
+	h.pstore.mu.Lock()
+	h.pstore.clearErr = nil
+	h.pstore.mu.Unlock()
+	h.harness = newHarness(t)
+	h.plane = h.newPlane(nil, slog.New(slog.DiscardHandler))
+	t.Cleanup(h.plane.Close)
+
+	if err := h.plane.Replay(t.Context()); err != nil {
+		t.Fatalf("replay: %v", err)
+	}
+
+	if got := h.plane.Current().Phase; got != apply.PhaseRolledBack {
+		t.Errorf("phase %q, expected the rollback finished", got)
+	}
+	if _, restored := h.editor.counts(); restored != 2 {
+		t.Errorf("rollbacks %d, expected the replay to repeat the interrupted one", restored)
+	}
+	if h.reloader.count() != 3 {
+		t.Errorf("reload %d times, expected the change, the rollback and its replay", h.reloader.count())
+	}
+	if h.pstore.saved() != nil {
+		t.Error("state stayed on disk after the replay")
+	}
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
+		t.Errorf("after the finished rollback the config apply is busy: %v", err)
+	}
+}
+
 func TestPlaneReplay(t *testing.T) {
 	tests := []struct {
 		name         string
