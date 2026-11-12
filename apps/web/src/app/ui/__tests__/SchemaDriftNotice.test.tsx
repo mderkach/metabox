@@ -43,7 +43,7 @@ describe('SchemaDriftNotice', () => {
   });
 
   it('stays silent on matching versions', async () => {
-    const served = serveService(SERVICE_RUNNING_FIXTURE);
+    const served = serveService({ ...SERVICE_RUNNING_FIXTURE, binary: SCHEMA_VERSION });
 
     renderWithQuery(<SchemaDriftNotice />);
 
