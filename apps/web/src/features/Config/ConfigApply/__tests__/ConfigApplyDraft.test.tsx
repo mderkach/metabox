@@ -6,7 +6,7 @@ import { http, HttpResponse } from 'msw';
 import type { FunctionComponent } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ConfigDocumentState } from '@entities/Config';
+import { CONFIG_ENDPOINT, ConfigDocumentState, findValue, selectConfigStale } from '@entities/Config';
 import { DAEMON_ENDPOINT } from '@entities/Daemon';
 import { DAEMON_STATUS_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture';
 import { fingerprint } from '@shared/lib/fingerprint';
@@ -121,5 +121,49 @@ describe('ConfigApply draft after the cycle ends', () => {
 
     expect(ConfigDocumentState.getState().draft).toBe(NEWER_DRAFT);
     expect(ConfigDocumentState.getState().draftBase).toBe(fingerprint(DRAFT));
+  });
+
+  it('carries the clash_api the daemon added onto edits typed during the Apply: the device config is not stale', async () => {
+    const withClashApi = DRAFT.replace(
+      '\n}',
+      ',\n  "experimental": { "clash_api": { "external_controller": "127.0.0.1:9090" } }\n}'
+    );
+    let device = APPLIED;
+
+    server.use(
+      http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(device, { headers: { ETag: APPLIED_ETAG } })),
+      http.get(CONFIG_ENDPOINT.ruleSetFiles(), () => HttpResponse.json({ files: {}, etag: APPLIED_ETAG })),
+      http.post(DAEMON_ENDPOINT.apply(), () => {
+        device = withClashApi;
+
+        return HttpResponse.json({ ...AWAITING, clash_api_added: true }, { status: 202 });
+      }),
+      http.post(DAEMON_ENDPOINT.applyConfirm(AWAITING.id), () =>
+        HttpResponse.json({ ...CONFIRMED, clash_api_added: true })
+      ),
+      http.get(DAEMON_ENDPOINT.applyState(AWAITING.id), () => HttpResponse.json({ ...AWAITING, clash_api_added: true }))
+    );
+    ConfigDocumentState.getState().replace(DRAFT);
+    await renderScreen(Screen);
+
+    await applyFromSummary();
+    const confirm = await screen.findByRole('button', { name: 'Связь есть, оставить' });
+
+    act(() => {
+      ConfigDocumentState.getState().replace(NEWER_DRAFT);
+    });
+    await userEvent.click(confirm);
+
+    await waitFor(() => {
+      expect(ConfigDocumentState.getState().applied).toBe(withClashApi);
+    });
+    await waitFor(() => {
+      expect(selectConfigStale(ConfigDocumentState.getState())).toBe(false);
+    });
+
+    const draft = ConfigDocumentState.getState().draft ?? '';
+
+    expect(findValue(draft, ['log', 'level'])).toBe('trace');
+    expect(findValue(draft, ['experimental', 'clash_api', 'external_controller'])).toBe('127.0.0.1:9090');
   });
 });

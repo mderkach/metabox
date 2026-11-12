@@ -113,7 +113,7 @@ export function ConfigNodeFormBody({
           ))}
 
           {rest.empty.length > 0 && (
-            <ConfigNodeFormAdvancedFields count={rest.empty.length}>
+            <ConfigNodeFormAdvancedFields names={rest.empty.map((field) => toFieldName(field.path))}>
               {rest.empty.map((field) => (
                 <ConfigNodeFormNodeField key={field.key} field={field} builtTags={builtTags} />
               ))}

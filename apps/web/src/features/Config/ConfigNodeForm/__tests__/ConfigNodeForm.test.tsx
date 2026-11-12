@@ -240,6 +240,31 @@ describe('node form by schema', () => {
     expect(ConfigDocumentState.getState().draft).toBeNull();
   });
 
+  it('"More parameters" with an invalid field inside does not collapse: the field that holds the writes stays visible', async () => {
+    const user = userEvent.setup();
+
+    renderVmess();
+    await showEmptyFields();
+    await user.type(screen.getByRole('textbox', { name: 'Тайм-аут подключения' }), '10 секунд');
+    await user.click(screen.getByRole('button', { name: /^Ещё параметры/ }));
+
+    expect(screen.getByRole('button', { name: /^Ещё параметры/ })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('alert')).toHaveTextContent('Длительность в формате 10s, 1m30s, 500ms');
+  });
+
+  it('a collapsed group with an invalid field inside does not collapse', async () => {
+    const user = userEvent.setup();
+
+    renderVmess();
+    await showEmptyFields();
+    await user.click(screen.getByRole('button', { name: 'Мультиплексирование' }));
+    await user.type(screen.getByRole('spinbutton', { name: 'max_connections' }), '1.5');
+    await user.click(screen.getByRole('button', { name: 'Мультиплексирование' }));
+
+    expect(screen.getByRole('button', { name: 'Мультиплексирование' })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('spinbutton', { name: 'max_connections' })).toHaveAttribute('aria-invalid', 'true');
+  });
+
   it('names a port above 65535 and does not write it', async () => {
     const user = userEvent.setup();
 

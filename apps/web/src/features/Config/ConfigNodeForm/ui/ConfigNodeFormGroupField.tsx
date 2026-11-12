@@ -6,6 +6,7 @@ import { cn } from '@shared/lib/utils';
 import { Button, FieldLegend, FieldSet } from '@shared/ui';
 
 import { countFilled, isFilledGroup, type ConfigNodeFormModel } from '../model';
+import { useHasError } from './ConfigNodeForm.error';
 import type { NodeFieldProps } from './ConfigNodeForm.field';
 import { useFieldLabel } from './ConfigNodeForm.labels';
 import { ConfigNodeFormFieldName } from './ConfigNodeFormFieldName';
@@ -19,7 +20,7 @@ const FLAT_GROUP_FIELDS = 3;
  * collapsed group still tells whether there is anything in it. A small group is a flat
  * subsection; a larger one is collapsed while nothing in it is set: a long type would otherwise
  * open as a wall of TLS and multiplex fields. Collapsed fields are not mounted, and form values
- * are not lost.
+ * are not lost; a group with a remark inside stays open.
  */
 export function ConfigNodeFormGroupField({ field, name, children }: NodeFieldProps) {
   const label = useFieldLabel(name);
@@ -28,6 +29,12 @@ export function ConfigNodeFormGroupField({ field, name, children }: NodeFieldPro
   const total = field.children?.length ?? 0;
   const flat = total <= FLAT_GROUP_FIELDS;
   const [open, setOpen] = useState(() => flat || isFilledGroup(getValues(name)));
+  const hasError = useHasError([name]);
+
+  if (hasError && !open) {
+    setOpen(true);
+  }
+
   const contentId = useId();
   const filled = countFilled(value);
 

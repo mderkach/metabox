@@ -227,11 +227,23 @@ describe('VLESS override checks', () => {
   });
 
   it('the server name and key are required only with Reality', () => {
-    expect(overrideIssues(override, { ...reality, tls: { reality: { enabled: true } } }, {})).toEqual([
+    const before = {
+      ...reality,
+      tls: { server_name: 'a.example', reality: { enabled: true, public_key: PUBLIC_KEY } },
+    };
+
+    expect(overrideIssues(override, { ...reality, tls: { reality: { enabled: true } } }, before)).toEqual([
       { name: 'tls.server_name', code: NODE_OVERRIDE_ERROR.Required },
       { name: 'tls.reality.public_key', code: NODE_OVERRIDE_ERROR.Required },
     ]);
-    expect(overrideIssues(override, { ...reality, tls: { enabled: true } }, {})).toEqual([]);
+    expect(overrideIssues(override, { ...reality, tls: { enabled: true } }, before)).toEqual([]);
+  });
+
+  it('a required field empty before the edit is not reported: the fields being filled in are written', () => {
+    expect(overrideIssues(override, { type: 'vless', server: 'a.example' }, { type: 'vless' })).toEqual([]);
+    expect(overrideIssues(override, { type: 'vless' }, { type: 'vless', server: 'a.example' })).toEqual([
+      { name: 'server', code: NODE_OVERRIDE_ERROR.Required },
+    ]);
   });
 });
 
@@ -325,7 +337,7 @@ describe('api service override', () => {
     expect(first).not.toEqual(second);
   });
 
-  it('is not saved without a port, with a port it is written to the node', async () => {
+  it('a field is written before the port is set, a cleared port is a required field', async () => {
     const user = userEvent.setup();
 
     ConfigDocumentState.getState().reset();
@@ -339,14 +351,23 @@ describe('api service override', () => {
 
     await user.type(screen.getByRole('textbox', { name: 'Имя узла' }), '-grpc');
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Обязательное поле');
-    expect(ConfigDocumentState.getState().draft).toBeNull();
+    await waitFor(() => {
+      expect(findValue(draft(), [...API, 'tag'])).toBe('api-grpc');
+    });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 
-    await user.type(screen.getByRole('spinbutton', { name: 'Порт прослушивания' }), '9091');
+    const port = screen.getByRole('spinbutton', { name: 'Порт прослушивания' });
+
+    await user.type(port, '9091');
 
     await waitFor(() => {
       expect(findValue(draft(), [...API, 'listen_port'])).toBe(9091);
     });
+
+    await user.clear(port);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Обязательное поле');
+    expect(findValue(draft(), [...API, 'listen_port'])).toBe(9091);
   });
 });
 

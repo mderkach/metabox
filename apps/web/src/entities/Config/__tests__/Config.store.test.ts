@@ -249,6 +249,59 @@ const ONE_LINE_RULES = `{
 }
 `;
 
+describe('ConfigDocumentState rebase onto the device text', () => {
+  const CLASH_API = ['experimental', 'clash_api'];
+  const SENT = '{\n  "log": { "level": "debug" }\n}';
+  const DEVICE =
+    '{\n  "log": { "level": "debug" },\n  "experimental": { "clash_api": { "external_controller": "127.0.0.1:9090" } }\n}';
+
+  beforeEach(() => {
+    state().reset();
+    state().load('{\n  "log": { "level": "info" }\n}');
+  });
+
+  it('carries what the device added onto the draft and bases it on the device text', () => {
+    state().replace('{\n  "log": { "level": "trace" }\n}');
+    state().rebase(SENT);
+    state().rebase(SENT, DEVICE, CLASH_API);
+
+    expect(findValue(state().draft ?? '', ['log', 'level'])).toBe('trace');
+    expect(findValue(state().draft ?? '', ['experimental', 'clash_api', 'external_controller'])).toBe('127.0.0.1:9090');
+    expect(state().draftBase).toBe(fingerprint(DEVICE));
+  });
+
+  it('keeps a leaf the draft changed and merges a section the draft added next to the device one', () => {
+    state().replace(
+      '{\n  "log": { "level": "debug" },\n  "experimental": { "cache_file": { "enabled": true }, "clash_api": { "external_controller": "0.0.0.0:9090" } }\n}'
+    );
+    state().rebase(SENT);
+    state().rebase(SENT, DEVICE, CLASH_API);
+
+    expect(findValue(state().draft ?? '', ['experimental'])).toEqual({
+      cache_file: { enabled: true },
+      clash_api: { external_controller: '0.0.0.0:9090' },
+    });
+  });
+
+  it('carries only the node at the path: another change of the device text is not taken into the draft', () => {
+    state().replace('{\n  "log": { "level": "debug" },\n  "route": { "final": "direct" }\n}');
+    state().rebase(SENT);
+    state().rebase(SENT, DEVICE.replace('"debug"', '"warn"'), CLASH_API);
+
+    expect(findValue(state().draft ?? '', ['log', 'level'])).toBe('debug');
+    expect(findValue(state().draft ?? '', ['experimental', 'clash_api', 'external_controller'])).toBe('127.0.0.1:9090');
+  });
+
+  it('leaves a draft based on another text alone', () => {
+    state().replace('{\n  "log": { "level": "trace" }\n}');
+    const before = state().draft;
+
+    state().rebase(SENT, DEVICE, CLASH_API);
+
+    expect(state().draft).toBe(before);
+  });
+});
+
 /** Lines an edit added, counted as a multiset: a repeated line counts as many times as it occurs. */
 function addedLines(before: string, after: string): string[] {
   const left = before.split('\n');

@@ -1,7 +1,7 @@
 import type { ParseKeys, TFunction } from 'i18next';
-import { type FieldError as FormFieldError } from 'react-hook-form';
+import { get, useFormContext, useFormState, type FieldError as FormFieldError } from 'react-hook-form';
 
-import { NODE_OVERRIDE_ERROR } from '../model';
+import { NODE_OVERRIDE_ERROR, type ConfigNodeFormModel } from '../model';
 import { RAW_PARSE_ERROR } from './ConfigNodeForm.context';
 import { NS } from './ConfigNodeForm.namespace';
 
@@ -30,4 +30,15 @@ export function errorText(t: TFunction<typeof NS>, error: FormFieldError | undef
   }
 
   return t(ERROR_KEY[error.type] ?? 'error.invalid');
+}
+
+/**
+ * Whether a remark sits on one of the fields or inside them. A collapsed block holding one stays
+ * open: an invalid field stops every write of the form, and hidden it would stop them silently.
+ */
+export function useHasError(names: readonly string[]): boolean {
+  const { control } = useFormContext<ConfigNodeFormModel>();
+  const { errors } = useFormState({ control, name: [...names] });
+
+  return names.some((name) => get(errors, name) !== undefined);
 }

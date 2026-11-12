@@ -1,10 +1,11 @@
 import type { JSONPath } from 'jsonc-parser';
 
 import { fingerprint } from '@shared/lib/fingerprint';
+import { parseJsonc } from '@shared/lib/jsonc';
 import { createReactSelectors, stateCreator } from '@shared/lib/state';
 
-import { insertValue, moveValue, nameValue, removeValue, setValue } from './Config.model';
-import type { NodeEdit } from './Config.patch';
+import { findValue, insertValue, moveValue, nameValue, removeValue, setValue } from './Config.model';
+import { rebaseEdits, type NodeEdit } from './Config.patch';
 import { readStoredDraft, writeStoredDraft } from './Config.storage';
 
 export interface ConfigDocumentState {
@@ -43,8 +44,12 @@ export interface ConfigDocumentState {
   /** Remove a list file on apply. */
   removeList: (name: string) => void;
   discard: () => void;
-  /** Moves the base of the draft onto the text `base`: what it was written on top of is now on the device. */
-  rebase: (base: string) => void;
+  /**
+   * Moves the base of the draft onto the text `base`: what it was written on top of is now on the device.
+   * `device` is the text the device holds for `base` when the daemon changed the node at `path` on
+   * Apply: that change is carried onto a draft based on `base`, and the draft is then based on `device`.
+   */
+  rebase: (base: string, device?: string, path?: JSONPath) => void;
   /** Forget both the file and the draft: the panel rereads the config from the device. */
   reset: () => void;
 }
@@ -135,9 +140,13 @@ const ConfigDocumentStateProto = stateCreator<ConfigDocumentState>((set, get) =>
       );
     },
 
-    rebase: (base) => {
+    rebase: (base, device = base, path = []) => {
       set((state) => {
         if (state.draft === null) return state;
+
+        if (device !== base) {
+          return state.draftBase === fingerprint(base) ? rebaseDraft(state, base, device, path) : state;
+        }
 
         const draftBase = fingerprint(base);
 
@@ -159,6 +168,25 @@ const ConfigDocumentStateProto = stateCreator<ConfigDocumentState>((set, get) =>
     },
   };
 }, 'ConfigDocument');
+
+/** The draft with the change at `path` from `base` to `device` carried onto it; one that does not parse keeps its base. */
+function rebaseDraft(
+  state: ConfigDocumentState,
+  base: string,
+  device: string,
+  path: JSONPath
+): Partial<ConfigDocumentState> {
+  const draft = state.draft ?? '';
+
+  if ([base, device, draft].some((text) => parseJsonc(text).failure !== null)) return state;
+
+  const [from, to, mine] = [base, device, draft].map((text) => findValue(text, path));
+  const next = rebaseEdits(path, from, to, mine).reduce((text, { path, value }) => setValue(text, path, value), draft);
+
+  return next === device
+    ? { draft: null, draftBase: null, revision: state.revision + 1 }
+    : { draft: next, draftBase: fingerprint(device), revision: state.revision + (next === draft ? 0 : 1) };
+}
 
 /** A started draft keeps its own base, a new one takes it from the device text. */
 function baseOf(state: ConfigDocumentState): string | null {

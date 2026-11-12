@@ -185,7 +185,7 @@ A type for which the autoform is not enough gets an entry in the `NODE_OVERRIDE`
 
 - `primary`: main fields on top, in order; a nested one is lifted out of its group and labelled with the full path (`tls.reality.public_key`). The other fields of the type follow: those set in the node are visible, empty ones are under the "More parameters (N)" collapsible («Ещё параметры (N)»), closed by default. Types without an override have the same collapsible for empty fields.
 - `widgets`: a field kind instead of the kind from the schema: the VLESS `flow` string is drawn as a select of the fork's values.
-- `required` and `refine`: checks on top of the schema, with a failure code, as in handwritten schemas. The resolver gets the node before the edit through the form context (`context`): `refine` does not recheck the format of a value the user did not touch (`sing-box check` is its arbiter), and the form does not prevent editing a neighbouring field.
+- `required` and `refine`: checks on top of the schema, with a failure code, as in handwritten schemas. The resolver gets the node before the edit through the form context (`context`): `refine` does not recheck the format of a value the user did not touch (`sing-box check` is its arbiter), `required` reports only a field emptied in the form, not one that was empty before, and the form does not prevent editing a neighbouring field.
 - `preset`: a new node of the type in the add form (`features/Config/ConfigNodeAdd`, through `@x`): only what the type cannot be built without.
 
 An option from `BUILD_TAG_OF_OPTION` that is not in the binary build (`tls.utls`: `with_utls`) is marked on the topmost field it belongs to: on the group or on a field lifted out of it.
