@@ -11,6 +11,7 @@ const REASON_KEY: Readonly<Record<RouteReason['kind'], { short: ParseKeys<Namesp
   [ROUTE_REASON.Host]: { short: 'reason.host', full: 'reason.hostFull' },
   [ROUTE_REASON.Subnet]: { short: 'reason.subnet', full: 'reason.subnetFull' },
   [ROUTE_REASON.Excluded]: { short: 'reason.excluded', full: 'reason.excludedFull' },
+  [ROUTE_REASON.ExcludedSubnet]: { short: 'reason.excludedSubnet', full: 'reason.excludedSubnetFull' },
 };
 
 export function DeviceRouteReason({ id, reason }: { id: string; reason: RouteReason }) {

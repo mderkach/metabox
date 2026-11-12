@@ -127,8 +127,17 @@ describe('routeReason', () => {
     expect(routeReason(model, BY_MAC)).toEqual({ kind: ROUTE_REASON.Subnet, subnet: '192.168.1.112/28' });
     expect(routeReason({ ...model, sourceMacExclude: ['AA:BB:CC:00:01:04'] }, BY_MAC)).toEqual(excluded);
     expect(routeReason({ ...model, sourceIpExclude: ['192.168.1.120'] }, BY_MAC)).toEqual(excluded);
-    expect(routeReason({ ...model, sourceIpExclude: ['192.168.1.120/30'] }, BY_MAC)).toEqual(excluded);
     expect(isRouted(excluded)).toBe(false);
+  });
+
+  it('names an exclusion wider than the device, with or without a subnet around it', () => {
+    const wider = { kind: ROUTE_REASON.ExcludedSubnet, subnet: '192.168.1.120/30' };
+
+    expect(
+      routeReason({ ...MODEL, sourceIp: ['192.168.1.112/28'], sourceIpExclude: ['192.168.1.120/30'] }, BY_MAC)
+    ).toEqual(wider);
+    expect(routeReason({ ...MODEL, sourceIpExclude: ['192.168.1.120/30'] }, BY_MAC)).toEqual(wider);
+    expect(isRouted(wider)).toBe(false);
   });
 
   it('an exclusion outside any subnet is not named: nothing lists the device', () => {
@@ -226,6 +235,19 @@ describe('withDeviceRoute', () => {
 
     expect(next.sourceMac).toContain('aa:bb:cc:00:00:40');
     expect(next.sourceMacExclude).toEqual([]);
+  });
+
+  it('enabling a device without a MAC writes no empty MAC', () => {
+    const next = withDeviceRoute(MODEL, { ...STATIC, mac: '' }, true);
+
+    expect(next.sourceMac).toEqual(MODEL.sourceMac);
+    expect(next.sourceIp).toContain('192.168.1.60/32');
+  });
+
+  it('enabling a device keeps an exclusion wider than the device', () => {
+    const model = { ...MODEL, sourceIp: ['192.168.1.0/24'], sourceIpExclude: ['192.168.1.32/28'] };
+
+    expect(withDeviceRoute(model, DYNAMIC, true).sourceIpExclude).toEqual(['192.168.1.32/28']);
   });
 
   it('other model fields go to the daemon unchanged', () => {

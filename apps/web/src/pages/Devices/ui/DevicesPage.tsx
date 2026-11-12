@@ -64,6 +64,8 @@ export function DevicesPage() {
           <DeviceRouteSubnets model={route.model} locked={route.locked} onApply={route.setSourceIp} />
         )}
 
+        {route.modelQuery.isLoadingError && <QueryFailure messageKey='source.dataplane' query={route.modelQuery} />}
+
         {devices.isPending && <SkeletonRows className={SURFACE} />}
 
         {devices.isLoadingError && <QueryFailure messageKey='source.devices' query={devices} />}

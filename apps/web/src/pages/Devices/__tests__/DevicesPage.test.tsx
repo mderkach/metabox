@@ -463,6 +463,36 @@ describe('devices screen', () => {
       expect(screen.getByRole('switch', { name: 'Через sing-box: iphone-guest' })).toBeChecked();
     });
 
+    it('an exclusion wider than the device keeps the toggle off and unavailable, and names the subnet', async () => {
+      server.use(...createDeviceHandlers());
+      serveDataplane({
+        ...DATAPLANE_FIXTURE,
+        model: { ...DATAPLANE_FIXTURE.model, source_ip: ['192.168.1.0/24'], source_ip_exclude: ['192.168.1.0/26'] },
+      });
+      renderScreen();
+
+      const laptop = await screen.findByRole('switch', { name: 'Через sing-box: Ноутбук' });
+
+      expect(within(rowOf('Ноутбук')).getByText('в исключениях: 192.168.1.0/26')).toBeInTheDocument();
+      expect(laptop).not.toBeChecked();
+      expect(isLocked(laptop)).toBe(true);
+    });
+
+    it('a failed model read shows the reason and a retry instead of toggles that read as off', async () => {
+      server.use(
+        ...createDeviceHandlers(),
+        http.get(DATAPLANE_ENDPOINT.dataplane(), () =>
+          HttpResponse.json({ code: 'internal', message: 'uci не ответил' }, { status: 500 })
+        )
+      );
+      renderScreen();
+
+      expect(await screen.findByText('Не удалось прочитать настройки перехвата трафика')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Повторить' })).toBeInTheDocument();
+      expect(await screen.findByText('Ноутбук')).toBeInTheDocument();
+      expect(screen.queryByRole('switch')).not.toBeInTheDocument();
+    });
+
     it('confirmation sends POST and closes the window', async () => {
       const confirmed = vi.fn<(path: string) => void>();
       const user = userEvent.setup();

@@ -38,6 +38,24 @@ function useModelRefresh(transaction: ApplyTransaction | null) {
   );
 }
 
+function useTransaction() {
+  const status = useDaemonStatus();
+  const confirm = useConfirmDeviceRoute();
+
+  const id = status.data?.dataplaneTransaction?.id ?? null;
+  const state = useDataplaneTransaction(id);
+  const transaction = state.data ?? status.data?.dataplaneTransaction ?? null;
+
+  const confirmMutate = confirm.mutate;
+  const onConfirm = useCallback(() => {
+    if (transaction === null) return;
+
+    confirmMutate(transaction.id);
+  }, [transaction, confirmMutate]);
+
+  return { transaction, isConfirming: confirm.isPending, confirm: onConfirm };
+}
+
 export interface DeviceRouteTransaction {
   /** `null` means there were no model changes in this daemon lifetime. */
   transaction: ApplyTransaction | null;
@@ -50,31 +68,22 @@ export interface DeviceRouteTransaction {
  * the shell holds the confirmation window on every screen, since checking the
  * connection on another screen is exactly what the window asks for. The change
  * id is taken from the daemon status, not from the `PUT` response, so the
- * window survives a page reload.
+ * window survives a page reload. The shell alone calls it, and it alone rereads
+ * the model after a change.
  */
 export function useDeviceRouteTransaction(): DeviceRouteTransaction {
-  const status = useDaemonStatus();
-  const confirm = useConfirmDeviceRoute();
+  const route = useTransaction();
 
-  const id = status.data?.dataplaneTransaction?.id ?? null;
-  const state = useDataplaneTransaction(id);
-  const transaction = state.data ?? status.data?.dataplaneTransaction ?? null;
+  useModelRefresh(route.transaction);
 
-  useModelRefresh(transaction);
-
-  const confirmMutate = confirm.mutate;
-  const onConfirm = useCallback(() => {
-    if (transaction === null) return;
-
-    confirmMutate(transaction.id);
-  }, [transaction, confirmMutate]);
-
-  return { transaction, isConfirming: confirm.isPending, confirm: onConfirm };
+  return route;
 }
 
 export interface DeviceRouteState {
   /** `null` means the model was not read, and there is nothing to write it from. */
   model: DataplaneModel | null;
+  /** The model read, for the loading and failure states of the screen. */
+  modelQuery: ReturnType<typeof useDataplane>;
   /** Change is unavailable: the model was not read or an apply is running, a model change or a config one. */
   locked: boolean;
   /** `null` means there were no model changes in this daemon lifetime. */
@@ -94,7 +103,7 @@ export function useDeviceRoute(): DeviceRouteState {
   const status = useDaemonStatus();
   const dataplane = useDataplane();
   const change = useChangeDeviceRoute();
-  const { transaction, isConfirming, confirm } = useDeviceRouteTransaction();
+  const { transaction, isConfirming, confirm } = useTransaction();
   const model = dataplane.data?.model ?? null;
   const etag = dataplane.data?.etag ?? null;
 
@@ -118,6 +127,7 @@ export function useDeviceRoute(): DeviceRouteState {
 
   return {
     model,
+    modelQuery: dataplane,
     locked:
       model === null ||
       change.isPending ||

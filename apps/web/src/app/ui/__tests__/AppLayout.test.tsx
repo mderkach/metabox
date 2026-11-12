@@ -156,6 +156,29 @@ describe('AppLayout', () => {
     expect(screen.getByRole('main')).toHaveTextContent('Экран содержимого');
   });
 
+  it('frees space under the interception bar measured against its container, even while the layer is empty', async () => {
+    const transaction = { id: 'dp-1', phase: 'awaiting_confirm', window: 60_000_000_000, sha256: 'b'.repeat(64) };
+    const containerHeight = 600;
+    const layerTop = 540;
+
+    serveDaemon();
+    server.use(
+      http.get(DAEMON_ENDPOINT.status(), () =>
+        HttpResponse.json({ ...DAEMON_STATUS_FIXTURE, dataplane_transaction: transaction })
+      ),
+      http.get(DATAPLANE_ENDPOINT.applyState(transaction.id), () => HttpResponse.json(transaction))
+    );
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(containerHeight - layerTop);
+    vi.spyOn(HTMLElement.prototype, 'offsetTop', 'get').mockReturnValue(layerTop);
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(containerHeight);
+    vi.spyOn(HTMLElement.prototype, 'offsetParent', 'get').mockReturnValue(null);
+
+    renderAppLayout();
+
+    expect(await screen.findByRole('button', { name: 'Связь есть, оставить' })).toBeInTheDocument();
+    expect(screen.getByRole('main')).toHaveStyle({ paddingBottom: `${String(containerHeight - layerTop)}px` });
+  });
+
   it('on a wide screen the sections are in the sidebar, there is no bottom bar', async () => {
     serveDaemon();
 
