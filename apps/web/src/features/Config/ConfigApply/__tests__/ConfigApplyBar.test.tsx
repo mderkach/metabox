@@ -3,7 +3,7 @@ import { renderWithRouter } from '@test/renderWithRouter';
 import { server } from '@test/server';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http, HttpResponse } from 'msw';
+import { delay, http, HttpResponse } from 'msw';
 import type { FunctionComponent } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -513,6 +513,31 @@ describe('ConfigApplyBar', () => {
     await waitFor(() => {
       expect(ConfigDocumentState.getState().applied).toBe(APPLIED);
     });
+    expect(screen.queryByText(/не прочитался/)).not.toBeInTheDocument();
+  });
+
+  it('keeps a config-only draft waiting for the device config when only the list files fail to read', async () => {
+    let listsFailed = false;
+
+    server.use(
+      http.get(CONFIG_ENDPOINT.config(), async () => delay('infinite')),
+      http.get(CONFIG_ENDPOINT.ruleSetFiles(), () => {
+        listsFailed = true;
+
+        return HttpResponse.json({ error: 'internal', message: 'boom' }, { status: 500 });
+      })
+    );
+    ConfigDocumentStore.setState({ draft: DRAFT, draftBase: fingerprint(APPLIED) });
+    await renderScreen(function Screen() {
+      return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+    });
+
+    await waitFor(() => {
+      expect(listsFailed).toBe(true);
+    });
+    await act(async () => {});
+
+    expect(screen.getByText('Конфиг с устройства ещё не прочитан — применить пока нельзя.')).toBeInTheDocument();
     expect(screen.queryByText(/не прочитался/)).not.toBeInTheDocument();
   });
 

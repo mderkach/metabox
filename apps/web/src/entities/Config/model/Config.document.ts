@@ -87,7 +87,10 @@ export interface ConfigDocumentView {
 }
 
 export interface ConfigLoad {
-  /** A request ended in a failure: the store will not get its file until a retry. */
+  /**
+   * A request Apply waits on ended in a failure: the store will not get its file until a retry. The
+   * list files count only while the draft changes any.
+   */
   failed: boolean;
   retry: () => void;
 }
@@ -102,6 +105,7 @@ export function useConfigLoad(enabled: boolean): ConfigLoad {
   const lists = useConfigLists(enabled);
   const load = ConfigDocumentState.use.load();
   const loadLists = ConfigDocumentState.use.loadLists();
+  const listsDraft = ConfigDocumentState.use.listsDraft();
   const applied = file.data?.text ?? null;
   const etag = file.data?.etag ?? null;
   const listFiles = lists.data?.files;
@@ -126,7 +130,7 @@ export function useConfigLoad(enabled: boolean): ConfigLoad {
   const refetchFile = file.refetch;
   const refetchLists = lists.refetch;
   const fileFailed = file.isError;
-  const listsFailed = lists.isError;
+  const listsFailed = lists.isError && Object.keys(listsDraft).length > 0;
   const retry = useCallback(() => {
     if (fileFailed) void refetchFile();
     if (listsFailed) void refetchLists();
