@@ -3,11 +3,12 @@ export { getProxies, getProxyProviders, selectProxy, testProxyDelay, updateProxy
 export {
   getProxiesOptions,
   getProxyProvidersOptions,
+  PROXY_MUTATION,
   PROXY_QUERY,
   useProxies,
   useProxyProviders,
 } from './api/Proxy.query';
-export { toProxyRuntime, withSelectedNode } from './model/Proxy.adapter';
+export { isProbeFailure, toProxyRuntime, withSelectedNode } from './model/Proxy.adapter';
 export {
   DELAY_FAST,
   DELAY_STATE,
@@ -18,6 +19,7 @@ export {
 } from './model/Proxy.model';
 export type {
   DelayState,
+  ProbeOutcome,
   ProviderUpdate,
   ProxyGroup,
   ProxyNode,

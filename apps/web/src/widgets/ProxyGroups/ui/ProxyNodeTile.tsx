@@ -8,7 +8,11 @@ import { toDelayText } from '../lib/ProxyGroups.delay';
 import { toMemberLabel } from './ProxyGroupLabel';
 import { ProxyNodeContent } from './ProxyNodeContent';
 
-/** The selected node carries an edge and a checkmark: two signs, one of them not color-based. */
+/**
+ * A node of a selector group is a button with an edge and a hover; a node of any other
+ * group is a reading. The selected node carries a fill and a check mark: two signs, one of
+ * them not color-based.
+ */
 function ProxyNodeTileProto({
   node,
   selectable,
@@ -30,10 +34,7 @@ function ProxyNodeTileProto({
   // `relative` keeps the hidden label inside the tile: `sr-only` is positioned
   // absolutely, and without a positioned ancestor it goes off the screen scroll and
   // lengthens the document — the bottom navigation slides up.
-  const className = cn(
-    'relative flex w-full flex-col gap-1.5 rounded-md border px-2.5 py-2 text-left transition-colors',
-    node.selected ? 'border-selected-edge bg-selected' : 'border-border bg-card'
-  );
+  const base = 'relative flex w-full flex-col gap-1.5 rounded-md border px-2.5 py-2 text-left';
 
   return (
     <li>
@@ -41,8 +42,11 @@ function ProxyNodeTileProto({
         <button
           type='button'
           className={cn(
-            className,
-            'hover:border-selected-edge/60 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none'
+            base,
+            'cursor-pointer transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none',
+            node.selected
+              ? 'border-selected-edge bg-selected'
+              : 'border-border bg-card hover:border-selected-edge/60 hover:bg-row-hover'
           )}
           aria-pressed={node.selected}
           aria-label={label}
@@ -53,7 +57,9 @@ function ProxyNodeTileProto({
           <ProxyNodeContent node={node} />
         </button>
       ) : (
-        <p className={className}>
+        // A reading, not a control: no edge and no hover, so nothing invites a click. The node in
+        // use keeps the opaque fill and the check mark.
+        <p className={cn(base, 'border-transparent', node.selected ? 'bg-selected' : 'bg-transparent')}>
           {node.selected && <span className='sr-only'>{t('node.selected')}</span>}
           <ProxyNodeContent node={node} />
         </p>

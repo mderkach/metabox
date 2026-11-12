@@ -1,3 +1,4 @@
+import { API_FAILURE, ApiError } from '@shared/api';
 import { MS_IN_SECOND } from '@shared/lib/time';
 
 import type {
@@ -13,6 +14,7 @@ import {
   GROUP_TYPES,
   SERVICE_GROUPS,
   type DelayState,
+  type ProbeOutcome,
   type ProviderUpdate,
   type ProviderUsage,
   type ProxyGroup,
@@ -24,10 +26,54 @@ import {
 /** Selector type: the only group where the user picks the node. */
 const SELECTOR_TYPE = 'Selector';
 
-function toDelay(proxy: ClashProxyWire): number | null {
+const SERVICE_UNAVAILABLE = 503;
+const GATEWAY_TIMEOUT = 504;
+
+/** Statuses the fork answers a probe with when the node did not respond in time or at all. */
+const PROBE_FAILURE_STATUS: ReadonlySet<number> = new Set([SERVICE_UNAVAILABLE, GATEWAY_TIMEOUT]);
+
+const NO_FAILED_PROBES: ReadonlySet<string> = new Set();
+
+/**
+ * The node did not answer the probe. The Clash API body has a message and no daemon
+ * code: a daemon refusal with a code (sing-box is down) stays an error of the panel.
+ */
+export function isProbeFailure(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    error.kind === API_FAILURE.Response &&
+    error.code === null &&
+    error.status !== null &&
+    PROBE_FAILURE_STATUS.has(error.status)
+  );
+}
+
+/**
+ * Nodes whose latest panel probe failed. Outcomes go in the order they were
+ * started, so a later probe of the same node overrides an earlier one.
+ */
+export function toFailedProbes(outcomes: readonly ProbeOutcome[]): ReadonlySet<string> {
+  const latest = new Map<string, boolean>();
+
+  for (const outcome of outcomes) {
+    latest.set(outcome.name, outcome.failed);
+  }
+
+  return new Set([...latest].filter(([, failed]) => failed).map(([name]) => name));
+}
+
+/**
+ * A failed probe counts only while the history is empty: the fork deletes the history
+ * on a failure, so an entry that appeared since is a newer measurement.
+ */
+function toDelay(proxy: ClashProxyWire, failed: ReadonlySet<string>): number | null {
   const last = proxy.history.at(-1);
 
-  return last === undefined ? null : last.delay;
+  if (last !== undefined) {
+    return last.delay;
+  }
+
+  return failed.has(proxy.name) ? DELAY_TIMEOUT : null;
 }
 
 function toDelayState(delay: number | null): DelayState {
@@ -42,8 +88,8 @@ function toDelayState(delay: number | null): DelayState {
   return delay <= DELAY_FAST ? DELAY_STATE.Fast : DELAY_STATE.Slow;
 }
 
-function toNode(proxy: ClashProxyWire, selected: boolean): ProxyNode {
-  const delay = toDelay(proxy);
+function toNode(proxy: ClashProxyWire, selected: boolean, failed: ReadonlySet<string>): ProxyNode {
+  const delay = toDelay(proxy, failed);
 
   return { name: proxy.name, type: proxy.type, delay, delayState: toDelayState(delay), selected };
 }
@@ -56,7 +102,7 @@ function toNode(proxy: ClashProxyWire, selected: boolean): ProxyNode {
  * Selectors go first: only in them is a node switched by hand, while the screen
  * merely observes the other groups. Within a kind the runtime order is kept.
  */
-function toGroups(source: ClashProxiesWire): ProxyGroup[] {
+function toGroups(source: ClashProxiesWire, failed: ReadonlySet<string>): ProxyGroup[] {
   const groups: ProxyGroup[] = [];
 
   for (const proxy of Object.values(source.proxies)) {
@@ -77,7 +123,7 @@ function toGroups(source: ClashProxiesWire): ProxyGroup[] {
 
       const node = source.proxies[name];
 
-      nodes.push(toNode(node, node.name === now));
+      nodes.push(toNode(node, node.name === now, failed));
     }
 
     groups.push({
@@ -96,10 +142,10 @@ function toGroups(source: ClashProxiesWire): ProxyGroup[] {
  * Nodes outside groups are what the screen shows when the config has no groups
  * at all: rules refer directly to outbounds, and there is nothing to switch.
  */
-function toStandalone(source: ClashProxiesWire): ProxyNode[] {
+function toStandalone(source: ClashProxiesWire, failed: ReadonlySet<string>): ProxyNode[] {
   return Object.values(source.proxies)
     .filter((proxy) => !GROUP_TYPES.has(proxy.type) && !SERVICE_GROUPS.has(proxy.name))
-    .map((proxy) => toNode(proxy, false));
+    .map((proxy) => toNode(proxy, false, failed));
 }
 
 /**
@@ -115,8 +161,9 @@ export function withSelectedNode(proxies: ClashProxiesWire, group: string, node:
   return { proxies: { ...proxies.proxies, [group]: { ...proxies.proxies[group], now: node } } };
 }
 
-export function toProxyRuntime(wire: ClashProxiesWire): ProxyRuntime {
-  return { groups: toGroups(wire), standalone: toStandalone(wire) };
+/** `failed` holds the nodes whose latest panel probe failed (`toFailedProbes`). */
+export function toProxyRuntime(wire: ClashProxiesWire, failed: ReadonlySet<string> = NO_FAILED_PROBES): ProxyRuntime {
+  return { groups: toGroups(wire, failed), standalone: toStandalone(wire, failed) };
 }
 
 function toProviderUpdate(raw: string): ProviderUpdate {

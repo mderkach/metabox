@@ -11,6 +11,9 @@ import { CLASH_DELAY_FIXTURE, CLASH_PROVIDERS_FIXTURE, CLASH_PROXIES_FIXTURE } f
  */
 const NODE_PATTERN = '*';
 
+/** The node the dev mock keeps silent, so the "did not answer" state can be seen. */
+const SILENT_NODE = 'sub-nl/nl-reality';
+
 /** Group name from the address: in the path it is encoded, and the state key must be the original. */
 function toGroupName(url: string): string {
   const path = new URL(url).pathname;
@@ -56,6 +59,7 @@ export const proxyHandlers = [
  */
 export function createStatefulProxyHandlers() {
   const chosen = new Map<string, string>();
+  const silent = new Set<string>();
 
   // The mock answers in the wire shape, so the selection is set right in it:
   // the model `withSelectedNode` works with groups that do not exist here yet.
@@ -68,11 +72,22 @@ export function createStatefulProxyHandlers() {
       }
     }
 
+    for (const node of silent) {
+      proxies[node] = { ...proxies[node], history: [] };
+    }
+
     return { proxies };
   }
 
   return [
     http.get(PROXY_ENDPOINT.proxies(), () => HttpResponse.json(snapshot())),
+
+    // One node never answers, as the fork reports it: an error status, and the history is dropped.
+    http.get(PROXY_ENDPOINT.proxyDelay(SILENT_NODE), () => {
+      silent.add(SILENT_NODE);
+
+      return HttpResponse.json({ message: 'An error occurred in the delay test' }, { status: 503 });
+    }),
     ...readOnlyHandlers(),
 
     http.put(PROXY_ENDPOINT.proxy(NODE_PATTERN), async function rememberSelect({ request }) {

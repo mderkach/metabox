@@ -44,11 +44,15 @@ export function ProxiesPage() {
     announce(t('announce.testedAll'));
   }, [announce, t]);
 
+  const onTestedOutbounds = useCallback(() => {
+    announce(t('announce.testedOutbounds'));
+  }, [announce, t]);
+
   return (
     <>
       <PageHeader
         title={t('section.proxies', { ns: 'shared' })}
-        actions={<ProxyTestAll groups={groups} onTested={onTestedAll} />}
+        actions={<ProxyTestAll groups={groups} nodes={nodes} onTested={onTestedAll} />}
       />
 
       <LiveRegion message={message} />
@@ -60,7 +64,13 @@ export function ProxiesPage() {
 
         {proxies.isSuccess && (
           <ProxiesSection title={t('groups.title')}>
-            <ProxyGroups groups={groups} nodes={nodes} onSelected={onSelected} onTested={onTested} />
+            <ProxyGroups
+              groups={groups}
+              nodes={nodes}
+              onSelected={onSelected}
+              onTested={onTested}
+              onTestedOutbounds={onTestedOutbounds}
+            />
           </ProxiesSection>
         )}
 
