@@ -77,6 +77,22 @@ describe('listenTopic', () => {
     parse.mockRestore();
   });
 
+  it('logs a failing slice handler instead of swallowing it, and keeps listening', () => {
+    const stream = fakeEventSource();
+    const apply = vi.fn<(data: unknown) => void>().mockImplementationOnce(() => {
+      throw new Error('slice bug');
+    });
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    listenTopic(stream.source, RUNTIME_TOPIC.Traffic, apply);
+    stream.send(RUNTIME_TOPIC.Traffic, { up: 1, down: 1 });
+    stream.send(RUNTIME_TOPIC.Traffic, { up: 2, down: 2 });
+
+    expect(error).toHaveBeenCalledWith('[STREAM] handler of topic traffic failed', expect.any(Error));
+    expect(apply).toHaveBeenCalledTimes(2);
+    error.mockRestore();
+  });
+
   it('skips a frame that is not JSON without a warning', () => {
     const stream = fakeEventSource();
     const apply = vi.fn<(data: unknown) => void>();

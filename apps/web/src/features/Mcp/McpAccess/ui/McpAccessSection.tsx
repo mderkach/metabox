@@ -16,7 +16,8 @@ export function McpAccessSection() {
   // "Done" after a token remounts the body: the issued token lives in its mutation and goes with it.
   const [round, setRound] = useState(0);
 
-  if (!mcp.isSuccess) {
+  // A failed reread keeps the data: hiding the section would take the issued token with it.
+  if (mcp.data === undefined) {
     return null;
   }
 

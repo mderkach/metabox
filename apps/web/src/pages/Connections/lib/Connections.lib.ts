@@ -112,9 +112,11 @@ function useTabFilter(
  * filtered list would show not what is in the store.
  *
  * `interval` sets the refresh rate of the shown set: counters, facets and the
- * footer speak about it, not about the last snapshot that arrived.
+ * footer speak about it, not about the last snapshot that arrived. `paused`
+ * freezes the shown sets of this screen only: the store stays live for the
+ * overview and its minute history.
  */
-export function useConnectionsScreen(interval: number): ConnectionsScreen {
+export function useConnectionsScreen(interval: number, paused: boolean): ConnectionsScreen {
   const search = useSearch({ from: '/connections' });
   const navigate = useNavigate({ from: '/connections' });
 
@@ -176,8 +178,8 @@ export function useConnectionsScreen(interval: number): ConnectionsScreen {
   // The throttle sits before selection and is separate for each tab: a facet
   // press must respond at once, and a tab switch must show its own set, not the
   // neighbor's until the end of the period.
-  const liveRows = useThrottledRows(ConnectionState.use.active(), interval);
-  const closedRows = useThrottledRows(ConnectionState.use.closed(), interval);
+  const liveRows = useWhileVisible(useThrottledRows(ConnectionState.use.active(), interval), !paused);
+  const closedRows = useWhileVisible(useThrottledRows(ConnectionState.use.closed(), interval), !paused);
   // A hidden tab gets the set frozen at the moment it was hidden: selection
   // over it is not recomputed on every snapshot, and the table body is not
   // redrawn. The shown one gets the current set in the same frame it becomes

@@ -1,6 +1,7 @@
 {
   "stream": {
-    "paused": "paused: rows are not updating"
+    "paused": "paused: rows are not updating",
+    "stale": "no updates from the router: rows and speeds are from the last snapshot"
   },
   "dropped": "updates not parsed: {{count}}",
   "resume": "Resume",

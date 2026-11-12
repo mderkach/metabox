@@ -108,15 +108,21 @@ describe('connections stream', () => {
     expect(ConnectionStore.getState().evicted).toBe(0);
   });
 
-  it('on pause the snapshot is not applied', async () => {
+  it('computes the speed over the interval between snapshots, not between batch timer ticks', async () => {
     const { source, send } = fakeEventSource();
     const unsubscribe = listenConnections(source);
+    const first = makeConnectionsSnapshot(1);
+    const [connection] = first.connections;
 
-    ConnectionStore.getState().setPaused(true);
-    send(RUNTIME_TOPIC.Connections, makeConnectionsSnapshot(3));
-    await vi.advanceTimersByTimeAsync(600);
+    send(RUNTIME_TOPIC.Connections, first);
+    await vi.advanceTimersByTimeAsync(1_900);
+    send(RUNTIME_TOPIC.Connections, {
+      ...first,
+      connections: [{ ...connection, download: connection.download + 1_900 }],
+    });
+    await vi.advanceTimersByTimeAsync(100);
 
-    expect(ConnectionStore.getState().active).toHaveLength(0);
+    expect(ConnectionStore.getState().active[0].downRate).toBe(1_000);
 
     unsubscribe();
   });
@@ -272,6 +278,30 @@ describe('summary and snapshot history', () => {
     ConnectionStore.getState().seedHistory([9, 9]);
 
     expect(ConnectionStore.getState().history).toEqual([1, 2, 3]);
+  });
+
+  it('after a break in the stream starts the history anew and fills it from the daemon minute once', () => {
+    const store = ConnectionStore.getState();
+
+    store.reset();
+    vi.setSystemTime(1_000 * MS_IN_SECOND);
+    store.apply(makeConnectionsSnapshot(1));
+    store.seedHistory([7, 7]);
+
+    expect(ConnectionStore.getState().history).toEqual([7, 1]);
+
+    vi.setSystemTime(1_600 * MS_IN_SECOND);
+    store.apply(makeConnectionsSnapshot(4));
+
+    expect(ConnectionStore.getState().history).toEqual([4]);
+
+    store.seedHistory([5, 6, 8]);
+
+    expect(ConnectionStore.getState().history).toEqual([5, 6, 4]);
+
+    store.seedHistory([9, 9, 9]);
+
+    expect(ConnectionStore.getState().history).toEqual([5, 6, 4]);
   });
 
   it('counts history point times from the last one backward with the snapshot step', () => {

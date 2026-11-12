@@ -19,7 +19,7 @@ import { ConnectionTable, useConnectionView, type ConnectionTableEmpty } from '@
 import { PageHeader } from '@widgets/PageHeader';
 import { RouteExplanation, RouteExplanationSheet } from '@widgets/RouteExplanation';
 
-import { useConnectionsScreen, useWhileVisible } from '../lib';
+import { useConnectionsScreen, useStreamStale, useWhileVisible } from '../lib';
 import { ConnectionActions } from './ConnectionActions';
 import { ConnectionExport } from './ConnectionExport';
 import { ConnectionFacets } from './ConnectionFacets';
@@ -36,18 +36,18 @@ export function ConnectionsPage() {
   useConnectionStream();
 
   const view = useConnectionView();
-  const screen = useConnectionsScreen(view.interval);
+  const [paused, setPaused] = useState(false);
+  const screen = useConnectionsScreen(view.interval, paused);
   const [explainedId, setExplainedId] = useState<string | null>(null);
   // The same identifier goes into `aria-controls` of the row that expanded the panel.
   const explainPanelId = useId();
-  const paused = ConnectionState.use.paused();
   const dropped = ConnectionState.use.dropped();
   const evicted = ConnectionState.use.evicted();
   // Both overflow numbers are from the store of one moment: a thinned table
   // output at a slow interval lags the evicted counter.
   const kept = ConnectionState.use.closed().length;
   const sampledAt = ConnectionState.use.sampledAt();
-  const setPaused = ConnectionState.use.setPaused();
+  const stale = useStreamStale(sampledAt);
   const closeAll = useCloseAllConnections();
   const sheet = usePanelAsSheet();
   // A row leaves the list silently: one area per screen announces to a screen
@@ -63,8 +63,8 @@ export function ConnectionsPage() {
   }, []);
 
   const onTogglePause = useCallback(() => {
-    setPaused(!paused);
-  }, [paused, setPaused]);
+    setPaused((current) => !current);
+  }, []);
 
   const onCloseAll = useCallback(() => {
     closeAll.mutate(undefined, {
@@ -111,7 +111,7 @@ export function ConnectionsPage() {
   return (
     <>
       <PageHeader title={t('section.connections', { ns: 'shared' })}>
-        <ConnectionsStreamStatus paused={paused} />
+        <ConnectionsStreamStatus paused={paused} stale={stale} />
         {dropped > 0 && (
           <p role='status' className='text-xs text-destructive'>
             {t('dropped', { count: dropped })}

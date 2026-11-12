@@ -26,6 +26,7 @@ export async function closeAllConnections(): Promise<void> {
  */
 export function listenConnections(source: StreamSource): () => void {
   let pending: unknown = null;
+  let receivedAt = 0;
 
   const flush = () => {
     if (pending === null) {
@@ -35,13 +36,14 @@ export function listenConnections(source: StreamSource): () => void {
     const snapshot = pending;
     pending = null;
 
-    ConnectionStore.getState().apply(snapshot);
+    ConnectionStore.getState().apply(snapshot, receivedAt);
   };
 
   const timer = setInterval(flush, APPLY_INTERVAL);
 
   const unsubscribe = listenTopic(source, RUNTIME_TOPIC.Connections, (snapshot) => {
     pending = snapshot;
+    receivedAt = Date.now();
   });
 
   return () => {

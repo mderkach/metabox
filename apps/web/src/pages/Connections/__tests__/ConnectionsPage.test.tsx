@@ -115,10 +115,30 @@ describe('connections screen', () => {
     ConnectionStore.getState().apply(makeConnectionsSnapshot(3));
 
     await user.click(await screen.findByRole('button', { name: 'Пауза' }));
-    ConnectionStore.getState().apply(makeConnectionsSnapshot(40));
+    act(() => {
+      ConnectionStore.getState().apply(makeConnectionsSnapshot(40));
+    });
 
-    expect(ConnectionStore.getState().active).toHaveLength(3);
+    expect(screen.getByRole('tab', { name: /Активные/ })).toHaveTextContent('3');
     expect(screen.getByRole('button', { name: 'Продолжить' })).toBeInTheDocument();
+  });
+
+  it('pause freezes only this screen: the store keeps the snapshots for the overview', async () => {
+    const user = userEvent.setup();
+
+    renderScreen();
+    ConnectionStore.getState().apply(makeConnectionsSnapshot(3));
+
+    await user.click(await screen.findByRole('button', { name: 'Пауза' }));
+    act(() => {
+      ConnectionStore.getState().apply(makeConnectionsSnapshot(40));
+    });
+
+    expect(ConnectionStore.getState().active).toHaveLength(40);
+
+    await user.click(screen.getByRole('button', { name: 'Продолжить' }));
+
+    expect(screen.getByRole('tab', { name: /Активные/ })).toHaveTextContent('40');
   });
 
   it('the header names the pause, and a live stream is not labeled', async () => {

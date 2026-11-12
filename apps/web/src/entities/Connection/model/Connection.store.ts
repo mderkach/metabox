@@ -61,6 +61,10 @@ const NO_RATE: ConnectionRate = { down: 0, up: 0 };
 const MIN_INTERVAL = 0.25;
 const MAX_INTERVAL = 10;
 
+/** Silence after which a snapshot starts a new run of `history`, as `STREAM_GAP` of the runtime store. */
+const STREAM_GAP_SECONDS = 5;
+const STREAM_GAP = STREAM_GAP_SECONDS * MS_IN_SECOND;
+
 /**
  * Speed over an interval. The runtime counter only grows, but after a stream
  * reconnect a connection arrives from zero: a negative delta is dropped,
@@ -156,8 +160,8 @@ interface ConnectionState {
   history: number[];
   /** When the last `history` point was received: the chart time is computed from it. */
   historyAt: number | null;
-  /** The stream is stopped by the user: the screen freezes, the subscription lives. */
-  paused: boolean;
+  /** The current run of `history` is already filled from the daemon history. */
+  historySeeded: boolean;
   /** How many screens are watching the stream now: at zero the subscription closes. */
   readers: number;
   /**
@@ -169,14 +173,18 @@ interface ConnectionState {
   dropped: number;
   /** When the previous parsed snapshot arrived: the speed is computed from it. */
   sampledAt: number | null;
-  apply: (snapshot: unknown) => void;
   /**
-   * Fills an empty connection count buffer with the minute the daemon
-   * accumulated: the chart opens full. A buffer the stream has already written
-   * to is not touched.
+   * `receivedAt` is when the snapshot came from the stream, not when the batch
+   * timer applied it: the speed is the byte delta over the interval between
+   * snapshots, and the timer step would make it jump.
+   */
+  apply: (snapshot: unknown, receivedAt?: number) => void;
+  /**
+   * Fills the connection count buffer to the left of what the stream wrote
+   * since the last break with the minute the daemon accumulated: the chart
+   * opens full. Once per run, like `seedTraffic` of the runtime store.
    */
   seedHistory: (counts: number[]) => void;
-  setPaused: (paused: boolean) => void;
   addReader: () => void;
   removeReader: () => void;
   /**
@@ -199,20 +207,15 @@ const ConnectionStateProto = stateCreator<ConnectionState>(
     summary: EMPTY_SUMMARY,
     history: [],
     historyAt: null,
-    paused: false,
+    historySeeded: false,
     readers: 0,
     outboundTypes: EMPTY_OUTBOUND_TYPES,
     dropped: 0,
     sampledAt: null,
-    apply: (frame) => {
+    apply: (frame, receivedAt = Date.now()) => {
       const snapshot = toConnectionsSnapshot(frame);
-      const receivedAt = Date.now();
 
       set((state) => {
-        if (state.paused) {
-          return state;
-        }
-
         if (snapshot === null) {
           return { dropped: state.dropped + 1 };
         }
@@ -250,7 +253,8 @@ const ConnectionStateProto = stateCreator<ConnectionState>(
         });
 
         const gone = state.active.filter((row) => !next.has(row.id));
-        const history = [...state.history, rows.length].slice(-HISTORY_POINTS);
+        const broken = state.historyAt !== null && receivedAt - state.historyAt > STREAM_GAP;
+        const history = broken ? [rows.length] : [...state.history, rows.length].slice(-HISTORY_POINTS);
         // The speed is cleared: the column speaks about the present, and a
         // closed connection would forever keep the speed of its last live
         // frame.
@@ -264,6 +268,7 @@ const ConnectionStateProto = stateCreator<ConnectionState>(
           summary: toSummary(rows),
           history,
           historyAt: receivedAt,
+          historySeeded: broken ? false : state.historySeeded,
           closed: gone.length > 0 ? [...stopped, ...state.closed].slice(0, CLOSED_LIMIT) : state.closed,
           evicted: state.evicted + overflow,
           totals: {
@@ -273,9 +278,6 @@ const ConnectionStateProto = stateCreator<ConnectionState>(
           },
         };
       });
-    },
-    setPaused: (paused) => {
-      set({ paused });
     },
     addReader: () => {
       set((state) => ({ readers: state.readers + 1 }));
@@ -308,11 +310,17 @@ const ConnectionStateProto = stateCreator<ConnectionState>(
       });
     },
     seedHistory: (counts) => {
-      set((state) =>
-        state.history.length > 0 || counts.length === 0
-          ? state
-          : { history: counts.slice(-HISTORY_POINTS), historyAt: Date.now() }
-      );
+      set((state) => {
+        if (state.historySeeded || counts.length === 0) return state;
+
+        const before = counts.slice(0, Math.max(0, counts.length - state.history.length));
+
+        return {
+          history: [...before, ...state.history].slice(-HISTORY_POINTS),
+          historyAt: state.historyAt ?? Date.now(),
+          historySeeded: true,
+        };
+      });
     },
     reset: () => {
       set({
@@ -324,7 +332,7 @@ const ConnectionStateProto = stateCreator<ConnectionState>(
         summary: EMPTY_SUMMARY,
         history: [],
         historyAt: null,
-        paused: false,
+        historySeeded: false,
         dropped: 0,
         sampledAt: null,
       });

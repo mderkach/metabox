@@ -62,7 +62,7 @@ export function DaemonServiceControl() {
   const action = useServiceAction();
   const shown = useLastConfirmedService(service.data);
 
-  if (service.isError) {
+  if (service.isLoadingError) {
     return (
       <Alert variant='destructive'>
         <CircleAlert />
@@ -72,7 +72,7 @@ export function DaemonServiceControl() {
     );
   }
 
-  if (!service.isSuccess) {
+  if (service.data === undefined) {
     return null;
   }
 

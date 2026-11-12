@@ -108,22 +108,23 @@ function safeJson(text: string): unknown {
  */
 export function listenTopic(source: StreamSource, topic: RuntimeTopic, apply: (data: unknown) => void): () => void {
   const handler = (event: MessageEvent<string>) => {
+    const envelope = parseEnvelope(event);
+
+    if (envelope === null) {
+      return;
+    }
+
+    if (!envelope.success) {
+      console.warn(`[STREAM] envelope of topic ${topic} not parsed`, z.prettifyError(envelope.error));
+
+      return;
+    }
+
     try {
-      const envelope = parseEnvelope(event);
-
-      if (envelope === null) {
-        return;
-      }
-
-      if (!envelope.success) {
-        console.warn(`[STREAM] envelope of topic ${topic} not parsed`, z.prettifyError(envelope.error));
-
-        return;
-      }
-
       apply(envelope.data.data);
-    } catch {
-      // A broken frame is skipped: the next one comes in a second.
+    } catch (error) {
+      // The frame is parsed, so the failure is a bug in the slice handler: it is logged, and the next frame still comes.
+      console.error(`[STREAM] handler of topic ${topic} failed`, error);
     }
   };
 
