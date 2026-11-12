@@ -25,6 +25,7 @@ const CONFIG_ETAG = `"${'c'.repeat(SUM_LENGTH)}"`;
  */
 export const configHandlers = [
   http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(CONFIG_TEXT, { headers: { ETag: CONFIG_ETAG } })),
+  http.get(CONFIG_ENDPOINT.ruleSetFiles(), () => HttpResponse.json({ files: {}, etag: `"${'d'.repeat(SUM_LENGTH)}"` })),
   http.get(CONFIG_ENDPOINT.versions(), () =>
     HttpResponse.json({ versions: VERSIONS_FIXTURE, current_sum: VERSIONS_FIXTURE[1].sum })
   ),
