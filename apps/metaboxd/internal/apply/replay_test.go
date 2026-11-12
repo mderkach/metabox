@@ -94,6 +94,9 @@ func TestReplayRollsBackExpiredWindow(t *testing.T) {
 // to confirm the connection, and without confirmation the rollback still happens.
 func TestReplayRestoresLiveWindow(t *testing.T) {
 	h := newHarness(t)
+	h.store.mu.Lock()
+	h.store.sum = "сумма-из-состояния"
+	h.store.mu.Unlock()
 	seedState(t, h, apply.Transaction{
 		ID:     "живая",
 		Phase:  apply.PhaseAwaitingConfirm,
@@ -268,6 +271,55 @@ func TestReplayReturnsListsWithoutConfig(t *testing.T) {
 	}
 	if state, _ := h.store.ReadState(t.Context()); state != nil {
 		t.Error("state of the closed transaction stayed on disk")
+	}
+}
+
+// Power lost inside the window rollback after Restore: the disk is back on the previous
+// config while the state still holds the window. Restoring the window would let Confirm
+// keep the previous config as the confirmed transaction, so the rollback is finished.
+func TestReplayFinishesRollbackInterruptedInWindow(t *testing.T) {
+	tests := []struct {
+		name  string
+		sum   string
+		lists map[string][]byte
+		tx    apply.Transaction
+	}{
+		{
+			name: "config restored",
+			sum:  "предыдущий",
+			tx:   apply.Transaction{ID: "окно", Phase: apply.PhaseAwaitingConfirm, Window: window, Sum: "новый"},
+		},
+		{
+			name:  "list restored, config unchanged",
+			sum:   "тот-же",
+			lists: map[string][]byte{"my.json": []byte(`{"old":true}`)},
+			tx: apply.Transaction{
+				ID: "окно", Phase: apply.PhaseAwaitingConfirm, Window: window, Sum: "тот-же",
+				Lists: map[string]string{"my.json": config.Sum([]byte(`{"new":true}`))},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := newHarness(t)
+			h.store.mu.Lock()
+			h.store.sum = tt.sum
+			h.store.lists = tt.lists
+			h.store.mu.Unlock()
+			seedState(t, h, tt.tx)
+
+			if err := h.manager.Replay(t.Context()); err != nil {
+				t.Fatalf("replay: %v", err)
+			}
+
+			if got := h.rec.snapshot(); !slices.Contains(got, "Restore") || !slices.Contains(got, "Restart") {
+				t.Errorf("steps %v, expected the rollback finished", got)
+			}
+			if got := h.manager.Current().Phase; got != apply.PhaseRolledBack {
+				t.Errorf("phase %q, expected rollback", got)
+			}
+		})
 	}
 }
 

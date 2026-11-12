@@ -625,6 +625,13 @@ func (m *Manager) Replay(ctx context.Context) error {
 		m.begin(tx)
 		m.rollback(ctx, log)
 
+	case tx.Phase == PhaseAwaitingConfirm && !m.appliedOnDisk(ctx, tx):
+		// A window rollback broke off after Restore and before the state was cleared:
+		// a restored window would let Confirm keep the transaction over the previous config.
+		log.Warn("rollback interrupted in the confirmation window, finishing it")
+		m.begin(tx)
+		m.rollback(ctx, log)
+
 	case tx.Phase == PhaseAwaitingConfirm:
 		log.Warn("confirmation window restored", "window", tx.Window)
 		m.restoreWindow(tx, m.reserveRestored())
@@ -679,6 +686,46 @@ func (m *Manager) writeHappened(ctx context.Context, tx Transaction) bool {
 	}
 
 	return false
+}
+
+// appliedOnDisk reports whether the disk still carries everything the transaction wrote:
+// the config sum and every changed list. A failed comparison counts as applied: the
+// restored window still ends in a rollback without confirmation.
+func (m *Manager) appliedOnDisk(ctx context.Context, tx Transaction) bool {
+	current, err := m.store.Sum(ctx)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		m.log.Warn("config comparison on replay did not go through", "err", err)
+
+		return true
+	}
+	if err != nil || current != tx.Sum {
+		return false
+	}
+
+	if len(tx.Lists) == 0 && len(tx.RemovedLists) == 0 {
+		return true
+	}
+
+	sums, err := m.store.ListSums(ctx)
+	if err != nil {
+		m.log.Warn("list comparison on replay did not go through", "err", err)
+
+		return true
+	}
+
+	for name, target := range tx.Lists {
+		if sums[name] != target {
+			return false
+		}
+	}
+
+	for _, name := range tx.RemovedLists {
+		if _, ok := sums[name]; ok {
+			return false
+		}
+	}
+
+	return true
 }
 
 // restoreWindow raises the timer again for the period from the state. How much of it
