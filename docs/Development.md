@@ -79,11 +79,10 @@ Build and generation:
 
 Frontend without the test bench:
 
-| Command                 | What it does                                                                                |
-| ----------------------- | ------------------------------------------------------------------------------------------- |
-| `make dev`              | Vite dev server                                                                             |
-| `make dev-mock`         | dev server on mock data: no daemon or sing-box needed                                       |
-| `make dev-mock-missing` | mocks answer only where the daemon has no endpoints yet; other requests go to a live daemon |
+| Command         | What it does                                          |
+| --------------- | ----------------------------------------------------- |
+| `make dev`      | Vite dev server                                       |
+| `make dev-mock` | dev server on mock data: no daemon or sing-box needed |
 
 Checks:
 

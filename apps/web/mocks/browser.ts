@@ -1,3 +1,4 @@
+import { http, HttpResponse } from 'msw';
 import { setupWorker } from 'msw/browser';
 
 import { createMissingHandlers } from '../src/test/handlers';
@@ -10,4 +11,15 @@ import { createMissingHandlers } from '../src/test/handlers';
 export { http, HttpResponse } from 'msw';
 export { silenceRuntimeStream } from '../src/test/runtimeStream';
 
-export const worker = setupWorker(...createMissingHandlers(__METABOX_MOCK_CONNECTIONS__));
+/**
+ * The last handler fails every unmocked `/api/` request: the dev server proxies `/api` to
+ * `METABOX_API_TARGET`, which may be a live daemon, and an error thrown from `onUnhandledRequest`
+ * does not stop the request in the browser worker.
+ */
+const unmockedApi = http.all('/api/*', ({ request }) => {
+  console.error(`[mocks] no mock for ${request.method} ${new URL(request.url).pathname}`);
+
+  return HttpResponse.error();
+});
+
+export const worker = setupWorker(...createMissingHandlers(__METABOX_MOCK_CONNECTIONS__), unmockedApi);

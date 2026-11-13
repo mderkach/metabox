@@ -10,7 +10,6 @@
   "scripts": {
     "dev": "vite",
     "dev:mock": "METABOX_MOCK=all vite",
-    "dev:mock-missing": "METABOX_MOCK=missing vite",
     "build": "node tools/i18n.ts && tsc -b && vite build",
     "preview": "vite preview",
     "gen:i18n": "node tools/i18n.ts",

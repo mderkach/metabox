@@ -3,12 +3,10 @@ import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import { createMissingHandlers } from '@test/handlers';
 import { render, screen } from '@testing-library/react';
 import axe from 'axe-core';
-import { http, HttpResponse } from 'msw';
 import { setupWorker } from 'msw/browser';
 import { ThemeProvider } from 'next-themes';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import { CONFIG_ENDPOINT } from '@entities/Config';
 import { QueryClientInstance } from '@shared/api';
 
 import { createPanelRouter } from '../../router/Router';
@@ -43,11 +41,7 @@ const worker = setupWorker();
 
 /** Fresh per case: the dev mocks keep state, such as the chosen node and the stream frame counter. */
 function screenHandlers() {
-  return [
-    ...createMissingHandlers(),
-    // The dev mock assembly leaves the list files to the daemon; without an answer the editor shows a load failure.
-    http.get(CONFIG_ENDPOINT.ruleSetFiles(), () => HttpResponse.json({ files: {}, etag: '"lists"' })),
-  ];
+  return createMissingHandlers();
 }
 
 beforeAll(async () => {
