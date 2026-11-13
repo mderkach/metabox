@@ -21,7 +21,8 @@ describe('toDaemonStatus', () => {
     const status = toDaemonStatus(DAEMON_STATUS_FIXTURE);
 
     expect(status.version).toBe(DAEMON_STATUS_FIXTURE.version);
-    expect(status.singboxVersion).toBe(DAEMON_STATUS_FIXTURE.singbox_version);
+    expect(status.singboxVersion).toBe(DAEMON_STATUS_FIXTURE.core.version);
+    expect(status.singboxTags).toEqual(DAEMON_STATUS_FIXTURE.core.build?.tags);
     expect(status.configPath).toBe(DAEMON_STATUS_FIXTURE.config_path);
   });
 

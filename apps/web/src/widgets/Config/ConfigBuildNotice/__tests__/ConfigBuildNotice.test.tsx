@@ -34,7 +34,8 @@ describe('ConfigBuildNotice', () => {
   });
 
   it('stays silent when the daemon did not read the binary', async () => {
-    const { singbox_build: _build, ...status } = DAEMON_STATUS_FIXTURE;
+    const { build: _build, ...core } = DAEMON_STATUS_FIXTURE.core;
+    const status = { ...DAEMON_STATUS_FIXTURE, core };
     let answered = false;
     server.use(
       http.get(DAEMON_ENDPOINT.status(), () => {

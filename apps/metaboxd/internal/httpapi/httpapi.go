@@ -412,10 +412,20 @@ func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(s.log, w, http.StatusOK, contract.Health{Status: "ok", Version: s.version})
 }
 
+func (s *Server) core() contract.Core {
+	core := contract.Core{Type: singbox.CoreType, Variant: singbox.Variant(s.singboxVersion), Version: s.singboxVersion}
+	if s.singboxTags != nil {
+		core.Build = &contract.CoreBuild{Tags: s.singboxTags}
+	}
+
+	return core
+}
+
 func (s *Server) handleStatus(w http.ResponseWriter, _ *http.Request) {
 	body := contract.Status{
 		Version:        s.version,
 		Instance:       s.instance,
+		Core:           s.core(),
 		SingboxVersion: s.singboxVersion,
 		ConfigPath:     s.configPath,
 		Runtime:        s.runtimeSources(),
@@ -423,9 +433,7 @@ func (s *Server) handleStatus(w http.ResponseWriter, _ *http.Request) {
 		ConfirmWindowSeconds: int(math.Ceil(s.confirmWindow.Seconds())),
 	}
 
-	if s.singboxTags != nil {
-		body.SingboxBuild = &contract.SingboxBuild{Tags: s.singboxTags}
-	}
+	body.SingboxBuild = body.Core.Build
 
 	if tx := s.applier.Current(); tx.ID != "" {
 		body.Transaction = &tx

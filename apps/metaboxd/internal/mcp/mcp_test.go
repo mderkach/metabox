@@ -681,6 +681,7 @@ func TestStatusNamesPermissions(t *testing.T) {
 
 	out := call[struct {
 		DaemonVersion string                   `json:"daemon_version"`
+		Core          contract.Core            `json:"core"`
 		Service       *contract.Service        `json:"service"`
 		Runtime       contract.Runtime         `json:"runtime"`
 		Permissions   []contract.MCPPermission `json:"permissions"`
@@ -696,6 +697,10 @@ func TestStatusNamesPermissions(t *testing.T) {
 
 	if out.DaemonVersion != "test" || out.Runtime.Connections != contract.SourceClashAPI {
 		t.Errorf("status %+v", out)
+	}
+
+	if out.Core.Type != "sing-box" || out.Core.Variant != "" || out.Core.Version != "1.14.1" || out.Core.Build != nil {
+		t.Errorf("core %+v, want sing-box 1.14.1 upstream without a read build", out.Core)
 	}
 }
 

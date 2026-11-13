@@ -6,34 +6,40 @@ import type {
   TrafficHistoryWire,
 } from '../api/Daemon.schema';
 
+// Binary tags on the device, `sing-box version` 2026-09-23: ccm, ocm,
+// cloudflared, naive, usbip, openvpn and openconnect are not in the build.
+const DEVICE_BUILD_TAGS = [
+  'with_gvisor',
+  'with_quic',
+  'with_dhcp',
+  'with_wireguard',
+  'with_utls',
+  'with_acme',
+  'with_clash_api',
+  'with_tailscale',
+  'with_masque',
+  'with_mtproxy',
+  'with_trusttunnel',
+  'with_call',
+  'with_sudoku',
+  'with_manager',
+  'with_admin_panel',
+  'with_profiler',
+  'badlinkname',
+  'tfogo_checklinkname0',
+];
+
 /** The daemon responds and no applies are in progress: the `transaction` field is empty. */
 export const DAEMON_STATUS_FIXTURE: DaemonStatusWire = {
   version: 'dev',
-  singbox_version: '1.14.1-extended-2.7.2',
-  // Binary tags on the device, `sing-box version` 2026-09-23: ccm, ocm,
-  // cloudflared, naive, usbip, openvpn and openconnect are not in the build.
-  singbox_build: {
-    tags: [
-      'with_gvisor',
-      'with_quic',
-      'with_dhcp',
-      'with_wireguard',
-      'with_utls',
-      'with_acme',
-      'with_clash_api',
-      'with_tailscale',
-      'with_masque',
-      'with_mtproxy',
-      'with_trusttunnel',
-      'with_call',
-      'with_sudoku',
-      'with_manager',
-      'with_admin_panel',
-      'with_profiler',
-      'badlinkname',
-      'tfogo_checklinkname0',
-    ],
+  core: {
+    type: 'sing-box',
+    variant: 'extended',
+    version: '1.14.1-extended-2.7.2',
+    build: { tags: DEVICE_BUILD_TAGS },
   },
+  singbox_version: '1.14.1-extended-2.7.2',
+  singbox_build: { tags: DEVICE_BUILD_TAGS },
   config_path: '/etc/sing-box/config.json',
   confirm_window_seconds: 60,
   instance: 'MOCKINSTANCE00000000000000',

@@ -20,6 +20,7 @@ import (
 	"metabox/internal/locale"
 	"metabox/internal/logs"
 	"metabox/internal/route"
+	"metabox/internal/singbox"
 )
 
 const (
@@ -131,10 +132,13 @@ func (t tools) addRead(server *sdk.Server, log *slog.Logger) {
 }
 
 type statusOut struct {
-	DaemonVersion  string   `json:"daemon_version"`
-	SingboxVersion string   `json:"singbox_version,omitempty"`
-	SingboxTags    []string `json:"singbox_tags,omitempty"`
-	SchemaVersion  string   `json:"schema_version,omitempty"`
+	DaemonVersion string        `json:"daemon_version"`
+	Core          contract.Core `json:"core"`
+	// Deprecated: read Core.Version; removed together with the same field of the HTTP status.
+	SingboxVersion string `json:"singbox_version,omitempty"`
+	// Deprecated: read Core.Build; removed together with SingboxVersion.
+	SingboxTags   []string `json:"singbox_tags,omitempty"`
+	SchemaVersion string   `json:"schema_version,omitempty"`
 	// Service is absent when the daemon does not manage a sing-box service.
 	Service *contract.Service `json:"service,omitempty"`
 	Routing routing           `json:"routing"`
@@ -154,8 +158,18 @@ type routing struct {
 }
 
 func (t tools) status(ctx context.Context, _ struct{}) (statusOut, error) {
+	core := contract.Core{
+		Type:    singbox.CoreType,
+		Variant: singbox.Variant(t.opts.SingboxVersion),
+		Version: t.opts.SingboxVersion,
+	}
+	if t.opts.SingboxTags != nil {
+		core.Build = &contract.CoreBuild{Tags: t.opts.SingboxTags}
+	}
+
 	out := statusOut{
 		DaemonVersion:  t.opts.Version,
+		Core:           core,
 		SingboxVersion: t.opts.SingboxVersion,
 		SingboxTags:    t.opts.SingboxTags,
 		SchemaVersion:  t.opts.SchemaVersion,
