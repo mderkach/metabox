@@ -76,8 +76,8 @@ export const ROUTE_PROCESS_RULES_FIXTURE: RouteExplanationWire['rules'] = [
 ];
 
 /**
- * The explanation chain diverged from the row chain. A regular case
- * (ADR-0007): the row arrived with a stream snapshot, the explanation by a separate handler
+ * The explanation chain diverged from the row chain. A regular case:
+ * the row arrived with a stream snapshot, the explanation by a separate handler
  * later, and `urltest` moved traffic to another node in the meantime.
  *
  * The identifier is the `clients.google.example` connection from the connections snapshot:

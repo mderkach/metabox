@@ -8,9 +8,9 @@ import { Button, SECTION_HEADING, SURFACE, SURFACE_HEAD, SheetTitle } from '@sha
 
 /**
  * Section node panel beside the list: the add form and the picked node open in it,
- * and nodes stay in place and do not shift down (ADR-0037). The structure is the same
- * as in the rule and rule set panels; they deliberately have no shared frame — the ADR
- * defers it while the panel headers diverge.
+ * and nodes stay in place and do not shift down. The structure is the same
+ * as in the rule and rule set panels; they deliberately have no shared frame — it is
+ * deferred while the panel headers diverge.
  *
  * The panel has no dictionary of its own: the title is named by the page, which knows
  * which form is open, and the close label is shared with the other panels.

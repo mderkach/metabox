@@ -22,7 +22,8 @@ export function isNodeObject(node: unknown): node is Record<string, unknown> {
  * override. An object section with a settings schema (`experimental`) gets the
  * section form by the same rule; other sections are edited only as text.
  * `recognized` is false when the schema does not accept the node: the form is
- * then disabled and the node opens as text (ADR-0018).
+ * then disabled and the node opens as text, since a form would hide the fields
+ * the schema does not know.
  */
 export function toNodeForm(section: GenericSection, node: unknown) {
   const registry = registryOfSection(section);

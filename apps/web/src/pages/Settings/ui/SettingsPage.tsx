@@ -8,7 +8,7 @@ import { SettingsSection } from './SettingsSection';
 import { SettingsSystem } from './SettingsSystem';
 
 /**
- * Settings of the panel itself (AC-77): access, agents, system. Rare actions that used to be
+ * Settings of the panel itself: access, agents, system. Rare actions that used to be
  * buttons in the sidebar footer; each section works on its own, without a wizard.
  */
 export function SettingsPage() {

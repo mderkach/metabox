@@ -134,6 +134,8 @@ Rollback: remove the reason retrieval and keep only the observed core. The origi
 - A config where a rule with the `sniff` action has the same conditions as the following rule with `route`: the explanation points to the second one, not the first.
 - A config with an unfamiliar or unrecognized rule does not break the explanation of the others: the rule is shown with a mark, and the list is not cut off.
 - No statement in the API response comes without an origin field.
+- `apps/web/src/entities/Route/__tests__/`: the fixture and the handlers give one connection an explanation chain that diverged from the row chain.
+- `apps/web/src/pages/Connections/__tests__/ConnectionsPage.test.tsx`: the panel shows the explanation chain when it diverged from the row chain.
 
 ## Links
 

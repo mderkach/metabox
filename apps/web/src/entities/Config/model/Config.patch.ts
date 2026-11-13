@@ -62,7 +62,7 @@ function isEqual(left: unknown, right: unknown): boolean {
  * Objects are compared by keys, everything else is a whole leaf: a scalar, an
  * array, a value in place of an object. This way editing one form field gives
  * one diff line, while comments and key order inside the node stay as they
- * were, whereas writing the whole node would rewrite all of it (ADR-0004).
+ * were, whereas writing the whole node would rewrite all of it.
  *
  * `base` is the node path in the document, leaf keys are appended to it. Empty
  * values are the same as in `compactNode`: a cleared field deletes the key.

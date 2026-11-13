@@ -7,7 +7,7 @@ import { nodeOverrideOf, type ConfigNodeFormModel } from '../model';
 import { NodeRegistryContext } from './ConfigNodeForm.context';
 import { ConfigNodeFormBody } from './ConfigNodeFormBody';
 
-/** Schema-driven node form with lossless leaf writes and optional type overrides (ADR-0035). */
+/** Schema-driven node form with lossless leaf writes and optional type overrides. */
 export function ConfigNodeForm({
   registry,
   path,

@@ -33,7 +33,7 @@ const WORKER_PATH = '/mockServiceWorker.js';
  * so a substituted entry never ends up in `dist`.
  *
  * `METABOX_MOCK_CONNECTIONS=<number>` inflates the connection snapshot to the given
- * size: the panel must hold five thousand live connections (NFR-2), and
+ * size: the panel must hold five thousand live connections, and
  * there is no other way to check this by hand — the test bench never has that much traffic.
  *
  * The worker script is served from `node_modules`, not put in `public/`: a file in
@@ -78,7 +78,7 @@ const SCAN_ENTRY = '/dev/scan.ts';
 /**
  * Re-render capture by react-scan. Enabled by `METABOX_SCAN=1` and lives only on the
  * dev server: `apply: 'serve'` keeps the plugin out of the build, and
- * render instrumentation costs time and must not get into the NFR-2 measurement.
+ * render instrumentation costs time and must not get into the five-thousand-connection measurement.
  *
  * The script goes into `head` — before the app entry: bippy replaces the devtools
  * hook, and before the first React render that is no longer possible.

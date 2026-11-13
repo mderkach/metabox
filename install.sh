@@ -1,6 +1,6 @@
 #!/bin/sh
 # Installs metabox on a clean OpenWrt router: the project key, the apk feed, the
-# sing-box-extended package and the metaboxd package. Decision: docs/adr/ADR-0058.
+# sing-box-extended package and the metaboxd package.
 #
 #   wget -qO- https://mderkach.github.io/metabox/install.sh | sh
 #   wget -qO- https://mderkach.github.io/metabox/install.sh | sh -s -- --channel stable

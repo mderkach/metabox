@@ -43,7 +43,7 @@ import { RuleSetsSearch } from './RuleSetsSearch';
  * An empty section is not a placeholder but the main screen of this place: for a new
  * user it is always empty, and there is nowhere else to explain why rule sets are needed.
  * So an empty place shows the form at once, not a button that opens the form.
- * When rule sets exist, forms open in the panel beside the list (ADR-0037).
+ * When rule sets exist, forms open in the panel beside the list.
  */
 export function RuleSetsPage() {
   const { t } = useTranslation('pages/RuleSets');

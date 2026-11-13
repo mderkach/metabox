@@ -32,7 +32,6 @@ const SORT_BUDGET_MS = 60;
  * Measured 2026-09-18 in a browser on live frames: 3 ms without throttling, 8.6 ms with
  * a fourfold CPU slowdown. Before the draft was taken out of immer from the stores it was
  * 14.9 and 61.3 ms: almost the whole tick budget went to proxy wrappers.
- * ([ADR-0024](../../../../../../docs/adr/ADR-0024-drop-the-immer-draft-from-frontend-stores.md)).
  *
  * In this environment the parse takes 3.8 ms. The threshold is held below what the
  * wrapper would bring it to: converting browser measurements gives about 19 ms, and with a threshold of

@@ -14,7 +14,7 @@ const HEADER_ROWS = 1;
 /**
  * Attached rule sets in file order: toolbar with search, column header, rows
  * and a footer with a counter. The list holds no forms: a toolbar button opens
- * the form in the panel beside it (ADR-0037).
+ * the form in the panel beside it.
  *
  * The list is deliberately not virtualized: there are tens of rule sets in a config, not hundreds —
  * a virtualizer here would cost absolute positioning for savings

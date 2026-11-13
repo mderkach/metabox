@@ -87,6 +87,8 @@ Rollback: return `z.looseObject` in the generator's `writeObject` and regenerate
 - `make schema` and `make test-schemagen` — the schema is rebuilt, the generator tests pass.
 - `pnpm --filter web test` — corpus: a config with unknown sections, fields and a condition is parsed, the model is built, `unknown` names `vendor_extension`, `unknown_option` and `unknown_matcher` with paths; the schema accepts the other corpus files entirely.
 - Run on the test bench on 2026-09-15: the rule `{"unknown_matcher": [...]}` is marked "UI does not cover" in the list and captioned "conditions not shown", the form is disabled in the edit panel, the node is opened as text and is intact.
+- `apps/web/src/entities/Config/model/Config.registry.ts`: `isNodeRecognized` decides whether a node opens in a form or as text.
+- `apps/web/src/widgets/Config/ConfigNode/model/ConfigNode.form.ts`: an unrecognized node gets a disabled form and opens as text.
 
 ## Links
 

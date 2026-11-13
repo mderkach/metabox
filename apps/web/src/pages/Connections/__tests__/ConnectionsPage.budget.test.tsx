@@ -13,7 +13,7 @@ import { MS_IN_SECOND } from '@shared/lib/time';
 
 import { ConnectionsPage } from '../ui/ConnectionsPage';
 
-/** Load ceiling: this many connections the panel must hold (NFR-2). */
+/** Load ceiling: this many connections the panel must hold. */
 const SNAPSHOT_SIZE = 5000;
 /** The first ticks cost more than the rest: JIT warm-up and the first virtualizer measurement. */
 const WARMUP = 3;

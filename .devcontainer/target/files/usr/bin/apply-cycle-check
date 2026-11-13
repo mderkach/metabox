@@ -1,9 +1,9 @@
 #!/bin/sh
-# Apply cycle check on the target environment (AC-21): sing-box check → write →
-# restart through procd → healthcheck. Then what the file-based lists (AC-8) rely on:
+# Apply cycle check on the target environment: sing-box check → write →
+# restart through procd → healthcheck. Then what custom lists stored as files rely on:
 # the service working directory equals the config directory, and a local
 # rule-set from rule-sets/ is resolved relative to it. Runs inside the
-# target container, used both locally (make apply-check) and in CI (AC-22).
+# target container, used both locally (make apply-check) and in CI.
 set -eu
 
 CONF_DIR=/etc/sing-box
@@ -158,4 +158,4 @@ wget -qO- "$API/rules" | grep -q metabox-check || fail "the rule with the rule s
 echo "   the service came up, the rule set metabox-check is in the runtime"
 
 echo
-echo "The Apply cycle passed completely (AC-21)."
+echo "The Apply cycle passed completely."

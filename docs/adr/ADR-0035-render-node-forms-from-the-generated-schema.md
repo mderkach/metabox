@@ -86,6 +86,7 @@ Not applicable to data: the decision changes neither the config format nor the d
 - Walk test: every variant of `InboundSchema`/`OutboundSchema` (and the other registries) produces a form without exceptions; the fields that went to the fallback raw widget are listed in a snapshot, so growth of the list shows in the diff.
 - AC-6 scenario on the test bench: a VLESS/Reality config built with forms from scratch passes `make apply-check`.
 - `pnpm --filter web build` and `pnpm lint` are green; no new dependencies in `apps/web/package.json`.
+- `apps/web/src/features/Config/ConfigNodeForm/`: the autoform, the type overrides and the walk test.
 
 ## Links
 

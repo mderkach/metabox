@@ -93,6 +93,7 @@ No product behaviour changes, and nothing from `e2e/` reaches the bundle. Rollba
 - `pnpm --filter web build` type-checks `e2e/` and `playwright.config.ts` through `tsconfig.node.json`; `pnpm lint` covers them.
 - The `web-browser` job runs the e2e step and `checks` fails when it fails.
 - The live run: the checks listed in [#226](https://github.com/mderkach/metabox/issues/226).
+- `.github/workflows/ci.yml`: the `web-browser` job runs the e2e scenarios on the mock stand.
 
 ## Links
 

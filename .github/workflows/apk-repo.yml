@@ -57,7 +57,7 @@ jobs:
               stable=$((stable + 1))
             fi
             # The list is newest first, so the site root gets the install.sh of the newest
-            # release that has one; releases before ADR-0058 have none.
+            # release that has one; releases older than the install script have none.
             [ -e site/install.sh ] || gh release download "$tag" --pattern install.sh --dir site < /dev/null 2> /dev/null || true
           done
           # Until a release carries install.sh, the site serves the one of the checked-out ref.

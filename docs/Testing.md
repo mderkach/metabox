@@ -11,6 +11,7 @@ Shared by every project in the repository. How a project applies them with its o
 - A failure is checked together with what it must leave untouched: the target file after a rejected write, the draft after a failed apply.
 - One behaviour has one test, at the lowest level that can show it broken. A check that moved to a lower level is removed from the upper one.
 - Test names and failure messages are in English and read as a specification: `check failure leaves the file unchanged`.
+- A test that confirms a PRD requirement is linked from a row in [`Verification.md`](./Verification.md), not by an ID in the test. Renaming such a test means editing its row; `make trace-check` names the row that broke.
 
 ## Boundaries
 

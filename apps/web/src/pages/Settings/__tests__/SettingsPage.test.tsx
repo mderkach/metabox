@@ -12,7 +12,7 @@ import { createMcpHandlers } from '@entities/Mcp/__tests__/Mcp.handlers';
 import { SettingsPage } from '../ui/SettingsPage';
 
 describe('settings screen', () => {
-  // AC-77: each section is complete on its own, without a dialog or a wizard.
+  // Each section is complete on its own, without a dialog or a wizard.
   it('shows access, agents and system as sections of one screen', async () => {
     server.use(
       ...createAuthHandlers(),

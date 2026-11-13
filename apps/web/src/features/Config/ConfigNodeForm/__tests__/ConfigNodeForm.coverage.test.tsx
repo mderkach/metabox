@@ -7,7 +7,7 @@ import { FIELD_KIND, toFieldPlan, type FieldPlan } from '@shared/lib/schemaShape
 import { ConfigNodeForm } from '../ui/ConfigNodeForm';
 
 /**
- * A walk over all types of the seven schema registries (ADR-0035): each gets a form, and
+ * A walk over all types of the seven schema registries: each gets a form, and
  * fields that fell to the fallback raw widget are listed in a snapshot: list
  * growth is visible in the diff. The schema is generated, so a snapshot is acceptable here.
  */

@@ -13,8 +13,9 @@ export const FORM_POLICY = {
 export type FormPolicy = (typeof FORM_POLICY)[keyof typeof FORM_POLICY];
 
 /**
- * Form policy per registry. Among services only `api` is entitled to a form (PRD, section
- * 8): it opens with its own override, the other services are edited as text.
+ * Form policy per registry. Among services only `api` is entitled to a form:
+ * the daemon reads runtime from it, while the other fork services serve server and
+ * multi-tenant setups. `api` opens with its own override, the others are edited as text.
  */
 export const NODE_FORM_POLICY: Readonly<Record<NodeRegistry, FormPolicy>> = {
   [NODE_REGISTRY.Inbound]: FORM_POLICY.Auto,
