@@ -30,6 +30,12 @@ test(
       await expect(applyBar.ruleChanges.getByRole('link', { name: NAME })).toBeVisible();
     });
 
+    await test.step('the text of the changes shows the name as a comment line', async () => {
+      await applyBar.showChangesText(1);
+
+      await expect(applyBar.diff).toContainText(`// ${NAME}`);
+    });
+
     await test.step('applying opens the confirmation window', async () => {
       await applyBar.confirmDiff();
 

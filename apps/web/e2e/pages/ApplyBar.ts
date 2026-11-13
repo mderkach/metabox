@@ -30,6 +30,11 @@ export class ApplyBar {
     await this.region.getByRole('button', { name: translate(CONFIG_APPLY, 'bar.apply'), exact: true }).click();
   }
 
+  /** Unfolds the line diff under the summary; `lines` is how many changed lines the button counts. */
+  async showChangesText(lines: number) {
+    await this.diff.getByRole('button', { name: translate(CONFIG_APPLY, 'diff.changed', { count: lines }) }).click();
+  }
+
   async confirmDiff() {
     await this.diff.getByRole('button', { name: translate(CONFIG_APPLY, 'bar.apply'), exact: true }).click();
   }
