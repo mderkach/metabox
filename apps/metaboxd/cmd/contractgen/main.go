@@ -38,6 +38,7 @@ var roots = []rootType{
 	{pkg: "internal/contract", name: "Auth"},
 	{pkg: "internal/contract", name: "Login"},
 	{pkg: "internal/contract", name: "PasswordChange"},
+	{pkg: "internal/contract", name: "Sessions"},
 	{pkg: "internal/contract", name: "MCP"},
 	{pkg: "internal/contract", name: "MCPToken"},
 	{pkg: "internal/device", name: "Stat"},

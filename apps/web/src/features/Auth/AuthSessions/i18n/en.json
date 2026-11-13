@@ -1,0 +1,11 @@
+{
+  "title": "Sessions",
+  "description": "Browsers signed in to the panel. Ending a session signs that browser out and closes its open streams.",
+  "current": "This browser",
+  "unknownAddress": "address unknown",
+  "activity": "signed in {{age}} ago, active {{idle}} ago",
+  "activityNow": "signed in {{age}} ago, active now",
+  "end": "End",
+  "endNamed": "End the session from {{name}}",
+  "onlyThis": "No other browser is signed in."
+}

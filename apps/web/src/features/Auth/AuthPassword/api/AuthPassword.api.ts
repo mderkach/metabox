@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { getAuthOptions, LOGGED_IN, OPEN_PANEL, putPassword } from '@entities/Auth';
+import { getAuthOptions, getSessionsOptions, LOGGED_IN, OPEN_PANEL, putPassword } from '@entities/Auth';
 
 /**
  * Set or change the password. The daemon closes every session and gives this browser a new one,
@@ -15,6 +15,7 @@ export function useSetPassword() {
     meta: { showSuccess: true, successMessageKey: 'toast.auth.password.saved' },
     onSuccess: () => {
       queryClient.setQueryData(getAuthOptions().queryKey, LOGGED_IN);
+      void queryClient.invalidateQueries({ queryKey: getSessionsOptions().queryKey });
     },
   });
 }

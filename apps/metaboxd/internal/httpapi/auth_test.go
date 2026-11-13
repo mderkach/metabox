@@ -110,10 +110,11 @@ func newBrowser(t *testing.T, srv *httptest.Server) *browser {
 		t.Fatalf("cookie jar: %v", err)
 	}
 
-	client := srv.Client()
+	// A copy: srv.Client returns one shared client, and two browsers must not share a jar.
+	client := *srv.Client()
 	client.Jar = jar
 
-	return &browser{t: t, srv: srv, client: client}
+	return &browser{t: t, srv: srv, client: &client}
 }
 
 func (b *browser) do(method, path string, body any) response {
@@ -557,4 +558,105 @@ func TestPasswordChangeClosesTheStreamsOfOtherSessions(t *testing.T) {
 
 	waitStopped(t, events.stopped, "the event stream after the password change")
 	waitStopped(t, logs.stopped, "the log stream after the password change")
+}
+
+func (b *browser) sessions() []contract.Session {
+	b.t.Helper()
+
+	r := b.do(http.MethodGet, "/api/auth/sessions", nil)
+	if r.status != http.StatusOK {
+		b.t.Fatalf("sessions: %d %s", r.status, r.body)
+	}
+
+	if got := r.header.Get("Cache-Control"); got != "no-store" {
+		b.t.Errorf("Cache-Control %q, want no-store", got)
+	}
+
+	var body contract.Sessions
+	r.decode(b.t, &body)
+
+	return body.Sessions
+}
+
+func TestSessionListNeedsASession(t *testing.T) {
+	b := newAuthServer(t)
+	b.setPassword("", panelPassword)
+
+	stranger := newBrowser(t, b.srv)
+
+	wantCode(t, stranger.do(http.MethodGet, "/api/auth/sessions", nil), http.StatusUnauthorized, contract.ErrUnauthorized)
+	wantCode(t, stranger.do(http.MethodDelete, "/api/auth/sessions/any", nil), http.StatusUnauthorized, contract.ErrUnauthorized)
+}
+
+func TestSessionListWithoutPasswordIsEmpty(t *testing.T) {
+	b := newAuthServer(t)
+
+	if list := b.sessions(); len(list) != 0 {
+		t.Errorf("got %d sessions without a password, want none", len(list))
+	}
+}
+
+func TestEndingAnotherSessionClosesItsStreams(t *testing.T) {
+	b, events, logs := newStreamAuthServer(t)
+	b.setPassword("", panelPassword)
+
+	other := newBrowser(t, b.srv)
+	if r := other.do(http.MethodPost, "/api/auth/login", contract.Login{Password: panelPassword}); r.status != http.StatusNoContent {
+		t.Fatalf("login: %d %s", r.status, r.body)
+	}
+
+	other.openStream("/api/events")
+	other.openStream("/api/logs/stream")
+
+	list := b.sessions()
+	if len(list) != 2 || !list[0].Current || list[1].Current {
+		t.Fatalf("sessions %+v: want the caller first and one other", list)
+	}
+
+	if r := b.do(http.MethodDelete, "/api/auth/sessions/"+list[1].ID, nil); r.status != http.StatusNoContent {
+		t.Fatalf("end session: %d %s", r.status, r.body)
+	}
+
+	wantCode(t, other.do(http.MethodGet, "/api/auth/sessions", nil), http.StatusUnauthorized, contract.ErrUnauthorized)
+
+	waitStopped(t, events.stopped, "the event stream of the ended session")
+	waitStopped(t, logs.stopped, "the log stream of the ended session")
+
+	if list := b.sessions(); len(list) != 1 {
+		t.Errorf("got %d sessions after ending one, want 1", len(list))
+	}
+}
+
+func TestTheCurrentSessionIsNotEndedFromTheList(t *testing.T) {
+	b := newAuthServer(t)
+	b.setPassword("", panelPassword)
+
+	own := b.sessions()[0]
+
+	wantCode(t, b.do(http.MethodDelete, "/api/auth/sessions/"+own.ID, nil), http.StatusConflict, contract.ErrSessionCurrent)
+
+	if r := b.do(http.MethodGet, "/api/auth", nil); !strings.Contains(r.body, `"authenticated":true`) {
+		t.Errorf("caller signed out by the refused request: %s", r.body)
+	}
+}
+
+func TestEndingAnUnknownSessionIs404(t *testing.T) {
+	b := newAuthServer(t)
+	b.setPassword("", panelPassword)
+
+	wantCode(t, b.do(http.MethodDelete, "/api/auth/sessions/unknown", nil), http.StatusNotFound, contract.ErrSessionNotFound)
+}
+
+func TestEndSessionWhoseWriteFailsIsAnError(t *testing.T) {
+	store := &memoryAuthStore{}
+	b := newAuthServerWith(t, store)
+	b.setPassword("", panelPassword)
+
+	other := newBrowser(t, b.srv)
+	other.do(http.MethodPost, "/api/auth/login", contract.Login{Password: panelPassword})
+
+	id := b.sessions()[1].ID
+	store.sessionWriteErr = errors.New("flash full")
+
+	wantCode(t, b.do(http.MethodDelete, "/api/auth/sessions/"+id, nil), http.StatusInternalServerError, contract.ErrLogoutNotSaved)
 }

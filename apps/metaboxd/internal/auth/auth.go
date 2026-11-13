@@ -7,6 +7,7 @@
 package auth
 
 import (
+	"cmp"
 	"context"
 	"crypto/pbkdf2"
 	"crypto/rand"
@@ -19,6 +20,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"net/netip"
+	"slices"
 	"sync"
 	"time"
 	"unicode/utf8"
@@ -84,6 +86,11 @@ var (
 	// ErrSessionNotRevoked means logout closed the session in memory, but the session file
 	// could not be written: a daemon restart would bring the session back.
 	ErrSessionNotRevoked = locale.New("session revocation not saved")
+	// ErrUnknownSession means no live session has the identifier.
+	ErrUnknownSession = locale.New("session not found")
+	// ErrCurrentSession means a caller tried to end its own session through the session
+	// list: that is a logout.
+	ErrCurrentSession = locale.New("use sign-out for the current session")
 )
 
 // LockedError means login is locked out: the client network made too many wrong
@@ -150,10 +157,25 @@ func (r *record) matches(password string) bool {
 }
 
 // session is a live login. ended closes when the session ends, so that a stream opened
-// with it stops.
+// with it stops. addr is the client address at login.
 type session struct {
-	seen  time.Time
-	ended chan struct{}
+	created time.Time
+	seen    time.Time
+	addr    netip.Addr
+	ended   chan struct{}
+}
+
+// Session is a live session as the session list shows it, without its token.
+type Session struct {
+	// ID identifies the session in the list; it does not open the panel.
+	ID string
+	// Addr is the client address at login; zero for a session saved before addresses
+	// were kept.
+	Addr netip.Addr
+	// Age is the time since login, Idle since the last request; both by the router clock.
+	Age, Idle time.Duration
+	// Current means the session belongs to the caller.
+	Current bool
 }
 
 // sessionFile is the session file: the SHA-256 of each token, so that a copy of the file
@@ -167,8 +189,10 @@ type sessionFile struct {
 }
 
 type savedSession struct {
-	Key  string    `json:"key"`
-	Seen time.Time `json:"seen"`
+	Key     string     `json:"key"`
+	Seen    time.Time  `json:"seen"`
+	Created time.Time  `json:"created,omitzero"`
+	Addr    netip.Addr `json:"addr,omitzero"`
 }
 
 type attempts struct {
@@ -294,7 +318,12 @@ func (g *Guard) restoreSessions(ctx context.Context) {
 			continue
 		}
 
-		g.sessions[saved.Key] = &session{seen: seen, ended: make(chan struct{})}
+		created := saved.Created
+		if created.IsZero() || created.After(seen) {
+			created = seen
+		}
+
+		g.sessions[saved.Key] = &session{created: created, seen: seen, addr: saved.Addr, ended: make(chan struct{})}
 	}
 }
 
@@ -369,7 +398,7 @@ func (g *Guard) Login(ctx context.Context, addr netip.Addr, password string) (st
 		return "", ErrWrongPassword
 	}
 
-	token := g.openSession()
+	token := g.openSession(addr)
 	g.mu.Unlock()
 
 	g.saveSessionsOrWarn(ctx)
@@ -395,6 +424,86 @@ func (g *Guard) Logout(ctx context.Context, token string) error {
 		return nil
 	}
 
+	return g.saveRevocation(ctx)
+}
+
+// Sessions lists the live sessions, the caller's first, then by the last request. A
+// session idle past SessionIdle is not listed.
+func (g *Guard) Sessions(token string) []Session {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	now := g.now()
+	current := tokenKey(token)
+	list := make([]Session, 0, len(g.sessions))
+
+	for key, live := range g.sessions {
+		if now.Sub(live.seen) >= SessionIdle {
+			continue
+		}
+
+		list = append(list, Session{
+			ID:      sessionID(key),
+			Addr:    live.addr,
+			Age:     max(now.Sub(live.created), 0),
+			Idle:    max(now.Sub(live.seen), 0),
+			Current: key == current,
+		})
+	}
+
+	slices.SortFunc(list, func(a, b Session) int {
+		if a.Current != b.Current {
+			if a.Current {
+				return -1
+			}
+
+			return 1
+		}
+
+		return cmp.Or(cmp.Compare(a.Idle, b.Idle), cmp.Compare(a.ID, b.ID))
+	})
+
+	return list
+}
+
+// EndSession closes another session by its identifier from Sessions, and with it the
+// streams opened with that session. The caller's own session is refused with
+// ErrCurrentSession: the caller logs out instead. The session file is written as by
+// Logout.
+func (g *Guard) EndSession(ctx context.Context, token, id string) error {
+	g.mu.Lock()
+
+	var found string
+
+	for key := range g.sessions {
+		if sessionID(key) == id {
+			found = key
+
+			break
+		}
+	}
+
+	switch found {
+	case "":
+		g.mu.Unlock()
+
+		return ErrUnknownSession
+	case tokenKey(token):
+		g.mu.Unlock()
+
+		return ErrCurrentSession
+	}
+
+	g.endSession(found)
+	g.mu.Unlock()
+
+	return g.saveRevocation(ctx)
+}
+
+// saveRevocation writes the session file after a session was closed, with one more try
+// after revokeRetryPause: a failure means the revocation lives only until the daemon
+// restarts, and the caller must hear that.
+func (g *Guard) saveRevocation(ctx context.Context) error {
 	err := g.saveSessions(ctx)
 	if err != nil {
 		time.Sleep(revokeRetryPause)
@@ -472,7 +581,7 @@ func (g *Guard) SetPassword(ctx context.Context, addr netip.Addr, token, current
 	g.mu.Lock()
 	g.password = fresh
 	g.endSessions()
-	opened := g.openSession()
+	opened := g.openSession(addr)
 	g.mu.Unlock()
 
 	g.saveSessionsOrWarn(ctx)
@@ -651,7 +760,7 @@ func (g *Guard) pruneFailures(now time.Time) {
 
 // openSession is called under mu. Expired sessions go first; if the table is still full,
 // the session idle the longest is evicted.
-func (g *Guard) openSession() string {
+func (g *Guard) openSession(addr netip.Addr) string {
 	now := g.now()
 
 	for key, live := range g.sessions {
@@ -676,7 +785,7 @@ func (g *Guard) openSession() string {
 	}
 
 	token := rand.Text() + rand.Text()
-	g.sessions[tokenKey(token)] = &session{seen: now, ended: make(chan struct{})}
+	g.sessions[tokenKey(token)] = &session{created: now, seen: now, addr: addr, ended: make(chan struct{})}
 
 	return token
 }
@@ -714,7 +823,7 @@ func (g *Guard) saveSessions(ctx context.Context) error {
 	g.mu.Lock()
 	file := sessionFile{Generation: saltKey(g.password), Sessions: make([]savedSession, 0, len(g.sessions))}
 	for key, live := range g.sessions {
-		file.Sessions = append(file.Sessions, savedSession{Key: key, Seen: live.seen})
+		file.Sessions = append(file.Sessions, savedSession{Key: key, Seen: live.seen, Created: live.created, Addr: live.addr})
 	}
 	g.mu.Unlock()
 
@@ -736,6 +845,14 @@ func saltKey(rec *record) string {
 	sum := sha256.Sum256(rec.Salt)
 
 	return hex.EncodeToString(sum[:])
+}
+
+// sessionID is derived from the token key rather than stored: it stays the same across a
+// daemon restart, and neither it nor the key opens the panel.
+func sessionID(key string) string {
+	sum := sha256.Sum256([]byte("session id " + key))
+
+	return hex.EncodeToString(sum[:16])
 }
 
 func tokenKey(token string) string {

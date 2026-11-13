@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw';
 
-import { createAuthHandlers } from '@entities/Auth/__tests__/Auth.handlers';
+import { createAuthHandlers, OTHER_SESSIONS_FIXTURE } from '@entities/Auth/__tests__/Auth.handlers';
 import { CONFIG_FIXTURE } from '@entities/Config/__tests__/Config.fixture';
 import { configHandlers } from '@entities/Config/__tests__/Config.handlers';
 import {
@@ -71,7 +71,7 @@ export function createMissingHandlers(connections = 0) {
   const dataplane = createDataplaneMock();
 
   return [
-    ...createAuthHandlers(),
+    ...createAuthHandlers({ others: OTHER_SESSIONS_FIXTURE }),
     ...createMcpHandlers(),
     ...configHandlers,
     // The daemon minute of open connections matches the live snapshot: with the
