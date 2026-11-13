@@ -248,7 +248,7 @@ describe('VLESS override checks', () => {
 });
 
 /**
- * The AC-6 scenario at the schema level: in an empty document, forms assemble a VLESS
+ * A config built from scratch, at the schema level: in an empty document, forms assemble a VLESS
  * with Reality and a rule for it, and the schema accepts the whole config document.
  * `sing-box check` does not run here: that is a test bench check.
  */

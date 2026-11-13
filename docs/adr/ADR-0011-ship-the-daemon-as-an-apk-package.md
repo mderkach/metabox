@@ -94,6 +94,8 @@ Rollback is to remove the package with the manager and, if needed, go back to th
 - After install the service is not running; after `enable` and `start` the panel answers on the lan interface address, as with a manual install (AC-17, AC-18).
 - Updating the package over the installed one does not overwrite edits in `/etc/config/metabox`.
 - Removing the package leaves neither the binary nor the init script, and `/etc/sing-box/config.json` stays in place.
+- `Makefile`: the `package` target builds the panel package with apk-tools from alpine.
+- `.devcontainer/target/Dockerfile`: the test bench installs the panel from the same package.
 
 ## Links
 

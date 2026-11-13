@@ -1,6 +1,6 @@
 # Operator messages of the metabox init scripts in the language of UCI
-# metabox.main.lang. The English text is the key, as in the daemon catalogue
-# (docs/adr/ADR-0062); a text without a translation is printed in English.
+# metabox.main.lang. The English text is the key, as in the daemon catalogue;
+# a text without a translation is printed in English.
 # internal/locale/catalogue_test.go checks the entries against the scripts.
 
 MB_LANG=${MB_LANG:-$(uci -q get metabox.main.lang 2>/dev/null || echo en)}

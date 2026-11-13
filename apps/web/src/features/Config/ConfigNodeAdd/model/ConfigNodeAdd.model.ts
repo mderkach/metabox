@@ -174,7 +174,7 @@ export interface NodeTypeSection {
 
 /**
  * Registry types for selection, by name. A type outside the binary build is not
- * disabled but marked (AC-47): a config is also built for another binary, and
+ * disabled but marked: a config is also built for another binary, and
  * the mark names the consequence. `builtTags` is `null` until the daemon has
  * read the binary: nothing is known about the build contents then, and there
  * are no marks.

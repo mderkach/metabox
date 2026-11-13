@@ -8,7 +8,7 @@ import { ConfigNodeMeta } from './ConfigNodeMeta';
 /**
  * An object section node (`ntp`, `experimental`) edited in place: the section has
  * one node, and there is no list to open it from. List nodes open in the panel
- * beside the list (ADR-0037).
+ * beside the list.
  *
  * The node draws no edge: the screen puts it into a surface.
  */

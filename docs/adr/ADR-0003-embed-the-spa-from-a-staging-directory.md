@@ -78,6 +78,7 @@ Rollback means going back to a binary without a UI and costs removing the `inter
 - `make lint` and `make test` are green without building the frontend first.
 - The `internal/webui` tests check serving on top of a fake file system: the shell on unknown paths, `immutable` on hashed names, `no-cache` on names without a hash, `ErrNotBuilt` on a directory without `index.html`.
 - Manual check on a built binary: the root and a client route serve `index.html`, a hashed asset comes with `immutable`, an unknown endpoint under `/api/` still answers with a JSON error.
+- `.gitignore` and `apps/metaboxd/internal/webui/static/.gitkeep`: the staging directory keeps only `.gitkeep` in git.
 
 ## Links
 

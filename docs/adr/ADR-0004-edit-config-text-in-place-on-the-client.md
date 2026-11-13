@@ -106,6 +106,7 @@ Rollback is to go back to option 4 or 5 at the cost of AC-2; the changes are con
 - A test for inserting, removing and moving a `route.rules` rule: the other rules stay unchanged byte for byte. A move is checked by the set of text lines: after it, the set must match the original.
 - `pnpm --filter web test` and `pnpm lint`.
 - Manual scenario on the test bench: `make up`, edit one rule in the interface, Apply, then `diff` of the file before and after: only the lines of that rule differ and, if the daemon added it, the `experimental.clash_api` section.
+- `apps/web/src/features/Rule/RuleReorder/ui/RuleReorderButtons.tsx`: a move is one store operation on the text.
 
 ## Links
 

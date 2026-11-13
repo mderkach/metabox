@@ -103,6 +103,9 @@ The decision does not touch the daemon contracts or the config format. Migration
 - `pnpm --filter web exec vitest run RuleSetsPage EditorPage`: the toolbar button opens the panel with focus on the title, Escape closes it and returns focus, below `lg` a sheet opens instead of the panel.
 - `RuleSetTable` does not accept a `form` prop: `pnpm --filter web build` fails on an attempt to pass it.
 - Manual check at a width under 64rem: the rule and rule set panels open as a bottom sheet.
+- `apps/web/src/widgets/Config/ConfigNodePanel/ui/ConfigNodePanel.tsx`: the section node panel beside the list.
+- `apps/web/src/widgets/Config/ConfigNode/ui/ConfigNode.tsx`: an object section node is edited in place, list nodes open in the panel.
+- `apps/web/src/widgets/RuleSet/RuleSetPanel/ui/RuleSetPanel.tsx`: the panel beside the list.
 
 ## Links
 

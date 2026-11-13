@@ -507,7 +507,7 @@ describe('connections screen', () => {
   });
 
   // The row chain came with the stream snapshot, the panel chain with a separate handler
-  // later: they diverge in the regular case (ADR-0007), and the panel shows its own, without
+  // later: they diverge in the regular case, and the panel shows its own, without
   // replacing it with the row chain.
   it('shows the explanation chain when it diverged from the row chain', async () => {
     server.use(...createRouteHandlers(CONNECTIONS_FIXTURE.connections));

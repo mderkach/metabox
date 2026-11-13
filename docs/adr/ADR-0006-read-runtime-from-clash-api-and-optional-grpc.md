@@ -110,6 +110,7 @@ Rollback: remove the gRPC branch from the daemon. The contract with the frontend
 - The number of connections on the screen does not jump when the source changes: the sets are brought to one filtering rule, and DNS connections are either in both or in neither.
 - A measurement on the target hardware is recorded before the first `require` appears in `apps/metaboxd/go.mod`.
 - The `service` section of type `api` does not appear in the config in any scenario except an explicit user action.
+- `apps/web/src/features/Config/ConfigNodeForm/model/ConfigNodeForm.overrides.ts`: the form of the `api` service.
 
 ## Links
 

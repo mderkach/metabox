@@ -106,6 +106,7 @@ A router without `option lang` gets English, the current behaviour. The flag is 
 - `metaboxd -lang ru -h` prints Russian, `metaboxd -h` English; on the router with `uci set metabox.main.lang=ru`, `metaboxd -h` prints Russian.
 - On the test bench with `lang ru`: a refused request answers with a Russian `message` and the same `code`; `logread` shows the same failure in English.
 - `make schema-daemon` leaves `apps/web/src/shared/api/daemon.generated.ts` unchanged.
+- `apps/metaboxd/package/lib/metabox/locale.sh`: the init scripts translate operator texts by the English key.
 
 ## Links
 

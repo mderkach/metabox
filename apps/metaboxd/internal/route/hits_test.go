@@ -275,8 +275,8 @@ func TestCounterWaitsRetryAfterFailure(t *testing.T) {
 	})
 }
 
-// The benchmark holds the NFR-2 ceiling: five thousand live connections, the price of one
-// counter poll in the steady state, with all connections already counted.
+// The benchmark measures the load ceiling and fails no threshold: five thousand live connections,
+// the price of one counter poll in the steady state, with all connections already counted.
 func BenchmarkCounterObserve5000(b *testing.B) {
 	source := &fakeSource{bodies: map[string]string{
 		"/rules":       rulesBody,

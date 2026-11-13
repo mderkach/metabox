@@ -222,7 +222,7 @@ const overviewRoute = createRoute({
   component: lazyRouteComponent(async () => import('@pages/Overview'), 'OverviewPage'),
 });
 
-/** Rare settings of the panel itself: AC-77. The state is read by the sections, nothing is preloaded but texts. */
+/** Rare settings of the panel itself. The state is read by the sections, nothing is preloaded but texts. */
 const settingsRoute = createRoute({
   getParentRoute: () => rootRoute,
   loader: async () =>

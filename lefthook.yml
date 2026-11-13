@@ -62,3 +62,6 @@ pre-push:
 
     - name: types
       run: pnpm --filter web build
+
+    - name: trace
+      run: make trace-check

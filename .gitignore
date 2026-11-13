@@ -15,7 +15,7 @@ coverage
 
 # Directory go:embed takes the SPA from: `make daemon` fills it.
 # Only .gitkeep stays in git: without a single file go:embed does not build,
-# and the Go part would stop building on a clean clone (docs/adr/ADR-0003).
+# and the Go part would stop building on a clean clone.
 !apps/metaboxd/internal/webui/static/
 apps/metaboxd/internal/webui/static/*
 !apps/metaboxd/internal/webui/static/.gitkeep

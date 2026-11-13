@@ -154,11 +154,12 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  /* Selection is a separate surface, not alpha over the background (ADR-0013). */
+  /* Selection is a separate surface, not alpha over the background:
+   * alpha made a selected row barely differ from the hovered one. */
   --color-selected: var(--selected);
   --color-selected-edge: var(--selected-edge);
 
-  /* Rule action: different fates of a packet (ADR-0013). */
+  /* Rule action: different fates of a packet. */
   --color-route-direct: var(--route-direct);
   --color-route-proxy: var(--route-proxy);
   --color-route-block: var(--route-block);
@@ -175,7 +176,7 @@
   --color-series-down: var(--series-down);
   --color-series-up: var(--series-up);
 
-  /* Scale track: a surface, not alpha over the background (ADR-0013). */
+  /* Scale track: a surface, not alpha over the background. */
   --color-meter-track: var(--meter-track);
 
   /* Table row states. Opaque: the anchor column is pinned during horizontal
@@ -202,7 +203,7 @@
 
 /* The light palette is in `:root`, the dark one in `.dark`: the `dark:` variant
  * of the shadcn primitives is bound to this class. The default theme is set by
- * `ThemeProvider`, not by block order. Composition and shades are in ADR-0013.
+ * `ThemeProvider`, not by block order.
  * */
 :root {
   /* Without a scheme declaration a browser with auto-dark mode recolors the

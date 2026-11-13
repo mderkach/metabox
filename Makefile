@@ -9,7 +9,7 @@ LDFLAGS    := -s -w -X metabox/internal/version.Version=$(VERSION) -X metabox/in
 # Pins the version down: the `go` directive in go.mod raises it but does not lower it.
 export GOTOOLCHAIN := go$(shell cat .go-version)
 
-.PHONY: all schema schema-daemon rule-set-snapshot web embed daemon daemon-device daemon-target ldflags dev dev-mock test test-schemagen singbox-pin-check lint hooks clean up up-dev down sh target-sh apply-check reach-check dataplane-check package stand-base stand-reset
+.PHONY: all schema schema-daemon rule-set-snapshot web embed daemon daemon-device daemon-target ldflags dev dev-mock test test-schemagen singbox-pin-check trace-check lint hooks clean up up-dev down sh target-sh apply-check reach-check dataplane-check package stand-base stand-reset
 
 all: daemon
 
@@ -90,6 +90,11 @@ singbox-pin-check:
 	grep -qx "SINGBOX_VERSION=$$version" install.sh || { echo "install.sh SINGBOX_VERSION differs from sing-box-extended.sha256 ($$version)" >&2; exit 1; }; \
 	grep -qx "SINGBOX_SHA256=$$sum" install.sh || { echo "install.sh SINGBOX_SHA256 differs from sing-box-extended.sha256 ($$sum)" >&2; exit 1; }
 
+# Requirements point at their checks in docs/Verification.md, and code does not name documents.
+# Coverage of the ticked criteria is reported, not enforced, until the table is filled.
+trace-check:
+	python3 -I .github/scripts/trace-check.py
+
 GOLANGCI = go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0
 
 lint:
@@ -137,7 +142,7 @@ daemon-target:
 
 # Panel package for the device. Built by the same stage that installs the panel into the
 # test bench, and for the same arch that the test bench base declares: the delivery and
-# the check cannot diverge. No OpenWrt SDK needed: apk-tools comes from alpine (ADR-0011).
+# the check cannot diverge. No OpenWrt SDK needed: apk-tools comes from alpine.
 package: daemon-device
 	$(if $(APK_VERSION),,$(error version $(VERSION) is not expressible as an apk version: need X.Y.Z or X.Y.Z-(alpha|beta|rc).N))
 	docker build --platform $(OPENWRT_PLATFORM) \

@@ -41,6 +41,9 @@ jobs:
       - name: Release publication tests
         run: python3 .github/tests/test_release_publish.py
 
+      - name: Requirement link check
+        run: python3 .github/tests/test_trace_check.py && make trace-check
+
       # govet is part of the golangci-lint set, a separate step is not needed. The generator
       # is checked with the fork's tags, which `go vet` did not do here.
       - name: Go lint
@@ -111,11 +114,11 @@ jobs:
         run: pnpm --filter web run lint:react
 
       # Full build: only here it is checked that the built SPA reaches
-      # go:embed and ends up in the binary (AC-17).
+      # go:embed and ends up in the binary.
       - run: make daemon
 
   # Tests that need a real browser: Base UI dropdowns, layout, pointer events, and the e2e
-  # scenarios on the mock stand (ADR-0075). A separate job, so the Chromium download does not
+  # scenarios on the mock stand. A separate job, so the Chromium download does not
   # hold back the main frontend checks; both runners share that one download.
   web-browser:
     runs-on: ubuntu-latest
@@ -162,7 +165,7 @@ jobs:
       - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
         run: exit 1
 
-  # AC-22: integration run on the target environment image of the same OpenWrt
+  # Integration run on the target environment image of the same OpenWrt
   # branch as on the device. CI has no device firmware, so the base is
   # the public rootfs; it differs from the owner's test bench only in architecture and in
   # the branch being a release, not SNAPSHOT.

@@ -90,7 +90,8 @@ function toRouteExplanationFixture(connection: ExplainedConnection): RouteExplan
 /**
  * Explanation by `connection_id` from a map built from the connections snapshot:
  * the panel has its own per row, and the chain matches the row chain. One
- * connection gets a diverged chain: the regular case of ADR-0007.
+ * connection gets a diverged chain: the snapshot and the explanation are read at
+ * different moments, and the chain may change in between.
  *
  * Connections come from outside: the snapshot lives in a neighboring slice. Multiplied
  * snapshots of the dev bench and tests append a suffix to the sample identifier,

@@ -96,6 +96,7 @@ If a commit mixes unrelated changes, split it. Moving or renaming files and chan
 | Frontend types and build | `pnpm --filter web build`           |
 | Frontend browser tests   | `pnpm --filter web test:browser`    |
 | Frontend e2e scenarios   | `pnpm --filter web test:e2e`        |
+| Requirement links        | `make trace-check`                  |
 | Everything               | `make test`                         |
 
 Run commands from the repository root. The exception is the daemon tests: there is no Go module at the root, so `go test ./...` works only from `apps/metaboxd`. `pnpm lint` works only from the root: the Tailwind plugin looks for the frontend config relative to the current directory.
@@ -108,11 +109,11 @@ The browser tests need Chromium (`pnpm --filter web exec playwright install --on
 
 `pnpm install` installs the git hooks (lefthook, config in `lefthook.yml`); `make hooks` reinstalls them.
 
-| Hook         | What it does                                                                                                        |
-| ------------ | ------------------------------------------------------------------------------------------------------------------- |
-| `pre-commit` | gofmt, lint and format of the staged files; `go vet` if there are Go files; generated files only with their source  |
-| `commit-msg` | commitlint                                                                                                          |
-| `pre-push`   | the whole repository: `pnpm lint`, `make lint`, `pnpm format:check`, `make test`, frontend build with type checking |
+| Hook         | What it does                                                                                                                            |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `pre-commit` | gofmt, lint and format of the staged files; `go vet` if there are Go files; generated files only with their source                      |
+| `commit-msg` | commitlint                                                                                                                              |
+| `pre-push`   | the whole repository: `pnpm lint`, `make lint`, `pnpm format:check`, `make test`, frontend build with type checking, `make trace-check` |
 
 A commit checks only what went into it and is fast. A push checks everything, because a change in one file can break types in another.
 
@@ -122,13 +123,13 @@ Use `git commit --no-verify` only when a change cannot pass a check, and explain
 
 Documents change in the same commit as the code:
 
-| What changes in the commit                           | What is edited                                                         |
-| ---------------------------------------------------- | ---------------------------------------------------------------------- |
-| an acceptance criterion is met                       | the AC checkbox in section 5 of the PRD is ticked                      |
-| a new technical decision is made                     | an ADR in `docs/adr/`; the PRD is edited only if a requirement changes |
-| a file or directory mentioned in documents has moved | the paths in the documents                                             |
+| What changes in the commit                           | What is edited                                                                                                                                   |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| an acceptance criterion is met                       | the AC checkbox in section 5 of the PRD is ticked, and the check that confirms it gets a row in [`docs/Verification.md`](./docs/Verification.md) |
+| a new technical decision is made                     | an ADR in `docs/adr/`; the PRD is edited only if a requirement changes                                                                           |
+| a file or directory mentioned in documents has moved | the paths in the documents                                                                                                                       |
 
-Tick an AC (acceptance criterion) checkbox only when a run confirms it: a test, CI or a measurement.
+Tick an AC (acceptance criterion) checkbox only when a run confirms it: a test, CI or a measurement. The row in `docs/Verification.md` names that run; `make trace-check` fails when the row points at a test, job or file that does not exist, and when code names a document instead ([ADR-0076](./docs/adr/ADR-0076-link-requirements-to-their-checks-not-code-to-documents.md)).
 
 Technical decisions are recorded as ADRs (architecture decision records) in [`docs/adr/`](./docs/adr/README.md). PRD appendix A is closed to new entries.
 
@@ -138,7 +139,7 @@ The description says what changed and why, with links to the PRD or an ADR if th
 
 CI runs on every PR and must be green before the merge. It runs:
 
-- the `pre-push` checks plus what needs a clean runner or more time: the frontend browser tests, `go test -race`, the `make daemon` build with the embedded panel, the fork pin check and the release script tests;
+- the `pre-push` checks plus what needs a clean runner or more time: the frontend browser tests, `go test -race`, the `make daemon` build with the embedded panel, the fork pin check and the tests of the release and requirement link scripts;
 - commitlint over every commit of the PR;
 - an integration run on the test bench: Apply, network reachability, LAN interception.
 

@@ -10,7 +10,7 @@ import { MOVE, type Move } from '../model/RuleReorder.constants';
 
 /**
  * Moving a rule by one position: in sing-box rule order is the logic, so a move
- * is an edit, not a view. A move is one store operation (ADR-0004): the node is
+ * is an edit, not a view. A move is one store operation: the node is
  * taken out and inserted in one step, and neighbor numbers do not shift under
  * the calling code.
  *

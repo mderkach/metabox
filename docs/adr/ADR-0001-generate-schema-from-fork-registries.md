@@ -113,6 +113,7 @@ The fork version is bumped by editing the tag in the `replace` block of `tools/s
 - `z.toJSONSchema(ConfigSchema)` succeeds; otherwise the autorenderer for AC-5 cannot be built. The default side must be checked: `z.toJSONSchema(schema, { io: 'input' })` also digests a transform, so the `.transform()` ban cannot rest on it alone.
 - `TestGenerate` does not let `.transform()` into the schema. The ban rests on two arguments at once: `ZodPipe` loses `.extend()`, `.omit()` and `.pick()`, on which the rule schema is built, and `z.toJSONSchema()` cannot represent the output side of a transform: the autorenderer would get an empty node instead of a field.
 - `pnpm --filter web build` checks that the schema compiles with TypeScript.
+- `.golangci.yml`: gosec is off for `_test.go`, where the generator test reads the unexported registry field through `unsafe`.
 
 ## Links
 

@@ -79,7 +79,7 @@ describe('AppSidebar', () => {
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   });
 
-  // AC-77: rare settings live on their screen, the footer keeps theme, language, logout and the service.
+  // Rare settings live on their screen, the footer keeps theme, language, logout and the service.
   it('leads to the settings screen instead of keeping password and MCP buttons in the footer', async () => {
     server.use(
       http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE)),

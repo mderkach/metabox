@@ -24,7 +24,7 @@ export interface NodeOverrideWidget {
 }
 
 /**
- * Handwritten type form setup on top of the autoform (ADR-0035): the fields and
+ * Handwritten type form setup on top of the autoform: the fields and
  * the write are the same, while the order, the kind of individual fields and
  * requiredness change.
  */
@@ -47,7 +47,7 @@ export interface NodeOverride {
   /**
    * Checks the schema does not know, verified against the fork sources.
    * `before` is the node before the edit: a value the user did not touch is not
-   * rechecked for format, since its arbiter is `sing-box check` (ADR-0035), and
+   * rechecked for format, since its arbiter is `sing-box check`, and
    * the form does not stop editing a neighboring field of a node saved by
    * another tool.
    */
@@ -126,10 +126,10 @@ function checkPattern(
 }
 
 /**
- * VLESS with Reality is the AC-6 scenario. Without the field order the form
- * would open with twenty dial fields; Reality keys are checked the same way the
- * fork client parses them, otherwise the error would surface only on `sing-box
- * check`.
+ * VLESS with Reality must be buildable from scratch without manual edits.
+ * Without the field order the form would open with twenty dial fields; Reality
+ * keys are checked the same way the fork client parses them, otherwise the error
+ * would surface only on `sing-box check`.
  */
 const VLESS_OVERRIDE: NodeOverride = {
   primary: [
@@ -185,8 +185,9 @@ function randomSecret(): string {
 }
 
 /**
- * The `api` service is the fork gRPC service, the only service with a form
- * (PRD, section 8; ADR-0006). It listens on loopback: the daemon does not open
+ * The `api` service is the fork gRPC service, the only service with a form:
+ * the other fork services serve server and multi-tenant setups, while the daemon
+ * reads runtime from this one. It listens on loopback: the daemon does not open
  * it outward and itself goes to it from the same machine. The port is not
  * substituted: 9090 is taken by the Clash API by default (the daemon
  * `-clash-port` flag), and the form does not know a free port on the device, so

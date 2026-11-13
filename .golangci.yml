@@ -40,7 +40,7 @@ linters:
         linters: [gosec]
 
       # The schema cannot be obtained from the fork otherwise: registry options live in an unexported
-      # field, and the test reads it through unsafe deliberately (ADR-0001).
+      # field, and the test reads it through unsafe deliberately.
       - path: _test\.go
         linters: [gosec]
 

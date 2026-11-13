@@ -8,7 +8,7 @@ import { Button, SECTION_HEADING, SURFACE, SURFACE_HEAD, SheetTitle } from '@sha
 
 /**
  * Rule set panel beside the list: the form opens in it, and the list stays in
- * place and does not shift down (ADR-0037).
+ * place and does not shift down.
  *
  * The panel has no dictionary of its own: the title is named by the page, which knows
  * which form is open, and the close label is shared with the rule panel.

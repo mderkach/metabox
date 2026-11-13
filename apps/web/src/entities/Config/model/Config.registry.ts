@@ -84,7 +84,8 @@ export function nodeSchemaOf(registry: NodeRegistry, type: string): z.core.$ZodT
 /**
  * A node that its type schema accepts entirely. An unfamiliar field, a wrong
  * value or a type the registry does not know makes it unrecognized: such a node
- * is edited as text and the form does not open it (ADR-0018).
+ * is edited as text and the form does not open it: a form shows only the
+ * fields the schema knows and would hide the rest.
  */
 export function isNodeRecognized(registry: NodeRegistry, node: unknown): boolean {
   const type: unknown = typeof node === 'object' && node !== null ? Reflect.get(node, 'type') : undefined;

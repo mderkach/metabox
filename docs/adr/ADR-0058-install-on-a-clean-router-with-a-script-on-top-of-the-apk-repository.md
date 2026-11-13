@@ -85,6 +85,7 @@ A router with metabox installed by hand is not affected: the script finds the fo
 - A container on `aarch64_generic` stops on the arch check without changes.
 - `grep -rn 1.14.1-extended-2.7.2 install.sh .devcontainer` shows the same version in both.
 - After the next release: `https://mderkach.github.io/metabox/install.sh` returns the script of that release.
+- `.github/workflows/apk-repo.yml`: the site root gets the `install.sh` of the newest release that has one.
 
 ## Links
 

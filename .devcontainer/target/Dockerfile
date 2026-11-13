@@ -32,7 +32,7 @@ RUN set -eu; \
 
 # The fork's apk version is its release version with `-extended-` read as a dot
 # (1.14.1-extended-2.7.2 is 1.14.1.2.7.2); the minimum is the version the bench and the script install.
-# The panel is built as the same package that goes to the router (ADR-0011): the test bench
+# The panel is built as the same package that goes to the router: the test bench
 # checks the delivery, not files laid out in place. The version is numeric:
 # apk does not accept a string like `dev` as a version.
 FROM --platform=$BUILDPLATFORM alpine:3.23 AS package

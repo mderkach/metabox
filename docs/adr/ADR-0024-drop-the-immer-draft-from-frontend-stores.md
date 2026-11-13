@@ -92,6 +92,7 @@ Rollback: return `immer` to the dependencies and to the middleware set, return `
 - `pnpm --filter web test` — the suite has a snapshot parsing budget: `apps/web/src/widgets/ConnectionTable/__tests__/ConnectionTable.budget.test.ts` parses 5000 connections with churn and fails if the best of the runs goes over 12 ms — half of what bringing the wrapper back would cost;
 - `grep -rn immer apps/web/src apps/web/docs apps/web/package.json docs` — code, manifest and documents keep only explanations of why there is no wrapper;
 - manual scenario: `METABOX_MOCK=all METABOX_MOCK_CONNECTIONS=5000 pnpm --filter web dev`, the connections screen, measuring `apply` in the console with the CPU slowed four times — the median is in single milliseconds, not tens.
+- `apps/web/src/shared/lib/state/stateCreator.ts`: the shared store middleware set has no immer.
 
 ## Links
 
