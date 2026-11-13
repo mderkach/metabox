@@ -15,6 +15,8 @@ A guide is read by the condition from the table, **in full** and before making a
 | write a form or a Zod schema                                     | [Form&Validation.md](./docs/guides/Form&Validation.md)                                                    |
 | create or change a list, a table, its columns and filtering      | [Tables.md](./docs/guides/Tables.md)                                                                      |
 | write or edit tests                                              | [UnitTesting.md](./docs/guides/UnitTesting.md)                                                            |
+| write or edit Russian text in an `i18n/ru.json` dictionary       | [Glossary.md](./docs/guides/Glossary.md)                                                                  |
+| claim, measure or fix a performance problem                      | [Performance.md](./docs/guides/Performance.md)                                                            |
 | hand in a frontend change                                        | [ReviewChecklist.md](./docs/guides/ReviewChecklist.md): go through the checklist                          |
 
 ## Changes in `apps/web/`
