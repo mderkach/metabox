@@ -1,6 +1,10 @@
 package device
 
-import "sync"
+import (
+	"sync"
+
+	"metabox/internal/history"
+)
 
 // Meter accumulates the increment of a foreign counter.
 //
@@ -65,7 +69,16 @@ func (m *Meter) Total() int64 {
 // The share is computed by dividing one by the other and is meaningful only together with
 // Seconds: the window starts when the daemon first took readings.
 type Share struct {
-	Link    int64 `json:"link"`
-	Proxy   int64 `json:"proxy"`
-	Seconds int   `json:"seconds"`
+	Link int64 `json:"link"`
+	// Proxy is everything that passed through the sing-box process, a direct exit included.
+	Proxy int64 `json:"proxy"`
+	// Split is the same volume by the outbound of the connection; the channel share
+	// through a proxy is counted by Split.Proxy.
+	Split   history.Split `json:"split"`
+	Seconds int           `json:"seconds"`
+}
+
+// VolumeSplit returns the sing-box volume accumulated by connection kind.
+type VolumeSplit interface {
+	Split() history.Split
 }

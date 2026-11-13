@@ -110,6 +110,8 @@ type Options struct {
 	Port PortResolver
 	// History accumulates the readings. nil means nobody keeps a history.
 	History Recorder
+	// Split is the sing-box volume by connection kind. nil means it is not counted.
+	Split VolumeSplit
 	// Now is replaced in tests: the observation window is counted from the first taking
 	// of readings, and a test must not wait for it in real seconds.
 	Now func() time.Time
@@ -121,6 +123,7 @@ type Reader struct {
 	sys     string
 	port    PortResolver
 	history Recorder
+	split   VolumeSplit
 	now     func() time.Time
 
 	// link and proxy accumulate counter increments: the reader counts the channel itself,
@@ -145,7 +148,7 @@ type Reader struct {
 
 // New assembles the reader. Empty roots take device values.
 func New(opts Options) *Reader {
-	reader := &Reader{proc: opts.Proc, sys: opts.Sys, port: opts.Port, history: opts.History, now: opts.Now}
+	reader := &Reader{proc: opts.Proc, sys: opts.Sys, port: opts.Port, history: opts.History, split: opts.Split, now: opts.Now}
 
 	if reader.proc == "" {
 		reader.proc = defaultProc
@@ -288,7 +291,12 @@ func (r *Reader) share(uplink *Link) Share {
 		seconds = int(r.now().Sub(since).Seconds())
 	}
 
-	return Share{Link: r.link.Total(), Proxy: r.proxy.Total(), Seconds: seconds}
+	share := Share{Link: r.link.Total(), Proxy: r.proxy.Total(), Seconds: seconds}
+	if r.split != nil {
+		share.Split = r.split.Split()
+	}
+
+	return share
 }
 
 func (r *Reader) load() (Load, error) {

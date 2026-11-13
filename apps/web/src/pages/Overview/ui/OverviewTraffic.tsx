@@ -6,7 +6,7 @@ import { ConnectionSummaryVolume } from '@widgets/ConnectionSummary';
 import { DaemonTraffic } from '@widgets/Daemon/DaemonTraffic';
 
 import type { OverviewRuntime } from '../lib';
-import { toVolume, toPeak } from '../lib/Overview.traffic';
+import { toDirectContext, toVolume, toPeak } from '../lib/Overview.traffic';
 import { OverviewSection } from './OverviewSection';
 import { OverviewTile } from './OverviewTile';
 
@@ -15,14 +15,15 @@ const PERCENT = 100;
 export function OverviewTraffic({ runtime }: { runtime: OverviewRuntime }) {
   const { t } = useTranslation('pages/Overview');
   const uplink = runtime.system?.uplink;
+  const { link, split } = runtime.share;
   // Proxy encapsulation adds bytes on top of the original traffic, so the share
   // hits a hundred.
-  const proxyShare = Math.min(1, runtime.share.link > 0 ? runtime.share.proxy / runtime.share.link : 0);
+  const proxyShare = Math.min(1, link > 0 ? split.proxy / link : 0);
+  const directShare = Math.min(1, link > 0 ? split.direct / link : 0);
   const noSnapshot = runtime.system === null;
   const proxyContext =
-    runtime.share.link > 0
-      ? t('traffic.proxyShare', { percent: Math.round(proxyShare * PERCENT) })
-      : t('traffic.proxyUnknown');
+    link > 0 ? t('traffic.linkShare', { percent: Math.round(proxyShare * PERCENT) }) : t('traffic.linkUnknown');
+  const directContext = toDirectContext(t, link, Math.round(directShare * PERCENT), split.block);
   const uplinkContext =
     runtime.share.seconds > 0
       ? t('traffic.uplinkSince', { age: formatAge(runtime.share.seconds) })
@@ -49,15 +50,21 @@ export function OverviewTraffic({ runtime }: { runtime: OverviewRuntime }) {
           <div className='flex flex-col xl:flex-row'>
             <ul aria-label={t('traffic.label')} className='grid min-w-0 grow grid-cols-2 gap-px bg-border'>
               <OverviewTile
-                label={t('traffic.proxy')}
-                value={toVolume(noSnapshot, runtime.share.proxy)}
-                context={noSnapshot ? null : proxyContext}
-                meter={runtime.share.link > 0 ? proxyShare : undefined}
+                label={t('traffic.uplink')}
+                value={toVolume(noSnapshot, link)}
+                context={noSnapshot ? null : uplinkContext}
+                wide
               />
               <OverviewTile
-                label={t('traffic.uplink')}
-                value={toVolume(noSnapshot, runtime.share.link)}
-                context={noSnapshot ? null : uplinkContext}
+                label={t('traffic.proxy')}
+                value={toVolume(noSnapshot, split.proxy)}
+                context={noSnapshot ? null : proxyContext}
+                meter={link > 0 ? proxyShare : undefined}
+              />
+              <OverviewTile
+                label={t('traffic.direct')}
+                value={toVolume(noSnapshot, split.direct)}
+                context={noSnapshot ? null : directContext}
               />
               <OverviewTile
                 label={t('traffic.down')}

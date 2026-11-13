@@ -11,6 +11,8 @@ import (
 	"testing"
 	"testing/synctest"
 	"time"
+
+	"metabox/internal/history"
 )
 
 func newTestCounter(source Source) *Counter {
@@ -311,4 +313,92 @@ func connectionsBody(count int) string {
 	sb.WriteString(`]}`)
 
 	return sb.String()
+}
+
+type fakeVolumes struct {
+	totals []int64
+	flows  [][]history.Flow
+}
+
+func (f *fakeVolumes) Observe(total int64, flows []history.Flow) {
+	f.totals = append(f.totals, total)
+	f.flows = append(f.flows, flows)
+}
+
+// The kind comes from the type of the final outbound, the first chain node: a tag
+// named like a proxy can be a direct exit, and the reverse.
+func TestCounterSplitsVolumeByOutboundType(t *testing.T) {
+	source := &fakeSource{bodies: map[string]string{
+		"/rules": rulesBody,
+		"/proxies": `{"proxies":{
+			"wan-ru":{"type":"Direct"},
+			"proxy":{"type":"Selector"},
+			"nl":{"type":"VLESS"},
+			"drop":{"type":"Reject"}
+		}}`,
+		"/connections": `{"uploadTotal":700,"downloadTotal":900,"connections":[
+			{"id":"a","rule":"final","chains":["nl","proxy"],"upload":100,"download":200},
+			{"id":"b","rule":"final","chains":["wan-ru"],"upload":10,"download":20},
+			{"id":"c","rule":"final","chains":["drop"]},
+			{"id":"d","rule":"final","chains":["from-subscription"],"upload":1,"download":2}
+		]}`,
+	}}
+	volumes := &fakeVolumes{}
+	counter := NewCounter(source, discardLogger(), CounterOptions{Interval: time.Second, Volumes: volumes})
+
+	if err := counter.observe(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(volumes.totals) != 1 || volumes.totals[0] != 1600 {
+		t.Fatalf("totals: got %v, want [1600]", volumes.totals)
+	}
+
+	want := []history.Flow{
+		{ID: "a", Kind: history.KindProxy, Bytes: 300},
+		{ID: "b", Kind: history.KindDirect, Bytes: 30},
+		{ID: "c", Kind: history.KindBlock, Bytes: 0},
+		{ID: "d", Kind: history.KindProxy, Bytes: 3},
+	}
+	if !slices.Equal(volumes.flows[0], want) {
+		t.Errorf("flows: got %+v, want %+v", volumes.flows[0], want)
+	}
+}
+
+// The outbound list is reread when a tag is missing, once per snapshot, and not on
+// every snapshot of known tags.
+func TestCounterRereadsOutboundsOnUnknownTag(t *testing.T) {
+	source := &fakeSource{bodies: map[string]string{
+		"/rules":   rulesBody,
+		"/proxies": `{"proxies":{"nl":{"type":"VLESS"}}}`,
+		"/connections": `{"connections":[
+			{"id":"a","rule":"final","chains":["nl"]}
+		]}`,
+	}}
+	counter := NewCounter(source, discardLogger(), CounterOptions{Interval: time.Second, Volumes: &fakeVolumes{}})
+
+	for range 3 {
+		if err := counter.observe(t.Context()); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	source.bodies["/connections"] = `{"connections":[
+		{"id":"b","rule":"final","chains":["gone"]},
+		{"id":"c","rule":"final","chains":["also-gone"]}
+	]}`
+	if err := counter.observe(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+
+	reads := 0
+	for _, call := range source.calls {
+		if call == "/proxies" {
+			reads++
+		}
+	}
+
+	if reads != 2 {
+		t.Errorf("outbound list reads: got %d, want 2", reads)
+	}
 }

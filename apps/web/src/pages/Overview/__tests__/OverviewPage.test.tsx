@@ -71,6 +71,37 @@ describe('overview screen', () => {
     expect(tiles.getByText('8.3 кБ/с', WITHOUT_WORD_JOINERS)).toBeInTheDocument();
   });
 
+  // Traffic a rule released direct passes sing-box too, but it is not proxied: the
+  // channel share counts the proxy part only.
+  it('splits the sing-box volume into proxied and direct and counts the share over the proxy', async () => {
+    RuntimeStore.getState().pushSystem({ ...SYSTEM_FIXTURE, thermal: [{ name: 'cpu-thermal', celsius: 42.5 }] });
+
+    renderWithRouter(OverviewPage);
+
+    const tiles = within(await screen.findByRole('list', { name: 'Скорость' }));
+    const items = tiles.getAllByRole('listitem');
+    const proxy = items.find((item) => within(item).queryByText('Через прокси') !== null);
+    const direct = items.find((item) => within(item).queryByText('Напрямую через sing-box') !== null);
+
+    expect(stripWordJoiners(proxy?.textContent ?? '')).toBe('Через прокси30.0 МБ12% от канала');
+    expect(stripWordJoiners(direct?.textContent ?? '')).toBe('Напрямую через sing-box16.2 МБ7% от канала');
+    expect(tiles.queryByText('Через sing-box')).not.toBeInTheDocument();
+  });
+
+  it('names the rejected volume next to the direct share', async () => {
+    RuntimeStore.getState().pushSystem({
+      ...SYSTEM_FIXTURE,
+      thermal: [{ name: 'cpu-thermal', celsius: 42.5 }],
+      share: { ...SYSTEM_FIXTURE.share, split: { ...SYSTEM_FIXTURE.share.split, block: 2048 } },
+    });
+
+    renderWithRouter(OverviewPage);
+
+    const tiles = within(await screen.findByRole('list', { name: 'Скорость' }));
+
+    expect(tiles.getByText('7% от канала, отклонено 2.0 кБ', WITHOUT_WORD_JOINERS)).toBeInTheDocument();
+  });
+
   // The first stream sample is zero: showing "0 B" would
   // lie that the process needs no memory.
   it('does not show a line for a zero memory sample', async () => {

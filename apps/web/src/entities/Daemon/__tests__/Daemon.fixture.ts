@@ -200,7 +200,12 @@ export const SYSTEM_FIXTURE: SystemStatWire = {
   memory: { total: 8_332_603_392, available: 7_962_783_744 },
   thermal: [{ name: 'cpu-thermal', milli: 42_578 }],
   uplink: { name: 'pppoe-wan', rx: 9_394_995_569, tx: 1_413_850_120 },
-  share: { link: 254_803_968, proxy: 48_412_672, seconds: 612 },
+  share: {
+    link: 254_803_968,
+    proxy: 48_412_672,
+    split: { proxy: 31_457_280, direct: 16_955_392, block: 0 },
+    seconds: 612,
+  },
   singbox: { pid: 5872, rss: 85_913_600 },
   daemon: { rss: 12_582_912, heap: 5_242_880, goroutines: 38 },
   uptime: 68_239,
