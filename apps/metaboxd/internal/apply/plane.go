@@ -580,6 +580,13 @@ func (p *Plane) Replay(ctx context.Context) error {
 		p.begin(tx, state.Previous)
 		p.rollback(ctx, log)
 
+	case tx.Phase == PhaseAwaitingConfirm && p.rolledBackInUCI(ctx, state.Previous):
+		// A window rollback broke off after Restore and before the state was cleared:
+		// a restored window would let Confirm keep the previous section as the change.
+		log.Warn("dataplane rollback interrupted in the confirmation window, finishing it")
+		p.begin(tx, state.Previous)
+		p.rollback(ctx, log)
+
 	case tx.Phase == PhaseAwaitingConfirm:
 		log.Warn("dataplane confirmation window restored", "window", tx.Window)
 		p.begin(tx, state.Previous)
@@ -592,6 +599,21 @@ func (p *Plane) Replay(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// rolledBackInUCI reports whether the section already holds the snapshot the transaction
+// rolls back to. The record keeps no target model, so a change that left the section as it
+// was also counts: finishing its rollback writes back the same section. A failed read counts
+// as not rolled back: the restored window still ends in a rollback without confirmation.
+func (p *Plane) rolledBackInUCI(ctx context.Context, previous dataplane.Snapshot) bool {
+	current, err := p.editor.Snapshot(ctx)
+	if err != nil {
+		p.log.Warn("dataplane section comparison on replay did not go through", "err", err)
+
+		return false
+	}
+
+	return current.Equal(previous)
 }
 
 func (p *Plane) begin(tx Transaction, previous dataplane.Snapshot) {

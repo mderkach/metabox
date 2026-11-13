@@ -150,7 +150,7 @@ The model is changed by `apply.Plane` with the same protocol as config apply, an
 
 Every change has a window. An ACL change that removes the request's source address from interception is applied the same way (the daemon only logs a warning about it) and without confirmation is rolled back by the window: it does not cut off the administrator for longer than the window. The address comes from `RemoteAddr`, the MAC is not checked.
 
-Replay on start comes after the config replay: `applying` with the section equal to the snapshot means the write did not happen, the state is removed; otherwise rollback. `awaiting_confirm`: the window starts again for its full duration, as for the config; immediate rollback only with a window of 0. A rollback failure leaves the state file, and the next start tries again. On router boot the service manages to bring up the dataplane with the unconfirmed model, and the daemon rolls it back in the next step.
+Replay on start comes after the config replay: `applying` with the section equal to the snapshot means the write did not happen, the state is removed; otherwise rollback. `awaiting_confirm`: the window starts again for its full duration, as for the config; immediate rollback only with a window of 0. If the section already equals the snapshot, a window rollback broke off after the write-back: the replay finishes it instead of opening a window over the previous section. The state holds no target model, so a change that left the section as it was is rolled back too, to the same section. A rollback failure leaves the state file, and the next start tries again. On router boot the service manages to bring up the dataplane with the unconfirmed model, and the daemon rolls it back in the next step.
 
 ## Service crash reason
 
