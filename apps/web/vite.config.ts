@@ -9,6 +9,7 @@ import { playwright } from '@vitest/browser-playwright';
 import type { ProxyOptions, ViteDevServer } from 'vite';
 import { configDefaults, defineConfig, type Plugin } from 'vitest/config';
 
+import { daemonOriginFor } from './tools/daemonOrigin.ts';
 import { metaboxI18n } from './tools/i18nPlugin.ts';
 
 const BUDGET_TESTS = 'src/**/*.budget.test.{ts,tsx}';
@@ -169,10 +170,15 @@ const daemonTarget = process.env.METABOX_API_TARGET ?? 'http://127.0.0.1:8080';
 
 // changeOrigin replaces only Host, while the daemon checks Origin against the panel address and
 // rejects any mutating request without a match. The dev server presents itself as
-// the daemon itself — otherwise the daemon would have to open a foreign origin.
+// the daemon itself, but only for the panel's own requests: a foreign Origin goes through
+// as is and the daemon refuses it.
 const sendDaemonOrigin: ProxyOptions['configure'] = (proxy) => {
-  proxy.on('proxyReq', (request) => {
-    request.setHeader('origin', daemonTarget);
+  proxy.on('proxyReq', (request, incoming) => {
+    const origin = daemonOriginFor(incoming.headers.origin, incoming.headers.host, daemonTarget);
+
+    if (origin !== undefined) {
+      request.setHeader('origin', origin);
+    }
   });
 };
 
