@@ -1,6 +1,6 @@
 # ADR-0069. Manage only the metabox-singbox service
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-25
 - Deciders: repository owner
 - Supersedes (as to the check mode, the `launch_mismatch` refusal and services under another owner): [ADR-0046](./ADR-0046-check-the-candidate-the-way-the-service-runs.md)

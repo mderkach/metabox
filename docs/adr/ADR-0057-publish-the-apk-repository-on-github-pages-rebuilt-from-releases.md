@@ -1,6 +1,6 @@
 # ADR-0057. Publish the apk repository on GitHub Pages, rebuilt from the GitHub Releases
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-21
 - Deciders: repository owner
 - Supersedes: the "package repository: a separate decision" item of [ADR-0051](./ADR-0051-publish-releases-from-a-tag-workflow-and-sign-the-apk.md); the rest of ADR-0051 stays in force

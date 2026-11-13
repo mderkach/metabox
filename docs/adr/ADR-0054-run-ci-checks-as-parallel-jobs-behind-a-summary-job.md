@@ -1,6 +1,6 @@
 # ADR-0054. Run CI checks as parallel jobs behind a summary job and key the Go cache by the tool pins
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-20
 - Deciders: repository owner
 

@@ -16,8 +16,8 @@
   // PRD, "SOLID" and "GRASP" in the frontend guides.
   "MD036": false,
 
-  // Interview transcripts are collapsed into <details>, otherwise the document is unreadable.
-  "MD033": { "allowed_elements": ["details", "summary"] },
+  // README collapses sections into <details> and lays out screenshots with <picture> and <img>: Markdown has no syntax for either.
+  "MD033": { "allowed_elements": ["details", "summary", "b", "div", "picture", "source", "img"] },
 
   // Go examples are formatted by gofmt, indented with tabs.
   "MD010": { "ignore_code_languages": ["go"] },
