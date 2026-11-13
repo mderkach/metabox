@@ -32,9 +32,9 @@ Prepare a verifiable architecture decision record based on facts from the reposi
 ## Status
 
 - Create a new ADR with the `Proposed` status.
-- Set `Accepted` **only** on explicit confirmation from the repository owner. Your own conclusion does not count as confirmation.
+- The repository owner delegated acceptance: set `Accepted` yourself once the decision holds.
 - Do not rewrite the meaning of an accepted ADR after the fact: a new decision is a separate ADR, the old one gets the `Superseded` status, and both get cross-links in the "Supersedes" and "Superseded by" fields. Only editorial changes are allowed in an accepted ADR.
 
 ## Result
 
-After writing, report: the file path; the status set; key assumptions and open questions; which checks were run; what the repository owner needs to do to accept the decision.
+After writing, report: the file path; the status set; key assumptions and open questions; which checks were run. Open the report with a summary for a reader without the task context: what was decided, which options were rejected and what changes for the owner, with every code and abbreviation expanded.

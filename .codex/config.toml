@@ -11,4 +11,4 @@ env_http_headers = { Authorization = "CONTEXT7_API_KEY" }
 
 [mcp_servers.chrome-devtools]
 command = "npx"
-args = ["-y", "chrome-devtools-mcp@latest", "--browser-url", "http://127.0.0.1:9222"]
+args = ["-y", "chrome-devtools-mcp@1.12.0", "--browser-url", "http://127.0.0.1:9222"]

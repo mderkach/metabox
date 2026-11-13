@@ -68,7 +68,7 @@ Go through it before handing in a change to the Go part. The checklist items are
 - [ ] For every started goroutine it is clear who stops it and where its error goes.
 - [ ] A resource has one owner; parallel access is closed off by its methods.
 - [ ] Cancellation reaches all steps through `ctx`.
-- [ ] The `-race` run is clean: `go test -race ./...` locally, the same step exists in CI.
+- [ ] A change that starts or touches goroutines was run with `go test -race ./...` locally; `make test` does not enable the detector, CI does.
 
 ## Tests
 

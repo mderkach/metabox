@@ -9,6 +9,8 @@
 | [Forms and validation](./guides/Form&Validation.md)            | React Hook Form + Zod, field path constraints, adapter schemas, generated schemas                              |
 | [Lists and tables](./guides/Tables.md)                         | Table engine, list anatomy, virtualization, sorting, filters, density, states                                  |
 | [Testing](./guides/testing/README.md)                          | Test levels and which one a check belongs to; Vitest unit and browser tests, Playwright e2e scenarios          |
+| [Russian glossary](./guides/Glossary.md)                       | How sing-box and panel terms are written in the Russian dictionaries                                           |
+| [Measuring performance](./guides/Performance.md)               | Measuring before naming a cause, tools, how the mock stand distorts traces                                     |
 | [Code review checklist](./guides/ReviewChecklist.md)           | Consolidated checklist of the rules                                                                            |
 
 Which document to read when: the "When to read the guides" table in [`apps/web/AGENTS.md`](../AGENTS.md). The priority order for conflicts is one for the whole repository, see "Rule sources and their priority" in the root [`AGENTS.md`](../../../AGENTS.md).

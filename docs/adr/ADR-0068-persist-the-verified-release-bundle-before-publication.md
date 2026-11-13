@@ -8,7 +8,7 @@
 
 The release workflow builds and signs a package, then uploads four public files to a GitHub Release: the package, its SHA256 file, the public signing key and the installer. Creating the release and uploading its files are separate requests. A failure can leave an incomplete release, and a retry runs on a fresh runner without the original files. A new signed package is not assumed to be byte-identical to the first one, so comparing existing assets against a rebuild does not provide a reliable retry path.
 
-The package feed is rebuilt from published releases and already excludes drafts ([ADR-0057](./ADR-0057-publish-the-apk-repository-on-github-pages-rebuilt-from-releases.md)). The CI gate for the tagged commit stays in force ([ADR-0054](./ADR-0054-run-ci-checks-as-parallel-jobs-behind-a-summary-job-and-key-the-go-cache-by-the-tool-pins.md)). The private signing key must not enter the release or its recovery artifact.
+The package feed is rebuilt from published releases and already excludes drafts ([ADR-0057](./ADR-0057-publish-the-apk-repository-on-github-pages-rebuilt-from-releases.md)). The CI gate for the tagged commit stays in force ([ADR-0054](./ADR-0054-run-ci-checks-as-parallel-jobs-behind-a-summary-job.md)). The private signing key must not enter the release or its recovery artifact.
 
 ## Decision drivers
 
