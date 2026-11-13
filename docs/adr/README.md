@@ -6,7 +6,7 @@ Requirements live in [`../PRD.md`](../PRD.md). Appendix A of the PRD holds decis
 
 ADRs are created and updated with the `create-adr` skill. The template, statuses and quality checklist are in [the shared ADR reference](../../.agents/skills/create-adr/ADR-reference.md).
 
-The `Accepted` status is set by the repository owner, not by an agent.
+The `Accepted` status is set by the agent: the repository owner delegated acceptance.
 
 ## Index
 

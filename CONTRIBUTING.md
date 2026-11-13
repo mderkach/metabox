@@ -101,6 +101,8 @@ Run commands from the repository root. The exception is the daemon tests: there 
 
 Do not commit anything red.
 
+The browser tests need Chromium (`pnpm --filter web exec playwright install --only-shell chromium`), and the hooks do not run them: CI does.
+
 ## Hooks
 
 `pnpm install` installs the git hooks (lefthook, config in `lefthook.yml`); `make hooks` reinstalls them.
@@ -135,9 +137,15 @@ The description says what changed and why, with links to the PRD or an ADR if th
 
 CI runs on every PR and must be green before the merge. It runs:
 
-- the same checks as `pre-push`, plus the frontend browser tests;
+- the `pre-push` checks plus what needs a clean runner or more time: the frontend browser tests, `go test -race`, the `make daemon` build with the embedded panel, the fork pin check and the release script tests;
 - commitlint over every commit of the PR;
 - an integration run on the test bench: Apply, network reachability, LAN interception.
+
+### Merging
+
+A PR may be merged when CI is green, its description says what was checked by hand (for the panel: in a browser) and what was not, and no review comment is left unanswered. A merge is a squash merge: the PR title becomes the commit header and follows the commit format.
+
+Stacked PRs: before merging a PR whose branch is the base of another open PR (`gh pr list --base <branch>`), retarget that PR to `main` (`gh pr edit <n> --base main`). Delete the merged branch only after that: deleting a base branch closes the PRs on top of it.
 
 ## Project specifics
 
