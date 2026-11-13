@@ -22,9 +22,13 @@ export class ConfigPage {
   }
 
   /** `title` is what the row shows for the rule: its name, or `<conditions> → <target>` without one. */
-  async openRule(title: string, index: number) {
+  ruleRow(title: string, index: number): Locator {
     const name = translate(RULE_TABLE, 'row.label', { title, index });
 
-    await this.rules.getByRole('button', { name, exact: true }).click();
+    return this.rules.getByRole('button', { name, exact: true });
+  }
+
+  async openRule(title: string, index: number) {
+    await this.ruleRow(title, index).click();
   }
 }

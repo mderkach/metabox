@@ -1,6 +1,6 @@
 # ADR-0051. Publish releases from a tag workflow and sign the apk package with the project key
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-14
 - Deciders: repository owner
 - Supersedes: the "package is not signed" rule of [ADR-0011](./ADR-0011-ship-the-daemon-as-an-apk-package.md); the rest of ADR-0011 stays in force

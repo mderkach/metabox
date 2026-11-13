@@ -296,6 +296,22 @@ in_target start
 in_target wait
 in_target expect-up || failed=1
 
+section "16. The service check fails on a broken route, start repairs it"
+if in_target service-check; then
+	check "service check passes on an installed dataplane" 1 = 1
+else
+	check "service check passes on an installed dataplane" 0 = 1
+fi
+in_target route-break
+if in_target service-check 2>/dev/null; then
+	check "service check fails without the local route" 0 = 1
+else
+	check "service check fails without the local route" 1 = 1
+fi
+in_target start
+in_target wait
+in_target expect-up || failed=1
+
 echo
 if [ "$failed" = 1 ]; then
 	echo "FAILED: the dataplane does not behave as required" >&2

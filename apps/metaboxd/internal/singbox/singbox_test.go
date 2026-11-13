@@ -209,6 +209,27 @@ func TestRestartFails(t *testing.T) {
 	}
 }
 
+func TestCheckDataplaneUsesInitScript(t *testing.T) {
+	runner := &fakeRunner{}
+
+	if err := newClient(t, runner).CheckDataplane(t.Context()); err != nil {
+		t.Fatalf("dataplane check: %v", err)
+	}
+
+	want := []string{initScript, "dataplane_check"}
+	if len(runner.calls) != 1 || !slices.Equal(runner.calls[0], want) {
+		t.Errorf("called %v, expected %v", runner.calls, want)
+	}
+}
+
+func TestCheckDataplaneFails(t *testing.T) {
+	runner := &fakeRunner{result: singbox.Result{ExitCode: 1, Stderr: "metabox-singbox: no local route in table 100"}}
+
+	if err := newClient(t, runner).CheckDataplane(t.Context()); err == nil {
+		t.Error("a non-zero dataplane check code taken for success")
+	}
+}
+
 func TestRunning(t *testing.T) {
 	tests := []struct {
 		name     string

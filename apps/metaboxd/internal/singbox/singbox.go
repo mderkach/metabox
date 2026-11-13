@@ -176,6 +176,13 @@ func (c *Client) Reload(ctx context.Context) error {
 	return c.service(ctx, "reload")
 }
 
+// CheckDataplane checks through the init script what nft chains do not show: the fwmark
+// rule, the local route in the dataplane table and the dnsmasq fragment. A disabled or
+// unreadable model passes: the service leaves the dataplane as is then.
+func (c *Client) CheckDataplane(ctx context.Context) error {
+	return c.service(ctx, "dataplane_check")
+}
+
 // Start brings the service up. An already running service is a regular path: the procd
 // init script does not complain about a repeated start.
 func (c *Client) Start(ctx context.Context) error {

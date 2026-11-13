@@ -38,7 +38,7 @@ pre-commit:
       exclude:
         - 'apps/web/src/shared/api/generated.ts'
         - 'apps/web/src/shared/api/daemon.generated.ts'
-      run: pnpm exec oxfmt --check {staged_files}
+      run: pnpm exec oxfmt --check --no-error-on-unmatched-pattern {staged_files}
 
 commit-msg:
   jobs:

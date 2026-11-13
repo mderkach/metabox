@@ -83,8 +83,10 @@ func (e *fakeEditor) counts() (int, int) {
 type fakeReloader struct {
 	gates
 
-	mu    sync.Mutex
-	calls int
+	mu       sync.Mutex
+	calls    int
+	checks   int
+	checkErr error
 }
 
 func (r *fakeReloader) Reload(ctx context.Context) error {
@@ -98,6 +100,15 @@ func (r *fakeReloader) Reload(ctx context.Context) error {
 	r.calls++
 
 	return nil
+}
+
+func (r *fakeReloader) CheckDataplane(context.Context) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	r.checks++
+
+	return r.checkErr
 }
 
 func (r *fakeReloader) count() int {
@@ -568,6 +579,46 @@ func TestPlaneMissingChainsRollBack(t *testing.T) {
 
 	if tx := h.waitPlane(t, apply.PhaseRolledBack); tx.ReasonCode != apply.ReasonInterceptionMissing {
 		t.Errorf("code %q, expected %q", tx.ReasonCode, apply.ReasonInterceptionMissing)
+	}
+}
+
+// The chains stand, but the service misses its route or dnsmasq fragment: interception
+// would silently stop, so the change rolls back.
+func TestPlaneBrokenRoutingRollsBack(t *testing.T) {
+	h := newPlaneHarness(t, nil, validConfig, slog.New(slog.DiscardHandler))
+	t.Cleanup(h.plane.Close)
+	h.reloader.checkErr = errors.New("service dataplane_check: exit code 1, no local route in table 100")
+
+	if _, err := h.plane.Start(t.Context(), aclChange(), "", admin); err != nil {
+		t.Fatalf("dataplane change: %v", err)
+	}
+
+	if tx := h.waitPlane(t, apply.PhaseRolledBack); tx.ReasonCode != apply.ReasonInterceptionMissing {
+		t.Errorf("code %q, expected %q", tx.ReasonCode, apply.ReasonInterceptionMissing)
+	}
+}
+
+// With the model disabled there is no route or fragment to look for.
+func TestPlaneDisabledSkipsRoutingCheck(t *testing.T) {
+	h := newPlaneHarness(t, nil, validConfig, slog.New(slog.DiscardHandler))
+	t.Cleanup(h.plane.Close)
+	h.editor.chains = nil
+	h.reloader.checkErr = errors.New("must not be called")
+
+	m := aclChange()
+	m.Enabled = false
+
+	if _, err := h.plane.Start(t.Context(), m, "", admin); err != nil {
+		t.Fatalf("dataplane change: %v", err)
+	}
+
+	h.waitPlane(t, apply.PhaseAwaitingConfirm)
+
+	h.reloader.mu.Lock()
+	defer h.reloader.mu.Unlock()
+
+	if h.reloader.checks != 0 {
+		t.Errorf("routing checked %d times with the model disabled", h.reloader.checks)
 	}
 }
 

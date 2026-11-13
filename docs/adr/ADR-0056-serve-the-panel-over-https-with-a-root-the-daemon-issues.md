@@ -1,6 +1,6 @@
 # ADR-0056. Serve the panel over HTTPS with a root the daemon issues
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-21
 - Deciders: repository owner
 

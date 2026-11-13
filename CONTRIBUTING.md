@@ -139,7 +139,7 @@ The description says what changed and why, with links to the PRD or an ADR if th
 
 CI runs on every PR and must be green before the merge. It runs:
 
-- the `pre-push` checks plus what needs a clean runner or more time: the frontend browser tests, `go test -race`, the `make daemon` build with the embedded panel, the fork pin check and the tests of the release and requirement link scripts;
+- the `pre-push` checks plus what needs a clean runner or more time: the frontend browser tests and the e2e scenarios on the mock stand, `go test -race`, the `make daemon` build with the embedded panel, the fork pin check and the tests of the release, fork release watch and requirement link scripts;
 - commitlint over every commit of the PR;
 - an integration run on the test bench: Apply, network reachability, LAN interception.
 

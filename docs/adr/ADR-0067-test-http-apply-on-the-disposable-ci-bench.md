@@ -1,6 +1,6 @@
 # ADR-0067. Test HTTP Apply on the disposable CI bench
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-25
 - Deciders: repository owner
 

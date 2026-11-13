@@ -1,6 +1,6 @@
 # ADR-0058. Install on a clean router with a script on top of the apk repository
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-21
 - Deciders: repository owner
 

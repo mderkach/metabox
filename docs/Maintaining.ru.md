@@ -2,7 +2,7 @@
 
 # Сопровождение
 
-Задачи, для которых нужны права владельца репозитория: релизы, ключ подписи, GitHub Pages, правила веток, обновления sing-box-extended. Сборка и стенд — в [`Development.ru.md`](./Development.ru.md).
+Задачи, для которых нужны права владельца репозитория: релизы, ключ подписи, GitHub Pages, правила веток, обновления sing-box-extended и OpenWrt. Сборка и стенд — в [`Development.ru.md`](./Development.ru.md).
 
 ## Релиз
 
@@ -78,6 +78,17 @@ Workflow нужен секрет `FORK_BUMP_TOKEN` — токен с право�
 
 Логика workflow проверяется без сети командой `bash .github/scripts/fork-release-check.test.sh`; её же запускает CI.
 
+### Ревью PR с обновлением
+
+Генератор и панель зависят от внутренностей форка, которые тесты покрывают не полностью. Перед слиянием PR с обновлением пройдите по diff форка из описания PR и проверьте:
+
+- **Типы под тегами сборки.** Какой тип узла требует какой тег сборки, генератор читает из исходников `include/` форка (`tools/schemagen/gates.go`, [ADR-0030](./adr/ADR-0030-read-the-build-composition-from-the-binary-and-the-fork-sources.md)). `TestBuildGates` проверяет известные случаи, а не полноту. Сверьте новые и изменённые строки `//go:build` в `include/` с `BUILD_TAG_OF_TYPE` в diff схемы.
+- **Опции под тегами сборки.** Таблица `optionGates` в `tools/schemagen/optiongates.go` написана вручную. Генерация падает, если перечисленный в ней файл-заглушка переехал или сменил условие, но опцию, которую закрывает новая заглушка, никто не заметит. Для каждой новой заглушки `//go:build !with_*` вне `include/`, которая закрывает опцию конфига, добавьте запись в `optionGates`; после этого проверка типов потребует детектор в `OPTION_FINDERS` (`apps/web/src/entities/Config/model/Config.build.ts`).
+- **`with_purego`.** `SCHEMA_TAGS` в `Makefile` добавляет `with_purego` к `release/DEFAULT_BUILD_TAGS` форка: без него `with_naive_outbound` линкует `libcronet.a` из cronet, который GNU ld в CI отвергает. Схема должна совпадать байт в байт со схемой, сгенерированной без этого тега: на машине, чей линкер принимает cronet (macOS принимает), `make schema SCHEMA_TAGS="$(cat <каталог модуля форка>/release/DEFAULT_BUILD_TAGS)"` не должен менять `generated.ts`. Если форк начнёт регистрировать типы, зависящие от cgo, тег придётся убрать.
+- **`go:linkname` в `common/force_close`.** Форк линкует неэкспортируемые символы `golang.org/x/net/http2` и `net/http` через `//go:linkname`, в вариантах файла для `!go1.27`, `go1.27 && badlinkname` и `go1.27 && !badlinkname` (`badlinkname` приходит из тегов форка). Это внутренние символы Go: когда меняется форк или версия Go в `.go-version`, отсутствующий или устаревший вариант роняет `make test-schemagen` на линковке.
+- **Строковые константы.** `constantStrings` в `tools/schemagen/types.go` читает пакет `constant` форка через `go/parser.ParseDir`, который не учитывает теги сборки (см. исключение в `.golangci.yml`). Это верно, пока от тегов там зависят только булевы константы. Если форк добавит зависящий от тега вариант файла со строковыми константами, переведите функцию на `golang.org/x/tools/go/packages`.
+- **Эндпоинты rule providers.** Rule providers Clash API в форке — заглушка (`experimental/clashapi/ruleprovider.go`): `GET /providers/rules` возвращает пустой список, а любой запрос к `/providers/rules/{name}` отвечает 404. Набор правил `remote` обновляется только по своему `update_interval` или при перезапуске сервиса. Если форк реализует эти эндпоинты, заведите issue на действие обновления на экране наборов правил.
+
 ### Версия, которая ставится на роутеры
 
 Workflow не меняет версию, которая ставится на роутеры и на стенд: она следует за сборкой, проверенной на настоящем роутере. [`install.sh`](../install.sh) закрепляет её в `SINGBOX_VERSION` и `SINGBOX_SHA256` и сверяет скачанный пакет с этим хешем. Чтобы перейти на новую версию, в одном коммите поменяйте:
@@ -93,3 +104,19 @@ gh api repos/shtorm-7/sing-box-extended/releases/tags/v<версия> --jq '.ass
 ```
 
 Решение о скрипте установки — [ADR-0058](./adr/ADR-0058-install-on-a-clean-router-with-a-script-on-top-of-the-apk-repository.md).
+
+## Обновления OpenWrt
+
+Стенд и CI следуют за релизом OpenWrt целевого устройства ([ADR-0023](./adr/ADR-0023-build-the-bench-from-the-device-firmware.md)). Релиз закреплён в нескольких местах; меняйте их одним коммитом:
+
+- `DEVICE_IMAGE_URL` в `.devcontainer/target/device-base/Dockerfile`: sysupgrade-образ прошивки устройства, из которого `make stand-base` извлекает базу стенда;
+- публичный rootfs локального стенда, `openwrt/rootfs:aarch64_generic-<релиз>`: `METABOX_BASE_IMAGE` в `Makefile`, `BASE_IMAGE` в `.devcontainer/docker-compose.yml` и `.devcontainer/target/Dockerfile`, таблица переменных стенда в `docs/Development.md` и `docs/Development.ru.md`;
+- база стенда в CI, `openwrt/rootfs:x86-64-<релиз>`: `METABOX_BASE_IMAGE` задания `integration` в `.github/workflows/ci.yml`.
+
+Перед слиянием проверьте:
+
+- `make stand-base` собирается. Корневая файловая система ищется в sysupgrade-образе по сигнатуре squashfs; если формат образа изменится, сборка упадёт с ошибкой, в которой назван URL образа.
+- Задание CI `integration` проходит на новом rootfs.
+- Новый релиз по-прежнему использует apk: его требуют `install.sh` и пакет. Если меняется поддерживаемая ветка OpenWrt, обновите требования и бейдж в `README.md` и `README.ru.md`.
+
+База извлекается из sysupgrade-образа, потому что OpenWrt не публикует docker-образ для `aarch64_cortex-a53`. Если он появится, замена извлечения — новое решение со своим ADR.

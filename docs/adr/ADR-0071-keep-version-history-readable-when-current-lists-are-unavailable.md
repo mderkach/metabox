@@ -1,6 +1,6 @@
 # ADR-0071. Keep version history readable when current lists are unavailable
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-31
 - Deciders: repository owner
 
