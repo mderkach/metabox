@@ -1,6 +1,6 @@
-# Frontend testing
+# Unit and component tests
 
-Vitest + Testing Library. Application tests run in jsdom; those that need a real browser run in Chromium in the `browser` project ([ADR-0064](../../../../docs/adr/ADR-0064-run-browser-tests-in-a-vitest-browser-project-next-to-jsdom.md)).
+Vitest + Testing Library: components and logic run in jsdom, what needs a real browser runs in Chromium in the `browser` project ([ADR-0064](../../../../../docs/adr/ADR-0064-run-browser-tests-in-a-vitest-browser-project-next-to-jsdom.md)). Which level a test belongs to: [the testing index](./README.md).
 
 ## Layout and naming
 
@@ -36,9 +36,11 @@ Vitest globals are **disabled** (`globals: false`): `describe`, `it`, `expect`, 
 
 ## Tooling rules
 
-`tools/**/*.test.js` runs in the `tooling` Vitest project with the Node environment and no application setup ([ADR-0072](../../../../docs/adr/ADR-0072-test-lint-rules-with-oxlint-in-a-vitest-node-project.md)). Local lint rules use the native `RuleTester` from `oxlint/plugins-dev`, wired to Vitest's `describe` and `it`. Boundary tests parse real imports and use temporary filesystem Public APIs, including creation and removal between checks; they do not mock the AST or filesystem. Run them with `pnpm --filter web exec vitest run --project tooling`.
+`tools/**/*.test.js` runs in the `tooling` Vitest project with the Node environment and no application setup ([ADR-0072](../../../../../docs/adr/ADR-0072-test-lint-rules-with-oxlint-in-a-vitest-node-project.md)). Local lint rules use the native `RuleTester` from `oxlint/plugins-dev`, wired to Vitest's `describe` and `it`. Boundary tests parse real imports and use temporary filesystem Public APIs, including creation and removal between checks; they do not mock the AST or filesystem. Run them with `pnpm --filter web exec vitest run --project tooling`.
 
 ## Methodology
+
+The shared principles are in [`docs/Testing.md`](../../../../../docs/Testing.md). In the panel they mean:
 
 - **Test behaviour, not implementation.** Check the DOM by roles and accessible names, public effects, contracts. The internal state of a component is not a subject of a test.
 - **Mock at the boundaries.** Network, router, third-party widgets. Do not mock our own business logic.
@@ -136,7 +138,7 @@ A set of real `config.json` files is parsed, edited at specific points and compa
 
 ## Browser tests
 
-A test goes to the `browser` project when jsdom cannot reproduce what it checks: Base UI dropdowns and other pointer interactions, layout and sizes, computed styles, accessibility checks by a tool. The rest stays in jsdom: it is faster and needs no browser.
+The `browser` project runs the test file in headless Chromium through `@vitest/browser-playwright`. When a test belongs here rather than in jsdom: [the testing index](./README.md#choosing-a-level).
 
 - The file is `*.browser.test.tsx` next to the jsdom tests of the same slice. It is typed by `tsconfig.browser.json`: the browser mode declares its own matchers, and in one program with `@testing-library/jest-dom` they break the types of jsdom tests.
 - Clicks and typing go through `userEvent` from `vitest/browser`: it drives Playwright, so the click is a real mouse click. `@testing-library/user-event` dispatches synthetic events and is not used here. A dropdown is opened by a click on the trigger and an option is picked by a click on it (`ConfigNodeAddManual.browser.test.tsx`), without `selectOption`.
@@ -162,7 +164,7 @@ Targets, not hard CI gates:
 
 ## Commands
 
-Running tests and the other checks: the table in [`CONTRIBUTING.md`](../../../../CONTRIBUTING.md). Specific to writing tests:
+Running tests and the other checks: the table in [`CONTRIBUTING.md`](../../../../../CONTRIBUTING.md). Specific to writing tests:
 
 ```bash
 pnpm --filter web test:watch     # watch

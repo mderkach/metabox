@@ -336,6 +336,12 @@
           }
         ]
       }
+    },
+    {
+      "files": ["e2e/**"],
+      "rules": {
+        "react/rules-of-hooks": "off"
+      }
     }
   ]
 }

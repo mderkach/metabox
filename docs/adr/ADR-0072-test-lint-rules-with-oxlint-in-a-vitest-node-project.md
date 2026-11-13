@@ -68,7 +68,7 @@ No product behaviour, persisted data or client contract changes; no migration is
 
 - [PRD](../PRD.md), section 9
 - [ADR-0064](./ADR-0064-run-browser-tests-in-a-vitest-browser-project-next-to-jsdom.md): one Vitest runner with separate environments
-- [Unit testing guide](../../apps/web/docs/guides/UnitTesting.md)
+- [Unit testing guide](../../apps/web/docs/guides/testing/Unit.md)
 - [Vitest configuration](../../apps/web/vite.config.ts), [test scripts](../../apps/web/package.json), [rule tests](../../apps/web/tools/fsdBoundaries.test.js)
 - [Issue #163](https://github.com/mderkach/metabox/issues/163)
 - [oxlint: writing tests for custom rules](https://oxc.rs/docs/guide/usage/linter/writing-js-plugins.html#writing-tests-for-custom-rules)

@@ -1,5 +1,7 @@
 # Go testing
 
+The principles shared with the frontend are in [`docs/Testing.md`](../../../../docs/Testing.md); this guide is how the daemon and the generator apply them in Go.
+
 Only `testing` from the standard library. The daemon module has no dependencies besides the MCP SDK and will not get them for assertions: `require` in `go.mod` is a separate decision ([Architecture&Style](./Architecture&Style.md)), and testify itself adds its own dialect on top of the language and breaks the semantics of `t.Fatal` in goroutines. Comparison is a plain `if`, the difference is printed as a message with got and want.
 
 ## Layout

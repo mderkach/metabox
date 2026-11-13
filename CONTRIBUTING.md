@@ -95,6 +95,7 @@ If a commit mixes unrelated changes, split it. Moving or renaming files and chan
 | Format (whole repo)      | `pnpm format:check`                 |
 | Frontend types and build | `pnpm --filter web build`           |
 | Frontend browser tests   | `pnpm --filter web test:browser`    |
+| Frontend e2e scenarios   | `pnpm --filter web test:e2e`        |
 | Everything               | `make test`                         |
 
 Run commands from the repository root. The exception is the daemon tests: there is no Go module at the root, so `go test ./...` works only from `apps/metaboxd`. `pnpm lint` works only from the root: the Tailwind plugin looks for the frontend config relative to the current directory.

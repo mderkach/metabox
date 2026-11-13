@@ -77,7 +77,7 @@ No product behaviour changes. Rollback: remove the `browser` project, the two de
 
 - [PRD](../PRD.md), OQ-6 in 10.1
 - [ADR-0045](./ADR-0045-split-document-and-server-state-and-keep-a-folder-per-project.md): test levels
-- [UnitTesting.md](../../apps/web/docs/guides/UnitTesting.md)
+- [Unit.md](../../apps/web/docs/guides/testing/Unit.md)
 - `apps/web/vite.config.ts`, `apps/web/tsconfig.browser.json`, `.github/workflows/ci.yml`
 - Issue [#37](https://github.com/mderkach/metabox/issues/37)
 - Vitest browser mode: <https://vitest.dev/guide/browser/>

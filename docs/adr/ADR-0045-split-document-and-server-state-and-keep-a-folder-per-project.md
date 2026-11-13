@@ -65,7 +65,7 @@ The build is tied together by the Makefile: the frontend is built before `go bui
 
 ### Scope and boundaries
 
-The stack table matches section 9 of the PRD; the rules for using the tools are in the frontend guides: [StateManagement](../../apps/web/docs/guides/StateManagement.md), [Query](../../apps/web/docs/guides/Query.md), [Form&Validation](../../apps/web/docs/guides/Form&Validation.md), [Tables](../../apps/web/docs/guides/Tables.md), [UnitTesting](../../apps/web/docs/guides/UnitTesting.md).
+The stack table matches section 9 of the PRD; the rules for using the tools are in the frontend guides: [StateManagement](../../apps/web/docs/guides/StateManagement.md), [Query](../../apps/web/docs/guides/Query.md), [Form&Validation](../../apps/web/docs/guides/Form&Validation.md), [Tables](../../apps/web/docs/guides/Tables.md), [UnitTesting](../../apps/web/docs/guides/testing/Unit.md).
 
 ## Consequences
 

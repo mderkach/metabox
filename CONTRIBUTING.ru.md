@@ -95,6 +95,7 @@ build(deps): bump oxlint to 1.80.0
 | Формат (весь репо)      | `pnpm format:check`                 |
 | Типы и сборка фронта    | `pnpm --filter web build`           |
 | Браузерные тесты фронта | `pnpm --filter web test:browser`    |
+| E2E-сценарии фронта     | `pnpm --filter web test:e2e`        |
 | Всё вместе              | `make test`                         |
 
 Команды запускаются из корня репозитория. Исключение — тесты демона: Go-модуля в корне нет, поэтому `go test ./...` работает только из `apps/metaboxd`. `pnpm lint` работает только из корня: плагин Tailwind ищет конфиг фронта от текущего каталога.

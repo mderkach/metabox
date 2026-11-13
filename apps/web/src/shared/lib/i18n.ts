@@ -1,11 +1,8 @@
 import i18next from 'i18next';
 
-export const LANGUAGES = ['ru', 'en'] as const;
+import { FALLBACK_LANGUAGE, LANGUAGES, type Language } from './i18nConfig';
 
-export type Language = (typeof LANGUAGES)[number];
-
-/** Language the source dictionaries are written in: the fallback goes to it too. */
-export const FALLBACK_LANGUAGE: Language = 'ru';
+export { FALLBACK_LANGUAGE, I18N_OPTIONS, LANGUAGES, type Language } from './i18nConfig';
 
 const STORAGE_KEY = 'metabox.language';
 

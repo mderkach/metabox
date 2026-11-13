@@ -13,6 +13,9 @@ dist-ssr
 *.local
 # Failure screenshots of the Vitest browser mode
 .vitest
+# Playwright Test results, traces and report
+/test-results
+/playwright-report
 
 # Editor directories and files
 .vscode/*

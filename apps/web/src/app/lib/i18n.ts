@@ -3,7 +3,7 @@ import resourcesToBackend from 'i18next-resources-to-backend';
 import { initReactI18next } from 'react-i18next';
 import { LOCALE_URLS } from 'virtual:metabox-locales';
 
-import { FALLBACK_LANGUAGE, LANGUAGES, applyDocumentLanguage, detectLanguage } from '@shared/lib/i18n';
+import { I18N_OPTIONS, applyDocumentLanguage, detectLanguage } from '@shared/lib/i18n';
 
 /**
  * Dictionaries are files next to the bundle and arrive over the network: this
@@ -42,13 +42,9 @@ export async function initI18n(): Promise<void> {
     .use(backend)
     .use(initReactI18next)
     .init({
+      ...I18N_OPTIONS,
       lng: language,
-      fallbackLng: FALLBACK_LANGUAGE,
-      supportedLngs: LANGUAGES,
       ns: [],
-      defaultNS: false,
-      // React escapes on its own, a second pass breaks quotes and angle brackets.
-      interpolation: { escapeValue: false },
       react: { useSuspense: true },
     });
 }
