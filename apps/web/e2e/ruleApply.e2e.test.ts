@@ -24,10 +24,10 @@ test(
       await expect(applyBar.dirty).toBeVisible();
     });
 
-    await test.step('the diff shows the name as a comment line', async () => {
+    await test.step('the summary names the rename', async () => {
       await applyBar.apply();
 
-      await expect(applyBar.diff).toContainText(`// ${NAME}`);
+      await expect(applyBar.ruleChanges.getByRole('link', { name: NAME })).toBeVisible();
     });
 
     await test.step('applying opens the confirmation window', async () => {
