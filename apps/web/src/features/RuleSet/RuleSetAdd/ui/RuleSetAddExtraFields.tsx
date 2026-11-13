@@ -56,9 +56,11 @@ export function RuleSetAddExtraFields({ outbounds }: { outbounds: readonly strin
               <div className='flex flex-col gap-1.5'>
                 <Label htmlFor={intervalId}>{t('field.interval.label')}</Label>
                 <Input
+                  ref={field.ref}
                   id={intervalId}
                   value={field.value}
                   onChange={field.onChange}
+                  onBlur={field.onBlur}
                   placeholder={t('field.interval.placeholder')}
                   autoComplete='off'
                   className='font-mono'
@@ -83,10 +85,12 @@ export function RuleSetAddExtraFields({ outbounds }: { outbounds: readonly strin
               <div className='flex flex-col gap-1.5'>
                 <Label htmlFor={detourId}>{t('field.detour.label')}</Label>
                 <Autocomplete
+                  ref={field.ref}
                   id={detourId}
                   items={matchOutbounds(outbounds, field.value)}
                   value={field.value}
                   onValueChange={field.onChange}
+                  onBlur={field.onBlur}
                   placeholder={t('field.detour.placeholder')}
                   autoComplete='off'
                   spellCheck={false}

@@ -38,8 +38,14 @@ export function RuleSetAddFormatField() {
             items={RULE_SET_FORMAT_OPTIONS.map((format) => ({ value: format, label: t(`format.${format}`) }))}
             value={field.value}
             onValueChange={field.onChange}
+            // Opening the list moves focus off the trigger: the field is touched
+            // when the list closes, so a required format is not flagged mid-choice.
+            onOpenChange={(open) => {
+              if (!open) field.onBlur();
+            }}
           >
             <SelectTrigger
+              ref={field.ref}
               id={id}
               aria-describedby={describedBy(hintId, fieldState.error === undefined ? undefined : errorId)}
             >

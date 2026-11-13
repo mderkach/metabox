@@ -34,8 +34,10 @@ export function RuleSetAddAddressField({ catalog }: { catalog: RuleSetCatalog })
         render={({ field, fieldState }) => (
           <>
             <Input
+              ref={field.ref}
               id={id}
               value={field.value}
+              onBlur={field.onBlur}
               placeholder={t('field.url.placeholder')}
               autoComplete='off'
               spellCheck={false}

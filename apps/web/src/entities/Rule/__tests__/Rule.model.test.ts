@@ -32,6 +32,12 @@ describe('newRulePlace', () => {
     expect(newRulePlace(rows, 2, 'direct')).toEqual({ index: 2, outbound: 'direct' });
   });
 
+  it('does not stop at a node the schema rejected: its unknown fields may be conditions', () => {
+    const rows = toRuleRowsFromNodes([{ future_matcher: ['x'], outbound: 'direct' }, { outbound: 'proxy' }]);
+
+    expect(newRulePlace(rows, 2, 'direct')).toEqual({ index: 2, outbound: 'proxy' });
+  });
+
   it('gives no place without an outbound to take', () => {
     expect(newRulePlace([], 0, null)).toBeNull();
   });

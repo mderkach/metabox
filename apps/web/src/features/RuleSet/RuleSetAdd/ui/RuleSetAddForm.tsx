@@ -4,7 +4,13 @@ import { useState } from 'react';
 import { FormProvider, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { ConfigDocumentState, RULE_SETS_PATH } from '@entities/Config';
+import {
+  ConfigDocumentState,
+  ConfigDocumentStore,
+  readRuleSets,
+  RULE_SETS_PATH,
+  selectConfigCurrent,
+} from '@entities/Config';
 import { type RuleSetCatalog } from '@entities/RuleSet';
 import { showQueryError } from '@shared/api';
 import { Button } from '@shared/ui';
@@ -38,7 +44,6 @@ export function RuleSetAddForm({
 }) {
   const { t } = useTranslation('features/RuleSet/RuleSetAdd');
   const insert = ConfigDocumentState.use.insert();
-  const count = takenTags.length;
   // A form that stays on the screen must report its success: the set goes into
   // the draft, and without a table row nearby that is not visible.
   const [added, setAdded] = useState<string | null>(null);
@@ -50,7 +55,11 @@ export function RuleSetAddForm({
   });
 
   const onSubmit = form.handleSubmit((data) => {
-    if (!insert([...RULE_SETS_PATH, count], toRuleSetPatch(data))) {
+    // The end of the list is read from the draft text: sets without a tag are
+    // not in `takenTags`, and counting by them would insert in the middle.
+    const end = readRuleSets(selectConfigCurrent(ConfigDocumentStore.getState()) ?? '').length;
+
+    if (!insert([...RULE_SETS_PATH, end], toRuleSetPatch(data))) {
       showQueryError({ showError: true, errorMessageKey: 'toast.config.edit.failed' }, null);
 
       return;
