@@ -1,13 +1,22 @@
 <!doctype html>
-<!-- Default theme is dark, and the class is set before the script loads:
-     otherwise the first frame is painted with the light palette and the panel
-     flashes white. next-themes picks it up and switches it further. -->
+<!-- Dark by default: the class is set here, and the inline script below applies the stored
+     choice before the first paint. next-themes does the same in its own script, but the panel
+     is rendered on the client, where React never runs that script. -->
 <html lang="ru" class="dark" style="color-scheme: dark">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>metabox</title>
+    <script>
+      try {
+        var theme = localStorage.getItem('theme') || 'dark';
+        var dark = theme === 'system' ? matchMedia('(prefers-color-scheme: dark)').matches : theme !== 'light';
+        var root = document.documentElement;
+        root.className = dark ? 'dark' : 'light';
+        root.style.colorScheme = dark ? 'dark' : 'light';
+      } catch (_) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>
