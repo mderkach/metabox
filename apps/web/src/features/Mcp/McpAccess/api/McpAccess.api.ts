@@ -14,7 +14,13 @@ export function useIssueMcpToken() {
     mutationFn: async () => decodeResponse(MCPTokenSchema, await postMcpToken(), 'mcp token'),
     gcTime: 0,
     meta: { showError: true, errorMessageKey: 'toast.mcp.token.failed' },
-    onSuccess: () => {
+    onSuccess: (issued) => {
+      // The response already says MCP is on: the screen must not wait for a reread that may fail.
+      queryClient.setQueryData(getMcpOptions().queryKey, {
+        enabled: true,
+        endpoint: issued.endpoint,
+        permissions: issued.permissions,
+      });
       void queryClient.invalidateQueries({ queryKey: getMcpOptions().queryKey });
     },
   });

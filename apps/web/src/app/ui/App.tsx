@@ -8,6 +8,10 @@ import { Toaster } from '@shared/ui';
 
 import { AuthGate } from './AuthGate';
 
+// The provider's own script never runs in a client-rendered panel; `index.html` has the working one.
+// A data block type keeps React 19 from logging an error about a script tag on every start.
+const THEME_SCRIPT_PROPS = { type: 'application/json' };
+
 const Panel = lazy(async () => import('./Panel').then(({ Panel }) => ({ default: Panel })));
 
 /** Called only after the panel was shown, so the router module is already loaded. */
@@ -19,7 +23,13 @@ export function App() {
   const { t } = useTranslation('app');
 
   return (
-    <ThemeProvider attribute='class' defaultTheme='dark' enableSystem disableTransitionOnChange>
+    <ThemeProvider
+      attribute='class'
+      defaultTheme='dark'
+      enableSystem
+      disableTransitionOnChange
+      scriptProps={THEME_SCRIPT_PROPS}
+    >
       <QueryClientProvider client={QueryClientInstance}>
         <div className='h-svh overflow-hidden'>
           <AuthGate onLogin={reloadRoutes}>

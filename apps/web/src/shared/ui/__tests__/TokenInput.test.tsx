@@ -9,10 +9,12 @@ function Harness({
   initial = [],
   onChange = vi.fn<(value: string[]) => void>(),
   isValid,
+  lines = false,
 }: {
   initial?: string[];
   onChange?: (value: string[]) => void;
   isValid?: (token: string) => boolean;
+  lines?: boolean;
 }) {
   const [value, setValue] = useState(initial);
 
@@ -22,6 +24,8 @@ function Harness({
       label='Домен'
       value={value}
       isValid={isValid}
+      separator={lines ? /\n/ : undefined}
+      distinct={!lines}
       onValueChange={(next) => {
         setValue(next);
         onChange(next);
@@ -74,6 +78,16 @@ describe('TokenInput', () => {
     expect(screen.getByRole('textbox', { name: 'Домен' })).toHaveValue('c.example');
   });
 
+  it('with a line separator keeps spaces, commas and repeats inside values', async () => {
+    const user = userEvent.setup();
+
+    render(<Harness lines />);
+    await user.click(screen.getByRole('textbox', { name: 'Домен' }));
+    await user.paste('-----BEGIN CERTIFICATE-----\na, b\n-----BEGIN CERTIFICATE-----\n');
+
+    expect(chips()).toEqual(['-----BEGIN CERTIFICATE-----', 'a, b', '-----BEGIN CERTIFICATE-----']);
+  });
+
   it('Backspace in an empty field takes the last chip back for editing', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn<(value: string[]) => void>();
@@ -113,5 +127,22 @@ describe('TokenInput', () => {
 
     expect(port).not.toHaveTextContent('ошибка');
     expect(word).toHaveTextContent('https, ошибка');
+  });
+
+  it('shows the name of a value on its chip before the value itself', () => {
+    render(
+      <TokenInput
+        label='Источник'
+        aria-label='Источник'
+        value={['192.168.1.60/32', '10.0.0.0/8']}
+        onValueChange={vi.fn<(value: string[]) => void>()}
+        tokenLabel={(token) => (token === '192.168.1.60/32' ? 'Ноутбук' : undefined)}
+      />
+    );
+
+    const [device, subnet] = within(screen.getByRole('list', { name: 'Источник: значения' })).getAllByRole('listitem');
+
+    expect(device).toHaveTextContent('Ноутбук 192.168.1.60/32');
+    expect(subnet).toHaveTextContent(/^10\.0\.0\.0\/8$/);
   });
 });

@@ -10,7 +10,7 @@
     "placeholder": "10s, 1m30s"
   },
   "list": {
-    "hint": "One value per line"
+    "hint": "Enter adds a value; a pasted list splits by line"
   },
   "raw": {
     "hint": "Field value as JSON"

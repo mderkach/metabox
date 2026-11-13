@@ -165,7 +165,7 @@ The entity knows the registries: `entities/Config` reads the generated unions an
 | `boolean`  | `z.boolean()`                                                                  | switch and a "reset" button («сбросить») that removes the key |
 | `enum`     | `z.enum()`                                                                     | select; the empty item means no key                           |
 | `literal`  | `z.literal()`: the `type` discriminator                                        | not drawn: the type changes only with a new node              |
-| `list`     | `z.array(z.string())` or listable `z.union([X, z.array(X)])`                   | multiline field, one value per line                           |
+| `list`     | `z.array(z.string())` or listable `z.union([X, z.array(X)])`                   | chips (`TokenInput`): Enter or a pasted line closes a value   |
 | `enumList` | the same over `z.enum()`                                                       | group of switches with multiple selection                     |
 | `scalar`   | union of string and integer (`FwMark`, `UDPTimeoutCompat`)                     | input field; an entry of digits only is written as a number   |
 | `group`    | `z.strictObject()` no deeper than `MAX_DEPTH`                                  | `FieldSet` with `FieldLegend`, collapsed while empty          |
