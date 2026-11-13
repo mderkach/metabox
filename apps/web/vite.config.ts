@@ -16,7 +16,9 @@ const BROWSER_TESTS = 'src/**/*.browser.test.{ts,tsx}';
 
 // Inline projects inherit the root `test` and merge `setupFiles`, so the jsdom setup is
 // given to its projects only: the browser one has no `msw/node` and needs no jsdom stubs.
-const JSDOM_PROJECT = { environment: 'jsdom', setupFiles: './src/test/setup.ts' } as const;
+// The 5 s default fails form and router tests on a loaded machine while each passes alone;
+// 15 s matches what Vitest gives browser tests.
+const JSDOM_PROJECT = { environment: 'jsdom', setupFiles: './src/test/setup.ts', testTimeout: 15_000 } as const;
 
 // FSD layers; the same list is in `paths` of both tsconfigs.
 const LAYERS = ['app', 'pages', 'widgets', 'features', 'entities', 'shared'];
@@ -215,6 +217,8 @@ export default defineConfig({
     },
   },
   test: {
+    // A local run shares the machine with the dev server and parallel agents; a CI runner is free.
+    maxWorkers: process.env.CI === 'true' ? undefined : '50%',
     // Budget measurements run as a separate group after the rest, one file at a time:
     // parallel neighbours take the CPU, and the measurement on a CI runner goes over the threshold.
     projects: [
