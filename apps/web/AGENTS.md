@@ -14,7 +14,7 @@ A guide is read by the condition from the table, **in full** and before making a
 | write a fetch function, a query key, a query hook or a mutation  | [Query.md](./docs/guides/Query.md)                                                                        |
 | write a form or a Zod schema                                     | [Form&Validation.md](./docs/guides/Form&Validation.md)                                                    |
 | create or change a list, a table, its columns and filtering      | [Tables.md](./docs/guides/Tables.md)                                                                      |
-| write or edit tests                                              | [UnitTesting.md](./docs/guides/UnitTesting.md)                                                            |
+| write or edit tests                                              | [Unit.md](./docs/guides/testing/Unit.md)                                                                  |
 | hand in a frontend change                                        | [ReviewChecklist.md](./docs/guides/ReviewChecklist.md): go through the checklist                          |
 
 ## Changes in `apps/web/`

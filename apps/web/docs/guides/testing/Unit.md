@@ -1,6 +1,6 @@
 # Frontend testing
 
-Vitest + Testing Library. Application tests run in jsdom; those that need a real browser run in Chromium in the `browser` project ([ADR-0064](../../../../docs/adr/ADR-0064-run-browser-tests-in-a-vitest-browser-project-next-to-jsdom.md)).
+Vitest + Testing Library. Application tests run in jsdom; those that need a real browser run in Chromium in the `browser` project ([ADR-0064](../../../../../docs/adr/ADR-0064-run-browser-tests-in-a-vitest-browser-project-next-to-jsdom.md)).
 
 ## Layout and naming
 
@@ -36,7 +36,7 @@ Vitest globals are **disabled** (`globals: false`): `describe`, `it`, `expect`, 
 
 ## Tooling rules
 
-`tools/**/*.test.js` runs in the `tooling` Vitest project with the Node environment and no application setup ([ADR-0072](../../../../docs/adr/ADR-0072-test-lint-rules-with-oxlint-in-a-vitest-node-project.md)). Local lint rules use the native `RuleTester` from `oxlint/plugins-dev`, wired to Vitest's `describe` and `it`. Boundary tests parse real imports and use temporary filesystem Public APIs, including creation and removal between checks; they do not mock the AST or filesystem. Run them with `pnpm --filter web exec vitest run --project tooling`.
+`tools/**/*.test.js` runs in the `tooling` Vitest project with the Node environment and no application setup ([ADR-0072](../../../../../docs/adr/ADR-0072-test-lint-rules-with-oxlint-in-a-vitest-node-project.md)). Local lint rules use the native `RuleTester` from `oxlint/plugins-dev`, wired to Vitest's `describe` and `it`. Boundary tests parse real imports and use temporary filesystem Public APIs, including creation and removal between checks; they do not mock the AST or filesystem. Run them with `pnpm --filter web exec vitest run --project tooling`.
 
 ## Methodology
 
@@ -162,7 +162,7 @@ Targets, not hard CI gates:
 
 ## Commands
 
-Running tests and the other checks: the table in [`CONTRIBUTING.md`](../../../../CONTRIBUTING.md). Specific to writing tests:
+Running tests and the other checks: the table in [`CONTRIBUTING.md`](../../../../../CONTRIBUTING.md). Specific to writing tests:
 
 ```bash
 pnpm --filter web test:watch     # watch
