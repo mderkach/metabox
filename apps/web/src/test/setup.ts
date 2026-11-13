@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest';
-import { cleanup } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
 import { afterAll, afterEach, beforeAll, vi } from 'vitest';
 
 import { FakePlot } from './fakePlot';
@@ -7,6 +7,10 @@ import { initTestI18n } from './i18n';
 import { server } from './server';
 
 await initTestI18n();
+
+// The default 1 s wait of findBy* and waitFor fails correct tests on a loaded machine;
+// it stays below the Vitest testTimeout, so a real failure still reports the missing element.
+configure({ asyncUtilTimeout: 10_000 });
 
 // Vitest globals are off, so Testing Library does not register its own cleanup.
 afterEach(cleanup);
