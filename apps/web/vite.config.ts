@@ -26,7 +26,7 @@ const MOCK_ENTRY = '/mocks/enable.ts';
 const WORKER_PATH = '/mockServiceWorker.js';
 
 /**
- * Mocks of missing daemon endpoints. Enabled by `METABOX_MOCK=missing|all` and live
+ * Daemon mocks. Enabled by `METABOX_MOCK=all` and live
  * only on the dev server: `apply: 'serve'` keeps the plugin out of the build,
  * so a substituted entry never ends up in `dist`.
  *
@@ -38,9 +38,7 @@ const WORKER_PATH = '/mockServiceWorker.js';
  * `public/` would go into `dist`, and from there via `go:embed` into the daemon binary.
  */
 function metaboxMocks(): Plugin | false {
-  const mode = process.env.METABOX_MOCK;
-
-  if (mode !== 'missing' && mode !== 'all') {
+  if (process.env.METABOX_MOCK !== 'all') {
     return false;
   }
 
@@ -49,7 +47,6 @@ function metaboxMocks(): Plugin | false {
     apply: 'serve',
     config: () => ({
       define: {
-        __METABOX_MOCK__: JSON.stringify(mode),
         __METABOX_MOCK_CONNECTIONS__: JSON.stringify(Number(process.env.METABOX_MOCK_CONNECTIONS ?? 0)),
       },
     }),

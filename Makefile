@@ -9,7 +9,7 @@ LDFLAGS    := -s -w -X metabox/internal/version.Version=$(VERSION) -X metabox/in
 # Pins the version down: the `go` directive in go.mod raises it but does not lower it.
 export GOTOOLCHAIN := go$(shell cat .go-version)
 
-.PHONY: all schema schema-daemon rule-set-snapshot web embed daemon daemon-device daemon-target ldflags dev dev-mock dev-mock-missing test test-schemagen singbox-pin-check lint hooks clean up up-dev down sh target-sh apply-check reach-check dataplane-check package stand-base stand-reset
+.PHONY: all schema schema-daemon rule-set-snapshot web embed daemon daemon-device daemon-target ldflags dev dev-mock test test-schemagen singbox-pin-check lint hooks clean up up-dev down sh target-sh apply-check reach-check dataplane-check package stand-base stand-reset
 
 all: daemon
 
@@ -70,9 +70,6 @@ dev:
 
 dev-mock:
 	pnpm --filter web dev:mock
-
-dev-mock-missing:
-	pnpm --filter web dev:mock-missing
 
 test:
 	cd apps/metaboxd && go test ./...
