@@ -20,3 +20,5 @@ A check goes to the lowest level that can show the defect: lower levels are fast
 - **An e2e scenario** for a user flow that crosses screens, the draft and the Apply cycle, or the router, when no component test can show it broken: editing a rule and applying it, a rollback after a missed confirmation, a route that loses the draft.
 
 A check that moves down a level is removed from the level above, so one behaviour has one test.
+
+A change visible in the panel is also gone through in a browser before the PR, by an e2e scenario or by hand: the rule is in [`apps/web/AGENTS.md`](../../../AGENTS.md).
