@@ -286,5 +286,6 @@ apk del metaboxd
 - [`docs/adr/`](./docs/adr/README.md) — архитектурные решения
 - [`docs/Development.ru.md`](./docs/Development.ru.md) — сборка из исходников, стенд, команды
 - [`CONTRIBUTING.ru.md`](./CONTRIBUTING.ru.md) — как прислать изменение
+- [`docs/Testing.md`](./docs/Testing.md) — общие принципы тестирования всех проектов
 - [`apps/metaboxd/docs/guides/`](./apps/metaboxd/docs/guides/README.md) — гайды демона
 - [`apps/web/docs/`](./apps/web/docs/README.md) — гайды фронтенда

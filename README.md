@@ -286,5 +286,6 @@ Stopping `metabox-singbox` removes interception: the nftables rules, the `ip rul
 - [`docs/adr/`](./docs/adr/README.md): architecture decisions
 - [`docs/Development.md`](./docs/Development.md): build from source, test bench, commands
 - [`CONTRIBUTING.md`](./CONTRIBUTING.md): how to send a change
+- [`docs/Testing.md`](./docs/Testing.md): testing principles shared by all projects
 - [`apps/metaboxd/docs/guides/`](./apps/metaboxd/docs/guides/README.md): daemon guides
 - [`apps/web/docs/`](./apps/web/docs/README.md): frontend guides
