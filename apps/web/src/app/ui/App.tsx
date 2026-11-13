@@ -1,16 +1,18 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { RouterProvider } from '@tanstack/react-router';
 import { ThemeProvider } from 'next-themes';
+import { lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { QueryClientInstance } from '@shared/api';
 import { Toaster } from '@shared/ui';
 
-import { Router } from '../router/Router';
 import { AuthGate } from './AuthGate';
 
+const Panel = lazy(async () => import('./Panel').then(({ Panel }) => ({ default: Panel })));
+
+/** Called only after the panel was shown, so the router module is already loaded. */
 function reloadRoutes() {
-  void Router.invalidate();
+  void import('../router/Router').then(async ({ Router }) => Router.invalidate());
 }
 
 export function App() {
@@ -21,7 +23,9 @@ export function App() {
       <QueryClientProvider client={QueryClientInstance}>
         <div className='h-svh overflow-hidden'>
           <AuthGate onLogin={reloadRoutes}>
-            <RouterProvider router={Router} />
+            <Suspense fallback={null}>
+              <Panel />
+            </Suspense>
           </AuthGate>
         </div>
         {/* At the top: the apply and interception bars hold the bottom edge with their buttons. */}
