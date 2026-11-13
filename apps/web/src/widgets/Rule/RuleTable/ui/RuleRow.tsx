@@ -3,6 +3,7 @@ import { memo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { isNamedRuleAction, RULE_TARGET, type RuleRow as RuleRowModel } from '@entities/Rule';
+import { ROW_FOCUS } from '@shared/lib/rowFocus';
 import { cn } from '@shared/lib/utils';
 import { Badge, Tooltip, TooltipContent, TooltipTrigger } from '@shared/ui';
 
@@ -79,6 +80,7 @@ function RuleRowProto({
         >
           <TooltipTrigger
             type='button'
+            {...ROW_FOCUS}
             aria-pressed={selected}
             // The button spans the row, so its name is the row name. The number
             // alone is not enough: it overlaps the content, and the rule sounds like

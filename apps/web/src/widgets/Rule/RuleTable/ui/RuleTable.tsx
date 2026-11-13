@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useRuleTitle, type RuleRow as RuleRowModel } from '@entities/Rule';
+import { moveRowFocus } from '@shared/lib/rowFocus';
 import { cn } from '@shared/lib/utils';
 import { SURFACE } from '@shared/ui';
 
@@ -177,10 +178,13 @@ export function RuleTable({
       {rules.length === 0 ? (
         <div className='flex grow items-center justify-center px-4 py-10 text-center'>{empty}</div>
       ) : (
+        // The arrow keys move between the row buttons: a list handler on the table, as on any list.
+        // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- see above
         <div
           ref={scrollRef}
           data-virtual-viewport=''
           role='table'
+          onKeyDown={moveRowFocus}
           aria-label={t('label')}
           aria-rowcount={rules.length + HEADER_ROWS}
           className='min-h-0 grow overflow-y-auto'

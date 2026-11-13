@@ -4,19 +4,21 @@ import { describe, expect, it, vi } from 'vitest';
 import { SHORTCUT, useShortcuts } from '../shortcuts';
 
 function Screen({
+  onHelp,
   onAdd = vi.fn<() => void>(),
   onApply = vi.fn<() => void>(),
   addDisabled = false,
   applyHidden = false,
   dialog = false,
 }: {
+  onHelp?: () => void;
   onAdd?: () => void;
   onApply?: () => void;
   addDisabled?: boolean;
   applyHidden?: boolean;
   dialog?: boolean;
 }) {
-  useShortcuts();
+  useShortcuts(onHelp);
 
   return (
     <>
@@ -113,5 +115,34 @@ describe('useShortcuts', () => {
     press({ key: 'n', code: 'KeyN' });
 
     expect(onAdd).not.toHaveBeenCalled();
+  });
+
+  it('? opens the shortcut list and does not take the search behind the same key', () => {
+    const onHelp = vi.fn<() => void>();
+
+    render(<Screen onHelp={onHelp} />);
+
+    expect(press({ key: '?', code: 'Slash', shiftKey: true })).toBe(false);
+    press({ key: ',', code: 'Slash', shiftKey: true });
+
+    expect(onHelp).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole('textbox', { name: 'Поиск' })).not.toHaveFocus();
+  });
+
+  it('? is a typed character in a text field and does nothing over an open dialog', () => {
+    const onHelp = vi.fn<() => void>();
+
+    const { rerender } = render(<Screen onHelp={onHelp} />);
+    const name = screen.getByRole('textbox', { name: 'Имя' });
+
+    name.focus();
+
+    expect(press({ key: '?', code: 'Slash', shiftKey: true }, name)).toBe(true);
+
+    name.blur();
+    rerender(<Screen onHelp={onHelp} dialog />);
+    press({ key: '?', code: 'Slash', shiftKey: true });
+
+    expect(onHelp).not.toHaveBeenCalled();
   });
 });

@@ -8,7 +8,7 @@ import {
 } from '@tanstack/react-router';
 import { finishApplyBarTransition } from '@test/applyBar';
 import { server } from '@test/server';
-import { act, render, screen, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -200,5 +200,27 @@ describe('AppLayout', () => {
     expect(within(nav).getByRole('button', { name: 'Ещё' })).toBeInTheDocument();
     // The bar is in flow after `main`, not over it: the screen under it is not hidden.
     expect(screen.getByRole('main').compareDocumentPosition(nav) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('? opens the list of keyboard shortcuts, Escape closes it', async () => {
+    serveDaemon();
+
+    const user = userEvent.setup();
+
+    renderAppLayout();
+    await screen.findByText('Экран содержимого');
+
+    await user.keyboard('?');
+
+    const help = await screen.findByRole('dialog', { name: 'Сочетания клавиш' });
+
+    expect(within(help).getByText('Поиск по списку на экране')).toBeInTheDocument();
+    expect(within(help).getByText('Показать этот список')).toBeInTheDocument();
+
+    await user.keyboard('{Escape}');
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
   });
 });

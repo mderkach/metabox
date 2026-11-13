@@ -1,5 +1,5 @@
 import { Outlet } from '@tanstack/react-router';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ConfigApplyBar } from '@features/Config/ConfigApply';
@@ -10,6 +10,7 @@ import { AppSidebar, AppSidebarBottomNav } from '@widgets/AppSidebar';
 
 import { useConfigLeaveGuard } from '../lib/useConfigLeaveGuard';
 import { useRuntimeStreams } from '../lib/useRuntimeStreams';
+import { AppShortcutHelp } from './AppShortcutHelp';
 import { DaemonBanner } from './DaemonBanner';
 import { DeviceRouteLayer } from './DeviceRouteLayer';
 
@@ -26,7 +27,11 @@ const SKIP_LINK_CLASS =
 export function AppLayout() {
   useRuntimeStreams();
   useConfigLeaveGuard();
-  useShortcuts();
+  const [help, setHelp] = useState(false);
+  const openHelp = useCallback(() => {
+    setHelp(true);
+  }, []);
+  useShortcuts(openHelp);
   const { t } = useTranslation('app');
   const narrow = useNarrowScreen();
   const [applySpace, setApplySpace] = useState(0);
@@ -65,6 +70,7 @@ export function AppLayout() {
         </div>
       </div>
       {narrow && <AppSidebarBottomNav />}
+      <AppShortcutHelp open={help} onOpenChange={setHelp} />
     </div>
   );
 }

@@ -11,6 +11,7 @@ export const SHORTCUT = {
   Search: '/',
   Add: 'N',
   Apply: 'Control+S Meta+S',
+  Help: '?',
 } as const;
 
 /**
@@ -67,11 +68,18 @@ function isEnabled(element: HTMLElement): boolean {
   return !element.matches(':disabled') && element.getAttribute('aria-disabled') !== 'true';
 }
 
+function openDialogs(): Element[] {
+  return [...document.querySelectorAll('[role="dialog"][aria-modal="true"],[role="alertdialog"]')];
+}
+
 /** An open modal dialog owns the keyboard: a control behind it is not reachable by a click either. */
 function isReachable(element: HTMLElement): boolean {
-  const dialogs = document.querySelectorAll('[role="dialog"][aria-modal="true"],[role="alertdialog"]');
+  return openDialogs().every((dialog) => dialog.contains(element));
+}
 
-  return [...dialogs].every((dialog) => dialog.contains(element));
+/** `?` is Shift with the slash key on most layouts: it must not reach the search behind `/`. */
+function isHelpKey(event: KeyboardEvent): boolean {
+  return event.key === SHORTCUT.Help || (event.shiftKey && event.code === 'Slash');
 }
 
 function findTarget(shortcut: string): HTMLElement | undefined {
@@ -88,51 +96,73 @@ function findTarget(shortcut: string): HTMLElement | undefined {
  * Runs the shortcuts declared on screen with `aria-keyshortcuts`: a field gets
  * focus with its text selected, any other control a click. A shortcut without
  * a modifier is a typed character while focus is in a text field, and is left
- * to the field.
+ * to the field. `?` has no control on screen: it calls `onHelp`, unless a
+ * dialog is already open.
  */
-export function useShortcuts() {
-  useEffect(function runShortcuts() {
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.defaultPrevented || event.isComposing || event.repeat) {
-        return;
-      }
-
-      const shortcuts = toShortcuts(event);
-      const plain = !event.ctrlKey && !event.metaKey && !event.altKey;
-
-      if (plain && isTypingFocused()) {
-        return;
-      }
-
-      const target = shortcuts.map(findTarget).find((element) => element !== undefined);
-
-      if (target === undefined) {
-        if (shortcuts.some((shortcut) => SWALLOWED.has(shortcut))) {
-          event.preventDefault();
+export function useShortcuts(onHelp?: () => void) {
+  useEffect(
+    function runShortcuts() {
+      function onKeyDown(event: KeyboardEvent) {
+        if (event.defaultPrevented || event.isComposing || event.repeat) {
+          return;
         }
 
-        return;
+        const shortcuts = toShortcuts(event);
+        const plain = !event.ctrlKey && !event.metaKey && !event.altKey;
+
+        if (plain && isTypingFocused()) {
+          return;
+        }
+
+        if (isHelpKey(event)) {
+          if (onHelp !== undefined && openDialogs().length === 0) {
+            event.preventDefault();
+            onHelp();
+          }
+
+          return;
+        }
+
+        const target = shortcuts.map(findTarget).find((element) => element !== undefined);
+
+        if (target === undefined) {
+          if (shortcuts.some((shortcut) => SWALLOWED.has(shortcut))) {
+            event.preventDefault();
+          }
+
+          return;
+        }
+
+        event.preventDefault();
+
+        if (target instanceof HTMLInputElement) {
+          target.focus();
+          target.select();
+        } else {
+          target.click();
+        }
       }
 
-      event.preventDefault();
+      document.addEventListener('keydown', onKeyDown);
 
-      if (target instanceof HTMLInputElement) {
-        target.focus();
-        target.select();
-      } else {
-        target.click();
-      }
-    }
-
-    document.addEventListener('keydown', onKeyDown);
-
-    return function stopShortcuts() {
-      document.removeEventListener('keydown', onKeyDown);
-    };
-  }, []);
+      return function stopShortcuts() {
+        document.removeEventListener('keydown', onKeyDown);
+      };
+    },
+    [onHelp]
+  );
 }
 
 /** Apple keyboards name the command key, others the control key. */
 export function isApplePlatform(): boolean {
   return /Mac|iPhone|iPad/.test(navigator.platform);
+}
+
+/** `Control+S Meta+S` → `⌘S` on Apple keyboards, `Ctrl S` elsewhere. */
+export function toShortcutLabel(shortcuts: string): string {
+  const apple = isApplePlatform();
+  const shortcut =
+    shortcuts.split(' ').find((one) => (apple ? !one.startsWith('Control+') : !one.startsWith('Meta+'))) ?? shortcuts;
+
+  return apple ? shortcut.replace('Meta+', '⌘') : shortcut.replace('Control+', 'Ctrl ');
 }

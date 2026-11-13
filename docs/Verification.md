@@ -39,6 +39,10 @@ File and Check are written in backticks, except a manual scenario.
 | AC-47 | vitest | `apps/web/src/features/Config/ConfigNodeAdd/__tests__/ConfigNodeAdd.model.test.ts`        | `marks a type whose tag is not in the build, and does not mark a type without a gate`    |
 | AC-77 | vitest | `apps/web/src/pages/Settings/__tests__/SettingsPage.test.tsx`                             | `shows access, agents and system as sections of one screen`                              |
 | AC-77 | vitest | `apps/web/src/widgets/AppSidebar/__tests__/AppSidebar.test.tsx`                           | `leads to the settings screen instead of keeping password and MCP buttons in the footer` |
+| AC-90 | vitest | `apps/web/src/shared/lib/__tests__/shortcuts.test.tsx`                                    | `? opens the shortcut list and does not take the search behind the same key`             |
+| AC-90 | vitest | `apps/web/src/pages/Section/__tests__/SectionPage.test.tsx`                               | `the arrow keys move between node rows and Enter opens the row in focus`                 |
+| AC-90 | vitest | `apps/web/src/pages/Editor/__tests__/EditorPage.test.tsx`                                 | `the arrow keys move between rule rows and Enter opens the rule in focus`                |
+| AC-90 | e2e    | `apps/web/e2e/keyboard.e2e.test.ts`                                                       | `moves through the list and the node panel from the keyboard`                            |
 | NFR-2 | vitest | `apps/web/src/pages/Connections/__tests__/ConnectionsPage.budget.test.tsx`                | `a snapshot tick of 5000 connections fits the budget while closed ones are hidden`       |
 | NFR-2 | vitest | `apps/web/src/widgets/ConnectionTable/__tests__/ConnectionTable.budget.test.ts`           | `parses a snapshot of 5000 connections within the budget`                                |
 | NFR-2 | bench  | `apps/metaboxd/internal/events/connections_test.go`                                       | `BenchmarkConnectionsSnapshot5000`                                                       |

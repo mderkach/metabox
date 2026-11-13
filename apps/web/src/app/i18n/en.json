@@ -26,5 +26,19 @@
   },
   "toasts": {
     "label": "Notifications"
+  },
+  "shortcuts": {
+    "title": "Keyboard shortcuts",
+    "description": "They work when focus is not in a text field.",
+    "keys": {
+      "search": "Search the list on screen",
+      "add": "Add an item: a rule, a rule set, a node",
+      "apply": "Open the summary of changes before Apply",
+      "rows": "Move between list rows",
+      "nodes": "On the title of an open node: the neighbouring node",
+      "open": "Open the row in focus",
+      "close": "Close the panel or the dialog",
+      "help": "Show this list"
+    }
   }
 }

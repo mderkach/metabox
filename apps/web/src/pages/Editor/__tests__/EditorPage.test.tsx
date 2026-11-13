@@ -185,6 +185,23 @@ describe('rules screen', () => {
     expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
   });
 
+  it('the arrow keys move between rule rows and Enter opens the rule in focus', async () => {
+    const user = userEvent.setup();
+
+    renderWithRouter(EditorPage);
+
+    (await screen.findByRole('button', { name: /, правило 1(,|$)/ })).focus();
+    await user.keyboard('{ArrowDown}{ArrowDown}{ArrowUp}');
+
+    expect(screen.getByRole('button', { name: /, правило 2(,|$)/ })).toHaveFocus();
+
+    await user.keyboard('{Enter}');
+
+    const panel = await screen.findByRole('complementary');
+
+    expect(within(panel).getByText('Правило 2', { selector: 'p' })).toBeInTheDocument();
+  });
+
   it('focus moves into the panel, and Escape closes it and returns focus to the row', async () => {
     const user = userEvent.setup();
 
