@@ -2,12 +2,10 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { ProxyGroup } from '@entities/Proxy';
-import { useTestProxyDelay } from '@features/Proxy/ProxyDelay';
 import { useSelectProxy } from '@features/Proxy/ProxySelect';
 import { cn } from '@shared/lib/utils';
 import {
   Badge,
-  Button,
   Card,
   CardAction,
   CardContent,
@@ -18,6 +16,8 @@ import {
 } from '@shared/ui';
 
 import { toGroupLabel } from './ProxyGroupLabel';
+import { ProxyGroupManualChoice } from './ProxyGroupManualChoice';
+import { ProxyNodesTest } from './ProxyNodesTest';
 import { ProxyNodeTile } from './ProxyNodeTile';
 
 export function ProxyGroupCard({
@@ -31,10 +31,9 @@ export function ProxyGroupCard({
 }) {
   const { t } = useTranslation('widgets/ProxyGroups');
   const select = useSelectProxy();
-  const delay = useTestProxyDelay();
   const kind = toGroupLabel(t, group.type);
   const active = group.nodes.find((node) => node.selected) ?? null;
-  const testing = delay.isPending && delay.variables === group.name;
+  const names = group.nodes.map((node) => node.name);
 
   const onSelect = useCallback(
     (node: string) => {
@@ -63,29 +62,19 @@ export function ProxyGroupCard({
           {t('count.node', { ns: 'shared', count: group.nodes.length })}
         </CardDescription>
         <CardAction>
-          {/* The name distinguishes three identical buttons on the screen: from the keyboard in a row
-              come "Check", "Check", "Check", and which belongs to which is
-              unknown. The label during measurement changes only on its own
-              card: there is one mutation per screen, and it works with one group. */}
-          <Button
-            variant='outline'
-            size='sm'
-            disabled={delay.isPending}
-            aria-label={t('card.testGroup', { group: group.name })}
-            onClick={() => {
-              delay.mutate(group.name, {
-                onSuccess: () => {
-                  onTested(group.name);
-                },
-              });
+          <ProxyNodesTest
+            names={names}
+            label={t('card.testGroup', { group: group.name })}
+            onTested={() => {
+              onTested(group.name);
             }}
-          >
-            {testing ? t('delay.testing', { ns: 'shared' }) : t('delay.test', { ns: 'shared' })}
-          </Button>
+          />
         </CardAction>
       </CardHeader>
 
       <CardContent className='flex flex-col gap-3'>
+        {!group.selectable && <ProxyGroupManualChoice group={group.name} />}
+
         {/* The selected node already carries an edge and a checkmark: the row is needed only
             when there is no selected one and nothing to mark. */}
         {active === null && <p className='text-xs text-muted-foreground'>{t('card.none')}</p>}

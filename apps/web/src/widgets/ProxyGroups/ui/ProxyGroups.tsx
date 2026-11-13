@@ -7,6 +7,7 @@ import {
   AlertDescription,
   AlertTitle,
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -16,6 +17,7 @@ import {
 
 import { ProxyGroupCard } from './ProxyGroupCard';
 import { ProxyGroupsLegend } from './ProxyGroupsLegend';
+import { ProxyNodesTest } from './ProxyNodesTest';
 import { ProxyNodeTile } from './ProxyNodeTile';
 
 const NO_OP = () => undefined;
@@ -31,6 +33,7 @@ export function ProxyGroups({
   nodes,
   onSelected,
   onTested,
+  onTestedOutbounds,
 }: {
   groups: ProxyGroup[];
   nodes: ProxyNode[];
@@ -38,6 +41,8 @@ export function ProxyGroups({
   onSelected: (group: string, node: string) => void;
   /** The group latency measurement passed. */
   onTested: (group: string) => void;
+  /** The latency measurement of the outbounds passed: the config has no groups. */
+  onTestedOutbounds: () => void;
 }) {
   const { t } = useTranslation('widgets/ProxyGroups');
   if (groups.length > 0) {
@@ -69,6 +74,13 @@ export function ProxyGroups({
             <h3>{t('empty.outbounds')}</h3>
           </CardTitle>
           <CardDescription>{nodes.length}</CardDescription>
+          <CardAction>
+            <ProxyNodesTest
+              names={nodes.map((node) => node.name)}
+              label={t('empty.testOutbounds')}
+              onTested={onTestedOutbounds}
+            />
+          </CardAction>
         </CardHeader>
         <CardContent className='flex flex-col gap-3'>
           <ProxyGroupsLegend />

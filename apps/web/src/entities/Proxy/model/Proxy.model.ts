@@ -36,6 +36,16 @@ export interface ProxyNode {
   selected: boolean;
 }
 
+/**
+ * Result of a probe the panel ran. The fork answers a node that did not respond
+ * with an error status and drops its history instead of storing `65535`, so a
+ * failure is known only from the probe itself.
+ */
+export interface ProbeOutcome {
+  name: string;
+  failed: boolean;
+}
+
 export interface ProxyGroup {
   name: string;
   type: string;

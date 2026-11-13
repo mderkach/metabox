@@ -51,7 +51,7 @@ describe('latency batches', () => {
     render(
       <QueryClientProvider client={queryClient}>
         {kind === 'groups' ? (
-          <ProxyTestAll groups={GROUPS} onTested={onTested} />
+          <ProxyTestAll groups={GROUPS} nodes={[]} onTested={onTested} />
         ) : (
           <ProxyLatency onTested={onTested} />
         )}

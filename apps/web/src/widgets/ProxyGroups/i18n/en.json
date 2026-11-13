@@ -2,7 +2,8 @@
   "empty": {
     "title": "There are no groups in the config — that is a working setup",
     "description": "Rules point straight at outbounds. To switch the exit on the fly, the config needs a selector group.",
-    "outbounds": "Config outbounds"
+    "outbounds": "Config outbounds",
+    "testOutbounds": "Test the config outbounds"
   },
   "card": {
     "manual": "you pick the node",
@@ -19,5 +20,14 @@
     "label": "Delay colour",
     "fast": "up to {{value}} ms",
     "slow": "over {{value}} ms"
+  },
+  "auto": {
+    "reason": "sing-box picks the node of this group by itself, so it cannot be switched here.",
+    "hint": "Manual choice puts a selector in front of the group in the draft. Until you pick a node, traffic goes the same way.",
+    "action": "Add manual choice",
+    "actionLabel": "Add manual choice over group {{group}}",
+    "added": "Manual choice is in the draft. After Apply you can pick the node of this group here.",
+    "refused": "The draft could not be changed safely here. Add a selector in the editor, in the Outbounds section.",
+    "wrapped": "A manual-choice group in front of this one already picks its node by hand."
   }
 }

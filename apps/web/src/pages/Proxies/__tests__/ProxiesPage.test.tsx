@@ -5,20 +5,50 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { ConfigDocumentStore, readSectionNodes, selectConfigCurrent } from '@entities/Config';
+import { configHandlers } from '@entities/Config/__tests__/Config.handlers';
 import { PROXY_ENDPOINT } from '@entities/Proxy';
-import { CLASH_PROVIDERS_FIXTURE } from '@entities/Proxy/__tests__/Proxy.fixture';
+import { CLASH_PROVIDERS_FIXTURE, CLASH_PROXIES_FIXTURE } from '@entities/Proxy/__tests__/Proxy.fixture';
 import { proxyHandlers } from '@entities/Proxy/__tests__/Proxy.handlers';
 import { formatDateTime } from '@shared/lib/format';
 
 import { ProxiesPage } from '../ui/ProxiesPage';
 
 function serveProxies() {
-  server.use(...proxyHandlers);
+  server.use(...proxyHandlers, ...configHandlers);
+}
+
+/** Records which nodes were probed; `failing` answer as the fork does when a node is silent. */
+function serveProbes(failing: readonly string[] = []) {
+  const probed: string[] = [];
+
+  server.use(
+    http.get(PROXY_ENDPOINT.proxyDelay('*'), ({ request }) => {
+      const name = decodeURIComponent(new URL(request.url).pathname.split('/').at(-2) ?? '');
+
+      probed.push(name);
+
+      return failing.includes(name)
+        ? HttpResponse.json({ message: 'An error occurred in the delay test' }, { status: 503 })
+        : HttpResponse.json({ delay: 100 });
+    })
+  );
+
+  return probed;
+}
+
+/** The runtime list with some proxies replaced: the fork drops the history of a silent node. */
+function serveProxyList(proxies: typeof CLASH_PROXIES_FIXTURE.proxies) {
+  server.use(http.get(PROXY_ENDPOINT.proxies(), () => HttpResponse.json({ proxies })));
 }
 
 // The screen is brought up whole together with requests, so the test lives in `src/test`:
 // from the `pages` layer the shared tooling cannot be reached without crossing layer boundaries.
 describe('proxies screen', () => {
+  afterEach(() => {
+    ConfigDocumentStore.getState().reset();
+  });
+
   it('shows config groups and does not show service ones', async () => {
     serveProxies();
 
@@ -123,9 +153,90 @@ describe('proxies screen', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('status', { name: 'Результат действия' })).toHaveTextContent(
-        'Задержка всех групп обновлена'
+        'Задержка всех узлов обновлена'
       );
     });
+  });
+
+  it('tests every node of a group, not only the one the group uses now', async () => {
+    serveProxies();
+    const probed = serveProbes();
+    const user = userEvent.setup();
+
+    renderWithQuery(<ProxiesPage />);
+
+    await user.click(await screen.findByRole('button', { name: 'Проверить узлы группы proxy' }));
+
+    await waitFor(() => {
+      expect(probed.toSorted()).toEqual([
+        'sub-eu/eu-reality',
+        'sub-eu/eu-xhttp',
+        'sub-nl/nl-reality',
+        'sub-nl/nl-xhttp',
+      ]);
+    });
+  });
+
+  it('shows a node that did not answer the probe as failed, not as never tested', async () => {
+    serveProxies();
+    serveProbes(['us']);
+    serveProxyList({ ...CLASH_PROXIES_FIXTURE.proxies, us: { ...CLASH_PROXIES_FIXTURE.proxies.us, history: [] } });
+    const user = userEvent.setup();
+
+    renderWithQuery(<ProxiesPage />);
+
+    expect(await screen.findByRole('button', { name: /^us, .*, не проверялся$/ })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Проверить узлы группы us-fallback' }));
+
+    expect(await screen.findByRole('button', { name: /^us, .*, не ответил$/ })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Результат действия' })).toHaveTextContent(
+      'Группа us-fallback: задержка обновлена'
+    );
+  });
+
+  it('tests the config outbounds when the config has no groups', async () => {
+    serveProxies();
+    const probed = serveProbes();
+    const { direct, 'sub-eu/eu-reality': node } = CLASH_PROXIES_FIXTURE.proxies;
+
+    serveProxyList({ direct, 'sub-eu/eu-reality': node });
+    const user = userEvent.setup();
+
+    renderWithQuery(<ProxiesPage />);
+
+    await user.click(await screen.findByRole('button', { name: 'Проверить аутбаунды конфига' }));
+
+    await waitFor(() => {
+      expect(probed.toSorted()).toEqual(['direct', 'sub-eu/eu-reality']);
+    });
+    expect(screen.getByRole('button', { name: 'Проверить все' })).toBeEnabled();
+  });
+
+  it('explains an automatic group and adds a manual choice over it to the draft only', async () => {
+    serveProxies();
+    const user = userEvent.setup();
+
+    renderWithQuery(<ProxiesPage />);
+
+    expect((await screen.findAllByText(/sing-box выбирает сам/)).length).toBeGreaterThan(0);
+
+    // `us` is not an outbound of the file: there is nothing to wrap, and no action is offered.
+    expect(screen.queryByRole('button', { name: 'Добавить ручной выбор для группы us' })).not.toBeInTheDocument();
+
+    await user.click(await screen.findByRole('button', { name: 'Добавить ручной выбор для группы proxy' }));
+
+    const outbounds = readSectionNodes(selectConfigCurrent(ConfigDocumentStore.getState()) ?? '', 'outbounds');
+
+    expect(outbounds).toContainEqual({
+      type: 'selector',
+      tag: 'proxy',
+      outbounds: ['proxy-auto', 'node-a-vless-reality'],
+      providers: ['sub-a', 'sub-c'],
+    });
+    expect(outbounds).toContainEqual(expect.objectContaining({ type: 'urltest', tag: 'proxy-auto' }));
+    expect(screen.getByText(/Ручной выбор добавлен в черновик/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Добавить ручной выбор для группы proxy' })).not.toBeInTheDocument();
   });
 
   it('a URL-test node is not clickable: sing-box makes the choice there', async () => {

@@ -21,6 +21,7 @@
   "announce": {
     "selected": "Group {{group}}: node {{node}} selected",
     "tested": "Group {{group}}: latency updated",
-    "testedAll": "Latency of all groups updated"
+    "testedAll": "Latency of all nodes updated",
+    "testedOutbounds": "Outbound latency updated"
   }
 }

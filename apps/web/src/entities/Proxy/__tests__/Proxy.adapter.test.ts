@@ -1,8 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
+import { API_FAILURE, ApiError } from '@shared/api';
+
 import { ClashProxiesSchema, type ClashProvidersWire, type ClashProxiesWire } from '../api/Proxy.schema';
-import { toProxyProviders, toProxyRuntime, withSelectedNode } from '../model/Proxy.adapter';
-import { DELAY_STATE } from '../model/Proxy.model';
+import {
+  isProbeFailure,
+  toFailedProbes,
+  toProxyProviders,
+  toProxyRuntime,
+  withSelectedNode,
+} from '../model/Proxy.adapter';
+import { DELAY_STATE, DELAY_TIMEOUT } from '../model/Proxy.model';
 import { CLASH_PROVIDERS_FIXTURE, CLASH_PROXIES_FIXTURE } from './Proxy.fixture';
 
 describe('toProxyRuntime', () => {
@@ -74,6 +82,73 @@ describe('config without groups', () => {
 
   it('shows outbounds as a list, including direct', () => {
     expect(toProxyRuntime(flat).standalone.map((node) => node.name)).toEqual(['direct', 'vless-de']);
+  });
+});
+
+describe('failed probes', () => {
+  const NODE = 'sub-eu/eu-xhttp';
+
+  function withHistory(history: ClashProxiesWire['proxies'][string]['history']): ClashProxiesWire {
+    return {
+      proxies: { ...CLASH_PROXIES_FIXTURE.proxies, [NODE]: { ...CLASH_PROXIES_FIXTURE.proxies[NODE], history } },
+    };
+  }
+
+  function nodeOf(runtime: ReturnType<typeof toProxyRuntime>) {
+    return runtime.groups.find((group) => group.name === 'proxy')?.nodes.find((node) => node.name === NODE);
+  }
+
+  // The fork deletes the history of a node that did not answer and never stores 65535.
+  it('marks a node failed when its last panel probe failed and the runtime dropped its history', () => {
+    const node = nodeOf(toProxyRuntime(withHistory([]), new Set([NODE])));
+
+    expect(node?.delayState).toBe(DELAY_STATE.Failed);
+    expect(node?.delay).toBe(DELAY_TIMEOUT);
+  });
+
+  it('keeps a node without history and without a failed probe unchecked', () => {
+    expect(nodeOf(toProxyRuntime(withHistory([])))?.delayState).toBe(DELAY_STATE.Unknown);
+  });
+
+  it('prefers a history entry that appeared after the failure', () => {
+    const node = nodeOf(toProxyRuntime(withHistory([{ time: '2026-09-10T19:30:00Z', delay: 120 }]), new Set([NODE])));
+
+    expect(node?.delayState).toBe(DELAY_STATE.Fast);
+    expect(node?.delay).toBe(120);
+  });
+
+  it('takes the latest probe of a node', () => {
+    const failed = toFailedProbes([
+      { name: 'a', failed: true },
+      { name: 'b', failed: false },
+      { name: 'a', failed: false },
+      { name: 'b', failed: true },
+    ]);
+
+    expect([...failed]).toEqual(['b']);
+  });
+
+  it.each([
+    { kind: 'a Clash timeout', error: new ApiError(API_FAILURE.Response, 'Timeout', { status: 504 }), expected: true },
+    {
+      kind: 'a Clash probe error',
+      error: new ApiError(API_FAILURE.Response, 'An error occurred in the delay test', { status: 503 }),
+      expected: true,
+    },
+    {
+      kind: 'a daemon refusal with a code',
+      error: new ApiError(API_FAILURE.Response, 'sing-box is down', { status: 503, code: 'runtime_unavailable' }),
+      expected: false,
+    },
+    {
+      kind: 'a silent gateway',
+      error: new ApiError(API_FAILURE.Unreachable, 'silent', { status: 502 }),
+      expected: false,
+    },
+    { kind: 'a server error', error: new ApiError(API_FAILURE.Response, 'boom', { status: 500 }), expected: false },
+    { kind: 'a foreign error', error: new Error('boom'), expected: false },
+  ])('tells $kind as a node failure: $expected', ({ error, expected }) => {
+    expect(isProbeFailure(error)).toBe(expected);
   });
 });
 

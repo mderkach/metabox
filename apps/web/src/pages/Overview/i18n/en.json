@@ -26,7 +26,7 @@
   },
   "node": {
     "title": "Node",
-    "none": "No group has a manual choice: groups pick their nodes by latency.",
+    "none": "No group has a manual choice: groups pick their nodes by latency. Add one on the Proxies screen.",
     "select": "Node of the {{group}} group",
     "selected": "{{group}}: node {{node}} selected"
   },
