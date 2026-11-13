@@ -58,10 +58,17 @@ export function ConfigNodeEditor({
         <TabsTrigger value={TAB.Raw}>JSON</TabsTrigger>
       </TabsList>
 
-      {/* The form keeps what was typed while the node is checked as text: unmounting erases it. */}
+      {/* The form keeps what was typed while the node is checked as text: unmounting erases it.
+          A type changed as text is another schema, and a field typed under the old one must not be written. */}
       <TabsContent value={TAB.Form} keepMounted className='pt-3'>
         {form.recognized && form.registry !== null && isNodeObject(node) && (
-          <ConfigNodeForm registry={form.registry} path={path} node={node} builtTags={builtTags} />
+          <ConfigNodeForm
+            key={String(node.type)}
+            registry={form.registry}
+            path={path}
+            node={node}
+            builtTags={builtTags}
+          />
         )}
         {form.recognized && form.settingsSection !== null && form.settings !== null && (
           <ConfigSectionForm section={form.settingsSection} settings={form.settings} />

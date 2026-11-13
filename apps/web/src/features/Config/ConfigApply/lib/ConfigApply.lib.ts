@@ -1,4 +1,4 @@
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef } from 'react';
 
 import {
@@ -12,6 +12,7 @@ import {
   ConfigDocumentState,
   ConfigDocumentStore,
   isGenericSection,
+  getConfigOptions,
   readRuleNames,
   readRules,
   toConfigChanges,
@@ -43,6 +44,9 @@ import { useStore } from '@shared/lib/state';
 
 import { useApplyConfig, useConfirmApply } from '../api/ConfigApply.api';
 import { ConfigApplyStore, type SubmittedApply } from '../model/ConfigApply.store';
+
+/** The section the daemon adds to a config without it on Apply. */
+const CLASH_API_PATH = ['experimental', 'clash_api'];
 
 /**
  * Rereads the document when the cycle reached its end, and settles the draft
@@ -88,10 +92,25 @@ function useDocumentRefresh(transaction: ApplyTransaction | null) {
 
       const submitted = ConfigApplyStore.getState().settle(transaction.id);
 
-      if (submitted !== null && transaction.phase === APPLY_PHASE.Confirmed) settleDraft(submitted);
+      if (submitted === null || transaction.phase !== APPLY_PHASE.Confirmed) return;
+
+      settleDraft(submitted);
+
+      if (transaction.clashApiAdded === true) void carryClashApi(queryClient, submitted.text);
     },
     [transaction, queryClient]
   );
+}
+
+/**
+ * The device file is the sent text plus the `experimental.clash_api` the daemon added: a draft kept
+ * over the sent text gets the section too, otherwise the device config reads as changed by someone
+ * else and the diff shows the section removed. A failed read leaves the draft on the sent text.
+ */
+async function carryClashApi(queryClient: QueryClient, sent: string) {
+  const device = await queryClient.query(getConfigOptions()).catch(() => null);
+
+  if (device !== null) ConfigDocumentStore.getState().rebase(sent, device.text, CLASH_API_PATH);
 }
 
 function settleDraft({ text, lists }: SubmittedApply) {

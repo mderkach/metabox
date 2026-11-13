@@ -36,7 +36,11 @@ export interface NodeOverride {
   primary: string[];
   /** Field to the kind it is drawn with instead of the schema kind. */
   widgets?: Readonly<Partial<Record<string, NodeOverrideWidget>>>;
-  /** Fields without which a node of the type does not work although the schema does not require them. */
+  /**
+   * Fields without which a node of the type does not work although the schema does not require them.
+   * Only a field emptied in the form is an error: one empty before the edit is the arbiter's
+   * (`sing-box check`), and it does not stop writing the fields being filled in.
+   */
   required?: string[];
   /** New node of the type: what it cannot be built without is already filled in. */
   preset?: (tag: string) => Record<string, unknown>;
@@ -101,9 +105,10 @@ function isEmpty(value: unknown): boolean {
   return value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0);
 }
 
-function requireFields(node: NodeValue, names: readonly string[]): NodeOverrideIssue[] {
+/** Required fields emptied by the edit: a field empty before it is not reported, see `NodeOverride.required`. */
+function requireFields(node: NodeValue, before: NodeValue, names: readonly string[]): NodeOverrideIssue[] {
   return names
-    .filter((name) => isEmpty(readField(node, name)))
+    .filter((name) => isEmpty(readField(node, name)) && !isEmpty(readField(before, name)))
     .map((name) => ({ name, code: NODE_OVERRIDE_ERROR.Required }));
 }
 
@@ -155,7 +160,7 @@ const VLESS_OVERRIDE: NodeOverride = {
   }),
   refine: (node, before) => [
     ...(readField(node, 'tls.reality.enabled') === true
-      ? requireFields(node, ['tls.server_name', 'tls.reality.public_key'])
+      ? requireFields(node, before, ['tls.server_name', 'tls.reality.public_key'])
       : []),
     ...checkPattern(node, before, 'tls.reality.public_key', REALITY_PUBLIC_KEY, NODE_OVERRIDE_ERROR.RealityPublicKey),
     ...checkPattern(node, before, 'tls.reality.short_id', REALITY_SHORT_ID, NODE_OVERRIDE_ERROR.RealityShortId),
@@ -282,5 +287,5 @@ export function overrideIssues(override: NodeOverride | null, node: NodeValue, b
     return [];
   }
 
-  return [...requireFields(node, override.required ?? []), ...(override.refine?.(node, before) ?? [])];
+  return [...requireFields(node, before, override.required ?? []), ...(override.refine?.(node, before) ?? [])];
 }

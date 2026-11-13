@@ -82,3 +82,24 @@ export function diffNode(base: JSONPath, before: unknown, after: unknown): NodeE
 
   return isEqual(before, next) ? [] : [{ path: base, value: next }];
 }
+
+/**
+ * Edits that carry the change from `base` to `device` onto `draft`, a value
+ * edited on top of `base`: a leaf the draft changed since `base` keeps the
+ * draft's value. Objects are merged by keys, so a section the device added
+ * next to one the draft added keeps both.
+ */
+export function rebaseEdits(path: JSONPath, base: unknown, device: unknown, draft: unknown): NodeEdit[] {
+  if (isEqual(base, device)) {
+    return [];
+  }
+
+  if (isRecord(device) && isRecord(draft)) {
+    const from = isRecord(base) ? base : {};
+    const keys = new Set([...Object.keys(from), ...Object.keys(device)]);
+
+    return [...keys].flatMap((key) => rebaseEdits([...path, key], from[key], device[key], draft[key]));
+  }
+
+  return isEqual(draft, base) ? [{ path, value: device }] : [];
+}

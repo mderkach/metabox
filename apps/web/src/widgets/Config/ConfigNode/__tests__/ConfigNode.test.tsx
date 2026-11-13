@@ -1,8 +1,8 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { ConfigDocumentState, CONFIG_SECTION } from '@entities/Config';
+import { ConfigDocumentState, CONFIG_SECTION, findValue } from '@entities/Config';
 
 import { ConfigNode } from '../ui/ConfigNode';
 
@@ -41,6 +41,28 @@ describe('section node', () => {
     await user.click(screen.getByRole('tab', { name: 'Форма' }));
 
     expect(screen.getByRole('textbox', { name: 'Сервер' })).toHaveValue('b.example');
+  });
+
+  it('a type changed as text gets a new form: fields typed under the old type do not go into the node', async () => {
+    const user = userEvent.setup();
+    const direct = { type: 'direct', tag: 'hk-01' };
+    const { rerender } = render(<ConfigNode section={CONFIG_SECTION.Outbounds} node={VLESS} name='hk-01' />);
+
+    await user.type(screen.getByRole('spinbutton', { name: 'Порт сервера' }), '99999');
+
+    act(() => {
+      ConfigDocumentState.getState().replace(JSON.stringify({ outbounds: [direct] }, null, 2));
+    });
+    rerender(<ConfigNode section={CONFIG_SECTION.Outbounds} node={direct} name='hk-01' />);
+
+    expect(screen.queryByRole('spinbutton', { name: 'Порт сервера' })).not.toBeInTheDocument();
+
+    await user.type(screen.getByRole('textbox', { name: 'Имя узла' }), '-b');
+
+    expect(findValue(ConfigDocumentState.getState().draft ?? '', ['outbounds', 0])).toEqual({
+      type: 'direct',
+      tag: 'hk-01-b',
+    });
   });
 
   it('a node with a field the schema does not know is marked and opened as text, the form is disabled', () => {
