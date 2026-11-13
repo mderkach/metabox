@@ -12,3 +12,4 @@ export const E2E_TAG = {
 } as const;
 
 export { expect };
+export { translate } from '../lib/i18n.ts';

@@ -7,7 +7,7 @@ Playwright Test runs whole user flows in the served panel. Why a separate runner
 ```text
 e2e/
 ├── fixtures/
-│   ├── index.ts        # mergeTests of the files below, expect, E2E_TAG
+│   ├── index.ts        # mergeTests of the files below, expect, E2E_TAG, translate
 │   ├── pages.ts        # page objects as fixtures
 │   └── pageErrors.ts   # fails a test on an uncaught page exception
 ├── lib/
@@ -20,7 +20,7 @@ The config is `playwright.config.ts`; the directory is typed by `tsconfig.node.j
 
 ## Fixtures and page objects
 
-- One fixture file per concern in `e2e/fixtures/`. A file exports its own `test`, extended from `@playwright/test`, or from another fixture file when it needs that file's fixture. `index.ts` joins them with `mergeTests` and exports `expect`; scenarios import only from `index.ts`. A new fixture is a new file and a line in `mergeTests`.
+- One fixture file per concern in `e2e/fixtures/`. A file exports its own `test`, extended from `@playwright/test`, or from another fixture file when it needs that file's fixture. `index.ts` joins them with `mergeTests` and exports `expect` and `translate`; scenarios import only from `index.ts`. A new fixture is a new file and a line in `mergeTests`.
 - A scenario takes page objects as fixtures and does not construct them.
 - A page object holds locators and user actions. Locators are declared in the page object and the scenario uses its fields; assertions stay in the scenario.
 
@@ -51,13 +51,14 @@ The stand runs in English (`locale: 'en-US'`). A panel text is taken by its dict
 
 Each scenario carries the tag of every stand it holds on: `E2E_TAG.Mock` for the mock stand (`METABOX_MOCK=all`), `E2E_TAG.Live` for the CI bench daemon. A run picks its stand with `--grep` on the command line, not with `grep` in the config; a filter that matches no scenario fails the run.
 
+- `METABOX_E2E_STAND=live` runs the stand without mocks, proxying `/api` to `METABOX_API_TARGET`, with one worker: the daemon state is shared. CI runs it in the `integration` job against the bench daemon.
 - The mock stand keeps its state in each browser context, so scenarios on it are isolated and run in parallel. The dev config handler is static: after Apply is confirmed the mock config reverts, so a scenario on mocks does not check that an edit stayed.
 - A scenario on the live daemon finds its data by name and does not depend on the mock fixture. Data the bench lacks makes a fixture fail with what to fix; the scenario is not skipped, because a skip turns an unchecked flow green.
 
 ## Failures and flakiness
 
 - An uncaught page exception fails the test through the automatic `noPageErrors` fixture.
-- On CI a failed test is retried once to record a trace; a test that passes only on the retry still fails the run (`failOnFlakyTests`). The HTML report with the trace is uploaded as the `playwright-report` artifact of the `web-browser` job.
+- On CI a failed test is retried once to record a trace; a test that passes only on the retry still fails the run (`failOnFlakyTests`). The HTML report with the trace is uploaded as the `playwright-report` artifact of the `web-browser` job and `playwright-report-live` of the `integration` job.
 
 ## Commands
 
