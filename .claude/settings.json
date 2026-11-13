@@ -25,6 +25,7 @@
       "Edit(./apps/web/src/shared/api/generated.ts)",
       "Edit(./apps/web/src/shared/api/daemon.generated.ts)",
       "Edit(./apps/web/src/i18n.generated.d.ts)",
+      "Edit(./apps/metaboxd/internal/mcp/fields.generated.go)",
       "Edit(./pnpm-lock.yaml)",
       "Edit(./dist/**)",
       "Edit(./apps/web/dist/**)"
@@ -42,8 +43,8 @@
       "Bash(go vet:*)",
       "Bash(gofmt:*)",
       "Bash(pnpm lint:fix:*)",
-      "Bash(pnpm -C apps/web test:*)",
-      "Bash(pnpm -C apps/web build:*)",
+      "Bash(pnpm --filter web test:*)",
+      "Bash(pnpm --filter web build:*)",
       "Bash(git status:*)",
       "Bash(git diff:*)",
       "Bash(git log:*)",
