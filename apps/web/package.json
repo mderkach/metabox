@@ -17,6 +17,7 @@
     "test": "vitest run --project unit --project budget --project tooling",
     "test:watch": "vitest --project unit --project budget --project tooling",
     "test:browser": "vitest run --project browser",
+    "test:e2e": "playwright test",
     "lint:react": "react-doctor --no-telemetry --no-supply-chain"
   },
   "dependencies": {
@@ -47,6 +48,7 @@
     "zustand": "5.0.15"
   },
   "devDependencies": {
+    "@playwright/test": "1.64.1",
     "@tailwindcss/vite": "4.3.3",
     "@tanstack/eslint-plugin-query": "5.103.1",
     "@testing-library/dom": "10.4.2",

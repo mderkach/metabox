@@ -8,7 +8,7 @@
 | [Working with requests](./guides/Query.md)                     | TanStack Query: fetch functions, key and option factories, `meta`, invalidation, runtime stream past the cache |
 | [Forms and validation](./guides/Form&Validation.md)            | React Hook Form + Zod, field path constraints, adapter schemas, generated schemas                              |
 | [Lists and tables](./guides/Tables.md)                         | Table engine, list anatomy, virtualization, sorting, filters, density, states                                  |
-| [Testing](./guides/testing/README.md)                          | Test levels and which one a check belongs to; Vitest unit and browser tests                                    |
+| [Testing](./guides/testing/README.md)                          | Test levels and which one a check belongs to; Vitest unit and browser tests, Playwright e2e scenarios          |
 | [Code review checklist](./guides/ReviewChecklist.md)           | Consolidated checklist of the rules                                                                            |
 
 Which document to read when: the "When to read the guides" table in [`apps/web/AGENTS.md`](../AGENTS.md). The priority order for conflicts is one for the whole repository, see "Rule sources and their priority" in the root [`AGENTS.md`](../../../AGENTS.md).
