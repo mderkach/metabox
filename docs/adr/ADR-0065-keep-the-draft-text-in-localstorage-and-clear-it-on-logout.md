@@ -1,6 +1,6 @@
 # ADR-0065. Keep the draft text in `localStorage`, store only a fingerprint of its base and clear it on logout
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-25
 - Deciders: repository owner
 

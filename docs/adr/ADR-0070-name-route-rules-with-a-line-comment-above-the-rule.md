@@ -1,6 +1,6 @@
 # ADR-0070. Name route rules with a line comment above the rule
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-30
 - Deciders: repository owner
 

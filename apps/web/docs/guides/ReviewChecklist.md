@@ -106,3 +106,4 @@ Only what a human checks. Layer boundaries, file and folder naming, `any`, unsaf
 - [ ] A change in adapters comes with a golden round-trip fixture
 - [ ] Timers in tests are fake, there are no real delays
 - [ ] A virtualized list is tested with a size mock
+- [ ] A change visible in the panel was checked in a browser on the mock stand, by an e2e scenario or by hand, and the PR description says what was checked there and what was not ([`AGENTS.md`](../../AGENTS.md))

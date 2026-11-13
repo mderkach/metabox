@@ -1,6 +1,6 @@
 # ADR-0075. Run end-to-end scenarios with Playwright Test on the mock stand and the live daemon
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-13
 - Deciders: repository owner
 

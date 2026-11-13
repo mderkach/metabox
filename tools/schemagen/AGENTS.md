@@ -14,4 +14,4 @@ Before editing tests: [Testing.md](../../apps/metaboxd/docs/guides/Testing.md).
 
 - The generator's artifacts are `apps/web/src/shared/api/generated.ts` and the MCP field reference `apps/metaboxd/internal/mcp/fields.generated.go`. They are committed together with the generator change, otherwise the frontend or the agent diverges from the schema; the pre-commit hook checks this.
 - Build, run and tests only through `make schema` and `make test-schemagen`: without the fork's tags and `-ldflags` the module does not build.
-- A change is done when `make schema` was run, `make test-schemagen` is green (it fails when a committed artifact differs from the generator output) and `pnpm --filter web build` passes: a schema change can break the form types.
+- A change is done when `make schema` was run, `make test-schemagen` is green (it fails when a committed artifact differs from the generator output), `make lint` is green (it lints the generator with the fork's tags) and `pnpm --filter web build` passes: a schema change can break the form types.
