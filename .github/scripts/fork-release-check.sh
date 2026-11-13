@@ -42,6 +42,7 @@ if grep -Fxq "refs/heads/$BRANCH" <<< "$refs"; then
     printf -- '- pinned: `%s`\n- latest: `%s`\n' "$pinned" "$latest"
     printf -- '- fork diff: https://github.com/%s/compare/%s...%s\n\n' "$FORK" "$pinned" "$latest"
     printf 'The existing branch is unchanged. Review its schema and MCP field-reference diff before merging.\n'
+    printf '\nReview checklist: %s/%s/blob/main/docs/Maintaining.md#reviewing-a-bump-pr\n' "${GITHUB_SERVER_URL:-https://github.com}" "$GITHUB_REPOSITORY"
   } > "$body"
   if ! gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$BRANCH" --title "$title" --body-file "$body"; then
     echo "::error::could not recover the PR for $BRANCH; verify FORK_BUMP_TOKEN contents/pull-requests write access and retry; the branch is unchanged"

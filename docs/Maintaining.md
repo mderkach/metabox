@@ -2,7 +2,7 @@
 
 # Maintaining
 
-Tasks that need owner access to the repository: releases, the signing key, GitHub Pages, branch rules, sing-box-extended updates. Build and the test bench: [`Development.md`](./Development.md).
+Tasks that need owner access to the repository: releases, the signing key, GitHub Pages, branch rules, sing-box-extended and OpenWrt updates. Build and the test bench: [`Development.md`](./Development.md).
 
 ## Release
 
@@ -78,6 +78,17 @@ The workflow needs the `FORK_BUMP_TOKEN` secret, a token with write access to `c
 
 The workflow logic is tested offline by `bash .github/scripts/fork-release-check.test.sh`, which CI also runs.
 
+### Reviewing a bump PR
+
+The generator and the panel depend on fork internals that the tests do not cover completely. Before merging a bump PR, go through the fork diff linked in the PR body and check:
+
+- **Types under build tags.** The generator reads which node type needs which build tag from the fork's `include/` sources (`tools/schemagen/gates.go`, [ADR-0030](./adr/ADR-0030-read-the-build-composition-from-the-binary-and-the-fork-sources.md)). `TestBuildGates` checks known cases, not completeness. Compare new or changed `//go:build` lines in `include/` with `BUILD_TAG_OF_TYPE` in the schema diff.
+- **Options under build tags.** The `optionGates` table in `tools/schemagen/optiongates.go` is written by hand. Generation fails when a listed stub file moves or changes its condition, but an option that a new stub gates goes unnoticed. For each new `//go:build !with_*` stub outside `include/` that gates a config option, add an entry to `optionGates`; the type check then requires a detector in `OPTION_FINDERS` (`apps/web/src/entities/Config/model/Config.build.ts`).
+- **`with_purego`.** `SCHEMA_TAGS` in the `Makefile` adds `with_purego` to the fork's `release/DEFAULT_BUILD_TAGS`; without it `with_naive_outbound` links cronet's `libcronet.a`, which GNU ld on CI rejects. The schema must stay byte-identical to the one generated without the tag: on a machine whose linker accepts cronet (macOS does), `make schema SCHEMA_TAGS="$(cat <fork module dir>/release/DEFAULT_BUILD_TAGS)"` must leave `generated.ts` unchanged. If the fork starts registering types that depend on cgo, the tag has to go.
+- **`go:linkname` in `common/force_close`.** The fork links unexported symbols of `golang.org/x/net/http2` and `net/http` with `//go:linkname`, in file variants for `!go1.27`, `go1.27 && badlinkname` and `go1.27 && !badlinkname` (`badlinkname` comes from the fork tags). The symbols are internal to Go: when the fork or the Go version in `.go-version` changes, a missing or stale variant fails `make test-schemagen` at link time.
+- **String constants.** `constantStrings` in `tools/schemagen/types.go` reads the fork's `constant` package with `go/parser.ParseDir`, which ignores build tags (see the exception in `.golangci.yml`). This is correct while only boolean constants there depend on tags. If the fork adds a tag-dependent variant of a file with string constants, switch the function to `golang.org/x/tools/go/packages`.
+- **Rule provider endpoints.** The Clash API rule providers are a stub in the fork (`experimental/clashapi/ruleprovider.go`): `GET /providers/rules` returns an empty list, and every `/providers/rules/{name}` request answers 404. A `remote` rule set is refreshed only by its `update_interval` or a service restart. If the fork implements these endpoints, open an issue for a refresh action on the Rule sets screen.
+
 ### The version installed on routers
 
 The workflow does not change the version installed on routers and on the test bench: that follows the build tested on a real router. [`install.sh`](../install.sh) pins it in `SINGBOX_VERSION` and `SINGBOX_SHA256`, and checks the downloaded package against that hash. To move to a new version, change in one commit:
@@ -93,3 +104,19 @@ gh api repos/shtorm-7/sing-box-extended/releases/tags/v<version> --jq '.assets[]
 ```
 
 The install script decision: [ADR-0058](./adr/ADR-0058-install-on-a-clean-router-with-a-script-on-top-of-the-apk-repository.md).
+
+## OpenWrt updates
+
+The test bench and CI follow the OpenWrt release of the target device ([ADR-0023](./adr/ADR-0023-build-the-bench-from-the-device-firmware.md)). The release is pinned in several places; change them in one commit:
+
+- `DEVICE_IMAGE_URL` in `.devcontainer/target/device-base/Dockerfile`: the sysupgrade image of the device firmware that `make stand-base` extracts the bench base from;
+- the public rootfs of the local bench, `openwrt/rootfs:aarch64_generic-<release>`: `METABOX_BASE_IMAGE` in the `Makefile`, `BASE_IMAGE` in `.devcontainer/docker-compose.yml` and `.devcontainer/target/Dockerfile`, and the bench variables table in `docs/Development.md` and `docs/Development.ru.md`;
+- the CI bench base, `openwrt/rootfs:x86-64-<release>`: `METABOX_BASE_IMAGE` of the `integration` job in `.github/workflows/ci.yml`.
+
+Before merging, check:
+
+- `make stand-base` builds. The root file system is found in the sysupgrade image by the squashfs magic; if the image format changes, the build fails with an error naming the image URL.
+- The `integration` CI job passes on the new rootfs.
+- The new release still uses apk: `install.sh` and the package require it. When the supported OpenWrt branch changes, update the requirements and the badge in `README.md` and `README.ru.md`.
+
+The base is extracted from a sysupgrade image because OpenWrt publishes no docker image for `aarch64_cortex-a53`. If one appears, replacing the extraction is a new decision with its own ADR.
