@@ -15,6 +15,12 @@ allowBuilds:
   lefthook: true
   msw: false
 
+# react-scan declares these two by `latest`; pinned so a lock re-resolution cannot pull a version nobody chose.
+# react-doctor matches the direct dependency of apps/web.
+overrides:
+  react-scan>react-doctor: 0.9.14
+  react-scan>react-grab: 0.2.0
+
 # Versions shared across the workspace, so the linter does not drift between packages.
 catalog:
   oxfmt: 0.68.0
