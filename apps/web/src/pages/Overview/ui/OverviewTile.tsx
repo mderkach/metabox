@@ -27,21 +27,25 @@ export function OverviewTile({
   wide?: boolean;
 }) {
   return (
-    <li className={cn('flex flex-col gap-1 bg-card px-4 py-3.5', wide === true && 'col-span-2')}>
-      <dl className='flex flex-col gap-0.5'>
+    // Label, value, context and chart rows are shared with the neighbouring tiles of the grid row:
+    // a label that wraps to two lines moves the neighbour's value down with its own.
+    <li
+      className={cn('row-span-4 grid grid-rows-subgrid gap-y-0.5 bg-card px-4 py-3.5', wide === true && 'col-span-2')}
+    >
+      <dl className='contents'>
         <dt className='text-sm font-medium text-muted-foreground'>{label}</dt>
         <dd className={cn('text-xl font-semibold tabular-nums', tone)}>
           {value ?? <Skeleton aria-hidden='true' className={cn('h-7 w-24', PENDING_REVEAL)} />}
         </dd>
       </dl>
       {context === null ? (
-        <Skeleton aria-hidden='true' className={cn('h-4 w-32', PENDING_REVEAL)} />
+        <Skeleton aria-hidden='true' className={cn('mt-0.5 h-4 w-32', PENDING_REVEAL)} />
       ) : (
-        <p className='text-xs text-muted-foreground'>{context}</p>
+        <p className='mt-0.5 text-xs text-muted-foreground'>{context}</p>
       )}
       {chart}
       {meter !== undefined && (
-        <span className='block h-1 overflow-hidden rounded-full bg-meter-track'>
+        <span className='mt-0.5 block h-1 self-start overflow-hidden rounded-full bg-meter-track'>
           <span
             className='block h-full rounded-full bg-primary'
             style={{ width: `${String(Math.min(1, meter) * PERCENT)}%` }}
